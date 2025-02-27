@@ -4,6 +4,7 @@ from ib_insync import *
 import numpy as np
 import pandas as pd
 from scipy import stats
+import re
 
 def connect_to_ib():
     ib = IB()
@@ -82,6 +83,33 @@ def get_portfolio_holdings(ib=None, print_output=False):
         portfolio = ib.portfolio()
         print(f"📊 Retrieved {len(portfolio)} portfolio positions")
         
+        # Get account values including cash balances
+        account_values = ib.accountValues()
+        
+        # Extract cash balances and other account metrics
+        cash_balances = {}
+        account_metrics = {}
+        base_currency = "USD"  # Default currency
+        
+        # These are the tags we want to extract for cash and account information
+        cash_tags = ['TotalCashBalance', 'AvailableFunds', 'BuyingPower', 'ExcessLiquidity']
+        metric_tags = ['NetLiquidation', 'GrossPositionValue', 'EquityWithLoanValue']
+        
+        for value in account_values:
+            # Identify the base currency if available
+            if value.tag == 'Currency' and value.value and value.currency == '':
+                base_currency = value.value
+                
+            # Extract cash balances for the base currency
+            if value.tag in cash_tags and value.currency == base_currency:
+                cash_balances[value.tag] = float(value.value) if value.value else 0.0
+            
+            # Extract account metrics for the base currency
+            if value.tag in metric_tags and value.currency == base_currency:
+                account_metrics[value.tag] = float(value.value) if value.value else 0.0
+        
+        print(f"💰 Retrieved cash balances in {base_currency}")
+        
         # Format the data for easier use
         positions = []
         for item in portfolio:
@@ -104,7 +132,7 @@ def get_portfolio_holdings(ib=None, print_output=False):
             symbol_width = max(8, max(len(p['contract'].symbol) for p in positions))
             account_width = max(9, max(len(p['account']) for p in positions))
             
-            # Create header
+            # Create header for positions
             header = (
                 f"{'Symbol':<{symbol_width}} | {'Position':>10} | {'Price':>10} | "
                 f"{'Market Value':>14} | {'Avg Cost':>10} | {'Unrealized PNL':>15} | "
@@ -112,8 +140,8 @@ def get_portfolio_holdings(ib=None, print_output=False):
             )
             separator = "-" * len(header)
             
-            # Create formatted table
-            result = [header, separator]
+            # Create formatted table for positions
+            result = ["\n📊 PORTFOLIO POSITIONS", separator]
             
             total_market_value = 0
             total_unrealized_pnl = 0
@@ -131,35 +159,82 @@ def get_portfolio_holdings(ib=None, print_output=False):
                 total_market_value += market_value
                 total_unrealized_pnl += unrealized_pnl
                 
-                row = (
-                    f"{symbol:<{symbol_width}} | {position:>10,.0f} | {price:>10,.2f} | "
+                result.append(
+                    f"{symbol:<{symbol_width}} | {position:>10,.2f} | {price:>10,.2f} | "
                     f"{market_value:>14,.2f} | {avg_cost:>10,.2f} | {unrealized_pnl:>15,.2f} | "
                     f"{account:<{account_width}}"
                 )
-                result.append(row)
             
-            # Add summary row
+            # Add total row for positions
             result.append(separator)
-            summary = (
-                f"{'TOTAL':<{symbol_width}} | {'':<10} | {'':<10} | "
-                f"{total_market_value:>14,.2f} | {'':<10} | {total_unrealized_pnl:>15,.2f} | "
-                f"{'':<{account_width}}"
+            result.append(
+                f"{'TOTAL':<{symbol_width}} | {' ':>10} | {' ':>10} | "
+                f"{total_market_value:>14,.2f} | {' ':>10} | {total_unrealized_pnl:>15,.2f} | "
+                f"{' ':<{account_width}}"
             )
-            result.append(summary)
+            
+            # Create a simpler table for cash balances with appropriate columns
+            result.append("\n\n💰 CASH BALANCES")
+            
+            # Define columns for cash/metrics tables
+            desc_width = 25
+            value_width = 20
+            curr_width = 5
+            
+            # Create header for cash table
+            cash_header = f"{'Description':<{desc_width}} | {'Value':>{value_width}} | {'Currency':<{curr_width}}"
+            cash_separator = "-" * len(cash_header)
+            
+            result.append(cash_separator)
+            
+            # Add cash rows with better formatting
+            for tag, amount in cash_balances.items():
+                # Format the tag name to be more readable
+                formatted_tag = ' '.join(re.findall('[A-Z][a-z]*', tag))
+                result.append(f"{formatted_tag:<{desc_width}} | {amount:>{value_width},.2f} | {base_currency:<{curr_width}}")
+            
+            # Create a similar table for account metrics
+            result.append("\n\n📊 ACCOUNT METRICS")
+            result.append(cash_separator)
+            
+            # Add account metric rows with consistent formatting
+            for tag, amount in account_metrics.items():
+                # Format the tag name to be more readable
+                formatted_tag = ' '.join(re.findall('[A-Z][a-z]*', tag))
+                result.append(f"{formatted_tag:<{desc_width}} | {amount:>{value_width},.2f} | {base_currency:<{curr_width}}")
+            
+            # Calculate portfolio allocation stats
+            if 'NetLiquidation' in account_metrics and account_metrics['NetLiquidation'] > 0:
+                # Calculate cash percentage
+                cash_percent = cash_balances.get('TotalCashBalance', 0) / account_metrics['NetLiquidation'] * 100
+                # Calculate equity percentage
+                equity_percent = total_market_value / account_metrics['NetLiquidation'] * 100
+                
+                # Create allocation summary with percentages in dedicated column
+                result.append("\n\n📈 ALLOCATION SUMMARY")
+                
+                # Create header for allocation table - add percentage column
+                alloc_header = f"{'Description':<{desc_width}} | {'Value':>{value_width}} | {'Percentage':>12}"
+                alloc_separator = "-" * len(alloc_header)
+                
+                result.append(alloc_separator)
+                result.append(f"{'Cash Allocation':<{desc_width}} | {cash_balances.get('TotalCashBalance', 0):>{value_width},.2f} | {cash_percent:>11.2f}%")
+                result.append(f"{'Equity Allocation':<{desc_width}} | {total_market_value:>{value_width},.2f} | {equity_percent:>11.2f}%")
+                result.append(f"{'Total':<{desc_width}} | {account_metrics.get('NetLiquidation', 0):>{value_width},.2f} | {100:>11.2f}%")
             
             formatted_output = "\n".join(result)
+        
         else:
-            formatted_output = "No portfolio positions found."
-        
-        # Print the formatted output if requested
+            formatted_output = "No positions found."
+            
+        # Print output if requested
         if print_output:
-            print("\n📊 PORTFOLIO HOLDINGS\n")
-            print(formatted_output)
-        
+            print("\n" + formatted_output)
+                    
         return positions, formatted_output
         
     except Exception as e:
-        print(f"❌ Error retrieving portfolio data: {e}")
+        print(f"⛔ Error retrieving portfolio: {e}")
         return None, None
     finally:
         # Disconnect only if we created the connection in this function
@@ -1101,6 +1176,401 @@ def calculate_monthly_stock_metrics(ib, symbol, market_symbol='SPY',
     
     return results
 
+def analyze_portfolio_diversification(ib=None, print_output=True):
+    """
+    Analyzes portfolio holdings to calculate exposure percentages by sector, industry, and sub-industry
+    
+    Args:
+        ib: An existing IB connection. If None, will create a new connection.
+        print_output: Whether to print the formatted analysis results
+        
+    Returns:
+        Dictionary containing exposure data by sector, industry, and sub-industry
+    """
+    # Connect to IB if no connection was provided
+    if ib is None or not ib.isConnected():
+        ib = connect_to_ib()
+        if ib is None:
+            print("⛔ Failed to establish connection to IB")
+            return None
+        connect_needed = True
+    else:
+        connect_needed = False
+    
+    try:
+        # Get portfolio holdings
+        positions, _ = get_portfolio_holdings(ib, print_output=False)
+        if not positions:
+            print("⛔ No positions found in portfolio")
+            return None
+        
+        # Extract symbols and create a symbol->market value mapping
+        symbols = [p['contract'].symbol for p in positions]
+        market_values = {p['contract'].symbol: p['marketValue'] for p in positions}
+        total_portfolio_value = sum(market_values.values())
+        
+        if total_portfolio_value <= 0:
+            print("⚠️ Portfolio total value is zero or negative")
+            return None
+        
+        # Initialize dictionaries for classifications and exposures
+        classifications = {}
+        sector_exposure = {}
+        industry_exposure = {}
+        subcategory_exposure = {}
+        
+        # Get classifications for each symbol and calculate exposures
+        for symbol in symbols:
+            try:
+                # Create and qualify contract
+                contract = Stock(symbol, 'SMART', 'USD')
+                qualified_contracts = ib.qualifyContracts(contract)
+                
+                if not qualified_contracts:
+                    print(f"⚠️ Could not qualify contract for {symbol}")
+                    continue
+                
+                contract = qualified_contracts[0]
+                
+                # Request contract details
+                details = ib.reqContractDetails(contract)
+                if not details:
+                    print(f"⚠️ No details available for {symbol}")
+                    continue
+                
+                # Extract classification data
+                detail = details[0]
+                
+                # Get classifications - replace empty strings with placeholders
+                sector = getattr(detail, 'industry', 'Unknown') or 'Unclassified'
+                industry = getattr(detail, 'category', 'Unknown') or 'Unclassified' 
+                subcategory = getattr(detail, 'subcategory', 'Unknown') or 'Unclassified'
+                
+                # Store classifications
+                classifications[symbol] = {
+                    'sector': sector,
+                    'industry': industry,
+                    'subcategory': subcategory
+                }
+                
+                # Get market value and weight
+                market_value = market_values.get(symbol, 0)
+                weight = market_value / total_portfolio_value
+                
+                # Update sector exposure
+                if sector not in sector_exposure:
+                    sector_exposure[sector] = {
+                        'value': 0,
+                        'weight': 0,
+                        'positions': []
+                    }
+                sector_exposure[sector]['value'] += market_value
+                sector_exposure[sector]['weight'] += weight
+                sector_exposure[sector]['positions'].append(symbol)
+                
+                # Update industry exposure
+                if industry not in industry_exposure:
+                    industry_exposure[industry] = {
+                        'value': 0,
+                        'weight': 0,
+                        'positions': [],
+                        'sector': sector
+                    }
+                industry_exposure[industry]['value'] += market_value
+                industry_exposure[industry]['weight'] += weight
+                industry_exposure[industry]['positions'].append(symbol)
+                
+                # Update subcategory exposure
+                if subcategory not in subcategory_exposure:
+                    subcategory_exposure[subcategory] = {
+                        'value': 0,
+                        'weight': 0,
+                        'positions': [],
+                        'industry': industry,
+                        'sector': sector
+                    }
+                subcategory_exposure[subcategory]['value'] += market_value
+                subcategory_exposure[subcategory]['weight'] += weight
+                subcategory_exposure[subcategory]['positions'].append(symbol)
+                
+                print(f"✅ Processed {symbol}: {sector} / {industry} / {subcategory}")
+                
+                # Add a small delay to avoid overwhelming the API
+                ib.sleep(0.1)
+                
+            except Exception as e:
+                print(f"❌ Error processing {symbol}: {e}")
+        
+        # Sort exposures by weight (descending)
+        sorted_sector_exposure = dict(sorted(sector_exposure.items(), 
+                                            key=lambda x: x[1]['weight'], 
+                                            reverse=True))
+        sorted_industry_exposure = dict(sorted(industry_exposure.items(), 
+                                              key=lambda x: x[1]['weight'], 
+                                              reverse=True))
+        sorted_subcategory_exposure = dict(sorted(subcategory_exposure.items(), 
+                                                 key=lambda x: x[1]['weight'], 
+                                                 reverse=True))
+        
+        # Prepare result dictionary
+        result = {
+            'total_value': total_portfolio_value,
+            'sector_exposure': sorted_sector_exposure,
+            'industry_exposure': sorted_industry_exposure,
+            'subcategory_exposure': sorted_subcategory_exposure,
+            'classifications': classifications
+        }
+        
+        # Print formatted output if requested
+        if print_output:
+            print("\n📊 PORTFOLIO DIVERSIFICATION ANALYSIS\n")
+            print(f"Total Portfolio Value: ${total_portfolio_value:,.2f}")
+            
+            # Print sector exposure with improved formatting
+            print("\n🔹 SECTOR EXPOSURE\n")
+            # Define consistent column widths
+            sector_col = 25
+            weight_col = 10
+            value_col = 15
+            positions_col = 30
+            
+            # Create properly formatted header
+            header = (
+                f"{'Sector':<{sector_col}} | {'Weight':<{weight_col}} | {'Value':<{value_col}} | {'Positions':<{positions_col}}"
+            )
+            separator = "-" * len(header)
+            
+            print(header)
+            print(separator)
+            
+            for sector, data in sorted_sector_exposure.items():
+                # Replace empty sector name with placeholder
+                sector_name = sector if sector else 'Unclassified'
+                positions_str = ", ".join(data['positions'])
+                weight_str = f"{data['weight']:.2%}"
+                value_str = f"${data['value']:,.2f}"
+                print(f"{sector_name:<{sector_col}} | {weight_str:<{weight_col}} | {value_str:<{value_col}} | {positions_str:<{positions_col}}")
+            
+            # Print industry exposure with improved formatting
+            print("\n🔹 INDUSTRY EXPOSURE\n")
+            # Define consistent column widths
+            industry_col = 25
+            sector_col = 20
+            weight_col = 10
+            value_col = 15
+            positions_col = 30
+            
+            # Create properly formatted header
+            header = (
+                f"{'Industry':<{industry_col}} | {'Sector':<{sector_col}} | {'Weight':<{weight_col}} | "
+                f"{'Value':<{value_col}} | {'Positions':<{positions_col}}"
+            )
+            separator = "-" * len(header)
+            
+            print(header)
+            print(separator)
+            
+            for industry, data in sorted_industry_exposure.items():
+                # Replace empty industry or sector names with placeholders
+                industry_name = industry if industry else 'Unclassified'
+                sector_name = data['sector'] if data['sector'] else 'Unclassified'
+                positions_str = ", ".join(data['positions'])
+                weight_str = f"{data['weight']:.2%}"
+                value_str = f"${data['value']:,.2f}"
+                print(
+                    f"{industry_name:<{industry_col}} | {sector_name:<{sector_col}} | "
+                    f"{weight_str:<{weight_col}} | {value_str:<{value_col}} | {positions_str:<{positions_col}}"
+                )
+            
+            # Print subcategory exposure with improved formatting
+            meaningful_subcategories = [sub for sub in sorted_subcategory_exposure.keys() 
+                                       if sub not in ('Unknown', 'N/A', '')]
+            
+            if meaningful_subcategories:
+                print("\n🔹 SUB-INDUSTRY EXPOSURE\n")
+                
+                # First, determine the maximum lengths for better column sizing
+                max_subcategory = max(25, max(len(sub) for sub in subcategory_exposure.keys() if sub))
+                max_industry = max(20, max(len(data['industry']) for data in subcategory_exposure.values() if data['industry']))
+                
+                # Fix column widths with padding
+                subcategory_col = max_subcategory + 2  # Add some padding
+                industry_col = max_industry + 2
+                weight_col = 10
+                value_col = 15
+                
+                # Create a properly formatted header
+                header = (
+                    f"{'Sub-Industry':<{subcategory_col}} | {'Industry':<{industry_col}} | {'Weight':<{weight_col}} | "
+                    f"{'Value':<{value_col}} | {'Positions'}"
+                )
+                
+                # Create separator with exact length
+                separator = "-" * len(header)
+                
+                print(header)
+                print(separator)
+                
+                for subcategory, data in sorted_subcategory_exposure.items():
+                    # Skip truly empty categories
+                    if subcategory in ('Unknown', 'N/A', '') and len(sorted_subcategory_exposure) > 1:
+                        continue
+                    
+                    # Replace empty names with placeholders
+                    subcategory_name = subcategory if subcategory else 'Unclassified'
+                    industry_name = data['industry'] if data['industry'] else 'Unclassified'
+                    
+                    positions_str = ", ".join(data['positions'])
+                    weight_str = f"{data['weight']:.2%}"
+                    value_str = f"${data['value']:,.2f}"
+                    
+                    # Match the exact header format
+                    print(
+                        f"{subcategory_name:<{subcategory_col}} | {industry_name:<{industry_col}} | "
+                        f"{weight_str:<{weight_col}} | {value_str:<{value_col}} | {positions_str}"
+                    )
+            
+            # Print stock classifications table
+            print("\n🔹 INDIVIDUAL STOCK CLASSIFICATIONS\n")
+            
+            # Calculate column widths
+            symbol_width = max(8, max(len(s) for s in symbols))
+            sector_width = max(15, max(len(c['sector'] if c['sector'] else 'Unclassified') for c in classifications.values()))
+            industry_width = max(15, max(len(c['industry'] if c['industry'] else 'Unclassified') for c in classifications.values()))
+            subcategory_width = max(15, max(len(c['subcategory'] if c['subcategory'] else 'Unclassified') for c in classifications.values()))
+            
+            # Create header
+            header = (
+                f"{'Symbol':<{symbol_width}} | {'Sector':<{sector_width}} | "
+                f"{'Industry':<{industry_width}} | {'Subcategory':<{subcategory_width}}"
+            )
+            separator = "-" * len(header)
+            
+            print(header)
+            print(separator)
+            
+            # Print each stock's classification
+            for symbol, data in classifications.items():
+                sector_name = data['sector'] if data['sector'] else 'Unclassified'
+                industry_name = data['industry'] if data['industry'] else 'Unclassified'
+                subcategory_name = data['subcategory'] if data['subcategory'] else 'Unclassified'
+                
+                print(
+                    f"{symbol:<{symbol_width}} | {sector_name:<{sector_width}} | "
+                    f"{industry_name:<{industry_width}} | {subcategory_name:<{subcategory_width}}"
+                )
+        
+        return result
+    
+    except Exception as e:
+        print(f"❌ Error analyzing portfolio diversification: {e}")
+        return None
+    finally:
+        # Disconnect only if we created the connection in this function
+        if connect_needed and ib is not None and ib.isConnected():
+            ib.disconnect()
+            print("🔌 Disconnected from IB")
+
+def analyze_portfolio_correlations(ib=None, symbols=None, duration='2 Y', bar_size='1 day', print_output=True, plot_heatmap=False):
+    """
+    Calculate correlation matrix for portfolio holdings
+    
+    Args:
+        ib: An existing IB connection. If None, will create a new connection.
+        symbols: List of stock symbols. If None, will get from portfolio.
+        duration: Time period for data (default: '2 Y')
+        bar_size: Bar size for data (default: '1 day')
+        print_output: Whether to print the formatted correlation matrix
+        plot_heatmap: Whether to plot a heatmap of correlations (requires matplotlib and seaborn)
+        
+    Returns:
+        Pandas DataFrame containing the correlation matrix
+    """
+    # Connect to IB if no connection was provided
+    if ib is None or not ib.isConnected():
+        ib = connect_to_ib()
+        if ib is None:
+            print("⛔ Failed to establish connection to IB")
+            return None
+        connect_needed = True
+    else:
+        connect_needed = False
+    
+    try:
+        # Get symbols from portfolio if not provided
+        if symbols is None:
+            positions, _ = get_portfolio_holdings(ib, print_output=False)
+            if positions:
+                symbols = [p['contract'].symbol for p in positions]
+                print(f"📊 Using {len(symbols)} symbols from portfolio")
+            else:
+                print("⛔ No positions found in portfolio and no symbols provided")
+                return None
+        
+        # Get historical price data for all symbols
+        print(f"📈 Retrieving {duration} of {bar_size} price data for {len(symbols)} symbols...")
+        price_data = {}
+        
+        for symbol in symbols:
+            try:
+                df = get_price_data_for_given_stock(ib, symbol, duration, bar_size)
+                if df is not None and not df.empty:
+                    # Ensure index is datetime
+                    if not isinstance(df.index, pd.DatetimeIndex):
+                        if 'date' in df.columns:
+                            df.set_index('date', inplace=True)
+                        df.index = pd.to_datetime(df.index)
+                    
+                    # Store close prices
+                    price_data[symbol] = df['close']
+                    print(f"✅ Got {len(df)} data points for {symbol}")
+                else:
+                    print(f"⚠️ No data available for {symbol}")
+            except Exception as e:
+                print(f"❌ Error retrieving data for {symbol}: {e}")
+        
+        if not price_data:
+            print("⛔ No price data retrieved for any symbols")
+            return None
+        
+        # Convert to DataFrame
+        all_prices = pd.DataFrame(price_data)
+        
+        # Calculate returns
+        returns = all_prices.pct_change().dropna()
+        
+        # Calculate correlation matrix
+        correlation_matrix = returns.corr()
+        
+        # Print formatted output if requested
+        if print_output:
+            print("\n📊 PORTFOLIO CORRELATION MATRIX\n")
+            
+            # Format the matrix for display - fix for applymap deprecation warning
+            pd.set_option('display.max_columns', None)
+            pd.set_option('display.width', 1000)
+            pd.set_option('display.precision', 2)
+            
+            # Create formatted version of correlation matrix without using deprecated applymap
+            formatted_corr = pd.DataFrame(
+                [[f"{val:.2f}" for val in row] for row in correlation_matrix.values],
+                index=correlation_matrix.index,
+                columns=correlation_matrix.columns
+            )
+            
+            print(formatted_corr)
+        
+        return correlation_matrix
+        
+    except Exception as e:
+        print(f"❌ Error analyzing portfolio correlations: {e}")
+        return None
+    finally:
+        # Disconnect only if we created the connection in this function
+        if connect_needed and ib is not None and ib.isConnected():
+            ib.disconnect()
+            print("🔌 Disconnected from IB")
+
 # Test code
 if __name__ == "__main__":
     ib = connect_to_ib()
@@ -1142,7 +1612,7 @@ if __name__ == "__main__":
                 print(f"  Calmar Ratio: {stock_metric['calmar_ratio']:.2f}")
                 print()
     
-        print("\n📅 MONTHLY PERFORMANCE BREAKDOWN\n")
+        print("\n📅 MONTHLY PORTFOLIO PERFORMANCE BREAKDOWN\n")
         
         # Calculate and get the monthly results - with print_output=False
         monthly_results = calculate_monthly_portfolio_metrics(ib, symbols, duration='2 Y', print_output=False)
@@ -1211,6 +1681,14 @@ if __name__ == "__main__":
         print(f"Sharpe Ratio: {metrics['sharpe_ratio']:.2f}")
         print(f"Calmar Ratio: {metrics['calmar_ratio']:.2f}")
 
+    # Analyze portfolio diversification
+    print("\n📊 ANALYZING PORTFOLIO DIVERSIFICATION\n")
+    diversification = analyze_portfolio_diversification(ib, print_output=True)
+
+    # Analyze portfolio correlations
+    print("\n📊 ANALYZING PORTFOLIO CORRELATIONS\n")
+    correlation_matrix = analyze_portfolio_correlations(ib, duration='2 Y', bar_size='1 day')
+    
     if ib and ib.isConnected():
         ib.disconnect()
 
