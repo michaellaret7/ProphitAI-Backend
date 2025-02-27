@@ -691,9 +691,7 @@ def calculate_portfolio_metrics(ib, symbols=None, market_symbol='SPY', duration=
     
     return metrics
 
-def calculate_monthly_portfolio_metrics(ib, symbols=None, market_symbol='SPY', 
-                                      duration='2 Y', confidence_level=0.99, 
-                                      risk_free_rate=0.03, use_position_weights=True):
+def calculate_monthly_portfolio_metrics(ib, symbols=None, market_symbol='SPY', duration='2 Y', confidence_level=0.99, risk_free_rate=0.03, use_position_weights=True, print_output=False):
     """
     Calculate portfolio metrics on a month-by-month basis
     
@@ -705,6 +703,7 @@ def calculate_monthly_portfolio_metrics(ib, symbols=None, market_symbol='SPY',
         confidence_level: confidence level for VaR (default: 0.99)
         risk_free_rate: annualized risk-free rate (default: 0.03)
         use_position_weights: whether to use actual position weights (default: True)
+        print_output: whether to print monthly performance table (default: False)
         
     Returns:
         Dictionary containing overall metrics and monthly metrics
@@ -887,29 +886,30 @@ def calculate_monthly_portfolio_metrics(ib, symbols=None, market_symbol='SPY',
         except KeyError:
             continue
     
-    # Format the monthly metrics for display
-    print("\n📊 MONTHLY PORTFOLIO PERFORMANCE\n")
-    
-    # Create header
-    headers = ["Month", "Return", "vs SPY", "Alpha", "Beta", "Volatility", "MaxDD", "Sharpe", "VaR(99%)"]
-    header_format = "{:<10} {:<10} {:<10} {:<10} {:<10} {:<10} {:<10} {:<10} {:<10}"
-    print(header_format.format(*headers))
-    print("-" * 100)
-    
-    # Print each month's metrics
-    for year_month in sorted(monthly_metrics.keys()):
-        m = monthly_metrics[year_month]
-        print(header_format.format(
-            year_month,
-            f"{m['total_return']:.2%}",
-            f"{m['relative_performance']:.2%}",
-            f"{m['alpha']:.2%}",
-            f"{m['beta']:.2f}",
-            f"{m['volatility']:.2%}",
-            f"{m['max_drawdown']:.2%}",
-            f"{m['sharpe_ratio']:.2f}",
-            f"{m['historical_var_pct']:.2%}"
-        ))
+    # Format the monthly metrics for display only if requested
+    if print_output:
+        print("\n📊 MONTHLY PORTFOLIO PERFORMANCE\n")
+        
+        # Create header
+        headers = ["Month", "Return", "vs SPY", "Alpha", "Beta", "Volatility", "MaxDD", "Sharpe", "VaR(99%)"]
+        header_format = "{:<10} {:<10} {:<10} {:<10} {:<10} {:<10} {:<10} {:<10} {:<10}"
+        print(header_format.format(*headers))
+        print("-" * 100)
+        
+        # Print each month's metrics
+        for year_month in sorted(monthly_metrics.keys()):
+            m = monthly_metrics[year_month]
+            print(header_format.format(
+                year_month,
+                f"{m['total_return']:.2%}",
+                f"{m['relative_performance']:.2%}",
+                f"{m['alpha']:.2%}",
+                f"{m['beta']:.2f}",
+                f"{m['volatility']:.2%}",
+                f"{m['max_drawdown']:.2%}",
+                f"{m['sharpe_ratio']:.2f}",
+                f"{m['historical_var_pct']:.2%}"
+            ))
     
     # Combine the results
     results = {
@@ -1144,8 +1144,8 @@ if __name__ == "__main__":
     
         print("\n📅 MONTHLY PERFORMANCE BREAKDOWN\n")
         
-        # Calculate and get the monthly results
-        monthly_results = calculate_monthly_portfolio_metrics(ib, symbols, duration='2 Y')
+        # Calculate and get the monthly results - with print_output=False
+        monthly_results = calculate_monthly_portfolio_metrics(ib, symbols, duration='2 Y', print_output=False)
         
         if monthly_results and 'monthly_metrics' in monthly_results:
             # Get the monthly metrics
@@ -1154,15 +1154,14 @@ if __name__ == "__main__":
             # Sort months chronologically
             sorted_months = sorted(monthly_data.keys())
             
-            # Create more detailed table with all metrics
+            # Create detailed table with all metrics
             month_detail_format = "{:<10} | {:<8} | {:<8} | {:<8} | {:<8} | {:<8} | {:<8} | {:<8}"
-            print("\n📊 MONTHLY DETAILS\n")
             print(month_detail_format.format(
                 "Month", "Return", "vs SPY", "Alpha", "Beta", "Vol", "MaxDD", "Sharpe"
             ))
             print("-" * 80)
             
-            # Print each month's detailed metrics with more precision
+            # Print each month's detailed metrics
             for month in sorted_months:
                 m = monthly_data[month]
                 print(month_detail_format.format(
@@ -1175,25 +1174,7 @@ if __name__ == "__main__":
                     f"{m['max_drawdown']:.2%}",
                     f"{m['sharpe_ratio']:.2f}"
                 ))
-            
-            # Add summary statistics about the monthly performance
-            positive_months = sum(1 for m in monthly_data.values() if m['total_return'] > 0)
-            total_months = len(monthly_data)
-            outperformance_months = sum(1 for m in monthly_data.values() if m['relative_performance'] > 0)
-            
-            print("\n📊 MONTHLY SUMMARY STATISTICS\n")
-            print(f"Total Months Analyzed: {total_months}")
-            print(f"Positive Return Months: {positive_months} ({positive_months/total_months:.1%})")
-            print(f"Months Outperforming SPY: {outperformance_months} ({outperformance_months/total_months:.1%})")
-            
-            # Find best and worst months
-            if total_months > 0:
-                best_month = max(monthly_data.items(), key=lambda x: x[1]['total_return'])
-                worst_month = min(monthly_data.items(), key=lambda x: x[1]['total_return'])
-                
-                print(f"\nBest Month: {best_month[0]} with {best_month[1]['total_return']:.2%} return")
-                print(f"Worst Month: {worst_month[0]} with {worst_month[1]['total_return']:.2%} return")
-        
+    
     # Run individual stock analysis for NVDA
     print("\n\n📈 NVIDIA (NVDA) STOCK ANALYSIS\n")
     nvda_results = calculate_monthly_stock_metrics(ib, "NVDA", duration='2 Y')
@@ -1215,4 +1196,3 @@ if __name__ == "__main__":
     if ib and ib.isConnected():
         ib.disconnect()
 
-        
