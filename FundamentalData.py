@@ -41,8 +41,6 @@ def get_financial_data(ticker, period, limit):
 
     return combined_data
 
-get_financial_data(ticker, period, limit)
-
 def read_sector_excel(filename="finalSectorSheet.xlsx"):
     """
     Read an Excel file from the parent documents folder.
@@ -386,7 +384,7 @@ def upload_sector_fundamentals(sector, industry, period="quarterly", limit="100"
     db_handler.create_database(db_name)
     
     # Format schema name based on industry
-    schema_name = industry.lower().replace(' ', '_').replace('&', 'and')
+    schema_name = industry.lower().replace(' ', '_').replace('&', 'and').replace(',', '_')
     
     # Read sector Excel and get tickers
     sector_df = read_sector_excel()
@@ -483,24 +481,49 @@ def upload_sector_fundamentals(sector, industry, period="quarterly", limit="100"
     
     print(f"\n🎉 Completed fundamental data processing for {len(tickers)} companies in {industry}!")
 
-# Example usage
-upload_sector_fundamentals("Communication Services", "Diversified Telecommunication Services")
-upload_sector_fundamentals("Communication Services", "Entertainment")
-upload_sector_fundamentals("Communication Services", "Interactive Media & Services")
-upload_sector_fundamentals("Communication Services", "Media")
-upload_sector_fundamentals("Communication Services", "Wireless Telecommunication Services")
+
+# upload_sector_fundamentals("Communication Services", "Diversified Telecommunication Services")
+# upload_sector_fundamentals("Communication Services", "Entertainment")
+# upload_sector_fundamentals("Communication Services", "Interactive Media & Services")
+# upload_sector_fundamentals("Communication Services", "Media")
+# upload_sector_fundamentals("Communication Services", "Wireless Telecommunication Services")
 
 # Add Consumer Discretionary sector uploads
-p = PushFundamentalDataToDB()
-p.create_database('equity_sector_consumer_discretionary_fundamentals')
-upload_sector_fundamentals("Consumer Discretionary", "Automobile Components", db_name='equity_sector_consumer_discretionary_fundamentals')
-upload_sector_fundamentals("Consumer Discretionary", "Automobiles", db_name='equity_sector_consumer_discretionary_fundamentals')
-upload_sector_fundamentals("Consumer Discretionary", "Broadline Retail", db_name='equity_sector_consumer_discretionary_fundamentals')
-upload_sector_fundamentals("Consumer Discretionary", "Distributors", db_name='equity_sector_consumer_discretionary_fundamentals')
-upload_sector_fundamentals("Consumer Discretionary", "Diversified Consumer Services", db_name='equity_sector_consumer_discretionary_fundamentals')
-upload_sector_fundamentals("Consumer Discretionary", "Hotels, Restaurants & Leisure", db_name='equity_sector_consumer_discretionary_fundamentals')
-upload_sector_fundamentals("Consumer Discretionary", "Household Durables", db_name='equity_sector_consumer_discretionary_fundamentals')
-upload_sector_fundamentals("Consumer Discretionary", "Leisure Products", db_name='equity_sector_consumer_discretionary_fundamentals')
-upload_sector_fundamentals("Consumer Discretionary", "Specialty Retail", db_name='equity_sector_consumer_discretionary_fundamentals')
-upload_sector_fundamentals("Consumer Discretionary", "Textiles, Apparel & Luxury Goods", db_name='equity_sector_consumer_discretionary_fundamentals')
 
+# upload_sector_fundamentals("Consumer Discretionary", "Automobile Components", db_name='equity_sector_consumer_discretionary_fundamentals')
+# upload_sector_fundamentals("Consumer Discretionary", "Automobiles", db_name='equity_sector_consumer_discretionary_fundamentals')
+# upload_sector_fundamentals("Consumer Discretionary", "Broadline Retail", db_name='equity_sector_consumer_discretionary_fundamentals')
+# upload_sector_fundamentals("Consumer Discretionary", "Distributors", db_name='equity_sector_consumer_discretionary_fundamentals')
+# upload_sector_fundamentals("Consumer Discretionary", "Diversified Consumer Services", db_name='equity_sector_consumer_discretionary_fundamentals')
+upload_sector_fundamentals("Consumer Discretionary", "Hotels, Restaurants & Leisure", db_name='equity_sector_consumer_discretionary_fundamentals') 
+# upload_sector_fundamentals("Consumer Discretionary", "Household Durables", db_name='equity_sector_consumer_discretionary_fundamentals')
+# upload_sector_fundamentals("Consumer Discretionary", "Leisure Products", db_name='equity_sector_consumer_discretionary_fundamentals')
+# upload_sector_fundamentals("Consumer Discretionary", "Specialty Retail", db_name='equity_sector_consumer_discretionary_fundamentals')
+upload_sector_fundamentals("Consumer Discretionary", "Textiles, Apparel & Luxury Goods", db_name='equity_sector_consumer_discretionary_fundamentals') 
+
+df = read_sector_excel()
+
+if df is not None:
+    # Create a dictionary to store sector -> industries mapping
+    sectors_and_industries = {}
+    for sector in df['GICS Sector'].unique():
+        sector_df = df[df['GICS Sector'] == sector]
+        industries = sector_df['GICS Ind Name'].unique().tolist()
+        sectors_and_industries[sector] = industries
+    
+    # Remove Communication Services and Consumer Discretionary sectors
+    sectors_and_industries.pop('Communication Services', None)
+    sectors_and_industries.pop('Consumer Discretionary', None)
+    
+    # Print the dictionary for verification
+    print("\n=== SECTORS AND INDUSTRIES DICTIONARY (without Communication Services and Consumer Discretionary) ===\n")
+    print(sectors_and_industries)
+else:
+    print("❌ Unable to create sectors dictionary - Excel file could not be loaded")
+
+# Print each sector-industry pair
+for sector, industries in sectors_and_industries.items():
+    for industry in industries:
+        dbName = f'equity_sector_{sector.lower().replace(" ", "_")}_fundamentals'
+        print(f"Uploading {sector} - {industry} to {dbName}")
+        upload_sector_fundamentals(sector, industry, db_name=dbName)
