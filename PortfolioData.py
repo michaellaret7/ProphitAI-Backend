@@ -1210,7 +1210,7 @@ if __name__ == "__main__":
         print(f"Maximum Drawdown: {metrics['max_drawdown']:.2%}")
         print(f"Sharpe Ratio: {metrics['sharpe_ratio']:.2f}")
         print(f"Calmar Ratio: {metrics['calmar_ratio']:.2f}")
-        
+
     if ib and ib.isConnected():
         ib.disconnect()
 
