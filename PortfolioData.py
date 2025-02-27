@@ -1174,16 +1174,34 @@ if __name__ == "__main__":
                     f"{m['max_drawdown']:.2%}",
                     f"{m['sharpe_ratio']:.2f}"
                 ))
+            
+            # Calculate and display summary statistics
+            positive_months = sum(1 for m in monthly_data.values() if m['total_return'] > 0)
+            total_months = len(monthly_data)
+            outperformance_months = sum(1 for m in monthly_data.values() if m['relative_performance'] > 0)
+            
+            if total_months > 0:
+                print("\n📊 MONTHLY SUMMARY STATISTICS\n")
+                print(f"Total Months Analyzed: {total_months}")
+                print(f"Positive Return Months: {positive_months} ({positive_months/total_months:.1%})")
+                print(f"Months Outperforming SPY: {outperformance_months} ({outperformance_months/total_months:.1%})")
+                
+                # Find best and worst months
+                best_month = max(monthly_data.items(), key=lambda x: x[1]['total_return'])
+                worst_month = min(monthly_data.items(), key=lambda x: x[1]['total_return'])
+                
+                print(f"\nBest Month: {best_month[0]} with {best_month[1]['total_return']:.2%} return")
+                print(f"Worst Month: {worst_month[0]} with {worst_month[1]['total_return']:.2%} return")
     
-    # Run individual stock analysis for NVDA
-    print("\n\n📈 NVIDIA (NVDA) STOCK ANALYSIS\n")
-    nvda_results = calculate_monthly_stock_metrics(ib, "NVDA", duration='2 Y')
+    # Run individual stock analysis for AAPL
+    print("\n\n📈 APPLE (AAPL) STOCK ANALYSIS\n")
+    aapl_results = calculate_monthly_stock_metrics(ib, "AAPL", duration='2 Y')
     
-    # Overall metrics for NVDA
-    if nvda_results and 'overall_metrics' in nvda_results and nvda_results['overall_metrics']:
-        metrics = nvda_results['overall_metrics']
+    # Overall metrics for AAPL
+    if aapl_results and 'overall_metrics' in aapl_results and aapl_results['overall_metrics']:
+        metrics = aapl_results['overall_metrics']
         
-        print(f"\n📊 OVERALL METRICS FOR NVDA\n")
+        print(f"\n📊 OVERALL METRICS FOR AAPL\n")
         print(f"Total Return: {metrics['total_return']:.2%}")
         print(f"Annualized Return: {metrics['annualized_return']:.2%}")
         print(f"Volatility: {metrics['volatility']:.2%}")
@@ -1192,7 +1210,7 @@ if __name__ == "__main__":
         print(f"Maximum Drawdown: {metrics['max_drawdown']:.2%}")
         print(f"Sharpe Ratio: {metrics['sharpe_ratio']:.2f}")
         print(f"Calmar Ratio: {metrics['calmar_ratio']:.2f}")
-    
+        
     if ib and ib.isConnected():
         ib.disconnect()
 
