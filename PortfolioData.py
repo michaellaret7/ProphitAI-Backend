@@ -1572,7 +1572,7 @@ def analyze_portfolio_correlations(ib=None, symbols=None, duration='2 Y', bar_si
             print("🔌 Disconnected from IB")
 
 # Test code
-if __name__ == "__main__":
+def run():
     ib = connect_to_ib()
     
     # Get portfolio holdings and calculate metrics
@@ -1692,3 +1692,4 @@ if __name__ == "__main__":
     if ib and ib.isConnected():
         ib.disconnect()
 
+run()
