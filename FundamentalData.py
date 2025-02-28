@@ -598,8 +598,8 @@ else:
 # Flag to determine when to start processing
 start_processing = False
 # Add a resume point for ACLX in Biotechnology
-resume_ticker = "HDSN"
-resume_industry = "Trading Companies & Distributors"
+resume_ticker = "CBT"
+resume_industry = "Chemicals"
 
 # Print each sector-industry pair
 for sector, industries in sectors_and_industries.items():
