@@ -259,9 +259,8 @@ def calculate_volatility(returns, annualize=True, trading_days=252):
     
     # Annualize if requested
     if annualize:
-        if len(returns) < trading_days:
-            # For daily returns, annualize by multiplying by sqrt(trading_days)
-            volatility = volatility * np.sqrt(trading_days)
+        # For daily returns, annualize by multiplying by sqrt(trading_days)
+        volatility = volatility * np.sqrt(trading_days)
             
     return volatility
 
@@ -394,6 +393,47 @@ def calculate_sharpe_ratio(returns, risk_free_rate=0.0, annualize=True, trading_
     sharpe_ratio = (avg_return - risk_free_rate) / volatility
     
     return sharpe_ratio
+
+def calculate_sortino_ratio(returns, risk_free_rate=0.0, annualize=True, trading_days=252):
+    """
+    Calculate Sortino Ratio - similar to Sharpe but only penalizes downside volatility
+    
+    Args:
+        returns: pandas Series or numpy array of returns
+        risk_free_rate: annualized risk-free rate (default: 0.0)
+        annualize: whether to annualize the returns and volatility
+        trading_days: number of trading days in a year (default: 252)
+        
+    Returns:
+        Sortino Ratio value
+    """
+    # Calculate average return
+    avg_return = np.mean(returns)
+    
+    # Calculate downside returns - only negative returns
+    downside_returns = returns[returns < 0]
+    
+    # Calculate downside deviation (downside risk)
+    # If no negative returns, return a large number
+    if len(downside_returns) == 0:
+        return float('inf')
+    
+    downside_deviation = np.sqrt(np.mean(downside_returns**2))
+    
+    # Adjust for annualization if requested
+    if annualize:
+        # Adjust daily values to annual values
+        avg_return = avg_return * trading_days
+        downside_deviation = downside_deviation * np.sqrt(trading_days)
+        # risk_free_rate is assumed to be already annualized
+    else:
+        # Convert annual risk-free rate to daily
+        risk_free_rate = risk_free_rate / trading_days
+    
+    # Calculate Sortino ratio
+    sortino_ratio = (avg_return - risk_free_rate) / downside_deviation
+    
+    return sortino_ratio
 
 def get_portfolio_returns(ib, symbols, duration='1 Y', bar_size='1 day'):
     """
@@ -606,92 +646,95 @@ def calculate_annualized_return(returns, period=252):
     
     return annualized_return
 
-def calculate_portfolio_metrics(ib, symbols=None, market_symbol='SPY', duration='1 Y', bar_size='1 day', confidence_level=0.99, risk_free_rate=0.03,use_position_weights=True):
+def calculate_portfolio_metrics(ib, symbols, printOutput=True):
     """
-    Calculate all risk metrics for a portfolio
+    Calculate key portfolio metrics from a list of stock symbols
     
     Args:
         ib: IB connection
-        symbols: list of stock symbols (if None, will get from portfolio)
-        market_symbol: symbol for market index (default: 'SPY')
-        duration: time period for data (default: '1 Y')
-        bar_size: bar size for data (default: '1 day')
-        confidence_level: confidence level for VaR (default: 0.99 or 99%)
-        risk_free_rate: annualized risk-free rate (default: 0.03 or 3%)
-        use_position_weights: whether to use actual position weights (default: True)
+        symbols: list of stock symbols
+        printOutput: Whether to print metrics to console (default: True)
         
     Returns:
-        Dictionary of portfolio metrics
+        Dictionary containing calculated metrics
     """
-    # Get symbols and positions from portfolio if not provided
-    positions = None
-    if symbols is None:
-        positions, _ = get_portfolio_holdings(ib)
-        if positions:
-            symbols = [p['contract'].symbol for p in positions]
-        else:
-            print("No positions found in portfolio")
-            return None
+    # Get portfolio holdings to calculate weights
+    positions, _ = get_portfolio_holdings(ib, print_output=False)
     
-    # Get position weights if needed
-    weights = None
-    if use_position_weights and positions:
+    # Get portfolio returns
+    duration = '2 Y'
+    bar_size = '1 day'
+    
+    # Get daily price data
+    prices_df = {}
+    
+    for symbol in symbols:
+        df = get_price_data_for_given_stock(ib, symbol, duration, bar_size)
+        if df is not None and not df.empty:
+            if 'date' in df.columns:
+                df.set_index('date', inplace=True)
+            
+            # Make sure index is datetime
+            if not isinstance(df.index, pd.DatetimeIndex):
+                df.index = pd.to_datetime(df.index)
+                
+            prices_df[symbol] = df['close']
+    
+    # Get SPY data for benchmark
+    market_df = get_price_data_for_given_stock(ib, 'SPY', duration, bar_size)
+    if market_df is not None and not market_df.empty:
+        if 'date' in market_df.columns:
+            market_df.set_index('date', inplace=True)
+        
+        # Make sure index is datetime
+        if not isinstance(market_df.index, pd.DatetimeIndex):
+            market_df.index = pd.to_datetime(market_df.index)
+            
+        market_prices = market_df['close']
+    else:
+        # Fallback if SPY data isn't available
+        market_prices = None
+    
+    # Convert to DataFrame
+    all_prices = pd.DataFrame(prices_df)
+    
+    # Calculate daily returns
+    returns_df = all_prices.pct_change(fill_method=None).dropna(how='all')
+    
+    # Calculate market returns
+    if market_prices is not None:
+        market_returns = market_prices.pct_change(fill_method=None).dropna()
+    else:
+        market_returns = None
+    
+    # Calculate weights if positions are available, otherwise use equal weights
+    if positions:
         # Create weights dictionary based on market value
-        weights = {p['contract'].symbol: p['marketValue'] for p in positions}
+        weights = {p['contract'].symbol: p['marketValue'] for p in positions if p['contract'].symbol in returns_df.columns}
         total_value = sum(weights.values())
         
         if total_value > 0:
             weights = {k: v / total_value for k, v in weights.items()}
-            print(f"Using actual position weights for portfolio returns calculation")
+            weight_method = "position"
         else:
-            weights = None
-            print(f"Warning: Total portfolio value is zero or negative. Using equal weights.")
-    
-    # Get returns for all symbols
-    returns_df = get_portfolio_returns(ib, symbols, duration, bar_size)
-    if returns_df is None or returns_df.empty:
-        print("Could not get returns data for portfolio")
-        return None
-    
-    # Get market returns
-    market_df = get_price_data_for_given_stock(ib, market_symbol, duration, bar_size)
-    if market_df is None or market_df.empty:
-        print(f"Could not get market data for {market_symbol}")
-        return None
-    
-    market_returns = market_df['close'].pct_change().dropna()
-    
-    # Calculate portfolio returns using weights if available
-    if weights is not None:
-        # Filter weights to only include symbols with data
-        available_symbols = set(returns_df.columns)
-        filtered_weights = {k: v for k, v in weights.items() if k in available_symbols}
-        
-        # Re-normalize weights if some symbols were filtered out
-        total = sum(filtered_weights.values())
-        if total > 0:
-            filtered_weights = {k: v / total for k, v in filtered_weights.items()}
-            
-            # Calculate weighted returns
-            weighted_returns = pd.DataFrame()
-            for symbol, weight in filtered_weights.items():
-                weighted_returns[symbol] = returns_df[symbol] * weight
-            
-            portfolio_returns = weighted_returns.sum(axis=1)
-            print(f"Calculated weighted portfolio returns using {len(filtered_weights)} positions")
-        else:
-            # Fall back to equal weights if filtering removed all weights
-            portfolio_returns = returns_df.mean(axis=1)
-            print(f"Warning: No valid weights after filtering. Using equal weights.")
+            # Fallback to equal weights if market values are invalid
+            weights = {symbol: 1/len(symbols) for symbol in returns_df.columns}
+            weight_method = "equal"
     else:
-        # Use equal-weighted returns
-        portfolio_returns = returns_df.mean(axis=1)
-        print(f"Using equal weights for portfolio returns calculation")
+        # Equal weights if no positions
+        weights = {symbol: 1/len(symbols) for symbol in returns_df.columns}
+        weight_method = "equal"
     
-    # Get cumulative returns for drawdown calculation
+    # Calculate portfolio returns
+    portfolio_returns = pd.Series(0, index=returns_df.index)
+    for symbol in returns_df.columns:
+        if symbol in weights:
+            portfolio_returns += returns_df[symbol].fillna(0) * weights.get(symbol, 0)
+    
+    # Calculate portfolio cumulative returns
     cumulative_returns = (1 + portfolio_returns).cumprod()
     
-    # Get annualization factors based on bar_size
+    # Calculate factors for annualization
     periods_per_year, sqrt_periods = get_annualization_factor(bar_size)
     
     # Calculate total and annualized returns for portfolio
@@ -708,12 +751,14 @@ def calculate_portfolio_metrics(ib, symbols=None, market_symbol='SPY', duration=
     # Calculate metrics
     beta = calculate_beta(portfolio_returns, market_returns)
     max_drawdown = calculate_max_drawdown(cumulative_returns)
-    var_pct, var_amount = calculate_var(portfolio_returns, confidence_level, portfolio_value)
-    param_var_pct, param_var_amount = calculate_parametric_var(portfolio_returns, confidence_level, portfolio_value)
+    var_pct, var_amount = calculate_var(portfolio_returns, 0.99, portfolio_value)
+    param_var_pct, param_var_amount = calculate_parametric_var(portfolio_returns, 0.99, portfolio_value)
     
-    volatility = calculate_volatility(portfolio_returns, True, periods_per_year)
-    sharpe_ratio = calculate_sharpe_ratio(portfolio_returns, risk_free_rate, True, periods_per_year)
+    # Use the square root of periods for volatility calculation without re-annualizing
+    volatility = np.std(portfolio_returns, ddof=1) * sqrt_periods
+    sharpe_ratio = calculate_sharpe_ratio(portfolio_returns, 0.03, True, periods_per_year)
     calmar_ratio = calculate_calmar_ratio(portfolio_returns, max_drawdown, periods_per_year)
+    sortino_ratio = calculate_sortino_ratio(portfolio_returns, 0.03, True, periods_per_year)
     
     metrics = {
         'total_return': total_return,
@@ -722,14 +767,15 @@ def calculate_portfolio_metrics(ib, symbols=None, market_symbol='SPY', duration=
         'market_annualized_return': market_annualized_return,
         'volatility': volatility,
         'beta': beta,
-        'alpha': calculate_alpha(portfolio_returns, market_returns, risk_free_rate, beta),
+        'alpha': calculate_alpha(portfolio_returns, market_returns, 0.03, beta),
         'historical_var_pct': var_pct,
         'historical_var_amount': var_amount,
         'parametric_var_pct': param_var_pct,
         'parametric_var_amount': param_var_amount,
         'max_drawdown': max_drawdown,
         'sharpe_ratio': sharpe_ratio,
-        'calmar_ratio': calmar_ratio
+        'calmar_ratio': calmar_ratio,
+        'sortino_ratio': sortino_ratio
     }
     
     # Calculate individual stock metrics
@@ -744,44 +790,121 @@ def calculate_portfolio_metrics(ib, symbols=None, market_symbol='SPY', duration=
             # Get stock value if positions exist
             stock_value = next((p['marketValue'] for p in positions if p['contract'].symbol == symbol), 1) if positions else 1
             
-            stock_var_pct, stock_var_amount = calculate_var(stock_returns, confidence_level, stock_value)
-            stock_param_var_pct, stock_param_var_amount = calculate_parametric_var(stock_returns, confidence_level, stock_value)
+            stock_var_pct, stock_var_amount = calculate_var(stock_returns, 0.99, stock_value)
+            stock_param_var_pct, stock_param_var_amount = calculate_parametric_var(stock_returns, 0.99, stock_value)
             
             stock_metrics[symbol] = {
                 'total_return': calculate_total_return(stock_returns),
                 'annualized_return': calculate_annualized_return(stock_returns, periods_per_year),
-                'volatility': calculate_volatility(stock_returns, True, periods_per_year),
+                'volatility': calculate_volatility(stock_returns, False),
                 'beta': stock_beta,
-                'alpha': calculate_alpha(stock_returns, market_returns, risk_free_rate, stock_beta),
-                'historical_var_pct': stock_var_pct,
-                'historical_var_amount': stock_var_amount,
-                'parametric_var_pct': stock_param_var_pct,
-                'parametric_var_amount': stock_param_var_amount,
+                'alpha': calculate_alpha(stock_returns, market_returns, 0.03, stock_beta),
+                'var_pct': stock_var_pct,
+                'var_amount': stock_var_amount,
                 'max_drawdown': stock_max_drawdown,
-                'sharpe_ratio': calculate_sharpe_ratio(stock_returns, risk_free_rate, True, periods_per_year),
-                'calmar_ratio': calculate_calmar_ratio(stock_returns, stock_max_drawdown, periods_per_year)
+                'sharpe_ratio': calculate_sharpe_ratio(stock_returns, 0.03, True, periods_per_year),
+                'calmar_ratio': calculate_calmar_ratio(stock_returns, stock_max_drawdown, periods_per_year),
+                'sortino_ratio': calculate_sortino_ratio(stock_returns, 0.03, True, periods_per_year)
             }
     
     metrics['stock_metrics'] = stock_metrics
     
+    # Print formatted output if requested
+    if printOutput:
+        print("\n📊 PORTFOLIO METRICS\n")
+        
+        if weight_method == "equal":
+            print("Using equal weights for portfolio returns calculation\n")
+        else:
+            print("Using position market value weights for portfolio returns calculation\n")
+            
+        print(f"Total Return: {metrics['total_return']*100:.2f}%")
+        print(f"Annualized Return: {metrics['annualized_return']*100:.2f}%")
+        print(f"Market Total Return (SPY): {metrics['market_total_return']*100:.2f}%")
+        print(f"Market Annualized Return (SPY): {metrics['market_annualized_return']*100:.2f}%")
+        print(f"Volatility (annualized): {metrics['volatility']*100:.2f}%")
+        print(f"Beta: {metrics['beta']:.2f}")
+        print(f"Alpha: {metrics['alpha']*100:.2f}%")
+        print(f"Historical VaR (99%): {metrics['historical_var_pct']*100:.2f}% (${metrics['historical_var_amount']:.2f})")
+        print(f"Parametric VaR (99%): {metrics['parametric_var_pct']*100:.2f}% (${metrics['parametric_var_amount']:.2f})")
+        print(f"Maximum Drawdown: {metrics['max_drawdown']*100:.2f}%")
+        print(f"Sharpe Ratio: {metrics['sharpe_ratio']:.2f}")
+        print(f"Calmar Ratio: {metrics['calmar_ratio']:.2f}")
+        print(f"Sortino Ratio: {metrics['sortino_ratio']:.2f}")
+        
+        print("\n📊 INDIVIDUAL STOCK METRICS\n")
+        
+        # Define metrics to display
+        metrics = [
+            ("Total Return", lambda s: f"{stock_metrics[s]['total_return']*100:.2f}%"),
+            ("Annualized Return", lambda s: f"{stock_metrics[s]['annualized_return']*100:.2f}%"),
+            ("Volatility", lambda s: f"{stock_metrics[s]['volatility']*100:.2f}%"),
+            ("Beta", lambda s: f"{stock_metrics[s]['beta']:.2f}"),
+            ("Alpha", lambda s: f"{stock_metrics[s]['alpha']*100:.2f}%"),
+            ("Historical VaR (99%)", lambda s: f"{stock_metrics[s]['var_pct']*100:.2f}%"),
+            ("Maximum Drawdown", lambda s: f"{stock_metrics[s]['max_drawdown']*100:.2f}%"),
+            ("Sharpe Ratio", lambda s: f"{stock_metrics[s]['sharpe_ratio']:.2f}"),
+            ("Calmar Ratio", lambda s: f"{stock_metrics[s]['calmar_ratio']:.2f}"),
+            ("Sortino Ratio", lambda s: f"{stock_metrics[s]['sortino_ratio']:.2f}")
+        ]
+        
+        # Calculate column widths based on actual values
+        metric_width = max(len(m[0]) for m in metrics) + 2
+        symbols = sorted(stock_metrics.keys())
+        
+        # Pre-compute all values to determine column widths
+        all_values = {}
+        for symbol in symbols:
+            all_values[symbol] = []
+            for _, metric_fn in metrics:
+                try:
+                    val = metric_fn(symbol)
+                    all_values[symbol].append(val)
+                except:
+                    all_values[symbol].append("N/A")
+        
+        # Calculate optimal column width for each symbol
+        column_widths = {}
+        for symbol in symbols:
+            # Maximum of symbol length or longest value for this symbol
+            column_widths[symbol] = max(len(symbol), max(len(val) for val in all_values[symbol])) + 2
+        
+        # Print header
+        header = "Metric".ljust(metric_width) + "| " + " | ".join(s.ljust(column_widths[s]) for s in symbols)
+        print(header)
+        print("-" * len(header))
+        
+        # Print each metric row
+        for i, (metric_name, _) in enumerate(metrics):
+            row = metric_name.ljust(metric_width) + "| "
+            values = []
+            for symbol in symbols:
+                try:
+                    val = all_values[symbol][i]
+                    values.append(val.rjust(column_widths[symbol]))
+                except:
+                    values.append("N/A".rjust(column_widths[symbol]))
+            row += " | ".join(values)
+            print(row)
+    
     return metrics
 
-def calculate_monthly_portfolio_metrics(ib, symbols=None, market_symbol='SPY', duration='2 Y', confidence_level=0.99, risk_free_rate=0.03, use_position_weights=True, print_output=False):
+def calculate_monthly_portfolio_metrics(ib, symbols=None, market_symbol='SPY', duration='2 Y', confidence_level=0.99, risk_free_rate=0.03, use_position_weights=True, print_output=True):
     """
-    Calculate portfolio metrics on a month-by-month basis
+    Calculate portfolio metrics on a monthly basis
     
     Args:
         ib: IB connection
-        symbols: list of stock symbols (if None, will get from portfolio)
-        market_symbol: symbol for market index (default: 'SPY')
+        symbols: list of stock symbols (if None, will use current portfolio holdings)
+        market_symbol: market index symbol (default: 'SPY')
         duration: time period for data (default: '2 Y')
         confidence_level: confidence level for VaR (default: 0.99)
-        risk_free_rate: annualized risk-free rate (default: 0.03)
-        use_position_weights: whether to use actual position weights (default: True)
-        print_output: whether to print monthly performance table (default: False)
+        risk_free_rate: risk-free rate (default: 0.03)
+        use_position_weights: whether to use position weights (default: True)
+        print_output: whether to print results (default: True)
         
     Returns:
-        Dictionary containing overall metrics and monthly metrics
+        Dictionary containing monthly metrics
     """
     # Get symbols and positions from portfolio if not provided
     positions = None
@@ -790,11 +913,15 @@ def calculate_monthly_portfolio_metrics(ib, symbols=None, market_symbol='SPY', d
         if positions:
             symbols = [p['contract'].symbol for p in positions]
         else:
-            print("No positions found in portfolio")
+            if print_output:
+                print("⚠️ No positions found in portfolio")
             return None
     
     # Get daily price data for all symbols for the specified duration
-    print(f"Fetching daily price data for {len(symbols)} symbols over {duration}...")
+    if print_output:
+        print(f"\n📈 MONTHLY PORTFOLIO PERFORMANCE ANALYSIS\n")
+        print(f"🔍 Fetching daily price data for {len(symbols)} symbols over {duration}...")
+    
     all_prices = {}
     for symbol in symbols:
         try:
@@ -804,13 +931,17 @@ def calculate_monthly_portfolio_metrics(ib, symbols=None, market_symbol='SPY', d
                 if 'date' in df.columns:
                     df.set_index('date', inplace=True)
                 all_prices[symbol] = df['close']
+                if print_output:
+                    print(f"✅ Got {len(df)} data points for {symbol}")
         except Exception as e:
-            print(f"Error getting data for {symbol}: {e}")
+            if print_output:
+                print(f"❌ Error getting data for {symbol}: {e}")
     
     # Get market price data
     market_df = get_price_data_for_given_stock(ib, market_symbol, duration, '1 day')
     if market_df is None or market_df.empty:
-        print(f"Could not get market data for {market_symbol}")
+        if print_output:
+            print(f"❌ Could not get market data for {market_symbol}")
         return None
     
     # Ensure the date is the index for market data too
@@ -822,7 +953,8 @@ def calculate_monthly_portfolio_metrics(ib, symbols=None, market_symbol='SPY', d
     # Convert to DataFrame and handle missing data
     prices_df = pd.DataFrame(all_prices)
     if prices_df.empty:
-        print("No price data available for any symbols")
+        if print_output:
+            print("❌ No price data available for any symbols")
         return None
     
     # Make sure index is datetime type
@@ -830,12 +962,22 @@ def calculate_monthly_portfolio_metrics(ib, symbols=None, market_symbol='SPY', d
         try:
             prices_df.index = pd.to_datetime(prices_df.index)
         except Exception as e:
-            print(f"Error converting index to datetime: {e}")
+            if print_output:
+                print(f"❌ Error converting index to datetime: {e}")
             return None
     
     # Calculate daily returns
     returns_df = prices_df.pct_change(fill_method=None).dropna(how='all')
     market_returns = market_prices.pct_change(fill_method=None).dropna()
+    
+    # Ensure market_returns has a datetime index
+    if not isinstance(market_returns.index, pd.DatetimeIndex):
+        try:
+            market_returns.index = pd.to_datetime(market_returns.index)
+        except Exception as e:
+            if print_output:
+                print(f"❌ Error converting market returns index to datetime: {e}")
+            return None
     
     # Get position weights if available
     weights = None
@@ -846,10 +988,12 @@ def calculate_monthly_portfolio_metrics(ib, symbols=None, market_symbol='SPY', d
         
         if total_value > 0:
             weights = {k: v / total_value for k, v in weights.items()}
-            print(f"Using actual position weights for portfolio returns calculation")
+            if print_output:
+                print(f"📊 Using actual position weights for portfolio returns calculation")
         else:
             weights = None
-            print(f"Warning: Total portfolio value is zero or negative. Using equal weights.")
+            if print_output:
+                print(f"⚠️ Total portfolio value is zero or negative. Using equal weights.")
     
     # Calculate portfolio returns
     if weights is not None:
@@ -857,71 +1001,59 @@ def calculate_monthly_portfolio_metrics(ib, symbols=None, market_symbol='SPY', d
         available_symbols = set(returns_df.columns)
         filtered_weights = {k: v for k, v in weights.items() if k in available_symbols}
         
-        # Re-normalize weights if some symbols were filtered out
-        total = sum(filtered_weights.values())
-        if total > 0:
-            filtered_weights = {k: v / total for k, v in filtered_weights.items()}
-            
-            # Calculate weighted returns for each day
-            portfolio_returns = pd.Series(0, index=returns_df.index)
-            for symbol, weight in filtered_weights.items():
-                portfolio_returns += returns_df[symbol].fillna(0) * weight
-            
-            print(f"Calculated weighted portfolio returns using {len(filtered_weights)} positions")
-        else:
-            # Fall back to equal weights if filtering removed all weights
-            portfolio_returns = returns_df.mean(axis=1)
-            print(f"Warning: No valid weights after filtering. Using equal weights.")
+        # Normalize filtered weights to sum to 1
+        total_filtered_weight = sum(filtered_weights.values())
+        if total_filtered_weight > 0:
+            filtered_weights = {k: v / total_filtered_weight for k, v in filtered_weights.items()}
+        
+        # Calculate portfolio returns using weighted average
+        portfolio_returns = pd.Series(0, index=returns_df.index)
+        for symbol, weight in filtered_weights.items():
+            portfolio_returns = portfolio_returns + returns_df[symbol] * weight
     else:
-        # Use equal-weighted returns
+        # Equal weighting if position weights are not available or not valid
         portfolio_returns = returns_df.mean(axis=1)
-        print(f"Using equal weights for portfolio returns calculation")
     
-    # Group by year and month
-    # Ensure we're working with a DatetimeIndex
+    # Calculate portfolio metrics for the entire period
+    overall_metrics = calculate_portfolio_metrics(ib, symbols, printOutput=False)
+    
+    # Prepare monthly data - ensure indices are DatetimeIndex
     portfolio_returns.index = pd.to_datetime(portfolio_returns.index)
-    portfolio_returns = portfolio_returns.sort_index()
     market_returns.index = pd.to_datetime(market_returns.index)
-    market_returns = market_returns.sort_index()
     
-    # Create year-month columns for grouping
     portfolio_returns_monthly = pd.DataFrame(portfolio_returns)
-    portfolio_returns_monthly.columns = ['returns']  # Rename for clarity
+    portfolio_returns_monthly.columns = ['returns']
     portfolio_returns_monthly['year'] = portfolio_returns_monthly.index.year
     portfolio_returns_monthly['month'] = portfolio_returns_monthly.index.month
     portfolio_returns_monthly['year_month'] = portfolio_returns_monthly.index.strftime('%Y-%m')
     
     market_returns_monthly = pd.DataFrame(market_returns)
-    market_returns_monthly.columns = ['returns']  # Rename for clarity
+    market_returns_monthly.columns = ['returns']
     market_returns_monthly['year'] = market_returns_monthly.index.year
     market_returns_monthly['month'] = market_returns_monthly.index.month
     market_returns_monthly['year_month'] = market_returns_monthly.index.strftime('%Y-%m')
     
-    # Calculate overall portfolio metrics first
-    overall_metrics = calculate_portfolio_metrics(ib, symbols, market_symbol, duration, '1 day', 
-                                               confidence_level, risk_free_rate, use_position_weights)
-    
-    # Initialize dictionary for monthly metrics
-    monthly_metrics = {}
-    
     # Group returns by year-month
-    grouped_returns = portfolio_returns_monthly.groupby('year_month')
+    grouped_portfolio = portfolio_returns_monthly.groupby('year_month')
     grouped_market = market_returns_monthly.groupby('year_month')
     
     # Get the unique year-months
     year_months = sorted(portfolio_returns_monthly['year_month'].unique())
     
-    # Process each month (without debug prints)
+    # Initialize dictionary for monthly metrics
+    monthly_metrics = {}
+    
+    # Process each month
     for year_month in year_months:
         try:
-            # Get returns for this month
-            month_portfolio = grouped_returns.get_group(year_month)['returns']
+            # Get portfolio returns for this month
+            month_portfolio = grouped_portfolio.get_group(year_month)['returns']
             
             # Try to get market returns for this month
             try:
                 month_market = grouped_market.get_group(year_month)['returns']
             except KeyError:
-                # Find overlapping dates
+                # Handle case where market data doesn't have this month
                 month_dates = month_portfolio.index
                 month_market = market_returns[market_returns.index.isin(month_dates)]
             
@@ -943,6 +1075,7 @@ def calculate_monthly_portfolio_metrics(ib, symbols=None, market_symbol='SPY', d
             month_alpha = calculate_alpha(month_portfolio, month_market, risk_free_rate/12, month_beta)
             month_var_pct, _ = calculate_var(month_portfolio, confidence_level, 1)
             month_sharpe = calculate_sharpe_ratio(month_portfolio, risk_free_rate/12, False)
+            month_sortino = calculate_sortino_ratio(month_portfolio, risk_free_rate/12, False)
             
             # Store metrics for this month
             monthly_metrics[year_month] = {
@@ -955,36 +1088,91 @@ def calculate_monthly_portfolio_metrics(ib, symbols=None, market_symbol='SPY', d
                 'historical_var_pct': month_var_pct,
                 'max_drawdown': month_max_drawdown,
                 'sharpe_ratio': month_sharpe,
+                'sortino_ratio': month_sortino,
                 'trading_days': len(month_portfolio)
             }
             
-        except KeyError:
+        except KeyError as e:
+            if print_output:
+                print(f"⚠️ Error processing month {year_month}: {e}")
             continue
     
-    # Format the monthly metrics for display only if requested
-    if print_output:
-        print("\n📊 MONTHLY PORTFOLIO PERFORMANCE\n")
+    # Print monthly performance table
+    if print_output and len(monthly_metrics) > 0:
+        print("\n📊 MONTHLY PORTFOLIO PERFORMANCE BREAKDOWN\n")
         
-        # Create header
-        headers = ["Month", "Return", "vs SPY", "Alpha", "Beta", "Volatility", "MaxDD", "Sharpe", "VaR(99%)"]
-        header_format = "{:<10} {:<10} {:<10} {:<10} {:<10} {:<10} {:<10} {:<10} {:<10}"
-        print(header_format.format(*headers))
-        print("-" * 100)
+        if not use_position_weights:
+            print("Using equal weights for portfolio returns calculation")
+            
+        # Define columns and create format functions
+        columns = [
+            ("Month", lambda m, d: m),
+            ("Return", lambda m, d: f"{d['total_return']*100:.2f}%"),
+            ("vs SPY", lambda m, d: f"{d['relative_performance']*100:.2f}%"),
+            ("Alpha", lambda m, d: f"{d['alpha']*100:.2f}%"),
+            ("Beta", lambda m, d: f"{d['beta']:.2f}"),
+            ("Vol", lambda m, d: f"{d['volatility']*100:.2f}%"),
+            ("MaxDD", lambda m, d: f"{d['max_drawdown']*100:.2f}%"),
+            ("Sharpe", lambda m, d: f"{d['sharpe_ratio']:.2f}"),
+            ("Sortino", lambda m, d: f"{d['sortino_ratio']:.2f}")
+        ]
         
-        # Print each month's metrics
-        for year_month in sorted(monthly_metrics.keys()):
-            m = monthly_metrics[year_month]
-            print(header_format.format(
-                year_month,
-                f"{m['total_return']:.2%}",
-                f"{m['relative_performance']:.2%}",
-                f"{m['alpha']:.2%}",
-                f"{m['beta']:.2f}",
-                f"{m['volatility']:.2%}",
-                f"{m['max_drawdown']:.2%}",
-                f"{m['sharpe_ratio']:.2f}",
-                f"{m['historical_var_pct']:.2%}"
-            ))
+        # Pre-compute all values to determine column widths
+        all_values = {}
+        for month, metrics in monthly_metrics.items():
+            all_values[month] = []
+            for _, format_fn in columns:
+                try:
+                    val = format_fn(month, metrics)
+                    all_values[month].append(val)
+                except:
+                    all_values[month].append("N/A")
+        
+        # Calculate optimal column width for each column
+        column_widths = {}
+        for i, (col_name, _) in enumerate(columns):
+            # Get the maximum width needed for this column across all months
+            max_val_width = max(len(all_values[month][i]) for month in monthly_metrics.keys())
+            column_widths[i] = max(len(col_name), max_val_width) + 2
+        
+        # Create header with proper column widths
+        header = ""
+        for i, (col_name, _) in enumerate(columns):
+            header += col_name.ljust(column_widths[i]) + "| "
+        header = header.rstrip("| ")
+        
+        print(header)
+        print("-" * len(header))
+        
+        # Print each month's metrics row with proper alignment
+        for month in sorted(monthly_metrics.keys()):
+            row = ""
+            for i, (_, format_fn) in enumerate(columns):
+                try:
+                    val = all_values[month][i]
+                    row += val.ljust(column_widths[i]) + "| "
+                except:
+                    row += "N/A".ljust(column_widths[i]) + "| "
+            print(row.rstrip("| "))
+    
+    # Calculate summary statistics
+    positive_months = sum(1 for m in monthly_metrics.values() if m['total_return'] > 0)
+    total_months = len(monthly_metrics)
+    outperformance_months = sum(1 for m in monthly_metrics.values() if m['relative_performance'] > 0)
+    
+    if total_months > 0 and print_output:
+        print("\n\n📊 MONTHLY SUMMARY STATISTICS\n")
+        print(f"Total Months Analyzed: {total_months}")
+        print(f"Positive Return Months: {positive_months} ({positive_months/total_months*100:.1f}%)")
+        print(f"Months Outperforming SPY: {outperformance_months} ({outperformance_months/total_months*100:.1f}%)")
+        
+        # Find best and worst months
+        if monthly_metrics:
+            best_month = max(monthly_metrics.items(), key=lambda x: x[1]['total_return'])
+            worst_month = min(monthly_metrics.items(), key=lambda x: x[1]['total_return'])
+            
+            print(f"\nBest Month: {best_month[0]} with {best_month[1]['total_return']*100:.2f}% return")
+            print(f"Worst Month: {worst_month[0]} with {worst_month[1]['total_return']*100:.2f}% return")
     
     # Combine the results
     results = {
@@ -996,7 +1184,7 @@ def calculate_monthly_portfolio_metrics(ib, symbols=None, market_symbol='SPY', d
 
 def calculate_monthly_stock_metrics(ib, symbol, market_symbol='SPY', 
                                   duration='2 Y', confidence_level=0.99, 
-                                  risk_free_rate=0.03):
+                                  risk_free_rate=0.03, printOutput=True):
     """
     Calculate monthly performance metrics for a single stock
     
@@ -1007,22 +1195,26 @@ def calculate_monthly_stock_metrics(ib, symbol, market_symbol='SPY',
         duration: time period for data (default: '2 Y')
         confidence_level: confidence level for VaR (default: 0.99)
         risk_free_rate: annualized risk-free rate (default: 0.03)
+        printOutput: whether to print output (default: True)
         
     Returns:
         Dictionary containing overall metrics and monthly metrics
     """
-    print(f"📈 Analyzing monthly performance for {symbol} over {duration}...")
+    if printOutput:
+        print(f"\n\n📈 APPLE (AAPL) STOCK ANALYSIS\n") if symbol == "AAPL" else print(f"\n\n📈 {symbol} STOCK ANALYSIS\n")
     
     # Get price data for the stock
     stock_df = get_price_data_for_given_stock(ib, symbol, duration, '1 day')
     if stock_df is None or stock_df.empty:
-        print(f"Could not get price data for {symbol}")
+        if printOutput:
+            print(f"Could not get price data for {symbol}")
         return None
     
     # Get market price data
     market_df = get_price_data_for_given_stock(ib, market_symbol, duration, '1 day')
     if market_df is None or market_df.empty:
-        print(f"Could not get market data for {market_symbol}")
+        if printOutput:
+            print(f"Could not get market data for {market_symbol}")
         return None
     
     # Ensure index is date
@@ -1041,7 +1233,8 @@ def calculate_monthly_stock_metrics(ib, symbol, market_symbol='SPY',
     
     # Ensure we have enough data
     if len(stock_returns) < 20:
-        print(f"Insufficient data for {symbol} (found only {len(stock_returns)} data points)")
+        if printOutput:
+            print(f"Insufficient data for {symbol} (found only {len(stock_returns)} data points)")
         return None
     
     # Calculate overall stock metrics first (this can be simplified but for consistency we'll use existing function)
@@ -1050,8 +1243,7 @@ def calculate_monthly_stock_metrics(ib, symbol, market_symbol='SPY',
     # Create a fake portfolio with just this stock
     fake_positions = [{'contract': Stock(symbol, 'SMART', 'USD'), 'marketValue': 1}]
     fake_symbols = [symbol]
-    overall_metrics = calculate_portfolio_metrics(ib, fake_symbols, market_symbol, duration, '1 day', 
-                                                confidence_level, risk_free_rate, False)
+    overall_metrics = calculate_portfolio_metrics(ib, fake_symbols, printOutput=False)
     
     # Prepare monthly data
     stock_returns_monthly = pd.DataFrame(stock_returns)
@@ -1107,6 +1299,7 @@ def calculate_monthly_stock_metrics(ib, symbol, market_symbol='SPY',
             month_alpha = calculate_alpha(month_stock, month_market, risk_free_rate/12, month_beta)
             month_var_pct, _ = calculate_var(month_stock, confidence_level, 1)
             month_sharpe = calculate_sharpe_ratio(month_stock, risk_free_rate/12, False)
+            month_sortino = calculate_sortino_ratio(month_stock, risk_free_rate/12, False)
             
             # Store metrics for this month
             monthly_metrics[year_month] = {
@@ -1119,58 +1312,104 @@ def calculate_monthly_stock_metrics(ib, symbol, market_symbol='SPY',
                 'historical_var_pct': month_var_pct,
                 'max_drawdown': month_max_drawdown,
                 'sharpe_ratio': month_sharpe,
+                'sortino_ratio': month_sortino,
                 'trading_days': len(month_stock)
             }
             
         except KeyError:
             continue
     
-    # Format and display the monthly metrics
-    print(f"\n📊 MONTHLY PERFORMANCE FOR {symbol}\n")
-    
-    # Create header
-    headers = ["Month", "Return", "vs SPY", "Alpha", "Beta", "Volatility", "MaxDD", "Sharpe", "VaR(99%)"]
-    header_format = "{:<10} {:<10} {:<10} {:<10} {:<10} {:<10} {:<10} {:<10} {:<10}"
-    print(header_format.format(*headers))
-    print("-" * 100)
-    
-    # Print each month's metrics
-    for year_month in sorted(monthly_metrics.keys()):
-        m = monthly_metrics[year_month]
-        print(header_format.format(
-            year_month,
-            f"{m['total_return']:.2%}",
-            f"{m['relative_performance']:.2%}",
-            f"{m['alpha']:.2%}",
-            f"{m['beta']:.2f}",
-            f"{m['volatility']:.2%}",
-            f"{m['max_drawdown']:.2%}",
-            f"{m['sharpe_ratio']:.2f}",
-            f"{m['historical_var_pct']:.2%}"
-        ))
+    # Print individual stock monthly performance
+    if printOutput and monthly_metrics:
+        print(f"\n📊 MONTHLY PERFORMANCE FOR {symbol}\n")
+        
+        # Define columns and create format functions
+        columns = [
+            ("Month", lambda m, d: m),
+            ("Return", lambda m, d: f"{d['total_return']*100:.2f}%"),
+            ("vs SPY", lambda m, d: f"{d['relative_performance']*100:.2f}%"),
+            ("Alpha", lambda m, d: f"{d['alpha']*100:.2f}%"),
+            ("Beta", lambda m, d: f"{d['beta']:.2f}"),
+            ("Volatility", lambda m, d: f"{d['volatility']*100:.2f}%"),
+            ("MaxDD", lambda m, d: f"{d['max_drawdown']*100:.2f}%"),
+            ("Sharpe", lambda m, d: f"{d['sharpe_ratio']:.2f}")
+        ]
+        
+        # Pre-compute all values to determine column widths
+        all_values = {}
+        for month, metrics in monthly_metrics.items():
+            all_values[month] = []
+            for _, format_fn in columns:
+                try:
+                    val = format_fn(month, metrics)
+                    all_values[month].append(val)
+                except:
+                    all_values[month].append("N/A")
+        
+        # Calculate optimal column width for each column
+        column_widths = {}
+        for i, (col_name, _) in enumerate(columns):
+            # Get the maximum width needed for this column across all months
+            max_val_width = max(len(all_values[month][i]) for month in monthly_metrics.keys())
+            column_widths[i] = max(len(col_name), max_val_width) + 2
+        
+        # Create header with proper column widths
+        header = ""
+        for i, (col_name, _) in enumerate(columns):
+            header += col_name.ljust(column_widths[i]) + "| "
+        header = header.rstrip("| ")
+        
+        print(header)
+        print("-" * len(header))
+        
+        # Print each month's metrics row with proper alignment
+        for month in sorted(monthly_metrics.keys()):
+            row = ""
+            for i, (_, format_fn) in enumerate(columns):
+                try:
+                    val = all_values[month][i]
+                    row += val.ljust(column_widths[i]) + "| "
+                except:
+                    row += "N/A".ljust(column_widths[i]) + "| "
+            print(row.rstrip("| "))
     
     # Calculate summary statistics
     positive_months = sum(1 for m in monthly_metrics.values() if m['total_return'] > 0)
     total_months = len(monthly_metrics)
     outperformance_months = sum(1 for m in monthly_metrics.values() if m['relative_performance'] > 0)
     
-    if total_months > 0:
+    if total_months > 0 and printOutput:
         print("\n📊 MONTHLY SUMMARY STATISTICS\n")
         print(f"Total Months Analyzed: {total_months}")
-        print(f"Positive Return Months: {positive_months} ({positive_months/total_months:.1%})")
-        print(f"Months Outperforming SPY: {outperformance_months} ({outperformance_months/total_months:.1%})")
+        print(f"Positive Return Months: {positive_months} ({positive_months/total_months*100:.1f}%)")
+        print(f"Months Outperforming SPY: {outperformance_months} ({outperformance_months/total_months*100:.1f}%)")
         
         # Find best and worst months
         best_month = max(monthly_metrics.items(), key=lambda x: x[1]['total_return'])
         worst_month = min(monthly_metrics.items(), key=lambda x: x[1]['total_return'])
         
-        print(f"\nBest Month: {best_month[0]} with {best_month[1]['total_return']:.2%} return")
-        print(f"Worst Month: {worst_month[0]} with {worst_month[1]['total_return']:.2%} return")
+        print(f"\nBest Month: {best_month[0]} with {best_month[1]['total_return']*100:.2f}% return")
+        print(f"Worst Month: {worst_month[0]} with {worst_month[1]['total_return']*100:.2f}% return")
+    
+    # Print overall metrics for the stock if available
+    if printOutput and overall_metrics and 'stock_metrics' in overall_metrics and symbol in overall_metrics['stock_metrics']:
+        metrics = overall_metrics['stock_metrics'][symbol]
+        
+        print(f"\n📊 OVERALL METRICS FOR {symbol}\n")
+        print(f"Total Return: {metrics['total_return']:.2%}")
+        print(f"Annualized Return: {metrics['annualized_return']:.2%}")
+        print(f"Volatility: {metrics['volatility']:.2%}")
+        print(f"Beta: {metrics['beta']:.2f}")
+        print(f"Alpha: {metrics['alpha']:.2%}")
+        print(f"Maximum Drawdown: {metrics['max_drawdown']:.2%}")
+        print(f"Sharpe Ratio: {metrics['sharpe_ratio']:.2f}")
+        print(f"Calmar Ratio: {metrics['calmar_ratio']:.2f}")
+        print(f"Sortino Ratio: {metrics['sortino_ratio']:.2f}")
     
     # Combine the results
     results = {
         'symbol': symbol,
-        'overall_metrics': overall_metrics['stock_metrics'].get(symbol, {}),
+        'overall_metrics': overall_metrics['stock_metrics'].get(symbol, {}) if overall_metrics and 'stock_metrics' in overall_metrics else {},
         'monthly_metrics': monthly_metrics
     }
     
@@ -1347,7 +1586,7 @@ def analyze_portfolio_diversification(ib=None, print_output=True):
                 # Replace empty sector name with placeholder
                 sector_name = sector if sector else 'Unclassified'
                 positions_str = ", ".join(data['positions'])
-                weight_str = f"{data['weight']:.2%}"
+                weight_str = f"{data['weight']*100:.2f}%"
                 value_str = f"${data['value']:,.2f}"
                 print(f"{sector_name:<{sector_col}} | {weight_str:<{weight_col}} | {value_str:<{value_col}} | {positions_str:<{positions_col}}")
             
@@ -1375,7 +1614,7 @@ def analyze_portfolio_diversification(ib=None, print_output=True):
                 industry_name = industry if industry else 'Unclassified'
                 sector_name = data['sector'] if data['sector'] else 'Unclassified'
                 positions_str = ", ".join(data['positions'])
-                weight_str = f"{data['weight']:.2%}"
+                weight_str = f"{data['weight']*100:.2f}%"
                 value_str = f"${data['value']:,.2f}"
                 print(
                     f"{industry_name:<{industry_col}} | {sector_name:<{sector_col}} | "
@@ -1384,7 +1623,7 @@ def analyze_portfolio_diversification(ib=None, print_output=True):
             
             # Print subcategory exposure with improved formatting
             meaningful_subcategories = [sub for sub in sorted_subcategory_exposure.keys() 
-                                       if sub not in ('Unknown', 'N/A', '')]
+                                           if sub not in ('Unknown', 'N/A', '')]
             
             if meaningful_subcategories:
                 print("\n🔹 SUB-INDUSTRY EXPOSURE\n")
@@ -1421,7 +1660,7 @@ def analyze_portfolio_diversification(ib=None, print_output=True):
                     industry_name = data['industry'] if data['industry'] else 'Unclassified'
                     
                     positions_str = ", ".join(data['positions'])
-                    weight_str = f"{data['weight']:.2%}"
+                    weight_str = f"{data['weight']*100:.2f}%"
                     value_str = f"${data['value']:,.2f}"
                     
                     # Match the exact header format
@@ -1490,7 +1729,8 @@ def analyze_portfolio_correlations(ib=None, symbols=None, duration='2 Y', bar_si
     if ib is None or not ib.isConnected():
         ib = connect_to_ib()
         if ib is None:
-            print("⛔ Failed to establish connection to IB")
+            if print_output:
+                print("⛔ Failed to establish connection to IB")
             return None
         connect_needed = True
     else:
@@ -1502,13 +1742,16 @@ def analyze_portfolio_correlations(ib=None, symbols=None, duration='2 Y', bar_si
             positions, _ = get_portfolio_holdings(ib, print_output=False)
             if positions:
                 symbols = [p['contract'].symbol for p in positions]
-                print(f"📊 Using {len(symbols)} symbols from portfolio")
+                if print_output:
+                    print(f"📊 Using {len(symbols)} symbols from portfolio")
             else:
-                print("⛔ No positions found in portfolio and no symbols provided")
+                if print_output:
+                    print("⛔ No positions found in portfolio and no symbols provided")
                 return None
         
         # Get historical price data for all symbols
-        print(f"📈 Retrieving {duration} of {bar_size} price data for {len(symbols)} symbols...")
+        if print_output:
+            print(f"📈 Retrieving {duration} of {bar_size} price data for {len(symbols)} symbols...")
         price_data = {}
         
         for symbol in symbols:
@@ -1523,14 +1766,18 @@ def analyze_portfolio_correlations(ib=None, symbols=None, duration='2 Y', bar_si
                     
                     # Store close prices
                     price_data[symbol] = df['close']
-                    print(f"✅ Got {len(df)} data points for {symbol}")
+                    if print_output:
+                        print(f"✅ Got {len(df)} data points for {symbol}")
                 else:
-                    print(f"⚠️ No data available for {symbol}")
+                    if print_output:
+                        print(f"⚠️ No data available for {symbol}")
             except Exception as e:
-                print(f"❌ Error retrieving data for {symbol}: {e}")
+                if print_output:
+                    print(f"❌ Error retrieving data for {symbol}: {e}")
         
         if not price_data:
-            print("⛔ No price data retrieved for any symbols")
+            if print_output:
+                print("⛔ No price data retrieved for any symbols")
             return None
         
         # Convert to DataFrame
@@ -1546,150 +1793,79 @@ def analyze_portfolio_correlations(ib=None, symbols=None, duration='2 Y', bar_si
         if print_output:
             print("\n📊 PORTFOLIO CORRELATION MATRIX\n")
             
-            # Format the matrix for display - fix for applymap deprecation warning
-            pd.set_option('display.max_columns', None)
-            pd.set_option('display.width', 1000)
-            pd.set_option('display.precision', 2)
+            # Get the symbols for display
+            symbols = correlation_matrix.index.tolist()
             
-            # Create formatted version of correlation matrix without using deprecated applymap
-            formatted_corr = pd.DataFrame(
-                [[f"{val:.2f}" for val in row] for row in correlation_matrix.values],
-                index=correlation_matrix.index,
-                columns=correlation_matrix.columns
-            )
+            # Calculate the optimal width for each column
+            col_widths = {}
+            for symbol in symbols:
+                values = [f"{correlation_matrix.loc[symbol, col]:.2f}" for col in symbols]
+                max_val_width = max(len(val) for val in values)
+                col_widths[symbol] = max(len(symbol), max_val_width) + 2
+                
+            # Print the header row with symbol names
+            header = " " * 8  # Space for row labels
+            for symbol in symbols:
+                header += symbol.ljust(col_widths[symbol]) + " "
+            print(header)
             
-            print(formatted_corr)
+            # Print each row of the correlation matrix
+            for row_symbol in symbols:
+                row = row_symbol.ljust(8)  # Left-align the row symbol
+                for col_symbol in symbols:
+                    value = correlation_matrix.loc[row_symbol, col_symbol]
+                    row += f"{value:.2f}".ljust(col_widths[col_symbol]) + " "
+                print(row)
         
         return correlation_matrix
         
     except Exception as e:
-        print(f"❌ Error analyzing portfolio correlations: {e}")
+        if print_output:
+            print(f"❌ Error analyzing portfolio correlations: {e}")
         return None
     finally:
         # Disconnect only if we created the connection in this function
         if connect_needed and ib is not None and ib.isConnected():
             ib.disconnect()
-            print("🔌 Disconnected from IB")
+            if print_output:
+                print("🔌 Disconnected from IB")
 
 # Test code
-def run():
+def run(printOutput=True):
     ib = connect_to_ib()
     
     # Get portfolio holdings and calculate metrics
-    positions, formatted_output = get_portfolio_holdings(ib, print_output=True)
+    positions, formatted_output = get_portfolio_holdings(ib, print_output=printOutput)
     
     if positions:
         symbols = [p['contract'].symbol for p in positions]
-        print("\n📊 PORTFOLIO METRICS\n")
-        metrics = calculate_portfolio_metrics(ib, symbols)
         
-        if metrics:
-            print(f"Total Return: {metrics['total_return']:.2%}")
-            print(f"Annualized Return: {metrics['annualized_return']:.2%}")
-            print(f"Market Total Return (SPY): {metrics['market_total_return']:.2%}")
-            print(f"Market Annualized Return (SPY): {metrics['market_annualized_return']:.2%}")
-            print(f"Volatility (annualized): {metrics['volatility']:.2%}")
-            print(f"Beta: {metrics['beta']:.2f}")
-            print(f"Alpha: {metrics['alpha']:.2%}")
-            print(f"Historical VaR (99%): {metrics['historical_var_pct']:.2%} (${metrics['historical_var_amount']:.2f})")
-            print(f"Parametric VaR (99%): {metrics['parametric_var_pct']:.2%} (${metrics['parametric_var_amount']:.2f})")
-            print(f"Maximum Drawdown: {metrics['max_drawdown']:.2%}")
-            print(f"Sharpe Ratio: {metrics['sharpe_ratio']:.2f}")
-            print(f"Calmar Ratio: {metrics['calmar_ratio']:.2f}")
-            
-            print("\n📊 INDIVIDUAL STOCK METRICS\n")
-            for symbol, stock_metric in metrics['stock_metrics'].items():
-                print(f"{symbol}:")
-                print(f"  Total Return: {stock_metric['total_return']:.2%}")
-                print(f"  Annualized Return: {stock_metric['annualized_return']:.2%}")
-                print(f"  Volatility: {stock_metric['volatility']:.2%}")
-                print(f"  Beta: {stock_metric['beta']:.2f}")
-                print(f"  Alpha: {stock_metric['alpha']:.2%}")
-                print(f"  Historical VaR (99%): {stock_metric['historical_var_pct']:.2%} (${stock_metric['historical_var_amount']:.2f})")
-                print(f"  Parametric VaR (99%): {stock_metric['parametric_var_pct']:.2%} (${stock_metric['parametric_var_amount']:.2f})")
-                print(f"  Maximum Drawdown: {stock_metric['max_drawdown']:.2%}")
-                print(f"  Sharpe Ratio: {stock_metric['sharpe_ratio']:.2f}")
-                print(f"  Calmar Ratio: {stock_metric['calmar_ratio']:.2f}")
-                print()
+        # Calculate portfolio metrics - printing handled internally
+        metrics = calculate_portfolio_metrics(ib, symbols, printOutput=printOutput)
+        
+        # Calculate monthly portfolio metrics - printing handled internally
+        monthly_results = calculate_monthly_portfolio_metrics(ib, symbols, print_output=printOutput)
     
-        print("\n📅 MONTHLY PORTFOLIO PERFORMANCE BREAKDOWN\n")
-        
-        # Calculate and get the monthly results - with print_output=False
-        monthly_results = calculate_monthly_portfolio_metrics(ib, symbols, duration='2 Y', print_output=False)
-        
-        if monthly_results and 'monthly_metrics' in monthly_results:
-            # Get the monthly metrics
-            monthly_data = monthly_results['monthly_metrics']
-            
-            # Sort months chronologically
-            sorted_months = sorted(monthly_data.keys())
-            
-            # Create detailed table with all metrics
-            month_detail_format = "{:<10} | {:<8} | {:<8} | {:<8} | {:<8} | {:<8} | {:<8} | {:<8}"
-            print(month_detail_format.format(
-                "Month", "Return", "vs SPY", "Alpha", "Beta", "Vol", "MaxDD", "Sharpe"
-            ))
-            print("-" * 80)
-            
-            # Print each month's detailed metrics
-            for month in sorted_months:
-                m = monthly_data[month]
-                print(month_detail_format.format(
-                    month,
-                    f"{m['total_return']:.2%}",
-                    f"{m['relative_performance']:.2%}",
-                    f"{m['alpha']:.2%}",
-                    f"{m['beta']:.2f}",
-                    f"{m['volatility']:.2%}",
-                    f"{m['max_drawdown']:.2%}",
-                    f"{m['sharpe_ratio']:.2f}"
-                ))
-            
-            # Calculate and display summary statistics
-            positive_months = sum(1 for m in monthly_data.values() if m['total_return'] > 0)
-            total_months = len(monthly_data)
-            outperformance_months = sum(1 for m in monthly_data.values() if m['relative_performance'] > 0)
-            
-            if total_months > 0:
-                print("\n📊 MONTHLY SUMMARY STATISTICS\n")
-                print(f"Total Months Analyzed: {total_months}")
-                print(f"Positive Return Months: {positive_months} ({positive_months/total_months:.1%})")
-                print(f"Months Outperforming SPY: {outperformance_months} ({outperformance_months/total_months:.1%})")
-                
-                # Find best and worst months
-                best_month = max(monthly_data.items(), key=lambda x: x[1]['total_return'])
-                worst_month = min(monthly_data.items(), key=lambda x: x[1]['total_return'])
-                
-                print(f"\nBest Month: {best_month[0]} with {best_month[1]['total_return']:.2%} return")
-                print(f"Worst Month: {worst_month[0]} with {worst_month[1]['total_return']:.2%} return")
-    
-    # Run individual stock analysis for AAPL
-    print("\n\n📈 APPLE (AAPL) STOCK ANALYSIS\n")
-    aapl_results = calculate_monthly_stock_metrics(ib, "AAPL", duration='2 Y')
-    
-    # Overall metrics for AAPL
-    if aapl_results and 'overall_metrics' in aapl_results and aapl_results['overall_metrics']:
-        metrics = aapl_results['overall_metrics']
-        
-        print(f"\n📊 OVERALL METRICS FOR AAPL\n")
-        print(f"Total Return: {metrics['total_return']:.2%}")
-        print(f"Annualized Return: {metrics['annualized_return']:.2%}")
-        print(f"Volatility: {metrics['volatility']:.2%}")
-        print(f"Beta: {metrics['beta']:.2f}")
-        print(f"Alpha: {metrics['alpha']:.2%}")
-        print(f"Maximum Drawdown: {metrics['max_drawdown']:.2%}")
-        print(f"Sharpe Ratio: {metrics['sharpe_ratio']:.2f}")
-        print(f"Calmar Ratio: {metrics['calmar_ratio']:.2f}")
+    # Run individual stock analysis for AAPL - printing handled internally
+    aapl_results = calculate_monthly_stock_metrics(ib, "AAPL", printOutput=printOutput)
 
-    # Analyze portfolio diversification
-    print("\n📊 ANALYZING PORTFOLIO DIVERSIFICATION\n")
-    diversification = analyze_portfolio_diversification(ib, print_output=True)
+    # Analyze portfolio diversification - printing handled internally
+    diversification = analyze_portfolio_diversification(ib, print_output=printOutput)
 
-    # Analyze portfolio correlations
-    print("\n📊 ANALYZING PORTFOLIO CORRELATIONS\n")
-    correlation_matrix = analyze_portfolio_correlations(ib, duration='2 Y', bar_size='1 day')
+    # Analyze portfolio correlations - printing handled internally
+    correlation_matrix = analyze_portfolio_correlations(ib, symbols=None, print_output=printOutput)
     
     if ib and ib.isConnected():
         ib.disconnect()
+        
+    # Return a collection of results that might be useful for further processing
+    return {
+        'positions': positions,
+        'metrics': metrics if positions else None,
+        'monthly_results': monthly_results if positions else None,
+        'aapl_results': aapl_results,
+        'diversification': diversification,
+        'correlation_matrix': correlation_matrix
+    }
 
 run()
