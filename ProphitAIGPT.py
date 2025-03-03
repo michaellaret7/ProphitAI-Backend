@@ -2,7 +2,7 @@ import openai
 import pandas as pd
 import numpy as np
 from openai import OpenAI
-from ib_insync import IB, Stock, Future, ContFuture, Option
+from ib_insync import IB, Stock, Future, ContFuture, Option, MarketOrder, StopOrder, LimitOrder
 import yfinance as yf
 from datetime import datetime, timedelta, date
 import json
@@ -40,7 +40,7 @@ def connect_to_ib():
 
     connected = False
 
-    for port in [4002, 7497]:
+    for port in [7497, 4002]:
         for clientId in range(7):  # Try client IDs from 0 to 6
             try:
                 ib.connect('127.0.0.1', port, clientId=clientId)
@@ -350,6 +350,123 @@ def prompt_long_buy_order(symbol):
         print("Order cancelled.")
         return None
 
+def exit_position(symbol):
+    """
+    Exits a position by selling all shares of the specified stock at market price.
+    
+    Args:
+        symbol (str): The stock symbol to sell
+        
+    Returns:
+        dict: Result of the order or None if no position found/order failed
+    """
+    # Convert company name to ticker if needed
+    ticker = name_to_ticker(symbol)
+    
+    # Connect to IB
+    ib = connect_to_ib()
+    
+    # Get portfolio data
+    portfolio = ib.portfolio()
+    
+    # Find position for the specified symbol
+    position_found = False
+    for position in portfolio:
+        if position.contract.symbol == ticker:
+            position_found = True
+            quantity = abs(position.position)
+            
+            if quantity <= 0:
+                print(f"No position found for {ticker}.")
+                ib.disconnect()
+                return None
+                
+            print(f"Found position: {quantity} shares of {ticker}")
+            
+            # Create contract
+            contract = Stock(ticker, 'SMART', 'USD')
+            ib.qualifyContracts(contract)
+            
+            # Create market sell order
+            sell_order = MarketOrder('SELL', quantity)
+            sell_order.tif = 'GTC'
+            
+            # Place the order
+            trade = ib.placeOrder(contract, sell_order)
+            print(f"Market sell order placed for {quantity} shares of {ticker}")
+            
+            # Wait for order to be acknowledged
+            while trade.orderStatus.status == 'PendingSubmit':
+                ib.sleep(0.1)
+                
+            print(f"Order status: {trade.orderStatus.status}")
+            
+            ib.disconnect()
+            return trade
+    
+    if not position_found:
+        print(f"No position found for {ticker}.")
+        ib.disconnect()
+        return None
+
+def prompt_exit_position(symbol):
+    """
+    Interactive user flow for exiting positions. Prompts user to confirm
+    selling all shares of the specified stock at market price.
+    
+    Args:
+        symbol (str): The stock symbol to sell
+        
+    Returns:
+        dict: Result of the order or None if canceled/no position
+    """
+    # Convert company name to ticker if needed
+    ticker = name_to_ticker(symbol)
+    
+    print(f"\n--- Exit Position for {ticker} ---")
+    
+    # Connect to IB to get position info
+    ib = connect_to_ib()
+    portfolio = ib.portfolio()
+    ib.disconnect()
+    
+    # Find position for the specified symbol
+    position_found = False
+    for position in portfolio:
+        if position.contract.symbol == ticker:
+            position_found = True
+            quantity = abs(position.position)
+            market_value = position.marketValue
+            market_price = position.marketPrice
+            
+            if quantity <= 0:
+                print(f"No position found for {ticker}.")
+                return None
+            
+            # Display position details
+            print(f"\nCurrent position:")
+            print(f"Symbol: {ticker}")
+            print(f"Quantity: {quantity} shares")
+            print(f"Current price: ${market_price:.2f}")
+            print(f"Market value: ${market_value:.2f}")
+            
+            # Confirm exit
+            confirmation = input(f"\nAre you sure you want to sell all {quantity} shares of {ticker} at market price? (y/n): ").lower()
+            
+            if confirmation == 'y' or confirmation == 'yes':
+                print(f"\nPlacing market sell order for {quantity} shares of {ticker}...")
+                result = exit_position(ticker)
+                if result:
+                    print(f"✅ Exit order submitted successfully!")
+                return result
+            else:
+                print("Order cancelled.")
+                return None
+    
+    if not position_found:
+        print(f"No position found for {ticker}.")
+        return None
+
 tools = [{
     "type": "function",
     "function": {
@@ -406,13 +523,38 @@ tools = [{
             "additionalProperties": False
         }
     }
+},
+{
+    "type": "function",
+    "function": {
+        "name": "prompt_exit_position",
+        "description": """
+        Exit/sell an existing position in a specified stock at market price.
+        
+        Activate for ANY selling/exit expressions:
+        - General: "exit position", "sell my shares", "close position", "liquidate position", "get out of"
+        - Specific: "sell", "exit", "close", "dump", "get rid of", "unload"
+        - Action: "sell all shares", "exit my position", "close my position"
+        - With stock: "sell my shares of", "exit my position in", "close out of", "get out of my position in"
+        
+        Trigger this whenever the user wants to sell or exit a position in a stock.
+        """,
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "symbol": {"type": "string", "description": "The stock symbol to exit/sell"}
+            },
+            "required": ["symbol"],
+            "additionalProperties": False
+        }
+    }
 }]
 
 # Initialize conversation history with system prompt
 messages = [
     {
         "role": "system",
-        "content": "You are an expert portfolio manager specializing in stocks and overseeing my portfolio. You can retrieve portfolio data or place trades when requested, but you can also answer general questions without taking any action. IMPORTANT: When a user expresses intent to buy a stock (e.g., 'I want to buy Apple'), IMMEDIATELY use the place_bracket_order_long tool with just the stock symbol - do NOT ask for additional details first."
+        "content": "You are an expert portfolio manager specializing in stocks and overseeing my portfolio. You can retrieve portfolio data, place trades, or exit positions when requested, but you can also answer general questions without taking any action. IMPORTANT: When a user expresses intent to buy a stock (e.g., 'I want to buy Apple'), IMMEDIATELY use the place_bracket_order_long tool with just the stock symbol - do NOT ask for additional details first. Similarly, when a user expresses intent to sell a stock (e.g., 'I want to exit my Amazon position'), IMMEDIATELY use the prompt_exit_position tool with just the stock symbol."
     }
 ]
 
@@ -481,6 +623,15 @@ while True:
                         # Use the interactive prompt flow instead of direct function call
                         symbol = args.get('symbol')
                         result = prompt_long_buy_order(symbol)
+                        messages.append({
+                            "role": "tool",
+                            "content": str(result) if result else "Order was cancelled.",
+                            "tool_call_id": tool_call.id
+                        })
+                    elif tool_call.function.name == "prompt_exit_position":
+                        args = json.loads(tool_call.function.arguments)
+                        symbol = args.get('symbol')
+                        result = prompt_exit_position(symbol)
                         messages.append({
                             "role": "tool",
                             "content": str(result) if result else "Order was cancelled.",
