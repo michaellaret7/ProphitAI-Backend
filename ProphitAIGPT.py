@@ -147,13 +147,13 @@ def format_portfolio_grid(df):
         # Calculate column widths based on the longest value in each column
         col_widths = {}
         for col in clean_df.columns:
-            # +4 provides some extra padding
-            col_widths[col] = max(len(col), clean_df[col].astype(str).map(len).max()) + 4
+            # Use exact width of the longest item in the column
+            col_widths[col] = max(len(col), clean_df[col].astype(str).map(len).max())
             
         # Add header row with pipes
         result += "| "
         for col in clean_df.columns:
-            result += col.center(col_widths[col]) + " | "
+            result += col.ljust(col_widths[col]) + " | "
         result += "\n"
         
         # Add separator row
@@ -196,23 +196,27 @@ def place_bracket_order_long(symbol, quantity, entry_price, take_profit_price, s
         stopLossPrice=stop_loss_price
     )
     
-    # Submit all orders together
-
+    # Set GTC for all orders
     for order in parent:
         order.tif = 'GTC'
-        order.transmit = True
-
+    
+    # Set transmission flags properly for a bracket
+    parent[0].transmit = False  # Parent order doesn't transmit yet
+    parent[1].transmit = False  # Take profit doesn't transmit yet
+    parent[2].transmit = True   # Stop loss transmits all orders
+    
+    # Place all orders
+    trades = []
     for order in parent:
         trade = ib.placeOrder(contract, order)
-        
-        ib.sleep(0.1)  # Add small delay between orders
-        
-        # Wait for order to be acknowledged
-        while trade.orderStatus.status == 'PendingSubmit':
-            ib.sleep(0.1)
-            
-        print(f"Order {order.orderId} status: {trade.orderStatus.status}")
+        trades.append(trade)
+        ib.sleep(0.1)  # Small delay between order submissions
     
+    # Wait for order acknowledgement
+    for trade in trades:
+        print(f"Order {trade.order.orderId} status: {trade.orderStatus.status}")
+    
+    print("✅ Order submitted successfully!")
     ib.disconnect()
     return parent[0]  # Return the parent order
 
@@ -532,7 +536,7 @@ tools = [{
         Exit/sell an existing position in a specified stock at market price.
         
         Activate for ANY selling/exit expressions:
-        - General: "exit position", "sell my shares", "close position", "liquidate position", "get out of"
+        - General: "exit position", "sell my shares", "close position", "liquidate position", "get out of", "exit my position", "close my position", "sell my position", "sell my shares of", "exit my position in", "close out of", "get out of my position in", "exit {stock name}", "close {stock name}", "sell {stock name}", "sell my shares of {stock name}", "exit my position in {stock name}", "close out of {stock name}", "get out of my position in {stock name}"
         - Specific: "sell", "exit", "close", "dump", "get rid of", "unload"
         - Action: "sell all shares", "exit my position", "close my position"
         - With stock: "sell my shares of", "exit my position in", "close out of", "get out of my position in"
