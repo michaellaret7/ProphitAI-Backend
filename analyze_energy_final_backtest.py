@@ -8,6 +8,7 @@ import traceback
 import re
 import sys
 import os
+import datetime
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from AgentBuilding import NLPDatabaseAgent
 
@@ -337,8 +338,9 @@ client = OpenAI(
 # Create a clean version of company data to prevent circular references
 serializable_data = []
 
-# Limit the number of historical periods to include
-MAX_PERIODS = 4  # Only include the 4 most recent periods to reduce data size
+# Backtest version: Skip the 4 most recent periods and include older periods
+MAX_PERIODS = 4  # Number of historical periods to include in the analysis
+SKIP_PERIODS = 4  # Skip this many most recent periods for backtesting
 
 for company in company_data:
     clean_company = {
@@ -353,11 +355,13 @@ for company in company_data:
         if pd.notna(value):
             clean_company['market_data'][key] = float(value) if isinstance(value, (float, int, np.number)) else value
     
-    # Copy financial metrics history (limited)
+    # Copy financial metrics history (skipping recent periods for backtesting)
     if company['financial_metrics']:
         clean_company['financial_metrics'] = []
         for i, metrics_period in enumerate(company['financial_metrics']):
-            if i >= MAX_PERIODS:
+            if i < SKIP_PERIODS:  # Skip the most recent periods
+                continue
+            if i >= SKIP_PERIODS + MAX_PERIODS:  # Only include MAX_PERIODS periods after skipping
                 break
             clean_period = {}
             for key, value in metrics_period.items():
@@ -367,11 +371,13 @@ for company in company_data:
                     clean_period[key] = float(value) if isinstance(value, (float, int, np.number)) else value
             clean_company['financial_metrics'].append(clean_period)
     
-    # Copy income statement history (limited)
+    # Copy income statement history (skipping recent periods for backtesting)
     if company['income_statement']:
         clean_company['income_statement'] = []
         for i, income_period in enumerate(company['income_statement']):
-            if i >= MAX_PERIODS:
+            if i < SKIP_PERIODS:  # Skip the most recent periods
+                continue
+            if i >= SKIP_PERIODS + MAX_PERIODS:  # Only include MAX_PERIODS periods after skipping
                 break
             clean_period = {}
             for key, value in income_period.items():
@@ -381,11 +387,13 @@ for company in company_data:
                     clean_period[key] = float(value) if isinstance(value, (float, int, np.number)) else value
             clean_company['income_statement'].append(clean_period)
     
-    # Copy balance sheet history (limited)
+    # Copy balance sheet history (skipping recent periods for backtesting)
     if company['balance_sheet']:
         clean_company['balance_sheet'] = []
         for i, balance_period in enumerate(company['balance_sheet']):
-            if i >= MAX_PERIODS:
+            if i < SKIP_PERIODS:  # Skip the most recent periods
+                continue
+            if i >= SKIP_PERIODS + MAX_PERIODS:  # Only include MAX_PERIODS periods after skipping
                 break
             clean_period = {}
             for key, value in balance_period.items():
@@ -395,11 +403,13 @@ for company in company_data:
                     clean_period[key] = float(value) if isinstance(value, (float, int, np.number)) else value
             clean_company['balance_sheet'].append(clean_period)
     
-    # Copy cash flow history (limited)
+    # Copy cash flow history (skipping recent periods for backtesting)
     if company['cash_flow']:
         clean_company['cash_flow'] = []
         for i, cash_flow_period in enumerate(company['cash_flow']):
-            if i >= MAX_PERIODS:
+            if i < SKIP_PERIODS:  # Skip the most recent periods
+                continue
+            if i >= SKIP_PERIODS + MAX_PERIODS:  # Only include MAX_PERIODS periods after skipping
                 break
             clean_period = {}
             for key, value in cash_flow_period.items():
@@ -466,6 +476,7 @@ try:
     # Process each chunk with OpenAI
     for i, chunk in enumerate(company_chunks):
         print(f"\nProcessing chunk {i+1}/{len(company_chunks)} ({len(chunk)} companies)...")
+        print("BACKTESTING: Using historical data (skipping 4 most recent periods)")
         
         # Serialize this chunk
         chunk_json = json.dumps(chunk, indent=2, default=json_serialize)
@@ -518,6 +529,7 @@ try:
     # Final comparison of top picks from all chunks
     if len(top_picks) > 1:
         print("\n🔍 Performing final comparison of top picks from each chunk...")
+        print("BACKTESTING: Using historical data (skipping 4 most recent periods)")
         final_comparison_prompt = """
         As a senior financial analyst specializing in the energy sector, you need to determine the SINGLE BEST investment opportunity from the following top picks. Your process should be:
 
@@ -572,14 +584,35 @@ try:
             final_analysis = final_analysis.replace('###', '').replace('##', '').replace('#', '')
             final_analysis = final_analysis.replace('**', '').replace('*', '')
             
-            print("\n=== OPENAI GPT-4o INVESTMENT ANALYSIS ===")
-            print("--- Individual Analyses ---")
+            print("\n=== OPENAI GPT-4o BACKTESTING INVESTMENT ANALYSIS ===")
+            print("--- Analyzing with data excluding 4 most recent periods ---")
             for i, analysis in enumerate(all_analyses):
                 print(f"\nCHUNK {i+1} ANALYSIS:")
                 print(analysis[:500] + "...\n")
             
             print("\n--- FINAL RECOMMENDATION ---")
             print(final_analysis)
+            
+            # Extract the selected ticker for backtesting comparison
+            ticker_pattern = r'([A-Z]+) (?:is|represents)'
+            ticker_matches = re.findall(ticker_pattern, final_analysis)
+            selected_ticker = ticker_matches[0] if ticker_matches else "UNKNOWN"
+            
+            # Save backtesting results to file
+            backtest_results = {
+                "date": datetime.datetime.now().strftime("%Y-%m-%d"),
+                "selected_ticker": selected_ticker,
+                "analysis": final_analysis,
+                "skipped_periods": SKIP_PERIODS,
+                "analyzed_periods": MAX_PERIODS
+            }
+            
+            # Save to JSON file
+            os.makedirs("backtesting_results", exist_ok=True)
+            with open(f"backtesting_results/energy_backtest_{datetime.datetime.now().strftime('%Y%m%d_%H%M%S')}.json", "w") as f:
+                json.dump(backtest_results, f, indent=2)
+            
+            print(f"\nBacktesting results saved. Selected ticker: {selected_ticker}")
             
         except Exception as e:
             print(f"Error in final comparison: {str(e)}")
@@ -590,8 +623,28 @@ try:
     
     elif len(top_picks) == 1:
         # If only one chunk was processed
-        print("\n=== OPENAI GPT-o1 INVESTMENT ANALYSIS ===")
+        print("\n=== OPENAI GPT-o1 BACKTESTING INVESTMENT ANALYSIS ===")
+        print("--- Analyzing with data excluding 4 most recent periods ---")
         print(all_analyses[0])
+        
+        # Extract the selected ticker for backtesting comparison
+        selected_ticker = top_picks[0]['ticker'] if 'ticker' in top_picks[0] else "UNKNOWN"
+        
+        # Save backtesting results to file
+        backtest_results = {
+            "date": datetime.datetime.now().strftime("%Y-%m-%d"),
+            "selected_ticker": selected_ticker,
+            "analysis": all_analyses[0],
+            "skipped_periods": SKIP_PERIODS,
+            "analyzed_periods": MAX_PERIODS
+        }
+        
+        # Save to JSON file
+        os.makedirs("backtesting_results", exist_ok=True)
+        with open(f"backtesting_results/energy_backtest_{datetime.datetime.now().strftime('%Y%m%d_%H%M%S')}.json", "w") as f:
+            json.dump(backtest_results, f, indent=2)
+        
+        print(f"\nBacktesting results saved. Selected ticker: {selected_ticker}")
     
     else:
         print("No analyses were completed successfully.")
