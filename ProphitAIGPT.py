@@ -60,6 +60,10 @@ def connect_to_ib():
 
     return ib
 
+# ---------------------------------------------------------------------------------------------------------------
+# Tools
+# ---------------------------------------------------------------------------------------------------------------
+
 def get_portfolio_data():
     """
     Retrieves current portfolio positions and data from Interactive Brokers using IB Insync.
