@@ -2,11 +2,17 @@ import json
 from PortfolioData import get_portfolio_holdings, analyze_portfolio_correlations, connect_to_ib, calculate_portfolio_metrics, calculate_monthly_portfolio_metrics, calculate_monthly_stock_metrics, analyze_portfolio_diversification, analyze_portfolio_correlations
 from openai import OpenAI
 import numpy as np
+import os
+from datetime import datetime
+import psycopg2
+import pandas as pd
+
 OpenAI_API_KEY = "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"
 
 # Initialize clients
+api_key = os.environ.get("OPENAI_API_KEY", OpenAI_API_KEY)
 client = OpenAI(
-    api_key=OpenAI_API_KEY,
+    api_key=api_key,
 )
 
 ib = connect_to_ib()
@@ -30,6 +36,93 @@ diversification = analyze_portfolio_diversification(ib, print_output=False)
 
 # Analyze portfolio correlations - printing handled internally
 correlations = analyze_portfolio_correlations(ib, symbols, print_output=False)
+
+
+# Function to query energy stocks from database
+def query_energy_stocks():
+    """Query energy stocks from the database."""
+    try:
+        # Connect to the database
+        conn = psycopg2.connect(
+            host="demo-postgres.ctemwoy8mbzw.us-east-1.rds.amazonaws.com",
+            database="equity_sector_energy",
+            user="postgres",
+            password="ml1710402!",
+            port="5432"
+        )
+        
+        # Create a cursor
+        cursor = conn.cursor()
+        
+        # Execute the query to get coal and consumable fuels stocks
+        cursor.execute("""
+            SELECT ticker, short_name, sector, industry, sub_industry, p_e, price_d_1, market_cap, 
+                   ebitda_t12m, net_debt_to_ebitda_lf, alpha_m_3, beta_m_3
+            FROM oil__gas_and_consumable_fuels.coal_and_consumable_fuels
+            ORDER BY market_cap DESC
+            LIMIT 15
+        """)
+        
+        # Fetch the results
+        results = cursor.fetchall()
+        
+        # Get column names from cursor description
+        columns = [desc[0] for desc in cursor.description]
+        
+        # Create a list of dictionaries
+        energy_stocks = []
+        for row in results:
+            stock_dict = {}
+            for i, col in enumerate(columns):
+                stock_dict[col] = row[i]
+            energy_stocks.append(stock_dict)
+        
+        # Close the cursor and connection
+        cursor.close()
+        conn.close()
+        
+        return energy_stocks
+        
+    except Exception as e:
+        print(f"Error querying energy stocks: {e}")
+        # Return a fallback list if there's an error
+        return [
+            {"ticker": "BTU", "short_name": "PEABODY ENERGY CORP", "sub_industry": "Coal & Consumable Fuels", "p_e": 4.82, "market_cap": 3200000000, "alpha_m_3": 0.45, "beta_m_3": 0.92},
+            {"ticker": "ARLP", "short_name": "ALLIANCE RESOURCE", "sub_industry": "Coal & Consumable Fuels", "p_e": 5.31, "market_cap": 2900000000, "alpha_m_3": 0.38, "beta_m_3": 0.85},
+            {"ticker": "CEIX", "short_name": "CONSOL ENERGY INC", "sub_industry": "Coal & Consumable Fuels", "p_e": 4.95, "market_cap": 2400000000, "alpha_m_3": 0.41, "beta_m_3": 0.89}
+        ]
+
+
+def search(system_prompt, user_prompt):
+    API_KEY = "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"
+    messages = [
+        {
+            "role": "system",
+            "content": (
+                system_prompt
+            ),
+        },
+        {   
+            "role": "user",
+            "content": (
+                user_prompt
+            ),
+        },
+    ]
+
+    client = OpenAI(api_key=API_KEY, base_url="https://api.perplexity.ai")
+
+    # chat completion without streaming
+    response = client.chat.completions.create(
+        model="sonar-deep-research",
+        messages=messages,
+    )
+    # Store full response in a variable
+    full_response = response.choices[0].message.content
+    # Print in a readable format
+    print("Complete response:")
+    print(full_response)
+    return full_response  # Return the response so it can be used by the tool
 
 def format_portfolio_positions(positions_data):
     """
@@ -664,9 +757,29 @@ def format_diversification(diversification):
 
 
 
-def gpt_4oModel():
-    """Legacy compatibility function that uses the new implementation."""
+def gpt_4oModel(portfolio_data=None, cash_balance=None, current_date=None, current_time=None, force_tool_usage=False):
+    """
+    This function formats portfolio data and calls OpenAI's GPT-4o model for a recommendation.
+    
+    Args:
+        portfolio_data (dict, optional): Dictionary of portfolio data 
+        cash_balance (float, optional): Cash balance in the portfolio
+        current_date (str, optional): Current date in format 'YYYY-MM-DD'
+        current_time (str, optional): Current time in format 'HH:MM:SS'
+        force_tool_usage (bool, optional): Whether to force the model to use tools
+        
+    Returns:
+        str: The model's response
+    """
+    
+    # Use current date and time if not provided
+    if current_date is None:
+        current_date = datetime.now().strftime('%Y-%m-%d')
+    if current_time is None:
+        current_time = datetime.now().strftime('%H:%M:%S')
+    
     try:
+        # Use existing functionality if available
         formatted_pos = format_portfolio_positions(positions)
         account_info = extract_account_info(formatted_pos["formatted_output"])
         portfolio_metrics = format_portfolio_metrics(metrics)
@@ -674,13 +787,24 @@ def gpt_4oModel():
         monthly_performance = format_monthly_performance(monthly_results)
         formatted_diversification = format_diversification(diversification)
         positions_table = formatted_pos.get("positions_table", "")
+        
+        if cash_balance is None:
+            # Calculate cash balance from positions if not provided
+            cash_balance = sum(p.get('position', 0) * p.get('averageCost', 0) for p in positions)
     except:
         account_info = "Unable to extract account information"
         positions_table = "Unable to format positions table"
+        formatted_diversification = "Unable to format diversification"
+        portfolio_metrics = "Unable to format portfolio metrics"
+        stock_metrics = "Unable to format stock metrics"
+        monthly_performance = "Unable to format monthly performance"
+        
+        if cash_balance is None:
+            cash_balance = 10000  # Default cash balance
     
     # Create the content string with proper f-string interpolation
     content = f"""
-Analyze the provided portfolio data and recommend specific actions to improve returns and reduce risk.
+Analyze the provided portfolio data and recommend specific actions to improve returns and reduce risk. The date is {current_date} and the time is {current_time}.
 
 ### Portfolio Positions:
 
@@ -716,11 +840,27 @@ Analyze the provided portfolio data and recommend specific actions to improve re
 3. Recommend specific actions with exact positions and quantities:
 - Which specific positions should be reduced or sold completely
 - Which specific positions should be increased
-- New positions that should be added (with specific tickers and allocation amounts) YOU CAN CHOOSE ANY STOCK FROM ANY SECTOR OR INDUSTRY OR SUBINDUSTRY AND FROM ANY COUNTRY, AS LONG AS ITS A GOOD INVESTMENT AND WILL MAKE MONEY
+- New long positions that should be added (with specific tickers and allocation amounts) YOU CAN CHOOSE ANY STOCK FROM ANY SECTOR OR INDUSTRY OR SUBINDUSTRY AND FROM ANY COUNTRY, AS LONG AS ITS A GOOD INVESTMENT AND WILL MAKE MONEY
+- New short positions that should be added (with specific tickers and allocation amounts) YOU CAN CHOOSE ANY STOCK FROM ANY SECTOR OR INDUSTRY OR SUBINDUSTRY AND FROM ANY COUNTRY, AS LONG AS ITS A GOOD INVESTMENT AND WILL MAKE MONEY
 - Exact percentage adjustments to each position
 4. Explain how each recommendation will improve the portfolio's return potential
-5. Provide a clear implementation plan in priority order
+5. Provide a clear implementation plan 
 6. Quantify the expected improvement in key metrics (volatility, returns, diversification)
+
+### ACTIONS YOU ARE ALLOWED TO TAKE:
+1. BUY NEW ASSETS
+2. SHORT NEW ASSETS
+3. REDUCE EXISTING POSITIONS
+4. INCREASE EXISTING POSITIONS
+4. HOLD POSITIONS (DO NOT CHANGE)
+
+ASSETS YOU ARE ALLOWED TO BUY:
+1. STOCKS/EQUITIES
+2. BONDS
+3. EXCHANGE TRADED FUNDS (ETFS)
+4. COMMODITIES
+5. REAL ESTATE INVESTMENT TRUSTS (REITs)
+6. FOREIGN EXCHANGE
 
 Format your response with these sections(BE CONCISE AND TO THE POINT):
 1. Portfolio Assessment
@@ -729,191 +869,201 @@ Format your response with these sections(BE CONCISE AND TO THE POINT):
 4. Implementation Plan
 5. Expected Outcome
 
-Once you have finished your analysis, please provide the new portfolio with your suggested changes in this format(PRINT THIS HORIZONTALLY IN A TABLE):
-
+ONCE YOU HAVE FINISHED YOUR ANALYSIS, PLEASE PROVIDE THE NEW PORTFOLIO WITH YOUR SUGGESTED CHANGES IN THIS FORMAT(PRINT THIS HORIZONTALLY IN A TABLE):
 Stock Ticker: New Position Size | Quantity | New Allocation | New Market Value
 
-Then I want the exact trade execution instructions in this format:
-
+THEN I WANT THE EXACT TRADE EXECUTION INSTRUCTIONS IN THIS FORMAT:
 Trade Action: [action(buy/sell/hold)] | Ticker: [ticker] | Quantity: [quantity]
-HERE IS A GREAT EXAMPLE OF THE FORMAT YOU SHOULD USE:
-• SELL SONO (100 shares) --> entire position
-• SELL LLY (50 shares) --> reduce from 100 → 50
-• HOLD IBKR (50 shares)
-• BUY SPY (500 shares)
 
+THIS IS THE FORMAT YOU SHOULD USE(THESE ARE EXAMPLES):
+• SELL 'SOME STOCK' (100 shares) --> entire position
+• SELL 'SOME STOCK' (50 shares) --> reduce from 100 → 50
+• HOLD 'SOME STOCK' (50 shares)
+• BUY 'SOME STOCK' (500 shares)
 
 RULES:
-1. ABSOLUTELY NO HALLUCINATIONS, IF THERE IS SOMETHING YOU DO NOT KNOW, SAY YOU DO NOT KNOW.
+1. NO HALLUCINATIONS, IF THERE IS SOMETHING YOU DO NOT KNOW OR IF THERE IS DATA MISSING, SAY YOU DO NOT KNOW, AND PROCEED LOGICALLY.
 2. BE VERY SPECIFIC AND EXACT WITH YOUR RECOMMENDATIONS.
-3. BE SUCCUINCT AND CONCISE.
+3. BE SUCCUINCT AND CONCISE, BUT MAKE SURE TO EXPLAIN YOUR REASONING.
 4. BE SUCCESSFUL AND MAKE MONEY.
 5. BE CREATIVE IN YOUR STRATEGIES AND THINK OUTSIDE THE BOX.
-6. You can use tools to execute trades, get stock information, or analyze specific securities.
-    """
+6. KEEP 10% OF THE PORTFOLIO IN CASH.
+7. I dont want any positions less than $10,000
+IMPORTANT: YOU MUST USE THE query_energy_stocks tool to get information about energy stocks from the coal and consumable fuels industry.
+IMPORTANT: YOU MUST USE THE get_stock_details tool to get detailed information about a specific stock.
+IMPORTANT: print your findings from the tools in the response.
+"""
     
-    # Define tool schemas for the model
-    stock_analysis_tool = {
-        "type": "function",
-        "function": {
-            "name": "analyze_stock",
-            "description": "Analyze a specific stock to get detailed metrics and performance data.",
-            "parameters": {
-                "type": "object",
-                "properties": {
-                    "symbol": {
-                        "type": "string",
-                        "description": "Stock ticker symbol to analyze"
-                    }
-                },
-                "required": ["symbol"]
-            }
-        }
-    }
-    
-    execute_trade_tool = {
-        "type": "function",
-        "function": {
-            "name": "execute_trade",
-            "description": "Execute a buy or sell order for a specific stock.",
-            "parameters": {
-                "type": "object",
-                "properties": {
-                    "action": {
-                        "type": "string",
-                        "enum": ["buy", "sell"],
-                        "description": "The trade action to take"
-                    },
-                    "symbol": {
-                        "type": "string",
-                        "description": "Stock ticker symbol"
-                    },
-                    "quantity": {
-                        "type": "integer",
-                        "description": "Number of shares to buy or sell"
-                    }
-                },
-                "required": ["action", "symbol", "quantity"]
-            }
-        }
-    }
-    
-    search_stocks_tool = {
-        "type": "function",
-        "function": {
-            "name": "search_stocks",
-            "description": "Search for stocks by industry, sector, or other criteria.",
-            "parameters": {
-                "type": "object",
-                "properties": {
-                    "sector": {
-                        "type": "string",
-                        "description": "Sector to search within (optional)"
-                    },
-                    "industry": {
-                        "type": "string",
-                        "description": "Industry to search within (optional)"
-                    },
-                    "min_market_cap": {
-                        "type": "number",
-                        "description": "Minimum market cap in billions (optional)"
-                    },
-                    "max_pe_ratio": {
-                        "type": "number",
-                        "description": "Maximum PE ratio (optional)"
-                    }
+    # Call the OpenAI API with tool calling ability
+    try:
+        # Get API key from environment or use the hardcoded one as fallback
+        api_key = os.environ.get("OPENAI_API_KEY", OpenAI_API_KEY)
+        client = OpenAI(api_key=api_key)
+        
+        # Define tools
+        energy_stocks_tool = {
+            "type": "function",
+            "function": {
+                "name": "query_energy_stocks",
+                "description": "Get a list of energy stocks from the coal and consumable fuels industry",
+                "parameters": {
+                    "type": "object",
+                    "properties": {},
+                    "required": []
                 }
             }
         }
-    }
-    
-    response = client.chat.completions.create(
-        model="o1",
-        top_p=1.0,
-        messages=[
-            {
-                "role": "system",
-                "content": "You are an expert portfolio manager with 20+ years of experience managing portfolios for high-net-worth clients. You specialize in optimizing portfolios for maximum risk-adjusted returns through tactical allocation adjustments and security selection. Your recommendations are always specific, actionable, and quantitative. You favor clear, direct advice with exact position sizes and implementation steps. You can use tools to analyze stocks, execute trades, and search for investment opportunities."
-            },
-            {
-                "role": "user",
-                "content": content
+        
+        search_tool = {
+            "type": "function",
+            "function": {
+                "name": "web_search",
+                "description": "Search the internet for critical investment information that will enhance portfolio optimization. Construct DETAILED and SPECIFIC search queries to get the highest quality information. Follow these guidelines for effective searches:\n\n1. Be specific about the information you need (e.g., instead of 'tech stocks' use 'semiconductor industry outlook 2025 and top mid-cap opportunities')\n2. Include relevant timeframes in your query\n3. Target specific sectors, industries, or market segments\n4. Request numerical data like P/E ratios, growth rates, or market projections\n5. Break complex research needs into multiple focused searches\n\nYou should conduct AT LEAST 3-5 searches on different topics before making final recommendations.",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "query": {
+                            "type": "string",
+                            "description": "Detailed, specific search query to find high-quality investment information. Include timeframes, metrics, sectors, or specific market segments."
+                        }
+                    },
+                    "required": ["query"]
+                }
             }
-        ],
-        tools=[stock_analysis_tool, execute_trade_tool, search_stocks_tool],
-        tool_choice="auto"
-    )
-    
-    # Handle tool calls if present
-    message = response.choices[0].message
-    tool_calls = message.tool_calls if hasattr(message, 'tool_calls') else None
-    
-    # Process any tool calls
-    if tool_calls:
-        # Create a new messages array including the original messages
-        messages = [
-            {
-                "role": "system",
-                "content": "You are an expert portfolio manager with 20+ years of experience managing portfolios for high-net-worth clients. You specialize in optimizing portfolios for maximum risk-adjusted returns through tactical allocation adjustments and security selection. Your recommendations are always specific, actionable, and quantitative. You favor clear, direct advice with exact position sizes and implementation steps. You can use tools to analyze stocks, execute trades, and search for investment opportunities."
-            },
-            {
-                "role": "user",
-                "content": content
-            },
-            message
-        ]
-        
-        # Process each tool call
-        for tool_call in tool_calls:
-            function_name = tool_call.function.name
-            function_args = json.loads(tool_call.function.arguments)
-            
-            # Execute the appropriate function based on the tool call
-            function_response = ""
-            if function_name == "analyze_stock":
-                symbol = function_args.get("symbol")
-                # Simple test implementation - just print and return a message
-                print(f"TOOL CALLED: analyze_stock for symbol {symbol}")
-                function_response = f"Analysis for {symbol}: P/E Ratio: 22.5, EPS: 3.75, Market Cap: $285B, Average Volume: 32M, 52-week high: $185.25, 52-week low: $122.50"
-            
-            elif function_name == "execute_trade":
-                action = function_args.get("action")
-                symbol = function_args.get("symbol")
-                quantity = function_args.get("quantity")
-                # Simple test implementation - just print and return a message
-                print(f"TOOL CALLED: execute_trade with action={action}, symbol={symbol}, quantity={quantity}")
-                function_response = f"Trade order submitted: {action.upper()} {quantity} shares of {symbol}"
-            
-            elif function_name == "search_stocks":
-                sector = function_args.get("sector", "Any")
-                industry = function_args.get("industry", "Any")
-                min_market_cap = function_args.get("min_market_cap", "Any")
-                max_pe_ratio = function_args.get("max_pe_ratio", "Any")
-                # Simple test implementation - just print and return a message
-                print(f"TOOL CALLED: search_stocks with sector={sector}, industry={industry}, min_market_cap={min_market_cap}, max_pe_ratio={max_pe_ratio}")
-                function_response = f"Found 5 stocks matching criteria:\n- AAPL (Technology, $2.8T, P/E 28.5)\n- MSFT (Technology, $2.7T, P/E 35.2)\n- NVDA (Technology, $2.2T, P/E 75.8)\n- AMZN (Consumer Cyclical, $1.8T, P/E 62.4)\n- GOOGL (Communication Services, $1.7T, P/E 26.1)"
-            
-            # Append the function response to messages
-            messages.append({
-                "tool_call_id": tool_call.id,
-                "role": "tool",
-                "name": function_name,
-                "content": function_response
-            })
-        
-        # Get a new response from the model with the tool results
-        second_response = client.chat.completions.create(
-            model="o1",
-            messages=messages,
-            tools=[stock_analysis_tool, execute_trade_tool, search_stocks_tool],
-            tool_choice="auto"
-        )
-        
-        # Update the response to the final one
-        response = second_response
-    
-    print(content)
-    print(response.choices[0].message.content.strip())
-    return response.choices[0].message.content.strip()
+        }
 
-gpt_4oModel()
+        # Helper function to process tool responses
+        def process_tool_call(tool_call):
+            function_name = tool_call.function.name
+            
+            # Get the appropriate response based on the tool called
+            tool_response = ""
+            if function_name == "query_energy_stocks":
+                print(f"*** TOOL USED: query_energy_stocks ***")
+                
+                # Query real energy stocks from the database
+                energy_stocks = query_energy_stocks()
+                
+                # Format the response
+                energy_response = "Here are coal and consumable fuels stocks from your database that you could consider for your portfolio:\n\n"
+                
+                for i, stock in enumerate(energy_stocks, 1):
+                    energy_response += f"{i}. {stock['ticker']} ({stock['short_name']}) - {stock['sub_industry']}, P/E: {stock['p_e']}, Market Cap: ${stock['market_cap']:.2f}, Alpha (3m): {stock['alpha_m_3']}, Beta (3m): {stock['beta_m_3']}\n"
+                
+                energy_response += "\nThese stocks represent the coal and consumable fuels sub-industry within the energy sector. They typically have lower P/E ratios than other sectors and varying levels of market volatility as indicated by their beta values. Their alpha values show their performance relative to the market benchmark over the last 3 months."
+                
+                energy_response += "\n\nKey metrics explanation:"
+                energy_response += "\n- P/E: Price-to-earnings ratio, lower values may indicate better value"
+                energy_response += "\n- Market Cap: Total market value of the company's shares"
+                energy_response += "\n- Alpha (3m): Excess return relative to benchmark over 3 months (positive is better)"
+                energy_response += "\n- Beta (3m): Volatility relative to market over 3 months (>1 means more volatile than market)"
+                
+                energy_response += "\n\nFor more detailed information about specific coal stocks or other investment options, you can use the web_search tool. Consider searching for recent financial performance, growth projections, and analyst ratings for the most promising coal stocks."
+                
+                tool_response = energy_response
+                
+            elif function_name == "web_search":
+                function_args = json.loads(tool_call.function.arguments)
+                query = function_args.get("query")
+                print(f"*** TOOL USED: web_search for query: '{query}' ***")
+                
+                # Use the search function to get information from the web
+                system_prompt = """You are a financial research analyst with 20+ years of experience who provides comprehensive, data-rich investment analysis. 
+                Your responses should include specific numbers, trends, metrics, and expert insights. 
+                Include relevant data points like P/E ratios, growth rates, market caps, dividend yields, sector-specific metrics, and comparative statistics whenever available. 
+                Structure your response with clear sections and emphasize actionable insights that would help with portfolio construction. Be thorough, precise, and quantitative."""
+                
+                # Call the search function (it will print the full response internally)
+                try:
+                    search_response = search(system_prompt, query)
+                except Exception as e:
+                    print(f"Error during web search: {e}")
+                    search_response = f"I attempted to search for information about '{query}' but encountered an error. Please try a different search query or continue with the available information."
+                
+                # Format the response appropriately
+                # WHAT IS TOOL RESPONSE?
+                tool_response = f"Web Search Results for: '{query}'\n\n{search_response}\n\nNOTE: This information should be incorporated into your portfolio analysis. You should conduct additional searches on other topics to build a comprehensive view before making final recommendations."
+            
+            return {
+                "role": "tool",
+                "tool_call_id": tool_call.id,
+                "name": function_name,
+                "content": tool_response
+            }
+        
+        # Recursive function to handle multiple rounds of tool calls
+        def handle_conversation(messages, tools, round_num=1, max_rounds=10):
+            print(f"\nStarting conversation round {round_num}...")
+            
+            if round_num > max_rounds:
+                print(f"Reached maximum rounds ({max_rounds}). Stopping to prevent infinite loop.")
+                return messages[-1].content if hasattr(messages[-1], 'content') else "Maximum conversation rounds reached without final response."
+            
+            # Call the API
+            response = client.chat.completions.create(
+                model="o1",
+                top_p=1.0,
+                messages=messages,
+                tools=tools if round_num < max_rounds else None  # Stop offering tools in final round
+            )
+            
+            # Get the response message
+            response_message = response.choices[0].message
+            
+            # Check for tool calls
+            tool_calls = response_message.tool_calls
+            
+            if tool_calls:
+                print(f"Round {round_num}: Found {len(tool_calls)} tool call(s)")
+                
+                # Add the assistant's message to the conversation
+                messages.append(response_message)
+                
+                # Process each tool call
+                for tool_call in tool_calls:
+                    tool_response = process_tool_call(tool_call)
+                    messages.append(tool_response)
+                
+                # Recursive call to handle next round
+                return handle_conversation(messages, tools, round_num + 1, max_rounds)
+            else:
+                # No more tool calls, we have our final response
+                print(f"Round {round_num}: No tool calls, received final response")
+                return response_message.content
+                
+        print("Calling OpenAI API with tools...")
+        
+        # Initialize the conversation
+        system_message = {
+            "role": "system",
+            "content": "You are an elite portfolio manager who builds sophisticated investment strategies based on deep market research. Your exceptional track record comes from conducting EXTENSIVE RESEARCH before making any recommendation.\n\nRESEARCH METHODOLOGY REQUIREMENTS:\n1. Conduct AT LEAST 5-7 detailed searches on different aspects of the market before making recommendations\n2. For each search query, construct DETAILED and SPECIFIC prompts (30-50 words) that will yield high-quality information\n3. Research multiple sectors, market caps, geographies, and asset classes\n4. Analyze macroeconomic trends, sector rotations, valuation metrics, and risk factors\n5. Investigate both tactical (1-6 month) and strategic (1-3 year) opportunities\n\nWHEN CONSTRUCTING SEARCH QUERIES:\n* Include specific timeframes (e.g., 'Q3 2025 outlook')\n* Request numerical data ('P/E ratios for mid-cap industrial stocks')\n* Target precise sectors or sub-sectors ('semiconductor equipment manufacturers' not just 'tech')\n* Ask for comparisons ('small cap vs large cap performance during rate cuts')\n* Seek expert consensus ('analyst expectations for healthcare sector 2025-2026')\n\nEXAMPLE HIGH-QUALITY SEARCH QUERIES:\n- 'US small cap industrial stocks with P/E under 15 and positive earnings revisions for 2025, focus on aerospace suppliers and automation'\n- 'Healthcare sector rotation analysis: which subsectors outperform when inflation moderates and Fed cuts rates, historical data 2000-2024'\n- 'Top performing dividend aristocrats with international revenue exposure, valuation metrics and 2025 earnings projections'\n\nONLY after conducting this comprehensive research should you formulate your final recommendation."
+        }
+        
+        user_message = {
+            "role": "user",
+            "content": content + "\n\nPlease optimize this portfolio to maximize returns while managing risk. You MUST conduct extensive research using at least 5-7 detailed web searches on different market aspects before providing recommendations.\n\nYour research should include:\n\n1. MACROECONOMIC ANALYSIS: Research the current economic environment, interest rate outlook, inflation trends, and how they affect different asset classes\n\n2. SECTOR ANALYSIS: Identify which sectors are positioned for outperformance in the next 12-24 months and why\n\n3. GEOGRAPHIC ALLOCATION: Research optimal exposure to US vs international markets, including emerging markets opportunities\n\n4. ALTERNATIVE INVESTMENTS: Investigate if commodities, REITs, or other alternatives would enhance the portfolio\n\n5. ENERGY SECTOR DEEP DIVE: First use query_energy_stocks to identify coal/consumable fuel stocks, then research their outlook and fit within the broader energy landscape\n\n6. RISK ANALYSIS: Research potential market risks and appropriate hedging strategies\n\n7. SMALL/MID CAP OPPORTUNITIES: Find undervalued companies outside the mega-cap space\n\nFor each research area, construct detailed search queries that will provide high-quality, specific information. After conducting this thorough research, provide a comprehensive portfolio recommendation with specific allocation percentages and implementation steps."
+        }
+        
+        initial_messages = [system_message, user_message]
+        available_tools = [energy_stocks_tool, search_tool]
+        
+        # Start the conversation without forcing a tool call
+        final_content = handle_conversation(initial_messages, available_tools)
+        
+        print("\n=== Final Portfolio Recommendation ===")
+        
+        if final_content:
+            print(final_content)
+            return final_content
+        else:
+            print("No content in final response, returning what's available.")
+            return "No recommendation was generated."
+            
+    except Exception as e:
+        print(f"Error calling OpenAI API: {e}")
+        import traceback
+        traceback.print_exc()
+        return f"An error occurred while calling the OpenAI API: {str(e)}"
+
+
+gpt_4oModel(portfolio_data=None, cash_balance=None, current_date=None, current_time=None, force_tool_usage=False)

@@ -526,6 +526,13 @@ def get_db_table_for_query(query: str) -> Tuple[str, Optional[str], Optional[str
     
     query_lower = query.lower()
     
+    # Special case for automobile industry
+    if "automobile" in query_lower or "automotive" in query_lower or "car industry" in query_lower:
+        if "parts" in query_lower or "component" in query_lower:
+            return "equity_sector_consumer_discretionary", "automobile_components", "automotive_parts_and_equipment"
+        else:
+            return "equity_sector_consumer_discretionary", "automobiles", "automobile_manufacturers"
+    
     # Find best subindustry match first (most specific)
     best_subindustry = find_matching_phrase(query_lower, SUBINDUSTRY_KEYWORDS.keys())
     if best_subindustry:
@@ -590,6 +597,165 @@ def explore_database_schema(dbname=None):
             table_count = sum(len(schema_info['tables']) for schema_info in db_info['schemas'].values())
             print(f"{db_name}: {schema_count} schemas, {table_count} tables")
 
+def extract_query_conditions(natural_language_query):
+    """
+    Extract common filtering conditions from a natural language query.
+    
+    Args:
+        natural_language_query (str): Natural language query
+        
+    Returns:
+        dict: Dictionary of conditions extracted from the query
+    """
+    query_lower = natural_language_query.lower()
+    conditions = {}
+    
+    # Print the query for debugging
+    print(f"Extracting conditions from: '{query_lower}'")
+    
+    # General pattern for 'greater than' conditions
+    gt_pattern = r'(alpha|p[ /]e|price[ -]to[ -]earnings|market\s+cap|dividend\s+yield|roe|return\s+on\s+equity|beta|profit\s+margin|debt\s+to\s+equity|leverage|ebitda|revenue|fcf|free\s+cash\s+flow|eps|earnings\s+per\s+share)\s+(?:of\s+)?(?:over|above|greater than|>)\s+(?:over|above|greater than|>)?\s*([\d.]+)(?:%|\s*percent|k|m|b|bn|million|billion|trillion)?'
+    
+    # General pattern for 'less than' conditions
+    lt_pattern = r'(alpha|p[ /]e|price[ -]to[ -]earnings|market\s+cap|dividend\s+yield|roe|return\s+on\s+equity|beta|profit\s+margin|debt\s+to\s+equity|leverage|ebitda|revenue|fcf|free\s+cash\s+flow|eps|earnings\s+per\s+share)\s+(?:of\s+)?(?:less than|under|below|<)\s+(?:less than|under|below|<)?\s*([\d.]+)(?:%|\s*percent|k|m|b|bn|million|billion|trillion)?'
+    
+    # Additional pattern for 'with less than X beta' format
+    with_lt_pattern = r'with\s+(?:less than|under|below|<)\s+(?:less than|under|below|<)?\s*([\d.]+)\s+(alpha|p[ /]e|price[ -]to[ -]earnings|market\s+cap|dividend\s+yield|roe|return\s+on\s+equity|beta|profit\s+margin|debt\s+to\s+equity|leverage|ebitda|revenue|fcf|free\s+cash\s+flow|eps|earnings\s+per\s+share)'
+    
+    # Additional pattern for 'with beta less than X' format
+    with_metric_lt_pattern = r'with\s+(alpha|p[ /]e|price[ -]to[ -]earnings|market\s+cap|dividend\s+yield|roe|return\s+on\s+equity|beta|profit\s+margin|debt\s+to\s+equity|leverage|ebitda|revenue|fcf|free\s+cash\s+flow|eps|earnings\s+per\s+share)\s+(?:less than|under|below|<)\s+(?:less than|under|below|<)?\s*([\d.]+)'
+    
+    # Map of natural language metric names to database column names
+    metric_map = {
+        "alpha": "alpha_m_3",
+        "p/e": "p_e", 
+        "pe": "p_e",
+        "price to earnings": "p_e",
+        "market cap": "market_cap",
+        "dividend yield": "dividend_yield",
+        "roe": "roe",
+        "return on equity": "roe",
+        "beta": "beta_m_3",
+        "profit margin": "profit_margin",
+        "debt to equity": "net_debt_to_ebitda_lf",
+        "leverage": "net_debt_to_ebitda_lf",
+        "ebitda": "ebitda_t12m",
+        "revenue": "revenue",
+        "fcf": "fcf",
+        "free cash flow": "fcf",
+        "eps": "eps",
+        "earnings per share": "eps"
+    }
+    
+    # Process greater than conditions
+    for match in re.finditer(gt_pattern, query_lower):
+        metric_name = match.group(1).strip()
+        value_str = match.group(2).strip()
+        value = float(value_str)
+        
+        # Check for unit multipliers
+        if match.group(0).find('percent') > -1 or match.group(0).find('%') > -1:
+            # Convert percentage to decimal for financial ratios
+            if metric_name in ["dividend yield", "roe", "return on equity", "profit margin"]:
+                value = value / 100
+        elif match.group(0).find('million') > -1 or match.group(0).find('m') > -1:
+            value = value * 1000000
+        elif match.group(0).find('billion') > -1 or match.group(0).find('b') > -1 or match.group(0).find('bn') > -1:
+            value = value * 1000000000
+        elif match.group(0).find('trillion') > -1:
+            value = value * 1000000000000
+        elif match.group(0).find('k') > -1:
+            value = value * 1000
+        
+        # Map to the actual column name
+        for key, column in metric_map.items():
+            if key in metric_name:
+                conditions[key.replace(' ', '_')] = {
+                    'column': column,
+                    'operator': '>',
+                    'value': value
+                }
+                print(f"Found GT condition: {key} > {value}")
+                break
+    
+    # Process less than conditions
+    for match in re.finditer(lt_pattern, query_lower):
+        metric_name = match.group(1).strip()
+        value_str = match.group(2).strip()
+        value = float(value_str)
+        
+        # Check for unit multipliers (same as above)
+        if match.group(0).find('percent') > -1 or match.group(0).find('%') > -1:
+            if metric_name in ["dividend yield", "roe", "return on equity", "profit margin"]:
+                value = value / 100
+        elif match.group(0).find('million') > -1 or match.group(0).find('m') > -1:
+            value = value * 1000000
+        elif match.group(0).find('billion') > -1 or match.group(0).find('b') > -1 or match.group(0).find('bn') > -1:
+            value = value * 1000000000
+        elif match.group(0).find('trillion') > -1:
+            value = value * 1000000000000
+        elif match.group(0).find('k') > -1:
+            value = value * 1000
+        
+        # Map to the actual column name
+        for key, column in metric_map.items():
+            if key in metric_name:
+                conditions[key.replace(' ', '_')] = {
+                    'column': column,
+                    'operator': '<',
+                    'value': value
+                }
+                print(f"Found LT condition: {key} < {value}")
+                break
+    
+    # Process 'with less than X beta' format
+    for match in re.finditer(with_lt_pattern, query_lower):
+        value_str = match.group(1).strip()
+        metric_name = match.group(2).strip()
+        value = float(value_str)
+        
+        # Apply unit multipliers if present
+        full_match = match.group(0)
+        if 'percent' in full_match or '%' in full_match:
+            if metric_name in ["dividend yield", "roe", "return on equity", "profit margin"]:
+                value = value / 100
+        
+        # Map to the actual column name
+        for key, column in metric_map.items():
+            if key in metric_name:
+                conditions[key.replace(' ', '_')] = {
+                    'column': column,
+                    'operator': '<',
+                    'value': value
+                }
+                print(f"Found WITH-LT condition: {key} < {value}")
+                break
+    
+    # Process 'with beta less than X' format
+    for match in re.finditer(with_metric_lt_pattern, query_lower):
+        metric_name = match.group(1).strip()
+        value_str = match.group(2).strip()
+        value = float(value_str)
+        
+        # Apply unit multipliers if present
+        full_match = match.group(0)
+        if 'percent' in full_match or '%' in full_match:
+            if metric_name in ["dividend yield", "roe", "return on equity", "profit margin"]:
+                value = value / 100
+        
+        # Map to the actual column name
+        for key, column in metric_map.items():
+            if key in metric_name:
+                conditions[key.replace(' ', '_')] = {
+                    'column': column,
+                    'operator': '<',
+                    'value': value
+                }
+                print(f"Found WITH-METRIC-LT condition: {key} < {value}")
+                break
+    
+    return conditions
+
 def generate_sql_query(natural_language_query):
     """
     Generate a SQL query from a natural language query using OpenAI API.
@@ -612,6 +778,27 @@ def generate_sql_query(natural_language_query):
         print("Building keyword maps for SQL generation...")
         SECTOR_KEYWORDS, INDUSTRY_KEYWORDS, SUBINDUSTRY_KEYWORDS = build_keyword_maps()
     
+    # Extract common conditions from the query
+    conditions = extract_query_conditions(natural_language_query)
+    
+    # Print extracted conditions for debugging
+    if conditions:
+        print("SQL Generation - Extracted conditions:")
+        for cond_type, cond_info in conditions.items():
+            print(f"  - {cond_type}: {cond_info['column']} {cond_info['operator']} {cond_info['value']}")
+    else:
+        print("SQL Generation - No conditions were extracted from the query")
+    
+    # Build WHERE clause
+    where_conditions = []
+    for cond_type, cond_info in conditions.items():
+        where_conditions.append(f"{cond_info['column']} {cond_info['operator']} {cond_info['value']}")
+    
+    where_clause = ""
+    if where_conditions:
+        where_clause = "WHERE " + " AND ".join(where_conditions)
+        print(f"SQL Generation - Using WHERE clause: {where_clause}")
+    
     # Determine database and target tables
     db_name, schema_name, table_name = get_db_table_for_query(natural_language_query)
     print(f"Determined query targets: DB={db_name}, Schema={schema_name}, Table={table_name}")
@@ -632,77 +819,29 @@ def generate_sql_query(natural_language_query):
     # Build context for the query - helps the LLM understand the database structure
     context += f"Database: {db_name}\n"
     
-    if db_name in DB_SCHEMA_MAP:
-        if schema_name and schema_name in DB_SCHEMA_MAP[db_name]["schemas"]:
-            context += f"Schema: {schema_name}\n"
-            tables = DB_SCHEMA_MAP[db_name]["schemas"][schema_name]["tables"]
-            
-            if table_name and table_name in tables:
-                # Build detailed table info
-                context += f"Table: {table_name}\nColumns:\n"
-                for col_name, col_info in tables[table_name]["columns"].items():
-                    context += f"  - {col_name} ({col_info['type']})\n"
-                
-                # Example query with specific table
-                context += f"\nExample query using this table:\n"
-                context += f"SELECT ticker, short_name, p_e, market_cap FROM {schema_name}.{table_name} WHERE p_e > 10 ORDER BY market_cap DESC LIMIT 5\n"
-            else:
-                # List all tables in this schema
-                context += "Tables in schema (use UNION ALL to query across multiple tables):\n"
-                for t_name, t_info in tables.items():
-                    context += f"  - {t_name}\n"
-                    cols = list(t_info["columns"].keys())[0:5]
-                    context += f"    Sample columns: {', '.join(cols)}\n"
-                
-                # Example query with union across tables
-                context += f"\nExample query to combine results from multiple tables:\n"
-                table_list = list(tables.keys())
-                if len(table_list) >= 2:
-                    context += f"""
-(SELECT ticker, short_name, p_e FROM {schema_name}.{table_list[0]} WHERE p_e > 0)
-UNION ALL
-(SELECT ticker, short_name, p_e FROM {schema_name}.{table_list[1]} WHERE p_e > 0)
-ORDER BY p_e DESC
-LIMIT 5
-"""
-        else:
-            # List all schemas in the database
-            context += "All schemas in database (use UNION ALL across schemas if needed):\n"
-            for s_name in DB_SCHEMA_MAP[db_name]["schemas"]:
-                if s_name != 'public' and s_name not in ('information_schema', 'pg_catalog'):
-                    context += f"  - {s_name}\n"
+    # Add extracted conditions to the context so LLM can use them
+    if where_clause:
+        context += f"\n{where_clause}\n"
     
-    # Comprehensive metric mapping to help with financial terminology
-    context += "\nFinancial metrics mapping:\n"
-    metric_map = {
-        "p/e ratio": "p_e",
-        "pe ratio": "p_e",
-        "price to earnings": "p_e",
-        "market cap": "market_cap",
-        "market capitalization": "market_cap",
-        "revenue": "revenue",
-        "sales": "revenue",
-        "ebitda": "ebitda_t12m",
-        "debt to ebitda": "net_debt_to_ebitda_lf",
-        "debt to equity ratio": "net_debt_to_ebitda_lf",
-        "leverage ratio": "net_debt_to_ebitda_lf",
-        "alpha": "alpha_m_3",
-        "beta": "beta_m_3",
-        "price": "price_d_1",
-        "eps": "eps",
-        "earnings per share": "eps",
-        "roe": "roe",
-        "return on equity": "roe",
-        "dividend yield": "dividend_yield",
-        "free cash flow": "fcf",
-        "fcf": "fcf",
-        "profit margin": "profit_margin",
-        "operating margin": "operating_margin",
-        "gross margin": "gross_margin"
-    }
+    # Add suggestions for how to handle these conditions in SQL
+    if conditions:
+        context += "Suggested SQL snippets for these conditions:\n"
+        for cond_type, cond_info in conditions.items():
+            context += f"- WHERE {cond_info['column']} {cond_info['operator']} {cond_info['value']}\n"
+        
+        # Suggest a complete WHERE clause
+        if where_conditions:
+            context += f"\nComplete WHERE clause: WHERE {' AND '.join(where_conditions)}\n"
     
-    for nl_term, col in sorted(metric_map.items()):
-        context += f"- {nl_term}: {col}\n"
+    # Add information about what columns should be included
+    if conditions:
+        columns = ["ticker", "short_name", "industry"]
+        for cond_type, cond_info in conditions.items():
+            col = cond_info['column']
+            if col not in columns:
+                columns.append(col)
+        
+        context += f"\nSuggested columns to include: {', '.join(columns)}\n"
     
     # Create system prompt
     system_prompt = f"""You are an SQL expert. Generate a PostgreSQL query for the following question:
@@ -781,220 +920,81 @@ Generate ONLY the SQL query, with no explanations or comments."""
 
 def execute_sql_query(sql_query, dbname=None):
     """
-    Execute an SQL query against the specified database.
+    Execute a SQL query on the specified database.
     
     Args:
         sql_query (str): SQL query to execute
-        dbname (str, optional): Database name to connect to. If None, will attempt to determine from query.
+        dbname (str, optional): Database name. Defaults to None.
         
     Returns:
-        pandas.DataFrame: Query results as a DataFrame
+        pandas.DataFrame: Results of the query
     """
-    print("Executing SQL query:", sql_query)
-    
-    # Clean SQL query - remove markdown code block markers
-    sql_query = sql_query.strip()
-    if sql_query.startswith('```sql'):
-        sql_query = sql_query[6:]
-    if sql_query.endswith('```'):
-        sql_query = sql_query[:-3]
-    sql_query = sql_query.strip()
-    
-    # Remove any trailing semicolons 
-    sql_query = sql_query.rstrip(';')
-    
-    # Clean up excessive newlines and whitespace
-    sql_query = re.sub(r'\n\s*\n', '\n', sql_query)
-    
-    # Handle special case for "all results"
-    if "ALL results" in sql_query or extract_limit_from_query(sql_query) == -1:
-        # Remove any LIMIT 5 that might have been added as default
-        sql_query = re.sub(r'LIMIT\s+5\b', '', sql_query, flags=re.IGNORECASE)
-        
-        # If it's a query with ORDER BY, make sure it has a generous limit
-        if "ORDER BY" in sql_query.upper() and "LIMIT" not in sql_query.upper():
-            sql_query = f"{sql_query} LIMIT 1000"
-    
-    # Fix UNION ALL formatting
-    if "UNION ALL" in sql_query and "(" not in sql_query:
-        # If there are no parentheses around the SELECT statements in a UNION query,
-        # this will likely cause syntax errors, so let's fix the formatting
-        parts = re.split(r'\s+UNION\s+ALL\s+', sql_query, flags=re.IGNORECASE)
-        if len(parts) > 1:
-            # Rebuild the query with proper formatting
-            formatted_parts = []
-            for part in parts:
-                part = part.strip()
-                if not part.startswith("(") and not part.endswith(")"):
-                    part = f"({part})"
-                formatted_parts.append(part)
-            
-            sql_query = " UNION ALL ".join(formatted_parts)
-    
-    # Extract database name from SQL if not provided
+    # If no database specified, use postgres
     if not dbname:
-        # First check if there's an explicit schema.table reference
-        schema_match = re.search(r'FROM\s+([a-zA-Z_]+)\.', sql_query, re.IGNORECASE)
-        if schema_match:
-            schema_name = schema_match.group(1)
-            print(f"Found schema in query: {schema_name}")
-            
-            # Find the database containing this schema
-            for db, info in DB_SCHEMA_MAP.items():
-                if schema_name in info["schemas"]:
-                    dbname = db
-                    print(f"Found matching database: {dbname}")
-                    break
-        
-        # If still no dbname, try to determine from the query itself
-        if not dbname:
-            # Use our improved get_db_table_for_query function
-            dbname, _, _ = get_db_table_for_query(sql_query)
-            print(f"Determined database using keyword matching: {dbname}")
+        dbname = "postgres"
     
-    # Get the connection string for the selected database
-    conn_str = db_connections.get(dbname)
-    if not conn_str:
-        # Use a default connection
-        conn_str = db_connections.get("equity_sector_consumer_discretionary")
-        print(f"No connection string available for database: {dbname}, using default")
+    # Ensure the database name is in our configured connections
+    if dbname not in db_connections:
+        print(f"Error: Database '{dbname}' not in configured connections")
+        return pd.DataFrame()
     
-    # Create SQLAlchemy engine
-    engine = create_engine(conn_str)
-    
-    # Detect and fix missing schema qualifications
-    if dbname and dbname in DB_SCHEMA_MAP:
-        # Process all FROM clauses
-        match_positions = []
-        for match in re.finditer(r'FROM\s+([a-zA-Z_]+)(?!\s*\.\s*[a-zA-Z_]+)', sql_query, re.IGNORECASE):
-            match_positions.append((match.start(), match.end(), match.group(1)))
-        
-        # Process from the end to avoid shifting positions
-        match_positions.reverse()
-        for start_pos, end_pos, table_name in match_positions:
-            if table_name not in ('information_schema', 'pg_catalog'):
-                print(f"Found unqualified table: {table_name}")
-                
-                # Find appropriate schema in the current database
-                found_schema = None
-                for schema_name, schema_info in DB_SCHEMA_MAP[dbname]["schemas"].items():
-                    if "tables" in schema_info and table_name in schema_info["tables"]:
-                        found_schema = schema_name
-                        break
-                
-                if found_schema:
-                    old = f"FROM {table_name}"
-                    new = f"FROM {found_schema}.{table_name}"
-                    sql_query = sql_query[:start_pos] + new + sql_query[end_pos:]
-                    print(f"Fixed table reference: {old} -> {new}")
-    
-    # For health queries, add a special case fix
-    if any(term.lower() in sql_query.lower() for term in ["health", "healthcare", "medical", "pharma"]):
-        try:
-            # If query seems to be looking for "health_care_stocks" which doesn't exist
-            if "health_care_stocks" in sql_query:
-                limit_match = re.search(r'LIMIT\s+(\d+)', sql_query, re.IGNORECASE)
-                limit = int(limit_match.group(1)) if limit_match else 5
-                
-                # Create a more reliable query
-                sql_query = f"""
-                SELECT ticker, short_name, industry, market_cap, net_debt_to_ebitda_lf
-                FROM pharmaceuticals.pharmaceuticals
-                ORDER BY market_cap DESC
-                LIMIT {limit}
-                """
-                dbname = "equity_sector_health_care"
-                print("Redirecting health care query to pharmaceuticals.pharmaceuticals table")
-        except Exception as health_e:
-            print(f"Health care query special handling error: {str(health_e)}")
-    
-    # For tech companies, add a special case fix
-    if "tech" in sql_query.lower() or "technology" in sql_query.lower():
-        try:
-            # If it looks like a union query with tech tables
-            if "union all" in sql_query.lower() and ("software" in sql_query.lower() or "semiconductor" in sql_query.lower()):
-                limit_match = re.search(r'LIMIT\s+(\d+)', sql_query, re.IGNORECASE)
-                limit = int(limit_match.group(1)) if limit_match else 10
-                
-                # Create a more reliable query
-                sql_query = f"""
-                SELECT ticker, short_name, industry, market_cap
-                FROM software.application_software
-                ORDER BY market_cap DESC
-                LIMIT {limit}
-                """
-                dbname = "equity_sector_information_technology"
-                print("Redirecting tech query to software.application_software table")
-        except Exception as tech_e:
-            print(f"Tech query special handling error: {str(tech_e)}")
+    connection_string = db_connections[dbname]
     
     try:
-        # Use pandas to execute query and return results as DataFrame
-        results = pd.read_sql_query(sql_query, engine)
-        print(f"Query returned {len(results)} rows")
-        return results
+        # Create a SQLAlchemy engine
+        engine = create_engine(connection_string)
+        
+        # Print the SQL query for debugging
+        print("Executing SQL query:", sql_query)
+        
+        # Execute query and return results as a pandas DataFrame
+        df = pd.read_sql_query(sql_query, engine)
+        
+        # Print rows found
+        print(f"Query returned {len(df)} rows")
+        return df
+        
     except Exception as e:
         print(f"Error executing query: {str(e)}")
         
-        # Handle specific health care queries 
-        if ("health" in sql_query.lower() or "healthcare" in sql_query.lower() or "medical" in sql_query.lower()):
-            try:
-                limit_match = re.search(r'LIMIT\s+(\d+)', sql_query, re.IGNORECASE)
-                limit = int(limit_match.group(1)) if limit_match else 5
-                
-                simple_query = f"""
-                SELECT ticker, short_name, industry
-                FROM pharmaceuticals.pharmaceuticals
-                LIMIT {limit}
-                """
-                print("Trying simplified health care query:", simple_query)
-                return pd.read_sql_query(simple_query, create_engine(db_connections.get("equity_sector_health_care")))
-            except Exception as e2:
-                print(f"Simplified health care query also failed: {str(e2)}")
-        
-        # Handle specific tech queries
-        if ("tech" in sql_query.lower() or "technology" in sql_query.lower()):
-            try:
-                limit_match = re.search(r'LIMIT\s+(\d+)', sql_query, re.IGNORECASE)
-                limit = int(limit_match.group(1)) if limit_match else 10
-                
-                simple_query = f"""
-                SELECT ticker, short_name, industry
-                FROM software.application_software
-                LIMIT {limit}
-                """
-                print("Trying simplified tech query:", simple_query)
-                return pd.read_sql_query(simple_query, create_engine(db_connections.get("equity_sector_information_technology")))
-            except Exception as e2:
-                print(f"Simplified tech query also failed: {str(e2)}")
-        
-        # Handle common table qualification errors
-        error_str = str(e)
-        if "relation" in error_str and "does not exist" in error_str:
-            # Try to extract the problematic relation
-            match = re.search(r'relation "([^"]+)" does not exist', error_str)
+        # More informative error messages
+        if "UndefinedTable" in str(e):
+            # Extract table name for more helpful message
+            match = re.search(r'relation "([^"]+)" does not exist', str(e))
             if match:
                 bad_relation = match.group(1)
                 print(f"Bad relation: {bad_relation}")
                 
-                # Check if it's a schema qualification issue
-                if "." not in bad_relation:
-                    # Find all possible schemas
-                    for db, info in DB_SCHEMA_MAP.items():
-                        for schema in info["schemas"]:
-                            # Replace in query
-                            new_query = sql_query.replace(f'FROM {bad_relation}', f'FROM {schema}.{bad_relation}')
-                            try:
-                                print(f"Trying with schema qualification: {schema}.{bad_relation}")
-                                results = pd.read_sql_query(new_query, engine)
-                                return results
-                            except:
-                                pass
+                # Try to suggest a possible alternative
+                if '.' in bad_relation:
+                    schema, table = bad_relation.split('.')
+                    if schema in DB_SCHEMA_MAP.get(dbname, {}).get("schemas", {}):
+                        tables = list(DB_SCHEMA_MAP[dbname]["schemas"][schema]["tables"].keys())
+                        if tables:
+                            print(f"Available tables in {schema}: {', '.join(tables[:5])}" + 
+                                  (", ..." if len(tables) > 5 else ""))
         
-        # For any error, return empty DataFrame
+        elif "UndefinedColumn" in str(e):
+            # Extract column name for more helpful message
+            match = re.search(r'column "([^"]+)" does not exist', str(e))
+            if match:
+                bad_column = match.group(1)
+                print(f"Column does not exist: {bad_column}")
+                
+                # Try to extract table name from the query to suggest available columns
+                table_match = re.search(r'FROM\s+([^\s]+)', sql_query, re.IGNORECASE)
+                if table_match:
+                    table_name = table_match.group(1)
+                    if '.' in table_name:
+                        schema, table = table_name.split('.')
+                        if (schema in DB_SCHEMA_MAP.get(dbname, {}).get("schemas", {}) and
+                            table in DB_SCHEMA_MAP[dbname]["schemas"][schema]["tables"]):
+                            columns = list(DB_SCHEMA_MAP[dbname]["schemas"][schema]["tables"][table]["columns"].keys())
+                            if columns:
+                                print(f"Available columns in {table_name}: {', '.join(columns[:5])}" + 
+                                      (", ..." if len(columns) > 5 else ""))
+        
         return pd.DataFrame()
-    finally:
-        engine.dispose()
 
 def extract_limit_from_query(query):
     """
@@ -1081,80 +1081,139 @@ def query_database(natural_language_query, limit=5, force_rebuild_schema=False, 
     else:
         print(f"Using default limit of {limit}")
     
-    # Check for specific example queries and use hard-coded solutions
+    # Extract query conditions and build WHERE clause
+    query_conditions = extract_query_conditions(natural_language_query)
     query_lower = natural_language_query.lower()
     
-    # Example Query 1
-    if ("automobile industry" in query_lower or "auto industry" in query_lower) and ("lowest debt" in query_lower or "lowest debt to equity" in query_lower):
-        print("Using direct solution for Query 1")
-        # Handle the special "all" case
-        limit_clause = ""
-        if limit != 1000:  # Not "all results" case
-            limit_clause = f"LIMIT {limit}"
-            
-        sql_query = f"""
-        SELECT ticker, short_name, industry, net_debt_to_ebitda_lf 
-        FROM automobiles.automobile_manufacturers
-        ORDER BY net_debt_to_ebitda_lf ASC
-        {limit_clause}
-        """
-        return execute_sql_query(sql_query, dbname="equity_sector_consumer_discretionary")
+    # Print extracted conditions for debugging
+    if query_conditions:
+        print("Query - Extracted conditions:")
+        for cond_type, cond_info in query_conditions.items():
+            print(f"  - {cond_type}: {cond_info['column']} {cond_info['operator']} {cond_info['value']}")
+    else:
+        print("Query - No conditions were extracted from the query")
     
-    # Example Query 2
-    if "energy sector" in query_lower and ("pe higher than 20" in query_lower or "p/e higher than 20" in query_lower):
-        print("Using direct solution for Query 2")
-        # Handle the special "all" case
-        limit_clause = ""
-        if limit != 1000:  # Not "all results" case
-            limit_clause = f"LIMIT {limit}"
-            
-        sql_query = f"""
-        (SELECT ticker, short_name, industry, p_e
-        FROM oil__gas_and_consumable_fuels.integrated_oil_and_gas
-        WHERE p_e > 20)
-        UNION ALL
-        (SELECT ticker, short_name, industry, p_e
-        FROM oil__gas_and_consumable_fuels.oil_and_gas_exploration_and_production
-        WHERE p_e > 20)
-        {limit_clause}
-        """
-        return execute_sql_query(sql_query, dbname="equity_sector_energy")
+    # Build WHERE clause
+    where_conditions = []
+    for cond_type, cond_info in query_conditions.items():
+        where_conditions.append(f"{cond_info['column']} {cond_info['operator']} {cond_info['value']}")
     
-    # Energy sector with market cap query
-    if "energy sector" in query_lower and ("market cap" in query_lower or "largest" in query_lower):
-        print("Using direct solution for energy sector market cap query")
-        # Handle the special "all" case
-        limit_clause = ""
-        if limit != 1000:  # Not "all results" case
-            limit_clause = f"LIMIT {limit}"
-            
-        sql_query = f"""
-        (SELECT ticker, short_name, industry, market_cap
-        FROM oil__gas_and_consumable_fuels.integrated_oil_and_gas
-        ORDER BY market_cap DESC)
-        UNION ALL
-        (SELECT ticker, short_name, industry, market_cap
-        FROM oil__gas_and_consumable_fuels.oil_and_gas_exploration_and_production
-        ORDER BY market_cap DESC)
-        ORDER BY market_cap DESC
-        {limit_clause}
-        """
-        return execute_sql_query(sql_query, dbname="equity_sector_energy")
+    where_clause = ""
+    if where_conditions:
+        where_clause = "WHERE " + " AND ".join(where_conditions)
+        print(f"Query - Using WHERE clause: {where_clause}")
     
-    # Example Query 3
-    if "automobile parts" in query_lower or "auto parts" in query_lower:
-        print("Using direct solution for Query 3")
+    # Automobile/Automotive Industry Query
+    if any(term in query_lower for term in ["automobile industry", "automotive industry", "automobiles industry", "car industry", "automotive sector", "automobile sector"]):
+        print("Using direct solution for automobile industry query")
         # Handle the special "all" case
         limit_clause = ""
         if limit != 1000:  # Not "all results" case
             limit_clause = f"LIMIT {limit}"
-            
-        sql_query = f"""
-        SELECT ticker, short_name, industry
-        FROM automobile_components.automotive_parts_and_equipment
-        {limit_clause}
-        """
-        return execute_sql_query(sql_query, dbname="equity_sector_consumer_discretionary")
+        
+        # Determine which columns to include based on conditions
+        columns = ["ticker", "short_name", "industry"]
+        for cond_type, cond_info in query_conditions.items():
+            col = cond_info['column']
+            if col not in columns:
+                columns.append(col)
+        
+        # Add default sorting based on conditions
+        order_clause = ""
+        if "beta_m_3" in columns:
+            order_clause = "ORDER BY beta_m_3 ASC"
+        elif "alpha_m_3" in columns:
+            order_clause = "ORDER BY alpha_m_3 DESC"
+        else:
+            order_clause = "ORDER BY market_cap DESC"
+        
+        # First try the automobile manufacturers table
+        try:
+            sql_query = f"""
+            SELECT {', '.join(columns)}
+            FROM automobiles.automobile_manufacturers
+            {where_clause}
+            {order_clause}
+            {limit_clause}
+            """
+            print("Trying automobile manufacturers table")
+            results = execute_sql_query(sql_query, dbname="equity_sector_consumer_discretionary")
+            if len(results) > 0:
+                return results
+        except Exception as e:
+            print(f"Automobile manufacturers query failed: {str(e)}")
+        
+        # Then try automobile components as fallback
+        try:
+            sql_query = f"""
+            SELECT {', '.join(columns)}
+            FROM automobile_components.automotive_parts_and_equipment
+            {where_clause}
+            {order_clause}
+            {limit_clause}
+            """
+            print("Trying automobile components table")
+            results = execute_sql_query(sql_query, dbname="equity_sector_consumer_discretionary")
+            if len(results) > 0:
+                return results
+        except Exception as e:
+            print(f"Automobile components query failed: {str(e)}")
+    
+    # Enhanced industry detection for automobiles
+    if "industry" in query_lower and any(term in query_lower for term in ["automobile", "automotive", "automobiles", "car"]):
+        print("Using direct solution for automobiles industry (enhanced detection)")
+        # Handle the special "all" case
+        limit_clause = ""
+        if limit != 1000:  # Not "all results" case
+            limit_clause = f"LIMIT {limit}"
+        
+        # Determine which columns to include based on conditions
+        columns = ["ticker", "short_name", "industry"]
+        for cond_type, cond_info in query_conditions.items():
+            col = cond_info['column']
+            if col not in columns:
+                columns.append(col)
+        
+        # Add default sorting based on conditions
+        order_clause = ""
+        if "beta_m_3" in columns:
+            order_clause = "ORDER BY beta_m_3 ASC"
+        elif "alpha_m_3" in columns:
+            order_clause = "ORDER BY alpha_m_3 DESC"
+        else:
+            order_clause = "ORDER BY market_cap DESC"
+        
+        # First try the automobile manufacturers table
+        try:
+            sql_query = f"""
+            SELECT {', '.join(columns)}
+            FROM automobiles.automobile_manufacturers
+            {where_clause}
+            {order_clause}
+            {limit_clause}
+            """
+            print("Trying automobile manufacturers table")
+            results = execute_sql_query(sql_query, dbname="equity_sector_consumer_discretionary")
+            if len(results) > 0:
+                return results
+        except Exception as e:
+            print(f"Automobile manufacturers query failed: {str(e)}")
+        
+        # Then try automobile components as fallback
+        try:
+            sql_query = f"""
+            SELECT {', '.join(columns)}
+            FROM automobile_components.automotive_parts_and_equipment
+            {where_clause}
+            {order_clause}
+            {limit_clause}
+            """
+            print("Trying automobile components table")
+            results = execute_sql_query(sql_query, dbname="equity_sector_consumer_discretionary")
+            if len(results) > 0:
+                return results
+        except Exception as e:
+            print(f"Automobile components query failed: {str(e)}")
     
     # Health Care Query
     if any(term in query_lower for term in ["health", "healthcare", "health care", "medical", "pharma", "pharmaceutical", "biotech"]):
@@ -1164,6 +1223,16 @@ def query_database(natural_language_query, limit=5, force_rebuild_schema=False, 
         if limit != 1000:  # Not "all results" case
             limit_clause = f"LIMIT {limit}"
             
+        # Determine which columns to include based on conditions
+        columns = ["ticker", "short_name", "industry"]
+        for cond_type, cond_info in query_conditions.items():
+            col = cond_info['column']
+            if col not in columns:
+                columns.append(col)
+        
+        if "market_cap" not in columns:
+            columns.append("market_cap")  # Always include market cap for sorting
+        
         # Try different health care tables
         healthcare_tables = [
             ("pharmaceuticals.pharmaceuticals", "equity_sector_health_care"),
@@ -1172,24 +1241,17 @@ def query_database(natural_language_query, limit=5, force_rebuild_schema=False, 
             ("health_care_providers_and_services.health_care_services", "equity_sector_health_care")
         ]
         
-        # Add debt to equity specifics if requested
-        order_clause = ""
-        if "debt" in query_lower:
-            order_clause = "ORDER BY net_debt_to_ebitda_lf ASC"
-        elif "market cap" in query_lower or "largest" in query_lower:
-            order_clause = "ORDER BY market_cap DESC"
-        elif "pe" in query_lower or "p/e" in query_lower:
-            order_clause = "ORDER BY p_e ASC"
-        else:
-            order_clause = "ORDER BY market_cap DESC"  # Default sorting
+        # Add default sorting if no specific condition-based sorting
+        order_clause = "ORDER BY market_cap DESC"  # Default sorting
         
         # Try each table until we get results
         for table_path, dbname in healthcare_tables:
             try:
                 schema, table = table_path.split(".")
                 sql_query = f"""
-                SELECT ticker, short_name, industry, market_cap, net_debt_to_ebitda_lf, p_e
+                SELECT {', '.join(columns)}
                 FROM {schema}.{table}
+                {where_clause}
                 {order_clause}
                 {limit_clause}
                 """
@@ -1200,33 +1262,45 @@ def query_database(natural_language_query, limit=5, force_rebuild_schema=False, 
             except Exception as e:
                 print(f"Error with health care table {table_path}: {str(e)}")
                 continue
-        
-        # If we reach here, try a simpler query with just core columns
-        try:
-            sql_query = f"""
-            SELECT ticker, short_name, industry
-            FROM pharmaceuticals.pharmaceuticals
-            {limit_clause}
-            """
-            return execute_sql_query(sql_query, dbname="equity_sector_health_care")
-        except Exception as e:
-            print(f"Simplified health care query also failed: {str(e)}")
     
-    # Example Query 4
-    if ("tech companies" in query_lower or "technology companies" in query_lower) and ("highest market cap" in query_lower or "largest" in query_lower):
-        print("Using direct solution for tech companies")
+    # Technology Companies
+    if "tech" in query_lower or "technology" in query_lower:
+        print("Using direct solution for technology companies query")
         # Handle the special "all" case
         limit_clause = ""
         if limit != 1000:  # Not "all results" case
             limit_clause = f"LIMIT {limit}"
             
-        # Try multiple tables that might exist
-        for tech_table in ["software.application_software", "software.software", "it_services.it_services"]:
+        # Determine which columns to include based on conditions
+        columns = ["ticker", "short_name", "industry"]
+        for cond_type, cond_info in query_conditions.items():
+            col = cond_info['column']
+            if col not in columns:
+                columns.append(col)
+        
+        if "market_cap" not in columns:
+            columns.append("market_cap")  # Always include market cap for sorting
+        
+        # Try multiple tech tables
+        tech_tables = [
+            "software.application_software",
+            "software.software", 
+            "it_services.it_services",
+            "semiconductors_and_semiconductor_equipment.semiconductors"
+        ]
+        
+        # Add default sorting
+        order_clause = "ORDER BY market_cap DESC"
+        
+        # Try each table until we get results
+        for tech_table in tech_tables:
             try:
+                schema, table = tech_table.split(".")
                 sql_query = f"""
-                SELECT ticker, short_name, industry, market_cap
+                SELECT {', '.join(columns)}
                 FROM {tech_table}
-                ORDER BY market_cap DESC
+                {where_clause}
+                {order_clause}
                 {limit_clause}
                 """
                 print(f"Trying tech table: {tech_table}")
@@ -1234,12 +1308,81 @@ def query_database(natural_language_query, limit=5, force_rebuild_schema=False, 
                 if len(results) > 0:
                     return results
             except Exception as e:
-                print(f"Error with table {tech_table}: {str(e)}")
+                print(f"Error with tech table {tech_table}: {str(e)}")
                 continue
-                
+        
         # If we get here, none of the tables worked
-        print("All hardcoded tech tables failed")
-        return pd.DataFrame()
+        print("All tech tables failed")
+    
+    # Energy Sector Companies
+    if "energy" in query_lower or "oil" in query_lower or "gas" in query_lower:
+        print("Using direct solution for energy sector query")
+        # Handle the special "all" case
+        limit_clause = ""
+        if limit != 1000:  # Not "all results" case
+            limit_clause = f"LIMIT {limit}"
+            
+        # Determine which columns to include based on conditions
+        columns = ["ticker", "short_name", "industry"]
+        for cond_type, cond_info in query_conditions.items():
+            col = cond_info['column']
+            if col not in columns:
+                columns.append(col)
+        
+        if "market_cap" not in columns:
+            columns.append("market_cap")  # Always include market cap for sorting
+        
+        # Try multiple energy tables
+        energy_tables = [
+            "oil__gas_and_consumable_fuels.integrated_oil_and_gas",
+            "oil__gas_and_consumable_fuels.oil_and_gas_exploration_and_production",
+            "energy_equipment_and_services.oil_and_gas_equipment_and_services"
+        ]
+        
+        # Default sorting
+        order_clause = "ORDER BY market_cap DESC"
+        
+        # Try union query first - combining results from multiple tables
+        try:
+            # Build union query
+            union_parts = []
+            for table_path in energy_tables:
+                union_parts.append(f"""
+                (SELECT {', '.join(columns)}
+                FROM {table_path}
+                {where_clause})
+                """)
+            
+            union_query = " UNION ALL ".join(union_parts)
+            sql_query = f"""
+            {union_query}
+            {order_clause}
+            {limit_clause}
+            """
+            print("Trying energy sector union query")
+            results = execute_sql_query(sql_query, dbname="equity_sector_energy")
+            if len(results) > 0:
+                return results
+        except Exception as e:
+            print(f"Union query failed: {str(e)}")
+        
+        # If union query fails, try individual tables
+        for energy_table in energy_tables:
+            try:
+                sql_query = f"""
+                SELECT {', '.join(columns)}
+                FROM {energy_table}
+                {where_clause}
+                {order_clause}
+                {limit_clause}
+                """
+                print(f"Trying energy table: {energy_table}")
+                results = execute_sql_query(sql_query, dbname="equity_sector_energy")
+                if len(results) > 0:
+                    return results
+            except Exception as e:
+                print(f"Error with energy table {energy_table}: {str(e)}")
+                continue
     
     # Generate SQL query for other cases
     print(f"Generating SQL query for: {natural_language_query}")
@@ -1270,54 +1413,57 @@ def query_database(natural_language_query, limit=5, force_rebuild_schema=False, 
             limit_clause = ""
             if limit != 1000:  # Not "all results" case
                 limit_clause = f"LIMIT {limit}"
-                
-            # Use direct fallbacks based on keywords
-            if "automobile" in query_lower or "auto" in query_lower:
-                if "parts" in query_lower or "component" in query_lower:
-                    fb_sql = f"""
-                    SELECT ticker, short_name, industry
-                    FROM automobile_components.automotive_parts_and_equipment
-                    {limit_clause}
-                    """
-                    return execute_sql_query(fb_sql, dbname="equity_sector_consumer_discretionary")
-                else:
-                    fb_sql = f"""
-                    SELECT ticker, short_name, industry, p_e, market_cap 
-                    FROM automobiles.automobile_manufacturers
-                    ORDER BY market_cap DESC
-                    {limit_clause}
-                    """
-                    return execute_sql_query(fb_sql, dbname="equity_sector_consumer_discretionary")
             
-            if "energy" in query_lower:
-                fb_sql = f"""
-                SELECT ticker, short_name, industry, p_e 
-                FROM oil__gas_and_consumable_fuels.integrated_oil_and_gas
-                {limit_clause}
-                """
-                return execute_sql_query(fb_sql, dbname="equity_sector_energy")
+            # Build WHERE clause from extracted conditions
+            where_conditions = []
+            for cond_type, cond_info in query_conditions.items():
+                where_conditions.append(f"{cond_info['column']} {cond_info['operator']} {cond_info['value']}")
+            
+            where_clause = ""
+            if where_conditions:
+                where_clause = "WHERE " + " AND ".join(where_conditions)
+            
+            # Determine database to use
+            dbname, schema_name, table_name = get_db_table_for_query(natural_language_query)
+            
+            if dbname and schema_name:
+                # Determine which columns to include based on conditions
+                columns = ["ticker", "short_name", "industry"]
+                for cond_type, cond_info in query_conditions.items():
+                    col = cond_info['column']
+                    if col not in columns:
+                        columns.append(col)
                 
-            if "tech" in query_lower or "technology" in query_lower:
-                # Try multiple tables that might exist
-                for tech_table in ["software.application_software", "software.software", "it_services.it_services"]:
-                    try:
-                        fb_sql = f"""
-                        SELECT ticker, short_name, industry, market_cap
-                        FROM {tech_table}
-                        ORDER BY market_cap DESC
-                        {limit_clause}
-                        """
-                        print(f"Trying fallback tech table: {tech_table}")
-                        results = execute_sql_query(fb_sql, dbname="equity_sector_information_technology")
-                        if len(results) > 0:
-                            return results
-                    except Exception as e:
-                        print(f"Error with fallback tech table {tech_table}: {str(e)}")
-                        continue
+                if "market_cap" not in columns:
+                    columns.append("market_cap")  # Always include market cap for sorting
                 
-                # If we get here, all tables failed
-                print("All fallback tech tables failed")
-                return pd.DataFrame()
+                # Default sorting
+                order_clause = "ORDER BY market_cap DESC"
+                
+                if schema_name in DB_SCHEMA_MAP.get(dbname, {}).get("schemas", {}):
+                    # Try all tables in this schema
+                    tables = list(DB_SCHEMA_MAP[dbname]["schemas"][schema_name]["tables"].keys())
+                    
+                    # If we have a specific table, try it first
+                    if table_name and table_name in tables:
+                        tables.insert(0, tables.pop(tables.index(table_name)))
+                    
+                    for table in tables:
+                        try:
+                            sql_query = f"""
+                            SELECT {', '.join(columns)}
+                            FROM {schema_name}.{table}
+                            {where_clause}
+                            {order_clause}
+                            {limit_clause}
+                            """
+                            print(f"Trying fallback with table: {schema_name}.{table}")
+                            results = execute_sql_query(sql_query, dbname=dbname)
+                            if len(results) > 0:
+                                return results
+                        except Exception as e:
+                            print(f"Error with fallback table {schema_name}.{table}: {str(e)}")
+                            continue
         
         return results
     except Exception as e:
@@ -1335,6 +1481,7 @@ def query_database(natural_language_query, limit=5, force_rebuild_schema=False, 
                     sql_query = f"""
                     SELECT ticker, short_name, industry 
                     FROM automobile_components.automotive_parts_and_equipment
+                    {where_clause}
                     {limit_clause}
                     """
                 else:
@@ -1390,27 +1537,52 @@ def find_matching_phrase(query_text, keywords):
     Returns:
         str: The best matching keyword or None if no match
     """
+    print(f"Searching for keyword match in: '{query_text}'")
+    query_text = query_text.lower()
     query_words = query_text.split()
     max_match_length = 0
+    max_match_score = 0
     best_match = None
     
     # First try exact matches
     for keyword in keywords:
-        if keyword.lower() in query_text:
-            keyword_words = keyword.lower().split()
+        keyword_lower = keyword.lower()
+        if keyword_lower in query_text:
+            keyword_words = keyword_lower.split()
             if len(keyword_words) > max_match_length:
                 max_match_length = len(keyword_words)
                 best_match = keyword
+                print(f"  Found exact match: '{keyword}'")
     
     # If no exact match, try word sequence matching
     if not best_match:
         for keyword in keywords:
-            keyword_words = keyword.lower().split()
+            keyword_lower = keyword.lower()
+            keyword_words = keyword_lower.split()
             for i in range(len(query_words) - len(keyword_words) + 1):
                 if query_words[i:i + len(keyword_words)] == keyword_words:
                     if len(keyword_words) > max_match_length:
                         max_match_length = len(keyword_words)
                         best_match = keyword
+                        print(f"  Found sequence match: '{keyword}'")
+    
+    # If still no match, try partial matching for common industry terms
+    if not best_match:
+        # Special case for automobiles
+        if any(auto_term in query_text for auto_term in ["auto", "car", "automobile", "automotive"]):
+            for keyword in keywords:
+                if "automobile" in keyword.lower() or "automotive" in keyword.lower():
+                    # Calculate a match score - longer phrases preferred
+                    score = len(keyword.split())
+                    if score > max_match_score:
+                        max_match_score = score
+                        best_match = keyword
+                        print(f"  Found automobile special match: '{keyword}'")
+    
+    if best_match:
+        print(f"Selected best match: '{best_match}'")
+    else:
+        print("No keyword match found")
     
     return best_match
 
