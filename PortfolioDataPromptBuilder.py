@@ -749,23 +749,169 @@ RULES:
 3. BE SUCCUINCT AND CONCISE.
 4. BE SUCCESSFUL AND MAKE MONEY.
 5. BE CREATIVE IN YOUR STRATEGIES AND THINK OUTSIDE THE BOX.
+6. You can use tools to execute trades, get stock information, or analyze specific securities.
     """
+    
+    # Define tool schemas for the model
+    stock_analysis_tool = {
+        "type": "function",
+        "function": {
+            "name": "analyze_stock",
+            "description": "Analyze a specific stock to get detailed metrics and performance data.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "symbol": {
+                        "type": "string",
+                        "description": "Stock ticker symbol to analyze"
+                    }
+                },
+                "required": ["symbol"]
+            }
+        }
+    }
+    
+    execute_trade_tool = {
+        "type": "function",
+        "function": {
+            "name": "execute_trade",
+            "description": "Execute a buy or sell order for a specific stock.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "action": {
+                        "type": "string",
+                        "enum": ["buy", "sell"],
+                        "description": "The trade action to take"
+                    },
+                    "symbol": {
+                        "type": "string",
+                        "description": "Stock ticker symbol"
+                    },
+                    "quantity": {
+                        "type": "integer",
+                        "description": "Number of shares to buy or sell"
+                    }
+                },
+                "required": ["action", "symbol", "quantity"]
+            }
+        }
+    }
+    
+    search_stocks_tool = {
+        "type": "function",
+        "function": {
+            "name": "search_stocks",
+            "description": "Search for stocks by industry, sector, or other criteria.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "sector": {
+                        "type": "string",
+                        "description": "Sector to search within (optional)"
+                    },
+                    "industry": {
+                        "type": "string",
+                        "description": "Industry to search within (optional)"
+                    },
+                    "min_market_cap": {
+                        "type": "number",
+                        "description": "Minimum market cap in billions (optional)"
+                    },
+                    "max_pe_ratio": {
+                        "type": "number",
+                        "description": "Maximum PE ratio (optional)"
+                    }
+                }
+            }
+        }
+    }
     
     response = client.chat.completions.create(
         model="o1",
         top_p=1.0,
-
         messages=[
             {
                 "role": "system",
-                "content": "You are an expert portfolio manager with 20+ years of experience managing portfolios for high-net-worth clients. You specialize in optimizing portfolios for maximum risk-adjusted returns through tactical allocation adjustments and security selection. Your recommendations are always specific, actionable, and quantitative. You favor clear, direct advice with exact position sizes and implementation steps."
+                "content": "You are an expert portfolio manager with 20+ years of experience managing portfolios for high-net-worth clients. You specialize in optimizing portfolios for maximum risk-adjusted returns through tactical allocation adjustments and security selection. Your recommendations are always specific, actionable, and quantitative. You favor clear, direct advice with exact position sizes and implementation steps. You can use tools to analyze stocks, execute trades, and search for investment opportunities."
             },
             {
                 "role": "user",
                 "content": content
             }
-        ]
+        ],
+        tools=[stock_analysis_tool, execute_trade_tool, search_stocks_tool],
+        tool_choice="auto"
     )
+    
+    # Handle tool calls if present
+    message = response.choices[0].message
+    tool_calls = message.tool_calls if hasattr(message, 'tool_calls') else None
+    
+    # Process any tool calls
+    if tool_calls:
+        # Create a new messages array including the original messages
+        messages = [
+            {
+                "role": "system",
+                "content": "You are an expert portfolio manager with 20+ years of experience managing portfolios for high-net-worth clients. You specialize in optimizing portfolios for maximum risk-adjusted returns through tactical allocation adjustments and security selection. Your recommendations are always specific, actionable, and quantitative. You favor clear, direct advice with exact position sizes and implementation steps. You can use tools to analyze stocks, execute trades, and search for investment opportunities."
+            },
+            {
+                "role": "user",
+                "content": content
+            },
+            message
+        ]
+        
+        # Process each tool call
+        for tool_call in tool_calls:
+            function_name = tool_call.function.name
+            function_args = json.loads(tool_call.function.arguments)
+            
+            # Execute the appropriate function based on the tool call
+            function_response = ""
+            if function_name == "analyze_stock":
+                symbol = function_args.get("symbol")
+                # Simple test implementation - just print and return a message
+                print(f"TOOL CALLED: analyze_stock for symbol {symbol}")
+                function_response = f"Analysis for {symbol}: P/E Ratio: 22.5, EPS: 3.75, Market Cap: $285B, Average Volume: 32M, 52-week high: $185.25, 52-week low: $122.50"
+            
+            elif function_name == "execute_trade":
+                action = function_args.get("action")
+                symbol = function_args.get("symbol")
+                quantity = function_args.get("quantity")
+                # Simple test implementation - just print and return a message
+                print(f"TOOL CALLED: execute_trade with action={action}, symbol={symbol}, quantity={quantity}")
+                function_response = f"Trade order submitted: {action.upper()} {quantity} shares of {symbol}"
+            
+            elif function_name == "search_stocks":
+                sector = function_args.get("sector", "Any")
+                industry = function_args.get("industry", "Any")
+                min_market_cap = function_args.get("min_market_cap", "Any")
+                max_pe_ratio = function_args.get("max_pe_ratio", "Any")
+                # Simple test implementation - just print and return a message
+                print(f"TOOL CALLED: search_stocks with sector={sector}, industry={industry}, min_market_cap={min_market_cap}, max_pe_ratio={max_pe_ratio}")
+                function_response = f"Found 5 stocks matching criteria:\n- AAPL (Technology, $2.8T, P/E 28.5)\n- MSFT (Technology, $2.7T, P/E 35.2)\n- NVDA (Technology, $2.2T, P/E 75.8)\n- AMZN (Consumer Cyclical, $1.8T, P/E 62.4)\n- GOOGL (Communication Services, $1.7T, P/E 26.1)"
+            
+            # Append the function response to messages
+            messages.append({
+                "tool_call_id": tool_call.id,
+                "role": "tool",
+                "name": function_name,
+                "content": function_response
+            })
+        
+        # Get a new response from the model with the tool results
+        second_response = client.chat.completions.create(
+            model="o1",
+            messages=messages,
+            tools=[stock_analysis_tool, execute_trade_tool, search_stocks_tool],
+            tool_choice="auto"
+        )
+        
+        # Update the response to the final one
+        response = second_response
+    
     print(content)
     print(response.choices[0].message.content.strip())
     return response.choices[0].message.content.strip()
