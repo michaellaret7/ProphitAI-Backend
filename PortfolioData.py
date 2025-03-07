@@ -1941,5 +1941,4 @@ def run_account_data(printOutput=False):
     """
     return generate_portfolio_report(capture_output=False, print_output=printOutput)
 
-# End of module
 

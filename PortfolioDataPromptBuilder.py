@@ -8,7 +8,7 @@ import psycopg2
 import pandas as pd
 
 OpenAI_API_KEY = "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"
-
+Sonar_API_KEY = "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"
 # Initialize clients
 api_key = os.environ.get("OPENAI_API_KEY", OpenAI_API_KEY)
 client = OpenAI(
@@ -36,93 +36,6 @@ diversification = analyze_portfolio_diversification(ib, print_output=False)
 
 # Analyze portfolio correlations - printing handled internally
 correlations = analyze_portfolio_correlations(ib, symbols, print_output=False)
-
-
-# Function to query energy stocks from database
-def query_energy_stocks():
-    """Query energy stocks from the database."""
-    try:
-        # Connect to the database
-        conn = psycopg2.connect(
-            host="demo-postgres.ctemwoy8mbzw.us-east-1.rds.amazonaws.com",
-            database="equity_sector_energy",
-            user="postgres",
-            password="ml1710402!",
-            port="5432"
-        )
-        
-        # Create a cursor
-        cursor = conn.cursor()
-        
-        # Execute the query to get coal and consumable fuels stocks
-        cursor.execute("""
-            SELECT ticker, short_name, sector, industry, sub_industry, p_e, price_d_1, market_cap, 
-                   ebitda_t12m, net_debt_to_ebitda_lf, alpha_m_3, beta_m_3
-            FROM oil__gas_and_consumable_fuels.coal_and_consumable_fuels
-            ORDER BY market_cap DESC
-            LIMIT 15
-        """)
-        
-        # Fetch the results
-        results = cursor.fetchall()
-        
-        # Get column names from cursor description
-        columns = [desc[0] for desc in cursor.description]
-        
-        # Create a list of dictionaries
-        energy_stocks = []
-        for row in results:
-            stock_dict = {}
-            for i, col in enumerate(columns):
-                stock_dict[col] = row[i]
-            energy_stocks.append(stock_dict)
-        
-        # Close the cursor and connection
-        cursor.close()
-        conn.close()
-        
-        return energy_stocks
-        
-    except Exception as e:
-        print(f"Error querying energy stocks: {e}")
-        # Return a fallback list if there's an error
-        return [
-            {"ticker": "BTU", "short_name": "PEABODY ENERGY CORP", "sub_industry": "Coal & Consumable Fuels", "p_e": 4.82, "market_cap": 3200000000, "alpha_m_3": 0.45, "beta_m_3": 0.92},
-            {"ticker": "ARLP", "short_name": "ALLIANCE RESOURCE", "sub_industry": "Coal & Consumable Fuels", "p_e": 5.31, "market_cap": 2900000000, "alpha_m_3": 0.38, "beta_m_3": 0.85},
-            {"ticker": "CEIX", "short_name": "CONSOL ENERGY INC", "sub_industry": "Coal & Consumable Fuels", "p_e": 4.95, "market_cap": 2400000000, "alpha_m_3": 0.41, "beta_m_3": 0.89}
-        ]
-
-
-def search(system_prompt, user_prompt):
-    API_KEY = "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"
-    messages = [
-        {
-            "role": "system",
-            "content": (
-                system_prompt
-            ),
-        },
-        {   
-            "role": "user",
-            "content": (
-                user_prompt
-            ),
-        },
-    ]
-
-    client = OpenAI(api_key=API_KEY, base_url="https://api.perplexity.ai")
-
-    # chat completion without streaming
-    response = client.chat.completions.create(
-        model="sonar-deep-research",
-        messages=messages,
-    )
-    # Store full response in a variable
-    full_response = response.choices[0].message.content
-    # Print in a readable format
-    print("Complete response:")
-    print(full_response)
-    return full_response  # Return the response so it can be used by the tool
 
 def format_portfolio_positions(positions_data):
     """
@@ -755,28 +668,538 @@ def format_diversification(diversification):
     
     return output
 
-
-
-def gpt_4oModel(portfolio_data=None, cash_balance=None, current_date=None, current_time=None, force_tool_usage=False):
-    """
-    This function formats portfolio data and calls OpenAI's GPT-4o model for a recommendation.
-    
-    Args:
-        portfolio_data (dict, optional): Dictionary of portfolio data 
-        cash_balance (float, optional): Cash balance in the portfolio
-        current_date (str, optional): Current date in format 'YYYY-MM-DD'
-        current_time (str, optional): Current time in format 'HH:MM:SS'
-        force_tool_usage (bool, optional): Whether to force the model to use tools
+# Function to query energy stocks from database
+def query_energy_stocks():
+    """Query energy stocks from the database."""
+    try:
+        # Connect to the database
+        conn = psycopg2.connect(
+            host="demo-postgres.ctemwoy8mbzw.us-east-1.rds.amazonaws.com",
+            database="equity_sector_energy",
+            user="postgres",
+            password="ml1710402!",
+            port="5432"
+        )
         
-    Returns:
-        str: The model's response
+        # Create a cursor
+        cursor = conn.cursor()
+        
+        # Execute the query to get coal and consumable fuels stocks
+        cursor.execute("""
+            SELECT ticker, short_name, sector, industry, sub_industry, p_e, price_d_1, market_cap, 
+                   ebitda_t12m, net_debt_to_ebitda_lf, alpha_m_3, beta_m_3
+            FROM oil__gas_and_consumable_fuels.coal_and_consumable_fuels
+            ORDER BY market_cap DESC
+            LIMIT 15
+        """)
+        
+        # Fetch the results
+        results = cursor.fetchall()
+        
+        # Get column names from cursor description
+        columns = [desc[0] for desc in cursor.description]
+        
+        # Create a list of dictionaries
+        energy_stocks = []
+        for row in results:
+            stock_dict = {}
+            for i, col in enumerate(columns):
+                stock_dict[col] = row[i]
+            energy_stocks.append(stock_dict)
+        
+        # Close the cursor and connection
+        cursor.close()
+        conn.close()
+        
+        return energy_stocks
+        
+    except Exception as e:
+        print(f"Error querying energy stocks: {e}")
+        # Return a fallback list if there's an error
+        return [
+            {"ticker": "BTU", "short_name": "PEABODY ENERGY CORP", "sub_industry": "Coal & Consumable Fuels", "p_e": 4.82, "market_cap": 3200000000, "alpha_m_3": 0.45, "beta_m_3": 0.92},
+            {"ticker": "ARLP", "short_name": "ALLIANCE RESOURCE", "sub_industry": "Coal & Consumable Fuels", "p_e": 5.31, "market_cap": 2900000000, "alpha_m_3": 0.38, "beta_m_3": 0.85},
+            {"ticker": "CEIX", "short_name": "CONSOL ENERGY INC", "sub_industry": "Coal & Consumable Fuels", "p_e": 4.95, "market_cap": 2400000000, "alpha_m_3": 0.41, "beta_m_3": 0.89}
+        ]
+
+
+def free_search(system_prompt, user_prompt):
+    messages = [
+        {
+            "role": "system",
+            "content": (
+                system_prompt
+            ),
+        },
+        {   
+            "role": "user",
+            "content": (
+                user_prompt
+            ),
+        },
+    ]
+
+    client = OpenAI(api_key=Sonar_API_KEY, base_url="https://api.perplexity.ai")
+
+    # chat completion without streaming
+    response = client.chat.completions.create(
+        model="sonar-deep-research",
+        messages=messages,
+    )
+    # Store full response in a variable
+    full_response = response.choices[0].message.content
+    # Print in a readable format
+    print("Complete response:")
+    print(full_response)
+    return full_response  # Return the response so it can be used by the tool
+
+
+def equity_research_analyst():
+    system_prompt = """You are an elite equity research analyst with 20+ years experience at top investment banks. Your expertise includes:
+
+- Data-driven market analysis with multiple reliable sources
+- Quantitative analysis of trends and integration with macroeconomic factors
+- Providing precise, actionable insights backed by verifiable data
+- Identifying both obvious and hidden market risks across timeframes
+- Recommending opportunities that enhance risk-adjusted returns
+
+Focus on information that directly impacts investment decisions. Provide both defensive strategies and growth opportunities with current market data."""
+
+    user_prompt = """
+GOAL: Provide comprehensive equity market analysis across multiple timeframes (1w, 1m, 3m, 6m) for portfolio optimization.
+
+FORMAT:
+
+1. EXECUTIVE SUMMARY
+   - Current market conditions, key recommendations, major opportunities/risks
+
+2. MARKET PERFORMANCE 
+   - Major indices (S&P 500, Nasdaq, Dow, Russell, FTSE, DAX, Nikkei, Shanghai) across all timeframes
+   - Volume, volatility (VIX), and breadth indicators
+
+3. SECTOR ANALYSIS
+   - Performance ranking of all major sectors across all timeframes
+   - Rotation patterns, correlation analysis, notable outperformers/underperformers
+
+4. MACRO FACTORS
+   - Central bank policies, rates, inflation, employment, currencies, yield curve
+
+5. GEOPOLITICAL IMPACT
+   - Current tensions, policy changes, upcoming events affecting markets
+
+6. SENTIMENT & TECHNICALS
+   - Institutional vs retail positioning, fund flows, technical indicators
+
+7. VALUATIONS
+   - P/E, P/S, P/B, CAPE compared to historical averages
+   - Earnings trends, margin analysis, valuation dispersions
+
+8. FACTOR PERFORMANCE
+   - Value, Growth, Quality, Momentum, Size, Low Volatility across timeframes
+   - Factor rotation and recommended tilts
+
+9. THEMATIC OPPORTUNITIES
+   - Emerging trends, secular growth themes, defensive and contrarian opportunities
+
+10. OUTLOOK
+    - Short and medium-term forecasts, key catalysts, inflection points
+
+REQUIREMENTS:
+- Include precise numerical data and historical comparisons
+- Specify timeframes for trends (accelerating/decelerating)
+- Support claims with specific events/releases
+- Highlight contradictory indicators
+- Cover global markets (not just individual stocks)
+- Use reliable sources (Bloomberg, Reuters, FT, WSJ, major banks)
+- Current date: March 7th, 2025
+- Clearly distinguish facts from opinions
+- Label estimates when exact data unavailable
+- Consider potential tail risks
     """
-    
-    # Use current date and time if not provided
-    if current_date is None:
-        current_date = datetime.now().strftime('%Y-%m-%d')
-    if current_time is None:
-        current_time = datetime.now().strftime('%H:%M:%S')
+
+    messages = [
+        {
+            "role": "system",
+            "content": (
+                system_prompt
+            ),
+        },
+        {   
+            "role": "user",
+            "content": (
+                user_prompt
+            ),
+        },
+    ]
+
+    client = OpenAI(api_key=Sonar_API_KEY, base_url="https://api.perplexity.ai")
+
+    # chat completion without streaming
+    response = client.chat.completions.create(
+        model="sonar-deep-research",
+        messages=messages,
+    )
+    # Store full response in a variable
+    full_response = response.choices[0].message.content
+    # Print in a readable format
+    print("Complete response:")
+    print(full_response)
+    return full_response  # Return the response so it can be used by the tool
+
+
+def commodities_analyst():
+    system_prompt = """You are a senior commodities analyst with 20+ years experience at major trading firms and investment banks. Your expertise includes:
+
+- Fundamental supply-demand analysis across energy, metals, and agricultural markets
+- Price trend analysis incorporating seasonal patterns and cyclical behaviors
+- Physical market dynamics including storage, transportation, and delivery constraints
+- Geopolitical risk assessment for commodity-producing regions
+- Macro drivers of commodity prices (inflation, currency, interest rates)
+
+Focus on actionable commodity market insights for portfolio allocation. Balance risk management with opportunity identification."""
+
+    user_prompt = """
+GOAL: Provide comprehensive commodities market analysis across multiple timeframes (1w, 1m, 3m, 6m) for portfolio optimization.
+
+FORMAT:
+
+1. EXECUTIVE SUMMARY
+   - Current commodities market conditions, key recommendations, major opportunities/risks
+
+2. COMMODITIES PERFORMANCE
+   - Major commodity indices and benchmarks across all timeframes
+   - Key individual commodities (oil, gas, gold, silver, copper, agriculture) performance
+   - Volatility metrics and term structure (contango/backwardation)
+
+3. SECTOR ANALYSIS
+   - Performance ranking of commodity sectors (Energy, Precious Metals, Industrial Metals, Agriculture)
+   - Inter-commodity spreads and relative value opportunities
+   - Supply-demand balances by sector
+
+4. MACRO DRIVERS
+   - Dollar strength/weakness impact on commodity prices
+   - Inflation trends and commodity response
+   - Interest rate environment and carrying costs
+   - Global economic growth and commodity demand outlook
+
+5. GEOPOLITICAL FACTORS
+   - Production disruptions and supply concerns
+   - Trade policies, sanctions, and export restrictions
+   - Resource nationalism and regulatory developments
+   - Weather patterns and climate-related impacts
+
+6. MARKET POSITIONING
+   - Speculative vs. commercial positioning (COT reports)
+   - ETF flows and investor sentiment
+   - Physical market premiums/discounts
+   - Technical indicators and price momentum
+
+7. INVENTORY & STORAGE
+   - Current inventory levels vs. 5-year averages
+   - Storage economics and capacity constraints
+   - Seasonal stock patterns and anomalies
+   - Production capacity utilization rates
+
+8. CURVE DYNAMICS
+   - Forward curve structures across commodities
+   - Roll yields and implications for investors
+   - Calendar spread opportunities
+   - Inter-commodity spread relationships
+
+9. THEMATIC OPPORTUNITIES
+   - Secular trends affecting commodities (energy transition, electrification)
+   - Supply constraints and capacity additions
+   - Substitution and demand destruction price levels
+   - Emerging market demand growth
+
+10. OUTLOOK
+    - Short and medium-term price forecasts with probability distributions
+    - Key catalysts and event risks to monitor
+    - Seasonal patterns likely to emerge
+    - Recommended positioning strategies
+
+REQUIREMENTS:
+- Include precise numerical data (prices, basis points, percentages)
+- Compare current levels to historical averages and seasonal norms
+- Specify supply-demand balances with quantitative estimates
+- Support claims with specific market events
+- Highlight divergences between physical and financial markets
+- Use reliable sources (Bloomberg, Reuters, IEA, EIA, USDA, major banks)
+- Current date: March 7th, 2025
+- Distinguish between structural and cyclical trends
+- Address potential external shocks (weather, geopolitics)
+- Consider cross-asset implications (FX, rates, equities)
+    """
+
+    messages = [
+        {
+            "role": "system",
+            "content": (
+                system_prompt
+            ),
+        },
+        {   
+            "role": "user",
+            "content": (
+                user_prompt
+            ),
+        },
+    ]
+
+    client = OpenAI(api_key=Sonar_API_KEY, base_url="https://api.perplexity.ai")
+
+    # chat completion without streaming
+    response = client.chat.completions.create(
+        model="sonar-deep-research",
+        messages=messages,
+    )
+    # Store full response in a variable
+    full_response = response.choices[0].message.content
+    # Print in a readable format
+    print("Complete response:")
+    print(full_response)
+    return full_response  # Return the response so it can be used by the tool
+
+
+def fixed_income_analyst():
+    system_prompt = """You are a veteran fixed income strategist with 20+ years experience at premier investment firms. Your expertise includes:
+
+- Interest rate analysis across global yield curves and monetary policy regimes
+- Credit market assessment from investment grade to high yield and emerging markets
+- Macro factors driving bond yields, spreads, and returns
+- Duration, convexity, and yield curve positioning strategies
+- Fixed income relative value across sectors, regions, and structures
+
+Focus on delivering actionable fixed income insights that directly impact portfolio construction. Provide both risk management strategies and alpha generation opportunities."""
+
+    user_prompt = """
+GOAL: Provide comprehensive fixed income market analysis across multiple timeframes (1w, 1m, 3m, 6m) for portfolio optimization.
+
+FORMAT:
+
+1. EXECUTIVE SUMMARY
+   - Current fixed income market conditions and key investment themes
+   - Strategic recommendations and major opportunities/risks
+
+2. RATES MARKET PERFORMANCE
+   - Sovereign yield curves (US, EU, UK, Japan) across all timeframes
+   - Real yields and breakeven inflation rates
+   - Yield curve shape metrics (slope, curvature)
+   - Volatility conditions (MOVE index) and rate expectations
+
+3. CREDIT MARKET ANALYSIS
+   - Performance of credit sectors (IG, HY, EM, securitized products)
+   - Credit spread evolution and relative value
+   - Credit quality trends and rating migration
+   - Default rates and recovery expectations
+
+4. CENTRAL BANK POLICY
+   - Policy rates and forward guidance across major central banks
+   - Balance sheet policies (QE/QT) and liquidity conditions
+   - Market vs. central bank rate expectations divergence
+   - Impact of recent policy decisions and communications
+
+5. ECONOMIC FUNDAMENTALS
+   - Growth and inflation outlook impact on fixed income
+   - Labor market conditions and wage pressures
+   - Fiscal policy developments and government funding needs
+   - Current position in the credit cycle
+
+6. MARKET TECHNICALS
+   - Supply/demand dynamics (issuance, redemptions, fund flows)
+   - Investor positioning and sentiment indicators
+   - Liquidity conditions and bid-ask spreads
+   - Foreign investor activity and currency-hedged yields
+
+7. RELATIVE VALUE
+   - Cross-market spreads and opportunities
+   - Sector rotation recommendations
+   - Duration positioning considerations
+   - Security selection themes
+
+8. CURVE POSITIONING
+   - Yield curve strategies (flatteners, steepeners)
+   - Roll-down analysis and carry opportunities
+   - Inflection points and optimal positioning
+   - Scenario analysis across different rate environments
+
+9. THEMATIC OPPORTUNITIES
+   - Special situations and dislocations
+   - Structural changes in fixed income markets
+   - Regulatory impacts on bond markets
+   - Innovation in fixed income products
+
+10. OUTLOOK
+    - Rate and spread forecasts with probability scenarios
+    - Key catalysts and event risks to monitor
+    - Optimal portfolio positioning strategies
+    - Duration and credit exposure recommendations
+
+REQUIREMENTS:
+- Include precise numerical data (yields, spreads, basis points)
+- Compare current levels to historical ranges
+- Specify expected returns and risk metrics for recommended positions
+- Support claims with specific economic data points and market events
+- Highlight inconsistencies in market pricing
+- Use reliable sources (Bloomberg, central banks, major dealer research)
+- Current date: March 7th, 2025
+- Distinguish between tactical and strategic recommendations
+- Consider correlation with other asset classes
+- Address inflation and liquidity risks
+    """
+
+    messages = [
+        {
+            "role": "system",
+            "content": (
+                system_prompt
+            ),
+        },
+        {   
+            "role": "user",
+            "content": (
+                user_prompt
+            ),
+        },
+    ]
+
+    client = OpenAI(api_key=Sonar_API_KEY, base_url="https://api.perplexity.ai")
+
+    # chat completion without streaming
+    response = client.chat.completions.create(
+        model="sonar-deep-research",
+        messages=messages,
+    )
+    # Store full response in a variable
+    full_response = response.choices[0].message.content
+    # Print in a readable format
+    print("Complete response:")
+    print(full_response)
+    return full_response  # Return the response so it can be used by the tool
+
+
+def etf_analyst():
+    system_prompt = """You are a leading ETF strategist with 20+ years experience across asset management and investment research. Your expertise includes:
+
+- ETF structure, mechanics, and liquidity analysis
+- Performance and tracking efficiency evaluation
+- Factor, thematic, and sector ETF evaluation
+- ETF portfolio construction techniques
+- Total cost analysis including expense ratios, tracking error, and trading costs
+
+Focus on identifying optimal ETF selections for various portfolio objectives. Evaluate both strategic and tactical ETF opportunities across asset classes."""
+
+    user_prompt = """
+GOAL: Provide comprehensive ETF market analysis across multiple timeframes (1w, 1m, 3m, 6m) for portfolio optimization.
+
+FORMAT:
+
+1. EXECUTIVE SUMMARY
+   - Current ETF market conditions and key investment themes
+   - Strategic recommendations and major opportunities/risks
+
+2. ETF MARKET OVERVIEW
+   - Broad ETF category flows and performance (equity, fixed income, commodity, multi-asset)
+   - New product developments and industry trends
+   - AUM growth and distribution patterns
+   - Liquidity conditions and trading volumes
+
+3. EQUITY ETF ANALYSIS
+   - U.S., international, and emerging market ETF performance
+   - Factor ETF rotation (value, growth, quality, momentum, min vol)
+   - Sector and industry ETF relative performance
+   - Market cap spectrum (large, mid, small) and style box analysis
+
+4. FIXED INCOME ETF ANALYSIS
+   - Government, corporate, high yield, and municipal ETF performance
+   - Duration-based ETF strategies and interest rate sensitivity
+   - Credit quality spectrum performance
+   - Active vs. passive fixed income ETF comparison
+
+5. SPECIALTY ETF ANALYSIS
+   - Thematic ETF performance (technology, ESG, infrastructure, etc.)
+   - Alternative strategy ETFs (options overlay, covered call, etc.)
+   - Commodity and real asset ETFs
+   - Multi-asset and allocation ETFs
+
+6. ETF TECHNICAL FACTORS
+   - Premium/discount patterns and trends
+   - Creation/redemption activity
+   - Securities lending revenue potential
+   - Trading costs and execution efficiency
+
+7. ETF STRUCTURAL ANALYSIS
+   - ETF construction methodologies and impact on performance
+   - Index methodologies and rebalancing effects
+   - Tax efficiency comparisons
+   - Expense ratio trends and competitive landscape
+
+8. STRATEGIC APPLICATIONS
+   - Core-satellite portfolio construction with ETFs
+   - Factor rotation strategies
+   - Tactical asset allocation implementation
+   - Risk management applications
+
+9. ETF OPPORTUNITIES
+   - Underutilized or overlooked ETF strategies
+   - Relative value opportunities between similar ETFs
+   - New product innovations worth considering
+   - Unique exposures available through ETFs
+
+10. OUTLOOK
+    - Top ETF recommendations by category with rationale
+    - Expected performance scenarios
+    - Key risks to monitor for recommended ETFs
+    - Implementation guidance and position sizing
+
+REQUIREMENTS:
+- Include precise numerical data (performance figures, expense ratios, flows)
+- Compare similar ETFs on multiple metrics
+- Provide specific ticker recommendations with rationale
+- Assess tracking error and index replication quality
+- Highlight liquidity considerations and trading guidance
+- Use reliable sources (Bloomberg, ETF issuer data, major research firms)
+- Current date: March 7th, 2025
+- Distinguish between strategic and tactical ETF recommendations
+- Consider tax implications where relevant
+- Address potential hidden risks in ETF structures
+    """
+
+    messages = [
+        {
+            "role": "system",
+            "content": (
+                system_prompt
+            ),
+        },
+        {   
+            "role": "user",
+            "content": (
+                user_prompt
+            ),
+        },
+    ]
+
+    client = OpenAI(api_key=Sonar_API_KEY, base_url="https://api.perplexity.ai")
+
+    # chat completion without streaming
+    response = client.chat.completions.create(
+        model="sonar-deep-research",
+        messages=messages,
+    )
+    # Store full response in a variable
+    full_response = response.choices[0].message.content
+    # Print in a readable format
+    print("Complete response:")
+    print(full_response)
+    return full_response  # Return the response so it can be used by the tool
+
+
+def optimize():
+
+    current_date = datetime.now().strftime('%Y-%m-%d')
+
+    current_time = datetime.now().strftime('%H:%M:%S')
     
     try:
         # Use existing functionality if available
@@ -787,10 +1210,6 @@ def gpt_4oModel(portfolio_data=None, cash_balance=None, current_date=None, curre
         monthly_performance = format_monthly_performance(monthly_results)
         formatted_diversification = format_diversification(diversification)
         positions_table = formatted_pos.get("positions_table", "")
-        
-        if cash_balance is None:
-            # Calculate cash balance from positions if not provided
-            cash_balance = sum(p.get('position', 0) * p.get('averageCost', 0) for p in positions)
     except:
         account_info = "Unable to extract account information"
         positions_table = "Unable to format positions table"
@@ -798,13 +1217,12 @@ def gpt_4oModel(portfolio_data=None, cash_balance=None, current_date=None, curre
         portfolio_metrics = "Unable to format portfolio metrics"
         stock_metrics = "Unable to format stock metrics"
         monthly_performance = "Unable to format monthly performance"
-        
-        if cash_balance is None:
-            cash_balance = 10000  # Default cash balance
     
+
     # Create the content string with proper f-string interpolation
     content = f"""
-Analyze the provided portfolio data and recommend specific actions to improve returns and reduce risk. The date is {current_date} and the time is {current_time}.
+Analyze the provided portfolio data and recommend specific actions to improve returns and reduce risk. 
+REMEMBER THE CURRENT DATE IS {current_date} 
 
 ### Portfolio Positions:
 
@@ -888,10 +1306,7 @@ RULES:
 4. BE SUCCESSFUL AND MAKE MONEY.
 5. BE CREATIVE IN YOUR STRATEGIES AND THINK OUTSIDE THE BOX.
 6. KEEP 10% OF THE PORTFOLIO IN CASH.
-7. I dont want any positions less than $10,000
-IMPORTANT: YOU MUST USE THE query_energy_stocks tool to get information about energy stocks from the coal and consumable fuels industry.
-IMPORTANT: YOU MUST USE THE get_stock_details tool to get detailed information about a specific stock.
-IMPORTANT: print your findings from the tools in the response.
+7. None of the positions should be less than $10,000
 """
     
     # Call the OpenAI API with tool calling ability
@@ -917,7 +1332,7 @@ IMPORTANT: print your findings from the tools in the response.
         search_tool = {
             "type": "function",
             "function": {
-                "name": "web_search",
+                "name": "free_search",
                 "description": "Search the internet for critical investment information that will enhance portfolio optimization. Construct DETAILED and SPECIFIC search queries to get the highest quality information. Follow these guidelines for effective searches:\n\n1. Be specific about the information you need (e.g., instead of 'tech stocks' use 'semiconductor industry outlook 2025 and top mid-cap opportunities')\n2. Include relevant timeframes in your query\n3. Target specific sectors, industries, or market segments\n4. Request numerical data like P/E ratios, growth rates, or market projections\n5. Break complex research needs into multiple focused searches\n\nYou should conduct AT LEAST 3-5 searches on different topics before making final recommendations.",
                 "parameters": {
                     "type": "object",
@@ -931,7 +1346,59 @@ IMPORTANT: print your findings from the tools in the response.
                 }
             }
         }
-
+        
+        equity_research_tool = {
+            "type": "function",
+            "function": {
+                "name": "equity_research_analyst",
+                "description": "Generate a comprehensive equity research report that provides actionable insights into the global equity market. The report covers market trends, sector performance, geopolitical events, investor sentiment, emerging opportunities, key risks, market valuation, and investment styles.",
+                "parameters": {
+                    "type": "object",
+                    "properties": {},
+                    "required": []
+                }
+            }
+        }
+        
+        commodities_research_tool = {
+            "type": "function",
+            "function": {
+                "name": "commodities_analyst",
+                "description": "Generate a comprehensive commodities market analysis covering energy, metals, and agricultural markets. The report includes supply-demand fundamentals, price trends, physical market dynamics, inventory levels, forward curves, and geopolitical factors affecting commodity prices.",
+                "parameters": {
+                    "type": "object",
+                    "properties": {},
+                    "required": []
+                }
+            }
+        }
+        
+        fixed_income_research_tool = {
+            "type": "function",
+            "function": {
+                "name": "fixed_income_analyst",
+                "description": "Generate a comprehensive fixed income market analysis covering sovereign bonds, credit markets, yield curves, and interest rate environments. The report includes central bank policies, economic fundamentals, relative value opportunities, and optimal positioning strategies.",
+                "parameters": {
+                    "type": "object",
+                    "properties": {},
+                    "required": []
+                }
+            }
+        }
+        
+        etf_research_tool = {
+            "type": "function",
+            "function": {
+                "name": "etf_analyst",
+                "description": "Generate a comprehensive ETF market analysis covering equity, fixed income, commodity, and specialty ETFs. The report includes performance analysis, structural considerations, liquidity conditions, and specific ETF recommendations with rationale.",
+                "parameters": {
+                    "type": "object",
+                    "properties": {},
+                    "required": []
+                }
+            }
+        }
+        
         # Helper function to process tool responses
         def process_tool_call(tool_call):
             function_name = tool_call.function.name
@@ -962,10 +1429,10 @@ IMPORTANT: print your findings from the tools in the response.
                 
                 tool_response = energy_response
                 
-            elif function_name == "web_search":
+            elif function_name == "free_search":
                 function_args = json.loads(tool_call.function.arguments)
                 query = function_args.get("query")
-                print(f"*** TOOL USED: web_search for query: '{query}' ***")
+                print(f"*** TOOL USED: free_search for query: '{query}' ***")
                 
                 # Use the search function to get information from the web
                 system_prompt = """You are a financial research analyst with 20+ years of experience who provides comprehensive, data-rich investment analysis. 
@@ -975,14 +1442,65 @@ IMPORTANT: print your findings from the tools in the response.
                 
                 # Call the search function (it will print the full response internally)
                 try:
-                    search_response = search(system_prompt, query)
+                    search_response = free_search(system_prompt, query)
                 except Exception as e:
                     print(f"Error during web search: {e}")
                     search_response = f"I attempted to search for information about '{query}' but encountered an error. Please try a different search query or continue with the available information."
                 
                 # Format the response appropriately
-                # WHAT IS TOOL RESPONSE?
                 tool_response = f"Web Search Results for: '{query}'\n\n{search_response}\n\nNOTE: This information should be incorporated into your portfolio analysis. You should conduct additional searches on other topics to build a comprehensive view before making final recommendations."
+            
+            elif function_name == "equity_research_analyst":
+                print(f"*** TOOL USED: equity_research_analyst ***")
+                
+                # Call the equity research analyst function
+                try:
+                    research_report = equity_research_analyst()
+                except Exception as e:
+                    print(f"Error generating equity research report: {e}")
+                    research_report = "I attempted to generate a comprehensive equity research report but encountered an error. Please continue with the available information or try using other research tools."
+                
+                # Format the response appropriately
+                tool_response = f"Equity Research Report:\n\n{research_report}\n\nNOTE: This comprehensive market analysis should form the foundation of your portfolio optimization strategy. Consider how these trends, opportunities, and risks impact your investment decisions."
+            
+            elif function_name == "commodities_analyst":
+                print(f"*** TOOL USED: commodities_analyst ***")
+                
+                # Call the commodities analyst function
+                try:
+                    research_report = commodities_analyst()
+                except Exception as e:
+                    print(f"Error generating commodities research report: {e}")
+                    research_report = "I attempted to generate a comprehensive commodities market analysis but encountered an error. Please continue with the available information or try using other research tools."
+                
+                # Format the response appropriately
+                tool_response = f"Commodities Market Analysis:\n\n{research_report}\n\nNOTE: Use this commodities market analysis to inform your allocation to energy, metals, agriculture, and other commodity-related assets. Consider both direct commodity exposure and indirect exposure through equities in commodity-producing companies."
+            
+            elif function_name == "fixed_income_analyst":
+                print(f"*** TOOL USED: fixed_income_analyst ***")
+                
+                # Call the fixed income analyst function
+                try:
+                    research_report = fixed_income_analyst()
+                except Exception as e:
+                    print(f"Error generating fixed income research report: {e}")
+                    research_report = "I attempted to generate a comprehensive fixed income market analysis but encountered an error. Please continue with the available information or try using other research tools."
+                
+                # Format the response appropriately
+                tool_response = f"Fixed Income Market Analysis:\n\n{research_report}\n\nNOTE: Use this fixed income analysis to optimize bond allocations, duration positioning, and credit exposure in your portfolio. Consider how the current interest rate environment affects both your fixed income holdings and other asset classes."
+            
+            elif function_name == "etf_analyst":
+                print(f"*** TOOL USED: etf_analyst ***")
+                
+                # Call the ETF analyst function
+                try:
+                    research_report = etf_analyst()
+                except Exception as e:
+                    print(f"Error generating ETF research report: {e}")
+                    research_report = "I attempted to generate a comprehensive ETF market analysis but encountered an error. Please continue with the available information or try using other research tools."
+                
+                # Format the response appropriately
+                tool_response = f"ETF Market Analysis:\n\n{research_report}\n\nNOTE: Use this ETF analysis to identify optimal vehicles for implementing your asset allocation and tactical views. Consider both the underlying exposures and structural characteristics of recommended ETFs."
             
             return {
                 "role": "tool",
@@ -1041,11 +1559,19 @@ IMPORTANT: print your findings from the tools in the response.
         
         user_message = {
             "role": "user",
-            "content": content + "\n\nPlease optimize this portfolio to maximize returns while managing risk. You MUST conduct extensive research using at least 5-7 detailed web searches on different market aspects before providing recommendations.\n\nYour research should include:\n\n1. MACROECONOMIC ANALYSIS: Research the current economic environment, interest rate outlook, inflation trends, and how they affect different asset classes\n\n2. SECTOR ANALYSIS: Identify which sectors are positioned for outperformance in the next 12-24 months and why\n\n3. GEOGRAPHIC ALLOCATION: Research optimal exposure to US vs international markets, including emerging markets opportunities\n\n4. ALTERNATIVE INVESTMENTS: Investigate if commodities, REITs, or other alternatives would enhance the portfolio\n\n5. ENERGY SECTOR DEEP DIVE: First use query_energy_stocks to identify coal/consumable fuel stocks, then research their outlook and fit within the broader energy landscape\n\n6. RISK ANALYSIS: Research potential market risks and appropriate hedging strategies\n\n7. SMALL/MID CAP OPPORTUNITIES: Find undervalued companies outside the mega-cap space\n\nFor each research area, construct detailed search queries that will provide high-quality, specific information. After conducting this thorough research, provide a comprehensive portfolio recommendation with specific allocation percentages and implementation steps."
+            "content": content + "\n\nBefore making recommendations, conduct thorough market research in this sequence:\n\n" + \
+            "1. MARKET ANALYSIS (REQUIRED)\n" + \
+            "   - Use equity_research_analyst for comprehensive equity market insights\n" + \
+            "   - Use fixed_income_analyst if the portfolio includes or should include bonds\n" + \
+            "   - Use commodities_analyst if the portfolio includes or should include commodities\n" + \
+            "   - Use etf_analyst to identify optimal ETF vehicles for implementation\n\n" + \
+            "2. TARGETED RESEARCH (AS NEEDED)\n" + \
+            "   - Use free_search to investigate specific opportunities or concerns \n" + \
+            "   - Use free_search to search any information you need to make the best portfolio recommendations\n\n"    
         }
         
         initial_messages = [system_message, user_message]
-        available_tools = [energy_stocks_tool, search_tool]
+        available_tools = [energy_stocks_tool, search_tool, equity_research_tool, fixed_income_research_tool, commodities_research_tool, etf_research_tool]
         
         # Start the conversation without forcing a tool call
         final_content = handle_conversation(initial_messages, available_tools)
@@ -1065,5 +1591,4 @@ IMPORTANT: print your findings from the tools in the response.
         traceback.print_exc()
         return f"An error occurred while calling the OpenAI API: {str(e)}"
 
-
-gpt_4oModel(portfolio_data=None, cash_balance=None, current_date=None, current_time=None, force_tool_usage=False)
+optimize()
