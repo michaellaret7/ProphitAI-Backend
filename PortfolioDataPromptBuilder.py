@@ -6,7 +6,7 @@ import os
 from datetime import datetime
 import psycopg2
 import pandas as pd
-
+import re
 OpenAI_API_KEY = "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"
 Sonar_API_KEY = "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"
 # Initialize clients
@@ -755,66 +755,55 @@ def free_search(system_prompt, user_prompt):
 
 
 def equity_research_analyst():
-    system_prompt = """You are an elite equity research analyst with 20+ years experience at top investment banks. Your expertise includes:
+    date = datetime.now().strftime("%Y-%m-%d")
 
-- Data-driven market analysis with multiple reliable sources
-- Quantitative analysis of trends and integration with macroeconomic factors
-- Providing precise, actionable insights backed by verifiable data
-- Identifying both obvious and hidden market risks across timeframes
-- Recommending opportunities that enhance risk-adjusted returns
+    system_prompt = """
+    You are a professional financial analyst specializing in equity markets. Provide comprehensive, data-driven analysis of the stock market with the following characteristics:
+1. Use reliable financial sources including market data providers, SEC filings, earnings reports, analyst research, and expert commentary
+2. Include relevant quantitative data such as index levels, trading volumes, market breadth, sector performance, and valuation metrics
+3. Analyze market trends across different market caps, sectors, investment styles, and geographic regions
+4. Explain technical concepts clearly but maintain sophisticated financial analysis
+5. Discuss macroeconomic factors affecting equity markets including monetary policy, inflation, employment, and economic growth
+6. Structure your response with clear sections covering different timeframes and market segments
+7. Include diverse perspectives on market outlook from leading institutions and strategists
+"""
 
-Focus on information that directly impacts investment decisions. Provide both defensive strategies and growth opportunities with current market data."""
-
-    user_prompt = """
+    user_prompt = f"""
 GOAL: Provide comprehensive equity market analysis across multiple timeframes (1w, 1m, 3m, 6m) for portfolio optimization.
 
-FORMAT:
+IMPORTANT:
+THIS IS THE DATE TODAY: {date}
 
-1. EXECUTIVE SUMMARY
-   - Current market conditions, key recommendations, major opportunities/risks
+Conduct a detailed analysis of the current state of the equity market with specific focus on:
 
-2. MARKET PERFORMANCE 
-   - Major indices (S&P 500, Nasdaq, Dow, Russell, FTSE, DAX, Nikkei, Shanghai) across all timeframes
-   - Volume, volatility (VIX), and breadth indicators
+1. RECENT DEVELOPMENTS (PAST WEEK):
+   - Major price movements and trading patterns in major indices (S&P 500, Nasdaq, Dow Jones, Russell 2000)
+   - Sector rotation and leadership changes
+   - Key earnings reports, economic data releases, or news that impacted markets
+   - Notable changes in market sentiment indicators (VIX, put/call ratios, sentiment surveys)
 
-3. SECTOR ANALYSIS
-   - Performance ranking of all major sectors across all timeframes
-   - Rotation patterns, correlation analysis, notable outperformers/underperformers
+2. MONTH-LONG TRENDS (PAST 30 DAYS):
+   - Performance comparison across sectors, market caps, and investment styles (growth vs. value)
+   - Fund flows into different market segments and ETFs
+   - Changes in market breadth and participation
+   - Shifts in institutional positioning and retail investor activity
+   - International market performance and correlation with US markets
 
-4. MACRO FACTORS
-   - Central bank policies, rates, inflation, employment, currencies, yield curve
+3. QUARTERLY PERSPECTIVE (PAST 3 MONTHS):
+   - Earnings season results and guidance trends
+   - Valuation changes and comparison to historical averages
+   - Monetary policy impacts on equity markets
+   - Market technical indicators and their signals
+   - Significant corporate actions (M&A, buybacks, dividends)
+   - Performance of thematic and factor-based investments
 
-5. GEOPOLITICAL IMPACT
-   - Current tensions, policy changes, upcoming events affecting markets
+4. OUTLOOK AND STRATEGIC CONSIDERATIONS:
+   - Key catalysts and risk factors for the equity market in coming weeks
+   - Sector and industry opportunities
+   - Consensus earnings expectations and their implications
+   - Technical levels to watch across major indices
 
-6. SENTIMENT & TECHNICALS
-   - Institutional vs retail positioning, fund flows, technical indicators
-
-7. VALUATIONS
-   - P/E, P/S, P/B, CAPE compared to historical averages
-   - Earnings trends, margin analysis, valuation dispersions
-
-8. FACTOR PERFORMANCE
-   - Value, Growth, Quality, Momentum, Size, Low Volatility across timeframes
-   - Factor rotation and recommended tilts
-
-9. THEMATIC OPPORTUNITIES
-   - Emerging trends, secular growth themes, defensive and contrarian opportunities
-
-10. OUTLOOK
-    - Short and medium-term forecasts, key catalysts, inflection points
-
-REQUIREMENTS:
-- Include precise numerical data and historical comparisons
-- Specify timeframes for trends (accelerating/decelerating)
-- Support claims with specific events/releases
-- Highlight contradictory indicators
-- Cover global markets (not just individual stocks)
-- Use reliable sources (Bloomberg, Reuters, FT, WSJ, major banks)
-- Current date: March 7th, 2025
-- Clearly distinguish facts from opinions
-- Label estimates when exact data unavailable
-- Consider potential tail risks
+Please include specific data points, charts when relevant, and cite your sources. Prioritize accuracy and depth of analysis over general commentary.
     """
 
     messages = [
@@ -841,94 +830,128 @@ REQUIREMENTS:
     )
     # Store full response in a variable
     full_response = response.choices[0].message.content
+
+    # Remove the thinking process using regex
+    cleaned_content = re.sub(r'<think>.*?</think>', '', full_response, flags=re.DOTALL)
+
     # Print in a readable format
     print("Complete response:")
     print(full_response)
+    print("Cleaned response:")
+    print(cleaned_content)
     return full_response  # Return the response so it can be used by the tool
 
+equity_research_analyst()
 
 def commodities_analyst():
-    system_prompt = """You are a senior commodities analyst with 20+ years experience at major trading firms and investment banks. Your expertise includes:
+    date = datetime.now().strftime("%Y-%m-%d")
 
-- Fundamental supply-demand analysis across energy, metals, and agricultural markets
-- Price trend analysis incorporating seasonal patterns and cyclical behaviors
-- Physical market dynamics including storage, transportation, and delivery constraints
-- Geopolitical risk assessment for commodity-producing regions
-- Macro drivers of commodity prices (inflation, currency, interest rates)
+    system_prompt = """
+    You are an expert commodities analyst with deep knowledge of global markets. You prioritize clarity, detail, and data-backed reasoning in your explanations. Always ground your conclusions in the provided context. If needed information is absent, acknowledge the gap rather than guessing.
+    """
 
-Focus on actionable commodity market insights for portfolio allocation. Balance risk management with opportunity identification."""
+    user_prompt = f"""
+    GOAL / OBJECTIVE:
+    Provide a structured, data-driven analysis of how commodities are influenced by fundamental supply and demand factors, weather events, economic indicators, geopolitical risks, currency movements, policy changes, and technological shifts.
 
-    user_prompt = """
-GOAL: Provide comprehensive commodities market analysis across multiple timeframes (1w, 1m, 3m, 6m) for portfolio optimization.
+    IMPORTANT:
+    THIS IS THE DATE TODAY: {date}
+    
+    USER MESSAGE (PROMPT):
+    Please read the following reference on commodity market drivers and produce a well-organized, multi-paragraph report that covers:
+    1. An overview of the key categories affecting commodities (supply/demand fundamentals, weather impacts, economic data, geopolitical risks, currency/financial factors, policy/regulatory influences, and technological trends).
+    2. How these factors interact and reinforce or offset each other across different commodity classes (energy, metals, agriculture, etc.).
+    3. Real or hypothetical scenarios illustrating potential market responses (e.g., how a strong dollar might affect oil prices, or how a drought impacts grain supplies).
+    4. A brief forward-looking perspective on which factors appear most significant for the near-term commodity outlook.
 
-FORMAT:
+    CONTEXT (REFERENCE MATERIAL):
+    ----------------------------------------------------------------
+    Commodities are influenced by a complex mix of fundamental supply and demand dynamics, weather
+    conditions, economic data, geopolitical events, and policy decisions. The importance of each factor
+    depends on the specific commodity (e.g., oil, natural gas, agricultural products, metals). Below is a
+    breakdown of the most critical drivers:
 
-1. EXECUTIVE SUMMARY
-   - Current commodities market conditions, key recommendations, major opportunities/risks
+    1. Supply and Demand Fundamentals
+    • Production Levels - Changes in mining, drilling, or agricultural output affect supply.
+    • Global Consumption Trends - Industrial activity, energy demand, and consumer behavior impact
+    prices.
+    • Inventory Levels (EIA, DOE, USDA, LME, COMEX Reports) - Storage and stockpile levels provide
+    insight into current supply/demand balances.
 
-2. COMMODITIES PERFORMANCE
-   - Major commodity indices and benchmarks across all timeframes
-   - Key individual commodities (oil, gas, gold, silver, copper, agriculture) performance
-   - Volatility metrics and term structure (contango/backwardation)
+    2. Weather and Natural Events
+    • Agricultural Commodities (Corn, Wheat, Soybeans, Coffee, Cocoa, Sugar)
+    --> Droughts, floods, frosts, and hurricanes can drastically impact crop yields.
+    --> El Niño and La Niña influence rainfall and temperatures globally.
+    --> Disease outbreaks (e.g., African Swine Fever affecting soybean demand in China).
+    • Energy Markets (Oil, Natural Gas, Coal)
+    --> Hurricanes affecting Gulf of Mexico oil and gas production.
+    --> Cold winters increase natural gas demand (heating), while hot summers boost electricity use.
+    --> Water shortages can impact hydropower generation and mining.
+    • Metals & Mining
+    --> Natural disasters or labor strikes can shut down mines (copper, iron ore, gold, etc.).
+    --> Geological constraints impact long-term supply.
 
-3. SECTOR ANALYSIS
-   - Performance ranking of commodity sectors (Energy, Precious Metals, Industrial Metals, Agriculture)
-   - Inter-commodity spreads and relative value opportunities
-   - Supply-demand balances by sector
+    3. Economic Data & Growth Indicators
+    • GDP Growth (China, U.S., EU) - Higher economic activity increases demand for industrial metals,
+    energy, and agricultural commodities.
+    • Manufacturing and Industrial Production (PMIs, ISM, Durable Goods Orders) - A strong
+    manufacturing sector signals increased raw material consumption.
+    • Employment & Consumer Spending - Affects fuel demand (gasoline, diesel) and consumption of
+    food/agriculture commodities.
 
-4. MACRO DRIVERS
-   - Dollar strength/weakness impact on commodity prices
-   - Inflation trends and commodity response
-   - Interest rate environment and carrying costs
-   - Global economic growth and commodity demand outlook
+    4. Geopolitical & Supply Chain Risks
+    • OPEC+ Decisions (Oil) - Production quotas set by OPEC+ impact crude oil supply and prices.
+    • Sanctions and Trade Restrictions - U.S. sanctions on Russian oil, metals, or agricultural products
+    shift trade flows.
+    • Tariffs and Trade Wars - U.S.-China trade tensions affecting soybean exports/imports.
+    • Shipping & Logistics Disruptions
+    - Red Sea/Suez Canal disruptions impacting energy and metals.
+    - Panama Canal drought slowing commodity shipments.
+    - Port strikes and supply chain bottlenecks.
 
-5. GEOPOLITICAL FACTORS
-   - Production disruptions and supply concerns
-   - Trade policies, sanctions, and export restrictions
-   - Resource nationalism and regulatory developments
-   - Weather patterns and climate-related impacts
+    5. Currency & Financial Market Movements
+    • U.S. Dollar Strength - Since most commodities are priced in USD, a stronger dollar makes them
+    more expensive for foreign buyers.
+    • Interest Rates & Inflation - Higher rates increase the cost of holding non-yielding assets like gold,
+    while inflationary pressures often support commodity prices.
+    • Speculative Positioning (COT Reports, Hedge Fund Flows) - Large spec positions in futures
+    markets drive volatility.
 
-6. MARKET POSITIONING
-   - Speculative vs. commercial positioning (COT reports)
-   - ETF flows and investor sentiment
-   - Physical market premiums/discounts
-   - Technical indicators and price momentum
+    6. Policy & Regulation
+    • Environmental Regulations (Carbon Taxes, Emissions Caps) - Restrictions on fossil fuel emissions
+    impact coal, oil, and natural gas demand.
+    • Biofuel Mandates (Ethanol, Biodiesel) - Policies requiring biofuel blending affect corn and soybean
+    demand.
+    • Mining & Drilling Restrictions - ESG-driven constraints on mining (lithium, cobalt) and fossil fuel
+    production.
+    • Government Stockpiling & Strategic Reserves (SPR Releases, China's Grain Reserves) - Governments manage strategic commodity reserves, impacting market balance.
 
-7. INVENTORY & STORAGE
-   - Current inventory levels vs. 5-year averages
-   - Storage economics and capacity constraints
-   - Seasonal stock patterns and anomalies
-   - Production capacity utilization rates
+    7. Alternative Energy & Technological Shifts
+    • EV and Battery Metals Demand (Lithium, Cobalt, Nickel, Copper) - Growth in electric vehicle
+    adoption increases demand for critical minerals.
+    • Green Energy Transition (Solar, Wind, Hydrogen) - Shifts in energy consumption patterns impact
+    fossil fuel demand.
+    • AI & Semiconductor Boom (Rare Earths, Silver, Copper) - Increased tech sector demand drives
+    specific commodity markets.
 
-8. CURVE DYNAMICS
-   - Forward curve structures across commodities
-   - Roll yields and implications for investors
-   - Calendar spread opportunities
-   - Inter-commodity spread relationships
+    8. War, Conflict & Cybersecurity Risks
+    • Russia-Ukraine War (Wheat, Corn, Oil, Natural Gas, Palladium) - Major disruptions in global grain
+    and energy markets.
+    • Middle East Tensions (Oil, Gold, Safe Haven Demand) - Conflicts in the region can lead to oil price
+    spikes.
+    • Cyberattacks on Infrastructure (Pipelines, Power Grids) - Potential for disruptions to oil, gas, and
+    power markets.
+    ----------------------------------------------------------------
 
-9. THEMATIC OPPORTUNITIES
-   - Secular trends affecting commodities (energy transition, electrification)
-   - Supply constraints and capacity additions
-   - Substitution and demand destruction price levels
-   - Emerging market demand growth
+    INSTRUCTIONS:
+    1. Provide an in depth overview of the main categories driving commodity markets.
+    2. Summarize how these factors intersect (e.g., how weather events affect supply, how currency movements alter global trade flows, etc.).
+    3. Give at least one example scenario (hypothetical or based on known patterns) illustrating how a particular driver might affect prices.
+    4. Offer a forward-looking perspective on which factors are likely to be especially influential in the near term.
+    5. Organize your response clearly, with headings or bullet points where appropriate.
+    6. If any detail is missing from the context, note that explicitly rather than fabricating information.
 
-10. OUTLOOK
-    - Short and medium-term price forecasts with probability distributions
-    - Key catalysts and event risks to monitor
-    - Seasonal patterns likely to emerge
-    - Recommended positioning strategies
-
-REQUIREMENTS:
-- Include precise numerical data (prices, basis points, percentages)
-- Compare current levels to historical averages and seasonal norms
-- Specify supply-demand balances with quantitative estimates
-- Support claims with specific market events
-- Highlight divergences between physical and financial markets
-- Use reliable sources (Bloomberg, Reuters, IEA, EIA, USDA, major banks)
-- Current date: March 7th, 2025
-- Distinguish between structural and cyclical trends
-- Address potential external shocks (weather, geopolitics)
-- Consider cross-asset implications (FX, rates, equities)
+    END OF PROMPT
     """
 
     messages = [
@@ -959,126 +982,10 @@ REQUIREMENTS:
     print("Complete response:")
     print(full_response)
     return full_response  # Return the response so it can be used by the tool
-
-
-def fixed_income_analyst():
-    system_prompt = """You are a veteran fixed income strategist with 20+ years experience at premier investment firms. Your expertise includes:
-
-- Interest rate analysis across global yield curves and monetary policy regimes
-- Credit market assessment from investment grade to high yield and emerging markets
-- Macro factors driving bond yields, spreads, and returns
-- Duration, convexity, and yield curve positioning strategies
-- Fixed income relative value across sectors, regions, and structures
-
-Focus on delivering actionable fixed income insights that directly impact portfolio construction. Provide both risk management strategies and alpha generation opportunities."""
-
-    user_prompt = """
-GOAL: Provide comprehensive fixed income market analysis across multiple timeframes (1w, 1m, 3m, 6m) for portfolio optimization.
-
-FORMAT:
-
-1. EXECUTIVE SUMMARY
-   - Current fixed income market conditions and key investment themes
-   - Strategic recommendations and major opportunities/risks
-
-2. RATES MARKET PERFORMANCE
-   - Sovereign yield curves (US, EU, UK, Japan) across all timeframes
-   - Real yields and breakeven inflation rates
-   - Yield curve shape metrics (slope, curvature)
-   - Volatility conditions (MOVE index) and rate expectations
-
-3. CREDIT MARKET ANALYSIS
-   - Performance of credit sectors (IG, HY, EM, securitized products)
-   - Credit spread evolution and relative value
-   - Credit quality trends and rating migration
-   - Default rates and recovery expectations
-
-4. CENTRAL BANK POLICY
-   - Policy rates and forward guidance across major central banks
-   - Balance sheet policies (QE/QT) and liquidity conditions
-   - Market vs. central bank rate expectations divergence
-   - Impact of recent policy decisions and communications
-
-5. ECONOMIC FUNDAMENTALS
-   - Growth and inflation outlook impact on fixed income
-   - Labor market conditions and wage pressures
-   - Fiscal policy developments and government funding needs
-   - Current position in the credit cycle
-
-6. MARKET TECHNICALS
-   - Supply/demand dynamics (issuance, redemptions, fund flows)
-   - Investor positioning and sentiment indicators
-   - Liquidity conditions and bid-ask spreads
-   - Foreign investor activity and currency-hedged yields
-
-7. RELATIVE VALUE
-   - Cross-market spreads and opportunities
-   - Sector rotation recommendations
-   - Duration positioning considerations
-   - Security selection themes
-
-8. CURVE POSITIONING
-   - Yield curve strategies (flatteners, steepeners)
-   - Roll-down analysis and carry opportunities
-   - Inflection points and optimal positioning
-   - Scenario analysis across different rate environments
-
-9. THEMATIC OPPORTUNITIES
-   - Special situations and dislocations
-   - Structural changes in fixed income markets
-   - Regulatory impacts on bond markets
-   - Innovation in fixed income products
-
-10. OUTLOOK
-    - Rate and spread forecasts with probability scenarios
-    - Key catalysts and event risks to monitor
-    - Optimal portfolio positioning strategies
-    - Duration and credit exposure recommendations
-
-REQUIREMENTS:
-- Include precise numerical data (yields, spreads, basis points)
-- Compare current levels to historical ranges
-- Specify expected returns and risk metrics for recommended positions
-- Support claims with specific economic data points and market events
-- Highlight inconsistencies in market pricing
-- Use reliable sources (Bloomberg, central banks, major dealer research)
-- Current date: March 7th, 2025
-- Distinguish between tactical and strategic recommendations
-- Consider correlation with other asset classes
-- Address inflation and liquidity risks
-    """
-
-    messages = [
-        {
-            "role": "system",
-            "content": (
-                system_prompt
-            ),
-        },
-        {   
-            "role": "user",
-            "content": (
-                user_prompt
-            ),
-        },
-    ]
-
-    client = OpenAI(api_key=Sonar_API_KEY, base_url="https://api.perplexity.ai")
-
-    # chat completion without streaming
-    response = client.chat.completions.create(
-        model="sonar-deep-research",
-        messages=messages,
-    )
-    # Store full response in a variable
-    full_response = response.choices[0].message.content
-    # Print in a readable format
-    print("Complete response:")
-    print(full_response)
-    return full_response  # Return the response so it can be used by the tool
-
 
 def etf_analyst():
+    date = datetime.now().strftime("%Y-%m-%d")
+
     system_prompt = """You are a leading ETF strategist with 20+ years experience across asset management and investment research. Your expertise includes:
 
 - ETF structure, mechanics, and liquidity analysis
@@ -1089,8 +996,11 @@ def etf_analyst():
 
 Focus on identifying optimal ETF selections for various portfolio objectives. Evaluate both strategic and tactical ETF opportunities across asset classes."""
 
-    user_prompt = """
+    user_prompt = f"""
 GOAL: Provide comprehensive ETF market analysis across multiple timeframes (1w, 1m, 3m, 6m) for portfolio optimization.
+
+IMPORTANT:
+THIS IS THE DATE TODAY: {date}
 
 FORMAT:
 
@@ -1194,6 +1104,710 @@ REQUIREMENTS:
     print(full_response)
     return full_response  # Return the response so it can be used by the tool
 
+def treasuries_analyst():
+    date = datetime.now().strftime("%Y-%m-%d")
+    
+    system_prompt = """
+You are an expert macroeconomic analyst with a specialization in U.S. Treasury markets and yield curves. You have deep knowledge of factors affecting Treasury yields—such as inflation, Federal Reserve policy, geopolitical risks, and market positioning. You prioritize clarity, detail, and data-driven reasoning in your analysis. Always cite relevant points from the provided context to ground your conclusions in facts. 
+    """
+
+    user_prompt = f"""
+GOAL / OBJECTIVE:
+Provide a structured, data-driven analysis of how treasuries are influenced by economic indicators, geopolitical risks, currency movements, policy changes, and technological shifts.
+
+Please analyze the following text and produce a well-structured, data-driven report on the behavior of U.S. Treasuries and rates, focusing on:
+1. How recent economic data (inflation, employment, wages, growth) has influenced government bond performance.  
+2. Specific behavior of the 2s10s yield curve (the yield differential between 2-year and 10-year Treasury notes) during these periods.  
+3. Historical tendencies versus current data and outlook for the 2s10s curve.  
+4. Upcoming factors that may impact Treasury rates, including but not limited to:
+   - Tariffs
+   - Inflation data
+   - "Flight to quality" (potential equity sell-off)
+   - Bond issuance
+   - Passive flows (central bank and mutual fund activity, rebalancing)
+   - CTA/technical drivers
+
+IMPORTANT:
+- The date is {date} (REMEMBER THIS WHEN DOING YOUR RESEARCH)
+
+CONTEXT:
+----------------------------------------------------------------
+US Treasuries/rates
+Government bond performance as it relates to the recent economic data, especially inflation, wages in 
+employment and growth. How did the 2s10s curve (yield differential between the 2 year and 10 year 
+treasury yield) behave during these periods. How should the curve behave given historical tendencies and 
+given the current data and outlook?
+Upcoming factors potentially impacting rates:
+- Tariffs
+- Inflation data
+- "flight to quality" - Further Equity selloff
+- Bond issuance
+- Passive flows (central bank purchases/sales, mutual fund purchases/sales, fund rebalancing)
+- CTA/technical.
+
+The U.S. Treasury market is influenced by a range of factors, broadly categorized into economic data,
+Federal Reserve policy, geopolitical risks, fiscal policy and supply dynamics, and global demand for safe-
+haven assets. Here are the key drivers:
+
+1. Economic Data and Inflation
+• Inflation (CPI, PCE Deflator) - Higher inflation typically leads to higher yields as investors demand 
+  greater compensation for eroded purchasing power.
+• Employment Data (Non-Farm Payrolls, Unemployment Rate, JOLTS, Initial Jobless Claims) -
+  Strong job growth suggests economic strength and potential inflationary pressures, impacting Fed 
+  policy expectations.
+• GDP Growth - Faster economic growth can lead to higher Treasury yields, while weak growth 
+  supports lower yields.
+• Consumer and Business Confidence (Consumer Confidence, ISM, PMIs) - These indicators gauge 
+  economic sentiment and can signal future growth trends.
+
+2. Federal Reserve Policy
+• FOMC Rate Decisions & Forward Guidance - Changes in the Fed Funds rate directly influence 
+  short-term Treasury yields, while guidance on future policy impacts the yield curve.
+• Quantitative Easing (QE) / Quantitative Tightening (QT) - The Fed's balance sheet policy affects 
+  supply and demand for Treasuries.
+• Dot Plot & Summary of Economic Projections - Provides insights into policymakers' expectations 
+  for future rates.
+
+3. Treasury Issuance and Fiscal Policy
+• U.S. Budget Deficit & Debt Issuance - Larger deficits often require more Treasury issuance, 
+  potentially pushing yields higher.
+• Treasury Refunding Announcements - The quarterly refunding schedule provides insight into future 
+  issuance and market absorption capacity.
+• Spending Bills & Stimulus Programs - Government spending plans impact future supply and 
+  inflation expectations.
+
+4. Geopolitical Risks & Global Uncertainty
+• War and International Conflicts - Events like Russia-Ukraine, Middle East tensions, or China-
+  Taiwan concerns can trigger flight-to-quality moves into Treasuries.
+• Trade Wars & Tariffs - U.S.-China tensions, for example, can impact global growth and Treasury 
+  demand.
+• Energy Prices & Commodity Shocks - Rising oil prices can fuel inflation, affecting yields.
+
+5. Foreign Demand and Currency Movements
+• Demand from Foreign Central Banks (China, Japan, Europe, Middle East) - Key buyers of 
+  Treasuries can influence yields by increasing or decreasing their purchases.
+• U.S. Dollar Strength & Treasury Demand - A strong dollar can reduce foreign demand for 
+  Treasuries, while a weaker dollar may attract buyers.
+• Sovereign Debt Market Comparisons - Relative yields vs. German Bunds or JGBs influence foreign 
+  investor appetite.
+
+6. Market Liquidity & Positioning
+• Hedge Fund and Dealer Positioning - Large speculative positioning in futures or options markets 
+  can drive short-term volatility.
+• Liquidity Conditions - If market depth declines, small shifts in supply/demand can cause outsized 
+  moves.
+• Repo Market Stress - Disruptions in funding markets can spill over into Treasury yields.
+
+7. Credit & Risk Sentiment
+• Corporate Bond Spreads - Wider credit spreads often lead to a bid for Treasuries as investors seek 
+  safety.
+• Equity Market Volatility (VIX, Risk-Off Moves) - Stock selloffs usually drive Treasury rallies (lower 
+  yields).
+• Banking Sector Stress (e.g., SVB, Credit Suisse Issues) - Concerns about financial stability often 
+  trigger Treasury buying.
+----------------------------------------------------------------
+
+INSTRUCTIONS:
+1. Provide an in depth and detailed overview of the overall context (recent economic data, inflation, employment, etc.).
+2. Discuss how these data points have influenced the 2s10s yield curve historically and in the current environment.
+3. Cite and connect the relevant points from the context above to explain the underlying drivers (Fed policy, geopolitical risk, etc.).
+4. Identify and evaluate the upcoming factors (tariffs, inflation data, etc.) that could impact rates.
+5. Conclude with a forward-looking perspective, highlighting future market positioning and risk sentiment.
+6. Present your answer in an organized, multi-paragraph format. Where appropriate, use bullet points or brief subheadings for clarity.
+7. If any information is unclear or not provided in the context, acknowledge the gap rather than guessing or fabricating data.
+8. Be as detailed as possible in your analysis.
+    """
+
+    messages = [
+        {
+            "role": "system",
+            "content": (
+                system_prompt
+            ),
+        },
+        {   
+            "role": "user",
+            "content": (
+                user_prompt
+            ),
+        },
+    ]
+
+    client = OpenAI(api_key=Sonar_API_KEY, base_url="https://api.perplexity.ai")
+
+    # chat completion without streaming
+    response = client.chat.completions.create(
+        model="sonar-deep-research",
+        messages=messages,
+    )
+    # Store full response in a variable
+    full_response = response.choices[0].message.content
+    # Print in a readable format
+    print("Complete response:")
+    print(full_response)
+    return full_response  # Return the response so it can be used by the tool
+
+def foreign_exchange_analyst():
+    date = datetime.now().strftime("%Y-%m-%d")
+    
+    system_prompt = """
+You are an expert FX strategist with deep knowledge of currency valuation models and global monetary dynamics. You prioritize clarity, detail, and factual grounding in your analyses. If information is missing, acknowledge that rather than guessing or inventing data.
+    """
+
+    user_prompt = f"""
+GOAL / OBJECTIVE:
+Provide a structured, data-driven analysis of how foreign exchange (FX) rates—particularly the U.S. Dollar (USD)—are influenced by various valuation methodologies (PPP, IRP, fundamental analysis, technical approaches) and key market drivers such as Federal Reserve policy, macroeconomic data, global risk sentiment, and geopolitical events.
+
+IMPORTANT:
+- The date is {date} (REMEMBER THIS WHEN DOING YOUR RESEARCH)
+
+Please analyze the following reference materials on currency valuation and the drivers of the U.S. Dollar, then produce a well-structured report that addresses:
+1. A concise overview of the main FX valuation methods (e.g., PPP, IRP, fundamental, technical/sentiment).
+2. Key drivers specifically influencing the U.S. Dollar (Fed policy, inflation data, interest rate differentials, geopolitical risk, etc.).
+3. How these valuation models and drivers might interplay in the short, medium, and long term.
+4. An outlook on which factors may be most significant for USD performance in the near future.
+
+CONTEXT (REFERENCE MATERIAL):
+-----------------------------------------------------------------------------------------------
+FX/Currencies:
+The U.S. Dollar Index (DXY), which measures the USD against a basket of major currencies (EUR, JPY, GBP, CAD, SEK, CHF), is influenced by a combination of economic data, Federal Reserve policy, global risk sentiment, and geopolitical events. Here are the main valuation methodologies:
+
+1. Parity Conditions-Based Valuation
+   - Purchasing Power Parity (PPP)
+     --> Based on the "law of one price," stating that identical goods should have the same price across countries when converted into a common currency.
+     --> The exchange rate should adjust so that a basket of goods costs the same in different countries.
+     --> Used as a long-term valuation tool.
+
+   - Interest Rate Parity (IRP)
+     --> Links exchange rate movements to interest rate differentials.
+     --> The forward exchange rate should be set to prevent arbitrage between interest rate differences across countries.
+     --> Used to explain forward rate premiums/discounts.
+
+   - Real Exchange Rate (RER) Approach
+     --> Adjusts the nominal exchange rate for inflation differentials.
+     --> If a country's real exchange rate is overvalued, its currency might depreciate in the future.
+
+   - Monetary Model
+     --> Relates exchange rates to differences in money supply growth, inflation, and output between countries.
+     --> More relevant for long-term FX valuation.
+
+2. Fundamental Analysis-Based Valuation
+   - Balance of Payments (BoP) Model
+     --> Examines trade balances, capital flows, and foreign reserves.
+     --> Persistent trade surpluses lead to currency appreciation, while deficits lead to depreciation.
+
+   - Asset Market Approach
+     --> Considers interest rates, bond yields, and equity markets.
+     --> Capital inflows into a country's bonds and equities support currency appreciation.
+
+   - Behavioral Equilibrium Exchange Rate (BEER)
+     --> Uses econometric models to determine whether a currency is overvalued or undervalued.
+     --> Includes factors like productivity, terms of trade, and net foreign assets.
+
+   - Debt Sustainability Approach
+     --> Evaluates a country's external debt levels.
+     --> Countries with unsustainable debt levels often face currency depreciation.
+
+3. Market-Based (Technical & Sentiment) Valuation
+   - Real Effective Exchange Rate (REER)
+     --> A trade-weighted index that measures a currency's relative strength against a basket of currencies, adjusted for inflation.
+
+   - FX Forward and Options Market Pricing
+     --> Forward rates incorporate market expectations of future exchange rate movements.
+     --> Options pricing (e.g., risk reversals) can signal expected volatility and directional bias.
+   - Technical Analysis
+     --> Uses price charts, historical trends, and momentum indicators to forecast FX movements.
+     --> Common tools: moving averages, Fibonacci retracements, Bollinger bands.
+   - Market Sentiment Indicators
+     --> CFTC Commitment of Traders (COT) report tracks speculative positioning.
+     --> Carry trade flows indicate risk appetite and currency demand.
+
+Which Model Is Best?
+   - Long-term: PPP, balance of payments, monetary models.
+   - Medium-term: BEER, REER, asset market approach.
+   - Short-term: Market-based (technical, sentiment, and positioning).
+
+Below are the key drivers of the U.S. dollar's movements:
+
+1. Federal Reserve Policy & Interest Rates
+   - Fed Funds Rate & Forward Guidance - Higher interest rates increase the appeal of the dollar by offering better returns.
+   - FOMC Meetings & Dot Plot - Market expectations for future rate hikes/cuts impact the dollar.
+   - Quantitative Tightening (QT) & Liquidity - Reducing the Fed's balance sheet strengthens the USD by tightening money supply.
+   - Key Reports: FOMC Meeting Minutes, Fed Chair Speeches, Inflation & Employment Data
+
+2. Inflation & Economic Data
+   - Inflation (CPI, PCE Deflator) - Higher inflation can push the Fed to tighten policy, boosting the dollar.
+   - Employment Reports (Non-Farm Payrolls, Unemployment Rate, Jobless Claims) - A strong labor market supports Fed rate hikes.
+   - GDP Growth - Stronger economic growth attracts capital inflows into the U.S.
+   - Retail Sales & Consumer Confidence - Consumer spending strength signals economic health, affecting USD demand.
+   - ISM Manufacturing & Services PMI - Indicators of expansion/contraction influencing USD sentiment.
+   - Key Reports: CPI, Core PCE Price Index, Non-Farm Payrolls, GDP Reports
+
+3. Global Interest Rate Differentials
+   - U.S. vs. Global Rate Spreads - If the Fed keeps rates higher than other central banks (ECB, BoJ, BoE), USD appreciates.
+   - Central Bank Divergence - A hawkish Fed vs. a dovish ECB/BoJ strengthens the USD.
+   - Key Reports: ECB, BoE, BoJ, RBA, PBoC Policy Statements; U.S. Treasury Yields vs. Global Bonds
+
+4. Geopolitical & Risk Sentiment
+   - Safe-Haven Flows - Global uncertainty (wars, banking crises) boosts demand for the U.S. dollar.
+   - Conflict & War (Russia-Ukraine, Middle East, China-Taiwan) - Geopolitical risks drive investors into USD as a safe haven.
+   - Sanctions & Trade Wars (U.S.-China, Tariffs, Export Bans) - Disruptions impact global trade flows and USD demand.
+   - Debt Ceiling & U.S. Fiscal Policy - Government shutdowns or deficit concerns influence USD stability.
+   - Key Events: War & Political Instability, U.S.-China Trade Relations, U.S. Debt Ceiling & Government Shutdowns
+
+5. Global Liquidity & Financial Market Conditions
+   - Equity Market Volatility (VIX Index, Stock Market Selloffs) - When risk-off sentiment rises, USD strengthens.
+   - Banking System Stress (Credit Crunch, Dollar Shortages) - A shortage of USD liquidity increases demand for the greenback.
+   - Commodity Prices & Inflation Expectations - Rising oil/gas prices can either boost or weaken USD, depending on the inflation impact.
+   - Key Reports: VIX Index, LIBOR/SOFR, Dollar Funding Costs
+
+6. U.S. Trade & Current Account Balance
+   - Trade Balance (Exports vs. Imports) - A wider U.S. trade deficit can weaken the USD.
+   - U.S. Current Account Deficit - A large deficit suggests more dollars flowing out, potentially weakening the USD.
+   - Foreign Exchange Reserves & Central Bank USD Holdings - China, Japan, and others adjusting their FX reserves can impact USD demand.
+   - Key Reports: U.S. Trade Balance, Treasury International Capital (TIC) Data
+
+7. Emerging Market & Global Currency Trends
+   - China's Yuan (CNY) & Emerging Market Currencies - Weakness in EM currencies often strengthens the dollar.
+   - Capital Flight & De-Dollarization Trends - Global shifts away from USD reliance can impact demand over time.
+   - BRICS & Alternative Reserve Currencies - Any effort to reduce USD's dominance in global trade could weaken demand.
+   - Key Reports: BRICS Currency Initiatives, IMF SDR Allocation
+-----------------------------------------------------------------------------------------------
+
+INSTRUCTIONS:
+1. Summarize the primary valuation approaches (PPP, IRP, fundamental, and technical/sentiment) used for FX.
+2. Highlight the main macro drivers of the U.S. Dollar, referencing Fed policy, inflation, global rates, geopolitical risk, etc.
+3. Illustrate how these valuation models and drivers interact over different time horizons (short, medium, long term).
+4. Conclude with a short forward-looking assessment on which factors may be most impactful in the near-term USD outlook.
+5. If any detail is missing or unclear, note it explicitly rather than fabricating information.
+6. Organize your response clearly with headings or bullet points.
+    """
+
+    messages = [
+        {
+            "role": "system",
+            "content": (
+                system_prompt
+            ),
+        },
+        {   
+            "role": "user",
+            "content": (
+                user_prompt
+            ),
+        },
+    ]
+
+    client = OpenAI(api_key=Sonar_API_KEY, base_url="https://api.perplexity.ai")
+
+    # chat completion without streaming
+    response = client.chat.completions.create(
+        model="sonar-deep-research",
+        messages=messages,
+    )
+    # Store full response in a variable
+    full_response = response.choices[0].message.content
+    # Print in a readable format
+    print("Complete response:")
+    print(full_response)
+    return full_response  # Return the response so it can be used by the tool
+
+def ig_credit_analyst():
+    date = datetime.now().strftime("%Y-%m-%d")
+    
+    system_prompt = """
+You are an expert credit analyst specializing in U.S. Investment Grade (IG) corporate bonds. You have deep knowledge of credit fundamentals, spread analysis, interest rate dynamics, and market technicals. You prioritize clarity, detail, and factual grounding in your analyses. If information is missing, acknowledge that rather than guessing or inventing data.
+    """
+
+    user_prompt = f"""
+GOAL / OBJECTIVE:
+Provide a structured, data-driven analysis of U.S. Investment Grade (IG) Credit Bonds, focusing on the key drivers that influence their performance, pricing, and spread dynamics.
+
+IMPORTANT:
+- The date is {date} (REMEMBER THIS WHEN DOING YOUR RESEARCH)
+
+Please analyze the following reference materials on IG credit markets and produce a well-structured report that addresses:
+1. A comprehensive overview of the main factors influencing IG corporate bond performance.
+2. Current market conditions and trends in the IG credit space.
+3. How various factors (company fundamentals, interest rates, economic data, etc.) interplay to affect IG bond valuations.
+4. An outlook on which factors may be most significant for IG credit performance in the near future.
+
+CONTEXT (REFERENCE MATERIAL):
+-----------------------------------------------------------------------------------------------
+CORPORATE CREDIT
+U.S. Investment Grade (IG) Credit Bonds are influenced by a mix of macro factors, credit-specific metrics,
+market liquidity, and global risk sentiment. Here are the most important drivers:
+
+1. Company credit ratings
+Individual company spreads are first and foremost influenced by a company's rating which is influenced
+and determined by rating agencies' reviews of a company's financials after every earnings release with
+ongoing monitoring.
+
+Corporate Fundamentals & Credit Metrics
+• Earnings Reports (Revenue, EBITDA, Free Cash Flow) - Strong corporate earnings support credit quality and reduce default risk.
+• Debt-to-EBITDA & Leverage Ratios - Higher leverage raises concerns over creditworthiness.
+• Interest Coverage Ratios - Indicates a company's ability to service debt.
+• Ratings Agency Actions (Moody's, S&P, Fitch) - Downgrades or upgrades impact bond pricing and spreads.
+
+Key Reports:
+• Corporate Earnings Releases
+• Ratings Agency Announcements
+
+2. Interest Rates & Federal Reserve Policy
+• Fed Funds Rate & Forward Guidance - IG credit spreads tighten when the Fed signals stability or cuts rates, while hikes increase borrowing costs.
+• Treasury Yield Curve (10Y, 2Y, 30Y Yields, Inversions) - IG bonds are priced off risk-free Treasury rates, with higher yields raising corporate borrowing costs.
+• Quantitative Tightening (QT) & Fed Balance Sheet Reduction - Fed selling Treasuries and MBS reduces market liquidity, which can widen credit spreads.
+
+Key Reports:
+• FOMC Meeting Minutes
+• Fed Dot Plot & SEP (Summary of Economic Projections)
+• Treasury Yield Movements
+
+3. Credit Spreads & Market Liquidity
+• Investment Grade Credit Spreads (OAS, CDX IG Index, BBB vs. A Spreads) - Widening spreads indicate risk-off sentiment.
+• Primary Market Issuance (New Bond Supply) - Large new issuance can temporarily widen spreads.
+• Bond Market Liquidity (Bid-Ask Spreads, Dealer Inventories) - Thin liquidity can exacerbate credit spread movements.
+
+Key Indicators:
+• Bloomberg Barclays U.S. IG Corporate Bond Index
+• ICE BofA Investment Grade OAS
+
+4. Economic Data & Growth Outlook
+• GDP Growth - A strong economy supports corporate revenues and IG bond demand.
+• Inflation (CPI, PCE Deflator) - High inflation leads to tighter monetary policy, pressuring IG bonds.
+• Employment & Wage Growth (Non-Farm Payrolls, JOLTS, Unemployment Rate) - Strong labor markets imply economic resilience but could lead to rate hikes.
+
+Key Reports:
+• GDP Growth
+• CPI & PCE Inflation Reports
+• Non-Farm Payrolls (NFP)
+
+5. Geopolitical & Market Risk Sentiment
+• Geopolitical Tensions (Russia-Ukraine, Middle East, China-Taiwan) - Flight-to-quality moves can impact IG spreads.
+• U.S. Fiscal Policy & Debt Ceiling Concerns - Increased Treasury issuance for deficit funding can crowd out corporate bond demand.
+• Banking Sector Stability (Financial Conditions, Credit Markets) - Stress in the banking sector can lead to wider IG spreads.
+
+Key Indicators:
+• VIX (Market Volatility)
+• Treasury Issuance Announcements
+
+6. Global Demand & Foreign Investment
+• Foreign Central Bank & Sovereign Wealth Fund Purchases - High demand from global investors (China, Japan, EU) tightens spreads.
+• Relative Yields (U.S. IG vs. Euro Credit, EM Bonds) - U.S. IG attracts capital if it offers better risk-adjusted returns.
+• Hedging Costs for Foreign Investors - FX hedging costs impact overseas demand for U.S. IG bonds.
+
+Key Reports:
+• TIC Data (Foreign Holdings of U.S. Bonds)
+• Relative Yield Comparisons (U.S. vs. European IG Credit)
+
+7. Sector-Specific Credit Risks
+• Financials (Bank & Insurance IG Bonds) - Heavily influenced by financial stability, regulations, and Fed policy.
+• Tech & High-Growth Names - Sensitive to rate hikes as they rely on low-cost funding.
+• Energy & Industrials - Commodity price fluctuations impact creditworthiness.
+
+Key Reports:
+• Sector-Specific Earnings Reports
+• Industry Credit Spreads
+-----------------------------------------------------------------------------------------------
+
+INSTRUCTIONS:
+1. Summarize the key drivers influencing U.S. Investment Grade corporate bond performance.
+2. Analyze current market conditions for IG credit based on the most recent data.
+3. Explain how company fundamentals, macroeconomic factors, and market technicals interact to affect IG bond valuations.
+4. Discuss sector-specific trends and differences in the IG credit space.
+5. Provide a forward-looking assessment on which factors may be most impactful for IG credit in the near term.
+6. If any detail is missing or unclear, note it explicitly rather than fabricating information.
+7. Organize your response clearly with headings or bullet points.
+    """
+
+    messages = [
+        {
+            "role": "system",
+            "content": (
+                system_prompt
+            ),
+        },
+        {   
+            "role": "user",
+            "content": (
+                user_prompt
+            ),
+        },
+    ]
+
+    client = OpenAI(api_key=Sonar_API_KEY, base_url="https://api.perplexity.ai")
+
+    # chat completion without streaming
+    response = client.chat.completions.create(
+        model="sonar-deep-research",
+        messages=messages,
+    )
+    # Store full response in a variable
+    full_response = response.choices[0].message.content
+    # Print in a readable format
+    print("Complete response:")
+    print(full_response)
+    return full_response  # Return the response so it can be used by the tool
+
+def high_yield_analyst():
+    date = datetime.now().strftime("%Y-%m-%d")
+    
+    system_prompt = """
+You are an expert fixed-income strategist with deep knowledge of both U.S. high-yield bond markets and emerging market (EM) debt. You prioritize clarity, detail, and factual grounding in your analysis. If information is missing, acknowledge that rather than fabricating data.
+    """
+
+    user_prompt = f"""
+GOAL / OBJECTIVE:
+Provide a structured, data-driven analysis of how the key drivers of U.S. high-yield (HY) bonds may apply to or differ within emerging markets (EM) high-yield debt, focusing on factors such as credit spreads, default risks, liquidity conditions, and macroeconomic influences.
+
+IMPORTANT:
+- The date is {date} (REMEMBER THIS WHEN DOING YOUR RESEARCH)
+
+Please use the reference material below on U.S. high-yield (HY) bonds to analyze how these drivers and metrics might apply within emerging markets. Specifically:
+1. Summarize the primary risk factors, credit metrics, and market conditions affecting HY bonds in the U.S.
+2. Discuss which of these factors might behave differently or be of particular relevance when looking at EM high-yield debt.
+3. Identify any additional considerations unique to emerging markets (e.g., sovereign risk, currency fluctuations, political instability).
+4. Conclude with a brief outlook on EM high-yield markets, referencing both global and local influences.
+
+CONTEXT (REFERENCE MATERIAL):
+----------------------------------------------------------------
+HIGH YIELD BONDS  
+U.S. High Yield (HY) Bonds: Key Market Drivers  
+High-yield (HY) bonds (junk bonds) are more sensitive to credit risk, liquidity, and economic growth
+expectations than investment-grade bonds. Here are the most important factors impacting HY bonds:
+
+1. Credit Spreads & Risk Premiums  
+   - High Yield Spreads (OAS, CDX HY Index, B vs. CCC Spreads) - Wider spreads indicate higher credit risk and market stress.  
+   - Credit Default Swap (CDS) Index for High Yield - Rising CDS prices suggest increasing default concerns.  
+   - Yield Curve (10Y vs. 2Y, Treasury Rates) - Rising Treasury yields make HY bonds less attractive relative to safer alternatives.  
+
+   Key Indicators:
+   - ICE BofA U.S. High Yield OAS
+   - CDX HY Index
+   - Bloomberg Barclays U.S. HY Bond Index
+
+2. Federal Reserve Policy & Interest Rates  
+   - Fed Funds Rate & Forward Guidance - Higher rates increase borrowing costs, making it harder for weaker firms to refinance.
+   - Liquidity & Quantitative Tightening (QT) - Fed balance sheet reductions drain liquidity, affecting HY funding.
+   - Yield Differentials (HY vs. IG Bonds) - If HY yields rise significantly over IG, it signals market risk aversion.
+
+   Key Reports:
+   - FOMC Meeting Minutes
+   - Treasury Yield Curves
+   - Fed's Financial Stability Reports
+
+3. Corporate Fundamentals & Default Risk  
+   - Earnings & Revenue Growth - Weak earnings pressure debt repayment ability.
+   - Debt Maturities & Refinancing Risks - Many HY firms rely on rolling over debt; rate hikes make refinancing harder.
+   - Leverage Ratios (Debt-to-EBITDA, Interest Coverage) - Highly leveraged companies are more vulnerable in rising rate environments.
+   - Ratings Downgrades (Moody's, S&P, Fitch) - Fallen angels (IG to HY downgrades) increase supply and widen spreads.
+
+   Key Reports:
+   - Moody's & S&P Default Rate Forecasts
+   - Corporate Earnings & Guidance
+   - Distressed Debt Ratios
+
+4. Economic Growth & Recession Risk  
+   - GDP Growth Trends - Slowdowns hurt lower-rated firms first, increasing default risks.
+   - ISM Manufacturing & Services PMI - A contraction signals economic stress for leveraged firms.
+   - Consumer Spending & Retail Sales - HY issuers in consumer sectors are sensitive to demand shifts.
+   - Housing Market Strength (NAHB, New Home Sales) - Impacts homebuilders, a key HY sector.
+
+   Key Reports:
+   - GDP Growth Data
+   - ISM Manufacturing & Services PMI
+   - Retail Sales & Consumer Confidence
+
+5. Market Liquidity & Fund Flows  
+   - High-Yield ETF & Mutual Fund Flows (HYG, JNK) - Inflows support HY, while outflows indicate risk-off sentiment.
+   - Dealer Market Liquidity (Bid-Ask Spreads) - A stressed HY market can see spreads widen due to lack of liquidity.
+   - Leveraged Loan Market Trends - Rising defaults in leveraged loans can spill over to HY bonds.
+
+   Key Indicators:
+   - HYG & JNK ETF Flows
+   - Leveraged Loan Default Rates
+   - Bid-Ask Spreads in HY Market
+
+6. Geopolitical & Market Risk Sentiment  
+   - Risk-Off Events (War, Sanctions, Political Uncertainty) - Investors flee riskier HY assets in favor of Treasuries.
+   - Banking System Stability (Credit Crunch, Financial Conditions Index) - HY bonds underperform in periods of financial instability.
+   - Stock Market Correlation (S&P 500 & Russell 2000) - HY bonds tend to track equity markets closely.
+
+   Key Events:
+   - VIX Index (Market Volatility)
+   - Global Geopolitical Tensions
+   - U.S. Debt Ceiling & Fiscal Policy
+
+7. Sector-Specific Risks  
+   - Energy (Oil & Gas HY Bonds) - Dependent on oil prices and production levels.
+   - Retail & Consumer Discretionary - Vulnerable to weak consumer demand and economic slowdowns.
+   - Technology & Communications - Rate-sensitive due to high leverage in growth sectors.
+
+   Key Reports:
+   - Sector-Specific HY Spread Indices
+   - Commodity Price Movements (Oil, Gas, Metals)
+----------------------------------------------------------------
+
+INSTRUCTIONS:
+1. Organize your response clearly, using headings or bullet points to address the listed items (1-4).
+2. Ground your analysis in the context of the U.S. HY bond drivers, then connect them to emerging markets where relevant.
+3. If any EM-specific data or factors are missing from the reference, acknowledge the gap rather than guessing.
+4. Provide a succinct conclusion with a near-term outlook for EM high-yield bonds.
+    """
+
+    messages = [
+        {
+            "role": "system",
+            "content": (
+                system_prompt
+            ),
+        },
+        {   
+            "role": "user",
+            "content": (
+                user_prompt
+            ),
+        },
+    ]
+
+    client = OpenAI(api_key=Sonar_API_KEY, base_url="https://api.perplexity.ai")
+
+    # chat completion without streaming
+    response = client.chat.completions.create(
+        model="sonar-deep-research",
+        messages=messages,
+    )
+    # Store full response in a variable
+    full_response = response.choices[0].message.content
+    # Print in a readable format
+    print("Complete response:")
+    print(full_response)
+    return full_response  # Return the response so it can be used by the tool
+
+def emerging_market_analyst():
+    date = datetime.now().strftime("%Y-%m-%d")
+    
+    system_prompt = """
+You are an expert emerging markets analyst with deep knowledge of the intersection between global macro forces and local EM conditions. You prioritize clarity, detail, and factual grounding in your assessments. If any information is missing, acknowledge that rather than guessing or inventing data.
+    """
+
+    user_prompt = f"""
+GOAL / OBJECTIVE:
+Provide a well-structured, data-driven analysis of how emerging markets (EM) equities and bonds are influenced by both global macro drivers (e.g., U.S. rates, risk sentiment, commodity prices, currency strength) and domestic fundamentals (growth, inflation, policy, political stability).
+
+IMPORTANT:
+- The date is {date} (REMEMBER THIS WHEN DOING YOUR RESEARCH)
+
+Using the reference material below on emerging markets drivers, please create a clear, structured report addressing the following:
+1. Summarize the global macro factors impacting EM (U.S. interest rates, risk appetite, commodity prices, USD strength, global liquidity).
+2. Explain how domestic fundamentals (growth, inflation, monetary/fiscal policy, political stability) shape EM equity and bond performance.
+3. Compare the differing dynamics between EM equities and EM bonds (local vs. hard currency debt), citing key market indicators.
+4. Conclude with a brief near-term outlook on EM assets, noting any potential risks or catalysts to watch.
+
+CONTEXT (REFERENCE MATERIAL):
+---------------------------------------------------------------------------------------------------
+EMERGING MARKETS
+Emerging markets (EM) equity and bond prices are driven by a combination of global and domestic
+factors, including macroeconomic conditions, monetary policy, investor sentiment, and political risks.
+Here's a breakdown of the key drivers:
+
+1. Global Macro and External Factors
+   - U.S. Interest Rates & Federal Reserve Policy
+     • Higher U.S. rates attract capital to U.S. assets, strengthening the dollar and leading to EM capital outflows.
+     • Lower rates push investors toward riskier EM assets in search of yield.
+   - Global Risk Appetite & Market Sentiment
+     • Risk-on environments (growth optimism, low volatility) lead to EM inflows.
+     • Risk-off episodes (crises, geopolitical risks) trigger EM outflows.
+   - Commodity Prices
+     • Many EM economies are commodity exporters (Brazil, Russia, South Africa, Indonesia). Rising commodity prices support their economies and assets, while falling prices hurt them.
+   - U.S. Dollar Strength
+     • A strong dollar increases the burden of dollar-denominated EM debt, pressuring bond yields and equity valuations.
+     • A weaker dollar generally boosts EM assets as financing conditions improve.
+   - Global Liquidity & Capital Flows
+     • Quantitative easing (QE) by major central banks fuels liquidity-driven rallies in EM.
+     • Quantitative tightening (QT) reduces liquidity and puts pressure on EM asset prices.
+
+2. Domestic Economic Fundamentals
+   - Growth & Inflation
+     • Strong GDP growth typically supports equities and bonds.
+     • High inflation erodes bond returns and increases rate hike risks.
+   - Monetary & Fiscal Policy
+     • Central bank rate cuts boost equities and bonds; rate hikes can dampen asset prices.
+     • Fiscal deficits and excessive government borrowing weaken currencies and raise bond yields.
+   - Currency Stability & FX Reserves
+     • A stable currency attracts investment; depreciation raises funding costs.
+     • Higher FX reserves provide a buffer against capital flight.
+
+3. Political & Structural Factors
+   - Geopolitical Risks & Sovereign Stability
+     • Political instability, policy unpredictability, and geopolitical tensions increase risk premia.
+     • Strong institutions and reforms enhance investor confidence.
+   - Credit Ratings & Default Risks
+     • Downgrades increase borrowing costs and trigger bond outflows.
+     • Improvements in fiscal discipline lead to yield compression.
+
+4. EM Equities vs. Bonds - Key Distinctions
+   - Equities
+     • More sensitive to domestic economic growth and corporate earnings.
+     • Benefit from currency depreciation if companies are export-oriented.
+     • Higher beta to global risk sentiment than bonds.
+     • Dividend yields provide some income buffer during market turbulence.
+   - Local Currency Bonds
+     • Most sensitive to domestic inflation, monetary policy, and currency stability.
+     • Offer higher yields but carry currency risk for foreign investors.
+     • Benefit from interest rate cuts and disinflation.
+   - Hard Currency (USD) Bonds
+     • Less sensitive to local currency volatility but highly impacted by U.S. rate movements.
+     • Sovereign spreads reflect country-specific default risk perceptions.
+     • Benefit from improving credit fundamentals and global risk appetite.
+
+5. Key Market Indicators to Watch
+   - EM Equity Indices: MSCI EM, MSCI EM ex-China
+   - Bond Indices: JPM EMBI Global Diversified (hard currency), JPM GBI-EM (local currency)
+   - Currency Index: JPM EM Currency Index
+   - Fund Flows: EM equity and bond fund flows (IIF data)
+   - Positioning: CFTC positioning data for EM currencies
+   - Credit Default Swaps (CDS): 5-year sovereign CDS spreads
+   - Implied Volatility: EM FX volatility and equity volatility (VXEEM)
+
+---------------------------------------------------------------------------------------------------
+
+INSTRUCTIONS:
+1. Organize your response with clear sections addressing each of the requested four topics.
+2. Back your analysis with references to the market drivers and indicators mentioned in the context material.
+3. If any information is missing, acknowledge the gap rather than inventing data.
+4. Include a balanced perspective on EM opportunities and risks, considering both bullish and bearish factors.
+5. Present your answer in an organized, multi-paragraph format with appropriate headings and bullet points.
+    """
+
+    messages = [
+        {
+            "role": "system",
+            "content": (
+                system_prompt
+            ),
+        },
+        {   
+            "role": "user",
+            "content": (
+                user_prompt
+            ),
+        },
+    ]
+
+    client = OpenAI(api_key=Sonar_API_KEY, base_url="https://api.perplexity.ai")
+
+    # chat completion without streaming
+    response = client.chat.completions.create(
+        model="sonar-deep-research",
+        messages=messages,
+    )
+    # Store full response in a variable
+    full_response = response.choices[0].message.content
+    # Print in a readable format
+    print("Complete response:")
+    print(full_response)
+    return full_response  # Return the response so it can be used by the tool
 
 def optimize():
 
@@ -1224,6 +1838,8 @@ def optimize():
 Analyze the provided portfolio data and recommend specific actions to improve returns and reduce risk. 
 REMEMBER THE CURRENT DATE IS {current_date} 
 
+------------------------------------------------------------------------------------------------------
+
 ### Portfolio Positions:
 
 {positions_table}
@@ -1252,6 +1868,8 @@ REMEMBER THE CURRENT DATE IS {current_date}
 
 {correlations}
 
+------------------------------------------------------------------------------------------------------
+
 ### Directions:
 1. Analyze the current portfolio positions, account information, portfolio metrics, stock metrics, monthly performance, diversification, and correlation matrix
 2. Identify the most significant issues affecting portfolio performance (concentration risk, underperforming assets, etc.)
@@ -1272,7 +1890,7 @@ REMEMBER THE CURRENT DATE IS {current_date}
 4. INCREASE EXISTING POSITIONS
 4. HOLD POSITIONS (DO NOT CHANGE)
 
-ASSETS YOU ARE ALLOWED TO BUY:
+### ASSETS YOU ARE ALLOWED TO BUY:
 1. STOCKS/EQUITIES
 2. BONDS
 3. EXCHANGE TRADED FUNDS (ETFS)
@@ -1280,26 +1898,26 @@ ASSETS YOU ARE ALLOWED TO BUY:
 5. REAL ESTATE INVESTMENT TRUSTS (REITs)
 6. FOREIGN EXCHANGE
 
-Format your response with these sections(BE CONCISE AND TO THE POINT):
+### FORMAT YOUR RESPONSE WITH THESE SECTIONS(BE CONCISE AND TO THE POINT):
 1. Portfolio Assessment
 2. Key Issues
 3. Specific Recommendations (with exact position sizes and tickers)
 4. Implementation Plan
 5. Expected Outcome
 
-ONCE YOU HAVE FINISHED YOUR ANALYSIS, PLEASE PROVIDE THE NEW PORTFOLIO WITH YOUR SUGGESTED CHANGES IN THIS FORMAT(PRINT THIS HORIZONTALLY IN A TABLE):
+### ONCE YOU HAVE FINISHED YOUR ANALYSIS, PLEASE PROVIDE THE NEW PORTFOLIO WITH YOUR SUGGESTED CHANGES IN THIS FORMAT(PRINT THIS HORIZONTALLY IN A TABLE):
 Stock Ticker: New Position Size | Quantity | New Allocation | New Market Value
 
-THEN I WANT THE EXACT TRADE EXECUTION INSTRUCTIONS IN THIS FORMAT:
+### THEN I WANT THE EXACT TRADE EXECUTION INSTRUCTIONS IN THIS FORMAT:
 Trade Action: [action(buy/sell/hold)] | Ticker: [ticker] | Quantity: [quantity]
 
-THIS IS THE FORMAT YOU SHOULD USE(THESE ARE EXAMPLES):
+### THIS IS THE FORMAT YOU SHOULD USE(THESE ARE EXAMPLES):
 • SELL 'SOME STOCK' (100 shares) --> entire position
 • SELL 'SOME STOCK' (50 shares) --> reduce from 100 → 50
 • HOLD 'SOME STOCK' (50 shares)
 • BUY 'SOME STOCK' (500 shares)
 
-RULES:
+### RULES:
 1. NO HALLUCINATIONS, IF THERE IS SOMETHING YOU DO NOT KNOW OR IF THERE IS DATA MISSING, SAY YOU DO NOT KNOW, AND PROCEED LOGICALLY.
 2. BE VERY SPECIFIC AND EXACT WITH YOUR RECOMMENDATIONS.
 3. BE SUCCUINCT AND CONCISE, BUT MAKE SURE TO EXPLAIN YOUR REASONING.
@@ -1328,7 +1946,7 @@ RULES:
                 }
             }
         }
-        
+
         search_tool = {
             "type": "function",
             "function": {
@@ -1373,11 +1991,11 @@ RULES:
             }
         }
         
-        fixed_income_research_tool = {
+        etf_research_tool = {
             "type": "function",
             "function": {
-                "name": "fixed_income_analyst",
-                "description": "Generate a comprehensive fixed income market analysis covering sovereign bonds, credit markets, yield curves, and interest rate environments. The report includes central bank policies, economic fundamentals, relative value opportunities, and optimal positioning strategies.",
+                "name": "etf_analyst",
+                "description": "Generate a comprehensive ETF market analysis covering equity, fixed income, commodity, and specialty ETFs. The report includes performance analysis, structural considerations, liquidity conditions, and specific ETF recommendations with rationale.",
                 "parameters": {
                     "type": "object",
                     "properties": {},
@@ -1386,11 +2004,63 @@ RULES:
             }
         }
         
-        etf_research_tool = {
+        treasuries_tool = {
             "type": "function",
             "function": {
-                "name": "etf_analyst",
-                "description": "Generate a comprehensive ETF market analysis covering equity, fixed income, commodity, and specialty ETFs. The report includes performance analysis, structural considerations, liquidity conditions, and specific ETF recommendations with rationale.",
+                "name": "treasuries_analyst",
+                "description": "Generate a comprehensive US Treasury market analysis covering yield curves, interest rate trends, and macroeconomic factors. The report includes analysis of recent economic data's impact on government bonds, behavior of the 2s10s yield curve, and upcoming factors likely to influence Treasury rates.",
+                "parameters": {
+                    "type": "object",
+                    "properties": {},
+                    "required": []
+                }
+            }
+        }
+        
+        foreign_exchange_tool = {
+            "type": "function",
+            "function": {
+                "name": "foreign_exchange_analyst",
+                "description": "Generate a comprehensive foreign exchange market analysis covering currency valuation methodologies and key drivers of the U.S. Dollar. The report includes analysis of parity conditions, fundamental analysis, market-based valuation, and how these models interact over different time horizons.",
+                "parameters": {
+                    "type": "object",
+                    "properties": {},
+                    "required": []
+                }
+            }
+        }
+        
+        ig_credit_tool = {
+            "type": "function",
+            "function": {
+                "name": "ig_credit_analyst",
+                "description": "Generate a comprehensive analysis of U.S. Investment Grade (IG) credit markets covering corporate fundamentals, interest rates, credit spreads, economic conditions, and sector-specific trends. The report examines key drivers affecting IG bond performance and provides outlook for credit markets.",
+                "parameters": {
+                    "type": "object",
+                    "properties": {},
+                    "required": []
+                }
+            }
+        }
+        
+        high_yield_tool = {
+            "type": "function",
+            "function": {
+                "name": "high_yield_analyst",
+                "description": "Generate a comprehensive analysis of high yield bonds and emerging market debt, comparing U.S. high yield factors with emerging market considerations. The report covers credit spreads, default risks, liquidity conditions, and macroeconomic influences affecting these higher-yielding fixed income assets.",
+                "parameters": {
+                    "type": "object",
+                    "properties": {},
+                    "required": []
+                }
+            }
+        }
+        
+        emerging_markets_tool = {
+            "type": "function",
+            "function": {
+                "name": "emerging_market_analyst",
+                "description": "Generate a comprehensive analysis of emerging markets (EM) equities and bonds, examining both global macro drivers and domestic fundamentals. The report covers the interplay between U.S. rates, risk sentiment, commodity prices, local economic conditions, and political factors that influence EM asset performance.",
                 "parameters": {
                     "type": "object",
                     "properties": {},
@@ -1476,19 +2146,6 @@ RULES:
                 # Format the response appropriately
                 tool_response = f"Commodities Market Analysis:\n\n{research_report}\n\nNOTE: Use this commodities market analysis to inform your allocation to energy, metals, agriculture, and other commodity-related assets. Consider both direct commodity exposure and indirect exposure through equities in commodity-producing companies."
             
-            elif function_name == "fixed_income_analyst":
-                print(f"*** TOOL USED: fixed_income_analyst ***")
-                
-                # Call the fixed income analyst function
-                try:
-                    research_report = fixed_income_analyst()
-                except Exception as e:
-                    print(f"Error generating fixed income research report: {e}")
-                    research_report = "I attempted to generate a comprehensive fixed income market analysis but encountered an error. Please continue with the available information or try using other research tools."
-                
-                # Format the response appropriately
-                tool_response = f"Fixed Income Market Analysis:\n\n{research_report}\n\nNOTE: Use this fixed income analysis to optimize bond allocations, duration positioning, and credit exposure in your portfolio. Consider how the current interest rate environment affects both your fixed income holdings and other asset classes."
-            
             elif function_name == "etf_analyst":
                 print(f"*** TOOL USED: etf_analyst ***")
                 
@@ -1502,6 +2159,71 @@ RULES:
                 # Format the response appropriately
                 tool_response = f"ETF Market Analysis:\n\n{research_report}\n\nNOTE: Use this ETF analysis to identify optimal vehicles for implementing your asset allocation and tactical views. Consider both the underlying exposures and structural characteristics of recommended ETFs."
             
+            elif function_name == "treasuries_analyst":
+                print(f"*** TOOL USED: treasuries_analyst ***")
+                
+                # Call the treasuries analyst function
+                try:
+                    research_report = treasuries_analyst()
+                except Exception as e:
+                    print(f"Error generating treasuries research report: {e}")
+                    research_report = "I attempted to generate a comprehensive US Treasury market analysis but encountered an error. Please continue with the available information or try using other research tools."
+                
+                # Format the response appropriately
+                tool_response = f"US Treasury Market Analysis:\n\n{research_report}\n\nNOTE: Use this US Treasury market analysis to inform your allocation to government bonds and Treasury securities. Consider how the current interest rate environment affects both your fixed income holdings and other asset classes."
+            
+            elif function_name == "foreign_exchange_analyst":
+                print(f"*** TOOL USED: foreign_exchange_analyst ***")
+                
+                # Call the foreign exchange analyst function
+                try:
+                    research_report = foreign_exchange_analyst()
+                except Exception as e:
+                    print(f"Error generating foreign exchange research report: {e}")
+                    research_report = "I attempted to generate a comprehensive foreign exchange market analysis but encountered an error. Please continue with the available information or try using other research tools."
+                
+                # Format the response appropriately
+                tool_response = f"Foreign Exchange Market Analysis:\n\n{research_report}\n\nNOTE: Use this foreign exchange analysis to inform your allocation to foreign currencies and currency-hedged assets. Consider how the current exchange rate environment affects both your foreign currency holdings and other asset classes."
+            
+            elif function_name == "ig_credit_analyst":
+                print(f"*** TOOL USED: ig_credit_analyst ***")
+                
+                # Call the IG credit analyst function
+                try:
+                    research_report = ig_credit_analyst()
+                except Exception as e:
+                    print(f"Error generating IG credit research report: {e}")
+                    research_report = "I attempted to generate a comprehensive Investment Grade (IG) credit market analysis but encountered an error. Please continue with the available information or try using other research tools."
+                
+                # Format the response appropriately
+                tool_response = f"Investment Grade Credit Market Analysis:\n\n{research_report}\n\nNOTE: Use this IG credit analysis to inform your allocation to investment grade corporate bonds. Consider how credit fundamentals, interest rates, and market technicals affect both your fixed income holdings and other asset classes."
+            
+            elif function_name == "high_yield_analyst":
+                print(f"*** TOOL USED: high_yield_analyst ***")
+                
+                # Call the high yield analyst function
+                try:
+                    research_report = high_yield_analyst()
+                except Exception as e:
+                    print(f"Error generating high yield research report: {e}")
+                    research_report = "I attempted to generate a comprehensive high yield and emerging markets debt analysis but encountered an error. Please continue with the available information or try using other research tools."
+                
+                # Format the response appropriately
+                tool_response = f"High Yield & Emerging Markets Debt Analysis:\n\n{research_report}\n\nNOTE: Use this high yield and emerging markets analysis to inform your allocation to higher yielding fixed income assets. Consider how credit risk, liquidity conditions, and macroeconomic factors differ between U.S. high yield and emerging market debt."
+            
+            elif function_name == "emerging_market_analyst":
+                print(f"*** TOOL USED: emerging_market_analyst ***")
+                
+                # Call the emerging market analyst function
+                try:
+                    research_report = emerging_market_analyst()
+                except Exception as e:
+                    print(f"Error generating emerging markets research report: {e}")
+                    research_report = "I attempted to generate a comprehensive emerging markets analysis but encountered an error. Please continue with the available information or try using other research tools."
+                
+                # Format the response appropriately
+                tool_response = f"Emerging Markets Analysis:\n\n{research_report}\n\nNOTE: Use this emerging markets analysis to inform your allocation to both EM equities and fixed income. Consider how global macro factors and domestic fundamentals influence different EM assets, and how they might perform in various economic scenarios."
+            
             return {
                 "role": "tool",
                 "tool_call_id": tool_call.id,
@@ -1510,7 +2232,7 @@ RULES:
             }
         
         # Recursive function to handle multiple rounds of tool calls
-        def handle_conversation(messages, tools, round_num=1, max_rounds=10):
+        def handle_conversation(messages, tools, round_num=1, max_rounds=15):
             print(f"\nStarting conversation round {round_num}...")
             
             if round_num > max_rounds:
@@ -1560,9 +2282,14 @@ RULES:
         user_message = {
             "role": "user",
             "content": content + "\n\nBefore making recommendations, conduct thorough market research in this sequence:\n\n" + \
-            "1. MARKET ANALYSIS (REQUIRED)\n" + \
+            "1. MARKET ANALYSIS (REQUIRED, MUST CONDUCT ALL TOOLS)\n" + \
+            "IMPORTANT: You must conduct all the tools in the order they are listed below before conducting any targeted research.\n" + \
             "   - Use equity_research_analyst for comprehensive equity market insights\n" + \
-            "   - Use fixed_income_analyst if the portfolio includes or should include bonds\n" + \
+            "   - Use treasuries_analyst for detailed US Treasury market analysis\n" + \
+            "   - Use foreign_exchange_analyst for currency valuation and FX market insights\n" + \
+            "   - Use ig_credit_analyst for Investment Grade corporate bond analysis\n" + \
+            "   - Use high_yield_analyst for High Yield and Emerging Market debt analysis\n" + \
+            "   - Use emerging_market_analyst for detailed Emerging Markets equity and fixed income analysis\n" + \
             "   - Use commodities_analyst if the portfolio includes or should include commodities\n" + \
             "   - Use etf_analyst to identify optimal ETF vehicles for implementation\n\n" + \
             "2. TARGETED RESEARCH (AS NEEDED)\n" + \
@@ -1571,7 +2298,7 @@ RULES:
         }
         
         initial_messages = [system_message, user_message]
-        available_tools = [energy_stocks_tool, search_tool, equity_research_tool, fixed_income_research_tool, commodities_research_tool, etf_research_tool]
+        available_tools = [energy_stocks_tool, search_tool, equity_research_tool, commodities_research_tool, etf_research_tool, treasuries_tool, foreign_exchange_tool, ig_credit_tool, high_yield_tool, emerging_markets_tool]
         
         # Start the conversation without forcing a tool call
         final_content = handle_conversation(initial_messages, available_tools)
@@ -1591,4 +2318,5 @@ RULES:
         traceback.print_exc()
         return f"An error occurred while calling the OpenAI API: {str(e)}"
 
-optimize()
+
+# optimize()
