@@ -2,62 +2,62 @@ from openai import OpenAI
 import re
 
 def search(system_prompt, user_prompt):
-    API_KEY = "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"
-    messages = [
-        {
-            "role": "system",
-            "content": (
-                system_prompt
-            ),
-        },
-        {   
-            "role": "user",
-            "content": (
-                user_prompt
-            ),
-        },
-    ]
+   API_KEY = "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"
+   messages = [
+      {
+         "role": "system",
+         "content": (
+               system_prompt
+         ),
+      },
+      {   
+         "role": "user",
+         "content": (
+               user_prompt
+         ),
+      },
+   ]
 
-    client = OpenAI(api_key=API_KEY, base_url="https://api.perplexity.ai")
+   client = OpenAI(api_key=API_KEY, base_url="https://api.perplexity.ai")
 
-    # chat completion without streaming
-    response = client.chat.completions.create(
-        model="sonar-deep-research",
-        messages=messages,
-        stream=True
-    )
+   # chat completion without streaming
+   response = client.chat.completions.create(
+      model="sonar-deep-research",
+      messages=messages,
+      stream=True
+   )
 
-    # Store full response in a variable
-    # full_response = response.choices[0].message.content
-    # print("Complete response:")
-    # print(full_response)
+   # Store full response in a variable
+   # full_response = response.choices[0].message.content
+   # print("Complete response:")
+   # print(full_response)
 
-    # Collect the streaming content
-    collected_chunks = []
-    collected_content = ""
-    # Process each chunk
-    print("\nStreaming response:")
-    for chunk in response:
-        collected_chunks.append(chunk)  # Store the raw chunk
-        content = chunk.choices[0].delta.content or ""
-        collected_content += content  # Concatenate the content
-        # Print each new piece as it arrives
-        print(content, end="", flush=True)
+   # Collect the streaming content
+   collected_chunks = []
+   collected_content = ""
+   # Process each chunk
+   print("\nStreaming response:")
+   for chunk in response:
+      collected_chunks.append(chunk)  # Store the raw chunk
+      content = chunk.choices[0].delta.content or ""
+      collected_content += content  # Concatenate the content
+      # Print each new piece as it arrives
+      print(content, end="", flush=True)
 
-    # Now collected_content has the full response text
-    print("\n\nFull collected response:")
-    
-    # Remove the thinking process using regex
-    cleaned_content = re.sub(r'<think>.*?</think>', '', collected_content, flags=re.DOTALL)
-    print("Cleaned content:")
-    print("=" * 100)
-    print(cleaned_content)
+   # Now collected_content has the full response text
+   print("\n\nFull collected response:")
 
-    return cleaned_content  
+   # Remove the thinking process using regex
+   cleaned_content = re.sub(r'<think>.*?</think>', '', collected_content, flags=re.DOTALL)
+   print("Cleaned content:")
+   print("=" * 100)
+   print(cleaned_content)
+
+   return cleaned_content  
 
 
 
-system_prompt_bonds = """
+fixed_income_system_prompt = """
 You are a professional financial analyst specializing in fixed income markets. Provide comprehensive, data-driven analysis of the bond market with the following characteristics:
 1. Use reliable financial sources including Federal Reserve data, Treasury reports, financial news, market indices, and expert commentary
 2. Include relevant quantitative data such as yields, spreads, trading volumes, and price movements
@@ -68,7 +68,7 @@ You are a professional financial analyst specializing in fixed income markets. P
 7. Include diverse perspectives on market outlook from leading institutions
 """
 
-user_prompt_bonds = """
+fixed_income_user_prompt = """
 Conduct a detailed analysis of the current state of the bond market with specific focus on:
 
 1. RECENT DEVELOPMENTS (PAST WEEK):
@@ -101,9 +101,6 @@ Conduct a detailed analysis of the current state of the bond market with specifi
 Please include specific data points, charts when relevant, and cite your sources. Prioritize accuracy and depth of analysis over general commentary.
 """
 
-
-
-# search(system_prompt_bonds, user_prompt_bonds)
 
 # Equity Market Research Prompts
 equity_system_prompt = """
@@ -149,9 +146,6 @@ Conduct a detailed analysis of the current state of the equity market with speci
 
 Please include specific data points, charts when relevant, and cite your sources. Prioritize accuracy and depth of analysis over general commentary.
 """
-
-# Execute equity market research
-search(equity_system_prompt, equity_user_prompt)
 
 # Commodity Market Research Prompts
 commodity_system_prompt = """
@@ -201,5 +195,3 @@ Conduct a detailed analysis of the current state of the commodity market with sp
 Please include specific data points, charts when relevant, and cite your sources. Prioritize accuracy and depth of analysis over general commentary.
 """
 
-# Execute commodity market research
-# search(commodity_system_prompt, commodity_user_prompt)
