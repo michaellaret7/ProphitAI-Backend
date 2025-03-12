@@ -7,10 +7,20 @@ from datetime import datetime
 import psycopg2
 import pandas as pd
 import re
+import time 
+import sys
+import random
+import itertools
+import threading
+import math
+import curses
+from optimizerAnimation import start_animation, Colors
+
 OpenAI_API_KEY = "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"
 Sonar_API_KEY = "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"
 # Initialize clients
 api_key = os.environ.get("OPENAI_API_KEY", OpenAI_API_KEY)
+
 client = OpenAI(
     api_key=api_key,
 )
@@ -722,7 +732,6 @@ def query_energy_stocks():
             {"ticker": "CEIX", "short_name": "CONSOL ENERGY INC", "sub_industry": "Coal & Consumable Fuels", "p_e": 4.95, "market_cap": 2400000000, "alpha_m_3": 0.41, "beta_m_3": 0.89}
         ]
 
-
 def free_search(system_prompt, user_prompt):
     messages = [
         {
@@ -755,8 +764,32 @@ def free_search(system_prompt, user_prompt):
 
 
 def equity_research_analyst():
+    from optimizerAnimation import start_animation, Colors
     date = datetime.now().strftime("%Y-%m-%d")
 
+    # Define custom analysis steps for equity research
+    equity_steps = [
+        "Analyzing S&P 500 sector performance",
+        "Evaluating market breadth indicators",
+        "Processing earnings growth trends",
+        "Calculating equity risk premiums",
+        "Examining market sentiment metrics",
+        "Analyzing technical support/resistance levels",
+        "Assessing global equity correlations",
+        "Evaluating valuation metrics by sector",
+        "Processing institutional fund flows",
+        "Analyzing volatility patterns",
+        "Calculating sector rotation metrics",
+        "Examining factor performance trends",
+        "Analyzing earnings surprise data",
+        "Evaluating market leadership dynamics",
+        "Processing analyst estimate revisions"
+    ]
+    
+    # Start animation before API setup
+    animation = start_animation(equity_steps, "Equity Research Analysis")
+    
+    # Now continue with the rest of the function
     system_prompt = """
     You are a professional financial analyst specializing in equity markets. Provide comprehensive, data-driven analysis of the stock market with the following characteristics:
 1. Use reliable financial sources including market data providers, SEC filings, earnings reports, analyst research, and expert commentary
@@ -821,30 +854,76 @@ Please include specific data points, charts when relevant, and cite your sources
         },
     ]
 
+    # Initialize client with explicit API key - fixing auth issue
     client = OpenAI(api_key=Sonar_API_KEY, base_url="https://api.perplexity.ai")
+    
+    try:
+        # chat completion with streaming
+        response = client.chat.completions.create(
+            model="sonar-deep-research",
+            messages=messages,
+            stream=True
+        )
 
-    # chat completion without streaming
-    response = client.chat.completions.create(
-        model="sonar-deep-research",
-        messages=messages,
-    )
-    # Store full response in a variable
-    full_response = response.choices[0].message.content
+        # Stop the animation before printing any output
+        animation.stop()
+        
+        # Give terminal a moment to complete cleanup
+        time.sleep(0.1)
+        
+        # Ensure fresh line for output (without clearing entire screen)
+        print("\nStreaming response:")
+        
+        # Collect the streaming content
+        collected_chunks = []
+        collected_content = ""
+        # Process each chunk
+        for chunk in response:
+            collected_chunks.append(chunk)  # Store the raw chunk
+            content = chunk.choices[0].delta.content or ""
+            collected_content += content  # Concatenate the content
+            # Print each new piece as it arrives
+            print(content, end="", flush=True)
 
-    # Remove the thinking process using regex
-    cleaned_content = re.sub(r'<think>.*?</think>', '', full_response, flags=re.DOTALL)
+        # Now collected_content has the full response text
+        print("\n\nFull collected response:")
 
-    # Print in a readable format
-    print("Complete response:")
-    print(full_response)
-    print("Cleaned response:")
-    print(cleaned_content)
-    return full_response  # Return the response so it can be used by the tool
-
-equity_research_analyst()
+        # Remove the thinking process using regex
+        cleaned_content = re.sub(r'<think>.*?</think>', '', collected_content, flags=re.DOTALL)
+        
+        return cleaned_content
+    
+    except Exception as e:
+        # Stop the animation if there's an error
+        animation.stop()
+        print(f"{Colors.RED}Error: {e}{Colors.END}")
+        return None
 
 def commodities_analyst():
+    from optimizerAnimation import start_animation, Colors
     date = datetime.now().strftime("%Y-%m-%d")
+
+    # Define custom analysis steps for commodities research
+    commodities_steps = [
+        "Analyzing supply and demand fundamentals",
+        "Evaluating weather impact on agricultural markets",
+        "Examining inventory levels across commodities",
+        "Calculating futures curve contango/backwardation",
+        "Processing geopolitical risk factors",
+        "Analyzing currency impacts on commodity prices",
+        "Assessing industrial demand metrics",
+        "Evaluating energy sector correlations",
+        "Processing seasonal consumption patterns",
+        "Examining production capacity constraints",
+        "Calculating cross-commodity correlations",
+        "Analyzing global trade flow disruptions",
+        "Evaluating commodity ETF fund flows",
+        "Processing inflation impacts on raw materials",
+        "Examining speculative positioning data"
+    ]
+    
+    # Start animation before API setup
+    animation = start_animation(commodities_steps, "Commodities Market Analysis")
 
     system_prompt = """
     You are an expert commodities analyst with deep knowledge of global markets. You prioritize clarity, detail, and data-backed reasoning in your explanations. Always ground your conclusions in the provided context. If needed information is absent, acknowledge the gap rather than guessing.
@@ -872,75 +951,57 @@ def commodities_analyst():
     breakdown of the most critical drivers:
 
     1. Supply and Demand Fundamentals
-    • Production Levels - Changes in mining, drilling, or agricultural output affect supply.
-    • Global Consumption Trends - Industrial activity, energy demand, and consumer behavior impact
-    prices.
-    • Inventory Levels (EIA, DOE, USDA, LME, COMEX Reports) - Storage and stockpile levels provide
-    insight into current supply/demand balances.
+        • Production Levels - Changes in mining, drilling, or agricultural output affect supply.
+        • Global Consumption Trends - Industrial activity, energy demand, and consumer behavior impact prices.
+        • Inventory Levels (EIA, DOE, USDA, LME, COMEX Reports) - Storage and stockpile levels provide insight into current supply/demand balances.
 
     2. Weather and Natural Events
-    • Agricultural Commodities (Corn, Wheat, Soybeans, Coffee, Cocoa, Sugar)
-    --> Droughts, floods, frosts, and hurricanes can drastically impact crop yields.
-    --> El Niño and La Niña influence rainfall and temperatures globally.
-    --> Disease outbreaks (e.g., African Swine Fever affecting soybean demand in China).
-    • Energy Markets (Oil, Natural Gas, Coal)
-    --> Hurricanes affecting Gulf of Mexico oil and gas production.
-    --> Cold winters increase natural gas demand (heating), while hot summers boost electricity use.
-    --> Water shortages can impact hydropower generation and mining.
-    • Metals & Mining
-    --> Natural disasters or labor strikes can shut down mines (copper, iron ore, gold, etc.).
-    --> Geological constraints impact long-term supply.
+        • Agricultural Commodities (Corn, Wheat, Soybeans, Coffee, Cocoa, Sugar)
+            --> Droughts, floods, frosts, and hurricanes can drastically impact crop yields.
+            --> El Niño and La Niña influence rainfall and temperatures globally.
+            --> Disease outbreaks (e.g., African Swine Fever affecting soybean demand in China).
+        • Energy Markets (Oil, Natural Gas, Coal)
+            --> Hurricanes affecting Gulf of Mexico oil and gas production.
+            --> Cold winters increase natural gas demand (heating), while hot summers boost electricity use.
+            --> Water shortages can impact hydropower generation and mining.
+        • Metals & Mining
+            --> Natural disasters or labor strikes can shut down mines (copper, iron ore, gold, etc.).
+            --> Geological constraints impact long-term supply.
 
     3. Economic Data & Growth Indicators
-    • GDP Growth (China, U.S., EU) - Higher economic activity increases demand for industrial metals,
-    energy, and agricultural commodities.
-    • Manufacturing and Industrial Production (PMIs, ISM, Durable Goods Orders) - A strong
-    manufacturing sector signals increased raw material consumption.
-    • Employment & Consumer Spending - Affects fuel demand (gasoline, diesel) and consumption of
-    food/agriculture commodities.
+        • GDP Growth (China, U.S., EU) - Higher economic activity increases demand for industrial metals, energy, and agricultural commodities.
+        • Manufacturing and Industrial Production (PMIs, ISM, Durable Goods Orders) - A strong manufacturing sector signals increased raw material consumption.
+        • Employment & Consumer Spending - Affects fuel demand (gasoline, diesel) and consumption of food/agriculture commodities.
 
     4. Geopolitical & Supply Chain Risks
-    • OPEC+ Decisions (Oil) - Production quotas set by OPEC+ impact crude oil supply and prices.
-    • Sanctions and Trade Restrictions - U.S. sanctions on Russian oil, metals, or agricultural products
-    shift trade flows.
-    • Tariffs and Trade Wars - U.S.-China trade tensions affecting soybean exports/imports.
-    • Shipping & Logistics Disruptions
-    - Red Sea/Suez Canal disruptions impacting energy and metals.
-    - Panama Canal drought slowing commodity shipments.
-    - Port strikes and supply chain bottlenecks.
+        • OPEC+ Decisions (Oil) - Production quotas set by OPEC+ impact crude oil supply and prices.
+        • Sanctions and Trade Restrictions - U.S. sanctions on Russian oil, metals, or agricultural products shift trade flows.
+        • Tariffs and Trade Wars - U.S.-China trade tensions affecting soybean exports/imports.
+        • Shipping & Logistics Disruptions
+            - Red Sea/Suez Canal disruptions impacting energy and metals.
+            - Panama Canal drought slowing commodity shipments.
+            - Port strikes and supply chain bottlenecks.
 
     5. Currency & Financial Market Movements
-    • U.S. Dollar Strength - Since most commodities are priced in USD, a stronger dollar makes them
-    more expensive for foreign buyers.
-    • Interest Rates & Inflation - Higher rates increase the cost of holding non-yielding assets like gold,
-    while inflationary pressures often support commodity prices.
-    • Speculative Positioning (COT Reports, Hedge Fund Flows) - Large spec positions in futures
-    markets drive volatility.
+        • U.S. Dollar Strength - Since most commodities are priced in USD, a stronger dollar makes them more expensive for foreign buyers.
+        • Interest Rates & Inflation - Higher rates increase the cost of holding non-yielding assets like gold, while inflationary pressures often support commodity prices.
+        • Speculative Positioning (COT Reports, Hedge Fund Flows) - Large spec positions in futures markets drive volatility.
 
     6. Policy & Regulation
-    • Environmental Regulations (Carbon Taxes, Emissions Caps) - Restrictions on fossil fuel emissions
-    impact coal, oil, and natural gas demand.
-    • Biofuel Mandates (Ethanol, Biodiesel) - Policies requiring biofuel blending affect corn and soybean
-    demand.
-    • Mining & Drilling Restrictions - ESG-driven constraints on mining (lithium, cobalt) and fossil fuel
-    production.
-    • Government Stockpiling & Strategic Reserves (SPR Releases, China's Grain Reserves) - Governments manage strategic commodity reserves, impacting market balance.
+        • Environmental Regulations (Carbon Taxes, Emissions Caps) - Restrictions on fossil fuel emissions impact coal, oil, and natural gas demand.
+        • Biofuel Mandates (Ethanol, Biodiesel) - Policies requiring biofuel blending affect corn and soybean demand.
+        • Mining & Drilling Restrictions - ESG-driven constraints on mining (lithium, cobalt) and fossil fuel production.
+        • Government Stockpiling & Strategic Reserves (SPR Releases, China's Grain Reserves) - Governments manage strategic commodity reserves, impacting market balance.
 
     7. Alternative Energy & Technological Shifts
-    • EV and Battery Metals Demand (Lithium, Cobalt, Nickel, Copper) - Growth in electric vehicle
-    adoption increases demand for critical minerals.
-    • Green Energy Transition (Solar, Wind, Hydrogen) - Shifts in energy consumption patterns impact
-    fossil fuel demand.
-    • AI & Semiconductor Boom (Rare Earths, Silver, Copper) - Increased tech sector demand drives
-    specific commodity markets.
+        • EV and Battery Metals Demand (Lithium, Cobalt, Nickel, Copper) - Growth in electric vehicle adoption increases demand for critical minerals.
+        • Green Energy Transition (Solar, Wind, Hydrogen) - Shifts in energy consumption patterns impact fossil fuel demand.
+        • AI & Semiconductor Boom (Rare Earths, Silver, Copper) - Increased tech sector demand drives specific commodity markets.
 
     8. War, Conflict & Cybersecurity Risks
-    • Russia-Ukraine War (Wheat, Corn, Oil, Natural Gas, Palladium) - Major disruptions in global grain
-    and energy markets.
-    • Middle East Tensions (Oil, Gold, Safe Haven Demand) - Conflicts in the region can lead to oil price
-    spikes.
-    • Cyberattacks on Infrastructure (Pipelines, Power Grids) - Potential for disruptions to oil, gas, and
-    power markets.
+        • Russia-Ukraine War (Wheat, Corn, Oil, Natural Gas, Palladium) - Major disruptions in global grain and energy markets.
+        • Middle East Tensions (Oil, Gold, Safe Haven Demand) - Conflicts in the region can lead to oil price spikes.
+        • Cyberattacks on Infrastructure (Pipelines, Power Grids) - Potential for disruptions to oil, gas, and power markets.
     ----------------------------------------------------------------
 
     INSTRUCTIONS:
@@ -969,22 +1030,71 @@ def commodities_analyst():
         },
     ]
 
+    # Initialize client once with Perplexity API
     client = OpenAI(api_key=Sonar_API_KEY, base_url="https://api.perplexity.ai")
+    
+    try:
+        # chat completion with streaming
+        response = client.chat.completions.create(
+            model="sonar-deep-research",
+            messages=messages,
+            stream=True
+        )
 
-    # chat completion without streaming
-    response = client.chat.completions.create(
-        model="sonar-deep-research",
-        messages=messages,
-    )
-    # Store full response in a variable
-    full_response = response.choices[0].message.content
-    # Print in a readable format
-    print("Complete response:")
-    print(full_response)
-    return full_response  # Return the response so it can be used by the tool
+        # Stop the animation before printing any output
+        animation.stop()
+        
+        # Give terminal a moment to complete cleanup
+        time.sleep(0.1)
+        
+        # Ensure fresh line for output (without clearing entire screen)
+        print("\nStreaming response:")
+        
+        # Collect the streaming content
+        collected_chunks = []
+        collected_content = ""
+        # Process each chunk
+        for chunk in response:
+            collected_chunks.append(chunk)  # Store the raw chunk
+            content = chunk.choices[0].delta.content or ""
+            collected_content += content  # Concatenate the content
+            # Print each new piece as it arrives
+            print(content, end="", flush=True)
+
+        # Now collected_content has the full response text
+        print("\n\nFull collected response:")
+
+        # Remove the thinking process using regex
+        cleaned_content = re.sub(r'<think>.*?</think>', '', collected_content, flags=re.DOTALL)
+        
+        return cleaned_content
+    
+    except Exception as e:
+        # Stop the animation if there's an error
+        animation.stop()
+        print(f"{Colors.RED}Error: {e}{Colors.END}")
+        return None
 
 def etf_analyst():
+    from optimizerAnimation import start_animation, Colors
     date = datetime.now().strftime("%Y-%m-%d")
+
+    etf_steps = [
+        "Analyzing ETF market conditions",
+        "Evaluating ETF performance",
+        "Examining ETF tracking efficiency",
+        "Processing ETF factor analysis",
+        "Analyzing ETF sector performance",
+        "Evaluating ETF portfolio construction techniques",
+        "Processing ETF total cost analysis",
+        "Examining ETF market conditions",
+        "Evaluating ETF performance",
+        "Examining ETF tracking efficiency",
+        "Processing ETF factor analysis",
+        "Analyzing ETF sector performance",
+    ]
+
+    animation = start_animation(etf_steps, "ETF Market Analysis")
 
     system_prompt = """You are a leading ETF strategist with 20+ years experience across asset management and investment research. Your expertise includes:
 
@@ -1090,22 +1200,64 @@ REQUIREMENTS:
         },
     ]
 
+    # Initialize client once with Perplexity API
     client = OpenAI(api_key=Sonar_API_KEY, base_url="https://api.perplexity.ai")
+    
+    try:
+        # chat completion with streaming
+        response = client.chat.completions.create(
+            model="sonar-deep-research",
+            messages=messages,
+            stream=True
+        )
 
-    # chat completion without streaming
-    response = client.chat.completions.create(
-        model="sonar-deep-research",
-        messages=messages,
-    )
-    # Store full response in a variable
-    full_response = response.choices[0].message.content
-    # Print in a readable format
-    print("Complete response:")
-    print(full_response)
-    return full_response  # Return the response so it can be used by the tool
+        # Stop the animation before printing any output
+        animation.stop()
+        
+        # Give terminal a moment to complete cleanup
+        time.sleep(0.1)
+        
+        # Ensure fresh line for output (without clearing entire screen)
+        print("\nStreaming response:")
+        
+        # Collect the streaming content
+        collected_chunks = []
+        collected_content = ""
+        # Process each chunk
+        for chunk in response:
+            collected_chunks.append(chunk)  # Store the raw chunk
+            content = chunk.choices[0].delta.content or ""
+            collected_content += content  # Concatenate the content
+            # Print each new piece as it arrives
+            print(content, end="", flush=True)
+
+        # Now collected_content has the full response text
+        print("\n\nFull collected response:")
+
+        # Remove the thinking process using regex
+        cleaned_content = re.sub(r'<think>.*?</think>', '', collected_content, flags=re.DOTALL)
+        
+        return cleaned_content
+    
+    except Exception as e:
+        # Stop the animation if there's an error
+        animation.stop()
+        print(f"{Colors.RED}Error: {e}{Colors.END}")
+        return None
 
 def treasuries_analyst():
+    from optimizerAnimation import start_animation, Colors
     date = datetime.now().strftime("%Y-%m-%d")
+
+    treasuries_steps = [
+        "Analyzing U.S. Treasury market conditions",
+        "Evaluating Treasury performance",
+        "Examining Treasury tracking efficiency",
+        "Processing Treasury factor analysis",
+        "Analyzing Treasury sector performance",
+    ]
+
+    animation = start_animation(treasuries_steps, "Treasury Market Analysis")
     
     system_prompt = """
 You are an expert macroeconomic analyst with a specialization in U.S. Treasury markets and yield curves. You have deep knowledge of factors affecting Treasury yields—such as inflation, Federal Reserve policy, geopolitical risks, and market positioning. You prioritize clarity, detail, and data-driven reasoning in your analysis. Always cite relevant points from the provided context to ground your conclusions in facts. 
@@ -1137,6 +1289,7 @@ Government bond performance as it relates to the recent economic data, especiall
 employment and growth. How did the 2s10s curve (yield differential between the 2 year and 10 year 
 treasury yield) behave during these periods. How should the curve behave given historical tendencies and 
 given the current data and outlook?
+
 Upcoming factors potentially impacting rates:
 - Tariffs
 - Inflation data
@@ -1150,61 +1303,42 @@ Federal Reserve policy, geopolitical risks, fiscal policy and supply dynamics, a
 haven assets. Here are the key drivers:
 
 1. Economic Data and Inflation
-• Inflation (CPI, PCE Deflator) - Higher inflation typically leads to higher yields as investors demand 
-  greater compensation for eroded purchasing power.
-• Employment Data (Non-Farm Payrolls, Unemployment Rate, JOLTS, Initial Jobless Claims) -
-  Strong job growth suggests economic strength and potential inflationary pressures, impacting Fed 
-  policy expectations.
-• GDP Growth - Faster economic growth can lead to higher Treasury yields, while weak growth 
-  supports lower yields.
-• Consumer and Business Confidence (Consumer Confidence, ISM, PMIs) - These indicators gauge 
-  economic sentiment and can signal future growth trends.
+    • Inflation (CPI, PCE Deflator) - Higher inflation typically leads to higher yields as investors demand greater compensation for eroded purchasing power.
+    • Employment Data (Non-Farm Payrolls, Unemployment Rate, JOLTS, Initial Jobless Claims) - Strong job growth suggests economic strength and potential inflationary pressures, impacting Fed policy expectations.
+    • GDP Growth - Faster economic growth can lead to higher Treasury yields, while weak growth supports lower yields.
+    • Consumer and Business Confidence (Consumer Confidence, ISM, PMIs) - These indicators gauge economic sentiment and can signal future growth trends.
 
 2. Federal Reserve Policy
-• FOMC Rate Decisions & Forward Guidance - Changes in the Fed Funds rate directly influence 
-  short-term Treasury yields, while guidance on future policy impacts the yield curve.
-• Quantitative Easing (QE) / Quantitative Tightening (QT) - The Fed's balance sheet policy affects 
-  supply and demand for Treasuries.
-• Dot Plot & Summary of Economic Projections - Provides insights into policymakers' expectations 
-  for future rates.
+    • FOMC Rate Decisions & Forward Guidance - Changes in the Fed Funds rate directly influence short-term Treasury yields, while guidance on future policy impacts the yield curve.
+    • Quantitative Easing (QE) / Quantitative Tightening (QT) - The Fed's balance sheet policy affects supply and demand for Treasuries.
+    • Dot Plot & Summary of Economic Projections - Provides insights into policymakers' expectations for future rates.
 
 3. Treasury Issuance and Fiscal Policy
-• U.S. Budget Deficit & Debt Issuance - Larger deficits often require more Treasury issuance, 
-  potentially pushing yields higher.
-• Treasury Refunding Announcements - The quarterly refunding schedule provides insight into future 
-  issuance and market absorption capacity.
-• Spending Bills & Stimulus Programs - Government spending plans impact future supply and 
-  inflation expectations.
+    • U.S. Budget Deficit & Debt Issuance - Larger deficits often require more Treasury issuance, potentially pushing yields higher.
+    • Treasury Refunding Announcements - The quarterly refunding schedule provides insight into future issuance and market absorption capacity.
+    • Spending Bills & Stimulus Programs - Government spending plans impact future supply and inflation expectations.
 
 4. Geopolitical Risks & Global Uncertainty
-• War and International Conflicts - Events like Russia-Ukraine, Middle East tensions, or China-
-  Taiwan concerns can trigger flight-to-quality moves into Treasuries.
-• Trade Wars & Tariffs - U.S.-China tensions, for example, can impact global growth and Treasury 
-  demand.
-• Energy Prices & Commodity Shocks - Rising oil prices can fuel inflation, affecting yields.
+    • War and International Conflicts - Events like Russia-Ukraine, Middle East tensions, or China-Taiwan concerns can trigger flight-to-quality moves into Treasuries.
+    • Trade Wars & Tariffs - U.S.-China tensions, for example, can impact global growth and Treasury demand.
+    • Energy Prices & Commodity Shocks - Rising oil prices can fuel inflation, affecting yields.
 
 5. Foreign Demand and Currency Movements
-• Demand from Foreign Central Banks (China, Japan, Europe, Middle East) - Key buyers of 
-  Treasuries can influence yields by increasing or decreasing their purchases.
-• U.S. Dollar Strength & Treasury Demand - A strong dollar can reduce foreign demand for 
-  Treasuries, while a weaker dollar may attract buyers.
-• Sovereign Debt Market Comparisons - Relative yields vs. German Bunds or JGBs influence foreign 
-  investor appetite.
+    • Demand from Foreign Central Banks (China, Japan, Europe, Middle East) - Key buyers of Treasuries can influence yields by increasing or decreasing their purchases.
+    • U.S. Dollar Strength & Treasury Demand - A strong dollar can reduce foreign demand for Treasuries, while a weaker dollar may attract buyers.
+    • Sovereign Debt Market Comparisons - Relative yields vs. German Bunds or JGBs influence foreign investor appetite.
 
 6. Market Liquidity & Positioning
-• Hedge Fund and Dealer Positioning - Large speculative positioning in futures or options markets 
-  can drive short-term volatility.
-• Liquidity Conditions - If market depth declines, small shifts in supply/demand can cause outsized 
-  moves.
-• Repo Market Stress - Disruptions in funding markets can spill over into Treasury yields.
+    • Hedge Fund and Dealer Positioning - Large speculative positioning in futures or options markets can drive short-term volatility.
+    • Liquidity Conditions - If market depth declines, small shifts in supply/demand can cause outsized moves.
+    • Repo Market Stress - Disruptions in funding markets can spill over into Treasury yields.
 
 7. Credit & Risk Sentiment
-• Corporate Bond Spreads - Wider credit spreads often lead to a bid for Treasuries as investors seek 
-  safety.
-• Equity Market Volatility (VIX, Risk-Off Moves) - Stock selloffs usually drive Treasury rallies (lower 
-  yields).
-• Banking Sector Stress (e.g., SVB, Credit Suisse Issues) - Concerns about financial stability often 
-  trigger Treasury buying.
+    • Corporate Bond Spreads - Wider credit spreads often lead to a bid for Treasuries as investors seek safety.
+    • Equity Market Volatility (VIX, Risk-Off Moves) - Stock selloffs usually drive Treasury rallies (lower yields).
+    • Banking Sector Stress (e.g., SVB, Credit Suisse Issues) - Concerns about financial stability often trigger Treasury buying.
+    • Equity Market Volatility (VIX, Risk-Off Moves) - Stock selloffs usually drive Treasury rallies (lower yields).
+    • Banking Sector Stress (e.g., SVB, Credit Suisse Issues) - Concerns about financial stability often trigger Treasury buying.
 ----------------------------------------------------------------
 
 INSTRUCTIONS:
@@ -1233,22 +1367,64 @@ INSTRUCTIONS:
         },
     ]
 
+    # Initialize client once with Perplexity API
     client = OpenAI(api_key=Sonar_API_KEY, base_url="https://api.perplexity.ai")
+    
+    try:
+        # chat completion with streaming
+        response = client.chat.completions.create(
+            model="sonar-deep-research",
+            messages=messages,
+            stream=True
+        )
 
-    # chat completion without streaming
-    response = client.chat.completions.create(
-        model="sonar-deep-research",
-        messages=messages,
-    )
-    # Store full response in a variable
-    full_response = response.choices[0].message.content
-    # Print in a readable format
-    print("Complete response:")
-    print(full_response)
-    return full_response  # Return the response so it can be used by the tool
+        # Stop the animation before printing any output
+        animation.stop()
+        
+        # Give terminal a moment to complete cleanup
+        time.sleep(0.1)
+        
+        # Ensure fresh line for output (without clearing entire screen)
+        print("\nStreaming response:")
+        
+        # Collect the streaming content
+        collected_chunks = []
+        collected_content = ""
+        # Process each chunk
+        for chunk in response:
+            collected_chunks.append(chunk)  # Store the raw chunk
+            content = chunk.choices[0].delta.content or ""
+            collected_content += content  # Concatenate the content
+            # Print each new piece as it arrives
+            print(content, end="", flush=True)
+
+        # Now collected_content has the full response text
+        print("\n\nFull collected response:")
+
+        # Remove the thinking process using regex
+        cleaned_content = re.sub(r'<think>.*?</think>', '', collected_content, flags=re.DOTALL)
+        
+        return cleaned_content
+    
+    except Exception as e:
+        # Stop the animation if there's an error
+        animation.stop()
+        print(f"{Colors.RED}Error: {e}{Colors.END}")
+        return None
 
 def foreign_exchange_analyst():
+    from optimizerAnimation import start_animation, Colors
     date = datetime.now().strftime("%Y-%m-%d")
+
+    fx_steps = [
+        "Analyzing FX market conditions",
+        "Evaluating FX performance",
+        "Examining FX tracking efficiency",
+        "Processing FX factor analysis",
+        "Analyzing FX sector performance",
+    ]
+
+    animation = start_animation(fx_steps, "Foreign Exchange Market Analysis")
     
     system_prompt = """
 You are an expert FX strategist with deep knowledge of currency valuation models and global monetary dynamics. You prioritize clarity, detail, and factual grounding in your analyses. If information is missing, acknowledge that rather than guessing or inventing data.
@@ -1398,22 +1574,64 @@ INSTRUCTIONS:
         },
     ]
 
+    # Initialize client once with Perplexity API
     client = OpenAI(api_key=Sonar_API_KEY, base_url="https://api.perplexity.ai")
+    
+    try:
+        # chat completion with streaming
+        response = client.chat.completions.create(
+            model="sonar-deep-research",
+            messages=messages,
+            stream=True
+        )
 
-    # chat completion without streaming
-    response = client.chat.completions.create(
-        model="sonar-deep-research",
-        messages=messages,
-    )
-    # Store full response in a variable
-    full_response = response.choices[0].message.content
-    # Print in a readable format
-    print("Complete response:")
-    print(full_response)
-    return full_response  # Return the response so it can be used by the tool
+        # Stop the animation before printing any output
+        animation.stop()
+        
+        # Give terminal a moment to complete cleanup
+        time.sleep(0.1)
+        
+        # Ensure fresh line for output (without clearing entire screen)
+        print("\nStreaming response:")
+        
+        # Collect the streaming content
+        collected_chunks = []
+        collected_content = ""
+        # Process each chunk
+        for chunk in response:
+            collected_chunks.append(chunk)  # Store the raw chunk
+            content = chunk.choices[0].delta.content or ""
+            collected_content += content  # Concatenate the content
+            # Print each new piece as it arrives
+            print(content, end="", flush=True)
+
+        # Now collected_content has the full response text
+        print("\n\nFull collected response:")
+
+        # Remove the thinking process using regex
+        cleaned_content = re.sub(r'<think>.*?</think>', '', collected_content, flags=re.DOTALL)
+        
+        return cleaned_content
+    
+    except Exception as e:
+        # Stop the animation if there's an error
+        animation.stop()
+        print(f"{Colors.RED}Error: {e}{Colors.END}")
+        return None
 
 def ig_credit_analyst():
+    from optimizerAnimation import start_animation, Colors
     date = datetime.now().strftime("%Y-%m-%d")
+
+    ig_credit_steps = [
+        "Analyzing IG credit market conditions",
+        "Evaluating IG credit performance",
+        "Examining IG credit tracking efficiency",
+        "Processing IG credit factor analysis",
+        "Analyzing IG credit sector performance",
+    ]
+
+    animation = start_animation(ig_credit_steps, "IG Credit Market Analysis")
     
     system_prompt = """
 You are an expert credit analyst specializing in U.S. Investment Grade (IG) corporate bonds. You have deep knowledge of credit fundamentals, spread analysis, interest rate dynamics, and market technicals. You prioritize clarity, detail, and factual grounding in your analyses. If information is missing, acknowledge that rather than guessing or inventing data.
@@ -1439,75 +1657,75 @@ U.S. Investment Grade (IG) Credit Bonds are influenced by a mix of macro factors
 market liquidity, and global risk sentiment. Here are the most important drivers:
 
 1. Company credit ratings
-Individual company spreads are first and foremost influenced by a company's rating which is influenced
-and determined by rating agencies' reviews of a company's financials after every earnings release with
-ongoing monitoring.
+    Individual company spreads are first and foremost influenced by a company's rating which is influenced
+    and determined by rating agencies' reviews of a company's financials after every earnings release with
+    ongoing monitoring.
 
 Corporate Fundamentals & Credit Metrics
-• Earnings Reports (Revenue, EBITDA, Free Cash Flow) - Strong corporate earnings support credit quality and reduce default risk.
-• Debt-to-EBITDA & Leverage Ratios - Higher leverage raises concerns over creditworthiness.
-• Interest Coverage Ratios - Indicates a company's ability to service debt.
-• Ratings Agency Actions (Moody's, S&P, Fitch) - Downgrades or upgrades impact bond pricing and spreads.
+    • Earnings Reports (Revenue, EBITDA, Free Cash Flow) - Strong corporate earnings support credit quality and reduce default risk.
+    • Debt-to-EBITDA & Leverage Ratios - Higher leverage raises concerns over creditworthiness.
+    • Interest Coverage Ratios - Indicates a company's ability to service debt.
+    • Ratings Agency Actions (Moody's, S&P, Fitch) - Downgrades or upgrades impact bond pricing and spreads.
 
 Key Reports:
-• Corporate Earnings Releases
-• Ratings Agency Announcements
+    • Corporate Earnings Releases
+    • Ratings Agency Announcements
 
 2. Interest Rates & Federal Reserve Policy
-• Fed Funds Rate & Forward Guidance - IG credit spreads tighten when the Fed signals stability or cuts rates, while hikes increase borrowing costs.
-• Treasury Yield Curve (10Y, 2Y, 30Y Yields, Inversions) - IG bonds are priced off risk-free Treasury rates, with higher yields raising corporate borrowing costs.
-• Quantitative Tightening (QT) & Fed Balance Sheet Reduction - Fed selling Treasuries and MBS reduces market liquidity, which can widen credit spreads.
+    • Fed Funds Rate & Forward Guidance - IG credit spreads tighten when the Fed signals stability or cuts rates, while hikes increase borrowing costs.
+    • Treasury Yield Curve (10Y, 2Y, 30Y Yields, Inversions) - IG bonds are priced off risk-free Treasury rates, with higher yields raising corporate borrowing costs.
+    • Quantitative Tightening (QT) & Fed Balance Sheet Reduction - Fed selling Treasuries and MBS reduces market liquidity, which can widen credit spreads.
 
 Key Reports:
-• FOMC Meeting Minutes
-• Fed Dot Plot & SEP (Summary of Economic Projections)
-• Treasury Yield Movements
+    • FOMC Meeting Minutes
+    • Fed Dot Plot & SEP (Summary of Economic Projections)
+    • Treasury Yield Movements
 
 3. Credit Spreads & Market Liquidity
-• Investment Grade Credit Spreads (OAS, CDX IG Index, BBB vs. A Spreads) - Widening spreads indicate risk-off sentiment.
-• Primary Market Issuance (New Bond Supply) - Large new issuance can temporarily widen spreads.
-• Bond Market Liquidity (Bid-Ask Spreads, Dealer Inventories) - Thin liquidity can exacerbate credit spread movements.
+    • Investment Grade Credit Spreads (OAS, CDX IG Index, BBB vs. A Spreads) - Widening spreads indicate risk-off sentiment.
+    • Primary Market Issuance (New Bond Supply) - Large new issuance can temporarily widen spreads.
+    • Bond Market Liquidity (Bid-Ask Spreads, Dealer Inventories) - Thin liquidity can exacerbate credit spread movements.
 
 Key Indicators:
-• Bloomberg Barclays U.S. IG Corporate Bond Index
-• ICE BofA Investment Grade OAS
+    • Bloomberg Barclays U.S. IG Corporate Bond Index
+    • ICE BofA Investment Grade OAS
 
 4. Economic Data & Growth Outlook
-• GDP Growth - A strong economy supports corporate revenues and IG bond demand.
-• Inflation (CPI, PCE Deflator) - High inflation leads to tighter monetary policy, pressuring IG bonds.
-• Employment & Wage Growth (Non-Farm Payrolls, JOLTS, Unemployment Rate) - Strong labor markets imply economic resilience but could lead to rate hikes.
+    • GDP Growth - A strong economy supports corporate revenues and IG bond demand.
+    • Inflation (CPI, PCE Deflator) - High inflation leads to tighter monetary policy, pressuring IG bonds.
+    • Employment & Wage Growth (Non-Farm Payrolls, JOLTS, Unemployment Rate) - Strong labor markets imply economic resilience but could lead to rate hikes.
 
 Key Reports:
-• GDP Growth
-• CPI & PCE Inflation Reports
-• Non-Farm Payrolls (NFP)
+    • GDP Growth
+    • CPI & PCE Inflation Reports
+    • Non-Farm Payrolls (NFP)
 
 5. Geopolitical & Market Risk Sentiment
-• Geopolitical Tensions (Russia-Ukraine, Middle East, China-Taiwan) - Flight-to-quality moves can impact IG spreads.
-• U.S. Fiscal Policy & Debt Ceiling Concerns - Increased Treasury issuance for deficit funding can crowd out corporate bond demand.
-• Banking Sector Stability (Financial Conditions, Credit Markets) - Stress in the banking sector can lead to wider IG spreads.
+    • Geopolitical Tensions (Russia-Ukraine, Middle East, China-Taiwan) - Flight-to-quality moves can impact IG spreads.
+    • U.S. Fiscal Policy & Debt Ceiling Concerns - Increased Treasury issuance for deficit funding can crowd out corporate bond demand.
+    • Banking Sector Stability (Financial Conditions, Credit Markets) - Stress in the banking sector can lead to wider IG spreads.
 
 Key Indicators:
-• VIX (Market Volatility)
-• Treasury Issuance Announcements
+    • VIX (Market Volatility)
+    • Treasury Issuance Announcements
 
 6. Global Demand & Foreign Investment
-• Foreign Central Bank & Sovereign Wealth Fund Purchases - High demand from global investors (China, Japan, EU) tightens spreads.
-• Relative Yields (U.S. IG vs. Euro Credit, EM Bonds) - U.S. IG attracts capital if it offers better risk-adjusted returns.
-• Hedging Costs for Foreign Investors - FX hedging costs impact overseas demand for U.S. IG bonds.
+    • Foreign Central Bank & Sovereign Wealth Fund Purchases - High demand from global investors (China, Japan, EU) tightens spreads.
+    • Relative Yields (U.S. IG vs. Euro Credit, EM Bonds) - U.S. IG attracts capital if it offers better risk-adjusted returns.
+    • Hedging Costs for Foreign Investors - FX hedging costs impact overseas demand for U.S. IG bonds.
 
 Key Reports:
-• TIC Data (Foreign Holdings of U.S. Bonds)
-• Relative Yield Comparisons (U.S. vs. European IG Credit)
+    • TIC Data (Foreign Holdings of U.S. Bonds)
+    • Relative Yield Comparisons (U.S. vs. European IG Credit)
 
 7. Sector-Specific Credit Risks
-• Financials (Bank & Insurance IG Bonds) - Heavily influenced by financial stability, regulations, and Fed policy.
-• Tech & High-Growth Names - Sensitive to rate hikes as they rely on low-cost funding.
-• Energy & Industrials - Commodity price fluctuations impact creditworthiness.
+    • Financials (Bank & Insurance IG Bonds) - Heavily influenced by financial stability, regulations, and Fed policy.
+    • Tech & High-Growth Names - Sensitive to rate hikes as they rely on low-cost funding.
+    • Energy & Industrials - Commodity price fluctuations impact creditworthiness.
 
 Key Reports:
-• Sector-Specific Earnings Reports
-• Industry Credit Spreads
+    • Sector-Specific Earnings Reports
+    • Industry Credit Spreads
 -----------------------------------------------------------------------------------------------
 
 INSTRUCTIONS:
@@ -1535,22 +1753,64 @@ INSTRUCTIONS:
         },
     ]
 
+    # Initialize client once with Perplexity API
     client = OpenAI(api_key=Sonar_API_KEY, base_url="https://api.perplexity.ai")
+    
+    try:
+        # chat completion with streaming
+        response = client.chat.completions.create(
+            model="sonar-deep-research",
+            messages=messages,
+            stream=True
+        )
 
-    # chat completion without streaming
-    response = client.chat.completions.create(
-        model="sonar-deep-research",
-        messages=messages,
-    )
-    # Store full response in a variable
-    full_response = response.choices[0].message.content
-    # Print in a readable format
-    print("Complete response:")
-    print(full_response)
-    return full_response  # Return the response so it can be used by the tool
+        # Stop the animation before printing any output
+        animation.stop()
+        
+        # Give terminal a moment to complete cleanup
+        time.sleep(0.1)
+        
+        # Ensure fresh line for output (without clearing entire screen)
+        print("\nStreaming response:")
+        
+        # Collect the streaming content
+        collected_chunks = []
+        collected_content = ""
+        # Process each chunk
+        for chunk in response:
+            collected_chunks.append(chunk)  # Store the raw chunk
+            content = chunk.choices[0].delta.content or ""
+            collected_content += content  # Concatenate the content
+            # Print each new piece as it arrives
+            print(content, end="", flush=True)
+
+        # Now collected_content has the full response text
+        print("\n\nFull collected response:")
+
+        # Remove the thinking process using regex
+        cleaned_content = re.sub(r'<think>.*?</think>', '', collected_content, flags=re.DOTALL)
+        
+        return cleaned_content
+    
+    except Exception as e:
+        # Stop the animation if there's an error
+        animation.stop()
+        print(f"{Colors.RED}Error: {e}{Colors.END}")
+        return None
 
 def high_yield_analyst():
+    from optimizerAnimation import start_animation, Colors
     date = datetime.now().strftime("%Y-%m-%d")
+
+    high_yield_steps = [
+        "Analyzing high-yield bond market conditions",
+        "Evaluating high-yield bond performance",
+        "Examining high-yield bond tracking efficiency",
+        "Processing high-yield bond factor analysis",
+        "Analyzing high-yield bond sector performance",
+    ]
+
+    animation = start_animation(high_yield_steps, "High Yield Bond Market Analysis")
     
     system_prompt = """
 You are an expert fixed-income strategist with deep knowledge of both U.S. high-yield bond markets and emerging market (EM) debt. You prioritize clarity, detail, and factual grounding in your analysis. If information is missing, acknowledge that rather than fabricating data.
@@ -1670,22 +1930,65 @@ INSTRUCTIONS:
         },
     ]
 
+        # Initialize client once with Perplexity API
     client = OpenAI(api_key=Sonar_API_KEY, base_url="https://api.perplexity.ai")
+    
+    try:
+        # chat completion with streaming
+        response = client.chat.completions.create(
+            model="sonar-deep-research",
+            messages=messages,
+            stream=True
+        )
 
-    # chat completion without streaming
-    response = client.chat.completions.create(
-        model="sonar-deep-research",
-        messages=messages,
-    )
-    # Store full response in a variable
-    full_response = response.choices[0].message.content
-    # Print in a readable format
-    print("Complete response:")
-    print(full_response)
-    return full_response  # Return the response so it can be used by the tool
+        # Stop the animation before printing any output
+        animation.stop()
+        
+        # Give terminal a moment to complete cleanup
+        time.sleep(0.1)
+        
+        # Ensure fresh line for output (without clearing entire screen)
+        print("\nStreaming response:")
+        
+        # Collect the streaming content
+        collected_chunks = []
+        collected_content = ""
+        # Process each chunk
+        for chunk in response:
+            collected_chunks.append(chunk)  # Store the raw chunk
+            content = chunk.choices[0].delta.content or ""
+            collected_content += content  # Concatenate the content
+            # Print each new piece as it arrives
+            print(content, end="", flush=True)
+
+        # Now collected_content has the full response text
+        print("\n\nFull collected response:")
+
+        # Remove the thinking process using regex
+        cleaned_content = re.sub(r'<think>.*?</think>', '', collected_content, flags=re.DOTALL)
+        
+        return cleaned_content
+    
+    except Exception as e:
+        # Stop the animation if there's an error
+        animation.stop()
+        print(f"{Colors.RED}Error: {e}{Colors.END}")
+        return None
+    
 
 def emerging_market_analyst():
+    from optimizerAnimation import start_animation, Colors
     date = datetime.now().strftime("%Y-%m-%d")
+
+    emerging_market_steps = [
+        "Analyzing emerging market conditions",
+        "Evaluating emerging market performance",
+        "Examining emerging market tracking efficiency",
+        "Processing emerging market factor analysis",
+        "Analyzing emerging market sector performance",
+    ]
+
+    animation = start_animation(emerging_market_steps, "Emerging Market Analysis")
     
     system_prompt = """
 You are an expert emerging markets analyst with deep knowledge of the intersection between global macro forces and local EM conditions. You prioritize clarity, detail, and factual grounding in your assessments. If any information is missing, acknowledge that rather than guessing or inventing data.
@@ -1795,19 +2098,50 @@ INSTRUCTIONS:
         },
     ]
 
+        # Initialize client once with Perplexity API
     client = OpenAI(api_key=Sonar_API_KEY, base_url="https://api.perplexity.ai")
+    
+    try:
+        # chat completion with streaming
+        response = client.chat.completions.create(
+            model="sonar-deep-research",
+            messages=messages,
+            stream=True
+        )
 
-    # chat completion without streaming
-    response = client.chat.completions.create(
-        model="sonar-deep-research",
-        messages=messages,
-    )
-    # Store full response in a variable
-    full_response = response.choices[0].message.content
-    # Print in a readable format
-    print("Complete response:")
-    print(full_response)
-    return full_response  # Return the response so it can be used by the tool
+        # Stop the animation before printing any output
+        animation.stop()
+        
+        # Give terminal a moment to complete cleanup
+        time.sleep(0.1)
+        
+        # Ensure fresh line for output (without clearing entire screen)
+        print("\nStreaming response:")
+        
+        # Collect the streaming content
+        collected_chunks = []
+        collected_content = ""
+        # Process each chunk
+        for chunk in response:
+            collected_chunks.append(chunk)  # Store the raw chunk
+            content = chunk.choices[0].delta.content or ""
+            collected_content += content  # Concatenate the content
+            # Print each new piece as it arrives
+            print(content, end="", flush=True)
+
+        # Now collected_content has the full response text
+        print("\n\nFull collected response:")
+
+        # Remove the thinking process using regex
+        cleaned_content = re.sub(r'<think>.*?</think>', '', collected_content, flags=re.DOTALL)
+        
+        return cleaned_content
+    
+    except Exception as e:
+        # Stop the animation if there's an error
+        animation.stop()
+        print(f"{Colors.RED}Error: {e}{Colors.END}")
+        return None
 
 def optimize():
 
@@ -1874,11 +2208,11 @@ REMEMBER THE CURRENT DATE IS {current_date}
 1. Analyze the current portfolio positions, account information, portfolio metrics, stock metrics, monthly performance, diversification, and correlation matrix
 2. Identify the most significant issues affecting portfolio performance (concentration risk, underperforming assets, etc.)
 3. Recommend specific actions with exact positions and quantities:
-- Which specific positions should be reduced or sold completely
-- Which specific positions should be increased
-- New long positions that should be added (with specific tickers and allocation amounts) YOU CAN CHOOSE ANY STOCK FROM ANY SECTOR OR INDUSTRY OR SUBINDUSTRY AND FROM ANY COUNTRY, AS LONG AS ITS A GOOD INVESTMENT AND WILL MAKE MONEY
-- New short positions that should be added (with specific tickers and allocation amounts) YOU CAN CHOOSE ANY STOCK FROM ANY SECTOR OR INDUSTRY OR SUBINDUSTRY AND FROM ANY COUNTRY, AS LONG AS ITS A GOOD INVESTMENT AND WILL MAKE MONEY
-- Exact percentage adjustments to each position
+    - Which specific positions should be reduced or sold completely
+    - Which specific positions should be increased
+    - New long positions that should be added (with specific tickers and allocation amounts) YOU CAN CHOOSE ANY STOCK FROM ANY SECTOR OR INDUSTRY OR SUBINDUSTRY AND FROM ANY COUNTRY, AS LONG AS ITS A GOOD INVESTMENT AND WILL MAKE MONEY
+    - New short positions that should be added (with specific tickers and allocation amounts) YOU CAN CHOOSE ANY STOCK FROM ANY SECTOR OR INDUSTRY OR SUBINDUSTRY AND FROM ANY COUNTRY, AS LONG AS ITS A GOOD INVESTMENT AND WILL MAKE MONEY
+    - Exact percentage adjustments to each position
 4. Explain how each recommendation will improve the portfolio's return potential
 5. Provide a clear implementation plan 
 6. Quantify the expected improvement in key metrics (volatility, returns, diversification)
@@ -2076,7 +2410,7 @@ Trade Action: [action(buy/sell/hold)] | Ticker: [ticker] | Quantity: [quantity]
             # Get the appropriate response based on the tool called
             tool_response = ""
             if function_name == "query_energy_stocks":
-                print(f"*** TOOL USED: query_energy_stocks ***")
+                print(f"\033[1m\033[94m*** TOOL USED: query_energy_stocks ***\033[0m")
                 
                 # Query real energy stocks from the database
                 energy_stocks = query_energy_stocks()
@@ -2102,7 +2436,7 @@ Trade Action: [action(buy/sell/hold)] | Ticker: [ticker] | Quantity: [quantity]
             elif function_name == "free_search":
                 function_args = json.loads(tool_call.function.arguments)
                 query = function_args.get("query")
-                print(f"*** TOOL USED: free_search for query: '{query}' ***")
+                print(f"\033[1m\033[94m*** TOOL USED: free_search for query: '{query}' ***\033[0m")
                 
                 # Use the search function to get information from the web
                 system_prompt = """You are a financial research analyst with 20+ years of experience who provides comprehensive, data-rich investment analysis. 
@@ -2121,7 +2455,7 @@ Trade Action: [action(buy/sell/hold)] | Ticker: [ticker] | Quantity: [quantity]
                 tool_response = f"Web Search Results for: '{query}'\n\n{search_response}\n\nNOTE: This information should be incorporated into your portfolio analysis. You should conduct additional searches on other topics to build a comprehensive view before making final recommendations."
             
             elif function_name == "equity_research_analyst":
-                print(f"*** TOOL USED: equity_research_analyst ***")
+                print(f"\033[1m\033[94m*** TOOL USED: equity_research_analyst ***\033[0m")
                 
                 # Call the equity research analyst function
                 try:
@@ -2232,7 +2566,7 @@ Trade Action: [action(buy/sell/hold)] | Ticker: [ticker] | Quantity: [quantity]
             }
         
         # Recursive function to handle multiple rounds of tool calls
-        def handle_conversation(messages, tools, round_num=1, max_rounds=15):
+        def handle_conversation(messages, tools, round_num=1, max_rounds=25):
             print(f"\nStarting conversation round {round_num}...")
             
             if round_num > max_rounds:
@@ -2285,23 +2619,112 @@ Trade Action: [action(buy/sell/hold)] | Ticker: [ticker] | Quantity: [quantity]
             "1. MARKET ANALYSIS (REQUIRED, MUST CONDUCT ALL TOOLS)\n" + \
             "IMPORTANT: You must conduct all the tools in the order they are listed below before conducting any targeted research.\n" + \
             "   - Use equity_research_analyst for comprehensive equity market insights\n" + \
+            "   - Use commodities_analyst if the portfolio includes or should include commodities\n" + \
             "   - Use treasuries_analyst for detailed US Treasury market analysis\n" + \
             "   - Use foreign_exchange_analyst for currency valuation and FX market insights\n" + \
             "   - Use ig_credit_analyst for Investment Grade corporate bond analysis\n" + \
             "   - Use high_yield_analyst for High Yield and Emerging Market debt analysis\n" + \
             "   - Use emerging_market_analyst for detailed Emerging Markets equity and fixed income analysis\n" + \
-            "   - Use commodities_analyst if the portfolio includes or should include commodities\n" + \
             "   - Use etf_analyst to identify optimal ETF vehicles for implementation\n\n" + \
-            "2. TARGETED RESEARCH (AS NEEDED)\n" + \
+            "2. TARGETED RESEARCH (AS NEEDED, DO AS MANY SEARCHES AS YOU NEED TO MAKE THE BEST RECOMMENDATIONS)\n" + \
             "   - Use free_search to investigate specific opportunities or concerns \n" + \
             "   - Use free_search to search any information you need to make the best portfolio recommendations\n\n"    
         }
         
         initial_messages = [system_message, user_message]
-        available_tools = [energy_stocks_tool, search_tool, equity_research_tool, commodities_research_tool, etf_research_tool, treasuries_tool, foreign_exchange_tool, ig_credit_tool, high_yield_tool, emerging_markets_tool]
         
-        # Start the conversation without forcing a tool call
-        final_content = handle_conversation(initial_messages, available_tools)
+        # Define the required tools in order
+        required_tools = [
+            "equity_research_analyst", 
+            "treasuries_analyst", 
+            "ig_credit_analyst", 
+            "high_yield_analyst", 
+            "foreign_exchange_analyst", 
+            "emerging_market_analyst", 
+            "commodities_analyst", 
+            "etf_analyst"
+        ]
+        
+        # Create tool mapping for easy access
+        tool_map = {
+            "equity_research_analyst": equity_research_tool,
+            "treasuries_analyst": treasuries_tool,
+            "ig_credit_analyst": ig_credit_tool,
+            "high_yield_analyst": high_yield_tool,
+            "foreign_exchange_analyst": foreign_exchange_tool,
+            "emerging_market_analyst": emerging_markets_tool,
+            "commodities_analyst": commodities_research_tool,
+            "etf_analyst": etf_research_tool,
+            "search_tool": search_tool,
+            "energy_stocks_tool": energy_stocks_tool
+        }
+        
+        # Track the conversation
+        current_messages = initial_messages.copy()
+        used_required_tools = []
+        
+        # Phase 1: Force the use of each required tool in sequence
+        print("\n=== Phase 1: Required Market Analysis Tools ===")
+        for tool_name in required_tools:
+            tool = tool_map.get(tool_name)
+            if not tool:
+                print(f"Warning: Tool {tool_name} not found in available tools, skipping")
+                continue
+                
+            print(f"Forcing usage of {tool_name}...")
+            
+            # Add a message to force the tool use
+            force_message = {
+                "role": "user",
+                "content": f"Please use the {tool_name} now to conduct the required analysis before proceeding. Do not skip this step."
+            }
+            current_messages.append(force_message)
+            
+            # Use only this specific tool for this round
+            phase1_result = handle_conversation(current_messages, [tool], max_rounds=2)
+            
+            # Update the conversation messages
+            # We need to preserve the conversation history but remove the last response
+            # since handle_conversation returns the content, not the full message object
+            if len(current_messages) > 0 and current_messages[-1]["role"] == "user":
+                # If the last message is from the user, we append the assistant's response
+                current_messages.append({"role": "assistant", "content": phase1_result})
+            
+            used_required_tools.append(tool_name)
+            print(f"Successfully used {tool_name}")
+        
+        # Phase 2: Allow free search and other targeted research
+        print("\n=== Phase 2: Targeted Research with Free Search ===")
+        
+        # Add a transition message
+        transition_message = {
+            "role": "user",
+            "content": "Now that you've completed all required market analyses, you can proceed with targeted research using free_search to investigate specific opportunities or gather additional information needed for your portfolio recommendations."
+        }
+        current_messages.append(transition_message)
+        
+        # Allow a few rounds of free search
+        available_search_tools = [tool_map.get("search_tool")]
+        if tool_map.get("energy_stocks_tool"):
+            available_search_tools.append(tool_map.get("energy_stocks_tool"))
+            
+        # Run a few rounds of free search
+        for i in range(1, 5):
+            print(f"Free search round {i}...")
+            search_result = handle_conversation(current_messages, available_search_tools, max_rounds=2)
+            current_messages.append({"role": "assistant", "content": search_result})
+        
+        # Phase 3: Generate final recommendation
+        print("\n=== Phase 3: Final Portfolio Recommendation ===")
+        final_message = {
+            "role": "user",
+            "content": "Based on all the market analyses and targeted research you've conducted, please provide your final portfolio recommendation."
+        }
+        current_messages.append(final_message)
+        
+        # Use all tools for the final recommendation
+        all_tools = [tool for tool in tool_map.values() if tool]
+        final_content = handle_conversation(current_messages, all_tools)
         
         print("\n=== Final Portfolio Recommendation ===")
         
@@ -2319,4 +2742,4 @@ Trade Action: [action(buy/sell/hold)] | Ticker: [ticker] | Quantity: [quantity]
         return f"An error occurred while calling the OpenAI API: {str(e)}"
 
 
-# optimize()
+optimize()
