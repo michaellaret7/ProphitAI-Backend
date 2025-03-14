@@ -1,4 +1,4 @@
-from optimizerTools import query_energy_stocks, free_search, equity_research_analyst, commodities_analyst, etf_analyst, treasuries_analyst, foreign_exchange_analyst, ig_credit_analyst, high_yield_analyst, emerging_market_analyst
+from optimizerAnalysts import free_search, communication_services_analyst, consumer_staples_analyst, consumer_discretionary_analyst, energy_analyst, financials_analyst, commodities_analyst, etf_analyst, treasuries_analyst, foreign_exchange_analyst, ig_credit_analyst, high_yield_analyst, emerging_market_analyst, healthcare_analyst, industrials_analyst, information_technology_analyst, materials_analyst, real_estate_analyst, utilities_analyst
 from optimizerFormatting import format
 from openai import OpenAI
 import json
@@ -69,6 +69,16 @@ REMEMBER THE CURRENT DATE IS {current_date}
 
 ------------------------------------------------------------------------------------------------------
 
+### RULES(YOU MUST FOLLOW THESE RULES):
+1. NO HALLUCINATIONS, IF THERE IS SOMETHING YOU DO NOT KNOW OR IF THERE IS DATA MISSING, SAY YOU DO NOT KNOW, AND PROCEED LOGICALLY.
+2. BE VERY SPECIFIC AND EXACT WITH YOUR RECOMMENDATIONS.
+3. BE SUCCUINCT AND CONCISE, BUT MAKE SURE TO EXPLAIN YOUR REASONING.
+4. BE SUCCESSFUL AND MAKE MONEY.
+5. BE CREATIVE IN YOUR STRATEGIES AND THINK OUTSIDE THE BOX.
+6. KEEP 10% OF THE PORTFOLIO IN CASH.
+7. NONE OF THE POSITIONS SHOULD BE LESS THAN $10,000.
+8. THE SUM OF ALL POSITIONS SHOULD BE EQUAL TO 85% OF THE PORTFOLIO.
+
 ### Directions:
 1. Analyze the current portfolio positions, account information, portfolio metrics, stock metrics, monthly performance, diversification, and correlation matrix
 2. Identify the most significant issues affecting portfolio performance (concentration risk, underperforming assets, etc.)
@@ -81,6 +91,7 @@ REMEMBER THE CURRENT DATE IS {current_date}
 4. Explain how each recommendation will improve the portfolio's return potential
 5. Provide a clear implementation plan 
 6. Quantify the expected improvement in key metrics (volatility, returns, diversification)
+7. Provide the final portfolio in a neatly organzied table
 
 ### ACTIONS YOU ARE ALLOWED TO TAKE:
 1. BUY NEW ASSETS
@@ -104,26 +115,23 @@ REMEMBER THE CURRENT DATE IS {current_date}
 4. Implementation Plan
 5. Expected Outcome
 
-### ONCE YOU HAVE FINISHED YOUR ANALYSIS, PLEASE PROVIDE THE NEW PORTFOLIO WITH YOUR SUGGESTED CHANGES IN THIS FORMAT(PRINT THIS HORIZONTALLY IN A TABLE):
-Stock Ticker: New Position Size | Quantity | New Allocation | New Market Value
-
 ### THEN I WANT THE EXACT TRADE EXECUTION INSTRUCTIONS IN THIS FORMAT:
 Trade Action: [action(buy/sell/hold)] | Ticker: [ticker] | Quantity: [quantity]
 
-### THIS IS THE FORMAT YOU SHOULD USE(THESE ARE EXAMPLES):
-• SELL 'SOME STOCK' (100 shares) --> entire position
-• SELL 'SOME STOCK' (50 shares) --> reduce from 100 → 50
-• HOLD 'SOME STOCK' (50 shares)
-• BUY 'SOME STOCK' (500 shares)
+### THIS IS THE FORMAT YOU SHOULD USE(THESE ARE EXAMPLES, YOU MUST FOLLOW THIS FORMAT, DO NOT PRINT UNCHAGNED ASSETS IN PORTFOLIO):
+• SELL 'SOME STOCK' (100 shares) --> entire position  [TELL THE USER THE REASON FOR MAKING THIS TRADE]
+• SELL 'SOME STOCK' (50 shares) --> reduce from 100 → 50 [TELL THE USER THE REASON FOR MAKING THIS TRADE]
+• BUY 'SOME STOCK' (50 shares) --> increase from 100 → 150 [TELL THE USER THE REASON FOR MAKING THIS TRADE]
+• BUY 'SOME STOCK' (500 shares)  [TELL THE USER THE REASON FOR MAKING THIS TRADE]
 
-### RULES:
-1. NO HALLUCINATIONS, IF THERE IS SOMETHING YOU DO NOT KNOW OR IF THERE IS DATA MISSING, SAY YOU DO NOT KNOW, AND PROCEED LOGICALLY.
-2. BE VERY SPECIFIC AND EXACT WITH YOUR RECOMMENDATIONS.
-3. BE SUCCUINCT AND CONCISE, BUT MAKE SURE TO EXPLAIN YOUR REASONING.
-4. BE SUCCESSFUL AND MAKE MONEY.
-5. BE CREATIVE IN YOUR STRATEGIES AND THINK OUTSIDE THE BOX.
-6. KEEP 10% OF THE PORTFOLIO IN CASH.
-7. None of the positions should be less than $10,000
+### ONCE YOU HAVE FINISHED YOUR ANALYSIS, THIS IS THE FORMAT YOU SHOULD USE FOR THE NEW PORTFOLIO:
+-----------------------------------------------------------------------------------------
+| Ticker | Quantity | Allocation | Market Value | bought/sold/held/position size change |
+-----------------------------------------------------------------------------------------
+| Ticker | Quantity | Allocation | Market Value | bought/sold/held/position size change |
+-----------------------------------------------------------------------------------------
+| Ticker | Quantity | Allocation | Market Value | bought/sold/held/position size change |
+-----------------------------------------------------------------------------------------
 """
     
     # Call the OpenAI API with tool calling ability
@@ -133,19 +141,6 @@ Trade Action: [action(buy/sell/hold)] | Ticker: [ticker] | Quantity: [quantity]
         client = OpenAI(api_key=api_key)
         
         # Define tools
-        energy_stocks_tool = {
-            "type": "function",
-            "function": {
-                "name": "query_energy_stocks",
-                "description": "Get a list of energy stocks from the coal and consumable fuels industry",
-                "parameters": {
-                    "type": "object",
-                    "properties": {},
-                    "required": []
-                }
-            }
-        }
-
         search_tool = {
             "type": "function",
             "function": {
@@ -164,10 +159,10 @@ Trade Action: [action(buy/sell/hold)] | Ticker: [ticker] | Quantity: [quantity]
             }
         }
         
-        equity_research_tool = {
+        communication_services_tool = {
             "type": "function",
             "function": {
-                "name": "equity_research_analyst",
+                "name": "communication_services_analyst",
                 "description": "Generate a comprehensive equity research report that provides actionable insights into the global equity market. The report covers market trends, sector performance, geopolitical events, investor sentiment, emerging opportunities, key risks, market valuation, and investment styles.",
                 "parameters": {
                     "type": "object",
@@ -268,37 +263,143 @@ Trade Action: [action(buy/sell/hold)] | Ticker: [ticker] | Quantity: [quantity]
             }
         }
         
+        consumer_staples_tool = {
+            "type": "function",
+            "function": {
+                "name": "consumer_staples_analyst",
+                "description": "Generate a comprehensive analysis of the consumer staples sector, examining market trends, consumer behavior, pricing dynamics, and competition. The report covers defensive characteristics, inflation impacts, global exposure, and growth opportunities within this essential sector.",
+                "parameters": {
+                    "type": "object",
+                    "properties": {},
+                    "required": []
+                }
+            }
+        }
+        
+        consumer_discretionary_tool = {
+            "type": "function",
+            "function": {
+                "name": "consumer_discretionary_analyst",
+                "description": "Generate a comprehensive analysis of the consumer discretionary sector, examining consumer spending trends, e-commerce developments, luxury vs. mass market dynamics, and cyclical factors. The report covers how economic conditions, interest rates, and consumer confidence affect discretionary spending patterns.",
+                "parameters": {
+                    "type": "object",
+                    "properties": {},
+                    "required": []
+                }
+            }
+        }
+        
+        energy_tool = {
+            "type": "function",
+            "function": {
+                "name": "energy_analyst",
+                "description": "Generate a comprehensive analysis of the energy sector, examining global supply-demand dynamics, price trends, regulatory influences, and the energy transition. The report covers both traditional fossil fuels and renewable energy sources, with analysis of key industry drivers and future outlooks.",
+                "parameters": {
+                    "type": "object",
+                    "properties": {},
+                    "required": []
+                }
+            }
+        }
+        
+        financials_tool = {
+            "type": "function",
+            "function": {
+                "name": "financials_analyst",
+                "description": "Generate a comprehensive analysis of the financial sector, examining banking, insurance, asset management, and fintech trends. The report covers interest rate sensitivities, credit conditions, regulatory developments, and technological disruption in financial services.",
+                "parameters": {
+                    "type": "object",
+                    "properties": {},
+                    "required": []
+                }
+            }
+        }
+        
+        healthcare_tool = {
+            "type": "function",
+            "function": {
+                "name": "healthcare_analyst",
+                "description": "Generate a comprehensive analysis of the healthcare sector, examining pharmaceutical, biotechnology, medical devices, and healthcare services trends. The report covers regulatory developments, innovation pipelines, pricing pressures, demographic trends, and competitive dynamics in healthcare.",
+                "parameters": {
+                    "type": "object",
+                    "properties": {},
+                    "required": []
+                }
+            }
+        }
+        
+        industrials_tool = {
+            "type": "function",
+            "function": {
+                "name": "industrials_analyst",
+                "description": "Generate a comprehensive analysis of the industrials sector, examining manufacturing, transportation, aerospace, defense, and construction trends. The report covers global supply chains, automation, infrastructure spending, and industrial production cycles.",
+                "parameters": {
+                    "type": "object",
+                    "properties": {},
+                    "required": []
+                }
+            }
+        }
+        
+        information_technology_tool = {
+            "type": "function",
+            "function": {
+                "name": "information_technology_analyst",
+                "description": "Generate a comprehensive analysis of the information technology sector, examining software, hardware, semiconductors, and IT services trends. The report covers digital transformation, cloud computing, AI/ML developments, cybersecurity, and competitive dynamics in tech.",
+                "parameters": {
+                    "type": "object",
+                    "properties": {},
+                    "required": []
+                }
+            }
+        }
+        
+        materials_tool = {
+            "type": "function",
+            "function": {
+                "name": "materials_analyst",
+                "description": "Generate a comprehensive analysis of the materials sector, examining chemicals, mining, metals, and construction materials trends. The report covers commodity prices, supply-demand dynamics, sustainability initiatives, and global trade patterns affecting materials companies.",
+                "parameters": {
+                    "type": "object",
+                    "properties": {},
+                    "required": []
+                }
+            }
+        }
+        
+        real_estate_tool = {
+            "type": "function",
+            "function": {
+                "name": "real_estate_analyst",
+                "description": "Generate a comprehensive analysis of the real estate sector, examining residential, commercial, industrial, and specialized property trends. The report covers interest rate impacts, occupancy rates, rent growth, development pipelines, and sector-specific dynamics within real estate.",
+                "parameters": {
+                    "type": "object",
+                    "properties": {},
+                    "required": []
+                }
+            }
+        }
+        
+        utilities_tool = {
+            "type": "function",
+            "function": {
+                "name": "utilities_analyst",
+                "description": "Generate a comprehensive analysis of the utilities sector, examining electric, gas, water, and renewable energy utilities. The report covers regulatory frameworks, interest rate sensitivity, environmental policies, infrastructure investments, and the energy transition's impact on utilities.",
+                "parameters": {
+                    "type": "object",
+                    "properties": {},
+                    "required": []
+                }
+            }
+        }
+        
         # Helper function to process tool responses
         def process_tool_call(tool_call):
             function_name = tool_call.function.name
             
             # Get the appropriate response based on the tool called
             tool_response = ""
-            if function_name == "query_energy_stocks":
-                print(f"\033[1m\033[94m*** TOOL USED: query_energy_stocks ***\033[0m")
-                
-                # Query real energy stocks from the database
-                energy_stocks = query_energy_stocks()
-                
-                # Format the response
-                energy_response = "Here are coal and consumable fuels stocks from your database that you could consider for your portfolio:\n\n"
-                
-                for i, stock in enumerate(energy_stocks, 1):
-                    energy_response += f"{i}. {stock['ticker']} ({stock['short_name']}) - {stock['sub_industry']}, P/E: {stock['p_e']}, Market Cap: ${stock['market_cap']:.2f}, Alpha (3m): {stock['alpha_m_3']}, Beta (3m): {stock['beta_m_3']}\n"
-                
-                energy_response += "\nThese stocks represent the coal and consumable fuels sub-industry within the energy sector. They typically have lower P/E ratios than other sectors and varying levels of market volatility as indicated by their beta values. Their alpha values show their performance relative to the market benchmark over the last 3 months."
-                
-                energy_response += "\n\nKey metrics explanation:"
-                energy_response += "\n- P/E: Price-to-earnings ratio, lower values may indicate better value"
-                energy_response += "\n- Market Cap: Total market value of the company's shares"
-                energy_response += "\n- Alpha (3m): Excess return relative to benchmark over 3 months (positive is better)"
-                energy_response += "\n- Beta (3m): Volatility relative to market over 3 months (>1 means more volatile than market)"
-                
-                energy_response += "\n\nFor more detailed information about specific coal stocks or other investment options, you can use the web_search tool. Consider searching for recent financial performance, growth projections, and analyst ratings for the most promising coal stocks."
-                
-                tool_response = energy_response
-                
-            elif function_name == "free_search":
+            if function_name == "free_search":
                 function_args = json.loads(tool_call.function.arguments)
                 query = function_args.get("query")
                 print(f"\033[1m\033[94m*** TOOL USED: free_search for query: '{query}' ***\033[0m")
@@ -319,15 +420,15 @@ Trade Action: [action(buy/sell/hold)] | Ticker: [ticker] | Quantity: [quantity]
                 # Format the response appropriately
                 tool_response = f"Web Search Results for: '{query}'\n\n{search_response}\n\nNOTE: This information should be incorporated into your portfolio analysis. You should conduct additional searches on other topics to build a comprehensive view before making final recommendations."
             
-            elif function_name == "equity_research_analyst":
-                print(f"\033[1m\033[94m*** TOOL USED: equity_research_analyst ***\033[0m")
+            elif function_name == "communication_services_analyst":
+                print(f"\033[1m\033[94m*** TOOL USED: communication_services_analyst ***\033[0m")
                 
                 # Call the equity research analyst function
                 try:
-                    research_report = equity_research_analyst()
+                    research_report = communication_services_analyst()
                 except Exception as e:
-                    print(f"Error generating equity research report: {e}")
-                    research_report = "I attempted to generate a comprehensive equity research report but encountered an error. Please continue with the available information or try using other research tools."
+                    print(f"Error generating communication services research report: {e}")
+                    research_report = "I attempted to generate a comprehensive communication services research report but encountered an error. Please continue with the available information or try using other research tools."
                 
                 # Format the response appropriately
                 tool_response = f"Equity Research Report:\n\n{research_report}\n\nNOTE: This comprehensive market analysis should form the foundation of your portfolio optimization strategy. Consider how these trends, opportunities, and risks impact your investment decisions."
@@ -423,6 +524,136 @@ Trade Action: [action(buy/sell/hold)] | Ticker: [ticker] | Quantity: [quantity]
                 # Format the response appropriately
                 tool_response = f"Emerging Markets Analysis:\n\n{research_report}\n\nNOTE: Use this emerging markets analysis to inform your allocation to both EM equities and fixed income. Consider how global macro factors and domestic fundamentals influence different EM assets, and how they might perform in various economic scenarios."
             
+            elif function_name == "consumer_staples_analyst":
+                print(f"*** TOOL USED: consumer_staples_analyst ***")
+                
+                # Call the consumer staples analyst function
+                try:
+                    research_report = consumer_staples_analyst()
+                except Exception as e:
+                    print(f"Error generating consumer staples research report: {e}")
+                    research_report = "I attempted to generate a comprehensive consumer staples analysis but encountered an error. Please continue with the available information or try using other research tools."
+                
+                # Format the response appropriately
+                tool_response = f"Consumer Staples Analysis:\n\n{research_report}\n\nNOTE: Use this consumer staples analysis to inform your allocation to consumer staples stocks. Consider how these stocks are defensive in nature and how they might perform in various economic scenarios."
+            
+            elif function_name == "consumer_discretionary_analyst":
+                print(f"*** TOOL USED: consumer_discretionary_analyst ***")
+                
+                # Call the consumer discretionary analyst function
+                try:
+                    research_report = consumer_discretionary_analyst()
+                except Exception as e:
+                    print(f"Error generating consumer discretionary research report: {e}")
+                    research_report = "I attempted to generate a comprehensive consumer discretionary analysis but encountered an error. Please continue with the available information or try using other research tools."
+                
+                # Format the response appropriately
+                tool_response = f"Consumer Discretionary Analysis:\n\n{research_report}\n\nNOTE: Use this consumer discretionary analysis to inform your allocation to consumer discretionary stocks. Consider how these stocks are cyclical in nature and how they might perform in various economic scenarios."
+            
+            elif function_name == "energy_analyst":
+                print(f"*** TOOL USED: energy_analyst ***")
+                
+                # Call the energy analyst function
+                try:
+                    research_report = energy_analyst()
+                except Exception as e:
+                    print(f"Error generating energy research report: {e}")
+                    research_report = "I attempted to generate a comprehensive energy analysis but encountered an error. Please continue with the available information or try using other research tools."
+                
+                # Format the response appropriately
+                tool_response = f"Energy Analysis:\n\n{research_report}\n\nNOTE: Use this energy analysis to inform your allocation to energy stocks. Consider how the current energy market dynamics and the energy transition affect different energy companies."
+            
+            elif function_name == "financials_analyst":
+                print(f"*** TOOL USED: financials_analyst ***")
+                
+                # Call the financials analyst function
+                try:
+                    research_report = financials_analyst()
+                except Exception as e:
+                    print(f"Error generating financials research report: {e}")
+                    research_report = "I attempted to generate a comprehensive financials analysis but encountered an error. Please continue with the available information or try using other research tools."
+                
+                # Format the response appropriately
+                tool_response = f"Financials Analysis:\n\n{research_report}\n\nNOTE: Use this financials analysis to inform your allocation to financial stocks. Consider how the current financial market dynamics and regulatory changes affect different financial companies."
+            
+            elif function_name == "healthcare_analyst":
+                print(f"*** TOOL USED: healthcare_analyst ***")
+                
+                # Call the healthcare analyst function
+                try:
+                    research_report = healthcare_analyst()
+                except Exception as e:
+                    print(f"Error generating healthcare research report: {e}")
+                    research_report = "I attempted to generate a comprehensive healthcare analysis but encountered an error. Please continue with the available information or try using other research tools."
+                
+                # Format the response appropriately
+                tool_response = f"Healthcare Analysis:\n\n{research_report}\n\nNOTE: Use this healthcare analysis to inform your allocation to healthcare stocks. Consider how the current healthcare market dynamics and regulatory changes affect different healthcare companies."
+            
+            elif function_name == "industrials_analyst":
+                print(f"*** TOOL USED: industrials_analyst ***")
+                
+                # Call the industrials analyst function
+                try:
+                    research_report = industrials_analyst()
+                except Exception as e:
+                    print(f"Error generating industrials research report: {e}")
+                    research_report = "I attempted to generate a comprehensive industrials analysis but encountered an error. Please continue with the available information or try using other research tools."
+                
+                # Format the response appropriately
+                tool_response = f"Industrials Analysis:\n\n{research_report}\n\nNOTE: Use this industrials analysis to inform your allocation to industrial stocks. Consider how the current industrial market dynamics and supply chains affect different industrial companies."
+            
+            elif function_name == "information_technology_analyst":
+                print(f"*** TOOL USED: information_technology_analyst ***")
+                
+                # Call the information technology analyst function
+                try:
+                    research_report = information_technology_analyst()
+                except Exception as e:
+                    print(f"Error generating information technology research report: {e}")
+                    research_report = "I attempted to generate a comprehensive information technology analysis but encountered an error. Please continue with the available information or try using other research tools."
+                
+                # Format the response appropriately
+                tool_response = f"Information Technology Analysis:\n\n{research_report}\n\nNOTE: Use this information technology analysis to inform your allocation to technology stocks. Consider how the current technology trends and competitive landscape affect different technology companies."
+            
+            elif function_name == "materials_analyst":
+                print(f"*** TOOL USED: materials_analyst ***")
+                
+                # Call the materials analyst function
+                try:
+                    research_report = materials_analyst()
+                except Exception as e:
+                    print(f"Error generating materials research report: {e}")
+                    research_report = "I attempted to generate a comprehensive materials analysis but encountered an error. Please continue with the available information or try using other research tools."
+                
+                # Format the response appropriately
+                tool_response = f"Materials Analysis:\n\n{research_report}\n\nNOTE: Use this materials analysis to inform your allocation to materials stocks. Consider how commodity prices and global trade patterns affect different materials companies."
+            
+            elif function_name == "real_estate_analyst":
+                print(f"*** TOOL USED: real_estate_analyst ***")
+                
+                # Call the real estate analyst function
+                try:
+                    research_report = real_estate_analyst()
+                except Exception as e:
+                    print(f"Error generating real estate research report: {e}")
+                    research_report = "I attempted to generate a comprehensive real estate analysis but encountered an error. Please continue with the available information or try using other research tools."
+                
+                # Format the response appropriately
+                tool_response = f"Real Estate Analysis:\n\n{research_report}\n\nNOTE: Use this real estate analysis to inform your allocation to real estate stocks and REITs. Consider how interest rates and property market dynamics affect different real estate companies."
+            
+            elif function_name == "utilities_analyst":
+                print(f"*** TOOL USED: utilities_analyst ***")
+                
+                # Call the utilities analyst function
+                try:
+                    research_report = utilities_analyst()
+                except Exception as e:
+                    print(f"Error generating utilities research report: {e}")
+                    research_report = "I attempted to generate a comprehensive utilities analysis but encountered an error. Please continue with the available information or try using other research tools."
+                
+                # Format the response appropriately
+                tool_response = f"Utilities Analysis:\n\n{research_report}\n\nNOTE: Use this utilities analysis to inform your allocation to utilities stocks. Consider how regulatory frameworks and the energy transition affect different utility companies."
+            
             return {
                 "role": "tool",
                 "tool_call_id": tool_call.id,
@@ -483,7 +714,11 @@ Trade Action: [action(buy/sell/hold)] | Ticker: [ticker] | Quantity: [quantity]
             "content": content + "\n\nBefore making recommendations, conduct thorough market research in this sequence:\n\n" + \
             "1. MARKET ANALYSIS (REQUIRED, MUST CONDUCT ALL TOOLS)\n" + \
             "IMPORTANT: You must conduct all the tools in the order they are listed below before conducting any targeted research.\n" + \
-            "   - Use equity_research_analyst for comprehensive equity market insights\n" + \
+            "   - Use communication_services_analyst for comprehensive equity communication services market insights\n" + \
+            "   - Use consumer_staples_analyst for consumer staples sector analysis\n" + \
+            "   - Use consumer_discretionary_analyst for consumer discretionary sector analysis\n" + \
+            "   - Use energy_analyst for comprehensive energy sector analysis\n" + \
+            "   - Use financials_analyst for financial sector analysis\n" + \
             "   - Use commodities_analyst if the portfolio includes or should include commodities\n" + \
             "   - Use treasuries_analyst for detailed US Treasury market analysis\n" + \
             "   - Use foreign_exchange_analyst for currency valuation and FX market insights\n" + \
@@ -500,7 +735,17 @@ Trade Action: [action(buy/sell/hold)] | Ticker: [ticker] | Quantity: [quantity]
         
         # Define the required tools in order
         required_tools = [
-            "equity_research_analyst", 
+            "communication_services_analyst", 
+            "consumer_staples_analyst",
+            "consumer_discretionary_analyst",
+            "energy_analyst",
+            "financials_analyst",
+            "healthcare_analyst",
+            "industrials_analyst",
+            "information_technology_analyst",
+            "materials_analyst",
+            "real_estate_analyst",
+            "utilities_analyst",
             "treasuries_analyst", 
             "ig_credit_analyst", 
             "high_yield_analyst", 
@@ -512,7 +757,7 @@ Trade Action: [action(buy/sell/hold)] | Ticker: [ticker] | Quantity: [quantity]
         
         # Create tool mapping for easy access
         tool_map = {
-            "equity_research_analyst": equity_research_tool,
+            "communication_services_analyst": communication_services_tool,
             "treasuries_analyst": treasuries_tool,
             "ig_credit_analyst": ig_credit_tool,
             "high_yield_analyst": high_yield_tool,
@@ -521,7 +766,16 @@ Trade Action: [action(buy/sell/hold)] | Ticker: [ticker] | Quantity: [quantity]
             "commodities_analyst": commodities_research_tool,
             "etf_analyst": etf_research_tool,
             "search_tool": search_tool,
-            "energy_stocks_tool": energy_stocks_tool
+            "consumer_staples_analyst": consumer_staples_tool,
+            "consumer_discretionary_analyst": consumer_discretionary_tool,
+            "energy_analyst": energy_tool,
+            "financials_analyst": financials_tool,
+            "healthcare_analyst": healthcare_tool,
+            "industrials_analyst": industrials_tool,
+            "information_technology_analyst": information_technology_tool,
+            "materials_analyst": materials_tool,
+            "real_estate_analyst": real_estate_tool,
+            "utilities_analyst": utilities_tool
         }
         
         # Track the conversation
@@ -570,8 +824,6 @@ Trade Action: [action(buy/sell/hold)] | Ticker: [ticker] | Quantity: [quantity]
         
         # Allow a few rounds of free search
         available_search_tools = [tool_map.get("search_tool")]
-        if tool_map.get("energy_stocks_tool"):
-            available_search_tools.append(tool_map.get("energy_stocks_tool"))
             
         # Run a few rounds of free search
         for i in range(1, 5):
