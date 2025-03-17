@@ -78,6 +78,7 @@ REMEMBER THE CURRENT DATE IS {current_date}
 6. KEEP 10% OF THE PORTFOLIO IN CASH.
 7. NONE OF THE POSITIONS SHOULD BE LESS THAN $10,000.
 8. THE SUM OF ALL POSITIONS SHOULD BE EQUAL TO 85% OF THE PORTFOLIO.
+9. THE PORTFOLIO SHOULD CONSIST OF AROUND 15-20 POSITIONS.
 
 ### Directions:
 1. Analyze the current portfolio positions, account information, portfolio metrics, stock metrics, monthly performance, diversification, and correlation matrix
@@ -402,7 +403,7 @@ Trade Action: [action(buy/sell/hold)] | Ticker: [ticker] | Quantity: [quantity]
             if function_name == "free_search":
                 function_args = json.loads(tool_call.function.arguments)
                 query = function_args.get("query")
-                print(f"\033[1m\033[94m*** TOOL USED: free_search for query: '{query}' ***\033[0m")
+                print(f"\033[97m 🛠️ TOOL USED: \033[92m{function_name}\033[97m for query: '{query}'\033[0m")
                 
                 # Use the search function to get information from the web
                 system_prompt = """You are a financial research analyst with 20+ years of experience who provides comprehensive, data-rich investment analysis. 
@@ -421,7 +422,7 @@ Trade Action: [action(buy/sell/hold)] | Ticker: [ticker] | Quantity: [quantity]
                 tool_response = f"Web Search Results for: '{query}'\n\n{search_response}\n\nNOTE: This information should be incorporated into your portfolio analysis. You should conduct additional searches on other topics to build a comprehensive view before making final recommendations."
             
             elif function_name == "communication_services_analyst":
-                print(f"\033[1m\033[94m*** TOOL USED: communication_services_analyst ***\033[0m")
+                print(f"\033[97m 🛠️ TOOL USED: \033[92m{function_name}\033[97m\033[0m")
                 
                 # Call the equity research analyst function
                 try:
@@ -434,7 +435,7 @@ Trade Action: [action(buy/sell/hold)] | Ticker: [ticker] | Quantity: [quantity]
                 tool_response = f"Equity Research Report:\n\n{research_report}\n\nNOTE: This comprehensive market analysis should form the foundation of your portfolio optimization strategy. Consider how these trends, opportunities, and risks impact your investment decisions."
             
             elif function_name == "commodities_analyst":
-                print(f"*** TOOL USED: commodities_analyst ***")
+                print(f"\033[97m 🛠️ TOOL USED: \033[92m{function_name}\033[97m\033[0m")
                 
                 # Call the commodities analyst function
                 try:
@@ -447,7 +448,7 @@ Trade Action: [action(buy/sell/hold)] | Ticker: [ticker] | Quantity: [quantity]
                 tool_response = f"Commodities Market Analysis:\n\n{research_report}\n\nNOTE: Use this commodities market analysis to inform your allocation to energy, metals, agriculture, and other commodity-related assets. Consider both direct commodity exposure and indirect exposure through equities in commodity-producing companies."
             
             elif function_name == "etf_analyst":
-                print(f"*** TOOL USED: etf_analyst ***")
+                print(f"\033[97m 🛠️ TOOL USED: \033[92m{function_name}\033[97m\033[0m")
                 
                 # Call the ETF analyst function
                 try:
@@ -460,7 +461,7 @@ Trade Action: [action(buy/sell/hold)] | Ticker: [ticker] | Quantity: [quantity]
                 tool_response = f"ETF Market Analysis:\n\n{research_report}\n\nNOTE: Use this ETF analysis to identify optimal vehicles for implementing your asset allocation and tactical views. Consider both the underlying exposures and structural characteristics of recommended ETFs."
             
             elif function_name == "treasuries_analyst":
-                print(f"*** TOOL USED: treasuries_analyst ***")
+                print(f"\033[97m 🛠️ TOOL USED: \033[92m{function_name}\033[97m\033[0m")
                 
                 # Call the treasuries analyst function
                 try:
@@ -473,7 +474,7 @@ Trade Action: [action(buy/sell/hold)] | Ticker: [ticker] | Quantity: [quantity]
                 tool_response = f"US Treasury Market Analysis:\n\n{research_report}\n\nNOTE: Use this US Treasury market analysis to inform your allocation to government bonds and Treasury securities. Consider how the current interest rate environment affects both your fixed income holdings and other asset classes."
             
             elif function_name == "foreign_exchange_analyst":
-                print(f"*** TOOL USED: foreign_exchange_analyst ***")
+                print(f"\033[97m 🛠️ TOOL USED: \033[92m{function_name}\033[97m\033[0m")
                 
                 # Call the foreign exchange analyst function
                 try:
@@ -486,7 +487,7 @@ Trade Action: [action(buy/sell/hold)] | Ticker: [ticker] | Quantity: [quantity]
                 tool_response = f"Foreign Exchange Market Analysis:\n\n{research_report}\n\nNOTE: Use this foreign exchange analysis to inform your allocation to foreign currencies and currency-hedged assets. Consider how the current exchange rate environment affects both your foreign currency holdings and other asset classes."
             
             elif function_name == "ig_credit_analyst":
-                print(f"*** TOOL USED: ig_credit_analyst ***")
+                print(f"\033[97m 🛠️ TOOL USED: \033[92m{function_name}\033[97m\033[0m")
                 
                 # Call the IG credit analyst function
                 try:
@@ -499,7 +500,7 @@ Trade Action: [action(buy/sell/hold)] | Ticker: [ticker] | Quantity: [quantity]
                 tool_response = f"Investment Grade Credit Market Analysis:\n\n{research_report}\n\nNOTE: Use this IG credit analysis to inform your allocation to investment grade corporate bonds. Consider how credit fundamentals, interest rates, and market technicals affect both your fixed income holdings and other asset classes."
             
             elif function_name == "high_yield_analyst":
-                print(f"*** TOOL USED: high_yield_analyst ***")
+                print(f"\033[97m 🛠️ TOOL USED: \033[92m{function_name}\033[0m")
                 
                 # Call the high yield analyst function
                 try:
@@ -512,7 +513,7 @@ Trade Action: [action(buy/sell/hold)] | Ticker: [ticker] | Quantity: [quantity]
                 tool_response = f"High Yield & Emerging Markets Debt Analysis:\n\n{research_report}\n\nNOTE: Use this high yield and emerging markets analysis to inform your allocation to higher yielding fixed income assets. Consider how credit risk, liquidity conditions, and macroeconomic factors differ between U.S. high yield and emerging market debt."
             
             elif function_name == "emerging_market_analyst":
-                print(f"*** TOOL USED: emerging_market_analyst ***")
+                print(f"\033[97m 🛠️ TOOL USED: \033[92m{function_name}\033[0m")
                 
                 # Call the emerging market analyst function
                 try:
@@ -525,7 +526,7 @@ Trade Action: [action(buy/sell/hold)] | Ticker: [ticker] | Quantity: [quantity]
                 tool_response = f"Emerging Markets Analysis:\n\n{research_report}\n\nNOTE: Use this emerging markets analysis to inform your allocation to both EM equities and fixed income. Consider how global macro factors and domestic fundamentals influence different EM assets, and how they might perform in various economic scenarios."
             
             elif function_name == "consumer_staples_analyst":
-                print(f"*** TOOL USED: consumer_staples_analyst ***")
+                print(f"\033[97m 🛠️ TOOL USED: \033[92m{function_name}\033[0m")
                 
                 # Call the consumer staples analyst function
                 try:
@@ -538,7 +539,7 @@ Trade Action: [action(buy/sell/hold)] | Ticker: [ticker] | Quantity: [quantity]
                 tool_response = f"Consumer Staples Analysis:\n\n{research_report}\n\nNOTE: Use this consumer staples analysis to inform your allocation to consumer staples stocks. Consider how these stocks are defensive in nature and how they might perform in various economic scenarios."
             
             elif function_name == "consumer_discretionary_analyst":
-                print(f"*** TOOL USED: consumer_discretionary_analyst ***")
+                print(f"\033[97m 🛠️ TOOL USED: \033[92m{function_name}\033[0m")
                 
                 # Call the consumer discretionary analyst function
                 try:
@@ -551,7 +552,7 @@ Trade Action: [action(buy/sell/hold)] | Ticker: [ticker] | Quantity: [quantity]
                 tool_response = f"Consumer Discretionary Analysis:\n\n{research_report}\n\nNOTE: Use this consumer discretionary analysis to inform your allocation to consumer discretionary stocks. Consider how these stocks are cyclical in nature and how they might perform in various economic scenarios."
             
             elif function_name == "energy_analyst":
-                print(f"*** TOOL USED: energy_analyst ***")
+                print(f"\033[97m 🛠️ TOOL USED: \033[92m{function_name}\033[0m")
                 
                 # Call the energy analyst function
                 try:
@@ -564,7 +565,7 @@ Trade Action: [action(buy/sell/hold)] | Ticker: [ticker] | Quantity: [quantity]
                 tool_response = f"Energy Analysis:\n\n{research_report}\n\nNOTE: Use this energy analysis to inform your allocation to energy stocks. Consider how the current energy market dynamics and the energy transition affect different energy companies."
             
             elif function_name == "financials_analyst":
-                print(f"*** TOOL USED: financials_analyst ***")
+                print(f"\033[97m 🛠️ TOOL USED: \033[92m{function_name}\033[0m")
                 
                 # Call the financials analyst function
                 try:
@@ -577,7 +578,7 @@ Trade Action: [action(buy/sell/hold)] | Ticker: [ticker] | Quantity: [quantity]
                 tool_response = f"Financials Analysis:\n\n{research_report}\n\nNOTE: Use this financials analysis to inform your allocation to financial stocks. Consider how the current financial market dynamics and regulatory changes affect different financial companies."
             
             elif function_name == "healthcare_analyst":
-                print(f"*** TOOL USED: healthcare_analyst ***")
+                print(f"\033[97m 🛠️ TOOL USED: \033[92m{function_name}\033[0m")
                 
                 # Call the healthcare analyst function
                 try:
@@ -590,7 +591,7 @@ Trade Action: [action(buy/sell/hold)] | Ticker: [ticker] | Quantity: [quantity]
                 tool_response = f"Healthcare Analysis:\n\n{research_report}\n\nNOTE: Use this healthcare analysis to inform your allocation to healthcare stocks. Consider how the current healthcare market dynamics and regulatory changes affect different healthcare companies."
             
             elif function_name == "industrials_analyst":
-                print(f"*** TOOL USED: industrials_analyst ***")
+                print(f"\033[97m 🛠️ TOOL USED: \033[92m{function_name}\033[0m")
                 
                 # Call the industrials analyst function
                 try:
@@ -603,7 +604,7 @@ Trade Action: [action(buy/sell/hold)] | Ticker: [ticker] | Quantity: [quantity]
                 tool_response = f"Industrials Analysis:\n\n{research_report}\n\nNOTE: Use this industrials analysis to inform your allocation to industrial stocks. Consider how the current industrial market dynamics and supply chains affect different industrial companies."
             
             elif function_name == "information_technology_analyst":
-                print(f"*** TOOL USED: information_technology_analyst ***")
+                print(f"\033[97m 🛠️ TOOL USED: \033[92m{function_name}\033[0m")
                 
                 # Call the information technology analyst function
                 try:
@@ -616,7 +617,7 @@ Trade Action: [action(buy/sell/hold)] | Ticker: [ticker] | Quantity: [quantity]
                 tool_response = f"Information Technology Analysis:\n\n{research_report}\n\nNOTE: Use this information technology analysis to inform your allocation to technology stocks. Consider how the current technology trends and competitive landscape affect different technology companies."
             
             elif function_name == "materials_analyst":
-                print(f"*** TOOL USED: materials_analyst ***")
+                print(f"\033[97m 🛠️ TOOL USED: \033[92m{function_name}\033[0m")
                 
                 # Call the materials analyst function
                 try:
@@ -629,7 +630,7 @@ Trade Action: [action(buy/sell/hold)] | Ticker: [ticker] | Quantity: [quantity]
                 tool_response = f"Materials Analysis:\n\n{research_report}\n\nNOTE: Use this materials analysis to inform your allocation to materials stocks. Consider how commodity prices and global trade patterns affect different materials companies."
             
             elif function_name == "real_estate_analyst":
-                print(f"*** TOOL USED: real_estate_analyst ***")
+                print(f"\033[97m 🛠️ TOOL USED: \033[92m{function_name}\033[0m")
                 
                 # Call the real estate analyst function
                 try:
@@ -642,7 +643,7 @@ Trade Action: [action(buy/sell/hold)] | Ticker: [ticker] | Quantity: [quantity]
                 tool_response = f"Real Estate Analysis:\n\n{research_report}\n\nNOTE: Use this real estate analysis to inform your allocation to real estate stocks and REITs. Consider how interest rates and property market dynamics affect different real estate companies."
             
             elif function_name == "utilities_analyst":
-                print(f"*** TOOL USED: utilities_analyst ***")
+                print(f"\033[97m 🛠️ TOOL USED: \033[92m{function_name}\033[0m")
                 
                 # Call the utilities analyst function
                 try:
@@ -671,7 +672,7 @@ Trade Action: [action(buy/sell/hold)] | Ticker: [ticker] | Quantity: [quantity]
             
             # Call the API
             response = client.chat.completions.create(
-                model="o1",
+                model="gpt-4o",
                 top_p=1.0,
                 messages=messages,
                 tools=tools if round_num < max_rounds else None  # Stop offering tools in final round
