@@ -69,7 +69,7 @@ REMEMBER THE CURRENT DATE IS {current_date}
 
 ------------------------------------------------------------------------------------------------------
 
-### RULES(YOU MUST FOLLOW THESE RULES):
+### RULES (YOU MUST FOLLOW THESE RULES):
 1. NO HALLUCINATIONS, IF THERE IS SOMETHING YOU DO NOT KNOW OR IF THERE IS DATA MISSING, SAY YOU DO NOT KNOW, AND PROCEED LOGICALLY.
 2. BE VERY SPECIFIC AND EXACT WITH YOUR RECOMMENDATIONS.
 3. BE SUCCUINCT AND CONCISE, BUT MAKE SURE TO EXPLAIN YOUR REASONING.
@@ -77,8 +77,8 @@ REMEMBER THE CURRENT DATE IS {current_date}
 5. BE CREATIVE IN YOUR STRATEGIES AND THINK OUTSIDE THE BOX.
 6. KEEP 10% OF THE PORTFOLIO IN CASH.
 7. NONE OF THE POSITIONS SHOULD BE LESS THAN $10,000.
-8. THE SUM OF ALL POSITIONS SHOULD BE EQUAL TO 85% OF THE PORTFOLIO.
-9. THE PORTFOLIO SHOULD CONSIST OF AROUND 15-20 POSITIONS.
+8. THE SUM OF ALL POSITIONS SHOULD BE EQUAL TO 85% OF THE ORIGINAL CASH VALUE OF THE PORTFOLIO.
+9. THE PORTFOLIO MUST CONSIST OF 15-20 POSITIONS.
 
 ### Directions:
 1. Analyze the current portfolio positions, account information, portfolio metrics, stock metrics, monthly performance, diversification, and correlation matrix
@@ -91,30 +91,31 @@ REMEMBER THE CURRENT DATE IS {current_date}
     - Exact percentage adjustments to each position
 4. Explain how each recommendation will improve the portfolio's return potential
 5. Provide a clear implementation plan 
-6. Quantify the expected improvement in key metrics (volatility, returns, diversification)
+6. Quantify the expected improvement in key metrics (volatility, returns, diversification, drawdown ratio, sharpe ratio, sortino ratio, max drawdown, etc.)
 7. Provide the final portfolio in a neatly organzied table
 
-### ACTIONS YOU ARE ALLOWED TO TAKE:
-1. BUY NEW ASSETS
-2. SHORT NEW ASSETS
-3. REDUCE EXISTING POSITIONS
-4. INCREASE EXISTING POSITIONS
-4. HOLD POSITIONS (DO NOT CHANGE)
+IMPORTANT:
+    ### ACTIONS YOU ARE ALLOWED TO TAKE:
+    1. BUY NEW ASSETS
+    2. SHORT NEW ASSETS
+    3. REDUCE EXISTING POSITIONS
+    4. INCREASE EXISTING POSITIONS
+    4. HOLD POSITIONS (DO NOT CHANGE)
 
-### ASSETS YOU ARE ALLOWED TO BUY:
-1. STOCKS/EQUITIES
-2. BONDS
-3. EXCHANGE TRADED FUNDS (ETFS)
-4. COMMODITIES
-5. REAL ESTATE INVESTMENT TRUSTS (REITs)
-6. FOREIGN EXCHANGE
+    ### ASSETS YOU ARE ALLOWED TO BUY:
+    1. STOCKS/EQUITIES
+    2. BONDS
+    3. EXCHANGE TRADED FUNDS (ETFS)
+    4. COMMODITIES
+    5. REAL ESTATE INVESTMENT TRUSTS (REITs)
+    6. FOREIGN EXCHANGE
 
-### FORMAT YOUR RESPONSE WITH THESE SECTIONS(BE CONCISE AND TO THE POINT):
-1. Portfolio Assessment
-2. Key Issues
-3. Specific Recommendations (with exact position sizes and tickers)
-4. Implementation Plan
-5. Expected Outcome
+    ### FORMAT YOUR RESPONSE WITH THESE SECTIONS(BE CONCISE AND TO THE POINT):
+    1. Portfolio Assessment
+    2. Key Issues
+    3. Specific Recommendations (with exact position sizes and tickers)
+    4. Implementation Plan
+    5. Expected Outcome
 
 ### THEN I WANT THE EXACT TRADE EXECUTION INSTRUCTIONS IN THIS FORMAT:
 Trade Action: [action(buy/sell/hold)] | Ticker: [ticker] | Quantity: [quantity]
@@ -126,6 +127,7 @@ Trade Action: [action(buy/sell/hold)] | Ticker: [ticker] | Quantity: [quantity]
 • BUY 'SOME STOCK' (500 shares)  [TELL THE USER THE REASON FOR MAKING THIS TRADE]
 
 ### ONCE YOU HAVE FINISHED YOUR ANALYSIS, THIS IS THE FORMAT YOU SHOULD USE FOR THE NEW PORTFOLIO:
+HEADER: FINAL PORTFOLIO POSITIONS
 -----------------------------------------------------------------------------------------
 | Ticker | Quantity | Allocation | Market Value | bought/sold/held/position size change |
 -----------------------------------------------------------------------------------------
@@ -672,7 +674,7 @@ Trade Action: [action(buy/sell/hold)] | Ticker: [ticker] | Quantity: [quantity]
             
             # Call the API
             response = client.chat.completions.create(
-                model="gpt-4o",
+                model="o1",
                 top_p=1.0,
                 messages=messages,
                 tools=tools if round_num < max_rounds else None  # Stop offering tools in final round
@@ -860,4 +862,197 @@ Trade Action: [action(buy/sell/hold)] | Ticker: [ticker] | Quantity: [quantity]
         return f"An error occurred while calling the OpenAI API: {str(e)}"
 
 
-optimize()
+def ai_extract_portfolio_data(output_text):
+    """Use a separate LLM call to extract structured data from unstructured output"""
+
+
+    
+    extraction_prompt = f"""
+    Extract the following structured data from this portfolio optimization output:
+    1. All trade actions (buy/sell/hold/reduce)
+    2. The final portfolio composition
+    
+    IMPORTANT: Your response must be ONLY valid JSON without any explanations, markdown formatting, or text before or after. Return ONLY the JSON object and nothing else.
+    
+    Convert to this exact JSON format:
+    {{
+      "trade_actions": [
+        {{
+          "action_type": "SELL|BUY|HOLD|SHORT|REDUCE",
+          "ticker": "symbol",
+          "quantity": "number or text description do not include the word shares",
+        }},
+        ...
+      ],
+      "final_portfolio": [
+        {{
+          "ticker": "symbol",
+          "position_type": "LONG|SHORT|RESERVE",
+          "shares": "number",
+          "allocation": "percentage",
+          "market_value": "dollar amount"
+        }},
+        ...
+      ]
+    }}
+    
+    Here is the text to extract from:
+    {output_text}
+    """
+    
+    # Make API call to extract structured data
+    response = client.chat.completions.create(
+        model="gpt-4o",
+        response_format={"type": "json_object"},  # This forces JSON output
+        messages=[
+            {"role": "system", "content": "You are a data extraction assistant that extracts structured data from text and returns only valid JSON."},
+            {"role": "user", "content": extraction_prompt}
+        ]
+    )
+    
+    try:
+        # Parse the JSON from the response
+        response_content = response.choices[0].message.content.strip()
+        
+        # Try to extract JSON if it's wrapped in markdown code blocks
+        if response_content.startswith("```json") and response_content.endswith("```"):
+            response_content = response_content[7:-3].strip()
+        elif response_content.startswith("```") and response_content.endswith("```"):
+            response_content = response_content[3:-3].strip()
+            
+        extracted_data = json.loads(response_content)
+        return extracted_data
+    except json.JSONDecodeError as e:
+        print(f"Error parsing JSON response: {e}")
+        print(f"Raw response content: {response_content}")
+        # Return a minimal valid structure as fallback
+        return {
+            "trade_actions": [],
+            "final_portfolio": [],
+            "error": "Failed to parse model response as JSON"
+        }
+
+output = """
+=== Final Portfolio Recommendation ===
+1. PORTFOLIO ASSESSMENT
+Your previous holdings were concentrated in consumer cyclicals (WBA, SBUX, GM, AAL, SONO), with notable single-stock risks (AAL, SONO) and an under-allocation to defensive areas. Volatility was elevated (>50% annualized), and the drawdown ratio (>40%) suggested a lack of balance. Recent market dynamics and sector outlooks (as discussed in our comprehensive analyses) recommend redeploying capital across broader growth and defensive exposures, while maintaining a structured approach to interest rates, commodities, and international diversification.
+
+2. KEY ISSUES
+• Concentration in struggling discretionary names (SONO, AAL, WBA) and minimal exposure to healthy growth/defensive sectors (healthcare, consumer staples, materials).
+• Several positions too small to meaningfully impact returns (<$10k in market value).
+• Limited use of fixed income or multi-asset allocations to hedge volatility.
+• Excess cash proportion not clearly targeted and underutilized for yield.
+
+3. SPECIFIC RECOMMENDATIONS
+Below are exact trades (buy/sell/hold) to realign toward a diversified, multi-sector strategy:
+
+──────────────────────────────────────────────────────────────────────────────────────────
+A) REDUCE/Sell Positions
+• SELL AAL (1,000 shares) → entire position
+  Reason: Airline margins remain vulnerable to recession risk, elevated input costs, and cyclical demand.
+• SELL SONO (100 shares) → entire position
+  Reason: Small scale (<$10k), negative earnings momentum, better opportunities elsewhere.
+• SELL WBA (4,389.82 shares) → entire position
+  Reason: Structural challenges in retail pharmacy; capital better allocated to defensible growth or undervalued cyclical plays.
+• SELL BZ (1 share, short covering) → entire short position
+  Reason: Internet-specific risk less attractive vs. broad-based hedges; close out this residual, illiquid short.
+• SELL GM (100 shares) → entire position
+  Reason: Auto margins facing electric vehicle transition overhead and consumer credit tightening.
+
+──────────────────────────────────────────────────────────────────────────────────────────
+B) INCREASE or PARTIAL SELL
+• SELL PARTIAL: SBUX (reduce from 100 shares → 50 shares)
+  Reason: Moderately high valuation; reallocate portion of gains to broader consumer staples or healthcare.
+• SELL PARTIAL: V (reduce from 100 shares → 50 shares)
+  Reason: Maintain some exposure to fintech/credit card growth, but free up capital to diversify infrastructure.
+
+──────────────────────────────────────────────────────────────────────────────────────────
+C) HOLD OR SLIGHT INCREASE
+• HOLD CEG (237.46 shares)
+  Reason: Utilities exposure (particularly renewables) remains attractive for stable growth.
+• HOLD CTSH (50 shares)
+  Reason: IT services remain well-positioned for enterprise digital transformation; moderate valuation.
+• HOLD IBKR (50 shares)
+  Reason: Brokerage with strong interest-income benefits; stable growth with fintech tailwinds.
+• HOLD HYG (50 shares)
+  Reason: Retain high-yield bond exposure for yield enhancement, but keep position size modest.
+
+──────────────────────────────────────────────────────────────────────────────────────────
+D) NEW LONG POSITIONS (with approximate amounts so each is ≥$10k):
+(Note: Totals sized to reach ~85% of portfolio, with 10% in cash, 5% in short-hedge positions. Dollar amounts are estimates; final share counts should be adjusted for prices at execution.)
+
+1) AAPL ($55,000)
+   Reason: Large-cap tech anchor with strong free cash flow, robust ecosystem, AI integration optionality.
+2) MSFT ($55,000)
+   Reason: Cloud (Azure) and AI leadership, stable enterprise demand, solid balance sheet.
+3) PFE ($40,000)
+   Reason: Pharma pipeline catalysts 2025–2026, stable dividend, possible M&A synergy.
+4) LLY ($40,000)
+   Reason: Significant upside in obesity/diabetes portfolio, strong R&D pipeline.
+5) UNH ($40,000)
+   Reason: Managed care leader, diversified revenue from Medicare Advantage and pharmacy benefits.
+6) XLE (Energy Sector ETF) ($40,000)
+   Reason: Continued demand for oil/gas short-term + integrated giants' dividend support.
+7) XLK (Tech Sector ETF) ($40,000)
+   Reason: Broad exposure to AI, semiconductors, cybersecurity, software.
+8) XLI (Industrials Sector ETF) ($40,000)
+   Reason: Beneficiary of re-shoring, infrastructure spending, automation.
+9) VIG (Dividend Appreciation ETF) ($40,000)
+   Reason: Quality dividend stocks with consistent dividend growth, lower volatility.
+10) IHI (Medical Devices ETF) ($40,000)
+    Reason: Structural tailwinds (aging demographics, innovation), diversified device manufacturers.
+11) EEM (Emerging Markets ETF) ($40,000)
+    Reason: Diversification, exposure to faster-growing EM consumer and tech.
+12) VNQ (REIT ETF) ($40,000)
+    Reason: Real estate factor exposure, potential rebound post-rate stabilization, broad-based property diversity.
+13) BND (Total Bond Market ETF) ($40,000)
+• SHORT TSLA (approx. $48,600)
+  Reason: Valuation-driven hedge on high-multiple tech/EV risk; a partial offset if growth stocks correct.
+  (Alternatively, short a broad cyclical ETF or a high-beta index if TSLA not desired.)
+
+4. IMPLEMENTATION PLAN
+• Execute proposed sells first to free capital (AAL, SONO, WBA, BZ, GM fully; partial SBUX, partial V).
+• Reinvest proceeds into the 13 new/expanded ticker positions to achieve ~85% portfolio total, ensuring each surpasses $10k.
+• Allocate 5% to the short TSLA or a similar hedge.
+• Maintain 10% (~$97k) in cash to manage volatility and preserve optionality for opportunistic entries.
+
+5. EXPECTED OUTCOME
+• Lower volatility vs. prior ~52%: Greater diversification across sectors and asset classes (tech, healthcare, consumer, industrials, fixed income).
+• Higher potential return: Balanced growth from AI-driven tech, stable pharma/healthcare, selective energy/industrial cyclical.
+• Improved risk-adjusted performance: The short position and bond ETF cushion market drawdowns, while dividend-oriented holdings enhance steady returns.
+• Aligns with macro tailwinds: Key exposures in AI, re-shoring, managed care, and big pharma pipelines.
+
+6. FINAL PORTFOLIO TABLE (Illustrative Allocations)
+
+┌──────────────────────────┬────────┬──────────────┬───────────────┬─────────────────────────────────────┐
+│ Ticker / Asset           │ Value  │ Allocation % │ Market Value  │ Action (position size change)       │
+├──────────────────────────┼────────┼──────────────┼───────────────┼─────────────────────────────────────┤
+│ CEG (Hold)               │ ≈$51K  │ ~5.2%        │ $51,000       │ held (no change)                    │
+│ CTSH (Hold)              │ ≈$4K   │ ~0.4%        │ $4,000        │ held (no change)                    │
+│ IBKR (Hold)              │ ≈$8K   │ ~0.8%        │ $8,000        │ held (no change)                    │
+│ HYG (Hold)               │ ≈$4K   │ ~0.4%        │ $4,000        │ held (no change)                    │
+│ SBUX (50 shares)         │ ≈$5K   │ ~0.5%        │ $5,000        │ reduced from 100 → 50 shares        │
+│ V (50 shares)            │ ≈$16K  │ ~1.6%        │ $16,000       │ reduced from 100 → 50 shares        │
+│ AAPL (New)               │ $55K   │ ~5.7%        │ $55,000       │ bought                              │
+│ MSFT (New)               │ $55K   │ ~5.7%        │ $55,000       │ bought                              │
+│ PFE (New)                │ $40K   │ ~4.1%        │ $40,000       │ bought                              │
+│ LLY (New)                │ $40K   │ ~4.1%        │ $40,000       │ bought                              │
+│ UNH (New)                │ $40K   │ ~4.1%        │ $40,000       │ bought                              │
+│ XLE (New)                │ $40K   │ ~4.1%        │ $40,000       │ bought                              │
+│ XLK (New)                │ $40K   │ ~4.1%        │ $40,000       │ bought                              │
+│ XLI (New)                │ $40K   │ ~4.1%        │ $40,000       │ bought                              │
+│ VIG (New)                │ $40K   │ ~4.1%        │ $40,000       │ bought                              │
+│ IHI (New)                │ $40K   │ ~4.1%        │ $40,000       │ bought                              │
+│ EEM (New)                │ $40K   │ ~4.1%        │ $40,000       │ bought                              │
+│ VNQ (New)                │ $40K   │ ~4.1%        │ $40,000       │ bought                              │
+│ BND (New)                │ $40K   │ ~4.1%        │ $40,000       │ bought                              │
+│ Short TSLA (New)         │ $49K   │ ~5.0%        │ –$49,000      │ short sold                          │
+│ Cash                     │ $97K   │ ~10.0%       │ $97,000       │ Held in cash/reserves               │
+└──────────────────────────┴────────┴──────────────┴───────────────┴─────────────────────────────────────┘
+
+(Note: Amounts above are approximate; final share counts depend on execution prices. For smaller legacy holdings like CTSH, IBKR, HYG, the recommendation is to hold or gradually scale as desired, ensuring each remains ≥$10k if you prefer a simpler structure. Alternatively, you may fully rebalance them as well.)
+
+By following these trades and allocations, you'll diversify away from concentrated consumer risk, add balanced exposure to growth and defensive sectors (healthcare, staples, and high-quality tech), and retain a prudent amount in cash plus a short hedge. This approach should enhance risk-adjusted returns and better position the portfolio for evolving macro/sector trends.
+"""
+
+print(ai_extract_portfolio_data(output))
