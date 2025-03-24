@@ -17,6 +17,9 @@ import curses
 
 OpenAI_API_KEY = "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"
 Sonar_API_KEY = "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"
+
+perplexity_model = "sonar-deep-research"
+
 # Initialize clients
 api_key = os.environ.get("OPENAI_API_KEY", OpenAI_API_KEY)
 
@@ -71,7 +74,7 @@ def free_search(system_prompt, user_prompt):
     try:
         # chat completion with streaming
         response = client.chat.completions.create(
-            model="sonar-deep-research",
+            model=perplexity_model,
             messages=messages,
             stream=True
         )
@@ -276,7 +279,7 @@ IMPORTANT
     try:
         # chat completion with streaming
         response = client.chat.completions.create(
-            model="sonar-deep-research",
+            model=perplexity_model,
             messages=messages,
             stream=True
         )
@@ -505,7 +508,7 @@ IMPORTANT
     try:
         # chat completion with streaming
         response = client.chat.completions.create(
-            model="sonar-deep-research",
+            model=perplexity_model,
             messages=messages,
             stream=True
         )
@@ -714,7 +717,7 @@ IMPORTANT
     try:
         # chat completion with streaming
         response = client.chat.completions.create(
-            model="sonar-deep-research",
+            model=perplexity_model,
             messages=messages,
             stream=True
         )
@@ -990,7 +993,7 @@ IMPORTANT
     try:
         # chat completion with streaming
         response = client.chat.completions.create(
-            model="sonar-deep-research",
+            model=perplexity_model,
             messages=messages,
             stream=True
         )
@@ -1291,7 +1294,7 @@ IMPORTANT
     try:
         # chat completion with streaming
         response = client.chat.completions.create(
-            model="sonar-deep-research",
+            model=perplexity_model,
             messages=messages,
             stream=True
         )
@@ -1593,7 +1596,7 @@ IMPORTANT
     try:
         # chat completion with streaming
         response = client.chat.completions.create(
-            model="sonar-deep-research",
+            model=perplexity_model,
             messages=messages,
             stream=True
         )
@@ -1916,7 +1919,7 @@ IMPORTANT
     try:
         # chat completion with streaming
         response = client.chat.completions.create(
-            model="sonar-deep-research",
+            model=perplexity_model,
             messages=messages,
             stream=True
         )
@@ -2204,7 +2207,7 @@ IMPORTANT
     try:
         # chat completion with streaming
         response = client.chat.completions.create(
-            model="sonar-deep-research",
+            model=perplexity_model,
             messages=messages,
             stream=True
         )
@@ -2505,7 +2508,7 @@ IMPORTANT
     try:
         # chat completion with streaming
         response = client.chat.completions.create(
-            model="sonar-deep-research",
+            model=perplexity_model,
             messages=messages,
             stream=True
         )
@@ -2819,7 +2822,7 @@ IMPORTANT
     try:
         # chat completion with streaming
         response = client.chat.completions.create(
-            model="sonar-deep-research",
+            model=perplexity_model,
             messages=messages,
             stream=True
         )
@@ -3109,7 +3112,7 @@ IMPORTANT
     try:
         # chat completion with streaming
         response = client.chat.completions.create(
-            model="sonar-deep-research",
+            model=perplexity_model,
             messages=messages,
             stream=True
         )
@@ -3290,7 +3293,7 @@ def commodities_analyst():
     try:
         # chat completion with streaming
         response = client.chat.completions.create(
-            model="sonar-deep-research",
+            model=perplexity_model,
             messages=messages,
             stream=True
         )
@@ -3501,7 +3504,7 @@ END OF PROMPT
     try:
         # chat completion with streaming
         response = client.chat.completions.create(
-            model="sonar-deep-research",
+            model=perplexity_model,
             messages=messages,
             stream=True
         )
@@ -3673,7 +3676,7 @@ IMPORTANT
     try:
         # chat completion with streaming
         response = client.chat.completions.create(
-            model="sonar-deep-research",
+            model=perplexity_model,
             messages=messages,
             stream=True
         )
@@ -3885,7 +3888,7 @@ IMPORTANT
     try:
         # chat completion with streaming
         response = client.chat.completions.create(
-            model="sonar-deep-research",
+            model=perplexity_model,
             messages=messages,
             stream=True
         )
@@ -4069,7 +4072,7 @@ IMPORTANT
     try:
         # chat completion with streaming
         response = client.chat.completions.create(
-            model="sonar-deep-research",
+            model=perplexity_model,
             messages=messages,
             stream=True
         )
@@ -4251,7 +4254,7 @@ IMPORTANT
     try:
         # chat completion with streaming
         response = client.chat.completions.create(
-            model="sonar-deep-research",
+            model=perplexity_model,
             messages=messages,
             stream=True
         )
@@ -4423,7 +4426,7 @@ IMPORTANT
     try:
         # chat completion with streaming
         response = client.chat.completions.create(
-            model="sonar-deep-research",
+            model=perplexity_model,
             messages=messages,
             stream=True
         )
