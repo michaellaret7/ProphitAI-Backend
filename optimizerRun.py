@@ -31,6 +31,11 @@ def optimize():
 
     account_info, positions_table, formatted_diversification, portfolio_metrics, stock_metrics, monthly_performance, correlations = format()
     
+    # Create output file with timestamp
+    output_filename = f"portfolio_optimization_{current_date}.txt"
+    with open(output_filename, "w", encoding="utf-8") as f:
+        f.write(f"PORTFOLIO OPTIMIZATION REPORT - {current_date}\n")
+        f.write("="*80 + "\n\n")
 
     # Create the content string with proper f-string interpolation
     content = f"""
@@ -91,8 +96,8 @@ REMEMBER THE CURRENT DATE IS {current_date}
     - Exact percentage adjustments to each position
 4. Explain how each recommendation will improve the portfolio's return potential
 5. Provide a clear implementation plan 
-6. Quantify the expected improvement in key metrics (volatility, returns, diversification, drawdown ratio, sharpe ratio, sortino ratio, max drawdown, etc.)
-7. Provide the final portfolio in a neatly organzied table
+6. Provide the final portfolio in a neatly organzied format
+7. Return trade actions and final portfolio in json format
 
 IMPORTANT:
     ### ACTIONS YOU ARE ALLOWED TO TAKE:
@@ -422,9 +427,17 @@ HEADER: FINAL PORTFOLIO POSITIONS
                 
                 # Format the response appropriately
                 tool_response = f"Web Search Results for: '{query}'\n\n{search_response}\n\nNOTE: This information should be incorporated into your portfolio analysis. You should conduct additional searches on other topics to build a comprehensive view before making final recommendations."
+                
+                # Write the search results to the output file
+                with open(output_filename, "a", encoding="utf-8") as f:
+                    f.write(f"\n\n{'='*40}\n")
+                    f.write(f"FREE SEARCH: {query}\n")
+                    f.write(f"{'='*40}\n\n")
+                    f.write(search_response)
+                    f.write("\n\n")
             
             elif function_name == "communication_services_analyst":
-                print(f"\033[97m 🛠️ TOOL USED: \033[92m{function_name}\033[97m\033[0m")
+                print(f"\033[97m🛠️ TOOL USED: \033[92m{function_name}\033[97m\033[0m")
                 
                 # Call the equity research analyst function
                 try:
@@ -435,9 +448,17 @@ HEADER: FINAL PORTFOLIO POSITIONS
                 
                 # Format the response appropriately
                 tool_response = f"Equity Research Report:\n\n{research_report}\n\nNOTE: This comprehensive market analysis should form the foundation of your portfolio optimization strategy. Consider how these trends, opportunities, and risks impact your investment decisions."
+                
+                # Write the research report to the output file
+                with open(output_filename, "a", encoding="utf-8") as f:
+                    f.write(f"\n\n{'='*40}\n")
+                    f.write(f"COMMUNICATION SERVICES ANALYST REPORT\n")
+                    f.write(f"{'='*40}\n\n")
+                    f.write(research_report)
+                    f.write("\n\n")
             
             elif function_name == "commodities_analyst":
-                print(f"\033[97m 🛠️ TOOL USED: \033[92m{function_name}\033[97m\033[0m")
+                print(f"\033[97m🛠️ TOOL USED: \033[92m{function_name}\033[97m\033[0m")
                 
                 # Call the commodities analyst function
                 try:
@@ -448,9 +469,17 @@ HEADER: FINAL PORTFOLIO POSITIONS
                 
                 # Format the response appropriately
                 tool_response = f"Commodities Market Analysis:\n\n{research_report}\n\nNOTE: Use this commodities market analysis to inform your allocation to energy, metals, agriculture, and other commodity-related assets. Consider both direct commodity exposure and indirect exposure through equities in commodity-producing companies."
+                
+                # Write the research report to the output file
+                with open(output_filename, "a", encoding="utf-8") as f:
+                    f.write(f"\n\n{'='*40}\n")
+                    f.write(f"COMMODITIES ANALYST REPORT\n")
+                    f.write(f"{'='*40}\n\n")
+                    f.write(research_report)
+                    f.write("\n\n")
             
             elif function_name == "etf_analyst":
-                print(f"\033[97m 🛠️ TOOL USED: \033[92m{function_name}\033[97m\033[0m")
+                print(f"\033[97m🛠️ TOOL USED: \033[92m{function_name}\033[97m\033[0m")
                 
                 # Call the ETF analyst function
                 try:
@@ -461,9 +490,17 @@ HEADER: FINAL PORTFOLIO POSITIONS
                 
                 # Format the response appropriately
                 tool_response = f"ETF Market Analysis:\n\n{research_report}\n\nNOTE: Use this ETF analysis to identify optimal vehicles for implementing your asset allocation and tactical views. Consider both the underlying exposures and structural characteristics of recommended ETFs."
+                
+                # Write the research report to the output file
+                with open(output_filename, "a", encoding="utf-8") as f:
+                    f.write(f"\n\n{'='*40}\n")
+                    f.write(f"ETF ANALYST REPORT\n")
+                    f.write(f"{'='*40}\n\n")
+                    f.write(research_report)
+                    f.write("\n\n")
             
             elif function_name == "treasuries_analyst":
-                print(f"\033[97m 🛠️ TOOL USED: \033[92m{function_name}\033[97m\033[0m")
+                print(f"\033[97m🛠️ TOOL USED: \033[92m{function_name}\033[97m\033[0m")
                 
                 # Call the treasuries analyst function
                 try:
@@ -474,9 +511,17 @@ HEADER: FINAL PORTFOLIO POSITIONS
                 
                 # Format the response appropriately
                 tool_response = f"US Treasury Market Analysis:\n\n{research_report}\n\nNOTE: Use this US Treasury market analysis to inform your allocation to government bonds and Treasury securities. Consider how the current interest rate environment affects both your fixed income holdings and other asset classes."
+                
+                # Write the research report to the output file
+                with open(output_filename, "a", encoding="utf-8") as f:
+                    f.write(f"\n\n{'='*40}\n")
+                    f.write(f"TREASURIES ANALYST REPORT\n")
+                    f.write(f"{'='*40}\n\n")
+                    f.write(research_report)
+                    f.write("\n\n")
             
             elif function_name == "foreign_exchange_analyst":
-                print(f"\033[97m 🛠️ TOOL USED: \033[92m{function_name}\033[97m\033[0m")
+                print(f"\033[97m🛠️ TOOL USED: \033[92m{function_name}\033[97m\033[0m")
                 
                 # Call the foreign exchange analyst function
                 try:
@@ -487,9 +532,17 @@ HEADER: FINAL PORTFOLIO POSITIONS
                 
                 # Format the response appropriately
                 tool_response = f"Foreign Exchange Market Analysis:\n\n{research_report}\n\nNOTE: Use this foreign exchange analysis to inform your allocation to foreign currencies and currency-hedged assets. Consider how the current exchange rate environment affects both your foreign currency holdings and other asset classes."
+                
+                # Write the research report to the output file
+                with open(output_filename, "a", encoding="utf-8") as f:
+                    f.write(f"\n\n{'='*40}\n")
+                    f.write(f"FOREIGN EXCHANGE ANALYST REPORT\n")
+                    f.write(f"{'='*40}\n\n")
+                    f.write(research_report)
+                    f.write("\n\n")
             
             elif function_name == "ig_credit_analyst":
-                print(f"\033[97m 🛠️ TOOL USED: \033[92m{function_name}\033[97m\033[0m")
+                print(f"\033[97m🛠️ TOOL USED: \033[92m{function_name}\033[97m\033[0m")
                 
                 # Call the IG credit analyst function
                 try:
@@ -500,9 +553,17 @@ HEADER: FINAL PORTFOLIO POSITIONS
                 
                 # Format the response appropriately
                 tool_response = f"Investment Grade Credit Market Analysis:\n\n{research_report}\n\nNOTE: Use this IG credit analysis to inform your allocation to investment grade corporate bonds. Consider how credit fundamentals, interest rates, and market technicals affect both your fixed income holdings and other asset classes."
+                
+                # Write the research report to the output file
+                with open(output_filename, "a", encoding="utf-8") as f:
+                    f.write(f"\n\n{'='*40}\n")
+                    f.write(f"INVESTMENT GRADE CREDIT ANALYST REPORT\n")
+                    f.write(f"{'='*40}\n\n")
+                    f.write(research_report)
+                    f.write("\n\n")
             
             elif function_name == "high_yield_analyst":
-                print(f"\033[97m 🛠️ TOOL USED: \033[92m{function_name}\033[0m")
+                print(f"\033[97m🛠️ TOOL USED: \033[92m{function_name}\033[0m")
                 
                 # Call the high yield analyst function
                 try:
@@ -513,9 +574,17 @@ HEADER: FINAL PORTFOLIO POSITIONS
                 
                 # Format the response appropriately
                 tool_response = f"High Yield & Emerging Markets Debt Analysis:\n\n{research_report}\n\nNOTE: Use this high yield and emerging markets analysis to inform your allocation to higher yielding fixed income assets. Consider how credit risk, liquidity conditions, and macroeconomic factors differ between U.S. high yield and emerging market debt."
+                
+                # Write the research report to the output file
+                with open(output_filename, "a", encoding="utf-8") as f:
+                    f.write(f"\n\n{'='*40}\n")
+                    f.write(f"HIGH YIELD ANALYST REPORT\n")
+                    f.write(f"{'='*40}\n\n")
+                    f.write(research_report)
+                    f.write("\n\n")
             
             elif function_name == "emerging_market_analyst":
-                print(f"\033[97m 🛠️ TOOL USED: \033[92m{function_name}\033[0m")
+                print(f"\033[97m🛠️ TOOL USED: \033[92m{function_name}\033[0m")
                 
                 # Call the emerging market analyst function
                 try:
@@ -526,9 +595,17 @@ HEADER: FINAL PORTFOLIO POSITIONS
                 
                 # Format the response appropriately
                 tool_response = f"Emerging Markets Analysis:\n\n{research_report}\n\nNOTE: Use this emerging markets analysis to inform your allocation to both EM equities and fixed income. Consider how global macro factors and domestic fundamentals influence different EM assets, and how they might perform in various economic scenarios."
+                
+                # Write the research report to the output file
+                with open(output_filename, "a", encoding="utf-8") as f:
+                    f.write(f"\n\n{'='*40}\n")
+                    f.write(f"EMERGING MARKETS ANALYST REPORT\n")
+                    f.write(f"{'='*40}\n\n")
+                    f.write(research_report)
+                    f.write("\n\n")
             
             elif function_name == "consumer_staples_analyst":
-                print(f"\033[97m 🛠️ TOOL USED: \033[92m{function_name}\033[0m")
+                print(f"\033[97m🛠️ TOOL USED: \033[92m{function_name}\033[0m")
                 
                 # Call the consumer staples analyst function
                 try:
@@ -539,9 +616,17 @@ HEADER: FINAL PORTFOLIO POSITIONS
                 
                 # Format the response appropriately
                 tool_response = f"Consumer Staples Analysis:\n\n{research_report}\n\nNOTE: Use this consumer staples analysis to inform your allocation to consumer staples stocks. Consider how these stocks are defensive in nature and how they might perform in various economic scenarios."
+                
+                # Write the research report to the output file
+                with open(output_filename, "a", encoding="utf-8") as f:
+                    f.write(f"\n\n{'='*40}\n")
+                    f.write(f"CONSUMER STAPLES ANALYST REPORT\n")
+                    f.write(f"{'='*40}\n\n")
+                    f.write(research_report)
+                    f.write("\n\n")
             
             elif function_name == "consumer_discretionary_analyst":
-                print(f"\033[97m 🛠️ TOOL USED: \033[92m{function_name}\033[0m")
+                print(f"\033[97m🛠️ TOOL USED: \033[92m{function_name}\033[0m")
                 
                 # Call the consumer discretionary analyst function
                 try:
@@ -552,9 +637,17 @@ HEADER: FINAL PORTFOLIO POSITIONS
                 
                 # Format the response appropriately
                 tool_response = f"Consumer Discretionary Analysis:\n\n{research_report}\n\nNOTE: Use this consumer discretionary analysis to inform your allocation to consumer discretionary stocks. Consider how these stocks are cyclical in nature and how they might perform in various economic scenarios."
+                
+                # Write the research report to the output file
+                with open(output_filename, "a", encoding="utf-8") as f:
+                    f.write(f"\n\n{'='*40}\n")
+                    f.write(f"CONSUMER DISCRETIONARY ANALYST REPORT\n")
+                    f.write(f"{'='*40}\n\n")
+                    f.write(research_report)
+                    f.write("\n\n")
             
             elif function_name == "energy_analyst":
-                print(f"\033[97m 🛠️ TOOL USED: \033[92m{function_name}\033[0m")
+                print(f"\033[97m🛠️ TOOL USED: \033[92m{function_name}\033[0m")
                 
                 # Call the energy analyst function
                 try:
@@ -565,9 +658,17 @@ HEADER: FINAL PORTFOLIO POSITIONS
                 
                 # Format the response appropriately
                 tool_response = f"Energy Analysis:\n\n{research_report}\n\nNOTE: Use this energy analysis to inform your allocation to energy stocks. Consider how the current energy market dynamics and the energy transition affect different energy companies."
+                
+                # Write the research report to the output file
+                with open(output_filename, "a", encoding="utf-8") as f:
+                    f.write(f"\n\n{'='*40}\n")
+                    f.write(f"ENERGY ANALYST REPORT\n")
+                    f.write(f"{'='*40}\n\n")
+                    f.write(research_report)
+                    f.write("\n\n")
             
             elif function_name == "financials_analyst":
-                print(f"\033[97m 🛠️ TOOL USED: \033[92m{function_name}\033[0m")
+                print(f"\033[97m🛠️ TOOL USED: \033[92m{function_name}\033[0m")
                 
                 # Call the financials analyst function
                 try:
@@ -578,9 +679,17 @@ HEADER: FINAL PORTFOLIO POSITIONS
                 
                 # Format the response appropriately
                 tool_response = f"Financials Analysis:\n\n{research_report}\n\nNOTE: Use this financials analysis to inform your allocation to financial stocks. Consider how the current financial market dynamics and regulatory changes affect different financial companies."
+                
+                # Write the research report to the output file
+                with open(output_filename, "a", encoding="utf-8") as f:
+                    f.write(f"\n\n{'='*40}\n")
+                    f.write(f"FINANCIALS ANALYST REPORT\n")
+                    f.write(f"{'='*40}\n\n")
+                    f.write(research_report)
+                    f.write("\n\n")
             
             elif function_name == "healthcare_analyst":
-                print(f"\033[97m 🛠️ TOOL USED: \033[92m{function_name}\033[0m")
+                print(f"\033[97m🛠️ TOOL USED: \033[92m{function_name}\033[0m")
                 
                 # Call the healthcare analyst function
                 try:
@@ -591,9 +700,17 @@ HEADER: FINAL PORTFOLIO POSITIONS
                 
                 # Format the response appropriately
                 tool_response = f"Healthcare Analysis:\n\n{research_report}\n\nNOTE: Use this healthcare analysis to inform your allocation to healthcare stocks. Consider how the current healthcare market dynamics and regulatory changes affect different healthcare companies."
+                
+                # Write the research report to the output file
+                with open(output_filename, "a", encoding="utf-8") as f:
+                    f.write(f"\n\n{'='*40}\n")
+                    f.write(f"HEALTHCARE ANALYST REPORT\n")
+                    f.write(f"{'='*40}\n\n")
+                    f.write(research_report)
+                    f.write("\n\n")
             
             elif function_name == "industrials_analyst":
-                print(f"\033[97m 🛠️ TOOL USED: \033[92m{function_name}\033[0m")
+                print(f"\033[97m🛠️ TOOL USED: \033[92m{function_name}\033[0m")
                 
                 # Call the industrials analyst function
                 try:
@@ -604,9 +721,17 @@ HEADER: FINAL PORTFOLIO POSITIONS
                 
                 # Format the response appropriately
                 tool_response = f"Industrials Analysis:\n\n{research_report}\n\nNOTE: Use this industrials analysis to inform your allocation to industrial stocks. Consider how the current industrial market dynamics and supply chains affect different industrial companies."
+                
+                # Write the research report to the output file
+                with open(output_filename, "a", encoding="utf-8") as f:
+                    f.write(f"\n\n{'='*40}\n")
+                    f.write(f"INDUSTRIALS ANALYST REPORT\n")
+                    f.write(f"{'='*40}\n\n")
+                    f.write(research_report)
+                    f.write("\n\n")
             
             elif function_name == "information_technology_analyst":
-                print(f"\033[97m 🛠️ TOOL USED: \033[92m{function_name}\033[0m")
+                print(f"\033[97m🛠️ TOOL USED: \033[92m{function_name}\033[0m")
                 
                 # Call the information technology analyst function
                 try:
@@ -617,9 +742,17 @@ HEADER: FINAL PORTFOLIO POSITIONS
                 
                 # Format the response appropriately
                 tool_response = f"Information Technology Analysis:\n\n{research_report}\n\nNOTE: Use this information technology analysis to inform your allocation to technology stocks. Consider how the current technology trends and competitive landscape affect different technology companies."
+                
+                # Write the research report to the output file
+                with open(output_filename, "a", encoding="utf-8") as f:
+                    f.write(f"\n\n{'='*40}\n")
+                    f.write(f"INFORMATION TECHNOLOGY ANALYST REPORT\n")
+                    f.write(f"{'='*40}\n\n")
+                    f.write(research_report)
+                    f.write("\n\n")
             
             elif function_name == "materials_analyst":
-                print(f"\033[97m 🛠️ TOOL USED: \033[92m{function_name}\033[0m")
+                print(f"\033[97m🛠️ TOOL USED: \033[92m{function_name}\033[0m")
                 
                 # Call the materials analyst function
                 try:
@@ -630,9 +763,17 @@ HEADER: FINAL PORTFOLIO POSITIONS
                 
                 # Format the response appropriately
                 tool_response = f"Materials Analysis:\n\n{research_report}\n\nNOTE: Use this materials analysis to inform your allocation to materials stocks. Consider how commodity prices and global trade patterns affect different materials companies."
+                
+                # Write the research report to the output file
+                with open(output_filename, "a", encoding="utf-8") as f:
+                    f.write(f"\n\n{'='*40}\n")
+                    f.write(f"MATERIALS ANALYST REPORT\n")
+                    f.write(f"{'='*40}\n\n")
+                    f.write(research_report)
+                    f.write("\n\n")
             
             elif function_name == "real_estate_analyst":
-                print(f"\033[97m 🛠️ TOOL USED: \033[92m{function_name}\033[0m")
+                print(f"\033[97m🛠️ TOOL USED: \033[92m{function_name}\033[0m")
                 
                 # Call the real estate analyst function
                 try:
@@ -643,9 +784,17 @@ HEADER: FINAL PORTFOLIO POSITIONS
                 
                 # Format the response appropriately
                 tool_response = f"Real Estate Analysis:\n\n{research_report}\n\nNOTE: Use this real estate analysis to inform your allocation to real estate stocks and REITs. Consider how interest rates and property market dynamics affect different real estate companies."
+                
+                # Write the research report to the output file
+                with open(output_filename, "a", encoding="utf-8") as f:
+                    f.write(f"\n\n{'='*40}\n")
+                    f.write(f"REAL ESTATE ANALYST REPORT\n")
+                    f.write(f"{'='*40}\n\n")
+                    f.write(research_report)
+                    f.write("\n\n")
             
             elif function_name == "utilities_analyst":
-                print(f"\033[97m 🛠️ TOOL USED: \033[92m{function_name}\033[0m")
+                print(f"\033[97m🛠️ TOOL USED: \033[92m{function_name}\033[0m")
                 
                 # Call the utilities analyst function
                 try:
@@ -656,6 +805,14 @@ HEADER: FINAL PORTFOLIO POSITIONS
                 
                 # Format the response appropriately
                 tool_response = f"Utilities Analysis:\n\n{research_report}\n\nNOTE: Use this utilities analysis to inform your allocation to utilities stocks. Consider how regulatory frameworks and the energy transition affect different utility companies."
+                
+                # Write the research report to the output file
+                with open(output_filename, "a", encoding="utf-8") as f:
+                    f.write(f"\n\n{'='*40}\n")
+                    f.write(f"UTILITIES ANALYST REPORT\n")
+                    f.write(f"{'='*40}\n\n")
+                    f.write(research_report)
+                    f.write("\n\n")
             
             return {
                 "role": "tool",
@@ -702,6 +859,15 @@ HEADER: FINAL PORTFOLIO POSITIONS
             else:
                 # No more tool calls, we have our final response
                 print(f"Round {round_num}: No tool calls, received final response")
+                
+                # Write the final recommendation to the output file
+                with open(output_filename, "a", encoding="utf-8") as f:
+                    f.write(f"\n\n{'='*40}\n")
+                    f.write(f"FINAL PORTFOLIO RECOMMENDATION\n")
+                    f.write(f"{'='*40}\n\n")
+                    f.write(response_message.content)
+                    
+                print(f"All analyst reports and the final recommendation have been saved to {output_filename}")
                 return response_message.content
                 
         print("Calling OpenAI API with tools...")
@@ -850,209 +1016,36 @@ HEADER: FINAL PORTFOLIO POSITIONS
         
         if final_content:
             print(final_content)
+            # Write final content is already handled in handle_conversation function
             return final_content
         else:
-            print("No content in final response, returning what's available.")
-            return "No recommendation was generated."
+            error_msg = "No recommendation was generated."
+            print(error_msg)
+            # Write the error message to the output file
+            with open(output_filename, "a", encoding="utf-8") as f:
+                f.write(f"\n\n{'='*40}\n")
+                f.write(f"ERROR\n")
+                f.write(f"{'='*40}\n\n")
+                f.write(error_msg)
+            return error_msg
             
     except Exception as e:
         print(f"Error calling OpenAI API: {e}")
         import traceback
         traceback.print_exc()
-        return f"An error occurred while calling the OpenAI API: {str(e)}"
-
-
-def ai_extract_portfolio_data(output_text):
-    """Use a separate LLM call to extract structured data from unstructured output"""
-
-
-    
-    extraction_prompt = f"""
-    Extract the following structured data from this portfolio optimization output:
-    1. All trade actions (buy/sell/hold/reduce)
-    2. The final portfolio composition
-    
-    IMPORTANT: Your response must be ONLY valid JSON without any explanations, markdown formatting, or text before or after. Return ONLY the JSON object and nothing else.
-    
-    Convert to this exact JSON format:
-    {{
-      "trade_actions": [
-        {{
-          "action_type": "SELL|BUY|HOLD|SHORT|REDUCE",
-          "ticker": "symbol",
-          "quantity": "number or text description do not include the word shares",
-        }},
-        ...
-      ],
-      "final_portfolio": [
-        {{
-          "ticker": "symbol",
-          "position_type": "LONG|SHORT|RESERVE",
-          "shares": "number",
-          "allocation": "percentage",
-          "market_value": "dollar amount"
-        }},
-        ...
-      ]
-    }}
-    
-    Here is the text to extract from:
-    {output_text}
-    """
-    
-    # Make API call to extract structured data
-    response = client.chat.completions.create(
-        model="gpt-4o",
-        response_format={"type": "json_object"},  # This forces JSON output
-        messages=[
-            {"role": "system", "content": "You are a data extraction assistant that extracts structured data from text and returns only valid JSON."},
-            {"role": "user", "content": extraction_prompt}
-        ]
-    )
-    
-    try:
-        # Parse the JSON from the response
-        response_content = response.choices[0].message.content.strip()
+        error_msg = f"An error occurred while calling the OpenAI API: {str(e)}"
         
-        # Try to extract JSON if it's wrapped in markdown code blocks
-        if response_content.startswith("```json") and response_content.endswith("```"):
-            response_content = response_content[7:-3].strip()
-        elif response_content.startswith("```") and response_content.endswith("```"):
-            response_content = response_content[3:-3].strip()
+        # Write the error message to the output file if possible
+        try:
+            with open(output_filename, "a", encoding="utf-8") as f:
+                f.write(f"\n\n{'='*40}\n")
+                f.write(f"ERROR\n")
+                f.write(f"{'='*40}\n\n")
+                f.write(error_msg)
+        except:
+            pass
             
-        extracted_data = json.loads(response_content)
-        return extracted_data
-    except json.JSONDecodeError as e:
-        print(f"Error parsing JSON response: {e}")
-        print(f"Raw response content: {response_content}")
-        # Return a minimal valid structure as fallback
-        return {
-            "trade_actions": [],
-            "final_portfolio": [],
-            "error": "Failed to parse model response as JSON"
-        }
+        return error_msg
 
-output = """
-=== Final Portfolio Recommendation ===
-1. PORTFOLIO ASSESSMENT
-Your previous holdings were concentrated in consumer cyclicals (WBA, SBUX, GM, AAL, SONO), with notable single-stock risks (AAL, SONO) and an under-allocation to defensive areas. Volatility was elevated (>50% annualized), and the drawdown ratio (>40%) suggested a lack of balance. Recent market dynamics and sector outlooks (as discussed in our comprehensive analyses) recommend redeploying capital across broader growth and defensive exposures, while maintaining a structured approach to interest rates, commodities, and international diversification.
 
-2. KEY ISSUES
-• Concentration in struggling discretionary names (SONO, AAL, WBA) and minimal exposure to healthy growth/defensive sectors (healthcare, consumer staples, materials).
-• Several positions too small to meaningfully impact returns (<$10k in market value).
-• Limited use of fixed income or multi-asset allocations to hedge volatility.
-• Excess cash proportion not clearly targeted and underutilized for yield.
-
-3. SPECIFIC RECOMMENDATIONS
-Below are exact trades (buy/sell/hold) to realign toward a diversified, multi-sector strategy:
-
-──────────────────────────────────────────────────────────────────────────────────────────
-A) REDUCE/Sell Positions
-• SELL AAL (1,000 shares) → entire position
-  Reason: Airline margins remain vulnerable to recession risk, elevated input costs, and cyclical demand.
-• SELL SONO (100 shares) → entire position
-  Reason: Small scale (<$10k), negative earnings momentum, better opportunities elsewhere.
-• SELL WBA (4,389.82 shares) → entire position
-  Reason: Structural challenges in retail pharmacy; capital better allocated to defensible growth or undervalued cyclical plays.
-• SELL BZ (1 share, short covering) → entire short position
-  Reason: Internet-specific risk less attractive vs. broad-based hedges; close out this residual, illiquid short.
-• SELL GM (100 shares) → entire position
-  Reason: Auto margins facing electric vehicle transition overhead and consumer credit tightening.
-
-──────────────────────────────────────────────────────────────────────────────────────────
-B) INCREASE or PARTIAL SELL
-• SELL PARTIAL: SBUX (reduce from 100 shares → 50 shares)
-  Reason: Moderately high valuation; reallocate portion of gains to broader consumer staples or healthcare.
-• SELL PARTIAL: V (reduce from 100 shares → 50 shares)
-  Reason: Maintain some exposure to fintech/credit card growth, but free up capital to diversify infrastructure.
-
-──────────────────────────────────────────────────────────────────────────────────────────
-C) HOLD OR SLIGHT INCREASE
-• HOLD CEG (237.46 shares)
-  Reason: Utilities exposure (particularly renewables) remains attractive for stable growth.
-• HOLD CTSH (50 shares)
-  Reason: IT services remain well-positioned for enterprise digital transformation; moderate valuation.
-• HOLD IBKR (50 shares)
-  Reason: Brokerage with strong interest-income benefits; stable growth with fintech tailwinds.
-• HOLD HYG (50 shares)
-  Reason: Retain high-yield bond exposure for yield enhancement, but keep position size modest.
-
-──────────────────────────────────────────────────────────────────────────────────────────
-D) NEW LONG POSITIONS (with approximate amounts so each is ≥$10k):
-(Note: Totals sized to reach ~85% of portfolio, with 10% in cash, 5% in short-hedge positions. Dollar amounts are estimates; final share counts should be adjusted for prices at execution.)
-
-1) AAPL ($55,000)
-   Reason: Large-cap tech anchor with strong free cash flow, robust ecosystem, AI integration optionality.
-2) MSFT ($55,000)
-   Reason: Cloud (Azure) and AI leadership, stable enterprise demand, solid balance sheet.
-3) PFE ($40,000)
-   Reason: Pharma pipeline catalysts 2025–2026, stable dividend, possible M&A synergy.
-4) LLY ($40,000)
-   Reason: Significant upside in obesity/diabetes portfolio, strong R&D pipeline.
-5) UNH ($40,000)
-   Reason: Managed care leader, diversified revenue from Medicare Advantage and pharmacy benefits.
-6) XLE (Energy Sector ETF) ($40,000)
-   Reason: Continued demand for oil/gas short-term + integrated giants' dividend support.
-7) XLK (Tech Sector ETF) ($40,000)
-   Reason: Broad exposure to AI, semiconductors, cybersecurity, software.
-8) XLI (Industrials Sector ETF) ($40,000)
-   Reason: Beneficiary of re-shoring, infrastructure spending, automation.
-9) VIG (Dividend Appreciation ETF) ($40,000)
-   Reason: Quality dividend stocks with consistent dividend growth, lower volatility.
-10) IHI (Medical Devices ETF) ($40,000)
-    Reason: Structural tailwinds (aging demographics, innovation), diversified device manufacturers.
-11) EEM (Emerging Markets ETF) ($40,000)
-    Reason: Diversification, exposure to faster-growing EM consumer and tech.
-12) VNQ (REIT ETF) ($40,000)
-    Reason: Real estate factor exposure, potential rebound post-rate stabilization, broad-based property diversity.
-13) BND (Total Bond Market ETF) ($40,000)
-• SHORT TSLA (approx. $48,600)
-  Reason: Valuation-driven hedge on high-multiple tech/EV risk; a partial offset if growth stocks correct.
-  (Alternatively, short a broad cyclical ETF or a high-beta index if TSLA not desired.)
-
-4. IMPLEMENTATION PLAN
-• Execute proposed sells first to free capital (AAL, SONO, WBA, BZ, GM fully; partial SBUX, partial V).
-• Reinvest proceeds into the 13 new/expanded ticker positions to achieve ~85% portfolio total, ensuring each surpasses $10k.
-• Allocate 5% to the short TSLA or a similar hedge.
-• Maintain 10% (~$97k) in cash to manage volatility and preserve optionality for opportunistic entries.
-
-5. EXPECTED OUTCOME
-• Lower volatility vs. prior ~52%: Greater diversification across sectors and asset classes (tech, healthcare, consumer, industrials, fixed income).
-• Higher potential return: Balanced growth from AI-driven tech, stable pharma/healthcare, selective energy/industrial cyclical.
-• Improved risk-adjusted performance: The short position and bond ETF cushion market drawdowns, while dividend-oriented holdings enhance steady returns.
-• Aligns with macro tailwinds: Key exposures in AI, re-shoring, managed care, and big pharma pipelines.
-
-6. FINAL PORTFOLIO TABLE (Illustrative Allocations)
-
-┌──────────────────────────┬────────┬──────────────┬───────────────┬─────────────────────────────────────┐
-│ Ticker / Asset           │ Value  │ Allocation % │ Market Value  │ Action (position size change)       │
-├──────────────────────────┼────────┼──────────────┼───────────────┼─────────────────────────────────────┤
-│ CEG (Hold)               │ ≈$51K  │ ~5.2%        │ $51,000       │ held (no change)                    │
-│ CTSH (Hold)              │ ≈$4K   │ ~0.4%        │ $4,000        │ held (no change)                    │
-│ IBKR (Hold)              │ ≈$8K   │ ~0.8%        │ $8,000        │ held (no change)                    │
-│ HYG (Hold)               │ ≈$4K   │ ~0.4%        │ $4,000        │ held (no change)                    │
-│ SBUX (50 shares)         │ ≈$5K   │ ~0.5%        │ $5,000        │ reduced from 100 → 50 shares        │
-│ V (50 shares)            │ ≈$16K  │ ~1.6%        │ $16,000       │ reduced from 100 → 50 shares        │
-│ AAPL (New)               │ $55K   │ ~5.7%        │ $55,000       │ bought                              │
-│ MSFT (New)               │ $55K   │ ~5.7%        │ $55,000       │ bought                              │
-│ PFE (New)                │ $40K   │ ~4.1%        │ $40,000       │ bought                              │
-│ LLY (New)                │ $40K   │ ~4.1%        │ $40,000       │ bought                              │
-│ UNH (New)                │ $40K   │ ~4.1%        │ $40,000       │ bought                              │
-│ XLE (New)                │ $40K   │ ~4.1%        │ $40,000       │ bought                              │
-│ XLK (New)                │ $40K   │ ~4.1%        │ $40,000       │ bought                              │
-│ XLI (New)                │ $40K   │ ~4.1%        │ $40,000       │ bought                              │
-│ VIG (New)                │ $40K   │ ~4.1%        │ $40,000       │ bought                              │
-│ IHI (New)                │ $40K   │ ~4.1%        │ $40,000       │ bought                              │
-│ EEM (New)                │ $40K   │ ~4.1%        │ $40,000       │ bought                              │
-│ VNQ (New)                │ $40K   │ ~4.1%        │ $40,000       │ bought                              │
-│ BND (New)                │ $40K   │ ~4.1%        │ $40,000       │ bought                              │
-│ Short TSLA (New)         │ $49K   │ ~5.0%        │ –$49,000      │ short sold                          │
-│ Cash                     │ $97K   │ ~10.0%       │ $97,000       │ Held in cash/reserves               │
-└──────────────────────────┴────────┴──────────────┴───────────────┴─────────────────────────────────────┘
-
-(Note: Amounts above are approximate; final share counts depend on execution prices. For smaller legacy holdings like CTSH, IBKR, HYG, the recommendation is to hold or gradually scale as desired, ensuring each remains ≥$10k if you prefer a simpler structure. Alternatively, you may fully rebalance them as well.)
-
-By following these trades and allocations, you'll diversify away from concentrated consumer risk, add balanced exposure to growth and defensive sectors (healthcare, staples, and high-quality tech), and retain a prudent amount in cash plus a short hedge. This approach should enhance risk-adjusted returns and better position the portfolio for evolving macro/sector trends.
-"""
-
-print(ai_extract_portfolio_data(output))
+optimize()
