@@ -25,6 +25,8 @@ client = OpenAI(
     api_key=api_key,
 )
 
+openai_model = "gpt-4o"
+
 def optimize():
 
     current_date = datetime.now().strftime('%Y-%m-%d')
@@ -140,6 +142,38 @@ HEADER: FINAL PORTFOLIO POSITIONS
 -----------------------------------------------------------------------------------------
 | Ticker | Quantity | Allocation | Market Value | bought/sold/held/position size change |
 -----------------------------------------------------------------------------------------
+
+IMPORTANT: IN ADDITION to providing a human readable recommendation, you MUST also output the same recommendation in a machine-readable JSON format for automated processing.
+
+Your response should have two parts:
+1. Human-readable portfolio recommendation
+2. JSON-formatted recommendation with the following structure:
+
+```json
+{{
+  "trade_actions": [
+    {{
+      "action_type": "SELL|BUY|HOLD|SHORT|REDUCE|INCREASE",
+      "ticker": "symbol",
+      "quantity": "number or text description",
+      "reason": "reason for the trade"
+    }},
+    ...
+  ],
+  "final_portfolio": [
+    {{
+      "ticker": "symbol",
+      "position_type": "LONG|SHORT|CASH",
+      "shares": "number",
+      "allocation": "percentage",
+      "market_value": "dollar amount"
+    }},
+    ...
+  ]
+}}
+```
+
+Place the JSON output at the end of your response after your human-readable recommendation, clearly separated by "===JSON OUTPUT===".
 """
     
     # Call the OpenAI API with tool calling ability
@@ -831,7 +865,7 @@ HEADER: FINAL PORTFOLIO POSITIONS
             
             # Call the API
             response = client.chat.completions.create(
-                model="o1",
+                model=openai_model,
                 top_p=1.0,
                 messages=messages,
                 tools=tools if round_num < max_rounds else None  # Stop offering tools in final round
