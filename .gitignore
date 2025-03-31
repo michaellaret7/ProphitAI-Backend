@@ -2,3 +2,4 @@ RatesTickers.xlsx
 __pycache__/
 *.py[cod]
 DATABASE_SCHEMA.md
+.env
