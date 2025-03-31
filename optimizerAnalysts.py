@@ -13,20 +13,34 @@ import itertools
 import threading
 import math
 import curses
+from dotenv import load_dotenv
 
 
-OpenAI_API_KEY = "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"
-Sonar_API_KEY = "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"
+# Load environment variables from .env file
+load_dotenv()
 
-perplexity_model = "sonar-deep-research"
+OpenAI_API_KEY = os.environ.get("OPENAI_API_KEY")
+Sonar_API_KEY = os.environ.get("PERPLEXITY_API_KEY")
+client = OpenAI(api_key=OpenAI_API_KEY)
+perplexity_model = os.environ.get("PERPLEXITY_MODEL")
 
-# Initialize clients
-api_key = os.environ.get("OPENAI_API_KEY", OpenAI_API_KEY)
-
-client = OpenAI(
-    api_key=api_key,
-)
-
+def stock_universe():
+    """
+    Returns the raw contents of the stock universe JSON file.
+    This allows the portfolio optimizer to have a complete view of available investment options.
+    """
+    # Get the absolute path to the JSON file
+    current_dir = os.path.dirname(os.path.abspath(__file__))
+    json_file_path = os.path.join(current_dir, "database_schemas.json")
+    
+    try:
+        # Read the raw contents of the JSON file
+        with open(json_file_path, 'r', encoding='utf-8') as file:
+            raw_json_content = file.read()
+        return raw_json_content
+    except Exception as e:
+        print(f"Error reading stock universe JSON file: {e}")
+        return f"Error: Could not read stock universe data from {json_file_path}. {str(e)}"
 
 def free_search(system_prompt, user_prompt):
     from optimizerAnimation import start_animation, Colors
@@ -281,7 +295,8 @@ IMPORTANT
         response = client.chat.completions.create(
             model=perplexity_model,
             messages=messages,
-            stream=True
+            stream=True,
+            web_search_options={"search_context_size": "high"}
         )
 
         # Stop the animation before printing any output
