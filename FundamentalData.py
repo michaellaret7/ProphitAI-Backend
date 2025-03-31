@@ -9,7 +9,7 @@ from ib_insync import *
 from sqlalchemy import create_engine, text
 
 api_key = '7b14137a-24fa-45d3-a752-6889558f551f'
-ticker = "HMC"
+ticker = "AAPL"
 period = "quarterly"
 limit = "100"
 
@@ -41,7 +41,6 @@ def get_financial_data(ticker, period, limit):
 
     return combined_data
 
-get_financial_data(ticker, period, limit)
 
 def read_sector_excel(filename="finalSectorSheet.xlsx"):
     """
@@ -78,6 +77,62 @@ def read_sector_excel(filename="finalSectorSheet.xlsx"):
     except Exception as e:
         print(f"❌ Error reading Excel file: {e}")
         return None
+    
+
+def get_ib_historical_data(ticker):
+    """
+    Get the most recent closing price for a ticker from Interactive Brokers.
+    
+    Args:
+        ticker (str): The ticker symbol to get data for
+        
+    Returns:
+        float: The most recent closing price, or None if no data is available
+    """
+    from ib_insync import IB, Stock
+    from datetime import datetime, timedelta
+    
+    try:
+        # Connect to IB Gateway
+        print(f"Connecting to IB Gateway on port 4002...")
+        ib = IB()
+        ib.connect('127.0.0.1', '4002', clientId=3)
+        
+        # Create contract for the ticker (assuming US stock)
+        contract = Stock(ticker, 'SMART', 'USD')
+        
+        # Request historical data
+        bars = ib.reqHistoricalData(
+            contract,
+            endDateTime='',
+            durationStr='2 D',
+            barSizeSetting='1 day',
+            whatToShow='TRADES',
+            useRTH=True,
+            formatDate=1
+        )
+        
+        # Extract the most recent close price
+        if bars and len(bars) > 0:
+            # Get the last bar (most recent)
+            most_recent_bar = bars[-1]
+            close_price = most_recent_bar.close
+            print(f"✅ Most recent close price for {ticker}: {close_price}")
+            return close_price
+        else:
+            print(f"⚠️ No historical data retrieved for {ticker}")
+            return None
+            
+    except Exception as e:
+        print(f"❌ Error retrieving historical data: {e}")
+        return None
+        
+    finally:
+        # Disconnect from IB
+        ib.disconnect()
+
+
+get_ib_historical_data('XLF')
 
 def get_news(ticker, start_date, end_date, limit):
     url = "https://api.financialdatasets.ai/news"
@@ -575,150 +630,150 @@ def upload_sector_fundamentals(sector, industry, period="quarterly", limit="100"
 # upload_sector_fundamentals("Consumer Discretionary", "Specialty Retail", db_name='equity_sector_consumer_discretionary_fundamentals')
 # upload_sector_fundamentals("Consumer Discretionary", "Textiles, Apparel & Luxury Goods", db_name='equity_sector_consumer_discretionary_fundamentals') 
 
-df = read_sector_excel()
+# df = read_sector_excel()
 
-if df is not None:
-    # Create a dictionary to store sector -> industries mapping
-    sectors_and_industries = {}
-    for sector in df['GICS Sector'].unique():
-        sector_df = df[df['GICS Sector'] == sector]
-        industries = sector_df['GICS Ind Name'].unique().tolist()
-        sectors_and_industries[sector] = industries
+# if df is not None:
+#     # Create a dictionary to store sector -> industries mapping
+#     sectors_and_industries = {}
+#     for sector in df['GICS Sector'].unique():
+#         sector_df = df[df['GICS Sector'] == sector]
+#         industries = sector_df['GICS Ind Name'].unique().tolist()
+#         sectors_and_industries[sector] = industries
     
-    # Remove Communication Services and Consumer Discretionary sectors
-    sectors_and_industries.pop('Communication Services', None)
-    sectors_and_industries.pop('Consumer Discretionary', None)
+#     # Remove Communication Services and Consumer Discretionary sectors
+#     sectors_and_industries.pop('Communication Services', None)
+#     sectors_and_industries.pop('Consumer Discretionary', None)
     
-    # Print the dictionary for verification
-    print("\n=== SECTORS AND INDUSTRIES DICTIONARY (without Communication Services and Consumer Discretionary) ===\n")
-    # print(sectors_and_industries)
-else:
-    print("❌ Unable to create sectors dictionary - Excel file could not be loaded")
+#     # Print the dictionary for verification
+#     print("\n=== SECTORS AND INDUSTRIES DICTIONARY (without Communication Services and Consumer Discretionary) ===\n")
+#     # print(sectors_and_industries)
+# else:
+#     print("❌ Unable to create sectors dictionary - Excel file could not be loaded")
 
-# Flag to determine when to start processing
-start_processing = False
-# Add a resume point for ACLX in Biotechnology
-resume_ticker = "CBT"
-resume_industry = "Chemicals"
+# # Flag to determine when to start processing
+# start_processing = False
+# # Add a resume point for ACLX in Biotechnology
+# resume_ticker = "CBT"
+# resume_industry = "Chemicals"
 
-# Print each sector-industry pair
-for sector, industries in sectors_and_industries.items():
-    for industry in industries:
-        if industry == resume_industry:
-            start_processing = True
-            print(f"Starting processing from {sector} - {industry}")
+# # Print each sector-industry pair
+# for sector, industries in sectors_and_industries.items():
+#     for industry in industries:
+#         if industry == resume_industry:
+#             start_processing = True
+#             print(f"Starting processing from {sector} - {industry}")
         
-        # Only process if we've reached or passed the resume industry
-        if start_processing:
-            dbName = f'equity_sector_{sector.lower().replace(" ", "_")}_fundamentals'
-            print(f"Checking {sector} - {industry} for processing...")
+#         # Only process if we've reached or passed the resume industry
+#         if start_processing:
+#             dbName = f'equity_sector_{sector.lower().replace(" ", "_")}_fundamentals'
+#             print(f"Checking {sector} - {industry} for processing...")
             
-            # Get tickers for this industry to check for resume point
-            sector_df = df[(df['GICS Sector'] == sector) & (df['GICS Ind Name'] == industry)]
+#             # Get tickers for this industry to check for resume point
+#             sector_df = df[(df['GICS Sector'] == sector) & (df['GICS Ind Name'] == industry)]
             
-            # Get ticker column (handle different possible column names)
-            ticker_col = None
-            for col in ['ticker', 'Ticker', 'Symbol', 'symbol']:
-                if col in sector_df.columns:
-                    ticker_col = col
-                    break
+#             # Get ticker column (handle different possible column names)
+#             ticker_col = None
+#             for col in ['ticker', 'Ticker', 'Symbol', 'symbol']:
+#                 if col in sector_df.columns:
+#                     ticker_col = col
+#                     break
             
-            if ticker_col is not None:
-                tickers = sector_df[ticker_col].unique().tolist()
-                tickers = [t.replace(' US Equity', '') if isinstance(t, str) else t for t in tickers]
+#             if ticker_col is not None:
+#                 tickers = sector_df[ticker_col].unique().tolist()
+#                 tickers = [t.replace(' US Equity', '') if isinstance(t, str) else t for t in tickers]
                 
-                # If we're at the resume industry, check if we need to skip to specific ticker
-                if industry == resume_industry and resume_ticker in tickers:
-                    # Get index of resume ticker
-                    resume_index = tickers.index(resume_ticker)
-                    # Slice the list to start from resume_ticker
-                    tickers = tickers[resume_index:]
-                    print(f"✅ Resuming from {resume_ticker} in {industry} (skipped {resume_index} previous tickers)")
+#                 # If we're at the resume industry, check if we need to skip to specific ticker
+#                 if industry == resume_industry and resume_ticker in tickers:
+#                     # Get index of resume ticker
+#                     resume_index = tickers.index(resume_ticker)
+#                     # Slice the list to start from resume_ticker
+#                     tickers = tickers[resume_index:]
+#                     print(f"✅ Resuming from {resume_ticker} in {industry} (skipped {resume_index} previous tickers)")
                     
-                    # Reset resume ticker to avoid checking in subsequent industries
-                    resume_ticker = None
-                elif industry == resume_industry and resume_ticker not in tickers:
-                    print(f"⚠️ Resume ticker {resume_ticker} not found in {industry}. Processing all tickers in this industry.")
-                    resume_ticker = None
+#                     # Reset resume ticker to avoid checking in subsequent industries
+#                     resume_ticker = None
+#                 elif industry == resume_industry and resume_ticker not in tickers:
+#                     print(f"⚠️ Resume ticker {resume_ticker} not found in {industry}. Processing all tickers in this industry.")
+#                     resume_ticker = None
                     
-                # Process this industry
-                print(f"Uploading {sector} - {industry} with {len(tickers)} tickers to {dbName}")
+#                 # Process this industry
+#                 print(f"Uploading {sector} - {industry} with {len(tickers)} tickers to {dbName}")
                 
-                # Process each ticker individually to better manage connections
-                for ticker in tickers:
-                    print(f"\n🔍 Processing {ticker} in {industry}...")
-                    try:
-                        # Create a fresh DB handler for each ticker to ensure clean connections
-                        db_handler = PushFundamentalDataToDB()
-                        db_handler.create_database(dbName)
+#                 # Process each ticker individually to better manage connections
+#                 for ticker in tickers:
+#                     print(f"\n🔍 Processing {ticker} in {industry}...")
+#                     try:
+#                         # Create a fresh DB handler for each ticker to ensure clean connections
+#                         db_handler = PushFundamentalDataToDB()
+#                         db_handler.create_database(dbName)
                         
-                        # Format schema name based on industry
-                        schema_name = industry.lower().replace(' ', '_').replace('&', 'and').replace(',', '_').replace('-', '_')
+#                         # Format schema name based on industry
+#                         schema_name = industry.lower().replace(' ', '_').replace('&', 'and').replace(',', '_').replace('-', '_')
                         
-                        # Process a single ticker
-                        try:
-                            # Get financial data
-                            financial_data = get_financial_data(ticker, "quarterly", "100")
+#                         # Process a single ticker
+#                         try:
+#                             # Get financial data
+#                             financial_data = get_financial_data(ticker, "quarterly", "100")
                             
-                            # Process each financial statement type
-                            if 'financials' in financial_data:
-                                financials = financial_data['financials']
+#                             # Process each financial statement type
+#                             if 'financials' in financial_data:
+#                                 financials = financial_data['financials']
                                 
-                                # Process income statements
-                                if 'income_statements' in financials and financials['income_statements']:
-                                    print(f"💰 Uploading income statements for {ticker}...")
-                                    income_df = pd.DataFrame(financials['income_statements'])
-                                    income_df = income_df.replace({pd.NA: None, float('nan'): None})
-                                    income_df['date'] = pd.to_datetime(income_df['calendar_date'])
-                                    db_handler.create_schema_and_table_dynamic(
-                                        dbName, schema_name, f"{ticker}_income_statements", income_df
-                                    )
+#                                 # Process income statements
+#                                 if 'income_statements' in financials and financials['income_statements']:
+#                                     print(f"💰 Uploading income statements for {ticker}...")
+#                                     income_df = pd.DataFrame(financials['income_statements'])
+#                                     income_df = income_df.replace({pd.NA: None, float('nan'): None})
+#                                     income_df['date'] = pd.to_datetime(income_df['calendar_date'])
+#                                     db_handler.create_schema_and_table_dynamic(
+#                                         dbName, schema_name, f"{ticker}_income_statements", income_df
+#                                     )
                                 
-                                # Process balance sheets
-                                if 'balance_sheets' in financials and financials['balance_sheets']:
-                                    print(f"📑 Uploading balance sheets for {ticker}...")
-                                    balance_df = pd.DataFrame(financials['balance_sheets'])
-                                    balance_df = balance_df.replace({pd.NA: None, float('nan'): None})
-                                    balance_df['date'] = pd.to_datetime(balance_df['calendar_date'])
-                                    db_handler.create_schema_and_table_dynamic(
-                                        dbName, schema_name, f"{ticker}_balance_sheets", balance_df
-                                    )
+#                                 # Process balance sheets
+#                                 if 'balance_sheets' in financials and financials['balance_sheets']:
+#                                     print(f"📑 Uploading balance sheets for {ticker}...")
+#                                     balance_df = pd.DataFrame(financials['balance_sheets'])
+#                                     balance_df = balance_df.replace({pd.NA: None, float('nan'): None})
+#                                     balance_df['date'] = pd.to_datetime(balance_df['calendar_date'])
+#                                     db_handler.create_schema_and_table_dynamic(
+#                                         dbName, schema_name, f"{ticker}_balance_sheets", balance_df
+#                                     )
                                 
-                                # Process cash flow statements
-                                if 'cash_flow_statements' in financials and financials['cash_flow_statements']:
-                                    print(f"💵 Uploading cash flow statements for {ticker}...")
-                                    cashflow_df = pd.DataFrame(financials['cash_flow_statements'])
-                                    cashflow_df = cashflow_df.replace({pd.NA: None, float('nan'): None})
-                                    cashflow_df['date'] = pd.to_datetime(cashflow_df['calendar_date'])
-                                    db_handler.create_schema_and_table_dynamic(
-                                        dbName, schema_name, f"{ticker}_cash_flow_statements", cashflow_df
-                                    )
+#                                 # Process cash flow statements
+#                                 if 'cash_flow_statements' in financials and financials['cash_flow_statements']:
+#                                     print(f"💵 Uploading cash flow statements for {ticker}...")
+#                                     cashflow_df = pd.DataFrame(financials['cash_flow_statements'])
+#                                     cashflow_df = cashflow_df.replace({pd.NA: None, float('nan'): None})
+#                                     cashflow_df['date'] = pd.to_datetime(cashflow_df['calendar_date'])
+#                                     db_handler.create_schema_and_table_dynamic(
+#                                         dbName, schema_name, f"{ticker}_cash_flow_statements", cashflow_df
+#                                     )
                             
-                            # Process financial metrics
-                            if 'financial_metrics' in financial_data and financial_data['financial_metrics']:
-                                print(f"📊 Uploading financial metrics for {ticker}...")
-                                metrics_df = pd.DataFrame(financial_data['financial_metrics'])
-                                metrics_df = metrics_df.replace({pd.NA: None, float('nan'): None})
-                                metrics_df['date'] = pd.to_datetime(metrics_df['calendar_date'])
-                                db_handler.create_schema_and_table_dynamic(
-                                    dbName, schema_name, f"{ticker}_financial_metrics", metrics_df
-                                )
+#                             # Process financial metrics
+#                             if 'financial_metrics' in financial_data and financial_data['financial_metrics']:
+#                                 print(f"📊 Uploading financial metrics for {ticker}...")
+#                                 metrics_df = pd.DataFrame(financial_data['financial_metrics'])
+#                                 metrics_df = metrics_df.replace({pd.NA: None, float('nan'): None})
+#                                 metrics_df['date'] = pd.to_datetime(metrics_df['calendar_date'])
+#                                 db_handler.create_schema_and_table_dynamic(
+#                                     dbName, schema_name, f"{ticker}_financial_metrics", metrics_df
+#                                 )
                             
-                            print(f"✅ Completed processing {ticker}")
+#                             print(f"✅ Completed processing {ticker}")
                             
-                        except Exception as e:
-                            print(f"❌ Error processing {ticker}: {e}")
+#                         except Exception as e:
+#                             print(f"❌ Error processing {ticker}: {e}")
                             
-                        # Always explicitly close connections
-                        finally:
-                            db_handler.close_connection()
+#                         # Always explicitly close connections
+#                         finally:
+#                             db_handler.close_connection()
                             
-                        # Pause between API calls to avoid rate limits
-                        print("⏳ Pausing before next company...")
-                        import time
-                        time.sleep(2)
+#                         # Pause between API calls to avoid rate limits
+#                         print("⏳ Pausing before next company...")
+#                         import time
+#                         time.sleep(2)
                         
-                    except Exception as outer_e:
-                        print(f"❌ Outer error processing {ticker}: {outer_e}")
-            else:
-                print(f"❌ Could not find ticker column in sector data for {industry}")
+#                     except Exception as outer_e:
+#                         print(f"❌ Outer error processing {ticker}: {outer_e}")
+#             else:
+#                 print(f"❌ Could not find ticker column in sector data for {industry}")
