@@ -1916,29 +1916,4 @@ def generate_portfolio_report(capture_output=False, print_output=False):
     else:
         return positions, formatted_output, metrics, monthly_results, diversification, correlations
 
-def run(printOutput=False):
-    """
-    Legacy function that runs a portfolio analysis and returns the output as a string.
-    
-    Args:
-        printOutput: Whether to print the report to console
-        
-    Returns:
-        String containing all analysis output
-    """
-    return generate_portfolio_report(capture_output=True, print_output=printOutput)
-
-def run_account_data(printOutput=False):
-    """
-    Runs a portfolio analysis and returns the data objects.
-    
-    Args:
-        printOutput: Whether to print the report to console
-        
-    Returns:
-        Tuple containing (positions, formatted_output, metrics, monthly_results, 
-                         diversification, correlations)
-    """
-    return generate_portfolio_report(capture_output=False, print_output=printOutput)
-
 
