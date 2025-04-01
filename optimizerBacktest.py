@@ -531,6 +531,27 @@ json6 = {
     ]
 }
 
+json7 = {
+    "final_portfolio": [
+        {"ticker": "CEG", "position_type": "LONG", "shares": "329", "allocation": "9%"},
+        {"ticker": "CTSH", "position_type": "LONG", "shares": "785", "allocation": "8%"},
+        {"ticker": "GM", "position_type": "LONG", "shares": "950", "allocation": "6%"},
+        {"ticker": "HYG", "position_type": "LONG", "shares": "474", "allocation": "5%"},
+        {"ticker": "IBKR", "position_type": "LONG", "shares": "524", "allocation": "12%"},
+        {"ticker": "V", "position_type": "LONG", "shares": "217", "allocation": "10%"},
+        {"ticker": "JPM", "position_type": "LONG", "shares": "373", "allocation": "7%"},
+        {"ticker": "PG", "position_type": "LONG", "shares": "319", "allocation": "6%"},
+        {"ticker": "CAT", "position_type": "LONG", "shares": "894", "allocation": "6%"},
+        {"ticker": "AAPL", "position_type": "LONG", "shares": "263", "allocation": "6%"},
+        {"ticker": "JNJ", "position_type": "LONG", "shares": "271", "allocation": "6%"},
+        {"ticker": "NEE", "position_type": "LONG", "shares": "497", "allocation": "5%"},
+        {"ticker": "DIS", "position_type": "LONG", "shares": "381", "allocation": "5%"},
+        {"ticker": "EEM", "position_type": "LONG", "shares": "596", "allocation": "4%"},
+        {"ticker": "VNQ", "position_type": "LONG", "shares": "373", "allocation": "4%"},
+        {"ticker": "CASH", "position_type": "CASH", "shares": "0", "allocation": "1%"}
+    ]
+}
+
 def connect_to_ib():
     """
     Establish a connection to Interactive Brokers TWS or Gateway
@@ -701,7 +722,7 @@ def get_current_portfolio_holdings(ib):
         return None
 
 # Get historical data for all tickers
-historical_data, portfolio_value = get_historical_data_for_all_tickers(json6)
+historical_data, portfolio_value = get_historical_data_for_all_tickers(json7)
 
 # Get current holdings
 ib = connect_to_ib()
@@ -905,7 +926,7 @@ def calculate_portfolio_returns(portfolio, historical_data, initial_investment):
 
 # Calculate portfolio returns but don't plot
 print("\n📈 Calculating portfolio returns...")
-portfolio_values, allocation_dict = calculate_portfolio_returns(json6, historical_data, portfolio_value)
+portfolio_values, allocation_dict = calculate_portfolio_returns(json7, historical_data, portfolio_value)
 
 if portfolio_values is not None:
     # Print summary statistics
@@ -976,6 +997,10 @@ if portfolio_values is not None:
         spy_df = pd.DataFrame(index=spy_data['date'])
         spy_df['close'] = spy_data['close'].values
         spy_df.index = pd.to_datetime(spy_df.index)  # Ensure datetime index
+        
+        # Filter SPY data to match portfolio_values start date
+        portfolio_start_date = portfolio_values.index.min()
+        spy_df = spy_df[spy_df.index >= portfolio_start_date]
         
         # Calculate returns
         spy_returns = spy_df['close'].pct_change(fill_method=None).fillna(0)
