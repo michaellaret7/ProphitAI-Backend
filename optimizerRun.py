@@ -1,4 +1,4 @@
-from optimizerAnalysts import stock_universe,free_search, communication_services_analyst, consumer_staples_analyst, consumer_discretionary_analyst, energy_analyst, financials_analyst, commodities_analyst, etf_analyst, treasuries_analyst, foreign_exchange_analyst, ig_credit_analyst, high_yield_analyst, emerging_market_analyst, healthcare_analyst, industrials_analyst, information_technology_analyst, materials_analyst, real_estate_analyst, utilities_analyst
+from optimizerAnalysts import stock_universe, free_search, communication_services_analyst, consumer_staples_analyst, consumer_discretionary_analyst, energy_analyst, financials_analyst, commodities_analyst, etf_analyst, treasuries_analyst, foreign_exchange_analyst, ig_credit_analyst, high_yield_analyst, emerging_market_analyst, healthcare_analyst, industrials_analyst, information_technology_analyst, materials_analyst, real_estate_analyst, utilities_analyst
 from optimizerFormatting import format
 from openai import OpenAI
 import json
@@ -10,11 +10,22 @@ from dotenv import load_dotenv
 # Load environment variables from .env file
 load_dotenv()
 
+# API KEYS
 OpenAI_API_KEY = os.environ.get("OPENAI_API_KEY")
 Sonar_API_KEY = os.environ.get("PERPLEXITY_API_KEY")
-client = OpenAI(api_key=OpenAI_API_KEY)
+DeepSeek_API_KEY = os.environ.get("DEEPSEEK_API_KEY")
+
+# MODELS
 openai_model = os.environ.get("OPENAI_MODEL")
 perplexity_model = os.environ.get("PERPLEXITY_MODEL")
+deepseek_model = os.environ.get("DEEPSEEK_MODEL")
+
+# CLIENTS
+client = OpenAI(api_key=OpenAI_API_KEY)
+# client = OpenAI(api_key=DeepSeek_API_KEY, base_url="https://api.deepseek.com")
+
+# MODEL
+model = "o3-mini"
 
 def optimize():
     current_date = datetime.now().strftime('%Y-%m-%d')
@@ -64,30 +75,27 @@ REMEMBER THE CURRENT DATE IS {current_date}
 ------------------------------------------------------------------------------------------------------
 
 ### RULES (YOU MUST FOLLOW THESE RULES):
-1. NO HALLUCINATIONS, IF THERE IS SOMETHING YOU DO NOT KNOW OR IF THERE IS DATA MISSING, SAY YOU DO NOT KNOW, AND PROCEED LOGICALLY.
-2. BE VERY SPECIFIC AND EXACT WITH YOUR RECOMMENDATIONS.
-3. BE SUCCUINCT AND CONCISE, BUT MAKE SURE TO EXPLAIN YOUR REASONING.
-4. BE SUCCESSFUL AND MAKE MONEY.
-5. BE CREATIVE IN YOUR STRATEGIES AND THINK OUTSIDE THE BOX.
-6. KEEP 10% OF THE PORTFOLIO IN CASH.
-7. NONE OF THE POSITIONS SHOULD BE LESS THAN $10,000.
-8. THE SUM OF ALL POSITIONS SHOULD BE EQUAL TO 85% OF THE ORIGINAL CASH VALUE OF THE PORTFOLIO.
-9. THE PORTFOLIO MUST CONTAIN EXACTLY 15-20 POSITIONS. THIS IS A STRICT REQUIREMENT - NEVER FEWER THAN 15 OR MORE THAN 20. IF NEEDED, ADD NEW POSITIONS OR REMOVE EXISTING ONES TO MEET THIS RANGE.
+    1. NO HALLUCINATIONS, IF THERE IS SOMETHING YOU DO NOT KNOW OR IF THERE IS DATA MISSING, SAY YOU DO NOT KNOW, AND PROCEED LOGICALLY.
+    2. BE VERY SPECIFIC AND EXACT WITH YOUR RECOMMENDATIONS.
+    3. BE SUCCUINCT AND CONCISE, BUT MAKE SURE TO EXPLAIN YOUR REASONING.
+    4. BE CREATIVE IN YOUR STRATEGIES AND THINK OUTSIDE THE BOX.
+    5. KEEP 5-7% OF THE PORTFOLIO IN CASH.
+    6. THE SUM OF ALL POSITIONS SHOULD BE EQUAL TO 93%-95% OF THE ORIGINAL CASH VALUE OF THE PORTFOLIO.
+    7. THE PORTFOLIO MUST CONTAIN EXACTLY 15-20 POSITIONS. THIS IS A STRICT REQUIREMENT - NEVER FEWER THAN 15 OR MORE THAN 20. IF NEEDED, ADD NEW POSITIONS OR REMOVE EXISTING ONES TO MEET THIS RANGE.
 
 ### Directions:
-0. Strictly ensure the final portfolio contains 15-20 positions. If current holdings are below 15, add new positions. If above 20, remove the weakest positions.
-1. Analyze the current portfolio positions, account information, portfolio metrics, stock metrics, monthly performance, diversification, and correlation matrix
-2. Identify the most significant issues affecting portfolio performance (concentration risk, underperforming assets, etc.)
-3. Recommend specific actions with exact positions and quantities:
-    - Which specific positions should be reduced or sold completely
-    - Which specific positions should be increased
-    - New long positions that should be added (with specific tickers and allocation amounts) YOU CAN CHOOSE ANY STOCK FROM ANY SECTOR OR INDUSTRY OR SUBINDUSTRY AND FROM ANY COUNTRY, AS LONG AS ITS A GOOD INVESTMENT AND WILL MAKE MONEY
-    - New short positions that should be added (with specific tickers and allocation amounts) YOU CAN CHOOSE ANY STOCK FROM ANY SECTOR OR INDUSTRY OR SUBINDUSTRY AND FROM ANY COUNTRY, AS LONG AS ITS A GOOD INVESTMENT AND WILL MAKE MONEY
-    - Exact percentage adjustments to each position
-4. Explain how each recommendation will improve the portfolio's return potential
-5. Provide a clear implementation plan 
-6. Provide the final portfolio in a neatly organzied format
-7. Return trade actions and final portfolio in json format
+    1. Analyze the current portfolio positions, account information, portfolio metrics, stock metrics, monthly performance, diversification, and correlation matrix
+    2. Identify the most significant issues affecting portfolio performance
+    3. Recommend specific actions with exact positions and quantities:
+        - Which specific positions should be reduced or sold completely (Bad Performers)
+        - Which specific positions should be increased (Good Performers)
+        - New long positions that should be added (with specific tickers and allocation amounts) 
+        - New short positions that should be added (with specific tickers and allocation amounts)
+        - Exact percentage adjustments to each position
+    4. Explain how each recommendation will improve the portfolio's return potential
+    5. Provide a clear implementation plan 
+    6. Provide the final portfolio in a neatly organzied table format
+    7. Return trade actions and final portfolio in json format
 
 IMPORTANT:
     ### ACTIONS YOU ARE ALLOWED TO TAKE:
@@ -104,15 +112,17 @@ IMPORTANT:
     4. COMMODITIES
     5. REAL ESTATE INVESTMENT TRUSTS (REITs)
     6. FOREIGN EXCHANGE
+    7. ALTERNATIVE INVESTMENTS 
 
     ### FORMAT YOUR RESPONSE WITH THESE SECTIONS(BE CONCISE AND TO THE POINT):
     1. Portfolio Assessment
     2. Key Issues
-    3. Specific Recommendations (with exact position sizes and tickers)
-    4. Implementation Plan
-    5. Expected Outcome
+    3. Specific fixes to issues 
+    4. Specific Recommendations (with exact allocation size and tickers)
+    5. Implementation Plan
+    6. Expected Outcome
 
-### THEN I WANT THE EXACT TRADE EXECUTION INSTRUCTIONS IN THIS FORMAT:
+### THE EXACT TRADE EXECUTION INSTRUCTIONS IN THIS FORMAT:
 Trade Action: [action(buy/sell/hold)] | Ticker: [ticker] | Quantity: [quantity]
 
 ### THIS IS THE FORMAT YOU SHOULD USE(THESE ARE EXAMPLES, YOU MUST FOLLOW THIS FORMAT, DO NOT PRINT UNCHAGNED ASSETS IN PORTFOLIO):
@@ -121,7 +131,7 @@ Trade Action: [action(buy/sell/hold)] | Ticker: [ticker] | Quantity: [quantity]
 • BUY 'SOME STOCK' (50 shares) --> increase from 100 → 150 [TELL THE USER THE REASON FOR MAKING THIS TRADE]
 • BUY 'SOME STOCK' (500 shares)  [TELL THE USER THE REASON FOR MAKING THIS TRADE]
 
-### ONCE YOU HAVE FINISHED YOUR ANALYSIS, THIS IS THE FORMAT YOU SHOULD USE FOR THE NEW PORTFOLIO, REMEMBER i WANT AT LEAST 15 ASSETS IN THE PORTFOLIO:
+### FINAL PORTFOLIO POSITIONS FORMAT(MUST BE 15-20 ASSETS):
 HEADER: FINAL PORTFOLIO POSITIONS
 -----------------------------------------------------------------------------------------
 | Ticker | Quantity | Allocation | Market Value | bought/sold/held/position size change |
@@ -341,7 +351,7 @@ Place the JSON output at the end of your response after your human-readable reco
             if round_num > max_rounds:
                 print(f"Reached maximum rounds ({max_rounds}). Getting final recommendation...")
                 final_response = client.chat.completions.create(
-                    model=openai_model,
+                    model=model,
                     messages=messages + [{
                         "role": "user",
                         "content": "You've reached the maximum number of tool calls. Please provide your final portfolio recommendation now based on the information you have gathered so far. Remember to include both human-readable and JSON formats as specified in the original instructions."
@@ -360,7 +370,7 @@ Place the JSON output at the end of your response after your human-readable reco
                 print(f"Round {round_num}: Using {next_tool} (Phase 1)")
                 
                 forced_response = client.chat.completions.create(
-                    model=openai_model,
+                    model=model,
                     messages=messages + [{
                         "role": "user", 
                         "content": f"Please ONLY use the {next_tool} tool now."
@@ -390,7 +400,7 @@ Place the JSON output at the end of your response after your human-readable reco
                 search_msg = f"Please use the free_search tool to search for specific market information. You have {remaining_searches} searches remaining."
                 
                 response = client.chat.completions.create(
-                    model=openai_model,
+                    model=model,
                     messages=messages + [{"role": "user", "content": search_msg}],
                     tools=[search_tool]
                 )
@@ -409,7 +419,7 @@ Place the JSON output at the end of your response after your human-readable reco
                 print(f"Round {round_num}: Requesting final recommendation")
                 
                 final_response = client.chat.completions.create(
-                    model=openai_model,
+                    model=model,
                     messages=messages + [{
                         "role": "user", 
                         "content": "Now provide your final portfolio recommendation based on all the data gathered. Include both human-readable and JSON formats as specified."
@@ -485,7 +495,7 @@ ONLY after conducting all required research using the specified tools and any ad
         return error_msg
 
 def parse_json_with_openai(text):
-    client = OpenAI(api_key=os.environ.get("OPENAI_API_KEY", OpenAI_API_KEY))
+    client = OpenAI(api_key=OpenAI_API_KEY)
     
     system_prompt = """You are a JSON extraction assistant. Your task is to extract ONLY the 'final_portfolio' 
     array from the provided text and return it as a valid, parseable JSON object with the structure:
@@ -495,7 +505,7 @@ def parse_json_with_openai(text):
     return an empty array: {"final_portfolio": []}"""
     
     response = client.chat.completions.create(
-        model=openai_model,
+        model="gpt-4o",
         messages=[
             {"role": "system", "content": system_prompt},
             {"role": "user", "content": f"Extract the 'final_portfolio' JSON from this text: {text}"}
