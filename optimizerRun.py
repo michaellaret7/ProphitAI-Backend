@@ -1,4 +1,4 @@
-from optimizerAnalysts import stock_universe, free_search, communication_services_analyst, consumer_staples_analyst, consumer_discretionary_analyst, energy_analyst, financials_analyst, commodities_analyst, etf_analyst, treasuries_analyst, foreign_exchange_analyst, ig_credit_analyst, high_yield_analyst, emerging_market_analyst, healthcare_analyst, industrials_analyst, information_technology_analyst, materials_analyst, real_estate_analyst, utilities_analyst
+from optimizerAnalysts import free_search, communication_services_analyst, consumer_staples_analyst, consumer_discretionary_analyst, energy_analyst, financials_analyst, commodities_analyst, etf_analyst, treasuries_analyst, foreign_exchange_analyst, ig_credit_analyst, high_yield_analyst, emerging_market_analyst, healthcare_analyst, industrials_analyst, information_technology_analyst, materials_analyst, real_estate_analyst, utilities_analyst, get_equity_universe, get_etf_universe
 from optimizerFormatting import format
 from openai import OpenAI
 import json
@@ -6,26 +6,249 @@ import os
 from datetime import datetime
 import traceback
 from dotenv import load_dotenv
+import re
+import anthropic
+import difflib  
 
 # Load environment variables from .env file
 load_dotenv()
 
 # API KEYS
 OpenAI_API_KEY = os.environ.get("OPENAI_API_KEY")
-Sonar_API_KEY = os.environ.get("PERPLEXITY_API_KEY")
 DeepSeek_API_KEY = os.environ.get("DEEPSEEK_API_KEY")
+Anthropic_API_KEY = os.environ.get("ANTHROPIC_API_KEY")
 
 # MODELS
 openai_model = os.environ.get("OPENAI_MODEL")
-perplexity_model = os.environ.get("PERPLEXITY_MODEL")
 deepseek_model = os.environ.get("DEEPSEEK_MODEL")
-
-# CLIENTS
-client = OpenAI(api_key=OpenAI_API_KEY)
-# client = OpenAI(api_key=DeepSeek_API_KEY, base_url="https://api.deepseek.com")
+anthropic_model = os.environ.get("ANTHROPIC_MODEL")
 
 # MODEL
-model = "o3-mini"
+model = openai_model
+client = OpenAI(api_key=OpenAI_API_KEY)
+
+def parse_json_with_openai(text):
+    # Simple regex to find JSON between triple quotes
+    json_pattern = r"```(?:json)?\s*([\s\S]*?)```"
+    json_matches = re.findall(json_pattern, text)
+    
+    if json_matches:
+        try:
+            # Try to parse the first JSON block found
+            parsed_json = json.loads(json_matches[0])
+            return parsed_json
+        except json.JSONDecodeError:
+            return {"error": "Failed to parse JSON", "portfolio": []}
+    
+    return {"error": "No JSON found in triple quotes", "portfolio": []}
+
+
+def validate_and_fix_allocations(portfolio_content):
+    """
+    Validates portfolio allocations sum to 100% and fixes them if necessary.
+    
+    Args:
+        portfolio_content: The raw portfolio recommendation content
+        model_client: The client to use for follow-up requests
+        
+    Returns:
+        The final validated portfolio JSON
+    """
+    model_client = OpenAI(api_key=DeepSeek_API_KEY, base_url="https://api.deepseek.com")
+    model = "deepseek-reasoner"
+
+    # Parse the initial JSON
+    portfolio_json = parse_json_with_openai(portfolio_content)
+    
+    # Validate the allocations
+    total_allocation = 0
+    
+    if "portfolio" not in portfolio_json:
+        print("Warning: No portfolio array found in JSON")
+        return portfolio_json
+    
+    for asset in portfolio_json["portfolio"]:
+        if "allocation" in asset:
+            # Handle allocation as string (remove % sign if present)
+            allocation_str = str(asset["allocation"]).strip()
+            if allocation_str.endswith("%"):
+                allocation_str = allocation_str[:-1]
+            
+            try:
+                allocation = float(allocation_str)
+                total_allocation += allocation
+            except ValueError:
+                print(f"Warning: Could not parse allocation value: {asset['allocation']}")
+    
+    # Check if total allocation is 100% (allowing for small floating point errors)
+    is_valid = abs(total_allocation - 100.0) < 0.5
+    
+    print("JSON:")
+    print("-"*100)
+    print(portfolio_json)
+    
+    # If allocations sum to 100%, return the original
+    if is_valid:
+        return portfolio_json
+    
+   
+    # Otherwise, send a follow-up request to fix allocations
+    print(f"\nWARNING: Total allocation is {total_allocation}%, which is not 100%.")
+    print("Sending follow-up request to fix allocations...\n")
+    
+    # Create follow-up request to fix allocations
+    follow_up_message = f"""
+Your portfolio recommendation has allocations that sum to {total_allocation}%, which is not 100%.
+
+Please adjust the allocations to ensure they sum to exactly 100%.
+Remember:
+1. Keep 5-7% of the portfolio in cash
+2. Make sure there are at least 5 asset classes
+3. ONLY use asset classes from the get_equity_universe and get_etf_universe tools
+4. Return the COMPLETE portfolio with adjusted allocations in the same JSON format
+
+Original portfolio recommendation:
+{json.dumps(portfolio_json, indent=2)}
+"""
+    
+    # Use the provided client for follow-up request
+    fix_response = model_client.chat.completions.create(
+        model=model,
+        messages=[
+            {
+                "role": "system",
+                "content": """You are an elite portfolio manager who creates optimized investment portfolios. Your task now is to fix allocation percentages to ensure they sum to exactly 100%.
+                """
+            },
+            {
+                "role": "user",
+                "content": follow_up_message
+            }
+        ],
+    )
+    
+    fixed_content = fix_response.choices[0].message.content
+    print("\nFixed portfolio recommendation received.")
+    
+    # Parse the fixed JSON
+    fixed_json = parse_json_with_openai(fixed_content)
+    
+    # Validate the fixed allocations
+    fixed_total = 0
+    for asset in fixed_json.get("portfolio", []):
+        if "allocation" in asset:
+            allocation_str = str(asset["allocation"]).strip()
+            if allocation_str.endswith("%"):
+                allocation_str = allocation_str[:-1]
+            
+            try:
+                allocation = float(allocation_str)
+                fixed_total += allocation
+            except ValueError:
+                print(f"Warning: Could not parse fixed allocation value: {asset['allocation']}")
+    
+    is_fixed_valid = abs(fixed_total - 100.0) < 0.5
+    
+    print(f"Fixed allocations sum to {fixed_total}%")
+    print("Fixed JSON:")
+    print("-"*100)
+    print(fixed_json)
+    
+    # Return the fixed JSON if it's valid, otherwise the original
+    if is_fixed_valid:
+        return fixed_json
+    else:
+        print(f"WARNING: Fixed allocations still don't sum to 100% (total: {fixed_total}%)")
+        return portfolio_json
+
+
+def validate_asset_classes(portfolio_json):
+    """
+    Validates that asset classes in the portfolio JSON exist in the database.
+    If an asset class doesn't exist, finds the most similar one.
+    
+    Args:
+        portfolio_json: The portfolio recommendation JSON
+        
+    Returns:
+        The final validated portfolio JSON with valid asset classes
+    """
+    print("Validating asset classes...")
+    
+    try:
+        # Load valid asset classes directly from database_schemas.json
+        with open('database_schemas.json', 'r') as f:
+            schema_data = json.load(f)
+        
+        # Extract all valid asset classes
+        valid_asset_classes = []
+        
+        # Process equity sectors from database_schemas.json
+        for sector_name, sector_info in schema_data.items():
+            schemas = sector_info.get('schemas', {})
+            
+            # Add sector name
+            valid_asset_classes.append(sector_name)
+            
+            for schema_name, schema_info in schemas.items():
+                # Add industry name
+                valid_asset_classes.append(schema_name)
+                
+                tables = schema_info.get('tables', {})
+                for table_name in tables.keys():
+                    # Add subindustry name
+                    valid_asset_classes.append(table_name)
+        
+        # Add ETF categories from database_schemas.json schema "etf_data"
+        if "etf_data" in schema_data:
+            etf_schemas = schema_data.get("etf_data", {}).get("schemas", {})
+            for etf_category in etf_schemas.keys():
+                # Add ETF category
+                valid_asset_classes.append(etf_category)
+                
+                tables = etf_schemas[etf_category].get('tables', {})
+                for etf_type in tables.keys():
+                    # Add ETF type
+                    valid_asset_classes.append(etf_type)
+        
+        # Add "cash" as a valid asset class
+        valid_asset_classes.append("cash")
+        
+        # Remove duplicates
+        valid_asset_classes = list(set(valid_asset_classes))
+        
+        # Check each asset class in the portfolio
+        replacements_made = False
+        if "portfolio" in portfolio_json:
+            for asset in portfolio_json["portfolio"]:
+                current_asset_class = asset.get("asset_class")
+                
+                # Skip if no asset class or already valid
+                if not current_asset_class or current_asset_class in valid_asset_classes:
+                    continue
+                
+                # Find the most similar asset class
+                closest_match = difflib.get_close_matches(current_asset_class, valid_asset_classes, n=1, cutoff=0.6)
+                
+                if closest_match:
+                    print(f"Replacing invalid asset class '{current_asset_class}' with '{closest_match[0]}'")
+                    asset["asset_class"] = closest_match[0]
+                    replacements_made = True
+                else:
+                    print(f"Warning: No close match found for '{current_asset_class}'")
+                    
+        if replacements_made:
+            print("Asset class validation complete - replacements were made")
+        else:
+            print("Asset class validation complete - all asset classes are valid")
+            
+        return portfolio_json
+        
+    except Exception as e:
+        print(f"Error during asset class validation: {e}")
+        traceback.print_exc()
+        return portfolio_json  # Return original if validation fails
+
 
 def optimize():
     current_date = datetime.now().strftime('%Y-%m-%d')
@@ -39,12 +262,13 @@ def optimize():
 
     # Create the content string with portfolio data
     content = f"""
-Analyze the provided portfolio data and recommend specific actions to improve returns and reduce risk. 
-REMEMBER THE CURRENT DATE IS {current_date} 
+Analyze the provided portfolio data, which consists of positions in asset class representatives such as sector ETFs, bond ETFs, and other instruments. Recommend specific actions to improve returns and reduce risk by adjusting exposures to different asset classes.
+
+REMEMBER THE CURRENT DATE IS {current_date}
 
 ------------------------------------------------------------------------------------------------------
 
-### Portfolio Positions:
+### Current Asset Class Positions:
 
 {positions_table}
 
@@ -55,10 +279,6 @@ REMEMBER THE CURRENT DATE IS {current_date}
 ### Portfolio Metrics:
 
 {portfolio_metrics}
-
-### Stock Metrics:
-
-{stock_metrics}
 
 ### Monthly Performance:
 
@@ -75,73 +295,47 @@ REMEMBER THE CURRENT DATE IS {current_date}
 ------------------------------------------------------------------------------------------------------
 
 ### RULES (YOU MUST FOLLOW THESE RULES):
-    1. NO HALLUCINATIONS, IF THERE IS SOMETHING YOU DO NOT KNOW OR IF THERE IS DATA MISSING, SAY YOU DO NOT KNOW, AND PROCEED LOGICALLY.
-    2. BE VERY SPECIFIC AND EXACT WITH YOUR RECOMMENDATIONS.
-    3. BE SUCCUINCT AND CONCISE, BUT MAKE SURE TO EXPLAIN YOUR REASONING.
-    4. BE CREATIVE IN YOUR STRATEGIES AND THINK OUTSIDE THE BOX.
-    5. KEEP 5-7% OF THE PORTFOLIO IN CASH.
-    6. THE SUM OF ALL POSITIONS SHOULD BE EQUAL TO 93%-95% OF THE ORIGINAL CASH VALUE OF THE PORTFOLIO.
-    7. THE PORTFOLIO MUST CONTAIN EXACTLY 15-20 POSITIONS. THIS IS A STRICT REQUIREMENT - NEVER FEWER THAN 15 OR MORE THAN 20. IF NEEDED, ADD NEW POSITIONS OR REMOVE EXISTING ONES TO MEET THIS RANGE.
+1. NO HALLUCINATIONS, IF THERE IS SOMETHING YOU DO NOT KNOW OR IF THERE IS DATA MISSING, SAY YOU DO NOT KNOW, AND PROCEED LOGICALLY.
+2. BE VERY SPECIFIC AND EXACT WITH YOUR RECOMMENDATIONS.
+3. BE SUCCINCT AND CONCISE, BUT MAKE SURE TO EXPLAIN YOUR REASONING.
+4. BE CREATIVE AND THINK OUTSIDE THE BOX.
+5. KEEP 5-7% OF THE PORTFOLIO IN CASH.
+6. THE SUM OF ALL POSITIONS SHOULD BE EQUAL TO 93%-95% OF THE ORIGINAL CASH VALUE OF THE PORTFOLIO.
+7. MAKE SURE ALL OF THE ALLOCATION PERCENTAGES ADD UP TO 100% OF THE PORTFOLIO
+    - IF ALL OF THE RECOMENDATIONS ADD UP TO LESS THAN 100% YOU MUST ADD MORE ASSET CLASSES TO THE PORTFOLIO UNTIL IT ADDS UP TO 100%
+8. MAKE SURE THERE ARE AT LEAST 5 ASSET CLASSES IN THE PORTFOLIO
+    - IF THERE ARE LESS THAN 5 ASSET CLASSES YOU MUST ADD MORE ASSET CLASSES TO THE PORTFOLIO
 
 ### Directions:
-    1. Analyze the current portfolio positions, account information, portfolio metrics, stock metrics, monthly performance, diversification, and correlation matrix
-    2. Identify the most significant issues affecting portfolio performance
-    3. Recommend specific actions with exact positions and quantities:
-        - Which specific positions should be reduced or sold completely (Bad Performers)
-        - Which specific positions should be increased (Good Performers)
-        - New long positions that should be added (with specific tickers and allocation amounts) 
-        - New short positions that should be added (with specific tickers and allocation amounts)
-        - Exact percentage adjustments to each position
-    4. Explain how each recommendation will improve the portfolio's return potential
-    5. Provide a clear implementation plan 
-    6. Provide the final portfolio in a neatly organzied table format
-    7. Return trade actions and final portfolio in json format
+1. Analyze the current portfolio positions, account information, portfolio metrics, asset class metrics, monthly performance, diversification, and correlation matrix.
+2. Identify the most significant issues affecting portfolio performance, focusing on asset class exposures.
+3. IMPORTANT: You MUST use the data from the get_equity_universe and get_etf_universe tools to make specific recommendations for:
+   - Specific equity sectors, industries, and sub-industries using ONLY the final category names from get_equity_universe
+   - Specific ETFs using ONLY the final category names from get_etf_universe
+   - Specific bond categories (Treasuries, Investment Grade, High Yield)
+   - Specific commodities
+   - Real Estate segments
+   - Foreign Exchange exposures
+   - Alternative Investments
+4. DO NOT recommend generic ETF categories - use the specific sector/industry/ETF names exactly as they appear in the data tools.
+5. Explain how each recommendation will improve the portfolio's return potential and risk profile.
+6. Return portfolio in JSON format.
 
 IMPORTANT:
-    ### ACTIONS YOU ARE ALLOWED TO TAKE:
-    1. BUY NEW ASSETS
-    2. SHORT NEW ASSETS
-    3. REDUCE EXISTING POSITIONS
-    4. INCREASE EXISTING POSITIONS
-    4. HOLD POSITIONS (DO NOT CHANGE)
+- Be as granular and specific as possible with your recommendations.
+- If you think a certain industry or sub industry will do really well based on the research add it to the allocation.
+- I want you to be creative and think outside the box.
+- The Goal is to create a portfolio that will outperform the S&P 500. 
+- BE AS SPECIFIC AS POSSIBLE WITH YOUR RECOMMENDATIONS
+- YOU CAN ONLY CHOOSE FROM THE ASSET CLASSES AND SECTORS/INDUSTRIES/SUBINDUSTRIES THAT ARE IN THE get_equity_universe and get_etf_universe tools.
+- USE ONLY THE FINAL/LEAF NODE NAME AS THE ASSET_CLASS VALUE, NOT THE FULL HIERARCHICAL PATH.
+- For example, use "multi_utilities" NOT "equity_sector_utilities_multi_utilities"
 
-    ### ASSETS YOU ARE ALLOWED TO BUY:
-    1. STOCKS/EQUITIES
-    2. BONDS
-    3. EXCHANGE TRADED FUNDS (ETFS)
-    4. COMMODITIES
-    5. REAL ESTATE INVESTMENT TRUSTS (REITs)
-    6. FOREIGN EXCHANGE
-    7. ALTERNATIVE INVESTMENTS 
+IMPORTANT: IN ADDITION to providing a human-readable recommendation, you MUST also output the same recommendation in a machine-readable JSON format for automated processing.
 
-    ### FORMAT YOUR RESPONSE WITH THESE SECTIONS(BE CONCISE AND TO THE POINT):
-    1. Portfolio Assessment
-    2. Key Issues
-    3. Specific fixes to issues 
-    4. Specific Recommendations (with exact allocation size and tickers)
-    5. Implementation Plan
-    6. Expected Outcome
-
-### THE EXACT TRADE EXECUTION INSTRUCTIONS IN THIS FORMAT:
-Trade Action: [action(buy/sell/hold)] | Ticker: [ticker] | Quantity: [quantity]
-
-### THIS IS THE FORMAT YOU SHOULD USE(THESE ARE EXAMPLES, YOU MUST FOLLOW THIS FORMAT, DO NOT PRINT UNCHAGNED ASSETS IN PORTFOLIO):
-• SELL 'SOME STOCK' (100 shares) --> entire position  [TELL THE USER THE REASON FOR MAKING THIS TRADE]
-• SELL 'SOME STOCK' (50 shares) --> reduce from 100 → 50 [TELL THE USER THE REASON FOR MAKING THIS TRADE]
-• BUY 'SOME STOCK' (50 shares) --> increase from 100 → 150 [TELL THE USER THE REASON FOR MAKING THIS TRADE]
-• BUY 'SOME STOCK' (500 shares)  [TELL THE USER THE REASON FOR MAKING THIS TRADE]
-
-### FINAL PORTFOLIO POSITIONS FORMAT(MUST BE 15-20 ASSETS):
-HEADER: FINAL PORTFOLIO POSITIONS
------------------------------------------------------------------------------------------
-| Ticker | Quantity | Allocation | Market Value | bought/sold/held/position size change |
------------------------------------------------------------------------------------------
-| Ticker | Quantity | Allocation | Market Value | bought/sold/held/position size change |
------------------------------------------------------------------------------------------
-| Ticker | Quantity | Allocation | Market Value | bought/sold/held/position size change |
------------------------------------------------------------------------------------------
-
-IMPORTANT: IN ADDITION to providing a human readable recommendation, you MUST also output the same recommendation in a machine-readable JSON format for automated processing.
+Clear Example of Correct Asset Class Format:
+- ✓ CORRECT: "asset_class": "multi_utilities"  
+- ✗ INCORRECT: "asset_class": "equity_sector_utilities_multi_utilities"
 
 Your response should have two parts:
 1. Human-readable portfolio recommendation
@@ -150,30 +344,17 @@ Your response should have two parts:
 ===JSON OUTPUT===
 ```json
 {{
-  "trade_actions": [
+    "portfolio": [
     {{
-      "action_type": "SELL|BUY|HOLD|SHORT|REDUCE|INCREASE",
-      "ticker": "symbol",
-      "quantity": "number or text description",
-      "reason": "reason for the trade"
+      "asset_class": "ONLY USE THE FINAL NODE NAME from get_equity_universe or get_etf_universe (Example: Use 'multi_utilities' NOT 'equity_sector_utilities_multi_utilities')",
+      "allocation": "percentage of the portfolio allocated to this asset class",
+      "reason": "reason for the allocation"
     }},
-    ...
-  ],
-  "final_portfolio": [
-    {{
-      "ticker": "symbol",
-      "position_type": "LONG|SHORT|CASH",
-      "shares": "number",
-      "allocation": "percentage of the portfolio that is allocated to this asset(this is a required field, do not leave blank and it should be in percent terms)",
-    }},
-    ...MUST CONTAIN BETWEEN 15-20 ENTRIES. NEVER FEWER THAN 15 OR MORE THAN 20...
   ]
 }}
 ```
-
-Place the JSON output at the end of your response after your human-readable recommendation, clearly separated by "===JSON OUTPUT===".
 """
-    
+
     try:
         # Define all analyst tools in a more efficient way
         def create_analyst_tool(name, description):
@@ -229,7 +410,8 @@ Place the JSON output at the end of your response after your human-readable reco
             "materials_analyst": "Generate a comprehensive analysis of the materials sector, examining chemicals, mining, metals, and construction materials trends. The report covers commodity prices, supply-demand dynamics, sustainability initiatives, and global trade patterns affecting materials companies.",
             "real_estate_analyst": "Generate a comprehensive analysis of the real estate sector, examining residential, commercial, industrial, and specialized property trends. The report covers interest rate impacts, occupancy rates, rent growth, development pipelines, and sector-specific dynamics within real estate.",
             "utilities_analyst": "Generate a comprehensive analysis of the utilities sector, examining electric, gas, water, and renewable energy utilities. The report covers regulatory frameworks, interest rate sensitivity, environmental policies, infrastructure investments, and the energy transition's impact on utilities.",
-            "stock_universe_analyst": "Access the complete list of available stocks for investment, organized by sector, industry, and sub-industry. Provides access to 5000+ securities across all sectors. YOU MUST SELECT 15-20 DIVERSE POSITIONS FROM THIS UNIVERSE."
+            "get_equity_universe": "Retrieve and format sector/industry/subindustry data from database_schemas.json for optimal LLM ingestion, providing a hierarchical classification structure for financial markets.",
+            "get_etf_universe": "Retrieve and format ETF classification data from the etf_data database for optimal LLM ingestion, providing a hierarchical ETF classification structure."
         }
         
         # Create all tools dynamically
@@ -271,6 +453,29 @@ Place the JSON output at the end of your response after your human-readable reco
                 tool_response = f"Web Search Results for: '{query}'\n\n{search_response}\n\nNOTE: This information should be incorporated into your portfolio analysis. You should conduct additional searches on other topics to build a comprehensive view before making final recommendations."
                 write_to_file(f"FREE SEARCH: {query}", search_response)
             
+            # Special cases for get_equity_universe and get_etf_universe
+            elif function_name == "get_equity_universe":
+                print(f"\033[97m🛠️ TOOL USED: \033[92m{function_name}\033[0m")
+                try:
+                    equity_universe_data = get_equity_universe()
+                except Exception as e:
+                    print(f"Error generating equity universe data: {e}")
+                    equity_universe_data = f"I attempted to retrieve the equity universe data but encountered an error. Please continue with the available information or try using other research tools."
+                
+                tool_response = f"Equity Universe Data:\n\n{equity_universe_data}\n\nNOTE: Use this hierarchical classification data to inform your portfolio allocation decisions across different sectors and industries."
+                write_to_file("EQUITY UNIVERSE DATA", equity_universe_data)
+                
+            elif function_name == "get_etf_universe":
+                print(f"\033[97m🛠️ TOOL USED: \033[92m{function_name}\033[0m")
+                try:
+                    etf_universe_data = get_etf_universe()
+                except Exception as e:
+                    print(f"Error generating ETF universe data: {e}")
+                    etf_universe_data = f"I attempted to retrieve the ETF universe data but encountered an error. Please continue with the available information or try using other research tools."
+                
+                tool_response = f"ETF Universe Data:\n\n{etf_universe_data}\n\nNOTE: Use this hierarchical classification data to inform your portfolio allocation decisions across different ETF categories."
+                write_to_file("ETF UNIVERSE DATA", etf_universe_data)
+            
             # All other analyst tools
             else:
                 print(f"\033[97m🛠️ TOOL USED: \033[92m{function_name}\033[0m")
@@ -295,7 +500,8 @@ Place the JSON output at the end of your response after your human-readable reco
                     "materials_analyst": materials_analyst,
                     "real_estate_analyst": real_estate_analyst,
                     "utilities_analyst": utilities_analyst,
-                    "stock_universe_analyst": stock_universe
+                    "get_equity_universe": get_equity_universe,
+                    "get_etf_universe": get_etf_universe
                 }
                 
                 # Get the appropriate function and call it
@@ -355,7 +561,8 @@ Place the JSON output at the end of your response after your human-readable reco
                     messages=messages + [{
                         "role": "user",
                         "content": "You've reached the maximum number of tool calls. Please provide your final portfolio recommendation now based on the information you have gathered so far. Remember to include both human-readable and JSON formats as specified in the original instructions."
-                    }]
+                    }],
+                    temperature=0.7
                 )
                 final_content = final_response.choices[0].message.content
                 with open(output_filename, "a", encoding="utf-8") as f:
@@ -375,7 +582,8 @@ Place the JSON output at the end of your response after your human-readable reco
                         "role": "user", 
                         "content": f"Please ONLY use the {next_tool} tool now."
                     }],
-                    tools=[tool_map[next_tool]]
+                    tools=[tool_map[next_tool]],
+                    temperature=0.7
                 )
                 
                 forced_message = forced_response.choices[0].message
@@ -402,7 +610,8 @@ Place the JSON output at the end of your response after your human-readable reco
                 response = client.chat.completions.create(
                     model=model,
                     messages=messages + [{"role": "user", "content": search_msg}],
-                    tools=[search_tool]
+                    tools=[search_tool],
+                    temperature=0.7
                 )
                 
                 response_message = response.choices[0].message
@@ -423,7 +632,8 @@ Place the JSON output at the end of your response after your human-readable reco
                     messages=messages + [{
                         "role": "user", 
                         "content": "Now provide your final portfolio recommendation based on all the data gathered. Include both human-readable and JSON formats as specified."
-                    }]
+                    }],
+                    temperature=0.7
                 )
                 
                 final_content = final_response.choices[0].message.content
@@ -447,6 +657,8 @@ RESEARCH METHODOLOGY REQUIREMENTS:
 3. Research multiple sectors, market caps, geographies, and asset classes.
 4. Analyze macroeconomic trends, sector rotations, valuation metrics, and risk factors.
 5. Investigate both tactical (1-6 month) and strategic (1-3 year) opportunities.
+6. IMPORTANT: You MUST use the get_equity_universe and get_etf_universe tools first to understand available investment options before making recommendations.
+7. ALWAYS use SPECIFIC names of sectors, industries, ETFs, and other assets exactly as they appear in the data from get_equity_universe and get_etf_universe.
 
 ONLY after conducting all required research using the specified tools and any additional free searches should you formulate your final recommendation."""
         }
@@ -458,9 +670,10 @@ ONLY after conducting all required research using the specified tools and any ad
         user_message = {
             "role": "user",
             "content": content + "\n\nTo optimize the portfolio, follow this specific process:\n\n" +
-            "1. First, use ALL the required analyst tools in sequence\n" +
-            "2. Then, use the free_search tool 3-6 times to research specific opportunities\n" +
-            "3. Finally, provide your comprehensive portfolio recommendation with both human-readable and JSON formats.\n\n"
+            "1. First, use the get_equity_universe and get_etf_universe tools to see all available investment options\n" +
+            "2. Then, use ALL the other required analyst tools in sequence\n" +
+            "3. Then, use the free_search tool 3-6 times to research specific opportunities\n" +
+            "4. Finally, provide your comprehensive portfolio recommendation using SPECIFIC asset names from the equity/ETF universe with both human-readable and JSON formats.\n\n"
         }
         
         # Set up initial messages and start conversation
@@ -494,51 +707,14 @@ ONLY after conducting all required research using the specified tools and any ad
             
         return error_msg
 
-def parse_json_with_openai(text):
-    client = OpenAI(api_key=OpenAI_API_KEY)
-    
-    system_prompt = """You are a JSON extraction assistant. Your task is to extract ONLY the 'final_portfolio' 
-    array from the provided text and return it as a valid, parseable JSON object with the structure:
-    {"final_portfolio": [...array items...]}
-    
-    Do not include any explanations or other content. If the final_portfolio section is not found,
-    return an empty array: {"final_portfolio": []}"""
-    
-    response = client.chat.completions.create(
-        model="gpt-4o",
-        messages=[
-            {"role": "system", "content": system_prompt},
-            {"role": "user", "content": f"Extract the 'final_portfolio' JSON from this text: {text}"}
-        ],
-        response_format={"type": "json_object"}
-    )
-    
-    extracted_json = response.choices[0].message.content
-    
-    try:
-        # Parse the extracted JSON
-        parsed_json = json.loads(extracted_json)
-        
-        # Return the parsed JSON, ensuring 'final_portfolio' exists
-        if isinstance(parsed_json, dict):
-            if "final_portfolio" in parsed_json:
-                return parsed_json
-            # If 'final_portfolio' key is missing but another structure exists
-            elif any(isinstance(v, list) for v in parsed_json.values()):
-                # Find the first list and use that as final_portfolio
-                for key, value in parsed_json.items():
-                    if isinstance(value, list):
-                        return {"final_portfolio": value}
-            
-        # If we couldn't find the right structure, return the whole JSON
-        return parsed_json
-    except json.JSONDecodeError:
-        return {"error": "Failed to parse JSON from OpenAI response", "final_portfolio": []}
 
-
+# Main execution flow
 final_content = optimize()
 print(final_content)
-json = parse_json_with_openai(final_content)
-print("JSON:")
-print("-"*100)
-print(json)
+
+portfolio_json = validate_and_fix_allocations(final_content)
+
+portfolio_json = validate_asset_classes(portfolio_json)
+
+print(portfolio_json)
+

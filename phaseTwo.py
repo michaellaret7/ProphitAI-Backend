@@ -7,6 +7,7 @@ from decimal import Decimal
 from datetime import datetime, timedelta
 from openai import OpenAI
 from dotenv import load_dotenv
+import concurrent.futures
 
 # Load environment variables from .env file
 load_dotenv()
@@ -16,11 +17,32 @@ DEEPSEEK_API_KEY = os.environ.get("DEEPSEEK_API_KEY")
 Sonar_API_KEY = os.environ.get("PERPLEXITY_API_KEY")
 PERPLEXITY_MODEL = os.environ.get("PERPLEXITY_MODEL")
 
-DEEPSEEK_API_KEY = os.environ.get("DEEPSEEK_API_KEY")
-
 client = OpenAI(api_key=DEEPSEEK_API_KEY, base_url="https://api.deepseek.com")
 
-model = 'deepseek-chat'
+model = 'deepseek-reasoner'
+
+# Sample portfolio data for testing when this module is run directly
+portfolio_data = {
+  "portfolio": [
+    {
+      "asset_class": "precious_metals_etfs",
+      "allocation": 15,
+      "reason": "Growth potential driven by AI and cloud technologies."
+    },
+
+    {
+      "asset_class": "automobile_manufacturers",
+      "allocation": 5,
+      "reason": "Attractive yields amid low interest rates."
+    },
+    {
+      "asset_class": "cash",
+      "allocation": 5,
+      "reason": "For liquidity and opportunistic investments."
+    }
+  ]
+}
+
 
 def get_daily_closing_prices(ticker, years=4, db_config=None):
    """
@@ -658,8 +680,7 @@ def analyze_fundamentals(ticker):
         # Only add items that have at least some data
         filtered_data.append(filtered_item)
     
-    # print(filtered_data)
-    
+
     # Create system prompt
     system_prompt = """
 You are a financial analyst specializing in fundamental analysis.
@@ -704,8 +725,7 @@ IMPORTANT:
         max_tokens=1000
     )
 
-    print(response.choices[0].message.content)
-    
+
     return response.choices[0].message.content
 
 def get_news_sentiment(query):
@@ -745,13 +765,34 @@ def get_news_sentiment(query):
         
         # Get the response content
         result = response.choices[0].message.content
-
         return result
                 
     except Exception as e:
         error_message = f"Error retrieving news sentiment: {str(e)}"
         print(error_message)
         return error_message
+
+def extract_asset_classes(json_data):
+    """
+    Extract asset classes from portfolio JSON data.
+    
+    Args:
+        json_data (str): JSON string containing portfolio data
+        
+    Returns:
+        list: List of asset class names with 'cash' filtered out
+    """
+    # Parse the JSON string
+    import json
+    data = json_data
+    
+    # Extract asset classes using list comprehension
+    asset_classes = [item["asset_class"] for item in data["portfolio"]]
+    
+    # Filter out 'cash' from the list
+    asset_classes = [asset for asset in asset_classes if asset.lower() != 'cash']
+    
+    return asset_classes
 
 def get_stock_tickers(filter_value):
     """
@@ -762,7 +803,7 @@ def get_stock_tickers(filter_value):
         filter_value (str, optional): Value to filter on. If None, returns all tickers.
     
     Returns:
-        list: List of matching stock tickers
+        dict: Dictionary with filter_value as key and list of matching stock tickers as value
     """
 
     with open('database_schemas.json', 'r') as f:
@@ -783,7 +824,7 @@ def get_stock_tickers(filter_value):
                     tickers = table_info.get('tickers', [])
                     matching_tickers.extend(tickers)
                     
-        return matching_tickers
+        return {"all": matching_tickers}
     
     # Check if filter_value is a sector
     if filter_value in schema_data:
@@ -817,168 +858,333 @@ def get_stock_tickers(filter_value):
                         tickers = table_info.get('tickers', [])
                         matching_tickers.extend(tickers)
     
-    # Remove duplicates and return sorted list
-    return sorted(list(set(matching_tickers)))
+    # Remove duplicates and sort list
+    sorted_tickers = sorted(list(set(matching_tickers)))
+    
+    # Return dictionary with filter_value as key and ticker list as value
+    return {filter_value: sorted_tickers}
 
-def filter_stocks(ticker_list):
+def filter_stocks(ticker_input):
     """
     Filter stocks based on quantitative metrics using z-scores to identify highest potential performers.
     
     Args:
-        ticker_list: List of stock tickers to evaluate
-        min_stocks: Minimum number of stocks to return if less than 10 are available
+        ticker_input: Either a dictionary {filter_value: [tickers]} or a list of tickers
         
     Returns:
-        List of the top 10 stock tickers based on composite z-scores
+        If input is a dictionary: Dictionary with filter_value as key and list of top tickers as value
+        If input is a list: List of top tickers
     """
-    all_metrics = {}
+    result_dict = {}
     
-    # Step 1: Calculate metrics for all tickers
-    for ticker in ticker_list:
-        metrics = calculate_stock_metrics(ticker)
-        all_metrics[ticker] = metrics
-    
-    # Step 2: Convert metrics to DataFrame for z-score calculation
-    metrics_data = []
-    for ticker, metrics in all_metrics.items():
-        metrics_row = {'Ticker': ticker}
-        metrics_row.update(metrics)
-        metrics_data.append(metrics_row)
-    
-    df = pd.DataFrame(metrics_data)
-    
-    # Define metrics based on whether higher or lower values are better
-    higher_is_better = [
-        'sharpe_ratio', 'sortino_ratio', 'calmar_ratio', 'annualized_return',
-        'upside_capture', 'momentum_6m', 'momentum_12m'
-    ]
-    
-    lower_is_better = [
-        'annualized_volatility', 'daily_return_volatility', 'max_drawdown', 'beta',
-        'sector_beta', 'downside_capture'
-    ]
-    
-    # Calculate z-scores for each metric
-    z_scores = df.copy()
-    for col in higher_is_better + lower_is_better:
-        if col in df.columns and df[col].std() != 0:
-            z_scores[col] = (df[col] - df[col].mean()) / df[col].std()
-        else:
-            # Skip or set to 0 if column is missing or has no variation
-            z_scores[col] = 0
-    
-    # Adjust z-scores for metrics where lower is better
-    for col in lower_is_better:
-        if col in z_scores.columns:
-            z_scores[col] = -z_scores[col]
-    
-    # Calculate composite score by summing adjusted z-scores
-    metric_columns = [col for col in higher_is_better + lower_is_better if col in z_scores.columns]
-    z_scores['composite_score'] = z_scores[metric_columns].sum(axis=1)
-    
-    # Rank stocks by composite score in descending order
-    ranked_df = z_scores.sort_values(by='composite_score', ascending=False)
-    
-    # Get the top 10 tickers (or all tickers if less than 10 are available)
-    max_stocks = 10
-    available_stocks = min(max_stocks, len(ranked_df))
-    filtered_tickers = ranked_df.head(available_stocks)['Ticker'].tolist()
-    
-    return filtered_tickers
+    # Check if input is a list or dictionary and handle accordingly
+    if isinstance(ticker_input, list):
+        # If input is a list, process it directly
+        ticker_list = ticker_input
+        all_metrics = {}
+        
+        # Step 1: Calculate metrics for all tickers
+        for ticker in ticker_list:
+            metrics = calculate_stock_metrics(ticker)
+            all_metrics[ticker] = metrics
+        
+        # Step 2: Convert metrics to DataFrame for z-score calculation
+        metrics_data = []
+        for ticker, metrics in all_metrics.items():
+            metrics_row = {'Ticker': ticker}
+            metrics_row.update(metrics)
+            metrics_data.append(metrics_row)
+        
+        df = pd.DataFrame(metrics_data)
+        
+        # Define metrics based on whether higher or lower values are better
+        higher_is_better = [
+            'sharpe_ratio', 'sortino_ratio', 'calmar_ratio', 'annualized_return',
+            'upside_capture', 'momentum_6m', 'momentum_12m'
+        ]
+        
+        lower_is_better = [
+            'annualized_volatility', 'daily_return_volatility', 'max_drawdown', 'beta',
+            'sector_beta', 'downside_capture'
+        ]
+        
+        # Calculate z-scores for each metric
+        z_scores = df.copy()
+        for col in higher_is_better + lower_is_better:
+            if col in df.columns and df[col].std() != 0:
+                z_scores[col] = (df[col] - df[col].mean()) / df[col].std()
+            else:
+                # Skip or set to 0 if column is missing or has no variation
+                z_scores[col] = 0
+        
+        # Adjust z-scores for metrics where lower is better
+        for col in lower_is_better:
+            if col in z_scores.columns:
+                z_scores[col] = -z_scores[col]
+        
+        # Calculate composite score by summing adjusted z-scores
+        metric_columns = [col for col in higher_is_better + lower_is_better if col in z_scores.columns]
+        z_scores['composite_score'] = z_scores[metric_columns].sum(axis=1)
+        
+        # Rank stocks by composite score in descending order
+        ranked_df = z_scores.sort_values(by='composite_score', ascending=False)
+        
+        # Get the top 10 tickers (or all tickers if less than 10 are available)
+        max_stocks = 10
+        available_stocks = min(max_stocks, len(ranked_df))
+        filtered_tickers = ranked_df.head(available_stocks)['Ticker'].tolist()
+        
+        # Return list directly for list input
+        return filtered_tickers
+        
+    else:
+        # Process each filter_value and its tickers for dictionary input
+        for filter_value, ticker_list in ticker_input.items():
+            all_metrics = {}
+            
+            # Step 1: Calculate metrics for all tickers
+            for ticker in ticker_list:
+                metrics = calculate_stock_metrics(ticker)
+                all_metrics[ticker] = metrics
+            
+            # Step 2: Convert metrics to DataFrame for z-score calculation
+            metrics_data = []
+            for ticker, metrics in all_metrics.items():
+                metrics_row = {'Ticker': ticker}
+                metrics_row.update(metrics)
+                metrics_data.append(metrics_row)
+            
+            df = pd.DataFrame(metrics_data)
+            
+            # Define metrics based on whether higher or lower values are better
+            higher_is_better = [
+                'sharpe_ratio', 'sortino_ratio', 'calmar_ratio', 'annualized_return',
+                'upside_capture', 'momentum_6m', 'momentum_12m'
+            ]
+            
+            lower_is_better = [
+                'annualized_volatility', 'daily_return_volatility', 'max_drawdown', 'beta',
+                'sector_beta', 'downside_capture'
+            ]
+            
+            # Calculate z-scores for each metric
+            z_scores = df.copy()
+            for col in higher_is_better + lower_is_better:
+                if col in df.columns and df[col].std() != 0:
+                    z_scores[col] = (df[col] - df[col].mean()) / df[col].std()
+                else:
+                    # Skip or set to 0 if column is missing or has no variation
+                    z_scores[col] = 0
+            
+            # Adjust z-scores for metrics where lower is better
+            for col in lower_is_better:
+                if col in z_scores.columns:
+                    z_scores[col] = -z_scores[col]
+            
+            # Calculate composite score by summing adjusted z-scores
+            metric_columns = [col for col in higher_is_better + lower_is_better if col in z_scores.columns]
+            z_scores['composite_score'] = z_scores[metric_columns].sum(axis=1)
+            
+            # Rank stocks by composite score in descending order
+            ranked_df = z_scores.sort_values(by='composite_score', ascending=False)
+            
+            # Get the top 10 tickers (or all tickers if less than 10 are available)
+            max_stocks = 10
+            available_stocks = min(max_stocks, len(ranked_df))
+            filtered_tickers = ranked_df.head(available_stocks)['Ticker'].tolist()
+            
+            # Add the filtered tickers to the result dictionary
+            result_dict[filter_value] = filtered_tickers
+        
+        return result_dict
 
 def run_portfolio_manager(tickers=None):
-    """
-    Run the portfolio manager to analyze stocks and make recommendations.
-    
-    Args:
-        tickers (list, optional): List of ticker symbols to analyze. If None, will retrieve all tickers.
-        
-    This function enforces a strict sequential workflow for consistent analysis:
-    1. Gather all tickers
-    2. For each ticker, analyze in sequence: metrics → fundamentals → sentiment
-    3. After all tickers are analyzed, select the best stocks
-    """
-    # Get tickers if not provided
-    if not tickers:
-        print("Retrieving all stock tickers...")
-        tickers = get_stock_tickers(None)
-    
-    print(f"Beginning analysis of {len(tickers)} tickers...")
-    
-    # Store all ticker analysis data
-    all_analysis_data = {}
-    
-    # Process each ticker sequentially
-    for ticker in tickers:
-        print(f"\nAnalyzing ticker: {ticker}")
-        ticker_data = {}
-        
-        # Step 1: Calculate stock metrics
-        print(f"  Calculating metrics for {ticker}...")
-        metrics = calculate_stock_metrics(ticker)
-        ticker_data["metrics"] = metrics
-        
-        # Step 2: Analyze fundamentals
-        print(f"  Analyzing fundamentals for {ticker}...")
-        fundamentals = analyze_fundamentals(ticker)
-        ticker_data["fundamentals"] = fundamentals
-        
-        # Step 3: Get news sentiment
-        print(f"  Getting news sentiment for {ticker}...")
-        query = f"{ticker} stock recent performance analyst ratings news institutional ownership price targets earnings forecasts"
-        sentiment = get_news_sentiment(query)
-        ticker_data["sentiment"] = sentiment
-        
-        # Store complete analysis for this ticker
-        all_analysis_data[ticker] = ticker_data
-    
-    print(f"\nCompleted analysis of all {len(tickers)} tickers. Preparing final recommendations...")
-    
-    # Initialize conversation with system instructions for the final recommendation
-    messages = [
-        {
-            "role": "system", 
-            "content": f"""
+   """
+   Run the portfolio manager to analyze stocks and make recommendations.
+   
+   Args:
+      tickers (dict or list, optional): Dictionary with industry as key and list of ticker symbols as value,
+                                       or a list of ticker symbols to analyze.
+                                       If None, will retrieve all tickers.
+      
+   This function enforces a strict sequential workflow for consistent analysis:
+   1. Gather all tickers
+   2. For each ticker, analyze in sequence: metrics → fundamentals → sentiment
+   3. After all tickers are analyzed, select the best stocks
+   """
+   # Get tickers if not provided
+   if tickers is None:
+      print("Retrieving all stock tickers...")
+      tickers = get_stock_tickers(None)
+   
+   etf_categories = [
+      "alternative_etfs", 
+      "commodity_etfs", 
+      "equity_etfs", 
+      "fixed_income_etfs",
+      "private_equity_exposure_etfs",
+      "business_development_companies",
+      "closed_end_funds_that_hold_private_equity_late_sta",
+      "equity_selection_hedge_fund_holding_clones",
+      "hedge_funds",
+      "ipo_focused_etfs_late_stage_tech_pre_ipo_th",
+      "softs",
+      "broad_commodity_etfs",
+      "energy_focused_etfs",
+      "grains",
+      "industrial_metals",
+      "livestock",
+      "precious_metals_etfs",
+      "single_country_and_regional_etfs_in_emerging_marke",
+      "sector_specific_etfs",
+      "barra_styleetfs",
+      "broad_us_market",
+      "broad_based_emerging_market_equity_etfs",
+      "factor_style_and_specialized_em_etfs",
+      "global_international_etfs",
+      "convertible_bonds",
+      "high_yield_junk_bond_etfs",
+      "investment_grade_corporate_bond_etfs",
+      "treasury_and_inflation_bond_etfs"
+   ]
+   
+   # Store all ticker analysis data
+   all_analysis_data = {}
+   
+   # Handle dictionary input format
+   if isinstance(tickers, dict):
+      # Process by industry
+      for industry, ticker_list in tickers.items():
+         # Check if 'etfs' appears in the industry name
+         if industry in etf_categories:
+            print("It's an etf")
+         
+            print(f"\nBeginning analysis of {len(ticker_list)} tickers in {industry}...")
+            
+            # Process each ticker sequentially
+            for ticker in ticker_list:
+               print(f"\nAnalyzing ticker: {ticker}")
+               ticker_data = {}
+               
+               # Step 1: Calculate stock metrics
+               print(f"Calculating metrics for {ticker}...")
+               metrics = calculate_stock_metrics(ticker)
+               ticker_data["metrics"] = metrics
+               
+               # Skip fundamentals for ETFs and add a placeholder
+               ticker_data["fundamentals"] = "ETF fundamental data not analyzed"
+               
+               # Step 2: Get news sentiment
+               print(f"Getting news sentiment for {ticker}...")
+               query = f"{ticker} etf recent performance analyst ratings news institutional ownership price targets forecasts"
+               sentiment = get_news_sentiment(query)
+               ticker_data["sentiment"] = sentiment
+               
+               # Store complete analysis for this ticker
+               all_analysis_data[ticker] = ticker_data
+         
+         else:
+            print(f"\nBeginning analysis of {len(ticker_list)} tickers in {industry}...")
+            
+            # Process each ticker sequentially
+            for ticker in ticker_list:
+               print(f"\nAnalyzing ticker: {ticker}")
+               ticker_data = {}
+               
+               # Step 1: Calculate stock metrics
+               print(f"Calculating metrics for {ticker}...")
+               metrics = calculate_stock_metrics(ticker)
+               ticker_data["metrics"] = metrics
+               
+               # Step 2: Analyze fundamentals
+               print(f"Analyzing fundamentals for {ticker}...")
+               fundamentals = analyze_fundamentals(ticker)
+               ticker_data["fundamentals"] = fundamentals
+               
+               # Step 3: Get news sentiment
+               print(f"Getting news sentiment for {ticker}...")
+               query = f"{ticker} stock recent performance analyst ratings news institutional ownership price targets earnings forecasts"
+               sentiment = get_news_sentiment(query)
+               ticker_data["sentiment"] = sentiment
+               
+               # Store complete analysis for this ticker
+               all_analysis_data[ticker] = ticker_data
+   
+   # Handle list input format (backward compatibility)
+   else:
+      print(f"Beginning analysis of {len(tickers)} tickers...")
+      
+      # Process each ticker sequentially
+      for ticker in tickers:
+         print(f"\nAnalyzing ticker: {ticker}")
+         ticker_data = {}
+         
+         # Step 1: Calculate stock metrics
+         print(f"Calculating metrics for {ticker}...")
+         metrics = calculate_stock_metrics(ticker)
+         ticker_data["metrics"] = metrics
+         
+         # Step 2: Analyze fundamentals
+         print(f"Analyzing fundamentals for {ticker}...")
+         fundamentals = analyze_fundamentals(ticker)
+         ticker_data["fundamentals"] = fundamentals
+         
+         # Step 3: Get news sentiment
+         print(f"Getting news sentiment for {ticker}...")
+         query = f"{ticker} stock recent performance analyst ratings news institutional ownership price targets earnings forecasts"
+         sentiment = get_news_sentiment(query)
+         ticker_data["sentiment"] = sentiment
+         
+         # Store complete analysis for this ticker
+         all_analysis_data[ticker] = ticker_data
+   
+   print(f"\nCompleted analysis of all tickers. Preparing final recommendations...")
+   
+   # Initialize conversation with system instructions for the final recommendation
+   messages = [
+      {
+         "role": "system", 
+         "content": f"""
 <think>
 
 You are a very skilled portfolio manager with 30 years of experience. 
 
 TASK:
-You will receive the complete analysis data for {len(tickers)} stocks. Your job is to identify the top 2-3 stocks with the best overall performance.
+You will receive the complete analysis data for {len(all_analysis_data)} stocks. Your job is to identify the top 2-3 stocks with the best overall performance.
 
 ANALYSIS APPROACH:
 - Review ALL the provided data carefully
 - Evaluate each stock based on a combination of:
-  1. Performance metrics (sharpe ratio, sortino ratio, etc.)
-  2. Fundamental data
-  3. News sentiment
+1. Performance metrics (sharpe ratio, sortino ratio, etc.)
+2. Fundamental data (when available)
+3. News sentiment
 - Choose the 2-3 stocks that you believe have the best investment potential
 
 OUTPUT FORMAT:
 Return your recommendations in this JSON format:
 {{
-  "total_stocks_analyzed": {len(tickers)},
-  "recommendations": [
-    {{
-      "ticker": [string],
-      "justification": [string],
-      "fundamental_overview": [string],
-      "news_sentiment": [string],
-      "sharpe_ratio": [float],
-      "sortino_ratio": [float],
-      "calmar_ratio": [float],
-      "annualized_return": [float],
-      "annualized_volatility": [float],
-      "daily_return_volatility": [float],
-      "max_drawdown": [float],
-      "beta": [float],
-      "sector_beta": [float],
-      "upside_capture": [float],
-      "downside_capture": [float], 
-      "momentum_6m": [float],
-      "momentum_12m": [float]
-    }}
-  ]
+"total_stocks_analyzed": {len(all_analysis_data)},
+"recommendations": [
+   {{
+   "ticker": [string],
+   "justification": [string],
+   "fundamental_overview": [string],
+   "sentiment": [string],
+   "sharpe_ratio": [float],
+   "sortino_ratio": [float],
+   "calmar_ratio": [float],
+   "annualized_return": [float],
+   "annualized_volatility": [float],
+   "daily_return_volatility": [float],
+   "max_drawdown": [float],
+   "beta": [float],
+   "sector_beta": [float],
+   "upside_capture": [float],
+   "downside_capture": [float], 
+   "momentum_6m": [float],
+   "momentum_12m": [float]
+   }}
+]
 }}
 
 UNDERSTANDING THE METRICS:
@@ -999,158 +1205,70 @@ UNDERSTANDING THE METRICS:
 IMPORTANT:
 - Base your recommendations on the data provided - don't hallucinate additional information
 - If there is missing information for certain stocks, you may exclude them from consideration
+- For ETFs, fundamental data will be marked as "ETF fundamental data not analyzed"
 - Provide a concise but thorough justification for each recommendation
-            """
-        },
-        {
-            "role": "user", 
-            "content": f"Here is the complete analysis data for {len(tickers)} tickers: {json.dumps(all_analysis_data)}\n\nPlease analyze this data and provide your top 2-3 stock recommendations."
-        }
-    ]
+         """
+      },
+      {
+         "role": "user", 
+         "content": f"Here is the complete analysis data for {len(all_analysis_data)} tickers: {json.dumps(all_analysis_data)}\n\nPlease analyze this data and provide your top 2-3 stock recommendations."
+      }
+   ]
 
-    # Get final recommendations from the model
-    response = client.chat.completions.create(
-        model=model,
-        messages=messages,
-        temperature=0.75
-    )
-    
-    # Extract and return the final recommendations
-    recommendations = response.choices[0].message.content
-    print("Analysis complete!")
-    return recommendations
-
+   # Get final recommendations from the model
+   response = client.chat.completions.create(
+      model=model,
+      messages=messages
+   )
+   
+   # Extract and return the final recommendations
+   recommendations = response.choices[0].message.content
+   print("Analysis complete!")
+   return recommendations
 
 
+final = {}
 
-portfolio_data = {
-  "portfolio": [
-    {
-      "asset_class": "semiconductor_equipment",
-      "allocation": 15,
-      "reason": "Growth potential driven by AI and cloud technologies."
-    },
-    {
-      "asset_class": "systems_software",
-      "allocation": 15,
-      "reason": "Significant growth due to increasing enterprise adoption."
-    },
-    {
-      "asset_class": "biotechnology",
-      "allocation": 5,
-      "reason": "Focus on breakthroughs in precision medicine."
-    },
-    {
-      "asset_class": "pharmaceuticals",
-      "allocation": 5,
-      "reason": "Opportunities in novel therapeutic areas."
-    },
-    {
-      "asset_class": "specialty_chemicals",
-      "allocation": 8,
-      "reason": "Beneficiary of global sustainability trends."
-    },
-    {
-      "asset_class": "renewable_electricity",
-      "allocation": 5,
-      "reason": "Alignment with global energy transition initiatives."
-    },
-    {
-      "asset_class": "high_yield_junk_bond_etfs",
-      "allocation": 5,
-      "reason": "Attractive yields amid low interest rates."
-    },
-    {
-      "asset_class": "treasury_and_inflation_bond_etfs",
-      "allocation": 10,
-      "reason": "Portfolio stability and inflation protection."
-    },
-    {
-      "asset_class": "broad_based_emerging_market_equity_etfs",
-      "allocation": 7,
-      "reason": "Capture growth in dynamic emerging markets."
-    },
-    {
-      "asset_class": "industrial_reits",
-      "allocation": 3,
-      "reason": "Benefitting from e-commerce and logistics growth."
-    },
-    {
-      "asset_class": "health_care_reits",
-      "allocation": 2,
-      "reason": "Demand driven by demographic trends."
-    },
-    {
-      "asset_class": "precious_metals_etfs",
-      "allocation": 5,
-      "reason": "Inflation hedge and store of value."
-    },
-    {
-      "asset_class": "energy_focused_etfs",
-      "allocation": 5,
-      "reason": "Focused on renewable energy opportunities and innovation."
-    },
-    {
-      "asset_class": "cash",
-      "allocation": 5,
-      "reason": "For liquidity and opportunistic investments."
-    }
-  ]
-}
+asset_classes = extract_asset_classes(portfolio_data)
+print(asset_classes)
 
-def extract_asset_classes(json_data):
-    """
-    Extract asset classes from portfolio JSON data.
-    
-    Args:
-        json_data (str): JSON string containing portfolio data
-        
-    Returns:
-        list: List of asset class names
-    """
-    # Parse the JSON string
-    import json
-    data = json_data
-    
-    # Extract asset classes using list comprehension
-    asset_classes = [item["asset_class"] for item in data["portfolio"]]
-    
-    return asset_classes
+for asset in asset_classes:
+   x = get_stock_tickers(asset)
+   print(x)
+   
+   filtered_tickers = filter_stocks(x)
+   print(filtered_tickers)
 
-def runMain(portfolio_data):
-   final_result = {}
+   result_json = run_portfolio_manager(filtered_tickers)
+   print(result_json)  # Keep printing the raw JSON output if needed for debugging
 
-   # Extract all asset classes from portfolio_data
-   asset_classes = extract_asset_classes(portfolio_data)
+   try:
+       # Find the start and end of the actual JSON content within the string
+       start_index = result_json.find('{')
+       end_index = result_json.rfind('}')
+       
+       if start_index != -1 and end_index != -1:
+           cleaned_json_str = result_json[start_index : end_index + 1]
+           
+           # Parse the cleaned JSON string into a dictionary
+           result_data = json.loads(cleaned_json_str)
+           
+           # Iterate through recommendations and populate the final dictionary
+           if 'recommendations' in result_data:
+               for recommendation in result_data['recommendations']:
+                   ticker = recommendation.get('ticker')
+                   justification = recommendation.get('justification')
+                   if ticker: # Ensure ticker is not None or empty
+                       final[ticker] = justification
+           else:
+               print("No 'recommendations' key found in the result.")
+       else:
+           print("Could not find valid JSON structure ('{' and '}') in the result string.")
 
-   # Process only the first 2 sectors
-   for asset_class in asset_classes:
-      tickers = get_stock_tickers(asset_class)
-      print(tickers)
+   except json.JSONDecodeError as e:
+       print(f"Error decoding JSON: {e}")
+   except Exception as e:
+       print(f"An error occurred while processing recommendations: {e}")
 
-
-      tickers = filter_stocks(tickers)
-      full_result = run_portfolio_manager(tickers)
-      
-      # Parse the JSON result to extract just the tickers
-      try:
-         # The result might be enclosed in ```json and ``` tags, remove them if present
-         if "```json" in full_result:
-            json_str = full_result.split("```json\n")[1].split("\n```")[0]
-         else:
-            json_str = full_result
-            
-         result_data = json.loads(json_str)
-         recommended_tickers = [rec["ticker"] for rec in result_data.get("recommendations", [])]
-         final_result[asset_class] = recommended_tickers
-      except Exception as e:
-         print(f"Error parsing result for {asset_class}: {e}")
-         final_result[asset_class] = []
-
-   return final_result
-
-
-from optimizerRun import validate_asset_classes
-
-
-print(validate_asset_classes(portfolio_data))
+print("Final recommendations dictionary:")
+print(final)
