@@ -1,195 +1,13 @@
 import os
+import psycopg2
 import json
 import pandas as pd
-import numpy as np
-import psycopg2
 from decimal import Decimal
-from datetime import datetime, timedelta
-from openai import OpenAI
-import time
 from dotenv import load_dotenv
+import pandas as pd
+from datetime import datetime
 
-# Load environment variables from .env file
 load_dotenv()
-
-# Initialize the OpenAI client
-OPENAI_API_KEY = os.environ.get("OPENAI_API_KEY")
-OPENAI_MODEL = os.environ.get("OPENAI_MODEL")
-PERPLEXITY_MODEL = os.environ.get("PERPLEXITY_MODEL")
-client = OpenAI(api_key=OPENAI_API_KEY)
-
-def get_daily_closing_prices(ticker, years=3, db_config=None):
-   """
-   Retrieve daily closing prices (last bar of each day) for a given stock
-   """
-   # Database configuration
-   if db_config is None:
-      db_config = {
-         "host": "demo-postgres.ctemwoy8mbzw.us-east-1.rds.amazonaws.com",
-         "user": "postgres",
-         "password": "ml1710402!",
-         "port": "5432"
-      }
-   
-   # Normalize ticker
-   ticker_upper = ticker.upper()
-   ticker_lower = ticker.lower()
-   
-   # Calculate start date
-   end_date = datetime.now()
-   start_date = end_date - timedelta(days=365 * years)
-   
-   # Load schema definition
-   with open('database_schemas.json', 'r') as f:
-      schema_data = json.load(f)
-   
-   # Find ticker location
-   ticker_location = None
-   for sector_name, sector_info in schema_data.items():
-      database = sector_info.get('database')
-      schemas = sector_info.get('schemas', {})
-      
-      for schema_name, schema_info in schemas.items():
-         tables = schema_info.get('tables', {})
-         
-         for table_name, table_info in tables.items():
-               tickers = table_info.get('tickers', [])
-               
-               if ticker_upper in tickers:
-                  ticker_location = {
-                     "database": f"{database}_prices",
-                     "schema": f"{schema_name}_prices",
-                     "ticker": ticker_upper
-                  }
-                  break
-         if ticker_location: break
-      if ticker_location: break
-   
-   if not ticker_location:
-      print(f"Ticker {ticker_upper} not found")
-      return None
-   
-   try:
-      # Connect to database
-      db_config['dbname'] = ticker_location['database']
-      conn = psycopg2.connect(**db_config)
-      cursor = conn.cursor()
-      
-      # Query only the last bar of each day
-      query = f"""
-      WITH daily_closing AS (
-         SELECT 
-               CAST(date AS DATE) as trading_date,
-               MAX(datetime) as last_bar_time
-         FROM {ticker_location['schema']}.{ticker_lower}
-         WHERE date >= %s
-         GROUP BY CAST(date AS DATE)
-      )
-      SELECT 
-         dc.trading_date as date,
-         t.close
-      FROM daily_closing dc
-      JOIN {ticker_location['schema']}.{ticker_lower} t
-         ON t.datetime = dc.last_bar_time
-      ORDER BY dc.trading_date DESC
-      """
-      
-      cursor.execute(query, (start_date.strftime('%Y-%m-%d'),))
-      
-      # Convert results
-      results = []
-      for row in cursor.fetchall():
-         date_val, close_val = row
-         
-         if isinstance(close_val, Decimal):
-               close_val = float(close_val)
-               
-         results.append({
-               "date": date_val.strftime('%Y-%m-%d'),
-               "close": close_val
-         })
-
-      df = pd.DataFrame(results)
-      df['date'] = pd.to_datetime(df['date'])
-      df = df.sort_values('date')
-
-      return df
-      
-   except Exception as e:
-      print(f"Error retrieving stock data: {e}")
-      return None
-   
-   finally:
-      if 'conn' in locals() and conn:
-         cursor.close()
-         conn.close()
-
-def calculate_stock_metrics(ticker):
-   """
-   Calculate the Sharpe ratio and other risk-adjusted performance metrics for a stock.
-   
-   Args:
-       ticker (str): The stock ticker symbol (e.g., 'AAPL', 'MSFT')
-   
-   Returns:
-       dict: Dictionary containing calculated financial metrics
-   """
-   # Get price data for the ticker
-   price_data = get_daily_closing_prices(ticker)
-   
-   risk_free_rate=0.03
-   annualization_factor=252
-   df = price_data
-   df['daily_return'] = df['close'].pct_change()
-   
-   # Drop NaN values (first row will have NaN return) and create an explicit copy
-   df = df.dropna().copy()
-   
-   # Calculate metrics
-   daily_returns = df['daily_return'].values
-   mean_daily_return = np.mean(daily_returns)
-   std_daily_return = np.std(daily_returns)
-   
-   # Convert risk-free rate to daily
-   daily_risk_free_rate = (1 + risk_free_rate) ** (1/annualization_factor) - 1
-   
-   # Calculate daily Sharpe ratio
-   daily_sharpe = (mean_daily_return - daily_risk_free_rate) / std_daily_return
-   
-   # Annualize Sharpe ratio
-   annual_sharpe = daily_sharpe * np.sqrt(annualization_factor)
-   
-   # Calculate annualized return and volatility
-   annual_return = ((1 + mean_daily_return) ** annualization_factor) - 1
-   annual_volatility = std_daily_return * np.sqrt(annualization_factor)
-   
-   # Calculate Maximum Drawdown
-   df['cumulative_return'] = (1 + df['daily_return']).cumprod()
-   df['rolling_max'] = df['cumulative_return'].cummax()
-   df['drawdown'] = (df['cumulative_return'] / df['rolling_max']) - 1
-   max_drawdown = df['drawdown'].min()
-   
-   # Calculate Sortino Ratio (uses only negative returns to penalize downside deviation)
-   negative_returns = daily_returns[daily_returns < 0]
-   downside_deviation = np.std(negative_returns) if len(negative_returns) > 0 else 0
-   sortino_ratio = 0
-   if downside_deviation > 0:
-      sortino_ratio = (mean_daily_return - daily_risk_free_rate) / downside_deviation * np.sqrt(annualization_factor)
-   
-   # Calculate Calmar Ratio (return / maximum drawdown)
-   calmar_ratio = abs(annual_return / max_drawdown) if max_drawdown != 0 else 0
-   
-   return {
-      "sharpe_ratio": float(round(annual_sharpe, 2)),
-      "sortino_ratio": float(round(sortino_ratio, 2)),
-      "calmar_ratio": float(round(calmar_ratio, 2)),
-      "annualized_return": float(round(annual_return, 2)),
-      "annualized_volatility": float(round(annual_volatility, 2)),
-      "daily_return_volatility": float(round(std_daily_return, 2)),
-      "max_drawdown": float(round(max_drawdown, 2)),
-      "data_points": len(daily_returns),
-      "date_range": [df['date'].min().strftime('%Y-%m-%d'), df['date'].max().strftime('%Y-%m-%d')]
-   }
 
 def get_fundamentals_data(ticker, db_config=None):
    """
@@ -199,10 +17,10 @@ def get_fundamentals_data(ticker, db_config=None):
    # Database configuration
    if db_config is None:
       db_config = {
-         "host": "demo-postgres.ctemwoy8mbzw.us-east-1.rds.amazonaws.com",
-         "user": "postgres",
-         "password": "ml1710402!",
-         "port": "5432"
+         "host": os.environ.get("DB_HOST"),
+         "user": os.environ.get("DB_USER"),
+         "password": os.environ.get("DB_PASSWORD"),
+         "port": os.environ.get("DB_PORT")
       }
    
    # Normalize ticker
@@ -226,14 +44,48 @@ def get_fundamentals_data(ticker, db_config=None):
                tickers = table_info.get('tickers', [])
                
                if ticker_upper in tickers:
+                  # Special case for ETFs - use specific database names
+                  if "etf" in sector_name.lower():
+                     db_name = "etf_fundamentals"
+                  else:
+                     db_name = f"{database}_fundamentals"
+                     
                   ticker_location = {
-                     "database": f"{database}_fundamentals",
+                     "database": db_name,
                      "schema": f"{schema_name}",
                      "ticker": ticker_upper
                   }
                   break
          if ticker_location: break
       if ticker_location: break
+   
+   if not ticker_location:
+      # Try case-insensitive ticker search if exact match wasn't found
+      for sector_name, sector_info in schema_data.items():
+         database = sector_info.get('database')
+         schemas = sector_info.get('schemas', {})
+         
+         for schema_name, schema_info in schemas.items():
+            tables = schema_info.get('tables', {})
+            
+            for table_name, table_info in tables.items():
+                  tickers = table_info.get('tickers', [])
+                  
+                  # Case-insensitive comparison
+                  for db_ticker in tickers:
+                     if ticker_upper.upper() == db_ticker.upper():
+                        # Special case for ETFs - use specific database names
+                        if "etf" in sector_name.lower():
+                           db_name = "etf_fundamentals"
+                        else:
+                           db_name = f"{database}_fundamentals"
+                           
+                        ticker_location = {
+                           "database": db_name,
+                           "schema": f"{schema_name}",
+                           "ticker": db_ticker  # Use the ticker with the exact case from the database
+                        }
+                        break
    
    if not ticker_location:
       print(f"Ticker {ticker_upper} not found")
@@ -283,8 +135,8 @@ def get_fundamentals_data(ticker, db_config=None):
             if not table_exists:
                print(f"Table {table_name} does not exist, skipping")
                continue
-               
-            # Query table data
+            
+            # Query all data from table without date filtering
             query = f"""
             SELECT *
             FROM {ticker_location['schema']}.{table_name}
@@ -367,270 +219,131 @@ def get_fundamentals_data(ticker, db_config=None):
          cursor.close()
          conn.close()
 
-# Helper function to create a file search assistant
-def get_stock_tickers():
+def get_most_recent_piotroski_score(ticker):
     """
-    Retrieve all available stock tickers from the vector store.
+    Calculate the most recent Piotroski Score for a given stock ticker based on available financial data.
+    
+    Parameters:
+    - ticker (str): The stock ticker symbol (e.g., "AAPL").
     
     Returns:
-        list: List of available stock tickers
+    - tuple: (score, fiscal_year) where score is the Piotroski Score (0-7) or None if data is insufficient,
+             and fiscal_year is the year for which it was calculated or None.
+    
+    Note: Assumes fiscal year ends in September (e.g., Apple's fiscal calendar). Due to missing cash flow data,
+          the score is based on 7 criteria instead of the full 9.
     """
-    # Create an assistant with file search capability
-    assistant = client.beta.assistants.create(
-        name="Stock Ticker Finder",
-        instructions="You are an assistant that retrives stock tickers from the database.",
-        model=OPENAI_MODEL,
-        tools=[{"type": "file_search"}],
-        tool_resources={"file_search": {"vector_store_ids": ["vs_67e9cd40d06c819191c42f9de2cde622"]}}
-    )
+    # Retrieve fundamentals data (assuming get_fundamentals_data is defined elsewhere)
+    data = get_fundamentals_data(ticker)
+    if data is None or 'balance_sheets' not in data or 'income_statements' not in data:
+        return None, None
     
-    # Create a thread for file search
-    thread = client.beta.threads.create()
+    # Convert data into DataFrames
+    balance_df = pd.DataFrame(data['balance_sheets'])
+    income_df = pd.DataFrame(data['income_statements'])
     
-    # Add a message asking for stock tickers
-    client.beta.threads.messages.create(
-        thread_id=thread.id,
-        role="user",
-        content="List all available stock tickers in the dataset"
-    )
+    # Parse dates and set as index
+    balance_df['date'] = pd.to_datetime(balance_df['date'])
+    income_df['date'] = pd.to_datetime(income_df['date'])
+    balance_df.set_index('date', inplace=True)
+    income_df.set_index('date', inplace=True)
     
-    # Run the assistant with file search tool
-    run = client.beta.threads.runs.create(
-        thread_id=thread.id,
-        assistant_id=assistant.id,
-    )
+    # Identify all fiscal years with September balance sheets
+    sept_years = balance_df[balance_df.index.month == 9].index.year.unique()
+    sept_years = sorted(sept_years, reverse=True)  # Sort descending to start with most recent
     
-    # Wait for completion
-    while run.status not in ["completed", "failed"]:
-        time.sleep(1)
-        run = client.beta.threads.runs.retrieve(thread_id=thread.id, run_id=run.id)
-    
-    if run.status == "failed":
-        return ["Error retrieving tickers"]
-    
-    # Get the file search results
-    messages = client.beta.threads.messages.list(thread_id=thread.id)
-    for message in messages.data:
-        if message.role == "assistant":
-            # Extract ticker list from the assistant's response
-            # This assumes the response is formatted as a list of tickers
-            content = message.content[0].text.value
-            # Simple parsing - this may need to be adjusted based on actual response format
-            tickers = [ticker.strip() for ticker in content.replace("[", "").replace("]", "").split(",")]
-            return tickers
-    
-    return "something went wrong"  # Fallback to sample list
-
-def get_news_sentiment(query):
-    """
-    Get news sentiment for a particular stock.
-    
-    Args:
-        query (str): A detailed query to retrieve recent news about a stock
+    # Iterate over fiscal years to find the most recent one with complete data
+    for year in sept_years:
+        # Define quarter dates for current and previous fiscal years (Apple's FY ends in September)
+        current_quarters = [
+            pd.Timestamp(year - 1, 12, 31),  # Q1
+            pd.Timestamp(year, 3, 31),       # Q2
+            pd.Timestamp(year, 6, 30),       # Q3
+            pd.Timestamp(year, 9, 30)        # Q4
+        ]
+        previous_quarters = [
+            pd.Timestamp(year - 2, 12, 31),  # Q1 previous year
+            pd.Timestamp(year - 1, 3, 31),   # Q2 previous year
+            pd.Timestamp(year - 1, 6, 30),   # Q3 previous year
+            pd.Timestamp(year - 1, 9, 30)    # Q4 previous year
+        ]
         
-    Returns:
-        str: News sentiment results
-    """
-    # Get Perplexity API key from environment variables
-    Sonar_API_KEY = os.environ.get("PERPLEXITY_API_KEY")
+        # Check if all required income statement quarters exist
+        if not all(q in income_df.index for q in current_quarters + previous_quarters):
+            continue
+        
+        # Define balance sheet dates (current and two prior years)
+        current_q4 = pd.Timestamp(year, 9, 30)
+        previous_q4 = pd.Timestamp(year - 1, 9, 30)
+        two_years_ago_q4 = pd.Timestamp(year - 2, 9, 30)
+        
+        # Check if all required balance sheets exist
+        if not all(q in balance_df.index for q in [current_q4, previous_q4, two_years_ago_q4]):
+            continue
+        
+        # Extract income statement data
+        current_net_income = income_df.loc[current_quarters, 'net_income'].sum()
+        previous_net_income = income_df.loc[previous_quarters, 'net_income'].sum()
+        current_revenue = income_df.loc[current_quarters, 'revenue'].sum()
+        previous_revenue = income_df.loc[previous_quarters, 'revenue'].sum()
+        current_gross_profit = income_df.loc[current_quarters, 'gross_profit'].sum()
+        previous_gross_profit = income_df.loc[previous_quarters, 'gross_profit'].sum()
+        
+        # Extract balance sheet data
+        current_bs = balance_df.loc[current_q4]
+        previous_bs = balance_df.loc[previous_q4]
+        two_years_ago_bs = balance_df.loc[two_years_ago_q4]
+        
+        current_total_assets = current_bs['total_assets']
+        previous_total_assets = previous_bs['total_assets']
+        two_years_ago_total_assets = two_years_ago_bs['total_assets']
+        current_long_term_debt = current_bs['non_current_debt']
+        previous_long_term_debt = previous_bs['non_current_debt']
+        current_current_assets = current_bs['current_assets']
+        previous_current_assets = previous_bs['current_assets']
+        current_current_liabilities = current_bs['current_liabilities']
+        previous_current_liabilities = previous_bs['current_liabilities']
+        current_outstanding_shares = current_bs['outstanding_shares']
+        previous_outstanding_shares = previous_bs['outstanding_shares']
+        
+        # Calculate Piotroski Score (7 criteria)
+        score = 0
+        
+        # Profitability Criteria
+        if current_net_income > 0:
+            score += 1
+        if current_net_income / previous_total_assets > 0:
+            score += 1
+        
+        # Leverage, Liquidity, and Source of Funds Criteria
+        current_debt_ratio = current_long_term_debt / current_total_assets if current_total_assets != 0 else 0
+        previous_debt_ratio = previous_long_term_debt / previous_total_assets if previous_total_assets != 0 else 0
+        if current_debt_ratio < previous_debt_ratio:
+            score += 1
+        
+        current_current_ratio = current_current_assets / current_current_liabilities if current_current_liabilities != 0 else float('inf')
+        previous_current_ratio = previous_current_assets / previous_current_liabilities if previous_current_liabilities != 0 else float('inf')
+        if current_current_ratio > previous_current_ratio:
+            score += 1
+        
+        if current_outstanding_shares <= previous_outstanding_shares:
+            score += 1
+        
+        # Operating Efficiency Criteria
+        current_gross_margin = current_gross_profit / current_revenue if current_revenue != 0 else 0
+        previous_gross_margin = previous_gross_profit / previous_revenue if previous_revenue != 0 else 0
+        if current_gross_margin > previous_gross_margin:
+            score += 1
+        
+        current_asset_turnover = current_revenue / previous_total_assets if previous_total_assets != 0 else 0
+        previous_asset_turnover = previous_revenue / two_years_ago_total_assets if two_years_ago_total_assets != 0 else 0
+        if current_asset_turnover > previous_asset_turnover:
+            score += 1
+        
+        # Return the score and year as soon as a valid score is calculated
+        return score, year
     
-    # Set up system and user prompts
-    system_prompt = "You are a financial analyst. Analyze news sentiment about stocks objectively."
-    user_prompt = f"Analyze the recent news sentiment for: {query}. Provide a summary of the sentiment (positive, negative, or neutral) with supporting evidence from recent articles. The date is March 30th, 2025, do not take news into account that is more than 2 weeks old. This is for a stock outlook to see if I should recomend to buy or not. Make sure to look at analyst ratings."
-    
-    messages = [
-        {
-            "role": "system",
-            "content": system_prompt
-        },
-        {   
-            "role": "user",
-            "content": user_prompt
-        },
-    ]
-
-    # Initialize client with Perplexity API
-    client = OpenAI(api_key=Sonar_API_KEY, base_url="https://api.perplexity.ai")
-    
-    try:
-        # Chat completion without streaming
-        response = client.chat.completions.create(
-            model=PERPLEXITY_MODEL,
-            messages=messages
-        )
-        
-        # Get the response content
-        result = response.choices[0].message.content
-        
-        # Print the output
-        print(result)
-        
-        return result
-                
-    except Exception as e:
-        error_message = f"Error retrieving news sentiment: {str(e)}"
-        print(error_message)
-        return error_message
-
-# Define the function schemas for OpenAI function calling
-available_functions = {
-    "get_stock_tickers": get_stock_tickers,
-    "calculate_stock_metrics": calculate_stock_metrics,
-    "get_news_sentiment": get_news_sentiment
-}
-
-# Function schema definitions
-tools = [
-    {
-        "type": "function",
-        "function": {
-            "name": "get_stock_tickers",
-            "description": "Retrieve all available stock tickers from the system",
-            "parameters": {
-                "type": "object",
-                "properties": {},
-                "required": []
-            }
-        }
-    },
-    {
-        "type": "function",
-        "function": {
-            "name": "calculate_stock_metrics",
-            "description": "Calculate performance metrics for a specific stock ticker",
-            "parameters": {
-                "type": "object",
-                "properties": {
-                    "ticker": {
-                        "type": "string",
-                        "description": "The stock ticker symbol (e.g., 'AAPL', 'MSFT')"
-                    }
-                },
-                "required": ["ticker"]
-            }
-        }
-    },
-    {
-        "type": "function",
-        "function": {
-            "name": "get_news_sentiment",
-            "description": "Get news sentiment for a specific stock or query",
-            "parameters": {
-                "type": "object",
-                "properties": {
-                    "query": {
-                        "type": "string",
-                        "description": "A detailed query to retrieve recent news about a stock"
-                    }
-                },
-                "required": ["query"]
-            }
-        }
-    }
-]
-
-def run_portfolio_manager():
-    """
-    Run the portfolio manager to analyze stocks and make recommendations.
-    
-    This function uses OpenAI function calling to orchestrate the analysis process.
-    """
-    # Initialize conversation with system instructions
-    messages = [
-        {
-            "role": "system", 
-            "content": """
-You are a very skilled portfolio manager at JP Morgan. 
-INSTRUCTIONS - FOLLOW THESE STEPS IN ORDER:
-1. Use the file search tool to retrieve ALL of the stock tickers that you can choose from.
-2. Create a comprehensive list of ALL tickers found in the vector store.
-3. Use the calculate_stock_metrics tool to calculate the performance of EVERY SINGLE stock in your list.
-   - You MUST process all stocks without exception
-   - Keep track of how many stocks you've analyzed and ensure it matches the total count
-4. After analyzing ALL stocks, identify the 10 stocks with the best performance metrics.
-   - Rank them based on Sharpe ratio, Sortino ratio, and other key metrics
-   - Create a clear table showing the top performers and their metrics
-5. Use the get_news_sentiment tool to get the news sentiment for EACH of these 10 stocks.
-   - Build a detailed query into a search engine to retrieve recent news about the stocks.
-   - For example: "Latest financial performance, analyst ratings, and major news events for [TICKER] in the past two weeks, including earnings reports, regulatory changes, and market sentiment"
-   - The date is March 30th, 2025, do not take news into account that is more than 2 weeks old.
-6. Pick the best 3 stocks to build a portfolio based on BOTH metrics and sentiment.
-7. Return the results of the analysis in this structured format:
-   - Total stocks analyzed: [number]
-   - Top 10 performing stocks with their key metrics
-   - News sentiment summary for each top stock
-   - Final 3 recommendations with detailed justification
-
-IMPORTANT:
-- You MUST analyze ALL stocks available in the vector store - expected to be approximately 49 stocks.
-- The decision of which stocks to pick must be made using BOTH the news sentiment and the performance metrics.
-- No hallucinations, if there is missing information, say you don't know.
-- DO NOT get stuck in analysis loops. Complete the task efficiently.
-- If you find yourself not analyzing all stocks, STOP and restart the process to ensure complete coverage.
-        """,
-        },
-        {
-            "role": "user", 
-            "content": "Analyze the stocks and make your recommendations"
-        }
-    ]
-
-    # Process will continue until we get a final message without a function call
-    while True:
-        # Get model response
-        response = client.chat.completions.create(
-            model=OPENAI_MODEL,
-            messages=messages,
-            tools=tools,
-            temperature=0.75
-        )
-        
-        # Extract the response message
-        response_message = response.choices[0].message
-        
-        # Add the response to the messages
-        messages.append(response_message)
-        
-        # Check if the model wants to call a function
-        if response_message.tool_calls:
-            # Process each function call
-            for tool_call in response_message.tool_calls:
-                function_name = tool_call.function.name
-                function_args = json.loads(tool_call.function.arguments)
-                
-                # Ensure the function exists
-                if function_name in available_functions:
-                    function_to_call = available_functions[function_name]
-                    
-                    # Call the function
-                    print(f"Calling function: {function_name} with args: {function_args}")
-                    if function_name == "calculate_stock_metrics":
-                        function_response = function_to_call(function_args.get("ticker"))
-                    elif function_name == "get_news_sentiment":
-                        function_response = function_to_call(function_args.get("query"))
-                    else:  # get_stock_tickers has no args
-                        function_response = function_to_call()
-                    
-                    # Add the function response to the messages
-                    messages.append({
-                        "role": "tool",
-                        "tool_call_id": tool_call.id,
-                        "name": function_name,
-                        "content": json.dumps(function_response)
-                    })
-                else:
-                    # Handle case where function doesn't exist
-                    print(f"Error: Function {function_name} does not exist")
-                    messages.append({
-                        "role": "tool",
-                        "tool_call_id": tool_call.id,
-                        "name": function_name,
-                        "content": json.dumps({"error": f"Function {function_name} does not exist"})
-                    })
-        else:
-            # No function call, we're done
-            print("Analysis complete:")
-            print(response_message.content)
-            return response_message.content
+    # Return None if no fiscal year has complete data
+    return None, None
 
 

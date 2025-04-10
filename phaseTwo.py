@@ -8,6 +8,8 @@ from datetime import datetime, timedelta
 from openai import OpenAI
 from dotenv import load_dotenv
 import concurrent.futures
+import functools
+import time
 
 # Load environment variables from .env file
 load_dotenv()
@@ -19,31 +21,78 @@ PERPLEXITY_MODEL = os.environ.get("PERPLEXITY_MODEL")
 
 client = OpenAI(api_key=DEEPSEEK_API_KEY, base_url="https://api.deepseek.com")
 
-model = 'deepseek-reasoner'
+model = 'deepseek-chat'
+
+# Simple in-memory cache for expensive operations
+_CACHE = {}
+_CACHE_EXPIRY = {}
+CACHE_TTL = 3600  # Cache time-to-live in seconds (1 hour)
+
+def cache_result(func):
+    """
+    Decorator to cache function results to avoid redundant expensive operations
+    """
+    @functools.wraps(func)
+    def wrapper(*args, **kwargs):
+        # Create a unique key based on function name and arguments
+        key = f"{func.__name__}:{str(args)}:{str(kwargs)}"
+        
+        # Check if result is in cache and not expired
+        current_time = time.time()
+        if key in _CACHE and _CACHE_EXPIRY.get(key, 0) > current_time:
+            print(f"Cache hit for {func.__name__}")
+            return _CACHE[key]
+        
+        # Execute function and cache result
+        result = func(*args, **kwargs)
+        _CACHE[key] = result
+        _CACHE_EXPIRY[key] = current_time + CACHE_TTL
+        return result
+    
+    return wrapper
 
 # Sample portfolio data for testing when this module is run directly
 portfolio_data = {
-  "portfolio": [
-    {
-      "asset_class": "precious_metals_etfs",
-      "allocation": 15,
-      "reason": "Growth potential driven by AI and cloud technologies."
-    },
-
-    {
-      "asset_class": "automobile_manufacturers",
-      "allocation": 5,
-      "reason": "Attractive yields amid low interest rates."
-    },
-    {
-      "asset_class": "cash",
-      "allocation": 5,
-      "reason": "For liquidity and opportunistic investments."
-    }
-  ]
+    "portfolio": [
+        {
+            "asset_class": "semiconductors",
+            "allocation": 20,
+            "reason": "Growth potential driven by AI demand and renewable energy applications. Allocation increased to balance total portfolio."
+        },
+        {
+            "asset_class": "renewable_electricity",
+            "allocation": 20,
+            "reason": "Projected growth in solar and wind energy supported by policy and technology. Allocation increased to balance total portfolio."
+        },
+        {
+            "asset_class": "investment_grade_corporate_bond_etfs",
+            "allocation": 20,
+            "reason": "Attractive yields and stable income from sectors like Financials and Energy."
+        },
+        {
+            "asset_class": "data_center_reits",
+            "allocation": 10,
+            "reason": "Growth driven by increasing demand for data storage and digital services."
+        },
+        {
+            "asset_class": "broad_based_emerging_market_equity_etfs",
+            "allocation": 15,
+            "reason": "Diversification and growth opportunities in emerging markets with hedging strategies."
+        },
+        {
+            "asset_class": "industrial_metals",
+            "allocation": 10,
+            "reason": "Essential for renewable energy technologies and benefiting from geopolitical trends."
+        },
+        {
+            "asset_class": "cash",
+            "allocation": 5,
+            "reason": "Provides liquidity and flexibility for tactical opportunities and risk management."
+        }
+    ]
 }
 
-
+@cache_result
 def get_daily_closing_prices(ticker, years=4, db_config=None):
    """
    Retrieve daily closing prices (last bar of each day) for a given stock
@@ -159,6 +208,7 @@ def get_daily_closing_prices(ticker, years=4, db_config=None):
          cursor.close()
          conn.close()
 
+@cache_result
 def calculate_stock_metrics(ticker):
    """
    Calculate the Sharpe ratio and other risk-adjusted performance metrics for a stock.
@@ -410,6 +460,7 @@ def calculate_stock_metrics(ticker):
    
    return metrics
 
+@cache_result
 def get_fundamentals_data(ticker, db_config=None):
    """
    Retrieve all fundamental data for a given stock across different tables
@@ -638,6 +689,7 @@ def get_fundamentals_data(ticker, db_config=None):
          cursor.close()
          conn.close()
 
+@cache_result
 def analyze_fundamentals(ticker):
     """
     Analyze fundamental data for a specific stock using LLM
@@ -728,6 +780,7 @@ IMPORTANT:
 
     return response.choices[0].message.content
 
+@cache_result
 def get_news_sentiment(query):
     """
     Get news sentiment for a particular stock.
@@ -786,14 +839,42 @@ def extract_asset_classes(json_data):
     import json
     data = json_data
     
-    # Extract asset classes using list comprehension
-    asset_classes = [item["asset_class"] for item in data["portfolio"]]
+    # Check if data has expected structure
+    if not isinstance(data, dict):
+        print("Error: Portfolio data is not a dictionary")
+        return []
+    
+    if "portfolio" not in data:
+        print("Error: Portfolio data does not contain 'portfolio' key")
+        return []
+    
+    if not isinstance(data["portfolio"], list) or not data["portfolio"]:
+        print("Error: Portfolio array is empty or not a list")
+        return []
+    
+    # Extract asset classes using list comprehension with error handling
+    asset_classes = []
+    for item in data["portfolio"]:
+        if not isinstance(item, dict):
+            print(f"Warning: Portfolio item is not a dictionary: {item}")
+            continue
+            
+        asset_class = item.get("asset_class")
+        if not asset_class:
+            print(f"Warning: Missing 'asset_class' in portfolio item: {item}")
+            continue
+            
+        asset_classes.append(asset_class)
     
     # Filter out 'cash' from the list
-    asset_classes = [asset for asset in asset_classes if asset.lower() != 'cash']
+    asset_classes = [asset for asset in asset_classes if asset and asset.lower() != 'cash']
     
+    if not asset_classes:
+        print("Warning: No valid asset classes found in portfolio data")
+        
     return asset_classes
 
+@cache_result
 def get_stock_tickers(filter_value):
     """
     Retrieve stock tickers from database_schemas.json filtered by a value.
@@ -864,6 +945,7 @@ def get_stock_tickers(filter_value):
     # Return dictionary with filter_value as key and ticker list as value
     return {filter_value: sorted_tickers}
 
+@cache_result
 def filter_stocks(ticker_input):
     """
     Filter stocks based on quantitative metrics using z-scores to identify highest potential performers.
@@ -988,8 +1070,8 @@ def filter_stocks(ticker_input):
             # Rank stocks by composite score in descending order
             ranked_df = z_scores.sort_values(by='composite_score', ascending=False)
             
-            # Get the top 10 tickers (or all tickers if less than 10 are available)
-            max_stocks = 10
+            # Get the top 7 tickers (or all tickers if less than 7 are available)
+            max_stocks = 7  # Changed from 10 to 7
             available_stocks = min(max_stocks, len(ranked_df))
             filtered_tickers = ranked_df.head(available_stocks)['Ticker'].tolist()
             
@@ -998,7 +1080,146 @@ def filter_stocks(ticker_input):
         
         return result_dict
 
-def run_portfolio_manager(tickers=None):
+def analyze_ticker(ticker, is_etf=False):
+    """
+    Analyze a single ticker with all required metrics.
+    This function is designed to be used with parallel processing.
+    
+    Args:
+        ticker (str): The ticker symbol to analyze
+        is_etf (bool): Whether the ticker is an ETF
+        
+    Returns:
+        tuple: (ticker, ticker_data) where ticker_data contains all analysis
+    """
+    print(f"\nAnalyzing ticker: {ticker}")
+    ticker_data = {}
+    
+    # Step 1: Calculate stock metrics
+    print(f"Calculating metrics for {ticker}...")
+    metrics = calculate_stock_metrics(ticker)
+    ticker_data["metrics"] = metrics
+    
+    # Step 2: Analyze fundamentals (skip for ETFs)
+    if is_etf:
+        ticker_data["fundamentals"] = "ETF fundamental data not analyzed"
+    else:
+        print(f"Analyzing fundamentals for {ticker}...")
+        fundamentals = analyze_fundamentals(ticker)
+        ticker_data["fundamentals"] = fundamentals
+    
+    # Step 3: Get news sentiment
+    print(f"Getting news sentiment for {ticker}...")
+    if is_etf:
+        query = f"{ticker} etf recent performance analyst ratings news institutional ownership price targets forecasts"
+    else:
+        query = f"{ticker} stock recent performance analyst ratings news institutional ownership price targets earnings forecasts"
+    
+    sentiment = get_news_sentiment(query)
+    ticker_data["sentiment"] = sentiment
+    
+    return (ticker, ticker_data)
+
+def batch_analyze_news_sentiment(ticker_queries, batch_size=3):
+    """
+    Analyze news sentiment for multiple tickers in batches to reduce API calls.
+    
+    Args:
+        ticker_queries: List of tuples (ticker, query)
+        batch_size: Number of tickers to analyze in each batch
+        
+    Returns:
+        dict: Dictionary mapping tickers to their sentiment analysis
+    """
+    results = {}
+    
+    # Process tickers in batches
+    for i in range(0, len(ticker_queries), batch_size):
+        batch = ticker_queries[i:i+batch_size]
+        
+        # Prepare combined query for the batch
+        combined_query = "\n\n".join([
+            f"TICKER: {ticker}\nQUERY: {query}" 
+            for ticker, query in batch
+        ])
+        
+        # Set up system prompt for batch processing
+        system_prompt = """
+You are a financial analyst. Analyze news sentiment about multiple stocks objectively.
+I will provide information about several stocks. For EACH stock:
+1. Analyze recent news sentiment (positive, negative, or neutral)
+2. Provide supporting evidence from recent articles
+3. Consider analyst ratings if available
+
+Format your response as:
+TICKER1:
+[Your analysis for TICKER1]
+
+TICKER2:
+[Your analysis for TICKER2]
+
+And so on. Keep each analysis concise but informative.
+"""
+        
+        user_prompt = f"Analyze the recent news sentiment for these stocks. The date is {datetime.now().strftime('%Y-%m-%d')}, do not take news into account that is more than 2 weeks old.\n\n{combined_query}"
+        
+        messages = [
+            {"role": "system", "content": system_prompt},
+            {"role": "user", "content": user_prompt}
+        ]
+
+        # Make a single API call for the batch
+        try:
+            # Initialize client with Perplexity API
+            perplexity_client = OpenAI(api_key=Sonar_API_KEY, base_url="https://api.perplexity.ai")
+            
+            response = perplexity_client.chat.completions.create(
+                model=PERPLEXITY_MODEL,
+                messages=messages
+            )
+            
+            batch_result = response.choices[0].message.content
+            
+            # Parse the batch result to extract individual ticker analyses
+            current_ticker = None
+            current_analysis = []
+            
+            # Add a sentinel to process the last ticker
+            for line in batch_result.split('\n') + ['SENTINEL:']:
+                # Check if this is a ticker header line
+                ticker_match = False
+                for ticker, _ in batch:
+                    if line.startswith(f"{ticker}:") or line.startswith(f"TICKER: {ticker}"):
+                        # Save the previous ticker's analysis if there was one
+                        if current_ticker:
+                            results[current_ticker] = '\n'.join(current_analysis)
+                            current_analysis = []
+                        
+                        # Start new ticker
+                        current_ticker = ticker
+                        ticker_match = True
+                        break
+                
+                # If this is a sentinel or new ticker was found, continue to next line
+                if line.startswith('SENTINEL:') or ticker_match:
+                    continue
+                    
+                # Otherwise add to current analysis
+                if current_ticker:
+                    current_analysis.append(line)
+            
+        except Exception as e:
+            print(f"Error in batch sentiment analysis: {e}")
+            # Fallback to individual processing
+            for ticker, query in batch:
+                try:
+                    results[ticker] = get_news_sentiment(query)
+                except:
+                    results[ticker] = f"Unable to retrieve sentiment for {ticker}"
+    
+    return results
+
+def run_portfolio_manager(tickers=None, max_workers=4, batch_sentiment=True):
    """
    Run the portfolio manager to analyze stocks and make recommendations.
    
@@ -1006,10 +1227,12 @@ def run_portfolio_manager(tickers=None):
       tickers (dict or list, optional): Dictionary with industry as key and list of ticker symbols as value,
                                        or a list of ticker symbols to analyze.
                                        If None, will retrieve all tickers.
+      max_workers (int): Maximum number of parallel workers for processing tickers
+      batch_sentiment (bool): Whether to batch process sentiment analysis
       
-   This function enforces a strict sequential workflow for consistent analysis:
+   This function uses parallel processing to analyze multiple tickers simultaneously:
    1. Gather all tickers
-   2. For each ticker, analyze in sequence: metrics → fundamentals → sentiment
+   2. Process tickers in parallel
    3. After all tickers are analyzed, select the best stocks
    """
    # Get tickers if not provided
@@ -1051,92 +1274,126 @@ def run_portfolio_manager(tickers=None):
    # Store all ticker analysis data
    all_analysis_data = {}
    
+   # Process metrics and fundamentals in parallel first, then batch sentiment analysis
+   print("Phase 1: Processing metrics and fundamentals...")
+   
+   # Prepare tasks for metrics and fundamentals
+   ticker_list = []
+   is_etf_map = {}
+   
    # Handle dictionary input format
    if isinstance(tickers, dict):
       # Process by industry
-      for industry, ticker_list in tickers.items():
-         # Check if 'etfs' appears in the industry name
-         if industry in etf_categories:
-            print("It's an etf")
+      for industry, industry_tickers in tickers.items():
+         # Check if industry is an ETF category
+         is_etf = industry in etf_categories
          
-            print(f"\nBeginning analysis of {len(ticker_list)} tickers in {industry}...")
-            
-            # Process each ticker sequentially
-            for ticker in ticker_list:
-               print(f"\nAnalyzing ticker: {ticker}")
-               ticker_data = {}
-               
-               # Step 1: Calculate stock metrics
-               print(f"Calculating metrics for {ticker}...")
-               metrics = calculate_stock_metrics(ticker)
-               ticker_data["metrics"] = metrics
-               
-               # Skip fundamentals for ETFs and add a placeholder
-               ticker_data["fundamentals"] = "ETF fundamental data not analyzed"
-               
-               # Step 2: Get news sentiment
-               print(f"Getting news sentiment for {ticker}...")
-               query = f"{ticker} etf recent performance analyst ratings news institutional ownership price targets forecasts"
-               sentiment = get_news_sentiment(query)
-               ticker_data["sentiment"] = sentiment
-               
-               # Store complete analysis for this ticker
-               all_analysis_data[ticker] = ticker_data
-         
-         else:
-            print(f"\nBeginning analysis of {len(ticker_list)} tickers in {industry}...")
-            
-            # Process each ticker sequentially
-            for ticker in ticker_list:
-               print(f"\nAnalyzing ticker: {ticker}")
-               ticker_data = {}
-               
-               # Step 1: Calculate stock metrics
-               print(f"Calculating metrics for {ticker}...")
-               metrics = calculate_stock_metrics(ticker)
-               ticker_data["metrics"] = metrics
-               
-               # Step 2: Analyze fundamentals
-               print(f"Analyzing fundamentals for {ticker}...")
-               fundamentals = analyze_fundamentals(ticker)
-               ticker_data["fundamentals"] = fundamentals
-               
-               # Step 3: Get news sentiment
-               print(f"Getting news sentiment for {ticker}...")
-               query = f"{ticker} stock recent performance analyst ratings news institutional ownership price targets earnings forecasts"
-               sentiment = get_news_sentiment(query)
-               ticker_data["sentiment"] = sentiment
-               
-               # Store complete analysis for this ticker
-               all_analysis_data[ticker] = ticker_data
-   
-   # Handle list input format (backward compatibility)
+         for ticker in industry_tickers:
+            ticker_list.append(ticker)
+            is_etf_map[ticker] = is_etf
    else:
-      print(f"Beginning analysis of {len(tickers)} tickers...")
+      # Handle list input format
+      ticker_list = tickers
+      is_etf_map = {ticker: False for ticker in tickers}
+   
+   # Process metrics and fundamentals in parallel
+   metrics_fundamentals_results = {}
+   
+   with concurrent.futures.ThreadPoolExecutor(max_workers=max_workers) as executor:
+      futures = {}
       
-      # Process each ticker sequentially
-      for ticker in tickers:
-         print(f"\nAnalyzing ticker: {ticker}")
-         ticker_data = {}
+      # Submit tasks for metrics
+      for ticker in ticker_list:
+         futures[executor.submit(calculate_stock_metrics, ticker)] = (ticker, "metrics")
+      
+      # Submit tasks for fundamentals (except for ETFs)
+      for ticker in ticker_list:
+         if not is_etf_map[ticker]:
+            futures[executor.submit(analyze_fundamentals, ticker)] = (ticker, "fundamentals")
+      
+      # Process results as they complete
+      for future in concurrent.futures.as_completed(futures):
+         ticker, data_type = futures[future]
+         try:
+            result = future.result()
+            if ticker not in metrics_fundamentals_results:
+               metrics_fundamentals_results[ticker] = {}
+            metrics_fundamentals_results[ticker][data_type] = result
+            print(f"Completed {data_type} for {ticker}")
+         except Exception as exc:
+            print(f"{data_type} analysis of {ticker} generated an exception: {exc}")
+            # Set default values
+            if ticker not in metrics_fundamentals_results:
+               metrics_fundamentals_results[ticker] = {}
+            if data_type == "metrics":
+               metrics_fundamentals_results[ticker][data_type] = {
+                  "sharpe_ratio": 0, "sortino_ratio": 0, "calmar_ratio": 0,
+                  "annualized_return": 0, "annualized_volatility": 0,
+                  "daily_return_volatility": 0, "max_drawdown": 0, "beta": 0,
+                  "sector_beta": 0, "upside_capture": 0, "downside_capture": 0,
+                  "momentum_6m": 0, "momentum_12m": 0
+               }
+            elif data_type == "fundamentals":
+               metrics_fundamentals_results[ticker][data_type] = f"Error analyzing fundamentals for {ticker}"
+   
+   # Add placeholder fundamentals for ETFs
+   for ticker in ticker_list:
+      if is_etf_map[ticker] and ticker in metrics_fundamentals_results:
+         metrics_fundamentals_results[ticker]["fundamentals"] = "ETF fundamental data not analyzed"
+   
+   # Phase 2: Batch sentiment analysis
+   print("Phase 2: Processing news sentiment...")
+   
+   sentiment_results = {}
+   
+   if batch_sentiment:
+      # Prepare queries for batch processing
+      ticker_queries = []
+      for ticker in ticker_list:
+         if is_etf_map[ticker]:
+            query = f"{ticker} etf recent performance analyst ratings news institutional ownership price targets forecasts"
+         else:
+            query = f"{ticker} stock recent performance analyst ratings news institutional ownership price targets earnings forecasts"
+         ticker_queries.append((ticker, query))
+      
+      # Process sentiment in batches
+      sentiment_results = batch_analyze_news_sentiment(ticker_queries)
+   else:
+      # Process sentiment individually
+      with concurrent.futures.ThreadPoolExecutor(max_workers=max_workers) as executor:
+         futures = {}
          
-         # Step 1: Calculate stock metrics
-         print(f"Calculating metrics for {ticker}...")
-         metrics = calculate_stock_metrics(ticker)
-         ticker_data["metrics"] = metrics
+         for ticker in ticker_list:
+            if is_etf_map[ticker]:
+               query = f"{ticker} etf recent performance analyst ratings news institutional ownership price targets forecasts"
+            else:
+               query = f"{ticker} stock recent performance analyst ratings news institutional ownership price targets earnings forecasts"
+            futures[executor.submit(get_news_sentiment, query)] = ticker
          
-         # Step 2: Analyze fundamentals
-         print(f"Analyzing fundamentals for {ticker}...")
-         fundamentals = analyze_fundamentals(ticker)
-         ticker_data["fundamentals"] = fundamentals
-         
-         # Step 3: Get news sentiment
-         print(f"Getting news sentiment for {ticker}...")
-         query = f"{ticker} stock recent performance analyst ratings news institutional ownership price targets earnings forecasts"
-         sentiment = get_news_sentiment(query)
-         ticker_data["sentiment"] = sentiment
-         
-         # Store complete analysis for this ticker
-         all_analysis_data[ticker] = ticker_data
+         # Process results as they complete
+         for future in concurrent.futures.as_completed(futures):
+            ticker = futures[future]
+            try:
+               sentiment_results[ticker] = future.result()
+               print(f"Completed sentiment analysis for {ticker}")
+            except Exception as exc:
+               print(f"Sentiment analysis of {ticker} generated an exception: {exc}")
+               sentiment_results[ticker] = f"Error analyzing sentiment for {ticker}"
+   
+   # Combine all results
+   for ticker in ticker_list:
+      all_analysis_data[ticker] = {}
+      
+      # Add metrics and fundamentals
+      if ticker in metrics_fundamentals_results:
+         for data_type, data in metrics_fundamentals_results[ticker].items():
+            all_analysis_data[ticker][data_type] = data
+      
+      # Add sentiment
+      if ticker in sentiment_results:
+         all_analysis_data[ticker]["sentiment"] = sentiment_results[ticker]
+      else:
+         all_analysis_data[ticker]["sentiment"] = f"No sentiment data available for {ticker}"
    
    print(f"\nCompleted analysis of all tickers. Preparing final recommendations...")
    
@@ -1226,49 +1483,105 @@ IMPORTANT:
    print("Analysis complete!")
    return recommendations
 
+# Modified main execution code to process asset classes in parallel
+def process_asset_class(asset):
+    print(f"Processing asset class: {asset}")
+    x = get_stock_tickers(asset)
+    print(f"Got {len(x.get(asset, []))} tickers for {asset}")
+    
+    filtered_tickers = filter_stocks(x)
+    print(f"Filtered down to {len(filtered_tickers)} tickers for {asset}")
 
-final = {}
+    # Use optimized portfolio manager with reasonable defaults for parallelism
+    max_workers = min(4, os.cpu_count() or 2)
+    result_json = run_portfolio_manager(filtered_tickers, max_workers=max_workers, batch_sentiment=True)
+    
+    try:
+        # Find the start and end of the actual JSON content within the string
+        start_index = result_json.find('{')
+        end_index = result_json.rfind('}')
+        
+        if start_index != -1 and end_index != -1:
+            cleaned_json_str = result_json[start_index : end_index + 1]
+            
+            # Parse the cleaned JSON string into a dictionary
+            result_data = json.loads(cleaned_json_str)
+            
+            # Extract recommendations
+            recommendations = {}
+            if 'recommendations' in result_data:
+                for recommendation in result_data['recommendations']:
+                    ticker = recommendation.get('ticker')
+                    justification = recommendation.get('justification')
+                    if ticker: # Ensure ticker is not None or empty
+                        recommendations[ticker] = justification
+            
+            return recommendations
+        else:
+            print(f"Could not find valid JSON structure for {asset}")
+            return {}
 
-asset_classes = extract_asset_classes(portfolio_data)
-print(asset_classes)
+    except json.JSONDecodeError as e:
+        print(f"Error decoding JSON for {asset}: {e}")
+        return {}
+    except Exception as e:
+        print(f"An error occurred while processing recommendations for {asset}: {e}")
+        return {}
 
-for asset in asset_classes:
-   x = get_stock_tickers(asset)
-   print(x)
-   
-   filtered_tickers = filter_stocks(x)
-   print(filtered_tickers)
+def analyze_portfolio(portfolio_data):
+    """
+    Analyze a portfolio to recommend optimal stocks for each asset class.
+    
+    Args:
+        portfolio_data (dict): A dictionary containing portfolio data with asset classes
+                              and their allocations.
+                              
+    Returns:
+        dict: A dictionary of recommended stock tickers and their justifications
+        float: Total execution time in seconds
+    """
+    # Start the timer
+    start_time = time.time()
+    print(f"Starting portfolio analysis at {datetime.now().strftime('%H:%M:%S')}")
+    
+    final = {}
 
-   result_json = run_portfolio_manager(filtered_tickers)
-   print(result_json)  # Keep printing the raw JSON output if needed for debugging
+    asset_classes = extract_asset_classes(portfolio_data)
+    print(f"Extracted asset classes: {asset_classes}")
 
-   try:
-       # Find the start and end of the actual JSON content within the string
-       start_index = result_json.find('{')
-       end_index = result_json.rfind('}')
-       
-       if start_index != -1 and end_index != -1:
-           cleaned_json_str = result_json[start_index : end_index + 1]
-           
-           # Parse the cleaned JSON string into a dictionary
-           result_data = json.loads(cleaned_json_str)
-           
-           # Iterate through recommendations and populate the final dictionary
-           if 'recommendations' in result_data:
-               for recommendation in result_data['recommendations']:
-                   ticker = recommendation.get('ticker')
-                   justification = recommendation.get('justification')
-                   if ticker: # Ensure ticker is not None or empty
-                       final[ticker] = justification
-           else:
-               print("No 'recommendations' key found in the result.")
-       else:
-           print("Could not find valid JSON structure ('{' and '}') in the result string.")
+    # Determine optimal number of workers based on system capabilities and number of asset classes
+    max_workers_asset_class = min(len(asset_classes), os.cpu_count() or 2)  # Use CPU count as upper limit
+    
+    # Process asset classes in parallel
+    with concurrent.futures.ThreadPoolExecutor(max_workers=max_workers_asset_class) as executor:
+        # Submit all asset class analysis tasks
+        future_to_asset = {
+            executor.submit(process_asset_class, asset): asset 
+            for asset in asset_classes
+        }
+        
+        # Process results as they complete
+        for future in concurrent.futures.as_completed(future_to_asset):
+            asset = future_to_asset[future]
+            try:
+                asset_recommendations = future.result()
+                final.update(asset_recommendations)
+                print(f"Added recommendations for asset class: {asset}")
+            except Exception as exc:
+                print(f"Processing asset class {asset} generated an exception: {exc}")
 
-   except json.JSONDecodeError as e:
-       print(f"Error decoding JSON: {e}")
-   except Exception as e:
-       print(f"An error occurred while processing recommendations: {e}")
-
-print("Final recommendations dictionary:")
-print(final)
+    print("Final recommendations dictionary:")
+    print(final)
+    
+    # End the timer and calculate elapsed time
+    end_time = time.time()
+    elapsed_time = end_time - start_time
+    minutes = int(elapsed_time // 60)
+    seconds = int(elapsed_time % 60)
+    
+    print(f"\n========== PROCESS COMPLETED ==========")
+    print(f"Total execution time: {minutes} minutes and {seconds} seconds")
+    print(f"Finished at: {datetime.now().strftime('%H:%M:%S')}")
+    print(f"Processed {len(asset_classes)} asset classes with {len(final)} final recommendations")
+    
+    return final, elapsed_time

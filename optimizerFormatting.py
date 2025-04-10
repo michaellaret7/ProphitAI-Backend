@@ -16,27 +16,72 @@ import math
 import curses
 
 
-ib = connect_to_ib()
-
-positions, formatted_output = get_portfolio_holdings(ib, print_output=False)
-
-if positions:
-    symbols = [p['contract'].symbol for p in positions]
+# Initialize IB connection function
+def initialize_ib_connection():
+    """
+    Establishes a connection to Interactive Brokers and returns the connection object.
     
-    # Calculate portfolio metrics - printing handled internally
-    metrics = calculate_portfolio_metrics(ib, symbols, printOutput=False)
+    Returns:
+        The IB connection object or None if connection fails
+    """
+    try:
+        print("Establishing connection to Interactive Brokers...")
+        ib = connect_to_ib()
+        print("Connection to Interactive Brokers established successfully")
+        return ib
+    except Exception as e:
+        print(f"Error establishing connection to Interactive Brokers: {e}")
+        return None
+
+# Close IB connection function
+def close_ib_connection(ib):
+    """
+    Properly closes the connection to Interactive Brokers.
     
-    # Calculate monthly portfolio metrics - printing handled internally
-    monthly_results = calculate_monthly_portfolio_metrics(ib, symbols, print_output=False)
+    Args:
+        ib: The IB connection object to close
+    """
+    try:
+        if ib and hasattr(ib, 'disconnect'):
+            print("Closing connection to Interactive Brokers...")
+            ib.disconnect()
+            print("Connection to Interactive Brokers closed successfully")
+    except Exception as e:
+        print(f"Error closing connection to Interactive Brokers: {e}")
 
-# Run individual stock analysis for AAPL - printing handled internally
-aapl_results = calculate_monthly_stock_metrics(ib, "AAPL", printOutput=False)
+# Initialize IB connection for legacy code still using global ib
+ib = initialize_ib_connection()
 
-# Analyze portfolio diversification - printing handled internally
-diversification = analyze_portfolio_diversification(ib, print_output=False)
+# Only fetch data if IB connection was successful
+if ib:
+    positions, formatted_output = get_portfolio_holdings(ib, print_output=False)
 
-# Analyze portfolio correlations - printing handled internally
-correlations = analyze_portfolio_correlations(ib, symbols, print_output=False)
+    if positions:
+        symbols = [p['contract'].symbol for p in positions]
+        
+        # Calculate portfolio metrics - printing handled internally
+        metrics = calculate_portfolio_metrics(ib, symbols, printOutput=False)
+        
+        # Calculate monthly portfolio metrics - printing handled internally
+        monthly_results = calculate_monthly_portfolio_metrics(ib, symbols, print_output=False)
+
+    # Run individual stock analysis for AAPL - printing handled internally
+    aapl_results = calculate_monthly_stock_metrics(ib, "AAPL", printOutput=False)
+
+    # Analyze portfolio diversification - printing handled internally
+    diversification = analyze_portfolio_diversification(ib, print_output=False)
+
+    # Analyze portfolio correlations - printing handled internally
+    correlations = analyze_portfolio_correlations(ib, symbols, print_output=False)
+else:
+    # Initialize empty data structures if connection failed
+    positions = []
+    formatted_output = "No connection to Interactive Brokers"
+    metrics = {}
+    monthly_results = {}
+    aapl_results = {}
+    diversification = {}
+    correlations = "No correlation data available"
 
 def format_portfolio_positions(positions_data):
     """
@@ -669,9 +714,46 @@ def format_diversification(diversification):
     
     return output
 
-def format():
+def format(ib_connection=None):
+    """
+    Format all portfolio data for LLM consumption
+    
+    Args:
+        ib_connection: The IB connection object to use for data retrieval
+    
+    Returns:
+        account_info, positions_table, formatted_diversification, portfolio_metrics, 
+        stock_metrics, monthly_performance, correlations
+    """
     try:
-        # Use existing functionality if available
+        # Use provided connection or fall back to global
+        active_ib = ib_connection if ib_connection is not None else ib
+        
+        # If we have an active connection, fetch fresh data
+        if active_ib:
+            current_positions, current_formatted_output = get_portfolio_holdings(active_ib, print_output=False)
+            
+            if current_positions:
+                current_symbols = [p['contract'].symbol for p in current_positions]
+                
+                # Calculate portfolio metrics with the active connection
+                current_metrics = calculate_portfolio_metrics(active_ib, current_symbols, printOutput=False)
+                current_monthly_results = calculate_monthly_portfolio_metrics(active_ib, current_symbols, print_output=False)
+                current_diversification = analyze_portfolio_diversification(active_ib, print_output=False)
+                current_correlations = analyze_portfolio_correlations(active_ib, current_symbols, print_output=False)
+                
+                # Format with fresh data
+                formatted_pos = format_portfolio_positions(current_positions)
+                account_info = extract_account_info(formatted_pos["formatted_output"])
+                portfolio_metrics = format_portfolio_metrics(current_metrics)
+                stock_metrics = format_stock_metrics(current_metrics)
+                monthly_performance = format_monthly_performance(current_monthly_results)
+                formatted_diversification = format_diversification(current_diversification)
+                positions_table = formatted_pos.get("positions_table", "")
+                
+                return account_info, positions_table, formatted_diversification, portfolio_metrics, stock_metrics, monthly_performance, current_correlations
+        
+        # Fall back to using cached data if available
         formatted_pos = format_portfolio_positions(positions)
         account_info = extract_account_info(formatted_pos["formatted_output"])
         portfolio_metrics = format_portfolio_metrics(metrics)
@@ -679,7 +761,8 @@ def format():
         monthly_performance = format_monthly_performance(monthly_results)
         formatted_diversification = format_diversification(diversification)
         positions_table = formatted_pos.get("positions_table", "")
-    except:
+    except Exception as e:
+        print(f"Error in format function: {e}")
         account_info = "Unable to extract account information"
         positions_table = "Unable to format positions table"
         formatted_diversification = "Unable to format diversification"

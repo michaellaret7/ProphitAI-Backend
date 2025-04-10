@@ -552,6 +552,62 @@ json7 = {
     ]
 }
 
+json8 = {
+    "final_portfolio": [
+        {"ticker": "IAU", "position_type": "LONG", "shares": "125", "allocation": "5%"},
+        {"ticker": "GLD", "position_type": "LONG", "shares": "28", "allocation": "5%"},
+        {"ticker": "SCHE", "position_type": "LONG", "shares": "160", "allocation": "4%"},
+        {"ticker": "VWO", "position_type": "LONG", "shares": "100", "allocation": "4%"},
+        {"ticker": "IGSB", "position_type": "LONG", "shares": "60", "allocation": "3%"},
+        {"ticker": "VCIT", "position_type": "LONG", "shares": "38", "allocation": "3%"},
+        {"ticker": "EQIX", "position_type": "LONG", "shares": "10", "allocation": "8%"},
+        {"ticker": "DLR", "position_type": "LONG", "shares": "53", "allocation": "8%"},
+        {"ticker": "MNTK", "position_type": "LONG", "shares": "200", "allocation": "2%"},
+        {"ticker": "ORA", "position_type": "LONG", "shares": "29", "allocation": "2%"},
+        {"ticker": "JXN", "position_type": "LONG", "shares": "200", "allocation": "10%"},
+        {"ticker": "APO", "position_type": "LONG", "shares": "100", "allocation": "10%"},
+        {"ticker": "CRBG", "position_type": "LONG", "shares": "233", "allocation": "7%"},
+        {"ticker": "NVDA", "position_type": "LONG", "shares": "52", "allocation": "13%"},
+        {"ticker": "CRDO", "position_type": "LONG", "shares": "200", "allocation": "4%"},
+        {"ticker": "ARM", "position_type": "LONG", "shares": "40", "allocation": "4%"},
+        {"ticker": "ADMA", "position_type": "LONG", "shares": "600", "allocation": "3%"},
+        {"ticker": "BNTC", "position_type": "LONG", "shares": "1500", "allocation": "3%"},
+        {"ticker": "TPST", "position_type": "LONG", "shares": "2000", "allocation": "2%"}
+    ]
+}
+
+json9 = {
+    "final_portfolio": [
+        {"ticker": "PSP", "position_type": "LONG", "shares": "200", "allocation": "5%"},
+        {"ticker": "MNA", "position_type": "LONG", "shares": "120", "allocation": "3%"},
+        {"ticker": "CPER", "position_type": "LONG", "shares": "240", "allocation": "6%"},
+        {"ticker": "DBB", "position_type": "LONG", "shares": "80", "allocation": "2%"},
+        {"ticker": "VGIT", "position_type": "LONG", "shares": "120", "allocation": "3%"},
+        {"ticker": "SCHP", "position_type": "LONG", "shares": "120", "allocation": "3%"},
+        {"ticker": "SHY", "position_type": "LONG", "shares": "80", "allocation": "2%"},
+        {"ticker": "IAU", "position_type": "LONG", "shares": "200", "allocation": "5%"},
+        {"ticker": "GLD", "position_type": "LONG", "shares": "200", "allocation": "5%"},
+        {"ticker": "IGSB", "position_type": "LONG", "shares": "120", "allocation": "3%"},
+        {"ticker": "VCIT", "position_type": "LONG", "shares": "120", "allocation": "3%"},
+        {"ticker": "HYG", "position_type": "LONG", "shares": "200", "allocation": "5%"},
+        {"ticker": "FALN", "position_type": "LONG", "shares": "120", "allocation": "3%"},
+        {"ticker": "AMPS", "position_type": "LONG", "shares": "80", "allocation": "2%"},
+        {"ticker": "MNTK", "position_type": "LONG", "shares": "80", "allocation": "2%"},
+        {"ticker": "JXN", "position_type": "LONG", "shares": "240", "allocation": "6%"},
+        {"ticker": "APO", "position_type": "LONG", "shares": "160", "allocation": "4%"},
+        {"ticker": "EQH", "position_type": "LONG", "shares": "120", "allocation": "3%"},
+        {"ticker": "EGP", "position_type": "LONG", "shares": "160", "allocation": "4%"},
+        {"ticker": "TRNO", "position_type": "LONG", "shares": "120", "allocation": "3%"},
+        {"ticker": "FR", "position_type": "LONG", "shares": "120", "allocation": "3%"},
+        {"ticker": "NVDA", "position_type": "LONG", "shares": "280", "allocation": "7%"},
+        {"ticker": "CRDO", "position_type": "LONG", "shares": "120", "allocation": "3%"},
+        {"ticker": "ARM", "position_type": "LONG", "shares": "200", "allocation": "5%"},
+        {"ticker": "ZJYL", "position_type": "LONG", "shares": "80", "allocation": "2%"},
+        {"ticker": "BSX", "position_type": "LONG", "shares": "200", "allocation": "5%"},
+        {"ticker": "KEQU", "position_type": "LONG", "shares": "120", "allocation": "3%"}
+    ]
+}
+
 def connect_to_ib():
     """
     Establish a connection to Interactive Brokers TWS or Gateway
@@ -722,7 +778,7 @@ def get_current_portfolio_holdings(ib):
         return None
 
 # Get historical data for all tickers
-historical_data, portfolio_value = get_historical_data_for_all_tickers(json7)
+historical_data, portfolio_value = get_historical_data_for_all_tickers(json9)
 
 # Get current holdings
 ib = connect_to_ib()
@@ -926,7 +982,7 @@ def calculate_portfolio_returns(portfolio, historical_data, initial_investment):
 
 # Calculate portfolio returns but don't plot
 print("\n📈 Calculating portfolio returns...")
-portfolio_values, allocation_dict = calculate_portfolio_returns(json7, historical_data, portfolio_value)
+portfolio_values, allocation_dict = calculate_portfolio_returns(json9, historical_data, portfolio_value)
 
 if portfolio_values is not None:
     # Print summary statistics

@@ -41,7 +41,6 @@ def get_financial_data(ticker, period, limit):
 
     return combined_data
 
-
 def read_sector_excel(filename="finalSectorSheet.xlsx"):
     """
     Read an Excel file from the parent documents folder.
@@ -78,7 +77,6 @@ def read_sector_excel(filename="finalSectorSheet.xlsx"):
         print(f"❌ Error reading Excel file: {e}")
         return None
     
-
 def get_ib_historical_data(ticker):
     """
     Get the most recent closing price for a ticker from Interactive Brokers.
