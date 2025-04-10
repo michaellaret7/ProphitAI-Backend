@@ -15,7 +15,6 @@ import math
 import curses
 from dotenv import load_dotenv
 
-
 # Load environment variables from .env file
 load_dotenv()
 
@@ -24,23 +23,133 @@ Sonar_API_KEY = os.environ.get("PERPLEXITY_API_KEY")
 client = OpenAI(api_key=OpenAI_API_KEY)
 perplexity_model = os.environ.get("PERPLEXITY_MODEL")
 
-def stock_universe():
+def get_equity_universe():
     """
-    Returns the raw contents of the stock universe JSON file.
-    This allows the portfolio optimizer to have a complete view of available investment options.
+    Retrieve and format sector/industry/subindustry data from database_schemas.json
+    for optimal LLM ingestion.
+    
+    Returns:
+        str: JSON string with hierarchical classification data formatted for LLM
     """
-    # Get the absolute path to the JSON file
-    current_dir = os.path.dirname(os.path.abspath(__file__))
-    json_file_path = os.path.join(current_dir, "database_schemas.json")
+    # Load schema definition
+    with open('database_schemas.json', 'r') as f:
+        schema_data = json.load(f)
+    
+    # Create nested dictionary structure
+    hierarchical_data = {}
+    
+    # Extract the hierarchical structure
+    for sector_name, sector_info in schema_data.items():
+        hierarchical_data[sector_name] = {}
+        schemas = sector_info.get('schemas', {})
+        
+        for schema_name, schema_info in schemas.items():
+            hierarchical_data[sector_name][schema_name] = []
+            tables = schema_info.get('tables', {})
+            
+            for table_name, table_info in tables.items():
+                hierarchical_data[sector_name][schema_name].append(table_name)
+    
+    # Create context object with metadata
+    context = {
+        "description": "Financial market hierarchical classification structure",
+        "levels": {
+            "sector": "Top-level market segment (e.g., 'technology', 'healthcare')",
+            "industry": "Sub-segment within a sector",
+            "subindustry": "Specific business category within an industry"
+        },
+        "data": hierarchical_data
+    }
+    
+    # Format with indentation for readability
+    return json.dumps(context, indent=2)
+
+def get_etf_universe():
+    """
+    Retrieve and format ETF classification data from the etf_data database
+    for optimal LLM ingestion.
+    
+    Returns:
+        str: JSON string with hierarchical ETF classification data formatted for LLM
+    """
+    # Database configuration
+    db_config = {
+        "host": "demo-postgres.ctemwoy8mbzw.us-east-1.rds.amazonaws.com",
+        "user": "postgres",
+        "password": "ml1710402!",
+        "port": "5432",
+        "dbname": "etf_data"
+    }
     
     try:
-        # Read the raw contents of the JSON file
-        with open(json_file_path, 'r', encoding='utf-8') as file:
-            raw_json_content = file.read()
-        return raw_json_content
+        # Connect to database
+        conn = psycopg2.connect(**db_config)
+        cursor = conn.cursor()
+        
+        # Query to get schema information
+        schemas_query = """
+        SELECT schema_name 
+        FROM information_schema.schemata 
+        WHERE schema_name NOT IN ('pg_catalog', 'information_schema', 'public')
+        ORDER BY schema_name
+        """
+        cursor.execute(schemas_query)
+        schemas = [row[0] for row in cursor.fetchall()]
+        
+        # Create hierarchical structure
+        hierarchical_data = {}
+        
+        # For each schema, get its tables
+        for schema in schemas:
+            tables_query = f"""
+            SELECT table_name 
+            FROM information_schema.tables 
+            WHERE table_schema = '{schema}'
+            ORDER BY table_name
+            """
+            cursor.execute(tables_query)
+            tables = [row[0] for row in cursor.fetchall()]
+            
+            # Group tables by category (assuming first part of table name is category)
+            categories = {}
+            for table in tables:
+                parts = table.split('_')
+                if len(parts) > 1:
+                    category = parts[0]
+                    if category not in categories:
+                        categories[category] = []
+                    categories[category].append(table)
+                else:
+                    # Handle tables without underscore
+                    if 'general' not in categories:
+                        categories['general'] = []
+                    categories['general'].append(table)
+            
+            hierarchical_data[schema] = categories
+        
+        # Create context object with metadata
+        context = {
+            "description": "ETF classification structure from database",
+            "levels": {
+                "category": "Top-level ETF category",
+                "subcategory": "Specific ETF types within a category",
+                "etf": "Individual ETF instruments"
+            },
+            "data": hierarchical_data
+        }
+        
+        # Format with indentation for readability
+        return json.dumps(context, indent=2)
+        
     except Exception as e:
-        print(f"Error reading stock universe JSON file: {e}")
-        return f"Error: Could not read stock universe data from {json_file_path}. {str(e)}"
+        error_msg = f"Error retrieving ETF data: {str(e)}"
+        print(error_msg)
+        return json.dumps({"error": error_msg})
+    
+    finally:
+        if 'conn' in locals() and conn:
+            cursor.close()
+            conn.close()
 
 def free_search(system_prompt, user_prompt):
     from optimizerAnimation import start_animation, Colors
