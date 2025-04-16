@@ -802,44 +802,53 @@ def extract_asset_classes(json_data):
     Extract asset classes from portfolio JSON data.
     
     Args:
-        json_data (str): JSON string containing portfolio data
+        json_data (dict): JSON data containing portfolio data
         
     Returns:
-        list: List of asset class names with 'cash' filtered out
+        dict: Dictionary mapping asset classes to their allocations, with 'cash' filtered out
     """
     # Parse the JSON string
-    import json
     data = json_data
     
     # Check if data has expected structure
     if not isinstance(data, dict):
         print("Error: Portfolio data is not a dictionary")
-        return []
+        return {}
     
     if "portfolio" not in data:
         print("Error: Portfolio data does not contain 'portfolio' key")
-        return []
+        return {}
     
     if not isinstance(data["portfolio"], list) or not data["portfolio"]:
         print("Error: Portfolio array is empty or not a list")
-        return []
+        return {}
     
-    # Extract asset classes using list comprehension with error handling
-    asset_classes = []
+    # Extract asset classes with allocations
+    asset_classes = {}
     for item in data["portfolio"]:
         if not isinstance(item, dict):
             print(f"Warning: Portfolio item is not a dictionary: {item}")
             continue
             
         asset_class = item.get("asset_class")
+        allocation = item.get("allocation")
+        
         if not asset_class:
             print(f"Warning: Missing 'asset_class' in portfolio item: {item}")
             continue
             
-        asset_classes.append(asset_class)
+        if allocation is None:
+            print(f"Warning: Missing 'allocation' in portfolio item: {item}")
+            continue
+        
+        # Convert allocation to float if it's a string (handle % if present)
+        if isinstance(allocation, str):
+            allocation = float(allocation.strip("%"))
+        
+        asset_classes[asset_class] = allocation
     
-    # Filter out 'cash' from the list
-    asset_classes = [asset for asset in asset_classes if asset and asset.lower() != 'cash']
+    # Filter out 'cash' from the dictionary
+    asset_classes = {k: v for k, v in asset_classes.items() if k.lower() != 'cash'}
     
     if not asset_classes:
         print("Warning: No valid asset classes found in portfolio data")
@@ -1454,12 +1463,23 @@ IMPORTANT:
    return recommendations
 
 # Modified main execution code to process asset classes in parallel
-def process_asset_class(asset):
-    print(f"Processing asset class: {asset}")
-    x = get_stock_tickers(asset)
-    print(f"Got {len(x.get(asset, []))} tickers for {asset}")
+def process_asset_class(asset, allocation):
+    """
+    Process an asset class to find optimal stocks.
     
-    filtered_tickers = filter_stocks(x)
+    Args:
+        asset (str): The asset class name
+        allocation (float): The allocation percentage for this asset class
+        
+    Returns:
+        dict: Dictionary mapping tickers to {'allocation': float, 'reason': str}
+    """
+    print(f"Processing asset class: {asset} with allocation: {allocation}%")
+    ticker_dict = get_stock_tickers(asset)
+    print(f"Got {len(ticker_dict.get(asset, []))} tickers for {asset}")
+    
+    filtered_tickers_dict = filter_stocks(ticker_dict)
+    filtered_tickers = filtered_tickers_dict.get(asset, [])
     print(f"Filtered down to {len(filtered_tickers)} tickers for {asset}")
 
     # Use optimized portfolio manager with reasonable defaults for parallelism
@@ -1480,11 +1500,20 @@ def process_asset_class(asset):
             # Extract recommendations
             recommendations = {}
             if 'recommendations' in result_data:
-                for recommendation in result_data['recommendations']:
-                    ticker = recommendation.get('ticker')
-                    justification = recommendation.get('justification')
-                    if ticker: # Ensure ticker is not None or empty
-                        recommendations[ticker] = justification
+                # Count number of recommendations to distribute allocation
+                num_recommendations = len(result_data['recommendations'])
+                if num_recommendations > 0:
+                    # Distribute allocation evenly among selected stocks
+                    per_stock_allocation = allocation / num_recommendations
+                    
+                    for recommendation in result_data['recommendations']:
+                        ticker = recommendation.get('ticker')
+                        justification = recommendation.get('justification')
+                        if ticker:  # Ensure ticker is not None or empty
+                            recommendations[ticker] = {
+                                'allocation': round(per_stock_allocation, 2),
+                                'reason': justification
+                            }
             
             return recommendations
         else:
@@ -1507,7 +1536,7 @@ def analyze_portfolio(portfolio_data):
                               and their allocations.
                               
     Returns:
-        dict: A dictionary of recommended stock tickers and their justifications
+        dict: A dictionary mapping tickers to their allocations and justifications
         float: Total execution time in seconds
     """
     # Start the timer
@@ -1516,18 +1545,19 @@ def analyze_portfolio(portfolio_data):
     
     final = {}
 
-    asset_classes = extract_asset_classes(portfolio_data)
-    print(f"Extracted asset classes: {asset_classes}")
+    # Extract asset classes with their allocations
+    asset_class_allocations = extract_asset_classes(portfolio_data)
+    print(f"Extracted asset classes with allocations: {asset_class_allocations}")
 
     # Determine optimal number of workers based on system capabilities and number of asset classes
-    max_workers_asset_class = min(len(asset_classes), os.cpu_count() or 2)  # Use CPU count as upper limit
+    max_workers_asset_class = min(len(asset_class_allocations), os.cpu_count() or 2)  # Use CPU count as upper limit
     
     # Process asset classes in parallel
     with concurrent.futures.ThreadPoolExecutor(max_workers=max_workers_asset_class) as executor:
         # Submit all asset class analysis tasks
         future_to_asset = {
-            executor.submit(process_asset_class, asset): asset 
-            for asset in asset_classes
+            executor.submit(process_asset_class, asset, allocation): asset 
+            for asset, allocation in asset_class_allocations.items()
         }
         
         # Process results as they complete
@@ -1552,7 +1582,7 @@ def analyze_portfolio(portfolio_data):
     print(f"\n========== PROCESS COMPLETED ==========")
     print(f"Total execution time: {minutes} minutes and {seconds} seconds")
     print(f"Finished at: {datetime.now().strftime('%H:%M:%S')}")
-    print(f"Processed {len(asset_classes)} asset classes with {len(final)} final recommendations")
+    print(f"Processed {len(asset_class_allocations)} asset classes with {len(final)} final recommendations")
     
     return final, elapsed_time
 
