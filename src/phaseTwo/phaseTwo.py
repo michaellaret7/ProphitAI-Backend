@@ -21,12 +21,20 @@ load_dotenv()
 
 # Initialize the OpenAI client
 DEEPSEEK_API_KEY = os.environ.get("DEEPSEEK_API_KEY")
+deepseek_model = os.environ.get("DEEPSEEK_MODEL")
+
 Sonar_API_KEY = os.environ.get("PERPLEXITY_API_KEY")
 PERPLEXITY_MODEL = os.environ.get("PERPLEXITY_MODEL")
 
-client = OpenAI(api_key=DEEPSEEK_API_KEY, base_url="https://api.deepseek.com")
+openai_api_key = os.environ.get("OPENAI_API_KEY")
+openai_model = os.environ.get("OPENAI_MODEL")
 
-model = 'deepseek-chat'
+model = openai_model
+
+if model == openai_model:
+   client = OpenAI(api_key=openai_api_key)
+elif model == deepseek_model:
+   client = OpenAI(api_key=DEEPSEEK_API_KEY, base_url="https://api.deepseek.com")
 
 # Sample portfolio data for testing when this module is run directly
 portfolio_data = {
@@ -1369,7 +1377,7 @@ def run_portfolio_manager(tickers=None, max_workers=4, batch_sentiment=True):
 You are a very skilled portfolio manager with 30 years of experience. 
 
 TASK:
-You will receive the complete analysis data for {len(all_analysis_data)} stocks. Your job is to identify the top 2-3 stocks with the best overall performance.
+You will receive the complete analysis data for {len(all_analysis_data)} stocks. Your job is to identify the top 1-2 stocks with the best overall performance.
 
 ANALYSIS APPROACH:
 - Review ALL the provided data carefully
@@ -1377,7 +1385,7 @@ ANALYSIS APPROACH:
 1. Performance metrics (sharpe ratio, sortino ratio, etc.)
 2. Fundamental data (when available)
 3. News sentiment
-- Choose the 2-3 stocks that you believe have the best investment potential
+- Choose the 1-2 stocks that you believe have the best investment potential(DO NOT EXCEED 2)
 
 OUTPUT FORMAT:
 Return your recommendations in this JSON format:
@@ -1430,7 +1438,7 @@ IMPORTANT:
       },
       {
          "role": "user", 
-         "content": f"Here is the complete analysis data for {len(all_analysis_data)} tickers: {json.dumps(all_analysis_data)}\n\nPlease analyze this data and provide your top 2-3 stock recommendations."
+         "content": f"Here is the complete analysis data for {len(all_analysis_data)} tickers: {json.dumps(all_analysis_data)}\n\nPlease analyze this data and provide your top 1-2 stock recommendations."
       }
    ]
 

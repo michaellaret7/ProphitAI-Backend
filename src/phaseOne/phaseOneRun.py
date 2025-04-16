@@ -53,7 +53,7 @@ deepseek_model = os.environ.get("DEEPSEEK_MODEL")
 grok_model = os.environ.get("GROK_MODEL")
 
 # MODEL
-model = grok_model
+model = openai_model
 
 if model == openai_model:
     client = OpenAI(api_key=OpenAI_API_KEY)
@@ -103,7 +103,6 @@ def parse_json_with_openai(text):
     
     print("Warning: Could not extract valid JSON with portfolio key from text")
     return {"error": "No valid JSON found", "portfolio": []}
-
 
 def validate_and_fix_allocations(data, min_allocation=1.0, max_allocation=20.0):
     """
@@ -182,7 +181,6 @@ def validate_and_fix_allocations(data, min_allocation=1.0, max_allocation=20.0):
             asset["allocation"] = round(asset.get("allocation", 0) * norm_factor, 1)
     
     return data
-
 
 def validate_asset_classes(data):
     """
@@ -269,7 +267,6 @@ def validate_asset_classes(data):
         print("Asset class validation complete - all asset classes are valid")
         
     return data
-
 
 def optimize():
     current_date = datetime.now().strftime('%Y-%m-%d')
@@ -455,6 +452,10 @@ Your response should have two parts:
                     f.write(f"\n\n{'='*40}\n")
                     f.write(f"{report_title}\n")
                     f.write(f"{'='*40}\n\n")
+                    # Check if research_report is None and provide a default value
+                    if research_report is None:
+                        research_report = "No data available for this report."
+                        print(f"Warning: Received None for {report_title}")
                     f.write(research_report)
                     f.write("\n\n")
             
@@ -535,6 +536,10 @@ Your response should have two parts:
                 
                 try:
                     research_report = analyst_func()
+                    # Add check for None result
+                    if research_report is None:
+                        print(f"Warning: {function_name} returned None. Using default message.")
+                        research_report = f"The {function_name} tool was called but did not return any data. This could be due to a connection issue or service interruption."
                 except Exception as e:
                     print(f"Error generating {function_name} report: {e}")
                     research_report = f"I attempted to generate a comprehensive {function_name} report but encountered an error. Please continue with the available information or try using other research tools."
@@ -710,15 +715,91 @@ ONLY after conducting all required research using the specified tools and any ad
         print("Starting portfolio optimization research...")
         final_content = handle_conversation(initial_messages, all_tools, remaining_required_tools)
         
-        if final_content:
-            print("\n=== Final Portfolio Recommendation ===")
-            return final_content
-        else:
+        if not final_content:
             error_msg = "No recommendation was generated."
             with open(output_filename, "a", encoding="utf-8") as f:
                 f.write(f"\n\n{'='*40}\nERROR\n{'='*40}\n\n{error_msg}")
             print(error_msg)
-            return error_msg
+            return {"portfolio": []}
+
+        print("\n=== Final Portfolio Recommendation ===")
+        print(final_content)
+        
+        # Process the recommendation and prepare the portfolio for analysis
+        portfolio_json = validate_and_fix_allocations(final_content)
+        portfolio_json = validate_asset_classes(portfolio_json)
+
+        print(portfolio_json)
+
+        # Additional safety check before passing to analyze_portfolio
+        if not isinstance(portfolio_json, dict):
+            print("Error: Portfolio JSON is not a dictionary, creating empty portfolio")
+            portfolio_json = {"portfolio": []}
+
+        if "portfolio" not in portfolio_json:
+            print("Error: Portfolio JSON does not contain 'portfolio' key, creating empty portfolio")
+            portfolio_json = {"portfolio": []}
+
+        if not isinstance(portfolio_json["portfolio"], list):
+            print("Error: Portfolio is not an array, creating empty portfolio array")
+            portfolio_json["portfolio"] = []
+
+        # Check if the portfolio has any entries
+        if not portfolio_json["portfolio"]:
+            print("Warning: Portfolio is empty, no assets to analyze")
+            # Create a default portfolio to prevent downstream errors
+            portfolio_json["portfolio"] = [
+                {
+                    "asset_class": "unknown",
+                    "allocation": 100,
+                    "reason": "Default portfolio created due to empty portfolio data"
+                }
+            ]
+
+        # Final check for required fields in each asset
+        required_fields = ["asset_class", "allocation", "reason"]
+        for i, asset in enumerate(portfolio_json["portfolio"]):
+            if not isinstance(asset, dict):
+                print(f"Error: Asset {i} is not a dictionary, replacing with default asset")
+                portfolio_json["portfolio"][i] = {
+                    "asset_class": "unknown",
+                    "allocation": 0,
+                    "reason": "Invalid asset entry"
+                }
+                continue
+            
+            for field in required_fields:
+                if field not in asset:
+                    print(f"Error: Asset {i} missing required field '{field}', adding default value")
+                    if field == "asset_class":
+                        asset[field] = "unknown"
+                    elif field == "allocation":
+                        asset[field] = 0
+                    elif field == "reason":
+                        asset[field] = "No reason provided"
+            
+            # Ensure allocation is a number, not a string
+            if field == "allocation" and isinstance(asset[field], str):
+                try:
+                    asset[field] = float(asset[field])
+                except ValueError:
+                    print(f"Error: Asset {i} has invalid allocation value, setting to 0")
+                    asset[field] = 0
+
+        # Now we can safely call analyze_portfolio
+        try:
+            analyze_portfolio(portfolio_json)
+            print("Portfolio analysis completed successfully")
+        except Exception as e:
+            print(f"Error during portfolio analysis: {e}")
+            traceback.print_exc()
+
+        # End timer and print execution time
+        end_time = time.time()
+        total_time = end_time - start_time
+        print(f"\nTotal processing time: {total_time:.2f} seconds ({total_time/60:.2f} minutes)")
+        
+        return portfolio_json
             
     except Exception as e:
         print(f"Error in portfolio optimization: {e}")
@@ -731,86 +812,9 @@ ONLY after conducting all required research using the specified tools and any ad
         except:
             pass
             
-        return error_msg
+        return {"portfolio": []}
 
-
-def phaseTwoMain():
-    final_content = optimize()
-    print(final_content)
-
-    portfolio_json = validate_and_fix_allocations(final_content)
-    portfolio_json = validate_asset_classes(portfolio_json)
-
-    print(portfolio_json)
-
-    # Additional safety check before passing to analyze_portfolio
-    if not isinstance(portfolio_json, dict):
-        print("Error: Portfolio JSON is not a dictionary, creating empty portfolio")
-        portfolio_json = {"portfolio": []}
-
-    if "portfolio" not in portfolio_json:
-        print("Error: Portfolio JSON does not contain 'portfolio' key, creating empty portfolio")
-        portfolio_json = {"portfolio": []}
-
-    if not isinstance(portfolio_json["portfolio"], list):
-        print("Error: Portfolio is not an array, creating empty portfolio array")
-        portfolio_json["portfolio"] = []
-
-    # Check if the portfolio has any entries
-    if not portfolio_json["portfolio"]:
-        print("Warning: Portfolio is empty, no assets to analyze")
-        # Create a default portfolio to prevent downstream errors
-        portfolio_json["portfolio"] = [
-            {
-                "asset_class": "unknown",
-                "allocation": 100,
-                "reason": "Default portfolio created due to empty portfolio data"
-            }
-        ]
-
-    # Final check for required fields in each asset
-    required_fields = ["asset_class", "allocation", "reason"]
-    for i, asset in enumerate(portfolio_json["portfolio"]):
-        if not isinstance(asset, dict):
-            print(f"Error: Asset {i} is not a dictionary, replacing with default asset")
-            portfolio_json["portfolio"][i] = {
-                "asset_class": "unknown",
-                "allocation": 0,
-                "reason": "Invalid asset entry"
-            }
-            continue
-            
-        for field in required_fields:
-            if field not in asset:
-                print(f"Error: Asset {i} missing required field '{field}', adding default value")
-                if field == "asset_class":
-                    asset[field] = "unknown"
-                elif field == "allocation":
-                    asset[field] = 0
-                elif field == "reason":
-                    asset[field] = "No reason provided"
-            
-            # Ensure allocation is a number, not a string
-            if field == "allocation" and isinstance(asset[field], str):
-                try:
-                    asset[field] = float(asset[field])
-                except ValueError:
-                    print(f"Error: Asset {i} has invalid allocation value, setting to 0")
-                    asset[field] = 0
-
-    # Now we can safely call analyze_portfolio
-    try:
-        analyze_portfolio(portfolio_json)
-        print("Portfolio analysis completed successfully")
-    except Exception as e:
-        print(f"Error during portfolio analysis: {e}")
-        traceback.print_exc()
-
-    # End timer and print execution time
-    end_time = time.time()
-    total_time = end_time - start_time
-    print(f"\nTotal processing time: {total_time:.2f} seconds ({total_time/60:.2f} minutes)")
 
 # Ensure module doesn't run on import
 if __name__ == "__main__":
-    phaseTwoMain()
+    optimize()  

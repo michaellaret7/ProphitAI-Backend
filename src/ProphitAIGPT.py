@@ -2,7 +2,7 @@ import openai
 import pandas as pd
 import numpy as np
 from openai import OpenAI
-from ib_insync import IB, Stock, Future, ContFuture, Option, MarketOrder, StopOrder, LimitOrder
+from ib_insync import Stock, Future, ContFuture, Option, MarketOrder, StopOrder, LimitOrder
 import yfinance as yf
 from datetime import datetime, timedelta, date
 import json
@@ -23,6 +23,7 @@ from sklearn.linear_model import LinearRegression
 from ib_insync import Stock, Option, Future, ContFuture, IB
 import os
 from dotenv import load_dotenv
+from src.utils.ib_utils import connect_to_ib, disconnect_from_ib, get_ib
 
 load_dotenv()
 
@@ -38,33 +39,6 @@ client = OpenAI(
     api_key=OpenAI_API_KEY
 )
 
-def connect_to_ib():
-    ib = IB()
-    if ib.isConnected():
-        ib.disconnect()
-
-    connected = False
-
-    for port in [7497, 4002]:
-        for clientId in range(7):  # Try client IDs from 0 to 6
-            try:
-                ib.connect('127.0.0.1', port, clientId=clientId)
-                connected = True
-                print(f"🌐 Connected successfully on port {port} with clientId {clientId}")
-                break  # Break out of the clientId loop
-            except Exception as e:
-                print(f"🚨 Failed to connect on port {port} with clientId {clientId}: {e}")
-                pass
-        
-        if connected:
-            break  # Break out of the port loop if we're connected
-    
-    if not connected:
-        print("⛔ Could not connect to IB on any port with any clientId")
-        return None
-
-    return ib
-
 # ---------------------------------------------------------------------------------------------------------------
 # Tools
 # ---------------------------------------------------------------------------------------------------------------
@@ -76,8 +50,10 @@ def get_portfolio_data():
     Returns:
         pd.DataFrame: DataFrame containing portfolio positions and data
     """
-
-    ib = connect_to_ib()
+    ib = get_ib()
+    
+    if ib is None:
+        return pd.DataFrame()  # Return empty DataFrame if connection failed
     
     # Get portfolio data
     portfolio = ib.portfolio()
@@ -100,7 +76,6 @@ def get_portfolio_data():
     
     df = pd.DataFrame(portfolio_data)
     
-    ib.disconnect()
     return df
 
 def format_portfolio_grid(df):
@@ -136,7 +111,6 @@ def format_portfolio_grid(df):
                 'Price': f"${price:,.2f}",
                 'Value': f"${value:,.2f}",
                 'Cost': f"${cost:,.2f}",
-                # Format P/L with sign before the dollar sign
                 'P/L': f"-${abs(pnl):,.2f}" if pnl < 0 else f"+${pnl:,.2f}"
             }
             formatted_data.append(formatted_row)
@@ -191,7 +165,10 @@ def place_bracket_order_long(symbol, quantity, entry_price, take_profit_price, s
     """
     Places a bracket order with a primary order, a take-profit order, and a stop-loss order.
     """
-    ib = connect_to_ib()
+    ib = get_ib()
+    
+    if ib is None:
+        return None  # Return None if connection failed
     
     contract = Stock(symbol, 'SMART', 'USD')
     ib.qualifyContracts(contract)
@@ -226,7 +203,6 @@ def place_bracket_order_long(symbol, quantity, entry_price, take_profit_price, s
         print(f"Order {trade.order.orderId} status: {trade.orderStatus.status}")
     
     print("✅ Order submitted successfully!")
-    ib.disconnect()
     return parent[0]  # Return the parent order
 
 def name_to_ticker(company_name):
@@ -373,11 +349,13 @@ def exit_position(symbol):
     Returns:
         dict: Result of the order or None if no position found/order failed
     """
+    ib = get_ib()
+    
+    if ib is None:
+        return None  # Return None if connection failed
+    
     # Convert company name to ticker if needed
     ticker = name_to_ticker(symbol)
-    
-    # Connect to IB
-    ib = connect_to_ib()
     
     # Get portfolio data
     portfolio = ib.portfolio()
@@ -391,7 +369,6 @@ def exit_position(symbol):
             
             if quantity <= 0:
                 print(f"No position found for {ticker}.")
-                ib.disconnect()
                 return None
                 
             print(f"Found position: {quantity} shares of {ticker}")
@@ -414,12 +391,10 @@ def exit_position(symbol):
                 
             print(f"Order status: {trade.orderStatus.status}")
             
-            ib.disconnect()
             return trade
     
     if not position_found:
         print(f"No position found for {ticker}.")
-        ib.disconnect()
         return None
 
 def prompt_exit_position(symbol):
@@ -433,15 +408,18 @@ def prompt_exit_position(symbol):
     Returns:
         dict: Result of the order or None if canceled/no position
     """
+    ib = get_ib()
+    
+    if ib is None:
+        return None  # Return None if connection failed
+    
     # Convert company name to ticker if needed
     ticker = name_to_ticker(symbol)
     
     print(f"\n--- Exit Position for {ticker} ---")
     
-    # Connect to IB to get position info
-    ib = connect_to_ib()
+    # Get portfolio data
     portfolio = ib.portfolio()
-    ib.disconnect()
     
     # Find position for the specified symbol
     position_found = False
@@ -571,88 +549,95 @@ messages = [
     }
 ]
 
+# Connect to IB at startup
+connect_to_ib()
+
 # Main interaction loop
-while True:
-    user_input = input("🤖 Enter your prompt here: ")
-    messages.append({"role": "user", "content": user_input})
-    
-    # Check for direct buy triggers
-    buy_triggers = ["buy", "purchase", "invest in", "want to buy", "get some", "go long", "long", "buy long", "execute long position", "enter position", "initiate position", "set up a trade", "create an order", "place an order", "execute trade", "make a purchase", "buy shares of", "purchase some", "acquire stock in"]
-    force_buy_tool = False
-    stock_symbol = None
-    
-    # Simple buy intent detection
-    user_input_lower = user_input.lower()
-    if any(trigger in user_input_lower for trigger in buy_triggers):
-        force_buy_tool = True
-        # Try to extract stock symbol - simple approach
-        words = user_input.replace(',', '').replace('.', '').split()
-        for i, word in enumerate(words):
-            if any(trigger in word.lower() for trigger in buy_triggers) and i < len(words) - 1:
-                # Assume the word after a buy trigger might be a stock name
-                stock_symbol = words[i+1]
-                break
-    
-    # Inner loop to handle tool calls and responses
+try:
     while True:
-        if force_buy_tool and stock_symbol:
-            # Skip the model and directly call prompt_long_buy_order
-            print("I'll help you buy some shares. Let me get some details from you.")
-            result = prompt_long_buy_order(stock_symbol)
-            # Add a simulated response to keep conversation history consistent
-            messages.append({
-                "role": "assistant",
-                "content": str(result) if result else "Order was cancelled."
-            })
-            break
-        else:
-            # Normal flow using the model
-            completion = client.chat.completions.create(
-                model=model,
-                messages=messages,
-                tools=tools,
-                tool_choice="auto"  # Let the model decide whether to use a tool
-            )
-            
-            response = completion.choices[0].message
-            messages.append(response)  # Add the model's response to history
-            
-            if response.tool_calls:
-                # Handle each tool call
-                for tool_call in response.tool_calls:
-                    if tool_call.function.name == "get_portfolio_data":
-                        result = get_portfolio_data()
-                        # Format as grid instead of basic string conversion
-                        result_str = format_portfolio_grid(result)
-                        
-                        # Add a message to the AI to preserve the formatting
-                        messages.append({
-                            "role": "tool",
-                            "content": "Here is your portfolio data in a tabular format. Please display it exactly as formatted below with its table structure intact:\n\n" + result_str,
-                            "tool_call_id": tool_call.id
-                        })
-                    elif tool_call.function.name == "place_bracket_order_long":
-                        args = json.loads(tool_call.function.arguments)
-                        # Use the interactive prompt flow instead of direct function call
-                        symbol = args.get('symbol')
-                        result = prompt_long_buy_order(symbol)
-                        messages.append({
-                            "role": "tool",
-                            "content": str(result) if result else "Order was cancelled.",
-                            "tool_call_id": tool_call.id
-                        })
-                    elif tool_call.function.name == "prompt_exit_position":
-                        args = json.loads(tool_call.function.arguments)
-                        symbol = args.get('symbol')
-                        result = prompt_exit_position(symbol)
-                        messages.append({
-                            "role": "tool",
-                            "content": str(result) if result else "Order was cancelled.",
-                            "tool_call_id": tool_call.id
-                        })
-                # After tool calls are processed, loop back to let the model respond
-            else:
-                # No tool calls: print the response and exit the inner loop
-                print(response.content)
+        user_input = input("🤖 Enter your prompt here: ")
+        messages.append({"role": "user", "content": user_input})
+        
+        # Check for direct buy triggers
+        buy_triggers = ["buy", "purchase", "invest in", "want to buy", "get some", "go long", "long", "buy long", "execute long position", "enter position", "initiate position", "set up a trade", "create an order", "place an order", "execute trade", "make a purchase", "buy shares of", "purchase some", "acquire stock in"]
+        force_buy_tool = False
+        stock_symbol = None
+        
+        # Simple buy intent detection
+        user_input_lower = user_input.lower()
+        if any(trigger in user_input_lower for trigger in buy_triggers):
+            force_buy_tool = True
+            # Try to extract stock symbol - simple approach
+            words = user_input.replace(',', '').replace('.', '').split()
+            for i, word in enumerate(words):
+                if any(trigger in word.lower() for trigger in buy_triggers) and i < len(words) - 1:
+                    # Assume the word after a buy trigger might be a stock name
+                    stock_symbol = words[i+1]
+                    break
+        
+        # Inner loop to handle tool calls and responses
+        while True:
+            if force_buy_tool and stock_symbol:
+                # Skip the model and directly call prompt_long_buy_order
+                print("I'll help you buy some shares. Let me get some details from you.")
+                result = prompt_long_buy_order(stock_symbol)
+                # Add a simulated response to keep conversation history consistent
+                messages.append({
+                    "role": "assistant",
+                    "content": str(result) if result else "Order was cancelled."
+                })
                 break
+            else:
+                # Normal flow using the model
+                completion = client.chat.completions.create(
+                    model=model,
+                    messages=messages,
+                    tools=tools,
+                    tool_choice="auto"  # Let the model decide whether to use a tool
+                )
+                
+                response = completion.choices[0].message
+                messages.append(response)  # Add the model's response to history
+                
+                if response.tool_calls:
+                    # Handle each tool call
+                    for tool_call in response.tool_calls:
+                        if tool_call.function.name == "get_portfolio_data":
+                            result = get_portfolio_data()
+                            # Format as grid instead of basic string conversion
+                            result_str = format_portfolio_grid(result)
+                            
+                            # Add a message to the AI to preserve the formatting
+                            messages.append({
+                                "role": "tool",
+                                "content": "Here is your portfolio data in a tabular format. Please display it exactly as formatted below with its table structure intact:\n\n" + result_str,
+                                "tool_call_id": tool_call.id
+                            })
+                        elif tool_call.function.name == "place_bracket_order_long":
+                            args = json.loads(tool_call.function.arguments)
+                            # Use the interactive prompt flow instead of direct function call
+                            symbol = args.get('symbol')
+                            result = prompt_long_buy_order(symbol)
+                            messages.append({
+                                "role": "tool",
+                                "content": str(result) if result else "Order was cancelled.",
+                                "tool_call_id": tool_call.id
+                            })
+                        elif tool_call.function.name == "prompt_exit_position":
+                            args = json.loads(tool_call.function.arguments)
+                            symbol = args.get('symbol')
+                            result = prompt_exit_position(symbol)
+                            messages.append({
+                                "role": "tool",
+                                "content": str(result) if result else "Order was cancelled.",
+                                "tool_call_id": tool_call.id
+                            })
+                    # After tool calls are processed, loop back to let the model respond
+                else:
+                    # No tool calls: print the response and exit the inner loop
+                    print(response.content)
+                    break
+finally:
+    # Make sure to disconnect when the program exits
+    disconnect_from_ib()
 
