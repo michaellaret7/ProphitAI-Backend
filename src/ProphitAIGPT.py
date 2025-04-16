@@ -21,14 +21,19 @@ from huggingface_hub import InferenceApi
 from huggingface_hub import InferenceClient
 from sklearn.linear_model import LinearRegression
 from ib_insync import Stock, Option, Future, ContFuture, IB
+import os
+from dotenv import load_dotenv
 
+load_dotenv()
 
-OpenAI_API_KEY = "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"
-ANTHROPIC_API_KEY = "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"
-hf_token = "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"
-grok_api_key = "xai-SRllgqCDKpTEPnjCdeoJABoKjO9vsyD3OXKvyiaPnuZNyjpx7CrntWrlw7vf3kFVo04NafIwWRnyqpeA"
+OpenAI_API_KEY = os.getenv("OPENAI_API_KEY")
+openai_model = os.getenv("OPENAI_MODEL")
 
-# Initialize clients
+grok_api_key = os.getenv("GROK_API_KEY")
+grok_model = os.getenv("GROK_MODEL")
+
+model = openai_model
+
 client = OpenAI(
     api_key=OpenAI_API_KEY
 )
@@ -241,7 +246,7 @@ def name_to_ticker(company_name):
     # Use OpenAI to identify the ticker
     try:
         response = client.chat.completions.create(
-            model="gpt-4o",
+            model=model,
             messages=[
                 {
                     "role": "system",
@@ -603,7 +608,7 @@ while True:
         else:
             # Normal flow using the model
             completion = client.chat.completions.create(
-                model="gpt-4o",
+                model=model,
                 messages=messages,
                 tools=tools,
                 tool_choice="auto"  # Let the model decide whether to use a tool
