@@ -23,6 +23,29 @@
             },
             "media": {
                 "tables": {
+                    "cable_and_satellite": {
+                        "tickers": [
+                            "ATUS",
+                            "CABO",
+                            "CHTR",
+                            "CMCSA",
+                            "LBRDA",
+                            "SATS",
+                            "SIRI",
+                            "WOW"
+                        ]
+                    },
+                    "publishing": {
+                        "tickers": [
+                            "DALN",
+                            "GCI",
+                            "LEE",
+                            "NWSA",
+                            "NYT",
+                            "SCHL",
+                            "WLY"
+                        ]
+                    },
                     "advertising": {
                         "tickers": [
                             "ABLV",
@@ -93,29 +116,6 @@
                             "TGNA",
                             "TSQ",
                             "UONEK"
-                        ]
-                    },
-                    "cable_and_satellite": {
-                        "tickers": [
-                            "ATUS",
-                            "CABO",
-                            "CHTR",
-                            "CMCSA",
-                            "LBRDA",
-                            "SATS",
-                            "SIRI",
-                            "WOW"
-                        ]
-                    },
-                    "publishing": {
-                        "tickers": [
-                            "DALN",
-                            "GCI",
-                            "LEE",
-                            "NWSA",
-                            "NYT",
-                            "SCHL",
-                            "WLY"
                         ]
                     }
                 }
@@ -374,6 +374,19 @@
             },
             "specialty_retail": {
                 "tables": {
+                    "homefurnishing_retail": {
+                        "tickers": [
+                            "ARHS",
+                            "BYON",
+                            "HTLM",
+                            "HVT",
+                            "KIRK",
+                            "RH",
+                            "SNBR",
+                            "W",
+                            "WSM"
+                        ]
+                    },
                     "apparel_retail": {
                         "tickers": [
                             "AEO",
@@ -412,6 +425,43 @@
                             "VSCO",
                             "XELB",
                             "ZUMZ"
+                        ]
+                    },
+                    "other_specialty_retail": {
+                        "tickers": [
+                            "ASO",
+                            "BARK",
+                            "BBW",
+                            "BBWI",
+                            "BGFV",
+                            "BNED",
+                            "BQ",
+                            "BRLT",
+                            "CHWY",
+                            "DKS",
+                            "ELA",
+                            "EYE",
+                            "FIVE",
+                            "FLWS",
+                            "FTEL",
+                            "GROV",
+                            "HZO",
+                            "JWEL",
+                            "LESL",
+                            "ODP",
+                            "PETS",
+                            "PHH",
+                            "RENT",
+                            "SBH",
+                            "SIG",
+                            "SPWH",
+                            "TKLF",
+                            "TSCO",
+                            "ULTA",
+                            "UPBD",
+                            "WINA",
+                            "WOOF",
+                            "WRBY"
                         ]
                     },
                     "automotive_retail": {
@@ -465,56 +515,6 @@
                             "HD",
                             "LOW",
                             "TTSH"
-                        ]
-                    },
-                    "homefurnishing_retail": {
-                        "tickers": [
-                            "ARHS",
-                            "BYON",
-                            "HTLM",
-                            "HVT",
-                            "KIRK",
-                            "RH",
-                            "SNBR",
-                            "W",
-                            "WSM"
-                        ]
-                    },
-                    "other_specialty_retail": {
-                        "tickers": [
-                            "ASO",
-                            "BARK",
-                            "BBW",
-                            "BBWI",
-                            "BGFV",
-                            "BNED",
-                            "BQ",
-                            "BRLT",
-                            "CHWY",
-                            "DKS",
-                            "ELA",
-                            "EYE",
-                            "FIVE",
-                            "FLWS",
-                            "FTEL",
-                            "GROV",
-                            "HZO",
-                            "JWEL",
-                            "LESL",
-                            "ODP",
-                            "PETS",
-                            "PHH",
-                            "RENT",
-                            "SBH",
-                            "SIG",
-                            "SPWH",
-                            "TKLF",
-                            "TSCO",
-                            "ULTA",
-                            "UPBD",
-                            "WINA",
-                            "WOOF",
-                            "WRBY"
                         ]
                     }
                 }
@@ -786,6 +786,30 @@
             },
             "diversified_consumer_services": {
                 "tables": {
+                    "specialized_consumer_services": {
+                        "tickers": [
+                            "ADT",
+                            "ALUR",
+                            "BODI",
+                            "CSV",
+                            "EJH",
+                            "EWCZ",
+                            "FTDR",
+                            "HRB",
+                            "JUNE",
+                            "MCW",
+                            "MMA",
+                            "MRM",
+                            "OSW",
+                            "PET",
+                            "RGS",
+                            "SCI",
+                            "SDA",
+                            "WW",
+                            "XWEL",
+                            "YSXT"
+                        ]
+                    },
                     "education_services": {
                         "tickers": [
                             "AACG",
@@ -837,30 +861,6 @@
                             "YQ",
                             "ZCMD",
                             "ZSPC"
-                        ]
-                    },
-                    "specialized_consumer_services": {
-                        "tickers": [
-                            "ADT",
-                            "ALUR",
-                            "BODI",
-                            "CSV",
-                            "EJH",
-                            "EWCZ",
-                            "FTDR",
-                            "HRB",
-                            "JUNE",
-                            "MCW",
-                            "MMA",
-                            "MRM",
-                            "OSW",
-                            "PET",
-                            "RGS",
-                            "SCI",
-                            "SDA",
-                            "WW",
-                            "XWEL",
-                            "YSXT"
                         ]
                     }
                 }
@@ -3559,6 +3559,51 @@
             },
             "professional_services": {
                 "tables": {
+                    "research_and_consulting_services": {
+                        "tickers": [
+                            "AERT",
+                            "AMTM",
+                            "BAH",
+                            "BKSY",
+                            "CACI",
+                            "CBZ",
+                            "CLVT",
+                            "CRAI",
+                            "DNB",
+                            "EFX",
+                            "ELWS",
+                            "EPOW",
+                            "EXPO",
+                            "FBYD",
+                            "FC",
+                            "FCN",
+                            "FORR",
+                            "HURN",
+                            "ICFI",
+                            "INOD",
+                            "J",
+                            "KBR",
+                            "LDOS",
+                            "LZ",
+                            "MG",
+                            "NOTE",
+                            "NVEE",
+                            "PL",
+                            "PSN",
+                            "RCMT",
+                            "RGP",
+                            "SAIC",
+                            "SOS",
+                            "SPIR",
+                            "TRU",
+                            "ULS",
+                            "VCIG",
+                            "VRSK",
+                            "WFCF",
+                            "WLDN",
+                            "ZBAI"
+                        ]
+                    },
                     "data_processing_and_outsourced_services": {
                         "tickers": [
                             "BR",
@@ -3612,51 +3657,6 @@
                             "TBI",
                             "TNET",
                             "UPWK"
-                        ]
-                    },
-                    "research_and_consulting_services": {
-                        "tickers": [
-                            "AERT",
-                            "AMTM",
-                            "BAH",
-                            "BKSY",
-                            "CACI",
-                            "CBZ",
-                            "CLVT",
-                            "CRAI",
-                            "DNB",
-                            "EFX",
-                            "ELWS",
-                            "EPOW",
-                            "EXPO",
-                            "FBYD",
-                            "FC",
-                            "FCN",
-                            "FORR",
-                            "HURN",
-                            "ICFI",
-                            "INOD",
-                            "J",
-                            "KBR",
-                            "LDOS",
-                            "LZ",
-                            "MG",
-                            "NOTE",
-                            "NVEE",
-                            "PL",
-                            "PSN",
-                            "RCMT",
-                            "RGP",
-                            "SAIC",
-                            "SOS",
-                            "SPIR",
-                            "TRU",
-                            "ULS",
-                            "VCIG",
-                            "VRSK",
-                            "WFCF",
-                            "WLDN",
-                            "ZBAI"
                         ]
                     }
                 }
@@ -3726,55 +3726,6 @@
             },
             "machinery": {
                 "tables": {
-                    "agricultural_and_farm_machinery": {
-                        "tickers": [
-                            "AGCO",
-                            "AGFY",
-                            "ALG",
-                            "ARTW",
-                            "CNH",
-                            "DE",
-                            "HYFM",
-                            "LNN",
-                            "TTC",
-                            "TWI",
-                            "UAVS",
-                            "UGRO"
-                        ]
-                    },
-                    "construction_machinery_and_heavy_transportation_equipment": {
-                        "tickers": [
-                            "ALSN",
-                            "ASTE",
-                            "ATMU",
-                            "BLBD",
-                            "CAT",
-                            "CMI",
-                            "CVGI",
-                            "CYD",
-                            "FSS",
-                            "GBX",
-                            "HCAI",
-                            "HYLN",
-                            "KITT",
-                            "MLR",
-                            "MTW",
-                            "MVST",
-                            "NKLA",
-                            "OSK",
-                            "PCAR",
-                            "PLOW",
-                            "RAIL",
-                            "REVG",
-                            "SHYF",
-                            "TEX",
-                            "TRN",
-                            "TWIN",
-                            "WAB",
-                            "WNC",
-                            "XOS"
-                        ]
-                    },
                     "industrial_machinery_and_supplies_and_components": {
                         "tickers": [
                             "AIN",
@@ -3863,6 +3814,55 @@
                             "ZJK",
                             "ZONE"
                         ]
+                    },
+                    "agricultural_and_farm_machinery": {
+                        "tickers": [
+                            "AGCO",
+                            "AGFY",
+                            "ALG",
+                            "ARTW",
+                            "CNH",
+                            "DE",
+                            "HYFM",
+                            "LNN",
+                            "TTC",
+                            "TWI",
+                            "UAVS",
+                            "UGRO"
+                        ]
+                    },
+                    "construction_machinery_and_heavy_transportation_equipment": {
+                        "tickers": [
+                            "ALSN",
+                            "ASTE",
+                            "ATMU",
+                            "BLBD",
+                            "CAT",
+                            "CMI",
+                            "CVGI",
+                            "CYD",
+                            "FSS",
+                            "GBX",
+                            "HCAI",
+                            "HYLN",
+                            "KITT",
+                            "MLR",
+                            "MTW",
+                            "MVST",
+                            "NKLA",
+                            "OSK",
+                            "PCAR",
+                            "PLOW",
+                            "RAIL",
+                            "REVG",
+                            "SHYF",
+                            "TEX",
+                            "TRN",
+                            "TWIN",
+                            "WAB",
+                            "WNC",
+                            "XOS"
+                        ]
                     }
                 }
             },
@@ -3882,6 +3882,27 @@
             },
             "ground_transportation": {
                 "tables": {
+                    "passenger_ground_transportation": {
+                        "tickers": [
+                            "CAR",
+                            "GRAB",
+                            "HTZ",
+                            "LYFT",
+                            "MRT",
+                            "RYDE",
+                            "SWVL",
+                            "UBER",
+                            "ZCAR"
+                        ]
+                    },
+                    "rail_transportation": {
+                        "tickers": [
+                            "CSX",
+                            "FIP",
+                            "NSC",
+                            "UNP"
+                        ]
+                    },
                     "cargo_ground_transportation": {
                         "tickers": [
                             "ARCB",
@@ -3907,27 +3928,6 @@
                             "XPO",
                             "YGMZ",
                             "YMM"
-                        ]
-                    },
-                    "passenger_ground_transportation": {
-                        "tickers": [
-                            "CAR",
-                            "GRAB",
-                            "HTZ",
-                            "LYFT",
-                            "MRT",
-                            "RYDE",
-                            "SWVL",
-                            "UBER",
-                            "ZCAR"
-                        ]
-                    },
-                    "rail_transportation": {
-                        "tickers": [
-                            "CSX",
-                            "FIP",
-                            "NSC",
-                            "UNP"
                         ]
                     }
                 }
@@ -4086,6 +4086,15 @@
             },
             "commercial_services_and_supplies": {
                 "tables": {
+                    "security_and_alarm_services": {
+                        "tickers": [
+                            "BCO",
+                            "CXW",
+                            "GEO",
+                            "KSCP",
+                            "SUGP"
+                        ]
+                    },
                     "commercial_printing": {
                         "tickers": [
                             "BRC",
@@ -4173,15 +4182,6 @@
                             "TILE",
                             "VIRC",
                             "YIBO"
-                        ]
-                    },
-                    "security_and_alarm_services": {
-                        "tickers": [
-                            "BCO",
-                            "CXW",
-                            "GEO",
-                            "KSCP",
-                            "SUGP"
                         ]
                     }
                 }
@@ -4760,32 +4760,6 @@
             },
             "it_services": {
                 "tables": {
-                    "internet_services_and_infrastructure": {
-                        "tickers": [
-                            "AKAM",
-                            "APLD",
-                            "BASE",
-                            "BIGC",
-                            "BLZE",
-                            "CSAI",
-                            "CXDO",
-                            "DOCN",
-                            "DTST",
-                            "FSLY",
-                            "GDDY",
-                            "GDS",
-                            "KC",
-                            "MDB",
-                            "NET",
-                            "OKTA",
-                            "RXT",
-                            "SNOW",
-                            "TWLO",
-                            "VNET",
-                            "VRSN",
-                            "WIX"
-                        ]
-                    },
                     "it_consulting_and_other_services": {
                         "tickers": [
                             "ACN",
@@ -4827,6 +4801,32 @@
                             "WYY",
                             "XTIA",
                             "YAAS"
+                        ]
+                    },
+                    "internet_services_and_infrastructure": {
+                        "tickers": [
+                            "AKAM",
+                            "APLD",
+                            "BASE",
+                            "BIGC",
+                            "BLZE",
+                            "CSAI",
+                            "CXDO",
+                            "DOCN",
+                            "DTST",
+                            "FSLY",
+                            "GDDY",
+                            "GDS",
+                            "KC",
+                            "MDB",
+                            "NET",
+                            "OKTA",
+                            "RXT",
+                            "SNOW",
+                            "TWLO",
+                            "VNET",
+                            "VRSN",
+                            "WIX"
                         ]
                     }
                 }
@@ -5045,6 +5045,11 @@
             },
             "metals_and_mining": {
                 "tables": {
+                    "precious_metals_and_minerals": {
+                        "tickers": [
+                            "ATLX"
+                        ]
+                    },
                     "aluminum": {
                         "tickers": [
                             "AA",
@@ -5054,11 +5059,47 @@
                             "TG"
                         ]
                     },
+                    "silver": {
+                        "tickers": [
+                            "HL"
+                        ]
+                    },
                     "copper": {
                         "tickers": [
                             "FCX",
                             "MTAL",
                             "SCCO"
+                        ]
+                    },
+                    "steel": {
+                        "tickers": [
+                            "ACNT",
+                            "AMR",
+                            "AP",
+                            "ATI",
+                            "CLF",
+                            "CMC",
+                            "CRS",
+                            "FRD",
+                            "HCC",
+                            "HLP",
+                            "HUDI",
+                            "INHD",
+                            "METC",
+                            "MSB",
+                            "MTUS",
+                            "NUE",
+                            "RDUS",
+                            "RS",
+                            "RYI",
+                            "SRL",
+                            "STLD",
+                            "SXC",
+                            "TX",
+                            "WS",
+                            "X",
+                            "ZEUS",
+                            "ZKIN"
                         ]
                     },
                     "diversified_metals_and_mining": {
@@ -5095,67 +5136,11 @@
                             "PZG",
                             "RGLD"
                         ]
-                    },
-                    "precious_metals_and_minerals": {
-                        "tickers": [
-                            "ATLX"
-                        ]
-                    },
-                    "silver": {
-                        "tickers": [
-                            "HL"
-                        ]
-                    },
-                    "steel": {
-                        "tickers": [
-                            "ACNT",
-                            "AMR",
-                            "AP",
-                            "ATI",
-                            "CLF",
-                            "CMC",
-                            "CRS",
-                            "FRD",
-                            "HCC",
-                            "HLP",
-                            "HUDI",
-                            "INHD",
-                            "METC",
-                            "MSB",
-                            "MTUS",
-                            "NUE",
-                            "RDUS",
-                            "RS",
-                            "RYI",
-                            "SRL",
-                            "STLD",
-                            "SXC",
-                            "TX",
-                            "WS",
-                            "X",
-                            "ZEUS",
-                            "ZKIN"
-                        ]
                     }
                 }
             },
             "containers_and_packaging": {
                 "tables": {
-                    "metal_glass_and_plastic_containers": {
-                        "tickers": [
-                            "AMBP",
-                            "ATR",
-                            "BALL",
-                            "BERY",
-                            "CCK",
-                            "GEF",
-                            "JBDI",
-                            "MYE",
-                            "OI",
-                            "SLGN",
-                            "TRS"
-                        ]
-                    },
                     "paper_and_plastic_packaging_products_and_materials": {
                         "tickers": [
                             "AMCR",
@@ -5170,6 +5155,21 @@
                             "SEE",
                             "SON",
                             "SW"
+                        ]
+                    },
+                    "metal_glass_and_plastic_containers": {
+                        "tickers": [
+                            "AMBP",
+                            "ATR",
+                            "BALL",
+                            "BERY",
+                            "CCK",
+                            "GEF",
+                            "JBDI",
+                            "MYE",
+                            "OI",
+                            "SLGN",
+                            "TRS"
                         ]
                     }
                 }
@@ -5408,27 +5408,6 @@
             },
             "real_estate_management_and_development": {
                 "tables": {
-                    "diversified_real_estate_activities": {
-                        "tickers": [
-                            "CHCI",
-                            "FPH",
-                            "JOE",
-                            "RMR",
-                            "TRC"
-                        ]
-                    },
-                    "real_estate_development": {
-                        "tickers": [
-                            "AEI",
-                            "AXR",
-                            "FOR",
-                            "HHH",
-                            "SGD",
-                            "STHO",
-                            "STRS",
-                            "XIN"
-                        ]
-                    },
                     "real_estate_operating_companies": {
                         "tickers": [
                             "ALBT",
@@ -5479,6 +5458,27 @@
                             "SYT",
                             "UOKA",
                             "ZG"
+                        ]
+                    },
+                    "diversified_real_estate_activities": {
+                        "tickers": [
+                            "CHCI",
+                            "FPH",
+                            "JOE",
+                            "RMR",
+                            "TRC"
+                        ]
+                    },
+                    "real_estate_development": {
+                        "tickers": [
+                            "AEI",
+                            "AXR",
+                            "FOR",
+                            "HHH",
+                            "SGD",
+                            "STHO",
+                            "STRS",
+                            "XIN"
                         ]
                     }
                 }

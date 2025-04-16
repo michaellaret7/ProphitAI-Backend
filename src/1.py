@@ -6,8 +6,219 @@ from decimal import Decimal
 from dotenv import load_dotenv
 import pandas as pd
 from datetime import datetime
+from src.utils.file_utils import load_schema_data
 
 load_dotenv()
+
+# def get_fundamentals_data(ticker, db_config=None):
+#    """
+#    Retrieve all fundamental data for a given stock across different tables
+#    (balance sheets, cash flow statements, financial metrics, etc.)
+#    """
+#    # Database configuration
+#    if db_config is None:
+#       db_config = {
+#          "host": os.environ.get("DB_HOST"),
+#          "user": os.environ.get("DB_USER"),
+#          "password": os.environ.get("DB_PASSWORD"),
+#          "port": os.environ.get("DB_PORT")
+#       }
+   
+#    # Normalize ticker
+#    ticker_upper = ticker.upper()
+#    ticker_lower = ticker.lower()
+   
+#    # Load schema definition
+#    with open('src/data/database_schemas.json', 'r') as f:
+#       schema_data = json.load(f)
+   
+#    # Find ticker location
+#    ticker_location = None
+#    for sector_name, sector_info in schema_data.items():
+#       database = sector_info.get('database')
+#       schemas = sector_info.get('schemas', {})
+      
+#       for schema_name, schema_info in schemas.items():
+#          tables = schema_info.get('tables', {})
+         
+#          for table_name, table_info in tables.items():
+#                tickers = table_info.get('tickers', [])
+               
+#                if ticker_upper in tickers:
+#                   # Special case for ETFs - use specific database names
+#                   if "etf" in sector_name.lower():
+#                      db_name = "etf_fundamentals"
+#                   else:
+#                      db_name = f"{database}_fundamentals"
+                     
+#                   ticker_location = {
+#                      "database": db_name,
+#                      "schema": f"{schema_name}",
+#                      "ticker": ticker_upper
+#                   }
+#                   break
+#          if ticker_location: break
+#       if ticker_location: break
+   
+#    if not ticker_location:
+#       # Try case-insensitive ticker search if exact match wasn't found
+#       for sector_name, sector_info in schema_data.items():
+#          database = sector_info.get('database')
+#          schemas = sector_info.get('schemas', {})
+         
+#          for schema_name, schema_info in schemas.items():
+#             tables = schema_info.get('tables', {})
+            
+#             for table_name, table_info in tables.items():
+#                   tickers = table_info.get('tickers', [])
+                  
+#                   # Case-insensitive comparison
+#                   for db_ticker in tickers:
+#                      if ticker_upper.upper() == db_ticker.upper():
+#                         # Special case for ETFs - use specific database names
+#                         if "etf" in sector_name.lower():
+#                            db_name = "etf_fundamentals"
+#                         else:
+#                            db_name = f"{database}_fundamentals"
+                           
+#                         ticker_location = {
+#                            "database": db_name,
+#                            "schema": f"{schema_name}",
+#                            "ticker": db_ticker  # Use the ticker with the exact case from the database
+#                         }
+#                         break
+   
+#    if not ticker_location:
+#       print(f"Ticker {ticker_upper} not found")
+#       return None
+   
+#    try:
+#       # Connect to database
+#       db_config['dbname'] = ticker_location['database']
+#       conn = psycopg2.connect(**db_config)
+#       cursor = conn.cursor()
+      
+#       # Define fundamental table types
+#       table_types = [
+#          "balance_sheets",
+#          "cash_flow_statements", 
+#          "financial_metrics",
+#          "income_statements"
+#       ]
+      
+#       # Dictionary to store all fundamental data
+#       fundamental_data = {}
+      
+#       # Large number columns that should have comma formatting
+#       large_number_columns = [
+#          'market_cap', 'revenue', 'total_assets', 'total_liabilities', 
+#          'total_equity', 'total_debt', 'net_income', 'operating_income',
+#          'gross_profit', 'ebitda', 'cash_flow', 'capex', 'fcf', 'dividends_paid',
+#          'shares_outstanding', 'total_cash', 'current_assets', 'current_liabilities'
+#       ]
+      
+#       # Query each table type
+#       for table_type in table_types:
+#          table_name = f"{ticker_lower}_{table_type}"
+         
+#          try:
+#             # Check if table exists
+#             check_query = f"""
+#             SELECT EXISTS (
+#                SELECT FROM information_schema.tables 
+#                WHERE table_schema = '{ticker_location['schema']}'
+#                AND table_name = '{table_name}'
+#             )
+#             """
+#             cursor.execute(check_query)
+#             table_exists = cursor.fetchone()[0]
+            
+#             if not table_exists:
+#                print(f"Table {table_name} does not exist, skipping")
+#                continue
+            
+#             # Query all data from table without date filtering
+#             query = f"""
+#             SELECT *
+#             FROM {ticker_location['schema']}.{table_name}
+#             ORDER BY date
+#             """
+            
+#             cursor.execute(query)
+            
+#             # Get column names
+#             column_names = [desc[0] for desc in cursor.description]
+            
+#             # Convert results
+#             results = []
+#             for row in cursor.fetchall():
+#                # Convert row to dict
+#                row_dict = {}
+#                for i, value in enumerate(row):
+#                   col_name = column_names[i]
+#                   # Convert Decimal to float
+#                   if isinstance(value, Decimal) or isinstance(value, float):
+#                      value = float(value)
+#                   row_dict[col_name] = value
+                     
+#                results.append(row_dict)
+            
+#             # Create DataFrame and handle data types
+#             df = pd.DataFrame(results)
+            
+#             # Process dates
+#             if 'date' in df.columns and not df.empty:
+#                df['date'] = pd.to_datetime(df['date'])
+#                df = df.sort_values('date')
+            
+#             # Process numeric columns
+#             for col in df.columns:
+#                # Skip date and non-numeric columns
+#                if col == 'date' or col == 'ticker' or col == 'currency' or col == 'period' or col == 'report_period' or col == 'calendar_date':
+#                   continue
+                  
+#                # Convert to numeric and round
+#                try:
+#                   df[col] = pd.to_numeric(df[col], errors='coerce')
+#                   df[col] = df[col].round(2)
+#                except:
+#                   # Keep as is if conversion fails
+#                   pass
+            
+#             # Convert DataFrame to formatted dictionary
+#             formatted_data = []
+#             for _, row in df.iterrows():
+#                formatted_row = {}
+#                for col, val in row.items():
+#                   # Format date columns to ISO format
+#                   if col == 'date' and pd.notna(val):
+#                      formatted_row[col] = val.strftime('%Y-%m-%d')
+#                   # Keep numeric values as actual numbers for better LLM analysis
+#                   elif pd.api.types.is_numeric_dtype(type(val)) and pd.notna(val):
+#                      formatted_row[col] = float(val) if col.lower() not in large_number_columns else int(val)
+#                   # Handle any other values including NaN/None
+#                   else:
+#                      formatted_row[col] = str(val) if pd.notna(val) else None
+               
+#                formatted_data.append(formatted_row)
+            
+#             # Add to the fundamental data dictionary
+#             fundamental_data[table_type] = formatted_data
+            
+#          except Exception as e:
+#             print(f"Error retrieving {table_type} data: {e}")
+#             fundamental_data[table_type] = []  # Empty list as fallback
+      
+#       return fundamental_data
+      
+#    except Exception as e:
+#       print(f"Error retrieving fundamental data: {e}")
+#       return None
+   
+#    finally:
+#       if 'conn' in locals() and conn:
+#          cursor.close()
+#          conn.close()
 
 def get_fundamentals_data(ticker, db_config=None):
    """
@@ -28,8 +239,7 @@ def get_fundamentals_data(ticker, db_config=None):
    ticker_lower = ticker.lower()
    
    # Load schema definition
-   with open('database_schemas.json', 'r') as f:
-      schema_data = json.load(f)
+   schema_data = load_schema_data()
    
    # Find ticker location
    ticker_location = None
@@ -136,12 +346,30 @@ def get_fundamentals_data(ticker, db_config=None):
                print(f"Table {table_name} does not exist, skipping")
                continue
             
-            # Query all data from table without date filtering
-            query = f"""
-            SELECT *
+            # First check if data exists from 2015
+            check_data_query = f"""
+            SELECT COUNT(*) 
             FROM {ticker_location['schema']}.{table_name}
-            ORDER BY date
+            WHERE date >= '2018-01-01'
             """
+            cursor.execute(check_data_query)
+            data_count = cursor.fetchone()[0]
+            
+            # Query table data - from 2015 if data exists, otherwise all data
+            if data_count > 0:
+               query = f"""
+               SELECT *
+               FROM {ticker_location['schema']}.{table_name}
+               WHERE date >= '2018-01-01'
+               ORDER BY date
+               """
+            else:
+               # Fallback to all data if no data from 2015
+               query = f"""
+               SELECT *
+               FROM {ticker_location['schema']}.{table_name}
+               ORDER BY date
+               """
             
             cursor.execute(query)
             
@@ -347,3 +575,4 @@ def get_most_recent_piotroski_score(ticker):
     return None, None
 
 
+print(get_most_recent_piotroski_score("NVDA"))

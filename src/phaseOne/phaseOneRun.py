@@ -1,5 +1,27 @@
-from optimizerAnalysts import free_search, communication_services_analyst, consumer_staples_analyst, consumer_discretionary_analyst, energy_analyst, financials_analyst, commodities_analyst, etf_analyst, treasuries_analyst, foreign_exchange_analyst, ig_credit_analyst, high_yield_analyst, emerging_market_analyst, healthcare_analyst, industrials_analyst, information_technology_analyst, materials_analyst, real_estate_analyst, utilities_analyst, get_equity_universe, get_etf_universe
-from optimizerFormatting import format
+from ..Analysts import (
+    free_search, 
+    communication_services_analyst, 
+    consumer_staples_analyst, 
+    consumer_discretionary_analyst, 
+    energy_analyst, 
+    financials_analyst, 
+    commodities_analyst, 
+    etf_analyst, 
+    treasuries_analyst, 
+    foreign_exchange_analyst, 
+    ig_credit_analyst, 
+    high_yield_analyst, 
+    emerging_market_analyst, 
+    healthcare_analyst, 
+    industrials_analyst, 
+    information_technology_analyst, 
+    materials_analyst, 
+    real_estate_analyst, 
+    utilities_analyst, 
+    get_equity_universe, 
+    get_etf_universe
+)
+from .phaseOneFormatting import format
 from openai import OpenAI
 import json
 import os
@@ -10,6 +32,9 @@ import re
 import anthropic
 import difflib  
 import time
+from src.utils.file_utils import load_schema_data
+from src.phaseTwo import analyze_portfolio
+
 
 # Start timer
 start_time = time.time()
@@ -20,332 +45,230 @@ load_dotenv()
 # API KEYS
 OpenAI_API_KEY = os.environ.get("OPENAI_API_KEY")
 DeepSeek_API_KEY = os.environ.get("DEEPSEEK_API_KEY")
-Anthropic_API_KEY = os.environ.get("ANTHROPIC_API_KEY")
+Grok_API_KEY = os.environ.get("GROK_API_KEY")
 
 # MODELS
 openai_model = os.environ.get("OPENAI_MODEL")
 deepseek_model = os.environ.get("DEEPSEEK_MODEL")
-anthropic_model = os.environ.get("ANTHROPIC_MODEL")
+grok_model = os.environ.get("GROK_MODEL")
 
 # MODEL
-model = openai_model
-client = OpenAI(api_key=OpenAI_API_KEY)
+model = grok_model
+
+if model == openai_model:
+    client = OpenAI(api_key=OpenAI_API_KEY)
+elif model == deepseek_model:
+    client = OpenAI(api_key=DeepSeek_API_KEY, base_url="https://api.deepseek.com")
+elif model == grok_model:
+    client = OpenAI(api_key=Grok_API_KEY, base_url="https://api.x.ai/v1")
 
 def parse_json_with_openai(text):
-    # Simple regex to find JSON between triple quotes
+    """
+    Extract JSON data from text that may contain both human-readable explanation and JSON.
+    
+    Args:
+        text (str): The text output from an LLM containing JSON somewhere within it
+        
+    Returns:
+        dict: Parsed JSON data, or a default portfolio structure if parsing fails
+    """
+    # First try to find JSON between triple quotes (markdown code blocks)
     json_pattern = r"```(?:json)?\s*([\s\S]*?)```"
     json_matches = re.findall(json_pattern, text)
     
     if json_matches:
-        try:
-            # Try to parse the first JSON block found
-            parsed_json = json.loads(json_matches[0])
-            return parsed_json
-        except json.JSONDecodeError:
-            return {"error": "Failed to parse JSON", "portfolio": []}
-    
-    return {"error": "No JSON found in triple quotes", "portfolio": []}
-
-
-def validate_and_fix_allocations(portfolio_content):
-    """
-    Validates portfolio allocations sum to 100% and fixes them if necessary.
-    Also ensures each asset has required fields.
-    
-    Args:
-        portfolio_content: The raw portfolio recommendation content
-        
-    Returns:
-        The final validated portfolio JSON
-    """
-    model_client = OpenAI(api_key=DeepSeek_API_KEY, base_url="https://api.deepseek.com")
-    model = "deepseek-reasoner"
-
-    # Parse the initial JSON
-    portfolio_json = parse_json_with_openai(portfolio_content)
-    
-    # Check for required structure
-    if "portfolio" not in portfolio_json:
-        print("Warning: No portfolio array found in JSON")
-        # Create basic structure if missing
-        portfolio_json = {"portfolio": []}
-        return portfolio_json
-    
-    if not isinstance(portfolio_json["portfolio"], list):
-        print("Warning: Portfolio is not an array")
-        portfolio_json["portfolio"] = []
-        return portfolio_json
-    
-    # Check for required fields in each asset
-    required_fields = ["asset_class", "allocation", "reason"]
-    for i, asset in enumerate(portfolio_json["portfolio"]):
-        if not isinstance(asset, dict):
-            print(f"Warning: Asset {i} is not a dictionary")
-            continue
-            
-        for field in required_fields:
-            if field not in asset:
-                print(f"Warning: Missing required field '{field}' in asset {i}")
-                # Add default value for missing field
-                if field == "asset_class":
-                    asset[field] = "unknown"
-                elif field == "allocation":
-                    asset[field] = "0"
-                elif field == "reason":
-                    asset[field] = "No reason provided"
-    
-    # Validate the allocations
-    total_allocation = 0
-    
-    for asset in portfolio_json["portfolio"]:
-        if "allocation" in asset:
-            # Handle allocation as string (remove % sign if present)
-            allocation_str = str(asset["allocation"]).strip()
-            if allocation_str.endswith("%"):
-                allocation_str = allocation_str[:-1]
-            
+        for json_str in json_matches:
             try:
-                allocation = float(allocation_str)
-                total_allocation += allocation
-            except ValueError:
-                print(f"Warning: Could not parse allocation value: {asset['allocation']}")
-                # Set default allocation
-                asset["allocation"] = "0"
+                # Try to parse the JSON block
+                parsed_json = json.loads(json_str)
+                if isinstance(parsed_json, dict) and "portfolio" in parsed_json:
+                    return parsed_json
+            except json.JSONDecodeError:
+                continue
     
-    # Check if total allocation is 100% (allowing for small floating point errors)
-    is_valid = abs(total_allocation - 100.0) < 0.5
-    
-    print("JSON:")
-    print("-"*100)
-    print(portfolio_json)
-    
-    # If allocations sum to 100%, return the original
-    if is_valid:
-        return portfolio_json
-    
-   
-    # Otherwise, send a follow-up request to fix allocations
-    print(f"\nWARNING: Total allocation is {total_allocation}%, which is not 100%.")
-    print("Sending follow-up request to fix allocations...\n")
-    
-    # Create follow-up request to fix allocations
-    follow_up_message = f"""
-Your portfolio recommendation has allocations that sum to {total_allocation}%, which is not 100%.
-
-Please adjust the allocations to ensure they sum to exactly 100%.
-Remember:
-1. Keep 5-7% of the portfolio in cash
-2. Make sure there are at least 5 asset classes
-3. ONLY use asset classes from the get_equity_universe and get_etf_universe tools
-4. Return the COMPLETE portfolio with adjusted allocations in the same JSON format
-5. EACH ASSET MUST INCLUDE asset_class, allocation, and reason fields
-
-Original portfolio recommendation:
-{json.dumps(portfolio_json, indent=2)}
-"""
-    
-    # Use the provided client for follow-up request
-    fix_response = model_client.chat.completions.create(
-        model=model,
-        messages=[
-            {
-                "role": "system",
-                "content": """You are an elite portfolio manager who creates optimized investment portfolios. Your task now is to fix allocation percentages to ensure they sum to exactly 100%. Make sure each asset has an asset_class, allocation, and reason field.
-                """
-            },
-            {
-                "role": "user",
-                "content": follow_up_message
-            }
-        ],
-    )
-    
-    fixed_content = fix_response.choices[0].message.content
-    print("\nFixed portfolio recommendation received.")
-    
-    # Parse the fixed JSON
-    fixed_json = parse_json_with_openai(fixed_content)
-    
-    # Check if fixed JSON has required structure
-    if "portfolio" not in fixed_json:
-        print("Warning: Fixed JSON doesn't have a portfolio array")
-        return portfolio_json
-    
-    # Check for required fields in each asset
-    for i, asset in enumerate(fixed_json["portfolio"]):
-        if not isinstance(asset, dict):
-            print(f"Warning: Asset {i} in fixed JSON is not a dictionary")
-            continue
-            
-        for field in required_fields:
-            if field not in asset:
-                print(f"Warning: Missing required field '{field}' in fixed asset {i}")
-                # Keep original value if available, otherwise use default
-                if field in portfolio_json["portfolio"][i] if i < len(portfolio_json["portfolio"]) else False:
-                    asset[field] = portfolio_json["portfolio"][i][field]
-                else:
-                    if field == "asset_class":
-                        asset[field] = "unknown"
-                    elif field == "allocation":
-                        asset[field] = "0"
-                    elif field == "reason":
-                        asset[field] = "No reason provided"
-    
-    # Validate the fixed allocations
-    fixed_total = 0
-    for asset in fixed_json.get("portfolio", []):
-        if "allocation" in asset:
-            allocation_str = str(asset["allocation"]).strip()
-            if allocation_str.endswith("%"):
-                allocation_str = allocation_str[:-1]
-            
-            try:
-                allocation = float(allocation_str)
-                fixed_total += allocation
-            except ValueError:
-                print(f"Warning: Could not parse fixed allocation value: {asset['allocation']}")
-    
-    is_fixed_valid = abs(fixed_total - 100.0) < 0.5
-    
-    print(f"Fixed allocations sum to {fixed_total}%")
-    print("Fixed JSON:")
-    print("-"*100)
-    print(fixed_json)
-    
-    # Return the fixed JSON if it's valid, otherwise the original
-    if is_fixed_valid:
-        return fixed_json
-    else:
-        print(f"WARNING: Fixed allocations still don't sum to 100% (total: {fixed_total}%)")
-        return portfolio_json
-
-
-def validate_asset_classes(portfolio_json):
-    """
-    Validates that asset classes in the portfolio JSON exist in the database.
-    If an asset class doesn't exist, finds the most similar one.
-    Also ensures each portfolio item has required fields.
-    
-    Args:
-        portfolio_json: The portfolio recommendation JSON
-        
-    Returns:
-        The final validated portfolio JSON with valid asset classes
-    """
-    print("Validating asset classes...")
-    
+    # If no valid JSON in code blocks, look for JSON-like structure with curly braces
     try:
-        # First, check for basic structure and required fields
-        if not isinstance(portfolio_json, dict):
-            print("Error: Portfolio JSON is not a dictionary")
-            return {"portfolio": []}
-            
-        if "portfolio" not in portfolio_json:
-            print("Error: Portfolio JSON does not contain 'portfolio' key")
-            return {"portfolio": []}
-            
-        if not isinstance(portfolio_json["portfolio"], list):
-            print("Error: Portfolio is not an array")
-            portfolio_json["portfolio"] = []
-            return portfolio_json
+        curly_pattern = r"\{[\s\S]*\"portfolio\"[\s\S]*\}"
+        curly_matches = re.findall(curly_pattern, text)
         
-        # Check for required fields in each asset
-        required_fields = ["asset_class", "allocation", "reason"]
-        for i, asset in enumerate(portfolio_json["portfolio"]):
-            if not isinstance(asset, dict):
-                print(f"Warning: Asset {i} is not a dictionary")
-                portfolio_json["portfolio"][i] = {"asset_class": "unknown", "allocation": "0", "reason": "Invalid asset"}
+        for potential_json in curly_matches:
+            try:
+                parsed_json = json.loads(potential_json)
+                if isinstance(parsed_json, dict) and "portfolio" in parsed_json:
+                    return parsed_json
+            except json.JSONDecodeError:
                 continue
-                
-            for field in required_fields:
-                if field not in asset:
-                    print(f"Warning: Missing required field '{field}' in asset {i}")
-                    # Add default value for missing field
-                    if field == "asset_class":
-                        asset[field] = "unknown"
-                    elif field == "allocation":
-                        asset[field] = "0"
-                    elif field == "reason":
-                        asset[field] = "No reason provided"
+    except:
+        pass
+    
+    print("Warning: Could not extract valid JSON with portfolio key from text")
+    return {"error": "No valid JSON found", "portfolio": []}
+
+
+def validate_and_fix_allocations(data, min_allocation=1.0, max_allocation=20.0):
+    """
+    Validate and fix the allocations in the portfolio data.
+    
+    Args:
+        data (str or dict): Portfolio data as string or dictionary
         
-        # Load valid asset classes directly from database_schemas.json
-        with open('database_schemas.json', 'r') as f:
-            schema_data = json.load(f)
+    Returns:
+        dict: Validated and fixed portfolio data
+    """
+    # If data is a string, try to parse it as JSON
+    if isinstance(data, str):
+        data = parse_json_with_openai(data)
+    
+    # Check if we have a valid dictionary with portfolio key
+    if not isinstance(data, dict) or "portfolio" not in data:
+        print("Error: Invalid portfolio data format")
+        return {"portfolio": []}
+    
+    # Make a copy to avoid modifying the original data
+    data = json.loads(json.dumps(data))
+    
+    # Check if we have allocations defined
+    if len(data["portfolio"]) == 0:
+        return data
+    
+    # Convert any string allocations to float values
+    for asset in data["portfolio"]:
+        if "allocation" in asset:
+            # If allocation is a string (possibly with %), convert to float
+            if isinstance(asset["allocation"], str):
+                try:
+                    # Remove % if present and convert to float
+                    asset["allocation"] = float(asset["allocation"].strip("%"))
+                except ValueError:
+                    print(f"WARNING: Could not convert allocation '{asset['allocation']}' to number, defaulting to 0")
+                    asset["allocation"] = 0
+    
+    # Calculate total allocation
+    total_allocation = sum(asset.get("allocation", 0) for asset in data["portfolio"])
+    
+    # If total is not close to 100, normalize
+    if abs(total_allocation - 100) > 0.1:  # Allow small rounding errors
+        print(f"WARNING: Total allocation is {total_allocation}%, normalizing to 100%")
         
-        # Extract all valid asset classes
-        valid_asset_classes = []
+        # Calculate normalization factor
+        norm_factor = 100 / total_allocation
         
-        # Process equity sectors from database_schemas.json
-        for sector_name, sector_info in schema_data.items():
-            schemas = sector_info.get('schemas', {})
+        # Apply normalization
+        for asset in data["portfolio"]:
+            asset["allocation"] = round(asset.get("allocation", 0) * norm_factor, 1)
+    
+    # Check for allocations outside min-max bounds
+    for asset in data["portfolio"]:
+        allocation = asset.get("allocation", 0)
+        if allocation < min_allocation:
+            print(f"WARNING: {asset.get('asset_class')} allocation is {allocation}%, increasing to {min_allocation}%")
+            asset["allocation"] = min_allocation
+        elif allocation > max_allocation:
+            print(f"WARNING: {asset.get('asset_class')} allocation is {allocation}%, decreasing to {max_allocation}%")
+            asset["allocation"] = max_allocation
+    
+    # Recalculate total after min-max adjustments
+    total_allocation = sum(asset.get("allocation", 0) for asset in data["portfolio"])
+    
+    # If total is not 100 after min-max adjustments, normalize again
+    if abs(total_allocation - 100) > 0.1:
+        print(f"WARNING: Total allocation after min-max adjustments is {total_allocation}%, normalizing to 100%")
+        
+        # Calculate normalization factor
+        norm_factor = 100 / total_allocation
+        
+        # Apply normalization
+        for asset in data["portfolio"]:
+            asset["allocation"] = round(asset.get("allocation", 0) * norm_factor, 1)
+    
+    return data
+
+
+def validate_asset_classes(data):
+    """
+    Validate if the asset classes in portfolio data are valid.
+    """
+    if not data or not isinstance(data, dict) or "portfolio" not in data:
+        return False, []
+    
+    # Load valid asset classes directly from database_schemas.json
+    schema_data = load_schema_data()
+    
+    # Extract all valid asset classes
+    valid_asset_classes = []
+    
+    # Process equity sectors from database_schemas.json
+    for sector_name, sector_info in schema_data.items():
+        # Skip non-sector entries
+        if not isinstance(sector_info, dict) or "schemas" not in sector_info:
+            continue
             
-            # Add sector name
-            valid_asset_classes.append(sector_name)
-            
-            for schema_name, schema_info in schemas.items():
-                # Add industry name
-                valid_asset_classes.append(schema_name)
-                
-                tables = schema_info.get('tables', {})
-                for table_name in tables.keys():
-                    # Add subindustry name
-                    valid_asset_classes.append(table_name)
+        # Convert sector name to valid asset class
+        sector_asset_class = sector_name.lower().replace(" ", "_")
+        valid_asset_classes.append(sector_asset_class)
         
-        # Add ETF categories from database_schemas.json schema "etf_data"
-        if "etf_data" in schema_data:
-            etf_schemas = schema_data.get("etf_data", {}).get("schemas", {})
-            for etf_category in etf_schemas.keys():
-                # Add ETF category
-                valid_asset_classes.append(etf_category)
-                
-                tables = etf_schemas[etf_category].get('tables', {})
-                for etf_type in tables.keys():
-                    # Add ETF type
-                    valid_asset_classes.append(etf_type)
-        
-        # Add "cash" as a valid asset class
-        valid_asset_classes.append("cash")
-        
-        # Remove duplicates
-        valid_asset_classes = list(set(valid_asset_classes))
-        
-        # Check each asset class in the portfolio
-        replacements_made = False
-        for asset in portfolio_json["portfolio"]:
-            current_asset_class = asset.get("asset_class")
+        # Process industries (schemas) within each sector
+        for industry_name, industry_info in sector_info.get("schemas", {}).items():
+            # Convert industry name to valid asset class
+            industry_asset_class = industry_name.lower().replace(" ", "_")
+            valid_asset_classes.append(industry_asset_class)
             
-            # Skip if no asset class or already valid
-            if not current_asset_class:
-                asset["asset_class"] = "unknown"
-                replacements_made = True
-                continue
-                
-            if current_asset_class in valid_asset_classes:
-                continue
+            # Process sub-industries (tables) within each industry
+            for subindustry_name in industry_info.get("tables", {}).keys():
+                # Convert sub-industry name to valid asset class
+                subindustry_asset_class = subindustry_name.lower().replace(" ", "_")
+                valid_asset_classes.append(subindustry_asset_class)
+    
+    # Add ETF categories from database_schemas.json schema "etf_data"
+    if "etf_data" in schema_data:
+        etf_schemas = schema_data.get("etf_data", {}).get("schemas", {})
+        for etf_category in etf_schemas.keys():
+            # Add ETF category
+            valid_asset_classes.append(etf_category)
             
-            # Find the most similar asset class
-            closest_match = difflib.get_close_matches(current_asset_class, valid_asset_classes, n=1, cutoff=0.6)
+            tables = etf_schemas[etf_category].get('tables', {})
+            for etf_type in tables.keys():
+                # Add ETF type
+                valid_asset_classes.append(etf_type)
+    
+    # Add "cash" as a valid asset class
+    valid_asset_classes.append("cash")
+    
+    # Remove duplicates
+    valid_asset_classes = list(set(valid_asset_classes))
+    
+    # Check each asset class in the portfolio
+    replacements_made = False
+    for asset in data["portfolio"]:
+        current_asset_class = asset.get("asset_class")
+        
+        # Skip if no asset class or already valid
+        if not current_asset_class:
+            asset["asset_class"] = "unknown"
+            replacements_made = True
+            continue
             
-            if closest_match:
-                print(f"Replacing invalid asset class '{current_asset_class}' with '{closest_match[0]}'")
-                asset["asset_class"] = closest_match[0]
-                replacements_made = True
-            else:
-                print(f"Warning: No close match found for '{current_asset_class}'. Setting to 'unknown'")
-                asset["asset_class"] = "unknown"
-                replacements_made = True
-                    
-        if replacements_made:
-            print("Asset class validation complete - replacements were made")
+        if current_asset_class in valid_asset_classes:
+            continue
+        
+        # Find the most similar asset class
+        closest_match = difflib.get_close_matches(current_asset_class, valid_asset_classes, n=1, cutoff=0.6)
+        
+        if closest_match:
+            print(f"Replacing invalid asset class '{current_asset_class}' with '{closest_match[0]}'")
+            asset["asset_class"] = closest_match[0]
+            replacements_made = True
         else:
-            print("Asset class validation complete - all asset classes are valid")
-            
-        return portfolio_json
+            print(f"Warning: No close match found for '{current_asset_class}'. Setting to 'unknown'")
+            asset["asset_class"] = "unknown"
+            replacements_made = True
+                
+    if replacements_made:
+        print("Asset class validation complete - replacements were made")
+    else:
+        print("Asset class validation complete - all asset classes are valid")
         
-    except Exception as e:
-        print(f"Error during asset class validation: {e}")
-        traceback.print_exc()
-        return portfolio_json  # Return original if validation fails
+    return data
 
 
 def optimize():
@@ -811,74 +734,83 @@ ONLY after conducting all required research using the specified tools and any ad
         return error_msg
 
 
-# Main execution flow
-final_content = optimize()
-print(final_content)
+def phaseTwoMain():
+    final_content = optimize()
+    print(final_content)
 
-portfolio_json = validate_and_fix_allocations(final_content)
+    portfolio_json = validate_and_fix_allocations(final_content)
+    portfolio_json = validate_asset_classes(portfolio_json)
 
-portfolio_json = validate_asset_classes(portfolio_json)
+    print(portfolio_json)
 
-print(portfolio_json)
+    # Additional safety check before passing to analyze_portfolio
+    if not isinstance(portfolio_json, dict):
+        print("Error: Portfolio JSON is not a dictionary, creating empty portfolio")
+        portfolio_json = {"portfolio": []}
 
-from phaseTwo import analyze_portfolio
+    if "portfolio" not in portfolio_json:
+        print("Error: Portfolio JSON does not contain 'portfolio' key, creating empty portfolio")
+        portfolio_json = {"portfolio": []}
 
-# Additional safety check before passing to analyze_portfolio
-if not isinstance(portfolio_json, dict):
-    print("Error: Portfolio JSON is not a dictionary, creating empty portfolio")
-    portfolio_json = {"portfolio": []}
+    if not isinstance(portfolio_json["portfolio"], list):
+        print("Error: Portfolio is not an array, creating empty portfolio array")
+        portfolio_json["portfolio"] = []
 
-if "portfolio" not in portfolio_json:
-    print("Error: Portfolio JSON does not contain 'portfolio' key, creating empty portfolio")
-    portfolio_json = {"portfolio": []}
+    # Check if the portfolio has any entries
+    if not portfolio_json["portfolio"]:
+        print("Warning: Portfolio is empty, no assets to analyze")
+        # Create a default portfolio to prevent downstream errors
+        portfolio_json["portfolio"] = [
+            {
+                "asset_class": "unknown",
+                "allocation": 100,
+                "reason": "Default portfolio created due to empty portfolio data"
+            }
+        ]
 
-if not isinstance(portfolio_json["portfolio"], list):
-    print("Error: Portfolio is not an array, creating empty portfolio array")
-    portfolio_json["portfolio"] = []
+    # Final check for required fields in each asset
+    required_fields = ["asset_class", "allocation", "reason"]
+    for i, asset in enumerate(portfolio_json["portfolio"]):
+        if not isinstance(asset, dict):
+            print(f"Error: Asset {i} is not a dictionary, replacing with default asset")
+            portfolio_json["portfolio"][i] = {
+                "asset_class": "unknown",
+                "allocation": 0,
+                "reason": "Invalid asset entry"
+            }
+            continue
+            
+        for field in required_fields:
+            if field not in asset:
+                print(f"Error: Asset {i} missing required field '{field}', adding default value")
+                if field == "asset_class":
+                    asset[field] = "unknown"
+                elif field == "allocation":
+                    asset[field] = 0
+                elif field == "reason":
+                    asset[field] = "No reason provided"
+            
+            # Ensure allocation is a number, not a string
+            if field == "allocation" and isinstance(asset[field], str):
+                try:
+                    asset[field] = float(asset[field])
+                except ValueError:
+                    print(f"Error: Asset {i} has invalid allocation value, setting to 0")
+                    asset[field] = 0
 
-# Check if the portfolio has any entries
-if not portfolio_json["portfolio"]:
-    print("Warning: Portfolio is empty, no assets to analyze")
-    # Create a default portfolio to prevent downstream errors
-    portfolio_json["portfolio"] = [
-        {
-            "asset_class": "unknown",
-            "allocation": "100",
-            "reason": "Default portfolio created due to empty portfolio data"
-        }
-    ]
+    # Now we can safely call analyze_portfolio
+    try:
+        analyze_portfolio(portfolio_json)
+        print("Portfolio analysis completed successfully")
+    except Exception as e:
+        print(f"Error during portfolio analysis: {e}")
+        traceback.print_exc()
 
-# Final check for required fields in each asset
-required_fields = ["asset_class", "allocation", "reason"]
-for i, asset in enumerate(portfolio_json["portfolio"]):
-    if not isinstance(asset, dict):
-        print(f"Error: Asset {i} is not a dictionary, replacing with default asset")
-        portfolio_json["portfolio"][i] = {
-            "asset_class": "unknown",
-            "allocation": "0",
-            "reason": "Invalid asset entry"
-        }
-        continue
-        
-    for field in required_fields:
-        if field not in asset:
-            print(f"Error: Asset {i} missing required field '{field}', adding default value")
-            if field == "asset_class":
-                asset[field] = "unknown"
-            elif field == "allocation":
-                asset[field] = "0"
-            elif field == "reason":
-                asset[field] = "No reason provided"
+    # End timer and print execution time
+    end_time = time.time()
+    total_time = end_time - start_time
+    print(f"\nTotal processing time: {total_time:.2f} seconds ({total_time/60:.2f} minutes)")
 
-# Now we can safely call analyze_portfolio
-try:
-    analyze_portfolio(portfolio_json)
-    print("Portfolio analysis completed successfully")
-except Exception as e:
-    print(f"Error during portfolio analysis: {e}")
-    traceback.print_exc()
-
-# End timer and print execution time
-end_time = time.time()
-total_time = end_time - start_time
-print(f"\nTotal processing time: {total_time:.2f} seconds ({total_time/60:.2f} minutes)")
+# Ensure module doesn't run on import
+if __name__ == "__main__":
+    phaseTwoMain()

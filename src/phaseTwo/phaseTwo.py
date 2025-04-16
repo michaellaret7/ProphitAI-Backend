@@ -11,6 +11,11 @@ import concurrent.futures
 import functools
 import time
 
+# Import from utils package
+from src.utils.caching import cache_result
+from src.utils.file_utils import load_schema_data
+from src.utils.database import get_default_db_config
+
 # Load environment variables from .env file
 load_dotenv()
 
@@ -22,34 +27,6 @@ PERPLEXITY_MODEL = os.environ.get("PERPLEXITY_MODEL")
 client = OpenAI(api_key=DEEPSEEK_API_KEY, base_url="https://api.deepseek.com")
 
 model = 'deepseek-chat'
-
-# Simple in-memory cache for expensive operations
-_CACHE = {}
-_CACHE_EXPIRY = {}
-CACHE_TTL = 3600  # Cache time-to-live in seconds (1 hour)
-
-def cache_result(func):
-    """
-    Decorator to cache function results to avoid redundant expensive operations
-    """
-    @functools.wraps(func)
-    def wrapper(*args, **kwargs):
-        # Create a unique key based on function name and arguments
-        key = f"{func.__name__}:{str(args)}:{str(kwargs)}"
-        
-        # Check if result is in cache and not expired
-        current_time = time.time()
-        if key in _CACHE and _CACHE_EXPIRY.get(key, 0) > current_time:
-            print(f"Cache hit for {func.__name__}")
-            return _CACHE[key]
-        
-        # Execute function and cache result
-        result = func(*args, **kwargs)
-        _CACHE[key] = result
-        _CACHE_EXPIRY[key] = current_time + CACHE_TTL
-        return result
-    
-    return wrapper
 
 # Sample portfolio data for testing when this module is run directly
 portfolio_data = {
@@ -99,12 +76,7 @@ def get_daily_closing_prices(ticker, years=4, db_config=None):
    """
    # Database configuration
    if db_config is None:
-      db_config = {
-         "host": os.environ.get("DB_HOST"),
-         "user": os.environ.get("DB_USER"),
-         "password": os.environ.get("DB_PASSWORD"),
-         "port": os.environ.get("DB_PORT")
-      }
+      db_config = get_default_db_config()
    
    # Normalize ticker
    ticker_upper = ticker.upper()
@@ -115,8 +87,7 @@ def get_daily_closing_prices(ticker, years=4, db_config=None):
    start_date = end_date - timedelta(days=365 * years)
    
    # Load schema definition
-   with open('database_schemas.json', 'r') as f:
-      schema_data = json.load(f)
+   schema_data = load_schema_data()
    
    # Find ticker location
    ticker_location = None
@@ -381,8 +352,7 @@ def calculate_stock_metrics(ticker):
       # Try to determine the sector from database schemas
       try:
          # Load schema definition
-         with open('database_schemas.json', 'r') as f:
-            schema_data = json.load(f)
+         schema_data = load_schema_data()
          
          # Find ticker location and sector
          for sector_name, sector_info in schema_data.items():
@@ -468,20 +438,14 @@ def get_fundamentals_data(ticker, db_config=None):
    """
    # Database configuration
    if db_config is None:
-      db_config = {
-         "host": os.environ.get("DB_HOST"),
-         "user": os.environ.get("DB_USER"),
-         "password": os.environ.get("DB_PASSWORD"),
-         "port": os.environ.get("DB_PORT")
-      }
+      db_config = get_default_db_config()
    
    # Normalize ticker
    ticker_upper = ticker.upper()
    ticker_lower = ticker.lower()
    
    # Load schema definition
-   with open('database_schemas.json', 'r') as f:
-      schema_data = json.load(f)
+   schema_data = load_schema_data()
    
    # Find ticker location
    ticker_location = None
@@ -886,9 +850,7 @@ def get_stock_tickers(filter_value):
     Returns:
         dict: Dictionary with filter_value as key and list of matching stock tickers as value
     """
-
-    with open('database_schemas.json', 'r') as f:
-        schema_data = json.load(f)
+    schema_data = load_schema_data()
     
     # List to store all matching tickers
     matching_tickers = []
@@ -1585,3 +1547,6 @@ def analyze_portfolio(portfolio_data):
     print(f"Processed {len(asset_classes)} asset classes with {len(final)} final recommendations")
     
     return final, elapsed_time
+
+if __name__ == "__main__":
+    analyze_portfolio(portfolio_data)

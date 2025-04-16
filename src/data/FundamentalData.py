@@ -129,9 +129,6 @@ def get_ib_historical_data(ticker):
         # Disconnect from IB
         ib.disconnect()
 
-
-get_ib_historical_data('XLF')
-
 def get_news(ticker, start_date, end_date, limit):
     url = "https://api.financialdatasets.ai/news"
 

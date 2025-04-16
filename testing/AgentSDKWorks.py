@@ -39,7 +39,7 @@ def get_daily_closing_prices(ticker, years=3, db_config=None):
    start_date = end_date - timedelta(days=365 * years)
    
    # Load schema definition
-   with open('database_schemas.json', 'r') as f:
+   with open('src/data/database_schemas.json', 'r') as f:
       schema_data = json.load(f)
    
    # Find ticker location
