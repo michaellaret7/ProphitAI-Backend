@@ -13,6 +13,8 @@ from src.utils.database import get_default_db_config
 from src.utils.file_utils import load_schema_data
 import io # Add io for StringIO
 import csv # Add csv for COPY formatting
+from psycopg2.extras import execute_values # Add import for execute_values
+import json # Add json for loading prices schema
 
 # Load environment variables from .env file
 load_dotenv()
@@ -203,7 +205,19 @@ def get_stock_data_from_ib(ib, ticker, start_date=None):
 db_config = get_default_db_config()
 
 # Load schema data
-schema_data = load_schema_data()
+# schema_data = load_schema_data() # Old way using default file
+# Explicitly load the prices schema
+prices_schema_file = os.path.join('src', 'data', 'database_schemas_prices.json')
+try:
+    with open(prices_schema_file, 'r') as f:
+        prices_schema_data = json.load(f)
+    print(f"Successfully loaded prices schema from {prices_schema_file}")
+except FileNotFoundError:
+    print(f"Error: Prices schema file not found at {prices_schema_file}")
+    prices_schema_data = None
+except json.JSONDecodeError:
+    print(f"Error: Could not decode JSON from {prices_schema_file}")
+    prices_schema_data = None
 
 # Connect to IB
 ib = get_ib()
@@ -417,128 +431,122 @@ def verify_ticker_table_exists(ticker, ticker_location, db_config):
 
 def insert_data_to_db(ticker_location, ticker, df, db_config):
     """
-    Insert OHLC data into the database using batched INSERT ON CONFLICT.
+    Insert OHLC data into the database using execute_values for faster bulk insertion.
     Ensures both 'datetime' and 'date' columns receive the full timestamp.
-    
+    Handles conflicts on the 'datetime' primary key by ignoring duplicates.
+
     Args:
         ticker_location (dict): Dictionary with database location info
         ticker (str): Ticker symbol
         df (DataFrame): OHLC data to insert (must contain 'datetime' column)
         db_config (dict): Database configuration
-        
+
     Returns:
         bool: True if successful, False otherwise
     """
     if df is None or df.empty:
         print(f"No data provided to insert for {ticker}")
         return True # Return True as there's nothing to fail on
-    
+
     # Ensure the required datetime column exists
     if 'datetime' not in df.columns:
         print(f"DataFrame missing required 'datetime' column for {ticker}")
         return False
-        
+
     start_time = time.time()
     original_row_count = len(df)
-    
+
     try:
         # Connect to database
-        db_config['dbname'] = ticker_location['database']
-        conn = psycopg2.connect(**db_config)
+        conn_config = db_config.copy() # Use a copy to avoid modifying original dict
+        conn_config['dbname'] = ticker_location['database']
+        conn = psycopg2.connect(**conn_config)
         cursor = conn.cursor()
-        
+
         ticker_lower = ticker.lower()
         schema = ticker_location['schema']
-        
+        table_name = f"{schema}.{ticker_lower}"
+
         # Prepare data for insertion
-        records = []
-        
         # Ensure barCount exists and handle NaNs
         if 'barCount' not in df.columns:
             df['barCount'] = 0
-        df['barCount'] = df['barCount'].fillna(0).astype(int)
-        
-        # Define the columns expected by the database table
+        df['barCount'] = df['barCount'].fillna(0).astype(int) # Ensure integer type
+
+        # Define the exact columns expected by the database table in order
         db_columns = ['datetime', 'date', 'open', 'high', 'low', 'close', 'volume', 'average', 'barCount']
-        
-        # Create list of tuples for insertion
-        # Insert the same timestamp into both 'datetime' and 'date' columns
-        for row_tuple in df.itertuples(index=False):
-            record_dict = row_tuple._asdict() # Convert named tuple to dict
-            record = (
-                record_dict['datetime'], # For datetime column
-                record_dict['datetime'], # For date column (using the same timestamp)
-                record_dict.get('open', None),
-                record_dict.get('high', None),
-                record_dict.get('low', None),
-                record_dict.get('close', None),
-                record_dict.get('volume', None),
-                record_dict.get('average', None),
-                record_dict.get('barCount', 0)
+        column_str = ', '.join(db_columns)
+
+        # Create list of tuples for insertion, ensuring correct order
+        # Use .get() with default None for safety, though IB data usually has these
+        data_tuples = [
+            (
+                row.datetime, # datetime column
+                row.datetime, # date column (same value)
+                row.open if pd.notna(row.open) else None,
+                row.high if pd.notna(row.high) else None,
+                row.low if pd.notna(row.low) else None,
+                row.close if pd.notna(row.close) else None,
+                row.volume if pd.notna(row.volume) else None,
+                row.average if pd.notna(row.average) else None,
+                int(row.barCount) # Ensure barCount is int
             )
-            records.append(record)
-            
+            for row in df.itertuples(index=False) # Use itertuples for efficiency
+        ]
+
         # Insert using ON CONFLICT (datetime) DO NOTHING
         # This lets the DB handle duplicate timestamps gracefully
         insert_query = f"""
-        INSERT INTO {schema}.{ticker_lower}
-        (datetime, date, open, high, low, close, volume, average, barcount)
-        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
+        INSERT INTO {table_name} ({column_str})
+        VALUES %s
         ON CONFLICT (datetime) DO NOTHING
         """
-        
-        # Execute in batches for better performance
-        batch_size = 1000
-        rows_processed = 0
-        
-        print(f"Starting batched insert of {len(records)} rows for {ticker} with ON CONFLICT...")
+
+        print(f"🚀 Starting bulk insert of {len(data_tuples)} rows for {ticker} using execute_values...")
         insert_start_time = time.time()
-        
-        for i in range(0, len(records), batch_size):
-            batch = records[i:i+batch_size]
-            if not batch:
-                continue
-            
-            # executemany returns None, so we can't easily get exact inserted count
-            cursor.executemany(insert_query, batch)
-            conn.commit()
-            rows_processed += len(batch)
-            # Print progress periodically if desired
-            # if (i // batch_size) % 10 == 0: 
-            #     print(f"  Processed {rows_processed}/{len(records)}...")
+
+        # Execute bulk insert with execute_values
+        execute_values(cursor, insert_query, data_tuples, page_size=1000)
+        conn.commit() # Commit the transaction
 
         insert_end_time = time.time()
-            
+        insert_duration = insert_end_time - insert_start_time
+        rows_processed = len(data_tuples) # Number of rows attempted
+
         cursor.close()
         conn.close()
-        
+
         end_time = time.time()
+        total_duration = end_time - start_time
+        avg_rows_per_sec = rows_processed / insert_duration if insert_duration > 0 else 0
+
         # Note: We can't easily tell exactly how many rows were *newly* inserted vs ignored due to conflict.
-        # We report the number of rows processed.
-        print(f"Processed {rows_processed} rows for {ticker} in {insert_end_time - insert_start_time:.3f} seconds (Total function time: {end_time - start_time:.3f}s)")
+        print(f"✅ Processed {rows_processed} rows for {ticker} in {insert_duration:.3f} seconds ({avg_rows_per_sec:.2f} rows/sec)")
+        print(f"   (Total function time: {total_duration:.3f}s)")
         return True
-        
+
     except Exception as e:
         end_time = time.time()
-        print(f"Error during batched insert for {ticker}: {e}")
+        print(f"❌ Error during bulk insert for {ticker}: {e}")
         # Attempt to rollback and close connection on error
         try:
-            if conn:
+            if conn and not conn.closed:
                 conn.rollback()
-        except:
-            pass
-        try:
-            if cursor:
-                cursor.close()
-        except:
-            pass
-        try:
-            if conn:
-                conn.close()
-        except:
-            pass
-            
-        print(f"Failed insert took {end_time - start_time:.3f} seconds")
+        except Exception as rb_err:
+             print(f"  Error during rollback: {rb_err}")
+        finally:
+             try:
+                 if cursor and not cursor.closed:
+                     cursor.close()
+             except Exception as cur_err:
+                 print(f"  Error closing cursor: {cur_err}")
+             try:
+                 if conn and not conn.closed:
+                     conn.close()
+             except Exception as con_err:
+                 print(f"  Error closing connection: {con_err}")
+
+        print(f"   (Failed insert took {end_time - start_time:.3f} seconds)")
         return False
 
 def update_date_column_to_match_datetime(ticker_location, ticker, db_config):
@@ -621,15 +629,11 @@ def update_date_column_to_match_datetime(ticker_location, ticker, db_config):
         print(f"Failed update took {end_time - start_time:.3f} seconds")
         return False
 
-def update_all_tickers_data(target_sector=None, target_schema=None, target_table=None, fix_date_column=False):
+def update_all_tickers_data(fix_date_column=False):
     """
-    Main function to update OHLC data for tickers in the database.
-    Can be limited to a specific subindustry by providing sector, schema, and table.
+    Main function to update OHLC data for all tickers listed in the prices schema file.
     
     Args:
-        target_sector (str, optional): Specific sector to process. Default is None (all sectors).
-        target_schema (str, optional): Specific schema to process. Default is None (all schemas).
-        target_table (str, optional): Specific table (subindustry) to process. Default is None (all tables).
         fix_date_column (bool, optional): Whether to fix date column values to match datetime. Default is False.
     """
     # Start timing the entire process
@@ -638,9 +642,16 @@ def update_all_tickers_data(target_sector=None, target_schema=None, target_table
     # Get database configuration
     db_config = get_default_db_config()
     
-    # Load schema data
-    schema_data = load_schema_data()
-    
+    # Load prices schema data (or check if it was loaded successfully earlier)
+    prices_schema_file = os.path.join('src', 'data', 'database_schemas_prices.json')
+    try:
+        with open(prices_schema_file, 'r') as f:
+            prices_schema_data = json.load(f)
+        print(f"Using prices schema from {prices_schema_file}")
+    except Exception as e:
+        print(f"Error loading prices schema file {prices_schema_file}: {e}")
+        return # Cannot proceed without the schema
+
     # Connect to IB
     ib = get_ib()
     if not ib:
@@ -648,196 +659,113 @@ def update_all_tickers_data(target_sector=None, target_schema=None, target_table
         return
         
     try:
-        # Extract all tickers from schema
-        tickers = []
-        ticker_locations = {}
+        # No longer need to build a flat list upfront
+        # processing_tasks = []
+        # ticker_locations = {} 
+        # processed_tickers = set()
         
-        # If targeting a specific subindustry
-        if target_sector and target_schema and target_table:
-            print(f"Processing only tickers from: {target_sector} -> {target_schema} -> {target_table}")
-            
-            # Remove "_prices" suffix from target names to match the schema_data keys
-            sector_key = target_sector.replace("_prices", "")
-            schema_key = target_schema.replace("_prices", "")
-            table_key = target_table.replace("_prices", "")
-            
-            # Check if the specified target exists
-            if sector_key in schema_data:
-                sector_info = schema_data[sector_key]
-                database = sector_info.get('database')
-                schemas = sector_info.get('schemas', {})
-                
-                if schema_key in schemas:
-                    schema_info = schemas[schema_key]
-                    tables = schema_info.get('tables', {})
-                    
-                    if table_key in tables:
-                        table_info = tables[table_key]
-                        table_tickers = table_info.get('tickers', [])
-                        
-                        for ticker in table_tickers:
-                            # Determine the database name based on sector name
-                            if "etf" in sector_key.lower():
-                                db_name = "etf_prices"
-                            else:
-                                db_name = f"{database}_prices"
-                                
-                            ticker_location = {
-                                "database": db_name,
-                                "schema": f"{schema_key}_prices",
-                                "ticker": ticker
-                            }
-                            
-                            # Instead of ensuring/creating table, check if it already exists
-                            if verify_ticker_table_exists(ticker, ticker_location, db_config):
-                                tickers.append(ticker)
-                                ticker_locations[ticker] = ticker_location
-                            else:
-                                print(f"Skipping {ticker} - table doesn't exist and we won't create it")
-                    else:
-                        print(f"Table '{table_key}' not found in schema '{schema_key}'")
-                else:
-                    print(f"Schema '{schema_key}' not found in sector '{sector_key}'")
-            else:
-                print(f"Sector '{sector_key}' not found in schema data")
-        # If no specific target, process everything or first subindustry
-        else:
-            # Or process the first subindustry if no specific targets provided
-            first_subindustry_found = False
-            
-            for sector_name, sector_info in schema_data.items():
-                if target_sector and sector_name != target_sector.replace("_prices", ""):
-                    continue
-                    
-                database = sector_info.get('database')
-                schemas = sector_info.get('schemas', {})
-                
-                for schema_name, schema_info in schemas.items():
-                    if target_schema and schema_name != target_schema.replace("_prices", ""):
-                        continue
-                        
-                    tables = schema_info.get('tables', {})
-                    
-                    for table_name, table_info in tables.items():
-                        if target_table and table_name != target_table.replace("_prices", ""):
-                            continue
-                            
-                        table_tickers = table_info.get('tickers', [])
-                        
-                        for ticker in table_tickers:
-                            # Determine the database name based on sector name
-                            if "etf" in sector_name.lower():
-                                db_name = "etf_prices"
-                            else:
-                                db_name = f"{database}_prices"
-                                
-                            ticker_location = {
-                                "database": db_name,
-                                "schema": f"{schema_name}_prices",
-                                "ticker": ticker
-                            }
-                            
-                            # Instead of ensuring/creating table, check if it already exists
-                            if verify_ticker_table_exists(ticker, ticker_location, db_config):
-                                tickers.append(ticker)
-                                ticker_locations[ticker] = ticker_location
-                            else:
-                                print(f"Skipping {ticker} - table doesn't exist and we won't create it")
-                        
-                        # If we're just looking for the first subindustry with no specific target
-                        if not (target_sector or target_schema or target_table) and not first_subindustry_found and tickers:  # Use tickers not table_tickers
-                            print(f"Testing with first sub-industry: {sector_name} -> {schema_name} -> {table_name}")
-                            print(f"Found {len(tickers)} valid tickers in this sub-industry")
-                            first_subindustry_found = True
-                            # Break to only process the first table found
-                            break
-                    
-                    # If processing only the first subindustry, break after the first one with tickers
-                    if not (target_sector or target_schema or target_table) and first_subindustry_found:
-                        break
-                
-                # If processing only the first subindustry, break after the first one with tickers
-                if not (target_sector or target_schema or target_table) and first_subindustry_found:
-                    break
-        
-        if not tickers:
-            print("No valid tickers found to process")
-            return
-            
-        print(f"Found {len(tickers)} valid tickers to update")
-        
-        # Update each ticker
+        # Counters for summary
+        total_tickers_processed = 0
         success_count = 0
         error_count = 0
-        skipped_count = 0
-        
-        for i, ticker in enumerate(tickers):
-            ticker_start_time = time.time()
-            print(f"[{i+1}/{len(tickers)}] Processing {ticker}...")
-            
-            try:
-                # Get the ticker location
-                ticker_location = ticker_locations.get(ticker)
-                if not ticker_location:
-                    print(f"Could not find database location for {ticker}")
-                    error_count += 1
+        skipped_no_data_count = 0
+
+        print("Starting ticker update process...")
+        for db_name, schemas in prices_schema_data.items():
+            if not isinstance(schemas, dict):
+                print(f"Warning: Skipping database '{db_name}' due to unexpected format.")
+                continue
+                
+            for schema_name, ticker_table_list in schemas.items():
+                if not isinstance(ticker_table_list, list):
+                    print(f"Warning: Skipping schema '{schema_name}' in db '{db_name}' due to unexpected format.")
                     continue
                 
-                # If fix_date_column flag is set, update date column to match datetime
-                if fix_date_column:
-                    print(f"Fixing date column for {ticker} to match datetime column...")
-                    update_success = update_date_column_to_match_datetime(ticker_location, ticker, db_config)
-                    if update_success:
-                        print(f"Successfully fixed date column for {ticker}")
-                    else:
-                        print(f"Failed to fix date column for {ticker}")
-                        error_count += 1
-                        continue
+                # Print the header for the current database and schema being processed
+                print(f"\n---> Updating: {db_name} / {schema_name} <---")
+                
+                if not ticker_table_list: # Check if the list of tickers is empty
+                    print(f"  No tickers listed for this schema.")
+                    continue
+
+                # Process each ticker listed under this specific schema
+                for ticker_table_name in ticker_table_list:
+                    ticker_start_time = time.time()
+                    # The table name is the lowercase ticker
+                    ticker_upper = ticker_table_name.upper() 
+                    total_tickers_processed += 1 # Increment total counter
                     
-                # Get the last date of data
-                last_date = get_last_data_date(ticker_location, ticker, db_config)
-                
-                # Skip tickers that don't have any existing data
-                if not last_date:
-                    print(f"No existing data for {ticker}, skipping this ticker")
-                    skipped_count += 1
-                    continue
-                
-                # If we have data, add 1 minute to get only new data
-                start_date = last_date + timedelta(minutes=1)
-                print(f"Last data for {ticker} is from {last_date}, getting data since {start_date}")
-                
-                # Get data from IB
-                df = get_stock_data_from_ib(ib, ticker, start_date)
-                
-                if df is not None and not df.empty:
-                    # Insert new data into database
-                    success = insert_data_to_db(ticker_location, ticker, df, db_config)
-                    if success:
-                        success_count += 1
-                    else:
+                    print(f"  Processing {ticker_upper}...") # Simple log for the ticker
+
+                    try:
+                        # Construct the ticker location info here
+                        ticker_location = {
+                            "database": db_name,
+                            "schema": schema_name,
+                            "ticker": ticker_upper # Keep original case for IB
+                        }
+
+                        # If fix_date_column flag is set, update date column to match datetime
+                        if fix_date_column:
+                            print(f"    Attempting to fix date column for {ticker_upper}...")
+                            update_success = update_date_column_to_match_datetime(ticker_location, ticker_upper, db_config)
+                            if update_success:
+                                print(f"    Successfully checked/fixed date column for {ticker_upper}")
+                            else:
+                                print(f"    Failed to fix date column for {ticker_upper}. Skipping further processing.")
+                                error_count += 1
+                                continue # Skip to next ticker if date fix fails
+                            
+                        # Get the last date of data 
+                        last_date = get_last_data_date(ticker_location, ticker_upper, db_config)
+                        
+                        # If no existing data, skip update.
+                        if not last_date:
+                            print(f"    No existing data found for {ticker_upper}. Skipping update.")
+                            skipped_no_data_count += 1
+                            continue
+                        
+                        # Calculate start date for fetching new data
+                        start_date = last_date + timedelta(minutes=1) 
+                        print(f"    Last data: {last_date}. Requesting new data since {start_date}")
+                        
+                        # Get data from IB
+                        df = get_stock_data_from_ib(ib, ticker_upper, start_date)
+                        
+                        if df is not None and not df.empty:
+                            print(f"    Received {len(df)} new bar(s). Inserting into DB...")
+                            success = insert_data_to_db(ticker_location, ticker_upper, df, db_config)
+                            if success:
+                                success_count += 1
+                            else:
+                                error_count += 1
+                                print(f"    Error inserting data for {ticker_upper}.")
+                        elif df is None:
+                             print(f"    Error retrieving data from IB for {ticker_upper}. Check logs.")
+                             error_count += 1
+                        else: # df is empty
+                            print(f"    No new data available from IB for {ticker_upper} since {start_date}.")
+                            success_count += 1  # Count as success if no new data
+                        
+                    except Exception as e:
+                        print(f"    Error processing {ticker_upper}: {e}")
+                        import traceback
+                        traceback.print_exc() 
                         error_count += 1
-                else:
-                    print(f"No new data available for {ticker}")
-                    success_count += 1  # Count as success if no new data is normal
-                
-                ticker_end_time = time.time()
-                print(f"Total processing time for {ticker}: {ticker_end_time - ticker_start_time:.3f} seconds")
-                print("-" * 80)
-                
-            except Exception as e:
-                ticker_end_time = time.time()
-                print(f"Error processing {ticker}: {e}")
-                print(f"Failed processing took {ticker_end_time - ticker_start_time:.3f} seconds")
-                print("-" * 80)
-                error_count += 1
+                    finally:
+                        ticker_end_time = time.time()
+                        print(f"    Processing time for {ticker_upper}: {ticker_end_time - ticker_start_time:.3f} seconds")
+                        # Removed the separator line here to reduce clutter, header provides separation
         
+        # Final Summary
         total_end_time = time.time()
         total_duration = total_end_time - total_start_time
         
         print(f"\nUpdate completed in {total_duration:.3f} seconds")
-        print(f"{success_count} tickers updated successfully, {error_count} errors, {skipped_count} skipped (no existing data)")
-        print(f"Average time per ticker: {total_duration / len(tickers):.3f} seconds")
+        print(f"Summary: Processed {total_tickers_processed} tickers.")
+        print(f"         {success_count} successful updates/checks, {error_count} errors, {skipped_no_data_count} skipped (no prior data).")
+        if total_tickers_processed > 0:
+             print(f"Average time per ticker processed: {total_duration / total_tickers_processed:.3f} seconds")
         
     finally:
         # Disconnect from IB
@@ -846,8 +774,15 @@ def update_all_tickers_data(target_sector=None, target_schema=None, target_table
             print("Disconnected from Interactive Brokers")
 
 if __name__ == "__main__":    
-    # Or continue with regular updates:
-    update_all_tickers_data("equity_sector_real_estate_prices", "industrial_reits_prices")
+    # Example: Update all tickers listed in the prices schema
+    update_all_tickers_data(fix_date_column=False) 
+    
+    # Example: Update all tickers AND fix the date column if needed
+    # update_all_tickers_data(fix_date_column=True)
+    
+    # Remove the old specific calls
+    # update_all_tickers_data("equity_sector_communication_services_prices", "entertainment_prices")
+    # update_all_tickers_data("equity_sector_communication_services_prices", "interactive_media_and_services_prices")
     
     
     

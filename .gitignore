@@ -3,3 +3,4 @@ __pycache__/
 *.py[cod]
 DATABASE_SCHEMA.md
 .env
+testing/FinalSectorSheet.xlsx
