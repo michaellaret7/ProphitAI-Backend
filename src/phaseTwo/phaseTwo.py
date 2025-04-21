@@ -694,7 +694,7 @@ def get_fundamentals_data(ticker, db_config=None):
          conn.close()
 
 @cache_result
-def analyze_fundamentals(ticker):
+def generate_fundamental_analysis_report(ticker):
     """
     Analyze fundamental data for a specific stock using LLM
     
@@ -898,7 +898,7 @@ def get_stock_tickers(filter_value):
     return {filter_value: sorted_tickers}
 
 @cache_result
-def filter_stocks(ticker_input):
+def select_top_performing_stocks(ticker_input):
     """
     Filter stocks based on quantitative metrics using z-scores to identify highest potential performers.
     
@@ -1148,7 +1148,7 @@ def analyze_ticker(ticker, is_etf=False):
         ticker_data["fundamentals"] = "ETF fundamental data not analyzed"
     else:
         print(f"Analyzing fundamentals for {ticker}...")
-        fundamentals = analyze_fundamentals(ticker)
+        fundamentals = generate_fundamental_analysis_report(ticker)
         ticker_data["fundamentals"] = fundamentals
     
     # Step 3: Get news sentiment
@@ -1262,7 +1262,7 @@ And so on. Keep each analysis concise but informative.
     
     return results
 
-def run_portfolio_manager(tickers=None, max_workers=4, batch_sentiment=True):
+def analyze_tickers_and_generate_recommendations(tickers=None, max_workers=4, batch_sentiment=True):
    """
    Run the portfolio manager to analyze stocks and make recommendations.
    
@@ -1352,7 +1352,7 @@ def run_portfolio_manager(tickers=None, max_workers=4, batch_sentiment=True):
       # Submit tasks for fundamentals (except for ETFs)
       for ticker in ticker_list:
          if not is_etf_map[ticker]:
-            futures[executor.submit(analyze_fundamentals, ticker)] = (ticker, "fundamentals")
+            futures[executor.submit(generate_fundamental_analysis_report, ticker)] = (ticker, "fundamentals")
       
       # Process results as they complete
       for future in concurrent.futures.as_completed(futures):
@@ -1548,13 +1548,13 @@ def process_asset_class(asset, allocation):
     ticker_dict = get_stock_tickers(asset)
     print(f"Got {len(ticker_dict.get(asset, []))} tickers for {asset}")
     
-    filtered_tickers_dict = filter_stocks(ticker_dict)
+    filtered_tickers_dict = select_top_performing_stocks(ticker_dict)
     filtered_tickers = filtered_tickers_dict.get(asset, [])
     print(f"Filtered down to {len(filtered_tickers)} tickers for {asset}")
 
     # Use optimized portfolio manager with reasonable defaults for parallelism
     max_workers = min(4, os.cpu_count() or 2)
-    result_json = run_portfolio_manager(filtered_tickers, max_workers=max_workers, batch_sentiment=True)
+    result_json = analyze_tickers_and_generate_recommendations(filtered_tickers, max_workers=max_workers, batch_sentiment=True)
     
     try:
         # Find the start and end of the actual JSON content within the string
