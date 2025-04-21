@@ -11,6 +11,7 @@ import pandas as pd
 import numpy as np
 import os
 from dotenv import load_dotenv
+import requests
 
 # Load environment variables from .env file
 load_dotenv()
@@ -316,5 +317,55 @@ Focus on drawdowns, volatility, and correlation risks.
     # Run the conversation
     have_conversation()
 
-main_agent()
-# run_multi_agent()
+def run_grok_simple():
+    """Runs a simple query against the Grok API using the OpenAI client format."""
+    api_key = os.environ.get("GROK_API_KEY")
+    if not api_key:
+        print("Error: GROK_API_KEY environment variable not set.")
+        return
+
+    # Configure the OpenAI client to use the Grok API endpoint
+    # See: https://lablab.ai/t/xai-beginner-tutorial
+    client = OpenAI(
+        api_key=api_key,
+        base_url="https://api.x.ai/v1",
+    )
+
+    messages = [
+        {
+            "role": "system",
+            "content": "You are a helpful assistant."
+        },
+        {
+            "role": "user",
+            "content": "What is Ollama and how does it work?"
+        }
+    ]
+
+    try:
+        # Send a chat completion request
+        completion = client.chat.completions.create(
+            model="grok-3-beta", # Using a cheaper model from the search results
+            messages=messages,
+            stream=False,
+            temperature=0.7 # Adjust temperature for creativity
+        )
+
+        # Print the response
+        print("Grok API Response:")
+        print(completion.choices[0].message.content)
+
+    except Exception as e:
+        # Catching a general exception, but you might want more specific 
+        # error handling based on the openai library's exceptions
+        print(f"Error calling Grok API via OpenAI client: {e}")
+
+# Example of how to call the function (you can integrate this elsewhere)
+if __name__ == "__main__":
+    # Example: Call main_agent or run_multi_agent or run_grok_simple
+    # main_agent()
+    # run_multi_agent()
+    run_grok_simple()
+
+
+

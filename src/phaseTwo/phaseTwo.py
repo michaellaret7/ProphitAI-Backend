@@ -29,12 +29,18 @@ PERPLEXITY_MODEL = os.environ.get("PERPLEXITY_MODEL")
 openai_api_key = os.environ.get("OPENAI_API_KEY")
 openai_model = os.environ.get("OPENAI_MODEL")
 
+grok_api_key = os.environ.get("GROK_API_KEY")
+grok_model = os.environ.get("GROK_MODEL")
+
 model = openai_model
 
 if model == openai_model:
    client = OpenAI(api_key=openai_api_key)
 elif model == deepseek_model:
    client = OpenAI(api_key=DEEPSEEK_API_KEY, base_url="https://api.deepseek.com")
+elif model == grok_model:
+   client = OpenAI(api_key=grok_api_key, base_url="https://api.grok.com")
+
 
 # Sample portfolio data for testing when this module is run directly
 portfolio_data = {
@@ -138,23 +144,27 @@ def get_daily_closing_prices(ticker, years=4, db_config=None):
       conn = psycopg2.connect(**db_config)
       cursor = conn.cursor()
       
-      # Query only the last bar of each day
+      # Query only the last bar of each day for close price, and sum daily volume
+      # Use window functions for efficiency
       query = f"""
-      WITH daily_closing AS (
-         SELECT 
-               CAST(date AS DATE) as trading_date,
-               MAX(datetime) as last_bar_time
-         FROM {ticker_location['schema']}.{ticker_lower}
-         WHERE date >= %s
-         GROUP BY CAST(date AS DATE)
+      WITH ranked_data AS (
+          SELECT 
+              datetime,
+              CAST(date AS DATE) as trading_date,
+              close,
+              volume,
+              ROW_NUMBER() OVER(PARTITION BY CAST(date AS DATE) ORDER BY datetime DESC) as rn,
+              SUM(volume) OVER(PARTITION BY CAST(date AS DATE)) as daily_total_volume
+          FROM {ticker_location['schema']}.{ticker_lower}
+          WHERE date >= %s
       )
       SELECT 
-         dc.trading_date as date,
-         t.close
-      FROM daily_closing dc
-      JOIN {ticker_location['schema']}.{ticker_lower} t
-         ON t.datetime = dc.last_bar_time
-      ORDER BY dc.trading_date DESC
+         trading_date as date,
+         close,
+         daily_total_volume as volume
+      FROM ranked_data
+      WHERE rn = 1 -- Select only the last bar's row for each day
+      ORDER BY trading_date DESC
       """
       
       cursor.execute(query, (start_date.strftime('%Y-%m-%d'),))
@@ -162,14 +172,23 @@ def get_daily_closing_prices(ticker, years=4, db_config=None):
       # Convert results
       results = []
       for row in cursor.fetchall():
-         date_val, close_val = row
+         date_val, close_val, volume_val = row # Added volume_val
          
          if isinstance(close_val, Decimal):
                close_val = float(close_val)
                
+         # Ensure volume is an integer
+         if volume_val is None:
+             volume_val = 0
+         elif isinstance(volume_val, Decimal):
+             volume_val = int(volume_val)
+         elif isinstance(volume_val, float):
+              volume_val = int(volume_val)
+             
          results.append({
                "date": date_val.strftime('%Y-%m-%d'),
-               "close": close_val
+               "close": close_val,
+               "volume": volume_val # Added volume
          })
 
       df = pd.DataFrame(results)
@@ -223,7 +242,8 @@ def calculate_stock_metrics(ticker):
          "upside_capture": 0,
          "downside_capture": 0,
          "momentum_6m": 0,
-         "momentum_12m": 0
+         "momentum_12m": 0,
+         "average_daily_volume": 0
       }
       
       # Only add sector fields for non-ETFs
@@ -238,6 +258,9 @@ def calculate_stock_metrics(ticker):
    annualization_factor=252
    df = price_data
    df['daily_return'] = df['close'].pct_change()
+   
+   # Calculate Average Daily Volume
+   average_daily_volume = df['volume'].mean() if 'volume' in df and not df['volume'].empty else 0
    
    # Drop NaN values (first row will have NaN return) and create an explicit copy
    df = df.dropna().copy()
@@ -433,7 +456,8 @@ def calculate_stock_metrics(ticker):
       "upside_capture": float(round(upside_capture, 2)),
       "downside_capture": float(round(downside_capture, 2)),
       "momentum_6m": float(round(momentum_6m, 4)),
-      "momentum_12m": float(round(momentum_12m, 4))
+      "momentum_12m": float(round(momentum_12m, 4)),
+      "average_daily_volume": int(round(average_daily_volume))
    }
    
    return metrics
@@ -470,7 +494,7 @@ def get_fundamentals_data(ticker, db_config=None):
                if ticker_upper in tickers:
                   # Special case for ETFs - use specific database names
                   if "etf" in sector_name.lower():
-                     db_name = "etf_fundamentals"
+                     db_name = database # Use the database name defined in the schema file
                   else:
                      db_name = f"{database}_fundamentals"
                      
@@ -482,6 +506,12 @@ def get_fundamentals_data(ticker, db_config=None):
                   break
          if ticker_location: break
       if ticker_location: break
+   
+   # If the ticker is identified as an ETF, return empty data immediately
+   # Assumes 'etf_data' is the database name designated for ETFs in database_schemas.json
+   if ticker_location and ticker_location.get('database') == 'etf_data':
+      print(f"Ticker {ticker_upper} identified as ETF, skipping fundamental data retrieval.")
+      return {}
    
    if not ticker_location:
       # Try case-insensitive ticker search if exact match wasn't found
@@ -500,7 +530,7 @@ def get_fundamentals_data(ticker, db_config=None):
                      if ticker_upper.upper() == db_ticker.upper():
                         # Special case for ETFs - use specific database names
                         if "etf" in sector_name.lower():
-                           db_name = "etf_fundamentals"
+                           db_name = database # Use the database name defined in the schema file
                         else:
                            db_name = f"{database}_fundamentals"
                            
@@ -510,9 +540,11 @@ def get_fundamentals_data(ticker, db_config=None):
                            "ticker": db_ticker  # Use the ticker with the exact case from the database
                         }
                         break
+            if ticker_location: break # Added break
+         if ticker_location: break # Added break
    
    if not ticker_location:
-      print(f"Ticker {ticker_upper} not found")
+      print(f"Ticker {ticker_upper} not found in any database schema for fundamentals.") # Modified print message
       return None
    
    try:
@@ -749,7 +781,6 @@ IMPORTANT:
         max_tokens=1000
     )
 
-
     return response.choices[0].message.content
 
 @cache_result
@@ -796,64 +827,6 @@ def get_news_sentiment(query):
         error_message = f"Error retrieving news sentiment: {str(e)}"
         print(error_message)
         return error_message
-
-def extract_asset_classes(json_data):
-    """
-    Extract asset classes from portfolio JSON data.
-    
-    Args:
-        json_data (dict): JSON data containing portfolio data
-        
-    Returns:
-        dict: Dictionary mapping asset classes to their allocations, with 'cash' filtered out
-    """
-    # Parse the JSON string
-    data = json_data
-    
-    # Check if data has expected structure
-    if not isinstance(data, dict):
-        print("Error: Portfolio data is not a dictionary")
-        return {}
-    
-    if "portfolio" not in data:
-        print("Error: Portfolio data does not contain 'portfolio' key")
-        return {}
-    
-    if not isinstance(data["portfolio"], list) or not data["portfolio"]:
-        print("Error: Portfolio array is empty or not a list")
-        return {}
-    
-    # Extract asset classes with allocations
-    asset_classes = {}
-    for item in data["portfolio"]:
-        if not isinstance(item, dict):
-            print(f"Warning: Portfolio item is not a dictionary: {item}")
-            continue
-            
-        asset_class = item.get("asset_class")
-        allocation = item.get("allocation")
-        
-        if not asset_class:
-            print(f"Warning: Missing 'asset_class' in portfolio item: {item}")
-            continue
-            
-        if allocation is None:
-            print(f"Warning: Missing 'allocation' in portfolio item: {item}")
-            continue
-        
-        # Convert allocation to float if it's a string (handle % if present)
-        if isinstance(allocation, str):
-            allocation = float(allocation.strip("%"))
-        
-        asset_classes[asset_class] = allocation
-    
-    # Filter out 'cash' from the dictionary
-    asset_classes = {k: v for k, v in asset_classes.items() if k.lower() != 'cash'}
-    
-    if not asset_classes:
-        print("Warning: No valid asset classes found in portfolio data")
-        
-    return asset_classes
 
 @cache_result
 def get_stock_tickers(filter_value):
@@ -949,23 +922,35 @@ def filter_stocks(ticker_input):
             metrics = calculate_stock_metrics(ticker)
             all_metrics[ticker] = metrics
         
-        # Step 2: Convert metrics to DataFrame for z-score calculation
-        metrics_data = []
+        # Step 1.5: Filter out tickers with default/missing metrics
+        valid_metrics_data = []
         for ticker, metrics in all_metrics.items():
-            metrics_row = {'Ticker': ticker}
-            metrics_row.update(metrics)
-            metrics_data.append(metrics_row)
+            # Check if date_range is populated AND average daily volume meets threshold
+            if metrics.get('date_range') and metrics.get('average_daily_volume', 0) >= 10000: # Added volume check
+                metrics_row = {'Ticker': ticker}
+                metrics_row.update(metrics)
+                valid_metrics_data.append(metrics_row)
+                
+        # If no tickers have valid metrics, return an empty list
+        if not valid_metrics_data:
+            print(f"Warning: No valid metrics found for the provided list of tickers. Returning empty list.")
+            return []
         
-        df = pd.DataFrame(metrics_data)
+        # Step 2: Convert *valid* metrics to DataFrame for z-score calculation
+        df = pd.DataFrame(valid_metrics_data)
+        
+        print("\n--- DataFrame with Valid Metrics (filter_stocks - list input) ---")
+        print(df)
+        print("-----------------------------------------------------------------")
         
         # Define metrics based on whether higher or lower values are better
         higher_is_better = [
             'sharpe_ratio', 'sortino_ratio', 'calmar_ratio', 'annualized_return',
-            'upside_capture', 'momentum_6m', 'momentum_12m'
+            'upside_capture', 'momentum_6m', 'momentum_12m', 'max_drawdown',
         ]
         
         lower_is_better = [
-            'annualized_volatility', 'daily_return_volatility', 'max_drawdown', 'beta',
+            'annualized_volatility', 'daily_return_volatility', 'beta',
             'sector_beta', 'downside_capture'
         ]
         
@@ -990,6 +975,10 @@ def filter_stocks(ticker_input):
         # Rank stocks by composite score in descending order
         ranked_df = z_scores.sort_values(by='composite_score', ascending=False)
         
+        print("\n--- Ranked DataFrame with Z-Scores (filter_stocks - list input) ---")
+        print(ranked_df)
+        print("------------------------------------------------------------------")
+        
         # Get the top 10 tickers (or all tickers if less than 10 are available)
         max_stocks = 10
         available_stocks = min(max_stocks, len(ranked_df))
@@ -1008,23 +997,36 @@ def filter_stocks(ticker_input):
                 metrics = calculate_stock_metrics(ticker)
                 all_metrics[ticker] = metrics
             
-            # Step 2: Convert metrics to DataFrame for z-score calculation
-            metrics_data = []
+            # Step 1.5: Filter out tickers with default/missing metrics
+            valid_metrics_data = []
             for ticker, metrics in all_metrics.items():
-                metrics_row = {'Ticker': ticker}
-                metrics_row.update(metrics)
-                metrics_data.append(metrics_row)
+                # Check if date_range is populated AND average daily volume meets threshold
+                if metrics.get('date_range') and metrics.get('average_daily_volume', 0) >= 10000: # Added volume check
+                    metrics_row = {'Ticker': ticker}
+                    metrics_row.update(metrics)
+                    valid_metrics_data.append(metrics_row)
+                    
+            # If no tickers have valid metrics for this filter_value, add empty list to result
+            if not valid_metrics_data:
+                print(f"Warning: No valid metrics found for filter '{filter_value}'. Skipping this filter.")
+                result_dict[filter_value] = []
+                continue # Skip to the next filter_value
             
-            df = pd.DataFrame(metrics_data)
+            # Step 2: Convert *valid* metrics to DataFrame for z-score calculation
+            df = pd.DataFrame(valid_metrics_data)
+            
+            print(f"\n--- DataFrame with Valid Metrics (filter_stocks - dict input: {filter_value}) ---")
+            print(df)
+            print("----------------------------------------------------------------------")
             
             # Define metrics based on whether higher or lower values are better
             higher_is_better = [
                 'sharpe_ratio', 'sortino_ratio', 'calmar_ratio', 'annualized_return',
-                'upside_capture', 'momentum_6m', 'momentum_12m'
+                'upside_capture', 'momentum_6m', 'momentum_12m', 'max_drawdown',
             ]
             
             lower_is_better = [
-                'annualized_volatility', 'daily_return_volatility', 'max_drawdown', 'beta',
+                'annualized_volatility', 'daily_return_volatility', 'beta',
                 'sector_beta', 'downside_capture'
             ]
             
@@ -1049,6 +1051,10 @@ def filter_stocks(ticker_input):
             # Rank stocks by composite score in descending order
             ranked_df = z_scores.sort_values(by='composite_score', ascending=False)
             
+            print(f"\n--- Ranked DataFrame with Z-Scores (filter_stocks - dict input: {filter_value}) ---")
+            print(ranked_df)
+            print("-------------------------------------------------------------------")
+            
             # Get the top 7 tickers (or all tickers if less than 7 are available)
             max_stocks = 7  # Changed from 10 to 7
             available_stocks = min(max_stocks, len(ranked_df))
@@ -1058,6 +1064,64 @@ def filter_stocks(ticker_input):
             result_dict[filter_value] = filtered_tickers
         
         return result_dict
+
+def extract_asset_classes(json_data):
+    """
+    Extract asset classes from portfolio JSON data.
+    
+    Args:
+        json_data (dict): JSON data containing portfolio data
+        
+    Returns:
+        dict: Dictionary mapping asset classes to their allocations, with 'cash' filtered out
+    """
+    # Parse the JSON string
+    data = json_data
+    
+    # Check if data has expected structure
+    if not isinstance(data, dict):
+        print("Error: Portfolio data is not a dictionary")
+        return {}
+    
+    if "portfolio" not in data:
+        print("Error: Portfolio data does not contain 'portfolio' key")
+        return {}
+    
+    if not isinstance(data["portfolio"], list) or not data["portfolio"]:
+        print("Error: Portfolio array is empty or not a list")
+        return {}
+    
+    # Extract asset classes with allocations
+    asset_classes = {}
+    for item in data["portfolio"]:
+        if not isinstance(item, dict):
+            print(f"Warning: Portfolio item is not a dictionary: {item}")
+            continue
+            
+        asset_class = item.get("asset_class")
+        allocation = item.get("allocation")
+        
+        if not asset_class:
+            print(f"Warning: Missing 'asset_class' in portfolio item: {item}")
+            continue
+            
+        if allocation is None:
+            print(f"Warning: Missing 'allocation' in portfolio item: {item}")
+            continue
+        
+        # Convert allocation to float if it's a string (handle % if present)
+        if isinstance(allocation, str):
+            allocation = float(allocation.strip("%"))
+        
+        asset_classes[asset_class] = allocation
+    
+    # Filter out 'cash' from the dictionary
+    asset_classes = {k: v for k, v in asset_classes.items() if k.lower() != 'cash'}
+    
+    if not asset_classes:
+        print("Warning: No valid asset classes found in portfolio data")
+        
+    return asset_classes
 
 def analyze_ticker(ticker, is_etf=False):
     """
@@ -1297,6 +1361,11 @@ def run_portfolio_manager(tickers=None, max_workers=4, batch_sentiment=True):
             result = future.result()
             if ticker not in metrics_fundamentals_results:
                metrics_fundamentals_results[ticker] = {}
+            
+            # Remove sector_beta from metrics if the ticker is an ETF
+            if data_type == "metrics" and is_etf_map.get(ticker, False):
+               result.pop('sector_beta', None) # Use pop with default to avoid KeyError
+            
             metrics_fundamentals_results[ticker][data_type] = result
             print(f"Completed {data_type} for {ticker}")
          except Exception as exc:
@@ -1310,7 +1379,7 @@ def run_portfolio_manager(tickers=None, max_workers=4, batch_sentiment=True):
                   "annualized_return": 0, "annualized_volatility": 0,
                   "daily_return_volatility": 0, "max_drawdown": 0, "beta": 0,
                   "sector_beta": 0, "upside_capture": 0, "downside_capture": 0,
-                  "momentum_6m": 0, "momentum_12m": 0
+                  "momentum_6m": 0, "momentum_12m": 0, "average_daily_volume": 0
                }
             elif data_type == "fundamentals":
                metrics_fundamentals_results[ticker][data_type] = f"Error analyzing fundamentals for {ticker}"
@@ -1386,7 +1455,7 @@ def run_portfolio_manager(tickers=None, max_workers=4, batch_sentiment=True):
 You are a very skilled portfolio manager with 30 years of experience. 
 
 TASK:
-You will receive the complete analysis data for {len(all_analysis_data)} stocks. Your job is to identify the top 1-2 stocks with the best overall performance.
+You will receive the complete analysis data for {len(all_analysis_data)} stocks. Your job is to identify the top 2-3 stocks with the best overall performance.
 
 ANALYSIS APPROACH:
 - Review ALL the provided data carefully
@@ -1394,7 +1463,7 @@ ANALYSIS APPROACH:
 1. Performance metrics (sharpe ratio, sortino ratio, etc.)
 2. Fundamental data (when available)
 3. News sentiment
-- Choose the 1-2 stocks that you believe have the best investment potential(DO NOT EXCEED 2)
+- Choose the 2-3 stocks that you believe have the best investment potential(DO NOT EXCEED 3)
 
 OUTPUT FORMAT:
 Return your recommendations in this JSON format:
@@ -1447,7 +1516,7 @@ IMPORTANT:
       },
       {
          "role": "user", 
-         "content": f"Here is the complete analysis data for {len(all_analysis_data)} tickers: {json.dumps(all_analysis_data)}\n\nPlease analyze this data and provide your top 1-2 stock recommendations."
+         "content": f"Here is the complete analysis data for {len(all_analysis_data)} tickers: {json.dumps(all_analysis_data)}\n\nPlease analyze this data and provide your top 2-3 stock recommendations."
       }
    ]
 
@@ -1460,6 +1529,7 @@ IMPORTANT:
    # Extract and return the final recommendations
    recommendations = response.choices[0].message.content
    print("Analysis complete!")
+   print(all_analysis_data)
    return recommendations
 
 # Modified main execution code to process asset classes in parallel
@@ -1587,4 +1657,4 @@ def analyze_portfolio(portfolio_data):
     return final, elapsed_time
 
 if __name__ == "__main__":
-    analyze_portfolio(portfolio_data)
+   analyze_portfolio(portfolio_data)

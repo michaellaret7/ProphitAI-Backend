@@ -814,7 +814,5 @@ ONLY after conducting all required research using the specified tools and any ad
             
         return {"portfolio": []}
 
-
-# Ensure module doesn't run on import
 if __name__ == "__main__":
     optimize()  

@@ -629,19 +629,21 @@ def update_date_column_to_match_datetime(ticker_location, ticker, db_config):
         print(f"Failed update took {end_time - start_time:.3f} seconds")
         return False
 
-def update_all_tickers_data(fix_date_column=False):
+def update_all_tickers_data(fix_date_column=False, start_db=None, start_schema=None):
     """
     Main function to update OHLC data for all tickers listed in the prices schema file.
-    
+
     Args:
         fix_date_column (bool, optional): Whether to fix date column values to match datetime. Default is False.
+        start_db (str, optional): The database name to start processing from. Default is None (start from beginning).
+        start_schema (str, optional): The schema name within start_db to start processing from. Default is None (start from beginning of start_db or beginning overall).
     """
     # Start timing the entire process
     total_start_time = time.time()
-    
+
     # Get database configuration
     db_config = get_default_db_config()
-    
+
     # Load prices schema data (or check if it was loaded successfully earlier)
     prices_schema_file = os.path.join('src', 'data', 'database_schemas_prices.json')
     try:
@@ -657,33 +659,65 @@ def update_all_tickers_data(fix_date_column=False):
     if not ib:
         print("Failed to connect to Interactive Brokers")
         return
-        
+
+    # Flag to control when to start processing based on start_db/start_schema
+    start_processing = (start_db is None and start_schema is None)
+    if not start_processing:
+        print(f"Attempting to start processing from DB: '{start_db}', Schema: '{start_schema}'")
+
     try:
         # No longer need to build a flat list upfront
         # processing_tasks = []
-        # ticker_locations = {} 
+        # ticker_locations = {}
         # processed_tickers = set()
-        
+
         # Counters for summary
         total_tickers_processed = 0
         success_count = 0
         error_count = 0
         skipped_no_data_count = 0
+        skipped_due_to_start_point = 0
 
         print("Starting ticker update process...")
         for db_name, schemas in prices_schema_data.items():
+            # --- Start Point Logic (Database Level) ---
+            if not start_processing and start_db is not None:
+                if db_name == start_db:
+                    # Reached the target database, now check schema or start processing
+                    if start_schema is None:
+                        print(f"--> Reached start database '{db_name}'. Starting processing.")
+                        start_processing = True
+                    # else: We need to find the specific schema within this DB
+                else:
+                    print(f"Skipping database '{db_name}' (before start point)...")
+                    skipped_due_to_start_point += sum(len(ticker_list) for ticker_list in schemas.values() if isinstance(ticker_list, list)) # Estimate skipped tickers
+                    continue # Skip this entire database
+
+            # Check schema format
             if not isinstance(schemas, dict):
                 print(f"Warning: Skipping database '{db_name}' due to unexpected format.")
                 continue
-                
+
             for schema_name, ticker_table_list in schemas.items():
+                # --- Start Point Logic (Schema Level) ---
+                if not start_processing: # This implies start_db was matched (or None) and start_schema is set
+                    if start_schema is not None and schema_name == start_schema:
+                        print(f"--> Reached start schema '{schema_name}' in database '{db_name}'. Starting processing.")
+                        start_processing = True
+                    else:
+                        print(f"Skipping schema '{schema_name}' in db '{db_name}' (before start point)...")
+                        if isinstance(ticker_table_list, list):
+                             skipped_due_to_start_point += len(ticker_table_list)
+                        continue # Skip this schema
+
+                # Check ticker list format
                 if not isinstance(ticker_table_list, list):
                     print(f"Warning: Skipping schema '{schema_name}' in db '{db_name}' due to unexpected format.")
                     continue
-                
+
                 # Print the header for the current database and schema being processed
                 print(f"\n---> Updating: {db_name} / {schema_name} <---")
-                
+
                 if not ticker_table_list: # Check if the list of tickers is empty
                     print(f"  No tickers listed for this schema.")
                     continue
@@ -692,9 +726,9 @@ def update_all_tickers_data(fix_date_column=False):
                 for ticker_table_name in ticker_table_list:
                     ticker_start_time = time.time()
                     # The table name is the lowercase ticker
-                    ticker_upper = ticker_table_name.upper() 
+                    ticker_upper = ticker_table_name.upper()
                     total_tickers_processed += 1 # Increment total counter
-                    
+
                     print(f"  Processing {ticker_upper}...") # Simple log for the ticker
 
                     try:
@@ -715,23 +749,23 @@ def update_all_tickers_data(fix_date_column=False):
                                 print(f"    Failed to fix date column for {ticker_upper}. Skipping further processing.")
                                 error_count += 1
                                 continue # Skip to next ticker if date fix fails
-                            
-                        # Get the last date of data 
+
+                        # Get the last date of data
                         last_date = get_last_data_date(ticker_location, ticker_upper, db_config)
-                        
+
                         # If no existing data, skip update.
                         if not last_date:
                             print(f"    No existing data found for {ticker_upper}. Skipping update.")
                             skipped_no_data_count += 1
                             continue
-                        
+
                         # Calculate start date for fetching new data
-                        start_date = last_date + timedelta(minutes=1) 
+                        start_date = last_date + timedelta(minutes=1)
                         print(f"    Last data: {last_date}. Requesting new data since {start_date}")
-                        
+
                         # Get data from IB
                         df = get_stock_data_from_ib(ib, ticker_upper, start_date)
-                        
+
                         if df is not None and not df.empty:
                             print(f"    Received {len(df)} new bar(s). Inserting into DB...")
                             success = insert_data_to_db(ticker_location, ticker_upper, df, db_config)
@@ -746,43 +780,45 @@ def update_all_tickers_data(fix_date_column=False):
                         else: # df is empty
                             print(f"    No new data available from IB for {ticker_upper} since {start_date}.")
                             success_count += 1  # Count as success if no new data
-                        
+
                     except Exception as e:
                         print(f"    Error processing {ticker_upper}: {e}")
                         import traceback
-                        traceback.print_exc() 
+                        traceback.print_exc()
                         error_count += 1
                     finally:
                         ticker_end_time = time.time()
                         print(f"    Processing time for {ticker_upper}: {ticker_end_time - ticker_start_time:.3f} seconds")
                         # Removed the separator line here to reduce clutter, header provides separation
-        
+
         # Final Summary
         total_end_time = time.time()
         total_duration = total_end_time - total_start_time
-        
+
         print(f"\nUpdate completed in {total_duration:.3f} seconds")
         print(f"Summary: Processed {total_tickers_processed} tickers.")
         print(f"         {success_count} successful updates/checks, {error_count} errors, {skipped_no_data_count} skipped (no prior data).")
+        if skipped_due_to_start_point > 0:
+             print(f"         Skipped approximately {skipped_due_to_start_point} tickers before reaching start point.")
         if total_tickers_processed > 0:
              print(f"Average time per ticker processed: {total_duration / total_tickers_processed:.3f} seconds")
-        
+
     finally:
         # Disconnect from IB
         if ib and ib.isConnected():
             ib.disconnect()
             print("Disconnected from Interactive Brokers")
 
-if __name__ == "__main__":    
+if __name__ == "__main__":
     # Example: Update all tickers listed in the prices schema
-    update_all_tickers_data(fix_date_column=False) 
-    
-    # Example: Update all tickers AND fix the date column if needed
-    # update_all_tickers_data(fix_date_column=True)
-    
-    # Remove the old specific calls
-    # update_all_tickers_data("equity_sector_communication_services_prices", "entertainment_prices")
-    # update_all_tickers_data("equity_sector_communication_services_prices", "interactive_media_and_services_prices")
-    
-    
-    
+    # update_all_tickers_data(fix_date_column=False)
+
+    # Example: Start updating from a specific database and schema (sector)
+    db_to_start = "equity_sector_financials_prices"
+    schema_to_start = "capital_markets_prices"
+    print(f"\nStarting update from DB: {db_to_start}, Schema: {schema_to_start}\n")
+    update_all_tickers_data(fix_date_column=False, start_db=db_to_start, start_schema=schema_to_start)
+
+
+
+
