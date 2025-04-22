@@ -19,12 +19,10 @@ from src.utils.file_utils import load_schema_data
 # Load environment variables from .env file
 load_dotenv()
 
-OpenAI_API_KEY = os.environ.get("OPENAI_API_KEY")
 Sonar_API_KEY = os.environ.get("PERPLEXITY_API_KEY")
-client = OpenAI(api_key=OpenAI_API_KEY)
-perplexity_model = os.environ.get("PERPLEXITY_MODEL")
+perplexity_model = 'sonar-deep-research'
 
-def communication_services_analyst():
+def communication_services_research_analyst():
     from src.phaseOne.phaseOneAnimation import start_animation, Colors
     date = datetime.now().strftime("%Y-%m-%d")
     current_month_year = datetime.now().strftime("%B %Y")
@@ -204,9 +202,11 @@ Additional Notes:
         print(f"{Colors.RED}Error: {e}{Colors.END}")
         return None
 
-def consumer_discretionary_analyst():
+def consumer_discretionary_research_analyst():
     from src.phaseOne.phaseOneAnimation import start_animation, Colors
     date = datetime.now().strftime("%Y-%m-%d")
+    current_month_year = datetime.now().strftime("%B %Y")
+    current_year = datetime.now().strftime("%Y")
 
     steps = [
         "Analyzing S&P 500 sector performance",
@@ -229,10 +229,8 @@ You are a professional financial analyst specializing in equity markets. Provide
 7. Include diverse perspectives on market outlook from leading institutions and strategists
 """
 
-    user_prompt = f"""
-# Analysis of the Consumer Discretionary Sector
-
-THIS IS THE DATE TODAY: {date}
+    user_prompt = """
+# Analysis of the Consumer Discretionary Sector as of {current_month_year}
 
 Here is a list of the Industries and Sub-Industries in the consumer discretionary sector:
 
@@ -371,6 +369,7 @@ IMPORTANT
 - Use clear headings, subheadings, and bullet points to ensure readability and structure.
 - Prioritize accuracy and logical reasoning, especially in the forward-looking perspective.
 - Do not guess anything, if there is no data just say there is no data or do further research to find the data.
+- Ensure the analysis reflects {current_month_year} conditions.
 """
     
     messages = [
@@ -433,9 +432,11 @@ IMPORTANT
         print(f"{Colors.RED}Error: {e}{Colors.END}")
         return None
 
-def consumer_staples_analyst():
+def consumer_staples_research_analyst():
     from src.phaseOne.phaseOneAnimation import start_animation, Colors
     date = datetime.now().strftime("%Y-%m-%d")
+    current_month_year = datetime.now().strftime("%B %Y")
+    current_year = datetime.now().strftime("%Y")
 
     steps = [
         "Analyzing S&P 500 sector performance",
@@ -458,10 +459,8 @@ def consumer_staples_analyst():
 7. Include diverse perspectives on market outlook from leading institutions and strategists
 """
 
-    user_prompt = f"""
-# Analysis of the Consumer Staples Sector
-
-THIS IS THE DATE TODAY: {date}
+    user_prompt = """
+# Analysis of the Consumer Staples Sector as of {current_month_year}
 
 Here is a list of the Industries and Sub-Industries in the consumer staples sector:
 
@@ -580,6 +579,7 @@ IMPORTANT
 - Use clear headings, subheadings, and bullet points to ensure readability and structure.
 - Prioritize accuracy and logical reasoning, especially in the forward-looking perspective.
 - Do not guess anything, if there is no data just say there is no data or do further research to find the data.
+- Ensure the analysis reflects {current_month_year} conditions.
 """
     
     messages = [
@@ -642,9 +642,11 @@ IMPORTANT
         print(f"{Colors.RED}Error: {e}{Colors.END}")
         return None
 
-def energy_analyst():
+def energy_research_analyst():
     from src.phaseOne.phaseOneAnimation import start_animation, Colors
     date = datetime.now().strftime("%Y-%m-%d")
+    current_month_year = datetime.now().strftime("%B %Y")
+    current_year = datetime.now().strftime("%Y")
 
     steps = [
         "Analyzing S&P 500 sector performance",
@@ -667,10 +669,8 @@ def energy_analyst():
 7. Include diverse perspectives on market outlook from leading institutions and strategists
 """
 
-    user_prompt = f"""
-# Analysis of the Energy Sector
-
-THIS IS THE DATE TODAY: {date}
+    user_prompt = """
+# Analysis of the Energy Sector as of {current_month_year}
 
 Here is a list of the Industries and Sub-Industries in the energy sector:
 
@@ -856,6 +856,7 @@ IMPORTANT
 - Use clear headings, subheadings, and bullet points to ensure readability and structure.
 - Prioritize accuracy and logical reasoning, especially in the forward-looking perspective.
 - Do not guess anything, if there is no data just say there is no data or do further research to find the data.
+- Ensure the analysis reflects {current_month_year} conditions.
 """
     
     messages = [
@@ -918,9 +919,11 @@ IMPORTANT
         print(f"{Colors.RED}Error: {e}{Colors.END}")
         return None
 
-def financials_analyst():
+def financials_research_analyst():
     from src.phaseOne.phaseOneAnimation import start_animation, Colors
     date = datetime.now().strftime("%Y-%m-%d")
+    current_month_year = datetime.now().strftime("%B %Y")
+    current_year = datetime.now().strftime("%Y")
 
     steps = [
         "Analyzing S&P 500 sector performance",
@@ -943,10 +946,8 @@ def financials_analyst():
 7. Include diverse perspectives on market outlook from leading institutions and strategists
 """
 
-    user_prompt = f"""
-# Analysis of the Financials Sector
-
-THIS IS THE DATE TODAY: {date}
+    user_prompt = """
+# Analysis of the Financials Sector as of {current_month_year}
 
 Here is a list of the Industries and Sub-Industries in the financials sector:
 
@@ -1157,6 +1158,7 @@ IMPORTANT
 - Use clear headings, subheadings, and bullet points to ensure readability and structure.
 - Prioritize accuracy and logical reasoning, especially in the forward-looking perspective.
 - Do not guess anything, if there is no data just say there is no data or do further research to find the data.
+- Ensure the analysis reflects {current_month_year} conditions.
 """
     
     messages = [
@@ -1219,9 +1221,11 @@ IMPORTANT
         print(f"{Colors.RED}Error: {e}{Colors.END}")
         return None
 
-def healthcare_analyst():
+def healthcare_research_analyst():
     from src.phaseOne.phaseOneAnimation import start_animation, Colors
     date = datetime.now().strftime("%Y-%m-%d")
+    current_month_year = datetime.now().strftime("%B %Y")
+    current_year = datetime.now().strftime("%Y")
 
     steps = [
         "Analyzing S&P 500 sector performance",
@@ -1244,10 +1248,8 @@ def healthcare_analyst():
 7. Include diverse perspectives on market outlook from leading institutions and strategists
 """
 
-    user_prompt = f"""
-# Analysis of the Healthcare Sector
-
-THIS IS THE DATE TODAY: {date}
+    user_prompt = """
+# Analysis of the Healthcare Sector as of {current_month_year}
 
 Here is a list of the Industries and Sub-Industries in the healthcare sector:
 
@@ -1459,6 +1461,7 @@ IMPORTANT
 - Use clear headings, subheadings, and bullet points to ensure readability and structure.
 - Prioritize accuracy and logical reasoning, especially in the forward-looking perspective.
 - Do not guess anything, if there is no data just say there is no data or do further research to find the data.
+- Ensure the analysis reflects {current_month_year} conditions.
 """
     
     messages = [
@@ -1521,9 +1524,11 @@ IMPORTANT
         print(f"{Colors.RED}Error: {e}{Colors.END}")
         return None
 
-def industrials_analyst():
+def industrials_research_analyst():
     from src.phaseOne.phaseOneAnimation import start_animation, Colors
     date = datetime.now().strftime("%Y-%m-%d")
+    current_month_year = datetime.now().strftime("%B %Y")
+    current_year = datetime.now().strftime("%Y")
 
     steps = [
         "Analyzing S&P 500 sector performance",
@@ -1546,10 +1551,8 @@ def industrials_analyst():
 7. Include diverse perspectives on market outlook from leading institutions and strategists
 """
 
-    user_prompt = f"""
-# Analysis of the Industrials Sector
-
-THIS IS THE DATE TODAY: {date}
+    user_prompt = """
+# Analysis of the Industrials Sector as of {current_month_year}
 
 Here is a list of the Industries and Sub-Industries in the industrials sector:
 
@@ -1782,6 +1785,7 @@ IMPORTANT
 - Use clear headings, subheadings, and bullet points to ensure readability and structure.
 - Prioritize accuracy and logical reasoning, especially in the forward-looking perspective.
 - Do not guess anything, if there is no data just say there is no data or do further research to find the data.
+- Ensure the analysis reflects {current_month_year} conditions.
 """
     
     messages = [
@@ -1844,9 +1848,11 @@ IMPORTANT
         print(f"{Colors.RED}Error: {e}{Colors.END}")
         return None
 
-def information_technology_analyst():
+def information_technology_research_analyst():
     from src.phaseOne.phaseOneAnimation import start_animation, Colors
     date = datetime.now().strftime("%Y-%m-%d")
+    current_month_year = datetime.now().strftime("%B %Y")
+    current_year = datetime.now().strftime("%Y")
 
     steps = [
         "Analyzing S&P 500 sector performance",
@@ -1869,10 +1875,8 @@ def information_technology_analyst():
 7. Include diverse perspectives on market outlook from leading institutions and strategists
 """
 
-    user_prompt = f"""
-# Analysis of the Information Technology Sector
-
-THIS IS THE DATE TODAY: {date}
+    user_prompt = """
+# Analysis of the Information Technology Sector as of {current_month_year}
 
 Here is a list of the Industries and Sub-Industries in the information technology sector:
 
@@ -2070,6 +2074,7 @@ IMPORTANT
 - Use clear headings, subheadings, and bullet points to ensure readability and structure.
 - Prioritize accuracy and logical reasoning, especially in the forward-looking perspective.
 - Do not guess anything, if there is no data just say there is no data or do further research to find the data.
+- Ensure the analysis reflects {current_month_year} conditions.
 """
     
     messages = [
@@ -2132,9 +2137,11 @@ IMPORTANT
         print(f"{Colors.RED}Error: {e}{Colors.END}")
         return None
 
-def materials_analyst():
+def materials_research_analyst():
     from src.phaseOne.phaseOneAnimation import start_animation, Colors
     date = datetime.now().strftime("%Y-%m-%d")
+    current_month_year = datetime.now().strftime("%B %Y")
+    current_year = datetime.now().strftime("%Y")
 
     steps = [
         "Analyzing S&P 500 sector performance",
@@ -2157,10 +2164,8 @@ def materials_analyst():
 7. Include diverse perspectives on market outlook from leading institutions and strategists
 """
 
-    user_prompt = f"""
-# Analysis of the Materials Sector
-
-THIS IS THE DATE TODAY: {date}
+    user_prompt = """
+# Analysis of the Materials Sector as of {current_month_year}
 
 Here is a list of the Industries and Sub-Industries in the materials sector:
 
@@ -2371,6 +2376,7 @@ IMPORTANT
 - Use clear headings, subheadings, and bullet points to ensure readability and structure.
 - Prioritize accuracy and logical reasoning, especially in the forward-looking perspective.
 - Do not guess anything, if there is no data just say there is no data or do further research to find the data.
+- Ensure the analysis reflects {current_month_year} conditions.
 """
     
     messages = [
@@ -2433,9 +2439,11 @@ IMPORTANT
         print(f"{Colors.RED}Error: {e}{Colors.END}")
         return None
 
-def real_estate_analyst():
+def real_estate_research_analyst():
     from src.phaseOne.phaseOneAnimation import start_animation, Colors
     date = datetime.now().strftime("%Y-%m-%d")
+    current_month_year = datetime.now().strftime("%B %Y")
+    current_year = datetime.now().strftime("%Y")
 
     steps = [
         "Analyzing S&P 500 sector performance",
@@ -2458,10 +2466,8 @@ def real_estate_analyst():
 7. Include diverse perspectives on market outlook from leading institutions and strategists
 """
 
-    user_prompt = f"""
-# Analysis of the Real Estate Sector
-
-THIS IS THE DATE TODAY: {date}
+    user_prompt = """
+# Analysis of the Real Estate Sector as of {current_month_year}
 
 Here is a list of the Industries and Sub-Industries in the real estate sector:
 
@@ -2685,6 +2691,7 @@ IMPORTANT
 - Use clear headings, subheadings, and bullet points to ensure readability and structure.
 - Prioritize accuracy and logical reasoning, especially in the forward-looking perspective.
 - Do not guess anything, if there is no data just say there is no data or do further research to find the data.
+- Ensure the analysis reflects {current_month_year} conditions.
 """
     
     messages = [
@@ -2747,9 +2754,11 @@ IMPORTANT
         print(f"{Colors.RED}Error: {e}{Colors.END}")
         return None
 
-def utilities_analyst():
+def utilities_research_analyst():
     from src.phaseOne.phaseOneAnimation import start_animation, Colors
     date = datetime.now().strftime("%Y-%m-%d")
+    current_month_year = datetime.now().strftime("%B %Y")
+    current_year = datetime.now().strftime("%Y")
 
     steps = [
         "Analyzing S&P 500 sector performance",
@@ -2772,10 +2781,8 @@ def utilities_analyst():
 7. Include diverse perspectives on market outlook from leading institutions and strategists
 """
 
-    user_prompt = f"""
-# Analysis of the Utilities Sector
-
-THIS IS THE DATE TODAY: {date}
+    user_prompt = """
+# Analysis of the Utilities Sector as of {current_month_year}
 
 Here is a list of the Industries and Sub-Industries in the utilities sector:
 
@@ -2975,6 +2982,7 @@ IMPORTANT
 - Use clear headings, subheadings, and bullet points to ensure readability and structure.
 - Prioritize accuracy and logical reasoning, especially in the forward-looking perspective.
 - Do not guess anything, if there is no data just say there is no data or do further research to find the data.
+- Ensure the analysis reflects {current_month_year} conditions.
 """
     
     messages = [

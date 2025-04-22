@@ -1,26 +1,26 @@
-from ..Analysts import (
-    free_search, 
-    communication_services_analyst, 
-    consumer_staples_analyst, 
-    consumer_discretionary_analyst, 
-    energy_analyst, 
-    financials_analyst, 
-    commodities_analyst, 
-    etf_analyst, 
-    treasuries_analyst, 
-    foreign_exchange_analyst, 
-    ig_credit_analyst, 
-    high_yield_analyst, 
-    emerging_market_analyst, 
-    healthcare_analyst, 
-    industrials_analyst, 
-    information_technology_analyst, 
-    materials_analyst, 
-    real_estate_analyst, 
-    utilities_analyst, 
-    get_equity_universe, 
-    get_etf_universe
-)
+# from ..Analysts import (
+#     free_search, 
+#     communication_services_analyst, 
+#     consumer_staples_analyst, 
+#     consumer_discretionary_analyst, 
+#     energy_analyst, 
+#     financials_analyst, 
+#     commodities_analyst, 
+#     etf_analyst, 
+#     treasuries_analyst, 
+#     foreign_exchange_analyst, 
+#     ig_credit_analyst, 
+#     high_yield_analyst, 
+#     emerging_market_analyst, 
+#     healthcare_analyst, 
+#     industrials_analyst, 
+#     information_technology_analyst, 
+#     materials_analyst, 
+#     real_estate_analyst, 
+#     utilities_analyst, 
+#     get_equity_universe, 
+#     get_etf_universe
+# )
 from .phaseOneFormatting import format
 from openai import OpenAI
 import json
@@ -269,6 +269,31 @@ def validate_asset_classes(data):
     return data
 
 def optimize():
+    # Import moved here
+    from ..analysts import (
+        free_search, 
+        communication_services_analyst, 
+        consumer_staples_analyst, 
+        consumer_discretionary_analyst, 
+        energy_analyst, 
+        financials_analyst, 
+        commodities_analyst, 
+        etf_analyst, 
+        treasuries_analyst, 
+        foreign_exchange_analyst, 
+        ig_credit_analyst, 
+        high_yield_analyst, 
+        emerging_market_analyst, 
+        healthcare_analyst, 
+        industrials_analyst, 
+        information_technology_analyst, 
+        materials_analyst, 
+        real_estate_analyst, 
+        utilities_analyst, 
+        get_equity_universe, 
+        get_etf_universe
+    )
+    
     current_date = datetime.now().strftime('%Y-%m-%d')
     account_info, positions_table, formatted_diversification, portfolio_metrics, stock_metrics, monthly_performance, correlations = format()
     

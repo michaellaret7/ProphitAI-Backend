@@ -21,7 +21,7 @@ load_dotenv()
 
 # Initialize the OpenAI client
 DEEPSEEK_API_KEY = os.environ.get("DEEPSEEK_API_KEY")
-deepseek_model = os.environ.get("DEEPSEEK_MODEL")
+deepseek_model = "deepseek-reasoner"
 
 Sonar_API_KEY = os.environ.get("PERPLEXITY_API_KEY")
 PERPLEXITY_MODEL = os.environ.get("PERPLEXITY_MODEL")
@@ -32,7 +32,7 @@ openai_model = os.environ.get("OPENAI_MODEL")
 grok_api_key = os.environ.get("GROK_API_KEY")
 grok_model = os.environ.get("GROK_MODEL")
 
-model = openai_model
+model = deepseek_model
 
 if model == openai_model:
    client = OpenAI(api_key=openai_api_key)
@@ -164,7 +164,7 @@ def get_daily_closing_prices(ticker, years=4, db_config=None):
          daily_total_volume as volume
       FROM ranked_data
       WHERE rn = 1 -- Select only the last bar's row for each day
-      ORDER BY trading_date DESC
+      ORDER BY trading_date ASC
       """
       
       cursor.execute(query, (start_date.strftime('%Y-%m-%d'),))
@@ -193,6 +193,7 @@ def get_daily_closing_prices(ticker, years=4, db_config=None):
 
       df = pd.DataFrame(results)
       df['date'] = pd.to_datetime(df['date'])
+      # Keep sorting as a safety net
       df = df.sort_values('date')
 
       return df
@@ -778,7 +779,7 @@ IMPORTANT:
     response = client.chat.completions.create(
         model=model,
         messages=messages,
-        max_tokens=1000
+        max_tokens=1500
     )
 
     return response.choices[0].message.content
@@ -1458,12 +1459,12 @@ TASK:
 You will receive the complete analysis data for {len(all_analysis_data)} stocks. Your job is to identify the top 2-3 stocks with the best overall performance.
 
 ANALYSIS APPROACH:
-- Review ALL the provided data carefully
-- Evaluate each stock based on a combination of:
-1. Performance metrics (sharpe ratio, sortino ratio, etc.)
-2. Fundamental data (when available)
-3. News sentiment
-- Choose the 2-3 stocks that you believe have the best investment potential(DO NOT EXCEED 3)
+1. Review ALL the provided data carefully
+2. Evaluate each stock based on a combination of:
+   - Performance metrics (sharpe ratio, sortino ratio, etc.)
+   - Fundamental data (when available)
+   - News sentiment
+3. Choose the 2-3 stocks that you believe have the best investment potential(DO NOT EXCEED 3)
 
 OUTPUT FORMAT:
 Return your recommendations in this JSON format:
@@ -1532,7 +1533,6 @@ IMPORTANT:
    print(all_analysis_data)
    return recommendations
 
-# Modified main execution code to process asset classes in parallel
 def process_asset_class(asset, allocation):
     """
     Process an asset class to find optimal stocks.
@@ -1657,4 +1657,5 @@ def analyze_portfolio(portfolio_data):
     return final, elapsed_time
 
 if __name__ == "__main__":
-   analyze_portfolio(portfolio_data)
+   # analyze_portfolio(portfolio_data)
+   process_asset_class("energy_equipment_and_services", 12)
