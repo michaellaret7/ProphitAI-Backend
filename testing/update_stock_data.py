@@ -814,8 +814,8 @@ if __name__ == "__main__":
     # update_all_tickers_data(fix_date_column=False)
 
     # Example: Start updating from a specific database and schema (sector)
-    db_to_start = "equity_sector_financials_prices"
-    schema_to_start = "capital_markets_prices"
+    db_to_start = "equity_sector_health_care_prices"
+    schema_to_start = "biotechnology_prices"
     print(f"\nStarting update from DB: {db_to_start}, Schema: {schema_to_start}\n")
     update_all_tickers_data(fix_date_column=False, start_db=db_to_start, start_schema=schema_to_start)
 
