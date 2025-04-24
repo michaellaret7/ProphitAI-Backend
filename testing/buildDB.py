@@ -1574,6 +1574,4 @@ def run_etfs(start_ticker=None):
             print("Disconnected from IB")
 
 
-
-
-
+            
