@@ -1,26 +1,3 @@
-# from ..Analysts import (
-#     free_search, 
-#     communication_services_analyst, 
-#     consumer_staples_analyst, 
-#     consumer_discretionary_analyst, 
-#     energy_analyst, 
-#     financials_analyst, 
-#     commodities_analyst, 
-#     etf_analyst, 
-#     treasuries_analyst, 
-#     foreign_exchange_analyst, 
-#     ig_credit_analyst, 
-#     high_yield_analyst, 
-#     emerging_market_analyst, 
-#     healthcare_analyst, 
-#     industrials_analyst, 
-#     information_technology_analyst, 
-#     materials_analyst, 
-#     real_estate_analyst, 
-#     utilities_analyst, 
-#     get_equity_universe, 
-#     get_etf_universe
-# )
 from .phaseOneFormatting import format
 from openai import OpenAI
 import json
@@ -268,6 +245,22 @@ def validate_asset_classes(data):
         
     return data
 
+def get_user_information():
+    """
+    Get user information from the user's profile.
+    """
+    json = {
+        "user_information": {
+            "age": "64",
+            "net_worth": "2,232,902",
+            "risk_tolerance": "Low Risk Tolerance",
+            "investment_goals": "Medium term high growth",
+            "time_horizon": "2-3 Years"
+        }
+    }
+    
+    return json
+
 def optimize():
     # Import moved here
     from ..analysts import (
@@ -310,7 +303,12 @@ def optimize():
 
     # Create the content string with portfolio data
     content = f"""
-Analyze the provided portfolio data, which consists of positions in asset class representatives such as sector ETFs, bond ETFs, and other instruments. Recommend specific actions to improve returns and reduce risk by adjusting exposures to different asset classes.
+GOALS:
+- Optimize the user's portfolio to outperform the S&P 500.
+- Minimize risk while maximizing returns.
+- Properly diversify the portfolio across multiple asset classes.
+- Tailor the portfolio to the user's risk tolerance, investment goals, and other investment information.
+- Come up with a portfolio Thesis that explains why the portfolio is optimized for the user's profile.
 
 REMEMBER THE CURRENT DATE IS {current_date}
 
@@ -343,16 +341,10 @@ REMEMBER THE CURRENT DATE IS {current_date}
 ------------------------------------------------------------------------------------------------------
 
 ### RULES (YOU MUST FOLLOW THESE RULES):
-1. NO HALLUCINATIONS, IF THERE IS SOMETHING YOU DO NOT KNOW OR IF THERE IS DATA MISSING, SAY YOU DO NOT KNOW, AND PROCEED LOGICALLY.
-2. BE VERY SPECIFIC AND EXACT WITH YOUR RECOMMENDATIONS.
-3. BE SUCCINCT AND CONCISE, BUT MAKE SURE TO EXPLAIN YOUR REASONING.
-4. BE CREATIVE AND THINK OUTSIDE THE BOX.
-5. KEEP 5-7% OF THE PORTFOLIO IN CASH.
-6. THE SUM OF ALL POSITIONS SHOULD BE EQUAL TO 93%-95% OF THE ORIGINAL CASH VALUE OF THE PORTFOLIO.
-7. MAKE SURE ALL OF THE ALLOCATION PERCENTAGES ADD UP TO 100% OF THE PORTFOLIO
-    - IF ALL OF THE RECOMENDATIONS ADD UP TO LESS THAN 100% YOU MUST ADD MORE ASSET CLASSES TO THE PORTFOLIO UNTIL IT ADDS UP TO 100%
-8. MAKE SURE THERE ARE AT LEAST 5 ASSET CLASSES IN THE PORTFOLIO
-    - IF THERE ARE LESS THAN 5 ASSET CLASSES YOU MUST ADD MORE ASSET CLASSES TO THE PORTFOLIO
+1. KEEP 5-7% OF THE PORTFOLIO IN CASH.
+2. MAKE SURE ALL OF THE ALLOCATION PERCENTAGES ADD UP TO 100% OF THE PORTFOLIO
+3. MINIMUM ASSET CLASSES ALLOWED: 8
+4. MAXIMUM ASSET CLASSES ALLOWED: 16
 
 ### Directions:
 1. Analyze the current portfolio positions, account information, portfolio metrics, asset class metrics, monthly performance, diversification, and correlation matrix.
@@ -367,19 +359,16 @@ REMEMBER THE CURRENT DATE IS {current_date}
    - Alternative Investments
 4. DO NOT recommend generic ETF categories - use the specific sector/industry/ETF names exactly as they appear in the data tools.
 5. Explain how each recommendation will improve the portfolio's return potential and risk profile.
-6. Return portfolio in JSON format.
+6. Construct the portfolio of asset classes based on your thesis. The maximum number of asset classes you can choose in your portfolio is 16 and the minimum is 8. If you go over or under this number, you will be penalized.
+7. Return portfolio in JSON format.
 
 IMPORTANT:
 - Be as granular and specific as possible with your recommendations.
-- If you think a certain industry or sub industry will do really well based on the research add it to the allocation.
-- I want you to be creative and think outside the box.
 - The Goal is to create a portfolio that will outperform the S&P 500. 
-- BE AS SPECIFIC AS POSSIBLE WITH YOUR RECOMMENDATIONS
 - YOU CAN ONLY CHOOSE FROM THE ASSET CLASSES AND SECTORS/INDUSTRIES/SUBINDUSTRIES THAT ARE IN THE get_equity_universe and get_etf_universe tools.
 - USE ONLY THE FINAL/LEAF NODE NAME AS THE ASSET_CLASS VALUE, NOT THE FULL HIERARCHICAL PATH.
-- For example, use "multi_utilities" NOT "equity_sector_utilities_multi_utilities"
-
-IMPORTANT: IN ADDITION to providing a human-readable recommendation, you MUST also output the same recommendation in a machine-readable JSON format for automated processing.
+    - For example, use "multi_utilities" NOT "equity_sector_utilities_multi_utilities"
+- IN ADDITION to providing a human-readable recommendation, you MUST also output the same recommendation in a machine-readable JSON format for automated processing.
 
 Clear Example of Correct Asset Class Format:
 - ✓ CORRECT: "asset_class": "multi_utilities"  
@@ -388,6 +377,16 @@ Clear Example of Correct Asset Class Format:
 Your response should have two parts:
 1. Human-readable portfolio recommendation
 2. JSON-formatted recommendation with the following structure:
+
+**How to Write the `portfolio_thesis`:**
+- For the `portfolio_thesis` field in the final JSON output, you must provide a concise (2-4 sentence) justification explaining *why* this specific portfolio recommendation is suitable for the user.
+
+To construct this thesis:
+1.  **Reference the User:** Start by explicitly mentioning key aspects of the user's profile gathered from the `get_user_information` tool (e.g., their risk tolerance, investment goals, time horizon).
+2.  **Connect to Strategy:** Explain how the overall portfolio structure (the mix of asset classes, risk level, specific tilts) directly aligns with the user profile you just mentioned.
+3.  **Incorporate Market View:** Briefly link the strategy to the key findings or outlook from your market research (analyst reports, free searches). Why do these allocations make sense *now*?
+4.  **Justify Key Choices:** You might highlight one or two significant allocation decisions (e.g., overweighting a specific sector, including alternatives) and briefly state how they support the user's objectives or capitalize on market opportunities identified in your research.
+5.  **Be Specific and Concise:** Ensure the thesis directly answers "Why this portfolio for this user?" clearly and succinctly.
 
 ===JSON OUTPUT===
 ```json
@@ -398,7 +397,8 @@ Your response should have two parts:
       "allocation": "percentage of the portfolio allocated to this asset class",
       "reason": "reason for the allocation"
     }},
-  ]
+  ],
+  "portfolio_thesis": "portfolio thesis goes here"
 }}
 ```
 """
@@ -459,7 +459,8 @@ Your response should have two parts:
             "real_estate_analyst": "Generate a comprehensive analysis of the real estate sector, examining residential, commercial, industrial, and specialized property trends. The report covers interest rate impacts, occupancy rates, rent growth, development pipelines, and sector-specific dynamics within real estate.",
             "utilities_analyst": "Generate a comprehensive analysis of the utilities sector, examining electric, gas, water, and renewable energy utilities. The report covers regulatory frameworks, interest rate sensitivity, environmental policies, infrastructure investments, and the energy transition's impact on utilities.",
             "get_equity_universe": "Retrieve and format sector/industry/subindustry data from database_schemas.json for optimal LLM ingestion, providing a hierarchical classification structure for financial markets.",
-            "get_etf_universe": "Retrieve and format ETF classification data from the etf_data database for optimal LLM ingestion, providing a hierarchical ETF classification structure."
+            "get_etf_universe": "Retrieve and format ETF classification data from the etf_data database for optimal LLM ingestion, providing a hierarchical ETF classification structure.",
+            "get_user_information": "Retrieve user profile information like age, risk tolerance, and investment goals to tailor the portfolio."
         }
         
         # Create all tools dynamically
@@ -528,6 +529,19 @@ Your response should have two parts:
                 tool_response = f"ETF Universe Data:\n\n{etf_universe_data}\n\nNOTE: Use this hierarchical classification data to inform your portfolio allocation decisions across different ETF categories."
                 write_to_file("ETF UNIVERSE DATA", etf_universe_data)
             
+            # Handle get_user_information tool
+            elif function_name == "get_user_information":
+                print(f"\033[97m🛠️ TOOL USED: \033[92m{function_name}\033[0m")
+                try:
+                    user_info_data = get_user_information()
+                    user_info_str = json.dumps(user_info_data, indent=2)
+                except Exception as e:
+                    print(f"Error getting user information: {e}")
+                    user_info_str = f"I attempted to retrieve user information but encountered an error: {e}"
+                
+                tool_response = f"User Profile Information:\n\n{user_info_str}\n\nNOTE: Use this information to tailor the portfolio recommendations."
+                write_to_file("USER INFORMATION", user_info_str)
+            
             # All other analyst tools
             else:
                 print(f"\033[97m🛠️ TOOL USED: \033[92m{function_name}\033[0m")
@@ -553,7 +567,8 @@ Your response should have two parts:
                     "real_estate_analyst": real_estate_analyst,
                     "utilities_analyst": utilities_analyst,
                     "get_equity_universe": get_equity_universe,
-                    "get_etf_universe": get_etf_universe
+                    "get_etf_universe": get_etf_universe,
+                    "get_user_information": get_user_information
                 }
                 
                 # Get the appropriate function and call it
@@ -586,9 +601,10 @@ Your response should have two parts:
             print(f"\nStarting conversation round {round_num}...")
             
             # Phase definitions
-            phase1_tools = list(analyst_tools.keys())
-            phase2_min_searches = 3
-            phase2_max_searches = 8
+            # Ensure get_user_information is always first
+            phase1_tools = ["get_user_information"] + [t for t in analyst_tools.keys() if t != "get_user_information"]
+            phase2_min_searches = 4
+            phase2_max_searches = 10
             
             # Track tool usage
             tool_calls_so_far = []
@@ -616,7 +632,7 @@ Your response should have two parts:
                     model=model,
                     messages=messages + [{
                         "role": "user",
-                        "content": "You've reached the maximum number of tool calls. Please provide your final portfolio recommendation now based on the information you have gathered so far. Remember to include both human-readable and JSON formats as specified in the original instructions."
+                        "content": "You've reached the maximum number of tool calls. Please provide your final portfolio recommendation now based on the information you have gathered so far. Remember to include both human-readable and JSON formats as specified in the original instructions. REMEMBER: Your final portfolio MUST contain between 8 and 16 asset classes - you CANNOT exceed 16 asset classes."
                     }],
                     temperature=0.7
                 )
@@ -686,8 +702,8 @@ Your response should have two parts:
                 final_response = client.chat.completions.create(
                     model=model,
                     messages=messages + [{
-                        "role": "user", 
-                        "content": "Now provide your final portfolio recommendation based on all the data gathered. Include both human-readable and JSON formats as specified."
+                        "role": "user",
+                        "content": "Now provide your final portfolio recommendation based on all the data gathered. Include both human-readable and JSON formats as specified. REMEMBER: Your final portfolio MUST contain between 8 and 16 asset classes - you CANNOT exceed 16 asset classes."
                     }],
                     temperature=0.7
                 )
@@ -705,7 +721,8 @@ Your response should have two parts:
         # Setup system message
         system_message = {
             "role": "system",
-            "content": """You are an elite portfolio manager who creates optimized investment portfolios. Your exceptional track record comes from conducting EXTENSIVE RESEARCH before making any recommendation.
+            "content": """
+You are an elite portfolio manager who creates optimized investment portfolios. Your exceptional track record comes from conducting EXTENSIVE RESEARCH before making any recommendation.
             
 RESEARCH METHODOLOGY REQUIREMENTS:
 1. Conduct AT LEAST 5-7 detailed searches on different aspects of the market before making recommendations.
@@ -715,6 +732,8 @@ RESEARCH METHODOLOGY REQUIREMENTS:
 5. Investigate both tactical (1-6 month) and strategic (1-3 year) opportunities.
 6. IMPORTANT: You MUST use the get_equity_universe and get_etf_universe tools first to understand available investment options before making recommendations.
 7. ALWAYS use SPECIFIC names of sectors, industries, ETFs, and other assets exactly as they appear in the data from get_equity_universe and get_etf_universe.
+
+CRITICAL CONSTRAINT: Your final portfolio MUST contain between 8 and 16 asset classes - NO MORE, NO LESS. This is a hard requirement that cannot be violated.
 
 ONLY after conducting all required research using the specified tools and any additional free searches should you formulate your final recommendation."""
         }
@@ -726,10 +745,11 @@ ONLY after conducting all required research using the specified tools and any ad
         user_message = {
             "role": "user",
             "content": content + "\n\nTo optimize the portfolio, follow this specific process:\n\n" +
-            "1. First, use the get_equity_universe and get_etf_universe tools to see all available investment options\n" +
-            "2. Then, use ALL the other required analyst tools in sequence\n" +
-            "3. Then, use the free_search tool 3-6 times to research specific opportunities\n" +
-            "4. Finally, provide your comprehensive portfolio recommendation using SPECIFIC asset names from the equity/ETF universe with both human-readable and JSON formats.\n\n"
+            "1. First, use the get_user_information tool to understand the user's profile\n" +
+            "2. Then, use the get_equity_universe and get_etf_universe tools to see all available investment options\n" +
+            "3. Then, use ALL the other required analyst tools in sequence\n" +
+            "4. Then, use the free_search tool 4-10 times to research specific opportunities\n" +
+            "5. Finally, provide your comprehensive portfolio recommendation using SPECIFIC asset names from the equity/ETF universe with both human-readable and JSON formats.\n\n"
         }
         
         # Set up initial messages and start conversation
@@ -840,4 +860,25 @@ ONLY after conducting all required research using the specified tools and any ad
         return {"portfolio": []}
 
 if __name__ == "__main__":
-    optimize()  
+    final_portfolio = optimize()
+    print("="*100)
+    print("PORTFOLIO SUMMARY:")
+    
+    # Check if 'portfolio' key exists and is a list
+    if isinstance(final_portfolio, dict) and 'portfolio' in final_portfolio and isinstance(final_portfolio['portfolio'], list):
+        for asset in final_portfolio['portfolio']:
+            # Check if the asset is a dictionary and has the required keys
+            if isinstance(asset, dict) and 'asset_class' in asset and 'allocation' in asset:
+                ticker = asset['asset_class']
+                allocation = asset['allocation']
+                # Ensure allocation is a number before printing
+                if isinstance(allocation, (int, float)):
+                    print(f"{ticker}: {allocation}%")
+                else:
+                    print(f"{ticker}: Invalid allocation format ({allocation})")
+            else:
+                print(f"Skipping invalid asset entry: {asset}")
+    else:
+        print("Could not find 'portfolio' list in the returned data or data is not a dictionary.")
+        
+    print("="*100)

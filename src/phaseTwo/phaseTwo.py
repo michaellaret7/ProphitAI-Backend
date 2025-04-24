@@ -51,11 +51,6 @@ portfolio_data = {
             "reason": "Growth potential driven by AI demand and renewable energy applications. Allocation increased to balance total portfolio."
         },
         {
-            "asset_class": "renewable_electricity",
-            "allocation": 20,
-            "reason": "Projected growth in solar and wind energy supported by policy and technology. Allocation increased to balance total portfolio."
-        },
-        {
             "asset_class": "investment_grade_corporate_bond_etfs",
             "allocation": 20,
             "reason": "Attractive yields and stable income from sectors like Financials and Energy."
@@ -694,6 +689,53 @@ def get_fundamentals_data(ticker, db_config=None):
          cursor.close()
          conn.close()
 
+def debug_json_encoding(data, ticker):
+    """
+    Debug function to identify which fields are causing JSON encoding issues.
+    
+    Args:
+        data (list): List of dictionaries to encode
+        ticker (str): Ticker symbol for logging
+        
+    Returns:
+        tuple: (success_flag, error_message)
+    """
+    print(f"DEBUG: Testing JSON encoding for {ticker} item by item")
+    
+    # First try individual records
+    for i, record in enumerate(data):
+        try:
+            json.dumps(record)
+        except Exception as e:
+            print(f"  Failed to encode record {i}: {e}")
+            
+            # Try each field individually
+            for key, value in record.items():
+                try:
+                    json.dumps({key: value})
+                except Exception as e:
+                    print(f"    Problem field: '{key}' with value '{value}' (type: {type(value)}): {e}")
+                    
+                    # Try to fix this problematic field
+                    if isinstance(value, float) and (np.isnan(value) or np.isinf(value)):
+                        record[key] = None
+                        print(f"      Fixed by replacing with None")
+                    elif not isinstance(value, (str, int, float, bool, type(None))):
+                        record[key] = str(value)
+                        print(f"      Fixed by converting to string: '{record[key]}'")
+                    else:
+                        record[key] = None
+                        print(f"      Fixed by replacing with None")
+    
+    # Try with fixed data
+    try:
+        json_str = json.dumps(data)
+        print(f"  Final JSON encoding successful: {len(json_str)} bytes")
+        return True, json_str
+    except Exception as e:
+        print(f"  Final JSON encoding still failed: {e}")
+        return False, str(e)
+
 @cache_result
 def generate_fundamental_analysis_report(ticker):
     """
@@ -708,10 +750,25 @@ def generate_fundamental_analysis_report(ticker):
     # Get fundamental data - specifically financial_metrics only
     raw_data = get_fundamentals_data(ticker)
     if not raw_data or 'financial_metrics' not in raw_data:
+        print(f"DEBUG: No fundamental data found for {ticker}")
         return f"No fundamental data found for {ticker}"
         
     fundamentals = raw_data['financial_metrics']
-    # print(fundamentals)
+    
+    # Debug: Print raw fundamentals data structure
+    print(f"DEBUG: Raw fundamentals data for {ticker}:")
+    if fundamentals and len(fundamentals) > 0:
+        print(f"  First record type: {type(fundamentals[0])}")
+        print(f"  Number of records: {len(fundamentals)}")
+        if len(fundamentals) > 0:
+            # Print keys from first record
+            print(f"  Keys in first record: {list(fundamentals[0].keys())}")
+            # Print a sample of values to check for problematic data
+            print(f"  Sample values from first record:")
+            for key, value in list(fundamentals[0].items())[:5]:  # Show first 5 items
+                print(f"    {key}: {value} (type: {type(value)})")
+    else:
+        print("  Empty fundamentals data")
     
     # Check if fundamentals has data
     if not fundamentals:
@@ -737,6 +794,12 @@ def generate_fundamental_analysis_report(ticker):
         # Only add items that have at least some data
         filtered_data.append(filtered_item)
     
+    # Debug: Print filtered data structure
+    print(f"DEBUG: Filtered data for {ticker}:")
+    if filtered_data and len(filtered_data) > 0:
+        print(f"  First filtered record: {filtered_data[0]}")
+    else:
+        print("  Empty filtered data")
 
     # Create system prompt
     system_prompt = """
@@ -769,20 +832,108 @@ IMPORTANT:
 - If there is no data or something you do not know, say you dont know.
 """
 
-    # Initialize messages with filtered financial data directly included
-    messages = [
-        {"role": "system", "content": system_prompt},
-        {"role": "user", "content": f"Analyze the fundamental data for {ticker.upper()}. Here is the financial data:\n{json.dumps(filtered_data)}"}
-    ]
-    
-    # Make a single API call with the data already included
-    response = client.chat.completions.create(
-        model=model,
-        messages=messages,
-        max_tokens=1500
-    )
+    try:
+        # Sanitize data by converting non-serializable objects and removing problematic values
+        sanitized_data = []
+        for item in filtered_data:
+            sanitized_item = {}
+            for key, value in item.items():
+                # Handle date objects
+                if key == 'date' and isinstance(value, str):
+                    # Ensure the date is in a valid format
+                    sanitized_item[key] = value
+                # Handle None, NaN, Inf values
+                elif value is None:
+                    sanitized_item[key] = None
+                elif isinstance(value, float) and (np.isnan(value) or np.isinf(value)):
+                    sanitized_item[key] = None
+                else:
+                    # Convert all other values to simple types
+                    try:
+                        # Try to convert to simpler types if needed
+                        if isinstance(value, (int, float, str, bool)):
+                            sanitized_item[key] = value
+                        else:
+                            sanitized_item[key] = str(value)
+                    except:
+                        # If conversion fails, just use None
+                        sanitized_item[key] = None
+            
+            sanitized_data.append(sanitized_item)
+        
+        # Debug output - inspect the data before trying to encode
+        print(f"DEBUG: Sanitized data for {ticker}:")
+        if sanitized_data and len(sanitized_data) > 0:
+            print(f"  First sanitized record: {sanitized_data[0]}")
+        else:
+            print("  Empty sanitized data")
+        
+        print(f"Preparing to encode data for {ticker} ({len(sanitized_data)} records)")
+        
+        # Use the debug function to find and fix problems
+        success, json_result = debug_json_encoding(sanitized_data, ticker)
+        
+        if success:
+            financial_data_json = json_result
+            print(f"Successfully encoded JSON data for {ticker} - length: {len(financial_data_json)}")
+            if len(financial_data_json) < 1000:  # Only print if it's not too large
+                print(f"DEBUG: JSON data: {financial_data_json[:500]}...")
+        else:
+            # Fall back to a simplified approach if debug function fails
+            print(f"Using simplified data for {ticker}")
+            # Create a very simple list with only numbers and strings
+            simple_data = []
+            for item in sanitized_data:
+                simple_item = {}
+                for key, value in item.items():
+                    if isinstance(value, (int, float)) and not (isinstance(value, float) and (np.isnan(value) or np.isinf(value))):
+                        simple_item[key] = value
+                    elif isinstance(value, str):
+                        simple_item[key] = value
+                    else:
+                        simple_item[key] = None
+                simple_data.append(simple_item)
+            
+            financial_data_json = json.dumps(simple_data)
+        
+        # Create messages with the sanitized data
+        messages = [
+            {"role": "system", "content": system_prompt},
+            {"role": "user", "content": f"Analyze the fundamental data for {ticker.upper()}. Here is the financial data:\n{financial_data_json}"}
+        ]
+        
+        # Make a single API call with the data already included
+        response = client.chat.completions.create(
+            model=model,
+            messages=messages,
+            max_tokens=1500,
+            temperature=1.0
+        )
 
-    return response.choices[0].message.content
+        # Return the text content directly without any parsing
+        return response.choices[0].message.content
+    except Exception as e:
+        print(f"Error in fundamental analysis for {ticker}: {str(e)}")
+        # Try with a simpler approach - convert to string directly
+        try:
+            print(f"Attempting fallback with str() for {ticker}")
+            simple_data = str(filtered_data)
+            messages = [
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": f"Analyze the fundamental data for {ticker.upper()}. Here is the financial data (in string format):\n{simple_data}"}
+            ]
+            
+            response = client.chat.completions.create(
+                model=model,
+                messages=messages,
+                max_tokens=1500,
+                temperature=1.0
+            )
+            
+            return response.choices[0].message.content
+        except Exception as e2:
+            print(f"Fallback also failed for {ticker}: {e2}")
+            return f"Error analyzing fundamental data for {ticker}: {str(e)}"
 
 @cache_result
 def get_news_sentiment(query):
@@ -1369,11 +1520,14 @@ def analyze_tickers_and_generate_recommendations(tickers=None, max_workers=4, ba
             
             metrics_fundamentals_results[ticker][data_type] = result
             print(f"Completed {data_type} for {ticker}")
-         except Exception as exc:
-            print(f"{data_type} analysis of {ticker} generated an exception: {exc}")
+         except json.JSONDecodeError as e:
+            print(f"{data_type} analysis of {ticker} generated a JSON decode exception: {e}")
+            print(f"Error location: line {e.lineno}, column {e.colno}, position {e.pos}")
+            
             # Set default values
             if ticker not in metrics_fundamentals_results:
                metrics_fundamentals_results[ticker] = {}
+               
             if data_type == "metrics":
                metrics_fundamentals_results[ticker][data_type] = {
                   "sharpe_ratio": 0, "sortino_ratio": 0, "calmar_ratio": 0,
@@ -1383,7 +1537,24 @@ def analyze_tickers_and_generate_recommendations(tickers=None, max_workers=4, ba
                   "momentum_6m": 0, "momentum_12m": 0, "average_daily_volume": 0
                }
             elif data_type == "fundamentals":
-               metrics_fundamentals_results[ticker][data_type] = f"Error analyzing fundamentals for {ticker}"
+               metrics_fundamentals_results[ticker][data_type] = f"Error analyzing fundamentals for {ticker}: JSON parsing error"
+         except Exception as exc:
+            print(f"{data_type} analysis of {ticker} generated an exception: {exc}")
+            
+            # Set default values
+            if ticker not in metrics_fundamentals_results:
+               metrics_fundamentals_results[ticker] = {}
+               
+            if data_type == "metrics":
+               metrics_fundamentals_results[ticker][data_type] = {
+                  "sharpe_ratio": 0, "sortino_ratio": 0, "calmar_ratio": 0,
+                  "annualized_return": 0, "annualized_volatility": 0,
+                  "daily_return_volatility": 0, "max_drawdown": 0, "beta": 0,
+                  "sector_beta": 0, "upside_capture": 0, "downside_capture": 0,
+                  "momentum_6m": 0, "momentum_12m": 0, "average_daily_volume": 0
+               }
+            elif data_type == "fundamentals":
+               metrics_fundamentals_results[ticker][data_type] = f"Error analyzing fundamentals for {ticker}: {str(exc)}"
    
    # Add placeholder fundamentals for ETFs
    for ticker in ticker_list:
@@ -1464,7 +1635,7 @@ ANALYSIS APPROACH:
    - Performance metrics (sharpe ratio, sortino ratio, etc.)
    - Fundamental data (when available)
    - News sentiment
-3. Choose the 2-3 stocks that you believe have the best investment potential(DO NOT EXCEED 3)
+3. Choose the 2-3 stocks that you believe have the best investment potential(DO NOT EXCEED 3 RECOMMENDATIONS)
 
 OUTPUT FORMAT:
 Return your recommendations in this JSON format:
@@ -1524,7 +1695,8 @@ IMPORTANT:
    # Get final recommendations from the model
    response = client.chat.completions.create(
       model=model,
-      messages=messages
+      messages=messages,
+      temperature=1.0
    )
    
    # Extract and return the final recommendations
@@ -1657,5 +1829,4 @@ def analyze_portfolio(portfolio_data):
     return final, elapsed_time
 
 if __name__ == "__main__":
-   # analyze_portfolio(portfolio_data)
-   process_asset_class("energy_equipment_and_services", 12)
+   analyze_portfolio(portfolio_data)

@@ -608,6 +608,41 @@ json9 = {
     ]
 }
 
+json10 = {
+  "final_portfolio": [
+    {"ticker": "CPER", "position_type": "LONG", "shares": "480", "allocation": "4.8%"},
+    {"ticker": "SCHE", "position_type": "LONG", "shares": "290", "allocation": "2.9%"},
+    {"ticker": "VWO", "position_type": "LONG", "shares": "290", "allocation": "2.9%"},
+    {"ticker": "IAU", "position_type": "LONG", "shares": "240", "allocation": "2.4%"},
+    {"ticker": "GLD", "position_type": "LONG", "shares": "240", "allocation": "2.4%"},
+    {"ticker": "IGSB", "position_type": "LONG", "shares": "675", "allocation": "6.75%"},
+    {"ticker": "VCIT", "position_type": "LONG", "shares": "675", "allocation": "6.75%"},
+    {"ticker": "EQIX", "position_type": "LONG", "shares": "670", "allocation": "6.7%"},
+    {"ticker": "SHY", "position_type": "LONG", "shares": "480", "allocation": "4.8%"},
+    {"ticker": "VGIT", "position_type": "LONG", "shares": "480", "allocation": "4.8%"},
+    {"ticker": "HYG", "position_type": "LONG", "shares": "190", "allocation": "1.9%"},
+    {"ticker": "FALN", "position_type": "LONG", "shares": "190", "allocation": "1.9%"},
+    {"ticker": "COST", "position_type": "LONG", "shares": "335", "allocation": "3.35%"},
+    {"ticker": "BJ", "position_type": "LONG", "shares": "335", "allocation": "3.35%"},
+    {"ticker": "CNP", "position_type": "LONG", "shares": "257", "allocation": "2.57%"},
+    {"ticker": "NI", "position_type": "LONG", "shares": "257", "allocation": "2.57%"},
+    {"ticker": "ED", "position_type": "LONG", "shares": "257", "allocation": "2.57%"},
+    {"ticker": "UNM", "position_type": "LONG", "shares": "127", "allocation": "1.27%"},
+    {"ticker": "AFL", "position_type": "LONG", "shares": "127", "allocation": "1.27%"},
+    {"ticker": "FG", "position_type": "LONG", "shares": "127", "allocation": "1.27%"},
+    {"ticker": "IRT", "position_type": "LONG", "shares": "240", "allocation": "2.4%"},
+    {"ticker": "AIV", "position_type": "LONG", "shares": "240", "allocation": "2.4%"},
+    {"ticker": "ZJYL", "position_type": "LONG", "shares": "223", "allocation": "2.23%"},
+    {"ticker": "BSX", "position_type": "LONG", "shares": "223", "allocation": "2.23%"},
+    {"ticker": "IRMD", "position_type": "LONG", "shares": "223", "allocation": "2.23%"},
+    {"ticker": "NVDA", "position_type": "LONG", "shares": "257", "allocation": "2.57%"},
+    {"ticker": "AVGO", "position_type": "LONG", "shares": "257", "allocation": "2.57%"},
+    {"ticker": "CRDO", "position_type": "LONG", "shares": "257", "allocation": "2.57%"},
+    {"ticker": "TRAK", "position_type": "LONG", "shares": "335", "allocation": "3.35%"},
+    {"ticker": "MFH", "position_type": "LONG", "shares": "335", "allocation": "3.35%"}
+  ]
+}
+
 def connect_to_ib():
     """
     Establish a connection to Interactive Brokers TWS or Gateway
@@ -1366,7 +1401,7 @@ def backtest(portfolio_json):
 # Example of how to run the backtest when the script is executed directly
 if __name__ == "__main__":
     # Choose which portfolio JSON to test (e.g., json, json2, ..., json9)
-    selected_portfolio_json = json9 # Or change to json, json2, etc.
+    selected_portfolio_json = json10 # Or change to json, json2, etc.
     print(f"🚀 Running backtest for selected portfolio...")
     backtest(selected_portfolio_json)
 
