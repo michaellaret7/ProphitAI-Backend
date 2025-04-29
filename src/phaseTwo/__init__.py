@@ -1,18 +1,32 @@
 # src/phaseTwo/__init__.py
 # Expose key functions/classes from phaseTwo modules
 
-from .phaseTwo import (
-    get_daily_closing_prices, 
-    calculate_stock_metrics, 
-    get_fundamentals_data, 
-    generate_fundamental_analysis_report,
+# Import from the new modules
+from .data_retrieval import (
+    get_daily_closing_prices,
+    get_fundamentals_data,
+    get_stock_tickers
+)
+
+from .financial_metrics import (
+    calculate_stock_metrics,
+    generate_fundamental_analysis_report
+    # debug_json_encoding is likely internal, not exposed
+)
+
+from .sentiment_analysis import (
     get_news_sentiment,
-    extract_asset_classes,
-    get_stock_tickers,
+    batch_analyze_news_sentiment
+)
+
+from .stock_selection import (
     select_top_performing_stocks,
-    analyze_ticker,
-    batch_analyze_news_sentiment,
-    analyze_tickers_and_generate_recommendations,
+    analyze_tickers_and_generate_recommendations
+)
+
+# Import from portfolio_analysis.py
+from .portfolio_analysis import (
+    extract_asset_classes,
     process_asset_class,
     analyze_portfolio
 )
@@ -30,18 +44,25 @@ from .phaseTwoBacktest import (
 # from .phaseTwoBacktest import function1, function2
 
 __all__ = [
-    # phaseTwo exports
-    'get_daily_closing_prices', 
-    'calculate_stock_metrics', 
-    'get_fundamentals_data', 
-    'generate_fundamental_analysis_report',
-    'get_news_sentiment',
-    'extract_asset_classes',
+    # data_retrieval exports
+    'get_daily_closing_prices',
+    'get_fundamentals_data',
     'get_stock_tickers',
-    'select_top_performing_stocks',
-    'analyze_ticker',
+    
+    # financial_metrics exports
+    'calculate_stock_metrics',
+    'generate_fundamental_analysis_report',
+
+    # sentiment_analysis exports
+    'get_news_sentiment',
     'batch_analyze_news_sentiment',
+
+    # stock_selection exports
+    'select_top_performing_stocks',
     'analyze_tickers_and_generate_recommendations',
+
+    # phaseTwo exports
+    'extract_asset_classes',
     'process_asset_class',
     'analyze_portfolio',
     
