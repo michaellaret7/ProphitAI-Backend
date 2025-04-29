@@ -7,22 +7,10 @@ from decimal import Decimal
 from datetime import datetime, timedelta
 from openai import OpenAI
 from dotenv import load_dotenv
-import concurrent.futures
-import functools
-import time
-
-# Import from utils package
-from src.utils.caching import cache_result
-from src.utils.file_utils import load_schema_data
-from src.utils.database import get_default_db_config
-
-# Import from our modules
-from src.phaseTwo.data_retrieval import get_daily_closing_prices, get_fundamentals_data, get_stock_tickers
-from src.phaseTwo.financial_metrics import calculate_stock_metrics, debug_json_encoding, generate_fundamental_analysis_report
-from src.phaseTwo.sentiment_analysis import get_news_sentiment, batch_analyze_news_sentiment
-from src.phaseTwo.stock_selection import select_top_performing_stocks, analyze_tickers_and_generate_recommendations
-from src.phaseTwo.portfolio_analysis import analyze_portfolio
-
+from src.phaseTwo.portfolio_analysis import extract_asset_classes
+from src.phaseTwo.data_retrieval import get_stock_tickers
+from src.phaseTwo.stock_selection import _calculate_and_filter_metrics, _calculate_composite_scores, _generate_llm_prompt_content
+from src.phaseTwo.financial_metrics import generate_fundamental_analysis_report
 # Load environment variables from .env file
 load_dotenv()
 
@@ -30,7 +18,7 @@ load_dotenv()
 portfolio_data = {
     "portfolio": [
         {
-            "asset_class": "semiconductors",
+            "asset_class": "coal_and_consumable_fuels",
             "allocation": 20,
             "reason": "Growth potential driven by AI demand and renewable energy applications. Allocation increased to balance total portfolio."
         },
@@ -61,4 +49,40 @@ portfolio_data = {
         }
     ]
 }
+
+if __name__ == "__main__":
+    dict = extract_asset_classes(portfolio_data)
+    first_key = next(iter(dict))
+
+    tickers = get_stock_tickers(first_key)
+    tickers = tickers[first_key]
+
+    df = _calculate_and_filter_metrics(tickers)
+    new_df = _calculate_composite_scores(df)
+    new_df = new_df[:5]
+
+    # Filter the original df to include only the top 5 tickers
+    top_tickers = new_df['Ticker'].tolist()
+    df_top_5 = df[df['Ticker'].isin(top_tickers)]
+    print(df_top_5)
+
+    # Create the final dictionary
+    final_stock_data = {}
+
+    for index, row in df_top_5.iterrows():
+        ticker = row['Ticker']
+        # Convert row to dictionary, excluding the Ticker itself
+        stock_metrics = row.drop('Ticker').to_dict()
+        
+        # Generate fundamental analysis report
+        fundamental_report = generate_fundamental_analysis_report(ticker)
+        
+        # Combine metrics and report
+        stock_metrics['fundamental_report'] = fundamental_report
+        
+        # Add to the main dictionary
+        final_stock_data[ticker] = stock_metrics
+
+    print(final_stock_data) 
+
 
