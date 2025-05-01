@@ -2,7 +2,7 @@ import json
 from openai import OpenAI
 import numpy as np
 import os
-from datetime import datetime
+import datetime
 import psycopg2
 import pandas as pd
 import re
@@ -23,6 +23,9 @@ OpenAI_API_KEY = os.environ.get("OPENAI_API_KEY")
 Sonar_API_KEY = os.environ.get("PERPLEXITY_API_KEY")
 client = OpenAI(api_key=OpenAI_API_KEY)
 perplexity_model = os.environ.get("PERPLEXITY_MODEL")
+
+# date = datetime.date.today().strftime("%Y_%m_%d")
+date = "2025_04_29"
 
 def get_equity_universe():
     """
@@ -254,7 +257,7 @@ def commodities_analyst():
         db_user = os.environ.get("DB_USER")
         db_password = os.environ.get("DB_PASSWORD")
         db_name = "research"
-        schema_name = "2025_04_22"
+        schema_name = date
         table_name = "commodities_research"
         target_id = 1
         text_column_name = "content" # ASSUMPTION: Adjust if your column name is different
@@ -323,7 +326,7 @@ def etf_analyst():
         db_user = os.environ.get("DB_USER")
         db_password = os.environ.get("DB_PASSWORD")
         db_name = "research"
-        schema_name = "2025_04_22"
+        schema_name = date
         table_name = "etf_research"
         target_id = 1
         text_column_name = "content" # ASSUMPTION: Adjust if your column name is different
@@ -392,7 +395,7 @@ def treasuries_analyst():
         db_user = os.environ.get("DB_USER")
         db_password = os.environ.get("DB_PASSWORD")
         db_name = "research"
-        schema_name = "2025_04_22"
+        schema_name = date
         table_name = "treasuries_research"
         target_id = 1
         text_column_name = "content" # ASSUMPTION: Adjust if your column name is different
@@ -461,7 +464,7 @@ def foreign_exchange_analyst():
         db_user = os.environ.get("DB_USER")
         db_password = os.environ.get("DB_PASSWORD")
         db_name = "research"
-        schema_name = "2025_04_22"
+        schema_name = date
         table_name = "foreign_exchange_research"
         target_id = 1
         text_column_name = "content" # ASSUMPTION: Adjust if your column name is different
@@ -530,7 +533,7 @@ def ig_credit_analyst():
         db_user = os.environ.get("DB_USER")
         db_password = os.environ.get("DB_PASSWORD")
         db_name = "research"
-        schema_name = "2025_04_22"
+        schema_name = date
         table_name = "ig_credit_research"
         target_id = 1
         text_column_name = "content" # ASSUMPTION: Adjust if your column name is different
@@ -599,7 +602,7 @@ def high_yield_analyst():
         db_user = os.environ.get("DB_USER")
         db_password = os.environ.get("DB_PASSWORD")
         db_name = "research"
-        schema_name = "2025_04_22"
+        schema_name = date
         table_name = "high_yield_research"
         target_id = 1
         text_column_name = "content" # ASSUMPTION: Adjust if your column name is different
@@ -668,7 +671,7 @@ def emerging_market_analyst():
         db_user = os.environ.get("DB_USER")
         db_password = os.environ.get("DB_PASSWORD")
         db_name = "research"
-        schema_name = "2025_04_22"
+        schema_name = date
         table_name = "emerging_market_research"
         target_id = 1
         text_column_name = "content" # ASSUMPTION: Adjust if your column name is different

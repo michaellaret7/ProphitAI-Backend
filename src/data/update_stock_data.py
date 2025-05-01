@@ -1,4 +1,9 @@
-#!/usr/bin/env python
+"""
+Author: @Michael Laret
+=====================================================================
+Update stock data from IBKR to the database.
+Purpose of this is to run it every coueple days to keep the database up to date.
+"""
 import os
 import sys
 import psycopg2
@@ -814,8 +819,8 @@ if __name__ == "__main__":
     # update_all_tickers_data(fix_date_column=False)
 
     # Example: Start updating from a specific database and schema (sector)
-    db_to_start = "equity_sector_health_care_prices"
-    schema_to_start = "biotechnology_prices"
+    db_to_start = "equity_sector_communication_services_prices"
+    schema_to_start = "diversified_telecommunication_services_prices"
     print(f"\nStarting update from DB: {db_to_start}, Schema: {schema_to_start}\n")
     update_all_tickers_data(fix_date_column=False, start_db=db_to_start, start_schema=schema_to_start)
 

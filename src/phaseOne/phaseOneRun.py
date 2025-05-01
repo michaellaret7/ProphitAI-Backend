@@ -10,8 +10,7 @@ import anthropic
 import difflib  
 import time
 from src.utils.file_utils import load_schema_data
-from src.phaseTwo import analyze_portfolio
-
+from src.phaseTwo.phaseTwo import pick_top_tickers_from_asset_classes, make_phaseTwo_recommendations
 
 # Start timer
 start_time = time.time()
@@ -21,23 +20,8 @@ load_dotenv()
 
 # API KEYS
 OpenAI_API_KEY = os.environ.get("OPENAI_API_KEY")
-DeepSeek_API_KEY = os.environ.get("DEEPSEEK_API_KEY")
-Grok_API_KEY = os.environ.get("GROK_API_KEY")
-
-# MODELS
-openai_model = os.environ.get("OPENAI_MODEL")
-deepseek_model = os.environ.get("DEEPSEEK_MODEL")
-grok_model = os.environ.get("GROK_MODEL")
-
-# MODEL
-model = openai_model
-
-if model == openai_model:
-    client = OpenAI(api_key=OpenAI_API_KEY)
-elif model == deepseek_model:
-    client = OpenAI(api_key=DeepSeek_API_KEY, base_url="https://api.deepseek.com")
-elif model == grok_model:
-    client = OpenAI(api_key=Grok_API_KEY, base_url="https://api.x.ai/v1")
+model = os.environ.get("OPENAI_MODEL")
+client = OpenAI(api_key=OpenAI_API_KEY)
 
 def parse_json_with_openai(text):
     """
@@ -251,11 +235,11 @@ def get_user_information():
     """
     json = {
         "user_information": {
-            "age": "64",
-            "net_worth": "2,232,902",
-            "risk_tolerance": "Low Risk Tolerance",
-            "investment_goals": "Medium term high growth",
-            "time_horizon": "2-3 Years"
+            "age": "35",
+            "net_worth": "1,292,902",
+            "risk_tolerance": "Medium Risk Tolerance",
+            "investment_goals": "Medium term high growth, some income",
+            "time_horizon": "5 Years"
         }
     }
     
@@ -307,8 +291,8 @@ GOALS:
 - Optimize the user's portfolio to outperform the S&P 500.
 - Minimize risk while maximizing returns.
 - Properly diversify the portfolio across multiple asset classes.
-- Tailor the portfolio to the user's risk tolerance, investment goals, and other investment information.
-- Come up with a portfolio Thesis that explains why the portfolio is optimized for the user's profile.
+- Tailor the portfolio to the user's risk tolerance, investment goals, and other investment information that is retrieved from the get_user_information tool.
+- Come up with a portfolio Thesis that explains why the portfolio is optimized for the user's profile. Make sure the portfolio allocations are aligned with the portfolio thesis.
 
 REMEMBER THE CURRENT DATE IS {current_date}
 
@@ -360,7 +344,8 @@ REMEMBER THE CURRENT DATE IS {current_date}
 4. DO NOT recommend generic ETF categories - use the specific sector/industry/ETF names exactly as they appear in the data tools.
 5. Explain how each recommendation will improve the portfolio's return potential and risk profile.
 6. Construct the portfolio of asset classes based on your thesis. The maximum number of asset classes you can choose in your portfolio is 16 and the minimum is 8. If you go over or under this number, you will be penalized.
-7. Return portfolio in JSON format.
+7. Write extensive and detailed reasoning for each allocation. Explain in depth why you chose the asset class you did and how it fits into the portfolio. This explenation will be returned in the JSON output.
+8. Return portfolio in JSON format.
 
 IMPORTANT:
 - Be as granular and specific as possible with your recommendations.
@@ -395,7 +380,7 @@ To construct this thesis:
     {{
       "asset_class": "ONLY USE THE FINAL NODE NAME from get_equity_universe or get_etf_universe (Example: Use 'multi_utilities' NOT 'equity_sector_utilities_multi_utilities')",
       "allocation": "percentage of the portfolio allocated to this asset class",
-      "reason": "reason for the allocation"
+      "reason": "Reason for the allocation. I want this to be a detailed and specific explenation for why you chose this asset class and how it fits into the portfolio."
     }},
   ],
   "portfolio_thesis": "portfolio thesis goes here"
@@ -833,7 +818,7 @@ ONLY after conducting all required research using the specified tools and any ad
 
         # Now we can safely call analyze_portfolio
         try:
-            analyze_portfolio(portfolio_json)
+            # analyze_portfolio(portfolio_json)
             print("Portfolio analysis completed successfully")
         except Exception as e:
             print(f"Error during portfolio analysis: {e}")
@@ -861,6 +846,7 @@ ONLY after conducting all required research using the specified tools and any ad
 
 if __name__ == "__main__":
     final_portfolio = optimize()
+    print(final_portfolio)
     print("="*100)
     print("PORTFOLIO SUMMARY:")
     
@@ -880,5 +866,31 @@ if __name__ == "__main__":
                 print(f"Skipping invalid asset entry: {asset}")
     else:
         print("Could not find 'portfolio' list in the returned data or data is not a dictionary.")
-        
+
+    picks = pick_top_tickers_from_asset_classes(final_portfolio)
+    print(picks)
+
+    final_portfolio = {}
+
     print("="*100)
+
+    # Or if you're looping
+    for asset_class_name in picks:
+        print(f"Asset class: {asset_class_name}")
+        print(picks[asset_class_name])
+
+        recommendations_json = make_phaseTwo_recommendations(picks[asset_class_name])
+        print(recommendations_json)
+        
+        # Parse JSON string to Python object and add to final_portfolio
+        if recommendations_json:
+            try:
+                recommendations_data = json.loads(recommendations_json)
+                final_portfolio[asset_class_name] = recommendations_data
+            except json.JSONDecodeError as e:
+                print(f"Error parsing recommendations for {asset_class_name}: {e}")
+                # Add error info to portfolio if parsing fails
+                final_portfolio[asset_class_name] = {"error": "Failed to parse recommendations"}
+    
+    print("\nFinal Portfolio:")
+    print(json.dumps(final_portfolio, indent=2))

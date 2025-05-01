@@ -4,8 +4,7 @@ import numpy as np
 import psycopg2
 from decimal import Decimal
 from datetime import datetime, timedelta
-
-# Imports needed for quarterly estimates
+from finvizfinance.quote import finvizfinance
 import xml.etree.ElementTree as ET
 from ib_insync import IB, Stock, util
 import json 
@@ -14,6 +13,7 @@ import json
 from src.utils.caching import cache_result
 from src.utils.file_utils import load_schema_data
 from src.utils.database import get_default_db_config
+from src.utils.ib_utils import get_ib, disconnect_from_ib
 
 @cache_result
 def get_daily_closing_prices(ticker, years=4, db_config=None):
@@ -439,47 +439,8 @@ def get_stock_tickers(asset_class):
     # Return dictionary with filter_value as key and ticker list as value
     return {asset_class: sorted_tickers}
 
-def extract_estimates(root, estimate_type, period_type="Q"):
-    """
-    Extract estimates of a specific type for a specific period type
-    
-    Parameters:
-    - root: XML root element
-    - estimate_type: Type of estimate (e.g., "EPS", "SREV", "EBITD")
-    - period_type: Type of period ("A" for Annual, "Q" for Quarterly)
-    
-    Returns:
-    - List of tuples (year/quarter, value)
-    """
-    estimates = []
-    
-    # Find all FYEstimate elements with specified type
-    for fy_estimate in root.findall(f'.//FYEstimate[@type="{estimate_type}"]'):
-        # Find all FYPeriod elements with specified periodType
-        for period in fy_estimate.findall(f'./FYPeriod[@periodType="{period_type}"]'):
-            year = period.get('fYear')
-            quarter = period.get('periodNum')  # Will be None for annual periods
-            
-            # Handle period identifier (year or year+quarter)
-            period_id = f"{year}"
-            if quarter:
-                period_id = f"{year} Q{quarter}"
-            
-            # Find the Mean ConsEstimate
-            mean_estimate = period.find('./ConsEstimate[@type="Mean"]')
-            if mean_estimate is not None:
-                # Find the current ConsValue
-                value_element = mean_estimate.find('./ConsValue[@dateType="CURR"]')
-                if value_element is not None and value_element.text:
-                    try:
-                        estimates.append((period_id, float(value_element.text)))
-                    except ValueError:
-                        continue
-    
-    return estimates
-
-@cache_result 
-def get_quarterly_estimates_json(ticker: str) -> str:
+@cache_result
+def get_quarterly_estimates(ticker: str) -> str:
     """
     Connects to IB, fetches quarterly fundamental estimates for a given ticker,
     filters for Q2 2025 onwards, and returns them as a compact JSON string.
@@ -490,86 +451,199 @@ def get_quarterly_estimates_json(ticker: str) -> str:
     Returns:
     - A JSON string containing the quarterly estimates or an error message.
     """
-    # If running in a Jupyter notebook, uncomment the following line:
-    # util.startLoop() 
+    # Obtain a connected IB instance using the shared utility
+    ib = get_ib()
 
-    ib = IB()
+    # Bail out early if connection could not be established
+    if ib is None or not ib.isConnected():
+        return json.dumps({"error": "Unable to connect to Interactive Brokers."})
+
     try:
-        # Consider making host/port/clientId params or config, potentially using get_default_db_config()
-        ib.connect('127.0.0.1', 4002, clientId=0) 
-        
+        # Connection is already established via get_ib(); proceed with data request
+
         contract = Stock(ticker, 'SMART', 'USD') # Use the ticker argument
-        
+
         xml_data = ib.reqFundamentalData(contract, reportType='RESC')
-        
+
         if not xml_data:
             error_json = json.dumps({"error": f"Failed to retrieve fundamental data for {ticker}."})
             return error_json
-        
+
         # Parse XML
         root = ET.fromstring(xml_data)
-        
+
         # Define metrics to extract
         metrics = ["EPS", "SREV", "EBITD", "CFSHR", "SCEX", "EBIT", "BVPS", "GROSMGN", "NETDEBT", "ROEPCT"]
-        
+
         # Store results - Only quarterly
-        results_data = { 
+        results_data = {
             "quarterly_estimates": [] # Initialize as list
         }
-        
+
         # Extract quarterly estimates for each metric
         quarterly_data_frames = []
         for metric in metrics:
-            quarterly_estimates = extract_estimates(root, metric, "Q")
-            if quarterly_estimates:
+            # --- Inlined extract_estimates logic for period_type="Q" ---
+            metric_estimates = []
+            # Find all FYEstimate elements with specified type
+            for fy_estimate in root.findall(f'.//FYEstimate[@type="{metric}"]'):
+                # Find all FYPeriod elements with periodType="Q"
+                for period in fy_estimate.findall('./FYPeriod[@periodType="Q"]'):
+                    year = period.get('fYear')
+                    quarter = period.get('periodNum') # Should always exist for quarterly
+
+                    if not year or not quarter: # Basic validation
+                        continue
+
+                    # Handle period identifier (year+quarter)
+                    period_id = f"{year} Q{quarter}"
+
+                    # Find the Mean ConsEstimate
+                    mean_estimate = period.find('./ConsEstimate[@type="Mean"]')
+                    if mean_estimate is not None:
+                        # Find the current ConsValue
+                        value_element = mean_estimate.find('./ConsValue[@dateType="CURR"]')
+                        if value_element is not None and value_element.text:
+                            try:
+                                metric_estimates.append((period_id, float(value_element.text)))
+                            except ValueError:
+                                continue # Skip if value is not a valid float
+            # --- End Inlined Logic ---
+
+            if metric_estimates:
                 # Sort by year and quarter
-                quarterly_estimates.sort(key=lambda x: (int(x[0].split()[0]), int(x[0].split()[1][1:])))
+                metric_estimates.sort(key=lambda x: (int(x[0].split()[0]), int(x[0].split()[1][1:])))
                 # Create a DataFrame for the current metric
-                df = pd.DataFrame(quarterly_estimates, columns=['Period', metric])
+                df = pd.DataFrame(metric_estimates, columns=['Period', metric])
                 df.set_index('Period', inplace=True)
                 quarterly_data_frames.append(df)
-                
+
         # Combine all quarterly DataFrames into one
         if quarterly_data_frames:
             quarterly_df = pd.concat(quarterly_data_frames, axis=1, sort=True)
-            
+
             # Handle potential NaNs introduced by concat if periods don't align perfectly
-            quarterly_df.fillna(value=pd.NA, inplace=True) 
+            quarterly_df.fillna(value=pd.NA, inplace=True)
 
-            # Sort the final DataFrame by period (Year, Quarter)
-            quarterly_df.index = pd.MultiIndex.from_tuples(
-                [(int(idx.split()[0]), int(idx.split()[1][1:])) for idx in quarterly_df.index],
-                names=['Year', 'Quarter']
-            )
-            quarterly_df.sort_index(inplace=True)
-            
-            # --- Filtering Step --- 
-            # Filter for data from Q2 2025 onwards
-            min_year = 2025
-            min_quarter = 2
-            quarterly_df = quarterly_df[
-                (quarterly_df.index.get_level_values('Year') > min_year) |
-                ((quarterly_df.index.get_level_values('Year') == min_year) & 
-                 (quarterly_df.index.get_level_values('Quarter') >= min_quarter))
-            ]
-            # --- End Filtering Step ---
+            # Filter out rows where the index is not in 'YYYY QQ' format before multi-index creation
+            valid_indices = [idx for idx in quarterly_df.index if isinstance(idx, str) and len(idx.split()) == 2 and idx.split()[1].startswith('Q')]
+            quarterly_df = quarterly_df.loc[valid_indices]
 
-            # Convert DataFrame to a list of dictionaries for JSON serialization
-            quarterly_df_reset = quarterly_df.reset_index()
-            # Replace NaN/NA with None for JSON compatibility
-            quarterly_df_reset = quarterly_df_reset.where(pd.notna(quarterly_df_reset), None)
-            results_data["quarterly_estimates"] = quarterly_df_reset.to_dict(orient='records')
+            if not quarterly_df.empty: # Proceed only if there are valid rows left
+                # Sort the final DataFrame by period (Year, Quarter)
+                quarterly_df.index = pd.MultiIndex.from_tuples(
+                    [(int(idx.split()[0]), int(idx.split()[1][1:])) for idx in quarterly_df.index],
+                    names=['Year', 'Quarter']
+                )
+                quarterly_df.sort_index(inplace=True)
+
+                # --- Filtering Step ---
+                # Filter for data from Q2 2025 onwards
+                min_year = 2025
+                min_quarter = 2
+                quarterly_df = quarterly_df[
+                    (quarterly_df.index.get_level_values('Year') > min_year) |
+                    ((quarterly_df.index.get_level_values('Year') == min_year) &
+                     (quarterly_df.index.get_level_values('Quarter') >= min_quarter))
+                ]
+                # --- End Filtering Step ---
+
+                # Convert DataFrame to a list of dictionaries for JSON serialization only if not empty
+                if not quarterly_df.empty:
+                    quarterly_df_reset = quarterly_df.reset_index()
+                    # Replace NaN/NA with None for JSON compatibility
+                    quarterly_df_reset = quarterly_df_reset.where(pd.notna(quarterly_df_reset), None)
+                    results_data["quarterly_estimates"] = quarterly_df_reset.to_dict(orient='records')
+                # If filtering results in an empty DataFrame, results_data["quarterly_estimates"] remains []
 
         # Output the results as a compact JSON string
         return json.dumps(results_data)
 
+    except ET.ParseError as e:
+        print(f"Error parsing XML for {ticker}: {e}")
+        return json.dumps({"error": f"Invalid XML received for {ticker}."})
+    except ConnectionRefusedError as e:
+         print(f"Connection refused when connecting to IB for {ticker}. Is TWS/Gateway running and API enabled? Error: {e}")
+         return json.dumps({"error": "Connection to IB Gateway/TWS refused."})
     except Exception as e:
         # Basic error handling, return error as JSON
         # Consider more specific error logging/handling
-        print(f"Error in get_quarterly_estimates_json for {ticker}: {e}") # Added print
-        return json.dumps({"error": f"An error occurred: {str(e)}"})
+        print(f"Error in get_quarterly_estimates for {ticker}: {type(e).__name__} - {e}") # Log type of error
+        # Add traceback for detailed debugging if needed
+        # import traceback
+        # print(traceback.format_exc())
+        return json.dumps({"error": f"An unexpected error occurred: {str(e)}"})
     finally:
-        # Ensure disconnection even if errors occur
-        if ib.isConnected():
-            ib.disconnect()
+        # Ensure disconnection even if errors occur using the shared utility
+        disconnect_from_ib()
 
+def get_asset_description(ticker):
+
+    # Create a finvizfinance object for the ETF
+    etf = finvizfinance(ticker)
+
+    # Get only the description of the ETF
+    etf_description = etf.ticker_description()
+
+    # Print the description
+    print(etf_description)
+
+    return etf_description
+
+def extract_asset_classes(json_data):
+    """
+    Extract asset classes from portfolio JSON data.
+    
+    Args:
+        json_data (dict): JSON data containing portfolio data
+        
+    Returns:
+        dict: Dictionary mapping asset classes to their allocations, with 'cash' filtered out
+    """
+    # Parse the JSON string
+    data = json_data
+    
+    # Check if data has expected structure
+    if not isinstance(data, dict):
+        print("Error: Portfolio data is not a dictionary")
+        return {}
+    
+    if "portfolio" not in data:
+        print("Error: Portfolio data does not contain 'portfolio' key")
+        return {}
+    
+    if not isinstance(data["portfolio"], list) or not data["portfolio"]:
+        print("Error: Portfolio array is empty or not a list")
+        return {}
+    
+    # Extract asset classes with allocations
+    asset_classes = {}
+    for item in data["portfolio"]:
+        if not isinstance(item, dict):
+            print(f"Warning: Portfolio item is not a dictionary: {item}")
+            continue
+            
+        asset_class = item.get("asset_class")
+        allocation = item.get("allocation")
+        
+        if not asset_class:
+            print(f"Warning: Missing 'asset_class' in portfolio item: {item}")
+            continue
+            
+        if allocation is None:
+            print(f"Warning: Missing 'allocation' in portfolio item: {item}")
+            continue
+        
+        # Convert allocation to float if it's a string (handle % if present)
+        if isinstance(allocation, str):
+            allocation = float(allocation.strip("%"))
+        
+        asset_classes[asset_class] = allocation
+    
+    # Filter out 'cash' from the dictionary
+    asset_classes = {k: v for k, v in asset_classes.items() if k.lower() != 'cash'}
+    
+    if not asset_classes:
+        print("Warning: No valid asset classes found in portfolio data")
+        
+    return asset_classes

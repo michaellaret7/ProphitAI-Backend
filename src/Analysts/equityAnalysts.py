@@ -2,7 +2,7 @@ import json
 from openai import OpenAI
 import numpy as np
 import os
-from datetime import datetime
+import datetime
 import psycopg2
 import pandas as pd
 import re
@@ -24,6 +24,10 @@ Sonar_API_KEY = os.environ.get("PERPLEXITY_API_KEY")
 client = OpenAI(api_key=OpenAI_API_KEY)
 perplexity_model = os.environ.get("PERPLEXITY_MODEL")
 
+# Get the current date and format it as YYYY_MM_DD
+# date = datetime.date.today().strftime("%Y_%m_%d")
+date = "2025_04_29"
+
 def communication_services_analyst():
     """
     Connects to the 'research' database, queries the communication_services_research table
@@ -42,7 +46,7 @@ def communication_services_analyst():
         db_user = os.environ.get("DB_USER")
         db_password = os.environ.get("DB_PASSWORD")
         db_name = "research"
-        schema_name = "2025_04_22"
+        schema_name = date
         table_name = "communication_services_research"
         target_id = 1
         text_column_name = "content" # ASSUMPTION: Adjust if your column name is different
@@ -111,7 +115,7 @@ def consumer_discretionary_analyst():
         db_user = os.environ.get("DB_USER")
         db_password = os.environ.get("DB_PASSWORD")
         db_name = "research"
-        schema_name = "2025_04_22"
+        schema_name = date
         table_name = "consumer_discretionary_research"  # Adjusted table name
         target_id = 1
         text_column_name = "content" # ASSUMPTION: Adjust if your column name is different
@@ -180,7 +184,7 @@ def consumer_staples_analyst():
         db_user = os.environ.get("DB_USER")
         db_password = os.environ.get("DB_PASSWORD")
         db_name = "research"
-        schema_name = "2025_04_22"
+        schema_name = date
         table_name = "consumer_staples_research"  # Adjusted table name
         target_id = 1
         text_column_name = "content" # ASSUMPTION: Adjust if your column name is different
@@ -249,7 +253,7 @@ def energy_analyst():
         db_user = os.environ.get("DB_USER")
         db_password = os.environ.get("DB_PASSWORD")
         db_name = "research"
-        schema_name = "2025_04_22"
+        schema_name = date
         table_name = "energy_research"  # Adjusted table name
         target_id = 1
         text_column_name = "content" # ASSUMPTION: Adjust if your column name is different
@@ -318,7 +322,7 @@ def financials_analyst():
         db_user = os.environ.get("DB_USER")
         db_password = os.environ.get("DB_PASSWORD")
         db_name = "research"
-        schema_name = "2025_04_22"
+        schema_name = date
         table_name = "financials_research"  # Adjusted table name
         target_id = 1
         text_column_name = "content" # ASSUMPTION: Adjust if your column name is different
@@ -387,7 +391,7 @@ def healthcare_analyst():
         db_user = os.environ.get("DB_USER")
         db_password = os.environ.get("DB_PASSWORD")
         db_name = "research"
-        schema_name = "2025_04_22"
+        schema_name = date
         table_name = "healthcare_research"  # Adjusted table name
         target_id = 1
         text_column_name = "content" # ASSUMPTION: Adjust if your column name is different
@@ -456,7 +460,7 @@ def industrials_analyst():
         db_user = os.environ.get("DB_USER")
         db_password = os.environ.get("DB_PASSWORD")
         db_name = "research"
-        schema_name = "2025_04_22"
+        schema_name = date
         table_name = "industrials_research"  # Adjusted table name
         target_id = 1
         text_column_name = "content" # ASSUMPTION: Adjust if your column name is different
@@ -525,7 +529,7 @@ def information_technology_analyst():
         db_user = os.environ.get("DB_USER")
         db_password = os.environ.get("DB_PASSWORD")
         db_name = "research"
-        schema_name = "2025_04_22"
+        schema_name = date
         table_name = "information_technology_research"  # Adjusted table name
         target_id = 1
         text_column_name = "content" # ASSUMPTION: Adjust if your column name is different
@@ -594,7 +598,7 @@ def materials_analyst():
         db_user = os.environ.get("DB_USER")
         db_password = os.environ.get("DB_PASSWORD")
         db_name = "research"
-        schema_name = "2025_04_22"
+        schema_name = date
         table_name = "materials_research"  # Adjusted table name
         target_id = 1
         text_column_name = "content" # ASSUMPTION: Adjust if your column name is different
@@ -663,7 +667,7 @@ def real_estate_analyst():
         db_user = os.environ.get("DB_USER")
         db_password = os.environ.get("DB_PASSWORD")
         db_name = "research"
-        schema_name = "2025_04_22"
+        schema_name = date
         table_name = "real_estate_research"  # Adjusted table name
         target_id = 1
         text_column_name = "content" # ASSUMPTION: Adjust if your column name is different
@@ -732,7 +736,7 @@ def utilities_analyst():
         db_user = os.environ.get("DB_USER")
         db_password = os.environ.get("DB_PASSWORD")
         db_name = "research"
-        schema_name = "2025_04_22"
+        schema_name = date
         table_name = "utilities_research"  # Adjusted table name
         target_id = 1
         text_column_name = "content" # ASSUMPTION: Adjust if your column name is different

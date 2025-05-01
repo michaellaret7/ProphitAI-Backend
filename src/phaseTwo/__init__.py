@@ -5,30 +5,22 @@
 from .data_retrieval import (
     get_daily_closing_prices,
     get_fundamentals_data,
-    get_stock_tickers
+    get_stock_tickers,
+    extract_asset_classes,
+    get_quarterly_estimates,
+    get_asset_description
 )
 
-from .financial_metrics import (
+# Import from phaseTwoCalculations.py
+from .phaseTwoCalculations import (
     calculate_stock_metrics,
+    calculate_and_filter_metrics,
+    calculate_composite_scores
+)
+
+from .generateFundamentalAnalysis import (
     generate_fundamental_analysis_report
     # debug_json_encoding is likely internal, not exposed
-)
-
-from .sentiment_analysis import (
-    get_news_sentiment,
-    batch_analyze_news_sentiment
-)
-
-from .stock_selection import (
-    select_top_performing_stocks,
-    analyze_tickers_and_generate_recommendations
-)
-
-# Import from portfolio_analysis.py
-from .portfolio_analysis import (
-    extract_asset_classes,
-    process_asset_class,
-    analyze_portfolio
 )
 
 from .phaseTwoBacktest import (
@@ -48,23 +40,26 @@ __all__ = [
     'get_daily_closing_prices',
     'get_fundamentals_data',
     'get_stock_tickers',
+    'extract_asset_classes',
+    'get_quarterly_estimates',
+    'get_asset_description',
     
-    # financial_metrics exports
+    # phaseTwoCalculations exports
     'calculate_stock_metrics',
+    'calculate_and_filter_metrics',
+    'calculate_composite_scores',
+
+    # financial_metrics exports
     'generate_fundamental_analysis_report',
 
-    # sentiment_analysis exports
-    'get_news_sentiment',
-    'batch_analyze_news_sentiment',
-
     # stock_selection exports
-    'select_top_performing_stocks',
-    'analyze_tickers_and_generate_recommendations',
+    # 'select_top_performing_stocks',
+    # 'analyze_tickers_and_generate_recommendations',
 
-    # phaseTwo exports
-    'extract_asset_classes',
-    'process_asset_class',
-    'analyze_portfolio',
+    # phaseTwo exports (Note: Original comment said 'phaseTwo', but these came from portfolio_analysis)
+    # 'extract_asset_classes', # Moved
+    # 'process_asset_class',
+    # 'analyze_portfolio',
     
     # phaseTwoBacktest exports
     'connect_to_ib',

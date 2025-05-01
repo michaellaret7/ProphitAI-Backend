@@ -1,3 +1,15 @@
+"""
+Financial Research Caching Module
+
+This module provides functionality to persist research data from equity and macro
+research analysts into a PostgreSQL database. It handles database connections,
+schema creation, and data storage operations to ensure research outputs are
+properly archived and retrievable for future analysis.
+
+The module supports structured storage of research data across different sectors
+and maintains a date-based organization system through database schemas.
+"""
+
 import psycopg2
 import os
 from psycopg2 import sql

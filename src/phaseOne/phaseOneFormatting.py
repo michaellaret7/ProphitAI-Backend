@@ -1,5 +1,6 @@
 import json
-from src.data.PortfolioData import get_portfolio_holdings, analyze_portfolio_correlations, connect_to_ib, calculate_portfolio_metrics, calculate_monthly_portfolio_metrics, calculate_monthly_stock_metrics, analyze_portfolio_diversification, analyze_portfolio_correlations
+from src.data.PortfolioData import get_portfolio_holdings, analyze_portfolio_correlations, calculate_portfolio_metrics, calculate_monthly_portfolio_metrics, calculate_monthly_stock_metrics, analyze_portfolio_diversification, analyze_portfolio_correlations
+from src.utils.ib_utils import connect_to_ib, disconnect_from_ib, get_ib
 from openai import OpenAI
 import numpy as np
 import os
@@ -26,8 +27,11 @@ def initialize_ib_connection():
     """
     try:
         print("Establishing connection to Interactive Brokers...")
-        ib = connect_to_ib()
-        print("Connection to Interactive Brokers established successfully")
+        ib = get_ib()  # Using the get_ib function from ib_utils
+        if ib:
+            print("Connection to Interactive Brokers established successfully")
+        else:
+            print("Failed to establish connection to Interactive Brokers")
         return ib
     except Exception as e:
         print(f"Error establishing connection to Interactive Brokers: {e}")
@@ -42,9 +46,9 @@ def close_ib_connection(ib):
         ib: The IB connection object to close
     """
     try:
-        if ib and hasattr(ib, 'disconnect'):
+        if ib and hasattr(ib, 'isConnected') and ib.isConnected():
             print("Closing connection to Interactive Brokers...")
-            ib.disconnect()
+            disconnect_from_ib()  # Using the disconnect_from_ib function from ib_utils
             print("Connection to Interactive Brokers closed successfully")
     except Exception as e:
         print(f"Error closing connection to Interactive Brokers: {e}")
