@@ -328,7 +328,7 @@ REMEMBER THE CURRENT DATE IS {current_date}
 1. KEEP 5-7% OF THE PORTFOLIO IN CASH.
 2. MAKE SURE ALL OF THE ALLOCATION PERCENTAGES ADD UP TO 100% OF THE PORTFOLIO
 3. MINIMUM ASSET CLASSES ALLOWED: 8
-4. MAXIMUM ASSET CLASSES ALLOWED: 16
+4. MAXIMUM ASSET CLASSES ALLOWED: 20
 
 ### Directions:
 1. Analyze the current portfolio positions, account information, portfolio metrics, asset class metrics, monthly performance, diversification, and correlation matrix.
@@ -343,7 +343,7 @@ REMEMBER THE CURRENT DATE IS {current_date}
    - Alternative Investments
 4. DO NOT recommend generic ETF categories - use the specific sector/industry/ETF names exactly as they appear in the data tools.
 5. Explain how each recommendation will improve the portfolio's return potential and risk profile.
-6. Construct the portfolio of asset classes based on your thesis. The maximum number of asset classes you can choose in your portfolio is 16 and the minimum is 8. If you go over or under this number, you will be penalized.
+6. Construct the portfolio of asset classes based on your thesis. The maximum number of asset classes you can choose in your portfolio is 20 and the minimum is 8. If you go over or under this number, you will be penalized.
 7. Write extensive and detailed reasoning for each allocation. Explain in depth why you chose the asset class you did and how it fits into the portfolio. This explenation will be returned in the JSON output.
 8. Return portfolio in JSON format.
 
@@ -617,7 +617,7 @@ To construct this thesis:
                     model=model,
                     messages=messages + [{
                         "role": "user",
-                        "content": "You've reached the maximum number of tool calls. Please provide your final portfolio recommendation now based on the information you have gathered so far. Remember to include both human-readable and JSON formats as specified in the original instructions. REMEMBER: Your final portfolio MUST contain between 8 and 16 asset classes - you CANNOT exceed 16 asset classes."
+                        "content": "You've reached the maximum number of tool calls. Please provide your final portfolio recommendation now based on the information you have gathered so far. Remember to include both human-readable and JSON formats as specified in the original instructions. REMEMBER: Your final portfolio MUST contain between 8 and 20 asset classes - you CANNOT exceed 20 asset classes."
                     }],
                     temperature=0.7
                 )
@@ -688,7 +688,7 @@ To construct this thesis:
                     model=model,
                     messages=messages + [{
                         "role": "user",
-                        "content": "Now provide your final portfolio recommendation based on all the data gathered. Include both human-readable and JSON formats as specified. REMEMBER: Your final portfolio MUST contain between 8 and 16 asset classes - you CANNOT exceed 16 asset classes."
+                        "content": "Now provide your final portfolio recommendation based on all the data gathered. Include both human-readable and JSON formats as specified. REMEMBER: Your final portfolio MUST contain between 8 and 20 asset classes - you CANNOT exceed 20 asset classes."
                     }],
                     temperature=0.7
                 )
@@ -718,7 +718,7 @@ RESEARCH METHODOLOGY REQUIREMENTS:
 6. IMPORTANT: You MUST use the get_equity_universe and get_etf_universe tools first to understand available investment options before making recommendations.
 7. ALWAYS use SPECIFIC names of sectors, industries, ETFs, and other assets exactly as they appear in the data from get_equity_universe and get_etf_universe.
 
-CRITICAL CONSTRAINT: Your final portfolio MUST contain between 8 and 16 asset classes - NO MORE, NO LESS. This is a hard requirement that cannot be violated.
+CRITICAL CONSTRAINT: Your final portfolio MUST contain between 8 and 20 asset classes - NO MORE, NO LESS. This is a hard requirement that cannot be violated.
 
 ONLY after conducting all required research using the specified tools and any additional free searches should you formulate your final recommendation."""
         }
