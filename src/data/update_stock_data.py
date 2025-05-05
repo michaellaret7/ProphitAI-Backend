@@ -2,7 +2,9 @@
 Author: @Michael Laret
 =====================================================================
 Update stock data from IBKR to the database.
-Purpose of this is to run it every coueple days to keep the database up to date.
+Purpose of this is to run it every couple days to keep the database up to date.
+This file takes the most recent price data from the database and then requests the most recent data from IBKR.
+It then updates the database with the new data.
 """
 import os
 import sys
@@ -815,10 +817,6 @@ def update_all_tickers_data(fix_date_column=False, start_db=None, start_schema=N
             print("Disconnected from Interactive Brokers")
 
 if __name__ == "__main__":
-    # Example: Update all tickers listed in the prices schema
-    # update_all_tickers_data(fix_date_column=False)
-
-    # Example: Start updating from a specific database and schema (sector)
     db_to_start = "equity_sector_communication_services_prices"
     schema_to_start = "diversified_telecommunication_services_prices"
     print(f"\nStarting update from DB: {db_to_start}, Schema: {schema_to_start}\n")

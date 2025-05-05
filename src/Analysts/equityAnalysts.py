@@ -1,3 +1,11 @@
+"""
+Author: @Michael Laret
+=====================================================================
+This file contains the functions for the equity analysts.
+It is used to get the analyst reports for the different asset classes.
+This file has the analysts pull the research reports from the database.
+"""
+
 import json
 from openai import OpenAI
 import numpy as np

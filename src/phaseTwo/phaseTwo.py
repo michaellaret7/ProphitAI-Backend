@@ -22,7 +22,7 @@ from openai import OpenAI
 from dotenv import load_dotenv
 from src.phaseTwo.data_retrieval import extract_asset_classes, get_stock_tickers, get_asset_description, get_quarterly_estimates
 from src.phaseTwo.phaseTwoCalculations import calculate_and_filter_metrics, calculate_composite_scores
-from src.phaseTwo.generateFundamentalAnalysis import generate_fundamental_analysis_report
+from src.phaseTwo.retrieve_fundamental_report import generate_fundamental_analysis_report
 from src.utils.determine_etf import is_etf
 import time
 
@@ -126,8 +126,12 @@ def pick_top_tickers_from_asset_classes(portfolio_json):
                 
                 final_stock_data[ticker] = stock_metrics
             
-            all_asset_class_data[asset_class] = final_stock_data 
-
+            # Include sector allocation alongside ticker data
+            sector_alloc = asset_classes_dict.get(asset_class, 0)
+            all_asset_class_data[asset_class] = {
+                "allocation": sector_alloc,
+                "tickers": final_stock_data
+            }
 
         except Exception as e:
             print(f"An error occurred while processing asset class {asset_class}: {e}")
@@ -141,19 +145,19 @@ def pick_top_tickers_from_asset_classes(portfolio_json):
     print(f"\nTotal execution time: {duration:.4f} seconds")
     return all_asset_class_data
 
-def make_phaseTwo_recommendations(asset_class_pick_top_tickers):
+def make_phaseTwo_recommendations(asset_class_top_tickers):
     """
     Sends the top ticker data for each asset class to the OpenAI API for recommendations.
 
     Args:
-        asset_class_pick_top_tickers (dict): A dictionary where keys are asset class names and values are dictionaries of top tickers and their data.
+        asset_class_top_tickers (dict): A dictionary where keys are asset class names and values are dictionaries of top tickers and their data.
 
     Returns:
         str: The content of the response from the OpenAI API. Returns None if an error occurs during the API call.
     """
     try:
         # Convert the input dictionary to a JSON string for the prompt content
-        data_string = json.dumps(asset_class_pick_top_tickers)
+        data_string = json.dumps(asset_class_top_tickers)
 
 
         system_prompt = """
@@ -289,18 +293,22 @@ Return your recommendations in this JSON format ONLY. Do not include any other t
             
             # Strip again in case there was whitespace around the fences
             cleaned_content = cleaned_content.strip() 
-            # --- END FIX ---
 
-            # Optional: Add validation here to ensure response is valid JSON
             try:
-                # Try parsing the cleaned content
-                json.loads(cleaned_content) 
-                return cleaned_content # Return the cleaned, validated JSON string
+                result_json = json.loads(cleaned_content)
+                # Get the original sector allocation
+                sector_alloc = asset_class_top_tickers.get('allocation', 0)
+                recs = result_json.get('recommendations', [])
+                if recs:
+                    per_alloc = round(sector_alloc / len(recs), 2)
+                    for rec in recs:
+                        rec['allocation'] = per_alloc
+                return json.dumps(result_json)
             except json.JSONDecodeError:
-                 print("Error: LLM response is not valid JSON even after cleaning.")
-                 print(f"Original Response:\\n{response_content}")
-                 print(f"Cleaned Response Attempted:\\n{cleaned_content}")
-                 return json.dumps({"error": "LLM response was not valid JSON."}) # Return error JSON
+                print("Error: LLM response is not valid JSON even after cleaning.")
+                print(f"Original Response:\n{response_content}")
+                print(f"Cleaned Response Attempted:\n{cleaned_content}")
+                return json.dumps({"error": "LLM response was not valid JSON."})
         else:
             print("Error: No response content received from API.")
             return None

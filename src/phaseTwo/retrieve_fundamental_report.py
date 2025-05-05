@@ -1,3 +1,9 @@
+"""
+Author: @Michael Laret
+=====================================================================
+This file contains the functions for the fundamental analysis.
+It queries the pre generated fundamental report from the database.
+"""
 import os
 import json
 import pandas as pd
@@ -16,6 +22,54 @@ DEEPSEEK_API_KEY = os.environ.get("DEEPSEEK_API_KEY")
 deepseek_model = os.environ.get("DEEPSEEK_MODEL")
 client = OpenAI(api_key=DEEPSEEK_API_KEY, base_url="https://api.deepseek.com")
 
+def debug_json_encoding(data, ticker):
+    """
+    Debug function to identify which fields are causing JSON encoding issues.
+    
+    Args:
+        data (list): List of dictionaries to encode
+        ticker (str): Ticker symbol for logging
+        
+    Returns:
+        tuple: (success_flag, error_message)
+    """
+    print(f"DEBUG: Testing JSON encoding for {ticker} item by item")
+    
+    # First try individual records
+    for i, record in enumerate(data):
+        try:
+            json.dumps(record)
+        except Exception as e:
+            print(f"  Failed to encode record {i}: {e}")
+            
+            # Try each field individually
+            for key, value in record.items():
+                try:
+                    json.dumps({key: value})
+                except Exception as e:
+                    print(f"    Problem field: '{key}' with value '{value}' (type: {type(value)}): {e}")
+                    
+                    # Try to fix this problematic field
+                    if isinstance(value, float) and (np.isnan(value) or np.isinf(value)):
+                        record[key] = None
+                        print(f"      Fixed by replacing with None")
+                    elif not isinstance(value, (str, int, float, bool, type(None))):
+                        record[key] = str(value)
+                        print(f"      Fixed by converting to string: '{record[key]}'")
+                    else:
+                        record[key] = None
+                        print(f"      Fixed by replacing with None")
+    
+    # Try with fixed data
+    try:
+        json_str = json.dumps(data)
+        print(f"  Final JSON encoding successful: {len(json_str)} bytes")
+        return True, json_str
+    except Exception as e:
+        print(f"  Final JSON encoding still failed: {e}")
+        return False, str(e)
+
+# change this to query the fundamental report from the database given the ticker 
 @cache_result
 def generate_fundamental_analysis_report(ticker):
     """
@@ -200,7 +254,7 @@ Analyze the provided data points over time to identify trends, strengths, and we
         response = client.chat.completions.create(
             model=deepseek_model,
             messages=messages,
-            max_tokens=1500,
+            max_tokens=2500,
             temperature=1.0
         )
 
@@ -229,51 +283,6 @@ Analyze the provided data points over time to identify trends, strengths, and we
             print(f"Fallback also failed for {ticker}: {e2}")
             return f"Error analyzing fundamental data for {ticker}: {str(e)}" 
 
-def debug_json_encoding(data, ticker):
-    """
-    Debug function to identify which fields are causing JSON encoding issues.
-    
-    Args:
-        data (list): List of dictionaries to encode
-        ticker (str): Ticker symbol for logging
-        
-    Returns:
-        tuple: (success_flag, error_message)
-    """
-    print(f"DEBUG: Testing JSON encoding for {ticker} item by item")
-    
-    # First try individual records
-    for i, record in enumerate(data):
-        try:
-            json.dumps(record)
-        except Exception as e:
-            print(f"  Failed to encode record {i}: {e}")
-            
-            # Try each field individually
-            for key, value in record.items():
-                try:
-                    json.dumps({key: value})
-                except Exception as e:
-                    print(f"    Problem field: '{key}' with value '{value}' (type: {type(value)}): {e}")
-                    
-                    # Try to fix this problematic field
-                    if isinstance(value, float) and (np.isnan(value) or np.isinf(value)):
-                        record[key] = None
-                        print(f"      Fixed by replacing with None")
-                    elif not isinstance(value, (str, int, float, bool, type(None))):
-                        record[key] = str(value)
-                        print(f"      Fixed by converting to string: '{record[key]}'")
-                    else:
-                        record[key] = None
-                        print(f"      Fixed by replacing with None")
-    
-    # Try with fixed data
-    try:
-        json_str = json.dumps(data)
-        print(f"  Final JSON encoding successful: {len(json_str)} bytes")
-        return True, json_str
-    except Exception as e:
-        print(f"  Final JSON encoding still failed: {e}")
-        return False, str(e)
+
 
 

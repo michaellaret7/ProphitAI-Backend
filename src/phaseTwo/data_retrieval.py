@@ -15,6 +15,7 @@ from src.utils.file_utils import load_schema_data
 from src.utils.database import get_default_db_config
 from src.utils.ib_utils import get_ib, disconnect_from_ib
 
+# Move this to utils 
 @cache_result
 def get_daily_closing_prices(ticker, years=4, db_config=None):
    """
@@ -139,6 +140,7 @@ def get_daily_closing_prices(ticker, years=4, db_config=None):
          cursor.close()
          conn.close()
 
+# move this to utils
 @cache_result
 def get_fundamentals_data(ticker, db_config=None):
    """
@@ -273,7 +275,7 @@ def get_fundamentals_data(ticker, db_config=None):
             check_data_query = f"""
             SELECT COUNT(*) 
             FROM {ticker_location['schema']}.{table_name}
-            WHERE date >= '2018-01-01'
+            WHERE date >= '2015-01-01'
             """
             cursor.execute(check_data_query)
             data_count = cursor.fetchone()[0]
@@ -283,7 +285,7 @@ def get_fundamentals_data(ticker, db_config=None):
                query = f"""
                SELECT *
                FROM {ticker_location['schema']}.{table_name}
-               WHERE date >= '2018-01-01'
+               WHERE date >= '2015-01-01'
                ORDER BY date
                """
             else:

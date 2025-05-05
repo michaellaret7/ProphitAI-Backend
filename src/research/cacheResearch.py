@@ -1,13 +1,8 @@
 """
-Financial Research Caching Module
-
-This module provides functionality to persist research data from equity and macro
-research analysts into a PostgreSQL database. It handles database connections,
-schema creation, and data storage operations to ensure research outputs are
-properly archived and retrievable for future analysis.
-
-The module supports structured storage of research data across different sectors
-and maintains a date-based organization system through database schemas.
+Author: @Michael Laret
+=====================================================================
+This file is used to store the Perplexity research in the database.
+The data from this research is pulled in the phaseOneRun.py file.
 """
 
 import psycopg2

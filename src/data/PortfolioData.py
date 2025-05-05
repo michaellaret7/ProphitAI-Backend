@@ -1,3 +1,16 @@
+"""
+Author: @Michael Laret
+=====================================================================
+Portfolio Data & Analysis Module
+
+Purpose:
+Connects to IBKR to fetch portfolio/market data (holdings, prices) and perform
+financial analysis (metrics, diversification, correlations).
+
+Role in Program:
+Provides IBKR data and analysis for portfolio monitoring, risk assessment,
+and performance reporting.
+"""
 from ib_insync import IB, Stock, util
 import numpy as np
 import pandas as pd

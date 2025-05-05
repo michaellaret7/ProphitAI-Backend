@@ -18,7 +18,7 @@ from .phaseTwoCalculations import (
     calculate_composite_scores
 )
 
-from .generateFundamentalAnalysis import (
+from .retrieve_fundamental_report import (
     generate_fundamental_analysis_report
     # debug_json_encoding is likely internal, not exposed
 )

@@ -1,3 +1,19 @@
+"""
+Author: @Michael Laret
+=====================================================================
+Fundamental Data Retrieval and Database Management Module
+
+Purpose:
+Fetches fundamental financial data (statements, metrics, news) from external APIs,
+reads local sector/industry classification files, and manages the process
+of storing this data into a PostgreSQL database, including schema and table creation.
+
+Role in Program:
+Acts as the bridge between external fundamental data sources and the application's
+database. It populates the database with historical financial information for
+various companies, organized by sector and industry, making it available for
+downstream analysis, screening, or modeling components.
+"""
 import requests
 import json
 from tabulate import tabulate

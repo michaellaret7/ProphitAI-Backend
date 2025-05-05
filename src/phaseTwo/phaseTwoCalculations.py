@@ -9,6 +9,8 @@ from src.utils.caching import cache_result
 from src.utils.file_utils import load_schema_data
 from src.phaseTwo.data_retrieval import get_daily_closing_prices
 
+daily_volume_threshold = 10000
+
 @cache_result
 def calculate_stock_metrics(ticker):
    """
@@ -274,7 +276,7 @@ def calculate_and_filter_metrics(ticker_list):
 
     valid_metrics_data = []
     for ticker, metrics in all_metrics.items():
-        if metrics.get('date_range') and metrics.get('average_daily_volume', 0) >= 10000:
+        if metrics.get('date_range') and metrics.get('average_daily_volume', 0) >= daily_volume_threshold:
             metrics_row = {'Ticker': ticker}
             metrics_row.update(metrics)
             valid_metrics_data.append(metrics_row)

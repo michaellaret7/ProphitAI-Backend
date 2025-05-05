@@ -1,3 +1,11 @@
+"""
+Author: @Michael Laret
+=====================================================================
+This file contains the functions for the equity research analysts.
+It is used to get the research reports for the different sectors.
+Perplexity is used to get the research reports.
+"""
+
 import json
 from openai import OpenAI
 import numpy as np

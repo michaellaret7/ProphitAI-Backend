@@ -1,8 +1,17 @@
 from ib_insync import IB
 import atexit
+import asyncio
 
 # Global IB instance
 ib = None
+
+def _ensure_event_loop():
+    """Create and set an asyncio event loop for the current thread if missing."""
+    try:
+        asyncio.get_running_loop()
+    except RuntimeError:
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
 
 def connect_to_ib():
     """
@@ -13,6 +22,9 @@ def connect_to_ib():
         IB: Connected IB instance or None if connection failed
     """
     global ib
+    
+    # Make sure the current thread has an event loop (needed when called from ThreadPoolExecutor)
+    _ensure_event_loop()
     
     # If already connected, return the existing connection
     if ib is not None and ib.isConnected():
