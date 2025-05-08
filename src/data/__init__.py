@@ -21,6 +21,6 @@ from src.data.FundamentalData import (
     PushFundamentalDataToDB
 )
 
-from src.data.database_schema_update import (
+from src.data.database.database_schema_update import (
     recreate_database_schemas
 ) 

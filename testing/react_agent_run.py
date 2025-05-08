@@ -1,6 +1,6 @@
 import json
 import openai
-from agentClassExamples import ReactAgentToDoList
+from testing.react_agent_class import ReactAgent
 import os
 from dotenv import load_dotenv
 from decimal import Decimal
@@ -15,7 +15,7 @@ from functools import lru_cache
 load_dotenv()
 
 # Create a ReactAgent
-agent = ReactAgentToDoList(llm="gpt-4.1-2025-04-14", api_key=os.environ.get("OPENAI_API_KEY"), max_iterations=100)
+agent = ReactAgent(llm="gpt-4.1-2025-04-14", api_key=os.environ.get("OPENAI_API_KEY"), max_iterations=100)
 
 # Calculate the cumulative portfolio returns in hourly increments for a given date range
 def get_portfolio_returns(start_date_str: str, end_date_str: str):
@@ -118,7 +118,7 @@ def get_stock_data(ticker: str, start_date_str: str, end_date_str: str, db_confi
    ticker_lower = ticker.lower()
    
    # Load schema definition
-   with open('../src/data/database_schemas.json', 'r') as f:
+   with open('../src/data/database/database_schemas.json', 'r') as f:
       schema_data = json.load(f)
    
    # Find ticker location
@@ -481,7 +481,6 @@ query2 = """
     "Synthesize the findings across ALL crisis windows.",
     "Determine the overall weakest ticker based on consistent underperformance (high drawdown/volatility), poor comparison to portfolio returns, and presence of negative patterns ('patterns_to_look_for') across windows.",
     "Provide the 'drivers' for identifying the weakest ticker, linking them back to the specific metrics and patterns observed.",
-    "Provide a replacement ticker for the weakest ticker in the same sector as the weakest ticker.",
     "ANSWER THIS QUESTION: Based on the OBSERVED behavior (drawdown, volatility, recovery patterns) during the analyzed crisis windows, what would you predict happen to my portfolio, focusing on the weakest ticker, if there was another SVB Crash?"
   ],
   "important_notes": [

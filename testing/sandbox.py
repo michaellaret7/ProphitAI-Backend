@@ -15,7 +15,8 @@ DB_PORT = "5432"
 script_dir = os.path.dirname(os.path.abspath(__file__))
 # Construct the path to the JSON file relative to the project root
 project_root = os.path.dirname(script_dir)
-json_file_path = os.path.join(project_root, 'src', 'data', 'database_schemas.json')
+# Updated path after move to src/data/database
+json_file_path = os.path.join(project_root, 'src', 'data', 'database', 'database_schemas.json')
 
 # --- Helper Function ---
 def calculate_average(values):

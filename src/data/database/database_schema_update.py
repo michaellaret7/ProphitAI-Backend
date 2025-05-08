@@ -48,7 +48,7 @@ def recreate_database_schemas(output_file="database_schemas.json"):
     
     # First, load the existing schema to preserve structure
     try:
-        with open('src/data/database_schemas.json', 'r') as f:
+        with open('src/data/database/database_schemas.json', 'r') as f:
             original_schema = json.load(f)
     except:
         print("Warning: Original schema file not found. Creating new structure.")
@@ -476,11 +476,16 @@ def recreate_database_schemas(output_file="database_schemas.json"):
         if 'conn' in locals() and conn:
             conn.close()
     
+    # Determine canonical output path – inside src/data/database
+    base_dir = os.path.join('src', 'data', 'database')
+    os.makedirs(base_dir, exist_ok=True)
+    output_path = os.path.join(base_dir, output_file)
+
     # Write the schemas data to a file
-    with open(output_file, 'w') as f:
+    with open(output_path, 'w') as f:
         json.dump(schemas_data, f, indent=4)
     
-    print(f"Successfully recreated schema in {output_file}")
+    print(f"Successfully recreated schema in {output_path}")
     return schemas_data
 
 

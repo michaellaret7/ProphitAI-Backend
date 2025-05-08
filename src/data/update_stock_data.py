@@ -213,8 +213,8 @@ db_config = get_default_db_config()
 
 # Load schema data
 # schema_data = load_schema_data() # Old way using default file
-# Explicitly load the prices schema
-prices_schema_file = os.path.join('src', 'data', 'database_schemas_prices.json')
+# Explicitly load the prices schema (moved to src/data/database)
+prices_schema_file = os.path.join('src', 'data', 'database', 'database_schemas_prices.json')
 try:
     with open(prices_schema_file, 'r') as f:
         prices_schema_data = json.load(f)
@@ -392,48 +392,6 @@ def ensure_ticker_table_exists(ticker, ticker_location, db_config):
                 conn.close()
             except:
                 pass
-        return False
-
-def verify_ticker_table_exists(ticker, ticker_location, db_config):
-    """
-    Verify that the ticker table exists in the database.
-    
-    Args:
-        ticker (str): Ticker symbol
-        ticker_location (dict): Dictionary with database location info
-        db_config (dict): Database configuration
-        
-    Returns:
-        bool: True if the table exists, False otherwise
-    """
-    try:
-        # Connect to database
-        config = db_config.copy()
-        config['dbname'] = ticker_location['database']
-        conn = psycopg2.connect(**config)
-        cursor = conn.cursor()
-        
-        # Check if table exists
-        ticker_lower = ticker.lower()
-        query = f"""
-        SELECT EXISTS (
-            SELECT 1 
-            FROM information_schema.tables 
-            WHERE table_schema = '{ticker_location['schema']}' 
-            AND table_name = '{ticker_lower}'
-        )
-        """
-        
-        cursor.execute(query)
-        exists = cursor.fetchone()[0]
-        
-        cursor.close()
-        conn.close()
-        
-        return exists
-        
-    except Exception as e:
-        print(f"Error checking if table exists for {ticker}: {e}")
         return False
 
 def insert_data_to_db(ticker_location, ticker, df, db_config):
@@ -652,7 +610,7 @@ def update_all_tickers_data(fix_date_column=False, start_db=None, start_schema=N
     db_config = get_default_db_config()
 
     # Load prices schema data (or check if it was loaded successfully earlier)
-    prices_schema_file = os.path.join('src', 'data', 'database_schemas_prices.json')
+    prices_schema_file = os.path.join('src', 'data', 'database', 'database_schemas_prices.json')
     try:
         with open(prices_schema_file, 'r') as f:
             prices_schema_data = json.load(f)

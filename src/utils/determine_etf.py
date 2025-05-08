@@ -1,6 +1,10 @@
 import json
 
-DATABASE_SCHEMA_PATH = "src/data/database_schemas.json"
+# Use helper from file_utils to resolve the new path of the schema file
+from .file_utils import get_schema_path
+
+# Resolve the canonical path to the schema JSON inside ``src/data/database``
+DATABASE_SCHEMA_PATH = str(get_schema_path())
 
 def is_etf(asset_class: str) -> bool:
     """Checks if the given asset class exists as a table within the ETF database schemas.

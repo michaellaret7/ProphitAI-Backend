@@ -9,6 +9,36 @@ from src.data.fundamental_report.generate_fundamental_report import generate_fun
 # Load environment variables from .env file
 load_dotenv()
 
+def create_report_table_if_not_exists(cursor, schema_name: str, table_name: str):
+    """
+    Creates the specified table within the given schema if it does not already exist.
+    The table is designed to store fundamental analysis reports.
+    """
+    # Sanitize schema name (basic but important for security and compatibility)
+    safe_schema_name = schema_name.lower().replace('-', '_').replace('.', '_')
+    if not safe_schema_name or not safe_schema_name[0].isalpha():
+        safe_schema_name = f"_{safe_schema_name}"
+
+    # Sanitize table name
+    safe_table_name = table_name.lower().replace('-', '_').replace('.', '_')
+    if not safe_table_name or not safe_table_name[0].isalpha():
+        safe_table_name = f"_{safe_table_name}"
+
+    create_table_sql = f"""
+    CREATE TABLE IF NOT EXISTS "{safe_schema_name}"."{safe_table_name}" (
+        id SERIAL PRIMARY KEY,
+        report_text TEXT,
+        generation_timestamp TIMESTAMP WITH TIME ZONE
+    );
+    """
+    try:
+        cursor.execute(create_table_sql)
+        # print(f"Table '{safe_schema_name}.{safe_table_name}' ensured to exist.") # Optional: for debugging
+    except psycopg2.Error as e:
+        print(f"Error creating table {safe_schema_name}.{safe_table_name}: {e}")
+        cursor.connection.rollback() # Rollback if table creation fails
+        raise # Re-raise the exception to be handled by the caller
+
 def get_tickers_and_schemas_for_sector(sector_db_name: str, schema_data: dict) -> dict[str, str]:
     """
     Extracts a mapping of ticker symbols to their original schema names
@@ -130,7 +160,7 @@ def main(sector_db_name: str):
                     if report and not report.startswith("No fundamental data found") and not report.startswith("Error analyzing"):
                         table_name = f"{ticker}_fundamental_report" # Use ticker directly for table name
                         # Use the original_schema here
-                        # create_report_table_if_not_exists(cur, safe_original_schema, table_name) # Removed call
+                        create_report_table_if_not_exists(cur, safe_original_schema, table_name) # Removed call
                         store_report(cur, safe_original_schema, table_name, report)
                         cur.connection.commit() # Commit after each successful ticker processing
                         print(f"  Successfully generated and stored report for {ticker} in schema {safe_original_schema}.")
@@ -163,15 +193,28 @@ def main(sector_db_name: str):
         print("-----------------------------") # Adjusted dashes
 
 if __name__ == "__main__":
-    # --- Hardcode the target database name here --- #
-    sector_db_name = "equity_sector_communication_services_fundamentals" # <<< Set to Communication Services
+    # sector_db_name = "equity_sector_communication_services_fundamentals" # Done
+    # sector_db_name = "equity_sector_consumer_discretionary_fundamentals" # Done
+    sector_db_name = "equity_sector_consumer_staples_fundamentals" # In Progress
+    sector_db_name2 = "equity_sector_energy_fundamentals" # In Progress
+    sector_db_name3 = "equity_sector_financials_fundamentals" # In Progress
+    # sector_db_name = "equity_sector_health_care_fundamentals" # <<< Set to Healthcare
+    # sector_db_name = "equity_sector_industrials_fundamentals" # <<< Set to Industrials
+    # sector_db_name = "equity_sector_information_technology_fundamentals" # <<< Set to Information Technology
+    # sector_db_name = "equity_sector_materials_fundamentals" # <<< Set to Materials
+    # sector_db_name = "equity_sector_real_estate_fundamentals" # <<< Set to Real Estate
+    # sector_db_name = "equity_sector_utilities_fundamentals" # <<< Set to Utilities
     # -------------------------------------------- #
 
-    # --- Check if sector_db_name is valid before running --- #
-    if not sector_db_name or sector_db_name == "REPLACE_WITH_YOUR_SECTOR_DATABASE_NAME_fundamentals":
-        print("Error: Please set a valid 'sector_db_name' in the script.")
-    elif not sector_db_name.endswith("_fundamentals"):
-        print(f"Warning: Database name '{sector_db_name}' does not end with '_fundamentals'. Proceeding anyway.")
-        main(sector_db_name)
-    else:
-        main(sector_db_name)
+    # if not sector_db_name or sector_db_name == "REPLACE_WITH_YOUR_SECTOR_DATABASE_NAME_fundamentals":
+    #     print("Error: Please set a valid 'sector_db_name' in the script.")
+    # elif not sector_db_name.endswith("_fundamentals"):
+    #     print(f"Warning: Database name '{sector_db_name}' does not end with '_fundamentals'. Proceeding anyway.")
+    #     main(sector_db_name)
+    # else:
+    #     main(sector_db_name)
+
+    main(sector_db_name)
+    main(sector_db_name2)
+    main(sector_db_name3)
+

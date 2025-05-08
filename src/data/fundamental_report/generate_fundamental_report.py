@@ -270,12 +270,12 @@ def generate_fundamental_analysis_report(ticker):
     
     # Create system prompt
     system_prompt = f"""
-You are an expert Senior Financial Analyst specializing in fundamental equity analysis. Your task is to generate an in-depth, comprehensive fundamental analysis report for a given company based on the provided time-series financial data.
+Role: You are an expert Senior Financial Analyst specializing in fundamental equity analysis. 
+Task: Generate an in-depth, comprehensive fundamental analysis report for a given company based on the provided time-series financial data.
 
-The input data will be a JSON list of dictionaries, where each dictionary represents a period (e.g., quarterly or annually). The specific financial metrics included may vary but will be drawn from common fundamental indicators. The keys in the JSON dictionary will indicate the metric names (e.g., 'price_to_earnings_ratio', 'net_margin', 'revenue_growth', etc.), along with 'date' and 'ticker'.
+The input data will be a JSON list of dictionaries, where each dictionary represents a quarterly period. The specific financial metrics included may vary but will be drawn from common fundamental indicators. The keys in the JSON dictionary will indicate the metric names (e.g., 'price_to_earnings_ratio', 'net_margin', 'revenue_growth', etc.), along with 'date' and 'ticker'.
 
 Analyze the provided data points over time to identify trends, strengths, and weaknesses. Structure your report clearly, addressing relevant aspects like:
-
 1.  **Valuation:** Analyze available valuation ratios (e.g., P/E, EV/EBITDA). Discuss trends and what they suggest about market expectations.
 2.  **Profitability:** Examine available margin metrics (e.g., Gross, Operating, Net Margins) and profit growth indicators (e.g., EPS Growth). Discuss trends and health.
 3.  **Growth:** Evaluate available growth metrics (e.g., Revenue Growth, EPS Growth). Discuss trends and sustainability.
@@ -293,8 +293,8 @@ Analyze the provided data points over time to identify trends, strengths, and we
 - If data for a specific metric included in the JSON is consistently missing or unavailable (e.g., all values are null), state that clearly and explain the implication of not having that metric for the analysis.
 - Structure the output clearly using headings for relevant sections (adapt the sections above based on data availability).
 - Write in a professional, analytical tone suitable for an investment report.
-- Do not include '#' or '*' characters in your response formatting.
-- Keep the response around 1500 tokens.
+- Keep the response around 2500 tokens.
+- DO NOT INCLUDE THE LIMITATIONS OF THE DATA IN YOUR REPORT.
 
 The specific columns included in the JSON data are: {', '.join(target_cols)}
 """
@@ -411,3 +411,6 @@ The specific columns included in the JSON data are: {', '.join(target_cols)}
         except Exception as e2:
             print(f"Fallback also failed for {ticker}: {e2}")
             return f"Error analyzing fundamental data for {ticker}: {str(e)}" 
+
+if __name__ == "__main__":
+    print(generate_fundamental_analysis_report("AAPL"))

@@ -15,14 +15,30 @@ def get_project_root():
     # Assuming this file is in src/utils/file_utils.py, go up two levels
     return Path(__file__).parent.parent.parent
 
-def get_schema_path():
+def get_schema_path(filename: str = "database_schemas.json"):
     """
-    Get the path to the database_schemas.json file.
-    
+    Get the path to a schema JSON file (defaults to database_schemas.json).
+
+    The helper will first look inside the new ``src/data/database`` folder that now
+    contains the schema files.  If the target file is not found there (for
+    backward-compatibility), it will fall back to the legacy location directly
+    under ``src/data``.
+
+    Args:
+        filename: The schema file name. Defaults to ``database_schemas.json``.
+
     Returns:
-        pathlib.Path: Path to the database_schemas.json file
+        pathlib.Path: Resolved path to the requested schema JSON file.
     """
-    return get_project_root() / "src" / "data" / "database_schemas.json"
+    root = get_project_root()
+
+    # New canonical location – ``src/data/database``
+    new_path = root / "src" / "data" / "database" / filename
+    if new_path.exists():
+        return new_path
+
+    # Fallback to old path for compatibility
+    return root / "src" / "data" / filename
 
 def load_schema_data():
     """

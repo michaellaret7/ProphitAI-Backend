@@ -97,7 +97,7 @@ def create_prices_schema_file(output_file="database_schemas_prices.json"):
             conn.close()
 
     # Write the prices schemas data to the specified output file
-    output_path = os.path.join('src', 'data', output_file)
+    output_path = os.path.join('src', 'data', 'database', output_file)
     try:
         with open(output_path, 'w') as f:
             json.dump(prices_schemas_data, f, indent=4)

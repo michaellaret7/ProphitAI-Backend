@@ -1,4 +1,3 @@
-from .phaseOneFormatting import format
 from openai import OpenAI
 import json
 import os
@@ -7,10 +6,14 @@ import traceback
 from dotenv import load_dotenv
 import re
 import anthropic
-import difflib  
 import time
-from src.utils.file_utils import load_schema_data
 from src.phaseTwo.phaseTwo import pick_top_tickers_from_asset_classes, make_phaseTwo_recommendations
+from .phase_one_validation import (
+    parse_json_with_openai,
+    validate_and_fix_allocations,
+    validate_asset_classes,
+)
+from .phase_one_prompts import SYSTEM_PROMPT, build_user_message
 
 # Start timer
 start_time = time.time()
@@ -23,212 +26,6 @@ OpenAI_API_KEY = os.environ.get("OPENAI_API_KEY")
 model = os.environ.get("OPENAI_MODEL")
 client = OpenAI(api_key=OpenAI_API_KEY)
 
-def parse_json_with_openai(text):
-    """
-    Extract JSON data from text that may contain both human-readable explanation and JSON.
-    
-    Args:
-        text (str): The text output from an LLM containing JSON somewhere within it
-        
-    Returns:
-        dict: Parsed JSON data, or a default portfolio structure if parsing fails
-    """
-    # First try to find JSON between triple quotes (markdown code blocks)
-    json_pattern = r"```(?:json)?\s*([\s\S]*?)```"
-    json_matches = re.findall(json_pattern, text)
-    
-    if json_matches:
-        for json_str in json_matches:
-            try:
-                # Try to parse the JSON block
-                parsed_json = json.loads(json_str)
-                if isinstance(parsed_json, dict) and "portfolio" in parsed_json:
-                    return parsed_json
-            except json.JSONDecodeError:
-                continue
-    
-    # If no valid JSON in code blocks, look for JSON-like structure with curly braces
-    try:
-        curly_pattern = r"\{[\s\S]*\"portfolio\"[\s\S]*\}"
-        curly_matches = re.findall(curly_pattern, text)
-        
-        for potential_json in curly_matches:
-            try:
-                parsed_json = json.loads(potential_json)
-                if isinstance(parsed_json, dict) and "portfolio" in parsed_json:
-                    return parsed_json
-            except json.JSONDecodeError:
-                continue
-    except:
-        pass
-    
-    print("Warning: Could not extract valid JSON with portfolio key from text")
-    return {"error": "No valid JSON found", "portfolio": []}
-
-def validate_and_fix_allocations(data, min_allocation=1.0, max_allocation=20.0):
-    """
-    Validate and fix the allocations in the portfolio data.
-    
-    Args:
-        data (str or dict): Portfolio data as string or dictionary
-        
-    Returns:
-        dict: Validated and fixed portfolio data
-    """
-    # If data is a string, try to parse it as JSON
-    if isinstance(data, str):
-        data = parse_json_with_openai(data)
-    
-    # Check if we have a valid dictionary with portfolio key
-    if not isinstance(data, dict) or "portfolio" not in data:
-        print("Error: Invalid portfolio data format")
-        return {"portfolio": []}
-    
-    # Make a copy to avoid modifying the original data
-    data = json.loads(json.dumps(data))
-    
-    # Check if we have allocations defined
-    if len(data["portfolio"]) == 0:
-        return data
-    
-    # Convert any string allocations to float values
-    for asset in data["portfolio"]:
-        if "allocation" in asset:
-            # If allocation is a string (possibly with %), convert to float
-            if isinstance(asset["allocation"], str):
-                try:
-                    # Remove % if present and convert to float
-                    asset["allocation"] = float(asset["allocation"].strip("%"))
-                except ValueError:
-                    print(f"WARNING: Could not convert allocation '{asset['allocation']}' to number, defaulting to 0")
-                    asset["allocation"] = 0
-    
-    # Calculate total allocation
-    total_allocation = sum(asset.get("allocation", 0) for asset in data["portfolio"])
-    
-    # If total is not close to 100, normalize
-    if abs(total_allocation - 100) > 0.1:  # Allow small rounding errors
-        print(f"WARNING: Total allocation is {total_allocation}%, normalizing to 100%")
-        
-        # Calculate normalization factor
-        norm_factor = 100 / total_allocation
-        
-        # Apply normalization
-        for asset in data["portfolio"]:
-            asset["allocation"] = round(asset.get("allocation", 0) * norm_factor, 1)
-    
-    # Check for allocations outside min-max bounds
-    for asset in data["portfolio"]:
-        allocation = asset.get("allocation", 0)
-        if allocation < min_allocation:
-            print(f"WARNING: {asset.get('asset_class')} allocation is {allocation}%, increasing to {min_allocation}%")
-            asset["allocation"] = min_allocation
-        elif allocation > max_allocation:
-            print(f"WARNING: {asset.get('asset_class')} allocation is {allocation}%, decreasing to {max_allocation}%")
-            asset["allocation"] = max_allocation
-    
-    # Recalculate total after min-max adjustments
-    total_allocation = sum(asset.get("allocation", 0) for asset in data["portfolio"])
-    
-    # If total is not 100 after min-max adjustments, normalize again
-    if abs(total_allocation - 100) > 0.1:
-        print(f"WARNING: Total allocation after min-max adjustments is {total_allocation}%, normalizing to 100%")
-        
-        # Calculate normalization factor
-        norm_factor = 100 / total_allocation
-        
-        # Apply normalization
-        for asset in data["portfolio"]:
-            asset["allocation"] = round(asset.get("allocation", 0) * norm_factor, 1)
-    
-    return data
-
-def validate_asset_classes(data):
-    """
-    Validate if the asset classes in portfolio data are valid.
-    """
-    if not data or not isinstance(data, dict) or "portfolio" not in data:
-        return False, []
-    
-    # Load valid asset classes directly from database_schemas.json
-    schema_data = load_schema_data()
-    
-    # Extract all valid asset classes
-    valid_asset_classes = []
-    
-    # Process equity sectors from database_schemas.json
-    for sector_name, sector_info in schema_data.items():
-        # Skip non-sector entries
-        if not isinstance(sector_info, dict) or "schemas" not in sector_info:
-            continue
-            
-        # Convert sector name to valid asset class
-        sector_asset_class = sector_name.lower().replace(" ", "_")
-        valid_asset_classes.append(sector_asset_class)
-        
-        # Process industries (schemas) within each sector
-        for industry_name, industry_info in sector_info.get("schemas", {}).items():
-            # Convert industry name to valid asset class
-            industry_asset_class = industry_name.lower().replace(" ", "_")
-            valid_asset_classes.append(industry_asset_class)
-            
-            # Process sub-industries (tables) within each industry
-            for subindustry_name in industry_info.get("tables", {}).keys():
-                # Convert sub-industry name to valid asset class
-                subindustry_asset_class = subindustry_name.lower().replace(" ", "_")
-                valid_asset_classes.append(subindustry_asset_class)
-    
-    # Add ETF categories from database_schemas.json schema "etf_data"
-    if "etf_data" in schema_data:
-        etf_schemas = schema_data.get("etf_data", {}).get("schemas", {})
-        for etf_category in etf_schemas.keys():
-            # Add ETF category
-            valid_asset_classes.append(etf_category)
-            
-            tables = etf_schemas[etf_category].get('tables', {})
-            for etf_type in tables.keys():
-                # Add ETF type
-                valid_asset_classes.append(etf_type)
-    
-    # Add "cash" as a valid asset class
-    valid_asset_classes.append("cash")
-    
-    # Remove duplicates
-    valid_asset_classes = list(set(valid_asset_classes))
-    
-    # Check each asset class in the portfolio
-    replacements_made = False
-    for asset in data["portfolio"]:
-        current_asset_class = asset.get("asset_class")
-        
-        # Skip if no asset class or already valid
-        if not current_asset_class:
-            asset["asset_class"] = "unknown"
-            replacements_made = True
-            continue
-            
-        if current_asset_class in valid_asset_classes:
-            continue
-        
-        # Find the most similar asset class
-        closest_match = difflib.get_close_matches(current_asset_class, valid_asset_classes, n=1, cutoff=0.6)
-        
-        if closest_match:
-            print(f"Replacing invalid asset class '{current_asset_class}' with '{closest_match[0]}'")
-            asset["asset_class"] = closest_match[0]
-            replacements_made = True
-        else:
-            print(f"Warning: No close match found for '{current_asset_class}'. Setting to 'unknown'")
-            asset["asset_class"] = "unknown"
-            replacements_made = True
-                
-    if replacements_made:
-        print("Asset class validation complete - replacements were made")
-    else:
-        print("Asset class validation complete - all asset classes are valid")
-        
-    return data
-
 def get_user_information():
     """
     Get user information from the user's profile.
@@ -239,7 +36,8 @@ def get_user_information():
             "net_worth": "1,292,902",
             "risk_tolerance": "Medium Risk Tolerance",
             "investment_goals": "Medium term high growth, some income",
-            "time_horizon": "5 Years"
+            "time_horizon": "5 Years",
+            "Overall Description": "The user is a 35 year old who wants to maximize returns in the medium term, while still having some income. They are comfortable with moderate risk."
         }
     }
     
@@ -272,7 +70,8 @@ def optimize():
     )
     
     current_date = datetime.now().strftime('%Y-%m-%d')
-    account_info, positions_table, formatted_diversification, portfolio_metrics, stock_metrics, monthly_performance, correlations = format()
+    # The line below is no longer needed as build_user_message will call format_to_json internally.
+    # account_info, positions_table, formatted_diversification, portfolio_metrics, stock_metrics, monthly_performance, correlations = format()
     
     # Ensure output directory exists
     output_dir = "output"
@@ -285,108 +84,18 @@ def optimize():
         f.write(f"PORTFOLIO OPTIMIZATION REPORT - {current_date}\n")
         f.write("="*80 + "\n\n")
 
-    # Create the content string with portfolio data
-    content = f"""
-GOALS:
-- Optimize the user's portfolio to outperform the S&P 500.
-- Minimize risk while maximizing returns.
-- Properly diversify the portfolio across multiple asset classes.
-- Tailor the portfolio to the user's risk tolerance, investment goals, and other investment information that is retrieved from the get_user_information tool.
-- Come up with a portfolio Thesis that explains why the portfolio is optimized for the user's profile. Make sure the portfolio allocations are aligned with the portfolio thesis.
+    # Build dynamic user prompt content using helper
+    # build_user_message now fetches and formats data internally.
+    content = build_user_message()
 
-REMEMBER THE CURRENT DATE IS {current_date}
-
-------------------------------------------------------------------------------------------------------
-
-### Current Asset Class Positions:
-
-{positions_table}
-
-### Account Information:
-
-{account_info}
-
-### Portfolio Metrics:
-
-{portfolio_metrics}
-
-### Monthly Performance:
-
-{monthly_performance}
-
-### Diversification:
-
-{formatted_diversification}
-
-### Correlation Matrix:
-
-{correlations}
-
-------------------------------------------------------------------------------------------------------
-
-### RULES (YOU MUST FOLLOW THESE RULES):
-1. KEEP 5-7% OF THE PORTFOLIO IN CASH.
-2. MAKE SURE ALL OF THE ALLOCATION PERCENTAGES ADD UP TO 100% OF THE PORTFOLIO
-3. MINIMUM ASSET CLASSES ALLOWED: 8
-4. MAXIMUM ASSET CLASSES ALLOWED: 20
-
-### Directions:
-1. Analyze the current portfolio positions, account information, portfolio metrics, asset class metrics, monthly performance, diversification, and correlation matrix.
-2. Identify the most significant issues affecting portfolio performance, focusing on asset class exposures.
-3. IMPORTANT: You MUST use the data from the get_equity_universe and get_etf_universe tools to make specific recommendations for:
-   - Specific equity sectors, industries, and sub-industries using ONLY the final category names from get_equity_universe
-   - Specific ETFs using ONLY the final category names from get_etf_universe
-   - Specific bond categories (Treasuries, Investment Grade, High Yield)
-   - Specific commodities
-   - Real Estate segments
-   - Foreign Exchange exposures
-   - Alternative Investments
-4. DO NOT recommend generic ETF categories - use the specific sector/industry/ETF names exactly as they appear in the data tools.
-5. Explain how each recommendation will improve the portfolio's return potential and risk profile.
-6. Construct the portfolio of asset classes based on your thesis. The maximum number of asset classes you can choose in your portfolio is 20 and the minimum is 8. If you go over or under this number, you will be penalized.
-7. Write extensive and detailed reasoning for each allocation. Explain in depth why you chose the asset class you did and how it fits into the portfolio. This explenation will be returned in the JSON output.
-8. Return portfolio in JSON format.
-
-IMPORTANT:
-- Be as granular and specific as possible with your recommendations.
-- The Goal is to create a portfolio that will outperform the S&P 500. 
-- YOU CAN ONLY CHOOSE FROM THE ASSET CLASSES AND SECTORS/INDUSTRIES/SUBINDUSTRIES THAT ARE IN THE get_equity_universe and get_etf_universe tools.
-- USE ONLY THE FINAL/LEAF NODE NAME AS THE ASSET_CLASS VALUE, NOT THE FULL HIERARCHICAL PATH.
-    - For example, use "multi_utilities" NOT "equity_sector_utilities_multi_utilities"
-- IN ADDITION to providing a human-readable recommendation, you MUST also output the same recommendation in a machine-readable JSON format for automated processing.
-
-Clear Example of Correct Asset Class Format:
-- ✓ CORRECT: "asset_class": "multi_utilities"  
-- ✗ INCORRECT: "asset_class": "equity_sector_utilities_multi_utilities"
-
-Your response should have two parts:
-1. Human-readable portfolio recommendation
-2. JSON-formatted recommendation with the following structure:
-
-**How to Write the `portfolio_thesis`:**
-- For the `portfolio_thesis` field in the final JSON output, you must provide a concise (2-4 sentence) justification explaining *why* this specific portfolio recommendation is suitable for the user.
-
-To construct this thesis:
-1.  **Reference the User:** Start by explicitly mentioning key aspects of the user's profile gathered from the `get_user_information` tool (e.g., their risk tolerance, investment goals, time horizon).
-2.  **Connect to Strategy:** Explain how the overall portfolio structure (the mix of asset classes, risk level, specific tilts) directly aligns with the user profile you just mentioned.
-3.  **Incorporate Market View:** Briefly link the strategy to the key findings or outlook from your market research (analyst reports, free searches). Why do these allocations make sense *now*?
-4.  **Justify Key Choices:** You might highlight one or two significant allocation decisions (e.g., overweighting a specific sector, including alternatives) and briefly state how they support the user's objectives or capitalize on market opportunities identified in your research.
-5.  **Be Specific and Concise:** Ensure the thesis directly answers "Why this portfolio for this user?" clearly and succinctly.
-
-===JSON OUTPUT===
-```json
-{{
-    "portfolio": [
-    {{
-      "asset_class": "ONLY USE THE FINAL NODE NAME from get_equity_universe or get_etf_universe (Example: Use 'multi_utilities' NOT 'equity_sector_utilities_multi_utilities')",
-      "allocation": "percentage of the portfolio allocated to this asset class",
-      "reason": "Reason for the allocation. I want this to be a detailed and specific explenation for why you chose this asset class and how it fits into the portfolio."
-    }},
-  ],
-  "portfolio_thesis": "portfolio thesis goes here"
-}}
-```
-"""
+    # -------------------- DEBUG: print prompts --------------------
+    print("\n" + "=" * 100)
+    print("SYSTEM PROMPT (Phase One):\n")
+    print(SYSTEM_PROMPT)
+    print("\n" + "-" * 100)
+    print("USER PROMPT (first message to LLM):\n")
+    print(content)
+    print("=" * 100 + "\n")
 
     try:
         # Define all analyst tools in a more efficient way
@@ -409,13 +118,15 @@ To construct this thesis:
             "type": "function",
             "function": {
                 "name": "free_search",
-                "description": "Search the internet for critical investment information that will enhance portfolio optimization. Construct DETAILED and SPECIFIC search queries to get the highest quality information. Follow these guidelines for effective searches:\n\n1. Be specific about the information you need (e.g., instead of 'tech stocks' use 'semiconductor industry outlook 2025 and top mid-cap opportunities')\n2. Include relevant timeframes in your query\n3. Target specific sectors, industries, or market segments\n4. Request numerical data like P/E ratios, growth rates, or market projections\n5. Break complex research needs into multiple focused searches\n\nYou should conduct AT LEAST 3-5 searches on different topics before making final recommendations.",
+                "description": """Search the internet for critical investment information that will enhance portfolio optimization. 
+                Construct DETAILED, SPECIFIC, and COMPREHENSIVE search queries to get the highest quality, in-depth information. 
+                Your queries should aim to uncover nuanced insights, data-driven analysis, and forward-looking perspectives. Follow these guidelines for effective searches:\n\n1. Be EXTREMELY specific about the information you need (e.g., instead of 'tech stocks' use 'Q3 2024 consensus earnings estimates for US large-cap semiconductor companies and key drivers for revisions' or 'Impact of recent Fed policy changes on high-yield corporate bond spreads and default rate outlook for the next 12 months').\n2. Include relevant timeframes, geographical regions, and market capitalizations in your query (e.g., 'next 5 years', 'European emerging markets', 'small-cap biotechnology').\n3. Target specific sectors, industries, sub-industries, or niche market segments. Go beyond broad categories.\n4. Explicitly request quantitative data, including but not limited to: P/E ratios, PEG ratios, growth rates (YoY, CAGR), market projections, valuation multiples, earnings estimates, financial ratios, economic indicators, and statistical correlations.\n5. Formulate queries to uncover underlying trends, competitive landscapes, regulatory impacts, technological disruptions, and macroeconomic influences.\n6. Break complex research needs into multiple, highly focused searches. Each search should target a distinct piece of the puzzle.\n7. Think like a seasoned financial analyst: what specific data or insight would give you an edge?\n\nYou should conduct AT LEAST 3-5 such comprehensive searches on different, strategically chosen topics before making final recommendations. The goal is to build a deeply informed perspective.""",
                 "parameters": {
                     "type": "object",
                     "properties": {
                         "query": {
                             "type": "string",
-                            "description": "Detailed, specific search query to find high-quality investment information. Include timeframes, metrics, sectors, or specific market segments."
+                            "description": "Detailed, specific, and comprehensive search query designed to find high-quality, in-depth investment information. Include timeframes, metrics, sectors, specific market segments, and aim for nuanced insights."
                         }
                     },
                     "required": ["query"]
@@ -704,24 +415,7 @@ To construct this thesis:
             return handle_conversation(messages, tools, remaining_required_tools, round_num + 1, max_rounds)
         
         # Setup system message
-        system_message = {
-            "role": "system",
-            "content": """
-You are an elite portfolio manager who creates optimized investment portfolios. Your exceptional track record comes from conducting EXTENSIVE RESEARCH before making any recommendation.
-            
-RESEARCH METHODOLOGY REQUIREMENTS:
-1. Conduct AT LEAST 5-7 detailed searches on different aspects of the market before making recommendations.
-2. For each search query, construct DETAILED and SPECIFIC prompts that will yield high-quality information.
-3. Research multiple sectors, market caps, geographies, and asset classes.
-4. Analyze macroeconomic trends, sector rotations, valuation metrics, and risk factors.
-5. Investigate both tactical (1-6 month) and strategic (1-3 year) opportunities.
-6. IMPORTANT: You MUST use the get_equity_universe and get_etf_universe tools first to understand available investment options before making recommendations.
-7. ALWAYS use SPECIFIC names of sectors, industries, ETFs, and other assets exactly as they appear in the data from get_equity_universe and get_etf_universe.
-
-CRITICAL CONSTRAINT: Your final portfolio MUST contain between 8 and 20 asset classes - NO MORE, NO LESS. This is a hard requirement that cannot be violated.
-
-ONLY after conducting all required research using the specified tools and any additional free searches should you formulate your final recommendation."""
-        }
+        system_message = {"role": "system", "content": SYSTEM_PROMPT}
         
         # Required tools list
         required_tools = list(analyst_tools.keys())

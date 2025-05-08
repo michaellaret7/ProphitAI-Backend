@@ -11,6 +11,8 @@ Role in Program:
 Provides IBKR data and analysis for portfolio monitoring, risk assessment,
 and performance reporting.
 """
+
+# MOVE THIS TO IB_UTILS.PY
 from ib_insync import IB, Stock, util
 import numpy as np
 import pandas as pd
@@ -19,7 +21,7 @@ import re
 import io
 import sys
 from contextlib import redirect_stdout, nullcontext
-
+import json
 def connect_to_ib():
     """
     Establish a connection to Interactive Brokers TWS or Gateway
@@ -1914,8 +1916,9 @@ def generate_portfolio_report(capture_output=False, print_output=False):
             # Analyze portfolio correlations
             correlations = analyze_portfolio_correlations(ib, symbols, print_output=print_output)
         
-        # Run stock analysis for AAPL
-        aapl_results = calculate_monthly_stock_metrics(ib, "AAPL", printOutput=print_output)
+        # Run stock analysis for AAPL, but don't print its summary if generate_portfolio_report is already handling prints.
+        # The results are still captured in aapl_results for other uses (e.g., JSON payload).
+        aapl_results = calculate_monthly_stock_metrics(ib, "AAPL", printOutput=False)
         
         # Analyze portfolio diversification
         diversification = analyze_portfolio_diversification(ib, print_output=print_output)
@@ -1929,4 +1932,4 @@ def generate_portfolio_report(capture_output=False, print_output=False):
     else:
         return positions, formatted_output, metrics, monthly_results, diversification, correlations
 
-
+    
