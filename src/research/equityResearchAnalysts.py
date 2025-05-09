@@ -21,7 +21,7 @@ import threading
 import math
 import curses
 from dotenv import load_dotenv
-from src.phaseOne.phaseOneAnimation import start_animation, Colors
+from src.portfolio_optimization.phase_one.phaseOneAnimation import start_animation, Colors
 from src.utils.file_utils import load_schema_data
 
 # Load environment variables from .env file
@@ -31,7 +31,7 @@ Sonar_API_KEY = os.environ.get("PERPLEXITY_API_KEY")
 perplexity_model = 'sonar-deep-research'
 
 def communication_services_research_analyst():
-    from src.phaseOne.phaseOneAnimation import start_animation, Colors
+    from src.portfolio_optimization.phase_one.phaseOneAnimation import start_animation, Colors
     date = datetime.now().strftime("%Y-%m-%d")
     current_month_year = datetime.now().strftime("%B %Y")
 
@@ -211,7 +211,7 @@ Additional Notes:
         return None
 
 def consumer_discretionary_research_analyst():
-    from src.phaseOne.phaseOneAnimation import start_animation, Colors
+    from src.portfolio_optimization.phase_one.phaseOneAnimation import start_animation, Colors
     date = datetime.now().strftime("%Y-%m-%d")
     current_month_year = datetime.now().strftime("%B %Y")
     current_year = datetime.now().strftime("%Y")
@@ -441,7 +441,7 @@ IMPORTANT
         return None
 
 def consumer_staples_research_analyst():
-    from src.phaseOne.phaseOneAnimation import start_animation, Colors
+    from src.portfolio_optimization.phase_one.phaseOneAnimation import start_animation, Colors
     date = datetime.now().strftime("%Y-%m-%d")
     current_month_year = datetime.now().strftime("%B %Y")
     current_year = datetime.now().strftime("%Y")
@@ -651,7 +651,7 @@ IMPORTANT
         return None
 
 def energy_research_analyst():
-    from src.phaseOne.phaseOneAnimation import start_animation, Colors
+    from src.portfolio_optimization.phase_one.phaseOneAnimation import start_animation, Colors
     date = datetime.now().strftime("%Y-%m-%d")
     current_month_year = datetime.now().strftime("%B %Y")
     current_year = datetime.now().strftime("%Y")
@@ -928,7 +928,7 @@ IMPORTANT
         return None
 
 def financials_research_analyst():
-    from src.phaseOne.phaseOneAnimation import start_animation, Colors
+    from src.portfolio_optimization.phase_one.phaseOneAnimation import start_animation, Colors
     date = datetime.now().strftime("%Y-%m-%d")
     current_month_year = datetime.now().strftime("%B %Y")
     current_year = datetime.now().strftime("%Y")
@@ -1230,7 +1230,7 @@ IMPORTANT
         return None
 
 def healthcare_research_analyst():
-    from src.phaseOne.phaseOneAnimation import start_animation, Colors
+    from src.portfolio_optimization.phase_one.phaseOneAnimation import start_animation, Colors
     date = datetime.now().strftime("%Y-%m-%d")
     current_month_year = datetime.now().strftime("%B %Y")
     current_year = datetime.now().strftime("%Y")
@@ -1533,7 +1533,7 @@ IMPORTANT
         return None
 
 def industrials_research_analyst():
-    from src.phaseOne.phaseOneAnimation import start_animation, Colors
+    from src.portfolio_optimization.phase_one.phaseOneAnimation import start_animation, Colors
     date = datetime.now().strftime("%Y-%m-%d")
     current_month_year = datetime.now().strftime("%B %Y")
     current_year = datetime.now().strftime("%Y")
@@ -1857,7 +1857,7 @@ IMPORTANT
         return None
 
 def information_technology_research_analyst():
-    from src.phaseOne.phaseOneAnimation import start_animation, Colors
+    from src.portfolio_optimization.phase_one.phaseOneAnimation import start_animation, Colors
     date = datetime.now().strftime("%Y-%m-%d")
     current_month_year = datetime.now().strftime("%B %Y")
     current_year = datetime.now().strftime("%Y")
@@ -2146,7 +2146,7 @@ IMPORTANT
         return None
 
 def materials_research_analyst():
-    from src.phaseOne.phaseOneAnimation import start_animation, Colors
+    from src.portfolio_optimization.phase_one.phaseOneAnimation import start_animation, Colors
     date = datetime.now().strftime("%Y-%m-%d")
     current_month_year = datetime.now().strftime("%B %Y")
     current_year = datetime.now().strftime("%Y")
@@ -2448,7 +2448,7 @@ IMPORTANT
         return None
 
 def real_estate_research_analyst():
-    from src.phaseOne.phaseOneAnimation import start_animation, Colors
+    from src.portfolio_optimization.phase_one.phaseOneAnimation import start_animation, Colors
     date = datetime.now().strftime("%Y-%m-%d")
     current_month_year = datetime.now().strftime("%B %Y")
     current_year = datetime.now().strftime("%Y")
@@ -2763,7 +2763,7 @@ IMPORTANT
         return None
 
 def utilities_research_analyst():
-    from src.phaseOne.phaseOneAnimation import start_animation, Colors
+    from src.portfolio_optimization.phase_one.phaseOneAnimation import start_animation, Colors
     date = datetime.now().strftime("%Y-%m-%d")
     current_month_year = datetime.now().strftime("%B %Y")
     current_year = datetime.now().strftime("%Y")

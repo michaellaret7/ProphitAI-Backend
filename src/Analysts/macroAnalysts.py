@@ -21,7 +21,7 @@ import threading
 import math
 import curses
 from dotenv import load_dotenv
-from src.phaseOne.phaseOneAnimation import start_animation, Colors
+from src.portfolio_optimization.phase_one.phaseOneAnimation import start_animation, Colors
 from src.utils.file_utils import load_schema_data
 
 # Load environment variables from .env file
@@ -163,7 +163,7 @@ def get_etf_universe():
             conn.close()
 
 def free_search(system_prompt, user_prompt):
-    from src.phaseOne.phaseOneAnimation import start_animation, Colors
+    from src.portfolio_optimization.phase_one.phaseOneAnimation import start_animation, Colors
 
     # Define custom analysis steps for equity research
     equity_steps = [
@@ -253,7 +253,7 @@ def commodities_analyst():
     within the '2025_04_22' schema, and returns the text from the row with id = 1.
     """
     # Import Colors locally for error messages if needed
-    from src.phaseOne.phaseOneAnimation import Colors 
+    from src.portfolio_optimization.phase_one.phaseOneAnimation import Colors 
     conn = None
     cur = None
     research_text = None
@@ -322,7 +322,7 @@ def etf_analyst():
     within the '2025_04_22' schema, and returns the text from the row with id = 1.
     """
     # Import Colors locally for error messages if needed
-    from src.phaseOne.phaseOneAnimation import Colors 
+    from src.portfolio_optimization.phase_one.phaseOneAnimation import Colors 
     conn = None
     cur = None
     research_text = None
@@ -391,7 +391,7 @@ def treasuries_analyst():
     within the '2025_04_22' schema, and returns the text from the row with id = 1.
     """
     # Import Colors locally for error messages if needed
-    from src.phaseOne.phaseOneAnimation import Colors 
+    from src.portfolio_optimization.phase_one.phaseOneAnimation import Colors 
     conn = None
     cur = None
     research_text = None
@@ -460,7 +460,7 @@ def foreign_exchange_analyst():
     within the '2025_04_22' schema, and returns the text from the row with id = 1.
     """
     # Import Colors locally for error messages if needed
-    from src.phaseOne.phaseOneAnimation import Colors 
+    from src.portfolio_optimization.phase_one.phaseOneAnimation import Colors 
     conn = None
     cur = None
     research_text = None
@@ -529,7 +529,7 @@ def ig_credit_analyst():
     within the '2025_04_22' schema, and returns the text from the row with id = 1.
     """
     # Import Colors locally for error messages if needed
-    from src.phaseOne.phaseOneAnimation import Colors 
+    from src.portfolio_optimization.phase_one.phaseOneAnimation import Colors 
     conn = None
     cur = None
     research_text = None
@@ -598,7 +598,7 @@ def high_yield_analyst():
     within the '2025_04_22' schema, and returns the text from the row with id = 1.
     """
     # Import Colors locally for error messages if needed
-    from src.phaseOne.phaseOneAnimation import Colors 
+    from src.portfolio_optimization.phase_one.phaseOneAnimation import Colors 
     conn = None
     cur = None
     research_text = None
@@ -667,7 +667,7 @@ def emerging_market_analyst():
     within the '2025_04_22' schema, and returns the text from the row with id = 1.
     """
     # Import Colors locally for error messages if needed
-    from src.phaseOne.phaseOneAnimation import Colors 
+    from src.portfolio_optimization.phase_one.phaseOneAnimation import Colors 
     conn = None
     cur = None
     research_text = None

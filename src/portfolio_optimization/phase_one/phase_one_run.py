@@ -7,7 +7,10 @@ from dotenv import load_dotenv
 import re
 import anthropic
 import time
-from src.phaseTwo.phaseTwo import pick_top_tickers_from_asset_classes, make_phaseTwo_recommendations
+from src.portfolio_optimization.phase_two.phase_two_run import (
+    pick_top_tickers_from_asset_classes,
+    make_phaseTwo_recommendations,
+)
 from .phase_one_validation import (
     parse_json_with_openai,
     validate_and_fix_allocations,
@@ -45,7 +48,7 @@ def get_user_information():
 
 def optimize():
     # Import moved here
-    from ..analysts import (
+    from src.analysts import (
         free_search, 
         communication_services_analyst, 
         consumer_staples_analyst, 
@@ -88,14 +91,14 @@ def optimize():
     # build_user_message now fetches and formats data internally.
     content = build_user_message()
 
-    # -------------------- DEBUG: print prompts --------------------
-    print("\n" + "=" * 100)
-    print("SYSTEM PROMPT (Phase One):\n")
-    print(SYSTEM_PROMPT)
-    print("\n" + "-" * 100)
-    print("USER PROMPT (first message to LLM):\n")
-    print(content)
-    print("=" * 100 + "\n")
+    # # -------------------- DEBUG: print prompts --------------------
+    # print("\n" + "=" * 100)
+    # print("SYSTEM PROMPT (Phase One):\n")
+    # print(SYSTEM_PROMPT)
+    # print("\n" + "-" * 100)
+    # print("USER PROMPT (first message to LLM):\n")
+    # print(content)
+    # print("=" * 100 + "\n")
 
     try:
         # Define all analyst tools in a more efficient way

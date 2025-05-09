@@ -22,7 +22,7 @@ import threading
 import math
 import curses
 from dotenv import load_dotenv
-from src.phaseOne.phaseOneAnimation import start_animation, Colors
+from src.portfolio_optimization.phase_one.phaseOneAnimation import start_animation, Colors
 from src.utils.file_utils import load_schema_data
 
 # Load environment variables from .env file
@@ -32,7 +32,7 @@ Sonar_API_KEY = os.environ.get("PERPLEXITY_API_KEY")
 perplexity_model = 'sonar-deep-research'
 
 def commodities_research_analyst():
-    from src.phaseOne.phaseOneAnimation import start_animation, Colors
+    from src.portfolio_optimization.phase_one.phaseOneAnimation import start_animation, Colors
     date = datetime.now().strftime("%Y-%m-%d")
 
     # Define custom analysis steps for commodities research
@@ -213,7 +213,7 @@ def commodities_research_analyst():
         return None
 
 def etf_research_analyst():
-    from src.phaseOne.phaseOneAnimation import start_animation, Colors
+    from src.portfolio_optimization.phase_one.phaseOneAnimation import start_animation, Colors
     date = datetime.now().strftime("%Y-%m-%d")
 
     etf_steps = [
@@ -424,7 +424,7 @@ END OF PROMPT
         return None
 
 def treasuries_research_analyst():
-    from src.phaseOne.phaseOneAnimation import start_animation, Colors
+    from src.portfolio_optimization.phase_one.phaseOneAnimation import start_animation, Colors
     date = datetime.now().strftime("%Y-%m-%d")
 
     treasuries_steps = [
@@ -596,7 +596,7 @@ IMPORTANT
         return None
 
 def foreign_exchange_research_analyst():
-    from src.phaseOne.phaseOneAnimation import start_animation, Colors
+    from src.portfolio_optimization.phase_one.phaseOneAnimation import start_animation, Colors
     date = datetime.now().strftime("%Y-%m-%d")
 
     fx_steps = [
@@ -808,7 +808,7 @@ IMPORTANT
         return None
 
 def ig_credit_research_analyst():
-    from src.phaseOne.phaseOneAnimation import start_animation, Colors
+    from src.portfolio_optimization.phase_one.phaseOneAnimation import start_animation, Colors
     date = datetime.now().strftime("%Y-%m-%d")
 
     ig_credit_steps = [
@@ -992,7 +992,7 @@ IMPORTANT
         return None
 
 def high_yield_research_analyst():
-    from src.phaseOne.phaseOneAnimation import start_animation, Colors
+    from src.portfolio_optimization.phase_one.phaseOneAnimation import start_animation, Colors
     date = datetime.now().strftime("%Y-%m-%d")
 
     high_yield_steps = [
@@ -1174,7 +1174,7 @@ IMPORTANT
         return None
 
 def emerging_market_research_analyst():
-    from src.phaseOne.phaseOneAnimation import start_animation, Colors
+    from src.portfolio_optimization.phase_one.phaseOneAnimation import start_animation, Colors
     date = datetime.now().strftime("%Y-%m-%d")
 
     emerging_market_steps = [

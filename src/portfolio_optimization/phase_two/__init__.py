@@ -12,7 +12,7 @@ from .data_retrieval import (
 )
 
 # Import from phaseTwoCalculations.py
-from .phaseTwoCalculations import (
+from .phase_two_calculations import (
     calculate_stock_metrics,
     calculate_and_filter_metrics,
     calculate_composite_scores
@@ -23,7 +23,7 @@ from .retrieve_fundamental_report import (
     # debug_json_encoding is likely internal, not exposed
 )
 
-from .phaseTwoBacktest import (
+from ..backtest import (
     connect_to_ib,
     get_ib_historical_data,
     get_portfolio_value,
@@ -32,8 +32,13 @@ from .phaseTwoBacktest import (
     calculate_portfolio_returns
 )
 
-# Import from phaseTwoBacktest when you know which functions to expose
-# from .phaseTwoBacktest import function1, function2
+from .phase_two_run import (
+    pick_top_tickers_from_asset_classes,
+    make_phaseTwo_recommendations,
+)
+
+# Import from backtest when you know which additional functions to expose
+# from ..backtest import some_other_function
 
 __all__ = [
     # data_retrieval exports
@@ -61,7 +66,7 @@ __all__ = [
     # 'process_asset_class',
     # 'analyze_portfolio',
     
-    # phaseTwoBacktest exports
+    # backtest exports
     'connect_to_ib',
     'get_ib_historical_data',
     'get_portfolio_value',
@@ -69,6 +74,10 @@ __all__ = [
     'get_current_portfolio_holdings',
     'calculate_portfolio_returns',
     
-    # phaseTwoBacktest exports - add when implemented
+    # backtest exports - add when implemented
     # 'function1', 'function2'
+
+    # additional exports from phase_two_run
+    'pick_top_tickers_from_asset_classes',
+    'make_phaseTwo_recommendations',
 ] 

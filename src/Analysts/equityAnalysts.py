@@ -21,7 +21,7 @@ import threading
 import math
 import curses
 from dotenv import load_dotenv
-from src.phaseOne.phaseOneAnimation import start_animation, Colors
+from src.portfolio_optimization.phase_one.phaseOneAnimation import start_animation, Colors
 from src.utils.file_utils import load_schema_data
 
 # Load environment variables from .env file
@@ -42,7 +42,7 @@ def communication_services_analyst():
     within the '2025_04_22' schema, and returns the text from the row with id = 1.
     """
     # Import Colors locally for error messages if needed
-    from src.phaseOne.phaseOneAnimation import Colors 
+    from src.portfolio_optimization.phase_one.phaseOneAnimation import Colors 
     conn = None
     cur = None
     research_text = None
@@ -111,7 +111,7 @@ def consumer_discretionary_analyst():
     within the '2025_04_22' schema, and returns the text from the row with id = 1.
     """
     # Import Colors locally for error messages if needed
-    from src.phaseOne.phaseOneAnimation import Colors 
+    from src.portfolio_optimization.phase_one.phaseOneAnimation import Colors 
     conn = None
     cur = None
     research_text = None
@@ -180,7 +180,7 @@ def consumer_staples_analyst():
     within the '2025_04_22' schema, and returns the text from the row with id = 1.
     """
     # Import Colors locally for error messages if needed
-    from src.phaseOne.phaseOneAnimation import Colors 
+    from src.portfolio_optimization.phase_one.phaseOneAnimation import Colors 
     conn = None
     cur = None
     research_text = None
@@ -249,7 +249,7 @@ def energy_analyst():
     within the '2025_04_22' schema, and returns the text from the row with id = 1.
     """
     # Import Colors locally for error messages if needed
-    from src.phaseOne.phaseOneAnimation import Colors 
+    from src.portfolio_optimization.phase_one.phaseOneAnimation import Colors 
     conn = None
     cur = None
     research_text = None
@@ -318,7 +318,7 @@ def financials_analyst():
     within the '2025_04_22' schema, and returns the text from the row with id = 1.
     """
     # Import Colors locally for error messages if needed
-    from src.phaseOne.phaseOneAnimation import Colors 
+    from src.portfolio_optimization.phase_one.phaseOneAnimation import Colors 
     conn = None
     cur = None
     research_text = None
@@ -387,7 +387,7 @@ def healthcare_analyst():
     within the '2025_04_22' schema, and returns the text from the row with id = 1.
     """
     # Import Colors locally for error messages if needed
-    from src.phaseOne.phaseOneAnimation import Colors 
+    from src.portfolio_optimization.phase_one.phaseOneAnimation import Colors 
     conn = None
     cur = None
     research_text = None
@@ -456,7 +456,7 @@ def industrials_analyst():
     within the '2025_04_22' schema, and returns the text from the row with id = 1.
     """
     # Import Colors locally for error messages if needed
-    from src.phaseOne.phaseOneAnimation import Colors 
+    from src.portfolio_optimization.phase_one.phaseOneAnimation import Colors 
     conn = None
     cur = None
     research_text = None
@@ -525,7 +525,7 @@ def information_technology_analyst():
     within the '2025_04_22' schema, and returns the text from the row with id = 1.
     """
     # Import Colors locally for error messages if needed
-    from src.phaseOne.phaseOneAnimation import Colors 
+    from src.portfolio_optimization.phase_one.phaseOneAnimation import Colors 
     conn = None
     cur = None
     research_text = None
@@ -594,7 +594,7 @@ def materials_analyst():
     within the '2025_04_22' schema, and returns the text from the row with id = 1.
     """
     # Import Colors locally for error messages if needed
-    from src.phaseOne.phaseOneAnimation import Colors 
+    from src.portfolio_optimization.phase_one.phaseOneAnimation import Colors 
     conn = None
     cur = None
     research_text = None
@@ -663,7 +663,7 @@ def real_estate_analyst():
     within the '2025_04_22' schema, and returns the text from the row with id = 1.
     """
     # Import Colors locally for error messages if needed
-    from src.phaseOne.phaseOneAnimation import Colors 
+    from src.portfolio_optimization.phase_one.phaseOneAnimation import Colors 
     conn = None
     cur = None
     research_text = None
@@ -732,7 +732,7 @@ def utilities_analyst():
     within the '2025_04_22' schema, and returns the text from the row with id = 1.
     """
     # Import Colors locally for error messages if needed
-    from src.phaseOne.phaseOneAnimation import Colors 
+    from src.portfolio_optimization.phase_one.phaseOneAnimation import Colors 
     conn = None
     cur = None
     research_text = None

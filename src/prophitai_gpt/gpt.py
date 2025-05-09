@@ -23,12 +23,12 @@ from sklearn.linear_model import LinearRegression
 from ib_insync import Stock, Option, Future, ContFuture, IB
 import os
 from dotenv import load_dotenv
-from src.prophitaiGPT.dataRetrievalTools.portfolioData import get_portfolio_data, format_portfolio_grid
+from src.prophitai_gpt.dataRetrievalTools.portfolioData import get_portfolio_data, format_portfolio_grid
 from src.utils.ticker_utils import name_to_ticker
-from src.prophitaiGPT.placeOrders.exitPosition import prompt_exit_position, exit_position
+from src.prophitai_gpt.placeOrders.exitPosition import prompt_exit_position, exit_position
 from src.utils.ib_utils import connect_to_ib, disconnect_from_ib, get_ib
-from src.prophitaiGPT.placeOrders.longOrder import prompt_long_buy_order, place_bracket_order_long
-from src.prophitaiGPT.functionSchemas.tools import tools    
+from src.prophitai_gpt.placeOrders.longOrder import prompt_long_buy_order, place_bracket_order_long
+from src.prophitai_gpt.functionSchemas.tools import tools    
 
 load_dotenv()
 

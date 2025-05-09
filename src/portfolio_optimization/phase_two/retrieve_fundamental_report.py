@@ -10,7 +10,7 @@ import pandas as pd
 import numpy as np
 from openai import OpenAI
 from src.utils.caching import cache_result
-from src.phaseTwo.data_retrieval import get_fundamentals_data
+from src.portfolio_optimization.phase_two.data_retrieval import get_fundamentals_data
 
 from dotenv import load_dotenv
 

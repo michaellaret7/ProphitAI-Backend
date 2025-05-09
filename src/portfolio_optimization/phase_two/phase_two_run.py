@@ -20,9 +20,19 @@ from decimal import Decimal
 from datetime import datetime, timedelta
 from openai import OpenAI
 from dotenv import load_dotenv
-from src.phaseTwo.data_retrieval import extract_asset_classes, get_stock_tickers, get_asset_description, get_quarterly_estimates
-from src.phaseTwo.phaseTwoCalculations import calculate_and_filter_metrics, calculate_composite_scores
-from src.phaseTwo.retrieve_fundamental_report import generate_fundamental_analysis_report
+from src.portfolio_optimization.phase_two.data_retrieval import (
+    extract_asset_classes,
+    get_stock_tickers,
+    get_asset_description,
+    get_quarterly_estimates,
+)
+from src.portfolio_optimization.phase_two.phase_two_calculations import (
+    calculate_and_filter_metrics,
+    calculate_composite_scores,
+)
+from src.portfolio_optimization.phase_two.retrieve_fundamental_report import (
+    generate_fundamental_analysis_report,
+)
 from src.utils.determine_etf import is_etf
 import time
 

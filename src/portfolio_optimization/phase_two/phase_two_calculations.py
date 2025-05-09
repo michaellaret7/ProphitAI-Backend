@@ -7,7 +7,7 @@ from datetime import datetime, timedelta
 from openai import OpenAI
 from src.utils.caching import cache_result
 from src.utils.file_utils import load_schema_data
-from src.phaseTwo.data_retrieval import get_daily_closing_prices
+from src.portfolio_optimization.phase_two.data_retrieval import get_daily_closing_prices
 
 daily_volume_threshold = 10000
 
