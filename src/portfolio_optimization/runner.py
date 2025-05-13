@@ -4,8 +4,7 @@ CLI / module entry-point that executes the full portfolio-optimisation
 workflow:
 
 phase-one  → draft portfolio allocations
-phase-two  → pick tickers + generate fundamental reports
-combine recommendations → print / return JSON
+phase-two  → pick tickers + generate recommendations
 
 Run directly:
     python -m src.portfolio_optimization.runner
@@ -22,8 +21,14 @@ import json
 import sys
 import traceback
 from typing import Any, Dict
+from time import perf_counter
 
-from . import optimize, pick_top_tickers, recommend
+from . import optimize, run_phase_two
+from src.data.final_portfolio_data import (
+    store_portfolio_sector_allocations,
+    store_final_portfolio,
+    store_user_information
+)
 
 
 def run_workflow() -> Dict[str, Any] | None:  # noqa: D401
@@ -36,26 +41,25 @@ def run_workflow() -> Dict[str, Any] | None:  # noqa: D401
         if not portfolio_json or "portfolio" not in portfolio_json:
             print("Phase-One did not return a valid portfolio JSON.")
             return None
+            
+        # Store portfolio sector allocations in the database
+        schema_name = store_portfolio_sector_allocations(portfolio_json)
+        print(f"\n💾  Portfolio sector allocations stored in schema '{schema_name}'")
 
         # ---------------- 2️⃣  Phase-two: Select tickers -----------------------
         print("\n📈  Running Phase-Two ticker selection …\n")
-        tickers_data = pick_top_tickers(portfolio_json)
-        if not tickers_data:
+        recs = run_phase_two(portfolio_json)
+        if not recs:
             print("Phase-Two failed to generate ticker data.")
             return None
-
-        # ---------------- 3️⃣  Recommendations --------------------------------
-        print("\n🧠  Generating final recommendations …\n")
-        recs_json_str = recommend(tickers_data)
-        if recs_json_str is None:
-            print("Recommendation step returned no data.")
-            return None
-
-        try:
-            recs = json.loads(recs_json_str)
-        except json.JSONDecodeError:
-            # If the string is not valid JSON, return raw string under key
-            recs = {"raw_response": recs_json_str}
+            
+        # Store final portfolio recommendations in the database
+        schema_name = store_final_portfolio(recs)
+        print(f"\n💾  Final portfolio recommendations stored in schema '{schema_name}'")
+        
+        # Store user information in the database
+        schema_name = store_user_information()
+        print(f"\n👤  User information stored in schema '{schema_name}'")
 
         return recs
 
@@ -68,10 +72,17 @@ def run_workflow() -> Dict[str, Any] | None:  # noqa: D401
 
 
 if __name__ == "__main__":
+    start_time = perf_counter()
     result = run_workflow()
+    elapsed = perf_counter() - start_time
+
+    # Report execution time
+
     if result is not None:
         # Print nicely-formatted JSON to stdout
-        print("\n🎯  Final Recommendations:\n")
+        print("🎯  Final Recommendations:\n")
         print(json.dumps(result, indent=2))
     else:
         sys.exit(1) 
+
+    print(f"\n⏱️  Workflow executed in {elapsed:.2f} seconds.\n")

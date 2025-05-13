@@ -28,7 +28,8 @@ from src.utils.ticker_utils import name_to_ticker
 from src.prophitai_gpt.placeOrders.exitPosition import prompt_exit_position, exit_position
 from src.utils.ib_utils import connect_to_ib, disconnect_from_ib, get_ib
 from src.prophitai_gpt.placeOrders.longOrder import prompt_long_buy_order, place_bracket_order_long
-from src.prophitai_gpt.functionSchemas.tools import tools    
+from src.prophitai_gpt.functionSchemas.tools import tools
+from src.prophitai_gpt.dataRetrievalTools.retrieve_pe import retrieve_financial_metric
 
 load_dotenv()
 
@@ -137,6 +138,39 @@ try:
                             messages.append({
                                 "role": "tool",
                                 "content": str(result) if result else "Order was cancelled.",
+                                "tool_call_id": tool_call.id
+                            })
+                        elif tool_call.function.name == "retrieve_financial_metric":
+                            args = json.loads(tool_call.function.arguments)
+                            ticker = args.get('ticker')
+                            metric_name = args.get('metric_name')
+
+                            # Convert company name to ticker if needed
+                            potential_ticker = name_to_ticker(ticker)
+                            if potential_ticker:
+                                ticker = potential_ticker
+                            # else: # No explicit print if ticker not found, rely on function to handle
+                                # # print(f"Could not find ticker for {ticker}, attempting with original input.")
+                                
+                            if not metric_name:
+                                result_str = "Error: Metric name was not provided."
+                            else:
+                                metric_data = retrieve_financial_metric(ticker, metric_name)
+                                
+                                if metric_data:
+                                    # Format the data for the model
+                                    result_str = f"Historical {metric_name} for {ticker}:\n"
+                                    for date_val, val in metric_data:
+                                        date_str = str(date_val) if date_val else "N/A"
+                                        result_str += f"  Date: {date_str}, {metric_name}: {val:.2f}\n"
+                                elif metric_data == []: # Empty list means no data found
+                                    result_str = f"No historical data found for metric '{metric_name}' for ticker '{ticker}'."
+                                else: # None means an error occurred
+                                    result_str = f"Could not retrieve data for metric '{metric_name}' for ticker '{ticker}'. This could be due to an invalid ticker, metric name, or a database issue. Check logs for details."
+
+                            messages.append({
+                                "role": "tool",
+                                "content": result_str,
                                 "tool_call_id": tool_call.id
                             })
                     # After tool calls are processed, loop back to let the model respond

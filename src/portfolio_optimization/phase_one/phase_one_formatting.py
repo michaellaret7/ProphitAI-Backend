@@ -1,17 +1,27 @@
 import json
-from src.data.PortfolioData import get_portfolio_holdings, analyze_portfolio_correlations, calculate_portfolio_metrics, calculate_monthly_portfolio_metrics, calculate_monthly_stock_metrics, analyze_portfolio_diversification, analyze_portfolio_correlations
-from src.utils.ib_utils import connect_to_ib, disconnect_from_ib, get_ib
-from openai import OpenAI
-import numpy as np
-import os
-from datetime import datetime
-import pandas as pd
+from src.data.PortfolioData import (
+    get_portfolio_holdings,
+    analyze_portfolio_correlations,
+    calculate_portfolio_metrics,
+    calculate_monthly_portfolio_metrics,
+    analyze_portfolio_diversification,
+)
+from src.utils.ib_utils import connect_to_ib
 
+# NOTE: The third-party imports below were unused in this module.  They have
+# been removed to reduce start-up time and avoid unnecessary dependencies.
 
 def format_to_json():
     active_ib = connect_to_ib()
     positions, formatted_output = get_portfolio_holdings(active_ib, print_output=False)
             
+    # Prepare default placeholders so that the later payload build does not
+    # raise ``UnboundLocalError`` when the portfolio is empty.
+    metrics = None
+    monthly_results = None
+    diversification = None
+    correlations = None
+    
     if positions:
         symbols = [p['contract'].symbol for p in positions]
         
@@ -26,12 +36,6 @@ def format_to_json():
         
         # Analyze portfolio correlations
         correlations = analyze_portfolio_correlations(active_ib, symbols, print_output=False)
-        
-        # Mark data as fetched to avoid duplicate calls
-        _data_fetched = True
-        
-        # Close the connection if we created it here
-        active_ib.disconnect()
     
     # ------------------------------------------------------------------
     # Sanitize *positions* so every entry is JSON-serialisable
@@ -62,10 +66,6 @@ def format_to_json():
         "portfolio_correlations": correlations.to_dict() if correlations is not None else {},
     }
 
-    def _default(o):
-        """Fallback JSON serializer that converts unknown objects to string."""
-        return str(o)
-
     # ------------------------------------------------------------------
     # Round all numeric values to 3 decimal places for compact JSON output
     # ------------------------------------------------------------------
@@ -82,7 +82,14 @@ def format_to_json():
     payload = _round(payload)
 
     json_block = json.dumps(payload)
-    print(json_block)
+    # print(json_block)
+
+    # We intentionally delay ``disconnect`` until after the conditional so
+    # that it is invoked exactly once, regardless of whether we entered
+    # the *positions* block or not.
+
+    # Always close the Interactive Brokers connection that we opened earlier
+    active_ib.disconnect()
 
     return json_block
 

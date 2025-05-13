@@ -27,12 +27,14 @@ from .phase_one.phase_one_run import optimize  # noqa: F401
 from .phase_two.phase_two_run import (
     pick_top_tickers_from_asset_classes as pick_top_tickers,
     make_phaseTwo_recommendations as recommend,
+    run_phase_two,
 )  # noqa: F401
 
 __all__ = [
     "optimize",
     "pick_top_tickers",
     "recommend",
+    "run_phase_two",
 ]
 
 # ---------------------------------------------------------------------------

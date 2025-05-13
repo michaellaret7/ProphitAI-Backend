@@ -14,7 +14,6 @@ import difflib
 
 from src.utils.file_utils import load_schema_data
 
-# what is this?
 __all__ = [
     "parse_json_with_openai",
     "validate_and_fix_allocations",
@@ -143,7 +142,7 @@ def validate_asset_classes(data: Dict[str, Any]):
             continue
         if cls in valid:
             continue
-        match = difflib.get_close_matches(cls, valid_list, n=1, cutoff=0.6)
+        match = difflib.get_close_matches(cls, valid_list, n=1, cutoff=0.5)
         asset["asset_class"] = match[0] if match else "unknown"
 
     return data 

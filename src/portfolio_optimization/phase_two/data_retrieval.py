@@ -1,19 +1,15 @@
 import os
 import pandas as pd
-import numpy as np
 import psycopg2
 from decimal import Decimal
 from datetime import datetime, timedelta
 from finvizfinance.quote import finvizfinance
-import xml.etree.ElementTree as ET
-from ib_insync import IB, Stock, util
 import json 
 
 # Import from utils package
 from src.utils.caching import cache_result
 from src.utils.file_utils import load_schema_data
 from src.utils.database import get_default_db_config
-from src.utils.ib_utils import get_ib, disconnect_from_ib
 
 # Move this to utils 
 @cache_result
@@ -441,143 +437,174 @@ def get_stock_tickers(asset_class):
     # Return dictionary with filter_value as key and ticker list as value
     return {asset_class: sorted_tickers}
 
-@cache_result
+# HAVE THIS RETRIEVE FROM DB TO GET RID OF ALL RELIANCE ON IBKR. IF NOT IN DB JUST RETURN NOT IN DB
 def get_quarterly_estimates(ticker: str) -> str:
-    """
-    Connects to IB, fetches quarterly fundamental estimates for a given ticker,
-    filters for Q2 2025 onwards, and returns them as a compact JSON string.
-    
-    Parameters:
-    - ticker: The stock ticker symbol (e.g., "AAPL")
-    
-    Returns:
-    - A JSON string containing the quarterly estimates or an error message.
-    """
-    # Obtain a connected IB instance using the shared utility
-    ib = get_ib()
+    """Return quarterly fundamental estimates for *ticker* from Postgres as JSON.
 
-    # Bail out early if connection could not be established
-    if ib is None or not ib.isConnected():
-        return json.dumps({"error": "Unable to connect to Interactive Brokers."})
+    The estimates are pre-fetched from Interactive Brokers (via
+    ``update_fundamental_predictions.py``) and stored in the database following
+    this naming convention:
+
+    * database:     ``<sector_db>_fundamentals`` (e.g. ``equity_sector_technology_fundamentals``)
+    * schema:       ``<industry>``            (e.g. ``semiconductors``)
+    * table:        ``<ticker>_fundamental_estimates`` (lower-case ticker)
+
+    The helper resolves the correct location via ``database_schemas.json`` (same
+    lookup logic as ``get_fundamentals_data``).  If the table exists its full
+    content is returned as the key ``"quarterly_estimates"`` – identical output
+    shape as the previous IBKR implementation so callers remain unchanged.
+
+    When the ticker cannot be located, the table is missing, or any database
+    error occurs the function returns ``{"error": "…"}`` instead.
+    """
+
+    ticker_upper = ticker.upper()
+    ticker_lower = ticker.lower()
+
+    # ------------------------------------------------------------------
+    # 1. Locate ticker within schema definition
+    # ------------------------------------------------------------------
+    schema_data = load_schema_data()
+    if not schema_data:
+        return json.dumps({"error": "Could not load database schema definitions."})
+
+    ticker_location = None
+
+    # First pass – case-sensitive lookup (faster)
+    for sector_name, sector_info in schema_data.items():
+        database = sector_info.get("database")
+        for schema_name, schema_info in sector_info.get("schemas", {}).items():
+            for table_info in schema_info.get("tables", {}).values():
+                if ticker_upper in table_info.get("tickers", []):
+                    if "etf" in sector_name.lower():
+                        db_name = database  # ETFs stored in dedicated db (skip estimates)
+                    else:
+                        db_name = f"{database}_fundamentals"
+                    ticker_location = {
+                        "database": db_name,
+                        "schema": schema_name,
+                        "sector": sector_name,
+                    }
+                    break
+            if ticker_location:
+                break
+        if ticker_location:
+            break
+
+    # Fallback – case-insensitive search
+    if not ticker_location:
+        for sector_name, sector_info in schema_data.items():
+            database = sector_info.get("database")
+            for schema_name, schema_info in sector_info.get("schemas", {}).items():
+                for table_info in schema_info.get("tables", {}).values():
+                    for db_ticker in table_info.get("tickers", []):
+                        if db_ticker.upper() == ticker_upper:
+                            if "etf" in sector_name.lower():
+                                db_name = database
+                            else:
+                                db_name = f"{database}_fundamentals"
+                            ticker_location = {
+                                "database": db_name,
+                                "schema": schema_name,
+                                "sector": sector_name,
+                            }
+                            break
+                    if ticker_location:
+                        break
+            if ticker_location:
+                break
+
+    # ETFs have no fundamental estimates – short-circuit
+    if ticker_location and ticker_location["database"] == "etf_data":
+        return json.dumps({"error": f"{ticker_upper} is an ETF – no fundamental estimates available."})
+
+    if not ticker_location:
+        return json.dumps({"error": f"Ticker {ticker_upper} not found in schema definitions."})
+
+    # ------------------------------------------------------------------
+    # 2. Build fully-qualified table reference
+    # ------------------------------------------------------------------
+    table_name = f"{ticker_lower}_fundamental_estimates"
+    db_name = ticker_location["database"]
+    schema_name = ticker_location["schema"]
+
+    # ------------------------------------------------------------------
+    # 3. Connect & fetch data
+    # ------------------------------------------------------------------
+    db_cfg = get_default_db_config()
+    if not db_cfg or not all(db_cfg.values()):
+        return json.dumps({"error": "Database connection information missing in environment."})
+
+    db_cfg["dbname"] = db_name
 
     try:
-        # Connection is already established via get_ib(); proceed with data request
+        conn = psycopg2.connect(**db_cfg)
+        cursor = conn.cursor()
 
-        contract = Stock(ticker, 'SMART', 'USD') # Use the ticker argument
+        # Check table existence first to avoid ugly errors
+        cursor.execute(
+            """
+            SELECT EXISTS (
+                SELECT FROM information_schema.tables
+                WHERE table_schema = %s AND table_name = %s
+            );""",
+            (schema_name, table_name),
+        )
+        if not cursor.fetchone()[0]:
+            return json.dumps({"error": f"Fundamental estimates table not found for {ticker_upper}."})
 
-        xml_data = ib.reqFundamentalData(contract, reportType='RESC')
+        # Pull everything (the data already starts at Q2-2025 per loader script)
+        cursor.execute(
+            f"SELECT * FROM {schema_name}.{table_name} ORDER BY year, quarter;"
+        )
+        rows = cursor.fetchall()
+        cols = [desc[0] for desc in cursor.description]
 
-        if not xml_data:
-            error_json = json.dumps({"error": f"Failed to retrieve fundamental data for {ticker}."})
-            return error_json
+        if not rows:
+            return json.dumps({"error": f"No fundamental estimates stored for {ticker_upper}."})
 
-        # Parse XML
-        root = ET.fromstring(xml_data)
+        # Build DataFrame and tidy types
+        df = pd.DataFrame(rows, columns=cols)
 
-        # Define metrics to extract
-        metrics = ["EPS", "SREV", "EBITD", "CFSHR", "SCEX", "EBIT", "BVPS", "GROSMGN", "NETDEBT", "ROEPCT"]
+        # Convert Decimals → float; integers keep as is
+        for col in df.columns:
+            if col in ("year", "quarter"):
+                df[col] = pd.to_numeric(df[col], errors="coerce").astype("Int64")
+            else:
+                df[col] = pd.to_numeric(df[col], errors="coerce")
 
-        # Store results - Only quarterly
-        results_data = {
-            "quarterly_estimates": [] # Initialize as list
-        }
+        # Optional safety-filter again (Q2-2025 onwards)
+        df = df[(df["year"] > 2025) | ((df["year"] == 2025) & (df["quarter"] >= 2))]
 
-        # Extract quarterly estimates for each metric
-        quarterly_data_frames = []
-        for metric in metrics:
-            # --- Inlined extract_estimates logic for period_type="Q" ---
-            metric_estimates = []
-            # Find all FYEstimate elements with specified type
-            for fy_estimate in root.findall(f'.//FYEstimate[@type="{metric}"]'):
-                # Find all FYPeriod elements with periodType="Q"
-                for period in fy_estimate.findall('./FYPeriod[@periodType="Q"]'):
-                    year = period.get('fYear')
-                    quarter = period.get('periodNum') # Should always exist for quarterly
+        # Rename columns back to original format expected by downstream code
+        rename_map = {"year": "Year", "quarter": "Quarter"}
+        for col in df.columns:
+            if col not in ("year", "quarter"):
+                rename_map[col] = col.upper()
+        df.rename(columns=rename_map, inplace=True)
 
-                    if not year or not quarter: # Basic validation
-                        continue
+        # Ensure Year and Quarter are plain Python ints for JSON serialisation
+        if "Year" in df.columns:
+            df["Year"] = df["Year"].astype(int)
+        if "Quarter" in df.columns:
+            df["Quarter"] = df["Quarter"].astype(int)
 
-                    # Handle period identifier (year+quarter)
-                    period_id = f"{year} Q{quarter}"
+        results_data = {"quarterly_estimates": []}
 
-                    # Find the Mean ConsEstimate
-                    mean_estimate = period.find('./ConsEstimate[@type="Mean"]')
-                    if mean_estimate is not None:
-                        # Find the current ConsValue
-                        value_element = mean_estimate.find('./ConsValue[@dateType="CURR"]')
-                        if value_element is not None and value_element.text:
-                            try:
-                                metric_estimates.append((period_id, float(value_element.text)))
-                            except ValueError:
-                                continue # Skip if value is not a valid float
-            # --- End Inlined Logic ---
+        if not df.empty:
+            results_data["quarterly_estimates"] = df.to_dict(orient="records")
 
-            if metric_estimates:
-                # Sort by year and quarter
-                metric_estimates.sort(key=lambda x: (int(x[0].split()[0]), int(x[0].split()[1][1:])))
-                # Create a DataFrame for the current metric
-                df = pd.DataFrame(metric_estimates, columns=['Period', metric])
-                df.set_index('Period', inplace=True)
-                quarterly_data_frames.append(df)
-
-        # Combine all quarterly DataFrames into one
-        if quarterly_data_frames:
-            quarterly_df = pd.concat(quarterly_data_frames, axis=1, sort=True)
-
-            # Handle potential NaNs introduced by concat if periods don't align perfectly
-            quarterly_df.fillna(value=pd.NA, inplace=True)
-
-            # Filter out rows where the index is not in 'YYYY QQ' format before multi-index creation
-            valid_indices = [idx for idx in quarterly_df.index if isinstance(idx, str) and len(idx.split()) == 2 and idx.split()[1].startswith('Q')]
-            quarterly_df = quarterly_df.loc[valid_indices]
-
-            if not quarterly_df.empty: # Proceed only if there are valid rows left
-                # Sort the final DataFrame by period (Year, Quarter)
-                quarterly_df.index = pd.MultiIndex.from_tuples(
-                    [(int(idx.split()[0]), int(idx.split()[1][1:])) for idx in quarterly_df.index],
-                    names=['Year', 'Quarter']
-                )
-                quarterly_df.sort_index(inplace=True)
-
-                # --- Filtering Step ---
-                # Filter for data from Q2 2025 onwards
-                min_year = 2025
-                min_quarter = 2
-                quarterly_df = quarterly_df[
-                    (quarterly_df.index.get_level_values('Year') > min_year) |
-                    ((quarterly_df.index.get_level_values('Year') == min_year) &
-                     (quarterly_df.index.get_level_values('Quarter') >= min_quarter))
-                ]
-                # --- End Filtering Step ---
-
-                # Convert DataFrame to a list of dictionaries for JSON serialization only if not empty
-                if not quarterly_df.empty:
-                    quarterly_df_reset = quarterly_df.reset_index()
-                    # Replace NaN/NA with None for JSON compatibility
-                    quarterly_df_reset = quarterly_df_reset.where(pd.notna(quarterly_df_reset), None)
-                    results_data["quarterly_estimates"] = quarterly_df_reset.to_dict(orient='records')
-                # If filtering results in an empty DataFrame, results_data["quarterly_estimates"] remains []
-
-        # Output the results as a compact JSON string
         return json.dumps(results_data)
 
-    except ET.ParseError as e:
-        print(f"Error parsing XML for {ticker}: {e}")
-        return json.dumps({"error": f"Invalid XML received for {ticker}."})
-    except ConnectionRefusedError as e:
-         print(f"Connection refused when connecting to IB for {ticker}. Is TWS/Gateway running and API enabled? Error: {e}")
-         return json.dumps({"error": "Connection to IB Gateway/TWS refused."})
     except Exception as e:
-        # Basic error handling, return error as JSON
-        # Consider more specific error logging/handling
-        print(f"Error in get_quarterly_estimates for {ticker}: {type(e).__name__} - {e}") # Log type of error
-        # Add traceback for detailed debugging if needed
-        # import traceback
-        # print(traceback.format_exc())
-        return json.dumps({"error": f"An unexpected error occurred: {str(e)}"})
+        return json.dumps({"error": f"Database error while retrieving estimates for {ticker_upper}: {e}"})
+
     finally:
-        # Ensure disconnection even if errors occur using the shared utility
-        disconnect_from_ib()
+        try:
+            cursor.close()
+            conn.close()
+        except Exception:
+            pass
 
 def get_asset_description(ticker):
 
@@ -588,7 +615,7 @@ def get_asset_description(ticker):
     etf_description = etf.ticker_description()
 
     # Print the description
-    print(etf_description)
+    # print(etf_description) # Removed print, function should just return
 
     return etf_description
 
@@ -649,3 +676,7 @@ def extract_asset_classes(json_data):
         print("Warning: No valid asset classes found in portfolio data")
         
     return asset_classes
+
+
+if __name__ == "__main__":
+    print(get_quarterly_estimates("AAPL"))

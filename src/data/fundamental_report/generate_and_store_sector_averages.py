@@ -297,388 +297,221 @@ def calculate_and_store_sector_averages(db_name, target_schema_name, data_points
 
 # --- Main Execution Block ---
 if __name__ == "__main__":
-    # Define the data points specific to this run
-    communication_services_data_points = {
-        "balance_sheets": ["total_debt"],
-        "cash_flow_statements": ["net_cash_flow_from_operations", "capital_expenditure", "free_cash_flow"],
-        "income_statements": ["revenue", "operating_income", "ebit"],
-        "financial_metrics": [
-            "price_to_earnings_ratio", "price_to_sales_ratio", "enterprise_value_to_ebitda_ratio",
-            "free_cash_flow_yield", "gross_margin", "operating_margin", "net_margin",
-            "return_on_equity", "return_on_assets", "asset_turnover", "working_capital_turnover",
-            "current_ratio", "debt_to_equity", "interest_coverage", "revenue_growth",
-            "earnings_per_share_growth", "free_cash_flow_growth", "earnings_per_share",
-            "free_cash_flow_per_share"
-        ]
+    TARGET_SCHEMA = "sector_averages"
+    BASE_DB_NAME_PREFIX = "equity_sector_"
+    BASE_DB_NAME_SUFFIX = "_fundamentals"
+
+    SECTOR_CONFIGS = {
+        "communication_services": {
+            "db_suffix": "communication_services",
+            "data_points": {
+                "balance_sheets": ["total_debt"],
+                "cash_flow_statements": ["net_cash_flow_from_operations", "capital_expenditure", "free_cash_flow"],
+                "income_statements": ["revenue", "operating_income", "ebit"],
+                "financial_metrics": [
+                    "price_to_earnings_ratio", "price_to_sales_ratio", "enterprise_value_to_ebitda_ratio",
+                    "free_cash_flow_yield", "gross_margin", "operating_margin", "net_margin",
+                    "return_on_equity", "return_on_assets", "asset_turnover", "working_capital_turnover",
+                    "current_ratio", "debt_to_equity", "interest_coverage", "revenue_growth",
+                    "earnings_per_share_growth", "free_cash_flow_growth", "earnings_per_share",
+                    "free_cash_flow_per_share"
+                ]
+            }
+        },
+        "consumer_discretionary": {
+            "db_suffix": "consumer_discretionary",
+            "data_points": {
+                "balance_sheets": ["total_debt"],
+                "cash_flow_statements": ["net_cash_flow_from_operations", "capital_expenditure", "free_cash_flow"],
+                "income_statements": ["revenue", "operating_income"],
+                "financial_metrics": [
+                    "price_to_earnings_ratio", "price_to_sales_ratio", "enterprise_value_to_ebitda_ratio",
+                    "free_cash_flow_yield", "gross_margin", "operating_margin", "net_margin",
+                    "return_on_equity", "return_on_assets", "asset_turnover", "working_capital_turnover",
+                    "current_ratio", "debt_to_equity", "interest_coverage", "revenue_growth",
+                    "earnings_per_share_growth", "free_cash_flow_growth", "earnings_per_share",
+                    "free_cash_flow_per_share", "return_on_invested_capital", "inventory_turnover", "days_sales_outstanding",
+                    "operating_cycle", "quick_ratio", "payout_ratio"
+                ]
+            }
+        },
+        "consumer_staples": {
+            "db_suffix": "consumer_staples",
+            "data_points": {
+                "balance_sheets": ["total_debt", "cash_and_equivalents"],
+                "cash_flow_statements": ["net_cash_flow_from_operations", "capital_expenditure", "free_cash_flow"],
+                "income_statements": ["revenue", "operating_income"],
+                "financial_metrics": [
+                    "price_to_earnings_ratio", "price_to_sales_ratio", "enterprise_value_to_ebitda_ratio",
+                    "free_cash_flow_yield", "gross_margin", "operating_margin", "net_margin",
+                    "return_on_equity", "return_on_assets", "return_on_invested_capital",
+                    "inventory_turnover", "days_sales_outstanding", "operating_cycle",
+                    "working_capital_turnover", "current_ratio", "quick_ratio", "cash_ratio",
+                    "operating_cash_flow_ratio", "debt_to_equity", "interest_coverage",
+                    "revenue_growth", "free_cash_flow_growth", "earnings_per_share_growth",
+                    "payout_ratio"
+                ]
+            }
+        },
+        "energy": {
+            "db_suffix": "energy",
+            "data_points": {
+                "balance_sheets": [
+                    "total_debt", "cash_and_equivalents", "property_plant_and_equipment", "shareholders_equity"
+                ],
+                "cash_flow_statements": [
+                    "net_cash_flow_from_operations", "capital_expenditure", "free_cash_flow",
+                    "net_cash_flow_from_investing", "dividends_and_other_cash_distributions"
+                ],
+                "income_statements": ["revenue", "operating_income", "interest_expense"],
+                "financial_metrics": [
+                    "price_to_earnings_ratio", "price_to_book_ratio", "price_to_sales_ratio",
+                    "enterprise_value_to_ebitda_ratio", "free_cash_flow_yield",
+                    "gross_margin", "operating_margin", "net_margin",
+                    "return_on_equity", "return_on_assets", "return_on_invested_capital",
+                    "return_on_capital_employed", "asset_turnover",
+                    "net_debt_to_ebitda", "debt_to_ebitda", "debt_to_equity",
+                    "interest_coverage", "current_ratio", "quick_ratio", "cash_ratio",
+                    "dividend_yield", "payout_ratio",
+                    "revenue_growth", "earnings_growth", "free_cash_flow_growth", "ebitda_growth"
+                ]
+            }
+        },
+        "financials": {
+            "db_suffix": "financials",
+            "data_points": {
+                "balance_sheets": [
+                    "total_assets", "cash_and_equivalents", "trade_and_non_trade_receivables",
+                    "deposit_liabilities", "shareholders_equity", "total_debt"
+                ],
+                "cash_flow_statements": [
+                    "net_cash_flow_from_operations", "net_cash_flow_from_financing",
+                    "dividends_and_other_cash_distributions", "free_cash_flow"
+                ],
+                "income_statements": ["revenue", "operating_income", "interest_expense", "net_income"],
+                "financial_metrics": [
+                    "price_to_book_ratio", "price_to_earnings_ratio",
+                    "return_on_equity", "return_on_assets",
+                    "net_margin", "operating_margin", "efficiency_ratio",
+                    "debt_to_equity", "interest_coverage",
+                    "current_ratio", "cash_ratio",
+                    "revenue_growth", "earnings_growth",
+                    "dividend_yield", "payout_ratio",
+                    "free_cash_flow_yield"
+                ]
+            }
+        },
+        "health_care": {
+            "db_suffix": "health_care",
+            "data_points": {
+                "balance_sheets": ["total_debt", "cash_and_equivalents", "goodwill_and_intangible_assets"],
+                "cash_flow_statements": ["net_cash_flow_from_operations", "free_cash_flow"],
+                "income_statements": ["revenue", "research_and_development", "operating_income"],
+                "financial_metrics": [
+                    "price_to_earnings_ratio", "enterprise_value_to_ebitda_ratio", "free_cash_flow_yield",
+                    "gross_margin", "operating_margin", "return_on_invested_capital",
+                    "return_on_capital_employed", "net_debt_to_ebitda", "interest_coverage", "revenue_growth"
+                ]
+            }
+        },
+        "industrials": {
+            "db_suffix": "industrials",
+            "data_points": {
+                "balance_sheets": [
+                    "total_debt", "cash_and_equivalents", "property_plant_and_equipment", "inventory", "shareholders_equity"
+                ],
+                "cash_flow_statements": ["net_cash_flow_from_operations", "capital_expenditure", "free_cash_flow"],
+                "income_statements": ["revenue", "operating_income"],
+                "financial_metrics": [
+                    "price_to_earnings_ratio", "enterprise_value_to_ebitda_ratio", "free_cash_flow_yield",
+                    "operating_margin", "ebitda_margin", "return_on_capital_employed", "return_on_assets",
+                    "asset_turnover", "inventory_turnover", "net_debt_to_ebitda", "debt_to_equity",
+                    "interest_coverage", "current_ratio", "quick_ratio", "revenue_growth"
+                ]
+            }
+        },
+        "information_technology": {
+            "db_suffix": "information_technology",
+            "data_points": {
+                "balance_sheets": ["cash_and_equivalents", "total_debt", "goodwill_and_intangible_assets"],
+                "cash_flow_statements": ["net_cash_flow_from_operations", "free_cash_flow"],
+                "income_statements": ["revenue", "research_and_development", "operating_income"],
+                "financial_metrics": [
+                    "price_to_earnings_ratio", "price_to_sales_ratio", "peg_ratio",
+                    "free_cash_flow_yield", "gross_margin", "operating_margin", "net_margin",
+                    "return_on_invested_capital", "revenue_growth", "earnings_per_share_growth", "cash_ratio"
+                ]
+            }
+        },
+        "materials": {
+            "db_suffix": "materials",
+            "data_points": {
+                "balance_sheets": [
+                    "total_debt", "cash_and_equivalents", "inventory", "property_plant_and_equipment", "shareholders_equity"
+                ],
+                "cash_flow_statements": ["net_cash_flow_from_operations", "capital_expenditure", "free_cash_flow"],
+                "income_statements": ["revenue", "operating_income"],
+                "financial_metrics": [
+                    "price_to_book_ratio", "enterprise_value_to_ebitda_ratio", "free_cash_flow_yield",
+                    "operating_margin", "ebitda_margin", "return_on_capital_employed", "return_on_assets",
+                    "asset_turnover", "inventory_turnover", "net_debt_to_ebitda", "debt_to_equity",
+                    "interest_coverage", "current_ratio", "quick_ratio", "revenue_growth"
+                ]
+            }
+        },
+        "real_estate": {
+            "db_suffix": "real_estate",
+            "data_points": {
+                "balance_sheets": [
+                    "total_debt", "cash_and_equivalents", "property_plant_and_equipment", "shareholders_equity"
+                ],
+                "cash_flow_statements": [
+                    "net_cash_flow_from_operations", "free_cash_flow", "dividends_and_other_cash_distributions"
+                ],
+                "income_statements": ["revenue", "operating_income", "interest_expense"],
+                "financial_metrics": [
+                    "price_to_book_ratio", "enterprise_value_to_ebitda_ratio", "price_to_earnings_ratio",
+                    "free_cash_flow_yield", "operating_margin", "net_margin", "return_on_equity",
+                    "debt_to_equity", "net_debt_to_ebitda", "interest_coverage", "current_ratio",
+                    "cash_ratio", "dividend_yield", "payout_ratio"
+                ]
+            }
+        },
+        "utilities": {
+            "db_suffix": "utilities",
+            "data_points": {
+                "balance_sheets": [
+                    "total_debt", "cash_and_equivalents", "property_plant_and_equipment", "shareholders_equity"
+                ],
+                "cash_flow_statements": [
+                    "net_cash_flow_from_operations", "free_cash_flow", "dividends_and_other_cash_distributions"
+                ],
+                "income_statements": ["revenue", "operating_income", "interest_expense"],
+                "financial_metrics": [
+                    "price_to_earnings_ratio", "price_to_book_ratio", "enterprise_value_to_ebitda_ratio",
+                    "free_cash_flow_yield", "operating_margin", "net_margin", "return_on_equity",
+                    "debt_to_equity", "net_debt_to_ebitda", "interest_coverage", "current_ratio",
+                    "dividend_yield", "payout_ratio", "revenue_growth"
+                ]
+            }
+        }
     }
+
+    for sector_name, config in SECTOR_CONFIGS.items():
+        db_name = f"{BASE_DB_NAME_PREFIX}{config['db_suffix']}{BASE_DB_NAME_SUFFIX}"
+        print(f"\n--- Processing Sector: {sector_name.replace('_', ' ').title()} ---")
+        try:
+            calculate_and_store_sector_averages(
+                db_name=db_name,
+                target_schema_name=TARGET_SCHEMA,
+                data_points_config=config["data_points"]
+            )
+        except Exception as e:
+            print(f"ERROR: Failed processing sector '{sector_name}'. Error: {e}")
+            # Optionally, continue to the next sector or re-raise the exception
+            # continue
     
-    # Call the function for the Communication Services sector
-    calculate_and_store_sector_averages(
-        db_name="equity_sector_communication_services_fundamentals", 
-        target_schema_name="sector_averages", 
-        data_points_config=communication_services_data_points
-    )
-
-    consumer_discretionary_data_points = {
-        "balance_sheets": ["total_debt"],
-        "cash_flow_statements": ["net_cash_flow_from_operations", "capital_expenditure", "free_cash_flow"],
-        "income_statements": ["revenue", "operating_income"],
-        "financial_metrics": [
-            "price_to_earnings_ratio", "price_to_sales_ratio", "enterprise_value_to_ebitda_ratio",
-            "free_cash_flow_yield", "gross_margin", "operating_margin", "net_margin",
-            "return_on_equity", "return_on_assets", "asset_turnover", "working_capital_turnover",
-            "current_ratio", "debt_to_equity", "interest_coverage", "revenue_growth",
-            "earnings_per_share_growth", "free_cash_flow_growth", "earnings_per_share",
-            "free_cash_flow_per_share", "return_on_invested_capital", "inventory_turnover", "days_sales_outstanding",
-            "operating_cycle", "quick_ratio", "payout_ratio"
-        ]
-    }
-    
-    calculate_and_store_sector_averages(
-        db_name="equity_sector_consumer_discretionary_fundamentals",
-        target_schema_name="sector_averages",
-        data_points_config=consumer_discretionary_data_points
-    )
-
-    consumer_staples_data_points = {
-        "balance_sheets": ["total_debt", "cash_and_equivalents"],
-        "cash_flow_statements": ["net_cash_flow_from_operations", "capital_expenditure", "free_cash_flow"],
-        "income_statements": ["revenue", "operating_income"],
-        "financial_metrics": [
-            "price_to_earnings_ratio", "price_to_sales_ratio", "enterprise_value_to_ebitda_ratio",
-            "free_cash_flow_yield", "gross_margin", "operating_margin", "net_margin",
-            "return_on_equity", "return_on_assets", "return_on_invested_capital",
-            "inventory_turnover", "days_sales_outstanding", "operating_cycle",
-            "working_capital_turnover", "current_ratio", "quick_ratio", "cash_ratio",
-            "operating_cash_flow_ratio", "debt_to_equity", "interest_coverage",
-            "revenue_growth", "free_cash_flow_growth", "earnings_per_share_growth",
-            "payout_ratio"
-        ]
-    }
-
-    calculate_and_store_sector_averages(
-        db_name="equity_sector_consumer_staples_fundamentals",
-        target_schema_name="sector_averages",
-        data_points_config=consumer_staples_data_points
-    )
-
-    energy_sector_data_points = {
-        "balance_sheets": [
-            "total_debt",
-            "cash_and_equivalents",
-            "property_plant_and_equipment",
-            "shareholders_equity"
-        ],
-        "cash_flow_statements": [
-            "net_cash_flow_from_operations",
-            "capital_expenditure",
-            "free_cash_flow",
-            "net_cash_flow_from_investing",
-            "dividends_and_other_cash_distributions"
-        ],
-        "income_statements": [
-            "revenue",
-            "operating_income",
-            "interest_expense"
-        ],
-        "financial_metrics": [
-            "price_to_earnings_ratio", "price_to_book_ratio", "price_to_sales_ratio",
-            "enterprise_value_to_ebitda_ratio", "free_cash_flow_yield",
-            "gross_margin", "operating_margin", "net_margin",
-            "return_on_equity", "return_on_assets", "return_on_invested_capital",
-            "return_on_capital_employed", "asset_turnover",
-            "net_debt_to_ebitda", "debt_to_ebitda", "debt_to_equity",
-            "interest_coverage", "current_ratio", "quick_ratio", "cash_ratio",
-            "dividend_yield", "payout_ratio",
-            "revenue_growth", "earnings_growth", "free_cash_flow_growth", "ebitda_growth"
-        ]
-    }
-
-
-    calculate_and_store_sector_averages(
-        db_name="equity_sector_energy_fundamentals",
-        target_schema_name="sector_averages",
-        data_points_config=energy_sector_data_points
-    )
-
-
-    financials_sector_data_points = {
-        "balance_sheets": [
-            "total_assets",                 # size / scale
-            "cash_and_equivalents",         # liquidity buffer
-            "trade_and_non_trade_receivables",  # loan book / premiums receivable
-            "deposit_liabilities",          # core funding base
-            "shareholders_equity",          # book value for P/B and ROE
-            "total_debt"                    # wholesale funding & leverage check
-        ],
-        "cash_flow_statements": [
-            "net_cash_flow_from_operations",        # core cash generation
-            "net_cash_flow_from_financing",         # debt & equity movements
-            "dividends_and_other_cash_distributions",
-            "free_cash_flow"                        # coverage of dividends / buybacks
-        ],
-        "income_statements": [
-            "revenue",               # top‑line (net interest income + fees)
-            "operating_income",      # pre‑tax profitability
-            "interest_expense",      # funding‑cost visibility
-            "net_income"             # bottom‑line for ROE/ROA
-        ],
-        "financial_metrics": [
-            # Valuation & profitability
-            "price_to_book_ratio", "price_to_earnings_ratio",
-            "return_on_equity", "return_on_assets",
-            "net_margin", "operating_margin",
-            # Cost efficiency
-            "efficiency_ratio",
-            # Leverage & coverage
-            "debt_to_equity", "interest_coverage",
-            # Liquidity
-            "current_ratio", "cash_ratio",
-            # Growth & compounding
-            "revenue_growth", "earnings_growth",
-            # Shareholder returns
-            "dividend_yield", "payout_ratio",
-            # Cash‑flow perspective
-            "free_cash_flow_yield"
-        ]
-    }
-
-    calculate_and_store_sector_averages(
-        db_name="equity_sector_financials_fundamentals",
-        target_schema_name="sector_averages",
-        data_points_config=financials_sector_data_points
-    )
-
-    healthcare_sector_data_points = {
-        "balance_sheet": [
-            "total_debt",
-            "cash_and_equivalents",
-            "goodwill_and_intangible_assets"
-        ],
-        "cash_flow_statements": [
-            "net_cash_flow_from_operations",
-            "free_cash_flow"
-        ],
-        "income_statements": [
-            "revenue",
-            "research_and_development",
-            "operating_income"
-        ],
-        "financial_metrics": [
-            "price_to_earnings_ratio",
-            "enterprise_value_to_ebitda_ratio",
-            "free_cash_flow_yield",
-            "gross_margin",
-            "operating_margin",
-            "return_on_invested_capital",
-            "return_on_capital_employed",
-            "net_debt_to_ebitda",
-            "interest_coverage",
-            "revenue_growth"
-        ]
-    }
-
-    calculate_and_store_sector_averages(
-        db_name="equity_sector_healthcare_fundamentals",
-        target_schema_name="sector_averages",
-        data_points_config=healthcare_sector_data_points
-    )
-
-    industrials_sector_data_points = {
-        "balance_sheet": [
-            "total_debt",
-            "cash_and_equivalents",
-            "property_plant_and_equipment",
-            "inventory",
-            "shareholders_equity"
-        ],
-        "cash_flow_statements": [
-            "net_cash_flow_from_operations",
-            "capital_expenditure",
-            "free_cash_flow"
-        ],
-        "income_statements": [
-            "revenue",
-            "operating_income"
-        ],
-        "financial_metrics": [
-            "price_to_earnings_ratio",
-            "enterprise_value_to_ebitda_ratio",
-            "free_cash_flow_yield",
-            "operating_margin",
-            "ebitda_margin",
-            "return_on_capital_employed",
-            "return_on_assets",
-            "asset_turnover",
-            "inventory_turnover",
-            "net_debt_to_ebitda",
-            "debt_to_equity",
-            "interest_coverage",
-            "current_ratio",
-            "quick_ratio",
-            "revenue_growth"
-        ]
-    }
-
-    calculate_and_store_sector_averages(
-        db_name="equity_sector_industrials_fundamentals",
-        target_schema_name="sector_averages",
-        data_points_config=industrials_sector_data_points
-    )
-
-    information_technology_sector_data_points = {
-        "balance_sheet": [
-            "cash_and_equivalents",
-            "total_debt",
-            "goodwill_and_intangible_assets"
-        ],
-        "cash_flow_statements": [
-            "net_cash_flow_from_operations",
-            "free_cash_flow"
-        ],
-        "income_statements": [
-            "revenue",
-            "research_and_development",
-            "operating_income"
-        ],
-        "financial_metrics": [
-            "price_to_earnings_ratio",
-            "price_to_sales_ratio",
-            "peg_ratio",
-            "free_cash_flow_yield",
-            "gross_margin",
-            "operating_margin",
-            "net_margin",
-            "return_on_invested_capital",
-            "revenue_growth",
-            "earnings_per_share_growth",
-            "cash_ratio"
-        ]
-    }
-
-    calculate_and_store_sector_averages(
-        db_name="equity_sector_information_technology_fundamentals",
-        target_schema_name="sector_averages",
-        data_points_config=information_technology_sector_data_points
-    )
-
-    materials_sector_data_points = {
-        "balance_sheet": [
-            "total_debt",
-            "cash_and_equivalents",
-            "inventory",
-            "property_plant_and_equipment",
-            "shareholders_equity"
-        ],
-        "cash_flow_statements": [
-            "net_cash_flow_from_operations",
-            "capital_expenditure",
-            "free_cash_flow"
-        ],
-        "income_statements": [
-            "revenue",
-            "operating_income"
-        ],
-        "financial_metrics": [
-            "price_to_book_ratio",
-            "enterprise_value_to_ebitda_ratio",
-            "free_cash_flow_yield",
-            "operating_margin",
-            "ebitda_margin",
-            "return_on_capital_employed",
-            "return_on_assets",
-            "asset_turnover",
-            "inventory_turnover",
-            "net_debt_to_ebitda",
-            "debt_to_equity",
-            "interest_coverage",
-            "current_ratio",
-            "quick_ratio",
-            "revenue_growth"
-        ]
-    }
-
-    calculate_and_store_sector_averages(
-        db_name="equity_sector_materials_fundamentals",
-        target_schema_name="sector_averages",
-        data_points_config=materials_sector_data_points
-    )
-
-    real_estate_sector_data_points = {
-        "balance_sheet": [
-            "total_debt",                   # leverage backbone
-            "cash_and_equivalents",         # liquidity buffer
-            "property_plant_and_equipment", # proxy for real‑estate assets
-            "shareholders_equity"           # book value for P/B & ROE
-        ],
-        "cash_flow_statements": [
-            "net_cash_flow_from_operations",        # core cash generation
-            "free_cash_flow",                       # dividend cover
-            "dividends_and_other_cash_distributions"
-        ],
-        "income_statements": [
-            "revenue",              # rent & fee base
-            "operating_income",     # NOI-like profitability
-            "interest_expense"      # debt‑service load
-        ],
-        "financial_metrics": [
-            "price_to_book_ratio", "enterprise_value_to_ebitda_ratio",
-            "price_to_earnings_ratio",           # still cited alongside P/FFO
-            "free_cash_flow_yield",
-            "operating_margin", "net_margin",
-            "return_on_equity",
-            "debt_to_equity", "net_debt_to_ebitda", "interest_coverage",
-            "current_ratio", "cash_ratio",
-            "dividend_yield", "payout_ratio"
-        ]
-    }
-
-    calculate_and_store_sector_averages(
-        db_name="equity_sector_real_estate_fundamentals",
-        target_schema_name="sector_averages",
-        data_points_config=real_estate_sector_data_points
-    )
-
-    utilities_sector_data_points = {
-        "balance_sheet": [
-            "total_debt",
-            "cash_and_equivalents",
-            "property_plant_and_equipment",
-            "shareholders_equity"
-        ],
-        "cash_flow_statements": [
-            "net_cash_flow_from_operations",
-            "free_cash_flow",
-            "dividends_and_other_cash_distributions"
-        ],
-        "income_statements": [
-            "revenue",
-            "operating_income",
-            "interest_expense"
-        ],
-        "financial_metrics": [
-            "price_to_earnings_ratio",
-            "price_to_book_ratio",
-            "enterprise_value_to_ebitda_ratio",
-            "free_cash_flow_yield",
-            "operating_margin",
-            "net_margin",
-            "return_on_equity",
-            "debt_to_equity",
-            "net_debt_to_ebitda",
-            "interest_coverage",
-            "current_ratio",
-            "dividend_yield",
-            "payout_ratio",
-            "revenue_growth"
-        ]
-    }
-
-    calculate_and_store_sector_averages(
-        db_name="equity_sector_utilities_fundamentals",
-        target_schema_name="sector_averages",
-        data_points_config=utilities_sector_data_points
-    )
+    print("\n--- All Sector Processing Complete ---")
 
 
 

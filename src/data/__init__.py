@@ -23,4 +23,8 @@ from src.data.FundamentalData import (
 
 from src.data.database.database_schema_update import (
     recreate_database_schemas
+)
+
+from src.data.user_information import (
+    get_user_information
 ) 

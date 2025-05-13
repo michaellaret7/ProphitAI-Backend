@@ -13,11 +13,6 @@ Workflow for this file:
 
 import os
 import json
-import pandas as pd
-import numpy as np
-import psycopg2
-from decimal import Decimal
-from datetime import datetime, timedelta
 from openai import OpenAI
 from dotenv import load_dotenv
 from src.portfolio_optimization.phase_two.data_retrieval import (
@@ -31,7 +26,7 @@ from src.portfolio_optimization.phase_two.phase_two_calculations import (
     calculate_composite_scores,
 )
 from src.portfolio_optimization.phase_two.retrieve_fundamental_report import (
-    generate_fundamental_analysis_report,
+    get_fundamental_report_from_db
 )
 from src.utils.determine_etf import is_etf
 import time
@@ -39,26 +34,12 @@ import time
 # Load environment variables from .env file
 load_dotenv()
 
-# Sample portfolio data for testing when this module is run directly
-portfolio_data = {
-    "portfolio": [
-        {
-            "asset_class": "automobiles",
-            "allocation": 20,
-            "reason": "Growth potential driven by AI demand and renewable energy applications. Allocation increased to balance total portfolio."
-        },
-        {
-            "asset_class": "investment_grade_corporate_bond_etfs",
-            "allocation": 20,
-            "reason": "Attractive yields and stable income from sectors like Financials and Energy."
-        }
-    ]
-}
-
 # Load environment variables
 DEEPSEEK_API_KEY = os.environ.get("DEEPSEEK_API_KEY")
 deepseek_model = os.environ.get("DEEPSEEK_MODEL")
 client = OpenAI(api_key=DEEPSEEK_API_KEY, base_url="https://api.deepseek.com")
+
+NUM_TOP_TICKERS = 10
 
 def pick_top_tickers_from_asset_classes(portfolio_json):
     start_time = time.perf_counter()
@@ -85,19 +66,19 @@ def pick_top_tickers_from_asset_classes(portfolio_json):
             df = calculate_and_filter_metrics(tickers)
 
             new_df = calculate_composite_scores(df)
-            new_df = new_df[:7]
+            new_df = new_df[:NUM_TOP_TICKERS]
 
             # Filter the original df to include only the top 5 tickers
             top_tickers = new_df['Ticker'].tolist()
-            df_top_10 = df[df['Ticker'].isin(top_tickers)]
+            df_top_tickers = df[df['Ticker'].isin(top_tickers)]
 
-            print(f"Top 10 tickers for {asset_class}:")
-            print(df_top_10)
+            print(f"Top {NUM_TOP_TICKERS} tickers for {asset_class}:")
+            print(df_top_tickers)
 
             # Create the final dictionary for the current asset class
             final_stock_data = {}
 
-            for index, row in df_top_10.iterrows():
+            for index, row in df_top_tickers.iterrows():
                 ticker = row['Ticker']
                 stock_metrics = row.drop('Ticker').to_dict()
 
@@ -113,7 +94,7 @@ def pick_top_tickers_from_asset_classes(portfolio_json):
                     fundamental_predictions = None 
                 else:
                     print(f"Ticker {ticker} in non-ETF asset class '{asset_class}', generating fundamental report.")
-                    fundamental_report = generate_fundamental_analysis_report(ticker)
+                    fundamental_report = get_fundamental_report_from_db(ticker)
 
                     # Get fundamental predictions only for non-ETFs
                     print(f"Fetching fundamental predictions for {ticker}...")
@@ -124,7 +105,7 @@ def pick_top_tickers_from_asset_classes(portfolio_json):
                     except json.JSONDecodeError:
                         print(f"Warning: Could not parse fundamental predictions JSON for {ticker}")
                         # Store an error indicator instead of the raw string or None
-                        fundamental_predictions = {"error": "Failed to parse predictions JSON"} 
+                        fundamental_predictions = {"error": "No Predicitons Found for this ticker"} 
                     except Exception as e: # Catch other potential errors during parsing
                          print(f"Warning: An unexpected error occurred parsing predictions for {ticker}: {e}")
                          fundamental_predictions = {"error": f"Unexpected error parsing predictions: {e}"}
@@ -176,11 +157,12 @@ def make_phaseTwo_recommendations(asset_class_top_tickers):
 You are a very skilled portfolio manager with 30 years of experience.
 
 USER PROFILE:
-- Age: {user_info.get("age", "35")}
-- Net Worth: {user_info.get("net_worth", "1,292,902")}
-- Risk Tolerance: {user_info.get("risk_tolerance", "Medium Risk Tolerance")}
-- Investment Goals: {user_info.get("investment_goals", "Medium term high growth, some income")}
-- Time Horizon: {user_info.get("time_horizon", "5 Years")}
+- Age: 35
+- Net Worth: 1,292,902
+- Risk Tolerance: Medium Risk Tolerance
+- Investment Goals: Medium term high growth, some income
+- Time Horizon: 5 Years
+- Description: This portfolio should contain mostly growth
 
 TASK:
 You will receive the complete analysis data for {num_tickers} stocks. Your job is to identify the top 2-3 stocks with the best overall performance that match the user's risk profile and investment goals.
@@ -258,6 +240,11 @@ IMPORTANT CONSIDERATIONS:
 - Provide a concise but thorough justification for each recommendation, linking specific data points (performance metrics, fundamental trends, future estimates) to your reasoning and the user profile.
 - Consider diversification benefits implicitly, but focus recommendations on the top individual stocks based on the analysis.
 
+DATA POINT WEIGHTS (This is how much you should weight each type of data in your analysis):
+- Performance Metrics: 45%
+- Historical Fundamental Data: 45%
+- Forward-Looking Fundamental Estimates: 10% (since this is a prediction and not the actual future fundamental data, it should not carry a huge amount of weight)
+
 OUTPUT FORMAT:
 Return your recommendations in this JSON format ONLY. Do not include any other text outside the JSON structure.
 {{
@@ -328,36 +315,36 @@ Return your recommendations in this JSON format ONLY. Do not include any other t
 
         return None
 
-# if __name__ == "__main__":
-#     picks = pick_top_tickers_from_asset_classes(portfolio_data)
-#     print(picks)
+def run_phase_two(portfolio_data):
+    picks = pick_top_tickers_from_asset_classes(portfolio_data)
+    print(picks)
 
-#     final_portfolio = {}
+    final_portfolio = {}
 
-#     print("="*100)
+    print("="*100)
 
-#     # Or if you're looping
-#     for asset_class_name in picks:
-#         print(f"Asset class: {asset_class_name}")
-#         print(picks[asset_class_name])
+    # Or if you're looping
+    for asset_class_name in picks:
+        print(f"Asset class: {asset_class_name}")
+        print(picks[asset_class_name])
 
-#         recommendations_json = make_phaseTwo_recommendations(picks[asset_class_name])
-#         print(recommendations_json)
+        recommendations_json = make_phaseTwo_recommendations(picks[asset_class_name])
+        print(recommendations_json)
         
-#         # Parse JSON string to Python object and add to final_portfolio
-#         if recommendations_json:
-#             try:
-#                 recommendations_data = json.loads(recommendations_json)
-#                 final_portfolio[asset_class_name] = recommendations_data
-#             except json.JSONDecodeError as e:
-#                 print(f"Error parsing recommendations for {asset_class_name}: {e}")
-#                 # Add error info to portfolio if parsing fails
-#                 final_portfolio[asset_class_name] = {"error": "Failed to parse recommendations"}
+        # Parse JSON string to Python object and add to final_portfolio
+        if recommendations_json:
+            try:
+                recommendations_data = json.loads(recommendations_json)
+                final_portfolio[asset_class_name] = recommendations_data
+            except json.JSONDecodeError as e:
+                print(f"Error parsing recommendations for {asset_class_name}: {e}")
+                # Add error info to portfolio if parsing fails
+                final_portfolio[asset_class_name] = {"error": "Failed to parse recommendations"}
     
-#     print("\nFinal Portfolio:")
-#     print(json.dumps(final_portfolio, indent=2))
+    print("\nFinal Portfolio:")
+    print(json.dumps(final_portfolio, indent=2))
     
- 
+    return final_portfolio
 
 
 

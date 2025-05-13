@@ -4,19 +4,17 @@ import os
 from datetime import datetime
 import traceback
 from dotenv import load_dotenv
-import re
-import anthropic
 import time
 from src.portfolio_optimization.phase_two.phase_two_run import (
     pick_top_tickers_from_asset_classes,
     make_phaseTwo_recommendations,
 )
 from .phase_one_validation import (
-    parse_json_with_openai,
     validate_and_fix_allocations,
     validate_asset_classes,
 )
-from .phase_one_prompts import SYSTEM_PROMPT, build_user_message
+from .phase_one_prompts import SYSTEM_PROMPT, build_user_message, min_asset_classes, max_asset_classes
+from src.data.user_information import get_user_information
 
 # Start timer
 start_time = time.time()
@@ -28,23 +26,6 @@ load_dotenv()
 OpenAI_API_KEY = os.environ.get("OPENAI_API_KEY")
 model = os.environ.get("OPENAI_MODEL")
 client = OpenAI(api_key=OpenAI_API_KEY)
-
-def get_user_information():
-    """
-    Get user information from the user's profile.
-    """
-    json = {
-        "user_information": {
-            "age": "35",
-            "net_worth": "1,292,902",
-            "risk_tolerance": "Medium Risk Tolerance",
-            "investment_goals": "Medium term high growth, some income",
-            "time_horizon": "5 Years",
-            "Overall Description": "The user is a 35 year old who wants to maximize returns in the medium term, while still having some income. They are comfortable with moderate risk."
-        }
-    }
-    
-    return json
 
 def optimize():
     # Import moved here
@@ -73,10 +54,7 @@ def optimize():
     )
     
     current_date = datetime.now().strftime('%Y-%m-%d')
-    # The line below is no longer needed as build_user_message will call format_to_json internally.
-    # account_info, positions_table, formatted_diversification, portfolio_metrics, stock_metrics, monthly_performance, correlations = format()
-    
-    # Ensure output directory exists
+
     output_dir = "output"
     if not os.path.exists(output_dir):
         os.makedirs(output_dir)
@@ -92,13 +70,13 @@ def optimize():
     content = build_user_message()
 
     # # -------------------- DEBUG: print prompts --------------------
-    # print("\n" + "=" * 100)
-    # print("SYSTEM PROMPT (Phase One):\n")
-    # print(SYSTEM_PROMPT)
-    # print("\n" + "-" * 100)
-    # print("USER PROMPT (first message to LLM):\n")
-    # print(content)
-    # print("=" * 100 + "\n")
+    print("\n" + "=" * 100)
+    print("SYSTEM PROMPT (Phase One):\n")
+    print(SYSTEM_PROMPT)
+    print("\n" + "-" * 100)
+    print("USER PROMPT (first message to LLM):\n")
+    print(content)
+    print("=" * 100 + "\n")
 
     try:
         # Define all analyst tools in a more efficient way
@@ -331,7 +309,7 @@ def optimize():
                     model=model,
                     messages=messages + [{
                         "role": "user",
-                        "content": "You've reached the maximum number of tool calls. Please provide your final portfolio recommendation now based on the information you have gathered so far. Remember to include both human-readable and JSON formats as specified in the original instructions. REMEMBER: Your final portfolio MUST contain between 8 and 20 asset classes - you CANNOT exceed 20 asset classes."
+                        "content": f"You've reached the maximum number of tool calls. Please provide your final portfolio recommendation now based on the information you have gathered so far. Ensure your final portfolio contains between {min_asset_classes} and {max_asset_classes} asset classes and adheres to all original formatting instructions."
                     }],
                     temperature=0.7
                 )
@@ -402,7 +380,7 @@ def optimize():
                     model=model,
                     messages=messages + [{
                         "role": "user",
-                        "content": "Now provide your final portfolio recommendation based on all the data gathered. Include both human-readable and JSON formats as specified. REMEMBER: Your final portfolio MUST contain between 8 and 20 asset classes - you CANNOT exceed 20 asset classes."
+                        "content": f"Now provide your final portfolio recommendation based on all the data gathered. Ensure your final portfolio contains between {min_asset_classes} and {max_asset_classes} asset classes and adheres to all original formatting instructions."
                     }],
                     temperature=0.7
                 )
@@ -426,12 +404,7 @@ def optimize():
         # Initial user message with process instructions
         user_message = {
             "role": "user",
-            "content": content + "\n\nTo optimize the portfolio, follow this specific process:\n\n" +
-            "1. First, use the get_user_information tool to understand the user's profile\n" +
-            "2. Then, use the get_equity_universe and get_etf_universe tools to see all available investment options\n" +
-            "3. Then, use ALL the other required analyst tools in sequence\n" +
-            "4. Then, use the free_search tool 4-10 times to research specific opportunities\n" +
-            "5. Finally, provide your comprehensive portfolio recommendation using SPECIFIC asset names from the equity/ETF universe with both human-readable and JSON formats.\n\n"
+            "content": content
         }
         
         # Set up initial messages and start conversation
@@ -544,50 +517,50 @@ def optimize():
 if __name__ == "__main__":
     final_portfolio = optimize()
     print(final_portfolio)
-    print("="*100)
-    print("PORTFOLIO SUMMARY:")
+    # print("="*100)
+    # print("PORTFOLIO SUMMARY:")
     
-    # Check if 'portfolio' key exists and is a list
-    if isinstance(final_portfolio, dict) and 'portfolio' in final_portfolio and isinstance(final_portfolio['portfolio'], list):
-        for asset in final_portfolio['portfolio']:
-            # Check if the asset is a dictionary and has the required keys
-            if isinstance(asset, dict) and 'asset_class' in asset and 'allocation' in asset:
-                ticker = asset['asset_class']
-                allocation = asset['allocation']
-                # Ensure allocation is a number before printing
-                if isinstance(allocation, (int, float)):
-                    print(f"{ticker}: {allocation}%")
-                else:
-                    print(f"{ticker}: Invalid allocation format ({allocation})")
-            else:
-                print(f"Skipping invalid asset entry: {asset}")
-    else:
-        print("Could not find 'portfolio' list in the returned data or data is not a dictionary.")
+    # # Check if 'portfolio' key exists and is a list
+    # if isinstance(final_portfolio, dict) and 'portfolio' in final_portfolio and isinstance(final_portfolio['portfolio'], list):
+    #     for asset in final_portfolio['portfolio']:
+    #         # Check if the asset is a dictionary and has the required keys
+    #         if isinstance(asset, dict) and 'asset_class' in asset and 'allocation' in asset:
+    #             ticker = asset['asset_class']
+    #             allocation = asset['allocation']
+    #             # Ensure allocation is a number before printing
+    #             if isinstance(allocation, (int, float)):
+    #                 print(f"{ticker}: {allocation}%")
+    #             else:
+    #                 print(f"{ticker}: Invalid allocation format ({allocation})")
+    #         else:
+    #             print(f"Skipping invalid asset entry: {asset}")
+    # else:
+    #     print("Could not find 'portfolio' list in the returned data or data is not a dictionary.")
 
-    picks = pick_top_tickers_from_asset_classes(final_portfolio)
-    print(picks)
+    # picks = pick_top_tickers_from_asset_classes(final_portfolio)
+    # print(picks)
 
-    final_portfolio = {}
+    # final_portfolio = {}
 
-    print("="*100)
+    # print("="*100)
 
-    # Or if you're looping
-    for asset_class_name in picks:
-        print(f"Asset class: {asset_class_name}")
-        print(picks[asset_class_name])
+    # # Or if you're looping
+    # for asset_class_name in picks:
+    #     print(f"Asset class: {asset_class_name}")
+    #     print(picks[asset_class_name])
 
-        recommendations_json = make_phaseTwo_recommendations(picks[asset_class_name])
-        print(recommendations_json)
+    #     recommendations_json = make_phaseTwo_recommendations(picks[asset_class_name])
+    #     print(recommendations_json)
         
-        # Parse JSON string to Python object and add to final_portfolio
-        if recommendations_json:
-            try:
-                recommendations_data = json.loads(recommendations_json)
-                final_portfolio[asset_class_name] = recommendations_data
-            except json.JSONDecodeError as e:
-                print(f"Error parsing recommendations for {asset_class_name}: {e}")
-                # Add error info to portfolio if parsing fails
-                final_portfolio[asset_class_name] = {"error": "Failed to parse recommendations"}
+    #     # Parse JSON string to Python object and add to final_portfolio
+    #     if recommendations_json:
+    #         try:
+    #             recommendations_data = json.loads(recommendations_json)
+    #             final_portfolio[asset_class_name] = recommendations_data
+    #         except json.JSONDecodeError as e:
+    #             print(f"Error parsing recommendations for {asset_class_name}: {e}")
+    #             # Add error info to portfolio if parsing fails
+    #             final_portfolio[asset_class_name] = {"error": "Failed to parse recommendations"}
     
-    print("\nFinal Portfolio:")
-    print(json.dumps(final_portfolio, indent=2))
+    # print("\nFinal Portfolio:")
+    # print(json.dumps(final_portfolio, indent=2))

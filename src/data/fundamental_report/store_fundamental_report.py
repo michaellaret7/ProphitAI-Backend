@@ -117,11 +117,15 @@ def store_report(cursor, schema_name: str, table_name: str, report_content: str)
         cursor.connection.rollback() # Rollback the specific failed transaction
         raise # Re-raise
 
-def main(sector_db_name: str):
+def main(sector_db_name: str, target_schema_name: str | None = None):
     """
     Main function to generate and store fundamental reports for a given sector.
+    Can optionally target a specific schema within the sector.
     """
     print(f"Starting fundamental report generation for database: {sector_db_name}")
+    if target_schema_name:
+        print(f"Targeting specific schema: {target_schema_name}")
+
     schema_data = load_schema_data()
     if not schema_data:
         print("Error: Could not load database schema data. Exiting.")
@@ -132,8 +136,27 @@ def main(sector_db_name: str):
         print(f"No tickers found for {sector_db_name}. Exiting.")
         return
 
-    # Removed slicing logic to process all tickers
-    print(f"Found {len(ticker_schema_map)} total tickers for {sector_db_name}. Processing all.")
+    # Filter by target schema if provided
+    if target_schema_name:
+        # Sanitize the target schema name for comparison (lowercase, replace -, .)
+        safe_target_schema = target_schema_name.lower().replace('-', '_').replace('.', '_')
+        if not safe_target_schema or not safe_target_schema[0].isalpha():
+             safe_target_schema = f"_{safe_target_schema}"
+
+        filtered_ticker_schema_map = {
+            ticker: schema
+            for ticker, schema in ticker_schema_map.items()
+            # Sanitize original schema from map for comparison
+            if schema.lower().replace('-', '_').replace('.', '_') == safe_target_schema or f"_{schema.lower().replace('-', '_').replace('.', '_')}" == safe_target_schema
+        }
+        if not filtered_ticker_schema_map:
+            print(f"No tickers found for schema '{target_schema_name}' within database '{sector_db_name}'. Exiting.")
+            return
+        ticker_schema_map = filtered_ticker_schema_map # Use the filtered map
+        print(f"Found {len(ticker_schema_map)} tickers for schema: {target_schema_name}")
+    else:
+        # Removed slicing logic to process all tickers
+        print(f"Found {len(ticker_schema_map)} total tickers for {sector_db_name}. Processing all.")
 
     db_config = get_default_db_config()
     processed_count = 0
@@ -193,28 +216,28 @@ def main(sector_db_name: str):
         print("-----------------------------") # Adjusted dashes
 
 if __name__ == "__main__":
+    # Example: Rerun only the 'communications_equipment' schema for the IT sector
+    # sector_db_name = "equity_sector_information_technology_fundamentals"
+    # target_schema = "communications_equipment"
+    # print(f"Running specifically for: Database='{sector_db_name}', Schema='{target_schema}'")
+    # main(sector_db_name=sector_db_name, target_schema_name=target_schema)
+
+
+    # --- Previous execution logic (commented out) ---
     # sector_db_name = "equity_sector_communication_services_fundamentals" # Done
     # sector_db_name = "equity_sector_consumer_discretionary_fundamentals" # Done
-    sector_db_name = "equity_sector_consumer_staples_fundamentals" # In Progress
-    sector_db_name2 = "equity_sector_energy_fundamentals" # In Progress
-    sector_db_name3 = "equity_sector_financials_fundamentals" # In Progress
-    # sector_db_name = "equity_sector_health_care_fundamentals" # <<< Set to Healthcare
-    # sector_db_name = "equity_sector_industrials_fundamentals" # <<< Set to Industrials
-    # sector_db_name = "equity_sector_information_technology_fundamentals" # <<< Set to Information Technology
-    # sector_db_name = "equity_sector_materials_fundamentals" # <<< Set to Materials
-    # sector_db_name = "equity_sector_real_estate_fundamentals" # <<< Set to Real Estate
-    # sector_db_name = "equity_sector_utilities_fundamentals" # <<< Set to Utilities
-    # -------------------------------------------- #
+    # sector_db_name = "equity_sector_consumer_staples_fundamentals" # Done
+    # sector_db_name2 = "equity_sector_energy_fundamentals" # Done
+    # sector_db_name3 = "equity_sector_financials_fundamentals" # Done
+    # sector_db_name1 = "equity_sector_health_care_fundamentals" # <<< Set to Healthcare
+    # sector_db_name2 = "equity_sector_industrials_fundamentals" # <<< Set to Industrials
+    # sector_db_name3 = "equity_sector_information_technology_fundamentals" # <<< Set to Information Technology
+    sector_db_name4 = "equity_sector_materials_fundamentals" # <<< Set to Materials
+    sector_db_name5 = "equity_sector_real_estate_fundamentals" # <<< Set to Real Estate
+    sector_db_name6 = "equity_sector_utilities_fundamentals" # <<< Set to Utilities
+    # # -------------------------------------------- #
 
-    # if not sector_db_name or sector_db_name == "REPLACE_WITH_YOUR_SECTOR_DATABASE_NAME_fundamentals":
-    #     print("Error: Please set a valid 'sector_db_name' in the script.")
-    # elif not sector_db_name.endswith("_fundamentals"):
-    #     print(f"Warning: Database name '{sector_db_name}' does not end with '_fundamentals'. Proceeding anyway.")
-    #     main(sector_db_name)
-    # else:
-    #     main(sector_db_name)
-
-    main(sector_db_name)
-    main(sector_db_name2)
-    main(sector_db_name3)
+    main(sector_db_name4)
+    main(sector_db_name5)
+    main(sector_db_name6)
 

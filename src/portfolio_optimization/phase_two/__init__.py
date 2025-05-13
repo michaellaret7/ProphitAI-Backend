@@ -35,6 +35,7 @@ from ..backtest import (
 from .phase_two_run import (
     pick_top_tickers_from_asset_classes,
     make_phaseTwo_recommendations,
+    run_phase_two,
 )
 
 # Import from backtest when you know which additional functions to expose
@@ -80,4 +81,5 @@ __all__ = [
     # additional exports from phase_two_run
     'pick_top_tickers_from_asset_classes',
     'make_phaseTwo_recommendations',
+    'run_phase_two',
 ] 

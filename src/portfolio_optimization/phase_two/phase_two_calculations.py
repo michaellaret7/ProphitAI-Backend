@@ -1,10 +1,5 @@
-import os
-import json
 import pandas as pd
 import numpy as np
-from decimal import Decimal
-from datetime import datetime, timedelta
-from openai import OpenAI
 from src.utils.caching import cache_result
 from src.utils.file_utils import load_schema_data
 from src.portfolio_optimization.phase_two.data_retrieval import get_daily_closing_prices
