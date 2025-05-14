@@ -88,7 +88,7 @@ tools = [{
         Retrieves the historical time series of a specified financial metric for a given stock ticker.
         It fetches the metric values along with the corresponding date, ordered by date.
         This is the list of all of the metrics that you can retrieve:
-        = market_cap
+        - market_cap
         - enterprise_value
         - price_to_earnings_ratio
         - price_to_book_ratio

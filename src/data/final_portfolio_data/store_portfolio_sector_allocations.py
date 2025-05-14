@@ -170,7 +170,8 @@ def store_portfolio_sector_allocations(portfolio: dict | str) -> str:
             create_table_sql = sql.SQL(
                 """
                 CREATE TABLE IF NOT EXISTS {schema}.{table} (
-                    asset_class VARCHAR(255) PRIMARY KEY,
+                    id SERIAL PRIMARY KEY,
+                    asset_class VARCHAR(255),
                     allocation NUMERIC(10,3),
                     reason TEXT
                 );
@@ -179,17 +180,14 @@ def store_portfolio_sector_allocations(portfolio: dict | str) -> str:
             cur.execute(create_table_sql)
 
             # ----------------------------------------------------------------
-            # 6. Insert / upsert data
+            # 6. Insert data - removed ON CONFLICT to allow duplicates
             # ----------------------------------------------------------------
             rows = [tuple(x) for x in df.itertuples(index=False, name=None)]
 
             insert_sql = sql.SQL(
                 """
                 INSERT INTO {schema}.{table} (asset_class, allocation, reason)
-                VALUES %s
-                ON CONFLICT (asset_class) DO UPDATE
-                SET allocation = EXCLUDED.allocation,
-                    reason     = EXCLUDED.reason;
+                VALUES %s;
                 """
             ).format(schema=sql.Identifier(schema_name), table=sql.Identifier(table_name))
 
@@ -204,6 +202,7 @@ def store_portfolio_sector_allocations(portfolio: dict | str) -> str:
                 create_meta_sql = sql.SQL(
                     """
                     CREATE TABLE IF NOT EXISTS {schema}.portfolio_thesis (
+                        id SERIAL PRIMARY KEY,
                         generated_at TIMESTAMP DEFAULT now(),
                         thesis        TEXT      NOT NULL,
                         extra         JSONB     DEFAULT '{{}}'::jsonb

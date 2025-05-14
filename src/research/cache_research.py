@@ -11,8 +11,8 @@ from psycopg2 import sql
 from datetime import date
 from dotenv import load_dotenv
 import re
-from src.research.equityResearchAnalysts import *
-from src.research.macroResearchAnalyst import *
+from src.research.equity_research_analysts import *
+from src.research.macro_research_analyst import *
 
 # Load environment variables from .env file
 load_dotenv()

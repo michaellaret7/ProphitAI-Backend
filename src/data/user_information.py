@@ -6,12 +6,15 @@ def get_user_information():
     """
     user_data = {
         "user_information": {
-            "age": "25",
-            "net_worth": "$124,023",
-            "risk_tolerance": "High Risk Tolerance",
-            "investment_goals": "Short term high growth, little to no income",
-            "time_horizon": "1 year",
-            "Overall Description": "The user is a very young investor who has a very high risk tolerance and wants to mazimize returns. He wants to target high growth stocks and ETFs. High volatility is allowed."
+            "age": "45",
+            "net_worth": "$624,023",
+            "risk_tolerance": "Medium Risk Tolerance",
+            "investment_goals": "Medium term high growth, some income",
+            "time_horizon": "3 Years",
+            "Overall Description": """
+            The user is a 45 year old who wants to maximize returns in the medium term, while still having some income. 
+            They are comfortable with moderate risk. The use emphasized heavy emphasis on low volatility and income as the priority.
+            """
         }
     }
     

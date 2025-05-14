@@ -85,4 +85,4 @@ if __name__ == "__main__":
     else:
         sys.exit(1) 
 
-    print(f"\n⏱️  Workflow executed in {elapsed:.2f} seconds.\n")
+    print(f"\n ⏱️  Workflow executed in {elapsed:.2f} seconds.\n")

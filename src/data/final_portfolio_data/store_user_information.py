@@ -75,6 +75,7 @@ def store_user_information() -> str:
                 sql.SQL(
                     """
                     CREATE TABLE IF NOT EXISTS {schema}.{table} (
+                        id SERIAL PRIMARY KEY,
                         created_at TIMESTAMP DEFAULT now(),
                         profile     JSONB NOT NULL
                     );

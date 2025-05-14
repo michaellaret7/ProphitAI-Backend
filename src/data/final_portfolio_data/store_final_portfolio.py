@@ -129,19 +129,19 @@ def store_final_portfolio(portfolio: dict | str) -> str:
             schema_name = f"portfolio_{_int_to_english(max_num)}"  # latest
 
         # ------------------------------------------------------------------
-        # 4. Create table & upsert
+        # 4. Create table & insert data (no upsert)
         # ------------------------------------------------------------------
         table = "final_portfolio"
         with conn.cursor() as cur:
             create_sql = sql.SQL(
                 """
                 CREATE TABLE IF NOT EXISTS {schema}.{table} (
+                    id SERIAL PRIMARY KEY,
                     asset_class       VARCHAR(255),
                     ticker            VARCHAR(32),
                     allocation        NUMERIC(10,3),
                     reason            TEXT,
-                    supporting_metrics JSONB,
-                    PRIMARY KEY (asset_class, ticker)
+                    supporting_metrics JSONB
                 );
                 """
             ).format(schema=sql.Identifier(schema_name), table=sql.Identifier(table))
@@ -151,11 +151,7 @@ def store_final_portfolio(portfolio: dict | str) -> str:
                 """
                 INSERT INTO {schema}.{table}
                 (asset_class, ticker, allocation, reason, supporting_metrics)
-                VALUES %s
-                ON CONFLICT (asset_class, ticker) DO UPDATE
-                SET allocation = EXCLUDED.allocation,
-                    reason    = EXCLUDED.reason,
-                    supporting_metrics = EXCLUDED.supporting_metrics;
+                VALUES %s;
                 """
             ).format(schema=sql.Identifier(schema_name), table=sql.Identifier(table))
 

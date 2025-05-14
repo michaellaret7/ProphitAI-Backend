@@ -28,6 +28,7 @@ from src.portfolio_optimization.phase_two.phase_two_calculations import (
 from src.portfolio_optimization.phase_two.retrieve_fundamental_report import (
     get_fundamental_report_from_db
 )
+from src.data.user_information import get_user_information
 from src.utils.determine_etf import is_etf
 import time
 
@@ -150,22 +151,30 @@ def make_phaseTwo_recommendations(asset_class_top_tickers):
         # Convert the input dictionary to a JSON string for the prompt content
         data_string = json.dumps(asset_class_top_tickers)
 
+        user_profile = get_user_information()
+        # Format the user profile in a more readable way
+        user_info = user_profile.get("user_information", {})
+        user_profile_formatted = f"""
+Age: {user_info.get("age", "N/A")}
+Net Worth: {user_info.get("net_worth", "N/A")}
+Risk Tolerance: {user_info.get("risk_tolerance", "N/A")}
+Investment Goals: {user_info.get("investment_goals", "N/A")}
+Time Horizon: {user_info.get("time_horizon", "N/A")}
+Description: {user_info.get("Overall Description", "N/A").strip()}
+"""
 
-        system_prompt = """
+        num_tickers = 10
+
+        system_prompt = f"""
 <think>
 
 You are a very skilled portfolio manager with 30 years of experience.
 
 USER PROFILE:
-- Age: 35
-- Net Worth: 1,292,902
-- Risk Tolerance: Medium Risk Tolerance
-- Investment Goals: Medium term high growth, some income
-- Time Horizon: 5 Years
-- Description: This portfolio should contain mostly growth
+{user_profile_formatted}
 
 TASK:
-You will receive the complete analysis data for {num_tickers} stocks. Your job is to identify the top 2-3 stocks with the best overall performance that match the user's risk profile and investment goals.
+You will receive the complete analysis data for {num_tickers} stocks. Your job is to identify the top 1-4 stocks with the best overall performance that match the user's risk profile and investment goals.
 
 INVESTOR TYPES AND STOCK SELECTION STRATEGIES:
 1. Income-Oriented Investors:
@@ -206,7 +215,7 @@ ANALYSIS APPROACH:
     - **Forward-looking fundamental estimates** (from `fundamental_predictions` when available). Analyze trends in estimated EPS and Revenue (SREV) growth.
     - Qualitative factors implied by the data (e.g., high momentum might suggest strong recent market sentiment).
     - Alignment with user's risk tolerance and investment goals.
-3. **Synthesize Findings:** Compare stocks across different asset classes. Identify the 2-3 stocks that offer the most compelling risk/reward profile based on the integrated analysis (performance, historical fundamentals, future estimates, user profile). DO NOT EXCEED 3 RECOMMENDATIONS IN TOTAL.
+3. **Synthesize Findings:** Compare stocks across different asset classes. Identify the 1-4 stocks that offer the most compelling risk/reward profile based on the integrated analysis (performance, historical fundamentals, future estimates, user profile). DO NOT EXCEED 3 RECOMMENDATIONS IN TOTAL.
 
 UNDERSTANDING THE METRICS:
 - "sharpe_ratio": Risk-adjusted return metric. Higher values indicate better risk-adjusted performance. Values > 1 are generally good.
@@ -264,8 +273,10 @@ Return your recommendations in this JSON format ONLY. Do not include any other t
 }}
 </think>
 """
-        user_prompt = f"Based on the following data for various asset classes, provide investment recommendations for the top 2-3 stocks overall that best fit the user profile:\n\n{data_string}"
-
+        user_prompt = f"""
+        Based on the following data for various asset classes, provide investment recommendations for the top 1-4 stocks overall that best fit the user profile:
+        {data_string}
+        """
 
         completion = client.chat.completions.create(
             model="deepseek-reasoner", 
