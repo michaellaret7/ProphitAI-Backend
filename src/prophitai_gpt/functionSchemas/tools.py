@@ -133,6 +133,9 @@ tools = [{
         - "Show me the Net Income trend for [stock name]."
         - "Get the P/E ratio time series for [ticker]."
         - "What were the Total Assets for [ticker] over time?"
+
+        Important:
+        - If the user asks for data please put it in an organized table format.
         """,
         "parameters": {
             "type": "object",

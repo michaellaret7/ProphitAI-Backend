@@ -7,3 +7,26 @@ from . import formatting
 from . import caching
 from . import ib_utils
 from . import ticker_utils 
+from .choose_model_and_client import (
+    deepseek_model_and_client,
+    openai_model_and_client, 
+    grok_model_and_client, 
+    perplexity_model_and_client
+)
+from .retrieve_portfolio_from_db import retrieve_portfolio_information_from_db
+
+__all__ = [
+    "connect_db",
+    "create_tables",
+    "load_config",
+    "save_config",
+    "deepseek_model_and_client",
+    "openai_model_and_client",
+    "grok_model_and_client",
+    "perplexity_model_and_client",
+    "retrieve_portfolio_information_from_db",
+    "format_dollar_amount",
+    "format_percentage",
+    "format_markdown_table",
+    "strip_formatting"
+] 

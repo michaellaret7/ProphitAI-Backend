@@ -677,6 +677,3 @@ def extract_asset_classes(json_data):
         
     return asset_classes
 
-
-if __name__ == "__main__":
-    print(get_quarterly_estimates("AAPL"))

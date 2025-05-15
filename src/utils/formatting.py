@@ -100,3 +100,13 @@ def format_markdown_table(headers, rows, alignments=None):
         table_lines.append(f"| {' | '.join(cells)} |")
     
     return "\n".join(table_lines) 
+
+def strip_formatting(text):
+    """Strip asterisks and hashtags from the output text."""
+    if not text:
+        return text
+    # Remove asterisks
+    text = text.replace('*', '')
+    # Remove hashtags
+    text = text.replace('#', '')
+    return text

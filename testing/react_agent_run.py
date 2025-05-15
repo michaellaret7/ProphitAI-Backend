@@ -1,6 +1,6 @@
 import json
 import openai
-from testing.react_agent_class import ReactAgent
+from react_agent_class import ReactAgent
 import os
 from dotenv import load_dotenv
 from decimal import Decimal

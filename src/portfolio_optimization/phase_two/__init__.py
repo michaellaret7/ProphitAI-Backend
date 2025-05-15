@@ -23,12 +23,8 @@ from .retrieve_fundamental_report import (
     # debug_json_encoding is likely internal, not exposed
 )
 
-from ..backtest import (
-    connect_to_ib,
-    get_ib_historical_data,
-    get_portfolio_value,
+from ...backtest.backtest_helpers import (
     get_historical_data_for_all_tickers,
-    get_current_portfolio_holdings,
     calculate_portfolio_returns
 )
 
@@ -37,9 +33,6 @@ from .phase_two_run import (
     make_phaseTwo_recommendations,
     run_phase_two,
 )
-
-# Import from backtest when you know which additional functions to expose
-# from ..backtest import some_other_function
 
 __all__ = [
     # data_retrieval exports
@@ -58,25 +51,9 @@ __all__ = [
     # financial_metrics exports
     'generate_fundamental_analysis_report',
 
-    # stock_selection exports
-    # 'select_top_performing_stocks',
-    # 'analyze_tickers_and_generate_recommendations',
-
-    # phaseTwo exports (Note: Original comment said 'phaseTwo', but these came from portfolio_analysis)
-    # 'extract_asset_classes', # Moved
-    # 'process_asset_class',
-    # 'analyze_portfolio',
-    
     # backtest exports
-    'connect_to_ib',
-    'get_ib_historical_data',
-    'get_portfolio_value',
     'get_historical_data_for_all_tickers',
-    'get_current_portfolio_holdings',
     'calculate_portfolio_returns',
-    
-    # backtest exports - add when implemented
-    # 'function1', 'function2'
 
     # additional exports from phase_two_run
     'pick_top_tickers_from_asset_classes',

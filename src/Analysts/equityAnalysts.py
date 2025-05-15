@@ -34,7 +34,7 @@ perplexity_model = os.environ.get("PERPLEXITY_MODEL")
 
 # Get the current date and format it as YYYY_MM_DD
 # date = datetime.date.today().strftime("%Y_%m_%d")
-date = "2025_04_29"
+date = "2025_05_13"
 
 def communication_services_analyst():
     """

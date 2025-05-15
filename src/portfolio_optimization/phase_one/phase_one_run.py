@@ -15,6 +15,7 @@ from .phase_one_validation import (
 )
 from .phase_one_prompts import SYSTEM_PROMPT, build_user_message, min_asset_classes, max_asset_classes
 from src.data.user_information import get_user_information
+from src.utils.choose_model_and_client import deepseek_model_and_client, openai_model_and_client, grok_model_and_client, perplexity_model_and_client
 
 # Start timer
 start_time = time.time()
@@ -22,10 +23,7 @@ start_time = time.time()
 # Load environment variables from .env file
 load_dotenv()
 
-# API KEYS
-OpenAI_API_KEY = os.environ.get("OPENAI_API_KEY")
-model = os.environ.get("OPENAI_MODEL")
-client = OpenAI(api_key=OpenAI_API_KEY)
+model, client = grok_model_and_client()
 
 def optimize():
     # Import moved here

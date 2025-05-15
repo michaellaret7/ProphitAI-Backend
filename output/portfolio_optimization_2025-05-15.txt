@@ -1,0 +1,20 @@
+PORTFOLIO OPTIMIZATION REPORT - 2025-05-15
+================================================================================
+
+
+
+========================================
+USER INFORMATION
+========================================
+
+{
+  "user_information": {
+    "age": "28",
+    "net_worth": "$2,500,000",
+    "risk_tolerance": "High Risk Tolerance",
+    "investment_goals": "High growth, low income, around 10-15% volatility",
+    "time_horizon": "2 Years",
+    "Overall Description": "\n            The user is a 28-year-old nearing retirement and focused on high growth, low income, and around 10-15% volatility.\n            He is particularly bullish on the tech and semiconductor sectors.\n            "
+  }
+}
+

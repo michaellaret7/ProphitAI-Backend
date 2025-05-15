@@ -33,7 +33,7 @@ client = OpenAI(api_key=OpenAI_API_KEY)
 perplexity_model = os.environ.get("PERPLEXITY_MODEL")
 
 # date = datetime.date.today().strftime("%Y_%m_%d")
-date = "2025_04_29"
+date = "2025_05_13"
 
 def get_equity_universe():
     """

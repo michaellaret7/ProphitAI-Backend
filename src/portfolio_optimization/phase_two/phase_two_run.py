@@ -31,14 +31,13 @@ from src.portfolio_optimization.phase_two.retrieve_fundamental_report import (
 from src.data.user_information import get_user_information
 from src.utils.determine_etf import is_etf
 import time
+from src.utils.choose_model_and_client import deepseek_model_and_client, openai_model_and_client, grok_model_and_client, perplexity_model_and_client
 
 # Load environment variables from .env file
 load_dotenv()
 
 # Load environment variables
-DEEPSEEK_API_KEY = os.environ.get("DEEPSEEK_API_KEY")
-deepseek_model = os.environ.get("DEEPSEEK_MODEL")
-client = OpenAI(api_key=DEEPSEEK_API_KEY, base_url="https://api.deepseek.com")
+model, client = grok_model_and_client()
 
 NUM_TOP_TICKERS = 10
 
@@ -174,7 +173,7 @@ USER PROFILE:
 {user_profile_formatted}
 
 TASK:
-You will receive the complete analysis data for {num_tickers} stocks. Your job is to identify the top 1-4 stocks with the best overall performance that match the user's risk profile and investment goals.
+You will receive the complete analysis data for {num_tickers} stocks. Your job is to identify the top 1-7 stocks with the best overall performance that match the user's risk profile and investment goals.
 
 INVESTOR TYPES AND STOCK SELECTION STRATEGIES:
 1. Income-Oriented Investors:
@@ -215,7 +214,7 @@ ANALYSIS APPROACH:
     - **Forward-looking fundamental estimates** (from `fundamental_predictions` when available). Analyze trends in estimated EPS and Revenue (SREV) growth.
     - Qualitative factors implied by the data (e.g., high momentum might suggest strong recent market sentiment).
     - Alignment with user's risk tolerance and investment goals.
-3. **Synthesize Findings:** Compare stocks across different asset classes. Identify the 1-4 stocks that offer the most compelling risk/reward profile based on the integrated analysis (performance, historical fundamentals, future estimates, user profile). DO NOT EXCEED 3 RECOMMENDATIONS IN TOTAL.
+3. **Synthesize Findings:** Compare stocks across different asset classes. Identify the 1-7 stocks that offer the most compelling risk/reward profile based on the integrated analysis (performance, historical fundamentals, future estimates, user profile). DO NOT EXCEED 3 RECOMMENDATIONS IN TOTAL.
 
 UNDERSTANDING THE METRICS:
 - "sharpe_ratio": Risk-adjusted return metric. Higher values indicate better risk-adjusted performance. Values > 1 are generally good.
@@ -249,6 +248,10 @@ IMPORTANT CONSIDERATIONS:
 - Provide a concise but thorough justification for each recommendation, linking specific data points (performance metrics, fundamental trends, future estimates) to your reasoning and the user profile.
 - Consider diversification benefits implicitly, but focus recommendations on the top individual stocks based on the analysis.
 
+TICKER SELECTION INFORMATION:
+- If the allocations for a certain sector, industry, or asset class is very high, allocate more tickers to that sector, industry, or asset class than sectors with lower allocations.
+- For example, the semiconductor sector has a 28.5% allocation and you think there are a couple tickers that would be great additions to the portfolio, you should recommend more than 3 tickers.
+
 DATA POINT WEIGHTS (This is how much you should weight each type of data in your analysis):
 - Performance Metrics: 45%
 - Historical Fundamental Data: 45%
@@ -274,7 +277,7 @@ Return your recommendations in this JSON format ONLY. Do not include any other t
 </think>
 """
         user_prompt = f"""
-        Based on the following data for various asset classes, provide investment recommendations for the top 1-4 stocks overall that best fit the user profile:
+        Based on the following data for various asset classes, provide investment recommendations for the top 1-7 stocks overall that best fit the user profile:
         {data_string}
         """
 

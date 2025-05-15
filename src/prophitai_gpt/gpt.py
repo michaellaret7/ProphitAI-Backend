@@ -6,35 +6,24 @@ from ib_insync import Stock, Future, ContFuture, Option, MarketOrder, StopOrder,
 import yfinance as yf
 from datetime import datetime, timedelta, date
 import json
-import time
 from typing import List, Dict
-import calendar
-import random
 import os
-import base64
 from PIL import Image
 import pandas as pd
-import io
-import sys
 from pathlib import Path
-from huggingface_hub import InferenceApi
-from huggingface_hub import InferenceClient
-from sklearn.linear_model import LinearRegression
 from ib_insync import Stock, Option, Future, ContFuture, IB
 import os
 from dotenv import load_dotenv
 from src.prophitai_gpt.dataRetrievalTools.portfolioData import get_portfolio_data, format_portfolio_grid
 from src.utils.ticker_utils import name_to_ticker
 from src.prophitai_gpt.placeOrders.exitPosition import prompt_exit_position, exit_position
-from src.utils.ib_utils import connect_to_ib, disconnect_from_ib, get_ib
+from src.utils.ib_utils import connect_to_ib, disconnect_from_ib
 from src.prophitai_gpt.placeOrders.longOrder import prompt_long_buy_order, place_bracket_order_long
 from src.prophitai_gpt.functionSchemas.tools import tools
-from src.prophitai_gpt.dataRetrievalTools.retrieve_pe import retrieve_financial_metric
+from src.prophitai_gpt.dataRetrievalTools.retrieve_financial_metrics import retrieve_financial_metric
+from src.utils.formatting import strip_formatting
 
 load_dotenv()
-
-OpenAI_API_KEY = os.getenv("OPENAI_API_KEY")
-openai_model = os.getenv("OPENAI_MODEL")
 
 grok_api_key = os.getenv("GROK_API_KEY")
 grok_model = os.getenv("GROK_MODEL")
@@ -47,13 +36,23 @@ client = OpenAI(
 )
 
 
+
 messages = [
     {
         "role": "system",
-        "content": """You are an expert portfolio manager specializing in stocks and overseeing my portfolio. 
-        You can retrieve portfolio data, place trades, or exit positions when requested, but you can also answer general questions without taking any action. 
-        IMPORTANT: When a user expresses intent to buy a stock (e.g., 'I want to buy Apple'), IMMEDIATELY use the place_bracket_order_long tool with just the stock symbol - do NOT ask for additional details first. 
-        Similarly, when a user expresses intent to sell a stock (e.g., 'I want to exit my Amazon position'), IMMEDIATELY use the prompt_exit_position tool with just the stock symbol."""
+        "content": """
+        Role: You are an expert portfolio manager, specializing in all things trading and investing.
+        
+        Follow the Thought → Action → Observation loop internally:
+        1. Thought: brief reasoning.
+        2. Action: call ONE tool exactly like  
+        Action: tool_name(param=value, …)
+        3. PAUSE 
+        4. Observation: reflect on the tool result.
+
+        IMPORTANT: 
+        - if the user proceeds with a question (e.g. what should I buy?) do not initiate any order placing tools
+        """
     }
 ]
 
@@ -114,6 +113,7 @@ try:
                             result = get_portfolio_data()
                             # Format as grid instead of basic string conversion
                             result_str = format_portfolio_grid(result)
+                            result_str = strip_formatting(result_str)
                             
                             # Add a message to the AI to preserve the formatting
                             messages.append({
@@ -168,6 +168,7 @@ try:
                                 else: # None means an error occurred
                                     result_str = f"Could not retrieve data for metric '{metric_name}' for ticker '{ticker}'. This could be due to an invalid ticker, metric name, or a database issue. Check logs for details."
 
+                                result_str = strip_formatting(result_str)
                             messages.append({
                                 "role": "tool",
                                 "content": result_str,
@@ -175,8 +176,8 @@ try:
                             })
                     # After tool calls are processed, loop back to let the model respond
                 else:
-                    # No tool calls: print the response and exit the inner loop
-                    print(response.content)
+                    # No tool calls: print the response and strip formatting before displaying
+                    print(strip_formatting(response.content))
                     break
 finally:
     # Make sure to disconnect when the program exits

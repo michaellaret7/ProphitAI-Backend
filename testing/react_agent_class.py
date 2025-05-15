@@ -103,7 +103,8 @@ Final Answer: {
             response = self.client.chat.completions.create(
                 model=self.llm,
                 messages=messages,
-                temperature=0.7
+                temperature=0.7,
+                verbose=True
             )
             
             assistant_response = response.choices[0].message.content

@@ -6,14 +6,14 @@ def get_user_information():
     """
     user_data = {
         "user_information": {
-            "age": "45",
-            "net_worth": "$624,023",
-            "risk_tolerance": "Medium Risk Tolerance",
-            "investment_goals": "Medium term high growth, some income",
-            "time_horizon": "3 Years",
+            "age": "28",
+            "net_worth": "$2,500,000",
+            "risk_tolerance": "High Risk Tolerance",
+            "investment_goals": "High growth, low income, around 10-15% volatility",
+            "time_horizon": "2 Years",
             "Overall Description": """
-            The user is a 45 year old who wants to maximize returns in the medium term, while still having some income. 
-            They are comfortable with moderate risk. The use emphasized heavy emphasis on low volatility and income as the priority.
+            The user is a 28-year-old nearing retirement and focused on high growth, low income, and around 10-15% volatility.
+            He is particularly bullish on the tech and semiconductor sectors.
             """
         }
     }

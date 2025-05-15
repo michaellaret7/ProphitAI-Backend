@@ -23,6 +23,9 @@ RESEARCH METHODOLOGY REQUIREMENTS:
 
 CRITICAL CONSTRAINT:
 - Your final portfolio MUST contain between {min_asset_classes} and {max_asset_classes} asset classes - NO MORE, NO LESS. This is a hard requirement that cannot be violated.
+IMPORTANT:
+- If you are very bullish on a certain sector or industry, you can give it a much bigger allocation than the average just make sure you still are properly diversifying
+--> for example if you are bullish on certain sector, asset class, or industry, you can give it a larger allocation and make sure the rest of the portfolio can be diversified across other asset classes.
 
 ONLY after conducting all required research using the specified tools and any additional free searches should you formulate your final recommendation.
 """
@@ -81,7 +84,13 @@ Clear Example of Correct Asset Class Format:
 - ✓ CORRECT: "asset_class": "multi_utilities"  
 - ✗ INCORRECT: "asset_class": "equity_sector_utilities_multi_utilities"
 
-Your response should have two parts:
+- ✓ CORRECT: "asset_class": "precious_metals_etfs"
+- ✗ INCORRECT: "asset_class": "SPDR Gold Shares (GLD)"
+
+- ✓ CORRECT: "asset_class": "broad_based_emerging_market_equity_etfs"
+- ✗ INCORRECT: "asset_class": "Emerging Market ETFs"
+
+Your response will have two parts:
 1. Human-readable portfolio recommendation
 2. JSON-formatted recommendation with the following structure:
 
