@@ -12,6 +12,8 @@ class Colors:
     BOLD = '\033[1m'
     END = '\033[0m'
     CYAN = '\033[96m'
+    RED = '\033[91m'
+    YELLOW = '\033[93m'
 
 class AnimationController:
     """Controls the display of animated loading indicators for research functions"""

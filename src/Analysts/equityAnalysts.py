@@ -14,12 +14,6 @@ import datetime
 import psycopg2
 import pandas as pd
 import re
-import time 
-import random
-import itertools
-import threading
-import math
-import curses
 from dotenv import load_dotenv
 from src.portfolio_optimization.phase_one.phaseOneAnimation import start_animation, Colors
 from src.utils.file_utils import load_schema_data
@@ -32,9 +26,86 @@ Sonar_API_KEY = os.environ.get("PERPLEXITY_API_KEY")
 client = OpenAI(api_key=OpenAI_API_KEY)
 perplexity_model = os.environ.get("PERPLEXITY_MODEL")
 
-# Get the current date and format it as YYYY_MM_DD
-# date = datetime.date.today().strftime("%Y_%m_%d")
-date = "2025_05_13"
+
+date = "2025_05_11"
+
+def update_research_date_to_latest():
+    """
+    Connects to the 'research' database, finds the schema with the most recent date-like name,
+    and updates the global 'date' variable to this date.
+    Schema names are expected in 'YYYY_MM_DD' format.
+    """
+    global date
+    conn = None
+    cur = None
+    
+    try:
+        db_host = os.environ.get("DB_HOST")
+        db_port = os.environ.get("DB_PORT", 5432)
+        db_user = os.environ.get("DB_USER")
+        db_password = os.environ.get("DB_PASSWORD")
+        db_name = "research"
+
+        if not all([db_host, db_user, db_password]):
+            print("Error: Database connection details (DB_HOST, DB_USER, DB_PASSWORD) not found in environment variables.")
+            return
+
+        conn = psycopg2.connect(
+            host=db_host,
+            port=db_port,
+            user=db_user,
+            password=db_password,
+            dbname=db_name
+        )
+        cur = conn.cursor()
+
+        # New approach: Fetch more broadly from SQL, then filter precisely in Python
+        cur.execute("""
+            SELECT schema_name 
+            FROM information_schema.schemata 
+            WHERE schema_name NOT LIKE 'pg_%'    -- Exclude system schemas
+              AND schema_name <> 'information_schema'
+              AND schema_name <> 'public'
+        """)
+        potential_schema_names = [row[0] for row in cur.fetchall()]
+        
+        # Filter for YYYY_MM_DD format using Python's re module
+        date_pattern = re.compile(r"^\d{4}_\d{2}_\d{2}$")
+        schema_names = [s_name for s_name in potential_schema_names if date_pattern.match(s_name)]
+        
+        latest_date_str = None
+        latest_datetime = None
+
+        for schema_name in schema_names:
+            try:
+                # Validate and parse the date string
+                current_datetime = datetime.datetime.strptime(schema_name, "%Y_%m_%d")
+                if latest_datetime is None or current_datetime > latest_datetime:
+                    latest_datetime = current_datetime
+                    latest_date_str = schema_name
+            except ValueError:
+                # Schema name is not a valid date in the expected format, ignore it
+                print(f"Warning: Schema name '{schema_name}' is not in YYYY_MM_DD format and will be ignored.")
+                continue
+        
+        if latest_date_str:
+            date = latest_date_str
+            print(f"Research date updated to the latest available: {date}")
+        else:
+            print("No valid date schemas found in the 'research' database. 'date' variable remains unchanged.")
+
+    except psycopg2.Error as e:
+        print(f"Database error: {e}")
+    except Exception as e:
+        print(f"An unexpected error occurred while updating research date: {e}")
+    finally:
+        if cur:
+            cur.close()
+        if conn:
+            conn.close()
+
+# Update the date to the latest research date available when the module is loaded
+update_research_date_to_latest()
 
 def communication_services_analyst():
     """

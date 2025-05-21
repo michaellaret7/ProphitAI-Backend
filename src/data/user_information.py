@@ -6,16 +6,17 @@ def get_user_information():
     """
     user_data = {
         "user_information": {
-            "age": "28",
-            "net_worth": "$2,500,000",
-            "risk_tolerance": "High Risk Tolerance",
-            "investment_goals": "High growth, low income, around 10-15% volatility",
-            "time_horizon": "2 Years",
+            "age": "48",
+            "net_worth": "$75,000,000",
+            "investment size(as a percentage of net worth)": "65%",
+            "risk_tolerance": "Very High",
+            "investment_goals": "High growth with some income",
+            "time_horizon": "5 Years",
             "Overall Description": """
-            The user is a 28-year-old nearing retirement and focused on high growth, low income, and around 10-15% volatility.
-            He is particularly bullish on the tech and semiconductor sectors.
+            I want a very technology/AI/growth focused portfolio. I am very wealthy and have a high risk tolerance. Find undervalued high growth potential 
+            assets and invest heavily in them.
             """
         }
     }
-    
+
     return user_data

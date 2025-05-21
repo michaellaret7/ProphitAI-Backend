@@ -13,6 +13,7 @@ Workflow for this file:
 
 import os
 import json
+import re
 from openai import OpenAI
 from dotenv import load_dotenv
 from src.portfolio_optimization.phase_two.data_retrieval import (
@@ -32,14 +33,27 @@ from src.data.user_information import get_user_information
 from src.utils.determine_etf import is_etf
 import time
 from src.utils.choose_model_and_client import deepseek_model_and_client, openai_model_and_client, grok_model_and_client, perplexity_model_and_client
+# ---------------------------------------------------------------------------
+# Phase-two prompt templates & constants
+# ---------------------------------------------------------------------------
+from src.portfolio_optimization.phase_two.phase_two_prompts import (
+    NUM_TOP_TICKERS,
+    build_system_prompt,
+    build_user_prompt,
+)
+import logging
+from src.utils.logging_config import init_logger, patch_print_for_logging
 
 # Load environment variables from .env file
 load_dotenv()
 
-# Load environment variables
-model, client = grok_model_and_client()
+# Initialise logging and quiet-print mechanism early -------------------------
+logger = init_logger(__name__)
+patch_print_for_logging()
+logger.info("[Phase-Two] Phase-two module initialised …")
 
-NUM_TOP_TICKERS = 10
+# Load environment variables
+model, client = deepseek_model_and_client()
 
 def pick_top_tickers_from_asset_classes(portfolio_json):
     start_time = time.perf_counter()
@@ -49,7 +63,7 @@ def pick_top_tickers_from_asset_classes(portfolio_json):
     all_asset_class_data = {} # Initialize a dictionary to hold data for all asset classes
 
     for asset_class, _ in asset_classes_dict.items(): # Loop through each asset class
-        print(f"Processing asset class: {asset_class}")
+        logger.info("Processing asset class: %s", asset_class)
 
         # Get tickers for the current asset class
         tickers_data = get_stock_tickers(asset_class)
@@ -72,8 +86,8 @@ def pick_top_tickers_from_asset_classes(portfolio_json):
             top_tickers = new_df['Ticker'].tolist()
             df_top_tickers = df[df['Ticker'].isin(top_tickers)]
 
-            print(f"Top {NUM_TOP_TICKERS} tickers for {asset_class}:")
-            print(df_top_tickers)
+            if logger.isEnabledFor(logging.DEBUG):
+                logger.debug("Top %d tickers for %s:\n%s", NUM_TOP_TICKERS, asset_class, df_top_tickers.to_string())
 
             # Create the final dictionary for the current asset class
             final_stock_data = {}
@@ -128,12 +142,13 @@ def pick_top_tickers_from_asset_classes(portfolio_json):
             print(f"An error occurred while processing asset class {asset_class}: {e}")
             all_asset_class_data[asset_class] = {"error": str(e)} # Store error info
 
-    print("\n--- Final Results for All Asset Classes ---")
-    print(json.dumps(all_asset_class_data)) # Print the aggregated results
+    logger.info("Finished processing all asset classes.")
+    if logger.isEnabledFor(logging.DEBUG):
+        logger.debug("Aggregated data: %s", json.dumps(all_asset_class_data))
 
     end_time = time.perf_counter()
     duration = end_time - start_time
-    print(f"\nTotal execution time: {duration:.4f} seconds")
+    logger.info("Phase-two ticker selection completed in %.2fs", duration)
     return all_asset_class_data
 
 def make_phaseTwo_recommendations(asset_class_top_tickers):
@@ -150,136 +165,59 @@ def make_phaseTwo_recommendations(asset_class_top_tickers):
         # Convert the input dictionary to a JSON string for the prompt content
         data_string = json.dumps(asset_class_top_tickers)
 
+        # --------------------------------------------------------------
+        # Helper 🧹  to salvage almost-JSON strings coming back from the LLM
+        # --------------------------------------------------------------
+        def _attempt_safe_json_load(txt: str):
+            """Try increasingly lenient strategies to convert *txt* to dict."""
+            try:
+                return json.loads(txt)
+            except Exception:
+                pass
+
+            # 1️⃣  Strip trailing commas before } or ]
+            no_trailing_commas = re.sub(r",\s*([\]}])", r"\\1", txt)
+            try:
+                return json.loads(no_trailing_commas)
+            except Exception:
+                pass
+
+            # 2️⃣  Replace single quotes with double quotes (coarse but helps)
+            swapped_quotes = no_trailing_commas.replace("'", '"')
+            try:
+                return json.loads(swapped_quotes)
+            except Exception:
+                pass
+
+            # 3️⃣  Replace Python-ish literals with JSON equivalents
+            literals_fixed = re.sub(r"\bTrue\b", "true", swapped_quotes)
+            literals_fixed = re.sub(r"\bFalse\b", "false", literals_fixed)
+            literals_fixed = re.sub(r"\bNone\b", "null", literals_fixed)
+            try:
+                return json.loads(literals_fixed)
+            except Exception:
+                return None
+
         user_profile = get_user_information()
         # Format the user profile in a more readable way
         user_info = user_profile.get("user_information", {})
         user_profile_formatted = f"""
 Age: {user_info.get("age", "N/A")}
 Net Worth: {user_info.get("net_worth", "N/A")}
+Investment Size (as a percentage of net worth): {user_info.get("investment size(as a percentage of net worth)", "N/A")}
 Risk Tolerance: {user_info.get("risk_tolerance", "N/A")}
 Investment Goals: {user_info.get("investment_goals", "N/A")}
 Time Horizon: {user_info.get("time_horizon", "N/A")}
 Description: {user_info.get("Overall Description", "N/A").strip()}
 """
 
-        num_tickers = 10
-
-        system_prompt = f"""
-<think>
-
-You are a very skilled portfolio manager with 30 years of experience.
-
-USER PROFILE:
-{user_profile_formatted}
-
-TASK:
-You will receive the complete analysis data for {num_tickers} stocks. Your job is to identify the top 1-7 stocks with the best overall performance that match the user's risk profile and investment goals.
-
-INVESTOR TYPES AND STOCK SELECTION STRATEGIES:
-1. Income-Oriented Investors:
-    - Focus on stocks with consistent dividend payments and dividend growth history
-    - Look for companies with strong cash flows and sustainable payout ratios
-    - Prefer established companies in defensive sectors like utilities, consumer staples, REITs
-    - Key metrics: dividend yield, dividend growth rate, payout ratio, free cash flow coverage
-
-2. Wealth Preservation Investors:
-    - Prioritize stable blue-chip corporations with long operating histories
-    - Focus on low volatility stocks with beta values less than 1.0
-    - Look for companies with strong balance sheets and low debt-to-equity ratios
-    - Prefer consumer staples, healthcare, and utilities sectors
-    - Key metrics: debt levels, consistent profitability, low price volatility, strong cash reserves
-
-3. Capital Appreciation Investors:
-    - Target companies in their growth phase with strong revenue and earnings growth
-    - Look for companies with competitive advantages and large addressable markets
-    - Consider innovative companies disrupting established industries
-    - May accept higher volatility for greater return potential
-    - Key metrics: revenue growth rate, earnings growth, price-to-earnings-growth (PEG) ratio
-
-MATCHING INVESTOR GOALS TO STOCK CHARACTERISTICS:
-- Short-term goals (1-3 years): Focus on stability, lower volatility stocks, stronger balance sheets
-- Medium-term goals (3-7 years): Balanced approach with growth potential and reasonable valuations
-- Long-term goals (7+ years): Can accept higher short-term volatility for long-term growth potential
-
-RISK TOLERANCE ALIGNMENT:
-- Low Risk Tolerance: Favor stocks with lower volatility (beta < 0.8), stronger balance sheets, stable earnings, and established market positions. Prioritize companies with defensive characteristics that perform well in economic downturns.
-- Medium Risk Tolerance: Balance between growth and stability. Look for companies with moderate volatility (beta 0.8-1.2), reasonable valuations, and consistent but not necessarily exceptional growth.
-- High Risk Tolerance: Can include higher volatility stocks (beta > 1.2) with stronger growth metrics, emerging market exposure, and cyclical industries. May accept less established companies with greater upside potential.
-
-ANALYSIS APPROACH:
-1. Review ALL the provided data carefully
-2. Evaluate each stock based on a combination of:
-    - Performance metrics (sharpe ratio, sortino ratio, beta, momentum, etc.)
-    - Historical fundamental data (from `fundamental_report` when available). Assess trends in profitability, solvency, etc.
-    - **Forward-looking fundamental estimates** (from `fundamental_predictions` when available). Analyze trends in estimated EPS and Revenue (SREV) growth.
-    - Qualitative factors implied by the data (e.g., high momentum might suggest strong recent market sentiment).
-    - Alignment with user's risk tolerance and investment goals.
-3. **Synthesize Findings:** Compare stocks across different asset classes. Identify the 1-7 stocks that offer the most compelling risk/reward profile based on the integrated analysis (performance, historical fundamentals, future estimates, user profile). DO NOT EXCEED 3 RECOMMENDATIONS IN TOTAL.
-
-UNDERSTANDING THE METRICS:
-- "sharpe_ratio": Risk-adjusted return metric. Higher values indicate better risk-adjusted performance. Values > 1 are generally good.
-- "sortino_ratio": Similar to Sharpe but only penalizes downside volatility. Higher values are better.
-- "calmar_ratio": Return relative to maximum drawdown. Higher values indicate better return per unit of downside risk.
-- "annualized_return": The total return expressed as annual percentage. Higher values represent stronger performance.
-- "annualized_volatility": The standard deviation of returns expressed annually. Lower values indicate more stability.
-- "daily_return_volatility": Standard deviation of daily returns. Lower values mean more consistent day-to-day performance.
-- "max_drawdown": Maximum loss from peak to trough. Closer to zero means smaller worst-case losses.
-- "beta": Stock's movement relative to the market. >1 means more volatile than market, <1 means less volatile.
-- "sector_beta": Similar to beta but measured against the stock's sector rather than the S&P 500. (May not be present for ETFs)
-- "upside_capture": Measures how much a stock gains relative to the market in up periods. >1 means outperforming in bull markets.
-- "downside_capture": Measures losses relative to market in down periods. <1 is better (smaller losses than market).
-- "momentum_6m": 6-month cumulative return. Higher values indicate stronger recent performance trend.
-- "momentum_12m": 12-month cumulative return. Higher values indicate stronger medium-term performance trend.
-- `fundamental_report`: Contains historical financial statement data (Balance Sheets, Income Statements, etc.). Use this to assess past performance, financial health, and stability.
-- `fundamental_predictions`: Contains **analyst estimates** for future quarterly performance (EPS, SREV, etc.). Use this to gauge growth expectations and potential future trajectory.
-
-STOCK SELECTION BEST PRACTICES:
-1. **Integrate Historical and Future Data:** Don't rely solely on past performance or future estimates. Use historical data (`fundamental_report`) to understand the company's track record and stability. Use future estimates (`fundamental_predictions`) to assess growth potential.
-2. **Valuation Context:** While direct valuation metrics (like P/E) might not be explicitly provided for all stocks, use the available data (e.g., recent performance, estimated future earnings growth from `fundamental_predictions`) to qualitatively assess if a stock seems reasonably valued relative to its growth prospects and risk profile. High anticipated growth might justify higher current performance metrics.
-3. **Qualitative Assessment:** Consider factors like management quality, competitive positioning, and industry trends (as described in the `fundamental_report` summary, if available) alongside the quantitative data.
-4. **Risk Assessment:** Pay close attention to volatility (annualized_volatility, beta), drawdown (max_drawdown), and downside capture, especially in relation to the user's risk tolerance.
-5. **User Alignment:** Always prioritize recommendations that align with the user's stated goals (growth, income, preservation), time horizon, and risk tolerance.
-
-IMPORTANT CONSIDERATIONS:
-- Base your recommendations *only* on the data provided. Do not introduce external information or metrics not present in the input data.
-- If there is missing information (e.g., no `fundamental_report` or `fundamental_predictions`), acknowledge this limitation in your reasoning if relevant, but still make recommendations based on available data (like performance metrics).
-- For ETFs, fundamental data (`fundamental_report`, `fundamental_predictions`) will likely be missing or marked as not applicable. Evaluate ETFs based primarily on their performance metrics, description (if provided), and alignment with the represented asset class's role in the portfolio.
-- **Disclaimer on Predictions:** The data in `fundamental_predictions` represents *analyst consensus estimates* for future performance. These are projections and are **not guaranteed** future results. Actual outcomes may differ significantly. Use them as indicators of expected trends, not certainties.
-- Provide a concise but thorough justification for each recommendation, linking specific data points (performance metrics, fundamental trends, future estimates) to your reasoning and the user profile.
-- Consider diversification benefits implicitly, but focus recommendations on the top individual stocks based on the analysis.
-
-TICKER SELECTION INFORMATION:
-- If the allocations for a certain sector, industry, or asset class is very high, allocate more tickers to that sector, industry, or asset class than sectors with lower allocations.
-- For example, the semiconductor sector has a 28.5% allocation and you think there are a couple tickers that would be great additions to the portfolio, you should recommend more than 3 tickers.
-
-DATA POINT WEIGHTS (This is how much you should weight each type of data in your analysis):
-- Performance Metrics: 45%
-- Historical Fundamental Data: 45%
-- Forward-Looking Fundamental Estimates: 10% (since this is a prediction and not the actual future fundamental data, it should not carry a huge amount of weight)
-
-OUTPUT FORMAT:
-Return your recommendations in this JSON format ONLY. Do not include any other text outside the JSON structure.
-{{
-"total_stocks_analyzed": {num_tickers},
-"recommendations": [
-    {{
-    "ticker": "[string]",
-    "reason_for_recommendation": "[string explaining rationale based on data and user profile]",
-    "supporting_metrics": {{ // Optional: Include a few key metrics supporting the decision
-        "key_metric_1": "[value]",
-        "key_metric_2": "[value]"
-        // e.g., "sharpe_ratio": 1.5, "estimated_eps_growth_trend": "Positive"
-        }}
-    }}
-    // Add up to 2 more recommendations if warranted
-]
-}}
-</think>
-"""
-        user_prompt = f"""
-        Based on the following data for various asset classes, provide investment recommendations for the top 1-7 stocks overall that best fit the user profile:
-        {data_string}
-        """
+        # -------------------------------------------------------------------
+        # Build prompts via the external templates to keep this file tidy
+        # -------------------------------------------------------------------
+        system_prompt = build_system_prompt(user_profile_formatted)
+        if logger.isEnabledFor(logging.DEBUG):
+            logger.debug("Phase-two system prompt:\n%s", system_prompt)
+        user_prompt = build_user_prompt(data_string)
 
         completion = client.chat.completions.create(
             model="deepseek-reasoner", 
@@ -294,7 +232,6 @@ Return your recommendations in this JSON format ONLY. Do not include any other t
         if completion.choices and completion.choices[0].message:
             response_content = completion.choices[0].message.content
 
-            # --- START FIX ---
             # Clean the response content: Strip whitespace and remove markdown fences
             cleaned_content = response_content.strip()
             if cleaned_content.startswith("```json"):
@@ -305,21 +242,43 @@ Return your recommendations in this JSON format ONLY. Do not include any other t
             # Strip again in case there was whitespace around the fences
             cleaned_content = cleaned_content.strip() 
 
+            # First, try a direct JSON parse of the cleaned content
             try:
-                result_json = json.loads(cleaned_content)
-                # Get the original sector allocation
+                result_json = _attempt_safe_json_load(cleaned_content)
+                if result_json is None:
+                    raise json.JSONDecodeError("Could not parse after cleaning", cleaned_content, 0)
                 sector_alloc = asset_class_top_tickers.get('allocation', 0)
                 recs = result_json.get('recommendations', [])
                 if recs:
-                    per_alloc = round(sector_alloc / len(recs), 2)
+                    per_alloc = round(sector_alloc / max(len(recs), 1), 2)
                     for rec in recs:
                         rec['allocation'] = per_alloc
                 return json.dumps(result_json)
             except json.JSONDecodeError:
-                print("Error: LLM response is not valid JSON even after cleaning.")
-                print(f"Original Response:\n{response_content}")
-                print(f"Cleaned Response Attempted:\n{cleaned_content}")
-                return json.dumps({"error": "LLM response was not valid JSON."})
+                # Attempt to salvage JSON by extracting the first JSON object between braces
+                json_match = re.search(r"\{[\s\S]*\}", cleaned_content)
+                if json_match:
+                    try:
+                        result_json = _attempt_safe_json_load(json_match.group(0))
+                        if result_json is None:
+                            raise json.JSONDecodeError("Could not parse extracted braces", json_match.group(0), 0)
+                        sector_alloc = asset_class_top_tickers.get('allocation', 0)
+                        recs = result_json.get('recommendations', [])
+                        if recs:
+                            per_alloc = round(sector_alloc / max(len(recs), 1), 2)
+                            for rec in recs:
+                                rec['allocation'] = per_alloc
+                        return json.dumps(result_json)
+                    except json.JSONDecodeError:
+                        # Still invalid – will fall through to final error
+                        pass
+
+            # If all attempts fail we log and return a structured error message
+            print("Error: LLM response is not valid JSON even after cleaning or extracting.")
+            if logger.isEnabledFor(logging.DEBUG):
+                logger.debug("Original LLM Response:\n%s", response_content)
+                logger.debug("Cleaned Response Attempted:\n%s", cleaned_content)
+            return json.dumps({"error": "LLM response was not valid JSON."})
         else:
             print("Error: No response content received from API.")
             return None
@@ -331,19 +290,43 @@ Return your recommendations in this JSON format ONLY. Do not include any other t
 
 def run_phase_two(portfolio_data):
     picks = pick_top_tickers_from_asset_classes(portfolio_data)
-    print(picks)
+    if logger.isEnabledFor(logging.DEBUG):
+        logger.debug("Ticker picks: %s", json.dumps(picks))
 
     final_portfolio = {}
 
-    print("="*100)
+    logger.info("="*60)
 
     # Or if you're looping
     for asset_class_name in picks:
-        print(f"Asset class: {asset_class_name}")
-        print(picks[asset_class_name])
+        data_for_class = picks[asset_class_name]
 
-        recommendations_json = make_phaseTwo_recommendations(picks[asset_class_name])
-        print(recommendations_json)
+        # -------------------------------------------------------------
+        # Skip classes with no usable ticker data to avoid pointless
+        # (and often error-prone) LLM calls that return non-JSON text.
+        # -------------------------------------------------------------
+        if not data_for_class or data_for_class.get("error"):
+            final_portfolio[asset_class_name] = {
+                "error": data_for_class.get("error", "No data available for this asset class.")
+            }
+            logger.info("Skipping %s – no usable data available.", asset_class_name)
+            continue
+        if not data_for_class.get("tickers"):
+            final_portfolio[asset_class_name] = {
+                "error": "No valid tickers with sufficient data were found for this asset class."
+            }
+            logger.info("Skipping %s – no tickers passed the data quality filters.", asset_class_name)
+            continue
+
+        logger.info("Generating recommendations for asset class: %s", asset_class_name)
+        if logger.isEnabledFor(logging.DEBUG):
+            logger.debug("Data for %s: %s", asset_class_name, json.dumps(data_for_class))
+        # Verbose details moved to DEBUG logs above.
+
+        recommendations_json = make_phaseTwo_recommendations(data_for_class)
+        if logger.isEnabledFor(logging.DEBUG):
+            logger.debug("Recommendations raw JSON for %s: %s", asset_class_name, recommendations_json)
+        # Raw recommendation JSON logged at DEBUG level.
         
         # Parse JSON string to Python object and add to final_portfolio
         if recommendations_json:
@@ -351,12 +334,14 @@ def run_phase_two(portfolio_data):
                 recommendations_data = json.loads(recommendations_json)
                 final_portfolio[asset_class_name] = recommendations_data
             except json.JSONDecodeError as e:
-                print(f"Error parsing recommendations for {asset_class_name}: {e}")
+                logger.warning("Error parsing recommendations for %s: %s", asset_class_name, e)
                 # Add error info to portfolio if parsing fails
                 final_portfolio[asset_class_name] = {"error": "Failed to parse recommendations"}
     
-    print("\nFinal Portfolio:")
-    print(json.dumps(final_portfolio, indent=2))
+    logger.info("Phase-two complete – final aggregated portfolio ready.")
+    if logger.isEnabledFor(logging.DEBUG):
+        logger.debug("Final Portfolio JSON:\n%s", json.dumps(final_portfolio, indent=2))
+    # Final portfolio already logged above.
     
     return final_portfolio
 

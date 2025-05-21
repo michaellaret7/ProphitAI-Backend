@@ -111,6 +111,7 @@ To construct this thesis:
     {{
       "asset_class": "ONLY USE THE FINAL NODE NAME from get_equity_universe or get_etf_universe (Example: Use 'multi_utilities' NOT 'equity_sector_utilities_multi_utilities')",
       "allocation": "percentage of the portfolio allocated to this asset class",
+      "position": "LONG",
       "reason": "Reason for the allocation. I want this to be a detailed and specific explanation for why you chose this asset class and how it fits into the portfolio."
     }}
   ],
@@ -125,6 +126,7 @@ EXAMPLE JSON OUTPUT:
         {{
             "asset_class": "multi_utilities",
             "allocation": 25,
+            "position": "LONG",
             "reason": "The user has a medium risk tolerance and wants to maximize returns. The portfolio will be tilted towards growth sectors."
         }},
         {{ THIS IS AN EXAMPLE, THERE ARE MANY MORE ASSET CLASSES THAN THIS IN THE ACTUAL JSON OUTPUT }}

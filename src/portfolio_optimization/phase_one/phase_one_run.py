@@ -16,14 +16,21 @@ from .phase_one_validation import (
 from .phase_one_prompts import SYSTEM_PROMPT, build_user_message, min_asset_classes, max_asset_classes
 from src.data.user_information import get_user_information
 from src.utils.choose_model_and_client import deepseek_model_and_client, openai_model_and_client, grok_model_and_client, perplexity_model_and_client
+import logging
+from src.utils.logging_config import init_logger, patch_print_for_logging
 
 # Start timer
 start_time = time.time()
 
+# Initialise logging and quiet-print mechanism EARLY ------------------------
+logger = init_logger(__name__)
+patch_print_for_logging()
+logger.info("[Phase-One] Portfolio optimisation started …")
+
 # Load environment variables from .env file
 load_dotenv()
 
-model, client = grok_model_and_client()
+model, client = openai_model_and_client()
 
 def optimize():
     # Import moved here
@@ -68,13 +75,9 @@ def optimize():
     content = build_user_message()
 
     # # -------------------- DEBUG: print prompts --------------------
-    print("\n" + "=" * 100)
-    print("SYSTEM PROMPT (Phase One):\n")
-    print(SYSTEM_PROMPT)
-    print("\n" + "-" * 100)
-    print("USER PROMPT (first message to LLM):\n")
-    print(content)
-    print("=" * 100 + "\n")
+    if logger.isEnabledFor(logging.DEBUG):
+        logger.debug("%s\n%s", "SYSTEM PROMPT (Phase One)", SYSTEM_PROMPT)
+        logger.debug("%s\n%s", "USER PROMPT (first message to LLM)", content)
 
     try:
         # Define all analyst tools in a more efficient way
@@ -314,7 +317,7 @@ def optimize():
                 final_content = final_response.choices[0].message.content
                 with open(output_filename, "a", encoding="utf-8") as f:
                     f.write(f"\n\n{'='*40}\nFINAL PORTFOLIO RECOMMENDATION (AFTER MAX ROUNDS)\n{'='*40}\n\n{final_content}")
-                print(f"Final recommendation saved to {output_filename}")
+                logger.info("Final recommendation saved to %s", output_filename)
                 return final_content
             
             # Handle phase-specific actions
@@ -387,7 +390,7 @@ def optimize():
                 
                 with open(output_filename, "a", encoding="utf-8") as f:
                     f.write(f"\n\n{'='*40}\nFINAL PORTFOLIO RECOMMENDATION\n{'='*40}\n\n{final_content}")
-                print(f"Final recommendation saved to {output_filename}")
+                logger.info("Final recommendation saved to %s", output_filename)
                 return final_content
             
             # Continue to next round
@@ -410,7 +413,7 @@ def optimize():
         remaining_required_tools = set(required_tools)
         all_tools = list(tool_map.values())
         
-        print("Starting portfolio optimization research...")
+        logger.info("Starting portfolio optimization research …")
         final_content = handle_conversation(initial_messages, all_tools, remaining_required_tools)
         
         if not final_content:
@@ -487,7 +490,7 @@ def optimize():
         # Now we can safely call analyze_portfolio
         try:
             # analyze_portfolio(portfolio_json)
-            print("Portfolio analysis completed successfully")
+            logger.info("Portfolio analysis completed successfully")
         except Exception as e:
             print(f"Error during portfolio analysis: {e}")
             traceback.print_exc()
@@ -496,6 +499,7 @@ def optimize():
         end_time = time.time()
         total_time = end_time - start_time
         print(f"\nTotal processing time: {total_time:.2f} seconds ({total_time/60:.2f} minutes)")
+        logger.info("Total processing time: %.2f seconds (%.2f minutes)", total_time, total_time/60)
         
         return portfolio_json
             
@@ -515,50 +519,3 @@ def optimize():
 if __name__ == "__main__":
     final_portfolio = optimize()
     print(final_portfolio)
-    # print("="*100)
-    # print("PORTFOLIO SUMMARY:")
-    
-    # # Check if 'portfolio' key exists and is a list
-    # if isinstance(final_portfolio, dict) and 'portfolio' in final_portfolio and isinstance(final_portfolio['portfolio'], list):
-    #     for asset in final_portfolio['portfolio']:
-    #         # Check if the asset is a dictionary and has the required keys
-    #         if isinstance(asset, dict) and 'asset_class' in asset and 'allocation' in asset:
-    #             ticker = asset['asset_class']
-    #             allocation = asset['allocation']
-    #             # Ensure allocation is a number before printing
-    #             if isinstance(allocation, (int, float)):
-    #                 print(f"{ticker}: {allocation}%")
-    #             else:
-    #                 print(f"{ticker}: Invalid allocation format ({allocation})")
-    #         else:
-    #             print(f"Skipping invalid asset entry: {asset}")
-    # else:
-    #     print("Could not find 'portfolio' list in the returned data or data is not a dictionary.")
-
-    # picks = pick_top_tickers_from_asset_classes(final_portfolio)
-    # print(picks)
-
-    # final_portfolio = {}
-
-    # print("="*100)
-
-    # # Or if you're looping
-    # for asset_class_name in picks:
-    #     print(f"Asset class: {asset_class_name}")
-    #     print(picks[asset_class_name])
-
-    #     recommendations_json = make_phaseTwo_recommendations(picks[asset_class_name])
-    #     print(recommendations_json)
-        
-    #     # Parse JSON string to Python object and add to final_portfolio
-    #     if recommendations_json:
-    #         try:
-    #             recommendations_data = json.loads(recommendations_json)
-    #             final_portfolio[asset_class_name] = recommendations_data
-    #         except json.JSONDecodeError as e:
-    #             print(f"Error parsing recommendations for {asset_class_name}: {e}")
-    #             # Add error info to portfolio if parsing fails
-    #             final_portfolio[asset_class_name] = {"error": "Failed to parse recommendations"}
-    
-    # print("\nFinal Portfolio:")
-    # print(json.dumps(final_portfolio, indent=2))

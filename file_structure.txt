@@ -1,49 +1,49 @@
 ├── src/ ← Python package root
 │ ├── __init__.py
 │ │
-│ ├── phaseOne/ ← 1st-pass makes sector allocations then passes them to phaseTwo
+│ ├── portfolio_optimization/ ← Portfolio construction logic
 │ │ ├── __init__.py
-│ │ ├── phaseOneRun.py — main driver
-│ │ ├── phase_one_prompts.py — system & user prompts
-│ │ ├── phase_one_formatting.py — cleans & reshapes raw data
-│ │ ├── phase_one_validation.py — validates inputs & outputs
-│ │ └── phaseOneAnimation.py — creates GIF/MP4 visualisations
+│ │ ├── runner.py — orchestrator / CLI entry
+│ │ ├── phase_one/
+│ │ │ ├── __init__.py
+│ │ │ ├── phase_one_run.py — main driver for sector allocations
+│ │ │ ├── phaseOneAnimation.py
+│ │ │ ├── phase_one_prompts.py
+│ │ │ ├── phase_one_formatting.py
+│ │ │ └── phase_one_validation.py
+│ │ └── phase_two/
+│ │   ├── __init__.py
+│ │   ├── phase_two_run.py — picks stocks per sector
+│ │   ├── phase_two_prompts.py
+│ │   ├── phase_two_calculations.py — DCF, CAGR, ratios
+│ │   ├── data_retrieval.py — price / statement pulls
+│ │   └── retrieve_fundamental_report.py
 │ │
-│ ├── phaseTwo/ ← Takes allocations and picks best stocks per sector then appends to one big portfolio dict
+│ ├── analysts/ ← Rule-based analysts
 │ │ ├── __init__.py
-│ │ ├── phaseTwo.py — orchestrator / CLI entry
-│ │ ├── phaseTwoCalculations.py — DCF, CAGR, ratios, etc.
-│ │ ├── phaseTwoBacktest.py — backtests the phaseTwo results
-│ │ ├── data_retrieval.py — price / statement pulls
-│ │ └── retrieve_fundamental_report.py — pulls fundamental report from the database
+│ │ ├── equityAnalysts.py — equity research integration
+│ │ └── macroAnalysts.py — macroeconomic logic
 │ │
-│ ├── prophitaiGPT/ ← OpenAI agentic chatbot
+│ ├── prophitai_gpt/ ← OpenAI agentic chatbot
 │ │ ├── gpt.py — wrapper around ChatGPT calls
 │ │ ├── functionSchemas/
 │ │ │ └── tools.py — schema definitions for tools
-│ │ ├── placeOrders/ — IB API order helpers
+│ │ ├── placeOrders/
 │ │ │ ├── longOrder.py
 │ │ │ └── exitPosition.py
 │ │ └── dataRetrievalTools/
 │ │   ├── __init__.py
-│ │   └── portfolioData.py
-│ │
-│ ├── utils/ ← shared helpers
-│ │ ├── __init__.py
-│ │ ├── caching.py — TTL memoisation to disk/redis
-│ │ ├── database.py — SQLite / Postgres helpers
-│ │ ├── determine_etf.py — ticker classification
-│ │ ├── file_utils.py — CSV/JSON convenience
-│ │ ├── formatting.py — display helpers
-│ │ ├── ib_utils.py — Interactive Brokers bridge
-│ │ └── ticker_utils.py
+│ │   ├── portfolioData.py
+│ │   └── retrieve_financial_metrics.py
 │ │
 │ ├── data/ ← DB schema & ETL for prices/fundamentals
 │ │ ├── __init__.py
 │ │ ├── update_stock_data.py — refreshes prices & fundamentals
+│ │ ├── update_fundamental_predictions.py — updates predictive fundamentals
 │ │ ├── PortfolioData.py — single-stock & holdings fetch
 │ │ ├── FundamentalData.py — income/BS/CF pulls
-│ │ ├── database/ — schema definitions & migrations
+│ │ ├── user_information.py — runtime user data
+│ │ ├── database/
 │ │ │ ├── database_schema_update.py
 │ │ │ ├── database_prices_schema_update.py
 │ │ │ ├── database_schemas.json
@@ -54,15 +54,37 @@
 │ │   ├── store_fundamental_report.py
 │ │   └── generate_and_store_sector_averages.py
 │ │
-│ ├── analysts/ ← rule-based analysts
+│ ├── utils/ ← Shared helpers
 │ │ ├── __init__.py
-│ │ ├── equityAnalysts.py — pulls research from the database (used in phaseOne)
-│ │ └── macroAnalysts.py — GDP, CPI, Fed policy logic (used in phaseOne)
+│ │ ├── caching.py — TTL memoisation to disk/redis
+│ │ ├── database.py — SQLite / Postgres helpers
+│ │ ├── determine_etf.py — ticker classification
+│ │ ├── file_utils.py — CSV/JSON convenience
+│ │ ├── formatting.py — display helpers
+│ │ ├── ib_utils.py — Interactive Brokers bridge
+│ │ ├── ticker_utils.py
+│ │ ├── choose_model_and_client.py
+│ │ ├── retrieve_portfolio_from_db.py
+│ │ └── logging_config.py
+│ │
+│ ├── backtest/ ← Backtesting engine
+│ │ ├── backtest_run.py
+│ │ └── backtest_helpers.py
+│ │
+│ ├── stress_test_agent/ ← Agent for portfolio stress testing
+│ │ ├── stress_test_agent_run.py
+│ │ ├── stress_test_agent_class.py
+│ │ └── tools/
+│ │   ├── __init__.py
+│ │   ├── get_data.py
+│ │   └── tool_registry.py
+│ │
+│ ├── portfolio_builder/ ← (placeholder for future work)
 │ │
 │ └── research/ ← LLM-generated research drafts
-│   ├── equityResearchAnalysts.py — writes stock research reports and stores them to the db
-│   ├── macroResearchAnalyst.py — writes macro commentary reports and stores them to the db
-│   └── cacheResearch.py — pushes research to the database
+│   ├── equity_research_analysts.py — writes stock research reports and stores them to the db
+│   ├── macro_research_analyst.py — writes macro commentary reports and stores them to the db
+│   └── cache_research.py — pushes research to the database
 │
 ├── testing/ ← notebooks / sandboxes / demos
 │ ├── AgentSDKWorks.py
@@ -73,5 +95,6 @@
 │ ├── FinalSectorSheet.xlsx
 │ └── recentOutput.txt
 │
-├── output/ ← generated reports, logs, etc. (currently empty)
+├── output/ ← generated reports, logs, etc.
+│
 └── .gitignore

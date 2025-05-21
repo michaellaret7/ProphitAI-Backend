@@ -307,29 +307,9 @@ def backtest(portfolio_json: Dict[str, Any]):
     fig.show()
 
 if __name__ == "__main__":
-    # Simulate data retrieved from the database (as per user's example output)
-    # In a real scenario, this would come from calling a function like
-    # src.utils.retrieve_portfolio_from_db and parsing its output.
-    # sample_db_output_data = [
-    #     {"ticker": "AVGO", "allocation": 6.500},
-    #     {"ticker": "ADI", "allocation": 6.500},
-    #     {"ticker": "TRAK", "allocation": 2.330},
-    #     {"ticker": "FICO", "allocation": 2.330},
-    #     # Using some tickers from json10 for which data might be more readily available
-    #     # in a typical test environment for this script.
-    #     {"ticker": "CPER", "allocation": 4.8},
-    #     {"ticker": "GLD", "allocation": 2.4},
-    #     {"ticker": "NVDA", "allocation": 2.57},
-    #     {"ticker": "MSFT", "allocation": 5.0}, # Added a common ticker for testing
-    #     {"ticker": "NONEXISTENTTICKER", "allocation": 1.0} # Test missing data
-    # ]
-
-    # Define total portfolio value for share calculation.
-    # This value aligns with the default used by get_portfolio_value_from_json
-    # if 'market_value' is not present in the generated JSON items.
     assumed_initial_portfolio_value = 10_000.0
 
-    test_schema = "portfolio_eleven"
+    test_schema = "portfolio_seventeen"
     table_name = "final_portfolio"
     print(f"🔄 Retrieving portfolio information from DB: {test_schema}.{table_name}...")
     portfolio_df = retrieve_portfolio_information_from_db(test_schema, table_name)
