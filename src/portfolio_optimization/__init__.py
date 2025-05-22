@@ -52,10 +52,6 @@ sys.modules.setdefault("src.phaseTwo", _phase_two_pkg)
 
 # Fine-grained sub-modules commonly imported directly
 sys.modules.setdefault(
-    "src.phaseOne.phaseOneAnimation",
-    importlib.import_module("src.portfolio_optimization.phase_one.phaseOneAnimation"),
-)
-sys.modules.setdefault(
     "src.phaseTwo.data_retrieval",
     importlib.import_module("src.portfolio_optimization.phase_two.data_retrieval"),
 )

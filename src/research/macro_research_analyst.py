@@ -20,9 +20,7 @@ import random
 import itertools
 import threading
 import math
-import curses
 from dotenv import load_dotenv
-from src.portfolio_optimization.phase_one.phaseOneAnimation import start_animation, Colors
 from src.utils.file_utils import load_schema_data
 
 # Load environment variables from .env file
@@ -32,7 +30,6 @@ Sonar_API_KEY = os.environ.get("PERPLEXITY_API_KEY")
 perplexity_model = 'sonar-deep-research'
 
 def commodities_research_analyst():
-    from src.portfolio_optimization.phase_one.phaseOneAnimation import start_animation, Colors
     date = datetime.now().strftime("%Y-%m-%d")
 
     # Define custom analysis steps for commodities research
@@ -54,9 +51,6 @@ def commodities_research_analyst():
         "Examining speculative positioning data"
     ]
     
-    # Start animation before API setup
-    animation = start_animation(commodities_steps, "Commodities Market Analysis")
-
     system_prompt = """
     You are an expert commodities analyst with deep knowledge of global markets. You prioritize clarity, detail, and data-backed reasoning in your explanations. Always ground your conclusions in the provided context. If needed information is absent, acknowledge the gap rather than guessing.
     """
@@ -178,15 +172,6 @@ def commodities_research_analyst():
             stream=True
         )
 
-        # Stop the animation before printing any output
-        animation.stop()
-        
-        # Give terminal a moment to complete cleanup
-        time.sleep(0.1)
-        
-        # Ensure fresh line for output (without clearing entire screen)
-        print("\nStreaming response:")
-        
         # Collect the streaming content
         collected_chunks = []
         collected_content = ""
@@ -207,13 +192,10 @@ def commodities_research_analyst():
         return cleaned_content
     
     except Exception as e:
-        # Stop the animation if there's an error
-        animation.stop()
-        print(f"{Colors.RED}Error: {e}{Colors.END}")
+        print(f"Error: {e}")
         return None
 
 def etf_research_analyst():
-    from src.portfolio_optimization.phase_one.phaseOneAnimation import start_animation, Colors
     date = datetime.now().strftime("%Y-%m-%d")
 
     etf_steps = [
@@ -238,8 +220,6 @@ def etf_research_analyst():
         "Examining ETF correlation matrices",
         "Processing ETF rebalancing data"
     ]
-
-    animation = start_animation(etf_steps, "ETF Market Analysis")
 
     system_prompt = """
 You are an ETF analyst tool designed to provide a comprehensive, data-driven analysis of Exchange-Traded Funds (ETFs) for a portfolio optimizer with agentic AI. Your role is to evaluate how various factors—such as underlying asset performance, market trends, economic indicators, geopolitical events, regulatory changes, technological advancements, currency movements, and fund-specific attributes—affect ETF performance, risks, and opportunities.
@@ -389,15 +369,6 @@ END OF PROMPT
             stream=True
         )
 
-        # Stop the animation before printing any output
-        animation.stop()
-        
-        # Give terminal a moment to complete cleanup
-        time.sleep(0.1)
-        
-        # Ensure fresh line for output (without clearing entire screen)
-        print("\nStreaming response:")
-        
         # Collect the streaming content
         collected_chunks = []
         collected_content = ""
@@ -418,13 +389,10 @@ END OF PROMPT
         return cleaned_content
     
     except Exception as e:
-        # Stop the animation if there's an error
-        animation.stop()
-        print(f"{Colors.RED}Error: {e}{Colors.END}")
+        print(f"Error: {e}")
         return None
 
 def treasuries_research_analyst():
-    from src.portfolio_optimization.phase_one.phaseOneAnimation import start_animation, Colors
     date = datetime.now().strftime("%Y-%m-%d")
 
     treasuries_steps = [
@@ -435,8 +403,6 @@ def treasuries_research_analyst():
         "Analyzing Treasury sector performance",
     ]
 
-    animation = start_animation(treasuries_steps, "Treasury Market Analysis")
-    
     system_prompt = """
 You are an expert macroeconomic analyst with a specialization in U.S. Treasury markets and yield curves. You have deep knowledge of factors affecting Treasury yields—such as inflation, Federal Reserve policy, geopolitical risks, and market positioning. You prioritize clarity, detail, and data-driven reasoning in your analysis. Always cite relevant points from the provided context to ground your conclusions in facts. 
     """
@@ -561,15 +527,6 @@ IMPORTANT
             stream=True
         )
 
-        # Stop the animation before printing any output
-        animation.stop()
-        
-        # Give terminal a moment to complete cleanup
-        time.sleep(0.1)
-        
-        # Ensure fresh line for output (without clearing entire screen)
-        print("\nStreaming response:")
-        
         # Collect the streaming content
         collected_chunks = []
         collected_content = ""
@@ -590,13 +547,10 @@ IMPORTANT
         return cleaned_content
     
     except Exception as e:
-        # Stop the animation if there's an error
-        animation.stop()
-        print(f"{Colors.RED}Error: {e}{Colors.END}")
+        print(f"Error: {e}")
         return None
 
 def foreign_exchange_research_analyst():
-    from src.portfolio_optimization.phase_one.phaseOneAnimation import start_animation, Colors
     date = datetime.now().strftime("%Y-%m-%d")
 
     fx_steps = [
@@ -607,8 +561,6 @@ def foreign_exchange_research_analyst():
         "Analyzing FX sector performance",
     ]
 
-    animation = start_animation(fx_steps, "Foreign Exchange Market Analysis")
-    
     system_prompt = """
 You are an expert FX strategist with deep knowledge of currency valuation models and global monetary dynamics. You prioritize clarity, detail, and factual grounding in your analyses. If information is missing, acknowledge that rather than guessing or inventing data.
     """
@@ -773,15 +725,6 @@ IMPORTANT
             stream=True
         )
 
-        # Stop the animation before printing any output
-        animation.stop()
-        
-        # Give terminal a moment to complete cleanup
-        time.sleep(0.1)
-        
-        # Ensure fresh line for output (without clearing entire screen)
-        print("\nStreaming response:")
-        
         # Collect the streaming content
         collected_chunks = []
         collected_content = ""
@@ -802,13 +745,10 @@ IMPORTANT
         return cleaned_content
     
     except Exception as e:
-        # Stop the animation if there's an error
-        animation.stop()
-        print(f"{Colors.RED}Error: {e}{Colors.END}")
+        print(f"Error: {e}")
         return None
 
 def ig_credit_research_analyst():
-    from src.portfolio_optimization.phase_one.phaseOneAnimation import start_animation, Colors
     date = datetime.now().strftime("%Y-%m-%d")
 
     ig_credit_steps = [
@@ -819,8 +759,6 @@ def ig_credit_research_analyst():
         "Analyzing IG credit sector performance",
     ]
 
-    animation = start_animation(ig_credit_steps, "IG Credit Market Analysis")
-    
     system_prompt = """
 You are an expert credit analyst specializing in U.S. Investment Grade (IG) corporate bonds. You have deep knowledge of credit fundamentals, spread analysis, interest rate dynamics, and market technicals. You prioritize clarity, detail, and factual grounding in your analyses. If information is missing, acknowledge that rather than guessing or inventing data.
     """
@@ -957,15 +895,6 @@ IMPORTANT
             stream=True
         )
 
-        # Stop the animation before printing any output
-        animation.stop()
-        
-        # Give terminal a moment to complete cleanup
-        time.sleep(0.1)
-        
-        # Ensure fresh line for output (without clearing entire screen)
-        print("\nStreaming response:")
-        
         # Collect the streaming content
         collected_chunks = []
         collected_content = ""
@@ -986,13 +915,10 @@ IMPORTANT
         return cleaned_content
     
     except Exception as e:
-        # Stop the animation if there's an error
-        animation.stop()
-        print(f"{Colors.RED}Error: {e}{Colors.END}")
+        print(f"Error: {e}")
         return None
 
 def high_yield_research_analyst():
-    from src.portfolio_optimization.phase_one.phaseOneAnimation import start_animation, Colors
     date = datetime.now().strftime("%Y-%m-%d")
 
     high_yield_steps = [
@@ -1003,8 +929,6 @@ def high_yield_research_analyst():
         "Analyzing high-yield bond sector performance",
     ]
 
-    animation = start_animation(high_yield_steps, "High Yield Bond Market Analysis")
-    
     system_prompt = """
 You are an expert fixed-income strategist with deep knowledge of both U.S. high-yield bond markets and emerging market (EM) debt. You prioritize clarity, detail, and factual grounding in your analysis. If information is missing, acknowledge that rather than fabricating data.
     """
@@ -1128,7 +1052,7 @@ IMPORTANT
         },
     ]
 
-        # Initialize client once with Perplexity API
+    # Initialize client once with Perplexity API
     client = OpenAI(api_key=Sonar_API_KEY, base_url="https://api.perplexity.ai")
     
     try:
@@ -1139,15 +1063,6 @@ IMPORTANT
             stream=True
         )
 
-        # Stop the animation before printing any output
-        animation.stop()
-        
-        # Give terminal a moment to complete cleanup
-        time.sleep(0.1)
-        
-        # Ensure fresh line for output (without clearing entire screen)
-        print("\nStreaming response:")
-        
         # Collect the streaming content
         collected_chunks = []
         collected_content = ""
@@ -1168,13 +1083,10 @@ IMPORTANT
         return cleaned_content
     
     except Exception as e:
-        # Stop the animation if there's an error
-        animation.stop()
-        print(f"{Colors.RED}Error: {e}{Colors.END}")
+        print(f"Error: {e}")
         return None
 
 def emerging_market_research_analyst():
-    from src.portfolio_optimization.phase_one.phaseOneAnimation import start_animation, Colors
     date = datetime.now().strftime("%Y-%m-%d")
 
     emerging_market_steps = [
@@ -1185,8 +1097,6 @@ def emerging_market_research_analyst():
         "Analyzing emerging market sector performance",
     ]
 
-    animation = start_animation(emerging_market_steps, "Emerging Market Analysis")
-    
     system_prompt = """
 You are an expert emerging markets analyst with deep knowledge of the intersection between global macro forces and local EM conditions. You prioritize clarity, detail, and factual grounding in your assessments. If any information is missing, acknowledge that rather than guessing or inventing data.
     """
@@ -1300,7 +1210,7 @@ IMPORTANT
         },
     ]
 
-        # Initialize client once with Perplexity API
+    # Initialize client once with Perplexity API
     client = OpenAI(api_key=Sonar_API_KEY, base_url="https://api.perplexity.ai")
     
     try:
@@ -1311,15 +1221,6 @@ IMPORTANT
             stream=True
         )
 
-        # Stop the animation before printing any output
-        animation.stop()
-        
-        # Give terminal a moment to complete cleanup
-        time.sleep(0.1)
-        
-        # Ensure fresh line for output (without clearing entire screen)
-        print("\nStreaming response:")
-        
         # Collect the streaming content
         collected_chunks = []
         collected_content = ""
@@ -1340,8 +1241,6 @@ IMPORTANT
         return cleaned_content
     
     except Exception as e:
-        # Stop the animation if there's an error
-        animation.stop()
-        print(f"{Colors.RED}Error: {e}{Colors.END}")
+        print(f"Error: {e}")
         return None
 

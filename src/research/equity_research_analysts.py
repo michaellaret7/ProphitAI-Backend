@@ -19,9 +19,7 @@ import random
 import itertools
 import threading
 import math
-import curses
 from dotenv import load_dotenv
-from src.portfolio_optimization.phase_one.phaseOneAnimation import start_animation, Colors
 from src.utils.file_utils import load_schema_data
 
 # Load environment variables from .env file
@@ -31,31 +29,9 @@ Sonar_API_KEY = os.environ.get("PERPLEXITY_API_KEY")
 perplexity_model = 'sonar-deep-research'
 
 def communication_services_research_analyst():
-    from src.portfolio_optimization.phase_one.phaseOneAnimation import start_animation, Colors
+    
     date = datetime.now().strftime("%Y-%m-%d")
     current_month_year = datetime.now().strftime("%B %Y")
-
-    # Define custom analysis steps for equity research
-    equity_steps = [
-        "Analyzing S&P 500 sector performance",
-        "Evaluating market breadth indicators",
-        "Processing earnings growth trends",
-        "Calculating equity risk premiums",
-        "Examining market sentiment metrics",
-        "Analyzing technical support/resistance levels",
-        "Assessing global equity correlations",
-        "Evaluating valuation metrics by sector",
-        "Processing institutional fund flows",
-        "Analyzing volatility patterns",
-        "Calculating sector rotation metrics",
-        "Examining factor performance trends",
-        "Analyzing earnings surprise data",
-        "Evaluating market leadership dynamics",
-        "Processing analyst estimate revisions"
-    ]
-    
-    # Start animation before API setup
-    animation = start_animation(equity_steps, "Equity Research Analysis")
     
     # Now continue with the rest of the function
     system_prompt = """
@@ -177,7 +153,7 @@ Additional Notes:
         )
 
         # Stop the animation before printing any output
-        animation.stop()
+        
         
         # Give terminal a moment to complete cleanup
         time.sleep(0.1)
@@ -206,25 +182,15 @@ Additional Notes:
     
     except Exception as e:
         # Stop the animation if there's an error
-        animation.stop()
-        print(f"{Colors.RED}Error: {e}{Colors.END}")
+        
+        
         return None
 
 def consumer_discretionary_research_analyst():
-    from src.portfolio_optimization.phase_one.phaseOneAnimation import start_animation, Colors
+    
     date = datetime.now().strftime("%Y-%m-%d")
     current_month_year = datetime.now().strftime("%B %Y")
     current_year = datetime.now().strftime("%Y")
-
-    steps = [
-        "Analyzing S&P 500 sector performance",
-        "Evaluating market breadth indicators",
-        "Processing earnings growth trends",
-        "Calculating equity risk premiums",
-        "Examining market sentiment metrics",
-    ]
-
-    animation = start_animation(steps, "Consumer Discretionary Analyst")
 
     system_prompt = """
 You are a professional financial analyst specializing in equity markets. Provide comprehensive, data-driven analysis of the stock market with the following characteristics:
@@ -407,7 +373,7 @@ IMPORTANT
         )
 
         # Stop the animation before printing any output
-        animation.stop()
+        
         
         # Give terminal a moment to complete cleanup
         time.sleep(0.1)
@@ -436,12 +402,12 @@ IMPORTANT
     
     except Exception as e:
         # Stop the animation if there's an error
-        animation.stop()
-        print(f"{Colors.RED}Error: {e}{Colors.END}")
+        
+        
         return None
 
 def consumer_staples_research_analyst():
-    from src.portfolio_optimization.phase_one.phaseOneAnimation import start_animation, Colors
+    
     date = datetime.now().strftime("%Y-%m-%d")
     current_month_year = datetime.now().strftime("%B %Y")
     current_year = datetime.now().strftime("%Y")
@@ -453,8 +419,6 @@ def consumer_staples_research_analyst():
         "Calculating equity risk premiums",
         "Examining market sentiment metrics",
     ]
-
-    animation = start_animation(steps, "Consumer Staples Analyst")
 
     system_prompt = """
     You are a professional financial analyst specializing in equity markets. Provide comprehensive, data-driven analysis of the stock market with the following characteristics:
@@ -617,7 +581,7 @@ IMPORTANT
         )
 
         # Stop the animation before printing any output
-        animation.stop()
+        
         
         # Give terminal a moment to complete cleanup
         time.sleep(0.1)
@@ -646,12 +610,12 @@ IMPORTANT
     
     except Exception as e:
         # Stop the animation if there's an error
-        animation.stop()
-        print(f"{Colors.RED}Error: {e}{Colors.END}")
+        
+        
         return None
 
 def energy_research_analyst():
-    from src.portfolio_optimization.phase_one.phaseOneAnimation import start_animation, Colors
+    
     date = datetime.now().strftime("%Y-%m-%d")
     current_month_year = datetime.now().strftime("%B %Y")
     current_year = datetime.now().strftime("%Y")
@@ -663,8 +627,6 @@ def energy_research_analyst():
         "Calculating equity risk premiums",
         "Examining market sentiment metrics",
     ]
-
-    animation = start_animation(steps, "Energy Analyst")
 
     system_prompt = """
     You are a professional financial analyst specializing in equity markets. Provide comprehensive, data-driven analysis of the stock market with the following characteristics:
@@ -894,7 +856,7 @@ IMPORTANT
         )
 
         # Stop the animation before printing any output
-        animation.stop()
+        
         
         # Give terminal a moment to complete cleanup
         time.sleep(0.1)
@@ -923,12 +885,12 @@ IMPORTANT
     
     except Exception as e:
         # Stop the animation if there's an error
-        animation.stop()
-        print(f"{Colors.RED}Error: {e}{Colors.END}")
+        
+        
         return None
 
 def financials_research_analyst():
-    from src.portfolio_optimization.phase_one.phaseOneAnimation import start_animation, Colors
+    
     date = datetime.now().strftime("%Y-%m-%d")
     current_month_year = datetime.now().strftime("%B %Y")
     current_year = datetime.now().strftime("%Y")
@@ -941,7 +903,7 @@ def financials_research_analyst():
         "Examining market sentiment metrics",
     ]
 
-    animation = start_animation(steps, "Financials Analyst")
+    
 
     system_prompt = """
     You are a professional financial analyst specializing in equity markets. Provide comprehensive, data-driven analysis of the stock market with the following characteristics:
@@ -1196,7 +1158,7 @@ IMPORTANT
         )
 
         # Stop the animation before printing any output
-        animation.stop()
+        
         
         # Give terminal a moment to complete cleanup
         time.sleep(0.1)
@@ -1225,12 +1187,12 @@ IMPORTANT
     
     except Exception as e:
         # Stop the animation if there's an error
-        animation.stop()
-        print(f"{Colors.RED}Error: {e}{Colors.END}")
+        
+        
         return None
 
 def healthcare_research_analyst():
-    from src.portfolio_optimization.phase_one.phaseOneAnimation import start_animation, Colors
+    
     date = datetime.now().strftime("%Y-%m-%d")
     current_month_year = datetime.now().strftime("%B %Y")
     current_year = datetime.now().strftime("%Y")
@@ -1242,8 +1204,6 @@ def healthcare_research_analyst():
         "Calculating equity risk premiums",
         "Examining market sentiment metrics",
     ]
-
-    animation = start_animation(steps, "Healthcare Analyst")
 
     system_prompt = """
     You are a professional financial analyst specializing in equity markets. Provide comprehensive, data-driven analysis of the stock market with the following characteristics:
@@ -1499,7 +1459,7 @@ IMPORTANT
         )
 
         # Stop the animation before printing any output
-        animation.stop()
+        
         
         # Give terminal a moment to complete cleanup
         time.sleep(0.1)
@@ -1528,12 +1488,12 @@ IMPORTANT
     
     except Exception as e:
         # Stop the animation if there's an error
-        animation.stop()
-        print(f"{Colors.RED}Error: {e}{Colors.END}")
+        
+        
         return None
 
 def industrials_research_analyst():
-    from src.portfolio_optimization.phase_one.phaseOneAnimation import start_animation, Colors
+    
     date = datetime.now().strftime("%Y-%m-%d")
     current_month_year = datetime.now().strftime("%B %Y")
     current_year = datetime.now().strftime("%Y")
@@ -1545,8 +1505,6 @@ def industrials_research_analyst():
         "Calculating equity risk premiums",
         "Examining market sentiment metrics",
     ]
-
-    animation = start_animation(steps, "Industrials Analyst")
 
     system_prompt = """
     You are a professional financial analyst specializing in equity markets. Provide comprehensive, data-driven analysis of the stock market with the following characteristics:
@@ -1823,7 +1781,7 @@ IMPORTANT
         )
 
         # Stop the animation before printing any output
-        animation.stop()
+        
         
         # Give terminal a moment to complete cleanup
         time.sleep(0.1)
@@ -1852,12 +1810,12 @@ IMPORTANT
     
     except Exception as e:
         # Stop the animation if there's an error
-        animation.stop()
-        print(f"{Colors.RED}Error: {e}{Colors.END}")
+        
+        
         return None
 
 def information_technology_research_analyst():
-    from src.portfolio_optimization.phase_one.phaseOneAnimation import start_animation, Colors
+    
     date = datetime.now().strftime("%Y-%m-%d")
     current_month_year = datetime.now().strftime("%B %Y")
     current_year = datetime.now().strftime("%Y")
@@ -1869,8 +1827,6 @@ def information_technology_research_analyst():
         "Calculating equity risk premiums",
         "Examining market sentiment metrics",
     ]
-
-    animation = start_animation(steps, "Industrials Analyst")
 
     system_prompt = """
     You are a professional financial analyst specializing in equity markets. Provide comprehensive, data-driven analysis of the stock market with the following characteristics:
@@ -2112,7 +2068,7 @@ IMPORTANT
         )
 
         # Stop the animation before printing any output
-        animation.stop()
+        
         
         # Give terminal a moment to complete cleanup
         time.sleep(0.1)
@@ -2141,12 +2097,12 @@ IMPORTANT
     
     except Exception as e:
         # Stop the animation if there's an error
-        animation.stop()
-        print(f"{Colors.RED}Error: {e}{Colors.END}")
+        
+        
         return None
 
 def materials_research_analyst():
-    from src.portfolio_optimization.phase_one.phaseOneAnimation import start_animation, Colors
+    
     date = datetime.now().strftime("%Y-%m-%d")
     current_month_year = datetime.now().strftime("%B %Y")
     current_year = datetime.now().strftime("%Y")
@@ -2158,8 +2114,6 @@ def materials_research_analyst():
         "Calculating equity risk premiums",
         "Examining market sentiment metrics",
     ]
-
-    animation = start_animation(steps, "Industrials Analyst")
 
     system_prompt = """
     You are a professional financial analyst specializing in equity markets. Provide comprehensive, data-driven analysis of the stock market with the following characteristics:
@@ -2294,13 +2248,13 @@ Materials value chains typically involve multiple transformation stages from raw
 ### Scenario 1: Accelerated Infrastructure Investment (Hypothetical)
 - **Event**: Major economies implement coordinated infrastructure renewal programs totaling $3-4 trillion over five years, with particular emphasis on transportation, renewable energy, and water systems.
 - **Impact**: 
-  - Construction materials producers experience 15-20% volume growth versus baseline expectations, with pricing power allowing 300-500 basis point margin expansion.
-  - Steel producers face capacity constraints with utilization rates exceeding 85%, driving 30-40% price increases for structural products.
-  - Copper miners benefit from electrification components, with prices potentially reaching $12,000-14,000/ton on 3-5% supply deficits.
-  - Specialty chemical providers serving infrastructure applications (concrete additives, coatings, waterproofing) see 20-25% revenue growth with limited capacity expansion requirements.
-  - Packaging companies face input cost pressures but maintain stable margins through contractual pass-through provisions.
+  - Construction and engineering firms experience 20-30% order backlog increases and 15-20% share price appreciation.
+  - Heavy equipment manufacturers see 5-7% annual revenue growth acceleration over baseline projections.
+  - Materials producers benefit from 10-15% volume increases and improved pricing power, adding 150-200 basis points to margins.
+  - Professional services firms specializing in project management and environmental compliance capture 15-20% revenue growth.
+  - Transportation companies benefit secondarily as improved infrastructure reduces logistics costs by 3-5%.
 - **Risks**: 
-  - Labor constraints and equipment availability create project delays and cost overruns.
+  - Labor and material constraints create project delays and cost overruns.
   - Political cycles interrupt funding continuity before completion of major projects.
 - **Opportunities**: 
   - Companies with vertically integrated operations capture multiple value chain segments.
@@ -2414,7 +2368,7 @@ IMPORTANT
         )
 
         # Stop the animation before printing any output
-        animation.stop()
+        
         
         # Give terminal a moment to complete cleanup
         time.sleep(0.1)
@@ -2443,12 +2397,12 @@ IMPORTANT
     
     except Exception as e:
         # Stop the animation if there's an error
-        animation.stop()
-        print(f"{Colors.RED}Error: {e}{Colors.END}")
+        
+        
         return None
 
 def real_estate_research_analyst():
-    from src.portfolio_optimization.phase_one.phaseOneAnimation import start_animation, Colors
+    
     date = datetime.now().strftime("%Y-%m-%d")
     current_month_year = datetime.now().strftime("%B %Y")
     current_year = datetime.now().strftime("%Y")
@@ -2460,8 +2414,6 @@ def real_estate_research_analyst():
         "Calculating equity risk premiums",
         "Examining market sentiment metrics",
     ]
-
-    animation = start_animation(steps, "Industrials Analyst")
 
     system_prompt = """
     You are a professional financial analyst specializing in equity markets. Provide comprehensive, data-driven analysis of the stock market with the following characteristics:
@@ -2729,7 +2681,7 @@ IMPORTANT
         )
 
         # Stop the animation before printing any output
-        animation.stop()
+        
         
         # Give terminal a moment to complete cleanup
         time.sleep(0.1)
@@ -2758,12 +2710,12 @@ IMPORTANT
     
     except Exception as e:
         # Stop the animation if there's an error
-        animation.stop()
-        print(f"{Colors.RED}Error: {e}{Colors.END}")
+        
+        
         return None
 
 def utilities_research_analyst():
-    from src.portfolio_optimization.phase_one.phaseOneAnimation import start_animation, Colors
+    
     date = datetime.now().strftime("%Y-%m-%d")
     current_month_year = datetime.now().strftime("%B %Y")
     current_year = datetime.now().strftime("%Y")
@@ -2775,8 +2727,6 @@ def utilities_research_analyst():
         "Calculating equity risk premiums",
         "Examining market sentiment metrics",
     ]
-
-    animation = start_animation(steps, "Industrials Analyst")
 
     system_prompt = """
     You are a professional financial analyst specializing in equity markets. Provide comprehensive, data-driven analysis of the stock market with the following characteristics:
@@ -3020,7 +2970,7 @@ IMPORTANT
         )
 
         # Stop the animation before printing any output
-        animation.stop()
+        
         
         # Give terminal a moment to complete cleanup
         time.sleep(0.1)
@@ -3049,6 +2999,6 @@ IMPORTANT
     
     except Exception as e:
         # Stop the animation if there's an error
-        animation.stop()
-        print(f"{Colors.RED}Error: {e}{Colors.END}")
+        
+        
         return None

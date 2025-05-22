@@ -16,7 +16,6 @@ import pandas as pd
 import re
 import time 
 from dotenv import load_dotenv
-from src.portfolio_optimization.phase_one.phaseOneAnimation import start_animation, Colors
 from src.utils.file_utils import load_schema_data
 
 # Load environment variables from .env file
@@ -236,8 +235,6 @@ def get_etf_universe():
             conn.close()
 
 def free_search(system_prompt, user_prompt):
-    from src.portfolio_optimization.phase_one.phaseOneAnimation import start_animation, Colors
-
     # Define custom analysis steps for equity research
     equity_steps = [
         "Analyzing S&P 500 sector performance",
@@ -257,9 +254,6 @@ def free_search(system_prompt, user_prompt):
         "Processing analyst estimate revisions"
     ]
     
-    # Start animation before API setup
-    animation = start_animation(equity_steps, "Communication Services Research")
-
     messages = [
         {
             "role": "system",
@@ -275,7 +269,7 @@ def free_search(system_prompt, user_prompt):
         },
     ]
 
-        # Initialize client once with Perplexity API
+    # Initialize client once with Perplexity API
     client = OpenAI(api_key=Sonar_API_KEY, base_url="https://api.perplexity.ai")
     
     try:
@@ -286,15 +280,6 @@ def free_search(system_prompt, user_prompt):
             stream=True
         )
 
-        # Stop the animation before printing any output
-        animation.stop()
-        
-        # Give terminal a moment to complete cleanup
-        time.sleep(0.1)
-        
-        # Ensure fresh line for output (without clearing entire screen)
-        print("\nStreaming response:")
-        
         # Collect the streaming content
         collected_chunks = []
         collected_content = ""
@@ -315,9 +300,7 @@ def free_search(system_prompt, user_prompt):
         return cleaned_content
     
     except Exception as e:
-        # Stop the animation if there's an error
-        animation.stop()
-        print(f"{Colors.RED}Error: {e}{Colors.END}")
+        print(f"Error: {e}")
         return None
 
 def commodities_analyst():
@@ -325,8 +308,6 @@ def commodities_analyst():
     Connects to the 'research' database, queries the commodities_research table
     within the '2025_04_22' schema, and returns the text from the row with id = 1.
     """
-    # Import Colors locally for error messages if needed
-    from src.portfolio_optimization.phase_one.phaseOneAnimation import Colors 
     conn = None
     cur = None
     research_text = None
@@ -345,7 +326,7 @@ def commodities_analyst():
 
         # Check if essential connection parameters are loaded
         if not all([db_host, db_user, db_password]):
-            print(f"{Colors.RED}Error: Database connection details (DB_HOST, DB_USER, DB_PASSWORD) not found in environment variables.{Colors.END}")
+            print(f"Error: Database connection details (DB_HOST, DB_USER, DB_PASSWORD) not found in environment variables.")
             return None
 
         # Establish connection
@@ -374,12 +355,12 @@ def commodities_analyst():
         if result:
             research_text = result[0]
         else:
-            print(f"{Colors.YELLOW}No data found for id {target_id} in table {schema_name}.{table_name}.{Colors.END}")
+            print(f"Warning: No data found for id {target_id} in table {schema_name}.{table_name}.")
 
     except psycopg2.Error as e:
-        print(f"{Colors.RED}Database error: {e}{Colors.END}")
+        print(f"Database error: {e}")
     except Exception as e:
-        print(f"{Colors.RED}An unexpected error occurred: {e}{Colors.END}")
+        print(f"An unexpected error occurred: {e}")
     finally:
         # Ensure cursor and connection are closed
         if cur:
@@ -394,8 +375,6 @@ def etf_analyst():
     Connects to the 'research' database, queries the etf_research table
     within the '2025_04_22' schema, and returns the text from the row with id = 1.
     """
-    # Import Colors locally for error messages if needed
-    from src.portfolio_optimization.phase_one.phaseOneAnimation import Colors 
     conn = None
     cur = None
     research_text = None
@@ -414,7 +393,7 @@ def etf_analyst():
 
         # Check if essential connection parameters are loaded
         if not all([db_host, db_user, db_password]):
-            print(f"{Colors.RED}Error: Database connection details (DB_HOST, DB_USER, DB_PASSWORD) not found in environment variables.{Colors.END}")
+            print(f"Error: Database connection details (DB_HOST, DB_USER, DB_PASSWORD) not found in environment variables.")
             return None
 
         # Establish connection
@@ -443,12 +422,12 @@ def etf_analyst():
         if result:
             research_text = result[0]
         else:
-            print(f"{Colors.YELLOW}No data found for id {target_id} in table {schema_name}.{table_name}.{Colors.END}")
+            print(f"Warning: No data found for id {target_id} in table {schema_name}.{table_name}.")
 
     except psycopg2.Error as e:
-        print(f"{Colors.RED}Database error: {e}{Colors.END}")
+        print(f"Database error: {e}")
     except Exception as e:
-        print(f"{Colors.RED}An unexpected error occurred: {e}{Colors.END}")
+        print(f"An unexpected error occurred: {e}")
     finally:
         # Ensure cursor and connection are closed
         if cur:
@@ -463,8 +442,6 @@ def treasuries_analyst():
     Connects to the 'research' database, queries the treasuries table
     within the '2025_04_22' schema, and returns the text from the row with id = 1.
     """
-    # Import Colors locally for error messages if needed
-    from src.portfolio_optimization.phase_one.phaseOneAnimation import Colors 
     conn = None
     cur = None
     research_text = None
@@ -483,7 +460,7 @@ def treasuries_analyst():
 
         # Check if essential connection parameters are loaded
         if not all([db_host, db_user, db_password]):
-            print(f"{Colors.RED}Error: Database connection details (DB_HOST, DB_USER, DB_PASSWORD) not found in environment variables.{Colors.END}")
+            print(f"Error: Database connection details (DB_HOST, DB_USER, DB_PASSWORD) not found in environment variables.")
             return None
 
         # Establish connection
@@ -512,12 +489,12 @@ def treasuries_analyst():
         if result:
             research_text = result[0]
         else:
-            print(f"{Colors.YELLOW}No data found for id {target_id} in table {schema_name}.{table_name}.{Colors.END}")
+            print(f"Warning: No data found for id {target_id} in table {schema_name}.{table_name}.")
 
     except psycopg2.Error as e:
-        print(f"{Colors.RED}Database error: {e}{Colors.END}")
+        print(f"Database error: {e}")
     except Exception as e:
-        print(f"{Colors.RED}An unexpected error occurred: {e}{Colors.END}")
+        print(f"An unexpected error occurred: {e}")
     finally:
         # Ensure cursor and connection are closed
         if cur:
@@ -532,8 +509,6 @@ def foreign_exchange_analyst():
     Connects to the 'research' database, queries the foreign_exchange table
     within the '2025_04_22' schema, and returns the text from the row with id = 1.
     """
-    # Import Colors locally for error messages if needed
-    from src.portfolio_optimization.phase_one.phaseOneAnimation import Colors 
     conn = None
     cur = None
     research_text = None
@@ -552,7 +527,7 @@ def foreign_exchange_analyst():
 
         # Check if essential connection parameters are loaded
         if not all([db_host, db_user, db_password]):
-            print(f"{Colors.RED}Error: Database connection details (DB_HOST, DB_USER, DB_PASSWORD) not found in environment variables.{Colors.END}")
+            print(f"Error: Database connection details (DB_HOST, DB_USER, DB_PASSWORD) not found in environment variables.")
             return None
 
         # Establish connection
@@ -581,12 +556,12 @@ def foreign_exchange_analyst():
         if result:
             research_text = result[0]
         else:
-            print(f"{Colors.YELLOW}No data found for id {target_id} in table {schema_name}.{table_name}.{Colors.END}")
+            print(f"Warning: No data found for id {target_id} in table {schema_name}.{table_name}.")
 
     except psycopg2.Error as e:
-        print(f"{Colors.RED}Database error: {e}{Colors.END}")
+        print(f"Database error: {e}")
     except Exception as e:
-        print(f"{Colors.RED}An unexpected error occurred: {e}{Colors.END}")
+        print(f"An unexpected error occurred: {e}")
     finally:
         # Ensure cursor and connection are closed
         if cur:
@@ -601,8 +576,6 @@ def ig_credit_analyst():
     Connects to the 'research' database, queries the ig_credit_research table
     within the '2025_04_22' schema, and returns the text from the row with id = 1.
     """
-    # Import Colors locally for error messages if needed
-    from src.portfolio_optimization.phase_one.phaseOneAnimation import Colors 
     conn = None
     cur = None
     research_text = None
@@ -621,7 +594,7 @@ def ig_credit_analyst():
 
         # Check if essential connection parameters are loaded
         if not all([db_host, db_user, db_password]):
-            print(f"{Colors.RED}Error: Database connection details (DB_HOST, DB_USER, DB_PASSWORD) not found in environment variables.{Colors.END}")
+            print(f"Error: Database connection details (DB_HOST, DB_USER, DB_PASSWORD) not found in environment variables.")
             return None
 
         # Establish connection
@@ -650,12 +623,12 @@ def ig_credit_analyst():
         if result:
             research_text = result[0]
         else:
-            print(f"{Colors.YELLOW}No data found for id {target_id} in table {schema_name}.{table_name}.{Colors.END}")
+            print(f"Warning: No data found for id {target_id} in table {schema_name}.{table_name}.")
 
     except psycopg2.Error as e:
-        print(f"{Colors.RED}Database error: {e}{Colors.END}")
+        print(f"Database error: {e}")
     except Exception as e:
-        print(f"{Colors.RED}An unexpected error occurred: {e}{Colors.END}")
+        print(f"An unexpected error occurred: {e}")
     finally:
         # Ensure cursor and connection are closed
         if cur:
@@ -670,8 +643,6 @@ def high_yield_analyst():
     Connects to the 'research' database, queries the high_yield_research table
     within the '2025_04_22' schema, and returns the text from the row with id = 1.
     """
-    # Import Colors locally for error messages if needed
-    from src.portfolio_optimization.phase_one.phaseOneAnimation import Colors 
     conn = None
     cur = None
     research_text = None
@@ -690,7 +661,7 @@ def high_yield_analyst():
 
         # Check if essential connection parameters are loaded
         if not all([db_host, db_user, db_password]):
-            print(f"{Colors.RED}Error: Database connection details (DB_HOST, DB_USER, DB_PASSWORD) not found in environment variables.{Colors.END}")
+            print(f"Error: Database connection details (DB_HOST, DB_USER, DB_PASSWORD) not found in environment variables.")
             return None
 
         # Establish connection
@@ -719,12 +690,12 @@ def high_yield_analyst():
         if result:
             research_text = result[0]
         else:
-            print(f"{Colors.YELLOW}No data found for id {target_id} in table {schema_name}.{table_name}.{Colors.END}")
+            print(f"Warning: No data found for id {target_id} in table {schema_name}.{table_name}.")
 
     except psycopg2.Error as e:
-        print(f"{Colors.RED}Database error: {e}{Colors.END}")
+        print(f"Database error: {e}")
     except Exception as e:
-        print(f"{Colors.RED}An unexpected error occurred: {e}{Colors.END}")
+        print(f"An unexpected error occurred: {e}")
     finally:
         # Ensure cursor and connection are closed
         if cur:
@@ -739,8 +710,6 @@ def emerging_market_analyst():
     Connects to the 'research' database, queries the emerging_market_research table
     within the '2025_04_22' schema, and returns the text from the row with id = 1.
     """
-    # Import Colors locally for error messages if needed
-    from src.portfolio_optimization.phase_one.phaseOneAnimation import Colors 
     conn = None
     cur = None
     research_text = None
@@ -759,7 +728,7 @@ def emerging_market_analyst():
 
         # Check if essential connection parameters are loaded
         if not all([db_host, db_user, db_password]):
-            print(f"{Colors.RED}Error: Database connection details (DB_HOST, DB_USER, DB_PASSWORD) not found in environment variables.{Colors.END}")
+            print(f"Error: Database connection details (DB_HOST, DB_USER, DB_PASSWORD) not found in environment variables.")
             return None
 
         # Establish connection
@@ -788,12 +757,12 @@ def emerging_market_analyst():
         if result:
             research_text = result[0]
         else:
-            print(f"{Colors.YELLOW}No data found for id {target_id} in table {schema_name}.{table_name}.{Colors.END}")
+            print(f"Warning: No data found for id {target_id} in table {schema_name}.{table_name}.")
 
     except psycopg2.Error as e:
-        print(f"{Colors.RED}Database error: {e}{Colors.END}")
+        print(f"Database error: {e}")
     except Exception as e:
-        print(f"{Colors.RED}An unexpected error occurred: {e}{Colors.END}")
+        print(f"An unexpected error occurred: {e}")
     finally:
         # Ensure cursor and connection are closed
         if cur:
