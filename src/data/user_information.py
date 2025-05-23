@@ -6,15 +6,16 @@ def get_user_information():
     """
     user_data = {
         "user_information": {
-            "age": "48",
-            "net_worth": "$75,000,000",
-            "investment size(as a percentage of net worth)": "65%",
-            "risk_tolerance": "Very High",
-            "investment_goals": "High growth with some income",
-            "time_horizon": "5 Years",
+            "age": "45",
+            "net_worth": "$750,000",
+            "investment size(as a percentage of net worth)": "25%",
+            "risk_tolerance": "Low to Moderate",
+            "investment_goals": "Capital preservation and steady income",
+            "time_horizon": "10 Years",
             "Overall Description": """
-            I want a very technology/AI/growth focused portfolio. I am very wealthy and have a high risk tolerance. Find undervalued high growth potential 
-            assets and invest heavily in them.
+            I am looking for a relatively conservative investment strategy. My primary goal is to preserve my capital while generating a steady stream of income.
+            I'm interested in high-quality bonds, dividend-paying blue-chip stocks, and real estate investment trusts (REITs).
+            I plan to retire in 20 years and want a portfolio that provides stability and reliable returns.
             """
         }
     }

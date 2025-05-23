@@ -13,7 +13,7 @@ from .phase_one_validation import (
     validate_and_fix_allocations,
     validate_asset_classes,
 )
-from .phase_one_prompts import SYSTEM_PROMPT, build_user_message, min_asset_classes, max_asset_classes
+from .phase_one_prompts import SYSTEM_PROMPT2, build_user_message, min_asset_classes, max_asset_classes
 from src.data.user_information import get_user_information
 from src.utils.choose_model_and_client import deepseek_model_and_client, openai_model_and_client, grok_model_and_client, perplexity_model_and_client
 import logging
@@ -76,7 +76,7 @@ def optimize():
 
     # # -------------------- DEBUG: print prompts --------------------
     if logger.isEnabledFor(logging.DEBUG):
-        logger.debug("%s\n%s", "SYSTEM PROMPT (Phase One)", SYSTEM_PROMPT)
+        logger.debug("%s\n%s", "SYSTEM PROMPT (Phase One)", SYSTEM_PROMPT2)
         logger.debug("%s\n%s", "USER PROMPT (first message to LLM)", content)
 
     try:
@@ -397,7 +397,7 @@ def optimize():
             return handle_conversation(messages, tools, remaining_required_tools, round_num + 1, max_rounds)
         
         # Setup system message
-        system_message = {"role": "system", "content": SYSTEM_PROMPT}
+        system_message = {"role": "system", "content": SYSTEM_PROMPT2}
         
         # Required tools list
         required_tools = list(analyst_tools.keys())

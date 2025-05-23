@@ -309,7 +309,7 @@ def backtest(portfolio_json: Dict[str, Any]):
 if __name__ == "__main__":
     assumed_initial_portfolio_value = 10_000.0
 
-    test_schema = "portfolio_seventeen"
+    test_schema = "portfolio_twenty"
     table_name = "final_portfolio"
     print(f"🔄 Retrieving portfolio information from DB: {test_schema}.{table_name}...")
     portfolio_df = retrieve_portfolio_information_from_db(test_schema, table_name)
