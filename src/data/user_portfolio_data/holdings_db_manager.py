@@ -39,16 +39,32 @@ def _create_user_portfolios_table_if_not_exists():
         logger.error(f"🚨 Error creating/updating table {TABLE_NAME}: {e}", exc_info=True)
         raise
 
-def store_portfolio_positions(user_name: str, positions_data: List[Dict[str, Any]]) -> Optional[str]:
+def store_portfolio_positions(user_name: str, positions_data: List[Dict[str, Any]], user_id: Optional[str] = None) -> Optional[str]:
     """
     Stores the given portfolio positions data into the user_portfolios table.
+    If user_id is provided, it will use that ID.
+    If user_id is not provided, it will check if a portfolio exists for the user_name.
+    If it exists, it will update the existing records. If not, it will create new records.
     """
     _create_user_portfolios_table_if_not_exists()
 
-    user_id = str(uuid.uuid4())
     fetch_timestamp = datetime.datetime.now(datetime.timezone.utc)
 
-    insert_sql = f"""
+    # If user_id is not provided, check if user exists
+    if user_id is None:
+        with get_cursor(dbname='user_data') as cursor:
+            # Check if user already has a portfolio
+            cursor.execute(f"SELECT DISTINCT user_id FROM {TABLE_NAME} WHERE user_name = %s LIMIT 1", (user_name,))
+            result = cursor.fetchone()
+            if result:
+                user_id = result[0]
+                logger.info(f"Found existing portfolio for user_name: '{user_name}' with user_id: {user_id}")
+            else:
+                user_id = str(uuid.uuid4())
+                logger.info(f"Creating new portfolio for user_name: '{user_name}' with user_id: {user_id}")
+
+    # Prepare the upsert SQL (INSERT ON CONFLICT UPDATE)
+    upsert_sql = f"""
     INSERT INTO {TABLE_NAME} (
         user_id, user_name, fetch_timestamp, symbol, secType, currency,
         position, marketPrice, marketValue, averageCost, unrealizedPNL, realizedPNL,
@@ -57,7 +73,18 @@ def store_portfolio_positions(user_name: str, positions_data: List[Dict[str, Any
         %(user_id)s, %(user_name)s, %(fetch_timestamp)s, %(symbol)s, %(secType)s, %(currency)s,
         %(position)s, %(marketPrice)s, %(marketValue)s, %(averageCost)s, %(unrealizedPNL)s, %(realizedPNL)s,
         %(account)s
-    );
+    )
+    ON CONFLICT (user_id, account, symbol, secType) 
+    DO UPDATE SET
+        user_name = EXCLUDED.user_name,
+        fetch_timestamp = EXCLUDED.fetch_timestamp,
+        currency = EXCLUDED.currency,
+        position = EXCLUDED.position,
+        marketPrice = EXCLUDED.marketPrice,
+        marketValue = EXCLUDED.marketValue,
+        averageCost = EXCLUDED.averageCost,
+        unrealizedPNL = EXCLUDED.unrealizedPNL,
+        realizedPNL = EXCLUDED.realizedPNL;
     """
 
     try:
@@ -82,8 +109,8 @@ def store_portfolio_positions(user_name: str, positions_data: List[Dict[str, Any
                 records_to_insert.append(record)
             
             if records_to_insert:
-                cursor.executemany(insert_sql, records_to_insert)
-                logger.info(f"Successfully stored {len(records_to_insert)} positions for user_name: '{user_name}' with user_id: {user_id}.")
+                cursor.executemany(upsert_sql, records_to_insert)
+                logger.info(f"Successfully stored/updated {len(records_to_insert)} positions for user_name: '{user_name}' with user_id: {user_id}.")
             else:
                 logger.info(f"No positions data provided for user_name: '{user_name}'. Nothing stored.")
         return user_id
@@ -91,34 +118,3 @@ def store_portfolio_positions(user_name: str, positions_data: List[Dict[str, Any
         logger.error(f"🚨 Error storing portfolio positions for user_name '{user_name}': {e}", exc_info=True)
         return None
 
-if __name__ == '__main__':
-    from src.utils.logging_config import patch_print_for_logging
-    from src.data.user_portfolio_data.fetch_ibkr_holdings import fetch_ibkr_portfolio_positions
-
-    patch_print_for_logging()
-    logger.info("🚀 Starting test for holdings_db_manager.py (with simplified schema)...")
-
-    logger.info("Fetching portfolio positions from IBKR for testing...")
-    test_positions = fetch_ibkr_portfolio_positions() # This will now fetch simplified data
-
-    if test_positions is not None:
-        logger.info(f"Fetched {len(test_positions)} positions (simplified)." )
-        
-        test_user_name = "test_user_beta"
-        logger.info(f"Attempting to store positions for user_name: {test_user_name}...")
-        generated_user_id = store_portfolio_positions(test_user_name, test_positions)
-
-        if generated_user_id:
-            logger.info(f"✅ Positions stored successfully under user_id: {generated_user_id}")
-        else:
-            logger.error(f"❌ Failed to store positions for user_name: {test_user_name}")
-    else:
-        logger.warning("⚠️ No positions fetched from IBKR. Cannot test storage.")
-
-    from src.utils.ib_utils import get_ib
-    ib_instance = get_ib()
-    if ib_instance and ib_instance.isConnected():
-        logger.info("Ensuring IBKR disconnection for script after test.")
-        ib_instance.disconnect()
-
-    logger.info("Test finished for holdings_db_manager.py.") 

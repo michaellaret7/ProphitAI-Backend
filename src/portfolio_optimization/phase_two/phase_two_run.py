@@ -53,7 +53,7 @@ patch_print_for_logging()
 logger.info("[Phase-Two] Phase-two module initialised …")
 
 # Load environment variables
-model, client = deepseek_model_and_client()
+model, client = deepseek_model_and_client('deepseek-reasoner')
 
 def pick_top_tickers_from_asset_classes(portfolio_json):
     start_time = time.perf_counter()

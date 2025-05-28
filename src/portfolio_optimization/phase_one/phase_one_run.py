@@ -5,10 +5,6 @@ from datetime import datetime
 import traceback
 from dotenv import load_dotenv
 import time
-from src.portfolio_optimization.phase_two.phase_two_run import (
-    pick_top_tickers_from_asset_classes,
-    make_phaseTwo_recommendations,
-)
 from .phase_one_validation import (
     validate_and_fix_allocations,
     validate_asset_classes,
@@ -23,14 +19,14 @@ from src.utils.logging_config import init_logger, patch_print_for_logging
 start_time = time.time()
 
 # Initialise logging and quiet-print mechanism EARLY ------------------------
-logger = init_logger(__name__)
+logger = init_logger(__name__) 
 patch_print_for_logging()
 logger.info("[Phase-One] Portfolio optimisation started …")
 
 # Load environment variables from .env file
 load_dotenv()
 
-model, client = openai_model_and_client()
+model, client = deepseek_model_and_client()
 
 def optimize():
     # Import moved here

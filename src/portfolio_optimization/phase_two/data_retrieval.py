@@ -437,7 +437,6 @@ def get_stock_tickers(asset_class):
     # Return dictionary with filter_value as key and ticker list as value
     return {asset_class: sorted_tickers}
 
-# HAVE THIS RETRIEVE FROM DB TO GET RID OF ALL RELIANCE ON IBKR. IF NOT IN DB JUST RETURN NOT IN DB
 def get_quarterly_estimates(ticker: str) -> str:
     """Return quarterly fundamental estimates for *ticker* from Postgres as JSON.
 

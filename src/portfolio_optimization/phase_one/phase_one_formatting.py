@@ -1,19 +1,71 @@
 import json
+from src.utils.database import get_cursor
+from typing import List, Dict, Any, Optional
 from src.data.PortfolioData import (
-    get_portfolio_holdings,
-    analyze_portfolio_correlations,
     calculate_portfolio_metrics,
     calculate_monthly_portfolio_metrics,
-    analyze_portfolio_diversification,
+    analyze_portfolio_correlations
 )
-from src.utils.ib_utils import connect_to_ib
 
 # NOTE: The third-party imports below were unused in this module.  They have
 # been removed to reduce start-up time and avoid unnecessary dependencies.
 
+def get_holdings_from_database(user_name: str = "test_user_beta_one") -> tuple[List[Dict[str, Any]], str]:
+    """
+    Retrieve holdings from the database instead of IBKR.
+    
+    Args:
+        user_name: Name of the user whose holdings to retrieve
+        
+    Returns:
+        A tuple containing (positions list, formatted string)
+    """
+    try:
+        with get_cursor(dbname='user_data') as cursor:
+            # Get the most recent holdings for the user
+            query = """
+            SELECT DISTINCT ON (symbol, account)
+                symbol, secType, currency, position, marketPrice, marketValue,
+                averageCost, unrealizedPNL, realizedPNL, account
+            FROM public.user_portfolios
+            WHERE user_name = %s
+            ORDER BY symbol, account, fetch_timestamp DESC
+            """
+            cursor.execute(query, (user_name,))
+            results = cursor.fetchall()
+            
+            if not results:
+                return [], "No positions found in database."
+            
+            # Format positions to match the expected structure
+            positions = []
+            for row in results:
+                position = {
+                    'symbol': row[0],
+                    'secType': row[1],
+                    'currency': row[2],
+                    'position': float(row[3]) if row[3] else 0.0,
+                    'marketPrice': float(row[4]) if row[4] else 0.0,
+                    'marketValue': float(row[5]) if row[5] else 0.0,
+                    'averageCost': float(row[6]) if row[6] else 0.0,
+                    'unrealizedPNL': float(row[7]) if row[7] else 0.0,
+                    'realizedPNL': float(row[8]) if row[8] else 0.0,
+                    'account': row[9]
+                }
+                positions.append(position)
+            
+            # Format output string for display
+            formatted_output = f"Retrieved {len(positions)} positions from database for user: {user_name}"
+            
+            return positions, formatted_output
+            
+    except Exception as e:
+        print(f"Error retrieving holdings from database: {e}")
+        return [], f"Error retrieving holdings: {str(e)}"
+
 def format_to_json():
-    active_ib = connect_to_ib()
-    positions, formatted_output = get_portfolio_holdings(active_ib, print_output=False)
+    # Get holdings from database instead of IBKR
+    positions, formatted_output = get_holdings_from_database()
             
     # Prepare default placeholders so that the later payload build does not
     # raise ``UnboundLocalError`` when the portfolio is empty.
@@ -23,19 +75,22 @@ def format_to_json():
     correlations = None
     
     if positions:
-        symbols = [p['contract'].symbol for p in positions]
+        symbols = [p['symbol'] for p in positions]
+        
+        # Now these calculations work with database data
+        # Pass None for the IB connection parameter
         
         # Calculate portfolio metrics
-        metrics = calculate_portfolio_metrics(active_ib, symbols, printOutput=False)
+        metrics = calculate_portfolio_metrics(None, symbols, printOutput=False)
         
         # Calculate monthly portfolio metrics
-        monthly_results = calculate_monthly_portfolio_metrics(active_ib, symbols, print_output=False)
+        monthly_results = calculate_monthly_portfolio_metrics(None, symbols, print_output=False)
         
-        # Analyze portfolio diversification
-        diversification = analyze_portfolio_diversification(active_ib, print_output=False)
+        # Analyze portfolio diversification - requires IBKR for contract details
+        # diversification = analyze_portfolio_diversification(None, print_output=False)
         
         # Analyze portfolio correlations
-        correlations = analyze_portfolio_correlations(active_ib, symbols, print_output=False)
+        correlations = analyze_portfolio_correlations(None, symbols, print_output=False)
     
     # ------------------------------------------------------------------
     # Sanitize *positions* so every entry is JSON-serialisable
@@ -44,12 +99,8 @@ def format_to_json():
     if positions:
         for p in positions:
             entry = p.copy()
-            contract_obj = entry.pop("contract", None)
             # Remove sensitive or non-serialisable fields
             entry.pop("account", None)
-            # Replace contract with its symbol (or string representation)
-            if contract_obj is not None:
-                entry["symbol"] = str(getattr(contract_obj, "symbol", contract_obj))
             json_positions.append(entry)
 
     # Prepare monthly performance data, extracting only the monthly breakdown
@@ -83,13 +134,6 @@ def format_to_json():
 
     json_block = json.dumps(payload)
     # print(json_block)
-
-    # We intentionally delay ``disconnect`` until after the conditional so
-    # that it is invoked exactly once, regardless of whether we entered
-    # the *positions* block or not.
-
-    # Always close the Interactive Brokers connection that we opened earlier
-    active_ib.disconnect()
 
     return json_block
 

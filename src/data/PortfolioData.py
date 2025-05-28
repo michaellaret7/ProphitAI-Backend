@@ -57,44 +57,44 @@ def connect_to_ib():
 
 def get_historical_price_data(ib, symbol, duration='1 D', bar_size='1 min', date=None):
     """
-    Get historical price data for a given stock symbol
+    Get historical price data for a given stock symbol from the database
     
     Args:
-        ib: IB connection
+        ib: IB connection (kept for compatibility but not used)
         symbol: Stock symbol to get data for
-        duration: Time period for data (default: '1 D')
-        bar_size: Bar size for data (default: '1 min')
-        date: Specific end date for data (default: None, which means latest data)
+        duration: Time period for data (e.g., '1 D', '2 Y')
+        bar_size: Bar size for data (not used - database has daily data)
+        date: Specific end date for data (not used)
         
     Returns:
         DataFrame containing historical price data
     """
-    contract = Stock(symbol, 'SMART', 'USD')
-    try:
-        qualified_contract = ib.qualifyContracts(contract)[0]
-    except:
-        return None
-
-    # Format date if provided
-    if date is not None:
-        if '-' in date:
-            date = date.replace('-', '')
-        date = date + ' 16:00:00'
-    else:
-        date = ''
-
-    # Request historical data
-    bars = ib.reqHistoricalData(
-        contract,
-        endDateTime=date,
-        durationStr=duration,
-        barSizeSetting=bar_size,
-        whatToShow='TRADES',
-        useRTH=True
-    )
+    # Import the database function
+    from src.portfolio_optimization.phase_two.data_retrieval import get_daily_closing_prices
     
-    # Convert to DataFrame
-    df = util.df(bars)
+    # Parse duration string to determine number of years
+    years = 2  # Default
+    if 'Y' in duration:
+        years = int(duration.split()[0])
+    elif 'M' in duration:
+        months = int(duration.split()[0])
+        years = months / 12.0
+    elif 'D' in duration:
+        days = int(duration.split()[0])
+        years = days / 365.0
+    
+    # Get data from database
+    df = get_daily_closing_prices(symbol, years=years)
+    
+    # Return None if no data found
+    if df is None or df.empty:
+        return None
+    
+    # Rename columns to match expected format
+    # The database returns 'date', 'close', 'volume'
+    # We need to ensure compatibility with existing code
+    df = df.rename(columns={'date': 'date', 'close': 'close'})
+    
     return df
 
 # Alias for backward compatibility
@@ -694,15 +694,38 @@ def calculate_portfolio_metrics(ib, symbols, printOutput=True):
     Calculate key performance metrics for a portfolio of stocks
     
     Args:
-        ib: IB connection
+        ib: IB connection (kept for compatibility but can be None)
         symbols: List of stock symbols in the portfolio
         printOutput: Whether to print metrics to console (default: True)
         
     Returns:
         Dictionary containing calculated metrics
     """
-    # Get portfolio positions for weights calculation
-    positions, _ = get_portfolio_holdings(ib, print_output=False)
+    # Try to get portfolio positions - if ib is None, use database
+    positions = None
+    if ib is not None:
+        try:
+            positions, _ = get_portfolio_holdings(ib, print_output=False)
+        except:
+            positions = None
+    
+    # If no positions from IBKR, try to get from database
+    if positions is None:
+        try:
+            from src.portfolio_optimization.phase_one.phase_one_formatting import get_holdings_from_database
+            db_positions, _ = get_holdings_from_database()
+            # Convert database format to expected format
+            if db_positions:
+                positions = []
+                for p in db_positions:
+                    # Create a simple object that mimics the IBKR position structure
+                    position = {
+                        'contract': type('obj', (object,), {'symbol': p['symbol']}),
+                        'marketValue': p.get('marketValue', 0)
+                    }
+                    positions.append(position)
+        except:
+            positions = None
     
     # Define time period for analysis
     duration = '2 Y'
@@ -951,13 +974,40 @@ def calculate_monthly_portfolio_metrics(ib, symbols=None, market_symbol='SPY', d
     # Get symbols and positions from portfolio if not provided
     positions = None
     if symbols is None:
-        positions, _ = get_portfolio_holdings(ib)
-        if positions:
-            symbols = [p['contract'].symbol for p in positions]
+        if ib is None:
+            # Try to get from database
+            try:
+                from src.portfolio_optimization.phase_one.phase_one_formatting import get_holdings_from_database
+                db_positions, _ = get_holdings_from_database()
+                if db_positions:
+                    # Convert database format to expected format
+                    positions = []
+                    for p in db_positions:
+                        position = {
+                            'contract': type('obj', (object,), {'symbol': p['symbol']}),
+                            'marketValue': p.get('marketValue', 0)
+                        }
+                        positions.append(position)
+                    symbols = [p['contract'].symbol for p in positions]
+                    if print_output:
+                        print(f"📊 Using {len(symbols)} symbols from database")
+                else:
+                    if print_output:
+                        print("⚠️ No positions found in database")
+                    return None
+            except Exception as e:
+                if print_output:
+                    print(f"⚠️ Error getting positions from database: {e}")
+                return None
         else:
-            if print_output:
-                print("⚠️ No positions found in portfolio")
-            return None
+            # Use IBKR
+            positions, _ = get_portfolio_holdings(ib)
+            if positions:
+                symbols = [p['contract'].symbol for p in positions]
+            else:
+                if print_output:
+                    print("⚠️ No positions found in portfolio")
+                return None
     
     # Get daily price data for all symbols for the specified duration
     if print_output:
@@ -1757,7 +1807,7 @@ def analyze_portfolio_correlations(ib=None, symbols=None, duration='2 Y', bar_si
     Calculate correlation matrix for portfolio holdings
     
     Args:
-        ib: An existing IB connection. If None, will create a new connection.
+        ib: An existing IB connection. If None, will use database for data.
         symbols: List of stock symbols. If None, will get from portfolio.
         duration: Time period for data (default: '2 Y')
         bar_size: Bar size for data (default: '1 day')
@@ -1767,30 +1817,48 @@ def analyze_portfolio_correlations(ib=None, symbols=None, duration='2 Y', bar_si
     Returns:
         Pandas DataFrame containing the correlation matrix
     """
-    # Connect to IB if no connection was provided
-    if ib is None or not ib.isConnected():
-        ib = connect_to_ib()
-        if ib is None:
-            if print_output:
-                print("⛔ Failed to establish connection to IB")
-            return None
-        connect_needed = True
-    else:
-        connect_needed = False
+    connect_needed = False
     
-    try:
-        # Get symbols from portfolio if not provided
-        if symbols is None:
+    # If symbols not provided, need to get them
+    if symbols is None:
+        # If ib is None, try to get from database
+        if ib is None:
+            try:
+                from src.portfolio_optimization.phase_one.phase_one_formatting import get_holdings_from_database
+                db_positions, _ = get_holdings_from_database()
+                if db_positions:
+                    symbols = [p['symbol'] for p in db_positions]
+                    if print_output:
+                        print(f"📊 Using {len(symbols)} symbols from database")
+                else:
+                    if print_output:
+                        print("⛔ No positions found in database and no symbols provided")
+                    return None
+            except Exception as e:
+                if print_output:
+                    print(f"⛔ Error getting positions from database: {e}")
+                return None
+        else:
+            # Use IBKR to get symbols
+            if not ib.isConnected():
+                ib = connect_to_ib()
+                if ib is None:
+                    if print_output:
+                        print("⛔ Failed to establish connection to IB")
+                    return None
+                connect_needed = True
+            
             positions, _ = get_portfolio_holdings(ib, print_output=False)
             if positions:
                 symbols = [p['contract'].symbol for p in positions]
                 if print_output:
-                    print(f"📊 Using {len(symbols)} symbols from portfolio")
+                    print(f"📊 Using {len(symbols)} symbols from IBKR portfolio")
             else:
                 if print_output:
                     print("⛔ No positions found in portfolio and no symbols provided")
                 return None
-        
+    
+    try:
         # Get historical price data for all symbols
         if print_output:
             print(f"📈 Retrieving {duration} of {bar_size} price data for {len(symbols)} symbols...")
@@ -1826,7 +1894,7 @@ def analyze_portfolio_correlations(ib=None, symbols=None, duration='2 Y', bar_si
         all_prices = pd.DataFrame(price_data)
         
         # Calculate returns
-        returns = all_prices.pct_change().dropna()
+        returns = all_prices.pct_change(fill_method=None).dropna()
         
         # Calculate correlation matrix
         correlation_matrix = returns.corr()

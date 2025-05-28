@@ -7,7 +7,6 @@ from src.utils.logging_config import init_logger
 
 logger = init_logger(__name__)
 
-
 def fetch_ibkr_portfolio_positions() -> Optional[List[Dict[str, Any]]]:
     """
     Fetches portfolio positions from Interactive Brokers.

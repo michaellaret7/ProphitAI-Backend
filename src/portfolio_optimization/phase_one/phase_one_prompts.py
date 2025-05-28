@@ -250,14 +250,14 @@ OUTPUT REQUIREMENTS:
     }}
 
 QUALITY CHECKLIST
-□ Used get_user_information, get_equity_universe, and get_etf_universe
-□ Conducted 6-10 detailed market-research searches
-□ Portfolio contains {min_asset_classes}-{max_asset_classes} asset classes
-□ Cash allocation is 5 - 7 %
-□ Total allocation equals 100%
-□ Each allocation has detailed reasoning
-□ Portfolio thesis clearly connects user to strategy
-□ All asset-class names match universe tools
+- Used get_user_information, get_equity_universe, and get_etf_universe
+- Conducted 6-10 detailed market-research searches
+- Portfolio contains {min_asset_classes}-{max_asset_classes} asset classes
+- Cash allocation is 5 - 7 %
+- Total allocation equals 100%
+- Each allocation has detailed reasoning
+- Portfolio thesis clearly connects user to strategy
+- All asset-class names match universe tools
 """
 
 def build_user_message() -> str:
