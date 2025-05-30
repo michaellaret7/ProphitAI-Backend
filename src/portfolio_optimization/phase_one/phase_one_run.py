@@ -26,7 +26,7 @@ logger.info("[Phase-One] Portfolio optimisation started …")
 # Load environment variables from .env file
 load_dotenv()
 
-model, client = deepseek_model_and_client()
+model, client = openai_model_and_client()
 
 def optimize():
     # Import moved here
@@ -69,6 +69,14 @@ def optimize():
     # Build dynamic user prompt content using helper
     # build_user_message now fetches and formats data internally.
     content = build_user_message()
+
+    # Write prompts to the output file
+    with open(output_filename, "a", encoding="utf-8") as f:
+        f.write("SYSTEM PROMPT (Phase One):\n")
+        f.write(SYSTEM_PROMPT2 + "\n\n")
+        f.write("USER PROMPT (first message to LLM):\n")
+        f.write(content + "\n\n")
+        f.write("="*80 + "\n\n")
 
     # # -------------------- DEBUG: print prompts --------------------
     if logger.isEnabledFor(logging.DEBUG):
@@ -401,7 +409,7 @@ def optimize():
         # Initial user message with process instructions
         user_message = {
             "role": "user",
-            "content": content
+            "content": content # This comes from build_user_message() in the beginning of the file
         }
         
         # Set up initial messages and start conversation

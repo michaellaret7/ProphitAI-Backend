@@ -24,10 +24,10 @@ NOTE: Only the columns that are guaranteed to appear in the optimiser output are
 import json
 from typing import Dict, Any, List
 import pandas as pd
-import re
 import os
+import uuid # Added for UUID generation
 from psycopg2 import connect, sql, extensions
-from psycopg2.extras import execute_values
+from psycopg2.extras import execute_values, RealDictCursor
 from dotenv import load_dotenv
 
 # ---------------------------------------------------------------------------
@@ -41,9 +41,13 @@ DB_USER = os.environ.get("DB_USER")
 DB_PASSWORD = os.environ.get("DB_PASSWORD")
 DB_HOST = os.environ.get("DB_HOST")
 DB_PORT = os.environ.get("DB_PORT", "5432")
+USER_NAME = os.environ.get("USER_NAME")
 
-if not all([DB_USER, DB_PASSWORD, DB_HOST]):
-    raise RuntimeError("Database credentials (DB_USER, DB_PASSWORD, DB_HOST) must be set in .env or environment")
+if not all([DB_USER, DB_PASSWORD, DB_HOST, USER_NAME]):
+    raise RuntimeError(
+        "Database credentials (DB_USER, DB_PASSWORD, DB_HOST) and USER_NAME "
+        "must be set in .env or environment"
+    )
 
 
 def _pg_connect(db: str, autocommit: bool = True):
@@ -55,6 +59,8 @@ def _pg_connect(db: str, autocommit: bool = True):
         host=DB_HOST,
         port=DB_PORT,
     )
+    # Register UUID adapter globally for psycopg2
+    # extensions.register_adapter(uuid.UUID, AsIs) # Not strictly needed as psycopg2 >2.8 handles UUIDs well
     conn.set_session(autocommit=autocommit)
     return conn
 
@@ -63,41 +69,32 @@ def _ensure_database_exists(db_name: str) -> None:
     """Create *db_name* if it does not yet exist."""
     with _pg_connect("postgres") as conn:
         with conn.cursor() as cur:
+            # Ensure pgcrypto extension is available for gen_random_uuid() if used,
+            # but we will generate UUID in Python. UUID type itself doesn't need it.
+            # cur.execute("CREATE EXTENSION IF NOT EXISTS pgcrypto;")
             cur.execute("SELECT 1 FROM pg_database WHERE datname = %s", (db_name,))
             if cur.fetchone():
                 return  # already there
             cur.execute(sql.SQL("CREATE DATABASE {}".format(sql.Identifier(db_name).string)))
 
-
-def _list_portfolio_schemas(conn) -> list[str]:
-    """Return schemas that match the 'portfolio_%' pattern (lower-cased)."""
-    with conn.cursor() as cur:
-        cur.execute(
-            """
-            SELECT schema_name
-            FROM information_schema.schemata
-            WHERE schema_name LIKE 'portfolio_%';
-            """
-        )
-        return [row[0] for row in cur.fetchall()]
-
 # ---------------------------------------------------------------------------
 # Public API
 # ---------------------------------------------------------------------------
 
-def store_portfolio_sector_allocations(portfolio: dict | str) -> str:
-    """Persist *portfolio* to Postgres and return the schema name that was created.
+def store_portfolio_sector_allocations(portfolio: dict | str, portfolio_name: str) -> uuid.UUID:
+    """Persist *portfolio* to Postgres and return the UUID portfolio_id that was created.
 
     Parameters
     ----------
     portfolio
         Either the dictionary produced by ``optimize`` or its JSON-encoded string.
+    portfolio_name
+        The name chosen by the user for this portfolio.
 
     Returns
     -------
-    str
-        The schema name inside *portfolio_results* that now contains the data
-        (e.g. ``'portfolio_one'``).
+    uuid.UUID
+        The portfolio_id (UUID) from the portfolios table.
     """
     # ---------------------------------------------------------------------
     # 1. Normalise input
@@ -135,250 +132,247 @@ def store_portfolio_sector_allocations(portfolio: dict | str) -> str:
     target_db = "portfolio_results"
     _ensure_database_exists(target_db)
 
+    # Use public schema by default
+    schema_name = "public"
+
     with _pg_connect(target_db) as conn:
         # -----------------------------------------------------------------
-        # 4. Calculate next schema name
+        # 4. Calculate next schema name - REMOVED, using public schema now
         # -----------------------------------------------------------------
-        existing_schemas = _list_portfolio_schemas(conn)
-
-        # Extract numbers from schemas like 'portfolio_one', 'portfolio_two', ...
-        pattern = re.compile(r"^portfolio_([a-z]+)$", re.IGNORECASE)
-        english_to_num = _english_word_to_int_map()
-
-        max_num = 0
-        for sch in existing_schemas:
-            match = pattern.match(sch)
-            if match:
-                word = match.group(1).lower()
-                num = english_to_num.get(word, 0)
-                max_num = max(max_num, num)
-
-        next_num = max_num + 1  # start at 1 when none exists
-        next_word = _int_to_english(next_num)
-        schema_name = f"portfolio_{next_word}"
-
+        
         # -----------------------------------------------------------------
-        # 5. Create schema & table
+        # 5. Create tables (if they don't exist) in the public schema
         # -----------------------------------------------------------------
-        table_name = "portfolio_sector_allocation"
+        portfolios_table = "portfolios"
+        portfolio_sector_allocation_table = "portfolio_sector_allocation"
+        portfolio_thesis_table = "portfolio_thesis"
 
-        with conn.cursor() as cur:
-            # Create schema
-            cur.execute(sql.SQL("CREATE SCHEMA IF NOT EXISTS {};").format(sql.Identifier(schema_name)))
-
-            # Define table
-            create_table_sql = sql.SQL(
+        with conn.cursor(cursor_factory=RealDictCursor) as cur:
+            # Drop the portfolios table to ensure it's created with the correct UUID type for portfolio_id
+            # cur.execute(sql.SQL("DROP TABLE IF EXISTS {schema}.{table} CASCADE;").format(
+            #     schema=sql.Identifier(schema_name), table=sql.Identifier(portfolios_table)))
+            
+            # Create portfolios table with UUID as portfolio_id
+            create_portfolios_table_sql = sql.SQL(
                 """
                 CREATE TABLE IF NOT EXISTS {schema}.{table} (
-                    id SERIAL PRIMARY KEY,
-                    asset_class VARCHAR(255),
-                    allocation NUMERIC(10,3),
-                    reason TEXT
+                    portfolio_id UUID PRIMARY KEY,
+                    user_name VARCHAR(255) NOT NULL,
+                    portfolio_name VARCHAR(255) NOT NULL,
+                    created_at TIMESTAMP DEFAULT now()
                 );
                 """
-            ).format(schema=sql.Identifier(schema_name), table=sql.Identifier(table_name))
-            cur.execute(create_table_sql)
+            ).format(schema=sql.Identifier(schema_name), table=sql.Identifier(portfolios_table))
+            cur.execute(create_portfolios_table_sql)
 
-            # ----------------------------------------------------------------
-            # 6. Insert data - removed ON CONFLICT to allow duplicates
-            # ----------------------------------------------------------------
-            rows = [tuple(x) for x in df.itertuples(index=False, name=None)]
+            # Always generate a new UUID for each call to this function for a new portfolio instance
+            current_portfolio_id = uuid.uuid4()
 
-            insert_sql = sql.SQL(
+            # Insert into portfolios table - REMOVED ON CONFLICT clause
+            insert_portfolio_sql = sql.SQL(
                 """
-                INSERT INTO {schema}.{table} (asset_class, allocation, reason)
-                VALUES %s;
+                INSERT INTO {schema}.{table} (portfolio_id, user_name, portfolio_name)
+                VALUES (%s, %s, %s)
+                RETURNING portfolio_id; 
                 """
-            ).format(schema=sql.Identifier(schema_name), table=sql.Identifier(table_name))
+            ).format(schema=sql.Identifier(schema_name), table=sql.Identifier(portfolios_table))
+            
+            cur.execute(
+                insert_portfolio_sql, 
+                (current_portfolio_id, USER_NAME, portfolio_name)
+            )
+            result = cur.fetchone()
+            # The returned portfolio_id should now always be the newly generated current_portfolio_id
+            if result and result['portfolio_id'] == current_portfolio_id:
+                pass # Successfully inserted the new UUID
+            else:
+                # This case should ideally not be reached if INSERT RETURNING works correctly
+                # and no other mechanism alters current_portfolio_id.
+                # If it does, it indicates a problem with the insert or logic.
+                raise Exception(f"Failed to insert/retrieve the new portfolio_id. Expected {current_portfolio_id}, got {result['portfolio_id'] if result else 'None'}")
 
-            execute_values(cur, insert_sql.as_string(conn), rows)
+            # Recreate portfolio_sector_allocation table
+            # Dropping for safety during schema change, normally migrations are better
+            # cur.execute(sql.SQL("DROP TABLE IF EXISTS {schema}.{table} CASCADE;").format(
+            #     schema=sql.Identifier(schema_name), table=sql.Identifier(portfolio_sector_allocation_table)))
+            create_psa_table_sql_revised = sql.SQL(
+                """
+                CREATE TABLE IF NOT EXISTS {schema}.{table} (
+                    portfolio_id UUID NOT NULL REFERENCES {schema}.{pf_table}(portfolio_id) ON DELETE CASCADE,
+                    user_name VARCHAR(255) NOT NULL,
+                    portfolio_name VARCHAR(255) NOT NULL,
+                    asset_class VARCHAR(255) NOT NULL,
+                    allocation NUMERIC(10,3),
+                    reason TEXT,
+                    PRIMARY KEY (portfolio_id, asset_class) 
+                );
+                """
+            ).format(
+                schema=sql.Identifier(schema_name), 
+                table=sql.Identifier(portfolio_sector_allocation_table),
+                pf_table=sql.Identifier(portfolios_table)
+            )
+            cur.execute(create_psa_table_sql_revised)
+            
+            psa_rows = []
+            for item_tuple in df.itertuples(index=False, name=None):
+                psa_rows.append((current_portfolio_id, USER_NAME, portfolio_name) + item_tuple)
+            
+            insert_psa_sql = sql.SQL(
+                """
+                INSERT INTO {schema}.{table} (portfolio_id, user_name, portfolio_name, asset_class, allocation, reason)
+                VALUES %s
+                ON CONFLICT (portfolio_id, asset_class) DO UPDATE SET
+                    allocation = EXCLUDED.allocation,
+                    reason = EXCLUDED.reason,
+                    user_name = EXCLUDED.user_name, 
+                    portfolio_name = EXCLUDED.portfolio_name;
+                """
+            ).format(
+                schema=sql.Identifier(schema_name), 
+                table=sql.Identifier(portfolio_sector_allocation_table)
+            )
+            execute_values(cur, insert_psa_sql.as_string(conn), psa_rows)
 
-            # ----------------------------------------------------------------
-            # 6.b (New) Store the high-level thesis, if provided
-            # ----------------------------------------------------------------
-            thesis = portfolio_dict.get("portfolio_thesis")
-            if thesis:
-                # Ensure meta table exists
-                create_meta_sql = sql.SQL(
+            # Recreate portfolio_thesis table
+            # cur.execute(sql.SQL("DROP TABLE IF EXISTS {schema}.{table} CASCADE;").format(
+            #     schema=sql.Identifier(schema_name), table=sql.Identifier(portfolio_thesis_table)))
+            create_thesis_table_sql_revised = sql.SQL(
+                """
+                CREATE TABLE IF NOT EXISTS {schema}.{table} (
+                    portfolio_id UUID PRIMARY KEY REFERENCES {schema}.{pf_table}(portfolio_id) ON DELETE CASCADE,
+                    user_name VARCHAR(255) NOT NULL, 
+                    portfolio_name VARCHAR(255) NOT NULL, 
+                    generated_at TIMESTAMP DEFAULT now(),
+                    thesis TEXT NOT NULL,
+                    extra JSONB DEFAULT '{{}}'::jsonb
+                );
+                """
+            ).format(
+                schema=sql.Identifier(schema_name), 
+                table=sql.Identifier(portfolio_thesis_table),
+                pf_table=sql.Identifier(portfolios_table)
+            )
+            cur.execute(create_thesis_table_sql_revised)
+
+            thesis_text = portfolio_dict.get("portfolio_thesis")
+            if thesis_text:
+                insert_thesis_sql = sql.SQL(
                     """
-                    CREATE TABLE IF NOT EXISTS {schema}.portfolio_thesis (
-                        id SERIAL PRIMARY KEY,
-                        generated_at TIMESTAMP DEFAULT now(),
-                        thesis        TEXT      NOT NULL,
-                        extra         JSONB     DEFAULT '{{}}'::jsonb
-                    );
+                    INSERT INTO {schema}.{table} (portfolio_id, user_name, portfolio_name, thesis) 
+                    VALUES (%s, %s, %s, %s)
+                    ON CONFLICT (portfolio_id) DO UPDATE SET
+                        thesis = EXCLUDED.thesis,
+                        user_name = EXCLUDED.user_name,
+                        portfolio_name = EXCLUDED.portfolio_name,
+                        generated_at = EXCLUDED.generated_at;
                     """
-                ).format(schema=sql.Identifier(schema_name))
-                cur.execute(create_meta_sql)
-
-                # Insert thesis (one row per portfolio snapshot)
-                cur.execute(
-                    sql.SQL("INSERT INTO {schema}.portfolio_thesis (thesis) VALUES (%s);").format(
-                        schema=sql.Identifier(schema_name)
-                    ),
-                    (thesis,)
+                ).format(
+                    schema=sql.Identifier(schema_name), 
+                    table=sql.Identifier(portfolio_thesis_table)
                 )
+                cur.execute(insert_thesis_sql, (current_portfolio_id, USER_NAME, portfolio_name, thesis_text))
 
-        # Commit is automatic because autocommit true, but call for clarity
         conn.commit()
 
-    return schema_name
+    return current_portfolio_id
 
 # ---------------------------------------------------------------------------
-# Helper utilities
+# Helper utilities - REMOVED _num_to_words_mapping, _int_to_english, _english_word_to_int_map
 # ---------------------------------------------------------------------------
-
-_num_to_words_mapping = {
-    0: "zero",
-    1: "one",
-    2: "two",
-    3: "three",
-    4: "four",
-    5: "five",
-    6: "six",
-    7: "seven",
-    8: "eight",
-    9: "nine",
-    10: "ten",
-    11: "eleven",
-    12: "twelve",
-    13: "thirteen",
-    14: "fourteen",
-    15: "fifteen",
-    16: "sixteen",
-    17: "seventeen",
-    18: "eighteen",
-    19: "nineteen",
-    20: "twenty",
-    30: "thirty",
-    40: "forty",
-    50: "fifty",
-    60: "sixty",
-    70: "seventy",
-    80: "eighty",
-    90: "ninety"
-}
-
-
-def _int_to_english(n: int) -> str:
-    """Convert *n* (1-99) to its English word representation.
-
-    For numbers outside that range a ``ValueError`` is raised – our use-case
-    will realistically never exceed that.
-    """
-    if n <= 0 or n >= 100:
-        raise ValueError("Only numbers between 1 and 99 supported")
-
-    if n in _num_to_words_mapping:
-        return _num_to_words_mapping[n]
-
-    # handle 21-99 (excluding exact tens which are covered above)
-    tens, ones = divmod(n, 10)
-    return f"{_num_to_words_mapping[tens * 10]}_{_num_to_words_mapping[ones]}"
-
-
-def _english_word_to_int_map() -> Dict[str, int]:
-    """Return inverse mapping used for schema introspection."""
-    mapping: Dict[str, int] = {word: num for num, word in _num_to_words_mapping.items()}
-    # Add values for 21-99 (hyphen/underscore handled)
-    for n in range(21, 100):
-        if n in _num_to_words_mapping:
-            continue
-        tens, ones = divmod(n, 10)
-        word = f"{_num_to_words_mapping[tens * 10]}_{_num_to_words_mapping[ones]}"
-        mapping[word] = n
-    return mapping
 
 if __name__ == "__main__":
-    portfolio = {
-    "portfolio": [
-        {
-        "asset_class": "semiconductors",
-        "allocation": 10,
-        "reason": "Secular AI and cloud growth, U.S./Taiwan leadership, and double-digit YoY sales increases drive this segment. Premium valuations are justified by structural demand; risks are countered by industry dominance and capital discipline."
-        },
-        {
-        "asset_class": "application_software",
-        "allocation": 7,
-        "reason": "AI adoption, enterprise cloud migration, and vertical-specific platforms make this segment a consistent outperformer. Strong retention, high margins, and broad applicability underpin growth."
-        },
-        {
-        "asset_class": "biotechnology",
-        "allocation": 6,
-        "reason": "Innovation in GLP-1, gene therapy, and biologics drives top-line growth and long-term defensiveness. Biotech offers both alpha and protection in volatile markets."
-        },
-        {
-        "asset_class": "health_care_equipment",
-        "allocation": 5,
-        "reason": "MedTech, diagnostics, and minimally invasive surgery (robotics, AI-driven devices) are high-growth, high-margin segments that combine defensiveness with innovation-driven upside."
-        },
-        {
-        "asset_class": "multi_family_residential_reits",
-        "allocation": 5,
-        "reason": "Housing undersupply, demographic tailwinds, and rising rents support strong income and inflation hedging for the next 3–5 years."
-        },
-        {
-        "asset_class": "data_center_reits",
-        "allocation": 5,
-        "reason": "Digital transformation and AI infrastructure demand are driving exponential data growth, making this REIT segment a structural outperformer with long-term leases and pricing power."
-        },
-        {
-        "asset_class": "diversified_banks",
-        "allocation": 5,
-        "reason": "Large banks offer resilience, digital innovation, and benefit from loan growth, M&A, and strong capital ratios. They also provide some yield and cyclical upside."
-        },
-        {
-        "asset_class": "investment_grade_corporate_bond_etfs",
-        "allocation": 7,
-        "reason": "Yields above 5%, robust credit fundamentals, and tight spreads create income ballast and portfolio stability, especially in a late-cycle environment."
-        },
-        {
-        "asset_class": "high_yield_junk_bond_etfs",
-        "allocation": 5,
-        "reason": "Attractive 7%+ yields, low default risk, and solid corporate fundamentals provide tactical income and risk-on exposure, complementing investment grade bonds."
-        },
-        {
-        "asset_class": "treasury_and_inflation_bond_etfs",
-        "allocation": 8,
-        "reason": "Treasuries and TIPS provide diversification, inflation protection, and a critical risk-off hedge—especially important amid policy, inflation, and geopolitical volatility."
-        },
-        {
-        "asset_class": "single_country_and_regional_etfs_in_emerging_marke",
-        "allocation": 8,
-        "reason": "Targeting India, Taiwan, and Southeast Asia leverages strong GDP and earnings growth, currency stability, and EM tech/consumer expansion, diversifying away from U.S. cyclicality."
-        },
-        {
-        "asset_class": "electric_utilities",
-        "allocation": 4,
-        "reason": "Secular growth from electrification, AI/data center power demand, and grid modernization. Utilities offer stable dividends, inflation protection, and defensive attributes."
-        },
-        {
-        "asset_class": "oil_and_gas_exploration",
-        "allocation": 4,
-        "reason": "Natural gas and upstream oil are well-positioned for energy transition volatility, with strong cash flows, capital discipline, and upside from both traditional and transition markets."
-        },
-        {
-        "asset_class": "precious_metals_etfs",
-        "allocation": 4,
-        "reason": "Gold provides a robust hedge against inflation, currency devaluation, and geopolitical uncertainty, especially as central banks accumulate reserves."
-        },
-        {
-        "asset_class": "specialty_chemicals",
-        "allocation": 3,
-        "reason": "Specialty chemicals benefit from energy transition, battery/EV demand, and innovation-driven margin expansion. Defensive and growth attributes are well-balanced here."
-        },
-        {
-        "asset_class": "consumer_staples_merchandise_retail",
-        "allocation": 4,
-        "reason": "Essentials-focused retail offers defensive ballast, cash flow resilience, and dividend support. Volume growth and stable demand make this a core holding for market uncertainty."
-        },
-        {
-        "asset_class": "Cash",
-        "allocation": 5,
-        "reason": "Maintains strategic liquidity for tactical rebalancing, supports risk management, and ensures portfolio flexibility for new opportunities or defensive moves."
+    # Example: Ensure USER_NAME is in your .env or environment for this test
+    if not USER_NAME:
+        print("Please set USER_NAME in your environment for the test to run.")
+    else:
+        # The f-string with uuid.uuid4().hex[:8] ensures unique portfolio name for each test run
+        test_portfolio_name = f"MyTestPortfolio_{uuid.uuid4().hex[:8]}" 
+        
+        # Sample data for store_portfolio_sector_allocations
+        sector_portfolio_data = {
+            "portfolio": [
+                {
+                    "asset_class": "semiconductors",
+                    "allocation": 10.5,
+                    "reason": "Strong growth in AI sector."
+                },
+                {
+                    "asset_class": "renewable_energy",
+                    "allocation": 15.0,
+                    "reason": "Government incentives and increasing demand."
+                },
+                {
+                    "asset_class": "Cash",
+                    "allocation": 5.0,
+                    "reason": "Strategic liquidity."
+                }
+            ],
+            "portfolio_thesis": "This is a test thesis for the comprehensive portfolio."
         }
-    ],
-    "portfolio_thesis": "This portfolio is optimized for a medium-risk, growth-focused investor with a 5-year horizon, balancing secular growth (AI, healthcare, EM tech/consumer) with defensive income and inflation hedges. Overweights in AI/tech, healthcare, and digital real estate are paired with quality bonds, EM equity, and real asset exposures to capture upside and manage risk. This structure aligns with 2025 market themes—AI acceleration, EM outperformance, late-cycle volatility, and policy uncertainty—ensuring strong return potential while minimizing drawdowns and maintaining flexibility."
-    }
 
-    store_portfolio_sector_allocations(portfolio)
+        # Sample data for store_final_portfolio 
+        # (structure this like the output of make_phaseTwo_recommendations)
+        final_portfolio_data = {
+            "semiconductors": {
+                "total_stocks_analyzed": 2,
+                "recommendations": [
+                    {
+                        "ticker": "NVDA",
+                        "reason_for_recommendation": "Leading AI chip manufacturer.",
+                        "supporting_metrics": {"sharpe_ratio": 2.1, "operating_margin_avg": "60%"},
+                        "allocation": 7.5
+                    },
+                    {
+                        "ticker": "AMD",
+                        "reason_for_recommendation": "Competitive CPU and GPU offerings.",
+                        "supporting_metrics": {"beta": 1.2, "revenue_growth": "20%"},
+                        "allocation": 3.0
+                    }
+                ]
+            },
+            "renewable_energy": {
+                "total_stocks_analyzed": 1,
+                "recommendations": [
+                    {
+                        "ticker": "NEE",
+                        "reason_for_recommendation": "Largest renewable energy producer.",
+                        "supporting_metrics": {"dividend_yield": "3%", "payout_ratio": "60%"},
+                        "allocation": 15.0
+                    }
+                ]
+            }
+            # "Cash" asset class usually doesn't have ticker recommendations in this structure
+        }
+
+        try:
+            print(f"--- Running Test for User: {USER_NAME}, Portfolio: {test_portfolio_name} ---")
+            
+            # 1. Store sector allocations and thesis, get portfolio_id
+            print("1. Storing sector allocations and thesis...")
+            created_portfolio_id = store_portfolio_sector_allocations(sector_portfolio_data, test_portfolio_name)
+            print(f"   Successfully stored. Portfolio UUID: {created_portfolio_id}")
+
+            # 2. Store final portfolio (ticker details)
+            # Need to import store_final_portfolio at the top of the file if not already done for __main__
+            from .store_final_portfolio import store_final_portfolio
+            print("\n2. Storing final portfolio (ticker details)...")
+            store_final_portfolio(final_portfolio_data, created_portfolio_id, test_portfolio_name)
+            print(f"   Successfully stored final portfolio details for Portfolio UUID: {created_portfolio_id}")
+
+            # 3. Store user information
+            # Need to import store_user_information at the top of the file if not already done for __main__
+            from .store_user_information import store_user_information
+            # (Assuming get_user_information() in store_user_information.py fetches/returns some mock data for testing)
+            print("\n3. Storing user information...")
+            store_user_information(created_portfolio_id, test_portfolio_name)
+            print(f"   Successfully stored user information for Portfolio UUID: {created_portfolio_id}")
+
+            print("\n--- Test Completed Successfully ---")
+            print(f"Check your 'portfolio_results' database, public schema, for portfolio_id = {created_portfolio_id}.")
+
+        except Exception as e:
+            print(f"--- Test Failed --- ")
+            print(f"Error during test: {e}")
+            import traceback
+            traceback.print_exc()

@@ -16,6 +16,8 @@ import pandas as pd
 import re
 from dotenv import load_dotenv
 from src.utils.file_utils import load_schema_data
+from src.utils.database import get_cursor, execute_query, get_default_db_config, get_single_value
+from typing import Optional
 
 # Load environment variables from .env file
 load_dotenv()
@@ -25,48 +27,34 @@ Sonar_API_KEY = os.environ.get("PERPLEXITY_API_KEY")
 client = OpenAI(api_key=OpenAI_API_KEY)
 perplexity_model = os.environ.get("PERPLEXITY_MODEL")
 
-
-date = "2025_05_11"
+# Define date as a global variable
+date = "2025_01_22"  # Set a default date
 
 def update_research_date_to_latest():
     """
-    Connects to the 'research' database, finds the schema with the most recent date-like name,
-    and updates the global 'date' variable to this date.
-    Schema names are expected in 'YYYY_MM_DD' format.
+    Connects to the 'research' database and updates the global 'date' variable
+    to the latest date found in the schema names (formatted as YYYY_MM_DD).
     """
     global date
-    conn = None
-    cur = None
     
     try:
-        db_host = os.environ.get("DB_HOST")
-        db_port = os.environ.get("DB_PORT", 5432)
-        db_user = os.environ.get("DB_USER")
-        db_password = os.environ.get("DB_PASSWORD")
-        db_name = "research"
-
-        if not all([db_host, db_user, db_password]):
-            print("Error: Database connection details (DB_HOST, DB_USER, DB_PASSWORD) not found in environment variables.")
-            return
-
-        conn = psycopg2.connect(
-            host=db_host,
-            port=db_port,
-            user=db_user,
-            password=db_password,
-            dbname=db_name
-        )
-        cur = conn.cursor()
-
-        # New approach: Fetch more broadly from SQL, then filter precisely in Python
-        cur.execute("""
+        # Use execute_query to get all schema names
+        schema_results = execute_query(
+            "research",
+            """
             SELECT schema_name 
             FROM information_schema.schemata 
-            WHERE schema_name NOT LIKE 'pg_%'    -- Exclude system schemas
+            WHERE schema_name NOT LIKE 'pg_%'
               AND schema_name <> 'information_schema'
               AND schema_name <> 'public'
-        """)
-        potential_schema_names = [row[0] for row in cur.fetchall()]
+            """
+        )
+        
+        if not schema_results:
+            print("No schemas found in the 'research' database.")
+            return
+            
+        potential_schema_names = [row[0] for row in schema_results]
         
         # Filter for YYYY_MM_DD format using Python's re module
         date_pattern = re.compile(r"^\d{4}_\d{2}_\d{2}$")
@@ -93,752 +81,104 @@ def update_research_date_to_latest():
         else:
             print("No valid date schemas found in the 'research' database. 'date' variable remains unchanged.")
 
-    except psycopg2.Error as e:
-        print(f"Database error: {e}")
     except Exception as e:
         print(f"An unexpected error occurred while updating research date: {e}")
-    finally:
-        if cur:
-            cur.close()
-        if conn:
-            conn.close()
 
 # Update the date to the latest research date available when the module is loaded
 update_research_date_to_latest()
 
+def get_analyst_research(table_name: str) -> Optional[str]:
+    """
+    Generic function to retrieve analyst research from the database.
+    
+    Args:
+        table_name: Name of the research table to query
+        
+    Returns:
+        The research text content or None if not found
+    """
+    db_name = "research"
+    schema_name = date
+    target_id = 1
+    text_column_name = "content"
+    
+    # Construct and execute the SQL query
+    sql_query = f"""
+        SELECT "{text_column_name}" 
+        FROM "{schema_name}"."{table_name}" 
+        WHERE id = %s
+    """
+    
+    research_text = get_single_value(db_name, sql_query, (target_id,))
+    
+    if research_text is None:
+        print(f"No data found for id {target_id} in table {schema_name}.{table_name}.")
+    
+    return research_text
+
 def communication_services_analyst():
     """
-    Connects to the 'research' database, queries the communication_services_research table
-    within the '2025_04_22' schema, and returns the text from the row with id = 1.
+    Retrieves communication services research from the database.
     """
-    conn = None
-    cur = None
-    research_text = None
-
-    try:
-        # Database connection parameters (assuming they are in .env)
-        db_host = os.environ.get("DB_HOST")
-        db_port = os.environ.get("DB_PORT", 5432) # Default PostgreSQL port
-        db_user = os.environ.get("DB_USER")
-        db_password = os.environ.get("DB_PASSWORD")
-        db_name = "research"
-        schema_name = date
-        table_name = "communication_services_research"
-        target_id = 1
-        text_column_name = "content" # ASSUMPTION: Adjust if your column name is different
-
-        # Check if essential connection parameters are loaded
-        if not all([db_host, db_user, db_password]):
-            print("Error: Database connection details (DB_HOST, DB_USER, DB_PASSWORD) not found in environment variables.")
-            return None
-
-        # Establish connection
-        # Note: psycopg2 is for PostgreSQL. Ensure it's configured correctly for your setup.
-        conn = psycopg2.connect(
-            host=db_host,
-            port=db_port,
-            user=db_user,
-            password=db_password,
-            dbname=db_name
-        )
-        cur = conn.cursor()
-
-        # Construct and execute the SQL query
-        # Using %s for parameter substitution to prevent SQL injection
-        # Quoting schema and table names
-        sql_query = f"""
-            SELECT "{text_column_name}" 
-            FROM "{schema_name}"."{table_name}" 
-            WHERE id = %s;
-        """
-        cur.execute(sql_query, (target_id,))
-
-        # Fetch the result
-        result = cur.fetchone()
-        if result:
-            research_text = result[0]
-        else:
-            print(f"No data found for id {target_id} in table {schema_name}.{table_name}.")
-
-    except psycopg2.Error as e:
-        print(f"Database error: {e}")
-    except Exception as e:
-        print(f"An unexpected error occurred: {e}")
-    finally:
-        # Ensure cursor and connection are closed
-        if cur:
-            cur.close()
-        if conn:
-            conn.close()
-
-    return research_text
+    return get_analyst_research("communication_services_research")
 
 def consumer_discretionary_analyst():
     """
-    Connects to the 'research' database, queries the consumer_discretionary_research table
-    within the '2025_04_22' schema, and returns the text from the row with id = 1.
+    Retrieves consumer discretionary research from the database.
     """
-    conn = None
-    cur = None
-    research_text = None
-
-    try:
-        # Database connection parameters (assuming they are in .env)
-        db_host = os.environ.get("DB_HOST")
-        db_port = os.environ.get("DB_PORT", 5432) # Default PostgreSQL port
-        db_user = os.environ.get("DB_USER")
-        db_password = os.environ.get("DB_PASSWORD")
-        db_name = "research"
-        schema_name = date
-        table_name = "consumer_discretionary_research"  # Adjusted table name
-        target_id = 1
-        text_column_name = "content" # ASSUMPTION: Adjust if your column name is different
-
-        # Check if essential connection parameters are loaded
-        if not all([db_host, db_user, db_password]):
-            print("Error: Database connection details (DB_HOST, DB_USER, DB_PASSWORD) not found in environment variables.")
-            return None
-
-        # Establish connection
-        # Note: psycopg2 is for PostgreSQL. Ensure it's configured correctly for your setup.
-        conn = psycopg2.connect(
-            host=db_host,
-            port=db_port,
-            user=db_user,
-            password=db_password,
-            dbname=db_name
-        )
-        cur = conn.cursor()
-
-        # Construct and execute the SQL query
-        # Using %s for parameter substitution to prevent SQL injection
-        # Quoting schema and table names
-        sql_query = f"""
-            SELECT "{text_column_name}" 
-            FROM "{schema_name}"."{table_name}" 
-            WHERE id = %s;
-        """
-        cur.execute(sql_query, (target_id,))
-
-        # Fetch the result
-        result = cur.fetchone()
-        if result:
-            research_text = result[0]
-        else:
-            print(f"No data found for id {target_id} in table {schema_name}.{table_name}.")
-
-    except psycopg2.Error as e:
-        print(f"Database error: {e}")
-    except Exception as e:
-        print(f"An unexpected error occurred: {e}")
-    finally:
-        # Ensure cursor and connection are closed
-        if cur:
-            cur.close()
-        if conn:
-            conn.close()
-
-    return research_text
+    return get_analyst_research("consumer_discretionary_research")
 
 def consumer_staples_analyst():
     """
-    Connects to the 'research' database, queries the consumer_staples_research table
-    within the '2025_04_22' schema, and returns the text from the row with id = 1.
+    Retrieves consumer staples research from the database.
     """
-    conn = None
-    cur = None
-    research_text = None
-
-    try:
-        # Database connection parameters (assuming they are in .env)
-        db_host = os.environ.get("DB_HOST")
-        db_port = os.environ.get("DB_PORT", 5432) # Default PostgreSQL port
-        db_user = os.environ.get("DB_USER")
-        db_password = os.environ.get("DB_PASSWORD")
-        db_name = "research"
-        schema_name = date
-        table_name = "consumer_staples_research"  # Adjusted table name
-        target_id = 1
-        text_column_name = "content" # ASSUMPTION: Adjust if your column name is different
-
-        # Check if essential connection parameters are loaded
-        if not all([db_host, db_user, db_password]):
-            print("Error: Database connection details (DB_HOST, DB_USER, DB_PASSWORD) not found in environment variables.")
-            return None
-
-        # Establish connection
-        # Note: psycopg2 is for PostgreSQL. Ensure it's configured correctly for your setup.
-        conn = psycopg2.connect(
-            host=db_host,
-            port=db_port,
-            user=db_user,
-            password=db_password,
-            dbname=db_name
-        )
-        cur = conn.cursor()
-
-        # Construct and execute the SQL query
-        # Using %s for parameter substitution to prevent SQL injection
-        # Quoting schema and table names
-        sql_query = f"""
-            SELECT "{text_column_name}" 
-            FROM "{schema_name}"."{table_name}" 
-            WHERE id = %s;
-        """
-        cur.execute(sql_query, (target_id,))
-
-        # Fetch the result
-        result = cur.fetchone()
-        if result:
-            research_text = result[0]
-        else:
-            print(f"No data found for id {target_id} in table {schema_name}.{table_name}.")
-
-    except psycopg2.Error as e:
-        print(f"Database error: {e}")
-    except Exception as e:
-        print(f"An unexpected error occurred: {e}")
-    finally:
-        # Ensure cursor and connection are closed
-        if cur:
-            cur.close()
-        if conn:
-            conn.close()
-
-    return research_text
+    return get_analyst_research("consumer_staples_research")
 
 def energy_analyst():
     """
-    Connects to the 'research' database, queries the energy_research table
-    within the '2025_04_22' schema, and returns the text from the row with id = 1.
+    Retrieves energy research from the database.
     """
-    conn = None
-    cur = None
-    research_text = None
-
-    try:
-        # Database connection parameters (assuming they are in .env)
-        db_host = os.environ.get("DB_HOST")
-        db_port = os.environ.get("DB_PORT", 5432) # Default PostgreSQL port
-        db_user = os.environ.get("DB_USER")
-        db_password = os.environ.get("DB_PASSWORD")
-        db_name = "research"
-        schema_name = date
-        table_name = "energy_research"  # Adjusted table name
-        target_id = 1
-        text_column_name = "content" # ASSUMPTION: Adjust if your column name is different
-
-        # Check if essential connection parameters are loaded
-        if not all([db_host, db_user, db_password]):
-            print("Error: Database connection details (DB_HOST, DB_USER, DB_PASSWORD) not found in environment variables.")
-            return None
-
-        # Establish connection
-        # Note: psycopg2 is for PostgreSQL. Ensure it's configured correctly for your setup.
-        conn = psycopg2.connect(
-            host=db_host,
-            port=db_port,
-            user=db_user,
-            password=db_password,
-            dbname=db_name
-        )
-        cur = conn.cursor()
-
-        # Construct and execute the SQL query
-        # Using %s for parameter substitution to prevent SQL injection
-        # Quoting schema and table names
-        sql_query = f"""
-            SELECT "{text_column_name}" 
-            FROM "{schema_name}"."{table_name}" 
-            WHERE id = %s;
-        """
-        cur.execute(sql_query, (target_id,))
-
-        # Fetch the result
-        result = cur.fetchone()
-        if result:
-            research_text = result[0]
-        else:
-            print(f"No data found for id {target_id} in table {schema_name}.{table_name}.")
-
-    except psycopg2.Error as e:
-        print(f"Database error: {e}")
-    except Exception as e:
-        print(f"An unexpected error occurred: {e}")
-    finally:
-        # Ensure cursor and connection are closed
-        if cur:
-            cur.close()
-        if conn:
-            conn.close()
-
-    return research_text
+    return get_analyst_research("energy_research")
 
 def financials_analyst():
     """
-    Connects to the 'research' database, queries the financials_research table
-    within the '2025_04_22' schema, and returns the text from the row with id = 1.
+    Retrieves financials research from the database.
     """
-    conn = None
-    cur = None
-    research_text = None
-
-    try:
-        # Database connection parameters (assuming they are in .env)
-        db_host = os.environ.get("DB_HOST")
-        db_port = os.environ.get("DB_PORT", 5432) # Default PostgreSQL port
-        db_user = os.environ.get("DB_USER")
-        db_password = os.environ.get("DB_PASSWORD")
-        db_name = "research"
-        schema_name = date
-        table_name = "financials_research"  # Adjusted table name
-        target_id = 1
-        text_column_name = "content" # ASSUMPTION: Adjust if your column name is different
-
-        # Check if essential connection parameters are loaded
-        if not all([db_host, db_user, db_password]):
-            print("Error: Database connection details (DB_HOST, DB_USER, DB_PASSWORD) not found in environment variables.")
-            return None
-
-        # Establish connection
-        # Note: psycopg2 is for PostgreSQL. Ensure it's configured correctly for your setup.
-        conn = psycopg2.connect(
-            host=db_host,
-            port=db_port,
-            user=db_user,
-            password=db_password,
-            dbname=db_name
-        )
-        cur = conn.cursor()
-
-        # Construct and execute the SQL query
-        # Using %s for parameter substitution to prevent SQL injection
-        # Quoting schema and table names
-        sql_query = f"""
-            SELECT "{text_column_name}" 
-            FROM "{schema_name}"."{table_name}" 
-            WHERE id = %s;
-        """
-        cur.execute(sql_query, (target_id,))
-
-        # Fetch the result
-        result = cur.fetchone()
-        if result:
-            research_text = result[0]
-        else:
-            print(f"No data found for id {target_id} in table {schema_name}.{table_name}.")
-
-    except psycopg2.Error as e:
-        print(f"Database error: {e}")
-    except Exception as e:
-        print(f"An unexpected error occurred: {e}")
-    finally:
-        # Ensure cursor and connection are closed
-        if cur:
-            cur.close()
-        if conn:
-            conn.close()
-
-    return research_text
+    return get_analyst_research("financials_research")
 
 def healthcare_analyst():
     """
-    Connects to the 'research' database, queries the healthcare_research table
-    within the '2025_04_22' schema, and returns the text from the row with id = 1.
+    Retrieves healthcare research from the database.
     """
-    conn = None
-    cur = None
-    research_text = None
-
-    try:
-        # Database connection parameters (assuming they are in .env)
-        db_host = os.environ.get("DB_HOST")
-        db_port = os.environ.get("DB_PORT", 5432) # Default PostgreSQL port
-        db_user = os.environ.get("DB_USER")
-        db_password = os.environ.get("DB_PASSWORD")
-        db_name = "research"
-        schema_name = date
-        table_name = "healthcare_research"  # Adjusted table name
-        target_id = 1
-        text_column_name = "content" # ASSUMPTION: Adjust if your column name is different
-
-        # Check if essential connection parameters are loaded
-        if not all([db_host, db_user, db_password]):
-            print("Error: Database connection details (DB_HOST, DB_USER, DB_PASSWORD) not found in environment variables.")
-            return None
-
-        # Establish connection
-        # Note: psycopg2 is for PostgreSQL. Ensure it's configured correctly for your setup.
-        conn = psycopg2.connect(
-            host=db_host,
-            port=db_port,
-            user=db_user,
-            password=db_password,
-            dbname=db_name
-        )
-        cur = conn.cursor()
-
-        # Construct and execute the SQL query
-        # Using %s for parameter substitution to prevent SQL injection
-        # Quoting schema and table names
-        sql_query = f"""
-            SELECT "{text_column_name}" 
-            FROM "{schema_name}"."{table_name}" 
-            WHERE id = %s;
-        """
-        cur.execute(sql_query, (target_id,))
-
-        # Fetch the result
-        result = cur.fetchone()
-        if result:
-            research_text = result[0]
-        else:
-            print(f"No data found for id {target_id} in table {schema_name}.{table_name}.")
-
-    except psycopg2.Error as e:
-        print(f"Database error: {e}")
-    except Exception as e:
-        print(f"An unexpected error occurred: {e}")
-    finally:
-        # Ensure cursor and connection are closed
-        if cur:
-            cur.close()
-        if conn:
-            conn.close()
-
-    return research_text
+    return get_analyst_research("healthcare_research")
 
 def industrials_analyst():
     """
-    Connects to the 'research' database, queries the industrials_research table
-    within the '2025_04_22' schema, and returns the text from the row with id = 1.
+    Retrieves industrials research from the database.
     """
-    conn = None
-    cur = None
-    research_text = None
-
-    try:
-        # Database connection parameters (assuming they are in .env)
-        db_host = os.environ.get("DB_HOST")
-        db_port = os.environ.get("DB_PORT", 5432) # Default PostgreSQL port
-        db_user = os.environ.get("DB_USER")
-        db_password = os.environ.get("DB_PASSWORD")
-        db_name = "research"
-        schema_name = date
-        table_name = "industrials_research"  # Adjusted table name
-        target_id = 1
-        text_column_name = "content" # ASSUMPTION: Adjust if your column name is different
-
-        # Check if essential connection parameters are loaded
-        if not all([db_host, db_user, db_password]):
-            print("Error: Database connection details (DB_HOST, DB_USER, DB_PASSWORD) not found in environment variables.")
-            return None
-
-        # Establish connection
-        # Note: psycopg2 is for PostgreSQL. Ensure it's configured correctly for your setup.
-        conn = psycopg2.connect(
-            host=db_host,
-            port=db_port,
-            user=db_user,
-            password=db_password,
-            dbname=db_name
-        )
-        cur = conn.cursor()
-
-        # Construct and execute the SQL query
-        # Using %s for parameter substitution to prevent SQL injection
-        # Quoting schema and table names
-        sql_query = f"""
-            SELECT "{text_column_name}" 
-            FROM "{schema_name}"."{table_name}" 
-            WHERE id = %s;
-        """
-        cur.execute(sql_query, (target_id,))
-
-        # Fetch the result
-        result = cur.fetchone()
-        if result:
-            research_text = result[0]
-        else:
-            print(f"No data found for id {target_id} in table {schema_name}.{table_name}.")
-
-    except psycopg2.Error as e:
-        print(f"Database error: {e}")
-    except Exception as e:
-        print(f"An unexpected error occurred: {e}")
-    finally:
-        # Ensure cursor and connection are closed
-        if cur:
-            cur.close()
-        if conn:
-            conn.close()
-
-    return research_text
+    return get_analyst_research("industrials_research")
 
 def information_technology_analyst():
     """
-    Connects to the 'research' database, queries the information_technology_research table
-    within the '2025_04_22' schema, and returns the text from the row with id = 1.
+    Retrieves information technology research from the database.
     """
-    conn = None
-    cur = None
-    research_text = None
-
-    try:
-        # Database connection parameters (assuming they are in .env)
-        db_host = os.environ.get("DB_HOST")
-        db_port = os.environ.get("DB_PORT", 5432) # Default PostgreSQL port
-        db_user = os.environ.get("DB_USER")
-        db_password = os.environ.get("DB_PASSWORD")
-        db_name = "research"
-        schema_name = date
-        table_name = "information_technology_research"  # Adjusted table name
-        target_id = 1
-        text_column_name = "content" # ASSUMPTION: Adjust if your column name is different
-
-        # Check if essential connection parameters are loaded
-        if not all([db_host, db_user, db_password]):
-            print("Error: Database connection details (DB_HOST, DB_USER, DB_PASSWORD) not found in environment variables.")
-            return None
-
-        # Establish connection
-        # Note: psycopg2 is for PostgreSQL. Ensure it's configured correctly for your setup.
-        conn = psycopg2.connect(
-            host=db_host,
-            port=db_port,
-            user=db_user,
-            password=db_password,
-            dbname=db_name
-        )
-        cur = conn.cursor()
-
-        # Construct and execute the SQL query
-        # Using %s for parameter substitution to prevent SQL injection
-        # Quoting schema and table names
-        sql_query = f"""
-            SELECT "{text_column_name}" 
-            FROM "{schema_name}"."{table_name}" 
-            WHERE id = %s;
-        """
-        cur.execute(sql_query, (target_id,))
-
-        # Fetch the result
-        result = cur.fetchone()
-        if result:
-            research_text = result[0]
-        else:
-            print(f"No data found for id {target_id} in table {schema_name}.{table_name}.")
-
-    except psycopg2.Error as e:
-        print(f"Database error: {e}")
-    except Exception as e:
-        print(f"An unexpected error occurred: {e}")
-    finally:
-        # Ensure cursor and connection are closed
-        if cur:
-            cur.close()
-        if conn:
-            conn.close()
-
-    return research_text
+    return get_analyst_research("information_technology_research")
 
 def materials_analyst():
     """
-    Connects to the 'research' database, queries the materials_research table
-    within the '2025_04_22' schema, and returns the text from the row with id = 1.
+    Retrieves materials research from the database.
     """
-    conn = None
-    cur = None
-    research_text = None
-
-    try:
-        # Database connection parameters (assuming they are in .env)
-        db_host = os.environ.get("DB_HOST")
-        db_port = os.environ.get("DB_PORT", 5432) # Default PostgreSQL port
-        db_user = os.environ.get("DB_USER")
-        db_password = os.environ.get("DB_PASSWORD")
-        db_name = "research"
-        schema_name = date
-        table_name = "materials_research"  # Adjusted table name
-        target_id = 1
-        text_column_name = "content" # ASSUMPTION: Adjust if your column name is different
-
-        # Check if essential connection parameters are loaded
-        if not all([db_host, db_user, db_password]):
-            print("Error: Database connection details (DB_HOST, DB_USER, DB_PASSWORD) not found in environment variables.")
-            return None
-
-        # Establish connection
-        # Note: psycopg2 is for PostgreSQL. Ensure it's configured correctly for your setup.
-        conn = psycopg2.connect(
-            host=db_host,
-            port=db_port,
-            user=db_user,
-            password=db_password,
-            dbname=db_name
-        )
-        cur = conn.cursor()
-
-        # Construct and execute the SQL query
-        # Using %s for parameter substitution to prevent SQL injection
-        # Quoting schema and table names
-        sql_query = f"""
-            SELECT "{text_column_name}" 
-            FROM "{schema_name}"."{table_name}" 
-            WHERE id = %s;
-        """
-        cur.execute(sql_query, (target_id,))
-
-        # Fetch the result
-        result = cur.fetchone()
-        if result:
-            research_text = result[0]
-        else:
-            print(f"No data found for id {target_id} in table {schema_name}.{table_name}.")
-
-    except psycopg2.Error as e:
-        print(f"Database error: {e}")
-    except Exception as e:
-        print(f"An unexpected error occurred: {e}")
-    finally:
-        # Ensure cursor and connection are closed
-        if cur:
-            cur.close()
-        if conn:
-            conn.close()
-
-    return research_text
+    return get_analyst_research("materials_research")
 
 def real_estate_analyst():
     """
-    Connects to the 'research' database, queries the real_estate_research table
-    within the '2025_04_22' schema, and returns the text from the row with id = 1.
+    Retrieves real estate research from the database.
     """
-    conn = None
-    cur = None
-    research_text = None
-
-    try:
-        # Database connection parameters (assuming they are in .env)
-        db_host = os.environ.get("DB_HOST")
-        db_port = os.environ.get("DB_PORT", 5432) # Default PostgreSQL port
-        db_user = os.environ.get("DB_USER")
-        db_password = os.environ.get("DB_PASSWORD")
-        db_name = "research"
-        schema_name = date
-        table_name = "real_estate_research"  # Adjusted table name
-        target_id = 1
-        text_column_name = "content" # ASSUMPTION: Adjust if your column name is different
-
-        # Check if essential connection parameters are loaded
-        if not all([db_host, db_user, db_password]):
-            print("Error: Database connection details (DB_HOST, DB_USER, DB_PASSWORD) not found in environment variables.")
-            return None
-
-        # Establish connection
-        # Note: psycopg2 is for PostgreSQL. Ensure it's configured correctly for your setup.
-        conn = psycopg2.connect(
-            host=db_host,
-            port=db_port,
-            user=db_user,
-            password=db_password,
-            dbname=db_name
-        )
-        cur = conn.cursor()
-
-        # Construct and execute the SQL query
-        # Using %s for parameter substitution to prevent SQL injection
-        # Quoting schema and table names
-        sql_query = f"""
-            SELECT "{text_column_name}" 
-            FROM "{schema_name}"."{table_name}" 
-            WHERE id = %s;
-        """
-        cur.execute(sql_query, (target_id,))
-
-        # Fetch the result
-        result = cur.fetchone()
-        if result:
-            research_text = result[0]
-        else:
-            print(f"No data found for id {target_id} in table {schema_name}.{table_name}.")
-
-    except psycopg2.Error as e:
-        print(f"Database error: {e}")
-    except Exception as e:
-        print(f"An unexpected error occurred: {e}")
-    finally:
-        # Ensure cursor and connection are closed
-        if cur:
-            cur.close()
-        if conn:
-            conn.close()
-
-    return research_text
+    return get_analyst_research("real_estate_research")
 
 def utilities_analyst():
     """
-    Connects to the 'research' database, queries the utilities_research table
-    within the '2025_04_22' schema, and returns the text from the row with id = 1.
+    Retrieves utilities research from the database.
     """
-    conn = None
-    cur = None
-    research_text = None
-
-    try:
-        # Database connection parameters (assuming they are in .env)
-        db_host = os.environ.get("DB_HOST")
-        db_port = os.environ.get("DB_PORT", 5432) # Default PostgreSQL port
-        db_user = os.environ.get("DB_USER")
-        db_password = os.environ.get("DB_PASSWORD")
-        db_name = "research"
-        schema_name = date
-        table_name = "utilities_research"  # Adjusted table name
-        target_id = 1
-        text_column_name = "content" # ASSUMPTION: Adjust if your column name is different
-
-        # Check if essential connection parameters are loaded
-        if not all([db_host, db_user, db_password]):
-            print("Error: Database connection details (DB_HOST, DB_USER, DB_PASSWORD) not found in environment variables.")
-            return None
-
-        # Establish connection
-        # Note: psycopg2 is for PostgreSQL. Ensure it's configured correctly for your setup.
-        conn = psycopg2.connect(
-            host=db_host,
-            port=db_port,
-            user=db_user,
-            password=db_password,
-            dbname=db_name
-        )
-        cur = conn.cursor()
-
-        # Construct and execute the SQL query
-        # Using %s for parameter substitution to prevent SQL injection
-        # Quoting schema and table names
-        sql_query = f"""
-            SELECT "{text_column_name}" 
-            FROM "{schema_name}"."{table_name}" 
-            WHERE id = %s;
-        """
-        cur.execute(sql_query, (target_id,))
-
-        # Fetch the result
-        result = cur.fetchone()
-        if result:
-            research_text = result[0]
-        else:
-            print(f"No data found for id {target_id} in table {schema_name}.{table_name}.")
-
-    except psycopg2.Error as e:
-        print(f"Database error: {e}")
-    except Exception as e:
-        print(f"An unexpected error occurred: {e}")
-    finally:
-        # Ensure cursor and connection are closed
-        if cur:
-            cur.close()
-        if conn:
-            conn.close()
-
-    return research_text
+    return get_analyst_research("utilities_research")
+    

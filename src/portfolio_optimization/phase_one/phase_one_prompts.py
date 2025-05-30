@@ -212,7 +212,7 @@ CONSTRAINTS & REQUIREMENTS:
 
     NAMING CONVENTIONS
     • Use ONLY the final / leaf-node names from universe tools. e.g. “multi_utilities”, “precious_metals_etfs” (Hard Constraint)
-    • Avoid long hierarchical names like “equity_sector_utilities_multi_utilities”
+    • If the name of the sector/industry/subindustry put into the final json must match the exact same name as it is in the stock and etf universe tools. (This is a hard constraint, there will be severe consequences if you do not follow this rule)
     Example of correct asset class format:
         • ✓ CORRECT: "asset_class": "multi_utilities"
         • ✗ INCORRECT: "asset_class": "equity_sector_utilities_multi_utilities"

@@ -3,14 +3,7 @@ import json
 import psycopg2
 from collections import defaultdict
 import re
-
-def create_connection(db_config, dbname):
-    """Create a new database connection with autocommit mode enabled"""
-    conn_config = db_config.copy()
-    conn_config['dbname'] = dbname
-    conn = psycopg2.connect(**conn_config)
-    conn.autocommit = True  # Prevent transaction issues
-    return conn
+from src.utils.database import get_pooled_connection, get_default_db_config
 
 def clean_ticker(ticker):
     """Remove 'US EQUITY' and other common suffixes from ticker symbols"""
@@ -36,12 +29,7 @@ def recreate_database_schemas(output_file="database_schemas.json"):
         output_file (str): The file to write the extracted schema to
     """
     # Database connection parameters
-    db_config = {
-        "host": "demo-postgres.ctemwoy8mbzw.us-east-1.rds.amazonaws.com",
-        "user": "postgres",
-        "password": "ml1710402!",
-        "port": "5432"
-    }
+    db_config = get_default_db_config()
     
     # Initialize the final structure
     schemas_data = {}
@@ -56,9 +44,11 @@ def recreate_database_schemas(output_file="database_schemas.json"):
     
     # Start with the postgres database to get a list of all databases
     conn = None
+    cursor = None
     try:
-        conn = create_connection(db_config, "postgres")
-        cursor = conn.cursor()
+        conn, cursor = get_pooled_connection("postgres", db_config, autocommit=True)
+        if not conn or not cursor:
+            raise Exception("Failed to connect to postgres database")
         
         # Query to get all equity sector databases
         cursor.execute("""
@@ -75,7 +65,6 @@ def recreate_database_schemas(output_file="database_schemas.json"):
         etf_databases = [row[0] for row in cursor.fetchall()]
         
         cursor.close()
-        conn.close()
         
         # Process each equity sector database
         for db_name in equity_databases:
@@ -93,9 +82,12 @@ def recreate_database_schemas(output_file="database_schemas.json"):
             
             # Connect to this database
             sector_conn = None
+            sector_cursor = None
             try:
-                sector_conn = create_connection(db_config, db_name)
-                sector_cursor = sector_conn.cursor()
+                sector_conn, sector_cursor = get_pooled_connection(db_name, db_config, autocommit=True)
+                if not sector_conn or not sector_cursor:
+                    print(f"  Failed to connect to {db_name}")
+                    continue
                 
                 # For each sector database, we need to find its schemas
                 sector_cursor.execute("""
@@ -159,117 +151,113 @@ def recreate_database_schemas(output_file="database_schemas.json"):
                         if schema_name == "wireless_telecommunication_services" and table_name == "wireless_telecommunication_services":
                             try:
                                 # Always use a fresh connection for each query
-                                special_conn = create_connection(db_config, db_name)
-                                special_cursor = special_conn.cursor()
-                                
-                                # Try different queries to find all wireless tickers
-                                wireless_queries = [
-                                    """
-                                    SELECT DISTINCT ticker
-                                    FROM wireless_telecommunication_services.classification
-                                    WHERE LOWER(sub_industry) = 'wireless telecommunication services'
-                                    """,
-                                    """
-                                    SELECT DISTINCT ticker
-                                    FROM wireless_telecommunication_services.classification
-                                    """,
-                                    """
-                                    SELECT DISTINCT ticker
-                                    FROM wireless_telecommunication_services.wireless_telecommunication_services
-                                    """
-                                ]
-                                
-                                # Try each query one by one
-                                for query in wireless_queries:
-                                    try:
-                                        special_cursor.execute(query)
-                                        wireless_tickers = [clean_ticker(row[0]) for row in special_cursor.fetchall()]
-                                        if wireless_tickers:
-                                            all_tickers.extend(wireless_tickers)
-                                            print(f"      Found {len(wireless_tickers)} wireless tickers")
-                                            break  # Stop if successful
-                                    except Exception as e:
-                                        print(f"      Wireless query failed: {e}")
-                                        # Create a fresh connection for the next attempt
-                                        special_conn.close()
-                                        special_conn = create_connection(db_config, db_name)
-                                        special_cursor = special_conn.cursor()
-                                
-                                # Check for specific tickers from the screenshot - already cleaned
-                                screenshot_tickers = ["TDS", "USM", "TMUS", "SPOK", "KORE", "GOGO", "TIGO", "VEON", "FNGR", "UCL", "SURG"]
-                                for ticker in screenshot_tickers:
-                                    if ticker not in [t.upper() for t in all_tickers]:
-                                        all_tickers.append(ticker)
-                                        print(f"      Manually added {ticker} from screenshot")
-                                
-                                special_conn.close()
+                                special_conn, special_cursor = get_pooled_connection(db_name, db_config, autocommit=True)
+                                if special_conn and special_cursor:
+                                    # Try different queries to find all wireless tickers
+                                    wireless_queries = [
+                                        """
+                                        SELECT DISTINCT ticker
+                                        FROM wireless_telecommunication_services.classification
+                                        WHERE LOWER(sub_industry) = 'wireless telecommunication services'
+                                        """,
+                                        """
+                                        SELECT DISTINCT ticker
+                                        FROM wireless_telecommunication_services.classification
+                                        """,
+                                        """
+                                        SELECT DISTINCT ticker
+                                        FROM wireless_telecommunication_services.wireless_telecommunication_services
+                                        """
+                                    ]
+
+                                    # Try each query one by one
+                                    for query in wireless_queries:
+                                        try:
+                                            special_cursor.execute(query)
+                                            wireless_tickers = [clean_ticker(row[0]) for row in special_cursor.fetchall()]
+                                            if wireless_tickers:
+                                                all_tickers.extend(wireless_tickers)
+                                                print(f"      Found {len(wireless_tickers)} wireless tickers")
+                                                break  # Stop if successful
+                                        except Exception as e:
+                                            print(f"      Wireless query failed: {e}")
+
+                                    # Check for specific tickers from the screenshot - already cleaned
+                                    screenshot_tickers = [
+                                        "TDS", "USM", "TMUS", "SPOK", "KORE", "GOGO", "TIGO", "VEON", "FNGR", "UCL", "SURG"
+                                    ]
+                                    for ticker in screenshot_tickers:
+                                        if ticker not in [t.upper() for t in all_tickers]:
+                                            all_tickers.append(ticker)
+                                            print(f"      Manually added {ticker} from screenshot")
+
+                                    special_cursor.close()
                             except Exception as e:
                                 print(f"      Special wireless handling error: {e}")
-                                if 'special_conn' in locals() and special_conn:
-                                    special_conn.close()
                         
                         # 1. Try the fundamentals database with classification tables
                         fundamentals_db = f"{db_name}_fundamentals"
                         try:
-                            fund_conn = create_connection(db_config, fundamentals_db)
-                            fund_cursor = fund_conn.cursor()
-                            
-                            # Look for classification tables
-                            fund_cursor.execute(f"""
-                                SELECT table_name FROM information_schema.tables 
-                                WHERE table_schema = '{schema_name}'
-                                AND table_name LIKE '%classification%'
-                            """)
-                            
-                            class_tables = [row[0] for row in fund_cursor.fetchall()]
-                            
-                            for class_table in class_tables:
-                                # Check for industry columns
-                                fund_cursor.execute(f"""
-                                    SELECT column_name FROM information_schema.columns 
-                                    WHERE table_schema = '{schema_name}' 
-                                    AND table_name = '{class_table}'
-                                """)
-                                
-                                columns = [row[0] for row in fund_cursor.fetchall()]
-                                
-                                # Look for any form of industry/subindustry column
-                                industry_columns = [col for col in columns if 
-                                                 'industry' in col.lower() or 
-                                                 'sub_industry' in col.lower() or 
-                                                 'subindustry' in col.lower()]
-                                
-                                for industry_col in industry_columns:
-                                    # Try all possible matches for industry name
-                                    normalized_table = table_name.replace('_', ' ')
-                                    
-                                    # Try with a fresh connection to avoid transaction errors
-                                    query_conn = create_connection(db_config, fundamentals_db)
-                                    query_cursor = query_conn.cursor()
-                                    
-                                    try:
-                                        query = f"""
-                                            SELECT ticker FROM {schema_name}.{class_table}
-                                            WHERE LOWER({industry_col}) = LOWER('{normalized_table}')
-                                            OR LOWER({industry_col}) = LOWER('{table_name}')
-                                            OR LOWER(REPLACE({industry_col}, ' ', '_')) = LOWER('{table_name}')
+                            fund_conn, fund_cursor = get_pooled_connection(fundamentals_db, db_config, autocommit=True)
+                            if fund_conn and fund_cursor:
+                                # Look for classification tables
+                                fund_cursor.execute(
+                                    f"""
+                                    SELECT table_name FROM information_schema.tables 
+                                    WHERE table_schema = '{schema_name}'
+                                      AND table_name LIKE '%classification%'
+                                    """
+                                )
+
+                                class_tables = [row[0] for row in fund_cursor.fetchall()]
+
+                                for class_table in class_tables:
+                                    # Check for industry columns
+                                    fund_cursor.execute(
+                                        f"""
+                                        SELECT column_name FROM information_schema.columns 
+                                        WHERE table_schema = '{schema_name}' 
+                                          AND table_name = '{class_table}'
                                         """
-                                        
-                                        query_cursor.execute(query)
-                                        table_tickers = [clean_ticker(row[0]) for row in query_cursor.fetchall()]
-                                        if table_tickers:
-                                            all_tickers.extend(table_tickers)
-                                            print(f"      Found {len(table_tickers)} tickers from {industry_col}")
-                                    except Exception as e:
-                                        print(f"      Industry query error: {e}")
-                                    finally:
-                                        query_conn.close()
-                            
-                            fund_conn.close()
+                                    )
+                                    columns = [row[0] for row in fund_cursor.fetchall()]
+
+                                    # Look for any form of industry/subindustry column
+                                    industry_columns = [
+                                        col
+                                        for col in columns
+                                        if 'industry' in col.lower() or 'sub_industry' in col.lower() or 'subindustry' in col.lower()
+                                    ]
+
+                                    for industry_col in industry_columns:
+                                        # Try all possible matches for industry name
+                                        normalized_table = table_name.replace('_', ' ')
+
+                                        # Try with a fresh connection to avoid transaction errors
+                                        query_conn, query_cursor = get_pooled_connection(
+                                            fundamentals_db, db_config, autocommit=True
+                                        )
+                                        if query_conn and query_cursor:
+                                            try:
+                                                query = f"""
+                                                    SELECT ticker FROM {schema_name}.{class_table}
+                                                    WHERE LOWER({industry_col}) = LOWER('{normalized_table}')
+                                                       OR LOWER({industry_col}) = LOWER('{table_name}')
+                                                       OR LOWER(REPLACE({industry_col}, ' ', '_')) = LOWER('{table_name}')
+                                                """
+                                                query_cursor.execute(query)
+                                                table_tickers = [clean_ticker(row[0]) for row in query_cursor.fetchall()]
+                                                if table_tickers:
+                                                    all_tickers.extend(table_tickers)
+                                                    print(f"      Found {len(table_tickers)} tickers from {industry_col}")
+                                            except Exception as e:
+                                                print(f"      Industry query error: {e}")
+                                            finally:
+                                                query_cursor.close()
+
+                                fund_cursor.close()
                         except Exception as e:
                             print(f"      Error accessing fundamentals DB: {e}")
-                            if 'fund_conn' in locals() and fund_conn:
-                                fund_conn.close()
                         
                         # 2. If still looking for tickers, check prices database
                         if len(all_tickers) < 5:  # Arbitrary threshold
@@ -277,40 +265,41 @@ def recreate_database_schemas(output_file="database_schemas.json"):
                             prices_schema = f"{schema_name}_prices"
                             
                             try:
-                                prices_conn = create_connection(db_config, prices_db)
-                                prices_cursor = prices_conn.cursor()
-                                
-                                # Check if the prices schema exists
-                                prices_cursor.execute(f"""
-                                    SELECT schema_name FROM information_schema.schemata 
-                                    WHERE schema_name = '{prices_schema}'
-                                """)
-                                
-                                if prices_cursor.fetchone():
-                                    # Get all tables in this schema - these are ticker tables directly
-                                    prices_cursor.execute(f"""
-                                        SELECT table_name FROM information_schema.tables 
-                                        WHERE table_schema = '{prices_schema}'
-                                    """)
-                                    
-                                    price_tables = [row[0] for row in prices_cursor.fetchall()]
-                                    
-                                    # If we have original tickers, check which still exist
-                                    table_info = original_tables.get(table_name, {})
-                                    if "tickers" in table_info and price_tables:
-                                        original_tickers = table_info["tickers"]
-                                        for ticker in original_tickers:
-                                            clean_tick = clean_ticker(ticker)
-                                            if clean_tick.lower() in price_tables:
-                                                all_tickers.append(clean_tick)
-                                        
-                                        print(f"      Found {len(all_tickers)} tickers in prices DB matching original")
-                                
-                                prices_conn.close()
+                                prices_conn, prices_cursor = get_pooled_connection(prices_db, db_config, autocommit=True)
+                                if prices_conn and prices_cursor:
+                                    # Check if the prices schema exists
+                                    prices_cursor.execute(
+                                        f"""
+                                        SELECT schema_name FROM information_schema.schemata 
+                                        WHERE schema_name = '{prices_schema}'
+                                        """
+                                    )
+
+                                    if prices_cursor.fetchone():
+                                        # Get all tables in this schema - these are ticker tables directly
+                                        prices_cursor.execute(
+                                            f"""
+                                            SELECT table_name FROM information_schema.tables 
+                                            WHERE table_schema = '{prices_schema}'
+                                            """
+                                        )
+
+                                        price_tables = [row[0] for row in prices_cursor.fetchall()]
+
+                                        # If we have original tickers, check which still exist
+                                        table_info = original_tables.get(table_name, {})
+                                        if "tickers" in table_info and price_tables:
+                                            original_tickers = table_info["tickers"]
+                                            for ticker in original_tickers:
+                                                clean_tick = clean_ticker(ticker)
+                                                if clean_tick.lower() in price_tables:
+                                                    all_tickers.append(clean_tick)
+
+                                            print(f"      Found {len(all_tickers)} tickers in prices DB matching original")
+
+                                    prices_cursor.close()
                             except Exception as e:
                                 print(f"      Error accessing prices DB: {e}")
-                                if 'prices_conn' in locals() and prices_conn:
-                                    prices_conn.close()
                         
                         # 3. Last resort: use the original tickers as fallback
                         table_info = original_tables.get(table_name, {})
@@ -346,12 +335,8 @@ def recreate_database_schemas(output_file="database_schemas.json"):
                                 schemas_data[db_name]["schemas"][schema_name]["tables"][table_name]["tickers"] = sorted(current_tickers)
                 
                 sector_cursor.close()
-                if sector_conn:
-                    sector_conn.close()
             except Exception as e:
                 print(f"  Error processing database {db_name}: {e}")
-                if 'sector_conn' in locals() and sector_conn:
-                    sector_conn.close()
                 
         # Process each ETF database
         print("\nProcessing ETF databases:")
@@ -370,9 +355,12 @@ def recreate_database_schemas(output_file="database_schemas.json"):
             
             # Connect to this database
             etf_conn = None
+            etf_cursor = None
             try:
-                etf_conn = create_connection(db_config, db_name)
-                etf_cursor = etf_conn.cursor()
+                etf_conn, etf_cursor = get_pooled_connection(db_name, db_config, autocommit=True)
+                if not etf_conn or not etf_cursor:
+                    print(f"  Failed to connect to {db_name}")
+                    continue
                 
                 # For each ETF database, we need to find its schemas
                 etf_cursor.execute("""
@@ -462,19 +450,11 @@ def recreate_database_schemas(output_file="database_schemas.json"):
                             print(f"      No ETFs found for {table_name}")
                 
                 etf_cursor.close()
-                if etf_conn:
-                    etf_conn.close()
             except Exception as e:
                 print(f"  Error processing ETF database {db_name}: {e}")
-                if 'etf_conn' in locals() and etf_conn:
-                    etf_conn.close()
     
     except Exception as e:
         print(f"Error: {e}")
-    
-    finally:
-        if 'conn' in locals() and conn:
-            conn.close()
     
     # Determine canonical output path – inside src/data/database
     base_dir = os.path.join('src', 'data', 'database')

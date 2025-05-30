@@ -9,364 +9,23 @@ import json
 # Import from utils package
 from src.utils.caching import cache_result
 from src.utils.file_utils import load_schema_data
-from src.utils.database import get_default_db_config
+from src.utils.database import get_default_db_config, get_db_connection
+from src.utils.data_retrieval import get_price_data, get_fundamental_data
 
-# Move this to utils 
-@cache_result
+# Create wrapper functions for backward compatibility
 def get_daily_closing_prices(ticker, years=4, db_config=None):
    """
-   Retrieve daily closing prices (last bar of each day) for a given stock
-   """
-   # Database configuration
-   if db_config is None:
-      db_config = get_default_db_config()
-   
-   # Normalize ticker
-   ticker_upper = ticker.upper()
-   ticker_lower = ticker.lower()
-   
-   # Calculate start date
-   end_date = datetime.now()
-   start_date = end_date - timedelta(days=365 * years)
-   
-   # Load schema definition
-   schema_data = load_schema_data()
-   
-   # Find ticker location
-   ticker_location = None
-   for sector_name, sector_info in schema_data.items():
-      database = sector_info.get('database')
-      schemas = sector_info.get('schemas', {})
-      
-      for schema_name, schema_info in schemas.items():
-         tables = schema_info.get('tables', {})
-         
-         for table_name, table_info in tables.items():
-               tickers = table_info.get('tickers', [])
-               
-               # Case-insensitive comparison
-               for db_ticker in tickers:
-                  if ticker_upper.upper() == db_ticker.upper():
-                     # Special case for ETFs - use specific database names
-                     if "etf" in sector_name.lower():
-                        db_name = "etf_prices"
-                     else:
-                        db_name = f"{database}_prices"
-                        
-                     ticker_location = {
-                        "database": db_name,
-                        "schema": f"{schema_name}_prices",
-                        "ticker": db_ticker  # Use the ticker with the exact case from the database
-                     }
+    Wrapper function for backward compatibility.
+    Retrieves daily closing prices using the generic get_price_data function.
+    """
+   return get_price_data(ticker, frequency='daily', years=years, db_config=db_config)
 
-                     break
-         if ticker_location: break
-      if ticker_location: break
-   
-   if not ticker_location:
-      # Just pass silently if ticker not found
-      return None
-   
-   try:
-      # Connect to database
-      db_config['dbname'] = ticker_location['database']
-      conn = psycopg2.connect(**db_config)
-      cursor = conn.cursor()
-      
-      # Query only the last bar of each day for close price, and sum daily volume
-      # Use window functions for efficiency
-      query = f"""
-      WITH ranked_data AS (
-          SELECT 
-              datetime,
-              CAST(date AS DATE) as trading_date,
-              close,
-              volume,
-              ROW_NUMBER() OVER(PARTITION BY CAST(date AS DATE) ORDER BY datetime DESC) as rn,
-              SUM(volume) OVER(PARTITION BY CAST(date AS DATE)) as daily_total_volume
-          FROM {ticker_location['schema']}.{ticker_lower}
-          WHERE date >= %s
-      )
-      SELECT 
-         trading_date as date,
-         close,
-         daily_total_volume as volume
-      FROM ranked_data
-      WHERE rn = 1 -- Select only the last bar's row for each day
-      ORDER BY trading_date ASC
-      """
-      
-      cursor.execute(query, (start_date.strftime('%Y-%m-%d'),))
-      
-      # Convert results
-      results = []
-      for row in cursor.fetchall():
-         date_val, close_val, volume_val = row # Added volume_val
-         
-         if isinstance(close_val, Decimal):
-               close_val = float(close_val)
-               
-         # Ensure volume is an integer
-         if volume_val is None:
-             volume_val = 0
-         elif isinstance(volume_val, Decimal):
-             volume_val = int(volume_val)
-         elif isinstance(volume_val, float):
-              volume_val = int(volume_val)
-             
-         results.append({
-               "date": date_val.strftime('%Y-%m-%d'),
-               "close": close_val,
-               "volume": volume_val # Added volume
-         })
-
-      df = pd.DataFrame(results)
-      df['date'] = pd.to_datetime(df['date'])
-      # Keep sorting as a safety net
-      df = df.sort_values('date')
-
-      return df
-      
-   except Exception as e:
-      # Just pass silently on error
-      return None
-   
-   finally:
-      if 'conn' in locals() and conn:
-         cursor.close()
-         conn.close()
-
-# move this to utils
-@cache_result
 def get_fundamentals_data(ticker, db_config=None):
    """
-   Retrieve all fundamental data for a given stock across different tables
-   (balance sheets, cash flow statements, financial metrics, etc.)
-   """
-   # Database configuration
-   if db_config is None:
-      db_config = get_default_db_config()
-   
-   # Normalize ticker
-   ticker_upper = ticker.upper()
-   ticker_lower = ticker.lower()
-   
-   # Load schema definition
-   schema_data = load_schema_data()
-   
-   # Find ticker location
-   ticker_location = None
-   for sector_name, sector_info in schema_data.items():
-      database = sector_info.get('database')
-      schemas = sector_info.get('schemas', {})
-      
-      for schema_name, schema_info in schemas.items():
-         tables = schema_info.get('tables', {})
-         
-         for table_name, table_info in tables.items():
-               tickers = table_info.get('tickers', [])
-               
-               if ticker_upper in tickers:
-                  # Special case for ETFs - use specific database names
-                  if "etf" in sector_name.lower():
-                     db_name = database # Use the database name defined in the schema file
-                  else:
-                     db_name = f"{database}_fundamentals"
-                     
-                  ticker_location = {
-                     "database": db_name,
-                     "schema": f"{schema_name}",
-                     "ticker": ticker_upper
-                  }
-                  break
-         if ticker_location: break
-      if ticker_location: break
-   
-   # If the ticker is identified as an ETF, return empty data immediately
-   # Assumes 'etf_data' is the database name designated for ETFs in database_schemas.json
-   if ticker_location and ticker_location.get('database') == 'etf_data':
-      print(f"Ticker {ticker_upper} identified as ETF, skipping fundamental data retrieval.")
-      return {}
-   
-   if not ticker_location:
-      # Try case-insensitive ticker search if exact match wasn't found
-      for sector_name, sector_info in schema_data.items():
-         database = sector_info.get('database')
-         schemas = sector_info.get('schemas', {})
-         
-         for schema_name, schema_info in schemas.items():
-            tables = schema_info.get('tables', {})
-            
-            for table_name, table_info in tables.items():
-                  tickers = table_info.get('tickers', [])
-                  
-                  # Case-insensitive comparison
-                  for db_ticker in tickers:
-                     if ticker_upper.upper() == db_ticker.upper():
-                        # Special case for ETFs - use specific database names
-                        if "etf" in sector_name.lower():
-                           db_name = database # Use the database name defined in the schema file
-                        else:
-                           db_name = f"{database}_fundamentals"
-                           
-                        ticker_location = {
-                           "database": db_name,
-                           "schema": f"{schema_name}",
-                           "ticker": db_ticker  # Use the ticker with the exact case from the database
-                        }
-                        break
-            if ticker_location: break # Added break
-         if ticker_location: break # Added break
-   
-   if not ticker_location:
-      print(f"Ticker {ticker_upper} not found in any database schema for fundamentals.") # Modified print message
-      return None
-   
-   try:
-      # Connect to database
-      db_config['dbname'] = ticker_location['database']
-      conn = psycopg2.connect(**db_config)
-      cursor = conn.cursor()
-      
-      # Define fundamental table types
-      table_types = [
-         "balance_sheets",
-         "cash_flow_statements", 
-         "financial_metrics",
-         "income_statements"
-      ]
-      
-      # Dictionary to store all fundamental data
-      fundamental_data = {}
-      
-      # Large number columns that should have comma formatting
-      large_number_columns = [
-         'market_cap', 'revenue', 'total_assets', 'total_liabilities', 
-         'total_equity', 'total_debt', 'net_income', 'operating_income',
-         'gross_profit', 'ebitda', 'cash_flow', 'capex', 'fcf', 'dividends_paid',
-         'shares_outstanding', 'total_cash', 'current_assets', 'current_liabilities'
-      ]
-      
-      # Query each table type
-      for table_type in table_types:
-         table_name = f"{ticker_lower}_{table_type}"
-         
-         try:
-            # Check if table exists
-            check_query = f"""
-            SELECT EXISTS (
-               SELECT FROM information_schema.tables 
-               WHERE table_schema = '{ticker_location['schema']}'
-               AND table_name = '{table_name}'
-            )
-            """
-            cursor.execute(check_query)
-            table_exists = cursor.fetchone()[0]
-            
-            if not table_exists:
-               print(f"Table {table_name} does not exist, skipping")
-               continue
-            
-            # First check if data exists from 2015
-            check_data_query = f"""
-            SELECT COUNT(*) 
-            FROM {ticker_location['schema']}.{table_name}
-            WHERE date >= '2015-01-01'
-            """
-            cursor.execute(check_data_query)
-            data_count = cursor.fetchone()[0]
-            
-            # Query table data - from 2015 if data exists, otherwise all data
-            if data_count > 0:
-               query = f"""
-               SELECT *
-               FROM {ticker_location['schema']}.{table_name}
-               WHERE date >= '2015-01-01'
-               ORDER BY date
-               """
-            else:
-               # Fallback to all data if no data from 2015
-               query = f"""
-               SELECT *
-               FROM {ticker_location['schema']}.{table_name}
-               ORDER BY date
-               """
-            
-            cursor.execute(query)
-            
-            # Get column names
-            column_names = [desc[0] for desc in cursor.description]
-            
-            # Convert results
-            results = []
-            for row in cursor.fetchall():
-               # Convert row to dict
-               row_dict = {}
-               for i, value in enumerate(row):
-                  col_name = column_names[i]
-                  # Convert Decimal to float
-                  if isinstance(value, Decimal) or isinstance(value, float):
-                     value = float(value)
-                  row_dict[col_name] = value
-                     
-               results.append(row_dict)
-            
-            # Create DataFrame and handle data types
-            df = pd.DataFrame(results)
-            
-            # Process dates
-            if 'date' in df.columns and not df.empty:
-               df['date'] = pd.to_datetime(df['date'])
-               df = df.sort_values('date')
-            
-            # Process numeric columns
-            for col in df.columns:
-               # Skip date and non-numeric columns
-               if col == 'date' or col == 'ticker' or col == 'currency' or col == 'period' or col == 'report_period' or col == 'calendar_date':
-                  continue
-                  
-               # Convert to numeric and round
-               try:
-                  df[col] = pd.to_numeric(df[col], errors='coerce')
-                  df[col] = df[col].round(2)
-               except:
-                  # Keep as is if conversion fails
-                  pass
-            
-            # Convert DataFrame to formatted dictionary
-            formatted_data = []
-            for _, row in df.iterrows():
-               formatted_row = {}
-               for col, val in row.items():
-                  # Format date columns to ISO format
-                  if col == 'date' and pd.notna(val):
-                     formatted_row[col] = val.strftime('%Y-%m-%d')
-                  # Keep numeric values as actual numbers for better LLM analysis
-                  elif pd.api.types.is_numeric_dtype(type(val)) and pd.notna(val):
-                     formatted_row[col] = float(val) if col.lower() not in large_number_columns else int(val)
-                  # Handle any other values including NaN/None
-                  else:
-                     formatted_row[col] = str(val) if pd.notna(val) else None
-               
-               formatted_data.append(formatted_row)
-            
-            # Add to the fundamental data dictionary
-            fundamental_data[table_type] = formatted_data
-            
-         except Exception as e:
-            print(f"Error retrieving {table_type} data: {e}")
-            fundamental_data[table_type] = []  # Empty list as fallback
-      
-      return fundamental_data
-      
-   except Exception as e:
-      print(f"Error retrieving fundamental data: {e}")
-      return None
-   
-   finally:
-      if 'conn' in locals() and conn:
-         cursor.close()
-         conn.close()
+    Wrapper function for backward compatibility.
+    Retrieves fundamental data using the generic get_fundamental_data function.
+    """
+   return get_fundamental_data(ticker, db_config=db_config)
 
 @cache_result
 def get_stock_tickers(asset_class):
@@ -534,76 +193,67 @@ def get_quarterly_estimates(ticker: str) -> str:
     if not db_cfg or not all(db_cfg.values()):
         return json.dumps({"error": "Database connection information missing in environment."})
 
-    db_cfg["dbname"] = db_name
-
     try:
-        conn = psycopg2.connect(**db_cfg)
-        cursor = conn.cursor()
+        with get_db_connection(db_name, db_cfg) as conn:
+            cursor = conn.cursor()
 
-        # Check table existence first to avoid ugly errors
-        cursor.execute(
-            """
-            SELECT EXISTS (
-                SELECT FROM information_schema.tables
-                WHERE table_schema = %s AND table_name = %s
-            );""",
-            (schema_name, table_name),
-        )
-        if not cursor.fetchone()[0]:
-            return json.dumps({"error": f"Fundamental estimates table not found for {ticker_upper}."})
+            # Check table existence first to avoid ugly errors
+            cursor.execute(
+                """
+                SELECT EXISTS (
+                    SELECT FROM information_schema.tables
+                    WHERE table_schema = %s AND table_name = %s
+                );""",
+                (schema_name, table_name),
+            )
+            if not cursor.fetchone()[0]:
+                return json.dumps({"error": f"Fundamental estimates table not found for {ticker_upper}."})
 
-        # Pull everything (the data already starts at Q2-2025 per loader script)
-        cursor.execute(
-            f"SELECT * FROM {schema_name}.{table_name} ORDER BY year, quarter;"
-        )
-        rows = cursor.fetchall()
-        cols = [desc[0] for desc in cursor.description]
+            # Pull everything (the data already starts at Q2-2025 per loader script)
+            cursor.execute(
+                f"SELECT * FROM {schema_name}.{table_name} ORDER BY year, quarter;"
+            )
+            rows = cursor.fetchall()
+            cols = [desc[0] for desc in cursor.description]
 
-        if not rows:
-            return json.dumps({"error": f"No fundamental estimates stored for {ticker_upper}."})
+            if not rows:
+                return json.dumps({"error": f"No fundamental estimates stored for {ticker_upper}."})
 
-        # Build DataFrame and tidy types
-        df = pd.DataFrame(rows, columns=cols)
+            # Build DataFrame and tidy types
+            df = pd.DataFrame(rows, columns=cols)
 
-        # Convert Decimals → float; integers keep as is
-        for col in df.columns:
-            if col in ("year", "quarter"):
-                df[col] = pd.to_numeric(df[col], errors="coerce").astype("Int64")
-            else:
-                df[col] = pd.to_numeric(df[col], errors="coerce")
+            # Convert Decimals → float; integers keep as is
+            for col in df.columns:
+                if col in ("year", "quarter"):
+                    df[col] = pd.to_numeric(df[col], errors="coerce").astype("Int64")
+                else:
+                    df[col] = pd.to_numeric(df[col], errors="coerce")
 
-        # Optional safety-filter again (Q2-2025 onwards)
-        df = df[(df["year"] > 2025) | ((df["year"] == 2025) & (df["quarter"] >= 2))]
+            # Optional safety-filter again (Q2-2025 onwards)
+            df = df[(df["year"] > 2025) | ((df["year"] == 2025) & (df["quarter"] >= 2))]
 
-        # Rename columns back to original format expected by downstream code
-        rename_map = {"year": "Year", "quarter": "Quarter"}
-        for col in df.columns:
-            if col not in ("year", "quarter"):
-                rename_map[col] = col.upper()
-        df.rename(columns=rename_map, inplace=True)
+            # Rename columns back to original format expected by downstream code
+            rename_map = {"year": "Year", "quarter": "Quarter"}
+            for col in df.columns:
+                if col not in ("year", "quarter"):
+                    rename_map[col] = col.upper()
+            df.rename(columns=rename_map, inplace=True)
 
-        # Ensure Year and Quarter are plain Python ints for JSON serialisation
-        if "Year" in df.columns:
-            df["Year"] = df["Year"].astype(int)
-        if "Quarter" in df.columns:
-            df["Quarter"] = df["Quarter"].astype(int)
+            # Ensure Year and Quarter are plain Python ints for JSON serialisation
+            if "Year" in df.columns:
+                df["Year"] = df["Year"].astype(int)
+            if "Quarter" in df.columns:
+                df["Quarter"] = df["Quarter"].astype(int)
 
-        results_data = {"quarterly_estimates": []}
+            results_data = {"quarterly_estimates": []}
 
-        if not df.empty:
-            results_data["quarterly_estimates"] = df.to_dict(orient="records")
+            if not df.empty:
+                results_data["quarterly_estimates"] = df.to_dict(orient="records")
 
-        return json.dumps(results_data)
+            return json.dumps(results_data)
 
     except Exception as e:
         return json.dumps({"error": f"Database error while retrieving estimates for {ticker_upper}: {e}"})
-
-    finally:
-        try:
-            cursor.close()
-            conn.close()
-        except Exception:
-            pass
 
 def get_asset_description(ticker):
 

@@ -3,6 +3,7 @@ import os
 from dotenv import load_dotenv
 import math
 import re # Import re for snake_case conversion
+from src.utils.database import get_default_db_config, get_cursor # Import get_cursor
 
 # Assuming this is the correct path - might need adjustment
 try:
@@ -139,215 +140,121 @@ def retrieve_financial_metric(ticker: str, metric_name: str) -> list[tuple[objec
         # # print("Error: Metric name cannot be empty.")
         return None
 
-    # --- Check if DB credentials are available ---
-    # print("DEBUG: Checking DB Credentials...") # DEBUG
-    if not all([DB_USER, DB_PASSWORD, DB_HOST, DB_PORT]):
-        print("DEBUG: DB Credentials MISSING or INCOMPLETE in environment.") # DEBUG
-        #  # print("Error: Database credentials (DB_USER, DB_PASSWORD, DB_HOST, DB_PORT) not found in environment variables.")
-        #  # print("Ensure they are set (e.g., in a .env file and load_dotenv() is called).")
+    db_config = get_default_db_config()
+    if not all(db_config.values()):
+        print("DEBUG: DB Credentials MISSING or INCOMPLETE in environment.")
         return None
-    # else: # DEBUG
-        # print(f"DEBUG: DB Credentials Found (Host: {DB_HOST}, Port: {DB_PORT}, User: {DB_USER})") # DEBUG
         
-    ticker = ticker.strip().upper() # Standardize ticker
-    column_name = _metric_name_to_column_name(metric_name) # Convert metric name to column name
-    # # print(f"Attempting to retrieve metric '{metric_name}' (column: '{column_name}') for ticker: {ticker}")
-    # print(f"DEBUG: Attempting: Ticker={ticker}, Metric='{metric_name}', Column='{column_name}'") # DEBUG
+    ticker = ticker.strip().upper()
+    column_name = _metric_name_to_column_name(metric_name)
 
-    # --- Find Database and Schema ---
-    # print("DEBUG: Looking up DB/Schema...") # DEBUG
     db_name, schema_name = _get_db_and_schema_for_ticker(ticker)
     if not db_name or not schema_name:
-        print(f"DEBUG: Failed to find DB/Schema for ticker '{ticker}'.") # DEBUG
-        # # print(f"Error: Could not determine database or schema for ticker '{ticker}'.")
-        # Specific error already printed in _get_db_and_schema_for_ticker
+        print(f"DEBUG: Failed to find DB/Schema for ticker '{ticker}'.")
         return None
-    # else: # DEBUG
-        # print(f"DEBUG: Found DB='{db_name}', Schema='{schema_name}'") # DEBUG
 
-    # --- Define Target Table ---
-    # Table name convention seems to be lower_ticker_tabletype
     table_name = f"{ticker.lower()}_financial_metrics"
-    # print(f"DEBUG: Target Table = '{table_name}'") # DEBUG
-    # column_name is now derived from metric_name
+    all_metric_values = []
 
-    conn = None
-    cur = None
-    all_metric_values = [] # New: for list of (date, metric_value)
-
-    # --- Database Interaction ---
     try:
-        # # print(f"Connecting to database '{db_name}' on host '{DB_HOST}'...")
-        conn = psycopg2.connect(
-            dbname=db_name,
-            user=DB_USER,
-            password=DB_PASSWORD,
-            host=DB_HOST,
-            port=DB_PORT,
-            connect_timeout=5 # Add a connection timeout
-        )
-        cur = conn.cursor()
-        # # print("Connection successful.")
-
-        # --- Determine available date column ---
-        date_column_to_use = None
-        potential_date_columns = ['date', 'period', 'filing_date', 'report_date'] # Common names
-        for col_name_check in potential_date_columns:
-            check_date_col_query = """
+        with get_cursor(db_name, db_config) as cur: # Use context manager
+            # --- Determine available date column ---
+            date_column_to_use = None
+            potential_date_columns = ['date', 'period', 'filing_date', 'report_date']
+            for col_name_check in potential_date_columns:
+                check_date_col_query = """
+                SELECT EXISTS (
+                    SELECT 1 FROM information_schema.columns
+                    WHERE table_schema = %s AND table_name = %s AND column_name = %s
+                );
+                """
+                cur.execute(check_date_col_query, (schema_name, table_name, col_name_check))
+                if cur.fetchone()[0]:
+                    date_column_to_use = col_name_check
+                    break
+            
+            # --- Check if Metric Column Exists ---
+            check_metric_col_query = """
             SELECT EXISTS (
-                SELECT 1 FROM information_schema.columns
-                WHERE table_schema = %s AND table_name = %s AND column_name = %s
+                SELECT 1
+                FROM information_schema.columns
+                WHERE table_schema = %s
+                  AND table_name = %s
+                  AND column_name = %s
             );
             """
-            cur.execute(check_date_col_query, (schema_name, table_name, col_name_check))
-            if cur.fetchone()[0]:
-                date_column_to_use = col_name_check
-                # # print(f"Found date column: '{date_column_to_use}'")
-                break
-        if not date_column_to_use:
-            pass
-            # # print(f"Warning: No standard date column ({', '.join(potential_date_columns)}) found in '{schema_name}'.'{table_name}'. Metric values will not be dated.")
+            cur.execute(check_metric_col_query, (schema_name, table_name, column_name))
+            metric_column_exists = cur.fetchone()[0]
 
-        # --- Check if Metric Column Exists ---
-        # print(f"DEBUG: Checking existence of column '{column_name}' in table '{schema_name}.{table_name}'") # DEBUG
-        check_metric_col_query = """
-        SELECT EXISTS (
-            SELECT 1
-            FROM information_schema.columns
-            WHERE table_schema = %s
-              AND table_name = %s
-              AND column_name = %s
-        );
-        """
-        cur.execute(check_metric_col_query, (schema_name, table_name, column_name))
-        metric_column_exists = cur.fetchone()[0]
-        # print(f"DEBUG: Metric column '{column_name}' exists: {metric_column_exists}") # DEBUG
+            if not metric_column_exists:
+                check_table_exists_query = """
+                SELECT EXISTS (
+                    SELECT 1 FROM information_schema.tables
+                    WHERE table_schema = %s AND table_name = %s
+                );
+                """
+                cur.execute(check_table_exists_query, (schema_name, table_name))
+                if not cur.fetchone()[0]:
+                    print(f"DEBUG: Table '{schema_name}.{table_name}' does not exist. Returning None.")
+                    return None
+                else:
+                    print(f"DEBUG: Column '{column_name}' does not exist in table '{schema_name}.{table_name}'. Returning None.")
+                    return None
 
-        if not metric_column_exists:
-            # # print(f"Error: Column '{column_name}' (derived from metric '{metric_name}') not found in table '{schema_name}'.'{table_name}'.")
-            # Check if the table itself exists before returning None
-            # print(f"DEBUG: Column '{column_name}' not found. Checking if table '{table_name}' exists...") # DEBUG
-            check_table_exists_query = """
-            SELECT EXISTS (
-                SELECT 1 FROM information_schema.tables
-                WHERE table_schema = %s AND table_name = %s
-            );
-            """
-            cur.execute(check_table_exists_query, (schema_name, table_name))
-            table_exists = cur.fetchone()[0] # DEBUG
-            # print(f"DEBUG: Table '{table_name}' exists: {table_exists}") # DEBUG
-            if not table_exists:
-                # # print(f"Error: Table '{schema_name}'.'{table_name}' not found.")
-                print(f"DEBUG: Table '{schema_name}.{table_name}' does not exist. Returning None.") # DEBUG
-                return None # Return None if table doesn't exist
-            else:
-                # # print(f"Table '{schema_name}'.'{table_name}' exists, but column '{column_name}' does not.")
-                print(f"DEBUG: Column '{column_name}' does not exist in table '{schema_name}.{table_name}'. Returning None.") # DEBUG
-                return None # Column definitely doesn't exist, return None
+            # --- Construct Data Query ---
+            from psycopg2 import sql
+            select_clause = f'"{column_name}"'
+            if date_column_to_use:
+                select_clause = f'"{date_column_to_use}", {select_clause}'
 
-        # --- Construct Data Query ---
-        # Use sql.Identifier for safe table/schema quoting
-        from psycopg2 import sql
-
-        # Construct column selection using f-string (closer to previous working version)
-        # Ensure column_name and date_column_to_use are simple identifiers before using in f-string
-        # (They should be safe based on prior checks and derivation logic)
-        select_clause = f'"{column_name}"'
-        if date_column_to_use:
-            select_clause = f'"{date_column_to_use}", {select_clause}'
-
-        # Construct the query using safe identifiers for schema and table
-        # and the f-string based select_clause
-        query = sql.SQL('SELECT {select_fields} FROM {schema}.{table}').format(
-            select_fields=sql.SQL(select_clause), # Wrap the f-string part in sql.SQL
-            schema=sql.Identifier(schema_name),
-            table=sql.Identifier(table_name)
-        )
-
-        if date_column_to_use:
-            # Add ORDER BY clause safely using sql.Identifier for the date column
-            query = sql.SQL('{query} ORDER BY {date_col} ASC').format(
-                query=query,
-                date_col=sql.Identifier(date_column_to_use)
+            query = sql.SQL('SELECT {select_fields} FROM {schema}.{table}').format(
+                select_fields=sql.SQL(select_clause),
+                schema=sql.Identifier(schema_name),
+                table=sql.Identifier(table_name)
             )
 
-        # # print(f"Executing query: {cur.mogrify(query).decode('utf-8')}") # Use mogrify for debugging
-        # print("DEBUG: Executing query...") # DEBUG
-        cur.execute(query)
-        # print("DEBUG: Query execution successful.") # DEBUG
+            if date_column_to_use:
+                query = sql.SQL('{query} ORDER BY {date_col} ASC').format(
+                    query=query,
+                    date_col=sql.Identifier(date_column_to_use)
+                )
+            
+            cur.execute(query)
+            results = cur.fetchall()
 
-        # --- Process Results ---
-        results = cur.fetchall()
-        # # # # print(f"Raw query results: {results}") # Optional debug print
+            if results:
+                for row in results:
+                    metric_value = None
+                    date_value = None
+                    if date_column_to_use:
+                        date_value = row[0]
+                        metric_value = _sanitize_metric_value(row[1])
+                    else:
+                        metric_value = _sanitize_metric_value(row[0])
 
-        if results:
-            for row in results:
-                metric_value = None
-                date_value = None
-
-                if date_column_to_use:
-                    date_value = row[0]
-                    metric_value = _sanitize_metric_value(row[1])
-                else:
-                    metric_value = _sanitize_metric_value(row[0])
-
-                if metric_value is not None:
-                    all_metric_values.append((date_value, metric_value))
-
-            if all_metric_values:
-                pass
-                # # print(f"Successfully retrieved {len(all_metric_values)} values for metric '{metric_name}'.")
-            else:
-                pass
-                # # print(f"Query executed, but no valid values found for metric '{metric_name}' or all were invalid (None, NaN, Inf) in '{schema_name}'.'{table_name}'.")
-        else:
-            pass
-            # # print(f"No data found for metric '{metric_name}' for ticker '{ticker}' in table '{schema_name}'.'{table_name}'.")
-
+                    if metric_value is not None:
+                        all_metric_values.append((date_value, metric_value))
+    
     except psycopg2.errors.UndefinedTable:
-        print(f"DEBUG: Caught UndefinedTable error for '{schema_name}'.'{table_name}'.") # DEBUG
-        # # print(f"Error: Table '{schema_name}'.'{table_name}' does not exist for ticker '{ticker}'.")
-        all_metric_values = None # Indicate error
+        print(f"DEBUG: Caught UndefinedTable error for '{schema_name}'.'{table_name}'.")
+        return None
     except psycopg2.errors.UndefinedColumn:
-         print(f"DEBUG: Caught UndefinedColumn error for column '{column_name}' in '{schema_name}'.'{table_name}'.") # DEBUG
-         # # print(f"Error: Column '{column_name}' (for metric '{metric_name}') does not exist in table '{schema_name}'.'{table_name}'.")
-         all_metric_values = None # Indicate error
+         print(f"DEBUG: Caught UndefinedColumn error for column '{column_name}' in '{schema_name}'.'{table_name}'.")
+         return None
     except psycopg2.OperationalError as e:
-        # Specific errors for connection issues (wrong host, port, DB down, credentials)
-        print(f"DEBUG: Caught OperationalError: {e}") # DEBUG
-        # # print(f"Database connection error to '{db_name}': {e}")
-        all_metric_values = None # Indicate error
-        pass
-    except psycopg2.Error as e:
-        # Catch-all for other psycopg2 errors during connect/cursor operations
-        print(f"DEBUG: Caught other psycopg2.Error: {e}") # DEBUG
-        # # print(f"Database error: {e}")
-        if conn: conn.rollback() # Ensure rollback if error occurred mid-transaction
-        all_metric_values = None # Indicate error
-    except ImportError as e:
-        # Handle the dummy function case from import try/except block
-        print(f"DEBUG: Caught ImportError: {e}") # DEBUG
-        #  # print(f"Setup Error: {e}")
-        all_metric_values = None # Indicate error
-        pass
-    except Exception as e:
-        # Catch unexpected Python errors
-        print(f"DEBUG: Caught unexpected Exception: {e}") # DEBUG
-        # # print(f"An unexpected error occurred: {e}")
-        all_metric_values = None # Indicate error
-        pass
-    finally:
-        # --- Cleanup ---
-        # print("DEBUG: Entering finally block.") # DEBUG
-        if cur:
-            cur.close()
-        if conn:
-            conn.close()
-            # # print("Database connection closed.")
-            # print("DEBUG: Database connection closed.") # DEBUG
+        print(f"DEBUG: Caught OperationalError: {e}")
+        return None
+    except psycopg2.Error as e: # Catch-all for other psycopg2 errors
+        print(f"DEBUG: Caught other psycopg2.Error: {e}")
+        return None
+    except ImportError as e: # Handle dummy load_schema_data case
+        print(f"DEBUG: Caught ImportError: {e}")
+        return None
+    except Exception as e: # Catch any other unexpected Python errors
+        print(f"DEBUG: Caught unexpected Exception: {e}")
+        return None
 
-    # print(f"DEBUG: Returning: {all_metric_values}") # DEBUG
-    return all_metric_values # Return list (could be empty or None on error)
+    return all_metric_values
 
 # # --- Example Usage Block ---
 # if __name__ == "__main__":

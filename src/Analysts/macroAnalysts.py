@@ -17,6 +17,8 @@ import re
 import time 
 from dotenv import load_dotenv
 from src.utils.file_utils import load_schema_data
+from src.utils.database import get_cursor, execute_query, get_default_db_config, get_single_value
+from typing import Optional
 
 # Load environment variables from .env file
 load_dotenv()
@@ -27,7 +29,7 @@ client = OpenAI(api_key=OpenAI_API_KEY)
 perplexity_model = os.environ.get("PERPLEXITY_MODEL")
 
 # date = datetime.date.today().strftime("%Y_%m_%d")
-date = "2025_05_13"
+date = "2025_05_14"
 
 def update_research_date_to_latest():
     """
@@ -36,38 +38,25 @@ def update_research_date_to_latest():
     Schema names are expected in 'YYYY_MM_DD' format.
     """
     global date
-    conn = None
-    cur = None
     
     try:
-        db_host = os.environ.get("DB_HOST")
-        db_port = os.environ.get("DB_PORT", 5432)
-        db_user = os.environ.get("DB_USER")
-        db_password = os.environ.get("DB_PASSWORD")
-        db_name = "research"
-
-        if not all([db_host, db_user, db_password]):
-            print("Error: Database connection details (DB_HOST, DB_USER, DB_PASSWORD) not found in environment variables.")
-            return
-
-        conn = psycopg2.connect(
-            host=db_host,
-            port=db_port,
-            user=db_user,
-            password=db_password,
-            dbname=db_name
-        )
-        cur = conn.cursor()
-
-        # New approach: Fetch more broadly from SQL, then filter precisely in Python
-        cur.execute("""
+        # Use execute_query to get all schema names
+        schema_results = execute_query(
+            "research",
+            """
             SELECT schema_name 
             FROM information_schema.schemata 
-            WHERE schema_name NOT LIKE 'pg_%'    -- Exclude system schemas
+            WHERE schema_name NOT LIKE 'pg_%'
               AND schema_name <> 'information_schema'
               AND schema_name <> 'public'
-        """)
-        potential_schema_names = [row[0] for row in cur.fetchall()]
+            """
+        )
+        
+        if not schema_results:
+            print("No schemas found in the 'research' database.")
+            return
+            
+        potential_schema_names = [row[0] for row in schema_results]
         
         # Filter for YYYY_MM_DD format using Python's re module
         date_pattern = re.compile(r"^\d{4}_\d{2}_\d{2}$")
@@ -94,15 +83,8 @@ def update_research_date_to_latest():
         else:
             print("No valid date schemas found in the 'research' database. 'date' variable remains unchanged.")
 
-    except psycopg2.Error as e:
-        print(f"Database error: {e}")
     except Exception as e:
         print(f"An unexpected error occurred while updating research date: {e}")
-    finally:
-        if cur:
-            cur.close()
-        if conn:
-            conn.close()
 
 # Update the date to the latest research date available when the module is loaded
 update_research_date_to_latest()
@@ -155,43 +137,43 @@ def get_etf_universe():
     Returns:
         str: JSON string with hierarchical ETF classification data formatted for LLM
     """
-    # Database configuration
-    db_config = {
-        "host": os.getenv('DB_HOST'),
-        "user": os.getenv('DB_USER'),
-        "password": os.getenv('DB_PASSWORD'),
-        "port": os.getenv('DB_PORT'),
-        "dbname": os.getenv('DB_NAME')
-    }
-    
     try:
-        # Connect to database
-        conn = psycopg2.connect(**db_config)
-        cursor = conn.cursor()
-        
         # Query to get schema information
-        schemas_query = """
-        SELECT schema_name 
-        FROM information_schema.schemata 
-        WHERE schema_name NOT IN ('pg_catalog', 'information_schema', 'public')
-        ORDER BY schema_name
-        """
-        cursor.execute(schemas_query)
-        schemas = [row[0] for row in cursor.fetchall()]
+        schemas_results = execute_query(
+            os.getenv('DB_NAME', 'etf_data'),
+            """
+            SELECT schema_name 
+            FROM information_schema.schemata 
+            WHERE schema_name NOT IN ('pg_catalog', 'information_schema', 'public')
+            ORDER BY schema_name
+            """
+        )
+        
+        if not schemas_results:
+            return json.dumps({"error": "No schemas found in ETF database"})
+            
+        schemas = [row[0] for row in schemas_results]
         
         # Create hierarchical structure
         hierarchical_data = {}
         
         # For each schema, get its tables
         for schema in schemas:
-            tables_query = f"""
-            SELECT table_name 
-            FROM information_schema.tables 
-            WHERE table_schema = '{schema}'
-            ORDER BY table_name
-            """
-            cursor.execute(tables_query)
-            tables = [row[0] for row in cursor.fetchall()]
+            tables_results = execute_query(
+                os.getenv('DB_NAME', 'etf_data'),
+                f"""
+                SELECT table_name 
+                FROM information_schema.tables 
+                WHERE table_schema = %s
+                ORDER BY table_name
+                """,
+                (schema,)
+            )
+            
+            if not tables_results:
+                continue
+                
+            tables = [row[0] for row in tables_results]
             
             # Group tables by category (assuming first part of table name is category)
             categories = {}
@@ -228,32 +210,8 @@ def get_etf_universe():
         error_msg = f"Error retrieving ETF data: {str(e)}"
         print(error_msg)
         return json.dumps({"error": error_msg})
-    
-    finally:
-        if 'conn' in locals() and conn:
-            cursor.close()
-            conn.close()
 
 def free_search(system_prompt, user_prompt):
-    # Define custom analysis steps for equity research
-    equity_steps = [
-        "Analyzing S&P 500 sector performance",
-        "Evaluating market breadth indicators",
-        "Processing earnings growth trends",
-        "Calculating equity risk premiums",
-        "Examining market sentiment metrics",
-        "Analyzing technical support/resistance levels",
-        "Assessing global equity correlations",
-        "Evaluating valuation metrics by sector",
-        "Processing institutional fund flows",
-        "Analyzing volatility patterns",
-        "Calculating sector rotation metrics",
-        "Examining factor performance trends",
-        "Analyzing earnings surprise data",
-        "Evaluating market leadership dynamics",
-        "Processing analyst estimate revisions"
-    ]
-    
     messages = [
         {
             "role": "system",
@@ -303,471 +261,74 @@ def free_search(system_prompt, user_prompt):
         print(f"Error: {e}")
         return None
 
+def get_analyst_research(table_name: str) -> Optional[str]:
+    """
+    Generic function to retrieve analyst research from the database.
+    
+    Args:
+        table_name: Name of the research table to query
+        
+    Returns:
+        The research text content or None if not found
+    """
+    db_name = "research"
+    schema_name = date
+    target_id = 1
+    text_column_name = "content"
+    
+    # Construct and execute the SQL query
+    sql_query = f"""
+        SELECT "{text_column_name}" 
+        FROM "{schema_name}"."{table_name}" 
+        WHERE id = %s
+    """
+    
+    research_text = get_single_value(db_name, sql_query, (target_id,))
+    
+    if research_text is None:
+        print(f"Warning: No data found for id {target_id} in table {schema_name}.{table_name}.")
+    
+    return research_text
+
 def commodities_analyst():
     """
-    Connects to the 'research' database, queries the commodities_research table
-    within the '2025_04_22' schema, and returns the text from the row with id = 1.
+    Retrieves commodities research from the database.
     """
-    conn = None
-    cur = None
-    research_text = None
-
-    try:
-        # Database connection parameters (assuming they are in .env)
-        db_host = os.environ.get("DB_HOST")
-        db_port = os.environ.get("DB_PORT", 5432) # Default PostgreSQL port
-        db_user = os.environ.get("DB_USER")
-        db_password = os.environ.get("DB_PASSWORD")
-        db_name = "research"
-        schema_name = date
-        table_name = "commodities_research"
-        target_id = 1
-        text_column_name = "content" # ASSUMPTION: Adjust if your column name is different
-
-        # Check if essential connection parameters are loaded
-        if not all([db_host, db_user, db_password]):
-            print(f"Error: Database connection details (DB_HOST, DB_USER, DB_PASSWORD) not found in environment variables.")
-            return None
-
-        # Establish connection
-        # Note: psycopg2 is for PostgreSQL. Ensure it's configured correctly for your setup.
-        conn = psycopg2.connect(
-            host=db_host,
-            port=db_port,
-            user=db_user,
-            password=db_password,
-            dbname=db_name
-        )
-        cur = conn.cursor()
-
-        # Construct and execute the SQL query
-        # Using %s for parameter substitution to prevent SQL injection
-        # Quoting schema and table names
-        sql_query = f"""
-            SELECT "{text_column_name}" 
-            FROM "{schema_name}"."{table_name}" 
-            WHERE id = %s;
-        """
-        cur.execute(sql_query, (target_id,))
-
-        # Fetch the result
-        result = cur.fetchone()
-        if result:
-            research_text = result[0]
-        else:
-            print(f"Warning: No data found for id {target_id} in table {schema_name}.{table_name}.")
-
-    except psycopg2.Error as e:
-        print(f"Database error: {e}")
-    except Exception as e:
-        print(f"An unexpected error occurred: {e}")
-    finally:
-        # Ensure cursor and connection are closed
-        if cur:
-            cur.close()
-        if conn:
-            conn.close()
-
-    return research_text
+    return get_analyst_research("commodities_research")
 
 def etf_analyst():
     """
-    Connects to the 'research' database, queries the etf_research table
-    within the '2025_04_22' schema, and returns the text from the row with id = 1.
+    Retrieves ETF research from the database.
     """
-    conn = None
-    cur = None
-    research_text = None
-
-    try:
-        # Database connection parameters (assuming they are in .env)
-        db_host = os.environ.get("DB_HOST")
-        db_port = os.environ.get("DB_PORT", 5432) # Default PostgreSQL port
-        db_user = os.environ.get("DB_USER")
-        db_password = os.environ.get("DB_PASSWORD")
-        db_name = "research"
-        schema_name = date
-        table_name = "etf_research"
-        target_id = 1
-        text_column_name = "content" # ASSUMPTION: Adjust if your column name is different
-
-        # Check if essential connection parameters are loaded
-        if not all([db_host, db_user, db_password]):
-            print(f"Error: Database connection details (DB_HOST, DB_USER, DB_PASSWORD) not found in environment variables.")
-            return None
-
-        # Establish connection
-        # Note: psycopg2 is for PostgreSQL. Ensure it's configured correctly for your setup.
-        conn = psycopg2.connect(
-            host=db_host,
-            port=db_port,
-            user=db_user,
-            password=db_password,
-            dbname=db_name
-        )
-        cur = conn.cursor()
-
-        # Construct and execute the SQL query
-        # Using %s for parameter substitution to prevent SQL injection
-        # Quoting schema and table names
-        sql_query = f"""
-            SELECT "{text_column_name}" 
-            FROM "{schema_name}"."{table_name}" 
-            WHERE id = %s;
-        """
-        cur.execute(sql_query, (target_id,))
-
-        # Fetch the result
-        result = cur.fetchone()
-        if result:
-            research_text = result[0]
-        else:
-            print(f"Warning: No data found for id {target_id} in table {schema_name}.{table_name}.")
-
-    except psycopg2.Error as e:
-        print(f"Database error: {e}")
-    except Exception as e:
-        print(f"An unexpected error occurred: {e}")
-    finally:
-        # Ensure cursor and connection are closed
-        if cur:
-            cur.close()
-        if conn:
-            conn.close()
-
-    return research_text
+    return get_analyst_research("etf_research")
 
 def treasuries_analyst():
     """
-    Connects to the 'research' database, queries the treasuries table
-    within the '2025_04_22' schema, and returns the text from the row with id = 1.
+    Retrieves treasuries research from the database.
     """
-    conn = None
-    cur = None
-    research_text = None
-
-    try:
-        # Database connection parameters (assuming they are in .env)
-        db_host = os.environ.get("DB_HOST")
-        db_port = os.environ.get("DB_PORT", 5432) # Default PostgreSQL port
-        db_user = os.environ.get("DB_USER")
-        db_password = os.environ.get("DB_PASSWORD")
-        db_name = "research"
-        schema_name = date
-        table_name = "treasuries_research"
-        target_id = 1
-        text_column_name = "content" # ASSUMPTION: Adjust if your column name is different
-
-        # Check if essential connection parameters are loaded
-        if not all([db_host, db_user, db_password]):
-            print(f"Error: Database connection details (DB_HOST, DB_USER, DB_PASSWORD) not found in environment variables.")
-            return None
-
-        # Establish connection
-        # Note: psycopg2 is for PostgreSQL. Ensure it's configured correctly for your setup.
-        conn = psycopg2.connect(
-            host=db_host,
-            port=db_port,
-            user=db_user,
-            password=db_password,
-            dbname=db_name
-        )
-        cur = conn.cursor()
-
-        # Construct and execute the SQL query
-        # Using %s for parameter substitution to prevent SQL injection
-        # Quoting schema and table names
-        sql_query = f"""
-            SELECT "{text_column_name}" 
-            FROM "{schema_name}"."{table_name}" 
-            WHERE id = %s;
-        """
-        cur.execute(sql_query, (target_id,))
-
-        # Fetch the result
-        result = cur.fetchone()
-        if result:
-            research_text = result[0]
-        else:
-            print(f"Warning: No data found for id {target_id} in table {schema_name}.{table_name}.")
-
-    except psycopg2.Error as e:
-        print(f"Database error: {e}")
-    except Exception as e:
-        print(f"An unexpected error occurred: {e}")
-    finally:
-        # Ensure cursor and connection are closed
-        if cur:
-            cur.close()
-        if conn:
-            conn.close()
-
-    return research_text
+    return get_analyst_research("treasuries_research")
 
 def foreign_exchange_analyst():
     """
-    Connects to the 'research' database, queries the foreign_exchange table
-    within the '2025_04_22' schema, and returns the text from the row with id = 1.
+    Retrieves foreign exchange research from the database.
     """
-    conn = None
-    cur = None
-    research_text = None
-
-    try:
-        # Database connection parameters (assuming they are in .env)
-        db_host = os.environ.get("DB_HOST")
-        db_port = os.environ.get("DB_PORT", 5432) # Default PostgreSQL port
-        db_user = os.environ.get("DB_USER")
-        db_password = os.environ.get("DB_PASSWORD")
-        db_name = "research"
-        schema_name = date
-        table_name = "foreign_exchange_research"
-        target_id = 1
-        text_column_name = "content" # ASSUMPTION: Adjust if your column name is different
-
-        # Check if essential connection parameters are loaded
-        if not all([db_host, db_user, db_password]):
-            print(f"Error: Database connection details (DB_HOST, DB_USER, DB_PASSWORD) not found in environment variables.")
-            return None
-
-        # Establish connection
-        # Note: psycopg2 is for PostgreSQL. Ensure it's configured correctly for your setup.
-        conn = psycopg2.connect(
-            host=db_host,
-            port=db_port,
-            user=db_user,
-            password=db_password,
-            dbname=db_name
-        )
-        cur = conn.cursor()
-
-        # Construct and execute the SQL query
-        # Using %s for parameter substitution to prevent SQL injection
-        # Quoting schema and table names
-        sql_query = f"""
-            SELECT "{text_column_name}" 
-            FROM "{schema_name}"."{table_name}" 
-            WHERE id = %s;
-        """
-        cur.execute(sql_query, (target_id,))
-
-        # Fetch the result
-        result = cur.fetchone()
-        if result:
-            research_text = result[0]
-        else:
-            print(f"Warning: No data found for id {target_id} in table {schema_name}.{table_name}.")
-
-    except psycopg2.Error as e:
-        print(f"Database error: {e}")
-    except Exception as e:
-        print(f"An unexpected error occurred: {e}")
-    finally:
-        # Ensure cursor and connection are closed
-        if cur:
-            cur.close()
-        if conn:
-            conn.close()
-
-    return research_text
+    return get_analyst_research("foreign_exchange_research")
 
 def ig_credit_analyst():
     """
-    Connects to the 'research' database, queries the ig_credit_research table
-    within the '2025_04_22' schema, and returns the text from the row with id = 1.
+    Retrieves investment grade credit research from the database.
+
     """
-    conn = None
-    cur = None
-    research_text = None
+    return get_analyst_research("ig_credit_research")
 
-    try:
-        # Database connection parameters (assuming they are in .env)
-        db_host = os.environ.get("DB_HOST")
-        db_port = os.environ.get("DB_PORT", 5432) # Default PostgreSQL port
-        db_user = os.environ.get("DB_USER")
-        db_password = os.environ.get("DB_PASSWORD")
-        db_name = "research"
-        schema_name = date
-        table_name = "ig_credit_research"
-        target_id = 1
-        text_column_name = "content" # ASSUMPTION: Adjust if your column name is different
-
-        # Check if essential connection parameters are loaded
-        if not all([db_host, db_user, db_password]):
-            print(f"Error: Database connection details (DB_HOST, DB_USER, DB_PASSWORD) not found in environment variables.")
-            return None
-
-        # Establish connection
-        # Note: psycopg2 is for PostgreSQL. Ensure it's configured correctly for your setup.
-        conn = psycopg2.connect(
-            host=db_host,
-            port=db_port,
-            user=db_user,
-            password=db_password,
-            dbname=db_name
-        )
-        cur = conn.cursor()
-
-        # Construct and execute the SQL query
-        # Using %s for parameter substitution to prevent SQL injection
-        # Quoting schema and table names
-        sql_query = f"""
-            SELECT "{text_column_name}" 
-            FROM "{schema_name}"."{table_name}" 
-            WHERE id = %s;
-        """
-        cur.execute(sql_query, (target_id,))
-
-        # Fetch the result
-        result = cur.fetchone()
-        if result:
-            research_text = result[0]
-        else:
-            print(f"Warning: No data found for id {target_id} in table {schema_name}.{table_name}.")
-
-    except psycopg2.Error as e:
-        print(f"Database error: {e}")
-    except Exception as e:
-        print(f"An unexpected error occurred: {e}")
-    finally:
-        # Ensure cursor and connection are closed
-        if cur:
-            cur.close()
-        if conn:
-            conn.close()
-
-    return research_text
-   
 def high_yield_analyst():
     """
-    Connects to the 'research' database, queries the high_yield_research table
-    within the '2025_04_22' schema, and returns the text from the row with id = 1.
+    Retrieves high yield research from the database.
     """
-    conn = None
-    cur = None
-    research_text = None
-
-    try:
-        # Database connection parameters (assuming they are in .env)
-        db_host = os.environ.get("DB_HOST")
-        db_port = os.environ.get("DB_PORT", 5432) # Default PostgreSQL port
-        db_user = os.environ.get("DB_USER")
-        db_password = os.environ.get("DB_PASSWORD")
-        db_name = "research"
-        schema_name = date
-        table_name = "high_yield_research"
-        target_id = 1
-        text_column_name = "content" # ASSUMPTION: Adjust if your column name is different
-
-        # Check if essential connection parameters are loaded
-        if not all([db_host, db_user, db_password]):
-            print(f"Error: Database connection details (DB_HOST, DB_USER, DB_PASSWORD) not found in environment variables.")
-            return None
-
-        # Establish connection
-        # Note: psycopg2 is for PostgreSQL. Ensure it's configured correctly for your setup.
-        conn = psycopg2.connect(
-            host=db_host,
-            port=db_port,
-            user=db_user,
-            password=db_password,
-            dbname=db_name
-        )
-        cur = conn.cursor()
-
-        # Construct and execute the SQL query
-        # Using %s for parameter substitution to prevent SQL injection
-        # Quoting schema and table names
-        sql_query = f"""
-            SELECT "{text_column_name}" 
-            FROM "{schema_name}"."{table_name}" 
-            WHERE id = %s;
-        """
-        cur.execute(sql_query, (target_id,))
-
-        # Fetch the result
-        result = cur.fetchone()
-        if result:
-            research_text = result[0]
-        else:
-            print(f"Warning: No data found for id {target_id} in table {schema_name}.{table_name}.")
-
-    except psycopg2.Error as e:
-        print(f"Database error: {e}")
-    except Exception as e:
-        print(f"An unexpected error occurred: {e}")
-    finally:
-        # Ensure cursor and connection are closed
-        if cur:
-            cur.close()
-        if conn:
-            conn.close()
-
-    return research_text
+    return get_analyst_research("high_yield_research")
 
 def emerging_market_analyst():
     """
-    Connects to the 'research' database, queries the emerging_market_research table
-    within the '2025_04_22' schema, and returns the text from the row with id = 1.
+    Retrieves emerging market research from the database.
     """
-    conn = None
-    cur = None
-    research_text = None
-
-    try:
-        # Database connection parameters (assuming they are in .env)
-        db_host = os.environ.get("DB_HOST")
-        db_port = os.environ.get("DB_PORT", 5432) # Default PostgreSQL port
-        db_user = os.environ.get("DB_USER")
-        db_password = os.environ.get("DB_PASSWORD")
-        db_name = "research"
-        schema_name = date
-        table_name = "emerging_market_research"
-        target_id = 1
-        text_column_name = "content" # ASSUMPTION: Adjust if your column name is different
-
-        # Check if essential connection parameters are loaded
-        if not all([db_host, db_user, db_password]):
-            print(f"Error: Database connection details (DB_HOST, DB_USER, DB_PASSWORD) not found in environment variables.")
-            return None
-
-        # Establish connection
-        # Note: psycopg2 is for PostgreSQL. Ensure it's configured correctly for your setup.
-        conn = psycopg2.connect(
-            host=db_host,
-            port=db_port,
-            user=db_user,
-            password=db_password,
-            dbname=db_name
-        )
-        cur = conn.cursor()
-
-        # Construct and execute the SQL query
-        # Using %s for parameter substitution to prevent SQL injection
-        # Quoting schema and table names
-        sql_query = f"""
-            SELECT "{text_column_name}" 
-            FROM "{schema_name}"."{table_name}" 
-            WHERE id = %s;
-        """
-        cur.execute(sql_query, (target_id,))
-
-        # Fetch the result
-        result = cur.fetchone()
-        if result:
-            research_text = result[0]
-        else:
-            print(f"Warning: No data found for id {target_id} in table {schema_name}.{table_name}.")
-
-    except psycopg2.Error as e:
-        print(f"Database error: {e}")
-    except Exception as e:
-        print(f"An unexpected error occurred: {e}")
-    finally:
-        # Ensure cursor and connection are closed
-        if cur:
-            cur.close()
-        if conn:
-            conn.close()
-
-    return research_text
+    return get_analyst_research("emerging_market_research")

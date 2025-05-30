@@ -1,7 +1,7 @@
 from typing import Optional
 from src.utils.logging_config import init_logger, patch_print_for_logging
 from src.data.user_portfolio_data.fetch_ibkr_holdings import fetch_ibkr_portfolio_positions
-from src.data.user_portfolio_data.holdings_db_manager import store_portfolio_positions
+from data.user_portfolio_data.store_user_positions import store_portfolio_positions
 from src.utils.ib_utils import get_ib
 
 logger = init_logger(__name__)

@@ -105,7 +105,7 @@ DATA POINT WEIGHTS (This is how much you should weight each type of data in your
 - Forward-Looking Fundamental Estimates: 10% (since this is a prediction and not the actual future fundamental data, it should not carry a huge amount of weight)
 
 OUTPUT FORMAT:
-Return your recommendations in this JSON format ONLY. Do not include any other text outside the JSON structure.
+Return your recommendations in this JSON format ONLY. Your entire response MUST be a single, valid JSON object, with no additional text, commentary, or markdown formatting before or after the JSON structure. Adhere strictly to the schema provided below.
 {{
 "total_stocks_analyzed": {num_tickers},
 "recommendations": [

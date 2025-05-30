@@ -1,0 +1,11 @@
+---
+description: 
+globs: 
+alwaysApply: true
+---
+1. Use the @Web if you need to
+2. Do not do anything more than what I specified
+3. Ask questions if you are confused about something
+4. Do not overcomplicate the approach
+5. If you violate any of these rules there will be consequences
+6. Always check the utils folder before implementing code, this is to mitigate redundancies.

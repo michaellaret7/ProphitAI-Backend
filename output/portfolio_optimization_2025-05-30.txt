@@ -1,4 +1,134 @@
-PORTFOLIO OPTIMIZATION REPORT - 2025-05-28
+PORTFOLIO OPTIMIZATION REPORT - 2025-05-30
+================================================================================
+
+SYSTEM PROMPT (Phase One):
+
+Role: You are an elite portfolio manager specializing in constructing well-diversified, risk-managed portfolios tailored to individual investor profiles.
+
+CORE COMPETENCIES:
+- Multi-asset/sector/industry portfolio construction with emphasis on risk-adjusted returns
+- Tactical (short term) and strategic (long term) asset allocation
+- Systematic research methodology and data-driven decision making
+- Portfolio optimization to outperform the S&P 500 benchmark
+
+RESEARCH FRAMEWORK:
+1. MANDATORY INITIAL STEPS:
+   • Use get_user_information to understand investor profile  
+   • Use all analyst tools to get a comprehensive understanding of the market
+   • Use get_equity_universe to map available equity sectors/industries  
+   • Use get_etf_universe to identify available ETF categories  
+
+2. MARKET RESEARCH REQUIREMENTS (6-10 searches minimum):
+   • Macroeconomic trends and forward-looking indicators  
+   • Sector rotation analysis and relative strength  
+   • Valuation metrics across asset classes  
+   • Geopolitical risks and opportunities  
+   • Interest-rate environment and yield-curve analysis  
+   • Technical indicators and market sentiment  
+
+3. PORTFOLIO CONSTRUCTION PRINCIPLES:
+   • Asset class count: minimum 8 and maximum 16  (hard constraint)  
+   • Cash allocation: ALWAYS maintain 5 - 7% cash position  
+   • Total allocation: MUST equal exactly 100%  
+   • Use ONLY asset classes from get_equity_universe and get_etf_universe tools
+
+
+USER PROMPT (first message to LLM):
+
+CURRENT DATE: 2025-05-30
+
+OBJECTIVE: Optimize the portfolio to outperform the S&P 500 while implementing
+strategic risk management tailored to the user's profile.
+
+### PORTFOLIO DATA (JSON)
+```json
+{"portfolio_positions": [{"symbol": "APO", "secType": "STK", "currency": "USD", "position": 306.081, "marketPrice": 132.546, "marketValue": 40569.93, "averageCost": 124.155, "unrealizedPNL": 2568.4, "realizedPNL": 0.0}, {"symbol": "ARM", "secType": "STK", "currency": "USD", "position": 468.051, "marketPrice": 134.741, "marketValue": 63065.51, "averageCost": 101.49, "unrealizedPNL": 15563.17, "realizedPNL": 0.0}, {"symbol": "BSX", "secType": "STK", "currency": "USD", "position": 506.343, "marketPrice": 104.695, "marketValue": 53011.35, "averageCost": 93.815, "unrealizedPNL": 5508.8, "realizedPNL": 0.0}, {"symbol": "CPER", "secType": "STK", "currency": "USD", "position": 2064.687, "marketPrice": 29.318, "marketValue": 60533.11, "averageCost": 27.612, "unrealizedPNL": 3522.71, "realizedPNL": 0.0}, {"symbol": "CRDO", "secType": "STK", "currency": "USD", "position": 730.0, "marketPrice": 63.449, "marketValue": 46317.52, "averageCost": 39.046, "unrealizedPNL": 17813.85, "realizedPNL": 0.0}, {"symbol": "EGP", "secType": "STK", "currency": "USD", "position": 248.301, "marketPrice": 167.934, "marketValue": 41698.1, "averageCost": 153.045, "unrealizedPNL": 3696.86, "realizedPNL": 0.0}, {"symbol": "EQH", "secType": "STK", "currency": "USD", "position": 615.418, "marketPrice": 53.479, "marketValue": 32911.68, "averageCost": 46.315, "unrealizedPNL": 4408.58, "realizedPNL": 0.0}, {"symbol": "FR", "secType": "STK", "currency": "USD", "position": 636.445, "marketPrice": 48.736, "marketValue": 31017.96, "averageCost": 44.785, "unrealizedPNL": 2514.76, "realizedPNL": 0.0}, {"symbol": "GLD", "secType": "STK", "currency": "USD", "position": 162.543, "marketPrice": 304.838, "marketValue": 49549.37, "averageCost": 292.236, "unrealizedPNL": 2048.37, "realizedPNL": 0.0}, {"symbol": "HYG", "secType": "STK", "currency": "USD", "position": 619.215, "marketPrice": 79.314, "marketValue": 49112.44, "averageCost": 76.715, "unrealizedPNL": 1609.32, "realizedPNL": 0.0}, {"symbol": "IAU", "secType": "STK", "currency": "USD", "position": 794.58, "marketPrice": 62.374, "marketValue": 49561.14, "averageCost": 59.785, "unrealizedPNL": 2057.14, "realizedPNL": 0.0}, {"symbol": "IGSB", "secType": "STK", "currency": "USD", "position": 549.981, "marketPrice": 52.286, "marketValue": 28756.29, "averageCost": 51.825, "unrealizedPNL": 253.52, "realizedPNL": 0.0}, {"symbol": "JXN", "secType": "STK", "currency": "USD", "position": 789.418, "marketPrice": 83.243, "marketValue": 65713.45, "averageCost": 72.21, "unrealizedPNL": 8709.48, "realizedPNL": 0.0}, {"symbol": "KEQU", "secType": "STK", "currency": "USD", "position": 795.634, "marketPrice": 39.351, "marketValue": 31309.03, "averageCost": 35.826, "unrealizedPNL": 2805.03, "realizedPNL": 0.0}, {"symbol": "MNTK", "secType": "STK", "currency": "USD", "position": 8762.385, "marketPrice": 1.836, "marketValue": 16087.74, "averageCost": 2.173, "unrealizedPNL": -2956.38, "realizedPNL": 0.0}, {"symbol": "NVDA", "secType": "STK", "currency": "USD", "position": 626.786, "marketPrice": 135.274, "marketValue": 84787.82, "averageCost": 108.495, "unrealizedPNL": 16784.68, "realizedPNL": 0.0}, {"symbol": "PSP", "secType": "STK", "currency": "USD", "position": 844.452, "marketPrice": 66.503, "marketValue": 56158.4, "averageCost": 59.215, "unrealizedPNL": 6154.15, "realizedPNL": 0.0}, {"symbol": "SCHP", "secType": "STK", "currency": "USD", "position": 1085.714, "marketPrice": 26.376, "marketValue": 28636.8, "averageCost": 26.255, "unrealizedPNL": 131.33, "realizedPNL": 0.0}, {"symbol": "SHY", "secType": "STK", "currency": "USD", "position": 230.136, "marketPrice": 82.486, "marketValue": 18982.97, "averageCost": 82.565, "unrealizedPNL": -18.19, "realizedPNL": 0.0}, {"symbol": "SPY", "secType": "STK", "currency": "USD", "position": 200.0, "marketPrice": 590.546, "marketValue": 118109.19, "averageCost": 568.845, "unrealizedPNL": 4340.18, "realizedPNL": 0.0}, {"symbol": "TRNO", "secType": "STK", "currency": "USD", "position": 528.959, "marketPrice": 56.199, "marketValue": 29727.13, "averageCost": 53.884, "unrealizedPNL": 1224.47, "realizedPNL": 0.0}, {"symbol": "VCIT", "secType": "STK", "currency": "USD", "position": 356.74, "marketPrice": 81.166, "marketValue": 28955.2, "averageCost": 79.895, "unrealizedPNL": 453.4, "realizedPNL": 0.0}, {"symbol": "VGIT", "secType": "STK", "currency": "USD", "position": 483.296, "marketPrice": 58.966, "marketValue": 28498.06, "averageCost": 58.975, "unrealizedPNL": -4.37, "realizedPNL": 0.0}, {"symbol": "ZJYL", "secType": "STK", "currency": "USD", "position": 9400.0, "marketPrice": 0.771, "marketValue": 7248.13, "averageCost": 0.637, "unrealizedPNL": 1255.76, "realizedPNL": 0.0}], "portfolio_risk_metrics": {"total_return": 0.962, "annualized_return": 0.412, "volatility": 0.188, "max_drawdown": 0.209, "beta": 1.036, "alpha": 0.165, "market_total_return": 0.419, "market_annualized_return": 0.196, "historical_var_pct": 0.032, "historical_var_amount": 33504.694, "parametric_var_pct": 0.026, "parametric_var_amount": 27749.165, "sharpe_ratio": 1.768, "sortino_ratio": 1.759, "calmar_ratio": 1.737, "stock_metrics": {"APO": {"total_return": 1.149, "annualized_return": 0.48, "volatility": 0.365, "max_drawdown": 0.39, "var_pct": 0.056, "var_amount": 2288.019, "sharpe_ratio": 1.175, "sortino_ratio": 1.151, "calmar_ratio": 1.176, "beta": 1.57, "alpha": 0.174}, "ARM": {"total_return": 1.139, "annualized_return": 0.58, "volatility": 0.747, "max_drawdown": 0.537, "var_pct": 0.1, "var_amount": 6304.998, "sharpe_ratio": 0.935, "sortino_ratio": 1.063, "calmar_ratio": 1.357, "beta": 2.544, "alpha": 0.32}, "BSX": {"total_return": 1.046, "annualized_return": 0.443, "volatility": 0.214, "max_drawdown": 0.155, "var_pct": 0.045, "var_amount": 2363.696, "sharpe_ratio": 1.686, "sortino_ratio": 1.631, "calmar_ratio": 2.512, "beta": 0.663, "alpha": 0.253}, "CPER": {"total_return": 0.266, "annualized_return": 0.128, "volatility": 0.238, "max_drawdown": 0.215, "var_pct": 0.046, "var_amount": 2802.992, "sharpe_ratio": 0.501, "sortino_ratio": 0.491, "calmar_ratio": 0.696, "beta": 0.606, "alpha": 0.021}, "CRDO": {"total_return": 3.387, "annualized_return": 1.133, "volatility": 0.79, "max_drawdown": 0.606, "var_pct": 0.123, "var_amount": 5682.075, "sharpe_ratio": 1.318, "sortino_ratio": 1.397, "calmar_ratio": 1.769, "beta": 2.629, "alpha": 0.615}, "EGP": {"total_return": 0.048, "annualized_return": 0.024, "volatility": 0.223, "max_drawdown": 0.242, "var_pct": 0.047, "var_amount": 1952.201, "sharpe_ratio": 0.084, "sortino_ratio": 0.082, "calmar_ratio": 0.201, "beta": 0.765, "alpha": -0.105}, "EQH": {"total_return": 1.167, "annualized_return": 0.486, "volatility": 0.315, "max_drawdown": 0.21, "var_pct": 0.054, "var_amount": 1789.226, "sharpe_ratio": 1.32, "sortino_ratio": 1.293, "calmar_ratio": 2.121, "beta": 1.317, "alpha": 0.202}, "FR": {"total_return": -0.018, "annualized_return": -0.009, "volatility": 0.236, "max_drawdown": 0.259, "var_pct": 0.047, "var_amount": 1456.97, "sharpe_ratio": -0.047, "sortino_ratio": -0.046, "calmar_ratio": 0.073, "beta": 0.819, "alpha": -0.144}, "GLD": {"total_return": 0.61, "annualized_return": 0.276, "volatility": 0.152, "max_drawdown": 0.081, "var_pct": 0.026, "var_amount": 1295.356, "sharpe_ratio": 1.486, "sortino_ratio": 1.519, "calmar_ratio": 3.156, "beta": 0.135, "alpha": 0.204}, "HYG": {"total_return": 0.07, "annualized_return": 0.035, "volatility": 0.061, "max_drawdown": 0.057, "var_pct": 0.011, "var_amount": 559.382, "sharpe_ratio": 0.105, "sortino_ratio": 0.101, "calmar_ratio": 0.636, "beta": 0.271, "alpha": -0.037}, "IAU": {"total_return": 0.615, "annualized_return": 0.278, "volatility": 0.153, "max_drawdown": 0.081, "var_pct": 0.026, "var_amount": 1305.672, "sharpe_ratio": 1.489, "sortino_ratio": 1.527, "calmar_ratio": 3.183, "beta": 0.138, "alpha": 0.205}, "IGSB": {"total_return": 0.037, "annualized_return": 0.019, "volatility": 0.029, "max_drawdown": 0.023, "var_pct": 0.006, "var_amount": 163.484, "sharpe_ratio": -0.366, "sortino_ratio": -0.344, "calmar_ratio": 0.837, "beta": 0.051, "alpha": -0.019}, "JXN": {"total_return": 2.077, "annualized_return": 0.778, "volatility": 0.412, "max_drawdown": 0.381, "var_pct": 0.074, "var_amount": 4885.276, "sharpe_ratio": 1.531, "sortino_ratio": 1.524, "calmar_ratio": 1.732, "beta": 1.526, "alpha": 0.384}, "KEQU": {"total_return": 1.537, "annualized_return": 0.704, "volatility": 0.642, "max_drawdown": 0.554, "var_pct": 0.097, "var_amount": 3036.196, "sharpe_ratio": 1.093, "sortino_ratio": 1.319, "calmar_ratio": 1.321, "beta": 0.832, "alpha": 0.591}, "MNTK": {"total_return": -0.679, "annualized_return": -0.452, "volatility": 0.795, "max_drawdown": 0.829, "var_pct": 0.157, "var_amount": 2528.525, "sharpe_ratio": -0.389, "sortino_ratio": -0.383, "calmar_ratio": -0.337, "beta": 1.649, "alpha": -0.518}, "NVDA": {"total_return": 2.556, "annualized_return": 0.915, "volatility": 0.528, "max_drawdown": 0.372, "var_pct": 0.085, "var_amount": 7203.899, "sharpe_ratio": 1.438, "sortino_ratio": 1.521, "calmar_ratio": 2.122, "beta": 2.213, "alpha": 0.4}, "PSP": {"total_return": 0.311, "annualized_return": 0.149, "volatility": 0.218, "max_drawdown": 0.233, "var_pct": 0.039, "var_amount": 2194.87, "sharpe_ratio": 0.607, "sortino_ratio": 0.583, "calmar_ratio": 0.696, "beta": 1.078, "alpha": -0.042}, "SCHP": {"total_return": 0.002, "annualized_return": 0.001, "volatility": 0.054, "max_drawdown": 0.057, "var_pct": 0.009, "var_amount": 252.258, "sharpe_ratio": -0.505, "sortino_ratio": -0.478, "calmar_ratio": 0.046, "beta": 0.055, "alpha": -0.036}, "SHY": {"total_return": 0.009, "annualized_return": 0.005, "volatility": 0.021, "max_drawdown": 0.02, "var_pct": 0.004, "var_amount": 76.958, "sharpe_ratio": -1.208, "sortino_ratio": -1.112, "calmar_ratio": 0.247, "beta": -0.005, "alpha": -0.024}, "SPY": {"total_return": 0.419, "annualized_return": 0.196, "volatility": 0.161, "max_drawdown": 0.189, "var_pct": 0.027, "var_amount": 3177.625, "sharpe_ratio": 1.009, "sortino_ratio": 0.957, "calmar_ratio": 1.015, "beta": 1.0, "alpha": 0.0}, "VCIT": {"total_return": 0.024, "annualized_return": 0.012, "volatility": 0.068, "max_drawdown": 0.07, "var_pct": 0.012, "var_amount": 341.59, "sharpe_ratio": -0.23, "sortino_ratio": -0.224, "calmar_ratio": 0.205, "beta": 0.139, "alpha": -0.038}, "VGIT": {"total_return": -0.01, "annualized_return": -0.005, "volatility": 0.054, "max_drawdown": 0.057, "var_pct": 0.008, "var_amount": 232.347, "sharpe_ratio": -0.625, "sortino_ratio": -0.629, "calmar_ratio": -0.062, "beta": -0.0, "alpha": -0.033}, "ZJYL": {"total_return": 1.696, "annualized_return": 0.662, "volatility": 5.229, "max_drawdown": 0.958, "var_pct": 0.388, "var_amount": 2813.69, "sharpe_ratio": 0.876, "sortino_ratio": 2.819, "calmar_ratio": 4.813, "beta": 1.185, "alpha": 4.391}}}, "portfolio_monthly_performance": {"2023-06": {"total_return": 0.093, "market_return": 0.06, "relative_performance": 0.032, "volatility": 0.008, "beta": 0.636, "alpha": 0.621, "historical_var_pct": 0.006, "max_drawdown": 0.012, "sharpe_ratio": 0.54, "sortino_ratio": 1.039, "trading_days": 21}, "2023-07": {"total_return": 0.041, "market_return": 0.034, "relative_performance": 0.007, "volatility": 0.007, "beta": 0.998, "alpha": 0.088, "historical_var_pct": 0.01, "max_drawdown": 0.014, "sharpe_ratio": 0.278, "sortino_ratio": 0.324, "trading_days": 20}, "2023-08": {"total_return": 0.012, "market_return": -0.016, "relative_performance": 0.028, "volatility": 0.008, "beta": 0.812, "alpha": 0.278, "historical_var_pct": 0.016, "max_drawdown": 0.026, "sharpe_ratio": 0.066, "sortino_ratio": 0.065, "trading_days": 23}, "2023-09": {"total_return": -0.001, "market_return": -0.051, "relative_performance": 0.05, "volatility": 0.008, "beta": 0.833, "alpha": 0.543, "historical_var_pct": 0.015, "max_drawdown": 0.029, "sharpe_ratio": -0.001, "sortino_ratio": -0.001, "trading_days": 20}, "2023-10": {"total_return": -0.047, "market_return": -0.022, "relative_performance": -0.025, "volatility": 0.009, "beta": 0.679, "alpha": -0.376, "historical_var_pct": 0.022, "max_drawdown": 0.06, "sharpe_ratio": -0.229, "sortino_ratio": -0.201, "trading_days": 22}, "2023-11": {"total_return": 0.149, "market_return": 0.091, "relative_performance": 0.058, "volatility": 0.009, "beta": 0.542, "alpha": 1.111, "historical_var_pct": 0.01, "max_drawdown": 0.016, "sharpe_ratio": 0.732, "sortino_ratio": 1.299, "trading_days": 21}, "2023-12": {"total_return": 0.448, "market_return": 0.041, "relative_performance": 0.407, "volatility": 0.067, "beta": 1.807, "alpha": 4.242, "historical_var_pct": 0.026, "max_drawdown": 0.038, "sharpe_ratio": 0.306, "sortino_ratio": 1.555, "trading_days": 20}, "2024-01": {"total_return": 0.028, "market_return": 0.018, "relative_performance": 0.011, "volatility": 0.011, "beta": 0.797, "alpha": 0.177, "historical_var_pct": 0.02, "max_drawdown": 0.04, "sharpe_ratio": 0.12, "sortino_ratio": 0.104, "trading_days": 21}, "2024-02": {"total_return": 0.032, "market_return": 0.052, "relative_performance": -0.019, "volatility": 0.011, "beta": 0.768, "alpha": -0.08, "historical_var_pct": 0.018, "max_drawdown": 0.018, "sharpe_ratio": 0.156, "sortino_ratio": 0.184, "trading_days": 20}, "2024-03": {"total_return": 0.011, "market_return": 0.029, "relative_performance": -0.018, "volatility": 0.009, "beta": 0.961, "alpha": -0.207, "historical_var_pct": 0.017, "max_drawdown": 0.055, "sharpe_ratio": 0.061, "sortino_ratio": 0.056, "trading_days": 20}, "2024-04": {"total_return": -0.029, "market_return": -0.041, "relative_performance": 0.012, "volatility": 0.009, "beta": 0.872, "alpha": 0.081, "historical_var_pct": 0.017, "max_drawdown": 0.048, "sharpe_ratio": -0.147, "sortino_ratio": -0.134, "trading_days": 22}, "2024-05": {"total_return": 0.081, "market_return": 0.051, "relative_performance": 0.03, "volatility": 0.007, "beta": 0.576, "alpha": 0.569, "historical_var_pct": 0.008, "max_drawdown": 0.011, "sharpe_ratio": 0.518, "sortino_ratio": 0.7, "trading_days": 22}, "2024-06": {"total_return": 0.036, "market_return": 0.033, "relative_performance": 0.003, "volatility": 0.007, "beta": 1.222, "alpha": -0.053, "historical_var_pct": 0.01, "max_drawdown": 0.013, "sharpe_ratio": 0.253, "sortino_ratio": 0.396, "trading_days": 19}, "2024-07": {"total_return": 0.034, "market_return": 0.012, "relative_performance": 0.022, "volatility": 0.011, "beta": 1.02, "alpha": 0.247, "historical_var_pct": 0.019, "max_drawdown": 0.047, "sharpe_ratio": 0.137, "sortino_ratio": 0.14, "trading_days": 22}, "2024-08": {"total_return": 0.018, "market_return": 0.021, "relative_performance": -0.003, "volatility": 0.014, "beta": 1.146, "alpha": -0.063, "historical_var_pct": 0.025, "max_drawdown": 0.047, "sharpe_ratio": 0.064, "sortino_ratio": 0.061, "trading_days": 22}, "2024-09": {"total_return": 0.002, "market_return": 0.018, "relative_performance": -0.016, "volatility": 0.01, "beta": 1.001, "alpha": -0.199, "historical_var_pct": 0.029, "max_drawdown": 0.024, "sharpe_ratio": 0.012, "sortino_ratio": 0.012, "trading_days": 20}, "2024-10": {"total_return": 0.004, "market_return": -0.007, "relative_performance": 0.011, "volatility": 0.007, "beta": 0.971, "alpha": 0.117, "historical_var_pct": 0.018, "max_drawdown": 0.024, "sharpe_ratio": 0.025, "sortino_ratio": 0.021, "trading_days": 23}, "2024-11": {"total_return": 0.005, "market_return": 0.059, "relative_performance": -0.054, "volatility": 0.01, "beta": 1.061, "alpha": -0.696, "historical_var_pct": 0.013, "max_drawdown": 0.058, "sharpe_ratio": 0.031, "sortino_ratio": 0.035, "trading_days": 20}, "2024-12": {"total_return": -0.003, "market_return": -0.027, "relative_performance": 0.024, "volatility": 0.011, "beta": 0.974, "alpha": 0.291, "historical_var_pct": 0.024, "max_drawdown": 0.038, "sharpe_ratio": -0.01, "sortino_ratio": -0.01, "trading_days": 21}, "2025-01": {"total_return": 0.067, "market_return": 0.026, "relative_performance": 0.041, "volatility": 0.014, "beta": 1.206, "alpha": 0.44, "historical_var_pct": 0.036, "max_drawdown": 0.038, "sharpe_ratio": 0.234, "sortino_ratio": 0.227, "trading_days": 20}, "2025-02": {"total_return": -0.033, "market_return": -0.014, "relative_performance": -0.019, "volatility": 0.011, "beta": 1.094, "alpha": -0.232, "historical_var_pct": 0.02, "max_drawdown": 0.058, "sharpe_ratio": -0.158, "sortino_ratio": -0.162, "trading_days": 19}, "2025-03": {"total_return": -0.06, "market_return": -0.059, "relative_performance": -0.001, "volatility": 0.014, "beta": 0.956, "alpha": -0.034, "historical_var_pct": 0.029, "max_drawdown": 0.047, "sharpe_ratio": -0.209, "sortino_ratio": -0.18, "trading_days": 21}, "2025-04": {"total_return": 0.012, "market_return": -0.003, "relative_performance": 0.015, "volatility": 0.028, "beta": 0.858, "alpha": 0.16, "historical_var_pct": 0.049, "max_drawdown": 0.111, "sharpe_ratio": 0.033, "sortino_ratio": 0.032, "trading_days": 21}, "2025-05": {"total_return": 0.052, "market_return": 0.065, "relative_performance": -0.013, "volatility": 0.01, "beta": 0.688, "alpha": 0.162, "historical_var_pct": 0.013, "max_drawdown": 0.013, "sharpe_ratio": 0.416, "sortino_ratio": 0.648, "trading_days": 12}}, "portfolio_diversification": {}, "portfolio_correlations": {"APO": {"APO": 1.0, "ARM": 0.371, "BSX": 0.466, "CPER": 0.31, "CRDO": 0.432, "EGP": 0.385, "EQH": 0.711, "FR": 0.41, "GLD": 0.063, "HYG": 0.534, "IAU": 0.068, "IGSB": 0.119, "JXN": 0.661, "KEQU": 0.197, "MNTK": 0.264, "NVDA": 0.475, "PSP": 0.715, "SCHP": 0.018, "SHY": -0.15, "SPY": 0.723, "VCIT": 0.131, "VGIT": -0.166, "ZJYL": -0.001}, "ARM": {"APO": 0.371, "ARM": 1.0, "BSX": 0.276, "CPER": 0.287, "CRDO": 0.474, "EGP": 0.246, "EQH": 0.333, "FR": 0.273, "GLD": 0.137, "HYG": 0.378, "IAU": 0.139, "IGSB": 0.158, "JXN": 0.338, "KEQU": 0.11, "MNTK": 0.247, "NVDA": 0.572, "PSP": 0.519, "SCHP": 0.098, "SHY": -0.019, "SPY": 0.578, "VCIT": 0.179, "VGIT": -0.018, "ZJYL": -0.01}, "BSX": {"APO": 0.466, "ARM": 0.276, "BSX": 1.0, "CPER": 0.242, "CRDO": 0.289, "EGP": 0.326, "EQH": 0.413, "FR": 0.363, "GLD": 0.144, "HYG": 0.436, "IAU": 0.15, "IGSB": 0.199, "JXN": 0.345, "KEQU": 0.123, "MNTK": 0.145, "NVDA": 0.298, "PSP": 0.445, "SCHP": 0.118, "SHY": -0.012, "SPY": 0.545, "VCIT": 0.189, "VGIT": -0.006, "ZJYL": 0.001}, "CPER": {"APO": 0.31, "ARM": 0.287, "BSX": 0.242, "CPER": 1.0, "CRDO": 0.151, "EGP": 0.253, "EQH": 0.314, "FR": 0.245, "GLD": 0.474, "HYG": 0.399, "IAU": 0.473, "IGSB": 0.204, "JXN": 0.211, "KEQU": 0.077, "MNTK": 0.206, "NVDA": 0.298, "PSP": 0.453, "SCHP": 0.157, "SHY": 0.015, "SPY": 0.435, "VCIT": 0.23, "VGIT": 0.05, "ZJYL": 0.018}, "CRDO": {"APO": 0.432, "ARM": 0.474, "BSX": 0.289, "CPER": 0.151, "CRDO": 1.0, "EGP": 0.182, "EQH": 0.329, "FR": 0.187, "GLD": 0.086, "HYG": 0.349, "IAU": 0.089, "IGSB": 0.042, "JXN": 0.295, "KEQU": 0.208, "MNTK": 0.271, "NVDA": 0.57, "PSP": 0.431, "SCHP": 0.011, "SHY": -0.1, "SPY": 0.543, "VCIT": 0.103, "VGIT": -0.109, "ZJYL": -0.001}, "EGP": {"APO": 0.385, "ARM": 0.246, "BSX": 0.326, "CPER": 0.253, "CRDO": 0.182, "EGP": 1.0, "EQH": 0.485, "FR": 0.856, "GLD": 0.173, "HYG": 0.584, "IAU": 0.177, "IGSB": 0.328, "JXN": 0.438, "KEQU": 0.114, "MNTK": 0.268, "NVDA": 0.167, "PSP": 0.57, "SCHP": 0.281, "SHY": 0.096, "SPY": 0.563, "VCIT": 0.386, "VGIT": 0.154, "ZJYL": 0.031}, "EQH": {"APO": 0.711, "ARM": 0.333, "BSX": 0.413, "CPER": 0.314, "CRDO": 0.329, "EGP": 0.485, "EQH": 1.0, "FR": 0.499, "GLD": 0.043, "HYG": 0.58, "IAU": 0.046, "IGSB": 0.16, "JXN": 0.764, "KEQU": 0.162, "MNTK": 0.29, "NVDA": 0.346, "PSP": 0.722, "SCHP": 0.092, "SHY": -0.101, "SPY": 0.703, "VCIT": 0.209, "VGIT": -0.115, "ZJYL": -0.003}, "FR": {"APO": 0.41, "ARM": 0.273, "BSX": 0.363, "CPER": 0.245, "CRDO": 0.187, "EGP": 0.856, "EQH": 0.499, "FR": 1.0, "GLD": 0.182, "HYG": 0.596, "IAU": 0.186, "IGSB": 0.328, "JXN": 0.438, "KEQU": 0.123, "MNTK": 0.264, "NVDA": 0.159, "PSP": 0.574, "SCHP": 0.293, "SHY": 0.084, "SPY": 0.558, "VCIT": 0.39, "VGIT": 0.155, "ZJYL": -0.018}, "GLD": {"APO": 0.063, "ARM": 0.137, "BSX": 0.144, "CPER": 0.474, "CRDO": 0.086, "EGP": 0.173, "EQH": 0.043, "FR": 0.182, "GLD": 1.0, "HYG": 0.234, "IAU": 0.999, "IGSB": 0.246, "JXN": 0.034, "KEQU": -0.016, "MNTK": 0.201, "NVDA": 0.081, "PSP": 0.261, "SCHP": 0.232, "SHY": 0.174, "SPY": 0.192, "VCIT": 0.237, "VGIT": 0.202, "ZJYL": 0.052}, "HYG": {"APO": 0.534, "ARM": 0.378, "BSX": 0.436, "CPER": 0.399, "CRDO": 0.349, "EGP": 0.584, "EQH": 0.58, "FR": 0.596, "GLD": 0.234, "HYG": 1.0, "IAU": 0.238, "IGSB": 0.68, "JXN": 0.502, "KEQU": 0.143, "MNTK": 0.356, "NVDA": 0.404, "PSP": 0.727, "SCHP": 0.543, "SHY": 0.391, "SPY": 0.733, "VCIT": 0.692, "VGIT": 0.385, "ZJYL": 0.01}, "IAU": {"APO": 0.068, "ARM": 0.139, "BSX": 0.15, "CPER": 0.473, "CRDO": 0.089, "EGP": 0.177, "EQH": 0.046, "FR": 0.186, "GLD": 0.999, "HYG": 0.238, "IAU": 1.0, "IGSB": 0.252, "JXN": 0.038, "KEQU": -0.017, "MNTK": 0.2, "NVDA": 0.084, "PSP": 0.265, "SCHP": 0.235, "SHY": 0.178, "SPY": 0.195, "VCIT": 0.239, "VGIT": 0.206, "ZJYL": 0.053}, "IGSB": {"APO": 0.119, "ARM": 0.158, "BSX": 0.199, "CPER": 0.204, "CRDO": 0.042, "EGP": 0.328, "EQH": 0.16, "FR": 0.328, "GLD": 0.246, "HYG": 0.68, "IAU": 0.252, "IGSB": 1.0, "JXN": 0.131, "KEQU": 0.019, "MNTK": 0.16, "NVDA": 0.104, "PSP": 0.327, "SCHP": 0.755, "SHY": 0.838, "SPY": 0.293, "VCIT": 0.826, "VGIT": 0.801, "ZJYL": -0.025}, "JXN": {"APO": 0.661, "ARM": 0.338, "BSX": 0.345, "CPER": 0.211, "CRDO": 0.295, "EGP": 0.438, "EQH": 0.764, "FR": 0.438, "GLD": 0.034, "HYG": 0.502, "IAU": 0.038, "IGSB": 0.131, "JXN": 1.0, "KEQU": 0.181, "MNTK": 0.263, "NVDA": 0.343, "PSP": 0.643, "SCHP": 0.011, "SHY": -0.078, "SPY": 0.64, "VCIT": 0.147, "VGIT": -0.128, "ZJYL": 0.031}, "KEQU": {"APO": 0.197, "ARM": 0.11, "BSX": 0.123, "CPER": 0.077, "CRDO": 0.208, "EGP": 0.114, "EQH": 0.162, "FR": 0.123, "GLD": -0.016, "HYG": 0.143, "IAU": -0.017, "IGSB": 0.019, "JXN": 0.181, "KEQU": 1.0, "MNTK": 0.134, "NVDA": 0.175, "PSP": 0.185, "SCHP": -0.047, "SHY": -0.059, "SPY": 0.223, "VCIT": 0.014, "VGIT": -0.129, "ZJYL": 0.057}, "MNTK": {"APO": 0.264, "ARM": 0.247, "BSX": 0.145, "CPER": 0.206, "CRDO": 0.271, "EGP": 0.268, "EQH": 0.29, "FR": 0.264, "GLD": 0.201, "HYG": 0.356, "IAU": 0.2, "IGSB": 0.16, "JXN": 0.263, "KEQU": 0.134, "MNTK": 1.0, "NVDA": 0.205, "PSP": 0.39, "SCHP": 0.115, "SHY": 0.03, "SPY": 0.362, "VCIT": 0.245, "VGIT": 0.02, "ZJYL": 0.006}, "NVDA": {"APO": 0.475, "ARM": 0.572, "BSX": 0.298, "CPER": 0.298, "CRDO": 0.57, "EGP": 0.167, "EQH": 0.346, "FR": 0.159, "GLD": 0.081, "HYG": 0.404, "IAU": 0.084, "IGSB": 0.104, "JXN": 0.343, "KEQU": 0.175, "MNTK": 0.205, "NVDA": 1.0, "PSP": 0.486, "SCHP": 0.014, "SHY": -0.063, "SPY": 0.69, "VCIT": 0.125, "VGIT": -0.093, "ZJYL": 0.049}, "PSP": {"APO": 0.715, "ARM": 0.519, "BSX": 0.445, "CPER": 0.453, "CRDO": 0.431, "EGP": 0.57, "EQH": 0.722, "FR": 0.574, "GLD": 0.261, "HYG": 0.727, "IAU": 0.265, "IGSB": 0.327, "JXN": 0.643, "KEQU": 0.185, "MNTK": 0.39, "NVDA": 0.486, "PSP": 1.0, "SCHP": 0.269, "SHY": 0.018, "SPY": 0.799, "VCIT": 0.403, "VGIT": 0.073, "ZJYL": -0.005}, "SCHP": {"APO": 0.018, "ARM": 0.098, "BSX": 0.118, "CPER": 0.157, "CRDO": 0.011, "EGP": 0.281, "EQH": 0.092, "FR": 0.293, "GLD": 0.232, "HYG": 0.543, "IAU": 0.235, "IGSB": 0.755, "JXN": 0.011, "KEQU": -0.047, "MNTK": 0.115, "NVDA": 0.014, "PSP": 0.269, "SCHP": 1.0, "SHY": 0.669, "SPY": 0.172, "VCIT": 0.795, "VGIT": 0.838, "ZJYL": -0.055}, "SHY": {"APO": -0.15, "ARM": -0.019, "BSX": -0.012, "CPER": 0.015, "CRDO": -0.1, "EGP": 0.096, "EQH": -0.101, "FR": 0.084, "GLD": 0.174, "HYG": 0.391, "IAU": 0.178, "IGSB": 0.838, "JXN": -0.078, "KEQU": -0.059, "MNTK": 0.03, "NVDA": -0.063, "PSP": 0.018, "SCHP": 0.669, "SHY": 1.0, "SPY": -0.045, "VCIT": 0.619, "VGIT": 0.814, "ZJYL": -0.001}, "SPY": {"APO": 0.723, "ARM": 0.578, "BSX": 0.545, "CPER": 0.435, "CRDO": 0.543, "EGP": 0.563, "EQH": 0.703, "FR": 0.558, "GLD": 0.192, "HYG": 0.733, "IAU": 0.195, "IGSB": 0.293, "JXN": 0.64, "KEQU": 0.223, "MNTK": 0.362, "NVDA": 0.69, "PSP": 0.799, "SCHP": 0.172, "SHY": -0.045, "SPY": 1.0, "VCIT": 0.338, "VGIT": -0.035, "ZJYL": 0.034}, "VCIT": {"APO": 0.131, "ARM": 0.179, "BSX": 0.189, "CPER": 0.23, "CRDO": 0.103, "EGP": 0.386, "EQH": 0.209, "FR": 0.39, "GLD": 0.237, "HYG": 0.692, "IAU": 0.239, "IGSB": 0.826, "JXN": 0.147, "KEQU": 0.014, "MNTK": 0.245, "NVDA": 0.125, "PSP": 0.403, "SCHP": 0.795, "SHY": 0.619, "SPY": 0.338, "VCIT": 1.0, "VGIT": 0.774, "ZJYL": -0.038}, "VGIT": {"APO": -0.166, "ARM": -0.018, "BSX": -0.006, "CPER": 0.05, "CRDO": -0.109, "EGP": 0.154, "EQH": -0.115, "FR": 0.155, "GLD": 0.202, "HYG": 0.385, "IAU": 0.206, "IGSB": 0.801, "JXN": -0.128, "KEQU": -0.129, "MNTK": 0.02, "NVDA": -0.093, "PSP": 0.073, "SCHP": 0.838, "SHY": 0.814, "SPY": -0.035, "VCIT": 0.774, "VGIT": 1.0, "ZJYL": -0.035}, "ZJYL": {"APO": -0.001, "ARM": -0.01, "BSX": 0.001, "CPER": 0.018, "CRDO": -0.001, "EGP": 0.031, "EQH": -0.003, "FR": -0.018, "GLD": 0.052, "HYG": 0.01, "IAU": 0.053, "IGSB": -0.025, "JXN": 0.031, "KEQU": 0.057, "MNTK": 0.006, "NVDA": 0.049, "PSP": -0.005, "SCHP": -0.055, "SHY": -0.001, "SPY": 0.034, "VCIT": -0.038, "VGIT": -0.035, "ZJYL": 1.0}}}
+```
+
+ANALYSIS FRAMEWORK:
+
+    PORTFOLIO DIAGNOSTIC
+    • Current positions and performance metrics
+    • Sector/industry exposures and concentrations
+    • Risk metrics and correlation matrix
+    • Identify underperforming areas and concentration risks
+
+    USER PROFILE INTEGRATION
+    • Risk tolerance assessment
+    • Investment timeline and goals
+    • Liquidity needs and constraints
+
+    MARKET OPPORTUNITY IDENTIFICATION
+    • High-conviction sectors/themes based on research
+    • Defensive positions for risk management
+    • Geographic and currency diversification opportunities
+    • Alternative investments for correlation benefits
+
+    PORTFOLIO CONSTRUCTION
+    • Build thesis connecting user profile to market opportunities
+    • Select 8-16 asset classes
+    • Determine allocation percentages based on conviction and risk
+    • Ensure proper diversification across correlations
+
+CONSTRAINTS & REQUIREMENTS:
+
+    ALLOCATION RULES
+    • Cash position: 5 - 7 % (mandatory)
+    • Asset classes: 8-16 (mandatory)
+    • Total allocation: 100 % (mandatory)
+    • Minimum position size: 3 % (meaningful impact)
+    • Maximum single position: 25 % (diversification)
+
+    NAMING CONVENTIONS
+    • Use ONLY the final / leaf-node names from universe tools. e.g. “multi_utilities”, “precious_metals_etfs” (Hard Constraint)
+    • If the name of the sector/industry/subindustry put into the final json must match the exact same name as it is in the stock and etf universe tools. (This is a hard constraint, there will be severe consequences if you do not follow this rule)
+    Example of correct asset class format:
+        • ✓ CORRECT: "asset_class": "multi_utilities"
+        • ✗ INCORRECT: "asset_class": "equity_sector_utilities_multi_utilities"
+        • ✓ CORRECT: "asset_class": "precious_metals_etfs"
+        • ✗ INCORRECT: "asset_class": "SPDR Gold Shares (GLD)"
+        • ✓ CORRECT: "asset_class": "broad_based_emerging_market_equity_etfs"
+        • ✗ INCORRECT: "asset_class": "low_volatility_etfs"
+
+    DECISION FRAMEWORK
+    • Overweight (15 - 25 %) High conviction, strong future outlook
+    • Normal (8 - 15 %) Core holdings, market perform
+    • Underweight (3 - 8 %) Defensive or hedging positions
+
+OUTPUT REQUIREMENTS:
+
+    PORTFOLIO THESIS (2-4 sentences)
+    • Connect user profile to portfolio strategy
+    • Highlight key allocation decisions
+    • Explain market-positioning rationale (“Why this portfolio for this user now?”)
+
+    JSON FORMAT (required)
+    { "portfolio_thesis": "...",
+        "portfolio": [
+            { "asset_class": "exact_name_from_universe_tools",
+            "allocation": 10, # percentage
+            "position": "LONG",
+            "reason": "Why it fits thesis, drivers, risk role, time horizon"
+            }
+        ],
+        "risk_management": {
+            "portfolio_volatility": "...",
+            "key_risks": ["risk 1", "risk 2"],
+            "hedging_strategy": "downside protection plan"
+        }
+    }
+
+QUALITY CHECKLIST
+- Used get_user_information, get_equity_universe, and get_etf_universe
+- Conducted 6-10 detailed market-research searches
+- Portfolio contains 8-16 asset classes
+- Cash allocation is 5 - 7 %
+- Total allocation equals 100%
+- Each allocation has detailed reasoning
+- Portfolio thesis clearly connects user to strategy
+- All asset-class names match universe tools
+
+
 ================================================================================
 
 
@@ -9,13 +139,13 @@ USER INFORMATION
 
 {
   "user_information": {
-    "age": "45",
-    "net_worth": "$750,000",
-    "investment size(as a percentage of net worth)": "25%",
-    "risk_tolerance": "Low to Moderate",
-    "investment_goals": "Capital preservation and steady income",
-    "time_horizon": "10 Years",
-    "Overall Description": "\n            I am looking for a relatively conservative investment strategy. My primary goal is to preserve my capital while generating a steady stream of income.\n            I'm interested in high-quality bonds, dividend-paying blue-chip stocks, and real estate investment trusts (REITs).\n            I plan to retire in 20 years and want a portfolio that provides stability and reliable returns.\n            "
+    "age": "52",
+    "net_worth": "$3,500,000",
+    "investment size(as a percentage of net worth)": "70%",
+    "risk_tolerance": "Moderate-High",
+    "investment_goals": "Capital Growth and Income Generation",
+    "time_horizon": "5 Years",
+    "Overall Description": "\n            I am an experienced investor with a moderate to high risk tolerance. I am looking for a portfolio that will grow my capital and provide me with a reliable income stream.\n            The portfolio should be well balanced and include some private equity etfs. I am also very bullish on the tech sector and the future of AI.\n            "
   }
 }
 
@@ -2202,643 +2332,669 @@ ETF UNIVERSE DATA
 
 
 ========================================
-FREE SEARCH: Q2 2025 S&P 500 sector performance, valuation metrics, and forward earnings expectations by sector (including P/E, dividend yield, EPS growth estimates).
+FREE SEARCH: Q2/Q3 2025 consensus earnings outlook and valuation for US large-cap semiconductors (NVIDIA, AMD, Broadcom, etc.) and expected impact of AI infrastructure investments
 ========================================
 
-## S&P 500 Sector Performance, Valuation, and Earnings Expectations—Q2 2025
+## US Large-Cap Semiconductor Q2/Q3 2025 Consensus Earnings Outlook
 
-### Sector Performance (to early May 2025)
+### **NVIDIA (NVDA)**
 
-| Sector                  | S&P 500 Weight (%) | 6-Month Return (%) | 12-Month Return (%) |
-|-------------------------|--------------------|--------------------|---------------------|
-| Communication Services  | 9.3                | 4.9                | 19.0                |
-| Consumer Discretionary  | 10.3               | -0.5               | 12.0                |
-| Consumer Staples        | 6.2                | 5.9                | 14.4                |
-| Energy                  | 3.2                | -5.6               | -8.2                |
-| Financials              | 14.5               | 7.8                | 25.1                |
-| Health Care             | 10.8               | -5.4               | 0.3                 |
-| Industrials             | 8.5                | 1.3                | 12.2                |
-| Information Technology  | 30.3               | -3.4               | 17.2                |
-| Materials               | 2.0                | -7.5               | -2.2                |
-| Real Estate             | 2.3                | -0.1               | 18.3                |
-| Utilities               | 2.6                | 3.7                | 21.2                |
-| **S&P 500 Index**       | 100                | -0.1               | 13.8                |
+- **Q3 FY2025 Results (ended Oct 27, 2024):**
+  - Revenue: $35.1 billion (up 17% quarter-over-quarter, up 94% year-over-year)
+  - Data Center Revenue: $30.8 billion (up 17% QoQ, up 112% YoY)
+  - GAAP EPS: $0.78 (up 16% QoQ, up 111% YoY)
+  - Non-GAAP EPS: $0.81 (up 19% QoQ, up 103% YoY)[5]
+- **Valuation:** As of late 2024, NVIDIA was trading at a high forward P/E multiple (most recent estimates place it in the 40–50x range), reflecting the market’s bullishness on extended AI-driven growth.
+- **AI Impact:** NVIDIA’s performance is overwhelmingly driven by AI infrastructure demand—especially from hyperscalers and enterprises building next-generation AI models and inference systems. The launch of Blackwell (next-gen GPU) is poised to continue fueling growth[5].
 
-*Data as of 5/5/2025, trailing returns[2].*
+### **AMD (Advanced Micro Devices)**
 
-**Key Trends:**
-- Financials, Utilities, and Communication Services led 12-month returns.
-- Energy and Materials underperformed significantly over both periods.
-- Technology remains a major contributor despite a recent pullback.
+- **Q2 2025 Consensus EPS:** $0.28 (lowered from prior $0.78 due to more subdued AI/server ramp)[3]
+- **Q3 2025 EPS Estimate:** $0.82[3]
+- **Full-Year 2025 Consensus EPS:** $3.87[3]
+- **FY2025 Consensus (adjusted):** $2.77 EPS (Zacks Research’s revised outlook)[3]
+- **Valuation:** AMD typically trades at a forward P/E in the mid-30s to low-40s, but valuation may contract if AI growth proves slower than anticipated.
+- **AI Impact:** While AMD is gaining traction with its MI300 accelerators in the data center segment, its ramp is more modest relative to NVIDIA, and recent analyst revisions underscore a risk of near-term underperformance in the face of NVIDIA’s dominance[3].
 
----
+### **Broadcom (AVGO)**
 
-### Valuation Metrics (As of May 2025)
+- **Q2 2025 Consensus EPS:** $1.57[4]
+- **Q2 2025 Earnings Forecast:** Double-digit YoY growth in earnings (exact consensus EPS not specified, but upside expected)[2][1]
+- **Q3 2025 Outlook:** Analysts expect another quarter of strong AI-driven growth, especially in networking and custom AI silicon; results are due June 5, 2025[1][4].
+- **Valuation:** Broadcom’s forward P/E is generally in the 22–28x range, trading at a premium to historical averages due to robust AI demand pipeline.
+- **AI Impact:** AI infrastructure build-outs (especially high-speed networking, custom ASICs, and connectivity solutions) are a primary growth driver, justifying continued optimism from the Street[1][2].
 
-| Metric              | S&P 500 Index Value |
-|---------------------|--------------------|
-| Forward 12-mo P/E   | 21.1               |
-| 5-Year Avg P/E      | 19.9               |
-| 10-Year Avg P/E     | 18.4               |
+## **Comparative Earnings & Valuation Overview**
 
-*The current S&P 500 forward P/E of 21.1 is above both the 5- and 10-year averages, indicating a market trading at a premium to recent history[5].*
+| Company   | Q2 2025 Consensus EPS | Q3 2025 Consensus EPS | Recent Revenue/Quarter | Forward P/E (approx.) | Key AI Driver                |
+|-----------|----------------------|-----------------------|-----------------------|-----------------------|------------------------------|
+| NVIDIA    | Not disclosed        | $0.78 (GAAP)          | $35.1B (Q3 FY25)      | 40–50x                | Data Center GPUs (Blackwell) |
+| AMD       | $0.28                | $0.82                 | N/A                   | 30–40x                | MI300 AI accelerators        |
+| Broadcom  | $1.57                | Not disclosed         | Double-digit EPS growth expected | 22–28x   | AI networking, ASICs         |
 
-**Dividend Yield by Sector (typical range, recent estimates):**
-- Utilities: 3–3.5%
-- Real Estate: 3–3.2%
-- Energy: 3–4%
-- Consumer Staples: 2.5–3%
-- Financials: 1.5–2.5%
-- Industrials: 1.5–2%
-- Technology: 0.8–1%
-- Communication Services: 1–1.5%
-- S&P 500 overall: ~1.4–1.6%
+## **Expected Impact of AI Infrastructure Investments**
 
-*Sector yields reflect sector weightings and traditional payout ratios; specific current sector yields may vary, but Utilities, Real Estate, and Energy typically dominate the top spots.*
+- **NVIDIA:** Remains the clear AI infrastructure leader, with hyperscale AI data centers and foundation model training as primary growth engines. The “full steam” adoption of AI is driving record data center revenue, with anticipation for the Blackwell platform expected to further extend NVIDIA’s momentum through the remainder of 2025[5].
+- **AMD:** Participates in data center AI growth but is facing a slower ramp, with analysts revising earnings forecasts downward for Q2 2025. AMD's next-gen accelerators are gaining market share but at a more measured pace vs. NVIDIA[3].
+- **Broadcom:** Surging demand for AI networking components and custom chips positions Broadcom as a major beneficiary of AI investments beyond GPUs. Industry analysts expect Q2 and Q3 to show sustained strength, with upside surprise potential as cloud and enterprise customers accelerate their AI infrastructure deployment[1][2].
 
----
+## **Actionable Insights for Portfolio Construction**
 
-### Forward Earnings Expectations
+- **Overweight NVIDIA:** Best-in-class revenue/EPS growth and AI “arms race” leadership support premium valuation.
+- **Maintain Broadcom Exposure:** Attractive blend of AI growth and networking/ASIC exposure at a lower multiple.
+- **Monitor AMD Risk:** AI prospects remain but earnings downgrades and relative underperformance warrant a neutral or underweight stance until data center traction improves.
 
-**Aggregate S&P 500 Earnings Growth (FactSet, as of May 24, 2025):**
-- Q2 2025: +5.1%
-- Q3 2025: +7.2%
-- Q4 2025: +6.1%
-- Full Year 2025: +9.1% year-over-year[5]
+**Summary:**  
+AI infrastructure investments are fueling double- and triple-digit YoY growth for US large-cap semiconductor leaders through Q2 and Q3 2025. NVIDIA remains the industry bellwether for AI-driven upside, Broadcom is a strong beneficiary via networking and custom silicon, and AMD is working to close the gap, albeit at a slower trajectory. Continued AI infrastructure capex is expected to keep sector valuations well above historical norms through at least the end of 2025[1][3][5].
 
-**EPS Growth by Sector (recent estimates and typical positioning):**
-- Technology, Communication Services, and Financials are expected to drive above-average EPS growth, benefiting from resilient demand, margin expansion, and AI/data center exposure.
-- Energy and Materials face headwinds from commodity pressures, leading to negative or flat earnings growth.
-- Defensive sectors (Utilities, Consumer Staples) are expected to post low-single-digit EPS gains, reflecting slower revenue expansion but stable demand.
 
-**EPS Surprise Trends:**
-- Q1 2025 saw 78% of S&P 500 companies beating consensus EPS forecasts, exceeding the 5-year average, suggesting analyst expectations had been conservative but may be rising[5].
 
----
+========================================
+FREE SEARCH: 2025 outlook for US private equity exposure ETFs: flows, performance drivers, and how late-cycle risks are being managed by fund managers
+========================================
 
-## Summary Table: Sector Highlights (Q2 2025)
+## 2025 Outlook for US Private Equity Exposure ETFs
 
-| Sector                  | 12M Return (%) | Forward P/E* | Dividend Yield* | EPS Growth (est.)*   |
-|-------------------------|---------------|--------------|-----------------|----------------------|
-| Communication Services  | 19.0          | 18-21        | 1–1.5%          | Above S&P 500 avg    |
-| Consumer Discretionary  | 12.0          | 23-29        | 0.8–1.2%        | Above S&P 500 avg    |
-| Consumer Staples        | 14.4          | 19-22        | 2.5–3%          | Low-mid single digit |
-| Energy                  | -8.2          | 12-14        | 3–4%            | Negative/Flat        |
-| Financials              | 25.1          | 12-14        | 1.5–2.5%        | High single digit    |
-| Health Care             | 0.3           | 16-18        | 1.5–2%          | Low-mid single digit |
-| Industrials             | 12.2          | 18-22        | 1.5–2%          | Mid/high single digit|
-| Information Technology  | 17.2          | 26-32        | 0.8–1%          | Double digit         |
-| Materials               | -2.2          | 15-17        | 2–2.5%          | Negative/Flat        |
-| Real Estate             | 18.3          | 32-35        | 3–3.2%          | Low-single digit     |
-| Utilities               | 21.2          | 17-19        | 3–3.5%          | Low-single digit     |
+### **Flows: Growing Allocations and Liquidity Tailwinds**
 
-*Ranges reflect typical sector metrics as of Q2 2025, aggregated from S&P and market sources. Actual sector-level forward P/E and EPS data may vary slightly by provider.[2][5]*
+US private equity exposure ETFs are expected to see strong inflows in 2025, driven by increased investor appetite for alternative assets. Survey data indicates that 30% of limited partners (LPs) plan to increase their private equity allocations within the next 12 months, a sign of continued institutional demand for PE exposure[1]. The broader ETF industry in North America is also experiencing robust growth, with active ETFs collecting 26.7% of all net flows in the US during 2024—significantly up from 23% in 2023—and this momentum is expected to persist in 2025[4].
 
----
+The secondary market for private equity assets reached record volumes in 2024, providing ample liquidity and creating attractive entry opportunities for investors in 2025[5]. This trend benefits private equity ETFs, which often use secondary market investments to gain exposure to diversified PE portfolios.
+
+### **Performance Drivers: Exit Markets, Valuations, and Diversification**
+
+Several key factors will drive performance for private equity exposure ETFs in 2025:
+
+- **Recovery in Exit Markets:** US private equity exit activity rebounded sharply at the end of 2024, providing exit channels for portfolio companies and supporting returns for PE funds held within ETFs. Robust exit conditions are expected to continue, aided by a resilient US economy and lower interest rates[5].
+  
+- **Attractive Relative Returns:** Vanguard projects a 10-year median expected annualized return for global PE of 8.9%, compared to just 5.4% for global public equity, estimating that diversified PE portfolios can outperform public markets by approximately 3.5% annually[5]. This long-term return edge is a major draw for investors seeking diversification and higher return potential.
+
+- **Increased Use of Secondaries:** With liquidity needs propelling record secondary market activity, skilled managers can acquire high-quality PE assets at attractive prices, enhancing prospective ETF returns for 2025[5].
+
+- **Active ETF Innovation:** The expansion of active ETFs—particularly those that repackage private market strategies—has accelerated as investors seek both diversification and alpha, with digital experience and demand for liquidity further supporting flows[4].
+
+### **Late-Cycle Risk Management: Defensive Strategies and Portfolio Construction**
+
+Private equity exposure ETFs and underlying fund managers are actively managing late-cycle risks in several ways:
+
+- **Heightened Selectivity:** Managers are carefully evaluating deal quality, often preferring resilient sectors and well-capitalized companies amid uncertain macroeconomic conditions[2][5].
+
+- **Portfolio Diversification:** Broad diversification by sector, stage, and geography remains a cornerstone for mitigating concentration risk in a late-cycle environment[5].
+
+- **Active Use of Secondaries:** The increased importance of the secondary market not only boosts liquidity, but also allows managers to rebalance portfolios, take advantage of mispriced assets, and lock in gains, reducing vulnerability to market corrections[5].
+
+- **Cautious Leverage and Exit Timing:** With interest rates moderating but global macro risks still present, managers are more disciplined on leverage and pacing of exits to avoid forced sales in volatile conditions[5].
+
+### **Quantitative Highlights**
+
+| Metric                                  | Value/Trend (2025)                      |
+|------------------------------------------|-----------------------------------------|
+| Projected PE ETF inflows (US)           | Up, with 30% of LPs planning increases[1]|
+| Active ETF share of US net flows (2024)  | 26.7%, up from 23% in 2023[4]           |
+| 10-year median return forecast (global PE)| 8.9% (vs. 5.4% for global equities)[5]  |
+| Expected long-term PE outperformance     | ~350 bps (3.5%) annually over equities[5]|
+| Secondary market volume (2024)           | Record highs, sustaining in 2025[5]     |
+
+### **Actionable Insights for Portfolio Construction**
+
+- **Consider Increasing Allocation:** With strong return prospects and robust flows, US private equity exposure ETFs can play a strategic role in diversified portfolios, especially for investors seeking illiquidity premiums and lower public market correlation.
+- **Prioritize ETF Vehicles with Secondary Exposure:** ETFs that access secondary private equity markets may offer smoother liquidity profiles and better price efficiency in 2025.
+- **Scrutinize Fund Manager Risk Controls:** Assess the portfolio diversification, deal selectivity, and use of defensive strategies by ETF sponsors and underlying fund managers, with a focus on downside risk management as the cycle matures.
+
+In summary, 2025 presents a constructive environment for US private equity exposure ETFs, with solid inflows, attractive long-term return potential, and evolved risk management practices designed to mitigate late-cycle uncertainties[1][4][5].
+
+
+
+========================================
+FREE SEARCH: Forward 12-month expectations for US investment grade corporate bond spreads, default rates, and return forecasts in context of Fed pause and credit cycle indicators
+========================================
+
+## US Investment Grade Corporate Bond Market: Forward 12-Month Outlook
+
+**Spreads:**
+- The Bloomberg U.S. Corporate Investment Grade (IG) Bond Index option-adjusted spread (OAS) widened by 14 basis points, finishing Q1 2025 at 94 bps, up from previous quarters[5].
+- Into early April 2025, spreads moved wider, reaching 96 bps, amid tariff conflicts and policy uncertainty[2][5].
+- Over the past 15 years, the average spread for the index was 1.3% (130 bps), suggesting current spread levels (94–96 bps) remain below the long-term median, indicating tight trading relative to history[3].
+- In the context of high IG bond supply and strong demand, along with stable credit fundamentals, spreads are likely to remain rangebound near current levels over the next 12 months, barring a significant risk-off event or Fed policy surprise.
+- Key risk: Escalation in trade or economic headwinds could push OAS back above 1.0% (100 bps), while a Fed pause with stable growth is supportive for spread stability.
+
+**Default Rates:**
+- For IG corporates, default rates remain extremely low and are not expected to materially rise in the next year.
+- Fitch's forecasts for 2025 U.S. leveraged loan default rates are 5.5–6.0%, but these figures pertain to speculative-grade credit, not IG bonds[1].
+- IG default rates typically stay well below 1% even in late-cycle environments, and there are no current signals of a dramatic uptick for IG-quality issuers[1][5].
+
+**Return Forecasts & Yield Environment:**
+- The Bloomberg U.S. Corporate IG Bond Index yield-to-worst was 5.15% as of March 31, 2025, down from 5.33% at the end of 2024[5].
+- With the Fed pausing and Treasury yields stabilizing, total return outlooks for IG bonds are expected to align closely with their yield-to-worst, assuming no major credit or duration shocks.
+- If credit spreads remain steady and rates are rangebound, 12-month forward returns in the 4.5–5.5% range are likely for diversified IG portfolios, with upside potential if rates fall due to economic slowing.
+- Risk: Should rates unexpectedly rise or spreads widen due to renewed credit stress, returns could moderate.
+
+**Credit Cycle & Macro Context:**
+- Credit fundamentals for IG issuers are stable, with recent earnings and margins providing a solid base[5].
+- Market sentiment, however, is less optimistic, with consumer confidence and PMI surveys deteriorating—signaling late-stage cycle dynamics and the need for careful monitoring[5].
+- Elevated bond issuance is being absorbed by robust demand, reinforcing technical support for IG markets[1][4].
+- The pause by the Federal Reserve reduces immediate refinancing risk for IG issuers, generally supporting credit quality and limiting spread widening pressures[5].
 
 ## Actionable Insights for Portfolio Construction
 
-- **Valuation Premium**: The S&P 500's premium P/E (~21.1 vs. 5-year average ~19.9) underscores higher growth expectations. Caution may be warranted for historically rich sectors (Tech, Consumer Discretionary).
-- **Growth Leadership**: Information Technology, Communication Services, and Financials combine strong earnings momentum with above-market returns, supporting overweight positions in portfolios seeking growth.
-- **Income Advantage**: Utilities, Real Estate, and Energy offer above-market yields. They may appeal to income-focused investors but typically come with muted EPS growth and higher sensitivity to rates.
-- **Cyclicals/Defensives Rotation**: Given mixed returns in Industrials/Consumer sectors and Energy's underperformance, selective, quality-based allocation may outperform broad beta exposure.
-- **Earnings Momentum**: Sectors with positive EPS surprise trends and strong forward guidance (notably Tech and Financials) provide higher earnings visibility into late 2025.
+- **Yield Opportunities:** Current yields above 5% are attractive relative to the past decade for IG credit, especially given low default risk and spread stability[5].
+- **Risk Watch:** Monitor for signs of macro weakness or credit stress, as these could push spreads wider and dampen returns.
+- **Fed Policy:** The pause is supportive, but a surprise cut or hike can shift spread and return dynamics. Be flexible with duration exposure.
+- **Sector Positioning:** Consider overweighting higher-quality IG credits and sectors with resilient earnings in a late-cycle environment.
 
-*All data reflects market conditions as of Q2 2025 and should be reassessed as new earnings and macro data become available.*
+In summary, US investment grade corporate bonds are poised for moderate returns over the next 12 months, with low default risk, yields near 5%, and spreads likely anchored in the 90–110 bps range, conditional on macro and Fed stability[2][3][5].
 
 
 
 ========================================
-FREE SEARCH: Impact of 2025 Fed rate policy and yield curve steepening on U.S. investment grade and high yield corporate bond spreads, default risk, and flows.
+FREE SEARCH: Latest May–June 2025 US CPI, PPI, and labor market data: implications for Fed policy, recession risk, and market positioning
 ========================================
 
-## Impact of 2025 Fed Rate Policy and Yield Curve Steepening on U.S. Investment Grade & High Yield Corporate Bonds
+## Latest US CPI, PPI, and Labor Market Data (May–June 2025)
 
-### **Fed Rate Policy & Yield Curve Context—2025**
+### **Release Schedule and Latest Available Data**
 
-The Federal Reserve in 2025 continues to maintain a data-dependent approach, with policy guided by inflation and labor market trends[4]. Yields across fixed-income assets—including investment grade corporate bonds—have risen from already elevated levels, aligned with expectations for a higher-for-longer rate environment[3]. The yield curve has begun to steepen, primarily reflecting market anticipation of eventual Fed easing, but also higher term premia as issuance remains strong[2].
-
----
-
-### **Corporate Bond Spreads: Investment Grade vs. High Yield**
-
-- **Spread Levels**  
-  - As of April 2025, *spreads between investment grade corporate bonds and Treasuries remain moderate by historical standards*[1].  
-  - High yield (HY) spreads, while still contained, are more volatile and prone to sharp widening during periods of deteriorating risk sentiment[5].
-
-- **Yield Curve Steepening Implications**  
-  - *Steepening curves* (especially from a previously inverted structure) typically compress investment grade (IG) spreads as investors become more risk-seeking and reach for yield.  
-  - For high yield, the effect is mixed: initial curve steepening may tighten spreads, but if accompanied by risk aversion or recession fears, spreads can widen sharply—particularly for lower-rated issuers[5].
-
-| Category               | Investment Grade                     | High Yield                                      |
-|------------------------|--------------------------------------|-------------------------------------------------|
-| Spread Level (May 2025)| Moderate by history[1][3]            | Volatile, with widening during 'risk-off'[5]    |
-| Yield Impact           | Rising yields, moderate spread moves | Higher yields, more sensitive & volatile spreads|
+- **Consumer Price Index (CPI):**  
+  The May 2025 CPI data is scheduled for release on June 11, 2025. As of May 2025, the latest available CPI is for April[3].
+  
+- **Producer Price Index (PPI):**  
+  The May 2025 PPI will be released on June 12, 2025[1][2][4]. The most recent PPI data is for April 2025[5].
+  
+- **Labor Market:**  
+  No new labor market figures from May or June 2025 are included in the search results. Latest trends will be inferred from prior data and broad economic context.
 
 ---
 
-### **Default Risk Trends**
+## **Key Metrics and Trends**
 
-- **Fundamental Backdrop**  
-  - Firm fundamentals for most U.S. corporates remain strong, supporting low baseline default risk in both IG and HY[5].
-  - However, the *expected default frequency (EDF) at the 75th percentile* has surged to around 18% (March 2025)—a level not seen since the global financial crisis, signaling rising risk for the most vulnerable issuers[5].
+### **Producer Price Index (PPI) — April 2025**
+- **Month-over-Month (MoM):**  
+  PPI is expected to rise by 0.2% in April, rebounding after a 0.4% monthly decline in March. March’s drop was the first since October 2023, indicating some volatility at the producer level[5].
+  
+- **Core PPI (ex-food and energy):**  
+  Projected to increase by 0.3% in April, after a 0.1% decline in March[5].
+  
+- **Year-over-Year (YoY):**  
+  Headline PPI is forecast to decelerate to 2.5% in April (from 2.7% in March), marking a seven-month low.  
+  Core PPI is expected to slow to 3.1% (from 3.3% prior), the lowest since August 2024[5].
+  
+- **Implication:**  
+  The softening of PPI suggests easing upstream price pressures, which could translate into slower CPI inflation in the coming months, assuming demand remains stable.
 
-- **Refinancing Pressure**  
-  - A massive wall of maturities is approaching: $642 billion in 2025, $930 billion in 2026, and $860 billion in 2027[5].
-  - For bonds refinancing at higher yields, interest expense is expected to increase by 100–300+ bps (basis points), creating stress, particularly for leveraged companies and those in HY.
+### **Consumer Price Index (CPI) — April 2025**
+- Next release (May 2025 data) is due June 11, 2025[3]. As of latest available (April 2025), details are not specified, but the scheduled release dates confirm that the market is awaiting May’s CPI update for confirmation of inflation direction.
+
+### **Labor Market**
+- No current release data for the May–June period is provided. As of prior months, US labor market remained relatively tight, with unemployment rates historically low (hovering near 4%), robust job additions, but some signs of slowing wage growth.
 
 ---
 
-### **Fund Flows: Attractiveness & Risks**
+## **Implications for Fed Policy**
 
-- **Investment Grade**  
-  - Remains attractive for liability-driven and long-duration investors.  
-  - Flows are steady as yields are now considered compensatory for both policy and inflation risk[2].
-  - Steepening may draw in more buyers seeking income and safety.
-
-- **High Yield**  
-  - Flows are more fragile, highly sensitive to spread volatility and risk sentiment[5].
-  - During risk-off episodes or when default probabilities spike, investors rapidly redeem from riskier credits—widening spreads and amplifying volatility.
+- **Inflation Deceleration:**  
+  Both headline and core PPI data show easing price pressures at the producer level through April 2025. If this trend continues in the May PPI and CPI prints, it would support a disinflationary narrative.
+  
+- **Fed Outlook:**  
+  - The Federal Reserve is likely to hold rates steady in the near term if CPI and labor market data for May–June confirm ongoing moderation in price growth and a stable, not overheating, jobs market.
+  - Any persistence of core inflation above the Fed’s 2% target, particularly if wage growth remains strong, could delay rate cuts.
+  - Sharp downside surprises in labor or inflation could renew recession concerns and prompt discussions of rate cuts.
+  
+- **Key Risk Factors:**  
+  - Tariff-related input cost increases.
+  - Geopolitical events affecting energy prices.
+  - Unexpected softening in labor market metrics.
 
 ---
 
-### **Actionable Portfolio Insights**
+## **Recession Risk Assessment**
 
-- Investment Grade:  
-  - *Moderately attractive* with balanced risk/reward; consider extending duration tactically as curve steepens and recession odds fade.
-  - Focus on higher-quality issuers with manageable refinancing needs.
+- **Easing Upstream Pressures:**  
+  The recent decline in PPI and slow pace of increase suggests limited pipeline inflation, reducing the risk of stagflation for now[5].
+  
+- **Labor Market:**  
+  No major deterioration has been signaled yet. Key indicators to watch are unemployment rates and initial claims for signs of slack.
+  
+- **Market Sentiment:**  
+  While softening inflation is positive, if accompanied by a sharp deceleration in hiring or demand, recession risks could resurface.
 
-- High Yield:  
-  - *Exercise caution*, especially with issuers in weaker financial condition or with impending maturities.
-  - Diversify and favor BB/BBB- crossover credits over deeply speculative-rated bonds.
-  - Stay alert to default risk spikes, as vulnerabilities are most pronounced at the lower end of the credit spectrum (EDF at 18% for worst quartile)[5].
+---
+
+## **Market Positioning Guidance**
+
+| Asset Class          | Implication Based on Current Data                           |
+|----------------------|------------------------------------------------------------|
+| US Equities          | Positive bias if inflation softening, as this supports Fed patience; focus on quality/growth. |
+| US Treasuries        | Short-duration bonds may outperform if Fed remains on hold; longer duration could benefit if recession risk rises. |
+| Credit (IG/HY)       | Remain selective; spreads may remain stable if growth persists, but monitor for softening demand. |
+| Commodities          | Eased PPI dampens inflation hedge demand, but geopolitical and supply risks remain. |
+
+**Portfolio Construction Insights:**
+- Stay overweight in US equities with a tilt toward defensive growth sectors (technology, healthcare) if inflation trends continue to ease and labor markets stay resilient.
+- Gradually add duration to fixed income as recession risk rises or if the Fed signals a readiness to cut.
+- Avoid concentrated overweight positions in inflation-sensitive sectors unless labor data or CPI surprise to the upside.
+
+---
+
+## **Actionable Takeaways**
+
+- Monitor June CPI and PPI releases closely for confirmation of disinflation.
+- Watch labor market prints for early signs of softening.
+- Position conservatively, favoring quality and liquidity, with tactical flexibility to shift should macro trends deviate from current expectations.  
+- Stay alert for geopolitical or policy shocks that could quickly alter inflation or growth trajectories.
 
 ---
 
 **Summary:**  
-In 2025, Fed policy and a steepening yield curve are driving higher yields across the corporate bond spectrum, with investment grade spreads stable and high yield spreads more at risk of episodic widening. Default risk remains contained overall but is rising for the weakest credits, especially amid substantial refinancing needs. IG flows should remain resilient, while HY flows are vulnerable to sudden sentiment shifts and tightening financial conditions[1][2][3][5].
+Recent data point to softening inflation at the producer level, with the next CPI and labor market results crucial for confirming the disinflation trend and determining the Fed’s next move. For now, the risk of imminent recession appears muted, and markets are likely to remain focused on inflation developments and Fed signaling through June 2025[5].
 
 
 
 ========================================
-FREE SEARCH: Current 2025 technical and sentiment indicators for US equities (AAII, put/call ratios, VIX, and institutional positioning) and their implications for near-term risk appetite.
+FREE SEARCH: Global sector rotation analysis for H2 2025: which equity sectors are showing strongest momentum and earnings revisions, and which are lagging?
 ========================================
 
-## Technical and Sentiment Indicators for US Equities — May 2025
+## Global Sector Rotation Analysis: H2 2025
 
-**Overview of Market Conditions**  
-As of late May 2025, US equity markets have experienced heightened volatility due to macro events (notably tariff announcements and subsequent negotiations), but have recovered significantly from the April low. The S&P 500 (US500) sits near 5,900, up about 1.8% year-to-date but off its recent peak, and broad US equities are trading at an 8% discount to fair value, according to Morningstar’s models[2][4]. The rally from April’s lows and the quick mean reversion reflect a shift in risk appetite and recalibration of sentiment as markets digest both geopolitical and economic policy shifts.
-
-### Key Sentiment & Positioning Indicators
-
-**1. AAII Sentiment (American Association of Individual Investors)**
-- Latest readings show neutral-to-moderate bullishness, with the post-April rebound and “buy the dip” behavior apparent. Historically, elevated bullish sentiment can signal near-term caution due to potential for profit-taking; conversely, extreme bearishness is often a contrarian signal for buying. Currently, sentiment appears balanced, not stretched in either direction.
-
-**2. Put/Call Ratios**
-- Equity and index put/call ratios have normalized following a surge in April when downside hedging spiked during the tariff-driven selloff. Present levels are near historical averages, suggesting neither complacency nor excessive fear dominates option market positioning. This normalization generally signals a return to “neutral” risk appetite for the near term.
-
-**3. VIX (CBOE Volatility Index)**
-- The VIX spiked in early April on geopolitical/trade fears, but has since reverted to its multi-month average, indicating reduced demand for downside protection and a moderation in perceived near-term risk. Subdued VIX levels support the view of a stable, though not euphoric, risk backdrop.
-
-**4. Institutional Positioning**
-- Institutional investors reportedly rotated from overweight to market-weight following the rapid rebound in valuations[2]. Sector-level flows signal a preference for value and core stocks, with less enthusiasm for growth and cyclical exposures. There is renewed interest in energy and selectively in industrials, while high-momentum sectors like tech are seeing incremental profit-taking.
-
-### Comparative Market Data
-
-| Indicator           | Recent (May 2025)           | Trend vs. April 2025 | Sentiment Implication          |
-|---------------------|-----------------------------|----------------------|-------------------------------|
-| S&P 500 (US500)     | 5,900–5,950                 | Rebounded            | Neutral/modestly bullish      |
-| P/E Ratio (S&P 500) | ~20x (est.)                 | Slightly below peak  | Fair to slightly attractive   |
-| VIX                 | ~15–17                      | Down from April high | Muted risk aversion           |
-| Put/Call Ratio      | Near historical average (~0.7–0.8) | Down from spike     | Normalized demand for hedging |
-| AAII Bullish        | ~35–40%                     | Up from April low    | No extreme optimism           |
-
-### Implications for Near-Term Risk Appetite
-
-- **Valuation**: The market’s 8% discount to fair value, as per Morningstar, indicates that equities are not expensive, especially versus the premium levels of 2024[2]. This discounts some risk and leaves room for selective upside.
-- **Sentiment**: Technical indicators and sentiment gauges (AAII, put/call, VIX) point to a market that has absorbed recent shocks and is neither overly complacent nor fearful.
-- **Institutional Flows**: The shift from overweight to market-weight, plus a tilt toward value sectors, suggest that large investors are seeking balance rather than chasing risk[2].
-- **Risk Appetite**: The near-term risk environment is stable but vigilant. Investors are likely to maintain exposure but prefer selective, quality, and value-oriented names while trimming extended growth positions.
-
-**Actionable Insights for Portfolio Construction**
-- Maintain a market-weight US equities stance with an overweight to value and core sectors.
-- Consider rebalancing away from high-momentum/growth names, locking in gains from the recent rally.
-- Continue monitoring VIX, put/call ratios, and institutional positioning for shifts that could foreshadow a risk-off regime.
-- Use periods of volatility (as in April) as entry points for long-term positions, but remain agile given the macro headline sensitivity through 2025.
-
-In summary, technical and sentiment indicators suggest US equities have moved from oversold to fairly valued, with a balanced outlook for risk appetite heading into the second half of 2025[2][4].
-
-
-
-========================================
-FREE SEARCH: Q2-Q4 2025 global macroeconomic forecasts (GDP, inflation, unemployment) for US, EU, China, and EM with consensus risks and opportunities.
-========================================
-
-# Q2-Q4 2025 Global Macroeconomic Forecast
-
-As we move through 2025, the global economy shows signs of moderation after stronger performance in 2024. Based on the latest forecasts, I'll provide a comprehensive analysis of key economic indicators across major regions for the remainder of 2025, along with associated risks and opportunities.
-
-## United States
-
-### GDP Growth
-The U.S. economy is projected to experience a cooling trend throughout 2025. Real GDP growth is forecast to decelerate to 1.9% for 2025, down from 2.8% in 2024[1]. For Q2 2025 specifically, growth is expected at a modest 1.5%, significantly below the previous quarter's forecast of 2.1%[2]. This represents a notable downward revision from earlier projections.
-
-### Unemployment
-The labor market outlook shows deterioration, with unemployment expected to rise from 4.2% in Q2 2025 to 4.5% by Q1 2026[2]. On an annual basis, unemployment is projected to average 4.3% for 2025[2]. Monthly job gains are forecast at approximately 141,400 for Q2 2025, with an annual average of 140,900 monthly additions for 2025—lower than previous estimates[2].
-
-### Inflation
-While specific inflation numbers for Q2-Q4 2025 aren't directly provided, the Federal Reserve is anticipated to make two 25 basis point rate cuts in 2025 (June and December), suggesting inflation pressures may be moderating but remain a concern, particularly with potential tariff impacts keeping price pressures elevated[5].
-
-## European Union
-
-### GDP Growth
-The EU economy is projected to grow at a modest 1.1% in 2025, only marginally improved from 1.0% in 2024[3]. The Euro area specifically will see even softer growth at 0.9% in 2025, unchanged from 2024[3]. This indicates continued economic challenges for the region throughout 2025.
-
-### Unemployment
-Unemployment in the EU is forecast to remain stable at 5.9% throughout 2025, identical to 2024 levels[3]. The Euro area will experience slightly higher but improving unemployment at 6.3% for 2025, down marginally from 6.4% in 2024[3].
-
-### Inflation
-Inflationary pressures are expected to moderate, with EU inflation projected at 2.3% for 2025, down from 2.6% in 2024[3]. The Euro area should see inflation of 2.1% in 2025, improving from 2.4% in 2024[3].
-
-## Alternative Growth Scenarios
-
-It's worth noting that some forecasts present more optimistic outlooks. Deloitte, for instance, projects a much stronger U.S. growth scenario with real GDP potentially rising by 2.9% in 2025[4]. The University of Michigan forecast suggests calendar year GDP growth of 2.3% for 2025[5].
-
-## Risks and Opportunities
-
-### Key Risks
-1. **Policy Shifts**: The U.S. economy faces headwinds from "shifting policies" that could further dampen growth[1].
-2. **Tariff-Induced Inflation**: Higher tariffs may keep inflation elevated through Q2-Q3 2025[5].
-3. **Labor Market Weakness**: Consistently rising unemployment forecasts suggest broader economic fragility.
-4. **Fiscal Concerns**: Deficit projections for both EU (-3.3%) and Euro area (-3.2%) in 2025 indicate continued fiscal pressures[3].
-
-### Opportunities
-1. **Monetary Easing**: Expected interest rate cuts in the U.S. (June and December 2025) could provide economic support[5].
-2. **Tax Relief**: Lower taxes projected for 2026 may help improve growth momentum toward the end of 2025[5].
-3. **Inventory Rebuilding**: This could help sustain expansion in early 2025[5].
-
-While detailed forecasts for China and emerging markets are not available in the provided data, the overall global picture suggests moderate growth amid continued economic uncertainty for the remainder of 2025, with most advanced economies showing decelerating growth trajectories compared to 2024.
-
-
-
-========================================
-FREE SEARCH: 2025 performance, risk, and valuation trends in US REITs: industrial, data center, multifamily, and retail REITs (cap rates, FFO multiples, dividend yields).
-========================================
-
-# 2025 US REIT Market Analysis: Performance, Risk, and Valuation Trends
-
-The US REIT market in 2025 has shown resilience and outperformance against broader market indices. As of early April 2025, the FTSE Nareit All Equity REITs Index has gained 2.9%, while the Russell 1000 has declined 4.5% and the Dow Jones US Total Stock Market has fallen 4.9%[1]. Analyst expectations for 2025 suggest a total return of approximately 9.5%, which aligns with the historical long-term average of 10%, with estimates ranging from 0% to 15%[2].
-
-## Current Performance Metrics
-
-REITs demonstrated strong fundamentals in late 2024, recording a 14% total return through November 30, 2024, outperforming private real estate by more than 17 percentage points[3]. For 2025, analysts forecast FFO/AFFO growth of 4.8%, with estimates ranging from 3.9% to 6%[2]. This growth trajectory is supported by improving property fundamentals across various sectors and the potential for declining interest rates.
-
-## Sector-Specific Analysis
-
-### Industrial REITs
-Industrial REITs faced supply-demand imbalances in recent quarters, with excess supply needing absorption. However, these imbalances are showing signs of bottoming out in 2025, creating potential improvement opportunities[5]. The industrial sector has been adjusting to normalized demand patterns following the post-pandemic e-commerce surge.
-
-### Data Center REITs
-Data center REITs continue to benefit from the ongoing digital transformation and AI-driven demand for computing infrastructure. This subsector represents one of the strongest growth segments within the REIT market in 2025, supported by megatrends in technological innovation[4].
-
-### Multifamily REITs
-Sunbelt apartments, which had previously experienced supply-demand imbalances, are showing signs of stabilization in 2025[5]. Multifamily fundamentals are improving as new supply deliveries are expected to decrease through 2025, potentially leading to rent growth stabilization.
-
-### Retail REITs
-Retail REITs have demonstrated resilience through strategic repositioning and focus on high-traffic, necessity-based retail centers. Their performance in 2025 reflects the sector's adaptation to changing consumer behaviors and omnichannel retail strategies.
-
-## Valuation Metrics
-
-Current REIT valuations in early 2025 are noted as "slightly high" by some analysts, which could potentially limit multiple expansion[5]. However, analyst opinions are divided on whether current valuations are supportive of or hindering better relative valuations[2].
-
-## Risk Factors
-
-Several risk factors are influencing REIT performance in 2025:
-
-1. Interest rate uncertainty: Despite Fed rate cuts beginning in late 2024, longer-term interest rates have generally risen, which impacts REITs due to their capital-intensive nature[5].
-
-2. Economic conditions: While a "soft landing" scenario with moderating interest rates and steady economic growth appears to be materializing, fiscal uncertainties and disruptive trade policies pose ongoing risks[3].
-
-3. Property fundamentals: Certain sectors continue to face challenges in property fundamentals, although these appear to be stabilizing across most segments[3].
-
-## Investment Outlook
-
-REITs are well-positioned for 2025 due to several factors:
-
-1. Strong balance sheets and efficient capital market access, allowing them to navigate the current interest rate environment[3].
-
-2. Increasing transaction volume providing improved price discovery and growth opportunities for REITs with strong financial positions[2].
-
-3. Accelerating earnings growth projected for 2026, suggesting potential for sustained performance beyond 2025[2].
-
-4. Four key megatrends supporting REIT evolution: specialization, scale, innovation, and sustainability, which highlight REITs' natural advantages in the current market environment[4].
-
-The overall outlook for US REITs in 2025 reflects a cautiously optimistic stance, with the potential for performance improvement as interest rates potentially moderate and property fundamentals stabilize across various sectors.
-
-
-
-========================================
-FREE SEARCH: Q2-Q4 2025 outlook for US dollar (DXY): drivers, consensus forecasts, and impact scenarios for equities and commodities.
-========================================
-
-## Q2–Q4 2025 Outlook for the US Dollar (DXY)
-
-**Summary**: The outlook for the US dollar index (DXY) through the remainder of 2025 points to increased volatility but with a slight weakening trend, influenced by diverging monetary policy, US growth differentials, and shifting global capital flows. The impact on equities and commodities will vary depending on the magnitude and drivers of these moves.
+**Summary:**  
+After a multi-year run for technology and growth stocks, 2025 has seen a notable sector rotation globally. As H2 2025 begins, momentum, earnings revisions, and fund flows point to emerging leaders and laggards across equity sectors.
 
 ---
 
-### Key Drivers
+## Sectors Showing Strongest Momentum & Earnings Revisions
 
-- **Federal Reserve Policy and Interest Rates**
-  - The FOMC has maintained the federal funds rate at 4.25%–4.50% since substantial cuts in 2024, but the pace of quantitative tightening (QT) is slowing, with Treasury runoff caps reduced from $25bn to $5bn monthly[1].
-  - Market participants are debating the path for Fed cuts in H2 2025, with more dovish expectations tending to weaken the USD[1][5].
+**1. Healthcare**
+- The Health Care Select Sector SPDR ETF (XLV) is up 7.5% year-to-date, significantly outperforming other major sectors[3].
+- Healthcare has benefited from defensive positioning amid ongoing macro uncertainty, as well as multiple positive earnings revisions[3].
+- The sector’s blend of stability, innovation, and resilient demand makes it a favored option as growth moderates and market volatility remains above trend levels[3].
 
-- **US Economic Growth**
-  - The US economy is forecast to grow by 2.7% in 2025, outpacing many developed peers, which supports dollar strength relative to other currencies[2].
-  - However, as rate differentials narrow with anticipated Fed cuts, the dollar's yield advantage may erode[5].
+**2. Value-Oriented Sectors**
+- Value stocks, as represented by the Russell 1000 Value Index, are up 1.89% YTD, contrasting with declines in growth/tech equities[5].
+- Sectors like consumer staples and select industrials (often included in value indices) have seen improving earnings outlooks, supported by stable cash flows and pricing power[5].
+- Rotation away from overvalued growth sectors has benefited these groups, especially as economic data cools and interest rate expectations shift.
 
-- **Global Monetary Policy Divergence**
-  - While the ECB and BoJ are also adjusting their stances, shifts in Japanese and European yields create cross-currents for the USD, especially against the yen and euro[1][5].
-  - Japanese policy tightening (with the 1-year yield at 0.70% versus a BOJ target rate of 0.50%) is seen as a potential catalyst for a weaker USD/JPY, which could pressure the DXY lower[5].
-
-- **Risk Appetite and Capital Flows**
-  - Resilient US equities may continue to draw foreign investment, supporting the dollar, but increased risk appetite generally favors non-USD assets and could drive capital to emerging markets and commodities.
+**3. International Equities**
+- While not a sector by itself, international stocks (MSCI EAFE) have delivered an 11.21% YTD gain, illustrating momentum in sectors tied to non-U.S. markets, notably financials, industrials, and consumer discretionary in Europe and Asia[5].
 
 ---
 
-### Consensus Forecasts
+## Sectors Lagging Behind
 
-| Period     | DXY Forecast      | EUR/USD Range      | USD/JPY Range      |
-|------------|------------------|--------------------|--------------------|
-| Q2 2025    | 101.68–104.0     | 1.08–1.17          | 135–150            |
-| Q3 2025    | 99.81–104.0      | 1.10–1.19          | 133–148            |
-| Q4 2025    | 99.0–106.45      | 1.12–1.21          | 131–146            |
+**1. Financials**
+- Financials continue to underperform, as evidenced by weakness in sector indices and negative price action[3].
+- Factors include ongoing uncertainty about net interest margins and loan growth amid a paused or constrained U.S. Federal Reserve policy outlook and global economic headwinds[2][3].
 
-- DXY is forecast to weaken further from its January 2025 high of 110.18, with most analysts seeing levels hovering near 100–104 by Q4, punctuated by volatility and short-term rebounds[3][4][5].
-- The euro is expected to strengthen modestly against the USD; forecasts see EUR/USD approaching or exceeding 1.15 by late 2025[1].
-- USD/JPY is projected to decline, potentially dropping below 140 should BOJ tightening persist and the Fed cut rates[1][5].
+**2. Technology**
+- After several years of leadership, technology/growth stocks (as measured by the Nasdaq) are down more than 6% YTD[5].
+- Negative momentum has been driven by high valuations, elevated profit expectations that are proving hard to meet, and rising competitive or regulatory risks[5].
 
 ---
 
-### Impact Scenarios
+## Macro & Earnings Revisions Backdrop
 
-#### **Equities**
-- **Weaker USD (Base Case)**
-  - US multinationals may benefit from currency translation gains on foreign earnings.
-  - S&P 500 sectors with non-US revenues (Tech, Industrials, Consumer Staples) likely outperform.
-  - EM equities often get a tailwind as local currencies strengthen and capital flows increase.
-
-- **Stronger USD (Upside Risk)**
-  - Exporters face margin pressure; non-US stocks may lag.
-  - US assets could outperform global equities due to safe-haven demand.
-
-#### **Commodities**
-- **Weaker USD**
-  - Bullish for commodities priced in dollars (gold, oil, industrial metals); tends to lift prices as the greenback falls[2][5].
-  - EM commodity producers benefit from improved terms of trade.
-
-- **Stronger USD**
-  - Commodities typically see price headwinds, particularly for oil and gold, as these become more expensive for non-USD buyers.
+- **Earnings revisions**: Tariffs and trade policy changes have created potential risks for margin compression and downward revisions to corporate earnings, especially in more cyclical, export-oriented sectors[1][2].
+- **Defensive sectors** (healthcare, utilities) continue to attract flows as investors brace for persistent volatility and a potentially maturing expansion or economic slowdown[2][4].
+- **Cyclical sectors** (technology, consumer discretionary) are seeing more cautious outlooks with earnings momentum slowing and vulnerability to negative revisions if macro data disappoints[1][2][5].
 
 ---
 
-### Actionable Insights
+## Key Metrics Snapshot (YTD as of early Q2 2025)
 
-- **Asset Allocation**: Tilt toward US multinational equities and commodity-sensitive sectors if the USD weakens.
-- **FX Hedging**: Consider reducing hedges on foreign currency exposures if a softer dollar is expected.
-- **Commodities**: Favor incremental commodity allocations, especially gold and energy, on further DXY declines.
-
----
-
-### Risks to Watch
-
-- **Unexpected Fed Hawkishness**: Could spike the DXY above consensus, hurting risk assets and EM.
-- **Geopolitical or Global Slowdown**: Safe-haven flows could favor the dollar despite rate cuts.
-- **Sharp Policy Shifts Abroad**: ECB or BoJ policy surprises could create non-linear FX moves.
+| Sector/Index                 | YTD Performance | Momentum | Earnings Revisions |
+|------------------------------|-----------------|----------|--------------------|
+| Healthcare (XLV)             | +7.5%           | Strong   | Positive           |
+| Value Stocks (Russell 1000 V)| +1.89%          | Moderate | Stable/positive    |
+| International (MSCI EAFE)    | +11.21%         | Strong   | Improving          |
+| Financials                   | Negative        | Weak     | Flat/negative      |
+| Technology (Nasdaq)          | -6%             | Weak     | Negative           |
 
 ---
 
-**Conclusion**: The consensus for Q2–Q4 2025 calls for a gradual but choppy weakening of the US dollar index, with DXY moving toward 100–104, barring unexpected shocks[1][3][5]. This environment is broadly supportive for US multinationals, commodities, and non-US equities, but vigilance is warranted for risk events that could abruptly reverse the trend.
+## Actionable Portfolio Insights
+
+- **Overweight**: Healthcare, value-oriented sectors, and international equities with improving earnings revisions and price momentum.
+- **Underweight**: Financials and technology, both showing lagging returns and negative-to-flat earnings momentum.
+- **Diversification**: Critical, as market leadership is rotating rapidly and macro headwinds (tariffs, policy shifts) threaten concentrated bets[5][2].
+
+---
+
+**In summary:**  
+Healthcare and value/international sectors currently show the strongest momentum and earnings support for H2 2025, while financials and technology are lagging due to unfavorable macro and sector-specific headwinds[3][5]. Portfolio positioning should continue to favor defensives and selectively add to international/value exposure as rotation persists.
 
 
 
 ========================================
-FREE SEARCH: Q2 2025 consensus earnings revision trends for global technology hardware, semiconductor, and software sectors with drivers and risks.
+FREE SEARCH: Q3 2025 projections for US REIT (Real Estate Investment Trust) fundamentals: rent growth, vacancy, capital markets access, and dividend outlook by sub-sector
 ========================================
 
-Based on the available data, I'll provide a comprehensive analysis of Q2 2025 earnings revision trends for technology subsectors, focusing on hardware, semiconductor, and software components within the broader tech sector.
+## Q3 2025 US REIT Projections: Fundamentals by Sub-Sector
 
-## Q2 2025 Tech Sector Earnings Revision Trends
+### Rent Growth
 
-The technology sector is experiencing significant shifts in earnings expectations for Q2 2025, with consensus estimates being revised downward from earlier projections, though with some signs of stabilization in recent weeks.
+**Multifamily REITs**
+- Rent growth is expected to remain positive but moderate in Q3 2025, with blended net effective rent growth reported at 2.8% in early 2025[4].
+- Sun Belt markets anticipate a return to slightly positive rent growth in Q3, as new supply pressures ease and demand remains resilient[4].
+- Major players like Equity Residential and MAA have reaffirmed 2025 guidance, reflecting stable or improving rental environments despite localized oversupply (notably in certain Sun Belt metros)[3][4].
+- Occupancy remains robust (over 97% in core coastal regions), and apartment demand is underpinned by strong job and wage growth, especially in suburban coastal markets and high-migration metros[3][4][5].
 
-### Overall Tech Sector Outlook
+**Industrial REITs**
+- While not explicitly detailed in the search results, the sector continues to benefit from e-commerce tailwinds and supply chain demand. Rent growth is expected to moderate but remain above long-term averages, likely in the 3–5% range based on historical trends (inference based on sector resilience and prior years).
 
-Tech sector earnings are currently expected to increase by +11.9% year-over-year in Q2 2025, accompanied by +9.9% higher revenues[1][4]. This growth projection represents a material reduction from previous estimates, as part of a broader pattern of downward revisions across most market sectors.
+**Office REITs**
+- Office rent growth remains weak or negative in most markets, especially for commodity space. Vacancy rates are stubbornly high due to hybrid work adoption, with market rent growth likely flat or slightly negative.
 
-The current growth expectation of +11.9% is down from +14.2% as of April 2, 2025, indicating a notable downward adjustment in the past two months[5]. While the magnitude of these reductions is greater than observed in recent quarters, the tech sector's revisions trend has shown signs of stabilization lately[4].
+**Retail REITs**
+- High-quality shopping centers and necessity-based retail are seeing stable or modestly rising rents. The outlook is improved for experiential and open-air centers, while weaker for malls.
 
-### Hardware & Semiconductor Outlook
+**Hotel REITs**
+- Hotel REITs led Q1 2025 rebound, though this is driven more by occupancy and rate normalization post-pandemic recovery than sustained rent (ADR) growth[3].
 
-While the search results don't provide specific breakdowns for hardware and semiconductor subsectors, these components are significant contributors to the overall tech sector performance. The broader tech sector revision trend suggests these subsectors are likely experiencing similar downward pressure on earnings expectations.
+### Vacancy
 
-Key observations:
+- **Multifamily:** Occupancy rates are holding near historic highs (>97% in many major metros), though new supply in the Sun Belt produces localized softness[3][4][5].
+- **Industrial:** Vacancy rates remain low, around 4–5% nationally, but have ticked up from historic lows, mainly as new supply catches up.
+- **Office:** Vacancy remains elevated (17–20% in major markets), with tenant downsizing and lease renewals at lower square footage.
+- **Retail:** Grocery-anchored and necessity-based centers have low vacancies (sub-6%), but enclosed malls experience double-digit vacancy.
+- **Hotels:** Sector is nearing pre-pandemic occupancy levels.
 
-- Tech remains one of the stronger performing sectors despite downward revisions
-- Hardware and semiconductor companies may be particularly affected by the heightened tariff uncertainty that began in early Q2 following April 2nd tariff announcements[4]
-- Supply chain disruptions and global trade tensions appear to be weighing on forward-looking estimates
+### Capital Markets Access
 
-### Software Outlook
+- Broadly, US REITs maintain strong balance sheets, low debt costs, and continued access to diverse capital sources, positioning them to capitalize on market opportunity as transaction volumes rise in late 2025[2].
+- Implied cap rates (average ~5.9%) reflect higher-for-longer rates, but as new supply tapers and certainty returns to interest rate policy, capital markets access is expected to incrementally improve—benefiting well-capitalized and high-quality REITs[1].
+- REITs with disciplined leverage and scale are best positioned to make accretive acquisitions as pricing adjusts.
 
-Software companies, as part of the broader tech ecosystem, are included in the overall tech sector projection of +11.9% earnings growth. Software typically enjoys higher margins than hardware, which may provide some buffer against macroeconomic headwinds.
+### Dividend Outlook
 
-## Drivers of Revision Trends
+- **REIT sector overall:** Analysts expect FFO/AFFO growth of about 4.8% in 2025 (range: 3.9–6%), supporting stable to modestly rising dividend payments in Q3 2025, especially for well-positioned sectors like multifamily and industrial[1].
+- **Multifamily/Industrial:** Dividends are projected to remain stable or increase marginally, reflecting solid cash flow and moderate earnings growth[3][4][5].
+- **Office:** Dividend risk is present due to weak fundamentals; some REITs may cut payouts to preserve capital.
+- **Retail and Hotel:** Dividends are stable or recovering, with retail benefiting from stabilized rent rolls and hotels from improved cash flow.
 
-Several factors are influencing the downward revision of tech earnings estimates:
+### Comparative Outlook by Sub-Sector
 
-1. **Tariff Uncertainty**: The announced tariffs in early April 2025 (though delayed for three months) have created significant uncertainty that has weighed heavily on estimates for current and coming quarters[4].
+| Sub-Sector     | Q3 Rent Growth      | Vacancy Trend          | Capital Markets Access      | Dividend Outlook         |
+|----------------|--------------------|------------------------|----------------------------|-------------------------|
+| Multifamily    | 2–3% (moderate)    | Stable/High Occupancy  | Strong for top operators   | Stable/Modest growth    |
+| Industrial     | ~3–5% (moderate)   | Low but rising         | Strongest among sectors    | Stable/Modest growth    |
+| Office         | Flat/Negative      | High/Elevated          | Weak, selective            | At risk/stable for top  |
+| Retail         | 1–2% (selective)   | Low for best assets    | Moderate, sector-specific  | Stable                  |
+| Hotel          | Lodging ADR rebound| Improved               | Recovering                 | Normalizing             |
 
-2. **Macroeconomic Pressures**: The broader economic environment appears to be challenging, as 15 out of 16 sectors have experienced downward revisions since the quarter began[4].
+### Additional Quantitative Takeaways
 
-3. **Normalization After Strong Growth**: The technology sector had been enjoying a very favorable revisions trend for more than a year prior to these recent adjustments, suggesting some normalization may be occurring[5].
+- Analysts forecast a 9.5% total return for US REITs in 2025, near the historic average, with a wide range (0–15%) reflecting sector dispersion[1].
+- Net inventory growth projected at 2.8% overall for multifamily; Sun Belt region at 4.6%[5].
+- REITs are preparing for increased transaction activity and price discovery in late 2025, benefiting those with strong liquidity and disciplined cost structures[1][2].
 
-## Risks and Outlook
+---
 
-Despite the downward revisions, several notable points emerge:
-
-- The tech sector's +11.9% projected earnings growth still significantly outpaces the broader S&P 500 index's expected growth of +5.5% for Q2 2025[4].
-
-- For full-year 2025, tech sector earnings are expected to increase by +11.3% from 2024 levels, down slightly from the +12.1% growth expected as of April 2nd[5].
-
-- The stabilization of estimate revisions in recent weeks suggests the initial negative reaction may have been overdone, with modest upward revisions occurring over the past few days[5].
-
-- The broader S&P 500 is still expected to deliver approximately 9% EPS growth for full-year 2025, providing a reasonably positive backdrop for the tech sector[2].
-
-The next earnings season will be particularly important to monitor as companies provide updated guidance that could either confirm these more conservative estimates or point to stronger-than-expected performance in the face of macroeconomic challenges.
-
-
-
-========================================
-FREE SEARCH: 2025 consensus outlook for defensive equity sectors (utilities, healthcare, consumer staples): valuation, performance, and risk factors.
-========================================
-
-The 2025 outlook for defensive equity sectors shows mixed performance with utilities leading while broader market sentiment remains cautious amid trade policy uncertainties. Let me provide a comprehensive analysis of the current landscape for these traditionally defensive sectors.
-
-## Utilities Sector
-
-Utilities have emerged as the top-performing sector in 2025 thus far, posting a 6.6% increase year-to-date through early May[5]. This strong performance highlights the sector's defensive characteristics during periods of market uncertainty. 
-
-**Growth Catalysts:**
-- Electricity demand has reached an inflection point, creating what some analysts describe as a "once-in-a-generation potential opportunity"[2]
-- The sector benefits from stable demand patterns regardless of economic conditions
-- Falling interest rates projected for 2025 could benefit utilities, which typically carry higher debt loads
-
-**Risk Factors:**
-- Regulatory changes following recent elections could impact profitability
-- Long-term inflation concerns may pressure margins
-- Potential for accelerated renewable energy transition costs
-
-## Consumer Staples
-
-Consumer staples have demonstrated resilience in 2025, with the sector up 4.1% year-to-date[5]. This positive performance contrasts sharply with consumer discretionary stocks, which have fallen 10% during the same period.
-
-**Performance Drivers:**
-- Defensive positioning proves valuable amid concerns about consumer spending shifts
-- Reduced sensitivity to economic cycles provides stability
-- Consumers redirecting spending toward essential purchases as tariffs impact prices[5]
-
-**Valuation Considerations:**
-- Traditionally trades at premium multiples during market uncertainty
-- Dividend yields generally remain attractive for income-focused investors
-- Potential margin pressure from elevated input costs and supply chain disruptions
-
-## Healthcare Sector
-
-While specific 2025 performance metrics for healthcare aren't detailed in the search results, the sector typically demonstrates defensive characteristics similar to utilities and consumer staples.
-
-**Market Dynamics:**
-- Aging demographics continue supporting long-term demand
-- Innovation pipelines and potential M&A activity could drive growth
-- Policy changes under the current administration may impact subsectors differently
-
-**Risk Assessment:**
-- Regulatory and pricing pressure remains an ongoing concern
-- Elevated volatility likely to persist amid ongoing uncertainty about U.S. trade policy[3]
-- Sector-specific impacts from bilateral tariff negotiations could emerge
-
-## Cross-Sector Considerations
-
-The broader context for defensive sectors in 2025 includes several important factors:
-
-**Market Sentiment:**
-- Despite recent rebounds, the overall market (SPY) remains down 3.3% year-to-date as of early May[5]
-- Defensive equities maintain a wide lead over the broader market
-- Volatility is expected to remain elevated throughout 2025[3]
-
-**Economic Backdrop:**
-- Trade tensions continue influencing sector performance, with potential positive developments from US-UK and US-China negotiations[5]
-- Expectations that tariffs will impact consumer spending patterns benefit defensive sectors[5]
-- J.P. Morgan analysts believe U.S., European, and Japanese equity markets will likely reach new highs over the next 12 months despite current challenges[4]
-
-In summary, defensive sectors are demonstrating their traditional value in 2025's uncertain market environment, with utilities leading performance followed by consumer staples. Investors should monitor trade policy developments, interest rate movements, and consumer spending patterns as key drivers of performance for these sectors through the remainder of 2025.
+**Summary:**  
+Q3 2025 fundamentals for US REITs remain differentiated by sub-sector. Multifamily and industrial REITs project modest rent growth, strong occupancy, and stable dividends. Office REITs face persistent headwinds with high vacancy and pressured rent rolls, while retail and hotel sectors are showing stabilization and gradual improvement. Well-capitalized REITs with scale are best-positioned as market uncertainty decreases and capital markets access marginally improves[1][2][3][4][5].
 
 
 
 ========================================
-FREE SEARCH: Q2-Q4 2025 outlook for US and global energy markets: oil, gas, renewables, and related equity/ETF performance drivers.
+FREE SEARCH: Consensus view on US dollar (DXY) trajectory for Q3–Q4 2025, including main drivers: Fed policy, global capital flows, and de-dollarization risks
 ========================================
 
-Based on the latest energy outlooks and forecasts, here's a comprehensive analysis of the Q2-Q4 2025 energy market landscape and investment implications:
+The consensus outlook for the US dollar in Q3-Q4 2025 suggests a period of potential weakness following an extended period of strength. Based on current market indicators and policy developments, there are several key factors shaping the dollar's trajectory for the latter half of 2025.
 
-## US Energy Market Outlook
+## Federal Reserve Policy
 
-### Electricity Demand and Generation
+The Federal Reserve has been on a measured easing cycle since September 2024, having reduced the federal funds target rate by a cumulative 100 basis points in the final three meetings of 2024, bringing the range to 4.25% to 4.50% as of February 2025[4]. Current policy positioning indicates:
 
-The United States is experiencing a significant surge in electricity demand that represents a fundamental shift after two decades of stagnation. This growth is primarily driven by:
+- The Fed is maintaining this target rate range of 4.25% to 4.50% as of late May 2025[2]
+- The pace of balance sheet reduction (quantitative tightening) has slowed, with monthly Treasury security redemption caps reduced to $25 billion as of June 2024[1]
+- Future rate decisions remain data-dependent, with the FOMC continuing to assess incoming economic data, the evolving outlook, and balance of risks[4]
 
-- Unprecedented electrification initiatives
-- AI-driven data center expansion
-- Resurgence in industrial reshoring and manufacturing[5]
+This moderate easing cycle follows a period where the dollar demonstrated surprising resilience, having risen 7% in 2024 despite the initial Fed rate cuts[3].
 
-Total electricity generation is forecast to increase by 2% in 2025 compared to 2024, representing an addition of approximately 100 billion kilowatthours (kWh), followed by a more modest 1% growth in 2026[2]. This sustained demand growth is reshaping the energy landscape and creating new investment opportunities.
+## Global Growth Differentials
 
-### Natural Gas Dynamics
+A significant driver supporting the dollar has been the relative strength of the US economy:
 
-Despite remaining the largest source of electricity in the US, natural gas-fired generation is projected to decline by 3% (58 billion kWh) in 2025 compared to 2024[2]. This decline is primarily attributed to rising prices, with natural gas delivered to power generators forecast to average $4.50 per million British thermal units in 2025—a substantial 63% increase from 2024's historic lows[2].
+- The US economy is projected to grow by 2.7% in 2025, outpacing many other developed economies[3]
+- This growth differential has created a widening gap between US 10-year bond yields and those of key trading partners, reaching levels not seen since 1994[3]
+- The real broad effective exchange rate (REER) of the dollar remains near all-time highs, indicating exceptional relative strength[3]
 
-The higher natural gas prices are expected to persist through Q2-Q4 2025 as the United States increases LNG exports, creating upward price pressure domestically[2]. Natural gas's share of electricity generation is projected to decline to 40% in 2025 due to these elevated fuel prices[5].
+## Long-Term Structural Challenges
 
-### Coal Generation Trends
+Despite near-term strength, analysts identify several factors pointing to dollar depreciation in the medium to long term:
 
-Coal-fired electricity generation is expected to increase by 6% (41 billion kWh) in 2025, benefiting from higher natural gas prices and temporary regulatory relief[2]. The EPA has announced temporary exemptions from emissions regulations for numerous coal-fired power plants, which, combined with higher natural gas prices, creates favorable near-term economics for coal generation[2].
+- The dollar is currently trading approximately two standard deviations above its 50-year average, suggesting limited room for further appreciation[3]
+- The persistent US trade deficit, measured at 4.2% of GDP as of September 2024, represents a structural challenge that could eventually pressure the currency[3]
+- Analysts at State Street Global Advisors project the dollar could decline by at least 15% over a multi-year horizon as US yields and growth revert toward G10 averages[5]
 
-However, this represents a short-term phenomenon, as coal plant operators have reported plans to retire approximately 5% of generating capacity in 2025, with most retirements scheduled for year-end[2]. Coal generation is expected to fall by 9% (61 billion kWh) in 2026 as these retirements take effect[2].
+## Political and Policy Factors
 
-### Renewable Energy Expansion
+Recent policy shifts are expected to influence dollar dynamics:
 
-Renewable energy, particularly solar, is positioned to be the fastest-growing energy source through the remainder of 2025. Solar generation experienced a 30% year-over-year increase as of September 2024, accelerating from 13% growth during the same period in 2023[5]. Analysis from Deloitte projects that solar could achieve a 34% growth rate by year-end 2025[5].
+- Domestic manufacturing initiatives, tariff increases, and industry deregulation could support business growth and sustain higher interest rates, potentially bolstering the dollar[3]
+- However, increasing policy uncertainty and isolationist tendencies may reduce global confidence in the US as a reliable trade and financial partner[5]
+- The implementation of tariffs is viewed by some analysts as likely to accelerate and deepen an anticipated dollar downturn[5]
 
-This robust growth in renewables is occurring against the backdrop of broader energy transition initiatives outlined in the New Energy Outlook 2025, which presents long-term scenarios for the transition to a low-carbon economy[3].
+## Regional Currency Opportunities
 
-## Economic Context and Investment Implications
+For Q3-Q4 2025, currencies expected to potentially outperform against the dollar include:
 
-The energy market outlook must be considered within the broader economic context. S&P Global Ratings forecasts that US real GDP growth will cool to 1.9% in both 2025 and 2026, down from 2.9% in 2023 and 2.8% in 2024[4]. This economic deceleration will likely impact energy demand growth rates in certain sectors.
+- The euro and Japanese yen, which may benefit from repatriation flows out of unhedged US assets[5]
+- The Swedish krona, which could see relative strength due to greater fiscal and monetary flexibility[5]
+- The British pound, which may benefit from relatively high yields and a more moderate US tariff stance, though upside is limited by tight fiscal constraints[5]
 
-### Investment Considerations for Q2-Q4 2025
+## Capital Flows Outlook
 
-1. **Natural Gas Equities**: Companies with significant LNG export exposure may outperform domestic-focused producers given the divergence between export and domestic pricing. The forecast 63% increase in power sector natural gas prices suggests potential margin expansion for producers with flexible sales strategies.
+Portfolio flows are expected to play a critical role in dollar valuation:
 
-2. **Renewable Energy ETFs**: Solar-focused ETFs are positioned for continued outperformance given the projected 34% growth rate. Companies with established manufacturing capacity and project pipelines should benefit from accelerating adoption.
+- Analysts anticipate persistent portfolio outflows from US assets, either through outright sales or increased currency hedging of dollar exposures[5]
+- This trend is expected to accelerate if US fiscal consolidation efforts disappoint or tariff policies negatively impact long-term productivity growth[5]
+- While periods of market turbulence may trigger temporary dollar strength due to safe-haven flows, the structural trend points toward gradual weakening[5]
 
-3. **Utility Stocks**: The 2% increase in electricity generation creates a supportive environment for utilities, particularly those with significant renewable generation assets and limited exposure to natural gas price volatility.
-
-4. **Coal Equities**: Despite the short-term boost in generation, the planned 5% capacity retirement and longer-term 9% generation decline in 2026 suggest cautious positioning in this sector. Companies with the most efficient plants benefiting from EPA exemptions may experience temporary margin expansion.
-
-5. **Energy Infrastructure**: Pipeline and storage operators serving LNG export facilities should benefit from increased throughput and potentially higher tariffs as export volumes grow.
-
-The remainder of 2025 presents a complex energy market characterized by shifting generation sources, rising natural gas prices, robust renewable growth, and temporary coal resurgence—all against a backdrop of moderating economic growth but sustained electricity demand increases.
+The consensus view suggests that while the dollar remains strong in the near term, the combination of monetary policy normalization, fiscal challenges, and changing global trade relationships points toward dollar depreciation in the latter part of 2025, though the magnitude and precise timing remain uncertain.
 
 
 
 ========================================
-FREE SEARCH: 2025 outlook and risk/return profile for broad US Treasuries and investment grade fixed income ETFs: duration, yield, and spread trends.
+FREE SEARCH: Outlook for gold and industrial metals prices through late 2025: supply/demand, ETF flows, and macro/geopolitical catalysts
 ========================================
 
-## 2025 Outlook: US Treasuries and Investment Grade Fixed Income ETFs
+# Gold and Industrial Metals Outlook Through Late 2025
 
-### **Yield and Duration Trends**
+The precious and industrial metals markets are experiencing significant price movements in 2025, with gold in particular reaching unprecedented levels. Based on current market data and expert forecasts, here's a comprehensive analysis of the outlook through the remainder of 2025.
 
-- **Treasury Yields:** After significant volatility in early 2025, yields have moved higher. For example, the 10-year Treasury yield spiked from below 4% to 4.5% in early April, with the 30-year yield briefly exceeding 5%[5]. The primary drivers were unexpected tariff announcements, heightened inflation concerns, and diminished market liquidity.
-- **Duration:** In the face of higher yields and volatility, most investment managers recommend maintaining benchmark or slightly lower duration exposure for broad fixed income allocations[3]. Benchmark duration for aggregate US investment grade indices (such as Bloomberg US Aggregate Bond Index) currently stands around 6.2 years.
+## Gold Market Dynamics
 
-### **Spread and Credit Trends**
+Gold has experienced a remarkable price trajectory in 2025, with the LBMA (PM) gold price setting multiple new record highs. The quarterly average price reached US$2,860/oz in Q1 2025, representing a substantial increase from previous periods[1]. Most recently, gold experienced a notable correction, dropping from $3,500 to $3,211 in early May, raising questions about its sustainability at these elevated levels[4].
 
-- **Spreads:** Treasury yield spreads—particularly Treasury to Overnight Index Swap (OIS)—widened sharply in early April, a signal of market stress and reduced liquidity[5]. However, investment-grade credit spreads have not shown extreme widening, reflecting a still-resilient economic backdrop, but spreads are at risk of widening further if volatility persists[2].
-- **Quality Preferences:** There is a consensus preference for high-quality (investment grade) credit, given ongoing economic and geopolitical uncertainty[3]. Lower-tier investment grade (BBB) may face pressure if volatility increases, but the risk of widespread downgrades remains contained for now.
+**Current Price Range**: As of late May 2025, gold is trading in a range between $3,200-$3,300, following its pullback from the $3,500 high. This represents a consolidation phase after the sharp rally earlier in the year.
 
-### **Return Expectations and Risk Profile**
+**Institutional Forecasts**: Major financial institutions have revised their gold price projections upward for 2025:
+- Goldman Sachs has raised its forecast to $3,100
+- Bank of America projects gold to reach $3,500
+- J.P. Morgan predicts prices around $3,000
+- Citigroup forecasts a range of $2,700-$3,200
+- UBS anticipates gold reaching $2,900
 
-- **Return Potential:** Higher yields in both Treasuries and investment grade credit create a favorable base case for fixed income total returns. Coupons for broad investment-grade indices are now in the 4.5%–5.5% range, the highest since before the Global Financial Crisis, providing meaningful income buffers against future price volatility[4].
-- **Risk Considerations:** Interest rate volatility remains a primary risk. The Treasury market saw rapid moves—10-year yield swings of more than 50 basis points in a single week—and liquidity conditions at times have deteriorated, amplifying price risks for both Treasuries and ETFs tracking them[5]. Credit risk in high grade fixed income is moderate relative to non-investment-grade assets, but wider spreads are possible if economic or policy shocks emerge.
+**Year-End Projections**: Based on aggregated forecasts, gold prices are expected to trade in the range of $3,266-$3,500 by the end of 2025, with some more bullish projections extending to $5,155 depending on macroeconomic developments and central bank demand[3][5].
 
-### **Key Metrics: Current State (May 2025)**
+## Supply and Demand Factors
 
-| Asset Class                           | Yield     | Duration | Spread (vs Treasuries) | Comment                                      |
-|----------------------------------------|-----------|----------|------------------------|-----------------------------------------------|
-| US Treasuries (10yr)                   | ~4.5%     | 9.2 yrs  | n/a                    | High volatility, strong income buffer         |
-| US Investment Grade Corp. Bonds        | 5.0–5.5%  | 7.0 yrs  | ~110–130 bps           | Modest spread, preference for higher quality  |
-| Aggregate Bond Index (e.g., US AGG ETF)| 4.7–5.0%  | 6.2 yrs  | ~55–65 bps             | Duration near benchmark, moderate credit risk |
+**Central Bank Purchasing**: Central banks continue to be significant buyers in 2025, maintaining the trend of diversifying reserves away from traditional fiat currencies. This represents a key structural support for gold prices.
 
-### **Actionable Takeaways for Portfolio Construction**
+**Investment Demand**: ETF flows have shown signs of recovery in 2025 after several quarters of outflows in previous years. Institutional investors are increasing allocations to gold as an inflation hedge and portfolio diversifier.
 
-- **Duration Positioning:** Maintain benchmark duration or slightly underweight, given ongoing yield volatility and uncertain Fed/tariff policy paths[3].
-- **Yield Capture:** The highest yields in over a decade provide substantial income, buffering portfolios against volatility and supporting total return potential[4].
-- **Spread Opportunities:** Consider capturing moderate investment grade spreads, but be selective—favor higher-quality issuers and limit allocations to lower-tier credits in this volatile environment[3].
-- **Risk Management:** Prepare for increased price swings and occasional liquidity gaps, particularly in Treasury and broad ETF exposures. Maintain flexibility to rebalance if volatility provides compelling entry points.
+**Physical Demand**: Physical gold demand from key markets like China and India remains robust, though price-sensitive buying has created some resistance at higher price levels.
 
-### **Summary**
+**Mining Production**: Supply constraints persist in the gold mining sector, with major producers struggling to replace reserves and facing higher extraction costs, supporting the price floor.
 
-The 2025 risk/return profile for US Treasuries and investment grade fixed income ETFs is anchored by higher yields and coupons, benchmark or modestly lower duration positioning, and moderate but manageable credit risks. Portfolio construction should focus on income capture with cautious duration exposure and strong issuer quality screens, given persistent macro and market volatility[2][3][4][5].
+## Macro and Geopolitical Catalysts
+
+**Inflation Concerns**: Despite central bank efforts, inflation has proven more persistent than expected in major economies, enhancing gold's appeal as a traditional inflation hedge.
+
+**Interest Rate Environment**: After the rate-hiking cycle of previous years, markets are anticipating potential rate cuts in late 2025, which typically benefits non-yielding assets like gold.
+
+**Geopolitical Tensions**: Ongoing global conflicts and trade tensions continue to drive safe-haven demand for gold.
+
+**Currency Devaluation Concerns**: Persistent government deficit spending and debt accumulation across major economies have raised concerns about long-term currency devaluation, bolstering the case for gold as a store of value.
+
+## Short-Term Price Outlook (June 2025)
+
+According to expert analysis, there are three potential scenarios for gold prices in June 2025:
+
+1. **Consolidation Scenario**: Gold could trade sideways between $3,200-$3,300 as the market digests recent gains and awaits new catalysts.
+
+2. **Bullish Breakout**: A move above $3,350 could trigger technical buying, potentially pushing prices toward the previous high of $3,500.
+
+3. **Corrective Pullback**: Further profit-taking might push gold temporarily below $3,200, creating a buying opportunity for long-term investors[2].
+
+## Industrial Metals Outlook
+
+While specific price data for industrial metals wasn't provided in the search results, these markets are typically influenced by:
+
+**Global Manufacturing Activity**: Industrial metals prices closely track global manufacturing PMI data, which has shown mixed signals in 2025.
+
+**Chinese Demand**: China's economic performance and infrastructure spending remain critical drivers for industrial metals like copper, aluminum, and nickel.
+
+**Energy Transition Demand**: The ongoing global shift toward renewable energy and electrification continues to create structural demand for copper, nickel, and other green energy metals.
+
+**Supply Constraints**: Many industrial metals face supply challenges due to underinvestment in new mining capacity over the past decade and increasing ESG requirements.
+
+## Investment Implications
+
+**Portfolio Allocation**: Maintaining a 5-10% allocation to gold appears prudent given the current macroeconomic and geopolitical landscape.
+
+**Entry Strategy**: Investors may consider using price dips below $3,200 as strategic entry points, particularly if fundamental drivers remain intact.
+
+**Exposure Methods**: Beyond physical gold, investors can gain exposure through gold mining equities, which offer operational leverage to gold prices, or through ETFs for more direct price exposure.
+
+The outlook for gold through late 2025 remains constructive, supported by a combination of macroeconomic uncertainty, central bank demand, and supply constraints, despite the potential for short-term volatility.
+
+
+
+========================================
+FREE SEARCH: Q3 2025 global equity ETF flows: which regions and factors (e.g., value, growth, quality) are seeing inflows/outflows and what does this suggest for allocation?
+========================================
+
+## Q3 2025 Global Equity ETF Flows: Regional and Factor Trends
+
+### **Regional ETF Flows**
+
+- **North America (Primarily U.S.):**
+  - Remains the dominant region for ETF inflows, with an estimated **$331.3 billion net inflows in Q1 2025**[5].
+  - The U.S. continues to account for the largest ETF assets under management globally ($10.43 trillion as of Q1 2025)[5].
+
+- **Europe:**
+  - Significant but smaller inflows compared to North America, totaling **$91.6 billion in Q1 2025**[5].
+  - Ongoing expansion in the European UCITS ETF market, with predictions of growth driven by **actively managed strategies** and rising retail participation through digital platforms and ETF savings programs[1].
+  
+- **Asia-Pacific:**
+  - Recorded **$38.2 billion in net inflows** in Q1 2025[5].
+  - **Australia**, **China**, **Japan**, **South Korea**, and **Taiwan** stand out as dynamic ETF markets with ongoing growth—China is anticipated to surpass Japan in ETF market size during 2025[1].
+
+- **Other Regions:**
+  - Modest but positive inflows observed in South and Central America ($0.4 billion) and Africa ($0.3 billion)[5].
+
+### **Equity Factor Flows (Value, Growth, Quality, Etc.)**
+
+- **Europe:**
+  - Growth remains a key theme for 2025, continuing the trend from 2024. ETF inflows in Europe are expected to favor **growth-oriented strategies**, likely reflecting investor optimism in sectors and companies with strong earnings potential[1].
+  - The expansion of **actively managed ETFs** is forecasted to accelerate, potentially encompassing a range of factors including quality, low volatility, and multi-factor approaches[1].
+
+- **U.S. and Global Trends:**
+  - While specific Q3 2025 factor flows are not detailed in the source data, historical patterns and expert commentary suggest:
+    - **Growth ETFs** are likely seeing continued inflows, especially in regions emphasizing technology, innovation, and large-cap equities[1][3].
+    - **Value** and **quality** factors may attract defensive inflows during periods of policy uncertainty or elevated volatility, which has been a theme in global markets entering 2025[3].
+    - The U.S. market, being the most significant by AUM and flow, is experiencing sophisticated investor demand—suggesting a continued blend of **core (market cap), growth, and quality** allocations[1][3].
+
+### **Implications for Portfolio Allocation**
+
+- **Overweight U.S. and Developed Markets:** Investors continue to favor the U.S. and developed Western European markets for equity allocations given their liquidity, breadth, and performance momentum[5].
+- **Growth Tilt in Europe:** Portfolios with European exposure may benefit from overweighting growth strategies, especially in sectors like technology, healthcare, and consumer discretionary[1].
+- **Asia-Pacific as a Growth Engine:** Consider increased allocations to Asia-Pacific ETFs, notably China and Australia, to capture regional dynamism and sector expansion[1][5].
+- **Balanced Factor Exposure:** Rising flows into active and multi-factor ETFs suggest investors are diversifying across growth, quality, and value to balance risk and opportunity during a period of evolving macroeconomic and monetary policy conditions[1][3].
+
+### **Key Data Points**
+
+| Region          | Q1 2025 Net Flows (USD bn) | Leading AUM (USD bn) | Thematic/Factor Trend       |
+|-----------------|---------------------------|----------------------|-----------------------------|
+| North America   | +331.3                    | 10,430.4             | Growth, Core, Quality        |
+| Europe          | +91.6                     | 1,652.7 (Ireland)    | Growth, Active, Digital      |
+| Asia-Pacific    | +38.2                     | Not specified        | Growth, China/Emerging Asia  |
+| S. & Cent. Am.  | +0.4                      | Not specified        | Passive/Core                 |
+| Africa          | +0.3                      | Not specified        | Passive/Core                 |
+
+### **Conclusion**
+
+The global ETF industry is witnessing robust inflows in 2025, with the **U.S. and Europe as primary destinations**. **Growth strategies and increased adoption of actively managed and digitally distributed ETFs** are key trends, especially in Europe and Asia-Pacific. These flows imply investors are positioned for continued economic expansion, but with diversification across **growth, quality, and value** factors in anticipation of potential macroeconomic shifts[1][5]. Portfolio strategies should emphasize U.S. and developed market equities, maintain a growth tilt in Europe, and consider the dynamism in Asia-Pacific markets for enhanced diversification and return potential.
+
+
+
+========================================
+FREE SEARCH: Forward estimates for S&P 500 earnings growth, valuation, and risk factors for H2 2025; how are strategists positioning vs. index benchmark?
+========================================
+
+Based on the latest data, S&P 500 earnings growth projections remain positive for the remainder of 2025, though with notable variations across quarters and sectors. Let me provide a comprehensive analysis of the current outlook, valuation metrics, and key risk factors.
+
+## H2 2025 Earnings Growth Outlook
+
+For the second half of 2025, analysts are projecting continued but moderating earnings growth. Specifically:
+
+- Q3 2025: Expected earnings growth of 7.2%[1]
+- Q4 2025: Expected earnings growth of 6.2%[1]
+
+These quarterly projections contribute to the full-year 2025 earnings growth forecast of approximately 9.1%[1], though estimates vary slightly across sources. Cresset Capital cites a slightly higher full-year 2025 projection of 10.1% earnings growth accompanied by 5.0% revenue growth[3].
+
+The growth narrative for 2025 is largely margin-driven rather than revenue-driven. JPMorgan notes that the consensus S&P 500 profit margin forecast for 2025 stands at an ambitious 13.4%, which would represent the highest annual margin since at least 2004[5].
+
+## Current Valuation Metrics
+
+The S&P 500's current valuation remains elevated:
+
+- Forward 12-month P/E ratio: 21.3x (as of late May 2025)[1]
+- 5-year average P/E: 19.9x[1][3]
+- 10-year average P/E: 18.4x[1]
+
+This represents an expansion from the 20.2x forward P/E ratio recorded at the end of Q1 2025 (March 31)[1][3]. According to Cresset Capital's analysis, the S&P 500 remains more than 15% above fair value, assuming current profit growth expectations are met[3].
+
+## Sector Dynamics and Earnings Breadth
+
+The earnings growth story for 2025 appears to be broadening beyond the "Magnificent Seven" mega-cap stocks:
+
+- Magnificent Seven: Expected 21% year-over-year EPS growth (slower than 2024)[5]
+- Remainder of S&P 500: Expected 13% year-over-year EPS growth (improvement from 2024)[5]
+
+Key sector expectations for H2 2025:
+- **Energy and Materials**: Returning to positive profit growth after struggling in 2024[5]
+- **Financials**: Slowing to approximately 8% year-over-year EPS growth due to lower net interest margins from policy rate adjustments[5]
+- **Healthcare**: Improving margin performance as post-COVID demand normalizes and wage growth moderates[5]
+
+## Risk Factors for H2 2025
+
+Several significant risk factors could impact the earnings outlook:
+
+1. **Trade Tariffs and Policy Uncertainty**: The recent implementation of tariffs has created uncertainty that isn't fully reflected in current estimates. Many companies are still assessing the potential impact on their supply chains and margins[3].
+
+2. **Valuation Pressure**: With the forward P/E ratio substantially above historical averages, there's vulnerability to multiple compression if earnings don't meet expectations[3].
+
+3. **Margin Sustainability**: The projected 13.4% profit margin represents a historically high level that may be challenging to achieve, particularly if inflationary pressures resurface or if tariffs impact input costs[5].
+
+4. **Divergence Between Current Results and Forward Guidance**: A noteworthy trend in Q1 2025 reporting was the contrast between strong current results (78% of companies beating EPS estimates) and more cautious forward guidance[1][3].
+
+## Strategist Positioning
+
+Wall Street strategists appear cautiously optimistic but with varied approaches to positioning versus the benchmark:
+
+Goldman Sachs has set a year-end 2025 S&P 500 target of 6,500, representing an 11% price gain and 12% total return from late 2024 levels[4].
+
+Investment advisors are recommending:
+
+1. **Increased Diversification**: Given the elevated valuation of U.S. large caps, strategists suggest broadening exposure to other market segments that offer better relative value[3].
+
+2. **Sector Rotation**: With earnings growth expected to broaden beyond technology, strategists are suggesting increased allocations to sectors poised for recovery, particularly energy and materials[5].
+
+3. **Quality Focus**: Given uncertainty around tariffs and their economic impact, there's emphasis on companies with pricing power and resilient supply chains.
+
+4. **Margin of Safety**: The 15%+ premium to fair value calculation suggests conservative positioning with selective exposure rather than full benchmark weighting[3].
+
+In summary, while earnings growth expectations remain positive for H2 2025, elevated valuations and emerging policy uncertainties suggest a more selective approach to S&P 500 exposure than the headline growth figures might initially indicate.
 
 
 
@@ -2847,95 +3003,101 @@ FINAL PORTFOLIO RECOMMENDATION
 ========================================
 
 {
-  "portfolio_thesis": "Given your low-to-moderate risk tolerance, 10-year horizon, and emphasis on capital preservation and steady income, this portfolio is designed to balance high-quality income-generating assets with selective growth exposure and robust diversification. The allocation tilts toward defensive sectors (utilities, healthcare, consumer staples, real estate), high-quality investment grade bonds, and dividend-focused equities, while integrating moderate growth and inflation hedges via technology, infrastructure, and commodities. This approach targets stable returns, resilience against market shocks, and the ability to outperform the S&P 500 over the cycle—while keeping downside risk well-contained.",
+  "portfolio_thesis": "Given your moderate-high risk tolerance, multi-year horizon, and desire for both capital growth and income, this portfolio balances high-conviction AI/tech and private equity themes with robust income generators and defensive assets. The allocation overweights sectors with superior forward earnings growth (AI, semiconductors, select healthcare, private equity) while ensuring diversification and downside protection via investment grade bonds, REITs, gold, and utilities. Market and macro research support a tilt toward quality, margin-resilient US equities, private equity exposure, and real assets, with defensive hedges against policy, inflation, and late-cycle risks.",
   "portfolio": [
     {
-      "asset_class": "investment_grade_corporate_bond_etfs",
-      "allocation": 16,
+      "asset_class": "semiconductors",
+      "allocation": 15,
       "position": "LONG",
-      "reason": "Anchors the portfolio with high-quality, income-generating bonds. Current yields (5%+) are attractive, spreads are stable, and duration risk is manageable with a modest overweight. Provides capital preservation and steady cash flow."
+      "reason": "Overweight due to AI infrastructure boom, sector-leading earnings and revenue growth (NVIDIA, Broadcom), and continued capital investment. Provides high growth and innovation exposure."
     },
     {
-      "asset_class": "treasury_and_inflation_bond_etfs",
-      "allocation": 12,
-      "position": "LONG",
-      "reason": "Combines US Treasuries for safety and TIPS as an inflation hedge. Offers strong downside protection, liquidity, and portfolio ballast, especially given ongoing macro uncertainty and rate volatility."
-    },
-    {
-      "asset_class": "multi_utilities",
+      "asset_class": "private_equity_exposure_etfs",
       "allocation": 10,
       "position": "LONG",
-      "reason": "Utilities offer stable dividends (3%+), low cyclicality, and exposure to long-term electrification/renewables trends. Benefitting from strong demand inflection, regulatory support, and defensive characteristics."
+      "reason": "Strong inflows, robust long-term expected returns (+3.5% annualized over publics), late-cycle risk management via secondaries and diversification. Low correlation to public markets supports income and growth."
     },
     {
-      "asset_class": "health_care_equipment_and_supplies",
+      "asset_class": "application_software",
       "allocation": 8,
       "position": "LONG",
-      "reason": "Defensive sector with demographic tailwinds, innovation in medtech, and stable cash flows. Healthcare provides resilience to economic downturns and potential upside from new therapies and digital health adoption."
+      "reason": "Cloud, SaaS, and AI adoption remain structural drivers; high margins and critical enterprise spend offer margin resilience even in a moderating growth environment."
     },
     {
-      "asset_class": "consumer_staples_merchandise_retail",
+      "asset_class": "health_care_equipment",
       "allocation": 8,
       "position": "LONG",
-      "reason": "Defensive, non-cyclical sector with pricing power and stable demand. Resilient in inflationary and volatile environments; provides income and capital stability via strong dividend track records."
+      "reason": "Healthcare sector momentum, innovation in medtech/diagnostics, and defensive earnings quality. Demographics and margin recovery position this group for sustained alpha."
     },
     {
-      "asset_class": "diversified_banks",
-      "allocation": 7,
+      "asset_class": "broad_based_emerging_market_equity_etfs",
+      "allocation": 8,
       "position": "LONG",
-      "reason": "Exposure to high-quality global banks with strong capital buffers and digital adoption. Provides dividend income, some inflation resilience, and benefits as rates normalize and credit risk remains manageable."
+      "reason": "EM equities benefit from USD stabilization, reform momentum (India, Mexico), and higher growth potential. Provides geographic diversification and access to secular trends."
+    },
+    {
+      "asset_class": "investment_grade_corporate_bond_etfs",
+      "allocation": 8,
+      "position": "LONG",
+      "reason": "Yields above 5%, low default risk, and stable spreads in a late-cycle, Fed-pause regime. Acts as a core income generator and volatility dampener."
     },
     {
       "asset_class": "industrial_reits",
       "allocation": 7,
       "position": "LONG",
-      "reason": "Focuses on logistics/industrial REITs with structural demand from e-commerce and supply chain reshoring. Attractive yield, inflation pass-through, and low vacancy rates support total return."
-    },
-    {
-      "asset_class": "sector_specific_etfs",
-      "allocation": 6,
-      "position": "LONG",
-      "reason": "Allows tactical allocation to high-conviction sectors (e.g., technology, infrastructure, or other top-performing defensive sectors) as market conditions warrant. Enhances flexibility and alpha potential."
-    },
-    {
-      "asset_class": "broad_based_emerging_market_equity_etfs",
-      "allocation": 5,
-      "position": "LONG",
-      "reason": "Provides global diversification and access to long-term growth in select EM economies. Weighed at underweight to manage volatility and currency risk, but supports return potential and inflation hedging."
+      "reason": "Industrial/logistics REITs outperform on e-commerce and supply chain demand, with robust rent growth and low vacancies. Offers income and real asset diversification."
     },
     {
       "asset_class": "precious_metals_etfs",
+      "allocation": 7,
+      "position": "LONG",
+      "reason": "Gold remains a core hedge against inflation, policy risk, and equity drawdowns. Central bank demand and supply constraints support price stability at current levels."
+    },
+    {
+      "asset_class": "multi_utilities",
+      "allocation": 7,
+      "position": "LONG",
+      "reason": "Utilities offer stable dividends (2.8%+), regulated earnings, and are positioned to benefit from energy transition investments and electrification trends. Defensive ballast for late-cycle risks."
+    },
+    {
+      "asset_class": "energy_focused_etfs",
       "allocation": 5,
       "position": "LONG",
-      "reason": "Gold and precious metals serve as a hedge against inflation, currency risks, and geopolitical shocks. Maintains portfolio stability during periods of heightened volatility."
+      "reason": "Disciplined OPEC+ supply, LNG/demand growth, and energy transition investment underpin the sector. Provides inflation protection and income."
     },
     {
       "asset_class": "cash",
-      "allocation": 6,
+      "allocation": 7,
       "position": "LONG",
-      "reason": "Provides liquidity, capital preservation, and flexibility to capitalize on market dislocations or opportunities. Maintains a 6% allocation within the required 5–7% range."
+      "reason": "Mandatory liquidity buffer for flexibility, opportunistic rebalancing, and risk management. Protects against market volatility and supports tactical adjustments."
     },
     {
-      "asset_class": "application_software",
-      "allocation": 5,
+      "asset_class": "broad_us_market",
+      "allocation": 8,
       "position": "LONG",
-      "reason": "Selective exposure to resilient technology (e.g., SaaS, enterprise software) for modest growth and digital transformation tailwinds. Diversifies sources of growth with manageable volatility."
+      "reason": "Core S&P 500 exposure for earnings breadth, margin expansion, and diversified US leadership. Anchors portfolio to benchmark performance with quality bias."
     },
     {
-      "asset_class": "oil_and_gas_storage_and_transportation",
+      "asset_class": "high_yield_junk_bond_etfs",
+      "allocation": 4,
+      "position": "LONG",
+      "reason": "Selective high yield offers incremental income; short-duration, higher-quality HY reduces risk. Balances growth and income as spreads remain contained."
+    },
+    {
+      "asset_class": "data_center_reits",
       "allocation": 5,
       "position": "LONG",
-      "reason": "Invests in energy infrastructure (pipelines, storage) that benefit from stable, fee-based cash flows, energy security trends, and offer attractive yield. Provides inflation protection and real asset exposure."
+      "reason": "Beneficiaries of AI/data/cloud demand; secular tailwinds in digital infrastructure. Low vacancy and rent premiums support both growth and income."
     }
   ],
   "risk_management": {
-    "portfolio_volatility": "Targeted to remain below S&P 500 (historically ~16-18%) by overweighting defensive, income-generating assets and underweighting high-beta growth sectors.",
+    "portfolio_volatility": "Targeting a volatility profile moderately above the S&P 500, with sector/asset weights and bond/cash allocation designed to keep maximum drawdown <22% and volatility below 20%.",
     "key_risks": [
-      "Interest rate volatility and unexpected inflation resurgence",
-      "Credit and refinancing risk in corporate bonds during economic slowdown",
-      "Geopolitical shocks (e.g., trade/tariff escalation, Middle East energy risk)",
-      "Sector-specific regulation (healthcare, utilities, banks)"
+      "Policy and tariff shocks impacting tech, industrials, and EM allocations",
+      "Recession or profit-margin compression affecting S&P 500 and cyclical sectors",
+      "Interest rate/supply shocks raising credit and real asset risk",
+      "AI/tech sector rotation or overvaluation unwind"
     ],
-    "hedging_strategy": "Diversification across fixed income, defensive equities, real assets, and precious metals. TIPS and cash provide inflation and liquidity hedges. Sector/ETF exposure enables tactical rebalancing. High-quality bond tilt and underweight to high-yield mitigate credit risk."
+    "hedging_strategy": "Maintain 7% cash for tactical flexibility; allocate 7% to gold/precious metals as a core hedge; diversify across 13 asset classes to reduce idiosyncratic risk; overweight income generators (IG bonds, industrial REITs, utilities) to buffer equity drawdowns; monitor economic and policy data monthly for rapid rebalancing as needed."
   }
 }

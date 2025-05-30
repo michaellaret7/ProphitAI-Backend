@@ -2,14 +2,7 @@ import os
 import json
 import psycopg2
 import re
-
-def create_connection(db_config, dbname):
-    """Create a new database connection with autocommit mode enabled"""
-    conn_config = db_config.copy()
-    conn_config['dbname'] = dbname
-    conn = psycopg2.connect(**conn_config)
-    conn.autocommit = True  # Prevent transaction issues
-    return conn
+from src.utils.database import get_pooled_connection, get_default_db_config
 
 def create_prices_schema_file(output_file="database_schemas_prices.json"):
     """
@@ -19,22 +12,17 @@ def create_prices_schema_file(output_file="database_schemas_prices.json"):
     Args:
         output_file (str): The file to write the extracted price schema information to.
     """
-    # Database connection parameters (same as the other script)
-    db_config = {
-        "host": "demo-postgres.ctemwoy8mbzw.us-east-1.rds.amazonaws.com",
-        "user": "postgres",
-        "password": "ml1710402!",
-        "port": "5432"
-    }
+    # Database connection parameters from environment
+    db_config = get_default_db_config()
 
     # Initialize the structure for price schemas
     prices_schemas_data = {}
-    conn = None
 
     try:
         # Connect to the main 'postgres' database to list all databases
-        conn = create_connection(db_config, "postgres")
-        cursor = conn.cursor()
+        conn, cursor = get_pooled_connection("postgres", db_config, autocommit=True)
+        if not conn or not cursor:
+            raise Exception("Failed to connect to postgres database")
 
         # Query to get all database names
         cursor.execute("SELECT datname FROM pg_database WHERE datistemplate = false;")
@@ -45,17 +33,17 @@ def create_prices_schema_file(output_file="database_schemas_prices.json"):
         print(f"Found {len(prices_databases)} databases ending with '_prices'.")
 
         cursor.close()
-        conn.close() # Close the connection to 'postgres'
 
         # Process each prices database
         for db_name in prices_databases:
             print(f"Processing database: {db_name}")
-            db_conn = None
             prices_schemas_data[db_name] = {} # Initialize as dict for schemas->tables mapping
             try:
                 # Connect to the specific prices database
-                db_conn = create_connection(db_config, db_name)
-                db_cursor = db_conn.cursor()
+                db_conn, db_cursor = get_pooled_connection(db_name, db_config, autocommit=True)
+                if not db_conn or not db_cursor:
+                    print(f"  Failed to connect to {db_name}")
+                    continue
 
                 # Query for schemas within this database that end with '_prices'
                 db_cursor.execute("""
@@ -82,19 +70,12 @@ def create_prices_schema_file(output_file="database_schemas_prices.json"):
                     # No matching schemas found in this DB, already handled by initializing prices_schemas_data[db_name] = {}
                     print(f"  No schemas ending with '_prices' found in {db_name}.")
 
-
                 db_cursor.close()
-                db_conn.close()
             except Exception as e:
                 print(f"  Error processing database {db_name}: {e}")
-                if db_conn:
-                    db_conn.close()
 
     except Exception as e:
         print(f"Error connecting to PostgreSQL: {e}")
-    finally:
-        if conn:
-            conn.close()
 
     # Write the prices schemas data to the specified output file
     output_path = os.path.join('src', 'data', 'database', output_file)

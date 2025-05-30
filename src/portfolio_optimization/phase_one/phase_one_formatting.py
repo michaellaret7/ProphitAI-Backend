@@ -7,8 +7,6 @@ from src.data.PortfolioData import (
     analyze_portfolio_correlations
 )
 
-# NOTE: The third-party imports below were unused in this module.  They have
-# been removed to reduce start-up time and avoid unnecessary dependencies.
 
 def get_holdings_from_database(user_name: str = "test_user_beta_one") -> tuple[List[Dict[str, Any]], str]:
     """

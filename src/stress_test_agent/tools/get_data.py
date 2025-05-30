@@ -9,6 +9,9 @@ import pandas as pd
 import numpy as np
 import math
 from functools import lru_cache
+from src.utils.database import get_default_db_config
+from src.utils.data_retrieval import get_price_data
+from src.utils.financial_calculations import calculate_max_drawdown, calculate_volatility
 
 
 def get_liquidity_data():
@@ -96,155 +99,46 @@ def get_portfolio_returns(start_date_str: str, end_date_str: str):
     return json.dumps(results_json_compatible)
 
 def get_stock_data(ticker: str, start_date_str: str, end_date_str: str, db_config=None):
-   """
-   Retrieve stock data in one-hour increments for a given ticker between specified dates.
-   The data is stored in 15-minute bars in the database.
-   
-   Args:
-       ticker (str): The stock ticker symbol
-       start_date_str (str): The start date in 'YYYY-MM-DD' format.
-       end_date_str (str): The end date in 'YYYY-MM-DD' format.
-       db_config (dict, optional): Database configuration parameters
-       
-   Returns:
-       dict: Dictionary with format {'ticker': {data}} or None if not found
-   """
-   # Database configuration
-   if db_config is None:
-      db_config = {
-         "host": os.environ.get("DB_HOST"),
-         "user": os.environ.get("DB_USER"),
-         "password": os.environ.get("DB_PASSWORD"),
-         "port": os.environ.get("DB_PORT")
-      }
-   
-   # Normalize ticker
-   ticker_upper = ticker.upper()
-   ticker_lower = ticker.lower()
-   
-   # Load schema definition
-   # Construct the path to database_schemas.json relative to this script's location
-   script_dir = os.path.dirname(os.path.abspath(__file__))
-   # Go up two directories (from tools to stress_test_agent, then to src)
-   # then into data/database/
-   schema_file_path = os.path.join(script_dir, '..', '..', 'data', 'database', 'database_schemas.json')
-   # Normalize the path to resolve '..' and ensure it's in the correct format for the OS
-   schema_file_path = os.path.normpath(schema_file_path)
-
-   with open(schema_file_path, 'r') as f:
-      schema_data = json.load(f)
-   
-   # Find ticker location
-   ticker_location = None
-   for sector_name, sector_info in schema_data.items():
-      database = sector_info.get('database')
-      schemas = sector_info.get('schemas', {})
-      
-      for schema_name, schema_info in schemas.items():
-         tables = schema_info.get('tables', {})
-         
-         for table_name, table_info in tables.items():
-            tickers = table_info.get('tickers', [])
+    """
+    Retrieve stock data in one-hour increments for a given ticker between specified dates.
+    The data is stored in 15-minute bars in the database.
+    
+    Args:
+        ticker (str): The stock ticker symbol
+        start_date_str (str): The start date in 'YYYY-MM-DD' format.
+        end_date_str (str): The end date in 'YYYY-MM-DD' format.
+        db_config (dict, optional): Database configuration parameters
+        
+    Returns:
+        dict: Dictionary with format {'ticker': {data}} or None if not found
+    """
+    # Calculate the number of years based on date range
+    start_date = datetime.strptime(start_date_str, '%Y-%m-%d')
+    end_date = datetime.strptime(end_date_str, '%Y-%m-%d')
+    years = (end_date - start_date).days / 365.0
+    
+    # Get hourly data using the generic function
+    result = get_price_data(ticker, frequency='hourly', years=years, db_config=db_config)
+    
+    if result is None:
+        return None
+    
+    # Filter the results to only include data within the specified date range
+    if isinstance(result, dict) and ticker.upper() in result:
+        filtered_data = []
+        for data_point in result[ticker.upper()]:
+            if isinstance(data_point['datetime'], datetime):
+                data_datetime = data_point['datetime']
+            else:
+                data_datetime = datetime.fromisoformat(str(data_point['datetime']))
             
-            # Case-insensitive comparison
-            for db_ticker in tickers:
-               if ticker_upper.upper() == db_ticker.upper():
-                  # Special case for ETFs - use specific database names
-                  if "etf" in sector_name.lower():
-                     db_name = "etf_prices"
-                  else:
-                     db_name = f"{database}_prices"
-                     
-                  ticker_location = {
-                     "database": db_name,
-                     "schema": f"{schema_name}_prices",
-                     "ticker": db_ticker  # Use the ticker with the exact case from the database
-                  }
-                  break
-         if ticker_location: break
-      if ticker_location: break
-   
-   if not ticker_location:
-      # Just pass silently if ticker not found
-      return None
-   
-   try:
-      # Connect to database
-      db_config['dbname'] = ticker_location['database']
-      conn = psycopg2.connect(**db_config)
-      cursor = conn.cursor()
-      
-      # Query hourly data (taking the last 15-min bar of each hour)
-      query = f"""
-      WITH hourly_data AS (
-         SELECT 
-            date_trunc('hour', datetime) as hour_start,
-            MAX(datetime) as last_bar_time
-         FROM {ticker_location['schema']}.{ticker_lower}
-         WHERE date BETWEEN %s AND %s
-         GROUP BY date_trunc('hour', datetime)
-      )
-      SELECT 
-         hd.hour_start as datetime,
-         t.open,
-         t.high,
-         t.low,
-         t.close,
-         t.volume
-      FROM hourly_data hd
-      JOIN {ticker_location['schema']}.{ticker_lower} t
-         ON t.datetime = hd.last_bar_time
-      ORDER BY hd.hour_start
-      """
-      
-      cursor.execute(query, (start_date_str, end_date_str))
-      
-      # Convert results
-      results = []
-      for row in cursor.fetchall():
-         datetime_val, open_val, high_val, low_val, close_val, volume_val = row
-         
-         # Convert Decimal types to float
-         if isinstance(open_val, Decimal):
-            open_val = float(open_val)
-         if isinstance(high_val, Decimal):
-            high_val = float(high_val)
-         if isinstance(low_val, Decimal):
-            low_val = float(low_val)
-         if isinstance(close_val, Decimal):
-            close_val = float(close_val)
-         if isinstance(volume_val, Decimal):
-            volume_val = float(volume_val)
-               
-         results.append({
-            "datetime": datetime_val,
-            "open": open_val,
-            "high": high_val,
-            "low": low_val,
-            "close": close_val,
-            "volume": volume_val
-         })
-
-      # Create DataFrame and sort by datetime
-      df = pd.DataFrame(results)
-      if not df.empty:
-         df = df.sort_values('datetime')
-         
-         # Convert to dictionary in the requested format
-         data_dict = df.to_dict('records')
-         return {ticker_upper: data_dict}
-      else:
-         return {ticker_upper: []}
-      
-   except Exception as e:
-      # Just pass silently on error
-      print(f"Error retrieving hourly data: {e}")
-      return None
-   
-   finally:
-      if 'conn' in locals() and conn:
-         cursor.close()
-         conn.close()
+            # Check if the data point is within the requested date range
+            if start_date <= data_datetime <= end_date:
+                filtered_data.append(data_point)
+        
+        return {ticker.upper(): filtered_data}
+    
+    return result
 
 def calculate_stock_metrics(start_date_str: str, end_date_str: str):
     """
@@ -259,11 +153,6 @@ def calculate_stock_metrics(start_date_str: str, end_date_str: str):
     """
     all_metrics = {}
     
-    # Define date range for analysis (previously hardcoded in get_stock_data)
-    # start_date_str = "2023-03-06" # Removed hardcoded date
-    # end_date_str = "2023-03-14"   # Removed hardcoded date
-
-    # Get available tickers
     try:
         tickers_json = get_tickers()
         tickers = json.loads(tickers_json)
@@ -272,85 +161,74 @@ def calculate_stock_metrics(start_date_str: str, end_date_str: str):
         return {}
 
     for ticker in tickers:
-        # Get stock data
         stock_data = get_stock_data(ticker, start_date_str, end_date_str)
         
         if not stock_data or ticker not in stock_data or not stock_data[ticker]:
             print(f"Could not retrieve or process data for {ticker}")
-            continue  # Skip to the next ticker if data is missing
+            continue
         
-        # Convert to DataFrame for easier analysis
         df = pd.DataFrame(stock_data[ticker])
+        if df.empty:
+            print(f"No data for {ticker} in the specified range.")
+            continue
         
-        # Ensure datetime is properly sorted
+        df['datetime'] = pd.to_datetime(df['datetime'])
         df = df.sort_values('datetime')
-        
-        # Calculate returns
         df['returns'] = df['close'].pct_change()
-        
-        # Remove first row with NaN return
         df = df.dropna(subset=['returns'])
         
-        # Skip if DataFrame is empty after dropping NaN
         if df.empty:
-            print(f"Not enough data for {ticker} after processing.")
+            print(f"Not enough data for {ticker} after processing returns.")
             continue
 
-        # Calculate cumulative returns
         df['cum_returns'] = (1 + df['returns']).cumprod()
         
-        # Calculate maximum drawdown
-        df['peak'] = df['cum_returns'].cummax()
-        df['drawdown'] = (df['cum_returns'] - df['peak']) / df['peak']
-        max_drawdown = df['drawdown'].min()
+        # Use utility functions for calculations
+        max_dd = calculate_max_drawdown(df['cum_returns']) 
+        # For annualized_volatility, we need to know the trading periods per year for hourly data
+        # get_annualization_factor from utils can be used if bar_size is known, 
+        # but get_stock_data returns 1-hour increments, so let's assume 252*6.5 for a 6.5 hour trading day.
+        # Or more simply, use the existing math.sqrt(252*24) for hourly data if that's the desired convention.
+        periods_per_year = 252 * 24 # Assuming 24 hours for simplicity, adjust if trading hours are specific
+        annualized_vol = calculate_volatility(df['returns'], annualize=True, trading_days=periods_per_year) 
         
-        # Get peak and trough values
         peak_idx = df['cum_returns'].idxmax()
         peak_value = df.loc[peak_idx, 'close']
         peak_date = df.loc[peak_idx, 'datetime']
         
-        # Find the minimum after the peak
         trough_idx = None
         trough_value = None
         trough_date = None
-        
-        if peak_idx < df.index[-1]:
-            post_peak_df = df.loc[peak_idx:]
-            trough_idx = post_peak_df['cum_returns'].idxmin()
-            trough_value = df.loc[trough_idx, 'close']
-            trough_date = df.loc[trough_idx, 'datetime']
-        
-        # Calculate peak to trough percentage
         peak_to_trough = None
-        if peak_value is not None and trough_value is not None:
-            peak_to_trough = (trough_value - peak_value) / peak_value
-        
-        # Calculate time to recover
         time_to_recover = None
-        if trough_idx is not None:
-            post_trough_df = df.loc[trough_idx:]
-            # Find first point where value exceeds the peak again
-            recovery_points = post_trough_df[post_trough_df['cum_returns'] >= df.loc[peak_idx, 'cum_returns']]
-            
-            if not recovery_points.empty:
-                recovery_idx = recovery_points.index[0]
-                recovery_date = df.loc[recovery_idx, 'datetime']
-                time_to_recover = (recovery_date - trough_date).total_seconds() / 3600  # hours
         
-        # Calculate annualized volatility
-        # Standard deviation of returns * sqrt(252) for daily data or sqrt(252*24) for hourly data
-        hourly_volatility = df['returns'].std()
-        annualized_volatility = hourly_volatility * math.sqrt(252 * 24)  # Annualizing hourly data
+        if not df[df['cum_returns'] < df.loc[peak_idx, 'cum_returns']].empty:
+            # Find the minimum cumulative return after the peak
+            post_peak_df = df.loc[peak_idx:]
+            if not post_peak_df.empty:
+                trough_idx = post_peak_df['cum_returns'].idxmin()
+                trough_value = df.loc[trough_idx, 'close']
+                trough_date = df.loc[trough_idx, 'datetime']
+                if peak_value is not None and trough_value is not None:
+                     peak_to_trough = (trough_value - peak_value) / peak_value if peak_value != 0 else 0
+
+                # Calculate time to recover
+                if trough_idx is not None:
+                    post_trough_df = df.loc[trough_idx:]
+                    recovery_points = post_trough_df[post_trough_df['cum_returns'] >= df.loc[peak_idx, 'cum_returns']]
+                    if not recovery_points.empty:
+                        recovery_idx = recovery_points.index[0]
+                        recovery_date = df.loc[recovery_idx, 'datetime']
+                        time_to_recover = (recovery_date - trough_date).total_seconds() / 3600  # hours
         
-        # Create results dictionary
         metrics = {
-            'max_drawdown': max_drawdown * 100,  # Convert to percentage
-            'annualized_volatility': annualized_volatility * 100,  # Convert to percentage
+            'max_drawdown': max_dd * 100,  # Already a percentage from calculate_max_drawdown
+            'annualized_volatility': annualized_vol * 100, # Already a percentage from calculate_volatility
             'peak_value': peak_value,
-            'peak_date': peak_date,
+            'peak_date': peak_date.isoformat() if pd.notnull(peak_date) else None,
             'trough_value': trough_value,
-            'trough_date': trough_date,
-            'peak_to_trough': peak_to_trough * 100 if peak_to_trough is not None else None,  # Convert to percentage
+            'trough_date': trough_date.isoformat() if pd.notnull(trough_date) else None,
+            'peak_to_trough': peak_to_trough * 100 if peak_to_trough is not None else None,
             'time_to_recover_hours': time_to_recover
         }
         
@@ -358,8 +236,6 @@ def calculate_stock_metrics(start_date_str: str, end_date_str: str):
         for key, value in metrics.items():
             if isinstance(value, (int, float)):
                 metrics[key] = round(value, 4)
-            elif isinstance(value, datetime):
-                 metrics[key] = value.isoformat() # Convert datetime to string for JSON compatibility
 
         all_metrics[ticker] = metrics
 

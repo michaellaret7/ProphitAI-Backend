@@ -1,10 +1,23 @@
 import pandas as pd
 import numpy as np
+import logging
 from src.utils.caching import cache_result
 from src.utils.file_utils import load_schema_data
 from src.portfolio_optimization.phase_two.data_retrieval import get_daily_closing_prices
+from src.utils.financial_calculations import (
+    calculate_sharpe_ratio,
+    calculate_sortino_ratio,
+    calculate_calmar_ratio,
+    calculate_annualized_return,
+    calculate_volatility,
+    calculate_max_drawdown,
+    calculate_beta
+)
 
-daily_volume_threshold = 10000
+daily_volume_threshold = 10_000
+
+# Get a logger instance
+logger = logging.getLogger(__name__)
 
 @cache_result
 def calculate_stock_metrics(ticker):
@@ -26,7 +39,7 @@ def calculate_stock_metrics(ticker):
    is_etf = ticker.upper() in etf_list
    
    # Return default values if no price data is available
-   if price_data is None:
+   if price_data is None or price_data.empty:
       print(f"No price data available for {ticker}")
       default_metrics = {
          "ticker": ticker,
@@ -55,73 +68,58 @@ def calculate_stock_metrics(ticker):
       return default_metrics
    
    risk_free_rate=0.03
-   annualization_factor=252
-   df = price_data
+   df = price_data.copy()
    df['daily_return'] = df['close'].pct_change()
    
    # Calculate Average Daily Volume
    average_daily_volume = df['volume'].mean() if 'volume' in df and not df['volume'].empty else 0
    
-   # Drop NaN values (first row will have NaN return) and create an explicit copy
-   df = df.dropna().copy()
+   # Drop NaN values (first row will have NaN return)
+   df = df.dropna(subset=['daily_return']).copy()
    
-   # Calculate metrics
-   daily_returns = df['daily_return'].values
-   mean_daily_return = np.mean(daily_returns)
-   std_daily_return = np.std(daily_returns)
-   
+   if df.empty:
+        # Handle case where all data is NaN after pct_change and dropna
+        # (e.g. if only one day of data was present in price_data)
+        print(f"Not enough data for {ticker} to calculate returns.")
+        # Return default metrics as above
+        default_metrics = {
+            "ticker": ticker, "sharpe_ratio": 0, "sortino_ratio": 0, "calmar_ratio": 0,
+            "annualized_return": 0, "annualized_volatility": 0, "daily_return_volatility": 0,
+            "max_drawdown": 0, "beta": 0, "date_range": [], "upside_capture": 0, "downside_capture": 0,
+            "momentum_6m": 0, "momentum_12m": 0, "average_daily_volume": int(round(average_daily_volume)) # Keep calculated volume
+        }
+        if not is_etf: default_metrics.update({"sector_beta": 0})
+        return default_metrics
+
+   daily_returns = df['daily_return']
+   df['cumulative_return'] = (1 + daily_returns).cumprod()
+
+   # Calculate metrics using utility functions
+   annual_sharpe = calculate_sharpe_ratio(daily_returns, risk_free_rate=risk_free_rate, annualize=True)
+   annual_volatility = calculate_volatility(daily_returns, annualize=True)
+   max_dd = calculate_max_drawdown(df['cumulative_return'])
+   annual_ret = calculate_annualized_return(daily_returns)
+   sortino_val = calculate_sortino_ratio(daily_returns, risk_free_rate=risk_free_rate, annualize=True)
+   calmar_val = calculate_calmar_ratio(daily_returns, max_dd)
+   std_daily_return = calculate_volatility(daily_returns, annualize=False) # Daily volatility
+
    # Calculate Momentum Scores (6-month and 12-month)
    momentum_6m = 0
    momentum_12m = 0
-   
-   # Check if we have enough data points for momentum calculations
-   if len(df) >= 126:  # 6 months
-      # Take the last 126 trading days for 6-month momentum
-      recent_returns_6m = df['daily_return'].iloc[-126:]
-      momentum_6m = (1 + recent_returns_6m).prod() - 1
-   
-   if len(df) >= 252:  # 12 months / 1 year
-      # Take the last 252 trading days for 12-month momentum
-      recent_returns_12m = df['daily_return'].iloc[-252:]
-      momentum_12m = (1 + recent_returns_12m).prod() - 1
-   
-   # Convert risk-free rate to daily
-   daily_risk_free_rate = (1 + risk_free_rate) ** (1/annualization_factor) - 1
-   
-   # Calculate daily Sharpe ratio
-   daily_sharpe = (mean_daily_return - daily_risk_free_rate) / std_daily_return if std_daily_return > 0 else 0
-   
-   # Annualize Sharpe ratio
-   annual_sharpe = daily_sharpe * np.sqrt(annualization_factor)
-   
-   # Calculate annualized return and volatility
-   annual_return = ((1 + mean_daily_return) ** annualization_factor) - 1
-   annual_volatility = std_daily_return * np.sqrt(annualization_factor)
-   
-   # Calculate Maximum Drawdown
-   df['cumulative_return'] = (1 + df['daily_return']).cumprod()
-   df['rolling_max'] = df['cumulative_return'].cummax()
-   df['drawdown'] = (df['cumulative_return'] / df['rolling_max']) - 1
-   max_drawdown = df['drawdown'].min()
-   
-   # Calculate Sortino Ratio (uses only negative returns to penalize downside deviation)
-   negative_returns = daily_returns[daily_returns < 0]
-   downside_deviation = np.std(negative_returns) if len(negative_returns) > 0 else 0
-   sortino_ratio = 0
-   if downside_deviation > 0:
-      sortino_ratio = (mean_daily_return - daily_risk_free_rate) / downside_deviation * np.sqrt(annualization_factor)
-   
-   # Calculate Calmar Ratio (return / maximum drawdown)
-   calmar_ratio = abs(annual_return / max_drawdown) if max_drawdown != 0 else 0
+   if len(df) >= 126:
+      momentum_6m = (1 + df['daily_return'].iloc[-126:]).prod() - 1
+   if len(df) >= 252:
+      momentum_12m = (1 + df['daily_return'].iloc[-252:]).prod() - 1
    
    # Calculate Beta (market risk)
-   beta = 0
-   if spy_data is not None:
-      spy_df = spy_data
+   beta_val = 0
+   upside_capture = 0
+   downside_capture = 0
+   if spy_data is not None and not spy_data.empty:
+      spy_df = spy_data.copy()
       spy_df['daily_return'] = spy_df['close'].pct_change()
-      spy_df = spy_df.dropna()
+      spy_df = spy_df.dropna(subset=['daily_return'])
       
-      # Align the dates between stock and market data
       merged_data = pd.merge(
          df[['date', 'daily_return']], 
          spy_df[['date', 'daily_return']], 
@@ -130,30 +128,18 @@ def calculate_stock_metrics(ticker):
          suffixes=('_stock', '_market')
       )
       
-      if not merged_data.empty:
-         # Calculate beta as covariance / variance
-         covariance = np.cov(merged_data['daily_return_stock'], merged_data['daily_return_market'])[0, 1]
-         market_variance = np.var(merged_data['daily_return_market'])
-         if market_variance > 0:
-            beta = covariance / market_variance
+      if not merged_data.empty and len(merged_data) > 1: # Beta needs more than one point
+         beta_val = calculate_beta(merged_data['daily_return_stock'], merged_data['daily_return_market'])
             
-         # Calculate Upside and Downside Capture Ratios
-         # Identify up and down market days
          up_days = merged_data[merged_data['daily_return_market'] > 0]
          down_days = merged_data[merged_data['daily_return_market'] < 0]
          
-         # Default values
-         upside_capture = 0
-         downside_capture = 0
-         
-         # Calculate Upside Capture Ratio
-         if not up_days.empty and up_days['daily_return_market'].mean() > 0:
+         if not up_days.empty and up_days['daily_return_market'].mean() != 0:
             avg_stock_return_up = up_days['daily_return_stock'].mean()
             avg_benchmark_return_up = up_days['daily_return_market'].mean()
             upside_capture = avg_stock_return_up / avg_benchmark_return_up
          
-         # Calculate Downside Capture Ratio
-         if not down_days.empty and down_days['daily_return_market'].mean() < 0:
+         if not down_days.empty and down_days['daily_return_market'].mean() != 0:
             avg_stock_return_down = down_days['daily_return_stock'].mean()
             avg_benchmark_return_down = down_days['daily_return_market'].mean()
             downside_capture = avg_stock_return_down / avg_benchmark_return_down
@@ -163,67 +149,38 @@ def calculate_stock_metrics(ticker):
    sector_etf = None
    sector_beta = 0
    
-   # Map of sector ETFs
    sector_etf_map = {
-      "technology": "XLK",
-      "financial": "XLF",
-      "health_care": "XLV",
-      "consumer_discretionary": "XLY",
-      "consumer_staples": "XLP",
-      "energy": "XLE",
-      "industrial": "XLI",
-      "materials": "XLB",
-      "utilities": "XLU",
-      "real_estate": "XLRE",
-      "communication": "XLC"
+      "technology": "XLK", "financial": "XLF", "health_care": "XLV",
+      "consumer_discretionary": "XLY", "consumer_staples": "XLP", "energy": "XLE",
+      "industrial": "XLI", "materials": "XLB", "utilities": "XLU",
+      "real_estate": "XLRE", "communication": "XLC"
    }
    
-   # Only calculate sector beta for stocks, not ETFs
    if not is_etf:
-      # Try to determine the sector from database schemas
       try:
-         # Load schema definition
          schema_data = load_schema_data()
-         
-         # Find ticker location and sector
          for sector_name, sector_info in schema_data.items():
             schemas = sector_info.get('schemas', {})
-            
-            for schema_name, schema_info in schemas.items():
-               tables = schema_info.get('tables', {})
-               
-               for table_name, table_info in tables.items():
-                  tickers = table_info.get('tickers', [])
-                  
-                  if ticker.upper() in [t.upper() for t in tickers]:
-                     # Found the ticker, use this sector
+            for schema_name_val, schema_info_val in schemas.items():
+               tables = schema_info_val.get('tables', {})
+               for table_name_val, table_info_val in tables.items():
+                  tickers_list = table_info_val.get('tickers', [])
+                  if ticker.upper() in [t.upper() for t in tickers_list]:
                      sector = sector_name
                      break
                if sector: break
             if sector: break
          
-         # Map sector name to corresponding ETF
          if sector:
-            # Try to match sector name with sector ETF map keys
-            matched_sector = None
-            for sector_key in sector_etf_map.keys():
-               if sector_key in sector.lower():
-                  matched_sector = sector_key
-                  break
-            
-            # If found matching sector, calculate sector beta
-            if matched_sector:
-               sector_etf = sector_etf_map[matched_sector]
-               
-               # Get the sector ETF data
+            matched_sector_key = next((key for key in sector_etf_map if key in sector.lower()), None)
+            if matched_sector_key:
+               sector_etf = sector_etf_map[matched_sector_key]
                sector_etf_data = get_daily_closing_prices(sector_etf)
-               
-               if sector_etf_data is not None:
-                  sector_etf_df = sector_etf_data
+               if sector_etf_data is not None and not sector_etf_data.empty:
+                  sector_etf_df = sector_etf_data.copy()
                   sector_etf_df['daily_return'] = sector_etf_df['close'].pct_change()
-                  sector_etf_df = sector_etf_df.dropna()
+                  sector_etf_df = sector_etf_df.dropna(subset=['daily_return'])
                   
-                  # Align the dates between stock and sector ETF data
                   merged_sector_data = pd.merge(
                      df[['date', 'daily_return']], 
                      sector_etf_df[['date', 'daily_return']], 
@@ -231,26 +188,20 @@ def calculate_stock_metrics(ticker):
                      how='inner',
                      suffixes=('_stock', '_sector')
                   )
-                  
-                  if not merged_sector_data.empty:
-                     # Calculate sector beta as covariance / variance
-                     sector_covariance = np.cov(merged_sector_data['daily_return_stock'], merged_sector_data['daily_return_sector'])[0, 1]
-                     sector_variance = np.var(merged_sector_data['daily_return_sector'])
-                     if sector_variance > 0:
-                        sector_beta = sector_covariance / sector_variance
+                  if not merged_sector_data.empty and len(merged_sector_data) > 1:
+                     sector_beta = calculate_beta(merged_sector_data['daily_return_stock'], merged_sector_data['daily_return_sector'])
       except Exception as e:
-         print(f"Error calculating sector beta: {e}")
+         print(f"Error calculating sector beta for {ticker}: {e}")
    
-   # Create base metrics dictionary
    metrics = {
       "sharpe_ratio": float(round(annual_sharpe, 2)),
-      "sortino_ratio": float(round(sortino_ratio, 2)),
-      "calmar_ratio": float(round(calmar_ratio, 2)),
-      "annualized_return": float(round(annual_return, 4)),
+      "sortino_ratio": float(round(sortino_val, 2)),
+      "calmar_ratio": float(round(calmar_val, 2)),
+      "annualized_return": float(round(annual_ret, 4)),
       "annualized_volatility": float(round(annual_volatility, 2)),
-      "daily_return_volatility": float(round(std_daily_return, 2)),
-      "max_drawdown": float(round(max_drawdown, 2)),
-      "beta": float(round(beta, 2)),
+      "daily_return_volatility": float(round(std_daily_return, 4)), # Increased precision for daily
+      "max_drawdown": float(round(max_dd, 4)), # Increased precision for drawdown
+      "beta": float(round(beta_val, 2)),
       "date_range": [df['date'].min().strftime('%Y-%m-%d'), df['date'].max().strftime('%Y-%m-%d')],
       "sector_beta": float(round(sector_beta, 2)),
       "upside_capture": float(round(upside_capture, 2)),
@@ -265,20 +216,30 @@ def calculate_stock_metrics(ticker):
 def calculate_and_filter_metrics(ticker_list):
     """Calculate metrics for tickers and filter out those with insufficient data."""
     all_metrics = {}
+    logger.info(f"Calculating and filtering metrics for tickers: {ticker_list}")
     for ticker in ticker_list:
+        logger.debug(f"Calculating metrics for ticker: {ticker}")
         metrics = calculate_stock_metrics(ticker)
         all_metrics[ticker] = metrics
+        logger.debug(f"Metrics for {ticker}: {metrics}")
 
     valid_metrics_data = []
     for ticker, metrics in all_metrics.items():
+        # Log the metrics being evaluated for filtering
+        logger.debug(f"Evaluating filter conditions for {ticker}: Date range present: {bool(metrics.get('date_range'))}, Avg Daily Volume: {metrics.get('average_daily_volume', 0)}")
         if metrics.get('date_range') and metrics.get('average_daily_volume', 0) >= daily_volume_threshold:
             metrics_row = {'Ticker': ticker}
             metrics_row.update(metrics)
             valid_metrics_data.append(metrics_row)
+            logger.debug(f"{ticker} passed filtering.")
+        else:
+            logger.info(f"{ticker} failed filtering. Date range: {metrics.get('date_range')}, Avg Daily Volume: {metrics.get('average_daily_volume', 0)}")
 
     if not valid_metrics_data:
+        logger.warning(f"No valid metrics data found for tickers: {ticker_list}")
         return pd.DataFrame() # Return empty DataFrame if no valid data
 
+    logger.info(f"Finished calculating and filtering metrics. Found {len(valid_metrics_data)} valid tickers.")
     return pd.DataFrame(valid_metrics_data)
 
 def calculate_composite_scores(df):
@@ -311,3 +272,6 @@ def calculate_composite_scores(df):
 
     return z_scores.sort_values(by='composite_score', ascending=False)
 
+if __name__ == "__main__":
+   x = calculate_stock_metrics('AAPL')
+   print(x)

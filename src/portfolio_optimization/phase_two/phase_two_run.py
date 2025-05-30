@@ -53,7 +53,7 @@ patch_print_for_logging()
 logger.info("[Phase-Two] Phase-two module initialised …")
 
 # Load environment variables
-model, client = deepseek_model_and_client('deepseek-reasoner')
+model, client = openai_model_and_client()
 
 def pick_top_tickers_from_asset_classes(portfolio_json):
     start_time = time.perf_counter()
@@ -220,12 +220,12 @@ Description: {user_info.get("Overall Description", "N/A").strip()}
         user_prompt = build_user_prompt(data_string)
 
         completion = client.chat.completions.create(
-            model="deepseek-reasoner", 
+            model=model, 
             messages=[
                 {"role": "system", "content": system_prompt},
                 {"role": "user", "content": user_prompt}
             ],
-            temperature=1.0
+            temperature=0.7
         )
 
         # Extract and return the content from the response

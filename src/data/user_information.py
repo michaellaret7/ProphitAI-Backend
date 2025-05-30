@@ -6,16 +6,15 @@ def get_user_information():
     """
     user_data = {
         "user_information": {
-            "age": "45",
-            "net_worth": "$750,000",
-            "investment size(as a percentage of net worth)": "25%",
-            "risk_tolerance": "Low to Moderate",
-            "investment_goals": "Capital preservation and steady income",
-            "time_horizon": "10 Years",
+            "age": "52",
+            "net_worth": "$3,500,000",
+            "investment size(as a percentage of net worth)": "70%",
+            "risk_tolerance": "Moderate-High",
+            "investment_goals": "Capital Growth and Income Generation",
+            "time_horizon": "5 Years",
             "Overall Description": """
-            I am looking for a relatively conservative investment strategy. My primary goal is to preserve my capital while generating a steady stream of income.
-            I'm interested in high-quality bonds, dividend-paying blue-chip stocks, and real estate investment trusts (REITs).
-            I plan to retire in 20 years and want a portfolio that provides stability and reliable returns.
+            I am an experienced investor with a moderate to high risk tolerance. I am looking for a portfolio that will grow my capital and provide me with a reliable income stream.
+            The portfolio should be well balanced and include some private equity etfs. I am also very bullish on the tech sector and the future of AI.
             """
         }
     }

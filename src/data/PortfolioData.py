@@ -22,6 +22,21 @@ import io
 import sys
 from contextlib import redirect_stdout, nullcontext
 import json
+from src.utils.financial_calculations import (
+    calculate_volatility,
+    calculate_beta,
+    calculate_var,
+    calculate_max_drawdown,
+    calculate_sharpe_ratio,
+    calculate_sortino_ratio,
+    get_annualization_factor,
+    calculate_parametric_var,
+    calculate_alpha,
+    calculate_calmar_ratio,
+    calculate_total_return,
+    calculate_annualized_return
+)
+
 def connect_to_ib():
     """
     Establish a connection to Interactive Brokers TWS or Gateway
@@ -284,199 +299,6 @@ def get_portfolio_holdings(ib=None, print_output=False):
         if connect_needed and ib is not None and ib.isConnected():
             ib.disconnect()
             print("🔌 Disconnected from IB")
-
-def calculate_volatility(returns, annualize=True, trading_days=252):
-    """
-    Calculate the volatility (standard deviation) of returns
-    
-    Args:
-        returns: pandas Series or numpy array of returns
-        annualize: whether to annualize the volatility
-        trading_days: number of trading days in a year (default: 252)
-        
-    Returns:
-        Volatility value
-    """
-    # Calculate standard deviation of returns
-    volatility = np.std(returns, ddof=1)
-    
-    # Annualize if requested
-    if annualize:
-        # For daily returns, annualize by multiplying by sqrt(trading_days)
-        volatility = volatility * np.sqrt(trading_days)
-            
-    return volatility
-
-def calculate_beta(portfolio_returns, market_returns):
-    """
-    Calculate the beta (market risk) of a portfolio or stock
-    
-    Args:
-        portfolio_returns: pandas Series or numpy array of portfolio/stock returns
-        market_returns: pandas Series or numpy array of market returns (e.g. S&P 500)
-        
-    Returns:
-        Beta value
-    """
-    # Convert inputs to pandas Series if they aren't already
-    if not isinstance(portfolio_returns, pd.Series):
-        portfolio_returns = pd.Series(portfolio_returns)
-    if not isinstance(market_returns, pd.Series):
-        market_returns = pd.Series(market_returns)
-    
-    # Ensure both series have the same index if they are pandas Series
-    if hasattr(portfolio_returns, 'index') and hasattr(market_returns, 'index'):
-        # Find common dates
-        common_index = portfolio_returns.index.intersection(market_returns.index)
-        
-        if len(common_index) == 0:
-            print("Warning: No overlapping dates between portfolio and market returns")
-            return 0.0
-            
-        # Filter to common dates
-        portfolio_returns = portfolio_returns.loc[common_index]
-        market_returns = market_returns.loc[common_index]
-    
-    # If they're numpy arrays, ensure they have the same length
-    elif len(portfolio_returns) != len(market_returns):
-        # Use the shorter length
-        min_length = min(len(portfolio_returns), len(market_returns))
-        portfolio_returns = portfolio_returns[:min_length]
-        market_returns = market_returns[:min_length]
-        print(f"Warning: Returns series have different lengths. Using first {min_length} elements.")
-    
-    # Calculate covariance between portfolio and market
-    covariance = np.cov(portfolio_returns, market_returns)[0, 1]
-    
-    # Calculate market variance
-    market_variance = np.var(market_returns, ddof=1)
-    
-    # Calculate beta
-    beta = covariance / market_variance
-    
-    return beta
-
-def calculate_var(returns, confidence_level=0.95, amount=1):
-    """
-    Calculate Value at Risk (VaR) using historical simulation method
-    
-    Args:
-        returns: pandas Series or numpy array of returns
-        confidence_level: desired confidence level (default: 0.95 for 95%)
-        amount: investment amount to calculate VaR in currency terms
-        
-    Returns:
-        VaR value as a percentage and in currency terms (if amount provided)
-    """
-    # Sort returns
-    sorted_returns = np.sort(returns)
-    
-    # Find the index at the specified confidence level
-    index = int(len(sorted_returns) * (1 - confidence_level))
-    
-    # Get the return at that index (VaR as a percentage)
-    var_pct = abs(sorted_returns[index])
-    
-    # Calculate VaR in currency terms if amount is provided
-    var_amount = var_pct * amount
-    
-    return var_pct, var_amount
-
-def calculate_max_drawdown(cumulative_returns):
-    """
-    Calculate Maximum Drawdown
-    
-    Args:
-        cumulative_returns: pandas Series or numpy array of cumulative returns
-        
-    Returns:
-        Maximum Drawdown value as a percentage
-    """
-    # Calculate running maximum
-    running_max = np.maximum.accumulate(cumulative_returns)
-    
-    # Calculate drawdown
-    drawdown = (cumulative_returns - running_max) / running_max
-    
-    # Find maximum drawdown
-    max_drawdown = abs(np.min(drawdown))
-    
-    return max_drawdown
-
-def calculate_sharpe_ratio(returns, risk_free_rate=0.0, annualize=True, trading_days=252):
-    """
-    Calculate Sharpe Ratio
-    
-    Args:
-        returns: pandas Series or numpy array of returns
-        risk_free_rate: annualized risk-free rate (default: 0.0)
-        annualize: whether to annualize the returns and volatility
-        trading_days: number of trading days in a year (default: 252)
-        
-    Returns:
-        Sharpe Ratio value
-    """
-    # Calculate average return
-    avg_return = np.mean(returns)
-    
-    # Calculate volatility
-    volatility = np.std(returns, ddof=1)
-    
-    # Adjust for annualization if requested
-    if annualize:
-        # Adjust daily values to annual values
-        avg_return = avg_return * trading_days
-        volatility = volatility * np.sqrt(trading_days)
-        # risk_free_rate is assumed to be already annualized
-    else:
-        # Convert annual risk-free rate to daily
-        risk_free_rate = risk_free_rate / trading_days
-    
-    # Calculate Sharpe ratio
-    sharpe_ratio = (avg_return - risk_free_rate) / volatility
-    
-    return sharpe_ratio
-
-def calculate_sortino_ratio(returns, risk_free_rate=0.0, annualize=True, trading_days=252):
-    """
-    Calculate Sortino Ratio - similar to Sharpe but only penalizes downside volatility
-    
-    Args:
-        returns: pandas Series or numpy array of returns
-        risk_free_rate: annualized risk-free rate (default: 0.0)
-        annualize: whether to annualize the returns and volatility
-        trading_days: number of trading days in a year (default: 252)
-        
-    Returns:
-        Sortino Ratio value
-    """
-    # Calculate average return
-    avg_return = np.mean(returns)
-    
-    # Calculate downside returns - only negative returns
-    downside_returns = returns[returns < 0]
-    
-    # Calculate downside deviation (downside risk)
-    # If no negative returns, return a large number
-    if len(downside_returns) == 0:
-        return float('inf')
-    
-    downside_deviation = np.sqrt(np.mean(downside_returns**2))
-    
-    # Adjust for annualization if requested
-    if annualize:
-        # Adjust daily values to annual values
-        avg_return = avg_return * trading_days
-        downside_deviation = downside_deviation * np.sqrt(trading_days)
-        # risk_free_rate is assumed to be already annualized
-    else:
-        # Convert annual risk-free rate to daily
-        risk_free_rate = risk_free_rate / trading_days
-    
-    # Calculate Sortino ratio
-    sortino_ratio = (avg_return - risk_free_rate) / downside_deviation
-    
-    return sortino_ratio
 
 def get_portfolio_returns(ib, symbols, duration='1 Y', bar_size='1 day'):
     """
