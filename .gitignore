@@ -4,3 +4,4 @@ __pycache__/
 DATABASE_SCHEMA.md
 .env
 testing/FinalSectorSheet.xlsx
+.venv/

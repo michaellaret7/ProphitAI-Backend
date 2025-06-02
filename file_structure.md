@@ -104,6 +104,13 @@
 │   ├── retrieve_portfolio_from_db.py
 │   └── ticker_utils.py
 │
+├── front_end/ ← Frontend React application
+│ ├── public/
+│ └── src/
+│   ├── assets/
+│   │ └── logos/
+│   └── components/
+│
 ├── testing/ ← notebooks / sandboxes / demos
 │ ├── AgentSDKWorks.py
 │ ├── FinalSectorSheet.xlsx

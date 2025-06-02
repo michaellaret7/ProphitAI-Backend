@@ -1,0 +1,281 @@
+.portfolio-container {
+  padding: 0 2rem 2rem;
+}
+
+/* Animation Keyframes */
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes fadeInScale {
+  from {
+    opacity: 0;
+    transform: translateY(20px) scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+/* Portfolio Header */
+.portfolio-header {
+  margin-bottom: 2rem;
+  animation: fadeInUp 0.6s ease;
+}
+
+.portfolio-title {
+  font-size: 2rem;
+  font-weight: 700;
+  color: #1a202c;
+  margin-bottom: 0.5rem;
+}
+
+.portfolio-subtitle {
+  color: #64748b;
+  font-size: 1rem;
+}
+
+/* Summary Cards */
+.portfolio-summary {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 1rem;
+  margin-bottom: 2rem;
+}
+
+.summary-card {
+  background: white;
+  border-radius: 12px;
+  padding: 1.5rem;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  transition: all 0.3s ease;
+  animation: fadeInUp 0.6s ease;
+  animation-fill-mode: both;
+}
+
+.summary-card:nth-child(1) { animation-delay: 0.1s; }
+.summary-card:nth-child(2) { animation-delay: 0.2s; }
+.summary-card:nth-child(3) { animation-delay: 0.3s; }
+.summary-card:nth-child(4) { animation-delay: 0.4s; }
+
+.summary-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.summary-icon {
+  font-size: 2rem;
+  width: 3rem;
+  height: 3rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #f8fafc;
+  border-radius: 8px;
+  transition: transform 0.3s ease;
+}
+
+.summary-card:hover .summary-icon {
+  transform: scale(1.1);
+}
+
+.summary-content h3 {
+  font-size: 0.875rem;
+  color: #64748b;
+  font-weight: 500;
+  margin-bottom: 0.25rem;
+}
+
+.summary-value {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: #1a202c;
+  margin: 0;
+}
+
+.summary-value.positive {
+  color: #10b981;
+}
+
+.summary-change {
+  font-size: 0.875rem;
+  color: #64748b;
+}
+
+.summary-change.positive {
+  color: #10b981;
+}
+
+/* Holdings Section */
+.holdings-section {
+  background: white;
+  border-radius: 12px;
+  padding: 1.5rem;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  animation: fadeInScale 0.8s ease 0.5s both;
+}
+
+.holdings-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1.5rem;
+}
+
+.holdings-header h2 {
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: #1a202c;
+  margin: 0;
+}
+
+.holdings-actions {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.holdings-actions button {
+  padding: 0.5rem 1rem;
+  border-radius: 8px;
+  border: 1px solid #e2e8f0;
+  background: white;
+  color: #64748b;
+  font-size: 0.875rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.holdings-actions button:hover {
+  background: #f8fafc;
+  border-color: #cbd5e1;
+  color: #475569;
+  transform: translateY(-1px);
+}
+
+/* Holdings Table */
+.holdings-table {
+  overflow-x: auto;
+}
+
+.holdings-table table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.holdings-table th {
+  text-align: left;
+  padding: 0.75rem 1rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: #64748b;
+  border-bottom: 2px solid #e2e8f0;
+  white-space: nowrap;
+}
+
+.holdings-table td {
+  padding: 1rem;
+  border-bottom: 1px solid #f1f5f9;
+  font-size: 0.875rem;
+  color: #1a202c;
+}
+
+.holdings-table tr {
+  opacity: 0;
+  animation: fadeInUp 0.4s ease forwards;
+}
+
+.holdings-table tr:nth-child(1) { animation-delay: 0.7s; }
+.holdings-table tr:nth-child(2) { animation-delay: 0.8s; }
+.holdings-table tr:nth-child(3) { animation-delay: 0.9s; }
+.holdings-table tr:nth-child(4) { animation-delay: 1.0s; }
+.holdings-table tr:nth-child(5) { animation-delay: 1.1s; }
+
+.holdings-table tr:hover {
+  background: #f8fafc;
+  transform: translateX(4px);
+}
+
+.holdings-table .symbol {
+  font-weight: 600;
+  color: #5b4cdb;
+}
+
+/* Stock Logo Styles */
+.holdings-table .symbol img {
+  object-fit: cover;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  transition: transform 0.2s ease;
+}
+
+.holdings-table tr:hover .symbol img {
+  transform: scale(1.1);
+}
+
+/* Analyst Sentiment Styles */
+.holdings-table td span {
+  display: inline-block;
+  padding: 0.25rem 0.75rem;
+  border-radius: 12px;
+  background-color: rgba(255, 255, 255, 0.1);
+  transition: all 0.2s ease;
+}
+
+.holdings-table .positive {
+  color: #10b981;
+  font-weight: 500;
+}
+
+.holdings-table .negative {
+  color: #ef4444;
+  font-weight: 500;
+}
+
+.btn-action {
+  background: transparent;
+  border: none;
+  font-size: 1.25rem;
+  color: #64748b;
+  cursor: pointer;
+  padding: 0.25rem 0.5rem;
+  border-radius: 4px;
+  transition: all 0.2s ease;
+}
+
+.btn-action:hover {
+  background: #e2e8f0;
+  color: #475569;
+  transform: scale(1.1);
+}
+
+/* Filter and Sort buttons */
+.btn-filter, .btn-sort, .btn-export {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.btn-filter::before {
+  content: '🔽';
+  font-size: 0.75rem;
+}
+
+.btn-sort::before {
+  content: '↕️';
+  font-size: 0.75rem;
+}
+
+.btn-export::before {
+  content: '📥';
+  font-size: 0.75rem;
+} 
