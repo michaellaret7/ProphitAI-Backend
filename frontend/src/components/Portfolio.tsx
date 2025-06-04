@@ -1,144 +1,64 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import './Portfolio.css';
 import appleLogo from '../assets/logos/icons8-apple-logo-48.png';
 import googleLogo from '../assets/logos/icons8-google-logo-48.png';
 
+// Define the Holding interface based on the backend model and frontend needs
+interface Holding {
+  symbol: string;
+  name?: string; // Name might not come from the DB, so it's optional
+  quantity: number;
+  currentPrice: number;
+  marketValue: number;
+  pnl: number;
+  pnlPercent: number;
+  portfolioPercent: number;
+  analystSentiment?: string; // Analyst sentiment might not come from the DB
+}
+
 const Portfolio: React.FC = () => {
-  // Holdings data with analyst sentiment
-  const holdings = [
-    {
-      symbol: 'AAPL',
-      name: 'Apple Inc.',
-      quantity: 100,
-      currentPrice: 189.95,
-      marketValue: 18995.00,
-      pnl: 3995.00,
-      pnlPercent: 26.63,
-      portfolioPercent: 15.24,
-      analystSentiment: 'overweight'
-    },
-    {
-      symbol: 'MSFT',
-      name: 'Microsoft Corp.',
-      quantity: 50,
-      currentPrice: 423.85,
-      marketValue: 21192.50,
-      pnl: 5692.50,
-      pnlPercent: 36.73,
-      portfolioPercent: 17.01,
-      analystSentiment: 'strong buy'
-    },
-    {
-      symbol: 'GOOGL',
-      name: 'Alphabet Inc.',
-      quantity: 30,
-      currentPrice: 175.94,
-      marketValue: 5278.20,
-      pnl: 1528.20,
-      pnlPercent: 40.75,
-      portfolioPercent: 4.24,
-      analystSentiment: 'overweight'
-    },
-    {
-      symbol: 'AMZN',
-      name: 'Amazon.com Inc.',
-      quantity: 25,
-      currentPrice: 178.35,
-      marketValue: 4458.75,
-      pnl: 958.75,
-      pnlPercent: 27.39,
-      portfolioPercent: 3.58,
-      analystSentiment: 'neutral'
-    },
-    {
-      symbol: 'NVDA',
-      name: 'NVIDIA Corp.',
-      quantity: 40,
-      currentPrice: 495.22,
-      marketValue: 19808.80,
-      pnl: 8808.80,
-      pnlPercent: 80.12,
-      portfolioPercent: 15.90,
-      analystSentiment: 'strong buy'
-    },
-    {
-      symbol: 'SPY',
-      name: 'SPDR S&P 500 ETF',
-      quantity: 20,
-      currentPrice: 452.16,
-      marketValue: 9043.20,
-      pnl: 1243.20,
-      pnlPercent: 15.94,
-      portfolioPercent: 7.26,
-      analystSentiment: 'overweight'
-    },
-    {
-      symbol: 'QQQ',
-      name: 'Invesco QQQ Trust',
-      quantity: 15,
-      currentPrice: 391.56,
-      marketValue: 5873.40,
-      pnl: 873.40,
-      pnlPercent: 17.47,
-      portfolioPercent: 4.71,
-      analystSentiment: 'neutral'
-    },
-    {
-      symbol: 'VTI',
-      name: 'Vanguard Total Stock Market ETF',
-      quantity: 30,
-      currentPrice: 235.48,
-      marketValue: 7064.40,
-      pnl: 564.40,
-      pnlPercent: 8.69,
-      portfolioPercent: 5.67,
-      analystSentiment: 'overweight'
-    },
-    {
-      symbol: 'TSLA',
-      name: 'Tesla Inc.',
-      quantity: 10,
-      currentPrice: 238.83,
-      marketValue: 2388.30,
-      pnl: -311.70,
-      pnlPercent: -11.54,
-      portfolioPercent: 1.92,
-      analystSentiment: 'underweight'
-    },
-    {
-      symbol: 'META',
-      name: 'Meta Platforms Inc.',
-      quantity: 35,
-      currentPrice: 352.08,
-      marketValue: 12322.80,
-      pnl: 2822.80,
-      pnlPercent: 29.71,
-      portfolioPercent: 9.89,
-      analystSentiment: 'overweight'
-    },
-    {
-      symbol: 'BRK.B',
-      name: 'Berkshire Hathaway',
-      quantity: 20,
-      currentPrice: 368.90,
-      marketValue: 7378.00,
-      pnl: 378.00,
-      pnlPercent: 5.40,
-      portfolioPercent: 5.92,
-      analystSentiment: 'neutral'
-    },
-    {
-      symbol: 'GE',
-      name: 'General Electric Co.',
-      quantity: 50,
-      currentPrice: 115.23,
-      marketValue: 5761.50,
-      pnl: -438.50,
-      pnlPercent: -7.07,
-      portfolioPercent: 4.62,
-      analystSentiment: 'strong sell'
-    }
-  ];
+  const [holdings, setHoldings] = useState<Holding[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  // Hardcoded user_name for now, this could come from auth context or props
+  const userName = "test_user_beta_two"; 
+
+  useEffect(() => {
+    const fetchHoldings = async () => {
+      setIsLoading(true);
+      setError(null);
+      try {
+        const response = await fetch(`http://localhost:8000/api/portfolio/holdings/${userName}`);
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(errorData.detail || `HTTP error! status: ${response.status}`);
+        }
+        const data: { holdings: Holding[] } = await response.json();
+        
+        // Map backend data to frontend Holding interface, adding placeholders if needed
+        const fetchedHoldings = data.holdings.map(h => ({
+          ...h,
+          name: h.symbol, // Placeholder for name, can be enriched later
+          analystSentiment: 'N/A' // Placeholder for analyst sentiment
+        }));        
+        setHoldings(fetchedHoldings);
+
+      } catch (err) {
+        if (err instanceof Error) {
+          setError(err.message);
+        } else {
+          setError('An unknown error occurred while fetching holdings.');
+        }
+        console.error("Failed to fetch holdings:", err);
+        setHoldings([]); // Set to empty array on error
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchHoldings();
+  }, [userName]); // Re-fetch if userName changes
 
   // Function to get sentiment color
   const getSentimentColor = (sentiment: string) => {
@@ -190,8 +110,8 @@ const Portfolio: React.FC = () => {
           <div className="summary-icon">📊</div>
           <div className="summary-content">
             <h3>Total Holdings</h3>
-            <p className="summary-value">24</p>
-            <span className="summary-change positive">+2 this month</span>
+            <p className="summary-value">{isLoading ? '-' : holdings.length}</p>
+            <span className="summary-change positive"></span>
           </div>
         </div>
 
@@ -199,8 +119,12 @@ const Portfolio: React.FC = () => {
           <div className="summary-icon">💰</div>
           <div className="summary-content">
             <h3>Total Value</h3>
-            <p className="summary-value">$124,613.20</p>
-            <span className="summary-change positive">+$1,245.31 (+1.01%)</span>
+            <p className="summary-value">
+              {isLoading ? '-' : 
+                `$${holdings.reduce((acc, h) => acc + h.marketValue, 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+              }
+            </p>
+            <span className="summary-change positive"></span>
           </div>
         </div>
 
@@ -208,8 +132,8 @@ const Portfolio: React.FC = () => {
           <div className="summary-icon">📈</div>
           <div className="summary-content">
             <h3>Today's P&L</h3>
-            <p className="summary-value positive">+$45.31</p>
-            <span className="summary-change">+0.04%</span>
+            <p className="summary-value positive">N/A</p>
+            <span className="summary-change"></span>
           </div>
         </div>
 
@@ -217,8 +141,8 @@ const Portfolio: React.FC = () => {
           <div className="summary-icon">🎯</div>
           <div className="summary-content">
             <h3>Best Performer</h3>
-            <p className="summary-value">NVDA</p>
-            <span className="summary-change positive">+12.5% today</span>
+            <p className="summary-value">N/A</p>
+            <span className="summary-change positive"></span>
           </div>
         </div>
       </section>
@@ -265,7 +189,7 @@ const Portfolio: React.FC = () => {
                       {holding.symbol}
                     </div>
                   </td>
-                  <td>{holding.name}</td>
+                  <td>{holding.name || holding.symbol}</td>
                   <td>{holding.quantity}</td>
                   <td>${holding.currentPrice.toFixed(2)}</td>
                   <td>${holding.marketValue.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
@@ -276,12 +200,12 @@ const Portfolio: React.FC = () => {
                   <td>
                     <span 
                       style={{ 
-                        color: getSentimentColor(holding.analystSentiment),
+                        color: getSentimentColor(holding.analystSentiment || 'neutral'),
                         fontWeight: '600',
                         fontSize: '0.875rem'
                       }}
                     >
-                      {formatSentiment(holding.analystSentiment)}
+                      {formatSentiment(holding.analystSentiment || 'N/A')}
                     </span>
                   </td>
                   <td>
@@ -292,6 +216,10 @@ const Portfolio: React.FC = () => {
             </tbody>
           </table>
         </div>
+
+        {isLoading && <div className="loading-message">Loading holdings...</div>}
+        {error && <div className="error-message">Error fetching holdings: {error}</div>}
+        {!isLoading && !error && holdings.length === 0 && <div className="info-message">No holdings found for this user.</div>}
       </section>
     </div>
   );

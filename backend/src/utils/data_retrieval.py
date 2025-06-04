@@ -14,15 +14,19 @@ from backend.src.utils.caching import cache_result
 
 @cache_result
 def get_price_data(ticker: str, frequency: str = 'daily', years: float = 4, 
-                   db_config: Optional[Dict] = None) -> Optional[Union[pd.DataFrame, Dict]]:
+                   db_config: Optional[Dict] = None,
+                   start_date_override: Optional[str] = None,
+                   end_date_override: Optional[str] = None) -> Optional[Union[pd.DataFrame, Dict]]:
     """
     Retrieve price data for a given ticker with specified frequency.
     
     Args:
         ticker: Stock ticker symbol
         frequency: 'daily' for daily closing prices or 'hourly' for hourly data
-        years: Number of years of historical data to retrieve
+        years: Number of years of historical data to retrieve (used if overrides are not provided)
         db_config: Database configuration (uses default if None)
+        start_date_override: Optional 'YYYY-MM-DD' string to specify exact start date
+        end_date_override: Optional 'YYYY-MM-DD' string to specify exact end date
         
     Returns:
         For 'daily': DataFrame with columns [date, close, volume]
@@ -38,8 +42,17 @@ def get_price_data(ticker: str, frequency: str = 'daily', years: float = 4,
     ticker_lower = ticker.lower()
     
     # Calculate date range
-    end_date = datetime.now()
-    start_date = end_date - timedelta(days=365 * years)
+    if start_date_override and end_date_override:
+        try:
+            start_date = datetime.strptime(start_date_override, '%Y-%m-%d')
+            # For end_date, set time to end of day to include all records on that day
+            end_date = datetime.strptime(end_date_override, '%Y-%m-%d').replace(hour=23, minute=59, second=59)
+        except ValueError:
+            print("Invalid date format for overrides. Please use 'YYYY-MM-DD'.")
+            return None
+    else:
+        end_date = datetime.now()
+        start_date = end_date - timedelta(days=365 * years)
     
     # Load schema definition
     schema_data = load_schema_data()
@@ -141,7 +154,7 @@ def get_price_data(ticker: str, frequency: str = 'daily', years: float = 4,
                         date_trunc('hour', datetime) as hour_start,
                         MAX(datetime) as last_bar_time
                     FROM {ticker_location['schema']}.{ticker_lower}
-                    WHERE date BETWEEN %s AND %s
+                    WHERE datetime BETWEEN %s AND %s
                     GROUP BY date_trunc('hour', datetime)
                 )
                 SELECT 
@@ -405,3 +418,33 @@ def get_fundamental_data(ticker: str, db_config: Optional[Dict] = None) -> Optio
     except Exception as e:
         print(f"Error retrieving fundamental data for {ticker}: {e}")
         return None 
+
+
+if __name__ == "__main__":
+    start_date = datetime(2022, 1, 1)
+    end_date = datetime(2022, 12, 31)
+    
+    qqq_data = get_price_data(
+        ticker='QQQ',
+        frequency='daily',
+        start_date_override=start_date.strftime('%Y-%m-%d'),
+        end_date_override=end_date.strftime('%Y-%m-%d')
+    )
+    
+    iwm_data = get_price_data(
+        ticker='IWM',
+        frequency='daily',
+        start_date_override=start_date.strftime('%Y-%m-%d'),
+        end_date_override=end_date.strftime('%Y-%m-%d')
+    )
+
+    spy_data = get_price_data(
+        ticker='SPY',
+        frequency='daily',
+        start_date_override=start_date.strftime('%Y-%m-%d'),
+        end_date_override=end_date.strftime('%Y-%m-%d')
+    )
+
+    print(qqq_data)
+    print(iwm_data)
+    print(spy_data)

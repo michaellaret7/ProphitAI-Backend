@@ -6,15 +6,14 @@ def get_user_information():
     """
     user_data = {
         "user_information": {
-            "age": "52",
-            "net_worth": "$3,500,000",
-            "investment size(as a percentage of net worth)": "70%",
-            "risk_tolerance": "Moderate-High",
-            "investment_goals": "Capital Growth and Income Generation",
-            "time_horizon": "5 Years",
+            "age": "28",
+            "net_worth": "$500,000",
+            "investment size(as a percentage of net worth)": "80%",
+            "risk_tolerance": "High",
+            "investment_goals": "Aggressive Capital Growth",
+            "time_horizon": "10 Years",
             "Overall Description": """
-            I am an experienced investor with a moderate to high risk tolerance. I am looking for a portfolio that will grow my capital and provide me with a reliable income stream.
-            The portfolio should be well balanced and include some private equity etfs. I am also very bullish on the tech sector and the future of AI.
+            I am a young investor with a high risk tolerance and a long investment horizon. I am comfortable with volatility and interested in aggressively growing my wealth through exposure to high-growth sectors such as technology, AI, and emerging markets. I welcome innovative investment vehicles, including leveraged ETFs and cryptocurrencies, as part of a diversified yet growth-oriented portfolio.
             """
         }
     }

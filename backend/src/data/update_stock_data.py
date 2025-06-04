@@ -775,8 +775,8 @@ def update_all_tickers_data(fix_date_column=False, start_db=None, start_schema=N
             print("Disconnected from Interactive Brokers")
 
 if __name__ == "__main__":
-    db_to_start = "equity_sector_communication_services_prices"
-    schema_to_start = "diversified_telecommunication_services_prices"
+    db_to_start = "equity_sector_information_technology_prices"
+    schema_to_start = "technology_hardware__storage_and_peripherals_prices"
     print(f"\nStarting update from DB: {db_to_start}, Schema: {schema_to_start}\n")
     update_all_tickers_data(fix_date_column=False, start_db=db_to_start, start_schema=schema_to_start)
 

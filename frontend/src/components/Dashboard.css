@@ -375,13 +375,13 @@
 }
 
 .metric-card.warning-card {
-  background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+  background: white;
 }
 
 .metric-card.warning-card .metric-icon,
 .metric-card.warning-card .metric-label,
 .metric-card.warning-card .metric-value {
-  color: #92400e;
+  color: #1e293b;
 }
 
 .metric-header {
@@ -392,17 +392,42 @@
 }
 
 .metric-icon {
-  font-size: 24px;
-  animation: bounce 2s infinite;
+  font-size: 20px;
+  width: 44px;
+  height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 8px;
+  flex-shrink: 0;
 }
 
-@keyframes bounce {
-  0%, 100% {
-    transform: translateY(0);
-  }
-  50% {
-    transform: translateY(-4px);
-  }
+.total-value-icon-bg {
+  background-color: #e6f4ea;
+}
+.total-value-icon-bg svg {
+  color: #1e8e3e;
+}
+
+.overall-return-icon-bg {
+  background-color: #e6f4ea;
+}
+.overall-return-icon-bg svg {
+  color: #1e8e3e;
+}
+
+.ai-risk-icon-bg {
+  background-color: #f3e8fd;
+}
+.ai-risk-icon-bg svg {
+  color: #8e44ad;
+}
+
+.optimization-icon-bg {
+  background-color: #fce8e6;
+}
+.optimization-icon-bg svg {
+  color: #d93025;
 }
 
 .metric-label {
@@ -441,7 +466,7 @@
 }
 
 .metric-change.warning {
-  color: #92400e;
+  color: #b91c1c;
   font-weight: 600;
 }
 
@@ -464,7 +489,7 @@
 /* Charts Section */
 .charts-section {
   display: grid;
-  grid-template-columns: 2fr 1fr;
+  grid-template-columns: 2fr 1fr; /* Reverted to original layout */
   gap: 24px;
   padding: 0 32px 32px;
 }
@@ -475,6 +500,9 @@
   padding: 24px;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.04);
   animation: fadeInUp 0.6s ease 0.5s both;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
 }
 
 .chart-header {
@@ -493,7 +521,7 @@
 .chart-controls {
   display: flex;
   align-items: center;
-  gap: 16px;
+  gap: 1rem;
 }
 
 .time-selector {
@@ -502,6 +530,7 @@
   background: #f1f5f9;
   padding: 4px;
   border-radius: 10px;
+  margin-left: auto;
 }
 
 .time-btn {
@@ -603,6 +632,36 @@
 .chart-body {
   position: relative;
   width: 100%;
+  flex-grow: 1;
+  min-height: 350px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* The TradingView widget often creates its own div, this ensures it fills the chart-body */
+.chart-body > div {
+  width: 100%;
+  height: 100%;
+}
+
+/* Ensure the performance chart container itself has proper height */
+.performance-chart-container {
+  min-height: auto;
+  height: auto;
+}
+
+.performance-chart-container .chart-body {
+  height: 300px; /* Fixed height matching allocation chart */
+}
+
+.allocation-chart-container {
+  min-height: auto;
+  height: auto;
+}
+
+.allocation-chart-container .chart-body {
+  height: auto; /* Keep allocation chart height as is */
 }
 
 .performance-svg {
@@ -739,10 +798,10 @@
 }
 
 .legend-color {
-  width: 16px;
-  height: 16px;
-  border-radius: 4px;
-  margin-right: 12px;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  margin-right: 10px;
   transition: transform 0.3s ease;
 }
 
@@ -951,4 +1010,229 @@
   .metrics-grid {
     grid-template-columns: 1fr;
   }
+}
+
+.broker-logo {
+  width: 20px;
+  height: 20px;
+  object-fit: contain;
+}
+
+/* Portfolio Performance Chart Styles - Recharts */
+.recharts-wrapper {
+  width: 100%;
+  height: 100%;
+  position: relative;
+  min-height: 250px;
+}
+
+/* Custom Tooltip Styles */
+.custom-tooltip {
+  background: rgba(255, 255, 255, 0.95);
+  padding: 12px;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.tooltip-date {
+  font-size: 12px;
+  color: #64748b;
+  margin: 0 0 8px 0;
+  font-weight: 500;
+}
+
+.tooltip-portfolio,
+.tooltip-spy,
+.tooltip-qqq,
+.tooltip-iwm,
+.tooltip-vti {
+  font-size: 14px;
+  color: #1e293b;
+  margin: 0 0 4px 0;
+  font-weight: 500;
+}
+
+.tooltip-portfolio {
+  color: #5b4cdb;
+}
+
+.tooltip-spy {
+  color: #10b981;
+}
+
+.tooltip-qqq {
+  color: #f59e0b;
+}
+
+.tooltip-iwm {
+  color: #ef4444;
+}
+
+.tooltip-vti {
+  color: #8b5cf6;
+}
+
+.tooltip-gld {
+  color: #d1a11e;
+}
+
+.tooltip-dbc {
+  color: #8b5cf6;
+}
+
+.tooltip-eem {
+  color: #06b6d4;
+}
+
+.tooltip-change {
+  font-size: 13px;
+  font-weight: normal;
+  opacity: 0.8;
+}
+
+.tooltip-value {
+  font-size: 14px;
+  font-weight: 600;
+  color: #1e293b;
+  margin: 0;
+}
+
+/* Recharts specific adjustments */
+.recharts-cartesian-axis-tick-value {
+  fill: #64748b;
+  font-size: 12px;
+}
+
+.recharts-cartesian-grid-horizontal line,
+.recharts-cartesian-grid-vertical line {
+  stroke: #f0f0f0;
+}
+
+.recharts-legend-wrapper {
+  font-size: 14px;
+}
+
+.recharts-legend-item {
+  margin: 0 16px !important;
+}
+
+.recharts-legend-item-text {
+  color: #475569 !important;
+  font-weight: 500;
+  font-size: 14px !important;
+}
+
+/* Style for the legend with percentages */
+.recharts-default-legend {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 8px 0;
+}
+
+/* Removed empty ruleset for .portfolio-chart-wrapper, .portfolio-chart */
+
+.chart-loading,
+.chart-error,
+.chart-no-data {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  min-height: 250px;
+  color: #64748b;
+  font-size: 16px;
+}
+
+.chart-error {
+  color: #ef4444;
+}
+
+.portfolio-chart text {
+  user-select: none;
+}
+
+.portfolio-chart circle {
+  transition: r 0.3s ease;
+}
+
+.portfolio-chart circle:hover {
+  r: 5;
+  cursor: pointer;
+}
+
+/* Responsive adjustments for portfolio chart */
+@media (max-width: 1200px) {
+  .portfolio-chart {
+    max-width: 100%;
+  }
+}
+
+/* ETF Filter Styling to match time buttons */
+.etf-filter-container {
+  position: relative;
+  background: #f1f5f9;
+  padding: 4px;
+  border-radius: 10px;
+}
+
+.etf-filter-btn {
+  /* Match time-btn styling exactly */
+  padding: 6px 12px;
+  border: none;
+  background: none;
+  color: #64748b;
+  font-size: 13px;
+  font-weight: 500;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.etf-filter-btn:hover {
+  background: white;
+  color: #1e293b;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+}
+
+.etf-filter-btn:focus {
+  outline: none;
+  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.5);
+}
+
+/* ETF Dropdown Menu */
+.etf-dropdown-menu {
+  background: white;
+  border-radius: 0.5rem;
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+  border: 1px solid #e5e7eb;
+  min-width: 8rem;
+  z-index: 50;
+}
+
+.etf-dropdown-item {
+  display: flex;
+  align-items: center;
+  padding: 0.75rem 1rem;
+  font-size: 0.875rem;
+  color: #374151;
+  cursor: pointer;
+  transition: background-color 0.15s ease;
+}
+
+.etf-dropdown-item:hover {
+  background-color: #f3f4f6;
+}
+
+.etf-dropdown-item.focus {
+  background-color: #f3f4f6;
+}
+
+.etf-dropdown-item input[type="checkbox"] {
+  margin-right: 0.5rem;
+  accent-color: #5b4cdb;
 } 

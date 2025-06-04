@@ -1,5 +1,4 @@
 from typing import Optional
-
 from backend.src.utils.logging_config import init_logger
 from backend.src.data.user_portfolio_data.fetch_ibkr_holdings import fetch_ibkr_portfolio_positions
 from backend.src.data.user_portfolio_data.store_user_positions import store_portfolio_positions, TABLE_NAME

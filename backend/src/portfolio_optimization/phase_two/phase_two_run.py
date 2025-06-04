@@ -56,6 +56,15 @@ logger.info("[Phase-Two] Phase-two module initialised …")
 model, client = openai_model_and_client()
 
 def pick_top_tickers_from_asset_classes(portfolio_json):
+    """
+    Picks the top tickers from each asset class quantitively.
+    Returns a dict containing the top ten tickers for each asset class.
+    The dict contains the following keys:
+        - Ticker 
+        - Tickers calculations (metrics)
+        - Tickers fundamental report
+        - Tickers fundamental predictions
+    """
     start_time = time.perf_counter()
 
     # Extract asset classes from portfolio data
@@ -77,9 +86,9 @@ def pick_top_tickers_from_asset_classes(portfolio_json):
         tickers = tickers_data[asset_class]
 
         try:
-            df = calculate_and_filter_metrics(tickers)
+            df = calculate_and_filter_metrics(tickers) # calculate metrics and filter out stocks with under 10,000 daily average volume
 
-            new_df = calculate_composite_scores(df)
+            new_df = calculate_composite_scores(df) # calculate composite scores for each stock and pick the top 10
             new_df = new_df[:NUM_TOP_TICKERS]
 
             # Filter the original df to include only the top 5 tickers
@@ -101,7 +110,7 @@ def pick_top_tickers_from_asset_classes(portfolio_json):
                     if 'sector_beta' in stock_metrics:
                         del stock_metrics['sector_beta']
 
-                    print(f"Ticker {ticker} in ETF asset class '{asset_class}', removing sector_beta and getting description.")
+                    # print(f"Ticker {ticker} in ETF asset class '{asset_class}', removing sector_beta and getting description.")
 
                     fundamental_report = get_asset_description(ticker)
                     # ETFs don't have fundamental predictions, set to None or skip
@@ -344,6 +353,31 @@ def run_phase_two(portfolio_data):
     # Final portfolio already logged above.
     
     return final_portfolio
+
+if __name__ == "__main__":
+    sample_portfolio_data_for_phase_two = {
+        "portfolio": [
+            {
+                "asset_class": "multi_utilities",  # Example: Equity Sub-industry
+                "allocation": 15.0,
+                "reason": "medium conviction to this asset class"
+            }
+        ],
+        "portfolio_thesis": "A growth-focused portfolio with significant allocation to technology and biotechnology, balanced by fixed income for stability. Includes a test for handling unknown asset classes."
+    }
+
+
+    # print(pick_top_tickers_from_asset_classes(sample_portfolio_data_for_phase_two))
+    # print(make_phaseTwo_recommendations(pick_top_tickers_from_asset_classes(sample_portfolio_data_for_phase_two)))
+    logger.info("Starting isolated run of phase_two with sample data...")
+    final_recommendations = run_phase_two(sample_portfolio_data_for_phase_two)
+
+    print("\n===========================================")
+    print("Final Portfolio Recommendations (Phase Two):")
+    print(json.dumps(final_recommendations, indent=2))
+    print("===========================================")
+
+    logger.info("Isolated run of phase_two complete.")
 
 
 

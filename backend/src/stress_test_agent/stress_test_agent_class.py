@@ -26,6 +26,7 @@ Follow the Thought → Action → Observation loop internally:
 Available tools
 • get_tickers() --> returns list of tickers
 • calculate_stock_metrics(start_date_str:string, end_date_str:string) --> returns {"ticker": {max_drawdown: %, annualized_volatility: %, ...}} (for all tickers in the specified date range)
+• get_portfolio_returns(start_date_str:string, end_date_str:string) --> returns the overall portfolio return in the specified date range
 • get_stock_data(ticker:string, start_date_str:string, end_date_str:string) --> returns full hourly price history for deeper analysis
 
 After analysing every ticker, output:

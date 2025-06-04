@@ -1,28 +1,392 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import './Dashboard.css';
 import logo from '../assets/logo.png';
+import ibkrLogo from '../assets/logos/ibkr-logo.png';
 import Portfolio from './Portfolio';
+import AiInsightsPage from './AiInsightsPage';
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import {
+    faChartPie, faLightbulb, faTasks, faHistory,
+    faExclamationTriangle, faCog, faUpload, faPlus, faSearch, faChartLine,
+    faSlidersH, faDollarSign, faRobot, faBalanceScale, faFilter
+} from '@fortawesome/free-solid-svg-icons';
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
+import { Menu, MenuButton, MenuItems, MenuItem } from '@headlessui/react';
+import clsx from 'clsx';
+
+interface Sector {
+  name: string;
+  percentage: number;
+  color: string;
+  // value: string; // This field is no longer sent by the backend
+}
+
+// Define a type for ETF visibility state
+interface EtfVisibility {
+  spy: boolean;
+  qqq: boolean;
+  iwm: boolean;
+  gld: boolean;
+  dbc: boolean;
+  eem: boolean;
+}
 
 const Dashboard: React.FC = () => {
   const [hoveredSector, setHoveredSector] = useState<string | null>(null);
   const [selectedTimeframe, setSelectedTimeframe] = useState('All');
   const [activeView, setActiveView] = useState<'dashboard' | 'portfolio' | 'ai-insights' | 'allocation' | 'optimization'>('dashboard');
+  const [sectors, setSectors] = useState<Sector[]>([]);
+  const [isLoadingAllocation, setIsLoadingAllocation] = useState(true);
+  const [allocationError, setAllocationError] = useState<string | null>(null);
+  
+  // Add a debounced state for hover to reduce frequent updates
+  const debouncedHoveredSector = useRef<string | null>(null);
+  const hoverTimeout = useRef<NodeJS.Timeout | null>(null);
+  
+  // Debounce hover state updates
+  const handleHoverChange = (sectorName: string | null) => {
+    if (hoverTimeout.current) {
+      clearTimeout(hoverTimeout.current);
+    }
+    hoverTimeout.current = setTimeout(() => {
+      debouncedHoveredSector.current = sectorName;
+      setHoveredSector(sectorName);
+    }, 50); // 50ms debounce to prevent rapid state changes
+  };
+  
+  useEffect(() => {
+    return () => {
+      if (hoverTimeout.current) {
+        clearTimeout(hoverTimeout.current);
+      }
+    };
+  }, []);
+  
+  // Portfolio performance state
+  const [portfolioPerformance, setPortfolioPerformance] = useState<any>({
+    performanceData: [],
+    totalReturn: 0,
+    startDate: '',
+    endDate: '',
+    spyTotalReturn: null,
+    qqqTotalReturn: null,
+    iwmTotalReturn: null,
+    gldTotalReturn: null,
+    dbcTotalReturn: null,
+    eemTotalReturn: null,
+  });
+  const [isLoadingPerformance, setIsLoadingPerformance] = useState(true);
+  const [performanceError, setPerformanceError] = useState<string | null>(null);
+  
+  const performanceChartContainerRef = useRef<HTMLDivElement>(null);
 
-  const sectors = [
-    { name: 'Tech', percentage: 25, color: '#5b4cdb', value: '$31,153' },
-    { name: 'Financial', percentage: 20, color: '#06b6d4', value: '$24,923' },
-    { name: 'Healthcare', percentage: 15, color: '#8b5cf6', value: '$18,692' },
-    { name: 'Consumer', percentage: 15, color: '#ec4899', value: '$18,692' },
-    { name: 'Energy', percentage: 10, color: '#f59e0b', value: '$12,461' },
-    { name: 'Other', percentage: 15, color: '#6b7280', value: '$18,692' }
-  ];
+  const timeframes = ['1M', '3M', '1Y', 'All'];
 
-  const timeframes = ['1D', '1W', '1M', '3M', '1Y', 'All'];
+  // State for ETF visibility
+  const [etfVisibility, setEtfVisibility] = useState<EtfVisibility>({
+    spy: true,
+    qqq: true,
+    iwm: true,
+    gld: true,
+    dbc: true,
+    eem: true,
+  });
+
+  useEffect(() => {
+    const fetchAllocationData = async () => {
+      setIsLoadingAllocation(true);
+      setAllocationError(null);
+      try {
+        const portfolioId = "f0e3e97b-ff5c-48a2-93e9-d8a1fa84c75b"; // Hardcoded portfolio_id
+        const response = await fetch(`http://localhost:8000/api/portfolio/allocation/${portfolioId}`);
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(errorData.detail || `HTTP error! status: ${response.status}`);
+        }
+        const data = await response.json();
+        setSectors(data.sectors);
+      } catch (error) {
+        if (error instanceof Error) {
+          setAllocationError(error.message);
+        } else {
+          setAllocationError('An unknown error occurred');
+        }
+        console.error("Failed to fetch allocation data:", error);
+        setSectors([
+          { name: 'Error Loading Allocation', percentage: 100, color: '#dc2626' }
+        ]);
+      } finally {
+        setIsLoadingAllocation(false);
+      }
+    };
+
+    if (activeView === 'dashboard') {
+      fetchAllocationData();
+    }
+  }, [activeView]);
+
+  useEffect(() => {
+    // Ensure selectedTimeframe is valid after removing 1D and 1W
+    if (selectedTimeframe === '1D' || selectedTimeframe === '1W') {
+      setSelectedTimeframe('1M'); // Default to 1M if current selection was removed
+    }
+
+    const fetchPortfolioPerformance = async () => {
+      setIsLoadingPerformance(true);
+      setPerformanceError(null);
+      try {
+        const userId = "2594bb4d-784c-4c53-a049-8438baaf0d7c"; // User ID from the request
+        
+        // Determine days based on selected timeframe
+        let days = 365; // Default
+        switch (selectedTimeframe) {
+          case '1M': days = 30; break;
+          case '3M': days = 90; break;
+          case '1Y': days = 365; break;
+          case 'All': days = 1825; break; // 5 years
+        }
+        
+        const response = await fetch(`http://localhost:8000/api/portfolio/performance/${userId}?days=${days}`);
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(errorData.detail || `HTTP error! status: ${response.status}`);
+        }
+        const data = await response.json();
+        setPortfolioPerformance(data);
+      } catch (error) {
+        if (error instanceof Error) {
+          setPerformanceError(error.message);
+        } else {
+          setPerformanceError('An unknown error occurred');
+        }
+        console.error("Failed to fetch portfolio performance:", error);
+      } finally {
+        setIsLoadingPerformance(false);
+      }
+    };
+
+    if (activeView === 'dashboard') {
+      fetchPortfolioPerformance();
+    }
+  }, [activeView, selectedTimeframe]);
+
+  const handleEtfVisibilityChange = (etfKey: keyof EtfVisibility) => {
+    setEtfVisibility(prev => ({ ...prev, [etfKey]: !prev[etfKey] }));
+  };
+
+  const renderPortfolioChart = () => {
+    if (isLoadingPerformance) {
+      return <div className="chart-loading">Loading portfolio performance...</div>;
+    }
+    
+    if (performanceError) {
+      return <div className="chart-error">Error: {performanceError}</div>;
+    }
+    
+    if (!portfolioPerformance.performanceData || portfolioPerformance.performanceData.length === 0) {
+      return <div className="chart-no-data">No performance data available</div>;
+    }
+    
+    // Format data for Recharts - using normalized values for comparison
+    const chartData = portfolioPerformance.performanceData.map((d: any) => ({
+      date: d.date,
+      portfolio: d.portfolio_normalized || 100,
+      spy: d.spy_normalized || null,
+      qqq: d.qqq_normalized || null,
+      iwm: d.iwm_normalized || null,
+      gld: d.gld_normalized || null,
+      dbc: d.dbc_normalized || null,
+      eem: d.eem_normalized || null,
+      portfolioValue: d.value,
+      displayDate: new Date(d.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+    }));
+    
+    // Check if we have ETF data
+    const hasSpyData = chartData.some((d: any) => d.spy !== null);
+    const hasQqqData = chartData.some((d: any) => d.qqq !== null);
+    const hasIwmData = chartData.some((d: any) => d.iwm !== null);
+    const hasGldData = chartData.some((d: any) => d.gld !== null);
+    const hasDbcData = chartData.some((d: any) => d.dbc !== null);
+    const hasEemData = chartData.some((d: any) => d.eem !== null);
+    
+    // Custom tooltip component
+    const CustomTooltip = ({ active, payload, label }: any) => {
+      if (active && payload && payload.length) {
+        const portfolioData = payload.find((p: any) => p.dataKey === 'portfolio');
+        const spyData = payload.find((p: any) => p.dataKey === 'spy');
+        const qqqData = payload.find((p: any) => p.dataKey === 'qqq');
+        const iwmData = payload.find((p: any) => p.dataKey === 'iwm');
+        const gldData = payload.find((p: any) => p.dataKey === 'gld');
+        const dbcData = payload.find((p: any) => p.dataKey === 'dbc');
+        const eemData = payload.find((p: any) => p.dataKey === 'eem');
+        const portfolioValue = payload[0]?.payload?.portfolioValue;
+        
+        return (
+          <div className="custom-tooltip">
+            <p className="tooltip-date">{new Date(label).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}</p>
+            {portfolioData && (
+              <p className="tooltip-portfolio">
+                Portfolio: ${portfolioValue?.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                <span className="tooltip-change"> ({((portfolioData.value - 100)).toFixed(2)}%)</span>
+              </p>
+            )}
+            {spyData && spyData.value !== null && (
+              <p className="tooltip-spy">
+                S&P 500: <span className="tooltip-change">{((spyData.value - 100)).toFixed(2)}%</span>
+              </p>
+            )}
+            {qqqData && qqqData.value !== null && (
+              <p className="tooltip-qqq">
+                QQQ: <span className="tooltip-change">{((qqqData.value - 100)).toFixed(2)}%</span>
+              </p>
+            )}
+            {iwmData && iwmData.value !== null && (
+              <p className="tooltip-iwm">
+                IWM: <span className="tooltip-change">{((iwmData.value - 100)).toFixed(2)}%</span>
+              </p>
+            )}
+            {gldData && gldData.value !== null && (
+              <p className="tooltip-gld">
+                GLD: <span className="tooltip-change">{((gldData.value - 100)).toFixed(2)}%</span>
+              </p>
+            )}
+            {dbcData && dbcData.value !== null && (
+              <p className="tooltip-dbc">
+                DBC: <span className="tooltip-change">{((dbcData.value - 100)).toFixed(2)}%</span>
+              </p>
+            )}
+            {eemData && eemData.value !== null && (
+              <p className="tooltip-eem">
+                EEM: <span className="tooltip-change">{((eemData.value - 100)).toFixed(2)}%</span>
+              </p>
+            )}
+          </div>
+        );
+      }
+      return null;
+    };
+    
+    // Format Y-axis values as percentage change
+    const formatYAxis = (value: number) => {
+      return `${((value - 100)).toFixed(0)}%`;
+    };
+    
+    return (
+      <div className="recharts-wrapper">
+        <ResponsiveContainer width="100%" height="100%">
+          <LineChart 
+            data={chartData}
+            margin={{ top: 10, right: 30, left: 0, bottom: 20 }}
+          >
+            <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+            <XAxis 
+              dataKey="date"
+              tick={{ fontSize: 12 }}
+              tickFormatter={(date) => new Date(date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+              interval="preserveStartEnd"
+            />
+            <YAxis 
+              tick={{ fontSize: 12 }}
+              tickFormatter={formatYAxis}
+              domain={['dataMin - 5', 'dataMax + 5']}
+            />
+            <Tooltip content={<CustomTooltip />} />
+            <Line
+              type="monotone"
+              dataKey="portfolio"
+              stroke="#5b4cdb"
+              strokeWidth={2.5}
+              dot={false}
+              name={`Portfolio (${portfolioPerformance.totalReturn >= 0 ? '+' : ''}${portfolioPerformance.totalReturn}%)`}
+              activeDot={{ r: 6 }}
+            />
+            {hasSpyData && etfVisibility.spy && (
+              <Line
+                type="monotone"
+                dataKey="spy"
+                stroke="#10b981"
+                strokeWidth={2}
+                dot={false}
+                name={`S&P 500 (${portfolioPerformance.spyTotalReturn >= 0 ? '+' : ''}${portfolioPerformance.spyTotalReturn ?? 0}%)`}
+                activeDot={{ r: 6 }}
+              />
+            )}
+            {hasQqqData && etfVisibility.qqq && (
+              <Line
+                type="monotone"
+                dataKey="qqq"
+                stroke="#f59e0b"
+                strokeWidth={2}
+                dot={false}
+                name={`QQQ (${portfolioPerformance.qqqTotalReturn >= 0 ? '+' : ''}${portfolioPerformance.qqqTotalReturn ?? 0}%)`}
+                activeDot={{ r: 6 }}
+              />
+            )}
+            {hasIwmData && etfVisibility.iwm && (
+              <Line
+                type="monotone"
+                dataKey="iwm"
+                stroke="#ef4444"
+                strokeWidth={2}
+                dot={false}
+                name={`IWM (${portfolioPerformance.iwmTotalReturn >= 0 ? '+' : ''}${portfolioPerformance.iwmTotalReturn ?? 0}%)`}
+                activeDot={{ r: 6 }}
+              />
+            )}
+            {hasGldData && etfVisibility.gld && (
+              <Line
+                type="monotone"
+                dataKey="gld"
+                stroke="#d1a11e"
+                strokeWidth={2}
+                dot={false}
+                name={`GLD (${portfolioPerformance.gldTotalReturn >= 0 ? '+' : ''}${portfolioPerformance.gldTotalReturn ?? 0}%)`}
+                activeDot={{ r: 6 }}
+              />
+            )}
+            {hasDbcData && etfVisibility.dbc && (
+              <Line
+                type="monotone"
+                dataKey="dbc"
+                stroke="#8b5cf6"
+                strokeWidth={2}
+                dot={false}
+                name={`DBC (${portfolioPerformance.dbcTotalReturn >= 0 ? '+' : ''}${portfolioPerformance.dbcTotalReturn ?? 0}%)`}
+                activeDot={{ r: 6 }}
+              />
+            )}
+            {hasEemData && etfVisibility.eem && (
+              <Line
+                type="monotone"
+                dataKey="eem"
+                stroke="#06b6d4"
+                strokeWidth={2}
+                dot={false}
+                name={`EEM (${portfolioPerformance.eemTotalReturn >= 0 ? '+' : ''}${portfolioPerformance.eemTotalReturn ?? 0}%)`}
+                activeDot={{ r: 6 }}
+              />
+            )}
+            <Legend 
+              verticalAlign="bottom" 
+              height={36}
+              iconType="line"
+              wrapperStyle={{
+                paddingTop: '10px',
+                fontSize: '14px'
+              }}
+            />
+          </LineChart>
+        </ResponsiveContainer>
+      </div>
+    );
+  };
 
   const renderMainContent = () => {
     switch (activeView) {
       case 'portfolio':
         return <Portfolio />;
+      case 'ai-insights':
+        return <AiInsightsPage />;
       case 'dashboard':
       default:
         return (
@@ -37,7 +401,9 @@ const Dashboard: React.FC = () => {
             <section className="metrics-grid">
               <div className="metric-card">
                 <div className="metric-header">
-                  <span className="metric-icon">💵</span>
+                  <span className="metric-icon total-value-icon-bg">
+                    <FontAwesomeIcon icon={faDollarSign} />
+                  </span>
                   <span className="metric-label">Total Value</span>
                 </div>
                 <div className="metric-value">$124,613.2</div>
@@ -49,7 +415,9 @@ const Dashboard: React.FC = () => {
 
               <div className="metric-card">
                 <div className="metric-header">
-                  <span className="metric-icon">📈</span>
+                  <span className="metric-icon overall-return-icon-bg">
+                    <FontAwesomeIcon icon={faChartLine} />
+                  </span>
                   <span className="metric-label">Overall Return</span>
                 </div>
                 <div className="metric-value">+18.7%</div>
@@ -61,7 +429,9 @@ const Dashboard: React.FC = () => {
 
               <div className="metric-card">
                 <div className="metric-header">
-                  <span className="metric-icon">🤖</span>
+                  <span className="metric-icon ai-risk-icon-bg">
+                    <FontAwesomeIcon icon={faRobot} />
+                  </span>
                   <span className="metric-label">AI Risk Score</span>
                 </div>
                 <div className="metric-value">72<span className="metric-unit">/100</span></div>
@@ -73,7 +443,9 @@ const Dashboard: React.FC = () => {
 
               <div className="metric-card warning-card">
                 <div className="metric-header">
-                  <span className="metric-icon">⚖️</span>
+                  <span className="metric-icon optimization-icon-bg">
+                    <FontAwesomeIcon icon={faBalanceScale} />
+                  </span>
                   <span className="metric-label">Optimization</span>
                 </div>
                 <div className="metric-value">3 issues found</div>
@@ -88,7 +460,51 @@ const Dashboard: React.FC = () => {
                 <div className="chart-header">
                   <h2 className="chart-title">Portfolio Performance</h2>
                   <div className="chart-controls">
-                    <div className="time-selector">
+                    {/* ETF Filter on the left */}
+                    <div className="etf-filter-container">
+                      <Menu>
+                        <MenuButton className="etf-filter-btn">
+                          <FontAwesomeIcon icon={faFilter} />
+                          ETFs
+                        </MenuButton>
+                        <MenuItems 
+                          anchor="bottom start"
+                          className="etf-dropdown-menu"
+                        >
+                          {(Object.keys(etfVisibility) as Array<keyof EtfVisibility>).map(etfKey => {
+                            const etfName = etfKey.toUpperCase();
+                            const totalReturnKey = `${etfKey}TotalReturn` as keyof typeof portfolioPerformance;
+                            if (portfolioPerformance.hasOwnProperty(totalReturnKey)) {
+                              return (
+                                <MenuItem key={etfKey}>
+                                  {({ focus }) => (
+                                    <label 
+                                      className={clsx(
+                                        'etf-dropdown-item',
+                                        focus && 'focus'
+                                      )}
+                                      onClick={(e) => e.stopPropagation()}
+                                    >
+                                      <input 
+                                        type="checkbox"
+                                        checked={etfVisibility[etfKey]}
+                                        onChange={() => handleEtfVisibilityChange(etfKey)}
+                                        onClick={(e) => e.stopPropagation()}
+                                      />
+                                      {etfName}
+                                    </label>
+                                  )}
+                                </MenuItem>
+                              );
+                            }
+                            return null;
+                          })}
+                        </MenuItems>
+                      </Menu>
+                    </div>
+
+                    {/* Time selector on the right */}
+                    <div className="time-selector ml-auto">
                       {timeframes.map(tf => (
                         <button 
                           key={tf}
@@ -99,82 +515,10 @@ const Dashboard: React.FC = () => {
                         </button>
                       ))}
                     </div>
-                    <button className="chart-action-btn" title="Download">📥</button>
-                    <button className="chart-action-btn" title="Refresh">🔄</button>
                   </div>
                 </div>
-                <div className="chart-legend">
-                  <span className="legend-item">
-                    <span className="legend-dot pulse" style={{background: '#5b4cdb'}}></span>
-                    Your Portfolio
-                  </span>
-                  <span className="legend-item">
-                    <span className="legend-dot" style={{background: '#a0aec0'}}></span>
-                    S&P 500
-                  </span>
-                </div>
-                <div className="chart-body">
-                  <svg viewBox="0 0 800 300" className="performance-svg" preserveAspectRatio="none">
-                    {/* Grid lines */}
-                    <g className="grid">
-                      {[0, 1, 2, 3, 4].map(i => (
-                        <line key={i} x1="0" y1={60 + i * 50} x2="800" y2={60 + i * 50} stroke="#e2e8f0" />
-                      ))}
-                    </g>
-                    {/* S&P 500 line */}
-                    <path
-                      className="sp500-line"
-                      d="M 0,180 L 40,175 L 80,170 L 120,172 L 160,168 L 200,165 L 240,162 L 280,160 L 320,158 L 360,155 L 400,152 L 440,150 L 480,148 L 520,146 L 560,144 L 600,142 L 640,141 L 680,140 L 720,139 L 760,138 L 800,137"
-                      fill="none"
-                      stroke="#a0aec0"
-                      strokeWidth="2"
-                      strokeDasharray="5,5"
-                    />
-                    {/* Portfolio line - realistic market movement */}
-                    <path
-                      className="portfolio-line"
-                      d="M 0,200 L 15,195 L 25,190 L 35,193 L 45,188 L 55,185 L 65,182 L 75,180 L 85,175 L 95,178 L 105,173 L 115,170 L 125,165 L 135,160 L 145,155 L 155,150 L 165,148 L 175,145 L 185,142 L 195,138 L 205,135 L 215,132 L 225,128 L 235,125 L 245,122 L 255,120 L 265,115 L 275,118 L 285,113 L 295,110 L 305,108 L 315,105 L 325,102 L 335,98 L 345,95 L 355,92 L 365,88 L 375,85 L 385,82 L 395,80 L 405,75 L 415,72 L 425,70 L 435,68 L 445,65 L 455,62 L 465,60 L 475,58 L 485,55 L 495,52 L 505,50 L 515,48 L 525,45 L 535,42 L 545,40 L 555,38 L 565,35 L 575,33 L 585,30 L 595,28 L 605,25 L 615,23 L 625,20 L 635,22 L 645,25 L 655,28 L 665,30 L 675,33 L 685,35 L 695,38 L 705,40 L 715,42 L 725,45 L 735,48 L 745,50 L 755,52 L 765,55 L 775,58 L 785,60 L 795,62 L 800,65"
-                      fill="none"
-                      stroke="#06b6d4"
-                      strokeWidth="2"
-                    />
-                    <path
-                      className="portfolio-area"
-                      d="M 0,200 L 15,195 L 25,190 L 35,193 L 45,188 L 55,185 L 65,182 L 75,180 L 85,175 L 95,178 L 105,173 L 115,170 L 125,165 L 135,160 L 145,155 L 155,150 L 165,148 L 175,145 L 185,142 L 195,138 L 205,135 L 215,132 L 225,128 L 235,125 L 245,122 L 255,120 L 265,115 L 275,118 L 285,113 L 295,110 L 305,108 L 315,105 L 325,102 L 335,98 L 345,95 L 355,92 L 365,88 L 375,85 L 385,82 L 395,80 L 405,75 L 415,72 L 425,70 L 435,68 L 445,65 L 455,62 L 465,60 L 475,58 L 485,55 L 495,52 L 505,50 L 515,48 L 525,45 L 535,42 L 545,40 L 555,38 L 565,35 L 575,33 L 585,30 L 595,28 L 605,25 L 615,23 L 625,20 L 635,22 L 645,25 L 655,28 L 665,30 L 675,33 L 685,35 L 695,38 L 705,40 L 715,42 L 725,45 L 735,48 L 745,50 L 755,52 L 765,55 L 775,58 L 785,60 L 795,62 L 800,65 L 800,300 L 0,300 Z"
-                      fill="url(#portfolioGradient3)"
-                      opacity="0.3"
-                    />
-                    <defs>
-                      <linearGradient id="portfolioGradient" x1="0%" y1="0%" x2="0%" y2="100%">
-                        <stop offset="0%" stopColor="#5b4cdb" />
-                        <stop offset="100%" stopColor="#5b4cdb" stopOpacity="0" />
-                      </linearGradient>
-                      <linearGradient id="portfolioGradient2" x1="0%" y1="0%" x2="0%" y2="100%">
-                        <stop offset="0%" stopColor="#06b6d4" />
-                        <stop offset="100%" stopColor="#06b6d4" stopOpacity="0" />
-                      </linearGradient>
-                      <linearGradient id="portfolioGradient3" x1="0%" y1="0%" x2="0%" y2="100%">
-                        <stop offset="0%" stopColor="#06b6d4" />
-                        <stop offset="100%" stopColor="#06b6d4" stopOpacity="0" />
-                      </linearGradient>
-                    </defs>
-                  </svg>
-                  <div className="chart-labels">
-                    <span>$150,000</span>
-                    <span>$140,000</span>
-                    <span>$130,000</span>
-                    <span>$120,000</span>
-                    <span>$110,000</span>
-                    <span>$100,000</span>
-                    <span>$90,000</span>
-                  </div>
-                  <div className="chart-dates">
-                    <span>May 4</span>
-                    <span>May 12</span>
-                    <span>May 20</span>
-                    <span>May 28</span>
-                    <span>Jun 1</span>
-                  </div>
+                <div className="chart-body" ref={performanceChartContainerRef}>
+                  {renderPortfolioChart()}
                 </div>
               </div>
 
@@ -188,10 +532,11 @@ const Dashboard: React.FC = () => {
                   <div className="donut-container">
                     <svg viewBox="0 0 200 200" className="donut-chart">
                       {/* Background circle */}
-                      <circle cx="100" cy="100" r="80" fill="none" stroke="#f3f4f6" strokeWidth="40" />
+                      <circle cx="100" cy="100" r="80" fill="none" stroke="#f3f4f6" strokeWidth="35" />
                       
                       {/* Sector segments */}
                       {(() => {
+                        if (isLoadingAllocation) return null; // Or a loading spinner for the chart
                         let offset = 0;
                         return sectors.map((sector) => {
                           const circumference = 2 * Math.PI * 80;
@@ -207,16 +552,16 @@ const Dashboard: React.FC = () => {
                               r="80"
                               fill="none"
                               stroke={sector.color}
-                              strokeWidth={hoveredSector === sector.name ? "45" : "40"}
+                              strokeWidth={hoveredSector === sector.name ? "40" : "35"}
                               strokeDasharray={`${strokeLength} ${circumference}`}
                               strokeDashoffset={`-${currentOffset}`}
                               transform="rotate(-90 100 100)"
                               className="donut-segment"
-                              onMouseEnter={() => setHoveredSector(sector.name)}
-                              onMouseLeave={() => setHoveredSector(null)}
+                              onMouseEnter={() => handleHoverChange(sector.name)}
+                              onMouseLeave={() => handleHoverChange(null)}
                               style={{
                                 cursor: 'pointer',
-                                transition: 'all 0.3s ease',
+                                transition: 'all 0.2s ease', // Reduced transition time for quicker response
                                 opacity: hoveredSector && hoveredSector !== sector.name ? 0.6 : 1
                               }}
                             />
@@ -227,14 +572,16 @@ const Dashboard: React.FC = () => {
                     
                     {/* Center text */}
                     <div className="donut-center">
-                      {hoveredSector ? (
+                      {isLoadingAllocation ? (
+                        <div className="center-label">Loading...</div>
+                      ) : hoveredSector ? (
                         <>
                           <div className="center-value">{sectors.find(s => s.name === hoveredSector)?.percentage}%</div>
                           <div className="center-label">{hoveredSector}</div>
                         </>
                       ) : (
                         <>
-                          <div className="center-value">6</div>
+                          <div className="center-value">{sectors.length}</div>
                           <div className="center-label">Sectors</div>
                         </>
                       )}
@@ -242,16 +589,17 @@ const Dashboard: React.FC = () => {
                   </div>
                   
                   <div className="allocation-legend">
-                    {sectors.map(sector => (
+                    {isLoadingAllocation && <p>Loading allocation data...</p>}
+                    {allocationError && <p style={{ color: 'red' }}>Error: {allocationError}</p>}
+                    {!isLoadingAllocation && !allocationError && sectors.map(sector => (
                       <div 
                         key={sector.name}
                         className={`legend-item ${hoveredSector === sector.name ? 'active' : ''}`}
-                        onMouseEnter={() => setHoveredSector(sector.name)}
-                        onMouseLeave={() => setHoveredSector(null)}
+                        onMouseEnter={() => handleHoverChange(sector.name)}
+                        onMouseLeave={() => handleHoverChange(null)}
                       >
                         <span className="legend-color" style={{background: sector.color}}></span>
                         <span className="legend-text">{sector.name} ({sector.percentage}%)</span>
-                        <span className="legend-value">{sector.value}</span>
                       </div>
                     ))}
                   </div>
@@ -310,7 +658,7 @@ const Dashboard: React.FC = () => {
             className={`nav-item ${activeView === 'dashboard' ? 'active' : ''}`}
             onClick={(e) => { e.preventDefault(); setActiveView('dashboard'); }}
           >
-            <span className="nav-icon">📊</span>
+            <span className="nav-icon"><FontAwesomeIcon icon={faChartLine} /></span>
             <span className="nav-text">Dashboard</span>
           </a>
           <a 
@@ -318,7 +666,7 @@ const Dashboard: React.FC = () => {
             className={`nav-item ${activeView === 'portfolio' ? 'active' : ''}`}
             onClick={(e) => { e.preventDefault(); setActiveView('portfolio'); }}
           >
-            <span className="nav-icon">💼</span>
+            <span className="nav-icon"><FontAwesomeIcon icon={faTasks} /></span>
             <span className="nav-text">Portfolio</span>
           </a>
           <a 
@@ -326,7 +674,7 @@ const Dashboard: React.FC = () => {
             className={`nav-item ${activeView === 'ai-insights' ? 'active' : ''}`}
             onClick={(e) => { e.preventDefault(); setActiveView('ai-insights'); }}
           >
-            <span className="nav-icon">🤖</span>
+            <span className="nav-icon"><FontAwesomeIcon icon={faLightbulb} /></span>
             <span className="nav-text">AI Insights</span>
           </a>
           <a 
@@ -334,7 +682,7 @@ const Dashboard: React.FC = () => {
             className={`nav-item ${activeView === 'allocation' ? 'active' : ''}`}
             onClick={(e) => { e.preventDefault(); setActiveView('allocation'); }}
           >
-            <span className="nav-icon">📈</span>
+            <span className="nav-icon"><FontAwesomeIcon icon={faChartPie} /></span>
             <span className="nav-text">Allocation</span>
           </a>
           <a 
@@ -342,41 +690,38 @@ const Dashboard: React.FC = () => {
             className={`nav-item ${activeView === 'optimization' ? 'active' : ''}`}
             onClick={(e) => { e.preventDefault(); setActiveView('optimization'); }}
           >
-            <span className="nav-icon">⚡</span>
+            <span className="nav-icon"><FontAwesomeIcon icon={faSlidersH} /></span>
             <span className="nav-text">Optimization</span>
           </a>
+          <a href="#" className="nav-item">
+            <span className="nav-icon"><FontAwesomeIcon icon={faHistory} /></span>
+            <span className="nav-text">Backtesting</span>
+          </a>
+          <a href="#" className="nav-item">
+            <span className="nav-icon"><FontAwesomeIcon icon={faExclamationTriangle} /></span>
+            <span className="nav-text">Risk Analysis</span>
+          </a>
+          <a href="#" className="nav-item">
+            <span className="nav-icon"><FontAwesomeIcon icon={faCog} /></span>
+            <span className="nav-text">Settings</span>
+          </a>
         </nav>
-        
+
         <div className="sidebar-section">
           <a href="#" className="nav-item account-item">
-            <span className="nav-icon">🏦</span>
-            <span className="nav-text">Charles Schwab</span>
+            <img src={ibkrLogo} alt="Interactive Brokers" className="broker-logo" />
+            <span className="nav-text">Interactive Brokers</span>
             <span className="account-status">Connected</span>
           </a>
         </div>
         
-        <nav className="sidebar-nav">
-          <a href="#" className="nav-item">
-            <span className="nav-icon">📈</span>
-            <span className="nav-text">Backtesting</span>
-          </a>
-          <a href="#" className="nav-item">
-            <span className="nav-icon">⚠️</span>
-            <span className="nav-text">Risk Analysis</span>
-          </a>
-          <a href="#" className="nav-item">
-            <span className="nav-icon">⚙️</span>
-            <span className="nav-text">Settings</span>
-          </a>
-        </nav>
-        
         <div className="sidebar-actions">
           <button className="btn-upload">
-            <span className="btn-icon">📤</span>
+            <span className="btn-icon"><FontAwesomeIcon icon={faUpload} /></span>
             Upload Portfolio
           </button>
           <button className="btn-add-asset">
-            <span className="btn-icon">➕</span>
+            <span className="btn-icon"><FontAwesomeIcon icon={faPlus} /></span>
             Add Asset
           </button>
         </div>
@@ -387,7 +732,7 @@ const Dashboard: React.FC = () => {
         {/* Header */}
         <header className="dashboard-header">
           <div className="search-container">
-            <span className="search-icon">🔍</span>
+            <span className="search-icon"><FontAwesomeIcon icon={faSearch} /></span>
             <input 
               type="text" 
               placeholder="Search for stocks, assets..." 
@@ -396,8 +741,8 @@ const Dashboard: React.FC = () => {
           </div>
           <div className="header-right">
             <button className="notification-btn">
-              <span className="notification-dot"></span>
-              <span className="notification-icon">🔔</span>
+              <span className="notification-dot" style={{backgroundColor: '#10b981'}}></span>
+              <img src={ibkrLogo} alt="Interactive Brokers" className="notification-icon" style={{width: '20px', height: '20px', objectFit: 'contain'}} />
             </button>
             <div className="user-profile">
               <img src="https://ui-avatars.com/api/?name=John+Doe&background=5b4cdb&color=fff" alt="User" className="user-avatar" />

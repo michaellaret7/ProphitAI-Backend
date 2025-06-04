@@ -309,10 +309,16 @@ def backtest(portfolio_json: Dict[str, Any]):
 if __name__ == "__main__":
     assumed_initial_portfolio_value = 10_000.0
 
-    test_schema = "portfolio_twenty"
-    table_name = "final_portfolio"
-    print(f"🔄 Retrieving portfolio information from DB: {test_schema}.{table_name}...")
-    portfolio_df = retrieve_portfolio_information_from_db(test_schema, table_name)
+    # You can retrieve by portfolio name or portfolio ID
+    # Option 1: Retrieve by portfolio name
+    # portfolio_name = "gpt4_1miniPortfolio"  # Change this to your desired portfolio name
+    # print(f"🔄 Retrieving portfolio information from DB by name: {portfolio_name}...")
+    # portfolio_df = retrieve_portfolio_information_from_db(portfolio_name, "name")
+
+    # Option 2: Retrieve by portfolio ID (uncomment to use this instead)
+    portfolio_id = "0f5bcbe1-6148-4673-80e9-263e08e35fbf"  # Change this to your desired portfolio ID
+    print(f"🔄 Retrieving portfolio information from DB by ID: {portfolio_id}...")
+    portfolio_df = retrieve_portfolio_information_from_db(portfolio_id, "id")
 
     if portfolio_df is not None and not portfolio_df.empty:
         print(f"✅ Successfully retrieved {len(portfolio_df)} records from the database.")
@@ -320,7 +326,7 @@ if __name__ == "__main__":
         portfolio_to_backtest = prepare_portfolio_json_from_db(portfolio_df, assumed_initial_portfolio_value)
 
         if portfolio_to_backtest:
-            print(f"🚀 Running backtest for generated portfolio from DB data...")
+            print(f"🚀 Running backtest for portfolio ID: {portfolio_id}...")
             # For debugging, you can print the generated JSON:
             # import json
             # print("Generated Portfolio JSON:", json.dumps(portfolio_to_backtest, indent=2))
@@ -328,7 +334,7 @@ if __name__ == "__main__":
         else:
             print("❌ Failed to prepare portfolio JSON from DataFrame. Backtest aborted.")
     elif portfolio_df is not None and portfolio_df.empty:
-        print(f"ℹ️ No data found in {test_schema}.{table_name}. Cannot run backtest.")
+        print(f"ℹ️ No data found for portfolio ID: {portfolio_id}. Cannot run backtest.")
     else:
-        print(f"❌ Failed to retrieve portfolio data from {test_schema}.{table_name}. Backtest aborted.")
+        print(f"❌ Failed to retrieve portfolio data for portfolio ID: {portfolio_id}. Backtest aborted.")
 

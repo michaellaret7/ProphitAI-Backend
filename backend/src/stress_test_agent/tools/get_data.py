@@ -112,13 +112,18 @@ def get_stock_data(ticker: str, start_date_str: str, end_date_str: str, db_confi
     Returns:
         dict: Dictionary with format {'ticker': {data}} or None if not found
     """
-    # Calculate the number of years based on date range
     start_date = datetime.strptime(start_date_str, '%Y-%m-%d')
-    end_date = datetime.strptime(end_date_str, '%Y-%m-%d')
-    years = (end_date - start_date).days / 365.0
+    # Ensure end_date includes the entire day
+    end_date = datetime.strptime(end_date_str, '%Y-%m-%d').replace(hour=23, minute=59, second=59)
+    # years = (end_date - start_date).days / 365.0 # No longer needed
     
-    # Get hourly data using the generic function
-    result = get_price_data(ticker, frequency='hourly', years=years, db_config=db_config)
+    # Get hourly data using the generic function, providing explicit start and end dates
+    result = get_price_data(ticker, 
+                              frequency='hourly', 
+                              # years=years, # Remove years argument
+                              db_config=db_config,
+                              start_date_override=start_date_str,
+                              end_date_override=end_date_str)
     
     if result is None:
         return None
