@@ -1,5 +1,7 @@
 .portfolio-container {
   padding: 0 2rem 2rem;
+  max-width: 1600px;
+  margin: 0 auto;
 }
 
 /* Animation Keyframes */
@@ -25,6 +27,17 @@
   }
 }
 
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    max-height: 0;
+  }
+  to {
+    opacity: 1;
+    max-height: 2000px;
+  }
+}
+
 /* Portfolio Header */
 .portfolio-header {
   margin-bottom: 2rem;
@@ -32,36 +45,57 @@
 }
 
 .portfolio-title {
-  font-size: 2rem;
+  font-size: 2.5rem;
   font-weight: 700;
   color: #1a202c;
   margin-bottom: 0.5rem;
+  letter-spacing: -0.5px;
 }
 
 .portfolio-subtitle {
   color: #64748b;
-  font-size: 1rem;
+  font-size: 1.125rem;
+  font-weight: 400;
 }
 
 /* Summary Cards */
 .portfolio-summary {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-  gap: 1rem;
-  margin-bottom: 2rem;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 1.5rem;
+  margin-bottom: 3rem;
 }
 
 .summary-card {
-  background: white;
-  border-radius: 12px;
-  padding: 1.5rem;
+  background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
+  border-radius: 16px;
+  padding: 2rem;
   display: flex;
   align-items: center;
-  gap: 1rem;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-  transition: all 0.3s ease;
+  gap: 1.5rem;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  border: 1px solid rgba(226, 232, 240, 0.8);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   animation: fadeInUp 0.6s ease;
   animation-fill-mode: both;
+  position: relative;
+  overflow: hidden;
+}
+
+.summary-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: linear-gradient(90deg, #6366f1 0%, #8b5cf6 100%);
+  transform: translateX(-100%);
+  transition: transform 0.3s ease;
+}
+
+.summary-card:hover::before {
+  transform: translateX(0);
 }
 
 .summary-card:nth-child(1) { animation-delay: 0.1s; }
@@ -70,38 +104,44 @@
 .summary-card:nth-child(4) { animation-delay: 0.4s; }
 
 .summary-card:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  transform: translateY(-4px);
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+  border-color: rgba(99, 102, 241, 0.2);
 }
 
 .summary-icon {
-  font-size: 2rem;
-  width: 3rem;
-  height: 3rem;
+  font-size: 2.5rem;
+  width: 4rem;
+  height: 4rem;
   display: flex;
   align-items: center;
   justify-content: center;
-  background: #f8fafc;
-  border-radius: 8px;
-  transition: transform 0.3s ease;
+  background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%);
+  border-radius: 12px;
+  transition: all 0.3s ease;
+  box-shadow: inset 0 2px 4px 0 rgba(0, 0, 0, 0.06);
 }
 
 .summary-card:hover .summary-icon {
-  transform: scale(1.1);
+  transform: scale(1.1) rotate(5deg);
+  background: linear-gradient(135deg, #e0f2fe 0%, #bfdbfe 100%);
 }
 
 .summary-content h3 {
   font-size: 0.875rem;
   color: #64748b;
-  font-weight: 500;
-  margin-bottom: 0.25rem;
+  font-weight: 600;
+  margin-bottom: 0.5rem;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
 }
 
 .summary-value {
-  font-size: 1.5rem;
+  font-size: 2rem;
   font-weight: 700;
   color: #1a202c;
   margin: 0;
+  line-height: 1;
 }
 
 .summary-value.positive {
@@ -111,171 +151,360 @@
 .summary-change {
   font-size: 0.875rem;
   color: #64748b;
+  margin-top: 0.5rem;
+  display: block;
 }
 
 .summary-change.positive {
   color: #10b981;
 }
 
-/* Holdings Section */
-.holdings-section {
+/* Asset Sections */
+.asset-section {
   background: white;
-  border-radius: 12px;
-  padding: 1.5rem;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-  animation: fadeInScale 0.8s ease 0.5s both;
+  border-radius: 16px;
+  margin-bottom: 1.5rem;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1), 0 1px 2px rgba(0, 0, 0, 0.06);
+  border: 1px solid #e2e8f0;
+  overflow: hidden;
+  animation: fadeInScale 0.8s ease;
+  animation-fill-mode: both;
+  transition: all 0.3s ease;
 }
 
-.holdings-header {
+.asset-section:hover {
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+}
+
+.asset-section:nth-child(3) { animation-delay: 0.1s; }
+.asset-section:nth-child(4) { animation-delay: 0.2s; }
+.asset-section:nth-child(5) { animation-delay: 0.3s; }
+.asset-section:nth-child(6) { animation-delay: 0.4s; }
+.asset-section:nth-child(7) { animation-delay: 0.5s; }
+.asset-section:nth-child(8) { animation-delay: 0.6s; }
+.asset-section:nth-child(9) { animation-delay: 0.7s; }
+
+.section-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 1.5rem;
+  padding: 1.5rem 2rem;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+  border-bottom: 2px solid #e2e8f0;
 }
 
-.holdings-header h2 {
-  font-size: 1.25rem;
+.section-header:hover {
+  background: linear-gradient(135deg, #f1f5f9 0%, #e2e8f0 100%);
+}
+
+.section-title {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.section-icon {
+  font-size: 1.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.5rem;
+  height: 2.5rem;
+  background: white;
+  border-radius: 8px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.section-title h2 {
+  font-size: 1.375rem;
   font-weight: 600;
   color: #1a202c;
   margin: 0;
+  letter-spacing: -0.25px;
 }
 
-.holdings-actions {
+.expand-icon {
+  font-size: 1rem;
+  color: #64748b;
+  transition: transform 0.3s ease;
+}
+
+.expand-icon.expanded {
+  transform: rotate(180deg);
+}
+
+/* Cash Content */
+.cash-content {
+  padding: 2rem;
+  animation: slideDown 0.3s ease;
+}
+
+.cash-item {
   display: flex;
-  gap: 0.5rem;
-}
-
-.holdings-actions button {
-  padding: 0.5rem 1rem;
-  border-radius: 8px;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1rem 1.5rem;
+  background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+  border-radius: 12px;
   border: 1px solid #e2e8f0;
-  background: white;
+}
+
+.cash-label {
+  font-size: 1rem;
   color: #64748b;
-  font-size: 0.875rem;
-  cursor: pointer;
-  transition: all 0.2s ease;
+  font-weight: 500;
 }
 
-.holdings-actions button:hover {
-  background: #f8fafc;
-  border-color: #cbd5e1;
-  color: #475569;
-  transform: translateY(-1px);
-}
-
-/* Holdings Table */
-.holdings-table {
-  overflow-x: auto;
-}
-
-.holdings-table table {
-  width: 100%;
-  border-collapse: collapse;
-}
-
-.holdings-table th {
-  text-align: left;
-  padding: 0.75rem 1rem;
-  font-size: 0.875rem;
-  font-weight: 600;
-  color: #64748b;
-  border-bottom: 2px solid #e2e8f0;
-  white-space: nowrap;
-}
-
-.holdings-table td {
-  padding: 1rem;
-  border-bottom: 1px solid #f1f5f9;
-  font-size: 0.875rem;
+.cash-amount {
+  font-size: 1.5rem;
+  font-weight: 700;
   color: #1a202c;
 }
 
-.holdings-table tr {
-  opacity: 0;
-  animation: fadeInUp 0.4s ease forwards;
+/* Table Styling */
+.table-container {
+  padding: 0;
+  overflow-x: auto;
+  animation: slideDown 0.3s ease;
 }
 
-.holdings-table tr:nth-child(1) { animation-delay: 0.7s; }
-.holdings-table tr:nth-child(2) { animation-delay: 0.8s; }
-.holdings-table tr:nth-child(3) { animation-delay: 0.9s; }
-.holdings-table tr:nth-child(4) { animation-delay: 1.0s; }
-.holdings-table tr:nth-child(5) { animation-delay: 1.1s; }
+.asset-table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  font-size: 0.875rem;
+}
 
-.holdings-table tr:hover {
-  background: #f8fafc;
+.asset-table th {
+  background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+  padding: 1rem;
+  text-align: left;
+  font-weight: 600;
+  color: #475569;
+  border-bottom: 2px solid #e2e8f0;
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  white-space: nowrap;
+}
+
+.asset-table td {
+  padding: 1rem;
+  border-bottom: 1px solid #f1f5f9;
+  color: #1a202c;
+  transition: all 0.2s ease;
+}
+
+.asset-table tbody tr {
+  transition: all 0.2s ease;
+}
+
+.asset-table tbody tr:hover {
+  background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
   transform: translateX(4px);
 }
 
-.holdings-table .symbol {
+.asset-table tbody tr:hover td {
+  border-bottom-color: #e2e8f0;
+}
+
+.symbol-cell {
   font-weight: 600;
-  color: #5b4cdb;
+  color: #6366f1;
+  font-size: 0.9375rem;
 }
 
-/* Stock Logo Styles */
-.holdings-table .symbol img {
-  object-fit: cover;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-  transition: transform 0.2s ease;
-}
-
-.holdings-table tr:hover .symbol img {
-  transform: scale(1.1);
-}
-
-/* Analyst Sentiment Styles */
-.holdings-table td span {
-  display: inline-block;
-  padding: 0.25rem 0.75rem;
-  border-radius: 12px;
-  background-color: rgba(255, 255, 255, 0.1);
-  transition: all 0.2s ease;
-}
-
-.holdings-table .positive {
+.positive {
   color: #10b981;
-  font-weight: 500;
+  font-weight: 600;
 }
 
-.holdings-table .negative {
+.negative {
   color: #ef4444;
-  font-weight: 500;
+  font-weight: 600;
 }
 
-.btn-action {
-  background: transparent;
+.tax-note {
+  font-size: 0.8125rem;
+  color: #64748b;
+  font-style: italic;
+}
+
+.rating {
+  font-weight: 600;
+  color: #8b5cf6;
+}
+
+/* Action Button */
+.action-btn {
+  background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+  color: white;
   border: none;
+  padding: 0.5rem 1rem;
+  border-radius: 8px;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.action-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  background: linear-gradient(135deg, #5b4cdb 0%, #7c3aed 100%);
+}
+
+.action-btn:active {
+  transform: translateY(0);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+/* Commodities Container */
+.commodities-container {
+  padding: 0;
+}
+
+.subsection-title {
+  font-size: 1.125rem;
+  font-weight: 600;
+  color: #1a202c;
+  margin: 0;
+  padding: 1.5rem 2rem 1rem;
+  background: linear-gradient(135deg, #fafafa 0%, #f8f8f8 100%);
+}
+
+/* Forex Content */
+.forex-content {
+  padding: 2rem;
+  animation: slideDown 0.3s ease;
+}
+
+.no-positions {
+  text-align: center;
+  padding: 3rem;
+  background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+  border-radius: 12px;
+  border: 1px dashed #cbd5e1;
+}
+
+.no-positions h3 {
   font-size: 1.25rem;
   color: #64748b;
-  cursor: pointer;
-  padding: 0.25rem 0.5rem;
+  margin-bottom: 0.5rem;
+  font-weight: 600;
+}
+
+.no-positions p {
+  color: #94a3b8;
+  font-size: 0.9375rem;
+}
+
+/* Responsive Design */
+@media (max-width: 1200px) {
+  .asset-table {
+    font-size: 0.8125rem;
+  }
+  
+  .asset-table th,
+  .asset-table td {
+    padding: 0.75rem;
+  }
+}
+
+@media (max-width: 768px) {
+  .portfolio-container {
+    padding: 0 1rem 1rem;
+  }
+  
+  .portfolio-title {
+    font-size: 2rem;
+  }
+  
+  .portfolio-summary {
+    grid-template-columns: 1fr;
+    gap: 1rem;
+  }
+  
+  .summary-card {
+    padding: 1.5rem;
+  }
+  
+  .section-header {
+    padding: 1rem 1.5rem;
+  }
+  
+  .section-title h2 {
+    font-size: 1.125rem;
+  }
+  
+  .table-container {
+    border-radius: 0;
+  }
+  
+  .asset-table {
+    font-size: 0.75rem;
+  }
+  
+  .asset-table th,
+  .asset-table td {
+    padding: 0.5rem;
+  }
+}
+
+/* Loading States */
+.loading-message,
+.error-message,
+.info-message {
+  text-align: center;
+  padding: 3rem;
+  font-size: 1rem;
+  color: #64748b;
+}
+
+.error-message {
+  color: #ef4444;
+}
+
+/* Scrollbar Styling */
+.table-container::-webkit-scrollbar {
+  height: 8px;
+}
+
+.table-container::-webkit-scrollbar-track {
+  background: #f1f5f9;
   border-radius: 4px;
-  transition: all 0.2s ease;
 }
 
-.btn-action:hover {
-  background: #e2e8f0;
-  color: #475569;
-  transform: scale(1.1);
+.table-container::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 4px;
 }
 
-/* Filter and Sort buttons */
-.btn-filter, .btn-sort, .btn-export {
-  display: flex;
-  align-items: center;
-  gap: 0.25rem;
+.table-container::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
 }
 
-.btn-filter::before {
-  content: '🔽';
-  font-size: 0.75rem;
+/* Advanced Hover Effects */
+.asset-section {
+  position: relative;
 }
 
-.btn-sort::before {
-  content: '↕️';
-  font-size: 0.75rem;
+.asset-section::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 4px;
+  background: linear-gradient(90deg, #6366f1 0%, #8b5cf6 50%, #ec4899 100%);
+  transform: scaleX(0);
+  transition: transform 0.3s ease;
+  transform-origin: left;
 }
 
-.btn-export::before {
-  content: '📥';
-  font-size: 0.75rem;
+.asset-section:hover::before {
+  transform: scaleX(1);
 } 
