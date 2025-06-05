@@ -256,27 +256,95 @@ Description: {user_info.get("Overall Description", "N/A").strip()}
                 result_json = _attempt_safe_json_load(cleaned_content)
                 if result_json is None:
                     raise json.JSONDecodeError("Could not parse after cleaning", cleaned_content, 0)
+                
+                # Validate and adjust the allocations provided by the LLM
                 sector_alloc = asset_class_top_tickers.get('allocation', 0)
                 recs = result_json.get('recommendations', [])
                 if recs:
-                    per_alloc = round(sector_alloc / max(len(recs), 1), 2)
+                    # Gracefully handle allocation key and ensure it's a float
                     for rec in recs:
-                        rec['allocation'] = per_alloc
+                        alloc_val = 0.0
+                        if 'allocation_percentage_within_asset_class' in rec:
+                            alloc_val = rec.pop('allocation_percentage_within_asset_class')
+                        elif 'allocation' in rec:
+                            alloc_val = rec['allocation']
+                        
+                        try:
+                            rec['allocation'] = float(alloc_val)
+                        except (ValueError, TypeError):
+                            logger.warning("Could not parse allocation value '%s' for ticker %s", alloc_val, rec.get('ticker'))
+                            rec['allocation'] = 0.0
+
+                    # Calculate the difference between LLM sum and target
+                    llm_total_alloc = sum(rec.get('allocation', 0) for rec in recs)
+                    adjustment = sector_alloc - llm_total_alloc
+
+                    # If the difference is non-trivial, adjust the smallest allocation
+                    if abs(adjustment) > 0.01 and len(recs) > 0:
+                        logger.warning(
+                            "LLM allocation sum (%.2f%%) differs from target (%.2f%%). Adjusting smallest allocation.",
+                            llm_total_alloc, sector_alloc
+                        )
+                        min_alloc_rec = min(recs, key=lambda r: r.get('allocation', 0))
+                        new_allocation = min_alloc_rec.get('allocation', 0) + adjustment
+
+                        if new_allocation < 0:
+                            logger.error(
+                                "Adjustment for '%s' results in negative allocation (%.2f). Cannot balance. Check LLM output.",
+                                min_alloc_rec.get('ticker'), new_allocation
+                            )
+                        else:
+                            min_alloc_rec['allocation'] = new_allocation
+                            logger.info(
+                                "Adjusted allocation for '%s' by %.2f%% to meet target.",
+                                min_alloc_rec.get('ticker'), adjustment
+                            )
+
                 return json.dumps(result_json)
             except json.JSONDecodeError:
                 # Attempt to salvage JSON by extracting the first JSON object between braces
-                json_match = re.search(r"\{[\s\S]*\}", cleaned_content)
+                json_match = re.search(r"\\{[\\s\\S]*\\}", cleaned_content)
                 if json_match:
                     try:
                         result_json = _attempt_safe_json_load(json_match.group(0))
                         if result_json is None:
                             raise json.JSONDecodeError("Could not parse extracted braces", json_match.group(0), 0)
+                        
+                        # Also validate and adjust allocations in this fallback path
                         sector_alloc = asset_class_top_tickers.get('allocation', 0)
                         recs = result_json.get('recommendations', [])
                         if recs:
-                            per_alloc = round(sector_alloc / max(len(recs), 1), 2)
                             for rec in recs:
-                                rec['allocation'] = per_alloc
+                                alloc_val = 0.0
+                                if 'allocation_percentage_within_asset_class' in rec:
+                                    alloc_val = rec.pop('allocation_percentage_within_asset_class')
+                                elif 'allocation' in rec:
+                                    alloc_val = rec['allocation']
+
+                                try:
+                                    rec['allocation'] = float(alloc_val)
+                                except (ValueError, TypeError):
+                                    rec['allocation'] = 0.0
+
+                            llm_total_alloc = sum(rec.get('allocation', 0) for rec in recs)
+                            adjustment = sector_alloc - llm_total_alloc
+
+                            if abs(adjustment) > 0.01 and len(recs) > 0:
+                                logger.warning(
+                                    "LLM allocation sum (%.2f%%) differs from target (%.2f%%) in fallback. Adjusting.",
+                                    llm_total_alloc, sector_alloc
+                                )
+                                min_alloc_rec = min(recs, key=lambda r: r.get('allocation', 0))
+                                new_allocation = min_alloc_rec.get('allocation', 0) + adjustment
+                                
+                                if new_allocation < 0:
+                                    logger.error(
+                                        "Adjustment for '%s' in fallback results in negative allocation (%.2f).",
+                                        min_alloc_rec.get('ticker'), new_allocation
+                                    )
+                                else:
+                                    min_alloc_rec['allocation'] = new_allocation
+                        
                         return json.dumps(result_json)
                     except json.JSONDecodeError:
                         # Still invalid – will fall through to final error
@@ -358,7 +426,7 @@ if __name__ == "__main__":
     sample_portfolio_data_for_phase_two = {
         "portfolio": [
             {
-                "asset_class": "multi_utilities",  # Example: Equity Sub-industry
+                "asset_class": "semiconductors",  # Example: Equity Sub-industry
                 "allocation": 15.0,
                 "reason": "medium conviction to this asset class"
             }

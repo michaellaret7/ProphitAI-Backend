@@ -376,4 +376,86 @@ def calculate_annualized_return(returns, period=252):
         
     annualized_return = (1 + total_return) ** (1 / years) - 1
     
-    return annualized_return 
+    return annualized_return
+
+def calculate_treynor_ratio(portfolio_returns, market_returns=None, risk_free_rate=0.0, beta=None, annualize=True, trading_days=252):
+    """
+    Calculate the Treynor Ratio – excess return per unit of systematic risk (beta).
+
+    Args:
+        portfolio_returns: pandas Series or numpy array of portfolio/stock returns (daily)
+        market_returns: pandas Series or numpy array of benchmark returns; required if *beta* is not supplied
+        risk_free_rate: annualised risk-free rate (default 0.0)
+        beta: optional pre-computed beta; if None it will be calculated from the supplied returns
+        annualize: whether to annualise the numerator (and risk-free adjustment)
+        trading_days: number of periods per year (default 252 for daily data)
+
+    Returns:
+        Treynor ratio value. Returns 0 if beta is 0 or cannot be computed.
+    """
+    if beta is None:
+        if market_returns is None:
+            print("Warning: Treynor ratio needs either beta or market_returns. Returning 0.")
+            return 0.0
+        beta = calculate_beta(portfolio_returns, market_returns)
+
+    # Protect against divide-by-zero
+    if beta == 0 or beta is None:
+        return 0.0
+
+    avg_return = np.mean(portfolio_returns)
+    if annualize:
+        avg_return *= trading_days
+        # risk_free_rate assumed annual
+    else:
+        risk_free_rate = risk_free_rate / trading_days
+
+    treynor_ratio = (avg_return - risk_free_rate) / beta
+    return treynor_ratio
+
+
+def calculate_information_ratio(portfolio_returns, benchmark_returns, annualize=True, trading_days=252):
+    """
+    Calculate the Information Ratio – active return divided by tracking error.
+
+    Args:
+        portfolio_returns: pandas Series or numpy array of portfolio/stock returns (daily)
+        benchmark_returns: pandas Series or numpy array of benchmark returns (daily)
+        annualize: whether to annualise (default True)
+        trading_days: periods per year (default 252)
+
+    Returns:
+        Information ratio value. Returns 0 if tracking error is 0 or cannot be computed.
+    """
+    if portfolio_returns is None or benchmark_returns is None:
+        return 0.0
+
+    # Ensure same length/index
+    if not isinstance(portfolio_returns, pd.Series):
+        portfolio_returns = pd.Series(portfolio_returns)
+    if not isinstance(benchmark_returns, pd.Series):
+        benchmark_returns = pd.Series(benchmark_returns)
+
+    common_idx = portfolio_returns.index.intersection(benchmark_returns.index)
+    if len(common_idx) == 0:
+        # Fallback to element-wise min length
+        min_len = min(len(portfolio_returns), len(benchmark_returns))
+        portfolio_returns = portfolio_returns.iloc[:min_len]
+        benchmark_returns = benchmark_returns.iloc[:min_len]
+    else:
+        portfolio_returns = portfolio_returns.loc[common_idx]
+        benchmark_returns = benchmark_returns.loc[common_idx]
+
+    active_returns = portfolio_returns - benchmark_returns
+    tracking_error = np.std(active_returns, ddof=1)
+    if annualize:
+        active_return = np.mean(active_returns) * trading_days
+        tracking_error *= np.sqrt(trading_days)
+    else:
+        active_return = np.mean(active_returns)
+
+    if tracking_error == 0:
+        return 0.0
+
+    info_ratio = active_return / tracking_error
+    return info_ratio 

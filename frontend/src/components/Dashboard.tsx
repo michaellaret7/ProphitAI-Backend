@@ -4,6 +4,7 @@ import logo from '../assets/logo.png';
 import ibkrLogo from '../assets/logos/ibkr-logo.png';
 import Portfolio from './Portfolio';
 import AiInsightsPage from './AiInsightsPage';
+import ProphitGpt from './ProphitGpt';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import {
     faChartPie, faLightbulb, faTasks, faHistory,
@@ -34,7 +35,7 @@ interface EtfVisibility {
 const Dashboard: React.FC = () => {
   const [hoveredSector, setHoveredSector] = useState<string | null>(null);
   const [selectedTimeframe, setSelectedTimeframe] = useState('All');
-  const [activeView, setActiveView] = useState<'dashboard' | 'portfolio' | 'ai-insights' | 'allocation' | 'optimization'>('dashboard');
+  const [activeView, setActiveView] = useState<'dashboard' | 'portfolio' | 'manager' | 'optimizer' | 'builder' | 'prophitgpt' | 'risk-analysis' | 'backtest' | 'asset-universe' | 'news'>('dashboard');
   const [sectors, setSectors] = useState<Sector[]>([]);
   const [isLoadingAllocation, setIsLoadingAllocation] = useState(true);
   const [allocationError, setAllocationError] = useState<string | null>(null);
@@ -294,7 +295,7 @@ const Dashboard: React.FC = () => {
             <Line
               type="monotone"
               dataKey="portfolio"
-              stroke="#5b4cdb"
+              stroke="#000000"
               strokeWidth={2.5}
               dot={false}
               name={`Portfolio (${portfolioPerformance.totalReturn >= 0 ? '+' : ''}${portfolioPerformance.totalReturn}%)`}
@@ -385,8 +386,18 @@ const Dashboard: React.FC = () => {
     switch (activeView) {
       case 'portfolio':
         return <Portfolio />;
-      case 'ai-insights':
+      case 'manager':
         return <AiInsightsPage />;
+      case 'builder':
+        return <Portfolio />;
+      case 'prophitgpt':
+        return <ProphitGpt />;
+      case 'backtest':
+        return <Portfolio />;
+      case 'asset-universe':
+        return <Portfolio />;
+      case 'news':
+        return <Portfolio />;
       case 'dashboard':
       default:
         return (
@@ -671,35 +682,67 @@ const Dashboard: React.FC = () => {
           </a>
           <a 
             href="#" 
-            className={`nav-item ${activeView === 'ai-insights' ? 'active' : ''}`}
-            onClick={(e) => { e.preventDefault(); setActiveView('ai-insights'); }}
+            className={`nav-item ${activeView === 'manager' ? 'active' : ''}`}
+            onClick={(e) => { e.preventDefault(); setActiveView('manager'); }}
           >
-            <span className="nav-icon"><FontAwesomeIcon icon={faLightbulb} /></span>
-            <span className="nav-text">AI Insights</span>
+            <span className="nav-icon"><FontAwesomeIcon icon={faCog} /></span>
+            <span className="nav-text">Manager</span>
           </a>
           <a 
             href="#" 
-            className={`nav-item ${activeView === 'allocation' ? 'active' : ''}`}
-            onClick={(e) => { e.preventDefault(); setActiveView('allocation'); }}
-          >
-            <span className="nav-icon"><FontAwesomeIcon icon={faChartPie} /></span>
-            <span className="nav-text">Allocation</span>
-          </a>
-          <a 
-            href="#" 
-            className={`nav-item ${activeView === 'optimization' ? 'active' : ''}`}
-            onClick={(e) => { e.preventDefault(); setActiveView('optimization'); }}
+            className={`nav-item ${activeView === 'optimizer' ? 'active' : ''}`}
+            onClick={(e) => { e.preventDefault(); setActiveView('optimizer'); }}
           >
             <span className="nav-icon"><FontAwesomeIcon icon={faSlidersH} /></span>
-            <span className="nav-text">Optimization</span>
+            <span className="nav-text">Optimizer</span>
           </a>
-          <a href="#" className="nav-item">
-            <span className="nav-icon"><FontAwesomeIcon icon={faHistory} /></span>
-            <span className="nav-text">Backtesting</span>
+          <a 
+            href="#" 
+            className={`nav-item ${activeView === 'builder' ? 'active' : ''}`}
+            onClick={(e) => { e.preventDefault(); setActiveView('builder'); }}
+          >
+            <span className="nav-icon"><FontAwesomeIcon icon={faPlus} /></span>
+            <span className="nav-text">Builder</span>
           </a>
-          <a href="#" className="nav-item">
+          <a 
+            href="#" 
+            className={`nav-item ${activeView === 'prophitgpt' ? 'active' : ''}`}
+            onClick={(e) => { e.preventDefault(); setActiveView('prophitgpt'); }}
+          >
+            <span className="nav-icon"><FontAwesomeIcon icon={faRobot} /></span>
+            <span className="nav-text">ProphitGPT</span>
+          </a>
+          <a 
+            href="#" 
+            className={`nav-item ${activeView === 'risk-analysis' ? 'active' : ''}`}
+            onClick={(e) => { e.preventDefault(); setActiveView('risk-analysis'); }}
+          >
             <span className="nav-icon"><FontAwesomeIcon icon={faExclamationTriangle} /></span>
             <span className="nav-text">Risk Analysis</span>
+          </a>
+          <a 
+            href="#" 
+            className={`nav-item ${activeView === 'backtest' ? 'active' : ''}`}
+            onClick={(e) => { e.preventDefault(); setActiveView('backtest'); }}
+          >
+            <span className="nav-icon"><FontAwesomeIcon icon={faHistory} /></span>
+            <span className="nav-text">Backtest</span>
+          </a>
+          <a 
+            href="#" 
+            className={`nav-item ${activeView === 'asset-universe' ? 'active' : ''}`}
+            onClick={(e) => { e.preventDefault(); setActiveView('asset-universe'); }}
+          >
+            <span className="nav-icon"><FontAwesomeIcon icon={faChartPie} /></span>
+            <span className="nav-text">Asset Universe</span>
+          </a>
+          <a 
+            href="#" 
+            className={`nav-item ${activeView === 'news' ? 'active' : ''}`}
+            onClick={(e) => { e.preventDefault(); setActiveView('news'); }}
+          >
+            <span className="nav-icon"><FontAwesomeIcon icon={faLightbulb} /></span>
+            <span className="nav-text">News</span>
           </a>
           <a href="#" className="nav-item">
             <span className="nav-icon"><FontAwesomeIcon icon={faCog} /></span>
@@ -707,13 +750,13 @@ const Dashboard: React.FC = () => {
           </a>
         </nav>
 
-        <div className="sidebar-section">
+        {/* <div className="sidebar-section">
           <a href="#" className="nav-item account-item">
             <img src={ibkrLogo} alt="Interactive Brokers" className="broker-logo" />
             <span className="nav-text">Interactive Brokers</span>
             <span className="account-status">Connected</span>
           </a>
-        </div>
+        </div> */}
         
         <div className="sidebar-actions">
           <button className="btn-upload">
@@ -740,10 +783,10 @@ const Dashboard: React.FC = () => {
             />
           </div>
           <div className="header-right">
-            <button className="notification-btn">
-              <span className="notification-dot" style={{backgroundColor: '#10b981'}}></span>
-              <img src={ibkrLogo} alt="Interactive Brokers" className="notification-icon" style={{width: '20px', height: '20px', objectFit: 'contain'}} />
-            </button>
+            <div className="broker-status-container">
+              <img src={ibkrLogo} alt="Interactive Brokers" className="broker-logo-header" />
+              <span className="broker-status-text connected">Connected</span>
+            </div>
             <div className="user-profile">
               <img src="https://ui-avatars.com/api/?name=John+Doe&background=5b4cdb&color=fff" alt="User" className="user-avatar" />
               <span className="user-name">John Doe</span>

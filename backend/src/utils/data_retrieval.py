@@ -413,6 +413,19 @@ def get_fundamental_data(ticker: str, db_config: Optional[Dict] = None) -> Optio
                     print(f"Error retrieving {table_type} data: {e}")
                     fundamental_data[table_type] = []
             
+            # Pull the three fundamental tables we care about
+            metrics_df = pd.DataFrame(fundamental_data.get("financial_metrics", []))
+            cashflow_df = pd.DataFrame(fundamental_data.get("cash_flow_statements", []))
+            income_df = pd.DataFrame(fundamental_data.get("income_statements", []))
+
+            # ──────────────────────────────────────────────────────────────
+            # DEBUGGING AID: Print the available columns so we can see what
+            # names exist in the DB for this particular ticker. Remove or
+            # silence these prints once the schema mapping is confirmed.
+            # ──────────────────────────────────────────────────────────────
+            print(f"[Debug] {ticker.upper()} – financial_metrics columns: {list(metrics_df.columns)}")
+            print(f"[Debug] {ticker.upper()} – cash_flow_statements columns: {list(cashflow_df.columns)}")
+
             return fundamental_data
         
     except Exception as e:
@@ -420,31 +433,95 @@ def get_fundamental_data(ticker: str, db_config: Optional[Dict] = None) -> Optio
         return None 
 
 
+def get_dividend_info(ticker: str, db_config: Optional[Dict] = None) -> Optional[pd.DataFrame]:
+    """Return a DataFrame with dividend-related fields for *ticker*.
+
+    The helper leverages ``get_fundamental_data`` (defined below in this same
+    module) to pull the fundamental tables and then extracts the columns most
+    relevant to income-focused analysis:
+
+    * ``date`` - statement or period date
+    * ``dividend_yield`` - trailing dividend yield as stored in ``financial_metrics``
+    * ``dividends_paid`` - total dividends paid (from cash-flow statements)
+    * ``payout_ratio`` - dividends ÷ earnings ratio (from ``financial_metrics``)
+
+    It returns ``None`` if no dividend columns are found for the ticker.
+    """
+    pd.set_option('display.float_format', '{:,.2f}'.format)
+    # Re-use the generic fundamental loader so we don't duplicate DB code
+    fundamental_data = get_fundamental_data(ticker, db_config=db_config)
+    if not fundamental_data:
+        return None
+
+    # Pull the three fundamental tables we care about
+    metrics_df = pd.DataFrame(fundamental_data.get("financial_metrics", []))
+    cashflow_df = pd.DataFrame(fundamental_data.get("cash_flow_statements", []))
+    income_df = pd.DataFrame(fundamental_data.get("income_statements", []))
+
+    if metrics_df.empty and cashflow_df.empty and income_df.empty:
+        return None
+
+    # Standardise date column name across tables
+    def _prep(df: pd.DataFrame) -> pd.DataFrame:
+        if df.empty:
+            return df
+        if "date" in df.columns:
+            df["date"] = pd.to_datetime(df["date"], errors="coerce")
+        return df
+
+    metrics_df = _prep(metrics_df)
+    cashflow_df = _prep(cashflow_df)
+    income_df = _prep(income_df)
+
+    # Determine which columns exist under potential aliases --------------------
+    metric_cols = {
+        "dividend_yield": ["dividend_yield", "dividendyield", "dividend_yield_percent"],
+        "payout_ratio": ["payout_ratio"],
+    }
+    cashflow_cols = {
+        "dividends_paid": ["dividends_paid", "cash_dividends_paid", "dividends_and_other_cash_distributions"],
+    }
+    income_cols = {
+        "dividends_per_common_share": ["dividends_per_common_share", "dividends_per_share", "dps"],
+    }
+
+    def _find_existing(df: pd.DataFrame, mapping: dict):
+        keep = ["date"] if "date" in df.columns else []
+        for canonical, aliases in mapping.items():
+            for alias in aliases:
+                if alias in df.columns:
+                    df.rename(columns={alias: canonical}, inplace=True)
+                    keep.append(canonical)
+                    break
+        return keep
+
+    cols_keep_metrics = _find_existing(metrics_df, metric_cols)
+    cols_keep_cashflow = _find_existing(cashflow_df, cashflow_cols)
+    cols_keep_income = _find_existing(income_df, income_cols)
+
+    out_df = pd.DataFrame()
+
+    if cols_keep_metrics:
+        out_df = metrics_df[cols_keep_metrics].copy()
+    if cols_keep_cashflow:
+        if out_df.empty:
+            out_df = cashflow_df[cols_keep_cashflow].copy()
+        else:
+            out_df = pd.merge(out_df, cashflow_df[cols_keep_cashflow], on="date", how="outer")
+    if cols_keep_income:
+        if out_df.empty:
+            out_df = income_df[cols_keep_income].copy()
+        else:
+            out_df = pd.merge(out_df, income_df[cols_keep_income], on="date", how="outer")
+
+    if out_df.empty:
+        return None
+
+    # Sort chronologically and reset index for cleanliness
+    out_df = out_df.sort_values("date").reset_index(drop=True)
+    return out_df
+
+
 if __name__ == "__main__":
-    start_date = datetime(2022, 1, 1)
-    end_date = datetime(2022, 12, 31)
-    
-    qqq_data = get_price_data(
-        ticker='QQQ',
-        frequency='daily',
-        start_date_override=start_date.strftime('%Y-%m-%d'),
-        end_date_override=end_date.strftime('%Y-%m-%d')
-    )
-    
-    iwm_data = get_price_data(
-        ticker='IWM',
-        frequency='daily',
-        start_date_override=start_date.strftime('%Y-%m-%d'),
-        end_date_override=end_date.strftime('%Y-%m-%d')
-    )
-
-    spy_data = get_price_data(
-        ticker='SPY',
-        frequency='daily',
-        start_date_override=start_date.strftime('%Y-%m-%d'),
-        end_date_override=end_date.strftime('%Y-%m-%d')
-    )
-
-    print(qqq_data)
-    print(iwm_data)
-    print(spy_data)
+    div_df = get_dividend_info('AAPL')
+    print(div_df)

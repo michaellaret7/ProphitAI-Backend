@@ -11,7 +11,11 @@ from backend.src.utils.financial_calculations import (
     calculate_annualized_return,
     calculate_volatility,
     calculate_max_drawdown,
-    calculate_beta
+    calculate_beta,
+    calculate_alpha,
+    calculate_var,
+    calculate_treynor_ratio,
+    calculate_information_ratio
 )
 
 daily_volume_threshold = 10_000
@@ -113,6 +117,9 @@ def calculate_stock_metrics(ticker):
    
    # Calculate Beta (market risk)
    beta_val = 0
+   alpha_val = 0
+   treynor_val = 0
+   information_ratio_val = 0
    upside_capture = 0
    downside_capture = 0
    if spy_data is not None and not spy_data.empty:
@@ -129,8 +136,33 @@ def calculate_stock_metrics(ticker):
       )
       
       if not merged_data.empty and len(merged_data) > 1: # Beta needs more than one point
-         beta_val = calculate_beta(merged_data['daily_return_stock'], merged_data['daily_return_market'])
-            
+         # Portfolio and benchmark daily returns aligned
+         portfolio_returns = merged_data['daily_return_stock']
+         benchmark_returns = merged_data['daily_return_market']
+
+         # Systematic risk
+         beta_val = calculate_beta(portfolio_returns, benchmark_returns)
+
+         # Risk-adjusted performance metrics dependent on beta / benchmark
+         try:
+            alpha_val = calculate_alpha(portfolio_returns, benchmark_returns, risk_free_rate, beta_val)
+         except Exception as e:
+            print(f"Warning: Failed to calculate alpha for {ticker}: {e}")
+            alpha_val = 0
+
+         try:
+            treynor_val = calculate_treynor_ratio(portfolio_returns, benchmark_returns, risk_free_rate, beta_val)
+         except Exception as e:
+            print(f"Warning: Failed to calculate Treynor Ratio for {ticker}: {e}")
+            treynor_val = 0
+
+         try:
+            information_ratio_val = calculate_information_ratio(portfolio_returns, benchmark_returns)
+         except Exception as e:
+            print(f"Warning: Failed to calculate Information Ratio for {ticker}: {e}")
+            information_ratio_val = 0
+
+         # Upside / Downside capture after benchmark alignment
          up_days = merged_data[merged_data['daily_return_market'] > 0]
          down_days = merged_data[merged_data['daily_return_market'] < 0]
          
@@ -143,6 +175,13 @@ def calculate_stock_metrics(ticker):
             avg_stock_return_down = down_days['daily_return_stock'].mean()
             avg_benchmark_return_down = down_days['daily_return_market'].mean()
             downside_capture = avg_stock_return_down / avg_benchmark_return_down
+   
+   # Calculate historical 95% VaR (lower is better)
+   try:
+      var_pct, _ = calculate_var(daily_returns, confidence_level=0.95, amount=1)
+   except Exception as e:
+      print(f"Warning: Failed to calculate VaR for {ticker}: {e}")
+      var_pct = 0
    
    # Initialize sector-specific variables
    sector = None
@@ -202,6 +241,10 @@ def calculate_stock_metrics(ticker):
       "daily_return_volatility": float(round(std_daily_return, 4)), # Increased precision for daily
       "max_drawdown": float(round(max_dd, 4)), # Increased precision for drawdown
       "beta": float(round(beta_val, 2)),
+      "alpha": float(round(alpha_val, 4)),
+      "var_95": float(round(var_pct, 4)),
+      "treynor_ratio": float(round(treynor_val, 2)),
+      "information_ratio": float(round(information_ratio_val, 2)),
       "date_range": [df['date'].min().strftime('%Y-%m-%d'), df['date'].max().strftime('%Y-%m-%d')],
       "sector_beta": float(round(sector_beta, 2)),
       "upside_capture": float(round(upside_capture, 2)),
@@ -250,10 +293,11 @@ def calculate_composite_scores(df):
     higher_is_better = [
         'sharpe_ratio', 'sortino_ratio', 'calmar_ratio', 'annualized_return',
         'upside_capture', 'momentum_6m', 'momentum_12m', 'max_drawdown',
+        'alpha', 'treynor_ratio', 'information_ratio'
     ]
     lower_is_better = [
         'annualized_volatility', 'daily_return_volatility', 'beta',
-        'sector_beta', 'downside_capture'
+        'sector_beta', 'downside_capture', 'var_95'
     ]
 
     z_scores = df.copy()

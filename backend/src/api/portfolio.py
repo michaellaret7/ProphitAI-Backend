@@ -12,9 +12,6 @@ import numpy as np
 
 router = APIRouter()
 
-# 1. Specific color overrides for known asset classes (customize as needed)
-# Keys should ideally be the exact asset_class string from your database 
-# or a string that uniquely identifies it after basic formatting.
 SPECIFIC_SECTOR_COLORS = {
     "Equity Sector Information Technology": "#5b4cdb", 
     "Energy Focused Etfs": "#f59e0b",

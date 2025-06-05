@@ -108,8 +108,6 @@
 
 .sidebar-section {
   padding: 20px 0;
-  border-top: 1px solid #e2e8f0;
-  border-bottom: 1px solid #e2e8f0;
   margin-bottom: 20px;
 }
 
@@ -169,6 +167,8 @@
   flex: 1;
   overflow-y: auto;
   background: #f8fafc;
+  display: flex;
+  flex-direction: column;
 }
 
 /* Header */
@@ -305,6 +305,41 @@
 
 .user-profile:hover .dropdown-arrow {
   transform: translateY(2px);
+}
+
+/* Broker Status in Header */
+.broker-status-container {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background-color: white;
+  padding: 8px 12px;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.broker-status-container:hover {
+  background-color: #f8fafc;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.07);
+}
+
+.broker-logo-header {
+  width: 20px;
+  height: 20px;
+  object-fit: contain;
+}
+
+.broker-status-text {
+  font-size: 13px;
+  font-weight: 500;
+  color: #64748b;
+}
+
+.broker-status-text.connected {
+  color: #10b981;
+  font-weight: 600;
 }
 
 /* Welcome Section */
@@ -1235,4 +1270,10 @@
 .etf-dropdown-item input[type="checkbox"] {
   margin-right: 0.5rem;
   accent-color: #5b4cdb;
+}
+
+.portfolio-legend-label {
+  display: flex;
+  align-items: center;
+  margin-right: 12px;
 } 
