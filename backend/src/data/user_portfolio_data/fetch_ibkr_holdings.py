@@ -9,11 +9,16 @@ logger = init_logger(__name__)
 
 def fetch_ibkr_portfolio_positions() -> Optional[List[Dict[str, Any]]]:
     """
-    Fetches portfolio positions from Interactive Brokers.
-
+    Fetch current portfolio positions from Interactive Brokers.
+    
+    Connects to IBKR, retrieves all portfolio positions, and formats them
+    into structured dictionaries with position details and contract information.
+    
+    Args:
+        None
+        
     Returns:
-        A list of dictionaries, where each dictionary represents a position,
-        or None if the connection to IBKR fails or no data is retrieved.
+        Optional[List[Dict[str, Any]]]: List of position dictionaries, or None if connection fails.
     """
     ib: Optional[IB] = get_ib()
     if not ib or not ib.isConnected():

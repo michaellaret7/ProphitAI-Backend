@@ -43,15 +43,18 @@ def store_user_information(
     portfolio_id: uuid.UUID,
     portfolio_name: str
 ) -> None:
-    """Fetches user information and stores it in public.user_information,
-    linked to a specific portfolio.
+    """
+    Store user profile information linked to a portfolio.
     
-    Parameters
-    ----------
-    portfolio_id
-        The UUID of the portfolio this user information snapshot is associated with.
-    portfolio_name
-        The name of the portfolio.
+    Fetches user information via get_user_information() and persists it
+    to the public.user_information table as JSONB data.
+    
+    Args:
+        portfolio_id: The UUID of the portfolio this user information snapshot is associated with.
+        portfolio_name: The name of the portfolio.
+        
+    Returns:
+        None
     """
 
     user_payload: Dict[str, Any] = get_user_information()

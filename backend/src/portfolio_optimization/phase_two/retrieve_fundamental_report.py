@@ -33,15 +33,17 @@ generate_fundamental_analysis_report = _generate_fundamental_analysis_report
 
 def get_fundamental_report_from_db(ticker):
     """
-    Retrieves a fundamental report for a given ticker from a PostgreSQL database,
-    using the schema lookup logic similar to data_retrieval.py.
-
+    Retrieve fundamental report for a ticker from PostgreSQL database.
+    
+    Uses schema lookup logic to locate the correct database and table,
+    then fetches the stored fundamental analysis report content.
+    
     Args:
-        ticker (str): The stock ticker symbol.
-
+        ticker: The stock ticker symbol to retrieve report for.
+        
     Returns:
-        str or None: The report content as a string if found, otherwise None.
-                     Returns None if there's a connection issue or the report/table doesn't exist.
+        str or None: The report content as string if found, None if not found
+        or if connection/table errors occur.
     """
     conn = None
     cursor = None
@@ -159,16 +161,18 @@ def get_fundamental_report_from_db(ticker):
 
 def debug_json_encoding(data, ticker):
     """
-    Debug function to identify which fields are causing JSON encoding issues.
+    Debug function to identify and fix JSON encoding issues.
+    
+    Analyzes data structure to find problematic fields causing JSON encoding
+    failures and attempts to fix them by converting or replacing values.
     
     Args:
-        data (list): List of dictionaries to encode
-        ticker (str): Ticker symbol for logging
+        data: List of dictionaries to encode and fix.
+        ticker: Ticker symbol for logging purposes.
         
     Returns:
-        tuple: (success_flag, error_message)
+        Tuple[bool, str]: Success flag and either JSON string or error message.
     """
-    
     # First try individual records
     for i, record in enumerate(data):
         try:

@@ -2,11 +2,23 @@ from backend.src.utils.ticker_utils import name_to_ticker
 from backend.src.utils.ib_utils import get_ib
 from ib_insync import Stock
 
-
-
 def place_bracket_order_long(symbol, quantity, entry_price, take_profit_price, stop_loss_price):
     """
-    Places a bracket order with a primary order, a take-profit order, and a stop-loss order.
+    Place bracket order with entry, take-profit, and stop-loss orders.
+    
+    Creates and submits a bracket order consisting of a primary buy order
+    with associated take-profit and stop-loss orders for risk management.
+    
+    Args:
+        symbol: Stock symbol to trade.
+        quantity: Number of shares to buy.
+        entry_price: Limit price for the entry order.
+        take_profit_price: Price level for take-profit order.
+        stop_loss_price: Price level for stop-loss order.
+        
+    Returns:
+        Order object: Parent order object if successfully placed,
+        or None if connection failed.
     """
     ib = get_ib()
     
@@ -50,14 +62,17 @@ def place_bracket_order_long(symbol, quantity, entry_price, take_profit_price, s
 
 def prompt_long_buy_order(symbol):
     """
-    Interactive user flow for long buy orders. Prompts user for required parameters,
-    confirms the order details, and places the order if confirmed.
+    Interactive flow for long buy orders with user input prompts.
+    
+    Guides user through entering order parameters (quantity, prices),
+    displays order summary for confirmation, and places bracket order if confirmed.
     
     Args:
-        symbol (str): The stock symbol to buy
+        symbol: The stock symbol to buy (can be company name or ticker).
         
     Returns:
-        dict: Result of the order or None if canceled
+        Order object: Parent order object if order confirmed and placed,
+        or None if canceled by user.
     """
     # Convert company name to ticker if needed
     ticker = name_to_ticker(symbol)

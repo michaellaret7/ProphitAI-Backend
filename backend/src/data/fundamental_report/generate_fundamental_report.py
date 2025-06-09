@@ -29,16 +29,16 @@ client = OpenAI(api_key=DEEPSEEK_API_KEY, base_url="https://api.deepseek.com")
 # Data retrieval functions
 def get_sector_averages(ticker):
     """
-    Locate the sector database for the supplied ``ticker`` and return the
-    dictionary of sector‐level average fundamentals stored in
-    sector_averages.averages_table.
-
-    The helper walks the ``database_schemas.json`` structure (via
-    ``load_schema_data``) to find which sector the ticker belongs to, then
-    connects to the corresponding *fundamentals* database using the default
-    credentials from the ``.env`` file. Only the first row of the averages
-    table is returned because the ETL that creates this table keeps a single
-    record containing the latest run-level averages.
+    Retrieve sector-level average fundamentals for a given ticker.
+    
+    Locates the sector database for the ticker and returns the dictionary
+    of sector averages from the sector_averages.averages_table.
+    
+    Args:
+        ticker: The stock ticker symbol to find sector averages for.
+        
+    Returns:
+        Dict: Dictionary containing sector-level average fundamental metrics, or empty dict if not found.
     """
     schema_data = load_schema_data()
     ticker_upper = ticker.upper()
@@ -82,10 +82,16 @@ def get_sector_averages(ticker):
 
 def get_ticker_averages(ticker):
     """
-    Calculate the average of each fundamental metric for ``ticker`` limited to
-    the set of columns present in the sector averages. The function pulls all
-    available data through ``get_fundamentals_data`` and computes simple means
-    (ignoring NULL / non-numeric values).
+    Calculate historical average fundamentals for a specific ticker.
+    
+    Computes the mean of each fundamental metric for the ticker across all
+    available historical data, limited to columns present in sector averages.
+    
+    Args:
+        ticker: The stock ticker symbol to calculate averages for.
+        
+    Returns:
+        Dict: Dictionary containing ticker-specific average fundamental metrics, or empty dict if no data.
     """
     sector_avgs = get_sector_averages(ticker)
     if not sector_avgs:
@@ -126,14 +132,17 @@ def get_ticker_averages(ticker):
 # Fundamental analysis functions
 def debug_json_encoding(data, ticker):
     """
-    Debug function to identify which fields are causing JSON encoding issues.
+    Debug and fix JSON encoding issues in fundamental data.
+    
+    Tests JSON encoding of data records item by item, identifies problematic
+    fields, and attempts to fix them by converting or replacing values.
     
     Args:
-        data (list): List of dictionaries to encode
-        ticker (str): Ticker symbol for logging
+        data: List of dictionaries containing fundamental data to encode.
+        ticker: Ticker symbol for logging context.
         
     Returns:
-        tuple: (success_flag, error_message)
+        Tuple[bool, str]: Success flag and either the JSON string or error message.
     """
     print(f"DEBUG: Testing JSON encoding for {ticker} item by item")
     
@@ -173,13 +182,16 @@ def debug_json_encoding(data, ticker):
 
 def generate_fundamental_analysis_report(ticker):
     """
-    Analyze fundamental data for a specific stock using LLM
+    Generate comprehensive fundamental analysis report for a stock using LLM.
+    
+    Retrieves fundamental data, sector averages, and ticker averages, then uses
+    DeepSeek LLM to create a detailed investment analysis report.
     
     Args:
-        ticker (str): The stock ticker symbol
+        ticker: The stock ticker symbol to analyze.
         
     Returns:
-        str: Analysis results
+        str: Generated fundamental analysis report or error message if analysis fails.
     """
     # Get fundamental data - specifically financial_metrics only
     raw_data = get_fundamentals_data(ticker)

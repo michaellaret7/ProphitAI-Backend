@@ -6,7 +6,18 @@ import re
 from backend.src.utils.database import get_pooled_connection, get_default_db_config
 
 def clean_ticker(ticker):
-    """Remove 'US EQUITY' and other common suffixes from ticker symbols"""
+    """
+    Remove common suffixes from ticker symbols.
+    
+    Strips 'US EQUITY', 'EQUITY', and 'US' suffixes from ticker strings
+    to normalize ticker symbols for database storage.
+    
+    Args:
+        ticker: The ticker symbol to clean (can be None or any type that converts to string)
+        
+    Returns:
+        str or None: The cleaned ticker symbol, or None if input was None.
+    """
     if ticker is None:
         return None
         
@@ -22,11 +33,16 @@ def clean_ticker(ticker):
 
 def recreate_database_schemas(output_file="database_schemas.json"):
     """
-    This script connects to the database and extracts schema information to recreate
-    the database_schemas.json file with the exact same structure.
+    Recreate database schema file by extracting equity and ETF database structures.
+    
+    Connects to equity sector and ETF databases, extracts schemas, tables, and ticker
+    information to rebuild the database_schemas.json file with complete structure.
     
     Args:
-        output_file (str): The file to write the extracted schema to
+        output_file: The filename for the output JSON schema file (default: "database_schemas.json")
+        
+    Returns:
+        Dict: The complete schemas data structure containing all database information.
     """
     # Database connection parameters
     db_config = get_default_db_config()

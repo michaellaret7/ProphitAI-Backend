@@ -51,16 +51,23 @@ def store_final_portfolio(
     portfolio_id: uuid.UUID, # Changed type to uuid.UUID
     portfolio_name: str
 ) -> None:
-    """Store *portfolio* ticker details into the public.final_portfolio table.
-
-    Parameters
-    ----------
-    portfolio
-        The portfolio data to store (ticker-level recommendations).
-    portfolio_id
-        The UUID of the portfolio this data belongs to.
-    portfolio_name
-        The name of the portfolio this data belongs to.
+    """
+    Store portfolio ticker-level allocation data to the database.
+    
+    Persists Phase Two optimization results (individual ticker recommendations)
+    into the public.final_portfolio table with allocation details and metrics.
+    
+    Args:
+        portfolio: The portfolio data dictionary or JSON string containing ticker recommendations.
+        portfolio_id: The UUID of the portfolio this data belongs to.
+        portfolio_name: The name of the portfolio this data belongs to.
+        
+    Returns:
+        None
+        
+    Raises:
+        ValueError: If portfolio data is empty or invalid JSON format.
+        TypeError: If portfolio is not dict or string type.
     """
 
     # ------------------------------------------------------------------
@@ -170,6 +177,5 @@ def store_final_portfolio(
             execute_values(cur, insert_sql.as_string(conn), rows)
             conn.commit()
 
-    # return schema_to_use # No longer returning schema_name as it's fixed
 
 

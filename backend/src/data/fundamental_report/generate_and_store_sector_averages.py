@@ -39,7 +39,19 @@ MAX_ABS_VALUES = {
 }
 
 def _sanitize_value(col_name, value):
-    """Return a cleaned float or None if the value should be ignored."""
+    """
+    Clean and normalize financial metric values for calculation.
+    
+    Removes NaN/Inf values, normalizes percentage columns, and clips outliers
+    to prepare data for statistical calculations.
+    
+    Args:
+        col_name: The name of the financial metric column.
+        value: The raw value to sanitize.
+        
+    Returns:
+        float or None: Cleaned float value or None if value should be ignored.
+    """
     if value is None:
         return None
     try:
@@ -68,14 +80,34 @@ def _sanitize_value(col_name, value):
 
 # --- Helper Function ---
 def calculate_average(values):
-    """Return the arithmetic mean of cleaned numeric *values* (already sanitised)."""
+    """
+    Calculate arithmetic mean of cleaned numeric values.
+    
+    Args:
+        values: List of numeric values (already sanitized).
+        
+    Returns:
+        float or None: The arithmetic mean or None if no valid values.
+    """
     numeric_values = [float(v) for v in values if v is not None]
     if not numeric_values:
         return None
     return statistics.mean(numeric_values)
 
 def trimmed_mean(values, proportion_to_cut=0.05):
-    """Return mean after dropping proportion_to_cut of lowest and highest values."""
+    """
+    Calculate trimmed mean by removing extreme values.
+    
+    Computes mean after dropping a proportion of the lowest and highest values
+    to reduce impact of outliers.
+    
+    Args:
+        values: List of numeric values to calculate trimmed mean for.
+        proportion_to_cut: Proportion of extreme values to remove (default: 0.05).
+        
+    Returns:
+        float or None: The trimmed mean or None if no valid values.
+    """
     cleaned = sorted([v for v in values if v is not None])
     n = len(cleaned)
     if n == 0:
@@ -88,12 +120,19 @@ def trimmed_mean(values, proportion_to_cut=0.05):
 
 # --- Main Workflow Function ---
 def calculate_and_store_sector_averages(db_name, target_schema_name, data_points_config):
-    """Connects to a database, calculates sector averages, and stores them.
-
+    """
+    Calculate sector-wide average fundamentals and store them in the database.
+    
+    Connects to a fundamentals database, processes all tickers to calculate
+    sector-level averages for specified metrics, and stores results in a table.
+    
     Args:
-        db_name (str): The name of the fundamentals database.
-        target_schema_name (str): The name of the schema to create/use for storing results.
-        data_points_config (dict): Dictionary defining columns to fetch per table type.
+        db_name: The name of the fundamentals database to process.
+        target_schema_name: The schema name to create/use for storing results.
+        data_points_config: Dictionary defining columns to fetch per table type.
+        
+    Returns:
+        None - Prints processing status and results to console.
     """
     print(f"--- Starting processing for database: {db_name} ---")
     

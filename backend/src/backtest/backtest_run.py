@@ -12,10 +12,16 @@ from .backtest_helpers import (
 
 def backtest(portfolio_json: Dict[str, Any]):
     """
-    Runs a backtest for a given portfolio JSON configuration.
-
+    Execute portfolio backtest analysis and generate performance visualization.
+    
+    Runs historical backtest simulation by fetching price data, calculating returns,
+    computing metrics, and displaying performance plots with benchmark comparisons.
+    
     Args:
-        portfolio_json: Dictionary containing the portfolio definition (e.g., json, json2, etc.)
+        portfolio_json: Dictionary containing portfolio definition with ticker allocations.
+        
+    Returns:
+        None - Displays performance plots and prints metrics to console.
     """
     # Get historical data for all tickers for the given portfolio
     print(f"\n📊 Fetching historical data for portfolio...")

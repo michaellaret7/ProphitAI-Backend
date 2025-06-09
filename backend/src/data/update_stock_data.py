@@ -30,13 +30,16 @@ def get_last_data_date(ticker_location, ticker, db_config):
     """
     Get the last date of OHLC data for a ticker in the database.
     
+    Queries the database to find the most recent datetime entry for the specified
+    ticker to determine where to resume data collection.
+    
     Args:
-        ticker_location (dict): Dictionary with database location info
-        ticker (str): Ticker symbol
-        db_config (dict): Database configuration
+        ticker_location: Dictionary with database location info including database and schema.
+        ticker: Ticker symbol to query.
+        db_config: Database configuration dictionary.
         
     Returns:
-        datetime: Last date of data or None if no data exists
+        datetime: Last date of data or None if no data exists or error occurs.
     """
     try:
         # Connect to database
@@ -64,15 +67,19 @@ def get_last_data_date(ticker_location, ticker, db_config):
 
 def get_stock_data_from_ib(ib, ticker, start_date=None):
     """
-    Get OHLC data for a ticker from IB.
+    Get OHLC data for a ticker from Interactive Brokers.
+    
+    Retrieves historical 15-minute bars from IB, filters for market hours only
+    (9:30 AM to 4:00 PM), and calculates appropriate duration based on start date.
     
     Args:
-        ib: IB connection
-        ticker (str): Ticker symbol
-        start_date (datetime): Start date for data request (None for 'now')
+        ib: IB connection object.
+        ticker: Ticker symbol to retrieve data for.
+        start_date: Start date for data request, or None for recent data (default: None).
         
     Returns:
-        DataFrame: OHLC data from IB, with a 'datetime' column, filtered for market hours (9:30 AM to 4:00 PM).
+        pd.DataFrame: OHLC data with datetime column filtered for market hours,
+        or None if no data retrieved or error occurs.
     """
     # Start timing the IBKR query
     query_start_time = time.time()
@@ -235,18 +242,19 @@ else:
 
 def ensure_ticker_table_exists(ticker, ticker_location, db_config):
     """
-    Ensure table exists for the ticker and create it if it doesn't.
-    Also attempts to fix the schema if the table exists:
-    - Drops the problematic unique date constraint ([ticker]_date_key).
-    - Corrects the data type of the 'date' column if it's DATE (should be TIMESTAMP).
+    Ensure table exists for ticker and fix schema issues if needed.
+    
+    Creates table if it doesn't exist, and fixes common schema problems including
+    dropping problematic unique constraints and correcting column data types.
     
     Args:
-        ticker (str): Ticker symbol
-        ticker_location (dict): Dictionary with database location info
-        db_config (dict): Database configuration
+        ticker: Ticker symbol for the table.
+        ticker_location: Dictionary with database location info including database and schema.
+        db_config: Database configuration dictionary.
         
     Returns:
-        bool: True if table exists or was created (and schema fixed), False otherwise
+        bool: True if table exists or was created successfully with correct schema,
+        False if errors occurred.
     """
     try:
         # Connect to database
@@ -396,18 +404,19 @@ def ensure_ticker_table_exists(ticker, ticker_location, db_config):
 
 def insert_data_to_db(ticker_location, ticker, df, db_config):
     """
-    Insert OHLC data into the database using execute_values for faster bulk insertion.
-    Ensures both 'datetime' and 'date' columns receive the full timestamp.
-    Handles conflicts on the 'datetime' primary key by ignoring duplicates.
-
+    Insert OHLC data into database using bulk operations with conflict handling.
+    
+    Efficiently inserts data using execute_values for bulk insertion,
+    handles conflicts on datetime primary key by ignoring duplicates.
+    
     Args:
-        ticker_location (dict): Dictionary with database location info
-        ticker (str): Ticker symbol
-        df (DataFrame): OHLC data to insert (must contain 'datetime' column)
-        db_config (dict): Database configuration
-
+        ticker_location: Dictionary with database location info including database and schema.
+        ticker: Ticker symbol for the target table.
+        df: DataFrame containing OHLC data with datetime column.
+        db_config: Database configuration dictionary.
+        
     Returns:
-        bool: True if successful, False otherwise
+        bool: True if successful, False if errors occurred during insertion.
     """
     if df is None or df.empty:
         print(f"No data provided to insert for {ticker}")
@@ -516,16 +525,18 @@ def insert_data_to_db(ticker_location, ticker, df, db_config):
 
 def update_date_column_to_match_datetime(ticker_location, ticker, db_config):
     """
-    Update the 'date' column values to match the 'datetime' column for all records.
-    This fixes cases where date column has only the date part without the time information.
+    Update date column values to match datetime column for all records.
+    
+    Fixes cases where date column has only the date part without time information
+    by copying the full timestamp from the datetime column.
     
     Args:
-        ticker_location (dict): Dictionary with database location info
-        ticker (str): Ticker symbol
-        db_config (dict): Database configuration
+        ticker_location: Dictionary with database location info including database and schema.
+        ticker: Ticker symbol for the target table.
+        db_config: Database configuration dictionary.
         
     Returns:
-        bool: True if successful, False otherwise
+        bool: True if successful, False if errors occurred during update.
     """
     start_time = time.time()
     
@@ -596,12 +607,18 @@ def update_date_column_to_match_datetime(ticker_location, ticker, db_config):
 
 def update_all_tickers_data(fix_date_column=False, start_db=None, start_schema=None):
     """
-    Main function to update OHLC data for all tickers listed in the prices schema file.
-
+    Update OHLC data for all tickers listed in the prices schema file.
+    
+    Main function that processes all tickers in the database schema,
+    fetches new data from IB since the last update, and stores it in the database.
+    
     Args:
-        fix_date_column (bool, optional): Whether to fix date column values to match datetime. Default is False.
-        start_db (str, optional): The database name to start processing from. Default is None (start from beginning).
-        start_schema (str, optional): The schema name within start_db to start processing from. Default is None (start from beginning of start_db or beginning overall).
+        fix_date_column: Whether to fix date column values to match datetime (default: False).
+        start_db: Database name to start processing from, or None to start from beginning (default: None).
+        start_schema: Schema name within start_db to start from, or None for beginning of start_db (default: None).
+        
+    Returns:
+        None - Prints progress and summary statistics to console.
     """
     # Start timing the entire process
     total_start_time = time.time()
@@ -775,8 +792,8 @@ def update_all_tickers_data(fix_date_column=False, start_db=None, start_schema=N
             print("Disconnected from Interactive Brokers")
 
 if __name__ == "__main__":
-    db_to_start = "equity_sector_information_technology_prices"
-    schema_to_start = "technology_hardware__storage_and_peripherals_prices"
+    db_to_start = "equity_sector_communication_services_prices"
+    schema_to_start = "diversified_telecommunication_services_prices"
     print(f"\nStarting update from DB: {db_to_start}, Schema: {schema_to_start}\n")
     update_all_tickers_data(fix_date_column=False, start_db=db_to_start, start_schema=schema_to_start)
 

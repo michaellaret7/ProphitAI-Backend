@@ -26,14 +26,17 @@ DB_PORT = os.environ.get("DB_PORT")
 
 def _get_db_and_schema_for_ticker(ticker: str) -> tuple[str | None, str | None]:
     """
-    Finds the database name and schema name for a given ticker using schema data.
-
+    Find database name and schema name for a ticker using schema data.
+    
+    Searches through the schema configuration to locate which database
+    and schema contain the specified ticker symbol.
+    
     Args:
-        ticker (str): The stock ticker symbol.
+        ticker: The stock ticker symbol to locate.
 
     Returns:
-        tuple[str | None, str | None]: A tuple containing (database_name, schema_name),
-                                       or (None, None) if not found or on error.
+        Tuple[str | None, str | None]: Database name and schema name,
+        or (None, None) if not found or on error.
     """
     ticker_upper = ticker.upper()
     try:
@@ -84,7 +87,18 @@ def _get_db_and_schema_for_ticker(ticker: str) -> tuple[str | None, str | None]:
     return None, None
 
 def _sanitize_metric_value(value) -> float | None:
-    """Basic sanitization for numeric metric values, handling None, NaN, Inf."""
+    """
+    Sanitize numeric metric values by handling None, NaN, and Inf values.
+    
+    Converts input to float and filters out invalid numeric values
+    while preserving valid negative numbers.
+    
+    Args:
+        value: Raw metric value to sanitize.
+        
+    Returns:
+        float or None: Sanitized float value, or None if invalid/unconvertible.
+    """
     if value is None:
         return None
     try:
@@ -99,9 +113,16 @@ def _sanitize_metric_value(value) -> float | None:
 
 def _metric_name_to_column_name(metric_name: str) -> str:
     """
-    Converts a user-friendly metric name (e.g., "Price to Earnings Ratio")
-    to a likely database column name (e.g., "price_to_earnings_ratio").
-    Handles spaces, dashes, slashes, and basic capitalization.
+    Convert user-friendly metric name to database column name format.
+    
+    Transforms metric names with spaces and special characters into
+    lowercase snake_case format expected by database columns.
+    
+    Args:
+        metric_name: User-friendly metric name (e.g., "Price to Earnings Ratio").
+        
+    Returns:
+        str: Database column name format (e.g., "price_to_earnings_ratio").
     """
     # Convert to lowercase first
     name = metric_name.lower()
@@ -115,23 +136,20 @@ def _metric_name_to_column_name(metric_name: str) -> str:
 
 def retrieve_financial_metric(ticker: str, metric_name: str) -> list[tuple[object, float]] | None:
     """
-    Retrieves the time series of a specified financial metric for a given stock ticker
-    from the relevant sector database and financial_metrics table.
-
-    It attempts to fetch the metric values along with a date column, ordered by date.
-
+    Retrieve time series of financial metric for a stock ticker from database.
+    
+    Fetches historical values of the specified financial metric along with dates,
+    ordered chronologically from the appropriate sector database table.
+    
     Args:
-        ticker (str): The stock ticker symbol (e.g., 'AAPL'). Case-insensitive.
-        metric_name (str): The user-friendly name of the financial metric to retrieve
-                           (e.g., "Price to Earnings Ratio", "Revenue", "Net Income").
-                           This will be converted to a potential column name.
+        ticker: The stock ticker symbol (e.g., 'AAPL'), case-insensitive.
+        metric_name: User-friendly name of the financial metric to retrieve
+                    (e.g., "Price to Earnings Ratio", "Revenue", "Net Income").
 
     Returns:
-        list[tuple[object, float]] | None: A list of (date, metric_value) tuples if found and valid,
-                                         ordered by date (if a date column is found).
-                                         Returns None if connection fails, ticker/table/column not found,
-                                         or other critical errors occur.
-                                         Returns an empty list if the table is empty or contains no valid data for the metric.
+        List[Tuple[object, float]] or None: List of (date, metric_value) tuples ordered by date,
+        or None if connection fails/ticker not found/critical errors occur.
+        Returns empty list if table exists but contains no valid data.
     """
     if not ticker:
         # # print("Error: Ticker symbol cannot be empty.")

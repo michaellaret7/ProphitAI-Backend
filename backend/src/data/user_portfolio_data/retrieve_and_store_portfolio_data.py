@@ -8,14 +8,17 @@ logger = init_logger(__name__)
 
 def retrieve_and_store_portfolio_data(user_name: str, user_id: Optional[str] = None) -> Optional[str]:
     """
-    Complete workflow to fetch portfolio positions from IBKR and store them in the database.
+    Complete workflow to fetch and store portfolio data from IBKR.
+    
+    Executes the full process of fetching portfolio positions from Interactive Brokers
+    and storing them in the database with proper cleanup and error handling.
     
     Args:
-        user_name: Name of the user whose portfolio to fetch and store
-        user_id: Optional specific user ID to use. If not provided, will use existing or generate new one
-    
+        user_name: Name of the user whose portfolio to fetch and store.
+        user_id: Optional specific user ID to use, will generate new one if not provided.
+        
     Returns:
-        user_id if successful, None if failed
+        Optional[str]: user_id if successful, None if operation failed.
     """
     logger.info(f"🚀 Starting portfolio retrieval and storage for user: '{user_name}'...")
     

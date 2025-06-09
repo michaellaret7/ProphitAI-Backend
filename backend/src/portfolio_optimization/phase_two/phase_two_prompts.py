@@ -182,12 +182,35 @@ Based on the following data for various sectores, provide investment recommendat
 # ---------------------------------------------------------------------------
 
 def build_system_prompt(user_profile_formatted: str, num_tickers: int = NUM_TOP_TICKERS) -> str:
-    """Return the filled phase-two system prompt."""
+    """
+    Build formatted system prompt for Phase Two LLM interactions.
+    
+    Creates the system prompt template with user profile information and
+    ticker count parameters for portfolio optimization guidance.
+    
+    Args:
+        user_profile_formatted: Formatted string containing user investment profile information.
+        num_tickers: Number of top tickers to analyze (default: NUM_TOP_TICKERS).
+        
+    Returns:
+        str: Complete system prompt string ready for LLM consumption.
+    """
     return SYSTEM_PROMPT_TEMPLATE.format(
         user_profile_formatted=user_profile_formatted,
         num_tickers=num_tickers,
     )
 
 def build_user_prompt(data_string: str) -> str:
-    """Return the filled phase-two user prompt."""
+    """
+    Build formatted user prompt for Phase Two LLM interactions.
+    
+    Creates the user prompt with ticker data and analysis instructions
+    for generating investment recommendations.
+    
+    Args:
+        data_string: JSON string containing ticker data and metrics for analysis.
+        
+    Returns:
+        str: Complete user prompt string ready for LLM consumption.
+    """
     return USER_PROMPT_TEMPLATE.format(data_string=data_string) 

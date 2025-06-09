@@ -4,13 +4,17 @@ from backend.src.utils.ticker_utils import name_to_ticker
 
 def exit_position(symbol):
     """
-    Exits a position by selling all shares of the specified stock at market price.
+    Exit position by selling all shares of specified stock at market price.
+    
+    Connects to Interactive Brokers, finds the position for the specified symbol,
+    and places a market sell order for the entire position quantity.
     
     Args:
-        symbol (str): The stock symbol to sell
+        symbol: The stock symbol to sell (can be company name or ticker).
         
     Returns:
-        dict: Result of the order or None if no position found/order failed
+        Trade object: IB trade object if order placed successfully,
+        or None if no position found or order failed.
     """
     ib = get_ib()
     
@@ -62,14 +66,17 @@ def exit_position(symbol):
 
 def prompt_exit_position(symbol):
     """
-    Interactive user flow for exiting positions. Prompts user to confirm
-    selling all shares of the specified stock at market price.
+    Interactive flow for exiting positions with user confirmation.
+    
+    Displays current position details and prompts user to confirm
+    before placing a market sell order for all shares.
     
     Args:
-        symbol (str): The stock symbol to sell
+        symbol: The stock symbol to sell (can be company name or ticker).
         
     Returns:
-        dict: Result of the order or None if canceled/no position
+        Trade object: IB trade object if order confirmed and placed,
+        or None if canceled or no position found.
     """
     ib = get_ib()
     

@@ -29,6 +29,19 @@ load_dotenv()
 model, client = openai_model_and_client()
 
 def optimize():
+    """
+    Execute Phase One portfolio optimization using LLM with analyst tools.
+    
+    Orchestrates the complete Phase One workflow including data collection via analyst tools,
+    web searches, and LLM-based portfolio recommendations with validation and formatting.
+    
+    Args:
+        None
+        
+    Returns:
+        Dict: Portfolio JSON containing validated asset class allocations and reasoning,
+        or empty portfolio dict if optimization fails.
+    """
     # Import moved here
     from backend.src.analysts import (
         free_search, 

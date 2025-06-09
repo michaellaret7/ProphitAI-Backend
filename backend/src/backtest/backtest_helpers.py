@@ -3,7 +3,18 @@ import numpy as np
 from typing import Any, Dict, Tuple, Optional # Added Optional as it's used by get_current_portfolio_holdings implicitly
 
 def get_portfolio_value_from_json(portfolio):
-    """Return summed numeric market_value in USD or default $1,000,000."""
+    """
+    Extract total market value from portfolio JSON structure.
+    
+    Sums all market_value fields from final_portfolio positions,
+    handling both numeric and string formats with currency symbols.
+    
+    Args:
+        portfolio: Dictionary containing portfolio data with final_portfolio list.
+        
+    Returns:
+        float: Total portfolio market value in USD, defaults to $1,000,000 if zero or invalid.
+    """
     total = 0.0
     for pos in portfolio.get("final_portfolio", []):
         mv = pos.get("market_value")
@@ -19,13 +30,17 @@ def get_portfolio_value_from_json(portfolio):
 
 def get_historical_data_for_all_tickers(portfolio) -> Tuple[Dict[str, pd.DataFrame], float]:
     """
-    Fetch daily closing prices for all tickers in the portfolio (plus SPY) from
-    the internal Postgres price databases. No Interactive Brokers dependency.
-
-    Returns
-    -------
-    Tuple[Dict[str, pd.DataFrame], float]
-        A mapping of ticker -> price dataframe and the estimated portfolio value.
+    Fetch historical price data for portfolio tickers and SPY benchmark.
+    
+    Retrieves daily closing prices from internal Postgres databases for all
+    portfolio tickers plus SPY for comparison analysis.
+    
+    Args:
+        portfolio: Dictionary containing portfolio data with final_portfolio ticker list.
+        
+    Returns:
+        Tuple[Dict[str, pd.DataFrame], float]: Dictionary mapping ticker symbols to price DataFrames
+        and the estimated portfolio value in USD.
     """
     from backend.src.portfolio_optimization.phase_two.data_retrieval import get_daily_closing_prices # LOCAL IMPORT
     results: dict[str, pd.DataFrame] = {}
@@ -46,15 +61,19 @@ def get_historical_data_for_all_tickers(portfolio) -> Tuple[Dict[str, pd.DataFra
 
 def calculate_portfolio_returns(portfolio: Dict[str, Any], historical_data: Dict[str, pd.DataFrame], initial_investment: float) -> Tuple[Optional[pd.DataFrame], Optional[Dict[str, float]]]:
     """
-    Calculate portfolio returns over time based on historical data and allocation percentages
-
+    Calculate portfolio performance metrics over time using historical data.
+    
+    Computes daily portfolio values, returns, drawdowns, and performance metrics
+    based on ticker allocations and historical price movements.
+    
     Args:
-        portfolio: Dictionary containing portfolio data
-        historical_data: Dictionary with tickers as keys and historical data as values
-        initial_investment: Actual portfolio value from IBKR
-
+        portfolio: Dictionary containing portfolio data with ticker allocations.
+        historical_data: Dictionary mapping ticker symbols to historical price DataFrames.
+        initial_investment: Starting portfolio value in USD.
+        
     Returns:
-        Tuple containing (portfolio_values DataFrame, allocation_dict) or (None, None) if error
+        Tuple[Optional[pd.DataFrame], Optional[Dict[str, float]]]: Portfolio values DataFrame with
+        metrics and allocation dictionary used, or (None, None) if calculation fails.
     """
     # Create dictionaries to store shares and allocations for each ticker
     # shares_dict = {} # This variable was unused
@@ -319,17 +338,17 @@ def calculate_portfolio_returns(portfolio: Dict[str, Any], historical_data: Dict
 
 def prepare_portfolio_json_from_db(portfolio_df: pd.DataFrame, total_portfolio_value: float = 1_000_000.0) -> Optional[Dict[str, Any]]:
     """
-    Converts portfolio data from a DataFrame (ticker, allocation %) to the JSON
-    format expected by the backtest function, calculating shares.
-
+    Convert portfolio DataFrame to JSON format for backtesting.
+    
+    Transforms database portfolio data with ticker allocations into the JSON structure
+    expected by backtest functions, calculating shares based on initial prices.
+    
     Args:
-        portfolio_df (pd.DataFrame): DataFrame with 'ticker' and 'allocation' columns.
-                                     Allocation is a percentage (e.g., 6.500 for 6.5%).
-        total_portfolio_value (float): The total initial value of the portfolio.
-
+        portfolio_df: DataFrame containing 'ticker' and 'allocation' columns with percentage allocations.
+        total_portfolio_value: Total initial portfolio value in USD (default: $1,000,000).
+        
     Returns:
-        dict: Portfolio in the JSON structure required by the backtest function.
-              Returns None if essential data is missing or DataFrame is empty.
+        Optional[Dict[str, Any]]: Portfolio in JSON format for backtesting, or None if data is invalid.
     """
     from backend.src.portfolio_optimization.phase_two.data_retrieval import get_daily_closing_prices # LOCAL IMPORT
     if portfolio_df is None or portfolio_df.empty:

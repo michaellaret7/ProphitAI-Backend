@@ -6,11 +6,16 @@ from backend.src.utils.database import get_pooled_connection, get_default_db_con
 
 def create_prices_schema_file(output_file="database_schemas_prices.json"):
     """
-    Connects to the database and extracts information about databases and schemas
-    ending with '_prices', writing the result to a JSON file.
-
+    Extract price database schemas and save to JSON file.
+    
+    Connects to databases ending with '_prices', extracts their schema and table
+    information, and writes the hierarchical structure to a JSON file.
+    
     Args:
-        output_file (str): The file to write the extracted price schema information to.
+        output_file: The filename for the output JSON file (default: "database_schemas_prices.json")
+        
+    Returns:
+        Dict: The extracted price schemas data structure.
     """
     # Database connection parameters from environment
     db_config = get_default_db_config()

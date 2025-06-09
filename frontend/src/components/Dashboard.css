@@ -389,14 +389,18 @@
 
 .metric-card {
   background: white;
-  padding: 24px;
-  border-radius: 16px;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
-  transition: transform 0.3s, box-shadow 0.3s;
+  padding: 32px;
+  border-radius: 24px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04), 0 0 0 1px rgba(0, 0, 0, 0.04);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   position: relative;
   overflow: hidden;
   animation: fadeInUp 0.6s ease;
   animation-fill-mode: both;
+  min-height: 200px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
 }
 
 .metric-card:nth-child(1) { animation-delay: 0.1s; }
@@ -405,120 +409,178 @@
 .metric-card:nth-child(4) { animation-delay: 0.4s; }
 
 .metric-card:hover {
-  transform: translateY(-5px);
-  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+  transform: translateY(-4px);
+  box-shadow: 0 12px 24px rgba(0, 0, 0, 0.08), 0 0 0 1px rgba(0, 0, 0, 0.08);
 }
 
 .metric-card.warning-card {
   background: white;
 }
 
-.metric-card.warning-card .metric-icon,
-.metric-card.warning-card .metric-label,
-.metric-card.warning-card .metric-value {
-  color: #1e293b;
-}
-
-.metric-header {
+.metric-icon-wrapper {
   display: flex;
-  align-items: center;
-  gap: 12px;
-  margin-bottom: 16px;
+  align-items: flex-start;
 }
 
 .metric-icon {
-  font-size: 20px;
-  width: 44px;
-  height: 44px;
+  width: 56px;
+  height: 56px;
   display: flex;
   align-items: center;
   justify-content: center;
-  border-radius: 8px;
+  border-radius: 16px;
   flex-shrink: 0;
+  position: relative;
+  border: 2px solid;
+  transition: all 0.3s ease;
+}
+
+.metric-card:hover .metric-icon {
+  transform: scale(1.05);
+}
+
+.metric-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
 }
 
 .total-value-icon-bg {
-  background-color: #e6f4ea;
+  background: linear-gradient(135deg, #e6f4ea 0%, #d4f0dc 100%);
+  border-color: #1e8e3e;
 }
 .total-value-icon-bg svg {
   color: #1e8e3e;
+  stroke-width: 1.5;
 }
 
 .overall-return-icon-bg {
-  background-color: #e6f4ea;
+  background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%);
+  border-color: #0ea5e9;
 }
 .overall-return-icon-bg svg {
-  color: #1e8e3e;
+  color: #0ea5e9;
+  stroke-width: 1.5;
 }
 
 .ai-risk-icon-bg {
-  background-color: #f3e8fd;
+  background: linear-gradient(135deg, #f3e8fd 0%, #e9d5ff 100%);
+  border-color: #8e44ad;
 }
 .ai-risk-icon-bg svg {
   color: #8e44ad;
+  stroke-width: 1.5;
 }
 
 .optimization-icon-bg {
-  background-color: #fce8e6;
+  background: linear-gradient(135deg, #fce8e6 0%, #fde2e2 100%);
+  border-color: #d93025;
 }
 .optimization-icon-bg svg {
   color: #d93025;
+  stroke-width: 1.5;
 }
 
 .metric-label {
   font-size: 14px;
   color: #64748b;
-  font-weight: 500;
+  font-weight: 600;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  opacity: 0.8;
 }
 
 .metric-value {
-  font-size: 28px;
-  font-weight: 700;
+  font-size: 36px;
+  font-weight: 800;
   color: #1e293b;
-  margin-bottom: 8px;
+  line-height: 1;
+  letter-spacing: -0.02em;
+  display: flex;
+  align-items: baseline;
+  gap: 4px;
 }
 
 .metric-unit {
+  font-size: 20px;
+  color: #94a3b8;
+  font-weight: 500;
+  margin-left: 2px;
+}
+
+.metric-unit-text {
   font-size: 18px;
   color: #64748b;
-  font-weight: 400;
+  font-weight: 600;
+  margin-left: 8px;
+  letter-spacing: 0;
+}
+
+.metric-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: auto;
+  padding-top: 16px;
+  border-top: 1px solid #f1f5f9;
 }
 
 .metric-change {
   font-size: 14px;
-  color: #64748b;
+  font-weight: 600;
   display: flex;
   align-items: center;
   gap: 4px;
-}
-
-.change-arrow {
-  font-size: 16px;
 }
 
 .metric-change.positive {
   color: #10b981;
 }
 
-.metric-change.warning {
-  color: #b91c1c;
+.change-indicator {
+  font-size: 14px;
+  font-weight: 800;
+}
+
+.metric-status {
+  font-size: 13px;
+  font-weight: 600;
+  padding: 4px 10px;
+  border-radius: 6px;
+}
+
+.metric-status.moderate {
+  background: #e0e7ff;
+  color: #5b4cdb;
+}
+
+.metric-status.warning {
+  background: #fee2e2;
+  color: #dc2626;
+}
+
+.metric-period {
+  font-size: 13px;
+  color: #94a3b8;
+  font-weight: 500;
+  transition: color 0.2s ease;
+}
+
+.metric-card:hover .metric-period {
+  color: #64748b;
+}
+
+/* Special styling for the "View details" link */
+.metric-card:nth-child(4) .metric-period {
+  color: #5b4cdb;
+  cursor: pointer;
   font-weight: 600;
 }
 
-.risk-bar {
-  width: 100%;
-  height: 6px;
-  background: #e2e8f0;
-  border-radius: 3px;
-  margin-top: 12px;
-  overflow: hidden;
-}
-
-.risk-fill {
-  height: 100%;
-  background: linear-gradient(90deg, #10b981 0%, #fbbf24 50%, #ef4444 100%);
-  border-radius: 3px;
-  transition: width 0.6s ease;
+.metric-card:nth-child(4):hover .metric-period {
+  color: #4c3fc2;
+  text-decoration: underline;
 }
 
 /* Charts Section */
@@ -1020,10 +1082,80 @@
   transform: scale(1.05);
 }
 
+/* Make metric cards interactive */
+.metric-card {
+  cursor: pointer;
+}
+
+.metric-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 4px;
+  background: linear-gradient(90deg, 
+    var(--card-accent-color, #5b4cdb) 0%, 
+    var(--card-accent-color-end, #8b5cf6) 100%
+  );
+  transform: scaleX(0);
+  transform-origin: left;
+  transition: transform 0.3s ease;
+}
+
+.metric-card:hover::before {
+  transform: scaleX(1);
+}
+
+.metric-card:nth-child(1) {
+  --card-accent-color: #1e8e3e;
+  --card-accent-color-end: #34a853;
+}
+
+.metric-card:nth-child(2) {
+  --card-accent-color: #0ea5e9;
+  --card-accent-color-end: #0284c7;
+}
+
+.metric-card:nth-child(3) {
+  --card-accent-color: #8e44ad;
+  --card-accent-color-end: #a855f7;
+}
+
+.metric-card:nth-child(4) {
+  --card-accent-color: #d93025;
+  --card-accent-color-end: #ef4444;
+}
+
+/* Add subtle gradient background to cards */
+.metric-card::after {
+  content: '';
+  position: absolute;
+  top: -50%;
+  right: -50%;
+  width: 200%;
+  height: 200%;
+  background: radial-gradient(circle, 
+    rgba(91, 76, 219, 0.03) 0%, 
+    transparent 70%
+  );
+  opacity: 0;
+  transition: opacity 0.3s ease;
+  pointer-events: none;
+}
+
+.metric-card:hover::after {
+  opacity: 1;
+}
+
 /* Responsive Design */
 @media (max-width: 1400px) {
   .metrics-grid {
     grid-template-columns: repeat(2, 1fr);
+  }
+  
+  .metric-card {
+    min-height: 180px;
   }
   
   .insights-grid {
@@ -1044,6 +1176,16 @@
   
   .metrics-grid {
     grid-template-columns: 1fr;
+    gap: 16px;
+  }
+  
+  .metric-card {
+    min-height: 160px;
+    padding: 24px;
+  }
+  
+  .metric-value {
+    font-size: 32px;
   }
 }
 

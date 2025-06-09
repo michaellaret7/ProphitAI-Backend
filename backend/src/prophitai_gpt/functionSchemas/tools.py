@@ -1,3 +1,9 @@
+"""
+This is the tool/function schema for the ProphitAI GPT.
+When a function/tool is created, it should be added to this schema. 
+Once a function is added to this schema, it can be called by the LLM.
+"""
+
 tools = [{
     "type": "function",
     "function": {

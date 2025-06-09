@@ -16,14 +16,16 @@ from sqlalchemy import create_engine, text
 
 def get_quarterly_estimates(ticker: str) -> str:
     """
-    Connects to IB, fetches quarterly fundamental estimates for a given ticker,
-    filters for Q2 2025 onwards, and returns them as a compact JSON string.
+    Fetch quarterly fundamental estimates for a ticker from Interactive Brokers.
     
-    Parameters:
-    - ticker: The stock ticker symbol (e.g., "AAPL")
+    Connects to IB, retrieves quarterly estimates for key financial metrics,
+    filters for Q2 2025 onwards, and returns them as JSON string.
     
+    Args:
+        ticker: The stock ticker symbol (e.g., "AAPL").
+        
     Returns:
-    - A JSON string containing the quarterly estimates or an error message.
+        str: JSON string containing quarterly estimates or error message.
     """
     # Obtain a connected IB instance using the shared utility
     ib = get_ib()
@@ -158,7 +160,21 @@ def get_quarterly_estimates(ticker: str) -> str:
 # --- NEW CODE: Bulk retrieval & database push ---
 
 def _get_sqlalchemy_engine(db_name: str):
-    """Create a SQLAlchemy engine for the given database using default env config."""
+    """
+    Create SQLAlchemy engine for database connection using default configuration.
+    
+    Builds connection string from environment variables and creates
+    engine with connection pooling enabled.
+    
+    Args:
+        db_name: Name of the database to connect to.
+        
+    Returns:
+        sqlalchemy.Engine: Database engine object.
+        
+    Raises:
+        ValueError: If required database environment variables are not set.
+    """
     db_cfg = get_default_db_config()
     if not db_cfg or not all(db_cfg.values()):
         raise ValueError("Database environment variables (DB_HOST, DB_USER, DB_PASSWORD, DB_PORT) must be set.")
@@ -175,7 +191,21 @@ def _push_estimates_dataframe(
     schema_name: str,
     table_name: str,
 ) -> None:
-    """Append the given DataFrame to ``schema_name.table_name`` (auto-creates if needed)."""
+    """
+    Append DataFrame to database table, creating schema and table if needed.
+    
+    Uses pandas to_sql for efficient bulk insertion with automatic
+    schema and table creation when required.
+    
+    Args:
+        df: DataFrame containing estimates data to insert.
+        db_name: Target database name.
+        schema_name: Target schema name.
+        table_name: Target table name.
+        
+    Returns:
+        None
+    """
     if df.empty:
         return  # Nothing to insert
 
@@ -204,8 +234,21 @@ def _push_estimates_dataframe(
 def update_all_ticker_fundamental_estimates(min_year: int = 2025, min_quarter: int = 2,
                                             start_sector: str | None = None,
                                             start_schema: str | None = None) -> None:
-    """Loop through every ticker in database_schemas.json, fetch quarterly estimates and store them in the DB."""
-
+    """
+    Update fundamental estimates for all tickers in database schema definitions.
+    
+    Loops through all tickers in database_schemas.json, fetches quarterly estimates
+    from IB, and stores them in individual ticker tables within fundamentals databases.
+    
+    Args:
+        min_year: Minimum year for filtering estimates (default: 2025).
+        min_quarter: Minimum quarter for filtering estimates (default: 2).
+        start_sector: Sector name to start processing from, or None to start from beginning (default: None).
+        start_schema: Schema name to start processing from, or None to start from beginning (default: None).
+        
+    Returns:
+        None - Prints progress and completion status to console.
+    """
     schema_data = load_schema_data()
     if not schema_data:
         print("⚠️ Could not load database schema definitions. Aborting.")

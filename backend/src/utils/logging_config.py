@@ -16,6 +16,12 @@ DEFAULT_LEVEL = os.getenv("LOG_LEVEL").upper()
 _logging_already_configured = False
 
 def _configure_root_logger(level: str = DEFAULT_LEVEL):
+    """
+    Configure the root logger with basic settings once.
+    
+    Args:
+        level: Logging level to set (default: from LOG_LEVEL env var)
+    """
     global _logging_already_configured
     if _logging_already_configured:
         return

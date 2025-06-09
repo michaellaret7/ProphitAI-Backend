@@ -11,7 +11,19 @@ TABLE_NAME = "public.user_portfolios"
 
 def _create_user_portfolios_table_if_not_exists():
     """
-    Creates the user_portfolios table in the database if it doesn't already exist.
+    Create user_portfolios table in database if it doesn't exist.
+    
+    Creates table with schema for storing user portfolio positions including
+    symbols, quantities, prices, and P&L data with composite primary key.
+    
+    Args:
+        None
+        
+    Returns:
+        None
+        
+    Raises:
+        Exception: If table creation fails.
     """
     create_table_sql = f"""
     CREATE TABLE IF NOT EXISTS {TABLE_NAME} (
@@ -41,10 +53,18 @@ def _create_user_portfolios_table_if_not_exists():
 
 def store_portfolio_positions(user_name: str, positions_data: List[Dict[str, Any]], user_id: Optional[str] = None) -> Optional[str]:
     """
-    Stores the given portfolio positions data into the user_portfolios table.
-    If user_id is provided, it will use that ID.
-    If user_id is not provided, it will check if a portfolio exists for the user_name.
-    If it exists, it will update the existing records. If not, it will create new records.
+    Store portfolio position data in the user_portfolios table.
+    
+    Uses upsert logic to store or update positions. Creates new user_id if not provided
+    or uses existing one. Handles conflicts based on composite primary key.
+    
+    Args:
+        user_name: Name of the user whose positions to store.
+        positions_data: List of dictionaries containing position data from IBKR.
+        user_id: Optional specific user ID to use, creates new one if not provided.
+        
+    Returns:
+        Optional[str]: The user_id used for storage, or None if operation failed.
     """
     _create_user_portfolios_table_if_not_exists()
 

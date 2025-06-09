@@ -7,6 +7,14 @@ from openai import OpenAI
 
 class StressTestAgent:
     def __init__(self, llm: str, api_key: Optional[str] = None, max_iterations: int = 10):
+        """
+        Initialize the stress test agent with LLM configuration.
+        
+        Args:
+            llm: Language model name to use
+            api_key: OpenAI API key (uses OPENAI_API_KEY env var if None)
+            max_iterations: Maximum number of iterations for agent loop
+        """
         self.llm = llm
         self.api_key = os.environ.get("OPENAI_API_KEY")
         self.client = OpenAI(api_key=self.api_key)
@@ -38,6 +46,15 @@ Final Answer: {
 """
 
     def add_tool(self, name: str, description: str, parameters: Dict, function: Callable):
+        """
+        Add a tool function to the agent's available tools.
+        
+        Args:
+            name: Tool name
+            description: Tool description
+            parameters: Tool parameter schema
+            function: Callable function to execute for this tool
+        """
         tool_def = {
             "type": "function",
             "function": {
@@ -50,13 +67,31 @@ Final Answer: {
         self.tool_functions[name] = function
     
     def execute_tool(self, function_name: str, arguments: Dict) -> str:
+        """
+        Execute a tool function with provided arguments.
+        
+        Args:
+            function_name: Name of the tool function to execute
+            arguments: Dictionary of arguments to pass to the function
+            
+        Returns:
+            str: Result from the tool function or error message
+        """
         if function_name not in self.tool_functions:
             return f"Error: Tool '{function_name}' not found"
         
         return self.tool_functions[function_name](**arguments)
     
     def parse_action(self, action_text: str) -> Tuple[str, Dict]:
-        """Parse action text into function name and arguments."""
+        """
+        Parse action text into function name and arguments.
+        
+        Args:
+            action_text: Text containing action to parse
+            
+        Returns:
+            tuple: (function_name, arguments_dict) or (None, {}) if parsing fails
+        """
         # Pattern: Action: tool_name(param1=value1, param2=value2, ...)
         match = re.match(r'Action:\s*(\w+)\((.*)\)', action_text)
         if not match:
@@ -90,6 +125,15 @@ Final Answer: {
         return function_name, args_dict
     
     def run(self, user_query: str) -> str:
+        """
+        Run the agent with a user query using thought-action-observation loop.
+        
+        Args:
+            user_query: User query or task to process
+            
+        Returns:
+            str: Complete agent response including thoughts, actions, and observations
+        """
         messages = [
             {"role": "system", "content": self.system_prompt},
             {"role": "user", "content": user_query}

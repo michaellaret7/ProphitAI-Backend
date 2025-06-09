@@ -12,11 +12,15 @@ def get_holdings_from_database(user_name: str = "test_user_beta_one") -> tuple[L
     """
     Retrieve holdings from the database instead of IBKR.
     
+    Queries the user_portfolios table to fetch the most recent holdings
+    for the specified user with proper data type conversion.
+    
     Args:
-        user_name: Name of the user whose holdings to retrieve
+        user_name: Name of the user whose holdings to retrieve (default: "test_user_beta_one").
         
     Returns:
-        A tuple containing (positions list, formatted string)
+        Tuple[List[Dict[str, Any]], str]: Tuple containing list of position dictionaries 
+        and formatted status string, or empty list and error message if failed.
     """
     try:
         with get_cursor(dbname='user_data') as cursor:
@@ -62,6 +66,19 @@ def get_holdings_from_database(user_name: str = "test_user_beta_one") -> tuple[L
         return [], f"Error retrieving holdings: {str(e)}"
 
 def format_to_json():
+    """
+    Format comprehensive portfolio data into JSON for Phase One analysis.
+    
+    Retrieves holdings from database, calculates portfolio metrics, monthly performance,
+    correlations, and formats everything into a JSON structure for LLM consumption.
+    
+    Args:
+        None
+        
+    Returns:
+        str: JSON string containing comprehensive portfolio data including positions,
+        metrics, performance, and correlations with rounded numeric values.
+    """
     # Get holdings from database instead of IBKR
     positions, formatted_output = get_holdings_from_database()
             

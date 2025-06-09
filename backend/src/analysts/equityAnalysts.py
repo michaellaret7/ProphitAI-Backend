@@ -32,8 +32,16 @@ date = "2025_01_22"  # Set a default date
 
 def update_research_date_to_latest():
     """
-    Connects to the 'research' database and updates the global 'date' variable
-    to the latest date found in the schema names (formatted as YYYY_MM_DD).
+    Update the global date variable to the latest research date found in the database schemas.
+    
+    Connects to the 'research' database and scans for schemas matching YYYY_MM_DD format,
+    then sets the global date variable to the most recent valid date schema found.
+    
+    Args:
+        None
+        
+    Returns:
+        None - Updates the global 'date' variable as a side effect.
     """
     global date
     
@@ -89,13 +97,13 @@ update_research_date_to_latest()
 
 def get_analyst_research(table_name: str) -> Optional[str]:
     """
-    Generic function to retrieve analyst research from the database.
+    Retrieve analyst research content from a specified table in the research database.
     
     Args:
-        table_name: Name of the research table to query
+        table_name: Name of the research table to query (e.g., 'energy_research', 'healthcare_research')
         
     Returns:
-        The research text content or None if not found
+        str or None: The research text content if found, None if no data exists for the specified table.
     """
     db_name = "research"
     schema_name = date
@@ -118,67 +126,133 @@ def get_analyst_research(table_name: str) -> Optional[str]:
 
 def communication_services_analyst():
     """
-    Retrieves communication services research from the database.
+    Retrieve communication services sector research report from the database.
+    
+    Args:
+        None
+        
+    Returns:
+        str or None: The communication services research content, or None if not found.
     """
     return get_analyst_research("communication_services_research")
 
 def consumer_discretionary_analyst():
     """
-    Retrieves consumer discretionary research from the database.
+    Retrieve consumer discretionary sector research report from the database.
+    
+    Args:
+        None
+        
+    Returns:
+        str or None: The consumer discretionary research content, or None if not found.
     """
     return get_analyst_research("consumer_discretionary_research")
 
 def consumer_staples_analyst():
     """
-    Retrieves consumer staples research from the database.
+    Retrieve consumer staples sector research report from the database.
+    
+    Args:
+        None
+        
+    Returns:
+        str or None: The consumer staples research content, or None if not found.
     """
     return get_analyst_research("consumer_staples_research")
 
 def energy_analyst():
     """
-    Retrieves energy research from the database.
+    Retrieve energy sector research report from the database.
+    
+    Args:
+        None
+        
+    Returns:
+        str or None: The energy research content, or None if not found.
     """
     return get_analyst_research("energy_research")
 
 def financials_analyst():
     """
-    Retrieves financials research from the database.
+    Retrieve financials sector research report from the database.
+    
+    Args:
+        None
+        
+    Returns:
+        str or None: The financials research content, or None if not found.
     """
     return get_analyst_research("financials_research")
 
 def healthcare_analyst():
     """
-    Retrieves healthcare research from the database.
+    Retrieve healthcare sector research report from the database.
+    
+    Args:
+        None
+        
+    Returns:
+        str or None: The healthcare research content, or None if not found.
     """
     return get_analyst_research("healthcare_research")
 
 def industrials_analyst():
     """
-    Retrieves industrials research from the database.
+    Retrieve industrials sector research report from the database.
+    
+    Args:
+        None
+        
+    Returns:
+        str or None: The industrials research content, or None if not found.
     """
     return get_analyst_research("industrials_research")
 
 def information_technology_analyst():
     """
-    Retrieves information technology research from the database.
+    Retrieve information technology sector research report from the database.
+    
+    Args:
+        None
+        
+    Returns:
+        str or None: The information technology research content, or None if not found.
     """
     return get_analyst_research("information_technology_research")
 
 def materials_analyst():
     """
-    Retrieves materials research from the database.
+    Retrieve materials sector research report from the database.
+    
+    Args:
+        None
+        
+    Returns:
+        str or None: The materials research content, or None if not found.
     """
     return get_analyst_research("materials_research")
 
 def real_estate_analyst():
     """
-    Retrieves real estate research from the database.
+    Retrieve real estate sector research report from the database.
+    
+    Args:
+        None
+        
+    Returns:
+        str or None: The real estate research content, or None if not found.
     """
     return get_analyst_research("real_estate_research")
 
 def utilities_analyst():
     """
-    Retrieves utilities research from the database.
+    Retrieve utilities sector research report from the database.
+    
+    Args:
+        None
+        
+    Returns:
+        str or None: The utilities research content, or None if not found.
     """
     return get_analyst_research("utilities_research")
     

@@ -5,12 +5,14 @@ import ibkrLogo from '../assets/logos/ibkr-logo.png';
 import Portfolio from './Portfolio';
 import AiInsightsPage from './AiInsightsPage';
 import ProphitGpt from './ProphitGpt';
+import ProphitAlts from './ProphitAlts';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import {
     faChartPie, faLightbulb, faTasks, faHistory,
     faExclamationTriangle, faCog, faUpload, faPlus, faSearch, faChartLine,
-    faSlidersH, faDollarSign, faRobot, faBalanceScale, faFilter
+    faSlidersH, faFilter, faUsers, faCoins
 } from '@fortawesome/free-solid-svg-icons';
+import { CandlestickChart, BriefcaseBusiness, Cpu, Scale } from 'lucide-react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
 import { Menu, MenuButton, MenuItems, MenuItem } from '@headlessui/react';
 import clsx from 'clsx';
@@ -35,7 +37,7 @@ interface EtfVisibility {
 const Dashboard: React.FC = () => {
   const [hoveredSector, setHoveredSector] = useState<string | null>(null);
   const [selectedTimeframe, setSelectedTimeframe] = useState('All');
-  const [activeView, setActiveView] = useState<'dashboard' | 'portfolio' | 'manager' | 'optimizer' | 'builder' | 'prophitgpt' | 'risk-analysis' | 'backtest' | 'asset-universe' | 'news'>('dashboard');
+  const [activeView, setActiveView] = useState<'dashboard' | 'portfolio' | 'manager' | 'optimizer' | 'builder' | 'prophitgpt' | 'prophitalts' | 'risk-analysis' | 'backtest' | 'asset-universe' | 'news' | 'social'>('dashboard');
   const [sectors, setSectors] = useState<Sector[]>([]);
   const [isLoadingAllocation, setIsLoadingAllocation] = useState(true);
   const [allocationError, setAllocationError] = useState<string | null>(null);
@@ -392,11 +394,15 @@ const Dashboard: React.FC = () => {
         return <Portfolio />;
       case 'prophitgpt':
         return <ProphitGpt />;
+      case 'prophitalts':
+        return <ProphitAlts />;
       case 'backtest':
         return <Portfolio />;
       case 'asset-universe':
         return <Portfolio />;
       case 'news':
+        return <Portfolio />;
+      case 'social':
         return <Portfolio />;
       case 'dashboard':
       default:
@@ -411,56 +417,73 @@ const Dashboard: React.FC = () => {
             {/* Metrics Cards */}
             <section className="metrics-grid">
               <div className="metric-card">
-                <div className="metric-header">
+                <div className="metric-icon-wrapper">
                   <span className="metric-icon total-value-icon-bg">
-                    <FontAwesomeIcon icon={faDollarSign} />
+                    <BriefcaseBusiness size={26} />
                   </span>
+                </div>
+                <div className="metric-content">
                   <span className="metric-label">Total Value</span>
-                </div>
-                <div className="metric-value">$124,613.2</div>
-                <div className="metric-change positive">
-                  <span className="change-arrow">↑</span>
-                  $45.31 (+0.0%) Today
+                  <div className="metric-value">$124,613.2</div>
+                  <div className="metric-footer">
+                    <span className="metric-change positive">
+                      <span className="change-indicator">↑</span>
+                      $45.31 (+0.0%)
+                    </span>
+                    <span className="metric-period">Today</span>
+                  </div>
                 </div>
               </div>
 
               <div className="metric-card">
-                <div className="metric-header">
+                <div className="metric-icon-wrapper">
                   <span className="metric-icon overall-return-icon-bg">
-                    <FontAwesomeIcon icon={faChartLine} />
+                    <CandlestickChart size={26} />
                   </span>
-                  <span className="metric-label">Overall Return</span>
                 </div>
-                <div className="metric-value">+18.7%</div>
-                <div className="metric-change positive">
-                  <span className="change-arrow">↑</span>
-                  1.2% vs last month
+                <div className="metric-content">
+                  <span className="metric-label">Overall Return</span>
+                  <div className="metric-value">+18.7%</div>
+                  <div className="metric-footer">
+                    <span className="metric-change positive">
+                      <span className="change-indicator">↑</span>
+                      1.2%
+                    </span>
+                    <span className="metric-period">vs last month</span>
+                  </div>
                 </div>
               </div>
 
               <div className="metric-card">
-                <div className="metric-header">
+                <div className="metric-icon-wrapper">
                   <span className="metric-icon ai-risk-icon-bg">
-                    <FontAwesomeIcon icon={faRobot} />
+                    <Cpu size={26} />
                   </span>
-                  <span className="metric-label">AI Risk Score</span>
                 </div>
-                <div className="metric-value">72<span className="metric-unit">/100</span></div>
-                <div className="metric-change">Moderate Low volatility</div>
-                <div className="risk-bar">
-                  <div className="risk-fill" style={{width: '72%'}}></div>
+                <div className="metric-content">
+                  <span className="metric-label">AI Risk Score</span>
+                  <div className="metric-value">72<span className="metric-unit">/100</span></div>
+                  <div className="metric-footer">
+                    <span className="metric-status moderate">Moderate</span>
+                    <span className="metric-period">Low volatility</span>
+                  </div>
                 </div>
               </div>
 
               <div className="metric-card warning-card">
-                <div className="metric-header">
+                <div className="metric-icon-wrapper">
                   <span className="metric-icon optimization-icon-bg">
-                    <FontAwesomeIcon icon={faBalanceScale} />
+                    <Scale size={26} />
                   </span>
-                  <span className="metric-label">Optimization</span>
                 </div>
-                <div className="metric-value">3 issues found</div>
-                <div className="metric-change warning">Needs attention Click to view</div>
+                <div className="metric-content">
+                  <span className="metric-label">Optimization</span>
+                  <div className="metric-value">3 <span className="metric-unit-text">issues</span></div>
+                  <div className="metric-footer">
+                    <span className="metric-status warning">Action required</span>
+                    <span className="metric-period">View details →</span>
+                  </div>
+                </div>
               </div>
             </section>
 
@@ -709,8 +732,16 @@ const Dashboard: React.FC = () => {
             className={`nav-item ${activeView === 'prophitgpt' ? 'active' : ''}`}
             onClick={(e) => { e.preventDefault(); setActiveView('prophitgpt'); }}
           >
-            <span className="nav-icon"><FontAwesomeIcon icon={faRobot} /></span>
+            <span className="nav-icon"><FontAwesomeIcon icon={faChartLine} /></span>
             <span className="nav-text">ProphitGPT</span>
+          </a>
+          <a 
+            href="#" 
+            className={`nav-item ${activeView === 'prophitalts' ? 'active' : ''}`}
+            onClick={(e) => { e.preventDefault(); setActiveView('prophitalts'); }}
+          >
+            <span className="nav-icon"><FontAwesomeIcon icon={faCoins} /></span>
+            <span className="nav-text">ProphitAlts</span>
           </a>
           <a 
             href="#" 
@@ -743,6 +774,14 @@ const Dashboard: React.FC = () => {
           >
             <span className="nav-icon"><FontAwesomeIcon icon={faLightbulb} /></span>
             <span className="nav-text">News</span>
+          </a>
+          <a 
+            href="#" 
+            className={`nav-item ${activeView === 'social' ? 'active' : ''}`}
+            onClick={(e) => { e.preventDefault(); setActiveView('social'); }}
+          >
+            <span className="nav-icon"><FontAwesomeIcon icon={faUsers} /></span>
+            <span className="nav-text">Social</span>
           </a>
           <a href="#" className="nav-item">
             <span className="nav-icon"><FontAwesomeIcon icon={faCog} /></span>

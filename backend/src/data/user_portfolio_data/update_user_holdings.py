@@ -8,20 +8,17 @@ logger = init_logger(__name__)
 
 def update_user_portfolio_in_db(user_identifier: str, is_user_id: bool = False) -> bool:
     """
-    Updates a user's portfolio in the database with the latest holdings from IBKR.
-
-    The function fetches current holdings from IBKR and then uses the
-    store_portfolio_positions function to update the user_portfolios table.
-    The store_portfolio_positions function handles the upsert logic,
-    replacing existing rows for the user based on the composite primary key.
-
+    Update user's portfolio in database with latest IBKR holdings data.
+    
+    Fetches current holdings from IBKR and updates the user_portfolios table
+    using upsert logic to replace existing positions for the specified user.
+    
     Args:
         user_identifier: The user's name (str) or user_id (str).
-        is_user_id: Boolean flag, True if user_identifier is a user_id,
-                      False (default) if it's a user_name.
-
+        is_user_id: True if user_identifier is a user_id, False if it's a user_name (default).
+        
     Returns:
-        True if the update was successful, False otherwise.
+        bool: True if update was successful, False otherwise.
     """
     logger.info(f"Starting portfolio update for user_identifier: {user_identifier}")
 

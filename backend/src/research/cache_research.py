@@ -21,7 +21,14 @@ NEW_DB_NAME = "research"
 TABLE_NAME = "communication_services_research"
 
 def setup_research_table_and_insert_data(db_name, table_name, content):
-    """Connects to the specific database using env vars, cleans content, creates schema/table if needed, and inserts data."""
+    """
+    Connect to database, create schema/table if needed, and insert research content.
+    
+    Args:
+        db_name: Database name to connect to
+        table_name: Table name to create/insert into
+        content: Research content to insert
+    """
     conn = None
     cursor = None
     try:
@@ -105,7 +112,12 @@ def setup_research_table_and_insert_data(db_name, table_name, content):
         print(f"Connection to '{db_name}' closed.")
 
 def run_all_research_analysts():
-    """Run all research analyst functions and store their results in appropriate database tables."""
+    """
+    Run all equity and macro research analyst functions and store results in database tables.
+    
+    Returns:
+        None: Prints status updates during execution
+    """
     db_name = NEW_DB_NAME
     
     # Dictionary mapping analyst functions to their corresponding table names

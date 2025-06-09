@@ -24,7 +24,12 @@ def get_liquidity_data():
     return None 
 
 def get_tickers() -> str:
-    """Returns a list of available stock tickers."""
+    """
+    Get a list of available stock ticker symbols.
+    
+    Returns:
+        str: JSON formatted list of ticker symbols
+    """
     tickers = ["NVDA", "AMD", "AAL", "F", "TSLA", "MSFT", "AAPL", "AMZN", "INTC", "IBM", "NFLX", "PYPL", "UBER"]
     return json.dumps(tickers)
 
@@ -150,11 +155,11 @@ def calculate_stock_metrics(start_date_str: str, end_date_str: str):
     Calculate various financial metrics for all available stock tickers for a given date range.
     
     Args:
-        start_date_str (str): The start date in 'YYYY-MM-DD' format.
-        end_date_str (str): The end date in 'YYYY-MM-DD' format.
+        start_date_str: The start date in 'YYYY-MM-DD' format
+        end_date_str: The end date in 'YYYY-MM-DD' format
 
     Returns:
-        dict: Dictionary containing calculated metrics for each ticker, JSON formatted.
+        str: JSON formatted dictionary containing calculated metrics for each ticker
     """
     all_metrics = {}
     

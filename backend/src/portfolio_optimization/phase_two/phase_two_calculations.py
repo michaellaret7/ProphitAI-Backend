@@ -26,13 +26,17 @@ logger = logging.getLogger(__name__)
 @cache_result
 def calculate_stock_metrics(ticker):
    """
-   Calculate the Sharpe ratio and other risk-adjusted performance metrics for a stock.
+   Calculate comprehensive risk-adjusted performance metrics for a stock.
+   
+   Computes Sharpe ratio, volatility, beta, momentum, and other financial metrics
+   using historical price data and market benchmarks for comparative analysis.
    
    Args:
-       ticker (str): The stock ticker symbol (e.g., 'AAPL', 'MSFT')
+       ticker: The stock ticker symbol (e.g., 'AAPL', 'MSFT').
    
    Returns:
-       dict: Dictionary containing calculated financial metrics
+       Dict: Dictionary containing calculated financial metrics including ratios,
+       returns, volatility, beta, momentum, and volume data.
    """
    # Get price data for the ticker
    price_data = get_daily_closing_prices(ticker)
@@ -257,7 +261,19 @@ def calculate_stock_metrics(ticker):
    return metrics
 
 def calculate_and_filter_metrics(ticker_list):
-    """Calculate metrics for tickers and filter out those with insufficient data."""
+    """
+    Calculate metrics for tickers and filter out those with insufficient data.
+    
+    Processes a list of tickers to compute financial metrics and applies
+    volume and date range filters to ensure data quality.
+    
+    Args:
+        ticker_list: List of ticker symbols to analyze.
+        
+    Returns:
+        pd.DataFrame: DataFrame containing valid tickers with their calculated metrics,
+        or empty DataFrame if no tickers pass filtering criteria.
+    """
     all_metrics = {}
     logger.info(f"Calculating and filtering metrics for tickers: {ticker_list}")
     for ticker in ticker_list:
@@ -286,7 +302,19 @@ def calculate_and_filter_metrics(ticker_list):
     return pd.DataFrame(valid_metrics_data)
 
 def calculate_composite_scores(df):
-    """Calculate z-scores and composite scores for ranking."""
+    """
+    Calculate z-scores and composite scores for ranking stocks.
+    
+    Computes standardized z-scores for all metrics and creates composite scores
+    for ranking, with proper handling of directional preferences (higher/lower is better).
+    
+    Args:
+        df: DataFrame containing stock metrics for scoring.
+        
+    Returns:
+        pd.DataFrame: DataFrame sorted by composite score in descending order,
+        or empty DataFrame if input is empty.
+    """
     if df.empty:
         return pd.DataFrame() # Return empty DataFrame if input is empty
 

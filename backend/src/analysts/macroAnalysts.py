@@ -33,9 +33,16 @@ date = "2025_05_14"
 
 def update_research_date_to_latest():
     """
-    Connects to the 'research' database, finds the schema with the most recent date-like name,
-    and updates the global 'date' variable to this date.
-    Schema names are expected in 'YYYY_MM_DD' format.
+    Update the global date variable to the latest research date found in the database schemas.
+    
+    Connects to the 'research' database and scans for schemas matching YYYY_MM_DD format,
+    then sets the global date variable to the most recent valid date schema found.
+    
+    Args:
+        None
+        
+    Returns:
+        None - Updates the global 'date' variable as a side effect.
     """
     global date
     
@@ -91,11 +98,16 @@ update_research_date_to_latest()
 
 def get_equity_universe():
     """
-    Retrieve and format sector/industry/subindustry data from database_schemas.json
-    for optimal LLM ingestion.
+    Retrieve and format hierarchical equity sector/industry/subindustry classification data.
     
+    Loads the equity universe structure from database_schemas.json and formats it into
+    a hierarchical JSON structure optimized for LLM consumption with clear metadata.
+    
+    Args:
+        None
+        
     Returns:
-        str: JSON string with hierarchical classification data formatted for LLM
+        str: JSON string containing hierarchical classification data with context metadata.
     """
     # Load schema definition
     schema_data = load_schema_data()
@@ -131,11 +143,16 @@ def get_equity_universe():
 
 def get_etf_universe():
     """
-    Retrieve and format ETF classification data from the etf_data database
-    for optimal LLM ingestion.
+    Retrieve and format ETF classification data from the ETF database.
     
+    Queries the etf_data database to extract all schemas and tables, organizing them
+    into a hierarchical structure by category for optimal LLM processing.
+    
+    Args:
+        None
+        
     Returns:
-        str: JSON string with hierarchical ETF classification data formatted for LLM
+        str: JSON string with hierarchical ETF classification data or error message if query fails.
     """
     try:
         # Query to get schema information
@@ -212,6 +229,19 @@ def get_etf_universe():
         return json.dumps({"error": error_msg})
 
 def free_search(system_prompt, user_prompt):
+    """
+    Execute a free-form search using the Perplexity AI Sonar Pro model.
+    
+    Sends system and user prompts to the Perplexity API for real-time information retrieval
+    and processes the streaming response, cleaning any thinking process tags.
+    
+    Args:
+        system_prompt: The system context/instructions for the AI model.
+        user_prompt: The user's query or search request.
+        
+    Returns:
+        str or None: The cleaned response content from the AI model, or None if an error occurs.
+    """
     messages = [
         {
             "role": "system",
@@ -263,13 +293,13 @@ def free_search(system_prompt, user_prompt):
 
 def get_analyst_research(table_name: str) -> Optional[str]:
     """
-    Generic function to retrieve analyst research from the database.
+    Retrieve analyst research content from a specified table in the research database.
     
     Args:
-        table_name: Name of the research table to query
+        table_name: Name of the research table to query (e.g., 'commodities_research', 'etf_research')
         
     Returns:
-        The research text content or None if not found
+        str or None: The research text content if found, None if no data exists for the specified table.
     """
     db_name = "research"
     schema_name = date
@@ -292,43 +322,84 @@ def get_analyst_research(table_name: str) -> Optional[str]:
 
 def commodities_analyst():
     """
-    Retrieves commodities research from the database.
+    Retrieve commodities market research report from the database.
+    
+    Args:
+        None
+        
+    Returns:
+        str or None: The commodities research content, or None if not found.
     """
     return get_analyst_research("commodities_research")
 
 def etf_analyst():
     """
-    Retrieves ETF research from the database.
+    Retrieve ETF (Exchange-Traded Fund) research report from the database.
+    
+    Args:
+        None
+        
+    Returns:
+        str or None: The ETF research content, or None if not found.
     """
     return get_analyst_research("etf_research")
 
 def treasuries_analyst():
     """
-    Retrieves treasuries research from the database.
+    Retrieve U.S. Treasury securities research report from the database.
+    
+    Args:
+        None
+        
+    Returns:
+        str or None: The treasuries research content, or None if not found.
     """
     return get_analyst_research("treasuries_research")
 
 def foreign_exchange_analyst():
     """
-    Retrieves foreign exchange research from the database.
+    Retrieve foreign exchange (forex) market research report from the database.
+    
+    Args:
+        None
+        
+    Returns:
+        str or None: The foreign exchange research content, or None if not found.
     """
     return get_analyst_research("foreign_exchange_research")
 
 def ig_credit_analyst():
     """
-    Retrieves investment grade credit research from the database.
-
+    Retrieve investment grade credit market research report from the database.
+    
+    Args:
+        None
+        
+    Returns:
+        str or None: The investment grade credit research content, or None if not found.
     """
     return get_analyst_research("ig_credit_research")
 
 def high_yield_analyst():
     """
-    Retrieves high yield research from the database.
+    Retrieve high yield (junk bond) market research report from the database.
+    
+    Args:
+        None
+        
+    Returns:
+        str or None: The high yield research content, or None if not found.
     """
     return get_analyst_research("high_yield_research")
 
 def emerging_market_analyst():
     """
-    Retrieves emerging market research from the database.
+    Retrieve emerging markets research report from the database.
+    
+    Args:
+        None
+        
+    Returns:
+        str or None: The emerging market research content, or None if not found.
     """
     return get_analyst_research("emerging_market_research")

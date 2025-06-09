@@ -5,6 +5,15 @@ from dotenv import load_dotenv
 load_dotenv()
 
 def deepseek_model_and_client(model: str = None):
+    """
+    Create a DeepSeek model name and OpenAI client instance.
+    
+    Args:
+        model: Model name to use (default: from DEEPSEEK_MODEL env var)
+        
+    Returns:
+        tuple: (model_name, openai_client) for DeepSeek API
+    """
     DEEPSEEK_API_KEY = os.getenv("DEEPSEEK_API_KEY")
 
     if model is None:
@@ -15,6 +24,15 @@ def deepseek_model_and_client(model: str = None):
     return model, client
 
 def openai_model_and_client(model: str = None):
+    """
+    Create an OpenAI model name and client instance.
+    
+    Args:
+        model: Model name to use (default: from OPENAI_MODEL env var)
+        
+    Returns:
+        tuple: (model_name, openai_client) for OpenAI API
+    """
     OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 
     if model is None:
@@ -25,6 +43,15 @@ def openai_model_and_client(model: str = None):
     return model, client
 
 def grok_model_and_client(model: str = None):
+    """
+    Create a Grok model name and OpenAI client instance.
+    
+    Args:
+        model: Model name to use (default: from GROK_MODEL env var)
+        
+    Returns:
+        tuple: (model_name, openai_client) for Grok API
+    """
     GROK_API_KEY = os.getenv("GROK_API_KEY")
 
     if model is None:
@@ -38,6 +65,15 @@ def grok_model_and_client(model: str = None):
     return model, client
 
 def perplexity_model_and_client(model: str = None):
+    """
+    Create a Perplexity model name and OpenAI client instance.
+    
+    Args:
+        model: Model name to use (default: from PERPLEXITY_MODEL env var)
+        
+    Returns:
+        tuple: (model_name, openai_client) for Perplexity API
+    """
     PERPLEXITY_API_KEY = os.getenv("PERPLEXITY_API_KEY")
 
     if model is None:

@@ -260,10 +260,19 @@ QUALITY CHECKLIST
 """
 
 def build_user_message() -> str:
-    """Render USER_TEMPLATE with runtime data, including comprehensive portfolio JSON."""
+    """
+    Render user prompt template with runtime data including comprehensive portfolio JSON.
     
+    Calls format_to_json to get comprehensive portfolio data and formats it into
+    the user message template with current date and asset class constraints.
+    
+    Args:
+        None
+        
+    Returns:
+        str: Formatted user message string ready for LLM consumption.
+    """
     # Call format_to_json to get the comprehensive data
-    # This function will handle connecting to IB, fetching all data, and formatting it.
     comprehensive_json_data = format_to_json()
     
     return USER_TEMPLATE2.format(

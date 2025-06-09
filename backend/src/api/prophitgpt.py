@@ -45,7 +45,19 @@ class ChatResponse(BaseModel):
 # ---------------------------------------------------------------------------
 
 def _handle_tool_call(tool_call):
-    """Executes the requested tool and returns a message dict to append to messages."""
+    """
+    Execute tool calls emitted by the LLM and format the response.
+    
+    Processes the requested tool (get_portfolio_data or retrieve_financial_metric),
+    executes it with the provided arguments, and returns a properly formatted message
+    to append to the conversation history.
+    
+    Args:
+        tool_call: OpenAI tool call object containing function name, arguments, and call ID.
+        
+    Returns:
+        Dict containing role, content, and tool_call_id for the conversation history.
+    """
     function_name = tool_call.function.name
     call_id = tool_call.id
     try:
@@ -128,7 +140,19 @@ def _handle_tool_call(tool_call):
 # ---------------------------------------------------------------------------
 
 def _generate_assistant_response(user_message: str, history: Optional[List[Dict[str, str]]] = None) -> str:
-    """Runs the conversation with the model and any tool calls until a final answer is produced."""
+    """
+    Generate an AI assistant response using the configured LLM with tool calling capabilities.
+    
+    Runs a conversation loop with the model, handling any tool calls until a final answer
+    is produced. Uses a Thought → Action → Observation pattern internally.
+    
+    Args:
+        user_message: The new message from the user to respond to.
+        history: Optional list of previous conversation messages (dicts with 'role' and 'content').
+        
+    Returns:
+        str: The final assistant response with formatting stripped.
+    """
 
     # Base system prompt identical to standalone script
     messages = [
@@ -189,6 +213,21 @@ def _generate_assistant_response(user_message: str, history: Optional[List[Dict[
 
 @router.post("/prophitgpt/chat", response_model=ChatResponse)
 def chat(request: ChatRequest):
+    """
+    Handle chat requests for the ProphitGPT AI assistant API endpoint.
+    
+    Processes incoming chat messages with optional conversation history and returns
+    AI-generated responses using the configured LLM model with tool capabilities.
+    
+    Args:
+        request: ChatRequest containing the message and optional conversation history.
+        
+    Returns:
+        ChatResponse: Object containing the AI assistant's response.
+        
+    Raises:
+        HTTPException: 500 error if response generation fails.
+    """
     try:
         answer = _generate_assistant_response(request.message, request.history)
         return ChatResponse(response=answer)

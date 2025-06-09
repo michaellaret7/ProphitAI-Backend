@@ -30,6 +30,12 @@ Sonar_API_KEY = os.environ.get("PERPLEXITY_API_KEY")
 perplexity_model = 'sonar-deep-research'
 
 def commodities_research_analyst():
+    """
+    Generate comprehensive research analysis for commodities markets.
+    
+    Returns:
+        str: Research report content or None if error occurs
+    """
     date = datetime.now().strftime("%Y-%m-%d")
 
     # Define custom analysis steps for commodities research
@@ -196,6 +202,12 @@ def commodities_research_analyst():
         return None
 
 def etf_research_analyst():
+    """
+    Generate comprehensive research analysis for exchange-traded funds (ETFs).
+    
+    Returns:
+        str: Research report content or None if error occurs
+    """
     date = datetime.now().strftime("%Y-%m-%d")
 
     etf_steps = [
@@ -393,6 +405,12 @@ END OF PROMPT
         return None
 
 def treasuries_research_analyst():
+    """
+    Generate comprehensive research analysis for U.S. Treasury markets and yield curves.
+    
+    Returns:
+        str: Research report content or None if error occurs
+    """
     date = datetime.now().strftime("%Y-%m-%d")
 
     treasuries_steps = [
@@ -551,6 +569,12 @@ IMPORTANT
         return None
 
 def foreign_exchange_research_analyst():
+    """
+    Generate comprehensive research analysis for foreign exchange markets.
+    
+    Returns:
+        str: Research report content or None if error occurs
+    """
     date = datetime.now().strftime("%Y-%m-%d")
 
     fx_steps = [
@@ -749,6 +773,12 @@ IMPORTANT
         return None
 
 def ig_credit_research_analyst():
+    """
+    Generate comprehensive research analysis for investment grade credit markets.
+    
+    Returns:
+        str: Research report content or None if error occurs
+    """
     date = datetime.now().strftime("%Y-%m-%d")
 
     ig_credit_steps = [
@@ -919,6 +949,12 @@ IMPORTANT
         return None
 
 def high_yield_research_analyst():
+    """
+    Generate comprehensive research analysis for high yield credit markets.
+    
+    Returns:
+        str: Research report content or None if error occurs
+    """
     date = datetime.now().strftime("%Y-%m-%d")
 
     high_yield_steps = [
@@ -1087,6 +1123,12 @@ IMPORTANT
         return None
 
 def emerging_market_research_analyst():
+    """
+    Generate comprehensive research analysis for emerging markets.
+    
+    Returns:
+        str: Research report content or None if error occurs
+    """
     date = datetime.now().strftime("%Y-%m-%d")
 
     emerging_market_steps = [

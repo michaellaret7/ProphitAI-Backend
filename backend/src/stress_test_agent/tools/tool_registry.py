@@ -54,7 +54,10 @@ TOOLS: List[Dict[str, Any]] = [
 
 def register_tools(agent_instance):
     """
-    Registers all defined tools with the given StressTestAgent instance.
+    Register all defined tools with the given StressTestAgent instance.
+    
+    Args:
+        agent_instance: StressTestAgent instance to register tools with
     """
     for tool_config in TOOLS:
         agent_instance.add_tool(

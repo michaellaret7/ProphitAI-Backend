@@ -39,12 +39,16 @@ from backend.src.utils.financial_calculations import (
 
 def connect_to_ib():
     """
-    Establish a connection to Interactive Brokers TWS or Gateway
+    Establish connection to Interactive Brokers TWS or Gateway.
     
-    Attempts to connect on standard ports (4002, 7497) with different client IDs.
+    Attempts to connect on standard ports with different client IDs,
+    trying both Gateway and TWS connection options.
     
+    Args:
+        None
+        
     Returns:
-        IB connection object if successful, None if connection fails
+        IB: Connection object if successful, None if connection fails.
     """
     ib = IB()
     
@@ -72,17 +76,21 @@ def connect_to_ib():
 
 def get_historical_price_data(ib, symbol, duration='1 D', bar_size='1 min', date=None):
     """
-    Get historical price data for a given stock symbol from the database
+    Get historical price data for a stock symbol from the database.
+    
+    Retrieves daily closing prices from internal database for the specified symbol
+    and time period, with automatic duration parsing.
     
     Args:
-        ib: IB connection (kept for compatibility but not used)
-        symbol: Stock symbol to get data for
-        duration: Time period for data (e.g., '1 D', '2 Y')
-        bar_size: Bar size for data (not used - database has daily data)
-        date: Specific end date for data (not used)
+        ib: IB connection (kept for compatibility but not used).
+        symbol: Stock symbol to get data for.
+        duration: Time period for data (e.g., '1 D', '2 Y') (default: '1 D').
+        bar_size: Bar size for data (not used - database has daily data) (default: '1 min').
+        date: Specific end date for data (not used) (default: None).
         
     Returns:
-        DataFrame containing historical price data
+        pd.DataFrame: DataFrame containing historical price data with 'date' and 'close' columns,
+        or None if no data found.
     """
     # Import the database function
     from backend.src.portfolio_optimization.phase_two.data_retrieval import get_daily_closing_prices
@@ -117,14 +125,18 @@ get_price_data_for_given_stock = get_historical_price_data
 
 def get_portfolio_holdings(ib=None, print_output=False):
     """
-    Retrieves, formats, and optionally prints portfolio holdings from Interactive Brokers.
+    Retrieve, format, and optionally print portfolio holdings from Interactive Brokers.
+    
+    Gets portfolio positions, cash balances, and account metrics from IBKR,
+    then formats them into structured data and readable tables.
     
     Args:
-        ib: An existing IB connection. If None, will create a new connection.
-        print_output: Whether to print the formatted portfolio data
+        ib: An existing IB connection, or None to create a new connection.
+        print_output: Whether to print the formatted portfolio data (default: False).
         
     Returns:
-        A tuple containing (positions list, formatted string)
+        Tuple[List[Dict], str]: Tuple containing positions list and formatted string,
+        or (None, None) if connection fails.
     """
     # Connect to IB if no connection was provided
     if ib is None or not ib.isConnected():
@@ -302,16 +314,19 @@ def get_portfolio_holdings(ib=None, print_output=False):
 
 def get_portfolio_returns(ib, symbols, duration='1 Y', bar_size='1 day'):
     """
-    Get historical returns for portfolio stocks
+    Get historical returns for portfolio stocks.
+    
+    Retrieves price data for multiple symbols and calculates their returns,
+    handling missing data gracefully.
     
     Args:
-        ib: IB connection
-        symbols: list of stock symbols
-        duration: time period for data (default: '1 Y')
-        bar_size: bar size for data (default: '1 day')
+        ib: IB connection.
+        symbols: List of stock symbols.
+        duration: Time period for data (default: '1 Y').
+        bar_size: Bar size for data (default: '1 day').
         
     Returns:
-        DataFrame with returns for all symbols
+        pd.DataFrame: DataFrame with returns for all symbols, or None if no data available.
     """
     all_data = {}
     missing_data = []
@@ -346,13 +361,16 @@ def get_portfolio_returns(ib, symbols, duration='1 Y', bar_size='1 day'):
 
 def get_annualization_factor(bar_size):
     """
-    Determine the annualization factor based on the bar size
+    Determine annualization factor based on bar size for return calculations.
+    
+    Calculates the number of periods per year based on the data frequency
+    for proper annualization of returns and volatility.
     
     Args:
-        bar_size: Bar size for data (e.g., '1 day', '1 hour', '1 min', '1W', '1M')
+        bar_size: Bar size for data (e.g., '1 day', '1 hour', '1 min', '1W', '1M').
         
     Returns:
-        Tuple of (periods_per_year, sqrt_periods_per_year) for return and volatility annualization
+        Tuple[float, float]: Tuple of (periods_per_year, sqrt_periods_per_year) for return and volatility annualization.
     """
     # Lower case for consistent comparison
     bar_size = bar_size.lower()
@@ -384,15 +402,18 @@ def get_annualization_factor(bar_size):
 
 def calculate_parametric_var(returns, confidence_level=0.99, amount=1):
     """
-    Calculate Value at Risk (VaR) using parametric method (assuming normal distribution)
+    Calculate Value at Risk using parametric method assuming normal distribution.
+    
+    Computes VaR based on mean and standard deviation of returns,
+    providing both percentage and currency amount estimates.
     
     Args:
-        returns: pandas Series or numpy array of returns
-        confidence_level: desired confidence level (default: 0.99 for 99%)
-        amount: investment amount to calculate VaR in currency terms
+        returns: pandas Series or numpy array of returns.
+        confidence_level: Desired confidence level (default: 0.99 for 99%).
+        amount: Investment amount to calculate VaR in currency terms (default: 1).
         
     Returns:
-        VaR value as a percentage and in currency terms
+        Tuple[float, float]: VaR value as a percentage and in currency terms.
     """
     # Calculate mean and standard deviation of returns
     mean_return = np.mean(returns)
@@ -409,16 +430,19 @@ def calculate_parametric_var(returns, confidence_level=0.99, amount=1):
 
 def calculate_alpha(portfolio_returns, market_returns, risk_free_rate, beta=None):
     """
-    Calculate Alpha - excess return of investment relative to a benchmark
+    Calculate Alpha - excess return of investment relative to a benchmark.
+    
+    Computes the risk-adjusted excess return using the CAPM model,
+    measuring performance above what would be expected given the portfolio's beta.
     
     Args:
-        portfolio_returns: pandas Series or numpy array of portfolio returns
-        market_returns: pandas Series or numpy array of market returns
-        risk_free_rate: risk-free rate (annualized)
-        beta: pre-calculated beta (if None, will be calculated)
+        portfolio_returns: pandas Series or numpy array of portfolio returns.
+        market_returns: pandas Series or numpy array of market returns.
+        risk_free_rate: Risk-free rate (annualized).
+        beta: Pre-calculated beta, or None to calculate automatically (default: None).
         
     Returns:
-        Alpha value
+        float: Alpha value representing excess return.
     """
     # Make sure we're working with common dates or lengths
     if not isinstance(portfolio_returns, pd.Series):
@@ -451,15 +475,18 @@ def calculate_alpha(portfolio_returns, market_returns, risk_free_rate, beta=None
 
 def calculate_calmar_ratio(returns, max_drawdown, trading_days=252):
     """
-    Calculate Calmar Ratio (return / maximum drawdown)
+    Calculate Calmar Ratio (annualized return divided by maximum drawdown).
+    
+    Measures risk-adjusted return by comparing annualized performance
+    to the worst peak-to-trough decline.
     
     Args:
-        returns: pandas Series or numpy array of returns
-        max_drawdown: maximum drawdown value
-        trading_days: number of trading days in a year (default: 252)
+        returns: pandas Series or numpy array of returns.
+        max_drawdown: Maximum drawdown value.
+        trading_days: Number of trading days in a year (default: 252).
         
     Returns:
-        Calmar Ratio value
+        float: Calmar Ratio value, or float('inf') if max_drawdown is zero.
     """
     if max_drawdown == 0:
         return float('inf')  # Avoid division by zero
@@ -475,13 +502,16 @@ def calculate_calmar_ratio(returns, max_drawdown, trading_days=252):
 
 def calculate_total_return(returns):
     """
-    Calculate total return over a period from a series of returns
+    Calculate total return over a period from a series of returns.
+    
+    Computes the cumulative return using compound growth methodology
+    to show total performance over the entire period.
     
     Args:
-        returns: pandas Series or numpy array of returns
+        returns: pandas Series or numpy array of returns.
         
     Returns:
-        Total return as a percentage
+        float: Total return as a percentage.
     """
     # Calculate total return using compounding
     total_return = (1 + returns).prod() - 1
@@ -489,14 +519,17 @@ def calculate_total_return(returns):
 
 def calculate_annualized_return(returns, period=252):
     """
-    Calculate annualized return from a series of returns
+    Calculate annualized return from a series of returns.
+    
+    Converts total return to an annualized equivalent using compound growth,
+    allowing comparison across different time periods.
     
     Args:
-        returns: pandas Series or numpy array of returns
-        period: number of periods in a year (default: 252 for daily data)
+        returns: pandas Series or numpy array of returns.
+        period: Number of periods in a year (default: 252 for daily data).
         
     Returns:
-        Annualized return as a percentage
+        float: Annualized return as a percentage.
     """
     # Calculate total return
     total_return = calculate_total_return(returns)
@@ -513,15 +546,18 @@ def calculate_annualized_return(returns, period=252):
 
 def calculate_portfolio_metrics(ib, symbols, printOutput=True):
     """
-    Calculate key performance metrics for a portfolio of stocks
+    Calculate comprehensive performance metrics for a portfolio of stocks.
+    
+    Computes return, risk, and benchmark-relative metrics for the portfolio,
+    including individual stock analysis and correlation with market indices.
     
     Args:
-        ib: IB connection (kept for compatibility but can be None)
-        symbols: List of stock symbols in the portfolio
-        printOutput: Whether to print metrics to console (default: True)
+        ib: IB connection (kept for compatibility but can be None).
+        symbols: List of stock symbols in the portfolio.
+        printOutput: Whether to print metrics to console (default: True).
         
     Returns:
-        Dictionary containing calculated metrics
+        Dict: Dictionary containing calculated portfolio and individual stock metrics.
     """
     # Try to get portfolio positions - if ib is None, use database
     positions = None
@@ -778,20 +814,24 @@ def print_stock_metrics_table(stock_metrics):
 
 def calculate_monthly_portfolio_metrics(ib, symbols=None, market_symbol='SPY', duration='2 Y', confidence_level=0.99, risk_free_rate=0.03, use_position_weights=True, print_output=True):
     """
-    Calculate portfolio metrics on a monthly basis
+    Calculate portfolio metrics on a monthly basis for detailed performance analysis.
+    
+    Breaks down portfolio performance by month, computing metrics like returns,
+    volatility, and benchmark comparisons for each monthly period.
     
     Args:
-        ib: IB connection
-        symbols: list of stock symbols (if None, will use current portfolio holdings)
-        market_symbol: market index symbol (default: 'SPY')
-        duration: time period for data (default: '2 Y')
-        confidence_level: confidence level for VaR (default: 0.99)
-        risk_free_rate: risk-free rate (default: 0.03)
-        use_position_weights: whether to use position weights (default: True)
-        print_output: whether to print results (default: True)
+        ib: IB connection.
+        symbols: List of stock symbols, or None to use current portfolio holdings (default: None).
+        market_symbol: Market index symbol for comparison (default: 'SPY').
+        duration: Time period for data (default: '2 Y').
+        confidence_level: Confidence level for VaR calculation (default: 0.99).
+        risk_free_rate: Risk-free rate for calculations (default: 0.03).
+        use_position_weights: Whether to use actual position weights (default: True).
+        print_output: Whether to print results (default: True).
         
     Returns:
-        Dictionary containing monthly metrics
+        Dict: Dictionary containing overall metrics and monthly breakdown,
+        or None if insufficient data.
     """
     # Get symbols and positions from portfolio if not provided
     positions = None
@@ -1100,19 +1140,23 @@ def calculate_monthly_stock_metrics(ib, symbol, market_symbol='SPY',
                                   duration='2 Y', confidence_level=0.99, 
                                   risk_free_rate=0.03, printOutput=True):
     """
-    Calculate monthly performance metrics for a single stock
+    Calculate monthly performance metrics for a single stock.
+    
+    Analyzes individual stock performance on a month-by-month basis,
+    providing detailed breakdown of returns and risk metrics.
     
     Args:
-        ib: IB connection
-        symbol: stock symbol to analyze
-        market_symbol: symbol for market index (default: 'SPY')
-        duration: time period for data (default: '2 Y')
-        confidence_level: confidence level for VaR (default: 0.99)
-        risk_free_rate: annualized risk-free rate (default: 0.03)
-        printOutput: whether to print output (default: True)
+        ib: IB connection.
+        symbol: Stock symbol to analyze.
+        market_symbol: Symbol for market index comparison (default: 'SPY').
+        duration: Time period for data (default: '2 Y').
+        confidence_level: Confidence level for VaR calculation (default: 0.99).
+        risk_free_rate: Annualized risk-free rate (default: 0.03).
+        printOutput: Whether to print output (default: True).
         
     Returns:
-        Dictionary containing overall metrics and monthly metrics
+        Dict: Dictionary containing overall metrics and monthly breakdown,
+        or None if insufficient data.
     """
     if printOutput:
         print(f"\n\n📈 APPLE (AAPL) STOCK ANALYSIS\n") if symbol == "AAPL" else print(f"\n\n📈 {symbol} STOCK ANALYSIS\n")
@@ -1331,14 +1375,18 @@ def calculate_monthly_stock_metrics(ib, symbol, market_symbol='SPY',
 
 def analyze_portfolio_diversification(ib=None, print_output=True):
     """
-    Analyzes portfolio holdings to calculate exposure percentages by sector, industry, and sub-industry
+    Analyze portfolio holdings to calculate exposure by sector, industry, and sub-industry.
+    
+    Retrieves classification data from IBKR and calculates percentage allocations
+    across different classification levels for diversification analysis.
     
     Args:
-        ib: An existing IB connection. If None, will create a new connection.
-        print_output: Whether to print the formatted analysis results
+        ib: An existing IB connection, or None to create a new connection.
+        print_output: Whether to print the formatted analysis results (default: True).
         
     Returns:
-        Dictionary containing exposure data by sector, industry, and sub-industry
+        Dict: Dictionary containing exposure data by sector, industry, and sub-industry,
+        or None if analysis fails.
     """
     # Connect to IB if no connection was provided
     if ib is None or not ib.isConnected():
@@ -1626,18 +1674,21 @@ def analyze_portfolio_diversification(ib=None, print_output=True):
 
 def analyze_portfolio_correlations(ib=None, symbols=None, duration='2 Y', bar_size='1 day', print_output=True, plot_heatmap=False):
     """
-    Calculate correlation matrix for portfolio holdings
+    Calculate correlation matrix for portfolio holdings.
+    
+    Computes pairwise correlations between portfolio stocks to assess
+    diversification and identify potential concentration risks.
     
     Args:
-        ib: An existing IB connection. If None, will use database for data.
-        symbols: List of stock symbols. If None, will get from portfolio.
-        duration: Time period for data (default: '2 Y')
-        bar_size: Bar size for data (default: '1 day')
-        print_output: Whether to print the formatted correlation matrix
-        plot_heatmap: Whether to plot a heatmap of correlations (requires matplotlib and seaborn)
+        ib: An existing IB connection, or None to use database for data.
+        symbols: List of stock symbols, or None to get from portfolio.
+        duration: Time period for data (default: '2 Y').
+        bar_size: Bar size for data (default: '1 day').
+        print_output: Whether to print the formatted correlation matrix (default: True).
+        plot_heatmap: Whether to plot a heatmap of correlations (default: False).
         
     Returns:
-        Pandas DataFrame containing the correlation matrix
+        pd.DataFrame: DataFrame containing the correlation matrix, or None if analysis fails.
     """
     connect_needed = False
     
@@ -1764,15 +1815,18 @@ def analyze_portfolio_correlations(ib=None, symbols=None, duration='2 Y', bar_si
 
 def generate_portfolio_report(capture_output=False, print_output=False):
     """
-    Generate a comprehensive portfolio analysis report.
+    Generate comprehensive portfolio analysis report.
+    
+    Combines all portfolio analysis functions into a single comprehensive report
+    including holdings, metrics, monthly performance, diversification, and correlations.
     
     Args:
-        capture_output: Whether to capture and return the printed output as a string
-        print_output: Whether to print the analysis results
+        capture_output: Whether to capture and return the printed output as a string (default: False).
+        print_output: Whether to print the analysis results (default: False).
         
     Returns:
-        If capture_output is True: A string containing all printed output
-        Otherwise: A tuple containing (positions, formatted_output, metrics, monthly_results, diversification, correlations)
+        str or Tuple: If capture_output is True, returns string containing all printed output.
+        Otherwise returns tuple containing (positions, formatted_output, metrics, monthly_results, diversification, correlations).
     """
     # Set up output capture if requested
     output_buffer = None

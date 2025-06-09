@@ -51,7 +51,16 @@ if not all([DB_USER, DB_PASSWORD, DB_HOST, USER_NAME]):
 
 
 def _pg_connect(db: str, autocommit: bool = True):
-    """Return a fresh psycopg2 connection to *db*."""
+    """
+    Create a PostgreSQL database connection.
+    
+    Args:
+        db: The database name to connect to.
+        autocommit: Whether to enable autocommit mode (default: True)
+        
+    Returns:
+        psycopg2.connection: Active database connection object.
+    """
     conn = connect(
         dbname=db,
         user=DB_USER,
@@ -66,7 +75,18 @@ def _pg_connect(db: str, autocommit: bool = True):
 
 
 def _ensure_database_exists(db_name: str) -> None:
-    """Create *db_name* if it does not yet exist."""
+    """
+    Create database if it doesn't exist.
+    
+    Connects to postgres database and creates the specified database
+    if it doesn't already exist.
+    
+    Args:
+        db_name: The name of the database to create.
+        
+    Returns:
+        None
+    """
     with _pg_connect("postgres") as conn:
         with conn.cursor() as cur:
             # Ensure pgcrypto extension is available for gen_random_uuid() if used,
@@ -82,19 +102,22 @@ def _ensure_database_exists(db_name: str) -> None:
 # ---------------------------------------------------------------------------
 
 def store_portfolio_sector_allocations(portfolio: dict | str, portfolio_name: str) -> uuid.UUID:
-    """Persist *portfolio* to Postgres and return the UUID portfolio_id that was created.
-
-    Parameters
-    ----------
-    portfolio
-        Either the dictionary produced by ``optimize`` or its JSON-encoded string.
-    portfolio_name
-        The name chosen by the user for this portfolio.
-
-    Returns
-    -------
-    uuid.UUID
-        The portfolio_id (UUID) from the portfolios table.
+    """
+    Store Phase One optimization results to the database.
+    
+    Persists sector-level portfolio allocations, thesis, and metadata to the
+    portfolio_results database using a newly generated UUID as portfolio identifier.
+    
+    Args:
+        portfolio: Dictionary or JSON string containing portfolio allocation data.
+        portfolio_name: User-chosen name for this portfolio.
+        
+    Returns:
+        uuid.UUID: The generated portfolio_id from the portfolios table.
+        
+    Raises:
+        ValueError: If portfolio data is invalid or empty.
+        TypeError: If portfolio is not dict or string type.
     """
     # ---------------------------------------------------------------------
     # 1. Normalise input

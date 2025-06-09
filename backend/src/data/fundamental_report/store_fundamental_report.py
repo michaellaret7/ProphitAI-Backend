@@ -11,8 +11,21 @@ load_dotenv()
 
 def create_report_table_if_not_exists(cursor, schema_name: str, table_name: str):
     """
-    Creates the specified table within the given schema if it does not already exist.
-    The table is designed to store fundamental analysis reports.
+    Create fundamental analysis report table if it doesn't exist.
+    
+    Creates a table with sanitized schema and table names to store fundamental
+    analysis reports with ID, content, and timestamp columns.
+    
+    Args:
+        cursor: Database cursor object for executing queries.
+        schema_name: The schema name to create the table in.
+        table_name: The name of the table to create.
+        
+    Returns:
+        None
+        
+    Raises:
+        psycopg2.Error: If table creation fails.
     """
     # Sanitize schema name (basic but important for security and compatibility)
     safe_schema_name = schema_name.lower().replace('-', '_').replace('.', '_')
@@ -41,16 +54,17 @@ def create_report_table_if_not_exists(cursor, schema_name: str, table_name: str)
 
 def get_tickers_and_schemas_for_sector(sector_db_name: str, schema_data: dict) -> dict[str, str]:
     """
-    Extracts a mapping of ticker symbols to their original schema names
-    for a given sector database name from the database schema definition.
-
+    Extract ticker-to-schema mapping for a specific sector database.
+    
+    Parses the database schema definition to create a mapping of ticker symbols
+    to their corresponding schema names within the given sector database.
+    
     Args:
         sector_db_name: The name of the target sector database (e.g., 'equity_sector_energy_fundamentals').
         schema_data: The loaded database schema structure from database_schemas.json.
-
+        
     Returns:
-        A dictionary mapping unique ticker symbols (uppercase) to their corresponding schema name.
-        If a ticker appears in multiple schemas, the last one encountered will be stored.
+        Dict[str, str]: Dictionary mapping uppercase ticker symbols to their schema names.
     """
     ticker_schema_map = {}
     # Match the base DB name (e.g., equity_sector_energy) found in the schema keys
@@ -87,8 +101,21 @@ def get_tickers_and_schemas_for_sector(sector_db_name: str, schema_data: dict) -
 
 def store_report(cursor, schema_name: str, table_name: str, report_content: str):
     """
-    Stores the generated fundamental report in the specified table.
-    It truncates the table first and then inserts the new report.
+    Store fundamental analysis report in the specified database table.
+    
+    Truncates the existing table and inserts the new report with current timestamp.
+    
+    Args:
+        cursor: Database cursor object for executing queries.
+        schema_name: The schema name containing the target table.
+        table_name: The name of the table to store the report in.
+        report_content: The generated fundamental analysis report text.
+        
+    Returns:
+        None
+        
+    Raises:
+        psycopg2.Error: If report storage fails.
     """
     # Sanitize schema name (basic)
     safe_schema_name = schema_name.lower().replace('-', '_').replace('.', '_')
@@ -119,8 +146,17 @@ def store_report(cursor, schema_name: str, table_name: str, report_content: str)
 
 def main(sector_db_name: str, target_schema_name: str | None = None):
     """
-    Main function to generate and store fundamental reports for a given sector.
-    Can optionally target a specific schema within the sector.
+    Generate and store fundamental reports for all tickers in a sector database.
+    
+    Orchestrates the complete workflow of loading schema data, finding tickers,
+    generating fundamental analysis reports, and storing them in the database.
+    
+    Args:
+        sector_db_name: The name of the sector database to process.
+        target_schema_name: Optional specific schema to target within the sector.
+        
+    Returns:
+        None - Prints processing summary to console.
     """
     print(f"Starting fundamental report generation for database: {sector_db_name}")
     if target_schema_name:

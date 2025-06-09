@@ -30,7 +30,20 @@ period = "quarterly"
 limit = "100"
 
 def get_financial_data(ticker, period, limit):
-    """Fetch financial data from the API and return formatted results"""
+    """
+    Fetch financial data from external API and return formatted results.
+    
+    Makes API calls to get income statements, balance sheets, cash flow statements,
+    and financial metrics for a specified ticker symbol.
+    
+    Args:
+        ticker: Stock ticker symbol to retrieve data for.
+        period: Data frequency - "quarterly" or "annual".
+        limit: Number of periods to retrieve (e.g., "100").
+        
+    Returns:
+        Dict: Combined financial data including statements and metrics.
+    """
     # First API call - Get income statements, balance sheets, and cash flow statements
     financials_url = "https://api.financialdatasets.ai/financials"
     
@@ -59,13 +72,16 @@ def get_financial_data(ticker, period, limit):
 
 def read_sector_excel(filename="finalSectorSheet.xlsx"):
     """
-    Read an Excel file from the parent documents folder.
+    Read Excel file containing sector/industry classification data.
+    
+    Loads sector classification data from Excel file in parent documents folder
+    and displays preview information.
     
     Args:
-        filename (str): Name of the Excel file to read
+        filename: Name of the Excel file to read (default: "finalSectorSheet.xlsx").
         
     Returns:
-        pd.DataFrame: DataFrame containing the Excel data
+        pd.DataFrame: DataFrame containing the Excel data, or None if error occurs.
     """
     try:
         # Navigate up one directory level to access the documents folder
@@ -97,11 +113,14 @@ def get_ib_historical_data(ticker):
     """
     Get the most recent closing price for a ticker from Interactive Brokers.
     
+    Connects to IB Gateway, retrieves historical data for the specified ticker,
+    and returns the most recent closing price.
+    
     Args:
-        ticker (str): The ticker symbol to get data for
+        ticker: The ticker symbol to get data for.
         
     Returns:
-        float: The most recent closing price, or None if no data is available
+        float: The most recent closing price, or None if no data is available.
     """
     from ib_insync import IB, Stock
     from datetime import datetime, timedelta
@@ -146,6 +165,21 @@ def get_ib_historical_data(ticker):
         ib.disconnect()
 
 def get_news(ticker, start_date, end_date, limit):
+    """
+    Fetch news data for a ticker from external API.
+    
+    Retrieves news articles for the specified ticker within the given date range
+    and prints the response.
+    
+    Args:
+        ticker: Stock ticker symbol to get news for.
+        start_date: Start date for news search.
+        end_date: End date for news search.
+        limit: Maximum number of news articles to retrieve.
+        
+    Returns:
+        None - Prints news data to console.
+    """
     url = "https://api.financialdatasets.ai/news"
 
     querystring = {"ticker": ticker, "start_date": start_date, "end_date": end_date, "limit": limit}
@@ -169,6 +203,19 @@ class PushFundamentalDataToDB:
 
     # connect to the cloud database AWS
     def connect_to_cloud_database(self, db_name):
+        """
+        Establish connection to cloud PostgreSQL database with connection pooling.
+        
+        Reuses existing connections when possible and creates new ones as needed.
+        Tests connection validity before reuse.
+        
+        Args:
+            db_name: Name of the database to connect to.
+            
+        Returns:
+            Tuple[psycopg2.connection, psycopg2.cursor]: Database connection and cursor objects,
+            or (None, None) if connection fails.
+        """
         # Check if we have a connection in our pool that we can reuse
         if db_name in self.conn_pool and self.conn_pool[db_name] is not None:
             try:
@@ -207,7 +254,17 @@ class PushFundamentalDataToDB:
             return None, None
 
     def close_connection(self, db_name=None):
-        """Explicitly close database connections"""
+        """
+        Close database connections explicitly.
+        
+        Closes specified database connection or all connections if no database specified.
+        
+        Args:
+            db_name: Specific database connection to close, or None to close all connections.
+            
+        Returns:
+            None
+        """
         if db_name and db_name in self.conn_pool and self.conn_pool[db_name]:
             try:
                 self.conn_pool[db_name].close()
@@ -232,6 +289,18 @@ class PushFundamentalDataToDB:
 
     # create a database by name if it doesn't exist
     def create_database(self, db_name):
+        """
+        Create a PostgreSQL database if it doesn't exist.
+        
+        Connects to postgres database and creates the specified database,
+        or confirms it already exists.
+        
+        Args:
+            db_name: Name of the database to create.
+            
+        Returns:
+            str: The database name that was created or already existed.
+        """
         conn = None
         cursor = None
         try:
@@ -271,14 +340,20 @@ class PushFundamentalDataToDB:
     
     def create_schema_and_table_dynamic(self, db_name, schema_name, table_name, df):
         """
-        Creates a new schema in the specified database if it doesn't already exist,
-        creates a table with columns dynamically derived from the df, and bulk inserts the data.
+        Create schema and table dynamically from DataFrame structure and bulk insert data.
+        
+        Dynamically generates table schema based on DataFrame column types,
+        creates the table with proper constraints, and efficiently inserts data
+        using chunked bulk operations with upsert logic.
         
         Args:
-            db_name (str): Name of the database to create the schema in.
-            schema_name (str): Name of the schema to create.
-            table_name (str): Name of the table to create.
-            df (pd.DataFrame): The DataFrame from which to generate columns and insert data.
+            db_name: Name of the database to create the schema in.
+            schema_name: Name of the schema to create.
+            table_name: Name of the table to create.
+            df: DataFrame from which to generate columns and insert data.
+            
+        Returns:
+            None
         """
         import time
         start_time = time.time()
@@ -503,14 +578,21 @@ class PushFundamentalDataToDB:
 
 def upload_sector_fundamentals(sector, industry, period="quarterly", limit="100", db_name='equity_sector_communication_services_fundamentals'):
     """
-    Fetches and uploads fundamental data for all companies in a given sector and industry.
+    Fetch and upload fundamental data for all companies in a sector and industry.
+    
+    Processes all companies in the specified sector/industry combination,
+    retrieves their financial data from API, and stores it in the database
+    with appropriate schema organization.
     
     Args:
-        sector (str): The sector name (e.g., "Communication Services")
-        industry (str): The industry name (e.g., "Diversified Telecommunication Services")
-        period (str): Period frequency ("quarterly" or "annual")
-        limit (str): Number of periods to retrieve (default: "100" for extensive historical data)
-        db_name (str): Database name to use
+        sector: The sector name (e.g., "Communication Services").
+        industry: The industry name (e.g., "Diversified Telecommunication Services").
+        period: Data frequency - "quarterly" or "annual" (default: "quarterly").
+        limit: Number of periods to retrieve (default: "100").
+        db_name: Database name to use (default: 'equity_sector_communication_services_fundamentals').
+        
+    Returns:
+        None
     """
     print(f"\n🔍 Processing fundamental data for {sector} - {industry}")
     

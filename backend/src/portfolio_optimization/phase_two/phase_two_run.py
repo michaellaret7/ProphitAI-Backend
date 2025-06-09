@@ -57,13 +57,17 @@ model, client = openai_model_and_client()
 
 def pick_top_tickers_from_asset_classes(portfolio_json):
     """
-    Picks the top tickers from each asset class quantitively.
-    Returns a dict containing the top ten tickers for each asset class.
-    The dict contains the following keys:
-        - Ticker 
-        - Tickers calculations (metrics)
-        - Tickers fundamental report
-        - Tickers fundamental predictions
+    Select top tickers from each asset class with quantitative analysis.
+    
+    Processes each asset class from portfolio JSON, retrieves tickers, calculates metrics,
+    ranks by composite scores, and compiles fundamental data for top performers.
+    
+    Args:
+        portfolio_json: Dictionary containing portfolio asset classes and allocations.
+        
+    Returns:
+        Dict: Dictionary mapping asset classes to their top ticker data including
+        allocation, metrics, fundamental reports, and predictions.
     """
     start_time = time.perf_counter()
 
@@ -162,13 +166,17 @@ def pick_top_tickers_from_asset_classes(portfolio_json):
 
 def make_phaseTwo_recommendations(asset_class_top_tickers):
     """
-    Sends the top ticker data for each asset class to the OpenAI API for recommendations.
-
+    Generate LLM-based investment recommendations for asset class tickers.
+    
+    Sends top ticker data to OpenAI API for analysis and recommendations,
+    with JSON parsing and allocation validation for each asset class.
+    
     Args:
-        asset_class_top_tickers (dict): A dictionary where keys are asset class names and values are dictionaries of top tickers and their data.
-
+        asset_class_top_tickers: Dictionary containing asset class allocation and ticker data.
+        
     Returns:
-        str: The content of the response from the OpenAI API. Returns None if an error occurs during the API call.
+        str: JSON string containing LLM recommendations with validated allocations,
+        or None if API call fails or produces invalid output.
     """
     try:
         # Convert the input dictionary to a JSON string for the prompt content
@@ -366,6 +374,19 @@ Description: {user_info.get("Overall Description", "N/A").strip()}
         return None
 
 def run_phase_two(portfolio_data):
+    """
+    Execute complete Phase Two ticker selection and recommendation workflow.
+    
+    Orchestrates the full Phase Two process including ticker selection, metric calculation,
+    LLM-based analysis, and final portfolio recommendation compilation.
+    
+    Args:
+        portfolio_data: Portfolio dictionary containing asset class allocations from Phase One.
+        
+    Returns:
+        Dict: Final portfolio recommendations dictionary mapping asset classes
+        to their recommended tickers and allocations.
+    """
     picks = pick_top_tickers_from_asset_classes(portfolio_data)
     if logger.isEnabledFor(logging.DEBUG):
         logger.debug("Ticker picks: %s", json.dumps(picks))

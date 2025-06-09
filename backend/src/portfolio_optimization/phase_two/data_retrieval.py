@@ -15,29 +15,53 @@ from backend.src.utils.data_retrieval import get_price_data, get_fundamental_dat
 # Create wrapper functions for backward compatibility
 def get_daily_closing_prices(ticker, years=4, db_config=None):
    """
-    Wrapper function for backward compatibility.
-    Retrieves daily closing prices using the generic get_price_data function.
+    Retrieve daily closing prices using the generic get_price_data function.
+    
+    Wrapper function that maintains backward compatibility while using
+    the centralized price data retrieval system.
+    
+    Args:
+        ticker: Stock ticker symbol to retrieve prices for.
+        years: Number of years of historical data to retrieve (default: 4).
+        db_config: Database configuration dictionary, or None to use defaults.
+        
+    Returns:
+        pd.DataFrame: DataFrame containing daily price data with date and close columns,
+        or None if data retrieval fails.
     """
    return get_price_data(ticker, frequency='daily', years=years, db_config=db_config)
 
 def get_fundamentals_data(ticker, db_config=None):
    """
-    Wrapper function for backward compatibility.
-    Retrieves fundamental data using the generic get_fundamental_data function.
+    Retrieve fundamental data using the generic get_fundamental_data function.
+    
+    Wrapper function that maintains backward compatibility while using
+    the centralized fundamental data retrieval system.
+    
+    Args:
+        ticker: Stock ticker symbol to retrieve fundamental data for.
+        db_config: Database configuration dictionary, or None to use defaults.
+        
+    Returns:
+        Data structure containing fundamental financial information,
+        or None if data retrieval fails.
     """
    return get_fundamental_data(ticker, db_config=db_config)
 
 @cache_result
 def get_stock_tickers(asset_class):
     """
-    Retrieve stock tickers from database_schemas.json filtered by a value.
-    The function automatically determines if the filter value is a sector, industry, or subindustry.
+    Retrieve stock tickers from database schemas filtered by asset class.
+    
+    Searches database_schemas.json to find tickers matching the specified asset class,
+    which can be a sector, industry, or subindustry classification.
     
     Args:
-        filter_value (str, optional): Value to filter on. If None, returns all tickers.
+        asset_class: Asset class name to filter on, or None to return all tickers.
     
     Returns:
-        dict: Dictionary with filter_value as key and list of matching stock tickers as value
+        Dict: Dictionary with asset_class as key and list of matching tickers as value,
+        or {"all": tickers} if asset_class is None.
     """
     schema_data = load_schema_data()
     
@@ -97,25 +121,19 @@ def get_stock_tickers(asset_class):
     return {asset_class: sorted_tickers}
 
 def get_quarterly_estimates(ticker: str) -> str:
-    """Return quarterly fundamental estimates for *ticker* from Postgres as JSON.
-
-    The estimates are pre-fetched from Interactive Brokers (via
-    ``update_fundamental_predictions.py``) and stored in the database following
-    this naming convention:
-
-    * database:     ``<sector_db>_fundamentals`` (e.g. ``equity_sector_technology_fundamentals``)
-    * schema:       ``<industry>``            (e.g. ``semiconductors``)
-    * table:        ``<ticker>_fundamental_estimates`` (lower-case ticker)
-
-    The helper resolves the correct location via ``database_schemas.json`` (same
-    lookup logic as ``get_fundamentals_data``).  If the table exists its full
-    content is returned as the key ``"quarterly_estimates"`` – identical output
-    shape as the previous IBKR implementation so callers remain unchanged.
-
-    When the ticker cannot be located, the table is missing, or any database
-    error occurs the function returns ``{"error": "…"}`` instead.
     """
-
+    Retrieve quarterly fundamental estimates for ticker from database as JSON.
+    
+    Fetches pre-stored analyst estimates from PostgreSQL database using schema
+    lookup logic to locate the correct table and returns formatted JSON data.
+    
+    Args:
+        ticker: Stock ticker symbol to retrieve estimates for.
+        
+    Returns:
+        str: JSON string containing quarterly estimates data or error message
+        if ticker not found, table missing, or database error occurs.
+    """
     ticker_upper = ticker.upper()
     ticker_lower = ticker.lower()
 
@@ -256,7 +274,18 @@ def get_quarterly_estimates(ticker: str) -> str:
         return json.dumps({"error": f"Database error while retrieving estimates for {ticker_upper}: {e}"})
 
 def get_asset_description(ticker):
-
+    """
+    Retrieve ETF description using finvizfinance API.
+    
+    Fetches detailed description information for ETF tickers to provide
+    context for investment analysis and portfolio construction.
+    
+    Args:
+        ticker: ETF ticker symbol to get description for.
+        
+    Returns:
+        str: Description text of the ETF, or None if retrieval fails.
+    """
     # Create a finvizfinance object for the ETF
     etf = finvizfinance(ticker)
 
@@ -270,13 +299,17 @@ def get_asset_description(ticker):
 
 def extract_asset_classes(json_data):
     """
-    Extract asset classes from portfolio JSON data.
+    Extract asset classes and allocations from portfolio JSON data.
+    
+    Parses portfolio JSON structure to extract asset class names and their
+    corresponding allocation percentages, filtering out cash positions.
     
     Args:
-        json_data (dict): JSON data containing portfolio data
+        json_data: Dictionary containing portfolio data with asset class allocations.
         
     Returns:
-        dict: Dictionary mapping asset classes to their allocations, with 'cash' filtered out
+        Dict: Dictionary mapping asset class names to allocation percentages,
+        with cash positions excluded, or empty dict if parsing fails.
     """
     # Parse the JSON string
     data = json_data

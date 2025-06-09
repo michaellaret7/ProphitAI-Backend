@@ -26,7 +26,19 @@ __all__ = [
 # ---------------------------------------------------------------------------
 
 def parse_json_with_openai(text: str) -> Dict[str, Any]:
-    """Extract a JSON object containing a *portfolio* key from a raw LLM string."""
+    """
+    Extract JSON object containing portfolio key from raw LLM string.
+    
+    Searches for JSON content within code blocks or curly braces and validates
+    that it contains the required 'portfolio' key structure.
+    
+    Args:
+        text: Raw LLM response text containing JSON data.
+        
+    Returns:
+        Dict[str, Any]: Parsed JSON dictionary with portfolio key, 
+        or error dictionary if no valid JSON found.
+    """
 
     json_pattern = r"```(?:json)?\s*([\s\S]*?)```"
     for json_str in re.findall(json_pattern, text):
@@ -54,6 +66,18 @@ def parse_json_with_openai(text: str) -> Dict[str, Any]:
 # ---------------------------------------------------------------------------
 
 def _to_float(value: Any) -> float:
+    """
+    Convert various value types to float for allocation processing.
+    
+    Handles numeric types, strings, and percentage strings by stripping
+    whitespace and percentage symbols before conversion.
+    
+    Args:
+        value: Value to convert to float (can be int, float, string, etc.).
+        
+    Returns:
+        float: Converted float value, or 0.0 if conversion fails.
+    """
     if isinstance(value, (int, float)):
         return float(value)
     if isinstance(value, str):
@@ -67,7 +91,21 @@ def _to_float(value: Any) -> float:
 def validate_and_fix_allocations(
     data: Any, *, min_allocation: float = 1.0, max_allocation: float = 20.0
 ) -> Dict[str, Any]:
-    """Ensure allocations sum to 100 and sit within bounds."""
+    """
+    Ensure allocations sum to 100% and remain within specified bounds.
+    
+    Normalizes portfolio allocations to sum to exactly 100%, applies minimum
+    and maximum allocation constraints, and handles string-to-JSON conversion.
+    
+    Args:
+        data: Portfolio data as string or dictionary containing allocations.
+        min_allocation: Minimum allowed allocation percentage (default: 1.0).
+        max_allocation: Maximum allowed allocation percentage (default: 20.0).
+        
+    Returns:
+        Dict[str, Any]: Validated portfolio dictionary with normalized allocations,
+        or empty portfolio dict if input invalid.
+    """
 
     if isinstance(data, str):
         data = parse_json_with_openai(data)
@@ -109,7 +147,19 @@ def validate_and_fix_allocations(
 # ---------------------------------------------------------------------------
 
 def validate_asset_classes(data: Dict[str, Any]):
-    """Replace invalid *asset_class* values with close matches or 'unknown'."""
+    """
+    Replace invalid asset_class values with close matches or 'unknown'.
+    
+    Uses database schema definitions to validate asset class names and applies
+    fuzzy string matching to correct minor naming inconsistencies.
+    
+    Args:
+        data: Portfolio dictionary containing asset_class fields to validate.
+        
+    Returns:
+        Dict[str, Any]: Portfolio dictionary with corrected asset_class names,
+        or original data if no portfolio structure found.
+    """
 
     if not data or not isinstance(data, dict) or "portfolio" not in data:
         return data

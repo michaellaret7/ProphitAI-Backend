@@ -29,6 +29,12 @@ Sonar_API_KEY = os.environ.get("PERPLEXITY_API_KEY")
 perplexity_model = 'sonar-deep-research'
 
 def communication_services_research_analyst():
+    """
+    Generate comprehensive research analysis for the communication services sector.
+    
+    Returns:
+        str: Research report content or None if error occurs
+    """
     
     date = datetime.now().strftime("%Y-%m-%d")
     current_month_year = datetime.now().strftime("%B %Y")
@@ -187,6 +193,12 @@ Additional Notes:
         return None
 
 def consumer_discretionary_research_analyst():
+    """
+    Generate comprehensive research analysis for the consumer discretionary sector.
+    
+    Returns:
+        str: Research report content or None if error occurs
+    """
     
     date = datetime.now().strftime("%Y-%m-%d")
     current_month_year = datetime.now().strftime("%B %Y")
@@ -407,6 +419,12 @@ IMPORTANT
         return None
 
 def consumer_staples_research_analyst():
+    """
+    Generate comprehensive research analysis for the consumer staples sector.
+    
+    Returns:
+        str: Research report content or None if error occurs
+    """
     
     date = datetime.now().strftime("%Y-%m-%d")
     current_month_year = datetime.now().strftime("%B %Y")
@@ -615,6 +633,12 @@ IMPORTANT
         return None
 
 def energy_research_analyst():
+    """
+    Generate comprehensive research analysis for the energy sector.
+    
+    Returns:
+        str: Research report content or None if error occurs
+    """
     
     date = datetime.now().strftime("%Y-%m-%d")
     current_month_year = datetime.now().strftime("%B %Y")
@@ -890,6 +914,12 @@ IMPORTANT
         return None
 
 def financials_research_analyst():
+    """
+    Generate comprehensive research analysis for the financials sector.
+    
+    Returns:
+        str: Research report content or None if error occurs
+    """
     
     date = datetime.now().strftime("%Y-%m-%d")
     current_month_year = datetime.now().strftime("%B %Y")
@@ -1192,6 +1222,12 @@ IMPORTANT
         return None
 
 def healthcare_research_analyst():
+    """
+    Generate comprehensive research analysis for the healthcare sector.
+    
+    Returns:
+        str: Research report content or None if error occurs
+    """
     
     date = datetime.now().strftime("%Y-%m-%d")
     current_month_year = datetime.now().strftime("%B %Y")
@@ -1493,6 +1529,12 @@ IMPORTANT
         return None
 
 def industrials_research_analyst():
+    """
+    Generate comprehensive research analysis for the industrials sector.
+    
+    Returns:
+        str: Research report content or None if error occurs
+    """
     
     date = datetime.now().strftime("%Y-%m-%d")
     current_month_year = datetime.now().strftime("%B %Y")
@@ -1815,6 +1857,12 @@ IMPORTANT
         return None
 
 def information_technology_research_analyst():
+    """
+    Generate comprehensive research analysis for the information technology sector.
+    
+    Returns:
+        str: Research report content or None if error occurs
+    """
     
     date = datetime.now().strftime("%Y-%m-%d")
     current_month_year = datetime.now().strftime("%B %Y")
@@ -2102,6 +2150,12 @@ IMPORTANT
         return None
 
 def materials_research_analyst():
+    """
+    Generate comprehensive research analysis for the materials sector.
+    
+    Returns:
+        str: Research report content or None if error occurs
+    """
     
     date = datetime.now().strftime("%Y-%m-%d")
     current_month_year = datetime.now().strftime("%B %Y")
@@ -2402,6 +2456,12 @@ IMPORTANT
         return None
 
 def real_estate_research_analyst():
+    """
+    Generate comprehensive research analysis for the real estate sector.
+    
+    Returns:
+        str: Research report content or None if error occurs
+    """
     
     date = datetime.now().strftime("%Y-%m-%d")
     current_month_year = datetime.now().strftime("%B %Y")
@@ -2715,6 +2775,12 @@ IMPORTANT
         return None
 
 def utilities_research_analyst():
+    """
+    Generate comprehensive research analysis for the utilities sector.
+    
+    Returns:
+        str: Research report content or None if error occurs
+    """
     
     date = datetime.now().strftime("%Y-%m-%d")
     current_month_year = datetime.now().strftime("%B %Y")

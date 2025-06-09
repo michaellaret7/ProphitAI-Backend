@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React from 'react';
 import './Portfolio.css';
 
 // Define interfaces for different asset types
@@ -96,16 +96,6 @@ interface AlternativeInvestment {
 }
 
 const Portfolio: React.FC = () => {
-  const [expandedSections, setExpandedSections] = useState<{ [key: string]: boolean }>({
-    cash: true,
-    equities: true,
-    etfs: true,
-    fixedIncome: true,
-    commodities: true,
-    forex: true,
-    alternatives: true
-  });
-
   // Mock data for demonstration
   const cashData: CashHolding = {
     type: "Available Cash",
@@ -429,13 +419,6 @@ const Portfolio: React.FC = () => {
     }
   ];
 
-  const toggleSection = (section: string) => {
-    setExpandedSections(prev => ({
-      ...prev,
-      [section]: !prev[section]
-    }));
-  };
-
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat('en-US', {
       style: 'currency',
@@ -453,14 +436,21 @@ const Portfolio: React.FC = () => {
   return (
     <div className="portfolio-container">
       <section className="portfolio-header">
-        <h1 className="portfolio-title">Portfolio Overview</h1>
+        <h1 className="portfolio-title">
+          Portfolio <span className="portfolio-accent">Overview</span>
+        </h1>
         <p className="portfolio-subtitle">Comprehensive view of your investment holdings across all asset classes</p>
       </section>
 
       {/* Portfolio Summary Cards */}
       <section className="portfolio-summary">
         <div className="summary-card">
-          <div className="summary-icon">📊</div>
+          <div className="summary-icon">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
+              <path d="M9 9h6v6H9z"/>
+            </svg>
+          </div>
           <div className="summary-content">
             <h3>Total Portfolio Value</h3>
             <p className="summary-value">$3,245,678</p>
@@ -469,7 +459,11 @@ const Portfolio: React.FC = () => {
         </div>
 
         <div className="summary-card">
-          <div className="summary-icon">💰</div>
+          <div className="summary-icon">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>
+            </svg>
+          </div>
           <div className="summary-content">
             <h3>Cash & Equivalents</h3>
             <p className="summary-value">{formatCurrency(cashData.amount)}</p>
@@ -478,7 +472,12 @@ const Portfolio: React.FC = () => {
         </div>
 
         <div className="summary-card">
-          <div className="summary-icon">📈</div>
+          <div className="summary-icon">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <polyline points="22,6 12,13 9,9 2,15"/>
+              <polyline points="16,6 22,6 22,12"/>
+            </svg>
+          </div>
           <div className="summary-content">
             <h3>Today's P&L</h3>
             <p className="summary-value positive">+$12,456</p>
@@ -487,7 +486,12 @@ const Portfolio: React.FC = () => {
         </div>
 
         <div className="summary-card">
-          <div className="summary-icon">🎯</div>
+          <div className="summary-icon">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <circle cx="12" cy="12" r="10"/>
+              <polyline points="10,8 16,12 10,16"/>
+            </svg>
+          </div>
           <div className="summary-content">
             <h3>YTD Performance</h3>
             <p className="summary-value positive">+18.76%</p>
@@ -496,383 +500,254 @@ const Portfolio: React.FC = () => {
         </div>
       </section>
 
-      {/* Cash & Cash Equivalents Section */}
-      <section className="asset-section">
-        <div className="section-header" onClick={() => toggleSection('cash')}>
-          <div className="section-title">
-            <span className="section-icon">💵</span>
-            <h2>Cash & Cash Equivalents</h2>
-          </div>
-          <span className={`expand-icon ${expandedSections.cash ? 'expanded' : ''}`}>▼</span>
-        </div>
-        {expandedSections.cash && (
-          <div className="cash-content">
-            <div className="cash-item">
-              <span className="cash-label">{cashData.type}</span>
-              <span className="cash-amount">{formatCurrency(cashData.amount)}</span>
-            </div>
-          </div>
-        )}
-      </section>
-
       {/* Equities Section */}
       <section className="asset-section">
-        <div className="section-header" onClick={() => toggleSection('equities')}>
+        <div className="section-header">
           <div className="section-title">
-            <span className="section-icon">📊</span>
+            <span className="section-icon">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M3 3v18h18"/>
+                <path d="m19 9-5 5-4-4-3 3"/>
+              </svg>
+            </span>
             <h2>Equities</h2>
           </div>
-          <span className={`expand-icon ${expandedSections.equities ? 'expanded' : ''}`}>▼</span>
         </div>
-        {expandedSections.equities && (
-          <div className="table-container">
-            <table className="asset-table">
-              <thead>
-                <tr>
-                  <th>Symbol</th>
-                  <th>Company</th>
-                  <th>Shares</th>
-                  <th>Price</th>
-                  <th>1D %</th>
-                  <th>1M %</th>
-                  <th>YTD %</th>
-                  <th>P/E</th>
-                  <th>Fwd P/E</th>
-                  <th>EV/Sales</th>
-                  <th>Dividend</th>
-                  <th>P&L</th>
-                  <th>Tax Note</th>
-                  <th>Action</th>
-                </tr>
-              </thead>
-              <tbody>
-                {equityData.map((equity) => (
-                  <tr key={equity.symbol}>
-                    <td className="symbol-cell">{equity.symbol}</td>
-                    <td>{equity.company}</td>
-                    <td>{equity.shares}</td>
-                    <td>${equity.price.toFixed(2)}</td>
-                    <td className={equity.change1D >= 0 ? 'positive' : 'negative'}>
-                      {formatPercent(equity.change1D)}
-                    </td>
-                    <td className={equity.change1M >= 0 ? 'positive' : 'negative'}>
-                      {formatPercent(equity.change1M)}
-                    </td>
-                    <td className={equity.changeYTD >= 0 ? 'positive' : 'negative'}>
-                      {formatPercent(equity.changeYTD)}
-                    </td>
-                    <td>{equity.pe.toFixed(1)}x</td>
-                    <td>{equity.fwdPE.toFixed(1)}x</td>
-                    <td>{equity.evSales.toFixed(1)}</td>
-                    <td>{equity.dividend.toFixed(2)}%</td>
-                    <td className={equity.pnl >= 0 ? 'positive' : 'negative'}>
-                      {formatCurrency(equity.pnl)}
-                    </td>
-                    <td className="tax-note">{equity.taxNote}</td>
-                    <td>
-                      <button className="action-btn">Details</button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </section>
-
-      {/* Exchange-Traded Funds Section */}
-      <section className="asset-section">
-        <div className="section-header" onClick={() => toggleSection('etfs')}>
-          <div className="section-title">
-            <span className="section-icon">📈</span>
-            <h2>Exchange-Traded Funds</h2>
-          </div>
-          <span className={`expand-icon ${expandedSections.etfs ? 'expanded' : ''}`}>▼</span>
-        </div>
-        {expandedSections.etfs && (
-          <div className="table-container">
-            <table className="asset-table">
+        <div className="table-container">
+          <table className="asset-table">
             <thead>
               <tr>
                 <th>Symbol</th>
-                <th>Name</th>
-                  <th>Shares</th>
-                  <th>NAV</th>
-                  <th>Premium/Discount</th>
-                  <th>1D %</th>
-                  <th>1M %</th>
-                  <th>YTD %</th>
-                  <th>Dividend</th>
-                  <th>Volatility</th>
+                <th>Company</th>
+                <th>Shares</th>
+                <th>Price</th>
+                <th>1D %</th>
+                <th>1M %</th>
+                <th>YTD %</th>
+                <th>P/E</th>
+                <th>Fwd P/E</th>
+                <th>EV/Sales</th>
+                <th>Dividend</th>
                 <th>P&L</th>
-                  <th>Tax Note</th>
-                  <th>Action</th>
+                <th>Tax Note</th>
+                <th>Action</th>
               </tr>
             </thead>
             <tbody>
-                {etfData.map((etf) => (
-                  <tr key={etf.symbol}>
-                    <td className="symbol-cell">{etf.symbol}</td>
-                    <td>{etf.name}</td>
-                    <td>{etf.shares}</td>
-                    <td>${etf.nav.toFixed(2)}</td>
-                    <td className={etf.premiumDiscount >= 0 ? 'positive' : 'negative'}>
-                      {formatPercent(etf.premiumDiscount)}
-                    </td>
-                    <td className={etf.change1D >= 0 ? 'positive' : 'negative'}>
-                      {formatPercent(etf.change1D)}
-                    </td>
-                    <td className={etf.change1M >= 0 ? 'positive' : 'negative'}>
-                      {formatPercent(etf.change1M)}
+              {equityData.map((equity) => (
+                <tr key={equity.symbol}>
+                  <td className="symbol-cell">{equity.symbol}</td>
+                  <td>{equity.company}</td>
+                  <td>{equity.shares}</td>
+                  <td>${equity.price.toFixed(2)}</td>
+                  <td className={equity.change1D >= 0 ? 'positive' : 'negative'}>
+                    {formatPercent(equity.change1D)}
                   </td>
-                    <td className={etf.changeYTD >= 0 ? 'positive' : 'negative'}>
-                      {formatPercent(etf.changeYTD)}
+                  <td className={equity.change1M >= 0 ? 'positive' : 'negative'}>
+                    {formatPercent(equity.change1M)}
                   </td>
-                    <td>{etf.dividend.toFixed(2)}%</td>
-                    <td>{etf.volatility.toFixed(1)}%</td>
-                    <td className={etf.pnl >= 0 ? 'positive' : 'negative'}>
-                      {formatCurrency(etf.pnl)}
+                  <td className={equity.changeYTD >= 0 ? 'positive' : 'negative'}>
+                    {formatPercent(equity.changeYTD)}
                   </td>
-                    <td className="tax-note">{etf.taxNote}</td>
+                  <td>{equity.pe.toFixed(1)}x</td>
+                  <td>{equity.fwdPE.toFixed(1)}x</td>
+                  <td>{equity.evSales.toFixed(1)}</td>
+                  <td>{equity.dividend.toFixed(2)}%</td>
+                  <td className={equity.pnl >= 0 ? 'positive' : 'negative'}>
+                    {formatCurrency(equity.pnl)}
+                  </td>
+                  <td className="tax-note">{equity.taxNote}</td>
                   <td>
-                      <button className="action-btn">Details</button>
+                    <button className="action-btn">Details</button>
                   </td>
                 </tr>
               ))}
             </tbody>
           </table>
         </div>
-        )}
+      </section>
+
+      {/* Exchange-Traded Funds Section */}
+      <section className="asset-section">
+        <div className="section-header">
+          <div className="section-title">
+            <span className="section-icon">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <polyline points="22,6 12,13 9,9 2,15"/>
+                <polyline points="16,6 22,6 22,12"/>
+              </svg>
+            </span>
+            <h2>Exchange-Traded Funds</h2>
+          </div>
+        </div>
+        <div className="table-container">
+          <table className="asset-table">
+            <thead>
+              <tr>
+                <th>Symbol</th>
+                <th>Name</th>
+                <th>Shares</th>
+                <th>NAV</th>
+                <th>Premium/Discount</th>
+                <th>1D %</th>
+                <th>1M %</th>
+                <th>YTD %</th>
+                <th>Dividend</th>
+                <th>Volatility</th>
+                <th>P&L</th>
+                <th>Tax Note</th>
+                <th>Action</th>
+              </tr>
+            </thead>
+            <tbody>
+              {etfData.map((etf) => (
+                <tr key={etf.symbol}>
+                  <td className="symbol-cell">{etf.symbol}</td>
+                  <td>{etf.name}</td>
+                  <td>{etf.shares}</td>
+                  <td>${etf.nav.toFixed(2)}</td>
+                  <td className={etf.premiumDiscount >= 0 ? 'positive' : 'negative'}>
+                    {formatPercent(etf.premiumDiscount)}
+                  </td>
+                  <td className={etf.change1D >= 0 ? 'positive' : 'negative'}>
+                    {formatPercent(etf.change1D)}
+                  </td>
+                  <td className={etf.change1M >= 0 ? 'positive' : 'negative'}>
+                    {formatPercent(etf.change1M)}
+                  </td>
+                  <td className={etf.changeYTD >= 0 ? 'positive' : 'negative'}>
+                    {formatPercent(etf.changeYTD)}
+                  </td>
+                  <td>{etf.dividend.toFixed(2)}%</td>
+                  <td>{etf.volatility.toFixed(1)}%</td>
+                  <td className={etf.pnl >= 0 ? 'positive' : 'negative'}>
+                    {formatCurrency(etf.pnl)}
+                  </td>
+                  <td className="tax-note">{etf.taxNote}</td>
+                  <td>
+                    <button className="action-btn">Details</button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       </section>
 
       {/* Fixed Income Securities Section */}
       <section className="asset-section">
-        <div className="section-header" onClick={() => toggleSection('fixedIncome')}>
+        <div className="section-header">
           <div className="section-title">
-            <span className="section-icon">🏦</span>
+            <span className="section-icon">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
+                <polyline points="9,22 9,12 15,12 15,22"/>
+              </svg>
+            </span>
             <h2>Fixed Income Securities</h2>
           </div>
-          <span className={`expand-icon ${expandedSections.fixedIncome ? 'expanded' : ''}`}>▼</span>
         </div>
-        {expandedSections.fixedIncome && (
-          <div className="table-container">
-            <table className="asset-table">
-              <thead>
-                <tr>
-                  <th>Bond</th>
-                  <th>Face Value</th>
-                  <th>Price</th>
-                  <th>Yield</th>
-                  <th>Coupon</th>
-                  <th>Maturity</th>
-                  <th>Rating</th>
-                  <th>Sector</th>
-                  <th>Callable</th>
-                  <th>Accrued Int.</th>
-                  <th>Total Return</th>
-                  <th>Action</th>
+        <div className="table-container">
+          <table className="asset-table">
+            <thead>
+              <tr>
+                <th>Bond</th>
+                <th>Face Value</th>
+                <th>Price</th>
+                <th>Yield</th>
+                <th>Coupon</th>
+                <th>Maturity</th>
+                <th>Rating</th>
+                <th>Sector</th>
+                <th>Callable</th>
+                <th>Accrued Int.</th>
+                <th>Total Return</th>
+                <th>Action</th>
+              </tr>
+            </thead>
+            <tbody>
+              {fixedIncomeData.map((bond) => (
+                <tr key={bond.bond}>
+                  <td className="symbol-cell">{bond.bond}</td>
+                  <td>{formatCurrency(bond.faceValue)}</td>
+                  <td>{formatCurrency(bond.price)}</td>
+                  <td>{bond.yield.toFixed(2)}%</td>
+                  <td>{bond.coupon.toFixed(3)}%</td>
+                  <td>{bond.maturity}</td>
+                  <td className="rating">{bond.rating}</td>
+                  <td>{bond.sector}</td>
+                  <td>{bond.callable ? 'Yes' : 'No'}</td>
+                  <td>${bond.accruedInt}</td>
+                  <td className="positive">{formatPercent(bond.totalReturn)}</td>
+                  <td>
+                    <button className="action-btn">Details</button>
+                  </td>
                 </tr>
-              </thead>
-              <tbody>
-                {fixedIncomeData.map((bond) => (
-                  <tr key={bond.bond}>
-                    <td className="symbol-cell">{bond.bond}</td>
-                    <td>{formatCurrency(bond.faceValue)}</td>
-                    <td>{formatCurrency(bond.price)}</td>
-                    <td>{bond.yield.toFixed(2)}%</td>
-                    <td>{bond.coupon.toFixed(3)}%</td>
-                    <td>{bond.maturity}</td>
-                    <td className="rating">{bond.rating}</td>
-                    <td>{bond.sector}</td>
-                    <td>{bond.callable ? 'Yes' : 'No'}</td>
-                    <td>${bond.accruedInt}</td>
-                    <td className="positive">{formatPercent(bond.totalReturn)}</td>
-                    <td>
-                      <button className="action-btn">Details</button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
+              ))}
+            </tbody>
+          </table>
+        </div>
       </section>
 
       {/* Commodities Section */}
       <section className="asset-section">
-        <div className="section-header" onClick={() => toggleSection('commodities')}>
+        <div className="section-header">
           <div className="section-title">
-            <span className="section-icon">🛢️</span>
+            <span className="section-icon">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <circle cx="12" cy="12" r="8"/>
+                <circle cx="12" cy="12" r="3"/>
+                <path d="M12 1v6"/>
+                <path d="M12 17v6"/>
+                <path d="m4.2 6.8.7.7"/>
+                <path d="m18.4 16.4.7.7"/>
+                <path d="M1 12h6"/>
+                <path d="M17 12h6"/>
+                <path d="m4.2 17.2.7-.7"/>
+                <path d="m18.4 7.6.7-.7"/>
+              </svg>
+            </span>
             <h2>Commodities</h2>
           </div>
-          <span className={`expand-icon ${expandedSections.commodities ? 'expanded' : ''}`}>▼</span>
         </div>
-        {expandedSections.commodities && (
-          <div className="commodities-container">
-            <h3 className="subsection-title">Commodity ETFs</h3>
-            <div className="table-container">
-              <table className="asset-table">
-                <thead>
-                  <tr>
-                    <th>Symbol</th>
-                    <th>Name</th>
-                    <th>Shares</th>
-                    <th>Price</th>
-                    <th>1D %</th>
-                    <th>1M %</th>
-                    <th>YTD %</th>
-                    <th>Volatility</th>
-                    <th>P&L</th>
-                    <th>Action</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {commodityETFs.map((etf) => (
-                    <tr key={etf.symbol}>
-                      <td className="symbol-cell">{etf.symbol}</td>
-                      <td>{etf.name}</td>
-                      <td>{etf.shares}</td>
-                      <td>${etf.price.toFixed(2)}</td>
-                      <td className={etf.change1D >= 0 ? 'positive' : 'negative'}>
-                        {formatPercent(etf.change1D)}
-                      </td>
-                      <td className={etf.change1M >= 0 ? 'positive' : 'negative'}>
-                        {formatPercent(etf.change1M)}
-                      </td>
-                      <td className={etf.changeYTD >= 0 ? 'positive' : 'negative'}>
-                        {formatPercent(etf.changeYTD)}
-                      </td>
-                      <td>{etf.volatility.toFixed(1)}%</td>
-                      <td className={etf.pnl >= 0 ? 'positive' : 'negative'}>
-                        {formatCurrency(etf.pnl)}
-                      </td>
-                      <td>
-                        <button className="action-btn">Details</button>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-
-            <h3 className="subsection-title">Futures Contracts</h3>
-            <div className="table-container">
-              <table className="asset-table">
-                <thead>
-                  <tr>
-                    <th>Contract</th>
-                    <th>Contracts</th>
-                    <th>Price</th>
-                    <th>1D %</th>
-                    <th>1M %</th>
-                    <th>YTD %</th>
-                    <th>Contract Month</th>
-                    <th>Last Roll</th>
-                    <th>Open Interest</th>
-                    <th>Volume (30D)</th>
-                    <th>Margin</th>
-                    <th>P&L</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {futuresContracts.map((contract) => (
-                    <tr key={contract.contract}>
-                      <td className="symbol-cell">{contract.contract}</td>
-                      <td>{contract.contracts}</td>
-                      <td>${contract.price.toFixed(2)}</td>
-                      <td className={contract.change1D >= 0 ? 'positive' : 'negative'}>
-                        {formatPercent(contract.change1D)}
-                      </td>
-                      <td className={contract.change1M >= 0 ? 'positive' : 'negative'}>
-                        {formatPercent(contract.change1M)}
-                      </td>
-                      <td className={contract.changeYTD >= 0 ? 'positive' : 'negative'}>
-                        {formatPercent(contract.changeYTD)}
-                      </td>
-                      <td>{contract.contractMonth}</td>
-                      <td>{contract.lastRoll}</td>
-                      <td>{contract.openInterest.toLocaleString()}</td>
-                      <td>{contract.volume.toLocaleString()}</td>
-                      <td>${contract.margin.toLocaleString()}</td>
-                      <td className={contract.pnl >= 0 ? 'positive' : 'negative'}>
-                        {formatCurrency(contract.pnl)}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </div>
-        )}
-      </section>
-
-      {/* Foreign Exchange Section */}
-      <section className="asset-section">
-        <div className="section-header" onClick={() => toggleSection('forex')}>
-          <div className="section-title">
-            <span className="section-icon">💱</span>
-            <h2>Foreign Exchange</h2>
-          </div>
-          <span className={`expand-icon ${expandedSections.forex ? 'expanded' : ''}`}>▼</span>
-        </div>
-        {expandedSections.forex && (
-          <div className="forex-content">
-            <div className="no-positions">
-              <h3>No FX Positions</h3>
-              <p>Your portfolio currently has no foreign exchange positions.</p>
-            </div>
-          </div>
-        )}
-      </section>
-
-      {/* Alternative Investments Section */}
-      <section className="asset-section">
-        <div className="section-header" onClick={() => toggleSection('alternatives')}>
-          <div className="section-title">
-            <span className="section-icon">🏗️</span>
-            <h2>Alternative Investments</h2>
-          </div>
-          <span className={`expand-icon ${expandedSections.alternatives ? 'expanded' : ''}`}>▼</span>
-        </div>
-        {expandedSections.alternatives && (
+        <div className="commodities-container">
+          <h3 className="subsection-title">Commodity ETFs</h3>
           <div className="table-container">
             <table className="asset-table">
               <thead>
                 <tr>
-                  <th>Fund Name</th>
-                  <th>Type</th>
-                  <th>Investment</th>
-                  <th>NAV</th>
-                  <th>1M Return</th>
-                  <th>CAGR</th>
+                  <th>Symbol</th>
+                  <th>Name</th>
+                  <th>Shares</th>
+                  <th>Price</th>
+                  <th>1D %</th>
+                  <th>1M %</th>
+                  <th>YTD %</th>
                   <th>Volatility</th>
-                  <th>Sharpe</th>
-                  <th>Max DD</th>
-                  <th>Alpha</th>
-                  <th>Beta</th>
-                  <th>Up/Down Capture</th>
-                  <th>Sortino</th>
+                  <th>P&L</th>
                   <th>Action</th>
                 </tr>
               </thead>
               <tbody>
-                {alternativeData.map((fund) => (
-                  <tr key={fund.fundName}>
-                    <td className="symbol-cell">{fund.fundName}</td>
-                    <td>{fund.type}</td>
-                    <td>{formatCurrency(fund.investment)}</td>
-                    <td>{formatCurrency(fund.nav)}</td>
-                    <td className={fund.return1M >= 0 ? 'positive' : 'negative'}>
-                      {fund.return1M ? formatPercent(fund.return1M) : 'N/A'}
+                {commodityETFs.map((etf) => (
+                  <tr key={etf.symbol}>
+                    <td className="symbol-cell">{etf.symbol}</td>
+                    <td>{etf.name}</td>
+                    <td>{etf.shares}</td>
+                    <td>${etf.price.toFixed(2)}</td>
+                    <td className={etf.change1D >= 0 ? 'positive' : 'negative'}>
+                      {formatPercent(etf.change1D)}
                     </td>
-                    <td className="positive">{fund.cagr ? formatPercent(fund.cagr) : 'N/A'}</td>
-                    <td>{fund.volatility ? `${fund.volatility.toFixed(1)}%` : 'N/A'}</td>
-                    <td>{fund.sharpe ? fund.sharpe.toFixed(2) : 'N/A'}</td>
-                    <td className="negative">{fund.maxDD ? `${fund.maxDD.toFixed(1)}%` : 'N/A'}</td>
-                    <td className="positive">{fund.alpha ? formatPercent(fund.alpha) : 'N/A'}</td>
-                    <td>{fund.beta ? fund.beta.toFixed(2) : 'N/A'}</td>
-                    <td>{fund.upDownCapture}</td>
-                    <td>{fund.sortino ? fund.sortino.toFixed(2) : 'N/A'}</td>
+                    <td className={etf.change1M >= 0 ? 'positive' : 'negative'}>
+                      {formatPercent(etf.change1M)}
+                    </td>
+                    <td className={etf.changeYTD >= 0 ? 'positive' : 'negative'}>
+                      {formatPercent(etf.changeYTD)}
+                    </td>
+                    <td>{etf.volatility.toFixed(1)}%</td>
+                    <td className={etf.pnl >= 0 ? 'positive' : 'negative'}>
+                      {formatCurrency(etf.pnl)}
+                    </td>
                     <td>
                       <button className="action-btn">Details</button>
                     </td>
@@ -881,7 +756,143 @@ const Portfolio: React.FC = () => {
               </tbody>
             </table>
           </div>
-        )}
+
+          <h3 className="subsection-title">Futures Contracts</h3>
+          <div className="table-container">
+            <table className="asset-table">
+              <thead>
+                <tr>
+                  <th>Contract</th>
+                  <th>Contracts</th>
+                  <th>Price</th>
+                  <th>1D %</th>
+                  <th>1M %</th>
+                  <th>YTD %</th>
+                  <th>Contract Month</th>
+                  <th>Last Roll</th>
+                  <th>Open Interest</th>
+                  <th>Volume (30D)</th>
+                  <th>Margin</th>
+                  <th>P&L</th>
+                </tr>
+              </thead>
+              <tbody>
+                {futuresContracts.map((contract) => (
+                  <tr key={contract.contract}>
+                    <td className="symbol-cell">{contract.contract}</td>
+                    <td>{contract.contracts}</td>
+                    <td>${contract.price.toFixed(2)}</td>
+                    <td className={contract.change1D >= 0 ? 'positive' : 'negative'}>
+                      {formatPercent(contract.change1D)}
+                    </td>
+                    <td className={contract.change1M >= 0 ? 'positive' : 'negative'}>
+                      {formatPercent(contract.change1M)}
+                    </td>
+                    <td className={contract.changeYTD >= 0 ? 'positive' : 'negative'}>
+                      {formatPercent(contract.changeYTD)}
+                    </td>
+                    <td>{contract.contractMonth}</td>
+                    <td>{contract.lastRoll}</td>
+                    <td>{contract.openInterest.toLocaleString()}</td>
+                    <td>{contract.volume.toLocaleString()}</td>
+                    <td>${contract.margin.toLocaleString()}</td>
+                    <td className={contract.pnl >= 0 ? 'positive' : 'negative'}>
+                      {formatCurrency(contract.pnl)}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      {/* Foreign Exchange Section */}
+      <section className="asset-section">
+        <div className="section-header">
+          <div className="section-title">
+            <span className="section-icon">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <circle cx="8" cy="8" r="6"/>
+                <path d="M18.09 10.37A6 6 0 1 1 10.34 18"/>
+                <path d="M7 6h1v4"/>
+                <path d="m16.7 13.2.9.9"/>
+                <path d="m17.6 16.6-.9-.9"/>
+                <path d="m18 14h1v4"/>
+              </svg>
+            </span>
+            <h2>Foreign Exchange</h2>
+          </div>
+        </div>
+        <div className="forex-content">
+          <div className="no-positions">
+            <h3>No FX Positions</h3>
+            <p>Your portfolio currently has no foreign exchange positions.</p>
+          </div>
+        </div>
+      </section>
+
+      {/* Alternative Investments Section */}
+      <section className="asset-section">
+        <div className="section-header">
+          <div className="section-title">
+            <span className="section-icon">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <rect width="14" height="20" x="5" y="2" rx="2" ry="2"/>
+                <path d="M9 22v-4h6v4"/>
+                <path d="m8 6 4-4 4 4"/>
+                <path d="M10 6h4"/>
+              </svg>
+            </span>
+            <h2>Alternative Investments</h2>
+          </div>
+        </div>
+        <div className="table-container">
+          <table className="asset-table">
+            <thead>
+              <tr>
+                <th>Fund Name</th>
+                <th>Type</th>
+                <th>Investment</th>
+                <th>NAV</th>
+                <th>1M Return</th>
+                <th>CAGR</th>
+                <th>Volatility</th>
+                <th>Sharpe</th>
+                <th>Max DD</th>
+                <th>Alpha</th>
+                <th>Beta</th>
+                <th>Up/Down Capture</th>
+                <th>Sortino</th>
+                <th>Action</th>
+              </tr>
+            </thead>
+            <tbody>
+              {alternativeData.map((fund) => (
+                <tr key={fund.fundName}>
+                  <td className="symbol-cell">{fund.fundName}</td>
+                  <td>{fund.type}</td>
+                  <td>{formatCurrency(fund.investment)}</td>
+                  <td>{formatCurrency(fund.nav)}</td>
+                  <td className={fund.return1M >= 0 ? 'positive' : 'negative'}>
+                    {fund.return1M ? formatPercent(fund.return1M) : 'N/A'}
+                  </td>
+                  <td className="positive">{fund.cagr ? formatPercent(fund.cagr) : 'N/A'}</td>
+                  <td>{fund.volatility ? `${fund.volatility.toFixed(1)}%` : 'N/A'}</td>
+                  <td>{fund.sharpe ? fund.sharpe.toFixed(2) : 'N/A'}</td>
+                  <td className="negative">{fund.maxDD ? `${fund.maxDD.toFixed(1)}%` : 'N/A'}</td>
+                  <td className="positive">{fund.alpha ? formatPercent(fund.alpha) : 'N/A'}</td>
+                  <td>{fund.beta ? fund.beta.toFixed(2) : 'N/A'}</td>
+                  <td>{fund.upDownCapture}</td>
+                  <td>{fund.sortino ? fund.sortino.toFixed(2) : 'N/A'}</td>
+                  <td>
+                    <button className="action-btn">Details</button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       </section>
     </div>
   );

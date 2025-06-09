@@ -3,6 +3,16 @@ import json
 def get_user_information():
     """
     Get user information from the user's profile.
+    
+    Returns predefined user profile data including demographics, financial status,
+    risk tolerance, and investment goals for portfolio optimization.
+    
+    Args:
+        None
+        
+    Returns:
+        Dict: Dictionary containing comprehensive user information including age,
+        net worth, risk tolerance, investment goals, and time horizon.
     """
     user_data = {
         "user_information": {

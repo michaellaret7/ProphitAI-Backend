@@ -92,13 +92,21 @@ class PortfolioPerformanceResponse(BaseModel):
 @router.get("/portfolio/allocation/{portfolio_id}")
 async def get_portfolio_allocation(portfolio_id: str):
     """
-    Get portfolio allocation data for a specific portfolio_id.
+    Retrieve portfolio sector allocation data with color assignments.
+    
+    Queries the portfolio_sector_allocation table for the given portfolio ID
+    and returns formatted sector allocation percentages with assigned colors
+    for visualization purposes.
     
     Args:
         portfolio_id: The portfolio identifier UUID.
         
     Returns:
-        Dict containing sectors array with allocation data.
+        Dict containing sectors array with allocation data including name, percentage, and color.
+        
+    Raises:
+        HTTPException: 404 if no allocation data found for the portfolio,
+                      500 if database query fails.
     """
     
     schema_name = "public"
@@ -166,7 +174,19 @@ async def get_portfolio_allocation(portfolio_id: str):
 @router.get("/portfolio/holdings/{user_name}", response_model=PortfolioHoldingsResponse)
 async def get_portfolio_holdings(user_name: str):
     """
-    Get portfolio holdings for a specific user_name.
+    Retrieve portfolio holdings data for a specific user.
+    
+    Queries the user_portfolios table to fetch all stock holdings for the given user,
+    including position sizes, current prices, market values, and P&L calculations.
+    
+    Args:
+        user_name: The username to retrieve holdings for.
+        
+    Returns:
+        PortfolioHoldingsResponse: Object containing list of holdings with market values and percentages.
+        
+    Raises:
+        HTTPException: 500 error if database query fails.
     """
     db_name = "user_data"
     schema_name = "public"
@@ -241,14 +261,23 @@ async def get_portfolio_holdings(user_name: str):
 @router.get("/portfolio/performance/{user_id}", response_model=PortfolioPerformanceResponse)
 async def get_portfolio_performance(user_id: str, days: int = 365):
     """
-    Get portfolio performance data for a specific user_id.
+    Calculate and retrieve historical portfolio performance metrics for a user.
+    
+    Fetches user holdings, retrieves historical price data for each position,
+    calculates portfolio values over time, and compares performance against
+    multiple benchmark ETFs (SPY, QQQ, IWM, GLD, DBC, EEM).
     
     Args:
         user_id: The user identifier UUID.
         days: Number of days of historical data to retrieve (default: 365)
         
     Returns:
-        Dict containing performance data with date, value, daily returns, and cumulative returns.
+        PortfolioPerformanceResponse: Object containing performance data with values, 
+        daily/cumulative returns, normalized values for comparison, and total returns.
+        
+    Raises:
+        HTTPException: 404 if no holdings found or no price data available,
+                      500 if database query or calculation fails.
     """
     
     db_name = "user_data"
