@@ -6,66 +6,61 @@ from backend.src.data.PortfolioData import (
     calculate_monthly_portfolio_metrics,
     analyze_portfolio_correlations
 )
+from backend.src.utils.retrieve_portfolio_from_db import retrieve_user_current_portfolio_from_db
 
 
-def get_holdings_from_database(user_name: str = "test_user_beta_one") -> tuple[List[Dict[str, Any]], str]:
+def get_holdings_from_database(user_id: str, email: str) -> tuple[List[Dict[str, Any]], str]:
     """
-    Retrieve holdings from the database instead of IBKR.
+    Retrieve holdings from the database using user_id and email.
     
     Queries the user_portfolios table to fetch the most recent holdings
     for the specified user with proper data type conversion.
     
     Args:
-        user_name: Name of the user whose holdings to retrieve (default: "test_user_beta_one").
+        user_id: The user ID of the user whose holdings to retrieve.
+        email: The email of the user whose holdings to retrieve.
         
     Returns:
         Tuple[List[Dict[str, Any]], str]: Tuple containing list of position dictionaries 
         and formatted status string, or empty list and error message if failed.
     """
     try:
-        with get_cursor(dbname='user_data') as cursor:
-            # Get the most recent holdings for the user
-            query = """
-            SELECT DISTINCT ON (symbol, account)
-                symbol, secType, currency, position, marketPrice, marketValue,
-                averageCost, unrealizedPNL, realizedPNL, account
-            FROM public.user_portfolios
-            WHERE user_name = %s
-            ORDER BY symbol, account, fetch_timestamp DESC
-            """
-            cursor.execute(query, (user_name,))
-            results = cursor.fetchall()
-            
-            if not results:
-                return [], "No positions found in database."
-            
-            # Format positions to match the expected structure
-            positions = []
-            for row in results:
-                position = {
-                    'symbol': row[0],
-                    'secType': row[1],
-                    'currency': row[2],
-                    'position': float(row[3]) if row[3] else 0.0,
-                    'marketPrice': float(row[4]) if row[4] else 0.0,
-                    'marketValue': float(row[5]) if row[5] else 0.0,
-                    'averageCost': float(row[6]) if row[6] else 0.0,
-                    'unrealizedPNL': float(row[7]) if row[7] else 0.0,
-                    'realizedPNL': float(row[8]) if row[8] else 0.0,
-                    'account': row[9]
-                }
-                positions.append(position)
-            
-            # Format output string for display
-            formatted_output = f"Retrieved {len(positions)} positions from database for user: {user_name}"
-            
-            return positions, formatted_output
+        # Use the new utility function to get the portfolio as a DataFrame
+        portfolio_df = retrieve_user_current_portfolio_from_db(user_id=user_id, email=email)
+
+        if portfolio_df is None or portfolio_df.empty:
+            return [], f"No positions found in database for user_id: {user_id} or email: {email}."
+
+        # Sort by timestamp to get the most recent for each symbol and account, then drop duplicates
+        portfolio_df = portfolio_df.sort_values('fetch_timestamp', ascending=False).drop_duplicates(subset=['symbol', 'account'])
+        
+        # Format positions to match the expected structure
+        positions = []
+        for _, row in portfolio_df.iterrows():
+            position = {
+                'symbol': row.get('symbol'),
+                'secType': row.get('secType'),
+                'currency': row.get('currency'),
+                'position': float(row.get('position', 0.0) or 0.0),
+                'marketPrice': float(row.get('marketPrice', 0.0) or 0.0),
+                'marketValue': float(row.get('marketValue', 0.0) or 0.0),
+                'averageCost': float(row.get('averageCost', 0.0) or 0.0),
+                'unrealizedPNL': float(row.get('unrealizedPNL', 0.0) or 0.0),
+                'realizedPNL': float(row.get('realizedPNL', 0.0) or 0.0),
+                'account': row.get('account')
+            }
+            positions.append(position)
+        
+        # Format output string for display
+        formatted_output = f"Retrieved {len(positions)} positions from database for user_id: {user_id}"
+        
+        return positions, formatted_output
             
     except Exception as e:
         print(f"Error retrieving holdings from database: {e}")
         return [], f"Error retrieving holdings: {str(e)}"
 
-def format_to_json():
+def format_to_json(user_id: str, email: str):
     """
     Format comprehensive portfolio data into JSON for Phase One analysis.
     
@@ -73,14 +68,15 @@ def format_to_json():
     correlations, and formats everything into a JSON structure for LLM consumption.
     
     Args:
-        None
+        user_id (str): The user ID to fetch data for.
+        email (str): The user's email to fetch data for.
         
     Returns:
         str: JSON string containing comprehensive portfolio data including positions,
         metrics, performance, and correlations with rounded numeric values.
     """
     # Get holdings from database instead of IBKR
-    positions, formatted_output = get_holdings_from_database()
+    positions, formatted_output = get_holdings_from_database(user_id=user_id, email=email)
             
     # Prepare default placeholders so that the later payload build does not
     # raise ``UnboundLocalError`` when the portfolio is empty.

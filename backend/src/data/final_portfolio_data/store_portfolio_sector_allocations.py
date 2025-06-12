@@ -41,12 +41,10 @@ DB_USER = os.environ.get("DB_USER")
 DB_PASSWORD = os.environ.get("DB_PASSWORD")
 DB_HOST = os.environ.get("DB_HOST")
 DB_PORT = os.environ.get("DB_PORT", "5432")
-USER_NAME = os.environ.get("USER_NAME")
 
-if not all([DB_USER, DB_PASSWORD, DB_HOST, USER_NAME]):
+if not all([DB_USER, DB_PASSWORD, DB_HOST]):
     raise RuntimeError(
-        "Database credentials (DB_USER, DB_PASSWORD, DB_HOST) and USER_NAME "
-        "must be set in .env or environment"
+        "Database credentials (DB_USER, DB_PASSWORD, DB_HOST) must be set in .env or environment"
     )
 
 
@@ -101,7 +99,9 @@ def _ensure_database_exists(db_name: str) -> None:
 # Public API
 # ---------------------------------------------------------------------------
 
-def store_portfolio_sector_allocations(portfolio: dict | str, portfolio_name: str) -> uuid.UUID:
+def store_portfolio_sector_allocations(
+    portfolio: dict | str, portfolio_name: str, user_id: str, email: str
+) -> uuid.UUID:
     """
     Store Phase One optimization results to the database.
     
@@ -111,6 +111,8 @@ def store_portfolio_sector_allocations(portfolio: dict | str, portfolio_name: st
     Args:
         portfolio: Dictionary or JSON string containing portfolio allocation data.
         portfolio_name: User-chosen name for this portfolio.
+        user_id: The ID of the user.
+        email: The email of the user.
         
     Returns:
         uuid.UUID: The generated portfolio_id from the portfolios table.
@@ -180,7 +182,8 @@ def store_portfolio_sector_allocations(portfolio: dict | str, portfolio_name: st
                 """
                 CREATE TABLE IF NOT EXISTS {schema}.{table} (
                     portfolio_id UUID PRIMARY KEY,
-                    user_name VARCHAR(255) NOT NULL,
+                    user_id VARCHAR(255) NOT NULL,
+                    email VARCHAR(255) NOT NULL,
                     portfolio_name VARCHAR(255) NOT NULL,
                     created_at TIMESTAMP DEFAULT now()
                 );
@@ -194,15 +197,15 @@ def store_portfolio_sector_allocations(portfolio: dict | str, portfolio_name: st
             # Insert into portfolios table - REMOVED ON CONFLICT clause
             insert_portfolio_sql = sql.SQL(
                 """
-                INSERT INTO {schema}.{table} (portfolio_id, user_name, portfolio_name)
-                VALUES (%s, %s, %s)
+                INSERT INTO {schema}.{table} (portfolio_id, user_id, email, portfolio_name)
+                VALUES (%s, %s, %s, %s)
                 RETURNING portfolio_id; 
                 """
             ).format(schema=sql.Identifier(schema_name), table=sql.Identifier(portfolios_table))
             
             cur.execute(
                 insert_portfolio_sql, 
-                (current_portfolio_id, USER_NAME, portfolio_name)
+                (current_portfolio_id, user_id, email, portfolio_name)
             )
             result = cur.fetchone()
             # The returned portfolio_id should now always be the newly generated current_portfolio_id
@@ -222,7 +225,8 @@ def store_portfolio_sector_allocations(portfolio: dict | str, portfolio_name: st
                 """
                 CREATE TABLE IF NOT EXISTS {schema}.{table} (
                     portfolio_id UUID NOT NULL REFERENCES {schema}.{pf_table}(portfolio_id) ON DELETE CASCADE,
-                    user_name VARCHAR(255) NOT NULL,
+                    user_id VARCHAR(255) NOT NULL,
+                    email VARCHAR(255) NOT NULL,
                     portfolio_name VARCHAR(255) NOT NULL,
                     asset_class VARCHAR(255) NOT NULL,
                     allocation NUMERIC(10,3),
@@ -239,16 +243,17 @@ def store_portfolio_sector_allocations(portfolio: dict | str, portfolio_name: st
             
             psa_rows = []
             for item_tuple in df.itertuples(index=False, name=None):
-                psa_rows.append((current_portfolio_id, USER_NAME, portfolio_name) + item_tuple)
+                psa_rows.append((current_portfolio_id, user_id, email, portfolio_name) + item_tuple)
             
             insert_psa_sql = sql.SQL(
                 """
-                INSERT INTO {schema}.{table} (portfolio_id, user_name, portfolio_name, asset_class, allocation, reason)
+                INSERT INTO {schema}.{table} (portfolio_id, user_id, email, portfolio_name, asset_class, allocation, reason)
                 VALUES %s
                 ON CONFLICT (portfolio_id, asset_class) DO UPDATE SET
                     allocation = EXCLUDED.allocation,
                     reason = EXCLUDED.reason,
-                    user_name = EXCLUDED.user_name, 
+                    user_id = EXCLUDED.user_id,
+                    email = EXCLUDED.email, 
                     portfolio_name = EXCLUDED.portfolio_name;
                 """
             ).format(
@@ -264,8 +269,9 @@ def store_portfolio_sector_allocations(portfolio: dict | str, portfolio_name: st
                 """
                 CREATE TABLE IF NOT EXISTS {schema}.{table} (
                     portfolio_id UUID PRIMARY KEY REFERENCES {schema}.{pf_table}(portfolio_id) ON DELETE CASCADE,
-                    user_name VARCHAR(255) NOT NULL, 
-                    portfolio_name VARCHAR(255) NOT NULL, 
+                    user_id VARCHAR(255) NOT NULL,
+                    email VARCHAR(255) NOT NULL,
+                    portfolio_name VARCHAR(255) NOT NULL,
                     generated_at TIMESTAMP DEFAULT now(),
                     thesis TEXT NOT NULL,
                     extra JSONB DEFAULT '{{}}'::jsonb
@@ -282,11 +288,12 @@ def store_portfolio_sector_allocations(portfolio: dict | str, portfolio_name: st
             if thesis_text:
                 insert_thesis_sql = sql.SQL(
                     """
-                    INSERT INTO {schema}.{table} (portfolio_id, user_name, portfolio_name, thesis) 
-                    VALUES (%s, %s, %s, %s)
+                    INSERT INTO {schema}.{table} (portfolio_id, user_id, email, portfolio_name, thesis) 
+                    VALUES (%s, %s, %s, %s, %s)
                     ON CONFLICT (portfolio_id) DO UPDATE SET
                         thesis = EXCLUDED.thesis,
-                        user_name = EXCLUDED.user_name,
+                        user_id = EXCLUDED.user_id,
+                        email = EXCLUDED.email,
                         portfolio_name = EXCLUDED.portfolio_name,
                         generated_at = EXCLUDED.generated_at;
                     """
@@ -294,7 +301,7 @@ def store_portfolio_sector_allocations(portfolio: dict | str, portfolio_name: st
                     schema=sql.Identifier(schema_name), 
                     table=sql.Identifier(portfolio_thesis_table)
                 )
-                cur.execute(insert_thesis_sql, (current_portfolio_id, USER_NAME, portfolio_name, thesis_text))
+                cur.execute(insert_thesis_sql, (current_portfolio_id, user_id, email, portfolio_name, thesis_text))
 
         conn.commit()
 
@@ -306,8 +313,10 @@ def store_portfolio_sector_allocations(portfolio: dict | str, portfolio_name: st
 
 if __name__ == "__main__":
     # Example: Ensure USER_NAME is in your .env or environment for this test
-    if not USER_NAME:
-        print("Please set USER_NAME in your environment for the test to run.")
+    test_user_id = "user_01JXG39MMAVW1P3XVGX7YHN2DT"
+    test_email = "michael@laret.com"
+    if not test_user_id or not test_email:
+        print("Please set test_user_id and test_email for the test to run.")
     else:
         # The f-string with uuid.uuid4().hex[:8] ensures unique portfolio name for each test run
         test_portfolio_name = f"MyTestPortfolio_{uuid.uuid4().hex[:8]}" 
@@ -369,18 +378,22 @@ if __name__ == "__main__":
         }
 
         try:
-            print(f"--- Running Test for User: {USER_NAME}, Portfolio: {test_portfolio_name} ---")
+            print(f"--- Running Test for User: {test_user_id}, Portfolio: {test_portfolio_name} ---")
             
             # 1. Store sector allocations and thesis, get portfolio_id
             print("1. Storing sector allocations and thesis...")
-            created_portfolio_id = store_portfolio_sector_allocations(sector_portfolio_data, test_portfolio_name)
+            created_portfolio_id = store_portfolio_sector_allocations(
+                sector_portfolio_data, test_portfolio_name, test_user_id, test_email
+            )
             print(f"   Successfully stored. Portfolio UUID: {created_portfolio_id}")
 
             # 2. Store final portfolio (ticker details)
             # Need to import store_final_portfolio at the top of the file if not already done for __main__
             from .store_final_portfolio import store_final_portfolio
             print("\n2. Storing final portfolio (ticker details)...")
-            store_final_portfolio(final_portfolio_data, created_portfolio_id, test_portfolio_name)
+            store_final_portfolio(
+                final_portfolio_data, created_portfolio_id, test_portfolio_name, test_user_id, test_email
+            )
             print(f"   Successfully stored final portfolio details for Portfolio UUID: {created_portfolio_id}")
 
             # 3. Store user information
@@ -388,7 +401,7 @@ if __name__ == "__main__":
             from .store_user_information import store_user_information
             # (Assuming get_user_information() in store_user_information.py fetches/returns some mock data for testing)
             print("\n3. Storing user information...")
-            store_user_information(created_portfolio_id, test_portfolio_name)
+            store_user_information(created_portfolio_id, test_portfolio_name, test_user_id, test_email)
             print(f"   Successfully stored user information for Portfolio UUID: {created_portfolio_id}")
 
             print("\n--- Test Completed Successfully ---")

@@ -34,14 +34,11 @@ from .store_portfolio_sector_allocations import (
 
 __all__ = ["store_user_information"]
 
-# Added: Get USER_NAME from environment
-USER_NAME = os.environ.get("USER_NAME")
-if not USER_NAME:
-    print("Warning: USER_NAME environment variable is not set. It will be required by a calling function.")
-
 def store_user_information(
     portfolio_id: uuid.UUID,
-    portfolio_name: str
+    portfolio_name: str,
+    user_id: str,
+    email: str
 ) -> None:
     """
     Store user profile information linked to a portfolio.
@@ -52,6 +49,8 @@ def store_user_information(
     Args:
         portfolio_id: The UUID of the portfolio this user information snapshot is associated with.
         portfolio_name: The name of the portfolio.
+        user_id: The ID of the user.
+        email: The email of the user.
         
     Returns:
         None
@@ -81,7 +80,8 @@ def store_user_information(
                     """
                     CREATE TABLE IF NOT EXISTS {schema}.{table} (
                         portfolio_id UUID PRIMARY KEY REFERENCES {schema}.{pf_table}(portfolio_id) ON DELETE CASCADE,
-                        user_name VARCHAR(255) NOT NULL,
+                        user_id VARCHAR(255) NOT NULL,
+                        email VARCHAR(255) NOT NULL,
                         portfolio_name VARCHAR(255) NOT NULL,
                         created_at TIMESTAMP DEFAULT now(),
                         profile JSONB NOT NULL
@@ -95,17 +95,18 @@ def store_user_information(
             )
 
             insert_sql = sql.SQL(
-                """INSERT INTO {schema}.{table} (portfolio_id, user_name, portfolio_name, profile) 
-                   VALUES (%s, %s, %s, %s)
+                """INSERT INTO {schema}.{table} (portfolio_id, user_id, email, portfolio_name, profile) 
+                   VALUES (%s, %s, %s, %s, %s)
                    ON CONFLICT (portfolio_id) DO UPDATE SET
-                       user_name = EXCLUDED.user_name,
+                       user_id = EXCLUDED.user_id,
+                       email = EXCLUDED.email,
                        portfolio_name = EXCLUDED.portfolio_name,
                        profile = EXCLUDED.profile,
                        created_at = EXCLUDED.created_at;
                 """
             ).format(schema=sql.Identifier(schema_to_use), table=sql.Identifier(table))
             
-            cur.execute(insert_sql, (portfolio_id, USER_NAME, portfolio_name, Json(user_payload)))
+            cur.execute(insert_sql, (portfolio_id, user_id, email, portfolio_name, Json(user_payload)))
             conn.commit()
 
 

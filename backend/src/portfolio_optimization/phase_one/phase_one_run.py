@@ -28,7 +28,7 @@ load_dotenv()
 
 model, client = openai_model_and_client()
 
-def optimize():
+def optimize(user_id: str, email: str):
     """
     Execute Phase One portfolio optimization using LLM with analyst tools.
     
@@ -36,7 +36,8 @@ def optimize():
     web searches, and LLM-based portfolio recommendations with validation and formatting.
     
     Args:
-        None
+        user_id (str): The user ID to fetch data for.
+        email (str): The user's email to fetch data for.
         
     Returns:
         Dict: Portfolio JSON containing validated asset class allocations and reasoning,
@@ -88,7 +89,7 @@ def optimize():
 
     # Build dynamic user prompt content using helper
     # build_user_message now fetches and formats data internally.
-    content = build_user_message()
+    content = build_user_message(user_id=user_id, email=email)
 
     # Write prompts to the output file
     with open(output_filename, "a", encoding="utf-8") as f:
@@ -306,7 +307,7 @@ def optimize():
             # Ensure get_user_information is always first
             phase1_tools = ["get_user_information"] + [t for t in analyst_tools.keys() if t != "get_user_information"]
             phase2_min_searches = 4
-            phase2_max_searches = 10
+            phase2_max_searches = 12
             
             # Track tool usage
             tool_calls_so_far = []
@@ -541,5 +542,8 @@ def optimize():
         return {"portfolio": []}
 
 if __name__ == "__main__":
-    final_portfolio = optimize()
+    # Example usage with mock user data
+    test_user_id = "user_01JXG39MMAVW1P3XVGX7YHN2DT"
+    test_email = "michael@laret.com"
+    final_portfolio = optimize(user_id=test_user_id, email=test_email)
     print(final_portfolio)

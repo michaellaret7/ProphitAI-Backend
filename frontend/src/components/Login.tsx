@@ -1,23 +1,11 @@
-import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import React from 'react';
 import './Login.css';
 import logo from '../assets/logo.png';
 
 const Login: React.FC = () => {
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [rememberMe, setRememberMe] = useState(false);
-  const navigate = useNavigate();
-
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    
-    // Development login - check if both email and password are "1"
-    if (email === '1' && password === '1') {
-      navigate('/dashboard');
-    } else {
-      alert('For development, use email: 1 and password: 1');
-    }
+  const handleLogin = () => {
+    // Redirect to the backend login endpoint which will then redirect to WorkOS
+    window.location.href = 'http://localhost:8000/auth/login';
   };
 
   return (
@@ -33,7 +21,7 @@ const Login: React.FC = () => {
             <a href="#" className="nav-link">Services</a>
             <a href="#" className="nav-link">About</a>
             <a href="#" className="nav-link">Contact</a>
-            <button className="nav-login-btn">Login</button>
+            <button className="nav-login-btn" onClick={handleLogin}>Login</button>
             <button className="nav-signup-btn">Sign Up</button>
           </div>
         </div>
@@ -42,72 +30,14 @@ const Login: React.FC = () => {
       <div className="login-container">
         <div className="login-left">
           <div className="login-form-container">
-            <h1 className="login-title">Welcome Back</h1>
+            <h1 className="login-title">Welcome</h1>
             <p className="login-subtitle">Log in to access your portfolio dashboard</p>
             
-            <form onSubmit={handleSubmit} className="login-form">
-              <div className="form-group">
-                <label htmlFor="email" className="form-label">Email Address</label>
-                <input
-                  type="text"
-                  id="email"
-                  className="form-input"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  placeholder="For dev: enter 1"
-                  required
-                />
-              </div>
-              
-              <div className="form-group">
-                <label htmlFor="password" className="form-label">Password</label>
-                <div className="password-input-wrapper">
-                  <input
-                    type="password"
-                    id="password"
-                    className="form-input"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    placeholder="For dev: enter 1"
-                    required
-                  />
-                  <button type="button" className="password-toggle">
-                    👁
-                  </button>
-                </div>
-              </div>
-              
-              <div className="form-options">
-                <label className="remember-me">
-                  <input
-                    type="checkbox"
-                    checked={rememberMe}
-                    onChange={(e) => setRememberMe(e.target.checked)}
-                  />
-                  <span>Remember me</span>
-                </label>
-                <a href="#" className="forgot-password">Forgot password?</a>
-              </div>
-              
-              <button type="submit" className="login-button">
-                Log In
-              </button>
-            </form>
+            <button onClick={handleLogin} className="login-button">
+              Sign In
+            </button>
             
-            <div className="divider">
-              <span>or login with</span>
-            </div>
-            
-            <div className="social-login">
-              <button className="social-button google">
-                <span className="social-icon">G</span> Google
-              </button>
-              <button className="social-button apple">
-                <span className="social-icon">🍎</span> Apple
-              </button>
-            </div>
-            
-            <p className="signup-link">
+            <p className="signup-link" style={{ marginTop: '2rem' }}>
               Don't have an account? <a href="#">Sign up</a>
             </p>
           </div>

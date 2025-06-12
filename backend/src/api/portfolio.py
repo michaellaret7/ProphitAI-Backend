@@ -1,4 +1,4 @@
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Depends
 from typing import List, Dict, Any, Optional
 from backend.src.utils.database import get_cursor
 import psycopg2
@@ -9,6 +9,8 @@ from datetime import datetime, timedelta
 from backend.src.utils.data_retrieval import get_price_data
 from backend.src.utils.financial_calculations import calculate_total_return
 import numpy as np
+from backend.src.auth import get_current_user
+from backend.src.utils.retrieve_portfolio_from_db import get_portfolio_allocations, retrieve_user_current_portfolio_from_db
 
 router = APIRouter()
 
@@ -89,177 +91,174 @@ class PortfolioPerformanceResponse(BaseModel):
     dbcTotalReturn: Optional[float] = None
     eemTotalReturn: Optional[float] = None
 
-@router.get("/portfolio/allocation/{portfolio_id}")
-async def get_portfolio_allocation(portfolio_id: str):
+# THESE ARE FOR THE OPTIMIZED/BUILT PORTFOLIOS
+@router.get("/portfolio/allocation")
+async def get_portfolio_allocation(current_user=Depends(get_current_user)):
     """
-    Retrieve portfolio sector allocation data with color assignments.
+    Retrieve all portfolio sector allocations for the currently authenticated user.
     
-    Queries the portfolio_sector_allocation table for the given portfolio ID
-    and returns formatted sector allocation percentages with assigned colors
-    for visualization purposes.
+    Queries the portfolio_sector_allocation table for the given user_id
+    and returns all associated sector allocations.
     
     Args:
-        portfolio_id: The portfolio identifier UUID.
+        current_user: The authenticated user object, injected by dependency.
         
     Returns:
-        Dict containing sectors array with allocation data including name, percentage, and color.
+        Dict containing sectors array with allocation data.
         
     Raises:
-        HTTPException: 404 if no allocation data found for the portfolio,
+        HTTPException: 404 if no allocation data is found for the user,
+                      401 if user is not authenticated,
                       500 if database query fails.
     """
     
-    schema_name = "public"
-    table_name = "portfolio_sector_allocation"
-    db_name = "portfolio_results" # Assuming this is still the correct DB name
-    
+    user_id = current_user.id
+    portfolio_id = "b0914b3f-a203-47e5-b602-af0a28d824f0" # As requested
+
     try:
-        # Query to get allocation data for the specified portfolio_id
-        query = psycopg2.sql.SQL("""
-        SELECT asset_class, allocation 
-        FROM {}.{} 
-        WHERE portfolio_id = %s AND allocation > 0
-        ORDER BY allocation DESC -- Ensure consistent color assignment for same dataset
-        """).format(psycopg2.sql.Identifier(schema_name), psycopg2.sql.Identifier(table_name))
+        # Use the existing function to get portfolio allocations
+        allocations_df = get_portfolio_allocations(portfolio_id=portfolio_id, user_id=user_id)
         
-        with get_cursor(dbname=db_name) as cursor:
-            cursor.execute(query, (portfolio_id,))
-            results = cursor.fetchall()
+        # The function returns None on DB error, or an empty DataFrame if no records found.
+        if allocations_df is None:
+            # This indicates a database error inside get_portfolio_allocations
+            raise HTTPException(status_code=500, detail="Database error processing portfolio allocation.")
+
+        if allocations_df.empty:
+            raise HTTPException(status_code=404, detail="No allocation data found for the current user.")
             
-            if not results:
-                raise HTTPException(status_code=404, detail=f"No allocation data found for portfolio_id {portfolio_id}")
+        # Filter for allocations > 0 and sort
+        allocations_df = allocations_df[allocations_df['allocation'] > 0]
+        allocations_df = allocations_df.sort_values(by='allocation', ascending=False)
+
+        # Process data
+        final_sectors = []
+        assigned_fallback_colors = 0
+        
+        for _, row in allocations_df.iterrows():
+            asset_class = row['asset_class']
+            allocation_value_from_db = row['allocation']
             
-            # Process data
-            final_sectors = []
-            assigned_fallback_colors = 0
+            sector_name_formatted = str(asset_class).replace('_', ' ').title()
+            allocation_percent = float(allocation_value_from_db)
             
-            for asset_class, allocation_value_from_db in results:
-                sector_name_formatted = str(asset_class).replace('_', ' ').title()
-                allocation_percent = float(allocation_value_from_db)
+            color = DEFAULT_UNASSIGNED_COLOR # Start with a base default
+
+            # Check specific overrides first
+            if sector_name_formatted in SPECIFIC_SECTOR_COLORS:
+                color = SPECIFIC_SECTOR_COLORS[sector_name_formatted]
+            elif asset_class in SPECIFIC_SECTOR_COLORS: # Check raw asset_class too
+                 color = SPECIFIC_SECTOR_COLORS[asset_class]
+            else:
+                # Cycle through fallback colors for unassigned sectors
+                if assigned_fallback_colors < len(FALLBACK_COLORS):
+                    color = FALLBACK_COLORS[assigned_fallback_colors]
+                    assigned_fallback_colors += 1
+                # If more sectors than fallback colors, they'll get DEFAULT_UNASSIGNED_COLOR
                 
-                color = DEFAULT_UNASSIGNED_COLOR # Start with a base default
-
-                # Check specific overrides first
-                if sector_name_formatted in SPECIFIC_SECTOR_COLORS:
-                    color = SPECIFIC_SECTOR_COLORS[sector_name_formatted]
-                elif asset_class in SPECIFIC_SECTOR_COLORS: # Check raw asset_class too
-                     color = SPECIFIC_SECTOR_COLORS[asset_class]
-                else:
-                    # Cycle through fallback colors for unassigned sectors
-                    if assigned_fallback_colors < len(FALLBACK_COLORS):
-                        color = FALLBACK_COLORS[assigned_fallback_colors]
-                        assigned_fallback_colors += 1
-                    # If more sectors than fallback colors, they'll get DEFAULT_UNASSIGNED_COLOR
-                    # or you could implement a hashing function here for more unique colors:
-                    # else: color = "#" + hashlib.md5(asset_class.encode()).hexdigest()[:6]
-                                    
-                final_sectors.append({
-                    "name": sector_name_formatted,
-                    "percentage": round(allocation_percent, 2),
-                    "color": color,
-                    # "raw_asset_class": asset_class # Keep if needed for debugging or other logic
-                })
-            
-            return {"sectors": final_sectors}
-            
-    except psycopg2.Error as e:
-        # It's good practice to log the error e on the server side for debugging
-        print(f"Database error for portfolio_id {portfolio_id}: {e}")
-        raise HTTPException(status_code=500, detail=f"Database error processing portfolio allocation.")
+            final_sectors.append({
+                "name": sector_name_formatted,
+                "percentage": round(allocation_percent, 2),
+                "color": color,
+            })
+        
+        return {"sectors": final_sectors}
+        
+    except HTTPException:
+        # Re-raise HTTPExceptions to let FastAPI handle them
+        raise
     except Exception as e:
-        # Log other unexpected errors
-        print(f"Unexpected error for portfolio_id {portfolio_id}: {e}")
-        raise HTTPException(status_code=500, detail=f"Internal server error processing portfolio allocation.") 
+        print(f"Unexpected error for user_id {user_id}: {e}")
+        raise HTTPException(status_code=500, detail="Internal server error processing portfolio allocation.")
 
-@router.get("/portfolio/holdings/{user_name}", response_model=PortfolioHoldingsResponse)
-async def get_portfolio_holdings(user_name: str):
+# THIS IS FOR THE OPTIMIZED/BUILT PORTFOLIOS
+@router.get("/portfolio/holdings", response_model=PortfolioHoldingsResponse)
+async def get_portfolio_holdings(current_user=Depends(get_current_user)):
     """
-    Retrieve portfolio holdings data for a specific user.
+    Retrieve portfolio holdings data for the currently authenticated user.
     
-    Queries the user_portfolios table to fetch all stock holdings for the given user,
+    Queries the user_portfolios table to fetch all stock holdings for the logged-in user,
     including position sizes, current prices, market values, and P&L calculations.
-    
-    Args:
-        user_name: The username to retrieve holdings for.
         
     Returns:
         PortfolioHoldingsResponse: Object containing list of holdings with market values and percentages.
         
     Raises:
-        HTTPException: 500 error if database query fails.
+        HTTPException: 500 error if database query fails or 401 if user is not authenticated.
     """
-    db_name = "user_data"
-    schema_name = "public"
-    table_name = "user_portfolios"
-
-    query = psycopg2.sql.SQL("""
-        SELECT symbol, position, marketprice, marketvalue, unrealizedpnl
-        FROM {}.{}
-        WHERE user_name = %s AND sectype = 'STK'
-    """).format(psycopg2.sql.Identifier(schema_name), psycopg2.sql.Identifier(table_name))
+    user_id = current_user.id 
 
     try:
-        with get_cursor(dbname=db_name) as cursor:
-            cursor.execute(query, (user_name,))
-            raw_holdings = cursor.fetchall()
+        holdings_df = retrieve_user_current_portfolio_from_db(user_id=user_id)
 
-            if not raw_holdings:
-                # Return empty list if no holdings found, not an error
-                return PortfolioHoldingsResponse(holdings=[])
+        if holdings_df is None:
+            raise HTTPException(status_code=500, detail="Database error retrieving portfolio holdings.")
 
-            holdings_data = []
-            total_portfolio_value = 0.0
+        if holdings_df.empty:
+            return PortfolioHoldingsResponse(holdings=[])
 
-            for row in raw_holdings:
-                symbol, quantity, current_price, market_value, unrealized_pnl = row
-                
-                quantity = float(quantity) if quantity is not None else 0.0
-                current_price = float(current_price) if current_price is not None else 0.0
-                market_value = float(market_value) if market_value is not None else 0.0
-                unrealized_pnl = float(unrealized_pnl) if unrealized_pnl is not None else 0.0
+        # Filter for STK security type, which was part of the original query
+        holdings_df = holdings_df[holdings_df['sectype'] == 'STK']
+        
+        if holdings_df.empty:
+            return PortfolioHoldingsResponse(holdings=[])
 
-                cost_basis = market_value - unrealized_pnl
-                pnl_percent = (unrealized_pnl / cost_basis) * 100 if cost_basis != 0 else 0.0
-                
-                holdings_data.append({
-                    "symbol": symbol,
-                    "quantity": quantity,
-                    "currentPrice": current_price,
-                    "marketValue": market_value,
-                    "pnl": unrealized_pnl,
-                    "pnlPercent": round(pnl_percent, 2),
-                    # portfolioPercent will be calculated in the next loop
-                })
-                total_portfolio_value += market_value
+        holdings_data = []
+        total_portfolio_value = 0.0
+
+        for _, row in holdings_df.iterrows():
+            # Ensure correct column names from the dataframe
+            symbol = row['symbol']
+            quantity = row['position']
+            current_price = row['marketprice']
+            market_value = row['marketvalue']
+            unrealized_pnl = row['unrealizedpnl']
             
-            # Calculate portfolioPercent for each holding
-            final_holdings = []
-            if total_portfolio_value > 0:
-                for holding in holdings_data:
-                    portfolio_percent = (holding["marketValue"] / total_portfolio_value) * 100
-                    final_holdings.append(HoldingBase(
-                        **holding,
-                        portfolioPercent=round(portfolio_percent, 2)
-                    ))
-            else: # Handle case with zero total value (e.g. all market values are zero)
-                 for holding in holdings_data:
-                    final_holdings.append(HoldingBase(
-                        **holding,
-                        portfolioPercent=0.0
-                    ))
+            quantity = float(quantity) if quantity is not None else 0.0
+            current_price = float(current_price) if current_price is not None else 0.0
+            market_value = float(market_value) if market_value is not None else 0.0
+            unrealized_pnl = float(unrealized_pnl) if unrealized_pnl is not None else 0.0
 
+            cost_basis = market_value - unrealized_pnl
+            pnl_percent = (unrealized_pnl / cost_basis) * 100 if cost_basis != 0 else 0.0
+            
+            holdings_data.append({
+                "symbol": symbol,
+                "quantity": quantity,
+                "currentPrice": current_price,
+                "marketValue": market_value,
+                "pnl": unrealized_pnl,
+                "pnlPercent": round(pnl_percent, 2),
+                # portfolioPercent will be calculated in the next loop
+            })
+            total_portfolio_value += market_value
+        
+        final_holdings = []
+        if total_portfolio_value > 0:
+            for holding in holdings_data:
+                portfolio_percent = (holding["marketValue"] / total_portfolio_value) * 100
+                final_holdings.append(HoldingBase(
+                    **holding,
+                    portfolioPercent=round(portfolio_percent, 2)
+                ))
+        else: 
+             for holding in holdings_data:
+                final_holdings.append(HoldingBase(
+                    **holding,
+                    portfolioPercent=0.0
+                ))
 
-            return PortfolioHoldingsResponse(holdings=final_holdings)
-
-    except psycopg2.Error as e:
-        print(f"Database error for user_name {user_name}: {e}")
-        raise HTTPException(status_code=500, detail=f"Database error retrieving portfolio holdings.")
+        return PortfolioHoldingsResponse(holdings=final_holdings)
+    
+    except HTTPException:
+        raise
     except Exception as e:
-        print(f"Unexpected error for user_name {user_name}: {e}")
+        print(f"Unexpected error for user_id {user_id}: {e}")
         raise HTTPException(status_code=500, detail=f"Internal server error retrieving portfolio holdings.") 
 
-@router.get("/portfolio/performance/{user_id}", response_model=PortfolioPerformanceResponse)
-async def get_portfolio_performance(user_id: str, days: int = 365):
+# THESE ARE FOR THE USERS CURRENT PORTFOLIO FROM THEIR BROKER
+@router.get("/portfolio/performance", response_model=PortfolioPerformanceResponse)
+async def get_portfolio_performance(days: int = 365, current_user=Depends(get_current_user)):
     """
     Calculate and retrieve historical portfolio performance metrics for a user.
     
@@ -268,8 +267,8 @@ async def get_portfolio_performance(user_id: str, days: int = 365):
     multiple benchmark ETFs (SPY, QQQ, IWM, GLD, DBC, EEM).
     
     Args:
-        user_id: The user identifier UUID.
         days: Number of days of historical data to retrieve (default: 365)
+        current_user: The authenticated user object, injected by dependency.
         
     Returns:
         PortfolioPerformanceResponse: Object containing performance data with values, 
@@ -283,6 +282,7 @@ async def get_portfolio_performance(user_id: str, days: int = 365):
     db_name = "user_data"
     schema_name = "public"
     table_name = "user_portfolios"
+    user_id = current_user.id
     
     try:
         # Step 1: Get the user's current portfolio holdings
@@ -297,7 +297,7 @@ async def get_portfolio_performance(user_id: str, days: int = 365):
             holdings = cursor.fetchall()
             
             if not holdings:
-                raise HTTPException(status_code=404, detail=f"No holdings found for user_id {user_id}")
+                raise HTTPException(status_code=404, detail=f"No holdings found for the current user.")
         
         # Step 2: Calculate date range
         # current_date = datetime.now()
@@ -589,5 +589,5 @@ async def get_portfolio_performance(user_id: str, days: int = 365):
     except HTTPException:
         raise
     except Exception as e:
-        print(f"Error getting portfolio performance for user_id {user_id}: {e}")
+        print(f"Error getting portfolio performance for user {user_id}: {e}")
         raise HTTPException(status_code=500, detail=f"Internal server error retrieving portfolio performance.") 

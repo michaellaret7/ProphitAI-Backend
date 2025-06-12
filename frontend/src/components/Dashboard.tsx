@@ -6,6 +6,7 @@ import Portfolio from './Portfolio';
 import AiInsightsPage from './AiInsightsPage';
 import ProphitGpt from './ProphitGpt';
 import ProphitAlts from './ProphitAlts';
+import Optimize from './Optimize';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import {
     faChartPie, faLightbulb, faTasks, faHistory,
@@ -100,10 +101,16 @@ const Dashboard: React.FC = () => {
       setIsLoadingAllocation(true);
       setAllocationError(null);
       try {
-        const portfolioId = "f0e3e97b-ff5c-48a2-93e9-d8a1fa84c75b"; // Hardcoded portfolio_id
-        const response = await fetch(`http://localhost:8000/api/portfolio/allocation/${portfolioId}`);
+        const response = await fetch(`http://localhost:8000/api/portfolio/allocation`, {
+          credentials: 'include',
+        });
+
         if (!response.ok) {
           const errorData = await response.json();
+          if (response.status === 401) {
+            window.location.href = 'http://localhost:8000/auth/login';
+            return;
+          }
           throw new Error(errorData.detail || `HTTP error! status: ${response.status}`);
         }
         const data = await response.json();
@@ -138,8 +145,6 @@ const Dashboard: React.FC = () => {
       setIsLoadingPerformance(true);
       setPerformanceError(null);
       try {
-        const userId = "2594bb4d-784c-4c53-a049-8438baaf0d7c"; // User ID from the request
-        
         // Determine days based on selected timeframe
         let days = 365; // Default
         switch (selectedTimeframe) {
@@ -149,9 +154,16 @@ const Dashboard: React.FC = () => {
           case 'All': days = 1825; break; // 5 years
         }
         
-        const response = await fetch(`http://localhost:8000/api/portfolio/performance/${userId}?days=${days}`);
+        const response = await fetch(`http://localhost:8000/api/portfolio/performance?days=${days}`, {
+          credentials: 'include', // Ensures auth cookies are sent
+        });
+        
         if (!response.ok) {
           const errorData = await response.json();
+          if (response.status === 401) {
+            window.location.href = 'http://localhost:8000/auth/login';
+            return;
+          }
           throw new Error(errorData.detail || `HTTP error! status: ${response.status}`);
         }
         const data = await response.json();
@@ -390,6 +402,8 @@ const Dashboard: React.FC = () => {
         return <Portfolio />;
       case 'manager':
         return <AiInsightsPage />;
+      case 'optimizer':
+        return <Optimize />;
       case 'builder':
         return <Portfolio />;
       case 'prophitgpt':
@@ -826,11 +840,28 @@ const Dashboard: React.FC = () => {
               <img src={ibkrLogo} alt="Interactive Brokers" className="broker-logo-header" />
               <span className="broker-status-text connected">Connected</span>
             </div>
-            <div className="user-profile">
-              <img src="https://ui-avatars.com/api/?name=John+Doe&background=5b4cdb&color=fff" alt="User" className="user-avatar" />
-              <span className="user-name">John Doe</span>
-              <span className="dropdown-arrow">▼</span>
-            </div>
+            <Menu as="div" className="user-profile">
+              <MenuButton className="flex items-center w-full text-left bg-transparent border-none p-0 cursor-pointer">
+                <img src="https://ui-avatars.com/api/?name=John+Doe&background=5b4cdb&color=fff" alt="User" className="user-avatar" />
+                <span className="user-name">John Doe</span>
+                <span className="dropdown-arrow">▼</span>
+              </MenuButton>
+              <MenuItems
+                anchor="bottom end"
+                className="etf-dropdown-menu"
+              >
+                <MenuItem>
+                  {({ focus }) => (
+                    <a
+                      href="http://localhost:8000/auth/logout"
+                      className={clsx('etf-dropdown-item', focus && 'focus')}
+                    >
+                      Logout
+                    </a>
+                  )}
+                </MenuItem>
+              </MenuItems>
+            </Menu>
           </div>
         </header>
 

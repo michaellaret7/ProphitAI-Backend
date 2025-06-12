@@ -36,9 +36,14 @@ from backend.src.data.final_portfolio_data import (
     store_user_information
 )
 
-def run_workflow() -> Dict[str, Any] | None:
-    """Run phase-one → phase-two workflow and return recommendations JSON.
+def run_workflow(user_id: str, email: str) -> Dict[str, Any] | None:
+    """
+    Run phase-one → phase-two workflow and return recommendations JSON.
     All database operations are deferred until the end of a successful workflow.
+
+    Args:
+        user_id: The ID of the user for whom the workflow is run.
+        email: The email of the user.
     """
     
     phase_one_data: Dict[str, Any] | None = None
@@ -50,7 +55,7 @@ def run_workflow() -> Dict[str, Any] | None:
 
         # ---------------- 1️⃣  Phase-one: Build draft portfolio -----------------
         print("\n🏗️  Running Phase-One optimisation …")
-        phase_one_data = optimize()
+        phase_one_data = optimize(user_id=user_id, email=email)
         if not phase_one_data or "portfolio" not in phase_one_data:
             print("Phase-One did not return a valid portfolio JSON. Aborting database operations.")
             return None
@@ -69,7 +74,7 @@ def run_workflow() -> Dict[str, Any] | None:
         # If we reach here, both phases were successful.
         
         # portfolio_name = f"prophitai_run_{strftime('%Y%m%d_%H%M%S')}"
-        portfolio_name = "techPEportfoliogpt4_1"
+        portfolio_name = "real_data_test_portfolio"
         print(f"\n💾 All phases successful. Preparing to store data for portfolio: {portfolio_name} ...")
 
         # Fetch user information just before storing if it's a separate call.
@@ -80,15 +85,28 @@ def run_workflow() -> Dict[str, Any] | None:
         #     return None
 
         print(f"   Storing sector allocations and thesis for '{portfolio_name}'...")
-        current_portfolio_id: uuid.UUID = store_portfolio_sector_allocations(phase_one_data, portfolio_name)
+        current_portfolio_id: uuid.UUID = store_portfolio_sector_allocations(
+            phase_one_data, portfolio_name, user_id, email
+        )
         print(f"     Portfolio UUID {current_portfolio_id} created/retrieved for '{portfolio_name}'.")
 
         print(f"   Storing final portfolio recommendations for '{portfolio_name}' (UUID: {current_portfolio_id})...")
-        store_final_portfolio(phase_two_recs, portfolio_id=current_portfolio_id, portfolio_name=portfolio_name)
+        store_final_portfolio(
+            phase_two_recs, 
+            portfolio_id=current_portfolio_id, 
+            portfolio_name=portfolio_name,
+            user_id=user_id,
+            email=email
+        )
         print(f"     Final portfolio recommendations stored.")
         
         print(f"   Storing user information for portfolio '{portfolio_name}' (UUID: {current_portfolio_id})...")
-        store_user_information(portfolio_id=current_portfolio_id, portfolio_name=portfolio_name)
+        store_user_information(
+            portfolio_id=current_portfolio_id, 
+            portfolio_name=portfolio_name,
+            user_id=user_id,
+            email=email
+        )
         print(f"     User information stored.")
         
         print("\n✅ All data successfully stored in the database.")
@@ -106,7 +124,10 @@ def run_workflow() -> Dict[str, Any] | None:
 
 if __name__ == "__main__":
     start_time = perf_counter()
-    final_recommendations = run_workflow()
+    # Mock user data for direct script execution
+    test_user_id = "user_01JXG39MMAVW1P3XVGX7YHN2DT"
+    test_email = "michael@laret.com"
+    final_recommendations = run_workflow(user_id=test_user_id, email=test_email)
     elapsed = perf_counter() - start_time
 
     if final_recommendations is not None:

@@ -5,6 +5,8 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from backend.src.api.portfolio import router as portfolio_router
 from backend.src.api.prophitgpt import router as prophitgpt_router
+from backend.src.api.runner import router as runner_router
+from backend.src.auth.routes import router as auth_router
 
 app = FastAPI(title="ProphitAI API", version="1.0.0")
 
@@ -20,6 +22,8 @@ app.add_middleware(
 # Include API routers
 app.include_router(portfolio_router, prefix="/api")
 app.include_router(prophitgpt_router, prefix="/api")
+app.include_router(runner_router, prefix="/api")
+app.include_router(auth_router)
 
 @app.get("/")
 async def root():

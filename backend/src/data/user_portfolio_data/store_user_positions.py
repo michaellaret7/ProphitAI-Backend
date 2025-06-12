@@ -28,7 +28,7 @@ def _create_user_portfolios_table_if_not_exists():
     create_table_sql = f"""
     CREATE TABLE IF NOT EXISTS {TABLE_NAME} (
         user_id TEXT,
-        user_name TEXT,
+        email VARCHAR(255),
         fetch_timestamp TIMESTAMP WITH TIME ZONE,
         symbol TEXT,
         secType TEXT,
@@ -51,17 +51,17 @@ def _create_user_portfolios_table_if_not_exists():
         logger.error(f"🚨 Error creating/updating table {TABLE_NAME}: {e}", exc_info=True)
         raise
 
-def store_portfolio_positions(user_name: str, positions_data: List[Dict[str, Any]], user_id: Optional[str] = None) -> Optional[str]:
+def store_portfolio_positions(user_id: str, email: str, positions_data: List[Dict[str, Any]]) -> Optional[str]:
     """
     Store portfolio position data in the user_portfolios table.
     
-    Uses upsert logic to store or update positions. Creates new user_id if not provided
-    or uses existing one. Handles conflicts based on composite primary key.
+    Uses upsert logic to store or update positions. Uses the provided user_id.
+    Handles conflicts based on composite primary key.
     
     Args:
-        user_name: Name of the user whose positions to store.
+        user_id: The user's ID.
+        email: The user's email address.
         positions_data: List of dictionaries containing position data from IBKR.
-        user_id: Optional specific user ID to use, creates new one if not provided.
         
     Returns:
         Optional[str]: The user_id used for storage, or None if operation failed.
@@ -70,33 +70,20 @@ def store_portfolio_positions(user_name: str, positions_data: List[Dict[str, Any
 
     fetch_timestamp = datetime.datetime.now(datetime.timezone.utc)
 
-    # If user_id is not provided, check if user exists
-    if user_id is None:
-        with get_cursor(dbname='user_data') as cursor:
-            # Check if user already has a portfolio
-            cursor.execute(f"SELECT DISTINCT user_id FROM {TABLE_NAME} WHERE user_name = %s LIMIT 1", (user_name,))
-            result = cursor.fetchone()
-            if result:
-                user_id = result[0]
-                logger.info(f"Found existing portfolio for user_name: '{user_name}' with user_id: {user_id}")
-            else:
-                user_id = str(uuid.uuid4())
-                logger.info(f"Creating new portfolio for user_name: '{user_name}' with user_id: {user_id}")
-
     # Prepare the upsert SQL (INSERT ON CONFLICT UPDATE)
     upsert_sql = f"""
     INSERT INTO {TABLE_NAME} (
-        user_id, user_name, fetch_timestamp, symbol, secType, currency,
+        user_id, email, fetch_timestamp, symbol, secType, currency,
         position, marketPrice, marketValue, averageCost, unrealizedPNL, realizedPNL,
         account
     ) VALUES (
-        %(user_id)s, %(user_name)s, %(fetch_timestamp)s, %(symbol)s, %(secType)s, %(currency)s,
+        %(user_id)s, %(email)s, %(fetch_timestamp)s, %(symbol)s, %(secType)s, %(currency)s,
         %(position)s, %(marketPrice)s, %(marketValue)s, %(averageCost)s, %(unrealizedPNL)s, %(realizedPNL)s,
         %(account)s
     )
     ON CONFLICT (user_id, account, symbol, secType) 
     DO UPDATE SET
-        user_name = EXCLUDED.user_name,
+        email = EXCLUDED.email,
         fetch_timestamp = EXCLUDED.fetch_timestamp,
         currency = EXCLUDED.currency,
         position = EXCLUDED.position,
@@ -113,7 +100,7 @@ def store_portfolio_positions(user_name: str, positions_data: List[Dict[str, Any
             for pos in positions_data:
                 record = {
                     "user_id": user_id,
-                    "user_name": user_name,
+                    "email": email,
                     "fetch_timestamp": fetch_timestamp,
                     "symbol": pos.get('symbol') or '',
                     "secType": pos.get('secType') or '',
@@ -130,11 +117,11 @@ def store_portfolio_positions(user_name: str, positions_data: List[Dict[str, Any
             
             if records_to_insert:
                 cursor.executemany(upsert_sql, records_to_insert)
-                logger.info(f"Successfully stored/updated {len(records_to_insert)} positions for user_name: '{user_name}' with user_id: {user_id}.")
+                logger.info(f"Successfully stored/updated {len(records_to_insert)} positions for user_id: {user_id}.")
             else:
-                logger.info(f"No positions data provided for user_name: '{user_name}'. Nothing stored.")
+                logger.info(f"No positions data provided for user_id: '{user_id}'. Nothing stored.")
         return user_id
     except Exception as e:
-        logger.error(f"🚨 Error storing portfolio positions for user_name '{user_name}': {e}", exc_info=True)
+        logger.error(f"🚨 Error storing portfolio positions for user_id '{user_id}': {e}", exc_info=True)
         return None
 

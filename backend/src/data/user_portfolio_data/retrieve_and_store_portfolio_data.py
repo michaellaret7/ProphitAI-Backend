@@ -3,10 +3,11 @@ from backend.src.utils.logging_config import init_logger, patch_print_for_loggin
 from backend.src.data.user_portfolio_data.fetch_ibkr_holdings import fetch_ibkr_portfolio_positions
 from backend.src.data.user_portfolio_data.store_user_positions import store_portfolio_positions
 from backend.src.utils.ib_utils import get_ib
+from backend.src.utils.retrieve_user_auth_data import get_user_id_from_email
 
 logger = init_logger(__name__)
 
-def retrieve_and_store_portfolio_data(user_name: str, user_id: Optional[str] = None) -> Optional[str]:
+def retrieve_and_store_portfolio_data(email: str) -> Optional[str]:
     """
     Complete workflow to fetch and store portfolio data from IBKR.
     
@@ -14,45 +15,45 @@ def retrieve_and_store_portfolio_data(user_name: str, user_id: Optional[str] = N
     and storing them in the database with proper cleanup and error handling.
     
     Args:
-        user_name: Name of the user whose portfolio to fetch and store.
-        user_id: Optional specific user ID to use, will generate new one if not provided.
+        email: The email address of the user whose portfolio to fetch and store.
         
     Returns:
         Optional[str]: user_id if successful, None if operation failed.
     """
-    logger.info(f"🚀 Starting portfolio retrieval and storage for user: '{user_name}'...")
+    logger.info(f"🚀 Starting portfolio retrieval and storage for user with email: '{email}'...")
     
+    # Get user_id from email
+    user_id = get_user_id_from_email(email)
+    if not user_id:
+        logger.error(f"❌ Could not retrieve user_id for email: {email}. Aborting workflow.")
+        return None
+    
+    logger.info(f"Found user_id: {user_id} for email: {email}")
+
     try:
         # Fetch portfolio positions from IBKR
         logger.info("Fetching portfolio positions from IBKR...")
-        test_positions = fetch_ibkr_portfolio_positions()
+        positions = fetch_ibkr_portfolio_positions()
 
-        if test_positions is not None:
-            logger.info(f"Fetched {len(test_positions)} positions from IBKR.")
+        if positions is not None:
+            logger.info(f"Fetched {len(positions)} positions from IBKR.")
             
             # Store positions in database
-            logger.info(f"Attempting to store positions for user_name: {user_name}...")
-            generated_user_id = store_portfolio_positions(user_name, test_positions, user_id=user_id)
+            logger.info(f"Attempting to store positions for user_id: {user_id}...")
+            stored_user_id = store_portfolio_positions(user_id, email, positions)
 
-            if generated_user_id:
-                logger.info(f"✅ Positions stored successfully under user_id: {generated_user_id}")
-                
-                # Verify that the returned ID matches provided ID (if one was provided)
-                if user_id and generated_user_id == user_id:
-                    logger.info(f"✅ Confirmed that the provided user_id '{user_id}' was used.")
-                elif user_id and generated_user_id != user_id:
-                    logger.warning(f"⚠️ The returned user_id '{generated_user_id}' does not match the provided id '{user_id}'.")
-                
-                return generated_user_id
+            if stored_user_id:
+                logger.info(f"✅ Positions stored successfully under user_id: {stored_user_id}")
+                return stored_user_id
             else:
-                logger.error(f"❌ Failed to store positions for user_name: {user_name}")
+                logger.error(f"❌ Failed to store positions for user_id: {user_id}")
                 return None
         else:
             logger.warning("⚠️ No positions fetched from IBKR. Cannot store data.")
             return None
             
     except Exception as e:
-        logger.error(f"🚨 Error in portfolio retrieval and storage workflow for user '{user_name}': {e}", exc_info=True)
+        logger.error(f"🚨 Error in portfolio retrieval and storage workflow for user_id '{user_id}': {e}", exc_info=True)
         return None
     
     finally:
@@ -70,12 +71,9 @@ if __name__ == '__main__':
     patch_print_for_logging()
     logger.info("🧪 Testing retrieve_and_store_portfolio_data workflow...")
     
-    test_user_name = "test_user_beta_two"
-    import uuid
-    test_user_id = str(uuid.uuid4())
-    # test_user_id = "a1b2c3d4-e5f6-7890-1234-567890abcdef"
+    test_email = "michael@laret.com"
     
-    result = retrieve_and_store_portfolio_data(test_user_name, test_user_id)
+    result = retrieve_and_store_portfolio_data(test_email)
     
     if result:
         logger.info(f"✅ Workflow completed successfully. User ID: {result}")

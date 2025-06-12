@@ -259,7 +259,7 @@ QUALITY CHECKLIST
 - All asset-class names match universe tools
 """
 
-def build_user_message() -> str:
+def build_user_message(user_id: str, email: str) -> str:
     """
     Render user prompt template with runtime data including comprehensive portfolio JSON.
     
@@ -267,13 +267,14 @@ def build_user_message() -> str:
     the user message template with current date and asset class constraints.
     
     Args:
-        None
+        user_id (str): The user ID to fetch data for.
+        email (str): The user's email to fetch data for.
         
     Returns:
         str: Formatted user message string ready for LLM consumption.
     """
     # Call format_to_json to get the comprehensive data
-    comprehensive_json_data = format_to_json()
+    comprehensive_json_data = format_to_json(user_id=user_id, email=email)
     
     return USER_TEMPLATE2.format(
         current_date=datetime.now().strftime("%Y-%m-%d"),

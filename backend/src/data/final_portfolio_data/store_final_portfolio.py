@@ -39,17 +39,12 @@ from .store_portfolio_sector_allocations import (
 
 __all__ = ["store_final_portfolio"]
 
-# Added: Get USER_NAME from environment
-USER_NAME = os.environ.get("USER_NAME")
-if not USER_NAME:
-    # This module relies on USER_NAME being set.
-    # It's also checked in store_portfolio_sector_allocations, but good to have a local check/awareness.
-    print("Warning: USER_NAME environment variable is not set. It will be required by a calling function.")
-
 def store_final_portfolio(
     portfolio: dict | str, 
     portfolio_id: uuid.UUID, # Changed type to uuid.UUID
-    portfolio_name: str
+    portfolio_name: str,
+    user_id: str,
+    email: str
 ) -> None:
     """
     Store portfolio ticker-level allocation data to the database.
@@ -61,6 +56,8 @@ def store_final_portfolio(
         portfolio: The portfolio data dictionary or JSON string containing ticker recommendations.
         portfolio_id: The UUID of the portfolio this data belongs to.
         portfolio_name: The name of the portfolio this data belongs to.
+        user_id: The ID of the user.
+        email: The email of the user.
         
     Returns:
         None
@@ -89,7 +86,7 @@ def store_final_portfolio(
     # ------------------------------------------------------------------
     # 2. Flatten the nested structure into rows
     # ------------------------------------------------------------------
-    rows: List[Tuple[uuid.UUID, str, str, str, str, float, str, str]] = [] # Changed portfolio_id type
+    rows: List[Tuple[uuid.UUID, str, str, str, str, str, float, str, str]] = [] # Changed portfolio_id type
 
     for asset_class, info in portfolio_dict.items():
         # Skip entries that are not dicts or contain error message only
@@ -116,7 +113,7 @@ def store_final_portfolio(
             reason = rec.get("reason_for_recommendation") or rec.get("reason") or ""
             metrics_json = json.dumps(rec.get("supporting_metrics", {}))
 
-            rows.append((portfolio_id, USER_NAME, portfolio_name, asset_class, ticker, allocation_float, reason, metrics_json))
+            rows.append((portfolio_id, user_id, email, portfolio_name, asset_class, ticker, allocation_float, reason, metrics_json))
 
     if not rows:
         raise ValueError("No recommendation rows found in portfolio payload")
@@ -143,7 +140,8 @@ def store_final_portfolio(
                 """
                 CREATE TABLE IF NOT EXISTS {schema}.{table} (
                     portfolio_id UUID NOT NULL REFERENCES {schema}.{pf_table}(portfolio_id) ON DELETE CASCADE,
-                    user_name VARCHAR(255) NOT NULL,
+                    user_id VARCHAR(255) NOT NULL,
+                    email VARCHAR(255) NOT NULL,
                     portfolio_name VARCHAR(255) NOT NULL,
                     asset_class VARCHAR(255) NOT NULL,
                     ticker VARCHAR(32) NOT NULL,
@@ -163,13 +161,14 @@ def store_final_portfolio(
             insert_sql = sql.SQL(
                 """
                 INSERT INTO {schema}.{table}
-                (portfolio_id, user_name, portfolio_name, asset_class, ticker, allocation, reason, supporting_metrics)
+                (portfolio_id, user_id, email, portfolio_name, asset_class, ticker, allocation, reason, supporting_metrics)
                 VALUES %s
                 ON CONFLICT (portfolio_id, asset_class, ticker) DO UPDATE SET
                     allocation = EXCLUDED.allocation,
                     reason = EXCLUDED.reason,
                     supporting_metrics = EXCLUDED.supporting_metrics,
-                    user_name = EXCLUDED.user_name,      -- ensure these are updated too
+                    user_id = EXCLUDED.user_id,
+                    email = EXCLUDED.email,
                     portfolio_name = EXCLUDED.portfolio_name;
                 """
             ).format(schema=sql.Identifier(schema_to_use), table=sql.Identifier(table))
