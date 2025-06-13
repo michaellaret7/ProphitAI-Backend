@@ -18,6 +18,10 @@ import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContai
 import { Menu, MenuButton, MenuItems, MenuItem } from '@headlessui/react';
 import clsx from 'clsx';
 
+interface User {
+  email: string;
+}
+
 interface Sector {
   name: string;
   percentage: number;
@@ -36,6 +40,7 @@ interface EtfVisibility {
 }
 
 const Dashboard: React.FC = () => {
+  const [user, setUser] = useState<User | null>(null);
   const [hoveredSector, setHoveredSector] = useState<string | null>(null);
   const [selectedTimeframe, setSelectedTimeframe] = useState('All');
   const [activeView, setActiveView] = useState<'dashboard' | 'portfolio' | 'manager' | 'optimizer' | 'builder' | 'prophitgpt' | 'prophitalts' | 'risk-analysis' | 'backtest' | 'asset-universe' | 'news' | 'social'>('dashboard');
@@ -95,6 +100,28 @@ const Dashboard: React.FC = () => {
     dbc: true,
     eem: true,
   });
+
+  useEffect(() => {
+    const fetchUserData = async () => {
+      try {
+        const response = await fetch('http://localhost:8000/auth/user', {
+          credentials: 'include',
+        });
+        if (!response.ok) {
+          if (response.status === 401) {
+            window.location.href = 'http://localhost:8000/auth/login';
+            return;
+          }
+          throw new Error('Failed to fetch user data');
+        }
+        const userData = await response.json();
+        setUser(userData);
+      } catch (error) {
+        console.error(error);
+      }
+    };
+    fetchUserData();
+  }, []);
 
   useEffect(() => {
     const fetchAllocationData = async () => {
@@ -841,20 +868,24 @@ const Dashboard: React.FC = () => {
               <span className="broker-status-text connected">Connected</span>
             </div>
             <Menu as="div" className="user-profile">
-              <MenuButton className="flex items-center w-full text-left bg-transparent border-none p-0 cursor-pointer">
-                <img src="https://ui-avatars.com/api/?name=John+Doe&background=5b4cdb&color=fff" alt="User" className="user-avatar" />
-                <span className="user-name">John Doe</span>
+              <MenuButton className="user-profile-button">
+                <img 
+                  src={`https://ui-avatars.com/api/?name=${user?.email || 'User'}&background=5b4cdb&color=fff`} 
+                  alt="User" 
+                  className="user-avatar" 
+                />
+                <span className="user-name">{user?.email || 'Loading...'}</span>
                 <span className="dropdown-arrow">▼</span>
               </MenuButton>
               <MenuItems
                 anchor="bottom end"
-                className="etf-dropdown-menu"
+                className="user-dropdown-menu"
               >
                 <MenuItem>
                   {({ focus }) => (
                     <a
                       href="http://localhost:8000/auth/logout"
-                      className={clsx('etf-dropdown-item', focus && 'focus')}
+                      className={clsx('user-dropdown-item', focus && 'focus')}
                     >
                       Logout
                     </a>

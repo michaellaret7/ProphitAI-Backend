@@ -1,7 +1,7 @@
-# src/Analysts/__init__.py
-# Expose key functions from the equityAnalysts and macroAnalysts modules
+# src/analysts/__init__.py
+# Expose key functions from the equity_analysts and macro_analysts modules
 
-from .equityAnalysts import (
+from .equity_analysts import (
     communication_services_analyst,
     consumer_discretionary_analyst,
     consumer_staples_analyst,
@@ -15,7 +15,7 @@ from .equityAnalysts import (
     utilities_analyst
 )
 
-from .macroAnalysts import (
+from .macro_analysts import (
     get_equity_universe,
     get_etf_universe,
     free_search,

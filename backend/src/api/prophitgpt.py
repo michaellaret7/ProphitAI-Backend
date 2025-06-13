@@ -1,4 +1,4 @@
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Depends
 from pydantic import BaseModel
 from typing import List, Dict, Optional
 import os
@@ -12,12 +12,13 @@ from backend.src.utils.formatting import strip_formatting
 from backend.src.utils.ticker_utils import name_to_ticker
 from backend.src.utils.retrieve_portfolio_from_db import retrieve_user_current_portfolio_from_db
 from backend.src.prophitai_gpt.dataRetrievalTools.retrieve_financial_metrics import retrieve_financial_metric
+from backend.src.auth import get_current_user
 
 # ---------------------------------------------------------------------------
 # Configuration for Grok / OpenAI client
 # ---------------------------------------------------------------------------
 
-model, client = grok_model_and_client()
+model, client = deepseek_model_and_client('deepseek-chat')
 
 # ---------------------------------------------------------------------------
 # FastAPI setup
@@ -44,7 +45,7 @@ class ChatResponse(BaseModel):
 # Helper to execute tool calls emitted by the LLM
 # ---------------------------------------------------------------------------
 
-def _handle_tool_call(tool_call):
+def _handle_tool_call(tool_call, current_user):
     """
     Execute tool calls emitted by the LLM and format the response.
     
@@ -54,6 +55,7 @@ def _handle_tool_call(tool_call):
     
     Args:
         tool_call: OpenAI tool call object containing function name, arguments, and call ID.
+        current_user: The authenticated user object.
         
     Returns:
         Dict containing role, content, and tool_call_id for the conversation history.
@@ -74,16 +76,15 @@ def _handle_tool_call(tool_call):
     # get_portfolio_data
     # ------------------------------------------------------------------
     if function_name == "get_portfolio_data":
-        # Hard-coded username until authentication is implemented
-        user_name = "test_user_beta"
+        user_id = current_user.id
 
         portfolio_df = retrieve_user_current_portfolio_from_db(
-            identifier=user_name, identifier_type="name"
+            user_id=user_id
         )
         if portfolio_df is None:
             result_str = "Error: Portfolio data could not be retrieved."
         elif portfolio_df.empty:
-            result_str = f"No portfolio data found for user '{user_name}'."
+            result_str = f"No portfolio data found for user."
         else:
             result_str = portfolio_df.to_string()
 
@@ -139,7 +140,7 @@ def _handle_tool_call(tool_call):
 # Core chat logic
 # ---------------------------------------------------------------------------
 
-def _generate_assistant_response(user_message: str, history: Optional[List[Dict[str, str]]] = None) -> str:
+def _generate_assistant_response(user_message: str, history: Optional[List[Dict[str, str]]] = None, current_user=None) -> str:
     """
     Generate an AI assistant response using the configured LLM with tool calling capabilities.
     
@@ -149,6 +150,7 @@ def _generate_assistant_response(user_message: str, history: Optional[List[Dict[
     Args:
         user_message: The new message from the user to respond to.
         history: Optional list of previous conversation messages (dicts with 'role' and 'content').
+        current_user: The authenticated user object.
         
     Returns:
         str: The final assistant response with formatting stripped.
@@ -199,7 +201,7 @@ def _generate_assistant_response(user_message: str, history: Optional[List[Dict[
         if response_msg.tool_calls:
             # Execute each tool and append its observation
             for tool_call in response_msg.tool_calls:
-                tool_obs_msg = _handle_tool_call(tool_call)
+                tool_obs_msg = _handle_tool_call(tool_call, current_user)
                 messages.append(tool_obs_msg)
             # Loop again for model to incorporate observations
             continue
@@ -212,7 +214,7 @@ def _generate_assistant_response(user_message: str, history: Optional[List[Dict[
 # ---------------------------------------------------------------------------
 
 @router.post("/prophitgpt/chat", response_model=ChatResponse)
-def chat(request: ChatRequest):
+async def chat(request: ChatRequest, current_user=Depends(get_current_user)):
     """
     Handle chat requests for the ProphitGPT AI assistant API endpoint.
     
@@ -221,6 +223,7 @@ def chat(request: ChatRequest):
     
     Args:
         request: ChatRequest containing the message and optional conversation history.
+        current_user: The authenticated user object, injected by dependency.
         
     Returns:
         ChatResponse: Object containing the AI assistant's response.
@@ -229,7 +232,7 @@ def chat(request: ChatRequest):
         HTTPException: 500 error if response generation fails.
     """
     try:
-        answer = _generate_assistant_response(request.message, request.history)
+        answer = _generate_assistant_response(request.message, request.history, current_user)
         return ChatResponse(response=answer)
     except Exception as e:
         # Log error server-side; return generic error to client

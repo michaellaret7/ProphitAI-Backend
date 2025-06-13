@@ -45,6 +45,7 @@ const ProphitGpt: React.FC = () => {
         headers: {
           'Content-Type': 'application/json',
         },
+        credentials: 'include',
         body: JSON.stringify({
           message: textToActuallySend,
           history: [...messages, newUserMessage].map(({ sender, text }) => ({

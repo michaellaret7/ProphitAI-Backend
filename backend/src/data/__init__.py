@@ -16,11 +16,6 @@ from backend.src.data.PortfolioData import (
     analyze_portfolio_correlations
 )
 
-from backend.src.data.FundamentalData import (
-    get_financial_data,
-    PushFundamentalDataToDB
-)
-
 from backend.src.data.database.database_schema_update import (
     recreate_database_schemas
 )

@@ -2,7 +2,7 @@
 Author: @Michael Laret
 =====================================================================
 This file is used to store the Perplexity research in the database.
-The data from this research is pulled in the phaseOneRun.py file.
+The data from this research is pulled in the phase_one_run.py file.
 """
 
 import psycopg2

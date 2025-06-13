@@ -39,14 +39,26 @@ def _create_user_portfolios_table_if_not_exists():
         averageCost NUMERIC,
         unrealizedPNL NUMERIC,
         realizedPNL NUMERIC,
-        account TEXT,
-        PRIMARY KEY (user_id, account, symbol, secType)
+        account TEXT
     );
+    """
+    alter_table_sql = f"""
+    DO $$
+    BEGIN
+        IF EXISTS (
+            SELECT 1 FROM pg_constraint 
+            WHERE conname = 'user_portfolios_pkey' AND conrelid = '{TABLE_NAME}'::regclass
+        ) THEN
+            ALTER TABLE {TABLE_NAME} DROP CONSTRAINT user_portfolios_pkey;
+        END IF;
+    END
+    $$;
     """
     try:
         with get_cursor(dbname='user_data') as cursor:
             cursor.execute(create_table_sql)
-        logger.info(f"Table {TABLE_NAME} ensured to exist with updated schema.")
+            cursor.execute(alter_table_sql)
+        logger.info(f"Table {TABLE_NAME} ensured to exist and PK constraint removed if it existed.")
     except Exception as e:
         logger.error(f"🚨 Error creating/updating table {TABLE_NAME}: {e}", exc_info=True)
         raise
@@ -55,8 +67,9 @@ def store_portfolio_positions(user_id: str, email: str, positions_data: List[Dic
     """
     Store portfolio position data in the user_portfolios table.
     
-    Uses upsert logic to store or update positions. Uses the provided user_id.
-    Handles conflicts based on composite primary key.
+    This function now deletes all existing positions for a given user and account
+    before inserting the new positions. This ensures that any sold/closed positions
+    are removed from the database.
     
     Args:
         user_id: The user's ID.
@@ -68,10 +81,24 @@ def store_portfolio_positions(user_id: str, email: str, positions_data: List[Dic
     """
     _create_user_portfolios_table_if_not_exists()
 
-    fetch_timestamp = datetime.datetime.now(datetime.timezone.utc)
+    if not positions_data:
+        logger.info(f"No positions data provided for user_id: '{user_id}'. Nothing stored.")
+        # Optionally, you might want to delete all positions for this user/account if the list is empty.
+        # For now, we'll just log and return.
+        return user_id
 
-    # Prepare the upsert SQL (INSERT ON CONFLICT UPDATE)
-    upsert_sql = f"""
+    fetch_timestamp = datetime.datetime.now(datetime.timezone.utc)
+    account = positions_data[0].get('account') if positions_data else None
+    
+    if not account:
+        logger.error("🚨 Account information is missing in positions data.", exc_info=True)
+        return None
+
+    # SQL to delete existing portfolio for the user and account
+    delete_sql = f"DELETE FROM {TABLE_NAME} WHERE user_id = %(user_id)s AND account = %(account)s;"
+
+    # Prepare the insert SQL
+    insert_sql = f"""
     INSERT INTO {TABLE_NAME} (
         user_id, email, fetch_timestamp, symbol, secType, currency,
         position, marketPrice, marketValue, averageCost, unrealizedPNL, realizedPNL,
@@ -80,22 +107,16 @@ def store_portfolio_positions(user_id: str, email: str, positions_data: List[Dic
         %(user_id)s, %(email)s, %(fetch_timestamp)s, %(symbol)s, %(secType)s, %(currency)s,
         %(position)s, %(marketPrice)s, %(marketValue)s, %(averageCost)s, %(unrealizedPNL)s, %(realizedPNL)s,
         %(account)s
-    )
-    ON CONFLICT (user_id, account, symbol, secType) 
-    DO UPDATE SET
-        email = EXCLUDED.email,
-        fetch_timestamp = EXCLUDED.fetch_timestamp,
-        currency = EXCLUDED.currency,
-        position = EXCLUDED.position,
-        marketPrice = EXCLUDED.marketPrice,
-        marketValue = EXCLUDED.marketValue,
-        averageCost = EXCLUDED.averageCost,
-        unrealizedPNL = EXCLUDED.unrealizedPNL,
-        realizedPNL = EXCLUDED.realizedPNL;
+    );
     """
 
     try:
         with get_cursor(dbname='user_data') as cursor:
+            # First, delete the old portfolio data for this user and account
+            cursor.execute(delete_sql, {"user_id": user_id, "account": account})
+            logger.info(f"Deleted existing positions for user_id: {user_id} and account: {account}.")
+
+            # Now, insert the new portfolio data
             records_to_insert = []
             for pos in positions_data:
                 record = {
@@ -116,10 +137,8 @@ def store_portfolio_positions(user_id: str, email: str, positions_data: List[Dic
                 records_to_insert.append(record)
             
             if records_to_insert:
-                cursor.executemany(upsert_sql, records_to_insert)
-                logger.info(f"Successfully stored/updated {len(records_to_insert)} positions for user_id: {user_id}.")
-            else:
-                logger.info(f"No positions data provided for user_id: '{user_id}'. Nothing stored.")
+                cursor.executemany(insert_sql, records_to_insert)
+                logger.info(f"Successfully stored {len(records_to_insert)} new positions for user_id: {user_id}.")
         return user_id
     except Exception as e:
         logger.error(f"🚨 Error storing portfolio positions for user_id '{user_id}': {e}", exc_info=True)

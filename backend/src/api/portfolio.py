@@ -91,7 +91,7 @@ class PortfolioPerformanceResponse(BaseModel):
     dbcTotalReturn: Optional[float] = None
     eemTotalReturn: Optional[float] = None
 
-# THESE ARE FOR THE OPTIMIZED/BUILT PORTFOLIOS
+#THIS RETRIEVES THE SECTOR ALLOCATIONS FOR THE OPTIMIZED/BUILT PORTFOLIOS
 @router.get("/portfolio/allocation")
 async def get_portfolio_allocation(current_user=Depends(get_current_user)):
     """
@@ -171,9 +171,9 @@ async def get_portfolio_allocation(current_user=Depends(get_current_user)):
         print(f"Unexpected error for user_id {user_id}: {e}")
         raise HTTPException(status_code=500, detail="Internal server error processing portfolio allocation.")
 
-# THIS IS FOR THE OPTIMIZED/BUILT PORTFOLIOS
+# THIS RETRIEVES THE HOLDINGS FOR THE USERS CURRENT PORTFOLIO
 @router.get("/portfolio/holdings", response_model=PortfolioHoldingsResponse)
-async def get_portfolio_holdings(current_user=Depends(get_current_user)):
+async def get_current_user_holdings(current_user=Depends(get_current_user)):
     """
     Retrieve portfolio holdings data for the currently authenticated user.
     
@@ -256,7 +256,7 @@ async def get_portfolio_holdings(current_user=Depends(get_current_user)):
         print(f"Unexpected error for user_id {user_id}: {e}")
         raise HTTPException(status_code=500, detail=f"Internal server error retrieving portfolio holdings.") 
 
-# THESE ARE FOR THE USERS CURRENT PORTFOLIO FROM THEIR BROKER
+# THIS RETRIEVES THE PERFORMANCE FOR THE USERS CURRENT PORTFOLIO FROM THEIR BROKER
 @router.get("/portfolio/performance", response_model=PortfolioPerformanceResponse)
 async def get_portfolio_performance(days: int = 365, current_user=Depends(get_current_user)):
     """

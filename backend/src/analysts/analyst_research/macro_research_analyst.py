@@ -38,25 +38,6 @@ def commodities_research_analyst():
     """
     date = datetime.now().strftime("%Y-%m-%d")
 
-    # Define custom analysis steps for commodities research
-    commodities_steps = [
-        "Analyzing supply and demand fundamentals",
-        "Evaluating weather impact on agricultural markets",
-        "Examining inventory levels across commodities",
-        "Calculating futures curve contango/backwardation",
-        "Processing geopolitical risk factors",
-        "Analyzing currency impacts on commodity prices",
-        "Assessing industrial demand metrics",
-        "Evaluating energy sector correlations",
-        "Processing seasonal consumption patterns",
-        "Examining production capacity constraints",
-        "Calculating cross-commodity correlations",
-        "Analyzing global trade flow disruptions",
-        "Evaluating commodity ETF fund flows",
-        "Processing inflation impacts on raw materials",
-        "Examining speculative positioning data"
-    ]
-    
     system_prompt = """
     You are an expert commodities analyst with deep knowledge of global markets. You prioritize clarity, detail, and data-backed reasoning in your explanations. Always ground your conclusions in the provided context. If needed information is absent, acknowledge the gap rather than guessing.
     """
@@ -210,28 +191,6 @@ def etf_research_analyst():
     """
     date = datetime.now().strftime("%Y-%m-%d")
 
-    etf_steps = [
-        "Analyzing ETF market conditions",
-        "Evaluating ETF performance metrics",
-        "Examining ETF tracking efficiency",
-        "Processing ETF factor analysis",
-        "Analyzing ETF sector performance",
-        "Evaluating ETF portfolio construction techniques", 
-        "Processing ETF total cost analysis",
-        "Examining ETF market conditions",
-        "Evaluating ETF liquidity profiles",
-        "Analyzing ETF asset flows",
-        "Examining ETF tracking efficiency",
-        "Processing ETF factor analysis",
-        "Analyzing ETF sector performance",
-        "Evaluating ETF risk metrics",
-        "Examining ETF tax efficiency",
-        "Processing ETF yield analysis",
-        "Analyzing ETF momentum signals",
-        "Evaluating ETF volatility patterns",
-        "Examining ETF correlation matrices",
-        "Processing ETF rebalancing data"
-    ]
 
     system_prompt = """
 You are an ETF analyst tool designed to provide a comprehensive, data-driven analysis of Exchange-Traded Funds (ETFs) for a portfolio optimizer with agentic AI. Your role is to evaluate how various factors—such as underlying asset performance, market trends, economic indicators, geopolitical events, regulatory changes, technological advancements, currency movements, and fund-specific attributes—affect ETF performance, risks, and opportunities.

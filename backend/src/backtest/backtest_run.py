@@ -3,7 +3,7 @@ import numpy as np
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
 from typing import Any, Dict, Optional
-from backend.src.utils.retrieve_portfolio_from_db import retrieve_portfolio_information_from_db
+from backend.src.utils.retrieve_portfolio_from_db import retrieve_built_portfolio_from_db
 from .backtest_helpers import (
     get_historical_data_for_all_tickers,
     calculate_portfolio_returns,
@@ -315,18 +315,14 @@ def backtest(portfolio_json: Dict[str, Any]):
 if __name__ == "__main__":
     assumed_initial_portfolio_value = 10_000.0
 
-    # You can retrieve by portfolio name or portfolio ID
-    # Option 1: Retrieve by portfolio name
-    # portfolio_name = "gpt4_1miniPortfolio"  # Change this to your desired portfolio name
-    # print(f"🔄 Retrieving portfolio information from DB by name: {portfolio_name}...")
-    # portfolio_df = retrieve_portfolio_information_from_db(portfolio_name, "name")
+    # This example uses a default portfolio_id. Replace with dynamic logic as needed.
+    portfolio_id = "839049b7-1ae8-4ef5-a27a-af8dcf4577e3"
 
-    # Option 2: Retrieve by portfolio ID (uncomment to use this instead)
-    portfolio_id = "0f5bcbe1-6148-4673-80e9-263e08e35fbf"  # Change this to your desired portfolio ID
-    print(f"🔄 Retrieving portfolio information from DB by ID: {portfolio_id}...")
-    portfolio_df = retrieve_portfolio_information_from_db(portfolio_id, "id")
+    portfolio_df = retrieve_built_portfolio_from_db(portfolio_id, "id")
 
-    if portfolio_df is not None and not portfolio_df.empty:
+    if portfolio_df is None or portfolio_df.empty:
+        print(f"Could not retrieve or empty portfolio for ID: {portfolio_id}")
+    elif portfolio_df is not None and not portfolio_df.empty:
         print(f"✅ Successfully retrieved {len(portfolio_df)} records from the database.")
         print("🔄 Preparing portfolio JSON from DataFrame...")
         portfolio_to_backtest = prepare_portfolio_json_from_db(portfolio_df, assumed_initial_portfolio_value)
