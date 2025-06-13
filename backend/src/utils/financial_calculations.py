@@ -4,6 +4,7 @@ Financial calculation utility functions.
 import numpy as np
 import pandas as pd
 from scipy import stats
+from backend.src.utils.data_retrieval import get_price_data
 
 def calculate_volatility(returns, annualize=True, trading_days=252):
     """
@@ -27,46 +28,46 @@ def calculate_volatility(returns, annualize=True, trading_days=252):
             
     return volatility
 
-def calculate_beta(portfolio_returns, market_returns):
+def calculate_beta(returns, market_returns):
     """
     Calculate the beta (market risk) of a portfolio or stock
     
     Args:
-        portfolio_returns: pandas Series or numpy array of portfolio/stock returns
+        returns: pandas Series or numpy array of portfolio/stock returns
         market_returns: pandas Series or numpy array of market returns (e.g. S&P 500)
         
     Returns:
         Beta value
     """
     # Convert inputs to pandas Series if they aren't already
-    if not isinstance(portfolio_returns, pd.Series):
-        portfolio_returns = pd.Series(portfolio_returns)
+    if not isinstance(returns, pd.Series):
+        returns = pd.Series(returns)
     if not isinstance(market_returns, pd.Series):
         market_returns = pd.Series(market_returns)
     
     # Ensure both series have the same index if they are pandas Series
-    if hasattr(portfolio_returns, 'index') and hasattr(market_returns, 'index'):
+    if hasattr(returns, 'index') and hasattr(market_returns, 'index'):
         # Find common dates
-        common_index = portfolio_returns.index.intersection(market_returns.index)
+        common_index = returns.index.intersection(market_returns.index)
         
         if len(common_index) == 0:
             print("Warning: No overlapping dates between portfolio and market returns")
             return 0.0
             
         # Filter to common dates
-        portfolio_returns = portfolio_returns.loc[common_index]
+        returns = returns.loc[common_index]
         market_returns = market_returns.loc[common_index]
     
     # If they're numpy arrays, ensure they have the same length
-    elif len(portfolio_returns) != len(market_returns):
+    elif len(returns) != len(market_returns):
         # Use the shorter length
-        min_length = min(len(portfolio_returns), len(market_returns))
-        portfolio_returns = portfolio_returns[:min_length]
+        min_length = min(len(returns), len(market_returns))
+        returns = returns[:min_length]
         market_returns = market_returns[:min_length]
         print(f"Warning: Returns series have different lengths. Using first {min_length} elements.")
     
     # Calculate covariance between portfolio and market
-    covariance = np.cov(portfolio_returns, market_returns)[0, 1]
+    covariance = np.cov(returns, market_returns)[0, 1]
     
     # Calculate market variance
     market_variance = np.var(market_returns, ddof=1)
@@ -265,12 +266,12 @@ def calculate_parametric_var(returns, confidence_level=0.99, amount=1):
     
     return var_pct, var_amount
 
-def calculate_alpha(portfolio_returns, market_returns, risk_free_rate, beta=None):
+def calculate_alpha(returns, market_returns, risk_free_rate, beta=None):
     """
     Calculate Alpha - excess return of investment relative to a benchmark
     
     Args:
-        portfolio_returns: pandas Series or numpy array of portfolio returns
+        returns: pandas Series or numpy array of portfolio returns
         market_returns: pandas Series or numpy array of market returns
         risk_free_rate: risk-free rate (annualized)
         beta: pre-calculated beta (if None, will be calculated)
@@ -279,27 +280,27 @@ def calculate_alpha(portfolio_returns, market_returns, risk_free_rate, beta=None
         Alpha value
     """
     # Make sure we're working with common dates or lengths
-    if not isinstance(portfolio_returns, pd.Series):
-        portfolio_returns = pd.Series(portfolio_returns)
+    if not isinstance(returns, pd.Series):
+        returns = pd.Series(returns)
     if not isinstance(market_returns, pd.Series):
         market_returns = pd.Series(market_returns)
     
     # Align dates if series have indexes
-    if hasattr(portfolio_returns, 'index') and hasattr(market_returns, 'index'):
-        common_index = portfolio_returns.index.intersection(market_returns.index)
+    if hasattr(returns, 'index') and hasattr(market_returns, 'index'):
+        common_index = returns.index.intersection(market_returns.index)
         if len(common_index) > 0:
-            portfolio_returns = portfolio_returns.loc[common_index]
+            returns = returns.loc[common_index]
             market_returns = market_returns.loc[common_index]
-        elif len(common_index) == 0 and len(portfolio_returns) > 0 and len(market_returns) > 0 : # if no common index but data exists
+        elif len(common_index) == 0 and len(returns) > 0 and len(market_returns) > 0 : # if no common index but data exists
             print("Warning: No common dates between portfolio and market returns. Alpha might be misleading.")
     
     # Calculate average returns
-    avg_portfolio_return = np.mean(portfolio_returns) * 252  # Annualize
+    avg_portfolio_return = np.mean(returns) * 252  # Annualize
     avg_market_return = np.mean(market_returns) * 252  # Annualize
     
     # Get or calculate beta
     if beta is None:
-        beta = calculate_beta(portfolio_returns, market_returns)
+        beta = calculate_beta(returns, market_returns)
     
     # Daily risk-free rate (assuming risk_free_rate is annual)
     # Ensure risk_free_rate is float, default to 0 if None
@@ -378,12 +379,12 @@ def calculate_annualized_return(returns, period=252):
     
     return annualized_return
 
-def calculate_treynor_ratio(portfolio_returns, market_returns=None, risk_free_rate=0.0, beta=None, annualize=True, trading_days=252):
+def calculate_treynor_ratio(returns, market_returns=None, risk_free_rate=0.0, beta=None, annualize=True, trading_days=252):
     """
     Calculate the Treynor Ratio – excess return per unit of systematic risk (beta).
 
     Args:
-        portfolio_returns: pandas Series or numpy array of portfolio/stock returns (daily)
+        returns: pandas Series or numpy array of portfolio/stock returns (daily)
         market_returns: pandas Series or numpy array of benchmark returns; required if *beta* is not supplied
         risk_free_rate: annualised risk-free rate (default 0.0)
         beta: optional pre-computed beta; if None it will be calculated from the supplied returns
@@ -397,13 +398,13 @@ def calculate_treynor_ratio(portfolio_returns, market_returns=None, risk_free_ra
         if market_returns is None:
             print("Warning: Treynor ratio needs either beta or market_returns. Returning 0.")
             return 0.0
-        beta = calculate_beta(portfolio_returns, market_returns)
+        beta = calculate_beta(returns, market_returns)
 
     # Protect against divide-by-zero
     if beta == 0 or beta is None:
         return 0.0
 
-    avg_return = np.mean(portfolio_returns)
+    avg_return = np.mean(returns)
     if annualize:
         avg_return *= trading_days
         # risk_free_rate assumed annual
@@ -413,13 +414,12 @@ def calculate_treynor_ratio(portfolio_returns, market_returns=None, risk_free_ra
     treynor_ratio = (avg_return - risk_free_rate) / beta
     return treynor_ratio
 
-
-def calculate_information_ratio(portfolio_returns, benchmark_returns, annualize=True, trading_days=252):
+def calculate_information_ratio(returns, benchmark_returns, annualize=True, trading_days=252):
     """
     Calculate the Information Ratio – active return divided by tracking error.
 
     Args:
-        portfolio_returns: pandas Series or numpy array of portfolio/stock returns (daily)
+        returns: pandas Series or numpy array of portfolio/stock returns (daily)
         benchmark_returns: pandas Series or numpy array of benchmark returns (daily)
         annualize: whether to annualise (default True)
         trading_days: periods per year (default 252)
@@ -427,26 +427,26 @@ def calculate_information_ratio(portfolio_returns, benchmark_returns, annualize=
     Returns:
         Information ratio value. Returns 0 if tracking error is 0 or cannot be computed.
     """
-    if portfolio_returns is None or benchmark_returns is None:
+    if returns is None or benchmark_returns is None:
         return 0.0
 
     # Ensure same length/index
-    if not isinstance(portfolio_returns, pd.Series):
-        portfolio_returns = pd.Series(portfolio_returns)
+    if not isinstance(returns, pd.Series):
+        returns = pd.Series(returns)
     if not isinstance(benchmark_returns, pd.Series):
         benchmark_returns = pd.Series(benchmark_returns)
 
-    common_idx = portfolio_returns.index.intersection(benchmark_returns.index)
+    common_idx = returns.index.intersection(benchmark_returns.index)
     if len(common_idx) == 0:
         # Fallback to element-wise min length
-        min_len = min(len(portfolio_returns), len(benchmark_returns))
-        portfolio_returns = portfolio_returns.iloc[:min_len]
+        min_len = min(len(returns), len(benchmark_returns))
+        returns = returns.iloc[:min_len]
         benchmark_returns = benchmark_returns.iloc[:min_len]
     else:
-        portfolio_returns = portfolio_returns.loc[common_idx]
+        returns = returns.loc[common_idx]
         benchmark_returns = benchmark_returns.loc[common_idx]
 
-    active_returns = portfolio_returns - benchmark_returns
+    active_returns = returns - benchmark_returns
     tracking_error = np.std(active_returns, ddof=1)
     if annualize:
         active_return = np.mean(active_returns) * trading_days
@@ -459,3 +459,64 @@ def calculate_information_ratio(portfolio_returns, benchmark_returns, annualize=
 
     info_ratio = active_return / tracking_error
     return info_ratio 
+
+# CHANGE DATA RETRIEVAL FUNCTION
+def get_returns(symbols, duration='1 Y'):
+    """
+    Get historical returns for portfolio stocks.
+    
+    Retrieves price data for multiple symbols and calculates their returns,
+    handling missing data gracefully.
+    
+    Args:
+        symbols: List of stock symbols.
+        duration: Time period for data (default: '1 Y').
+        
+    Returns:
+        pd.DataFrame: DataFrame with returns for all symbols, or None if no data available.
+    """
+    all_data = {}
+    missing_data = []
+
+    try:
+        years = float(duration.split(' ')[0])
+    except (ValueError, IndexError):
+        years = 1.0
+    
+    for symbol in symbols:
+        try:
+            # Get price data using get_price_data
+            df = get_price_data(ticker=symbol, frequency='daily', years=years)
+            
+            if df is not None and not df.empty:
+                if 'date' in df.columns:
+                    df.set_index('date', inplace=True)
+                
+                # Calculate returns
+                returns = df['close'].pct_change().dropna()
+                all_data[symbol] = returns
+            else:
+                missing_data.append(symbol)
+                
+        except Exception as e:
+            print(f"Error getting data for {symbol}: {e}")
+            missing_data.append(symbol)
+    
+    if missing_data:
+        print(f"Warning: Missing historical data for symbols: {', '.join(missing_data)}")
+            
+    # Create a DataFrame with all returns
+    if all_data:
+        returns_df = pd.DataFrame(all_data)
+        # Drop rows with all NaNs
+        returns_df = returns_df.dropna(how='all')
+        return returns_df
+    
+    return None
+
+if __name__ == "__main__":
+    symbols = ["AAPL"]
+    returns = get_returns(symbols, duration="3 Y")
+    max_drawdown = calculate_max_drawdown(returns)
+    print(calculate_calmar_ratio(returns, max_drawdown))
+    print(returns)

@@ -14,7 +14,7 @@ from backend.src.utils.ticker_utils import name_to_ticker
 from backend.src.prophitai_gpt.functionSchemas.tools import tools
 from backend.src.prophitai_gpt.dataRetrievalTools.retrieve_financial_metrics import retrieve_financial_metric
 from backend.src.utils.formatting import strip_formatting
-from backend.src.utils.retrieve_portfolio_from_db import retrieve_user_current_portfolio_from_db
+from backend.src.utils.retrieve_portfolio_from_db import retrieve_user_current_portfolio
 
 load_dotenv()
 
@@ -81,7 +81,7 @@ try:
                         if not user_name: # Should not happen with hardcoding, but good for robustness if hardcoding is removed
                             result_str = "Error: 'user_name' was not provided or is empty."
                         else:
-                            portfolio_df = retrieve_user_current_portfolio_from_db(identifier=user_name, identifier_type="name")
+                            portfolio_df = retrieve_user_current_portfolio(identifier=user_name, identifier_type="name")
                             if portfolio_df is None:
                                 result_str = "Error: Portfolio data could not be retrieved."
                             elif portfolio_df.empty:

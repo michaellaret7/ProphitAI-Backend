@@ -20,8 +20,7 @@ Follow the Thought → Action → Observation loop internally:
 1. Thought: brief reasoning.
 2. Action: call ONE tool exactly like  
    Action: tool_name(param=value, …)
-3. PAUSE 
-4. Observation: reflect on the tool result.
+3. Observation: reflect on the tool result.
 
 Available tools
 • get_tickers() --> returns list of tickers

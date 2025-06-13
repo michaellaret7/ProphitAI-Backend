@@ -10,7 +10,7 @@ from backend.src.utils.choose_model_and_client import deepseek_model_and_client,
 from backend.src.prophitai_gpt.functionSchemas.tools import tools
 from backend.src.utils.formatting import strip_formatting
 from backend.src.utils.ticker_utils import name_to_ticker
-from backend.src.utils.retrieve_portfolio_from_db import retrieve_user_current_portfolio_from_db
+from backend.src.utils.retrieve_portfolio_from_db import retrieve_user_current_portfolio
 from backend.src.prophitai_gpt.dataRetrievalTools.retrieve_financial_metrics import retrieve_financial_metric
 from backend.src.auth import get_current_user
 
@@ -78,7 +78,7 @@ def _handle_tool_call(tool_call, current_user):
     if function_name == "get_portfolio_data":
         user_id = current_user.id
 
-        portfolio_df = retrieve_user_current_portfolio_from_db(
+        portfolio_df = retrieve_user_current_portfolio(
             user_id=user_id
         )
         if portfolio_df is None:

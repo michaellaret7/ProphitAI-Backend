@@ -3,7 +3,7 @@ import numpy as np
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
 from typing import Any, Dict, Optional
-from backend.src.utils.retrieve_portfolio_from_db import retrieve_built_portfolio_from_db
+from backend.src.utils.retrieve_portfolio_from_db import retrieve_built_portfolio
 from .backtest_helpers import (
     get_historical_data_for_all_tickers,
     calculate_portfolio_returns,
@@ -318,7 +318,7 @@ if __name__ == "__main__":
     # This example uses a default portfolio_id. Replace with dynamic logic as needed.
     portfolio_id = "839049b7-1ae8-4ef5-a27a-af8dcf4577e3"
 
-    portfolio_df = retrieve_built_portfolio_from_db(portfolio_id, "id")
+    portfolio_df = retrieve_built_portfolio(portfolio_id, "id")
 
     if portfolio_df is None or portfolio_df.empty:
         print(f"Could not retrieve or empty portfolio for ID: {portfolio_id}")

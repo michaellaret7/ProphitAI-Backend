@@ -16,7 +16,7 @@ from .tools.tool_registry import register_tools
 load_dotenv()
 
 # Create a ReactAgent
-agent = StressTestAgent(llm="gpt-4.1-2025-04-14", api_key=os.environ.get("OPENAI_API_KEY"), max_iterations=100)
+agent = StressTestAgent(llm="gpt-4.1", api_key=os.environ.get("OPENAI_API_KEY"), max_iterations=200)
 
 # Register all tools with the agent
 register_tools(agent)

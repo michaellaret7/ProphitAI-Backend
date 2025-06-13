@@ -23,7 +23,6 @@
 │   │   │   └── backtest_run.py --> Main script for executing portfolio backtests, generating performance metrics, and visualizing results against benchmarks.
 │   │   ├── data/
 │   │   │   ├── __init__.py --> Exposes key data management functions from various modules within the data package.
-│   │   │   ├── PortfolioData.py --> Provides functions to fetch and analyze portfolio data from Interactive Brokers, including holdings, performance metrics, diversification, and correlation analysis.
 │   │   │   ├── user_information.py --> Provides a function to retrieve a hardcoded user profile with financial and risk tolerance information.
 │   │   │   ├── database/
 │   │   │   │   ├── sql_commands.py --> Contains various utility scripts for one-off database migrations and data cleanup tasks.
@@ -100,6 +99,7 @@
 │   │       ├── formatting.py --> A set of utility functions for formatting data into human-readable strings, such as dollar amounts, percentages, and Markdown tables.
 │   │       ├── ib_utils.py --> Provides utility functions for managing a singleton connection to Interactive Brokers.
 │   │       ├── logging_config.py --> Provides utilities for configuring logging and redirecting `print` statements to the logging system.
+│   │       ├── portfolio_analysis.py --> Provides functions to fetch and analyze portfolio data from Interactive Brokers, including holdings, performance metrics, diversification, and correlation analysis.
 │   │       ├── retrieve_portfolio_from_db.py --> Provides functions to retrieve various types of portfolio information from the database.
 │   │       ├── retrieve_user_auth_data.py --> Provides a function to retrieve user authentication data from the database.
 │   │       └── ticker_utils.py --> Provides a utility function to convert a company name into its stock ticker symbol using OpenAI and yfinance.

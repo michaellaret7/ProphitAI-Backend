@@ -1,14 +1,15 @@
 import json
 from backend.src.utils.database import get_cursor
 from typing import List, Dict, Any, Optional
-from backend.src.data.PortfolioData import (
+from backend.src.utils.logging_config import init_logger
+from backend.src.utils.portfolio_analysis import (
     calculate_portfolio_metrics,
     calculate_monthly_portfolio_metrics,
     analyze_portfolio_correlations
 )
-from backend.src.utils.retrieve_portfolio_from_db import retrieve_user_current_portfolio_from_db
+from backend.src.utils.retrieve_portfolio_from_db import retrieve_user_current_portfolio
 
-
+# Use a utils function here instead
 def get_holdings_from_database(user_id: str, email: str) -> tuple[List[Dict[str, Any]], str]:
     """
     Retrieve holdings from the database using user_id and email.
@@ -26,7 +27,7 @@ def get_holdings_from_database(user_id: str, email: str) -> tuple[List[Dict[str,
     """
     try:
         # Use the new utility function to get the portfolio as a DataFrame
-        portfolio_df = retrieve_user_current_portfolio_from_db(user_id=user_id, email=email)
+        portfolio_df = retrieve_user_current_portfolio(user_id=user_id, email=email)
 
         if portfolio_df is None or portfolio_df.empty:
             return [], f"No positions found in database for user_id: {user_id} or email: {email}."
@@ -39,14 +40,14 @@ def get_holdings_from_database(user_id: str, email: str) -> tuple[List[Dict[str,
         for _, row in portfolio_df.iterrows():
             position = {
                 'symbol': row.get('symbol'),
-                'secType': row.get('secType'),
+                'secType': row.get('sectype'),
                 'currency': row.get('currency'),
                 'position': float(row.get('position', 0.0) or 0.0),
-                'marketPrice': float(row.get('marketPrice', 0.0) or 0.0),
-                'marketValue': float(row.get('marketValue', 0.0) or 0.0),
-                'averageCost': float(row.get('averageCost', 0.0) or 0.0),
-                'unrealizedPNL': float(row.get('unrealizedPNL', 0.0) or 0.0),
-                'realizedPNL': float(row.get('realizedPNL', 0.0) or 0.0),
+                'marketPrice': float(row.get('marketprice', 0.0) or 0.0),
+                'marketValue': float(row.get('marketvalue', 0.0) or 0.0),
+                'averageCost': float(row.get('averagecost', 0.0) or 0.0),
+                'unrealizedPNL': float(row.get('unrealizedpnl', 0.0) or 0.0),
+                'realizedPNL': float(row.get('realizedpnl', 0.0) or 0.0),
                 'account': row.get('account')
             }
             positions.append(position)
@@ -77,9 +78,7 @@ def format_to_json(user_id: str, email: str):
     """
     # Get holdings from database instead of IBKR
     positions, formatted_output = get_holdings_from_database(user_id=user_id, email=email)
-            
-    # Prepare default placeholders so that the later payload build does not
-    # raise ``UnboundLocalError`` when the portfolio is empty.
+
     metrics = None
     monthly_results = None
     diversification = None
@@ -88,20 +87,14 @@ def format_to_json(user_id: str, email: str):
     if positions:
         symbols = [p['symbol'] for p in positions]
         
-        # Now these calculations work with database data
-        # Pass None for the IB connection parameter
-        
         # Calculate portfolio metrics
-        metrics = calculate_portfolio_metrics(None, symbols, printOutput=False)
+        metrics = calculate_portfolio_metrics(symbols)
         
         # Calculate monthly portfolio metrics
-        monthly_results = calculate_monthly_portfolio_metrics(None, symbols, print_output=False)
-        
-        # Analyze portfolio diversification - requires IBKR for contract details
-        # diversification = analyze_portfolio_diversification(None, print_output=False)
+        monthly_results = calculate_monthly_portfolio_metrics(symbols=symbols, user_id=user_id, email=email)
         
         # Analyze portfolio correlations
-        correlations = analyze_portfolio_correlations(None, symbols, print_output=False)
+        correlations = analyze_portfolio_correlations(symbols)
     
     # ------------------------------------------------------------------
     # Sanitize *positions* so every entry is JSON-serialisable
@@ -144,7 +137,6 @@ def format_to_json(user_id: str, email: str):
     payload = _round(payload)
 
     json_block = json.dumps(payload)
-    # print(json_block)
 
     return json_block
 

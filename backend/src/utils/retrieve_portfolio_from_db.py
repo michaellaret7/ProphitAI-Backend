@@ -4,8 +4,10 @@ import pandas as pd
 from typing import Optional, Union
 from backend.src.utils.database import get_cursor
 
+# CHANGE GET TO RETRIEVE
+
 # THIS RETRIEVES THE OPTIMIZED/BUILT PORTFOLIOS FROM THE DATABASE
-def retrieve_built_portfolio_from_db(portfolio_id: str, user_id: Optional[str] = None, email: Optional[str] = None) -> Optional[pd.DataFrame]:
+def retrieve_built_portfolio(portfolio_id: str, user_id: Optional[str] = None, email: Optional[str] = None) -> Optional[pd.DataFrame]:
     """
     Retrieves portfolio information from the database using portfolio ID and either user_id or email.
 
@@ -65,7 +67,7 @@ def retrieve_built_portfolio_from_db(portfolio_id: str, user_id: Optional[str] =
         return None
 
 # THIS RETRIEVES THE OPTIMIZED/BUILT ALLOCATIONS FROM THE DATABASE
-def get_portfolio_allocations(portfolio_id: str, user_id: Optional[str] = None, email: Optional[str] = None) -> Optional[pd.DataFrame]:
+def retrieve_built_portfolio_allocations(portfolio_id: str, user_id: Optional[str] = None, email: Optional[str] = None) -> Optional[pd.DataFrame]:
     """
     Retrieves portfolio sector allocations from the database using portfolio ID and either user_id or email.
 
@@ -125,7 +127,7 @@ def get_portfolio_allocations(portfolio_id: str, user_id: Optional[str] = None, 
         return None
 
 # THIS RETRIEVES THE OPTIMIZED/BUILT PORTFOLIOS FROM THE DATABASE
-def get_available_portfolios(user_id: Optional[str] = None, email: Optional[str] = None) -> Optional[pd.DataFrame]:
+def retrieve_available_portfolios(user_id: Optional[str] = None, email: Optional[str] = None) -> Optional[pd.DataFrame]:
     """
     Retrieves a list of available portfolios, optionally filtered by user_id or email.
 
@@ -179,7 +181,7 @@ def get_available_portfolios(user_id: Optional[str] = None, email: Optional[str]
         return None
 
 # THIS RETRIEVES THE OPTIMIZED/BUILT PORTFOLIO THESES FROM THE DATABASE
-def get_portfolio_thesis(portfolio_id: str, user_id: Optional[str] = None, email: Optional[str] = None) -> Optional[pd.DataFrame]:
+def retrieve_portfolio_thesis(portfolio_id: str, user_id: Optional[str] = None, email: Optional[str] = None) -> Optional[pd.DataFrame]:
     """
     Retrieves portfolio thesis from the database using portfolio ID and either user_id or email.
 
@@ -238,7 +240,7 @@ def get_portfolio_thesis(portfolio_id: str, user_id: Optional[str] = None, email
         return None
 
 # THIS RETRIEVES THE USER INFORMATION FROM THE DATABASE WHICH IS FROM THE OPTIMIZED/BUILT PORTFOLIOS
-def get_user_information_from_db(portfolio_id: str, user_id: Optional[str] = None, email: Optional[str] = None) -> Optional[pd.DataFrame]:
+def retrieve_user_information(portfolio_id: str, user_id: Optional[str] = None, email: Optional[str] = None) -> Optional[pd.DataFrame]:
     """
     Retrieves user information from the database using portfolio ID and either user_id or email.
 
@@ -297,7 +299,7 @@ def get_user_information_from_db(portfolio_id: str, user_id: Optional[str] = Non
         return None
 
 # THIS RETRIEVES THE USERS CURRENT PORTFOLIO FROM THE DATABASE
-def retrieve_user_current_portfolio_from_db(user_id: Optional[str] = None, email: Optional[str] = None) -> Optional[pd.DataFrame]:
+def retrieve_user_current_portfolio(user_id: Optional[str] = None, email: Optional[str] = None) -> Optional[pd.DataFrame]:
     """
     Retrieves the current portfolio for a user from the 'user_data' database using user_id and/or email.
 
@@ -360,12 +362,57 @@ def retrieve_user_current_portfolio_from_db(user_id: Optional[str] = None, email
         print(f"An unexpected error occurred: {e}")
         return None
 
-if __name__ == '__main__':
-    # Example usage
-    print("Available portfolios:")
-    # print(get_portfolio_allocations(portfolio_id="839049b7-1ae8-4ef5-a27a-af8dcf4577e3", email="michael@laret.com"))
-    # print(get_portfolio_thesis(portfolio_id="839049b7-1ae8-4ef5-a27a-af8dcf4577e3", email="michael@laret.com"))
-    print(get_user_information_from_db(portfolio_id="839049b7-1ae8-4ef5-a27a-af8dcf4577e3", email="michael@laret.com"))
-    print(get_portfolio_thesis(portfolio_id="839049b7-1ae8-4ef5-a27a-af8dcf4577e3", email="michael@laret.com"))
+def get_holdings_from_database(user_id: Optional[str] = None, email: Optional[str] = None) -> Optional[pd.DataFrame]:
+    """
+    Retrieve holdings from the database using user_id and email.
+    
+    Queries the user_portfolios table to fetch the most recent holdings
+    for the specified user with proper data type conversion.
+    
+    Args:
+        user_id: The user ID of the user whose holdings to retrieve.
+        email: The email of the user whose holdings to retrieve.
+        
+    Returns:
+        Tuple[List[Dict[str, Any]], str]: Tuple containing list of position dictionaries 
+        and formatted status string, or empty list and error message if failed.
+    """
+    try:
+        # Use the new utility function to get the portfolio as a DataFrame
+        portfolio_df = retrieve_user_current_portfolio(user_id=user_id, email=email)
+
+        if portfolio_df is None or portfolio_df.empty:
+            return [], f"No positions found in database for user_id: {user_id} or email: {email}."
+
+        # Sort by timestamp to get the most recent for each symbol and account, then drop duplicates
+        portfolio_df = portfolio_df.sort_values('fetch_timestamp', ascending=False).drop_duplicates(subset=['symbol', 'account'])
+        
+        # Format positions to match the expected structure
+        positions = []
+        for _, row in portfolio_df.iterrows():
+            position = {
+                'symbol': row.get('symbol'),
+                'secType': row.get('secType'),
+                'currency': row.get('currency'),
+                'position': float(row.get('position', 0.0) or 0.0),
+                'marketPrice': float(row.get('marketPrice', 0.0) or 0.0),
+                'marketValue': float(row.get('marketValue', 0.0) or 0.0),
+                'averageCost': float(row.get('averageCost', 0.0) or 0.0),
+                'unrealizedPNL': float(row.get('unrealizedPNL', 0.0) or 0.0),
+                'realizedPNL': float(row.get('realizedPNL', 0.0) or 0.0),
+                'account': row.get('account')
+            }
+            positions.append(position)
+        
+        # Format output string for display
+        formatted_output = f"Retrieved {len(positions)} positions from database for user_id: {user_id}"
+        
+        return positions, formatted_output
+            
+    except Exception as e:
+        print(f"Error retrieving holdings from database: {e}")
+        return [], f"Error retrieving holdings: {str(e)}"
+
+
 
          

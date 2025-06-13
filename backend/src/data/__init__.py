@@ -6,14 +6,16 @@ portfolio data, fundamental data, and database schemas.
 """
 
 # Import modules for easier access
-from backend.src.data.PortfolioData import (
+from backend.src.utils.portfolio_analysis import (
     get_portfolio_holdings,
-    connect_to_ib,
     calculate_portfolio_metrics,
     calculate_monthly_portfolio_metrics, 
     calculate_monthly_stock_metrics,
-    analyze_portfolio_diversification,
     analyze_portfolio_correlations
+)
+
+from backend.src.utils.ib_utils import (
+    connect_to_ib
 )
 
 from backend.src.data.database.database_schema_update import (

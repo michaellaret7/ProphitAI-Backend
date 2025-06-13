@@ -54,7 +54,7 @@ def run_workflow(user_id: str, email: str) -> Dict[str, Any] | None:
         print("🚀 Starting workflow ...")
 
         # ---------------- 1️⃣  Phase-one: Build draft portfolio -----------------
-        print("\n🏗️  Running Phase-One optimisation …")
+        print("\n 🏗️  Running Phase-One optimisation …")
         phase_one_data = optimize(user_id=user_id, email=email)
         if not phase_one_data or "portfolio" not in phase_one_data:
             print("Phase-One did not return a valid portfolio JSON. Aborting database operations.")
@@ -74,7 +74,7 @@ def run_workflow(user_id: str, email: str) -> Dict[str, Any] | None:
         # If we reach here, both phases were successful.
         
         # portfolio_name = f"prophitai_run_{strftime('%Y%m%d_%H%M%S')}"
-        portfolio_name = "real_data_test_portfolio"
+        portfolio_name = "grok_test_portfolio"
         print(f"\n💾 All phases successful. Preparing to store data for portfolio: {portfolio_name} ...")
 
         # Fetch user information just before storing if it's a separate call.

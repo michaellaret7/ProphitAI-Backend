@@ -433,7 +433,7 @@ def get_fundamental_data(ticker: str, db_config: Optional[Dict] = None) -> Optio
         return None 
 
 
-def get_dividend_info(ticker: str, db_config: Optional[Dict] = None) -> Optional[pd.DataFrame]:
+def get_dividend_data(ticker: str, db_config: Optional[Dict] = None) -> Optional[pd.DataFrame]:
     """Return a DataFrame with dividend-related fields for *ticker*.
 
     The helper leverages ``get_fundamental_data`` (defined below in this same
@@ -523,5 +523,5 @@ def get_dividend_info(ticker: str, db_config: Optional[Dict] = None) -> Optional
 
 
 if __name__ == "__main__":
-    div_df = get_dividend_info('AAPL')
+    div_df = get_dividend_data('AAPL')
     print(div_df)

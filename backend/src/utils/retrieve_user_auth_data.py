@@ -20,7 +20,3 @@ def get_user_id_from_email(email: str) -> Optional[str]:
     if user_id is not None:
         return str(user_id)
     return None
-
-
-if __name__ == "__main__":
-    print(get_user_id_from_email('michael@laret.com'))

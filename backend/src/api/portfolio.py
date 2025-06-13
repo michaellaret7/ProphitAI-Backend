@@ -10,7 +10,7 @@ from backend.src.utils.data_retrieval import get_price_data
 from backend.src.utils.financial_calculations import calculate_total_return
 import numpy as np
 from backend.src.auth import get_current_user
-from backend.src.utils.retrieve_portfolio_from_db import get_portfolio_allocations, retrieve_user_current_portfolio_from_db
+from backend.src.utils.retrieve_portfolio_from_db import retrieve_built_portfolio_allocations, retrieve_user_current_portfolio
 
 router = APIRouter()
 
@@ -117,11 +117,11 @@ async def get_portfolio_allocation(current_user=Depends(get_current_user)):
 
     try:
         # Use the existing function to get portfolio allocations
-        allocations_df = get_portfolio_allocations(portfolio_id=portfolio_id, user_id=user_id)
+        allocations_df = retrieve_built_portfolio_allocations(portfolio_id=portfolio_id, user_id=user_id)
         
         # The function returns None on DB error, or an empty DataFrame if no records found.
         if allocations_df is None:
-            # This indicates a database error inside get_portfolio_allocations
+            # This indicates a database error inside retrieve_built_portfolio_allocations
             raise HTTPException(status_code=500, detail="Database error processing portfolio allocation.")
 
         if allocations_df.empty:
@@ -189,7 +189,7 @@ async def get_current_user_holdings(current_user=Depends(get_current_user)):
     user_id = current_user.id 
 
     try:
-        holdings_df = retrieve_user_current_portfolio_from_db(user_id=user_id)
+        holdings_df = retrieve_user_current_portfolio(user_id=user_id)
 
         if holdings_df is None:
             raise HTTPException(status_code=500, detail="Database error retrieving portfolio holdings.")
