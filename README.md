@@ -1,4 +1,4 @@
-# ProphitAI 📈
+![bird_logo_full](https://github.com/user-attachments/assets/994e93dd-c2ce-4880-b0dd-f83d71f899e9)
 
 [![Build Status](https://img.shields.io/badge/build-passing-brightgreen)](https://github.com/your-username/ProphitAI)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
