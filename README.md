@@ -1,6 +1,6 @@
-![bird_logo_full](https://github.com/user-attachments/assets/994e93dd-c2ce-4880-b0dd-f83d71f899e9)
+[![Build Status](https:/![bird_logo_full](https://github.com/user-attachments/assets/a7cfd249-992c-4479-aace-4eb0ee727075)
 
-[![Build Status](https://img.shields.io/badge/build-passing-brightgreen)](https://github.com/your-username/ProphitAI)
+/img.shields.io/badge/build-passing-brightgreen)](https://github.com/your-username/ProphitAI)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Python Version](https://img.shields.io/badge/python-3.9%2B-blue)](https://www.python.org/downloads/)
 [![Frontend](https://img.shields.io/badge/frontend-React-cyan)](https://react.dev/)
