@@ -18,7 +18,7 @@ from backend.src.utils.ib_utils import (
     connect_to_ib
 )
 
-from backend.src.data.database.database_schema_update import (
+from backend.jobs.update_database_schema import (
     recreate_database_schemas
 )
 

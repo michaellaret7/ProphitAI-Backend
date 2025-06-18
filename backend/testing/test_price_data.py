@@ -41,13 +41,17 @@ def get_last_day_price_data(ticker: str):
 
 if __name__ == '__main__':
 
-    fixed_income_etfs = ["EMLC", "HYXU", "HYD", "BKLN", "SJB", "BNDX", "BAB", "LTPZ", "EDV", "TMF", "TBT"]
-    equity_etfs = ["SKYY", "CLOU", "HACK", "TAN", "LIT", "NOBL", "COWZ", "SYLD", "BTAL", "IPO", "FPX", "FTLS", "RSP", "SSO", "SPXU", "TQQQ", "SQQQ"]
-    alts_etfs = ["HFND", "ARB", "DBMF", "KMLM", "CTA", "BTAL", "FTLS", "PSH", "IEP", "GLRE"]
-    pe_funds = ["PEX", "PEVC", "LBO", "BDCZ", "BDCX", "ALTY", "IPRV"]
-    for etf in pe_funds:
+    # fixed_income_etfs = ["EMLC", "HYXU", "HYD", "BKLN", "SJB", "BNDX", "BAB", "LTPZ", "EDV", "TMF", "TBT"]
+    # equity_etfs = ["SKYY", "CLOU", "HACK", "TAN", "LIT", "NOBL", "COWZ", "SYLD", "BTAL", "IPO", "FPX", "FTLS", "RSP", "SSO", "SPXU", "TQQQ", "SQQQ"]
+    # alts_etfs = ["HFND", "ARB", "DBMF", "KMLM", "CTA", "BTAL", "FTLS", "PSH", "IEP", "GLRE"]
+    clo_etfs = ["JAAA", "JBBB", "CLOI", "PAAA", "ICLO", "CLOA", "TRPA", "BCLO", "NCLO"]
+    abs_etfs = ["VABS", "FUSI", "NBSD", "JPLD", "USTB", "TUSI"]
+    # pe_funds = ["PEX", "PEVC", "LBO", "BDCZ", "BDCX", "ALTY", "IPRV"]
+    for etf in abs_etfs:
         price_data = get_last_day_price_data(etf)
         print(price_data)
         print("--------------------------------")
+
+    # print(get_last_day_price_data("TYA"))
 
 

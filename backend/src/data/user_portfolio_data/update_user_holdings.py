@@ -36,9 +36,6 @@ def update_user_portfolio_in_db(email: str) -> bool:
     
     if not latest_positions:
         logger.warning(f"⚠️ No positions returned from IBKR for user_id: {user_id}. If this is unexpected, please check IBKR connection and account status.")
-        # The current store_portfolio_positions will simply log "No positions data provided"
-        # and not change the database if latest_positions is empty. This is the desired behavior.
-        # If the intention is to delete all user's positions, explicit logic would be needed here.
 
     logger.info(f"Attempting to store/update portfolio for user_id: '{user_id}'.")
     

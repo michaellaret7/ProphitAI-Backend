@@ -436,7 +436,7 @@ def run_phase_two(portfolio_data):
                 # Add error info to portfolio if parsing fails
                 final_portfolio[asset_class_name] = {"error": "Failed to parse recommendations"}
     
-    logger.info("Phase-two complete – final aggregated portfolio ready.")
+    logger.info("Phase-two complete - final aggregated portfolio ready.")
     if logger.isEnabledFor(logging.DEBUG):
         logger.debug("Final Portfolio JSON:\n%s", json.dumps(final_portfolio, indent=2))
     # Final portfolio already logged above.
@@ -447,7 +447,7 @@ if __name__ == "__main__":
     sample_portfolio_data_for_phase_two = {
         "portfolio": [
             {
-                "asset_class": "semiconductors",  # Example: Equity Sub-industry
+                "asset_class": "broad_bond_index_etfs",  # Example: Equity Sub-industry
                 "allocation": 15.0,
                 "reason": "medium conviction to this asset class"
             }

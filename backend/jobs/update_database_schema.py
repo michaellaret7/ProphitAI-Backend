@@ -49,10 +49,18 @@ def recreate_database_schemas(output_file="database_schemas.json"):
     
     # Initialize the final structure
     schemas_data = {}
+
+    # --- MODIFIED ---
+    # Construct a path to backend/src/data/database regardless of where the script is run from.
+    # This assumes the script is run from the project root.
+    database_dir = os.path.join("backend", "src", "data", "database")
+    if not os.path.exists(database_dir):
+        os.makedirs(database_dir) # Ensure the directory exists
+    # --- END MODIFIED ---
     
     # First, load the existing schema to preserve structure
     try:
-        with open('backend/src/data/database/database_schemas.json', 'r') as f:
+        with open(os.path.join(database_dir, 'database_schemas.json'), 'r') as f:
             original_schema = json.load(f)
     except:
         print("Warning: Original schema file not found. Creating new structure.")
@@ -472,10 +480,7 @@ def recreate_database_schemas(output_file="database_schemas.json"):
     except Exception as e:
         print(f"Error: {e}")
     
-    # Determine canonical output path – inside src/data/database
-    base_dir = os.path.join('backend', 'src', 'data', 'database')
-    os.makedirs(base_dir, exist_ok=True)
-    output_path = os.path.join(base_dir, output_file)
+    output_path = os.path.join(database_dir, output_file)
 
     # Write the schemas data to a file
     with open(output_path, 'w') as f:

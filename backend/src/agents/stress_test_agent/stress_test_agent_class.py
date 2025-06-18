@@ -6,7 +6,7 @@ from typing import List, Dict, Any, Callable, Optional, Tuple
 from openai import OpenAI
 
 class StressTestAgent:
-    def __init__(self, llm: str, api_key: Optional[str] = None, max_iterations: int = 10):
+    def __init__(self, llm: str, api_key: Optional[str] = None, max_iterations: int = 100):
         """
         Initialize the stress test agent with LLM configuration.
         
@@ -28,14 +28,16 @@ Follow the Thought → Action → Observation loop internally:
 1. Thought: brief reasoning.
 2. Action: call ONE tool exactly like  
    Action: tool_name(param=value, …)
-3. PAUSE 
-4. Observation: reflect on the tool result.
+3. Observation: reflect on the tool result.
 
 Available tools
 • get_tickers() --> returns list of tickers
 • calculate_stock_metrics(start_date_str:string, end_date_str:string) --> returns {"ticker": {max_drawdown: %, annualized_volatility: %, ...}} (for all tickers in the specified date range)
 • get_portfolio_returns(start_date_str:string, end_date_str:string) --> returns the overall portfolio return in the specified date range
 • get_stock_data(ticker:string, start_date_str:string, end_date_str:string) --> returns full hourly price history for deeper analysis
+
+Important:
+- You may not stop until you have completed the task.
 
 After analysing every ticker, output:
 

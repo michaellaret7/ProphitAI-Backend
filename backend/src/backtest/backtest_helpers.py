@@ -254,13 +254,6 @@ def calculate_portfolio_returns(portfolio: Dict[str, Any], historical_data: Dict
 
         portfolio_values.loc[day, 'value'] = day_value
 
-
-    # Ensure the first value is based on the actual initial investment if possible
-    # The calculated value on the first day might differ slightly due to using first available prices
-    # Option 1: Use calculated first day value (current implementation)
-    # Option 2: Force first day value to be initial_investment
-    # portfolio_values.iloc[0, portfolio_values.columns.get_loc('value')] = initial_investment
-
     # Handle cases where calculated value might be zero or negative if logic allows
     if (portfolio_values['value'] <= 1e-9).all():
          print("⚠️ Portfolio value remained zero or near-zero throughout the backtest period.")
@@ -279,14 +272,6 @@ def calculate_portfolio_returns(portfolio: Dict[str, Any], historical_data: Dict
 
     # Calculate cumulative returns with proper geometric compounding
     portfolio_values['cumulative_return'] = (1 + portfolio_values['daily_return']).cumprod() - 1
-
-    # Verify consistency between value and returns (optional check)
-    # calculated_values = initial_investment * (1 + portfolio_values['cumulative_return'])
-    # value_discrepancy = np.abs(portfolio_values['value'] - calculated_values)
-    # if (value_discrepancy > 1).any():  # Allow $1 tolerance
-    #     print("⚠️ Warning: Value/return mismatch detected - check calculation logic")
-    #     print("   Max discrepancy: ${:.2f}".format(value_discrepancy.max()))
-
 
     # --- Calculate Metrics ---
     print(" calculating performance metrics...")

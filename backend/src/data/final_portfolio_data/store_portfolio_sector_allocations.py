@@ -162,10 +162,6 @@ def store_portfolio_sector_allocations(
 
     with _pg_connect(target_db) as conn:
         # -----------------------------------------------------------------
-        # 4. Calculate next schema name - REMOVED, using public schema now
-        # -----------------------------------------------------------------
-        
-        # -----------------------------------------------------------------
         # 5. Create tables (if they don't exist) in the public schema
         # -----------------------------------------------------------------
         portfolios_table = "portfolios"
@@ -173,10 +169,6 @@ def store_portfolio_sector_allocations(
         portfolio_thesis_table = "portfolio_thesis"
 
         with conn.cursor(cursor_factory=RealDictCursor) as cur:
-            # Drop the portfolios table to ensure it's created with the correct UUID type for portfolio_id
-            # cur.execute(sql.SQL("DROP TABLE IF EXISTS {schema}.{table} CASCADE;").format(
-            #     schema=sql.Identifier(schema_name), table=sql.Identifier(portfolios_table)))
-            
             # Create portfolios table with UUID as portfolio_id
             create_portfolios_table_sql = sql.SQL(
                 """
@@ -306,109 +298,3 @@ def store_portfolio_sector_allocations(
         conn.commit()
 
     return current_portfolio_id
-
-# ---------------------------------------------------------------------------
-# Helper utilities - REMOVED _num_to_words_mapping, _int_to_english, _english_word_to_int_map
-# ---------------------------------------------------------------------------
-
-if __name__ == "__main__":
-    # Example: Ensure USER_NAME is in your .env or environment for this test
-    test_user_id = "user_01JXG39MMAVW1P3XVGX7YHN2DT"
-    test_email = "michael@laret.com"
-    if not test_user_id or not test_email:
-        print("Please set test_user_id and test_email for the test to run.")
-    else:
-        # The f-string with uuid.uuid4().hex[:8] ensures unique portfolio name for each test run
-        test_portfolio_name = f"MyTestPortfolio_{uuid.uuid4().hex[:8]}" 
-        
-        # Sample data for store_portfolio_sector_allocations
-        sector_portfolio_data = {
-            "portfolio": [
-                {
-                    "asset_class": "semiconductors",
-                    "allocation": 10.5,
-                    "reason": "Strong growth in AI sector."
-                },
-                {
-                    "asset_class": "renewable_energy",
-                    "allocation": 15.0,
-                    "reason": "Government incentives and increasing demand."
-                },
-                {
-                    "asset_class": "Cash",
-                    "allocation": 5.0,
-                    "reason": "Strategic liquidity."
-                }
-            ],
-            "portfolio_thesis": "This is a test thesis for the comprehensive portfolio."
-        }
-
-        # Sample data for store_final_portfolio 
-        # (structure this like the output of make_phaseTwo_recommendations)
-        final_portfolio_data = {
-            "semiconductors": {
-                "total_stocks_analyzed": 2,
-                "recommendations": [
-                    {
-                        "ticker": "NVDA",
-                        "reason_for_recommendation": "Leading AI chip manufacturer.",
-                        "supporting_metrics": {"sharpe_ratio": 2.1, "operating_margin_avg": "60%"},
-                        "allocation": 7.5
-                    },
-                    {
-                        "ticker": "AMD",
-                        "reason_for_recommendation": "Competitive CPU and GPU offerings.",
-                        "supporting_metrics": {"beta": 1.2, "revenue_growth": "20%"},
-                        "allocation": 3.0
-                    }
-                ]
-            },
-            "renewable_energy": {
-                "total_stocks_analyzed": 1,
-                "recommendations": [
-                    {
-                        "ticker": "NEE",
-                        "reason_for_recommendation": "Largest renewable energy producer.",
-                        "supporting_metrics": {"dividend_yield": "3%", "payout_ratio": "60%"},
-                        "allocation": 15.0
-                    }
-                ]
-            }
-            # "Cash" asset class usually doesn't have ticker recommendations in this structure
-        }
-
-        try:
-            print(f"--- Running Test for User: {test_user_id}, Portfolio: {test_portfolio_name} ---")
-            
-            # 1. Store sector allocations and thesis, get portfolio_id
-            print("1. Storing sector allocations and thesis...")
-            created_portfolio_id = store_portfolio_sector_allocations(
-                sector_portfolio_data, test_portfolio_name, test_user_id, test_email
-            )
-            print(f"   Successfully stored. Portfolio UUID: {created_portfolio_id}")
-
-            # 2. Store final portfolio (ticker details)
-            # Need to import store_final_portfolio at the top of the file if not already done for __main__
-            from .store_final_portfolio import store_final_portfolio
-            print("\n2. Storing final portfolio (ticker details)...")
-            store_final_portfolio(
-                final_portfolio_data, created_portfolio_id, test_portfolio_name, test_user_id, test_email
-            )
-            print(f"   Successfully stored final portfolio details for Portfolio UUID: {created_portfolio_id}")
-
-            # 3. Store user information
-            # Need to import store_user_information at the top of the file if not already done for __main__
-            from .store_user_information import store_user_information
-            # (Assuming get_user_information() in store_user_information.py fetches/returns some mock data for testing)
-            print("\n3. Storing user information...")
-            store_user_information(created_portfolio_id, test_portfolio_name, test_user_id, test_email)
-            print(f"   Successfully stored user information for Portfolio UUID: {created_portfolio_id}")
-
-            print("\n--- Test Completed Successfully ---")
-            print(f"Check your 'portfolio_results' database, public schema, for portfolio_id = {created_portfolio_id}.")
-
-        except Exception as e:
-            print(f"--- Test Failed --- ")
-            print(f"Error during test: {e}")
-            import traceback
-            traceback.print_exc()

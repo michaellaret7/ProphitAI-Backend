@@ -5747,101 +5747,168 @@
     "etf_data": {
         "database": "etf_data",
         "schemas": {
+            "cryptocurrency_etfs": {
+                "tables": {
+                    "crypto": {
+                        "tickers": [
+                            "ARKB",
+                            "BITB",
+                            "BITO",
+                            "BRRR",
+                            "BTC",
+                            "BTCO",
+                            "BTCW",
+                            "DEFI",
+                            "ETHA",
+                            "EZBC",
+                            "FBTC",
+                            "GBTC",
+                            "HODL",
+                            "IBIT"
+                        ]
+                    }
+                }
+            },
             "alternative_etfs": {
                 "tables": {
-                    "private_equity_exposure_etfs": {
+                    "hedge_fund_replication": {
+                        "tickers": [
+                            "ARB",
+                            "BXMDX",
+                            "FORH",
+                            "GLRE",
+                            "HDG",
+                            "HFND",
+                            "IEP",
+                            "LALT",
+                            "PSH",
+                            "QAI"
+                        ]
+                    },
+                    "collateralized_loan_obligation": {
+                        "tickers": [
+                            "BCLO",
+                            "CLOA",
+                            "CLOI",
+                            "ICLO",
+                            "JAAA",
+                            "JBBB",
+                            "NCLO",
+                            "PAAA",
+                            "TRPA"
+                        ]
+                    },
+                    "interest_rate_and_inflation_hedge": {
+                        "tickers": [
+                            "HYKE",
+                            "PFIX",
+                            "RATE",
+                            "RINF",
+                            "RYSE"
+                        ]
+                    },
+                    "managed_futures": {
+                        "tickers": [
+                            "CTA",
+                            "DBMF",
+                            "FMF",
+                            "KMLM",
+                            "USE",
+                            "WTMF"
+                        ]
+                    },
+                    "abs_and_mbs": {
+                        "tickers": [
+                            "FUSI",
+                            "JPLD",
+                            "NBSD",
+                            "TUSI",
+                            "USTB",
+                            "VABS"
+                        ]
+                    },
+                    "risk_parity": {
+                        "tickers": [
+                            "ARP",
+                            "RLY",
+                            "RPAR",
+                            "TYA",
+                            "UPAR"
+                        ]
+                    },
+                    "volatility": {
+                        "tickers": [
+                            "VXX",
+                            "VXZ"
+                        ]
+                    },
+                    "equity_long_short_tactical": {
+                        "tickers": [
+                            "BTAL",
+                            "CBLS",
+                            "HEDJ",
+                            "HTUS",
+                            "VAMO"
+                        ]
+                    },
+                    "business_development_company": {
                         "tickers": [
                             "BIZD",
-                            "PSP"
-                        ]
-                    },
-                    "business_development_companies": {
-                        "tickers": [
                             "HTGC",
-                            "TPVG",
-                            "TSLX"
-                        ]
-                    },
-                    "closed_end_funds_that_hold_private_equity_late_sta": {
-                        "tickers": [
+                            "PEX",
                             "SSSS",
-                            "SVVC"
-                        ]
-                    },
-                    "equity_selection_hedge_fund_holding_clones": {
-                        "tickers": [
-                            "GURU"
-                        ]
-                    },
-                    "hedge_funds": {
-                        "tickers": [
-                            "BXMDX",
-                            "HDG",
-                            "MNA",
-                            "QAI",
-                            "RCIWX"
-                        ]
-                    },
-                    "ipo_focused_etfs_late_stage_tech_pre_ipo_th": {
-                        "tickers": [
-                            "ARKK",
-                            "FPX",
-                            "IPO",
-                            "PEX"
+                            "TPVG"
                         ]
                     }
                 }
             },
             "commodity_etfs": {
                 "tables": {
-                    "softs": {
-                        "tickers": [
-                            "BAL",
-                            "CANE",
-                            "DBA",
-                            "JO",
-                            "NIB",
-                            "SGG"
-                        ]
-                    },
-                    "broad_commodity_etfs": {
-                        "tickers": [
-                            "COMT",
-                            "DBC",
-                            "GSG",
-                            "USCI"
-                        ]
-                    },
-                    "energy_focused_etfs": {
+                    "energy": {
                         "tickers": [
                             "BNO",
+                            "DBO",
+                            "UGA",
                             "UNG",
                             "USO"
                         ]
                     },
-                    "grains": {
+                    "industrial_commodities": {
                         "tickers": [
+                            "ALUM",
+                            "BCIM",
+                            "CPER",
+                            "NICK",
+                            "REMX",
+                            "TINM"
+                        ]
+                    },
+                    "industrial_metals": {
+                        "tickers": [
+                            "JJC"
+                        ]
+                    },
+                    "multi": {
+                        "tickers": [
+                            "COMT",
+                            "DBC",
+                            "USCI"
+                        ]
+                    },
+                    "agricultural_commodities": {
+                        "tickers": [
+                            "CANE",
+                            "COFF",
                             "CORN",
-                            "DBA",
+                            "COW",
+                            "NIB",
+                            "SGG",
                             "SOYB",
                             "TAGS",
                             "WEAT"
                         ]
                     },
-                    "industrial_metals": {
-                        "tickers": [
-                            "CPER",
-                            "DBB",
-                            "FOIL",
-                            "JJC"
-                        ]
-                    },
-                    "livestock": {
-                        "tickers": [
-                            "COW"
-                        ]
-                    },
-                    "precious_metals_etfs": {
+                    "precious_metals": {
                         "tickers": [
                             "GLD",
                             "IAU",
@@ -5849,22 +5916,329 @@
                             "PPLT",
                             "SLV"
                         ]
+                    },
+                    "base_metals": {
+                        "tickers": [
+                            "DBB"
+                        ]
+                    },
+                    "commodity_basket": {
+                        "tickers": [
+                            "BCI",
+                            "DBA",
+                            "DBE",
+                            "GSG"
+                        ]
                     }
                 }
             },
             "equity_etfs": {
                 "tables": {
-                    "single_country_and_regional_etfs_in_emerging_marke": {
+                    "asset_allocation": {
                         "tickers": [
-                            "EWT",
-                            "EWY",
-                            "EWZ",
-                            "INDA",
-                            "MCHI"
+                            "AOA",
+                            "AOK",
+                            "AOM",
+                            "AOR"
                         ]
                     },
-                    "sector_specific_etfs": {
+                    "commodities": {
                         "tickers": [
+                            "COPJ",
+                            "COPP",
+                            "COPX",
+                            "EFG",
+                            "ENFR",
+                            "EVX",
+                            "FAN",
+                            "FCG",
+                            "GBUG",
+                            "GNR",
+                            "GWX",
+                            "IYM",
+                            "LITP",
+                            "NIKL",
+                            "NLR",
+                            "PBD",
+                            "PICK",
+                            "PXE",
+                            "PXJ",
+                            "SCZ",
+                            "SETM",
+                            "SGDJ",
+                            "SGDM",
+                            "SLVR",
+                            "SLX",
+                            "TAN",
+                            "URA",
+                            "URNJ",
+                            "URNM",
+                            "WOOD"
+                        ]
+                    },
+                    "developed_countries": {
+                        "tickers": [
+                            "EDEN",
+                            "EFNL",
+                            "EIRL",
+                            "ENZL",
+                            "EPOL",
+                            "EUSA",
+                            "EWA",
+                            "EWC",
+                            "EWD",
+                            "EWG",
+                            "EWI",
+                            "EWJ",
+                            "EWK",
+                            "EWL",
+                            "EWN",
+                            "EWO",
+                            "EWP",
+                            "EWQ",
+                            "EWU",
+                            "NORW",
+                            "VTI"
+                        ]
+                    },
+                    "dividend_strategies": {
+                        "tickers": [
+                            "DGRO",
+                            "NOBL",
+                            "SCHD",
+                            "SDY"
+                        ]
+                    },
+                    "emerging_markets": {
+                        "tickers": [
+                            "AFK",
+                            "ARGT",
+                            "ASEA",
+                            "ASHR",
+                            "BKF",
+                            "CHIQ",
+                            "CQQQ",
+                            "DEM",
+                            "DGRE",
+                            "DGS",
+                            "ECH",
+                            "ECON",
+                            "EEM",
+                            "EEMV",
+                            "EIS",
+                            "EMIF",
+                            "EMQQ",
+                            "EMXC",
+                            "EPHE",
+                            "EPU",
+                            "EWH",
+                            "EWM",
+                            "EWS",
+                            "EWT",
+                            "EWW",
+                            "EWX",
+                            "EWY",
+                            "EWZ",
+                            "EZA",
+                            "FXI",
+                            "GMF",
+                            "GREK",
+                            "GXC",
+                            "GXG",
+                            "IDX",
+                            "IEMG",
+                            "ILF",
+                            "INCO",
+                            "INDA",
+                            "KSA",
+                            "KURE",
+                            "KWEB",
+                            "KWT",
+                            "MCHI",
+                            "PIN",
+                            "QAT",
+                            "SCHE",
+                            "THD",
+                            "TUR",
+                            "UAE",
+                            "VMMSX",
+                            "VNM",
+                            "VWO"
+                        ]
+                    },
+                    "environmental_social_and_corporate_governance": {
+                        "tickers": [
+                            "DSI",
+                            "ESGG",
+                            "ETHO",
+                            "SHE",
+                            "SUSL"
+                        ]
+                    },
+                    "equal_weighted": {
+                        "tickers": [
+                            "EQAL",
+                            "EQWL",
+                            "GRPM",
+                            "QQEW"
+                        ]
+                    },
+                    "factors": {
+                        "tickers": [
+                            "EEMO",
+                            "EFV",
+                            "GEM",
+                            "IDLV",
+                            "PFM",
+                            "PID",
+                            "PIE",
+                            "PIZ",
+                            "QWLD",
+                            "VIG"
+                        ]
+                    },
+                    "fundamental": {
+                        "tickers": [
+                            "PDN",
+                            "PXF",
+                            "PXH"
+                        ]
+                    },
+                    "fundamentally_weighted": {
+                        "tickers": [
+                            "FNDB",
+                            "PRF",
+                            "PRFZ"
+                        ]
+                    },
+                    "global_dividends": {
+                        "tickers": [
+                            "AIVI",
+                            "DIM",
+                            "DLS",
+                            "DOL",
+                            "DTH"
+                        ]
+                    },
+                    "global_equities": {
+                        "tickers": [
+                            "ACWI",
+                            "IEFA",
+                            "SPDW",
+                            "VEA"
+                        ]
+                    },
+                    "global_regions_dividends": {
+                        "tickers": [
+                            "DFE",
+                            "DFJ",
+                            "DXJ",
+                            "FDD"
+                        ]
+                    },
+                    "preferred_stock": {
+                        "tickers": [
+                            "EPRF",
+                            "FPE",
+                            "IPPP",
+                            "JHPI",
+                            "PFF",
+                            "PFFA",
+                            "PFFD",
+                            "PFFL",
+                            "PFFR",
+                            "PFFV",
+                            "PFXF",
+                            "PGF",
+                            "PGX",
+                            "PREF",
+                            "PSK",
+                            "QPFF",
+                            "SPFF"
+                        ]
+                    },
+                    "quality": {
+                        "tickers": [
+                            "IQDF",
+                            "IQLT"
+                        ]
+                    },
+                    "regions": {
+                        "tickers": [
+                            "AIA",
+                            "EPP",
+                            "EZU",
+                            "FEZ",
+                            "SPEU",
+                            "VGK"
+                        ]
+                    },
+                    "sectors": {
+                        "tickers": [
+                            "AIQ",
+                            "BJK",
+                            "BLOK",
+                            "CANC",
+                            "CARZ",
+                            "CIBR",
+                            "ESPO",
+                            "EXI",
+                            "GDX",
+                            "GDXJ",
+                            "GGME",
+                            "GII",
+                            "GRID",
+                            "HAP",
+                            "IAI",
+                            "IBUY",
+                            "IDRV",
+                            "IGPT",
+                            "IHF",
+                            "IHI",
+                            "IXC",
+                            "IXG",
+                            "IXJ",
+                            "IXN",
+                            "IXP",
+                            "IYT",
+                            "JETS",
+                            "JXI",
+                            "KBWB",
+                            "KBWP",
+                            "KBWR",
+                            "KCE",
+                            "KIE",
+                            "KNCT",
+                            "KXI",
+                            "MXI",
+                            "NXTG",
+                            "PBE",
+                            "PBJ",
+                            "PEJ",
+                            "PIO",
+                            "PJP",
+                            "PNQI",
+                            "PPA",
+                            "PSCC",
+                            "PSCD",
+                            "PSCE",
+                            "PSCF",
+                            "PSCH",
+                            "PSCI",
+                            "PSCM",
+                            "PSCT",
+                            "PSCU",
+                            "PSI",
+                            "PSP",
+                            "ROBO",
+                            "RXI",
+                            "SEA",
+                            "SIL",
+                            "SKYY",
+                            "SOCL",
+                            "VICE",
+                            "XHB",
+                            "XHE",
                             "XLB",
                             "XLC",
                             "XLE",
@@ -5875,25 +6249,112 @@
                             "XLRE",
                             "XLU",
                             "XLV",
-                            "XLY"
+                            "XLY",
+                            "XME",
+                            "XRT"
                         ]
                     },
-                    "barra_styleetfs": {
+                    "single_country_small_and_mid_caps": {
                         "tickers": [
+                            "BRF",
+                            "ECNS",
+                            "EWZS",
+                            "SMIN"
+                        ]
+                    },
+                    "strategies": {
+                        "tickers": [
+                            "ARB",
+                            "ARKK",
+                            "BTAL",
+                            "CEFS",
+                            "CLIX",
+                            "CLSE",
+                            "CSD",
+                            "EQL",
+                            "EVNT",
+                            "FLAG",
+                            "FLSP",
+                            "FPX",
+                            "FTLS",
+                            "GURU",
+                            "IPKW",
+                            "IPO",
+                            "LBAY",
+                            "MARB",
+                            "MNA",
+                            "MOAT",
+                            "MRGR",
+                            "PBP",
+                            "PHDG",
+                            "PKW",
+                            "SVVC",
+                            "UPGD"
+                        ]
+                    },
+                    "us_factors": {
+                        "tickers": [
+                            "ACWV",
+                            "AIVL",
+                            "DES",
+                            "DLN",
+                            "DON",
+                            "DTD",
+                            "DWAS",
+                            "EELV",
+                            "EES",
+                            "EPS",
+                            "EZM",
+                            "FDM",
+                            "FVD",
+                            "IDMO",
+                            "IJR",
+                            "ILCB",
+                            "ILCG",
+                            "ILCV",
+                            "IMCB",
+                            "IMCG",
+                            "IMCV",
+                            "ISCB",
+                            "ISCG",
+                            "ISCV",
+                            "IUSG",
+                            "IUSV",
                             "IVW",
+                            "IWB",
+                            "IWC",
+                            "IWD",
                             "IWF",
+                            "IWM",
+                            "IWN",
                             "IWO",
                             "IWP",
+                            "IWR",
+                            "IWS",
                             "JHMS",
+                            "LGLV",
+                            "MDY",
+                            "MDYG",
+                            "MDYV",
+                            "MMTM",
                             "MTUM",
                             "PDP",
                             "QUAL",
                             "RFG",
                             "RPG",
+                            "SCHA",
+                            "SCHM",
+                            "SCHX",
+                            "SLYG",
+                            "SLYV",
+                            "SMLV",
+                            "SPHB",
                             "SPHD",
                             "SPHQ",
                             "SPLV",
+                            "SPMO",
                             "SPYG",
+                            "SPYV",
                             "USMV",
                             "VBK",
                             "VFMF",
@@ -5903,79 +6364,138 @@
                             "VFVA",
                             "VLUE",
                             "VOT",
-                            "VUG"
+                            "VUG",
+                            "VYM",
+                            "XMLV",
+                            "XSLV"
                         ]
                     },
-                    "broad_us_market": {
+                    "us_major_index": {
                         "tickers": [
+                            "DIA",
                             "ITOT",
-                            "IWM",
                             "QQQ",
-                            "SPY",
-                            "VTI"
+                            "SPY"
                         ]
                     },
-                    "broad_based_emerging_market_equity_etfs": {
+                    "world": {
                         "tickers": [
-                            "EEM",
-                            "IEMG",
-                            "SCHE",
-                            "VWO"
-                        ]
-                    },
-                    "factor_style_and_specialized_em_etfs": {
-                        "tickers": [
-                            "EEMV",
-                            "KWEB",
-                            "VMMSX"
-                        ]
-                    },
-                    "global_international_etfs": {
-                        "tickers": [
-                            "ACWI",
-                            "EZU",
-                            "FXI",
-                            "IEFA",
-                            "IEMG",
-                            "VEA",
-                            "VGK",
-                            "VT",
-                            "VWO"
+                            "DGT",
+                            "IOO",
+                            "VT"
                         ]
                     }
                 }
             },
             "fixed_income_etfs": {
                 "tables": {
+                    "broad_bond_index_etfs": {
+                        "tickers": [
+                            "BND",
+                            "BSV",
+                            "GBF",
+                            "SPIB",
+                            "SPLB"
+                        ]
+                    },
+                    "strategies": {
+                        "tickers": [
+                            "HOMZ"
+                        ]
+                    },
                     "convertible_bonds": {
                         "tickers": [
+                            "CWB",
                             "ICVT"
                         ]
                     },
-                    "high_yield_junk_bond_etfs": {
-                        "tickers": [
-                            "ANGL",
-                            "FALN",
-                            "HYG",
-                            "JNK"
-                        ]
-                    },
-                    "investment_grade_corporate_bond_etfs": {
-                        "tickers": [
-                            "IGSB",
-                            "LQD",
-                            "SPBO",
-                            "VCIT",
-                            "VTC"
-                        ]
-                    },
-                    "treasury_and_inflation_bond_etfs": {
+                    "treasuries": {
                         "tickers": [
                             "IEF",
                             "SCHP",
                             "SHY",
-                            "TLT",
                             "VGIT"
+                        ]
+                    },
+                    "corporate_bond_etfs": {
+                        "tickers": [
+                            "ANGL",
+                            "FALN",
+                            "HYG",
+                            "JNK",
+                            "LQD",
+                            "PFIG",
+                            "SPBO",
+                            "VTC"
+                        ]
+                    },
+                    "u_s_municipal_bond_etfs": {
+                        "tickers": [
+                            "CMF",
+                            "HYD",
+                            "ITM",
+                            "MLN",
+                            "NYF",
+                            "SHM",
+                            "TFI"
+                        ]
+                    },
+                    "credit": {
+                        "tickers": [
+                            "IGIB",
+                            "IGLB",
+                            "IGSB",
+                            "PHB",
+                            "PICB",
+                            "RCIWX",
+                            "VCIT",
+                            "VCSH"
+                        ]
+                    },
+                    "u_s_sector_reits": {
+                        "tickers": [
+                            "INDS",
+                            "NETL",
+                            "NURE",
+                            "REM",
+                            "REZ"
+                        ]
+                    },
+                    "global_real_estate": {
+                        "tickers": [
+                            "IFGL",
+                            "RWO",
+                            "VNQ",
+                            "VNQI"
+                        ]
+                    },
+                    "securitized_products": {
+                        "tickers": [
+                            "SPMB"
+                        ]
+                    },
+                    "senior_loans": {
+                        "tickers": [
+                            "BKLN"
+                        ]
+                    },
+                    "sovereign": {
+                        "tickers": [
+                            "BIL",
+                            "BWX",
+                            "BWZ",
+                            "GOVI",
+                            "PCY",
+                            "SPTI",
+                            "SPTL",
+                            "TIP",
+                            "TLT",
+                            "WIP"
+                        ]
+                    },
+                    "specialty_lending": {
+                        "tickers": [
+                            "TSLX"
                         ]
                     }
                 }

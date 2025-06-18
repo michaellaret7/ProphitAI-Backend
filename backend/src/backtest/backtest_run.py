@@ -212,21 +212,6 @@ def backtest(portfolio_json: Dict[str, Any]):
 
             # --- Fetch data for current holdings ONCE ---
             current_holdings_data = {}
-            # ib_conn_plot = connect_to_ib() # Connect once for this plotting task
-            # if ib_conn_plot:
-            #     try:
-            #         for symbol in symbols_to_fetch:
-            #             print(f"    Fetching for {symbol}...")
-            #             data = get_ib_historical_data(ib_conn_plot, symbol)
-            #             if isinstance(data, pd.DataFrame) and not data.empty:
-            #                 current_holdings_data[symbol] = data
-            #             else:
-            #                 print(f"    ⚠️ Failed to get valid data for {symbol}")
-            #     except Exception as e:
-            #          print(f"    ❌ Error fetching data for current holdings: {e}")
-            # else:
-            #      print("  ⚠️ Could not connect to IB to fetch data for current holdings plot.")
-            # --- End data fetching ---
 
 
             if not current_holdings_data:

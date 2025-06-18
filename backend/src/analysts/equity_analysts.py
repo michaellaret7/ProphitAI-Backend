@@ -28,7 +28,7 @@ client = OpenAI(api_key=OpenAI_API_KEY)
 perplexity_model = os.environ.get("PERPLEXITY_MODEL")
 
 # Define date as a global variable
-date = "2025_01_22"  # Set a default date
+date = "2025_05_28"  # Set a default date
 
 def update_research_date_to_latest():
     """
@@ -62,7 +62,7 @@ def update_research_date_to_latest():
             print("No schemas found in the 'research' database.")
             return
             
-        potential_schema_names = [row[0] for row in schema_results]
+        potential_schema_names = [row['schema_name'] for row in schema_results]
         
         # Filter for YYYY_MM_DD format using Python's re module
         date_pattern = re.compile(r"^\d{4}_\d{2}_\d{2}$")
@@ -255,4 +255,3 @@ def utilities_analyst():
         str or None: The utilities research content, or None if not found.
     """
     return get_analyst_research("utilities_research")
-    

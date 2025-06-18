@@ -29,7 +29,7 @@ client = OpenAI(api_key=OpenAI_API_KEY)
 perplexity_model = os.environ.get("PERPLEXITY_MODEL")
 
 # date = datetime.date.today().strftime("%Y_%m_%d")
-date = "2025_05_14"
+date = "2025_05_28"
 
 def update_research_date_to_latest():
     """
@@ -63,7 +63,7 @@ def update_research_date_to_latest():
             print("No schemas found in the 'research' database.")
             return
             
-        potential_schema_names = [row[0] for row in schema_results]
+        potential_schema_names = [row['schema_name'] for row in schema_results]
         
         # Filter for YYYY_MM_DD format using Python's re module
         date_pattern = re.compile(r"^\d{4}_\d{2}_\d{2}$")
@@ -169,7 +169,7 @@ def get_etf_universe():
         if not schemas_results:
             return json.dumps({"error": "No schemas found in ETF database"})
             
-        schemas = [row[0] for row in schemas_results]
+        schemas = [row['schema_name'] for row in schemas_results]
         
         # Create hierarchical structure
         hierarchical_data = {}
@@ -190,7 +190,7 @@ def get_etf_universe():
             if not tables_results:
                 continue
                 
-            tables = [row[0] for row in tables_results]
+            tables = [row['table_name'] for row in tables_results]
             
             # Group tables by category (assuming first part of table name is category)
             categories = {}
@@ -403,3 +403,7 @@ def emerging_market_analyst():
         str or None: The emerging market research content, or None if not found.
     """
     return get_analyst_research("emerging_market_research")
+
+if __name__ == "__main__":
+    print(get_etf_universe())
+    print(get_equity_universe())

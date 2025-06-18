@@ -101,13 +101,13 @@ def get_price_data(ticker: str, frequency: str = 'daily', years: float = 4,
                 WITH ranked_data AS (
                     SELECT 
                         datetime,
-                        CAST(date AS DATE) as trading_date,
+                        CAST(datetime AS DATE) as trading_date,
                         close,
                         volume,
-                        ROW_NUMBER() OVER(PARTITION BY CAST(date AS DATE) ORDER BY datetime DESC) as rn,
-                        SUM(volume) OVER(PARTITION BY CAST(date AS DATE)) as daily_total_volume
+                        ROW_NUMBER() OVER(PARTITION BY CAST(datetime AS DATE) ORDER BY datetime DESC) as rn,
+                        SUM(volume) OVER(PARTITION BY CAST(datetime AS DATE)) as daily_total_volume
                     FROM {ticker_location['schema']}.{ticker_lower}
-                    WHERE date >= %s
+                    WHERE datetime >= %s
                 )
                 SELECT 
                    trading_date as date,
@@ -523,5 +523,8 @@ def get_dividend_data(ticker: str, db_config: Optional[Dict] = None) -> Optional
 
 
 if __name__ == "__main__":
-    div_df = get_dividend_data('AAPL')
-    print(div_df)
+    # div_df = get_dividend_data('AAPL')
+    # print(div_df)
+
+    price_df = get_price_data('ARKB')
+    print(price_df)

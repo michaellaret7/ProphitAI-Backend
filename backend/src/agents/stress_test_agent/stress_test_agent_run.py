@@ -28,9 +28,7 @@ prompt = """
   "crisis_windows": [
     {"name":"SVB Shock","start":"2023-03-08","end":"2023-03-15"},
     {"name":"Downgrade Shock","start":"2023-07-29","end":"2023-08-02"},
-    {"name":"Fed Raises Rates by 25bps May 2022","start":"2022-05-05","end":"2022-05-10"},
-    {"name":"Fed Raises Rates by 75bps June 2022","start":"2022-06-14","end":"2022-06-20"},
-    {"name":"Fed Raises Rates by 75bps September 2022","start":"2022-09-20","end":"2022-09-30"}
+    {"name":"Fed Raises Rates by 25bps May 2022","start":"2022-05-05","end":"2022-05-10"}
   ],
   "patterns_to_look_for": [
     "Large volume spikes accompanying price drops",

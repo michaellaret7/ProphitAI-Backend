@@ -82,8 +82,15 @@ def create_prices_schema_file(output_file="database_schemas_prices.json"):
     except Exception as e:
         print(f"Error connecting to PostgreSQL: {e}")
 
-    # Write the prices schemas data to the specified output file
-    output_path = os.path.join('src', 'data', 'database', output_file)
+    # --- MODIFIED ---
+    # Construct a path to backend/src/data/database regardless of where the script is run from.
+    # This assumes the script is run from the project root.
+    output_dir = os.path.join("backend", "src", "data", "database")
+    if not os.path.exists(output_dir):
+        os.makedirs(output_dir) # Ensure the directory exists
+    output_path = os.path.join(output_dir, output_file)
+    # --- END MODIFIED ---
+    
     try:
         with open(output_path, 'w') as f:
             json.dump(prices_schemas_data, f, indent=4)

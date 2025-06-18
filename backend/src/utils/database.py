@@ -4,7 +4,8 @@ Database utilities for connection management and common operations.
 import os
 import psycopg2
 from contextlib import contextmanager
-from typing import Optional, Dict, Tuple, Any
+from typing import Optional, Dict, Tuple, Any, List
+from psycopg2.extras import execute_values
 
 # Connection pool to reuse database connections
 _connection_pool: Dict[str, psycopg2.extensions.connection] = {}
@@ -22,6 +23,27 @@ def get_default_db_config():
         "password": os.environ.get("DB_PASSWORD"),
         "port": os.environ.get("DB_PORT")
     }
+
+def get_connection(dbname: str, db_config: Optional[Dict] = None) -> Optional[psycopg2.extensions.connection]:
+    """
+    Get a simple database connection with proper error handling.
+    
+    Args:
+        dbname: Database name to connect to
+        db_config: Database configuration parameters (uses default if None)
+        
+    Returns:
+        psycopg2 connection object or None if error
+    """
+    # Use provided config or get default
+    config = db_config if db_config is not None else get_default_db_config()
+    
+    try:
+        config['dbname'] = dbname
+        return psycopg2.connect(**config)
+    except psycopg2.Error as e:
+        print(f"Database connection error: {e}")
+        return None
 
 def get_pooled_connection(dbname: str, db_config: Optional[Dict] = None, autocommit: bool = False) -> Tuple[Optional[psycopg2.extensions.connection], Optional[psycopg2.extensions.cursor]]:
     """
@@ -138,7 +160,7 @@ def create_database(db_name: str, db_config: Optional[Dict] = None) -> bool:
             conn.close()
 
 @contextmanager
-def get_db_connection(dbname=None, db_config=None):
+def get_db_connection(dbname: str, db_config: Optional[Dict] = None):
     """
     Context manager for database connections.
     
@@ -167,8 +189,8 @@ def get_db_connection(dbname=None, db_config=None):
         conn = psycopg2.connect(**config)
         yield conn
     except Exception as e:
-        print(f"Database connection error: {e}")
-        raise
+        print(f"Failed to get DB connection for {dbname}: {e}")
+        return None
     finally:
         if conn is not None:
             conn.close()
@@ -273,6 +295,7 @@ def execute_bulk_insert(dbname: str, query: str, data: list,
             cursor = conn.cursor()
             execute_values(cursor, query, data, page_size=page_size)
             conn.commit()
+            cursor.close()
             return True
     except Exception as e:
         print(f"Error during bulk insert: {e}")
@@ -302,23 +325,86 @@ def get_single_value(dbname: str, query: str, params: Optional[tuple] = None,
         return None
 
 def execute_query(dbname: str, query: str, params: Optional[tuple] = None,
-                 db_config: Optional[Dict] = None) -> Optional[list]:
+                  db_config: Optional[Dict] = None) -> Optional[List[Dict[str, Any]]]:
     """
-    Execute a query and return all results.
+    Execute a query and return all results as a list of dictionaries.
     
     Args:
         dbname: Database name
         query: SQL query to execute
-        params: Query parameters
+        params: Optional parameters for the query
         db_config: Database configuration parameters (uses default if None)
         
     Returns:
-        List of tuples with results or None if error
+        List of dictionaries with results or None if error
     """
     try:
-        with get_cursor(dbname, db_config) as cursor:
+        with get_db_connection(dbname, db_config) as conn:
+            from psycopg2.extras import RealDictCursor
+            cursor = conn.cursor(cursor_factory=RealDictCursor)
             cursor.execute(query, params)
-            return cursor.fetchall()
+            results = cursor.fetchall()
+            cursor.close()
+            return results
     except Exception as e:
-        print(f"Error executing query: {e}")
+        print(f"Database error: {e}")
+        return None
+
+def execute_ddl(dbname: str, query: str, db_config: Optional[Dict] = None) -> bool:
+    """
+    Execute a DDL query, for creating schemas and tables.
+    
+    Args:
+        dbname: Database name
+        query: DDL query to execute
+        db_config: Database configuration parameters (uses default if None)
+        
+    Returns:
+        bool: True if successful, False otherwise
+    """
+    try:
+        with get_db_connection(dbname, db_config) as conn:
+            cursor = conn.cursor()
+            cursor.execute(query)
+            conn.commit()
+            cursor.close()
+            return True
+    except psycopg2.Error as e:
+        if "already exists" in str(e):
+            print(f"Notice: {e}")
+            conn.rollback()
+            return True
+        print(f"Error executing DDL query '{query}': {e}")
+        conn.rollback()
+        return False
+
+def get_table_columns(dbname: str, table_name: str, schema: str = 'public',
+                      db_config: Optional[Dict] = None) -> Optional[List[Tuple[str, str]]]:
+    """
+    Get table columns and their data types from the database.
+    
+    Args:
+        dbname: Database name
+        table_name: Table name
+        schema: Schema name (default is 'public')
+        db_config: Database configuration parameters (uses default if None)
+        
+    Returns:
+        List of tuples (column_name, data_type) or None if error
+    """
+    query = """
+        SELECT column_name, data_type
+        FROM information_schema.columns
+        WHERE table_schema = %s
+        AND table_name = %s
+    """
+    try:
+        with get_db_connection(dbname, db_config) as conn:
+            cursor = conn.cursor()
+            cursor.execute(query, (schema, table_name))
+            columns = cursor.fetchall()
+            cursor.close()
+            return columns
+    except Exception as e:
+        print(f"Error fetching columns for {schema}.{table_name}: {e}")
         return None 

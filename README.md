@@ -1,7 +1,5 @@
-# ProphitAI 📈
-
-<p align="center">
-  <img src="frontend/src/assets/logo_smaller.png" alt="ProphitAI Logo" width="200"/>
+<p align="left">
+  <img src="frontend/src/assets/logo_smaller.png" alt="ProphitAI Logo"/>
 </p>
 
 [![Build Status](https://img.shields.io/badge/build-passing-brightgreen)](https://github.com/michaellaret7/ProphitAI)

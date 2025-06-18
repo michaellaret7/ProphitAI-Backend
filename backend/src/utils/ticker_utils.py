@@ -2,16 +2,14 @@ import os
 from openai import OpenAI
 import yfinance as yf
 from dotenv import load_dotenv
+from backend.src.utils.choose_model_and_client import openai_model_and_client
 
 # Load environment variables from .env file
 load_dotenv()
 
 # Load OpenAI credentials from environment
-openai_api_key = os.getenv("OPENAI_API_KEY")
-openai_model = os.getenv("OPENAI_MODEL")
 
-# Initialize OpenAI client
-client = OpenAI(api_key=openai_api_key)
+model, client = openai_model_and_client('gpt-4o-mini')
 
 def name_to_ticker(company_name):
     """
@@ -30,7 +28,7 @@ def name_to_ticker(company_name):
     # Use OpenAI to identify the ticker
     try:
         response = client.chat.completions.create(
-            model=openai_model,
+            model=model,
             messages=[
                 {
                     "role": "system",

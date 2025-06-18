@@ -345,19 +345,9 @@ def update_all_ticker_fundamental_estimates(min_year: int = 2025, min_quarter: i
 
 
 if __name__ == "__main__":
-    # Run the update when this script is executed directly
-    # Allow simple resume by environment variables or command-line arguments
     import sys, os
-
-    # Usage: python -m ...update_fundamental_predictions <start_sector> <start_schema>
-    # cli_args = sys.argv[1:]
-    # start_sector = cli_args[0] if len(cli_args) >= 1 else os.environ.get("RESUME_START_SECTOR")
-    # start_schema = cli_args[1] if len(cli_args) >= 2 else os.environ.get("RESUME_START_SCHEMA")
     start_sector = 'equity_sector_consumer_discretionary'
     start_schema = 'diversified_consumer_services'
     update_all_ticker_fundamental_estimates(start_sector=start_sector, start_schema=start_schema)
 
 
-
-
-# --- END NEW CODE ---
