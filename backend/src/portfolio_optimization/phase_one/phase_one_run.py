@@ -427,10 +427,7 @@ def optimize(user_id: str, email: str):
         required_tools = list(analyst_tools.keys())
         
         # Initial user message with process instructions
-        user_message = {
-            "role": "user",
-            "content": content # This comes from build_user_message() in the beginning of the file
-        }
+        user_message = {"role": "user", "content": content} # This comes from build_user_message() in the beginning of the file
         
         # Set up initial messages and start conversation
         initial_messages = [system_message, user_message]
