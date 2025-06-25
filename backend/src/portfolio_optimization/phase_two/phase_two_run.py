@@ -118,15 +118,24 @@ def pick_top_tickers_from_asset_classes(portfolio_json):
                     fundamental_predictions = None 
                 else:
                     print(f"Ticker {ticker} in non-ETF asset class '{asset_class}', retrieving fundamental report.")
-                    fundamental_report = FundamentalDataRepository().fetch_fundamental_report(ticker)
+                    fundamental_report_raw = FundamentalDataRepository().fetch_fundamental_report(ticker)
+                    
+                    # Handle the list returned by the repository
+                    if fundamental_report_raw and isinstance(fundamental_report_raw, list):
+                        fundamental_report = fundamental_report_raw  # Keep as list since it's List[Dict]
+                    else:
+                        fundamental_report = []  # Empty list if no data
 
                     # Get fundamental predictions only for non-ETFs
                     print(f"Fetching fundamental predictions for {ticker}...")
                     try:
-                        # Fetch fundamental predictions (already returns parsed data as List[Dict])
-                        fundamental_predictions = FundamentalDataRepository().fetch_fundamental_estimates(ticker)
-                        # Check if we got valid data
-                        if not fundamental_predictions:
+                        # Fetch fundamental predictions (returns List[Dict])
+                        fundamental_predictions_raw = FundamentalDataRepository().fetch_fundamental_estimates(ticker)
+                        
+                        # Handle the list returned by the repository
+                        if fundamental_predictions_raw and isinstance(fundamental_predictions_raw, list):
+                            fundamental_predictions = fundamental_predictions_raw  # Keep as list
+                        else:
                             fundamental_predictions = {"error": "No Predictions Found for this ticker"}
                     except Exception as e: # Catch any errors during data fetching
                          print(f"Warning: An unexpected error occurred fetching predictions for {ticker}: {e}")
@@ -134,8 +143,12 @@ def pick_top_tickers_from_asset_classes(portfolio_json):
 
                 stock_metrics['fundamental_report'] = fundamental_report
                 # Only add predictions if they were successfully fetched and parsed
-                if fundamental_predictions and not fundamental_predictions.get("error"): # Check if valid and no error key
-                    stock_metrics['fundamental_predictions'] = fundamental_predictions # Add the parsed dict
+                if fundamental_predictions:
+                    # Check if it's a list (successful fetch) or dict with error
+                    if isinstance(fundamental_predictions, list):
+                        stock_metrics['fundamental_predictions'] = fundamental_predictions
+                    elif isinstance(fundamental_predictions, dict) and not fundamental_predictions.get("error"):
+                        stock_metrics['fundamental_predictions'] = fundamental_predictions
                 
                 final_stock_data[ticker] = stock_metrics
             
@@ -173,6 +186,11 @@ def make_phaseTwo_recommendations(asset_class_top_tickers):
         str: JSON string containing LLM recommendations with validated allocations,
         or None if API call fails or produces invalid output.
     """
+    try:
+        data_preview = json.dumps(asset_class_top_tickers, indent=2, default=str) if asset_class_top_tickers else "None"
+        logger.info("Starting make_phaseTwo_recommendations with data: %s", data_preview)
+    except Exception as e:
+        logger.info("Starting make_phaseTwo_recommendations with data (serialization failed): %s", str(asset_class_top_tickers))
     try:
         # Convert the input dictionary to a JSON string for the prompt content
         data_string = json.dumps(asset_class_top_tickers)
@@ -231,6 +249,7 @@ Description: {user_info.get("Overall Description", "N/A").strip()}
             logger.debug("Phase-two system prompt:\n%s", system_prompt)
         user_prompt = build_user_prompt(data_string)
 
+        logger.info("Calling OpenAI API for recommendations...")
         completion = client.chat.completions.create(
             model=model, 
             messages=[
@@ -239,10 +258,12 @@ Description: {user_info.get("Overall Description", "N/A").strip()}
             ],
             temperature=0.7
         )
+        logger.info("OpenAI API call completed successfully")
 
         # Extract and return the content from the response
         if completion.choices and completion.choices[0].message:
             response_content = completion.choices[0].message.content
+            logger.info("Received API response, length: %d characters", len(response_content) if response_content else 0)
 
             # Clean the response content: Strip whitespace and remove markdown fences
             cleaned_content = response_content.strip()
@@ -303,6 +324,7 @@ Description: {user_info.get("Overall Description", "N/A").strip()}
                                 min_alloc_rec.get('ticker'), adjustment
                             )
 
+                logger.info("Successfully processed recommendations, returning JSON")
                 return json.dumps(result_json)
             except json.JSONDecodeError:
                 # Attempt to salvage JSON by extracting the first JSON object between braces
@@ -348,6 +370,7 @@ Description: {user_info.get("Overall Description", "N/A").strip()}
                                 else:
                                     min_alloc_rec['allocation'] = new_allocation
                         
+                        logger.info("Successfully processed recommendations in fallback path, returning JSON")
                         return json.dumps(result_json)
                     except json.JSONDecodeError:
                         # Still invalid – will fall through to final error
@@ -364,8 +387,11 @@ Description: {user_info.get("Overall Description", "N/A").strip()}
             return None
 
     except Exception as e:
+        logger.error("An error occurred while calling the API or processing data: %s", str(e))
+        logger.error("Exception type: %s", type(e).__name__)
+        import traceback
+        logger.error("Full traceback: %s", traceback.format_exc())
         print(f"An error occurred while calling the API or processing data: {e}")
-
         return None
 
 def run_phase_two(portfolio_data):
@@ -422,6 +448,7 @@ def run_phase_two(portfolio_data):
         recommendations_json = make_phaseTwo_recommendations(data_for_class)
         # ===============================================================================
 
+        logger.info("Recommendations result for %s: %s", asset_class_name, recommendations_json)
         if logger.isEnabledFor(logging.DEBUG):
             logger.debug("Recommendations raw JSON for %s: %s", asset_class_name, recommendations_json)
         
@@ -429,10 +456,14 @@ def run_phase_two(portfolio_data):
             try:
                 recommendations_data = json.loads(recommendations_json)
                 final_portfolio[asset_class_name] = recommendations_data
+                logger.info("Successfully parsed recommendations for %s", asset_class_name)
 
             except json.JSONDecodeError as e:
                 logger.warning("Error parsing recommendations for %s: %s", asset_class_name, e)
                 final_portfolio[asset_class_name] = {"error": "Failed to parse recommendations"}
+        else:
+            logger.warning("No recommendations returned for %s (recommendations_json is None or empty)", asset_class_name)
+            final_portfolio[asset_class_name] = {"error": "No recommendations generated"}
     
     logger.info("Phase-two complete - final aggregated portfolio ready.")
     if logger.isEnabledFor(logging.DEBUG):
@@ -444,7 +475,7 @@ if __name__ == "__main__":
     sample_portfolio_data_for_phase_two = {
         "portfolio": [
             {
-                "asset_class": "broad_bond_index_etfs",  # Example: Equity Sub-industry
+                "asset_class": "other_specialized_reits",  # Example: Equity Sub-industry
                 "allocation": 15.0,
                 "reason": "medium conviction to this asset class"
             }
@@ -460,7 +491,7 @@ if __name__ == "__main__":
 
     print("\n===========================================")
     print("Final Portfolio Recommendations (Phase Two):")
-    print(json.dumps(final_recommendations, indent=2))
+    logger.info(json.dumps(final_recommendations, indent=2))
     print("===========================================")
 
     logger.info("Isolated run of phase_two complete.")

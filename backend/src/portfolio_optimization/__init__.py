@@ -63,15 +63,3 @@ sys.modules.setdefault(
     "src.phaseTwo.phaseTwo",
     importlib.import_module("backend.src.portfolio_optimization.phase_two.phase_two_run"),
 )
-sys.modules.setdefault(
-    "src.phaseTwo.backtest",
-    importlib.import_module("backend.src.backtest.backtest_run"),
-)
-sys.modules.setdefault(
-    "src.phaseTwo.phaseTwoBacktest",
-    importlib.import_module("backend.src.backtest.backtest_run"),
-)
-sys.modules.setdefault(
-    "src.phaseTwoBacktest",
-    importlib.import_module("backend.src.backtest.backtest_run"),
-)

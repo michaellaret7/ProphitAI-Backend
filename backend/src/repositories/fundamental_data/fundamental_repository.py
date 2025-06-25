@@ -3,6 +3,9 @@ import psycopg2
 from psycopg2.extras import RealDictCursor
 from backend.src.utils.database import get_connection
 from decimal import Decimal
+import logging
+
+logger = logging.getLogger(__name__)
 
 class FundamentalDataRepository:
     def __init__(self):
@@ -93,9 +96,29 @@ class FundamentalDataRepository:
 
     def fetch_fundamental_report(self, ticker: str) -> List[Dict]:
         """ Fetches the fundamental report for a given ticker. """
-        return self._fetch_data("fundamental_report", ticker)
+        reports = self._fetch_data("fundamental_report", ticker)
+        if reports:
+            logger.info("Successfully fetched fundamental report for %s", ticker)
+            for report in reports:
+                timestamp = report.get("generation_timestamp")
+                if timestamp:
+                    report["generation_timestamp"] = timestamp.isoformat()
+            return reports
+        else:
+            logger.warning("No fundamental report found for %s", ticker)
+            return []
 
     def fetch_fundamental_estimates(self, ticker: str) -> List[Dict]:
         """ Fetches fundamental estimates for a given ticker. """
-        return self._fetch_data("fundamental_estimates", ticker)
+        estimates = self._fetch_data("fundamental_estimates", ticker)
+        if estimates:
+            logger.info("Successfully fetched %d fundamental estimates for %s", len(estimates), ticker)
+            for estimate in estimates:
+                timestamp = estimate.get("generation_timestamp")
+                if timestamp:
+                    estimate["generation_timestamp"] = timestamp.isoformat()
+            return estimates
+        else:
+            logger.warning("No fundamental estimates found for %s", ticker)
+            return []
 

@@ -10,3 +10,4 @@ alwaysApply: true
 5. If you violate any of these rules there will be consequences
 6. Always check the utils folder before implementing code, this is to mitigate redundancies.
 7. You are not under any circumstances allowed to create files or folders unless I explicitly tell you to create a file 
+8. Follow the DRY (Don't Repeat Yourself) principle as closely as possible. This is the most important!! 

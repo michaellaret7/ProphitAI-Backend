@@ -30,11 +30,8 @@ logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(
 logger = logging.getLogger(__name__)
 
 from . import optimize, run_phase_two
-from backend.src.data.final_portfolio_data import (
-    store_portfolio_sector_allocations,
-    store_final_portfolio,
-    store_user_information
-)
+from backend.src.repositories.portfolio.push_created_portfolio_repository import PushUserCreatedPortfolioRepository
+from backend.src.data.user_information import get_user_information
 
 def run_workflow(user_id: str, email: str) -> Dict[str, Any] | None:
     """
@@ -48,7 +45,6 @@ def run_workflow(user_id: str, email: str) -> Dict[str, Any] | None:
     
     phase_one_data: Dict[str, Any] | None = None
     phase_two_recs: Dict[str, Any] | None = None
-    # user_profile_data: Dict[str, Any] | None = None # User data fetched by store_user_information
 
     try:
         print("🚀 Starting workflow ...")
@@ -73,34 +69,83 @@ def run_workflow(user_id: str, email: str) -> Dict[str, Any] | None:
         # ---------------- 3️⃣ All data collected, proceed to store ------------- 
         # If we reach here, both phases were successful.
         
-        # portfolio_name = f"prophitai_run_{strftime('%Y%m%d_%H%M%S')}"
         portfolio_name = "sss_portfolio"
         print(f"\n💾 All phases successful. Preparing to store data for portfolio: {portfolio_name} ...")
 
-        print(f"   Storing sector allocations and thesis for '{portfolio_name}'...")
-        current_portfolio_id: uuid.UUID = store_portfolio_sector_allocations(
-            phase_one_data, portfolio_name, user_id, email
-        )
-        print(f"     Portfolio UUID {current_portfolio_id} created/retrieved for '{portfolio_name}'.")
+        # Initialize the repository
+        repo = PushUserCreatedPortfolioRepository()
 
-        print(f"   Storing final portfolio recommendations for '{portfolio_name}' (UUID: {current_portfolio_id})...")
-        store_final_portfolio(
-            phase_two_recs, 
-            portfolio_id=current_portfolio_id, 
+        # Create portfolio and get UUID
+        print(f"   Creating portfolio '{portfolio_name}'...")
+        current_portfolio_id = repo.store_portfolio(
             portfolio_name=portfolio_name,
             user_id=user_id,
             email=email
         )
-        print(f"     Final portfolio recommendations stored.")
         
-        print(f"   Storing user information for portfolio '{portfolio_name}' (UUID: {current_portfolio_id})...")
-        store_user_information(
-            portfolio_id=current_portfolio_id, 
+        if not current_portfolio_id:
+            print("Failed to create portfolio. Aborting workflow.")
+            return None
+        
+        print(f"     Portfolio UUID {current_portfolio_id} created for '{portfolio_name}'.")
+
+        # Store sector allocations
+        print(f"   Storing sector allocations for '{portfolio_name}'...")
+        sector_success = repo.store_sector_allocations(
+            portfolio=phase_one_data,
+            portfolio_id=current_portfolio_id,
             portfolio_name=portfolio_name,
             user_id=user_id,
             email=email
         )
-        print(f"     User information stored.")
+        
+        if sector_success:
+            print("     Sector allocations stored successfully.")
+        else:
+            print("     Failed to store sector allocations.")
+
+        # Store final portfolio recommendations
+        print(f"   Storing final portfolio recommendations for '{portfolio_name}'...")
+        repo.store_final_portfolio(
+            portfolio=phase_two_recs,
+            portfolio_id=current_portfolio_id,
+            portfolio_name=portfolio_name,
+            user_id=user_id,
+            email=email
+        )
+        print("     Final portfolio recommendations stored.")
+
+        # Store portfolio thesis if available
+        if phase_one_data.get("portfolio_thesis"):
+            print(f"   Storing portfolio thesis for '{portfolio_name}'...")
+            thesis_success = repo.store_portfolio_thesis(
+                portfolio_id=current_portfolio_id,
+                portfolio_name=portfolio_name,
+                thesis=phase_one_data["portfolio_thesis"],
+                user_id=user_id,
+                email=email
+            )
+            
+            if thesis_success:
+                print("     Portfolio thesis stored successfully.")
+            else:
+                print("     Failed to store portfolio thesis.")
+
+        # Store user information
+        print(f"   Storing user information for portfolio '{portfolio_name}'...")
+        user_profile = get_user_information()
+        user_info_success = repo.store_user_information(
+            portfolio_id=current_portfolio_id,
+            portfolio_name=portfolio_name,
+            user_id=user_id,
+            email=email,
+            user_profile=user_profile
+        )
+        
+        if user_info_success:
+            print("     User information stored successfully.")
+        else:
+            print("     Failed to store user information.")
         
         print("\n✅ All data successfully stored in the database.")
         return phase_two_recs # Return the final recommendations
