@@ -1,15 +1,32 @@
 from typing import List
 from datetime import datetime
-from backend.src.data_models.market_data_models import PriceData
 from backend.src.utils.database import get_connection
 import psycopg2
 from psycopg2.extras import RealDictCursor
+import pandas as pd
+from decimal import Decimal
+from backend.src.utils.caching import cache_result
 
-class ETFDataRepository:
+class ETFPriceDataRepository:
     def __init__(self):
         pass
     
-    def fetch_etf_data(self, ticker: str, start_date: datetime, end_date: datetime) -> List[PriceData]:
+    @cache_result
+    def fetch_etf_price_data(self, ticker: str, start_date: datetime, end_date: datetime, interval: str = '15T') -> pd.DataFrame:
+        """
+        Fetches ETF price data and resamples it to the specified interval.
+
+        Args:
+            ticker (str): The ETF ticker.
+            start_date (datetime): The start of the date range.
+            end_date (datetime): The end of the date range.
+            interval (str): The desired time interval for the data. 
+                            Accepts pandas frequency strings like '15T', '30T', '1H', '1D'.
+                            Defaults to '15T'.
+
+        Returns:
+            pd.DataFrame: A DataFrame with the resampled price data, or an empty DataFrame if not found.
+        """
         # Convert ticker to lowercase for table lookup
         ticker_lower = ticker.lower()
         
@@ -25,7 +42,7 @@ class ETFDataRepository:
         conn = get_connection("etf_prices")
         if not conn:
             print("Could not connect to etf_prices database")
-            return []
+            return pd.DataFrame()
             
         try:
             with conn.cursor(cursor_factory=RealDictCursor) as cursor:
@@ -48,14 +65,47 @@ class ETFDataRepository:
                         """, (start_date, end_date))
                         
                         rows = cursor.fetchall()
-                        return [PriceData(**dict(row)) for row in rows]
+                        
+                        if not rows:
+                            return pd.DataFrame()
+
+                        # Convert to DataFrame directly with Decimal to float conversion
+                        data = []
+                        for row in rows:
+                            row_dict = dict(row)
+                            # Convert Decimal values to float
+                            for key, value in row_dict.items():
+                                if isinstance(value, Decimal):
+                                    row_dict[key] = float(value)
+                            data.append(row_dict)
+                        
+                        df = pd.DataFrame(data)
+
+                        if df.empty:
+                            return pd.DataFrame()
+
+                        df['date'] = pd.to_datetime(df['date'])
+                        df.set_index('date', inplace=True)
+                        
+                        if interval != '15T':
+                            agg_dict = {
+                                'open': 'first',
+                                'high': 'max',
+                                'low': 'min',
+                                'close': 'last',
+                                'volume': 'sum'
+                            }
+                            df = df.resample(interval).agg(agg_dict).dropna()
+
+                        return df.reset_index()
                 
                 print(f"Ticker '{ticker}' not found in any ETF price schema")
-                return []
+                return pd.DataFrame()
             
         except psycopg2.Error as e:
             print(f"Error searching in etf_prices database: {e}")
-            return []
+            return pd.DataFrame()
         finally:
-            conn.close()
+            if conn:
+                conn.close()
 

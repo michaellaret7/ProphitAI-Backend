@@ -49,3 +49,17 @@ class MomentumFactorMetrics(BaseModel):
     idiosyncratic_momentum: Optional[float]
     sector_idiosyncratic_momentum: Optional[float]
     volume_adjusted_momentum: Optional[float]
+
+class VolatilityFactorMetrics(BaseModel):
+    """Pydantic model for volatility factor metrics"""
+    realized_vol_30d: Optional[float]
+    realized_vol_90d: Optional[float]
+    beta_1yr: Optional[float]
+    idiosyncratic_vol: Optional[float]
+    downside_dev_30d: Optional[float]
+    max_drawdown_1yr: Optional[float]
+    atr_price_ratio: Optional[float]
+    variance_ratio_3m_12m: Optional[float]
+    skewness: Optional[float]
+    kurtosis: Optional[float]
+    garch_forecast: Optional[float]

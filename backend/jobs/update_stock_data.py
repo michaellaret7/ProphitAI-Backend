@@ -218,9 +218,6 @@ def get_stock_data_from_ib(ib, ticker, start_date=None):
 # Get database configuration
 db_config = get_default_db_config()
 
-# Load schema data
-# schema_data = load_schema_data() # Old way using default file
-# Explicitly load the prices schema (moved to src/data/database)
 prices_schema_file = os.path.join('backend', 'src', 'data', 'database', 'database_schemas_prices.json')
 try:
     with open(prices_schema_file, 'r') as f:

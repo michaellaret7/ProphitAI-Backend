@@ -1,65 +1,17 @@
 import json
-from backend.src.utils.database import get_cursor
 from typing import List, Dict, Any, Optional
 from backend.src.utils.logging_config import init_logger
 from backend.src.utils.portfolio_analysis import (
+    _fetch_price_data_for_analysis,
     calculate_portfolio_metrics,
     calculate_monthly_portfolio_metrics,
-    analyze_portfolio_correlations
+    analyze_portfolio_correlations,
+    get_portfolio_holdings
 )
-from backend.src.utils.retrieve_portfolio_from_db import retrieve_user_current_portfolio
+from backend.src.repositories.user.user_portfolio_repository import UserCurrentPortfolioRepository
+from backend.src.utils.logging_config import init_logger
 
-# Use a utils function here instead
-def get_holdings_from_database(user_id: str, email: str) -> tuple[List[Dict[str, Any]], str]:
-    """
-    Retrieve holdings from the database using user_id and email.
-    
-    Queries the user_portfolios table to fetch the most recent holdings
-    for the specified user with proper data type conversion.
-    
-    Args:
-        user_id: The user ID of the user whose holdings to retrieve.
-        email: The email of the user whose holdings to retrieve.
-        
-    Returns:
-        Tuple[List[Dict[str, Any]], str]: Tuple containing list of position dictionaries 
-        and formatted status string, or empty list and error message if failed.
-    """
-    try:
-        # Use the new utility function to get the portfolio as a DataFrame
-        portfolio_df = retrieve_user_current_portfolio(user_id=user_id, email=email)
-
-        if portfolio_df is None or portfolio_df.empty:
-            return [], f"No positions found in database for user_id: {user_id} or email: {email}."
-
-        # Sort by timestamp to get the most recent for each symbol and account, then drop duplicates
-        portfolio_df = portfolio_df.sort_values('fetch_timestamp', ascending=False).drop_duplicates(subset=['symbol', 'account'])
-        
-        # Format positions to match the expected structure
-        positions = []
-        for _, row in portfolio_df.iterrows():
-            position = {
-                'symbol': row.get('symbol'),
-                'secType': row.get('sectype'),
-                'currency': row.get('currency'),
-                'position': float(row.get('position', 0.0) or 0.0),
-                'marketPrice': float(row.get('marketprice', 0.0) or 0.0),
-                'marketValue': float(row.get('marketvalue', 0.0) or 0.0),
-                'averageCost': float(row.get('averagecost', 0.0) or 0.0),
-                'unrealizedPNL': float(row.get('unrealizedpnl', 0.0) or 0.0),
-                'realizedPNL': float(row.get('realizedpnl', 0.0) or 0.0),
-                'account': row.get('account')
-            }
-            positions.append(position)
-        
-        # Format output string for display
-        formatted_output = f"Retrieved {len(positions)} positions from database for user_id: {user_id}"
-        
-        return positions, formatted_output
-            
-    except Exception as e:
-        print(f"Error retrieving holdings from database: {e}")
-        return [], f"Error retrieving holdings: {str(e)}"
+logger = init_logger(__name__)
 
 def format_to_json(user_id: str, email: str):
     """
@@ -77,7 +29,10 @@ def format_to_json(user_id: str, email: str):
         metrics, performance, and correlations with rounded numeric values.
     """
     # Get holdings from database instead of IBKR
-    positions, formatted_output = get_holdings_from_database(user_id=user_id, email=email)
+    portfolio_df = UserCurrentPortfolioRepository().fetch_holdings(user_id=user_id, email=email)
+    logger.info(f"Retrieved {len(portfolio_df)} positions from database for user_id: {user_id} or email: {email}.")
+    positions = portfolio_df
+    formatted_output = f"Retrieved {len(positions)} positions from database for user_id: {user_id}"
 
     metrics = None
     monthly_results = None
@@ -85,33 +40,51 @@ def format_to_json(user_id: str, email: str):
     correlations = None
     
     if positions:
-        symbols = [p['symbol'] for p in positions]
+        symbols = [p.symbol for p in positions]
         
-        # Calculate portfolio metrics
-        metrics = calculate_portfolio_metrics(symbols)
+        # Fetch all price data once
+        prices_df, market_prices = _fetch_price_data_for_analysis(symbols, years=2.0)
         
-        # Calculate monthly portfolio metrics
-        monthly_results = calculate_monthly_portfolio_metrics(symbols=symbols, user_id=user_id, email=email)
-        
-        # Analyze portfolio correlations
-        correlations = analyze_portfolio_correlations(symbols)
+        # Reformat positions to be compatible with analysis functions
+        # This is temporary until all parts of the codebase use the same data models
+        formatted_positions = get_portfolio_holdings(user_id=user_id, email=email)
+
+        if prices_df is not None and not prices_df.empty:
+            # Calculate portfolio metrics
+            metrics = calculate_portfolio_metrics(prices_df, market_prices, formatted_positions)
+            
+            # Calculate monthly portfolio metrics
+            monthly_results = calculate_monthly_portfolio_metrics(prices_df, market_prices, formatted_positions)
+            
+            # Analyze portfolio correlations
+            correlations = analyze_portfolio_correlations(prices_df)
     
     # ------------------------------------------------------------------
     # Sanitize *positions* so every entry is JSON-serialisable
     # ------------------------------------------------------------------
     json_positions = []
     if positions:
+        total_market_value = sum(p.marketvalue for p in positions)
         for p in positions:
-            entry = p.copy()
-            # Remove sensitive or non-serialisable fields
-            entry.pop("account", None)
+            portfolio_percentage = (p.marketvalue / total_market_value) * 100 if total_market_value > 0 else 0
+            entry = {
+                "symbol": p.symbol,
+                "quantity": p.position,
+                "average_cost": p.averagecost,
+                "market_price": p.marketprice,
+                "market_value": p.marketvalue,
+                "unrealized_pnl": p.unrealizedpnl,
+                "realized_pnl": p.realizedpnl,
+                "portfolio_percentage": portfolio_percentage,
+                "asset_class": p.sectype,
+                "updated_at": p.fetch_timestamp.isoformat() if p.fetch_timestamp else None
+            }
             json_positions.append(entry)
 
-    # Prepare monthly performance data, extracting only the monthly breakdown
-    # monthly_results is a dict: {'overall_metrics': {...}, 'monthly_metrics': {...}} or None
+
     actual_monthly_breakdown = {}
-    if monthly_results and isinstance(monthly_results, dict) and 'monthly_metrics' in monthly_results:
-        actual_monthly_breakdown = monthly_results['monthly_metrics']
+    if monthly_results:
+        actual_monthly_breakdown = monthly_results
 
     payload = {
         "portfolio_positions": json_positions,
@@ -140,3 +113,5 @@ def format_to_json(user_id: str, email: str):
 
     return json_block
 
+if __name__ == "__main__":
+    logger.info(format_to_json(user_id="user_01JXG39MMAVW1P3XVGX7YHN2DT", email="michael@laret.com"))

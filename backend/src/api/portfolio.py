@@ -6,11 +6,13 @@ import hashlib # For generating consistent colors if needed
 from pydantic import BaseModel # Added for Pydantic models
 import pandas as pd
 from datetime import datetime, timedelta
-from backend.src.utils.data_retrieval import get_price_data
 from backend.src.utils.financial_calculations import calculate_total_return
 import numpy as np
 from backend.src.auth import get_current_user
-from backend.src.utils.retrieve_portfolio_from_db import retrieve_built_portfolio_allocations, retrieve_user_current_portfolio
+from backend.src.repositories.market_data.equity_price_repository import EquityPriceDataRepository
+from backend.src.repositories.market_data.etf_price_repository import ETFPriceDataRepository
+from backend.src.repositories.portfolio.created_portfolio_repository import UserCreatedPortfolioRepository
+from backend.src.repositories.user.user_portfolio_repository import UserCurrentPortfolioRepository
 
 router = APIRouter()
 
@@ -117,11 +119,10 @@ async def get_portfolio_allocation(current_user=Depends(get_current_user)):
 
     try:
         # Use the existing function to get portfolio allocations
-        allocations_df = retrieve_built_portfolio_allocations(portfolio_id=portfolio_id, user_id=user_id)
+        allocations_df = UserCreatedPortfolioRepository().fetch_portfolio_allocations(portfolio_id=portfolio_id, user_id=user_id)
         
         # The function returns None on DB error, or an empty DataFrame if no records found.
         if allocations_df is None:
-            # This indicates a database error inside retrieve_built_portfolio_allocations
             raise HTTPException(status_code=500, detail="Database error processing portfolio allocation.")
 
         if allocations_df.empty:
@@ -189,7 +190,7 @@ async def get_current_user_holdings(current_user=Depends(get_current_user)):
     user_id = current_user.id 
 
     try:
-        holdings_df = retrieve_user_current_portfolio(user_id=user_id)
+        holdings_df = UserCurrentPortfolioRepository().fetch_holdings(user_id=user_id)
 
         if holdings_df is None:
             raise HTTPException(status_code=500, detail="Database error retrieving portfolio holdings.")
@@ -311,11 +312,11 @@ async def get_portfolio_performance(days: int = 365, current_user=Depends(get_cu
             position = float(position) if position else 0.0
             
             # Get price data for this symbol
-            price_data = get_price_data(
+            price_data = EquityPriceDataRepository().fetch_equity_price_data(
                 ticker=symbol,
-                frequency='daily',
-                start_date_override=start_date.strftime('%Y-%m-%d'),
-                end_date_override=end_date.strftime('%Y-%m-%d')
+                start_date=start_date,
+                end_date=end_date,
+                interval='1D'
             )
             
             if price_data is not None and not price_data.empty:
@@ -326,48 +327,48 @@ async def get_portfolio_performance(days: int = 365, current_user=Depends(get_cu
                 portfolio_data.append(price_data)
         
         # Step 3.5: Get SPY price data for comparison
-        spy_data = get_price_data(
+        spy_data = ETFPriceDataRepository().fetch_etf_price_data(
             ticker='SPY',
-            frequency='daily',
-            start_date_override=start_date.strftime('%Y-%m-%d'),
-            end_date_override=end_date.strftime('%Y-%m-%d')
+            start_date=start_date,
+            end_date=end_date,
+            interval='1D'
         )
         
         # Get additional ETF data
-        qqq_data = get_price_data(
+        qqq_data = ETFPriceDataRepository().fetch_etf_price_data(
             ticker='QQQ',
-            frequency='daily',
-            start_date_override=start_date.strftime('%Y-%m-%d'),
-            end_date_override=end_date.strftime('%Y-%m-%d')
+            start_date=start_date,
+            end_date=end_date,
+            interval='1D'
         )
         
-        iwm_data = get_price_data(
+        iwm_data = ETFPriceDataRepository().fetch_etf_price_data(
             ticker='IWM',
-            frequency='daily',
-            start_date_override=start_date.strftime('%Y-%m-%d'),
-            end_date_override=end_date.strftime('%Y-%m-%d')
+            start_date=start_date,
+            end_date=end_date,
+            interval='1D'
         )
         
         # Get additional new ETF data
-        gld_data = get_price_data(
+        gld_data = ETFPriceDataRepository().fetch_etf_price_data(
             ticker='GLD',
-            frequency='daily',
-            start_date_override=start_date.strftime('%Y-%m-%d'),
-            end_date_override=end_date.strftime('%Y-%m-%d')
+            start_date=start_date,
+            end_date=end_date,
+            interval='1D'
         )
         
-        dbc_data = get_price_data(
+        dbc_data = ETFPriceDataRepository().fetch_etf_price_data(
             ticker='DBC',
-            frequency='daily',
-            start_date_override=start_date.strftime('%Y-%m-%d'),
-            end_date_override=end_date.strftime('%Y-%m-%d')
+            start_date=start_date,
+            end_date=end_date,
+            interval='1D'
         )
         
-        eem_data = get_price_data(
+        eem_data = ETFPriceDataRepository().fetch_etf_price_data(
             ticker='EEM',
-            frequency='daily',
-            start_date_override=start_date.strftime('%Y-%m-%d'),
-            end_date_override=end_date.strftime('%Y-%m-%d')
+            start_date=start_date,
+            end_date=end_date,
+            interval='1D'
         )
         
         if not portfolio_data:
@@ -380,9 +381,6 @@ async def get_portfolio_performance(days: int = 365, current_user=Depends(get_cu
         portfolio_values = combined_df.groupby('date')['value'].sum().reset_index()
         portfolio_values = portfolio_values.sort_values('date')
 
-        # Ensure data does not exceed the calculated end_date's date part.
-        # This makes the code robust against get_price_data returning dates beyond what was requested
-        # or if the data source contains spurious future dates.
         if not portfolio_values.empty:
             # Ensure 'date' column is datetime for comparison; it typically is already.
             portfolio_values['date'] = pd.to_datetime(portfolio_values['date'])

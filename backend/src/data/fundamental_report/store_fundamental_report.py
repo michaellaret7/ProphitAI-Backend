@@ -1,6 +1,5 @@
 import psycopg2
 import datetime
-
 from dotenv import load_dotenv
 from backend.src.utils.file_utils import load_schema_data
 from backend.src.utils.database import get_default_db_config, get_cursor

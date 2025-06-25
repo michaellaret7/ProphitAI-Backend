@@ -11,11 +11,10 @@ import pandas as pd
 import numpy as np
 from openai import OpenAI
 from backend.src.utils.caching import cache_result
-from backend.src.portfolio_optimization.phase_two.data_retrieval import get_fundamentals_data
 import psycopg2
 from backend.src.utils.file_utils import load_schema_data
 from backend.src.utils.database import get_default_db_config, get_cursor
-
+from backend.src.repositories.fundamental_data.fundamental_repository import FundamentalDataRepository
 from dotenv import load_dotenv
 
 # Load environment variables
@@ -98,7 +97,12 @@ def get_ticker_averages(ticker):
         return {}
 
     target_cols = list(sector_avgs.keys())
-    raw_data = get_fundamentals_data(ticker)
+    raw_data = {
+        'financial_metrics': FundamentalDataRepository().fetch_financial_metrics(ticker),
+        'balance_sheets': FundamentalDataRepository().fetch_balance_sheet(ticker),
+        'cash_flow_statements': FundamentalDataRepository().fetch_cash_flow_statement(ticker),
+        'income_statements': FundamentalDataRepository().fetch_income_statement(ticker)
+    }
     if not raw_data:
         return {}
 
@@ -194,7 +198,12 @@ def generate_fundamental_analysis_report(ticker):
         str: Generated fundamental analysis report or error message if analysis fails.
     """
     # Get fundamental data - specifically financial_metrics only
-    raw_data = get_fundamentals_data(ticker)
+    raw_data = {
+        'financial_metrics': FundamentalDataRepository().fetch_financial_metrics(ticker),
+        'balance_sheets': FundamentalDataRepository().fetch_balance_sheet(ticker),
+        'cash_flow_statements': FundamentalDataRepository().fetch_cash_flow_statement(ticker),
+        'income_statements': FundamentalDataRepository().fetch_income_statement(ticker)
+    }
     if not raw_data or 'financial_metrics' not in raw_data:
         print(f"DEBUG: No fundamental data found for {ticker}")
         return f"No fundamental data found for {ticker}"

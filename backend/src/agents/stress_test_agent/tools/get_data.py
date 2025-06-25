@@ -10,8 +10,9 @@ import numpy as np
 import math
 from functools import lru_cache
 from backend.src.utils.database import get_default_db_config
-from backend.src.utils.data_retrieval import get_price_data
 from backend.src.utils.financial_calculations import calculate_max_drawdown, calculate_volatility
+from backend.src.repositories.market_data.equity_price_repository import EquityPriceDataRepository
+from backend.src.repositories.market_data.etf_price_repository import ETFPriceDataRepository
 
 
 def get_liquidity_data():
@@ -123,12 +124,7 @@ def get_stock_data(ticker: str, start_date_str: str, end_date_str: str, db_confi
     # years = (end_date - start_date).days / 365.0 # No longer needed
     
     # Get hourly data using the generic function, providing explicit start and end dates
-    result = get_price_data(ticker, 
-                              frequency='hourly', 
-                              # years=years, # Remove years argument
-                              db_config=db_config,
-                              start_date_override=start_date_str,
-                              end_date_override=end_date_str)
+    result = EquityPriceDataRepository().fetch_equity_price_data(ticker, start_date=start_date, end_date=end_date, interval='1H')
     
     if result is None:
         return None

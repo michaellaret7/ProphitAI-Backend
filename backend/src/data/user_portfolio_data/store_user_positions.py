@@ -1,7 +1,6 @@
 import uuid
 from typing import List, Dict, Any, Optional
 import datetime
-
 from backend.src.utils.database import get_cursor
 from backend.src.utils.logging_config import init_logger
 

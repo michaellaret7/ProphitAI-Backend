@@ -2,7 +2,7 @@ from typing import Optional
 from backend.src.utils.logging_config import init_logger
 from backend.src.data.user_portfolio_data.fetch_ibkr_holdings import fetch_ibkr_portfolio_positions
 from backend.src.data.user_portfolio_data.store_user_positions import store_portfolio_positions
-from backend.src.utils.retrieve_user_auth_data import get_user_id_from_email
+from backend.src.repositories.user.user_info_repository import UserInfoRepository
 
 logger = init_logger(__name__)
 
@@ -22,7 +22,7 @@ def update_user_portfolio_in_db(email: str) -> bool:
     logger.info(f"Starting portfolio update for user with email: {email}")
 
     # Step 1: Get user_id from email
-    user_id = get_user_id_from_email(email)
+    user_id = UserInfoRepository().fetch_user_by_email(email).id
     if not user_id:
         logger.error(f"❌ Failed to find user_id for email: {email}. Update aborted.")
         return False

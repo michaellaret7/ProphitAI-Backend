@@ -12,18 +12,18 @@ class MomentumFactors:
         self.prices = price_series.astype(float)
 
         if self.prices is not None:
-            self.returns = self.prices.pct_change().dropna()
+            self.returns = self.prices.pct_change(fill_method=None).dropna()
 
         self.volumes = volume_series.astype(float).reindex(self.prices.index)
 
         self.sector_prices = sector_price_series.astype(float).reindex(self.prices.index)
         if self.sector_prices is not None:
-            self.sector_returns = self.sector_prices.pct_change().dropna()
+            self.sector_returns = self.sector_prices.pct_change(fill_method=None).dropna()
 
         self.spy_prices = spy_price_series.astype(float).reindex(self.prices.index)
 
         if self.spy_prices is not None:
-            self.spy_returns = self.spy_prices.pct_change().dropna()
+            self.spy_returns = self.spy_prices.pct_change(fill_method=None).dropna()
 
     # ------------------------------------------------------------------
     # Generic helpers
@@ -165,8 +165,9 @@ class MomentumFactors:
         up = delta.clip(lower=0)
         down = -delta.clip(upper=0)
 
-        avg_up = up.rolling(window).mean()
-        avg_down = down.rolling(window).mean()
+        # Wilder's smoothing
+        avg_up = up.ewm(com=window - 1, adjust=False).mean()
+        avg_down = down.ewm(com=window - 1, adjust=False).mean()
 
         rs = avg_up / avg_down.replace(0, np.nan)
         rsi_series = 100.0 - (100.0 / (1.0 + rs))
@@ -189,18 +190,21 @@ class MomentumFactors:
         if self.spy_prices is None:
             raise ValueError("spy_price_series is required for this metric")
 
-        if len(self.returns) < lookback + 1:
+        import statsmodels.api as sm
+        
+        # Combine and align returns, dropping any non-overlapping dates
+        combined_df = pd.concat([self.returns, self.spy_returns], axis=1, keys=['asset', 'market']).dropna()
+        
+        if len(combined_df) < lookback:
             return None
 
-        import statsmodels.api as sm
-
-        y = self.returns.iloc[-lookback:]
-        x = sm.add_constant(self.spy_returns.loc[y.index])
+        y = combined_df['asset'].iloc[-lookback:]
+        x_market = combined_df['market'].iloc[-lookback:]
+        x = sm.add_constant(x_market)
 
         model = sm.OLS(y, x, missing="drop").fit()
         resid = model.resid
-        # Sum of residuals for OLS with an intercept is always 0.
-        # Instead, we calculate the cumulative compounded return of the residuals.
+
         return round((1 + resid).prod() - 1, 4)
     
     def sector_idiosyncratic_momentum(self, lookback: int = 60) -> Optional[float]:
@@ -212,13 +216,17 @@ class MomentumFactors:
         if self.sector_prices is None:
             raise ValueError("sector_price_series is required for this metric")
         
-        if len(self.returns) < lookback + 1:
-            return None
-        
         import statsmodels.api as sm
 
-        y = self.returns.iloc[-lookback:]
-        x = sm.add_constant(self.sector_returns.loc[y.index])
+        # Combine and align returns, dropping any non-overlapping dates
+        combined_df = pd.concat([self.returns, self.sector_returns], axis=1, keys=['asset', 'sector']).dropna()
+        
+        if len(combined_df) < lookback:
+            return None
+        
+        y = combined_df['asset'].iloc[-lookback:]
+        x_sector = combined_df['sector'].iloc[-lookback:]
+        x = sm.add_constant(x_sector)
 
         model = sm.OLS(y, x, missing="drop").fit()
         resid = model.resid
@@ -309,60 +317,24 @@ class MomentumFactors:
 
 
 if __name__ == "__main__":
-    import random
+    from backend.src.repositories.market_data.equity_price_repository import EquityPriceDataRepository
+    from backend.src.repositories.market_data.etf_price_repository import ETFPriceDataRepository
+    from datetime import datetime, timedelta
     
-    # Set seed for reproducible results
-    np.random.seed(42)
-    random.seed(42)
+    equity_prices = EquityPriceDataRepository()
+    etf_prices = ETFPriceDataRepository()
+
+    equity_data = equity_prices.fetch_equity_price_data('lmt', start_date=datetime.now() - timedelta(days=730), end_date=datetime.now(), interval='1H')
+    price_data = equity_data['close']
+    volume_data = equity_data['volume']
+
+    spy_df = etf_prices.fetch_etf_price_data('spy', start_date=datetime.now() - timedelta(days=730), end_date=datetime.now(), interval='1H')
+    spy_price_data = spy_df['close']
     
-    n_days = 500
-    
-    # Generate realistic stock price series with drift and volatility
-    initial_price = 100.0
-    daily_returns = np.random.normal(0.0008, 0.02, n_days)  # ~0.08% daily return, 2% volatility
-    cumulative_returns = np.cumsum(daily_returns)
-    price_series = pd.Series(initial_price * np.exp(cumulative_returns))
-    
-    # Generate volume series with realistic variation (mean reversion around average volume)
-    base_volume = 2000000  # 2M shares average
-    volume_noise = np.random.lognormal(0, 0.5, n_days)  # Log-normal for realistic volume spikes
-    volume_series = pd.Series(base_volume * volume_noise)
-    
-    # Generate SPY price series (market benchmark) - slightly less volatile than individual stock
-    spy_initial = 400.0
-    spy_returns = np.random.normal(0.0005, 0.015, n_days)  # Lower volatility than individual stock
-    spy_cumulative_returns = np.cumsum(spy_returns)
-    spy_price_series = pd.Series(spy_initial * np.exp(spy_cumulative_returns))
-    
-    # Generate sector price series - correlated with individual stock but with own dynamics
-    sector_initial = 150.0
-    # Make sector somewhat correlated with the stock (0.6 correlation)
-    sector_specific_returns = np.random.normal(0.0006, 0.018, n_days)
-    combined_sector_returns = 0.6 * daily_returns + 0.4 * sector_specific_returns
-    sector_cumulative_returns = np.cumsum(combined_sector_returns)
-    sector_price_series = pd.Series(sector_initial * np.exp(sector_cumulative_returns))
-    
-    # Create date index for more realistic time series
-    dates = pd.date_range(start='2022-01-01', periods=n_days, freq='D')
-    price_series.index = dates
-    volume_series.index = dates
-    spy_price_series.index = dates
-    sector_price_series.index = dates
-    
-    # Initialize MomentumFactors class
-    momentum_calc = MomentumFactors(
-        price_series=price_series,
-        volume_series=volume_series,
-        spy_price_series=spy_price_series,
-        sector_price_series=sector_price_series
-    )
-    
-    # Calculate all momentum metrics
-    momentum_metrics = momentum_calc.calc_all()
-    
-    # Create MomentumMetrics instance
-    momentum_metrics = momentum_metrics
-    
-    print("Generated Momentum Metrics:")
-    print(momentum_metrics)
+    sector_df = etf_prices.fetch_etf_price_data('xlf', start_date=datetime.now() - timedelta(days=730), end_date=datetime.now(), interval='1H')
+    sector_price_data = sector_df['close']
+
+    momentum_factors = MomentumFactors(price_data, volume_data, spy_price_data, sector_price_data)
+    print(momentum_factors.calc_all())
+
 

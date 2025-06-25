@@ -74,7 +74,7 @@ def run_workflow(user_id: str, email: str) -> Dict[str, Any] | None:
         # If we reach here, both phases were successful.
         
         # portfolio_name = f"prophitai_run_{strftime('%Y%m%d_%H%M%S')}"
-        portfolio_name = "aaaa_portfolio"
+        portfolio_name = "sss_portfolio"
         print(f"\n💾 All phases successful. Preparing to store data for portfolio: {portfolio_name} ...")
 
         print(f"   Storing sector allocations and thesis for '{portfolio_name}'...")
@@ -118,8 +118,8 @@ def run_workflow(user_id: str, email: str) -> Dict[str, Any] | None:
 if __name__ == "__main__":
     start_time = perf_counter()
     # Mock user data for direct script execution
-    test_user_id = "user_01JXG381MBS0JRAX3CM1E4Z9XE"
-    test_email = "michaellaret7@gmail.com"
+    test_user_id = "user_01JXG39MMAVW1P3XVGX7YHN2DT"
+    test_email = "michael@laret.com"
     final_recommendations = run_workflow(user_id=test_user_id, email=test_email)
     elapsed = perf_counter() - start_time
 

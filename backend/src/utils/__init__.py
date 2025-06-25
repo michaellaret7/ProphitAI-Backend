@@ -13,7 +13,6 @@ from .choose_model_and_client import (
     grok_model_and_client, 
     perplexity_model_and_client
 )
-from .retrieve_portfolio_from_db import retrieve_built_portfolio
 
 __all__ = [
     "connect_db",
@@ -24,9 +23,5 @@ __all__ = [
     "openai_model_and_client",
     "grok_model_and_client",
     "perplexity_model_and_client",
-    "retrieve_built_portfolio",
-    "format_dollar_amount",
-    "format_percentage",
-    "format_markdown_table",
     "strip_formatting"
 ] 

@@ -43,22 +43,3 @@ def cache_result(func):
     
     return wrapper
 
-def clear_cache():
-    """
-    Clear the entire cache.
-    """
-    global _CACHE, _CACHE_EXPIRY
-    _CACHE = {}
-    _CACHE_EXPIRY = {}
-    print("Cache cleared")
-
-def set_cache_ttl(seconds):
-    """
-    Set the cache time-to-live.
-    
-    Args:
-        seconds: Number of seconds before cache entries expire
-    """
-    global CACHE_TTL
-    CACHE_TTL = seconds
-    print(f"Cache TTL set to {seconds} seconds") 

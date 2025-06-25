@@ -4,7 +4,9 @@ Financial calculation utility functions.
 import numpy as np
 import pandas as pd
 from scipy import stats
-from backend.src.utils.data_retrieval import get_price_data
+from backend.src.repositories.market_data.equity_price_repository import EquityPriceDataRepository
+from backend.src.repositories.market_data.etf_price_repository import ETFPriceDataRepository
+from datetime import datetime, timedelta
 
 def calculate_volatility(returns, annualize=True, trading_days=252):
     """
@@ -485,8 +487,7 @@ def get_returns(symbols, duration='1 Y'):
     
     for symbol in symbols:
         try:
-            # Get price data using get_price_data
-            df = get_price_data(ticker=symbol, frequency='daily', years=years)
+            df = EquityPriceDataRepository().fetch_equity_price_data(symbol, start_date=datetime.now() - timedelta(days=1460), end_date=datetime.now(), interval='1D')
             
             if df is not None and not df.empty:
                 if 'date' in df.columns:

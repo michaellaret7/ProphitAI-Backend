@@ -14,7 +14,7 @@ from backend.src.utils.ticker_utils import name_to_ticker
 from backend.src.prophitai_gpt.functionSchemas.tools import tools
 from backend.src.prophitai_gpt.dataRetrievalTools.retrieve_financial_metrics import retrieve_financial_metric
 from backend.src.utils.formatting import strip_formatting
-from backend.src.utils.retrieve_portfolio_from_db import retrieve_user_current_portfolio
+from backend.src.repositories.user.user_portfolio_repository import UserCurrentPortfolioRepository
 
 load_dotenv()
 
@@ -75,13 +75,12 @@ try:
 
                     if tool_function_name == "get_portfolio_data":
                         user_name_from_model = args.get('user_name')
-                        user_name = "test_user_beta" # Hardcoded for testing purposes
-                        # print(f"[Testing Override] 'get_portfolio_data' called. Model sent user_name: '{user_name_from_model}'. Using hardcoded user_name: '{user_name}'")
+                        user_name = "michael@laret.com" # Hardcoded for testing purposes
 
                         if not user_name: # Should not happen with hardcoding, but good for robustness if hardcoding is removed
                             result_str = "Error: 'user_name' was not provided or is empty."
                         else:
-                            portfolio_df = retrieve_user_current_portfolio(identifier=user_name, identifier_type="name")
+                            portfolio_df = UserCurrentPortfolioRepository().fetch_holdings(email=user_name)
                             if portfolio_df is None:
                                 result_str = "Error: Portfolio data could not be retrieved."
                             elif portfolio_df.empty:

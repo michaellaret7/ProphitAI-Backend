@@ -20,19 +20,16 @@ from backend.src.portfolio_optimization.phase_two.data_retrieval import (
     extract_asset_classes,
     get_stock_tickers,
     get_asset_description,
-    get_quarterly_estimates,
 )
 from backend.src.portfolio_optimization.phase_two.phase_two_calculations import (
     calculate_and_filter_metrics,
     calculate_composite_scores,
 )
-from backend.src.portfolio_optimization.phase_two.retrieve_fundamental_report import (
-    get_fundamental_report_from_db
-)
 from backend.src.data.user_information import get_user_information
-from backend.src.utils.determine_etf import is_etf
+from backend.src.utils.determine_etf import is_etf_asset_class
 import time
 from backend.src.utils.choose_model_and_client import deepseek_model_and_client, openai_model_and_client, grok_model_and_client, perplexity_model_and_client
+from backend.src.repositories.fundamental_data.fundamental_repository import FundamentalDataRepository
 # ---------------------------------------------------------------------------
 # Phase-two prompt templates & constants
 # ---------------------------------------------------------------------------
@@ -110,7 +107,7 @@ def pick_top_tickers_from_asset_classes(portfolio_json):
                 stock_metrics = row.drop('Ticker').to_dict()
 
                 # Check if the asset class itself is considered an ETF class
-                if is_etf(asset_class):
+                if is_etf_asset_class(asset_class):
                     if 'sector_beta' in stock_metrics:
                         del stock_metrics['sector_beta']
 
@@ -120,22 +117,20 @@ def pick_top_tickers_from_asset_classes(portfolio_json):
                     # ETFs don't have fundamental predictions, set to None or skip
                     fundamental_predictions = None 
                 else:
-                    print(f"Ticker {ticker} in non-ETF asset class '{asset_class}', generating fundamental report.")
-                    fundamental_report = get_fundamental_report_from_db(ticker)
+                    print(f"Ticker {ticker} in non-ETF asset class '{asset_class}', retrieving fundamental report.")
+                    fundamental_report = FundamentalDataRepository().fetch_fundamental_report(ticker)
 
                     # Get fundamental predictions only for non-ETFs
                     print(f"Fetching fundamental predictions for {ticker}...")
-                    predictions_string = get_quarterly_estimates(ticker) # Get the JSON string
                     try:
-                        # Parse the JSON string into a Python object (dict)
-                        fundamental_predictions = json.loads(predictions_string)
-                    except json.JSONDecodeError:
-                        print(f"Warning: Could not parse fundamental predictions JSON for {ticker}")
-                        # Store an error indicator instead of the raw string or None
-                        fundamental_predictions = {"error": "No Predicitons Found for this ticker"} 
-                    except Exception as e: # Catch other potential errors during parsing
-                         print(f"Warning: An unexpected error occurred parsing predictions for {ticker}: {e}")
-                         fundamental_predictions = {"error": f"Unexpected error parsing predictions: {e}"}
+                        # Fetch fundamental predictions (already returns parsed data as List[Dict])
+                        fundamental_predictions = FundamentalDataRepository().fetch_fundamental_estimates(ticker)
+                        # Check if we got valid data
+                        if not fundamental_predictions:
+                            fundamental_predictions = {"error": "No Predictions Found for this ticker"}
+                    except Exception as e: # Catch any errors during data fetching
+                         print(f"Warning: An unexpected error occurred fetching predictions for {ticker}: {e}")
+                         fundamental_predictions = {"error": f"Unexpected error fetching predictions: {e}"}
 
                 stock_metrics['fundamental_report'] = fundamental_report
                 # Only add predictions if they were successfully fetched and parsed
@@ -387,7 +382,10 @@ def run_phase_two(portfolio_data):
         Dict: Final portfolio recommendations dictionary mapping asset classes
         to their recommended tickers and allocations.
     """
+    # ===============================================================================
     picks = pick_top_tickers_from_asset_classes(portfolio_data)
+    # ===============================================================================
+
     if logger.isEnabledFor(logging.DEBUG):
         logger.debug("Ticker picks: %s", json.dumps(picks))
 
@@ -407,39 +405,38 @@ def run_phase_two(portfolio_data):
             final_portfolio[asset_class_name] = {
                 "error": data_for_class.get("error", "No data available for this asset class.")
             }
-            logger.info("Skipping %s – no usable data available.", asset_class_name)
+            logger.info("Skipping %s - no usable data available.", asset_class_name)
             continue
         if not data_for_class.get("tickers"):
             final_portfolio[asset_class_name] = {
                 "error": "No valid tickers with sufficient data were found for this asset class."
             }
-            logger.info("Skipping %s – no tickers passed the data quality filters.", asset_class_name)
+            logger.info("Skipping %s - no tickers passed the data quality filters.", asset_class_name)
             continue
 
         logger.info("Generating recommendations for asset class: %s", asset_class_name)
         if logger.isEnabledFor(logging.DEBUG):
             logger.debug("Data for %s: %s", asset_class_name, json.dumps(data_for_class))
-        # Verbose details moved to DEBUG logs above.
 
+        # ===============================================================================
         recommendations_json = make_phaseTwo_recommendations(data_for_class)
+        # ===============================================================================
+
         if logger.isEnabledFor(logging.DEBUG):
             logger.debug("Recommendations raw JSON for %s: %s", asset_class_name, recommendations_json)
-        # Raw recommendation JSON logged at DEBUG level.
         
-        # Parse JSON string to Python object and add to final_portfolio
         if recommendations_json:
             try:
                 recommendations_data = json.loads(recommendations_json)
                 final_portfolio[asset_class_name] = recommendations_data
+
             except json.JSONDecodeError as e:
                 logger.warning("Error parsing recommendations for %s: %s", asset_class_name, e)
-                # Add error info to portfolio if parsing fails
                 final_portfolio[asset_class_name] = {"error": "Failed to parse recommendations"}
     
     logger.info("Phase-two complete - final aggregated portfolio ready.")
     if logger.isEnabledFor(logging.DEBUG):
         logger.debug("Final Portfolio JSON:\n%s", json.dumps(final_portfolio, indent=2))
-    # Final portfolio already logged above.
     
     return final_portfolio
 

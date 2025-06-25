@@ -105,26 +105,3 @@ def load_schema_data(filename: str = "database_schemas.json"):
     except Exception as e:
         # Catch any other unexpected errors
         raise RuntimeError(f"Unexpected error loading schema from '{schema_path}': {e}")
-
-def ensure_dir_exists(directory):
-    """
-    Ensure a directory exists, creating it if necessary.
-    
-    Args:
-        directory: Directory path to ensure exists
-    
-    Returns:
-        pathlib.Path: Path to the directory
-        
-    Raises:
-        PermissionError: If directory cannot be created due to permissions
-        OSError: If directory creation fails for other reasons
-    """
-    try:
-        dir_path = Path(directory)
-        os.makedirs(dir_path, exist_ok=True)
-        return dir_path
-    except PermissionError:
-        raise PermissionError(f"Permission denied creating directory: {directory}")
-    except OSError as e:
-        raise OSError(f"Failed to create directory '{directory}': {e}") 

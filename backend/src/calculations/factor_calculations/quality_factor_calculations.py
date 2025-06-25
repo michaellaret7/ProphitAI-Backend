@@ -265,10 +265,6 @@ if __name__ == "__main__":
     np.random.seed(42)
     random.seed(42)
     
-    # Generate realistic financial data for a mid-cap technology company
-    # All values in millions except per-share metrics
-    
-    # Basic financial statement items
     net_income = 850.0  # $850M net income
     revenue = 5200.0    # $5.2B revenue  
     gross_profit = 3100.0  # ~60% gross margin

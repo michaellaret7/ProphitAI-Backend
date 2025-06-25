@@ -1,56 +1,14 @@
 from typing import List, Optional
 from backend.src.repositories.base_repository import BaseRepository
 from backend.src.data_models.user_models import UserPortfolioHoldings
+from backend.src.utils.database import get_connection
+from psycopg2.extras import RealDictCursor
+import psycopg2
 
-# class UserCurrentPortfolioRepository:
-#     """Minimalistic and efficient repository for portfolio data queries."""
-#     def __init__(self):
-#         pass
-    
-#     def fetch_holdings(self, email: str) -> List[UserPortfolioHoldings]:
-#         """
-#         Fetch user portfolio holdings by email.
-#         Args:
-#             email: User email address
-#         Returns:
-#             List of UserPortfolioHolding objects with validated data
-#         """
-#         conn = get_connection("user_data")
-#         if not conn:
-#             return []
-        
-#         try:
-#             with conn.cursor(cursor_factory=RealDictCursor) as cursor:
-#                 cursor.execute("""
-#                     SELECT * FROM public.user_portfolios
-#                     WHERE email = %s
-#                 """, (email,))
-                
-#                 rows = cursor.fetchall()
-                
-#                 # Convert to Pydantic objects with validation
-#                 holdings = []
-#                 for row in rows:
-#                     try:
-#                         holding = UserPortfolioHoldings(**dict(row))
-#                         holdings.append(holding)
-#                     except Exception as e:
-#                         print(f"Error validating holding data: {e}")
-#                         print(f"Raw data: {dict(row)}")
-#                         # Skip invalid records
-#                         continue
-                
-#                 return holdings
-            
-#         except psycopg2.Error as e:
-#             print(f"Query execution error: {e}")
-#             return []
-#         finally:
-#             conn.close()
-
-
-class UserCurrentPortfolioRepository(BaseRepository):
+class UserCurrentPortfolioRepository:
     """Minimalistic and efficient repository for portfolio data queries."""
+    def __init__(self):
+        pass
     
     def fetch_holdings(self, user_id: Optional[str] = None, email: Optional[str] = None) -> List[UserPortfolioHoldings]:
         """
@@ -63,18 +21,46 @@ class UserCurrentPortfolioRepository(BaseRepository):
         """
         if not user_id and not email:
             raise ValueError("Either user_id or email must be provided")
+
+        conn = get_connection("user_data")
+        if not conn:
+            return []
         
-        return self._execute_query_with_model_validation(
-            db_name="user_data",
-            query="SELECT * FROM public.user_portfolios WHERE user_id = %s OR email = %s",
-            model_class=UserPortfolioHoldings,
-            params=(user_id, email),
-            fetch_one=False,  # Returns a list
-            use_validation=True  # Uses try/catch validation like your original code
-        )
+        try:
+            with conn.cursor(cursor_factory=RealDictCursor) as cursor:
+                query_conditions = []
+                params = []
+                if user_id:
+                    query_conditions.append("user_id = %s")
+                    params.append(user_id)
+                if email:
+                    query_conditions.append("email = %s")
+                    params.append(email)
+                
+                query = "SELECT * FROM public.user_portfolios WHERE " + " OR ".join(query_conditions)
+                
+                cursor.execute(query, tuple(params))
+                
+                rows = cursor.fetchall()
+                
+                # Convert to Pydantic objects with validation
+                holdings = []
+                for row in rows:
+                    try:
+                        holding = UserPortfolioHoldings(**dict(row))
+                        holdings.append(holding)
+                    except Exception as e:
+                        print(f"Error validating holding data: {e}")
+                        print(f"Raw data: {dict(row)}")
+                        # Skip invalid records
+                        continue
+                
+                return holdings
+            
+        except psycopg2.Error as e:
+            print(f"Query execution error: {e}")
+            return []
+        finally:
+            conn.close()
 
 
-if __name__ == "__main__":
-    repo = UserCurrentPortfolioRepository()
-    holdings = repo.fetch_holdings(user_id="user_01JXG39MMAVW1P3XVGX7YHN2DT")
-    print(holdings[0].symbol)

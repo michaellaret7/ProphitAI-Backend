@@ -3,7 +3,10 @@ import numpy as np
 import logging
 from backend.src.utils.caching import cache_result
 from backend.src.utils.file_utils import load_schema_data
-from backend.src.portfolio_optimization.phase_two.data_retrieval import get_daily_closing_prices
+from backend.src.repositories.market_data.equity_price_repository import EquityPriceDataRepository
+from backend.src.repositories.market_data.etf_price_repository import ETFPriceDataRepository
+from backend.src.utils.determine_etf import is_etf_ticker
+from datetime import datetime, timedelta
 from backend.src.utils.financial_calculations import (
     calculate_sharpe_ratio,
     calculate_sortino_ratio,
@@ -38,14 +41,22 @@ def calculate_stock_metrics(ticker):
        Dict: Dictionary containing calculated financial metrics including ratios,
        returns, volatility, beta, momentum, and volume data.
    """
+   # Determine if the ticker is an ETF
+   is_etf = is_etf_ticker(ticker)
+
    # Get price data for the ticker
-   price_data = get_daily_closing_prices(ticker)
-   spy_data = get_daily_closing_prices('spy')
-   
-   # Check if ticker is an ETF (simple check based on common ETF tickers from screenshot)
-   etf_list = ["XLK", "XLF", "XLV", "XLY", "XLP", "XLE", "XLI", "XLB", "XLU", "XLRE", "XLC"]
-   is_etf = ticker.upper() in etf_list
-   
+   prices = EquityPriceDataRepository()
+   etf_prices = ETFPriceDataRepository()
+
+   if is_etf:
+       price_data = etf_prices.fetch_etf_price_data(ticker, start_date=datetime.now() - timedelta(days=730), end_date=datetime.now(), interval='1D')
+   else:
+       price_data = prices.fetch_equity_price_data(ticker, start_date=datetime.now() - timedelta(days=730), end_date=datetime.now(), interval='1D')
+
+   logger.info(f"Price data: {price_data.head()}")
+
+   spy_data = etf_prices.fetch_etf_price_data('spy', start_date=datetime.now() - timedelta(days=730), end_date=datetime.now(), interval='1D')
+
    # Return default values if no price data is available
    if price_data is None or price_data.empty:
       print(f"No price data available for {ticker}")
@@ -218,7 +229,7 @@ def calculate_stock_metrics(ticker):
             matched_sector_key = next((key for key in sector_etf_map if key in sector.lower()), None)
             if matched_sector_key:
                sector_etf = sector_etf_map[matched_sector_key]
-               sector_etf_data = get_daily_closing_prices(sector_etf)
+               sector_etf_data = etf_prices.fetch_etf_price_data(sector_etf, start_date=datetime.now() - timedelta(days=1460), end_date=datetime.now(), interval='1D')
                if sector_etf_data is not None and not sector_etf_data.empty:
                   sector_etf_df = sector_etf_data.copy()
                   sector_etf_df['daily_return'] = sector_etf_df['close'].pct_change()
@@ -344,6 +355,4 @@ def calculate_composite_scores(df):
 
     return z_scores.sort_values(by='composite_score', ascending=False)
 
-if __name__ == "__main__":
-   x = calculate_stock_metrics('AAPL')
-   print(x)
+

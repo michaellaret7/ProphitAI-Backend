@@ -60,10 +60,6 @@ sys.modules.setdefault(
     importlib.import_module("backend.src.portfolio_optimization.phase_two.phase_two_calculations"),
 )
 sys.modules.setdefault(
-    "src.phaseTwo.retrieve_fundamental_report",
-    importlib.import_module("backend.src.portfolio_optimization.phase_two.retrieve_fundamental_report"),
-)
-sys.modules.setdefault(
     "src.phaseTwo.phaseTwo",
     importlib.import_module("backend.src.portfolio_optimization.phase_two.phase_two_run"),
 )
