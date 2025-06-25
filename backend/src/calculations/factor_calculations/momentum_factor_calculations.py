@@ -6,6 +6,8 @@ from io import StringIO
 from pydantic import BaseModel
 from backend.src.data_models.style_factors_models import MomentumFactorMetrics
 
+ROUND_PRECISION = 6
+
 class MomentumFactors:
     def __init__(self, price_series: pd.Series, volume_series: Optional[pd.Series] = None, spy_price_series: Optional[pd.Series] = None, sector_price_series: Optional[pd.Series] = None):
         
@@ -48,7 +50,7 @@ class MomentumFactors:
     # ------------------------------------------------------------------
     def one_month_return(self) -> Optional[float]:
         """1-month total return (no skip)."""
-        return round(self._total_return(lookback=21, skip=0), 4) 
+        return self._total_return(lookback=21, skip=0) 
 
     def three_month_return(self, skip: int = 21) -> Optional[float]:
         """
@@ -60,15 +62,15 @@ class MomentumFactors:
             Trading days to exclude at the end of the window—set to 0 if you
             **do want** the most recent month included.
         """
-        return round(self._total_return(lookback=63, skip=skip), 4)
+        return self._total_return(lookback=63, skip=skip)
 
     def six_month_return(self, skip: int = 21) -> Optional[float]:
         """6-month total return (≈126 days), skipping `skip` most recent days."""
-        return round(self._total_return(lookback=126, skip=skip), 4)
+        return self._total_return(lookback=126, skip=skip)
 
     def twelve_month_return_ex1m(self) -> Optional[float]:
         """12-month return **excluding** the last 1 month (lookback 252, skip 21)."""
-        return round(self._total_return(lookback=252, skip=21), 4)
+        return self._total_return(lookback=252, skip=21)
 
     # ------------------------------------------------------------------
     # % from 52-week high
@@ -88,7 +90,7 @@ class MomentumFactors:
             return None
         highest = self.prices.iloc[-window:].max()
         current = self.prices.iloc[-1]
-        return round((current / highest) - 1.0, 4)
+        return (current / highest) - 1.0
 
     # ------------------------------------------------------------------
     # SMA ratio (Golden-Cross style)
@@ -116,8 +118,8 @@ class MomentumFactors:
         ratio_series = (sma_fast / sma_slow) - 1.0
 
         if latest_only:
-            return round(ratio_series.iloc[-1], 4) if not np.isnan(ratio_series.iloc[-1]) else None
-        return round(ratio_series, 4)
+            return ratio_series.iloc[-1] if not np.isnan(ratio_series.iloc[-1]) else None
+        return ratio_series
 
     # ------------------------------------------------------------------
     # MACD (EMA-12, EMA-26, signal = EMA-9 of MACD)
@@ -139,7 +141,7 @@ class MomentumFactors:
         macd_line = ema_fast - ema_slow
         signal_line = macd_line.ewm(span=signal_period, adjust=False).mean()
 
-        return round(macd_line.iloc[-1], 4), round(signal_line.iloc[-1], 4)
+        return macd_line.iloc[-1], signal_line.iloc[-1]
 
     # ------------------------------------------------------------------
     # RSI
@@ -171,7 +173,7 @@ class MomentumFactors:
 
         rs = avg_up / avg_down.replace(0, np.nan)
         rsi_series = 100.0 - (100.0 / (1.0 + rs))
-        return round(rsi_series.iloc[-1], 4)
+        return rsi_series.iloc[-1]
 
     # ------------------------------------------------------------------
     # Idiosyncratic Momentum (CAPM residuals)
@@ -205,7 +207,7 @@ class MomentumFactors:
         model = sm.OLS(y, x, missing="drop").fit()
         resid = model.resid
 
-        return round((1 + resid).prod() - 1, 4)
+        return (1 + resid).prod() - 1
     
     def sector_idiosyncratic_momentum(self, lookback: int = 60) -> Optional[float]:
         """
@@ -232,7 +234,7 @@ class MomentumFactors:
         resid = model.resid
         # Sum of residuals for OLS with an intercept is always 0.
         # Instead, we calculate the cumulative compounded return of the residuals.
-        return round((1 + resid).prod() - 1, 4)
+        return (1 + resid).prod() - 1
 
     # ------------------------------------------------------------------
     # Volume-Adjusted Momentum
@@ -261,7 +263,7 @@ class MomentumFactors:
         window_vol = self.volumes.loc[window_ret.index]
 
         vw_return = (window_ret * window_vol).sum() / window_vol.sum()
-        return round(vw_return, 4)
+        return vw_return
 
     def calc_all(
         self, 
@@ -293,13 +295,7 @@ class MomentumFactors:
         
         # Calculate MACD values (returns tuple)
         macd_result = self.macd(macd_fast, macd_slow, macd_signal)
-        macd_value = macd_result[0] if macd_result[0] is not None else None
-        macd_signal_value = macd_result[1] if macd_result[1] is not None else None
 
-        idiosyncratic_momentum_value = self.idiosyncratic_momentum(idio_lookback)
-        sector_idiosyncratic_momentum_value = self.sector_idiosyncratic_momentum(sector_idio_lookback)
-        volume_adjusted_momentum_value = self.volume_adjusted_momentum(vol_adj_lookback)
-        
         return MomentumFactorMetrics(
             one_month_return=self.one_month_return(),
             three_month_return=self.three_month_return(skip=three_month_skip),
@@ -307,12 +303,12 @@ class MomentumFactors:
             twelve_month_return_ex1m=self.twelve_month_return_ex1m(),
             pct_from_52w_high=self.pct_from_52w_high(window=window_52w),
             sma_ratio=self.sma_ratio(fast=sma_fast, slow=sma_slow),
-            macd_value=macd_value,
-            macd_signal=macd_signal_value,
+            macd_value=macd_result[0],
+            macd_signal=macd_result[1],
             rsi=self.rsi(window=rsi_window),
-            idiosyncratic_momentum=idiosyncratic_momentum_value,
-            sector_idiosyncratic_momentum=sector_idiosyncratic_momentum_value,
-            volume_adjusted_momentum=volume_adjusted_momentum_value,
+            idiosyncratic_momentum=self.idiosyncratic_momentum(idio_lookback),
+            sector_idiosyncratic_momentum=self.sector_idiosyncratic_momentum(sector_idio_lookback),
+            volume_adjusted_momentum=self.volume_adjusted_momentum(vol_adj_lookback),
         )
 
 
@@ -324,17 +320,19 @@ if __name__ == "__main__":
     equity_prices = EquityPriceDataRepository()
     etf_prices = ETFPriceDataRepository()
 
-    equity_data = equity_prices.fetch_equity_price_data('lmt', start_date=datetime.now() - timedelta(days=730), end_date=datetime.now(), interval='1H')
+    equity_data = equity_prices.fetch_equity_price_data('lmt', start_date=datetime.now() - timedelta(days=730), end_date=datetime.now(), interval='1d')
     price_data = equity_data['close']
     volume_data = equity_data['volume']
 
-    spy_df = etf_prices.fetch_etf_price_data('spy', start_date=datetime.now() - timedelta(days=730), end_date=datetime.now(), interval='1H')
+    spy_df = etf_prices.fetch_etf_price_data('spy', start_date=datetime.now() - timedelta(days=730), end_date=datetime.now(), interval='1d')
     spy_price_data = spy_df['close']
     
-    sector_df = etf_prices.fetch_etf_price_data('xlf', start_date=datetime.now() - timedelta(days=730), end_date=datetime.now(), interval='1H')
+    sector_df = etf_prices.fetch_etf_price_data('xlf', start_date=datetime.now() - timedelta(days=730), end_date=datetime.now(), interval='1d')
     sector_price_data = sector_df['close']
 
     momentum_factors = MomentumFactors(price_data, volume_data, spy_price_data, sector_price_data)
-    print(momentum_factors.calc_all())
+    mf = momentum_factors.calc_all()
+    print(mf.model_dump())
+    print(type(mf.model_dump()))
 
 

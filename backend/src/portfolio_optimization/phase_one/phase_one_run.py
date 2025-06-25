@@ -542,4 +542,5 @@ if __name__ == "__main__":
     test_user_id = "user_01JXG39MMAVW1P3XVGX7YHN2DT"
     test_email = "michael@laret.com"
     final_portfolio = optimize(user_id=test_user_id, email=test_email)
-    print(final_portfolio)
+    logger.info(final_portfolio)
+    logger.info(type(final_portfolio))

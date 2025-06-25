@@ -38,7 +38,7 @@ class VolatilityFactors:
         
         returns_30d = self.returns.iloc[-30:]
         vol = returns_30d.std() * np.sqrt(252)
-        return round(vol, 4)
+        return vol
 
     def realized_vol_90d(self) -> Optional[float]:
         """
@@ -49,7 +49,34 @@ class VolatilityFactors:
         
         returns_90d = self.returns.iloc[-90:]
         vol = returns_90d.std() * np.sqrt(252)
-        return round(vol, 4)
+        return vol
+
+    def annualized_volatility(self, lookback_days: int) -> Optional[float]:
+        """
+        Calculate annualized volatility for any lookback period.
+        
+        Parameters
+        ----------
+        lookback_days : int
+            Number of days to look back for volatility calculation
+            
+        Returns
+        -------
+        float or None
+            Annualized volatility, or None if insufficient data
+        """
+        if len(self.returns) < lookback_days:
+            return None
+        
+        returns_period = self.returns.iloc[-lookback_days:]
+        vol = returns_period.std() * np.sqrt(252)
+        return vol
+
+    def daily_return_volatility(self) -> Optional[float]:
+        """Calculate daily return volatility."""
+        if len(self.returns) < 2:
+            return None
+        return np.std(self.returns, ddof=1)
 
     # ------------------------------------------------------------------
     # Beta Calculation (CAPM)
@@ -78,7 +105,7 @@ class VolatilityFactors:
             return None
         
         beta = covariance / spy_variance
-        return round(beta, 4)
+        return beta
 
     # ------------------------------------------------------------------
     # Idiosyncratic Volatility
@@ -108,7 +135,7 @@ class VolatilityFactors:
         
         # Annualize the residual volatility
         idio_vol = residuals.std() * np.sqrt(252)
-        return round(idio_vol, 4)
+        return idio_vol
 
     # ------------------------------------------------------------------
     # Downside Deviation
@@ -125,7 +152,7 @@ class VolatilityFactors:
         downside_variance = np.mean(downside_returns ** 2)
         downside_dev = np.sqrt(downside_variance) * np.sqrt(252)
         
-        return round(downside_dev, 4)
+        return downside_dev
 
     # ------------------------------------------------------------------
     # Maximum Drawdown
@@ -147,7 +174,7 @@ class VolatilityFactors:
         
         # Maximum drawdown is the most negative value
         max_dd = drawdown.min()
-        return round(max_dd, 4)
+        return max_dd
 
     # ------------------------------------------------------------------
     # ATR/Price Ratio
@@ -182,7 +209,7 @@ class VolatilityFactors:
             return None
         
         atr_ratio = atr / current_price
-        return round(atr_ratio, 4)
+        return atr_ratio
 
     # ------------------------------------------------------------------
     # Variance Ratio
@@ -204,7 +231,7 @@ class VolatilityFactors:
             return None
         
         variance_ratio = var_63d / var_252d
-        return round(variance_ratio, 4)
+        return variance_ratio
 
     # ------------------------------------------------------------------
     # Skewness and Kurtosis
@@ -218,7 +245,7 @@ class VolatilityFactors:
         
         returns_period = self.returns.iloc[-lookback:]
         skew = scipy.stats.skew(returns_period)
-        return round(skew, 4)
+        return skew
 
     def kurtosis(self, lookback: int = 252) -> Optional[float]:
         """
@@ -229,7 +256,7 @@ class VolatilityFactors:
         
         returns_period = self.returns.iloc[-lookback:]
         kurt = scipy.stats.kurtosis(returns_period)
-        return round(kurt, 4)
+        return kurt
 
     # ------------------------------------------------------------------
     # GARCH Forecast
@@ -249,7 +276,7 @@ class VolatilityFactors:
             
             # Fit GARCH(1,1) model
             returns_pct = self.returns.iloc[-252:] * 100  # Convert to percentage returns
-            model = arch_model(returns_pct, vol='Garch', p=1, q=1)
+            model = arch_model(returns_pct, vol='Garch', p=1, q=1, rescale=False)
             fitted_model = model.fit(disp='off')
             
             # Get forecast for next period
@@ -259,7 +286,7 @@ class VolatilityFactors:
             # Convert back to decimal form and annualize
             next_period_vol = np.sqrt(next_period_variance / 10000 * 252)
             
-            return round(next_period_vol, 4)
+            return next_period_vol
             
         except ImportError:
             # Fallback to simple exponential smoothing if arch not available
@@ -267,7 +294,7 @@ class VolatilityFactors:
             # Simple exponential weighted moving average with alpha=0.1
             ewma_var = returns_squared.ewm(alpha=0.1).mean().iloc[-1]
             forecast_vol = np.sqrt(ewma_var * 252)
-            return round(forecast_vol, 4)
+            return forecast_vol
         
         except Exception:
             # If GARCH fitting fails, return None
@@ -291,7 +318,10 @@ class VolatilityFactors:
         garch_enabled: bool = True,
         atr_period: int = 14,
         skewness_lookback: int = 252,
-        kurtosis_lookback: int = 252
+        kurtosis_lookback: int = 252,
+        annualized_volatility_enabled: bool = True,
+        annualized_volatility_lookback: int = 252,
+        daily_return_volatility_enabled: bool = True
     ) -> VolatilityFactorMetrics:
         """
         Calculate all volatility factor metrics at once.
@@ -319,6 +349,8 @@ class VolatilityFactors:
             skewness=self.skewness(lookback=skewness_lookback) if skewness_enabled else None,
             kurtosis=self.kurtosis(lookback=kurtosis_lookback) if kurtosis_enabled else None,
             garch_forecast=self.garch_forecast() if garch_enabled else None,
+            annualized_volatility=self.annualized_volatility(lookback_days=annualized_volatility_lookback) if annualized_volatility_enabled else None,
+            daily_return_volatility=self.daily_return_volatility() if daily_return_volatility_enabled else None,
         )
 
 
@@ -369,26 +401,6 @@ if __name__ == "__main__":
     
     # Calculate all metrics
     all_metrics = volatility_factors.calc_all()
+    print(all_metrics)
     
-    print("Volatility Factor Metrics Results:")
-    print("-" * 40)
-    for field_name, value in all_metrics.model_dump().items():
-        if value is not None:
-            if 'vol' in field_name.lower() or 'dev' in field_name.lower():
-                print(f"{field_name.replace('_', ' ').title()}: {value:.2%}")
-            elif field_name == 'beta_1yr':
-                print(f"{field_name.replace('_', ' ').title()}: {value:.3f}")
-            elif field_name == 'max_drawdown_1yr':
-                print(f"{field_name.replace('_', ' ').title()}: {value:.2%}")
-            else:
-                print(f"{field_name.replace('_', ' ').title()}: {value:.4f}")
-        else:
-            print(f"{field_name.replace('_', ' ').title()}: N/A")
-    
-    print("\n" + "=" * 60)
-    print("Individual metric tests:")
-    print(f"• 30-day realized vol: {volatility_factors.realized_vol_30d()}")
-    print(f"• 90-day realized vol: {volatility_factors.realized_vol_90d()}")
-    print(f"• 1-year beta: {volatility_factors.beta_1yr()}")
-    print(f"• Idiosyncratic vol: {volatility_factors.idiosyncratic_vol()}")
-    print(f"• Max drawdown: {volatility_factors.max_drawdown_1yr()}")
+

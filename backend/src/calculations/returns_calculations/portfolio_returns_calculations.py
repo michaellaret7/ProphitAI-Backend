@@ -71,7 +71,7 @@ class CalculatePortfolioReturns:
                 else:
                     portfolio_returns = portfolio_returns.add(weighted_returns, fill_value=0)
         
-        return round(portfolio_returns, 4)
+        return portfolio_returns
     
     def calculate_daily_total_returns(self):
         """
@@ -89,7 +89,7 @@ class CalculatePortfolioReturns:
                 else:
                     portfolio_returns = portfolio_returns.add(weighted_returns, fill_value=0)
         
-        return round(portfolio_returns, 4)
+        return portfolio_returns
     
     def calculate_annualized_price_return(self):
         """
@@ -106,7 +106,7 @@ class CalculatePortfolioReturns:
             return 0.0
         
         annualized = (1 + total_return) ** (252/days) - 1
-        return round(annualized, 4)
+        return annualized
     
     def calculate_annualized_total_return(self):
         """
@@ -123,7 +123,7 @@ class CalculatePortfolioReturns:
             return 0.0
         
         annualized = (1 + total_return) ** (252/days) - 1
-        return round(annualized, 4)
+        return annualized
     
     def calculate_holding_period_return(self):
         """
@@ -136,7 +136,7 @@ class CalculatePortfolioReturns:
                 ticker_hpr = self.ticker_calculators[ticker].calculate_holding_period_return()
                 portfolio_hpr += ticker_hpr * weight
         
-        return round(portfolio_hpr, 4)
+        return portfolio_hpr
     
     @staticmethod
     def calculate_real_return(nominal_return: float, inflation_rate: float) -> float:
@@ -147,7 +147,7 @@ class CalculatePortfolioReturns:
         :param inflation_rate: The inflation rate as a decimal (e.g., 0.02 for 2%).
         :return: The real return as a decimal.
         """
-        return round((1 + nominal_return) / (1 + inflation_rate) - 1, 4)
+        return (1 + nominal_return) / (1 + inflation_rate) - 1
 
 if __name__ == "__main__":
     from backend.src.repositories.portfolio.created_portfolio_repository import UserCreatedPortfolioRepository

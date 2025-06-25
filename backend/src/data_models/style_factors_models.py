@@ -63,3 +63,5 @@ class VolatilityFactorMetrics(BaseModel):
     skewness: Optional[float]
     kurtosis: Optional[float]
     garch_forecast: Optional[float]
+    annualized_volatility: Optional[float]
+    daily_return_volatility: Optional[float]

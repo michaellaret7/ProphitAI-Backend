@@ -2492,909 +2492,725 @@ ETF UNIVERSE DATA
 
 
 ========================================
-FREE SEARCH: Q3–Q4 2025 projected earnings growth and valuation multiples for US large-cap semiconductor companies (NVDA, AMD, AVGO, INTC, MU). Include consensus forward P/E, EPS growth estimates, and commentary on AI/datacenter demand trends.
+FREE SEARCH: Q3 2025 consensus earnings growth estimates for S&P 500 information technology sector and leading sub-industries (semiconductors, software, IT services); include forward P/E ratios and top growth drivers.
 ========================================
 
-## Q3–Q4 2025 Earnings Growth and Valuation Multiples for US Large-Cap Semiconductor Companies
+## S&P 500 Information Technology Sector: Q3 2025 Earnings Outlook
 
-This overview summarizes key projections and trends for major US semiconductor firms—Nvidia (NVDA), AMD, Broadcom (AVGO), Intel (INTC), and Micron (MU)—with a focus on Q3 and Q4 2025 performance, forward P/E multiples, EPS growth estimates, and the driving forces behind AI and datacenter demand.
+**Q3 2025 Consensus Estimates**
 
----
+- **Earnings Growth:** The S&P 500 Information Technology sector is projected to lead all sectors in Q3 2025, with consensus analyst estimates forecasting robust year-over-year earnings growth. The broad S&P 500 is expected to report earnings growth of 7.2%, with Information Technology outperforming the index and leading both in earnings and revenue expansion[1].
+- **Revenue Growth:** The sector is also forecast to deliver the strongest revenue growth among all S&P 500 sectors in Q3 2025[1].
+- **Forward P/E Ratios:** The S&P 500 forward 12-month P/E ratio stands at 21.6, noticeably above both the five-year average (19.9) and ten-year average (18.4). Technology stocks, as a high-growth sector, are trading at a premium to the broader market[1].
 
-**Company Snapshot Table (Q3–Q4 2025 Estimates)**
+## Key Sub-Industries: Growth Estimates and Valuations
 
-| Company | Fwd. P/E (2025E) | FY25 EPS Growth YoY | Q3 EPS Estimate | Q4 EPS Estimate | Key Drivers                       |
-|---------|------------------|--------------------|----------------|----------------|------------------------------------|
-| NVDA    | ~35–40[own]      | 90–100%[own]       | $8.50–$9.00[own]| $9.25–$10.00[own] | AI GPU, datacenter, HBM demand     |
-| AMD     | ~32–36[own]      | 55–60%[own]        | $1.40–$1.50[own]| $1.55–$1.65[own] | MI300 AI accelerators, server CPUs |
-| AVGO    | ~28–30[own]      | 35–40%[own]        | $9.20–$9.50[own]| $9.50–$10.00[own] | Custom AI silicon, networking      |
-| INTC    | ~21–24[own]      | 17–22%[own]        | $0.46–$0.50[own]| $0.55–$0.60[own] | Foundry ramp, traditional CPUs     |
-| MU      | ~19–22[5]        | 430%+ (FY25E)[3][1] | $1.59[2]        | $1.86[own]     | HBM/DRAM for AI, pricing power     |
+| Sub-Industry      | Q3 2025 Earnings Growth Estimate | Forward P/E Ratio | Growth Drivers                       |
+|-------------------|----------------------------------|-------------------|--------------------------------------|
+| Semiconductors    | High double-digit (%)            | High 20s–mid 30s  | AI demand, data center, auto, IoT    |
+| Software          | Mid-to-high single digit (%)     | High 20s–mid 30s  | Cloud, AI integration, SaaS models   |
+| IT Services       | Single digit (%)                 | Low-to-mid 20s    | Digital transformation, cloud, AI    |
 
-_Note: “own” denotes analyst consensus and recent industry estimates beyond provided citations. Forward P/E and EPS figures are consensus ranges reflecting mid-2025 share prices and current EPS projections; sources and calculations detailed below._
+*Estimates are based on sector trends; sub-industry consensus figures are not detailed in search results but are consistent with current Wall Street research and sector performance.*
 
----
+### Semiconductors
 
-## **Micron Technology (MU): Leading AI Memory Upswing**
+- **Earnings Growth:** Semiconductors are expected to post the highest earnings growth within Tech, with estimates ranging from high teens to low 20% YoY for Q3 2025, driven by persistent strength in AI chip demand, cloud data center buildouts, and recovery in automotive and industrial end-markets.
+- **Forward P/E:** Typically trades in the high 20s to mid-30s, reflecting market optimism for continued AI-driven expansion.
+- **Growth Drivers:** Key drivers include generative AI investments, accelerated cloud infrastructure spend, and increasing chip content in autos and industrials.
 
-- **Q3 2025 EPS Estimate**: $1.59, up 152% YoY from $0.63[2].
-- **Q3 2025 Revenue**: $8.885 billion; Q4 consensus points to further sequential growth[2][5].
-- **Full-Year 2025 EPS**: $3.88 (Melius estimate), with some models projecting as high as $5.77 for 2026[1].
-- **FY25 Adjusted EPS Growth**: Over 430% YoY, reflecting AI-driven DRAM demand surge[3].
-- **Forward P/E**: 19–22x, materially discounted relative to peers like Nvidia and AMD[5].
+### Software
 
-**Growth Catalysts**
-- HBM3E high-bandwidth memory in tight supply, critical for Nvidia’s Blackwell (H200) GPUs[4][5].
-- DRAM revenues expected to rise 49% YoY in Q3 2025[4].
-- Datacenter shipments at record highs; DRAM bit shipments up 22% sequentially[5].
-- NAND remains a pressure point, but overall AI/LLM-driven demand more than offsets[4].
+- **Earnings Growth:** Software is projected to deliver mid-to-high single-digit growth. Resilience comes from strong demand for SaaS solutions, ongoing enterprise digital transformation, and incorporation of AI features into software platforms.
+- **Forward P/E:** Remains elevated (high 20s to low 30s) due to recurring revenues, high margin profiles, and long-term secular growth.
+- **Growth Drivers:** Key themes are migration to cloud platforms, AI integration within productivity and security suites, and sustained growth in cyber security.
 
----
+### IT Services
 
-## **Other Major Firms: Key Takeaways**
+- **Earnings Growth:** IT Services is expected to post stable, single-digit earnings growth, benefiting from rising demand for managed services, consulting, and cloud migration.
+- **Forward P/E:** Lower than other Tech sub-industries, in the low- to mid-20s.
+- **Growth Drivers:** Expansion in digital transformation initiatives, adoption of AI tools to boost productivity, and IT spend by enterprises seeking modernization.
 
-### **Nvidia (NVDA)**
-- **Forward P/E**: ~35–40x (2025 consensus)[own].
-- **2025 EPS Growth**: Approaching 100% YoY as AI datacenter and GPU demand remains insatiable[own].
-- **Quarterly EPS**: Q3 consensus near $8.50–$9.00; Q4 expected to cross $9[own].
-- **Trends**: AI inference/training workloads, HBM supply constraints, broadening customer base (cloud, enterprise).
+## Top Growth Drivers for Technology Earnings in Q3 2025
 
-### **Advanced Micro Devices (AMD)**
-- **Forward P/E**: ~32–36x[own].
-- **2025 EPS Growth**: 55–60% YoY, led by MI300 accelerator ramp and incremental market share vs. Nvidia[own].
-- **Trends**: AI server CPU demand, strong position in next-gen datacenter silicon.
+- *Artificial Intelligence (AI):* Surging enterprise and cloud provider investment in AI infrastructure and tools is a primary driver.
+- *Cloud Computing:* Continued migration to cloud platforms sustains demand for both hardware (chips) and software.
+- *Digital Transformation:* Broad-based digital initiatives across industries keep demand strong for both software and services.
+- *Data Center Expansion:* Hyperscalers are spending aggressively to meet AI workloads, fueling demand for semiconductors and IT hardware.
+- *Recurring Revenue Models:* SaaS and managed services provide earnings resilience and margin stability.
 
-### **Broadcom (AVGO)**
-- **Forward P/E**: ~28–30x[own].
-- **2025 EPS Growth**: 35–40% YoY, benefiting from custom AI hardware and networking chips[own].
-- **Trends**: Custom silicon for hyperscalers, networking upgrades to support AI clusters.
+## Actionable Insights for Portfolio Construction
 
-### **Intel (INTC)**
-- **Forward P/E**: 21–24x[own].
-- **2025 EPS Growth**: 17–22% YoY amid foundry business turnaround and modest AI accelerator traction[own].
-- **Trends**: Still lagging peers on AI, but improving foundry and CPU volume.
+- **Overweight Semiconductors and AI Beneficiaries:** This sub-industry is set to deliver the highest growth and maintains strong earnings momentum, supported by real secular demand drivers.
+- **Selectivity in Software:** Focus on leading cloud and AI-capable software providers; be mindful of high valuations but recurring revenue and margin expansion remain attractive.
+- **Balance IT Services Exposure:** IT services offer diversification and steady growth, appealing for stability within a tech-overweight portfolio.
+- **Valuation Discipline:** Elevated P/E ratios across Tech indicate high growth expectations are already priced in, warranting selective entry points.
 
 ---
 
-## **AI and Datacenter Demand Commentary**
-
-- **AI Memory Demand Surging:** DRAM and especially HBM (high-bandwidth memory) are in structural shortage, powering Nvidia and AMD accelerators in hyperscale datacenters. Micron’s HBM3E is a centerpiece of the AI supply chain[4][5].
-- **Datacenter Investment Continues:** Cloud service providers are ramping capital expenditures for new AI clusters. This underpins robust chip demand through at least 2026[2][4][5].
-- **AI Model Complexity:** Increasing size and complexity of AI models (particularly LLMs and generative AI) require ever-larger memory bandwidth and capacity, reinforcing positive demand/pricing dynamics for DRAM suppliers like Micron[4].
-- **Valuation Gaps:** Despite rapid growth, memory-centric players (MU) trade at a meaningful discount to AI compute leaders (NVDA, AMD), possibly reflecting perceived cyclicality but offering potential for multiple re-rating if earnings outperformance persists[5].
-
----
-
-## **Actionable Insights**
-
-- **Micron (MU) is a high-leverage play on continued AI infrastructure buildout, trading at a steep discount to compute-heavy peers.** Its triple-digit earnings growth, driven by HBM scarcity and pricing power, could narrow the valuation gap if datacenter trends sustain through 2026[5].
-- **Nvidia and AMD remain core holdings for pure AI exposure,** with expected EPS compounding far above sector norms, but face premium multiples and supply chain execution risks[own].
-- **Broadcom and Intel offer diversified leverage to AI and networking,** with AVGO showing strong double-digit EPS growth and INTC a lower-beta, lower-multiple alternative[own].
-
-In summary, US large-cap semiconductor firms, especially those exposed to AI datacenter buildout, are expected to post outstanding EPS growth for Q3–Q4 2025. Consensus forward P/E multiples reflect both optimism for AI-related tailwinds and differentiation by product mix and historical cyclicality. The memory segment (notably Micron) is at an inflection point, capturing outsized benefits from HBM demand as generative AI and large language models continue to reshape the semiconductor demand landscape[2][3][4][5].
+**Summary:**  
+The Information Technology sector is leading S&P 500 earnings growth for Q3 2025, with semiconductors and software anchoring the sector’s strength. Forward P/E multiples remain elevated, underscoring strong market expectations for AI and cloud-driven growth[1]. Investors should focus on names and groups most levered to AI, cloud, and recurring revenue models, while maintaining valuation awareness and diversification.
 
 
 
 ========================================
-FREE SEARCH: Q3–Q4 2025 sector rotation outlook: which S&P 500 sectors are forecasted to outperform or underperform, and what are the key macro/earnings drivers for those projections? Please include quantitative data and forward-looking analyst sentiment.
+FREE SEARCH: Forward 12-month outlook for U.S. and global semiconductor industry: capacity trends, AI/data center demand, geopolitical supply risks, and expected revenue growth (2025-2026).
 ========================================
 
-Here is a comprehensive Q3–Q4 2025 sector rotation outlook for the S&P 500, integrating quantitative metrics, analyst sentiment, and actionable portfolio insights.
+## Forward 12-Month Outlook: Semiconductor Industry (2025–2026)
+
+**Summary**  
+The global semiconductor industry is set for robust double-digit growth in 2025 and continued expansion through 2026, driven largely by surging AI and data center demand. However, the sector faces ongoing geopolitical and supply chain challenges, particularly regarding capacity allocation and potential disruptions. Below, the outlook is broken down by demand trends, capacity, supply risks, and revenue growth forecasts.
 
 ---
 
-## S&P 500 Sector Performance Snapshot (Trailing Returns and Weightings)
+### AI and Data Center Demand
 
-| Sector                   | S&P 500 Weight (%) | 6m Return (%) | 12m Return (%) | Notable Metrics (recent) |
-|--------------------------|-------------------|---------------|----------------|--------------------------|
-| Communication Services   | 9.6               | 7.3           | 20.9           | High growth, P/E ~20–25  |
-| Consumer Discretionary   | 10.6              | -3.7          | 21.7           | Volatile, P/E ~30–35     |
-| Consumer Staples         | 5.9               | 3.1           | 15.8           | Defensive, P/E ~20, Div. Yield ~2.8% |
-| Energy                   | 3.0               | -13.0         | -7.3           | High volatility, P/E ~10, Div. Yield ~3.7% |
-| Financials               | 14.3              | 0.1           | 26.1           | P/E ~13, Div. Yield ~2.3% |
-| Health Care              | 9.6               | -9.1          | -4.7           | P/E ~18, Div. Yield ~2.6% |
-| Industrials              | 8.7               | 0.2           | 18.9           | P/E ~20, Dividend Yield ~1.8% |
-| Information Technology   | 31.6              | -0.4          | 14.6           | P/E ~28, Growth focus     |
-| Materials                | 1.9               | -7.5          | -2.3           | P/E ~15, Cyclical         |
-| Real Estate              | 2.1               | -5.5          | 15.9           | P/E ~40, Div. Yield ~4%   |
-| Utilities                | 2.5               | 0.4           | 18.2           | P/E ~17, Div. Yield ~3.7% |
-| **S&P 500 Index**        | —                 | **-1.3**      | **14.4**       | —                        |
-
-*Source: Schwab Center for Financial Research, S&P Dow Jones Indices, data as of 6/2/2025. P/E and yield figures are approximate, reflecting recent averages.*[2]
+- **AI as the Primary Growth Driver:**  
+  Generative AI, machine learning, and accelerated cloud infrastructure deployments are fueling unprecedented demand for advanced semiconductors, especially in data center and high-performance computing markets[1][3][5].
+- **Data Center Build-Outs:**  
+  Major hyperscalers are scaling aggressively, creating strong pull for logic, memory, and networking chips. These segments are forecasted to post robust double-digit increases throughout 2025, with sustained demand into 2026[1][5].
+- **Consumer & Edge Devices:**  
+  Industrial IoT, automotive (especially EVs), and edge computing are also contributing to broad-based semiconductor demand growth, albeit at a slightly lower rate than AI/data center verticals[4].
 
 ---
 
-## Q3–Q4 2025 Sector Rotation and Outperformance/Underperformance Outlook
+### Capacity Trends
 
-### **Sectors Forecasted to Outperform**
-
-**1. Financials**
-- **Reasoning:** Financials have already been strong in 2024 (+30.6% return), with solid trailing 12-month performance (+26.1%) and a reasonable P/E ratio (~13).
-- **Macro Drivers:** Expectations of stable interest rates, improved net interest margins, and a resilient U.S. economy support profitability.
-- **Earnings Drivers:** Q3/Q4 consensus expects continued loan growth and manageable credit losses. Analyst sentiment is optimistic due to strong capital positions and shareholder returns (dividends and buybacks).
-- **Quantitative Highlights:** P/E ~13, Dividend Yield ~2.3%, attractive valuation relative to history.
-
-**2. Industrials**
-- **Reasoning:** Industrials have shown resilience (trailing 12m: +18.9%) and benefit from cyclical economic strength.
-- **Macro Drivers:** Infrastructure spending, reshoring trends, and global industrial recovery.
-- **Earnings Drivers:** Analyst expectations for margin expansion and order growth in Q3/Q4. Valuations remain reasonable (P/E ~20).
-- **Quantitative Highlights:** P/E ~20, Dividend Yield ~1.8%, cyclical beta.
-
-**3. Communication Services and Consumer Discretionary (Selectively)**
-- **Communication Services:** Robust growth (trailing 12m: +20.9%), supported by digital advertising and streaming.
-- **Consumer Discretionary:** Recent underperformance (trailing 6m: -3.7%) but strong 12m returns (+21.7%). Analyst sentiment is mixed; selective opportunities exist in e-commerce, travel, and leisure.
-- **Macro Drivers:** Strong consumer demand, digital transformation, and targeted stimulus.
-- **Quantitative Highlights:** P/E ~20–35, high growth potential.
-
-### **Sectors Forecasted to Underperform**
-
-**1. Energy**
-- **Reasoning:** Weak trailing performance (trailing 6m: -13.0%, trailing 12m: -7.3%) due to volatile oil prices and demand uncertainty.
-- **Macro Drivers:** Concerns over global growth, energy transition pressures, and fluctuating supply.
-- **Earnings Drivers:** Analyst sentiment is cautious; consensus expects flat to negative earnings revisions.
-- **Quantitative Highlights:** P/E ~10, Dividend Yield ~3.7%, but sector risk remains elevated.
-
-**2. Health Care**
-- **Reasoning:** Trailing 6m: -9.1%, trailing 12m: -4.7%—underperformance due to regulatory and reimbursement headwinds.
-- **Macro Drivers:** Policy uncertainty, patent cliffs, and pricing pressures.
-- **Earnings Drivers:** Analyst consensus for Q3/Q4 is muted; limited catalysts for outperformance.
-- **Quantitative Highlights:** P/E ~18, Dividend Yield ~2.6%, modest growth outlook.
-
-**3. Materials**
-- **Reasoning:** Trailing 6m: -7.5%, trailing 12m: -2.3%—cyclical exposure and China weakness weigh on sentiment.
-- **Macro Drivers:** Global manufacturing slowdown, commodity price volatility.
-- **Earnings Drivers:** Analyst expectations are subdued; limited earnings momentum.
-- **Quantitative Highlights:** P/E ~15, cyclical risk.
+- **Capacity Expansion:**  
+  After a period of tight supply and strategic realignment post-pandemic, fabs are ramping up production. Key regions—particularly the Americas and Asia Pacific—are leading the way in new capacity additions[5].
+- **Advanced Node Investments:**  
+  The push for smaller process nodes (5nm and below) is intensifying, especially for AI workloads. Leading foundries (TSMC, Samsung, Intel) are prioritizing advanced node investments, which may strain supply chains for critical equipment and materials[4].
+- **Risk of Oversupply in Select Segments:**  
+  While most sectors face tight capacity aligned with demand, some analysts warn of possible oversupply—especially in older commodity nodes—if macroeconomic or geopolitical conditions shift abruptly[4].
 
 ---
 
-## Analyst Sentiment and Forward-Looking Market Themes
+### Geopolitical & Supply Chain Risks
 
-### **Rotation from Growth to Value**
-- **Trend:** The market is shifting from the dominance of mega-cap tech (e.g., “Magnificent Seven”) to broader participation, with value and cyclical sectors gaining traction[5].
-- **Quantitative Evidence:** The top seven S&P 500 stocks contributed about 60% of index gains in H1 2024, falling to just 23% in H2 2024. This signals broadening market breadth, which is expected to continue into late 2025[5].
-- **Analyst Consensus:** Financials, industrials, and select cyclicals are favored as market leadership diversifies. Tech and growth names may see more muted performance unless earnings reaccelerate.
+- **Geopolitical Tensions:**  
+  Ongoing U.S.-China trade disputes and new rounds of tariffs continue to disrupt semiconductor trade routes and complicate cross-border supply chains. Export controls on advanced chipmaking tools remain a major risk[4].
+- **Supply Chain Vulnerabilities:**  
+  Although companies have diversified supplier networks, bottlenecks for specific equipment and advanced packaging persist. Volatile memory pricing and reliance on limited advanced foundry capacity add further uncertainty[4].
+- **Regional Reshoring:**  
+  U.S., Japanese, and European subsidy programs are boosting local production but will not meaningfully offset Asia-Pacific’s dominant capacity position before late 2026[4][5].
 
-### **Earnings and Valuation Outlook**
-- **S&P 500 EPS Revision:** Some major banks have lowered 2025 S&P 500 EPS and valuation forecasts, reflecting a 4% reduction in fair-value forward P/E multiples (e.g., year-end index target reduced from 6500 to 6200)[4].
-- **Valuation Metrics:** Current P/E ratios across sectors are within historical ranges, but relative value favors financials and industrials over tech and health care.
-- **Dividend Yields:** Defensive sectors like utilities and real estate offer attractive yields but may lag in a risk-on environment.
+---
+
+### Revenue Growth Forecasts (2025–2026)
+
+| Year | Global Semiconductor Revenue | YoY Growth (%)  | Key Notes                                 |
+|------|-----------------------------|-----------------|-------------------------------------------|
+| 2024 | $598 billion                | Recovery year   | Post-downturn rebound                     |
+| 2025 | $700.9 billion[5]           | 11.2%[2][5]     | Driven by AI, memory/logic strength       |
+| 2026 | $733 billion[4]             | 11.2%[4]        | Sustained double-digit expansion forecast |
+
+- **Regional Growth:**  
+  - Americas: +18% (2025 forecast, fastest globally)[5]
+  - Asia Pacific: +9.8% (2025)[5]
+  - Europe & Japan: Moderate single-digit growth[5]
+- **Long-term Projection:**  
+  Industry en route to surpass $1 trillion in annual revenue by 2030, at a projected CAGR of 7.1% from 2024–2029[4].
+
+---
+
+### Actionable Insights for Investors
+
+- **Beneficiaries:**  
+  - Logic and memory chip producers (AI/data center exposure)
+  - U.S. and Asia-Pacific fab operators (capacity ramp-up)
+  - Suppliers in analog, sensors, and industrial/EV verticals
+- **Risks:**  
+  - Companies reliant on mature nodes or exposed to geopolitical chokepoints
+  - Continued inflation in input costs and supply chain complexity
+- **Portfolio Strategy:**  
+  Overweight leaders in advanced node fabrication, AI-enabling IP, and diversified global supply chains. Underweight segments forecast for continued contraction (discretes, optoelectronics)[5].
+
+---
+
+**Bottom Line:**  
+The semiconductor industry is entering a period of vigorous expansion, with double-digit revenue growth into 2026 driven by AI/data center demand and a healthy recovery across most segments. Nevertheless, navigating geopolitical risks and supply chain uncertainties remains critical for sustained outperformance[2][4][5].
+
+
+
+========================================
+FREE SEARCH: Expected impact of Federal Reserve monetary policy (Q3/Q4 2025) on U.S. yield curve, large-cap growth equities, and high-yield corporate bond spreads; include consensus views on timing of rate cuts.
+========================================
+
+## Federal Reserve Monetary Policy Outlook (Q3/Q4 2025)
+
+**Current Policy Stance and Consensus Rate Cut Expectations**
+
+- The Federal Reserve has maintained the federal funds rate in the 4.25%–4.50% range throughout 2025 so far, emphasizing a data-dependent and cautious approach in light of persistent, though ebbing, inflation pressures and slightly downgraded growth projections[1][3].
+- The Fed's June 2025 Monetary Policy Report confirms continued vigilance, with policymakers indicating readiness to respond to evolving inflation and economic data but showing no urgency to cut rates absent clearer evidence of inflation returning toward the 2% target[1].
+- Market consensus and FOMC projections as of June 2025 suggest that the first rate cut is likely to occur late in Q3 or early Q4 2025, contingent on further disinflation and labor market stability[1][3].
+
+## Expected Impact on the U.S. Yield Curve
+
+- **Short End**: Yields at the short end of the curve are expected to remain anchored near current levels (4.25%–4.50%) until a rate cut is confirmed, with modest downward drift possible on dovish signals or weaker economic data[1].
+- **Long End**: With the Fed's balance sheet reduction pace having slowed and the outlook for rate cuts becoming clearer, longer-dated Treasury yields may start to drift lower in anticipation, leading to a modest steepening of the curve as rate cut expectations are priced in[1].
+- The Fed's balance sheet run-off has already reduced Treasury and agency securities holdings by $2 trillion since mid-2022, but additional run-off is slowing as reserves near target levels, providing less upward pressure on long-term yields going forward[1].
+- **Curve Shape**: A gradual steepening is likely in Q3/Q4, as historically the yield curve pivots upward at the long end ahead of actual Fed rate cuts, reflecting improved growth prospects and lower term premium concerns once the easing cycle is underway[1][3].
+
+## Impact on Large-Cap Growth Equities
+
+- Large-cap growth stocks, especially those with higher sensitivity to discount rates (e.g., tech and communication services), typically benefit from falling interest rates and a steeper yield curve:
+  - Lower rates reduce the discount applied to future cash flows, which boosts valuations for high-growth firms.
+  - As the consensus coalesces around a rate cut by Q4 2025, forward P/E ratios for large-cap growth have room to expand from already elevated levels (the S&P 500 growth P/E was last seen in the mid-30s), provided earnings growth remains robust and inflation is contained[3].
+- **Risks**: If inflation proves sticky or the Fed delays cuts, growth equities could face volatility. However, easing financial conditions support a base case of renewed risk appetite, favoring large-cap growth leadership into 2026[3].
+
+## Impact on U.S. High-Yield Corporate Bond Spreads
+
+- **Spread Outlook**: High-yield spreads have remained relatively tight in 2025, reflecting resilient corporate earnings and low default rates.
+- As policy loosens and the yield curve steepens, high-yield spreads may compress further, especially if the rate cuts are seen as a response to success in containing inflation rather than fears of recession.
+- If the economic outlook sours or the Fed is forced to delay cuts, spreads could widen modestly. However, current Fed posture and projections do not suggest an imminent downturn, so the consensus favors stable-to-tighter spreads into Q4 2025[3].
+- **Absolute Yields**: Even with spread compression, the absolute yield offered by high-yield bonds will likely fall as Treasuries rally, but total return prospects remain positive if credit quality holds and refinancing risk remains muted.
+
+## Summary Table: Expected Monetary Policy Impacts (Q3/Q4 2025)
+
+| Asset Class                 | Expected Impact (Fed Policy Easing)                |
+|-----------------------------|---------------------------------------------------|
+| U.S. Yield Curve            | Modest steepening; long-end yields drift lower    |
+| Large-Cap Growth Equities   | Valuation support, outperformance likely          |
+| High-Yield Bond Spreads     | Stable-to-tighter spreads, positive total return  |
+
+## Actionable Insights for Portfolio Construction
+
+- **Overweight large-cap growth equities** ahead of confirmed rate cuts, but monitor valuation risk.
+- **Increase exposure to intermediate and long-duration Treasuries** to benefit from expected yield curve steepening.
+- **Maintain neutral-to-overweight posture in high-yield** corporate bonds, focusing on credit selection as spreads are tight but not yet at cycle lows.
+
+**Consensus view** remains that the Fed’s first rate cut will come late Q3 or early Q4, with gradual policy easing supporting a positive environment for both equities and credit, particularly if macro data trends remain stable[1][3].
+
+
+
+========================================
+FREE SEARCH: Emerging markets equity and local currency bond outlook for H2 2025: top countries/sectors, capital flow trends, and currency risk factors. Include consensus MSCI EM index EPS growth and valuation metrics.
+========================================
+
+## Emerging Markets Equity and Local Currency Bond Outlook for H2 2025
+
+### Equity Market Outlook: Top Countries and Sectors
+
+- **Performance and Leadership Shifts**  
+  Emerging market (EM) equities started 2025 with strong relative momentum. The MSCI Emerging Markets IMI Index rose around 1.7% in Q1, outperforming developed markets after prolonged underperformance[4]. For H2 2025, leadership within EM equities is shifting:
+    - **China:** Rebounding on the back of a tech sector rally—MSCI China (with a 37% weight in soft tech) surged 17% year-to-date, strongly outperforming China A-shares[5]. Domestic policy stimulus and a strategic pivot to innovation and consumption further support the outlook[4].
+    - **Korea and Latin America (LATAM):** Gaining favor as leadership rotates away from previous strong performers like Taiwan and India. These regions are benefiting from both catch-up dynamics and improved macroeconomic conditions[5].
+    - **Brazil and CEEMEA:** Brazil, along with parts of Central and Eastern Europe, Middle East, and Africa, posted robust gains, supported by macro stability and improved investor sentiment[4].
+    - **India:** Despite robust long-term fundamentals (demographics, digitization, policy reform), Indian equities experienced moderate declines in H1 2025 due to profit-taking and softer economic data[4][5].
+
+- **Sectoral Trends**  
+  - **Technology:** Leading the rebound, particularly in China and Korea. Fast AI adoption and a surge in software and IT services are outpacing other sectors[5].
+  - **Consumer/Services:** Market narratives are increasingly focused on domestically oriented consumption and innovation, especially in markets adapting to global trade policy shifts[4].
+
+### Local Currency Bond Market Outlook
+
+- **Attractive Yields and Policy Backdrop**  
+  EM local currency bonds have positive momentum with yields exceeding those of developed markets[1]. Many EM central banks are easing monetary policy as inflation moderates, supporting local bond prices and flows[5].
+- **Capital Flows**  
+  - A rotation from developed to emerging market assets is underway. EMs remain under-owned globally, with their share of assets under management (AUM) declining to 5% from 8% in 2017, suggesting ample room for reallocation[5].
+
+### Currency Risk Factors
+
+- **Policy and U.S. Interest Rates:**  
+  - EM currencies remain sensitive to evolving U.S. rate expectations. As central banks in EMs cut rates and the U.S. approaches or initiates rate cuts, currency volatility is likely to persist[4][5].
+- **Trade Policy and Geopolitical Developments:**  
+  - U.S. tariffs—especially those targeting China and India—add uncertainty and could drive currency fluctuations, particularly in export-oriented EMs. However, economies with robust domestic demand (e.g., India, Brazil) may be more resilient[4].
+- **Structural Trends:**  
+  - The shift toward domestic consumption, friendshoring, and regional integration is helping some EMs mitigate external currency shocks[4][5].
+
+### MSCI EM Index: EPS Growth and Valuation Metrics
+
+- **EPS Growth:**  
+  The consensus expectation for the MSCI EM Index EPS growth in 2025 remains robust, reflecting strong corporate earnings in tech and consumer sectors, though an exact figure was not given in the search results. Current trends point to mid-to-high single-digit or better EPS growth, underpinned by strong sectoral performance and the rebound in Chinese tech equities[4][5].
+
+- **Valuations:**  
+  - EM equities continue to trade at a valuation discount to developed markets. This, alongside improving fundamentals, supports the case for increased allocation to EM within diversified portfolios[2][5].
+  - Specific metrics (e.g., forward P/E) were not detailed in the results, but EM typically trades at a mid-teens forward P/E, below that of the U.S. and developed markets[5].
+
+### Capital Flow Trends
+
+- **Flows Picking Up:**  
+  - Investors are rotating from developed markets, especially as U.S. equities underperform. EM assets, given their relatively attractive valuations and positive yield/rate differential, are seeing renewed inflows[5].
+- **AUM Share:**  
+  - The global share of EM within total managed assets has room to grow, as it remains well below previous peaks[5].
+
+---
+
+## Summary Table: Top EM Equity and Bond Opportunities (H2 2025)
+
+| Country/Region     | Equity Momentum     | Top Sectors         | Local Bond Outlook  | Currency Risks                       |
+|--------------------|---------------------|---------------------|--------------------|--------------------------------------|
+| China              | Strong (tech-led)   | Technology, Consumer| Yield premium      | Trade tariffs, USD volatility        |
+| Korea              | Improving           | Tech, Industrials   | Attractive         | Policy sensitivity                   |
+| Brazil             | Solid               | Financials, Consumer| Supportive macro   | Commodity swings, US rate impact     |
+| India              | Steady (modest dip) | Financials, IT      | Favourable         | Tariffs, domestic resilience         |
+| LATAM (ex-Brazil)  | Improving           | Commodities, Finance| Attractive         | Volatility, political/geopolitical   |
+| CEEMEA             | Gaining             | Mixed               | Relatively stable  | Geopolitics, EU spillovers           |
 
 ---
 
 ## Actionable Insights for Portfolio Construction
 
-- **Overweight Financials and Industrials:** Both sectors offer attractive valuations, dividend support, and upside from economic resilience. Consider large-cap banks, diversified industrials, and infrastructure-focused names.
-- **Selective Exposure to Communication Services:** Digital transformation and advertising tailwinds support growth, but be mindful of valuation.
-- **Underweight Energy and Health Care:** These sectors face headwinds from macro uncertainty and earnings revisions.
-- **Monitor Consumer Discretionary:** Mixed performance suggests picking winners within subsectors like travel, e-commerce, and leisure.
-- **Stay Neutral on Tech:** While tech remains the largest sector by weight, recent underperformance and high valuations suggest a more balanced approach.
+- Overweight China and Korea within EM equities for tech and innovation exposure.
+- Selectively add to Brazil and LATAM for macro stabilization and commodity upside.
+- Rotate into EM local currency bonds for yield pickup and potential duration gains as central banks cut rates.
+- Monitor U.S. rate cycles, trade/tariff announcements, and policy shifts for currency management.
+- Favor active, country- and sector-selective strategies to navigate divergent domestic drivers and external risks.
+
+
+
+========================================
+FREE SEARCH: U.S. and European industrials sector performance outlook for H2 2025: order backlog trends, supply chain constraints, and capital expenditure intentions by sub-industry.
+========================================
+
+## U.S. and European Industrials Sector Performance Outlook for H2 2025
+
+### Overview
+
+The U.S. and European industrials sectors face distinct challenges and opportunities in the second half of 2025. Key factors include order backlog trends, supply chain constraints, and capital expenditure intentions across various sub-industries.
+
+### U.S. Industrials Sector
+
+**1. Order Backlog Trends:**
+   - The U.S. industrials sector has seen a moderate increase in order backlogs, driven by sectors like **defense** and **energy transition**. This growth is supported by strategic investments in automation and resilience, which are crucial for long-term success[5].
+   - **Defense** and **aerospace** industries are expected to maintain strong backlogs due to ongoing geopolitical tensions and increased government spending on defense initiatives.
+
+**2. Supply Chain Constraints:**
+   - Despite some easing of supply chain pressures post-pandemic, U.S. companies continue to face challenges such as high costs and potential disruptions. To mitigate these risks, companies are focusing on diversifying sources, enhancing partnerships, and investing in digital tools for supply chain optimization[2].
+   - **Automation** and **technology** sectors are seeing increased investment, partly to address supply chain resilience and efficiency.
+
+**3. Capital Expenditure Intentions:**
+   - Capital expenditure in the U.S. is expected to remain strong, particularly in sectors benefiting from policy support and technological advancements. For example, **energy transition** and **infrastructure** projects are attracting significant investments[5].
+   - Strategic M&A activities are focused on transformative investments tied to technology and supply chain realignments, with 76% of deal value in Q1 2025 coming from transactions over $1 billion[5].
+
+### European Industrials Sector
+
+**1. Order Backlog Trends:**
+   - European industrials have been experiencing a steady increase in order backlogs, driven by sectors like **renewable energy** and **automotive**. The region benefits from supportive policies and a strong focus on sustainability[3].
+   - Companies in the **industrial equipment** and **machinery** sectors are seeing growth due to increased demand for advanced manufacturing technologies.
+
+**2. Supply Chain Constraints:**
+   - European companies are also dealing with supply chain challenges but benefit from more stable economic conditions and accommodative monetary policies. This stability allows for more predictable planning and investment in supply chain optimization[3].
+   - **Digitalization** and **data management** are key areas of focus for improving supply chain efficiency and resilience.
+
+**3. Capital Expenditure Intentions:**
+   - Capital expenditure in Europe is expected to remain robust, driven by investments in **sustainability** and **innovation**. The region's lower borrowing costs compared to the U.S. support larger investment projects[3].
+   - Attractive valuations and higher earnings potential make European stocks appealing for investors seeking diversification[3].
+
+### Comparative Analysis
+
+| Sector Metrics      | U.S. Industrials                 | European Industrials            |
+|---------------------|----------------------------------|--------------------------------|
+| **P/E Ratio**      | Generally higher than Europe     | More attractive due to lower valuations[3] |
+| **Growth Rate**    | Moderate growth driven by defense and energy transition[5] | Steady growth supported by sustainability initiatives[3] |
+| **Market Cap**     | Larger market cap compared to Europe | Smaller but with potential for higher earnings yields[3] |
+| **Dividend Yield** | Varies by sub-industry, but generally lower than Europe | Tends to be higher due to mature companies[3] |
+| **Sector-Specific Metrics** | Strong focus on automation and technology[5] | Emphasis on sustainability and digitalization[3] |
+
+### Actionable Insights for Portfolio Construction
+
+1. **Diversification**: Consider rotating some investments from U.S. to European industrials to capitalize on lower valuations and higher earnings potential.
+   
+2. **Sector Focus**: Allocate to sectors with strong policy support and technological advancements, such as **energy transition** and **defense** in the U.S., and **sustainability** in Europe.
+
+3. **Supply Chain Resilience**: Invest in companies prioritizing digital tools and supply chain optimization to mitigate risks.
+
+4. **M&A Opportunities**: Look for strategic M&A activities that align with long-term structural trends, particularly in sectors like **automation** and **energy transition**.
+
+5. **Risk Management**: Monitor geopolitical volatility and adjust portfolios accordingly to maintain agility and resilience.
+
+In conclusion, both U.S. and European industrials sectors offer unique opportunities and challenges in H2 2025. Investors should focus on sectors with strong long-term trends and be prepared to adapt to changing market conditions.
+
+
+
+========================================
+FREE SEARCH: Global energy sector (oil, gas, renewables) 12-18 month outlook: OPEC+ strategy, U.S. shale production trend, clean energy investment pipeline, and expected commodity price ranges.
+========================================
+
+## Global Energy Sector 12–18 Month Outlook
+
+### **OPEC+ Strategy and Oil Price Expectations**
+
+- OPEC+ continues to pursue a disciplined supply management strategy, keeping approximately 6 million barrels per day (b/d) of capacity offline to support prices[4].
+- This policy has succeeded in maintaining Brent crude above $80/barrel in recent years, but headwinds are building. The resilience of non-OPEC supply, especially from the US and Brazil, limits OPEC+’s pricing power.
+- Projections indicate Brent crude will average $70–$75/barrel through late 2025, with little scope for additional OPEC+ barrels to return to market under current fundamentals[4][5].
+- Downside risks include global economic slowdown, while upside risks stem from supply disruptions or escalated geopolitical tensions[5].
+
+### **U.S. Shale Production Trend**
+
+- U.S. shale production remains robust and continues to exert significant influence on global balances.
+- The EIA’s Annual Energy Outlook 2025 highlights ongoing growth in U.S. oil and gas output, supported by efficiency gains and stable capex, though the pace of growth is moderating compared to the boom years[3].
+- Non-OPEC supply growth, led by U.S. shale, is a major factor constraining OPEC+’s ability to support prices; this dynamic is expected to persist into 2026[4].
+
+### **Clean Energy Investment Pipeline**
+
+- Global energy investment is projected to reach a record $3.3 trillion in 2025, up amid energy security and decarbonization concerns[2].
+- Investment in renewable energy and supporting infrastructure will exceed $1.5 trillion in 2025, growing at a 6% real annual rate[4].
+- The renewable sector’s trajectory remains positive, but growth faces headwinds from supply chain issues, trade protection measures, and the need for grid expansion—especially in the US and Europe[5].
+- European utilities are set to invest around €160 billion to accelerate the shift from fossil fuels to renewables, necessitating substantial grid modernization and bond issuance to finance this build-out[5].
+- Carbon Capture and Storage (CCS) and hydrogen infrastructure are progressing, but the bulk of new capacity will come online post-2025[5].
+
+### **Natural Gas and Other Commodity Price Outlook**
+
+- Natural gas markets will be tighter and more volatile through 2025. Only three major LNG projects are ramping up, delaying new supply until 2026[4].
+- European natural gas prices are expected to be somewhat weaker, as demand softens and storage remains healthy, but price volatility persists due to ongoing geopolitical risks and reduced Russian pipeline flows[5].
+- Copper prices, relevant as an energy transition indicator, are forecast to recover from early 2025 lows, averaging $4.50/lb over the year—reflecting both supply lags and strong demand from electrification[4].
+
+### **Summary Table: Expected Ranges and Trends**
+
+| Segment          | 12–18M Outlook                                 | Key Metrics/Notes                                       |
+|------------------|------------------------------------------------|---------------------------------------------------------|
+| Brent Crude Oil  | $70–$75/barrel average                         | Down from $80+ highs; OPEC+ constrained by non-OPEC     |
+| U.S. Shale Oil   | Modest growth continues                        | Slower than prior years; limits OPEC+ price control     |
+| Global Gas       | Higher & volatile prices                       | Supply tightness until new LNG 2026; EU prices weaker   |
+| Renewables       | Robust investment, >$1.5T (2025)               | Grid, supply chain & financing bottlenecks              |
+| Clean Energy     | $3.3T global energy investment (2025)          | +6% real growth rate; dominated by renewables/efficiency|
+| CCS/Hydrogen     | Progressing, but major capacity post-2025      | Scaling up, but behind policy goals                     |
+
+### **Actionable Insights for Portfolio Construction**
+
+- Maintain balanced exposure: Oil and gas fundamentals remain strong through 2025, but price downside risks are increasing; energy equities with robust balance sheets and capital discipline are favored.
+- Renewables and grid enablers: Prioritize investments in renewable developers, grid infrastructure, and supply chain players with strong execution capabilities to hedge against fossil fuel volatility.
+- Watch U.S. shale productivity: Monitor cost and activity trends in U.S. shale producers, as their output will heavily influence global supply dynamics and the success of OPEC+ strategies.
+- Monitor policy and trade risks: Supply chain and trade policy disruptions may affect renewable energy project timelines and costs, particularly in the US and Europe.
+- Track LNG and storage: Natural gas market tightness and volatility will benefit LNG players and storage companies with flexible assets.
+- Position for transition infrastructure: Longer-term, opportunities exist in CCS, hydrogen, and grid modernization, although meaningful returns may ramp up post-2025.
+
+In summary, the next 12–18 months will see strong global energy investment, continued but moderating fossil fuel dominance, higher volatility in gas, and steady growth in renewables—all shaped by complex interplays among OPEC+, U.S. shale, and the accelerating clean energy transition[2][4][5].
+
+
+
+========================================
+FREE SEARCH: Q3/Q4 2025 outlook for U.S. large-cap healthcare (pharma, biotech, medtech, managed care): earnings growth, innovation catalysts, and valuation multiples. Highlight policy/regulatory overhangs.
+========================================
+
+## Q3/Q4 2025 Outlook: U.S. Large-Cap Healthcare
+
+### Earnings Growth
+
+- **Overall Sector**: The U.S. healthcare sector is projected to see EBITDA growth at a 7% CAGR through 2028, with industry profitability and revenues expected to rise in 2025 as the sector recovers from pandemic-era margin pressures[1][2]. 
+- **Managed Care (Health Insurance)**: Earnings growth is expected to be incremental, as the sector continues to recover from strains seen in 2024—particularly stemming from negative Medicare Advantage rates, elevated medical utilization, and Medicaid underpricing. While repricing efforts should aid a gradual improvement, regulatory constraints (especially for Medicare and Medicaid segments) limit how quickly margins can rebound[5]. 
+- **Pharma/Biotech**: After a period of underperformance, the sector is positioned for potential upside in late 2025, driven by an uptick in novel drug candidates, specialty pharmacy growth, and reduced policy headwinds post-election[3]. 
+- **Medtech**: The medtech segment is experiencing volume recovery as aging demographics increase demand for chronic disease management and elective procedures, supporting stable to slightly improving earnings trajectories[1][2].
+
+### Innovation Catalysts
+
+- **Biotech/Pharma**: Multiple “green shoots” are visible, with strong pipelines focused on obesity, oncology, immunology, and rare diseases fueling optimism for robust long-term growth. Increased adoption of specialty drugs is expected, with high-impact clinical data readouts in late 2025 possibly serving as key sector catalysts[3].
+- **Medtech**: Continued investment in AI, analytics, and medical software is driving operational efficiencies and new product launches, supporting innovation-led growth[1].
+- **Managed Care**: Digital health, value-based care models, and analytics-driven population management remain primary areas of focus for managed care innovation. Companies are heavily investing in technology to manage costs and improve member outcomes, especially within Medicare and Medicaid dual-eligible populations[1][2].
+
+### Valuation Multiples
+
+- **Current Multiples**: Large-cap healthcare remains attractively valued relative to broader equities after a period of underperformance. Many subsectors, especially pharma and biotech, are trading somewhat below historical averages, reflecting policy/regulatory concerns and 2024 utilization spikes[3].
+    - **Pharma/Biotech**: As of mid-2025, P/E ratios for large-cap pharma typically range from 12x–16x forward earnings, below the S&P 500 average, while large-cap biotech peers trade between 13x–18x, depending on pipeline visibility and near-term catalysts[3].
+    - **Medtech**: Medtech names generally command higher multiples, typically 20x–25x forward earnings, due to above-average growth prospects and secular demand tailwinds.
+    - **Managed Care**: Multiples have come under pressure amid MA margin compression, with forward P/Es in the 12x–16x range, but valuations are not stretched, leaving room for mean reversion if policy headwinds abate[3][5].
+
+### Policy/Regulatory Overhangs
+
+- **Election Impact**: The incoming Trump administration and new Congress are expected to prioritize healthcare reform. Potential changes include greater flexibility (and possibly higher reimbursement) for Medicare Advantage plans, as well as the possibility of pausing or reversing some restrictive policies enacted under the previous administration[3].
+- **Managed Care**: The sector faces ongoing regulatory risk around Medicare Advantage benchmark rates, potential risk model changes, and Medicaid redetermination policies—factors that are contributing to a negative sector outlook for health insurers per S&P Global[5].
+- **Drug Pricing**: While the immediate threat of significant drug pricing reform has receded post-election, continued scrutiny of drug costs and reimbursement remains a policy risk, particularly for large-cap pharma.
+- **Other Headwinds**: Broader healthcare policy uncertainty, reimbursement framework changes, and evolving state-level regulations continue to weigh on sector sentiment and could influence corporate strategies throughout 2025[2][5].
+
+## Key Takeaways for Investors
+
+- **Improving but Still Cautious Growth Outlook**: Earnings growth for large-cap healthcare should improve in late 2025, supported by innovation and secular demand, but is likely to remain uneven across subsectors due to lingering cost and regulatory pressures.
+- **Compelling Valuations**: Especially in pharma, biotech, and managed care, valuations are relatively undemanding—presenting a potential entry point if policy headwinds stabilize.
+- **Innovation-Driven Upside**: Biotech and pharma are well-positioned for upside surprise on successful drug launches or pivotal clinical trial results in H2 2025.
+- **Monitor Policy Developments**: The regulatory landscape remains fluid post-election, and investors should closely track new legislation or rulemaking, particularly in managed care and drug pricing.
+
+**Actionable portfolio implication**: A diversified approach—favoring innovative biopharma, stable medtech, and selectively positioned managed-care companies—offers exposure to secular growth while helping manage policy-driven volatility[1][2][3][5].
+
+
+
+========================================
+FREE SEARCH: 2025-2026 outlook for U.S. and global REITs: industrial, data center, residential, and healthcare sub-sectors. Focus on FFO growth, cap rate trends, and risks from rates or oversupply.
+========================================
+
+## 2025-2026 Outlook for U.S. and Global REITs
+
+### **Headline Trends for REITs**
+- **Fundamental Growth**: REIT earnings growth is projected at approximately 3% for 2025, with potential acceleration toward 6% in 2026[1][4]. 
+- **Macroeconomic Backdrop**: The global economy faces slower growth and elevated inflation in 2025, with U.S. GDP expected to rise about 2%. Interest rates remain a pivotal risk factor, especially as the 10-year U.S. Treasury yield influences REIT stock performance[1][3][4].
+- **Cap Rate Movement**: Cap rates have been sticky, but could begin to adjust as capital markets liquidity improves. Any normalization or decline in rates could support higher valuations; persistent rate pressure would keep cap rates elevated, challenging property values and FFO growth[1][4].
 
 ---
 
-## Summary Table: Sector Outlook and Key Metrics
-
-| Sector                | 2025 Q3–Q4 Outlook | Key Drivers                        | P/E (approx.) | Dividend Yield | Analyst Sentiment       |
-|-----------------------|-------------------|-------------------------------------|---------------|---------------|------------------------|
-| Financials            | Outperform        | Interest margins, loan growth       | 13            | 2.3%          | Bullish                |
-| Industrials           | Outperform        | Infrastructure, reshoring, recovery | 20            | 1.8%          | Bullish                |
-| Communication Services| Outperform/Sel    | Digital ads, streaming              | 20–25         | —             | Mixed/Bullish (select) |
-| Consumer Discretionary| Select            | Consumer demand, e-commerce         | 30–35         | —             | Mixed                  |
-| Consumer Staples      | Neutral           | Defensive, stable demand            | 20            | 2.8%          | Neutral                |
-| Energy                | Underperform      | Oil price volatility, transition    | 10            | 3.7%          | Bearish                |
-| Health Care           | Underperform      | Regulatory/pricing headwinds        | 18            | 2.6%          | Bearish/Neutral        |
-| Materials             | Underperform      | China/global slowdown               | 15            | —             | Bearish                |
-| Information Technology| Neutral           | Growth, AI, cloud                   | 28            | —             | Neutral/Mixed          |
-| Real Estate           | Neutral           | Yield, interest rates               | 40            | 4%            | Neutral                |
-| Utilities             | Neutral           | Yield, defensive                    | 17            | 3.7%          | Neutral                |
-
----
-
-## Key Takeaways
-
-- **Financials and industrials are favored for Q3–Q4 2025 due to valuation, macro tailwinds, and earnings momentum.**
-- **Energy, health care, and materials are expected to lag, weighed down by macro and earnings headwinds.**
-- **Market breadth is improving, with leadership broadening beyond mega-cap tech, supporting a rotation into value and cyclicals**[5][2].
-- **Portfolios should balance exposure, favoring value and cyclical sectors while remaining selective in growth and defensive allocations.**
-
-
-
-========================================
-FREE SEARCH: 2025–2026 US Treasury and investment-grade corporate bond yield forecasts, with scenario analysis for Fed rate cuts, sticky inflation, and possible recession. Include duration risk, spread outlook, and institutional allocation trends.
-========================================
-
-## US Treasury and Investment-Grade Corporate Bond Yield Forecasts (2025–2026)
-
-### US Treasury Yield Forecasts
-
-- **10-Year US Treasury Yield:**
-  - Forecasts for the 10-year US Treasury yield are clustered around 4.3%–4.5% through mid-2026, reflecting current market expectations for persistent inflation and steady economic activity[1][2][5].
-  - **Quarterly Projections:**
-    - Q2 2025: 4.37%
-    - Q2 2026: 4.3%[1]
-    - Other forecasts show yields holding above 4.35% through early 2026[2].
-    - Some scenarios anticipate yields staying above 4.5% if fiscal risks remain elevated or if the market grows uneasy about US debt sustainability[5].
-- **Federal Funds Rate:**
-  - The Fed has cut rates by 100 bps so far in 2025, settling the target range to 4.25%–4.5%[5].
-  - Market consensus is for delayed or slow rate cuts due to persistent, "sticky" inflation[5].
-  - Baseline scenario sees the Fed remaining on hold through much of 2025, with the policy rate possibly reaching 3.125% by Q4 2026[5].
-
-### Investment-Grade Corporate Bond Yield Forecasts
-
-- **Yield Levels:**
-  - Corporate bond yields generally move in tandem with Treasurys, plus a spread to compensate for credit risk.
-  - With the US 10-year around 4.3%–4.5%, investment-grade (IG) corporate yields are projected in the 5.0%–5.5% range, assuming current spreads of 70–130 bps over Treasurys remain stable.
-- **Spread Outlook:**
-  - In a soft-landing or baseline scenario, IG spreads are expected to remain rangebound, with modest narrowing if economic data outperforms.
-  - In a recessionary or risk-off scenario, spreads could widen by 50–100 bps, pushing IG yields closer to 6% or above, especially for lower-tier credits.
-
-## Scenario Analysis
-
-| Scenario                      | 10Y Treasury Yield         | IG Corporate Yield      | Spread Trend      | Duration Risk               |
-|-------------------------------|---------------------------|------------------------|-------------------|-----------------------------|
-| **Fed Rate Cuts ("Soft Landing")**     | Drifts to 4.0%–4.3%               | 5.0%–5.3%               | Stable/narrow     | Moderate: long end still volatile |
-| **Sticky Inflation**          | Stays 4.5%+ or rises       | 5.5%+                  | Slight widening   | Elevated: long bonds underperform |
-| **Recession**                 | Falls sub-4.0%             | 4.5%–5.0% (spreads wider) | Spreads widen     | High: curve flattens, IG outperforms |
-
-- **Fed Rate Cuts / Soft Landing:** Two or three 25 bp cuts, curve remains upward-sloping but flattens; yields ease but not dramatically, and IG spreads stay contained[3][5].
-- **Sticky Inflation:** Delays in cuts, 10-year yield holds or rises above 4.5%, IG spreads inch up, duration risk climbs as long bonds lose value[5].
-- **Recession:** Rapid fall in yields below 4%, but IG spreads widen sharply; long-duration, higher-quality bonds outperform due to flight-to-quality, but lower-grade credits see price declines.
-
-## Duration Risk
-
-- **Treasuries:** Elevated duration risk persists in the long end amid uncertain rate path; small rate moves create outsized price swings.
-- **IG Corporates:** Duration risk remains substantial, especially for long-dated bonds; barbell or short-duration strategies are favored among cautious allocators.
-- All scenarios emphasize the need for duration management, given volatility and possible sharp moves in yields.
-
-## Institutional Allocation Trends
-
-- **Rotation to Shorter Duration:** Many institutions are overweight short/intermediate-duration bonds due to yield curve uncertainty and high duration risk in the long end.
-- **Selective Re-risking:** Some pension funds, insurers, and large asset managers are adding high-quality IG credit for incremental yield, but with an emphasis on upper-tier credits.
-- **Diversification Across Curves:** Laddering and barbell strategies are common, balancing reinvestment risk with yield capture.
-- **Defensive Tilts:** In the event of a recession, expect rapid reallocation to Treasurys and top-tier IG, with risk-off moves reducing high-beta credit exposure.
-
-## Actionable Insights
-
-- **For portfolios, a core allocation to short- and intermediate-duration Treasurys and high-quality corporates remains prudent.**
-- **Opportunistic extension of duration could make sense if conviction grows for a Fed easing cycle or recession, but should be carefully sized due to elevated long-end volatility.**
-- **Monitor credit conditions: IG spreads are contained now but will widen sharply in a risk-off or recession scenario.**
-- **Stay flexible and avoid concentration in long-duration or lower-tier credits unless compensated with adequate spread.**
-
----
-
-**Summary Table: Key Metrics**
-
-| Metric                | Current (2025) | 2026 Forecast | Scenario Range                |
-|-----------------------|----------------|---------------|-------------------------------|
-| 10Y Treasury Yield    | ~4.3%–4.5%     | ~4.3%–4.5%    | 3.8% (recession) – 4.7% (inflation)    |
-| IG Corp Yield         | ~5.0%–5.3%     | ~5.0%–5.5%    | 4.5% (recession) – 6.0% (risk-off)     |
-| IG Spread (bps)       | 70–130         | 80–150        | 70 (bull) – 200 (recession)           |
-| Fed Funds Rate        | 4.25%–4.5%     | 3.1% (Q4 2026) | 2.5% (deep cut) – 4.5% (no cuts)      |
-
-**Bottom Line:** Yields are expected to remain historically elevated, with duration and credit risk needing close monitoring as the economic path and Fed actions evolve[1][2][3][5].
-
-
-
-========================================
-FREE SEARCH: 2025 YTD performance, flows, and volatility data for US-listed cryptocurrency ETFs and major crypto assets (BTC, ETH). Include institutional adoption trends and regulatory updates.
-========================================
-
-## 2025 YTD Performance, Flows, and Volatility: US-Listed Crypto ETFs & Major Crypto Assets
-
-### **YTD Returns for US-Listed Cryptocurrency ETFs**
-
-- **iShares Bitcoin Trust ETF (IBIT):**  
-  - YTD performance (as of June 24, 2025): **+12.46%**[2].
-  - Price range past 52 weeks: \$30.24 to \$63.38[2].
-
-- **ProShares Bitcoin Strategy ETF (BITO):**
-  - YTD NAV return: **+8.93%**  
-  - Market Price return: **+9.09%** (as of latest reporting)[5].
-  - 1-year NAV return: 44.67%[5].
-
-- **Calamos Bitcoin 80 Series Structured Alt Protection ETF (CBTJ):**
-  - Since Feb 4, 2025, inception: Price rose from \$25.00 to \$26.67 (+6.7% in less than 5 months)[4].
-
-- **Crypto ETF Segment (Aggregate):**  
-  - YTD net inflows across all U.S.-listed crypto ETFs: **\$3.9 billion** (as of May 2025)[3].
-
-### **Performance of Major Crypto Assets (BTC, ETH)**
-
-- **Bitcoin (BTC):**  
-  - YTD performance and volatility for BTC itself are not directly listed, but can be inferred from ETF returns and product NAVs.
-  - Based on ETF tracking, BTC price is up approximately **9–13% YTD** (broad range, consistent with ETF returns)[2][5].
-  
-- **Ethereum (ETH):**  
-  - No specific ETF returns for ETH in provided results. However, ETH ETFs have generally tracked ETH’s price, which saw **mid-single digit percentage returns YTD** (typical for 2025's range-bound market, but specific numbers not listed in search results).
-
-### **ETF Flows and Assets**
-
-- Crypto ETFs remain in high demand among investors despite market volatility, with **\$3.9B in YTD net inflows** into U.S. listed vehicles as of the end of April 2025[3].
-
-### **Volatility Overview**
-
-- Bitcoin ETFs and BTC itself experienced **high volatility** in the first half of 2025, with significant short-term price swings but overall positive returns.
-- For reference, the 1-month return for BITO was **10.41% (NAV)** with a 3-month return of **22.24%**, indicating substantial intra-year volatility[5].
-
-### **Institutional Adoption Trends**
-
-- Institutional investors continue to participate actively in crypto ETF products, driving significant inflows[3].
-- The variety of ETF products is expanding, including both spot and derivative-based products; demand from advisors and institutions supports new ETF launches[3].
-
-### **Regulatory Updates (2025)**
-
-- Crypto ETFs, especially for BTC, now have several fully listed spot products on U.S. exchanges, which indicates maturing regulatory acceptance throughout 2024–2025.
-- The continuing launch of new crypto ETFs and net positive flows show a regulatory landscape that, while still evolving, is notably more supportive than in previous years[3].
-
----
-
-### **Key Takeaways for Portfolio Construction**
-
-- **Crypto ETFs have demonstrated strong YTD performance** (8–13%), albeit with above-average volatility, making them tactical additions for growth-oriented portfolios[2][5].
-- **Flows remain robust** (\$3.9B YTD), signaling persistent institutional and retail demand despite market choppiness[3].
-- **ETF products are now mainstream tools** for gaining crypto exposure, with improving regulatory clarity making them more attractive for institutions[3].
-- Investors should monitor **volatility metrics** and use structured or hedged products (e.g., protection series ETFs) to manage drawdown risk in crypto allocations[4].
-
----
-
-| ETF/Product      | YTD Return | 1-Year Return | YTD Net Flows   | Institution Adoption | Regulatory Status   |
-|------------------|------------|---------------|-----------------|---------------------|---------------------|
-| IBIT (BTC spot)  | +12.46%    | N/A           | Data not given  | High                | Spot ETF, approved  |
-| BITO (BTC fut.)  | +8.93%     | +44.67%       | Data not given  | High                | Futures ETF, mature |
-| US Crypto ETFs   | Aggregate  | N/A           | +\$3.9B YTD     | High                | Expanding approval  |
-| BTC Asset        | ~9–13%     | N/A           | N/A             | N/A                 | N/A                 |
-
-**Note:** Exact ETH ETF figures are not provided in the search results. Data reflect all numbers available as of June 25, 2025.
-
-
-
-========================================
-FREE SEARCH: Q3–Q4 2025 consensus earnings growth, P/E ratios, and sales trends for US mega-cap technology stocks (AAPL, MSFT, GOOGL, META, AMZN, TSLA). Highlight AI/cloud, consumer, and ad revenue outlooks.
-========================================
-
-## US Mega-Cap Tech: Q3–Q4 2025 Earnings Growth, Valuations, and Revenue Drivers
-
-### **Consensus Earnings Growth and Valuation Metrics (Q3–Q4 2025)**
-
-- **Aggregate Trends**: The "Magnificent Seven" tech stocks' contribution to S&P 500 earnings growth is expected to moderate, accounting for roughly 33% of the index’s total earnings growth in 2025, signaling a normalization after several years of outperformance[1].
-- **Price-to-Earnings (P/E) Ratios (Recent)**: While specific Q3–Q4 2025 P/E ratios are not provided, these names historically trade at market premiums due to superior growth.
-  - AAPL, MSFT, GOOGL, META: Forward P/E ratios typically range from 24–33x.
-  - AMZN and TSLA: Higher multiples due to reinvestment and volatile earnings, often 40–65x for AMZN and even higher for TSLA[1].
-
-### **Sales Trends and Growth Outlook**
-
-#### **Apple (AAPL)**
-- **Sales growth**: Revenue trajectory is slower compared to peers, especially in traditional hardware businesses. Key upside is tied to adoption of new AI features and potential new hardware cycles[1].
-- **AI/cloud**: Apple lags peers in publicized AI/cloud monetization, but is expected to integrate AI into its ecosystem in 2025[1].
-- **Consumer**: Maintains premium pricing; hardware upgrades (AI-enabled iPhones) may boost revenues late in 2025[1].
-
-#### **Microsoft (MSFT)**
-- **Sales growth**: Robust due to continued cloud and AI demand; Azure remains a leader despite intense competition[1].
-- **AI/cloud**: Heavy investment in AI/data centers, with CapEx guidance reportedly $60–$65 billion for 2025[2]. Azure’s generative AI offerings drive strong enterprise adoption[5].
-- **Valuation**: Remains elevated by historical standards, justified by secular growth tailwinds[1].
-
-#### **Alphabet (GOOGL)**
-- **Sales growth**: Q1 revenue outperformance driven by ad business; Q1 advertising revenue at $66.89 billion, above expectations[3].
-- **AI/cloud**: Significant AI/cloud capex; cloud revenue slightly below expectations but remains a growth pillar[3][5].
-- **Ad revenue**: Remains resilient, no signs of material slowdown despite concerns over broader ad demand[3].
-
-#### **Meta Platforms (META)**
-- **Sales growth**: Family of Apps (Facebook, Instagram, WhatsApp) drives revenue. Q1 2025 revenue expectation: $41.3 billion; operating profit: $15.5 billion[2].
-- **Ad revenue**: Core catalyst, with higher ad revenue per DAU in US/EU[2][4].
-- **AI/cloud**: Raising 2025 spending forecast by 8%, to $64–$72 billion, reflecting major AI and data center capex increases[4][5].
-- **Valuation**: Family of Apps operating income expected to rise, but losses from Reality Labs (metaverse) are projected to worsen by $1.5 billion in H2 2025[2].
-
-#### **Amazon (AMZN)**
-- **Sales growth**: Momentum remains strong; AWS is slowing but still a global leader in cloud. AI infrastructure investment is a top priority[1][5].
-- **AI/cloud**: Among the top four in $320 billion projected 2025 AI/data center capex alongside Microsoft, Alphabet, and Meta[5].
-- **Consumer**: E-commerce stable; retail growth is steady, but margins remain thin compared to cloud[1].
-- **Valuation**: Trades at a premium due to reinvestment and business mix.
-
-#### **Tesla (TSLA)**
-- **Sales growth**: Uncertain due to political and macro headwinds; the end of US EV subsidies could pressure volumes[1].
-- **AI/cloud**: Bets on autonomous driving and robotics (notably “Optimus”) represent long-term upside, but meaningful revenue from these is likely still several years out[1].
-- **Consumer**: Potential new affordable models in 2025, but affordability and volume growth may be challenged by higher rates and policy risk[1].
-
-### **AI/Cloud, Consumer, and Ad Revenue Outlook by Theme**
-
-| Company | AI/Cloud Investment | Consumer Revenue Outlook | Ad Revenue Outlook |
-|---------|---------------------|------------------------|--------------------|
-| AAPL    | Lags peers, AI integration planned[1]  | Hardware refreshes hinge on adoption of AI features[1] | N/A |
-| MSFT    | $60–$65B CapEx in 2025; Azure strong[2][5] | Not primary driver | N/A |
-| GOOGL   | Heavy AI/cloud spend; some softness in cloud[3][5] | N/A | Q1 ad revenue strong, resilient[3] |
-| META    | $64–$72B CapEx, major AI/data center spend[4][5] | Driven by user engagement in Family of Apps[2] | Ad revenue per DAU rising in US/EU[2] |
-| AMZN    | Massive AI/data center buildout[5] | E-commerce steady[1] | N/A |
-| TSLA    | Focus on autonomy, robotics (early stage)[1] | Model launches challenged by macro/policy[1] | N/A |
-
-- **AI/Cloud**: Meta, Amazon, Alphabet, Microsoft are leading a record $320 billion AI/data center investment in 2025, up sharply from $230 billion in 2024. Apple is integrating AI but at a slower publicized pace; Tesla’s AI bets are more futuristic than near-term revenue drivers[5].
-- **Consumer**: Apple and Amazon remain most exposed; Apple’s 2025 hardware cycle hinges on AI feature adoption, while Amazon’s e-commerce is steady but lower margin.
-- **Ad Revenue**: Alphabet and Meta remain dominant. Meta’s ad revenue per user is accelerating in its core markets, while Alphabet’s Q1 2025 ad revenues surpassed estimates, with YouTube ad performance stable[2][3].
-
-### **Key Takeaways for Investors and Portfolio Construction**
-
-- **Mega-cap tech growth is normalizing** as contributions to S&P 500 earnings growth moderate to 33% in 2025[1].
-- **Valuations remain elevated** but supported by superior growth, AI/cloud spending, and dominant competitive positions.
-- **AI/cloud infrastructure is the primary capex and growth driver** for MSFT, AMZN, GOOGL, META. Investors should weigh the risk of high capex versus the potential payoff in new revenue streams[2][5].
-- **Advertising resilience** supports Meta and Alphabet. Watch for any macro-driven ad slowdown, but current trends are robust[2][3].
-- **Consumer-facing names** (AAPL, AMZN) will be more susceptible to cyclical headwinds and discretionary spending patterns[1].
-- **Tesla represents the biggest outlier risk** given regulatory headwinds and reliance on new category launches.
-
-**A balanced portfolio could overweight names like Microsoft, Alphabet, and Meta for secular AI/cloud and advertising growth, while maintaining smaller weights in higher-risk names like Tesla and, to a lesser extent, Apple depending on confidence in AI hardware adoption and policy developments.**
-
-
-
-========================================
-FREE SEARCH: Q3–Q4 2025 outlook for US REITs by sub-sector (data center, industrial, multifamily, office, retail, healthcare). Please include FFO growth, cap rates, and major risk factors.
-========================================
-
-## US REITs Q3–Q4 2025 Outlook by Sub-Sector
-
-The US REIT landscape for the second half of 2025 reflects a nuanced picture across major property sectors as monetary policy, supply-demand shifts, and sector-specific headwinds shape performance expectations. Below is a detailed outlook for Data Center, Industrial, Multifamily, Office, Retail, and Healthcare REITs, focusing on Funds From Operations (FFO) growth, cap rates, and key risk factors.
-
----
-
-### **FFO Growth and Sector Trends**
-
-| Sub-Sector    | FFO Growth Outlook            | Key Drivers/Trends                                                         |
-|---------------|------------------------------|----------------------------------------------------------------------------|
-| Data Center   | Strong, outpaces sector      | AI/cloud demand, robust rent growth                                        |
-| Industrial    | Moderate, steady             | Absorption of supply, e-commerce remains driver                            |
-| Multifamily   | Modest, stabilizing          | Absorption of new supply, rent growth stabilizing as supply tapers         |
-| Office        | Negative, double-digit drop  | Structural demand weakness, tenant downsizing continues                    |
-| Retail        | Resilient, modest gains      | Service/necessity-based retail stable, some pressure on discretionary      |
-| Healthcare    | Healthy, above average       | Demographic tailwinds, stable demand for medical offices, senior housing   |
-
-- **Data Centers:** Continued leadership in total returns, up 25.2% in 2024 with further above-average FFO growth expected as AI accelerates data demand and rental rates rise[3].
-- **Industrial:** New construction has slowed after a recent surge; supply absorption is improving and rent growth should be modest but positive in H2 2025[5].
-- **Multifamily:** Net absorption records in 2024; with supply tapering, expect modest FFO growth as rent increases return to positive territory in late 2025[5].
-- **Office:** Poorest outlook—FFO expected to decline by 21% year-over-year as per S&P Global projections, reflecting continued headwinds from remote/hybrid adoption[2].
-- **Retail:** Stability persists, particularly in grocery-anchored and service-based retail; overall FFO growth to be modest but positive[3].
-- **Healthcare:** Outperformed in 2024 (24.2% total return); strong FFO growth projected as demographic trends support medical and senior housing REITs[3].
-
----
-
-### **Cap Rates by Sub-Sector (Mid–2025 Estimates)**
-
-| Sub-Sector    | Cap Rate Range (%)    | Trend                          |
-|---------------|----------------------|--------------------------------|
-| Data Center   | 4.5 – 5.5            | Stable, slight upward pressure |
-| Industrial    | 5.0 – 5.75           | Range-bound, modest uptick     |
-| Multifamily   | 4.75 – 5.75          | Slight rise, stabilizing       |
-| Office        | 7.5 – 9.0            | Elevated, risk premium persists|
-| Retail        | 5.5 – 6.5            | Modest upward drift            |
-| Healthcare    | 5.5 – 6.5            | Stable/modestly higher         |
-
-- Cap rates have generally drifted higher from 2022–2024 due to rising interest rates, but are expected to stabilize or marginally decline in late 2025 as the Fed signals rate cuts and market volatility abates[1][5].
-- Office cap rates remain widest, reflecting poor liquidity and tenant risk[2].
-
----
-
-### **Major Risk Factors by Sector**
-
-- **Data Center**
-  - Power supply constraints, high valuations, potential oversupply in certain markets.
-- **Industrial**
-  - E-commerce normalization, risk of economic slowdown dampening logistics demand.
-- **Multifamily**
-  - Affordability concerns, tapering rent growth in overbuilt markets, local regulation (e.g., rent controls).
-- **Office**
-  - Remote/hybrid work persistency, refinancing risk, tenant retention and concessions, high vacancy risk.
-- **Retail**
-  - Consumer spending headwinds, competition from e-commerce for non-service retail.
-- **Healthcare**
-  - Operator risk, reimbursement policy changes, labor cost inflation.
-
----
-
-### **Aggregate Sector Performance and Valuation Metrics**
-
-- S&P Global sees total US REIT dividends growing by 5.5% in 2025, below the long-term average, reflecting the drag from office and some retail assets[2].
-- 2024 total returns highlight sector dispersion: Data Center (+25.2%), Healthcare (+24.2%), Office (+21.5%), with office strength likely unsustainable due to negative FFO trajectory[3].
-- Overall REITs trade at a discount to net asset value (NAV), but specific sub-sectors (particularly office) require caution due to weak fundamentals[2][3].
-
----
-
-## **Key Takeaways for Portfolio Construction**
-
-- **Overweight:** Data Center and Healthcare REITs for secular growth and stable cash flows.
-- **Neutral/Selective:** Industrial and Multifamily—focus on markets with absorbed new supply and pricing power.
-- **Underweight/Avoid:** Office REITs due to negative FFO outlook and elevated cap rates.
-- **Tactical Exposure:** Retail REITs (especially grocery-anchored, service-based formats) as a partial inflation hedge.
-
-Rising cap rates are stabilizing, and rent growth is returning in select sectors as new supply abates, but headwinds persist—especially for office and high-leverage segments. Risk-adjusted returns in H2 2025 favor sectors with demand tailwinds and manageable supply pipelines.
-
-
-
-========================================
-FREE SEARCH: 2025–2026 outlook for global and US AI/robotics/thematic ETFs: consensus return expectations, flows, and sector allocation. Highlight drivers from enterprise AI adoption and innovation cycles.
-========================================
-
-## 2025–2026 Outlook for Global and US AI/Robotics/Thematic ETFs
-
-### Consensus Return Expectations
-
-- **Vanguard Information Technology ETF (VGT)**: Over the past decade, this broad technology ETF—driven by the AI boom—has delivered outstanding performance, averaging 19.8% annualized gains[1]. Market observers suggest that, as AI adoption is still in early stages, technology-focused ETFs may continue to post above-market returns into 2025–2026, although expectations have tempered somewhat after recent rallies.
-- **Global X Robotics & Artificial Intelligence ETF (BOTZ)**: Near-term forecasts indicate stagnation, with BOTZ’s price expected to remain flat at around $30.94 over the next year, according to algorithmic projections[5]. This suggests muted investor return expectations for BOTZ specifically, with negligible returns anticipated through mid-2026[5].
-- **ARK Autonomous Tech & Robotics ETF (ARKQ)**: Historically strong but more volatile returns, with performance lagging broader tech indices in the last cycle due to concentrated exposure to emerging/volatile names[1].
-
-There is no unanimous quantitative analyst consensus on single-year returns for 2025–2026, but the broader narrative is a moderation from peak gains, especially in narrower or more speculative AI/robotics funds.
-
-### Flows and Investor Behavior
-
-- AI and robotics ETFs have been major beneficiaries of thematic interest, with the segment pulling in approximately $1.1 billion in net flows recently—outpacing many other popular ETF themes[2].
-- Thematic ETFs focusing on AI continue to see inflows as institutional and retail investors position for long-term AI acceleration, even as some sub-sectors cool after sharp 2023–2024 rallies[2].
-
-### Sector Allocations
-
-- **Vanguard Information Technology ETF (VGT)**: Heavyweight exposures to megacap AI leaders—Microsoft, Nvidia, Apple, and Alphabet—dominate allocations. The fund is diversified among software, semiconductors, and IT services, providing stability and broad AI exposure[1].
-- **BOTZ & ARKQ**: BOTZ holds a more concentrated portfolio tilted towards robotics and specialized AI hardware/software names. ARKQ features more emerging, high-growth and disruptive companies, including Tesla, Kratos Defense, and Palantir Technologies[1]. Both funds have a significant allocation to next-generation robotics, automation, and AI-enabled platforms, though ARKQ is more volatile due to its focus on smaller-cap names and earlier-stage innovation.
-
-### Key Drivers: Enterprise AI Adoption & Innovation Cycles
-
-**Enterprise AI Adoption:**
-- AI adoption in corporate settings is ramping, especially in productivity tools, cloud infrastructure, and process automation. Firms are transitioning from experimentation to scaled deployment, especially in sectors like finance, health care, logistics, and manufacturing[1].
-- This adoption cycle fuels demand for cloud services, semiconductors, and enterprise software—all major holdings in broad tech and AI ETFs.
-
-**Innovation Cycle:**
-- The next wave of AI advances (e.g., generative AI, robotics process automation, edge AI) is catalyzing R&D spend and capital investment across sectors, underpinning long-term growth prospects for AI/robotics ETFs.
-- Robotics is seeing a surge in automation demand for labor-intensive industries and supply chain optimizations, further supporting robotics ETF segment allocations[2].
-
-### Comparative Summary Table
-
-| ETF/Ticker        | 2024-2025 Return Trend | Sector Focus                    | Key Holdings                         | Volatility / Risk Profile |
-|-------------------|-----------------------|----------------------------------|--------------------------------------|--------------------------|
-| VGT               | ~19.8% 10-yr CAGR     | Broad IT, heavy on AI leaders    | MSFT, NVDA, AAPL, GOOG               | Lower, diversified        |
-| BOTZ              | Stagnant (0% 1-yr)    | Robotics & AI hardware/software  | Fanuc, Nvidia, Intuitive Surgical    | Moderate                 |
-| ARKQ              | High past returns w/volatility | Emerging robotics, AI disruptors  | Tesla, Kratos, Palantir              | High, concentrated       |
-
-### Actionable Insights
-
-- **Broad Diversified Exposure**: Large-cap technology ETFs (like VGT) offer the most robust and consistent exposure to AI mega-trends with lower downside risk[1].
-- **Specialized Robotics/AI ETFs**: Funds like BOTZ may underperform in the near term due to sector consolidation, but remain levered to future waves of enterprise/industrial automation[5].
-- **High-Risk High-Reward**: Thematic, concentrated funds such as ARKQ can outperform in upcycles but are susceptible to sharp corrections during market downturns due to their small-cap and speculative tilt[1].
-
-### Conclusion
-
-AI and robotics/thematic ETFs are still positioned for secular growth, propelled by rapid enterprise adoption and robust innovation. However, after recent rallies, return expectations for 2025–2026 are more modest—especially in specialized sub-sectors—while investor flows remain positive as long-term conviction holds. Optimal portfolio construction favors a blend of diversified large-cap exposure and select satellite positions in niche robotic/AI funds for asymmetric upside.
-
-
-
-========================================
-FREE SEARCH: Q3–Q4 2025 risk outlook for US high-yield bonds and leveraged loans: default forecasts, spread projections, and sector vulnerabilities. Include historical comparison and Fed policy impact.
-========================================
-
-## Q3–Q4 2025 Risk Outlook: US High-Yield Bonds & Leveraged Loans
-
-### **Default Rate Forecasts**
-
-- **High-Yield Bonds:** 
-  - Recent par-weighted default rates are low, at 0.43%, climbing to 1.33% when distressed exchanges are included[2].
-  - Projections for H2 2025 suggest an uptick: default rates are forecast to reach 1.5% (core) and 2.75% (including distressed exchanges)[2].
-  - Fitch Ratings offers a more bearish scenario, forecasting defaults in the 4.0%–4.5% range[4].
-
-- **Leveraged Loans:** 
-  - Loan default rates are higher than high yield, sitting at 1.42% (core) and 3.62% (including distressed exchanges)[2].
-  - Forecasts for Q3–Q4 2025 see loan default rates climbing to 3.25% (core) and potentially 4.75% (including distressed exchanges)[2].
-  - Fitch’s projections are even more elevated at 5.5%–6.0% for the year[4].
-  - Defaults via liability management exercises (LMEs) have been a key factor, especially in the loan segment[2].
-
-> “The market anticipates a challenging default environment for floating-rate borrowers that investors should actively manage around.”[1]
-
-### **Spread Projections and Relative Value**
-
-- **Spread Levels:** 
-  - High-yield bond spreads are compressed partly due to a higher-quality issuer mix, which may make index levels appear tighter than underlying risk would suggest[1].
-  - CCC-rated loan discount margins remain above 1,200 basis points, significantly wider than the roughly 575 bps for CCC corporate bonds, reflecting sharper risk aversion in leveraged loans[1].
-  - Discount margins for loans continue to outpace those for similarly rated bonds, pointing to continued stress and elevated risk premiums for riskier credits[1].
-
-- **Yield Attractiveness:** 
-  - All-in yields remain attractive versus historic levels, reflecting both rate and spread components, but the elevated yields also compensate for increasing credit risk and tightening liquidity[1].
-
-### **Sector Vulnerabilities**
-
-- **Leveraged Loans:** 
-  - Most vulnerable due to:
-    - Prevalence of weaker covenants and “soft” defaults (via LMEs).
-    - Higher exposure to floating-rate debt, making them sensitive to slower-than-expected Fed cuts and sustained elevated policy rates[1][2].
-    - Sectors reliant on margin expansion or refinancing (e.g., lower-rated cyclicals, healthcare, retail) face the most acute risk.
-
-- **High-Yield Bonds:** 
-  - Benefits from a gradual shift toward higher-quality issuance. However, credits with heavier refinancing needs or already-high leverage remain exposed if economic conditions deteriorate or the Fed remains cautious[1][2].
-
-### **Historical Comparison**
-
-- **High-Yield Bond Defaults:**
-  - 2023–2024: Default rates remained notably subdued (well below 2%).
-  - Post-COVID (2020): Default rates spiked above 6% at the peak.
-  - Rolling 10-year average for the US high-yield default rate is around 2.5%–3%. Projected levels for late 2025 (up to 4.5% by some estimates) exceed recent norms but are below crisis peaks[2][4].
-
-- **Leveraged Loans:** 
-  - Historically, post-recession loan default rates can reach 5%–8%. The 2025 projections of 3.25%–6% approach the higher end of historic non-crisis periods and reflect ongoing fragility, especially among the weakest credits[2][4].
-
-### **Federal Reserve Policy Impact**
-
-- **Fed Path:** 
-  - The outlook assumes moderate growth and cautious Fed easing—rate cuts are anticipated but not aggressive[1].
-  - If the Fed is slower to lower rates, floating-rate borrowers (especially leveraged loans) may face liquidity and refinancing stress, increasing defaults and spreads[1][2].
-  - Conversely, a faster-than-expected easing cycle would relieve some pressure on the most vulnerable sectors and slow the rise in defaults.
-
-- **Investor Positioning:** 
-  - With a cautious Fed and a moderate economic backdrop, disciplined credit selection is critical. High-yield bonds may still offer opportunities for carry, but risks are skewed higher for speculative-grade and leveraged loan issuers reliant on refinancing or facing margin pressure[1][2].
-
----
-
-## **Summary Table: 2025 Outlook vs. Historical Context**
-
-| Metric                    | 2023–2024  | Q3–Q4 2025 Forecast | 10-Year Average | 2020 (COVID Peak) |
-|---------------------------|------------|---------------------|-----------------|-------------------|
-| HY Bond Default Rate      | <1.5%      | 1.5% – 4.5%         | ~2.5–3%         | 6%+               |
-| Leveraged Loan Default    | ~2%        | 3.25% – 6.0%        | ~3%             | 7%+               |
-| HY Spreads (bps)          | 350–425    | 350–500+            | 400–500         | 900+              |
-| Loan DM, CCC-rated (bps)  | 1,200+     | 1,200+ (elevated)   | 800–1,100       | 1,500+            |
+## **Sub-Sector Outlooks**
+
+### **Industrial REITs**
+- **FFO Growth**: Industrial REITs are expected to maintain mid-single-digit FFO growth, fueled by resilient demand for logistics and e-commerce-related facilities.
+- **Cap Rates**: Industrial cap rates have ticked up from historic lows, especially in secondary markets, but prime assets remain bid tightly. 2025 may see cap rates stabilize if interest rates plateau or fall.
+- **Risks**: Risks include potential supply overhang in certain markets (notably Sun Belt U.S.), and a cyclical slowdown in goods demand could pressure rents. However, long-term secular demand for logistics remains strong[1][4].
+
+### **Data Center REITs**
+- **FFO Growth**: Data center REITs stand out for strong, secular demand driven by AI and cloud adoption. FFO growth could outpace the broader REIT universe, likely in the high single-digits or better.
+- **Cap Rates**: Remain among the lowest across property types due to investor conviction in the sector; possible mild expansion if financing costs stay high.
+- **Risks**: The main risk is oversupply as hyperscale customers increasingly build and lease new assets, though demand is expected to stay robust. Power availability and high development costs are also constraints.
+
+### **Residential REITs (Multifamily & Single-Family)**
+- **FFO Growth**: Expected growth is moderate, with market rent growth normalizing after the post-pandemic surge. New supply—especially in markets like Texas and Florida—could pressure occupancy and rent growth in late 2025 and 2026.
+- **Cap Rates**: Have risen from lows but remain attractive to institutional investors. Multifamily valuations are sensitive to rate changes.
+- **Risks**: Biggest risks are interest rates, a potential slowdown in job/wage growth, and oversupply in certain metros. Single-family rental REITs (a growing segment) benefit from a structurally undersupplied U.S. housing market[1][4][5].
+
+### **Healthcare REITs (Senior Housing, Medical Office, Life Science)**
+- **FFO Growth**: Healthcare REITs, particularly senior housing, show upside as operating performance rebounds post-pandemic. FFO growth is likely in the low- to mid-single-digit range, with upside potential as margins recover.
+- **Cap Rates**: Healthcare cap rates are higher relative to sectors like data centers, reflecting operational complexity and policy sensitivity.
+- **Risks**: Key risks include government reimbursement changes (especially for skilled nursing), labor costs, and oversupply in senior housing—though deliveries are moderating. Life sciences could see supply/demand mismatches in select markets.
 
 ---
 
 ## **Actionable Insights for Portfolio Construction**
 
-- Stay cautious on lower-rated, floating-rate leveraged loans; focus on higher-quality segments within both bonds and loans.
-- Monitor Fed policy signals closely—slower rate cuts could hit loan-heavy portfolios hardest.
-- Industry selection is crucial: avoid highly levered, cyclical, or low-margin sectors facing imminent maturities.
-- Expect continued volatility and a wider dispersion of returns, especially as default rates climb toward multi-year highs relative to the last decade.
+- **Dividend Yields & FFO Stability**: REITs continue to offer stable FFO/share growth and dividend yields that are attractive versus broader equities, particularly in volatile macro regimes[1].
+- **Diversification**: Global REITs can diversify U.S. economic and currency risks, especially if U.S. growth lags or the dollar weakens. Fiscal stimulus in Europe or Asia could create opportunities abroad[5].
+- **Interest Rate Sensitivity**: Sectors like net lease, residential, and offices remain highly sensitive to U.S. rate moves. Tilt toward data center and industrial for more secular, less rate-dependent growth.
+- **Oversupply and Market Selection**: Carefully monitor supply pipelines, especially for residential and industrial; favor undersupplied or high-barrier markets.
 
 ---
 
-**Bottom line:** US high-yield bonds and leveraged loans face a rising default and spread environment in H2 2025, with leveraged loans particularly exposed. The sector remains investable with careful credit selection and a preference for quality, but late-cycle risks are clearly intensifying, especially if Fed easing underwhelms market expectations[1][2][4].
+## **Summary Table: Sector Comparative Outlook (2025-2026)**
+
+| Sub-Sector         | FFO Growth Outlook | Cap Rate Trend         | Key Risks                 |
+|--------------------|--------------------|------------------------|---------------------------|
+| Industrial         | Mid-single digits   | Stable/rising slightly | Oversupply, demand shifts |
+| Data Center        | High single digits  | Flat/slight up         | Oversupply, power limits  |
+| Residential        | Moderate            | Stable/upward pressure | Interest rates, supply    |
+| Healthcare         | Low-to-mid digits   | Higher vs others       | Policy, labor, supply     |
+
+---
+
+**Bottom Line:** Industrial and data center REITs offer the best structural growth opportunity, with data centers likely leading in FFO growth. Residential and healthcare are stable, but face supply and policy risks. Cap rates should stabilize if interest rates peak, but tight credit or economic uncertainty could challenge property values. Diversification—both sectoral and geographic—remains key in navigating the 2025-2026 REIT landscape[1][4][5].
 
 
 
 ========================================
-FREE SEARCH: 2025–2026 global and US small- and mid-cap equity performance forecasts: valuation, earnings growth, and sector leadership expectations. Include data on relative returns vs. large-cap peers.
+FREE SEARCH: Q3/Q4 2025 U.S. utilities sector forecast: regulatory rate case calendar, dividend yield, clean energy capex, and valuation versus historical averages. Note decarbonization and grid investment themes.
 ========================================
 
-## 2025–2026 Outlook: Global and US Small- and Mid-Cap Equity Performance
+## U.S. Utilities Sector Outlook: Q3/Q4 2025
 
-### **Valuation**
-
-- **Historic Discount:** US small- and mid-cap (SMID) stocks are trading at near-record-low valuations relative to the S&P 500. The Russell 2500 Value Index and the Russell Midcap Value Index are both highlighted as being at or close to all-time lows versus large-cap benchmarks[5].
-- **Market Share:** Small-cap companies now represent less than 4% of the total US equity market, marking their lowest share since the 1930s, underscoring the depth of their recent underperformance and subsequent valuation discount[3].
-- **Relative Opportunity:** The extended 14-year stretch of large-cap outperformance (well above the 11-year historical average for such cycles) suggests the current environment could be ripe for mean reversion, making smaller-cap stocks particularly attractive on a valuation basis[5].
-
-### **Earnings Growth Expectations**
-
-- **Acceleration Ahead:** Small- and mid-caps are expected to see a reversal in earnings leadership. While their earnings grew about 30% in 2024, a more sustainable—but still strong—20% year-over-year earnings growth is projected for 2025[3].
-- **Relative to Large Caps:** Earnings growth for large-cap "Magnificent Seven" stocks surged by 33% in 2024 but is set to decelerate sharply in 2025, falling below the growth rates forecast for SMID equities[3][5].
-- **Macro Supports:** Robust US consumer spending, strong small business sentiment, potential business deregulation, and a likely pickup in M&A and IPO activity are expected to further bolster earnings for SMID companies, especially as they are more domestically focused and insulated from global uncertainties[4].
-
-### **Sector Leadership Expectations**
-
-- **Domestic Engine:** Small- and mid-cap stocks are more leveraged to the US domestic economy, which is expected to remain resilient thanks to healthy consumer activity and favorable policy support[4].
-- **Potential Winners:** Cyclical sectors—including industrials, financials, consumer discretionary, and technology—are poised to benefit disproportionately if the US economy maintains its momentum, as many small- and mid-cap constituents are concentrated in these areas[4][5].
-- **Policy Impact:** Easing of regulations and pro-growth fiscal policies are likely to benefit sectors with a high exposure to domestic economic activity—again favoring SMID companies over large-cap multinational peers[3][4].
-
-### **Relative Returns vs. Large-Cap Peers**
-
-| Metric                                    | 2024 (Actual/Est)      | 2025 (Forecast)         | Trend/Implication                                  |
-|--------------------------------------------|------------------------|-------------------------|----------------------------------------------------|
-| Small/Mid-Cap Earnings Growth (YoY)        | ~30%                   | ~20%                    | Higher than large caps in 2025                     |
-| Magnificent Seven Earnings Growth (YoY)    | 33%                    | Slowing (sub-20%)       | Narrowing leadership, rotation possible            |
-| Relative Valuation (SMID vs. S&P 500)      | Record discount        | Persistent discount     | Significant mean reversion potential               |
-| Market Cycle Duration (Large vs. Small Cap)| 14 years (current)     | Historically 11 years   | Cycle reversal increasingly likely                 |
-
-- **Performance Potential:** The combination of earnings leadership, inexpensive valuations, and potential policy tailwinds sets the stage for SMID cap equities to potentially outperform their large-cap counterparts for the first time in over a decade[5][3][4].
-
-### **Global Perspective**
-
-- **US vs. Global:** US equities—across all cap sizes—are forecast to outperform non-US developed and emerging markets through mid-2026, driven by expected monetary easing and potential further deregulation[1].
-- **SMID Cap Global Bias:** While global SMID caps may also benefit from local recoveries, the case for US SMID caps is particularly strong given the domestic economic resilience and supportive political backdrop[1][4].
+The U.S. utilities sector in the second half of 2025 is navigating a high-investment, high-regulation environment. Key themes include robust capital expenditure to support decarbonization and grid modernization, a busy regulatory rate case calendar, above-average dividend yields, and valuations that reflect both elevated risks and long-term energy transition opportunities.
 
 ---
 
-**Actionable Insights:**
-- **Consider overweighting US small- and mid-caps** in diversified portfolios for 2025–2026, especially in cyclical and domestically oriented sectors.
-- **Monitor for macro shifts:** While the environment is turning positive, volatility may persist due to macro uncertainty and potential shifts in monetary policy.
-- **Relative value is compelling**: A unique combination of low valuations, improving growth, and cyclical dynamics suggest SMID caps could offer attractive risk-adjusted returns versus large-cap and global peers in the coming quarters[3][4][5].
+**Regulatory Rate Case Calendar**
+
+- In 2025, utilities are actively engaging in rate cases to recover surging capital expenditures, especially for grid and clean energy investments. In Q1 2025 alone, utilities requested or received approval for rate increases totaling approximately $20 billion[3].
+- These filings are being scrutinized by regulators focused on reliability, customer affordability, and the prudence of resiliency investments. Regulatory challenges are increasing, with several cases partially or fully disallowed due to concerns about project necessity and execution[2].
+- Decision activity remains elevated into the second half, with dozens of pending cases across multiple jurisdictions as of mid-year[4].
+- Federal Energy Regulatory Commission (FERC) mandates, such as Order 881 requiring real-time ambient-adjusted transmission ratings implementation by July 12, 2025, are forcing additional near-term investments and operational changes[1].
 
 ---
 
-**Summary:**  
-US small- and mid-cap equities are poised for a period of outperformance in 2025–2026, featuring accelerating earnings growth, deep valuation discounts, and renewed sector leadership, particularly in cyclicals. The end of a historic cycle of large-cap outperformance increases the probability of a market rotation favoring smaller-cap stocks, especially in the context of supportive US economic and policy dynamics[3][4][5].
+**Dividend Yield Trends**
 
+- As of mid-2025, the sector’s average dividend yield is in the 3.5%–4.0% range, notably higher than the S&P 500 average, reflecting the defensive nature of utilities and investor demand for income amid market volatility and rising capital needs.
+- Elevated yields partly compensate for higher regulatory and execution risks, as well as slower near-term earnings growth due to regulatory lag and cost headwinds.
 
+---
 
-========================================
-FREE SEARCH: 2025–2026 consensus outlook for emerging markets equities and EM thematic ETFs: earnings growth, valuation, currency risk, and sector/region allocation trends.
-========================================
+**Clean Energy Capex and Grid Investment**
 
-## 2025–2026 Consensus Outlook for Emerging Markets Equities and EM Thematic ETFs
+- Utilities’ capital spending continues to break records, with a projected CAGR of about 10% in the near term. Total 2025 industry capex is expected to reach approximately $240 billion—up sharply from recent years—with projections to surpass $300 billion before 2030[5].
+- Major investment categories include:
+  - Clean energy generation (wind, solar, storage) to meet decarbonization mandates.
+  - Grid modernization, digitalization, and transmission expansion to support renewables integration and reliability.
+  - Wildfire mitigation and resiliency, driven by climate-related risks[5].
+- Focus areas for late 2025 include compliance with new NERC reliability standards, EPA environmental rules, and the integration of distributed energy resources (DERs)[1].
 
-### Earnings Growth
+---
 
-- The IMF projects real GDP growth for emerging markets and developing economies at 4.2% in 2025 and 4.3% in 2026, significantly outpacing advanced economies (1.9% and 1.8%, respectively)[5]. This superior macro growth outlook should support earnings growth for EM corporates, despite some volatility from policy and external headwinds.
-- Sector and regionally, earnings momentum is notably strong in China’s technology and innovation sectors, boosted by domestic stimulus and a strategic shift toward consumption and innovation[3]. Conversely, India has seen more moderate performance in early 2025 due to profit-taking and softer economic data, though its medium-term outlook remains solid, supported by structural reforms and demographic trends[3].
-- Despite positive growth, Morgan Stanley forecasts only a modest 3% return for the MSCI EM Index by June 2026, reflecting lingering turbulence from slower global GDP growth and persistent policy uncertainty[1].
+**Valuation Versus Historical Averages**
 
-### Valuation
+- The utility sector’s forward price/earnings (P/E) ratio is hovering near its long-term average (historically 17–18x forward earnings), but stocks continue to trade at a premium to their own 10-year averages due to the sector’s energy transition growth optionality and stable cash flows.
+- However, the gap to broader market multiples has narrowed as earnings growth has moderated and risk perceptions have risen due to regulatory and extreme weather headwinds.
+- Current valuations reflect market confidence in regulated returns and long-term electrification, tempered by persistent execution and policy risk.
 
-- EM equities are trading at significant discounts versus developed markets. Ashmore notes that 11 of the 14 largest EM countries are currently “cheap” compared to their long-term averages[4]. Only Taiwan, India, and Thailand trade above both their long-term and 2016 averages[4].
-- RBC highlights that EMs are at a “50% discount to developed markets” on a price-to-book value basis, the largest discount ever recorded[5]. Forward P/E ratios for the MSCI EM Index remain below both the S&P 500 and the MSCI World ex-US indices[4].
-- This valuation gap is especially pronounced as US equities (S&P 500) currently trade at their historical peaks[4].
+---
 
-### Currency Risk
+**Decarbonization and Grid Investment Themes**
 
-- EM currencies have outperformed since the US Federal Reserve pivoted to cutting interest rates[5]. Many EMs currently maintain healthy fiscal and trade balances, helping stabilize their currencies.
-- Nevertheless, currency volatility remains an ongoing risk, particularly in the face of shifting US trade policy, potential new tariffs, and global monetary tightening cycles[3][5]. Export-oriented Asian economies are especially vulnerable to trade-related currency shocks[3].
-- The outlook for EM FX is more constructive than in recent years, largely because of more robust current account and fiscal positions across major EMs[5].
+- **Decarbonization**: Utilities are accelerating retirements of coal and legacy fossil assets, with capital redirected toward renewables and new generation. Federal and state decarbonization targets remain a major capex driver[5].
+- **Grid Investments**: The convergence of renewable integration, electrification (EVs, data centers), and climate resilience is pushing utilities to expand, harden, and digitize grid infrastructure at an unprecedented pace.
+- Regulatory and compliance risk is rising as state and federal agencies assertively shape utility investment decisions, demanding both grid reliability and affordability[1][2][5].
 
-### Sector and Regional Allocation Trends
+---
 
-- **China:** The key driver for 2025 has been a rebound in China’s equity markets—particularly within technology and innovation-focused sectors—fueled by domestic stimulus and a pivot toward consumption[3].
-- **India:** Despite recent underperformance, India remains a strategic favorite for its internal demand, demographic strength, and progress in digitization and reforms[3].
-- **Brazil & CEEMEA:** These regions have shown solid gains on the back of improved macroeconomic conditions and positive investor sentiment in early 2025[3].
-- **Thematic ETFs:** Investor focus continues to shift toward domestically-oriented, resilient growth stories within EMs, with themes such as digital adoption, green energy transition, and middle-class consumerism gaining traction[3].
-- **Discount vs. Premium Markets:** Most EM countries are trading below their long-term averages, with the exceptions of Taiwan, India, and Thailand, which are near or above historical valuation averages[4].
+## Key Strategic Insights
 
-### Actionable Insights for Portfolio Construction
+- Utilities remain an income-focused, defensive sector but face increasing volatility due to regulatory, weather-related, and execution risks.
+- The combination of above-average dividend yields, record capex, and valuation at or just above historical averages creates a nuanced risk/reward profile, especially for investors seeking stable income and long-term exposure to the energy transition.
+- Regulatory rate case outcomes, the pace of capex recovery, and success in meeting decarbonization mandates will be pivotal in sector performance through 2025 and beyond.
 
-- Current valuations make EM equities particularly attractive on a relative basis, especially for diversification away from expensive US stocks[4][5].
-- Currency risk, while lower than in previous years due to fundamentals, can spike due to policy or geopolitical shocks—favor EMs with robust fiscal/trade balances to mitigate this risk[5].
-- Allocation should emphasize:
-  - Sectors benefiting from domestic demand and reform (consumer, tech in China and India).
-  - Countries with strong macro fundamentals and low external vulnerability (parts of LatAm, select Asian and CEEMEA markets)[3][5].
-  - Thematic ETFs targeting digital transformation, green transition, and expanding middle-class consumption[3].
-- Monitor trade policy developments and potential tariff escalations, particularly for export-heavy Asian markets.
+---
 
-Emerging markets offer superior growth prospects and historically low valuations heading into 2026, but navigating policy and currency risks will be essential to harness these opportunities[3][4][5].
+**Actionable Takeaway:**  
+Investors should prioritize utilities with strong regulatory relationships, clear cost recovery mechanisms, and disciplined capital allocation. The sector’s yield and growth prospects are attractive, but increasing scrutiny of rate cases and execution risk on major clean energy and grid projects require selective exposure and ongoing monitoring of regulatory developments.
 
 
 
 ========================================
-FREE SEARCH: Q3–Q4 2025 inflation and recession probability estimates for US economy: consensus economist forecasts, leading indicators, and key risk triggers. Present data-driven probabilities and scenario impacts.
+FREE SEARCH: H2 2025 high-yield and investment-grade corporate bond outlook: default rates, spread forecasts, sector rotation themes, and impact of Fed easing cycle.
 ========================================
 
-## US Inflation and Recession Probability Forecasts for Q3–Q4 2025
+## H2 2025 Outlook for High-Yield and Investment-Grade Corporate Bonds
 
-### Inflation: Consensus Forecasts & Leading Indicators
+### Default Rates Forecast
 
-**Headline and Core Inflation Projections**
-- **Consensus forecast**: US headline inflation is expected to begin rising in Q3 2025, with year-on-year rates slightly above 3% and peaking near 4% in Q2 2026. The annual average inflation rate for 2025 is projected around 3.1%[1].
-- **Core inflation** (ex-food and energy) is forecast to increase, rising to between 3.0% and 3.5% by Q4 2025[4].
-- **Short-term average**: Deloitte projects 2025 CPI inflation to average about 2.9%, increasing to 3.2% in 2026 against a backdrop of renewed tariff pressures and rising inflation expectations[3].
+- Speculative-grade (high-yield) bond default rates are expected to rise modestly by mid-2025. Moody's projects the default rate for speculative-grade bond issuers to increase from 3.1% as of September 2024 to around 3.4% by the end of Q2 2025[5].
+- For leveraged loans (often high-yield), the default rate could increase from 6.9% in September 2024 to approximately 8.6% by Q2 2025[5].
+- Investment-grade corporate bond default rates remain relatively low and stable, supported by resilient corporate balance sheets and favorable credit conditions[4].
 
-**Recent Trends and Expectations**
-- As of April 2025, the reported US inflation rate stood at 2.3% (headline) with core inflation at 2.8%. However, monthly data show upward momentum, prompted by new tariff hikes and supply-side pressures; the sequential monthly CPI gain is rebounding to 0.3%[2].
-- **Consumer inflation expectations** for the coming year have risen sharply to 3.6% (March 2025), with medium-term (3 to 5 years) anchored closer to 3%[5].
-- **Risks to inflation**: Higher import tariffs, sticky services inflation, and potentially resurgent commodity prices are key drivers that could push inflation higher[1][3][4].
+### Credit Spreads and Yield Environment
 
-### Recession Probability Estimates
+- Despite the modest rise in high-yield defaults, credit spreads for both investment-grade and high-yield bonds remain relatively tight in 2025, reflecting strong investor demand and confidence in credit quality[4].
+- Yield-to-worst on investment-grade bonds was about 5.15% in Q1 2025, a slight decline from 5.33% at the end of 2024, indicating some price appreciation alongside policy easing expectations[1].
+- The corporate bond market offers attractive all-in yields compared to cash and money market instruments, providing opportunities especially in floating rate instruments with limited duration or in selected longer-duration credits[4].
 
-**Consensus and Scenario Probabilities**
-- **Base-case (no recession):** Leading forecasts do not anticipate a technical recession in H2 2025. Consumer and business spending remain resilient, and the unemployment rate, while edging up, is not expected to spike precipitously[3].
-- **Recession probability estimates:**
-  - **Soft landing (slower but positive growth):** ~60%–65% probability. Most economists expect the US to avoid a downturn, with GDP growth slowing but remaining modestly positive as policy uncertainty and inflation weigh on activity[4].
-  - **Mild recession:** ~25%–30% probability. Scenario risk centers on sustained higher inflation forcing renewed Fed tightening, or an external shock (geopolitical, trade, or financial market instability)[4].
-  - **Severe recession:** <10%. Tail risks are present but not the consensus expectation barring significant unforeseen shocks.
+### Sector Rotation Themes
 
-**Key Leading Indicators**
-- **Labor market:** Unemployment expectations have risen (mean unemployment expectation 44%, highest since April 2020), potentially hinting at softening, but job losses are not yet widespread[5].
-- **Consumer sentiment and inflation expectations:** Deterioration here could feed into weaker consumption and elevate recession risk—watch inflation expectations, which are showing signs of de-anchoring[5].
-- **Policy uncertainty:** The 2025–2026 period is marked by significant policy and fiscal uncertainty, which could lead to investment pullbacks and slowdowns[4].
-- **Interest rate path:** The Fed’s response to renewed inflation pressures will be critical. Less dovish monetary conditions could tighten credit and curb growth, supporting mild recession probabilities[3][4].
+- Given the mixed macro environment and policy uncertainties, investors are advised to be selective with sector allocations.
+- Sectors with strong fundamentals and resilient earnings are preferred, while sectors vulnerable to economic downturns may warrant caution.
+- Morgan Stanley highlights emerging-market debt as an area with select opportunities due to favorable central bank policies abroad, which could influence sector rotation in global portfolios[3].
+- Rotation may also favor companies with pricing power and robust balance sheets to withstand inflation volatility and potential economic slowdowns[4].
 
-### Key Risk Triggers to Watch
+### Impact of Federal Reserve Easing Cycle
 
-- **Tariff impacts and trade disputes:** Ongoing or escalating tariffs could further disrupt supply chains and increase business input costs, raising both inflation and recession risk[1][3].
-- **Sticky services inflation:** If services inflation remains high due to wage rigidity or shelter costs, the Fed may delay rate cuts or even tighten, tightening financial conditions[3][4].
-- **Consumer confidence shock:** A marked fall in consumer sentiment or spending, potentially linked to declining real wages or job market stress, could tip growth negative.
-- **Geopolitical or market shocks:** External events (e.g., Middle East, Asia, major financial instability) could quickly change the trajectory toward recession.
+- The Fed’s easing cycle in 2025 has led to declining policy rates and supportive liquidity conditions, which have stabilized government bond yields at longer maturities[2].
+- This supportive monetary policy helps reduce corporate borrowing costs marginally and contributes to the tight credit spreads observed[4].
+- However, the market remains sensitive to inflation data and forward guidance, meaning rate volatility and yield curve dynamics will continue to influence fixed income valuations and sector preferences[4].
+- Investors are balancing duration and credit risk carefully, as part of a cautious but constructive stance in the face of "higher for longer" rate expectations turning more accommodative mid-year[4].
 
-### Scenario Impact Summary
+---
 
-| Scenario            | Probability | Inflation Impact         | Growth Impact         | Market Implications         |
-|---------------------|-------------|-------------------------|----------------------|----------------------------|
-| Soft landing        | 60–65%      | Gradual rise (to 3–3.5%)| Slow, positive GDP   | Range-bound equities, cautious Fed |
-| Mild recession      | 25–30%      | Sticky near 3%+         | Mildly negative GDP  | Volatility up, defensive rotation   |
-| Severe recession    | <10%        | Deflationary risk later | Sharp GDP contraction| Risk-off, bonds rally             |
+**Summary**
 
-### Actionable Insights for Portfolio Construction
+For H2 2025, the corporate bond market is characterized by:
 
-- **Inflation hedging**: Consider allocations to inflation-linked bonds and real assets (commodities, real estate) if inflation remains persistent.
-- **Defensive equity tilt**: In rising recession risk scenarios, emphasize low-volatility, high-dividend sectors (utilities, consumer staples).
-- **Credit risk management**: Monitor corporate credit spreads for signs of economic stress, and be selective in high-yield exposures.
-- **Global diversification**: US policy and inflation risk are significant; balance with non-US exposure to mitigate idiosyncratic shocks.
+- Modest increases in high-yield default rates to around 3.4%, with leveraged loan defaults possibly reaching 8.6% by mid-2025[5].
+- Tight investment-grade and high-yield spreads, reflecting credit resilience and investor demand despite mixed economic signals[4].
+- Attractive yield opportunities compared to cash instruments, especially in floating-rate and select duration exposures[4].
+- Sector rotation favoring fundamentally strong, inflation-resilient sectors and emerging-market opportunities[3][4].
+- Supportive impact from the Fed easing cycle which is stabilizing yields but maintaining sensitivity to inflation and policy shifts[2][4].
 
-**Consensus points to a moderately higher inflation environment in Q3–Q4 2025, with mild recession risks elevated but not baseline. Watch leading indicators, particularly labor market softening, consumer inflation expectations, and new policy actions, for scenario shifts**[1][3][4][5].
+Investors are advised to maintain selectivity and balance duration and credit risks carefully to navigate the evolving macro and policy environment in the second half of 2025.
 
 
 
 ========================================
-FREE SEARCH: 2025–2026 outlook for US and global renewable energy stocks and ETFs: consensus earnings growth, valuation, policy/regulatory catalysts, and major risks. Include top sub-sectors (solar, wind, storage, grid).
+FREE SEARCH: 2025-2026 global consumer discretionary outlook: U.S. vs. Europe, demand for luxury vs. mass-market, e-commerce and travel trends, and sector valuation dispersion.
 ========================================
 
-## 2025–2026 Outlook for US and Global Renewable Energy Stocks and ETFs
+## 2025-2026 Global Consumer Discretionary Outlook
 
-**Summary**:  
-Renewable energy equities are positioned for continued structural growth through 2026, supported by record investment, expanding generation capacity, robust policy support, and persistent private-sector demand. However, earnings volatility, valuation dispersion, and policy risk—particularly in the US—remain prominent.
+### U.S. vs. Europe: Growth and Macro Backdrop
 
----
+**U.S. Outlook**
+- U.S. consumer discretionary sector is projected to see continued, but moderating, growth into 2025-2026. Dividends are expected to rise by 6.46% in 2025 (to $43.2 billion) and reach $46.1 billion in 2026. This follows 8.9% growth in 2024, signaling a slowdown yet ongoing resilience[2].
+- Key drivers include economic conditions, inflation, interest rates, and consumer confidence. Lower inflation and anticipated Federal Reserve rate cuts could provide additional consumer spending power, particularly for big-ticket items such as cars and homes[3].
+- U.S. economic "exceptionalism" is projected to bolster both the U.S. dollar and maintain a strong consumer backdrop, provided there is no recession[4].
+- Policy uncertainty, including potential tax and trade policy changes post-election, may either benefit or challenge the sector, particularly regarding tariffs and regulations[3].
 
-## Earnings Growth & Market Trends
+**Europe Outlook**
+- Growth in Europe is expected to be more constrained. The sector faces pressure from weaker economic rebound, lingering inflation, and consumer caution. S&P Global forecasts modest net sales growth of 1%-3% for global consumer goods in 2025, with Europe likely tracking the lower end due to a softer economic climate compared to the U.S.[5].
+- European consumer confidence is recovering but remains sensitive to employment conditions and energy prices. The sector is further challenged by ongoing geopolitical uncertainty and less robust wage growth.
+- Recovery in China, a key market for European luxury houses, remains a risk factor, with continued economic softness impacting export-driven European discretionary firms[5].
 
-- **Consensus Earnings Growth**:  
-  While near-term earnings guidance for individual renewable energy companies and ETFs will vary, sector analysts project double-digit annualized revenue growth for leading solar and energy storage firms, with wind expected to show more modest expansion due to recent policy and supply chain headwinds[3][5].
+### Luxury vs. Mass-Market Demand
 
-- **Renewables’ Share of Electricity Generation**:  
-  - In the US, renewables are forecast to supply about 25% of electricity in 2025 and up to 27% in 2026, versus 23% in 2024[3].
-  - Major capacity growth: US developers are projected to add 32,500 MW of utility-scale solar (a record) and about 7,700 MW of new wind in 2025[3].
-  - Globally, investment in solar is set to hit $450 billion in 2025—the largest allocation within the $3.3 trillion global energy investment pool, highlighting strong international momentum[1].
+- **Luxury Segment**: There remains solid long-term demand for luxury goods driven by demographic trends such as aging populations in developed markets and expanding middle classes in emerging markets. However, growth rates have normalized post-pandemic, and the lackluster recovery in China continues to weigh on global luxury brands[5]. Multinational luxury companies with diversified geographic exposure may fare better.
+- **Mass-Market Segment**: The mass-market faces more acute pressure from inflation and increased competition between branded and private-label products. Consumer price sensitivity is higher, leading to elevated promotional activity and innovation to drive volume[5].
 
-- **AI and Data Center Demand as a New Growth Driver**:  
-  Surging electricity demand from AI and data center expansion is now the top driver supporting green energy stocks, particularly utility-scale solar and grid modernization plays[5].
+### E-Commerce and Travel Trends
 
----
+- **E-Commerce**: Digital channels continue to gain share in both luxury and mass-market, with ongoing investments in direct-to-consumer models. Brands are leveraging technology and supply chain improvements to defend margins and counterbalance the effects of discounting and rising promotional costs[5].
+- **Travel & Experiences**: Travel-related discretionary spend is anticipated to remain robust, especially as global mobility returns to pre-pandemic levels. Consumer appetite for experiences over goods is a structural trend benefiting travel, hospitality, and related luxury segments[1][3].
 
-## Valuation Landscape
+### Sector Valuation Dispersion
 
-- **Valuations**:  
-  - Renewable energy equities have generally come down from 2021's peak multiples, but top-tier solar, storage, and grid companies still trade at premiums to the broader utilities and industrials sectors.
-  - As of June 2025, leading green energy stocks have P/E ratios often in the 25–40x range (forward), compared to the S&P 500 at about 21x. Some pure-play solar and storage names command even higher multiples, reflecting anticipated growth and policy tailwinds[5].
-  - Global clean energy ETFs often trade at a 10–30% premium to the MSCI ACWI on EV/EBITDA and P/E bases but remain well below their 2021 highs.
+- There is considerable valuation dispersion within the global consumer discretionary sector:
+  - **U.S. Large-Cap Brands & Platforms**: Trade at higher P/E multiples, reflecting anticipated earnings resilience, strong balance sheets, and better pricing power.
+  - **Luxury vs. Mass-Market**: Luxury stocks generally command premium valuations due to their brand equity, secular demand, and global reach. Mass-market and retail sub-sectors often trade at discounts, reflecting tighter margins and higher exposure to economic downturns.
+  - **E-Commerce Leaders**: Digital-first companies maintain a valuation premium versus traditional retail due to superior growth prospects and scalability, though competitive pressures and higher customer acquisition costs are narrowing gaps.
 
----
+### Quantitative Highlights
 
-## Policy & Regulatory Catalysts
+| Metric/Region                   | U.S.                        | Europe                   |
+|---------------------------------|-----------------------------|--------------------------|
+| Dividend Growth (2025E)         | 6.46%                       | Lower, modest[2][5]      |
+| Net Sales Growth (Global)       | 1%–3% (subsector)           | Lower end in Europe[5]   |
+| Luxury Demand                   | Robust, China-dependent     | Robust, China-dependent  |
+| Mass-Market Pressure            | High, inflation sensitive   | High, more acute in EU   |
+| E-Commerce Trend                | Expanding                   | Expanding                |
+| Travel Trend                    | Strong Recovery             | Strong, more pent-up     |
+| P/E Valuation (Relative)        | Higher for U.S., luxury, e-comm | Lower for mass-market |
 
-- **United States**:
-  - The Inflation Reduction Act (IRA, 2022) extended wind and solar tax credits for projects started before 2025 through at least 2032, ensuring a predictable investment runway[5].
-  - State-level mandates: 22 states and DC are targeting 100% renewable or carbon-free electricity by 2040–2050, driving multi-decade procurement[5].
-  - 43 of the 45 largest US investor-owned utilities have public net-zero targets, providing added demand stability[5].
-  - Analysts expect that even with the new administration’s efforts to roll back some federal credits, the impact on utility-scale solar demand will be modest due to strong corporate and state sustainability commitments[5].
+## Actionable Insights for Portfolio Construction
 
-- **International**:
-  - Europe and Asia continue to expand subsidies and set aggressive decarbonization goals, with major investment flowing into solar, wind, and grid technologies[1].
-  - Global energy security and decarbonization concerns are keeping policy support high, particularly in the EU and China[1].
+- **Favor U.S.-based global leaders** with diversified revenue streams and exposure to digital, travel, and premium segments.
+- **Selective on luxury**: Focus on brands with strong direct-to-consumer and digital capabilities; monitor China recovery risk.
+- **Cautious on mass-market retailers**: Margin pressure and promotional intensity erode near-term profitability; prefer those with operational efficiency and innovation.
+- **E-commerce and travel names**: Maintain overweight as secular growth drivers persist, but be disciplined on valuation.
+- **Monitor macro and political changes**: U.S. election and trade policy could impact sector earnings, especially import-heavy/retail names.
 
----
+The 2025-2026 consumer discretionary sector remains bifurcated with clear winners among digital, luxury, and travel, while mass-market faces persistent headwinds. Regional disparities, particularly the U.S. vs. Europe gap, are likely to remain a key theme for investors[2][3][5].
 
-## Major Risks
 
-- **Policy & Regulatory Uncertainty**:  
-  - Possible rollback or non-renewal of US federal tax credits (e.g., if new legislation is passed or existing incentives sunset after 2025) could introduce volatility, especially for wind projects[5].
-  - Trade/tariff disputes, especially with China, could disrupt solar supply chains or impact costs.
 
-- **Interest Rate Sensitivity**:  
-  Renewable projects are capital intensive and sensitive to interest rates; higher-for-longer rates could weigh on project returns and equity valuations.
+========================================
+FREE SEARCH: 2025-2026 outlook for global consumer staples: food, beverage, household products earnings trends, pricing power, margin risk, and impact of commodity/input costs.
+========================================
 
-- **Execution and Supply Chain Risks**:  
-  - Wind: Growth has lagged solar due to transmission bottlenecks, slow permitting, and rising input costs (e.g., turbine blades)[3].
-  - Solar: Despite strong growth and lower module costs, localized supply shortages (e.g., inverters, transformers) and permitting delays persist.
+## Global Consumer Staples Outlook 2025–2026
 
-- **Earnings Volatility**:  
-  Commodity price swings, grid congestion, and intermittency can lead to more volatile quarterly results, especially for less-diversified firms.
+### **Earnings Trends**
 
----
+- Global consumer staples—covering food, beverage, and household products—face a mixed but resilient earnings outlook for 2025–2026.
+- The sector is expected to see a "return to normal," with stable underlying demand supported by strong consumer balance sheets and robust employment, although the growth environment remains modest[2].
+- S&P Global projects a moderate improvement in credit metrics for the sector, following a challenging prior period, though some sub-categories (notably chocolate and packaged snacks) will still face margin headwinds[3].
+- The focus is shifting from price-driven to volume-driven organic growth as the ability to raise prices further diminishes[5].
 
-## Top Sub-Sectors
+### **Pricing Power**
 
-| Sub-sector      | 2025–2026 Growth Drivers     | Notable Trends & Stocks/ETFs             |
-|-----------------|-----------------------------|------------------------------------------|
-| Solar           | Record capacity additions, IRA support, global investment | US (32,500+ MW new in 2025), global solar investment $450B in 2025; top US/INTL names: Enphase, First Solar, Array Technologies, Invesco Solar ETF (TAN)[1][3][5] |
-| Wind            | Offshore expansion, state mandates, cost headwinds | US wind additions lagging solar (7,700 MW in 2025); Vestas, Siemens Gamesa, iShares Global Clean Energy ETF (ICLN)[3][5] |
-| Storage         | AI/data-center-driven demand, grid stability needs | Rapid growth; names: Tesla, Fluence, Stem; ETFs: Global X Lithium & Battery Tech ETF (LIT) |
-| Grid/Transmission | Modernization, resilience, AI/data center load growth | Grid upgrade spending surging; Quanta Services, Eaton; ETFs: First Trust NASDAQ Clean Edge Smart Grid Infrastructure Index Fund (GRID) |
+- The inflation-driven era of significant price increases is ending: most executives do not anticipate meaningful further price hikes in 2025, as consumers are increasingly stretched and pushing back on higher prices[1][3][5].
+- Pricing power is expected to be "limited," and further price increases may curb already-slowing volume growth, especially as competition from private labels (store brands) remains strong—though private label share gains have notably slowed[3][5].
+- Companies must increasingly depend on promotional activity, marketing spend, and value-driven product lines to maintain or grow share[5].
 
----
+### **Margin Risks**
 
-## Actionable Insights
+- Margin pressure will persist due to elevated costs for key commodities (cocoa, coffee, dairy, sugar), packaging, and labor, even as some input costs begin to ease[3][5].
+- Some companies, especially those with high exposure to commodities like cocoa (e.g., Hershey, Mondelez), will see continued margin contraction as they struggle to fully pass on higher input costs[3].
+- Promotional activity and normalizing price elasticities add further risk, forcing companies to spend more to capture volumes in a tougher consumer environment[5].
+- Rising regulatory and policy risks, including the threat of new U.S. tariffs on China and potentially on Mexico/Canada, introduce further uncertainty and could create new inflationary pressures, squeezing margins more[5].
 
-- **Solar and Storage are highest-conviction sub-sectors** in the US and globally, given unparalleled demand growth, policy certainty through much of the decade, and secular trends from digitalization (AI/data centers)[1][3][5].
-- **Wind remains a solid, but lower-growth, allocation** due to recent project delays and input cost challenges, but could rebound if permitting and supply chains improve[3][5].
-- **Grid infrastructure is entering a “supercycle”** in response to electrification, resiliency, and digital demand—grid ETFs and engineering stocks are compelling longer-term plays[5].
-- Consider diversified exposure via ETFs, given single-stock volatility and execution risk in early-stage or pure-play renewables.
+### **Impact of Commodity/Input Costs**
 
----
+- While select input costs are easing, critical commodity prices (notably cocoa and sugar) remain high relative to historical averages, posing significant risk for food and beverage manufacturers[3].
+- Labor costs remain sticky on the upside, and packaging inflation continues to linger, particularly for consumer discretionary items within staples[3][5].
+- Companies are prioritizing cost mitigation, productivity enhancements, and supply chain optimization to buffer against the input cost environment, but the capacity for further price hikes is diminishing[3][5].
 
-**In sum:**  
-The renewable energy sector is expected to deliver above-market growth, with solar and storage best positioned for outperformance through 2026 amid record investment, durable policy supports, and surging demand from new digital infrastructure. Valuations remain elevated but not excessive relative to growth. Investors should monitor US policy risk and interest rates but can target leading solar, storage, and grid infrastructure names and ETFs for core allocation[1][3][5].
+### **Sector Comparisons and Strategic Takeaways**
+
+| Factor                    | Food & Beverage              | Household Products          | All Staples               |
+|---------------------------|------------------------------|-----------------------------|---------------------------|
+| Expected Volume Growth    | Muted, value focus           | Stable, less trade-down     | Stable/modestly up        |
+| Pricing Power             | Weakening, highly promotional| Limited, more inelastic     | Weakening                 |
+| Margin Risk               | Elevated, cocoa/sugar a drag | Moderate, less input risk   | Elevated/moderate         |
+| Input Cost Sensitivity    | High (cocoa, coffee, sugar)  | Moderate (packaging, labor) | High                      |
+| Private Label Pressure    | High in food                 | Lower, but present          | Moderating                |
+
+### **Actionable Insights for Portfolio Construction**
+
+- Prioritize consumer staples companies with demonstrated cost control, supply chain flexibility, and strong brands capable of withstanding private label competition.
+- Heavily commodity-exposed firms (confectionery, chocolate, packaged snacks) face outsized margin risk; underweight or hedge exposure to these sub-industries[3][5].
+- U.S.-domiciled producers may be better insulated from certain tariff risk, but international firms with large dollar exposure face FX and trade headwinds[2][5].
+- Defensive characteristics of the staples sector could help buffer portfolios if economic growth falls short of optimistic consensus projections[2].
+- Monitor regulatory risk, especially U.S. tariff policy, as even the prospect of new trade barriers can drive up input costs and disrupt earnings stability[5].
+
+In summary, the 2025–2026 global consumer staples outlook calls for cautious optimism: demand is stable, but pricing power is waning and margin risks remain substantial due to lingering high input costs and potential policy shocks. Competitive differentiation, operational agility, and cost management will be the key drivers of relative earnings outperformance.
 
 
 
@@ -3403,96 +3219,94 @@ FINAL PORTFOLIO RECOMMENDATION
 ========================================
 
 {
-  "portfolio_thesis": "This portfolio is meticulously engineered for an aggressive, growth-oriented investor with a long time horizon and high risk tolerance. The strategy leverages secular megatrends—AI, cloud, semiconductors, and renewable energy—while embracing tactical tilts toward small/mid-cap equities and emerging markets to capture mean-reversion and global GDP outperformance. A core allocation to US technology and AI leaders capitalizes on the ongoing enterprise adoption wave, while select exposure to thematic ETFs (AI/robotics, renewables, crypto) provides asymmetric upside. Risk management is achieved via diversification across asset classes, regions, and factors, as well as a mandatory cash reserve for opportunistic rebalancing and volatility buffering. This robust, future-facing allocation is designed to outperform the S&P 500 by maximizing exposure to innovation, high-velocity growth, and global alpha sources, while strategically managing late-cycle and macro risks.",
+  "portfolio_thesis": "This portfolio is purpose-built for a young, high-risk-tolerance investor seeking aggressive capital appreciation over a 10-year horizon. It aligns with the user's explicit appetite for volatility, high-growth sectors (technology, AI, emerging markets), and innovative vehicles (including crypto and alternatives). The portfolio strategically overweights secular growth drivers—AI/semiconductors, cloud software, and emerging market tech—while maintaining tactical exposure to cyclical leaders (industrials, consumer discretionary) and structural winners (data center REITs, renewables). Risk management is addressed through sector/geographic diversification, select defensive tilts (healthcare innovation, quality U.S. equities), a disciplined cash buffer, and limited hedging with alternatives. The structure is designed to outperform the S&P 500 by capturing both global innovation trends and asymmetrical upside, with active risk controls to mitigate major drawdowns.",
   "portfolio": [
     {
       "asset_class": "semiconductors",
-      "allocation": 14,
+      "allocation": 17,
       "position": "LONG",
-      "reason": "AI/datacenter infrastructure is the highest-conviction growth theme; semiconductors (NVDA, AMD, MU) are posting 50–100%+ EPS growth, benefiting from structural shortages, enterprise AI adoption, and capex supercycles. Core lever for portfolio alpha."
+      "reason": "Overweight due to AI/data center supercycle, double-digit earnings growth, and global supply-chain leadership; sector is the epicenter of disruptive innovation and expected to outperform as cloud and AI investments accelerate."
     },
     {
       "asset_class": "application_software",
-      "allocation": 10,
+      "allocation": 12,
       "position": "LONG",
-      "reason": "Enterprise AI/cloud, SaaS, and productivity tools are driving secular growth. Top software names have resilient margins, sticky revenue, and benefit from digital transformation across all sectors."
+      "reason": "Core growth engine; SaaS/cloud platforms offer recurring revenues, strong margins, and are rapidly integrating AI, benefiting from enterprise digital transformation and high valuation support."
     },
     {
       "asset_class": "broad_based_emerging_market_equity_etfs",
       "allocation": 10,
       "position": "LONG",
-      "reason": "EM equities offer superior GDP and earnings growth, deep valuation discounts (~50% vs. DM), and currency tailwind as Fed pivots. China tech, India reforms, and LatAm resilience diversify US-centric risk while providing potent upside."
+      "reason": "Captures high-growth markets (China, Korea, Brazil, India) with tech/consumer tilt; poised to benefit from global capital rotation, innovation, and attractive valuations relative to developed markets."
     },
     {
-      "asset_class": "ai_robotics_etfs",
+      "asset_class": "industrial_machinery_and_supplies_and_components",
       "allocation": 8,
       "position": "LONG",
-      "reason": "Captures the next wave of automation and AI/robotics adoption beyond mega-cap tech. Provides diversified exposure to enterprise AI adoption, robotics, and process automation in supply chains and manufacturing."
-    },
-    {
-      "asset_class": "us_major_index",
-      "allocation": 8,
-      "position": "LONG",
-      "reason": "Maintains core exposure to US large-cap growth and ensures S&P 500 benchmark participation. Provides liquidity, broad diversification, and tactical flexibility for rebalancing."
-    },
-    {
-      "asset_class": "multi_sector_small_and_mid_caps",
-      "allocation": 8,
-      "position": "LONG",
-      "reason": "US small- and mid-cap stocks are at historic valuation discounts and poised for earnings leadership in 2025–2026. Cyclical recovery, pro-growth policy, and domestic bias support outperformance potential relative to large caps."
-    },
-    {
-      "asset_class": "renewable_electricity",
-      "allocation": 7,
-      "position": "LONG",
-      "reason": "Secular tailwinds from digital infrastructure (AI/data centers), policy support, and global decarbonization drive double-digit growth in solar, storage, and grid modernization. Provides green energy alpha and real asset diversification."
+      "reason": "Exposure to automation, reshoring, and infrastructure cycles; leverages U.S./Europe capex booms, supply chain resilience, and industrial tech upgrades (robotics, digital twins)."
     },
     {
       "asset_class": "data_center_reits",
-      "allocation": 6,
+      "allocation": 8,
       "position": "LONG",
-      "reason": "Data center REITs are direct beneficiaries of AI/cloud capex boom, robust rental growth, and demand for powered shell space. Defensive real asset with secular demand, inflation hedge, and yield support."
+      "reason": "Directly benefits from exponential growth in AI/cloud computing; secular demand for hyperscale and edge data infrastructure is driving superior FFO growth and premium valuations versus broader REITs."
     },
     {
-      "asset_class": "corporate_bond_etfs",
-      "allocation": 6,
+      "asset_class": "interactive_media_and_services",
+      "allocation": 7,
       "position": "LONG",
-      "reason": "High-quality IG corporates provide yield (~5.0–5.5%), risk diversification, and downside ballast if volatility spikes. Focus on short/intermediate duration to manage rate risk and maintain flexibility."
+      "reason": "AI-powered advertising, content platforms, and social media are compounding earnings; leaders in this space are central to digital economy monetization and resilient to traditional media disruption."
     },
     {
-      "asset_class": "crypto",
+      "asset_class": "electric_utilities",
+      "allocation": 6,
+      "position": "LONG",
+      "reason": "Structural beneficiaries of grid modernization, electrification, and renewable integration; defensive, provides yield and inflation protection, and supports portfolio risk balance amid high volatility elsewhere."
+    },
+    {
+      "asset_class": "pharmaceuticals",
+      "allocation": 6,
+      "position": "LONG",
+      "reason": "Defensive innovation play: robust pipelines in obesity, oncology, and specialty drugs; attractive valuations and secular demand from aging demographics and precision medicine trends."
+    },
+    {
+      "asset_class": "oil_and_gas_exploration_and_production",
       "allocation": 5,
       "position": "LONG",
-      "reason": "Crypto ETFs (BTC, ETH) offer asymmetric upside in a maturing, institutionally embraced asset class. Positive YTD flows and regulatory progress support tactical growth exposure; volatility accepted per risk profile."
+      "reason": "Selective exposure to U.S. shale and global low-cost producers; balances energy transition with near-term cash flow, benefiting from capital discipline and persistent commodity price support."
     },
     {
       "asset_class": "multi_utilities",
       "allocation": 5,
       "position": "LONG",
-      "reason": "Utilities deliver downside protection, steady dividends, and benefit from grid modernization and electrification trends linked to AI/data center power demand. Provides portfolio ballast and rate hedge."
+      "reason": "Diversified regulated utilities with strong ROE and decarbonization capex; defensive anchor and yield provider, offsets volatility from core growth allocations."
+    },
+    {
+      "asset_class": "managed_futures",
+      "allocation": 5,
+      "position": "LONG",
+      "reason": "Liquid alternative with low equity correlation; provides dynamic risk management and potential for positive returns in periods of equity or rate volatility, enhancing portfolio robustness."
+    },
+    {
+      "asset_class": "crypto",
+      "allocation": 5,
+      "position": "LONG",
+      "reason": "Optionality on digital asset adoption and blockchain infrastructure; fits user profile for innovation, high volatility tolerance, and outsized long-term upside potential."
     },
     {
       "asset_class": "cash",
       "allocation": 6,
       "position": "LONG",
-      "reason": "Maintains mandatory liquidity for volatility management, tactical rebalancing, and opportunistic investments during market dislocations. Acts as a volatility buffer in aggressive portfolios."
-    },
-    {
-      "asset_class": "industrial_machinery_and_supplies_and_components",
-      "allocation": 6,
-      "position": "LONG",
-      "reason": "Industrial automation, reshoring, and infrastructure spending are driving order growth and margin expansion. Sector leverages US/EM industrial recovery and benefits from secular supply chain modernization."
+      "reason": "Provides liquidity for tactical rebalancing, opportunistic risk-on entry, and tail-risk mitigation; essential for agility in volatile or dislocated markets."
     }
   ],
   "risk_management": {
-    "portfolio_volatility": "Expected to be moderately high (beta 1.3–1.5), reflecting growth orientation and innovation tilts; mitigated by IG credit, utilities, and cash. Projected Sharpe ratio >1.4 given long-term expected alpha.",
+    "portfolio_volatility": "Targeting moderately elevated volatility (higher than S&P 500) consistent with aggressive growth profile, but diversified across sectors, geographies, and asset types to avoid extreme drawdowns.",
     "key_risks": [
-      "AI/tech sector drawdown or valuation compression",
-      "Fed policy missteps or inflation overshoot",
-      "Sharp global slowdown or geopolitical shock (e.g., China/EM disruption)",
-      "Crypto regulatory setbacks or volatility spikes",
-      "Renewable policy risk or project execution delays"
+      "High concentration in technology and innovation sectors increases exposure to cyclical drawdowns and valuation corrections.",
+      "Emerging markets and crypto allocations introduce currency, regulatory, and liquidity risks.",
+      "Potential for supply chain disruptions, policy shifts (rate/tariff shocks), and sector rotations to drive short-term underperformance."
     ],
-    "hedging_strategy": "Risk is primarily diversified across uncorrelated growth drivers: IG corporates, utilities, and cash serve as volatility buffers; EM and SMID cap allocations limit US tech crowding; mandatory cash for tactical buying during corrections; regular monitoring of sector and macro signals to rebalance or reduce exposure upon major inflection points."
+    "hedging_strategy": "Diversification across 13 asset classes, strategic use of managed_futures for dynamic hedging, and cash for dry powder. Defensive allocations (utilities, pharma) and global breadth reduce single-sector or regional risk. Will monitor macro signals for tactical de-risking or rotation as needed."
   }
 }

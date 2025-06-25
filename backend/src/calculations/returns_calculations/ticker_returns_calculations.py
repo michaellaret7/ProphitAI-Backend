@@ -6,11 +6,8 @@ from backend.src.utils.determine_etf import is_etf_ticker
 from datetime import datetime, timedelta
 
 class CalculateTickerReturns:
-    def __init__(self, ticker: str, price_data: pd.DataFrame, start_date: str, end_date: str):
-        self.ticker = ticker
+    def __init__(self, price_data: pd.DataFrame):
         self.price_data = price_data
-        self.start_date = start_date
-        self.end_date = end_date
         self.dividends = pd.Series(0.0, index=self.price_data.index)
     
     def calculate_daily_price_returns(self):
@@ -18,7 +15,7 @@ class CalculateTickerReturns:
         Calculates the daily price return (capital gain/loss), which measures the
         percentage change in the stock's price.
         """
-        return round(self.price_data['close'].pct_change(fill_method=None).dropna(), 4)
+        return self.price_data['close'].pct_change(fill_method=None).dropna()
 
     def calculate_daily_total_returns(self):
         """
@@ -31,7 +28,8 @@ class CalculateTickerReturns:
         daily_dividend_yield = daily_dividend_yield.fillna(0)
         
         total_returns = price_returns.add(daily_dividend_yield.loc[price_returns.index], fill_value=0)
-        return round(total_returns, 4)
+        
+        return total_returns
      
     def calculate_annualized_price_return(self):
         """
@@ -48,7 +46,7 @@ class CalculateTickerReturns:
             return 0.0
         
         annualized = (1 + total_return) ** (252/days) - 1
-        return round(annualized, 4)
+        return annualized
 
     def calculate_annualized_total_return(self):
         """
@@ -65,7 +63,7 @@ class CalculateTickerReturns:
             return 0.0
         
         annualized = (1 + total_return) ** (252/days) - 1
-        return round(annualized, 4)
+        return annualized
 
     def calculate_holding_period_return(self):
         """
@@ -81,7 +79,7 @@ class CalculateTickerReturns:
         total_dividends = self.dividends.sum()
         
         holding_return = ((end_price - start_price) + total_dividends) / start_price
-        return round(holding_return, 4)
+        return holding_return
 
     @staticmethod
     def calculate_real_return(nominal_return: float, inflation_rate: float) -> float:
@@ -92,7 +90,7 @@ class CalculateTickerReturns:
         :param inflation_rate: The inflation rate as a decimal (e.g., 0.02 for 2%).
         :return: The real return as a decimal.
         """
-        return round((1 + nominal_return) / (1 + inflation_rate) - 1, 4)    
+        return (1 + nominal_return) / (1 + inflation_rate) - 1
 
 if __name__ == "__main__":
     ticker = "xlf"
@@ -123,10 +121,7 @@ if __name__ == "__main__":
             price_data.set_index('date', inplace=True)
 
         returns_calculator = CalculateTickerReturns(
-            ticker=ticker, 
-            price_data=price_data, 
-            start_date=start_date.strftime('%Y-%m-%d'), 
-            end_date=end_date.strftime('%Y-%m-%d')
+            price_data=price_data
         )
 
         print(returns_calculator.calculate_daily_price_returns())

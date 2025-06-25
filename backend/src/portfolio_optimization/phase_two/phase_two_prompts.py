@@ -215,13 +215,12 @@ Return your recommendations in this JSON format ONLY. Your entire response MUST 
 </Non-Negotiable Requirement>
 """
 
-
 # ---------------------------------------------------------------------------
 # USER PROMPT
 # ---------------------------------------------------------------------------
 USER_PROMPT_TEMPLATE = """
 <Task>
-Based on the following data for various sectores, provide investment recommendations for the top 1-10 stocks overall that best fit the user profile:
+Based on the following data for the sector, provide investment recommendations for the top 1-10 stocks overall that best fit the user profile:
 </Task>
 
 <Data String>

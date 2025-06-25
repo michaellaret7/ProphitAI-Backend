@@ -15,7 +15,7 @@ class ValueFactors:
         if book_value_per_share <= 0:
             return None
         
-        return round(self.most_recent_price / book_value_per_share, 4)
+        return self.most_recent_price / book_value_per_share
 
     def book_to_market(self, book_value_per_share: float) -> Optional[float]:
         """
@@ -24,7 +24,7 @@ class ValueFactors:
         if self.most_recent_price <= 0:
             return None
         
-        return round(book_value_per_share / self.most_recent_price, 4)
+        return book_value_per_share / self.most_recent_price
 
     def trailing_pe(self, eps_ttm: float) -> Optional[float]:
         """
@@ -32,7 +32,7 @@ class ValueFactors:
         """
         if eps_ttm == 0:
             return None
-        return round(self.most_recent_price / eps_ttm, 4)
+        return self.most_recent_price / eps_ttm
 
 
     def forward_pe(self, eps_forward_next_fy: float) -> Optional[float]:
@@ -41,7 +41,7 @@ class ValueFactors:
         """
         if eps_forward_next_fy == 0:
             return None
-        return round(self.most_recent_price / eps_forward_next_fy, 4)
+        return self.most_recent_price / eps_forward_next_fy
     
     def earnings_yield(self, eps_forward_next_fy: float) -> Optional[float]:
         """
@@ -50,7 +50,7 @@ class ValueFactors:
         if self.most_recent_price == 0:
             return None
         
-        return round(eps_forward_next_fy / self.most_recent_price, 4)
+        return eps_forward_next_fy / self.most_recent_price
     
     def price_to_sales(self, revenue_ttm: float, shares_outstanding: float) -> Optional[float]:
         """
@@ -61,7 +61,7 @@ class ValueFactors:
         if revenue_per_share <= 0:
             return None
         
-        return round(self.most_recent_price / revenue_per_share, 4)
+        return self.most_recent_price / revenue_per_share
 
     def price_to_cashflow(self, operating_cash_flow_ttm: float, shares_outstanding: float) -> Optional[float]:
         """
@@ -72,7 +72,7 @@ class ValueFactors:
         if ocf_per_share <= 0:
             return None
         
-        return round(self.most_recent_price / ocf_per_share, 4)
+        return self.most_recent_price / ocf_per_share
     
     def free_cashflow_yield(self, free_cash_flow_ttm: float, shares_outstanding: float) -> Optional[float]:
         """
@@ -82,7 +82,7 @@ class ValueFactors:
 
         if market_cap == 0:
             return None
-        return round(free_cash_flow_ttm / market_cap, 4)
+        return free_cash_flow_ttm / market_cap
     
     def ev_to_ebitda(self, shares_outstanding: float, total_debt: float, cash_and_equivalents: float, ebitda_ttm: float) -> Optional[float]:
         """
@@ -95,7 +95,7 @@ class ValueFactors:
         if ebitda_ttm <= 0:
             return None
         
-        return round(enterprise_value / ebitda_ttm, 4)
+        return enterprise_value / ebitda_ttm
     
     def ev_to_ebit(self, shares_outstanding: float, total_debt: float, cash_and_equivalents: float, ebit_ttm: float) -> Optional[float]:
         """
@@ -108,7 +108,7 @@ class ValueFactors:
         if ebit_ttm <= 0:
             return None
         
-        return round(enterprise_value / ebit_ttm, 4)
+        return enterprise_value / ebit_ttm
     
     def dividend_yield(self, annual_dividend_per_share: float) -> Optional[float]:
         """
@@ -116,7 +116,7 @@ class ValueFactors:
         """
         if self.most_recent_price == 0:
             return None
-        return round(annual_dividend_per_share / self.most_recent_price, 4)
+        return annual_dividend_per_share / self.most_recent_price
     
     def peg_ratio(self, eps_ttm: float, eps_growth_5yr: float) -> Optional[float]:
         """
@@ -127,7 +127,7 @@ class ValueFactors:
             return None
         
         pe = self.most_recent_price / eps_ttm
-        return round(pe / eps_growth_5yr, 4)
+        return pe / eps_growth_5yr
 
     def calc_all(
         self,
