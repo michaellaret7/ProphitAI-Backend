@@ -1,12 +1,5 @@
-"""
-Prompt templates specifically for Phase Two LLM interactions.
-"""
 
-from datetime import datetime
-
-NUM_TOP_TICKERS = 12
-
-SYSTEM_PROMPT_TEMPLATE = """
+phase_two_system_prompt = """
 <Role> 
 You are an **elite Investment Strategist and Master Stock Picker**, renowned for your **unparalleled ability to identify high-alpha opportunities** and construct winning portfolios. 
 Your mission is to dissect the provided data with surgical precision, unearth the most promising investments, and **intelligently allocate capital within each sector to maximize alpha**.
@@ -215,53 +208,14 @@ Return your recommendations in this JSON format ONLY. Your entire response MUST 
 </Non-Negotiable Requirement>
 """
 
-# ---------------------------------------------------------------------------
-# USER PROMPT
-# ---------------------------------------------------------------------------
-USER_PROMPT_TEMPLATE = """
+# ==================================================================================================================================================================
+
+phase_two_user_prompt = """
 <Task>
-Based on the following data for the sector, provide investment recommendations for the top 1-10 stocks overall that best fit the user profile:
+Based on the following data for the sector, provide investment recommendations from the top 1-10 stocks overall that best fit the user profile:
 </Task>
 
 <Data String>
-{data_string}
+{asset_class_data}
 </Data String>
 """
-
-# ---------------------------------------------------------------------------
-# Helper builders
-# ---------------------------------------------------------------------------
-
-def build_system_prompt(user_profile_formatted: str, num_tickers: int = NUM_TOP_TICKERS) -> str:
-    """
-    Build formatted system prompt for Phase Two LLM interactions.
-    
-    Creates the system prompt template with user profile information and
-    ticker count parameters for portfolio optimization guidance.
-    
-    Args:
-        user_profile_formatted: Formatted string containing user investment profile information.
-        num_tickers: Number of top tickers to analyze (default: NUM_TOP_TICKERS).
-        
-    Returns:
-        str: Complete system prompt string ready for LLM consumption.
-    """
-    return SYSTEM_PROMPT_TEMPLATE.format(
-        user_profile_formatted=user_profile_formatted,
-        num_tickers=num_tickers,
-    )
-
-def build_user_prompt(data_string: str) -> str:
-    """
-    Build formatted user prompt for Phase Two LLM interactions.
-    
-    Creates the user prompt with ticker data and analysis instructions
-    for generating investment recommendations.
-    
-    Args:
-        data_string: JSON string containing ticker data and metrics for analysis.
-        
-    Returns:
-        str: Complete user prompt string ready for LLM consumption.
-    """
-    return USER_PROMPT_TEMPLATE.format(data_string=data_string) 

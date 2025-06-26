@@ -320,5 +320,3 @@ class PushUserCreatedPortfolioRepository:
         finally:
             conn.close()
 
-
-
