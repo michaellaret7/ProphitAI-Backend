@@ -7,24 +7,34 @@ from backend.src.data_models.performance_models import PerformanceMetrics
 lookback_years = 1.5
 
 class TickerPerformanceMetrics:
-    def __init__(self, ticker, risk_free_rate=0.04/252):  # Daily risk-free rate (4% annual / 252 trading days)
+    def __init__(self, ticker, price_data=None, market_returns=None, risk_free_rate=0.04/252):  # Daily risk-free rate (4% annual / 252 trading days)
         self.ticker = ticker
         self.risk_free_rate = risk_free_rate
         
-        # Get ticker data
-        self.price_data = self._get_ticker_data(ticker)
+        # Accept pre-fetched data or fetch if not provided
+        if price_data is not None:
+            self.price_data = price_data
+        else:
+            # Get ticker data
+            self.price_data = self._get_ticker_data(ticker)
+            
         self.returns_calculator = CalculateTickerReturns(self.price_data)
         self.returns = self.returns_calculator.calculate_daily_total_returns()
         
-        # Get SPY data for market returns
-        spy_data = self._get_ticker_data('SPY')
-        if spy_data is not None:
-            spy_calculator = CalculateTickerReturns(spy_data)
-            self.market_returns = spy_calculator.calculate_daily_total_returns()
+        # Accept pre-calculated market returns or calculate if not provided
+        if market_returns is not None:
+            self.market_returns = market_returns
             self.benchmark_returns = self.market_returns  # Use SPY as default benchmark
         else:
-            self.market_returns = None
-            self.benchmark_returns = None
+            # Get SPY data for market returns
+            spy_data = self._get_ticker_data('SPY')
+            if spy_data is not None:
+                spy_calculator = CalculateTickerReturns(spy_data)
+                self.market_returns = spy_calculator.calculate_daily_total_returns()
+                self.benchmark_returns = self.market_returns  # Use SPY as default benchmark
+            else:
+                self.market_returns = None
+                self.benchmark_returns = None
     
     def _get_ticker_data(self, ticker):
         end_date = datetime.now()

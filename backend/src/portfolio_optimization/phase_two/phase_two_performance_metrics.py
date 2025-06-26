@@ -35,21 +35,39 @@ class PhaseTwoPerformanceData:
 
         return data
     
-    def calculate_performance_metrics_and_factors(self):
-        equity_data = self._get_ticker_data(self.ticker)
+    def calculate_performance_metrics_and_factors(self, equity_data=None, spy_data=None, spy_returns=None, xlf_data=None):
+        # Use pre-fetched data if provided, otherwise fetch it
+        if equity_data is None:
+            equity_data = self._get_ticker_data(self.ticker)
+        
         price_data = equity_data['close']
         volume_data = equity_data['volume']
 
-        spy_df = self._get_ticker_data('SPY')
+        if spy_data is None:
+            spy_df = self._get_ticker_data('SPY')
+        else:
+            spy_df = spy_data
+            
         spy_price_data = spy_df['close']
+        
+        # Pre-calculate SPY returns to pass to TickerPerformanceMetrics
+        if spy_returns is None:
+            spy_returns_calc = CalculateTickerReturns(spy_df)
+            spy_returns = spy_returns_calc.calculate_daily_total_returns()
 
-        sector_df = self._get_ticker_data('XLF')
+        if xlf_data is None:
+            sector_df = self._get_ticker_data('XLF')
+        else:
+            sector_df = xlf_data
+            
         sector_price_data = sector_df['close']
         
         momentum_factors = MomentumFactors(price_data, volume_data, spy_price_data, sector_price_data).calc_all()
         volatility_factors = VolatilityFactors(price_data, spy_price_data).calc_all()
         returns_calculator = CalculateTickerReturns(equity_data)
-        performance_calculator = TickerPerformanceMetrics(self.ticker).calc_all()
+        
+        # Pass pre-fetched data and market returns to avoid duplicate fetches
+        performance_calculator = TickerPerformanceMetrics(self.ticker, price_data=equity_data, market_returns=spy_returns).calc_all()
 
         # Turn output into a dictionary
         momentum_factors = momentum_factors.model_dump()

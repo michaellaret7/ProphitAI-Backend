@@ -3,6 +3,7 @@ from datetime import datetime, timedelta
 from backend.src.utils.determine_etf import is_etf_asset_class
 from backend.src.repositories.market_data.cached_ticker_repository import get_cached_ticker_data
 from backend.src.calculations.performance_calculations.ticker_performance_calculations import TickerPerformanceMetrics
+from backend.src.calculations.returns_calculations.ticker_returns_calculations import CalculateTickerReturns
 import numpy as np
 import pandas as pd
 import logging
@@ -18,6 +19,14 @@ class PhaseTwoFilters:
         self.is_etf = is_etf_asset_class(self.asset_class)
         with open('backend/src/data/database/database_schemas.json', 'r') as f:
             self.database_schemas = json.load(f)
+        
+        # Pre-fetch market data (SPY) once during initialization
+        self.spy_data = self._get_ticker_data('SPY')
+        if self.spy_data is not None:
+            spy_calculator = CalculateTickerReturns(self.spy_data)
+            self.market_returns = spy_calculator.calculate_daily_total_returns()
+        else:
+            self.market_returns = None
         
     def _get_ticker_data(self, ticker):
         end_date = datetime.now()
@@ -40,7 +49,7 @@ class PhaseTwoFilters:
 
         return data
     
-    def _calculate_composite_score(self, tickers):
+    def _calculate_composite_score(self, tickers_with_data):
         """
         Calculate composite scores for tickers using multiple performance metrics.
         
@@ -54,7 +63,7 @@ class PhaseTwoFilters:
         - Consistency: Win rate, profit factor
         
         Args:
-            tickers (list): List of ticker symbols to analyze
+            tickers_with_data (dict): Dictionary mapping ticker symbols to their price data
             
         Returns:
             list: Top 10 tickers sorted by composite score (highest to lowest)
@@ -64,10 +73,10 @@ class PhaseTwoFilters:
         metrics_data = {}
         
         # Collect metrics for all tickers
-        for ticker in tickers:
+        for ticker, price_data in tickers_with_data.items():
             try:
-                # Calculate performance metrics using existing class
-                metrics_calc = TickerPerformanceMetrics(ticker)
+                # Calculate performance metrics using existing class with pre-fetched data
+                metrics_calc = TickerPerformanceMetrics(ticker, price_data=price_data, market_returns=self.market_returns)
                 metrics = metrics_calc.calc_all()
                 
                 # Store metrics for normalization
@@ -161,31 +170,34 @@ class PhaseTwoFilters:
         return daily_average_volume
 
     def filter_tickers(self, tickers):
-        filtered_tickers = []
+        # Dictionary to store tickers with their data
+        tickers_with_data = {}
+        
         for ticker in tickers:
-
             data = self._get_ticker_data(ticker) # --> get the data for the ticker
 
             if data is not None and not data.empty:
                 volume = self._calculate_daily_average_volume(data) # --> calculate the daily average volume for the ticker
 
                 if volume > self.minimum_daily_average_volume:
-                    filtered_tickers.append(ticker)
+                    # Store the ticker with its data for later use
+                    tickers_with_data[ticker] = data
 
             else:
                 logger.warning(f"No data returned for ticker '{ticker}', it will be skipped.")
 
-        logger.info(f"Filtered tickers: {filtered_tickers}")
+        logger.info(f"Filtered tickers: {list(tickers_with_data.keys())}")
 
-        filtered_tickers = self._calculate_composite_score(filtered_tickers) # --> calculate the composite score for the tickers and return the top 10
+        # Pass the tickers with their pre-fetched data
+        filtered_tickers_sorted = self._calculate_composite_score(tickers_with_data) # --> calculate the composite score for the tickers and return the top 10
 
-        return filtered_tickers
+        # Return both the sorted ticker list and the data dictionary
+        return filtered_tickers_sorted, {ticker: tickers_with_data[ticker] for ticker in filtered_tickers_sorted}
     
 
 
 if __name__ == "__main__":
-    
     filters = PhaseTwoFilters("passenger_airlines")
     tickers = filters.get_asset_class_tickers()
-    filtered_tickers = filters.filter_tickers(tickers)
+    filtered_tickers, tickers_with_data = filters.filter_tickers(tickers)
     logger.info(f"Filtered tickers: {filtered_tickers}")

@@ -55,12 +55,26 @@ class PushUserCreatedPortfolioRepository:
             return
 
         data_to_insert = []
-        for asset_class, assets in portfolio.items():
+        for asset_class, asset_data in portfolio.items():
+            # Handle both old format (direct list) and new format (dict with 'recommendations' key)
+            if isinstance(asset_data, dict) and 'recommendations' in asset_data:
+                # New format: extract recommendations list
+                assets = asset_data['recommendations']
+            elif isinstance(asset_data, list):
+                # Old format: direct list of assets
+                assets = asset_data
+            else:
+                print(f"Warning: Unexpected format for asset class {asset_class}, skipping")
+                continue
+                
             for asset in assets:
                 # Ensure supporting_metrics is a JSON string
                 supporting_metrics = asset.get('supporting_metrics')
                 if not isinstance(supporting_metrics, str):
                     supporting_metrics = json.dumps(supporting_metrics)
+
+                # Handle both 'reason' and 'reason_for_recommendation' field names
+                reason = asset.get('reason') or asset.get('reason_for_recommendation')
 
                 data_to_insert.append((
                     portfolio_id,
@@ -70,7 +84,7 @@ class PushUserCreatedPortfolioRepository:
                     asset_class,
                     asset.get('ticker'),
                     asset.get('allocation'),
-                    asset.get('reason'),
+                    reason,
                     supporting_metrics
                 ))
 
