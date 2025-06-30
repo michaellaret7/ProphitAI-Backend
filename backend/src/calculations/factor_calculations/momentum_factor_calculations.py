@@ -292,23 +292,26 @@ class MomentumFactors:
         MomentumFactorMetrics
             Pydantic model containing all calculated momentum metrics
         """
-        
+        def safe_round(value, decimals=4):
+            """Safely round a value, returning None if value is None"""
+            return round(value, decimals) if value is not None else None
+
         # Calculate MACD values (returns tuple)
         macd_result = self.macd(macd_fast, macd_slow, macd_signal)
 
         return MomentumFactorMetrics(
-            one_month_return=self.one_month_return(),
-            three_month_return=self.three_month_return(skip=three_month_skip),
-            six_month_return=self.six_month_return(skip=six_month_skip),
-            twelve_month_return_ex1m=self.twelve_month_return_ex1m(),
-            pct_from_52w_high=self.pct_from_52w_high(window=window_52w),
-            sma_ratio=self.sma_ratio(fast=sma_fast, slow=sma_slow),
-            macd_value=macd_result[0],
-            macd_signal=macd_result[1],
-            rsi=self.rsi(window=rsi_window),
-            idiosyncratic_momentum=self.idiosyncratic_momentum(idio_lookback),
-            sector_idiosyncratic_momentum=self.sector_idiosyncratic_momentum(sector_idio_lookback),
-            volume_adjusted_momentum=self.volume_adjusted_momentum(vol_adj_lookback),
+            one_month_return=safe_round(self.one_month_return()),
+            three_month_return=safe_round(self.three_month_return(skip=three_month_skip)),
+            six_month_return=safe_round(self.six_month_return(skip=six_month_skip)),
+            twelve_month_return_ex1m=safe_round(self.twelve_month_return_ex1m()),
+            pct_from_52w_high=safe_round(self.pct_from_52w_high(window=window_52w)),
+            sma_ratio=safe_round(self.sma_ratio(fast=sma_fast, slow=sma_slow)),
+            macd_value=safe_round(macd_result[0]),
+            macd_signal=safe_round(macd_result[1]),
+            rsi=safe_round(self.rsi(window=rsi_window)),
+            idiosyncratic_momentum=safe_round(self.idiosyncratic_momentum(idio_lookback)),
+            sector_idiosyncratic_momentum=safe_round(self.sector_idiosyncratic_momentum(sector_idio_lookback)),
+            volume_adjusted_momentum=safe_round(self.volume_adjusted_momentum(vol_adj_lookback))
         )
 
 

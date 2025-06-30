@@ -63,6 +63,13 @@ class FundamentalDataRepository:
                             for key, value in row_dict.items():
                                 if isinstance(value, Decimal):
                                     row_dict[key] = float(value)
+                                elif isinstance(value, str) and key not in ['ticker', 'currency', 'period']:
+                                    # Try to convert string numeric values to float
+                                    try:
+                                        row_dict[key] = float(value)
+                                    except (ValueError, TypeError):
+                                        # Keep as string if it's not a numeric value
+                                        pass
                             data.append(row_dict)
                         
                         conn.close()

@@ -25,6 +25,11 @@ class VolatilityFactors:
         else:
             self.spy_prices = None
             self.spy_returns = None
+        
+        self.annualized_volatility_lookback: int = 252
+        self.skewness_lookback: int = 252
+        self.kurtosis_lookback: int = 252
+        self.atr_period: int = 14
 
     # ------------------------------------------------------------------
     # Realized Volatility Calculations
@@ -303,26 +308,7 @@ class VolatilityFactors:
     # ------------------------------------------------------------------
     # Calculate All Metrics
     # ------------------------------------------------------------------
-    def calc_all(
-        self,
-        realized_vol_30d_enabled: bool = True,
-        realized_vol_90d_enabled: bool = True,
-        beta_enabled: bool = True,
-        idio_vol_enabled: bool = True,
-        downside_dev_enabled: bool = True,
-        max_drawdown_enabled: bool = True,
-        atr_enabled: bool = True,
-        variance_ratio_enabled: bool = True,
-        skewness_enabled: bool = True,
-        kurtosis_enabled: bool = True,
-        garch_enabled: bool = True,
-        atr_period: int = 14,
-        skewness_lookback: int = 252,
-        kurtosis_lookback: int = 252,
-        annualized_volatility_enabled: bool = True,
-        annualized_volatility_lookback: int = 252,
-        daily_return_volatility_enabled: bool = True
-    ) -> VolatilityFactorMetrics:
+    def calc_all(self) -> VolatilityFactorMetrics:
         """
         Calculate all volatility factor metrics at once.
         
@@ -336,21 +322,25 @@ class VolatilityFactors:
         VolatilityFactorMetrics
             Pydantic model containing all calculated volatility metrics
         """
-        
+        def safe_round(value, decimals=4):
+            """Safely round a value, returning None if value is None"""
+            
+            return round(value, decimals) if value is not None else None
+
         return VolatilityFactorMetrics(
-            realized_vol_30d=self.realized_vol_30d() if realized_vol_30d_enabled else None,
-            realized_vol_90d=self.realized_vol_90d() if realized_vol_90d_enabled else None,
-            beta_1yr=self.beta_1yr() if beta_enabled else None,
-            idiosyncratic_vol=self.idiosyncratic_vol() if idio_vol_enabled else None,
-            downside_dev_30d=self.downside_dev_30d() if downside_dev_enabled else None,
-            max_drawdown_1yr=self.max_drawdown_1yr() if max_drawdown_enabled else None,
-            atr_price_ratio=self.atr_price_ratio(period=atr_period) if atr_enabled else None,
-            variance_ratio_3m_12m=self.variance_ratio_3m_12m() if variance_ratio_enabled else None,
-            skewness=self.skewness(lookback=skewness_lookback) if skewness_enabled else None,
-            kurtosis=self.kurtosis(lookback=kurtosis_lookback) if kurtosis_enabled else None,
-            garch_forecast=self.garch_forecast() if garch_enabled else None,
-            annualized_volatility=self.annualized_volatility(lookback_days=annualized_volatility_lookback) if annualized_volatility_enabled else None,
-            daily_return_volatility=self.daily_return_volatility() if daily_return_volatility_enabled else None,
+            realized_vol_30d=safe_round(self.realized_vol_30d()),
+            realized_vol_90d=safe_round(self.realized_vol_90d()),
+            beta_1yr=safe_round(self.beta_1yr()),
+            idiosyncratic_vol=safe_round(self.idiosyncratic_vol()),
+            downside_dev_30d=safe_round(self.downside_dev_30d()),
+            max_drawdown_1yr=safe_round(self.max_drawdown_1yr()),
+            atr_price_ratio=safe_round(self.atr_price_ratio(period=self.atr_period)),
+            variance_ratio_3m_12m=safe_round(self.variance_ratio_3m_12m()),
+            skewness=safe_round(self.skewness(lookback=self.skewness_lookback)),
+            kurtosis=safe_round(self.kurtosis(lookback=self.kurtosis_lookback)),
+            garch_forecast=safe_round(self.garch_forecast()),
+            annualized_volatility=safe_round(self.annualized_volatility(lookback_days=self.annualized_volatility_lookback)),
+            daily_return_volatility=safe_round(self.daily_return_volatility())
         )
 
 

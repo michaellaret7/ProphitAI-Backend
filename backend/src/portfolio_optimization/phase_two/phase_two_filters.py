@@ -1,7 +1,7 @@
 import json
 from datetime import datetime, timedelta
 from backend.src.utils.determine_etf import is_etf_asset_class
-from backend.src.repositories.market_data.cached_ticker_repository import get_cached_ticker_data
+from backend.src.repositories.market_data.ticker_repository import get_ticker_price_data
 from backend.src.calculations.performance_calculations.ticker_performance_calculations import TickerPerformanceMetrics
 from backend.src.calculations.returns_calculations.ticker_returns_calculations import CalculateTickerReturns
 import numpy as np
@@ -15,7 +15,7 @@ lookback_years = 1.5
 class PhaseTwoFilters:
     def __init__(self, asset_class):
         self.asset_class = asset_class
-        self.minimum_daily_average_volume = 10_000
+        self.minimum_daily_average_volume = 25_000
         self.is_etf = is_etf_asset_class(self.asset_class)
         with open('backend/src/data/database/database_schemas.json', 'r') as f:
             self.database_schemas = json.load(f)
@@ -37,7 +37,7 @@ class PhaseTwoFilters:
         end_date_str = end_date.isoformat()
         
         # Use the cached function
-        data = get_cached_ticker_data(
+        data = get_ticker_price_data(
             ticker=ticker,
             start_date=start_date_str,
             end_date=end_date_str,
@@ -49,6 +49,7 @@ class PhaseTwoFilters:
 
         return data
     
+    # MOVE THIS TO CALCULATIONS FOLDER AND REVIEW THE CALCULATIONS (FIND THE BEST WAY TO DO THIS)
     def _calculate_composite_score(self, tickers_with_data):
         """
         Calculate composite scores for tickers using multiple performance metrics.
@@ -130,8 +131,6 @@ class PhaseTwoFilters:
                     # For other metrics, higher is better
                     normalized_df[col] = (df[col] - mean) / std
         
-        # Calculate composite score using equal weights
-        # Research shows equal weighting often outperforms complex weighting schemes
         composite_scores = normalized_df.mean(axis=1)
         
         # Sort tickers by composite score (descending)
@@ -146,7 +145,17 @@ class PhaseTwoFilters:
         # Return top 10 tickers
         return sorted_tickers.head(10).index.tolist()
     
-    def get_asset_class_tickers(self):
+    def _calculate_daily_average_volume(self, equity_data): # --> calculate the daily average volume for a given ticker
+        total_volume = equity_data["volume"].sum()
+        number_of_trading_days = len(equity_data)
+
+        if number_of_trading_days == 0:
+            return 0
+            
+        daily_average_volume = total_volume / number_of_trading_days
+        return daily_average_volume
+    
+    def get_asset_class_tickers(self): # --> extract the tickers from within a given asset class
         if self.asset_class == "cash":
             return []
 
@@ -159,17 +168,7 @@ class PhaseTwoFilters:
         logger.warning(f"No tickers found for asset class: {self.asset_class}")
         return []
 
-    def _calculate_daily_average_volume(self, equity_data):
-        total_volume = equity_data["volume"].sum()
-        number_of_trading_days = len(equity_data)
-
-        if number_of_trading_days == 0:
-            return 0
-            
-        daily_average_volume = total_volume / number_of_trading_days
-        return daily_average_volume
-
-    def filter_tickers(self, tickers):
+    def filter_tickers(self, tickers): # --> filter the tickers based on the daily average volume and the composite score (this is the main function that is called)
         # Dictionary to store tickers with their data
         tickers_with_data = {}
         
@@ -193,8 +192,6 @@ class PhaseTwoFilters:
 
         # Return both the sorted ticker list and the data dictionary
         return filtered_tickers_sorted, {ticker: tickers_with_data[ticker] for ticker in filtered_tickers_sorted}
-    
-
 
 if __name__ == "__main__":
     filters = PhaseTwoFilters("passenger_airlines")

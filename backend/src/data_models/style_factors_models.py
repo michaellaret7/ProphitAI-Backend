@@ -22,6 +22,7 @@ class QualityFactorMetrics(BaseModel):
     return_on_assets: Optional[float]
     roic: Optional[float]
     gross_profitability: Optional[float]
+    gross_margin: Optional[float]
     net_margin: Optional[float]
     fcf_margin: Optional[float]
     debt_to_equity: Optional[float]
@@ -31,9 +32,13 @@ class QualityFactorMetrics(BaseModel):
     altman_z_score: Optional[float]
     accruals_ratio: Optional[float]
     earnings_stability: Optional[float]
-    piotroski_f_score: Optional[int]
     eps_revision_3m: Optional[float]
     dividend_payout: Optional[float]
+    asset_turnover: Optional[float]
+    cash_conversion_ratio: Optional[float]
+    cash_flow_to_debt_ratio: Optional[float]
+    conservative_financing: Optional[bool]
+    return_on_capital_employed: Optional[float]
 
 class MomentumFactorMetrics(BaseModel):
     """Pydantic model for momentum factor metrics"""
@@ -65,3 +70,16 @@ class VolatilityFactorMetrics(BaseModel):
     garch_forecast: Optional[float]
     annualized_volatility: Optional[float]
     daily_return_volatility: Optional[float]
+
+class GrowthFactorMetrics(BaseModel):
+    """Pydantic model for growth factor metrics"""
+    eps_growth_rate: Optional[float]
+    eps_cagr: Optional[float]
+    revenue_growth_rate: Optional[float]
+    sales_trend_growth_factor: Optional[float]
+    fcf_growth_rate: Optional[float]
+    peg_ratio: Optional[float]
+    roe_growth_rate: Optional[float]
+    roic_growth_rate: Optional[float]
+    book_value_growth_rate: Optional[float]
+    ocf_growth_rate: Optional[float]

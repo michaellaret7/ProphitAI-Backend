@@ -230,12 +230,6 @@ except json.JSONDecodeError:
     print(f"Error: Could not decode JSON from {prices_schema_file}")
     prices_schema_data = None
 
-# Connect to IB
-ib = get_ib()
-if not ib:
-    print("Failed to connect to Interactive Brokers")
-else:
-    print(get_stock_data_from_ib(ib, "AAPL", datetime.now() - timedelta(days=1)))
 
 def ensure_ticker_table_exists(ticker, ticker_location, db_config):
     """
@@ -399,12 +393,58 @@ def ensure_ticker_table_exists(ticker, ticker_location, db_config):
                 pass
         return False
 
+def check_table_has_date_column(ticker_location, ticker, db_config):
+    """
+    Check if the target table has a 'date' column.
+    
+    Args:
+        ticker_location: Dictionary with database location info including database and schema.
+        ticker: Ticker symbol for the target table.
+        db_config: Database configuration dictionary.
+        
+    Returns:
+        bool: True if table has 'date' column, False otherwise.
+    """
+    try:
+        # Connect to database
+        conn_config = db_config.copy()
+        conn_config['dbname'] = ticker_location['database']
+        conn = psycopg2.connect(**conn_config)
+        cursor = conn.cursor()
+
+        ticker_lower = ticker.lower()
+        schema = ticker_location['schema']
+
+        # Check if 'date' column exists
+        check_column_query = f"""
+        SELECT EXISTS (
+            SELECT 1 
+            FROM information_schema.columns 
+            WHERE table_schema = '{schema}' 
+            AND table_name = '{ticker_lower}'
+            AND column_name = 'date'
+        )
+        """
+        
+        cursor.execute(check_column_query)
+        has_date_column = cursor.fetchone()[0]
+        
+        cursor.close()
+        conn.close()
+        
+        return has_date_column
+        
+    except Exception as e:
+        print(f"Error checking for date column in {ticker}: {e}")
+        return False # Default to False if we can't check
+
 def insert_data_to_db(ticker_location, ticker, df, db_config):
     """
     Insert OHLC data into database using bulk operations with conflict handling.
     
     Efficiently inserts data using execute_values for bulk insertion,
     handles conflicts on datetime primary key by ignoring duplicates.
+    Automatically detects if table has 'date' column and adjusts accordingly.
     
     Args:
         ticker_location: Dictionary with database location info including database and schema.
@@ -444,26 +484,52 @@ def insert_data_to_db(ticker_location, ticker, df, db_config):
             df['barCount'] = 0
         df['barCount'] = df['barCount'].fillna(0).astype(int) # Ensure integer type
 
-        # Define the exact columns expected by the database table in order
-        db_columns = ['datetime', 'date', 'open', 'high', 'low', 'close', 'volume', 'average', 'barCount']
+        # Check if table has 'date' column to determine which columns to use
+        has_date_column = check_table_has_date_column(ticker_location, ticker, db_config)
+        
+        if has_date_column:
+            # Equity tables: include both datetime and date columns
+            db_columns = ['datetime', 'date', 'open', 'high', 'low', 'close', 'volume', 'average', 'barCount']
+            print(f"    Using equity table schema (with date column) for {ticker}")
+        else:
+            # ETF tables: only datetime column, no date column
+            db_columns = ['datetime', 'open', 'high', 'low', 'close', 'volume', 'average', 'barCount']
+            print(f"    Using ETF table schema (without date column) for {ticker}")
+        
         column_str = ', '.join(db_columns)
 
-        # Create list of tuples for insertion, ensuring correct order
-        # Use .get() with default None for safety, though IB data usually has these
-        data_tuples = [
-            (
-                row.datetime, # datetime column
-                row.datetime, # date column (same value)
-                row.open if pd.notna(row.open) else None,
-                row.high if pd.notna(row.high) else None,
-                row.low if pd.notna(row.low) else None,
-                row.close if pd.notna(row.close) else None,
-                row.volume if pd.notna(row.volume) else None,
-                row.average if pd.notna(row.average) else None,
-                int(row.barCount) # Ensure barCount is int
-            )
-            for row in df.itertuples(index=False) # Use itertuples for efficiency
-        ]
+        # Create list of tuples for insertion based on schema type
+        if has_date_column:
+            # Include both datetime and date columns
+            data_tuples = [
+                (
+                    row.datetime, # datetime column
+                    row.datetime, # date column (same value)
+                    row.open if pd.notna(row.open) else None,
+                    row.high if pd.notna(row.high) else None,
+                    row.low if pd.notna(row.low) else None,
+                    row.close if pd.notna(row.close) else None,
+                    row.volume if pd.notna(row.volume) else None,
+                    row.average if pd.notna(row.average) else None,
+                    int(row.barCount) # Ensure barCount is int
+                )
+                for row in df.itertuples(index=False) # Use itertuples for efficiency
+            ]
+        else:
+            # Only datetime column, no date column
+            data_tuples = [
+                (
+                    row.datetime, # datetime column only
+                    row.open if pd.notna(row.open) else None,
+                    row.high if pd.notna(row.high) else None,
+                    row.low if pd.notna(row.low) else None,
+                    row.close if pd.notna(row.close) else None,
+                    row.volume if pd.notna(row.volume) else None,
+                    row.average if pd.notna(row.average) else None,
+                    int(row.barCount) # Ensure barCount is int
+                )
+                for row in df.itertuples(index=False) # Use itertuples for efficiency
+            ]
 
         # Insert using ON CONFLICT (datetime) DO NOTHING
         # This lets the DB handle duplicate timestamps gracefully
@@ -526,6 +592,7 @@ def update_date_column_to_match_datetime(ticker_location, ticker, db_config):
     
     Fixes cases where date column has only the date part without time information
     by copying the full timestamp from the datetime column.
+    Only applies to tables that have a 'date' column (equity tables).
     
     Args:
         ticker_location: Dictionary with database location info including database and schema.
@@ -538,6 +605,13 @@ def update_date_column_to_match_datetime(ticker_location, ticker, db_config):
     start_time = time.time()
     
     try:
+        # Check if table has 'date' column first
+        has_date_column = check_table_has_date_column(ticker_location, ticker, db_config)
+        
+        if not has_date_column:
+            print(f"Table for {ticker} has no 'date' column (ETF table), skipping date column fix")
+            return True
+        
         # Connect to database
         config = db_config.copy()
         config['dbname'] = ticker_location['database']
@@ -789,8 +863,8 @@ def update_all_tickers_data(fix_date_column=False, start_db=None, start_schema=N
             print("Disconnected from Interactive Brokers")
 
 if __name__ == "__main__":
-    db_to_start = "equity_sector_industrials_prices"
-    schema_to_start = "aerospace_and_defense_prices"
+    db_to_start = "equity_sector_communication_services_prices"
+    schema_to_start = "wireless_telecommunications_services_prices"
     print(f"\nStarting update from DB: {db_to_start}, Schema: {schema_to_start}\n")
     update_all_tickers_data(fix_date_column=False, start_db=db_to_start)
 

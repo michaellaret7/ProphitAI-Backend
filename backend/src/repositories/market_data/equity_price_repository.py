@@ -5,13 +5,11 @@ import psycopg2
 from psycopg2.extras import RealDictCursor
 import pandas as pd
 from decimal import Decimal
-from backend.src.utils.caching import cache_result
 
 class EquityPriceDataRepository:
     def __init__(self):
         pass
-    
-    @cache_result
+
     def fetch_equity_price_data(self, ticker: str, start_date: datetime, end_date: datetime, interval: str = '15T') -> pd.DataFrame:
         """
         Fetches equity price data and resamples it to the specified interval.

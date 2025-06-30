@@ -19,9 +19,9 @@ def main(user_id: str, email: str):
 
     user_profile_formatted = get_user_information() # --> get the user profile formatted data
 
-    filtered_tickers = phase_two.filter_tickers() # --> filter the tickers based on daily average volume and composite score
+    filtered_and_analyzed_tickers = phase_two.screen_and_analyze_tickers() # --> filter the tickers based on daily average volume and composite score
 
-    final_recommendations = phase_two.final_recommendations(filtered_tickers, user_profile_formatted) # --> run the phase_two process and return the data
+    final_recommendations = phase_two.final_recommendations(filtered_and_analyzed_tickers, user_profile_formatted) # --> run the phase_two process and return the data
 
     logger.info(final_recommendations)
 

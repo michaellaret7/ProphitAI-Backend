@@ -1,7 +1,7 @@
 import json
 import logging
 from datetime import datetime, timedelta
-from backend.src.repositories.market_data.cached_ticker_repository import get_cached_ticker_data
+from backend.src.repositories.market_data.ticker_repository import get_ticker_price_data
 from backend.src.calculations.returns_calculations.ticker_returns_calculations import CalculateTickerReturns
 from backend.src.utils.formatting import round_floats_in_object
 from backend.src.portfolio_optimization.phase_two.phase_two_extract_assets_classes import PhaseTwoExtractAssetClasses
@@ -37,7 +37,6 @@ output = """
 }
 """
 
-
 class PhaseTwo:
     def __init__(self, phase_one_data):
         self.phase_one_data = phase_one_data
@@ -53,7 +52,7 @@ class PhaseTwo:
         end_date_str = end_date.isoformat()
         
         # Use the cached function
-        data = get_cached_ticker_data(
+        data = get_ticker_price_data(
             ticker=ticker,
             start_date=start_date_str,
             end_date=end_date_str,
@@ -62,7 +61,7 @@ class PhaseTwo:
         
         return data
 
-    def filter_tickers(self):
+    def screen_and_analyze_tickers(self):
         assets = PhaseTwoExtractAssetClasses(self.phase_one_data)
         asset_class_allocations = assets.get_asset_class_allocations()
         
@@ -148,26 +147,15 @@ class PhaseTwo:
 
 
 if __name__ == "__main__":
-    # Parse the JSON string into a dictionary
     phase_one_data_parsed = json.loads(output)
     phase_two = PhaseTwo(phase_one_data_parsed)
 
     user_profile_formatted = get_user_information()
 
-    filtered_tickers = phase_two.filter_tickers()
-    # logger.info(filtered_tickers)
+    filtered_and_analyzed_tickers = phase_two.screen_and_analyze_tickers()
 
-    final_recommendations = phase_two.final_recommendations(filtered_tickers, user_profile_formatted)
+    final_recommendations = phase_two.final_recommendations(filtered_and_analyzed_tickers, user_profile_formatted)
     logger.info(type(final_recommendations))
-
-    from backend.src.repositories.portfolio.push_created_portfolio_repository import PushUserCreatedPortfolioRepository
-    import uuid
-    portfolio_id = uuid.uuid4()
-    portfolio_name = "Phase Two Portfolio"
-    user_id = "3333333333333"
-    email = "test@test.com"
-    push_user_created_portfolio_repository = PushUserCreatedPortfolioRepository()    
-    push_user_created_portfolio_repository.store_final_portfolio(final_recommendations, portfolio_id, portfolio_name, user_id, email)
 
 
 

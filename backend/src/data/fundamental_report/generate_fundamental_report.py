@@ -10,7 +10,6 @@ import json
 import pandas as pd
 import numpy as np
 from openai import OpenAI
-from backend.src.utils.caching import cache_result
 import psycopg2
 from backend.src.utils.file_utils import load_schema_data
 from backend.src.utils.database import get_default_db_config, get_cursor

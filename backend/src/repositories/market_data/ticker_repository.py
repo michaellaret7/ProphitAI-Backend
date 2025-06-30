@@ -1,4 +1,3 @@
-from functools import lru_cache
 import logging
 from backend.src.repositories.market_data.equity_price_repository import EquityPriceDataRepository
 from backend.src.repositories.market_data.etf_price_repository import ETFPriceDataRepository
@@ -7,8 +6,7 @@ from backend.src.utils.determine_etf import is_etf_ticker
 
 logger = logging.getLogger(__name__)
 
-@lru_cache(maxsize=1000)
-def get_cached_ticker_data(ticker, start_date, end_date, interval):
+def get_ticker_price_data(ticker, start_date, end_date, interval):
     """
     Cached function to fetch ticker data. This ensures that each ticker's data
     is only fetched once regardless of how many times it's requested.
@@ -23,7 +21,6 @@ def get_cached_ticker_data(ticker, start_date, end_date, interval):
         DataFrame with price data or None if no data available
     """
 
-    
     # Convert string dates back to datetime objects
     start_dt = datetime.fromisoformat(start_date)
     end_dt = datetime.fromisoformat(end_date)

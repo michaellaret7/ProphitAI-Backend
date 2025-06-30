@@ -1,4 +1,4 @@
-from backend.src.repositories.market_data.cached_ticker_repository import get_cached_ticker_data
+from backend.src.repositories.market_data.ticker_repository import get_ticker_price_data
 from datetime import datetime, timedelta
 from backend.src.calculations.returns_calculations.ticker_returns_calculations import CalculateTickerReturns
 import numpy as np
@@ -45,7 +45,7 @@ class TickerPerformanceMetrics:
         end_date_str = end_date.isoformat()
         
         # Use the cached function
-        data = get_cached_ticker_data(
+        data = get_ticker_price_data(
             ticker=ticker,
             start_date=start_date_str,
             end_date=end_date_str,
@@ -304,28 +304,34 @@ class TickerPerformanceMetrics:
     
     def calc_all(self) -> PerformanceMetrics:
         """Calculate all performance metrics and return them as a Pydantic model."""
+
+        def safe_round(value, decimals):
+            """Safely round a value, returning None if value is None"""
+            decimals = 4
+            return round(value, decimals) if value is not None else None
+
         return PerformanceMetrics(
-            annualized_return=self.annualized_return(),
-            max_drawdown=self.max_drawdown(),
-            sharpe_ratio=self.sharpe_ratio(),
-            sortino_ratio=self.sortino_ratio(),
-            calmar_ratio=self.calmar_ratio(),
-            treynor_ratio=self.treynor_ratio(),
-            information_ratio=self.information_ratio(),
-            omega_ratio=self.omega_ratio(),
-            sterling_ratio=self.sterling_ratio(),
-            burke_ratio=self.burke_ratio(),
-            martin_ratio=self.martin_ratio(),
-            kappa_ratio=self.kappa_ratio(),
-            beta=self.beta(),
-            alpha=self.alpha(),
-            upside_capture=self.upside_capture(),
-            downside_capture=self.downside_capture(),
-            gain_loss_ratio=self.gain_loss_ratio(),
-            pain_index=self.pain_index(),
-            win_rate=self.win_rate(),
-            profit_factor=self.profit_factor(),
-            tail_ratio=self.tail_ratio()
+            annualized_return=safe_round(self.annualized_return()),
+            max_drawdown=safe_round(self.max_drawdown()),
+            sharpe_ratio=safe_round(self.sharpe_ratio()),
+            sortino_ratio=safe_round(self.sortino_ratio()),
+            calmar_ratio=safe_round(self.calmar_ratio()),
+            treynor_ratio=safe_round(self.treynor_ratio()),
+            information_ratio=safe_round(self.information_ratio()),
+            omega_ratio=safe_round(self.omega_ratio()),
+            sterling_ratio=safe_round(self.sterling_ratio()),
+            burke_ratio=safe_round(self.burke_ratio()),
+            martin_ratio=safe_round(self.martin_ratio()),
+            kappa_ratio=safe_round(self.kappa_ratio()),
+            beta=safe_round(self.beta()),
+            alpha=safe_round(self.alpha()),
+            upside_capture=safe_round(self.upside_capture()),
+            downside_capture=safe_round(self.downside_capture()),
+            gain_loss_ratio=safe_round(self.gain_loss_ratio()),
+            pain_index=safe_round(self.pain_index()),
+            win_rate=safe_round(self.win_rate()),
+            profit_factor=safe_round(self.profit_factor()),
+            tail_ratio=safe_round(self.tail_ratio())
         )
 
 if __name__ == "__main__":
