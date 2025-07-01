@@ -19,7 +19,7 @@ class QualityFactors:
         self.revenue = self.income_statement[0]['revenue']
         self.gross_profit = self.income_statement[0]['gross_profit']
         self.ebit = self.income_statement[0]['ebit']
-        self.ebitda = self.income_statement[0]['operating_income'] + self.cash_flow_statement[0]['depreciation_and_amortization']
+        self.ebitda = self.income_statement[0]['operating_income'] + self.cash_flow_statement[0]['depreciation_and_amortization'] if self.income_statement[0]['operating_income'] is not None and self.cash_flow_statement[0]['depreciation_and_amortization'] is not None else None
         self.free_cash_flow = self.cash_flow_statement[0]['free_cash_flow']
         self.operating_cash_flow = self.cash_flow_statement[0]['net_cash_flow_from_operations']
         self.dividends = self.cash_flow_statement[0]['dividends_and_other_cash_distributions']
@@ -35,7 +35,7 @@ class QualityFactors:
         self.current_liabilities = self.balance_sheet[0]['current_liabilities']
         self.inventory = self.balance_sheet[0]['inventory']
         self.cash_and_equivalents = self.balance_sheet[0]['cash_and_equivalents']
-        self.working_capital = self.balance_sheet[0]['current_assets'] - self.balance_sheet[0]['current_liabilities']
+        self.working_capital = self.balance_sheet[0]['current_assets'] - self.balance_sheet[0]['current_liabilities'] if self.balance_sheet[0]['current_assets'] is not None and self.balance_sheet[0]['current_liabilities'] is not None else None
         self.retained_earnings = self.balance_sheet[0]['retained_earnings']
         self.total_liabilities = self.balance_sheet[0]['total_liabilities']
         self.eps = self.financial_metrics[0]['earnings_per_share']
@@ -45,29 +45,22 @@ class QualityFactors:
         self.sales = self.income_statement[0]['revenue']  # Same as revenue
         
         # Specialized inputs
-        self.nopat = self.income_statement[0]['ebit'] * (1 - 0.21)  # EBIT * (1 - tax rate)
-        self.invested_capital = self.balance_sheet[0]['shareholders_equity'] + self.balance_sheet[0]['total_debt'] - self.balance_sheet[0]['cash_and_equivalents']
+        self.nopat = self.income_statement[0]['ebit'] * (1 - 0.21) if self.income_statement[0]['ebit'] is not None else None  # EBIT * (1 - tax rate)
+        self.invested_capital = self.balance_sheet[0]['shareholders_equity'] + self.balance_sheet[0]['total_debt'] - self.balance_sheet[0]['cash_and_equivalents'] if self.balance_sheet[0]['shareholders_equity'] is not None and self.balance_sheet[0]['total_debt'] is not None and self.balance_sheet[0]['cash_and_equivalents'] is not None else None
         self.interest_expense = self.income_statement[0]['interest_expense']
         
         # Time series data (not available in current dataset)
-        self.eps_quarterly_8 = [self.financial_metrics[0]['earnings_per_share'], 
-                                self.financial_metrics[1]['earnings_per_share'], 
-                                self.financial_metrics[2]['earnings_per_share'], 
-                                self.financial_metrics[3]['earnings_per_share'], 
-                                self.financial_metrics[4]['earnings_per_share'], 
-                                self.financial_metrics[5]['earnings_per_share'], 
-                                self.financial_metrics[6]['earnings_per_share'], 
-                                self.financial_metrics[7]['earnings_per_share']]
+        self.eps_quarterly_8 = [self.financial_metrics[i]['earnings_per_share'] for i in range(min(8, len(self.financial_metrics)))] if len(self.financial_metrics) >= 1 else []
         
         # Analyst estimates (not available in current dataset)
-        self.eps_estimate_now = self.estimates[1]['eps']
-        self.eps_estimate_3m_ago = self.estimates[0]['eps']
+        self.eps_estimate_now = self.estimates[1]['eps'] if len(self.estimates) > 1 else None
+        self.eps_estimate_3m_ago = self.estimates[0]['eps'] if len(self.estimates) > 0 else None
 
     def return_on_equity(self) -> Optional[float]:
         """
         ROE = net_income ÷ average_total_equity
         """
-        if self.avg_total_equity <= 0:
+        if self.avg_total_equity is None or self.net_income is None or self.avg_total_equity <= 0:
             return None
         return self.net_income / self.avg_total_equity
 
@@ -75,7 +68,7 @@ class QualityFactors:
         """
         ROA = net_income ÷ average_total_assets
         """
-        if self.avg_total_assets <= 0:
+        if self.avg_total_assets is None or self.net_income is None or self.avg_total_assets <= 0:
             return None
         return self.net_income / self.avg_total_assets
 
@@ -83,7 +76,7 @@ class QualityFactors:
         """
         ROIC = NOPAT ÷ invested_capital
         """
-        if self.invested_capital <= 0:
+        if self.invested_capital is None or self.nopat is None or self.invested_capital <= 0:
             return None
         return self.nopat / self.invested_capital
 
@@ -91,7 +84,7 @@ class QualityFactors:
         """
         Novy-Marx Gross Profitability = gross_profit ÷ total_assets
         """
-        if self.total_assets <= 0:
+        if self.total_assets is None or self.gross_profit is None or self.total_assets <= 0:
             return None
         return self.gross_profit / self.total_assets
 
@@ -101,7 +94,7 @@ class QualityFactors:
         
         Note: This is different from gross_profitability which divides by assets
         """
-        if self.revenue == 0:
+        if self.revenue is None or self.gross_profit is None or self.revenue == 0:
             return None
         return self.gross_profit / self.revenue
 
@@ -109,7 +102,7 @@ class QualityFactors:
         """
         Net Margin = net_income ÷ revenue
         """
-        if self.revenue == 0:
+        if self.revenue is None or self.net_income is None or self.revenue == 0:
             return None
         return self.net_income / self.revenue
 
@@ -117,7 +110,7 @@ class QualityFactors:
         """
         FCF Margin = free_cash_flow ÷ revenue
         """
-        if self.revenue == 0:
+        if self.revenue is None or self.free_cash_flow is None or self.revenue == 0:
             return None
         return self.free_cash_flow / self.revenue
 
@@ -125,7 +118,7 @@ class QualityFactors:
         """
         Debt/Equity = total_debt ÷ total_equity
         """
-        if self.total_equity == 0:
+        if self.total_equity is None or self.total_debt is None or self.total_equity == 0:
             return None
         return self.total_debt / self.total_equity
 
@@ -135,7 +128,7 @@ class QualityFactors:
 
         net_debt = total_debt − cash_and_equivalents
         """
-        if self.ebitda <= 0:
+        if self.ebitda is None or self.total_debt is None or self.cash_and_equivalents is None or self.ebitda <= 0:
             return None
         net_debt = self.total_debt - self.cash_and_equivalents
         return net_debt / self.ebitda
@@ -148,7 +141,7 @@ class QualityFactors:
         Companies with zero interest expense have no debt service requirements,
         which is typically a sign of strong financial health.
         """
-        if self.interest_expense <= 0:
+        if self.ebit is None or self.interest_expense is None or self.interest_expense <= 0:
             return None  # No meaningful ratio when no interest expense
         return self.ebit / self.interest_expense
 
@@ -156,7 +149,7 @@ class QualityFactors:
         """
         Quick Ratio = (current_assets − inventory) ÷ current_liabilities
         """
-        if self.current_liabilities == 0:
+        if self.current_liabilities == 0 or self.current_assets is None or self.inventory is None or self.current_liabilities is None:
             return None
         return (self.current_assets - self.inventory) / self.current_liabilities
 
@@ -167,7 +160,10 @@ class QualityFactors:
         Z = 1.2·(WC/TA) + 1.4·(RE/TA) + 3.3·(EBIT/TA)
             + 0.6·(MVE/TL) + 1.0·(Sales/TA)
         """
-        if self.total_assets == 0 or self.total_liabilities == 0:
+        if (self.total_assets is None or self.total_liabilities is None or 
+            self.total_assets == 0 or self.total_liabilities == 0 or 
+            self.working_capital is None or self.retained_earnings is None or 
+            self.ebit is None or self.sales is None):
             return None
         wc_ta = self.working_capital / self.total_assets
         re_ta = self.retained_earnings / self.total_assets
@@ -183,7 +179,7 @@ class QualityFactors:
 
         Higher (more positive) accruals → lower quality earnings.
         """
-        if self.total_assets == 0:
+        if self.total_assets is None or self.net_income is None or self.operating_cash_flow is None or self.total_assets == 0:
             return None
         return (self.net_income - self.operating_cash_flow) / self.total_assets
 
@@ -214,7 +210,7 @@ class QualityFactors:
         """
         EPS Revision 3m = (EPS_now - EPS_3m_ago) ÷ EPS_3m_ago
         """
-        if self.eps_estimate_3m_ago == 0:
+        if self.eps_estimate_3m_ago == 0 or self.eps_estimate_now is None or self.eps_estimate_3m_ago is None:
             return None
         return (self.eps_estimate_now - self.eps_estimate_3m_ago) / self.eps_estimate_3m_ago
 
@@ -226,7 +222,7 @@ class QualityFactors:
         A negative payout ratio means the company is returning cash to shareholders
         through repurchases instead of dividends.
         """
-        if self.net_income == 0:
+        if self.net_income is None or self.dividends is None or self.net_income == 0:
             return None
         return self.dividends / self.net_income
 
@@ -234,7 +230,7 @@ class QualityFactors:
         """
         Asset Turnover = revenue / total_assets
         """
-        if self.total_assets == 0:
+        if self.total_assets is None or self.revenue is None or self.total_assets == 0:
             return None
         return self.revenue / self.total_assets
 
@@ -242,7 +238,7 @@ class QualityFactors:
         """
         Cash Conversion Ratio = operating_cash_flow / net_income
         """
-        if self.net_income == 0:
+        if self.net_income is None or self.operating_cash_flow is None or self.net_income == 0:
             return None
         return self.operating_cash_flow / self.net_income
 
@@ -250,7 +246,7 @@ class QualityFactors:
         """
         Cash Flow to Debt Ratio = operating_cash_flow / total_debt
         """
-        if self.total_debt == 0:
+        if self.total_debt is None or self.operating_cash_flow is None or self.total_debt == 0:
             return None
         return self.operating_cash_flow / self.total_debt
         
@@ -258,14 +254,18 @@ class QualityFactors:
         """
         Conservative Financing = total_debt < total_assets
         """
+        if self.total_debt is None or self.total_assets is None:
+            return None
         return self.total_debt < self.total_assets
 
     def return_on_capital_employed(self) -> Optional[float]:
         """
         Return on Capital Employed = ebit / (total_assets - current_liabilities)
         """
+        if self.total_assets is None or self.current_liabilities is None or self.ebit is None:
+            return None
         capital_employed = self.total_assets - self.current_liabilities
-        if capital_employed == 0:
+        if capital_employed is None or capital_employed == 0:
             return None
         return self.ebit / capital_employed
 

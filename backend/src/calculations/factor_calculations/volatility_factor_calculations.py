@@ -16,10 +16,13 @@ class VolatilityFactors:
         spy_price_series : pd.Series, optional
             Time series of SPY prices for beta calculation
         """
+        if price_series is None or price_series.empty:
+            raise ValueError("Price series cannot be None or empty.")
+
         self.prices = price_series.astype(float)
         self.returns = self.prices.pct_change(fill_method=None).dropna()
         
-        if spy_price_series is not None:
+        if spy_price_series is not None and not spy_price_series.empty:
             self.spy_prices = spy_price_series.astype(float).reindex(self.prices.index)
             self.spy_returns = self.spy_prices.pct_change(fill_method=None).dropna()
         else:
@@ -173,9 +176,12 @@ class VolatilityFactors:
         
         # Calculate cumulative maximum (running peak)
         cumulative_max = prices_1yr.expanding().max()
+
+        # Avoid division by zero
+        safe_cumulative_max = cumulative_max.replace(0, np.nan)
         
         # Calculate drawdown at each point
-        drawdown = (prices_1yr - cumulative_max) / cumulative_max
+        drawdown = (prices_1yr - safe_cumulative_max) / safe_cumulative_max
         
         # Maximum drawdown is the most negative value
         max_dd = drawdown.min()

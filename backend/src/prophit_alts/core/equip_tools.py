@@ -3,7 +3,7 @@ from typing import List, Dict, Any
 
 TOOLS: List[Dict[str, Any]] = [
     {
-        "name": "get_ticker_daily_total_returns",
+        "name": "get_ticker_data",
         "description": "Get the daily total returns for a given ticker.",
         "parameters": {
             "type": "object",
@@ -12,7 +12,7 @@ TOOLS: List[Dict[str, Any]] = [
             },
             "required": ["ticker"]
         },
-        "function": lambda ticker: ProphitAltsDataWrapper().run_all(ticker)
+        "function": lambda ticker: ProphitAltsDataWrapper(ticker).run_all()
     }
 ]
 

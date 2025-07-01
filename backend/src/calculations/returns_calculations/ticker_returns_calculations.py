@@ -77,6 +77,9 @@ class CalculateTickerReturns:
         end_price = self.price_data['close'].iloc[-1]
         
         total_dividends = self.dividends.sum()
+
+        if start_price is None or start_price == 0:
+            return 0.0
         
         holding_return = ((end_price - start_price) + total_dividends) / start_price
         return holding_return

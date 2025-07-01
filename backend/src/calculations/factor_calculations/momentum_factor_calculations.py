@@ -43,6 +43,9 @@ class MomentumFactors:
             return None
         past_price = self.prices.iloc[-(lookback + skip)]
         recent_price = self.prices.iloc[-1]
+        
+        if past_price is None or past_price == 0:
+            return None
         return (recent_price / past_price) - 1.0
 
     # ------------------------------------------------------------------
@@ -90,6 +93,9 @@ class MomentumFactors:
             return None
         highest = self.prices.iloc[-window:].max()
         current = self.prices.iloc[-1]
+        
+        if highest is None or highest == 0:
+            return None
         return (current / highest) - 1.0
 
     # ------------------------------------------------------------------
@@ -171,7 +177,12 @@ class MomentumFactors:
         avg_up = up.ewm(com=window - 1, adjust=False).mean()
         avg_down = down.ewm(com=window - 1, adjust=False).mean()
 
-        rs = avg_up / avg_down.replace(0, np.nan)
+        # Replace 0 with a very small number to avoid division by zero
+        safe_avg_down = avg_down.replace(0, np.nan)
+        if safe_avg_down.isnull().all(): # a check in case all values are 0
+            return 0.0 # can be 0 or 50, depends on how you want to see it, I'll put 0
+
+        rs = avg_up / safe_avg_down
         rsi_series = 100.0 - (100.0 / (1.0 + rs))
         return rsi_series.iloc[-1]
 
@@ -262,7 +273,11 @@ class MomentumFactors:
         window_ret = self.returns.iloc[-lookback:]
         window_vol = self.volumes.loc[window_ret.index]
 
-        vw_return = (window_ret * window_vol).sum() / window_vol.sum()
+        total_volume = window_vol.sum()
+        if total_volume is None or total_volume == 0:
+            return None
+
+        vw_return = (window_ret * window_vol).sum() / total_volume
         return vw_return
 
     def calc_all(

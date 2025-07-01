@@ -12,17 +12,20 @@ class TickerPerformanceMetrics:
         self.risk_free_rate = risk_free_rate
         
         # Accept pre-fetched data or fetch if not provided
-        if price_data is not None:
+        if price_data is not None and not price_data.empty:
             self.price_data = price_data
         else:
             # Get ticker data
             self.price_data = self._get_ticker_data(ticker)
+
+        if self.price_data is None or self.price_data.empty:
+            raise ValueError(f"Price data for {ticker} could not be fetched or is empty.")
             
         self.returns_calculator = CalculateTickerReturns(self.price_data)
         self.returns = self.returns_calculator.calculate_daily_total_returns()
         
         # Accept pre-calculated market returns or calculate if not provided
-        if market_returns is not None:
+        if market_returns is not None and not market_returns.empty:
             self.market_returns = market_returns
             self.benchmark_returns = self.market_returns  # Use SPY as default benchmark
         else:
@@ -68,10 +71,13 @@ class TickerPerformanceMetrics:
     
     def max_drawdown(self):
         """Calculate maximum drawdown."""
+        if self.returns.empty:
+            return 0.0
         cumulative = (1 + self.returns).cumprod()
         running_max = np.maximum.accumulate(cumulative)
-        drawdown = (cumulative - running_max) / running_max
-        return drawdown.min()
+        safe_running_max = np.where(running_max == 0, np.nan, running_max)
+        drawdown = (cumulative - safe_running_max) / safe_running_max
+        return np.nanmin(drawdown) if not np.all(np.isnan(drawdown)) else 0.0
     
     def beta(self):
         """Calculate beta against market returns."""
@@ -155,10 +161,15 @@ class TickerPerformanceMetrics:
 
         if len(losses) == 0:
             return np.inf
+        
+        sum_losses = np.sum(losses)
+        if sum_losses == 0:
+            return np.inf # If losses sum to zero, it is infinite gain
+
         if len(gains) == 0:
             return 0
 
-        return np.sum(gains) / np.sum(losses)
+        return np.sum(gains) / sum_losses
 
     def sterling_ratio(self):
         """Calculate Sterling Ratio."""
@@ -229,6 +240,9 @@ class TickerPerformanceMetrics:
         portfolio_up_returns = returns[positive_periods]
         benchmark_up_returns = benchmark_returns[positive_periods]
 
+        if len(portfolio_up_returns) == 0:
+            return 0.0
+
         portfolio_up_return = (1 + portfolio_up_returns).prod()**(1/len(portfolio_up_returns)) - 1
         benchmark_up_return = (1 + benchmark_up_returns).prod()**(1/len(benchmark_up_returns)) - 1
 
@@ -249,6 +263,9 @@ class TickerPerformanceMetrics:
 
         portfolio_down_returns = returns[negative_periods]
         benchmark_down_returns = benchmark_returns[negative_periods]
+
+        if len(portfolio_down_returns) == 0:
+            return 0.0
 
         portfolio_down_return = (1 + portfolio_down_returns).prod()**(1/len(portfolio_down_returns)) - 1
         benchmark_down_return = (1 + benchmark_down_returns).prod()**(1/len(benchmark_down_returns)) - 1
@@ -305,9 +322,8 @@ class TickerPerformanceMetrics:
     def calc_all(self) -> PerformanceMetrics:
         """Calculate all performance metrics and return them as a Pydantic model."""
 
-        def safe_round(value, decimals):
+        def safe_round(value, decimals=4):
             """Safely round a value, returning None if value is None"""
-            decimals = 4
             return round(value, decimals) if value is not None else None
 
         return PerformanceMetrics(

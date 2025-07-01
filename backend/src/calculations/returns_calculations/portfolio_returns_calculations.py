@@ -42,7 +42,7 @@ class CalculatePortfolioReturns:
                     interval='1D'
                 )
             
-            if not price_data.empty:
+            if price_data is not None and not price_data.empty:
                 # Set 'date' as index if it's not already
                 if 'date' in price_data.columns:
                     price_data['date'] = pd.to_datetime(price_data['date'])

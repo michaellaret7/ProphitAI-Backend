@@ -25,7 +25,7 @@ class ValueFactors:
         self.revenue_ttm = self.income_statement[0]['revenue']
         self.operating_cash_flow_ttm = self.cash_flow_statement[0]['net_cash_flow_from_operations']
         self.free_cash_flow_ttm = self.cash_flow_statement[0]['free_cash_flow']
-        self.ebitda_ttm = self.income_statement[0]['operating_income'] + self.cash_flow_statement[0]['depreciation_and_amortization']
+        self.ebitda_ttm = self.income_statement[0]['operating_income'] + self.cash_flow_statement[0]['depreciation_and_amortization'] if self.income_statement[0]['operating_income'] is not None and self.cash_flow_statement[0]['depreciation_and_amortization'] is not None else None
         self.ebit_ttm = self.income_statement[0]['ebit']
         self.total_debt = self.balance_sheet[0]['total_debt']
         self.cash_and_equivalents = self.balance_sheet[0]['cash_and_equivalents']
@@ -36,7 +36,7 @@ class ValueFactors:
         """
         Price to book ratio
         """
-        if self.book_value_per_share <= 0:
+        if self.book_value_per_share is None or self.most_recent_price is None or self.book_value_per_share <= 0:
             return None
         
         return self.most_recent_price / self.book_value_per_share
@@ -45,7 +45,7 @@ class ValueFactors:
         """
         Book to market ratio
         """
-        if self.most_recent_price <= 0:
+        if self.most_recent_price is None or self.book_value_per_share is None or self.most_recent_price <= 0:
             return None
         
         return self.book_value_per_share / self.most_recent_price
@@ -54,7 +54,7 @@ class ValueFactors:
         """
         Trailing twelve-month price/earnings
         """
-        if self.eps_ttm == 0:
+        if self.eps_ttm is None or self.most_recent_price is None or self.eps_ttm == 0:
             return None
         return self.most_recent_price / self.eps_ttm
 
@@ -80,6 +80,9 @@ class ValueFactors:
         """
         Price to sales ratio
         """
+        if self.revenue_ttm is None or self.shares_outstanding is None or self.shares_outstanding == 0:
+            return None
+        
         revenue_per_share = self.revenue_ttm / self.shares_outstanding
 
         if revenue_per_share <= 0:
@@ -91,6 +94,9 @@ class ValueFactors:
         """
         Price to cashflow ratio
         """
+        if self.operating_cash_flow_ttm is None or self.shares_outstanding is None or self.shares_outstanding == 0:
+            return None
+        
         ocf_per_share = self.operating_cash_flow_ttm / self.shares_outstanding
 
         if ocf_per_share <= 0:
@@ -102,6 +108,9 @@ class ValueFactors:
         """
         Free-Cash-Flow Yield
         """
+        if self.shares_outstanding is None or self.most_recent_price is None or self.free_cash_flow_ttm is None:
+            return None
+            
         market_cap = self.shares_outstanding * self.most_recent_price
 
         if market_cap == 0:
@@ -112,6 +121,9 @@ class ValueFactors:
         """
         Enterprise Value to EBITDA ratio
         """
+        if self.shares_outstanding is None or self.most_recent_price is None or self.total_debt is None or self.cash_and_equivalents is None or self.ebitda_ttm is None:
+            return None
+            
         market_cap = self.shares_outstanding * self.most_recent_price
         net_debt = self.total_debt - self.cash_and_equivalents
         enterprise_value = market_cap + net_debt
@@ -125,6 +137,9 @@ class ValueFactors:
         """
         Enterprise Value to EBIT ratio
         """
+        if self.shares_outstanding is None or self.most_recent_price is None or self.total_debt is None or self.cash_and_equivalents is None:
+            return None
+            
         market_cap = self.shares_outstanding * self.most_recent_price
         net_debt = self.total_debt - self.cash_and_equivalents
         enterprise_value = market_cap + net_debt
@@ -147,7 +162,7 @@ class ValueFactors:
         Price/Earnings to Growth ratio
         """
         
-        if self.eps_ttm == 0 or self.eps_growth_5yr <= 0:
+        if self.most_recent_price is None or self.eps_ttm is None or self.eps_growth_5yr is None or self.eps_ttm == 0 or self.eps_growth_5yr <= 0:
             return None
         
         pe = self.most_recent_price / self.eps_ttm
@@ -187,15 +202,11 @@ class ValueFactors:
 
 if __name__ == "__main__":
     # Initialize with current stock price
-    value_calc = ValueFactors(most_recent_price=150.0, ticker='AAPL')
+    value_calc = ValueFactors(ticker='AAPL')
 
     # Calculate all value metrics at once
     all_metrics = value_calc.calc_all()
     print(all_metrics)
-    print(value_calc.cash_flow_statement[0])
-    print(value_calc.balance_sheet[0])
-    print(value_calc.income_statement[0])
-    print(value_calc.financial_metrics[0])
-    print(value_calc.estimates[0])
+
 
 

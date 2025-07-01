@@ -7,14 +7,14 @@ from dotenv import load_dotenv
 from backend.src.repositories.market_data.equity_price_repository import EquityPriceDataRepository
 from datetime import datetime, timedelta
 import pandas as pd
-from backend.src.prophit_alts.equip_tools import register_tools
+from backend.src.prophit_alts.core.equip_tools import register_tools
 from backend.src.utils.choose_model_and_client import openai_model_and_client, deepseek_model_and_client
 
 load_dotenv()
 
 class BaseAgent:
     def __init__(self, system_prompt: str, user_prompt: str):
-        self.llm, self.client = deepseek_model_and_client()
+        self.llm, self.client = openai_model_and_client()
         self.tools = []
         self.tool_functions = {}
         self.max_iterations = 100

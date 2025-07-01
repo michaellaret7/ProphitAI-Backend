@@ -77,8 +77,12 @@ class PhaseTwoPerformanceData:
         volatility_factors = VolatilityFactors(price_data, spy_price_data).calc_all().model_dump()
 
         if not self.is_etf:
-            quality_factors = QualityFactors(ticker=self.ticker).calc_all()
-            quality_factors = quality_factors.model_dump()
+            try:
+                quality_factors = QualityFactors(ticker=self.ticker).calc_all()
+                quality_factors = quality_factors.model_dump()
+            except Exception as e:
+                logger.warning(f"Failed to calculate quality factors for {self.ticker}: {e}")
+                quality_factors = None
         else:
             quality_factors = "None this is an ETF, no quality factors available"
 
@@ -103,12 +107,12 @@ class PhaseTwoPerformanceData:
             fundamental_data['fundamental_report'] = etf_description
 
             return fundamental_data
-        else:
-            fundamental_estimates = fundamental_repository.fetch_fundamental_estimates(self.ticker)
-            fundamental_report = fundamental_repository.fetch_fundamental_report(self.ticker)
+        else: 
+            fundamental_estimates = fundamental_repository.fetch_fundamental_estimates(self.ticker) 
+            fundamental_report = fundamental_repository.fetch_fundamental_report(self.ticker) 
 
-            fundamental_data['fundamental_estimates'] = fundamental_estimates
-            fundamental_data['fundamental_report'] = fundamental_report
+            fundamental_data['fundamental_estimates'] = fundamental_estimates if fundamental_estimates is not None else None
+            fundamental_data['fundamental_report'] = fundamental_report if fundamental_report is not None else None
 
             return fundamental_data
 

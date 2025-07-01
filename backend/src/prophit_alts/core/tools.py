@@ -122,33 +122,19 @@ class ProphitAltsDataWrapper:
         self._load_data() # --> make sure to load the data only once per ticker per tool call
 
         data = {
-            "weekly_returns": self.retrieve_returns(),
+            # "weekly_returns": self.retrieve_returns(),
             "momentum_factors": self.retrieve_momentum_factors(),
             "volatility_factors": self.retrieve_volatility_factors(),
 
             "growth_factors": GrowthFactors(self.ticker).calc_all().model_dump(),
-            "value_factors": ValueFactors(self.ticker).calc_all().model_dump(),
-            "quality_factors": QualityFactors(self.ticker).calc_all().model_dump(),
+            # "value_factors": ValueFactors(self.ticker).calc_all().model_dump(),
+            # "quality_factors": QualityFactors(self.ticker).calc_all().model_dump(),
 
-            "financial_ratios": FundamentalDataRepository().fetch_financial_metrics(self.ticker),
-            "fundamental_estimates": FundamentalDataRepository().fetch_fundamental_estimates(self.ticker)
+            # "financial_ratios": FundamentalDataRepository().fetch_financial_metrics(self.ticker),
+            # "fundamental_estimates": FundamentalDataRepository().fetch_fundamental_estimates(self.ticker)
         }
         
         return data
 
 
-if __name__ == "__main__":
-    import json
-    from datetime import datetime
-    
-    data = ProphitAltsDataWrapper(ticker="aapl").run_all()
-    
-    # Generate filename with timestamp
-    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    filename = f"aapl_analysis_{timestamp}.txt"
-    
-    # Write data to txt file
-    with open(filename, 'w') as f:
-        f.write(json.dumps(data, default=str))
-    
-    print(f"Data written to {filename}")
+

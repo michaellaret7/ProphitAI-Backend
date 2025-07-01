@@ -79,7 +79,7 @@ class GrowthFactors:
             EPS CAGR as decimal (multiply by 100 for percentage)
         """
 
-        if self.beginning_eps <= 0 or self.current_eps <= 0 or self.years <= 0 or self.current_eps is None or self.beginning_eps is None:
+        if self.current_eps is None or self.beginning_eps is None or self.beginning_eps <= 0 or self.current_eps <= 0 or self.years <= 0:
             return np.nan
         return (self.current_eps / self.beginning_eps) ** (1 / self.years) - 1
     
