@@ -165,39 +165,42 @@ Remember, the quality and conviction behind your selections and allocations are 
 
 <Output Format>
 Return your recommendations in this JSON format ONLY. Your entire response MUST be a single, valid JSON object, with no additional text, commentary, or markdown formatting before or after the JSON structure. Adhere strictly to the schema provided below.
+
+CRITICAL JSON FORMATTING RULES:
+- Do NOT include any comments (// or /* */) in the JSON
+- Ensure all string values are properly escaped
+- Use only standard ASCII characters in strings or properly escape Unicode
+- Numbers should be numeric types, not strings (unless specifically required)
+- Do not use trailing commas
+
 {{
-"total_stocks_analyzed": {num_tickers}, // This should be the number of tickers you were given to analyze for this sector
-"recommendations": [
-    // Include 1 to 7 recommendations based on your conviction and analysis for this sector.
-    // If, in a rare case, NO tickers meet your high standards for this specific sector after thorough analysis,
-    // you may return an empty list for "recommendations": [].
+  "total_stocks_analyzed": {num_tickers},
+  "recommendations": [
     {{
-    "ticker": "EXAMPLE_TICKER_1", // e.g., "MSFT"
-    "allocation": 7.5, // Example: MSFT gets 7.5% of the *sector's total allocation*. This is a float.
-    "reason_for_recommendation": "MSFT is strongly recommended due to its exceptional and consistent revenue growth (average 18% YoY over the past 3 years from fundamental_report), robust positive forward-looking EPS estimates (+12% for next quarter, +15% for next year from fundamental_predictions), an outstanding Sharpe ratio of 2.1, and its direct alignment with the user's goal of long-term capital appreciation and moderate risk tolerance (beta of 1.05). Its dominant position in cloud computing and enterprise software, coupled with significant AI investments, provides a strong moat and future growth catalysts. It receives a higher allocation within the sector due to superior conviction in its outlook relative to other selected peers within this sector.",
-    "supporting_metrics": {{
+      "ticker": "EXAMPLE_TICKER_1",
+      "allocation": 7.5,
+      "reason_for_recommendation": "MSFT is strongly recommended due to its exceptional and consistent revenue growth (average 18% YoY over the past 3 years from fundamental_report), robust positive forward-looking EPS estimates (+12% for next quarter, +15% for next year from fundamental_predictions), an outstanding Sharpe ratio of 2.1, and its direct alignment with the user's goal of long-term capital appreciation and moderate risk tolerance (beta of 1.05). Its dominant position in cloud computing and enterprise software, coupled with significant AI investments, provides a strong moat and future growth catalysts. It receives a higher allocation within the sector due to superior conviction in its outlook relative to other selected peers within this sector.",
+      "supporting_metrics": {{
         "sharpe_ratio": 2.1,
-        "annualized_return": 0.28, // Example: 28% annualized return
-        "estimated_eps_growth_next_year": "+15%", // Example: From fundamental_predictions
-        "historical_net_margin_avg_3yr": "35%", // Example: From fundamental_report
+        "annualized_return": 0.28,
+        "estimated_eps_growth_next_year": "+15%",
+        "historical_net_margin_avg_3yr": "35%",
         "beta": 1.05,
-        "momentum_12m": 0.35 // Example: 35% 12-month momentum
-        // Add other highly relevant metrics that directly support your choice.
-        }}
+        "momentum_12m": 0.35
+      }}
     }},
-    // Example of a second recommendation (if warranted by your conviction):
     {{
-    "ticker": "EXAMPLE_TICKER_2", // e.g., "AVGO"
-    "allocation": 5.0, // Example: AVGO gets 5.0% if sector total was 15% and MSFT got 7.5%, QCOM 2.5%
-    "reason_for_recommendation": "AVGO also shows strong growth in a complementary semiconductor area, with solid fundamentals and good upside_capture of 1.2. While also a strong pick, its current valuation and recent run-up suggest a slightly more moderate allocation compared to EXAMPLE_TICKER_1 within this sector to balance risk/reward.",
-    "supporting_metrics": {{
+      "ticker": "EXAMPLE_TICKER_2",
+      "allocation": 5.0,
+      "reason_for_recommendation": "AVGO also shows strong growth in a complementary semiconductor area, with solid fundamentals and good upside_capture of 1.2. While also a strong pick, its current valuation and recent run-up suggest a slightly more moderate allocation compared to EXAMPLE_TICKER_1 within this sector to balance risk/reward.",
+      "supporting_metrics": {{
         "calmar_ratio": 3.2,
         "upside_capture": 1.2,
         "momentum_12m": 0.45,
         "annualized_volatility": 0.20
-       }}
-    }},
-]
+      }}
+    }}
+  ]
 }}
 </Output Format>
 

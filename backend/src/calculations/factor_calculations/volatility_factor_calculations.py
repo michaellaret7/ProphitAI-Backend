@@ -62,20 +62,9 @@ class VolatilityFactors:
     def annualized_volatility(self, lookback_days: int) -> Optional[float]:
         """
         Calculate annualized volatility for any lookback period.
-        
-        Parameters
-        ----------
-        lookback_days : int
-            Number of days to look back for volatility calculation
-            
-        Returns
-        -------
-        float or None
-            Annualized volatility, or None if insufficient data
+        If fewer than lookback_days are available, uses all available returns.
         """
-        if len(self.returns) < lookback_days:
-            return None
-        
+        # Use the most recent lookback_days returns (or all if fewer)
         returns_period = self.returns.iloc[-lookback_days:]
         vol = returns_period.std() * np.sqrt(252)
         return vol

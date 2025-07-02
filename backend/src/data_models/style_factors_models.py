@@ -48,6 +48,8 @@ class MomentumFactorMetrics(BaseModel):
     twelve_month_return_ex1m: Optional[float]
     pct_from_52w_high: Optional[float]
     sma_ratio: Optional[float]
+    sma_50: Optional[float]
+    sma_200: Optional[float]
     macd_value: Optional[float]
     macd_signal: Optional[float]
     rsi: Optional[float]

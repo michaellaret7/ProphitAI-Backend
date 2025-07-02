@@ -23,16 +23,7 @@ Follow the Thought → Action → Observation loop internally:
 3. Observation: reflect on the tool result.
 
 Available tools
-• get_tickers() --> returns list of tickers
-• calculate_stock_metrics(start_date_str:string, end_date_str:string) --> returns {"ticker": {max_drawdown: %, annualized_volatility: %, ...}} (for all tickers in the specified date range)
-• get_stock_data(ticker:string, start_date_str:string, end_date_str:string) --> returns full hourly price history for deeper analysis
-
-After analysing every ticker, output:
-
-Final Answer: {
-  "weakest_ticker": "string",
-  "drivers": ["string", …]        # short bullet explanations
-}
+• print_word() --> prints the word to the console
 """
 
     def add_tool(self, name: str, description: str, parameters: Dict, function: Callable):
@@ -102,8 +93,7 @@ Final Answer: {
             response = self.client.chat.completions.create(
                 model=self.llm,
                 messages=messages,
-                temperature=0.7,
-                verbose=True
+                temperature=0.7
             )
             
             assistant_response = response.choices[0].message.content

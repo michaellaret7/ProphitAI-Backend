@@ -128,6 +128,59 @@ class MomentumFactors:
         return ratio_series
 
     # ------------------------------------------------------------------
+    # Simple Moving Averages
+    # ------------------------------------------------------------------
+    def simple_moving_average(self, window: int, latest_only: bool = True) -> Optional[float]:
+        """
+        Calculate Simple Moving Average for a given window.
+
+        Parameters
+        ----------
+        window : int
+            Number of periods for the moving average calculation.
+        latest_only : bool, default True
+            If `True`, returns the latest SMA value; otherwise returns a
+            pandas Series for the entire history.
+
+        Returns
+        -------
+        float | None
+            Latest SMA value if latest_only=True, or pandas Series if False.
+            Returns None if insufficient data.
+        """
+        if len(self.prices) < window:
+            return None
+
+        sma_series = self.prices.rolling(window=window).mean()
+
+        if latest_only:
+            latest_value = sma_series.iloc[-1]
+            return latest_value if not np.isnan(latest_value) else None
+        return sma_series
+
+    def sma_50(self) -> Optional[float]:
+        """
+        50-day Simple Moving Average.
+
+        Returns
+        -------
+        float | None
+            Latest 50-day SMA value. None if insufficient history.
+        """
+        return self.simple_moving_average(window=50)
+
+    def sma_200(self) -> Optional[float]:
+        """
+        200-day Simple Moving Average.
+
+        Returns
+        -------
+        float | None
+            Latest 200-day SMA value. None if insufficient history.
+        """
+        return self.simple_moving_average(window=200)
+
+    # ------------------------------------------------------------------
     # MACD (EMA-12, EMA-26, signal = EMA-9 of MACD)
     # ------------------------------------------------------------------
     def macd(self, fast_period: int = 12, slow_period: int = 26, signal_period: int = 9) -> Tuple[Optional[float], Optional[float]]:
@@ -321,6 +374,8 @@ class MomentumFactors:
             twelve_month_return_ex1m=safe_round(self.twelve_month_return_ex1m()),
             pct_from_52w_high=safe_round(self.pct_from_52w_high(window=window_52w)),
             sma_ratio=safe_round(self.sma_ratio(fast=sma_fast, slow=sma_slow)),
+            sma_50=safe_round(self.sma_50()),
+            sma_200=safe_round(self.sma_200()),
             macd_value=safe_round(macd_result[0]),
             macd_signal=safe_round(macd_result[1]),
             rsi=safe_round(self.rsi(window=rsi_window)),

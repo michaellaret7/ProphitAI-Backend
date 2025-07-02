@@ -94,4 +94,5 @@ class CalculateTickerReturns:
         :return: The real return as a decimal.
         """
         return (1 + nominal_return) / (1 + inflation_rate) - 1
+    
 

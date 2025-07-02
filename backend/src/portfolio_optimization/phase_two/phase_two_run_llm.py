@@ -1,3 +1,4 @@
+import json
 from backend.src.utils.choose_model_and_client import openai_model_and_client
 from backend.src.portfolio_optimization.phase_two.phase_two_prompts import phase_two_system_prompt, phase_two_user_prompt
 from backend.src.data_models.phase_two_models import PhaseTwoRecommendations
@@ -24,7 +25,8 @@ class PhaseTwoRunLLM:
                 {"role": "system", "content": system_prompt},
                 {"role": "user", "content": user_prompt}
             ],
-            temperature=0.7
+            temperature=0.7,
+            response_format={"type": "json_object"}  # Force JSON output
         )
     
         response_content = response.choices[0].message.content
@@ -40,11 +42,33 @@ class PhaseTwoRunLLM:
                 response_content = response_content[:-3]
             response_content = response_content.strip()
             
+            # Additional cleaning for common issues
+            # Remove any BOM characters
+            response_content = response_content.lstrip('\ufeff')
+            
+            # First, try to parse as regular JSON to identify specific issues
+            try:
+                parsed_json = json.loads(response_content)
+            except json.JSONDecodeError as json_error:
+                logger.error(f"JSON decode error: {json_error}")
+                logger.error(f"Error position: line {json_error.lineno}, column {json_error.colno}")
+                
+                # Try to extract a snippet around the error position
+                lines = response_content.split('\n')
+                if json_error.lineno and json_error.lineno <= len(lines):
+                    error_line = lines[json_error.lineno - 1]
+                    logger.error(f"Error line content: {error_line}")
+                    if json_error.colno:
+                        logger.error(f"Error at character: '{error_line[json_error.colno-1] if json_error.colno <= len(error_line) else 'END'}'")
+                
+                raise
+            
             # Parse and validate with Pydantic
-            recommendations = PhaseTwoRecommendations.model_validate_json(response_content)
+            recommendations = PhaseTwoRecommendations.model_validate(parsed_json)
 
             return recommendations
         except Exception as e:
             logger.error(f"Failed to parse LLM response: {e}")
             logger.error(f"Raw response: {response_content}")
+            logger.error(f"Response length: {len(response_content)} characters")
             raise ValueError(f"Invalid LLM response format: {e}")

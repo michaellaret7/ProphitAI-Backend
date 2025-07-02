@@ -1,13 +1,23 @@
 ---
-description: 
-globs: 
 alwaysApply: true
 ---
-1. Use the @Web if you need to
-2. Do not do anything more than what I specified
-3. Ask questions if you are confused about something
-4. Do not overcomplicate the approach
-5. If you violate any of these rules there will be consequences
-6. Always check the utils folder before implementing code, this is to mitigate redundancies.
-7. You are not under any circumstances allowed to create files or folders unless I explicitly tell you to create a file 
-8. Follow the DRY (Don't Repeat Yourself) principle as closely as possible. This is the most important!! 
+- You MUST follow the DRY ("Don't Repeat Yourself") principle when programming. If you do not follow this closely there will be sever consequences 
+- You must write the most modular, clean, clear, simple and maintainable code but have it be as effective and efficient as possible 
+- Do NOT do anything beyond/more than what I specified in my query to you 
+- Ask questions back to me if you are confused about something and need more clarification 
+- Do not overcomplicate the approach 
+- ALWAYS read through the necessary and code before making any changes or returning a response, you should maximize your context before doing anything 
+- You are not under any circumstances allowed to create files or folders unless I explicitly tell you to create a file (there will be serious consequences if violated)
+- Use the Web if you need to at any point (I encourage this)
+- You MAY NOT run commands in your own command line, If you want to test the results of something I will run it in my own terminal and show you the results 
+- Do not create a new function unless its ABSOLUTELY imperative to the fixing solution
+- If you need to retrieve data for a file use the backend/src/repositories/market_data/ticker_repository.py
+
+
+
+
+
+
+
+
+

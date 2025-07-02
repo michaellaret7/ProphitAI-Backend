@@ -15,40 +15,41 @@ class GrowthFactors:
         self.financial_metrics = self.fundamental_repository.fetch_financial_metrics(self.ticker)
         self.estimates = self.fundamental_repository.fetch_fundamental_estimates(self.ticker)
         
-        self.current_eps = self.financial_metrics[0]['earnings_per_share']
-        self.previous_eps = self.financial_metrics[1]['earnings_per_share']
-        self.beginning_eps = self.financial_metrics[len(self.financial_metrics) - 1]['earnings_per_share']
-        self.years = len(self.financial_metrics)/4
+        # Simple null-safe data access
+        self.current_eps = self.financial_metrics[0]['earnings_per_share'] if self.financial_metrics else None
+        self.previous_eps = self.financial_metrics[1]['earnings_per_share'] if len(self.financial_metrics) > 1 else None
+        self.beginning_eps = self.financial_metrics[len(self.financial_metrics) - 1]['earnings_per_share'] if self.financial_metrics else None
+        self.years = len(self.financial_metrics)/4 if self.financial_metrics else 0
         
         # Extract revenue data
-        self.current_revenue = self.income_statement[0]['revenue']
-        self.previous_revenue = self.income_statement[1]['revenue'] if len(self.income_statement) > 1 else 0
+        self.current_revenue = self.income_statement[0]['revenue'] if self.income_statement else None
+        self.previous_revenue = self.income_statement[1]['revenue'] if len(self.income_statement) > 1 else None
         
         # Extract all revenue values for sales trend analysis
-        self.revenue_data = [period['revenue'] for period in self.income_statement if period['revenue'] is not None]
+        self.revenue_data = [period['revenue'] for period in self.income_statement if period['revenue'] is not None] if self.income_statement else []
         
         # Extract free cash flow data
-        self.current_fcf = self.cash_flow_statement[0]['free_cash_flow']
-        self.previous_fcf = self.cash_flow_statement[1]['free_cash_flow'] if len(self.cash_flow_statement) > 1 else 0
+        self.current_fcf = self.cash_flow_statement[0]['free_cash_flow'] if self.cash_flow_statement else None
+        self.previous_fcf = self.cash_flow_statement[1]['free_cash_flow'] if len(self.cash_flow_statement) > 1 else None
         
         # Extract PE ratio
-        self.pe_ratio = self.financial_metrics[0]['price_to_earnings_ratio']
+        self.pe_ratio = self.financial_metrics[0]['price_to_earnings_ratio'] if self.financial_metrics else None
         
         # Extract ROE data
-        self.current_roe = self.financial_metrics[0]['return_on_equity']
-        self.previous_roe = self.financial_metrics[1]['return_on_equity'] if len(self.financial_metrics) > 1 else 0
+        self.current_roe = self.financial_metrics[0]['return_on_equity'] if self.financial_metrics else None
+        self.previous_roe = self.financial_metrics[1]['return_on_equity'] if len(self.financial_metrics) > 1 else None
         
         # Extract ROIC data
-        self.current_roic = self.financial_metrics[0]['return_on_invested_capital']
-        self.previous_roic = self.financial_metrics[1]['return_on_invested_capital'] if len(self.financial_metrics) > 1 else 0
+        self.current_roic = self.financial_metrics[0]['return_on_invested_capital'] if self.financial_metrics else None
+        self.previous_roic = self.financial_metrics[1]['return_on_invested_capital'] if len(self.financial_metrics) > 1 else None
         
         # Extract book value per share data
-        self.current_bvps = self.financial_metrics[0]['book_value_per_share']
-        self.previous_bvps = self.financial_metrics[1]['book_value_per_share'] if len(self.financial_metrics) > 1 else 0
+        self.current_bvps = self.financial_metrics[0]['book_value_per_share'] if self.financial_metrics else None
+        self.previous_bvps = self.financial_metrics[1]['book_value_per_share'] if len(self.financial_metrics) > 1 else None
         
         # Extract operating cash flow data
-        self.current_ocf = self.cash_flow_statement[0]['net_cash_flow_from_operations']
-        self.previous_ocf = self.cash_flow_statement[1]['net_cash_flow_from_operations'] if len(self.cash_flow_statement) > 1 else 0
+        self.current_ocf = self.cash_flow_statement[0]['net_cash_flow_from_operations'] if self.cash_flow_statement else None
+        self.previous_ocf = self.cash_flow_statement[1]['net_cash_flow_from_operations'] if len(self.cash_flow_statement) > 1 else None
 
         
     def eps_growth_rate(self) -> float:
@@ -62,7 +63,7 @@ class GrowthFactors:
         Returns:
             EPS growth rate as percentage
         """
-        if self.previous_eps == 0 or self.current_eps is None or self.previous_eps is None:
+        if self.current_eps is None or self.previous_eps is None or self.previous_eps == 0:
             return np.nan if self.current_eps == 0 else np.inf
         return ((self.current_eps - self.previous_eps) / abs(self.previous_eps)) * 100
     
@@ -90,7 +91,7 @@ class GrowthFactors:
         Returns:
             Revenue growth rate as percentage
         """
-        if self.previous_revenue == 0 or self.current_revenue is None or self.previous_revenue is None:
+        if self.current_revenue is None or self.previous_revenue is None or self.previous_revenue == 0:
             return np.nan if self.current_revenue == 0 else np.inf
         return ((self.current_revenue - self.previous_revenue) / abs(self.previous_revenue)) * 100
 
@@ -129,7 +130,7 @@ class GrowthFactors:
         Returns:
             FCF growth rate as percentage
         """
-        if self.previous_fcf == 0 or self.current_fcf is None or self.previous_fcf is None:
+        if self.current_fcf is None or self.previous_fcf is None or self.previous_fcf == 0:
             return np.nan if self.current_fcf == 0 else np.inf
         return ((self.current_fcf - self.previous_fcf) / abs(self.previous_fcf)) * 100
 
@@ -155,7 +156,7 @@ class GrowthFactors:
         Returns:
             ROE growth rate as percentage
         """
-        if self.previous_roe == 0 or self.current_roe is None or self.previous_roe is None:
+        if self.current_roe is None or self.previous_roe is None or self.previous_roe == 0:
             return np.nan if self.current_roe == 0 else np.inf
         return ((self.current_roe - self.previous_roe) / abs(self.previous_roe)) * 100
 
@@ -166,7 +167,7 @@ class GrowthFactors:
         Returns:
             ROIC growth rate as percentage
         """
-        if self.previous_roic == 0 or self.current_roic is None or self.previous_roic is None:
+        if self.current_roic is None or self.previous_roic is None or self.previous_roic == 0:
             return np.nan if self.current_roic == 0 else np.inf
         return ((self.current_roic - self.previous_roic) / abs(self.previous_roic)) * 100
     
@@ -177,7 +178,7 @@ class GrowthFactors:
         Returns:
             Book value growth rate as percentage
         """
-        if self.previous_bvps == 0 or self.current_bvps is None or self.previous_bvps is None:
+        if self.current_bvps is None or self.previous_bvps is None or self.previous_bvps == 0:
             return np.nan if self.current_bvps == 0 else np.inf
         return ((self.current_bvps - self.previous_bvps) / abs(self.previous_bvps)) * 100
 
@@ -188,7 +189,7 @@ class GrowthFactors:
         Returns:
             OCF growth rate as percentage
         """
-        if self.previous_ocf == 0 or self.current_ocf is None or self.previous_ocf is None:
+        if self.current_ocf is None or self.previous_ocf is None or self.previous_ocf == 0:
             return np.nan if self.current_ocf == 0 else np.inf
         return ((self.current_ocf - self.previous_ocf) / abs(self.previous_ocf)) * 100
     

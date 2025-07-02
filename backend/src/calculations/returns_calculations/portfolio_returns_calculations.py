@@ -48,12 +48,8 @@ class CalculatePortfolioReturns:
                     price_data['date'] = pd.to_datetime(price_data['date'])
                     price_data.set_index('date', inplace=True)
                 
-                self.ticker_calculators[ticker] = CalculateTickerReturns(
-                    ticker=ticker,
-                    price_data=price_data,
-                    start_date=self.start_date,
-                    end_date=self.end_date
-                )
+                # Initialize using only price_data as per CalculateTickerReturns signature
+                self.ticker_calculators[ticker] = CalculateTickerReturns(price_data)
     
     def calculate_daily_price_returns(self):
         """

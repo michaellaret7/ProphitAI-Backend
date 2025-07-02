@@ -1,4 +1,4 @@
-from backend.src.prophit_alts.core.tools import ProphitAltsDataWrapper
+from backend.src.prophit_alts.core.tools import ProphitAltsDataWrapper, AgentSearchEngine
 from typing import List, Dict, Any
 
 TOOLS: List[Dict[str, Any]] = [
@@ -13,6 +13,18 @@ TOOLS: List[Dict[str, Any]] = [
             "required": ["ticker"]
         },
         "function": lambda ticker: ProphitAltsDataWrapper(ticker).run_all()
+    },
+    {
+        "name": "free_search",
+        "description": "The free_search tool gives you the ability to search the web for information. You will create an indepth query that will be entered into the Perplexity search engine.",
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "query": {"type": "string", "description": "The query to search the web for. This query should be indepth and detailed, the more detailed the better the results wil be."},
+            },
+            "required": ["query"]
+        },
+        "function": lambda query: AgentSearchEngine().perplexity_free_search(query)
     }
 ]
 
