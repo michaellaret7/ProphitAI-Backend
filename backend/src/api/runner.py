@@ -3,7 +3,7 @@ from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 from typing import Dict, Any, Optional
 import json, uuid, sys, io, threading, queue, asyncio, logging
-from backend.src.portfolio_optimization.runner import run_workflow
+from backend.src.portfolio_optimization.runner import main as run_workflow
 from backend.src.auth import get_current_user
 
 router = APIRouter()

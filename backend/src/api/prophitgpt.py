@@ -3,7 +3,6 @@ from pydantic import BaseModel
 from typing import List, Dict, Optional
 import os
 import json
-
 from openai import OpenAI
 from backend.src.utils.choose_model_and_client import deepseek_model_and_client, openai_model_and_client, grok_model_and_client, perplexity_model_and_client
 

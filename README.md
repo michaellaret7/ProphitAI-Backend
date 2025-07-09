@@ -133,3 +133,7 @@ Contributions are welcome! Please feel free to submit a pull request or open an 
 ## 📄 License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details. 
+
+run frontend --> npm run dev
+create venv --> .venv/Scripts/Activate.ps1  
+run backend --> 

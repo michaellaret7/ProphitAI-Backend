@@ -6,7 +6,6 @@ import pandas as pd
 from backend.src.repositories.market_data.ticker_repository import get_ticker_price_data
 from backend.src.calculations.returns_calculations.ticker_returns_calculations import CalculateTickerReturns
 
-# CVaR, VaR, ES, etc. 
 class PortfolioRiskCalculations:
     """
     Value at Risk (VaR) calculator for portfolio risk management and position sizing

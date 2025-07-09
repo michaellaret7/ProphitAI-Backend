@@ -155,6 +155,7 @@ if __name__ == "__main__":
     filtered_and_analyzed_tickers = phase_two.screen_and_analyze_tickers()
 
     final_recommendations = phase_two.final_recommendations(filtered_and_analyzed_tickers, user_profile_formatted)
+    logger.info(f"Final recommendations: {final_recommendations}")
     logger.info(type(final_recommendations))
 
 
