@@ -7,7 +7,7 @@ from sqlalchemy.orm import relationship
 from sqlalchemy.dialects.postgresql import UUID
 import uuid
 from datetime import datetime
-from backend.testing.db_test.db_config import UserBase
+from backend.src.db.core.db_config import UserBase
 
 # =============================================================================
 # USER DATA SCHEMA

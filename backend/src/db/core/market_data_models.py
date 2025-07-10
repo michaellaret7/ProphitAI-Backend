@@ -5,7 +5,7 @@ Complete Market Data Models for all tables in the market_data database
 from sqlalchemy import Column, Integer, String, Float, DateTime, Boolean, Text, ForeignKey, Date, Numeric, JSON
 from sqlalchemy.orm import relationship
 from sqlalchemy.dialects.postgresql import UUID
-from backend.testing.db_test.db_config import MarketBase
+from backend.src.db.core.db_config import MarketBase
 import uuid
 
 # =============================================================================
@@ -411,13 +411,13 @@ class PressRelease(MarketBase):
     __table_args__ = {'schema': 'news_data'}
     
     ticker_id = Column(UUID(as_uuid=True), ForeignKey('ticker_universe.tickers.id'), primary_key=True, index=True)
-    publishedDate = Column(DateTime, primary_key=True, index=True)
+    publishedDate = Column(DateTime, index=True)
     publisher = Column(String)
     title = Column(String)
     image = Column(String)
     site = Column(String)
     text = Column(Text)
-    url = Column(String)
+    url = Column(String(512), primary_key=True)
     
     # Relationship
     ticker = relationship('Ticker', back_populates='press_releases')
@@ -427,13 +427,13 @@ class StockNews(MarketBase):
     __table_args__ = {'schema': 'news_data'}
     
     ticker_id = Column(UUID(as_uuid=True), ForeignKey('ticker_universe.tickers.id'), primary_key=True, index=True)
-    publishedDate = Column(DateTime, primary_key=True, index=True)
+    publishedDate = Column(DateTime, index=True)
     publisher = Column(String)
     title = Column(String)
     image = Column(String)
     site = Column(String)
     text = Column(Text)
-    url = Column(String)
+    url = Column(String(512), primary_key=True)
     
     # Relationship
     ticker = relationship('Ticker', back_populates='stock_news')
@@ -443,8 +443,8 @@ class PriceTargetNews(MarketBase):
     __table_args__ = {'schema': 'news_data'}
     
     ticker_id = Column(UUID(as_uuid=True), ForeignKey('ticker_universe.tickers.id'), primary_key=True, index=True)
-    publishedDate = Column(DateTime, primary_key=True, index=True)
-    newsURL = Column(String)
+    publishedDate = Column(DateTime, index=True)
+    newsURL = Column(String(512), primary_key=True)
     newsTitle = Column(String)
     analystName = Column(String)
     priceTarget = Column(Float)
@@ -462,8 +462,8 @@ class StockGradeNews(MarketBase):
     __table_args__ = {'schema': 'news_data'}
     
     ticker_id = Column(UUID(as_uuid=True), ForeignKey('ticker_universe.tickers.id'), primary_key=True, index=True)
-    publishedDate = Column(DateTime, primary_key=True, index=True)
-    newsURL = Column(String)
+    publishedDate = Column(DateTime, index=True)
+    newsURL = Column(String(512), primary_key=True)
     newsTitle = Column(String)
     newsBaseURL = Column(String)
     newsPublisher = Column(String)
@@ -481,13 +481,13 @@ class GeneralNews(MarketBase):
     __table_args__ = {'schema': 'news_data'}
     
     ticker_id = Column(UUID(as_uuid=True), ForeignKey('ticker_universe.tickers.id'), primary_key=True, index=True)
-    publishedDate = Column(DateTime, primary_key=True, index=True)
+    publishedDate = Column(DateTime, index=True)
     publisher = Column(String)
     title = Column(String)
     image = Column(String)
     site = Column(String)
     text = Column(Text)
-    url = Column(String)
+    url = Column(String(512), primary_key=True)
     
     # Relationship
     ticker = relationship('Ticker', back_populates='general_news')

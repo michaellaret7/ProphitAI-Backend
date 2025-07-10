@@ -2,17 +2,17 @@
 Script to create all database tables from SQLAlchemy models
 """
 from sqlalchemy import text
-from backend.testing.db_test.db_config import market_engine, user_engine, MarketBase, UserBase
+from backend.src.db.core.db_config import market_engine, user_engine, MarketBase, UserBase
 
 # Import all models to register them with their respective Base classes
-from backend.testing.db_test.user_data_models import (
+from backend.src.db.core.user_data_models import (
     User, Company, CompanyUser, Portfolio
 )
-from backend.testing.db_test.market_data_models import (
+from backend.src.db.core.market_data_models import (
     Ticker, BalanceSheet, CashFlowStatement, IncomeStatement, FinancialRatio,
     AnalystEstimate, ETFHolding, ETFInfo, Dividend,
     EarningsTranscript, Price, PressRelease, StockNews, PriceTargetNews,
-    StockGradeNews, GeneralNews, StockGrade, HistoricalStockGradesSummary,
+    StockGradeNews, GeneralNews, StockGradesIndividual, StockGradesSummary,
     Rating, AnalystRecommendation, PriceTargetSummary
 )
 

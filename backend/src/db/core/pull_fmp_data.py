@@ -134,21 +134,21 @@ class FMP_API_DATA:
         url = f"https://financialmodelingprep.com/stable/dividends?symbol={ticker}"
         return self._make_fmp_api_request(url)
 
-    def get_press_releases(self, ticker: str, limit: int = 30):
+    def get_press_releases(self, ticker: str, limit: int = 1000):
         """
         Retrieves press releases for a given stock.
         """
         url = f"https://financialmodelingprep.com/stable/news/press-releases?symbols={ticker}&limit={limit}"
         return self._make_fmp_api_request(url)
 
-    def get_stock_news(self, ticker: str, limit: int = 100):
+    def get_stock_news(self, ticker: str, limit: int = 1000):
         """
         Retrieves news for a given stock.
         """
         url = f"https://financialmodelingprep.com/stable/news/stock?symbols={ticker}&limit={limit}"
         return self._make_fmp_api_request(url)
 
-    def get_general_news(self, limit: int = 100):
+    def get_general_news(self, limit: int = 1000):
         """
         Retrieves general news.
         """
@@ -176,7 +176,7 @@ class FMP_API_DATA:
         url = f"https://financialmodelingprep.com/stable/price-target-summary?symbol={ticker}"
         return self._make_fmp_api_request(url)
 
-    def get_price_target_news(self, ticker: str, page: int = 0, limit: int = 100):
+    def get_price_target_news(self, ticker: str, page: int = 0, limit: int = 1000):
         """
         Retrieves price target news for a given stock ticker.
         """
@@ -197,19 +197,17 @@ class FMP_API_DATA:
         url = f"https://financialmodelingprep.com/stable/grades-historical?symbol={ticker}&limit={limit}"
         return self._make_fmp_api_request(url)
 
-    def get_stock_grade_news(self, ticker: str, page: int = 0, limit: int = 100):
+    def get_stock_grade_news(self, ticker: str, page: int = 0, limit: int = 1000):
         """
         Retrieves stock grade news for a given stock ticker.
         """
         url = f"https://financialmodelingprep.com/stable/grades-news?symbol={ticker}&page={page}&limit={limit}"
         return self._make_fmp_api_request(url)
 
-    def get_intraday_prices_for_ticker(self, ticker: str):
+    def get_intraday_prices_for_ticker(self, ticker: str, from_date: datetime, to_date: datetime):
         """
         Retrieves 15-minute interval price data for a ticker for the last two weeks.
         """
-        to_date = datetime.now()
-        from_date = to_date - timedelta(weeks=6)
         url = f"https://financialmodelingprep.com/api/v3/historical-chart/15min/{ticker}?from={from_date.strftime('%Y-%m-%d')}&to={to_date.strftime('%Y-%m-%d')}"
         return self._make_fmp_api_request(url)
     
@@ -227,29 +225,9 @@ if __name__ == "__main__":
     ticker = "AAPL"
     etf = "SPY"
 
-    # print("balance_sheets: ", fmp_api.get_balance_sheets(ticker)[0].keys())
-    # print("cash_flow_statements: ", fmp_api.get_cash_flow_statements(ticker)[0].keys())
-    # print("income_statements: ", fmp_api.get_income_statements(ticker)[0].keys())
-    # print("financial_ratios: ", fmp_api.get_financial_ratios(ticker)[0].keys())
-    # print("analyst_estimate_history: ", fmp_api.get_analyst_estimates(ticker)[0].keys())
-    # print("etf_holdings: ", fmp_api.get_etf_holdings(etf)[0].keys())
-    # print("etf_info: ", fmp_api.get_etf_info(etf)[0].keys())
-    # print("dividends: ", fmp_api.get_dividends(ticker)[0].keys())
-    # print("earnings_transcript: ", fmp_api.get_earnings_transcript(ticker, 2016, 1)[0].keys())
-    # print("press_releases: ", fmp_api.get_press_releases(ticker)[0].keys())
-    # print("stock_news: ", fmp_api.get_stock_news(ticker)[0].keys())
-    # print("price_target_news: ", fmp_api.get_price_target_news(ticker)[0].keys())
-    # print("stock_grade_news: ", fmp_api.get_stock_grade_news(ticker)[0].keys())
-    # print("general_news: ", fmp_api.get_general_news()[0].keys())
-    # print("stock_grades: ", fmp_api.get_stock_grades_individual(ticker)[0].keys())
-    # print("stock_grades_summary: ", fmp_api.get_stock_grades_summary(ticker)[0].keys())
-    # print("ratings: ", fmp_api.get_rating_scores(ticker)[0].keys())
-    # print("price_target_summary: ", fmp_api.get_price_target_summary(ticker)[0].keys())
-    # print("analyst_recommendations: ", fmp_api.get_analyst_recommendations(ticker)[0].keys())
-    # print(fmp_api.get_intraday_prices_for_ticker(ticker)[0]['date'])
-    # print(fmp_api.get_intraday_prices_for_ticker(ticker)[-1]['date'])
-    # print(fmp_api.get_full_quote(ticker))
-    print(fmp_api.get_price_target_summary(ticker))
+    x = (fmp_api.get_stock_grade_news(ticker))
+    print(x[0])
+
 
 
 
