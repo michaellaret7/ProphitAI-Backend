@@ -1,85 +1,77 @@
 from typing import Optional, Sequence
 import numpy as np
 from backend.src.data_models.style_factors_models import QualityFactorMetrics
-from backend.src.repositories.fundamental_data.fundamental_repository import FundamentalDataRepository
+from backend.src.db.core.db_config import MarketSession
+from backend.src.db.core.market_data_models import *
+from sqlalchemy import desc
 
 class QualityFactors:
     def __init__(self, ticker: str):
         self.ticker = ticker
 
-        self.fundamental_repository = FundamentalDataRepository()
-        self.cash_flow_statement = self.fundamental_repository.fetch_cash_flow_statement(self.ticker)
-        self.balance_sheet = self.fundamental_repository.fetch_balance_sheet(self.ticker)
-        self.income_statement = self.fundamental_repository.fetch_income_statement(self.ticker)
-        self.financial_metrics = self.fundamental_repository.fetch_financial_metrics(self.ticker)
-        self.estimates = self.fundamental_repository.fetch_fundamental_estimates(self.ticker)
+        market_session = MarketSession()
+        self.cash_flow_statement = market_session.query(CashFlowStatement).join(Ticker).filter(Ticker.ticker == self.ticker).order_by(desc(CashFlowStatement.date)).all()
+        self.balance_sheet = market_session.query(BalanceSheet).join(Ticker).filter(Ticker.ticker == self.ticker).order_by(desc(BalanceSheet.date)).all()
+        self.income_statement = market_session.query(IncomeStatement).join(Ticker).filter(Ticker.ticker == self.ticker).order_by(desc(IncomeStatement.date)).all()
+        self.financial_metrics = market_session.query(FinancialRatio).join(Ticker).filter(Ticker.ticker == self.ticker).order_by(desc(FinancialRatio.date)).all()
+        self.estimates = market_session.query(AnalystEstimate).join(Ticker).filter(Ticker.ticker == self.ticker).order_by(desc(AnalystEstimate.date)).all()
+        
+        # Get ticker info for market cap
+        self.ticker_info = market_session.query(Ticker).filter(Ticker.ticker == self.ticker).first()
+        market_session.close()
 
         # Simple null-safe data access - Basic financial statement items
-        self.net_income = self.income_statement[0]['net_income'] if self.income_statement else None
-        self.revenue = self.income_statement[0]['revenue'] if self.income_statement else None
-        self.gross_profit = self.income_statement[0]['gross_profit'] if self.income_statement else None
-        self.ebit = self.income_statement[0]['ebit'] if self.income_statement else None
+        self.net_income = float(self.income_statement[0].netIncome) if self.income_statement and self.income_statement[0].netIncome else None
+        self.revenue = float(self.income_statement[0].revenue) if self.income_statement and self.income_statement[0].revenue else None
+        self.gross_profit = float(self.income_statement[0].grossProfit) if self.income_statement and self.income_statement[0].grossProfit else None
         
-        # Handle ebitda calculation safely
-        if self.income_statement and self.cash_flow_statement:
-            operating_income = self.income_statement[0]['operating_income']
-            depreciation = self.cash_flow_statement[0]['depreciation_and_amortization']
-            self.ebitda = (operating_income + depreciation) if operating_income is not None and depreciation is not None else None
-        else:
-            self.ebitda = None
+        # Calculate EBIT from operating income
+        self.ebit = float(self.income_statement[0].operatingIncome) if self.income_statement and self.income_statement[0].operatingIncome else None
+        
+        # EBITDA is already available in income statement
+        self.ebitda = float(self.income_statement[0].ebitda) if self.income_statement and self.income_statement[0].ebitda else None
             
-        self.free_cash_flow = self.cash_flow_statement[0]['free_cash_flow'] if self.cash_flow_statement else None
-        self.operating_cash_flow = self.cash_flow_statement[0]['net_cash_flow_from_operations'] if self.cash_flow_statement else None
-        self.dividends = self.cash_flow_statement[0]['dividends_and_other_cash_distributions'] if self.cash_flow_statement else None
+        self.free_cash_flow = float(self.cash_flow_statement[0].freeCashFlow) if self.cash_flow_statement and self.cash_flow_statement[0].freeCashFlow else None
+        self.operating_cash_flow = float(self.cash_flow_statement[0].netCashProvidedByOperatingActivities) if self.cash_flow_statement and self.cash_flow_statement[0].netCashProvidedByOperatingActivities else None
+        self.dividends = float(self.cash_flow_statement[0].dividendsPaid) if self.cash_flow_statement and self.cash_flow_statement[0].dividendsPaid else None
         # Note: dividends can be negative, representing share buybacks
         
         # Balance sheet items
-        self.total_assets = self.balance_sheet[0]['total_assets'] if self.balance_sheet else None
-        self.avg_total_assets = self.balance_sheet[0]['total_assets'] if self.balance_sheet else None  # Using current as avg not available
-        self.total_equity = self.balance_sheet[0]['shareholders_equity'] if self.balance_sheet else None
-        self.avg_total_equity = self.balance_sheet[0]['shareholders_equity'] if self.balance_sheet else None  # Using current as avg not available
-        self.total_debt = self.balance_sheet[0]['total_debt'] if self.balance_sheet else None
-        self.current_assets = self.balance_sheet[0]['current_assets'] if self.balance_sheet else None
-        self.current_liabilities = self.balance_sheet[0]['current_liabilities'] if self.balance_sheet else None
-        self.inventory = self.balance_sheet[0]['inventory'] if self.balance_sheet else None
-        self.cash_and_equivalents = self.balance_sheet[0]['cash_and_equivalents'] if self.balance_sheet else None
+        self.total_assets = float(self.balance_sheet[0].totalAssets) if self.balance_sheet and self.balance_sheet[0].totalAssets else None
+        self.avg_total_assets = self.total_assets  # Using current as avg not available
+        self.total_equity = float(self.balance_sheet[0].totalStockholdersEquity) if self.balance_sheet and self.balance_sheet[0].totalStockholdersEquity else None
+        self.avg_total_equity = self.total_equity  # Using current as avg not available
+        self.total_debt = float(self.balance_sheet[0].totalDebt) if self.balance_sheet and self.balance_sheet[0].totalDebt else None
+        self.current_assets = float(self.balance_sheet[0].totalCurrentAssets) if self.balance_sheet and self.balance_sheet[0].totalCurrentAssets else None
+        self.current_liabilities = float(self.balance_sheet[0].totalCurrentLiabilities) if self.balance_sheet and self.balance_sheet[0].totalCurrentLiabilities else None
+        self.inventory = float(self.balance_sheet[0].inventory) if self.balance_sheet and self.balance_sheet[0].inventory else None
+        self.cash_and_equivalents = float(self.balance_sheet[0].cashAndCashEquivalents) if self.balance_sheet and self.balance_sheet[0].cashAndCashEquivalents else None
         
-        # Handle working capital calculation safely
-        if self.balance_sheet:
-            current_assets = self.balance_sheet[0]['current_assets']
-            current_liabilities = self.balance_sheet[0]['current_liabilities']
-            self.working_capital = (current_assets - current_liabilities) if current_assets is not None and current_liabilities is not None else None
-        else:
-            self.working_capital = None
+        # Calculate working capital
+        self.working_capital = (self.current_assets - self.current_liabilities) if self.current_assets is not None and self.current_liabilities is not None else None
             
-        self.retained_earnings = self.balance_sheet[0]['retained_earnings'] if self.balance_sheet else None
-        self.total_liabilities = self.balance_sheet[0]['total_liabilities'] if self.balance_sheet else None
-        self.eps = self.financial_metrics[0]['earnings_per_share'] if self.financial_metrics else None
+        self.retained_earnings = float(self.balance_sheet[0].retainedEarnings) if self.balance_sheet and self.balance_sheet[0].retainedEarnings else None
+        self.total_liabilities = float(self.balance_sheet[0].totalLiabilities) if self.balance_sheet and self.balance_sheet[0].totalLiabilities else None
+        self.eps = float(self.income_statement[0].eps) if self.income_statement and self.income_statement[0].eps else None
         
         # Market data
-        self.market_value_equity = float(self.financial_metrics[0]['market_cap']) if self.financial_metrics and self.financial_metrics[0]['market_cap'] is not None else None
-        self.sales = self.income_statement[0]['revenue'] if self.income_statement else None  # Same as revenue
+        self.market_value_equity = float(self.ticker_info.market_cap) if self.ticker_info and self.ticker_info.market_cap else None
+        self.sales = self.revenue  # Same as revenue
         
         # Specialized inputs
-        self.nopat = (self.income_statement[0]['ebit'] * (1 - 0.21)) if self.income_statement and self.income_statement[0]['ebit'] is not None else None  # EBIT * (1 - tax rate)
+        self.nopat = (self.ebit * (1 - 0.21)) if self.ebit is not None else None  # EBIT * (1 - tax rate)
         
-        # Handle invested capital calculation safely
-        if self.balance_sheet:
-            shareholders_equity = self.balance_sheet[0]['shareholders_equity']
-            total_debt = self.balance_sheet[0]['total_debt']
-            cash_and_equivalents = self.balance_sheet[0]['cash_and_equivalents']
-            self.invested_capital = (shareholders_equity + total_debt - cash_and_equivalents) if shareholders_equity is not None and total_debt is not None and cash_and_equivalents is not None else None
-        else:
-            self.invested_capital = None
+        # Calculate invested capital
+        self.invested_capital = (self.total_equity + self.total_debt - self.cash_and_equivalents) if self.total_equity is not None and self.total_debt is not None and self.cash_and_equivalents is not None else None
             
-        self.interest_expense = self.income_statement[0]['interest_expense'] if self.income_statement else None
+        self.interest_expense = float(self.income_statement[0].interestExpense) if self.income_statement and self.income_statement[0].interestExpense else None
         
-        # Time series data (not available in current dataset)
-        self.eps_quarterly_8 = [self.financial_metrics[i]['earnings_per_share'] for i in range(min(8, len(self.financial_metrics)))] if self.financial_metrics and len(self.financial_metrics) >= 1 else []
+        # Time series data - get last 8 quarters of EPS
+        self.eps_quarterly_8 = [float(stmt.eps) for stmt in self.income_statement[:8] if stmt.eps is not None] if self.income_statement else []
         
-        # Analyst estimates (not available in current dataset)
-        self.eps_estimate_now = self.estimates[1]['eps'] if len(self.estimates) > 1 else None
-        self.eps_estimate_3m_ago = self.estimates[0]['eps'] if len(self.estimates) > 0 else None
+        # Analyst estimates
+        self.eps_estimate_now = float(self.estimates[0].epsAvg) if self.estimates and self.estimates[0].epsAvg else None
+        self.eps_estimate_3m_ago = float(self.estimates[1].epsAvg) if len(self.estimates) > 1 and self.estimates[1].epsAvg else None
 
     def return_on_equity(self) -> Optional[float]:
         """
@@ -235,16 +227,16 @@ class QualityFactors:
         
         Lower values indicate more consistent earnings (higher quality).
         """
-        if len(self.eps_quarterly_8) < 6:
+        if len(self.eps_quarterly_8) < 4:  # Reduced from 6 to 4 for minimum data points
             return None
         
         eps_arr = np.array(self.eps_quarterly_8, dtype=float)
         mean_eps = eps_arr.mean()
 
-        if mean_eps == 0:
+        if mean_eps == 0 or np.isnan(mean_eps):
             return None
 
-        return eps_arr.std(ddof=0) / mean_eps
+        return eps_arr.std(ddof=0) / abs(mean_eps)  # Use absolute value to handle negative mean
 
     def eps_revision_3m(self) -> Optional[float]:
         """
@@ -362,7 +354,5 @@ class QualityFactors:
 
 
 if __name__ == "__main__":
-    from backend.src.repositories.fundamental_data.fundamental_repository import FundamentalDataRepository
-
     quality_factors = QualityFactors('AAPL')
     print(quality_factors.calc_all())

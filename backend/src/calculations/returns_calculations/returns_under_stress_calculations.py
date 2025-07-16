@@ -1,12 +1,18 @@
-from backend.src.repositories.market_data.ticker_repository import get_ticker_price_data
+from backend.src.repositories.price_data import get_price_data_hourly
+from datetime import datetime
 
 class CalculateReturnsUnderStress:
     def __init__(self, ticker: str):
-        self.ticker = ticker
+        self.ticker = ticker.upper()  # Ensure uppercase
 
     def _calculate_stress_returns(self, start_date: str, end_date: str):
-        price_data = get_ticker_price_data(self.ticker, start_date, end_date, "1h")
-        spy_data = get_ticker_price_data("SPY", start_date, end_date, "1h")
+        # Convert string dates to datetime objects
+        start_dt = datetime.strptime(start_date, '%Y-%m-%d')
+        end_dt = datetime.strptime(end_date, '%Y-%m-%d')
+        
+        # Fetch hourly price data using the new function
+        price_data = get_price_data_hourly(self.ticker, start_dt, end_dt)
+        spy_data = get_price_data_hourly("SPY", start_dt, end_dt)
         
         if price_data is not None and not price_data.empty and spy_data is not None and not spy_data.empty:
             # Calculate ticker returns and cumulative returns
@@ -19,8 +25,7 @@ class CalculateReturnsUnderStress:
             spy_data['spy_cumulative_returns'] = ((1 + spy_data['spy_returns']/100).cumprod() - 1) * 100
             spy_data['spy_cumulative_returns'] = spy_data['spy_cumulative_returns'].round(2)
             
-            price_data.set_index('date', inplace=True)
-            spy_data.set_index('date', inplace=True)
+            # Data already has datetime index from get_price_data_hourly
             
             # Merge the dataframes on date index
             combined_data = price_data[['ticker_returns', 'ticker_cumulative_returns']].merge(

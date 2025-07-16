@@ -16,13 +16,15 @@ def get_user_information():
     """
     user_data = {
         "user_information": {
-            "age": "28",
-            "net_worth": "$500,000",
-            "investment size(as a percentage of net worth)": "80%",
+            "age": "35",
+            "net_worth": "$5,000,000",
+            "investment size(as a percentage of net worth)": "70%",
             "risk_tolerance": "High",
-            "investment_goals": "Aggressive Capital Growth",
-            "time_horizon": "10 Years",
-            "Overall Description": "I am a young investor with a high risk tolerance and a long investment horizon. I am comfortable with volatility and interested in aggressively growing my wealth through exposure to high-growth sectors such as technology, AI, and emerging markets. I welcome innovative investment vehicles, including leveraged ETFs and cryptocurrencies, as part of a diversified yet growth-oriented portfolio."
+            "investment_goals": "Capital Growth",
+            "time_horizon": "2 Years",
+            "Overall Description": """I am a young investor with a high rick tolerance. I am comfortable with volatility and interested in the technology and automobile sectors.
+            I am looking for a portfolio that will grow aggressively grow my wealth over the next 2 years. I am olso bullish on etf's, I think they provide good 
+            overall exposure and returns. I want you to build me the best portfolio possible for me. The goal is to have a portfolio with smaller drawdowns and higher returns."""
         }
     }
 

@@ -2,9 +2,9 @@
 """
 Complete User Data Models for all tables in the user_data database
 """
-from sqlalchemy import Column, Integer, String, ForeignKey, DateTime, Float, Boolean
+from sqlalchemy import Column, Integer, String, ForeignKey, DateTime, Float, Boolean, Text
 from sqlalchemy.orm import relationship
-from sqlalchemy.dialects.postgresql import UUID
+from sqlalchemy.dialects.postgresql import UUID, JSONB
 import uuid
 from datetime import datetime
 from backend.src.db.core.db_config import UserBase
@@ -38,7 +38,7 @@ class Company(UserBase):
     # Relationships
     user_associations = relationship('CompanyUser', back_populates='company', cascade='all, delete-orphan')
     users = relationship('User', secondary='company_users', viewonly=True)
-    subscriptions = relationship('Subscription', back_populates='company', cascade='all, delete-orphan')
+    # subscriptions = relationship('Subscription', back_populates='company', cascade='all, delete-orphan')
 
 class CompanyUser(UserBase):
     __tablename__ = 'company_users'
@@ -63,17 +63,21 @@ class CompanyUser(UserBase):
 class Portfolio(UserBase):
     __tablename__ = 'portfolios'
     
-    # Composite primary key as specified in the schema
-    name = Column(String, primary_key=True)
-    asset = Column(String, primary_key=True)
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    portfolio_id = Column(UUID(as_uuid=True), nullable=False, index=True)
+    name = Column(String, nullable=False, index=True)
+    ticker = Column(String, nullable=False)
     
     # Additional fields
     sector = Column(String, index=True)
     industry = Column(String, index=True)
     sub_industry = Column(String)
-    allocation = Column(Float)  # Percentage allocation in portfolio
-    market_price = Column(Float)
+    allocation = Column(Float)
     is_current = Column(Boolean, default=True, index=True)
+    
+    # New fields for recommendations
+    supporting_metrics = Column(JSONB, nullable=True)
+    reason_for_rec = Column(Text, nullable=True)
     
     # Additional tracking fields that might be useful
     created_date = Column(DateTime, default=datetime.utcnow)

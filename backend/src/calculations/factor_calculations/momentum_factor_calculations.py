@@ -386,26 +386,42 @@ class MomentumFactors:
 
 
 if __name__ == "__main__":
-    from backend.src.repositories.market_data.equity_price_repository import EquityPriceDataRepository
-    from backend.src.repositories.market_data.etf_price_repository import ETFPriceDataRepository
+    from backend.src.repositories.price_data import get_price_data_daily
     from datetime import datetime, timedelta
     
-    equity_prices = EquityPriceDataRepository()
-    etf_prices = ETFPriceDataRepository()
-
-    equity_data = equity_prices.fetch_equity_price_data('lmt', start_date=datetime.now() - timedelta(days=730), end_date=datetime.now(), interval='1d')
-    price_data = equity_data['close']
-    volume_data = equity_data['volume']
-
-    spy_df = etf_prices.fetch_etf_price_data('spy', start_date=datetime.now() - timedelta(days=730), end_date=datetime.now(), interval='1d')
-    spy_price_data = spy_df['close']
+    # Fetch equity data - use uppercase ticker
+    ticker = 'AAPL'  # Changed to uppercase
+    start_date = datetime.now() - timedelta(days=730)
+    end_date = datetime.now()
     
-    sector_df = etf_prices.fetch_etf_price_data('xlf', start_date=datetime.now() - timedelta(days=730), end_date=datetime.now(), interval='1d')
-    sector_price_data = sector_df['close']
+    print(f"Fetching data for {ticker} from {start_date} to {end_date}")
+    
+    equity_data = get_price_data_daily(ticker, start_date=start_date, end_date=end_date)
+    
+    if equity_data.empty:
+        print(f"Error: No equity data found for '{ticker}'")
+        # Try with lowercase
+        ticker_lower = ticker.lower()
+        print(f"Trying with lowercase: '{ticker_lower}'")
+        equity_data = get_price_data_daily(ticker_lower, start_date=start_date, end_date=end_date)
+        
+    if not equity_data.empty:
+        price_data = equity_data['close']
+        volume_data = equity_data['volume']
+        
+        # Fetch SPY data
+        spy_df = get_price_data_daily('SPY', start_date=start_date, end_date=end_date)
+        spy_price_data = spy_df['close'] if not spy_df.empty else None
+        
+        # Fetch sector ETF data  
+        sector_df = get_price_data_daily('XLF', start_date=start_date, end_date=end_date)
+        sector_price_data = sector_df['close'] if not sector_df.empty else None
 
-    momentum_factors = MomentumFactors(price_data, volume_data, spy_price_data, sector_price_data)
-    mf = momentum_factors.calc_all()
-    print(mf.model_dump())
-    print(type(mf.model_dump()))
+        momentum_factors = MomentumFactors(price_data, volume_data, spy_price_data, sector_price_data)
+        mf = momentum_factors.calc_all()
+        print(mf.model_dump())
+        print(type(mf.model_dump()))
+    else:
+        print("No data found for ticker")
 
 

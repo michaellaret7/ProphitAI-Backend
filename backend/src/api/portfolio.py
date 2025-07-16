@@ -2,17 +2,14 @@ from fastapi import APIRouter, HTTPException, Depends
 from typing import List, Dict, Any, Optional
 from backend.src.utils.database import get_cursor
 import psycopg2
-import hashlib # For generating consistent colors if needed
-from pydantic import BaseModel # Added for Pydantic models
+from pydantic import BaseModel
 import pandas as pd
 from datetime import datetime, timedelta
-from backend.src.utils.financial_calculations import calculate_total_return
-import numpy as np
 from backend.src.auth import get_current_user
-from backend.src.repositories.market_data.equity_price_repository import EquityPriceDataRepository
-from backend.src.repositories.market_data.etf_price_repository import ETFPriceDataRepository
-from backend.src.repositories.portfolio.created_portfolio_repository import UserCreatedPortfolioRepository
-from backend.src.repositories.user.user_portfolio_repository import UserCurrentPortfolioRepository
+from backend.src.repositories.price_data import get_price_data_daily
+from backend.src.db.core.market_data_models import *
+from backend.src.db.core.user_data_models import *
+from backend.src.repositories.portfolio_data import retrieve_portfolio 
 
 router = APIRouter()
 
@@ -115,11 +112,12 @@ async def get_portfolio_allocation(current_user=Depends(get_current_user)):
     """
     
     user_id = current_user.id
+    email = current_user.email
     portfolio_id = "b0914b3f-a203-47e5-b602-af0a28d824f0" # As requested
 
     try:
         # Use the existing function to get portfolio allocations
-        allocations_df = UserCreatedPortfolioRepository().fetch_portfolio_allocations(portfolio_id=portfolio_id, user_id=user_id)
+        allocations_df = retrieve_portfolio(portfolio_id=portfolio_id, email=email)
         
         # The function returns None on DB error, or an empty DataFrame if no records found.
         if allocations_df is None:
@@ -188,9 +186,11 @@ async def get_current_user_holdings(current_user=Depends(get_current_user)):
         HTTPException: 500 error if database query fails or 401 if user is not authenticated.
     """
     user_id = current_user.id 
+    email = current_user.email
+    portfolio_id = "b0914b3f-a203-47e5-b602-af0a28d824f0" # As requested
 
     try:
-        holdings_df = UserCurrentPortfolioRepository().fetch_holdings(user_id=user_id)
+        holdings_df = retrieve_portfolio(portfolio_id=portfolio_id, email=email)
 
         if holdings_df is None:
             raise HTTPException(status_code=500, detail="Database error retrieving portfolio holdings.")
@@ -312,11 +312,10 @@ async def get_portfolio_performance(days: int = 365, current_user=Depends(get_cu
             position = float(position) if position else 0.0
             
             # Get price data for this symbol
-            price_data = EquityPriceDataRepository().fetch_equity_price_data(
+            price_data = get_price_data_daily(
                 ticker=symbol,
                 start_date=start_date,
-                end_date=end_date,
-                interval='1D'
+                end_date=end_date
             )
             
             if price_data is not None and not price_data.empty:
@@ -327,48 +326,42 @@ async def get_portfolio_performance(days: int = 365, current_user=Depends(get_cu
                 portfolio_data.append(price_data)
         
         # Step 3.5: Get SPY price data for comparison
-        spy_data = ETFPriceDataRepository().fetch_etf_price_data(
+        spy_data = get_price_data_daily(
             ticker='SPY',
             start_date=start_date,
-            end_date=end_date,
-            interval='1D'
+            end_date=end_date
         )
         
         # Get additional ETF data
-        qqq_data = ETFPriceDataRepository().fetch_etf_price_data(
+        qqq_data = get_price_data_daily(
             ticker='QQQ',
             start_date=start_date,
-            end_date=end_date,
-            interval='1D'
+            end_date=end_date
         )
         
-        iwm_data = ETFPriceDataRepository().fetch_etf_price_data(
+        iwm_data = get_price_data_daily(
             ticker='IWM',
             start_date=start_date,
-            end_date=end_date,
-            interval='1D'
+            end_date=end_date
         )
         
         # Get additional new ETF data
-        gld_data = ETFPriceDataRepository().fetch_etf_price_data(
+        gld_data = get_price_data_daily(
             ticker='GLD',
             start_date=start_date,
-            end_date=end_date,
-            interval='1D'
+            end_date=end_date
         )
         
-        dbc_data = ETFPriceDataRepository().fetch_etf_price_data(
+        dbc_data = get_price_data_daily(
             ticker='DBC',
             start_date=start_date,
-            end_date=end_date,
-            interval='1D'
+            end_date=end_date
         )
         
-        eem_data = ETFPriceDataRepository().fetch_etf_price_data(
+        eem_data = get_price_data_daily(
             ticker='EEM',
             start_date=start_date,
-            end_date=end_date,
-            interval='1D'
+            end_date=end_date
         )
         
         if not portfolio_data:

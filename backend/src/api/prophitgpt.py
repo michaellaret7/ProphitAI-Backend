@@ -5,19 +5,18 @@ import os
 import json
 from openai import OpenAI
 from backend.src.utils.choose_model_and_client import deepseek_model_and_client, openai_model_and_client, grok_model_and_client, perplexity_model_and_client
-
-from backend.src.prophitai_gpt.functionSchemas.tools import tools
+from backend.src.prophit_gpt.functionSchemas.tools import tools
 from backend.src.utils.formatting import strip_formatting
 from backend.src.utils.ticker_utils import name_to_ticker
-from backend.src.prophitai_gpt.dataRetrievalTools.retrieve_financial_metrics import retrieve_financial_metric
+from backend.src.prophit_gpt.dataRetrievalTools.retrieve_financial_metrics import retrieve_financial_metric
 from backend.src.auth import get_current_user
-from backend.src.repositories.user.user_portfolio_repository import UserCurrentPortfolioRepository
+from backend.src.repositories.portfolio_data import retrieve_portfolio
 
 # ---------------------------------------------------------------------------
 # Configuration for Grok / OpenAI client
 # ---------------------------------------------------------------------------
 
-model, client = deepseek_model_and_client('deepseek-chat')
+model, client = openai_model_and_client()
 
 # ---------------------------------------------------------------------------
 # FastAPI setup
@@ -75,11 +74,14 @@ def _handle_tool_call(tool_call, current_user):
     # get_portfolio_data
     # ------------------------------------------------------------------
     if function_name == "get_portfolio_data":
-        user_id = current_user.id
+        email = current_user.email
+        portfolio_id = "b0914b3f-a203-47e5-b602-af0a28d824f0" # As requested
     
-        portfolio_df = UserCurrentPortfolioRepository().fetch_holdings(
-            user_id=user_id
+        portfolio_df = retrieve_portfolio(
+            portfolio_id=portfolio_id,
+            email=email
         )
+
         if portfolio_df is None:
             result_str = "Error: Portfolio data could not be retrieved."
         elif portfolio_df.empty:

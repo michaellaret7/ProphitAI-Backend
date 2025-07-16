@@ -1,55 +1,65 @@
-from backend.src.repositories.fundamental_data.fundamental_repository import FundamentalDataRepository
 import numpy as np
 from scipy import stats
 from typing import List, Dict
 from backend.src.data_models.style_factors_models import GrowthFactorMetrics
+from backend.src.db.core.db_config import MarketSession
+from backend.src.db.core.market_data_models import *
+from sqlalchemy import desc
 
 class GrowthFactors:
     def __init__(self, ticker: str):
         self.ticker = ticker
 
-        self.fundamental_repository = FundamentalDataRepository()
-        self.cash_flow_statement = self.fundamental_repository.fetch_cash_flow_statement(self.ticker)
-        self.balance_sheet = self.fundamental_repository.fetch_balance_sheet(self.ticker)
-        self.income_statement = self.fundamental_repository.fetch_income_statement(self.ticker)
-        self.financial_metrics = self.fundamental_repository.fetch_financial_metrics(self.ticker)
-        self.estimates = self.fundamental_repository.fetch_fundamental_estimates(self.ticker)
-        
+        market_session = MarketSession()
+        self.cash_flow_statement = market_session.query(CashFlowStatement).join(Ticker).filter(Ticker.ticker == self.ticker).order_by(desc(CashFlowStatement.date)).all()
+        self.balance_sheet = market_session.query(BalanceSheet).join(Ticker).filter(Ticker.ticker == self.ticker).order_by(desc(BalanceSheet.date)).all()
+        self.income_statement = market_session.query(IncomeStatement).join(Ticker).filter(Ticker.ticker == self.ticker).order_by(desc(IncomeStatement.date)).all()
+        self.financial_metrics = market_session.query(FinancialRatio).join(Ticker).filter(Ticker.ticker == self.ticker).order_by(desc(FinancialRatio.date)).all()
+        self.estimates = market_session.query(AnalystEstimate).join(Ticker).filter(Ticker.ticker == self.ticker).order_by(desc(AnalystEstimate.date)).all()
+        market_session.close()
+
         # Simple null-safe data access
-        self.current_eps = self.financial_metrics[0]['earnings_per_share'] if self.financial_metrics else None
-        self.previous_eps = self.financial_metrics[1]['earnings_per_share'] if len(self.financial_metrics) > 1 else None
-        self.beginning_eps = self.financial_metrics[len(self.financial_metrics) - 1]['earnings_per_share'] if self.financial_metrics else None
-        self.years = len(self.financial_metrics)/4 if self.financial_metrics else 0
+        self.current_eps = self.income_statement[0].eps if self.income_statement else None
+        self.previous_eps = self.income_statement[1].eps if len(self.income_statement) > 1 else None
+        self.beginning_eps = self.income_statement[len(self.income_statement) - 1].eps if self.income_statement else None
+        self.years = len(self.income_statement) / 4 if self.income_statement else 0
         
         # Extract revenue data
-        self.current_revenue = self.income_statement[0]['revenue'] if self.income_statement else None
-        self.previous_revenue = self.income_statement[1]['revenue'] if len(self.income_statement) > 1 else None
+        self.current_revenue = self.income_statement[0].revenue if self.income_statement else None
+        self.previous_revenue = self.income_statement[1].revenue if len(self.income_statement) > 1 else None
         
         # Extract all revenue values for sales trend analysis
-        self.revenue_data = [period['revenue'] for period in self.income_statement if period['revenue'] is not None] if self.income_statement else []
+        self.revenue_data = [float(period.revenue) for period in self.income_statement if period.revenue is not None] if self.income_statement else []
         
         # Extract free cash flow data
-        self.current_fcf = self.cash_flow_statement[0]['free_cash_flow'] if self.cash_flow_statement else None
-        self.previous_fcf = self.cash_flow_statement[1]['free_cash_flow'] if len(self.cash_flow_statement) > 1 else None
+        self.current_fcf = self.cash_flow_statement[0].freeCashFlow if self.cash_flow_statement else None
+        self.previous_fcf = self.cash_flow_statement[1].freeCashFlow if len(self.cash_flow_statement) > 1 else None
         
         # Extract PE ratio
-        self.pe_ratio = self.financial_metrics[0]['price_to_earnings_ratio'] if self.financial_metrics else None
+        self.pe_ratio = self.financial_metrics[0].priceEarningsRatio if self.financial_metrics else None
         
         # Extract ROE data
-        self.current_roe = self.financial_metrics[0]['return_on_equity'] if self.financial_metrics else None
-        self.previous_roe = self.financial_metrics[1]['return_on_equity'] if len(self.financial_metrics) > 1 else None
+        self.current_roe = self.financial_metrics[0].returnOnEquity if self.financial_metrics else None
+        self.previous_roe = self.financial_metrics[1].returnOnEquity if len(self.financial_metrics) > 1 else None
         
         # Extract ROIC data
-        self.current_roic = self.financial_metrics[0]['return_on_invested_capital'] if self.financial_metrics else None
-        self.previous_roic = self.financial_metrics[1]['return_on_invested_capital'] if len(self.financial_metrics) > 1 else None
+        self.current_roic = self.financial_metrics[0].returnOnCapitalEmployed if self.financial_metrics else None
+        self.previous_roic = self.financial_metrics[1].returnOnCapitalEmployed if len(self.financial_metrics) > 1 else None
         
         # Extract book value per share data
-        self.current_bvps = self.financial_metrics[0]['book_value_per_share'] if self.financial_metrics else None
-        self.previous_bvps = self.financial_metrics[1]['book_value_per_share'] if len(self.financial_metrics) > 1 else None
-        
+        try:
+            self.current_bvps = float(self.balance_sheet[0].totalStockholdersEquity) / float(self.income_statement[0].weightedAverageShsOut) if self.balance_sheet and self.income_statement and self.income_statement[0].weightedAverageShsOut != 0 else None
+        except (IndexError, TypeError, ZeroDivisionError):
+            self.current_bvps = None
+
+        try:
+            self.previous_bvps = float(self.balance_sheet[1].totalStockholdersEquity) / float(self.income_statement[1].weightedAverageShsOut) if len(self.balance_sheet) > 1 and len(self.income_statement) > 1 and self.income_statement[1].weightedAverageShsOut != 0 else None
+        except (IndexError, TypeError, ZeroDivisionError):
+            self.previous_bvps = None
+
         # Extract operating cash flow data
-        self.current_ocf = self.cash_flow_statement[0]['net_cash_flow_from_operations'] if self.cash_flow_statement else None
-        self.previous_ocf = self.cash_flow_statement[1]['net_cash_flow_from_operations'] if len(self.cash_flow_statement) > 1 else None
+        self.current_ocf = self.cash_flow_statement[0].netCashProvidedByOperatingActivities if self.cash_flow_statement else None
+        self.previous_ocf = self.cash_flow_statement[1].netCashProvidedByOperatingActivities if len(self.cash_flow_statement) > 1 else None
 
         
     def eps_growth_rate(self) -> float:
@@ -226,3 +236,4 @@ class GrowthFactors:
 if __name__ == "__main__":
     growth_factors = GrowthFactors(ticker='AAPL')
     print(growth_factors.calc_all())
+    

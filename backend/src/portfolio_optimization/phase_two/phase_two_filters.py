@@ -1,7 +1,9 @@
 import json
 from datetime import datetime, timedelta
+from backend.src.db.core.db_config import MarketSession
+from backend.src.db.core.market_data_models import Ticker
 from backend.src.utils.determine_etf import is_etf_asset_class
-from backend.src.repositories.market_data.ticker_repository import get_ticker_price_data
+from backend.src.repositories.price_data import get_price_data_daily
 from backend.src.calculations.performance_calculations.ticker_performance_calculations import TickerPerformanceMetrics
 from backend.src.calculations.returns_calculations.ticker_returns_calculations import CalculateTickerReturns
 import numpy as np
@@ -10,20 +12,18 @@ import logging
 
 logger = logging.getLogger(__name__)
 
-lookback_years = 1.5
+lookback_years = 2
 
 class PhaseTwoFilters:
     def __init__(self, asset_class):
         self.asset_class = asset_class
         self.minimum_daily_average_volume = 25_000
         self.is_etf = is_etf_asset_class(self.asset_class)
-        with open('backend/src/data/database/database_schemas.json', 'r') as f:
-            self.database_schemas = json.load(f)
         
         # Pre-fetch market data (SPY) once during initialization
         self.spy_data = self._get_ticker_data('SPY')
         if self.spy_data is not None:
-            spy_calculator = CalculateTickerReturns(self.spy_data)
+            spy_calculator = CalculateTickerReturns(self.spy_data, 'SPY')
             self.market_returns = spy_calculator.calculate_daily_total_returns()
         else:
             self.market_returns = None
@@ -32,16 +32,11 @@ class PhaseTwoFilters:
         end_date = datetime.now()
         start_date = end_date - timedelta(days=365*lookback_years)
         
-        # Convert dates to ISO format strings for caching (hashable)
-        start_date_str = start_date.isoformat()
-        end_date_str = end_date.isoformat()
-        
-        # Use the cached function
-        data = get_ticker_price_data(
+        # Use the new function with datetime objects
+        data = get_price_data_daily(
             ticker=ticker,
-            start_date=start_date_str,
-            end_date=end_date_str,
-            interval="1d"
+            start_date=start_date,
+            end_date=end_date
         )
         
         if data is None:
@@ -159,14 +154,12 @@ class PhaseTwoFilters:
         if self.asset_class == "cash":
             return []
 
-        for sector_data in self.database_schemas.values():
-            if "schemas" in sector_data:
-                for schema_data in sector_data["schemas"].values():
-                    if "tables" in schema_data and self.asset_class in schema_data["tables"]:
-                        return schema_data["tables"][self.asset_class].get("tickers", [])
-        
-        logger.warning(f"No tickers found for asset class: {self.asset_class}")
-        return []
+        session = MarketSession()
+        tickers = session.query(Ticker).filter(Ticker.sector == self.asset_class or Ticker.industry == self.asset_class or Ticker.sub_industry == self.asset_class).all()
+        session.close()
+        tickers = [ticker.ticker for ticker in tickers]
+
+        return tickers
 
     def filter_tickers(self, tickers): # --> filter the tickers based on the daily average volume and the composite score (this is the main function that is called)
         # Dictionary to store tickers with their data
@@ -196,5 +189,6 @@ class PhaseTwoFilters:
 if __name__ == "__main__":
     filters = PhaseTwoFilters("passenger_airlines")
     tickers = filters.get_asset_class_tickers()
+    logger.info(f"Tickers: {tickers}")
     filtered_tickers, tickers_with_data = filters.filter_tickers(tickers)
     logger.info(f"Filtered tickers: {filtered_tickers}")

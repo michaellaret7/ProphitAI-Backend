@@ -10,9 +10,10 @@ import numpy as np
 import math
 from functools import lru_cache
 from backend.src.utils.database import get_default_db_config
-from backend.src.utils.financial_calculations import calculate_max_drawdown, calculate_volatility
-from backend.src.repositories.market_data.equity_price_repository import EquityPriceDataRepository
-from backend.src.repositories.market_data.etf_price_repository import ETFPriceDataRepository
+from backend.src.calculations.factor_calculations.volatility_factor_calculations import VolatilityFactors
+from backend.src.calculations.performance_calculations.ticker_performance_calculations import TickerPerformanceMetrics
+from backend.src.repositories.price_data import get_price_data_hourly
+
 
 
 def get_liquidity_data():
@@ -123,28 +124,26 @@ def get_stock_data(ticker: str, start_date_str: str, end_date_str: str, db_confi
     end_date = datetime.strptime(end_date_str, '%Y-%m-%d').replace(hour=23, minute=59, second=59)
     # years = (end_date - start_date).days / 365.0 # No longer needed
     
-    # Get hourly data using the generic function, providing explicit start and end dates
-    result = EquityPriceDataRepository().fetch_equity_price_data(ticker, start_date=start_date, end_date=end_date, interval='1H')
+    # Get hourly data using the function from price_data.py
+    data_df = get_price_data_hourly(ticker.upper(), start_date, end_date)
     
-    if result is None:
+    if data_df is None or data_df.empty:
         return None
     
-    # Filter the results to only include data within the specified date range
-    if isinstance(result, dict) and ticker.upper() in result:
-        filtered_data = []
-        for data_point in result[ticker.upper()]:
-            if isinstance(data_point['datetime'], datetime):
-                data_datetime = data_point['datetime']
-            else:
-                data_datetime = datetime.fromisoformat(str(data_point['datetime']))
-            
-            # Check if the data point is within the requested date range
-            if start_date <= data_datetime <= end_date:
-                filtered_data.append(data_point)
-        
-        return {ticker.upper(): filtered_data}
+    # Convert DataFrame to the expected format
+    result_data = []
+    for index, row in data_df.iterrows():
+        data_point = {
+            'datetime': index,
+            'open': row['open'],
+            'high': row['high'],
+            'low': row['low'],
+            'close': row['close'],
+            'volume': row['volume']
+        }
+        result_data.append(data_point)
     
-    return result
+    return {ticker.upper(): result_data}
 
 def calculate_stock_metrics(start_date_str: str, end_date_str: str):
     """
@@ -189,14 +188,21 @@ def calculate_stock_metrics(start_date_str: str, end_date_str: str):
 
         df['cum_returns'] = (1 + df['returns']).cumprod()
         
-        # Use utility functions for calculations
-        max_dd = calculate_max_drawdown(df['cum_returns']) 
-        # For annualized_volatility, we need to know the trading periods per year for hourly data
-        # get_annualization_factor from utils can be used if bar_size is known, 
-        # but get_stock_data returns 1-hour increments, so let's assume 252*6.5 for a 6.5 hour trading day.
-        # Or more simply, use the existing math.sqrt(252*24) for hourly data if that's the desired convention.
-        periods_per_year = 252 * 24 # Assuming 24 hours for simplicity, adjust if trading hours are specific
-        annualized_vol = calculate_volatility(df['returns'], annualize=True, trading_days=periods_per_year) 
+        # Use TickerPerformanceMetrics for max drawdown calculation
+        # Convert returns to pandas Series if not already
+        returns_series = pd.Series(df['returns'].values, index=df.index)
+        perf_metrics = TickerPerformanceMetrics(ticker=ticker, returns=returns_series)
+        max_dd = abs(perf_metrics.max_drawdown())  # abs() because it returns negative
+        
+        # Use VolatilityFactors for volatility calculation
+        # Need price series for VolatilityFactors
+        price_series = pd.Series(df['close'].values, index=df['datetime'])
+        vol_factors = VolatilityFactors(price_series)
+        # For hourly data, we need to adjust the annualization
+        periods_per_year = 252 * 24  # Assuming 24 hours for simplicity
+        # Get daily volatility and annualize manually for hourly data
+        daily_vol = vol_factors.daily_return_volatility()
+        annualized_vol = daily_vol * np.sqrt(periods_per_year) if daily_vol else 0
         
         peak_idx = df['cum_returns'].idxmax()
         peak_value = df.loc[peak_idx, 'close']
@@ -228,8 +234,8 @@ def calculate_stock_metrics(start_date_str: str, end_date_str: str):
                         time_to_recover = (recovery_date - trough_date).total_seconds() / 3600  # hours
         
         metrics = {
-            'max_drawdown': max_dd * 100,  # Already a percentage from calculate_max_drawdown
-            'annualized_volatility': annualized_vol * 100, # Already a percentage from calculate_volatility
+            'max_drawdown': max_dd * 100,  # Convert to percentage
+            'annualized_volatility': annualized_vol * 100, # Convert to percentage
             'peak_value': peak_value,
             'peak_date': peak_date.isoformat() if pd.notnull(peak_date) else None,
             'trough_value': trough_value,

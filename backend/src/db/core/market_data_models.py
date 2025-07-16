@@ -42,12 +42,12 @@ class Ticker(MarketBase):
     etf_info = relationship('ETFInfo', back_populates='ticker', uselist=False)
     dividends = relationship('Dividend', back_populates='ticker', lazy='dynamic')
     earnings_transcripts = relationship('EarningsTranscript', back_populates='ticker', lazy='dynamic')
+    fundamental_reports = relationship('FundamentalReport', back_populates='ticker', lazy='dynamic')
     prices = relationship('Price', back_populates='ticker', lazy='dynamic')
     press_releases = relationship('PressRelease', back_populates='ticker', lazy='dynamic')
     stock_news = relationship('StockNews', back_populates='ticker', lazy='dynamic')
     price_target_news = relationship('PriceTargetNews', back_populates='ticker', lazy='dynamic')
     stock_grade_news = relationship('StockGradeNews', back_populates='ticker', lazy='dynamic')
-    general_news = relationship('GeneralNews', back_populates='ticker', lazy='dynamic')
     stock_grades_individual = relationship('StockGradesIndividual', back_populates='ticker', lazy='dynamic')
     stock_grades_summary = relationship('StockGradesSummary', back_populates='ticker', lazy='dynamic')
     rating_scores = relationship('Rating', back_populates='ticker', lazy='dynamic')
@@ -383,6 +383,17 @@ class EarningsTranscript(MarketBase):
     # Relationship
     ticker = relationship('Ticker', back_populates='earnings_transcripts')
 
+class FundamentalReport(MarketBase):
+    __tablename__ = 'fundamental_reports'
+    __table_args__ = {'schema': 'fundamental_data'}
+    
+    ticker_id = Column(UUID(as_uuid=True), ForeignKey('ticker_universe.tickers.id'), primary_key=True, index=True)
+    date = Column(Date, primary_key=True, index=True)
+    content = Column(Text)
+    
+    # Relationship
+    ticker = relationship('Ticker', back_populates='fundamental_reports')
+
 # =============================================================================
 # PRICE DATA SCHEMA
 # =============================================================================
@@ -475,22 +486,6 @@ class StockGradeNews(MarketBase):
     
     # Relationship
     ticker = relationship('Ticker', back_populates='stock_grade_news')
-
-class GeneralNews(MarketBase):
-    __tablename__ = 'general_news'
-    __table_args__ = {'schema': 'news_data'}
-    
-    ticker_id = Column(UUID(as_uuid=True), ForeignKey('ticker_universe.tickers.id'), primary_key=True, index=True)
-    publishedDate = Column(DateTime, index=True)
-    publisher = Column(String)
-    title = Column(String)
-    image = Column(String)
-    site = Column(String)
-    text = Column(Text)
-    url = Column(String(512), primary_key=True)
-    
-    # Relationship
-    ticker = relationship('Ticker', back_populates='general_news')
 
 # =============================================================================
 # GRADES AND RATINGS DATA SCHEMA

@@ -28,7 +28,7 @@ load_dotenv()
 
 model, client = openai_model_and_client()
 
-def optimize(user_id: str, email: str):
+def optimize(email: str):
     """
     Execute Phase One portfolio optimization using LLM with analyst tools.
     
@@ -405,7 +405,7 @@ def optimize(user_id: str, email: str):
             return handle_conversation(messages, tools, remaining_required_tools, round_num + 1, max_rounds)
         
         # THIS IS THE USER PROMPT (first message to LLM)
-        content = build_user_message(user_id=user_id, email=email)
+        content = build_user_message(email=email)
 
         # Write prompts to the output file
         with open(output_filename, "a", encoding="utf-8") as f:

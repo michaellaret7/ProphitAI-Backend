@@ -11,10 +11,10 @@ from PIL import Image
 from pathlib import Path
 from dotenv import load_dotenv
 from backend.src.utils.ticker_utils import name_to_ticker
-from backend.src.prophitai_gpt.functionSchemas.tools import tools
-from backend.src.prophitai_gpt.dataRetrievalTools.retrieve_financial_metrics import retrieve_financial_metric
+from backend.src.prophit_gpt.functionSchemas.tools import tools
+from backend.src.prophit_gpt.dataRetrievalTools.retrieve_financial_metrics import retrieve_financial_metric
 from backend.src.utils.formatting import strip_formatting
-from backend.src.repositories.user.user_portfolio_repository import UserCurrentPortfolioRepository
+from backend.src.repositories.portfolio_data import retrieve_portfolio
 
 load_dotenv()
 
@@ -76,11 +76,11 @@ try:
                     if tool_function_name == "get_portfolio_data":
                         user_name_from_model = args.get('user_name')
                         user_name = "michael@laret.com" # Hardcoded for testing purposes
-
+                        portfolio_id = "b0914b3f-a203-47e5-b602-af0a28d824f0" # Hardcoded for testing purposes
                         if not user_name: # Should not happen with hardcoding, but good for robustness if hardcoding is removed
                             result_str = "Error: 'user_name' was not provided or is empty."
                         else:
-                            portfolio_df = UserCurrentPortfolioRepository().fetch_holdings(email=user_name)
+                            portfolio_df = retrieve_portfolio(portfolio_id=portfolio_id, email=user_name)  
                             if portfolio_df is None:
                                 result_str = "Error: Portfolio data could not be retrieved."
                             elif portfolio_df.empty:

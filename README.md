@@ -104,7 +104,7 @@ ProphitAI/
 │   │   ├── backtest/        # Portfolio backtesting engine
 │   │   ├── data/            # Data management and database interaction
 │   │   ├── portfolio_optimization/ # Core AI portfolio optimization logic
-│   │   ├── prophitai_gpt/   # Conversational AI assistant
+│   │   ├── prophit_gpt/   # Conversational AI assistant
 │   │   └── utils/           # Shared utility functions
 │   └── main.py              # Backend application entrypoint
 ├── frontend/

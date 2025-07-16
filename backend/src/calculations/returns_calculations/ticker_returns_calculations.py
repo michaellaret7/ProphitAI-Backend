@@ -1,14 +1,68 @@
 import pandas as pd
 import numpy as np
-from backend.src.repositories.market_data.equity_price_repository import EquityPriceDataRepository
-from backend.src.repositories.market_data.etf_price_repository import ETFPriceDataRepository
-from backend.src.utils.determine_etf import is_etf_ticker
 from datetime import datetime, timedelta
+from backend.src.db.core.db_config import MarketSession
+from backend.src.db.core.market_data_models import Dividend, Ticker
+from sqlalchemy import desc
 
 class CalculateTickerReturns:
-    def __init__(self, price_data: pd.DataFrame):
-        self.price_data = price_data
-        self.dividends = pd.Series(0.0, index=self.price_data.index)
+    def __init__(self, price_data: pd.DataFrame, ticker: str = None):
+        # Ensure we have a copy to avoid modifying the original
+        self.price_data = price_data.copy()
+        self.ticker = ticker
+        
+        # Ensure price_data has datetime index
+        if not isinstance(self.price_data.index, pd.DatetimeIndex):
+            if 'date' in self.price_data.columns:
+                self.price_data.set_index('date', inplace=True)
+            elif 'datetime' in self.price_data.columns:
+                self.price_data.set_index('datetime', inplace=True)
+        
+        # Ensure index is datetime
+        if not isinstance(self.price_data.index, pd.DatetimeIndex):
+            self.price_data.index = pd.to_datetime(self.price_data.index)
+        
+        self.dividends = self._fetch_dividends()
+    
+    def _fetch_dividends(self):
+        """Fetches dividend data for the ticker from the database and aligns it with price data dates."""
+        if self.price_data.empty or not self.ticker:
+            return pd.Series(0.0, index=self.price_data.index)
+        
+        session = MarketSession()
+        try:
+            # Get date range from price data
+            start_date = self.price_data.index.min().date()
+            end_date = self.price_data.index.max().date()
+            
+            # Query dividends for the ticker within the date range
+            dividends = session.query(Dividend).join(Ticker).filter(
+                Ticker.ticker == self.ticker.upper(),
+                Dividend.date >= start_date,
+                Dividend.date <= end_date
+            ).order_by(Dividend.date).all()
+            
+            # Create a series with dividend amounts aligned to price data dates
+            dividend_series = pd.Series(0.0, index=self.price_data.index)
+            
+            for div in dividends:
+                # Find all dates in price data that match the dividend date
+                mask = self.price_data.index.date == div.date
+                matching_indices = self.price_data.index[mask]
+                
+                if len(matching_indices) > 0:
+                    # Use adjDividend if available, otherwise use dividend
+                    dividend_amount = div.adjDividend if div.adjDividend is not None else div.dividend
+                    # Assign dividend to the first matching date (usually there's only one per day)
+                    dividend_series.loc[matching_indices[0]] = dividend_amount
+            
+            return dividend_series
+            
+        except Exception as e:
+            print(f"Error fetching dividends for {self.ticker}: {e}")
+            return pd.Series(0.0, index=self.price_data.index)
+        finally:
+            session.close()
     
     def calculate_daily_price_returns(self):
         """
@@ -20,7 +74,6 @@ class CalculateTickerReturns:
     def calculate_daily_total_returns(self):
         """
         Calculates the daily total return, which includes both price changes and dividends.
-        NOTE: This currently uses a placeholder for dividends.
         """
         price_returns = self.calculate_daily_price_returns()
         # The dividend yield is calculated based on the previous day's closing price.

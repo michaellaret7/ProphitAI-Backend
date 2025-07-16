@@ -3,7 +3,9 @@ import numpy as np
 import random
 from typing import Optional
 from backend.src.data_models.style_factors_models import ValueFactorMetrics
-from backend.src.repositories.fundamental_data.fundamental_repository import FundamentalDataRepository
+from backend.src.db.core.db_config import MarketSession
+from backend.src.db.core.market_data_models import *
+from sqlalchemy import desc
 from backend.src.utils.ticker_utils import get_most_recent_price
 
 class ValueFactors:
@@ -11,35 +13,46 @@ class ValueFactors:
         self.ticker = ticker
         self.most_recent_price = get_most_recent_price(self.ticker)
 
-        self.fundamental_repository = FundamentalDataRepository()
-        self.cash_flow_statement = self.fundamental_repository.fetch_cash_flow_statement(self.ticker)
-        self.balance_sheet = self.fundamental_repository.fetch_balance_sheet(self.ticker)
-        self.income_statement = self.fundamental_repository.fetch_income_statement(self.ticker)
-        self.financial_metrics = self.fundamental_repository.fetch_financial_metrics(self.ticker)
-        self.estimates = self.fundamental_repository.fetch_fundamental_estimates(self.ticker)
+        market_session = MarketSession()
+        self.cash_flow_statement = market_session.query(CashFlowStatement).join(Ticker).filter(Ticker.ticker == self.ticker).order_by(desc(CashFlowStatement.date)).all()
+        self.balance_sheet = market_session.query(BalanceSheet).join(Ticker).filter(Ticker.ticker == self.ticker).order_by(desc(BalanceSheet.date)).all()
+        self.income_statement = market_session.query(IncomeStatement).join(Ticker).filter(Ticker.ticker == self.ticker).order_by(desc(IncomeStatement.date)).all()
+        self.financial_metrics = market_session.query(FinancialRatio).join(Ticker).filter(Ticker.ticker == self.ticker).order_by(desc(FinancialRatio.date)).all()
+        self.estimates = market_session.query(AnalystEstimate).join(Ticker).filter(Ticker.ticker == self.ticker).order_by(desc(AnalystEstimate.date)).all()
+        market_session.close()
 
         # Simple null-safe data access
-        self.book_value_per_share = self.financial_metrics[0]['book_value_per_share'] if self.financial_metrics else None
-        self.eps_ttm = self.financial_metrics[0]['earnings_per_share'] if self.financial_metrics else None
-        self.eps_forward_next_fy = self.estimates[0]['eps'] if self.estimates else None
-        self.shares_outstanding = self.balance_sheet[0]['outstanding_shares'] if self.balance_sheet else None
-        self.revenue_ttm = self.income_statement[0]['revenue'] if self.income_statement else None
-        self.operating_cash_flow_ttm = self.cash_flow_statement[0]['net_cash_flow_from_operations'] if self.cash_flow_statement else None
-        self.free_cash_flow_ttm = self.cash_flow_statement[0]['free_cash_flow'] if self.cash_flow_statement else None
-        
-        # Handle ebitda_ttm calculation safely
-        if self.income_statement and self.cash_flow_statement:
-            operating_income = self.income_statement[0]['operating_income']
-            depreciation = self.cash_flow_statement[0]['depreciation_and_amortization']
-            self.ebitda_ttm = (operating_income + depreciation) if operating_income is not None and depreciation is not None else None
-        else:
-            self.ebitda_ttm = None
+        # Calculate book value per share
+        try:
+            self.book_value_per_share = float(self.balance_sheet[0].totalStockholdersEquity) / float(self.income_statement[0].weightedAverageShsOut) if self.balance_sheet and self.income_statement and self.income_statement[0].weightedAverageShsOut != 0 else None
+        except (IndexError, TypeError, ZeroDivisionError):
+            self.book_value_per_share = None
             
-        self.ebit_ttm = self.income_statement[0]['ebit'] if self.income_statement else None
-        self.total_debt = self.balance_sheet[0]['total_debt'] if self.balance_sheet else None
-        self.cash_and_equivalents = self.balance_sheet[0]['cash_and_equivalents'] if self.balance_sheet else None
-        self.dividends = self.cash_flow_statement[0]['dividends_and_other_cash_distributions'] if self.cash_flow_statement else None
-        self.eps_growth_5yr = self.financial_metrics[0]['earnings_per_share_growth'] if self.financial_metrics else None 
+        self.eps_ttm = float(self.income_statement[0].eps) if self.income_statement and self.income_statement[0].eps else None
+        self.eps_forward_next_fy = float(self.estimates[0].epsAvg) if self.estimates and self.estimates[0].epsAvg else None
+        self.shares_outstanding = float(self.income_statement[0].weightedAverageShsOut) if self.income_statement and self.income_statement[0].weightedAverageShsOut else None
+        self.revenue_ttm = float(self.income_statement[0].revenue) if self.income_statement and self.income_statement[0].revenue else None
+        self.operating_cash_flow_ttm = float(self.cash_flow_statement[0].netCashProvidedByOperatingActivities) if self.cash_flow_statement and self.cash_flow_statement[0].netCashProvidedByOperatingActivities else None
+        self.free_cash_flow_ttm = float(self.cash_flow_statement[0].freeCashFlow) if self.cash_flow_statement and self.cash_flow_statement[0].freeCashFlow else None
+        
+        # EBITDA is directly available
+        self.ebitda_ttm = float(self.income_statement[0].ebitda) if self.income_statement and self.income_statement[0].ebitda else None
+            
+        self.ebit_ttm = float(self.income_statement[0].operatingIncome) if self.income_statement and self.income_statement[0].operatingIncome else None
+        self.total_debt = float(self.balance_sheet[0].totalDebt) if self.balance_sheet and self.balance_sheet[0].totalDebt else None
+        self.cash_and_equivalents = float(self.balance_sheet[0].cashAndCashEquivalents) if self.balance_sheet and self.balance_sheet[0].cashAndCashEquivalents else None
+        self.dividends = float(self.cash_flow_statement[0].dividendsPaid) if self.cash_flow_statement and self.cash_flow_statement[0].dividendsPaid else None
+        
+        # Calculate 5-year EPS growth if we have enough historical data
+        if len(self.income_statement) >= 20:  # 20 quarters = 5 years
+            current_eps = float(self.income_statement[0].eps) if self.income_statement[0].eps else None
+            five_year_ago_eps = float(self.income_statement[19].eps) if self.income_statement[19].eps else None
+            if current_eps and five_year_ago_eps and five_year_ago_eps > 0:
+                self.eps_growth_5yr = ((current_eps / five_year_ago_eps) ** (1/5) - 1) * 100
+            else:
+                self.eps_growth_5yr = None
+        else:
+            self.eps_growth_5yr = None
     
     def price_to_book(self) -> Optional[float]:
         """
@@ -162,9 +175,12 @@ class ValueFactors:
         """
         Dividend yield
         """
-        if self.most_recent_price is None or self.dividends is None or self.most_recent_price == 0:
+        if self.most_recent_price is None or self.dividends is None or self.shares_outstanding is None or self.most_recent_price == 0 or self.shares_outstanding == 0:
             return None
-        return self.dividends / self.most_recent_price
+        
+        # Dividends are total paid, need to convert to per share
+        dividends_per_share = abs(self.dividends) / self.shares_outstanding  # abs() because dividends are negative in cash flow
+        return dividends_per_share / self.most_recent_price
     
     def peg_ratio(self) -> Optional[float]:
         """

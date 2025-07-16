@@ -5,7 +5,6 @@ import time
 from typing import List, Dict, Any, Callable, Optional, Tuple
 from openai import OpenAI
 from dotenv import load_dotenv
-from backend.src.repositories.market_data.equity_price_repository import EquityPriceDataRepository
 from datetime import datetime, timedelta
 import pandas as pd
 from backend.src.prophit_alts.core.equip_tools import register_tools

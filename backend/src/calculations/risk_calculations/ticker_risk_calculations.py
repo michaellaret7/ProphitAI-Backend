@@ -1,6 +1,6 @@
 import pandas as pd
 import numpy as np
-from backend.src.repositories.market_data.ticker_repository import get_ticker_price_data
+from backend.src.repositories.price_data import get_price_data_daily
 from backend.src.calculations.returns_calculations.ticker_returns_calculations import CalculateTickerReturns
 from backend.src.calculations.returns_calculations.portfolio_returns_calculations import CalculatePortfolioReturns
 from datetime import datetime, timedelta
@@ -15,18 +15,17 @@ class TickerRiskCalculations:
         start_date = datetime.now() - timedelta(days=365)
         end_date = datetime.now()
         # Fetch price data and ensure datetime index
-        raw_data = get_ticker_price_data(
+        raw_data = get_price_data_daily(
             ticker,
-            start_date.isoformat(),
-            end_date.isoformat(),
-            "1d"
+            start_date,
+            end_date
         )
         if raw_data is not None and 'date' in raw_data.columns:
             raw_data['date'] = pd.to_datetime(raw_data['date'])
             raw_data.set_index('date', inplace=True)
 
         self.price_data = raw_data
-        self.returns = CalculateTickerReturns(self.price_data).calculate_daily_total_returns()
+        self.returns = CalculateTickerReturns(self.price_data, ticker).calculate_daily_total_returns()
 
         self.confidence_level = 0.99
         self.trading_days = 252

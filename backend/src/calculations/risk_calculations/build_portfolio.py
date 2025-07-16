@@ -1,6 +1,6 @@
 from backend.src.calculations.risk_calculations.ticker_risk_calculations import TickerRiskCalculations
 from backend.src.calculations.factor_calculations.volatility_factor_calculations import VolatilityFactors
-from backend.src.repositories.market_data.ticker_repository import get_ticker_price_data
+from backend.src.repositories.price_data import get_price_data_daily
 from datetime import datetime, timedelta
 
 class BuildPortfolio:
@@ -21,7 +21,7 @@ class BuildPortfolio:
         print(f"Portfolio value: ${self.portfolio_value:,.2f}\n")
         
         for ticker, ticker_data in self.tickers.items():
-            price_data = get_ticker_price_data(ticker, start_date.isoformat(), end_date.isoformat(), "1d")
+            price_data = get_price_data_daily(ticker, start_date, end_date)
             volatility = VolatilityFactors(price_data['close']).annualized_volatility(lookback_days=252)
             
             position_size = TickerRiskCalculations(ticker).calculate_ticker_position_size(

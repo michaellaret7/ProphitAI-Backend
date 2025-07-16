@@ -50,20 +50,19 @@
 │       │   ├── performance_calculations/
 │       │   │   ├── portfolio_performance_calculations.py
 │       │   │   └── ticker_performance_calculations.py
-│       │   └── returns_calculations/
-│       │       ├── portfolio_returns_calculations.py
-│       │       ├── returns_under_stress_calculations.py
-│       │       └── ticker_returns_calculations.py
+│       │   ├── returns_calculations/
+│       │   │   ├── portfolio_returns_calculations.py
+│       │   │   ├── returns_under_stress_calculations.py
+│       │   │   └── ticker_returns_calculations.py
+│       │   └── risk_calculations/
+│       │       ├── build_portfolio.py
+│       │       ├── portfolio_risk_calculations.py
+│       │       └── ticker_risk_calculations.py
 │       ├── data/
 │       │   ├── __init__.py
 │       │   ├── database/
 │       │   │   ├── database_schemas_prices.json
 │       │   │   └── database_schemas.json
-│       │   ├── fundamental_report/
-│       │   │   ├── __init__.py
-│       │   │   ├── generate_and_store_sector_averages.py
-│       │   │   ├── generate_fundamental_report.py
-│       │   │   └── store_fundamental_report.py
 │       │   ├── user_information.py
 │       │   └── user_portfolio_data/
 │       │       ├── __init__.py
@@ -76,6 +75,21 @@
 │       │   ├── portfolio_models.py
 │       │   ├── style_factors_models.py
 │       │   └── user_models.py
+│       ├── db/
+│       │   ├── core/
+│       │   │   ├── db_build_structure.py
+│       │   │   ├── db_config.py
+│       │   │   ├── market_data_models.py
+│       │   │   ├── pull_fmp_data.py
+│       │   │   ├── schema.json
+│       │   │   └── user_data_models.py
+│       │   ├── db_push.py
+│       │   ├── jobs/
+│       │   │   └── ticker_table.py
+│       │   ├── monitor/
+│       │   │   ├── health_check.py
+│       │   │   └── query_performance_check.py
+│       │   └── transfer_price_data.py
 │       ├── portfolio_optimization/
 │       │   ├── __init__.py
 │       │   ├── runner.py
@@ -107,7 +121,7 @@
 │       │       ├── base_agent_class.py
 │       │       ├── equip_tools.py
 │       │       └── tools.py
-│       ├── prophitai_gpt/
+│       ├── prophit_gpt/
 │       │   ├── gpt.py
 │       │   ├── dataRetrievalTools/
 │       │   │   ├── __init__.py
@@ -118,13 +132,8 @@
 │       │       ├── exitPosition.py
 │       │       └── longOrder.py
 │       ├── repositories/
-│       │   ├── base_repository.py
-│       │   ├── fundamental_data/
-│       │   │   └── fundamental_repository.py
-│       │   ├── market_data/
-│       │   │   ├── equity_price_repository.py
-│       │   │   ├── etf_price_repository.py
-│       │   │   └── ticker_repository.py
+│       │   ├── portfolio_data.py
+│       │   ├── price_data.py
 │       │   ├── portfolio/
 │       │   │   ├── created_portfolio_repository.py
 │       │   │   └── push_created_portfolio_repository.py
@@ -133,17 +142,14 @@
 │       │       └── user_portfolio_repository.py
 │       └── utils/
 │           ├── __init__.py
-│           ├── caching.py
 │           ├── choose_model_and_client.py
 │           ├── database.py
 │           ├── determine_etf.py
 │           ├── file_utils.py
-│           ├── financial_calculations.py
 │           ├── formatting.py
 │           ├── ib_utils.py
 │           ├── logging_config.py
-│           ├── portfolio_analysis.py
-│           ├── push_full_hist_data.py
+│           ├── serialize_output.py
 │           └── ticker_utils.py
 │   └── testing/
 │       ├── All_US_ETFs.xlsx

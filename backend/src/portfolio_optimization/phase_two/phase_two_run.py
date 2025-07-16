@@ -1,7 +1,7 @@
 import json
 import logging
 from datetime import datetime, timedelta
-from backend.src.repositories.market_data.ticker_repository import get_ticker_price_data
+from backend.src.repositories.price_data import get_price_data_daily
 from backend.src.calculations.returns_calculations.ticker_returns_calculations import CalculateTickerReturns
 from backend.src.utils.formatting import round_floats_in_object
 from backend.src.portfolio_optimization.phase_two.phase_two_extract_assets_classes import PhaseTwoExtractAssetClasses
@@ -47,16 +47,11 @@ class PhaseTwo:
         end_date = datetime.now()
         start_date = end_date - timedelta(days=365*self.lookback_years)
         
-        # Convert dates to ISO format strings for caching (hashable)
-        start_date_str = start_date.isoformat()
-        end_date_str = end_date.isoformat()
-        
-        # Use the cached function
-        data = get_ticker_price_data(
+        # Use the new function with datetime objects
+        data = get_price_data_daily(
             ticker=ticker,
-            start_date=start_date_str,
-            end_date=end_date_str,
-            interval="1d"
+            start_date=start_date,
+            end_date=end_date
         )
         
         return data
@@ -73,7 +68,7 @@ class PhaseTwo:
         # Pre-calculate SPY returns once
         spy_returns = None
         if spy_data is not None:
-            spy_returns_calc = CalculateTickerReturns(spy_data)
+            spy_returns_calc = CalculateTickerReturns(spy_data, 'SPY')
             spy_returns = spy_returns_calc.calculate_daily_total_returns()
 
         filtered_tickers = {}
@@ -92,7 +87,7 @@ class PhaseTwo:
                 phase_two_performance_metrics = PhaseTwoPerformanceData(ticker)
 
                 # Pass pre-fetched data to avoid duplicate fetches
-                momentum_metrics, volatility_metrics, annualized_total_return, holding_period_return, performance_metrics = phase_two_performance_metrics.calculate_performance_metrics_and_factors(
+                performance_data = phase_two_performance_metrics.calculate_performance_metrics_and_factors(
                     equity_data=ticker_data,
                     spy_data=spy_data,
                     spy_returns=spy_returns,
@@ -100,22 +95,25 @@ class PhaseTwo:
                 )
                 fundamental_data = phase_two_performance_metrics.get_fundamental_metrics()
 
-                logger.debug(f"Momentum metrics for {ticker}: {momentum_metrics}")
-                logger.debug(f"Volatility metrics for {ticker}: {volatility_metrics}, {annualized_total_return}, {holding_period_return}")
-                logger.debug(f"Performance metrics for {ticker}: {performance_metrics}")
+                logger.debug(f"Momentum metrics for {ticker}: {performance_data['momentum_factors']}")
+                logger.debug(f"Volatility metrics for {ticker}: {performance_data['volatility_factors']}")
+                logger.debug(f"Returns for {ticker}: {performance_data['returns']}")
+                logger.debug(f"Performance metrics for {ticker}: {performance_data['performance_metrics']}")
                 logger.debug(f"Fundamental estimates for {ticker}: {fundamental_data['fundamental_estimates']}")
                 logger.debug(f"Fundamental report for {ticker}: {fundamental_data['fundamental_report']}")
 
                 ticker_dict.append({
                     "ticker": ticker,
-                    "momentum_metrics": momentum_metrics,
-                    "volatility_metrics": volatility_metrics,
-                    "annualized_total_return": annualized_total_return,
-                    "holding_period_return": holding_period_return,
-                    "performance_metrics": performance_metrics,
+                    "momentum_metrics": performance_data['momentum_factors'],
+                    "volatility_metrics": performance_data['volatility_factors'],
+                    "annualized_total_return": performance_data['returns']['annualized_total_return'],
+                    "holding_period_return": performance_data['returns']['holding_period_return'],
+                    "performance_metrics": performance_data['performance_metrics'],
                     "fundamental_estimates": fundamental_data['fundamental_estimates'],
-                    "fundamental_report": fundamental_data['fundamental_report']
+                    "fundamental_report": fundamental_data['fundamental_report'],
+                    "analyst_recommendations": fundamental_data['analyst_recommendations']
                 })
+
             
             filtered_tickers[asset_class] = {
                 "allocation": allocation,

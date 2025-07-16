@@ -1,4 +1,4 @@
-from backend.src.repositories.market_data.ticker_repository import get_ticker_price_data
+from backend.src.repositories.price_data import get_price_data_daily
 from datetime import datetime, timedelta
 from pandas import DataFrame
 import pandas as pd
@@ -9,7 +9,6 @@ from backend.src.calculations.factor_calculations.volatility_factor_calculations
 from backend.src.calculations.factor_calculations.growth_factor_calculations import GrowthFactors
 from backend.src.calculations.factor_calculations.value_factor_calculations import ValueFactors
 from backend.src.calculations.factor_calculations.quality_factor_calculations import QualityFactors
-from backend.src.repositories.fundamental_data.fundamental_repository import FundamentalDataRepository
 from backend.src.utils.choose_model_and_client import perplexity_model_and_client
 
 class ProphitAltsDataWrapper:
@@ -29,13 +28,13 @@ class ProphitAltsDataWrapper:
         start_date_dt = datetime.now() - timedelta(days=365*2)
         end_date_dt = datetime.now()
         
-        # Convert datetime objects to ISO format strings for the cached_ticker_repository
-        self.start_date = start_date_dt.strftime('%Y-%m-%d')
-        self.end_date = end_date_dt.strftime('%Y-%m-%d')
+        # Store datetime objects
+        self.start_date = start_date_dt
+        self.end_date = end_date_dt
 
-        self.price_data = get_ticker_price_data(self.ticker, start_date=self.start_date, end_date=self.end_date, interval="1d")
-        self.spy_data = get_ticker_price_data("spy", start_date=self.start_date, end_date=self.end_date, interval="1d")
-        self.sector_data = get_ticker_price_data("xlf", start_date=self.start_date, end_date=self.end_date, interval="1d") # --> THIS IS GOING TO CAUSE A PROBLEM, GET ACTUAL SECTOR DATA
+        self.price_data = get_price_data_daily(self.ticker, start_date=start_date_dt, end_date=end_date_dt)
+        self.spy_data = get_price_data_daily("spy", start_date=start_date_dt, end_date=end_date_dt)
+        self.sector_data = get_price_data_daily("xlf", start_date=start_date_dt, end_date=end_date_dt) # --> THIS IS GOING TO CAUSE A PROBLEM, GET ACTUAL SECTOR DATA
 
     def retrieve_returns(self):
         if self.price_data is None or self.price_data.empty:
@@ -132,9 +131,6 @@ class ProphitAltsDataWrapper:
             "growth_factors": GrowthFactors(self.ticker).calc_all().model_dump(),
             "value_factors": ValueFactors(self.ticker).calc_all().model_dump(),
             "quality_factors": QualityFactors(self.ticker).calc_all().model_dump(),
-
-            # "financial_ratios": FundamentalDataRepository().fetch_financial_metrics(self.ticker),
-            # "fundamental_estimates": FundamentalDataRepository().fetch_fundamental_estimates(self.ticker)
         }
         
         return data

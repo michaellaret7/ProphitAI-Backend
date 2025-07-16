@@ -15,7 +15,6 @@ import psycopg2
 import pandas as pd
 import re
 from dotenv import load_dotenv
-from backend.src.utils.file_utils import load_schema_data
 from backend.src.utils.database import get_cursor, execute_query, get_default_db_config, get_single_value
 from typing import Optional
 
@@ -28,7 +27,7 @@ client = OpenAI(api_key=OpenAI_API_KEY)
 perplexity_model = os.environ.get("PERPLEXITY_MODEL")
 
 # Define date as a global variable
-date = "2025_05_28"  # Set a default date
+date = "2025_07_15"  # Set a default date
 
 def update_research_date_to_latest():
     """

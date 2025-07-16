@@ -149,7 +149,9 @@ class UpdateTickerTable:
             session.close()
 
 
-
+if __name__ == "__main__":
+    update_ticker_table = UpdateTickerTable()
+    update_ticker_table.run_update_parallel()
 
 
 

@@ -281,6 +281,11 @@
           "year",
           "date",
           "content"
+        ],
+        "fundamental_reports (table)": [
+          "ticker_id",
+          "date",
+          "content"
         ]
       },
       "price_data (schema)": {
@@ -340,16 +345,6 @@
           "gradingCompany",
           "action",
           "priceWhenPosted"
-        ],
-        "general_news (table)": [
-          "ticker_id",
-          "publishedDate",
-          "publisher",
-          "title",
-          "image",
-          "site",
-          "text",
-          "url"
         ]
       },
       "grades_and_ratings_data (schema)": {
@@ -435,14 +430,21 @@
         "company_id"
       ],
       "portfolios": [
+        "id (integer)",
+        "portfolio_id (uuid)",
         "name",
-        "asset",
+        "ticker",
         "sector",
         "industry",
         "sub_industry",
         "allocation",
-        "market_price",
-        "is_current"
+        "is_current",
+        "supporting_metrics (jsonb)",
+        "reason_for_rec (text)",
+        "created_date",
+        "updated_date",
+        "company_id (uuid foreign key)",
+        "user_id (uuid foreign key)"
       ],
       "subscriptions": []
     }

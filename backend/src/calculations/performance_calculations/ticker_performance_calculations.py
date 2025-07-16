@@ -1,4 +1,4 @@
-from backend.src.repositories.market_data.ticker_repository import get_ticker_price_data
+from backend.src.repositories.price_data import get_price_data_daily
 from datetime import datetime, timedelta
 from backend.src.calculations.returns_calculations.ticker_returns_calculations import CalculateTickerReturns
 import numpy as np
@@ -31,7 +31,7 @@ class TickerPerformanceMetrics:
         else:
             # Get SPY data for market returns
             spy_data = self._get_ticker_data('SPY')
-            if spy_data is not None:
+            if spy_data is not None and not spy_data.empty:
                 spy_calculator = CalculateTickerReturns(spy_data)
                 self.market_returns = spy_calculator.calculate_daily_total_returns()
                 self.benchmark_returns = self.market_returns  # Use SPY as default benchmark
@@ -43,19 +43,14 @@ class TickerPerformanceMetrics:
         end_date = datetime.now()
         start_date = end_date - timedelta(days=365*lookback_years)
         
-        # Convert dates to ISO format strings for caching (hashable)
-        start_date_str = start_date.isoformat()
-        end_date_str = end_date.isoformat()
-        
-        # Use the cached function
-        data = get_ticker_price_data(
+        # Use the function from price_data.py
+        data = get_price_data_daily(
             ticker=ticker,
-            start_date=start_date_str,
-            end_date=end_date_str,
-            interval="1d"
+            start_date=start_date,
+            end_date=end_date
         )
         
-        if data is None:
+        if data is None or data.empty:
             return None
 
         return data
@@ -230,8 +225,8 @@ class TickerPerformanceMetrics:
             raise ValueError("Benchmark returns required for upside capture calculation")
 
         min_len = min(len(self.returns), len(self.benchmark_returns))
-        returns = self.returns[:min_len]
-        benchmark_returns = self.benchmark_returns[:min_len]
+        returns = self.returns[:min_len].reset_index(drop=True)
+        benchmark_returns = self.benchmark_returns[:min_len].reset_index(drop=True)
 
         positive_periods = benchmark_returns > 0
         if not np.any(positive_periods):
@@ -254,8 +249,8 @@ class TickerPerformanceMetrics:
             raise ValueError("Benchmark returns required for downside capture calculation")
 
         min_len = min(len(self.returns), len(self.benchmark_returns))
-        returns = self.returns[:min_len]
-        benchmark_returns = self.benchmark_returns[:min_len]
+        returns = self.returns[:min_len].reset_index(drop=True)
+        benchmark_returns = self.benchmark_returns[:min_len].reset_index(drop=True)
 
         negative_periods = benchmark_returns < 0
         if not np.any(negative_periods):
@@ -352,7 +347,7 @@ class TickerPerformanceMetrics:
 
 if __name__ == "__main__":
     # Test the performance metrics
-    ticker = 'nvda'
+    ticker = 'NVDA'  # Use uppercase
     print(f"\nPerformance Metrics for {ticker}")
     print("=" * 50)
     

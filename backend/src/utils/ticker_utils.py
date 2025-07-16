@@ -4,7 +4,8 @@ from openai import OpenAI
 import yfinance as yf
 from dotenv import load_dotenv
 from backend.src.utils.choose_model_and_client import openai_model_and_client
-from backend.src.utils.determine_etf import is_etf_ticker
+from backend.src.db.core.db_config import MarketSession
+from backend.src.db.core.market_data_models import *
 
 # Load environment variables from .env file
 load_dotenv()
@@ -63,22 +64,11 @@ def name_to_ticker(company_name):
 
 def get_most_recent_price(ticker):
     """Get just the most recent close price for a ticker"""
+
+    session = MarketSession()
+
+    price = session.query(Ticker).filter(Ticker.ticker == ticker).first()
+    price = price.price
     
-    # Import inside function to avoid circular import
-    from backend.src.repositories.market_data.etf_price_repository import ETFPriceDataRepository
-    from backend.src.repositories.market_data.equity_price_repository import EquityPriceDataRepository
-    
-    # Use last 7 days to ensure we catch the most recent trading day
-    end_date = datetime.now()
-    start_date = end_date - timedelta(days=7)
-    
-    if is_etf_ticker(ticker):
-        etf_data_repo = ETFPriceDataRepository()
-        data = etf_data_repo.fetch_etf_price_data(ticker, start_date=start_date, end_date=end_date, interval="1d")
-    else:
-        equity_data_repo = EquityPriceDataRepository()
-        data = equity_data_repo.fetch_equity_price_data(ticker, start_date=start_date, end_date=end_date, interval="1d")
-    
-    if not data.empty:
-        return data['close'].iloc[-1]
-    return None
+    session.close()
+    return price

@@ -154,7 +154,7 @@ def check_index_usage(table_name, schema_name, session):
 
 if __name__ == "__main__":
     from backend.src.db.core.db_config import MarketSession
-    from backend.src.db.core.market_data_models import Price, Ticker
+    from backend.src.db.core.market_data_models import Price, Ticker, FinancialRatio
     
     session = MarketSession()
     
@@ -162,15 +162,21 @@ if __name__ == "__main__":
     price_query = session.query(Price).join(Ticker).filter(
         Ticker.ticker == 'SSB'
     )
+
+    fundamental_query = session.query(FinancialRatio).join(Ticker).filter(
+        Ticker.ticker == 'SSB'
+    )
+
+    query = price_query
     
     # --- Example 1: Analyze the execution plan ---
     # This shows HOW the database will run the query.
-    analyze_query_performance(price_query, session)
+    analyze_query_performance(query, session)
     
     # --- Example 2: Time the query execution ---
     # This shows HOW FAST the query runs over several iterations.
     # The function itself handles executing the query.
-    time_query(price_query, session, iterations=3)
+    time_query(query, session, iterations=3)
     
     # --- Example 3: Check index usage on relevant tables ---
     # This helps you see if your indexes are effective.

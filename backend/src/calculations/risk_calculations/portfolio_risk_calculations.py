@@ -3,7 +3,7 @@ from scipy import stats
 from typing import Dict
 from datetime import datetime, timedelta
 import pandas as pd
-from backend.src.repositories.market_data.ticker_repository import get_ticker_price_data
+from backend.src.repositories.price_data import get_price_data_daily
 from backend.src.calculations.returns_calculations.ticker_returns_calculations import CalculateTickerReturns
 
 class PortfolioRiskCalculations:
@@ -57,11 +57,10 @@ class PortfolioRiskCalculations:
         print("Fetching price data and calculating returns...")
         for ticker in self.tickers:
             # Fetch price data
-            price_data = get_ticker_price_data(
+            price_data = get_price_data_daily(
                 ticker,
-                start_date.isoformat(),
-                end_date.isoformat(),
-                "1d"
+                start_date,
+                end_date
             )
             
             if price_data is not None and not price_data.empty:
@@ -71,7 +70,7 @@ class PortfolioRiskCalculations:
                     price_data.set_index('date', inplace=True)
                 
                 # Calculate returns
-                ticker_calc = CalculateTickerReturns(price_data)
+                ticker_calc = CalculateTickerReturns(price_data, ticker)
                 daily_returns = ticker_calc.calculate_daily_price_returns()
                 
                 returns_dict[ticker] = daily_returns

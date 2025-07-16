@@ -340,52 +340,33 @@ class VolatilityFactors:
 
 
 if __name__ == "__main__":
-    from backend.src.repositories.market_data.equity_price_repository import EquityPriceDataRepository
-    from backend.src.repositories.market_data.etf_price_repository import ETFPriceDataRepository
-    from backend.src.utils.determine_etf import is_etf_ticker
+    from backend.src.repositories.price_data import get_price_data_daily
     from datetime import datetime, timedelta
     
     print("Testing VolatilityFactors with sample data...")
     print("=" * 60)
     
-    # Initialize repositories
-    equity_prices = EquityPriceDataRepository()
-    etf_prices = ETFPriceDataRepository()
+    ticker = 'MSFT'  # Use uppercase
+    start_date = datetime.now() - timedelta(days=500)
+    end_date = datetime.now()
 
-    ticker = 'msft'
-
-    if is_etf_ticker(ticker):
-        etf_data = etf_prices.fetch_etf_price_data(
-            ticker, 
-            start_date=datetime.now() - timedelta(days=500), 
-            end_date=datetime.now(), 
-            interval='1d'
-        )
-        price_data = etf_data['close']
+    # Fetch price data using the new function
+    ticker_data = get_price_data_daily(ticker, start_date=start_date, end_date=end_date)
+    
+    if ticker_data.empty:
+        print(f"No data found for {ticker}")
     else:
-        equity_data = equity_prices.fetch_equity_price_data(
-            ticker, 
-            start_date=datetime.now() - timedelta(days=500), 
-            end_date=datetime.now(), 
-            interval='1d'
-        )
-        price_data = equity_data['close']
+        price_data = ticker_data['close']
         
-
-    # Fetch SPY data for beta calculation
-    spy_df = etf_prices.fetch_etf_price_data(
-        'spy', 
-        start_date=datetime.now() - timedelta(days=500), 
-        end_date=datetime.now(), 
-        interval='1d'
-    )
-    spy_price_data = spy_df['close']
-    
-    # Initialize VolatilityFactors
-    volatility_factors = VolatilityFactors(price_data, spy_price_data)
-    
-    # Calculate all metrics
-    all_metrics = volatility_factors.calc_all()
-    print(all_metrics)
+        # Fetch SPY data for beta calculation
+        spy_df = get_price_data_daily('SPY', start_date=start_date, end_date=end_date)
+        spy_price_data = spy_df['close'] if not spy_df.empty else None
+        
+        # Initialize VolatilityFactors
+        volatility_factors = VolatilityFactors(price_data, spy_price_data)
+        
+        # Calculate all metrics
+        all_metrics = volatility_factors.calc_all()
+        print(all_metrics)
     
 
