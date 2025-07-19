@@ -5,6 +5,8 @@ from backend.src.calculations.returns_calculations.ticker_returns_calculations i
 from datetime import datetime, timedelta
 from typing import Dict
 from concurrent.futures import ThreadPoolExecutor, as_completed
+import matplotlib.pyplot as plt
+import matplotlib.dates as mdates
 
 class CalculatePortfolioReturns:
     def __init__(self, tickers_weights: Dict[str, float], start_date: str, end_date: str):
@@ -148,22 +150,97 @@ class CalculatePortfolioReturns:
         :return: The real return as a decimal.
         """
         return (1 + nominal_return) / (1 + inflation_rate) - 1
+    
+    def plot_portfolio_performance(self, save_path: str = None):
+        """
+        Creates a comprehensive plot of portfolio performance including daily returns and cumulative returns.
+        
+        :param save_path: Optional path to save the plot. If None, displays the plot.
+        """
+        # Get daily returns
+        daily_returns = self.calculate_daily_total_returns()
+        
+        if daily_returns.empty:
+            print("No data available for plotting")
+            return
+        
+        # Calculate cumulative returns
+        cumulative_returns = (1 + daily_returns).cumprod() - 1
+        
+        # Create figure with subplots
+        fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(12, 10))
+        
+        # Plot 1: Cumulative Returns
+        ax1.plot(cumulative_returns.index, cumulative_returns * 100, 
+                linewidth=2, color='#2E86AB', label='Cumulative Returns')
+        ax1.set_title('Portfolio Cumulative Returns', fontsize=14, fontweight='bold')
+        ax1.set_ylabel('Cumulative Return (%)', fontsize=12)
+        ax1.grid(True, alpha=0.3)
+        ax1.legend()
+        
+        # Format x-axis dates
+        ax1.xaxis.set_major_formatter(mdates.DateFormatter('%Y-%m'))
+        ax1.xaxis.set_major_locator(mdates.MonthLocator(interval=3))
+        plt.setp(ax1.xaxis.get_majorticklabels(), rotation=45)
+        
+        # Plot 2: Daily Returns
+        ax2.plot(daily_returns.index, daily_returns * 100, 
+                linewidth=1, color='#A23B72', alpha=0.7, label='Daily Returns')
+        ax2.axhline(y=0, color='black', linestyle='-', alpha=0.3)
+        ax2.set_title('Portfolio Daily Returns', fontsize=14, fontweight='bold')
+        ax2.set_ylabel('Daily Return (%)', fontsize=12)
+        ax2.set_xlabel('Date', fontsize=12)
+        ax2.grid(True, alpha=0.3)
+        ax2.legend()
+        
+        # Format x-axis dates
+        ax2.xaxis.set_major_formatter(mdates.DateFormatter('%Y-%m'))
+        ax2.xaxis.set_major_locator(mdates.MonthLocator(interval=3))
+        plt.setp(ax2.xaxis.get_majorticklabels(), rotation=45)
+        
+        # Add performance metrics as text
+        total_return = round(self.calculate_annualized_total_return() * 100, 2)
+        holding_return = round(self.calculate_holding_period_return() * 100, 2)
+        real_return = round(self.calculate_real_return(self.calculate_annualized_total_return(), 0.02) * 100, 2)
+        
+        metrics_text = f"""Performance Metrics:
+        Annualized Total Return: {total_return}%
+        Holding Period Return: {holding_return}%
+        Real Return (adj. for 2% inflation): {real_return}%"""
+        
+        fig.text(0.02, 0.02, metrics_text, fontsize=10, 
+                bbox=dict(boxstyle="round,pad=0.3", facecolor="lightgray", alpha=0.7))
+        
+        plt.tight_layout()
+        plt.subplots_adjust(bottom=0.15)
+        
+        if save_path:
+            plt.savefig(save_path, dpi=300, bbox_inches='tight')
+            print(f"Plot saved to {save_path}")
+        else:
+            plt.show()
 
 if __name__ == "__main__":
     # Example usage
-    tickers_weights = {
-        "xlf": 0.2,
-        "spy": 0.2,
-        "qqq": 0.2,
-        "iwm": 0.1,
-        "nvda": 0.3,
-        "ba": -0.2,
-        "mrna": -0.2,
-        "alb": -0.2
-    }
+    from backend.src.db.core.db_config import ProphitAltsSession
+    from backend.src.db.core.prophit_alts_models import FundInitialPosition, PositionType
+
+    session = ProphitAltsSession()
+    positions = session.query(FundInitialPosition).filter(FundInitialPosition.fund_name == "consumer_staples_fund").all()
+    tickers_weights = {}
+
+    for position in positions:
+        if position.position == PositionType.SHORT:
+            tickers_weights[position.ticker_name] = position.risk_allocation * -1
+        else:
+            tickers_weights[position.ticker_name] = position.risk_allocation
+    
+    print(sum(tickers_weights.values()))
+
+    session.close()
     
     end_date = datetime.now()
-    start_date = end_date - timedelta(days=365*2)
+    start_date = end_date - timedelta(days=365*4)
     
     portfolio_calculator = CalculatePortfolioReturns(
         tickers_weights=tickers_weights,
@@ -171,10 +248,6 @@ if __name__ == "__main__":
         end_date=end_date.strftime('%Y-%m-%d')
     )
 
-    print(portfolio_calculator.calculate_daily_total_returns().head())
-    print(portfolio_calculator.calculate_daily_price_returns().head())
-    print(portfolio_calculator.calculate_annualized_total_return())
-    print(portfolio_calculator.calculate_annualized_price_return())
-    print(portfolio_calculator.calculate_holding_period_return())
-    print(portfolio_calculator.calculate_real_return(portfolio_calculator.calculate_annualized_total_return(), 0.02))
+    # Create and show portfolio performance plot
+    portfolio_calculator.plot_portfolio_performance()
 

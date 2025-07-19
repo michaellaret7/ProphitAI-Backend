@@ -6,6 +6,7 @@ from dotenv import load_dotenv
 from backend.src.utils.choose_model_and_client import openai_model_and_client
 from backend.src.db.core.db_config import MarketSession
 from backend.src.db.core.market_data_models import *
+from backend.src.utils.serialize_output import serialize_sqlalchemy_obj
 
 # Load environment variables from .env file
 load_dotenv()
@@ -64,7 +65,7 @@ def name_to_ticker(company_name):
 
 def get_most_recent_price(ticker):
     """Get just the most recent close price for a ticker"""
-
+    ticker = ticker.upper()
     session = MarketSession()
 
     price = session.query(Ticker).filter(Ticker.ticker == ticker).first()
@@ -72,3 +73,21 @@ def get_most_recent_price(ticker):
     
     session.close()
     return price
+
+def get_eligible_tickers(industry: str, market_cap: int, price: int = None):
+   ticker_list = []
+
+   session = MarketSession()
+   if price is None:
+      tickers = session.query(Ticker).filter(Ticker.industry == industry, Ticker.market_cap > market_cap).all()
+   else:
+      tickers = session.query(Ticker).filter(Ticker.industry == industry, Ticker.market_cap > market_cap, Ticker.price > price).all()
+      
+   tickers = [serialize_sqlalchemy_obj(ticker) for ticker in tickers]
+
+   for ticker in tickers:
+      ticker_list.append(ticker['ticker'])
+
+   session.close()
+
+   return ticker_list

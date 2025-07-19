@@ -1,24 +1,14 @@
 ---
 alwaysApply: true
 ---
-- You MUST follow the DRY ("Don't Repeat Yourself") principle when programming. If you do not follow this closely there will be sever consequences 
-- You must write the most modular, clean, clear, simple and maintainable code but have it be as effective and efficient as possible 
-- Do NOT do anything beyond/more than what I specified in my query to you 
-- Ask questions back to me if you are confused about something and need more clarification 
-- Do not overcomplicate the approach 
-- ALWAYS read through the necessary and code before making any changes or returning a response, you should maximize your context before doing anything 
-- You are not under any circumstances allowed to create files or folders unless I explicitly tell you to create a file (there will be serious consequences if violated)
-- Use the Web if you need to at any point (I encourage this)
-- You MAY NOT run commands in your own command line, If you want to test the results of something I will run it in my own terminal and show you the results 
-- Do not create a new function unless its ABSOLUTELY imperative to the fixing solution
-- If you need to retrieve price data use backend/src/repositories/price_data.py and for portfolio data use backend/src/repositories/portfolio_data.py
-- You are NEVER allowed to make any git commands inside of the chat command line UNLESS I explicitly tell you its ok
-
-
-
-
-
-
-
-
-
+a. You MUST follow the DRY ("Don't Repeat Yourself") principle when coding. If you do not follow this closely there will be sever consequences 
+b. You must write the most modular, clean, clear, simple maintainable, and resuseable code possible while being as effective and efficient as possible 
+c. NEVER do anything beyond/more than what I specified in my query to you 
+d. ALWAYS ask questions back to me if you are confused about something and need more clarification 
+e. NEVER overcomplicate the approach, the simpler the code the better
+f. ALWAYS read through the necessary files before making any changes or returning a response, you should maximize your context before doing anything 
+g. You are never allowed, under any curcumstances, to create files or folders unless I explicitly tell you (there will be serious consequences if violated)
+h. Use the @Web if you need to at any point (I strongly encourage this)
+i. You MAY NOT run commands in your own terminal, If you want to test the results of something I will run it on my terminal and show you the results 
+j. If you need to retrieve price data use backend/src/repositories/price_data.py and for portfolio data use backend/src/repositories/portfolio_data.py
+k. You are NEVER allowed to make any git commands inside of your own terminal

@@ -447,6 +447,86 @@
         "user_id (uuid foreign key)"
       ],
       "subscriptions": []
+    },
+    "prophit_alts (database)": {
+      "prophit_alts_funds (schema)": {
+        "funds (table)": [
+          "id (uuid, primary key)",
+          "fund_name (string, unique)",
+          "strategy (string)",
+          "unrealized_pnl (numeric, nullable)",
+          "alpha (float, nullable)",
+          "beta (float, nullable)"
+        ],
+        "trades (table)": [
+          "id (uuid, primary key)",
+          "fund_id (uuid, foreign key references prophit_alts_funds.funds.id)",
+          "ticker_id (uuid, references market_data.ticker_universe.tickers.id)",
+          "action (string)",
+          "dollar_amount (numeric)",
+          "datetime (datetime)",
+          "industry (string)"
+        ],
+        "initial_positions (table)": [
+          "id (uuid, primary key)",
+          "fund_id (uuid, foreign key references prophit_alts_funds.funds.id)",
+          "fund_name (string)",
+          "ticker_id (uuid, references market_data.ticker_universe.tickers.id)",
+          "ticker_name (string)",
+          "position (enum: LONG, SHORT)",
+          "industry (string)",
+          "risk_allocation (float)",
+          "reasoning (string)",
+          "date_created (datetime)",
+          "date_updated (datetime)"
+        ],
+        "final_positions (table)": [
+          "id (uuid, primary key)",
+          "fund_id (uuid, foreign key references prophit_alts_funds.funds.id)",
+          "ticker_id (uuid, references market_data.ticker_universe.tickers.id)",
+          "ticker_name (string)",
+          "position (enum: LONG, SHORT)",
+          "industry (string)",
+          "risk_allocation (float)",
+          "portfolio_allocation (float)",
+          "reasoning (string)",
+          "date_created (datetime)",
+          "date_updated (datetime)",
+          "unique constraint on (fund_id, ticker_id)"
+        ]
+      },
+      "consumer_staples_fund (schema, legacy)": {
+        "trades (table)": [
+          "id (integer, primary key, autoincrement)",
+          "ticker_id (uuid, references market_data.ticker_universe.tickers.id)",
+          "action (string)",
+          "dollar_amount (numeric)",
+          "datetime (datetime)",
+          "industry (string)"
+        ],
+        "initial_picks (table)": [
+          "id (integer, primary key, autoincrement)",
+          "ticker_id (uuid, references market_data.ticker_universe.tickers.id)",
+          "ticker_name (string)",
+          "position (string)",
+          "industry (string)",
+          "risk_allocation (float)",
+          "reasoning (string)",
+          "date_created (datetime)",
+          "date_updated (datetime)"
+        ],
+        "final_portfolio (table)": [
+          "id (integer, primary key, autoincrement)",
+          "ticker_id (uuid, references market_data.ticker_universe.tickers.id)",
+          "ticker_name (string)",
+          "position (string)",
+          "industry (string)",
+          "risk_allocation (float)",
+          "reasoning (string)",
+          "date_created (datetime)",
+          "date_updated (datetime)"
+        ]
+      }
     }
   }
 

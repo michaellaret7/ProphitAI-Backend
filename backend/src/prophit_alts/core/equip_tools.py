@@ -1,10 +1,22 @@
-from backend.src.prophit_alts.core.tools import ProphitAltsDataWrapper, AgentSearchEngine
+from backend.src.prophit_alts.core.tools.data_wrapper_tool import ProphitAltsDataWrapper
+from backend.src.prophit_alts.core.tools.search_engine_tool import AgentSearchEngine
 from typing import List, Dict, Any
+
+ticker_data_description = """
+The get_ticker_data tool returns a comprehensive dictionary of financial data for a given stock ticker. 
+This includes performance metrics like weekly returns and style factors (Momentum, Volatility, etc.), fundamental data such as financial statements and analyst estimates, 
+recent news, earnings transcript summaries, and stock grades.
+"""
+
+search_description = """
+The free_search tool gives you the ability to search the web for information. 
+You will create an indepth query that will be entered into the Perplexity search engine.
+"""
 
 TOOLS: List[Dict[str, Any]] = [
     {
         "name": "get_ticker_data",
-        "description": "Get the daily total returns for a given ticker.",
+        "description": ticker_data_description,
         "parameters": {
             "type": "object",
             "properties": {
@@ -16,7 +28,7 @@ TOOLS: List[Dict[str, Any]] = [
     },
     {
         "name": "free_search",
-        "description": "The free_search tool gives you the ability to search the web for information. You will create an indepth query that will be entered into the Perplexity search engine.",
+        "description": search_description,
         "parameters": {
             "type": "object",
             "properties": {

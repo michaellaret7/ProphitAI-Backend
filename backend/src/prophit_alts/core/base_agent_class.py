@@ -119,6 +119,16 @@ class BaseAgent:
             thought = thought_match.group(1).strip() if thought_match else ""
             action_text = action_match.group(1).strip() if action_match else ""
             
+            # Check for multiple Thought/Action pairs (which shouldn't happen)
+            all_thoughts = re.findall(r'Thought:(.*?)(?=Action:|Thought:|$)', assistant_response, re.DOTALL)
+            all_actions = re.findall(r'Action:(.*?)(?=Observation:|Action:|Thought:|$)', assistant_response, re.DOTALL)
+            
+            if len(all_thoughts) > 1 or len(all_actions) > 1:
+                if self.verbose:
+                    print(f"\n ⚠️ WARNING: Multiple Thought/Action pairs detected in response!")
+                    print(f"   Found {len(all_thoughts)} Thoughts and {len(all_actions)} Actions")
+                    print(f"   Only processing the first one. This may cause skipped actions.")
+            
             # Add the thought and action to our collected response
             thought_output = f"Thought: {thought}"
             action_output = f"Action: {action_text}"
@@ -150,6 +160,34 @@ class BaseAgent:
             # Add to messages for context
             messages.append({"role": "assistant", "content": assistant_response})
             messages.append({"role": "user", "content": f"Observation: {observation}"})
+            
+            # Get analysis from the model
+            analysis_prompt = "Now provide your Analysis of this observation:"
+            messages.append({"role": "user", "content": analysis_prompt})
+            
+            analysis_response = self.client.chat.completions.create(
+                model=self.llm,
+                messages=messages,
+                temperature=0.7
+            )
+            
+            analysis = analysis_response.choices[0].message.content
+            
+            # Extract analysis if it has the "Analysis:" prefix
+            analysis_match = re.search(r'Analysis:(.*?)(?=$)', analysis, re.DOTALL)
+            if analysis_match:
+                analysis_text = analysis_match.group(1).strip()
+            else:
+                analysis_text = analysis.strip()
+            
+            analysis_output = f"Analysis: {analysis_text}"
+            full_response.append(analysis_output)
+            
+            if self.verbose:
+                print(f"\n{analysis_output}\n" + "="*50)
+            
+            # Add analysis to message history
+            messages.append({"role": "assistant", "content": analysis})
         
         if iterations >= self.max_iterations:
             full_response.append("Reached maximum iterations without a final answer.")

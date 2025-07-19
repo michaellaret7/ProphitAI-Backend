@@ -24,10 +24,20 @@ user_engine = create_engine(
     echo=False
 )
 
+prophit_alts_engine = create_engine(
+    os.getenv("PROPHIT_ALTS"),
+    pool_size=10,
+    max_overflow=5,
+    pool_pre_ping=True,
+    echo=False
+)
+
 # Create session factories
 MarketSession = sessionmaker(bind=market_engine)
 UserSession = sessionmaker(bind=user_engine)
+ProphitAltsSession = sessionmaker(bind=prophit_alts_engine)
 
 # Create base classes for each database
 MarketBase = declarative_base()
 UserBase = declarative_base()
+ProphitAltsBase = declarative_base()

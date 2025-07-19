@@ -1,0 +1,53 @@
+<output>
+{
+  "long": [
+    {
+      "ticker": "CASY",
+      "allocation": 10,
+      "reasoning": "Casey's General Stores is demonstrating record EBITDA/net income growth, robust free cash flow, rapid post-acquisition deleveraging, and disciplined capital allocation, with strong operational execution and high-conviction compounding potential. The stock offers defensive growth, strong management, accelerating store expansion, and consistent dividend increases."
+    },
+    {
+      "ticker": "SFM",
+      "allocation": 5,
+      "reasoning": "Sprouts Farmers Market has exceptional comp sales growth, margin expansion, and e-commerce momentum, with strong cash flow, no debt, and ongoing share buybacks. The differentiated health/wellness positioning, private label growth, and disciplined new store pipeline make it a high-quality long-term growth story."
+    },
+    {
+      "ticker": "WMT",
+      "allocation": 5,
+      "reasoning": "Walmart is a best-in-class omni-channel retailer with strong comp sales, margin expansion, e-commerce acceleration, robust capital returns, and a defensive business model. The company maintains high analyst conviction, strong balance sheet, and sector leadership, suitable for a core long allocation."
+    },
+    {
+      "ticker": "BJ",
+      "allocation": 5,
+      "reasoning": "BJ's Wholesale Club is a high-quality growth compounder with strong membership economics, record renewal rates, digital innovation, and disciplined real estate expansion. The company is gaining market share, executing well on digital and private label, and maintaining a conservative balance sheet."
+    },
+    {
+      "ticker": "CHEF",
+      "allocation": 2,
+      "reasoning": "Chefs' Warehouse has strong momentum, margin expansion, and digital transformation, with disciplined management and market share gains in specialty distribution. The company is a tactical long for high-conviction growth portfolios seeking exposure to foodservice execution."
+    }
+  ],
+  "short": [
+    {
+      "ticker": "WBA",
+      "allocation": 5,
+      "reasoning": "Walgreens Boots Alliance is facing persistent negative comps, pharmacy margin pressure, legal/outflow drag, and extremely high leverage, with negative ROE/ROA and consistent dividend sustainability concerns. The turnaround is high risk, and structural headwinds make it a high-conviction short."   
+    },
+    {
+      "ticker": "ANDE",
+      "allocation": 5,
+      "reasoning": "The Andersons is experiencing margin compression, negative earnings growth, poor quality/return metrics, and high volatility, with limited segment visibility and weak FCF. The fundamental picture is deteriorating, making it a clear short candidate."
+    },
+    {
+      "ticker": "TGT",
+      "allocation": 2,
+      "reasoning": "Target faces declining comps, persistent margin and inventory pressure, high leverage, negative momentum, and execution risk in a turnaround. Guidance is cautious, and FCF remains weak, making it a tactical short opportunity."
+    },
+    {
+      "ticker": "WMK",
+      "allocation": 2,
+      "reasoning": "Weis Markets has weak momentum, negative EPS/revenue/cash flow growth, thin margins, and low returns. Defensive balance sheet and high valuation make it vulnerable to further multiple compression and operational underperformance."
+    }
+  ]
+}
+</output>

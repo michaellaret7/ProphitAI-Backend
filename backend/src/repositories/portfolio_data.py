@@ -1,4 +1,4 @@
-from backend.src.db.core.db_config import UserSession, MarketSession
+from backend.src.db.core.db_config import UserSession, MarketSession, ProphitAltsSession
 from backend.src.db.core.user_data_models import *
 from backend.src.utils.serialize_output import serialize_sqlalchemy_obj
 from typing import Optional
@@ -7,6 +7,7 @@ from datetime import datetime, timedelta
 from backend.src.db.core.market_data_models import *
 from sqlalchemy import func
 from sqlalchemy.orm import aliased
+from backend.src.db.core.prophit_alts_models import *
 
 def retrieve_portfolio(email: str = None, workos_id: str = None, user_id: uuid.UUID = None, is_current: bool = None, portfolio_id: uuid.UUID = None):
     session = UserSession()
@@ -127,3 +128,42 @@ def list_portfolios(email: str = None, workos_id: str = None, user_id: uuid.UUID
     session.close()
     return result
 
+def add_initial_positions(positions: dict, industry: str, fund_name: str):
+    session = ProphitAltsSession()
+    market_session = MarketSession()
+
+    for position in positions['long']:
+        session.add(FundInitialPosition(
+            id=uuid.uuid4(),
+            fund_id=session.query(Fund).filter(Fund.fund_name == fund_name).first().id,
+            fund_name=fund_name,
+            ticker_id=market_session.query(Ticker).filter(Ticker.ticker == position['ticker']).first().id,
+            ticker_name=position['ticker'],
+            position=PositionType.LONG,
+            industry=industry,
+            risk_allocation=position['allocation']/100,
+            reasoning=position['reasoning'],
+            date_created=datetime.now(),
+            date_updated=datetime.now(),
+        ))
+
+    for position in positions['short']:
+        session.add(FundInitialPosition(
+            id=uuid.uuid4(),
+            fund_id=session.query(Fund).filter(Fund.fund_name == fund_name).first().id,
+            fund_name=fund_name,
+            ticker_id=market_session.query(Ticker).filter(Ticker.ticker == position['ticker']).first().id,
+            ticker_name=position['ticker'],
+            position=PositionType.SHORT,
+            industry=industry,
+            risk_allocation=position['allocation']/100,
+            reasoning=position['reasoning'],
+            date_created=datetime.now(),
+            date_updated=datetime.now(),
+        ))   
+
+    session.commit()
+    session.close()
+    market_session.close()
+
+    return True

@@ -47,8 +47,12 @@ class ValueFactors:
         if len(self.income_statement) >= 20:  # 20 quarters = 5 years
             current_eps = float(self.income_statement[0].eps) if self.income_statement[0].eps else None
             five_year_ago_eps = float(self.income_statement[19].eps) if self.income_statement[19].eps else None
-            if current_eps and five_year_ago_eps and five_year_ago_eps > 0:
-                self.eps_growth_5yr = ((current_eps / five_year_ago_eps) ** (1/5) - 1) * 100
+            if current_eps is not None and five_year_ago_eps is not None and five_year_ago_eps != 0:
+                ratio = current_eps / five_year_ago_eps
+                if ratio > 0:
+                    self.eps_growth_5yr = (ratio ** (1/5) - 1) * 100
+                else:
+                    self.eps_growth_5yr = None
             else:
                 self.eps_growth_5yr = None
         else:
