@@ -40,6 +40,7 @@ class Fund(ProphitAltsBase):
     unrealized_pnl = Column(Numeric(15, 2), nullable=True)
     alpha = Column(Float, nullable=True)
     beta = Column(Float, nullable=True)
+    net_exposure = Column(Numeric(5, 2), nullable=True)
     
     # Relationships
     trades = relationship('FundTrade', back_populates='fund', lazy='dynamic', cascade='all, delete-orphan')

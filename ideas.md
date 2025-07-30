@@ -10,8 +10,10 @@ Big Concepts and Ideas to Implement
     b. CRO Monitors the porfolio
 
 3. Retail Fund backtest
-    a. Give the agent data from two years ago 
-        i. Filter using queries
+    a. Give the agent data from two years ago. (old news and all old data and tell it the date is two years ago)
+        i. Have it build a portfolio thinking its 2 years ago 
+        ii. Track the performance of the portfolio 
+        iii. store it in the db
     b. Analyze performance 
 
 

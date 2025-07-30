@@ -13,7 +13,6 @@ import threading
 class UpdatePriceTable():
     def __init__(self):
         self.fmp_api = FMP_API_DATA()
-        # Thread-safe counters
         self.lock = threading.Lock()
         self.total_records = 0
         self.successful_updates = 0

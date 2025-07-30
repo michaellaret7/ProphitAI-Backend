@@ -6,8 +6,9 @@ from openai import OpenAI
 from dotenv import load_dotenv
 from datetime import datetime, timedelta
 import pandas as pd
-from backend.src.prophit_alts.core.equip_tools import register_tools
-from backend.src.utils.choose_model_and_client import openai_model_and_client, deepseek_model_and_client, grok_model_and_client
+from backend.src.prophit_alts.core.tools.data_wrapper_tool import ProphitAltsDataWrapper
+from backend.src.prophit_alts.core.tools.search_engine_tool import AgentSearchEngine
+from backend.src.utils.choose_model_and_client import *
 
 load_dotenv()
 
@@ -21,8 +22,50 @@ class BaseAgent:
         self.system_prompt = system_prompt
         self.user_prompt = user_prompt
         
-        # Register tools
-        register_tools(self)
+        # Register tools directly
+        self._register_tools()
+
+    def _register_tools(self):
+        """Register all tools for this agent."""
+        # Tool descriptions
+        ticker_data_description = """
+        The get_ticker_data tool returns a comprehensive dictionary of financial data for a given stock ticker. 
+        This includes performance metrics like weekly returns and style factors (Momentum, Volatility, etc.), fundamental data such as financial statements and analyst estimates, 
+        recent news, earnings transcript summaries, and stock grades.
+        """
+        
+        search_description = """
+        The free_search tool gives you the ability to search the web for information. 
+        You will create an indepth query that will be entered into the Perplexity search engine.
+        """
+        
+        # Register ticker data tool
+        self.add_tool(
+            name="get_ticker_data",
+            description=ticker_data_description,
+            parameters={
+                "type": "object",
+                "properties": {
+                    "ticker": {"type": "string", "description": "The stock ticker symbol to get price for."},
+                },
+                "required": ["ticker"]
+            },
+            function=lambda ticker: ProphitAltsDataWrapper(ticker).run_all()
+        )
+        
+        # Register search tool
+        self.add_tool(
+            name="free_search",
+            description=search_description,
+            parameters={
+                "type": "object",
+                "properties": {
+                    "query": {"type": "string", "description": "The query to search the web for. This query should be indepth and detailed, the more detailed the better the results wil be."},
+                },
+                "required": ["query"]
+            },
+            function=lambda query: AgentSearchEngine().perplexity_free_search(query)
+        )
 
     def add_tool(self, name: str, description: str, parameters: Dict, function: Callable):
         tool_def = {
@@ -94,7 +137,7 @@ class BaseAgent:
             iterations += 1
             
             if self.verbose:
-                print(f"\n🔄 Iteration {iterations}")
+                print(f"\n⚜️  Iteration {iterations}")
             
             response = self.client.chat.completions.create(
                 model=self.llm,

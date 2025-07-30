@@ -1,9 +1,9 @@
-from backend.src.utils.choose_model_and_client import perplexity_model_and_client
+from backend.src.utils.choose_model_and_client import perplexity_model_and_client, openai_model_and_client
 import re 
 
 class AgentSearchEngine:
     def perplexity_free_search(self, query: str):
-        model, client = perplexity_model_and_client() # --> initialize model and client for perplexity
+        model, client = perplexity_model_and_client('sonar-pro') # --> initialize model and client for perplexity
 
         system_prompt = """
         <Role>
@@ -61,6 +61,48 @@ class AgentSearchEngine:
 
             return cleaned_content
         
+        except Exception as e:
+            print(f"Error: {e}")
+            return None
+    
+    def openai_search(self, query: str):
+        model, client = openai_model_and_client() 
+        """
+        Processes a user query using the Deep Research API for detailed market analysis.
+        """
+        system_message = """
+    You are a professional financial analyst preparing a structured, data-driven report. Your task is to analyze the user's query about the macroeconomic environment and its implications for the stock market.
+
+    Do:
+    - Focus on data-rich insights: include specific figures, economic indicators (e.g., GDP growth, inflation rates, unemployment), market trends, and statistical data.
+    - Prioritize reliable, up-to-date sources: government economic reports (e.g., from the Federal Reserve, Bureau of Labor Statistics), major financial news outlets (e.g., Bloomberg, Reuters, Wall Street Journal), and reports from reputable financial institutions.
+    - Structure the report with clear headers for different sections (e.g., "Current Macroeconomic Indicators", "Inflation and Monetary Policy", "Geopolitical Factors", "Stock Market Outlook", "Sector-specific Implications").
+    - Include inline citations for all data points and return all source metadata.
+    - Be analytical, objective, and avoid speculation without data-backed reasoning.
+    """
+        try:
+            response = client.responses.create(
+                model="o3",
+                input=[
+                    {"role": "developer", "content": [{"type": "input_text", "text": system_message}]},
+                    {"role": "user", "content": [{"type": "input_text", "text": query}]}
+                ],
+                tools=[
+                    {"type": "web_search_preview"}
+                ]
+            )
+            
+            # For deep research response, the final report is in the last output item
+            if hasattr(response, 'output') and response.output:
+                final_report = response.output[-1]
+                if hasattr(final_report, 'content'):
+                    return final_report.content[0].text
+            return "No response generated"
+            
+        except AttributeError as e:
+            print(f"AttributeError: {e}")
+            print("Make sure you have the latest OpenAI library: pip install --upgrade openai")
+            return None
         except Exception as e:
             print(f"Error: {e}")
             return None

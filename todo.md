@@ -1,103 +1,88 @@
-# Price Data Update Function Plan
+# Add Maximum Position Weight Cap to Portfolio Builder
 
-## Objective
-Create a function in `backend/src/db/jobs/price_table.py` that:
-1. Loops through the dictionary from `create_last_price_dict()`
-2. For each ticker, queries FMP API for 15-minute price data from last date to current time
-3. Adds new data to the database (NOT replacing anything)
+## Goal
+Implement a 10% maximum position weight constraint to ensure no single position can exceed 10% of the portfolio, preventing concentration risk.
 
-## TODO Items
+## Analysis
+Current system sizes positions based on risk and conviction but has no upper limit. We need to:
+- Add a cap after risk-based sizing but before volatility scaling
+- Redistribute excess weight proportionally to other positions
+- Maintain long/short balance and target exposures
 
-- [x] 1. **Add method to update prices for all tickers**
-   - Use the dictionary from `create_last_price_dict()`
-   - Loop through each ticker_id and last_date
-   - Call update method for each ticker
+## Plan
 
-- [x] 2. **Add method to update prices for single ticker**
-   - Get ticker symbol from ticker_id
-   - Calculate date range (last_date to current time)
-   - Fetch data from FMP API using `get_intraday_prices_for_ticker`
-   - Process and insert new price records
+### 1. Add Max Weight Parameter
+- [ ] Add `max_position_weight` parameter to class constructor (default 0.10)
+- [ ] Update docstring to document the new parameter
 
-- [x] 3. **Add method to bulk insert price data**
-   - Convert FMP API response to Price model format
-   - Use bulk insert for efficiency
-   - Handle potential duplicates gracefully
+### 2. Create Weight Capping Method
+- [ ] Create `_apply_position_weight_cap()` method
+- [ ] Cap any weights exceeding the maximum
+- [ ] Redistribute excess weight proportionally to uncapped positions
+- [ ] Preserve long/short separation during redistribution
 
-- [x] 4. **Add main execution block updates**
-   - After creating the dictionary, call the update function
-   - Add progress reporting
+### 3. Integrate Weight Capping into Portfolio Building
+- [ ] Apply cap after risk-based weighting in `risk_based_portfolio()`
+- [ ] Apply before volatility scaling to ensure cap is meaningful
+- [ ] Ensure net exposure targets are still met after capping
 
-## Technical Considerations
-- Keep it simple - no complex threading initially
-- Use existing FMP API methods
-- Ensure timezone handling between API and database
-- Add basic error handling for API failures
+### 4. Update Display and Reporting
+- [ ] Show when positions hit the cap in portfolio allocation table
+- [ ] Add summary of capped positions if any
 
-## Notes
-- FMP API returns 15-minute interval data
-- Must handle timezone conversions if needed
-- Should skip if data is already current
+## Implementation Details
+
+### Weight Capping Logic:
+1. Identify positions exceeding max weight
+2. Cap them at max weight
+3. Calculate excess weight to redistribute
+4. Redistribute proportionally among uncapped positions in same group (long/short)
+5. Iterate until no positions exceed cap
+
+### Edge Cases to Handle:
+- All positions in a group hitting the cap
+- Very high conviction positions being capped
+- Maintaining target net exposure after capping
+
+## Files to Modify
+- `backend/src/calculations/risk_calculations/correlation_portfolio_builder.py`
 
 ## Review
 
-### Changes Made
+### Summary of Changes Made
 
-1. **Added `update_prices_for_single_ticker` method**:
-   - Gets ticker symbol from ticker_id using database query
-   - Calculates date range starting 15 minutes after last recorded date
-   - Skips update if data is already current (within 15 minutes)
-   - Fetches data from FMP API using existing `get_intraday_prices_for_ticker` method
-   - Returns count of records inserted
+✅ **Successfully implemented 10% position weight cap functionality**
 
-2. **Added `_bulk_insert_prices` helper method**:
-   - Converts FMP API response format to Price model format
-   - Uses PostgreSQL's `INSERT ... ON CONFLICT DO NOTHING` to handle duplicates
-   - Returns actual count of inserted records
+### Changes Made:
 
-3. **Added `update_all_ticker_prices` method**:
-   - Loops through all tickers from `create_last_price_dict()`
-   - Provides progress updates every 10 tickers
-   - Tracks successful updates, total records, and errors
-   - Prints summary at completion
+1. **Added max_position_weight parameter**:
+   - Added to constructor with default value of 0.10 (10%)
+   - Updated docstring to document the parameter
 
-4. **Added `test_update_first_10_tickers` method**:
-   - Tests the update process on only the first 10 tickers
-   - Shows which tickers will be tested with their symbols
-   - Provides detailed progress for each ticker
-   - Prints comprehensive test summary with average records per ticker
+2. **Created weight capping methods**:
+   - `_apply_position_weight_cap()`: Main method that applies cap to both long and short positions separately
+   - `_cap_weights_group()`: Helper method that caps weights within a group and redistributes excess proportionally
+   - Uses iterative approach to handle cases where redistribution causes other positions to exceed cap
 
-5. **Updated main execution block**:
-   - Shows current state first
-   - Runs the test method by default
-   - Full update method is commented out but available
+3. **Integrated into portfolio building flow**:
+   - Applied after risk-based weighting and target net exposure calculations
+   - Applied before position signs and volatility scaling
+   - Preserves long/short balance and target exposures
 
-### Key Features
-- **Thread pooling for performance** - Uses ThreadPoolExecutor with configurable workers (default 10)
-- **Thread-safe operations** - Counters protected with locks for accurate tracking
-- **Duplicate handling** - Uses ON CONFLICT DO NOTHING to prevent duplicates
-- **Error handling** - Each ticker update wrapped in try-except with proper rollback
-- **Progress reporting** - Updates every 50 tickers and comprehensive final summary
-- **Efficient queries** - Single GROUP BY query for all last dates, bulk inserts for price data
-- **No data replacement** - Only adds new data from last_date + 15 minutes onwards
-- **Timezone consistency** - Converts FMP's EST timestamps to UTC to match existing data format
+4. **Updated display output**:
+   - Added "Note" column to portfolio allocation table showing "CAPPED" for positions at the limit
+   - Added summary section showing number and list of capped positions
+   - Uses small tolerance (0.0001) for float comparison when checking if position hit cap
 
-### Timezone Conversion Update
-- Added pytz library import for timezone handling
-- Modified `_bulk_insert_prices` to convert EST timestamps from FMP to UTC
-- Process: Parse datetime → Localize to EST → Convert to UTC → Remove timezone info for storage
-- Ensures all price data in the database remains consistently in UTC format
+### Key Features:
+- **10% maximum weight**: No single position can exceed 10% of the portfolio
+- **Proportional redistribution**: Excess weight redistributed to uncapped positions in same group
+- **Long/short separation**: Maintains balance by handling long and short positions separately
+- **Clear visibility**: Shows which positions hit the cap in the output
 
-### Thread Pooling Implementation
-- Added `ThreadPoolExecutor` with configurable `max_workers` parameter (default: 10)
-- Created thread-safe wrapper method `_update_ticker_thread_safe` with locking
-- Each ticker update runs in its own thread with its own database session
-- Thread-safe counters track progress across all threads
-- No tickers will be skipped - the executor ensures all tasks complete
-- Significantly faster than sequential processing while maintaining data integrity
-- Progress reporting every 50 tickers with timing statistics
+The implementation is simple and effective, preventing concentration risk while maintaining the portfolio's risk-based allocation strategy.
 
-### Code Cleanup
-- Removed test method and test queries
-- Streamlined main execution block for production use
-- Ready to run full update with simple command execution
+### Fix Applied:
+- Moved cap application to AFTER volatility scaling to ensure positions are actually limited to 10%
+- Created `_apply_position_weight_cap_signed()` method to handle signed weights (positive/negative)
+- Now the cap is applied on the final scaled weights, ensuring no position exceeds 10% in the final portfolio

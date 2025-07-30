@@ -225,19 +225,210 @@ if __name__ == "__main__":
     from backend.src.db.core.db_config import ProphitAltsSession
     from backend.src.db.core.prophit_alts_models import FundInitialPosition, PositionType
 
-    session = ProphitAltsSession()
-    positions = session.query(FundInitialPosition).filter(FundInitialPosition.fund_name == "consumer_staples_fund").all()
+    portfolio_dict = {
+        "long_tickers": {
+            "CASY": {
+                "position": "long",
+                "industry": "distribution_and_retail",
+                "risk_allocation": 0.1,
+                "reasoning": "Record operational momentum, robust FCF growth, disciplined capital allocation, and consistent execution. Defensive growth, positive technicals, and rising analyst targets support a core allocation despite valuation."
+            },
+            "CELH": {
+                "position": "long",
+                "industry": "beverages",
+                "risk_allocation": 0.1,
+                "reasoning": "Exceptional EPS and FCF growth, industry-leading gross margin, clean balance sheet, and secular health/wellness tailwinds. Despite high volatility and valuation, quality and brand momentum justify a core position."
+            },
+            "ODC": {
+                "position": "long",
+                "industry": "household_products",
+                "risk_allocation": 0.05,
+                "reasoning": "Accelerating margin/FCF growth, capital discipline, and strategic mix shift toward high-value segments. Positive technicals, strong balance sheet, and underappreciated re-rating catalysts."
+            },
+            "ODD": {
+                "position": "long",
+                "industry": "personal_care_products",
+                "risk_allocation": 0.05,
+                "reasoning": "Hyper-growth, sector-leading margins, high FCF, asset-light, and net cash. Digital/AI-driven business model, strong brand, and positive analyst/management alignment justify premium multiples."
+            },
+            "PM": {
+                "position": "long",
+                "industry": "tobacco",
+                "risk_allocation": 0.1,
+                "reasoning": "Dominant in smoke-free transformation, best-in-class margins, very strong FCF and dividend, low beta, and secular growth. Recent technical weakness is an opportunity given structural defensiveness."
+            },
+            "VITL": {
+                "position": "long",
+                "industry": "food_products",
+                "risk_allocation": 0.05,
+                "reasoning": "Best-in-class margin and growth profile, brand leadership, clean balance sheet, and high compounding potential. Defensive growth, positive sentiment, and analyst support for a core allocation."
+            },
+            "WMT": {
+                "position": "long",
+                "industry": "distribution_and_retail",
+                "risk_allocation": 0.05,
+                "reasoning": "Omni-channel leadership, e-commerce acceleration, strong balance sheet, and defensive core holding. Low volatility, high visibility, and cash returns support inclusion."
+            },
+            "BJ": {
+                "position": "long",
+                "industry": "distribution_and_retail",
+                "risk_allocation": 0.05,
+                "reasoning": "Growth compounder, market share gains, digital innovation, and conservative capital structure. Membership renewal rates and private label strength add conviction."
+            },
+            "SFM": {
+                "position": "long",
+                "industry": "distribution_and_retail",
+                "risk_allocation": 0.05,
+                "reasoning": "Exceptional comp sales/margin expansion, no debt, e-commerce momentum, and disciplined new store pipeline. Health/wellness focus and private label growth reinforce quality."
+            },
+            "COCO": {
+                "position": "long",
+                "industry": "beverages",
+                "risk_allocation": 0.05,
+                "reasoning": "Strong brand momentum, high revenue/profitability growth, zero net debt, and international expansion. Category leadership in functional beverages with positive technicals."
+            },
+            "MNST": {
+                "position": "long",
+                "industry": "beverages",
+                "risk_allocation": 0.05,
+                "reasoning": "Superior quality, EPS/FCF growth, global brand leadership, and innovation offsetting U.S. share loss. Stretched valuation is offset by fundamentals and positive sentiment."
+            },
+            "CL": {
+                "position": "long",
+                "industry": "household_products",
+                "risk_allocation": 0.05,
+                "reasoning": "Defensive global leader, robust margins, FCF stability, and innovation pipeline. Market share gains and resilience make it a solid stabilizer in the portfolio."
+            },
+            "IPAR": {
+                "position": "long",
+                "industry": "personal_care_products",
+                "risk_allocation": 0.05,
+                "reasoning": "Resilient growth, margin expansion, strong brand launches, prudent cost control, and healthy cash flow/dividend. Niche leadership with conservative guidance."
+            },
+            "TPB": {
+                "position": "long",
+                "industry": "tobacco",
+                "risk_allocation": 0.05,
+                "reasoning": "Modern oral nicotine disruptor, accelerating market share, positive FCF, and upward guidance. Margin compression risk offset by execution and momentum."
+            },
+            "DOLE": {
+                "position": "long",
+                "industry": "food_products",
+                "risk_allocation": 0.05,
+                "reasoning": "Turnaround/value play, improving margins, deleveraging, cost discipline, and capital returns. Execution in fresh/value-added supports inclusion."
+            },
+            "PPC": {
+                "position": "long",
+                "industry": "food_products",
+                "risk_allocation": 0.05,
+                "reasoning": "Diversified protein, positive growth/margins, strong cash flow, and branded/value-added growth. Healthy capital structure and operational execution."
+            },
+            "INGR": {
+                "position": "long",
+                "industry": "food_products",
+                "risk_allocation": 0.05,
+                "reasoning": "Defensive, high-quality operator, margin expansion, positive EPS/cash flow, and cost discipline. Diversified portfolio and strong analyst sentiment."
+            }
+        },
+        "short_tickers": {
+            "WBA": {
+                "position": "short",
+                "industry": "distribution_and_retail",
+                "risk_allocation": 0.05,
+                "reasoning": "Persistent negative comps, margin pressure, high leverage, legal/operational drag, and dividend risk. Structural headwinds make it a high-conviction short."
+            },
+            "ANDE": {
+                "position": "short",
+                "industry": "distribution_and_retail",
+                "risk_allocation": 0.05,
+                "reasoning": "Margin compression, negative earnings, poor return metrics, high volatility, and weak FCF. Deteriorating fundamentals warrant a tactical short."
+            },
+            "TGT": {
+                "position": "short",
+                "industry": "distribution_and_retail",
+                "risk_allocation": 0.02,
+                "reasoning": "Declining comps, margin/inventory pressure, high leverage, and weak FCF. Cautious guidance and execution risk add to short case."    
+            },
+            "STZ": {
+                "position": "short",
+                "industry": "beverages",
+                "risk_allocation": 0.05,
+                "reasoning": "Negative momentum, core beer headwinds, reduced growth guidance, expensive valuation, and high leverage. Analyst downgrades and cautious management reinforce conviction."
+            },
+            "PEP": {
+                "position": "short",
+                "industry": "beverages",
+                "risk_allocation": 0.05,
+                "reasoning": "Negative momentum, revenue/FCF contraction, high valuation, margin pressure, high leverage, and cautious analyst sentiment."
+            },
+            "SAM": {
+                "position": "short",
+                "industry": "beverages",
+                "risk_allocation": 0.05,
+                "reasoning": "Severe negative momentum, category headwinds, weak cash generation, and high valuation. Sentiment/price targets support further downside."    
+            },
+            "MGPI": {
+                "position": "short",
+                "industry": "beverages",
+                "risk_allocation": 0.05,
+                "reasoning": "Cyclical downturn, revenue/profit declines, execution/legal risk, and negative technicals. High-conviction fundamental and technical short."  
+            },
+            "ENR": {
+                "position": "short",
+                "industry": "household_products",
+                "risk_allocation": 0.05,
+                "reasoning": "Negative momentum, deteriorating revenue/FCF, excessive leverage, margin compression, and litigation risk."
+            },
+            "SPB": {
+                "position": "short",
+                "industry": "household_products",
+                "risk_allocation": 0.05,
+                "reasoning": "Severe negative momentum, declining revenue/EPS, margin compression, weak technical/fundamental profile."
+            },
+            "COTY": {
+                "position": "short",
+                "industry": "personal_care_products",
+                "risk_allocation": 0.05,
+                "reasoning": "Severe negative momentum, weak operational metrics, persistent declines, high leverage, tight liquidity, and negative sentiment."
+            },
+            "KVUE": {
+                "position": "short",
+                "industry": "personal_care_products",
+                "risk_allocation": 0.05,
+                "reasoning": "Negative organic growth, margin compression, FCF deterioration, high tariffs, high valuation, and cautious management/analyst stance."        
+            },
+            "KLG": {
+                "position": "short",
+                "industry": "food_products",
+                "risk_allocation": 0.05,
+                "reasoning": "Rallying on momentum despite negative FCF, persistent volume declines, high leverage, and extreme valuation. Weak fundamentals."
+            },
+            "JJSF": {
+                "position": "short",
+                "industry": "food_products",
+                "risk_allocation": 0.05,
+                "reasoning": "Margin compression, negative revenue/FCF growth, persistent volume headwinds, and high valuation. Fundamentals do not justify price."
+            },
+            "SEB": {
+                "position": "short",
+                "industry": "food_products",
+                "risk_allocation": 0.05,
+                "reasoning": "Recent price momentum unsupported by operational performance, shrinking revenue/EPS, negative FCF, and thin margins. Strong mean-reversion short."
+            }
+        }
+    }
+
     tickers_weights = {}
-
-    for position in positions:
-        if position.position == PositionType.SHORT:
-            tickers_weights[position.ticker_name] = position.risk_allocation * -1
-        else:
-            tickers_weights[position.ticker_name] = position.risk_allocation
     
-    print(sum(tickers_weights.values()))
+    # Add long positions with positive weights
+    for ticker, info in portfolio_dict["long_tickers"].items():
+        tickers_weights[ticker] = info["risk_allocation"]
+    
+    # Add short positions with negative weights
+    for ticker, info in portfolio_dict["short_tickers"].items():
+        tickers_weights[ticker] = -info["risk_allocation"]
 
-    session.close()
+    print(tickers_weights)
     
     end_date = datetime.now()
     start_date = end_date - timedelta(days=365*4)

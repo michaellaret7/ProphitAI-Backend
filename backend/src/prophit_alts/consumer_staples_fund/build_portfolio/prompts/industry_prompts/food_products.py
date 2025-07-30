@@ -5,14 +5,14 @@ from backend.src.utils.serialize_output import serialize_sqlalchemy_obj
 from backend.src.utils.ticker_utils import get_eligible_tickers
 
 min_short_tickers_high_conviction = 2
-max_short_tickers_high_conviction = 3
+max_short_tickers_high_conviction = 4
 min_short_tickers_low_conviction = 1
-max_short_tickers_low_conviction = 2
+max_short_tickers_low_conviction = 4
 
 min_long_tickers_high_conviction = 2
-max_long_tickers_high_conviction = 5
+max_long_tickers_high_conviction = 6
 min_long_tickers_low_conviction = 1
-max_long_tickers_low_conviction = 2
+max_long_tickers_low_conviction = 4
 
 long_min_total_tickers = min_long_tickers_high_conviction + min_long_tickers_low_conviction
 short_min_total_tickers = min_short_tickers_high_conviction + min_short_tickers_low_conviction
@@ -21,11 +21,15 @@ short_max_total_tickers = max_short_tickers_high_conviction + max_short_tickers_
 
 date = datetime.now().strftime("%Y-%m-%d")
 
-distribution_and_retail_system_prompt = f"""
+industry = "food_products"
+market_cap = 800_000_000
+price = 5
+
+food_products_system_prompt = f"""
 <Role>
 Act as the top analyst at a hedge fund that focuses on the Consumer Staples Sector.
 The strategies that your fund employs are long/short equity strategies. Your job is to focus on ONLY ONE industry within the Consumer Staples Sector.
-The industry within the Consumer Staples Sector that you will focus on is the Distribution and Retail Industry.
+The industry within the Consumer Staples Sector that you will focus on is the Food Products Industry.
 </Role>
 
 <CRITICAL JSON OUTPUT REQUIREMENT>
@@ -49,7 +53,7 @@ EXCEPTION: When you have completed ALL ticker analyses and are ready to generate
 </Thinking Framework>
 
 <List of Tickers>
-{get_eligible_tickers(industry="consumer_staples_distribution_and_retail", market_cap=1_000_000_000)}
+{get_eligible_tickers(industry=industry, market_cap=market_cap, price=price)}
 </List of Tickers>
 
 <Rules>
@@ -58,7 +62,7 @@ EXCEPTION: When you have completed ALL ticker analyses and are ready to generate
 - You must run the tools and come up with your own analysis for EVERY ticker in the <List of Tickers>.
 - The output must match the exact same structure and format as the <Output Format>. This is a non negotiable requirement, violation of this rule will result in severe consequences.
 - You may not pick less than {long_min_total_tickers} tickers to go long and less than {short_min_total_tickers} tickers to go short. You MAY NOT pick more than {long_max_total_tickers} tickers to go long and you MAY NOT pick more than {short_max_total_tickers} tickers to go short. This is a non negotiable requirement, violation of this rule will result in severe consequences.
-- You MUST use the get_ticker_data tool for all {len(get_eligible_tickers(industry="consumer_staples_distribution_and_retail", market_cap=1_000_000_000))} tickers in the <List of Tickers>. If you do not do this, you will be VERY HARSHLY penalized.
+- You MUST use the get_ticker_data tool for all {len(get_eligible_tickers(industry=industry, market_cap=market_cap, price=price))} tickers in the <List of Tickers>. If you do not do this, you will be VERY HARSHLY penalized.
 - CRITICAL: After analyzing all tickers, you MUST continue to portfolio construction and JSON output generation. Do NOT stop after stating you've completed the analyses. This is a continuous workflow.
 </Rules>
 
@@ -67,11 +71,11 @@ EXCEPTION: When you have completed ALL ticker analyses and are ready to generate
 </Tools available>
 """
 
-distribution_and_retail_user_prompt = f"""
+food_products_user_prompt = f"""
 <Instructions>
 ## PHASE 1: ANALYSIS
 1. Create a checklist of all of the tickers in the <List of Tickers>.
-2. Call get_ticker_data(ticker) for ALL {len(get_eligible_tickers(industry="consumer_staples_distribution_and_retail", market_cap=1_000_000_000))} tickers in the <List of Tickers>.
+2. Call get_ticker_data(ticker) for ALL {len(get_eligible_tickers(industry=industry, market_cap=market_cap, price=price))} tickers in the <List of Tickers>.
    a. get_ticker_data(ticker) will return a dictionary of data for the ticker.
    b. Once you call the tool remove the ticker you just called from the checklist and print the remaining tickers in the checklist in the <Thinking Framework>.
 3. Analyze the data for each ticker very closely, make sure to follow the <Thinking Framework>.

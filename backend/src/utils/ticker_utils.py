@@ -74,7 +74,7 @@ def get_most_recent_price(ticker):
     session.close()
     return price
 
-def get_eligible_tickers(industry: str, market_cap: int, price: int = None):
+def get_eligible_tickers(industry: str, market_cap: int, price: int = None, dollar_volume: int = None):
    ticker_list = []
 
    session = MarketSession()
@@ -82,6 +82,9 @@ def get_eligible_tickers(industry: str, market_cap: int, price: int = None):
       tickers = session.query(Ticker).filter(Ticker.industry == industry, Ticker.market_cap > market_cap).all()
    else:
       tickers = session.query(Ticker).filter(Ticker.industry == industry, Ticker.market_cap > market_cap, Ticker.price > price).all()
+
+   if dollar_volume is not None and price is not None:
+      tickers = session.query(Ticker).filter(Ticker.industry == industry, Ticker.market_cap > market_cap, Ticker.dollar_volume > dollar_volume, Ticker.price > price).all()
       
    tickers = [serialize_sqlalchemy_obj(ticker) for ticker in tickers]
 

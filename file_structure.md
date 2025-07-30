@@ -54,42 +54,41 @@
 │       │   │   ├── portfolio_returns_calculations.py
 │       │   │   ├── returns_under_stress_calculations.py
 │       │   │   └── ticker_returns_calculations.py
-│       │   └── risk_calculations/
-│       │       ├── build_portfolio.py
-│       │       ├── portfolio_risk_calculations.py
-│       │       └── ticker_risk_calculations.py
+│       │   ├── risk_calculations/
+│       │   │   ├── build_portfolio.py
+│       │   │   ├── correlation_portfolio_builder.py
+│       │   │   ├── portfolio_risk_calculations.py
+│       │   │   └── ticker_risk_calculations.py
+│       │   └── sector_calculations/
+│       │       ├── industry_calculations.py
+│       │       ├── sector_calculations.py
+│       │       └── sub_industry_calculations.py
 │       ├── data/
 │       │   ├── __init__.py
 │       │   ├── database/
 │       │   │   ├── database_schemas_prices.json
 │       │   │   └── database_schemas.json
-│       │   ├── user_information.py
-│       │   └── user_portfolio_data/
-│       │       ├── __init__.py
-│       │       ├── fetch_ibkr_holdings.py
-│       │       ├── store_user_positions.py
-│       │       └── update_user_holdings.py
+│       │   └── user_information.py
 │       ├── data_models/
 │       │   ├── performance_models.py
 │       │   ├── phase_two_models.py
-│       │   ├── portfolio_models.py
-│       │   ├── style_factors_models.py
-│       │   └── user_models.py
+│       │   └── style_factors_models.py
 │       ├── db/
 │       │   ├── core/
-│       │   │   ├── db_build_structure.py
+│       │   │   ├── build_price_table.py
 │       │   │   ├── db_config.py
 │       │   │   ├── market_data_models.py
+│       │   │   ├── prophit_alts_models.py
 │       │   │   ├── pull_fmp_data.py
 │       │   │   ├── schema.json
 │       │   │   └── user_data_models.py
-│       │   ├── db_push.py
 │       │   ├── jobs/
+│       │   │   ├── fundamental_data.py
+│       │   │   ├── price_table.py
 │       │   │   └── ticker_table.py
-│       │   ├── monitor/
-│       │   │   ├── health_check.py
-│       │   │   └── query_performance_check.py
-│       │   └── transfer_price_data.py
+│       │   └── monitor/
+│       │       ├── health_check.py
+│       │       └── query_performance_check.py
 │       ├── portfolio_optimization/
 │       │   ├── __init__.py
 │       │   ├── runner.py
@@ -108,19 +107,29 @@
 │       │       ├── phase_two_run_llm.py
 │       │       └── phase_two_run.py
 │       ├── prophit_alts/
-│       │   ├── poc.py
 │       │   ├── consumer_staples_fund/
 │       │   │   ├── build_portfolio/
-│       │   │   │   ├── distribution_and_retail/
-│       │   │   │   │   ├── distribution_and_retail_agent.py
-│       │   │   │   │   ├── prompts.py
-│       │   │   │   │   └── trading_strategy_analysis_*.txt
-│       │   │   │   └── tobacco_industry/
+│       │   │   │   ├── cio_agent.py
+│       │   │   │   ├── cro_agent.py
+│       │   │   │   ├── industry_agents.py
+│       │   │   │   ├── macro_agent.py
+│       │   │   │   └── prompts/
+│       │   │   │       ├── cio_agent_prompts.py
+│       │   │   │       ├── macro_agent_prompts.py
+│       │   │   │       └── industry_prompts/
+│       │   │   │           ├── beverages.py
+│       │   │   │           ├── distribution_and_retail.py
+│       │   │   │           ├── food_products.py
+│       │   │   │           ├── household_products.py
+│       │   │   │           ├── personal_care_products.py
+│       │   │   │           └── tobacco.py
 │       │   │   └── manage_portfolio/
 │       │   └── core/
 │       │       ├── base_agent_class.py
-│       │       ├── equip_tools.py
-│       │       └── tools.py
+│       │       └── tools/
+│       │           ├── __init__.py
+│       │           ├── data_wrapper_tool.py
+│       │           └── search_engine_tool.py
 │       ├── prophit_gpt/
 │       │   ├── gpt.py
 │       │   ├── dataRetrievalTools/
@@ -134,12 +143,7 @@
 │       ├── repositories/
 │       │   ├── portfolio_data.py
 │       │   ├── price_data.py
-│       │   ├── portfolio/
-│       │   │   ├── created_portfolio_repository.py
-│       │   │   └── push_created_portfolio_repository.py
-│       │   └── user/
-│       │       ├── user_info_repository.py
-│       │       └── user_portfolio_repository.py
+│       │   └── user_data.py
 │       └── utils/
 │           ├── __init__.py
 │           ├── choose_model_and_client.py
@@ -149,21 +153,21 @@
 │           ├── formatting.py
 │           ├── ib_utils.py
 │           ├── logging_config.py
+│           ├── parsing_utils.py
 │           ├── serialize_output.py
-│           └── ticker_utils.py
+│           ├── ticker_utils.py
+│           └── token_count.py
 │   └── testing/
 │       ├── All_US_ETFs.xlsx
-│       ├── buildDB.py
+│       ├── llm_dialogue.py
 │       ├── react_agent_class.py
 │       ├── react_agent_run.py
-│       ├── test_price_data.py
 │       └── hedge_fund_stuff/
 │           ├── hedge_fund_portfolio_construction.py
 │           └── hedge_fund_risk_management.py
 ├── frontend/
 │   ├── src
 ├── file_structure.md
-├── prompt_testing.md
 ├── README.md
 ├── requirements.txt
 └── roadmap.md

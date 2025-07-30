@@ -82,3 +82,22 @@ def perplexity_model_and_client(model: str = None):
     client = OpenAI(api_key=PERPLEXITY_API_KEY, base_url="https://api.perplexity.ai")
     
     return model, client
+
+def claude_model_and_client(model: str = None):
+    """
+    Create a Claude model name and OpenAI client instance.
+    
+    Args:
+        model: Model name to use (default: from CLAUDE_MODEL env var)
+        
+    Returns:
+        tuple: (model_name, openai_client) for Claude API
+    """
+    CLAUDE_API_KEY = os.getenv("ANTHROPIC_API_KEY")
+
+    if model is None:
+        model = os.environ.get("ANTHROPIC_MODEL")
+
+    client = OpenAI(api_key=CLAUDE_API_KEY, base_url="https://api.anthropic.com/v1")
+
+    return model, client

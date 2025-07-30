@@ -7,7 +7,14 @@
           "sector",
           "industry",
           "sub_industry",
-          "is_etf"
+          "is_etf",
+          "price",
+          "market_cap",
+          "avg_volume",
+          "eps",
+          "pe",
+          "dollar_volume",
+          "last_updated"
         ]
       },
       "fundamental_data (schema)": {
@@ -348,7 +355,7 @@
         ]
       },
       "grades_and_ratings_data (schema)": {
-        "stock_grades (table)": [
+        "stock_grades_individual (table)": [
           "ticker_id",
           "date",
           "gradingCompany",
@@ -456,7 +463,8 @@
           "strategy (string)",
           "unrealized_pnl (numeric, nullable)",
           "alpha (float, nullable)",
-          "beta (float, nullable)"
+          "beta (float, nullable)",
+          "net_exposure (numeric, nullable)"
         ],
         "trades (table)": [
           "id (uuid, primary key)",
@@ -465,7 +473,8 @@
           "action (string)",
           "dollar_amount (numeric)",
           "datetime (datetime)",
-          "industry (string)"
+          "industry (string)",
+          "reasoning (string, nullable)"
         ],
         "initial_positions (table)": [
           "id (uuid, primary key)",
