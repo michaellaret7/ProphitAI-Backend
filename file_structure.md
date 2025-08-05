@@ -115,6 +115,7 @@
 │       │   │   │   ├── macro_agent.py
 │       │   │   │   └── prompts/
 │       │   │   │       ├── cio_agent_prompts.py
+│       │   │   │       ├── cro_agent_prompts.py
 │       │   │   │       ├── macro_agent_prompts.py
 │       │   │   │       └── industry_prompts/
 │       │   │   │           ├── beverages.py
@@ -124,6 +125,7 @@
 │       │   │   │           ├── personal_care_products.py
 │       │   │   │           └── tobacco.py
 │       │   │   └── manage_portfolio/
+│       │   │       └── drawdown_management.py
 │       │   └── core/
 │       │       ├── base_agent_class.py
 │       │       └── tools/
@@ -144,6 +146,14 @@
 │       │   ├── portfolio_data.py
 │       │   ├── price_data.py
 │       │   └── user_data.py
+│       ├── stress_test/
+│       │   ├── __init__.py
+│       │   ├── capture_metrics.py
+│       │   ├── correlation_metrics.py
+│       │   ├── data_fetcher.py
+│       │   ├── drawdown_metrics.py
+│       │   ├── scenarios.py
+│       │   └── stress_test_core.py
 │       └── utils/
 │           ├── __init__.py
 │           ├── choose_model_and_client.py
@@ -165,9 +175,9 @@
 │       └── hedge_fund_stuff/
 │           ├── hedge_fund_portfolio_construction.py
 │           └── hedge_fund_risk_management.py
-├── frontend/
-│   ├── src
+├── backend_review.md
 ├── file_structure.md
+├── ideas.md
 ├── README.md
 ├── requirements.txt
 └── roadmap.md

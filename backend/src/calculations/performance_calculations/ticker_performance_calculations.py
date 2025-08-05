@@ -2,6 +2,7 @@ from backend.src.repositories.price_data import get_price_data_daily
 from datetime import datetime, timedelta
 from backend.src.calculations.returns_calculations.ticker_returns_calculations import CalculateTickerReturns
 import numpy as np
+import pandas as pd
 from backend.src.data_models.performance_models import PerformanceMetrics
 
 lookback_years = 1.5
@@ -313,6 +314,95 @@ class TickerPerformanceMetrics:
         
         tail_ratio = upper_tail / lower_tail
         return tail_ratio
+    
+    @staticmethod
+    def calculate_ticker_capture_ratios(ticker_returns_df: pd.DataFrame, benchmark_ticker: str = 'SPY'):
+        """
+        Calculate upside/downside capture ratios for all tickers against a benchmark.
+        
+        :param ticker_returns_df: DataFrame with ticker returns as columns
+        :param benchmark_ticker: Ticker to use as benchmark (default: 'SPY')
+        :return: Dictionary with capture metrics for each ticker
+        """
+        if ticker_returns_df.empty:
+            return "No ticker data available"
+        
+        # Determine benchmark
+        if benchmark_ticker and benchmark_ticker.upper() in ticker_returns_df.columns:
+            benchmark_returns = ticker_returns_df[benchmark_ticker.upper()]
+        elif 'SPY' in ticker_returns_df.columns:
+            benchmark_returns = ticker_returns_df['SPY']
+        else:
+            return "No benchmark data available"
+        
+        if benchmark_returns.empty:
+            return "No benchmark data available"
+        
+        # Calculate capture ratios for each ticker
+        ticker_capture_results = {}
+        
+        for ticker in ticker_returns_df.columns:
+            ticker_returns = ticker_returns_df[ticker]
+            
+            # Align the series and remove NaN values
+            aligned_data = pd.DataFrame({
+                'fund': ticker_returns,
+                'benchmark': benchmark_returns
+            }).dropna()
+            
+            if aligned_data.empty:
+                capture_metrics = {
+                    'upside_capture': np.nan,
+                    'downside_capture': np.nan,
+                    'capture_ratio': np.nan,
+                    'capture_spread': np.nan
+                }
+            else:
+                fund_aligned = aligned_data['fund']
+                benchmark_aligned = aligned_data['benchmark']
+                
+                # Separate up and down periods based on benchmark performance
+                up_periods = benchmark_aligned >= 0
+                down_periods = benchmark_aligned < 0
+                
+                # Calculate upside capture ratio
+                if up_periods.sum() > 0:
+                    fund_up_returns = fund_aligned[up_periods]
+                    benchmark_up_returns = benchmark_aligned[up_periods]
+                    
+                    fund_up_compound = (1 + fund_up_returns).prod() - 1
+                    benchmark_up_compound = (1 + benchmark_up_returns).prod() - 1
+                    
+                    upside_capture = fund_up_compound / benchmark_up_compound if benchmark_up_compound != 0 else np.nan
+                else:
+                    upside_capture = np.nan
+                    
+                # Calculate downside capture ratio
+                if down_periods.sum() > 0:
+                    fund_down_returns = fund_aligned[down_periods]
+                    benchmark_down_returns = benchmark_aligned[down_periods]
+                    
+                    fund_down_compound = (1 + fund_down_returns).prod() - 1
+                    benchmark_down_compound = (1 + benchmark_down_returns).prod() - 1
+                    
+                    downside_capture = fund_down_compound / benchmark_down_compound if benchmark_down_compound != 0 else np.nan
+                else:
+                    downside_capture = np.nan
+                    
+                # Calculate overall capture ratio and spread
+                capture_ratio = upside_capture / downside_capture if (downside_capture != 0 and not np.isnan(downside_capture)) else np.nan
+                capture_spread = upside_capture - downside_capture if (not np.isnan(upside_capture) and not np.isnan(downside_capture)) else np.nan
+                
+                capture_metrics = {
+                    'upside_capture': upside_capture,
+                    'downside_capture': downside_capture,
+                    'capture_ratio': capture_ratio,
+                    'capture_spread': capture_spread
+                }
+            
+            ticker_capture_results[ticker] = capture_metrics
+        
+        return ticker_capture_results
     
     def calc_all(self) -> PerformanceMetrics:
         """Calculate all performance metrics and return them as a Pydantic model."""

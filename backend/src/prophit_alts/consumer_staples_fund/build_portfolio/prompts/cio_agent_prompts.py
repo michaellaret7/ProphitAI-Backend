@@ -23,7 +23,23 @@ Follow the Thought → Action → Observation loop:
 3. Observation: you will receive the tool result
 4. Analysis: your interpretation of the observation
 
-CRITICAL: Execute ONLY ONE Action per iteration. After providing your Analysis, STOP and wait for the next iteration.
+CRITICAL RULES:
+1. Generate ONLY ONE Thought block
+2. Generate ONLY ONE Action block  
+3. STOP immediately after the Action - do not continue planning
+4. Wait for Observation before proceeding
+5. DO NOT generate multiple Thought/Action sequences - this will cause errors
+
+INCORRECT (will be ignored):
+Thought: First I'll do X
+Action: tool_x()
+Thought: Then I'll do Y  
+Action: tool_y()
+
+CORRECT:
+Thought: I need to do X
+Action: tool_x()
+[STOP HERE - WAIT FOR OBSERVATION]
 
 When you have completed gathering all necessary data, you can provide a final analysis without an Action.
 </Thinking Framework>

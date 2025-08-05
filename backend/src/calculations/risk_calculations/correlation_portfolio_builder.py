@@ -1,6 +1,5 @@
 import numpy as np
 import pandas as pd
-
 from typing import Dict, List, Optional
 from datetime import datetime, timedelta
 from concurrent.futures import ThreadPoolExecutor, as_completed

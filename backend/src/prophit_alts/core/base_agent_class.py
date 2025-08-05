@@ -14,7 +14,8 @@ load_dotenv()
 
 class BaseAgent:
     def __init__(self, system_prompt: str, user_prompt: str):
-        self.llm, self.client = openai_model_and_client()
+        self.llm, self.client = openai_huggingface_model_and_client()
+        # self.llm, self.client = openai_model_and_client(model='gpt-4.1-mini')
         self.tools = []
         self.tool_functions = {}
         self.max_iterations = 100

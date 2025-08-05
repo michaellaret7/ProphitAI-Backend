@@ -223,10 +223,13 @@ class FMP_API_DATA:
 if __name__ == "__main__":
     fmp_api = FMP_API_DATA()
     ticker = "AAPL"
-    etf = "SPY"
+    etf = "VIXY"
 
-    x = (fmp_api.get_stock_grade_news(ticker))
-    print(x[0])
+    # x = (fmp_api.get_stock_grade_news(ticker))
+    # print(x[0])
+
+    x = fmp_api.get_intraday_prices_for_ticker(etf, datetime.now() - timedelta(days=10), datetime.now())
+    print(x)
 
 
 

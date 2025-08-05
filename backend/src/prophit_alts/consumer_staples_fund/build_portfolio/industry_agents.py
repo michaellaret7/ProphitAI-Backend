@@ -52,9 +52,10 @@ class FoodProductsAgent(BaseAgent):
 
 
 if __name__ == "__main__":
-    agent = FoodProductsAgent()
+    agent = TobaccoAgent()
     output = agent.run()
 
     output_dict = parse_json_from_output(output)
-    add_initial_positions(positions=output_dict, industry="food_products", fund_name="consumer_staples_fund")
+    print(output_dict)
+    # add_initial_positions(positions=output_dict, industry="food_products", fund_name="consumer_staples_fund")
 

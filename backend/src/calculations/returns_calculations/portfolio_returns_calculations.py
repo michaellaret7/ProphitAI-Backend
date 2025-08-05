@@ -1,6 +1,6 @@
 import pandas as pd
 import numpy as np
-from backend.src.repositories.price_data import get_price_data_daily
+from backend.src.repositories.price_data import get_price_data_daily, get_price_data_15_mins
 from backend.src.calculations.returns_calculations.ticker_returns_calculations import CalculateTickerReturns
 from datetime import datetime, timedelta
 from typing import Dict

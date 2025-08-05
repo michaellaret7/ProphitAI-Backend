@@ -1,3 +1,4 @@
+from concurrent.futures import ThreadPoolExecutor, as_completed
 import pandas as pd
 from backend.src.db.core.db_config import MarketSession
 from backend.src.db.core.market_data_models import *
@@ -49,8 +50,6 @@ def get_price_data_hourly(ticker: str, start_date: datetime, end_date: datetime)
     # Resample to hourly data. 'h' stands for hourly frequency.
     hourly_data_df = data_15_min_df.resample('h').apply(ohlc_dict)
 
-    # The resample might create rows for hours with no data (e.g. overnight).
-    # We can remove rows where all OHLCV data is NaN.
     hourly_data_df.dropna(subset=['open', 'high', 'low', 'close'], how='all', inplace=True)
 
     return hourly_data_df
@@ -121,5 +120,39 @@ def get_price_data_daily(ticker: str, start_date: datetime, end_date: datetime):
     finally:
         session.close()
 
+def fetch_bulk_price_data_for_tickers(tickers: list, start_date_str: str, end_date_str: str, frequency: str = 'daily'):
+    """
+    Fetch price data for multiple tickers in parallel.
+    
+    Parameters:
+    - tickers: List of ticker symbols
+    - start_date_str: Start date in 'YYYY-MM-DD' format
+    - end_date_str: End date in 'YYYY-MM-DD' format
+    
+    Returns:
+    - dict: Mapping of ticker to price series
+    """
 
+    if frequency == 'daily':
+        get_price_data_func = get_price_data_daily
+    elif frequency == '15min':
+        get_price_data_func = get_price_data_15_mins
+    elif frequency == 'hourly':
+        get_price_data_func = get_price_data_hourly
 
+    price_data_map = {}
+    with ThreadPoolExecutor(max_workers=20) as executor:
+        future_to_ticker = {
+            executor.submit(get_price_data_func, ticker, start_date_str, end_date_str): ticker
+            for ticker in tickers
+        }
+        for future in as_completed(future_to_ticker):
+            ticker = future_to_ticker[future]
+            try:
+                data = future.result()
+                if data is not None and not data.empty:
+                    data['date'] = pd.to_datetime(data['date'])
+                    price_data_map[ticker] = data.set_index('date')['close']
+            except Exception as e:
+                print(f"Error fetching data for {ticker}: {e}")
+    return price_data_map

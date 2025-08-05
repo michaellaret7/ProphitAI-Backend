@@ -127,3 +127,69 @@ class PortfolioPerformanceCalculations:
             return np.inf
         
         return ann_return / max_dd
+    
+    def calculate_upside_downside_capture(self, fund_returns: pd.Series, benchmark_returns: pd.Series):
+        """
+        Calculate upside and downside capture ratios for given fund and benchmark returns.
+        
+        :param fund_returns: Fund return series
+        :param benchmark_returns: Benchmark return series
+        :return: Dictionary with upside capture, downside capture, and capture ratio
+        """
+        # Align the series and remove NaN values
+        aligned_data = pd.DataFrame({
+            'fund': fund_returns,
+            'benchmark': benchmark_returns
+        }).dropna()
+        
+        if aligned_data.empty:
+            return {
+                'upside_capture': np.nan,
+                'downside_capture': np.nan,
+                'capture_ratio': np.nan,
+                'capture_spread': np.nan
+            }
+        
+        fund_aligned = aligned_data['fund']
+        benchmark_aligned = aligned_data['benchmark']
+        
+        # Separate up and down periods based on benchmark performance
+        up_periods = benchmark_aligned >= 0
+        down_periods = benchmark_aligned < 0
+        
+        # Calculate upside capture ratio
+        if up_periods.sum() > 0:
+            fund_up_returns = fund_aligned[up_periods]
+            benchmark_up_returns = benchmark_aligned[up_periods]
+            
+            # Calculate compound returns for up periods
+            fund_up_compound = (1 + fund_up_returns).prod() - 1
+            benchmark_up_compound = (1 + benchmark_up_returns).prod() - 1
+            
+            upside_capture = fund_up_compound / benchmark_up_compound if benchmark_up_compound != 0 else np.nan
+        else:
+            upside_capture = np.nan
+            
+        # Calculate downside capture ratio
+        if down_periods.sum() > 0:
+            fund_down_returns = fund_aligned[down_periods]
+            benchmark_down_returns = benchmark_aligned[down_periods]
+            
+            # Calculate compound returns for down periods
+            fund_down_compound = (1 + fund_down_returns).prod() - 1
+            benchmark_down_compound = (1 + benchmark_down_returns).prod() - 1
+            
+            downside_capture = fund_down_compound / benchmark_down_compound if benchmark_down_compound != 0 else np.nan
+        else:
+            downside_capture = np.nan
+            
+        # Calculate overall capture ratio and spread
+        capture_ratio = upside_capture / downside_capture if (downside_capture != 0 and not np.isnan(downside_capture)) else np.nan
+        capture_spread = upside_capture - downside_capture if (not np.isnan(upside_capture) and not np.isnan(downside_capture)) else np.nan
+        
+        return {
+            'upside_capture': upside_capture,
+            'downside_capture': downside_capture,
+            'capture_ratio': capture_ratio,
+            'capture_spread': capture_spread
+        }
