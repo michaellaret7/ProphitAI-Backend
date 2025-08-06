@@ -1,22 +1,41 @@
-# Todo List - Code Duplication Removal in Simulated Shocks
+# Stress Test Cleanup - Unused Functions and Imports
 
-## Completed Tasks
-✅ Remove wildcard imports and make them explicit
-✅ Extract duplicate price data fetching logic into a reusable function  
-✅ Refactor simulated_market_shock to use helper functions
-✅ Refactor multi_factor_market_shock to use helper functions
+## Overview
+Remove unused functions and imports from the simulated_shocks folder to improve code cleanliness and maintainability.
+
+## Todo Items
+
+### 1. Remove unused functions ✓
+- Removed `simulated_market_shock()` function from engine.py ✓
+- Removed `get_industry_distribution()` method from runner.py ✓
+
+### 2. Remove unused imports ✓
+- Removed `simulated_market_shock` import from runner.py ✓
+- Removed `json` import from runner.py ✓
+- Removed `MarketSession` import from runner.py ✓
+- Removed `Ticker` import from runner.py ✓
+- Removed `calculate_beta` import from engine.py ✓
+- Removed `get_price_data_daily` import from engine.py ✓
+
+### 3. Fix references ✓
+- Fixed json.dumps reference in test code to use get_token_count ✓
 
 ## Review
-Successfully removed all code duplication from the simulated shocks folder:
 
-1. **Fixed wildcard imports** - Replaced `import *` with explicit imports in run_report.py
+### Summary of Changes
+Successfully removed all unused functions and imports from the simulated_shocks folder:
 
-2. **Created reusable helper functions**:
-   - `fetch_price_data_for_tickers()` - Centralized parallel price data fetching  
-   - `calculate_betas_for_portfolio()` - Centralized beta calculation logic
+1. **engine.py**: 
+   - Removed the unused `simulated_market_shock()` function (75 lines)
+   - Removed unused imports: `calculate_beta` and `get_price_data_daily`
 
-3. **Refactored existing functions** to use the new helpers, eliminating ~80 lines of duplicate code
+2. **runner.py**: 
+   - Removed the unused `get_industry_distribution()` method (10 lines)
+   - Removed unused imports: `simulated_market_shock`, `json`, `MarketSession`, and `Ticker`
+   - Fixed the test code to use `get_token_count()` instead of `json.dumps()`
 
-4. **No linting errors** introduced
-
-The code is now more maintainable, follows DRY principle, and is easier to understand.
+### Benefits
+- Cleaner, more maintainable codebase
+- Reduced code size and complexity
+- No unused imports or functions
+- All functionality remains intact

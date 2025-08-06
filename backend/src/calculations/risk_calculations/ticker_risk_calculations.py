@@ -1,6 +1,6 @@
 import pandas as pd
 import numpy as np
-from backend.src.repositories.price_data import get_price_data_daily
+from backend.src.repositories.price_data import get_price_data_daily, fetch_bulk_price_data_for_tickers
 from backend.src.calculations.returns_calculations.ticker_returns_calculations import CalculateTickerReturns
 from backend.src.calculations.returns_calculations.portfolio_returns_calculations import CalculatePortfolioReturns
 from datetime import datetime, timedelta
@@ -119,3 +119,105 @@ class TickerRiskCalculations:
         }
     
 
+def calculate_beta(ticker: str, benchmark_ticker: str = None, period_days: int = 730):
+    """
+    Calculates the beta of a ticker against a benchmark using historical data.
+
+    Parameters:
+    - ticker (str): The ticker symbol of the stock.
+    - benchmark_ticker (str): The ticker symbol of the benchmark (e.g., 'SPY').
+    - period_days (int): The number of past days to use for the beta calculation.
+
+    Returns:
+    - float: The calculated beta value, or None if data is insufficient.
+    """
+    end_date = datetime.now()
+    start_date = end_date - timedelta(days=period_days)
+    
+    start_date_str = start_date.strftime('%Y-%m-%d')
+    end_date_str = end_date.strftime('%Y-%m-%d')
+
+    # Fetch data for the ticker and the benchmark
+    ticker_df = get_price_data_daily(ticker, start_date_str, end_date_str)
+    if benchmark_ticker:
+        benchmark_df = get_price_data_daily(benchmark_ticker, start_date_str, end_date_str)
+    else:
+        benchmark_df = get_price_data_daily(ticker, start_date_str, end_date_str)
+
+    if ticker_df is None or benchmark_df is None or ticker_df.empty or benchmark_df.empty:
+        print(f"Warning: Could not fetch price data for {ticker} or {benchmark_ticker}.")
+        return None
+
+    # Set 'date' as index and extract 'close' prices
+    ticker_df['date'] = pd.to_datetime(ticker_df['date'])
+    ticker_df = ticker_df.set_index('date')
+    ticker_prices = ticker_df['close']
+
+    benchmark_df['date'] = pd.to_datetime(benchmark_df['date'])
+    benchmark_df = benchmark_df.set_index('date')
+    benchmark_prices = benchmark_df['close']
+
+    # Calculate returns
+    ticker_returns = ticker_prices.pct_change().dropna()
+    benchmark_returns = benchmark_prices.pct_change().dropna()
+
+    # Align data by index (timestamps)
+    returns_df = pd.concat([ticker_returns, benchmark_returns], axis=1, join='inner')
+    returns_df.columns = [ticker, benchmark_ticker]
+
+    if len(returns_df) < 2:
+        print(f"Warning: Not enough overlapping data for {ticker} to calculate beta.")
+        return None
+
+    # Calculate covariance and variance using pandas built-in methods
+    covariance = returns_df[ticker].cov(returns_df[benchmark_ticker])
+    variance = returns_df[benchmark_ticker].var()
+
+    if variance is None or variance == 0:
+        print(f"Warning: Benchmark variance is zero for {benchmark_ticker}, cannot calculate beta.")
+        return None
+
+    beta = covariance / variance
+    
+    return beta
+
+def calculate_up_down_beta(stock_ticker: str, market_ticker: str = 'SPY', start_date_str: str = None, end_date_str: str = None, frequency: str = None):
+    """
+    Calculate up beta and down beta for a stock relative to the market.
+    
+    Parameters:
+    - stock_ticker: str - The stock ticker symbol
+    - market_ticker: str - The market ticker symbol (default: 'SPY')
+    - start_date_str: str - Start date for the price data
+    - end_date_str: str - End date for the price data
+    - frequency: str - Frequency of the price data
+    
+    Returns:
+    - dict: Dictionary containing up_beta and down_beta values
+    """
+    
+    # Fetch price data for stock and market
+    tickers = [stock_ticker, market_ticker]
+    price_data = fetch_bulk_price_data_for_tickers(tickers=tickers, start_date_str=start_date_str, end_date_str=end_date_str, frequency=frequency)
+    
+    # Convert to DataFrame and calculate returns
+    price_df = pd.DataFrame(price_data)
+    returns_df = price_df.pct_change().dropna()
+    
+    # Create DataFrame with Market and Stock columns
+    df = pd.DataFrame({
+        'Market': returns_df[market_ticker],
+        'Stock': returns_df[stock_ticker]
+    })
+    
+    # Calculate up and down betas
+    up = df[df['Market'] > 0]
+    down = df[df['Market'] < 0]
+    
+    up_beta = up['Stock'].cov(up['Market']) / up['Market'].var()
+    down_beta = down['Stock'].cov(down['Market']) / down['Market'].var()
+    
+    return {
+        'up_beta': up_beta,
+        'down_beta': down_beta
+    }

@@ -51,7 +51,6 @@ class CalculatePortfolioReturns:
                     ticker, ticker_upper, price_data = future.result()
                     
                     if price_data is not None and not price_data.empty:
-                        # Initialize with both price_data and ticker
                         self.ticker_calculators[ticker] = CalculateTickerReturns(price_data, ticker_upper)
                 except Exception as e:
                     ticker = future_to_ticker[future]

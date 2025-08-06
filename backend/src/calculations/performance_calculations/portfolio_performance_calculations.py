@@ -4,7 +4,6 @@ from datetime import datetime, timedelta
 import pandas as pd
 from backend.src.calculations.returns_calculations.portfolio_returns_calculations import CalculatePortfolioReturns
 
-
 class PortfolioPerformanceCalculations:
     """
     Efficient portfolio performance metrics calculator.

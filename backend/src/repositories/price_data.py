@@ -28,7 +28,6 @@ def get_price_data_15_mins(ticker: str, start_date: datetime, end_date: datetime
     session.close()
     return df
 
-
 def get_price_data_hourly(ticker: str, start_date: datetime, end_date: datetime):
     """
     Fetches 15-minute price data and resamples it to hourly intervals.
@@ -53,7 +52,6 @@ def get_price_data_hourly(ticker: str, start_date: datetime, end_date: datetime)
     hourly_data_df.dropna(subset=['open', 'high', 'low', 'close'], how='all', inplace=True)
 
     return hourly_data_df
-
 
 def get_price_data_daily(ticker: str, start_date: datetime, end_date: datetime):
     """
@@ -132,10 +130,13 @@ def fetch_bulk_price_data_for_tickers(tickers: list, start_date_str: str, end_da
     Returns:
     - dict: Mapping of ticker to price series
     """
+    # Convert string dates to datetime objects
+    start_date = datetime.strptime(start_date_str, '%Y-%m-%d')
+    end_date = datetime.strptime(end_date_str, '%Y-%m-%d')
 
     if frequency == 'daily':
         get_price_data_func = get_price_data_daily
-    elif frequency == '15min':
+    elif frequency == '15mins':
         get_price_data_func = get_price_data_15_mins
     elif frequency == 'hourly':
         get_price_data_func = get_price_data_hourly
@@ -143,7 +144,7 @@ def fetch_bulk_price_data_for_tickers(tickers: list, start_date_str: str, end_da
     price_data_map = {}
     with ThreadPoolExecutor(max_workers=20) as executor:
         future_to_ticker = {
-            executor.submit(get_price_data_func, ticker, start_date_str, end_date_str): ticker
+            executor.submit(get_price_data_func, ticker, start_date, end_date): ticker
             for ticker in tickers
         }
         for future in as_completed(future_to_ticker):
@@ -151,8 +152,15 @@ def fetch_bulk_price_data_for_tickers(tickers: list, start_date_str: str, end_da
             try:
                 data = future.result()
                 if data is not None and not data.empty:
-                    data['date'] = pd.to_datetime(data['date'])
-                    price_data_map[ticker] = data.set_index('date')['close']
+                    # Handle different data formats based on frequency
+                    if frequency == 'daily':
+                        # Daily data has 'date' column
+                        data['date'] = pd.to_datetime(data['date'])
+                        price_data_map[ticker] = data.set_index('date')['close']
+                    else:
+                        # 15mins and hourly data already have datetime as index
+                        price_data_map[ticker] = data['close']
             except Exception as e:
                 print(f"Error fetching data for {ticker}: {e}")
+                
     return price_data_map
