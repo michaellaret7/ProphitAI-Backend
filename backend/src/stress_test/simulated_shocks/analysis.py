@@ -8,7 +8,6 @@ import pandas as pd
 from backend.src.db.core.db_config import MarketSession
 from backend.src.db.core.market_data_models import Ticker
 
-
 def get_industry_mapping(tickers):
     """
     Get industry mapping for a list of tickers.
@@ -25,7 +24,6 @@ def get_industry_mapping(tickers):
     
     industry_map = {ticker.ticker: ticker.industry for ticker in tickers_db}
     return industry_map
-
 
 def industry_returns_analysis(scenario_results):
     """

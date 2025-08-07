@@ -29,7 +29,6 @@ class CustomScenarioStressTest:
             'credit_stress': credit_stress,
         }
 
-    
     def run_all_scenarios(self):
         dict = {}
 

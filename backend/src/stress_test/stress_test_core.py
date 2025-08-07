@@ -4,7 +4,7 @@ Core stress test class that orchestrates stress testing functionality.
 import pandas as pd
 from backend.src.stress_test.historical_shocks.scenarios import STRESS_SCENARIOS
 from backend.src.stress_test.data_fetcher import calculate_price_returns
-from backend.src.stress_test.historical_shocks.capture_metrics import calculate_portfolio_capture_ratio, calculate_ticker_capture_ratios
+# from backend.src.stress_test.historical_shocks.capture_analysis import calculate_portfolio_capture_ratio, calculate_ticker_capture_ratios
 from backend.src.stress_test.historical_shocks.drawdown_metrics import calculate_portfolio_max_drawdown, calculate_ticker_max_drawdowns
 
 
@@ -44,42 +44,6 @@ class StressTest:
             scenario_dict['ticker_returns'] = ticker_returns
             setattr(self, attr_name, scenario_dict)
 
-    def calculate_portfolio_capture_ratio(self, scenario_name: str):
-        """
-        Calculate portfolio upside/downside capture ratio for a stress scenario against SPY.
-        
-        :param scenario_name: Name of the stress scenario
-        :return: Dictionary with capture metrics
-        """
-        scenario_data = getattr(self, scenario_name, None)
-        if scenario_data is None:
-            return f"Scenario '{scenario_name}' not found"
-        
-        portfolio_returns = scenario_data.get('portfolio_returns', pd.Series())
-        ticker_returns = scenario_data.get('ticker_returns', pd.DataFrame())
-        
-        if portfolio_returns.empty or 'SPY' not in ticker_returns.columns:
-            return "No portfolio or SPY data available"
-        
-        spy_returns = ticker_returns['SPY']
-        
-        return calculate_portfolio_capture_ratio(portfolio_returns, spy_returns)
-    
-    def calculate_ticker_capture_ratios(self, scenario_name: str, benchmark_ticker: str = 'SPY'):
-        """
-        Calculate individual ticker capture ratios for a stress scenario.
-        
-        :param scenario_name: Name of the stress scenario
-        :param benchmark_ticker: Ticker to use as benchmark (default: 'SPY')
-        :return: Dictionary with capture metrics for each ticker
-        """
-        scenario_data = getattr(self, scenario_name, None)
-        if scenario_data is None:
-            return f"Scenario '{scenario_name}' not found"
-        
-        ticker_returns = scenario_data.get('ticker_returns', pd.DataFrame())
-        
-        return calculate_ticker_capture_ratios(ticker_returns, benchmark_ticker)
     
     def calculate_max_drawdown(self, scenario_name: str, portfolio: bool = False, num_tickers: int = 5):
         """

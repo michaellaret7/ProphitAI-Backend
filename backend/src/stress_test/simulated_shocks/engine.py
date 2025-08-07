@@ -39,7 +39,7 @@ def calculate_betas_for_portfolio(portfolio_tickers: list, benchmark_ticker: str
     
     return betas
 
-def multi_factor_market_shock(portfolio_df, shocks: dict, period_days=730, scenario_name=None):
+def multi_factor_market_shock(portfolio_df, shocks: dict, period_days=252, scenario_name=None):
     """
     Calculates the portfolio impact of multiple simultaneous market shocks.
 
