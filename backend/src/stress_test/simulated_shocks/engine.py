@@ -152,18 +152,24 @@ def get_stock_return(shock_returns: dict, portfolio_betas: dict) -> dict:
 
     return summed_returns
 
-def run_stress_test_engine(portfolio_dict: dict, etf_shocks: dict):
+def run_stress_test_engine(portfolio_dict: dict, etf_shocks: dict, pre_calculated_betas: dict = None):
     """
     Run the stress test engine.
     
     Parameters:
     - portfolio_dict: Dictionary with tickers as keys and 'conviction'/'position' as values
     - etf_shocks: Dictionary with ETF tickers as keys and shock values (decimals) as values
+    - pre_calculated_betas: Optional pre-calculated betas to avoid redundant fetching
     
     Returns:
     - dict: Contains expected_returns, betas, and shock_returns
     """
-    betas = get_portfolio_betas(list(portfolio_dict.keys()), etf_shocks)
+    # Use pre-calculated betas if provided, otherwise fetch them
+    if pre_calculated_betas is not None:
+        betas = pre_calculated_betas
+    else:
+        betas = get_portfolio_betas(list(portfolio_dict.keys()), etf_shocks)
+    
     shock_returns = compute_shock_returns(betas, etf_shocks, portfolio_dict)
     expected_returns = get_stock_return(shock_returns, betas)
 

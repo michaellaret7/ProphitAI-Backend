@@ -1,11 +1,14 @@
 """
 Stress Test Workflow Runner
-Runs stress test engine and analysis for all scenarios
+Runs stress test engine and analysis for all scenarios with optimized data fetching
 """
 
 import json
 import pandas as pd
-from backend.src.stress_test.simulated_shocks.engine import run_stress_test_engine
+from backend.src.stress_test.simulated_shocks.engine import (
+    run_stress_test_engine,
+    get_portfolio_betas
+)
 from backend.src.stress_test.simulated_shocks.analysis import (
     industry_returns_analysis,
     contribution_analysis,
@@ -16,9 +19,184 @@ from backend.src.stress_test.simulated_shocks.scenarios import (
     hypothetical_scenarios
 )
 
+
+class StressTestRunner:
+    """
+    Optimized stress test runner that caches betas to avoid redundant data fetching.
+    """
+    
+    def __init__(self, portfolio_dict: dict):
+        """
+        Initialize the stress test runner with a portfolio.
+        Fetches all required data once during initialization.
+        
+        Parameters:
+        - portfolio_dict: Dictionary with tickers as keys and 'conviction'/'position' as values
+        """
+        self.portfolio_dict = portfolio_dict
+        self.tickers = list(portfolio_dict.keys())
+        
+        # Get all unique ETFs from scenarios
+        self.etf_list = self._get_all_etfs()
+        
+        # Fetch betas once for all ETFs
+        print(f"Fetching betas for {len(self.tickers)} tickers and {len(self.etf_list)} ETFs...")
+        self.cached_betas = get_portfolio_betas(
+            self.tickers,
+            {etf: 0 for etf in self.etf_list}  # Dummy shocks just to get betas
+        )
+        print("Betas cached successfully.")
+    
+    def _get_all_etfs(self):
+        """
+        Extract all unique ETFs from both historical and hypothetical scenarios.
+        """
+        etf_set = set()
+        
+        # Extract ETFs from historical scenarios
+        for scenario_data in historical_scenarios.values():
+            etf_set.update(
+                k for k in scenario_data.keys() 
+                if k not in ['start_date', 'end_date']
+            )
+        
+        # Extract ETFs from hypothetical scenarios
+        for etf_shocks in hypothetical_scenarios.values():
+            etf_set.update(etf_shocks.keys())
+        
+        return list(etf_set)
+    
+    def _filter_betas_for_scenario(self, etf_shocks: dict):
+        """
+        Filter cached betas to only include ETFs relevant to current scenario.
+        """
+        filtered_betas = {}
+        for ticker in self.tickers:
+            filtered_betas[ticker] = {
+                etf: self.cached_betas[ticker].get(etf, 0.0)
+                for etf in etf_shocks.keys()
+            }
+        return filtered_betas
+    
+    def run_workflow(self):
+        """
+        Run stress test workflow for all scenarios using cached betas.
+        
+        Returns:
+        - dict: Results for all scenarios
+        """
+        all_results = {}
+        
+        # Process historical scenarios
+        for scenario_name, scenario_data in historical_scenarios.items():
+            # Extract ETF shocks (exclude date fields)
+            etf_shocks = {k: v for k, v in scenario_data.items() 
+                          if k not in ['start_date', 'end_date']}
+            
+            # Filter betas for this scenario's ETFs
+            scenario_betas = self._filter_betas_for_scenario(etf_shocks)
+            
+            # Run stress test engine with cached betas
+            engine_results = run_stress_test_engine(
+                self.portfolio_dict, 
+                etf_shocks,
+                pre_calculated_betas=scenario_betas
+            )
+            
+            # Convert to format expected by analysis functions
+            scenario_results = self._format_engine_results(
+                engine_results, 
+                scenario_name, 
+                etf_shocks
+            )
+            
+            # Run analysis functions
+            analysis_results = {
+                'scenario_name': scenario_name,
+                'scenario_type': 'historical',
+                'etf_shocks': etf_shocks,
+                'stock_returns': engine_results['expected_returns'],
+                'industry_returns': industry_returns_analysis(scenario_results, self.portfolio_dict),
+                'contribution': contribution_analysis(scenario_results, self.portfolio_dict),
+                'performance': performance_analysis(scenario_results, self.portfolio_dict)
+            }
+            
+            all_results[f'historical_{scenario_name}'] = analysis_results
+        
+        # Process hypothetical scenarios
+        for scenario_name, etf_shocks in hypothetical_scenarios.items():
+            # Filter betas for this scenario's ETFs
+            scenario_betas = self._filter_betas_for_scenario(etf_shocks)
+            
+            # Run stress test engine with cached betas
+            engine_results = run_stress_test_engine(
+                self.portfolio_dict,
+                etf_shocks,
+                pre_calculated_betas=scenario_betas
+            )
+            
+            # Convert to format expected by analysis functions
+            scenario_results = self._format_engine_results(
+                engine_results, 
+                scenario_name, 
+                etf_shocks
+            )
+            
+            # Run analysis functions
+            analysis_results = {
+                'scenario_name': scenario_name,
+                'scenario_type': 'hypothetical',
+                'etf_shocks': etf_shocks,
+                'stock_returns': engine_results['expected_returns'],
+                'industry_returns': industry_returns_analysis(scenario_results, self.portfolio_dict),
+                'contribution': contribution_analysis(scenario_results, self.portfolio_dict),
+                'performance': performance_analysis(scenario_results, self.portfolio_dict)
+            }
+            
+            all_results[f'hypothetical_{scenario_name}'] = analysis_results
+        
+        return all_results
+    
+    def _format_engine_results(self, engine_results, scenario_name, etf_shocks):
+        """
+        Helper function to format engine results for analysis functions.
+        
+        Parameters:
+        - engine_results: Results from run_stress_test_engine
+        - scenario_name: Name of the scenario
+        - etf_shocks: ETF shock values
+        
+        Returns:
+        - dict: Formatted results for analysis functions
+        """
+        position_details_list = []
+        
+        for ticker, return_pct in engine_results['expected_returns'].items():
+            position = self.portfolio_dict[ticker]["position"]
+            return_decimal = return_pct / 100.0
+            pnl = return_decimal if position == "long" else -return_decimal
+            
+            position_details_list.append({
+                'ticker': ticker,
+                'position': position,
+                'pnl': pnl,
+                'total_stock_return': return_decimal,
+                # Add beta columns from results
+                **{f'beta_{etf}': engine_results['betas'][ticker].get(etf, 0.0) 
+                   for etf in etf_shocks.keys()}
+            })
+        
+        return {
+            'position_details': pd.DataFrame(position_details_list),
+            'scenario_name': scenario_name,
+            'scenario_etf_moves': etf_shocks
+        }
+
+
 def run_stress_test_workflow(portfolio_dict: dict):
     """
-    Run stress test workflow for all scenarios.
+    Legacy function for backward compatibility.
+    Creates a StressTestRunner instance and runs the workflow.
     
     Parameters:
     - portfolio_dict: Dictionary with tickers as keys and 'conviction'/'position' as values
@@ -26,102 +204,8 @@ def run_stress_test_workflow(portfolio_dict: dict):
     Returns:
     - dict: Results for all scenarios
     """
-    all_results = {}
-    
-    # Process historical scenarios (remove date fields)
-    for scenario_name, scenario_data in historical_scenarios.items():
-        # Extract ETF shocks (exclude date fields)
-        etf_shocks = {k: v for k, v in scenario_data.items() 
-                      if k not in ['start_date', 'end_date']}
-        
-        # Run stress test engine
-        engine_results = run_stress_test_engine(portfolio_dict, etf_shocks)
-        
-        # Convert to format expected by analysis functions
-        scenario_results = _format_engine_results(
-            engine_results, 
-            portfolio_dict, 
-            scenario_name, 
-            etf_shocks
-        )
-        
-        # Run analysis functions
-        analysis_results = {
-            'scenario_name': scenario_name,
-            'scenario_type': 'historical',
-            'etf_shocks': etf_shocks,
-            'stock_returns': engine_results['expected_returns'],
-            'industry_returns': industry_returns_analysis(scenario_results, portfolio_dict),
-            'contribution': contribution_analysis(scenario_results, portfolio_dict),
-            'performance': performance_analysis(scenario_results, portfolio_dict)
-        }
-        
-        all_results[f'historical_{scenario_name}'] = analysis_results
-    
-    # Process hypothetical scenarios
-    for scenario_name, etf_shocks in hypothetical_scenarios.items():
-        # Run stress test engine
-        engine_results = run_stress_test_engine(portfolio_dict, etf_shocks)
-        
-        # Convert to format expected by analysis functions
-        scenario_results = _format_engine_results(
-            engine_results, 
-            portfolio_dict, 
-            scenario_name, 
-            etf_shocks
-        )
-        
-        # Run analysis functions
-        analysis_results = {
-            'scenario_name': scenario_name,
-            'scenario_type': 'hypothetical',
-            'etf_shocks': etf_shocks,
-            'stock_returns': engine_results['expected_returns'],
-            'industry_returns': industry_returns_analysis(scenario_results, portfolio_dict),
-            'contribution': contribution_analysis(scenario_results, portfolio_dict),
-            'performance': performance_analysis(scenario_results, portfolio_dict)
-        }
-        
-        all_results[f'hypothetical_{scenario_name}'] = analysis_results
-    
-    return all_results
-
-
-def _format_engine_results(engine_results, portfolio_dict, scenario_name, etf_shocks):
-    """
-    Helper function to format engine results for analysis functions.
-    
-    Parameters:
-    - engine_results: Results from run_stress_test_engine
-    - portfolio_dict: Portfolio dictionary
-    - scenario_name: Name of the scenario
-    - etf_shocks: ETF shock values
-    
-    Returns:
-    - dict: Formatted results for analysis functions
-    """
-    position_details_list = []
-    
-    for ticker, return_pct in engine_results['expected_returns'].items():
-        position = portfolio_dict[ticker]["position"]
-        return_decimal = return_pct / 100.0
-        pnl = return_decimal if position == "long" else -return_decimal
-        
-        position_details_list.append({
-            'ticker': ticker,
-            'position': position,
-            'pnl': pnl,
-            'total_stock_return': return_decimal,
-            # Add beta columns from results
-            **{f'beta_{etf}': engine_results['betas'][ticker].get(etf, 0.0) 
-               for etf in etf_shocks.keys()}
-        })
-    
-    return {
-        'position_details': pd.DataFrame(position_details_list),
-        'scenario_name': scenario_name,
-        'scenario_etf_moves': etf_shocks
-    }
+    runner = StressTestRunner(portfolio_dict)
+    return runner.run_workflow()
 
 
 if __name__ == "__main__":
@@ -162,11 +246,15 @@ if __name__ == "__main__":
         "SEB": {"conviction": 0.05, "position": "short"}
     }
 
-
     from backend.src.utils.token_count import get_token_count
     
-    # Run the workflow and return raw results
-    results = run_stress_test_workflow(portfolio_dict)
+    # Create runner instance (fetches data once)
+    print("Creating StressTestRunner instance...")
+    runner = StressTestRunner(portfolio_dict)
+    
+    # Run the workflow using cached betas
+    print("Running stress test workflow with cached betas...")
+    results = runner.run_workflow()
+    
     print(json.dumps(results, indent=4))
-
     print(get_token_count(results))
