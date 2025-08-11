@@ -2,123 +2,175 @@ import pandas as pd
 import numpy as np
 from datetime import datetime, timedelta
 from backend.src.repositories.price_data import fetch_bulk_price_data_for_tickers
+import statsmodels.api as sm
+import json
+from backend.src.stress_test.simulated_shocks.scenarios import historical_scenarios, hypothetical_scenarios
 
-def calculate_betas_for_portfolio(portfolio_tickers: list, benchmark_ticker: str, returns_map: dict):
+def calculate_beta_from_data(ticker_prices: pd.Series, benchmark_prices: pd.Series) -> float:
     """
-    Calculate betas for multiple tickers against a benchmark.
+    Calculate beta from pre-fetched price data.
     
     Parameters:
-    - portfolio_tickers: List of portfolio ticker symbols
-    - benchmark_ticker: Benchmark ticker symbol
-    - returns_map: Dictionary mapping tickers to their return series
+    - ticker_prices: Series of ticker close prices
+    - benchmark_prices: Series of benchmark close prices
     
     Returns:
-    - dict: Mapping of ticker to beta value
+    - float: The calculated beta value
     """
-    betas = {}
-    benchmark_returns = returns_map.get(benchmark_ticker)
+    # Calculate returns
+    ticker_returns = ticker_prices.pct_change().dropna()
+    benchmark_returns = benchmark_prices.pct_change().dropna()
     
-    if benchmark_returns is None:
-        print(f"Warning: Could not get returns for benchmark {benchmark_ticker}.")
-        return {ticker: 1.0 for ticker in portfolio_tickers}
+    # Align the data
+    aligned_data = pd.DataFrame({
+        'ticker': ticker_returns,
+        'benchmark': benchmark_returns
+    }).dropna()
     
-    for ticker in portfolio_tickers:
-        ticker_returns = returns_map.get(ticker)
-        if ticker_returns is not None:
-            combined_returns = pd.concat([ticker_returns, benchmark_returns], axis=1, join='inner')
-            combined_returns.columns = [ticker, benchmark_ticker]
-            
-            if len(combined_returns) > 2 and combined_returns[benchmark_ticker].var() != 0:
-                covariance = combined_returns[ticker].cov(combined_returns[benchmark_ticker])
-                variance = combined_returns[benchmark_ticker].var()
-                betas[ticker] = covariance / variance
-            else:
-                betas[ticker] = 1.0
-        else:
-            betas[ticker] = 1.0
+    if len(aligned_data) < 20:  # Minimum data points for meaningful beta
+        return 0.0
     
-    return betas
+    # Calculate beta using covariance method
+    covariance = aligned_data['ticker'].cov(aligned_data['benchmark'])
+    benchmark_variance = aligned_data['benchmark'].var()
+    
+    if benchmark_variance == 0:
+        return 0.0
+    
+    beta = covariance / benchmark_variance
+    return beta
 
-def multi_factor_market_shock(portfolio_df, shocks: dict, period_days=252, scenario_name=None):
+def calculate_dynamic_weights(portfolio_betas: dict, ticker: str) -> dict:
     """
-    Calculates the portfolio impact of multiple simultaneous market shocks.
-
-    Parameters:
-    - portfolio_df (pd.DataFrame): DataFrame with ['ticker', 'position', 'allocation']
-    - shocks (dict): A dictionary where keys are benchmark tickers and values are their shocks.
-                     Example: {'SPY': -0.05, 'USO': 0.50}
-    - period_days (int): The historical period to use for beta calculations.
-
-    Returns:
-    - pd.DataFrame: A DataFrame with detailed P&L for each position.
+    Calculate dynamic weights based on absolute beta values.
+    Higher beta means more sensitivity to that factor.
     """
-    df = portfolio_df.copy()
-    portfolio_tickers = df['ticker'].tolist()
-    benchmark_tickers = list(shocks.keys())
-    all_tickers_to_fetch = list(set(portfolio_tickers + benchmark_tickers))
+    etf_betas = portfolio_betas[ticker]
+    
+    # Use absolute values of betas as basis for weights
+    abs_betas = {etf: abs(beta) for etf, beta in etf_betas.items()}
+    total_abs_beta = sum(abs_betas.values())
+    
+    # Normalize to sum to 1
+    if total_abs_beta > 0:
+        weights = {etf: abs_beta / total_abs_beta for etf, abs_beta in abs_betas.items()}
+    else:
+        # Fallback to equal weights if all betas are 0
+        num_etfs = len(etf_betas)
+        weights = {etf: 1.0 / num_etfs for etf in etf_betas.keys()}
+    
+    return weights
 
+def get_portfolio_betas(portfolio: list, etf_shocks: dict, period_days: int = 252) -> dict:
+    """
+    Get the portfolio betas for a given portfolio and etf shocks.
+    Uses bulk data fetching for efficiency.
+    """
+    # Calculate date range
     end_date = datetime.now()
     start_date = end_date - timedelta(days=period_days)
     start_date_str = start_date.strftime('%Y-%m-%d')
     end_date_str = end_date.strftime('%Y-%m-%d')
-
-    # Use the new helper function to fetch price data
-    price_data_map = fetch_bulk_price_data_for_tickers(all_tickers_to_fetch, start_date_str, end_date_str, frequency='daily')
     
-    # Convert prices to returns
-    returns_map = {ticker: prices.pct_change().dropna() for ticker, prices in price_data_map.items()}
+    # Combine all tickers we need to fetch
+    all_tickers = list(portfolio) + list(etf_shocks.keys())
     
-    df['total_stock_return'] = 0.0
-
-    for benchmark_ticker, shock_value in shocks.items():
-        # Use the helper function to calculate betas
-        betas = calculate_betas_for_portfolio(portfolio_tickers, benchmark_ticker, returns_map)
+    # Bulk fetch all price data at once
+    print(f"Fetching price data for {len(all_tickers)} tickers...")
+    price_data_map = fetch_bulk_price_data_for_tickers(
+        all_tickers, 
+        start_date_str, 
+        end_date_str, 
+        frequency='daily'
+    )
+    print(f"Price data fetched for {len(price_data_map)} tickers")
+    
+    # Calculate betas using the pre-fetched data
+    portfolio_betas = {ticker: {etf: 0.0 for etf in etf_shocks.keys()} for ticker in portfolio}
+    
+    for ticker in portfolio:
+        if ticker not in price_data_map:
+            print(f"Warning: No price data found for {ticker}")
+            continue
+            
+        ticker_prices = price_data_map[ticker]
         
-        beta_col_name = f'beta_{benchmark_ticker}'
-        df[beta_col_name] = df['ticker'].map(betas).fillna(1.0)
-        df['total_stock_return'] += df[beta_col_name] * shock_value
+        for etf in etf_shocks.keys():
+            if etf not in price_data_map:
+                print(f"Warning: No price data found for ETF {etf}")
+                continue
+                
+            etf_prices = price_data_map[etf]
+            
+            # Calculate beta using pre-fetched data
+            beta = calculate_beta_from_data(ticker_prices, etf_prices)
+            portfolio_betas[ticker][etf] = round(float(beta), 3)
+    
+    return portfolio_betas
 
-    df['position_multiplier'] = df['position'].map({'long': 1, 'short': -1})
-    df['pnl'] = df['total_stock_return'] * df['position_multiplier'] * df['allocation']
+def compute_shock_returns(portfolio_betas: dict, etf_shocks: dict, portfolio_dict: dict):
+    """
+    Compute the shock returns for a portfolio based on the baseline betas and etf shocks.
+    Inverts returns for short positions.
+    """
+    shock_returns = {ticker: {etf: 0.0 for etf in etf_shocks.keys()} for ticker in portfolio_betas.keys()}
 
-    total_pnl = df['pnl'].sum()
+    for ticker, etf_betas in portfolio_betas.items():
+        # Get position type (default to 'long' if not specified)
+        position = portfolio_dict.get(ticker, {}).get('position', 'long')
+        
+        for etf, beta in etf_betas.items():
+            shock = etf_shocks[etf]  # Direct access instead of etf_shocks[etf]['shock']
+            base_return = beta * shock
+            
+            # Invert return for short positions
+            if position == 'short':
+                base_return = -base_return
+                
+            shock_returns[ticker][etf] = round(float(base_return), 3)
+
+    return shock_returns
+
+def get_stock_return(shock_returns: dict, portfolio_betas: dict) -> dict:
+    """
+    For each ticker, multiply each ETF shock by its DYNAMIC weight and
+    return a flat dict {ticker: sum_of_weighted_etf_shocks} rounded to 2 decimals (percent).
+    """
+    summed_returns = {}
+
+    for ticker, etf_returns in shock_returns.items():
+        # Calculate dynamic weights for this specific ticker
+        dynamic_weights = calculate_dynamic_weights(portfolio_betas, ticker)
+        
+        total_weighted = 0.0
+        for etf, shock_return in etf_returns.items():
+            # Use dynamic weight instead of hardcoded weight
+            weight = dynamic_weights[etf]
+            total_weighted += shock_return * weight
+        # Multiply first to convert to percent, then round to 2 decimals to avoid float tails
+        summed_returns[ticker] = round(float(total_weighted) * 100.0, 2)
+
+    return summed_returns
+
+def run_stress_test_engine(portfolio_dict: dict, etf_shocks: dict):
+    """
+    Run the stress test engine.
     
-    # Calculate SPY P&L under multi-factor shocks
-    if 'SPY' in shocks:
-        # If SPY is directly shocked, use only its direct shock
-        spy_total_return = shocks['SPY']
-    else:
-        # If SPY is not directly shocked, calculate its exposure to other shock factors
-        spy_total_return = 0.0
-        for benchmark_ticker, shock_value in shocks.items():
-            spy_betas = calculate_betas_for_portfolio(['SPY'], benchmark_ticker, returns_map)
-            spy_beta = spy_betas.get('SPY', 1.0)
-            spy_total_return += spy_beta * shock_value
+    Parameters:
+    - portfolio_dict: Dictionary with tickers as keys and 'conviction'/'position' as values
+    - etf_shocks: Dictionary with ETF tickers as keys and shock values (decimals) as values
     
-    print("\n--- Multi-Factor Market Shock Analysis ---")
-    print("Shocks Applied:")
-    for factor, shock in shocks.items():
-        print(f"- {factor}: {shock*100:.2f}%")
-    
-    print(f"\nTotal Portfolio P&L: {total_pnl*100:.4f}%")
-    print(f"SPY P&L: {spy_total_return*100:.4f}%\n")
-    print("Position Details:")
-    print("-" * 80)
-    
-    for _, row in df.iterrows():
-        beta_str = " ".join([f"β_{b.split('_')[-1]}={row[b]:.2f}" for b in df.columns if b.startswith('beta_')])
-        print(f"{row['ticker']:6} {row['position']:5} {beta_str} | "
-              f"Stock Return: {row['total_stock_return']*100:6.2f}% | "
-              f"P&L: {row['pnl']*100:6.4f}%")
-    
-    print("-" * 80)
-    print(f"{'Total Portfolio Impact:':65} {total_pnl*100:6.4f}%")
-    
+    Returns:
+    - dict: Contains expected_returns, betas, and shock_returns
+    """
+    betas = get_portfolio_betas(list(portfolio_dict.keys()), etf_shocks)
+    shock_returns = compute_shock_returns(betas, etf_shocks, portfolio_dict)
+    expected_returns = get_stock_return(shock_returns, betas)
+
     return {
-        'scenario_name': scenario_name,
-        'scenario_etf_moves': shocks,
-        'total_portfolio_pnl': total_pnl,
-        'spy_pnl': spy_total_return,
-        'position_details': df
+        'expected_returns': expected_returns,
+        'betas': betas,
+        'shock_returns': shock_returns
     }
+
 

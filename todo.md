@@ -1,49 +1,40 @@
-# Fix pairwise_corr.py Issues
+# Stress Test Runner Bottleneck Fix
 
-## Problem Analysis
-The `pairwise_corr.py` file has several issues:
-1. The main function is testing with a ticker ('ODD') that doesn't have historical data for older stress scenarios
-2. The code is trying to calculate betas for scenarios where data doesn't exist
-3. The stress correlation test date ('2025-04-02' to '2025-04-07') may not have 15-minute data available
-4. The function is returning NaN values due to insufficient data
+## Objective
+Refactor runner.py into a class to fix data fetching bottleneck. Currently fetching price data and industry data multiple times (once per scenario).
 
 ## Todo Items
 
-### 1. Clean up test data in main function ✓
-- [x] Use a more established ticker (SPY) that has historical data
-- [x] Remove or fix the stress correlation test with valid dates
+### 1. Analyze Current Bottlenecks
+- [x] Identify repeated price data fetching in engine.py (line 79-86 in get_portfolio_betas)
+- [x] Identify repeated industry data fetching in analysis.py (line 27-29 in industry_returns_analysis)
+- [x] Document the data flow and redundancies (12 scenarios x 41+ tickers = 492+ fetches)
 
-### 2. Improve error handling ✓
-- [x] Add validation for date ranges before attempting calculations
-- [x] Handle cases where data is insufficient more gracefully
+### 2. Design StressTestRunner Class
+- [ ] Create class with initialization to fetch data once
+- [ ] Store price data for all tickers and ETFs
+- [ ] Store industry mapping for all tickers
+- [ ] Pass pre-fetched data to engine and analysis functions
 
-### 3. Simplify the main function ✓
-- [x] Focus on demonstrating the correlation matrix functionality
-- [x] Remove unnecessary beta calculations in the main test
-- [x] Keep the test simple and functional
+### 3. Refactor engine.py
+- [ ] Modify get_portfolio_betas to accept pre-fetched price data
+- [ ] Update function signatures to use cached data
 
-## Review
+### 4. Refactor analysis.py
+- [ ] Modify industry_returns_analysis to accept industry mapping
+- [ ] Remove database queries from analysis functions
 
-### Summary of Changes
-Successfully fixed the `pairwise_corr.py` file with minimal, focused changes:
+### 5. Refactor runner.py
+- [ ] Convert to StressTestRunner class
+- [ ] Implement data caching in __init__
+- [ ] Update workflow methods to use cached data
 
-1. **Simplified main function**: 
-   - Removed complex beta calculations for all scenarios
-   - Added clear output formatting with descriptive headers
-   - Focused on demonstrating correlation functionality
+### 6. Test and Validate
+- [ ] Ensure results remain identical
+- [ ] Verify performance improvement
+- [ ] Check all scenarios work correctly
 
-2. **Fixed data issues**:
-   - Replaced 'ODD' ticker with 'SPY' for beta calculations (SPY has complete historical data)
-   - Used valid historical stress scenario dates instead of future dates
-   - Changed from 15-minute to daily frequency for stress scenarios
-
-3. **Improved output**:
-   - Added top 5 most correlated tickers display
-   - Shows correlation change between baseline and stress scenarios
-   - Clear section headers for better readability
-
-### Benefits
-- Code now runs without errors
-- Cleaner, more focused demonstration of correlation analysis
-- Better error handling for missing data
-- More informative output for analysis
+## Notes
+- Main bottleneck: Fetching ~41 ticker prices for each scenario (6 historical + 6 hypothetical = 12x fetches)
+- Secondary bottleneck: Database queries for industry data in each scenario
+- Solution: Fetch all data once in class initialization, reuse for all scenarios

@@ -565,16 +565,13 @@ def load_multiple_etfs(etf_list, years_of_history=2):
 
 
 if __name__ == "__main__":
-    # Example usage - single ETF
-    etf_ticker = "KRE"  # Change this to any ETF ticker you want to load
-    
-    # # Option 1: Complete partial load (if VIXY has incomplete data)
-    # load_single_etf(
-    #     etf_ticker, 
-    #     sector="etf", 
-    #     industry="equity_etfs", 
-    #     sub_industry="regional_banks", 
-    #     years_of_history=4,  # Use 2 years for faster loading
-    #     allow_partial_reload=False  # This will complete missing data
-    # )
+
+    load_single_etf(
+        "RSPS", 
+        sector="etf", 
+        industry="equity_etfs", 
+        sub_industry="equal_weighted", 
+        years_of_history=4,  # Use 2 years for faster loading
+        allow_partial_reload=False  # This will complete missing data
+    )
 

@@ -14,8 +14,8 @@ load_dotenv()
 
 class BaseAgent:
     def __init__(self, system_prompt: str, user_prompt: str):
-        self.llm, self.client = openai_huggingface_model_and_client()
-        # self.llm, self.client = openai_model_and_client(model='gpt-4.1-mini')
+        # self.llm, self.client = openai_huggingface_model_and_client()
+        self.llm, self.client = openai_model_and_client(model='gpt-5')
         self.tools = []
         self.tool_functions = {}
         self.max_iterations = 100
@@ -24,9 +24,10 @@ class BaseAgent:
         self.user_prompt = user_prompt
         
         # Register tools directly
-        self._register_tools()
+        self._register_base_tools()
 
-    def _register_tools(self):
+    #TODO: Add more base tools like calculator, better search engine, etc.
+    def _register_base_tools(self):
         """Register all tools for this agent."""
         # Tool descriptions
         ticker_data_description = """
@@ -143,7 +144,7 @@ class BaseAgent:
             response = self.client.chat.completions.create(
                 model=self.llm,
                 messages=messages,
-                temperature=0.7
+                # temperature=0.7
             )
             
             assistant_response = response.choices[0].message.content
@@ -212,7 +213,7 @@ class BaseAgent:
             analysis_response = self.client.chat.completions.create(
                 model=self.llm,
                 messages=messages,
-                temperature=0.7
+                # temperature=0.7
             )
             
             analysis = analysis_response.choices[0].message.content

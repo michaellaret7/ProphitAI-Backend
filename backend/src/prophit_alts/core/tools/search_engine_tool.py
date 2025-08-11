@@ -66,7 +66,7 @@ class AgentSearchEngine:
             return None
     
     def openai_search(self, query: str):
-        model, client = openai_model_and_client() 
+        model, client = openai_model_and_client('o3') 
         """
         Processes a user query using the Deep Research API for detailed market analysis.
         """
@@ -82,7 +82,7 @@ class AgentSearchEngine:
     """
         try:
             response = client.responses.create(
-                model="o3",
+                model=model,
                 input=[
                     {"role": "developer", "content": [{"type": "input_text", "text": system_message}]},
                     {"role": "user", "content": [{"type": "input_text", "text": query}]}
