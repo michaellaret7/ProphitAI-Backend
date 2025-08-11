@@ -2,7 +2,7 @@ import pandas as pd
 import numpy as np
 from backend.src.repositories.price_data import fetch_bulk_price_data_for_tickers
 from datetime import datetime, timedelta
-from backend.src.stress_test.simulated_shocks.scenarios import historical_scenarios
+from backend.src.stress_test.scenarios import historical_scenarios
 
 def calculate_correlation_matrix(price_data: dict = None, start_date_str: str = None, end_date_str: str = None, frequency: str = None, tickers: list[str] = None):
     """
@@ -57,15 +57,29 @@ def pairwise_correlation_analysis(correlation_matrix: pd.DataFrame):
     return avg_correlations, portfolio_average_correlation
 
 def run_pairwise_correlation_analysis(portfolio_dict: dict):
+    """
+    Optimized pairwise correlation analysis that fetches all price data once.
+    """
     baseline_summary = {}
     stress_summary = {}
     tickers = list(portfolio_dict.keys())
 
-    start_date_str = (datetime.now() - timedelta(days=252)).strftime("%Y-%m-%d")
-    end_date_str = datetime.now().strftime("%Y-%m-%d")  
-    frequency = "daily"
-
-    baseline_correlation_matrix = calculate_correlation_matrix(tickers=tickers, start_date_str=start_date_str, end_date_str=end_date_str, frequency=frequency)
+    # Prepare all date ranges needed
+    baseline_start = (datetime.now() - timedelta(days=252)).strftime("%Y-%m-%d")
+    baseline_end = datetime.now().strftime("%Y-%m-%d")
+    
+    # Fetch baseline data once
+    baseline_price_data = fetch_bulk_price_data_for_tickers(
+        tickers=tickers, 
+        start_date_str=baseline_start, 
+        end_date_str=baseline_end, 
+        frequency="daily"
+    )
+    
+    # Calculate baseline correlation matrix using cached data
+    baseline_correlation_matrix = calculate_correlation_matrix(
+        price_data=baseline_price_data
+    )
     avg_correlations, portfolio_average_correlation = pairwise_correlation_analysis(baseline_correlation_matrix)
 
     baseline_summary['baseline_scenario_averages'] = {
@@ -73,13 +87,28 @@ def run_pairwise_correlation_analysis(portfolio_dict: dict):
         'average_portfolio_correlation': portfolio_average_correlation
     }
 
-    # Calculate stress scenario correlations
+    # Fetch all stress scenario data in bulk
     stress_correlations_dict = {}
     
-    for scenario in historical_scenarios.keys():
-        stress_correlation_matrix = calculate_correlation_matrix(tickers=tickers, start_date_str=historical_scenarios[scenario]['start_date'], end_date_str=historical_scenarios[scenario]['end_date'], frequency='15mins')
+    for scenario_name, scenario_data in historical_scenarios.items():
+        # Fetch stress scenario data
+        stress_price_data = fetch_bulk_price_data_for_tickers(
+            tickers=tickers,
+            start_date_str=scenario_data['start_date'],
+            end_date_str=scenario_data['end_date'],
+            frequency='15mins'
+        )
+        
+        # Calculate correlation matrix using fetched data
+        stress_correlation_matrix = calculate_correlation_matrix(
+            price_data=stress_price_data
+        )
+        
         avg_correlations, portfolio_average_correlation = pairwise_correlation_analysis(stress_correlation_matrix)
-        stress_correlations_dict[scenario] = {'avg_correlations': avg_correlations, 'portfolio_average_correlation': portfolio_average_correlation}
+        stress_correlations_dict[scenario_name] = {
+            'avg_correlations': avg_correlations, 
+            'portfolio_average_correlation': portfolio_average_correlation
+        }
     
     # Calculate average across all stress scenarios
     ticker_averages = {}

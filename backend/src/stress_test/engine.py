@@ -4,7 +4,7 @@ from datetime import datetime, timedelta
 from backend.src.repositories.price_data import fetch_bulk_price_data_for_tickers
 import statsmodels.api as sm
 import json
-from backend.src.stress_test.simulated_shocks.scenarios import historical_scenarios, hypothetical_scenarios
+from backend.src.stress_test.scenarios import historical_scenarios, hypothetical_scenarios
 
 def calculate_beta_from_data(ticker_prices: pd.Series, benchmark_prices: pd.Series) -> float:
     """

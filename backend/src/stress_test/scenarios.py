@@ -48,7 +48,6 @@ hypothetical_scenarios = {
     },
 }
 
-# Historical Scenarios - Individual variables for consistency with existing code
 historical_scenarios = {
     'trump_tariff_crash': {
         'VIXY': 0.3865,

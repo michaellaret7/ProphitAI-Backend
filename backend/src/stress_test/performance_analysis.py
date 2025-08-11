@@ -4,12 +4,8 @@ This module contains functions for analyzing stress test results including
 industry returns, contribution analysis, and performance metrics.
 """
 
-import pandas as pd
 from backend.src.db.core.db_config import MarketSession
 from backend.src.db.core.market_data_models import Ticker
-from backend.src.stress_test.simulated_shocks.scenarios import historical_scenarios
-from backend.src.stress_test.simulated_shocks.engine import run_stress_test_engine
-
 
 def industry_returns_analysis(scenario_results, portfolio_dict=None):
     """

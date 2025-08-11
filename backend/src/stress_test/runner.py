@@ -5,24 +5,29 @@ Runs stress test engine and analysis for all scenarios with optimized data fetch
 
 import json
 import pandas as pd
-from backend.src.stress_test.simulated_shocks.engine import (
+from backend.src.stress_test.engine import (
     run_stress_test_engine,
     get_portfolio_betas
 )
-from backend.src.stress_test.simulated_shocks.analysis import (
+from backend.src.stress_test.performance_analysis import (
     industry_returns_analysis,
     contribution_analysis,
     performance_analysis
 )
-from backend.src.stress_test.simulated_shocks.scenarios import (
+from backend.src.stress_test.scenarios import (
     historical_scenarios,
     hypothetical_scenarios
+)
+
+from backend.src.stress_test.pairwise_corr_analysis import (
+    run_pairwise_correlation_analysis
 )
 
 
 class StressTestRunner:
     """
     Optimized stress test runner that caches betas to avoid redundant data fetching.
+    Pairwise correlation analysis is computed lazily and only for historical scenarios.
     """
     
     def __init__(self, portfolio_dict: dict):
@@ -46,6 +51,9 @@ class StressTestRunner:
             {etf: 0 for etf in self.etf_list}  # Dummy shocks just to get betas
         )
         print("Betas cached successfully.")
+        
+        # Initialize pairwise correlation cache (lazy loading)
+        self._pairwise_corr_analysis = None
     
     def _get_all_etfs(self):
         """
@@ -66,6 +74,21 @@ class StressTestRunner:
         
         return list(etf_set)
     
+    def _get_pairwise_correlation_analysis(self):
+        """
+        Lazy loading for pairwise correlation analysis.
+        Only computes it once when first needed (for historical scenarios).
+        """
+        if self._pairwise_corr_analysis is None:
+            print("Running pairwise correlation analysis...")
+            baseline_summary, stress_summary = run_pairwise_correlation_analysis(self.portfolio_dict)
+            self._pairwise_corr_analysis = {
+                'baseline_summary': baseline_summary,
+                'stress_summary': stress_summary
+            }
+            print("Pairwise correlation analysis completed.")
+        return self._pairwise_corr_analysis
+    
     def _filter_betas_for_scenario(self, etf_shocks: dict):
         """
         Filter cached betas to only include ETFs relevant to current scenario.
@@ -81,6 +104,7 @@ class StressTestRunner:
     def run_workflow(self):
         """
         Run stress test workflow for all scenarios using cached betas.
+        Pairwise correlation analysis is included only for historical scenarios.
         
         Returns:
         - dict: Results for all scenarios
@@ -110,7 +134,7 @@ class StressTestRunner:
                 etf_shocks
             )
             
-            # Run analysis functions
+            # Run analysis functions (including pairwise correlation for historical scenarios)
             analysis_results = {
                 'scenario_name': scenario_name,
                 'scenario_type': 'historical',
@@ -118,7 +142,8 @@ class StressTestRunner:
                 'stock_returns': engine_results['expected_returns'],
                 'industry_returns': industry_returns_analysis(scenario_results, self.portfolio_dict),
                 'contribution': contribution_analysis(scenario_results, self.portfolio_dict),
-                'performance': performance_analysis(scenario_results, self.portfolio_dict)
+                'performance': performance_analysis(scenario_results, self.portfolio_dict),
+                'pairwise_correlation_analysis': self._get_pairwise_correlation_analysis()
             }
             
             all_results[f'historical_{scenario_name}'] = analysis_results
@@ -192,7 +217,6 @@ class StressTestRunner:
             'scenario_etf_moves': etf_shocks
         }
 
-
 def run_stress_test_workflow(portfolio_dict: dict):
     """
     Legacy function for backward compatibility.
@@ -206,7 +230,6 @@ def run_stress_test_workflow(portfolio_dict: dict):
     """
     runner = StressTestRunner(portfolio_dict)
     return runner.run_workflow()
-
 
 if __name__ == "__main__":
     # Example portfolio for testing
