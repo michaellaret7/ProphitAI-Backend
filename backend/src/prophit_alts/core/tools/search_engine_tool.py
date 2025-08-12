@@ -3,7 +3,7 @@ import re
 
 class AgentSearchEngine:
     def perplexity_free_search(self, query: str):
-        model, client = perplexity_model_and_client('sonar-pro') # --> initialize model and client for perplexity
+        model, client = perplexity_model_and_client('sonar-reasoning') # --> initialize model and client for perplexity
 
         system_prompt = """
         <Role>
@@ -57,8 +57,11 @@ class AgentSearchEngine:
             )
 
             content = response.choices[0].message.content
-            cleaned_content = re.sub(r'\[\d+\]', '', content) # --> clean up the content to remove the thinking process tags
-
+            # Remove numbered references like [1], [2], etc.
+            cleaned_content = re.sub(r'\[\d+\]', '', content)
+            # Remove content between <think> and </think> tags (including the tags)
+            cleaned_content = re.sub(r'<think>.*?</think>', '', cleaned_content, flags=re.DOTALL)
+            
             return cleaned_content
         
         except Exception as e:

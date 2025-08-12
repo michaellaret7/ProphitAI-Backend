@@ -30,17 +30,6 @@ CRITICAL RULES:
 4. Wait for Observation before proceeding
 5. DO NOT generate multiple Thought/Action sequences - this will cause errors
 
-INCORRECT (will be ignored):
-Thought: First I'll do X
-Action: tool_x()
-Thought: Then I'll do Y  
-Action: tool_y()
-
-CORRECT:
-Thought: I need to do X
-Action: tool_x()
-[STOP HERE - WAIT FOR OBSERVATION]
-
 When you have completed gathering all necessary data, you can provide a final analysis without an Action.
 </Thinking Framework>
 

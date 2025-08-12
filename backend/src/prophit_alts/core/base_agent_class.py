@@ -15,7 +15,8 @@ load_dotenv()
 class BaseAgent:
     def __init__(self, system_prompt: str, user_prompt: str):
         # self.llm, self.client = openai_huggingface_model_and_client()
-        self.llm, self.client = openai_model_and_client(model='gpt-5')
+        self.model = 'gpt-5'
+        self.llm, self.client = openai_model_and_client(model=self.model)
         self.tools = []
         self.tool_functions = {}
         self.max_iterations = 100
@@ -141,11 +142,17 @@ class BaseAgent:
             if self.verbose:
                 print(f"\n⚜️  Iteration {iterations}")
             
-            response = self.client.chat.completions.create(
-                model=self.llm,
-                messages=messages,
-                # temperature=0.7
-            )
+            if self.model == 'gpt-5':
+                response = self.client.chat.completions.create(
+                    model=self.llm,
+                    messages=messages,
+                )
+            else:
+                response = self.client.chat.completions.create(
+                    model=self.llm,
+                    messages=messages,
+                    temperature=0.7
+                )
             
             assistant_response = response.choices[0].message.content
             
@@ -210,11 +217,17 @@ class BaseAgent:
             analysis_prompt = "Now provide your Analysis of this observation:"
             messages.append({"role": "user", "content": analysis_prompt})
             
-            analysis_response = self.client.chat.completions.create(
-                model=self.llm,
-                messages=messages,
-                # temperature=0.7
-            )
+            if self.model == 'gpt-5':
+                analysis_response = self.client.chat.completions.create(
+                    model=self.llm,
+                    messages=messages,
+                )
+            else:
+                analysis_response = self.client.chat.completions.create(
+                    model=self.llm,
+                    messages=messages,
+                    temperature=0.7
+                )
             
             analysis = analysis_response.choices[0].message.content
             
@@ -233,6 +246,10 @@ class BaseAgent:
             
             # Add analysis to message history
             messages.append({"role": "assistant", "content": analysis})
+            
+            # Explicitly prompt to continue with next step if workflow not complete
+            continue_prompt = "Continue with the next step in the workflow. If all steps are complete, provide your final conclusion without an Action. Otherwise, proceed with the next Thought and Action."
+            messages.append({"role": "user", "content": continue_prompt})
         
         if iterations >= self.max_iterations:
             full_response.append("Reached maximum iterations without a final answer.")
