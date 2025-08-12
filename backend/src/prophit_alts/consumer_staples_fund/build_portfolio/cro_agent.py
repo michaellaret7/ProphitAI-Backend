@@ -15,7 +15,7 @@ from backend.src.calculations.performance_calculations.portfolio_performance_cal
 
 class CROAgent(BaseAgent):
     def __init__(self, system_prompt: str = cro_system_prompt, user_prompt: str = cro_user_prompt):
-        super().__init__(system_prompt, user_prompt, max_iterations=75)
+        super().__init__(system_prompt, user_prompt, max_iterations=75, save_messages=True, model="gpt-5")
         
         self._register_cro_tools()
 

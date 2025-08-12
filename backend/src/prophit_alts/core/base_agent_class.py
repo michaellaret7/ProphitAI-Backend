@@ -4,6 +4,7 @@ import re
 from typing import List, Dict, Any, Callable, Optional, Tuple
 from datetime import datetime
 from dataclasses import dataclass, field
+from pathlib import Path
 
 from dotenv import load_dotenv
 from openai import OpenAI
@@ -13,6 +14,7 @@ from backend.src.prophit_alts.core.tools.calculator import calculator
 from backend.src.prophit_alts.core.tools.data_wrapper_tool import ProphitAltsDataWrapper
 from backend.src.prophit_alts.core.tools.search_engine_tool import AgentSearchEngine
 from backend.src.utils.choose_model_and_client import openai_model_and_client
+from backend.src.utils.choose_model_and_client import *
 
 load_dotenv()
 
@@ -24,7 +26,6 @@ class StepTrace:
     observation: Optional[Any] = None
     analysis: Optional[str] = None
 
-#TODO: add a tool to check an item off the to do list every time the model runs
 class BaseAgent:
     """
     Refactored BaseAgent with:
@@ -34,7 +35,7 @@ class BaseAgent:
       (d) Returns a clean structured trace
     """
 
-    def __init__(self, system_prompt: str, user_prompt: str, *, model: str = "gpt-5", max_iterations: int = 50, verbose: bool = True, plan_first: bool = True, final_keywords: Optional[List[str]] = None):
+    def __init__(self, system_prompt: str, user_prompt: str, *, model: str = "gpt-5", max_iterations: int = 50, verbose: bool = True, plan_first: bool = True, final_keywords: Optional[List[str]] = None, save_messages: bool = True):
         self.model_name = model
         self.llm, self.client = openai_model_and_client(model=self.model_name)
 
@@ -44,6 +45,7 @@ class BaseAgent:
         self.verbose = verbose
         self.plan_first = True  # always plan first
         self.final_keywords = final_keywords or ["Final Answer:", "FINAL ANSWER:"]
+        self.save_messages = save_messages
 
         # OpenAI tools and local dispatch map
         self.tools: List[Dict[str, Any]] = []
@@ -60,6 +62,27 @@ class BaseAgent:
         self._recent_actions: List[str] = []  # serialized (tool_name + sorted args)
         self._stuck_count: int = 0
         self._stuck_threshold: int = 4  # Increased to allow more iterations for portfolio testing
+        
+        # Message logging
+        if self.save_messages:
+            self.messages_log_path = Path(__file__).parent / "agent_messages.json"
+            # Clear the messages file at start
+            try:
+                with open(self.messages_log_path, "w", encoding="utf-8") as f:
+                    json.dump({}, f)
+            except Exception:
+                pass
+        
+        # Checklist tracking
+        self.checklist_path = Path(__file__).parent / "agent_checklist.json"
+        self.checklist_items: List[Dict[str, Any]] = []
+        self.checklist_enabled = False  # Will be enabled when plan is detected
+        # Clear the checklist file at start
+        try:
+            with open(self.checklist_path, "w", encoding="utf-8") as f:
+                json.dump({}, f)
+        except Exception:
+            pass
 
     # --- Tool registry -----------------------------------------------------
     def _register_base_tools(self):
@@ -134,12 +157,17 @@ class BaseAgent:
             print("🚀 Starting JSON ReAct run")
             print(f"Query: {self.user_prompt}")
             print("=" * 60)
+            if self.save_messages:
+                print(f"📝 Saving messages to: {self.messages_log_path}")
 
         messages: List[Dict[str, Any]] = [
             {"role": "system", "content": self._system_rules()},
             {"role": "system", "content": self.system_prompt},
             {"role": "user", "content": self.user_prompt},
         ]
+        
+        # Save initial messages
+        self._save_messages_to_json(messages, iteration=0)
 
         if self.plan_first:
             messages.append(
@@ -177,6 +205,10 @@ class BaseAgent:
                 print("  assistant_raw:", assistant_raw)
 
             step = StepTrace(iteration=i, assistant_raw=assistant_raw)
+            
+            # Try to parse plan from first response if plan_first is enabled
+            if i == 1 and self.plan_first and assistant_raw:
+                self._parse_plan_to_checklist(assistant_raw)
 
             if msg.tool_calls:
                 # Append the assistant message that contains all tool calls
@@ -214,16 +246,14 @@ class BaseAgent:
                         "content": self._stringify(observation),
                     })
 
+                # Update checklist progress and ask the model to analyze
+                self._update_checklist_progress(i)
+                
                 # Ask the model to analyze the observation and decide next step or finalize
                 messages.append(
                     {
                         "role": "user",
-                            "content": (
-                                "Analyze the latest tool observations. Based on your analysis, either: "
-                                "(a) call another tool to continue iterating, or "
-                                "(b) if you've tested multiple portfolio variations and achieved your targets, "
-                                "produce a FINAL ANSWER preceded by 'Final Answer:'."
-                            ),
+                        "content": self._get_checklist_prompt(i),
                     }
                 )
 
@@ -250,17 +280,16 @@ class BaseAgent:
                         print("  observation:", self._stringify(observation))
 
                     messages.append({"role": "assistant", "content": assistant_raw})
-                    messages.append({"role": "tool", "content": self._stringify(observation)})
+                    # For content-based tool calls, we can't use "tool" role - use "user" instead
+                    messages.append({"role": "user", "content": f"Tool '{name}' returned: {self._stringify(observation)}"})
 
+                    # Update checklist progress
+                    self._update_checklist_progress(i)
+                    
                     messages.append(
                         {
                             "role": "user",
-                            "content": (
-                                "Analyze the latest tool observations. Based on your analysis, either: "
-                                "(a) call another tool to continue iterating, or "
-                                "(b) if you've tested multiple portfolio variations and achieved your targets, "
-                                "produce a FINAL ANSWER preceded by 'Final Answer:'."
-                            ),
+                            "content": self._get_checklist_prompt(i),
                         }
                     )
                 else:
@@ -277,6 +306,9 @@ class BaseAgent:
                     )
 
             self.trace.append(step)
+            
+            # Save messages after each iteration
+            self._save_messages_to_json(messages, iteration=i)
 
             if self.verbose:
                 print("" + "-"*80)
@@ -310,13 +342,20 @@ class BaseAgent:
             "total_tokens": self.total_tokens,
             "trace": [self._trace_to_dict(s) for s in self.trace],
         }
+        
+        # Final save with complete trace
+        if self.save_messages:
+            self._save_final_json(messages, result)
+        
+        return result
 
     # --- Helpers -----------------------------------------------------------
     def _system_rules(self) -> str:
         return (
             "You are a JSON ReAct agent. Prefer native tool-calls. When you can finalize, "
             "output a concise answer beginning with 'Final Answer:'. If you must emit a JSON step, use:\n"
-            '{"thought":"...","action":{"tool":"name","args":{}}}'
+            '{"thought":"...","action":{"tool":"name","args":{}}}\n'
+            'IMPORTANT: Use exact tool names without any prefix (e.g., "get_ticker_data" not "functions.get_ticker_data")'
         )
 
     def _accumulate_usage(self, response) -> None:
@@ -345,7 +384,12 @@ class BaseAgent:
         try:
             obj = json.loads(content)
             if isinstance(obj, dict) and "action" in obj and isinstance(obj["action"], dict):
-                return obj["action"]
+                action = obj["action"]
+                # Strip "functions." prefix if present
+                if "tool" in action and isinstance(action["tool"], str):
+                    if action["tool"].startswith("functions."):
+                        action["tool"] = action["tool"][10:]  # Remove "functions." prefix
+                return action
         except json.JSONDecodeError:
             pass
         # Try to find JSON object inside text
@@ -354,7 +398,12 @@ class BaseAgent:
             try:
                 obj = json.loads(m.group(0))
                 if isinstance(obj, dict) and "action" in obj:
-                    return obj["action"]
+                    action = obj["action"]
+                    # Strip "functions." prefix if present
+                    if isinstance(action, dict) and "tool" in action and isinstance(action["tool"], str):
+                        if action["tool"].startswith("functions."):
+                            action["tool"] = action["tool"][10:]  # Remove "functions." prefix
+                    return action
             except json.JSONDecodeError:
                 return None
         return None
@@ -407,4 +456,230 @@ class BaseAgent:
             "observation": s.observation,
             "analysis": s.analysis,
         }
+    
+    def _save_messages_to_json(self, messages: List[Dict[str, Any]], iteration: int) -> None:
+        """Save messages to JSON file during execution."""
+        if not self.save_messages:
+            return
+        
+        try:
+            # Create a serializable version of messages
+            serializable_messages = []
+            for msg in messages:
+                serializable_msg = {"role": msg["role"], "content": msg.get("content", "")}
+                
+                # Handle tool calls if present
+                if "tool_calls" in msg and msg["tool_calls"]:
+                    serializable_msg["tool_calls"] = [
+                        {
+                            "id": tc.id,
+                            "function": {
+                                "name": tc.function.name,
+                                "arguments": tc.function.arguments
+                            }
+                        } for tc in msg["tool_calls"]
+                    ]
+                
+                # Handle tool_call_id if present
+                if "tool_call_id" in msg:
+                    serializable_msg["tool_call_id"] = msg["tool_call_id"]
+                
+                serializable_messages.append(serializable_msg)
+            
+            data = {
+                "iteration": iteration,
+                "timestamp": datetime.now().isoformat(),
+                "messages": serializable_messages,
+                "message_count": len(serializable_messages)
+            }
+            
+            with open(self.messages_log_path, "w", encoding="utf-8") as f:
+                json.dump(data, f, indent=2, ensure_ascii=False)
+        
+        except Exception as e:
+            if self.verbose:
+                print(f"⚠️ Failed to save messages: {e}")
+    
+    def _save_final_json(self, messages: List[Dict[str, Any]], result: Dict[str, Any]) -> None:
+        """Save final messages and results to JSON file."""
+        if not self.save_messages:
+            return
+        
+        try:
+            # Create serializable messages
+            serializable_messages = []
+            for msg in messages:
+                serializable_msg = {"role": msg["role"], "content": msg.get("content", "")}
+                
+                if "tool_calls" in msg and msg["tool_calls"]:
+                    serializable_msg["tool_calls"] = [
+                        {
+                            "id": tc.id,
+                            "function": {
+                                "name": tc.function.name,
+                                "arguments": tc.function.arguments
+                            }
+                        } for tc in msg["tool_calls"]
+                    ]
+                
+                if "tool_call_id" in msg:
+                    serializable_msg["tool_call_id"] = msg["tool_call_id"]
+                
+                serializable_messages.append(serializable_msg)
+            
+            final_data = {
+                "timestamp": datetime.now().isoformat(),
+                "model": self.model_name,
+                "final_result": {
+                    "final_text": result["final_text"],
+                    "iterations": result["iterations"],
+                    "stopped_reason": result["stopped_reason"],
+                    "total_tokens": result["total_tokens"]
+                },
+                "messages": serializable_messages,
+                "trace_summary": [
+                    {
+                        "iteration": t["iteration"],
+                        "tool_call": t["tool_call"]["name"] if t["tool_call"] else None,
+                        "has_observation": t["observation"] is not None
+                    } for t in result["trace"]
+                ]
+            }
+            
+            # Save to the same messages file (not a separate final file)
+            with open(self.messages_log_path, "w", encoding="utf-8") as f:
+                json.dump(final_data, f, indent=2, ensure_ascii=False)
+            
+            if self.verbose:
+                print(f"\n✅ Final messages saved to: {self.messages_log_path}")
+        
+        except Exception as e:
+            if self.verbose:
+                print(f"⚠️ Failed to save final messages: {e}")
+    
+    # --- Checklist management methods --------------------------------------
+    def _parse_plan_to_checklist(self, content: str) -> bool:
+        """Parse the agent's JSON plan into checklist items."""
+        try:
+            # Look for JSON object in the content
+            import re
+            json_match = re.search(r'\{.*"plan".*\}', content, re.DOTALL)
+            if not json_match:
+                return False
+            
+            plan_data = json.loads(json_match.group(0))
+            if "plan" not in plan_data:
+                return False
+            
+            # Convert plan to checklist items
+            self.checklist_items = []
+            for item in plan_data["plan"]:
+                self.checklist_items.append({
+                    "step": item.get("step", len(self.checklist_items) + 1),
+                    "description": item.get("desc", ""),
+                    "status": "pending",
+                    "started_at_iteration": None,
+                    "completed_at_iteration": None
+                })
+            
+            self.checklist_enabled = True
+            self._save_checklist()
+            
+            if self.verbose:
+                print(f"📋 Checklist created with {len(self.checklist_items)} items")
+            
+            return True
+        except Exception as e:
+            if self.verbose:
+                print(f"⚠️ Failed to parse plan: {e}")
+            return False
+    
+    def _save_checklist(self) -> None:
+        """Save current checklist to JSON file."""
+        if not self.checklist_enabled:
+            return
+        
+        try:
+            checklist_data = {
+                "created_at": datetime.now().isoformat(),
+                "current_iteration": len(self.trace),
+                "items": self.checklist_items
+            }
+            
+            with open(self.checklist_path, "w", encoding="utf-8") as f:
+                json.dump(checklist_data, f, indent=2, ensure_ascii=False)
+        except Exception as e:
+            if self.verbose:
+                print(f"⚠️ Failed to save checklist: {e}")
+    
+    def _load_checklist(self) -> None:
+        """Load checklist from JSON file if it exists."""
+        try:
+            if self.checklist_path.exists():
+                with open(self.checklist_path, "r", encoding="utf-8") as f:
+                    data = json.load(f)
+                    self.checklist_items = data.get("items", [])
+                    self.checklist_enabled = len(self.checklist_items) > 0
+        except Exception as e:
+            if self.verbose:
+                print(f"⚠️ Failed to load checklist: {e}")
+    
+    def _update_checklist_progress(self, iteration: int) -> None:
+        """Update checklist based on recent tool calls."""
+        if not self.checklist_enabled or not self.checklist_items:
+            return
+        
+        # Simple heuristic: mark first pending item as in-progress
+        # and mark in-progress items as completed after 2-3 iterations
+        for item in self.checklist_items:
+            if item["status"] == "pending":
+                item["status"] = "in_progress"
+                item["started_at_iteration"] = iteration
+                break
+            elif item["status"] == "in_progress" and item.get("started_at_iteration"):
+                # Mark as complete if we've moved past this step
+                if iteration - item["started_at_iteration"] >= 2:
+                    item["status"] = "completed"
+                    item["completed_at_iteration"] = iteration
+        
+        self._save_checklist()
+    
+    def _get_checklist_prompt(self, iteration: int) -> str:
+        """Generate combined analysis direction + checklist status prompt."""
+        # Base analysis direction (always include this)
+        base_prompt = (
+            "Analyze the latest tool observations. Based on your analysis, either: "
+            "(a) call another tool to continue iterating, or "
+            "(b) if you've tested multiple portfolio variations and achieved your targets, "
+            "produce a FINAL ANSWER preceded by 'Final Answer:'."
+        )
+        
+        # If no checklist, return just the base prompt
+        if not self.checklist_enabled or not self.checklist_items:
+            return base_prompt
+        
+        # Build checklist status display
+        status_lines = ["\n\n📋 Checklist Progress (Iteration {}):".format(iteration)]
+        for item in self.checklist_items:
+            step_num = item.get("step", "?")
+            desc = item.get("description", "")
+            status = item.get("status", "pending")
+            
+            if status == "completed":
+                status_lines.append(f"[✓ DONE] Step {step_num}: {desc}")
+            elif status == "in_progress":
+                status_lines.append(f"→ Step {step_num}: {desc} (IN PROGRESS)")
+            else:
+                status_lines.append(f"  Step {step_num}: {desc}")
+        
+        # Count progress
+        completed = sum(1 for item in self.checklist_items if item["status"] == "completed")
+        total = len(self.checklist_items)
+        status_lines.append(f"\nProgress: {completed}/{total} steps completed")
+        
+        # Add reminder to stay on track
+        status_lines.append("\nRemember to follow your plan while analyzing the results.")
+        
+        # Combine base prompt with checklist status
+        return base_prompt + "\n".join(status_lines)
 
