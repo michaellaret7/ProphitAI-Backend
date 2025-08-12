@@ -241,6 +241,10 @@ class ProphitAltsDataWrapper:
             analyst_estimates = session.query(AnalystEstimate).join(Ticker).filter(Ticker.ticker == self.ticker).filter(AnalystEstimate.date > datetime.now().date()).all()
             analyst_estimates = [serialize_sqlalchemy_obj(estimate) for estimate in analyst_estimates]
 
+        if len(analyst_estimates) > 0:
+            for analyst_estimate in analyst_estimates:
+                analyst_estimate.pop('ticker_id', None)
+
         return analyst_estimates
     
     def retrieve_fundamentals(self):
@@ -260,6 +264,26 @@ class ProphitAltsDataWrapper:
             financial_ratios = [serialize_sqlalchemy_obj(financial_ratio) for financial_ratio in financial_ratios]
 
         for balance_sheet, income_statement, cash_flow_statement, financial_ratios in zip(balance_sheet, income_statement, cash_flow_statement, financial_ratios):
+            # Remove finalLink from each statement if it exists
+
+            if balance_sheet and 'finalLink' in balance_sheet:
+                balance_sheet.pop('finalLink', None)
+                income_statement.pop('finalLink', None)
+                cash_flow_statement.pop('finalLink', None)
+
+            if balance_sheet and 'link' in balance_sheet:
+                balance_sheet.pop('link', None)
+                income_statement.pop('link', None)
+                cash_flow_statement.pop('link', None)
+
+            if balance_sheet and 'ticker_id' in balance_sheet:
+                balance_sheet.pop('ticker_id', None)
+                income_statement.pop('ticker_id', None)
+                cash_flow_statement.pop('ticker_id', None)
+            
+            if financial_ratios and 'ticker_id' in financial_ratios:
+                financial_ratios.pop('ticker_id', None)
+            
             fundamentals_dict[financial_ratios['date']] = {
                 'balance_sheet': balance_sheet,
                 'income_statement': income_statement,
@@ -282,11 +306,42 @@ class ProphitAltsDataWrapper:
             stock_grades_summary = session.query(StockGradesSummary).join(Ticker).filter(Ticker.ticker == self.ticker).order_by(StockGradesSummary.date.desc()).limit(4).all()
             stock_grades_summary = [serialize_sqlalchemy_obj(grade) for grade in stock_grades_summary]
 
+        # Remove ticker_id from analyst_recommendations
+        if analyst_recommendations and 'ticker_id' in analyst_recommendations:
+            analyst_recommendations.pop('ticker_id', None)
+        
+        # Remove ticker_id from stock_grades list
+        if len(stock_grades) > 0:
+            for grade in stock_grades:
+                grade.pop('ticker_id', None)
+        
+        # Remove ticker_id from stock_grades_summary list  
+        if len(stock_grades_summary) > 0:
+            for grade_summary in stock_grades_summary:
+                grade_summary.pop('ticker_id', None)
+
         grades_and_ratings_dict['analyst_recommendations'] = analyst_recommendations
         grades_and_ratings_dict['stock_grades'] = stock_grades
         grades_and_ratings_dict['stock_grades_summary'] = stock_grades_summary
 
         return grades_and_ratings_dict
+    
+    def _round_floats(self, obj, decimals=5):
+        """Recursively round all floats and numeric strings in a nested structure"""
+        if isinstance(obj, float):
+            return round(obj, decimals)
+        elif isinstance(obj, str):
+            # Try to convert string to float and round it
+            try:
+                num = float(obj)
+                return round(num, decimals)
+            except (ValueError, TypeError):
+                return obj
+        elif isinstance(obj, dict):
+            return {k: self._round_floats(v, decimals) for k, v in obj.items()}
+        elif isinstance(obj, list):
+            return [self._round_floats(item, decimals) for item in obj]
+        return obj
     
     def run_all(self):
         """Load data for the given ticker and return all analysis results"""
@@ -309,7 +364,13 @@ class ProphitAltsDataWrapper:
             'Grades and Ratings': self.retrieve_grades_and_ratings(),
         }
         
-        return data
+        return self._round_floats(data)
+
+if __name__ == "__main__":
+    data = ProphitAltsDataWrapper("AAPL").run_all()
+    print(data)
+    from backend.src.utils.token_count import get_token_count
+    print(get_token_count(data))
 
 prompt = """
 # EARNINGS CALL TRANSCRIPT ANALYSIS PROMPT

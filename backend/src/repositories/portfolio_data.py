@@ -167,3 +167,5 @@ def add_initial_positions(positions: dict, industry: str, fund_name: str):
     market_session.close()
 
     return True
+
+#TODO: add an add final positions function

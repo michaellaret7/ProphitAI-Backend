@@ -11,6 +11,8 @@ import numpy as np
 from backend.src.repositories.price_data import get_price_data_daily
 from backend.src.calculations.factor_calculations.volatility_factor_calculations import VolatilityFactors
 
+#TODO: break this file up into smaller files
+
 class CorrelationAwarePortfolioBuilder:
     """
     Portfolio builder that incorporates full risk analysis to optimize portfolio weights.
@@ -805,50 +807,91 @@ class CorrelationAwarePortfolioBuilder:
 
 if __name__ == "__main__":
     # Consumer Staples Portfolio
+    # tickers = {
+    #     # Long positions
+    #     "CASY": {"conviction": 0.10, "position": "long"},
+    #     "CELH": {"conviction": 0.10, "position": "long"},
+    #     "ODC": {"conviction": 0.05, "position": "long"},
+    #     "ODD": {"conviction": 0.05, "position": "long"},
+    #     "PM": {"conviction": 0.05, "position": "long"},
+    #     "VITL": {"conviction": 0.05, "position": "long"},
+    #     "WMT": {"conviction": 0.05, "position": "long"},
+    #     "BJ": {"conviction": 0.05, "position": "long"},
+    #     "SFM": {"conviction": 0.05, "position": "long"},
+    #     "COCO": {"conviction": 0.05, "position": "long"},
+    #     "MNST": {"conviction": 0.05, "position": "long"},
+    #     "CL": {"conviction": 0.05, "position": "long"},
+    #     "IPAR": {"conviction": 0.05, "position": "long"},
+    #     "TPB": {"conviction": 0.05, "position": "long"},
+    #     "DOLE": {"conviction": 0.05, "position": "long"},
+    #     "PPC": {"conviction": 0.05, "position": "long"},
+    #     "INGR": {"conviction": 0.05, "position": "long"},
+    #     # Short positions
+    #     "WBA": {"conviction": 0.05, "position": "short"},
+    #     "ANDE": {"conviction": 0.05, "position": "short"},
+    #     "TGT": {"conviction": 0.02, "position": "short"},
+    #     "STZ": {"conviction": 0.05, "position": "short"},
+    #     "PEP": {"conviction": 0.05, "position": "short"},
+    #     "SAM": {"conviction": 0.05, "position": "short"},
+    #     "MGPI": {"conviction": 0.05, "position": "short"},
+    #     "ENR": {"conviction": 0.05, "position": "short"},
+    #     "SPB": {"conviction": 0.05, "position": "short"},
+    #     "COTY": {"conviction": 0.05, "position": "short"},
+    #     "KVUE": {"conviction": 0.05, "position": "short"},
+    #     "KLG": {"conviction": 0.05, "position": "short"},
+    #     "JJSF": {"conviction": 0.05, "position": "short"},
+    #     "SEB": {"conviction": 0.05, "position": "short"},
+    # }
+
     tickers = {
         # Long positions
-        "CASY": {"conviction": 0.10, "position": "long"},
-        "CELH": {"conviction": 0.10, "position": "long"},
-        "ODC": {"conviction": 0.05, "position": "long"},
-        "ODD": {"conviction": 0.05, "position": "long"},
-        "PM": {"conviction": 0.05, "position": "long"},
-        "VITL": {"conviction": 0.05, "position": "long"},
-        "WMT": {"conviction": 0.05, "position": "long"},
-        "BJ": {"conviction": 0.05, "position": "long"},
-        "SFM": {"conviction": 0.05, "position": "long"},
-        "COCO": {"conviction": 0.05, "position": "long"},
+        "CL": {"conviction": 0.015, "position": "long"},
+        "PM": {"conviction": 0.07, "position": "long"},
+        "KO": {"conviction": 0.01, "position": "long"},
+        "WMT": {"conviction": 0.045, "position": "long"},
+        "BJ": {"conviction": 0.052, "position": "long"},
         "MNST": {"conviction": 0.05, "position": "long"},
-        "CL": {"conviction": 0.05, "position": "long"},
-        "IPAR": {"conviction": 0.05, "position": "long"},
-        "TPB": {"conviction": 0.05, "position": "long"},
-        "DOLE": {"conviction": 0.05, "position": "long"},
-        "PPC": {"conviction": 0.05, "position": "long"},
-        "INGR": {"conviction": 0.05, "position": "long"},
+        "INGR": {"conviction": 0.007, "position": "long"},
+        "ODC": {"conviction": 0.07, "position": "long"},
+        "CASY": {"conviction": 0.045, "position": "long"},
+        "SFM": {"conviction": 0.01, "position": "long"},
+        "VITL": {"conviction": 0.035, "position": "long"},
+        "DOLE": {"conviction": 0.018, "position": "long"},
+        "PPC": {"conviction": 0.025, "position": "long"},
+        "COCO": {"conviction": 0.03, "position": "long"},
+        "CELH": {"conviction": 0.027, "position": "long"},
+        "IPAR": {"conviction": 0.01, "position": "long"},
+        "TPB": {"conviction": 0.02, "position": "long"},
+        "ODD": {"conviction": 0.017, "position": "long"},
+        "CENT": {"conviction": 0.012, "position": "long"},
+        "CHEF": {"conviction": 0.01, "position": "long"},
+
         # Short positions
-        "WBA": {"conviction": 0.05, "position": "short"},
-        "ANDE": {"conviction": 0.05, "position": "short"},
-        "TGT": {"conviction": 0.02, "position": "short"},
-        "STZ": {"conviction": 0.05, "position": "short"},
-        "PEP": {"conviction": 0.05, "position": "short"},
-        "SAM": {"conviction": 0.05, "position": "short"},
-        "MGPI": {"conviction": 0.05, "position": "short"},
-        "ENR": {"conviction": 0.05, "position": "short"},
-        "SPB": {"conviction": 0.05, "position": "short"},
-        "COTY": {"conviction": 0.05, "position": "short"},
-        "KVUE": {"conviction": 0.05, "position": "short"},
-        "KLG": {"conviction": 0.05, "position": "short"},
-        "JJSF": {"conviction": 0.05, "position": "short"},
-        "SEB": {"conviction": 0.05, "position": "short"},
+        "COTY": {"conviction": 0.03, "position": "short"},
+        "SPB": {"conviction": 0.03, "position": "short"},
+        "TGT": {"conviction": 0.015, "position": "short"},
+        "ENR": {"conviction": 0.015, "position": "short"},
+        "PEP": {"conviction": 0.02, "position": "short"},
+        "KVUE": {"conviction": 0.015, "position": "short"},
+        "KLG": {"conviction": 0.015, "position": "short"},
+        "JJSF": {"conviction": 0.02, "position": "short"},
+        "MGPI": {"conviction": 0.01, "position": "short"},
+        "STZ": {"conviction": 0.01, "position": "short"},
+        "WBA": {"conviction": 0.025, "position": "short"},
+        "ANDE": {"conviction": 0.03, "position": "short"},
+        "FRPT": {"conviction": 0.015, "position": "short"},
+        "CPB": {"conviction": 0.02, "position": "short"},
     }
+
     
     # Build portfolio with target volatility and portfolio value
     build_portfolio = CorrelationAwarePortfolioBuilder(
         tickers=tickers,
         target_annual_vol=0.17,  # 17% target volatility (adjust as needed)
         portfolio_value=1_000_000,  # $1M base capital (before leverage)
-        leverage=1.5,  # 1.75x leverage (175% gross exposure)
+        leverage=1.8,  # 1.75x leverage (175% gross exposure)
         target_net_exposure=0.25,  # 35% net long exposure
-        lookback_days=252 * 3  # 3 years of data
+        lookback_days=252 * 4  # 3 years of data
     )
     
     # Build risk-based portfolio with target volatility

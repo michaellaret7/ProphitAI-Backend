@@ -4,6 +4,7 @@ Runs stress test engine and analysis for all scenarios with optimized data fetch
 """
 
 import json
+from datetime import datetime, timedelta
 import pandas as pd
 from backend.src.stress_test.engine import (
     run_stress_test_engine,
@@ -217,63 +218,20 @@ class StressTestRunner:
             'scenario_etf_moves': etf_shocks
         }
 
-# def run_stress_test_workflow(portfolio_dict: dict):
-#     """
-#     Legacy function for backward compatibility.
-#     Creates a StressTestRunner instance and runs the workflow.
-    
-#     Parameters:
-#     - portfolio_dict: Dictionary with tickers as keys and 'conviction'/'position' as values
-    
-#     Returns:
-#     - dict: Results for all scenarios
-#     """
-#     runner = StressTestRunner(portfolio_dict)
-#     return runner.run_workflow()
-
-def run_stress_test_workflow():
+def run_stress_test_workflow(portfolio_dict: dict):
     """
     Legacy function for backward compatibility.
     Creates a StressTestRunner instance and runs the workflow.
-    """
-    portfolio_dict = {
-        # Long positions
-        "CASY": {"conviction": 0.10, "position": "long"},
-        "CELH": {"conviction": 0.10, "position": "long"},
-        "ODC": {"conviction": 0.05, "position": "long"},
-        "ODD": {"conviction": 0.05, "position": "long"},
-        "PM": {"conviction": 0.05, "position": "long"},
-        "VITL": {"conviction": 0.05, "position": "long"},
-        "WMT": {"conviction": 0.05, "position": "long"},
-        "BJ": {"conviction": 0.05, "position": "long"},
-        "SFM": {"conviction": 0.05, "position": "long"},
-        "COCO": {"conviction": 0.05, "position": "long"},
-        "MNST": {"conviction": 0.05, "position": "long"},
-        "CL": {"conviction": 0.05, "position": "long"},
-        "IPAR": {"conviction": 0.05, "position": "long"},
-        "TPB": {"conviction": 0.05, "position": "long"},
-        "DOLE": {"conviction": 0.05, "position": "long"},
-        "PPC": {"conviction": 0.05, "position": "long"},
-        "INGR": {"conviction": 0.05, "position": "long"},
-        # Short positions
-        "WBA": {"conviction": 0.05, "position": "short"},
-        "ANDE": {"conviction": 0.05, "position": "short"},
-        "TGT": {"conviction": 0.02, "position": "short"},
-        "STZ": {"conviction": 0.05, "position": "short"},
-        "PEP": {"conviction": 0.05, "position": "short"},
-        "SAM": {"conviction": 0.05, "position": "short"},
-        "MGPI": {"conviction": 0.05, "position": "short"},
-        "ENR": {"conviction": 0.05, "position": "short"},
-        "SPB": {"conviction": 0.05, "position": "short"},
-        "COTY": {"conviction": 0.05, "position": "short"},
-        "KVUE": {"conviction": 0.05, "position": "short"},
-        "KLG": {"conviction": 0.05, "position": "short"},
-        "JJSF": {"conviction": 0.05, "position": "short"},
-        "SEB": {"conviction": 0.05, "position": "short"}
-    }
     
+    Parameters:
+    - portfolio_dict: Dictionary with tickers as keys and 'conviction'/'position' as values
+    
+    Returns:
+    - dict: Results for all scenarios
+    """
     runner = StressTestRunner(portfolio_dict)
     return runner.run_workflow()
+
 
 if __name__ == "__main__":
     # Example portfolio for testing
@@ -325,3 +283,4 @@ if __name__ == "__main__":
     
     print(json.dumps(results, indent=4))
     print(get_token_count(results))
+

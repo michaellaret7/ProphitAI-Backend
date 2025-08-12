@@ -2,263 +2,409 @@ import json
 import os
 import re
 from typing import List, Dict, Any, Callable, Optional, Tuple
-from openai import OpenAI
+from datetime import datetime
+from dataclasses import dataclass, field
+
 from dotenv import load_dotenv
-from datetime import datetime, timedelta
-import pandas as pd
+from openai import OpenAI
+
+# Domain tools
+from backend.src.prophit_alts.core.tools.calculator import calculator
 from backend.src.prophit_alts.core.tools.data_wrapper_tool import ProphitAltsDataWrapper
 from backend.src.prophit_alts.core.tools.search_engine_tool import AgentSearchEngine
-from backend.src.utils.choose_model_and_client import *
+from backend.src.utils.choose_model_and_client import openai_model_and_client
 
 load_dotenv()
 
+@dataclass
+class StepTrace:
+    iteration: int
+    assistant_raw: str = ""
+    tool_call: Optional[Dict[str, Any]] = None
+    observation: Optional[Any] = None
+    analysis: Optional[str] = None
+
+#TODO: add a tool to check an item off the to do list every time the model runs
 class BaseAgent:
-    def __init__(self, system_prompt: str, user_prompt: str):
-        # self.llm, self.client = openai_huggingface_model_and_client()
-        self.model = 'gpt-5'
-        self.llm, self.client = openai_model_and_client(model=self.model)
-        self.tools = []
-        self.tool_functions = {}
-        self.max_iterations = 100
-        self.verbose = True
+    """
+    Refactored BaseAgent with:
+      (a) Native tool-calls + JSON ReAct
+      (b) No eval() anywhere (safe JSON parsing only)
+      (c) Loop/stop/summary management
+      (d) Returns a clean structured trace
+    """
+
+    def __init__(self, system_prompt: str, user_prompt: str, *, model: str = "gpt-5", max_iterations: int = 50, verbose: bool = True, plan_first: bool = True, final_keywords: Optional[List[str]] = None):
+        self.model_name = model
+        self.llm, self.client = openai_model_and_client(model=self.model_name)
+
         self.system_prompt = system_prompt
         self.user_prompt = user_prompt
-        
-        # Register tools directly
+        self.max_iterations = max_iterations
+        self.verbose = verbose
+        self.plan_first = True  # always plan first
+        self.final_keywords = final_keywords or ["Final Answer:", "FINAL ANSWER:"]
+
+        # OpenAI tools and local dispatch map
+        self.tools: List[Dict[str, Any]] = []
+        self.tool_functions: Dict[str, Callable[..., Any]] = {}
+
+        # Register built-ins
         self._register_base_tools()
 
-    #TODO: Add more base tools like calculator, better search engine, etc.
+        # Trace and accounting
+        self.trace: List[StepTrace] = []
+        self.total_tokens: int = 0
+
+        # Stagnation detection
+        self._recent_actions: List[str] = []  # serialized (tool_name + sorted args)
+        self._stuck_count: int = 0
+        self._stuck_threshold: int = 4  # Increased to allow more iterations for portfolio testing
+
+    # --- Tool registry -----------------------------------------------------
     def _register_base_tools(self):
-        """Register all tools for this agent."""
-        # Tool descriptions
-        ticker_data_description = """
-        The get_ticker_data tool returns a comprehensive dictionary of financial data for a given stock ticker. 
-        This includes performance metrics like weekly returns and style factors (Momentum, Volatility, etc.), fundamental data such as financial statements and analyst estimates, 
-        recent news, earnings transcript summaries, and stock grades.
-        """
-        
-        search_description = """
-        The free_search tool gives you the ability to search the web for information. 
-        You will create an indepth query that will be entered into the Perplexity search engine.
-        """
-        
-        # Register ticker data tool
+        ticker_data_description = (
+            "The get_ticker_data tool returns a comprehensive dictionary of financial "
+            "data for a given stock ticker, including performance metrics, style factors, "
+            "fundamental data, recent news, earnings transcript summaries, and grades."
+        )
+        search_description = (
+            "The free_search tool searches the web. Provide a detailed query that will be "
+            "sent to an external search engine."
+        )
+
+        # get_ticker_data
         self.add_tool(
             name="get_ticker_data",
             description=ticker_data_description,
             parameters={
                 "type": "object",
                 "properties": {
-                    "ticker": {"type": "string", "description": "The stock ticker symbol to get price for."},
+                    "ticker": {"type": "string", "description": "Stock ticker symbol."},
                 },
-                "required": ["ticker"]
+                "required": ["ticker"],
             },
-            function=lambda ticker: ProphitAltsDataWrapper(ticker).run_all()
+            function=lambda ticker: ProphitAltsDataWrapper(ticker).run_all(),
         )
-        
-        # Register search tool
+
+        # free_search
         self.add_tool(
             name="free_search",
             description=search_description,
             parameters={
                 "type": "object",
                 "properties": {
-                    "query": {"type": "string", "description": "The query to search the web for. This query should be indepth and detailed, the more detailed the better the results wil be."},
+                    "query": {
+                        "type": "string",
+                        "description": "Detailed query for the search engine.",
+                    }
                 },
-                "required": ["query"]
+                "required": ["query"],
             },
-            function=lambda query: AgentSearchEngine().perplexity_free_search(query)
+            function=lambda query: AgentSearchEngine().perplexity_free_search(query),
+        )
+
+        # calculator
+        self.add_tool(
+            name="calculator",
+            description=(
+                "Perform mathematical calculations. Provide the expression string and the tool returns the result."
+            ),
+            parameters={
+                "type": "object",
+                "properties": {
+                    "expression": {"type": "string", "description": "Expression to evaluate."}
+                },
+                "required": ["expression"],
+            },
+            function=lambda expression: calculator(expression),
         )
 
     def add_tool(self, name: str, description: str, parameters: Dict, function: Callable):
         tool_def = {
             "type": "function",
-            "function": {
-                "name": name,
-                "description": description,
-                "parameters": parameters
-            }
+            "function": {"name": name, "description": description, "parameters": parameters},
         }
         self.tools.append(tool_def)
         self.tool_functions[name] = function
-    
-    def execute_tool(self, function_name: str, arguments: Dict) -> str:
-        if function_name not in self.tool_functions:
-            return f"Error: Tool '{function_name}' not found"
-        
-        return self.tool_functions[function_name](**arguments)
-    
-    def parse_action(self, action_text: str) -> Tuple[str, Dict]:
-        """Parse action text into function name and arguments."""
-        # Pattern: Action: tool_name(param1=value1, param2=value2, ...)
-        match = re.match(r'Action:\s*(\w+)\((.*)\)', action_text)
-        if not match:
-            return None, {}
-        
-        function_name = match.group(1)
-        args_text = match.group(2)
-        
-        # Parse arguments
-        args_dict = {}
-        if args_text.strip():
-            # Simple parsing - in a real implementation, use a more robust parser
-            for arg_pair in args_text.split(','):
-                if '=' in arg_pair:
-                    key, value = arg_pair.split('=', 1)
-                    # Clean up and attempt to parse values (basic)
-                    key = key.strip()
-                    value = value.strip()
-                    
-                    # Strip quotes from string values (handle both single and double quotes)
-                    if (value.startswith('"') and value.endswith('"')) or (value.startswith("'") and value.endswith("'")):
-                        value = value[1:-1]
-                    # Try to parse as JSON if it looks like a data structure
-                    elif value.startswith('{') or value.startswith('[') or value in ('true', 'false', 'null') or value.isdigit():
-                        try:
-                            value = json.loads(value)
-                        except:
-                            pass
-                    args_dict[key] = value
-        
-        return function_name, args_dict
-    
-    def run(self) -> str:
+
+    # --- Core run loop -----------------------------------------------------
+    def run(self) -> Dict[str, Any]:
         if self.verbose:
-            print(f"🚀 Starting ReactAgent analysis...")
+            print("🚀 Starting JSON ReAct run")
             print(f"Query: {self.user_prompt}")
             print("=" * 60)
-            
-        messages = [
+
+        messages: List[Dict[str, Any]] = [
+            {"role": "system", "content": self._system_rules()},
             {"role": "system", "content": self.system_prompt},
-            {"role": "user", "content": self.user_prompt}
+            {"role": "user", "content": self.user_prompt},
         ]
-        
-        full_response = []
-        iterations = 0
-        
-        while iterations < self.max_iterations:
-            iterations += 1
-            
+
+        if self.plan_first:
+            messages.append(
+                {
+                    "role": "user",
+                    "content": (
+                        "Before you start, produce a short JSON plan: {\"plan\":[{\"step\":1,\"desc\":\"...\"},...]}\n"
+                        "Then begin executing with tool-calls."
+                    ),
+                }
+            )
+
+        final_text: Optional[str] = None
+        stop_reason: str = ""
+
+        for i in range(1, self.max_iterations + 1):
             if self.verbose:
-                print(f"\n⚜️  Iteration {iterations}")
-            
-            if self.model == 'gpt-5':
-                response = self.client.chat.completions.create(
-                    model=self.llm,
-                    messages=messages,
+                print(f"\n⚜️  Iteration {i}")
+
+            response = self.client.chat.completions.create(
+                model=self.llm,
+                messages=messages,
+                tools=self.tools if self.tools else None,
+                tool_choice="auto" if self.tools else None,            
+            )
+
+            choice = response.choices[0]
+            msg = choice.message
+            self._accumulate_usage(response)
+
+            # Record assistant content (may be None when tool_calls are used)
+            assistant_raw = msg.content or ""
+
+            if self.verbose:
+                print("  assistant_raw:", assistant_raw)
+
+            step = StepTrace(iteration=i, assistant_raw=assistant_raw)
+
+            if msg.tool_calls:
+                # Append the assistant message that contains all tool calls
+                messages.append({
+                    "role": "assistant",
+                    "content": assistant_raw if assistant_raw else "",
+                    "tool_calls": msg.tool_calls,
+                })
+                # Execute tool-calls sequentially (usually one at a time)
+                for tc in msg.tool_calls:
+                    name = tc.function.name
+                    args_json = tc.function.arguments or "{}"
+                    try:
+                        args = json.loads(args_json)
+                    except json.JSONDecodeError:
+                        # If arguments are not valid JSON, pass raw string under a key
+                        args = {"_raw": args_json}
+
+                    step.tool_call = {"name": name, "args": args}
+
+                    # Stagnation detection
+                    self._update_stagnation(name, args)
+
+                    observation = self._execute_tool_safe(name, args)
+                    step.observation = observation
+
+                    if self.verbose:
+                        print(f"  tool_call -> {name} args={json.dumps(args, sort_keys=True)}")
+                        print("  observation:", self._stringify(observation))
+
+                    # tie tool result back to the tool_call_id
+                    messages.append({
+                        "role": "tool",
+                        "tool_call_id": tc.id,
+                        "content": self._stringify(observation),
+                    })
+
+                # Ask the model to analyze the observation and decide next step or finalize
+                messages.append(
+                    {
+                        "role": "user",
+                            "content": (
+                                "Analyze the latest tool observations. Based on your analysis, either: "
+                                "(a) call another tool to continue iterating, or "
+                                "(b) if you've tested multiple portfolio variations and achieved your targets, "
+                                "produce a FINAL ANSWER preceded by 'Final Answer:'."
+                            ),
+                    }
                 )
+
             else:
-                response = self.client.chat.completions.create(
-                    model=self.llm,
-                    messages=messages,
-                    temperature=0.7
+                # No tool call. Check for finality
+                if self._looks_final(assistant_raw):
+                    final_text = assistant_raw
+                    stop_reason = "final_message"
+                    self.trace.append(step)
+                    break
+
+                # If it's JSON step format, allow model to request tools via content
+                content_tool = self._maybe_parse_json_step(assistant_raw)
+                if content_tool:
+                    name = content_tool["tool"]
+                    args = content_tool.get("args", {})
+                    step.tool_call = {"name": name, "args": args}
+                    self._update_stagnation(name, args)
+                    observation = self._execute_tool_safe(name, args)
+                    step.observation = observation
+
+                    if self.verbose:
+                        print(f"  tool_call(content) -> {name} args={json.dumps(args, sort_keys=True)}")
+                        print("  observation:", self._stringify(observation))
+
+                    messages.append({"role": "assistant", "content": assistant_raw})
+                    messages.append({"role": "tool", "content": self._stringify(observation)})
+
+                    messages.append(
+                        {
+                            "role": "user",
+                            "content": (
+                                "Analyze the latest tool observations. Based on your analysis, either: "
+                                "(a) call another tool to continue iterating, or "
+                                "(b) if you've tested multiple portfolio variations and achieved your targets, "
+                                "produce a FINAL ANSWER preceded by 'Final Answer:'."
+                            ),
+                        }
+                    )
+                else:
+                    # Ask the model to either pick a tool or finalize
+                    messages.append({"role": "assistant", "content": assistant_raw})
+                    messages.append(
+                        {
+                            "role": "user",
+                            "content": (
+                                "You provided no tool-call. If additional information is required, call a tool now. "
+                                "Otherwise produce a 'Final Answer:' and stop."
+                            ),
+                        }
+                    )
+
+            self.trace.append(step)
+
+            if self.verbose:
+                print("" + "-"*80)
+            # Stagnation guard – request a different approach
+            if self._stuck_count >= self._stuck_threshold:
+                messages.append(
+                    {
+                        "role": "user",
+                        "content": (
+                            "You are repeating the same action with similar arguments and no new information. "
+                            "Propose a different approach or finalize with a 'Final Answer:'."
+                        ),
+                    }
                 )
-            
-            assistant_response = response.choices[0].message.content
-            
-            # Check if this is a direct answer (no action)
-            if "Action:" not in assistant_response:
-                # If it's just a thought or a direct answer
-                full_response.append(assistant_response)
-                if self.verbose:
-                    print(f"\n✅ Final Answer: {assistant_response}")
-                break
-            
-            # Extract thought, action, and add to full response
-            thought_match = re.search(r'Thought:(.*?)(?=Action:|$)', assistant_response, re.DOTALL)
-            action_match = re.search(r'Action:(.*?)(?=Observation:|$)', assistant_response, re.DOTALL)
-            
-            thought = thought_match.group(1).strip() if thought_match else ""
-            action_text = action_match.group(1).strip() if action_match else ""
-            
-            # Check for multiple Thought/Action pairs (which shouldn't happen)
-            all_thoughts = re.findall(r'Thought:(.*?)(?=Action:|Thought:|$)', assistant_response, re.DOTALL)
-            all_actions = re.findall(r'Action:(.*?)(?=Observation:|Action:|Thought:|$)', assistant_response, re.DOTALL)
-            
-            if len(all_thoughts) > 1 or len(all_actions) > 1:
-                if self.verbose:
-                    print(f"\n ⚠️ WARNING: Multiple Thought/Action pairs detected in response!")
-                    print(f"   Found {len(all_thoughts)} Thoughts and {len(all_actions)} Actions")
-                    print(f"   Only processing the first one. This may cause skipped actions.")
-            
-            # Add the thought and action to our collected response
-            thought_output = f"Thought: {thought}"
-            action_output = f"Action: {action_text}"
-            full_response.append(thought_output)
-            full_response.append(action_output)
-            
-            # Print in real-time if verbose
-            if self.verbose:
-                print(f"\n{thought_output}")
-                print(f"{action_output}")
-            
-            # Parse and execute the action
-            function_name, arguments = self.parse_action(f"Action: {action_text}")
-            
-            if function_name is None:
-                observation = "Error: Could not parse the action correctly."
-            else:
-                if self.verbose:
-                    print("Executing tool...")
-                observation = self.execute_tool(function_name, arguments)
-            
-            observation_output = f"Observation: {observation}"
-            full_response.append(observation_output)
-            
-            # Print observation in real-time if verbose
-            if self.verbose:
-                print(f"{observation_output}\n" + "="*50)
-            
-            # Add to messages for context
-            messages.append({"role": "assistant", "content": assistant_response})
-            messages.append({"role": "user", "content": f"Observation: {observation}"})
-            
-            # Get analysis from the model
-            analysis_prompt = "Now provide your Analysis of this observation:"
-            messages.append({"role": "user", "content": analysis_prompt})
-            
-            if self.model == 'gpt-5':
-                analysis_response = self.client.chat.completions.create(
-                    model=self.llm,
-                    messages=messages,
-                )
-            else:
-                analysis_response = self.client.chat.completions.create(
-                    model=self.llm,
-                    messages=messages,
-                    temperature=0.7
-                )
-            
-            analysis = analysis_response.choices[0].message.content
-            
-            # Extract analysis if it has the "Analysis:" prefix
-            analysis_match = re.search(r'Analysis:(.*?)(?=$)', analysis, re.DOTALL)
-            if analysis_match:
-                analysis_text = analysis_match.group(1).strip()
-            else:
-                analysis_text = analysis.strip()
-            
-            analysis_output = f"Analysis: {analysis_text}"
-            full_response.append(analysis_output)
-            
-            if self.verbose:
-                print(f"\n{analysis_output}\n" + "="*50)
-            
-            # Add analysis to message history
-            messages.append({"role": "assistant", "content": analysis})
-            
-            # Explicitly prompt to continue with next step if workflow not complete
-            continue_prompt = "Continue with the next step in the workflow. If all steps are complete, provide your final conclusion without an Action. Otherwise, proceed with the next Thought and Action."
-            messages.append({"role": "user", "content": continue_prompt})
-        
-        if iterations >= self.max_iterations:
-            full_response.append("Reached maximum iterations without a final answer.")
-            if self.verbose:
-                print("\n ⚠️ Reached maximum iterations without a final answer.")
-        
-        if self.verbose:
-            print(f"\n🎯 Analysis complete after {iterations} iterations!")
-            print("=" * 60)
-        
-        return "\n\n".join(full_response)
+                self._stuck_count = 0  # reset after nudging
+
+        else:
+            stop_reason = "max_iterations"
+
+        # If no explicit final_text was emitted, try to extract the last assistant content
+        if final_text is None:
+            final_text = self._extract_last_final(messages) or "Reached maximum iterations without a final answer."
+
+        if self.verbose and final_text:
+            print("✅ Final Answer:", final_text)
+
+        return {
+            "final_text": final_text,
+            "iterations": len(self.trace),
+            "stopped_reason": stop_reason,
+            "total_tokens": self.total_tokens,
+            "trace": [self._trace_to_dict(s) for s in self.trace],
+        }
+
+    # --- Helpers -----------------------------------------------------------
+    def _system_rules(self) -> str:
+        return (
+            "You are a JSON ReAct agent. Prefer native tool-calls. When you can finalize, "
+            "output a concise answer beginning with 'Final Answer:'. If you must emit a JSON step, use:\n"
+            '{"thought":"...","action":{"tool":"name","args":{}}}'
+        )
+
+    def _accumulate_usage(self, response) -> None:
+        try:
+            if hasattr(response, "usage") and response.usage and response.usage.total_tokens:
+                self.total_tokens += int(response.usage.total_tokens)
+        except Exception:
+            pass
+
+    def _execute_tool_safe(self, name: str, args: Dict[str, Any]):
+        func = self.tool_functions.get(name)
+        if not func:
+            return f"Error: tool '{name}' not found"
+        try:
+            return func(**args) if isinstance(args, dict) else func(args)
+        except TypeError as e:
+            return f"Error calling tool '{name}': {e} (args={args})"
+        except Exception as e:
+            return f"Unhandled error in tool '{name}': {e}"
+
+    def _maybe_parse_json_step(self, content: str) -> Optional[Dict[str, Any]]:
+        content = (content or "").strip()
+        if not content:
+            return None
+        # Try single JSON object in content
+        try:
+            obj = json.loads(content)
+            if isinstance(obj, dict) and "action" in obj and isinstance(obj["action"], dict):
+                return obj["action"]
+        except json.JSONDecodeError:
+            pass
+        # Try to find JSON object inside text
+        m = re.search(r"\{.*\}", content, flags=re.DOTALL)
+        if m:
+            try:
+                obj = json.loads(m.group(0))
+                if isinstance(obj, dict) and "action" in obj:
+                    return obj["action"]
+            except json.JSONDecodeError:
+                return None
+        return None
+
+    def _looks_final(self, text: str) -> bool:
+        if not text:
+            return False
+        if text.strip().startswith("Final Answer:"):
+            return True
+        # If the model returned a JSON with final true (rare when using content), accept
+        try:
+            j = json.loads(text)
+            if isinstance(j, dict) and j.get("final") is True:
+                return True
+        except Exception:
+            pass
+        return False
+
+    def _extract_last_final(self, messages: List[Dict[str, Any]]) -> Optional[str]:
+        for m in reversed(messages):
+            if m["role"] == "assistant" and isinstance(m.get("content"), str):
+                c = m["content"]
+                if c and c.strip():
+                    return c
+        return None
+
+    def _stringify(self, observation: Any) -> str:
+        try:
+            if isinstance(observation, (dict, list)):
+                return json.dumps(observation, ensure_ascii=False)
+            return str(observation)
+        except Exception:
+            return "<unserializable observation>"
+
+    def _update_stagnation(self, name: str, args: Dict[str, Any]):
+        key = f"{name}:{json.dumps(args, sort_keys=True)}"
+        if key in self._recent_actions:
+            self._stuck_count += 1
+        else:
+            self._stuck_count = 0
+        self._recent_actions.append(key)
+        if len(self._recent_actions) > 16:
+            self._recent_actions.pop(0)
+
+    def _trace_to_dict(self, s: StepTrace) -> Dict[str, Any]:
+        return {
+            "iteration": s.iteration,
+            "assistant_raw": s.assistant_raw,
+            "tool_call": s.tool_call,
+            "observation": s.observation,
+            "analysis": s.analysis,
+        }
 

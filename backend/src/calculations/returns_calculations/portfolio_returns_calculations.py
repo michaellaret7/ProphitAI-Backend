@@ -226,196 +226,216 @@ if __name__ == "__main__":
 
     portfolio_dict = {
         "long_tickers": {
-            "CASY": {
+            "CL": {
                 "position": "long",
-                "industry": "distribution_and_retail",
-                "risk_allocation": 0.1,
-                "reasoning": "Record operational momentum, robust FCF growth, disciplined capital allocation, and consistent execution. Defensive growth, positive technicals, and rising analyst targets support a core allocation despite valuation."
-            },
-            "CELH": {
-                "position": "long",
-                "industry": "beverages",
-                "risk_allocation": 0.1,
-                "reasoning": "Exceptional EPS and FCF growth, industry-leading gross margin, clean balance sheet, and secular health/wellness tailwinds. Despite high volatility and valuation, quality and brand momentum justify a core position."
-            },
-            "ODC": {
-                "position": "long",
-                "industry": "household_products",
-                "risk_allocation": 0.05,
-                "reasoning": "Accelerating margin/FCF growth, capital discipline, and strategic mix shift toward high-value segments. Positive technicals, strong balance sheet, and underappreciated re-rating catalysts."
-            },
-            "ODD": {
-                "position": "long",
-                "industry": "personal_care_products",
-                "risk_allocation": 0.05,
-                "reasoning": "Hyper-growth, sector-leading margins, high FCF, asset-light, and net cash. Digital/AI-driven business model, strong brand, and positive analyst/management alignment justify premium multiples."
+                "industry": "",
+                "risk_allocation": 0.015,
+                "reasoning": "Trimmed to reduce low-upside weight; keep as quality defensive with low beta"
             },
             "PM": {
                 "position": "long",
-                "industry": "tobacco",
-                "risk_allocation": 0.1,
-                "reasoning": "Dominant in smoke-free transformation, best-in-class margins, very strong FCF and dividend, low beta, and secular growth. Recent technical weakness is an opportunity given structural defensiveness."
+                "industry": "",
+                "risk_allocation": 0.07,
+                "reasoning": "Core defensive growth; strong pricing power; resilient across scenarios"
             },
-            "VITL": {
+            "KO": {
                 "position": "long",
-                "industry": "food_products",
-                "risk_allocation": 0.05,
-                "reasoning": "Best-in-class margin and growth profile, brand leadership, clean balance sheet, and high compounding potential. Defensive growth, positive sentiment, and analyst support for a core allocation."
+                "industry": "",
+                "risk_allocation": 0.01,
+                "reasoning": "Small ballast; trimmed to free risk budget for higher-upside names"
             },
             "WMT": {
                 "position": "long",
-                "industry": "distribution_and_retail",
-                "risk_allocation": 0.05,
-                "reasoning": "Omni-channel leadership, e-commerce acceleration, strong balance sheet, and defensive core holding. Low volatility, high visibility, and cash returns support inclusion."
+                "industry": "",
+                "risk_allocation": 0.045,
+                "reasoning": "Kept sizable for defensive retail scale; trimmed to control drawdown in credit stress"
             },
             "BJ": {
                 "position": "long",
-                "industry": "distribution_and_retail",
-                "risk_allocation": 0.05,
-                "reasoning": "Growth compounder, market share gains, digital innovation, and conservative capital structure. Membership renewal rates and private label strength add conviction."
-            },
-            "SFM": {
-                "position": "long",
-                "industry": "distribution_and_retail",
-                "risk_allocation": 0.05,
-                "reasoning": "Exceptional comp sales/margin expansion, no debt, e-commerce momentum, and disciplined new store pipeline. Health/wellness focus and private label growth reinforce quality."
-            },
-            "COCO": {
-                "position": "long",
-                "industry": "beverages",
-                "risk_allocation": 0.05,
-                "reasoning": "Strong brand momentum, high revenue/profitability growth, zero net debt, and international expansion. Category leadership in functional beverages with positive technicals."
+                "industry": "",
+                "risk_allocation": 0.052,
+                "reasoning": "Maintained for defensive comps and membership model; positive in sticky inflation"
             },
             "MNST": {
                 "position": "long",
-                "industry": "beverages",
+                "industry": "",
                 "risk_allocation": 0.05,
-                "reasoning": "Superior quality, EPS/FCF growth, global brand leadership, and innovation offsetting U.S. share loss. Stretched valuation is offset by fundamentals and positive sentiment."
-            },
-            "CL": {
-                "position": "long",
-                "industry": "household_products",
-                "risk_allocation": 0.05,
-                "reasoning": "Defensive global leader, robust margins, FCF stability, and innovation pipeline. Market share gains and resilience make it a solid stabilizer in the portfolio."
-            },
-            "IPAR": {
-                "position": "long",
-                "industry": "personal_care_products",
-                "risk_allocation": 0.05,
-                "reasoning": "Resilient growth, margin expansion, strong brand launches, prudent cost control, and healthy cash flow/dividend. Niche leadership with conservative guidance."
-            },
-            "TPB": {
-                "position": "long",
-                "industry": "tobacco",
-                "risk_allocation": 0.05,
-                "reasoning": "Modern oral nicotine disruptor, accelerating market share, positive FCF, and upward guidance. Margin compression risk offset by execution and momentum."
-            },
-            "DOLE": {
-                "position": "long",
-                "industry": "food_products",
-                "risk_allocation": 0.05,
-                "reasoning": "Turnaround/value play, improving margins, deleveraging, cost discipline, and capital returns. Execution in fresh/value-added supports inclusion."
-            },
-            "PPC": {
-                "position": "long",
-                "industry": "food_products",
-                "risk_allocation": 0.05,
-                "reasoning": "Diversified protein, positive growth/margins, strong cash flow, and branded/value-added growth. Healthy capital structure and operational execution."
+                "reasoning": "Quality beverages; stable margins; balances higher-beta growth longs"
             },
             "INGR": {
                 "position": "long",
-                "industry": "food_products",
-                "risk_allocation": 0.05,
-                "reasoning": "Defensive, high-quality operator, margin expansion, positive EPS/cash flow, and cost discipline. Diversified portfolio and strong analyst sentiment."
+                "industry": "",
+                "risk_allocation": 0.007,
+                "reasoning": "Reduced; retain small position for ingredients defensiveness"
+            },
+            "ODC": {
+                "position": "long",
+                "industry": "",
+                "risk_allocation": 0.07,
+                "reasoning": "Increased as high up-capture with moderate down-capture; strong FCF/margins"
+            },
+            "CASY": {
+                "position": "long",
+                "industry": "",
+                "risk_allocation": 0.045,
+                "reasoning": "Increased for quality compounding; acceptable drawdown profile"
+            },
+            "SFM": {
+                "position": "long",
+                "industry": "",
+                "risk_allocation": 0.01,
+                "reasoning": "Kept small; provides stagflation/inflation resilience"
+            },
+            "VITL": {
+                "position": "long",
+                "industry": "",
+                "risk_allocation": 0.035,
+                "reasoning": "Selective growth; kept moderate due to higher down-capture"
+            },
+            "DOLE": {
+                "position": "long",
+                "industry": "",
+                "risk_allocation": 0.018,
+                "reasoning": "Value/turnaround; maintained small for diversification"
+            },
+            "PPC": {
+                "position": "long",
+                "industry": "",
+                "risk_allocation": 0.025,
+                "reasoning": "Protein diversification; stable cash generation"
+            },
+            "COCO": {
+                "position": "long",
+                "industry": "",
+                "risk_allocation": 0.03,
+                "reasoning": "Added to improve upside; manageable risk with balanced short book"
+            },
+            "CELH": {
+                "position": "long",
+                "industry": "",
+                "risk_allocation": 0.027,
+                "reasoning": "Raised selectively for upside; sized for volatility and credit stress sensitivity"
+            },
+            "IPAR": {
+                "position": "long",
+                "industry": "",
+                "risk_allocation": 0.01,
+                "reasoning": "Kept small; niche growth with acceptable risk"
+            },
+            "TPB": {
+                "position": "long",
+                "industry": "",
+                "risk_allocation": 0.02,
+                "reasoning": "Modern oral growth; moderate sizing due to beta"
+            },
+            "ODD": {
+                "position": "long",
+                "industry": "",
+                "risk_allocation": 0.017,
+                "reasoning": "High up-capture; reduced vs early versions to control tail risk"
+            },
+            "CENT": {
+                "position": "long",
+                "industry": "",
+                "risk_allocation": 0.012,
+                "reasoning": "Small weight for diversification; cyclical recovery optionality"
+            },
+            "CHEF": {
+                "position": "long",
+                "industry": "",
+                "risk_allocation": 0.01,
+                "reasoning": "Small tactical growth exposure; diversified distribution"
             }
         },
         "short_tickers": {
-            "WBA": {
+            "COTY": {
                 "position": "short",
-                "industry": "distribution_and_retail",
-                "risk_allocation": 0.05,
-                "reasoning": "Persistent negative comps, margin pressure, high leverage, legal/operational drag, and dividend risk. Structural headwinds make it a high-conviction short."
-            },
-            "ANDE": {
-                "position": "short",
-                "industry": "distribution_and_retail",
-                "risk_allocation": 0.05,
-                "reasoning": "Margin compression, negative earnings, poor return metrics, high volatility, and weak FCF. Deteriorating fundamentals warrant a tactical short."
-            },
-            "TGT": {
-                "position": "short",
-                "industry": "distribution_and_retail",
-                "risk_allocation": 0.02,
-                "reasoning": "Declining comps, margin/inventory pressure, high leverage, and weak FCF. Cautious guidance and execution risk add to short case."    
-            },
-            "STZ": {
-                "position": "short",
-                "industry": "beverages",
-                "risk_allocation": 0.05,
-                "reasoning": "Negative momentum, core beer headwinds, reduced growth guidance, expensive valuation, and high leverage. Analyst downgrades and cautious management reinforce conviction."
-            },
-            "PEP": {
-                "position": "short",
-                "industry": "beverages",
-                "risk_allocation": 0.05,
-                "reasoning": "Negative momentum, revenue/FCF contraction, high valuation, margin pressure, high leverage, and cautious analyst sentiment."
-            },
-            "SAM": {
-                "position": "short",
-                "industry": "beverages",
-                "risk_allocation": 0.05,
-                "reasoning": "Severe negative momentum, category headwinds, weak cash generation, and high valuation. Sentiment/price targets support further downside."    
-            },
-            "MGPI": {
-                "position": "short",
-                "industry": "beverages",
-                "risk_allocation": 0.05,
-                "reasoning": "Cyclical downturn, revenue/profit declines, execution/legal risk, and negative technicals. High-conviction fundamental and technical short."  
-            },
-            "ENR": {
-                "position": "short",
-                "industry": "household_products",
-                "risk_allocation": 0.05,
-                "reasoning": "Negative momentum, deteriorating revenue/FCF, excessive leverage, margin compression, and litigation risk."
+                "industry": "",
+                "risk_allocation": 0.03,
+                "reasoning": "High negative up-capture short; credit/liquidity stress hedge"
             },
             "SPB": {
                 "position": "short",
-                "industry": "household_products",
-                "risk_allocation": 0.05,
-                "reasoning": "Severe negative momentum, declining revenue/EPS, margin compression, weak technical/fundamental profile."
+                "industry": "",
+                "risk_allocation": 0.03,
+                "reasoning": "Weak fundamentals; high HYG beta; strong hedge in credit scenarios"
             },
-            "COTY": {
+            "TGT": {
                 "position": "short",
-                "industry": "personal_care_products",
-                "risk_allocation": 0.05,
-                "reasoning": "Severe negative momentum, weak operational metrics, persistent declines, high leverage, tight liquidity, and negative sentiment."
+                "industry": "",
+                "risk_allocation": 0.015,
+                "reasoning": "Turnaround risk; maintains hedge in risk-off and overtightening"
+            },
+            "ENR": {
+                "position": "short",
+                "industry": "",
+                "risk_allocation": 0.015,
+                "reasoning": "Structural challenges and leverage; effective defensive short"
+            },
+            "PEP": {
+                "position": "short",
+                "industry": "",
+                "risk_allocation": 0.02,
+                "reasoning": "Valuation/FCF pressure; mild beta hedge with limited upside sensitivity"
             },
             "KVUE": {
                 "position": "short",
-                "industry": "personal_care_products",
-                "risk_allocation": 0.05,
-                "reasoning": "Negative organic growth, margin compression, FCF deterioration, high tariffs, high valuation, and cautious management/analyst stance."        
+                "industry": "",
+                "risk_allocation": 0.015,
+                "reasoning": "Organic growth/margin pressure; helpful in sticky inflation/credit"
             },
             "KLG": {
                 "position": "short",
-                "industry": "food_products",
-                "risk_allocation": 0.05,
-                "reasoning": "Rallying on momentum despite negative FCF, persistent volume declines, high leverage, and extreme valuation. Weak fundamentals."
+                "industry": "",
+                "risk_allocation": 0.015,
+                "reasoning": "Turnaround risk and leverage; hedge against staples rerating"
             },
             "JJSF": {
                 "position": "short",
-                "industry": "food_products",
-                "risk_allocation": 0.05,
-                "reasoning": "Margin compression, negative revenue/FCF growth, persistent volume headwinds, and high valuation. Fundamentals do not justify price."
+                "industry": "",
+                "risk_allocation": 0.02,
+                "reasoning": "Valuation rich; defensive short with modest beta"
             },
-            "SEB": {
+            "MGPI": {
                 "position": "short",
-                "industry": "food_products",
-                "risk_allocation": 0.05,
-                "reasoning": "Recent price momentum unsupported by operational performance, shrinking revenue/EPS, negative FCF, and thin margins. Strong mean-reversion short."
+                "industry": "",
+                "risk_allocation": 0.01,
+                "reasoning": "Cyclical downturn; reduced sizing to rebalance book"
+            },
+            "STZ": {
+                "position": "short",
+                "industry": "",
+                "risk_allocation": 0.01,
+                "reasoning": "Earnings visibility risk; modest hedge"
+            },
+            "WBA": {
+                "position": "short",
+                "industry": "",
+                "risk_allocation": 0.025,
+                "reasoning": "Structural headwinds/leverage; significant downside in stagflation/energy shocks"
+            },
+            "ANDE": {
+                "position": "short",
+                "industry": "",
+                "risk_allocation": 0.03,
+                "reasoning": "Margin/volatility risks; effective credit/liquidity stress hedge"
+            },
+            "FRPT": {
+                "position": "short",
+                "industry": "",
+                "risk_allocation": 0.015,
+                "reasoning": "High valuation/high beta; strong contributor in risk-off/credit stress"
+            },
+            "CPB": {
+                "position": "short",
+                "industry": "",
+                "risk_allocation": 0.02,
+                "reasoning": "Low growth, integration risks; defensive short to fund higher-upside longs"
             }
         }
     }
+
+
 
     tickers_weights = {}
     

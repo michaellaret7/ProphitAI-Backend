@@ -3,6 +3,7 @@ from typing import Dict, Optional
 from datetime import datetime, timedelta
 import pandas as pd
 from backend.src.calculations.returns_calculations.portfolio_returns_calculations import CalculatePortfolioReturns
+from backend.src.repositories.price_data import fetch_bulk_price_data_for_tickers
 
 class PortfolioPerformanceCalculations:
     """
@@ -192,3 +193,108 @@ class PortfolioPerformanceCalculations:
             'capture_ratio': capture_ratio,
             'capture_spread': capture_spread
         }
+
+#TODO: move this to a better place and revamp this file
+def get_upside_downside_ratios(portfolio_dict: dict):
+    """
+    Calculate up and down capture ratios for portfolio and individual tickers.
+
+    Parameters:
+    - portfolio_dict: Dictionary with tickers as keys and 'conviction'/'position' as values
+    - benchmark_ticker: Benchmark ticker to compare against (default: SPY)
+
+    Returns:
+    - dict: Contains portfolio and individual ticker up/down capture ratios
+    """
+    benchmark_ticker = 'SPY'
+
+    # Calculate date range (last 252 trading days, approximately 1 year)
+    end_date = datetime.now()
+    start_date = end_date - timedelta(days=252)
+
+    # Convert to string format expected by fetch_bulk_price_data_for_tickers
+    start_date_str = start_date.strftime('%Y-%m-%d')
+    end_date_str = end_date.strftime('%Y-%m-%d')
+
+    # Get all tickers including benchmark
+    tickers = list(portfolio_dict.keys()) + [benchmark_ticker]
+
+    # Fetch price data
+    price_data = fetch_bulk_price_data_for_tickers(tickers, start_date_str, end_date_str, frequency='daily')
+
+    if not price_data or benchmark_ticker not in price_data:
+        print(f"Unable to fetch price data for benchmark {benchmark_ticker}")
+        return None
+
+    # Create DataFrame from price data
+    prices_df = pd.DataFrame(price_data)
+
+    # Calculate daily returns
+    returns = prices_df.pct_change().dropna()
+
+    # Separate benchmark returns
+    benchmark_returns = returns[benchmark_ticker]
+
+    # Identify up and down market periods
+    up_market = benchmark_returns > 0
+    down_market = benchmark_returns < 0
+
+    # Initialize results dictionary
+    results = {
+        'up_capture': {},
+        'down_capture': {}
+    }
+
+    # Calculate capture ratios for each ticker
+    for ticker in portfolio_dict.keys():
+        if ticker not in returns.columns:
+            continue
+            
+        # Get ticker returns
+        ticker_returns = returns[ticker]
+        
+        # Adjust returns for short positions
+        if portfolio_dict[ticker]['position'] == 'short':
+            ticker_returns = -ticker_returns
+        
+        # Calculate up-market capture
+        ticker_up_returns = ticker_returns[up_market].mean()
+        benchmark_up_returns = benchmark_returns[up_market].mean()
+        up_capture = (ticker_up_returns / benchmark_up_returns * 100) if benchmark_up_returns != 0 else np.nan
+        
+        # Calculate down-market capture
+        ticker_down_returns = ticker_returns[down_market].mean()
+        benchmark_down_returns = benchmark_returns[down_market].mean()
+        down_capture = (ticker_down_returns / benchmark_down_returns * 100) if benchmark_down_returns != 0 else np.nan
+        
+        results['up_capture'][ticker] = round(float(up_capture), 3)
+        results['down_capture'][ticker] = round(float(down_capture), 3)
+
+    # Calculate portfolio-level capture ratios
+    portfolio_returns = pd.Series(0.0, index=returns.index)
+
+    for ticker, details in portfolio_dict.items():
+        if ticker not in returns.columns:
+            continue
+        
+        weight = details['conviction']
+        position = details['position']
+        
+        # Adjust returns for position type
+        if position == 'long':
+            portfolio_returns += returns[ticker] * weight
+        else:  # short
+            portfolio_returns -= returns[ticker] * weight
+
+    # Portfolio up-market capture
+    portfolio_up_returns = portfolio_returns[up_market].mean()
+    portfolio_up_capture = (portfolio_up_returns / benchmark_up_returns * 100) if benchmark_up_returns != 0 else np.nan
+
+    # Portfolio down-market capture
+    portfolio_down_returns = portfolio_returns[down_market].mean()
+    portfolio_down_capture = (portfolio_down_returns / benchmark_down_returns * 100) if benchmark_down_returns != 0 else np.nan
+
+    results['portfolio_up_capture'] = round(float(portfolio_up_capture), 3)
+    results['portfolio_down_capture'] = round(float(portfolio_down_capture), 3)
+
+    return results
