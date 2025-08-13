@@ -1,4 +1,4 @@
-from backend.src.prophit_alts.core.base_agent_class import BaseAgent
+from backend.src.agentic_framework.base_agent import BaseAgent
 from backend.src.prophit_alts.consumer_staples_fund.build_portfolio.prompts.cio_agent_prompts import cio_system_prompt, cio_user_prompt
 from backend.src.prophit_alts.consumer_staples_fund.build_portfolio.macro_agent import MacroAnalyst
 from backend.src.db.core.db_config import ProphitAltsSession

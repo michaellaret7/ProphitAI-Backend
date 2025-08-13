@@ -1,5 +1,5 @@
 from datetime import timedelta
-from backend.src.prophit_alts.core.base_agent_class import BaseAgent
+from backend.src.agentic_framework.base_agent import BaseAgent
 # from backend.src.prophit_alts.consumer_staples_fund.build_portfolio.prompts.cro_agent_prompts import cro_system_prompt, cro_user_prompt
 from backend.src.calculations.risk_calculations.ticker_risk_calculations import TickerRiskCalculations
 from backend.src.db.core.db_config import ProphitAltsSession

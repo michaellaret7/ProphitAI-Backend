@@ -1,0 +1,89 @@
+{
+  "created_at": "2025-08-13T08:46:03.759385",
+  "items": [
+    {
+      "step": 1,
+      "description": "Digest initial stress tests and capture ratios; flag problematic names and protective names",
+      "status": "completed",
+      "started_at_iteration": 2,
+      "completed_at_iteration": 4
+    },
+    {
+      "step": 2,
+      "description": "Query larger ticker pool to source substitutes and hedges",
+      "status": "completed",
+      "started_at_iteration": 3,
+      "completed_at_iteration": 5
+    },
+    {
+      "step": 3,
+      "description": "Deep-dive 2-3 red-flag longs (e.g., CELH, ODD, IPAR) and 2 shorts that squeeze (e.g., COTY, SPB) via ticker data",
+      "status": "completed",
+      "started_at_iteration": 4,
+      "completed_at_iteration": 6
+    },
+    {
+      "step": 4,
+      "description": "Construct Portfolio V1: de-risk high-beta longs, diversify longs into resilient, low down-capture names; re-balance shorts away from squeeze-prone names; enforce ~30% net long",
+      "status": "completed",
+      "started_at_iteration": 5,
+      "completed_at_iteration": 7
+    },
+    {
+      "step": 5,
+      "description": "Test V1 with stress_test and get_upside_downside_ratios; record max loss, captures, attribution",
+      "status": "completed",
+      "started_at_iteration": 6,
+      "completed_at_iteration": 8
+    },
+    {
+      "step": 6,
+      "description": "Analyze V1; identify remaining drivers of worst-scenario drawdown and over-correlation; adjust concentration",
+      "status": "completed",
+      "started_at_iteration": 7,
+      "completed_at_iteration": 9
+    },
+    {
+      "step": 7,
+      "description": "Construct Portfolio V2: tweak weights, swap 2-4 positions based on V1 learnings; maintain ~30% net long",
+      "status": "completed",
+      "started_at_iteration": 8,
+      "completed_at_iteration": 10
+    },
+    {
+      "step": 8,
+      "description": "Test V2 with stress_test and get_upside_downside_ratios; compare vs V1; track improvements",
+      "status": "completed",
+      "started_at_iteration": 9,
+      "completed_at_iteration": 11
+    },
+    {
+      "step": 9,
+      "description": "Construct Portfolio V3: further refine shorts for robustness across credit and rate shocks; add decorrelated longs; tighten concentration",
+      "status": "completed",
+      "started_at_iteration": 10,
+      "completed_at_iteration": 12
+    },
+    {
+      "step": 10,
+      "description": "Test V3 with stress_test and get_upside_downside_ratios; verify max loss trending toward <10%, down capture <15%, up capture >40%",
+      "status": "completed",
+      "started_at_iteration": 11,
+      "completed_at_iteration": 13
+    },
+    {
+      "step": 11,
+      "description": "Construct Portfolio V4 (if needed): fine-tune exposures to hit targets; validate across multiple scenarios",
+      "status": "completed",
+      "started_at_iteration": 12,
+      "completed_at_iteration": 14
+    },
+    {
+      "step": 12,
+      "description": "Final validation: confirm ~30% net long, counts ~15-20 longs and 10-15 shorts, improvements documented",
+      "status": "completed",
+      "started_at_iteration": 13,
+      "completed_at_iteration": 15
+    }
+  ]
+}

@@ -1,126 +1,115 @@
-# Active Checklist Monitoring for BaseAgent
+# BaseAgent Class Refactoring Plan
 
 ## Objective
-Implement active checklist monitoring to maintain agent direction and force explicit progress tracking after each tool call.
+Break down the BaseAgent class (currently 686 lines) into smaller, more maintainable and modular pieces within a dedicated folder structure, while maintaining all existing functionality.
 
-## File Format Decision
-**Use JSON format** for the checklist file because:
-- Agent already outputs JSON plan in first step
-- Easy to parse and update programmatically  
-- Can track completion status, timestamps, and iteration numbers
-- Integrates seamlessly with existing Python code
+## Current Structure Analysis
+The BaseAgent class contains the following major components:
+- Data class: StepTrace
+- Initialization and configuration
+- Tool registration system
+- Core run loop
+- Helper methods for various operations
+- Message and checklist logging
+- Stagnation detection
+- JSON/parsing utilities
 
-## Todo Items
-
-### Phase 1: Setup Checklist Infrastructure
-- [x] Add checklist file path to BaseAgent __init__ (backend/src/prophit_alts/core/agent_checklist.json)
-- [x] Add checklist tracking attributes to BaseAgent class
-- [x] Create method to parse initial JSON plan into checklist structure
-
-### Phase 2: Checklist Management Methods
-- [x] Create `_save_checklist()` method to write checklist to JSON file
-- [x] Create `_load_checklist()` method to read current checklist status
-- [x] Create `_update_checklist_progress()` method to mark items complete
-- [x] Create `_get_checklist_prompt()` method to format current progress
-
-### Phase 3: Integration with Agent Loop
-- [x] Capture initial JSON plan from agent's first response
-- [x] After each tool call, inject checklist status into user prompt
-- [x] Update checklist based on completed actions
-- [x] Modify the analysis prompt to include checklist context
-
-### Phase 4: Testing & Cleanup
-- [ ] Test with CRO agent to ensure checklist tracking works
-- [ ] Ensure checklist file is created/updated properly
-- [ ] Verify checklist progress tracking is accurate
-- [ ] Clean up any debug code
-
-## Implementation Details
-
-### Checklist JSON Structure
-```json
-{
-  "created_at": "2025-01-12T15:00:00",
-  "iteration": 5,
-  "items": [
-    {
-      "step": 1,
-      "description": "Get larger ticker pool",
-      "status": "completed",
-      "completed_at_iteration": 2
-    },
-    {
-      "step": 2,
-      "description": "Analyze problem positions",
-      "status": "in_progress",
-      "started_at_iteration": 3
-    },
-    {
-      "step": 3,
-      "description": "Build Portfolio V1",
-      "status": "pending"
-    }
-  ]
-}
+## Proposed Folder Structure
+```
+backend/src/agentic_framework/base_agent/
+├── __init__.py                    # Export BaseAgent and key components
+├── agent.py                        # Main BaseAgent class (core logic)
+├── data_models.py                  # StepTrace and other data classes
+├── tool_registry.py                # Tool registration and management
+├── execution_engine.py             # Core run loop and execution logic
+├── helpers/
+│   ├── __init__.py
+│   ├── message_handler.py         # Message formatting and saving
+│   ├── checklist_manager.py       # Checklist tracking functionality
+│   ├── stagnation_detector.py     # Stagnation detection logic
+│   └── parsing_utils.py           # JSON parsing and text utilities
+└── config.py                       # Default configurations and constants
 ```
 
-### Modified Prompt After Tool Calls
-Instead of generic "Analyze the latest tool observations", use:
-```
-Current Progress (Iteration X):
-✓ Step 1: Get larger ticker pool
-→ Step 2: Analyze problem positions (IN PROGRESS)
-  Step 3: Build Portfolio V1
+## TODO Items
 
-Based on your checklist and latest results:
-1. Mark any completed items
-2. Continue with current task or move to next
-3. Stay focused on your targets
+### [x] 1. Create folder structure
+- Create `backend/src/agentic_framework/base_agent/` directory
+- Create `helpers/` subdirectory
+- Create all necessary `__init__.py` files
 
-Proceed with your next action.
-```
+### [x] 2. Extract data models
+- Move `StepTrace` dataclass to `data_models.py`
+- Add proper imports and type hints
 
-## Expected Outcome
-- Agent maintains clear direction throughout execution
-- Explicit progress tracking visible in logs
-- Reduced redundant actions and better focus
-- Improved debugging and understanding of agent decisions
+### [x] 3. Extract tool registry functionality
+- Move tool registration methods to `tool_registry.py`
+  - `_register_base_tools()`
+  - `add_tool()`
+  - `_execute_tool_safe()`
+- Keep tool function mappings and definitions
 
-## Review
+### [x] 4. Extract message handling
+- Move to `helpers/message_handler.py`:
+  - `_save_messages_to_json()`
+  - `_save_final_json()`
+  - `_system_rules()`
+  - Message formatting logic
 
-### Summary of Changes Made
-Successfully implemented active checklist monitoring for the BaseAgent class to maintain agent focus and provide explicit progress tracking.
+### [x] 5. Extract checklist management
+- Move to `helpers/checklist_manager.py`:
+  - `_parse_plan_to_checklist()`
+  - `_save_checklist()`
+  - `_load_checklist()`
+  - `_update_checklist_progress()`
+  - `_get_checklist_prompt()`
 
-### Key Changes:
-1. **BaseAgent.__init__**: Added checklist tracking attributes (checklist_path, checklist_items, checklist_enabled)
+### [x] 6. Extract stagnation detection
+- Move to `helpers/stagnation_detector.py`:
+  - `_update_stagnation()`
+  - Stagnation tracking variables and logic
 
-2. **Checklist Management Methods Added**:
-   - `_parse_plan_to_checklist()`: Extracts JSON plan from agent's first response and converts to checklist
-   - `_save_checklist()`: Persists checklist to JSON file in core folder
-   - `_load_checklist()`: Loads existing checklist from file
-   - `_update_checklist_progress()`: Updates item statuses based on iteration progress
-   - `_get_checklist_prompt()`: Generates formatted checklist status for agent context
+### [x] 7. Extract parsing utilities
+- Move to `helpers/parsing_utils.py`:
+  - `_maybe_parse_json_step()`
+  - `_looks_final()`
+  - `_extract_last_final()`
+  - `_stringify()`
 
-3. **Run Loop Integration**:
-   - Captures initial plan after first assistant response (line 197-199)
-   - Replaces generic analysis prompts with checklist-aware prompts
-   - Updates checklist progress after each tool call
-   - Shows progress like: "✓ Step 1: Complete | → Step 2: IN PROGRESS | Step 3: Pending"
+### [x] 8. Create execution engine
+- Move core run loop to `execution_engine.py`
+- Keep the main `run()` method logic
+- Maintain iteration management
 
-### Technical Implementation:
-- **JSON file format** chosen for simplicity and compatibility
-- **Automatic progress tracking** using iteration-based heuristics
-- **Graceful error handling** to prevent agent failures if checklist operations fail
-- **Minimal code changes** following DRY principle - reused existing patterns
+### [x] 9. Create configuration module
+- Move to `config.py`:
+  - Default configurations (max_iterations, stuck_threshold, etc.)
+  - File paths for outputs
+  - Final keywords list
 
-### Benefits:
-- Agent now has persistent awareness of its plan
-- Progress is visible in console output
-- Reduces chance of agent getting stuck or losing direction
-- Creates audit trail of agent decision-making
-- No breaking changes to existing agent functionality
+### [x] 10. Update main agent.py
+- Keep only the main BaseAgent class skeleton
+- Import all extracted components
+- Maintain the same public API
+- Ensure __init__ properly initializes all components
 
-### Next Steps:
-- Test with CRO agent to verify checklist creation and tracking
-- Monitor agent behavior to ensure improved focus
-- Fine-tune progress detection heuristics if needed
+### [x] 11. Update imports in dependent files
+- Update `cro_agent.py` import
+- Update `cio_agent.py` import  
+- Update `macro_agent.py` import
+- Update `industry_agents.py` import
+
+### [ ] 12. Test functionality
+- Verify all agents still work correctly
+- Ensure no breaking changes
+- Confirm all methods are accessible
+
+## Implementation Notes
+- Keep all method signatures exactly the same
+- Maintain backward compatibility 
+- Use proper imports to keep the same external API
+- Ensure the refactored code follows DRY principle
+- Keep components loosely coupled for future extensibility
+
+## Review Section
+*To be completed after implementation*

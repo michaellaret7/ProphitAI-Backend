@@ -10,9 +10,9 @@ from dotenv import load_dotenv
 from openai import OpenAI
 
 # Domain tools
-from backend.src.prophit_alts.core.tools.calculator import calculator
-from backend.src.prophit_alts.core.tools.data_wrapper_tool import ProphitAltsDataWrapper
-from backend.src.prophit_alts.core.tools.search_engine_tool import AgentSearchEngine
+from backend.src.agentic_framework.base_tools.calculator import calculator
+from backend.src.agentic_framework.base_tools.data_wrapper_tool import ProphitAltsDataWrapper
+from backend.src.agentic_framework.base_tools.search_engine_tool import AgentSearchEngine
 from backend.src.utils.choose_model_and_client import openai_model_and_client
 from backend.src.utils.choose_model_and_client import *
 
@@ -65,7 +65,7 @@ class BaseAgent:
         
         # Message logging
         if self.save_messages:
-            self.messages_log_path = Path(__file__).parent / "agent_messages.json"
+            self.messages_log_path = Path(__file__).parent / "agent_output" / "agent_messages.json"
             # Clear the messages file at start
             try:
                 with open(self.messages_log_path, "w", encoding="utf-8") as f:
@@ -74,7 +74,7 @@ class BaseAgent:
                 pass
         
         # Checklist tracking
-        self.checklist_path = Path(__file__).parent / "agent_checklist.json"
+        self.checklist_path = Path(__file__).parent / "agent_output" / "agent_checklist.json"
         self.checklist_items: List[Dict[str, Any]] = []
         self.checklist_enabled = False  # Will be enabled when plan is detected
         # Clear the checklist file at start
@@ -175,6 +175,16 @@ class BaseAgent:
                     "role": "user",
                     "content": (
                         "Before you start, produce a short JSON plan: {\"plan\":[{\"step\":1,\"desc\":\"...\"},...]}\n"
+                        "After you produce the short json plan, you must come up with an actionable to-do list which must be numbered in the following format: \n\n"
+                        "1. [actionable item 1]\n"
+                            "a. [actionable item 1a]\n"
+                            "b. [actionable item 1b]\n"
+                            "and so on..."
+                        "2. [actionable item 2]\n"
+                            "a. [actionable item 2a]\n"
+                            "b. [actionable item 2b]\n"
+                            "and so on..."
+                        "and so on..."
                         "Then begin executing with tool-calls."
                     ),
                 }
@@ -221,15 +231,17 @@ class BaseAgent:
                 for tc in msg.tool_calls:
                     name = tc.function.name
                     args_json = tc.function.arguments or "{}"
+
                     try:
                         args = json.loads(args_json)
+                        print(tc.function.name)
                     except json.JSONDecodeError:
                         # If arguments are not valid JSON, pass raw string under a key
                         args = {"_raw": args_json}
 
                     step.tool_call = {"name": name, "args": args}
 
-                    # Stagnation detection
+                    # Stagnation detection to detect if the agent is stuck in a loop
                     self._update_stagnation(name, args)
 
                     observation = self._execute_tool_safe(name, args)
@@ -246,10 +258,10 @@ class BaseAgent:
                         "content": self._stringify(observation),
                     })
 
-                # Update checklist progress and ask the model to analyze
+                # Update checklist progress and ask the model to analyze the observation
                 self._update_checklist_progress(i)
                 
-                # Ask the model to analyze the observation and decide next step or finalize
+                # Ask the model to analyze the observation and decide next step or finalize the answer
                 messages.append(
                     {
                         "role": "user",
@@ -312,6 +324,7 @@ class BaseAgent:
 
             if self.verbose:
                 print("" + "-"*80)
+
             # Stagnation guard – request a different approach
             if self._stuck_count >= self._stuck_threshold:
                 messages.append(
