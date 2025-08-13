@@ -13,6 +13,7 @@ from openai import OpenAI
 from backend.src.agentic_framework.base_tools.calculator import calculator
 from backend.src.agentic_framework.base_tools.data_wrapper_tool import ProphitAltsDataWrapper
 from backend.src.agentic_framework.base_tools.search_engine_tool import AgentSearchEngine
+from backend.src.agentic_framework.base_agent.args_parse import ToolArgumentParser
 from backend.src.utils.choose_model_and_client import openai_model_and_client
 from backend.src.utils.choose_model_and_client import *
 
@@ -35,7 +36,18 @@ class BaseAgent:
       (d) Returns a clean structured trace
     """
 
-    def __init__(self, system_prompt: str, user_prompt: str, *, model: str = "gpt-5", max_iterations: int = 50, verbose: bool = True, plan_first: bool = True, final_keywords: Optional[List[str]] = None, save_messages: bool = True):
+    def __init__(self, 
+                system_prompt: str, 
+                user_prompt: str, 
+                *, 
+                model: str = None, 
+                max_iterations: int = 50, 
+                verbose: bool = True, 
+                plan_first: bool = True, 
+                final_keywords: Optional[List[str]] = None, 
+                save_messages: bool = True,
+            ):
+        
         self.model_name = model
         self.llm, self.client = openai_model_and_client(model=self.model_name)
 
@@ -43,7 +55,7 @@ class BaseAgent:
         self.user_prompt = user_prompt
         self.max_iterations = max_iterations
         self.verbose = verbose
-        self.plan_first = True  # always plan first
+        self.plan_first = plan_first  # always plan first
         self.final_keywords = final_keywords or ["Final Answer:", "FINAL ANSWER:"]
         self.save_messages = save_messages
 
@@ -63,6 +75,9 @@ class BaseAgent:
         self._stuck_count: int = 0
         self._stuck_threshold: int = 4  # Increased to allow more iterations for portfolio testing
         
+        # Initialize argument parser (will be set after tools are registered)
+        self._arg_parser: Optional[ToolArgumentParser] = None
+        
         # Message logging
         if self.save_messages:
             self.messages_log_path = Path(__file__).parent / "agent_output" / "agent_messages.json"
@@ -77,7 +92,7 @@ class BaseAgent:
         self.checklist_path = Path(__file__).parent / "agent_output" / "agent_checklist.json"
         self.checklist_items: List[Dict[str, Any]] = []
         self.checklist_enabled = False  # Will be enabled when plan is detected
-        # Clear the checklist file at start
+        
         try:
             with open(self.checklist_path, "w", encoding="utf-8") as f:
                 json.dump({}, f)
@@ -146,13 +161,29 @@ class BaseAgent:
     def add_tool(self, name: str, description: str, parameters: Dict, function: Callable):
         tool_def = {
             "type": "function",
-            "function": {"name": name, "description": description, "parameters": parameters},
+            "function": {
+                "name": name, 
+                "description": description, 
+                "parameters": parameters
+            }
         }
         self.tools.append(tool_def)
         self.tool_functions[name] = function
+    
+    def _create_arg_parser(self):
+        """Create argument parser with current tool definitions."""
+        tool_registry = {}
+        for tool in self.tools:
+            func_def = tool.get('function', {})
+            tool_registry[func_def.get('name')] = func_def
+        self._arg_parser = ToolArgumentParser(tool_registry)
 
     # --- Core run loop -----------------------------------------------------
     def run(self) -> Dict[str, Any]:
+        # Create argument parser now that all tools (base + child class) are registered
+        if not self._arg_parser:
+            self._create_arg_parser()
+        
         if self.verbose:
             print("🚀 Starting JSON ReAct run")
             print(f"Query: {self.user_prompt}")
@@ -232,12 +263,22 @@ class BaseAgent:
                     name = tc.function.name
                     args_json = tc.function.arguments or "{}"
 
-                    try:
-                        args = json.loads(args_json)
-                        print(tc.function.name)
-                    except json.JSONDecodeError:
-                        # If arguments are not valid JSON, pass raw string under a key
-                        args = {"_raw": args_json}
+                    # Use robust argument parser
+                    if self._arg_parser:
+                        args = self._arg_parser.parse_arguments(
+                            tool_name=name,
+                            args_json=args_json,
+                            tool_function=self.tool_functions.get(name)
+                        )
+                    else:
+                        # Fallback if parser not initialized
+                        try:
+                            args = json.loads(args_json)
+                        except json.JSONDecodeError:
+                            args = {"_raw": args_json}
+                    
+                    # if self.verbose:
+                    #     print(f"  Parsed args for {name}: {json.dumps(args, sort_keys=True)}")
 
                     step.tool_call = {"name": name, "args": args}
 
@@ -280,30 +321,65 @@ class BaseAgent:
                 # If it's JSON step format, allow model to request tools via content
                 content_tool = self._maybe_parse_json_step(assistant_raw)
                 if content_tool:
-                    name = content_tool["tool"]
+                    name = content_tool.get("tool")
                     args = content_tool.get("args", {})
-                    step.tool_call = {"name": name, "args": args}
-                    self._update_stagnation(name, args)
-                    observation = self._execute_tool_safe(name, args)
-                    step.observation = observation
 
-                    if self.verbose:
-                        print(f"  tool_call(content) -> {name} args={json.dumps(args, sort_keys=True)}")
-                        print("  observation:", self._stringify(observation))
+                    # Special handling: unwrap invented parallel wrapper
+                    if name == "multi_tool_use.parallel" and isinstance(args, dict) and isinstance(args.get("tool_uses"), list):
+                        aggregated_results: List[Dict[str, Any]] = []
+                        for entry in args.get("tool_uses", []):
+                            if not isinstance(entry, dict):
+                                continue
+                            inner_name = entry.get("recipient_name") or entry.get("tool")
+                            inner_args = entry.get("parameters") or entry.get("args") or {}
+                            if isinstance(inner_name, str) and inner_name.startswith("functions."):
+                                inner_name = inner_name[10:]
+                            # Parse/validate inner args against schema if possible
+                            if self._arg_parser and isinstance(inner_name, str):
+                                inner_args = self._arg_parser.parse_arguments(
+                                    tool_name=inner_name,
+                                    args_json=json.dumps(inner_args),
+                                    tool_function=self.tool_functions.get(inner_name)
+                                )
+                            # Execute sequentially
+                            obs = self._execute_tool_safe(inner_name, inner_args)
+                            aggregated_results.append({
+                                "tool": inner_name,
+                                "args": inner_args,
+                                "observation": obs,
+                            })
 
-                    messages.append({"role": "assistant", "content": assistant_raw})
-                    # For content-based tool calls, we can't use "tool" role - use "user" instead
-                    messages.append({"role": "user", "content": f"Tool '{name}' returned: {self._stringify(observation)}"})
+                        step.tool_call = {"name": name, "args": args}
+                        step.observation = {"parallel_results": aggregated_results}
 
-                    # Update checklist progress
-                    self._update_checklist_progress(i)
-                    
-                    messages.append(
-                        {
-                            "role": "user",
-                            "content": self._get_checklist_prompt(i),
-                        }
-                    )
+                        if self.verbose:
+                            print(f"  tool_call(content) -> {name} (unwrapped {len(aggregated_results)} calls)")
+                            print("  observation:", self._stringify(step.observation))
+
+                        messages.append({"role": "assistant", "content": assistant_raw})
+                        messages.append({"role": "user", "content": f"Unwrapped 'multi_tool_use.parallel' and executed sequentially: {self._stringify(step.observation)}"})
+
+                        # Update checklist progress
+                        self._update_checklist_progress(i)
+                        messages.append({"role": "user", "content": self._get_checklist_prompt(i)})
+                    else:
+                        # Normal single tool via content JSON
+                        step.tool_call = {"name": name, "args": args}
+                        self._update_stagnation(name, args)
+                        observation = self._execute_tool_safe(name, args)
+                        step.observation = observation
+
+                        if self.verbose:
+                            print(f"  tool_call(content) -> {name} args={json.dumps(args, sort_keys=True)}")
+                            print("  observation:", self._stringify(observation))
+
+                        messages.append({"role": "assistant", "content": assistant_raw})
+                        # For content-based tool calls, we can't use "tool" role - use "user" instead
+                        messages.append({"role": "user", "content": f"Tool '{name}' returned: {self._stringify(observation)}"})
+
+                        # Update checklist progress
+                        self._update_checklist_progress(i)
+                        messages.append({"role": "user", "content": self._get_checklist_prompt(i)})
                 else:
                     # Ask the model to either pick a tool or finalize
                     messages.append({"role": "assistant", "content": assistant_raw})
@@ -368,7 +444,8 @@ class BaseAgent:
             "You are a JSON ReAct agent. Prefer native tool-calls. When you can finalize, "
             "output a concise answer beginning with 'Final Answer:'. If you must emit a JSON step, use:\n"
             '{"thought":"...","action":{"tool":"name","args":{}}}\n'
-            'IMPORTANT: Use exact tool names without any prefix (e.g., "get_ticker_data" not "functions.get_ticker_data")'
+            'IMPORTANT: Use exact tool names without any prefix (e.g., "get_ticker_data" not "functions.get_ticker_data"). '
+            'Do NOT invent wrapper tools such as "multi_tool_use.parallel". If you want to call multiple tools, either emit native tool_calls or call them one-by-one via JSON steps.'
         )
 
     def _accumulate_usage(self, response) -> None:
