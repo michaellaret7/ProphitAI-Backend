@@ -45,11 +45,8 @@ class BaseAgent:
                 save_messages: bool = True,
             ):
         
-        # self.model_name = model
-        # self.llm, self.client = openai_model_and_client(model=self.model_name)
-
-        self.llm, self.client = gemini_model_and_client()
-        self.model_name = self.llm
+        self.model_name = model
+        self.llm, self.client = openai_model_and_client(model=self.model_name)
 
         self.system_prompt = system_prompt
         self.user_prompt = user_prompt
@@ -328,6 +325,7 @@ class BaseAgent:
 
                 # If it's JSON step format, allow model to request tools via content
                 content_tool = self.utilities.maybe_parse_json_step(assistant_raw)
+                
                 if content_tool:
                     name = content_tool.get("tool")
                     args = content_tool.get("args", {})
@@ -400,8 +398,6 @@ class BaseAgent:
                             ),
                         }
                     )
-                
-                time.sleep(60)
 
             self.trace.append(step)
             
@@ -423,7 +419,9 @@ class BaseAgent:
                     }
                 )
                 self._stuck_count = 0  # reset after nudging
-
+        
+        # THIS IS WHERE THE AGENT LOOP ENDS 
+        # THE FOLLOWING CODE IS FOR THE FINAL ANSWER AND SAVING THE MESSAGES
         else:
             stop_reason = "max_iterations"
 

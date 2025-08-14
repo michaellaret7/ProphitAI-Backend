@@ -25,7 +25,8 @@ def calculate_correlation_matrix(price_data: dict = None, start_date_str: str = 
     price_df = pd.DataFrame(price_data)
     
     # Calculate returns for correlation (using percentage change)
-    returns_df = price_df.pct_change().dropna()
+    # Explicitly set fill_method=None to avoid pandas FutureWarning
+    returns_df = price_df.pct_change(fill_method=None).dropna()
     
     # Calculate correlation matrix
     correlation_matrix = returns_df.corr()

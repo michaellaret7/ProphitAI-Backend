@@ -1,19 +1,24 @@
-from datetime import timedelta
 from backend.src.agentic_framework.base_agent.agent import BaseAgent
-from backend.src.calculations.risk_calculations.ticker_risk_calculations import TickerRiskCalculations
 from backend.src.db.core.db_config import ProphitAltsSession
 from backend.src.db.core.prophit_alts_models import *
-from backend.src.utils.serialize_output import serialize_sqlalchemy_obj
+from backend.src.prophit_alts.consumer_staples_fund.build_portfolio.cro_temp_tools import *
 from backend.src.stress_test.runner import run_stress_test_workflow
-from datetime import datetime, timedelta
-import numpy as np
-import pandas as pd
-from backend.src.repositories.price_data import fetch_bulk_price_data_for_tickers
 from backend.src.prophit_alts.consumer_staples_fund.build_portfolio.prompts.cro_agent_prompts import cro_system_prompt, cro_user_prompt
 from backend.src.calculations.performance_calculations.portfolio_performance_calculations import get_upside_downside_ratios
 from pydantic import BaseModel
 from typing import List, Literal
 import json
+
+print(f"""
+╔═══════════════════════════════════════════════╗
+║                                               ║
+║  ╔═╗╦═╗╔═╗╔═╗╦ ╦╦╔╦╗╔═╗╦                      ║
+║  ╠═╝╠╦╝║ ║╠═╝╠═╣║ ║ ╠═╣║                      ║
+║  ╩  ╩╚═╚═╝╩  ╩ ╩╩ ╩ ╩ ╩╩                      ║
+║  Agent: CRO Agent                             ║
+║  Fund: Consumer Staples Fund                  ║
+╚═══════════════════════════════════════════════╝
+""")
 
 class CROPortfolioItem(BaseModel):
 	ticker: str
@@ -23,10 +28,10 @@ class CROPortfolioItem(BaseModel):
 
 class FinalPortfolio(BaseModel):
 	portfolio: List[CROPortfolioItem]
-# model="gpt-5-2025-08-07"
+
 class CROAgent(BaseAgent):
     def __init__(self, system_prompt: str = cro_system_prompt, user_prompt: str = cro_user_prompt):
-        super().__init__(system_prompt, user_prompt, max_iterations=75, save_messages=True, model="gpt-5", verbose=True)
+        super().__init__(system_prompt, user_prompt, max_iterations=75, save_messages=True, model="gpt-4.1", verbose=True)
         
         self._register_cro_tools()
 
@@ -108,6 +113,74 @@ class CROAgent(BaseAgent):
                 "required": ["portfolio_dict"]
             },
             function=lambda portfolio_dict: get_upside_downside_ratios(portfolio_dict)
+        )
+
+        self.add_tool(
+            name="get_all_factor_calculations",
+            description="Get all factor calculations for a ticker. This is good for fundamental analysis on a single ticker.",
+            parameters={
+                "type": "object",
+                "properties": {
+                    "ticker": {
+                        "type": "string", 
+                        "description": "The ticker symbol you want to get factor calculations for"
+                    }
+                },
+                "required": ["ticker"]
+            },
+            function=lambda ticker: get_all_factor_calculations(ticker)
+        )
+
+        self.add_tool(
+            name="get_ticker_performance_metrics",
+            description="Get performance metrics for a ticker. This is good for technical analysis on a single ticker.",
+            parameters={
+                "type": "object",
+                "properties": {
+                    "ticker": {
+                        "type": "string", 
+                        "description": "The ticker symbol you want to get performance metrics for"
+                    }
+                },
+                "required": ["ticker"]
+            },
+            function=lambda ticker: get_ticker_performance_metrics(ticker)
+        )
+
+        self.add_tool(
+            name="get_most_recent_fundamentals",
+            description="Get the most recent fundamentals for a ticker. This is good for fundamental analysis on a single ticker.",
+            parameters={
+                "type": "object",
+                "properties": {
+                    "ticker": {
+                        "type": "string", 
+                        "description": "The ticker symbol you want to get the most recent fundamentals for"
+                    },
+                    "fundamentals_type": {
+                        "type": "string", 
+                        "description": "The type of fundamentals you want to get. Options are: ['balance_sheet', 'income_statement', 'cash_flow_statement', 'financial_ratios', 'analyst_estimates', 'all']"
+                    }
+                },
+                "required": ["ticker", "fundamentals_type"]
+            },
+            function=lambda ticker, fundamentals_type: get_most_recent_fundamentals(ticker, fundamentals_type)
+        )
+
+        self.add_tool(
+            name="analyze_portfolio_performance",
+            description="Analyze the performance of the portfolio. This is good for portfolio level analysis.",
+            parameters={
+                "type": "object",
+                "properties": {
+                    "portfolio_dict": {
+                        "type": "object",
+                        "description": "Dictionary with tickers as keys and {'conviction': float, 'position': 'long'|'short'} as values. Follow the <Dictionary Format Rules> from the prompt for this format."
+                    }
+                },
+                "required": ["portfolio_dict"]
+            },
+            function=lambda portfolio_dict: analyze_portfolio_performance(portfolio_dict)
         )
 
     def _get_larger_ticker_pool(self):

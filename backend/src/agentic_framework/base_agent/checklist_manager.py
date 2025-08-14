@@ -278,3 +278,5 @@ class ChecklistManager:
         
         # Combine base prompt with checklist status
         return base_prompt + "\n".join(status_lines)
+
+

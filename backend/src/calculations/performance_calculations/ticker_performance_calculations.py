@@ -103,7 +103,7 @@ class TickerPerformanceMetrics:
         return daily_sharpe * np.sqrt(trading_days)
 
     def sortino_ratio(self, target_return=None):
-        """Calculate Sortino Ratio."""
+        """Calculate annualized Sortino Ratio."""
         if target_return is None:
             target_return = self.risk_free_rate
 
@@ -113,8 +113,11 @@ class TickerPerformanceMetrics:
         if len(downside_returns) == 0:
             return np.inf
 
-        downside_deviation = np.sqrt(np.mean(downside_returns**2))
-        return np.mean(excess_returns) / downside_deviation if downside_deviation != 0 else np.nan
+        # Annualize the components
+        ann_excess_return = np.mean(excess_returns) * 252
+        downside_deviation = np.sqrt(np.mean(downside_returns**2)) * np.sqrt(252)
+        
+        return ann_excess_return / downside_deviation if downside_deviation != 0 else np.nan
 
     def calmar_ratio(self):
         """Calculate Calmar Ratio."""
@@ -131,11 +134,12 @@ class TickerPerformanceMetrics:
         ann_risk_free_rate = self.risk_free_rate * trading_days
         portfolio_beta = self.beta()
         
+        # Treynor ratio = (Portfolio Return - Risk-free Rate) / Beta
         excess_return = ann_portfolio_return - ann_risk_free_rate
         return excess_return / portfolio_beta if portfolio_beta != 0 else np.nan
 
     def information_ratio(self):
-        """Calculate Information Ratio (requires benchmark returns)."""
+        """Calculate Information Ratio (annualized) (requires benchmark returns)."""
         if self.benchmark_returns is None:
             raise ValueError("Benchmark returns required for Information ratio calculation")
 
@@ -145,7 +149,12 @@ class TickerPerformanceMetrics:
 
         excess_returns = returns - benchmark_returns
         tracking_error = np.std(excess_returns, ddof=1)
-        return np.mean(excess_returns) / tracking_error if tracking_error != 0 else np.nan
+        
+        # Annualize both components
+        ann_excess_return = np.mean(excess_returns) * 252
+        ann_tracking_error = tracking_error * np.sqrt(252)
+        
+        return ann_excess_return / ann_tracking_error if ann_tracking_error != 0 else np.nan
 
     def omega_ratio(self, threshold=None):
         """Calculate Omega Ratio."""
@@ -205,20 +214,23 @@ class TickerPerformanceMetrics:
 
     # ALPHA AND CAPTURE METRICS
     def alpha(self):
-        """Calculate Jensen's Alpha (requires market returns)."""
+        """Calculate Jensen's Alpha (annualized) (requires market returns)."""
         if self.market_returns is None:
             raise ValueError("Market returns required for alpha calculation")
 
-        min_len = min(len(self.returns), len(self.market_returns))
-        returns = self.returns[:min_len]
-        market_returns = self.market_returns[:min_len]
-
-        portfolio_return = np.mean(returns)
-        market_return = np.mean(market_returns)
+        # Use annualized returns for proper alpha calculation
+        ann_portfolio_return = self.annualized_return()
+        
+        # Calculate annualized market return
+        market_total_return = (1 + self.market_returns).prod() - 1
+        days = len(self.market_returns)
+        ann_market_return = (1 + market_total_return) ** (252/days) - 1 if days > 0 else 0
+        
         portfolio_beta = self.beta()
+        ann_risk_free_rate = self.risk_free_rate * 252
 
-        expected_return = self.risk_free_rate + portfolio_beta * (market_return - self.risk_free_rate)
-        return portfolio_return - expected_return
+        expected_return = ann_risk_free_rate + portfolio_beta * (ann_market_return - ann_risk_free_rate)
+        return ann_portfolio_return - expected_return
 
     def upside_capture(self):
         """Calculate Upside Capture Ratio (requires benchmark returns)."""
