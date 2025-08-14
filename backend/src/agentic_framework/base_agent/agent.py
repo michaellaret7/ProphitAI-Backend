@@ -17,10 +17,12 @@ from backend.src.agentic_framework.base_tools.search_engine_tool import AgentSea
 from backend.src.utils.choose_model_and_client import *
 
 # Import helper classes
-from .checklist_manager import ChecklistManager
+from .task_manager import TaskManager, ChecklistCompatibilityWrapper
 from .manage_logger import MessageLogger
 from .agent_utilities import AgentUtilities, StepTrace
 from .args_parse import ToolArgumentParser
+from .agent_events import EventManager, AgentEvent
+from .task_validator import TaskValidator
 
 load_dotenv()
 
@@ -77,8 +79,21 @@ class BaseAgent:
         
         # Initialize helper classes
         self.message_logger = MessageLogger(save_messages=save_messages, verbose=verbose, model_name=self.model_name)
-        self.checklist_manager = ChecklistManager(verbose=verbose)
+        self.task_manager = TaskManager(verbose=verbose)
+        # Maintain backward compatibility with checklist_manager name
+        self.checklist_manager = ChecklistCompatibilityWrapper(self.task_manager)
         self.utilities = AgentUtilities(self)
+        
+        # Initialize event system
+        self.event_manager = EventManager(verbose=verbose)
+        self.task_validator = TaskValidator(verbose=verbose)
+        
+        # Track recent tool executions for validation
+        self.recent_tool_executions: List[Dict] = []
+        self.recent_observations: List[Any] = []
+        
+        # Register event handlers
+        self._register_event_handlers()
 
     # --- Tool registry -----------------------------------------------------
     def _register_base_tools(self):
@@ -138,7 +153,149 @@ class BaseAgent:
             },
             function=lambda expression: calculator(expression),
         )
+        
+        # Task management tools
+        self._register_task_management_tools()
 
+    def _register_task_management_tools(self):
+        """Register task management tools for structured updates."""
+        
+        # Update task status with evidence
+        self.add_tool(
+            name="update_task_status",
+            description="Update the status of a task with evidence of completion or progress",
+            parameters={
+                "type": "object",
+                "properties": {
+                    "task_id": {
+                        "type": "string", 
+                        "description": "Task identifier (e.g., 'task_1' or just '1' for step 1)"
+                    },
+                    "status": {
+                        "type": "string", 
+                        "enum": ["started", "in_progress", "completed", "failed", "blocked"],
+                        "description": "New task status"
+                    },
+                    "evidence": {
+                        "type": "object",
+                        "description": "Evidence supporting the status change",
+                        "properties": {
+                            "outputs": {"type": "object", "description": "Task outputs/results"},
+                            "observations": {"type": "array", "items": {"type": "string"}},
+                            "confidence": {"type": "number", "minimum": 0, "maximum": 1}
+                        }
+                    },
+                    "reason": {
+                        "type": "string", 
+                        "description": "Explanation for the status change"
+                    }
+                },
+                "required": ["task_id", "status"]
+            },
+            function=lambda **kwargs: self.task_manager.update_task_status(**kwargs)
+        )
+        
+        # Mark task complete (simplified version)
+        self.add_tool(
+            name="mark_task_complete",
+            description="Mark a task as complete with optional outputs",
+            parameters={
+                "type": "object",
+                "properties": {
+                    "task_id": {
+                        "type": "string",
+                        "description": "Task identifier (e.g., 'task_1' or just '1' for step 1)"
+                    },
+                    "outputs": {
+                        "type": "object",
+                        "description": "Task outputs/results"
+                    },
+                    "summary": {
+                        "type": "string",
+                        "description": "Brief summary of what was accomplished"
+                    }
+                },
+                "required": ["task_id"]
+            },
+            function=lambda task_id, outputs=None, summary=None: self.task_manager.update_task_status(
+                task_id=task_id,
+                status="completed",
+                evidence={"outputs": outputs or {}, "summary": summary} if (outputs or summary) else None,
+                reason=summary
+            )
+        )
+
+    def _register_event_handlers(self):
+        """Register event handlers for task management."""
+        
+        # Handle tool execution events
+        def on_tool_executed(data: Dict):
+            tool_name = data.get('tool_name')
+            result = data.get('result')
+            
+            # Track for validation
+            self.recent_tool_executions.append({'tool_name': tool_name, 'result': result})
+            if len(self.recent_tool_executions) > 20:  # Keep last 20
+                self.recent_tool_executions.pop(0)
+            
+            # Check current task progress
+            current_task = self.task_manager.get_current_task()
+            if current_task:
+                # Quick validation based on tool result
+                is_complete, confidence, reason = self.task_validator.validate_from_tool_result(
+                    current_task, tool_name, result
+                )
+                
+                if is_complete and confidence >= 0.8:
+                    # Task appears complete, emit completion event
+                    self.event_manager.emit_task_completed(
+                        current_task.id,
+                        outputs=current_task.outputs,
+                        confidence=confidence
+                    )
+        
+        # Handle task completion events
+        def on_task_completed(data: Dict):
+            task_id = data.get('task_id')
+            confidence = data.get('confidence', 1.0)
+            
+            # Update task status
+            self.task_manager.update_task_status(
+                task_id,
+                'completed',
+                evidence={'confidence': confidence, 'auto_detected': True},
+                reason='Auto-detected completion from tool execution'
+            )
+            
+            # Start next task if available
+            next_tasks = self.task_manager.get_next_tasks()
+            if next_tasks and len(next_tasks) > 0:
+                next_task = next_tasks[0]
+                self.task_manager.update_task_status(
+                    next_task.id,
+                    'in_progress',
+                    reason='Auto-started after previous task completion'
+                )
+                self.event_manager.emit_task_started(next_task.id, next_task.description)
+        
+        # Handle task failure events
+        def on_task_failed(data: Dict):
+            task_id = data.get('task_id')
+            error = data.get('error')
+            
+            # Update task status
+            self.task_manager.update_task_status(
+                task_id,
+                'failed',
+                evidence={'error': error},
+                reason=f'Task failed: {error}'
+            )
+        
+        # Register the handlers
+        self.event_manager.on(AgentEvent.TOOL_EXECUTED, on_tool_executed)
+        self.event_manager.on(AgentEvent.TASK_COMPLETED, on_task_completed)
+        self.event_manager.on(AgentEvent.TASK_FAILED, on_task_failed)
+    
     def add_tool(self, name: str, description: str, parameters: Dict, function: Callable):
         tool_def = {
             "type": "function",
@@ -230,7 +387,12 @@ class BaseAgent:
             
             # Try to parse plan from first response if plan_first is enabled
             if i == 1 and self.plan_first and assistant_raw:
-                self.checklist_manager.parse_plan_to_checklist(assistant_raw, len(self.trace))
+                parsed = self.checklist_manager.parse_plan_to_checklist(assistant_raw, len(self.trace))
+                if parsed:
+                    # Emit plan created event
+                    self.event_manager.emit(AgentEvent.PLAN_CREATED, {
+                        'task_count': len(self.task_manager.tasks)
+                    })
             
             # Parse any task completion indicators from the response
             if assistant_raw:
@@ -272,6 +434,14 @@ class BaseAgent:
 
                     observation = self.utilities.execute_tool_safe(name, args)
                     step.observation = observation
+                    
+                    # Emit tool executed event
+                    self.event_manager.emit_tool_executed(name, args, observation)
+                    
+                    # Track observation for validation
+                    self.recent_observations.append(observation)
+                    if len(self.recent_observations) > 20:  # Keep last 20
+                        self.recent_observations.pop(0)
 
                     if self.verbose:
                         print(f"  tool_call -> {name} args={json.dumps(args, sort_keys=True)}")
@@ -349,6 +519,10 @@ class BaseAgent:
                                 )
                             # Execute sequentially
                             obs = self.utilities.execute_tool_safe(inner_name, inner_args)
+                            
+                            # Emit event for each inner tool
+                            self.event_manager.emit_tool_executed(inner_name, inner_args, obs)
+                            
                             aggregated_results.append({
                                 "tool": inner_name,
                                 "args": inner_args,
@@ -374,6 +548,14 @@ class BaseAgent:
                         self.utilities.update_stagnation(name, args)
                         observation = self.utilities.execute_tool_safe(name, args)
                         step.observation = observation
+                        
+                        # Emit tool executed event
+                        self.event_manager.emit_tool_executed(name, args, observation)
+                        
+                        # Track observation
+                        self.recent_observations.append(observation)
+                        if len(self.recent_observations) > 20:
+                            self.recent_observations.pop(0)
 
                         if self.verbose:
                             print(f"  tool_call(content) -> {name} args={json.dumps(args, sort_keys=True)}")
@@ -403,6 +585,13 @@ class BaseAgent:
             
             # Save messages after each iteration
             self.message_logger.save_messages_to_json(messages, iteration=i)
+            
+            # Emit iteration complete event
+            self.event_manager.emit(AgentEvent.ITERATION_COMPLETE, {
+                'iteration': i,
+                'had_tool_call': step.tool_call is not None,
+                'current_task': self.task_manager.get_current_task().id if self.task_manager.get_current_task() else None
+            })
 
             if self.verbose:
                 print("" + "-"*80)
@@ -419,6 +608,8 @@ class BaseAgent:
                     }
                 )
                 self._stuck_count = 0  # reset after nudging
+            
+            # time.sleep(100)
         
         # THIS IS WHERE THE AGENT LOOP ENDS 
         # THE FOLLOWING CODE IS FOR THE FINAL ANSWER AND SAVING THE MESSAGES
