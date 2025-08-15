@@ -30,7 +30,7 @@ class FinalPortfolio(BaseModel):
 
 class CROAgent(BaseAgent):
     def __init__(self, system_prompt: str = cro_system_prompt, user_prompt: str = cro_user_prompt):
-        super().__init__(system_prompt, user_prompt, max_iterations=75, save_messages=True, model="gpt-5", verbose=True)
+        super().__init__(system_prompt, user_prompt, max_iterations=75, save_messages=True, model="gpt-4.1", verbose=True)
         
         self._register_cro_tools()
 
@@ -182,21 +182,28 @@ class CROAgent(BaseAgent):
         )
 
         self.add_tool(
-            name="get_initial_portfolio",
-            description="Get the initial portfolio from the CIO agent.",
+            name="get_initial_portfolio_data",
+            description="Get the initial portfolio stress test and performance analysis from the CIO agent.",
             parameters={
                 "type": "object",
                 "properties": {},
                 "required": []
             },
-            function=lambda: self._get_initial_portfolio()
+            function=lambda: self._get_initial_portfolio_data()
+        )
+
+        self.add_tool(
+            name="get_initial_portfolio_dict",
+            description="Get the initial portfolio dictionary. If you do not have the initial portfolio dictionary, you must call this tool first.",
+            parameters={},
+            function=lambda: self._get_initial_portfolio_dict()
         )
     
-    def _get_initial_portfolio(self):
+    def _get_initial_portfolio_data(self):
         """
-        Get the initial portfolio from the CIO agent.
+        Get the initial portfolio stress test and performance analysis from the CIO agent.
         """
-        initial_portfolio = {
+        initial_portfolio_dict = {
             # Long positions
             "CASY": {"conviction": 0.10, "position": "long"},
             "CELH": {"conviction": 0.10, "position": "long"},
@@ -232,7 +239,56 @@ class CROAgent(BaseAgent):
             "SEB": {"conviction": 0.05, "position": "short"}
         }
 
-        return initial_portfolio
+        initial_stress_test_results = run_stress_test_workflow(initial_portfolio_dict)
+        initial_upside_downside_ratios = get_upside_downside_ratios(initial_portfolio_dict)
+
+        return {
+            "initial_stress_test_results": initial_stress_test_results,
+            "initial_upside_downside_ratios": initial_upside_downside_ratios
+        }
+    
+    def _get_initial_portfolio_dict(self):
+        """
+        Get the initial portfolio dictionary.
+        """
+        # Long positions
+        initial_portfolio_dict = {
+            # Long positions
+            "CASY": {"conviction": 0.10, "position": "long"},
+            "CELH": {"conviction": 0.10, "position": "long"},
+            "ODC": {"conviction": 0.05, "position": "long"},
+            "ODD": {"conviction": 0.05, "position": "long"},
+            "PM": {"conviction": 0.05, "position": "long"},
+            "VITL": {"conviction": 0.05, "position": "long"},
+            "WMT": {"conviction": 0.05, "position": "long"},
+            "BJ": {"conviction": 0.05, "position": "long"},
+            "SFM": {"conviction": 0.05, "position": "long"},
+            "COCO": {"conviction": 0.05, "position": "long"},
+            "MNST": {"conviction": 0.05, "position": "long"},
+            "CL": {"conviction": 0.05, "position": "long"},
+            "IPAR": {"conviction": 0.05, "position": "long"},
+            "TPB": {"conviction": 0.05, "position": "long"},
+            "DOLE": {"conviction": 0.05, "position": "long"},
+            "PPC": {"conviction": 0.05, "position": "long"},
+            "INGR": {"conviction": 0.05, "position": "long"},
+            # Short positions
+            "WBA": {"conviction": 0.05, "position": "short"},
+            "ANDE": {"conviction": 0.05, "position": "short"},
+            "TGT": {"conviction": 0.02, "position": "short"},
+            "STZ": {"conviction": 0.05, "position": "short"},
+            "PEP": {"conviction": 0.05, "position": "short"},
+            "SAM": {"conviction": 0.05, "position": "short"},
+            "MGPI": {"conviction": 0.05, "position": "short"},
+            "ENR": {"conviction": 0.05, "position": "short"},
+            "SPB": {"conviction": 0.05, "position": "short"},
+            "COTY": {"conviction": 0.05, "position": "short"},
+            "KVUE": {"conviction": 0.05, "position": "short"},
+            "KLG": {"conviction": 0.05, "position": "short"},
+            "JJSF": {"conviction": 0.05, "position": "short"},
+            "SEB": {"conviction": 0.05, "position": "short"}
+        }
+
+        return initial_portfolio_dict
 
     def _get_larger_ticker_pool(self):
         """

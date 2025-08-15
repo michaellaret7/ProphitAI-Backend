@@ -573,7 +573,7 @@ class BaseAgent:
                         {
                             "role": "user",
                             "content": (
-                                "You provided no tool-call. If additional information is required, call a tool now. "
+                                "You provided no tool-call. If additional work is required, either call a tool now or do further analysis. "
                                 "Otherwise produce a 'Final Answer:' and stop."
                             ),
                         }

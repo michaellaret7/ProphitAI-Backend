@@ -1,46 +1,3 @@
-from backend.src.stress_test.runner import run_stress_test_workflow
-from backend.src.calculations.performance_calculations.portfolio_performance_calculations import get_upside_downside_ratios
-
-initial_portfolio = {
-    # Long positions
-    "CASY": {"conviction": 0.10, "position": "long"},
-    "CELH": {"conviction": 0.10, "position": "long"},
-    "ODC": {"conviction": 0.05, "position": "long"},
-    "ODD": {"conviction": 0.05, "position": "long"},
-    "PM": {"conviction": 0.05, "position": "long"},
-    "VITL": {"conviction": 0.05, "position": "long"},
-    "WMT": {"conviction": 0.05, "position": "long"},
-    "BJ": {"conviction": 0.05, "position": "long"},
-    "SFM": {"conviction": 0.05, "position": "long"},
-    "COCO": {"conviction": 0.05, "position": "long"},
-    "MNST": {"conviction": 0.05, "position": "long"},
-    "CL": {"conviction": 0.05, "position": "long"},
-    "IPAR": {"conviction": 0.05, "position": "long"},
-    "TPB": {"conviction": 0.05, "position": "long"},
-    "DOLE": {"conviction": 0.05, "position": "long"},
-    "PPC": {"conviction": 0.05, "position": "long"},
-    "INGR": {"conviction": 0.05, "position": "long"},
-    # Short positions
-    "WBA": {"conviction": 0.05, "position": "short"},
-    "ANDE": {"conviction": 0.05, "position": "short"},
-    "TGT": {"conviction": 0.02, "position": "short"},
-    "STZ": {"conviction": 0.05, "position": "short"},
-    "PEP": {"conviction": 0.05, "position": "short"},
-    "SAM": {"conviction": 0.05, "position": "short"},
-    "MGPI": {"conviction": 0.05, "position": "short"},
-    "ENR": {"conviction": 0.05, "position": "short"},
-    "SPB": {"conviction": 0.05, "position": "short"},
-    "COTY": {"conviction": 0.05, "position": "short"},
-    "KVUE": {"conviction": 0.05, "position": "short"},
-    "KLG": {"conviction": 0.05, "position": "short"},
-    "JJSF": {"conviction": 0.05, "position": "short"},
-    "SEB": {"conviction": 0.05, "position": "short"}
-}
-
-
-initial_stress_test_results = run_stress_test_workflow(initial_portfolio)
-initial_upside_downside_ratios = get_upside_downside_ratios(initial_portfolio)
-
 cro_system_prompt = f"""
 <Role>
 Act as the Chief Risk Officer (CRO) for a long/short equity Consumer Staples Fund with these core responsibilities:
@@ -56,6 +13,8 @@ Act as the Chief Risk Officer (CRO) for a long/short equity Consumer Staples Fun
 
 <Goal>
 Your goal is to EXHAUSTIVELY ANALYZE AND REFINE the portfolio until you feel confident in the portfolios risk management and alpha potential.
+This means finding vulnerabilities and improving on them through iteration. Create adjusted portfolio and run them through the stress test and other tools to mitigate risk 
+and improve alpha.
 
 Critical note: 
 - When running the functions for analysis, it is all data from the past. Do not base your entire analysis on the past data.
@@ -72,6 +31,11 @@ Portfolio Tools:
 3. analyze_portfolio_performance(portfolio_dict=DICTIONARY) → Analyze portfolio performance
     a. This tool is used to analyze portfolio performance
     b. This is good for portfolio level analysis
+4. get_initial_portfolio_data() → Get the initial portfolio data and results
+    a. This tool takes no args
+5. get_initial_portfolio_dict() → Get the initial portfolio dictionary
+    a. This tool takes no args
+    b. This is good for getting the initial portfolio dictionary
 
 Individual Ticker Tools:
 1. get_all_factor_calculations(ticker="SYMBOL") → Get all factor calculations for a ticker 
@@ -132,17 +96,13 @@ Rules:
 - When you finish an item on the checklist, state that you are finished with that item and move on to the next item. (This is non negotiable)
 - You MUST follow the provided output format.
 - There must be a minimum of 15 longs and 10 shorts in the final portfolio. (THIS IS NON NEGOTIABLE)
+- You MAY NOT run the analyze_portfolio_performance(), stress_test(), or get_upside_downside_ratios() tools unless its for a new iteration of the portfolio or the initial portfolio. (This is non negotiable)
+- When running analyze_portfolio_performance(), stress_test(), or get_upside_downside_ratios() you must give the tool a portfolio_dict as an argument. (This is non negotiable)
 </Rules>
 """
 
 cro_user_prompt = f"""
-Begin your EXHAUSTIVE risk assessment after reviewing the provided <Portfolio Data> below:
-
-<Portfolio Data>
-Initial Portfolio: {initial_portfolio}
-Initial Stress Test Results: {initial_stress_test_results}
-Initial Upside/Downside Ratios: {initial_upside_downside_ratios}
-</Portfolio Data>
+Begin your EXHAUSTIVE risk assessment after reviewing the rest of this message:
 
 <Required Output Format>
 After completing ALL analysis, output the FINAL PORTFOLIO as a valid JSON array:
@@ -160,13 +120,13 @@ START NOW with your COMPREHENSIVE ACTIONABLE TO-DO LIST based on the provided da
 
 EXECUTION APPROACH:
 - Create a to-do list that EXPLICITLY includes multiple portfolio iterations.
-- Review the Provided Portfolio Data → Run portfolio level and ticker level analysis → Crate and iterate on portfolio variations → Return the Final Portfolio
+- Review the Initial Portfolio Data → Run portfolio level and ticker level analysis → Crate and iterate on portfolio variations → Return the Final Portfolio
 - You CANNOT skip to Final Answer without showing tested iterations
 
 Remember: 
 - First response is your ITERATION-FOCUSED to-do list (no tools), ending with "Next step: [action]"
-- Use the get_initial_portfolio() tool to get the initial portfolio from the CIO agent, then use the stress_test() tool to test the initial portfolio and analyze portfolio performance for your baseline/initial portfolio results.
-- Initial portfolio data is your baseline - you must IMPROVE on it through iteration
+- The first step of the to-do list must always be to run the get_initial_portfolio_data() tool to get the current portfolio data and results.
+- Initial portfolio data is your baseline - you must find the vulnerabilities and improve on it through iteration
 - Output "Final Answer" ONLY after testing multiple portfolios and showing improvement
 - Success = demonstrable risk reduction WITH maintained alpha through TESTED iterations
 """
