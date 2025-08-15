@@ -17,12 +17,12 @@ from backend.src.agentic_framework.base_tools.search_engine_tool import AgentSea
 from backend.src.utils.choose_model_and_client import *
 
 # Import helper classes
-from .task_manager import TaskManager, ChecklistCompatibilityWrapper
-from .manage_logger import MessageLogger
-from .agent_utilities import AgentUtilities, StepTrace
-from .args_parse import ToolArgumentParser
-from .agent_events import EventManager, AgentEvent
-from .task_validator import TaskValidator
+from .tasks.manager import TaskManager
+from .core.logger import MessageLogger
+from .core.utilities import AgentUtilities, StepTrace
+from .core.arg_parser import ToolArgumentParser
+from .events.manager import EventManager, AgentEvent
+from .tasks.validator import TaskValidator
 
 load_dotenv()
 
@@ -48,7 +48,7 @@ class BaseAgent:
             ):
         
         self.model_name = model
-        self.llm, self.client = openai_model_and_client(model=self.model_name)
+        self.llm, self.client = openai_model_and_client()
 
         self.system_prompt = system_prompt
         self.user_prompt = user_prompt
@@ -80,8 +80,6 @@ class BaseAgent:
         # Initialize helper classes
         self.message_logger = MessageLogger(save_messages=save_messages, verbose=verbose, model_name=self.model_name)
         self.task_manager = TaskManager(verbose=verbose)
-        # Maintain backward compatibility with checklist_manager name
-        self.checklist_manager = ChecklistCompatibilityWrapper(self.task_manager)
         self.utilities = AgentUtilities(self)
         
         # Initialize event system
@@ -343,8 +341,8 @@ class BaseAgent:
                 {
                     "role": "user",
                     "content": (
-                        "Before you start, produce a short JSON plan: {\"plan\":[{\"step\":1,\"desc\":\"...\"},...]}\n"
-                        "After you produce the short json plan, you must come up with an actionable to-do list which must be numbered in the following format: \n\n"
+                        "Before you start, produce a JSON plan to follow that will accomplish the user's goal: {\"plan\":[{\"step\":1,\"desc\":\"...\"},...]}\n"
+                        "After you produce the json plan, you must come up with an actionable to-do list which must be numbered in the following format: \n\n"
                         "1. [actionable item 1]\n"
                             "a. [actionable item 1a]\n"
                             "b. [actionable item 1b]\n"
@@ -387,7 +385,7 @@ class BaseAgent:
             
             # Try to parse plan from first response if plan_first is enabled
             if i == 1 and self.plan_first and assistant_raw:
-                parsed = self.checklist_manager.parse_plan_to_checklist(assistant_raw, len(self.trace))
+                parsed = self.task_manager.parse_plan_to_tasks(assistant_raw, len(self.trace))
                 if parsed:
                     # Emit plan created event
                     self.event_manager.emit(AgentEvent.PLAN_CREATED, {
@@ -396,7 +394,7 @@ class BaseAgent:
             
             # Parse any task completion indicators from the response
             if assistant_raw:
-                self.checklist_manager.parse_progress_from_response(assistant_raw, i, len(self.trace))
+                self.task_manager.parse_progress_from_response(assistant_raw, i, len(self.trace))
 
             if msg.tool_calls:
                 # Append the assistant message that contains all tool calls
@@ -454,41 +452,41 @@ class BaseAgent:
                         "content": self.utilities.stringify(observation),
                     })
 
-                # Update checklist progress (starts first pending task if needed)
-                self.checklist_manager.update_checklist_progress(i, len(self.trace))
+                # Update task progress (starts first pending task if needed)
+                self.task_manager.update_task_progress(i, len(self.trace))
                 
                 # Ask the model to analyze the observation and decide next step or finalize the answer
                 messages.append(
                     {
                         "role": "user",
-                        "content": self.checklist_manager.get_checklist_prompt(i),
+                        "content": self.task_manager.get_task_status_prompt(i),
                     }
                 )
 
             else:
                 # No tool call. Check for finality
                 if self.utilities.looks_final(assistant_raw):
-                    # Check if checklist is complete before accepting Final Answer
-                    if self.checklist_manager.is_checklist_complete():
+                    # Check if all tasks are complete before accepting Final Answer
+                    if self.task_manager.is_checklist_complete():
                         final_text = assistant_raw
                         stop_reason = "final_message"
                         self.trace.append(step)
                         break
                     else:
                         # Reject Final Answer and list incomplete tasks
-                        incomplete = self.checklist_manager.get_incomplete_tasks()
+                        incomplete = self.task_manager.get_incomplete_tasks()
                         messages.append({"role": "assistant", "content": assistant_raw})
                         
                         # Build rejection message
                         reject_msg = (
-                            "❌ Cannot accept Final Answer yet - checklist is incomplete!\n\n"
-                            "You must complete ALL checklist items before finalizing.\n"
+                            "❌ Cannot accept Final Answer yet - task list is incomplete!\n\n"
+                            "You must complete ALL tasks before finalizing.\n"
                             "Incomplete tasks:\n"
                         )
                         for task in incomplete:
                             status_marker = "→" if task["status"] == "in_progress" else " "
                             reject_msg += f"{status_marker} Step {task['step']}: {task['description']} ({task['status'].upper()})\n"
-                        reject_msg += "\nPlease continue working through your checklist."
+                        reject_msg += "\nPlease continue working through your task list."
                         
                         messages.append({"role": "user", "content": reject_msg})
                         continue  # Don't break, continue the loop
@@ -539,9 +537,9 @@ class BaseAgent:
                         messages.append({"role": "assistant", "content": assistant_raw})
                         messages.append({"role": "user", "content": f"Unwrapped 'multi_tool_use.parallel' and executed sequentially: {self.utilities.stringify(step.observation)}"})
 
-                        # Update checklist progress
-                        self.checklist_manager.update_checklist_progress(i, len(self.trace))
-                        messages.append({"role": "user", "content": self.checklist_manager.get_checklist_prompt(i)})
+                        # Update task progress
+                        self.task_manager.update_task_progress(i, len(self.trace))
+                        messages.append({"role": "user", "content": self.task_manager.get_task_status_prompt(i)})
                     else:
                         # Normal single tool via content JSON
                         step.tool_call = {"name": name, "args": args}
@@ -565,9 +563,9 @@ class BaseAgent:
                         # For content-based tool calls, we can't use "tool" role - use "user" instead
                         messages.append({"role": "user", "content": f"Tool '{name}' returned: {self.utilities.stringify(observation)}"})
 
-                        # Update checklist progress
-                        self.checklist_manager.update_checklist_progress(i, len(self.trace))
-                        messages.append({"role": "user", "content": self.checklist_manager.get_checklist_prompt(i)})
+                        # Update task progress
+                        self.task_manager.update_task_progress(i, len(self.trace))
+                        messages.append({"role": "user", "content": self.task_manager.get_task_status_prompt(i)})
                 else:
                     # Ask the model to either pick a tool or finalize
                     messages.append({"role": "assistant", "content": assistant_raw})

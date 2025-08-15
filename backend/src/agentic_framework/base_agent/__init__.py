@@ -1,17 +1,16 @@
 """Base agent module - backward compatibility exports."""
 
 from .agent import BaseAgent
-from .agent_utilities import StepTrace
-from .task_manager import TaskManager, ChecklistCompatibilityWrapper
-from .task_models import Task, TaskStatus, TaskPriority, TaskValidation
-from .agent_events import EventManager, AgentEvent
-from .task_validator import TaskValidator
+from .core.utilities import StepTrace
+from .tasks.manager import TaskManager
+from .tasks.models import Task, TaskStatus, TaskPriority, TaskValidation
+from .events.manager import EventManager, AgentEvent
+from .tasks.validator import TaskValidator
 
 __all__ = [
     'BaseAgent', 
     'StepTrace', 
     'TaskManager', 
-    'ChecklistCompatibilityWrapper', 
     'Task', 
     'TaskStatus', 
     'TaskPriority',

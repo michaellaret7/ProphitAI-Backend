@@ -10,6 +10,7 @@ import seaborn as sns
 import numpy as np
 from backend.src.repositories.price_data import get_price_data_daily
 from backend.src.calculations.factor_calculations.volatility_factor_calculations import VolatilityFactors
+import time
 
 #TODO: break this file up into smaller files
 
@@ -83,6 +84,7 @@ class CorrelationAwarePortfolioBuilder:
         """Calculate daily returns for all assets and combine into a DataFrame."""
         print("\nCalculating returns...")
         returns_dict = {}
+        ticker_start_dates = {}
         
         for ticker, price_data in self.price_data.items():
             # Ensure datetime index
@@ -94,10 +96,32 @@ class CorrelationAwarePortfolioBuilder:
             # Calculate returns
             returns = price_data['close'].pct_change().dropna()
             returns_dict[ticker] = returns
+            
+            # Track start date for each ticker
+            if not returns.empty:
+                ticker_start_dates[ticker] = returns.index[0]
         
-        # Combine into DataFrame and align dates
-        self.returns_data = pd.DataFrame(returns_dict).dropna()
+        # Combine into DataFrame - use 'outer' join to keep all dates
+        self.returns_data = pd.DataFrame(returns_dict)
+        
+        # Print information about data availability
+        print(f"\n  Data availability by ticker:")
+        for ticker, start_date in sorted(ticker_start_dates.items(), key=lambda x: x[1]):
+            print(f"    {ticker}: starts from {start_date.strftime('%Y-%m-%d')}")
+        
+        # Find the date when we have at least 80% of tickers available
+        min_tickers_required = int(len(self.tickers) * 0.8)
+        data_availability = self.returns_data.notna().sum(axis=1)
+        sufficient_data_mask = data_availability >= min_tickers_required
+        
+        if sufficient_data_mask.any():
+            first_sufficient_date = self.returns_data[sufficient_data_mask].index[0]
+            print(f"\n  Using data from {first_sufficient_date.strftime('%Y-%m-%d')} onwards (80% ticker coverage)")
+            # Filter to dates with sufficient ticker coverage
+            self.returns_data = self.returns_data[sufficient_data_mask]
+        
         print(f"  Combined returns shape: {self.returns_data.shape}")
+        print(f"  Date range: {self.returns_data.index[0].strftime('%Y-%m-%d')} to {self.returns_data.index[-1].strftime('%Y-%m-%d')}")
         return self.returns_data
     
     def calculate_correlation_matrix(self) -> pd.DataFrame:
@@ -105,13 +129,16 @@ class CorrelationAwarePortfolioBuilder:
         if self.returns_data.empty:
             self.calculate_returns()
         
-        self.correlation_matrix = self.returns_data.corr()
+        # Use pairwise correlation to handle missing data
+        self.correlation_matrix = self.returns_data.corr(method='pearson')
         print(f"\nCorrelation matrix calculated ({self.correlation_matrix.shape[0]}x{self.correlation_matrix.shape[1]})")
         
         # Print average correlations
         mask = np.ones_like(self.correlation_matrix, dtype=bool)
         np.fill_diagonal(mask, 0)
-        avg_corr = self.correlation_matrix.values[mask].mean()
+        # Filter out NaN values when calculating average
+        corr_values = self.correlation_matrix.values[mask]
+        avg_corr = np.nanmean(corr_values)
         print(f"  Average pairwise correlation: {avg_corr:.3f}")
         
         return self.correlation_matrix
@@ -121,8 +148,13 @@ class CorrelationAwarePortfolioBuilder:
         if self.returns_data.empty:
             self.calculate_returns()
         
-        # Annualized covariance matrix
+        # Annualized covariance matrix using pairwise covariance to handle missing data
         self.covariance_matrix = self.returns_data.cov() * self.trading_days
+        
+        # Fill any remaining NaN values in covariance matrix with zeros for missing ticker pairs
+        # This is conservative - assumes no correlation for ticker pairs with no overlapping data
+        self.covariance_matrix = self.covariance_matrix.fillna(0)
+        
         return self.covariance_matrix
     
 
@@ -355,7 +387,9 @@ class CorrelationAwarePortfolioBuilder:
         
         for ticker in tickers:
             if ticker in self.returns_data.columns:
-                portfolio_returns += self.returns_data[ticker] * weights[ticker]
+                # Only add to portfolio returns where ticker data exists
+                ticker_returns = self.returns_data[ticker].fillna(0)  # Fill NaN with 0 for missing data
+                portfolio_returns += ticker_returns * weights[ticker]
         
         # Calculate VaR for different confidence levels
         var_results = {}
@@ -434,7 +468,9 @@ class CorrelationAwarePortfolioBuilder:
         
         for ticker in tickers:
             if ticker in self.returns_data.columns:
-                portfolio_returns += self.returns_data[ticker] * weights[ticker]
+                # Only add to portfolio returns where ticker data exists
+                ticker_returns = self.returns_data[ticker].fillna(0)  # Fill NaN with 0 for missing data
+                portfolio_returns += ticker_returns * weights[ticker]
         
         # Create figure with subplots
         fig, axes = plt.subplots(2, 2, figsize=(15, 10))
@@ -569,7 +605,9 @@ class CorrelationAwarePortfolioBuilder:
         
         for ticker in tickers:
             if ticker in self.returns_data.columns:
-                portfolio_returns += self.returns_data[ticker] * weights[ticker]
+                # Only add to portfolio returns where ticker data exists
+                ticker_returns = self.returns_data[ticker].fillna(0)  # Fill NaN with 0 for missing data
+                portfolio_returns += ticker_returns * weights[ticker]
         
         # Calculate cumulative returns
         cumulative_returns = (1 + portfolio_returns).cumprod()
@@ -719,6 +757,7 @@ class CorrelationAwarePortfolioBuilder:
         print("-" * 80)
         
         capped_positions = []
+        allocation_data = []
         
         for ticker, weight in weights.items():
             position_size = abs(weight) * self.portfolio_value * self.leverage
@@ -749,6 +788,22 @@ class CorrelationAwarePortfolioBuilder:
             risk_contrib = risk_contributions.get(ticker, 0)
             note = "CAPPED" if is_capped else ""
             print(f"{ticker:<8} {self.tickers[ticker]['position']:<8} {weight:>9.2%} ${position_size:>13,.2f} {vol:>9.2%} {risk_contrib:>11.2%} {note:<8}")
+            
+            # Store data for DataFrame
+            allocation_data.append({
+                'ticker': ticker,
+                'position': self.tickers[ticker]['position'],
+                'weight': weight,
+                'position_size': position_size if weight >= 0 else -position_size,
+                'volatility': vol,
+                'risk_contrib': risk_contrib,
+                'capped': is_capped
+            })
+        
+        # Create Portfolio Allocation DataFrame
+        import pandas as pd
+        allocation_df = pd.DataFrame(allocation_data)
+        self.allocation_df = allocation_df
         
         # Calculate portfolio metrics
         metrics = self.calculate_portfolio_metrics(weights)
@@ -803,11 +858,11 @@ class CorrelationAwarePortfolioBuilder:
             for ticker in capped_positions:
                 print(f"  - {ticker}")
         
-        return portfolio_positions 
+        return portfolio_positions, self.allocation_df 
 
 if __name__ == "__main__":
     # Consumer Staples Portfolio
-    # tickers = {
+    # tickers1 = {
     #     # Long positions
     #     "CASY": {"conviction": 0.10, "position": "long"},
     #     "CELH": {"conviction": 0.10, "position": "long"},
@@ -843,61 +898,64 @@ if __name__ == "__main__":
     #     "SEB": {"conviction": 0.05, "position": "short"},
     # }
 
-    tickers = {
-        # Long positions
-        "CL": {"conviction": 0.015, "position": "long"},
+    tickers2 = {
+	# Long positions
+        "CASY": {"conviction": 0.08, "position": "long"},
+        "CELH": {"conviction": 0.07, "position": "long"},
+        "ODC": {"conviction": 0.06, "position": "long"},
+        "ODD": {"conviction": 0.05, "position": "long"},
         "PM": {"conviction": 0.07, "position": "long"},
-        "KO": {"conviction": 0.01, "position": "long"},
-        "WMT": {"conviction": 0.045, "position": "long"},
-        "BJ": {"conviction": 0.052, "position": "long"},
-        "MNST": {"conviction": 0.05, "position": "long"},
-        "INGR": {"conviction": 0.007, "position": "long"},
-        "ODC": {"conviction": 0.07, "position": "long"},
-        "CASY": {"conviction": 0.045, "position": "long"},
-        "SFM": {"conviction": 0.01, "position": "long"},
-        "VITL": {"conviction": 0.035, "position": "long"},
-        "DOLE": {"conviction": 0.018, "position": "long"},
-        "PPC": {"conviction": 0.025, "position": "long"},
-        "COCO": {"conviction": 0.03, "position": "long"},
-        "CELH": {"conviction": 0.027, "position": "long"},
-        "IPAR": {"conviction": 0.01, "position": "long"},
-        "TPB": {"conviction": 0.02, "position": "long"},
-        "ODD": {"conviction": 0.017, "position": "long"},
-        "CENT": {"conviction": 0.012, "position": "long"},
-        "CHEF": {"conviction": 0.01, "position": "long"},
+        "VITL": {"conviction": 0.07, "position": "long"},
+        "WMT": {"conviction": 0.05, "position": "long"},
+        "BJ": {"conviction": 0.05, "position": "long"},
+        "SFM": {"conviction": 0.06, "position": "long"},
+        "COCO": {"conviction": 0.04, "position": "long"},
+        "MNST": {"conviction": 0.04, "position": "long"},
+        "CL": {"conviction": 0.04, "position": "long"},
+        "TPB": {"conviction": 0.04, "position": "long"},
+        "DOLE": {"conviction": 0.03, "position": "long"},
+        "PPC": {"conviction": 0.03, "position": "long"},
+        "INGR": {"conviction": 0.03, "position": "long"},
+        "FIZZ": {"conviction": 0.02, "position": "long"},
 
         # Short positions
-        "COTY": {"conviction": 0.03, "position": "short"},
-        "SPB": {"conviction": 0.03, "position": "short"},
-        "TGT": {"conviction": 0.015, "position": "short"},
-        "ENR": {"conviction": 0.015, "position": "short"},
-        "PEP": {"conviction": 0.02, "position": "short"},
-        "KVUE": {"conviction": 0.015, "position": "short"},
-        "KLG": {"conviction": 0.015, "position": "short"},
-        "JJSF": {"conviction": 0.02, "position": "short"},
-        "MGPI": {"conviction": 0.01, "position": "short"},
-        "STZ": {"conviction": 0.01, "position": "short"},
-        "WBA": {"conviction": 0.025, "position": "short"},
-        "ANDE": {"conviction": 0.03, "position": "short"},
-        "FRPT": {"conviction": 0.015, "position": "short"},
-        "CPB": {"conviction": 0.02, "position": "short"},
+        "WBA": {"conviction": 0.05, "position": "short"},
+        "ANDE": {"conviction": 0.05, "position": "short"},
+        "TGT": {"conviction": 0.03, "position": "short"},
+        "STZ": {"conviction": 0.05, "position": "short"},
+        "PEP": {"conviction": 0.05, "position": "short"},
+        "SAM": {"conviction": 0.04, "position": "short"},
+        "MGPI": {"conviction": 0.03, "position": "short"},
+        "ENR": {"conviction": 0.04, "position": "short"},
+        "SPB": {"conviction": 0.04, "position": "short"},
+        "COTY": {"conviction": 0.04, "position": "short"},
+        "KVUE": {"conviction": 0.03, "position": "short"},
+        "KLG": {"conviction": 0.03, "position": "short"},
+        "JJSF": {"conviction": 0.03, "position": "short"},
+        "SEB": {"conviction": 0.02, "position": "short"},
+        "WMK": {"conviction": 0.02, "position": "short"},
+        "PRMB": {"conviction": 0.02, "position": "short"},
+        "REYN": {"conviction": 0.02, "position": "short"},
     }
 
     
     # Build portfolio with target volatility and portfolio value
     build_portfolio = CorrelationAwarePortfolioBuilder(
-        tickers=tickers,
+        tickers=tickers2,  # Changed to tickers2 to test with the new portfolio
         target_annual_vol=0.17,  # 17% target volatility (adjust as needed)
-        portfolio_value=1_000_000,  # $1M base capital (before leverage)
-        leverage=1.8,  # 1.75x leverage (175% gross exposure)
-        target_net_exposure=0.25,  # 35% net long exposure
-        lookback_days=252 * 4  # 3 years of data
+        portfolio_value=50_000,  # $1M base capital (before leverage)
+        leverage=1.5,  # 1.75x leverage (175% gross exposure)
+        target_net_exposure=0.30,  # 35% net long exposure
+        lookback_days=252 * 5  # 5 years of data
     )
     
     # Build risk-based portfolio with target volatility
     print("\n" + "="*80)
-    print("CONSUMER STAPLES PORTFOLIO ANALYSIS (3-YEAR PERFORMANCE)")
+    print("CONSUMER STAPLES PORTFOLIO ANALYSIS (5-YEAR PERFORMANCE)")
     print("="*80)
     
     # Build with risk-based strategy and volatility targeting
-    portfolio = build_portfolio.build_portfolio()
+    portfolio, allocation_df = build_portfolio.build_portfolio()
+    
+
+        

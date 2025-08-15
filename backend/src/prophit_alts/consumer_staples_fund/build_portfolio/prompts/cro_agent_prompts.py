@@ -131,6 +131,7 @@ Rules:
 - You MUST follow the checklist in order and complete each item before moving on to the next item. (This is non negotiable)
 - When you finish an item on the checklist, state that you are finished with that item and move on to the next item. (This is non negotiable)
 - You MUST follow the provided output format.
+- There must be a minimum of 15 longs and 10 shorts in the final portfolio. (THIS IS NON NEGOTIABLE)
 </Rules>
 """
 
@@ -158,12 +159,13 @@ After completing ALL analysis, output the FINAL PORTFOLIO as a valid JSON array:
 START NOW with your COMPREHENSIVE ACTIONABLE TO-DO LIST based on the provided data.
 
 EXECUTION APPROACH:
-- Create a to-do list that EXPLICITLY includes multiple portfolio iterations
+- Create a to-do list that EXPLICITLY includes multiple portfolio iterations.
 - Review the Provided Portfolio Data → Run portfolio level and ticker level analysis → Crate and iterate on portfolio variations → Return the Final Portfolio
 - You CANNOT skip to Final Answer without showing tested iterations
 
 Remember: 
 - First response is your ITERATION-FOCUSED to-do list (no tools), ending with "Next step: [action]"
+- Use the get_initial_portfolio() tool to get the initial portfolio from the CIO agent, then use the stress_test() tool to test the initial portfolio and analyze portfolio performance for your baseline/initial portfolio results.
 - Initial portfolio data is your baseline - you must IMPROVE on it through iteration
 - Output "Final Answer" ONLY after testing multiple portfolios and showing improvement
 - Success = demonstrable risk reduction WITH maintained alpha through TESTED iterations
