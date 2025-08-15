@@ -15,6 +15,10 @@ from backend.src.calculations.factor_calculations.volatility_factor_calculations
 from backend.src.calculations.performance_calculations.ticker_performance_calculations import TickerPerformanceMetrics
 from backend.src.utils.serialize_output import serialize_sqlalchemy_obj
 from backend.src.utils.token_count import get_token_count
+from backend.src.stress_test.runner import run_stress_test_workflow
+from backend.src.calculations.performance_calculations.portfolio_performance_calculations import get_upside_downside_ratios
+from backend.src.db.core.db_config import ProphitAltsSession
+from backend.src.db.core.prophit_alts_models import *
 
 def get_all_factor_calculations(ticker: str) -> dict:
     """
@@ -343,57 +347,118 @@ def get_most_recent_fundamentals(ticker: str, fundamentals_type: str) -> dict:
         ]
         return cleaned_list
 
-
-
-if __name__ == "__main__":
-    # Test: analyze_portfolio_performance with provided sample portfolio
-    sample_portfolio_list = [
-        {"ticker":"WMT","position":"long","weight":0.09},
-        {"ticker":"CASY","position":"long","weight":0.08},
-        {"ticker":"ODC","position":"long","weight":0.095},
-        {"ticker":"CELH","position":"long","weight":0.07},
-        {"ticker":"SFM","position":"long","weight":0.055},
-        {"ticker":"BJ","position":"long","weight":0.03},
-        {"ticker":"MNST","position":"long","weight":0.085},
-        {"ticker":"COCO","position":"long","weight":0.025},
-        {"ticker":"IPAR","position":"long","weight":0.01},
-        {"ticker":"VITL","position":"long","weight":0.01},
-        {"ticker":"PM","position":"long","weight":0.015},
-        {"ticker":"CL","position":"long","weight":0.005},
-        {"ticker":"PPC","position":"long","weight":0.035},
-        {"ticker":"DOLE","position":"long","weight":0.04},
-        {"ticker":"ODD","position":"long","weight":0.003},
-        {"ticker":"COTY","position":"short","weight":0.01},
-        {"ticker":"SPB","position":"short","weight":0.01},
-        {"ticker":"TGT","position":"short","weight":0.005},
-        {"ticker":"WBA","position":"short","weight":0.035},
-        {"ticker":"ANDE","position":"short","weight":0.015},
-        {"ticker":"KVUE","position":"short","weight":0.035},
-        {"ticker":"KLG","position":"short","weight":0.01},
-        {"ticker":"ENR","position":"short","weight":0.01},
-        {"ticker":"SAM","position":"short","weight":0.025},
-        {"ticker":"MGPI","position":"short","weight":0.015},
-        {"ticker":"SEB","position":"short","weight":0.01},
-        {"ticker":"WMK","position":"short","weight":0.04},
-        {"ticker":"PEP","position":"short","weight":0.035},
-        {"ticker":"STZ","position":"short","weight":0.035},
-        {"ticker":"CPB","position":"short","weight":0.05}
-    ]
-
-    portfolio_mapping = {
-        item["ticker"].upper(): {"conviction": float(item["weight"]), "position": item["position"]}
-        for item in sample_portfolio_list
+def get_initial_portfolio_data():
+    """
+    Get the initial portfolio stress test and performance analysis from the CIO agent.
+    """
+    initial_portfolio_dict = {
+        # Long positions
+        "CASY": {"conviction": 0.10, "position": "long"},
+        "CELH": {"conviction": 0.10, "position": "long"},
+        "ODC": {"conviction": 0.05, "position": "long"},
+        "ODD": {"conviction": 0.05, "position": "long"},
+        "PM": {"conviction": 0.05, "position": "long"},
+        "VITL": {"conviction": 0.05, "position": "long"},
+        "WMT": {"conviction": 0.05, "position": "long"},
+        "BJ": {"conviction": 0.05, "position": "long"},
+        "SFM": {"conviction": 0.05, "position": "long"},
+        "COCO": {"conviction": 0.05, "position": "long"},
+        "MNST": {"conviction": 0.05, "position": "long"},
+        "CL": {"conviction": 0.05, "position": "long"},
+        "IPAR": {"conviction": 0.05, "position": "long"},
+        "TPB": {"conviction": 0.05, "position": "long"},
+        "DOLE": {"conviction": 0.05, "position": "long"},
+        "PPC": {"conviction": 0.05, "position": "long"},
+        "INGR": {"conviction": 0.05, "position": "long"},
+        # Short positions
+        "WBA": {"conviction": 0.05, "position": "short"},
+        "ANDE": {"conviction": 0.05, "position": "short"},
+        "TGT": {"conviction": 0.02, "position": "short"},
+        "STZ": {"conviction": 0.05, "position": "short"},
+        "PEP": {"conviction": 0.05, "position": "short"},
+        "SAM": {"conviction": 0.05, "position": "short"},
+        "MGPI": {"conviction": 0.05, "position": "short"},
+        "ENR": {"conviction": 0.05, "position": "short"},
+        "SPB": {"conviction": 0.05, "position": "short"},
+        "COTY": {"conviction": 0.05, "position": "short"},
+        "KVUE": {"conviction": 0.05, "position": "short"},
+        "KLG": {"conviction": 0.05, "position": "short"},
+        "JJSF": {"conviction": 0.05, "position": "short"},
+        "SEB": {"conviction": 0.05, "position": "short"}
     }
-    sample_portfolio = {"portfolio_dict": portfolio_mapping}
 
-    # analysis = analyze_portfolio_performance(sample_portfolio, risk_free_rate=0.02)
-    # print(analysis)
-    # print(get_token_count(analysis))
+    initial_stress_test_results = run_stress_test_workflow(initial_portfolio_dict)
+    initial_upside_downside_ratios = get_upside_downside_ratios(initial_portfolio_dict)
 
-    ticker = 'AAPL'
-    result = get_most_recent_fundamentals(ticker, 'all')
-    print(result)
-    print(get_token_count(result))
+    return {
+        "initial_stress_test_results": initial_stress_test_results,
+        "initial_upside_downside_ratios": initial_upside_downside_ratios
+    }
+    
+def get_initial_portfolio_dict():
+    """
+    Get the initial portfolio dictionary.
+    """
+    # Long positions
+    initial_portfolio_dict = {
+        # Long positions
+        "CASY": {"conviction": 0.10, "position": "long"},
+        "CELH": {"conviction": 0.10, "position": "long"},
+        "ODC": {"conviction": 0.05, "position": "long"},
+        "ODD": {"conviction": 0.05, "position": "long"},
+        "PM": {"conviction": 0.05, "position": "long"},
+        "VITL": {"conviction": 0.05, "position": "long"},
+        "WMT": {"conviction": 0.05, "position": "long"},
+        "BJ": {"conviction": 0.05, "position": "long"},
+        "SFM": {"conviction": 0.05, "position": "long"},
+        "COCO": {"conviction": 0.05, "position": "long"},
+        "MNST": {"conviction": 0.05, "position": "long"},
+        "CL": {"conviction": 0.05, "position": "long"},
+        "IPAR": {"conviction": 0.05, "position": "long"},
+        "TPB": {"conviction": 0.05, "position": "long"},
+        "DOLE": {"conviction": 0.05, "position": "long"},
+        "PPC": {"conviction": 0.05, "position": "long"},
+        "INGR": {"conviction": 0.05, "position": "long"},
+        # Short positions
+        "WBA": {"conviction": 0.05, "position": "short"},
+        "ANDE": {"conviction": 0.05, "position": "short"},
+        "TGT": {"conviction": 0.02, "position": "short"},
+        "STZ": {"conviction": 0.05, "position": "short"},
+        "PEP": {"conviction": 0.05, "position": "short"},
+        "SAM": {"conviction": 0.05, "position": "short"},
+        "MGPI": {"conviction": 0.05, "position": "short"},
+        "ENR": {"conviction": 0.05, "position": "short"},
+        "SPB": {"conviction": 0.05, "position": "short"},
+        "COTY": {"conviction": 0.05, "position": "short"},
+        "KVUE": {"conviction": 0.05, "position": "short"},
+        "KLG": {"conviction": 0.05, "position": "short"},
+        "JJSF": {"conviction": 0.05, "position": "short"},
+        "SEB": {"conviction": 0.05, "position": "short"}
+    }
+
+    return initial_portfolio_dict
+
+def get_larger_ticker_pool():
+    """
+    Get the larger pool of tickers from the CIO agent's original selection.
+    """
+    session = ProphitAltsSession()
+    fund = session.query(Fund).filter(Fund.fund_name == "consumer_staples_fund").first()
+    fund_id = fund.id
+    positions = session.query(FundInitialPosition).filter(FundInitialPosition.fund_id == fund_id).all()
+    session.close()
+
+    ticker_choices = {}
+
+    for position in positions:
+        ticker_choices[position.ticker_name] = {
+            "position": position.position.value,
+            "industry": position.industry,
+            "risk_allocation": position.risk_allocation,
+            "reasoning": position.reasoning
+        }
+
+    return ticker_choices
 
 
 

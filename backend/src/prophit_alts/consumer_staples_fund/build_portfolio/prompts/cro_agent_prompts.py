@@ -98,6 +98,7 @@ Rules:
 - There must be a minimum of 15 longs and 10 shorts in the final portfolio. (THIS IS NON NEGOTIABLE)
 - You MAY NOT run the analyze_portfolio_performance(), stress_test(), or get_upside_downside_ratios() tools unless its for a new iteration of the portfolio or the initial portfolio. (This is non negotiable)
 - When running analyze_portfolio_performance(), stress_test(), or get_upside_downside_ratios() you must give the tool a portfolio_dict as an argument. (This is non negotiable)
+- YOU MUST ESTEBLISH THE PORTFOLIO DICT THAT WILL BE USED AS AN ARGUMENT FOR analyze_portfolio_performance(), stress_test(), or get_upside_downside_ratios() BEFORE RUNNING THE TOOL. (This is non negotiable)
 </Rules>
 """
 
