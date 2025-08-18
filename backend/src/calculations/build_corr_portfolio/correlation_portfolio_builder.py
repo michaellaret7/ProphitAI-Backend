@@ -368,42 +368,42 @@ if __name__ == "__main__":
     print("="*80)
     
     # Build with risk-based strategy and volatility targeting
-    # portfolio, allocation_df = build_portfolio.build_portfolio()
+    portfolio, allocation_df = build_portfolio.build_portfolio()
 
     from backend.src.db.core.db_config import MarketSession
     from backend.src.db.core.market_data_models import *
     from backend.testing.alpaca_trade import AlpacaTrader
 
-    trader = AlpacaTrader(paper=True)
-    session = MarketSession()
+    # trader = AlpacaTrader(paper=True)
+    # session = MarketSession()
 
 
     # Instead of using allocation_df, iterate through alpaca_portfolio directly
-    for ticker, position_data in alpaca_portfolio.items():
-        position = position_data['position']
-        conviction = position_data['conviction']
+    # for ticker, position_data in alpaca_portfolio.items():
+    #     position = position_data['position']
+    #     conviction = position_data['conviction']
         
-        # Calculate position size based on conviction and portfolio value
-        # Assuming you want to use the same portfolio value and leverage
-        portfolio_value = 500_000
-        leverage = 1.5
-        position_size = conviction * portfolio_value * leverage
+    #     # Calculate position size based on conviction and portfolio value
+    #     # Assuming you want to use the same portfolio value and leverage
+    #     portfolio_value = 500_000
+    #     leverage = 1.5
+    #     position_size = conviction * portfolio_value * leverage
         
-        recent_price = session.query(Ticker).filter(Ticker.ticker == ticker).first().price
+    #     recent_price = session.query(Ticker).filter(Ticker.ticker == ticker).first().price
 
-        calc_shares = abs(position_size / recent_price)
-        calc_shares = round(calc_shares, 0)
-        calc_shares = int(calc_shares)
-        print(f"{ticker}: {calc_shares} shares")
+    #     calc_shares = abs(position_size / recent_price)
+    #     calc_shares = round(calc_shares, 0)
+    #     calc_shares = int(calc_shares)
+    #     print(f"{ticker}: {calc_shares} shares")
 
-        if position == 'long':
-            trader.buy(symbol=ticker, qty=calc_shares)
-        else:
-            trader.sell(symbol=ticker, qty=calc_shares)
+    #     if position == 'long':
+    #         trader.buy(symbol=ticker, qty=calc_shares)
+    #     else:
+    #         trader.sell(symbol=ticker, qty=calc_shares)
 
 
 
-    session.close()
+    # session.close()
         
     
 

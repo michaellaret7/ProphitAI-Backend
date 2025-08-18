@@ -1,96 +1,138 @@
-# Refactor CRO Agent Tool Registration
+# Entry Point Calculation Plan
 
-## Overview
-Extract the lengthy tool registration logic from `cro_agent.py` into a separate module to improve code organization and maintainability.
+## Objective
+Create a simple, effective system to determine optimal entry prices for long and short stock positions using daily price data.
 
-## Current Structure Analysis
-The `_register_cro_tools()` method in `CROAgent` class is 132 lines (lines 68-200), making up 40% of the file. This large method contains 7 tool registrations with detailed parameter schemas.
-
-## Proposed Module Structure
-```
-backend/src/prophit_alts/consumer_staples_fund/build_portfolio/cro/
-├── cro_agent.py          # Main agent class (simplified)
-├── cro_temp_tools.py     # Existing tool functions (unchanged)
-└── cro_tools.py          # NEW: Tool registration logic
-```
+## Research Summary (from web search)
+Based on research, the most effective methods for entry point calculation are:
+1. **RSI (Relative Strength Index)**: Identifies overbought (>70) and oversold (<30) conditions
+2. **Moving Average Crossovers**: Signals trend changes when short-term MA crosses long-term MA
+3. **Support/Resistance Levels**: Historical price levels where reversals tend to occur
+4. **Bollinger Bands**: Identifies price extremes based on volatility
 
 ## Implementation Plan
 
-### Phase 1: Create Tool Registration Module
-- [ ] Create `cro_tools.py` file
-- [ ] Extract tool registration function from agent class
+### Todo Items
+- [x] Clear todo.md and create plan for entry point calculation
+- [x] Research effective methods for calculating entry points (completed via web search)
+- [x] Design entry point calculation system using RSI, Moving Averages, and Support/Resistance
+- [x] Implement RSI calculation function for overbought/oversold signals
+- [x] Implement Moving Average crossover detection for trend confirmation
+- [x] Implement Support/Resistance level identification
+- [x] Create main entry point determination function that combines indicators
+- [x] Add example usage and testing code
 
-### Phase 2: Extract Tool Registration Logic
-- [ ] Move all tool registration logic from `_register_cro_tools()` method
-- [ ] Create `register_cro_tools(agent)` function that takes agent instance
-- [ ] Preserve all existing tool configurations exactly
+## Technical Approach
 
-### Phase 3: Update Main Agent Class
-- [ ] Import new `register_cro_tools` function in `cro_agent.py`
-- [ ] Replace lengthy `_register_cro_tools()` method with simple function call
-- [ ] Ensure all functionality preserved
+### 1. RSI Calculation
+- Calculate 14-day RSI from daily price data
+- Long entry signal: RSI < 30 (oversold)
+- Short entry signal: RSI > 70 (overbought)
 
-### Phase 4: Validation
-- [ ] Verify agent still initializes correctly
-- [ ] Ensure all tools are registered properly
-- [ ] Check no imports broken
+### 2. Moving Averages
+- Calculate 20-day SMA (short-term) and 50-day SMA (long-term)
+- Long entry signal: 20-day crosses above 50-day
+- Short entry signal: 20-day crosses below 50-day
 
-## Design Principles
-1. **Single Responsibility**: Separate tool registration from agent logic
-2. **DRY**: No code duplication
-3. **Minimal Changes**: Keep all tool configurations identical
-4. **Simple Approach**: Just move code, don't optimize
-5. **Backward Compatibility**: Agent behavior unchanged
+### 3. Support/Resistance
+- Identify price levels with multiple touches (at least 2-3)
+- Long entry: Near support level
+- Short entry: Near resistance level
 
-## Expected Benefits
-- **Maintainability**: Tool definitions easier to find and modify
-- **Readability**: Main agent class more focused (reduce from 326 to ~200 lines)
-- **Organization**: Clear separation of concerns
-- **Simplicity**: Follows workspace rules for simple, modular code
+### 4. Entry Price Determination
+- Combine signals from all indicators
+- For LONG positions:
+  - Primary signal: RSI < 30 OR price near support
+  - Confirmation: Moving average trend is bullish
+  - Entry price: Current spot price or limit order slightly below
+  
+- For SHORT positions:
+  - Primary signal: RSI > 70 OR price near resistance
+  - Confirmation: Moving average trend is bearish
+  - Entry price: Current spot price or limit order slightly above
 
-## Notes
-- Keep all existing tool parameter schemas exactly the same
-- Preserve all imports and dependencies
-- No functional changes, purely organizational
-- Follow existing code style and patterns
+## Code Structure
+All code will be added to `backend/testing/trade_entry.py`:
+1. `calculate_rsi()` - RSI calculation
+2. `calculate_moving_averages()` - SMA calculations
+3. `find_support_resistance()` - Identify key price levels
+4. `determine_entry_point()` - Main function combining all indicators
+5. `get_entry_prices()` - Wrapper function for portfolio positions
 
-## Review Section
+## Review - Implementation Complete
 
-### Refactoring Successfully Completed ✅
+### Summary of Changes
+Successfully implemented a complete entry point calculation system in `backend/testing/trade_entry.py` with the following components:
 
-#### Summary of Changes
-Successfully extracted the 132-line tool registration logic from `CROAgent` class into a separate module, improving code organization and maintainability while preserving all functionality.
+1. **Data Structures**:
+   - `PositionType` enum for LONG/SHORT positions
+   - `EntrySignal` dataclass to store entry point analysis results
 
-#### Files Modified:
-1. **cro_tools.py** (NEW FILE) - 127 lines of tool registration logic
-2. **cro_agent.py** - Reduced from 326 to 198 lines (39% reduction)
+2. **Technical Indicators Implemented**:
+   - **RSI Calculation** (`calculate_rsi`): 14-day RSI to identify overbought/oversold conditions
+   - **Moving Averages** (`calculate_moving_averages`): 20-day and 50-day SMAs for trend confirmation
+   - **Support/Resistance** (`find_support_resistance`): Identifies key price levels from historical data
 
-#### Changes Made:
-1. **Created cro_tools.py**: Extracted all tool registration logic into `register_cro_tools(agent)` function
-2. **Updated cro_agent.py**: 
-   - Added import for new `register_cro_tools` function
-   - Simplified `_register_cro_tools()` method to single function call
-   - Removed 132 lines of repetitive tool registration code
+3. **Main Functions**:
+   - **`determine_entry_point()`**: Core function that combines all indicators to determine optimal entry price
+     - For LONG positions: Looks for oversold RSI (<30), bullish MA trend, and proximity to support
+     - For SHORT positions: Looks for overbought RSI (>70), bearish MA trend, and proximity to resistance
+     - Returns signal strength (strong/moderate/weak) based on number of confirming indicators
+   - **`get_entry_prices()`**: Portfolio-level function that processes multiple positions at once
 
-#### Key Benefits Achieved:
-1. **Better Organization**: Tool definitions now separated from agent logic
-2. **Improved Maintainability**: Tool registrations easier to find and modify  
-3. **Cleaner Agent Class**: Main class reduced by 128 lines, more focused
-4. **DRY Principle Applied**: No code duplication
-5. **Simple Approach**: Pure organizational change, no functional modifications
+4. **Entry Price Logic**:
+   - Strong signals (3 indicators agree): 0.5% adjustment from spot price
+   - Moderate signals (2 indicators agree): 0.2% adjustment from spot price  
+   - Weak signals (1 or fewer indicators): Use current spot price
 
-#### Technical Details:
-- **No Breaking Changes**: All tool configurations preserved exactly
-- **Zero Functionality Lost**: Agent behavior completely unchanged
-- **Clean Imports**: Proper dependency management maintained
-- **No Linting Errors**: All code passes style checks
-- **Backward Compatibility**: External API unchanged
+5. **Example Usage**:
+   - Single stock entry point analysis
+   - Portfolio-wide entry point calculation with formatted output
 
-#### Validation Status:
-- ✅ All imports working correctly
-- ✅ No linting errors in either file
-- ✅ Tool registration logic preserved exactly
-- ✅ Agent class still initializes properly
-- ✅ All tool parameter schemas unchanged
+### Key Features
+- Simple, clean implementation following DRY principles
+- Uses existing `get_data_daily()` and `spot_price()` functions as requested
+- No stop loss, take profit, or risk/reward calculations - purely entry point focused
+- Modular design with separate functions for each indicator
+- Clear signal strength classification to help with decision making
 
-The refactoring successfully achieved the objective of improving code modularity and maintainability while following the DRY principle and keeping changes minimal and simple.
+### Usage
+The system can be used in two ways:
+1. **Single Position**: `determine_entry_point(ticker, PositionType.LONG/SHORT)`
+2. **Portfolio**: `get_entry_prices({'AAPL': (0.2, 'long'), 'TSLA': (0.1, 'short'), ...})`
+
+The implementation is complete and ready for testing with real portfolio data.
+
+## Update - Improved Thresholds
+
+### Issue Identified
+The entry prices were showing the same as current prices with all "weak" signals because the original RSI thresholds (30/70) were too extreme and rarely occur in normal market conditions.
+
+### Improvements Made
+1. **Adjusted RSI Thresholds**:
+   - LONG positions: RSI < 40 (was 30)
+   - SHORT positions: RSI > 60 (was 70)
+   
+2. **Widened Support/Resistance Proximity**:
+   - Now checks within 5% of levels (was 2%)
+   
+3. **Added Signal Gradation**:
+   - 'strong': 3 indicators agree (0.5% price adjustment)
+   - 'moderate': 2 indicators agree (0.2% price adjustment)
+   - 'weak': 1 indicator agrees (0.1% price adjustment)
+   - 'neutral': No indicators triggered (no adjustment)
+   
+4. **Added Debug Mode**:
+   - Set `debug=True` in functions to see RSI values, MA trends, and which signals are triggering
+   - Helps diagnose why certain entry points are recommended
+
+### Usage with Debug
+```python
+# Single stock with debug info
+signal = determine_entry_point("AAPL", PositionType.LONG, debug=True)
+
+# Portfolio with debug info
+portfolio_signals = get_entry_prices(portfolio, debug=True)
+```
+
+These adjustments make the system more practical for real-world trading conditions where extreme RSI values are rare.
