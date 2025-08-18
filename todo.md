@@ -1,138 +1,145 @@
-# Entry Point Calculation Plan
+# Tool Error Memory Auto-Retry Implementation Plan
+
+## Problem Statement
+When a tool call fails, the error memory system provides guidance but doesn't automatically retry the tool in the same iteration. The agent receives the error with solution guidance but must wait for the next iteration to retry, wasting iterations and potentially losing context.
 
 ## Objective
-Create a simple, effective system to determine optimal entry prices for long and short stock positions using daily price data.
-
-## Research Summary (from web search)
-Based on research, the most effective methods for entry point calculation are:
-1. **RSI (Relative Strength Index)**: Identifies overbought (>70) and oversold (<30) conditions
-2. **Moving Average Crossovers**: Signals trend changes when short-term MA crosses long-term MA
-3. **Support/Resistance Levels**: Historical price levels where reversals tend to occur
-4. **Bollinger Bands**: Identifies price extremes based on volatility
+Implement automatic tool retry within the same iteration when error memory has a solution, allowing the agent to immediately apply the fix without waiting for the next iteration.
 
 ## Implementation Plan
 
 ### Todo Items
-- [x] Clear todo.md and create plan for entry point calculation
-- [x] Research effective methods for calculating entry points (completed via web search)
-- [x] Design entry point calculation system using RSI, Moving Averages, and Support/Resistance
-- [x] Implement RSI calculation function for overbought/oversold signals
-- [x] Implement Moving Average crossover detection for trend confirmation
-- [x] Implement Support/Resistance level identification
-- [x] Create main entry point determination function that combines indicators
-- [x] Add example usage and testing code
+- [x] Modify execute_tool_safe() to attempt auto-retry when solution exists
+- [x] Add retry mechanism with solution injection
+- [x] Update tool execution flow to handle retry responses
+- [x] Add retry tracking to prevent infinite loops
+- [ ] Test with portfolio analysis tool errors
 
 ## Technical Approach
 
-### 1. RSI Calculation
-- Calculate 14-day RSI from daily price data
-- Long entry signal: RSI < 30 (oversold)
-- Short entry signal: RSI > 70 (overbought)
-
-### 2. Moving Averages
-- Calculate 20-day SMA (short-term) and 50-day SMA (long-term)
-- Long entry signal: 20-day crosses above 50-day
-- Short entry signal: 20-day crosses below 50-day
-
-### 3. Support/Resistance
-- Identify price levels with multiple touches (at least 2-3)
-- Long entry: Near support level
-- Short entry: Near resistance level
-
-### 4. Entry Price Determination
-- Combine signals from all indicators
-- For LONG positions:
-  - Primary signal: RSI < 30 OR price near support
-  - Confirmation: Moving average trend is bullish
-  - Entry price: Current spot price or limit order slightly below
-  
-- For SHORT positions:
-  - Primary signal: RSI > 70 OR price near resistance
-  - Confirmation: Moving average trend is bearish
-  - Entry price: Current spot price or limit order slightly above
-
-## Code Structure
-All code will be added to `backend/testing/trade_entry.py`:
-1. `calculate_rsi()` - RSI calculation
-2. `calculate_moving_averages()` - SMA calculations
-3. `find_support_resistance()` - Identify key price levels
-4. `determine_entry_point()` - Main function combining all indicators
-5. `get_entry_prices()` - Wrapper function for portfolio positions
-
-## Review - Implementation Complete
-
-### Summary of Changes
-Successfully implemented a complete entry point calculation system in `backend/testing/trade_entry.py` with the following components:
-
-1. **Data Structures**:
-   - `PositionType` enum for LONG/SHORT positions
-   - `EntrySignal` dataclass to store entry point analysis results
-
-2. **Technical Indicators Implemented**:
-   - **RSI Calculation** (`calculate_rsi`): 14-day RSI to identify overbought/oversold conditions
-   - **Moving Averages** (`calculate_moving_averages`): 20-day and 50-day SMAs for trend confirmation
-   - **Support/Resistance** (`find_support_resistance`): Identifies key price levels from historical data
-
-3. **Main Functions**:
-   - **`determine_entry_point()`**: Core function that combines all indicators to determine optimal entry price
-     - For LONG positions: Looks for oversold RSI (<30), bullish MA trend, and proximity to support
-     - For SHORT positions: Looks for overbought RSI (>70), bearish MA trend, and proximity to resistance
-     - Returns signal strength (strong/moderate/weak) based on number of confirming indicators
-   - **`get_entry_prices()`**: Portfolio-level function that processes multiple positions at once
-
-4. **Entry Price Logic**:
-   - Strong signals (3 indicators agree): 0.5% adjustment from spot price
-   - Moderate signals (2 indicators agree): 0.2% adjustment from spot price  
-   - Weak signals (1 or fewer indicators): Use current spot price
-
-5. **Example Usage**:
-   - Single stock entry point analysis
-   - Portfolio-wide entry point calculation with formatted output
-
-### Key Features
-- Simple, clean implementation following DRY principles
-- Uses existing `get_data_daily()` and `spot_price()` functions as requested
-- No stop loss, take profit, or risk/reward calculations - purely entry point focused
-- Modular design with separate functions for each indicator
-- Clear signal strength classification to help with decision making
-
-### Usage
-The system can be used in two ways:
-1. **Single Position**: `determine_entry_point(ticker, PositionType.LONG/SHORT)`
-2. **Portfolio**: `get_entry_prices({'AAPL': (0.2, 'long'), 'TSLA': (0.1, 'short'), ...})`
-
-The implementation is complete and ready for testing with real portfolio data.
-
-## Update - Improved Thresholds
-
-### Issue Identified
-The entry prices were showing the same as current prices with all "weak" signals because the original RSI thresholds (30/70) were too extreme and rarely occur in normal market conditions.
-
-### Improvements Made
-1. **Adjusted RSI Thresholds**:
-   - LONG positions: RSI < 40 (was 30)
-   - SHORT positions: RSI > 60 (was 70)
-   
-2. **Widened Support/Resistance Proximity**:
-   - Now checks within 5% of levels (was 2%)
-   
-3. **Added Signal Gradation**:
-   - 'strong': 3 indicators agree (0.5% price adjustment)
-   - 'moderate': 2 indicators agree (0.2% price adjustment)
-   - 'weak': 1 indicator agrees (0.1% price adjustment)
-   - 'neutral': No indicators triggered (no adjustment)
-   
-4. **Added Debug Mode**:
-   - Set `debug=True` in functions to see RSI values, MA trends, and which signals are triggering
-   - Helps diagnose why certain entry points are recommended
-
-### Usage with Debug
-```python
-# Single stock with debug info
-signal = determine_entry_point("AAPL", PositionType.LONG, debug=True)
-
-# Portfolio with debug info
-portfolio_signals = get_entry_prices(portfolio, debug=True)
+### 1. Current Flow (Problem)
+```
+Tool fails → Record error → Get solution → Return error with guidance → Wait for next iteration → Agent retries
 ```
 
-These adjustments make the system more practical for real-world trading conditions where extreme RSI values are rare.
+### 2. Desired Flow (Solution)
+```
+Tool fails → Record error → Get solution → Auto-retry with corrected args → Return success (or final error)
+```
+
+### 3. Implementation Details
+
+#### A. Modify execute_tool_safe() in utilities.py
+- When tool fails with TypeError/error
+- Check if error memory has a solution
+- If solution exists with high confidence (>0.7):
+  - Extract example_args from solution
+  - Attempt retry with corrected arguments
+  - If retry succeeds: return success result
+  - If retry fails: return original error + guidance
+
+#### B. Add Retry Context Injection
+- Before retry, inject solution guidance into a temporary context
+- Pass corrected arguments based on example_args pattern
+- Merge user's intent with correct format from memory
+
+#### C. Retry Safety Mechanisms
+- Maximum 1 retry per tool call (prevent loops)
+- Only retry if confidence >= 0.7
+- Track retry attempts in agent state
+- Log retry attempts for debugging
+
+### 4. Code Structure Changes
+1. `base_agent/core/utilities.py`:
+   - Enhance execute_tool_safe() with auto-retry logic
+   - Add _attempt_retry_with_solution() helper method
+   
+2. `base_agent/memory/error_memory.py`:
+   - Add method to merge user args with solution template
+   - Add confidence threshold checking
+
+### 5. Example Scenario
+```python
+# Tool called: analyze_portfolio_performance({})
+# Error: "Parsed portfolio must be a non-empty dict"
+# Memory solution found: {"portfolio": {"AAPL": 0.5, "MSFT": 0.5}}
+# Auto-retry with: analyze_portfolio_performance({"portfolio": <extracted_from_context>})
+# Success: Returns analysis results in same iteration
+```
+
+## Benefits
+- Reduces iterations wasted on retrying
+- Improves agent efficiency
+- Better user experience (faster completion)
+- Maintains context continuity
+- Leverages error memory immediately
+
+## Scope Limitations
+- Only retry once per tool call
+- Only retry when confidence is high
+- Only for tool argument errors (not logic errors)
+- Preserve original error if retry also fails
+
+## Risk Mitigation
+- Prevent infinite retry loops
+- Log all retry attempts
+- Maintain audit trail of corrections
+- Fallback to original behavior if retry fails
+
+## Success Criteria
+- Tool errors with known solutions retry automatically
+- Retry happens within same iteration
+- Agent completes tasks with fewer total iterations
+- Error memory solutions are applied immediately
+
+## Review
+
+### Implementation Complete
+
+Successfully implemented automatic tool retry within the same iteration when error memory has a high-confidence solution.
+
+#### Changes Made:
+
+1. **Modified `execute_tool_safe()` in `utilities.py`**:
+   - Added `is_retry` parameter to prevent infinite retry loops
+   - Checks error memory for solutions when tool fails
+   - Auto-retries with corrected arguments if confidence >= 0.7
+   - Returns successful result or final error with guidance
+
+2. **Added `_merge_args_with_solution()` helper method**:
+   - Intelligently merges failed arguments with solution template
+   - Extracts portfolio data from recent observations for portfolio tools
+   - Preserves meaningful user inputs while applying corrections
+
+3. **Retry Logic Features**:
+   - **Confidence Threshold**: Only auto-retries if solution confidence >= 0.7
+   - **Single Retry**: Prevents infinite loops with `is_retry` flag
+   - **Smart Merging**: Combines user intent with correct format
+   - **Portfolio Context**: Searches recent observations for portfolio data
+   - **Verbose Logging**: Shows retry attempts and results
+
+#### How It Works:
+1. Tool fails with an error (e.g., missing portfolio argument)
+2. Error memory is checked for a solution
+3. If high-confidence solution exists (>= 0.7):
+   - Merges failed args with solution template
+   - Attempts retry with corrected arguments
+   - If successful: Returns result in same iteration
+   - If failed: Returns error with guidance
+4. If no/low-confidence solution: Returns error (may include guidance)
+
+#### Benefits Achieved:
+- **Fewer Iterations**: Errors fixed immediately without waiting
+- **Better UX**: Faster task completion
+- **Context Preservation**: No loss of context between attempts
+- **Learning System**: Successful retries strengthen solution confidence
+
+#### Example Flow:
+```
+analyze_portfolio_performance({}) → Error: "portfolio must be non-empty"
+→ Memory has solution with portfolio template
+→ Auto-retry with {"portfolio": <extracted_from_context>}
+→ Success! Returns analysis in same iteration
+```
+
+The implementation is complete and ready for testing with real portfolio tool errors.

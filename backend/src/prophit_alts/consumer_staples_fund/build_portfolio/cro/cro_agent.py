@@ -1,4 +1,5 @@
 from backend.src.agentic_framework.base_agent.agent import BaseAgent
+from backend.src.agentic_framework.base_agent.memory.semantic_memory import SemanticMemory, initialize_cro_memories
 from backend.src.db.core.db_config import ProphitAltsSession
 from backend.src.db.core.prophit_alts_models import *
 from backend.src.prophit_alts.consumer_staples_fund.build_portfolio.cro.cro_tool_registry import register_cro_tools
@@ -30,9 +31,26 @@ class FinalPortfolio(BaseModel):
 
 class CROAgent(BaseAgent):
     def __init__(self, system_prompt: str = cro_system_prompt, user_prompt: str = cro_user_prompt):
-        super().__init__(system_prompt, user_prompt, max_iterations=75, save_messages=True, model="gpt-4.1", verbose=True)
+        # CRO agents often run longer, refresh memory every 6 iterations to maintain risk principles
+        super().__init__(system_prompt, user_prompt, max_iterations=75, save_messages=True, 
+                        model="gpt-4.1", verbose=True, memory_refresh_interval=10)
         
         register_cro_tools(self)
+    
+    def _initialize_semantic_memory(self):
+        """Initialize CRO-specific semantic memories for risk management."""
+        # Initialize semantic memory for CRO agent
+        self.semantic_memory = SemanticMemory(agent_type='cro', save_memory=True, verbose=self.verbose)
+        
+        # If memory is empty, initialize with default CRO risk concepts
+        if not self.semantic_memory.memories:
+            if self.verbose:
+                print("📚 Initializing CRO semantic memory with risk management concepts...")
+            self.semantic_memory = initialize_cro_memories()
+        
+        if self.verbose:
+            total_memories = sum(len(m) for m in self.semantic_memory.memories.values())
+            print(f"🧠 CRO Agent loaded with {total_memories} risk management memories")
 
     def run(self):
         result = super().run()

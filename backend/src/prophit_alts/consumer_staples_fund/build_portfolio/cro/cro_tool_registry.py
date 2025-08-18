@@ -149,3 +149,35 @@ def register_cro_tools(agent):
         parameters={},
         function=lambda: get_initial_portfolio_dict()
     )
+
+    agent.add_tool(
+        name="calculate_correlation_matrix",
+        description="Calculate the correlation matrix for the portfolio.",
+        parameters={
+            "type": "object",
+            "properties": {
+                "portfolio_dict": {
+                    "type": "object",
+                    "description": "Dictionary with tickers as keys and {'weight': float, 'position': 'long'|'short'} as values"
+                }
+            },
+            "required": ["portfolio_dict"]
+        },
+        function=lambda portfolio_dict: calculate_correlation_matrix(portfolio_dict)
+    )
+
+    agent.add_tool(
+        name="calculate_covariance_matrix",
+        description="Calculate the covariance matrix for the portfolio.",
+        parameters={
+            "type": "object",
+            "properties": {
+                "portfolio_dict": {
+                    "type": "object",
+                    "description": "Dictionary with tickers as keys and {'weight': float, 'position': 'long'|'short'} as values"
+                }
+            },
+            "required": ["portfolio_dict"]
+        },
+        function=lambda portfolio_dict: calculate_covariance_matrix(portfolio_dict)
+    )

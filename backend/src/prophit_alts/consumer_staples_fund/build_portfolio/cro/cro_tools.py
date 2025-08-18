@@ -460,5 +460,98 @@ def get_larger_ticker_pool():
 
     return ticker_choices
 
+def calculate_correlation_matrix(portfolio_dict: dict = None) -> dict:
+    """
+    Calculate the correlation matrix for the given portfolio.
+    """
+    
+    portfolio_dict = {
+        'aapl': {'weight': 0.1, 'position': 'long'},
+        'msft': {'weight': 0.2, 'position': 'long'},
+        'goog': {'weight': 0.1, 'position': 'long'},
+        'amzn': {'weight': 0.1, 'position': 'long'},
+        'tsla': {'weight': 0.1, 'position': 'long'},
+        'nvda': {'weight': 0.1, 'position': 'long'},
+        'meta': {'weight': 0.1, 'position': 'long'},
+    }
 
+    # Get tickers from portfolio
+    tickers = list(portfolio_dict.keys())
+    
+    # Get price data for last year
+    end_date = datetime.now()
+    start_date = end_date - timedelta(days=252)
+    
+    # Fetch price data for all tickers
+    prices_map = fetch_bulk_price_data_for_tickers(tickers, start_date.strftime('%Y-%m-%d'), end_date.strftime('%Y-%m-%d'), frequency='daily')
+    
+    if not prices_map:
+        return {"error": "No price data available"}
+    
+    # Create DataFrame and calculate returns
+    prices_df = pd.DataFrame(prices_map)
+    returns_df = prices_df.pct_change().dropna()
+    
+    # Calculate correlation matrix
+    correlation_matrix = returns_df.corr()
+    
+    # Round all values to 3 decimal places
+    correlation_matrix = correlation_matrix.round(3)
+    
+    # Convert to dictionary format
+    result = {
+        'tickers': tickers,
+        'correlation_matrix': correlation_matrix.to_dict()
+    }
+    
+    return result
 
+def calculate_covariance_matrix(portfolio_dict: dict = None) -> dict:
+    """
+    Calculate the covariance matrix for the given portfolio.
+    """
+    
+    portfolio_dict = {
+        'aapl': {'weight': 0.1, 'position': 'long'},
+        'msft': {'weight': 0.2, 'position': 'long'},
+        'goog': {'weight': 0.1, 'position': 'long'},
+        'amzn': {'weight': 0.1, 'position': 'long'},
+        'tsla': {'weight': 0.1, 'position': 'long'},
+        'nvda': {'weight': 0.1, 'position': 'long'},
+        'meta': {'weight': 0.1, 'position': 'long'},
+    }
+
+    # Get tickers from portfolio
+    tickers = list(portfolio_dict.keys())
+    
+    # Get price data for last year
+    end_date = datetime.now()
+    start_date = end_date - timedelta(days=252)
+    
+    # Fetch price data for all tickers
+    prices_map = fetch_bulk_price_data_for_tickers(tickers, start_date.strftime('%Y-%m-%d'), end_date.strftime('%Y-%m-%d'), frequency='daily')
+    
+    if not prices_map:
+        return {"error": "No price data available"}
+    
+    # Create DataFrame and calculate returns
+    prices_df = pd.DataFrame(prices_map)
+    returns_df = prices_df.pct_change().dropna()
+    
+    # Calculate covariance matrix
+    covariance_matrix = returns_df.cov()
+    
+    # Round all values to 6 decimal places (covariance values are typically smaller)
+    covariance_matrix = covariance_matrix.round(6)
+    
+    # Convert to dictionary format
+    result = {
+        'tickers': tickers,
+        'covariance_matrix': covariance_matrix.to_dict()
+    }
+    
+    return result
+
+if __name__ == "__main__":
+    print(calculate_correlation_matrix())
+    print(calculate_covariance_matrix())

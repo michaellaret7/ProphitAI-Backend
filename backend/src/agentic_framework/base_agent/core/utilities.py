@@ -35,6 +35,7 @@ class AgentUtilities:
             "You are a JSON ReAct agent. You MUST use one of these two formats:\n"
             "1. Native tool-calls (preferred if supported)\n"
             "2. JSON format: {\"thought\":\"...\",\"action\":{\"tool\":\"name\",\"args\":{}}}\n\n"
+            "3. The list can be as long as you want, the priority is to complete the task at hand as accurately and analytically as possible.\n"
             "CRITICAL RULES:\n"
             "- NEVER output plain text like 'Thought: ...' or 'Action: ...'\n"
             "- ALWAYS use complete JSON objects when not using native tool calls\n"
@@ -58,8 +59,8 @@ class AgentUtilities:
         except Exception:
             pass
     
-    def execute_tool_safe(self, name: str, args: Dict[str, Any]):
-        """Safely execute a tool with error handling."""
+    def execute_tool_safe(self, name: str, args: Dict[str, Any], is_retry: bool = False):
+        """Safely execute a tool with error handling, memory, and auto-retry."""
         name = self._strip_functions_prefix(name)
         func = self.agent.tool_functions.get(name)
         if not func:
@@ -71,11 +72,215 @@ class AgentUtilities:
             if not func:
                 return f"Error: tool '{name}' not found. Available tools: {list(self.agent.tool_functions.keys())}"
         try:
-            return func(**args) if isinstance(args, dict) else func(args)
+            result = func(**args) if isinstance(args, dict) else func(args)
+            
+            # If this was a retry after an error and it succeeded, record the solution
+            if self.agent.error_memory and self.agent.last_tool_error:
+                if self.agent.last_tool_error.get('tool_name') == name:
+                    self.agent.error_memory.record_solution(
+                        self.agent.last_tool_error['error_key'],
+                        args,
+                        "Successful retry with corrected arguments"
+                    )
+                    self.agent.last_tool_error = None  # Clear the error
+                    if self.agent.verbose:
+                        print("✅ Tool succeeded after error correction!")
+            
+            return result
+            
         except TypeError as e:
-            return f"Error calling tool '{name}': {e} (args={args})"
+            error_msg = str(e)
+            error_response = f"Error calling tool '{name}': {error_msg} (args={args})"
+            
+            # Record error and check for solutions if error memory is enabled
+            if self.agent.error_memory and not is_retry:  # Only attempt auto-retry on first failure
+                error_key = self.agent.error_memory.record_error(name, args, error_msg)
+                solution = self.agent.error_memory.get_solution(name, error_msg)
+                
+                if solution and solution.get('confidence', 0) >= 0.7:
+                    # High confidence solution found, attempt auto-retry
+                    if self.agent.verbose:
+                        print(f"🔄 Auto-retrying {name} with corrected arguments from memory (confidence: {solution['confidence']:.2f})")
+                    
+                    # Attempt retry with solution's example args or merge with original
+                    expected_params = []
+                    try:
+                        import inspect
+                        sig = inspect.signature(func)
+                        for pname, p in sig.parameters.items():
+                            if pname != 'self' and p.kind not in (inspect.Parameter.VAR_POSITIONAL, inspect.Parameter.VAR_KEYWORD):
+                                expected_params.append(pname)
+                    except Exception:
+                        pass
+                    retry_args = self._merge_args_with_solution(args, solution.get('example_args', {}), expected_params)
+                    
+                    # Store error info for tracking
+                    self.agent.last_tool_error = {
+                        'tool_name': name,
+                        'error_key': error_key,
+                        'error_message': error_msg,
+                        'failed_args': args
+                    }
+                    
+                    # Attempt retry
+                    retry_result = self.execute_tool_safe(name, retry_args, is_retry=True)
+                    
+                    # Check if retry was successful
+                    if not isinstance(retry_result, str) or not retry_result.startswith("Error"):
+                        if self.agent.verbose:
+                            print(f"✅ Auto-retry successful for {name}!")
+                        # Record the successful solution
+                        self.agent.error_memory.record_solution(
+                            error_key,
+                            retry_args,
+                            "Auto-retry with memory solution succeeded"
+                        )
+                        self.agent.last_tool_error = None  # Clear error
+                        return retry_result
+                    else:
+                        # Retry also failed, return original error with guidance
+                        if self.agent.verbose:
+                            print(f"⚠️ Auto-retry failed for {name}, returning guidance")
+                        return (
+                            f"{error_response}\n\n"
+                            f"💡 AUTO-RETRY ATTEMPTED BUT FAILED:\n"
+                            f"{solution['guidance']}\n\n"
+                            f"Manual correction may be needed."
+                        )
+                else:
+                    # No high-confidence solution, store error for future learning
+                    self.agent.last_tool_error = {
+                        'tool_name': name,
+                        'error_key': error_key if self.agent.error_memory else None,
+                        'error_message': error_msg,
+                        'failed_args': args
+                    }
+                    
+                    # If solution exists but low confidence, provide guidance
+                    if solution:
+                        return (
+                            f"{error_response}\n\n"
+                            f"💡 SOLUTION FOUND (low confidence: {solution.get('confidence', 0):.2f}):\n"
+                            f"{solution['guidance']}\n\n"
+                            f"Please verify and retry."
+                        )
+            
+            return error_response
+            
         except Exception as e:
-            return f"Unhandled error in tool '{name}': {e}"
+            error_msg = str(e)
+            error_response = f"Unhandled error in tool '{name}': {error_msg}"
+            
+            # Record error and check for solutions if error memory is enabled
+            if self.agent.error_memory and not is_retry:  # Only attempt auto-retry on first failure
+                error_key = self.agent.error_memory.record_error(name, args, error_msg)
+                solution = self.agent.error_memory.get_solution(name, error_msg)
+                
+                if solution and solution.get('confidence', 0) >= 0.7:
+                    # High confidence solution found, attempt auto-retry
+                    if self.agent.verbose:
+                        print(f"🔄 Auto-retrying {name} after general error (confidence: {solution['confidence']:.2f})")
+                    
+                    # Attempt retry with solution's example args or merge with original
+                    expected_params = []
+                    try:
+                        import inspect
+                        sig = inspect.signature(func)
+                        for pname, p in sig.parameters.items():
+                            if pname != 'self' and p.kind not in (inspect.Parameter.VAR_POSITIONAL, inspect.Parameter.VAR_KEYWORD):
+                                expected_params.append(pname)
+                    except Exception:
+                        pass
+                    retry_args = self._merge_args_with_solution(args, solution.get('example_args', {}), expected_params)
+                    
+                    # Store error info for tracking
+                    self.agent.last_tool_error = {
+                        'tool_name': name,
+                        'error_key': error_key,
+                        'error_message': error_msg,
+                        'failed_args': args
+                    }
+                    
+                    # Attempt retry
+                    retry_result = self.execute_tool_safe(name, retry_args, is_retry=True)
+                    
+                    # Check if retry was successful
+                    if not isinstance(retry_result, str) or (not retry_result.startswith("Error") and not retry_result.startswith("Unhandled")):
+                        if self.agent.verbose:
+                            print(f"✅ Auto-retry successful for {name}!")
+                        # Record the successful solution
+                        self.agent.error_memory.record_solution(
+                            error_key,
+                            retry_args,
+                            "Auto-retry with memory solution succeeded"
+                        )
+                        self.agent.last_tool_error = None  # Clear error
+                        return retry_result
+                    else:
+                        # Retry also failed
+                        if self.agent.verbose:
+                            print(f"⚠️ Auto-retry failed for {name}")
+                else:
+                    # No high-confidence solution, store error for future learning
+                    self.agent.last_tool_error = {
+                        'tool_name': name,
+                        'error_key': error_key if self.agent.error_memory else None,
+                        'error_message': error_msg,
+                        'failed_args': args
+                    }
+            
+            return error_response
+    
+    def _merge_args_with_solution(self, failed_args: Dict[str, Any], solution_args: Dict[str, Any], expected_params: List[str] = None) -> Dict[str, Any]:
+        """Merge failed arguments with solution template intelligently.
+        
+        Args:
+            failed_args: The arguments that caused the error
+            solution_args: Example arguments from the memory solution
+            expected_params: Parameter names expected by the tool function
+            
+        Returns:
+            Merged arguments that should work
+        """
+        # Start with solution template
+        merged = solution_args.copy()
+        expected = set(expected_params or [])
+        
+        # Remap common synonyms to expected param names if needed
+        synonyms_map = {
+            'portfolio': ['portfolio_dict', 'portfolio_data'],
+            'portfolio_dict': ['portfolio', 'portfolio_data'],
+            'portfolio_data': ['portfolio', 'portfolio_dict'],
+        }
+        for src_key, alt_keys in list(synonyms_map.items()):
+            if src_key in merged and src_key not in expected:
+                for alt in alt_keys:
+                    if alt in expected:
+                        merged[alt] = merged.pop(src_key)
+                        break
+        
+        # For portfolio-specific tools, try to extract portfolio data from context
+        if 'portfolio' in solution_args and not failed_args.get('portfolio'):
+            # Check if there's a get_initial_portfolio_dict result in recent observations
+            if hasattr(self.agent, 'recent_observations'):
+                for obs in reversed(self.agent.recent_observations[-5:]):  # Check last 5 observations
+                    if isinstance(obs, dict) and any(key in obs for key in ['portfolio', 'positions', 'holdings']):
+                        # Found portfolio data in recent observations
+                        if 'portfolio' in obs:
+                            merged['portfolio'] = obs['portfolio']
+                        elif 'positions' in obs:
+                            merged['portfolio'] = obs['positions']
+                        elif 'holdings' in obs:
+                            merged['portfolio'] = obs['holdings']
+                        break
+        
+        # Override with any valid non-empty values from failed args
+        for key, value in failed_args.items():
+            if value is not None and value != {} and value != [] and value != "":
+                # Keep the user's value if it's meaningful
+                merged[key] = value
+        
+        return merged
     
     def _parse_plain_args(self, args_str: str) -> Dict[str, Any]:
         """Parse arguments from plain text format."""
