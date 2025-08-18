@@ -25,8 +25,8 @@ class AlpacaTrader:
             secret_key: Your Alpaca secret key
             paper: Use paper trading (True) or live trading (False)
         """
-        self.api_key = "PKTN1NUYX2VG701470N6"
-        self.secret_key = "dTxaH2n6qIIREdajPnMwK0m2JvbDvWvABX9hgC2L"
+        self.api_key = "PKBJQF04EN267R5OFH09"
+        self.secret_key = "CW1NAvvBvlErPte4AFR4B3jNmUNzKP0lEe9cI6Fl"
         self.client = TradingClient(self.api_key, self.secret_key, paper=paper)
         self.paper = paper
 

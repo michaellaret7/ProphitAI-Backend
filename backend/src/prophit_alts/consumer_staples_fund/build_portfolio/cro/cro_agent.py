@@ -37,7 +37,6 @@ class CROAgent(BaseAgent):
     def run(self):
         result = super().run()
 
-        print(type(result))
         final_text = (result.get("final_text") or "").strip()
         
         if not final_text:
