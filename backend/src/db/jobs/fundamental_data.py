@@ -7,7 +7,7 @@ import time
 import threading
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from sqlalchemy.dialects.postgresql import insert
-from sqlalchemy import func, and_
+from sqlalchemy import func, and_, text
 import json
 
 class UpdateFundamentalData:
@@ -91,12 +91,15 @@ class UpdateFundamentalData:
             if not data:
                 return 0
             
-            records = []
+            # Use a dictionary to deduplicate by date
+            unique_records = {}
             for item in data[:20]:  # Last 20 quarters (5 years)
-                record = {
-                    'ticker_id': ticker_id,
-                    'date': self._safe_date(item.get('date')),
-                    'reportedCurrency': item.get('reportedCurrency'),
+                date = self._safe_date(item.get('date'))
+                if date and date not in unique_records:
+                    unique_records[date] = {
+                        'ticker_id': ticker_id,
+                        'date': date,
+                        'reportedCurrency': item.get('reportedCurrency'),
                     'cik': item.get('cik'),
                     'fillingDate': self._safe_date(item.get('fillingDate')),
                     'acceptedDate': self._safe_date(item.get('acceptedDate')),
@@ -144,14 +147,13 @@ class UpdateFundamentalData:
                     'minorityInterest': self._safe_decimal(item.get('minorityInterest')),
                     'totalLiabilitiesAndTotalEquity': self._safe_decimal(item.get('totalLiabilitiesAndTotalEquity')),
                     'totalInvestments': self._safe_decimal(item.get('totalInvestments')),
-                    'totalDebt': self._safe_decimal(item.get('totalDebt')),
-                    'netDebt': self._safe_decimal(item.get('netDebt')),
-                    'link': item.get('link'),
-                    'finalLink': item.get('finalLink')
-                }
-                if record['date']:  # Only add if date is valid
-                    records.append(record)
+                        'totalDebt': self._safe_decimal(item.get('totalDebt')),
+                        'netDebt': self._safe_decimal(item.get('netDebt')),
+                        'link': item.get('link'),
+                        'finalLink': item.get('finalLink')
+                    }
             
+            records = list(unique_records.values())
             if records:
                 stmt = insert(BalanceSheet).values(records)
                 stmt = stmt.on_conflict_do_update(
@@ -173,12 +175,15 @@ class UpdateFundamentalData:
             if not data:
                 return 0
             
-            records = []
+            # Use a dictionary to deduplicate by date
+            unique_records = {}
             for item in data[:20]:  # Last 20 quarters
-                record = {
-                    'ticker_id': ticker_id,
-                    'date': self._safe_date(item.get('date')),
-                    'reportedCurrency': item.get('reportedCurrency'),
+                date = self._safe_date(item.get('date'))
+                if date and date not in unique_records:
+                    unique_records[date] = {
+                        'ticker_id': ticker_id,
+                        'date': date,
+                        'reportedCurrency': item.get('reportedCurrency'),
                     'cik': item.get('cik'),
                     'fillingDate': self._safe_date(item.get('fillingDate')),
                     'acceptedDate': self._safe_date(item.get('acceptedDate')),
@@ -213,13 +218,12 @@ class UpdateFundamentalData:
                     'cashAtBeginningOfPeriod': self._safe_decimal(item.get('cashAtBeginningOfPeriod')),
                     'operatingCashFlow': self._safe_decimal(item.get('operatingCashFlow')),
                     'capitalExpenditure': self._safe_decimal(item.get('capitalExpenditure')),
-                    'freeCashFlow': self._safe_decimal(item.get('freeCashFlow')),
-                    'link': item.get('link'),
-                    'finalLink': item.get('finalLink')
-                }
-                if record['date']:
-                    records.append(record)
+                        'freeCashFlow': self._safe_decimal(item.get('freeCashFlow')),
+                        'link': item.get('link'),
+                        'finalLink': item.get('finalLink')
+                    }
             
+            records = list(unique_records.values())
             if records:
                 stmt = insert(CashFlowStatement).values(records)
                 stmt = stmt.on_conflict_do_update(
@@ -241,12 +245,15 @@ class UpdateFundamentalData:
             if not data:
                 return 0
             
-            records = []
+            # Use a dictionary to deduplicate by date
+            unique_records = {}
             for item in data[:20]:  # Last 20 quarters
-                record = {
-                    'ticker_id': ticker_id,
-                    'date': self._safe_date(item.get('date')),
-                    'reportedCurrency': item.get('reportedCurrency'),
+                date = self._safe_date(item.get('date'))
+                if date and date not in unique_records:
+                    unique_records[date] = {
+                        'ticker_id': ticker_id,
+                        'date': date,
+                        'reportedCurrency': item.get('reportedCurrency'),
                     'cik': item.get('cik'),
                     'fillingDate': self._safe_date(item.get('fillingDate')),
                     'acceptedDate': self._safe_date(item.get('acceptedDate')),
@@ -279,13 +286,12 @@ class UpdateFundamentalData:
                     'eps': item.get('eps'),
                     'epsdiluted': item.get('epsdiluted'),
                     'weightedAverageShsOut': self._safe_decimal(item.get('weightedAverageShsOut')),
-                    'weightedAverageShsOutDil': self._safe_decimal(item.get('weightedAverageShsOutDil')),
-                    'link': item.get('link'),
-                    'finalLink': item.get('finalLink')
-                }
-                if record['date']:
-                    records.append(record)
+                        'weightedAverageShsOutDil': self._safe_decimal(item.get('weightedAverageShsOutDil')),
+                        'link': item.get('link'),
+                        'finalLink': item.get('finalLink')
+                    }
             
+            records = list(unique_records.values())
             if records:
                 stmt = insert(IncomeStatement).values(records)
                 stmt = stmt.on_conflict_do_update(
@@ -307,14 +313,17 @@ class UpdateFundamentalData:
             if not data:
                 return 0
             
-            records = []
+            # Use a dictionary to deduplicate by date
+            unique_records = {}
             for item in data[:20]:  # Last 20 quarters
-                record = {
-                    'ticker_id': ticker_id,
-                    'date': self._safe_date(item.get('date')),
-                    'calendarYear': item.get('calendarYear'),
-                    'period': item.get('period')
-                }
+                date = self._safe_date(item.get('date'))
+                if date and date not in unique_records:
+                    record = {
+                        'ticker_id': ticker_id,
+                        'date': date,
+                        'calendarYear': item.get('calendarYear'),
+                        'period': item.get('period')
+                    }
                 
                 # Add all the ratio fields
                 ratio_fields = [
@@ -340,9 +349,9 @@ class UpdateFundamentalData:
                 for field in ratio_fields:
                     record[field] = item.get(field)
                 
-                if record['date']:
-                    records.append(record)
+                unique_records[date] = record
             
+            records = list(unique_records.values())
             if records:
                 stmt = insert(FinancialRatio).values(records)
                 stmt = stmt.on_conflict_do_update(
@@ -364,34 +373,37 @@ class UpdateFundamentalData:
             if not data:
                 return 0
             
-            records = []
+            # Use a dictionary to deduplicate by date
+            unique_records = {}
             for item in data[:20]:  # Last 20 quarters
-                record = {
-                    'ticker_id': ticker_id,
-                    'date': self._safe_date(item.get('date')),
-                    'revenueLow': self._safe_decimal(item.get('revenueLow')),
-                    'revenueHigh': self._safe_decimal(item.get('revenueHigh')),
-                    'revenueAvg': self._safe_decimal(item.get('revenueAvg')),
-                    'ebitdaLow': self._safe_decimal(item.get('ebitdaLow')),
-                    'ebitdaHigh': self._safe_decimal(item.get('ebitdaHigh')),
-                    'ebitdaAvg': self._safe_decimal(item.get('ebitdaAvg')),
-                    'ebitLow': self._safe_decimal(item.get('ebitLow')),
-                    'ebitHigh': self._safe_decimal(item.get('ebitHigh')),
-                    'ebitAvg': self._safe_decimal(item.get('ebitAvg')),
-                    'netIncomeLow': self._safe_decimal(item.get('netIncomeLow')),
-                    'netIncomeHigh': self._safe_decimal(item.get('netIncomeHigh')),
-                    'netIncomeAvg': self._safe_decimal(item.get('netIncomeAvg')),
-                    'sgaExpenseLow': self._safe_decimal(item.get('sgaExpenseLow')),
-                    'sgaExpenseHigh': self._safe_decimal(item.get('sgaExpenseHigh')),
-                    'sgaExpenseAvg': self._safe_decimal(item.get('sgaExpenseAvg')),
-                    'epsAvg': item.get('epsAvg'),
-                    'epsHigh': item.get('epsHigh'),
-                    'epsLow': item.get('epsLow'),
-                    'numAnalystsRevenue': item.get('numberAnalystEstimatedRevenue'),
-                    'numAnalystsEps': item.get('numberAnalystEstimatedEps')
-                }
-                if record['date']:
-                    records.append(record)
+                date = self._safe_date(item.get('date'))
+                if date and date not in unique_records:
+                    unique_records[date] = {
+                        'ticker_id': ticker_id,
+                        'date': date,
+                        'revenueLow': self._safe_decimal(item.get('revenueLow')),
+                        'revenueHigh': self._safe_decimal(item.get('revenueHigh')),
+                        'revenueAvg': self._safe_decimal(item.get('revenueAvg')),
+                        'ebitdaLow': self._safe_decimal(item.get('ebitdaLow')),
+                        'ebitdaHigh': self._safe_decimal(item.get('ebitdaHigh')),
+                        'ebitdaAvg': self._safe_decimal(item.get('ebitdaAvg')),
+                        'ebitLow': self._safe_decimal(item.get('ebitLow')),
+                        'ebitHigh': self._safe_decimal(item.get('ebitHigh')),
+                        'ebitAvg': self._safe_decimal(item.get('ebitAvg')),
+                        'netIncomeLow': self._safe_decimal(item.get('netIncomeLow')),
+                        'netIncomeHigh': self._safe_decimal(item.get('netIncomeHigh')),
+                        'netIncomeAvg': self._safe_decimal(item.get('netIncomeAvg')),
+                        'sgaExpenseLow': self._safe_decimal(item.get('sgaExpenseLow')),
+                        'sgaExpenseHigh': self._safe_decimal(item.get('sgaExpenseHigh')),
+                        'sgaExpenseAvg': self._safe_decimal(item.get('sgaExpenseAvg')),
+                        'epsAvg': item.get('epsAvg'),
+                        'epsHigh': item.get('epsHigh'),
+                        'epsLow': item.get('epsLow'),
+                        'numAnalystsRevenue': item.get('numberAnalystEstimatedRevenue'),
+                        'numAnalystsEps': item.get('numberAnalystEstimatedEps')
+                    }
+            
+            records = list(unique_records.values())
             
             if records:
                 stmt = insert(AnalystEstimate).values(records)
@@ -421,12 +433,28 @@ class UpdateFundamentalData:
             
             # Delete existing holdings for this ETF
             session.query(ETFHolding).filter(ETFHolding.ticker_id == ticker_id).delete()
+            session.flush()  # Ensure delete is executed within the transaction
             
-            records = []
+            # Use a dictionary to deduplicate holdings by asset symbol
+            unique_holdings = {}
             for item in data[:500]:  # Limit to top 500 holdings
-                record = {
+                asset = item.get('asset', '').strip()
+                
+                # Skip empty assets
+                if not asset:
+                    continue
+                
+                # If we already have this asset, keep the one with higher weight or first occurrence
+                if asset in unique_holdings:
+                    existing_weight = unique_holdings[asset].get('weightPercentage', 0) or 0
+                    new_weight = item.get('weightPercentage', 0) or 0
+                    if new_weight <= existing_weight:
+                        continue  # Keep the existing one
+                
+                # Add or update the holding
+                unique_holdings[asset] = {
                     'ticker_id': ticker_id,
-                    'asset': item.get('asset', ''),
+                    'asset': asset,
                     'name': item.get('name'),
                     'isin': item.get('isin'),
                     'securityCusip': item.get('cusip'),
@@ -435,11 +463,18 @@ class UpdateFundamentalData:
                     'marketValue': self._safe_decimal(item.get('marketValue')),
                     'updatedAt': self._safe_datetime(item.get('updated'))
                 }
-                if record['asset']:  # Asset is required as part of primary key
-                    records.append(record)
             
-            if records:
+            if unique_holdings:
+                records = list(unique_holdings.values())
                 stmt = insert(ETFHolding).values(records)
+                # Add ON CONFLICT clause as extra safety
+                stmt = stmt.on_conflict_do_update(
+                    index_elements=['ticker_id', 'asset'],
+                    set_={'weightPercentage': stmt.excluded.weightPercentage,
+                          'sharesNumber': stmt.excluded.sharesNumber,
+                          'marketValue': stmt.excluded.marketValue,
+                          'updatedAt': stmt.excluded.updatedAt}
+                )
                 session.execute(stmt)
                 return len(records)
             return 0
@@ -543,20 +578,23 @@ class UpdateFundamentalData:
             if not data:
                 return 0
             
-            records = []
+            # Use a dictionary to deduplicate by URL
+            unique_records = {}
             for item in data[:100]:  # Last 100 press releases
-                record = {
-                    'ticker_id': ticker_id,
-                    'publishedDate': self._safe_datetime(item.get('publishedDate')),
-                    'publisher': item.get('publisher'),
-                    'title': item.get('title'),
-                    'image': item.get('image'),
-                    'site': item.get('site'),
-                    'text': item.get('text'),
-                    'url': item.get('url', '')[:512]  # Limit URL length
-                }
-                if record['url']:  # URL is part of primary key
-                    records.append(record)
+                url = item.get('url', '')[:512]  # Limit URL length
+                if url and url not in unique_records:  # Only add if URL is unique
+                    unique_records[url] = {
+                        'ticker_id': ticker_id,
+                        'publishedDate': self._safe_datetime(item.get('publishedDate')),
+                        'publisher': item.get('publisher'),
+                        'title': item.get('title'),
+                        'image': item.get('image'),
+                        'site': item.get('site'),
+                        'text': item.get('text'),
+                        'url': url
+                    }
+            
+            records = list(unique_records.values())
             
             if records:
                 stmt = insert(PressRelease).values(records)
@@ -578,20 +616,23 @@ class UpdateFundamentalData:
             if not data:
                 return 0
             
-            records = []
+            # Use a dictionary to deduplicate by URL
+            unique_records = {}
             for item in data[:100]:  # Last 100 news items
-                record = {
-                    'ticker_id': ticker_id,
-                    'publishedDate': self._safe_datetime(item.get('publishedDate')),
-                    'publisher': item.get('publisher'),
-                    'title': item.get('title'),
-                    'image': item.get('image'),
-                    'site': item.get('site'),
-                    'text': item.get('text'),
-                    'url': item.get('url', '')[:512]
-                }
-                if record['url']:
-                    records.append(record)
+                url = item.get('url', '')[:512]
+                if url and url not in unique_records:
+                    unique_records[url] = {
+                        'ticker_id': ticker_id,
+                        'publishedDate': self._safe_datetime(item.get('publishedDate')),
+                        'publisher': item.get('publisher'),
+                        'title': item.get('title'),
+                        'image': item.get('image'),
+                        'site': item.get('site'),
+                        'text': item.get('text'),
+                        'url': url
+                    }
+            
+            records = list(unique_records.values())
             
             if records:
                 stmt = insert(StockNews).values(records)
@@ -613,23 +654,26 @@ class UpdateFundamentalData:
             if not data:
                 return 0
             
-            records = []
+            # Use a dictionary to deduplicate by newsURL
+            unique_records = {}
             for item in data[:100]:
-                record = {
-                    'ticker_id': ticker_id,
-                    'publishedDate': self._safe_datetime(item.get('publishedDate')),
-                    'newsURL': item.get('newsURL', '')[:512],
-                    'newsTitle': item.get('newsTitle'),
-                    'analystName': item.get('analystName'),
-                    'priceTarget': item.get('priceTarget'),
-                    'adjPriceTarget': item.get('adjPriceTarget'),
-                    'priceWhenPosted': item.get('priceWhenPosted'),
-                    'newsPublisher': item.get('newsPublisher'),
-                    'newsBaseURL': item.get('newsBaseURL'),
-                    'analystCompany': item.get('analystCompany')
-                }
-                if record['newsURL']:
-                    records.append(record)
+                news_url = item.get('newsURL', '')[:512]
+                if news_url and news_url not in unique_records:
+                    unique_records[news_url] = {
+                        'ticker_id': ticker_id,
+                        'publishedDate': self._safe_datetime(item.get('publishedDate')),
+                        'newsURL': news_url,
+                        'newsTitle': item.get('newsTitle'),
+                        'analystName': item.get('analystName'),
+                        'priceTarget': item.get('priceTarget'),
+                        'adjPriceTarget': item.get('adjPriceTarget'),
+                        'priceWhenPosted': item.get('priceWhenPosted'),
+                        'newsPublisher': item.get('newsPublisher'),
+                        'newsBaseURL': item.get('newsBaseURL'),
+                        'analystCompany': item.get('analystCompany')
+                    }
+            
+            records = list(unique_records.values())
             
             if records:
                 stmt = insert(PriceTargetNews).values(records)
@@ -651,23 +695,26 @@ class UpdateFundamentalData:
             if not data:
                 return 0
             
-            records = []
+            # Use a dictionary to deduplicate by newsURL
+            unique_records = {}
             for item in data[:100]:
-                record = {
-                    'ticker_id': ticker_id,
-                    'publishedDate': self._safe_datetime(item.get('publishedDate')),
-                    'newsURL': item.get('newsURL', '')[:512],
-                    'newsTitle': item.get('newsTitle'),
-                    'newsBaseURL': item.get('newsBaseURL'),
-                    'newsPublisher': item.get('newsPublisher'),
-                    'newGrade': item.get('newGrade'),
-                    'previousGrade': item.get('previousGrade'),
-                    'gradingCompany': item.get('gradingCompany'),
-                    'action': item.get('action'),
-                    'priceWhenPosted': item.get('priceWhenPosted')
-                }
-                if record['newsURL']:
-                    records.append(record)
+                news_url = item.get('newsURL', '')[:512]
+                if news_url and news_url not in unique_records:
+                    unique_records[news_url] = {
+                        'ticker_id': ticker_id,
+                        'publishedDate': self._safe_datetime(item.get('publishedDate')),
+                        'newsURL': news_url,
+                        'newsTitle': item.get('newsTitle'),
+                        'newsBaseURL': item.get('newsBaseURL'),
+                        'newsPublisher': item.get('newsPublisher'),
+                        'newGrade': item.get('newGrade'),
+                        'previousGrade': item.get('previousGrade'),
+                        'gradingCompany': item.get('gradingCompany'),
+                        'action': item.get('action'),
+                        'priceWhenPosted': item.get('priceWhenPosted')
+                    }
+            
+            records = list(unique_records.values())
             
             if records:
                 stmt = insert(StockGradeNews).values(records)
@@ -694,20 +741,30 @@ class UpdateFundamentalData:
             individual_count = 0
             
             if individual_data:
-                records = []
+                # Use a dictionary to deduplicate records by (date, normalized grading company)
+                unique_records = {}
                 for item in individual_data[:100]:
-                    record = {
-                        'ticker_id': ticker_id,
-                        'date': self._safe_date(item.get('date')),
-                        'gradingCompany': item.get('gradingCompany', ''),
-                        'previousGrade': item.get('previousGrade'),
-                        'newGrade': item.get('newGrade'),
-                        'action': item.get('gradeAction')
-                    }
-                    if record['date'] and record['gradingCompany']:
-                        records.append(record)
+                    date = self._safe_date(item.get('date'))
+                    # Normalize grading company name to avoid duplicates like 'Keybanc' vs 'KeyBanc'
+                    grading_company = item.get('gradingCompany', '').strip().lower()
+                    
+                    if date and grading_company:
+                        # Create a unique key for deduplication
+                        key = (date, grading_company)
+                        
+                        # Only keep the first occurrence of each unique combination
+                        if key not in unique_records:
+                            unique_records[key] = {
+                                'ticker_id': ticker_id,
+                                'date': date,
+                                'gradingCompany': item.get('gradingCompany', ''),  # Keep original case for storage
+                                'previousGrade': item.get('previousGrade'),
+                                'newGrade': item.get('newGrade'),
+                                'action': item.get('gradeAction')
+                            }
                 
-                if records:
+                if unique_records:
+                    records = list(unique_records.values())
                     stmt = insert(StockGradesIndividual).values(records)
                     stmt = stmt.on_conflict_do_update(
                         index_elements=['ticker_id', 'date', 'gradingCompany'],
@@ -757,22 +814,25 @@ class UpdateFundamentalData:
             if not data:
                 return 0
             
-            records = []
+            # Use a dictionary to deduplicate by date
+            unique_records = {}
             for item in data[:20]:
-                record = {
-                    'ticker_id': ticker_id,
-                    'date': self._safe_date(item.get('date')),
-                    'rating': item.get('symbol'),  # Sometimes the API returns symbol as rating
-                    'overallScore': item.get('score'),
-                    'discountedCashFlowScore': item.get('discountedCashFlowScore'),
-                    'returnOnEquityScore': item.get('returnOnEquityScore'),
-                    'returnOnAssetsScore': item.get('returnOnAssetsScore'),
-                    'debtToEquityScore': item.get('debtToEquityScore'),
-                    'priceToEarningsScore': item.get('priceToEarningsScore'),
-                    'priceToBookScore': item.get('priceToBookScore')
-                }
-                if record['date']:
-                    records.append(record)
+                date = self._safe_date(item.get('date'))
+                if date and date not in unique_records:
+                    unique_records[date] = {
+                        'ticker_id': ticker_id,
+                        'date': date,
+                        'rating': item.get('symbol'),  # Sometimes the API returns symbol as rating
+                        'overallScore': item.get('score'),
+                        'discountedCashFlowScore': item.get('discountedCashFlowScore'),
+                        'returnOnEquityScore': item.get('returnOnEquityScore'),
+                        'returnOnAssetsScore': item.get('returnOnAssetsScore'),
+                        'debtToEquityScore': item.get('debtToEquityScore'),
+                        'priceToEarningsScore': item.get('priceToEarningsScore'),
+                        'priceToBookScore': item.get('priceToBookScore')
+                    }
+            
+            records = list(unique_records.values())
             
             if records:
                 stmt = insert(Rating).values(records)
@@ -795,29 +855,32 @@ class UpdateFundamentalData:
             if not data:
                 return 0
             
-            records = []
+            # Use a dictionary to deduplicate by date
+            unique_records = {}
             for item in data[:20]:  # Last 20 recommendations
-                record = {
-                    'ticker_id': ticker_id,
-                    'date': self._safe_date(item.get('date')),
-                    'rating': item.get('rating'),
-                    'ratingScore': item.get('ratingScore'),
-                    'ratingRecommendation': item.get('ratingRecommendation'),
-                    'ratingDetailsDCFScore': item.get('ratingDetailsDCFScore'),
-                    'ratingDetailsDCFRecommendation': item.get('ratingDetailsDCFRecommendation'),
-                    'ratingDetailsROEScore': item.get('ratingDetailsROEScore'),
-                    'ratingDetailsROERecommendation': item.get('ratingDetailsROERecommendation'),
-                    'ratingDetailsROAScore': item.get('ratingDetailsROAScore'),
-                    'ratingDetailsROARecommendation': item.get('ratingDetailsROARecommendation'),
-                    'ratingDetailsDEScore': item.get('ratingDetailsDEScore'),
-                    'ratingDetailsDERecommendation': item.get('ratingDetailsDERecommendation'),
-                    'ratingDetailsPEScore': item.get('ratingDetailsPEScore'),
-                    'ratingDetailsPERecommendation': item.get('ratingDetailsPERecommendation'),
-                    'ratingDetailsPBScore': item.get('ratingDetailsPBScore'),
-                    'ratingDetailsPBRecommendation': item.get('ratingDetailsPBRecommendation')
-                }
-                if record['date']:
-                    records.append(record)
+                date = self._safe_date(item.get('date'))
+                if date and date not in unique_records:
+                    unique_records[date] = {
+                        'ticker_id': ticker_id,
+                        'date': date,
+                        'rating': item.get('rating'),
+                        'ratingScore': item.get('ratingScore'),
+                        'ratingRecommendation': item.get('ratingRecommendation'),
+                        'ratingDetailsDCFScore': item.get('ratingDetailsDCFScore'),
+                        'ratingDetailsDCFRecommendation': item.get('ratingDetailsDCFRecommendation'),
+                        'ratingDetailsROEScore': item.get('ratingDetailsROEScore'),
+                        'ratingDetailsROERecommendation': item.get('ratingDetailsROERecommendation'),
+                        'ratingDetailsROAScore': item.get('ratingDetailsROAScore'),
+                        'ratingDetailsROARecommendation': item.get('ratingDetailsROARecommendation'),
+                        'ratingDetailsDEScore': item.get('ratingDetailsDEScore'),
+                        'ratingDetailsDERecommendation': item.get('ratingDetailsDERecommendation'),
+                        'ratingDetailsPEScore': item.get('ratingDetailsPEScore'),
+                        'ratingDetailsPERecommendation': item.get('ratingDetailsPERecommendation'),
+                        'ratingDetailsPBScore': item.get('ratingDetailsPBScore'),
+                        'ratingDetailsPBRecommendation': item.get('ratingDetailsPBRecommendation')
+                    }
+            
+            records = list(unique_records.values())
             
             if records:
                 stmt = insert(AnalystRecommendation).values(records)
@@ -904,7 +967,8 @@ class UpdateFundamentalData:
                     # Fetch transcript from API
                     data = self.fmp_api.get_earnings_transcript(ticker_symbol, year, quarter)
                     
-                    if data and data.get('content'):
+                    # Check if data is a dictionary (not a list) and has content
+                    if data and isinstance(data, dict) and data.get('content'):
                         record = {
                             'ticker_id': ticker_id,
                             'period': str(quarter),
@@ -961,17 +1025,31 @@ class UpdateFundamentalData:
             ]
             
             for data_type, update_method in update_methods:
-                count = update_method(ticker_id, ticker_symbol, session)
-                results['details'][data_type] = count
-                
-                # Update counters
-                with self.lock:
-                    if count > 0:
-                        self.counters[data_type] += count
-                    elif count == -1:
-                        results['success'] = False
+                try:
+                    # Create a savepoint before each update method
+                    session.execute(text(f"SAVEPOINT sp_{data_type}"))
+                    
+                    count = update_method(ticker_id, ticker_symbol, session)
+                    results['details'][data_type] = count
+                    
+                    # If successful, release the savepoint
+                    session.execute(text(f"RELEASE SAVEPOINT sp_{data_type}"))
+                    
+                    # Update counters
+                    with self.lock:
+                        if count > 0:
+                            self.counters[data_type] += count
+                        elif count == -1:
+                            results['success'] = False
+                            
+                except Exception as e:
+                    # Rollback to the savepoint if this specific update fails
+                    session.execute(text(f"ROLLBACK TO SAVEPOINT sp_{data_type}"))
+                    print(f"Failed to update {data_type} for {ticker_symbol}: {str(e)}")
+                    results['details'][data_type] = -1
+                    # Continue with other updates instead of failing entirely
             
-            # Commit all changes for this ticker
+            # Commit all successful changes for this ticker
             session.commit()
             
             # Update progress
@@ -1077,9 +1155,5 @@ class UpdateFundamentalData:
 if __name__ == "__main__":
     updater = UpdateFundamentalData()
     
-    # Test with a small number of tickers first
-    print("Testing with 5 tickers...")
-    updater.update_all_fundamentals(max_workers=3, ticker_limit=5)
-    
     # Uncomment to run full update
-    # updater.update_all_fundamentals(max_workers=5) 
+    updater.update_all_fundamentals(max_workers=5) 

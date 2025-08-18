@@ -4,6 +4,9 @@ from backend.src.db.core.db_config import MarketSession
 from backend.src.db.core.market_data_models import *
 from datetime import datetime
 from pandas import DataFrame
+import logging
+
+logger = logging.getLogger(__name__)
 
 def get_price_data_15_mins(ticker: str, start_date: datetime, end_date: datetime):
     ticker = ticker.upper()
@@ -21,9 +24,9 @@ def get_price_data_15_mins(ticker: str, start_date: datetime, end_date: datetime
         # Debug: Check if ticker exists
         ticker_exists = session.query(Ticker).filter(Ticker.ticker == ticker).first()
         if not ticker_exists:
-            print(f"Ticker '{ticker}' not found in database")
+            logger.debug("Ticker '%s' not found in database", ticker)
         else:
-            print(f"Ticker '{ticker}' exists but no price data for date range {start_date} to {end_date}")
+            logger.debug("Ticker '%s' exists but no price data for date range %s to %s", ticker, start_date, end_date)
     
     session.close()
     return df
@@ -109,9 +112,9 @@ def get_price_data_daily(ticker: str, start_date: datetime, end_date: datetime):
         if df.empty:
             ticker_exists = session.query(Ticker).filter(Ticker.ticker == ticker).first()
             if not ticker_exists:
-                print(f"Ticker '{ticker}' not found in database")
+                logger.debug("Ticker '%s' not found in database", ticker)
             else:
-                print(f"Ticker '{ticker}' exists but no price data for date range {start_date} to {end_date}")
+                logger.debug("Ticker '%s' exists but no price data for date range %s to %s", ticker, start_date, end_date)
                 
         return df
         

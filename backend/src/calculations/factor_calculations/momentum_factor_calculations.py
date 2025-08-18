@@ -16,16 +16,21 @@ class MomentumFactors:
         if self.prices is not None:
             self.returns = self.prices.pct_change(fill_method=None).dropna()
 
-        self.volumes = volume_series.astype(float).reindex(self.prices.index)
+        self.volumes = volume_series.astype(float).reindex(self.prices.index) if volume_series is not None else None
 
-        self.sector_prices = sector_price_series.astype(float).reindex(self.prices.index)
-        if self.sector_prices is not None:
+        if sector_price_series is not None:
+            self.sector_prices = sector_price_series.astype(float).reindex(self.prices.index)
             self.sector_returns = self.sector_prices.pct_change(fill_method=None).dropna()
+        else:
+            self.sector_prices = None
+            self.sector_returns = None
 
-        self.spy_prices = spy_price_series.astype(float).reindex(self.prices.index)
-
-        if self.spy_prices is not None:
+        if spy_price_series is not None:
+            self.spy_prices = spy_price_series.astype(float).reindex(self.prices.index)
             self.spy_returns = self.spy_prices.pct_change(fill_method=None).dropna()
+        else:
+            self.spy_prices = None
+            self.spy_returns = None
 
     # ------------------------------------------------------------------
     # Generic helpers
@@ -254,7 +259,7 @@ class MomentumFactors:
             Sum of daily residuals. Higher ⇒ positive idiosyncratic trend.
         """
         if self.spy_prices is None:
-            raise ValueError("spy_price_series is required for this metric")
+            return None
 
         import statsmodels.api as sm
         
@@ -280,7 +285,7 @@ class MomentumFactors:
         Requires `sector_price_series` supplied at construction.
         """
         if self.sector_prices is None:
-            raise ValueError("sector_price_series is required for this metric")
+            return None
         
         import statsmodels.api as sm
 
@@ -318,7 +323,7 @@ class MomentumFactors:
             Σ(r_t * vol_t) / Σ(vol_t).  Requires `volume_series`.
         """
         if self.volumes is None:
-            raise ValueError("volume_series is required for this metric")
+            return None
 
         if len(self.returns) < lookback + 1:
             return None

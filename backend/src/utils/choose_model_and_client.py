@@ -123,3 +123,39 @@ def openai_huggingface_model_and_client(model: str = None):
     )
 
     return model, client
+
+def gemini_model_and_client(model: str = None):
+    """
+    Create a Gemini model name and OpenAI client instance.
+    
+    Args:
+        model: Model name to use (default: from GEMINI_MODEL env var)
+        
+    Returns:
+        tuple: (model_name, openai_client) for Gemini API
+    """
+
+    GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
+
+    if model is None:
+        model = os.environ.get("GEMINI_MODEL")
+
+    client = OpenAI(
+        api_key=GEMINI_API_KEY,
+        base_url="https://generativelanguage.googleapis.com/v1beta/openai/"
+    )
+
+    return model, client
+
+def llama_model_and_client(model: str = None):
+    api_key = os.getenv("TOGETHER_AI_API_KEY")
+
+    if model is None:
+        model = os.environ.get("LLAMA_MODEL")
+
+    client = OpenAI(
+        base_url="https://api.together.xyz/v1",
+        api_key=api_key,
+    )
+
+    return model, client

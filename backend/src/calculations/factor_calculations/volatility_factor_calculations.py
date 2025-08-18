@@ -80,18 +80,20 @@ class VolatilityFactors:
     # ------------------------------------------------------------------
     def beta_1yr(self) -> Optional[float]:
         """
-        1-Year Beta (CAPM) = cov(returns, spy) / var(spy) over 252 days
+        Beta (CAPM) = cov(returns, spy) / var(spy) - uses available data, minimum 30 days
         """
         if self.spy_returns is None:
             return None
         
-        # Align returns and get last 252 days
+        # Align returns and use available data (minimum 30 days)
         combined_df = pd.concat([self.returns, self.spy_returns], axis=1, keys=['asset', 'spy']).dropna()
         
-        if len(combined_df) < 252:
+        if len(combined_df) < 30:
             return None
         
-        recent_data = combined_df.iloc[-252:]
+        # Use up to 252 days if available, otherwise use what we have
+        lookback = min(252, len(combined_df))
+        recent_data = combined_df.iloc[-lookback:]
         asset_returns = recent_data['asset']
         spy_returns = recent_data['spy']
         
@@ -109,30 +111,60 @@ class VolatilityFactors:
     # ------------------------------------------------------------------
     def idiosyncratic_vol(self) -> Optional[float]:
         """
-        Idiosyncratic Volatility = std(residuals) from CAPM over 252 days
+        Idiosyncratic Volatility = std(residuals) from CAPM - uses available data, minimum 30 days
         """
         if self.spy_returns is None:
             return None
         
-        import statsmodels.api as sm
-        
-        # Align returns and get last 252 days
+        # Align returns and use available data
         combined_df = pd.concat([self.returns, self.spy_returns], axis=1, keys=['asset', 'spy']).dropna()
         
-        if len(combined_df) < 252:
+        if len(combined_df) < 30:  # Minimum 30 days
             return None
         
-        recent_data = combined_df.iloc[-252:]
+        # Use up to 252 days if available, otherwise use what we have
+        lookback = min(252, len(combined_df))
+        recent_data = combined_df.iloc[-lookback:]
         y = recent_data['asset']
         x_market = recent_data['spy']
-        x = sm.add_constant(x_market)
         
-        model = sm.OLS(y, x, missing="drop").fit()
-        residuals = model.resid
+        try:
+            import statsmodels.api as sm
+            x = sm.add_constant(x_market)
+            model = sm.OLS(y, x, missing="drop").fit()
+            residuals = model.resid
+        except ImportError:
+            # Fallback: Manual CAPM calculation without statsmodels
+            # Convert to numpy arrays to ensure proper calculation
+            y_values = y.values
+            x_values = x_market.values
+            
+            # Calculate beta using covariance method
+            covariance = np.cov(y_values, x_values)[0, 1]
+            market_variance = np.var(x_values, ddof=1)
+            
+            if market_variance == 0 or np.isnan(market_variance):
+                return None
+                
+            beta = covariance / market_variance
+            alpha = np.mean(y_values) - beta * np.mean(x_values)
+            
+            # Calculate predicted returns using CAPM: R = alpha + beta * R_market
+            predicted_returns = alpha + beta * x_values
+            
+            # Calculate residuals: actual - predicted
+            residuals = y_values - predicted_returns
         
         # Annualize the residual volatility
-        idio_vol = residuals.std() * np.sqrt(252)
-        return idio_vol
+        # Use ddof=1 for sample standard deviation (consistent with financial practice)
+        if hasattr(residuals, 'std'):
+            # pandas Series
+            idio_vol = residuals.std() * np.sqrt(252)
+        else:
+            # numpy array
+            idio_vol = np.std(residuals, ddof=1) * np.sqrt(252)
+        
+        return idio_vol if not (np.isnan(idio_vol) or idio_vol <= 0) else None
 
     # ------------------------------------------------------------------
     # Downside Deviation
@@ -156,25 +188,27 @@ class VolatilityFactors:
     # ------------------------------------------------------------------
     def max_drawdown_1yr(self) -> Optional[float]:
         """
-        Max Drawdown (1 yr) = (peak − trough) / peak over rolling 252 days
+        Max Drawdown = (peak − trough) / peak - uses available data, minimum 30 days
         """
-        if len(self.prices) < 252:
+        if len(self.prices) < 30:
             return None
         
-        prices_1yr = self.prices.iloc[-252:]
+        # Use up to 252 days if available, otherwise use what we have
+        lookback = min(252, len(self.prices))
+        prices_period = self.prices.iloc[-lookback:]
         
         # Calculate cumulative maximum (running peak)
-        cumulative_max = prices_1yr.expanding().max()
+        cumulative_max = prices_period.expanding().max()
 
         # Avoid division by zero
         safe_cumulative_max = cumulative_max.replace(0, np.nan)
         
         # Calculate drawdown at each point
-        drawdown = (prices_1yr - safe_cumulative_max) / safe_cumulative_max
+        drawdown = (prices_period - safe_cumulative_max) / safe_cumulative_max
         
         # Maximum drawdown is the most negative value
         max_dd = drawdown.min()
-        return max_dd
+        return max_dd if not np.isnan(max_dd) else None
 
     # ------------------------------------------------------------------
     # ATR/Price Ratio
@@ -216,21 +250,28 @@ class VolatilityFactors:
     # ------------------------------------------------------------------
     def variance_ratio_3m_12m(self) -> Optional[float]:
         """
-        Variance Ratio (3m / 12m) = var_63d / var_252d
+        Variance Ratio (3m / 12m) = var_short / var_long - uses available data
         """
-        if len(self.returns) < 252:
+        if len(self.returns) < 63:  # Need at least 3 months
             return None
         
-        returns_63d = self.returns.iloc[-63:]
-        returns_252d = self.returns.iloc[-252:]
+        # Use 63 days for short period
+        returns_short = self.returns.iloc[-63:]
         
-        var_63d = returns_63d.var()
-        var_252d = returns_252d.var()
+        # For long period, use min(252, available data) but at least 126 days
+        long_lookback = min(252, len(self.returns))
+        if long_lookback < 126:
+            long_lookback = len(self.returns)  # Use all available if less than 126
+            
+        returns_long = self.returns.iloc[-long_lookback:]
         
-        if var_252d == 0:
+        var_short = returns_short.var()
+        var_long = returns_long.var()
+        
+        if var_long == 0:
             return None
         
-        variance_ratio = var_63d / var_252d
+        variance_ratio = var_short / var_long
         return variance_ratio
 
     # ------------------------------------------------------------------
@@ -238,25 +279,29 @@ class VolatilityFactors:
     # ------------------------------------------------------------------
     def skewness(self, lookback: int = 252) -> Optional[float]:
         """
-        Skewness = scipy.stats.skew(returns_252d)
+        Skewness = scipy.stats.skew(returns) - uses available data, minimum 30 days
         """
-        if len(self.returns) < lookback:
+        if len(self.returns) < 30:
             return None
         
-        returns_period = self.returns.iloc[-lookback:]
+        # Use up to lookback days if available, otherwise use what we have
+        actual_lookback = min(lookback, len(self.returns))
+        returns_period = self.returns.iloc[-actual_lookback:]
         skew = scipy.stats.skew(returns_period)
-        return skew
+        return skew if not np.isnan(skew) else None
 
     def kurtosis(self, lookback: int = 252) -> Optional[float]:
         """
-        Kurtosis = scipy.stats.kurtosis(returns_252d)
+        Kurtosis = scipy.stats.kurtosis(returns) - uses available data, minimum 30 days
         """
-        if len(self.returns) < lookback:
+        if len(self.returns) < 30:
             return None
         
-        returns_period = self.returns.iloc[-lookback:]
+        # Use up to lookback days if available, otherwise use what we have
+        actual_lookback = min(lookback, len(self.returns))
+        returns_period = self.returns.iloc[-actual_lookback:]
         kurt = scipy.stats.kurtosis(returns_period)
-        return kurt
+        return kurt if not np.isnan(kurt) else None
 
     # ------------------------------------------------------------------
     # GARCH Forecast

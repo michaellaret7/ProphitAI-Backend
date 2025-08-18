@@ -1,4 +1,4 @@
-from backend.src.prophit_alts.core.base_agent_class import BaseAgent
+from backend.src.agentic_framework.base_agent import BaseAgent
 from backend.src.prophit_alts.consumer_staples_fund.build_portfolio.prompts.industry_prompts.distribution_and_retail import distribution_and_retail_system_prompt, distribution_and_retail_user_prompt
 from backend.src.prophit_alts.consumer_staples_fund.build_portfolio.prompts.industry_prompts.beverages import beverages_system_prompt, beverages_user_prompt
 from backend.src.prophit_alts.consumer_staples_fund.build_portfolio.prompts.industry_prompts.household_products import household_products_system_prompt, household_products_user_prompt
