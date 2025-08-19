@@ -341,7 +341,7 @@ class BaseAgent:
         for tool in self.tools:
             func_def = tool.get('function', {})
             tool_registry[func_def.get('name')] = func_def
-        self._arg_parser = ToolArgumentParser(tool_registry)
+        self._arg_parser = ToolArgumentParser(tool_registry, verbose=self.verbose)
 
     # --- Core run loop -----------------------------------------------------
     def run(self) -> Dict[str, Any]:
@@ -379,7 +379,7 @@ class BaseAgent:
                 {
                     "role": "user",
                     "content": (
-                        "Before you start, produce a JSON plan to follow that will accomplish the user's goal: {\"plan\":[{\"step\":1,\"desc\":\"...\"},...]}\n"
+                        "Before you start, produce an extensively detailed and thorough JSON plan for you to follow that will accomplish the user's goal: {\"plan\":[{\"step\":1,\"desc\":\"...\"},...]}\n"
                         "After you produce the json plan, you must come up with an actionable to-do list which must be numbered in the following format: \n\n"
                         "1. [actionable item 1]\n"
                             "a. [actionable item 1a]\n"

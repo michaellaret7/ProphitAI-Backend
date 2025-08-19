@@ -273,7 +273,6 @@ class ThemeAnalysis:
         
         plt.show()
 
-
 class RiskAttributionAnalysis:
     """
     Advanced risk attribution and performance analysis tools
@@ -383,316 +382,218 @@ class RiskAttributionAnalysis:
         return pd.DataFrame(results)
 
 
-class LiquidityAnalysis:
+
+# Simple usage example
+def main():
     """
-    Liquidity analysis and management tools
+    Simple example showing how to use ThemeAnalysis with price data
     """
+    from backend.src.repositories.price_data import fetch_bulk_price_data_for_tickers
     
-    def __init__(self, fund_manager):
-        self.fund = fund_manager
-        self.liquidity_tiers = {
-            'Tier1': {'max_days_to_liquidate': 1, 'max_allocation': 1.0},
-            'Tier2': {'max_days_to_liquidate': 5, 'max_allocation': 0.3},
-            'Tier3': {'max_days_to_liquidate': 20, 'max_allocation': 0.2}
-        }
+    # 1. Define theme instruments
+    ai_stocks = ['NVDA', 'MSFT', 'GOOGL', 'AMD']
+    energy_stocks = ['PLTR', 'FSLR', 'NEE', 'ENPH']
+    all_tickers = ai_stocks + energy_stocks
     
-    def classify_instrument_liquidity(self, volume_data, spread_data):
-        """
-        Classify instruments by liquidity tiers based on volume and spreads
-        
-        Parameters:
-        volume_data: DataFrame with average daily volumes
-        spread_data: DataFrame with bid-ask spreads
-        """
-        liquidity_scores = {}
-        
-        for instrument in volume_data.index:
-            # Volume score (higher is better)
-            volume_percentile = volume_data[instrument] / volume_data.quantile(0.95)
+    # 2. Fetch price data using your function
+    print("Fetching price data...")
+    price_data = fetch_bulk_price_data_for_tickers(
+        tickers=all_tickers,
+        start_date_str='2023-01-01',
+        end_date_str='2024-01-01',
+        frequency='daily'
+    )
+    
+    # 3. Create returns data
+    returns_data = {}
+    for ticker, prices in price_data.items():
+        if len(prices) > 1:
+            returns_data[ticker] = prices.pct_change().dropna()
+    
+    returns_df = pd.DataFrame(returns_data).dropna()
+    print(f"Returns data shape: {returns_df.shape}")
+    
+    # 4. Create minimal fund manager mock
+    class SimpleFund:
+        def __init__(self, returns_history):
+            self.returns_history = returns_history
+            self.covariance_matrix = returns_history.cov() * 252  # Annualized
             
-            # Spread score (lower is better)
-            spread_percentile = 1 - (spread_data[instrument] / spread_data.quantile(0.95))
+        def optimize_portfolio_weights(self, expected_returns, target_vol=0.08, max_weight=0.4):
+            # Simple equal weight with bounds
+            n_assets = len(expected_returns)
+            equal_weight = 1.0 / n_assets
             
-            # Combined score
-            liquidity_score = (volume_percentile + spread_percentile) / 2
-            
-            # Assign tier
-            if liquidity_score >= 0.7:
-                tier = 'Tier1'
-            elif liquidity_score >= 0.4:
-                tier = 'Tier2'
+            # Cap individual weights at max_weight
+            if equal_weight > max_weight:
+                # If too many assets, use conviction-weighted approach
+                weights = expected_returns / expected_returns.sum()
+                weights = weights.clip(0, max_weight)  # No shorts, cap max
+                weights = weights / weights.sum()      # Renormalize
             else:
-                tier = 'Tier3'
+                weights = pd.Series(equal_weight, index=expected_returns.index)
             
-            liquidity_scores[instrument] = {
-                'score': liquidity_score,
-                'tier': tier,
-                'volume_score': volume_percentile,
-                'spread_score': spread_percentile
-            }
-        
-        return pd.DataFrame(liquidity_scores).T
+            return weights
     
-    def calculate_liquidity_risk(self, weights, liquidity_classifications):
-        """
-        Calculate portfolio-level liquidity risk
-        """
-        tier_allocations = {}
-        
-        for tier in ['Tier1', 'Tier2', 'Tier3']:
-            tier_instruments = liquidity_classifications[
-                liquidity_classifications['tier'] == tier
-            ].index
-            
-            tier_weight = weights[tier_instruments].sum() if len(tier_instruments) > 0 else 0
-            tier_allocations[tier] = tier_weight
-        
-        # Check constraints
-        constraints_met = {}
-        for tier, allocation in tier_allocations.items():
-            max_allowed = self.liquidity_tiers[tier]['max_allocation']
-            constraints_met[tier] = allocation <= max_allowed
-        
-        return {
-            'tier_allocations': tier_allocations,
-            'constraints_met': constraints_met,
-            'total_illiquid': tier_allocations.get('Tier2', 0) + tier_allocations.get('Tier3', 0)
-        }
-
-
-class OptionsStrategyAnalysis:
-    """
-    Options strategy analysis for enhanced theme expression
-    """
+    fund = SimpleFund(returns_df)
     
-    def __init__(self, fund_manager):
-        self.fund = fund_manager
-    
-    def analyze_option_strategies(self, underlying, strategy_type='call', 
-                                strike_range=0.1, expiration_days=30):
-        """
-        Analyze option strategies for theme expression
-        
-        Parameters:
-        underlying: Underlying instrument
-        strategy_type: 'call', 'put', 'straddle', 'collar'
-        strike_range: Range around current price to analyze
-        expiration_days: Days to expiration
-        """
-        # This would require real options data - showing framework
-        
-        strategies = {
-            'long_call': self._analyze_long_call,
-            'long_put': self._analyze_long_put,
-            'collar': self._analyze_collar,
-            'straddle': self._analyze_straddle
-        }
-        
-        if strategy_type in strategies:
-            return strategies[strategy_type](underlying, strike_range, expiration_days)
-        else:
-            raise ValueError(f"Strategy {strategy_type} not supported")
-    
-    def _analyze_long_call(self, underlying, strike_range, expiration_days):
-        """Analyze long call strategy"""
-        # Framework for call analysis
-        return {
-            'strategy': 'long_call',
-            'max_profit': 'unlimited',
-            'max_loss': 'premium_paid',
-            'breakeven': 'strike + premium',
-            'risk_reward_ratio': 'asymmetric_upside'
-        }
-    
-    def _analyze_long_put(self, underlying, strike_range, expiration_days):
-        """Analyze long put strategy"""
-        return {
-            'strategy': 'long_put',
-            'max_profit': 'strike - premium',
-            'max_loss': 'premium_paid',
-            'breakeven': 'strike - premium',
-            'risk_reward_ratio': 'asymmetric_downside'
-        }
-    
-    def _analyze_collar(self, underlying, strike_range, expiration_days):
-        """Analyze collar strategy"""
-        return {
-            'strategy': 'collar',
-            'max_profit': 'call_strike - current_price + put_premium - call_premium',
-            'max_loss': 'current_price - put_strike + call_premium - put_premium',
-            'characteristics': 'limited_upside_and_downside'
-        }
-    
-    def _analyze_straddle(self, underlying, strike_range, expiration_days):
-        """Analyze straddle strategy"""
-        return {
-            'strategy': 'straddle',
-            'max_profit': 'unlimited',
-            'max_loss': 'total_premium_paid',
-            'breakeven_upper': 'strike + total_premium',
-            'breakeven_lower': 'strike - total_premium',
-            'characteristics': 'volatility_play'
-        }
-
-
-# Example demonstration of advanced tools
-def demonstrate_advanced_tools():
-    """Demonstrate advanced portfolio construction tools"""
-    
-    # Create sample fund with data
-    from datetime import datetime, timedelta
-    
-    np.random.seed(42)
-    dates = pd.date_range('2020-01-01', '2024-12-31', freq='D')
-    
-    instruments = [
-        'SPY', 'EFA', 'EEM', 'TLT', 'HYG', 'GLD', 'DXY', 'CRUDE_OIL',
-        'EURUSD', 'GBPUSD', 'USDJPY', 'TNX', 'VIX'
-    ]
-    
-    # Generate returns
-    n_instruments = len(instruments)
-    correlation_matrix = np.random.rand(n_instruments, n_instruments)
-    correlation_matrix = (correlation_matrix + correlation_matrix.T) / 2
-    np.fill_diagonal(correlation_matrix, 1.0)
-    
-    # Ensure positive definiteness
-    eigenvals, eigenvecs = np.linalg.eigh(correlation_matrix)
-    eigenvals = np.maximum(eigenvals, 0.01)
-    correlation_matrix = eigenvecs @ np.diag(eigenvals) @ eigenvecs.T
-    
-    # Generate correlated returns
-    L = np.linalg.cholesky(correlation_matrix)
-    random_returns = np.random.normal(0, 0.01, (len(dates), n_instruments))
-    correlated_returns = random_returns @ L.T
-    
-    returns_df = pd.DataFrame(correlated_returns, index=dates, columns=instruments)    # Initialize fund and theme analysis
-    import sys
-    import os
-    sys.path.append(os.path.dirname(__file__))
-    from importlib import import_module
-    
-    # Import from the file with comma in name
-    risk_mgmt = import_module('Hedge_fund_risk_,management')
-    GlobalMacroFund = risk_mgmt.GlobalMacroFund
-    
-    fund = GlobalMacroFund()
-    fund.load_market_data(returns_df)
-    
+    # 5. Initialize ThemeAnalysis
     theme_analyzer = ThemeAnalysis(fund)
     
-    print("=== Advanced Portfolio Construction Demo ===\n")
-    
-    # 1. Create sample themes
-    print("1. Creating Macro Themes:")
-    
-    # Theme 1: USD Strength
-    usd_strength_theme = theme_analyzer.construct_theme_portfolio(
-        theme_name='USD_Strength',
-        instruments=['DXY', 'USDJPY', 'TLT', 'SPY'],
-        convictions={'DXY': 9, 'USDJPY': 8, 'TLT': 6, 'SPY': 7},
-        max_positions=4,
-        target_vol=0.08
-    )
-    print(f"   USD Strength Theme created with {len(usd_strength_theme['instruments'])} instruments")
-    
-    # Theme 2: Risk-Off
-    risk_off_theme = theme_analyzer.construct_theme_portfolio(
-        theme_name='Risk_Off',
-        instruments=['TLT', 'GLD', 'VIX', 'HYG'],
-        convictions={'TLT': 8, 'GLD': 9, 'VIX': 7, 'HYG': -6},  # Short HYG
-        max_positions=4,
-        target_vol=0.10
-    )
-    print(f"   Risk-Off Theme created with {len(risk_off_theme['instruments'])} instruments")
-    
-    # Theme 3: EM Outperformance
-    em_theme = theme_analyzer.construct_theme_portfolio(
-        theme_name='EM_Outperformance',
-        instruments=['EEM', 'EURUSD', 'CRUDE_OIL', 'GLD'],
-        convictions={'EEM': 8, 'EURUSD': 6, 'CRUDE_OIL': 7, 'GLD': 5},
+    # 6. Create AI theme
+    ai_convictions = {'NVDA': 10, 'MSFT': 8, 'GOOGL': 7, 'AMD': 9}
+    ai_theme = theme_analyzer.construct_theme_portfolio(
+        theme_name='AI_Revolution',
+        instruments=ai_stocks,
+        convictions=ai_convictions,
         max_positions=4,
         target_vol=0.12
     )
-    print(f"   EM Outperformance Theme created with {len(em_theme['instruments'])} instruments")
     
-    # 2. Calculate theme correlations
-    print("\n2. Theme Correlation Analysis:")
-    theme_correlations = theme_analyzer.calculate_theme_correlations()
-    print("   Theme correlation matrix:")
-    print(theme_correlations.round(3))
+    print("\n=== AI Theme Results ===")
+    print(f"Instruments: {ai_theme['instruments']}")
+    print(f"Weights:\n{ai_theme['weights']}")
+    print(f"Annual Volatility: {ai_theme['var_metrics']['portfolio_vol_annual']:.2%}")
+    print(f"1-Day VaR: {ai_theme['var_metrics']['var_1day']:.2%}")
     
-    # 3. Optimize theme allocation
-    print("\n3. Optimizing Theme Allocation:")
-    try:
-        allocation_result = theme_analyzer.optimize_theme_allocation(
-            fund_target_vol=0.10,
-            max_theme_weight=0.10
-        )
-        
-        if allocation_result['optimization_success']:
-            print(f"   Target Volatility: {allocation_result['target_volatility']:.1%}")
-            print(f"   Achieved Volatility: {allocation_result['achieved_volatility']:.1%}")
-            print("   Optimal Theme Weights:")
-            for theme, weight in allocation_result['theme_weights'].items():
-                print(f"     {theme}: {weight:.1%}")
-        else:
-            print(f"   Optimization failed: {allocation_result['error']}")
-    except Exception as e:
-        print(f"   Optimization error: {str(e)}")
-    
-    # 4. Risk attribution analysis
-    print("\n4. Risk Attribution Analysis:")
-    risk_analyzer = RiskAttributionAnalysis(fund)
-    
-    # Create sample factor returns
-    factor_names = ['Equity_Factor', 'Rates_Factor', 'Credit_Factor', 'FX_Factor']
-    factor_returns = pd.DataFrame(
-        np.random.normal(0, 0.008, (len(dates), len(factor_names))),
-        index=dates,
-        columns=factor_names
+    # 7. Create Energy theme  
+    energy_convictions = {'PLTR': 9, 'FSLR': 7, 'NEE': 6, 'ENPH': 8}
+    energy_theme = theme_analyzer.construct_theme_portfolio(
+        theme_name='Energy_Transition',
+        instruments=energy_stocks,
+        convictions=energy_convictions,
+        max_positions=4,
+        target_vol=0.15
     )
     
-    try:
-        factor_analysis = risk_analyzer.calculate_factor_exposures(factor_returns)
-        print("   Factor Exposures:")
-        for factor, exposure in factor_analysis['factor_exposures'].items():
-            print(f"     {factor}: {exposure:.3f}")
-        print(f"   Alpha: {factor_analysis['alpha']:.2%}")
-        print(f"   R-squared: {factor_analysis['r_squared']:.3f}")
-    except Exception as e:
-        print(f"   Factor analysis error: {str(e)}")
+    print("\n=== Energy Theme Results ===")
+    print(f"Instruments: {energy_theme['instruments']}")
+    print(f"Weights:\n{energy_theme['weights']}")
+    print(f"Annual Volatility: {energy_theme['var_metrics']['portfolio_vol_annual']:.2%}")
     
-    # 5. Liquidity analysis
-    print("\n5. Liquidity Analysis:")
-    liquidity_analyzer = LiquidityAnalysis(fund)
+    # 8. Calculate theme correlations
+    correlations = theme_analyzer.calculate_theme_correlations()
+    print(f"\n=== Theme Correlations ===")
+    print(correlations)
     
-    # Sample volume and spread data
-    volume_data = pd.Series(np.random.lognormal(10, 1, len(instruments)), index=instruments)
-    spread_data = pd.Series(np.random.uniform(0.001, 0.05, len(instruments)), index=instruments)
+    # 9. Optimize theme allocation
+    allocation = theme_analyzer.optimize_theme_allocation(
+        fund_target_vol=0.10,
+        max_theme_weight=0.60
+    )
     
-    liquidity_classification = liquidity_analyzer.classify_instrument_liquidity(volume_data, spread_data)
-    print("   Liquidity Classifications:")
-    for instrument, data in liquidity_classification.iterrows():
-        print(f"     {instrument}: {data['tier']} (Score: {data['score']:.2f})")
+    if allocation['optimization_success']:
+        print(f"\n=== Optimal Theme Allocation ===")
+        print(f"Target Vol: {allocation['target_volatility']:.2%}")
+        print(f"Achieved Vol: {allocation['achieved_volatility']:.2%}")
+        print(f"Theme Weights:\n{allocation['theme_weights']}")
     
-    # Sample portfolio weights for liquidity analysis
-    sample_weights = pd.Series(1/len(instruments), index=instruments)
-    liquidity_risk = liquidity_analyzer.calculate_liquidity_risk(sample_weights, liquidity_classification)
-    print("\n   Liquidity Risk Assessment:")
-    for tier, allocation in liquidity_risk['tier_allocations'].items():
-        constraint_status = "✓" if liquidity_risk['constraints_met'][tier] else "✗"
-        print(f"     {tier}: {allocation:.1%} {constraint_status}")
-    
-    # 6. Generate dashboard
-    print("\n6. Generating Theme Dashboard...")
-    try:
-        theme_analyzer.generate_theme_dashboard()
-    except Exception as e:
-        print(f"   Dashboard generation error: {str(e)}")
-    
-    return theme_analyzer, risk_analyzer, liquidity_analyzer
+    return theme_analyzer
 
-# Run advanced demonstration
+def demo_theme_identification():
+    """
+    Demonstrate theme identification using dummy economic data
+    """
+    from backend.src.repositories.price_data import fetch_bulk_price_data_for_tickers
+    
+    # 1. Create dummy economic data
+    dates = pd.date_range('2023-01-01', '2024-01-01', freq='D')
+    np.random.seed(42)
+    
+    # Generate realistic economic indicators with some correlation structure
+    economic_data = pd.DataFrame({
+        'fed_funds_rate': np.random.normal(5.0, 0.5, len(dates)).cumsum() * 0.01 + 4.5,
+        '10yr_treasury': np.random.normal(4.2, 0.3, len(dates)).cumsum() * 0.01 + 4.0,
+        'cpi_yoy': np.random.normal(3.5, 0.2, len(dates)).cumsum() * 0.005 + 3.2,
+        'unemployment': np.random.normal(3.8, 0.1, len(dates)).cumsum() * 0.003 + 3.7,
+        'gdp_growth': np.random.normal(2.1, 0.3, len(dates)),
+        'oil_price': np.random.normal(75, 5, len(dates)).cumsum() * 0.1 + 70,
+        'vix': np.abs(np.random.normal(18, 3, len(dates))),
+        'dollar_index': np.random.normal(103, 2, len(dates)).cumsum() * 0.05 + 102
+    }, index=dates)
+    
+    print("=== Economic Data Sample ===")
+    print(economic_data.head())
+    print(f"Economic data shape: {economic_data.shape}")
+    
+    # 2. Get market data  
+    tickers = ['SPY', 'TLT', 'GLD', 'MSFT', 'GOOGL']
+    print(f"\nFetching market data for: {tickers}")
+    price_data = fetch_bulk_price_data_for_tickers(
+        tickers=tickers,
+        start_date_str='2023-01-01', 
+        end_date_str='2024-01-01',
+        frequency='daily'
+    )
+    
+    # Convert to returns
+    market_returns = {}
+    for ticker, prices in price_data.items():
+        if len(prices) > 1:
+            market_returns[ticker] = prices.pct_change().dropna()
+    
+    market_data = pd.DataFrame(market_returns).dropna()
+    print(f"Market data shape: {market_data.shape}")
+    
+    # 3. Create minimal fund for theme analysis
+    class SimpleFund:
+        def __init__(self):
+            pass
+    
+    fund = SimpleFund()
+    theme_analyzer = ThemeAnalysis(fund)
+    
+    # 4. Run theme identification
+    print("\n=== Running Theme Identification ===")
+    theme_results = theme_analyzer.identify_macro_themes(
+        economic_data=economic_data,
+        market_data=market_data,
+        lookback_days=200
+    )
+    
+    # 5. Display results
+    print("\n=== PCA Results ===")
+    print("Explained Variance by Component:")
+    for i, var in enumerate(theme_results['explained_variance'][:5]):
+        print(f"PC{i+1}: {var:.3f} ({var*100:.1f}%)")
+    
+    print(f"\nTotal variance explained by first 5 PCs: {theme_results['explained_variance'][:5].sum():.1%}")
+    
+    print("\n=== Top Loadings for First 3 Principal Components ===")
+    loadings = theme_results['pca_loadings']
+    
+    for pc in ['PC1', 'PC2', 'PC3']:
+        print(f"\n{pc} - Top Contributors:")
+        top_loadings = loadings[pc].abs().nlargest(5)
+        for indicator, loading in top_loadings.items():
+            direction = "+" if loadings.loc[indicator, pc] > 0 else "-"
+            print(f"  {direction} {indicator}: {abs(loading):.3f}")
+    
+    print("\n=== Cluster Assignments ===")
+    clusters = theme_results['cluster_assignments']
+    for cluster_id in sorted(clusters.unique()):
+        indicators = clusters[clusters == cluster_id].index.tolist()
+        print(f"Cluster {cluster_id}: {indicators}")
+    
+    print("\n=== Theme Interpretation ===")
+    # Interpret the first principal component
+    pc1_loadings = loadings['PC1']
+    top_positive = pc1_loadings.nlargest(3)
+    top_negative = pc1_loadings.nsmallest(3)
+    
+    print("PC1 could represent a macro theme driven by:")
+    print("Positive drivers (move together):")
+    for indicator, loading in top_positive.items():
+        print(f"  - {indicator}: {loading:.3f}")
+    
+    print("Negative drivers (move opposite):")  
+    for indicator, loading in top_negative.items():
+        print(f"  - {indicator}: {loading:.3f}")
+    
+    return theme_results
+
+# Uncomment to run the example
 if __name__ == "__main__":
-    theme_analyzer, risk_analyzer, liquidity_analyzer = demonstrate_advanced_tools()
+    # analyzer = main()  # Theme construction example
+    theme_results = demo_theme_identification()  # Theme identification example
+

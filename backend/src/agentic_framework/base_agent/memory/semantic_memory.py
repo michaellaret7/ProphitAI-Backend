@@ -51,6 +51,10 @@ class SemanticMemory:
                             if top_level_categories:
                                 loaded_memories = top_level_categories
                     self.memories = loaded_memories
+                    
+                    # Dynamically inject current date into memory
+                    self._update_current_date_in_memory(data)
+                    
                     if self.verbose:
                         total_memories = sum(len(m) for m in self.memories.values())
                         print(f"📚 Loaded {total_memories} semantic memories for {self.agent_type} agent")
@@ -58,6 +62,28 @@ class SemanticMemory:
             if self.verbose:
                 print(f"⚠️ Failed to load semantic memory: {e}")
             self.memories = {}
+    
+    def _update_current_date_in_memory(self, data: Dict[str, Any]) -> None:
+        """Update the current_date field in memory with today's date."""
+        current_date = datetime.now().strftime('%Y-%m-%d')
+        
+        # Check if current_date field exists and update it
+        if isinstance(data, dict) and 'current_date' in data:
+            data['current_date'] = current_date
+            
+            # Save the updated memory back to disk if save_memory is enabled
+            if self.save_memory:
+                try:
+                    self.memory_dir.mkdir(parents=True, exist_ok=True)
+                    with open(self.memory_path, 'w', encoding='utf-8') as f:
+                        json.dump(data, f, indent=2, ensure_ascii=False)
+                    
+                    if self.verbose:
+                        print(f"📅 Updated current_date to {current_date} in {self.agent_type} memory")
+                        
+                except Exception as e:
+                    if self.verbose:
+                        print(f"⚠️ Failed to save updated current_date: {e}")
     
     def _save_memories(self) -> None:
         """Save semantic memories to disk."""
@@ -201,6 +227,12 @@ class SemanticMemory:
         if concise:
             # Concise format for refresh injections
             formatted = []
+            
+            # Add current date for context
+            current_date = self.get_current_date()
+            if current_date:
+                formatted.append(f"📅 Date: {current_date}")
+                
             for memory in relevant_memories:
                 title = memory.get('title', 'Untitled')
                 key_point = memory.get('application') or memory.get('content', '')[:150]
@@ -210,6 +242,12 @@ class SemanticMemory:
             # Full format for initial context
             formatted = ["📚 RELEVANT KNOWLEDGE BASE:"]
             formatted.append("=" * 50)
+            
+            # Add current date at the top of knowledge base
+            current_date = self.get_current_date()
+            if current_date:
+                formatted.append(f"\n📅 CURRENT DATE: {current_date}")
+                formatted.append("")
             
             for memory in relevant_memories:
                 formatted.append(f"\n[{memory.get('category', 'general').upper()}] {memory.get('title', 'Untitled')}")
@@ -222,6 +260,20 @@ class SemanticMemory:
             formatted.append("Use the above knowledge to inform your analysis and decisions.\n")
             
             return "\n".join(formatted)
+    
+    def get_current_date(self) -> Optional[str]:
+        """Get the current date from memory if available."""
+        # First check if we have the date stored at the root level of our loaded data
+        if self.save_memory and self.memory_path.exists():
+            try:
+                with open(self.memory_path, 'r', encoding='utf-8') as f:
+                    data = json.load(f)
+                    return data.get('current_date')
+            except Exception:
+                pass
+        
+        # Fallback to current system date
+        return datetime.now().strftime('%Y-%m-%d')
 
 
 # Pre-populate CRO Agent risk management concepts

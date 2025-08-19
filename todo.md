@@ -1,145 +1,191 @@
-# Tool Error Memory Auto-Retry Implementation Plan
-
-## Problem Statement
-When a tool call fails, the error memory system provides guidance but doesn't automatically retry the tool in the same iteration. The agent receives the error with solution guidance but must wait for the next iteration to retry, wasting iterations and potentially losing context.
-
-## Objective
-Implement automatic tool retry within the same iteration when error memory has a solution, allowing the agent to immediately apply the fix without waiting for the next iteration.
+# CRO Agent Prompt Enhancement: Advanced Risk Management Tools Integration
 
 ## Implementation Plan
 
-### Todo Items
-- [x] Modify execute_tool_safe() to attempt auto-retry when solution exists
-- [x] Add retry mechanism with solution injection
-- [x] Update tool execution flow to handle retry responses
-- [x] Add retry tracking to prevent infinite loops
-- [ ] Test with portfolio analysis tool errors
+### 3. CRO Agent Prompt Integration ✅ COMPLETED
 
-## Technical Approach
+#### Phase 3A: System Prompt Enhancement ✅ COMPLETED
+- [x] Update "Tools Available" section in `cro_agent_prompts.py`
+  - ✅ Added `vol_es()` tool with VaR/ES calculation parameters
+  - ✅ Added `risk_contribution()` tool with risk decomposition guidance
+  - ✅ Added `drawdown_profile()` tool with historical analysis context
+  - ✅ Maintained consistent formatting with existing tools
+  - ✅ Included parameter examples and dictionary format specifications
 
-### 1. Current Flow (Problem)
+- [x] Enhance "Analysis Approach" workflow
+  - ✅ Expanded from 5 to 7-step approach
+  - ✅ Added Step 1: Quantitative Risk Baseline using `vol_es()` 
+  - ✅ Added Step 2: Risk Attribution Analysis using `risk_contribution()`
+  - ✅ Added Step 3: Historical Resilience Check using `drawdown_profile()`
+  - ✅ Maintained existing stress testing and correlation analysis integration
+
+- [x] Update "Goal" section risk analysis methodology
+  - ✅ Changed from "correlation analysis" to "quantitative risk analysis"
+  - ✅ Integrated VaR/Expected Shortfall as primary risk baseline
+  - ✅ Added risk contribution for concentration management
+  - ✅ Added drawdown analysis for downside protection
+  - ✅ Updated Rules section to include new tools in portfolio analysis restrictions
+
+#### Phase 3B: User Prompt Enhancement ✅ COMPLETED 
+- [x] Update "EXECUTION APPROACH" with new tools
+  - ✅ Integrated VaR/ES baseline → risk contribution → drawdown analysis sequence
+  - ✅ Added specific tool usage order in workflow
+  - ✅ Updated to require full risk metrics for each iteration
+  - ✅ Ensured logical progression from statistical → attribution → historical analysis
+
+- [x] Enhance workflow sequence documentation
+  - ✅ Added 5-step "RISK ANALYSIS SEQUENCE" with specific tools
+  - ✅ Established VaR/ES baseline as first risk assessment (targets: VaR < 2%, ES < 3%)
+  - ✅ Added risk contribution for concentration analysis (no position > 10% of risk)
+  - ✅ Included drawdown profile for resilience check (max DD < 15%, ulcer < 5%)
+  - ✅ Maintained correlation/covariance and stress test integration
+
+- [x] Add risk metrics validation requirements
+  - ✅ Created new "Risk Metrics Validation Requirements" section
+  - ✅ Set VaR threshold: Daily VaR < 2% (99% confidence)
+  - ✅ Set ES threshold: Daily ES < 3% for tail risk control
+  - ✅ Risk concentration limit: No position > 10% of total risk
+  - ✅ Drawdown parameters: Max DD < 15%, Ulcer Index < 5%
+  - ✅ Correlation limit: Avoid clusters > 0.7 correlation
+  - ✅ Stress test requirement: Must survive -30% market crash
+
+#### Phase 3C: Tool Usage Guidelines Integration ✅ COMPLETED
+- [x] Add comprehensive tool sequencing guidance
+  - ✅ Created "Tool Usage Sequencing Guidelines" section with 7-step optimal sequence
+  - ✅ Defined when to re-run risk analysis (after modifications, iterations, final validation)
+  - ✅ Added decision trees for tool selection by analysis phase
+  - ✅ Integrated with existing portfolio analysis tool restrictions
+
+- [x] Update dictionary format rules for new tools
+  - ✅ Added parameter specifications for vol_es, risk_contribution, drawdown_profile
+  - ✅ Provided parameter validation examples (ranges, types, defaults)
+  - ✅ Included error handling guidance (adjust and retry on invalid parameters)
+  - ✅ Maintained consistency with existing portfolio_dict format
+
+- [x] Enhance "Rules" section for new tools
+  - ✅ Added "MINIMUM ANALYSIS REQUIREMENTS before Final Answer" section
+  - ✅ Defined mandatory risk tool usage (vol_es, risk_contribution, drawdown_profile)
+  - ✅ Established requirement for 2-3 portfolio iterations with risk metrics
+  - ✅ Added "RISK TOOL USAGE RESTRICTIONS" with parameter guidance
+
+## Tool Integration Specifications
+
+### vol_es Tool Integration
+**Purpose**: Primary risk metric for portfolio evaluation
+**Placement**: Core analysis step after initial portfolio assessment
+**Usage Pattern**: 
+- Baseline risk measurement on initial portfolio
+- Risk validation after each portfolio modification
+- Final risk confirmation before output
+
+### risk_contribution Tool Integration  
+**Purpose**: Risk attribution and concentration analysis
+**Placement**: Secondary analysis after vol_es for deep-dive investigation
+**Usage Pattern**:
+- Identify highest risk contributors after vol_es analysis
+- Guide position sizing decisions
+- Validate risk distribution improvements
+
+### drawdown_profile Tool Integration
+**Purpose**: Historical resilience and downside protection assessment
+**Placement**: Tertiary analysis for comprehensive risk evaluation  
+**Usage Pattern**:
+- Historical context after statistical risk analysis
+- Complement stress testing with actual historical experience
+- Client suitability and risk tolerance validation
+
+## Expected Workflow Enhancement
+
+### New Enhanced Analysis Approach (6 Steps)
+1. **Portfolio-Level Risk Assessment**: Correlation/covariance matrices + VaR/ES baseline
+2. **Risk Attribution Analysis**: Use risk_contribution() to identify concentrations
+3. **Historical Resilience Validation**: Use drawdown_profile() for downside assessment  
+4. **Stress Testing**: Comprehensive scenario testing with existing tools
+5. **Market Context Research**: Current conditions with free_search
+6. **Iterative Optimization**: Test variations with full risk analysis suite
+
+### Updated Tool Usage Sequence
 ```
-Tool fails → Record error → Get solution → Return error with guidance → Wait for next iteration → Agent retries
-```
-
-### 2. Desired Flow (Solution)
-```
-Tool fails → Record error → Get solution → Auto-retry with corrected args → Return success (or final error)
-```
-
-### 3. Implementation Details
-
-#### A. Modify execute_tool_safe() in utilities.py
-- When tool fails with TypeError/error
-- Check if error memory has a solution
-- If solution exists with high confidence (>0.7):
-  - Extract example_args from solution
-  - Attempt retry with corrected arguments
-  - If retry succeeds: return success result
-  - If retry fails: return original error + guidance
-
-#### B. Add Retry Context Injection
-- Before retry, inject solution guidance into a temporary context
-- Pass corrected arguments based on example_args pattern
-- Merge user's intent with correct format from memory
-
-#### C. Retry Safety Mechanisms
-- Maximum 1 retry per tool call (prevent loops)
-- Only retry if confidence >= 0.7
-- Track retry attempts in agent state
-- Log retry attempts for debugging
-
-### 4. Code Structure Changes
-1. `base_agent/core/utilities.py`:
-   - Enhance execute_tool_safe() with auto-retry logic
-   - Add _attempt_retry_with_solution() helper method
-   
-2. `base_agent/memory/error_memory.py`:
-   - Add method to merge user args with solution template
-   - Add confidence threshold checking
-
-### 5. Example Scenario
-```python
-# Tool called: analyze_portfolio_performance({})
-# Error: "Parsed portfolio must be a non-empty dict"
-# Memory solution found: {"portfolio": {"AAPL": 0.5, "MSFT": 0.5}}
-# Auto-retry with: analyze_portfolio_performance({"portfolio": <extracted_from_context>})
-# Success: Returns analysis results in same iteration
-```
-
-## Benefits
-- Reduces iterations wasted on retrying
-- Improves agent efficiency
-- Better user experience (faster completion)
-- Maintains context continuity
-- Leverages error memory immediately
-
-## Scope Limitations
-- Only retry once per tool call
-- Only retry when confidence is high
-- Only for tool argument errors (not logic errors)
-- Preserve original error if retry also fails
-
-## Risk Mitigation
-- Prevent infinite retry loops
-- Log all retry attempts
-- Maintain audit trail of corrections
-- Fallback to original behavior if retry fails
-
-## Success Criteria
-- Tool errors with known solutions retry automatically
-- Retry happens within same iteration
-- Agent completes tasks with fewer total iterations
-- Error memory solutions are applied immediately
-
-## Review
-
-### Implementation Complete
-
-Successfully implemented automatic tool retry within the same iteration when error memory has a high-confidence solution.
-
-#### Changes Made:
-
-1. **Modified `execute_tool_safe()` in `utilities.py`**:
-   - Added `is_retry` parameter to prevent infinite retry loops
-   - Checks error memory for solutions when tool fails
-   - Auto-retries with corrected arguments if confidence >= 0.7
-   - Returns successful result or final error with guidance
-
-2. **Added `_merge_args_with_solution()` helper method**:
-   - Intelligently merges failed arguments with solution template
-   - Extracts portfolio data from recent observations for portfolio tools
-   - Preserves meaningful user inputs while applying corrections
-
-3. **Retry Logic Features**:
-   - **Confidence Threshold**: Only auto-retries if solution confidence >= 0.7
-   - **Single Retry**: Prevents infinite loops with `is_retry` flag
-   - **Smart Merging**: Combines user intent with correct format
-   - **Portfolio Context**: Searches recent observations for portfolio data
-   - **Verbose Logging**: Shows retry attempts and results
-
-#### How It Works:
-1. Tool fails with an error (e.g., missing portfolio argument)
-2. Error memory is checked for a solution
-3. If high-confidence solution exists (>= 0.7):
-   - Merges failed args with solution template
-   - Attempts retry with corrected arguments
-   - If successful: Returns result in same iteration
-   - If failed: Returns error with guidance
-4. If no/low-confidence solution: Returns error (may include guidance)
-
-#### Benefits Achieved:
-- **Fewer Iterations**: Errors fixed immediately without waiting
-- **Better UX**: Faster task completion
-- **Context Preservation**: No loss of context between attempts
-- **Learning System**: Successful retries strengthen solution confidence
-
-#### Example Flow:
-```
-analyze_portfolio_performance({}) → Error: "portfolio must be non-empty"
-→ Memory has solution with portfolio template
-→ Auto-retry with {"portfolio": <extracted_from_context>}
-→ Success! Returns analysis in same iteration
+get_initial_portfolio_dict() 
+    ↓
+vol_es(portfolio_dict) → risk_contribution(portfolio_dict) → drawdown_profile(portfolio_dict)
+    ↓  
+calculate_correlation_matrix(portfolio_dict) + calculate_covariance_matrix(portfolio_dict)
+    ↓
+stress_test(portfolio_dict)
+    ↓
+[Portfolio Modifications Based on All Risk Insights]
+    ↓
+[Re-run risk analysis suite on modified portfolio]
+    ↓
+Final Answer with comprehensive risk validation
 ```
 
-The implementation is complete and ready for testing with real portfolio tool errors.
+## Implementation Requirements
+
+### Prompt Consistency Standards
+- Maintain existing tone and formatting
+- Use same technical detail level as existing tools
+- Follow established parameter description patterns
+- Keep GPT-5 compatibility warnings consistent
+
+### Risk Analysis Integration Points
+- **Initial Analysis**: Add vol_es as primary risk baseline
+- **Concentration Analysis**: Use risk_contribution for attribution
+- **Historical Context**: Add drawdown_profile for reality check
+- **Validation Loop**: Re-run risk suite after modifications
+- **Final Verification**: All tools confirm risk acceptability
+
+### Success Metrics
+- Agent uses all three new tools appropriately in workflow
+- Risk analysis depth significantly improved
+- Portfolio modifications guided by quantitative risk insights
+- Final portfolios demonstrate measurable risk improvement
+- Tool usage follows logical progression and sequencing
+
+## 🎉 PROJECT COMPLETE: CRO Agent Risk Management Enhancement
+
+### Summary of Accomplishments
+
+#### ✅ Phase 1: Core Tools Implementation (3 new risk tools)
+- **vol_es**: VaR/Expected Shortfall calculator with parametric, historical, and EWMA methods
+- **risk_contribution**: Risk decomposition for concentration analysis  
+- **drawdown_profile**: Historical drawdown analysis with episode detection
+
+#### ✅ Phase 2: Tool Registry Integration
+- Registered all tools in `cro_tool_registry.py` with comprehensive schemas
+- Added GPT-5 compatibility warnings and usage examples
+- Included workflow guidance for optimal tool sequencing
+
+#### ✅ Phase 3: Prompt Enhancement (All 3 phases complete)
+- **3A**: Enhanced system prompt with 7-step risk analysis approach
+- **3B**: Updated user prompt with mandatory risk analysis sequence
+- **3C**: Added comprehensive tool usage guidelines and restrictions
+
+### Key Improvements to CRO Agent
+
+**Quantitative Risk Analysis**:
+- VaR/ES baseline establishment for all portfolios
+- Risk contribution analysis for concentration management
+- Historical drawdown validation for resilience testing
+
+**Clear Workflow Structure**:
+```
+Initial Portfolio → VaR/ES → Risk Attribution → Drawdowns → Correlation → Stress Tests → Iterate
+```
+
+**Mandatory Analysis Requirements**:
+- Must run all risk tools on initial and final portfolios
+- Requires 2-3 iterations showing progressive risk improvement
+- Comprehensive documentation of all portfolio changes
+
+### Files Modified
+- `backend/src/prophit_alts/consumer_staples_fund/build_portfolio/cro/cro_tools.py` (~350 lines added)
+- `backend/src/prophit_alts/consumer_staples_fund/build_portfolio/cro/cro_tool_registry.py` (~100 lines added)
+- `backend/src/prophit_alts/consumer_staples_fund/build_portfolio/prompts/cro_agent_prompts.py` (significant enhancements)
+
+### Ready for Production ✅
+The CRO Agent now has comprehensive risk management capabilities with three powerful new tools fully integrated into its decision-making framework. All tools are tested, documented, and ready for immediate use.
+
+---
+*Project completed successfully with all objectives achieved.*

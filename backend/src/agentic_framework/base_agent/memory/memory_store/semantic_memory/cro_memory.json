@@ -1,29 +1,38 @@
 {
+  "current_date": "2025-08-19",
   "risk_management": [
     {
       "title": "Covariance Matrix for Portfolio Risk",
       "content": "The covariance matrix quantifies joint variability between assets and is the foundation for portfolio variance, marginal risk contributions, and risk budgeting. Because daily returns are small, values are small but critical; use it to measure total volatility, tracking error, and how each position contributes to risk.",
-      "suggested_tools": ["calculate_covariance_matrix", "analyze_portfolio_performance"],
+      "suggested_tools": [
+        "calculate_covariance_matrix"
+      ],
       "application": "Compute daily-return covariance and use it to estimate portfolio variance and marginal risk; prioritize reallocations that reduce outsized risk contributors."
     },
     {
       "title": "Correlation Matrix for Diversification",
       "content": "The correlation matrix normalizes co-movement to the -1 to +1 scale, revealing clusters and hidden concentration. It is position-agnostic (long/short does not change correlation), and helps ensure true diversification across names, factors, and industries.",
-      "suggested_tools": ["calculate_correlation_matrix"],
+      "suggested_tools": [
+        "calculate_correlation_matrix"
+      ],
       "application": "Review correlations and remove or downsize highly correlated names; prefer complementary exposures with low or negative correlation."
     },
     {
       "title": "Stress Tests and What to Watch",
       "content": "Stress tests expose non-linear and regime risks that variance-based metrics miss. Focus on path-dependent drawdowns, peak-to-trough loss, downside/upside capture, factor and sector tilts, and sensitivity to market shocks.",
-      "suggested_tools": ["get_initial_portfolio_data", "analyze_portfolio_performance"],
+      "suggested_tools": [
+        "stress_test"
+      ],
       "application": "Run baseline and severe scenarios; reject portfolios with unacceptable drawdowns or excessive downside capture, and adjust hedges or sizing accordingly."
     },
     {
       "title": "General Risk Management Principles",
       "content": "Size by risk not just conviction, cap single-name and sector exposure, balance gross/net exposure, maintain hedges, monitor regimes, and rebalance when exposures drift. Use data-driven checks before approvals.",
-      "suggested_tools": ["analyze_portfolio_performance", "calculate_correlation_matrix", "calculate_covariance_matrix"],
+      "suggested_tools": [
+        "calculate_correlation_matrix",
+        "calculate_covariance_matrix"
+      ],
       "application": "Set risk limits, review metrics regularly, and rebalance to keep exposures and risk contributions within bounds."
     }
   ]
 }
-

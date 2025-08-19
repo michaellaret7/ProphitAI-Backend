@@ -350,11 +350,43 @@ if __name__ == "__main__":
         "REYN": {"conviction": 0.0566, "position": "short"},
     }
 
+    tickers3 = {
+    # Long positions
+        "CASY": {"conviction": 0.09, "position": "long"},
+        "CELH": {"conviction": 0.09, "position": "long"},
+        "ODC":  {"conviction": 0.06, "position": "long"},
+        "PM":   {"conviction": 0.06, "position": "long"},
+        "VITL": {"conviction": 0.06, "position": "long"},
+        "WMT":  {"conviction": 0.05, "position": "long"},
+        "IPAR": {"conviction": 0.05, "position": "long"},
+        "TPB":  {"conviction": 0.04, "position": "long"},
+        "COCO": {"conviction": 0.04, "position": "long"},
+        "SFM":  {"conviction": 0.04, "position": "long"},
+        "MNST": {"conviction": 0.04, "position": "long"},
+        "CL":   {"conviction": 0.04, "position": "long"},
+        "DOLE": {"conviction": 0.03, "position": "long"},
+        "PPC":  {"conviction": 0.03, "position": "long"},
+        "INGR": {"conviction": 0.03, "position": "long"},
+
+        # Short positions
+        "WBA":  {"conviction": 0.05, "position": "short"},
+        "ENR":  {"conviction": 0.05, "position": "short"},
+        "SPB":  {"conviction": 0.04, "position": "short"},
+        "KLG":  {"conviction": 0.04, "position": "short"},
+        "PEP":  {"conviction": 0.04, "position": "short"},
+        "SAM":  {"conviction": 0.04, "position": "short"},
+        "COTY": {"conviction": 0.04, "position": "short"},
+        "MGPI": {"conviction": 0.04, "position": "short"},
+        "JJSF": {"conviction": 0.03, "position": "short"},
+        "KVUE": {"conviction": 0.04, "position": "short"},
+    }
+
+
 
     
     # Build portfolio with target volatility and portfolio value
     build_portfolio = CorrelationAwarePortfolioBuilder(
-        tickers=tickers2,  # Changed to tickers2 to test with the new portfolio
+        tickers=tickers3,  # Changed to tickers2 to test with the new portfolio
         target_annual_vol=0.17,  # 17% target volatility (adjust as needed)
         portfolio_value=1_000_000,  # $1M base capital (before leverage)
         leverage=1.75,  # 1.75x leverage (175% gross exposure)
