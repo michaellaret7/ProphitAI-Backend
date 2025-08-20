@@ -350,11 +350,43 @@ if __name__ == "__main__":
         "REYN": {"conviction": 0.0566, "position": "short"},
     }
 
+    tickers3 = {
+    # Long positions
+        "CASY": {"conviction": 0.09, "position": "long"},
+        "CELH": {"conviction": 0.09, "position": "long"},
+        "ODC":  {"conviction": 0.06, "position": "long"},
+        "PM":   {"conviction": 0.06, "position": "long"},
+        "VITL": {"conviction": 0.06, "position": "long"},
+        "WMT":  {"conviction": 0.05, "position": "long"},
+        "IPAR": {"conviction": 0.05, "position": "long"},
+        "TPB":  {"conviction": 0.04, "position": "long"},
+        "COCO": {"conviction": 0.04, "position": "long"},
+        "SFM":  {"conviction": 0.04, "position": "long"},
+        "MNST": {"conviction": 0.04, "position": "long"},
+        "CL":   {"conviction": 0.04, "position": "long"},
+        "DOLE": {"conviction": 0.03, "position": "long"},
+        "PPC":  {"conviction": 0.03, "position": "long"},
+        "INGR": {"conviction": 0.03, "position": "long"},
+
+        # Short positions
+        "WBA":  {"conviction": 0.05, "position": "short"},
+        "ENR":  {"conviction": 0.05, "position": "short"},
+        "SPB":  {"conviction": 0.04, "position": "short"},
+        "KLG":  {"conviction": 0.04, "position": "short"},
+        "PEP":  {"conviction": 0.04, "position": "short"},
+        "SAM":  {"conviction": 0.04, "position": "short"},
+        "COTY": {"conviction": 0.04, "position": "short"},
+        "MGPI": {"conviction": 0.04, "position": "short"},
+        "JJSF": {"conviction": 0.03, "position": "short"},
+        "KVUE": {"conviction": 0.04, "position": "short"},
+    }
+
+
 
     
     # Build portfolio with target volatility and portfolio value
     build_portfolio = CorrelationAwarePortfolioBuilder(
-        tickers=tickers2,  # Changed to tickers2 to test with the new portfolio
+        tickers=tickers3,  # Changed to tickers2 to test with the new portfolio
         target_annual_vol=0.17,  # 17% target volatility (adjust as needed)
         portfolio_value=1_000_000,  # $1M base capital (before leverage)
         leverage=1.75,  # 1.75x leverage (175% gross exposure)
@@ -368,42 +400,42 @@ if __name__ == "__main__":
     print("="*80)
     
     # Build with risk-based strategy and volatility targeting
-    # portfolio, allocation_df = build_portfolio.build_portfolio()
+    portfolio, allocation_df = build_portfolio.build_portfolio()
 
     from backend.src.db.core.db_config import MarketSession
     from backend.src.db.core.market_data_models import *
     from backend.testing.alpaca_trade import AlpacaTrader
 
-    trader = AlpacaTrader(paper=True)
-    session = MarketSession()
+    # trader = AlpacaTrader(paper=True)
+    # session = MarketSession()
 
 
     # Instead of using allocation_df, iterate through alpaca_portfolio directly
-    for ticker, position_data in alpaca_portfolio.items():
-        position = position_data['position']
-        conviction = position_data['conviction']
+    # for ticker, position_data in alpaca_portfolio.items():
+    #     position = position_data['position']
+    #     conviction = position_data['conviction']
         
-        # Calculate position size based on conviction and portfolio value
-        # Assuming you want to use the same portfolio value and leverage
-        portfolio_value = 500_000
-        leverage = 1.5
-        position_size = conviction * portfolio_value * leverage
+    #     # Calculate position size based on conviction and portfolio value
+    #     # Assuming you want to use the same portfolio value and leverage
+    #     portfolio_value = 500_000
+    #     leverage = 1.5
+    #     position_size = conviction * portfolio_value * leverage
         
-        recent_price = session.query(Ticker).filter(Ticker.ticker == ticker).first().price
+    #     recent_price = session.query(Ticker).filter(Ticker.ticker == ticker).first().price
 
-        calc_shares = abs(position_size / recent_price)
-        calc_shares = round(calc_shares, 0)
-        calc_shares = int(calc_shares)
-        print(f"{ticker}: {calc_shares} shares")
+    #     calc_shares = abs(position_size / recent_price)
+    #     calc_shares = round(calc_shares, 0)
+    #     calc_shares = int(calc_shares)
+    #     print(f"{ticker}: {calc_shares} shares")
 
-        if position == 'long':
-            trader.buy(symbol=ticker, qty=calc_shares)
-        else:
-            trader.sell(symbol=ticker, qty=calc_shares)
+    #     if position == 'long':
+    #         trader.buy(symbol=ticker, qty=calc_shares)
+    #     else:
+    #         trader.sell(symbol=ticker, qty=calc_shares)
 
 
 
-    session.close()
+    # session.close()
         
     
 

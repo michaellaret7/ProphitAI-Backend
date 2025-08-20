@@ -41,7 +41,7 @@ class GlobalMacroFund:
         self.calculate_correlation_matrix()
         self.calculate_covariance_matrix()
         
-    def calculate_volatility(self, returns, window=252):
+    def calculate_volatility(self, returns, window=252): 
         """Calculate annualized volatility"""
         return returns.rolling(window=window).std() * np.sqrt(self.trading_days)
     
@@ -93,7 +93,7 @@ class GlobalMacroFund:
         
         return pd.DataFrame(reconstructed, index=cov_matrix.index, columns=cov_matrix.columns)
     
-    def calculate_portfolio_var(self, weights, method='parametric'):
+    def calculate_portfolio_var(self, weights, method='parametric'): 
         """
         Calculate portfolio VaR using different methods
         
@@ -538,6 +538,16 @@ def demonstrate_fund_calculations():
     # 7. Generate correlation heatmap
     print("\n7. Generating Correlation Matrix Heatmap...")
     fund.generate_correlation_heatmap()
+
+    # Calculate portfolio returns using weights
+    portfolio_returns = (returns_df * weights).sum(axis=1)
+    
+    print("8. Risk Management Backtest Results:")
+    backtest_results = fund.backtest_risk_management(returns_series=portfolio_returns)
+    print(f"Final NAV: {backtest_results['nav'].iloc[-1]:.2f}")
+    print(f"Max Drawdown: {backtest_results['drawdown'].min():.2%}")
+    print(f"Avg Risk Scalar: {backtest_results['risk_scalar'].mean():.2f}")
+    print(f"Min Risk Scalar: {backtest_results['risk_scalar'].min():.2f}")
     
     return fund, weights, returns_df
 

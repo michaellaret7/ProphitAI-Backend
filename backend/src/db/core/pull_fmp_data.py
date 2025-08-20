@@ -211,6 +211,13 @@ class FMP_API_DATA:
         url = f"https://financialmodelingprep.com/api/v3/historical-chart/15min/{ticker}?from={from_date.strftime('%Y-%m-%d')}&to={to_date.strftime('%Y-%m-%d')}"
         return self._make_fmp_api_request(url)
     
+    def get_daily_prices_for_ticker(self, ticker: str, from_date: datetime, to_date: datetime):
+        """
+        Retrieves daily OHLCV price data for a ticker.
+        """
+        url = f"https://financialmodelingprep.com/api/v3/historical-price-full/{ticker}?from={from_date.strftime('%Y-%m-%d')}&to={to_date.strftime('%Y-%m-%d')}"
+        return self._make_fmp_api_request(url)
+    
     def get_full_quote(self, ticker: str):
         """
         Retrieves full quote information including current price and market cap.

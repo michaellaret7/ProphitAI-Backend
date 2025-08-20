@@ -7,12 +7,14 @@ from datetime import datetime
 class ToolArgumentParser:
     """Robust argument parser for LLM tool calls with validation and error recovery."""
     
-    def __init__(self, tool_registry: Dict[str, Dict]):
+    def __init__(self, tool_registry: Dict[str, Dict], verbose: bool = False):
         """
         Args:
             tool_registry: Maps tool names to their definitions including parameters schema
+            verbose: Whether to log parameter transformations for debugging
         """
         self.tool_registry = tool_registry
+        self._verbose = verbose
         self._type_converters = {
             'string': str,
             'integer': int,
@@ -43,6 +45,10 @@ class ToolArgumentParser:
         # Strategy 4: Last resort - wrap as single parameter
         if args is None:
             args = self._wrap_as_single_param(tool_name, args_json)
+        
+        # Strategy 5: Handle GPT-5 parameter flattening (after successful parsing)
+        if args is not None:
+            args = self._handle_gpt5_flattening(tool_name, args)
         
         # Validate and coerce types based on schema
         if tool_name in self.tool_registry:
@@ -184,6 +190,47 @@ class ToolArgumentParser:
         
         # Default fallback
         return {"input": args_json}
+    
+    def _handle_gpt5_flattening(self, tool_name: str, args: Dict) -> Dict:
+        """
+        Handle GPT-5 parameter flattening where single-parameter tools have their
+        parameter structure flattened directly into the arguments.
+        
+        Example:
+        GPT-4: {"portfolio_dict": {"AAPL": {"conviction": 0.1, "position": "long"}}}
+        GPT-5: {"AAPL": {"conviction": 0.1, "position": "long"}}
+        
+        This method detects the GPT-5 pattern and wraps it properly.
+        """
+        if tool_name not in self.tool_registry or not isinstance(args, dict):
+            return args
+        
+        schema = self.tool_registry[tool_name].get('parameters', {})
+        required = schema.get('required', [])
+        properties = schema.get('properties', {})
+        
+        # Only apply this fix for single required parameter tools
+        if len(required) != 1:
+            return args
+        
+        param_name = required[0]
+        param_schema = properties.get(param_name, {})
+        param_type = param_schema.get('type')
+        
+        # Only fix if the parameter is supposed to be an object but is currently flattened
+        if param_type != 'object':
+            return args
+        
+        # Check if the expected parameter is missing but we have data that looks like it should be wrapped
+        if param_name not in args and len(args) > 0:
+            # Log the transformation for debugging
+            if self._verbose:
+                print(f"🔧 GPT-5 parameter flattening detected for {tool_name}: wrapping arguments under '{param_name}'")
+            
+            # Wrap all current arguments under the expected parameter name
+            return {param_name: args}
+        
+        return args
     
     def _validate_and_coerce(self, tool_name: str, args: Dict) -> Dict:
         """Validate and coerce types based on tool schema."""

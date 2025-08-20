@@ -23,6 +23,8 @@ from .core.utilities import AgentUtilities, StepTrace
 from .core.arg_parser import ToolArgumentParser
 from .events.manager import EventManager, AgentEvent
 from .tasks.validator import TaskValidator
+from .memory.error_memory import ToolErrorMemory
+from .memory.semantic_memory import SemanticMemory
 
 load_dotenv()
 
@@ -45,6 +47,8 @@ class BaseAgent:
                 plan_first: bool = True, 
                 final_keywords: Optional[List[str]] = None, 
                 save_messages: bool = True,
+                use_error_memory: bool = True,
+                memory_refresh_interval: int = 6,
             ):
         
         self.model_name = model
@@ -57,6 +61,8 @@ class BaseAgent:
         self.plan_first = plan_first  # always plan first
         self.final_keywords = final_keywords or ["Final Answer:", "FINAL ANSWER:"]
         self.save_messages = save_messages
+        self.use_error_memory = use_error_memory
+        self.memory_refresh_interval = memory_refresh_interval
 
         # OpenAI tools and local dispatch map
         self.tools: List[Dict[str, Any]] = []
@@ -86,13 +92,36 @@ class BaseAgent:
         self.event_manager = EventManager(verbose=verbose)
         self.task_validator = TaskValidator(verbose=verbose)
         
+        # Initialize error memory system
+        if self.use_error_memory:
+            self.error_memory = ToolErrorMemory(save_memory=True, verbose=verbose)
+            # Pre-populate with common solutions
+            if not self.error_memory.error_patterns:
+                from .memory.error_memory import initialize_common_solutions
+                self.error_memory = initialize_common_solutions()
+        else:
+            self.error_memory = None
+        
         # Track recent tool executions for validation
         self.recent_tool_executions: List[Dict] = []
         self.recent_observations: List[Any] = []
         
+        # Track last tool error for retry guidance
+        self.last_tool_error: Optional[Dict] = None
+        
+        # Initialize semantic memory (child classes override this)
+        self.semantic_memory: Optional[SemanticMemory] = None
+        self._initialize_semantic_memory()
+        
         # Register event handlers
         self._register_event_handlers()
 
+    def _initialize_semantic_memory(self):
+        """Initialize semantic memory - override in child classes for agent-specific memories."""
+        # Base agent doesn't have semantic memory by default
+        # Child agents should override this to load their specific memories
+        pass
+    
     # --- Tool registry -----------------------------------------------------
     def _register_base_tools(self):
         ticker_data_description = (
@@ -312,7 +341,7 @@ class BaseAgent:
         for tool in self.tools:
             func_def = tool.get('function', {})
             tool_registry[func_def.get('name')] = func_def
-        self._arg_parser = ToolArgumentParser(tool_registry)
+        self._arg_parser = ToolArgumentParser(tool_registry, verbose=self.verbose)
 
     # --- Core run loop -----------------------------------------------------
     def run(self) -> Dict[str, Any]:
@@ -329,9 +358,18 @@ class BaseAgent:
 
         messages: List[Dict[str, Any]] = [
             {"role": "system", "content": self.utilities.system_rules()},
+        ]
+        
+        # Inject semantic memories if available
+        if self.semantic_memory:
+            memory_context = self.semantic_memory.format_memories_for_prompt()
+            if memory_context:
+                messages.append({"role": "system", "content": memory_context})
+        
+        messages.extend([
             {"role": "system", "content": self.system_prompt},
             {"role": "user", "content": self.user_prompt},
-        ]
+        ])
         
         # Save initial messages
         self.message_logger.save_messages_to_json(messages, iteration=0)
@@ -341,7 +379,7 @@ class BaseAgent:
                 {
                     "role": "user",
                     "content": (
-                        "Before you start, produce a JSON plan to follow that will accomplish the user's goal: {\"plan\":[{\"step\":1,\"desc\":\"...\"},...]}\n"
+                        "Before you start, produce an extensively detailed and thorough JSON plan for you to follow that will accomplish the user's goal: {\"plan\":[{\"step\":1,\"desc\":\"...\"},...]}\n"
                         "After you produce the json plan, you must come up with an actionable to-do list which must be numbered in the following format: \n\n"
                         "1. [actionable item 1]\n"
                             "a. [actionable item 1a]\n"
@@ -363,6 +401,28 @@ class BaseAgent:
         for i in range(1, self.max_iterations + 1):
             if self.verbose:
                 print(f"\n⚜️  Iteration {i}")
+            
+            # Periodically re-inject semantic memory to keep it fresh in context
+            if (self.semantic_memory and 
+                self.memory_refresh_interval > 0 and 
+                i > 1 and 
+                i % self.memory_refresh_interval == 0):
+                
+                # Use concise format for refresh to avoid context bloat
+                memory_refresh = self.semantic_memory.format_memories_for_prompt(concise=False)
+                if memory_refresh:
+                    if self.verbose:
+                        print(f"  🔄 Refreshing semantic memory (every {self.memory_refresh_interval} iterations)")
+                    
+                    # Inject as a user message to reinforce the concepts
+                    messages.append({
+                        "role": "user",
+                        "content": (
+                            f"📌 REMINDER - Key principles to maintain (iteration {i}):\n"
+                            f"{memory_refresh}\n"
+                            "Continue applying these principles in your analysis."
+                        )
+                    })
 
             response = self.client.chat.completions.create(
                 model=self.llm,

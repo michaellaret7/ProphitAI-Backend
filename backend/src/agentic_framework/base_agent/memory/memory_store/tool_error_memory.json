@@ -1,0 +1,1142 @@
+{
+  "error_patterns": {
+    "get_upside_downside_ratios:missing_portfolio": {
+      "tool_name": "get_upside_downside_ratios",
+      "error_pattern": "missing required argument 'portfolio'",
+      "occurrences": [],
+      "solutions": [
+        {
+          "correct_args": {
+            "portfolio": {
+              "CASY": {
+                "conviction": 0.1,
+                "position": "long"
+              },
+              "CELH": {
+                "conviction": 0.1,
+                "position": "long"
+              }
+            }
+          },
+          "explanation": "Extract portfolio from either from get_initial_portfolio_dict() previous tool call if you want to test the initial portfolio but if you want to test a new portfolio you must pass the new portfolio in the correct dict format, don't pass empty dict",
+          "timestamp": "2025-08-18T14:14:38.429191",
+          "success_count": 10
+        }
+      ],
+      "auto_solution": {
+        "correct_args": {
+          "portfolio": {
+            "CASY": {
+              "conviction": 0.1,
+              "position": "long"
+            },
+            "CELH": {
+              "conviction": 0.1,
+              "position": "long"
+            }
+          }
+        },
+        "explanation": "Extract portfolio from either from get_initial_portfolio_dict() previous tool call if you want to test the initial portfolio but if you want to test a new portfolio you must pass the new portfolio in the correct dict format, don't pass empty dict",
+        "timestamp": "2025-08-18T14:14:38.429191",
+        "success_count": 10
+      }
+    },
+    "stress_test:unknown_error": {
+      "tool_name": "stress_test",
+      "error_pattern": "portfolio argument cannot be empty",
+      "occurrences": [
+        {
+          "timestamp": "2025-08-18T15:03:52.690281",
+          "args": {
+            "portfolio_dict": {}
+          },
+          "full_error": "'ticker'"
+        },
+        {
+          "timestamp": "2025-08-18T17:42:55.461827",
+          "args": {
+            "portfolio_dict": {}
+          },
+          "full_error": "'ticker'"
+        },
+        {
+          "timestamp": "2025-08-18T17:43:08.361039",
+          "args": {
+            "portfolio_dict": {}
+          },
+          "full_error": "'ticker'"
+        },
+        {
+          "timestamp": "2025-08-18T17:47:47.637389",
+          "args": {
+            "portfolio_dict": {}
+          },
+          "full_error": "'ticker'"
+        },
+        {
+          "timestamp": "2025-08-18T18:14:53.975823",
+          "args": {
+            "portfolio_dict": {}
+          },
+          "full_error": "'ticker'"
+        },
+        {
+          "timestamp": "2025-08-19T09:14:43.515049",
+          "args": {
+            "portfolio_dict": {}
+          },
+          "full_error": "'ticker'"
+        },
+        {
+          "timestamp": "2025-08-19T10:14:34.380244",
+          "args": {
+            "portfolio_dict": {}
+          },
+          "full_error": "'ticker'"
+        },
+        {
+          "timestamp": "2025-08-19T10:40:28.020483",
+          "args": {
+            "portfolio_dict": {}
+          },
+          "full_error": "'ticker'"
+        },
+        {
+          "timestamp": "2025-08-19T10:40:43.459510",
+          "args": {
+            "portfolio_dict": {}
+          },
+          "full_error": "'ticker'"
+        }
+      ],
+      "solutions": [
+        {
+          "correct_args": {
+            "portfolio": {
+              "CASY": {
+                "conviction": 0.1,
+                "position": "long"
+              },
+              "CELH": {
+                "conviction": 0.1,
+                "position": "long"
+              }
+            }
+          },
+          "explanation": "Extract portfolio from either from get_initial_portfolio_dict() previous tool call if you want to test the initial portfolio but if you want to test a new portfolio you must pass the new portfolio in the correct dict format, don't pass empty dict",
+          "timestamp": "2025-08-18T14:14:38.430194",
+          "success_count": 10
+        },
+        {
+          "correct_args": {
+            "portfolio_dict": {
+              "CASY": {
+                "conviction": 0.1,
+                "position": "long"
+              },
+              "CELH": {
+                "conviction": 0.1,
+                "position": "long"
+              }
+            }
+          },
+          "explanation": "Successful retry with corrected arguments",
+          "timestamp": "2025-08-18T17:47:49.262183",
+          "success_count": 12
+        }
+      ],
+      "auto_solution": {
+        "correct_args": {
+          "portfolio_dict": {
+            "CASY": {
+              "conviction": 0.1,
+              "position": "long"
+            },
+            "CELH": {
+              "conviction": 0.1,
+              "position": "long"
+            }
+          }
+        },
+        "explanation": "Successful retry with corrected arguments",
+        "timestamp": "2025-08-18T17:47:49.262183",
+        "success_count": 12
+      }
+    },
+    "analyze_portfolio_performance:unknown_error": {
+      "tool_name": "analyze_portfolio_performance",
+      "error_pattern": "Parsed portfolio must be a non-empty dict of tickers",
+      "occurrences": [
+        {
+          "timestamp": "2025-08-18T15:03:46.254555",
+          "args": {
+            "portfolio_dict": {}
+          },
+          "full_error": "Parsed portfolio must be a non-empty dict of tickers"
+        },
+        {
+          "timestamp": "2025-08-18T17:42:59.221900",
+          "args": {
+            "portfolio_dict": {}
+          },
+          "full_error": "Parsed portfolio must be a non-empty dict of tickers"
+        },
+        {
+          "timestamp": "2025-08-18T17:47:49.335379",
+          "args": {
+            "portfolio_dict": {}
+          },
+          "full_error": "Parsed portfolio must be a non-empty dict of tickers"
+        },
+        {
+          "timestamp": "2025-08-18T18:14:55.437489",
+          "args": {
+            "portfolio_dict": {}
+          },
+          "full_error": "Parsed portfolio must be a non-empty dict of tickers"
+        },
+        {
+          "timestamp": "2025-08-18T18:19:23.140914",
+          "args": {
+            "portfolio_dict": {}
+          },
+          "full_error": "Parsed portfolio must be a non-empty dict of tickers"
+        },
+        {
+          "timestamp": "2025-08-19T09:14:43.355777",
+          "args": {
+            "portfolio_dict": {}
+          },
+          "full_error": "Parsed portfolio must be a non-empty dict of tickers"
+        }
+      ],
+      "solutions": [
+        {
+          "correct_args": {
+            "portfolio_dict": {
+              "CASY": {
+                "conviction": 0.09,
+                "position": "long"
+              },
+              "PM": {
+                "conviction": 0.09,
+                "position": "long"
+              },
+              "ODC": {
+                "conviction": 0.07,
+                "position": "long"
+              },
+              "VITL": {
+                "conviction": 0.07,
+                "position": "long"
+              },
+              "SFM": {
+                "conviction": 0.06,
+                "position": "long"
+              },
+              "WMT": {
+                "conviction": 0.06,
+                "position": "long"
+              },
+              "BJ": {
+                "conviction": 0.06,
+                "position": "long"
+              },
+              "COCO": {
+                "conviction": 0.06,
+                "position": "long"
+              },
+              "MNST": {
+                "conviction": 0.06,
+                "position": "long"
+              },
+              "DOLE": {
+                "conviction": 0.06,
+                "position": "long"
+              },
+              "PPC": {
+                "conviction": 0.06,
+                "position": "long"
+              },
+              "INGR": {
+                "conviction": 0.06,
+                "position": "long"
+              },
+              "CL": {
+                "conviction": 0.05,
+                "position": "long"
+              },
+              "IPAR": {
+                "conviction": 0.05,
+                "position": "long"
+              },
+              "TPB": {
+                "conviction": 0.05,
+                "position": "long"
+              },
+              "WBA": {
+                "conviction": 0.06,
+                "position": "short"
+              },
+              "ANDE": {
+                "conviction": 0.06,
+                "position": "short"
+              },
+              "TGT": {
+                "conviction": 0.03,
+                "position": "short"
+              },
+              "STZ": {
+                "conviction": 0.05,
+                "position": "short"
+              },
+              "PEP": {
+                "conviction": 0.05,
+                "position": "short"
+              },
+              "SAM": {
+                "conviction": 0.05,
+                "position": "short"
+              },
+              "MGPI": {
+                "conviction": 0.05,
+                "position": "short"
+              },
+              "ENR": {
+                "conviction": 0.05,
+                "position": "short"
+              },
+              "KVUE": {
+                "conviction": 0.05,
+                "position": "short"
+              },
+              "KLG": {
+                "conviction": 0.05,
+                "position": "short"
+              },
+              "JJSF": {
+                "conviction": 0.05,
+                "position": "short"
+              },
+              "SEB": {
+                "conviction": 0.05,
+                "position": "short"
+              }
+            }
+          },
+          "explanation": "Successful retry with corrected arguments",
+          "timestamp": "2025-08-18T17:49:08.955280",
+          "success_count": 1
+        }
+      ],
+      "auto_solution": {
+        "correct_args": {
+          "portfolio_dict": {
+            "CASY": {
+              "conviction": 0.09,
+              "position": "long"
+            },
+            "PM": {
+              "conviction": 0.09,
+              "position": "long"
+            },
+            "ODC": {
+              "conviction": 0.07,
+              "position": "long"
+            },
+            "VITL": {
+              "conviction": 0.07,
+              "position": "long"
+            },
+            "SFM": {
+              "conviction": 0.06,
+              "position": "long"
+            },
+            "WMT": {
+              "conviction": 0.06,
+              "position": "long"
+            },
+            "BJ": {
+              "conviction": 0.06,
+              "position": "long"
+            },
+            "COCO": {
+              "conviction": 0.06,
+              "position": "long"
+            },
+            "MNST": {
+              "conviction": 0.06,
+              "position": "long"
+            },
+            "DOLE": {
+              "conviction": 0.06,
+              "position": "long"
+            },
+            "PPC": {
+              "conviction": 0.06,
+              "position": "long"
+            },
+            "INGR": {
+              "conviction": 0.06,
+              "position": "long"
+            },
+            "CL": {
+              "conviction": 0.05,
+              "position": "long"
+            },
+            "IPAR": {
+              "conviction": 0.05,
+              "position": "long"
+            },
+            "TPB": {
+              "conviction": 0.05,
+              "position": "long"
+            },
+            "WBA": {
+              "conviction": 0.06,
+              "position": "short"
+            },
+            "ANDE": {
+              "conviction": 0.06,
+              "position": "short"
+            },
+            "TGT": {
+              "conviction": 0.03,
+              "position": "short"
+            },
+            "STZ": {
+              "conviction": 0.05,
+              "position": "short"
+            },
+            "PEP": {
+              "conviction": 0.05,
+              "position": "short"
+            },
+            "SAM": {
+              "conviction": 0.05,
+              "position": "short"
+            },
+            "MGPI": {
+              "conviction": 0.05,
+              "position": "short"
+            },
+            "ENR": {
+              "conviction": 0.05,
+              "position": "short"
+            },
+            "KVUE": {
+              "conviction": 0.05,
+              "position": "short"
+            },
+            "KLG": {
+              "conviction": 0.05,
+              "position": "short"
+            },
+            "JJSF": {
+              "conviction": 0.05,
+              "position": "short"
+            },
+            "SEB": {
+              "conviction": 0.05,
+              "position": "short"
+            }
+          }
+        },
+        "explanation": "Successful retry with corrected arguments",
+        "timestamp": "2025-08-18T17:49:08.955280",
+        "success_count": 1
+      }
+    },
+    "get_upside_downside_ratios:unknown_error": {
+      "tool_name": "get_upside_downside_ratios",
+      "error_pattern": "cannot access local variable 'benchmark_up_returns' where it is not associated with a value",
+      "occurrences": [
+        {
+          "timestamp": "2025-08-18T15:03:52.757005",
+          "args": {
+            "portfolio_dict": {}
+          },
+          "full_error": "cannot access local variable 'benchmark_up_returns' where it is not associated with a value"
+        },
+        {
+          "timestamp": "2025-08-18T17:43:08.427719",
+          "args": {
+            "portfolio_dict": {}
+          },
+          "full_error": "cannot access local variable 'benchmark_up_returns' where it is not associated with a value"
+        },
+        {
+          "timestamp": "2025-08-18T17:47:49.335379",
+          "args": {
+            "portfolio_dict": {}
+          },
+          "full_error": "cannot access local variable 'benchmark_up_returns' where it is not associated with a value"
+        },
+        {
+          "timestamp": "2025-08-18T18:14:55.435490",
+          "args": {
+            "portfolio_dict": {}
+          },
+          "full_error": "cannot access local variable 'benchmark_up_returns' where it is not associated with a value"
+        },
+        {
+          "timestamp": "2025-08-18T18:19:23.215047",
+          "args": {
+            "portfolio_dict": {}
+          },
+          "full_error": "cannot access local variable 'benchmark_up_returns' where it is not associated with a value"
+        },
+        {
+          "timestamp": "2025-08-19T09:14:45.567682",
+          "args": {
+            "portfolio_dict": {}
+          },
+          "full_error": "cannot access local variable 'benchmark_up_returns' where it is not associated with a value"
+        },
+        {
+          "timestamp": "2025-08-19T10:14:36.399005",
+          "args": {
+            "portfolio_dict": {}
+          },
+          "full_error": "cannot access local variable 'benchmark_up_returns' where it is not associated with a value"
+        }
+      ],
+      "solutions": [
+        {
+          "correct_args": {
+            "portfolio_dict": {
+              "CASY": {
+                "conviction": 0.08,
+                "position": "long"
+              },
+              "CELH": {
+                "conviction": 0.06,
+                "position": "long"
+              },
+              "ODC": {
+                "conviction": 0.08,
+                "position": "long"
+              },
+              "PM": {
+                "conviction": 0.08,
+                "position": "long"
+              },
+              "VITL": {
+                "conviction": 0.08,
+                "position": "long"
+              },
+              "WMT": {
+                "conviction": 0.06,
+                "position": "long"
+              },
+              "SFM": {
+                "conviction": 0.06,
+                "position": "long"
+              },
+              "COCO": {
+                "conviction": 0.06,
+                "position": "long"
+              },
+              "BJ": {
+                "conviction": 0.05,
+                "position": "long"
+              },
+              "CL": {
+                "conviction": 0.05,
+                "position": "long"
+              },
+              "TPB": {
+                "conviction": 0.05,
+                "position": "long"
+              },
+              "DOLE": {
+                "conviction": 0.04,
+                "position": "long"
+              },
+              "IPAR": {
+                "conviction": 0.04,
+                "position": "long"
+              },
+              "CENT": {
+                "conviction": 0.03,
+                "position": "long"
+              },
+              "KO": {
+                "conviction": 0.03,
+                "position": "long"
+              },
+              "YSG": {
+                "conviction": 0.02,
+                "position": "long"
+              },
+              "HLF": {
+                "conviction": 0.02,
+                "position": "long"
+              },
+              "RLX": {
+                "conviction": 0.02,
+                "position": "long"
+              },
+              "FIZZ": {
+                "conviction": 0.02,
+                "position": "long"
+              },
+              "CHEF": {
+                "conviction": 0.02,
+                "position": "long"
+              },
+              "DLO": {
+                "conviction": 0.02,
+                "position": "long"
+              },
+              "WBA": {
+                "conviction": 0.05,
+                "position": "short"
+              },
+              "ANDE": {
+                "conviction": 0.05,
+                "position": "short"
+              },
+              "TGT": {
+                "conviction": 0.03,
+                "position": "short"
+              },
+              "STZ": {
+                "conviction": 0.05,
+                "position": "short"
+              },
+              "PEP": {
+                "conviction": 0.04,
+                "position": "short"
+              },
+              "SAM": {
+                "conviction": 0.04,
+                "position": "short"
+              },
+              "ENR": {
+                "conviction": 0.04,
+                "position": "short"
+              },
+              "SPB": {
+                "conviction": 0.04,
+                "position": "short"
+              },
+              "COTY": {
+                "conviction": 0.04,
+                "position": "short"
+              },
+              "KVUE": {
+                "conviction": 0.04,
+                "position": "short"
+              },
+              "KLG": {
+                "conviction": 0.04,
+                "position": "short"
+              },
+              "WMK": {
+                "conviction": 0.03,
+                "position": "short"
+              },
+              "REYN": {
+                "conviction": 0.03,
+                "position": "short"
+              },
+              "WDFC": {
+                "conviction": 0.03,
+                "position": "short"
+              },
+              "UVV": {
+                "conviction": 0.03,
+                "position": "short"
+              },
+              "CPB": {
+                "conviction": 0.02,
+                "position": "short"
+              },
+              "PRMB": {
+                "conviction": 0.02,
+                "position": "short"
+              },
+              "EL": {
+                "conviction": 0.02,
+                "position": "short"
+              },
+              "EPC": {
+                "conviction": 0.02,
+                "position": "short"
+              },
+              "FRPT": {
+                "conviction": 0.01,
+                "position": "short"
+              }
+            }
+          },
+          "explanation": "Successful retry with corrected arguments",
+          "timestamp": "2025-08-18T15:04:56.885633",
+          "success_count": 1
+        },
+        {
+          "correct_args": {
+            "portfolio_dict": {
+              "CASY": {
+                "conviction": 0.1,
+                "position": "long"
+              },
+              "CELH": {
+                "conviction": 0.1,
+                "position": "long"
+              },
+              "ODC": {
+                "conviction": 0.05,
+                "position": "long"
+              },
+              "ODD": {
+                "conviction": 0.05,
+                "position": "long"
+              },
+              "PM": {
+                "conviction": 0.05,
+                "position": "long"
+              },
+              "VITL": {
+                "conviction": 0.05,
+                "position": "long"
+              },
+              "WMT": {
+                "conviction": 0.05,
+                "position": "long"
+              },
+              "BJ": {
+                "conviction": 0.05,
+                "position": "long"
+              },
+              "SFM": {
+                "conviction": 0.05,
+                "position": "long"
+              },
+              "COCO": {
+                "conviction": 0.05,
+                "position": "long"
+              },
+              "MNST": {
+                "conviction": 0.05,
+                "position": "long"
+              },
+              "CL": {
+                "conviction": 0.05,
+                "position": "long"
+              },
+              "IPAR": {
+                "conviction": 0.05,
+                "position": "long"
+              },
+              "TPB": {
+                "conviction": 0.05,
+                "position": "long"
+              },
+              "DOLE": {
+                "conviction": 0.05,
+                "position": "long"
+              },
+              "PPC": {
+                "conviction": 0.05,
+                "position": "long"
+              },
+              "INGR": {
+                "conviction": 0.05,
+                "position": "long"
+              },
+              "WBA": {
+                "conviction": 0.05,
+                "position": "short"
+              },
+              "ANDE": {
+                "conviction": 0.05,
+                "position": "short"
+              },
+              "TGT": {
+                "conviction": 0.02,
+                "position": "short"
+              },
+              "STZ": {
+                "conviction": 0.05,
+                "position": "short"
+              },
+              "PEP": {
+                "conviction": 0.05,
+                "position": "short"
+              },
+              "SAM": {
+                "conviction": 0.05,
+                "position": "short"
+              },
+              "MGPI": {
+                "conviction": 0.05,
+                "position": "short"
+              },
+              "ENR": {
+                "conviction": 0.05,
+                "position": "short"
+              },
+              "SPB": {
+                "conviction": 0.05,
+                "position": "short"
+              },
+              "COTY": {
+                "conviction": 0.05,
+                "position": "short"
+              },
+              "KVUE": {
+                "conviction": 0.05,
+                "position": "short"
+              },
+              "KLG": {
+                "conviction": 0.05,
+                "position": "short"
+              },
+              "JJSF": {
+                "conviction": 0.05,
+                "position": "short"
+              },
+              "SEB": {
+                "conviction": 0.05,
+                "position": "short"
+              }
+            }
+          },
+          "explanation": "Successful retry with corrected arguments",
+          "timestamp": "2025-08-18T18:19:29.632828",
+          "success_count": 1
+        },
+        {
+          "correct_args": {
+            "portfolio_dict": {
+              "CASY": {
+                "conviction": 0.075,
+                "position": "long"
+              },
+              "CELH": {
+                "conviction": 0.075,
+                "position": "long"
+              },
+              "ODC": {
+                "conviction": 0.05,
+                "position": "long"
+              },
+              "ODD": {
+                "conviction": 0.075,
+                "position": "long"
+              },
+              "PM": {
+                "conviction": 0.1,
+                "position": "long"
+              },
+              "VITL": {
+                "conviction": 0.1,
+                "position": "long"
+              },
+              "WMT": {
+                "conviction": 0.05,
+                "position": "long"
+              },
+              "BJ": {
+                "conviction": 0.05,
+                "position": "long"
+              },
+              "SFM": {
+                "conviction": 0.05,
+                "position": "long"
+              },
+              "COCO": {
+                "conviction": 0.05,
+                "position": "long"
+              },
+              "MNST": {
+                "conviction": 0.05,
+                "position": "long"
+              },
+              "CL": {
+                "conviction": 0.05,
+                "position": "long"
+              },
+              "IPAR": {
+                "conviction": 0.025,
+                "position": "long"
+              },
+              "DOLE": {
+                "conviction": 0.04,
+                "position": "long"
+              },
+              "PPC": {
+                "conviction": 0.04,
+                "position": "long"
+              },
+              "INGR": {
+                "conviction": 0.04,
+                "position": "long"
+              },
+              "KO": {
+                "conviction": 0.025,
+                "position": "long"
+              },
+              "CENT": {
+                "conviction": 0.025,
+                "position": "long"
+              },
+              "WBA": {
+                "conviction": 0.04,
+                "position": "short"
+              },
+              "ANDE": {
+                "conviction": 0.04,
+                "position": "short"
+              },
+              "TGT": {
+                "conviction": 0.02,
+                "position": "short"
+              },
+              "STZ": {
+                "conviction": 0.04,
+                "position": "short"
+              },
+              "PEP": {
+                "conviction": 0.04,
+                "position": "short"
+              },
+              "SAM": {
+                "conviction": 0.04,
+                "position": "short"
+              },
+              "MGPI": {
+                "conviction": 0.04,
+                "position": "short"
+              },
+              "ENR": {
+                "conviction": 0.04,
+                "position": "short"
+              },
+              "SPB": {
+                "conviction": 0.03,
+                "position": "short"
+              },
+              "COTY": {
+                "conviction": 0.03,
+                "position": "short"
+              },
+              "KVUE": {
+                "conviction": 0.04,
+                "position": "short"
+              },
+              "REYN": {
+                "conviction": 0.02,
+                "position": "short"
+              },
+              "EL": {
+                "conviction": 0.02,
+                "position": "short"
+              },
+              "EPC": {
+                "conviction": 0.02,
+                "position": "short"
+              },
+              "UVV": {
+                "conviction": 0.02,
+                "position": "short"
+              }
+            }
+          },
+          "explanation": "Successful retry with corrected arguments",
+          "timestamp": "2025-08-19T09:16:11.345019",
+          "success_count": 1
+        }
+      ],
+      "auto_solution": {
+        "correct_args": {
+          "portfolio_dict": {
+            "CASY": {
+              "conviction": 0.08,
+              "position": "long"
+            },
+            "CELH": {
+              "conviction": 0.06,
+              "position": "long"
+            },
+            "ODC": {
+              "conviction": 0.08,
+              "position": "long"
+            },
+            "PM": {
+              "conviction": 0.08,
+              "position": "long"
+            },
+            "VITL": {
+              "conviction": 0.08,
+              "position": "long"
+            },
+            "WMT": {
+              "conviction": 0.06,
+              "position": "long"
+            },
+            "SFM": {
+              "conviction": 0.06,
+              "position": "long"
+            },
+            "COCO": {
+              "conviction": 0.06,
+              "position": "long"
+            },
+            "BJ": {
+              "conviction": 0.05,
+              "position": "long"
+            },
+            "CL": {
+              "conviction": 0.05,
+              "position": "long"
+            },
+            "TPB": {
+              "conviction": 0.05,
+              "position": "long"
+            },
+            "DOLE": {
+              "conviction": 0.04,
+              "position": "long"
+            },
+            "IPAR": {
+              "conviction": 0.04,
+              "position": "long"
+            },
+            "CENT": {
+              "conviction": 0.03,
+              "position": "long"
+            },
+            "KO": {
+              "conviction": 0.03,
+              "position": "long"
+            },
+            "YSG": {
+              "conviction": 0.02,
+              "position": "long"
+            },
+            "HLF": {
+              "conviction": 0.02,
+              "position": "long"
+            },
+            "RLX": {
+              "conviction": 0.02,
+              "position": "long"
+            },
+            "FIZZ": {
+              "conviction": 0.02,
+              "position": "long"
+            },
+            "CHEF": {
+              "conviction": 0.02,
+              "position": "long"
+            },
+            "DLO": {
+              "conviction": 0.02,
+              "position": "long"
+            },
+            "WBA": {
+              "conviction": 0.05,
+              "position": "short"
+            },
+            "ANDE": {
+              "conviction": 0.05,
+              "position": "short"
+            },
+            "TGT": {
+              "conviction": 0.03,
+              "position": "short"
+            },
+            "STZ": {
+              "conviction": 0.05,
+              "position": "short"
+            },
+            "PEP": {
+              "conviction": 0.04,
+              "position": "short"
+            },
+            "SAM": {
+              "conviction": 0.04,
+              "position": "short"
+            },
+            "ENR": {
+              "conviction": 0.04,
+              "position": "short"
+            },
+            "SPB": {
+              "conviction": 0.04,
+              "position": "short"
+            },
+            "COTY": {
+              "conviction": 0.04,
+              "position": "short"
+            },
+            "KVUE": {
+              "conviction": 0.04,
+              "position": "short"
+            },
+            "KLG": {
+              "conviction": 0.04,
+              "position": "short"
+            },
+            "WMK": {
+              "conviction": 0.03,
+              "position": "short"
+            },
+            "REYN": {
+              "conviction": 0.03,
+              "position": "short"
+            },
+            "WDFC": {
+              "conviction": 0.03,
+              "position": "short"
+            },
+            "UVV": {
+              "conviction": 0.03,
+              "position": "short"
+            },
+            "CPB": {
+              "conviction": 0.02,
+              "position": "short"
+            },
+            "PRMB": {
+              "conviction": 0.02,
+              "position": "short"
+            },
+            "EL": {
+              "conviction": 0.02,
+              "position": "short"
+            },
+            "EPC": {
+              "conviction": 0.02,
+              "position": "short"
+            },
+            "FRPT": {
+              "conviction": 0.01,
+              "position": "short"
+            }
+          }
+        },
+        "explanation": "Successful retry with corrected arguments",
+        "timestamp": "2025-08-18T15:04:56.885633",
+        "success_count": 1
+      }
+    },
+    "set_plan:missing_plan": {
+      "tool_name": "set_plan",
+      "error_pattern": "BaseAgent._set_plan() missing 1 required positional argument: 'plan'",
+      "occurrences": [
+        {
+          "timestamp": "2025-08-19T16:02:35.343702",
+          "args": {},
+          "full_error": "BaseAgent._set_plan() missing 1 required positional argument: 'plan'"
+        }
+      ],
+      "solutions": [],
+      "auto_solution": null
+    }
+  },
+  "last_updated": "2025-08-19T16:02:35.343702"
+}
