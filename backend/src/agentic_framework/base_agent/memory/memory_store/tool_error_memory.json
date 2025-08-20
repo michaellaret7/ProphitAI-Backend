@@ -1123,7 +1123,20 @@
         "timestamp": "2025-08-18T15:04:56.885633",
         "success_count": 1
       }
+    },
+    "set_plan:missing_plan": {
+      "tool_name": "set_plan",
+      "error_pattern": "BaseAgent._set_plan() missing 1 required positional argument: 'plan'",
+      "occurrences": [
+        {
+          "timestamp": "2025-08-19T16:02:35.343702",
+          "args": {},
+          "full_error": "BaseAgent._set_plan() missing 1 required positional argument: 'plan'"
+        }
+      ],
+      "solutions": [],
+      "auto_solution": null
     }
   },
-  "last_updated": "2025-08-19T10:40:45.263226"
+  "last_updated": "2025-08-19T16:02:35.343702"
 }
