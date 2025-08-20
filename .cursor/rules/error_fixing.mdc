@@ -1,0 +1,20 @@
+---
+description: Error fixing workflow
+globs:
+alwaysApply: false
+---
+
+**How to fix an Error**:
+
+1. Review the terminal output containing the error 
+2. Pick out the files that contain the error and review them 
+3. Diagnose the error based on the file context and error message 
+4. Write out the error in the planning/error_fixer.md file 
+5. Write out a plan to fix it in the md file 
+6. Wait for the developer to approve the plan 
+7. Apply the plan to the code 
+8. Once the application of the error fix is complete review the code and confirm that the solution is applied
+
+Important Rules:
+a. Do not overcomplicate the approach
+b. Keep it effective but as simple as you can

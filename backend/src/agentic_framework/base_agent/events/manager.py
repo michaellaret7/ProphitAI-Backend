@@ -21,6 +21,7 @@ class AgentEvent(Enum):
     # Agent lifecycle events
     ITERATION_COMPLETE = "iteration_complete"
     PLAN_CREATED = "plan_created"
+    PLAN_COMPLETED = "plan_completed"
     
     # Validation events
     VALIDATION_REQUIRED = "validation_required"
