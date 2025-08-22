@@ -13,7 +13,6 @@ class TaskManager:
     
     def __init__(self, verbose: bool = True):
         self.verbose = verbose
-        self.tasks: Dict[str, Dict[str, Any]] = {}  # Simplified task storage
         self.execution_history: List[Dict] = []
         self.structured_plan: Optional[TodoList] = None  # Store the structured plan
         
@@ -442,7 +441,7 @@ class TaskManager:
             print(f"📝 Task progress update at iteration {iteration}")
         self.save_state()
     
-    def is_checklist_complete(self) -> bool:
+    def is_plan_complete(self) -> bool:
         """Check if all tasks are completed."""
         return self.all_tasks_complete()
     
