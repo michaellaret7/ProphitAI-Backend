@@ -30,6 +30,9 @@ from .memory.semantic_memory import SemanticMemory
 
 load_dotenv()
 
+#TODO: Push the register tools functions to their own files and manage that properly 
+#TODO: get rid of old/dead code that does not help the main agent work flow
+
 class BaseAgent:
     """
     Refactored BaseAgent with:
