@@ -1136,7 +1136,69 @@
       ],
       "solutions": [],
       "auto_solution": null
+    },
+    "update_task_status:missing_confidence": {
+      "tool_name": "update_task_status",
+      "error_pattern": "TaskManager.update_task_status() got an unexpected keyword argument 'confidence'",
+      "occurrences": [
+        {
+          "timestamp": "2025-08-27T15:43:21.339408",
+          "args": {
+            "task_id": "2",
+            "status": "completed",
+            "evidence": {
+              "observations": [
+                "Baseline portfolio daily VaR (99%): 2.43%, ES: 2.78%, volatility: 16.6%.",
+                "Top 5 risk contributors by volatility CTR%: PPC (10.1%), ODD (7.5%), JJSF (6.7%), VITL (6.6%), SEB (6.6%).",
+                "Highest single-name tail risk by CTR% (VaR): CASY (21.4%)—significant outlier; others: CELH (7.4%), IPAR (6.9%), DOLE (6.9%), KVUE (6.4%).",
+                "CASY exhibits >20% tail-risk: single-name concentration risk identified—even though volatility CTR% appears diversified. No other positions >11%."
+              ]
+            },
+            "confidence": 0.99,
+            "reason": "Recorded baseline risk metrics. Flagged CASY for outsized tail-risk contribution. Other positions within moderate risk range."
+          },
+          "full_error": "TaskManager.update_task_status() got an unexpected keyword argument 'confidence'"
+        }
+      ],
+      "solutions": [
+        {
+          "correct_args": {
+            "task_id": "3",
+            "status": "completed",
+            "evidence": {
+              "observations": [
+                "Initial portfolio max drawdown: -10.9% is within moderately acceptable range, but multiple episodes approach -6% to -7% in single streaks.",
+                "Average drawdown: -1.79% and Ulcer Index: 2.7% are moderate, but frequent 20+ day recovery periods (up to 89 days) reflect some resilience issues under stress and slow regains post-loss.",
+                "Current drawdown is -6.1% active, representing some ongoing portfolio volatility risk.",
+                "Largest drawdowns occurred over summer and early autumn, indicating seasonality and potential systemic portfolio vulnerabilities."
+              ]
+            },
+            "reason": "Drawdown profile shows moderate downside risk, with generally acceptable recovery times, but some lengthy and severe events to address in iteration."
+          },
+          "explanation": "Successful retry with corrected arguments",
+          "timestamp": "2025-08-27T15:43:30.250422",
+          "success_count": 1
+        }
+      ],
+      "auto_solution": {
+        "correct_args": {
+          "task_id": "3",
+          "status": "completed",
+          "evidence": {
+            "observations": [
+              "Initial portfolio max drawdown: -10.9% is within moderately acceptable range, but multiple episodes approach -6% to -7% in single streaks.",
+              "Average drawdown: -1.79% and Ulcer Index: 2.7% are moderate, but frequent 20+ day recovery periods (up to 89 days) reflect some resilience issues under stress and slow regains post-loss.",
+              "Current drawdown is -6.1% active, representing some ongoing portfolio volatility risk.",
+              "Largest drawdowns occurred over summer and early autumn, indicating seasonality and potential systemic portfolio vulnerabilities."
+            ]
+          },
+          "reason": "Drawdown profile shows moderate downside risk, with generally acceptable recovery times, but some lengthy and severe events to address in iteration."
+        },
+        "explanation": "Successful retry with corrected arguments",
+        "timestamp": "2025-08-27T15:43:30.250422",
+        "success_count": 1
+      }
     }
   },
-  "last_updated": "2025-08-19T16:02:35.343702"
+  "last_updated": "2025-08-27T15:43:30.251422"
 }

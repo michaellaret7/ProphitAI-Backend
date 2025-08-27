@@ -251,6 +251,7 @@ Remember:
   * Running complete risk suite on final portfolio
   * Showing measurable improvement in risk metrics
 - Success = Demonstrable risk improvement across VaR, concentration, drawdowns, and stress tests WITH maintained alpha
+- EXTREMELY IMPORTAMT NOTE: You do not HAVE to change position allocations or make drops. ONLY make a change to a position if it will help the portfolios risk profile. 
 
 FINAL OUTPUT REQUIREMENT:
 Your final output must include both:
