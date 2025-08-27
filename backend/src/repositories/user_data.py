@@ -120,10 +120,8 @@ def get_user_basic_info(email: Optional[str] = None, user_id: Optional[str] = No
             'last_name': user.last_name
         }
 
-def add_user(email:str, first_name:str, last_name:str):
+def add_user(email:str, first_name:str, last_name:str, workos_id: Optional[str] = None):
     session = UserSession()
-
-    workos_id = "" # TODO: get workos_id from workos
 
     user = session.query(User).filter(User.email == email).first()
     if user:
@@ -139,6 +137,14 @@ def add_user(email:str, first_name:str, last_name:str):
 
     session.add(user)
     session.commit()
+    session.close()
+
+def update_user_workos_id(email: str, workos_id: str) -> None:
+    session = UserSession()
+    user = session.query(User).filter(User.email == email).first()
+    if user and user.workos_id != workos_id:
+        user.workos_id = workos_id
+        session.commit()
     session.close()
 
 def add_company_user(email:str, company_name:str, role:str):

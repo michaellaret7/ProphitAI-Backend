@@ -1,15 +1,14 @@
 import os
-from dotenv import load_dotenv
 from workos import WorkOSClient
+from dotenv import load_dotenv
 
 load_dotenv()
 
 # Initialize WorkOS client
-workos = WorkOSClient(
-    api_key=os.getenv("WORKOS_API_KEY"),
-    client_id=os.getenv("WORKOS_CLIENT_ID")
+workos_client = WorkOSClient(
+    api_key=os.environ["WORKOS_API_KEY"],
+    client_id=os.environ["WORKOS_CLIENT_ID"]
 )
 
-# Configuration
-REDIRECT_URI = os.getenv("WORKOS_REDIRECT_URI")
-COOKIE_PASSWORD = os.getenv("WORKOS_COOKIE_PASSWORD")
+# Configuration constants
+REDIRECT_URI = os.environ.get("WORKOS_REDIRECT_URI", "http://localhost:8000/auth/callback")

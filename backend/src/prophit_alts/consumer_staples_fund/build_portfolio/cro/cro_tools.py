@@ -486,3 +486,4 @@ def drawdown_profile(portfolio_dict: dict = None) -> dict:
     except Exception as e:
         return {"error": f"Failed to calculate drawdown_profile: {str(e)}"}
 
+#TODO: add an industry/subindustry concentration tool

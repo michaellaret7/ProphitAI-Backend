@@ -1,281 +1,190 @@
-# WorkOS Backend Implementation Plan
+## WorkOS code appearances in backend (for reset)
 
-## Project Overview
-Complete WorkOS backend implementation for ProphitAI using FastAPI, PostgreSQL, and WorkOS Python SDK. This implementation will provide enterprise-ready authentication, SSO, directory sync, audit logs, and user management capabilities.
+### backend/src/auth/config.py
+```python
+import os
+from workos import WorkOSClient
+from dotenv import load_dotenv
 
-## Prerequisites & Setup
+load_dotenv()
 
-### 1. WorkOS Account Setup
-- [ ] Create WorkOS account at https://workos.com/
-- [ ] Obtain API Key and Client ID from WorkOS Dashboard
-- [ ] Configure WorkOS environment (Development/Staging/Production)
-- [ ] Set up redirect URIs in WorkOS Dashboard
-- [ ] Configure allowed origins for CORS
+# Initialize WorkOS client
+workos_client = WorkOSClient(
+    api_key=os.environ["WORKOS_API_KEY"],
+    client_id=os.environ["WORKOS_CLIENT_ID"]
+)
 
-### 2. Environment Configuration
-- [ ] Add WorkOS environment variables to `.env` file
-  - `WORKOS_API_KEY`
-  - `WORKOS_CLIENT_ID`
-  - `WORKOS_WEBHOOK_SECRET`
-  - `WORKOS_REDIRECT_URI`
-  - `COOKIE_SECRET_KEY`
-- [ ] Update requirements.txt to ensure workos==5.23.0 (already present)
-- [ ] Configure secure cookie settings for production
+# Configuration constants
+REDIRECT_URI = os.environ["WORKOS_REDIRECT_URI"]
 
-### 3. Database Schema Updates
-- [ ] Review existing user_data database schema
-- [ ] Create/update user management tables:
-  - `workos_organizations` table
-  - `workos_connections` table
-  - `workos_directory_sync` table
-  - `user_sessions` table
-  - `audit_events` table
-- [ ] Add WorkOS-specific fields to existing users table
-- [ ] Create database migration scripts
-- [ ] Add proper indexes for performance
+print(workos_client)
+```
 
-## Core Implementation
+## Clean WorkOS backend re-implementation (actionable plan)
 
-### 4. WorkOS SDK Configuration
-- [ ] Create new `backend/src/workos_integration/` directory structure
-- [ ] Implement `config.py` - WorkOS client initialization and configuration
-- [ ] Create `exceptions.py` - Custom WorkOS-specific exceptions
-- [ ] Implement `models.py` - Pydantic models for WorkOS entities
-- [ ] Create `constants.py` - WorkOS-related constants and enums
+### Scope
+- **SSO only (minimal)**: Login + callback, persist `workos_id`, redirect to frontend.
+- Optional later: audit logs, webhooks, richer session management.
 
-### 5. Authentication & Session Management
-- [ ] Implement `auth_service.py` - Core authentication logic
-- [ ] Create secure session management with JWT/sealed sessions
-- [ ] Implement user profile retrieval and caching
-- [ ] Add login/logout endpoints with proper redirects
-- [ ] Create middleware for authentication validation
-- [ ] Implement refresh token handling
-- [ ] Add password reset functionality (if applicable)
-
-### 6. User Management
-- [ ] Implement `user_service.py` - User CRUD operations
-- [ ] Create user profile management endpoints
-- [ ] Implement user search and filtering
-- [ ] Add user role and permission management
-- [ ] Create user invitation system
-- [ ] Implement user deactivation/reactivation
-- [ ] Add user data export functionality
-
-### 7. Organization Management
-- [ ] Implement `organization_service.py` - Organization CRUD operations
-- [ ] Create organization creation and configuration
-- [ ] Add domain verification functionality
-- [ ] Implement organization member management
-- [ ] Create organization settings management
-- [ ] Add organization branding customization
-
-### 8. Single Sign-On (SSO) Implementation
-- [ ] Implement `sso_service.py` - SSO connection management
-- [ ] Create SSO provider configuration (SAML, OIDC)
-- [ ] Add SSO connection testing and validation
-- [ ] Implement automatic user provisioning via SSO
-- [ ] Create SSO analytics and reporting
-- [ ] Add support for multiple SSO providers per organization
-- [ ] Implement Just-In-Time (JIT) provisioning
-
-### 9. Directory Sync (SCIM) Implementation
-- [ ] Implement `directory_service.py` - Directory sync management
-- [ ] Create SCIM endpoints for user/group provisioning
-- [ ] Add directory sync webhook handlers
-- [ ] Implement user lifecycle management (create/update/delete)
-- [ ] Create group management and membership sync
-- [ ] Add directory sync monitoring and error handling
-- [ ] Implement incremental sync capabilities
-
-### 10. Webhooks Implementation
-- [ ] Create `webhook_service.py` - Webhook event processing
-- [ ] Implement webhook signature verification
-- [ ] Add webhook event routing and handling
-- [ ] Create retry logic for failed webhook processing
-- [ ] Implement webhook event logging and monitoring
-- [ ] Add webhook endpoint configuration management
-- [ ] Create webhook event replay functionality
-
-### 11. Audit Logs Implementation
-- [ ] Implement `audit_service.py` - Audit log management
-- [ ] Create audit event ingestion and storage
-- [ ] Add audit log search and filtering
-- [ ] Implement audit log export functionality
-- [ ] Create audit log retention policies
-- [ ] Add audit log visualization and reporting
-- [ ] Implement real-time audit monitoring
-
-### 12. Multi-Factor Authentication (MFA)
-- [ ] Implement `mfa_service.py` - MFA management
-- [ ] Create MFA enrollment and setup
-- [ ] Add MFA verification endpoints
-- [ ] Implement backup codes generation
-- [ ] Create MFA recovery options
-- [ ] Add MFA policy enforcement
-- [ ] Implement MFA analytics and reporting
-
-## API Endpoints Structure
-
-### 13. Authentication Endpoints
-- [ ] `POST /auth/login` - Initiate login flow
-- [ ] `GET /auth/callback` - Handle OAuth callback
-- [ ] `POST /auth/logout` - User logout
-- [ ] `POST /auth/refresh` - Refresh authentication token
-- [ ] `GET /auth/user` - Get current user profile
-- [ ] `POST /auth/forgot-password` - Password reset request
-- [ ] `POST /auth/reset-password` - Password reset confirmation
-
-### 14. User Management Endpoints
-- [ ] `GET /users` - List users with pagination and filtering
-- [ ] `GET /users/{user_id}` - Get specific user details
-- [ ] `PUT /users/{user_id}` - Update user profile
-- [ ] `DELETE /users/{user_id}` - Deactivate user
-- [ ] `POST /users/invite` - Invite new users
-- [ ] `POST /users/bulk-import` - Bulk user import
-- [ ] `GET /users/export` - Export user data
-
-### 15. Organization Endpoints
-- [ ] `GET /organizations` - List organizations
-- [ ] `POST /organizations` - Create new organization
-- [ ] `GET /organizations/{org_id}` - Get organization details
-- [ ] `PUT /organizations/{org_id}` - Update organization
-- [ ] `DELETE /organizations/{org_id}` - Delete organization
-- [ ] `GET /organizations/{org_id}/members` - Get organization members
-- [ ] `POST /organizations/{org_id}/domains` - Add domain to organization
-
-### 16. SSO Management Endpoints
-- [ ] `GET /sso/connections` - List SSO connections
-- [ ] `POST /sso/connections` - Create SSO connection
-- [ ] `GET /sso/connections/{connection_id}` - Get SSO connection details
-- [ ] `PUT /sso/connections/{connection_id}` - Update SSO connection
-- [ ] `DELETE /sso/connections/{connection_id}` - Delete SSO connection
-- [ ] `POST /sso/connections/{connection_id}/test` - Test SSO connection
-
-### 17. Directory Sync Endpoints
-- [ ] `GET /directory-sync/directories` - List directories
-- [ ] `POST /directory-sync/directories` - Create directory sync
-- [ ] `GET /directory-sync/directories/{directory_id}` - Get directory details
-- [ ] `POST /directory-sync/directories/{directory_id}/sync` - Manual sync trigger
-- [ ] `GET /directory-sync/users` - List synced users
-- [ ] `GET /directory-sync/groups` - List synced groups
-
-### 18. Webhook Endpoints
-- [ ] `POST /webhooks/workos` - WorkOS webhook receiver
-- [ ] `GET /webhooks/config` - Get webhook configuration
-- [ ] `POST /webhooks/config` - Configure webhook settings
-- [ ] `POST /webhooks/test` - Test webhook endpoint
-- [ ] `GET /webhooks/logs` - View webhook processing logs
-
-### 19. Audit Log Endpoints
-- [ ] `GET /audit/events` - List audit events with filtering
-- [ ] `POST /audit/events` - Create audit event
-- [ ] `GET /audit/events/{event_id}` - Get specific audit event
-- [ ] `GET /audit/export` - Export audit logs
-- [ ] `GET /audit/analytics` - Audit log analytics
-
-## Security & Error Handling
-
-### 20. Security Implementation
-- [ ] Implement rate limiting on all endpoints
-- [ ] Add input validation and sanitization
-- [ ] Create secure cookie configuration
-- [ ] Implement CSRF protection
-- [ ] Add API key rotation capabilities
-- [ ] Create security headers middleware
-- [ ] Implement IP whitelisting (if required)
-
-### 21. Error Handling & Resilience
-- [ ] Create comprehensive error handling for all WorkOS API calls
-- [ ] Implement retry logic with exponential backoff
-- [ ] Add circuit breaker pattern for external API calls
-- [ ] Create proper error logging and monitoring
-- [ ] Implement graceful degradation strategies
-- [ ] Add timeout handling for all external requests
-
-### 22. Monitoring & Observability
-- [ ] Add structured logging throughout the application
-- [ ] Implement health check endpoints
-- [ ] Create metrics collection for WorkOS operations
-- [ ] Add performance monitoring for critical paths
-- [ ] Implement alerting for critical failures
-- [ ] Create dashboard for WorkOS integration status
-
-## Testing
-
-### 23. Unit Testing
-- [ ] Write unit tests for all service classes
-- [ ] Create mock objects for WorkOS API responses
-- [ ] Test error handling and edge cases
-- [ ] Add tests for authentication flows
-- [ ] Create tests for webhook processing
-- [ ] Test database operations and transactions
-
-### 24. Integration Testing
-- [ ] Create end-to-end authentication flow tests
-- [ ] Test SSO integration with mock providers
-- [ ] Add webhook integration tests
-- [ ] Test database schema migrations
-- [ ] Create API endpoint integration tests
-- [ ] Test rate limiting and security features
-
-### 25. Load Testing
-- [ ] Create load tests for authentication endpoints
-- [ ] Test webhook processing under high load
-- [ ] Add stress tests for database operations
-- [ ] Test rate limiting behavior
-- [ ] Create performance benchmarks
-
-## Documentation & Deployment
-
-### 26. Documentation
-- [ ] Create API documentation with OpenAPI/Swagger
-- [ ] Write integration guide for frontend developers
-- [ ] Create deployment documentation
-- [ ] Add troubleshooting guide
-- [ ] Create security best practices document
-- [ ] Write disaster recovery procedures
-
-### 27. Deployment Preparation
-- [ ] Create Docker configuration for WorkOS services
-- [ ] Set up environment-specific configurations
-- [ ] Create database migration scripts
-- [ ] Add health check endpoints for load balancers
-- [ ] Configure logging for production
-- [ ] Set up monitoring and alerting
-
-### 28. Final Integration
-- [ ] Update existing authentication middleware to use WorkOS
-- [ ] Migrate existing user data to WorkOS-compatible format
-- [ ] Update frontend authentication flows
-- [ ] Configure production WorkOS settings
-- [ ] Implement feature flags for gradual rollout
-- [ ] Create rollback procedures
-
-## Post-Implementation
-
-### 29. Performance Optimization
-- [ ] Optimize database queries and add caching
-- [ ] Implement connection pooling for WorkOS API calls
-- [ ] Add CDN configuration for static assets
-- [ ] Optimize authentication flow performance
-- [ ] Create efficient data synchronization processes
-
-### 30. Maintenance & Monitoring
-- [ ] Set up automated testing pipelines
-- [ ] Create monitoring dashboards
-- [ ] Implement log aggregation and analysis
-- [ ] Set up automated security scanning
-- [ ] Create backup and recovery procedures
-- [ ] Plan for SDK updates and maintenance
+### TODO checklist
+- [ ] Fix router import in `backend/main.py`
+- [ ] Finalize `backend/src/auth/config.py` (remove debug print; envs only)
+- [ ] Implement minimal SSO in `backend/src/auth/sso.py` (login + callback)
+- [ ] Update `backend/src/repositories/user_data.py` to persist `workos_id`
+- [ ] Smoke-test the flow locally
 
 ---
 
-## Review Section
+### 1) Router import (wire-up)
+Change import to use the existing `sso.py` router.
 
-*This section will be populated after implementation with:*
-- Summary of completed features
-- Performance metrics achieved
-- Security considerations implemented
-- Known limitations or technical debt
-- Recommendations for future enhancements
-- Lessons learned during implementation
+```python
+# File: backend/main.py
+# Before
+from backend.src.auth.routes import router as auth_router
+
+# After
+from backend.src.auth.sso import router as auth_router
+```
+
+`app.include_router(auth_router)` can remain as-is.
+
+---
+
+### 2) WorkOS client config (minimal, no side-effects)
+Use env vars only; remove prints. Provide a sane default for local redirect.
+
+```python
+# File: backend/src/auth/config.py
+import os
+from workos import WorkOSClient
+from dotenv import load_dotenv
+
+load_dotenv()
+
+workos_client = WorkOSClient(
+    api_key=os.environ["WORKOS_API_KEY"],
+    client_id=os.environ["WORKOS_CLIENT_ID"],
+)
+
+REDIRECT_URI = os.environ.get(
+    "WORKOS_REDIRECT_URI", "http://localhost:8000/auth/callback"
+)
+```
+
+Required env vars:
+- `WORKOS_API_KEY`
+- `WORKOS_CLIENT_ID`
+- `WORKOS_REDIRECT_URI` (optional in dev; defaults to the callback above)
+
+---
+
+### 3) Minimal SSO endpoints (login + callback)
+Keep it simple: generate URL, exchange code, upsert user, redirect to frontend.
+
+```python
+# File: backend/src/auth/sso.py
+from fastapi import APIRouter, Request, HTTPException
+from fastapi.responses import RedirectResponse
+from .config import workos_client, REDIRECT_URI
+from backend.src.repositories.user_data import get_user_basic_info, add_user
+
+router = APIRouter(prefix="/auth", tags=["authentication"])
+
+@router.get("/login")
+async def login():
+    # TODO: replace with your org/connection lookup if needed
+    organization_id = "org_test_idp"
+
+    authorization_url = workos_client.sso.get_authorization_url(
+        organization_id=organization_id,
+        redirect_uri=REDIRECT_URI,
+    )
+    return RedirectResponse(url=authorization_url)
+
+@router.get("/callback")
+async def callback(request: Request):
+    code = request.query_params.get("code")
+    if not code:
+        raise HTTPException(status_code=400, detail="Missing authorization code")
+
+    try:
+        profile_and_token = workos_client.sso.get_profile_and_token(code)
+        profile = profile_and_token.profile
+
+        # 1) Try to find user by email
+        existing = get_user_basic_info(email=profile.email)
+
+        # 2) Create if absent, otherwise ensure workos_id is persisted (see repo changes below)
+        if not existing:
+            add_user(
+                email=profile.email,
+                first_name=profile.first_name or "",
+                last_name=profile.last_name or "",
+                # new optional param you'll add
+                workos_id=profile.id,
+            )
+        else:
+            # If you add update helper, call it here to persist profile.id
+            pass
+
+        return RedirectResponse(url="http://localhost:5173/dashboard")
+    except Exception:
+        return RedirectResponse(url="/auth/login")
+```
+
+---
+
+### 4) Repository changes (persist workos_id)
+Make `add_user` accept an optional `workos_id` and add a tiny helper to update it when a user already exists.
+
+```python
+# File: backend/src/repositories/user_data.py
+from typing import Optional
+
+def add_user(email: str, first_name: str, last_name: str, workos_id: Optional[str] = None):
+    session = UserSession()
+
+    user = session.query(User).filter(User.email == email).first()
+    if user:
+        session.close()
+        return user, "User already exists"
+
+    user = User(
+        id=uuid.uuid4(),
+        workos_id=workos_id,
+        email=email,
+        first_name=first_name,
+        last_name=last_name,
+    )
+    session.add(user)
+    session.commit()
+    session.close()
+
+def update_user_workos_id(email: str, workos_id: str) -> None:
+    session = UserSession()
+    user = session.query(User).filter(User.email == email).first()
+    if user and user.workos_id != workos_id:
+        user.workos_id = workos_id
+        session.commit()
+    session.close()
+```
+
+Then in `auth/sso.py` callback, call `update_user_workos_id(profile.email, profile.id)` when `existing` is found.
+
+---
+
+### 5) Smoke test
+1. Start backend on port 8000.
+2. Visit `http://localhost:8000/auth/login` and complete SSO.
+3. Verify a user row is created/updated with `workos_id`.
+4. Confirm redirect to `http://localhost:5173/dashboard`.
+
+---
+
+### Later (optional)
+- Add CSRF `state` on login and verify on callback.
+- Replace hardcoded `organization_id` with lookup by email domain/company.
+- Implement real session/JWT and plug into `get_current_user` in `auth/dependencies.py`.
+- Add WorkOS Audit Logs and Webhooks.
+

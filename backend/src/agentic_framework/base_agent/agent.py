@@ -47,7 +47,7 @@ class BaseAgent:
                 user_prompt: str, 
                 *, 
                 model: str = None, 
-                max_iterations: int = 50, 
+                max_iterations: int = 75, 
                 verbose: bool = True, 
                 plan_first: bool = True, 
                 final_keywords: Optional[List[str]] = None, 
@@ -802,7 +802,7 @@ class BaseAgent:
             plan_start_context = None
             
             if self.verbose:
-                print(f"\n⚜️  Iteration {i}")
+                print(f"\n ⚜️  Iteration {i}")
                 
                 # Show current task context for plan-driven execution awareness
                 if self.execution_engine.plan_loaded:
