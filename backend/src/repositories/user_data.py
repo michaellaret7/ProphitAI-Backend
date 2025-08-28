@@ -3,20 +3,18 @@ from backend.src.db.core.db_config import UserSession
 from sqlalchemy.orm import joinedload
 from typing import Optional, Union, Dict, Any
 
-def get_all_user_data(email: Optional[str] = None, user_id: Optional[str] = None, workos_id: Optional[str] = None) -> Optional[Dict[str, Any]]:
+def get_all_user_data(email: str) -> Optional[Dict[str, Any]]:
     """
-    Get complete user data by email, user_id, or workos_id
+    Get complete user data by email
     
     Args:
         email: User's email address
-        user_id: User's UUID
-        workos_id: User's WorkOS ID
         
     Returns:
         Dictionary containing complete user data with companies and portfolios, or None if not found
     """
-    if not any([email, user_id, workos_id]):
-        raise ValueError("At least one identifier (email, user_id, or workos_id) must be provided")
+    if not email:
+        raise ValueError("Email must be provided")
     
     with UserSession() as session:
         # Build query with eager loading of related data
@@ -25,13 +23,8 @@ def get_all_user_data(email: Optional[str] = None, user_id: Optional[str] = None
             joinedload(User.portfolios)
         )
         
-        # Apply filters based on provided identifiers
-        if email:
-            query = query.filter(User.email == email)
-        elif user_id:
-            query = query.filter(User.id == user_id)
-        elif workos_id:
-            query = query.filter(User.workos_id == workos_id)
+        # Apply filter by email
+        query = query.filter(User.email == email)
         
         user = query.first()
         
@@ -81,32 +74,21 @@ def get_all_user_data(email: Optional[str] = None, user_id: Optional[str] = None
         
         return user_data
 
-def get_user_basic_info(email: Optional[str] = None, user_id: Optional[str] = None, workos_id: Optional[str] = None) -> Optional[Dict[str, Any]]:
+def get_user_basic_info(email: str) -> Optional[Dict[str, Any]]:
     """
-    Get basic user info (id, workos_id, email, first_name, last_name) by email, user_id, or workos_id
+    Get basic user info (id, workos_id, email, first_name, last_name) by email
     
     Args:
         email: User's email address
-        user_id: User's UUID
-        workos_id: User's WorkOS ID
         
     Returns:
         Dictionary containing only basic user info, or None if not found
     """
-    if not any([email, user_id, workos_id]):
-        raise ValueError("At least one identifier (email, user_id, or workos_id) must be provided")
+    if not email:
+        raise ValueError("Email must be provided")
     
     with UserSession() as session:
-        query = session.query(User)
-        
-        # Apply filters based on provided identifiers
-        if email:
-            query = query.filter(User.email == email)
-        elif user_id:
-            query = query.filter(User.id == user_id)
-        elif workos_id:
-            query = query.filter(User.workos_id == workos_id)
-        
+        query = session.query(User).filter(User.email == email)
         user = query.first()
         
         if not user:
@@ -182,3 +164,5 @@ def add_company(company_name:str, seats:int):
     session.close()
 
 
+if __name__ == "__main__":
+    print(get_all_user_data('michael@laret.com'))

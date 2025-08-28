@@ -21,7 +21,6 @@ app.add_middleware(
 app.include_router(auth_router, prefix="/api/auth")
 app.include_router(user_router, prefix="/api/user")
 
-
 @app.get("/")
 async def root():
     return {"message": "ProphitAI API is running"}
