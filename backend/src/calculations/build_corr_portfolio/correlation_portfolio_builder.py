@@ -3,6 +3,8 @@
 import pandas as pd
 from typing import Dict, Optional, Tuple
 import warnings
+
+from backend.src.db.core.db_config import MarketSession
 warnings.filterwarnings('ignore')
 
 # Import all the modular components
@@ -233,84 +235,55 @@ class CorrelationAwarePortfolioBuilder:
         
         return portfolio_positions, self.allocation_df 
 
+def save_positions_to_db(allocation_df, alpaca_portfolio):
+    """Save final positions to prophit_alts_funds.final_positions table"""
+    from backend.src.db.core.prophit_alts_models import FundFinalPosition, Fund, FundInitialPosition
+    from backend.src.db.core.db_config import ProphitAltsSession
+    from backend.src.db.core.market_data_models import Ticker
+    import uuid
+    from datetime import datetime
+
+    market_session = MarketSession()
+    session = ProphitAltsSession()
+    
+    try:
+        # Clear existing positions for this fund (optional - remove if you want to keep historical)
+        fund_id = session.query(Fund).filter(Fund.fund_name == "consumer_staples_fund").first().id
+
+        # Insert new positions
+        for _, row in allocation_df.iterrows():
+            position = FundFinalPosition(
+                fund_id=fund_id,  # You'll need to provide the actual fund UUID
+                ticker_id=market_session.query(Ticker).filter(Ticker.ticker == row['ticker']).first().id,  # You'll need to lookup actual ticker_id from market_data.ticker_universe.tickers
+                ticker_name=row['ticker'],
+                position=row['position'].upper(),  # LONG or SHORT
+                industry=market_session.query(Ticker).filter(Ticker.ticker == row['ticker']).first().industry,  # You can make this dynamic by looking up from tickers table
+                risk_allocation=float(row['weight']),
+                portfolio_allocation=alpaca_portfolio[row['ticker']]['conviction'],  # Same as risk_allocation in your case
+                reasoning=f"Risk-based allocation with {row['risk_contrib']:.2%} risk contribution"
+            )
+            session.add(position)
+
+            # print(fund_id)  # You'll need to provide the actual fund UUID
+            # print(market_session.query(Ticker).filter(Ticker.ticker == row['ticker']).first().id)  # You'll need to lookup actual ticker_id from market_data.ticker_universe.tickers
+            # print(row['ticker'])
+            # print(row['position'].upper())
+            # print(market_session.query(Ticker).filter(Ticker.ticker == row['ticker']).first().industry)  # You'll need to lookup actual ticker_id from market_data.ticker_universe.tickers
+            # print(alpaca_portfolio[row['ticker']]['conviction'])  # You'll need to lookup actual ticker_id from market_data.ticker_universe.tickers
+            # print(row['weight'])  # You'll need to lookup actual ticker_id from market_data.ticker_universe.tickers
+            # print(f"Risk-based allocation with {row['risk_contrib']:.2%} risk contribution")  # You'll need to lookup actual ticker_id from market_data.ticker_universe.tickers
+
+        session.commit()
+        print(f"\nSuccessfully saved {len(allocation_df)} positions to database!")
+        
+    except Exception as e:
+        session.rollback()
+        print(f"Error saving positions to database: {e}")
+        session.close()
+        market_session.close()
+        raise e
+
 if __name__ == "__main__":
-    # Consumer Staples Portfolio
-    # tickers1 = {
-    #     # Long positions
-    #     "CASY": {"conviction": 0.10, "position": "long"},
-    #     "CELH": {"conviction": 0.10, "position": "long"},
-    #     "ODC": {"conviction": 0.05, "position": "long"},
-    #     "ODD": {"conviction": 0.05, "position": "long"},
-    #     "PM": {"conviction": 0.05, "position": "long"},
-    #     "VITL": {"conviction": 0.05, "position": "long"},
-    #     "WMT": {"conviction": 0.05, "position": "long"},
-    #     "BJ": {"conviction": 0.05, "position": "long"},
-    #     "SFM": {"conviction": 0.05, "position": "long"},
-    #     "COCO": {"conviction": 0.05, "position": "long"},
-    #     "MNST": {"conviction": 0.05, "position": "long"},
-    #     "CL": {"conviction": 0.05, "position": "long"},
-    #     "IPAR": {"conviction": 0.05, "position": "long"},
-    #     "TPB": {"conviction": 0.05, "position": "long"},
-    #     "DOLE": {"conviction": 0.05, "position": "long"},
-    #     "PPC": {"conviction": 0.05, "position": "long"},
-    #     "INGR": {"conviction": 0.05, "position": "long"},
-    #     # Short positions
-    #     "WBA": {"conviction": 0.05, "position": "short"},
-    #     "ANDE": {"conviction": 0.05, "position": "short"},
-    #     "TGT": {"conviction": 0.02, "position": "short"},
-    #     "STZ": {"conviction": 0.05, "position": "short"},
-    #     "PEP": {"conviction": 0.05, "position": "short"},
-    #     "SAM": {"conviction": 0.05, "position": "short"},
-    #     "MGPI": {"conviction": 0.05, "position": "short"},
-    #     "ENR": {"conviction": 0.05, "position": "short"},
-    #     "SPB": {"conviction": 0.05, "position": "short"},
-    #     "COTY": {"conviction": 0.05, "position": "short"},
-    #     "KVUE": {"conviction": 0.05, "position": "short"},
-    #     "KLG": {"conviction": 0.05, "position": "short"},
-    #     "JJSF": {"conviction": 0.05, "position": "short"},
-    #     "SEB": {"conviction": 0.05, "position": "short"},
-    # }
-
-    tickers2 = {
-	# Long positions
-        "CASY": {"conviction": 0.08, "position": "long"},
-        "CELH": {"conviction": 0.07, "position": "long"},
-        "ODC": {"conviction": 0.06, "position": "long"},
-        "ODD": {"conviction": 0.05, "position": "long"},
-        "PM": {"conviction": 0.07, "position": "long"},
-        "VITL": {"conviction": 0.07, "position": "long"},
-        "WMT": {"conviction": 0.05, "position": "long"},
-        "BJ": {"conviction": 0.05, "position": "long"},
-        "SFM": {"conviction": 0.06, "position": "long"},
-        "COCO": {"conviction": 0.04, "position": "long"},
-        "MNST": {"conviction": 0.04, "position": "long"},
-        "CL": {"conviction": 0.04, "position": "long"},
-        "TPB": {"conviction": 0.04, "position": "long"},
-        "DOLE": {"conviction": 0.03, "position": "long"},
-        "PPC": {"conviction": 0.03, "position": "long"},
-        "INGR": {"conviction": 0.03, "position": "long"},
-        "FIZZ": {"conviction": 0.02, "position": "long"},
-
-        # Short positions
-        "WBA": {"conviction": 0.05, "position": "short"},
-        "ANDE": {"conviction": 0.05, "position": "short"},
-        "TGT": {"conviction": 0.03, "position": "short"},
-        "STZ": {"conviction": 0.05, "position": "short"},
-        "PEP": {"conviction": 0.05, "position": "short"},
-        "SAM": {"conviction": 0.04, "position": "short"},
-        "MGPI": {"conviction": 0.03, "position": "short"},
-        "ENR": {"conviction": 0.04, "position": "short"},
-        "SPB": {"conviction": 0.04, "position": "short"},
-        "COTY": {"conviction": 0.04, "position": "short"},
-        "KVUE": {"conviction": 0.03, "position": "short"},
-        "KLG": {"conviction": 0.03, "position": "short"},
-        "JJSF": {"conviction": 0.03, "position": "short"},
-        "SEB": {"conviction": 0.02, "position": "short"},
-        "WMK": {"conviction": 0.02, "position": "short"},
-        "PRMB": {"conviction": 0.02, "position": "short"},
-        "REYN": {"conviction": 0.02, "position": "short"},
-    }
-
     alpaca_portfolio = {
         # Long positions
         "CASY": {"conviction": 0.10,   "position": "long"},
@@ -350,43 +323,11 @@ if __name__ == "__main__":
         "REYN": {"conviction": 0.0566, "position": "short"},
     }
 
-    tickers3 = {
-    # Long positions
-        "CASY": {"conviction": 0.09, "position": "long"},
-        "CELH": {"conviction": 0.09, "position": "long"},
-        "ODC":  {"conviction": 0.06, "position": "long"},
-        "PM":   {"conviction": 0.06, "position": "long"},
-        "VITL": {"conviction": 0.06, "position": "long"},
-        "WMT":  {"conviction": 0.05, "position": "long"},
-        "IPAR": {"conviction": 0.05, "position": "long"},
-        "TPB":  {"conviction": 0.04, "position": "long"},
-        "COCO": {"conviction": 0.04, "position": "long"},
-        "SFM":  {"conviction": 0.04, "position": "long"},
-        "MNST": {"conviction": 0.04, "position": "long"},
-        "CL":   {"conviction": 0.04, "position": "long"},
-        "DOLE": {"conviction": 0.03, "position": "long"},
-        "PPC":  {"conviction": 0.03, "position": "long"},
-        "INGR": {"conviction": 0.03, "position": "long"},
-
-        # Short positions
-        "WBA":  {"conviction": 0.05, "position": "short"},
-        "ENR":  {"conviction": 0.05, "position": "short"},
-        "SPB":  {"conviction": 0.04, "position": "short"},
-        "KLG":  {"conviction": 0.04, "position": "short"},
-        "PEP":  {"conviction": 0.04, "position": "short"},
-        "SAM":  {"conviction": 0.04, "position": "short"},
-        "COTY": {"conviction": 0.04, "position": "short"},
-        "MGPI": {"conviction": 0.04, "position": "short"},
-        "JJSF": {"conviction": 0.03, "position": "short"},
-        "KVUE": {"conviction": 0.04, "position": "short"},
-    }
-
-
-
+    
     
     # Build portfolio with target volatility and portfolio value
     build_portfolio = CorrelationAwarePortfolioBuilder(
-        tickers=tickers3,  # Changed to tickers2 to test with the new portfolio
+        tickers=alpaca_portfolio,  # Changed to tickers2 to test with the new portfolio
         target_annual_vol=0.17,  # 17% target volatility (adjust as needed)
         portfolio_value=1_000_000,  # $1M base capital (before leverage)
         leverage=1.75,  # 1.75x leverage (175% gross exposure)
@@ -402,41 +343,12 @@ if __name__ == "__main__":
     # Build with risk-based strategy and volatility targeting
     portfolio, allocation_df = build_portfolio.build_portfolio()
 
-    from backend.src.db.core.db_config import MarketSession
-    from backend.src.db.core.market_data_models import *
-    from backend.testing.alpaca_trade import AlpacaTrader
-
-    # trader = AlpacaTrader(paper=True)
-    # session = MarketSession()
-
-
-    # Instead of using allocation_df, iterate through alpaca_portfolio directly
-    # for ticker, position_data in alpaca_portfolio.items():
-    #     position = position_data['position']
-    #     conviction = position_data['conviction']
-        
-    #     # Calculate position size based on conviction and portfolio value
-    #     # Assuming you want to use the same portfolio value and leverage
-    #     portfolio_value = 500_000
-    #     leverage = 1.5
-    #     position_size = conviction * portfolio_value * leverage
-        
-    #     recent_price = session.query(Ticker).filter(Ticker.ticker == ticker).first().price
-
-    #     calc_shares = abs(position_size / recent_price)
-    #     calc_shares = round(calc_shares, 0)
-    #     calc_shares = int(calc_shares)
-    #     print(f"{ticker}: {calc_shares} shares")
-
-    #     if position == 'long':
-    #         trader.buy(symbol=ticker, qty=calc_shares)
-    #     else:
-    #         trader.sell(symbol=ticker, qty=calc_shares)
-
-
-
-    # session.close()
-        
+    # print(portfolio)
+    # print(allocation_df)
     
+    # Save positions to database
+    save_positions_to_db(allocation_df, alpaca_portfolio)
+
+
 
         

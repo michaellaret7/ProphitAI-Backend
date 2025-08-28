@@ -1,7 +1,8 @@
 from backend.src.db.core.user_data_models import *
 from backend.src.db.core.db_config import UserSession
-from sqlalchemy.orm import joinedload
+from sqlalchemy.orm import joinedload, selectinload
 from typing import Optional, Union, Dict, Any
+from backend.src.utils.serialize_output import serialize_sqlalchemy_obj
 
 def get_all_user_data(email: str) -> Optional[Dict[str, Any]]:
     """
@@ -18,9 +19,10 @@ def get_all_user_data(email: str) -> Optional[Dict[str, Any]]:
     
     with UserSession() as session:
         # Build query with eager loading of related data
+        # Using selectinload for portfolios to avoid duplicates
         query = session.query(User).options(
             joinedload(User.company_associations).joinedload(CompanyUser.company),
-            joinedload(User.portfolios)
+            selectinload(User.portfolios)
         )
         
         # Apply filter by email
@@ -34,7 +36,6 @@ def get_all_user_data(email: str) -> Optional[Dict[str, Any]]:
         # Format user data
         user_data = {
             'id': str(user.id),
-            'workos_id': user.workos_id,
             'email': user.email,
             'first_name': user.first_name,
             'last_name': user.last_name,
@@ -54,29 +55,23 @@ def get_all_user_data(email: str) -> Optional[Dict[str, Any]]:
                 'joined_date': company_user.joined_date.isoformat() if company_user.joined_date else None
             })
         
-        # Add portfolio information
+        # Add portfolio information - deduplicate by portfolio_id
+        seen_portfolio_ids = set()
         for portfolio in user.portfolios:
-            user_data['portfolios'].append({
-                'id': portfolio.id,
-                'portfolio_id': str(portfolio.portfolio_id),
-                'name': portfolio.name,
-                'ticker': portfolio.ticker,
-                'sector': portfolio.sector,
-                'industry': portfolio.industry,
-                'sub_industry': portfolio.sub_industry,
-                'allocation': portfolio.allocation,
-                'is_current': portfolio.is_current,
-                'supporting_metrics': portfolio.supporting_metrics,
-                'reason_for_rec': portfolio.reason_for_rec,
-                'created_date': portfolio.created_date.isoformat() if portfolio.created_date else None,
-                'updated_date': portfolio.updated_date.isoformat() if portfolio.updated_date else None
-            })
+            portfolio_id = str(portfolio.portfolio_id)
+            if portfolio_id not in seen_portfolio_ids:
+                seen_portfolio_ids.add(portfolio_id)
+                user_data['portfolios'].append({
+                    'name': portfolio.name,
+                    'portfolio_id': portfolio_id,
+                    'is_current': portfolio.is_current
+                })
         
         return user_data
 
 def get_user_basic_info(email: str) -> Optional[Dict[str, Any]]:
     """
-    Get basic user info (id, workos_id, email, first_name, last_name) by email
+    Get basic user info (id, email, first_name, last_name) by email
     
     Args:
         email: User's email address
@@ -96,7 +91,6 @@ def get_user_basic_info(email: str) -> Optional[Dict[str, Any]]:
         
         return {
             'id': str(user.id),
-            'workos_id': user.workos_id,
             'email': user.email,
             'first_name': user.first_name,
             'last_name': user.last_name
@@ -163,6 +157,24 @@ def add_company(company_name:str, seats:int):
     session.commit()
     session.close()
 
+def get_user_current_portfolio(email: str):
+    if not email:
+        raise ValueError("Email must be provided")
+    
+    session = UserSession()
+    user = session.query(User).filter(User.email == email).first()
+    
+    if not user:
+        session.close()
+        return None
+    
+    user_id = user.id
+
+    portfolio = session.query(Portfolio).filter(Portfolio.user_id == user_id, Portfolio.is_current == True).all()
+    portfolio = [serialize_sqlalchemy_obj(p) for p in portfolio]
+    
+    session.close()
+    return portfolio
 
 if __name__ == "__main__":
-    print(get_all_user_data('michael@laret.com'))
+    print(get_user_current_portfolio('michaellaret7@gmail.com'))
