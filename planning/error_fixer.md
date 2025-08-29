@@ -1,5 +1,29 @@
 # Error Fix Documentation
 
+## Case: CamelCase not applied in API response (test failure)
+
+### Terminal Output (excerpt)
+- Failure: `AssertionError: 'tickerName' not found in { 'ticker_name': 'CASY', ... }`
+- Context: `backend/src/api/testing/prophit_alts_testing.py` expects camelCase keys in `positions` and a metrics object.
+- Actual response contained snake_case keys for positions and metrics.
+
+### Diagnosis
+- In `backend/src/api/controller/prophit_alts_controller.py`, we build `positions_camel` and `metrics_camel`, but the returned payload still uses `filtered_positions` and `metrics` (snake_case). CamelCase transformation is computed but not used in the final response.
+
+### Minimal Fix Plan
+1) Update the return payload in `get_fund_final_positions_controller` to use the transformed structures:
+   - Replace `"positions": filtered_positions` with `"positions": positions_camel`.
+   - Replace `"metrics": metrics` with `"metrics": metrics_camel`.
+2) Keep numeric rounding on allocations as implemented (ensures numbers, not strings).
+3) No changes needed to tests beyond what is already committed (tests expect camelCase and numeric types).
+
+### Risks
+- Low. Only affects response shape (already intended by the camelCase migration). Data types and values remain the same.
+
+### Expected Outcome
+- `prophit_alts` endpoint returns camelCase keys for positions and metrics; tests pass.
+
+---
 ## Terminal Output Analysis
 
 ### Good News:
