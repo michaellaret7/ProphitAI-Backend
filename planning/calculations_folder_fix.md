@@ -1,7 +1,7 @@
-# Calculations Folder Refactoring Plan
+# Calculations Folder Refactoring Plan - V2 Implementation
 
 ## Executive Summary
-The calculations folder has grown organically over time and now suffers from inconsistency, code duplication, and poor maintainability. This plan outlines a comprehensive refactoring to create a modular, DRY-compliant, and maintainable calculation framework.
+The calculations folder has grown organically over time and now suffers from inconsistency, code duplication, and poor maintainability. This plan outlines a comprehensive refactoring to create a modular, DRY-compliant, and maintainable calculation framework in the new `calculations_vtwo/` directory, allowing safe migration without disrupting existing functionality.
 
 ## Critical Issues Identified
 
@@ -41,7 +41,7 @@ The calculations folder has grown organically over time and now suffers from inc
 
 ### Layer 1: Data Access Layer
 ```
-calculations/
+calculations_vtwo/
 ├── data/
 │   ├── __init__.py
 │   ├── data_provider.py         # Unified data access interface
@@ -158,20 +158,28 @@ calculations/
 
 ## Migration Strategy
 
-### Step 1: Create New Structure (Don't Delete Old)
-- Build new architecture alongside existing
-- Implement DataProvider first
-- Test thoroughly
+### Step 1: Build New Architecture in calculations_vtwo/
+- Create complete new architecture in `calculations_vtwo/` directory
+- Implement DataProvider and core modules first
+- Build and test thoroughly without touching existing `calculations/` folder
+- Existing functionality remains completely unaffected
+- **Benefits of V2 Approach:**
+  - Zero risk to production code during development
+  - Can iterate and test freely in isolated environment
+  - Easy to compare old vs new implementations side-by-side
+  - Rollback is trivial (just ignore the new folder)
 
-### Step 2: Gradual Migration
-- Update one calculation type at a time
-- Keep old code as fallback
-- Update dependencies incrementally
+### Step 2: Gradual Migration & Integration
+- Update dependent services to optionally use `calculations_vtwo` modules
+- Create feature flags or configuration to switch between old/new implementations
+- Migrate one calculation type at a time (factors, portfolio, etc.)
+- Keep `calculations/` as fallback during transition
 
-### Step 3: Cleanup
-- Remove old code once all dependencies updated
-- Update imports throughout project
-- Final testing
+### Step 3: Final Transition & Cleanup
+- Once all functionality proven in `calculations_vtwo/`, update all imports
+- Remove dependencies on old `calculations/` folder
+- Eventually deprecate `calculations/` folder (keep for reference initially)
+- Final integration testing
 
 ## Key Design Principles
 
@@ -244,8 +252,9 @@ Total: **4 weeks** for complete refactoring
 
 ## Next Immediate Actions
 
-1. Create `data_provider.py` with unified interface
-2. Create `core/returns.py` and consolidate all returns calculations
-3. Create comprehensive test for returns calculations
-4. Migrate one factor (suggest starting with momentum) to new architecture
-5. Validate approach before proceeding with full refactoring
+1. Create `calculations_vtwo/` directory structure
+2. Create `calculations_vtwo/data/data_provider.py` with unified interface
+3. Create `calculations_vtwo/core/returns.py` and consolidate all returns calculations
+4. Create comprehensive test for returns calculations
+5. Migrate one factor (suggest starting with momentum) to new architecture in `calculations_vtwo/factors/`
+6. Validate approach before proceeding with full refactoring

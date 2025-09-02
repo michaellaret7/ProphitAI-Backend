@@ -565,13 +565,12 @@ def load_multiple_etfs(etf_list, years_of_history=2):
 
 
 if __name__ == "__main__":
-
     load_single_etf(
         "RSPS", 
         sector="etf", 
         industry="equity_etfs", 
         sub_industry="equal_weighted", 
-        years_of_history=4,  # Use 2 years for faster loading
+        years_of_history=4,  # Use 4 years for faster loading
         allow_partial_reload=False  # This will complete missing data
     )
 

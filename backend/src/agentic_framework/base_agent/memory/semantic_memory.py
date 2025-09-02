@@ -281,22 +281,4 @@ def initialize_cro_memories():
     """Initialize CRO agent with essential risk management concepts."""
     memory = SemanticMemory(agent_type='cro', save_memory=True, verbose=False)
     
-    # 1. Correlation Risk Management
-    # memory.add_memory(
-    #     category='risk_management',
-    #     memory={
-    #         'title': 'Correlation Risk and Diversification',
-    #         'content': (
-    #             'Portfolio correlation is a hidden risk that manifests during market stress. '
-    #             'Assets that appear uncorrelated in normal markets often become highly correlated '
-    #             'during crises. To manage this: (1) Limit sector concentration to max 30% in any '
-    #             'single industry, (2) Balance long/short positions to reduce directional risk, '
-    #             '(3) Include defensive positions that benefit from volatility or market declines.'
-    #         ),
-    #         'keywords': ['correlation', 'diversification', 'concentration', 'crisis'],
-    #         'application': 'When constructing portfolios, actively check correlation matrices and ensure true diversification across factors, not just tickers.',
-    #         'priority': 'critical'
-    #     }
-    # )
-    
     return memory
