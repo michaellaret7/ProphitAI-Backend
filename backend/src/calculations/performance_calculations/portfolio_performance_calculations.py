@@ -230,7 +230,7 @@ def get_upside_downside_ratios(portfolio_dict: dict):
     prices_df = pd.DataFrame(price_data)
 
     # Calculate daily returns
-    returns = prices_df.pct_change().dropna()
+    returns = prices_df.pct_change(fill_method=None).dropna()
 
     # Separate benchmark returns
     benchmark_returns = returns[benchmark_ticker]

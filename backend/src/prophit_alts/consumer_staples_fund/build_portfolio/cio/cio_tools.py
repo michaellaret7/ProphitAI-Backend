@@ -190,7 +190,7 @@ def analyze_portfolio_performance(portfolio_dict: Any, risk_free_rate: float = 0
         return {"error": "Price DataFrame is empty after fetch"}
 
     # Compute daily returns; align across tickers and trim to last 504 observations
-    returns_df = prices_df.pct_change().dropna(how='any')
+    returns_df = prices_df.pct_change(fill_method=None).dropna(how='any')
     if len(returns_df) > 252*2:
         returns_df = returns_df.tail(252*2)
 
@@ -233,7 +233,7 @@ def analyze_portfolio_performance(portfolio_dict: Any, risk_free_rate: float = 0
     beta = None
     annualized_benchmark_return = None
     if spy_close is not None and not spy_close.empty:
-        market_returns = spy_close.pct_change().dropna()
+        market_returns = spy_close.pct_change(fill_method=None).dropna()
         market_returns.name = 'market'
         if len(market_returns) > 252*2:
             market_returns = market_returns.tail(252*2)

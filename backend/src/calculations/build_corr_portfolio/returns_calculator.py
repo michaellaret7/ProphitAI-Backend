@@ -41,7 +41,7 @@ class ReturnsCalculator:
                 data.set_index('date', inplace=True)
             
             # Calculate returns
-            returns = data['close'].pct_change().dropna()
+            returns = data['close'].pct_change(fill_method=None).dropna()
             returns_dict[ticker] = returns
             
             # Track start date for each ticker

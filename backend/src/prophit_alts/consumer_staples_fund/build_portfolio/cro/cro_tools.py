@@ -78,7 +78,7 @@ def calculate_correlation_matrix(portfolio_dict: dict = None) -> dict:
     
     # Create DataFrame and calculate returns
     prices_df = pd.DataFrame(prices_map)
-    returns_df = prices_df.pct_change().dropna()
+    returns_df = prices_df.pct_change(fill_method=None).dropna()
     
     # Calculate correlation matrix
     correlation_matrix = returns_df.corr()
@@ -121,7 +121,7 @@ def calculate_covariance_matrix(portfolio_dict: dict = None) -> dict:
     
     # Create DataFrame and calculate returns
     prices_df = pd.DataFrame(prices_map)
-    returns_df = prices_df.pct_change().dropna()
+    returns_df = prices_df.pct_change(fill_method=None).dropna()
     
     # Calculate covariance matrix
     covariance_matrix = returns_df.cov()
@@ -165,7 +165,7 @@ def _get_portfolio_returns_data(tickers: list, days_back: int = 252) -> pd.DataF
     
     # Create DataFrame and calculate returns
     prices_df = pd.DataFrame(prices_map)
-    returns_df = prices_df.pct_change().dropna()
+    returns_df = prices_df.pct_change(fill_method=None).dropna()
     
     return returns_df
 

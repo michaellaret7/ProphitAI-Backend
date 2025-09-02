@@ -18,8 +18,8 @@ def calculate_beta_from_data(ticker_prices: pd.Series, benchmark_prices: pd.Seri
     - float: The calculated beta value
     """
     # Calculate returns
-    ticker_returns = ticker_prices.pct_change().dropna()
-    benchmark_returns = benchmark_prices.pct_change().dropna()
+    ticker_returns = ticker_prices.pct_change(fill_method=None).dropna()
+    benchmark_returns = benchmark_prices.pct_change(fill_method=None).dropna()
     
     # Align the data
     aligned_data = pd.DataFrame({

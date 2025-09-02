@@ -10,7 +10,6 @@ from datetime import datetime, timedelta
 from typing import Dict
 import json
 
-
 class ProphitAltsServices:
     """
     Service to fetch price data ONCE and compute all portfolio-derived series/metrics.
@@ -100,7 +99,7 @@ class ProphitAltsServices:
         for ticker, prices in price_data.items():
             if not prices.empty:
                 series_sorted = prices.sort_index()
-                returns_data[ticker] = series_sorted.pct_change().replace([np.inf, -np.inf], np.nan)
+                returns_data[ticker] = series_sorted.pct_change(fill_method=None).replace([np.inf, -np.inf], np.nan)
         self.returns_data = returns_data.sort_index()
 
         if self.returns_data.empty:

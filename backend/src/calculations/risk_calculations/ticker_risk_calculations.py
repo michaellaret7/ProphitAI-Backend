@@ -158,8 +158,8 @@ def calculate_beta(ticker: str, benchmark_ticker: str = None, period_days: int =
     benchmark_prices = benchmark_df['close']
 
     # Calculate returns
-    ticker_returns = ticker_prices.pct_change().dropna()
-    benchmark_returns = benchmark_prices.pct_change().dropna()
+    ticker_returns = ticker_prices.pct_change(fill_method=None).dropna()
+    benchmark_returns = benchmark_prices.pct_change(fill_method=None).dropna()
 
     # Align data by index (timestamps)
     returns_df = pd.concat([ticker_returns, benchmark_returns], axis=1, join='inner')
@@ -202,7 +202,7 @@ def calculate_up_down_beta(stock_ticker: str, market_ticker: str = 'SPY', start_
     
     # Convert to DataFrame and calculate returns
     price_df = pd.DataFrame(price_data)
-    returns_df = price_df.pct_change().dropna()
+    returns_df = price_df.pct_change(fill_method=None).dropna()
     
     # Create DataFrame with Market and Stock columns
     df = pd.DataFrame({
