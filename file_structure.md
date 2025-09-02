@@ -2,14 +2,6 @@
 │   ├── __init__.py
 │   ├── main.py
 │   ├── README.md
-│   ├── jobs/
-│   │   ├── update_database_prices_schema.py
-│   │   ├── update_database_schema.py
-│   │   ├── update_fundamental_predictions.py
-│   │   ├── update_fundamentals.py
-│   │   └── update_stock_data.py
-│   ├── output/
-│   │   └── portfolio_optimization_*.txt
 │   ├── src/
 │   │   ├── __init__.py
 │   │   ├── agentic_framework/

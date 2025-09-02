@@ -55,3 +55,110 @@ ProphitAI/
 │   ├── __init__.py
 │   ├── test_api/
 │   └── test_services
+
+
+
+ProphitAI/
+├── app/                                          
+│   ├── main.py                                   # from backend/main.py (FastAPI app + router includes)
+│   ├── config.py                                 # from backend/src/auth/config.py
+│   │
+│   ├── routes/
+│   │   ├── auth_routes.py                        # from backend/src/auth/sso.py
+│   │   ├── user_routes.py                        # from backend/src/api/routes/user_routes.py
+│   │   ├── prophit_alts_routes.py                # from backend/src/api/routes/prophit_alts_router.py (rename)
+│   │   ├── user.py                               # from backend/src/api/user.py (router aggregator; optional later removal)
+│   │   └── prophit_alts.py                       # from backend/src/api/prophit_alts.py (router aggregator; optional later removal)
+│   │
+│   ├── controllers/
+│   │   ├── user_controller.py                    # from backend/src/api/controller/user_controller.py
+│   │   └── prophit_alts_controller.py            # from backend/src/api/controller/prophit_alts_controller.py
+│   │
+│   ├── services/
+│   │   ├── prophit_alts_service.py               # from backend/src/services/prophit_alts_service.py
+│   │   ├── prophit_gpt/                          # from backend/src/prophit_gpt/
+│   │   │   ├── gpt.py
+│   │   │   ├── dataRetrievalTools/
+│   │   │   ├── functionSchemas/
+│   │   │   └── placeOrders/
+│   │   ├── calculations/                         # from backend/src/calculations/
+│   │   ├── portfolio_optimization/               # from backend/src/portfolio_optimization/
+│   │   ├── stress_test/                          # from backend/src/stress_test/
+│   │   ├── analysts/                             # from backend/src/analysts/
+│   │   ├── prophit_alts/                         # from backend/src/prophit_alts/
+│   │   └── agentic_framework/                    # from backend/src/agentic_framework/
+│   │
+│   ├── repositories/
+│   │   ├── portfolio_data.py                     # from backend/src/repositories/portfolio_data.py
+│   │   ├── price_data.py                         # from backend/src/repositories/price_data.py
+│   │   ├── prophit_alts_data.py                  # from backend/src/repositories/prophit_alts_data.py
+│   │   └── user_data.py                          # from backend/src/repositories/user_data.py
+│   │
+│   ├── models/
+│   │   ├── db/
+│   │   │   ├── market_data_models.py             # from backend/src/db/core/market_data_models.py
+│   │   │   ├── user_data_models.py               # from backend/src/db/core/user_data_models.py
+│   │   │   ├── prophit_alts_models.py            # from backend/src/db/core/prophit_alts_models.py
+│   │   │   └── db_config.py                      # from backend/src/db/core/db_config.py
+│   │   └── data_models/                          # from backend/src/data_models/
+│   │
+│   ├── schemas/
+│   │   ├── auth_schemas.py                       # from backend/src/auth/models.py (rename)
+│   │   └── response_envelope.py                  # from backend/src/api/response_envelope.py
+│   │
+│   ├── middleware/
+│   │   ├── auth_middleware.py                    # from backend/src/auth/dependencies.py (rename)
+│   │   └── audit.py                              # from backend/src/auth/audit.py (empty file retained)
+│   │
+│   ├── utils/
+│   │   ├── choose_model_and_client.py
+│   │   ├── database.py
+│   │   ├── determine_etf.py
+│   │   ├── file_utils.py
+│   │   ├── formatting.py
+│   │   ├── ib_utils.py
+│   │   ├── logging_config.py
+│   │   ├── parsing_utils.py
+│   │   ├── serialize_output.py
+│   │   ├── ticker_utils.py
+│   │   ├── token_count.py
+│   │   └── validation_utils.py
+│   │
+│   └── data/
+│       └── user_information.py                   # from backend/src/data/user_information.py
+│
+├── migrations/
+│   ├── schema.json                               # from backend/src/db/core/schema.json
+│   ├── database_schemas.json                     # from backend/src/data/database/database_schemas.json
+│   └── database_schemas_prices.json              # from backend/src/data/database/database_schemas_prices.json
+│
+├── scripts/
+│   ├── db/
+│   │   ├── build_etf_data.py                     # from backend/src/db/core/build_etf_data.py
+│   │   ├── build_price_table.py                  # from backend/src/db/core/build_price_table.py
+│   │   ├── pull_fmp_data.py                      # from backend/src/db/core/pull_fmp_data.py
+│   │   └── jobs/                                 # from backend/src/db/jobs/
+│   │       ├── fundamental_data.py
+│   │       ├── price_table.py
+│   │       └── ticker_table.py
+│   ├── monitor/                                  # from backend/src/db/monitor/
+│   │   ├── health_check.py
+│   │   └── query_performance_check.py
+│   └── api/
+│       └── runner.py                             # from backend/src/api/runner.py
+│
+├── tests/
+│   ├── test_users.py                             # from backend/src/api/testing/user_testing.py (rename)
+│   └── test_prophit_alts.py                      # from backend/src/api/testing/prophit_alts_testing.py (rename)
+│
+├── logs/                                         # (add, not committed)
+├── uploads/                                      # (add, not committed)
+├── run.py                                        # from backend/main.py (alternative placement if preferred)
+├── README.md
+├── requirements.txt
+├── requirements-dev.txt                          # (add)
+├── .env                                          # (add)
+├── .env.example                                  # (add)
+├── .gitignore                                    # (add)
+├── roadmap.md
+└── file_structure.md

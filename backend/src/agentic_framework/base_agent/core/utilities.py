@@ -61,12 +61,14 @@ class AgentUtilities:
     
     def execute_tool_safe(self, name: str, args: Dict[str, Any], is_retry: bool = False):
         """Safely execute a tool with error handling, memory, and auto-retry."""
+        if not name:
+            return f"Error: tool name is None or empty. Available tools: {list(self.agent.tool_functions.keys())}"
         name = self._strip_functions_prefix(name)
         func = self.agent.tool_functions.get(name)
         if not func:
             # Try to find the tool with case-insensitive matching as fallback
             for tool_name, tool_func in self.agent.tool_functions.items():
-                if tool_name.lower() == name.lower():
+                if tool_name and name and tool_name.lower() == name.lower():
                     func = tool_func
                     break
             if not func:

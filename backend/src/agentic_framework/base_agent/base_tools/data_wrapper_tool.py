@@ -15,7 +15,7 @@ from backend.src.utils.token_count import get_token_count
 import tiktoken
 import json
 import os
-from backend.src.agentic_framework.base_tools.data_wrapper_prompt import earnings_call_transcript_prompt
+from backend.src.agentic_framework.base_agent.base_tools.data_wrapper_prompt import earnings_call_transcript_prompt
 
 class ProphitAltsDataWrapper:
     def __init__(self, ticker: str = None):
