@@ -191,4 +191,63 @@ class RiskCalculator:
             return 0.0
         return float(var_budget_dollars / (z * daily_vol))
 
+    @staticmethod
+    def diversification_ratio(weights: pd.Series, cov: pd.DataFrame) -> float:
+        """Diversification ratio = weighted_avg_vol / portfolio_vol."""
+        if weights.empty or cov.empty:
+            return np.nan
+        vols = np.sqrt(np.diag(cov.values))
+        weighted_avg_vol = np.dot(np.abs(weights.values), vols)
+        portfolio_vol = np.sqrt(weights.values @ cov.values @ weights.values)
+        if portfolio_vol == 0:
+            return np.inf
+        return float(weighted_avg_vol / portfolio_vol)
+
+    @staticmethod
+    def up_down_beta(asset_daily_returns: pd.Series, market_daily_returns: pd.Series) -> tuple[float, float]:
+        """Calculate separate up and down market betas."""
+        df = pd.concat([asset_daily_returns, market_daily_returns], axis=1).dropna()
+        if df.empty:
+            return (np.nan, np.nan)
+        asset = df.iloc[:, 0]
+        market = df.iloc[:, 1]
+        
+        up_mask = market >= 0
+        down_mask = market < 0
+        
+        up_beta = np.nan
+        down_beta = np.nan
+        
+        if up_mask.sum() > 1:
+            up_cov = asset[up_mask].cov(market[up_mask])
+            up_var = market[up_mask].var(ddof=1)
+            up_beta = float(up_cov / up_var) if up_var != 0 else np.nan
+        
+        if down_mask.sum() > 1:
+            down_cov = asset[down_mask].cov(market[down_mask])
+            down_var = market[down_mask].var(ddof=1)
+            down_beta = float(down_cov / down_var) if down_var != 0 else np.nan
+        
+        return (up_beta, down_beta)
+
+    @staticmethod
+    def parametric_cvar(annual_vol: float, confidence: float = 0.99, trading_days: int = 252) -> float:
+        """Parametric CVaR assuming normal distribution."""
+        from scipy.stats import norm
+        alpha = 1 - confidence
+        daily_vol = annual_vol / np.sqrt(trading_days)
+        z = norm.ppf(alpha)
+        cvar = daily_vol * norm.pdf(z) / alpha
+        return float(cvar)
+
+    @staticmethod
+    def ulcer_index(close: pd.Series) -> float:
+        """Ulcer Index - RMS of drawdowns."""
+        if close.empty:
+            return 0.0
+        cumulative = close / close.iloc[0]  # Normalize to start at 1
+        running_max = cumulative.cummax()
+        drawdowns = (cumulative - running_max) / running_max
+        return float(np.sqrt(np.mean(drawdowns ** 2)))
+
 

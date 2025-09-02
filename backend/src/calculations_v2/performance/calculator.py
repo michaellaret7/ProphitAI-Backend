@@ -217,6 +217,50 @@ class PerformanceCalculator:
         return float(gross_profits / gross_losses)
 
     @staticmethod
+    def pain_index(daily_returns: pd.Series) -> float:
+        """Pain index - average of squared drawdowns."""
+        if daily_returns.empty:
+            return np.nan
+        cumulative = (1 + daily_returns).cumprod()
+        running_max = cumulative.cummax()
+        drawdowns = (cumulative - running_max) / running_max
+        return float(np.mean(drawdowns ** 2))
+
+    @staticmethod
+    def tail_ratio(daily_returns: pd.Series) -> float:
+        """Tail ratio - 95th percentile / 5th percentile of returns."""
+        if daily_returns.empty:
+            return np.nan
+        p95 = np.percentile(daily_returns, 95)
+        p5 = np.percentile(daily_returns, 5)
+        if p5 == 0:
+            return np.inf
+        return float(p95 / abs(p5))
+
+    @staticmethod
+    def gain_loss_ratio(daily_returns: pd.Series) -> float:
+        """Gain/loss ratio - average gain / average loss."""
+        if daily_returns.empty:
+            return np.nan
+        gains = daily_returns[daily_returns > 0]
+        losses = daily_returns[daily_returns < 0]
+        if len(gains) == 0 or len(losses) == 0:
+            return np.inf if len(losses) == 0 else 0.0
+        avg_gain = gains.mean()
+        avg_loss = abs(losses.mean())
+        if avg_loss == 0:
+            return np.inf
+        return float(avg_gain / avg_loss)
+
+    @staticmethod
+    def tracking_error(daily_returns: pd.Series, benchmark_daily_returns: pd.Series, trading_days: int = 252) -> float:
+        """Tracking error - annualized standard deviation of active returns."""
+        active = (daily_returns - benchmark_daily_returns).dropna()
+        if active.empty:
+            return np.nan
+        return float(active.std(ddof=1) * np.sqrt(trading_days))
+
+    @staticmethod
     def appraisal_ratio(
         daily_returns: pd.Series,
         market_daily_returns: pd.Series,

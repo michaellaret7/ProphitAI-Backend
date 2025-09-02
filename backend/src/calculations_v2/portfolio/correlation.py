@@ -129,6 +129,13 @@ class CorrelationAnalysis:
                 })
         return pd.DataFrame.from_records(records, columns=["asset_i", "asset_j", "correlation", "abs_correlation"])
 
+    @staticmethod
+    def herfindahl_concentration_index(weights: pd.Series) -> float:
+        """Herfindahl concentration index - sum of squared weights. Effective number of assets = 1/HHI."""
+        if weights.empty:
+            return np.nan
+        return float(np.sum(weights.values ** 2))
+
 
 
 
