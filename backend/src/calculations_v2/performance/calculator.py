@@ -216,4 +216,39 @@ class PerformanceCalculator:
             return np.inf
         return float(gross_profits / gross_losses)
 
+    @staticmethod
+    def appraisal_ratio(
+        daily_returns: pd.Series,
+        market_daily_returns: pd.Series,
+        risk_free_daily: float = 0.04 / 252,
+        trading_days: int = 252,
+    ) -> float:
+        """Appraisal ratio = alpha / residual risk (annualized).
+
+        Alpha is CAPM alpha (annualized). Residual risk is std dev of regression residuals (annualized).
+        """
+        if daily_returns.empty or market_daily_returns.empty:
+            return np.nan
+        df = pd.concat([daily_returns, market_daily_returns], axis=1).dropna()
+        if df.empty:
+            return np.nan
+        y = df.iloc[:, 0] - risk_free_daily
+        x = df.iloc[:, 1] - risk_free_daily
+        # OLS beta and alpha on daily basis
+        var_x = x.var(ddof=1)
+        if var_x == 0 or np.isnan(var_x):
+            return np.nan
+        cov_xy = x.cov(y)
+        beta = cov_xy / var_x
+        alpha_daily = y.mean() - beta * x.mean()
+        # Residuals and residual std
+        residuals = y - (alpha_daily + beta * x)
+        resid_std_daily = residuals.std(ddof=1)
+        if resid_std_daily == 0 or np.isnan(resid_std_daily):
+            return np.nan
+        # Annualize alpha and residual risk
+        alpha_ann = alpha_daily * trading_days
+        resid_std_ann = resid_std_daily * np.sqrt(trading_days)
+        return float(alpha_ann / resid_std_ann)
+
 

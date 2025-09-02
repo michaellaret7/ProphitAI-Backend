@@ -141,4 +141,3 @@ class TechnicalIndicators:
         cci = (typical_price - sma) / (0.015 * mad)
         return cci
 
-

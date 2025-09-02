@@ -51,34 +51,84 @@ class CorrelationAnalysis:
         order = leaves_list(Z)
         return list(corr.columns[order])
 
-if __name__ == "__main__":
-    # Quick test: fetch returns for a few tickers and compute correlation analytics
-    from datetime import datetime, timedelta
-    from backend.src.calculations_v2.core import DataService
+    # ------------------ Portfolio-specific correlation metrics ------------------ #
+    @staticmethod
+    def effective_diversification_ratio(corr: pd.DataFrame) -> float:
+        """Effective diversification ratio (1 / average absolute correlation)."""
+        if corr is None or corr.empty:
+            return 0.0
+        c = corr.values
+        n = c.shape[0]
+        # Exclude diagonal by using upper triangle indices
+        iu = np.triu_indices(n, k=1)
+        vals = np.abs(c[iu])
+        mean_abs = float(vals.mean()) if vals.size > 0 else 0.0
+        return float(0.0 if mean_abs == 0 else 1.0 / mean_abs)
 
-    ds = DataService()
-    end = datetime.now()
-    start = end - timedelta(days=365)
-    tickers = ["AAPL", "MSFT", "SPY"]
+    @staticmethod
+    def concentration_risk_metrics(corr: pd.DataFrame) -> dict[str, float]:
+        """Return simple concentration metrics derived from correlation.
 
-    prices = ds.get_bulk_close_series(tickers, start, end)
-    returns = pd.DataFrame(prices).pct_change(fill_method=None).dropna()
+        - avg_abs_corr: mean of absolute off-diagonal correlations
+        - max_abs_corr: maximum absolute pairwise correlation
+        - min_abs_corr: minimum absolute pairwise correlation
+        """
+        if corr is None or corr.empty:
+            return {"avg_abs_corr": 0.0, "max_abs_corr": 0.0, "min_abs_corr": 0.0}
+        c = corr.values
+        n = c.shape[0]
+        iu = np.triu_indices(n, k=1)
+        vals = np.abs(c[iu])
+        if vals.size == 0:
+            return {"avg_abs_corr": 0.0, "max_abs_corr": 0.0, "min_abs_corr": 0.0}
+        return {
+            "avg_abs_corr": float(vals.mean()),
+            "max_abs_corr": float(vals.max()),
+            "min_abs_corr": float(vals.min()),
+        }
 
-    corr = CorrelationAnalysis.correlation_matrix(returns)
-    cov_a = CorrelationAnalysis.covariance_matrix(returns, annualize=True)
-    dist = CorrelationAnalysis.correlation_distance_matrix(corr)
-    Z = CorrelationAnalysis.hierarchical_linkage(dist)
-    order = CorrelationAnalysis.order_by_clustering(corr)
+    @staticmethod
+    def correlation_risk_contribution(weights: pd.Series, cov: pd.DataFrame) -> pd.Series:
+        """Component variance contributions using covariance matrix.
 
-    pd.set_option('display.width', 120)
-    pd.set_option('display.max_columns', 20)
-    print("tickers:", tickers)
-    print("\nCorrelation matrix:")
-    print(corr.round(4))
-    print("\nAnnualized covariance matrix:")
-    print(cov_a.round(6))
-    print("\nCorrelation distance matrix:")
-    print(dist.round(4))
-    print("\nClustering order:", order)
+        Returns a series where each value is w_i * (Sigma w)_i.
+        """
+        if weights is None or cov is None or cov.empty:
+            return pd.Series(dtype=float)
+        # Align order
+        common = [t for t in weights.index if t in cov.index]
+        if not common:
+            return pd.Series(dtype=float)
+        w = weights.loc[common].astype(float)
+        Sigma = cov.loc[common, common].astype(float).values
+        contrib = w.values * (Sigma @ w.values)
+        return pd.Series(contrib, index=common)
+
+    @staticmethod
+    def pairwise_correlation_analysis(returns_df: pd.DataFrame) -> pd.DataFrame:
+        """Return a tidy DataFrame of pairwise correlations with (i, j, rho, |rho|), upper triangle only.
+
+        Columns: asset_i, asset_j, correlation, abs_correlation
+        """
+        if returns_df is None or returns_df.empty:
+            return pd.DataFrame(columns=["asset_i", "asset_j", "correlation", "abs_correlation"])  # empty tidy frame
+        corr = CorrelationAnalysis.correlation_matrix(returns_df)
+        if corr.empty:
+            return pd.DataFrame(columns=["asset_i", "asset_j", "correlation", "abs_correlation"])  # empty tidy frame
+        tickers = list(corr.columns)
+        n = len(tickers)
+        records = []
+        for i in range(n):
+            for j in range(i + 1, n):
+                rho = float(corr.iat[i, j])
+                records.append({
+                    "asset_i": tickers[i],
+                    "asset_j": tickers[j],
+                    "correlation": rho,
+                    "abs_correlation": abs(rho),
+                })
+        return pd.DataFrame.from_records(records, columns=["asset_i", "asset_j", "correlation", "abs_correlation"])
+
+
 
 
