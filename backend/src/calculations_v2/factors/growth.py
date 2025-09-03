@@ -5,9 +5,22 @@ from datetime import date
 
 from backend.src.calculations_v2.core.data_service import DataService
 from backend.src.calculations_v2.core.models import FundamentalData
+from backend.src.calculations_v2.core.helpers import (
+    winsorize_series,
+    zscore_series,
+    sector_zscore,
+    ttm,
+    safe_divide,
+    sort_rows_desc_by_date,
+    pct_change,
+    yoy_growth,
+    residualize,
+    compose_exposure,
+)
 import numpy as np
 from scipy import stats
 import pandas as pd
+from backend.src.calculations_v2.core.config import DEFAULT_SECTOR_COL, DEFAULT_WINSOR_LIMITS
 
 
 class GrowthFactors:
@@ -24,11 +37,11 @@ class GrowthFactors:
         self.fund: FundamentalData = self.ds.get_fundamentals(self.ticker)
 
         # Defensive sort by date descending where possible
-        ists = self._sort_rows_desc_by_date(self.fund.income_statements)
-        bss = self._sort_rows_desc_by_date(self.fund.balance_sheets)
-        cfs = self._sort_rows_desc_by_date(self.fund.cash_flow_statements)
-        frs = self._sort_rows_desc_by_date(self.fund.financial_ratios)
-        ests = self._sort_rows_desc_by_date(self.fund.analyst_estimates)
+        ists = sort_rows_desc_by_date(self.fund.income_statements)
+        bss = sort_rows_desc_by_date(self.fund.balance_sheets)
+        cfs = sort_rows_desc_by_date(self.fund.cash_flow_statements)
+        frs = sort_rows_desc_by_date(self.fund.financial_ratios)
+        ests = sort_rows_desc_by_date(self.fund.analyst_estimates)
 
         # Detect statement frequency and compute span in years using actual dates when available
         income_dates = self._extract_dates(ists)
@@ -84,7 +97,7 @@ class GrowthFactors:
         if self.curr_eps is None or self.prev_eps is None:
             return np.nan
         # Return decimal (e.g., 0.12 for 12%)
-        return float(self._pct_change(self.curr_eps, self.prev_eps, scale=1.0))
+        return float(pct_change(self.curr_eps, self.prev_eps, scale=1.0))
 
     def eps_cagr(self) -> float:
         if self.curr_eps is None or self.beg_eps is None:
@@ -104,7 +117,7 @@ class GrowthFactors:
         if self.curr_rev is None or self.prev_rev is None:
             return np.nan
         # Decimal unit
-        return float(self._pct_change(self.curr_rev, self.prev_rev, scale=1.0))
+        return float(pct_change(self.curr_rev, self.prev_rev, scale=1.0))
 
     def sales_trend_growth_factor(self) -> float:
         # Prefer TTM Sales CAGR; if unavailable, use robust log1p slope on revenue series
@@ -112,8 +125,8 @@ class GrowthFactors:
         if len(series) < 5:
             return np.nan
         # TTM now and TTM 4 quarters earlier (requires at least 8 quarters to be strict; relax to 5+ for minimal signal)
-        ttm_now = self.ttm(series, window=4)
-        ttm_prev = self.ttm(series[4:], window=4) if len(series) >= 8 else np.nan
+        ttm_now = ttm(series, window=4)
+        ttm_prev = ttm(series[4:], window=4) if len(series) >= 8 else np.nan
         if not np.isnan(ttm_now) and not np.isnan(ttm_prev):
             return float(self.cagr(ttm_now, ttm_prev, 1.0))
         # Fallback: log1p-linear slope normalized by periods to approximate growth
@@ -129,56 +142,56 @@ class GrowthFactors:
     # ------------------------- YoY/TTM variants ------------------------- #
     def eps_yoy(self) -> float:
         # Requires quarterly series; use lag 4
-        ists = self._sort_rows_desc_by_date(self.fund.income_statements)
+        ists = sort_rows_desc_by_date(self.fund.income_statements)
         if len(ists) < 5:
             return np.nan
         curr = getattr(ists[0], 'eps', None)
         lag4 = getattr(ists[4], 'eps', None)
-        return float(self.yoy_growth(curr, lag4))
+        return float(yoy_growth(curr, lag4))
 
     def sales_ttm_yoy(self) -> float:
-        ists = self._sort_rows_desc_by_date(self.fund.income_statements)
+        ists = sort_rows_desc_by_date(self.fund.income_statements)
         if len(ists) < 8:
             return np.nan
         # Prefer per-share if shares available
         shares_series = [getattr(x, 'weightedAverageShsOut', None) for x in ists]
         if all(s is not None and float(s) > 0 for s in shares_series[:8]):
             sales_series = [
-                self._safe_divide(getattr(x, 'revenue', None), getattr(x, 'weightedAverageShsOut', None))
+                safe_divide(getattr(x, 'revenue', None), getattr(x, 'weightedAverageShsOut', None))
                 for x in ists
             ]
         else:
             sales_series = [getattr(x, 'revenue', None) for x in ists]
-        ttm_now = self.ttm(sales_series, window=4)
-        ttm_prev = self.ttm(sales_series[4:], window=4)
-        return float(self.yoy_growth(ttm_now, ttm_prev))
+        ttm_now = ttm(sales_series, window=4)
+        ttm_prev = ttm(sales_series[4:], window=4)
+        return float(yoy_growth(ttm_now, ttm_prev))
 
     def ocf_ttm_yoy(self) -> float:
-        cfs = self._sort_rows_desc_by_date(self.fund.cash_flow_statements)
+        cfs = sort_rows_desc_by_date(self.fund.cash_flow_statements)
         if len(cfs) < 8:
             return np.nan
         # Prefer per-share using income statement shares where possible
-        ists = self._sort_rows_desc_by_date(self.fund.income_statements)
+        ists = sort_rows_desc_by_date(self.fund.income_statements)
         shares_series = [getattr(x, 'weightedAverageShsOut', None) for x in ists[:len(cfs)]] if ists else []
         if shares_series and all(s is not None and float(s) > 0 for s in shares_series[:8]):
             ocf_series = [
-                self._safe_divide(getattr(c, 'netCashProvidedByOperatingActivities', None), getattr(i, 'weightedAverageShsOut', None))
+                safe_divide(getattr(c, 'netCashProvidedByOperatingActivities', None), getattr(i, 'weightedAverageShsOut', None))
                 for c, i in zip(cfs, ists)
             ]
         else:
             ocf_series = [getattr(x, 'netCashProvidedByOperatingActivities', None) for x in cfs]
-        ttm_now = self.ttm(ocf_series, window=4)
-        ttm_prev = self.ttm(ocf_series[4:], window=4)
-        return float(self.yoy_growth(ttm_now, ttm_prev))
+        ttm_now = ttm(ocf_series, window=4)
+        ttm_prev = ttm(ocf_series[4:], window=4)
+        return float(yoy_growth(ttm_now, ttm_prev))
 
     def fcf_ttm_yoy(self) -> float:
-        cfs = self._sort_rows_desc_by_date(self.fund.cash_flow_statements)
+        cfs = sort_rows_desc_by_date(self.fund.cash_flow_statements)
         if len(cfs) < 8:
             return np.nan
         fcf_series = [getattr(x, 'freeCashFlow', None) for x in cfs]
-        ttm_now = self.ttm(fcf_series, window=4)
-        ttm_prev = self.ttm(fcf_series[4:], window=4)
-        return float(self.yoy_growth(ttm_now, ttm_prev))
+        ttm_now = ttm(fcf_series, window=4)
+        ttm_prev = ttm(fcf_series[4:], window=4)
+        return float(yoy_growth(ttm_now, ttm_prev))
 
     # ------------------------- Forward estimates ------------------------- #
     def forward_eps_growth(self) -> float:
@@ -187,15 +200,15 @@ class GrowthFactors:
         Uses analyst_estimates.epsAvg aggregated over next 4 quarters as FY1 proxy.
         """
         # CY: trailing TTM EPS from actuals
-        ists = self._sort_rows_desc_by_date(self.fund.income_statements)
+        ists = sort_rows_desc_by_date(self.fund.income_statements)
         if len(ists) < 4:
             return np.nan
         eps_series = [getattr(x, 'eps', None) for x in ists]
-        cy_ttm = self.ttm(eps_series, window=4)
+        cy_ttm = ttm(eps_series, window=4)
         if np.isnan(cy_ttm):
             return np.nan
         # FY1: next 4 quarters EPSAvg from estimates, most recent-first
-        ests = self._sort_rows_desc_by_date(self.fund.analyst_estimates)
+        ests = sort_rows_desc_by_date(self.fund.analyst_estimates)
         if not ests or len(ests) < 1:
             return np.nan
         try:
@@ -205,21 +218,21 @@ class GrowthFactors:
             fy1 = float(np.nansum([float(v) for v in next4]))
         except Exception:
             return np.nan
-        base = self._safe_divide(fy1 - float(cy_ttm), abs(float(cy_ttm)))
+        base = safe_divide(fy1 - float(cy_ttm), abs(float(cy_ttm)))
         return float(base) if not np.isnan(base) else np.nan
 
     def forward_eps_cagr_2y(self) -> float:
         """2-year forward EPS CAGR using estimates: CAGR(FY2, CY, 2)."""
         # CY: trailing TTM EPS from actuals
-        ists = self._sort_rows_desc_by_date(self.fund.income_statements)
+        ists = sort_rows_desc_by_date(self.fund.income_statements)
         if len(ists) < 4:
             return np.nan
         eps_series = [getattr(x, 'eps', None) for x in ists]
-        cy_ttm = self.ttm(eps_series, window=4)
+        cy_ttm = ttm(eps_series, window=4)
         if np.isnan(cy_ttm):
             return np.nan
         # FY2: next 8 quarters EPSAvg
-        ests = self._sort_rows_desc_by_date(self.fund.analyst_estimates)
+        ests = sort_rows_desc_by_date(self.fund.analyst_estimates)
         if not ests or len(ests) < 8:
             return np.nan
         try:
@@ -235,7 +248,7 @@ class GrowthFactors:
         if self.curr_fcf is None or self.prev_fcf is None:
             return np.nan
         # Decimal unit
-        return float(self._pct_change(self.curr_fcf, self.prev_fcf, scale=1.0))
+        return float(pct_change(self.curr_fcf, self.prev_fcf, scale=1.0))
 
     def peg_ratio(self) -> float:
         if self.pe_ratio is None:
@@ -253,37 +266,27 @@ class GrowthFactors:
         if self.curr_roe is None or self.prev_roe is None:
             return np.nan
         # Decimal unit
-        return float(self._pct_change(self.curr_roe, self.prev_roe, scale=1.0))
+        return float(pct_change(self.curr_roe, self.prev_roe, scale=1.0))
 
     def roic_growth_rate(self) -> float:
         if self.curr_roic is None or self.prev_roic is None:
             return np.nan
         # Decimal unit
-        return float(self._pct_change(self.curr_roic, self.prev_roic, scale=1.0))
+        return float(pct_change(self.curr_roic, self.prev_roic, scale=1.0))
 
     def book_value_growth_rate(self) -> float:
         if self.curr_bvps is None or self.prev_bvps is None:
             return np.nan
         # Decimal unit
-        return float(self._pct_change(self.curr_bvps, self.prev_bvps, scale=1.0))
+        return float(pct_change(self.curr_bvps, self.prev_bvps, scale=1.0))
 
     def ocf_growth_rate(self) -> float:
         if self.curr_ocf is None or self.prev_ocf is None:
             return np.nan
         # Decimal unit
-        return float(self._pct_change(self.curr_ocf, self.prev_ocf, scale=1.0))
+        return float(pct_change(self.curr_ocf, self.prev_ocf, scale=1.0))
 
     # ------------------------- Helpers (in-file) ------------------------- #
-    @staticmethod
-    def _sort_rows_desc_by_date(rows: Optional[Iterable]) -> list:
-        if not rows:
-            return []
-        try:
-            return sorted(list(rows), key=lambda r: getattr(r, 'date', None) or date.min, reverse=True)
-        except Exception:
-            # Fallback: return as list without sorting
-            return list(rows)
-
     @staticmethod
     def _extract_dates(rows: Optional[Iterable]) -> List[date]:
         if not rows:
@@ -348,53 +351,8 @@ class GrowthFactors:
             return 0.0
         return float(max(len(dates) - 1, 0)) / float(self.periods_per_year or 4)
 
-    @staticmethod
-    def _safe_divide(numerator: Optional[float], denominator: Optional[float], default: float = np.nan) -> float:
-        try:
-            if numerator is None or denominator is None:
-                return default
-            if float(denominator) == 0.0:
-                return default
-            return float(numerator) / float(denominator)
-        except Exception:
-            return default
 
-    @classmethod
-    def _pct_change(cls, current: Optional[float], previous: Optional[float], scale: float = 1.0) -> float:
-        if current is None or previous is None:
-            return np.nan
-        try:
-            base = cls._safe_divide(float(current) - float(previous), abs(float(previous)))
-            if np.isnan(base):
-                return np.nan
-            return float(base * scale)
-        except Exception:
-            return np.nan
-
-    @staticmethod
-    def yoy_growth(current: Optional[float], lagged: Optional[float]) -> float:
-        """Year-over-year growth (decimal)."""
-        if current is None or lagged is None:
-            return np.nan
-        try:
-            base = GrowthFactors._safe_divide(float(current), float(lagged))
-            if np.isnan(base):
-                return np.nan
-            return float(base - 1.0)
-        except Exception:
-            return np.nan
-
-    @staticmethod
-    def ttm(series: List[Optional[float]], window: int = 4) -> float:
-        if not series or len(series) < window:
-            return np.nan
-        try:
-            values = [float(x) for x in series[:window] if x is not None]
-            if len(values) < window:
-                return np.nan
-            return float(np.nansum(values))
-        except Exception:
-            return np.nan
+    # Removed redundant wrappers: _pct_change, yoy_growth, ttm
 
     @staticmethod
     def cagr(v_end: Optional[float], v_start: Optional[float], years: Optional[float]) -> float:
@@ -406,39 +364,6 @@ class GrowthFactors:
             return float((float(v_end) / float(v_start)) ** (1.0 / float(years)) - 1.0)
         except Exception:
             return np.nan
-
-    # ------------------------- Cross-section helpers ------------------------- #
-    @staticmethod
-    def winsorize_series(series: pd.Series, lower: float = 0.025, upper: float = 0.025) -> pd.Series:
-        if series is None or series.empty:
-            return series
-        s = series.copy()
-        try:
-            lo = s.quantile(lower)
-            hi = s.quantile(1.0 - upper)
-            return s.clip(lower=lo, upper=hi)
-        except Exception:
-            return s
-
-    @staticmethod
-    def zscore_series(series: pd.Series) -> pd.Series:
-        if series is None or series.empty:
-            return series
-        s = series.copy()
-        m = s.mean()
-        sd = s.std(ddof=0)
-        if sd is None or sd == 0 or np.isnan(sd):
-            return pd.Series(0.0, index=s.index)
-        return (s - m) / sd
-
-    @classmethod
-    def sector_zscore(cls, df: pd.DataFrame, col: str, sector_col: str = "sector") -> pd.Series:
-        if df is None or df.empty or col not in df.columns:
-            return pd.Series(dtype=float)
-        if sector_col not in df.columns:
-            # Global z-score if no sector
-            return cls.zscore_series(df[col])
-        return df.groupby(sector_col)[col].transform(cls.zscore_series)
 
     # ------------------------- Attributes & composite ------------------------- #
     def compute_attributes(self) -> Dict[str, float]:
@@ -459,8 +384,8 @@ class GrowthFactors:
     def compose_growth_exposure(
         cls,
         df: pd.DataFrame,
-        sector_col: str = "sector",
-        winsor_limits: tuple[float, float] = (0.025, 0.025),
+        sector_col: str = DEFAULT_SECTOR_COL,
+        winsor_limits: tuple[float, float] = DEFAULT_WINSOR_LIMITS,
         weights: Optional[Dict[str, float]] = None,
         output_col: str = "growth_exposure_raw",
     ) -> pd.DataFrame:
@@ -472,27 +397,16 @@ class GrowthFactors:
         if df is None or df.empty:
             return df
         cols = ["fwd_eps_g", "fwd_2y_cagr", "sales_yoy", "ocf_yoy"]
-        for c in cols:
-            if c not in df.columns:
-                df[c] = np.nan
-        lw, uw = winsor_limits
-        # Winsorize then sector z-score
-        for c in cols:
-            df[f"{c}_w"] = cls.winsorize_series(df[c], lower=lw, upper=uw)
-            df[f"{c}_z"] = cls.sector_zscore(df, f"{c}_w", sector_col=sector_col)
-        # Default weights
         if not weights:
-            weights = {"fwd_eps_g_z": 0.35, "fwd_2y_cagr_z": 0.25, "sales_yoy_z": 0.20, "ocf_yoy_z": 0.20}
-        # Compute weighted sum
-        df[output_col] = 0.0
-        for key, w in weights.items():
-            if key not in df.columns:
-                # Map base name to z variant if needed
-                base = key.replace("_z", "")
-                key = f"{base}_z"
-            if key in df.columns:
-                df[output_col] = df[output_col].fillna(0.0) + w * df[key].fillna(0.0)
-        return df
+            weights = {"fwd_eps_g": 0.35, "fwd_2y_cagr": 0.25, "sales_yoy": 0.20, "ocf_yoy": 0.20}
+        return compose_exposure(
+            df,
+            cols=cols,
+            weights=weights,
+            sector_col=sector_col,
+            winsor_limits=winsor_limits,
+            output_col=output_col,
+        )
 
     @classmethod
     def orthogonalize_growth(
@@ -503,40 +417,18 @@ class GrowthFactors:
         value_col: Optional[str] = None,
         output_col: str = "growth_exposure",
     ) -> pd.DataFrame:
-        """Orthogonalize growth exposure against Size/Value via OLS residuals.
+        """Orthogonalize growth exposure against Size/Value using shared residualizer.
 
-        If size_col/value_col are None or missing, returns z-scored exposure.
+        If required regressors are missing, falls back to global z-score of exposure.
         """
         if df is None or df.empty or exposure_col not in df.columns:
             return df
-        # Z-score exposure globally first
-        exp_z = cls.zscore_series(df[exposure_col].astype(float))
+        # Fallback if regressors missing
         if not size_col or not value_col or size_col not in df.columns or value_col not in df.columns:
-            df[output_col] = exp_z
+            df[output_col] = zscore_series(df[exposure_col].astype(float))
             return df
-        # Prepare design matrix with intercept
-        X0 = pd.DataFrame({
-            "const": 1.0,
-            "size_z": cls.zscore_series(df[size_col].astype(float)),
-            "value_z": cls.zscore_series(df[value_col].astype(float)),
-        })
-        # Align and drop NaNs
-        m = pd.concat([exp_z.rename("y"), X0], axis=1).dropna()
-        if m.empty:
-            df[output_col] = exp_z
-            return df
-        Y = m["y"].values
-        X = m[["const", "size_z", "value_z"]].values
-        try:
-            beta, *_ = np.linalg.lstsq(X, Y, rcond=None)
-            fitted = X @ beta
-            resid = Y - fitted
-            # Place residuals back aligned to df index
-            df[output_col] = np.nan
-            df.loc[m.index, output_col] = resid
-        except Exception:
-            df[output_col] = exp_z
-        return df
+        # Residualize y ~ [size_col, value_col]
+        return residualize(df, y_col=exposure_col, x_cols=[size_col, value_col], out_col=output_col)
 
 
 if __name__ == "__main__":

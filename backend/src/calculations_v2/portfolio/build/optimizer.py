@@ -9,6 +9,7 @@ from scipy import optimize
 
 from backend.src.calculations_v2.risk.calculator import RiskCalculator
 from backend.src.calculations_v2.portfolio.correlation import CorrelationAnalysis
+from backend.src.calculations_v2.core.config import DEFAULT_RF_ANNUAL
 
 
 class PortfolioOptimizer:
@@ -82,7 +83,7 @@ class PortfolioOptimizer:
             return pd.Series(w0, index=cov.index)
     
     def optimize_weights_max_sharpe(self, expected_returns: pd.Series, cov: pd.DataFrame,
-                                   risk_free_rate: float = 0.04) -> pd.Series:
+                                   risk_free_rate: float = DEFAULT_RF_ANNUAL) -> pd.Series:
         """Calculate maximum Sharpe ratio weights.
         
         Args:

@@ -15,6 +15,7 @@ from backend.src.calculations_v2.factors.value import ValueFactors
 from backend.src.calculations_v2.factors.growth import GrowthFactors
 from backend.src.calculations_v2.factors.quality import QualityFactors
 from backend.src.calculations_v2.factors.volatility import VolatilityFactors
+from backend.src.calculations_v2.core.config import DEFAULT_TRADING_DAYS
 
 
 def main() -> None:
@@ -104,7 +105,7 @@ def main() -> None:
     tracking_err = PerformanceCalculator.tracking_error(r_price, rm) if not rm.empty else np.nan
     appraisal = PerformanceCalculator.appraisal_ratio(r_price, rm) if not rm.empty else np.nan
     up_cap_d, down_cap_d = PerformanceCalculator.capture_ratios(r_price, rm, periods_per_year=None) if not rm.empty else (np.nan, np.nan)
-    up_cap_ann, down_cap_ann = PerformanceCalculator.capture_ratios(r_price, rm, periods_per_year=252) if not rm.empty else (np.nan, np.nan)
+    up_cap_ann, down_cap_ann = PerformanceCalculator.capture_ratios(r_price, rm, periods_per_year=DEFAULT_TRADING_DAYS) if not rm.empty else (np.nan, np.nan)
 
     # ---------------------- Technical Indicators ---------------------- #
     ti = TechnicalIndicators(price_frame)
@@ -315,7 +316,7 @@ def main() -> None:
     print({
         "realized_vol_30d": vf_vol.realized_vol_30d(),
         "realized_vol_90d": vf_vol.realized_vol_90d(),
-        "annualized_vol_252": vf_vol.annualized_volatility(252),
+        "annualized_vol_252": vf_vol.annualized_volatility(DEFAULT_TRADING_DAYS),
         "daily_vol": vf_vol.daily_return_volatility(),
         "beta_1y": vf_vol.beta_1yr(),
         "idio_vol": vf_vol.idiosyncratic_vol(),

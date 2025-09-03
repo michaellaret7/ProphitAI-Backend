@@ -8,6 +8,7 @@ an optimized portfolio using the calculations_v2 framework.
 from datetime import datetime
 from backend.src.calculations_v2.core import DataService
 from backend.src.calculations_v2.portfolio.build import CorrelationPortfolioBuilder
+from backend.src.calculations_v2.core.config import DEFAULT_TRADING_DAYS
 
 
 def basic_portfolio_example():
@@ -37,7 +38,7 @@ def basic_portfolio_example():
         target_annual_vol=target_annual_vol,
         portfolio_value=portfolio_value,
         leverage=leverage,
-        lookback_days=252  # 1 year of data
+        lookback_days=DEFAULT_TRADING_DAYS  # 1 year of data
     )
     
     # Check results

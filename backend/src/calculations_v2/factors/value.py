@@ -9,7 +9,13 @@ import pandas as pd
 from backend.src.calculations_v2.core.data_service import DataService
 from backend.src.calculations_v2.core.models import FundamentalData
 from backend.src.utils.ticker_utils import get_most_recent_price
-from backend.src.calculations_v2.factors.growth import GrowthFactors
+from backend.src.calculations_v2.core.helpers import (
+    ttm,
+    winsorize_series,
+    sector_zscore,
+    zscore_series,
+)
+from backend.src.calculations_v2.core.config import DEFAULT_SECTOR_COL, DEFAULT_WINSOR_LIMITS
 
 
 class ValueFactors:
@@ -51,12 +57,13 @@ class ValueFactors:
         except Exception:
             self.price = get_most_recent_price(self.ticker)
 
-        # Defensive sort by date desc using Growth helpers (DRY)
-        ists = GrowthFactors._sort_rows_desc_by_date(self.fund.income_statements)
-        bss = GrowthFactors._sort_rows_desc_by_date(self.fund.balance_sheets)
-        cfs = GrowthFactors._sort_rows_desc_by_date(self.fund.cash_flow_statements)
-        frs = GrowthFactors._sort_rows_desc_by_date(self.fund.financial_ratios)
-        ests = GrowthFactors._sort_rows_desc_by_date(self.fund.analyst_estimates)
+        # Defensive sort by date desc using centralized helpers (DRY)
+        from backend.src.calculations_v2.core.helpers import sort_rows_desc_by_date
+        ists = sort_rows_desc_by_date(self.fund.income_statements)
+        bss = sort_rows_desc_by_date(self.fund.balance_sheets)
+        cfs = sort_rows_desc_by_date(self.fund.cash_flow_statements)
+        frs = sort_rows_desc_by_date(self.fund.financial_ratios)
+        ests = sort_rows_desc_by_date(self.fund.analyst_estimates)
 
         # As-of cutoff filter to avoid look-ahead
         def _filter_rows_by_cutoff(rows):
@@ -96,7 +103,7 @@ class ValueFactors:
         # TTM aggregations from quarterly series
         def _ttm_from(rows, attr: str) -> Optional[float]:
             series = [getattr(x, attr, None) for x in rows] if rows else []
-            val = GrowthFactors.ttm(series, window=4)
+            val = ttm(series, window=4)
             return float(val) if val is not None and not np.isnan(val) else None
 
         self.eps_ttm = _ttm_from(ists, 'eps')
@@ -330,7 +337,8 @@ class ValueFactors:
         # bp: (Equity / Shares) / Price
         try:
             if price is not None and shares is not None:
-                equity = getattr(GrowthFactors._sort_rows_desc_by_date(self.fund.balance_sheets)[0], 'totalStockholdersEquity', None)
+                from backend.src.calculations_v2.core.helpers import sort_rows_desc_by_date
+                equity = getattr(sort_rows_desc_by_date(self.fund.balance_sheets)[0], 'totalStockholdersEquity', None)
                 if equity is not None and float(equity) > 0:
                     bvps = float(equity) / float(shares)
                     if bvps > 0:
@@ -389,8 +397,8 @@ class ValueFactors:
     def compose_value_exposure(
         cls,
         df: pd.DataFrame,
-        sector_col: str = "sector",
-        winsor_limits: tuple[float, float] = (0.025, 0.025),
+        sector_col: str = DEFAULT_SECTOR_COL,
+        winsor_limits: tuple[float, float] = DEFAULT_WINSOR_LIMITS,
         weights: Optional[Dict[str, float]] = None,
         output_col: str = "value_exposure_raw",
     ) -> pd.DataFrame:
@@ -405,10 +413,10 @@ class ValueFactors:
             if c not in df.columns:
                 df[c] = np.nan
         lw, uw = winsor_limits
-        # Winsorize then sector z-score (reuse Growth helpers)
+        # Winsorize then sector z-score (use centralized helpers)
         for c in base_cols:
-            df[f"{c}_w"] = GrowthFactors.winsorize_series(df[c].astype(float), lower=lw, upper=uw)
-            df[f"{c}_z"] = GrowthFactors.sector_zscore(df, f"{c}_w", sector_col=sector_col)
+            df[f"{c}_w"] = winsorize_series(df[c].astype(float), lower=lw, upper=uw)
+            df[f"{c}_z"] = sector_zscore(df, f"{c}_w", sector_col=sector_col)
 
         # Default weights
         if not weights:
@@ -461,15 +469,15 @@ class ValueFactors:
         """
         if df is None or df.empty or exposure_col not in df.columns:
             return df
-        exp_z = GrowthFactors.zscore_series(df[exposure_col].astype(float))
+        exp_z = zscore_series(df[exposure_col].astype(float))
         # Require both regressors for orthogonalization; otherwise fallback
         if not size_col or not momentum_col or size_col not in df.columns or momentum_col not in df.columns:
             df[output_col] = exp_z
             return df
         X0 = pd.DataFrame({
             "const": 1.0,
-            "size_z": GrowthFactors.zscore_series(df[size_col].astype(float)),
-            "mom_z": GrowthFactors.zscore_series(df[momentum_col].astype(float)),
+            "size_z": zscore_series(df[size_col].astype(float)),
+            "mom_z": zscore_series(df[momentum_col].astype(float)),
         })
         m = pd.concat([exp_z.rename("y"), X0], axis=1).dropna()
         if m.empty:

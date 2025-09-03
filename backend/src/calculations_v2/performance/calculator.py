@@ -2,6 +2,11 @@ from __future__ import annotations
 
 import numpy as np
 import pandas as pd
+from backend.src.calculations_v2.risk.calculator import RiskCalculator
+from backend.src.calculations_v2.core.data_service import DataService
+from datetime import datetime, timedelta, timezone
+from backend.src.calculations_v2.returns.calculator import ReturnsCalculator
+from backend.src.calculations_v2.core.config import DEFAULT_TRADING_DAYS, DEFAULT_RF_ANNUAL
 
 
 class PerformanceCalculator:
@@ -10,8 +15,8 @@ class PerformanceCalculator:
     @staticmethod
     def sharpe_ratio(
         daily_returns: pd.Series,
-        rf_annual: float = 0.04,
-        periods_per_year: int = 252,
+        rf_annual: float = DEFAULT_RF_ANNUAL,
+        periods_per_year: int = DEFAULT_TRADING_DAYS,
         rf_series: pd.Series | None = None,
     ) -> float:
         r = pd.Series(daily_returns).dropna().astype(float)
@@ -33,8 +38,8 @@ class PerformanceCalculator:
     @staticmethod
     def sortino_ratio(
         daily_returns: pd.Series,
-        mar_annual: float = 0.04,
-        periods_per_year: int = 252,
+        mar_annual: float = DEFAULT_RF_ANNUAL,
+        periods_per_year: int = DEFAULT_TRADING_DAYS,
         mar_daily: float | None = None,
     ) -> float:
         r = pd.Series(daily_returns).dropna().astype(float)
@@ -58,7 +63,7 @@ class PerformanceCalculator:
         return float(annual_return / md)
 
     @staticmethod
-    def calmar_from_returns(r: pd.Series, periods_per_year: int = 252, years: int = 3) -> float:
+    def calmar_from_returns(r: pd.Series, periods_per_year: int = DEFAULT_TRADING_DAYS, years: int = 3) -> float:
         series = pd.Series(r).dropna().astype(float)
         min_len = int(years * periods_per_year)
         if len(series) < min_len:
@@ -81,8 +86,8 @@ class PerformanceCalculator:
     def treynor_ratio(
         daily_returns: pd.Series,
         market_daily_returns: pd.Series,
-        rf_annual: float = 0.04,
-        periods_per_year: int = 252,
+        rf_annual: float = DEFAULT_RF_ANNUAL,
+        periods_per_year: int = DEFAULT_TRADING_DAYS,
     ) -> float:
         """Treynor ratio computed on aligned excess returns with geometric RF.
 
@@ -119,7 +124,7 @@ class PerformanceCalculator:
     def information_ratio(
         daily_returns: pd.Series,
         benchmark_daily_returns: pd.Series,
-        periods_per_year: int = 252,
+        periods_per_year: int = DEFAULT_TRADING_DAYS,
     ) -> float:
         """Ex-post Information Ratio on aligned series with guards."""
         data = pd.concat(
@@ -154,7 +159,7 @@ class PerformanceCalculator:
     def omega_ratio_from_annual(
         daily_returns: pd.Series,
         mar_annual: float = 0.0,
-        periods_per_year: int = 252,
+        periods_per_year: int = DEFAULT_TRADING_DAYS,
     ) -> float:
         """Omega ratio with an annual MAR converted geometrically to daily."""
         r = pd.Series(daily_returns).dropna().astype(float)
@@ -176,15 +181,8 @@ class PerformanceCalculator:
         return float(annual_return / denom)
 
     @staticmethod
-    def cagr_from_returns(daily_returns: pd.Series, periods_per_year: int = 252) -> float:
-        r = pd.Series(daily_returns).dropna().astype(float)
-        if r.empty:
-            return np.nan
-        equity = (1.0 + r).cumprod()
-        years = len(r) / float(periods_per_year)
-        if years <= 0.0 or equity.iloc[-1] <= 0.0:
-            return np.nan
-        return float(equity.iloc[-1] ** (1.0 / years) - 1.0)
+    def cagr_from_returns(daily_returns: pd.Series, periods_per_year: int = DEFAULT_TRADING_DAYS) -> float:
+        return ReturnsCalculator.annualized_return(daily_returns, trading_days=periods_per_year)
 
     @staticmethod
     def drawdown_series(equity: pd.Series) -> pd.Series:
@@ -193,7 +191,7 @@ class PerformanceCalculator:
         return equity / safe - 1.0
 
     @staticmethod
-    def sterling_ratio_from_returns(daily_returns: pd.Series, periods_per_year: int = 252) -> float:
+    def sterling_ratio_from_returns(daily_returns: pd.Series, periods_per_year: int = DEFAULT_TRADING_DAYS) -> float:
         r = pd.Series(daily_returns).dropna().astype(float)
         if r.empty:
             return np.nan
@@ -249,7 +247,7 @@ class PerformanceCalculator:
         return np.array(mags, dtype=float)
 
     @staticmethod
-    def burke_ratio(daily_returns: pd.Series, periods_per_year: int = 252) -> float:
+    def burke_ratio(daily_returns: pd.Series, periods_per_year: int = DEFAULT_TRADING_DAYS) -> float:
         r = pd.Series(daily_returns).dropna().astype(float)
         if len(r) < 2:
             return np.nan
@@ -267,7 +265,7 @@ class PerformanceCalculator:
     def martin_ratio(
         daily_returns: pd.Series,
         rf_annual: float = 0.0,
-        periods_per_year: int = 252,
+        periods_per_year: int = DEFAULT_TRADING_DAYS,
     ) -> float:
         r = pd.Series(daily_returns).dropna().astype(float)
         if len(r) < 2:
@@ -308,8 +306,8 @@ class PerformanceCalculator:
     def alpha(
         daily_returns: pd.Series,
         market_daily_returns: pd.Series,
-        risk_free_daily: float = 0.04 / 252,
-        trading_days: int = 252,
+        risk_free_daily: float = (1.0 + DEFAULT_RF_ANNUAL)**(1.0/DEFAULT_TRADING_DAYS) - 1.0,
+        trading_days: int = DEFAULT_TRADING_DAYS,
     ) -> float:
         """Backward-compatible wrapper that calls Jensen's alpha (regression intercept).
 
@@ -327,8 +325,8 @@ class PerformanceCalculator:
     def alpha_jensen(
         daily_returns: pd.Series,
         market_daily_returns: pd.Series,
-        rf_annual: float = 0.04,
-        periods_per_year: int = 252,
+        rf_annual: float = DEFAULT_RF_ANNUAL,
+        periods_per_year: int = DEFAULT_TRADING_DAYS,
     ) -> float:
         """Jensen's alpha via regression intercept on aligned excess returns.
 
@@ -545,14 +543,8 @@ class PerformanceCalculator:
         window: int | None = None,
         as_percent: bool = False,
     ) -> float:
-        p = pd.Series(prices).dropna().astype(float)
-        if p.empty:
-            return np.nan
-        if window is not None and window > 0:
-            p = p.iloc[-int(window):]
-        dd = p / p.cummax() - 1.0
-        scale = 100.0 if as_percent else 1.0
-        return float(np.sqrt(np.mean((dd * scale) ** 2)))
+        # Delegate to price-based Ulcer Index in RiskCalculator; ignore window/as_percent to keep parity
+        return RiskCalculator.ulcer_index(prices)
 
     @staticmethod
     def ulcer_index_monthly(
@@ -577,7 +569,7 @@ class PerformanceCalculator:
     def tracking_error(
         daily_returns: pd.Series,
         benchmark_daily_returns: pd.Series,
-        periods_per_year: int = 252,
+        periods_per_year: int = DEFAULT_TRADING_DAYS,
     ) -> float:
         """Tracking error - annualized std dev of active returns (aligned series)."""
         df = pd.concat(
@@ -596,8 +588,8 @@ class PerformanceCalculator:
     def appraisal_ratio(
         daily_returns: pd.Series,
         market_daily_returns: pd.Series,
-        rf_annual: float = 0.04,
-        periods_per_year: int = 252,
+        rf_annual: float = DEFAULT_RF_ANNUAL,
+        periods_per_year: int = DEFAULT_TRADING_DAYS,
     ) -> float:
         """Appraisal ratio = annualized alpha / annualized residual risk (aligned excess returns)."""
         df = pd.concat(
@@ -661,19 +653,19 @@ if __name__ == "__main__":
                 r = s.astype(float).pct_change(fill_method=None).dropna()
 
                 # Core risk-adjusted metrics
-                sharpe = PerformanceCalculator.sharpe_ratio(r, rf_annual=0.04, periods_per_year=252)
-                sortino = PerformanceCalculator.sortino_ratio(r, mar_annual=0.04, periods_per_year=252)
-                treynor = PerformanceCalculator.treynor_ratio(r, rm, rf_annual=0.04, periods_per_year=252)
-                info = PerformanceCalculator.information_ratio(r, rm, periods_per_year=252)
-                omega = PerformanceCalculator.omega_ratio_from_annual(r, mar_annual=0.0, periods_per_year=252)
-                sterling = PerformanceCalculator.sterling_ratio_from_returns(r, periods_per_year=252)
-                burke = PerformanceCalculator.burke_ratio(r, periods_per_year=252)
-                martin = PerformanceCalculator.martin_ratio(r, rf_annual=0.04, periods_per_year=252)
-                alpha = PerformanceCalculator.alpha_jensen(r, rm, rf_annual=0.04, periods_per_year=252)
+                sharpe = PerformanceCalculator.sharpe_ratio(r, rf_annual=DEFAULT_RF_ANNUAL, periods_per_year=DEFAULT_TRADING_DAYS)
+                sortino = PerformanceCalculator.sortino_ratio(r, mar_annual=DEFAULT_RF_ANNUAL, periods_per_year=DEFAULT_TRADING_DAYS)
+                treynor = PerformanceCalculator.treynor_ratio(r, rm, rf_annual=DEFAULT_RF_ANNUAL, periods_per_year=DEFAULT_TRADING_DAYS)
+                info = PerformanceCalculator.information_ratio(r, rm, periods_per_year=DEFAULT_TRADING_DAYS)
+                omega = PerformanceCalculator.omega_ratio_from_annual(r, mar_annual=0.0, periods_per_year=DEFAULT_TRADING_DAYS)
+                sterling = PerformanceCalculator.sterling_ratio_from_returns(r, periods_per_year=DEFAULT_TRADING_DAYS)
+                burke = PerformanceCalculator.burke_ratio(r, periods_per_year=DEFAULT_TRADING_DAYS)
+                martin = PerformanceCalculator.martin_ratio(r, rf_annual=DEFAULT_RF_ANNUAL, periods_per_year=DEFAULT_TRADING_DAYS)
+                alpha = PerformanceCalculator.alpha_jensen(r, rm, rf_annual=DEFAULT_RF_ANNUAL, periods_per_year=DEFAULT_TRADING_DAYS)
 
                 # Capture ratios (daily per-period ratio and annualized monthly-style)
                 up_cap_daily, down_cap_daily = PerformanceCalculator.capture_ratios(r, rm, periods_per_year=None, strict_zero_split=True)
-                up_cap_ann, down_cap_ann = PerformanceCalculator.capture_ratios(r, rm, periods_per_year=252, strict_zero_split=True)
+                up_cap_ann, down_cap_ann = PerformanceCalculator.capture_ratios(r, rm, periods_per_year=DEFAULT_TRADING_DAYS, strict_zero_split=True)
 
                 # Hit ratio and profit factor variants
                 hit = PerformanceCalculator.win_rate(r, threshold=0.0, include_zeros_in_denominator=False, count_zero_as_win=False)
@@ -685,7 +677,7 @@ if __name__ == "__main__":
                 tail = PerformanceCalculator.tail_ratio(r, q=5.0)
                 gl_mean = PerformanceCalculator.gain_loss_ratio(r, threshold=0.0, method="mean")
                 ui = PerformanceCalculator.ulcer_index(r, window=None, as_percent=False)
-                ui_pct = PerformanceCalculator.ulcer_index(r, window=252, as_percent=True)
+                ui_pct = PerformanceCalculator.ulcer_index(r, window=DEFAULT_TRADING_DAYS, as_percent=True)
 
                 rows.append({
                     "ticker": t,

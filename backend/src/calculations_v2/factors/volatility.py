@@ -6,7 +6,9 @@ from datetime import datetime, timedelta, timezone
 import numpy as np
 import pandas as pd
 import scipy.stats
-from backend.src.calculations_v2.factors.growth import GrowthFactors
+from backend.src.calculations_v2.core.helpers import zscore_series, winsorize_series, sector_zscore, compose_exposure
+from backend.src.calculations_v2.risk.calculator import RiskCalculator
+from backend.src.calculations_v2.core.config import DEFAULT_TRADING_DAYS, DEFAULT_SECTOR_COL, DEFAULT_WINSOR_LIMITS
 
 
 class VolatilityFactors:
@@ -56,7 +58,7 @@ class VolatilityFactors:
         r = self.returns.iloc[-days:]
         if len(r) < max(20, int(days * 0.2)):
             return None
-        return float(r.std(ddof=1) * np.sqrt(252))
+        return float(r.std(ddof=1) * np.sqrt(DEFAULT_TRADING_DAYS))
 
     def realized_vol_30d(self) -> Optional[float]:
         return self.realized_vol(30)
@@ -68,7 +70,8 @@ class VolatilityFactors:
         r = self.returns.iloc[-lookback_days:]
         if len(r) < max(20, int(lookback_days * 0.2)):
             return None
-        return float(r.std(ddof=1) * np.sqrt(252))
+        vol = RiskCalculator.annualized_volatility(r)
+        return float(vol) if np.isfinite(vol) else None
 
     def daily_return_volatility(self) -> Optional[float]:
         if len(self.returns) < 2:
@@ -76,7 +79,7 @@ class VolatilityFactors:
         return float(self.returns.std(ddof=1))
 
     def realized_vol_252(self) -> Optional[float]:
-        return self.realized_vol(252)
+        return self.realized_vol(DEFAULT_TRADING_DAYS)
 
     def beta_1yr(self) -> Optional[float]:
         if self.spy_returns is None:
@@ -84,11 +87,10 @@ class VolatilityFactors:
         combined = pd.concat([self.returns.rename("asset"), self.spy_returns.rename("spy")], axis=1).dropna()
         if len(combined) < 30:
             return None
-        lookback = min(252, len(combined))
+        lookback = min(DEFAULT_TRADING_DAYS, len(combined))
         recent = combined.iloc[-lookback:]
-        cov = np.cov(recent["asset"], recent["spy"], ddof=1)[0, 1]
-        var = np.var(recent["spy"], ddof=1)
-        return float(cov / var) if var != 0 else None
+        b = RiskCalculator.beta(recent["asset"], recent["spy"])
+        return float(b) if np.isfinite(b) else None
 
     def idiosyncratic_vol(self) -> Optional[float]:
         if self.spy_returns is None:
@@ -97,31 +99,31 @@ class VolatilityFactors:
         combined = pd.concat([self.returns.rename("asset"), self.spy_returns.rename("spy")], axis=1).dropna()
         if len(combined) < 30:
             return None
-        lookback = min(252, len(combined))
+        lookback = min(DEFAULT_TRADING_DAYS, len(combined))
         recent = combined.iloc[-lookback:]
         y = recent["asset"]
         x = sm.add_constant(recent["spy"])
         model = sm.OLS(y, x, missing="drop").fit()
         resid = model.resid
-        return float(resid.std(ddof=1) * np.sqrt(252))
+        return float(resid.std(ddof=1) * np.sqrt(DEFAULT_TRADING_DAYS))
 
-    def downside_dev(self, days: int = 252, hurdle: float = 0.0) -> Optional[float]:
+    def downside_dev(self, days: int = DEFAULT_TRADING_DAYS, hurdle: float = 0.0) -> Optional[float]:
         r = self.returns.iloc[-days:]
         if len(r) < max(20, int(days * 0.2)):
             return None
         downside = np.minimum(r - float(hurdle), 0.0)
-        return float(np.sqrt(np.mean(np.square(downside))) * np.sqrt(252))
+        return float(np.sqrt(np.mean(np.square(downside))) * np.sqrt(DEFAULT_TRADING_DAYS))
 
     def downside_dev_30d(self) -> Optional[float]:
         return self.downside_dev(days=30, hurdle=0.0)
 
     def downside_dev_252(self) -> Optional[float]:
-        return self.downside_dev(days=252, hurdle=0.0)
+        return self.downside_dev(days=DEFAULT_TRADING_DAYS, hurdle=0.0)
 
     def max_drawdown_1yr(self) -> Optional[float]:
         if len(self.prices) < 30:
             return None
-        lookback = min(252, len(self.prices))
+        lookback = min(DEFAULT_TRADING_DAYS, len(self.prices))
         p = self.prices.iloc[-lookback:]
         cum_max = p.expanding().max()
         safe = cum_max.replace(0, np.nan)
@@ -156,7 +158,7 @@ class VolatilityFactors:
         if len(self.returns) < 63:
             return None
         short = self.returns.iloc[-63:]
-        long_lookback = min(252, len(self.returns))
+        long_lookback = min(DEFAULT_TRADING_DAYS, len(self.returns))
         if long_lookback < 126:
             long_lookback = len(self.returns)
         long = self.returns.iloc[-long_lookback:]
@@ -166,7 +168,7 @@ class VolatilityFactors:
             return None
         return float(var_s / var_l)
 
-    def short_long_vol_ratio(self, short_days: int = 63, long_days: int = 252) -> Optional[float]:
+    def short_long_vol_ratio(self, short_days: int = 63, long_days: int = DEFAULT_TRADING_DAYS) -> Optional[float]:
         short_vol = self.realized_vol(short_days)
         long_vol = self.realized_vol(long_days)
         if short_vol is None or long_vol is None or long_vol <= 0:
@@ -175,7 +177,7 @@ class VolatilityFactors:
         # Clip extremes for stability
         return float(min(max(ratio, 0.25), 4.0))
 
-    def skewness(self, lookback: int = 252) -> Optional[float]:
+    def skewness(self, lookback: int = DEFAULT_TRADING_DAYS) -> Optional[float]:
         if len(self.returns) < 30:
             return None
         actual = min(lookback, len(self.returns))
@@ -183,7 +185,7 @@ class VolatilityFactors:
         s = scipy.stats.skew(r)
         return float(s) if not np.isnan(s) else None
 
-    def kurtosis(self, lookback: int = 252) -> Optional[float]:
+    def kurtosis(self, lookback: int = DEFAULT_TRADING_DAYS) -> Optional[float]:
         if len(self.returns) < 30:
             return None
         actual = min(lookback, len(self.returns))
@@ -196,17 +198,17 @@ class VolatilityFactors:
             return None
         try:
             from arch import arch_model
-            r_pct = self.returns.iloc[-252:] * 100
+            r_pct = self.returns.iloc[-DEFAULT_TRADING_DAYS:] * 100
             model = arch_model(r_pct, vol='Garch', p=1, q=1, rescale=False)
             fitted = model.fit(disp='off')
             f = fitted.forecast(horizon=1)
             next_var = f.variance.iloc[-1, 0]
-            return float(np.sqrt(next_var / 10000 * 252))
+            return float(np.sqrt(next_var / 10000 * DEFAULT_TRADING_DAYS))
         except Exception:
             # Fallback EWMA
-            return self.ewma_vol(lam=0.94, days=252)
+            return self.ewma_vol(lam=0.94, days=DEFAULT_TRADING_DAYS)
 
-    def ewma_vol(self, lam: float = 0.94, days: int = 252) -> Optional[float]:
+    def ewma_vol(self, lam: float = 0.94, days: int = DEFAULT_TRADING_DAYS) -> Optional[float]:
         r = self.returns.iloc[-days:]
         if len(r) < 20:
             return None
@@ -222,7 +224,7 @@ class VolatilityFactors:
         if norm <= 0.0:
             return None
         ewma_var = var  # Already incorporates normalization via recursion
-        return float(np.sqrt(ewma_var) * np.sqrt(252))
+        return float(np.sqrt(ewma_var) * np.sqrt(DEFAULT_TRADING_DAYS))
 
     # ------------------------- Cross-sectional API ------------------------- #
     def compute_attributes(self) -> Dict[str, float]:
@@ -273,8 +275,8 @@ class VolatilityFactors:
     def compose_volatility_exposure(
         cls,
         df: pd.DataFrame,
-        sector_col: str = "sector",
-        winsor_limits: tuple[float, float] = (0.025, 0.025),
+        sector_col: str = DEFAULT_SECTOR_COL,
+        winsor_limits: tuple[float, float] = DEFAULT_WINSOR_LIMITS,
         weights: Optional[Dict[str, float]] = None,
         mode: str = "Vol",
         output_col: str = "vol_exposure_raw",
@@ -286,23 +288,16 @@ class VolatilityFactors:
         if df is None or df.empty:
             return df
         base_cols = ["idio_vol", "realized_vol", "downside_dev", "svlr"]
-        for c in base_cols + ["beta"]:
-            if c not in df.columns:
-                df[c] = np.nan
-        lw, uw = winsor_limits
-        # Winsorize then sector z-score
-        for c in base_cols:
-            df[f"{c}_w"] = GrowthFactors.winsorize_series(df[c].astype(float), lower=lw, upper=uw)
-            df[f"{c}_z"] = GrowthFactors.sector_zscore(df, f"{c}_w", sector_col=sector_col)
-        # Default weights
         if not weights:
             weights = {"idio_vol": 0.60, "realized_vol": 0.30, "downside_dev": 0.10, "svlr": 0.00}
-        # Weighted sum
-        df[output_col] = 0.0
-        for key, w in weights.items():
-            zcol = f"{key}_z"
-            if zcol in df.columns:
-                df[output_col] = df[output_col].fillna(0.0) + float(w) * df[zcol].fillna(0.0)
+        df = compose_exposure(
+            df,
+            cols=base_cols,
+            weights=weights,
+            sector_col=sector_col,
+            winsor_limits=winsor_limits,
+            output_col=output_col,
+        )
         # LowVol option flips sign
         if isinstance(mode, str) and mode.lower().startswith("low"):
             df[output_col] = -df[output_col]
@@ -320,15 +315,15 @@ class VolatilityFactors:
         """Orthogonalize volatility exposure against Beta (and Size if provided)."""
         if df is None or df.empty or exposure_col not in df.columns or beta_col not in df.columns:
             return df
-        exp_z = GrowthFactors.zscore_series(df[exposure_col].astype(float))
+        exp_z = zscore_series(df[exposure_col].astype(float))
         # If beta missing entirely, fallback
         if df[beta_col].isna().all():
             df[output_col] = exp_z
             return df
         # Build design matrix
-        X_cols = {"const": 1.0, "beta_z": GrowthFactors.zscore_series(df[beta_col].astype(float))}
+        X_cols = {"const": 1.0, "beta_z": zscore_series(df[beta_col].astype(float))}
         if size_col and size_col in df.columns:
-            X_cols["size_z"] = GrowthFactors.zscore_series(df[size_col].astype(float))
+            X_cols["size_z"] = zscore_series(df[size_col].astype(float))
         X0 = pd.DataFrame(X_cols)
         m = pd.concat([exp_z.rename("y"), X0], axis=1).dropna()
         if m.empty:

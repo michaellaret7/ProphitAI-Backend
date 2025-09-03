@@ -7,9 +7,17 @@ import numpy as np
 
 from backend.src.calculations_v2.core.data_service import DataService
 from backend.src.calculations_v2.core.models import FundamentalData
+from backend.src.calculations_v2.core.helpers import (
+    winsorize_series,
+    zscore_series,
+    sector_zscore,
+    ttm,
+    sort_rows_desc_by_date,
+)
 from backend.src.utils.ticker_utils import get_most_recent_price
 import pandas as pd
 import numpy as np
+from backend.src.calculations_v2.core.config import DEFAULT_SECTOR_COL, DEFAULT_WINSOR_LIMITS
 
 
 class QualityFactors:
@@ -27,11 +35,11 @@ class QualityFactors:
         self.fund: FundamentalData = self.ds.get_fundamentals(self.ticker)
 
         # Defensive sort by period end date desc
-        ists = self._sort_rows_desc_by_date(self.fund.income_statements)
-        bss = self._sort_rows_desc_by_date(self.fund.balance_sheets)
-        cfs = self._sort_rows_desc_by_date(self.fund.cash_flow_statements)
-        frs = self._sort_rows_desc_by_date(self.fund.financial_ratios)
-        ests = self._sort_rows_desc_by_date(self.fund.analyst_estimates)
+        ists = sort_rows_desc_by_date(self.fund.income_statements)
+        bss = sort_rows_desc_by_date(self.fund.balance_sheets)
+        cfs = sort_rows_desc_by_date(self.fund.cash_flow_statements)
+        frs = sort_rows_desc_by_date(self.fund.financial_ratios)
+        ests = sort_rows_desc_by_date(self.fund.analyst_estimates)
 
         # Optional filing lag handling: if provided, drop the most recent statements not older than lag
         if filing_lag_days is not None and filing_lag_days > 0:
@@ -259,64 +267,39 @@ class QualityFactors:
             pass
         return out
 
-    # ------------------------- Winsorize/Z-score helpers ------------------------- #
-    @staticmethod
-    def winsorize_series(series: pd.Series, lower: float = 0.025, upper: float = 0.025) -> pd.Series:
-        if series is None or series.empty:
-            return series
-        s = series.copy()
-        try:
-            lo = s.quantile(lower)
-            hi = s.quantile(1.0 - upper)
-            return s.clip(lower=lo, upper=hi)
-        except Exception:
-            return s
-
-    @staticmethod
-    def zscore_series(series: pd.Series) -> pd.Series:
-        if series is None or series.empty:
-            return series
-        s = series.copy()
-        m = s.mean()
-        sd = s.std(ddof=0)
-        if sd is None or sd == 0 or np.isnan(sd):
-            return pd.Series(0.0, index=s.index)
-        return (s - m) / sd
-
-    @classmethod
-    def sector_zscore(cls, df: pd.DataFrame, col: str, sector_col: str = 'sector') -> pd.Series:
-        if df is None or df.empty or col not in df.columns:
-            return pd.Series(dtype=float)
-        if sector_col not in df.columns:
-            return cls.zscore_series(df[col])
-        return df.groupby(sector_col)[col].transform(cls.zscore_series)
 
     # ------------------------- Composite & orthogonalization ------------------------- #
     @classmethod
     def compose_quality_exposure(
         cls,
         df: pd.DataFrame,
-        sector_col: str = 'sector',
-        winsor_limits: tuple[float, float] = (0.025, 0.025),
+        sector_col: str = DEFAULT_SECTOR_COL,
+        winsor_limits: tuple[float, float] = DEFAULT_WINSOR_LIMITS,
         output_col: str = 'quality_exposure_raw',
     ) -> pd.DataFrame:
         if df is None or df.empty:
             return df
+        from backend.src.calculations_v2.core.helpers import compose_exposure
         cols = ['roe','roic','gp_a','fcf_margin','accruals','de','nd_ebitda','int_cover','stab']
-        for c in cols:
-            if c not in df.columns:
-                df[c] = np.nan
-        lw, uw = winsor_limits
-        for c in cols:
-            df[f'{c}_w'] = cls.winsorize_series(df[c], lower=lw, upper=uw)
-            df[f'{c}_z'] = cls.sector_zscore(df, f'{c}_w', sector_col=sector_col)
-        df[output_col] = (
-            0.40*(0.33*df['roe_z'] + 0.33*df['roic_z'] + 0.34*df['gp_a_z']) +
-            0.25*(0.5*df['accruals_z'] + 0.5*df['fcf_margin_z']) +
-            0.25*(0.4*df['de_z'] + 0.3*df['nd_ebitda_z'] + 0.3*df['int_cover_z']) +
-            0.10*(df['stab_z'])
+        weights = {
+            'roe': 0.40 * 0.33,
+            'roic': 0.40 * 0.33,
+            'gp_a': 0.40 * 0.34,
+            'accruals': 0.25 * 0.5,
+            'fcf_margin': 0.25 * 0.5,
+            'de': 0.25 * 0.4,
+            'nd_ebitda': 0.25 * 0.3,
+            'int_cover': 0.25 * 0.3,
+            'stab': 0.10,
+        }
+        return compose_exposure(
+            df,
+            cols=cols,
+            weights=weights,
+            sector_col=sector_col,
+            winsor_limits=winsor_limits,
+            output_col=output_col,
         )
-        return df
 
     @classmethod
     def orthogonalize_quality(
@@ -329,14 +312,14 @@ class QualityFactors:
     ) -> pd.DataFrame:
         if df is None or df.empty or exposure_col not in df.columns:
             return df
-        exp_z = cls.zscore_series(df[exposure_col].astype(float))
+        exp_z = zscore_series(df[exposure_col].astype(float))
         if not size_col or not value_col or size_col not in df.columns or value_col not in df.columns:
             df[output_col] = exp_z
             return df
         X0 = pd.DataFrame({
             'const': 1.0,
-            'size_z': cls.zscore_series(df[size_col].astype(float)),
-            'value_z': cls.zscore_series(df[value_col].astype(float)),
+            'size_z': zscore_series(df[size_col].astype(float)),
+            'value_z': zscore_series(df[value_col].astype(float)),
         })
         m = pd.concat([exp_z.rename('y'), X0], axis=1).dropna()
         if m.empty:
@@ -357,24 +340,11 @@ class QualityFactors:
      # ------------------------- Helpers (in-file) ------------------------- #
     @staticmethod
     def _sort_rows_desc_by_date(rows: Optional[Iterable]) -> list:
-        if not rows:
-            return []
-        try:
-            return sorted(list(rows), key=lambda r: getattr(r, 'date', None) or date.min, reverse=True)
-        except Exception:
-            return list(rows)
+        return sort_rows_desc_by_date(rows)
 
     @staticmethod
     def ttm(series: List[Optional[float]], window: int = 4) -> float:
-        if not series or len(series) < window:
-            return np.nan
-        try:
-            values = [float(x) for x in series[:window] if x is not None]
-            if len(values) < window:
-                return np.nan
-            return float(np.nansum(values))
-        except Exception:
-            return np.nan
+        return ttm(series, window)
 
     @staticmethod
     def avg(a: Optional[float], b: Optional[float]) -> float:
@@ -388,18 +358,18 @@ class QualityFactors:
     # ------------------------- Composite attributes ------------------------- #
     def compute_attributes(self) -> Dict[str, float]:
         """Compute robust TTM/averaged quality attributes with proper signs (decimals)."""
-        ists = self._sort_rows_desc_by_date(self.fund.income_statements)
-        bss = self._sort_rows_desc_by_date(self.fund.balance_sheets)
-        cfs = self._sort_rows_desc_by_date(self.fund.cash_flow_statements)
+        ists = sort_rows_desc_by_date(self.fund.income_statements)
+        bss = sort_rows_desc_by_date(self.fund.balance_sheets)
+        cfs = sort_rows_desc_by_date(self.fund.cash_flow_statements)
 
         # TTM numerators (quarterly expected, most-recent-first)
-        ni_ttm = self.ttm([getattr(q, 'netIncome', None) for q in ists])
-        gp_ttm = self.ttm([getattr(q, 'grossProfit', None) for q in ists])
-        sales_ttm = self.ttm([getattr(q, 'revenue', None) for q in ists])
-        ebit_ttm = self.ttm([getattr(q, 'operatingIncome', None) for q in ists])
-        ebitda_ttm = self.ttm([getattr(q, 'ebitda', None) for q in ists])
-        cfo_ttm = self.ttm([getattr(c, 'netCashProvidedByOperatingActivities', None) for c in cfs])
-        fcf_ttm = self.ttm([getattr(c, 'freeCashFlow', None) for c in cfs])
+        ni_ttm = ttm([getattr(q, 'netIncome', None) for q in ists])
+        gp_ttm = ttm([getattr(q, 'grossProfit', None) for q in ists])
+        sales_ttm = ttm([getattr(q, 'revenue', None) for q in ists])
+        ebit_ttm = ttm([getattr(q, 'operatingIncome', None) for q in ists])
+        ebitda_ttm = ttm([getattr(q, 'ebitda', None) for q in ists])
+        cfo_ttm = ttm([getattr(c, 'netCashProvidedByOperatingActivities', None) for c in cfs])
+        fcf_ttm = ttm([getattr(c, 'freeCashFlow', None) for c in cfs])
         # Averages: current vs 4Q ago
         assets0 = getattr(bss[0], 'totalAssets', None) if bss else None
         assets4 = getattr(bss[4], 'totalAssets', None) if len(bss) > 4 else None

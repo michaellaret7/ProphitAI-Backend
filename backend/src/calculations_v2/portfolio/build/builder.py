@@ -12,6 +12,7 @@ from backend.src.calculations_v2.risk.calculator import RiskCalculator
 from backend.src.calculations_v2.performance.calculator import PerformanceCalculator
 from backend.src.calculations_v2.portfolio.correlation import CorrelationAnalysis
 from backend.src.calculations_v2.portfolio.build.optimizer import PortfolioOptimizer
+from backend.src.calculations_v2.core.config import DEFAULT_CONFIDENCE
 
 class CorrelationPortfolioBuilder:
     """Portfolio builder that incorporates correlation analysis.
@@ -203,7 +204,7 @@ class CorrelationPortfolioBuilder:
         metrics = {
             "annual_volatility": self.risk_calc.annualized_volatility(portfolio_returns),
             "max_drawdown": self.risk_calc.max_drawdown(portfolio_value),  # Pass cumulative value, not returns
-            "var_99": self.risk_calc.historical_var(portfolio_returns, confidence=0.99),
+            "var_99": self.risk_calc.historical_var(portfolio_returns, confidence=DEFAULT_CONFIDENCE),
             "expected_shortfall": self.risk_calc.expected_shortfall(portfolio_returns),
             "sharpe_ratio": self.perf_calc.sharpe_ratio(portfolio_returns),
         }

@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import numpy as np
 import pandas as pd
+from backend.src.calculations_v2.core.config import DEFAULT_CONFIDENCE
 
 
 def _to_psd(cov: np.ndarray, floor: float = 1e-12) -> np.ndarray:
@@ -35,7 +36,7 @@ class RiskCalculator:
         return float(drawdown.min())
 
     @staticmethod
-    def parametric_var(annual_vol: float, confidence: float = 0.99, trading_days: int = 252, mean_daily: float | None = None) -> float:
+    def parametric_var(annual_vol: float, confidence: float = DEFAULT_CONFIDENCE, trading_days: int = 252, mean_daily: float | None = None) -> float:
         from scipy.stats import norm
 
         z = norm.ppf(confidence)
@@ -46,7 +47,7 @@ class RiskCalculator:
         return float(-(mean_daily + z * daily_vol))
 
     @staticmethod
-    def historical_var(portfolio_daily_returns: pd.Series, confidence: float = 0.99) -> float:
+    def historical_var(portfolio_daily_returns: pd.Series, confidence: float = DEFAULT_CONFIDENCE) -> float:
         """Historical (non-parametric) VaR for 1-day horizon (positive magnitude)."""
         r = pd.Series(portfolio_daily_returns).dropna().astype(float)
         if r.empty:
@@ -55,7 +56,7 @@ class RiskCalculator:
         return float(-np.nanpercentile(r, alpha_pct))
 
     @staticmethod
-    def expected_shortfall(portfolio_daily_returns: pd.Series, confidence: float = 0.99) -> float:
+    def expected_shortfall(portfolio_daily_returns: pd.Series, confidence: float = DEFAULT_CONFIDENCE) -> float:
         """Expected shortfall (CVaR) from historical distribution (positive magnitude)."""
         r = pd.Series(portfolio_daily_returns).dropna().astype(float)
         if r.empty:
@@ -96,7 +97,7 @@ class RiskCalculator:
     def monte_carlo_var(
         weights: np.ndarray | pd.Series,
         returns_df: pd.DataFrame,
-        confidence: float = 0.99,
+        confidence: float = DEFAULT_CONFIDENCE,
         n_simulations: int = 10000,
         use_mean: bool = True,
         random_state: int | None = None,
@@ -145,7 +146,7 @@ class RiskCalculator:
     def marginal_var(
         weights: np.ndarray | pd.Series,
         cov_daily: pd.DataFrame | np.ndarray,
-        confidence: float = 0.99,
+        confidence: float = DEFAULT_CONFIDENCE,
         as_percent_of_portfolio_var: bool = False,
     ) -> tuple[pd.Series, pd.Series]:
         """Marginal and component VaR using daily covariance matrix."""
@@ -198,7 +199,7 @@ class RiskCalculator:
     def position_size_from_var_budget(
         var_budget_dollars: float,
         annual_vol: float,
-        confidence: float = 0.99,
+        confidence: float = DEFAULT_CONFIDENCE,
         trading_days: int = 252,
     ) -> float:
         """Compute maximum position size (dollars) given a VaR dollar budget."""
@@ -250,7 +251,7 @@ class RiskCalculator:
         return (up_beta, down_beta)
 
     @staticmethod
-    def parametric_cvar(annual_vol: float, confidence: float = 0.99, trading_days: int = 252) -> float:
+    def parametric_cvar(annual_vol: float, confidence: float = DEFAULT_CONFIDENCE, trading_days: int = 252) -> float:
         """Parametric CVaR assuming normal distribution."""
         from scipy.stats import norm
         alpha = 1 - confidence

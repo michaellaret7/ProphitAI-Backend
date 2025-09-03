@@ -6,6 +6,14 @@ import numpy as np
 import pandas as pd
 import statsmodels.api as sm
 from datetime import datetime, timedelta, timezone
+from backend.src.calculations_v2.core.helpers import (
+    winsorize_series,
+    zscore_series,
+    sector_zscore,
+    residualize,
+    compose_exposure,
+)
+from backend.src.calculations_v2.core.config import DEFAULT_SECTOR_COL, DEFAULT_WINSOR_LIMITS
 
 
 class MomentumFactors:
@@ -216,38 +224,6 @@ class MomentumFactors:
         except Exception:
             return None
 
-    # ------------------------- Cross-section helpers ------------------------- #
-    @staticmethod
-    def winsorize_series(series: pd.Series, lower: float = 0.025, upper: float = 0.025) -> pd.Series:
-        if series is None or series.empty:
-            return series
-        s = series.copy()
-        try:
-            lo = s.quantile(lower)
-            hi = s.quantile(1.0 - upper)
-            return s.clip(lower=lo, upper=hi)
-        except Exception:
-            return s
-
-    @staticmethod
-    def zscore_series(series: pd.Series) -> pd.Series:
-        if series is None or series.empty:
-            return series
-        s = series.copy()
-        m = s.mean()
-        sd = s.std(ddof=0)
-        if sd is None or sd == 0 or np.isnan(sd):
-            return pd.Series(0.0, index=s.index)
-        return (s - m) / sd
-
-    @classmethod
-    def sector_zscore(cls, df: pd.DataFrame, col: str, sector_col: str = "sector") -> pd.Series:
-        if df is None or df.empty or col not in df.columns:
-            return pd.Series(dtype=float)
-        if sector_col not in df.columns:
-            return cls.zscore_series(df[col])
-        return df.groupby(sector_col)[col].transform(cls.zscore_series)
-
     # ------------------------- Attributes & composite ------------------------- #
     def compute_attributes(self) -> dict:
         return {
@@ -261,29 +237,24 @@ class MomentumFactors:
     def compose_momentum_exposure(
         cls,
         df: pd.DataFrame,
-        sector_col: str = "sector",
-        winsor_limits: tuple[float, float] = (0.025, 0.025),
+        sector_col: str = DEFAULT_SECTOR_COL,
+        winsor_limits: tuple[float, float] = DEFAULT_WINSOR_LIMITS,
         weights: Optional[dict] = None,
         output_col: str = "momentum_exposure_raw",
     ) -> pd.DataFrame:
         if df is None or df.empty:
             return df
         cols = ["r12_1", "r6_1", "idio_mom"]
-        for c in cols:
-            if c not in df.columns:
-                df[c] = np.nan
-        lw, uw = winsor_limits
-        for c in cols:
-            df[f"{c}_w"] = cls.winsorize_series(df[c], lower=lw, upper=uw)
-            df[f"{c}_z"] = cls.sector_zscore(df, f"{c}_w", sector_col=sector_col)
         if not weights:
-            weights = {"r12_1_z": 0.6, "r6_1_z": 0.2, "idio_mom_z": 0.2}
-        df[output_col] = 0.0
-        for key, w in weights.items():
-            key_col = key if key in df.columns else f"{key.replace('_z','')}_z"
-            if key_col in df.columns:
-                df[output_col] = df[output_col].fillna(0.0) + w * df[key_col].fillna(0.0)
-        return df
+            weights = {"r12_1": 0.6, "r6_1": 0.2, "idio_mom": 0.2}
+        return compose_exposure(
+            df,
+            cols=cols,
+            weights=weights,
+            sector_col=sector_col,
+            winsor_limits=winsor_limits,
+            output_col=output_col,
+        )
 
     @classmethod
     def orthogonalize_momentum(
@@ -296,30 +267,10 @@ class MomentumFactors:
     ) -> pd.DataFrame:
         if df is None or df.empty or exposure_col not in df.columns:
             return df
-        exp_z = cls.zscore_series(df[exposure_col].astype(float))
         if not beta_col or not size_col or beta_col not in df.columns or size_col not in df.columns:
-            df[output_col] = exp_z
+            df[output_col] = zscore_series(df[exposure_col].astype(float))
             return df
-        X0 = pd.DataFrame({
-            "const": 1.0,
-            "beta_z": cls.zscore_series(df[beta_col].astype(float)),
-            "size_z": cls.zscore_series(df[size_col].astype(float)),
-        })
-        m = pd.concat([exp_z.rename("y"), X0], axis=1).dropna()
-        if m.empty:
-            df[output_col] = exp_z
-            return df
-        Y = m["y"].values
-        X = m[["const", "beta_z", "size_z"]].values
-        try:
-            beta, *_ = np.linalg.lstsq(X, Y, rcond=None)
-            fitted = X @ beta
-            resid = Y - fitted
-            df[output_col] = np.nan
-            df.loc[m.index, output_col] = resid
-        except Exception:
-            df[output_col] = exp_z
-        return df
+        return residualize(df, y_col=exposure_col, x_cols=[beta_col, size_col], out_col=output_col)
 
     # ------------------------- Microstructure hygiene ------------------------- #
     @staticmethod
