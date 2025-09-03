@@ -1,7 +1,6 @@
 ├── backend/
 │   ├── __init__.py
 │   ├── main.py
-│   ├── README.md
 │   ├── src/
 │   │   ├── __init__.py
 │   │   ├── agentic_framework/
@@ -29,6 +28,7 @@
 │   │   │   │   │   └── semantic_memory.py
 │   │   │   │   └── tasks/
 │   │   │   │       ├── __init__.py
+│   │   │   │       ├── execution_engine.py
 │   │   │   │       ├── manager.py
 │   │   │   │       ├── models.py
 │   │   │   │       └── validator.py
@@ -37,6 +37,7 @@
 │   │   │       ├── calculator.py
 │   │   │       ├── data_wrapper_prompt.py
 │   │   │       ├── data_wrapper_tool.py
+│   │   │       ├── planning_tool.py
 │   │   │       └── search_engine_tool.py
 │   │   ├── analysts/
 │   │   │   ├── __init__.py
@@ -47,16 +48,25 @@
 │   │   │   ├── equity_analysts.py
 │   │   │   └── macro_analysts.py
 │   │   ├── api/
-│   │   │   ├── __init__.py
-│   │   │   ├── portfolio.py
-│   │   │   ├── prophitgpt.py
-│   │   │   └── runner.py
+│   │   │   ├── controller/
+│   │   │   │   ├── prophit_alts_controller.py
+│   │   │   │   └── user_controller.py
+│   │   │   ├── routes/
+│   │   │   │   ├── prophit_alts_router.py
+│   │   │   │   └── user_routes.py
+│   │   │   ├── prophit_alts.py
+│   │   │   ├── response_envelope.py
+│   │   │   ├── testing/
+│   │   │   │   ├── prophit_alts_testing.py
+│   │   │   │   └── user_testing.py
+│   │   │   └── user.py
 │   │   ├── auth/
 │   │   │   ├── __init__.py
+│   │   │   ├── audit.py
 │   │   │   ├── config.py
 │   │   │   ├── dependencies.py
 │   │   │   ├── models.py
-│   │   │   └── routes.py
+│   │   │   └── sso.py
 │   │   ├── calculations/
 │   │   │   ├── build_corr_portfolio/
 │   │   │   │   ├── __init__.py
@@ -80,7 +90,6 @@
 │   │   │   │   └── ticker_performance_calculations.py
 │   │   │   ├── returns_calculations/
 │   │   │   │   ├── portfolio_returns_calculations.py
-│   │   │   │   ├── returns_under_stress_calculations.py
 │   │   │   │   └── ticker_returns_calculations.py
 │   │   │   ├── risk_calculations/
 │   │   │   │   ├── portfolio_risk_calculations.py
@@ -89,6 +98,45 @@
 │   │   │       ├── industry_calculations.py
 │   │   │       ├── sector_calculations.py
 │   │   │       └── sub_industry_calculations.py
+│   │   ├── calculations_v2/
+│   │   │   ├── __init__.py
+│   │   │   ├── core/
+│   │   │   │   ├── __init__.py
+│   │   │   │   ├── config.py
+│   │   │   │   ├── data_service.py
+│   │   │   │   ├── exceptions.py
+│   │   │   │   └── models.py
+│   │   │   ├── factors/
+│   │   │   │   ├── __init__.py
+│   │   │   │   ├── growth.py
+│   │   │   │   ├── momentum.py
+│   │   │   │   ├── quality.py
+│   │   │   │   ├── value.py
+│   │   │   │   └── volatility.py
+│   │   │   ├── performance/
+│   │   │   │   ├── __init__.py
+│   │   │   │   └── calculator.py
+│   │   │   ├── portfolio/
+│   │   │   │   ├── __init__.py
+│   │   │   │   ├── build/
+│   │   │   │   │   ├── __init__.py
+│   │   │   │   │   ├── builder.py
+│   │   │   │   │   ├── example_usage.py
+│   │   │   │   │   └── optimizer.py
+│   │   │   │   └── correlation.py
+│   │   │   ├── returns/
+│   │   │   │   ├── __init__.py
+│   │   │   │   └── calculator.py
+│   │   │   ├── risk/
+│   │   │   │   ├── __init__.py
+│   │   │   │   └── calculator.py
+│   │   │   ├── sectors/
+│   │   │   │   ├── industry.py
+│   │   │   │   ├── sector.py
+│   │   │   │   └── sub_industry.py
+│   │   │   └── technical/
+│   │   │       ├── __init__.py
+│   │   │       └── indicators.py
 │   │   ├── data/
 │   │   │   ├── __init__.py
 │   │   │   ├── database/
@@ -101,7 +149,7 @@
 │   │   │   └── style_factors_models.py
 │   │   ├── db/
 │   │   │   ├── core/
-│   │   │   │   ├── build_etf_data.py
+│   │   │   │   ├── add_etf.py
 │   │   │   │   ├── build_price_table.py
 │   │   │   │   ├── db_config.py
 │   │   │   │   ├── market_data_models.py
@@ -136,7 +184,10 @@
 │   │   ├── prophit_alts/
 │   │   │   └── consumer_staples_fund/
 │   │   │       ├── build_portfolio/
-│   │   │       │   ├── cio_agent.py
+│   │   │       │   ├── cio/
+│   │   │       │   │   ├── cio_agent.py
+│   │   │       │   │   ├── cio_tool_registry.py
+│   │   │       │   │   └── cio_tools.py
 │   │   │       │   ├── cro/
 │   │   │       │   │   ├── cro_agent.py
 │   │   │       │   │   ├── cro_tool_registry.py
@@ -169,7 +220,10 @@
 │   │   ├── repositories/
 │   │   │   ├── portfolio_data.py
 │   │   │   ├── price_data.py
+│   │   │   ├── prophit_alts_data.py
 │   │   │   └── user_data.py
+│   │   ├── services/
+│   │   │   └── prophit_alts_service.py
 │   │   ├── stress_test/
 │   │   │   ├── engine.py
 │   │   │   ├── pairwise_corr_analysis.py
@@ -188,19 +242,23 @@
 │   │       ├── parsing_utils.py
 │   │       ├── serialize_output.py
 │   │       ├── ticker_utils.py
-│   │       └── token_count.py
+│   │       ├── token_count.py
+│   │       └── validation_utils.py
 │   └── testing/
-│       ├── All_US_ETFs.xlsx
 │       ├── alpaca_trade.py
+│       ├── calculations_vtwo_smoke_test.py
+│       ├── cluster_analysis.py
 │       ├── hedge_fund_stuff/
-│       │   ├── hedge_fund_portfolio_construction.py
-│       │   └── hedge_fund_risk_management.py
-│       ├── llm_dialogue.py
-│       ├── retail-fund-code.py
-│       └── trade_entry.py
+│       │   ├── Hedge_fund_portfolio_construction.py
+│       │   └── Hedge_fund_risk_management.py
+│       └── retail-fund-code.py
 ├── file_structure.md
-├── ideas.md
-├── new_improvements.md
+├── git_helper.md
+├── new_stucture.md
+├── planning/
+│   ├── calculations_folder_fix.md
+│   ├── error_fixer.md
+│   └── todo.md
 ├── README.md
 ├── requirements.txt
 └── roadmap.md

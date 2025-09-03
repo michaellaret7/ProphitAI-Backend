@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from datetime import datetime
 from typing import Dict, Iterable, Optional
+from concurrent.futures import ThreadPoolExecutor, as_completed
 
 import pandas as pd
 
@@ -119,4 +120,42 @@ class DataService:
         finally:
             session.close()
 
+    def get_bulk_fundamentals(self, tickers: Iterable[str], max_workers: int = 8) -> Dict[str, FundamentalData]:
+        """Fetch fundamentals for multiple tickers in parallel and cache them.
+
+        Returns a dict of ticker -> FundamentalData for successful fetches only.
+        """
+        unique = []
+        seen = set()
+        for t in tickers:
+            if not t:
+                continue
+            u = t.upper()
+            if u not in seen:
+                seen.add(u)
+                unique.append(u)
+        results: Dict[str, FundamentalData] = {}
+        # First, fill from cache
+        remaining = []
+        for t in unique:
+            if t in self._fund_cache:
+                results[t] = self._fund_cache[t]
+            else:
+                remaining.append(t)
+        if not remaining:
+            return results
+        # Fetch remaining in parallel
+        with ThreadPoolExecutor(max_workers=max_workers) as executor:
+            future_to_t = {executor.submit(self.get_fundamentals, t): t for t in remaining}
+            for fut in as_completed(future_to_t):
+                tkr = future_to_t[fut]
+                try:
+                    data = fut.result()
+                    if data is not None:
+                        self._fund_cache[tkr] = data
+                        results[tkr] = data
+                except Exception:
+                    # Skip ticker on error
+                    pass
+        return results
 

@@ -29,7 +29,6 @@ from .tool_registry import register_base_tools, register_task_management_tools
 
 load_dotenv()
 
-#TODO: Push the register tools functions to their own files and manage that properly 
 #TODO: get rid of old/dead code that does not help the main agent work flow
 
 class BaseAgent:
@@ -138,9 +137,6 @@ class BaseAgent:
         # Child agents should override this to load their specific memories
         pass
     
-    # --- Tool registry (moved to tool_registry module) ---------------------
-
-    # removed: _register_task_management_tools (moved to tool_registry)
 
     def get_available_tools(self) -> Dict[str, Dict[str, Any]]:
         """Return all available tools and their information."""
