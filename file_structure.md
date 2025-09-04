@@ -262,3 +262,10 @@
 ├── README.md
 ├── requirements.txt
 └── roadmap.md
+
+
+Updates:
+- Stress test: `backend/src/stress_test/engine.py` now uses `calculations_v2` for returns and beta
+  - Returns via `ReturnsCalculator.daily_price_returns`
+  - Beta via `RiskCalculator.beta`
+  - Removed internal `calculate_beta_from_data()` and unused `statsmodels` import

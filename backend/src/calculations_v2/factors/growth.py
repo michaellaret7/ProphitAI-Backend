@@ -31,10 +31,14 @@ class GrowthFactors:
     operating cash flow growth.
     """
 
-    def __init__(self, ticker: str, data_service: DataService | None = None):
+    def __init__(self, ticker: str, data_service: DataService | None = None, fundamental_data: FundamentalData | None = None):
         self.ticker = ticker.upper()
         self.ds = data_service or DataService()
-        self.fund: FundamentalData = self.ds.get_fundamentals(self.ticker)
+        # Use provided fundamental data or fetch it
+        if fundamental_data is not None:
+            self.fund: FundamentalData = fundamental_data
+        else:
+            self.fund: FundamentalData = self.ds.get_fundamentals(self.ticker)
 
         # Defensive sort by date descending where possible
         ists = sort_rows_desc_by_date(self.fund.income_statements)
@@ -351,9 +355,6 @@ class GrowthFactors:
             return 0.0
         return float(max(len(dates) - 1, 0)) / float(self.periods_per_year or 4)
 
-
-    # Removed redundant wrappers: _pct_change, yoy_growth, ttm
-
     @staticmethod
     def cagr(v_end: Optional[float], v_start: Optional[float], years: Optional[float]) -> float:
         if v_end is None or v_start is None or years is None:
@@ -430,73 +431,76 @@ class GrowthFactors:
         # Residualize y ~ [size_col, value_col]
         return residualize(df, y_col=exposure_col, x_cols=[size_col, value_col], out_col=output_col)
 
-
-if __name__ == "__main__":
-    # Lightweight smoke test for attributes and composite
-    import sys
-    try:
-        test_tickers = ["AAPL", "MSFT", "AMZN", "GOOGL", "NVDA"]
-        ds = DataService()
-        rows: List[Dict[str, float]] = []
-        for t in test_tickers:
-            try:
-                gf = GrowthFactors(t, ds)
-                attrs = gf.compute_attributes()
-                extra = {
-                    "eps_gr": gf.eps_growth_rate(),
-                    "eps_cagr": gf.eps_cagr(),
-                    "eps_yoy": gf.eps_yoy(),
-                    "rev_gr": gf.revenue_growth_rate(),
-                    "sales_ttm_yoy": gf.sales_ttm_yoy(),
-                    "sales_trend": gf.sales_trend_growth_factor(),
-                    "ocf_gr": gf.ocf_growth_rate(),
-                    "ocf_ttm_yoy": gf.ocf_ttm_yoy(),
-                    "fcf_gr": gf.fcf_growth_rate(),
-                    "fcf_ttm_yoy": gf.fcf_ttm_yoy(),
-                    "peg": gf.peg_ratio(),
-                    "roe_gr": gf.roe_growth_rate(),
-                    "roic_gr": gf.roic_growth_rate(),
-                    "bvps_gr": gf.book_value_growth_rate(),
-                    "freq": gf.frequency,
-                    "ppy": gf.periods_per_year,
-                    "years_span": gf.years,
-                }
-                rows.append({"ticker": t, **attrs, **extra})
-            except Exception as e:
-                print(f"[warn] Failed computing attributes for {t}: {e}")
-        frame = pd.DataFrame(rows)
-        # Compose exposure (global z-score if sector not provided)
-        frame = GrowthFactors.compose_growth_exposure(frame)
-        frame = GrowthFactors.orthogonalize_growth(frame, exposure_col="growth_exposure_raw")
-        cols = [
-            "ticker",
-            "fwd_eps_g",
-            "fwd_2y_cagr",
-            "eps_gr",
-            "eps_cagr",
-            "eps_yoy",
-            "rev_gr",
-            "sales_yoy",
-            "sales_ttm_yoy",
-            "sales_trend",
-            "ocf_yoy",
-            "ocf_ttm_yoy",
-            "ocf_gr",
-            "fcf_ttm_yoy",
-            "fcf_gr",
-            "peg",
-            "roe_gr",
-            "roic_gr",
-            "bvps_gr",
-            "growth_exposure_raw",
-            "growth_exposure",
-            "freq",
-            "ppy",
-            "years_span",
-        ]
-        print(frame[cols].to_string(index=False))
-    except Exception as e:
-        print(f"[error] Smoke test failed: {e}")
-        sys.exit(1)
-
-
+    def calc_all(self) -> Dict[str, float]:
+        """Calculate all growth factors for the ticker.
+        
+        Returns:
+            Dictionary containing all growth factor metrics (as decimals).
+        """
+        round_factor = 4
+        results = {
+            # Basic growth rates
+            "eps_growth_rate": round(self.eps_growth_rate(), round_factor),
+            "eps_cagr": round(self.eps_cagr(), round_factor),
+            "revenue_growth_rate": round(self.revenue_growth_rate(), round_factor),
+            "sales_trend_growth_factor": round(self.sales_trend_growth_factor(), round_factor),
+            
+            # YoY metrics
+            "eps_yoy": round(self.eps_yoy(), round_factor),
+            "sales_ttm_yoy": round(self.sales_ttm_yoy(), round_factor),
+            "ocf_ttm_yoy": round(self.ocf_ttm_yoy(), round_factor),
+            "fcf_ttm_yoy": round(self.fcf_ttm_yoy(), round_factor),
+            
+            # Forward estimates
+            "forward_eps_growth": round(self.forward_eps_growth(), round_factor),
+            "forward_eps_cagr_2y": round(self.forward_eps_cagr_2y(), round_factor),
+            
+            # Other growth metrics
+            "fcf_growth_rate": round(self.fcf_growth_rate(), round_factor),
+            "peg_ratio": round(self.peg_ratio(), round_factor),    
+            "roe_growth_rate": round(self.roe_growth_rate(), round_factor),
+            "roic_growth_rate": round(self.roic_growth_rate(), round_factor),
+            "book_value_growth_rate": round(self.book_value_growth_rate(), round_factor),
+            "ocf_growth_rate": round(self.ocf_growth_rate(), round_factor),
+        }
+        
+        # Clean up NaN/Inf values
+        for key, value in results.items():
+            if value is None or np.isinf(value) or (isinstance(value, float) and np.isnan(value)):
+                results[key] = np.nan
+                
+        return results
+    
+    @classmethod
+    def calc_all_bulk(cls, tickers: List[str], data_service: DataService | None = None) -> pd.DataFrame:
+        """Calculate all growth factors for multiple tickers using bulk data fetching.
+        
+        Args:
+            tickers: List of ticker symbols
+            data_service: Optional DataService instance (created if not provided)
+        
+        Returns:
+            DataFrame with tickers as rows and growth metrics as columns
+        """
+        ds = data_service or DataService()
+        
+        # Bulk fetch fundamental data for all tickers
+        fundamentals = ds.get_bulk_fundamentals(tickers)
+        
+        # Calculate growth factors for each ticker
+        all_results = {}
+        for ticker in tickers:
+            ticker = ticker.upper()
+            if ticker in fundamentals:
+                try:
+                    # Create GrowthFactors with pre-fetched data
+                    gf = cls(ticker, data_service=ds, fundamental_data=fundamentals[ticker])
+                    all_results[ticker] = gf.calc_all()
+                except Exception as e:
+                    print(f"Error calculating growth factors for {ticker}: {e}")
+                    # Add NaN row for failed tickers
+                    all_results[ticker] = {}
+        
+        # Convert to DataFrame
+        df = pd.DataFrame(all_results).T
+        return df

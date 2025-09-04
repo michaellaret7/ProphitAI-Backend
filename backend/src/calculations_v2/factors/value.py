@@ -271,6 +271,77 @@ class ValueFactors:
         pe = self.price / self.eps_ttm
         return pe / self.eps_growth_5yr
 
+    def calc_all(self) -> Dict[str, float]:
+        """Calculate all value factors for the ticker.
+        
+        Returns:
+            Dictionary containing all value factor metrics (as decimals).
+        """
+        round_factor = 4
+        results = {
+            # Value ratios
+            "price_to_book": round(self.price_to_book() or np.nan, round_factor),
+            "book_to_market": round(self.book_to_market() or np.nan, round_factor),
+            "trailing_pe": round(self.trailing_pe() or np.nan, round_factor),
+            "forward_pe": round(self.forward_pe() or np.nan, round_factor),
+            "earnings_yield": round(self.earnings_yield() or np.nan, round_factor),
+            "price_to_sales": round(self.price_to_sales() or np.nan, round_factor),
+            "price_to_cashflow": round(self.price_to_cashflow() or np.nan, round_factor),
+            "free_cashflow_yield": round(self.free_cashflow_yield() or np.nan, round_factor),
+            "ev_to_ebitda": round(self.ev_to_ebitda() or np.nan, round_factor),
+            "ev_to_ebit": round(self.ev_to_ebit() or np.nan, round_factor),
+            "dividend_yield": round(self.dividend_yield() or np.nan, round_factor),
+            "peg_ratio": round(self.peg_ratio() or np.nan, round_factor),
+        }
+        
+        # Clean up NaN/Inf values
+        for key, value in results.items():
+            if value is None or np.isinf(value) or (isinstance(value, float) and np.isnan(value)):
+                results[key] = np.nan
+                
+        return results
+    
+    @classmethod
+    def calc_all_bulk(
+        cls, 
+        tickers: list[str], 
+        data_service: DataService | None = None,
+        as_of_date: Optional[datetime] = None,
+        filing_lag_days: int = 0
+    ) -> pd.DataFrame:
+        """Calculate all value factors for multiple tickers using bulk data fetching.
+        
+        Args:
+            tickers: List of ticker symbols
+            data_service: Optional DataService instance (created if not provided)
+            as_of_date: Optional as-of date for calculations
+            filing_lag_days: Filing lag in days
+        
+        Returns:
+            DataFrame with tickers as rows and value metrics as columns
+        """
+        ds = data_service or DataService()
+        
+        # Bulk fetch fundamental data for all tickers
+        fundamentals = ds.get_bulk_fundamentals(tickers)
+        
+        # Calculate value factors for each ticker
+        all_results = {}
+        for ticker in tickers:
+            ticker = ticker.upper()
+            if ticker in fundamentals:
+                try:
+                    # Create ValueFactors instance (it will use cached fundamentals from DataService)
+                    vf = cls(ticker, data_service=ds, as_of_date=as_of_date, filing_lag_days=filing_lag_days)
+                    all_results[ticker] = vf.calc_all()
+                except Exception as e:
+                    print(f"Error calculating value factors for {ticker}: {e}")
+                    all_results[ticker] = {}
+        
+        # Convert to DataFrame
+        df = pd.DataFrame(all_results).T
+        return df
+    
     # ------------------------- New: Attributes & Composition ------------------------- #
     def _get_market_cap(self) -> Optional[float]:
         if self.shares_outstanding is None or self.price is None:

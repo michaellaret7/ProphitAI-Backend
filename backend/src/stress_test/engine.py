@@ -1,44 +1,9 @@
 import pandas as pd
-import numpy as np
 from datetime import datetime, timedelta
 from backend.src.repositories.price_data import fetch_bulk_price_data_for_tickers
-import statsmodels.api as sm
-import json
+from backend.src.calculations_v2.risk import RiskCalculator
+from backend.src.calculations_v2.returns import ReturnsCalculator
 from backend.src.stress_test.scenarios import historical_scenarios, hypothetical_scenarios
-
-def calculate_beta_from_data(ticker_prices: pd.Series, benchmark_prices: pd.Series) -> float:
-    """
-    Calculate beta from pre-fetched price data.
-    
-    Parameters:
-    - ticker_prices: Series of ticker close prices
-    - benchmark_prices: Series of benchmark close prices
-    
-    Returns:
-    - float: The calculated beta value
-    """
-    # Calculate returns
-    ticker_returns = ticker_prices.pct_change(fill_method=None).dropna()
-    benchmark_returns = benchmark_prices.pct_change(fill_method=None).dropna()
-    
-    # Align the data
-    aligned_data = pd.DataFrame({
-        'ticker': ticker_returns,
-        'benchmark': benchmark_returns
-    }).dropna()
-    
-    if len(aligned_data) < 20:  # Minimum data points for meaningful beta
-        return 0.0
-    
-    # Calculate beta using covariance method
-    covariance = aligned_data['ticker'].cov(aligned_data['benchmark'])
-    benchmark_variance = aligned_data['benchmark'].var()
-    
-    if benchmark_variance == 0:
-        return 0.0
-    
-    beta = covariance / benchmark_variance
-    return beta
 
 def calculate_dynamic_weights(portfolio_betas: dict, ticker: str) -> dict:
     """
@@ -102,9 +67,13 @@ def get_portfolio_betas(portfolio: list, etf_shocks: dict, period_days: int = 25
                 
             etf_prices = price_data_map[etf]
             
-            # Calculate beta using pre-fetched data
-            beta = calculate_beta_from_data(ticker_prices, etf_prices)
-            portfolio_betas[ticker][etf] = round(float(beta), 3)
+            # Calculate beta using calculations_v2 utilities on daily returns
+            ticker_returns = ReturnsCalculator.daily_price_returns(ticker_prices)
+            etf_returns = ReturnsCalculator.daily_price_returns(etf_prices)
+            beta_value = RiskCalculator.beta(ticker_returns, etf_returns)
+            if pd.isna(beta_value):
+                beta_value = 0.0
+            portfolio_betas[ticker][etf] = round(float(beta_value), 3)
     
     return portfolio_betas
 
@@ -178,5 +147,4 @@ def run_stress_test_engine(portfolio_dict: dict, etf_shocks: dict, pre_calculate
         'betas': betas,
         'shock_returns': shock_returns
     }
-
 

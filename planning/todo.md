@@ -43,21 +43,10 @@ This document identifies all places in the codebase that need to be migrated fro
     - ~~All these duplicate functionality in calculations_v2/risk/calculator.py~~
 
 ### Beta Calculations
-12. **`backend/src/stress_test/engine.py`**
-    - Lines 9-41: `calculate_beta_from_data()` function
-    - Similar functionality exists in calculations_v2/risk/calculator.py for beta calculation
-
-## 3. Testing and Implementation Files That May Need Updates
-
-13. **`testing/calculations_vtwo_smoke_test.py`** (in root testing directory)
-    - Lines 9-11: Imports from calculations_v2 core, returns, and performance modules
-    - Tests calculations_v2 but may need updates as migration proceeds
-
-14. **`backend/src/testing/calculations_vtwo_smoke_test.py`**
-    - This file tests calculations_v2 but may need updates as migration proceeds
-
-15. **`backend/src/calculations_v2/test_implementation.py`**
-    - Main testing file for calculations_v2 functionality
+~~12. **`backend/src/stress_test/engine.py`**~~
+    - ~~Lines 9-41: `calculate_beta_from_data()` function~~
+    - ~~Similar functionality exists in calculations_v2/risk/calculator.py for beta calculation~~
+    - ~~Completed: engine now uses `calculations_v2.risk.RiskCalculator.beta`; local helper removed~~
 
 ## 4. Services With Custom Calculation Implementations
 
@@ -66,17 +55,6 @@ This document identifies all places in the codebase that need to be migrated fro
     - Lines 192-195: Custom max_drawdown calculation
     - Lines 202-205: Custom beta calculation
     - These should use calculations_v2 standardized implementations
-
-## 5. Error Memory Files With Old Calculation References
-
-17. **`backend/src/agentic_framework/base_agent/memory/memory_store/tool_error_memory.json`**
-    - References to `get_upside_downside_ratios` tool from old calculations folder
-    - May need updates when tool is migrated to calculations_v2
-
-## 6. Data Models That Reference Old Calculations
-
-18. **`backend/src/data_models/performance_models.py`**
-    - Lines 4-26: PerformanceMetrics model that may need to align with calculations_v2 structure
 
 ## 7. Configuration and Support Files
 

@@ -226,6 +226,113 @@ class VolatilityFactors:
         ewma_var = var  # Already incorporates normalization via recursion
         return float(np.sqrt(ewma_var) * np.sqrt(DEFAULT_TRADING_DAYS))
 
+    def calc_all(self) -> Dict[str, float]:
+        """Calculate all volatility factors for the ticker.
+        
+        Returns:
+            Dictionary containing all volatility factor metrics (as decimals).
+        """
+        round_factor = 4
+        results = {
+            # Realized volatility
+            "realized_vol_30d": round(self.realized_vol_30d() or np.nan, round_factor),
+            "realized_vol_90d": round(self.realized_vol_90d() or np.nan, round_factor),
+            "realized_vol_252d": round(self.realized_vol_252() or np.nan, round_factor),
+            "daily_return_volatility": round(self.daily_return_volatility() or np.nan, round_factor),
+            
+            # Annualized volatility
+            "annualized_vol_30d": round(self.annualized_volatility(30) or np.nan, round_factor),
+            "annualized_vol_90d": round(self.annualized_volatility(90) or np.nan, round_factor),
+            "annualized_vol_252d": round(self.annualized_volatility(252) or np.nan, round_factor),
+            
+            # Market-related
+            "beta_1yr": round(self.beta_1yr() or np.nan, round_factor),
+            "idiosyncratic_vol": round(self.idiosyncratic_vol() or np.nan, round_factor),
+            
+            # Downside risk
+            "downside_dev_30d": round(self.downside_dev_30d() or np.nan, round_factor),
+            "downside_dev_252d": round(self.downside_dev_252() or np.nan, round_factor),
+            
+            # Drawdown
+            "max_drawdown_1yr": round(self.max_drawdown_1yr() or np.nan, round_factor),
+            
+            # Volatility ratios
+            "variance_ratio_3m_12m": round(self.variance_ratio_3m_12m() or np.nan, round_factor),
+            "short_long_vol_ratio": round(self.short_long_vol_ratio() or np.nan, round_factor),
+            
+            # Higher moments
+            "skewness": round(self.skewness() or np.nan, round_factor),
+            "kurtosis": round(self.kurtosis() or np.nan, round_factor),
+            
+            # GARCH/EWMA forecast
+            "garch_forecast": round(self.garch_forecast() or np.nan, round_factor),
+            "ewma_vol": round(self.ewma_vol() or np.nan, round_factor),
+        }
+        
+        # Clean up NaN/Inf values
+        for key, value in results.items():
+            if value is None or np.isinf(value) or (isinstance(value, float) and np.isnan(value)):
+                results[key] = np.nan
+                
+        return results
+    
+    @classmethod
+    def calc_all_bulk(
+        cls, 
+        tickers: list[str],
+        start_date: datetime,
+        end_date: datetime,
+        market_ticker: str = "SPY",
+        as_of_date: Optional[datetime] = None,
+        filing_lag_days: int = 0
+    ) -> pd.DataFrame:
+        """Calculate all volatility factors for multiple tickers using bulk data fetching.
+        
+        Args:
+            tickers: List of ticker symbols
+            start_date: Start date for price data
+            end_date: End date for price data
+            market_ticker: Market benchmark ticker for beta calculations
+            as_of_date: Optional as-of date for calculations
+            filing_lag_days: Filing lag in days
+        
+        Returns:
+            DataFrame with tickers as rows and volatility metrics as columns
+        """
+        from backend.src.calculations_v2.core.data_service import DataService
+        ds = DataService()
+        
+        # Bulk fetch price data for all tickers plus market
+        all_tickers = list(tickers) + [market_ticker]
+        price_map = ds.get_bulk_close_series(all_tickers, start_date, end_date)
+        
+        # Get market prices
+        spy_px = price_map.get(market_ticker)
+        
+        # Calculate volatility factors for each ticker
+        all_results = {}
+        for ticker in tickers:
+            ticker = ticker.upper()
+            if ticker in price_map:
+                try:
+                    px = price_map[ticker]
+                    
+                    # Create VolatilityFactors instance
+                    vf = cls(
+                        price_series=px, 
+                        spy_price_series=spy_px,
+                        as_of_date=as_of_date,
+                        filing_lag_days=filing_lag_days
+                    )
+                    all_results[ticker] = vf.calc_all()
+                except Exception as e:
+                    print(f"Error calculating volatility factors for {ticker}: {e}")
+                    all_results[ticker] = {}
+        
+        # Convert to DataFrame
+        df = pd.DataFrame(all_results).T
+        return df
+    
     # ------------------------- Cross-sectional API ------------------------- #
     def compute_attributes(self) -> Dict[str, float]:
         attrs: Dict[str, float] = {

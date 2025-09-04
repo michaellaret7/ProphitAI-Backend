@@ -355,6 +355,94 @@ class QualityFactors:
         except Exception:
             return np.nan
 
+    def calc_all(self) -> Dict[str, float]:
+        """Calculate all quality factors for the ticker.
+        
+        Returns:
+            Dictionary containing all quality factor metrics (as decimals).
+        """
+        round_factor = 4
+        results = {
+            # Profitability & Margins
+            "return_on_equity": round(self.return_on_equity() or np.nan, round_factor),
+            "return_on_assets": round(self.return_on_assets() or np.nan, round_factor),
+            "roic": round(self.roic() or np.nan, round_factor),
+            "gross_profitability": round(self.gross_profitability() or np.nan, round_factor),
+            "gross_margin": round(self.gross_margin() or np.nan, round_factor),
+            "net_margin": round(self.net_margin() or np.nan, round_factor),
+            "fcf_margin": round(self.fcf_margin() or np.nan, round_factor),
+            
+            # Leverage
+            "debt_to_equity": round(self.debt_to_equity() or np.nan, round_factor),
+            "net_debt_to_ebitda": round(self.net_debt_to_ebitda() or np.nan, round_factor),
+            "interest_coverage": round(self.interest_coverage() or np.nan, round_factor),
+            "quick_ratio": round(self.quick_ratio() or np.nan, round_factor),
+            
+            # Financial Health
+            "altman_z_score": round(self.altman_z_score() or np.nan, round_factor),
+            
+            # Earnings Quality
+            "accruals_ratio": round(self.accruals_ratio() or np.nan, round_factor),
+            "earnings_stability": round(self.earnings_stability() or np.nan, round_factor),
+            "eps_revision_3m": round(self.eps_revision_3m() or np.nan, round_factor),
+            "dividend_payout": round(self.dividend_payout() or np.nan, round_factor),
+            
+            # Efficiency
+            "asset_turnover": round(self.asset_turnover() or np.nan, round_factor),
+            "cash_conversion_ratio": round(self.cash_conversion_ratio() or np.nan, round_factor),
+            "cash_flow_to_debt_ratio": round(self.cash_flow_to_debt_ratio() or np.nan, round_factor),
+            "return_on_capital_employed": round(self.return_on_capital_employed() or np.nan, round_factor),
+            
+            # Conservative financing (boolean as 1/0)
+            "conservative_financing": 1.0 if self.conservative_financing() else 0.0,
+        }
+        
+        # Clean up NaN/Inf values
+        for key, value in results.items():
+            if value is None or np.isinf(value) or (isinstance(value, float) and np.isnan(value)):
+                results[key] = np.nan
+                
+        return results
+    
+    @classmethod
+    def calc_all_bulk(
+        cls, 
+        tickers: list[str], 
+        data_service: DataService | None = None,
+        filing_lag_days: int | None = None
+    ) -> pd.DataFrame:
+        """Calculate all quality factors for multiple tickers using bulk data fetching.
+        
+        Args:
+            tickers: List of ticker symbols
+            data_service: Optional DataService instance (created if not provided)
+            filing_lag_days: Optional filing lag in days
+        
+        Returns:
+            DataFrame with tickers as rows and quality metrics as columns
+        """
+        ds = data_service or DataService()
+        
+        # Bulk fetch fundamental data for all tickers
+        fundamentals = ds.get_bulk_fundamentals(tickers)
+        
+        # Calculate quality factors for each ticker
+        all_results = {}
+        for ticker in tickers:
+            ticker = ticker.upper()
+            if ticker in fundamentals:
+                try:
+                    # Create QualityFactors instance (it will use cached fundamentals from DataService)
+                    qf = cls(ticker, data_service=ds, filing_lag_days=filing_lag_days)
+                    all_results[ticker] = qf.calc_all()
+                except Exception as e:
+                    print(f"Error calculating quality factors for {ticker}: {e}")
+                    all_results[ticker] = {}
+        
+        # Convert to DataFrame
+        df = pd.DataFrame(all_results).T
+        return df
+    
     # ------------------------- Composite attributes ------------------------- #
     def compute_attributes(self) -> Dict[str, float]:
         """Compute robust TTM/averaged quality attributes with proper signs (decimals)."""

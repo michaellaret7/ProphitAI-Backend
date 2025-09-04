@@ -1,20 +1,13 @@
-from backend.src.db.core.market_data_models import *
-from backend.src.db.core.db_config import MarketSession
-from backend.src.repositories.price_data import fetch_bulk_price_data_for_tickers
+from functools import partial
+from backend.src.calculations_v2.sectors.base import create_factor_calculator
 
-def get_industry_tickers(industry: str):
-    session = MarketSession()
-    tickers = session.query(Ticker).filter(Ticker.industry == industry).all()
-    session.close()
-
-    tickers_list = []
-    for ticker in tickers:
-        tickers_list.append(ticker.ticker)
-    
-    price_dict = fetch_bulk_price_data_for_tickers(tickers_list, "2023-01-01", "2025-01-01")
-
-    return price_dict
+# Create all industry factor calculators using partial application
+calc_industry_growth_factors = lambda industry: create_factor_calculator('growth')(industry, 'industry')
+calc_industry_value_factors = lambda industry: create_factor_calculator('value')(industry, 'industry')
+calc_industry_momentum_factors = lambda industry: create_factor_calculator('momentum')(industry, 'industry')
+calc_industry_quality_factors = lambda industry: create_factor_calculator('quality')(industry, 'industry')
+calc_industry_volatility_factors = lambda industry: create_factor_calculator('volatility')(industry, 'industry')
 
 if __name__ == "__main__":
-    print(get_industry_tickers("software"))
+    print(calc_industry_momentum_factors("software"))
 

@@ -1,20 +1,14 @@
-from backend.src.db.core.market_data_models import *
-from backend.src.db.core.db_config import MarketSession
-from backend.src.repositories.price_data import fetch_bulk_price_data_for_tickers
+from functools import partial
+from backend.src.calculations_v2.sectors.base import create_factor_calculator
 
-def get_sub_industry_tickers(sub_industry: str):
-    session = MarketSession()
-    tickers = session.query(Ticker).filter(Ticker.sub_industry == sub_industry).all()
-    session.close()
-
-    tickers_list = []
-    for ticker in tickers:
-        tickers_list.append(ticker.ticker)
-    
-    price_dict = fetch_bulk_price_data_for_tickers(tickers_list, "2023-01-01", "2025-01-01")
-
-    return price_dict
+# Create all sub-industry factor calculators using partial application
+calc_sub_industry_growth_factors = lambda sub_industry: create_factor_calculator('growth')(sub_industry, 'sub_industry')
+calc_sub_industry_value_factors = lambda sub_industry: create_factor_calculator('value')(sub_industry, 'sub_industry')  
+calc_sub_industry_momentum_factors = lambda sub_industry: create_factor_calculator('momentum')(sub_industry, 'sub_industry')
+calc_sub_industry_quality_factors = lambda sub_industry: create_factor_calculator('quality')(sub_industry, 'sub_industry')
+calc_sub_industry_volatility_factors = lambda sub_industry: create_factor_calculator('volatility')(sub_industry, 'sub_industry')
 
 if __name__ == "__main__":
-    print(get_sub_industry_tickers("systems_software"))
-
+    print(calc_sub_industry_momentum_factors("semiconductors"))
+    # print(calc_sub_industry_growth_factors("systems_software"))
+    # print(calc_sub_industry_value_factors("semiconductors"))

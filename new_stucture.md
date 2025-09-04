@@ -129,8 +129,6 @@ ProphitAI/
 │
 ├── migrations/
 │   ├── schema.json                               # from backend/src/db/core/schema.json
-│   ├── database_schemas.json                     # from backend/src/data/database/database_schemas.json
-│   └── database_schemas_prices.json              # from backend/src/data/database/database_schemas_prices.json
 │
 ├── scripts/
 │   ├── db/

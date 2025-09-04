@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Optional, Tuple
+from typing import Optional, Tuple, Dict
 
 import numpy as np
 import pandas as pd
@@ -329,6 +329,174 @@ class MomentumFactors:
             return None
         vw_return = float((window_ret * window_vol).sum() / total_vol)
         return vw_return
+    
+    def calc_all(self) -> Dict[str, float]:
+        """Calculate all momentum factors for the ticker.
+        
+        Returns:
+            Dictionary containing all momentum factor metrics (as decimals).
+        """
+        round_factor = 4
+        results = {
+            # Return windows
+            "one_month_return": round(self.one_month_return() or np.nan, round_factor),
+            "three_month_return": round(self.three_month_return() or np.nan, round_factor),
+            "six_month_return": round(self.six_month_return() or np.nan, round_factor),
+            "twelve_month_return_ex1m": round(self.twelve_month_return_ex1m() or np.nan, round_factor),
+            
+            # Canonical ex-1m windows
+            "r12_1": round(self.r12_1() or np.nan, round_factor),
+            "r6_1": round(self.r6_1() or np.nan, round_factor),
+            "r3_1": round(self.r3_1() or np.nan, round_factor),
+            
+            # Technical indicators
+            "pct_from_52w_high": round(self.pct_from_52w_high() or np.nan, round_factor),
+            "sma_ratio": round(self.sma_ratio() or np.nan, round_factor),
+            "sma_50": round(self.sma_50() or np.nan, round_factor),
+            "sma_200": round(self.sma_200() or np.nan, round_factor),
+            "rsi": round(self.rsi() or np.nan, round_factor),
+            
+            # MACD
+            "macd_value": np.nan,
+            "macd_signal": np.nan,
+            
+            # Idiosyncratic momentum
+            "idio_momentum": round(self.idiosyncratic_momentum() or np.nan, round_factor),
+            "sector_idio_momentum": round(self.sector_idiosyncratic_momentum() or np.nan, round_factor),
+            "idio_momentum_log": round(self.idiosyncratic_momentum_log() or np.nan, round_factor),
+            "sector_idio_momentum_log": round(self.sector_idiosyncratic_momentum_log() or np.nan, round_factor),
+            
+            # Volume-adjusted
+            "volume_adjusted_momentum": round(self.volume_adjusted_momentum() or np.nan, round_factor),
+        }
+        
+        # Handle MACD separately since it returns tuple
+        macd_val, macd_sig = self.macd()
+        if macd_val is not None:
+            results["macd_value"] = round(macd_val, round_factor)
+        if macd_sig is not None:
+            results["macd_signal"] = round(macd_sig, round_factor)
+        
+        # Clean up NaN/Inf values
+        for key, value in results.items():
+            if value is None or np.isinf(value) or (isinstance(value, float) and np.isnan(value)):
+                results[key] = np.nan
+                
+        return results
+    
+    @classmethod
+    def calc_all_bulk(
+        cls, 
+        tickers: list[str], 
+        start_date: datetime,
+        end_date: datetime,
+        market_ticker: str = "SPY"
+    ) -> pd.DataFrame:
+        """Calculate all momentum factors for multiple tickers using bulk data fetching.
+        
+        Args:
+            tickers: List of ticker symbols
+            start_date: Start date for price data
+            end_date: End date for price data
+            market_ticker: Market benchmark ticker for idiosyncratic calculations
+        
+        Returns:
+            DataFrame with tickers as rows and momentum metrics as columns
+        """
+        from backend.src.calculations_v2.core.data_service import DataService
+        from backend.src.db.core.market_data_models import Ticker as TickerModel
+        from backend.src.db.core.db_config import MarketSession
+        
+        ds = DataService()
+        
+        # Simple sector ETF mapping 
+        SECTOR_ETF_MAP = {
+            'equity_sector_information_technology': 'XLK',
+            'equity_sector_financials': 'XLF',
+            'equity_sector_health_care': 'XLV',
+            'equity_sector_consumer_discretionary': 'XLY',
+            'equity_sector_communication_services': 'XLC',
+            'equity_sector_industrials': 'XLI',
+            'equity_sector_consumer_staples': 'XLP',
+            'equity_sector_energy': 'XLE',
+            'equity_sector_utilities': 'XLU',
+            'equity_sector_real_estate': 'XLRE',
+            'equity_sector_materials': 'XLB'
+        }
+        
+        # Get sector for each ticker
+        ticker_sectors = {}
+        session = MarketSession()
+        for ticker in tickers:
+            ticker_obj = session.query(TickerModel).filter(TickerModel.ticker == ticker.upper()).first()
+            if ticker_obj and ticker_obj.sector:
+                ticker_sectors[ticker.upper()] = ticker_obj.sector
+        session.close()
+        
+        # Determine unique sector ETFs needed
+        sector_etfs = set()
+        for sector in ticker_sectors.values():
+            if sector in SECTOR_ETF_MAP:
+                sector_etfs.add(SECTOR_ETF_MAP[sector])
+        
+        # Bulk fetch full price data (includes volume) for all tickers plus market and sector ETFs
+        all_tickers = list(tickers) + [market_ticker] + list(sector_etfs)
+        
+        # Get full price data with volume
+        price_data = {}
+        volume_data = {}
+        for ticker in all_tickers:
+            try:
+                price_frame = ds.get_price_data(ticker, start_date, end_date).frame
+                if price_frame is not None and not price_frame.empty:
+                    price_data[ticker] = price_frame['close']
+                    if 'volume' in price_frame.columns:
+                        volume_data[ticker] = price_frame['volume']
+            except Exception:
+                pass
+        
+        # Get market prices
+        market_px = price_data.get(market_ticker)
+        
+        # Calculate momentum factors for each ticker
+        all_results = {}
+        for ticker in tickers:
+            ticker = ticker.upper()
+            if ticker in price_data:
+                try:
+                    px = price_data[ticker]
+                    vol = volume_data.get(ticker)  # Get volume if available
+                    
+                    # Get dividends if available
+                    try:
+                        divs = ds.get_dividends(ticker, start_date, end_date).series
+                        divs = divs.reindex(px.index).fillna(0.0)
+                    except Exception:
+                        divs = None
+                    
+                    # Align market series to asset index
+                    mkt_aligned = market_px.reindex(px.index) if market_px is not None else None
+                    
+                    # Get sector ETF price data if available
+                    sector_px = None
+                    if ticker in ticker_sectors:
+                        sector = ticker_sectors[ticker]
+                        if sector in SECTOR_ETF_MAP:
+                            sector_etf = SECTOR_ETF_MAP[sector]
+                            if sector_etf in price_data:
+                                sector_px = price_data[sector_etf].reindex(px.index)
+                    
+                    # Create MomentumFactors instance with volume and sector data
+                    mf = cls(px, volume_series=vol, dividends_series=divs, 
+                            market_price_series=mkt_aligned, sector_price_series=sector_px)
+                    all_results[ticker] = mf.calc_all()
+                except Exception as e:
+                    print(f"Error calculating momentum factors for {ticker}: {e}")
+                    all_results[ticker] = {}
+        
+        # Convert to DataFrame
+        df = pd.DataFrame(all_results).T
+        return df
 
 
 if __name__ == "__main__":
@@ -356,6 +524,7 @@ if __name__ == "__main__":
                 market_px = (1.0 + eq_ret).cumprod()
             except Exception:
                 market_px = None
+                
         rows = []
         for tkr, px in price_map.items():
             # Dividends (optional)
@@ -369,6 +538,7 @@ if __name__ == "__main__":
             mf = MomentumFactors(px, dividends_series=divs, market_price_series=mkt_aligned)
             attrs = mf.compute_attributes()
             rows.append({"ticker": tkr, **attrs})
+
         frame = pd.DataFrame(rows)
         # Compose exposure (global z if no sector column)
         frame = MomentumFactors.compose_momentum_exposure(frame)

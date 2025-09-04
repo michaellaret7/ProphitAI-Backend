@@ -1,20 +1,13 @@
-from backend.src.db.core.market_data_models import *
-from backend.src.db.core.db_config import MarketSession
-from backend.src.repositories.price_data import fetch_bulk_price_data_for_tickers
+from functools import partial
+from backend.src.calculations_v2.sectors.base import create_factor_calculator
 
-def get_sector_tickers(sector: str):
-    session = MarketSession()
-    tickers = session.query(Ticker).filter(Ticker.sector == sector).all()
-    session.close()
-
-    tickers_list = []
-    for ticker in tickers:
-        tickers_list.append(ticker.ticker)
-    
-    price_dict = fetch_bulk_price_data_for_tickers(tickers_list, "2023-01-01", "2025-01-01")
-
-    return price_dict
+# Create all sector factor calculators using partial application
+calc_sector_growth_factors = lambda sector: create_factor_calculator('growth')(sector, 'sector')
+calc_sector_value_factors = lambda sector: create_factor_calculator('value')(sector, 'sector')
+calc_sector_momentum_factors = lambda sector: create_factor_calculator('momentum')(sector, 'sector')
+calc_sector_quality_factors = lambda sector: create_factor_calculator('quality')(sector, 'sector')
+calc_sector_volatility_factors = lambda sector: create_factor_calculator('volatility')(sector, 'sector')
 
 if __name__ == "__main__":
-    print(get_sector_tickers("equity_sector_information_technology"))
+    print(calc_sector_growth_factors("equity_sector_information_technology"))
 

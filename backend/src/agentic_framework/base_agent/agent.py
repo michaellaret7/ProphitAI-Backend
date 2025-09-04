@@ -90,6 +90,7 @@ class BaseAgent:
         self.message_logger = MessageLogger(save_messages=save_messages, verbose=verbose, model_name=self.model_name)
         self.task_manager = TaskManager(verbose=verbose)
         self.utilities = AgentUtilities(self)
+
         # Register task management tools after task manager is initialized
         register_task_management_tools(self)
         
@@ -137,7 +138,6 @@ class BaseAgent:
         # Child agents should override this to load their specific memories
         pass
     
-
     def get_available_tools(self) -> Dict[str, Dict[str, Any]]:
         """Return all available tools and their information."""
         tools_info = {}
