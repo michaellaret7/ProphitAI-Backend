@@ -1,162 +1,132 @@
 ProphitAI/
-├── src/
-│   ├── api/                           # API Layer (minimal changes)
-│   │   ├── routes/                    # EXISTING - Route definitions
-│   │   │   ├── __init__.py
-│   │   │   ├── auth_routes.py        # Move auth routes here
-│   │   │   ├── user_routes.py        # EXISTING
-│   │   │   └── prophit_alts_router.py # EXISTING
-│   │   │
-│   │   ├── controllers/               # EXISTING - Keep your pattern
-│   │   │   ├── __init__.py
-│   │   │   ├── user_controller.py
-│   │   │   └── prophit_alts_controller.py
-│   │   │
-│   │   └── middleware/                # NEW - Just the essentials
-│   │       ├── __init__.py
-│   │       └── error_handler.py      # Global error handling
-│   │
-│   ├── services/                      # NEW - Simple service layer
-│   │   ├── __init__.py
-│   │   ├── portfolio_service.py      # Orchestrates portfolio operations
-│   │   ├── prophit_alts_service.py   # Orchestrates fund operations
-│   │   └── calculation_service.py    # Orchestrates calculations
-│   │
-│   ├── repositories/                  # EXISTING - Just organize better
-│   │   ├── __init__.py
-│   │   ├── portfolio_data.py         # EXISTING
-│   │   ├── price_data.py             # EXISTING
-│   │   ├── prophit_alts_data.py      # EXISTING
-│   │   └── user_data.py              # EXISTING
-│   │
-│   ├── models/                        # RENAME from data_models
-│   │   ├── __init__.py
-│   │   ├── performance_models.py     # EXISTING
-│   │   ├── phase_two_models.py       # EXISTING
-│   │   └── style_factors_models.py   # EXISTING
-│   │
-│   ├── business/                        # Business logic (keep structure)
-│   │   ├── portfolio_optimization/    # MOVE from src/
-│   │   ├── calculations/              # MOVE from src/
-│   │   ├── prophit_alts/              # MOVE from src/
-│   │   ├── prophit_gpt/               # MOVE from src/
-│   │   ├── analysts/                  # MOVE from src/
-│   │   └── stress_test/               # MOVE from src/
-│   │
-│   ├── auth/                          # EXISTING - Keep as is
-│   ├── db/                            # EXISTING - Keep as is
-│   ├── utils/                         # EXISTING - Keep as is
-│   ├── agentic_framework/             # EXISTING - Keep as is
-│   └── config/                        # NEW - Simple config
-│       ├── __init__.py
-│       └── settings.py                # Centralized settings
-│
-├── tests/                             # MOVE from src/api/testing
+├── app/                                # Main FastAPI application
 │   ├── __init__.py
-│   ├── test_api/
-│   └── test_services
-
-
-
-ProphitAI/
-├── app/                                          
-│   ├── main.py                                   # from backend/main.py (FastAPI app + router includes)
-│   ├── config.py                                 # from backend/src/auth/config.py
+│   ├── main.py                         # FastAPI app initialization (move from backend/main.py)
+│   ├── config.py                       # Environment & app configuration
 │   │
-│   ├── routes/
-│   │   ├── auth_routes.py                        # from backend/src/auth/sso.py
-│   │   ├── user_routes.py                        # from backend/src/api/routes/user_routes.py
-│   │   ├── prophit_alts_routes.py                # from backend/src/api/routes/prophit_alts_router.py (rename)
-│   │   ├── user.py                               # from backend/src/api/user.py (router aggregator; optional later removal)
-│   │   └── prophit_alts.py                       # from backend/src/api/prophit_alts.py (router aggregator; optional later removal)
+│   ├── api/                            # API endpoints layer
+│   │   ├── __init__.py
+│   │   ├── v1/                         # API versioning
+│   │   │   ├── __init__.py
+│   │   │   ├── routes/                 # Route definitions
+│   │   │   │   ├── __init__.py
+│   │   │   │   ├── users.py            # User endpoints
+│   │   │   │   ├── portfolio.py        # Portfolio endpoints
+│   │   │   │   └── prophit_alts.py     # Fund endpoints
+│   │   │   └── api.py                  # Main router aggregator
+│   │   └── dependencies.py             # Shared dependencies
 │   │
-│   ├── controllers/
-│   │   ├── user_controller.py                    # from backend/src/api/controller/user_controller.py
-│   │   └── prophit_alts_controller.py            # from backend/src/api/controller/prophit_alts_controller.py
+│   ├── controllers/                     # Business logic handlers (EXISTING pattern)
+│   │   ├── __init__.py
+│   │   ├── user_controller.py          # Keep existing logic
+│   │   ├── portfolio_controller.py
+│   │   └── prophit_alts_controller.py  # Keep existing logic
 │   │
-│   ├── services/
-│   │   ├── prophit_alts_service.py               # from backend/src/services/prophit_alts_service.py
-│   │   ├── prophit_gpt/                          # from backend/src/prophit_gpt/
-│   │   │   ├── gpt.py
-│   │   │   ├── dataRetrievalTools/
-│   │   │   ├── functionSchemas/
-│   │   │   └── placeOrders/
-│   │   ├── calculations/                         # from backend/src/calculations/
-│   │   ├── portfolio_optimization/               # from backend/src/portfolio_optimization/
-│   │   ├── stress_test/                          # from backend/src/stress_test/
-│   │   ├── analysts/                             # from backend/src/analysts/
-│   │   ├── prophit_alts/                         # from backend/src/prophit_alts/
-│   │   └── agentic_framework/                    # from backend/src/agentic_framework/
+│   ├── models/                         # Pydantic schemas (not DB models)
+│   │   ├── __init__.py
+│   │   ├── requests/                   # Request models
+│   │   │   ├── __init__.py
+│   │   │   ├── user.py
+│   │   │   └── portfolio.py
+│   │   ├── responses/                  # Response models
+│   │   │   ├── __init__.py
+│   │   │   ├── envelope.py             # Response envelope pattern (EXISTING)
+│   │   │   └── portfolio.py
+│   │   └── domain/                     # Business domain models (from data_models/)
+│   │       ├── __init__.py
+│   │       ├── performance.py
+│   │       ├── phase_two.py
+│   │       └── style_factors.py
 │   │
-│   ├── repositories/
-│   │   ├── portfolio_data.py                     # from backend/src/repositories/portfolio_data.py
-│   │   ├── price_data.py                         # from backend/src/repositories/price_data.py
-│   │   ├── prophit_alts_data.py                  # from backend/src/repositories/prophit_alts_data.py
-│   │   └── user_data.py                          # from backend/src/repositories/user_data.py
+│   ├── core/                           # Core utilities
+│   │   ├── __init__.py
+│   │   ├── exceptions.py               # Custom exceptions
+│   │   ├── logging.py                  # Logging config (from utils/)
+│   │   └── security.py                 # Minimal auth if needed
 │   │
-│   ├── models/
-│   │   ├── db/
-│   │   │   ├── market_data_models.py             # from backend/src/db/core/market_data_models.py
-│   │   │   ├── user_data_models.py               # from backend/src/db/core/user_data_models.py
-│   │   │   ├── prophit_alts_models.py            # from backend/src/db/core/prophit_alts_models.py
-│   │   │   └── db_config.py                      # from backend/src/db/core/db_config.py
-│   │   └── data_models/                          # from backend/src/data_models/
-│   │
-│   ├── schemas/
-│   │   ├── auth_schemas.py                       # from backend/src/auth/models.py (rename)
-│   │   └── response_envelope.py                  # from backend/src/api/response_envelope.py
-│   │
-│   ├── middleware/
-│   │   ├── auth_middleware.py                    # from backend/src/auth/dependencies.py (rename)
-│   │   └── audit.py                              # from backend/src/auth/audit.py (empty file retained)
-│   │
-│   ├── utils/
-│   │   ├── choose_model_and_client.py
-│   │   ├── database.py
-│   │   ├── determine_etf.py
-│   │   ├── file_utils.py
-│   │   ├── formatting.py
-│   │   ├── ib_utils.py
-│   │   ├── logging_config.py
-│   │   ├── parsing_utils.py
-│   │   ├── serialize_output.py
-│   │   ├── ticker_utils.py
-│   │   ├── token_count.py
-│   │   └── validation_utils.py
-│   │
-│   └── data/
-│       └── user_information.py                   # from backend/src/data/user_information.py
+│   └── middleware/                     # FastAPI middleware
+│       ├── __init__.py
+│       └── error_handler.py            # Global error handling
 │
-├── migrations/
-│   ├── schema.json                               # from backend/src/db/core/schema.json
+├── services/                           # Business service layer (EXISTING)
+│   ├── __init__.py
+│   └── prophit_alts_service.py        # Keep existing implementation
 │
-├── scripts/
-│   ├── db/
-│   │   ├── build_etf_data.py                     # from backend/src/db/core/build_etf_data.py
-│   │   ├── build_price_table.py                  # from backend/src/db/core/build_price_table.py
-│   │   ├── pull_fmp_data.py                      # from backend/src/db/core/pull_fmp_data.py
-│   │   └── jobs/                                 # from backend/src/db/jobs/
-│   │       ├── fundamental_data.py
-│   │       ├── price_table.py
-│   │       └── ticker_table.py
-│   ├── monitor/                                  # from backend/src/db/monitor/
-│   │   ├── health_check.py
-│   │   └── query_performance_check.py
-│   └── api/
-│       └── runner.py                             # from backend/src/api/runner.py
+├── repositories/                       # Data access layer (EXISTING - just rename)
+│   ├── __init__.py
+│   ├── portfolio.py                   # Was portfolio_data.py
+│   ├── price.py                       # Was price_data.py
+│   ├── prophit_alts.py                # Was prophit_alts_data.py
+│   └── user.py                        # Was user_data.py
 │
-├── tests/
-│   ├── test_users.py                             # from backend/src/api/testing/user_testing.py (rename)
-│   └── test_prophit_alts.py                      # from backend/src/api/testing/prophit_alts_testing.py (rename)
+├── db/                                 # Database layer (EXISTING - keep as is)
+│   ├── __init__.py
+│   ├── core/                           # Keep entire structure
+│   │   ├── db_config.py
+│   │   ├── market_data_models.py
+│   │   ├── prophit_alts_models.py
+│   │   ├── user_data_models.py
+│   │   ├── pull_fmp_data.py
+│   │   ├── schema.json
+│   │   └── ...
+│   ├── jobs/                           # Keep as is
+│   └── monitor/                        # Keep as is
 │
-├── logs/                                         # (add, not committed)
-├── uploads/                                      # (add, not committed)
-├── run.py                                        # from backend/main.py (alternative placement if preferred)
-├── README.md
+├── business_logic/                     # Domain-specific business modules
+│   ├── __init__.py
+│   ├── portfolio_optimization/        # Move from backend/src/
+│   │   ├── phase_one/
+│   │   ├── phase_two/
+│   │   └── runner.py
+│   ├── prophit_alts/                  # Move from backend/src/
+│   │   └── consumer_staples_fund/
+│   │       ├── build_portfolio/
+│   │       └── manage_portfolio/
+│   ├── prophit_gpt/                   # Move from backend/src/
+│   │   ├── gpt.py
+│   │   └── ...
+│   └── stress_test/                   # Move from backend/src/
+│       ├── engine.py
+│       ├── scenarios.py
+│       └── ...
+│
+├── calculations_v2/                    # KEEP AS IS - Your calculation engine
+│   ├── __init__.py
+│   ├── core/
+│   ├── factors/
+│   ├── performance/
+│   ├── portfolio/
+│   ├── returns/
+│   ├── risk/
+│   ├── sectors/
+│   └── technical/
+│
+├── agentic_framework/                  # KEEP COMPLETELY SEPARATE - Don't touch
+│   └── [keep entire existing structure]
+│
+├── utils/                              # General utilities (EXISTING - simplified)
+│   ├── __init__.py
+│   ├── formatting.py
+│   ├── validation.py                  # Was validation_utils.py
+│   ├── serialize.py                   # Was serialize_output.py
+│   ├── parsers.py                     # Was parsing_utils.py
+│   ├── ticker.py                      # Was ticker_utils.py
+│   ├── file.py                        # Was file_utils.py
+│   └── model_selector.py              # Was choose_model_and_client.py
+│
+├── tests/                              # Move from backend/testing
+│   ├── __init__.py
+│   ├── conftest.py                    # Pytest fixtures
+│   ├── unit/
+│   ├── integration/
+│   └── smoke/
+│       └── calculations_smoke_test.py
+│
+├── scripts/                            # Utility scripts
+│   ├── __init__.py
+│   └── migrate_data.py
+│
+├── main.py                             # Entry point: uvicorn app.main:app
 ├── requirements.txt
-├── requirements-dev.txt                          # (add)
-├── .env                                          # (add)
-├── .env.example                                  # (add)
-├── .gitignore                                    # (add)
-├── roadmap.md
-└── file_structure.md
+├── .env.example
+└── README.md

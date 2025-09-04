@@ -386,6 +386,8 @@ class BaseAgent:
             if self.save_messages:
                 print(f"📝 Saving messages to: {self.message_logger.messages_log_path}")
 
+    # --- Set Up -----------------------------------------------------
+
         messages: List[Dict[str, Any]] = [
             {"role": "system", "content": self.utilities.system_rules()},
         ]
@@ -425,6 +427,8 @@ class BaseAgent:
         final_text: Optional[str] = None
         stop_reason: str = ""
         
+    # --- Begin Loop -----------------------------------------------------
+
         # Track plan loading for context injection
         plan_loaded_this_iteration: bool = False
         plan_start_context: Optional[str] = None
@@ -503,11 +507,13 @@ class BaseAgent:
                         )
                     })
 
+
             response = self.client.chat.completions.create(
                 model=self.llm,
                 messages=messages,
                 tools=self.tools if self.tools else None,
-                tool_choice="auto" if self.tools else None,            
+                tool_choice="auto" if self.tools else None,
+                temperature=0.8        
             )
 
             choice = response.choices[0]
@@ -981,11 +987,10 @@ class BaseAgent:
                     )
                 
                 self._stuck_count = 0  # reset after nudging
-            
-            # time.sleep(100)
-        
+                    
         # THIS IS WHERE THE AGENT LOOP ENDS 
         # THE FOLLOWING CODE IS FOR THE FINAL ANSWER AND SAVING THE MESSAGES
+
         else:
             stop_reason = "max_iterations"
 

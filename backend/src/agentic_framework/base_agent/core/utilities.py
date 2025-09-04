@@ -375,13 +375,64 @@ class AgentUtilities:
         return None
     
     def stringify(self, observation: Any) -> str:
-        """Convert observation to string format."""
+        """Convert observation to string format that is robustly JSON-serializable."""
+        def _default(o):
+            # Enums → use their value
+            try:
+                from enum import Enum
+                if isinstance(o, Enum):
+                    return o.value
+            except Exception:
+                pass
+            
+            # Dataclasses → asdict
+            try:
+                import dataclasses
+                if dataclasses.is_dataclass(o):
+                    return dataclasses.asdict(o)
+            except Exception:
+                pass
+            
+            # Pydantic v2 BaseModel → model_dump(mode="json")
+            try:
+                from pydantic import BaseModel  # type: ignore
+                if isinstance(o, BaseModel):
+                    return o.model_dump(mode="json")
+            except Exception:
+                pass
+            
+            # Pydantic-like objects with model_dump
+            try:
+                if hasattr(o, "model_dump") and callable(getattr(o, "model_dump")):
+                    return o.model_dump()
+            except Exception:
+                pass
+            
+            # Pydantic v1 models → dict()
+            try:
+                if hasattr(o, "dict") and callable(getattr(o, "dict")):
+                    return o.dict()
+            except Exception:
+                pass
+            
+            # Sets → list
+            if isinstance(o, set):
+                return list(o)
+            
+            # Fallback: string representation
+            return str(o)
+        
         try:
-            if isinstance(observation, (dict, list)):
-                return json.dumps(observation, ensure_ascii=False)
-            return str(observation)
+            if isinstance(observation, str):
+                return observation
+            # Prefer JSON so downstream LLM sees structured content
+            return json.dumps(observation, ensure_ascii=False, default=_default)
         except Exception:
-            return "<unserializable observation>"
+            # Final fallback to plain string or placeholder
+            try:
+                return str(observation)
+            except Exception:
+                return "<unserializable observation>"
     
     def update_stagnation(self, name: str, args: Dict[str, Any]):
         """Update stagnation detection for repeated actions."""

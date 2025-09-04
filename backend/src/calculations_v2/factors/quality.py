@@ -354,6 +354,92 @@ class QualityFactors:
             return float((float(a) + float(b)) / 2.0)
         except Exception:
             return np.nan
+    
+    # ------------------------- Composite attributes ------------------------- #
+    def compute_attributes(self) -> Dict[str, float]:
+        """Compute robust TTM/averaged quality attributes with proper signs (decimals)."""
+        ists = sort_rows_desc_by_date(self.fund.income_statements)
+        bss = sort_rows_desc_by_date(self.fund.balance_sheets)
+        cfs = sort_rows_desc_by_date(self.fund.cash_flow_statements)
+
+        # TTM numerators (quarterly expected, most-recent-first)
+        ni_ttm = ttm([getattr(q, 'netIncome', None) for q in ists])
+        gp_ttm = ttm([getattr(q, 'grossProfit', None) for q in ists])
+        sales_ttm = ttm([getattr(q, 'revenue', None) for q in ists])
+        ebit_ttm = ttm([getattr(q, 'operatingIncome', None) for q in ists])
+        ebitda_ttm = ttm([getattr(q, 'ebitda', None) for q in ists])
+        cfo_ttm = ttm([getattr(c, 'netCashProvidedByOperatingActivities', None) for c in cfs])
+        fcf_ttm = ttm([getattr(c, 'freeCashFlow', None) for c in cfs])
+        # Averages: current vs 4Q ago
+        assets0 = getattr(bss[0], 'totalAssets', None) if bss else None
+        assets4 = getattr(bss[4], 'totalAssets', None) if len(bss) > 4 else None
+        equity0 = getattr(bss[0], 'totalStockholdersEquity', None) if bss else None
+        equity4 = getattr(bss[4], 'totalStockholdersEquity', None) if len(bss) > 4 else None
+        debt0 = getattr(bss[0], 'totalDebt', None) if bss else None
+        cash0 = getattr(bss[0], 'cashAndCashEquivalents', None) if bss else None
+        avg_assets = self.avg(assets0, assets4)
+        avg_equity = self.avg(equity0, equity4)
+        invested_capital0 = (float(equity0 or 0) + float(debt0 or 0) - float(cash0 or 0)) if (equity0 is not None and debt0 is not None and cash0 is not None) else None
+        invested_capital4 = (float(getattr(bss[4], 'totalStockholdersEquity', 0) or 0) + float(getattr(bss[4], 'totalDebt', 0) or 0) - float(getattr(bss[4], 'cashAndCashEquivalents', 0) or 0)) if len(bss) > 4 else None
+        avg_invested_capital = self.avg(invested_capital0, invested_capital4)
+        # NOPAT TTM (assume 21% tax on EBIT TTM)
+        nopat_ttm = np.nan if np.isnan(ebit_ttm) else float(ebit_ttm) * (1.0 - 0.21)
+
+        # Metrics (decimals); guard zeros and invalids
+        def safe_div(n, d):
+            try:
+                if n is None or d is None:
+                    return np.nan
+                d = float(d)
+                if d == 0 or np.isnan(d):
+                    return np.nan
+                return float(n) / d
+            except Exception:
+                return np.nan
+
+        roe = safe_div(ni_ttm, avg_equity)
+        roic = safe_div(nopat_ttm, avg_invested_capital)
+        gp_a = safe_div(gp_ttm, avg_assets)
+        fcf_margin = safe_div(fcf_ttm, sales_ttm)
+        accruals = safe_div((ni_ttm - cfo_ttm) if (not np.isnan(ni_ttm) and not np.isnan(cfo_ttm)) else np.nan, avg_assets)
+        cfo_assets = safe_div(cfo_ttm, avg_assets)
+        cash_conv = safe_div(cfo_ttm, ni_ttm)
+        # Leverage/safety
+        de = safe_div(getattr(bss[0], 'totalDebt', None) if bss else None, getattr(bss[0], 'totalStockholdersEquity', None) if bss else None)
+        nd_ebitda = safe_div((float(getattr(bss[0], 'totalDebt', 0) or 0) - float(getattr(bss[0], 'cashAndCashEquivalents', 0) or 0)) if bss else None, ebitda_ttm)
+        int_cover = safe_div(ebit_ttm, self.ttm([getattr(q, 'interestExpense', None) for q in ists]))
+        # Stability: negative stdev of EPS over 12 quarters if available, fallback to 8
+        eps_series = [getattr(x, 'eps', None) for x in ists[:12]] if ists else []
+        eps_vals = [float(x) for x in eps_series if x is not None]
+        stab = np.nan
+        if len(eps_vals) >= 4:
+            sd = float(np.std(eps_vals, ddof=0))
+            stab = -sd
+
+        # Sign handling (higher = higher quality)
+        # Bad metrics: accruals, de, nd_ebitda, instability (already negative)
+        accruals = -accruals if not np.isnan(accruals) else accruals
+        de = -de if not np.isnan(de) else de
+        nd_ebitda = -nd_ebitda if not np.isnan(nd_ebitda) else nd_ebitda
+
+        attrs: Dict[str, float] = {
+            'roe': roe,
+            'roic': roic,
+            'gp_a': gp_a,
+            'fcf_margin': fcf_margin,
+            'accruals': accruals,
+            'cfo_assets': cfo_assets,
+            'cash_conv': cash_conv,
+            'de': de,
+            'nd_ebitda': nd_ebitda,
+            'int_cover': int_cover,
+            'stab': stab,
+        }
+        # Normalize invalids
+        for k, v in list(attrs.items()):
+            if v is None or (isinstance(v, float) and (np.isinf(v) or np.isnan(v))):
+                attrs[k] = np.nan
+        return attrs
 
     def calc_all(self) -> Dict[str, float]:
         """Calculate all quality factors for the ticker.
@@ -442,93 +528,8 @@ class QualityFactors:
         # Convert to DataFrame
         df = pd.DataFrame(all_results).T
         return df
-    
-    # ------------------------- Composite attributes ------------------------- #
-    def compute_attributes(self) -> Dict[str, float]:
-        """Compute robust TTM/averaged quality attributes with proper signs (decimals)."""
-        ists = sort_rows_desc_by_date(self.fund.income_statements)
-        bss = sort_rows_desc_by_date(self.fund.balance_sheets)
-        cfs = sort_rows_desc_by_date(self.fund.cash_flow_statements)
 
-        # TTM numerators (quarterly expected, most-recent-first)
-        ni_ttm = ttm([getattr(q, 'netIncome', None) for q in ists])
-        gp_ttm = ttm([getattr(q, 'grossProfit', None) for q in ists])
-        sales_ttm = ttm([getattr(q, 'revenue', None) for q in ists])
-        ebit_ttm = ttm([getattr(q, 'operatingIncome', None) for q in ists])
-        ebitda_ttm = ttm([getattr(q, 'ebitda', None) for q in ists])
-        cfo_ttm = ttm([getattr(c, 'netCashProvidedByOperatingActivities', None) for c in cfs])
-        fcf_ttm = ttm([getattr(c, 'freeCashFlow', None) for c in cfs])
-        # Averages: current vs 4Q ago
-        assets0 = getattr(bss[0], 'totalAssets', None) if bss else None
-        assets4 = getattr(bss[4], 'totalAssets', None) if len(bss) > 4 else None
-        equity0 = getattr(bss[0], 'totalStockholdersEquity', None) if bss else None
-        equity4 = getattr(bss[4], 'totalStockholdersEquity', None) if len(bss) > 4 else None
-        debt0 = getattr(bss[0], 'totalDebt', None) if bss else None
-        cash0 = getattr(bss[0], 'cashAndCashEquivalents', None) if bss else None
-        avg_assets = self.avg(assets0, assets4)
-        avg_equity = self.avg(equity0, equity4)
-        invested_capital0 = (float(equity0 or 0) + float(debt0 or 0) - float(cash0 or 0)) if (equity0 is not None and debt0 is not None and cash0 is not None) else None
-        invested_capital4 = (float(getattr(bss[4], 'totalStockholdersEquity', 0) or 0) + float(getattr(bss[4], 'totalDebt', 0) or 0) - float(getattr(bss[4], 'cashAndCashEquivalents', 0) or 0)) if len(bss) > 4 else None
-        avg_invested_capital = self.avg(invested_capital0, invested_capital4)
-        # NOPAT TTM (assume 21% tax on EBIT TTM)
-        nopat_ttm = np.nan if np.isnan(ebit_ttm) else float(ebit_ttm) * (1.0 - 0.21)
-
-        # Metrics (decimals); guard zeros and invalids
-        def safe_div(n, d):
-            try:
-                if n is None or d is None:
-                    return np.nan
-                d = float(d)
-                if d == 0 or np.isnan(d):
-                    return np.nan
-                return float(n) / d
-            except Exception:
-                return np.nan
-
-        roe = safe_div(ni_ttm, avg_equity)
-        roic = safe_div(nopat_ttm, avg_invested_capital)
-        gp_a = safe_div(gp_ttm, avg_assets)
-        fcf_margin = safe_div(fcf_ttm, sales_ttm)
-        accruals = safe_div((ni_ttm - cfo_ttm) if (not np.isnan(ni_ttm) and not np.isnan(cfo_ttm)) else np.nan, avg_assets)
-        cfo_assets = safe_div(cfo_ttm, avg_assets)
-        cash_conv = safe_div(cfo_ttm, ni_ttm)
-        # Leverage/safety
-        de = safe_div(getattr(bss[0], 'totalDebt', None) if bss else None, getattr(bss[0], 'totalStockholdersEquity', None) if bss else None)
-        nd_ebitda = safe_div((float(getattr(bss[0], 'totalDebt', 0) or 0) - float(getattr(bss[0], 'cashAndCashEquivalents', 0) or 0)) if bss else None, ebitda_ttm)
-        int_cover = safe_div(ebit_ttm, self.ttm([getattr(q, 'interestExpense', None) for q in ists]))
-        # Stability: negative stdev of EPS over 12 quarters if available, fallback to 8
-        eps_series = [getattr(x, 'eps', None) for x in ists[:12]] if ists else []
-        eps_vals = [float(x) for x in eps_series if x is not None]
-        stab = np.nan
-        if len(eps_vals) >= 4:
-            sd = float(np.std(eps_vals, ddof=0))
-            stab = -sd
-
-        # Sign handling (higher = higher quality)
-        # Bad metrics: accruals, de, nd_ebitda, instability (already negative)
-        accruals = -accruals if not np.isnan(accruals) else accruals
-        de = -de if not np.isnan(de) else de
-        nd_ebitda = -nd_ebitda if not np.isnan(nd_ebitda) else nd_ebitda
-
-        attrs: Dict[str, float] = {
-            'roe': roe,
-            'roic': roic,
-            'gp_a': gp_a,
-            'fcf_margin': fcf_margin,
-            'accruals': accruals,
-            'cfo_assets': cfo_assets,
-            'cash_conv': cash_conv,
-            'de': de,
-            'nd_ebitda': nd_ebitda,
-            'int_cover': int_cover,
-            'stab': stab,
-        }
-        # Normalize invalids
-        for k, v in list(attrs.items()):
-            if v is None or (isinstance(v, float) and (np.isinf(v) or np.isnan(v))):
-                attrs[k] = np.nan
-        return attrs
-
+        
 if __name__ == '__main__':
     # Smoke test: compute attributes for a small ticker set and compose a simple quality score
     from backend.src.calculations_v2.core.data_service import DataService

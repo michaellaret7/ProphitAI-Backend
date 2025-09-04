@@ -6,12 +6,63 @@ from backend.src.calculations_v2.core.config import DEFAULT_CONFIDENCE
 
 
 def _to_psd(cov: np.ndarray, floor: float = 1e-12) -> np.ndarray:
-    """Eigenvalue floor to obtain a PSD covariance matrix."""
+    """Make covariance matrix positive semi-definite in a numerically stable way.
+
+    Strategy:
+    - Sanitize inputs and enforce symmetry
+    - Scale to correlation space (unit diagonal) to avoid extreme magnitudes
+    - Floor eigenvalues to small positive and cap at n (corr eigvals ≤ n)
+    - Reconstruct correlation, fix diagonal to 1, then scale back to covariance
+    - Fallback to diagonal if anything becomes non-finite
+    """
     cov = np.asarray(cov, dtype=float)
+    cov = np.nan_to_num(cov, nan=0.0, posinf=0.0, neginf=0.0)
     cov = (cov + cov.T) / 2.0
-    vals, vecs = np.linalg.eigh(cov)
-    vals = np.clip(vals, a_min=floor, a_max=None)
-    return (vecs * vals) @ vecs.T
+
+    n = cov.shape[0]
+    if n == 0:
+        return cov
+
+    # Build scale factors from diagonal, guard against non-positive/NaN
+    diag_cov = np.diag(cov)
+    diag_cov = np.nan_to_num(diag_cov, nan=floor, posinf=floor, neginf=floor)
+    diag_cov = np.clip(diag_cov, a_min=floor, a_max=None)
+    std = np.sqrt(diag_cov)
+    inv_std = 1.0 / np.where(std > 0.0, std, 1.0)
+
+    # Convert to correlation space
+    corr = (cov * inv_std[:, None]) * inv_std[None, :]
+    corr = (corr + corr.T) / 2.0
+
+    # Eigendecomposition with robust clipping in correlation space
+    try:
+        vals, vecs = np.linalg.eigh(corr)
+    except np.linalg.LinAlgError:
+        # Fall back to identity correlation (diagonal covariance)
+        return np.diag(diag_cov)
+
+    # Floor negative/invalid eigenvalues and cap excessively large ones
+    vals = np.nan_to_num(vals, nan=floor, posinf=floor, neginf=floor)
+    vals = np.clip(vals, a_min=floor, a_max=float(n))
+
+    # Reconstruct correlation matrix and enforce unit diagonal
+    corr_psd = vecs @ np.diag(vals) @ vecs.T
+    corr_psd = np.nan_to_num(corr_psd, nan=0.0, posinf=0.0, neginf=0.0)
+    corr_psd = (corr_psd + corr_psd.T) / 2.0
+    np.fill_diagonal(corr_psd, 1.0)
+
+    # Scale back to covariance space
+    cov_psd = (corr_psd * std[:, None]) * std[None, :]
+    cov_psd = np.nan_to_num(cov_psd, nan=0.0, posinf=0.0, neginf=0.0)
+    cov_psd = (cov_psd + cov_psd.T) / 2.0
+    # Ensure non-negative diagonal
+    final_diag = np.clip(np.diag(cov_psd), a_min=floor, a_max=None)
+    cov_psd[np.diag_indices_from(cov_psd)] = final_diag
+
+    if not np.all(np.isfinite(cov_psd)):
+        return np.diag(final_diag)
+
+    return cov_psd
 
 
 class RiskCalculator:
