@@ -3,6 +3,8 @@ import numpy as np
 from backend.src.repositories.price_data import fetch_bulk_price_data_for_tickers
 from datetime import datetime, timedelta
 from backend.src.stress_test.scenarios import historical_scenarios
+from backend.src.calculations_v2.returns.calculator import ReturnsCalculator
+from backend.src.calculations_v2.risk.calculator import RiskCalculator
 
 def calculate_correlation_matrix(price_data: dict = None, start_date_str: str = None, end_date_str: str = None, frequency: str = None, tickers: list[str] = None):
     """
@@ -23,11 +25,14 @@ def calculate_correlation_matrix(price_data: dict = None, start_date_str: str = 
 
     # Convert dict of Series to DataFrame
     price_df = pd.DataFrame(price_data)
-    
-    returns_df = price_df.pct_change(fill_method=None).dropna()
-    
-    # Calculate correlation matrix
-    correlation_matrix = returns_df.corr()
+
+    # v2 returns and correlation
+    returns_df = pd.DataFrame({
+        col: ReturnsCalculator.daily_price_returns(price_df[col])
+        for col in price_df.columns
+    }).dropna()
+
+    correlation_matrix = RiskCalculator.correlation_matrix(returns_df)
 
     np.fill_diagonal(correlation_matrix.values, np.nan)
         

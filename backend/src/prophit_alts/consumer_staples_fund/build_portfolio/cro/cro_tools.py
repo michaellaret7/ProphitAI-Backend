@@ -1,10 +1,10 @@
 from datetime import datetime, timedelta
 import pandas as pd
 import numpy as np
-from scipy import stats
+from backend.src.calculations_v2.risk.calculator import RiskCalculator
+from backend.src.calculations_v2.returns.calculator import ReturnsCalculator
 from backend.src.repositories.price_data import fetch_bulk_price_data_for_tickers
 from backend.src.utils.validation_utils import validate_portfolio_dict
-from backend.src.utils.token_count import get_token_count
 
 # Consumer Staples Fund initial portfolio configuration
 INITIAL_PORTFOLIO_DICT = {
@@ -66,22 +66,13 @@ def calculate_correlation_matrix(portfolio_dict: dict = None) -> dict:
     # Get tickers from portfolio
     tickers = list(portfolio_dict.keys())
     
-    # Get price data for last year
-    end_date = datetime.now()
-    start_date = end_date - timedelta(days=252)
-    
-    # Fetch price data for all tickers
-    prices_map = fetch_bulk_price_data_for_tickers(tickers, start_date.strftime('%Y-%m-%d'), end_date.strftime('%Y-%m-%d'), frequency='daily')
-    
-    if not prices_map:
+    # Use shared helper for returns (v2)
+    returns_df = _get_portfolio_returns_data(tickers)
+    if returns_df.empty:
         return {"error": "No price data available"}
     
-    # Create DataFrame and calculate returns
-    prices_df = pd.DataFrame(prices_map)
-    returns_df = prices_df.pct_change(fill_method=None).dropna()
-    
-    # Calculate correlation matrix
-    correlation_matrix = returns_df.corr()
+    # Calculate correlation matrix using calculations_v2
+    correlation_matrix = RiskCalculator.correlation_matrix(returns_df)
     
     # Round all values to 3 decimal places
     correlation_matrix = correlation_matrix.round(3)
@@ -109,22 +100,13 @@ def calculate_covariance_matrix(portfolio_dict: dict = None) -> dict:
     # Get tickers from portfolio
     tickers = list(portfolio_dict.keys())
     
-    # Get price data for last year
-    end_date = datetime.now()
-    start_date = end_date - timedelta(days=252)
-    
-    # Fetch price data for all tickers
-    prices_map = fetch_bulk_price_data_for_tickers(tickers, start_date.strftime('%Y-%m-%d'), end_date.strftime('%Y-%m-%d'), frequency='daily')
-    
-    if not prices_map:
+    # Use shared helper for returns (v2)
+    returns_df = _get_portfolio_returns_data(tickers)
+    if returns_df.empty:
         return {"error": "No price data available"}
     
-    # Create DataFrame and calculate returns
-    prices_df = pd.DataFrame(prices_map)
-    returns_df = prices_df.pct_change(fill_method=None).dropna()
-    
-    # Calculate covariance matrix
-    covariance_matrix = returns_df.cov()
+    # Calculate covariance matrix using calculations_v2 (daily)
+    covariance_matrix = RiskCalculator.covariance_matrix(returns_df, annualize=False)
     
     # Round all values to 6 decimal places (covariance values are typically smaller)
     covariance_matrix = covariance_matrix.round(6)
@@ -163,10 +145,13 @@ def _get_portfolio_returns_data(tickers: list, days_back: int = 252) -> pd.DataF
     if not prices_map:
         return pd.DataFrame()
     
-    # Create DataFrame and calculate returns
+    # Create DataFrame and calculate returns using v2 ReturnsCalculator
     prices_df = pd.DataFrame(prices_map)
-    returns_df = prices_df.pct_change(fill_method=None).dropna()
-    
+    returns_df = pd.DataFrame({
+        col: ReturnsCalculator.daily_price_returns(prices_df[col])
+        for col in prices_df.columns
+    }).dropna()
+
     return returns_df
 
 
@@ -195,8 +180,10 @@ def vol_es(portfolio_dict: dict = None, horizon_days: int = 1, conf: float = 0.9
 
     # Get tickers and weights from portfolio
     tickers = list(portfolio_dict.keys())
-    weights = np.array([portfolio_dict[ticker]['conviction'] * (1 if portfolio_dict[ticker]['position'] == 'long' else -1) 
-                       for ticker in tickers])
+    weights_series = pd.Series({
+        ticker: portfolio_dict[ticker]['conviction'] * (1 if portfolio_dict[ticker]['position'] == 'long' else -1)
+        for ticker in tickers
+    })
     
     try:
         # Get returns data
@@ -205,78 +192,42 @@ def vol_es(portfolio_dict: dict = None, horizon_days: int = 1, conf: float = 0.9
         if returns_df.empty:
             return {"error": "No price data available for portfolio tickers"}
         
-        # Calculate portfolio returns
-        portfolio_returns = (returns_df * weights).sum(axis=1)
-        
-        # Calculate covariance matrix
-        cov_matrix = returns_df.cov()
-        
-        # Portfolio variance and volatility
-        portfolio_variance = np.dot(weights, np.dot(cov_matrix.values, weights))
-        portfolio_vol_daily = np.sqrt(portfolio_variance)
-        portfolio_vol_annual = portfolio_vol_daily * np.sqrt(252)
-        
-        # Z-score for confidence level
-        z_score = stats.norm.ppf(conf)
-        
-        # Calculate VaR and ES based on method
+        # Calculate portfolio returns (weights aligned to columns)
+        aligned_weights = weights_series.reindex(returns_df.columns).fillna(0.0)
+        portfolio_returns = (returns_df.mul(aligned_weights, axis=1)).sum(axis=1)
+
+        # Calculate VaR/ES and volatility using calculations_v2
         if method == 'param':
-            # Parametric VaR
-            var_1day = z_score * portfolio_vol_daily
-            
-            # Parametric ES
-            alpha = 1 - conf
-            es_value = portfolio_vol_daily * stats.norm.pdf(stats.norm.ppf(alpha)) / alpha
-            
+            annual_vol = RiskCalculator.annualized_volatility(portfolio_returns)
+            var_1day = RiskCalculator.parametric_var(annual_vol, confidence=conf)
+            es_value = RiskCalculator.parametric_cvar(annual_vol, confidence=conf)
+
         elif method == 'hist':
-            # Historical VaR
-            var_1day = -np.percentile(portfolio_returns, (1 - conf) * 100)
-            
-            # Historical ES
-            var_threshold = var_1day
-            tail_losses = portfolio_returns[portfolio_returns <= -var_threshold]
-            es_value = -tail_losses.mean() if len(tail_losses) > 0 else var_1day
+            var_1day = RiskCalculator.historical_var(portfolio_returns, confidence=conf)
+            es_value = RiskCalculator.expected_shortfall(portfolio_returns, confidence=conf)
+            annual_vol = RiskCalculator.annualized_volatility(portfolio_returns)
             
         elif method == 'ewma':
-            # EWMA implementation using exponentially weighted covariance
-            lambda_param = 0.94  # Standard EWMA decay factor
-            
-            # Calculate EWMA covariance matrix
-            ewma_cov = returns_df.ewm(alpha=1-lambda_param).cov().iloc[-len(tickers):, -len(tickers):]
-            
-            # Portfolio variance using EWMA covariance
-            portfolio_var_ewma = np.dot(weights, np.dot(ewma_cov.values, weights))
-            portfolio_vol_daily_ewma = np.sqrt(portfolio_var_ewma)
-            portfolio_vol_annual = portfolio_vol_daily_ewma * np.sqrt(252)
-            
-            # EWMA VaR
-            var_1day = z_score * portfolio_vol_daily_ewma
-            
-            # EWMA ES
-            alpha = 1 - conf
-            es_value = portfolio_vol_daily_ewma * stats.norm.pdf(stats.norm.ppf(alpha)) / alpha
-            
-            portfolio_vol_daily = portfolio_vol_daily_ewma
-            
+            return {"error": "Method 'ewma' not supported with calculations_v2. Use 'param' or 'hist'."}
         else:
-            return {"error": f"Invalid method '{method}'. Use 'param', 'hist', or 'ewma'"}
-        
-        # Scale VaR for time horizon
-        var_scaled = abs(var_1day) * np.sqrt(horizon_days)
-        es_scaled = abs(es_value) * np.sqrt(horizon_days)
-        var_annual = abs(var_1day) * np.sqrt(252)
-        
+            return {"error": f"Invalid method '{method}'. Use 'param' or 'hist'"}
+
+        # Scale VaR for time horizon and annualize
+        var_scaled = float(var_1day) * np.sqrt(horizon_days)
+        es_scaled = float(es_value) * np.sqrt(horizon_days)
+        var_annual = float(var_1day) * np.sqrt(252)
+
         result = {
             'method': method,
             'confidence_level': conf,
             'horizon_days': horizon_days,
-            'VaR': round(var_scaled, 6),
-            'ES': round(es_scaled, 6),
-            'vol': round(portfolio_vol_annual, 6),
-            'var_1day': round(abs(var_1day), 6),
-            'var_annual': round(var_annual, 6)
+            'VaR': round(float(var_scaled), 6),
+            'ES': round(float(es_scaled), 6),
+            'vol': round(float(annual_vol), 6),
+            'var_1day': round(float(var_1day), 6),
+            'var_annual': round(float(var_annual), 6)
         }
-        
+
         return result
         
     except Exception as e:
@@ -306,8 +257,10 @@ def risk_contribution(portfolio_dict: dict = None, metric: str = 'vol') -> dict:
 
     # Get tickers and weights from portfolio
     tickers = list(portfolio_dict.keys())
-    weights = np.array([portfolio_dict[ticker]['conviction'] * (1 if portfolio_dict[ticker]['position'] == 'long' else -1) 
-                       for ticker in tickers])
+    weights_series = pd.Series({
+        ticker: portfolio_dict[ticker]['conviction'] * (1 if portfolio_dict[ticker]['position'] == 'long' else -1)
+        for ticker in tickers
+    })
     
     try:
         # Get returns data
@@ -316,44 +269,38 @@ def risk_contribution(portfolio_dict: dict = None, metric: str = 'vol') -> dict:
         if returns_df.empty:
             return {"error": "No price data available for portfolio tickers"}
         
-        # Calculate covariance matrix
-        cov_matrix = returns_df.cov()
-        
+        # Calculate covariance matrix using v2
+        cov_matrix = RiskCalculator.covariance_matrix(returns_df, annualize=False)
+
+        # Align weights to covariance columns
+        aligned_weights = weights_series.reindex(cov_matrix.columns).fillna(0.0)
+        w = aligned_weights.to_numpy(dtype=float)
+        Sigma = cov_matrix.to_numpy(dtype=float)
+
         if metric == 'vol':
             # Volatility-based risk contribution
-            # Portfolio variance
-            portfolio_variance = np.dot(weights, np.dot(cov_matrix.values, weights))
-            total_risk = np.sqrt(portfolio_variance)  # Portfolio volatility
-            
-            # Marginal contribution to total risk (volatility)
-            marginal_contrib = np.dot(cov_matrix.values, weights) / total_risk
-            
-            # Component contribution to total risk
-            component_contrib = weights * marginal_contrib
-            
-            # Convert to percentages
-            ctr_pct = (component_contrib / total_risk) * 100
-            
+            portfolio_variance = float(w @ Sigma @ w)
+            total_risk = float(np.sqrt(max(portfolio_variance, 0.0)))  # Portfolio volatility
+            if total_risk == 0.0:
+                marginal_contrib = np.zeros_like(w)
+                component_contrib = np.zeros_like(w)
+                ctr_pct = np.zeros_like(w)
+            else:
+                marginal_contrib = (Sigma @ w) / total_risk
+                component_contrib = w * marginal_contrib
+                ctr_pct = (component_contrib / total_risk) * 100.0
+
         elif metric == 'var':
-            # VaR-based risk contribution
-            z_score = stats.norm.ppf(0.99)  # Default 99% confidence
-            
-            # Portfolio variance and volatility
-            portfolio_variance = np.dot(weights, np.dot(cov_matrix.values, weights))
-            portfolio_vol_daily = np.sqrt(portfolio_variance)
-            
-            # Total portfolio VaR
-            total_risk = z_score * portfolio_vol_daily
-            
-            # Marginal VaR = (dVaR/dw_i) = (Σw * cov_i) / portfolio_vol * z_score
-            marginal_contrib = np.dot(cov_matrix.values, weights) / portfolio_vol_daily * z_score
-            
-            # Component VaR = weight * marginal VaR
-            component_contrib = weights * marginal_contrib
-            
-            # Convert to percentages
-            ctr_pct = (component_contrib / total_risk) * 100
-            
+            # VaR-based risk contribution using v2 marginal_var
+            mv_series, cv_series = RiskCalculator.marginal_var(aligned_weights, cov_matrix, confidence=0.99, as_percent_of_portfolio_var=False)
+            total_risk = float(cv_series.sum())
+            marginal_contrib = mv_series.reindex(cov_matrix.columns).to_numpy(dtype=float)
+            component_contrib = cv_series.reindex(cov_matrix.columns).to_numpy(dtype=float)
+            if total_risk != 0.0:
+                ctr_pct = (component_contrib / total_risk) * 100.0
+            else:
+                ctr_pct = np.zeros_like(component_contrib)
+
         else:
             return {"error": f"Invalid metric '{metric}'. Use 'vol' or 'var'"}
         
@@ -361,8 +308,8 @@ def risk_contribution(portfolio_dict: dict = None, metric: str = 'vol') -> dict:
         result = {
             'metric': metric,
             'TR': round(float(total_risk), 6),
-            'MCTR': {ticker: round(float(marginal_contrib[i]), 6) for i, ticker in enumerate(tickers)},
-            'CTR_pct': {ticker: round(float(ctr_pct[i]), 2) for i, ticker in enumerate(tickers)}
+            'MCTR': {ticker: round(float(marginal_contrib[i]), 6) for i, ticker in enumerate(cov_matrix.columns)},
+            'CTR_pct': {ticker: round(float(ctr_pct[i]), 2) for i, ticker in enumerate(cov_matrix.columns)}
         }
         
         return result
@@ -412,15 +359,15 @@ def drawdown_profile(portfolio_dict: dict = None) -> dict:
         
         # Calculate cumulative portfolio value (NAV)
         portfolio_nav = (1 + portfolio_returns).cumprod()
-        
+
         # Calculate running maximum (peak values)
         running_max = portfolio_nav.expanding().max()
-        
+
         # Calculate drawdown series
         drawdown = (portfolio_nav - running_max) / running_max
-        
-        # Calculate key metrics
-        max_drawdown = float(drawdown.min())
+
+        # Calculate key metrics using v2 for max drawdown and ulcer index
+        max_drawdown = float(RiskCalculator.max_drawdown(portfolio_nav))
         
         # Find drawdown episodes
         episodes = []
@@ -468,8 +415,8 @@ def drawdown_profile(portfolio_dict: dict = None) -> dict:
         else:
             avg_drawdown = 0.0
         
-        # Calculate Ulcer Index (RMS of drawdowns)
-        ulcer_index = float(np.sqrt((drawdown ** 2).mean()))
+        # Calculate Ulcer Index (RMS of drawdowns) via v2
+        ulcer_index = float(RiskCalculator.ulcer_index(portfolio_nav))
         
         result = {
             'analysis_period_days': len(portfolio_nav),
@@ -487,3 +434,5 @@ def drawdown_profile(portfolio_dict: dict = None) -> dict:
         return {"error": f"Failed to calculate drawdown_profile: {str(e)}"}
 
 #TODO: add an industry/subindustry concentration tool
+
+

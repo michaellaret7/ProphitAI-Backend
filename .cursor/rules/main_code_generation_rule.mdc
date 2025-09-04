@@ -12,3 +12,4 @@ h. Use the @Web if you need to at any point (I strongly encourage this)
 i. You MAY NOT run commands in your own terminal, If you want to test the results of something I will run it on my terminal and show you the results 
 j. If you need to retrieve price data use backend/src/repositories/price_data.py and for portfolio data use backend/src/repositories/portfolio_data.py
 k. You are NEVER allowed to make any git commands inside of your own terminal
+l. When writing a function that uses a calculation, read through src/calculations_v2 first. If the calculation is defined there you MUST use that calculation from that folder. This follow DRY coding principles and if violated, there will be serious consequences
