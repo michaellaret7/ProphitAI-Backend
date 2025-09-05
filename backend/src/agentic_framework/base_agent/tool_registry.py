@@ -9,32 +9,12 @@ def register_base_tools(agent: Any) -> None:
     - Lambdas capture `agent` and access attributes at call-time.
     """
     # Local imports to avoid circular dependencies at module import time
-    from backend.src.agentic_framework.base_agent.base_tools.data_wrapper_tool import ProphitAltsDataWrapper
     from backend.src.agentic_framework.base_agent.base_tools.search_engine_tool import AgentSearchEngine
     from backend.src.agentic_framework.base_agent.base_tools.calculator import calculator
 
-    ticker_data_description = (
-        "The get_ticker_data tool returns a comprehensive dictionary of financial "
-        "data for a given stock ticker, including performance metrics, style factors, "
-        "fundamental data, recent news, earnings transcript summaries, and grades."
-    )
     search_description = (
         "The free_search tool searches the web. Provide a detailed query that will be "
         "sent to an external search engine."
-    )
-
-    # get_ticker_data
-    agent.add_tool(
-        name="get_ticker_data",
-        description=ticker_data_description,
-        parameters={
-            "type": "object",
-            "properties": {
-                "ticker": {"type": "string", "description": "Stock ticker symbol."},
-            },
-            "required": ["ticker"],
-        },
-        function=lambda ticker: ProphitAltsDataWrapper(ticker).run_all(),
     )
 
     # free_search

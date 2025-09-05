@@ -1,5 +1,5 @@
 from backend.src.agentic_framework.base_agent.agent import BaseAgent
-from backend.src.agentic_framework.base_agent.memory.semantic_memory import SemanticMemory, initialize_cro_memories
+from backend.src.agentic_framework.base_agent.memory.semantic_memory import SemanticMemory
 from backend.src.prophit_alts.consumer_staples_fund.build_portfolio.cro.cro_tool_registry import register_cro_tools
 from backend.src.prophit_alts.consumer_staples_fund.build_portfolio.prompts.cro_agent_prompts import cro_system_prompt, cro_user_prompt
 from pydantic import BaseModel
@@ -25,7 +25,7 @@ class CROPortfolioItem(BaseModel):
 class ActionableSuggestion(BaseModel):
 	ticker: str
 	action: Literal["increase allocation", "decrease allocation", "drop position"]
-	amount: float = None  # Optional field, required for increase/decrease actions, decimal format (e.g., 0.05 for 5%)
+	amount: float = None  
 	reason: str
 
 class FinalPortfolio(BaseModel):
@@ -46,18 +46,15 @@ class CROAgent(BaseAgent):
         # Initialize semantic memory for CRO agent
         self.semantic_memory = SemanticMemory(agent_type='cro', save_memory=True, verbose=self.verbose)
         
-        # If memory is empty, initialize with default CRO risk concepts
-        if not self.semantic_memory.memories:
-            if self.verbose:
-                print("📚 Initializing CRO semantic memory with risk management concepts...")
-            self.semantic_memory = initialize_cro_memories()
-        
         if self.verbose:
             total_memories = sum(len(m) for m in self.semantic_memory.memories.values())
-            print(f"🧠 CRO Agent loaded with {total_memories} risk management memories")
+            if total_memories == 0:
+                print("⚠️ No CRO memories found - agent will have no risk management knowledge!")
+            else:
+                print(f"🧠 CRO Agent loaded with {total_memories} risk management memories")
 
     def run(self):
-        result = super().run()
+        result = super().run() # Run main BaseAgent workflow
 
         final_text = (result.get("final_text") or "").strip()
         
@@ -70,6 +67,7 @@ class CROAgent(BaseAgent):
         
         try:
             # First try to parse as PortfolioWithSuggestions (new format)
+            # Use OpenAI to parse final output and return a PortfolioWithSuggestions Pydantic Object
             final_comp = self.client.chat.completions.parse(
                 model=self.llm,
                 messages=[

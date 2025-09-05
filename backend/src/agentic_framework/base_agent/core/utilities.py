@@ -39,7 +39,7 @@ class AgentUtilities:
             "CRITICAL RULES:\n"
             "- NEVER output plain text like 'Thought: ...' or 'Action: ...'\n"
             "- ALWAYS use complete JSON objects when not using native tool calls\n"
-            "- Use exact tool names WITHOUT 'functions.' prefix (e.g., 'get_ticker_data' not 'functions.get_ticker_data')\n"
+            "- Use exact tool names WITHOUT 'functions.' prefix (e.g., 'calculator' not 'functions.calculator')\n"
             "- Do NOT invent wrapper tools like 'multi_tool_use.parallel'\n"
             "- When ready to finalize, output 'Final Answer:' followed by your answer\n\n"
             "TASK MANAGEMENT PROTOCOL:\n"

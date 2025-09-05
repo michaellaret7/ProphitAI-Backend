@@ -58,6 +58,7 @@ class SemanticMemory:
                     if self.verbose:
                         total_memories = sum(len(m) for m in self.memories.values())
                         print(f"📚 Loaded {total_memories} semantic memories for {self.agent_type} agent")
+
         except Exception as e:
             if self.verbose:
                 print(f"⚠️ Failed to load semantic memory: {e}")
@@ -276,9 +277,7 @@ class SemanticMemory:
         return datetime.now().strftime('%Y-%m-%d')
 
 
-# Pre-populate CRO Agent risk management concepts
-def initialize_cro_memories():
-    """Initialize CRO agent with essential risk management concepts."""
-    memory = SemanticMemory(agent_type='cro', save_memory=True, verbose=False)
-    
-    return memory
+
+if __name__ == "__main__":
+    memory = SemanticMemory(agent_type='cro', save_memory=True, verbose=True)
+    print(memory.format_memories_for_prompt())

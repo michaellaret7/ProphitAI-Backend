@@ -52,10 +52,13 @@ class FoodProductsAgent(BaseAgent):
 
 
 if __name__ == "__main__":
-    agent = TobaccoAgent()
-    output = agent.run()
+    from backend.src.db.core.db_config import *
+    from backend.src.db.core.market_data_models import *
 
-    output_dict = parse_json_from_output(output)
-    print(output_dict)
-    # add_initial_positions(positions=output_dict, industry="food_products", fund_name="consumer_staples_fund")
+    session = MarketSession()
+    tickers = session.query(Ticker).filter(Ticker.industry == "beverages").all()
+    for ticker in tickers:
+        print(ticker.ticker)
+
+    session.close()
 

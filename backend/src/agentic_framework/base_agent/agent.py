@@ -507,13 +507,14 @@ class BaseAgent:
                         )
                     })
 
+            temperature = None if "gpt-5" in self.llm else 0.8
 
             response = self.client.chat.completions.create(
                 model=self.llm,
                 messages=messages,
                 tools=self.tools if self.tools else None,
                 tool_choice="auto" if self.tools else None,
-                temperature=0.8        
+                temperature=temperature        
             )
 
             choice = response.choices[0]

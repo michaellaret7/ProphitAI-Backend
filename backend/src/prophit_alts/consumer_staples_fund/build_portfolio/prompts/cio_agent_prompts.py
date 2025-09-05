@@ -49,14 +49,6 @@ When you have completed gathering all necessary data, you can provide a final an
     - You have an analyst for each industry.
     - They each picked a couple long and short tickers from EACH industry in the Consumer Staples Sector.
   </tool context>
-
-- get_ticker_data() → Retrieves all data on a given ticker
-  Returns: Dictionary of ticker_data
-  Parameters:
-    - ticker: The ticker symbol to get data for
-  <tool context>
-    - This tool retrieves all data on a given ticker.
-  </tool context>
 </Tools Available>
 
 <Rules>
@@ -106,7 +98,6 @@ REMEMBER: After the tool calls and research in Phase 1, DO NOT call any more too
 3. Make a list of tickers you want to do more research on. (DO NOT USE A TOOL CALL FOR THIS)
     - Print out the list of tickers you want to do more research on.
     - Check them off the list as you do your research.
-4. Use the get_ticker_data() tool to get the full data on the tickers you want to do more research on.
 5. Once you individual ticker research is done, state: "I have gathered all necessary data. Now constructing the final portfolio recommendations." Then move to Phase 2.
 
 ## PHASE 2: PORTFOLIO CONSTRUCTION (No tool calls - just analysis)

@@ -8,7 +8,7 @@ from .tasks.models import TaskStatus, TodoList, MainTask, SubTask
 from .events.manager import EventManager, AgentEvent
 from .tasks.validator import TaskValidator
 from .memory.error_memory import ToolErrorMemory, initialize_common_solutions
-from .memory.semantic_memory import SemanticMemory, initialize_cro_memories
+from .memory.semantic_memory import SemanticMemory
 
 __all__ = [
     'BaseAgent', 
@@ -24,6 +24,5 @@ __all__ = [
     'TaskValidator',
     'ToolErrorMemory',
     'initialize_common_solutions',
-    'SemanticMemory',
-    'initialize_cro_memories'
+    'SemanticMemory'
 ]

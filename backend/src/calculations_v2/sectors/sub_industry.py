@@ -8,7 +8,18 @@ calc_sub_industry_momentum_factors = lambda sub_industry: create_factor_calculat
 calc_sub_industry_quality_factors = lambda sub_industry: create_factor_calculator('quality')(sub_industry, 'sub_industry')
 calc_sub_industry_volatility_factors = lambda sub_industry: create_factor_calculator('volatility')(sub_industry, 'sub_industry')
 
-if __name__ == "__main__":
-    print(calc_sub_industry_momentum_factors("semiconductors"))
-    # print(calc_sub_industry_growth_factors("systems_software"))
-    # print(calc_sub_industry_value_factors("semiconductors"))
+def calc_sub_industry_factor_benchmark_calculations(sub_industry: str, factor: str):
+    if factor == "growth":
+        return calc_sub_industry_growth_factors(sub_industry)
+    elif factor == "value":
+        return calc_sub_industry_value_factors(sub_industry)
+    elif factor == "momentum":
+        return calc_sub_industry_momentum_factors(sub_industry)
+    elif factor == "quality":
+        return calc_sub_industry_quality_factors(sub_industry)
+    elif factor == "volatility":
+        return calc_sub_industry_volatility_factors(sub_industry)
+    else:
+        raise ValueError(f"Unknown factor: {factor}")
+
+
