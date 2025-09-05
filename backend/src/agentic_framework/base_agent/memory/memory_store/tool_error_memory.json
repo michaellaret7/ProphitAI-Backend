@@ -1198,7 +1198,63 @@
         "timestamp": "2025-08-27T15:43:30.250422",
         "success_count": 1
       }
+    },
+    "calculate_ticker_factors:unknown_error": {
+      "tool_name": "calculate_ticker_factors",
+      "error_pattern": "'str' object has no attribute 'astype'",
+      "occurrences": [
+        {
+          "timestamp": "2025-09-05T09:26:06.662279",
+          "args": {
+            "ticker": "AAPL",
+            "factor": "momentum"
+          },
+          "full_error": "'str' object has no attribute 'astype'"
+        },
+        {
+          "timestamp": "2025-09-05T09:26:09.837522",
+          "args": {
+            "ticker": "KO",
+            "factor": "momentum"
+          },
+          "full_error": "'str' object has no attribute 'astype'"
+        },
+        {
+          "timestamp": "2025-09-05T09:26:11.167331",
+          "args": {
+            "ticker": "AAPL",
+            "factor": "volatility"
+          },
+          "full_error": "'str' object has no attribute 'empty'"
+        },
+        {
+          "timestamp": "2025-09-05T09:26:12.070247",
+          "args": {
+            "ticker": "KO",
+            "factor": "volatility"
+          },
+          "full_error": "'str' object has no attribute 'empty'"
+        },
+        {
+          "timestamp": "2025-09-05T09:33:03.533276",
+          "args": {
+            "ticker": "AAPL",
+            "factor": "momentum"
+          },
+          "full_error": "'str' object has no attribute 'astype'"
+        },
+        {
+          "timestamp": "2025-09-05T09:33:03.536791",
+          "args": {
+            "ticker": "MSFT",
+            "factor": "volatility"
+          },
+          "full_error": "'str' object has no attribute 'empty'"
+        }
+      ],
+      "solutions": [],
+      "auto_solution": null
     }
   },
-  "last_updated": "2025-08-27T15:43:30.251422"
+  "last_updated": "2025-09-05T09:33:03.536866"
 }

@@ -167,3 +167,31 @@ def fetch_bulk_price_data_for_tickers(tickers: list, start_date_str: str, end_da
                 print(f"Error fetching data for {ticker}: {e}")
                 
     return price_data_map
+
+
+def get_dividends_series(ticker: str, start_date: datetime, end_date: datetime) -> pd.Series:
+    """Return a pandas Series of dividends for a ticker between dates.
+
+    Index: datetime (ex-dividend date), Values: dividend amount (float)
+    """
+    session = MarketSession()
+    try:
+        # Join on ticker and filter by date
+        rows = (
+            session.query(Dividend)
+            .join(Ticker)
+            .filter(
+                Ticker.ticker == ticker.upper(),
+                Dividend.date >= start_date.date(),
+                Dividend.date <= end_date.date(),
+            )
+            .order_by(Dividend.date)
+            .all()
+        )
+        if not rows:
+            return pd.Series(dtype=float)
+        # Prefer adjusted dividend if available, fallback to raw
+        data = {pd.to_datetime(r.date): float(r.adjDividend if r.adjDividend is not None else (r.dividend or 0.0)) for r in rows}
+        return pd.Series(data).sort_index()
+    finally:
+        session.close()

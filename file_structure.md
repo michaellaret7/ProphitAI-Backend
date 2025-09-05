@@ -23,6 +23,8 @@
 │   │   │   │   │   ├── error_memory.py
 │   │   │   │   │   ├── memory_store/
 │   │   │   │   │   │   ├── semantic_memory/
+│   │   │   │   │   │   │   ├── consumer_staples_fund/
+│   │   │   │   │   │   │   │   └── beverages_memory.json
 │   │   │   │   │   │   │   └── cro_memory.json
 │   │   │   │   │   │   └── tool_error_memory.json
 │   │   │   │   │   └── semantic_memory.py
@@ -182,7 +184,7 @@
 │   │   │       ├── phase_two_run_llm.py
 │   │   │       └── phase_two_run.py
 │   │   ├── prophit_alts/
-│   │   │   └── consumer_staples_fund/
+│   │   │   ├── consumer_staples_fund/
 │   │   │       ├── build_portfolio/
 │   │   │       │   ├── cio/
 │   │   │       │   │   ├── cio_agent.py
@@ -193,6 +195,9 @@
 │   │   │       │   │   ├── cro_tool_registry.py
 │   │   │       │   │   └── cro_tools.py
 │   │   │       │   ├── industry_agents.py
+│   │   │       │   ├── industry_agents_2/
+│   │   │       │   │   ├── beverages.py
+│   │   │       │   │   └── industry_tools.py
 │   │   │       │   ├── macro_agent.py
 │   │   │       │   └── prompts/
 │   │   │       │       ├── cio_agent_prompts.py
@@ -207,6 +212,7 @@
 │   │   │       │       └── macro_agent_prompts.py
 │   │   │       └── manage_portfolio/
 │   │   │           └── drawdown_management.py
+│   │   │   └── tech_ai_fund/
 │   │   ├── prophit_gpt/
 │   │   │   ├── gpt.py
 │   │   │   ├── dataRetrievalTools/
@@ -218,9 +224,14 @@
 │   │   │       ├── exitPosition.py
 │   │   │       └── longOrder.py
 │   │   ├── repositories/
+│   │   │   ├── etf_data.py
+│   │   │   ├── fundamental_data.py
+│   │   │   ├── news_data.py
 │   │   │   ├── portfolio_data.py
 │   │   │   ├── price_data.py
 │   │   │   ├── prophit_alts_data.py
+│   │   │   ├── ratings_data.py
+│   │   │   ├── transcripts_data.py
 │   │   │   └── user_data.py
 │   │   ├── services/
 │   │   │   └── prophit_alts_service.py
@@ -251,7 +262,8 @@
 │       ├── hedge_fund_stuff/
 │       │   ├── Hedge_fund_portfolio_construction.py
 │       │   └── Hedge_fund_risk_management.py
-│       └── retail-fund-code.py
+│       ├── retail-fund-code.py
+│       └── streaming_data.py
 ├── file_structure.md
 ├── git_helper.md
 ├── new_stucture.md
@@ -269,3 +281,8 @@ Updates:
   - Returns via `ReturnsCalculator.daily_price_returns`
   - Beta via `RiskCalculator.beta`
   - Removed internal `calculate_beta_from_data()` and unused `statsmodels` import
+ - Repositories: added `etf_data.py`, `fundamental_data.py`, `news_data.py`, `ratings_data.py`, `transcripts_data.py`
+ - Semantic memory: added `consumer_staples_fund/beverages_memory.json`
+ - Consumer staples build_portfolio: added `industry_agents_2/` with `beverages.py`, `industry_tools.py`
+ - Prophit Alts: added `tech_ai_fund/`
+ - Testing: added `backend/testing/streaming_data.py`

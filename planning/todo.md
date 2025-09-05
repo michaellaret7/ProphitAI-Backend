@@ -1,15 +1,17 @@
-### Task: Fix matmul warnings in `calculations_v2/risk/calculator._to_psd`
+Update file_structure.md – Plan
 
-Context: Terminal shows RuntimeWarnings at `backend/src/calculations_v2/risk/calculator.py:14` during covariance PSD reconstruction: divide by zero, overflow, and invalid value encountered in matmul.
+Scope to reflect current workspace:
+- backend/src/repositories: add etf_data.py, fundamental_data.py, news_data.py, ratings_data.py, transcripts_data.py
+- agentic_framework/base_agent/memory/memory_store/semantic_memory: add consumer_staples_fund/ with beverages_memory.json
+- prophit_alts/consumer_staples_fund/build_portfolio: add industry_agents_2/ with beverages.py and industry_tools.py
+- prophit_alts: include tech_ai_fund/
+- backend/testing: add streaming_data.py
 
-Goal: Implement a minimal, safe fix to sanitize inputs/outputs in `_to_psd`, prevent inf/NaN propagation, and ensure robust PSD covariance reconstruction without changing public APIs.
+Status:
+- Updated `file_structure.md` with new paths and Updates section entries
+- Verified additions: repositories, semantic memory, industry_agents_2, tech_ai_fund, streaming_data.py
 
-Plan / TODOs:
-1) Confirm source line and function causing warnings in `_to_psd` (read-only). [ ]
-2) Sanitize covariance input: replace NaN/Inf with 0; enforce symmetry. [ ]
-3) Stable eigen handling: floor negatives to small positive; set non-finite eigenvalues to floor; reconstruct via `vecs @ diag(vals) @ vecs.T`. [ ]
-4) Post-check result: re-symmetrize and, if any non-finite remains, fallback to diagonal-only covariance. [ ]
-5) Run lints on modified file; keep code simple and minimal. [ ]
+Review summary:
+- Minimal edits; preserved indentation and structure
+- Kept scope limited to requested file structure sync
 
-Review (to be filled after implementation):
-- Summary of changes, impact, and any follow-ups.
