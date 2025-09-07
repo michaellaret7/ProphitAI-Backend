@@ -1254,7 +1254,20 @@
       ],
       "solutions": [],
       "auto_solution": null
+    },
+    "update_task_status:missing_status": {
+      "tool_name": "update_task_status",
+      "error_pattern": "TaskManager.update_task_status() missing 2 required positional arguments: 'task_id' and 'status'",
+      "occurrences": [
+        {
+          "timestamp": "2025-09-05T16:33:43.127905",
+          "args": {},
+          "full_error": "TaskManager.update_task_status() missing 2 required positional arguments: 'task_id' and 'status'"
+        }
+      ],
+      "solutions": [],
+      "auto_solution": null
     }
   },
-  "last_updated": "2025-09-05T09:33:03.536866"
+  "last_updated": "2025-09-05T16:33:43.128139"
 }

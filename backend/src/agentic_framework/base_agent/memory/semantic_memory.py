@@ -24,7 +24,7 @@ class SemanticMemory:
         
         # Memory storage path - each agent type has its own file
         self.memory_dir = Path(__file__).parent / "memory_store" / "semantic_memory"
-        if self.agent_type == "beverages":
+        if self.agent_type == "beverages" or self.agent_type == "distribution_and_retail":
             self.memory_path = self.memory_dir / "consumer_staples_fund" / f"{self.agent_type}_memory.json"
         else:
             self.memory_path = self.memory_dir / f"{self.agent_type}_memory.json"
