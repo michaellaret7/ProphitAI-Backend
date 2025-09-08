@@ -161,6 +161,16 @@ class ValueFactors:
         else:
             self.eps_growth_5yr = None
 
+        # Current PE from financial ratios
+        self.current_pe_from_ratios = None
+        try:
+            if frs:
+                pe = getattr(frs[0], 'priceEarningsRatio', None)
+                if pe is not None:
+                    self.current_pe_from_ratios = float(pe)
+        except Exception:
+            self.current_pe_from_ratios = None
+
     # ------------------------- Value Ratios ------------------------- #
     def price_to_book(self) -> Optional[float]:
         if self.book_value_per_share is None or self.price is None or self.book_value_per_share <= 0:
@@ -181,6 +191,10 @@ class ValueFactors:
         if self.eps_forward_next_fy is None or self.price is None or self.eps_forward_next_fy == 0:
             return None
         return self.price / self.eps_forward_next_fy
+
+    def current_pe(self) -> Optional[float]:
+        """Returns the most recent PE ratio from financial ratio statements."""
+        return self.current_pe_from_ratios
 
     def earnings_yield(self) -> Optional[float]:
         if self.price is None or self.eps_forward_next_fy is None or self.price == 0:
@@ -508,6 +522,7 @@ class ValueFactors:
             "book_to_market": round(self.book_to_market() or np.nan, round_factor),
             "trailing_pe": round(self.trailing_pe() or np.nan, round_factor),
             "forward_pe": round(self.forward_pe() or np.nan, round_factor),
+            "current_pe": round(self.current_pe() or np.nan, round_factor),
             "earnings_yield": round(self.earnings_yield() or np.nan, round_factor),
             "price_to_sales": round(self.price_to_sales() or np.nan, round_factor),
             "price_to_cashflow": round(self.price_to_cashflow() or np.nan, round_factor),
@@ -567,39 +582,21 @@ class ValueFactors:
         return df
 
 if __name__ == "__main__":
-    # Lightweight smoke test for attributes, composition, and NaN handling
+    # Lightweight smoke test for calc_all_bulk
     import sys
     try:
         test_tickers = ["AAPL", "MSFT", "AMZN", "GOOGL", "NVDA"]
-        ds = DataService()
-        rows: list[dict[str, float]] = []
-        for t in test_tickers:
-            try:
-                vf = ValueFactors(t, ds)
-                attrs = vf.compute_attributes()
-                rows.append({"ticker": t, **attrs})
-            except Exception as e:
-                print(f"[warn] Failed computing attributes for {t}: {e}")
-        frame = pd.DataFrame(rows)
-        # Compose exposure (global z-score if sector not provided)
-        frame = ValueFactors.compose_value_exposure(frame)
-        frame = ValueFactors.orthogonalize_value(frame, exposure_col="value_exposure_raw")
-        cols = [
-            "ticker",
-            "bp",
-            "ep",
-            "cfp",
-            "fcf_yield",
-            "sales_ev",
-            "ebitda_ev",
-            "ebit_ev",
-            "div_yld",
-            "value_exposure_raw",
-            "value_exposure",
-        ]
-        print(frame[cols].to_string(index=False))
+        
+        # Use the classmethod to get all value factors in a DataFrame
+        value_factors_df = ValueFactors.calc_all_bulk(tickers=test_tickers)
+        
+        print("Calculated Value Factors:")
+        print(value_factors_df.to_string())
+
     except Exception as e:
         print(f"[error] Smoke test failed: {e}")
         sys.exit(1)
+
+
 
 

@@ -3,8 +3,8 @@
     "type": "Semantic",
     "agent": "beverages_industry",
     "domain": "Beverages industry stock picking",
-    "purpose": "Nuanced concepts for a portfolio construction/stock picking agent (not a trading agent).",
-    "last_updated": "2025-09-05",
+    "purpose": "Nuanced concepts for a portfolio construction/stock picking agent.",
+    "last_updated": "2025-09-08",
     "memories": {
       "investable_tickers": [],
       "industry": "beverages",

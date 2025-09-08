@@ -1263,11 +1263,39 @@
           "timestamp": "2025-09-05T16:33:43.127905",
           "args": {},
           "full_error": "TaskManager.update_task_status() missing 2 required positional arguments: 'task_id' and 'status'"
+        },
+        {
+          "timestamp": "2025-09-08T13:58:13.631898",
+          "args": {},
+          "full_error": "TaskManager.update_task_status() missing 2 required positional arguments: 'task_id' and 'status'"
+        }
+      ],
+      "solutions": [],
+      "auto_solution": null
+    },
+    "mark_task_complete:missing_task_id": {
+      "tool_name": "mark_task_complete",
+      "error_pattern": "register_task_management_tools.<locals>.<lambda>() missing 1 required positional argument: 'task_id'",
+      "occurrences": [
+        {
+          "timestamp": "2025-09-08T13:56:50.745216",
+          "args": {},
+          "full_error": "register_task_management_tools.<locals>.<lambda>() missing 1 required positional argument: 'task_id'"
+        },
+        {
+          "timestamp": "2025-09-08T13:58:07.179011",
+          "args": {},
+          "full_error": "register_task_management_tools.<locals>.<lambda>() missing 1 required positional argument: 'task_id'"
+        },
+        {
+          "timestamp": "2025-09-08T14:04:01.591313",
+          "args": {},
+          "full_error": "register_task_management_tools.<locals>.<lambda>() missing 1 required positional argument: 'task_id'"
         }
       ],
       "solutions": [],
       "auto_solution": null
     }
   },
-  "last_updated": "2025-09-05T16:33:43.128139"
+  "last_updated": "2025-09-08T14:04:01.591357"
 }
