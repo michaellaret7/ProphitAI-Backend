@@ -16,10 +16,8 @@ class IndustryRecommendation(BaseModel):
     valuation_snapshot: str
     conviction: float
 
-
 class IndustryRecommendations(BaseModel):
     recommendations: List[IndustryRecommendation]
-
 
 class IndustryAgent(BaseAgent):
     def __init__(self, industry: str):
@@ -83,6 +81,45 @@ class IndustryAgent(BaseAgent):
 
         return result["final_text"]
 
+    def save_initial_positions(self, fund_name: str, recommendations_json: str) -> bool:
+        """
+        Persist agent recommendations into prophit_alts_funds.initial_positions.
+
+        Args:
+            fund_name: Target fund name (e.g., "consumer_staples_fund").
+            recommendations_json: JSON string from self.run() with key 'recommendations'.
+
+        Returns:
+            bool indicating success.
+        """
+        from backend.src.repositories.portfolio_data import add_initial_positions as repo_add_initial_positions
+
+        try:
+            data = json.loads(recommendations_json)
+            items = data.get("recommendations", []) if isinstance(data, dict) else []
+
+            positions = {"long": [], "short": []}
+            for item in items:
+                ticker = item.get("ticker")
+                position_side = (item.get("position") or "").lower()
+                conviction = item.get("conviction") or 0.0  # expected as decimal (e.g., 0.1 for 10%)
+                thesis = item.get("thesis") or ""
+
+                if not ticker or position_side not in ("long", "short"):
+                    continue
+
+                positions[position_side].append({
+                    "ticker": ticker,
+                    "allocation": float(conviction),  # repository expects percent, it will divide by 100
+                    "reasoning": thesis,
+                })
+
+            return repo_add_initial_positions(positions=positions, industry=self.industry, fund_name=fund_name)
+        except Exception:
+            return False
+
+
+
 if __name__ == "__main__":
     industries = [
         "beverages",
@@ -95,18 +132,11 @@ if __name__ == "__main__":
 
     agent = IndustryAgent(industries[4])
     final_result = agent.run()
-    print(final_result)
-    print(type(final_result))
+    agent.save_initial_positions(fund_name="consumer_staples_fund", recommendations_json=final_result)
+    # print(final_result)
+    # print(type(final_result))
+    # print(json.loads(final_result))
+    # print(type(json.loads(final_result)))
 
-    # from backend.src.db.core.db_config import MarketSession
-    # from backend.src.db.core.market_data_models import *
-    # from backend.src.utils.serialize_output import serialize_sqlalchemy_obj
+    
 
-    # tickers = []
-    # with MarketSession() as session:
-    #     tickers = session.query(BalanceSheet).join(Ticker).filter(
-    #         Ticker.ticker == "AAL", 
-    #         BalanceSheet.fillingDate >= "2025-04-01"
-    #     ).all()
-    #     for balance_sheet in tickers:
-    #         print(serialize_sqlalchemy_obj(balance_sheet))

@@ -76,8 +76,8 @@ Produce Quality, High Conviction ideas. Emphasize quality over quantity.
 
 <Investment Thesis>
 Value-first, fundamentals-driven strategy:
-Identify high-quality businesses trading below intrinsic value and avoid (or short) deteriorating, low-quality stories. Favor durable free cash flow, resilient/expanding margins, healthy balance sheets, prudent capital allocation, and clear near-term catalysts. Complement fundamentals with **trend confirmation** (positive for longs, negative for shorts) using **12-1 month momentum** with a **3-month confirmation** to reduce timing risk.
-
+Identify high-quality businesses trading below intrinsic value and avoid (or short) deteriorating, low-quality stories. Favor durable free cash flow, resilient/expanding margins, healthy balance sheets, prudent capital allocation, and clear near-term catalysts. 
+Complement fundamentals with **trend confirmation** (positive for longs, negative for shorts) using **12-1 month momentum** with a **3-month confirmation** to reduce timing risk.
 Require attractive valuation vs. history/peers (e.g., top-quartile FCF yield; discounted EV/EBIT or EV/FCF; sensible P/E vs. EPS CAGR) and a margin of safety. Avoid aggressive accounting and leverage-dependent narratives.
 
 <LONG CANDIDATES>
