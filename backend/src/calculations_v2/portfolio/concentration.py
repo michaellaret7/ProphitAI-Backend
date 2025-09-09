@@ -60,7 +60,7 @@ class PortfolioConcentration:
             return {}
         group_index = pd.Series({t: (label_map.get(t) or 'Unknown') for t in component_var.index})
         grouped = component_var.groupby(group_index).sum()
-        return {k: float(v) for k, v in grouped.items()}
+        return {k: round(float(v), 5) for k, v in grouped.items()}
 
     # ------------------------------ APIs ------------------------------- #
     def sector_concentration(self) -> dict:
@@ -94,6 +94,26 @@ class PortfolioConcentration:
 
     def sub_industry_var(self) -> dict:
         return self._var_grouped(self._ticker_to_sub_industry)
+
+    def portfolio_var(self) -> float:
+        """Compute 1-day portfolio VaR (positive magnitude) using parametric method.
+
+        Aligns with group VaR logic by leveraging RiskCalculator.marginal_var and
+        summing component contributions.
+        """
+        returns_df = self._fetch_returns_df()
+        if returns_df.empty:
+            return float('nan')
+        weights = self._weights_for(returns_df.columns)
+        if weights.empty or float(weights.sum()) == 0.0:
+            return float('nan')
+        cov = RiskCalculator.covariance_matrix(returns_df, annualize=False)
+        if cov.empty:
+            return float('nan')
+        _, component_var = RiskCalculator.marginal_var(weights, cov, confidence=self.confidence)
+        if component_var.empty:
+            return float('nan')
+        return round(float(component_var.sum()), 5)
 
     def net_exposure(self) -> float:
         """Calculate net exposure (long positions - short positions)."""

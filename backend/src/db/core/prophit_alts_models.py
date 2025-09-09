@@ -75,7 +75,7 @@ class FundInitialPosition(ProphitAltsBase):
     ticker_name = Column(String, nullable=False)
     position = Column(Enum(PositionType), nullable=False)
     industry = Column(String, nullable=False)
-    risk_allocation = Column(Float, nullable=False)
+    conviction = Column(Float, nullable=False)
     reasoning = Column(String, nullable=False)
     date_created = Column(DateTime, default=datetime.utcnow, nullable=False)
     date_updated = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)

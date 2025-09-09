@@ -484,7 +484,7 @@
           "ticker_name (string)",
           "position (enum: LONG, SHORT)",
           "industry (string)",
-          "risk_allocation (float)",
+          "conviction (float)",
           "reasoning (string)",
           "date_created (datetime)",
           "date_updated (datetime)"

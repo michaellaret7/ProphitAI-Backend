@@ -1,11 +1,12 @@
 from backend.src.agentic_framework.base_agent import BaseAgent
 from backend.src.agentic_framework.base_agent.memory.semantic_memory import SemanticMemory
 from backend.src.prophit_alts.consumer_staples_fund.build_portfolio.prompts.industry_prompts import build_industry_prompt
-from .tools import get_eligible_tickers
+from .tools import get_eligible_tickers, get_base_ticker_info
 from .tool_registry import register_industry_tools
 from pydantic import BaseModel
 from typing import List, Literal
 import json
+import time
 
 class IndustryRecommendation(BaseModel):
     ticker: str
@@ -110,7 +111,7 @@ class IndustryAgent(BaseAgent):
 
                 positions[position_side].append({
                     "ticker": ticker,
-                    "allocation": float(conviction),  # repository expects percent, it will divide by 100
+                    "allocation": float(conviction)*100,  # repository expects percent, it will divide by 100
                     "reasoning": thesis,
                 })
 
@@ -120,23 +121,14 @@ class IndustryAgent(BaseAgent):
 
 
 
-if __name__ == "__main__":
-    industries = [
-        "beverages",
-        "food_products",
-        "household_products",
-        "personal_care_products",
-        "consumer_staples_distribution_and_retail",
-        "tobacco",
-    ]
 
-    agent = IndustryAgent(industries[4])
-    final_result = agent.run()
-    agent.save_initial_positions(fund_name="consumer_staples_fund", recommendations_json=final_result)
-    # print(final_result)
-    # print(type(final_result))
-    # print(json.loads(final_result))
-    # print(type(json.loads(final_result)))
+
+   
+
+
+
+
+
 
     
 
