@@ -33,29 +33,29 @@ ProphitAI/
 │   │   └── monitor/
 │   ├── core/
 │   ├── utils/
-│   └── middleware/
-├── core_libs/
-│   ├── calculations/
-│   │   ├── core/
-│   │   ├── factors/
-│   │   ├── performance/
-│   │   ├── portfolio/
-│   │   │   └── build/
-│   │   ├── returns/
-│   │   ├── risk/
-│   │   ├── sectors/
-│   │   └── technical/
-│   └── agent_framework/
-│       ├── agent_output/
-│       └── base_agent/
-│           ├── base_tools/
-│           ├── core/
-│           ├── events/
-│           ├── memory/
-│           │   └── memory_store/
-│           │       └── semantic_memory/
-│           │           └── consumer_staples_fund/
-│           └── tasks/
+│   ├── middleware/
+│   └── core_libs/
+│       ├── calculations/
+│       │   ├── core/
+│       │   ├── factors/
+│       │   ├── performance/
+│       │   ├── portfolio/
+│       │   │   └── build/
+│       │   ├── returns/
+│       │   ├── risk/
+│       │   ├── sectors/
+│       │   └── technical/
+│       └── agent_framework/
+│           ├── agent_output/
+│           └── base_agent/
+│               ├── base_tools/
+│               ├── core/
+│               ├── events/
+│               ├── memory/
+│               │   └── memory_store/
+│               │       └── semantic_memory/
+│               │           └── consumer_staples_fund/
+│               └── tasks/
 ├── tests/
 │   ├── unit/
 │   ├── integration/

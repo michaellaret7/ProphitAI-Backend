@@ -5,7 +5,14 @@ This module provides reusable validation functions for ensuring data integrity
 across the application, particularly for financial instruments and portfolio data.
 """
 
-from typing import Dict, Any
+from typing import Dict, Any, Tuple, Union
+
+from pydantic import ValidationError
+from backend.src.data_models.portfolio_models import (
+    PortfolioInput,
+    PortfolioPosition,
+    PositionType,
+)
 
 
 def validate_ticker(ticker: str) -> str:
@@ -35,58 +42,98 @@ def validate_ticker(ticker: str) -> str:
     return ticker
 
 
+def normalize_portfolio_input(data: Any) -> PortfolioInput:
+    """Normalize various portfolio input shapes to PortfolioInput.
+
+    Accepted legacy formats:
+    - {ticker: {allocation, position}}
+    - {ticker: {conviction, position}}
+    - {ticker: {risk_allocation, position}}
+    - {ticker: (weight_or_allocation, position)}
+    - {ticker: signed_weight}
+    - {ticker: PortfolioPosition}
+    - PortfolioInput (returned as-is)
+    """
+    if isinstance(data, PortfolioInput):
+        return data
+
+    if not isinstance(data, dict) or not data:
+        raise ValueError("Portfolio input must be a non-empty dictionary or PortfolioInput")
+
+    normalized: Dict[str, PortfolioPosition] = {}
+
+    for raw_ticker, raw_value in data.items():
+        ticker = validate_ticker(raw_ticker)
+
+        # Already a PortfolioPosition
+        if isinstance(raw_value, PortfolioPosition):
+            normalized[ticker] = raw_value
+            continue
+
+        allocation: Union[int, float]
+        position: Union[str, PositionType]
+
+        if isinstance(raw_value, dict):
+            if 'allocation' in raw_value:
+                allocation = float(raw_value['allocation'])
+            elif 'conviction' in raw_value:
+                allocation = float(raw_value['conviction'])
+            elif 'risk_allocation' in raw_value:
+                allocation = float(raw_value['risk_allocation'])
+            else:
+                raise ValueError(f"{ticker}: missing 'allocation'/'conviction'/'risk_allocation'")
+
+            if 'position' not in raw_value:
+                raise ValueError(f"{ticker}: missing 'position'")
+            position = str(raw_value['position']).lower()
+
+        elif isinstance(raw_value, (tuple, list)) and len(raw_value) == 2:
+            weight_or_alloc, pos = raw_value
+            allocation = abs(float(weight_or_alloc))
+            position = str(pos).lower()
+
+        elif isinstance(raw_value, (int, float)):
+            # signed weight
+            w = float(raw_value)
+            allocation = abs(w)
+            position = 'long' if w >= 0 else 'short'
+
+        else:
+            raise ValueError(f"{ticker}: unsupported value type {type(raw_value)}")
+
+        if not 0.0 <= allocation <= 1.0:
+            raise ValueError(f"{ticker}: allocation must be between 0 and 1 (decimal)")
+
+        if position not in ('long', 'short'):
+            raise ValueError(f"{ticker}: position must be 'long' or 'short'")
+
+        normalized[ticker] = PortfolioPosition(allocation=allocation, position=position)  # validator lowercases
+
+    try:
+        return PortfolioInput(normalized)
+    except ValidationError as e:
+        raise ValueError(f"Invalid portfolio input: {e}")
+
+
 def validate_portfolio_dict(portfolio_dict: dict) -> dict:
+    """Backwards-compatible validator returning a plain dict.
+
+    Normalizes to the canonical schema and returns:
+        {ticker: {allocation: float, position: 'long'|'short'}}
     """
-    Validate portfolio dictionary structure and values.
-    
-    Args:
-        portfolio_dict: Portfolio dictionary to validate
-        
-    Returns:
-        dict: Validated portfolio dictionary with normalized values
-        
-    Raises:
-        ValueError: If portfolio structure is invalid
-    """
-    if not portfolio_dict:
-        raise ValueError("Portfolio dictionary cannot be empty")
-    
-    if not isinstance(portfolio_dict, dict):
-        raise ValueError("Portfolio must be a dictionary")
-    
-    validated_portfolio = {}
-    
-    for ticker, details in portfolio_dict.items():
-        # Validate ticker
-        validated_ticker = validate_ticker(ticker)
-        
-        # Validate details structure
-        if not isinstance(details, dict):
-            raise ValueError(f"Details for {ticker} must be a dictionary")
-        
-        if 'conviction' not in details or 'position' not in details:
-            raise ValueError(f"Ticker {ticker} must have 'conviction' and 'position' keys")
-        
-        # Validate conviction value
-        conviction = details['conviction']
-        if not isinstance(conviction, (int, float)):
-            raise ValueError(f"Conviction for {ticker} must be a number")
-        
-        if not 0.0 <= conviction <= 1.0:
-            raise ValueError(f"Conviction for {ticker} must be between 0.0 and 1.0")
-        
-        # Validate position value
-        position = details['position']
-        if not isinstance(position, str):
-            raise ValueError(f"Position for {ticker} must be a string")
-        
-        position = position.lower()
-        if position not in ['long', 'short']:
-            raise ValueError(f"Position for {ticker} must be 'long' or 'short'")
-        
-        validated_portfolio[validated_ticker] = {
-            'conviction': float(conviction),
-            'position': position
+    portfolio = normalize_portfolio_input(portfolio_dict)
+    return {
+        t: {
+            'allocation': float(p.allocation),
+            'position': p.position.value,
         }
-    
-    return validated_portfolio
+        for t, p in portfolio.root.items()
+    }
+
+def validate_portfolio_input(portfolio: PortfolioInput | dict) -> PortfolioInput:
+    """Explicit validator that returns a `PortfolioInput`.
+
+    Accepts either a `PortfolioInput` or a legacy dict and normalizes to
+    the canonical `PortfolioInput` schema.
+    """
+    return normalize_portfolio_input(portfolio)

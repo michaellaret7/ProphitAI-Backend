@@ -7,6 +7,7 @@ from datetime import datetime, timedelta
 from typing import Dict
 import pandas as pd
 import warnings
+import json
 
 from backend.src.calculations_v2.core import DataService
 from backend.src.calculations_v2.core.config import DEFAULT_TRADING_DAYS, DEFAULT_RF_ANNUAL
@@ -14,10 +15,13 @@ from backend.src.calculations_v2.returns import PortfolioReturnsCalculator, Retu
 from backend.src.calculations_v2.performance import PerformanceCalculator
 from backend.src.calculations_v2.risk import RiskCalculator
 from backend.src.calculations_v2.portfolio.factor_tilt import portfolio_factor_tilts
+from backend.src.utils.validation_utils import normalize_portfolio_input
+from backend.src.data_models.portfolio_models import PortfolioInput
+from backend.src.db.core.market_data_models import Ticker
 
-def get_analyst_picks(fund_name: str):
+def get_analyst_picks():
     session = ProphitAltsSession()
-    initial_positions = session.query(FundInitialPosition).join(Fund).filter(Fund.fund_name == fund_name).all()
+    initial_positions = session.query(FundInitialPosition).join(Fund).filter(Fund.fund_name == "consumer_staples_fund").all()
 
     initial_positions_dict = {}
     for position in initial_positions:
@@ -30,7 +34,12 @@ def get_analyst_picks(fund_name: str):
 
     return initial_positions_dict
 
-def correlation_matrix(portfolio_dict: dict, lookback_days: int = 252) -> pd.DataFrame:
+def _to_canonical_portfolio(portfolio: PortfolioInput | dict) -> Dict[str, Dict]:
+    norm = normalize_portfolio_input(portfolio)
+    return {t: {"allocation": float(p.allocation), "position": p.position.value} for t, p in norm.root.items()}
+
+def correlation_matrix(portfolio_dict: PortfolioInput | dict, lookback_days: int = 252) -> pd.DataFrame:
+    portfolio_dict = _to_canonical_portfolio(portfolio_dict)
     tickers = list(portfolio_dict.keys())
     if not tickers:
         return pd.DataFrame()
@@ -56,11 +65,12 @@ def correlation_matrix(portfolio_dict: dict, lookback_days: int = 252) -> pd.Dat
     if not returns_map:
         return pd.DataFrame()
     returns_df = pd.DataFrame(returns_map)
+    
     return CorrelationAnalysis.correlation_matrix(returns_df)
 
 
 def calculate_portfolio_past_performance(
-    portfolio_dict: dict,
+    portfolio_dict: PortfolioInput | dict,
     rf_annual: float = DEFAULT_RF_ANNUAL,
     lookback_years: int = 3,
     benchmark: str = "SPY",
@@ -72,6 +82,7 @@ def calculate_portfolio_past_performance(
     """
     if not portfolio_dict:
         return {}
+    portfolio_dict = _to_canonical_portfolio(portfolio_dict)
     # Build signed weights (negative for shorts)
     weights = {}
     for t, cfg in portfolio_dict.items():
@@ -206,7 +217,8 @@ def calculate_portfolio_past_performance(
         "calmar_1y": _rd(calmar_1y),
     }
 
-def exposure_calculator(portfolio_dict: dict, exposure_type: str):
+def exposure_calculator(portfolio_dict: PortfolioInput | dict, exposure_type: str):
+    portfolio_dict = _to_canonical_portfolio(portfolio_dict)
     if exposure_type == "net":
         return PortfolioConcentration(portfolio_dict).net_exposure()
     elif exposure_type == "gross":
@@ -218,7 +230,8 @@ def exposure_calculator(portfolio_dict: dict, exposure_type: str):
     else:
         raise ValueError(f"Invalid exposure type: {exposure_type}")
 
-def industry_concentration(portfolio_dict: dict, industry_level: str):
+def industry_concentration(portfolio_dict: PortfolioInput | dict, industry_level: str):
+    portfolio_dict = _to_canonical_portfolio(portfolio_dict)
     if industry_level == "industry":
         res = PortfolioConcentration(portfolio_dict).industry_concentration()
     elif industry_level == "sub_industry":
@@ -228,7 +241,8 @@ def industry_concentration(portfolio_dict: dict, industry_level: str):
     # Round values to 5 decimals for cleaner display
     return {k: round(float(v), 5) for k, v in res.items()}
 
-def VaR_calculator(portfolio_dict: dict, level: str):
+def VaR_calculator(portfolio_dict: PortfolioInput | dict, level: str):
+    portfolio_dict = _to_canonical_portfolio(portfolio_dict)
     if level == "industry":
         res = PortfolioConcentration(portfolio_dict).industry_var()
     elif level == "sub_industry":
@@ -243,7 +257,7 @@ def VaR_calculator(portfolio_dict: dict, level: str):
     return {k: round(float(v), 5) for k, v in res.items()}
 
 def calculate_portfolio_beta_vs_index(
-    portfolio_dict: Dict[str, Dict], 
+    portfolio_dict: PortfolioInput | Dict[str, Dict], 
     lookback_days: int = 252,
     index_ticker: str = None,
 ) -> float:
@@ -258,6 +272,7 @@ def calculate_portfolio_beta_vs_index(
         Portfolio beta vs index
     """
     # Extract weights from portfolio dict, applying sign based on position
+    portfolio_dict = _to_canonical_portfolio(portfolio_dict)
     portfolio_weights = {}
     for ticker, config in portfolio_dict.items():
         allocation = config.get('allocation', 0.0)
@@ -308,11 +323,11 @@ def calculate_portfolio_beta_vs_index(
     # Calculate and return beta
     return RiskCalculator.beta(portfolio_returns, spy_returns)
 
-
-def factor_tilts_for_portfolio(portfolio_dict: dict, factors: str) -> dict:
+def factor_tilts_for_portfolio(portfolio_dict: PortfolioInput | dict, factors: str) -> dict:
     """Compute and print factor tilts (value/growth/momentum/quality/volatility)."""
     if not portfolio_dict:
         return {}
+    portfolio_dict = _to_canonical_portfolio(portfolio_dict)
 
     # Convert portfolio dict to signed weights expected by calculations_v2
     # Positive for longs, negative for shorts
@@ -359,6 +374,25 @@ def factor_tilts_for_portfolio(portfolio_dict: dict, factors: str) -> dict:
 
     return _round_tilt_output(portfolio_factor_tilts(weights, factors))
 
-    
+def pull_rest_of_ticker_pool():
+    session = ProphitAltsSession()
+    market_session = MarketSession()
+    ticker_pool = session.query(FundInitialPosition).all()
 
+    tickers = []
+    for position in ticker_pool:
+        tickers.append(position.ticker_name)
+    
+    ticker_pool_list = []
+
+    rest_of_ticker_pool = market_session.query(Ticker).filter(
+        Ticker.ticker.notin_(tickers), 
+        Ticker.sector == "equity_sector_consumer_staples",
+        Ticker.market_cap > 600_000_000
+    ).all()
+
+    for ticker in rest_of_ticker_pool:
+        ticker_pool_list.append(ticker.ticker)
+
+    return ticker_pool_list
 

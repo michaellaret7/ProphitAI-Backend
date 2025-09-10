@@ -5,6 +5,8 @@ from datetime import datetime, timedelta
 from backend.src.stress_test.scenarios import historical_scenarios
 from backend.src.calculations_v2.returns.calculator import ReturnsCalculator
 from backend.src.calculations_v2.risk.calculator import RiskCalculator
+from backend.src.utils.validation_utils import normalize_portfolio_input
+from backend.src.data_models.portfolio_models import PortfolioInput
 
 def calculate_correlation_matrix(price_data: dict = None, start_date_str: str = None, end_date_str: str = None, frequency: str = None, tickers: list[str] = None):
     """
@@ -60,13 +62,18 @@ def pairwise_correlation_analysis(correlation_matrix: pd.DataFrame):
 
     return avg_correlations, portfolio_average_correlation
 
-def run_pairwise_correlation_analysis(portfolio_dict: dict):
+def run_pairwise_correlation_analysis(portfolio_dict: PortfolioInput | dict):
     """
     Optimized pairwise correlation analysis that fetches all price data once.
     """
     baseline_summary = {}
     stress_summary = {}
-    tickers = list(portfolio_dict.keys())
+    # Normalize/accept both PortfolioInput and dict
+    try:
+        norm = normalize_portfolio_input(portfolio_dict)
+        tickers = list(norm.root.keys())
+    except Exception:
+        tickers = list(portfolio_dict.keys()) if isinstance(portfolio_dict, dict) else []
 
     # Prepare all date ranges needed
     baseline_start = (datetime.now() - timedelta(days=252)).strftime("%Y-%m-%d")
@@ -145,43 +152,30 @@ def run_pairwise_correlation_analysis(portfolio_dict: dict):
 
 
 if __name__ == "__main__":
-    portfolio_dict = {
-        # Long positions
-        "CASY": {"conviction": 0.10, "position": "long"},
-        "CELH": {"conviction": 0.10, "position": "long"},
-        "ODC": {"conviction": 0.05, "position": "long"},
-        "ODD": {"conviction": 0.05, "position": "long"},
-        "PM": {"conviction": 0.05, "position": "long"},
-        "VITL": {"conviction": 0.05, "position": "long"},
-        "WMT": {"conviction": 0.05, "position": "long"},
-        "BJ": {"conviction": 0.05, "position": "long"},
-        "SFM": {"conviction": 0.05, "position": "long"},
-        "COCO": {"conviction": 0.05, "position": "long"},
-        "MNST": {"conviction": 0.05, "position": "long"},
-        "CL": {"conviction": 0.05, "position": "long"},
-        "IPAR": {"conviction": 0.05, "position": "long"},
-        "TPB": {"conviction": 0.05, "position": "long"},
-        "DOLE": {"conviction": 0.05, "position": "long"},
-        "PPC": {"conviction": 0.05, "position": "long"},
-        "INGR": {"conviction": 0.05, "position": "long"},
-        # Short positions
-        "WBA": {"conviction": 0.05, "position": "short"},
-        "ANDE": {"conviction": 0.05, "position": "short"},
-        "TGT": {"conviction": 0.02, "position": "short"},
-        "STZ": {"conviction": 0.05, "position": "short"},
-        "PEP": {"conviction": 0.05, "position": "short"},
-        "SAM": {"conviction": 0.05, "position": "short"},
-        "MGPI": {"conviction": 0.05, "position": "short"},
-        "ENR": {"conviction": 0.05, "position": "short"},
-        "SPB": {"conviction": 0.05, "position": "short"},
-        "COTY": {"conviction": 0.05, "position": "short"},
-        "KVUE": {"conviction": 0.05, "position": "short"},
-        "KLG": {"conviction": 0.05, "position": "short"},
-        "JJSF": {"conviction": 0.05, "position": "short"},
-        "SEB": {"conviction": 0.05, "position": "short"}
-    }
+    # Example uses canonical schema with allocation/position
+    portfolio = PortfolioInput({
+        "CASY": {"allocation": 0.10, "position": "long"},
+        "CELH": {"allocation": 0.10, "position": "long"},
+        "ODC": {"allocation": 0.05, "position": "long"},
+        "ODD": {"allocation": 0.05, "position": "long"},
+        "PM": {"allocation": 0.05, "position": "long"},
+        "VITL": {"allocation": 0.05, "position": "long"},
+        "WMT": {"allocation": 0.05, "position": "long"},
+        "BJ": {"allocation": 0.05, "position": "long"},
+        "SFM": {"allocation": 0.05, "position": "long"},
+        "COCO": {"allocation": 0.05, "position": "long"},
+        "MNST": {"allocation": 0.05, "position": "long"},
+        "CL": {"allocation": 0.05, "position": "long"},
+        "IPAR": {"allocation": 0.05, "position": "long"},
+        "TPB": {"allocation": 0.05, "position": "long"},
+        "DOLE": {"allocation": 0.05, "position": "long"},
+        "PPC": {"allocation": 0.05, "position": "long"},
+        "INGR": {"allocation": 0.05, "position": "long"},
+        "WBA": {"allocation": 0.05, "position": "short"},
+        "ANDE": {"allocation": 0.05, "position": "short"}
+    })
 
-    baseline_summary, stress_summary = run_pairwise_correlation_analysis(portfolio_dict)
+    baseline_summary, stress_summary = run_pairwise_correlation_analysis(portfolio)
     print(baseline_summary)
     print(stress_summary)
 

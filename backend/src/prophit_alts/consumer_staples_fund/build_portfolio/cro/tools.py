@@ -4,7 +4,8 @@ import numpy as np
 from backend.src.calculations_v2.risk.calculator import RiskCalculator
 from backend.src.calculations_v2.returns.calculator import ReturnsCalculator
 from backend.src.repositories.price_data import fetch_bulk_price_data_for_tickers
-from backend.src.utils.validation_utils import validate_portfolio_dict
+from backend.src.utils.validation_utils import normalize_portfolio_input
+from backend.src.data_models.portfolio_models import PortfolioInput
 
 # Consumer Staples Fund initial portfolio configuration
 INITIAL_PORTFOLIO_DICT = {
@@ -51,7 +52,7 @@ def get_initial_portfolio_dict():
     return INITIAL_PORTFOLIO_DICT
 
 
-def calculate_correlation_matrix(portfolio_dict: dict = None) -> dict:
+def calculate_correlation_matrix(portfolio_dict: PortfolioInput | dict = None) -> dict:
     """
     Calculate the correlation matrix for the given portfolio.
     """
@@ -59,7 +60,8 @@ def calculate_correlation_matrix(portfolio_dict: dict = None) -> dict:
         return {"error": "Portfolio dictionary is required"}
     
     try:
-        portfolio_dict = validate_portfolio_dict(portfolio_dict)
+        normalized = normalize_portfolio_input(portfolio_dict)
+        portfolio_dict = {t: {"allocation": float(p.allocation), "position": p.position.value} for t, p in normalized.root.items()}
     except ValueError as e:
         return {"error": str(e)}
 
@@ -85,7 +87,7 @@ def calculate_correlation_matrix(portfolio_dict: dict = None) -> dict:
     
     return result
 
-def calculate_covariance_matrix(portfolio_dict: dict = None) -> dict:
+def calculate_covariance_matrix(portfolio_dict: PortfolioInput | dict = None) -> dict:
     """
     Calculate the covariance matrix for the given portfolio.
     """
@@ -93,7 +95,8 @@ def calculate_covariance_matrix(portfolio_dict: dict = None) -> dict:
         return {"error": "Portfolio dictionary is required"}
     
     try:
-        portfolio_dict = validate_portfolio_dict(portfolio_dict)
+        normalized = normalize_portfolio_input(portfolio_dict)
+        portfolio_dict = {t: {"allocation": float(p.allocation), "position": p.position.value} for t, p in normalized.root.items()}
     except ValueError as e:
         return {"error": str(e)}
 
@@ -155,12 +158,12 @@ def _get_portfolio_returns_data(tickers: list, days_back: int = 252) -> pd.DataF
     return returns_df
 
 
-def vol_es(portfolio_dict: dict = None, horizon_days: int = 1, conf: float = 0.99, method: str = 'param') -> dict:
+def vol_es(portfolio_dict: PortfolioInput | dict = None, horizon_days: int = 1, conf: float = 0.99, method: str = 'param') -> dict:
     """
     Calculate Volatility, Value at Risk (VaR), and Expected Shortfall (ES) for portfolio.
     
     Parameters:
-    - portfolio_dict: Portfolio configuration with tickers and convictions
+    - portfolio_dict: Portfolio configuration mapping ticker -> {allocation, position}
     - horizon_days: Time horizon for risk calculation (default: 1 day)
     - conf: Confidence level (default: 0.99 for 99% confidence)
     - method: Calculation method {'param', 'hist', 'ewma'}
@@ -174,14 +177,15 @@ def vol_es(portfolio_dict: dict = None, horizon_days: int = 1, conf: float = 0.9
         return {"error": "Portfolio dictionary is required"}
     
     try:
-        portfolio_dict = validate_portfolio_dict(portfolio_dict)
+        normalized = normalize_portfolio_input(portfolio_dict)
+        portfolio_dict = {t: {"allocation": float(p.allocation), "position": p.position.value} for t, p in normalized.root.items()}
     except ValueError as e:
         return {"error": str(e)}
 
     # Get tickers and weights from portfolio
     tickers = list(portfolio_dict.keys())
     weights_series = pd.Series({
-        ticker: portfolio_dict[ticker]['conviction'] * (1 if portfolio_dict[ticker]['position'] == 'long' else -1)
+        ticker: portfolio_dict[ticker]['allocation'] * (1 if portfolio_dict[ticker]['position'] == 'long' else -1)
         for ticker in tickers
     })
     
@@ -234,12 +238,12 @@ def vol_es(portfolio_dict: dict = None, horizon_days: int = 1, conf: float = 0.9
         return {"error": f"Failed to calculate vol_es: {str(e)}"}
 
 
-def risk_contribution(portfolio_dict: dict = None, metric: str = 'vol') -> dict:
+def risk_contribution(portfolio_dict: PortfolioInput | dict = None, metric: str = 'vol') -> dict:
     """
     Calculate Total Risk and risk contributions by asset.
     
     Parameters:
-    - portfolio_dict: Portfolio configuration with tickers and convictions
+    - portfolio_dict: Portfolio configuration mapping ticker -> {allocation, position}
     - metric: Risk metric to decompose {'vol', 'var'}
     
     Returns:
@@ -251,14 +255,15 @@ def risk_contribution(portfolio_dict: dict = None, metric: str = 'vol') -> dict:
         return {"error": "Portfolio dictionary is required"}
     
     try:
-        portfolio_dict = validate_portfolio_dict(portfolio_dict)
+        normalized = normalize_portfolio_input(portfolio_dict)
+        portfolio_dict = {t: {"allocation": float(p.allocation), "position": p.position.value} for t, p in normalized.root.items()}
     except ValueError as e:
         return {"error": str(e)}
 
     # Get tickers and weights from portfolio
     tickers = list(portfolio_dict.keys())
     weights_series = pd.Series({
-        ticker: portfolio_dict[ticker]['conviction'] * (1 if portfolio_dict[ticker]['position'] == 'long' else -1)
+        ticker: portfolio_dict[ticker]['allocation'] * (1 if portfolio_dict[ticker]['position'] == 'long' else -1)
         for ticker in tickers
     })
     
@@ -318,12 +323,12 @@ def risk_contribution(portfolio_dict: dict = None, metric: str = 'vol') -> dict:
         return {"error": f"Failed to calculate risk_contribution: {str(e)}"}
 
 
-def drawdown_profile(portfolio_dict: dict = None) -> dict:
+def drawdown_profile(portfolio_dict: PortfolioInput | dict = None) -> dict:
     """
     Analyze portfolio drawdown characteristics.
     
     Parameters:
-    - portfolio_dict: Portfolio configuration with tickers and convictions
+    - portfolio_dict: Portfolio configuration mapping ticker -> {allocation, position}
     
     Returns:
     - max_dd: Maximum drawdown (worst peak-to-trough decline)
@@ -335,13 +340,14 @@ def drawdown_profile(portfolio_dict: dict = None) -> dict:
         return {"error": "Portfolio dictionary is required"}
     
     try:
-        portfolio_dict = validate_portfolio_dict(portfolio_dict)
+        normalized = normalize_portfolio_input(portfolio_dict)
+        portfolio_dict = {t: {"allocation": float(p.allocation), "position": p.position.value} for t, p in normalized.root.items()}
     except ValueError as e:
         return {"error": str(e)}
 
     # Get tickers and weights from portfolio
     tickers = list(portfolio_dict.keys())
-    weights = {ticker: portfolio_dict[ticker]['conviction'] * (1 if portfolio_dict[ticker]['position'] == 'long' else -1) 
+    weights = {ticker: portfolio_dict[ticker]['allocation'] * (1 if portfolio_dict[ticker]['position'] == 'long' else -1) 
               for ticker in tickers}
     
     try:
@@ -433,6 +439,5 @@ def drawdown_profile(portfolio_dict: dict = None) -> dict:
     except Exception as e:
         return {"error": f"Failed to calculate drawdown_profile: {str(e)}"}
 
-#TODO: add an industry/subindustry concentration tool
 
 

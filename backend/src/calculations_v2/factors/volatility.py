@@ -9,6 +9,7 @@ import scipy.stats
 from backend.src.calculations_v2.core.helpers import zscore_series, winsorize_series, sector_zscore, compose_exposure
 from backend.src.calculations_v2.risk.calculator import RiskCalculator
 from backend.src.calculations_v2.core.config import DEFAULT_TRADING_DAYS, DEFAULT_SECTOR_COL, DEFAULT_WINSOR_LIMITS
+from backend.src.calculations_v2.factors.config import VOLATILITY_WEIGHTS, VOLATILITY_WINDOWS, MIN_SAMPLE_SIZE, MOMENTUM_LOOKBACK
 
 
 class VolatilityFactors:
@@ -61,10 +62,10 @@ class VolatilityFactors:
         return float(r.std(ddof=1) * np.sqrt(DEFAULT_TRADING_DAYS))
 
     def realized_vol_30d(self) -> Optional[float]:
-        return self.realized_vol(30)
+        return self.realized_vol(VOLATILITY_WINDOWS["30D"])
 
     def realized_vol_90d(self) -> Optional[float]:
-        return self.realized_vol(90)
+        return self.realized_vol(VOLATILITY_WINDOWS["90D"])
 
     def annualized_volatility(self, lookback_days: int) -> Optional[float]:
         r = self.returns.iloc[-lookback_days:]
@@ -79,15 +80,15 @@ class VolatilityFactors:
         return float(self.returns.std(ddof=1))
 
     def realized_vol_252(self) -> Optional[float]:
-        return self.realized_vol(DEFAULT_TRADING_DAYS)
+        return self.realized_vol(VOLATILITY_WINDOWS["252D"])
 
     def beta_1yr(self) -> Optional[float]:
         if self.spy_returns is None:
             return None
         combined = pd.concat([self.returns.rename("asset"), self.spy_returns.rename("spy")], axis=1).dropna()
-        if len(combined) < 30:
+        if len(combined) < MIN_SAMPLE_SIZE:
             return None
-        lookback = min(DEFAULT_TRADING_DAYS, len(combined))
+        lookback = min(VOLATILITY_WINDOWS["BETA_LOOKBACK"], len(combined))
         recent = combined.iloc[-lookback:]
         b = RiskCalculator.beta(recent["asset"], recent["spy"])
         return float(b) if np.isfinite(b) else None
@@ -97,7 +98,7 @@ class VolatilityFactors:
             return None
         import statsmodels.api as sm
         combined = pd.concat([self.returns.rename("asset"), self.spy_returns.rename("spy")], axis=1).dropna()
-        if len(combined) < 30:
+        if len(combined) < MIN_SAMPLE_SIZE:
             return None
         lookback = min(DEFAULT_TRADING_DAYS, len(combined))
         recent = combined.iloc[-lookback:]
@@ -115,13 +116,13 @@ class VolatilityFactors:
         return float(np.sqrt(np.mean(np.square(downside))) * np.sqrt(DEFAULT_TRADING_DAYS))
 
     def downside_dev_30d(self) -> Optional[float]:
-        return self.downside_dev(days=30, hurdle=0.0)
+        return self.downside_dev(days=VOLATILITY_WINDOWS["30D"], hurdle=0.0)
 
     def downside_dev_252(self) -> Optional[float]:
-        return self.downside_dev(days=DEFAULT_TRADING_DAYS, hurdle=0.0)
+        return self.downside_dev(days=VOLATILITY_WINDOWS["252D"], hurdle=0.0)
 
     def max_drawdown_1yr(self) -> Optional[float]:
-        if len(self.prices) < 30:
+        if len(self.prices) < MIN_SAMPLE_SIZE:
             return None
         lookback = min(DEFAULT_TRADING_DAYS, len(self.prices))
         p = self.prices.iloc[-lookback:]
@@ -155,11 +156,11 @@ class VolatilityFactors:
         return float(atr / curr)
 
     def variance_ratio_3m_12m(self) -> Optional[float]:
-        if len(self.returns) < 63:
+        if len(self.returns) < MOMENTUM_LOOKBACK["3M"]:
             return None
-        short = self.returns.iloc[-63:]
+        short = self.returns.iloc[-MOMENTUM_LOOKBACK["3M"]:]
         long_lookback = min(DEFAULT_TRADING_DAYS, len(self.returns))
-        if long_lookback < 126:
+        if long_lookback < MOMENTUM_LOOKBACK["6M"]:
             long_lookback = len(self.returns)
         long = self.returns.iloc[-long_lookback:]
         var_s = float(short.var())
@@ -168,7 +169,11 @@ class VolatilityFactors:
             return None
         return float(var_s / var_l)
 
-    def short_long_vol_ratio(self, short_days: int = 63, long_days: int = DEFAULT_TRADING_DAYS) -> Optional[float]:
+    def short_long_vol_ratio(self, short_days: int = None, long_days: int = None) -> Optional[float]:
+        if short_days is None:
+            short_days = MOMENTUM_LOOKBACK["3M"]
+        if long_days is None:
+            long_days = DEFAULT_TRADING_DAYS
         short_vol = self.realized_vol(short_days)
         long_vol = self.realized_vol(long_days)
         if short_vol is None or long_vol is None or long_vol <= 0:
@@ -178,7 +183,7 @@ class VolatilityFactors:
         return float(min(max(ratio, 0.25), 4.0))
 
     def skewness(self, lookback: int = DEFAULT_TRADING_DAYS) -> Optional[float]:
-        if len(self.returns) < 30:
+        if len(self.returns) < MIN_SAMPLE_SIZE:
             return None
         actual = min(lookback, len(self.returns))
         r = self.returns.iloc[-actual:]
@@ -186,7 +191,7 @@ class VolatilityFactors:
         return float(s) if not np.isnan(s) else None
 
     def kurtosis(self, lookback: int = DEFAULT_TRADING_DAYS) -> Optional[float]:
-        if len(self.returns) < 30:
+        if len(self.returns) < MIN_SAMPLE_SIZE:
             return None
         actual = min(lookback, len(self.returns))
         r = self.returns.iloc[-actual:]
@@ -289,7 +294,7 @@ class VolatilityFactors:
             return df
         base_cols = ["idio_vol", "realized_vol", "downside_dev", "svlr"]
         if not weights:
-            weights = {"idio_vol": 0.60, "realized_vol": 0.30, "downside_dev": 0.10, "svlr": 0.00}
+            weights = VOLATILITY_WEIGHTS
         df = compose_exposure(
             df,
             cols=base_cols,
@@ -356,9 +361,9 @@ class VolatilityFactors:
             "daily_return_volatility": round(self.daily_return_volatility() or np.nan, round_factor),
             
             # Annualized volatility
-            "annualized_vol_30d": round(self.annualized_volatility(30) or np.nan, round_factor),
-            "annualized_vol_90d": round(self.annualized_volatility(90) or np.nan, round_factor),
-            "annualized_vol_252d": round(self.annualized_volatility(252) or np.nan, round_factor),
+            "annualized_vol_30d": round(self.annualized_volatility(VOLATILITY_WINDOWS["30D"]) or np.nan, round_factor),
+            "annualized_vol_90d": round(self.annualized_volatility(VOLATILITY_WINDOWS["90D"]) or np.nan, round_factor),
+            "annualized_vol_252d": round(self.annualized_volatility(VOLATILITY_WINDOWS["252D"]) or np.nan, round_factor),
             
             # Market-related
             "beta_1yr": round(self.beta_1yr() or np.nan, round_factor),

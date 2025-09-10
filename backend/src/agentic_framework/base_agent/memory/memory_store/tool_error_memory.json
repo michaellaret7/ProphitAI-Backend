@@ -1295,7 +1295,71 @@
       ],
       "solutions": [],
       "auto_solution": null
+    },
+    "exposure_calculator:unknown_error": {
+      "tool_name": "exposure_calculator",
+      "error_pattern": "Portfolio input must be a non-empty dictionary or PortfolioInput",
+      "occurrences": [
+        {
+          "timestamp": "2025-09-10T15:32:47.161690",
+          "args": {
+            "portfolio_dict": {},
+            "exposure_type": "gross"
+          },
+          "full_error": "Portfolio input must be a non-empty dictionary or PortfolioInput"
+        },
+        {
+          "timestamp": "2025-09-10T15:32:47.183834",
+          "args": {
+            "portfolio_dict": {},
+            "exposure_type": "net"
+          },
+          "full_error": "Portfolio input must be a non-empty dictionary or PortfolioInput"
+        }
+      ],
+      "solutions": [],
+      "auto_solution": null
+    },
+    "VaR_calculator:unknown_error": {
+      "tool_name": "VaR_calculator",
+      "error_pattern": "Portfolio input must be a non-empty dictionary or PortfolioInput",
+      "occurrences": [
+        {
+          "timestamp": "2025-09-10T15:32:48.675746",
+          "args": {
+            "portfolio_dict": {},
+            "level": "portfolio"
+          },
+          "full_error": "Portfolio input must be a non-empty dictionary or PortfolioInput"
+        },
+        {
+          "timestamp": "2025-09-10T15:32:48.701296",
+          "args": {
+            "portfolio_dict": {},
+            "level": "industry"
+          },
+          "full_error": "Portfolio input must be a non-empty dictionary or PortfolioInput"
+        }
+      ],
+      "solutions": [],
+      "auto_solution": null
+    },
+    "industry_concentration:unknown_error": {
+      "tool_name": "industry_concentration",
+      "error_pattern": "Portfolio input must be a non-empty dictionary or PortfolioInput",
+      "occurrences": [
+        {
+          "timestamp": "2025-09-10T15:32:48.714971",
+          "args": {
+            "portfolio_dict": {},
+            "industry_level": "industry"
+          },
+          "full_error": "Portfolio input must be a non-empty dictionary or PortfolioInput"
+        }
+      ],
+      "solutions": [],
+      "auto_solution": null
     }
   },
-  "last_updated": "2025-09-08T14:04:01.591357"
+  "last_updated": "2025-09-10T15:32:48.715013"
 }

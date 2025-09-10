@@ -18,6 +18,7 @@ from backend.src.utils.ticker_utils import get_most_recent_price
 import pandas as pd
 import numpy as np
 from backend.src.calculations_v2.core.config import DEFAULT_SECTOR_COL, DEFAULT_WINSOR_LIMITS
+from backend.src.calculations_v2.factors.config import QUALITY_WEIGHTS, CORPORATE_TAX_RATE
 
 
 class QualityFactors:
@@ -105,7 +106,7 @@ class QualityFactors:
             if self.current_assets is not None and self.current_liabilities is not None
             else None
         )
-        self.nopat = (self.ebit * (1 - 0.21)) if self.ebit is not None else None
+        self.nopat = (self.ebit * (1 - CORPORATE_TAX_RATE)) if self.ebit is not None else None
         self.invested_capital = (
             (self.total_equity + self.total_debt - self.cash_and_equivalents)
             if self.total_equity is not None and self.total_debt is not None and self.cash_and_equivalents is not None
@@ -281,17 +282,7 @@ class QualityFactors:
             return df
         from backend.src.calculations_v2.core.helpers import compose_exposure
         cols = ['roe','roic','gp_a','fcf_margin','accruals','de','nd_ebitda','int_cover','stab']
-        weights = {
-            'roe': 0.40 * 0.33,
-            'roic': 0.40 * 0.33,
-            'gp_a': 0.40 * 0.34,
-            'accruals': 0.25 * 0.5,
-            'fcf_margin': 0.25 * 0.5,
-            'de': 0.25 * 0.4,
-            'nd_ebitda': 0.25 * 0.3,
-            'int_cover': 0.25 * 0.3,
-            'stab': 0.10,
-        }
+        weights = QUALITY_WEIGHTS
         return compose_exposure(
             df,
             cols=cols,
@@ -382,8 +373,8 @@ class QualityFactors:
         invested_capital0 = (float(equity0 or 0) + float(debt0 or 0) - float(cash0 or 0)) if (equity0 is not None and debt0 is not None and cash0 is not None) else None
         invested_capital4 = (float(getattr(bss[4], 'totalStockholdersEquity', 0) or 0) + float(getattr(bss[4], 'totalDebt', 0) or 0) - float(getattr(bss[4], 'cashAndCashEquivalents', 0) or 0)) if len(bss) > 4 else None
         avg_invested_capital = self.avg(invested_capital0, invested_capital4)
-        # NOPAT TTM (assume 21% tax on EBIT TTM)
-        nopat_ttm = np.nan if np.isnan(ebit_ttm) else float(ebit_ttm) * (1.0 - 0.21)
+        # NOPAT TTM (use corporate tax rate from config)
+        nopat_ttm = np.nan if np.isnan(ebit_ttm) else float(ebit_ttm) * (1.0 - CORPORATE_TAX_RATE)
 
         # Metrics (decimals); guard zeros and invalids
         def safe_div(n, d):

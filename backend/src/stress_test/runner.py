@@ -23,6 +23,8 @@ from backend.src.stress_test.scenarios import (
 from backend.src.stress_test.pairwise_corr_analysis import (
     run_pairwise_correlation_analysis
 )
+from backend.src.utils.validation_utils import normalize_portfolio_input
+from backend.src.data_models.portfolio_models import PortfolioInput
 
 
 class StressTestRunner:
@@ -31,16 +33,20 @@ class StressTestRunner:
     Pairwise correlation analysis is computed lazily and only for historical scenarios.
     """
     
-    def __init__(self, portfolio_dict: dict):
+    def __init__(self, portfolio: PortfolioInput | dict):
         """
         Initialize the stress test runner with a portfolio.
         Fetches all required data once during initialization.
         
         Parameters:
-        - portfolio_dict: Dictionary with tickers as keys and 'conviction'/'position' as values
+        - portfolio: PortfolioInput or compatible dict mapping ticker -> {allocation, position}
         """
-        self.portfolio_dict = portfolio_dict
-        self.tickers = list(portfolio_dict.keys())
+        normalized = normalize_portfolio_input(portfolio)
+        self.portfolio_dict = {
+            t: {"allocation": float(p.allocation), "position": p.position.value}
+            for t, p in normalized.root.items()
+        }
+        self.tickers = list(normalized.root.keys())
         
         # Get all unique ETFs from scenarios
         self.etf_list = self._get_all_etfs()
@@ -123,7 +129,7 @@ class StressTestRunner:
             
             # Run stress test engine with cached betas
             engine_results = run_stress_test_engine(
-                self.portfolio_dict, 
+                self.portfolio_dict,
                 etf_shocks,
                 pre_calculated_betas=scenario_betas
             )
@@ -218,18 +224,18 @@ class StressTestRunner:
             'scenario_etf_moves': etf_shocks
         }
 
-def run_stress_test_workflow(portfolio_dict: dict):
+def run_stress_test_workflow(portfolio: PortfolioInput | dict):
     """
     Legacy function for backward compatibility.
     Creates a StressTestRunner instance and runs the workflow.
     
     Parameters:
-    - portfolio_dict: Dictionary with tickers as keys and 'conviction'/'position' as values
+    - portfolio: PortfolioInput or compatible dict mapping ticker -> {allocation, position}
     
     Returns:
     - dict: Results for all scenarios
     """
-    runner = StressTestRunner(portfolio_dict)
+    runner = StressTestRunner(portfolio)
     return runner.run_workflow()
 
 

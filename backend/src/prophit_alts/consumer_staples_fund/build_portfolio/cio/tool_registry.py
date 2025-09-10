@@ -14,6 +14,7 @@ from backend.src.prophit_alts.consumer_staples_fund.build_portfolio.cio.tools im
     VaR_calculator,
     calculate_portfolio_beta_vs_index,
     factor_tilts_for_portfolio,
+    pull_rest_of_ticker_pool,
 )
 from backend.src.calculations_v2.portfolio.build.builder import CorrelationPortfolioBuilder
 
@@ -420,6 +421,20 @@ def register_cio_tools(agent):
             lookback_days=lookback_days,
             max_position_weight=max_position_weight,
         ),
+    )
+
+    # Tool 10: Pull Rest of Ticker Pool
+    agent.add_tool(
+        name="pull_rest_of_ticker_pool",
+        description=(
+            "Return remaining consumer staples tickers not already in fund initial positions, "
+            "filtered by sector and minimum market cap."
+        ),
+        parameters={
+            "type": "object",
+            "properties": {},
+        },
+        function=pull_rest_of_ticker_pool,
     )
 
 

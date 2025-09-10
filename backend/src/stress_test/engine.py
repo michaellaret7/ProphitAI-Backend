@@ -4,6 +4,8 @@ from backend.src.repositories.price_data import fetch_bulk_price_data_for_ticker
 from backend.src.calculations_v2.risk import RiskCalculator
 from backend.src.calculations_v2.returns import ReturnsCalculator
 from backend.src.stress_test.scenarios import historical_scenarios, hypothetical_scenarios
+from backend.src.utils.validation_utils import normalize_portfolio_input
+from backend.src.data_models.portfolio_models import PortfolioInput
 
 def calculate_dynamic_weights(portfolio_betas: dict, ticker: str) -> dict:
     """
@@ -121,25 +123,32 @@ def get_stock_return(shock_returns: dict, portfolio_betas: dict) -> dict:
 
     return summed_returns
 
-def run_stress_test_engine(portfolio_dict: dict, etf_shocks: dict, pre_calculated_betas: dict = None):
+def run_stress_test_engine(portfolio: PortfolioInput | dict, etf_shocks: dict, pre_calculated_betas: dict = None):
     """
     Run the stress test engine.
     
     Parameters:
-    - portfolio_dict: Dictionary with tickers as keys and 'conviction'/'position' as values
+    - portfolio: PortfolioInput or compatible dict mapping ticker -> {allocation, position}
     - etf_shocks: Dictionary with ETF tickers as keys and shock values (decimals) as values
     - pre_calculated_betas: Optional pre-calculated betas to avoid redundant fetching
     
     Returns:
     - dict: Contains expected_returns, betas, and shock_returns
     """
+    # Normalize portfolio to canonical schema
+    normalized = normalize_portfolio_input(portfolio)
+    normalized_dict = {
+        t: {"allocation": float(p.allocation), "position": p.position.value}
+        for t, p in normalized.root.items()
+    }
+    tickers = list(normalized.root.keys())
     # Use pre-calculated betas if provided, otherwise fetch them
     if pre_calculated_betas is not None:
         betas = pre_calculated_betas
     else:
-        betas = get_portfolio_betas(list(portfolio_dict.keys()), etf_shocks)
+        betas = get_portfolio_betas(tickers, etf_shocks)
     
-    shock_returns = compute_shock_returns(betas, etf_shocks, portfolio_dict)
+    shock_returns = compute_shock_returns(betas, etf_shocks, normalized_dict)
     expected_returns = get_stock_return(shock_returns, betas)
 
     return {
@@ -148,3 +157,13 @@ def run_stress_test_engine(portfolio_dict: dict, etf_shocks: dict, pre_calculate
         'shock_returns': shock_returns
     }
 
+
+if __name__ == "__main__":
+    portfolio = PortfolioInput({
+        "AAPL": {"allocation": 0.05, "position": "long"},
+        "WBA": {"allocation": 0.03, "position": "short"},
+    })
+    etf_shocks = {
+        "SPY": 0.05,
+    }
+    print(run_stress_test_engine(portfolio, etf_shocks))

@@ -16,6 +16,7 @@ from backend.src.calculations_v2.core.helpers import (
     zscore_series,
 )
 from backend.src.calculations_v2.core.config import DEFAULT_SECTOR_COL, DEFAULT_WINSOR_LIMITS
+from backend.src.calculations_v2.factors.config import VALUE_WEIGHTS, PRICE_LOOKBACK_DAYS
 
 
 class ValueFactors:
@@ -45,7 +46,7 @@ class ValueFactors:
         # Price aligned to as_of_date if provided, else most recent
         try:
             if self.as_of_date is not None:
-                start_dt = self._effective_end_dt - timedelta(days=30)
+                start_dt = self._effective_end_dt - timedelta(days=PRICE_LOOKBACK_DAYS)
                 price_data = self.ds.get_price_data(self.ticker, start_dt, self._effective_end_dt)
                 if price_data and price_data.frame is not None and not price_data.frame.empty:
                     last_close = price_data.frame["close"].iloc[-1]
@@ -432,18 +433,9 @@ class ValueFactors:
             df[f"{c}_w"] = winsorize_series(df[c].astype(float), lower=lw, upper=uw)
             df[f"{c}_z"] = sector_zscore(df, f"{c}_w", sector_col=sector_col)
 
-        # Default weights
+        # Default weights from config
         if not weights:
-            weights = {
-                "bp": 0.20,
-                "ep": 0.20,
-                "cfp": 0.15,
-                "fcf_yield": 0.15,
-                "sales_ev": 0.10,
-                "ebitda_ev": 0.10,
-                "ebit_ev": 0.05,
-                "div_yld": 0.05,
-            }
+            weights = VALUE_WEIGHTS
 
         ev_cols = {"sales_ev", "ebitda_ev", "ebit_ev"}
 

@@ -21,6 +21,7 @@ import numpy as np
 from scipy import stats
 import pandas as pd
 from backend.src.calculations_v2.core.config import DEFAULT_SECTOR_COL, DEFAULT_WINSOR_LIMITS
+from backend.src.calculations_v2.factors.config import GROWTH_WEIGHTS
 
 
 class GrowthFactors:
@@ -399,7 +400,7 @@ class GrowthFactors:
             return df
         cols = ["fwd_eps_g", "fwd_2y_cagr", "sales_yoy", "ocf_yoy"]
         if not weights:
-            weights = {"fwd_eps_g": 0.35, "fwd_2y_cagr": 0.25, "sales_yoy": 0.20, "ocf_yoy": 0.20}
+            weights = GROWTH_WEIGHTS
         return compose_exposure(
             df,
             cols=cols,

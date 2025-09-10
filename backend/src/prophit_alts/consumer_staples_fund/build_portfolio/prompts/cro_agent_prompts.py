@@ -47,31 +47,31 @@ Portfolio Tools:
     b. This is essential for risk assessment and scenario analysis
 2. get_initial_portfolio_dict() → Get the initial portfolio dictionary
     a. This tool takes no args
-    b. This returns the CIO-recommended initial portfolio with 34 tickers
+    b. This returns the CIO-recommended initial portfolio with 34 tickers   
     c. This is good for getting the baseline portfolio dictionary
 3. vol_es(portfolio_dict=DICTIONARY, horizon_days=1, conf=0.99, method="param") → Calculate VaR and Expected Shortfall
     a. Calculates Value at Risk (VaR), Expected Shortfall (ES), and portfolio volatility
     b. Parameters: horizon_days (1-252), conf (0.90-0.999), method ("param", "hist", "ewma")
     c. Essential for establishing quantitative risk baseline and position sizing
-    d. Dictionary format is: {{"ticker": "SYMBOL", "conviction": 0.05, "position": "long|short"}}
+    d. Dictionary format is: {{"ticker": "SYMBOL", "allocation": 0.05, "position": "long|short"}}
 4. risk_contribution(portfolio_dict=DICTIONARY, metric="vol") → Analyze risk attribution by position
     a. Decomposes Total Risk (TR) into Marginal (MCTR) and Component (CTR%) contributions
     b. Parameters: metric ("vol" for volatility, "var" for Value at Risk decomposition)
     c. Critical for identifying concentration risks and position sizing decisions
-    d. Dictionary format is: {{"ticker": "SYMBOL", "conviction": 0.05, "position": "long|short"}}
+    d. Dictionary format is: {{"ticker": "SYMBOL", "allocation": 0.05, "position": "long|short"}}
 5. drawdown_profile(portfolio_dict=DICTIONARY) → Analyze historical drawdown characteristics
     a. Calculates maximum drawdown, average drawdown, Ulcer Index, and recovery episodes
     b. Uses 2-year historical data to assess downside protection and resilience
     c. Essential for understanding actual portfolio behavior during market stress
-    d. Dictionary format is: {{"ticker": "SYMBOL", "conviction": 0.05, "position": "long|short"}}
+    d. Dictionary format is: {{"ticker": "SYMBOL", "allocation": 0.05, "position": "long|short"}}
 6. calculate_correlation_matrix(portfolio_dict=DICTIONARY) → Calculate the correlation matrix for the portfolio
     a. This tool calculates the correlation matrix for the portfolio
     b. This is essential for understanding relationships between holdings
-    c. Dictionary format is: {{"ticker": "SYMBOL", "conviction": 0.05, "position": "long|short"}}
+    c. Dictionary format is: {{"ticker": "SYMBOL", "allocation": 0.05, "position": "long|short"}}
 7. calculate_covariance_matrix(portfolio_dict=DICTIONARY) → Calculate the covariance matrix for the portfolio
     a. This tool calculates the covariance matrix for the portfolio
     b. This is essential for portfolio optimization and risk measurement
-    c. Dictionary format is: {{"ticker": "SYMBOL", "conviction": 0.05, "position": "long|short"}}
+    c. Dictionary format is: {{"ticker": "SYMBOL", "allocation": 0.05, "position": "long|short"}}
 
 Analysis Tools:
 1. free_search(query="search_query") → Search web for information
@@ -88,12 +88,12 @@ Other Tools:
 
 <Dictionary Format Rules>
 For portfolio_dict parameters:
-- Use DOUBLE QUOTES for all keys and string values: "ticker", "conviction", "position", "long", "short"
+- Use DOUBLE QUOTES for all keys and string values: "ticker", "allocation", "position", "long", "short"
 - Numbers WITHOUT quotes: 0.05 not "0.05"  
 - Keep entire dictionary on ONE LINE
 - No trailing commas
 
-CORRECT Example: {{"CASY": {{"conviction": 0.10, "position": "long"}}, "WBA": {{"conviction": 0.05, "position": "short"}}}}
+CORRECT Example: {{"CASY": {{"allocation": 0.10, "position": "long"}}, "WBA": {{"allocation": 0.05, "position": "short"}}}}
 
 For new risk tools parameters:
 - vol_es: horizon_days (integer 1-252), conf (decimal 0.90-0.999), method (string "param"/"hist"/"ewma")

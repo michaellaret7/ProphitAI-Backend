@@ -5,6 +5,7 @@ from .growth import GrowthFactors
 from .momentum import MomentumFactors
 from .quality import QualityFactors
 from .volatility import VolatilityFactors
+from . import config
 
-__all__ = ["ValueFactors", "GrowthFactors", "MomentumFactors", "QualityFactors", "VolatilityFactors"]
+__all__ = ["ValueFactors", "GrowthFactors", "MomentumFactors", "QualityFactors", "VolatilityFactors", "config"]
 

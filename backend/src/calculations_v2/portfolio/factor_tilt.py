@@ -15,6 +15,7 @@ from backend.src.calculations_v2.factors import (
     QualityFactors,
     VolatilityFactors,
 )
+from backend.src.calculations_v2.factors.config import DEFAULT_PRICE_LOOKBACK
 import warnings; warnings.filterwarnings("ignore", category=FutureWarning)
 
 
@@ -152,9 +153,8 @@ def _compute_exposure_frame(
         df = pd.DataFrame(rows)
         df = VolatilityFactors.compose_volatility_exposure(df)
         # Provide beta column when available to improve orthogonalization
-        beta_col = "beta" if "beta" in df.columns else "beta"
-        df[beta_col] = df.get(beta_col, np.nan)
-        df = VolatilityFactors.orthogonalize_volatility(df, exposure_col="vol_exposure_raw", beta_col=beta_col)
+        df["beta"] = df.get("beta", np.nan)
+        df = VolatilityFactors.orthogonalize_volatility(df, exposure_col="vol_exposure_raw", beta_col="beta")
         return df, "vol_exposure"
 
     raise ValueError(f"Unsupported factor: {factor}")
@@ -170,14 +170,14 @@ def portfolio_factor_tilts(
 
     - weights: mapping of ticker -> signed portfolio weight (positive=long, negative=short)
     - factor: one of {value, growth, momentum, quality, volatility}
-    - start/end: lookback window for price-based factors (defaults to ~1y)
+    - start/end: lookback window for price-based factors (defaults to DEFAULT_PRICE_LOOKBACK from config)
     Returns dict with net/long/short tilts and per-ticker exposures.
     """
     if not weights:
         return {"error": "weights is empty"}
 
     end_dt = end or datetime.now(timezone.utc)
-    start_dt = start or (end_dt - timedelta(days=365))
+    start_dt = start or (end_dt - timedelta(days=DEFAULT_PRICE_LOOKBACK))
 
     ds = DataService()
     tickers = [t.upper() for t in weights.keys()]

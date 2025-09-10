@@ -6,8 +6,11 @@ industry returns, contribution analysis, and performance metrics.
 
 from backend.src.db.core.db_config import MarketSession
 from backend.src.db.core.market_data_models import Ticker
+from typing import Optional
+from backend.src.utils.validation_utils import normalize_portfolio_input
+from backend.src.data_models.portfolio_models import PortfolioInput
 
-def industry_returns_analysis(scenario_results, portfolio_dict=None):
+def industry_returns_analysis(scenario_results, portfolio_dict: PortfolioInput | dict | None = None):
     """
     Calculate weighted average returns per industry from scenario results.
     
@@ -29,21 +32,34 @@ def industry_returns_analysis(scenario_results, portfolio_dict=None):
     df['industry'] = df['ticker'].map(industry_map)
     
     if portfolio_dict:
-        # Add conviction weights to dataframe
-        df['conviction'] = df['ticker'].map(lambda x: portfolio_dict.get(x, {}).get('conviction', 0))
-        
-        # Calculate weighted return per industry
-        industry_groups = df.groupby('industry')
-        industry_returns_dict = {}
-        
-        for industry, group in industry_groups:
-            # Calculate weighted average return for the industry
-            total_weight = group['conviction'].sum()
-            if total_weight > 0:
-                weighted_return = (group['pnl'] * group['conviction']).sum() / total_weight
-                industry_returns_dict[industry] = f"{round(float(weighted_return) * 100, 2)}%"
-            else:
-                industry_returns_dict[industry] = "0.00%"
+        # Build allocation weights map (normalize if needed)
+        allocation_map = None
+        try:
+            norm = normalize_portfolio_input(portfolio_dict)
+            allocation_map = {t: float(p.allocation) for t, p in norm.root.items()}
+        except Exception:
+            if isinstance(portfolio_dict, dict):
+                allocation_map = {
+                    t: float(v.get('allocation', v.get('conviction', 0.0))) if isinstance(v, dict) else 0.0
+                    for t, v in portfolio_dict.items()
+                }
+
+        if allocation_map:
+            df['allocation'] = df['ticker'].map(lambda x: allocation_map.get(x, 0.0))
+            # Calculate weighted return per industry using allocation weights
+            industry_groups = df.groupby('industry')
+            industry_returns_dict = {}
+            for industry, group in industry_groups:
+                total_weight = group['allocation'].sum()
+                if total_weight > 0:
+                    weighted_return = (group['pnl'] * group['allocation']).sum() / total_weight
+                    industry_returns_dict[industry] = f"{round(float(weighted_return) * 100, 2)}%"
+                else:
+                    industry_returns_dict[industry] = "0.00%"
+        else:
+            # Fallback to simple average return per industry if no valid weights
+            industry_returns = df.groupby('industry')['pnl'].mean()
+            industry_returns_dict = {industry: f"{round(float(pnl) * 100, 2)}%" for industry, pnl in industry_returns.items()}
     else:
         # Simple average return per industry if no weights provided
         industry_returns = df.groupby('industry')['pnl'].mean()
@@ -55,7 +71,7 @@ def industry_returns_analysis(scenario_results, portfolio_dict=None):
     
     return industry_returns_dict
 
-def contribution_analysis(scenario_results, portfolio_dict=None):
+def contribution_analysis(scenario_results, portfolio_dict: PortfolioInput | dict | None = None):
     """
     Perform contribution analysis on scenario results.
     
@@ -68,15 +84,27 @@ def contribution_analysis(scenario_results, portfolio_dict=None):
     """
     df = scenario_results['position_details'].copy()
     
-    # Add conviction weights if portfolio_dict is provided
+    # Add allocation weights if portfolio_dict is provided; else use equal weights
     if portfolio_dict:
-        df['conviction'] = df['ticker'].map(lambda x: portfolio_dict.get(x, {}).get('conviction', 0))
+        allocation_map = None
+        try:
+            norm = normalize_portfolio_input(portfolio_dict)
+            allocation_map = {t: float(p.allocation) for t, p in norm.root.items()}
+        except Exception:
+            if isinstance(portfolio_dict, dict):
+                allocation_map = {
+                    t: float(v.get('allocation', v.get('conviction', 0.0))) if isinstance(v, dict) else 0.0
+                    for t, v in portfolio_dict.items()
+                }
+        if allocation_map:
+            df['allocation'] = df['ticker'].map(lambda x: allocation_map.get(x, 0.0))
+        else:
+            df['allocation'] = 1.0 / len(df)
     else:
-        # Assume equal weights if no portfolio_dict provided
-        df['conviction'] = 1.0 / len(df)
+        df['allocation'] = 1.0 / len(df)
     
     # Calculate weighted PnL
-    df['weighted_pnl'] = df['pnl'] * df['conviction']
+    df['weighted_pnl'] = df['pnl'] * df['allocation']
     df['weighted_abs_pnl'] = df['weighted_pnl'].abs()
     
     # 1. Position P&L Impact: Rank all positions by absolute weighted P&L contribution
@@ -115,7 +143,7 @@ def contribution_analysis(scenario_results, portfolio_dict=None):
         'long_short_attribution': attribution
     }
 
-def performance_analysis(scenario_results, portfolio_dict=None):
+def performance_analysis(scenario_results, portfolio_dict: PortfolioInput | dict | None = None):
     """
     Perform performance analysis on scenario results.
     
@@ -128,12 +156,24 @@ def performance_analysis(scenario_results, portfolio_dict=None):
     """
     df = scenario_results['position_details'].copy()
     
-    # Add conviction weights if portfolio_dict is provided
+    # Add allocation weights if portfolio_dict is provided; otherwise use raw PnL
     if portfolio_dict:
-        df['conviction'] = df['ticker'].map(lambda x: portfolio_dict.get(x, {}).get('conviction', 0))
-        df['weighted_pnl'] = df['pnl'] * df['conviction']
+        allocation_map = None
+        try:
+            norm = normalize_portfolio_input(portfolio_dict)
+            allocation_map = {t: float(p.allocation) for t, p in norm.root.items()}
+        except Exception:
+            if isinstance(portfolio_dict, dict):
+                allocation_map = {
+                    t: float(v.get('allocation', v.get('conviction', 0.0))) if isinstance(v, dict) else 0.0
+                    for t, v in portfolio_dict.items()
+                }
+        if allocation_map:
+            df['allocation'] = df['ticker'].map(lambda x: allocation_map.get(x, 0.0))
+            df['weighted_pnl'] = df['pnl'] * df['allocation']
+        else:
+            df['weighted_pnl'] = df['pnl']
     else:
-        # If no weights, use raw PnL
         df['weighted_pnl'] = df['pnl']
 
     # --- 1. Top 5 Tickers by Beta Exposure ---

@@ -14,6 +14,7 @@ from backend.src.calculations_v2.core.helpers import (
     compose_exposure,
 )
 from backend.src.calculations_v2.core.config import DEFAULT_SECTOR_COL, DEFAULT_WINSOR_LIMITS
+from backend.src.calculations_v2.factors.config import MOMENTUM_WEIGHTS, MOMENTUM_LOOKBACK
 
 
 class MomentumFactors:
@@ -83,29 +84,35 @@ class MomentumFactors:
 
     # ------------------------- returns windows ------------------------- #
     def one_month_return(self) -> Optional[float]:
-        return self._window_return(self.prices, lookback=21, skip_end=0)
+        return self._window_return(self.prices, lookback=MOMENTUM_LOOKBACK["1M"], skip_end=0)
 
-    def three_month_return(self, skip: int = 21) -> Optional[float]:
-        return self._window_return(self.prices, lookback=63, skip_end=skip)
+    def three_month_return(self, skip: int = None) -> Optional[float]:
+        if skip is None:
+            skip = MOMENTUM_LOOKBACK["SKIP_RECENT"]
+        return self._window_return(self.prices, lookback=MOMENTUM_LOOKBACK["3M"], skip_end=skip)
 
-    def six_month_return(self, skip: int = 21) -> Optional[float]:
-        return self._window_return(self.prices, lookback=126, skip_end=skip)
+    def six_month_return(self, skip: int = None) -> Optional[float]:
+        if skip is None:
+            skip = MOMENTUM_LOOKBACK["SKIP_RECENT"]
+        return self._window_return(self.prices, lookback=MOMENTUM_LOOKBACK["6M"], skip_end=skip)
 
     def twelve_month_return_ex1m(self) -> Optional[float]:
-        return self._window_return(self.prices, lookback=252, skip_end=21)
+        return self._window_return(self.prices, lookback=MOMENTUM_LOOKBACK["12M"], skip_end=MOMENTUM_LOOKBACK["SKIP_RECENT"])
 
     # Canonical ex-1m windows
     def r12_1(self) -> Optional[float]:
         return self.twelve_month_return_ex1m()
 
     def r6_1(self) -> Optional[float]:
-        return self.six_month_return(skip=21)
+        return self.six_month_return(skip=MOMENTUM_LOOKBACK["SKIP_RECENT"])
 
     def r3_1(self) -> Optional[float]:
-        return self.three_month_return(skip=21)
+        return self.three_month_return(skip=MOMENTUM_LOOKBACK["SKIP_RECENT"])
 
     # ------------------------- 52w high ------------------------- #
-    def pct_from_52w_high(self, window: int = 252) -> Optional[float]:
+    def pct_from_52w_high(self, window: int = None) -> Optional[float]:
+        if window is None:
+            window = MOMENTUM_LOOKBACK["12M"]
         if len(self.prices) < window:
             return None
         highest = self.prices.iloc[-window:].max()
@@ -159,7 +166,9 @@ class MomentumFactors:
         return float(rsi_series.iloc[-1])
 
     # ------------------------- Idiosyncratic Momentum ------------------------- #
-    def idiosyncratic_momentum(self, lookback: int = 60) -> Optional[float]:
+    def idiosyncratic_momentum(self, lookback: int = None) -> Optional[float]:
+        if lookback is None:
+            lookback = MOMENTUM_LOOKBACK["IDIO_LOOKBACK"]
         if self.market_returns is None:
             return None
         import statsmodels.api as sm
@@ -172,7 +181,9 @@ class MomentumFactors:
         resid = model.resid
         return float((1 + resid).prod() - 1)
 
-    def sector_idiosyncratic_momentum(self, lookback: int = 60) -> Optional[float]:
+    def sector_idiosyncratic_momentum(self, lookback: int = None) -> Optional[float]:
+        if lookback is None:
+            lookback = MOMENTUM_LOOKBACK["IDIO_LOOKBACK"]
         if self.sector_returns is None:
             return None
         import statsmodels.api as sm
@@ -186,8 +197,12 @@ class MomentumFactors:
         return float((1 + resid).prod() - 1)
 
     # ------------------------- Residual Momentum (log, ex-1m) ------------------------- #
-    def idiosyncratic_momentum_log(self, lookback: int = 252, skip_end: int = 21) -> Optional[float]:
+    def idiosyncratic_momentum_log(self, lookback: int = None, skip_end: int = None) -> Optional[float]:
         """Log-based residual momentum vs market over window excluding last month."""
+        if lookback is None:
+            lookback = MOMENTUM_LOOKBACK["12M"]
+        if skip_end is None:
+            skip_end = MOMENTUM_LOOKBACK["SKIP_RECENT"]
         if self.market_prices is None:
             return None
         import statsmodels.api as sm
@@ -206,7 +221,11 @@ class MomentumFactors:
         except Exception:
             return None
 
-    def sector_idiosyncratic_momentum_log(self, lookback: int = 252, skip_end: int = 21) -> Optional[float]:
+    def sector_idiosyncratic_momentum_log(self, lookback: int = None, skip_end: int = None) -> Optional[float]:
+        if lookback is None:
+            lookback = MOMENTUM_LOOKBACK["12M"]
+        if skip_end is None:
+            skip_end = MOMENTUM_LOOKBACK["SKIP_RECENT"]
         if self.sector_prices is None:
             return None
         lr = self._log_returns(self.prices)
@@ -246,7 +265,7 @@ class MomentumFactors:
             return df
         cols = ["r12_1", "r6_1", "idio_mom"]
         if not weights:
-            weights = {"r12_1": 0.6, "r6_1": 0.2, "idio_mom": 0.2}
+            weights = MOMENTUM_WEIGHTS
         return compose_exposure(
             df,
             cols=cols,
@@ -317,7 +336,9 @@ class MomentumFactors:
         return out
     
         # ------------------------- Volume-Adjusted Momentum ------------------------- #
-    def volume_adjusted_momentum(self, lookback: int = 60) -> Optional[float]:
+    def volume_adjusted_momentum(self, lookback: int = None) -> Optional[float]:
+        if lookback is None:
+            lookback = MOMENTUM_LOOKBACK["IDIO_LOOKBACK"]
         if self.volumes is None:
             return None
         if len(self.returns) < lookback + 1:
