@@ -1,46 +1,73 @@
-## Plan: Portfolio Factor Style Exposures (Long/Short) — Proof of Concept
+# Portfolio Dictionary Normalization Task
 
-Context
-- Goal: Compute portfolio-level style tilts for long/short equity portfolios using existing `backend/src/calculations_v2/` modules.
-- Approach: Characteristic-based tilts via cross-sectional factor exposures per ticker, then portfolio aggregation; optional regression-based tilts when factor return series are available.
+## Instances Found Where Portfolio Dictionaries Are Used As Input Arguments
 
-Todos
-1) Define POC scope and function shape (no code saved yet)
-   - Function: `portfolio_factor_tilts(weights: dict[str, float], factor: str, start: datetime, end: datetime) -> dict`
-   - Factors supported: `value`, `growth`, `momentum`, `quality`, `volatility`.
-   - Outputs: per-ticker exposure, and portfolio-level net/long/short tilts.
+### Target Format: 
+```json
+{
+  "ticker": {
+    "allocation": float,
+    "position": "long"/"short"
+  }
+}
+```
 
-2) Per-ticker factor attributes and exposures (use calculations_v2)
-   - Value: `ValueFactors(ticker).compute_attributes()` → `compose_value_exposure()` → `orthogonalize_value()`
-   - Growth: `GrowthFactors(ticker).compute_attributes()` → `compose_growth_exposure()` → `orthogonalize_growth()`
-   - Momentum: `MomentumFactors(price_series, dividends?, market?)` → `compute_attributes()` → `compose_momentum_exposure()` → `orthogonalize_momentum()`
-   - Quality: `QualityFactors(ticker).compute_attributes()` → `compose_quality_exposure()` → `orthogonalize_quality()`
-   - Volatility: `VolatilityFactors(price_series, SPY?)` → `compute_attributes()` → `compose_volatility_exposure()` → `orthogonalize_volatility()`
-   - Data via `DataService`: prices/dividends/fundamentals; sector optional (falls back to global z-score if absent).
+### Files to Update:
 
-3) Portfolio aggregation
-   - Build DataFrame of per-ticker exposures (column: `<factor>_exposure`).
-   - Compute: net tilt = Σ w_i * exp_i; long tilt = Σ w_i+ / Σ w+ * exp_i; short tilt = Σ |w_i-| / Σ |w-| * exp_i (report signed as long − short and separately by leg).
-   - Return dict with tilts and per-ticker table.
+1. **backend/src/stress_test/engine.py**
+   - `run_stress_test_engine(portfolio_dict: dict, etf_shocks: dict, pre_calculated_betas: dict = None)`
+   - Current format: `{ticker: {'conviction': float, 'position': str}}`
 
-4) Optional regression-based variant (if factor returns available)
-   - Use `PortfolioReturnsCalculator.weighted_daily_returns` for portfolio daily r.
-   - Regress on factor return series (e.g., Fama–French/Carhart) via `statsmodels` OLS; report betas as alternative style exposures.
+2. **backend/src/stress_test/runner.py**
+   - `__init__(self, portfolio_dict: dict)`
+   - Current format: `{ticker: {'conviction': float, 'position': str}}`
 
-5) Example usage (manual test)
-   - Use a small ticker set and signed weights; time window ≈ 252–504 trading days.
+3. **backend/src/stress_test/performance_analysis.py**
+   - `contribution_analysis(scenario_results, portfolio_dict=None)`
+   - `performance_analysis(scenario_results, portfolio_dict=None)`
+   - Current format: `{ticker: {'conviction': float, 'position': str}}`
 
-Review (to complete after implementation)
-- Summarize decisions (data sources, sector handling, orthogonalization steps), sample outputs, and any caveats.
+4. **backend/src/stress_test/pairwise_corr_analysis.py**
+   - `run_pairwise_correlation_analysis(portfolio_dict: dict)`
+   - Current format: Dictionary with tickers as keys
 
----
+5. **backend/src/prophit_alts/consumer_staples_fund/build_portfolio/cio/tools.py**
+   - `correlation_matrix(portfolio_dict: dict, lookback_days: int = 252)`
+   - `exposure_calculator(portfolio_dict: dict, exposure_type: str)`
+   - `industry_concentration(portfolio_dict: dict, industry_level: str)`
+   - `VaR_calculator(portfolio_dict: dict, level: str)`
+   - `factor_tilts_for_portfolio(portfolio_dict: dict, factors: str)`
+   - Current format: Various formats
 
-Review (done)
-- Implemented `portfolio_factor_tilts` POC in `backend/testing/factor_tilt.py`.
-- Uses `DataService` for prices/dividends/fundamentals; composes/orthogonalizes exposures via
-  existing calculators per factor (Value/Growth/Momentum/Quality/Volatility).
-- Aggregates net tilt (Σ w·exp), and leg averages for long and short.
-- Momentum/Volatility require price windows; defaults to ~1y; SPY used where helpful.
-- Caveats: sector-aware z-scoring uses global z when sector is absent; exposure columns must exist
-  after composition; tickers lacking data are skipped (NaN exposures).
+6. **backend/src/prophit_alts/consumer_staples_fund/build_portfolio/cro/tools.py**
+   - `calculate_correlation_matrix(portfolio_dict: dict = None)`
+   - `calculate_covariance_matrix(portfolio_dict: dict = None)`
+   - `vol_es(portfolio_dict: dict = None, horizon_days: int = 1, conf: float = 0.99, method: str = 'param')`
+   - `risk_contribution(portfolio_dict: dict = None, metric: str = 'vol')`
+   - `drawdown_profile(portfolio_dict: dict = None)`
+   - Current format: Various formats
 
+7. **backend/src/calculations/trade_entry.py**
+   - `get_entry_prices(portfolio: Dict[str, Tuple[float, str]], debug: bool = False)`
+   - Current format: `{ticker: (weight, position_type)}`
+
+8. **backend/src/calculations/performance_calculations/portfolio_performance_calculations.py**
+   - `get_upside_downside_ratios(portfolio_dict: dict)`
+   - Current format: `{ticker: {'conviction': float, 'position': str}}`
+   - `__init__(self, tickers_weights: Dict[str, float], start_date: str, end_date: str)`
+   - Current format: `{ticker: weight}`
+
+9. **backend/src/calculations/returns_calculations/portfolio_returns_calculations.py**
+   - `__init__(self, tickers_weights: Dict[str, float], start_date: str, end_date: str)`
+   - Current format: `{ticker: weight}` (signed weights for long/short)
+
+10. **backend/src/utils/validation_utils.py**
+    - `validate_portfolio_dict(portfolio_dict: dict)`
+    - Current format: Various formats
+
+11. **backend/src/prophit_alts/consumer_staples_fund/build_portfolio/cio/tool_registry.py**
+    - Multiple lambda functions that accept `portfolio_dict` parameter
+    - Current format: Various formats
+
+### Note:
+Some instances use different field names like 'conviction' instead of 'allocation', and some use tuple formats instead of dictionaries. All need to be normalized to the target format.

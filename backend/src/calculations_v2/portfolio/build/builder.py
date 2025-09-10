@@ -45,8 +45,8 @@ class CorrelationPortfolioBuilder:
         
         Args:
             tickers: Dictionary with ticker symbols as keys and dict containing:
-                    - 'conviction': Decimal risk allocation (e.g., 0.10 = 10% of risk budget)
-                                   Convictions are normalized within long/short groups
+                    - 'allocation': Decimal risk allocation (e.g., 0.10 = 10% of risk budget)
+                                   Allocations are normalized within long/short groups
                     - 'position': Either 'long' or 'short'
             target_annual_vol: Target annual volatility (e.g., 0.10 for 10%)
             portfolio_value: Total portfolio value in dollars (base capital before leverage)
@@ -102,6 +102,14 @@ class CorrelationPortfolioBuilder:
             net_exposure = long_exposure - short_exposure
             gross_exposure = long_exposure + short_exposure
             
+            # Create final portfolio in allocation/position format
+            final_portfolio = {}
+            for ticker, weight in weights.items():
+                final_portfolio[ticker] = {
+                    "allocation": round(abs(float(weight)), 5),
+                    "position": "long" if float(weight) > 0 else "short"
+                }
+            
             return {
                 "status": "success",
                 "weights": weights.to_dict(),
@@ -114,7 +122,8 @@ class CorrelationPortfolioBuilder:
                 "actual_net_exposure": net_exposure,
                 "gross_exposure": gross_exposure,
                 "long_exposure": long_exposure,
-                "short_exposure": short_exposure
+                "short_exposure": short_exposure,
+                "final_portfolio": final_portfolio
             }
             
         except Exception as e:
@@ -267,7 +276,7 @@ class CorrelationPortfolioBuilder:
         
         Args:
             returns: DataFrame of returns
-            tickers: Dictionary with ticker info including position and conviction
+            tickers: Dictionary with ticker info including position and allocation
             target_net_exposure: Target net exposure (None for natural)
             max_position_weight: Maximum weight per position
             method: Optimization method
@@ -282,34 +291,34 @@ class CorrelationPortfolioBuilder:
         long_tickers = [t for t in tickers if tickers[t]['position'] == 'long']
         short_tickers = [t for t in tickers if tickers[t]['position'] == 'short']
         
-        # Get convictions (as decimal allocations, e.g., 0.1 = 10%)
-        # If no conviction specified, use equal weight placeholder
-        base_convictions = {}
+        # Get allocations (as decimal allocations, e.g., 0.1 = 10%)
+        # If no allocation specified, use equal weight placeholder
+        base_allocations = {}
         for ticker in tickers:
             if ticker in returns.columns:
-                # Conviction is already a decimal (0.1 = 10% allocation)
-                base_convictions[ticker] = tickers[ticker].get('conviction', 0.1)
+                # Allocation is already a decimal (0.1 = 10% allocation)
+                base_allocations[ticker] = tickers[ticker].get('allocation', 0.1)
         
         # Get covariance matrix
         cov = self.correlation.covariance_matrix(returns, annualize=True)
         
-        # Separate convictions by long/short
-        long_convictions = {t: base_convictions[t] for t in long_tickers if t in base_convictions}
-        short_convictions = {t: base_convictions[t] for t in short_tickers if t in base_convictions}
+        # Separate allocations by long/short
+        long_allocations = {t: base_allocations[t] for t in long_tickers if t in base_allocations}
+        short_allocations = {t: base_allocations[t] for t in short_tickers if t in base_allocations}
         
         # Normalize convictions within each group to sum to 1
         long_weights = {}
         short_weights = {}
         
-        if long_tickers and long_convictions:
-            # Normalize long convictions
-            long_conv_sum = sum(long_convictions.values())
-            if long_conv_sum > 0:
-                long_norm_conv = {k: v/long_conv_sum for k, v in long_convictions.items()}
+        if long_tickers and long_allocations:
+            # Normalize long allocations
+            long_alloc_sum = sum(long_allocations.values())
+            if long_alloc_sum > 0:
+                long_norm_alloc = {k: v/long_alloc_sum for k, v in long_allocations.items()}
             else:
-                long_norm_conv = {k: 1.0/len(long_convictions) for k in long_convictions}
+                long_norm_alloc = {k: 1.0/len(long_allocations) for k in long_allocations}
             
-            # Apply optimization with conviction-based starting weights
+            # Apply optimization with allocation-based starting weights
             long_returns = returns[long_tickers]
             long_cov = cov.loc[long_tickers, long_tickers]
             
@@ -321,26 +330,26 @@ class CorrelationPortfolioBuilder:
             elif method == "min_variance":
                 long_opt = self.optimizer.optimize_weights_min_variance(long_cov)
             else:  # Default to risk_based
-                # Create base convictions series for risk-based optimization
-                conv_series = pd.Series(long_norm_conv)
-                long_opt = self.optimizer.optimize_weights_risk_based(long_cov, conv_series)
+                # Create base allocations series for risk-based optimization
+                alloc_series = pd.Series(long_norm_alloc)
+                long_opt = self.optimizer.optimize_weights_risk_based(long_cov, alloc_series)
             
-            # Blend optimization with conviction weights (50/50 blend)
+            # Blend optimization with allocation weights (50/50 blend)
             for ticker in long_tickers:
                 opt_weight = long_opt.get(ticker, 0)
-                conv_weight = long_norm_conv.get(ticker, 0)
-                # Blend optimization result with conviction
-                long_weights[ticker] = 0.5 * opt_weight + 0.5 * conv_weight
+                alloc_weight = long_norm_alloc.get(ticker, 0)
+                # Blend optimization result with allocation
+                long_weights[ticker] = 0.5 * opt_weight + 0.5 * alloc_weight
         
-        if short_tickers and short_convictions:
-            # Normalize short convictions
-            short_conv_sum = sum(short_convictions.values())
-            if short_conv_sum > 0:
-                short_norm_conv = {k: v/short_conv_sum for k, v in short_convictions.items()}
+        if short_tickers and short_allocations:
+            # Normalize short allocations
+            short_alloc_sum = sum(short_allocations.values())
+            if short_alloc_sum > 0:
+                short_norm_alloc = {k: v/short_alloc_sum for k, v in short_allocations.items()}
             else:
-                short_norm_conv = {k: 1.0/len(short_convictions) for k in short_convictions}
+                short_norm_alloc = {k: 1.0/len(short_allocations) for k in short_allocations}
             
-            # Apply optimization with conviction-based starting weights
+            # Apply optimization with allocation-based starting weights
             short_returns = returns[short_tickers]
             short_cov = cov.loc[short_tickers, short_tickers]
             
@@ -352,16 +361,16 @@ class CorrelationPortfolioBuilder:
             elif method == "min_variance":
                 short_opt = self.optimizer.optimize_weights_min_variance(short_cov)
             else:  # Default to risk_based
-                # Create base convictions series for risk-based optimization
-                conv_series = pd.Series(short_norm_conv)
-                short_opt = self.optimizer.optimize_weights_risk_based(short_cov, conv_series)
+                # Create base allocations series for risk-based optimization
+                alloc_series = pd.Series(short_norm_alloc)
+                short_opt = self.optimizer.optimize_weights_risk_based(short_cov, alloc_series)
             
-            # Blend optimization with conviction weights (50/50 blend)
+            # Blend optimization with allocation weights (50/50 blend)
             for ticker in short_tickers:
                 opt_weight = short_opt.get(ticker, 0)
-                conv_weight = short_norm_conv.get(ticker, 0)
-                # Blend optimization result with conviction
-                short_weights[ticker] = 0.5 * opt_weight + 0.5 * conv_weight
+                alloc_weight = short_norm_alloc.get(ticker, 0)
+                # Blend optimization result with allocation
+                short_weights[ticker] = 0.5 * opt_weight + 0.5 * alloc_weight
         
         # Normalize within groups
         if long_weights:

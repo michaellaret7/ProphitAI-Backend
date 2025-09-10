@@ -5,6 +5,17 @@ from backend.src.prophit_alts.consumer_staples_fund.build_portfolio.industry_age
     get_fundamental_data,
     fetch_repository_data,
 )
+from backend.src.prophit_alts.consumer_staples_fund.build_portfolio.cio.tools import (
+    get_analyst_picks,
+    correlation_matrix,
+    calculate_portfolio_past_performance,
+    exposure_calculator,
+    industry_concentration,
+    VaR_calculator,
+    calculate_portfolio_beta_vs_index,
+    factor_tilts_for_portfolio,
+)
+from backend.src.calculations_v2.portfolio.build.builder import CorrelationPortfolioBuilder
 
 def register_cio_tools(agent):
     agent.add_tool(
@@ -141,3 +152,274 @@ def register_cio_tools(agent):
         },
         function=fetch_repository_data,
     )
+
+    # Tool 1: Get Analyst Picks
+    agent.add_tool(
+        name="get_analyst_picks",
+        description="Retrieve analyst picks and initial positions for a specific fund. Returns a dictionary with tickers as keys and position details including position type (long/short), industry, conviction level, and reasoning.",
+        parameters={
+            "type": "object",
+            "properties": {
+                "fund_name": {
+                    "type": "string",
+                    "description": "The exact name of the fund to get analyst picks for. Must match the fund name in the database.",
+                },
+            },
+            "required": ["fund_name"],
+        },
+        function=get_analyst_picks,
+    )
+
+    # Tool 2: Correlation Matrix
+    agent.add_tool(
+        name="correlation_matrix",
+        description="Calculate the correlation matrix for portfolio holdings using 252 trading days of historical data. Returns a correlation matrix showing relationships between all portfolio holdings.",
+        parameters={
+            "type": "object",
+            "properties": {
+                "portfolio_dict": {
+                    "type": "object",
+                    "description": "Dictionary with tickers as keys. Each ticker's value should contain 'allocation' (float representing weight) and 'position' (string: 'long' or 'short').",
+                },
+            },
+            "required": ["portfolio_dict"],
+        },
+        function=lambda portfolio_dict: correlation_matrix(portfolio_dict, lookback_days=252),
+    )
+
+    # Tool 3: Calculate Portfolio Past Performance
+    agent.add_tool(
+        name="calculate_portfolio_past_performance",
+        description="Compute comprehensive performance metrics for a portfolio using 3 years of historical data. Returns metrics including CAGR, Sharpe ratio, Sortino ratio, Beta, Alpha, Information ratio, Treynor ratio, tracking error, Omega ratio, Burke ratio, Sterling ratio, Martin ratio, max drawdown, win rate, profit factor, tail ratio, ulcer index, Calmar ratios, and annualized returns. All values are rounded to 5 decimal places.",
+        parameters={
+            "type": "object",
+            "properties": {
+                "portfolio_dict": {
+                    "type": "object",
+                    "description": "Dictionary with tickers as keys. Each ticker's value MUST contain 'allocation' (float representing portfolio weight, e.g., 0.1 for 10%) and 'position' (string: must be either 'long' or 'short'). The allocations should sum to 1.0 for a fully invested portfolio.",
+                },
+                "rf_annual": {
+                    "type": "number",
+                    "description": "Annual risk-free rate for Sharpe/Sortino calculations. Default is 0.02 (2%). Common values: 0.02 for 2%, 0.03 for 3%, etc.",
+                    "default": 0.02,
+                },
+                "benchmark": {
+                    "type": "string",
+                    "description": "Benchmark ticker for relative performance metrics (Alpha, Beta, Information ratio, Treynor ratio, tracking error). Default is 'SPY'. Other common benchmarks: 'QQQ', 'IWM', 'DIA'.",
+                    "default": "SPY",
+                },
+            },
+            "required": ["portfolio_dict"],
+        },
+        function=lambda portfolio_dict, rf_annual=0.02, benchmark="SPY": calculate_portfolio_past_performance(
+            portfolio_dict, rf_annual=rf_annual, lookback_years=3, benchmark=benchmark
+        ),
+    )
+
+    # Tool 4: Exposure Calculator
+    agent.add_tool(
+        name="exposure_calculator",
+        description="Calculate portfolio exposure metrics. Net exposure is long minus short exposure. Gross exposure is the sum of absolute values of all positions. Long exposure is the sum of all long positions. Short exposure is the absolute value sum of all short positions.",
+        parameters={
+            "type": "object",
+            "properties": {
+                "portfolio_dict": {
+                    "type": "object",
+                    "description": "Dictionary with tickers as keys. Each ticker's value should contain 'allocation' (float) and 'position' (string: 'long' or 'short').",
+                },
+                "exposure_type": {
+                    "type": "string",
+                    "description": "Type of exposure to calculate. Must be one of: 'net' (long minus short), 'gross' (sum of absolute values), 'long' (sum of long positions), or 'short' (sum of short positions).",
+                    "enum": ["net", "gross", "long", "short"],
+                },
+            },
+            "required": ["portfolio_dict", "exposure_type"],
+        },
+        function=exposure_calculator,
+    )
+
+    # Tool 5: Industry Concentration
+    agent.add_tool(
+        name="industry_concentration",
+        description="Calculate portfolio concentration by industry or sub-industry. Returns a dictionary showing the allocation percentage to each industry or sub-industry category, rounded to 5 decimal places.",
+        parameters={
+            "type": "object",
+            "properties": {
+                "portfolio_dict": {
+                    "type": "object",
+                    "description": "Dictionary with tickers as keys. Each ticker's value should contain 'allocation' (float) and 'position' (string: 'long' or 'short').",
+                },
+                "industry_level": {
+                    "type": "string",
+                    "description": "Level of industry aggregation. 'industry' provides broader categories (e.g., 'Food Products'), while 'sub_industry' provides more granular categories (e.g., 'Packaged Foods').",
+                    "enum": ["industry", "sub_industry"],
+                },
+            },
+            "required": ["portfolio_dict", "industry_level"],
+        },
+        function=industry_concentration,
+    )
+
+    # Tool 6: VaR Calculator
+    agent.add_tool(
+        name="VaR_calculator",
+        description="Calculate Value at Risk (VaR) at portfolio, industry, or sub-industry level. Portfolio level returns a single float value. Industry and sub-industry levels return dictionaries with VaR for each category. All values are rounded to 5 decimal places.",
+        parameters={
+            "type": "object",
+            "properties": {
+                "portfolio_dict": {
+                    "type": "object",
+                    "description": "Dictionary with tickers as keys. Each ticker's value should contain 'allocation' (float) and 'position' (string: 'long' or 'short').",
+                },
+                "level": {
+                    "type": "string",
+                    "description": "Level at which to calculate VaR. 'portfolio' calculates overall portfolio VaR, 'industry' calculates VaR by industry groups, 'sub_industry' calculates VaR by sub-industry groups.",
+                    "enum": ["portfolio", "industry", "sub_industry"],
+                },
+            },
+            "required": ["portfolio_dict", "level"],
+        },
+        function=VaR_calculator,
+    )
+
+    # Tool 7: Calculate Portfolio Beta vs Index
+    agent.add_tool(
+        name="calculate_portfolio_beta_vs_index",
+        description="Calculate CAPM beta for a long/short portfolio versus a specified market index using 252 trading days of historical data. Beta measures the portfolio's systematic risk relative to the index. A beta of 1.0 means the portfolio moves with the market, >1.0 means more volatile than market, <1.0 means less volatile.",
+        parameters={
+            "type": "object",
+            "properties": {
+                "portfolio_dict": {
+                    "type": "object",
+                    "description": "Dictionary with tickers as keys. Each ticker's value MUST contain 'allocation' (float representing portfolio weight) and 'position' (string: must be either 'long' or 'short'). Short positions will have negative weights applied in beta calculation.",
+                },
+                "index_ticker": {
+                    "type": "string",
+                    "description": "Market index ticker to calculate beta against. Common indices: 'SPY' (S&P 500), 'QQQ' (NASDAQ 100), 'IWM' (Russell 2000), 'DIA' (Dow Jones), 'VTI' (Total Market).",
+                },
+            },
+            "required": ["portfolio_dict", "index_ticker"],
+        },
+        function=lambda portfolio_dict, index_ticker: calculate_portfolio_beta_vs_index(
+            portfolio_dict, lookback_days=252, index_ticker=index_ticker
+        ),
+    )
+
+    # Tool 8: Factor Tilts for Portfolio
+    agent.add_tool(
+        name="factor_tilts_for_portfolio",
+        description=(
+            "Compute style factor tilts for a long/short portfolio using calculations_v2. "
+            "Supports 'value', 'growth', 'momentum', 'quality', 'volatility', or 'all'.\n\n"
+            "Input: 'portfolio_dict' must map each ticker to an object with 'allocation' (decimal, e.g., 0.1 for 10%) "
+            "and 'position' ('long' or 'short'). Shorts are treated as negative weights automatically.\n\n"
+            "Output: If a single factor is requested, returns a detailed object including 'factor', 'net_tilt', 'long_tilt', 'short_tilt', "
+            "and 'per_ticker_exposure' (exposure per ticker). If 'all' is requested, returns a compact object keyed by factor name, "
+            "each containing only the summary fields: 'factor', 'net_tilt', 'long_tilt', 'short_tilt'.\n\n"
+            "All numeric results are rounded to 4 decimals. In cases where exposures cannot be computed (e.g., data unavailable), "
+            "an object with an 'error' message is returned."
+        ),
+        parameters={
+            "type": "object",
+            "properties": {
+                "portfolio_dict": {
+                    "type": "object",
+                    "description": (
+                        "Dictionary where keys are tickers (e.g., 'KO', 'WMT') and values are objects with: "
+                        "'allocation' (float, decimal weight like 0.05) and 'position' ('long'|'short'). "
+                        "Weights do not need to be pre-signed; the function applies negatives for shorts."
+                    ),
+                },
+                "factors": {
+                    "type": "string",
+                    "description": (
+                        "Factor to compute. Use 'all' for a summary across all factors; otherwise choose one of: "
+                        "'value', 'growth', 'momentum', 'quality', 'volatility'."
+                    ),
+                    "enum": ["all", "value", "growth", "momentum", "quality", "volatility"],
+                },
+            },
+            "required": ["portfolio_dict", "factors"],
+        },
+        function=factor_tilts_for_portfolio,
+    )
+
+    # Tool 9: Build Correlation-Aware Portfolio
+    agent.add_tool(
+        name="build_portfolio",
+        description=(
+            "Build a correlation-aware long/short portfolio using historical data, optimization, and risk controls. "
+            "This orchestrates data fetching, returns calculation, long/short optimization with group normalization, "
+            "volatility scaling to a target annual volatility, and position sizing with leverage.\n\n"
+            "Input 'portfolio_dict' maps tickers to {'allocation', 'position'} where: \n"
+            "- 'allocation' is a decimal risk allocation (e.g., 0.10 = 10% of risk budget). Allocations are normalized within long and short groups.\n"
+            "- 'position' is 'long' or 'short'. Shorts are treated as negative weights automatically.\n\n"
+            "Key parameters: \n"
+            "- 'target_annual_vol' (number): desired annualized volatility (e.g., 0.10 for 10%).\n"
+            "- 'portfolio_value' (number): base capital in dollars for sizing positions.\n"
+            "- 'leverage' (number, default 1.0): gross exposure multiplier (e.g., 1.5 => 150% gross).\n"
+            "- 'target_net_exposure' (number, optional): target net exposure in [-1,1] (e.g., 0.35 => 35% net long). If None, uses natural exposure.\n"
+            "- 'lookback_days' (integer, default 252): history length for return/covariance calculations.\n"
+            "- 'max_position_weight' (number, default 0.10): cap on absolute weight per position before renormalization.\n\n"
+            "Output includes: \n"
+            "- 'status' ('success' or 'error').\n"
+            "- 'weights': signed optimized weights (negative for shorts).\n"
+            "- 'position_sizes': dollar sizes after applying 'portfolio_value' and 'leverage'.\n"
+            "- 'risk_metrics': volatility, max drawdown, VaR, expected shortfall, Sharpe, and concentration metrics.\n"
+            "- 'target_vol', 'portfolio_value', 'leverage', 'target_net_exposure'.\n"
+            "- 'actual_net_exposure', 'gross_exposure', 'long_exposure', 'short_exposure'.\n"
+            "- 'final_portfolio': allocation/position format for execution (allocations rounded to 5 decimals).\n\n"
+            "Returns an 'error' field with a message if any step fails (e.g., data unavailable)."
+        ),
+        parameters={
+            "type": "object",
+            "properties": {
+                "portfolio_dict": {
+                    "type": "object",
+                    "description": (
+                        "Dictionary where keys are tickers and values are objects with: "
+                        "'allocation' (float, decimal weight like 0.05) and 'position' ('long'|'short')."
+                    ),
+                },
+                "target_annual_vol": {
+                    "type": "number",
+                    "description": "Target annualized volatility (e.g., 0.10 for 10%).",
+                },
+                "portfolio_value": {
+                    "type": "number",
+                    "description": "Base capital in dollars used to size positions.",
+                },
+                "leverage": {
+                    "type": "number",
+                    "description": "Gross exposure multiplier (e.g., 1.5 => 150% gross).",
+                    "default": 1.0,
+                },
+                "target_net_exposure": {
+                    "type": "number",
+                    "description": "Target net exposure in [-1, 1]. Example: 0.35 => 35% net long. If omitted, uses natural exposure.",
+                },
+                "lookback_days": {
+                    "type": "integer",
+                    "description": "Historical lookback window in trading days.",
+                    "default": 252,
+                },
+                "max_position_weight": {
+                    "type": "number",
+                    "description": "Max absolute position weight cap prior to renormalization.",
+                    "default": 0.10,
+                },
+            },
+            "required": ["portfolio_dict", "target_annual_vol", "portfolio_value"],
+        },
+        function=lambda portfolio_dict, target_annual_vol, portfolio_value, leverage=1.0, target_net_exposure=None, lookback_days=252, max_position_weight=0.10: CorrelationPortfolioBuilder().build_portfolio(
+            portfolio_dict,
+            target_annual_vol,
+            portfolio_value,
+            leverage=leverage,
+            target_net_exposure=target_net_exposure,
+            lookback_days=lookback_days,
+            max_position_weight=max_position_weight,
+        ),
+    )
+
+
