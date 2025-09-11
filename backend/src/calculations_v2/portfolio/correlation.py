@@ -158,5 +158,49 @@ class CorrelationAnalysis:
         return float(np.sum(np.square(w.values)))
 
 
+if __name__ == "__main__":
+    portfolio = {"BJ":{"allocation":0.055,"position":"long"},"KR":{"allocation":0.055,"position":"long"},"COST":{"allocation":0.07,"position":"long"},"MNST":{"allocation":0.075,"position":"long"},"KO":{"allocation":0.06,"position":"long"},"CCEP":{"allocation":0.045,"position":"long"},"SAM":{"allocation":0.035,"position":"long"},"CAG":{"allocation":0.04,"position":"long"},"GIS":{"allocation":0.04,"position":"long"},"PG":{"allocation":0.045,"position":"long"},"CL":{"allocation":0.03,"position":"long"},"KMB":{"allocation":0.025,"position":"long"},"EPC":{"allocation":0.03,"position":"long"},"ODD":{"allocation":0.025,"position":"long"},"RLX":{"allocation":0.025,"position":"long"},"LW":{"allocation":0.015,"position":"long"},"PM":{"allocation":0.015,"position":"long"},"WBA":{"allocation":0.04,"position":"short"},"UNFI":{"allocation":0.035,"position":"short"},"TGT":{"allocation":0.04,"position":"short"},"PRMB":{"allocation":0.045,"position":"short"},"TAP":{"allocation":0.045,"position":"short"},"STZ":{"allocation":0.035,"position":"short"},"SJM":{"allocation":0.03,"position":"short"},"HSY":{"allocation":0.015,"position":"short"},"ADM":{"allocation":0.015,"position":"short"},"ENR":{"allocation":0.015,"position":"short"},"SPB":{"allocation":0.03,"position":"short"},"CLX":{"allocation":0.015,"position":"short"},"ELF":{"allocation":0.035,"position":"short"},"OLPX":{"allocation":0.035,"position":"short"},"EL":{"allocation":0.04,"position":"short"},"CELH":{"allocation":0.02,"position":"short"}}
+    
+    # Optional: parse if input is unstructured. Here it's already a dict, so skip.
+    # from backend.src.utils.gpt_parser import parse_portfolio_with_gpt
+    # portfolio = parse_portfolio_with_gpt(portfolio)
+
+    # Build list of tickers from portfolio
+    tickers = list(portfolio.keys())
+
+    # Fetch prices and compute daily returns
+    from backend.src.repositories.price_data import get_price_data_daily
+    from backend.src.calculations_v2.returns.calculator import ReturnsCalculator
+    from datetime import datetime, timedelta
+
+    end_date = datetime.now()
+    start_date = end_date - timedelta(days=252 * 4)
+
+    ticker_returns: dict[str, pd.Series] = {}
+    for t in tickers:
+        try:
+            df = get_price_data_daily(t, start_date, end_date)
+            if df is None or df.empty:
+                continue
+            df['date'] = pd.to_datetime(df['date'])
+            close = df.set_index('date')['close']
+            r = ReturnsCalculator.daily_price_returns(close)
+            if not r.empty:
+                ticker_returns[t] = r
+        except Exception as e:
+            print(f"Error fetching/processing {t}: {e}")
+
+    if not ticker_returns:
+        print("No returns available to compute correlation.")
+    else:
+        returns_df = pd.concat(ticker_returns, axis=1)
+        corr = CorrelationAnalysis.correlation_matrix(returns_df)
+        if corr is None or corr.empty:
+            print("Correlation matrix is empty.")
+        else:
+            # Pretty print rounded matrix
+            print("=== Pairwise Correlation Matrix (daily price returns) ===")
+            print(corr.round(3).to_string())
+    
 
 

@@ -172,7 +172,11 @@ def register_cio_tools(agent):
     # Tool 2: Correlation Matrix
     agent.add_tool(
         name="correlation_matrix",
-        description="Calculate the correlation matrix for portfolio holdings using 252 trading days of historical data. Returns a correlation matrix showing relationships between all portfolio holdings.",
+        description=(
+            "Compute pairwise correlations using 252 trading days of daily returns and "
+            "return only high-correlation pairs (> 0.5) as a flat dictionary. "
+            "Output format: {'TICKER1|TICKER2': 0.712, ...} (values rounded to 3 decimals)."
+        ),
         parameters={
             "type": "object",
             "properties": {

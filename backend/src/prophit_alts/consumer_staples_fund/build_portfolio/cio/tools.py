@@ -53,17 +53,17 @@ def _to_canonical_portfolio(portfolio: PortfolioInput | dict) -> Dict[str, Dict]
     # Use GPT parser for any other format
     return parse_portfolio_with_gpt(portfolio)
 
-def correlation_matrix(portfolio_dict: PortfolioInput | dict, lookback_days: int = 252) -> pd.DataFrame:
+def correlation_matrix(portfolio_dict: PortfolioInput | dict, lookback_days: int = 252) -> dict:
     portfolio_dict = _to_canonical_portfolio(portfolio_dict)
     tickers = list(portfolio_dict.keys())
     if not tickers:
-        return pd.DataFrame()
+        return {}
     end_date = datetime.now()
     start_date = end_date - timedelta(days=lookback_days)
     ds = DataService()
     price_map = ds.get_bulk_close_series(tickers, start_date, end_date)
     if not price_map:
-        return pd.DataFrame()
+        return {}
     # Prefer total returns (price + dividends) for accuracy; fallback to price returns
     returns_map = {}
     for t, s in price_map.items():
@@ -78,11 +78,24 @@ def correlation_matrix(portfolio_dict: PortfolioInput | dict, lookback_days: int
         if tr is not None and not tr.empty:
             returns_map[t] = tr
     if not returns_map:
-        return pd.DataFrame()
+        return {}
     returns_df = pd.DataFrame(returns_map)
     
-    return CorrelationAnalysis.correlation_matrix(returns_df)
-
+    corr = CorrelationAnalysis.correlation_matrix(returns_df)
+    if corr is None or corr.empty:
+        return {}
+    # Build raw dict of UNIQUE pairs with correlation > 0.5 (upper triangle, exclude diagonal)
+    tickers = list(corr.columns)
+    values = corr.values
+    pairs: dict[str, float] = {}
+    n = len(tickers)
+    for i in range(n):
+        for j in range(i + 1, n):
+            val = float(values[i, j])
+            if val > 0.5:
+                key = f"{tickers[i]}|{tickers[j]}"
+                pairs[key] = round(val, 3)
+    return pairs
 
 def calculate_portfolio_past_performance(
     portfolio_dict: PortfolioInput | dict,
@@ -444,7 +457,9 @@ def build_portfolio(portfolio_data: any):
     return built_portfolio["final_portfolio"]
 
 if __name__ == "__main__":
-    test_data = """"arguments": "{\"portfolio_dict\":{\"BJ\":{\"allocation\":0.075,\"position\":\"long\"},\"KR\":{\"allocation\":0.075,\"position\":\"long\"},\"COST\":{\"allocation\":0.075,\"position\":\"long\"},\"MNST\":{\"allocation\":0.075,\"position\":\"long\"},\"KO\":{\"allocation\":0.075,\"position\":\"long\"},\"CCEP\":{\"allocation\":0.075,\"position\":\"long\"},\"SAM\":{\"allocation\":0.075,\"position\":\"long\"},\"CAG\":{\"allocation\":0.075,\"position\":\"long\"},\"GIS\":{\"allocation\":0.075,\"position\":\"long\"},\"POST\":{\"allocation\":0.075,\"position\":\"long\"},\"PG\":{\"allocation\":0.075,\"position\":\"long\"},\"CL\":{\"allocation\":0.075,\"position\":\"long\"},\"KMB\":{\"allocation\":0.075,\"position\":\"long\"},\"EPC\":{\"allocation\":0.075,\"position\":\"long\"},\"HLF\":{\"allocation\":0.075,\"position\":\"long\"},\"ODD\":{\"allocation\":0.075,\"position\":\"long\"},\"RLX\":{\"allocation\":0.075,\"position\":\"long\"},\"WBA\":{\"allocation\":0.05,\"position\":\"short\"},\"UNFI\":{\"allocation\":0.05,\"position\":\"short\"},\"TGT\":{\"allocation\":0.05,\"position\":\"short\"},\"PRMB\":{\"allocation\":0.05,\"position\":\"short\"},\"TAP\":{\"allocation\":0.05,\"position\":\"short\"},\"STZ\":{\"allocation\":0.05,\"position\":\"short\"},\"SJM\":{\"allocation\":0.05,\"position\":\"short\"},\"HSY\":{\"allocation\":0.05,\"position\":\"short\"},\"ADM\":{\"allocation\":0.05,\"position\":\"short\"},\"ENR\":{\"allocation\":0.05,\"position\":\"short\"},\"SPB\":{\"allocation\":0.05,\"position\":\"short\"},\"CLX\":{\"allocation\":0.05,\"position\":\"short\"},\"ELF\":{\"allocation\":0.05,\"position\":\"short\"},\"OLPX\":{\"allocation\":0.05,\"position\":\"short\"},\"EL\":{\"allocation\":0.05,\"position\":\"short\"}},\"exposure_type\":\"net\"}"""
+    sample_portfolio = """"arguments": "{\"portfolio_dict\":{\"BJ\":{\"allocation\":0.075,\"position\":\"long\"},\"KR\":{\"allocation\":0.075,\"position\":\"long\"},\"COST\":{\"allocation\":0.075,\"position\":\"long\"},\"MNST\":{\"allocation\":0.075,\"position\":\"long\"},\"KO\":{\"allocation\":0.075,\"position\":\"long\"},\"CCEP\":{\"allocation\":0.075,\"position\":\"long\"},\"SAM\":{\"allocation\":0.075,\"position\":\"long\"},\"CAG\":{\"allocation\":0.075,\"position\":\"long\"},\"GIS\":{\"allocation\":0.075,\"position\":\"long\"},\"POST\":{\"allocation\":0.075,\"position\":\"long\"},\"PG\":{\"allocation\":0.075,\"position\":\"long\"},\"CL\":{\"allocation\":0.075,\"position\":\"long\"},\"KMB\":{\"allocation\":0.075,\"position\":\"long\"},\"EPC\":{\"allocation\":0.075,\"position\":\"long\"},\"HLF\":{\"allocation\":0.075,\"position\":\"long\"},\"ODD\":{\"allocation\":0.075,\"position\":\"long\"},\"RLX\":{\"allocation\":0.075,\"position\":\"long\"},\"WBA\":{\"allocation\":0.05,\"position\":\"short\"},\"UNFI\":{\"allocation\":0.05,\"position\":\"short\"},\"TGT\":{\"allocation\":0.05,\"position\":\"short\"},\"PRMB\":{\"allocation\":0.05,\"position\":\"short\"},\"TAP\":{\"allocation\":0.05,\"position\":\"short\"},\"STZ\":{\"allocation\":0.05,\"position\":\"short\"},\"SJM\":{\"allocation\":0.05,\"position\":\"short\"},\"HSY\":{\"allocation\":0.05,\"position\":\"short\"},\"ADM\":{\"allocation\":0.05,\"position\":\"short\"},\"ENR\":{\"allocation\":0.05,\"position\":\"short\"},\"SPB\":{\"allocation\":0.05,\"position\":\"short\"},\"CLX\":{\"allocation\":0.05,\"position\":\"short\"},\"ELF\":{\"allocation\":0.05,\"position\":\"short\"},\"OLPX\":{\"allocation\":0.05,\"position\":\"short\"},\"EL\":{\"allocation\":0.05,\"position\":\"short\"}},\"exposure_type\":\"net\"}"""
 
 
-    print(build_portfolio(test_data))
+    sample_portfolio = parse_portfolio_with_gpt(sample_portfolio)
+    pairs = correlation_matrix(sample_portfolio, lookback_days=252)
+    print(pairs)
