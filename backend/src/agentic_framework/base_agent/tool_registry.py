@@ -288,6 +288,48 @@ def register_base_tools(agent: Any) -> None:
         function=lambda: agent.task_manager.get_plan_health_status(),
     )
 
+    # Episodic memory tools (optional)
+    if getattr(agent, "use_episodic_memory", False) and getattr(agent, "episodic", None) is not None:
+        agent.add_tool(
+            name="episodic_remember",
+            description=(
+                "Append an episodic memory entry. Use for key milestones or facts you may want to recall later."
+            ),
+            parameters={
+                "type": "object",
+                "properties": {
+                    "title": {"type": "string", "description": "Short human-readable label"},
+                    "event": {"type": "string", "description": "Machine-oriented event key"},
+                    "context": {"type": "object", "description": "Arbitrary context/details"},
+                    "outcome": {"type": ["string", "object"], "description": "Outcome snapshot"},
+                    "tags": {"type": "array", "items": {"type": "string"}, "description": "Tags for retrieval"},
+                    "meta": {"type": "object", "description": "Extra metadata"}
+                },
+                "required": ["title", "event"],
+            },
+            function=lambda title, event, context=None, outcome=None, tags=None, meta=None: \
+                agent.episodic.append(title=title, event=event, context=context, outcome=outcome, tags=tags, meta=meta),
+        )
+
+        agent.add_tool(
+            name="episodic_recall",
+            description=(
+                "Recall episodic memories by keyword, tags, or since a timestamp. Returns most recent first."
+            ),
+            parameters={
+                "type": "object",
+                "properties": {
+                    "query": {"type": "string", "description": "Keyword to search (optional)"},
+                    "tags": {"type": "array", "items": {"type": "string"}, "description": "Tags filter (optional)"},
+                    "since": {"type": "string", "description": "ISO timestamp to filter newer entries (optional)"},
+                    "limit": {"type": "integer", "description": "Max entries to return (default 20)"}
+                },
+                "required": [],
+            },
+            function=lambda query=None, tags=None, since=None, limit=20: \
+                agent.episodic.recall(query=query, tags=tags, since=since, limit=limit),
+        )
+
 
 def register_task_management_tools(agent: Any) -> None:
     """

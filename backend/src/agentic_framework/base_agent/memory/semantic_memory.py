@@ -402,9 +402,10 @@ class SemanticMemory:
         if categories:
             for category in categories:
                 for memory in self.get_memories_by_category(category):
+                    payload = memory if isinstance(memory, dict) else {'content': self._stringify_value(memory)}
                     relevant_memories.append({
                         'category': category,
-                        **memory
+                        **payload
                     })
         
         # Get memories by keywords
@@ -419,9 +420,10 @@ class SemanticMemory:
         if not categories and not keywords:
             for category, memories in self.memories.items():
                 for memory in memories:
+                    payload = memory if isinstance(memory, dict) else {'content': self._stringify_value(memory)}
                     relevant_memories.append({
                         'category': category,
-                        **memory
+                        **payload
                     })
         
         if not relevant_memories:

@@ -73,7 +73,7 @@ def register_cio_tools(agent):
                 },
                 "factor": {
                     "type": "string",
-                    "description": "The factor type to calculate. Options are 'growth', 'value', 'momentum', 'quality', or 'volatility'.",
+                    "description": "The factor type to calculate. Options are 'growth', 'value', 'momentum', 'quality', or 'volatility'. 'all' DOES NOT EXIST FOR THIS TOOL",
                     "enum": ["growth", "value", "momentum", "quality", "volatility"]
                 },
             },
@@ -157,16 +157,14 @@ def register_cio_tools(agent):
     # Tool 1: Get Analyst Picks
     agent.add_tool(
         name="get_analyst_picks",
-        description="Retrieve analyst picks and initial positions for a specific fund. Returns a dictionary with tickers as keys and position details including position type (long/short), industry, conviction level, and reasoning.",
+        description=(
+            "Retrieve analyst picks and initial positions for the Consumer Staples Fund. "
+            "Returns a dictionary with tickers as keys and position details including position type "
+            "(long/short), industry, conviction level, and reasoning."
+        ),
         parameters={
             "type": "object",
-            "properties": {
-                "fund_name": {
-                    "type": "string",
-                    "description": "The exact name of the fund to get analyst picks for. Must match the fund name in the database.",
-                },
-            },
-            "required": ["fund_name"],
+            "properties": {}
         },
         function=get_analyst_picks,
     )
@@ -180,10 +178,11 @@ def register_cio_tools(agent):
             "properties": {
                 "portfolio_dict": {
                     "type": "object",
-                    "description": "Dictionary with tickers as keys. Each ticker's value should contain 'allocation' (float representing weight) and 'position' (string: 'long' or 'short').",
+                    "description": "🚨 REQUIRED: Portfolio dictionary containing the portfolio you want to analyze. Keys are ticker symbols (uppercase strings, 1-10 characters) and values are objects with 'conviction' and 'position' fields. Conviction must be float between 0.0-1.0 representing position size. Position must be exactly 'long' or 'short' (lowercase). MUST provide actual portfolio data - cannot be empty! Example: {'MNST': {'conviction': 0.05, 'position': 'long'}, 'COTY': {'conviction': 0.05, 'position': 'short'}}"
                 },
             },
             "required": ["portfolio_dict"],
+            "additionalProperties": False
         },
         function=lambda portfolio_dict: correlation_matrix(portfolio_dict, lookback_days=252),
     )
@@ -191,42 +190,33 @@ def register_cio_tools(agent):
     # Tool 3: Calculate Portfolio Past Performance
     agent.add_tool(
         name="calculate_portfolio_past_performance",
-        description="Compute comprehensive performance metrics for a portfolio using 3 years of historical data. Returns metrics including CAGR, Sharpe ratio, Sortino ratio, Beta, Alpha, Information ratio, Treynor ratio, tracking error, Omega ratio, Burke ratio, Sterling ratio, Martin ratio, max drawdown, win rate, profit factor, tail ratio, ulcer index, Calmar ratios, and annualized returns. All values are rounded to 5 decimal places.",
+        description="Compute comprehensive performance metrics for a portfolio using 3 years of historical data. Returns metrics including CAGR, Sharpe ratio, Sortino ratio, Beta, Alpha, Information ratio, Treynor ratio, tracking error, Omega ratio, Burke ratio, Sterling ratio, Martin ratio, max drawdown, win rate, profit factor, tail ratio, ulcer index, Calmar ratios, and annualized returns. All values are rounded to 5 decimal places. Uses SPY as benchmark and 2% risk-free rate.",
         parameters={
             "type": "object",
             "properties": {
                 "portfolio_dict": {
                     "type": "object",
-                    "description": "Dictionary with tickers as keys. Each ticker's value MUST contain 'allocation' (float representing portfolio weight, e.g., 0.1 for 10%) and 'position' (string: must be either 'long' or 'short'). The allocations should sum to 1.0 for a fully invested portfolio.",
-                },
-                "rf_annual": {
-                    "type": "number",
-                    "description": "Annual risk-free rate for Sharpe/Sortino calculations. Default is 0.02 (2%). Common values: 0.02 for 2%, 0.03 for 3%, etc.",
-                    "default": 0.02,
-                },
-                "benchmark": {
-                    "type": "string",
-                    "description": "Benchmark ticker for relative performance metrics (Alpha, Beta, Information ratio, Treynor ratio, tracking error). Default is 'SPY'. Other common benchmarks: 'QQQ', 'IWM', 'DIA'.",
-                    "default": "SPY",
+                    "description": "🚨 REQUIRED: Portfolio dictionary containing the portfolio you want to analyze. Keys are ticker symbols (uppercase strings, 1-10 characters) and values are objects with 'conviction' and 'position' fields. Conviction must be float between 0.0-1.0 representing position size. Position must be exactly 'long' or 'short' (lowercase). MUST provide actual portfolio data - cannot be empty! Example: {'MNST': {'conviction': 0.05, 'position': 'long'}, 'COTY': {'conviction': 0.05, 'position': 'short'}}"
                 },
             },
             "required": ["portfolio_dict"],
+            "additionalProperties": False
         },
-        function=lambda portfolio_dict, rf_annual=0.02, benchmark="SPY": calculate_portfolio_past_performance(
-            portfolio_dict, rf_annual=rf_annual, lookback_years=3, benchmark=benchmark
+        function=lambda portfolio_dict: calculate_portfolio_past_performance(
+            portfolio_dict, rf_annual=0.02, lookback_years=3, benchmark="SPY"
         ),
     )
 
     # Tool 4: Exposure Calculator
     agent.add_tool(
         name="exposure_calculator",
-        description="Calculate portfolio exposure metrics. Net exposure is long minus short exposure. Gross exposure is the sum of absolute values of all positions. Long exposure is the sum of all long positions. Short exposure is the absolute value sum of all short positions.",
+        description="Calculate portfolio exposure metrics. Net exposure is long minus short exposure. Gross exposure is the sum of absolute values of all positions. Long exposure is the sum of all long positions. Short exposure is the absolute value sum of all short positions. You must provide a portfolio_dict as an argument.",
         parameters={
             "type": "object",
             "properties": {
                 "portfolio_dict": {
                     "type": "object",
-                    "description": "Dictionary with tickers as keys. Each ticker's value should contain 'allocation' (float) and 'position' (string: 'long' or 'short').",
+                    "description": "🚨 REQUIRED: Portfolio dictionary containing the portfolio you want to analyze. Keys are ticker symbols (uppercase strings, 1-10 characters) and values are objects with 'conviction' and 'position' fields. Conviction must be float between 0.0-1.0 representing position size. Position must be exactly 'long' or 'short' (lowercase). MUST provide actual portfolio data - cannot be empty! Example: {'MNST': {'conviction': 0.05, 'position': 'long'}, 'COTY': {'conviction': 0.05, 'position': 'short'}}"
                 },
                 "exposure_type": {
                     "type": "string",
@@ -235,6 +225,7 @@ def register_cio_tools(agent):
                 },
             },
             "required": ["portfolio_dict", "exposure_type"],
+            "additionalProperties": False
         },
         function=exposure_calculator,
     )
@@ -248,7 +239,7 @@ def register_cio_tools(agent):
             "properties": {
                 "portfolio_dict": {
                     "type": "object",
-                    "description": "Dictionary with tickers as keys. Each ticker's value should contain 'allocation' (float) and 'position' (string: 'long' or 'short').",
+                    "description": "🚨 REQUIRED: Portfolio dictionary containing the portfolio you want to analyze. Keys are ticker symbols (uppercase strings, 1-10 characters) and values are objects with 'conviction' and 'position' fields. Conviction must be float between 0.0-1.0 representing position size. Position must be exactly 'long' or 'short' (lowercase). MUST provide actual portfolio data - cannot be empty! Example: {'MNST': {'conviction': 0.05, 'position': 'long'}, 'COTY': {'conviction': 0.05, 'position': 'short'}}"
                 },
                 "industry_level": {
                     "type": "string",
@@ -257,6 +248,7 @@ def register_cio_tools(agent):
                 },
             },
             "required": ["portfolio_dict", "industry_level"],
+            "additionalProperties": False
         },
         function=industry_concentration,
     )
@@ -270,7 +262,7 @@ def register_cio_tools(agent):
             "properties": {
                 "portfolio_dict": {
                     "type": "object",
-                    "description": "Dictionary with tickers as keys. Each ticker's value should contain 'allocation' (float) and 'position' (string: 'long' or 'short').",
+                    "description": "🚨 REQUIRED: Portfolio dictionary containing the portfolio you want to analyze. Keys are ticker symbols (uppercase strings, 1-10 characters) and values are objects with 'conviction' and 'position' fields. Conviction must be float between 0.0-1.0 representing position size. Position must be exactly 'long' or 'short' (lowercase). MUST provide actual portfolio data - cannot be empty! Example: {'MNST': {'conviction': 0.05, 'position': 'long'}, 'COTY': {'conviction': 0.05, 'position': 'short'}}"
                 },
                 "level": {
                     "type": "string",
@@ -279,6 +271,7 @@ def register_cio_tools(agent):
                 },
             },
             "required": ["portfolio_dict", "level"],
+            "additionalProperties": False
         },
         function=VaR_calculator,
     )
@@ -292,7 +285,7 @@ def register_cio_tools(agent):
             "properties": {
                 "portfolio_dict": {
                     "type": "object",
-                    "description": "Dictionary with tickers as keys. Each ticker's value MUST contain 'allocation' (float representing portfolio weight) and 'position' (string: must be either 'long' or 'short'). Short positions will have negative weights applied in beta calculation.",
+                    "description": "🚨 REQUIRED: Portfolio dictionary containing the portfolio you want to analyze. Keys are ticker symbols (uppercase strings, 1-10 characters) and values are objects with 'conviction' and 'position' fields. Conviction must be float between 0.0-1.0 representing position size. Position must be exactly 'long' or 'short' (lowercase). MUST provide actual portfolio data - cannot be empty! Example: {'MNST': {'conviction': 0.05, 'position': 'long'}, 'COTY': {'conviction': 0.05, 'position': 'short'}}"
                 },
                 "index_ticker": {
                     "type": "string",
@@ -300,6 +293,7 @@ def register_cio_tools(agent):
                 },
             },
             "required": ["portfolio_dict", "index_ticker"],
+            "additionalProperties": False
         },
         function=lambda portfolio_dict, index_ticker: calculate_portfolio_beta_vs_index(
             portfolio_dict, lookback_days=252, index_ticker=index_ticker
@@ -325,11 +319,7 @@ def register_cio_tools(agent):
             "properties": {
                 "portfolio_dict": {
                     "type": "object",
-                    "description": (
-                        "Dictionary where keys are tickers (e.g., 'KO', 'WMT') and values are objects with: "
-                        "'allocation' (float, decimal weight like 0.05) and 'position' ('long'|'short'). "
-                        "Weights do not need to be pre-signed; the function applies negatives for shorts."
-                    ),
+                    "description": "🚨 REQUIRED: Portfolio dictionary containing the portfolio you want to analyze. Keys are ticker symbols (uppercase strings, 1-10 characters) and values are objects with 'conviction' and 'position' fields. Conviction must be float between 0.0-1.0 representing position size. Position must be exactly 'long' or 'short' (lowercase). MUST provide actual portfolio data - cannot be empty! Example: {'MNST': {'conviction': 0.05, 'position': 'long'}, 'COTY': {'conviction': 0.05, 'position': 'short'}}"
                 },
                 "factors": {
                     "type": "string",
@@ -341,6 +331,7 @@ def register_cio_tools(agent):
                 },
             },
             "required": ["portfolio_dict", "factors"],
+            "additionalProperties": False
         },
         function=factor_tilts_for_portfolio,
     )
@@ -356,12 +347,8 @@ def register_cio_tools(agent):
             "- 'allocation' is a decimal risk allocation (e.g., 0.10 = 10% of risk budget). Allocations are normalized within long and short groups.\n"
             "- 'position' is 'long' or 'short'. Shorts are treated as negative weights automatically.\n\n"
             "Key parameters: \n"
-            "- 'target_annual_vol' (number): desired annualized volatility (e.g., 0.10 for 10%).\n"
-            "- 'portfolio_value' (number): base capital in dollars for sizing positions.\n"
-            "- 'leverage' (number, default 1.0): gross exposure multiplier (e.g., 1.5 => 150% gross).\n"
-            "- 'target_net_exposure' (number, optional): target net exposure in [-1,1] (e.g., 0.35 => 35% net long). If None, uses natural exposure.\n"
-            "- 'lookback_days' (integer, default 252): history length for return/covariance calculations.\n"
-            "- 'max_position_weight' (number, default 0.10): cap on absolute weight per position before renormalization.\n\n"
+            "- The following parameters are LOCKED and cannot be overridden: target_annual_vol=0.15, portfolio_value=1_000_000, leverage=2.0, target_net_exposure=0.30, lookback_days=252.\n"
+            "- Optional: 'max_position_weight' (number, default 0.10) caps absolute weight per position prior to renormalization.\n\n"
             "Output includes: \n"
             "- 'status' ('success' or 'error').\n"
             "- 'weights': signed optimized weights (negative for shorts).\n"
@@ -377,49 +364,20 @@ def register_cio_tools(agent):
             "properties": {
                 "portfolio_dict": {
                     "type": "object",
-                    "description": (
-                        "Dictionary where keys are tickers and values are objects with: "
-                        "'allocation' (float, decimal weight like 0.05) and 'position' ('long'|'short')."
-                    ),
-                },
-                "target_annual_vol": {
-                    "type": "number",
-                    "description": "Target annualized volatility (e.g., 0.10 for 10%).",
-                },
-                "portfolio_value": {
-                    "type": "number",
-                    "description": "Base capital in dollars used to size positions.",
-                },
-                "leverage": {
-                    "type": "number",
-                    "description": "Gross exposure multiplier (e.g., 1.5 => 150% gross).",
-                    "default": 1.0,
-                },
-                "target_net_exposure": {
-                    "type": "number",
-                    "description": "Target net exposure in [-1, 1]. Example: 0.35 => 35% net long. If omitted, uses natural exposure.",
-                },
-                "lookback_days": {
-                    "type": "integer",
-                    "description": "Historical lookback window in trading days.",
-                    "default": 252,
-                },
-                "max_position_weight": {
-                    "type": "number",
-                    "description": "Max absolute position weight cap prior to renormalization.",
-                    "default": 0.10,
-                },
+                    "description": "🚨 REQUIRED: Portfolio dictionary containing the portfolio you want to analyze. Keys are ticker symbols (uppercase strings, 1-10 characters) and values are objects with 'conviction' and 'position' fields. Conviction must be float between 0.0-1.0 representing position size. Position must be exactly 'long' or 'short' (lowercase). MUST provide actual portfolio data - cannot be empty! Example: {'MNST': {'conviction': 0.05, 'position': 'long'}, 'COTY': {'conviction': 0.05, 'position': 'short'}}"
+                }
             },
-            "required": ["portfolio_dict", "target_annual_vol", "portfolio_value"],
+            "required": ["portfolio_dict"],
+            "additionalProperties": False
         },
-        function=lambda portfolio_dict, target_annual_vol, portfolio_value, leverage=1.0, target_net_exposure=None, lookback_days=252, max_position_weight=0.10: CorrelationPortfolioBuilder().build_portfolio(
-            portfolio_dict,
-            target_annual_vol,
-            portfolio_value,
-            leverage=leverage,
-            target_net_exposure=target_net_exposure,
-            lookback_days=lookback_days,
-            max_position_weight=max_position_weight,
+        function=lambda portfolio_dict: CorrelationPortfolioBuilder().build_portfolio(
+            portfolio_dict=portfolio_dict,
+            target_annual_vol=0.15,
+            portfolio_value=1_000_000,
+            leverage=2.0,
+            target_net_exposure=0.30,
+            lookback_days=252,
+            max_position_weight=0.10,
         ),
     )
 

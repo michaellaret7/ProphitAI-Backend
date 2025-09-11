@@ -217,17 +217,22 @@ class ToolArgumentParser:
         param_schema = properties.get(param_name, {})
         param_type = param_schema.get('type')
         
-        # Only fix if the parameter is supposed to be an object but is currently flattened
-        if param_type != 'object':
+        # Only consider wrapping if the parameter is an object and we don't already have it
+        if param_type != 'object' or param_name in args or not isinstance(args, dict) or len(args) == 0:
             return args
         
-        # Check if the expected parameter is missing but we have data that looks like it should be wrapped
-        if param_name not in args and len(args) > 0:
-            # Log the transformation for debugging
+
+        def _looks_like_ticker(k: str) -> bool:
+            return isinstance(k, str) and k.isalpha() and 1 <= len(k) <= 10
+        def _looks_like_position_dict(v) -> bool:
+            if not isinstance(v, dict):
+                return False
+            has_alloc = any(x in v for x in ['allocation', 'conviction', 'risk_allocation'])
+            has_pos = 'position' in v
+            return has_pos and has_alloc
+        if all(_looks_like_ticker(k) and _looks_like_position_dict(v) for k, v in args.items()):
             if self._verbose:
                 print(f"🔧 GPT-5 parameter flattening detected for {tool_name}: wrapping arguments under '{param_name}'")
-            
-            # Wrap all current arguments under the expected parameter name
             return {param_name: args}
         
         return args
@@ -270,24 +275,11 @@ class ToolArgumentParser:
         for param_name in required:
             if param_name not in args and param_name in properties:
                 param_schema = properties[param_name]
-                # Try to provide sensible defaults
-                param_type = param_schema.get('type')
+                # Do not create empty objects for required params; only apply explicit defaults
                 if 'default' in param_schema:
                     args[param_name] = param_schema['default']
                 elif 'enum' in param_schema:
                     args[param_name] = param_schema['enum'][0]
-                elif param_type == 'string':
-                    args[param_name] = ""
-                elif param_type == 'integer':
-                    args[param_name] = 0
-                elif param_type == 'number':
-                    args[param_name] = 0.0
-                elif param_type == 'boolean':
-                    args[param_name] = False
-                elif param_type == 'array':
-                    args[param_name] = []
-                elif param_type == 'object':
-                    args[param_name] = {}
         
         return args
     

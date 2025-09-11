@@ -93,6 +93,18 @@ class AgentUtilities:
         except TypeError as e:
             error_msg = str(e)
             error_response = f"Error calling tool '{name}': {error_msg} (args={args})"
+            # Opportunistic fix: if required 'portfolio_dict' is missing, infer from recent observations
+            try:
+                if ("required positional argument" in error_msg or "missing" in error_msg) and "'portfolio_dict'" in error_msg:
+                    inferred = self._infer_portfolio_dict_from_context()
+                    if inferred:
+                        retry_args = dict(args or {})
+                        retry_args['portfolio_dict'] = inferred
+                        if self.agent.verbose:
+                            print("🔧 Auto-injecting 'portfolio_dict' inferred from recent context and retrying")
+                        return self.execute_tool_safe(name, retry_args, is_retry=True)
+            except Exception:
+                pass
             
             # Record error and check for solutions if error memory is enabled
             if self.agent.error_memory and not is_retry:  # Only attempt auto-retry on first failure
@@ -232,6 +244,41 @@ class AgentUtilities:
                     }
             
             return error_response
+
+    def _infer_portfolio_dict_from_context(self) -> Optional[Dict[str, Any]]:
+        """Infer a portfolio_dict-shaped object from recent tool observations.
+
+        Looks for a dict mapping ticker-> {allocation/conviction/risk_allocation, position}.
+        Falls back to common containers (e.g., under keys 'portfolio', 'positions', 'holdings').
+        """
+        def _looks_like_ticker(k: Any) -> bool:
+            return isinstance(k, str) and k.isalpha() and 1 <= len(k) <= 10
+        def _looks_like_position_dict(v: Any) -> bool:
+            if not isinstance(v, dict):
+                return False
+            has_alloc = any(x in v for x in ['allocation', 'conviction', 'risk_allocation'])
+            has_pos = isinstance(v.get('position'), str)
+            return has_alloc and has_pos
+        # Search last few observations for a usable mapping
+        try:
+            for obs in reversed(getattr(self.agent, 'recent_observations', [])[-8:]):
+                candidate = None
+                if isinstance(obs, dict):
+                    # Direct mapping of tickers
+                    if obs and all(_looks_like_ticker(k) and _looks_like_position_dict(v) for k, v in obs.items()):
+                        candidate = obs
+                    else:
+                        # Nested common keys
+                        for key in ('portfolio', 'positions', 'holdings'):
+                            inner = obs.get(key)
+                            if isinstance(inner, dict) and inner and all(_looks_like_ticker(k) and _looks_like_position_dict(v) for k, v in inner.items()):
+                                candidate = inner
+                                break
+                if candidate:
+                    return candidate
+        except Exception:
+            return None
+        return None
     
     def _merge_args_with_solution(self, failed_args: Dict[str, Any], solution_args: Dict[str, Any], expected_params: List[str] = None) -> Dict[str, Any]:
         """Merge failed arguments with solution template intelligently.

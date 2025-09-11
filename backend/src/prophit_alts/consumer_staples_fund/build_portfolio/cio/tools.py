@@ -1,3 +1,4 @@
+from backend.src.calculations_v2.portfolio.build.builder import CorrelationPortfolioBuilder
 from backend.src.db.core.db_config import ProphitAltsSession, MarketSession
 from backend.src.db.core.prophit_alts_models import *
 from backend.src.utils.serialize_output import serialize_sqlalchemy_obj
@@ -15,7 +16,7 @@ from backend.src.calculations_v2.returns import PortfolioReturnsCalculator, Retu
 from backend.src.calculations_v2.performance import PerformanceCalculator
 from backend.src.calculations_v2.risk import RiskCalculator
 from backend.src.calculations_v2.portfolio.factor_tilt import portfolio_factor_tilts
-from backend.src.utils.validation_utils import normalize_portfolio_input
+from backend.src.utils.gpt_parser import parse_portfolio_with_gpt
 from backend.src.data_models.portfolio_models import PortfolioInput
 from backend.src.db.core.market_data_models import Ticker
 
@@ -35,8 +36,22 @@ def get_analyst_picks():
     return initial_positions_dict
 
 def _to_canonical_portfolio(portfolio: PortfolioInput | dict) -> Dict[str, Dict]:
-    norm = normalize_portfolio_input(portfolio)
-    return {t: {"allocation": float(p.allocation), "position": p.position.value} for t, p in norm.root.items()}
+    """Convert any portfolio format to canonical dictionary using GPT parser."""
+    # If already in the correct format, return as-is
+    if isinstance(portfolio, dict):
+        # Check if it's already in canonical format
+        if all(isinstance(v, dict) and 'allocation' in v and 'position' in v for v in portfolio.values()):
+            # Ensure position is lowercase and allocation is float
+            return {
+                ticker: {
+                    "allocation": float(config['allocation']),
+                    "position": config['position'].lower() if isinstance(config['position'], str) else config['position']
+                }
+                for ticker, config in portfolio.items()
+            }
+    
+    # Use GPT parser for any other format
+    return parse_portfolio_with_gpt(portfolio)
 
 def correlation_matrix(portfolio_dict: PortfolioInput | dict, lookback_days: int = 252) -> pd.DataFrame:
     portfolio_dict = _to_canonical_portfolio(portfolio_dict)
@@ -374,6 +389,7 @@ def factor_tilts_for_portfolio(portfolio_dict: PortfolioInput | dict, factors: s
 
     return _round_tilt_output(portfolio_factor_tilts(weights, factors))
 
+
 def pull_rest_of_ticker_pool():
     session = ProphitAltsSession()
     market_session = MarketSession()
@@ -396,3 +412,37 @@ def pull_rest_of_ticker_pool():
 
     return ticker_pool_list
 
+def build_portfolio(portfolio_data: any):
+    """
+    Parse ANY portfolio data into a proper portfolio dict and build optimized portfolio
+    
+    Args:
+        portfolio_data: Any format - string, dict, list, etc.
+        Examples:
+            - "AAPL 10% long, MSFT 5% short"
+            - {"AAPL": 0.1, "MSFT": -0.05}  
+            - [("AAPL", 0.1, "long")]
+    
+    Returns:
+        Dict in format: {"TICKER": {"allocation": 0.x, "position": "long/short"}, ...}
+    """
+    # Parse any input into portfolio dict format using the canonical converter
+    portfolio_dict = _to_canonical_portfolio(portfolio_data)
+
+    built_portfolio = CorrelationPortfolioBuilder().build_portfolio(
+        tickers=portfolio_dict,  # Parameter is named 'tickers', not 'portfolio_dict'
+        target_annual_vol=0.20,
+        portfolio_value=1_000_000,
+        leverage=2.0,
+        target_net_exposure=0.30,
+        lookback_days=252,
+        max_position_weight=0.10,
+    )
+    
+    return built_portfolio["final_portfolio"]
+
+if __name__ == "__main__":
+    test_data = """"arguments": "{\"portfolio_dict\":{\"BJ\":{\"allocation\":0.075,\"position\":\"long\"},\"KR\":{\"allocation\":0.075,\"position\":\"long\"},\"COST\":{\"allocation\":0.075,\"position\":\"long\"},\"MNST\":{\"allocation\":0.075,\"position\":\"long\"},\"KO\":{\"allocation\":0.075,\"position\":\"long\"},\"CCEP\":{\"allocation\":0.075,\"position\":\"long\"},\"SAM\":{\"allocation\":0.075,\"position\":\"long\"},\"CAG\":{\"allocation\":0.075,\"position\":\"long\"},\"GIS\":{\"allocation\":0.075,\"position\":\"long\"},\"POST\":{\"allocation\":0.075,\"position\":\"long\"},\"PG\":{\"allocation\":0.075,\"position\":\"long\"},\"CL\":{\"allocation\":0.075,\"position\":\"long\"},\"KMB\":{\"allocation\":0.075,\"position\":\"long\"},\"EPC\":{\"allocation\":0.075,\"position\":\"long\"},\"HLF\":{\"allocation\":0.075,\"position\":\"long\"},\"ODD\":{\"allocation\":0.075,\"position\":\"long\"},\"RLX\":{\"allocation\":0.075,\"position\":\"long\"},\"WBA\":{\"allocation\":0.05,\"position\":\"short\"},\"UNFI\":{\"allocation\":0.05,\"position\":\"short\"},\"TGT\":{\"allocation\":0.05,\"position\":\"short\"},\"PRMB\":{\"allocation\":0.05,\"position\":\"short\"},\"TAP\":{\"allocation\":0.05,\"position\":\"short\"},\"STZ\":{\"allocation\":0.05,\"position\":\"short\"},\"SJM\":{\"allocation\":0.05,\"position\":\"short\"},\"HSY\":{\"allocation\":0.05,\"position\":\"short\"},\"ADM\":{\"allocation\":0.05,\"position\":\"short\"},\"ENR\":{\"allocation\":0.05,\"position\":\"short\"},\"SPB\":{\"allocation\":0.05,\"position\":\"short\"},\"CLX\":{\"allocation\":0.05,\"position\":\"short\"},\"ELF\":{\"allocation\":0.05,\"position\":\"short\"},\"OLPX\":{\"allocation\":0.05,\"position\":\"short\"},\"EL\":{\"allocation\":0.05,\"position\":\"short\"}},\"exposure_type\":\"net\"}"""
+
+
+    print(build_portfolio(test_data))

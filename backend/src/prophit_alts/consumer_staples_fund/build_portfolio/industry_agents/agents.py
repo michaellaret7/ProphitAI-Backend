@@ -23,7 +23,7 @@ class IndustryRecommendations(BaseModel):
 class IndustryAgent(BaseAgent):
     def __init__(self, industry: str):
         self.industry = industry
-        super().__init__(*build_industry_prompt(industry), max_iterations=75, plan_first=True, save_messages=True, model="gpt-4.1", verbose=True, memory_refresh_interval=8)
+        super().__init__(*build_industry_prompt(industry), max_iterations=75, plan_first=True, save_messages=True, model="gpt-4.1", verbose=True, memory_refresh_interval=8, use_episodic_memory=False)
         
         register_industry_tools(self)
 
@@ -120,14 +120,13 @@ class IndustryAgent(BaseAgent):
             return False
 
 
-
-
-
-   
-
-
-
-
+if __name__ == "__main__":
+    agent = IndustryAgent(industry="beverages")
+    result = agent.run()
+    print("="*100)
+    print("Industry Agent Result:")
+    print("="*100)
+    print(result)
 
 
     

@@ -453,11 +453,6 @@ class CorrelationPortfolioBuilder:
             vol_scale = target_annual_vol / current_vol
             scaled_weights = weights * vol_scale
             
-            print(f"\nVolatility Scaling:")
-            print(f"  Current volatility: {current_vol:.2%}")
-            print(f"  Target volatility:  {target_annual_vol:.2%}")
-            print(f"  Scaling factor:     {vol_scale:.3f}")
-            
             return scaled_weights
         
         return weights

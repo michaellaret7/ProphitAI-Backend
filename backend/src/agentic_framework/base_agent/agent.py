@@ -25,6 +25,7 @@ from .events.manager import EventManager, AgentEvent
 from .tasks.validator import TaskValidator
 from .memory.error_memory import ToolErrorMemory
 from .memory.semantic_memory import SemanticMemory
+from .memory.episodic_memory import EpisodicMemory
 from .tool_registry import register_base_tools, register_task_management_tools
 
 load_dotenv()
@@ -51,6 +52,7 @@ class BaseAgent:
                 final_keywords: Optional[List[str]] = None, 
                 save_messages: bool = True,
                 use_error_memory: bool = True,
+                use_episodic_memory: bool = True,
                 memory_refresh_interval: int = 6,
             ):
         
@@ -65,6 +67,7 @@ class BaseAgent:
         self.final_keywords = final_keywords or ["Final Answer:", "FINAL ANSWER:"]
         self.save_messages = save_messages
         self.use_error_memory = use_error_memory
+        self.use_episodic_memory = use_episodic_memory
         self.memory_refresh_interval = memory_refresh_interval
 
         # OpenAI tools and local dispatch map
@@ -118,6 +121,9 @@ class BaseAgent:
         # Initialize semantic memory (child classes override this)
         self.semantic_memory: Optional[SemanticMemory] = None
         self._initialize_semantic_memory()
+
+        # Initialize episodic memory (blank each session if enabled)
+        self.episodic = EpisodicMemory(reset_on_init=True) if self.use_episodic_memory else None
         
         # Initialize planning tool with agent context
         self.planning_tool = PlanningTool(agent=self)
