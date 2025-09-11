@@ -163,44 +163,18 @@ class PortfolioReturnsCalculator:
 
 if __name__ == "__main__":
     # Portfolio from JSON
-    portfolio = [
-        {"ticker": "MNST", "position": "long", "allocation": 0.072},
-        {"ticker": "KO", "position": "long", "allocation": 0.072},
-        {"ticker": "CCEP", "position": "long", "allocation": 0.055},
-        {"ticker": "BJ", "position": "long", "allocation": 0.06},
-        {"ticker": "KR", "position": "long", "allocation": 0.06},
-        {"ticker": "COST", "position": "long", "allocation": 0.06},
-        {"ticker": "CAG", "position": "long", "allocation": 0.06},
-        {"ticker": "GIS", "position": "long", "allocation": 0.06},
-        {"ticker": "PG", "position": "long", "allocation": 0.065},
-        {"ticker": "CL", "position": "long", "allocation": 0.065},
-        {"ticker": "KMB", "position": "long", "allocation": 0.065},
-        {"ticker": "EPC", "position": "long", "allocation": 0.065},
-        {"ticker": "HLF", "position": "long", "allocation": 0.045},
-        {"ticker": "POST", "position": "long", "allocation": 0.045},
-        {"ticker": "SAM", "position": "long", "allocation": 0.045},
-        {"ticker": "ODD", "position": "long", "allocation": 0.045},
-        {"ticker": "UNFI", "position": "short", "allocation": 0.056},
-        {"ticker": "TGT", "position": "short", "allocation": 0.112},
-        {"ticker": "PRMB", "position": "short", "allocation": 0.056},
-        {"ticker": "TAP", "position": "short", "allocation": 0.056},
-        {"ticker": "STZ", "position": "short", "allocation": 0.035},
-        {"ticker": "SJM", "position": "short", "allocation": 0.056},
-        {"ticker": "HSY", "position": "short", "allocation": 0.056},
-        {"ticker": "ADM", "position": "short", "allocation": 0.056},
-        {"ticker": "ENR", "position": "short", "allocation": 0.056},
-        {"ticker": "SPB", "position": "short", "allocation": 0.056},
-        {"ticker": "CLX", "position": "short", "allocation": 0.056},
-        {"ticker": "ELF", "position": "short", "allocation": 0.035},
-    ]
+    portfolio = {"BJ":{"allocation":0.055,"position":"long"},"KR":{"allocation":0.055,"position":"long"},"COST":{"allocation":0.07,"position":"long"},"MNST":{"allocation":0.075,"position":"long"},"KO":{"allocation":0.06,"position":"long"},"CCEP":{"allocation":0.045,"position":"long"},"SAM":{"allocation":0.035,"position":"long"},"CAG":{"allocation":0.04,"position":"long"},"GIS":{"allocation":0.04,"position":"long"},"PG":{"allocation":0.045,"position":"long"},"CL":{"allocation":0.03,"position":"long"},"KMB":{"allocation":0.025,"position":"long"},"EPC":{"allocation":0.03,"position":"long"},"ODD":{"allocation":0.025,"position":"long"},"RLX":{"allocation":0.025,"position":"long"},"LW":{"allocation":0.015,"position":"long"},"PM":{"allocation":0.015,"position":"long"},"WBA":{"allocation":0.04,"position":"short"},"UNFI":{"allocation":0.035,"position":"short"},"TGT":{"allocation":0.04,"position":"short"},"PRMB":{"allocation":0.045,"position":"short"},"TAP":{"allocation":0.045,"position":"short"},"STZ":{"allocation":0.035,"position":"short"},"SJM":{"allocation":0.03,"position":"short"},"HSY":{"allocation":0.015,"position":"short"},"ADM":{"allocation":0.015,"position":"short"},"ENR":{"allocation":0.015,"position":"short"},"SPB":{"allocation":0.03,"position":"short"},"CLX":{"allocation":0.015,"position":"short"},"ELF":{"allocation":0.035,"position":"short"},"OLPX":{"allocation":0.035,"position":"short"},"EL":{"allocation":0.04,"position":"short"},"CELH":{"allocation":0.02,"position":"short"}}
     
+    from backend.src.utils.gpt_parser import parse_portfolio_with_gpt
+    portfolio = parse_portfolio_with_gpt(portfolio)
+
     # Convert to weights dict (negative for shorts)
     weights = {}
-    for position in portfolio:
-        if position["position"] == "short":
-            weights[position["ticker"]] = -position["allocation"]
+    for ticker, meta in portfolio.items():
+        if meta["position"].lower() == "short":
+            weights[ticker] = -meta["allocation"]
         else:
-            weights[position["ticker"]] = position["allocation"]
+            weights[ticker] = meta["allocation"]
     
     # Calculate portfolio metrics
     from backend.src.repositories.price_data import get_price_data_daily, get_dividends_series

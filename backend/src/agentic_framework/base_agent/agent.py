@@ -415,7 +415,7 @@ class BaseAgent:
         ])
         
         # Save initial messages
-        self.message_logger.save_messages_to_json(messages, iteration=0)
+        self.message_logger.save_messages_to_json(messages, iteration=0, total_tokens=self.total_tokens)
 
         if self.plan_first:
             # Use new structured planning tool with enhanced plan-driven execution instructions
@@ -909,7 +909,7 @@ class BaseAgent:
             self.trace.append(step)
             
             # Save messages after each iteration
-            self.message_logger.save_messages_to_json(messages, iteration=i)
+            self.message_logger.save_messages_to_json(messages, iteration=i, total_tokens=self.total_tokens)
             
             # Enhanced iteration tracking with plan-driven execution awareness
             iteration_data = {

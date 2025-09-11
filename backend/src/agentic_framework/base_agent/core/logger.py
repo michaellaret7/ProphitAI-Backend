@@ -24,7 +24,7 @@ class MessageLogger:
             except Exception:
                 pass
     
-    def save_messages_to_json(self, messages: List[Dict[str, Any]], iteration: int) -> None:
+    def save_messages_to_json(self, messages: List[Dict[str, Any]], iteration: int, total_tokens: int = None) -> None:
         """Save messages to JSON file during execution."""
         if not self.save_messages:
             return
@@ -59,6 +59,9 @@ class MessageLogger:
                 "messages": serializable_messages,
                 "message_count": len(serializable_messages)
             }
+            if total_tokens is not None:
+                # Live cumulative tokens used so far in the run
+                data["live_total_tokens"] = int(total_tokens)
             
             with open(self.messages_log_path, "w", encoding="utf-8") as f:
                 json.dump(data, f, indent=2, ensure_ascii=False)

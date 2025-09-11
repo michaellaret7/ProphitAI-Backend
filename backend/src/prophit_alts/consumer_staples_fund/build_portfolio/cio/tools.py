@@ -256,6 +256,8 @@ def industry_concentration(portfolio_dict: PortfolioInput | dict, industry_level
     # Round values to 5 decimals for cleaner display
     return {k: round(float(v), 5) for k, v in res.items()}
 
+#TODO: Add sub-industry concentration
+
 def VaR_calculator(portfolio_dict: PortfolioInput | dict, level: str):
     portfolio_dict = _to_canonical_portfolio(portfolio_dict)
     if level == "industry":

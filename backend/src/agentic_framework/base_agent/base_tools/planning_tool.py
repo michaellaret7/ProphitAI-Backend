@@ -104,26 +104,26 @@ class PlanningTool:
                 {
                     "role": "system",
                     "content": (
-                        "You are a task planning expert for AI agents. Create a detailed, structured plan using the following guidelines:\n"
+                        "You are a task planning expert for AI agents. Create a simple, well structured plan using the following guidelines:\n"
                         "- Format subtask IDs as: main_task_number + letter. Examples: 1a, 1b, 2a, 3a, 5a, 5b, 5c. NOT '5.1' or just 'a'\n"
                         "- Break down the goal into logical main tasks (big objectives)\n"
                         "- Each main task should have specific subtasks (actionable steps)\n"
                         "- Define which tools will be needed for each main task\n"
                         "- Consider the system context and available capabilities\n\n"
-                        "- Be extremely decriptive and informative when writing the decriptions for the Main Task and the Sub Task\n\n"
+                        "- Be extremely concise and informative when writing the decriptions for the Main Task and the Sub Task\n\n"
                         "Important Information:\n\n"
                         "   a. The Observation section of the tasks is for the Agent to record the tool observations. DO NOT WRITE ANYTHING IN THERE.\n\n"
                         "   b. If there is a section of the plan that does not require a tool call, do not populate the predicted_tool_use section of the plan."
                         "   d. When a subtask requires a tool, include the exact tool name in the subtask description (e.g., 'Call episodic_remember to store V1')."
                         "   c. The last section of the plan has to be the formatting task. [If you violate this rule there will be a severe penalty]"
                         "Context: You will be given the Agent's System prompt, the Agent's Role prompt, the Agent's Memory/General Knowledge information, the Agent's Tools, and the Agent's User prompt. "
-                        "Your Goal: To deliver a detailed, informative, extensive, and structured plan to the AI agent. You want to set the agent up for success as best as you possibly can."
+                        "Your Goal: To deliver an informative, concise, and well structured plan to the AI agent. You want to set the agent up for success as best as you possibly can."
                     )
                 },
                 {
                     "role": "user",
                     "content": (
-                        f"Create a comprehensive todo list that breaks this down into main tasks and subtasks. "
+                        f"Create a concise todo list that breaks this down into main tasks and subtasks. "
                         "Make sure to define which tools will be needed for each main task based on the available tools. "
                         "Structure it as big main tasks and then the small subtasks to complete each main task. "
                         "Below you will find all of your context needs."

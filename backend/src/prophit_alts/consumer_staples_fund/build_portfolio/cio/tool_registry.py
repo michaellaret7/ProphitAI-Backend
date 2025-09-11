@@ -100,7 +100,7 @@ def register_cio_tools(agent):
                 "quarters_back": {
                     "type": "integer",
                     "description": "Number of quarters of historical data to retrieve. Default is 1 (most recent quarter only).",
-                    "default": 1
+                    "default": 2
                 },
             },
             "required": ["ticker", "statement_type"],
@@ -158,9 +158,9 @@ def register_cio_tools(agent):
     agent.add_tool(
         name="get_analyst_picks",
         description=(
-            "Retrieve analyst picks and initial positions for the Consumer Staples Fund. "
+            "Retrieve initial analyst picks for the Consumer Staples Fund. (These picks are not a portfolio, they are the analyst picks and their conviction levels)"
             "Returns a dictionary with tickers as keys and position details including position type "
-            "(long/short), industry, allocation level, and reasoning."
+            "(long/short), industry, conviction level, and reasoning."
         ),
         parameters={
             "type": "object",
