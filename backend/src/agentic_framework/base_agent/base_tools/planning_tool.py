@@ -114,6 +114,7 @@ class PlanningTool:
                         "Important Information:\n\n"
                         "   a. The Observation section of the tasks is for the Agent to record the tool observations. DO NOT WRITE ANYTHING IN THERE.\n\n"
                         "   b. If there is a section of the plan that does not require a tool call, do not populate the predicted_tool_use section of the plan."
+                        "   d. When a subtask requires a tool, include the exact tool name in the subtask description (e.g., 'Call episodic_remember to store V1')."
                         "   c. The last section of the plan has to be the formatting task. [If you violate this rule there will be a severe penalty]"
                         "Context: You will be given the Agent's System prompt, the Agent's Role prompt, the Agent's Memory/General Knowledge information, the Agent's Tools, and the Agent's User prompt. "
                         "Your Goal: To deliver a detailed, informative, extensive, and structured plan to the AI agent. You want to set the agent up for success as best as you possibly can."

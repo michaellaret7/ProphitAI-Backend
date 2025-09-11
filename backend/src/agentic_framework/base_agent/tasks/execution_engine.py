@@ -11,7 +11,7 @@ from .models import TodoList, MainTask, SubTask, TaskStatus
 class PlanExecutionEngine:
     """Drives task execution based on structured plans."""
     
-    def __init__(self, task_manager: TaskManager, event_manager: EventManager, verbose: bool = True):
+    def __init__(self, task_manager: TaskManager, event_manager: EventManager, verbose: bool = True, strict_validation: bool = True):
         """Initialize the execution engine.
         
         Args:
@@ -22,6 +22,7 @@ class PlanExecutionEngine:
         self.task_manager = task_manager
         self.event_manager = event_manager
         self.verbose = verbose
+        self.strict_validation = strict_validation
         self.current_main_task: Optional[MainTask] = None
         self.current_subtask: Optional[SubTask] = None
         self.plan_loaded: bool = False
@@ -330,22 +331,26 @@ class PlanExecutionEngine:
         
         # Add tool result to observations using TaskManager
         observation = f"Tool '{tool_name}' returned: {str(result)[:200]}"
-        
-        # Add observation to main task
+
+        # Always add observation to main task
         self.task_manager.add_task_observation(
             self.current_main_task.id,
             observation
         )
-        
-        if self.current_subtask:
-            # Add observation to subtask
+
+        # Determine relevance and success
+        is_relevant = self._is_tool_relevant(tool_name, self.current_main_task, self.current_subtask) if self.strict_validation else True
+        is_error = self._is_error_result(result)
+
+        if self.current_subtask and (is_relevant or not self.strict_validation):
+            # Add observation to subtask only if relevant (or not strict)
             self.task_manager.add_task_observation(
                 self.current_main_task.id,
                 observation,
                 self.current_subtask.id
             )
-            
-            # Automatically collect evidence from tool result
+
+            # Collect evidence respecting error-awareness
             evidence_items = self.collect_evidence_from_tool_result(tool_name, result)
             for evidence in evidence_items:
                 self.task_manager.add_task_evidence(
@@ -374,6 +379,9 @@ class PlanExecutionEngine:
         # Add completion evidence to main task using automatic evidence collection
         evidence_items = self.collect_evidence_from_tool_result(tool_name, result)
         for evidence in evidence_items:
+            # If strict, avoid adding misleading success evidence at main-task level when error occurred
+            if self.strict_validation and self._looks_like_success_evidence(evidence) and is_error:
+                continue
             self.task_manager.add_task_evidence(
                 self.current_main_task.id,
                 evidence
@@ -413,6 +421,14 @@ class PlanExecutionEngine:
             self.current_main_task
         )
         
+        # Strict gate: require relevance, success, and explicit tool-named evidence
+        if self.strict_validation:
+            is_relevant = self._is_tool_relevant(tool_name, self.current_main_task, self.current_subtask)
+            is_error = self._is_error_result(result)
+            has_tool_named_evidence = self._subtask_has_tool_named_evidence(self.current_subtask, tool_name)
+            if not (is_relevant and not is_error and has_tool_named_evidence):
+                return False
+
         # Auto-advance if either validator suggests completion with high confidence
         return (should_complete and confidence >= 0.6) or (subtask_complete and subtask_confidence >= 0.7)
     
@@ -645,30 +661,39 @@ class PlanExecutionEngine:
             List of evidence strings extracted from the result
         """
         evidence_items = []
-        
-        # Basic evidence: tool execution
+
+        is_error = self._is_error_result(result)
+
+        if is_error:
+            # Record explicit failure evidence without implying success
+            message = self._summarize_error(result)
+            evidence_items.append(f"Tool {tool_name} returned error{': ' + message if message else ''}")
+            return evidence_items
+
+        # Basic evidence: tool execution (success path only)
         evidence_items.append(f"Successfully executed tool '{tool_name}'")
-        
-        # Analyze result for specific evidence
+
+        # Analyze result for specific evidence (success path)
         if isinstance(result, dict):
             if result.get('success'):
                 evidence_items.append(f"Tool {tool_name} returned success=True")
-            
+
             # Look for data indicators
             data_keys = ['data', 'results', 'output', 'response', 'items']
             for key in data_keys:
                 if key in result and result[key]:
                     evidence_items.append(f"Tool {tool_name} returned {key} with content")
-        
+
         elif isinstance(result, list):
             if len(result) > 0:
                 evidence_items.append(f"Tool {tool_name} returned list with {len(result)} items")
-        
+
         elif isinstance(result, str):
-            if len(result.strip()) > 20:
+            text = result.strip()
+            if len(text) > 20:
                 evidence_items.append(f"Tool {tool_name} returned substantial text output")
-        
-        # Check for completion-indicating tool names
+
+        # Check for completion-indicating tool names (success path)
         completion_indicators = {
             'get': 'Data retrieval completed',
             'fetch': 'Data fetching completed',
@@ -679,13 +704,78 @@ class PlanExecutionEngine:
             'create': 'Creation completed',
             'generate': 'Generation completed'
         }
-        
+
         for indicator, evidence_text in completion_indicators.items():
             if indicator in tool_name.lower():
                 evidence_items.append(evidence_text)
                 break
-        
+
         return evidence_items
+
+    # --- Helper methods for strict validation ---
+    def _is_error_result(self, result: Any) -> bool:
+        if isinstance(result, Exception):
+            return True
+        if isinstance(result, dict):
+            if result.get('success') is False:
+                return True
+            err_val = result.get('error')
+            if err_val:
+                try:
+                    return bool(str(err_val).strip())
+                except Exception:
+                    return True
+        if isinstance(result, str):
+            text = result.lower()
+            error_words = ['error', 'failed', 'exception', 'timeout', 'not found', 'invalid', 'denied', 'missing']
+            return any(w in text for w in error_words)
+        return False
+
+    def _summarize_error(self, result: Any) -> str:
+        try:
+            if isinstance(result, Exception):
+                return str(result)
+            if isinstance(result, dict):
+                if result.get('error'):
+                    return str(result.get('error'))
+                # Common error shapes
+                for key in ['message', 'detail', 'details']:
+                    if key in result:
+                        return str(result[key])
+            if isinstance(result, str):
+                return result[:160]
+        except Exception:
+            return ""
+        return ""
+
+    def _is_tool_relevant(self, tool_name: str, main_task: MainTask, subtask: Optional[SubTask]) -> bool:
+        if not main_task or not subtask:
+            return False
+        try:
+            tool = str(tool_name).strip().lower()
+            predicted = [str(t).strip().lower() for t in (main_task.predicted_tool_use or [])]
+            in_predicted = tool in predicted
+            in_description = tool in str(subtask.description).lower()
+            return in_predicted and in_description
+        except Exception:
+            return False
+
+    def _subtask_has_tool_named_evidence(self, subtask: SubTask, tool_name: str) -> bool:
+        if not subtask:
+            return False
+        t = str(tool_name).strip().lower()
+        for ev in subtask.completion_evidence:
+            try:
+                if t in str(ev).lower():
+                    return True
+            except Exception:
+                continue
+        return False
+
+    def _looks_like_success_evidence(self, evidence_text: str) -> bool:
+        text = (evidence_text or "").lower()
+        success_markers = ['successfully executed tool', 'returned success=true', 'completed', 'retrieval completed', 'analysis completed', 'calculation completed', 'processing completed', 'creation completed', 'generation completed']
+        return any(marker in text for marker in success_markers)
 
     # === Advanced Task Management ===
     

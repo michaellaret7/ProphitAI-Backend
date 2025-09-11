@@ -1603,41 +1603,6 @@
       "error_pattern": "exposure_calculator() missing 1 required positional argument: 'portfolio_dict'",
       "occurrences": [
         {
-          "timestamp": "2025-09-11T11:36:43.004438",
-          "args": {
-            "exposure_type": "long"
-          },
-          "full_error": "exposure_calculator() missing 1 required positional argument: 'portfolio_dict'"
-        },
-        {
-          "timestamp": "2025-09-11T11:36:43.010678",
-          "args": {
-            "exposure_type": "short"
-          },
-          "full_error": "exposure_calculator() missing 1 required positional argument: 'portfolio_dict'"
-        },
-        {
-          "timestamp": "2025-09-11T13:58:01.519833",
-          "args": {
-            "exposure_type": "net"
-          },
-          "full_error": "exposure_calculator() missing 1 required positional argument: 'portfolio_dict'"
-        },
-        {
-          "timestamp": "2025-09-11T13:58:01.559018",
-          "args": {
-            "exposure_type": "gross"
-          },
-          "full_error": "exposure_calculator() missing 1 required positional argument: 'portfolio_dict'"
-        },
-        {
-          "timestamp": "2025-09-11T13:58:01.591114",
-          "args": {
-            "exposure_type": "long"
-          },
-          "full_error": "exposure_calculator() missing 1 required positional argument: 'portfolio_dict'"
-        },
-        {
           "timestamp": "2025-09-11T13:58:01.623558",
           "args": {
             "exposure_type": "short"
@@ -1669,6 +1634,41 @@
           "timestamp": "2025-09-11T14:15:10.947919",
           "args": {
             "exposure_type": "short"
+          },
+          "full_error": "exposure_calculator() missing 1 required positional argument: 'portfolio_dict'"
+        },
+        {
+          "timestamp": "2025-09-11T15:10:07.812830",
+          "args": {
+            "exposure_type": "net"
+          },
+          "full_error": "exposure_calculator() missing 1 required positional argument: 'portfolio_dict'"
+        },
+        {
+          "timestamp": "2025-09-11T15:10:07.819237",
+          "args": {
+            "exposure_type": "gross"
+          },
+          "full_error": "exposure_calculator() missing 1 required positional argument: 'portfolio_dict'"
+        },
+        {
+          "timestamp": "2025-09-11T15:10:07.826067",
+          "args": {
+            "exposure_type": "long"
+          },
+          "full_error": "exposure_calculator() missing 1 required positional argument: 'portfolio_dict'"
+        },
+        {
+          "timestamp": "2025-09-11T15:10:07.830453",
+          "args": {
+            "exposure_type": "short"
+          },
+          "full_error": "exposure_calculator() missing 1 required positional argument: 'portfolio_dict'"
+        },
+        {
+          "timestamp": "2025-09-11T15:42:39.396202",
+          "args": {
+            "exposure_type": "net"
           },
           "full_error": "exposure_calculator() missing 1 required positional argument: 'portfolio_dict'"
         }
@@ -1794,6 +1794,140 @@
           },
           "explanation": "Successful retry with corrected arguments",
           "timestamp": "2025-09-11T14:16:36.592733",
+          "success_count": 1
+        },
+        {
+          "correct_args": {
+            "portfolio_dict": {
+              "KR": {
+                "allocation": 0.065,
+                "position": "long"
+              },
+              "CAG": {
+                "allocation": 0.06,
+                "position": "long"
+              },
+              "GIS": {
+                "allocation": 0.055,
+                "position": "long"
+              },
+              "POST": {
+                "allocation": 0.05,
+                "position": "long"
+              },
+              "BJ": {
+                "allocation": 0.05,
+                "position": "long"
+              },
+              "PG": {
+                "allocation": 0.05,
+                "position": "long"
+              },
+              "CL": {
+                "allocation": 0.045,
+                "position": "long"
+              },
+              "MNST": {
+                "allocation": 0.045,
+                "position": "long"
+              },
+              "KO": {
+                "allocation": 0.04,
+                "position": "long"
+              },
+              "COST": {
+                "allocation": 0.05,
+                "position": "long"
+              },
+              "KMB": {
+                "allocation": 0.04,
+                "position": "long"
+              },
+              "ENR": {
+                "allocation": 0.045,
+                "position": "long"
+              },
+              "ODD": {
+                "allocation": 0.035,
+                "position": "long"
+              },
+              "ELF": {
+                "allocation": 0.035,
+                "position": "long"
+              },
+              "HLF": {
+                "allocation": 0.03,
+                "position": "long"
+              },
+              "CCEP": {
+                "allocation": 0.035,
+                "position": "long"
+              },
+              "TAP": {
+                "allocation": 0.035,
+                "position": "long"
+              },
+              "EPC": {
+                "allocation": 0.035,
+                "position": "long"
+              },
+              "WBA": {
+                "allocation": 0.055,
+                "position": "short"
+              },
+              "UNFI": {
+                "allocation": 0.055,
+                "position": "short"
+              },
+              "SJM": {
+                "allocation": 0.05,
+                "position": "short"
+              },
+              "PRMB": {
+                "allocation": 0.045,
+                "position": "short"
+              },
+              "HSY": {
+                "allocation": 0.045,
+                "position": "short"
+              },
+              "STZ": {
+                "allocation": 0.045,
+                "position": "short"
+              },
+              "TGT": {
+                "allocation": 0.04,
+                "position": "short"
+              },
+              "ADM": {
+                "allocation": 0.04,
+                "position": "short"
+              },
+              "SAM": {
+                "allocation": 0.035,
+                "position": "short"
+              },
+              "OLPX": {
+                "allocation": 0.035,
+                "position": "short"
+              },
+              "EL": {
+                "allocation": 0.035,
+                "position": "short"
+              },
+              "SPB": {
+                "allocation": 0.035,
+                "position": "short"
+              },
+              "CLX": {
+                "allocation": 0.035,
+                "position": "short"
+              }
+            },
+            "exposure_type": "net"
+          },
+          "explanation": "Successful retry with corrected arguments",
+          "timestamp": "2025-09-11T15:42:50.168502",
           "success_count": 1
         }
       ],
@@ -3034,7 +3168,292 @@
         "timestamp": "2025-09-11T08:32:54.155241",
         "success_count": 1
       }
+    },
+    "episodic_remember:unknown_error": {
+      "tool_name": "episodic_remember",
+      "error_pattern": "'context' must be a dictionary if provided",
+      "occurrences": [
+        {
+          "timestamp": "2025-09-11T15:48:29.969003",
+          "args": {
+            "title": "portfolio_v2",
+            "event": "Portfolio V2 portfolio_dict and rationale (changes from V1) logged per execution protocol. V2 rebalances for value tilt, lower intra-industry correlation, more beverage/household/personal care diversification. Allocations: {\"KR\":{\"allocation\":0.06,\"position\":\"long\"},\"CAG\":{\"allocation\":0.055,\"position\":\"long\"},\"POST\":{\"allocation\":0.045,\"position\":\"long\"},\"BJ\":{\"allocation\":0.045,\"position\":\"long\"},\"PG\":{\"allocation\":0.04,\"position\":\"long\"},\"CL\":{\"allocation\":0.04,\"position\":\"long\"},\"MNST\":{\"allocation\":0.05,\"position\":\"long\"},\"KO\":{\"allocation\":0.045,\"position\":\"long\"},\"COST\":{\"allocation\":0.045,\"position\":\"long\"},\"KMB\":{\"allocation\":0.035,\"position\":\"long\"},\"ENR\":{\"allocation\":0.05,\"position\":\"long\"},\"ODD\":{\"allocation\":0.04,\"position\":\"long\"},\"ELF\":{\"allocation\":0.04,\"position\":\"long\"},\"EPC\":{\"allocation\":0.04,\"position\":\"long\"},\"CCEP\":{\"allocation\":0.035,\"position\":\"long\"},\"TAP\":{\"allocation\":0.045,\"position\":\"long\"},\"HLF\":{\"allocation\":0.035,\"position\":\"long\"},\"WBA\":{\"allocation\":0.055,\"position\":\"short\"},\"UNFI\":{\"allocation\":0.055,\"position\":\"short\"},\"SJM\":{\"allocation\":0.05,\"position\":\"short\"},\"PRMB\":{\"allocation\":0.045,\"position\":\"short\"},\"HSY\":{\"allocation\":0.045,\"position\":\"short\"},\"STZ\":{\"allocation\":0.045,\"position\":\"short\"},\"TGT\":{\"allocation\":0.04,\"position\":\"short\"},\"ADM\":{\"allocation\":0.04,\"position\":\"short\"},\"SAM\":{\"allocation\":0.04,\"position\":\"short\"},\"OLPX\":{\"allocation\":0.035,\"position\":\"short\"},\"EL\":{\"allocation\":0.035,\"position\":\"short\"},\"SPB\":{\"allocation\":0.035,\"position\":\"short\"},\"CLX\":{\"allocation\":0.035,\"position\":\"short\"}}. Rationale: See prior evidence; trims household/food clusters, reallocates to select value/momentum/quality longs (ENR, TAP, ODD, EPC, ELF), increases beverage/personal care weighting, all constraints met.",
+            "context": "Rebalancing versus V1: trims PG, KMB, GIS, POST; boosts ENR, TAP, ODD, EPC, ELF. Diversification and value tilt improved; all hard constraints met. Ready for analytics suite."
+          },
+          "full_error": "'context' must be a dictionary if provided"
+        }
+      ],
+      "solutions": [
+        {
+          "correct_args": {
+            "title": "portfolio_v2",
+            "event": "Portfolio V2 constructed and output (explicit portfolio_dict and rationale for changes from V1). Household/food clusters trimmed, ENR/TAP/ODD/EPC/ELF increased, beverage/personal care diversified. All constraints met.",
+            "context": {
+              "portfolio_dict": {
+                "KR": {
+                  "allocation": 0.06,
+                  "position": "long"
+                },
+                "CAG": {
+                  "allocation": 0.055,
+                  "position": "long"
+                },
+                "POST": {
+                  "allocation": 0.045,
+                  "position": "long"
+                },
+                "BJ": {
+                  "allocation": 0.045,
+                  "position": "long"
+                },
+                "PG": {
+                  "allocation": 0.04,
+                  "position": "long"
+                },
+                "CL": {
+                  "allocation": 0.04,
+                  "position": "long"
+                },
+                "MNST": {
+                  "allocation": 0.05,
+                  "position": "long"
+                },
+                "KO": {
+                  "allocation": 0.045,
+                  "position": "long"
+                },
+                "COST": {
+                  "allocation": 0.045,
+                  "position": "long"
+                },
+                "KMB": {
+                  "allocation": 0.035,
+                  "position": "long"
+                },
+                "ENR": {
+                  "allocation": 0.05,
+                  "position": "long"
+                },
+                "ODD": {
+                  "allocation": 0.04,
+                  "position": "long"
+                },
+                "ELF": {
+                  "allocation": 0.04,
+                  "position": "long"
+                },
+                "EPC": {
+                  "allocation": 0.04,
+                  "position": "long"
+                },
+                "CCEP": {
+                  "allocation": 0.035,
+                  "position": "long"
+                },
+                "TAP": {
+                  "allocation": 0.045,
+                  "position": "long"
+                },
+                "HLF": {
+                  "allocation": 0.035,
+                  "position": "long"
+                },
+                "WBA": {
+                  "allocation": 0.055,
+                  "position": "short"
+                },
+                "UNFI": {
+                  "allocation": 0.055,
+                  "position": "short"
+                },
+                "SJM": {
+                  "allocation": 0.05,
+                  "position": "short"
+                },
+                "PRMB": {
+                  "allocation": 0.045,
+                  "position": "short"
+                },
+                "HSY": {
+                  "allocation": 0.045,
+                  "position": "short"
+                },
+                "STZ": {
+                  "allocation": 0.045,
+                  "position": "short"
+                },
+                "TGT": {
+                  "allocation": 0.04,
+                  "position": "short"
+                },
+                "ADM": {
+                  "allocation": 0.04,
+                  "position": "short"
+                },
+                "SAM": {
+                  "allocation": 0.04,
+                  "position": "short"
+                },
+                "OLPX": {
+                  "allocation": 0.035,
+                  "position": "short"
+                },
+                "EL": {
+                  "allocation": 0.035,
+                  "position": "short"
+                },
+                "SPB": {
+                  "allocation": 0.035,
+                  "position": "short"
+                },
+                "CLX": {
+                  "allocation": 0.035,
+                  "position": "short"
+                }
+              },
+              "rationale": "Trims PG, KMB, GIS, POST to reduce household/food clustering; reallocates to ENR, TAP, ODD, EPC, ELF (value/momentum/quality, decorrelation), boosts beverage/personal care for diversification. All constraints met."
+            }
+          },
+          "explanation": "Successful retry with corrected arguments",
+          "timestamp": "2025-09-11T15:48:43.615481",
+          "success_count": 1
+        }
+      ],
+      "auto_solution": {
+        "correct_args": {
+          "title": "portfolio_v2",
+          "event": "Portfolio V2 constructed and output (explicit portfolio_dict and rationale for changes from V1). Household/food clusters trimmed, ENR/TAP/ODD/EPC/ELF increased, beverage/personal care diversified. All constraints met.",
+          "context": {
+            "portfolio_dict": {
+              "KR": {
+                "allocation": 0.06,
+                "position": "long"
+              },
+              "CAG": {
+                "allocation": 0.055,
+                "position": "long"
+              },
+              "POST": {
+                "allocation": 0.045,
+                "position": "long"
+              },
+              "BJ": {
+                "allocation": 0.045,
+                "position": "long"
+              },
+              "PG": {
+                "allocation": 0.04,
+                "position": "long"
+              },
+              "CL": {
+                "allocation": 0.04,
+                "position": "long"
+              },
+              "MNST": {
+                "allocation": 0.05,
+                "position": "long"
+              },
+              "KO": {
+                "allocation": 0.045,
+                "position": "long"
+              },
+              "COST": {
+                "allocation": 0.045,
+                "position": "long"
+              },
+              "KMB": {
+                "allocation": 0.035,
+                "position": "long"
+              },
+              "ENR": {
+                "allocation": 0.05,
+                "position": "long"
+              },
+              "ODD": {
+                "allocation": 0.04,
+                "position": "long"
+              },
+              "ELF": {
+                "allocation": 0.04,
+                "position": "long"
+              },
+              "EPC": {
+                "allocation": 0.04,
+                "position": "long"
+              },
+              "CCEP": {
+                "allocation": 0.035,
+                "position": "long"
+              },
+              "TAP": {
+                "allocation": 0.045,
+                "position": "long"
+              },
+              "HLF": {
+                "allocation": 0.035,
+                "position": "long"
+              },
+              "WBA": {
+                "allocation": 0.055,
+                "position": "short"
+              },
+              "UNFI": {
+                "allocation": 0.055,
+                "position": "short"
+              },
+              "SJM": {
+                "allocation": 0.05,
+                "position": "short"
+              },
+              "PRMB": {
+                "allocation": 0.045,
+                "position": "short"
+              },
+              "HSY": {
+                "allocation": 0.045,
+                "position": "short"
+              },
+              "STZ": {
+                "allocation": 0.045,
+                "position": "short"
+              },
+              "TGT": {
+                "allocation": 0.04,
+                "position": "short"
+              },
+              "ADM": {
+                "allocation": 0.04,
+                "position": "short"
+              },
+              "SAM": {
+                "allocation": 0.04,
+                "position": "short"
+              },
+              "OLPX": {
+                "allocation": 0.035,
+                "position": "short"
+              },
+              "EL": {
+                "allocation": 0.035,
+                "position": "short"
+              },
+              "SPB": {
+                "allocation": 0.035,
+                "position": "short"
+              },
+              "CLX": {
+                "allocation": 0.035,
+                "position": "short"
+              }
+            },
+            "rationale": "Trims PG, KMB, GIS, POST to reduce household/food clustering; reallocates to ENR, TAP, ODD, EPC, ELF (value/momentum/quality, decorrelation), boosts beverage/personal care for diversification. All constraints met."
+          }
+        },
+        "explanation": "Successful retry with corrected arguments",
+        "timestamp": "2025-09-11T15:48:43.615481",
+        "success_count": 1
+      }
     }
   },
-  "last_updated": "2025-09-11T14:32:18.385499"
+  "last_updated": "2025-09-11T15:48:43.615582"
 }

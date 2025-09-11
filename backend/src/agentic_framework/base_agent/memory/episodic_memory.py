@@ -88,6 +88,10 @@ class EpisodicMemory:
             entry["meta"] = meta
 
         entries = self._load()
+        # If an entry exists with the same title, replace/update it by
+        # removing the old one(s) and appending the new entry
+        title_key = entry["title"]
+        entries = [e for e in entries if e.get("title") != title_key]
         entries.append(entry)
         self._save(entries)
         return entry

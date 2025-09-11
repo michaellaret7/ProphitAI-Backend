@@ -21,7 +21,7 @@ from backend.src.calculations_v2.portfolio.build.builder import CorrelationPortf
 def register_cio_tools(agent):
     agent.add_tool(
         name="get_industry_benchmark_calculations",
-        description="Get the industry benchmark calculations for a given industry and factor. For example, 'beverages' and 'growth'. Another example is 'food_products' and 'value'.",
+        description="Get the industry benchmark calculations for a given industry and factor. For example, 'beverages' and 'growth'. Another example is 'food_products' and 'value'. Important Note: consumer_staples is not an industry, it is a sector.",
         parameters={
             "type": "object",
             "properties": {
@@ -160,7 +160,7 @@ def register_cio_tools(agent):
         description=(
             "Retrieve analyst picks and initial positions for the Consumer Staples Fund. "
             "Returns a dictionary with tickers as keys and position details including position type "
-            "(long/short), industry, conviction level, and reasoning."
+            "(long/short), industry, allocation level, and reasoning."
         ),
         parameters={
             "type": "object",
@@ -178,7 +178,7 @@ def register_cio_tools(agent):
             "properties": {
                 "portfolio_dict": {
                     "type": "object",
-                    "description": "🚨 REQUIRED: Portfolio dictionary containing the portfolio you want to analyze. Keys are ticker symbols (uppercase strings, 1-10 characters) and values are objects with 'conviction' and 'position' fields. Conviction must be float between 0.0-1.0 representing position size. Position must be exactly 'long' or 'short' (lowercase). MUST provide actual portfolio data - cannot be empty! Example: {'MNST': {'conviction': 0.05, 'position': 'long'}, 'COTY': {'conviction': 0.05, 'position': 'short'}}"
+                    "description": "🚨 REQUIRED: Portfolio dictionary containing the portfolio you want to analyze. Keys are ticker symbols (uppercase strings, 1-10 characters) and values are objects with 'allocation' and 'position' fields. Allocation must be float between 0.0-1.0 representing position size. Position must be exactly 'long' or 'short' (lowercase). MUST provide actual portfolio data - cannot be empty! Example: {'MNST': {'allocation': 0.05, 'position': 'long'}, 'COTY': {'allocation': 0.05, 'position': 'short'}}"
                 },
             },
             "required": ["portfolio_dict"],
@@ -196,7 +196,7 @@ def register_cio_tools(agent):
             "properties": {
                 "portfolio_dict": {
                     "type": "object",
-                    "description": "🚨 REQUIRED: Portfolio dictionary containing the portfolio you want to analyze. Keys are ticker symbols (uppercase strings, 1-10 characters) and values are objects with 'conviction' and 'position' fields. Conviction must be float between 0.0-1.0 representing position size. Position must be exactly 'long' or 'short' (lowercase). MUST provide actual portfolio data - cannot be empty! Example: {'MNST': {'conviction': 0.05, 'position': 'long'}, 'COTY': {'conviction': 0.05, 'position': 'short'}}"
+                    "description": "🚨 REQUIRED: Portfolio dictionary containing the portfolio you want to analyze. Keys are ticker symbols (uppercase strings, 1-10 characters) and values are objects with 'allocation' and 'position' fields. Allocation must be float between 0.0-1.0 representing position size. Position must be exactly 'long' or 'short' (lowercase). MUST provide actual portfolio data - cannot be empty! Example: {'MNST': {'allocation': 0.05, 'position': 'long'}, 'COTY': {'allocation': 0.05, 'position': 'short'}}"
                 },
             },
             "required": ["portfolio_dict"],
@@ -216,7 +216,7 @@ def register_cio_tools(agent):
             "properties": {
                 "portfolio_dict": {
                     "type": "object",
-                    "description": "🚨 REQUIRED: Portfolio dictionary containing the portfolio you want to analyze. Keys are ticker symbols (uppercase strings, 1-10 characters) and values are objects with 'conviction' and 'position' fields. Conviction must be float between 0.0-1.0 representing position size. Position must be exactly 'long' or 'short' (lowercase). MUST provide actual portfolio data - cannot be empty! Example: {'MNST': {'conviction': 0.05, 'position': 'long'}, 'COTY': {'conviction': 0.05, 'position': 'short'}}"
+                    "description": "🚨 REQUIRED: Portfolio dictionary containing the portfolio you want to analyze. Keys are ticker symbols (uppercase strings, 1-10 characters) and values are objects with 'allocation' and 'position' fields. Allocation must be float between 0.0-1.0 representing position size. Position must be exactly 'long' or 'short' (lowercase). MUST provide actual portfolio data - cannot be empty! Example: {'MNST': {'allocation': 0.05, 'position': 'long'}, 'COTY': {'allocation': 0.05, 'position': 'short'}}"
                 },
                 "exposure_type": {
                     "type": "string",
@@ -239,7 +239,7 @@ def register_cio_tools(agent):
             "properties": {
                 "portfolio_dict": {
                     "type": "object",
-                    "description": "🚨 REQUIRED: Portfolio dictionary containing the portfolio you want to analyze. Keys are ticker symbols (uppercase strings, 1-10 characters) and values are objects with 'conviction' and 'position' fields. Conviction must be float between 0.0-1.0 representing position size. Position must be exactly 'long' or 'short' (lowercase). MUST provide actual portfolio data - cannot be empty! Example: {'MNST': {'conviction': 0.05, 'position': 'long'}, 'COTY': {'conviction': 0.05, 'position': 'short'}}"
+                    "description": "🚨 REQUIRED: Portfolio dictionary containing the portfolio you want to analyze. Keys are ticker symbols (uppercase strings, 1-10 characters) and values are objects with 'allocation' and 'position' fields. Allocation must be float between 0.0-1.0 representing position size. Position must be exactly 'long' or 'short' (lowercase). MUST provide actual portfolio data - cannot be empty! Example: {'MNST': {'allocation': 0.05, 'position': 'long'}, 'COTY': {'allocation': 0.05, 'position': 'short'}}"
                 },
                 "industry_level": {
                     "type": "string",
@@ -262,7 +262,7 @@ def register_cio_tools(agent):
             "properties": {
                 "portfolio_dict": {
                     "type": "object",
-                    "description": "🚨 REQUIRED: Portfolio dictionary containing the portfolio you want to analyze. Keys are ticker symbols (uppercase strings, 1-10 characters) and values are objects with 'conviction' and 'position' fields. Conviction must be float between 0.0-1.0 representing position size. Position must be exactly 'long' or 'short' (lowercase). MUST provide actual portfolio data - cannot be empty! Example: {'MNST': {'conviction': 0.05, 'position': 'long'}, 'COTY': {'conviction': 0.05, 'position': 'short'}}"
+                    "description": "🚨 REQUIRED: Portfolio dictionary containing the portfolio you want to analyze. Keys are ticker symbols (uppercase strings, 1-10 characters) and values are objects with 'allocation' and 'position' fields. Allocation must be float between 0.0-1.0 representing position size. Position must be exactly 'long' or 'short' (lowercase). MUST provide actual portfolio data - cannot be empty! Example: {'MNST': {'allocation': 0.05, 'position': 'long'}, 'COTY': {'allocation': 0.05, 'position': 'short'}}"
                 },
                 "level": {
                     "type": "string",
@@ -285,7 +285,7 @@ def register_cio_tools(agent):
             "properties": {
                 "portfolio_dict": {
                     "type": "object",
-                    "description": "🚨 REQUIRED: Portfolio dictionary containing the portfolio you want to analyze. Keys are ticker symbols (uppercase strings, 1-10 characters) and values are objects with 'conviction' and 'position' fields. Conviction must be float between 0.0-1.0 representing position size. Position must be exactly 'long' or 'short' (lowercase). MUST provide actual portfolio data - cannot be empty! Example: {'MNST': {'conviction': 0.05, 'position': 'long'}, 'COTY': {'conviction': 0.05, 'position': 'short'}}"
+                    "description": "🚨 REQUIRED: Portfolio dictionary containing the portfolio you want to analyze. Keys are ticker symbols (uppercase strings, 1-10 characters) and values are objects with 'allocation' and 'position' fields. Allocation must be float between 0.0-1.0 representing position size. Position must be exactly 'long' or 'short' (lowercase). MUST provide actual portfolio data - cannot be empty! Example: {'MNST': {'allocation': 0.05, 'position': 'long'}, 'COTY': {'allocation': 0.05, 'position': 'short'}}"
                 },
                 "index_ticker": {
                     "type": "string",
@@ -319,7 +319,7 @@ def register_cio_tools(agent):
             "properties": {
                 "portfolio_dict": {
                     "type": "object",
-                    "description": "🚨 REQUIRED: Portfolio dictionary containing the portfolio you want to analyze. Keys are ticker symbols (uppercase strings, 1-10 characters) and values are objects with 'conviction' and 'position' fields. Conviction must be float between 0.0-1.0 representing position size. Position must be exactly 'long' or 'short' (lowercase). MUST provide actual portfolio data - cannot be empty! Example: {'MNST': {'conviction': 0.05, 'position': 'long'}, 'COTY': {'conviction': 0.05, 'position': 'short'}}"
+                    "description": "🚨 REQUIRED: Portfolio dictionary containing the portfolio you want to analyze. Keys are ticker symbols (uppercase strings, 1-10 characters) and values are objects with 'allocation' and 'position' fields. Allocation must be float between 0.0-1.0 representing position size. Position must be exactly 'long' or 'short' (lowercase). MUST provide actual portfolio data - cannot be empty! Example: {'MNST': {'allocation': 0.05, 'position': 'long'}, 'COTY': {'allocation': 0.05, 'position': 'short'}}"
                 },
                 "factors": {
                     "type": "string",
@@ -364,7 +364,7 @@ def register_cio_tools(agent):
             "properties": {
                 "portfolio_dict": {
                     "type": "object",
-                    "description": "🚨 REQUIRED: Portfolio dictionary containing the portfolio you want to analyze. Keys are ticker symbols (uppercase strings, 1-10 characters) and values are objects with 'conviction' and 'position' fields. Conviction must be float between 0.0-1.0 representing position size. Position must be exactly 'long' or 'short' (lowercase). MUST provide actual portfolio data - cannot be empty! Example: {'MNST': {'conviction': 0.05, 'position': 'long'}, 'COTY': {'conviction': 0.05, 'position': 'short'}}"
+                    "description": "🚨 REQUIRED: Portfolio dictionary containing the portfolio you want to analyze. Keys are ticker symbols (uppercase strings, 1-10 characters) and values are objects with 'allocation' and 'position' fields. Allocation must be float between 0.0-1.0 representing position size. Position must be exactly 'long' or 'short' (lowercase). MUST provide actual portfolio data - cannot be empty! Example: {'MNST': {'allocation': 0.05, 'position': 'long'}, 'COTY': {'allocation': 0.05, 'position': 'short'}}"
                 }
             },
             "required": ["portfolio_dict"],

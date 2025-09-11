@@ -1,7 +1,5 @@
 from datetime import datetime
 
-date = datetime.now().strftime("%Y-%m-%d")
-
 cio_system_prompt = f"""
 <Role>
 Act as the Chief Investment Officer (CIO) for a long/short equity Consumer Staples Fund.

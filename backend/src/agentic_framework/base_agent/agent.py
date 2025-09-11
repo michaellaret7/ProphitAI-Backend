@@ -54,6 +54,7 @@ class BaseAgent:
                 use_error_memory: bool = True,
                 use_episodic_memory: bool = True,
                 memory_refresh_interval: int = 6,
+                strict_validation: bool = True,
             ):
         
         self.model_name = model
@@ -69,13 +70,13 @@ class BaseAgent:
         self.use_error_memory = use_error_memory
         self.use_episodic_memory = use_episodic_memory
         self.memory_refresh_interval = memory_refresh_interval
+        
+        # Validation behavior toggle (strict by default)
+        self.strict_validation = strict_validation
 
         # OpenAI tools and local dispatch map
         self.tools: List[Dict[str, Any]] = []
         self.tool_functions: Dict[str, Callable[..., Any]] = {}
-
-        # Register built-ins
-        register_base_tools(self)
 
         # Trace and accounting
         self.trace: List[StepTrace] = []
@@ -99,7 +100,7 @@ class BaseAgent:
         
         # Initialize event system
         self.event_manager = EventManager(verbose=verbose)
-        self.task_validator = TaskValidator(verbose=verbose)
+        self.task_validator = TaskValidator(verbose=verbose, strict_validation=self.strict_validation)
         
         # Initialize error memory system
         if self.use_error_memory:
@@ -124,6 +125,9 @@ class BaseAgent:
 
         # Initialize episodic memory (blank each session if enabled)
         self.episodic = EpisodicMemory(reset_on_init=True) if self.use_episodic_memory else None
+
+        # Register built-ins (after episodic is initialized so episodic tools are available)
+        register_base_tools(self)
         
         # Initialize planning tool with agent context
         self.planning_tool = PlanningTool(agent=self)
@@ -132,7 +136,8 @@ class BaseAgent:
         self.execution_engine = PlanExecutionEngine(
             task_manager=self.task_manager, 
             event_manager=self.event_manager,
-            verbose=self.verbose
+            verbose=self.verbose,
+            strict_validation=self.strict_validation
         )
         
         # Register event handlers

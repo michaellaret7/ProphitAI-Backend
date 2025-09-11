@@ -248,13 +248,10 @@ class ToolArgumentParser:
         coerced = {}
         for key, value in args.items():
             if key in properties:
-                expected_type = properties[key].get('type')
-                if expected_type and expected_type in self._type_converters:
-                    try:
-                        converter = self._type_converters[expected_type]
-                        coerced[key] = converter(value)
-                    except (ValueError, TypeError):
-                        coerced[key] = value  # Keep original if conversion fails
+                param_schema = properties[key]
+                expected_types = self._extract_expected_types(param_schema)
+                if expected_types:
+                    coerced[key] = self._coerce_to_first_matching_type(value, expected_types)
                 else:
                     coerced[key] = value
             else:
@@ -262,6 +259,71 @@ class ToolArgumentParser:
                 coerced[key] = value
         
         return coerced
+
+    def _extract_expected_types(self, param_schema: Dict[str, Any]) -> List[str]:
+        """Extract a list of expected JSON schema types from a parameter schema.
+        Supports: type (string or list), anyOf, oneOf.
+        """
+        types: List[str] = []
+        t = param_schema.get('type')
+        if isinstance(t, str):
+            types.append(t)
+        elif isinstance(t, list):
+            # Filter to known types only
+            types.extend([x for x in t if isinstance(x, str)])
+        # Handle anyOf/oneOf
+        for union_key in ('anyOf', 'oneOf'):
+            if union_key in param_schema and isinstance(param_schema[union_key], list):
+                for sub in param_schema[union_key]:
+                    st = sub.get('type') if isinstance(sub, dict) else None
+                    if isinstance(st, str):
+                        types.append(st)
+                    elif isinstance(st, list):
+                        types.extend([x for x in st if isinstance(x, str)])
+        # Deduplicate while preserving order
+        seen = set()
+        result: List[str] = []
+        for x in types:
+            if x not in seen:
+                seen.add(x)
+                result.append(x)
+        return result
+
+    def _coerce_to_first_matching_type(self, value: Any, expected_types: List[str]) -> Any:
+        """Attempt to coerce value to the first type that cleanly applies.
+        Falls back to original value if no converters apply.
+        Special-cases arrays to avoid list(str) pitfalls.
+        """
+        for t in expected_types:
+            converter = self._type_converters.get(t)
+            if not converter:
+                continue
+            try:
+                if t == 'array':
+                    # Avoid list(str) which splits into chars; wrap non-list as single-item list
+                    if isinstance(value, list):
+                        return value
+                    else:
+                        return [value]
+                if t == 'object':
+                    # Only coerce if already dict-like; otherwise leave as-is
+                    if isinstance(value, dict):
+                        return value
+                    # Try to parse JSON object from string
+                    if isinstance(value, str):
+                        try:
+                            parsed = json.loads(value)
+                            if isinstance(parsed, dict):
+                                return parsed
+                        except Exception:
+                            pass
+                        # leave as-is if not JSON object
+                        continue
+                coerced = converter(value)
+                return coerced
+            except (ValueError, TypeError):
+                continue
+        return value
     
     def _fill_defaults(self, tool_name: str, args: Dict) -> Dict:
         """Fill in missing required parameters with defaults."""

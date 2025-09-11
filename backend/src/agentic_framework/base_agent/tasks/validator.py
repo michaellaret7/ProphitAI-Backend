@@ -10,13 +10,14 @@ from .models import MainTask, SubTask, TaskStatus
 class TaskValidator:
     """Validates MainTask and SubTask completion based on evidence and criteria."""
     
-    def __init__(self, verbose: bool = False):
+    def __init__(self, verbose: bool = False, strict_validation: bool = False):
         """Initialize task validator.
         
         Args:
             verbose: Whether to print validation messages
         """
         self.verbose = verbose
+        self.strict_validation = strict_validation
         self.validators: Dict[str, Callable] = {}
         self._confidence_thresholds = {
             'subtask_completion': 0.7,
@@ -54,6 +55,14 @@ class TaskValidator:
         if main_task.subtasks:
             subtask_result = self._validate_subtasks_completion(main_task)
             validation_results.append(subtask_result)
+            # Strict: require all subtasks completed if subtasks exist
+            if self.strict_validation:
+                all_complete = subtask_result[0]
+                if not all_complete:
+                    explanation = "Strict validation: all subtasks must be completed"
+                    if self.verbose:
+                        print(f"❌ MainTask {main_task.id} not complete - {explanation}")
+                    return False, subtask_result[1], explanation
         
         # Check evidence threshold
         evidence_result = self._evidence_threshold_validator(main_task)
@@ -130,6 +139,32 @@ class TaskValidator:
             success_result = self._analyze_observations_for_success(subtask.observations)
             validation_results.append(success_result)
         
+        # Strict checks: require relevant tool-named evidence and no error evidence when tools are implied
+        if self.strict_validation and parent_task is not None:
+            # Determine relevant tools: predicted tools that appear in subtask description
+            try:
+                relevant_tools = []
+                if parent_task.predicted_tool_use:
+                    desc_lower = subtask.description.lower()
+                    for t in parent_task.predicted_tool_use:
+                        if str(t).lower() in desc_lower:
+                            relevant_tools.append(str(t).lower())
+                has_error_evidence = any('error' in str(ev).lower() for ev in subtask.completion_evidence)
+                has_relevant_tool_evidence = False
+                if relevant_tools:
+                    for ev in subtask.completion_evidence:
+                        ev_lower = str(ev).lower()
+                        if any(rt in ev_lower for rt in relevant_tools):
+                            has_relevant_tool_evidence = True
+                            break
+                    if not has_relevant_tool_evidence:
+                        validation_results.append((False, 0.0, "No evidence referencing required tool for this subtask"))
+                if has_error_evidence:
+                    validation_results.append((False, 0.0, "Error evidence present for this subtask"))
+            except Exception:
+                # Fail-safe: do not crash validator
+                pass
+
         # Calculate overall confidence
         if not validation_results:
             return False, 0.0, "No validation criteria met"
@@ -177,15 +212,28 @@ class TaskValidator:
         content_result = self._analyze_result_content(tool_result)
         confidence_factors.append(content_result)
         
-        # 3. Tool prediction match (if we have current task)
-        if current_task and tool_name in current_task.predicted_tool_use:
-            confidence_factors.append((True, 0.8, "Tool was predicted for this task"))
+        # 3. Tool prediction and relevance match (if we have current task/subtask)
+        if current_task:
+            predicted = tool_name in (current_task.predicted_tool_use or [])
+            if predicted:
+                confidence_factors.append((True, 0.8, "Tool was predicted for this task"))
+            # Strict: require tool also to be referenced in subtask description when applicable
+            if self.strict_validation and current_subtask is not None:
+                in_desc = str(tool_name).lower() in str(current_subtask.description).lower()
+                if not (predicted and in_desc):
+                    confidence_factors.append((False, 0.0, "Strict: tool not relevant to current subtask"))
         
         # 4. Evidence accumulation check (if we have current subtask)
         if current_subtask:
             evidence_result = self._check_evidence_accumulation(current_subtask)
             confidence_factors.append(evidence_result)
         
+        # Strict early exit on clear failure
+        if self.strict_validation:
+            # If tool_result clearly indicates error, fail fast
+            if self._result_has_error(tool_result):
+                return False, 0.0, "Strict: tool result indicates error"
+
         # Calculate overall confidence
         if not confidence_factors:
             return False, 0.0, "No validation criteria applicable"
@@ -367,6 +415,19 @@ class TaskValidator:
         
         # Default for other types
         return True, 0.6, f"Result of type {type(tool_result).__name__}"
+
+    def _result_has_error(self, tool_result: Any) -> bool:
+        if isinstance(tool_result, Exception):
+            return True
+        if isinstance(tool_result, dict):
+            if tool_result.get('success') is False:
+                return True
+            if tool_result.get('error'):
+                return True
+        if isinstance(tool_result, str):
+            txt = tool_result.lower()
+            return any(w in txt for w in ['error', 'failed', 'exception', 'timeout', 'invalid', 'not found', 'denied', 'missing'])
+        return False
     
     def _check_evidence_accumulation(self, subtask: SubTask) -> Tuple[bool, float, str]:
         """Check if subtask has accumulated sufficient evidence."""
