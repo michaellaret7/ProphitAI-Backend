@@ -15,7 +15,8 @@
         "There should be 15-20 longs (this is a hard constraint)",
         "There should be 10-15 shorts (this is a hard constraint)",
         "Portfolio should be gross exposure around 200% (no more than 200%)",
-        "Target high alpha potential"
+        "Target high alpha potential",
+        "Target low market beta"
       ],
       "tool_requirements": [
         "Everytime you create portfolio v1, v2, v3, you must use the episodic_remember tool to remember the portfolio. The memory key should be 'portfolio_v1', 'portfolio_v2', 'portfolio_v3' respectively.",
