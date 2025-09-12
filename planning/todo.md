@@ -7,35 +7,48 @@ Make strict validation the only mode across the agent. Remove all non‑strict v
 - `backend/src/agentic_framework/base_agent/tasks/validator.py`
 - `backend/testing/calculations_vtwo_smoke_test.py` (and any other callers passing `strict_validation`)
 
-### Deletions and Simplifications
-- Remove the `strict_validation` parameter and attribute everywhere:
-  - `BaseAgent.__init__(..., strict_validation: bool = True, ...)` → remove param; stop storing/passing it
-  - `TaskValidator.__init__(..., strict_validation: bool = False)` → remove param; always strict
-  - `PlanExecutionEngine.__init__(..., strict_validation: bool = True)` → remove param; always strict
-- Delete all non‑strict branches and fallbacks:
-  - In `execution_engine.py`: remove conditions like `if self.strict_validation ... else ...`; enforce strict gating always (tool relevance required, error results block progress, evidence must be tool‑named)
-  - In `validator.py`: enforce strict rules unconditionally:
-    - Main task completes only when all subtasks complete (if subtasks exist)
-    - Subtask requires relevant tool‑named evidence and no error evidence
-    - Tool result must be successful and relevant; error → fail fast
-  - Remove permissive/heuristic fallback validators (e.g., "basic" completion and lenient evidence thresholds) that allow completion without strict criteria
-- Remove unused code after simplification (imports, attributes, helper methods solely used by non‑strict paths)
+### Deletion checklist (what to remove)
+- `backend/src/agentic_framework/base_agent/agent.py`
+  - [ ] Remove `strict_validation` param from `BaseAgent.__init__` signature.
+  - [ ] Delete `self.strict_validation = strict_validation` assignment.
+  - [ ] Update `TaskValidator(...)` construction to drop `strict_validation=...` (use `TaskValidator(verbose=verbose)`).
+  - [ ] Update `PlanExecutionEngine(...)` construction to drop `strict_validation=...` (pass only `task_manager`, `event_manager`, `verbose`).
+
+- `backend/src/agentic_framework/base_agent/tasks/execution_engine.py`
+  - [ ] Remove `strict_validation` param from `__init__` signature and delete `self.strict_validation` property.
+  - [ ] In `update_task_from_tool_result`:
+    - [ ] Replace `is_relevant = ... if self.strict_validation else True` with unconditional relevance: `is_relevant = self._is_tool_relevant(...)`.
+    - [ ] Replace `if self.current_subtask and (is_relevant or not self.strict_validation):` with `if self.current_subtask and is_relevant:`.
+    - [ ] Make error‑evidence guard unconditional: keep `if self._looks_like_success_evidence(evidence) and is_error: continue` (remove the `self.strict_validation` check).
+  - [ ] In `_should_auto_advance_subtask`:
+    - [ ] Remove the `if self.strict_validation:` block and always require: `is_relevant and not is_error and has_tool_named_evidence`.
+  - [ ] Remove any remaining references to `self.strict_validation`.
+
+- `backend/src/agentic_framework/base_agent/tasks/validator.py`
+  - [ ] Remove `strict_validation` param from `__init__` and delete `self.strict_validation`.
+  - [ ] In `validate_main_task_completion`: make subtask completion requirement unconditional (if subtasks exist, all must be complete).
+  - [ ] In `validate_subtask_completion`: make relevant tool‑named evidence and no‑error checks unconditional (were under `if self.strict_validation`).
+  - [ ] In `validate_tool_result_for_completion`: make fail‑fast on error and relevance requirements unconditional (remove `self.strict_validation` guards).
+  - [ ] Delete any unused imports/branches left over from removing the above.
+  - [ ] Optional: If `_basic_main_task_validation` becomes unreachable, remove it; otherwise leave as fallback.
+
+- Call sites
+  - [ ] `backend/testing/calculations_vtwo_smoke_test.py`: remove `strict_validation=True` when constructing `BaseAgent`.
+  - [ ] Grep repo for `strict_validation` and remove any other call‑site args/usages.
 
 ### Implementation TODOs
-- [ ] `agent.py`: Remove `strict_validation` from `BaseAgent.__init__` signature and instance state; stop passing it when creating `TaskValidator` and `PlanExecutionEngine`
-- [ ] `execution_engine.py`: Remove `strict_validation` constructor arg/property; make relevance and error gating mandatory in:
-  - [ ] Adding observations/evidence only when tool is relevant to current task/subtask
-  - [ ] Blocking evidence on error‑like results
-  - [ ] Auto‑advance only when relevant tool succeeded and evidence includes the exact tool name
-- [ ] `validator.py`: Remove `strict_validation` constructor arg/property; make strict checks unconditional in:
-  - [ ] `validate_main_task_completion` (require all subtasks complete when present)
-  - [ ] `validate_subtask_completion` (require relevant tool‑named evidence; no error evidence)
-  - [ ] `validate_tool_result_for_completion` (require success + relevance; fail fast on errors)
-  - [ ] Remove or stop using permissive helpers (e.g., `_basic_main_task_validation`) and any validator registry items used only for non‑strict paths
-- [ ] Call sites/tests: Remove any `strict_validation=` arguments (e.g., `backend/testing/calculations_vtwo_smoke_test.py`)
-- [ ] Cleanup: Remove dead imports/attributes resulting from the above deletions
+- [ ] Agent: remove param/wiring
+  - [ ] `agent.py`: drop param; stop passing into `TaskValidator` and `PlanExecutionEngine`.
+- [ ] Execution engine: enforce strict always
+  - [ ] `execution_engine.py`: drop param/property; make relevance/error/evidence gates unconditional as listed above.
+- [ ] Validator: enforce strict always
+  - [ ] `validator.py`: drop param/property; make strict checks unconditional in the three validators listed above.
+- [ ] Call sites/tests
+  - [ ] Remove `strict_validation=` args (e.g., smoke test).
+- [ ] Cleanup
+  - [ ] Remove dead code/imports; run linters; fix any type hints or signatures affected.
 
-### Non‑Goals (for this change)
+### Non‑Goals
 - No new files or folders
 - No changes to tool APIs
 - No changes to planning/task creation semantics beyond validation/gating
@@ -47,5 +60,5 @@ Make strict validation the only mode across the agent. Remove all non‑strict v
   - Error tool results never contribute positive evidence or auto‑advancement
 - [ ] Ensure tests compile and run after removing constructor args
 
-### Review
-- After implementation, summarize removed branches and confirms stricter gating improved correctness without introducing regressions. Add any follow‑ups if additional lenient paths are discovered during testing.
+### Review (to fill after implementation)
+- Summarize removed branches and confirm stricter gating improved correctness without regressions. Note any follow‑ups if additional lenient paths are discovered during testing.

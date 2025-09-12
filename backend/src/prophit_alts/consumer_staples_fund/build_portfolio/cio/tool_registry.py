@@ -15,8 +15,8 @@ from backend.src.prophit_alts.consumer_staples_fund.build_portfolio.cio.tools im
     calculate_portfolio_beta_vs_index,
     factor_tilts_for_portfolio,
     pull_rest_of_ticker_pool,
+    build_portfolio,
 )
-from backend.src.calculations_v2.portfolio.build.builder import CorrelationPortfolioBuilder
 
 def register_cio_tools(agent):
     agent.add_tool(
@@ -350,9 +350,6 @@ def register_cio_tools(agent):
             "Input 'portfolio_dict' maps tickers to {'allocation', 'position'} where: \n"
             "- 'allocation' is a decimal risk allocation (e.g., 0.10 = 10% of risk budget). Allocations are normalized within long and short groups.\n"
             "- 'position' is 'long' or 'short'. Shorts are treated as negative weights automatically.\n\n"
-            "Key parameters: \n"
-            "- The following parameters are LOCKED and cannot be overridden: target_annual_vol=0.15, portfolio_value=1_000_000, leverage=2.0, target_net_exposure=0.30, lookback_days=252.\n"
-            "- Optional: 'max_position_weight' (number, default 0.10) caps absolute weight per position prior to renormalization.\n\n"
             "Output includes: \n"
             "- 'status' ('success' or 'error').\n"
             "- 'weights': signed optimized weights (negative for shorts).\n"
@@ -374,15 +371,7 @@ def register_cio_tools(agent):
             "required": ["portfolio_dict"],
             "additionalProperties": False
         },
-        function=lambda portfolio_dict: CorrelationPortfolioBuilder().build_portfolio(
-            portfolio_dict=portfolio_dict,
-            target_annual_vol=0.15,
-            portfolio_value=1_000_000,
-            leverage=2.0,
-            target_net_exposure=0.30,
-            lookback_days=252,
-            max_position_weight=0.10,
-        ),
+        function=build_portfolio,
     )
 
     # Tool 10: Pull Rest of Ticker Pool

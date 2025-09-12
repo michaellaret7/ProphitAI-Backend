@@ -427,7 +427,7 @@ def pull_rest_of_ticker_pool():
 
     return ticker_pool_list
 
-def build_portfolio(portfolio_data: any):
+def build_portfolio(portfolio_dict: any):
     """
     Parse ANY portfolio data into a proper portfolio dict and build optimized portfolio
     
@@ -442,10 +442,10 @@ def build_portfolio(portfolio_data: any):
         Dict in format: {"TICKER": {"allocation": 0.x, "position": "long/short"}, ...}
     """
     # Parse any input into portfolio dict format using the canonical converter
-    portfolio_dict = _to_canonical_portfolio(portfolio_data)
+    portfolio_dict = _to_canonical_portfolio(portfolio_dict)
 
     built_portfolio = CorrelationPortfolioBuilder().build_portfolio(
-        tickers=portfolio_dict,  # Parameter is named 'tickers', not 'portfolio_dict'
+        tickers=portfolio_dict,  
         target_annual_vol=0.20,
         portfolio_value=1_000_000,
         leverage=2.0,

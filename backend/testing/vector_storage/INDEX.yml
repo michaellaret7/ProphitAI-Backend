@@ -1,0 +1,5 @@
+model: text-embedding-3-large
+dim: 3072
+chunks: 148
+chunk_tokens: 800
+chunk_overlap: 120

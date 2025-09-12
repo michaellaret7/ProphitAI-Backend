@@ -283,5 +283,3 @@ def main():
     streamer.set_percent_above_alert("AAPL", 0.01)
     streamer.run(SYMBOLS)
 
-if __name__ == "__main__":
-    main()

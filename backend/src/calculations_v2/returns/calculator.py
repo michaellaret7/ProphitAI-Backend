@@ -163,10 +163,157 @@ class PortfolioReturnsCalculator:
 
 if __name__ == "__main__":
     # Portfolio from JSON
-    portfolio = {"BJ":{"allocation":0.055,"position":"long"},"KR":{"allocation":0.055,"position":"long"},"COST":{"allocation":0.07,"position":"long"},"MNST":{"allocation":0.075,"position":"long"},"KO":{"allocation":0.06,"position":"long"},"CCEP":{"allocation":0.045,"position":"long"},"SAM":{"allocation":0.035,"position":"long"},"CAG":{"allocation":0.04,"position":"long"},"GIS":{"allocation":0.04,"position":"long"},"PG":{"allocation":0.045,"position":"long"},"CL":{"allocation":0.03,"position":"long"},"KMB":{"allocation":0.025,"position":"long"},"EPC":{"allocation":0.03,"position":"long"},"ODD":{"allocation":0.025,"position":"long"},"RLX":{"allocation":0.025,"position":"long"},"LW":{"allocation":0.015,"position":"long"},"PM":{"allocation":0.015,"position":"long"},"WBA":{"allocation":0.04,"position":"short"},"UNFI":{"allocation":0.035,"position":"short"},"TGT":{"allocation":0.04,"position":"short"},"PRMB":{"allocation":0.045,"position":"short"},"TAP":{"allocation":0.045,"position":"short"},"STZ":{"allocation":0.035,"position":"short"},"SJM":{"allocation":0.03,"position":"short"},"HSY":{"allocation":0.015,"position":"short"},"ADM":{"allocation":0.015,"position":"short"},"ENR":{"allocation":0.015,"position":"short"},"SPB":{"allocation":0.03,"position":"short"},"CLX":{"allocation":0.015,"position":"short"},"ELF":{"allocation":0.035,"position":"short"},"OLPX":{"allocation":0.035,"position":"short"},"EL":{"allocation":0.04,"position":"short"},"CELH":{"allocation":0.02,"position":"short"}}
+    portfolio = {"MNST": {
+        "allocation": 0.05,
+        "position": "long"
+      },
+      "COST": {
+        "allocation": 0.05,
+        "position": "long"
+      },
+      "KR": {
+        "allocation": 0.05,
+        "position": "long"
+      },
+      "BJ": {
+        "allocation": 0.05,
+        "position": "long"
+      },
+      "PG": {
+        "allocation": 0.05,
+        "position": "long"
+      },
+      "CL": {
+        "allocation": 0.05,
+        "position": "long"
+      },
+      "EPC": {
+        "allocation": 0.05,
+        "position": "long"
+      },
+      "HLF": {
+        "allocation": 0.05,
+        "position": "long"
+      },
+      "ODD": {
+        "allocation": 0.05,
+        "position": "long"
+      },
+      "CCEP": {
+        "allocation": 0.05,
+        "position": "long"
+      },
+      "RLX": {
+        "allocation": 0.05,
+        "position": "long"
+      },
+      "CHD": {
+        "allocation": 0.05,
+        "position": "long"
+      },
+      "MDLZ": {
+        "allocation": 0.05,
+        "position": "long"
+      },
+      "PEP": {
+        "allocation": 0.05,
+        "position": "long"
+      },
+      "WMT": {
+        "allocation": 0.05,
+        "position": "long"
+      },
+      "CASY": {
+        "allocation": 0.05,
+        "position": "long"
+      },
+      "SMPL": {
+        "allocation": 0.05,
+        "position": "long"
+      },
+      "CELH": {
+        "allocation": 0.05,
+        "position": "long"
+      },
+      "FRPT": {
+        "allocation": 0.05,
+        "position": "long"
+      },
+      "UVV": {
+        "allocation": 0.05,
+        "position": "long"
+      },
+      "UNFI": {
+        "allocation": 0.04,
+        "position": "short"
+      },
+      "TGT": {
+        "allocation": 0.04,
+        "position": "short"
+      },
+      "PRMB": {
+        "allocation": 0.04,
+        "position": "short"
+      },
+      "TAP": {
+        "allocation": 0.04,
+        "position": "short"
+      },
+      "STZ": {
+        "allocation": 0.04,
+        "position": "short"
+      },
+      "HSY": {
+        "allocation": 0.04,
+        "position": "short"
+      },
+      "ADM": {
+        "allocation": 0.04,
+        "position": "short"
+      },
+      "ENR": {
+        "allocation": 0.04,
+        "position": "short"
+      },
+      "SPB": {
+        "allocation": 0.04,
+        "position": "short"
+      },
+      "CLX": {
+        "allocation": 0.04,
+        "position": "short"
+      },
+      "DLTR": {
+        "allocation": 0.04,
+        "position": "short"
+      },
+      "OLPX": {
+        "allocation": 0.04,
+        "position": "short"
+      },
+      "EL": {
+        "allocation": 0.04,
+        "position": "short"
+      },
+      "MO": {
+        "allocation": 0.04,
+        "position": "short"
+      },
+      "KDP": {
+        "allocation": 0.04,
+        "position": "short"
+      }}
     
     from backend.src.utils.gpt_parser import parse_portfolio_with_gpt
     portfolio = parse_portfolio_with_gpt(portfolio)
+
+    from backend.src.calculations_v2.portfolio.build.builder import CorrelationPortfolioBuilder
+    builder = CorrelationPortfolioBuilder()
+    portfolio = builder.build_portfolio(portfolio, target_annual_vol=0.17, portfolio_value=1_000_000, leverage=2.0, target_net_exposure=0.20, lookback_days=252, max_position_weight=0.10)
+    portfolio = portfolio["final_portfolio"]
+
+    portfolio = parse_portfolio_with_gpt(portfolio)
+    print(portfolio)
 
     # Convert to weights dict (negative for shorts)
     weights = {}
