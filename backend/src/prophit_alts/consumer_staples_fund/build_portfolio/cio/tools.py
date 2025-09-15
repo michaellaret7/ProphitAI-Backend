@@ -54,18 +54,25 @@ def _to_canonical_portfolio(portfolio: PortfolioInput | dict) -> Dict[str, Dict]
     return parse_portfolio_with_gpt(portfolio)
 
 def correlation_matrix(portfolio_dict: PortfolioInput | dict, lookback_days: int = 252) -> dict:
+    if not portfolio_dict:
+        return "You Must provide a portfolio dictionary to calculate the correlation matrix"
+
     portfolio_dict = _to_canonical_portfolio(portfolio_dict)
     tickers = list(portfolio_dict.keys())
+
     if not tickers:
         return {}
+
     end_date = datetime.now()
     start_date = end_date - timedelta(days=lookback_days)
     ds = DataService()
     price_map = ds.get_bulk_close_series(tickers, start_date, end_date)
+
     if not price_map:
         return {}
-    # Prefer total returns (price + dividends) for accuracy; fallback to price returns
+
     returns_map = {}
+
     for t, s in price_map.items():
         if s is None or s.empty:
             continue
@@ -95,6 +102,7 @@ def correlation_matrix(portfolio_dict: PortfolioInput | dict, lookback_days: int
             if val > 0.5:
                 key = f"{tickers[i]}|{tickers[j]}"
                 pairs[key] = round(val, 3)
+
     return pairs
 
 def calculate_portfolio_past_performance(
@@ -109,7 +117,8 @@ def calculate_portfolio_past_performance(
     Uses SPY as the benchmark.
     """
     if not portfolio_dict:
-        return {}
+        return "You Must provide a portfolio dictionary to calculate the portfolio past performance"
+        
     portfolio_dict = _to_canonical_portfolio(portfolio_dict)
     # Build signed weights (negative for shorts)
     weights = {}

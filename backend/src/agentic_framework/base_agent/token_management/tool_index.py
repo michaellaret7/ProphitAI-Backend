@@ -98,7 +98,6 @@ def _extract_ticker_from_text(text: str) -> str:
             return base
     return None
 
-
 def build_tool_index(
     agent_messages_path: str = AGENT_MESSAGES_FILE,
     *,

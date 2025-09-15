@@ -14,7 +14,9 @@ from openai import OpenAI
 from backend.src.agentic_framework.base_agent.base_tools.calculator import calculator
 from backend.src.agentic_framework.base_agent.base_tools.planning_tool import PlanningTool
 from backend.src.utils.choose_model_and_client import *
-from backend.src.agentic_framework.base_agent.tool_lookup.tool_index import seed_messages_json
+from backend.src.agentic_framework.base_agent.token_management.tool_index import seed_messages_json
+from backend.src.agentic_framework.base_agent.token_management.tool_index import _find_plan_boundary_index as _tm_find_plan_boundary_index
+from backend.src.agentic_framework.base_agent.token_management.tool_query import tool_lookup_by_call_id
 
 # Import helper classes
 from .tasks.manager import TaskManager
@@ -53,6 +55,7 @@ class BaseAgent:
                 use_error_memory: bool = True,
                 use_episodic_memory: bool = True,
                 memory_refresh_interval: int = 6,
+                prune_messages: bool = True,
             ):
         
         self.model_name = model
@@ -68,6 +71,7 @@ class BaseAgent:
         self.use_error_memory = use_error_memory
         self.use_episodic_memory = use_episodic_memory
         self.memory_refresh_interval = memory_refresh_interval
+        self.prune_messages = prune_messages
         
         # Validation behavior is strict and enforced engine-side
 
@@ -79,7 +83,7 @@ class BaseAgent:
         self.trace: List[StepTrace] = []
         self.total_tokens: int = 0
         self._seed_messages_done: bool = False  # indicates at least one seed has occurred
-        self._next_seed_token_threshold: int = 200_000  # seed every 200k tokens
+        self._next_seed_token_threshold: int = 100_000  # seed every 100k tokens
 
         # Stagnation detection
         self._recent_actions: List[str] = []  # serialized (tool_name + sorted args)
@@ -518,6 +522,9 @@ class BaseAgent:
 
             temperature = None if "gpt-5" in self.llm else 0.8
 
+            # Before model call, write the live input message stream
+            self.message_logger.save_live_messages_to_json(messages, iteration=i, total_tokens=self.total_tokens)
+
             response = self.client.chat.completions.create(
                 model=self.llm,
                 messages=messages,
@@ -906,15 +913,16 @@ class BaseAgent:
 
             self.trace.append(step)
             
-            # Save messages after each iteration
+            # Save full messages after each iteration (non-truncated flow log)
             self.message_logger.save_messages_to_json(messages, iteration=i, total_tokens=self.total_tokens)
             
-            # Seed tool_lookup/messages.json when token threshold(s) are reached
+            # Seed token_management/messages.json when token threshold(s) are reached
             if self.total_tokens >= self._next_seed_token_threshold:
                 try:
                     # First time: append=False; subsequent times: append=True
                     append_flag = self._seed_messages_done
                     output_path = seed_messages_json(append=append_flag)
+                    
                     self._seed_messages_done = True
                     if self.verbose:
                         mode = "append" if append_flag else "write"
@@ -922,14 +930,64 @@ class BaseAgent:
                             f"🌱 Token threshold reached (>= {self._next_seed_token_threshold}). "
                             f"Seeded messages ({mode}) to: {output_path}"
                         )
+                        
                 except Exception as e:
                     # Log and continue; still advance threshold to avoid spamming
                     self._seed_messages_done = True
                     if self.verbose:
                         print(f"⚠️ seed_messages_json failed at threshold {self._next_seed_token_threshold}: {e}")
                 finally:
-                    # Move to the next 200k window regardless of success
-                    self._next_seed_token_threshold += 200_000
+                    # Optionally prune in-memory messages
+                    try:
+                        if self.prune_messages:
+                            keep_n = 4
+                            if len(messages) > keep_n:
+                                messages[:] = messages[:keep_n]
+                                if self.verbose:
+                                    print(f"🧹 Trimmed in-memory messages to the first {keep_n} entries for next iteration")
+                        else:
+                            if self.verbose:
+                                print("🧹 Prune disabled; keeping full in-memory messages for next iteration")
+                        # Persist the live snapshot reflecting next input
+                        self.message_logger.save_live_messages_to_json(messages, iteration=i, total_tokens=self.total_tokens)
+                    except Exception as e:
+                        if self.verbose:
+                            print(f"⚠️ Failed to update live/pruned messages: {e}")
+                    
+                    # Dynamically register lookup tool (only once), then move to next threshold
+                    if "tool_lookup_by_call_id" not in self.tool_functions:
+                        try:
+                            self.add_tool(
+                                name="tool_lookup_by_call_id",
+                                description=(
+                                    "This tool looks up previous tool calls from the current conversation and returns their output data."
+                                    "Args: The only argument for this tool is the tool_call_id. You will find the list of previous tool calls and their ids previously in the conversation."
+                                ),
+                                parameters={
+                                    "type": "object",
+                                    "properties": {
+                                        "tool_call_id": {
+                                            "type": "string",
+                                            "description": "The tool_call_id to look up"
+                                        }
+                                    },
+                                    "required": ["tool_call_id"],
+                                },
+                                function=tool_lookup_by_call_id,
+                            )
+                            # Refresh parser so the new tool becomes invokable by the model
+                            self._create_arg_parser()
+
+                            if self.verbose:
+                                print("🛠️ Registered tool 'tool_lookup_by_call_id' for post-threshold lookups")
+                                
+                        except Exception as e:
+                            if self.verbose:
+                                print(f"⚠️ Failed to register tool_lookup_by_call_id: {e}")
+                                
+                    self._next_seed_token_threshold += 100_000
+                
+                # new code in loop
             
             # Enhanced iteration tracking with plan-driven execution awareness
             iteration_data = {
