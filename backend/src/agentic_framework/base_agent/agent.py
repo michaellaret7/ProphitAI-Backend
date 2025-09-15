@@ -14,6 +14,7 @@ from openai import OpenAI
 from backend.src.agentic_framework.base_agent.base_tools.calculator import calculator
 from backend.src.agentic_framework.base_agent.base_tools.planning_tool import PlanningTool
 from backend.src.utils.choose_model_and_client import *
+from backend.src.agentic_framework.base_agent.tool_lookup.tool_index import seed_messages_json
 
 # Import helper classes
 from .tasks.manager import TaskManager
@@ -77,6 +78,8 @@ class BaseAgent:
         # Trace and accounting
         self.trace: List[StepTrace] = []
         self.total_tokens: int = 0
+        self._seed_messages_done: bool = False  # indicates at least one seed has occurred
+        self._next_seed_token_threshold: int = 200_000  # seed every 200k tokens
 
         # Stagnation detection
         self._recent_actions: List[str] = []  # serialized (tool_name + sorted args)
@@ -905,6 +908,28 @@ class BaseAgent:
             
             # Save messages after each iteration
             self.message_logger.save_messages_to_json(messages, iteration=i, total_tokens=self.total_tokens)
+            
+            # Seed tool_lookup/messages.json when token threshold(s) are reached
+            if self.total_tokens >= self._next_seed_token_threshold:
+                try:
+                    # First time: append=False; subsequent times: append=True
+                    append_flag = self._seed_messages_done
+                    output_path = seed_messages_json(append=append_flag)
+                    self._seed_messages_done = True
+                    if self.verbose:
+                        mode = "append" if append_flag else "write"
+                        print(
+                            f"🌱 Token threshold reached (>= {self._next_seed_token_threshold}). "
+                            f"Seeded messages ({mode}) to: {output_path}"
+                        )
+                except Exception as e:
+                    # Log and continue; still advance threshold to avoid spamming
+                    self._seed_messages_done = True
+                    if self.verbose:
+                        print(f"⚠️ seed_messages_json failed at threshold {self._next_seed_token_threshold}: {e}")
+                finally:
+                    # Move to the next 200k window regardless of success
+                    self._next_seed_token_threshold += 200_000
             
             # Enhanced iteration tracking with plan-driven execution awareness
             iteration_data = {

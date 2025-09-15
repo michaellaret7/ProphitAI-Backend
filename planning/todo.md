@@ -12,8 +12,8 @@ Remove dead/unused code in `backend/src/agentic_framework/**` to simplify mainte
 ### Deletion checklist (what to remove)
 
 - `base_tools/calculator.py`
-  - [ ] Remove the unused "operation"/`**kwargs` branch (advanced ops: add/subtract/multiply/divide/etc.)
-  - [ ] Keep only the `expression` evaluation path used by the tool registration
+  - [x] Remove the unused "operation"/`**kwargs` branch (advanced ops: add/subtract/multiply/divide/etc.)
+  - [x] Keep only the `expression` evaluation path used by the tool registration
   - Rationale: Tool schema only passes `expression`; wrapper lambda is `calculator(expression)`. No callsites use `operation`.
 
 - `memory/episodic_memory.py`
@@ -43,10 +43,10 @@ Remove dead/unused code in `backend/src/agentic_framework/**` to simplify mainte
 
 ### Implementation TODOs
 - Search/confirm unused status
-  - [ ] Grep repo for each symbol above to confirm zero references (beyond their own file definitions)
+  - [x] Grep repo for each symbol above to confirm zero references (beyond their own file definitions)
 
 - Minimal, surgical deletions
-  - [ ] Prune the `operation` branch from `calculator.py` while preserving expression evaluation
+  - [x] Prune the `operation` branch from `calculator.py` while preserving expression evaluation
   - [ ] Delete `get_latest` and `summarize_older` from `episodic_memory.py`
   - [ ] Remove unused plan-edit helpers from `tasks/manager.py` (modify/reorder/add_subtask/status_prompt)
   - [ ] Delete `force_advance_task` from `tasks/execution_engine.py`

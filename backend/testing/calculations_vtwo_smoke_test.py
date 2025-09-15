@@ -40,5 +40,7 @@ def create_and_run_simple_agent() -> Dict[str, Any]:
 
 
 if __name__ == "__main__":
-    create_and_run_simple_agent()
+    # create_and_run_simple_agent()
+    from backend.testing.vector_storage.build import seed_corpus_from_agent_messages
+    seed_corpus_from_agent_messages()
 
