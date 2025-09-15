@@ -10,14 +10,13 @@ from .models import MainTask, SubTask, TaskStatus
 class TaskValidator:
     """Validates MainTask and SubTask completion based on evidence and criteria."""
     
-    def __init__(self, verbose: bool = False, strict_validation: bool = False):
-        """Initialize task validator.
+    def __init__(self, verbose: bool = False):
+        """Initialize task validator (strict mode always on).
         
         Args:
             verbose: Whether to print validation messages
         """
         self.verbose = verbose
-        self.strict_validation = strict_validation
         self.validators: Dict[str, Callable] = {}
         self._confidence_thresholds = {
             'subtask_completion': 0.7,
@@ -51,18 +50,16 @@ class TaskValidator:
         
         validation_results = []
         
-        # Check subtask completion first
+        # Check subtask completion first (strict: require all subtasks complete if any exist)
         if main_task.subtasks:
             subtask_result = self._validate_subtasks_completion(main_task)
             validation_results.append(subtask_result)
-            # Strict: require all subtasks completed if subtasks exist
-            if self.strict_validation:
-                all_complete = subtask_result[0]
-                if not all_complete:
-                    explanation = "Strict validation: all subtasks must be completed"
-                    if self.verbose:
-                        print(f"❌ MainTask {main_task.id} not complete - {explanation}")
-                    return False, subtask_result[1], explanation
+            all_complete = subtask_result[0]
+            if not all_complete:
+                explanation = "Strict validation: all subtasks must be completed"
+                if self.verbose:
+                    print(f"⏳ MainTask {main_task.id} not complete yet - {explanation}")
+                return False, subtask_result[1], explanation
         
         # Check evidence threshold
         evidence_result = self._evidence_threshold_validator(main_task)
@@ -139,8 +136,8 @@ class TaskValidator:
             success_result = self._analyze_observations_for_success(subtask.observations)
             validation_results.append(success_result)
         
-        # Strict checks: require relevant tool-named evidence and no error evidence when tools are implied
-        if self.strict_validation and parent_task is not None:
+        # Require relevant tool-named evidence and no error evidence when tools are implied
+        if parent_task is not None:
             # Determine relevant tools: predicted tools that appear in subtask description
             try:
                 relevant_tools = []
@@ -212,13 +209,13 @@ class TaskValidator:
         content_result = self._analyze_result_content(tool_result)
         confidence_factors.append(content_result)
         
-        # 3. Tool prediction and relevance match (if we have current task/subtask)
+        # 3. Tool prediction and relevance match (strict)
         if current_task:
             predicted = tool_name in (current_task.predicted_tool_use or [])
             if predicted:
                 confidence_factors.append((True, 0.8, "Tool was predicted for this task"))
-            # Strict: require tool also to be referenced in subtask description when applicable
-            if self.strict_validation and current_subtask is not None:
+            # Require tool also to be referenced in subtask description when applicable
+            if current_subtask is not None:
                 in_desc = str(tool_name).lower() in str(current_subtask.description).lower()
                 if not (predicted and in_desc):
                     confidence_factors.append((False, 0.0, "Strict: tool not relevant to current subtask"))
@@ -228,11 +225,9 @@ class TaskValidator:
             evidence_result = self._check_evidence_accumulation(current_subtask)
             confidence_factors.append(evidence_result)
         
-        # Strict early exit on clear failure
-        if self.strict_validation:
-            # If tool_result clearly indicates error, fail fast
-            if self._result_has_error(tool_result):
-                return False, 0.0, "Strict: tool result indicates error"
+        # Early exit on clear failure (strict)
+        if self._result_has_error(tool_result):
+            return False, 0.0, "Strict: tool result indicates error"
 
         # Calculate overall confidence
         if not confidence_factors:

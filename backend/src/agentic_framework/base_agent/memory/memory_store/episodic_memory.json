@@ -1,26 +1,24 @@
 [
   {
-    "timestamp": "2025-09-12T20:55:02.854256",
+    "timestamp": "2025-09-15T14:30:30.827305",
     "title": "portfolio_v1",
-    "event": "Store Portfolio V1 - allocations and rationale",
-    "context": {
-      "portfolio_dict": "{\"BJ\":{\"allocation\":0.06,\"position\":\"long\"},\"KR\":{\"allocation\":0.06,\"position\":\"long\"},\"COST\":{\"allocation\":0.06,\"position\":\"long\"},\"MNST\":{\"allocation\":0.07,\"position\":\"long\"},\"KO\":{\"allocation\":0.065,\"position\":\"long\"},\"CCEP\":{\"allocation\":0.055,\"position\":\"long\"},\"CAG\":{\"allocation\":0.06,\"position\":\"long\"},\"GIS\":{\"allocation\":0.055,\"position\":\"long\"},\"POST\":{\"allocation\":0.05,\"position\":\"long\"},\"PG\":{\"allocation\":0.07,\"position\":\"long\"},\"CL\":{\"allocation\":0.06,\"position\":\"long\"},\"KMB\":{\"allocation\":0.055,\"position\":\"long\"},\"EPC\":{\"allocation\":0.06,\"position\":\"long\"},\"HLF\":{\"allocation\":0.06,\"position\":\"long\"},\"ODD\":{\"allocation\":0.06,\"position\":\"long\"},\"RLX\":{\"allocation\":0.045,\"position\":\"long\"},\"UNFI\":{\"allocation\":0.045,\"position\":\"short\"},\"TGT\":{\"allocation\":0.045,\"position\":\"short\"},\"PRMB\":{\"allocation\":0.055,\"position\":\"short\"},\"TAP\":{\"allocation\":0.045,\"position\":\"short\"},\"STZ\":{\"allocation\":0.045,\"position\":\"short\"},\"SJM\":{\"allocation\":0.055,\"position\":\"short\"},\"HSY\":{\"allocation\":0.045,\"position\":\"short\"},\"ADM\":{\"allocation\":0.045,\"position\":\"short\"},\"ENR\":{\"allocation\":0.055,\"position\":\"short\"},\"SPB\":{\"allocation\":0.045,\"position\":\"short\"},\"CLX\":{\"allocation\":0.045,\"position\":\"short\"},\"ELF\":{\"allocation\":0.045,\"position\":\"short\"},\"OLPX\":{\"allocation\":0.045,\"position\":\"short\"},\"EL\":{\"allocation\":0.045,\"position\":\"short\"}"
-    }
+    "event": "portfolio_v1",
+    "context": {},
+    "outcome": "{'MNST': {'allocation': 0.1, 'position': 'long'}, 'KO': {'allocation': 0.085, 'position': 'long'}, 'BJ': {'allocation': 0.083, 'position': 'long'}, 'KR': {'allocation': 0.07, 'position': 'long'}, 'COST': {'allocation': 0.07, 'position': 'long'}, 'CCEP': {'allocation': 0.054, 'position': 'long'}, 'SAM': {'allocation': 0.05, 'position': 'long'}, 'CAG': {'allocation': 0.05, 'position': 'long'}, 'GIS': {'allocation': 0.05, 'position': 'long'}, 'POST': {'allocation': 0.045, 'position': 'long'}, 'PG': {'allocation': 0.07, 'position': 'long'}, 'CL': {'allocation': 0.05, 'position': 'long'}, 'EPC': {'allocation': 0.045, 'position': 'long'}, 'HLF': {'allocation': 0.03, 'position': 'long'}, 'ODD': {'allocation': 0.022, 'position': 'long'}, 'UNFI': {'allocation': -0.06, 'position': 'short'}, 'TGT': {'allocation': -0.06, 'position': 'short'}, 'PRMB': {'allocation': -0.045, 'position': 'short'}, 'STZ': {'allocation': -0.055, 'position': 'short'}, 'SJM': {'allocation': -0.047, 'position': 'short'}, 'HSY': {'allocation': -0.045, 'position': 'short'}, 'ADM': {'allocation': -0.04, 'position': 'short'}, 'ENR': {'allocation': -0.022, 'position': 'short'}, 'SPB': {'allocation': -0.023, 'position': 'short'}}",
+    "tags": [
+      "portfolio",
+      "v1"
+    ]
   },
   {
-    "timestamp": "2025-09-12T21:00:41.930571",
+    "timestamp": "2025-09-15T14:33:49.605443",
     "title": "portfolio_v2",
-    "event": "Log V2 after analytics: improved diversification, alpha, risk metrics; new names/weights; rationale for construction decisions.",
-    "context": {
-      "portfolio_dict": "{\"BJ\":{\"allocation\":0.06,\"position\":\"long\"},\"KR\":{\"allocation\":0.06,\"position\":\"long\"},\"COST\":{\"allocation\":0.06,\"position\":\"long\"},\"MNST\":{\"allocation\":0.07,\"position\":\"long\"},\"KO\":{\"allocation\":0.045,\"position\":\"long\"},\"CCEP\":{\"allocation\":0.055,\"position\":\"long\"},\"CAG\":{\"allocation\":0.06,\"position\":\"long\"},\"POST\":{\"allocation\":0.05,\"position\":\"long\"},\"PG\":{\"allocation\":0.045,\"position\":\"long\"},\"EPC\":{\"allocation\":0.06,\"position\":\"long\"},\"HLF\":{\"allocation\":0.06,\"position\":\"long\"},\"ODD\":{\"allocation\":0.06,\"position\":\"long\"},\"RLX\":{\"allocation\":0.045,\"position\":\"long\"},\"WMT\":{\"allocation\":0.06,\"position\":\"long\"},\"SFM\":{\"allocation\":0.045,\"position\":\"long\"},\"PEP\":{\"allocation\":0.06,\"position\":\"long\"},\"MO\":{\"allocation\":0.045,\"position\":\"long\"},\"UNFI\":{\"allocation\":0.045,\"position\":\"short\"},\"TGT\":{\"allocation\":0.045,\"position\":\"short\"},\"PRMB\":{\"allocation\":0.055,\"position\":\"short\"},\"TAP\":{\"allocation\":0.045,\"position\":\"short\"},\"STZ\":{\"allocation\":0.045,\"position\":\"short\"},\"SJM\":{\"allocation\":0.055,\"position\":\"short\"},\"HSY\":{\"allocation\":0.045,\"position\":\"short\"},\"ADM\":{\"allocation\":0.045,\"position\":\"short\"},\"ENR\":{\"allocation\":0.055,\"position\":\"short\"},\"SPB\":{\"allocation\":0.045,\"position\":\"short\"},\"CLX\":{\"allocation\":0.045,\"position\":\"short\"},\"ELF\":{\"allocation\":0.045,\"position\":\"short\"},\"OLPX\":{\"allocation\":0.045,\"position\":\"short\"},\"EL\":{\"allocation\":0.045,\"position\":\"short\"}"
-    }
-  },
-  {
-    "timestamp": "2025-09-12T21:02:24.063547",
-    "title": "portfolio_v3",
-    "event": "Construct Portfolio V3: further trim high-correlation pairs, boost differentiated longs/shorts, add new low-correlation positions; log allocations/rationale.",
-    "context": {
-      "portfolio_dict": "{\"BJ\":{\"allocation\":0.06,\"position\":\"long\"},\"KR\":{\"allocation\":0.06,\"position\":\"long\"},\"COST\":{\"allocation\":0.06,\"position\":\"long\"},\"MNST\":{\"allocation\":0.07,\"position\":\"long\"},\"KO\":{\"allocation\":0.03,\"position\":\"long\"},\"CCEP\":{\"allocation\":0.055,\"position\":\"long\"},\"CAG\":{\"allocation\":0.06,\"position\":\"long\"},\"POST\":{\"allocation\":0.05,\"position\":\"long\"},\"PG\":{\"allocation\":0.03,\"position\":\"long\"},\"EPC\":{\"allocation\":0.06,\"position\":\"long\"},\"HLF\":{\"allocation\":0.06,\"position\":\"long\"},\"ODD\":{\"allocation\":0.065,\"position\":\"long\"},\"RLX\":{\"allocation\":0.055,\"position\":\"long\"},\"WMT\":{\"allocation\":0.065,\"position\":\"long\"},\"SFM\":{\"allocation\":0.06,\"position\":\"long\"},\"PEP\":{\"allocation\":0.045,\"position\":\"long\"},\"MO\":{\"allocation\":0.055,\"position\":\"long\"},\"CELH\":{\"allocation\":0.045,\"position\":\"long\"},\"UNFI\":{\"allocation\":0.045,\"position\":\"short\"},\"TGT\":{\"allocation\":0.045,\"position\":\"short\"},\"FIZZ\":{\"allocation\":0.045,\"position\":\"short\"},\"PRMB\":{\"allocation\":0.045,\"position\":\"short\"},\"TAP\":{\"allocation\":0.035,\"position\":\"short\"},\"STZ\":{\"allocation\":0.035,\"position\":\"short\"},\"SJM\":{\"allocation\":0.05,\"position\":\"short\"},\"HSY\":{\"allocation\":0.045,\"position\":\"short\"},\"ADM\":{\"allocation\":0.045,\"position\":\"short\"},\"ENR\":{\"allocation\":0.055,\"position\":\"short\"},\"SPB\":{\"allocation\":0.045,\"position\":\"short\"},\"CLX\":{\"allocation\":0.045,\"position\":\"short\"},\"ELF\":{\"allocation\":0.045,\"position\":\"short\"},\"OLPX\":{\"allocation\":0.045,\"position\":\"short\"},\"EL\":{\"allocation\":0.045,\"position\":\"short\"}"
-    }
+    "event": "portfolio_v2",
+    "context": {},
+    "outcome": "{'MNST': {'allocation': 0.09, 'position': 'long'}, 'KO': {'allocation': 0.058, 'position': 'long'}, 'KR': {'allocation': 0.08, 'position': 'long'}, 'COST': {'allocation': 0.065, 'position': 'long'}, 'CCEP': {'allocation': 0.045, 'position': 'long'}, 'SAM': {'allocation': 0.04, 'position': 'long'}, 'CAG': {'allocation': 0.065, 'position': 'long'}, 'GIS': {'allocation': 0.035, 'position': 'long'}, 'POST': {'allocation': 0.03, 'position': 'long'}, 'PG': {'allocation': 0.055, 'position': 'long'}, 'CHD': {'allocation': 0.047, 'position': 'long'}, 'EPC': {'allocation': 0.048, 'position': 'long'}, 'HLF': {'allocation': 0.03, 'position': 'long'}, 'ODD': {'allocation': 0.018, 'position': 'long'}, 'UNFI': {'allocation': -0.05, 'position': 'short'}, 'TGT': {'allocation': -0.051, 'position': 'short'}, 'PRMB': {'allocation': -0.037, 'position': 'short'}, 'STZ': {'allocation': -0.049, 'position': 'short'}, 'SJM': {'allocation': -0.039, 'position': 'short'}, 'HSY': {'allocation': -0.036, 'position': 'short'}, 'ADM': {'allocation': -0.037, 'position': 'short'}, 'ENR': {'allocation': -0.016, 'position': 'short'}, 'SPB': {'allocation': -0.019, 'position': 'short'}}",
+    "tags": [
+      "portfolio",
+      "v2"
+    ]
   }
 ]

@@ -30,8 +30,6 @@ from .tool_registry import register_base_tools, register_task_management_tools
 
 load_dotenv()
 
-#TODO: get rid of old/dead code that does not help the main agent work flow
-
 class BaseAgent:
     """
     Refactored BaseAgent with:
@@ -54,7 +52,6 @@ class BaseAgent:
                 use_error_memory: bool = True,
                 use_episodic_memory: bool = True,
                 memory_refresh_interval: int = 6,
-                strict_validation: bool = True,
             ):
         
         self.model_name = model
@@ -71,8 +68,7 @@ class BaseAgent:
         self.use_episodic_memory = use_episodic_memory
         self.memory_refresh_interval = memory_refresh_interval
         
-        # Validation behavior toggle (strict by default)
-        self.strict_validation = strict_validation
+        # Validation behavior is strict and enforced engine-side
 
         # OpenAI tools and local dispatch map
         self.tools: List[Dict[str, Any]] = []
@@ -100,7 +96,7 @@ class BaseAgent:
         
         # Initialize event system
         self.event_manager = EventManager(verbose=verbose)
-        self.task_validator = TaskValidator(verbose=verbose, strict_validation=self.strict_validation)
+        self.task_validator = TaskValidator(verbose=verbose)
         
         # Initialize error memory system
         if self.use_error_memory:
@@ -137,7 +133,6 @@ class BaseAgent:
             task_manager=self.task_manager, 
             event_manager=self.event_manager,
             verbose=self.verbose,
-            strict_validation=self.strict_validation
         )
         
         # Register event handlers

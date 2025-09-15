@@ -4150,6 +4150,20 @@
             ]
           },
           "full_error": "'context' must be a dictionary if provided"
+        },
+        {
+          "timestamp": "2025-09-15T10:30:25.705224",
+          "args": {
+            "title": "portfolio_v1",
+            "event": "portfolio_v1",
+            "context": "Consumer Staples L/S Equity - V1 Construction",
+            "outcome": "{'MNST': {'allocation': 0.1, 'position': 'long'}, 'KO': {'allocation': 0.085, 'position': 'long'}, 'BJ': {'allocation': 0.083, 'position': 'long'}, 'KR': {'allocation': 0.07, 'position': 'long'}, 'COST': {'allocation': 0.07, 'position': 'long'}, 'CCEP': {'allocation': 0.054, 'position': 'long'}, 'SAM': {'allocation': 0.05, 'position': 'long'}, 'CAG': {'allocation': 0.05, 'position': 'long'}, 'GIS': {'allocation': 0.05, 'position': 'long'}, 'POST': {'allocation': 0.045, 'position': 'long'}, 'PG': {'allocation': 0.07, 'position': 'long'}, 'CL': {'allocation': 0.05, 'position': 'long'}, 'EPC': {'allocation': 0.045, 'position': 'long'}, 'HLF': {'allocation': 0.03, 'position': 'long'}, 'ODD': {'allocation': 0.022, 'position': 'long'}, 'UNFI': {'allocation': -0.06, 'position': 'short'}, 'TGT': {'allocation': -0.06, 'position': 'short'}, 'PRMB': {'allocation': -0.045, 'position': 'short'}, 'STZ': {'allocation': -0.055, 'position': 'short'}, 'SJM': {'allocation': -0.047, 'position': 'short'}, 'HSY': {'allocation': -0.045, 'position': 'short'}, 'ADM': {'allocation': -0.04, 'position': 'short'}, 'ENR': {'allocation': -0.022, 'position': 'short'}, 'SPB': {'allocation': -0.023, 'position': 'short'}}",
+            "tags": [
+              "portfolio",
+              "v1"
+            ]
+          },
+          "full_error": "'context' must be a dictionary if provided"
         }
       ],
       "solutions": [
@@ -4299,6 +4313,21 @@
           },
           "explanation": "Successful retry with corrected arguments",
           "timestamp": "2025-09-12T13:26:12.534095",
+          "success_count": 1
+        },
+        {
+          "correct_args": {
+            "title": "portfolio_v1",
+            "event": "portfolio_v1",
+            "context": {},
+            "outcome": "{'MNST': {'allocation': 0.1, 'position': 'long'}, 'KO': {'allocation': 0.085, 'position': 'long'}, 'BJ': {'allocation': 0.083, 'position': 'long'}, 'KR': {'allocation': 0.07, 'position': 'long'}, 'COST': {'allocation': 0.07, 'position': 'long'}, 'CCEP': {'allocation': 0.054, 'position': 'long'}, 'SAM': {'allocation': 0.05, 'position': 'long'}, 'CAG': {'allocation': 0.05, 'position': 'long'}, 'GIS': {'allocation': 0.05, 'position': 'long'}, 'POST': {'allocation': 0.045, 'position': 'long'}, 'PG': {'allocation': 0.07, 'position': 'long'}, 'CL': {'allocation': 0.05, 'position': 'long'}, 'EPC': {'allocation': 0.045, 'position': 'long'}, 'HLF': {'allocation': 0.03, 'position': 'long'}, 'ODD': {'allocation': 0.022, 'position': 'long'}, 'UNFI': {'allocation': -0.06, 'position': 'short'}, 'TGT': {'allocation': -0.06, 'position': 'short'}, 'PRMB': {'allocation': -0.045, 'position': 'short'}, 'STZ': {'allocation': -0.055, 'position': 'short'}, 'SJM': {'allocation': -0.047, 'position': 'short'}, 'HSY': {'allocation': -0.045, 'position': 'short'}, 'ADM': {'allocation': -0.04, 'position': 'short'}, 'ENR': {'allocation': -0.022, 'position': 'short'}, 'SPB': {'allocation': -0.023, 'position': 'short'}}",
+            "tags": [
+              "portfolio",
+              "v1"
+            ]
+          },
+          "explanation": "Successful retry with corrected arguments",
+          "timestamp": "2025-09-15T10:30:30.828027",
           "success_count": 1
         }
       ],
@@ -4476,5 +4505,5 @@
       "auto_solution": null
     }
   },
-  "last_updated": "2025-09-12T15:25:57.708932"
+  "last_updated": "2025-09-15T10:30:30.828211"
 }

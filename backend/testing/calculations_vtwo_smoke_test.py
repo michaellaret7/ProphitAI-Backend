@@ -27,7 +27,6 @@ def create_and_run_simple_agent() -> Dict[str, Any]:
         max_iterations=75,
         verbose=True,
         plan_first=True,  # Let the agent create a tiny plan and execute
-        strict_validation=True,
         save_messages=True,
         use_error_memory=True,
         use_episodic_memory=False,

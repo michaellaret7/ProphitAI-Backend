@@ -11,7 +11,7 @@ from .models import TodoList, MainTask, SubTask, TaskStatus
 class PlanExecutionEngine:
     """Drives task execution based on structured plans."""
     
-    def __init__(self, task_manager: TaskManager, event_manager: EventManager, verbose: bool = True, strict_validation: bool = True):
+    def __init__(self, task_manager: TaskManager, event_manager: EventManager, verbose: bool = True):
         """Initialize the execution engine.
         
         Args:
@@ -22,7 +22,6 @@ class PlanExecutionEngine:
         self.task_manager = task_manager
         self.event_manager = event_manager
         self.verbose = verbose
-        self.strict_validation = strict_validation
         self.current_main_task: Optional[MainTask] = None
         self.current_subtask: Optional[SubTask] = None
         self.plan_loaded: bool = False
@@ -338,12 +337,12 @@ class PlanExecutionEngine:
             observation
         )
 
-        # Determine relevance and success
-        is_relevant = self._is_tool_relevant(tool_name, self.current_main_task, self.current_subtask) if self.strict_validation else True
+        # Determine relevance and success (always strict)
+        is_relevant = self._is_tool_relevant(tool_name, self.current_main_task, self.current_subtask)
         is_error = self._is_error_result(result)
 
-        if self.current_subtask and (is_relevant or not self.strict_validation):
-            # Add observation to subtask only if relevant (or not strict)
+        if self.current_subtask and is_relevant:
+            # Add observation to subtask only when relevant
             self.task_manager.add_task_observation(
                 self.current_main_task.id,
                 observation,
@@ -379,8 +378,8 @@ class PlanExecutionEngine:
         # Add completion evidence to main task using automatic evidence collection
         evidence_items = self.collect_evidence_from_tool_result(tool_name, result)
         for evidence in evidence_items:
-            # If strict, avoid adding misleading success evidence at main-task level when error occurred
-            if self.strict_validation and self._looks_like_success_evidence(evidence) and is_error:
+            # Avoid adding misleading success evidence at main-task level when error occurred
+            if self._looks_like_success_evidence(evidence) and is_error:
                 continue
             self.task_manager.add_task_evidence(
                 self.current_main_task.id,
@@ -421,13 +420,12 @@ class PlanExecutionEngine:
             self.current_main_task
         )
         
-        # Strict gate: require relevance, success, and explicit tool-named evidence
-        if self.strict_validation:
-            is_relevant = self._is_tool_relevant(tool_name, self.current_main_task, self.current_subtask)
-            is_error = self._is_error_result(result)
-            has_tool_named_evidence = self._subtask_has_tool_named_evidence(self.current_subtask, tool_name)
-            if not (is_relevant and not is_error and has_tool_named_evidence):
-                return False
+        # Require relevance, success, and explicit tool-named evidence (always strict)
+        is_relevant = self._is_tool_relevant(tool_name, self.current_main_task, self.current_subtask)
+        is_error = self._is_error_result(result)
+        has_tool_named_evidence = self._subtask_has_tool_named_evidence(self.current_subtask, tool_name)
+        if not (is_relevant and not is_error and has_tool_named_evidence):
+            return False
 
         # Auto-advance if either validator suggests completion with high confidence
         return (should_complete and confidence >= 0.6) or (subtask_complete and subtask_confidence >= 0.7)
