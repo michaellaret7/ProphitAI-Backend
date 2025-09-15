@@ -55,7 +55,7 @@ class BaseAgent:
                 use_error_memory: bool = True,
                 use_episodic_memory: bool = True,
                 memory_refresh_interval: int = 6,
-                prune_messages: bool = True,
+                token_window_truncation: bool = True,
             ):
         
         self.model_name = model
@@ -71,7 +71,7 @@ class BaseAgent:
         self.use_error_memory = use_error_memory
         self.use_episodic_memory = use_episodic_memory
         self.memory_refresh_interval = memory_refresh_interval
-        self.prune_messages = prune_messages
+        self.token_window_truncation = token_window_truncation
         
         # Validation behavior is strict and enforced engine-side
 
@@ -917,7 +917,7 @@ class BaseAgent:
             self.message_logger.save_messages_to_json(messages, iteration=i, total_tokens=self.total_tokens)
             
             # Seed token_management/messages.json when token threshold(s) are reached
-            if self.total_tokens >= self._next_seed_token_threshold:
+            if self.token_window_truncation and self.total_tokens >= self._next_seed_token_threshold:
                 try:
                     # First time: append=False; subsequent times: append=True
                     append_flag = self._seed_messages_done
@@ -937,22 +937,19 @@ class BaseAgent:
                     if self.verbose:
                         print(f"⚠️ seed_messages_json failed at threshold {self._next_seed_token_threshold}: {e}")
                 finally:
-                    # Optionally prune in-memory messages
+                    # new code in loop
+                    # Trim in-memory messages to ONLY the first four messages for the next iteration
                     try:
-                        if self.prune_messages:
-                            keep_n = 4
-                            if len(messages) > keep_n:
-                                messages[:] = messages[:keep_n]
-                                if self.verbose:
-                                    print(f"🧹 Trimmed in-memory messages to the first {keep_n} entries for next iteration")
-                        else:
+                        keep_n = 4
+                        if len(messages) > keep_n:
+                            messages[:] = messages[:keep_n]
                             if self.verbose:
-                                print("🧹 Prune disabled; keeping full in-memory messages for next iteration")
-                        # Persist the live snapshot reflecting next input
+                                print(f"🧹 Trimmed in-memory messages to the first {keep_n} entries for next iteration")
+                        # Immediately persist the trimmed snapshot to live-only log
                         self.message_logger.save_live_messages_to_json(messages, iteration=i, total_tokens=self.total_tokens)
                     except Exception as e:
                         if self.verbose:
-                            print(f"⚠️ Failed to update live/pruned messages: {e}")
+                            print(f"⚠️ Failed to trim in-memory messages to first four: {e}")
                     
                     # Dynamically register lookup tool (only once), then move to next threshold
                     if "tool_lookup_by_call_id" not in self.tool_functions:
@@ -985,7 +982,7 @@ class BaseAgent:
                             if self.verbose:
                                 print(f"⚠️ Failed to register tool_lookup_by_call_id: {e}")
                                 
-                    self._next_seed_token_threshold += 100_000
+                    self._next_seed_token_threshold += self._next_seed_token_threshold
                 
                 # new code in loop
             
