@@ -1,0 +1,22 @@
+from fastapi import APIRouter, Query
+from app.api.controller.user_controller import get_user_data_controller, get_user_portfolio_list_controller
+
+router = APIRouter()
+
+@router.get("/data")
+async def get_user_data(email: str = Query(None, description="User's email address")):
+    """
+    Get complete user data by email
+    
+    Email must be provided.
+    """
+    return await get_user_data_controller(email=email)
+
+@router.get("/portfolios")
+async def get_user_portfolio_list(email: str = Query(None, description="User's email address")):
+    """
+    Get user portfolio list by email
+    
+    Email must be provided.
+    """
+    return await get_user_portfolio_list_controller(email=email)
