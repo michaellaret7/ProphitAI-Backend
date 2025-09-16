@@ -23,7 +23,9 @@ class EpisodicMemory:
     ) -> None:
         # Default to sibling memory_store/episodic_memory.json
         if path is None:
-            path = Path(__file__).parent / "memory_store" / "episodic_memory.json"
+            # Resolve the path to ensure it's absolute
+            memory_base_dir = Path(__file__).resolve().parent
+            path = memory_base_dir / "memory_store" / "episodic_memory.json"
 
         self.path: Path = Path(path)
         self._ensure_storage()

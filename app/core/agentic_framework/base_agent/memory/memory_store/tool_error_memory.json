@@ -1611,16 +1611,6 @@
       "error_pattern": "register_cio_tools.<locals>.<lambda>() missing 1 required positional argument: 'portfolio_dict'",
       "occurrences": [
         {
-          "timestamp": "2025-09-10T17:19:29.805267",
-          "args": {},
-          "full_error": "register_cio_tools.<locals>.<lambda>() missing 1 required positional argument: 'portfolio_dict'"
-        },
-        {
-          "timestamp": "2025-09-10T17:46:53.633114",
-          "args": {},
-          "full_error": "register_cio_tools.<locals>.<lambda>() missing 1 required positional argument: 'portfolio_dict'"
-        },
-        {
           "timestamp": "2025-09-11T07:54:21.761036",
           "args": {},
           "full_error": "register_cio_tools.<locals>.<lambda>() missing 1 required positional argument: 'portfolio_dict'"
@@ -1657,6 +1647,16 @@
         },
         {
           "timestamp": "2025-09-15T18:21:32.779781",
+          "args": {},
+          "full_error": "register_cio_tools.<locals>.<lambda>() missing 1 required positional argument: 'portfolio_dict'"
+        },
+        {
+          "timestamp": "2025-09-16T13:28:27.810373",
+          "args": {},
+          "full_error": "register_cio_tools.<locals>.<lambda>() missing 1 required positional argument: 'portfolio_dict'"
+        },
+        {
+          "timestamp": "2025-09-16T14:43:15.928350",
           "args": {},
           "full_error": "register_cio_tools.<locals>.<lambda>() missing 1 required positional argument: 'portfolio_dict'"
         }
@@ -2020,6 +2020,268 @@
           "explanation": "Successful retry with corrected arguments",
           "timestamp": "2025-09-12T13:08:27.516136",
           "success_count": 1
+        },
+        {
+          "correct_args": {
+            "portfolio_dict": {
+              "KR": {
+                "allocation": 0.065,
+                "position": "long"
+              },
+              "PG": {
+                "allocation": 0.06,
+                "position": "long"
+              },
+              "KO": {
+                "allocation": 0.055,
+                "position": "long"
+              },
+              "COST": {
+                "allocation": 0.045,
+                "position": "long"
+              },
+              "MNST": {
+                "allocation": 0.05,
+                "position": "long"
+              },
+              "CCEP": {
+                "allocation": 0.045,
+                "position": "long"
+              },
+              "CAG": {
+                "allocation": 0.045,
+                "position": "long"
+              },
+              "GIS": {
+                "allocation": 0.045,
+                "position": "long"
+              },
+              "POST": {
+                "allocation": 0.04,
+                "position": "long"
+              },
+              "CL": {
+                "allocation": 0.04,
+                "position": "long"
+              },
+              "KMB": {
+                "allocation": 0.035,
+                "position": "long"
+              },
+              "EPC": {
+                "allocation": 0.035,
+                "position": "long"
+              },
+              "HLF": {
+                "allocation": 0.035,
+                "position": "long"
+              },
+              "ODD": {
+                "allocation": 0.03,
+                "position": "long"
+              },
+              "RLX": {
+                "allocation": 0.03,
+                "position": "long"
+              },
+              "UNFI": {
+                "allocation": 0.045,
+                "position": "short"
+              },
+              "TGT": {
+                "allocation": 0.045,
+                "position": "short"
+              },
+              "PRMB": {
+                "allocation": 0.045,
+                "position": "short"
+              },
+              "TAP": {
+                "allocation": 0.045,
+                "position": "short"
+              },
+              "STZ": {
+                "allocation": 0.04,
+                "position": "short"
+              },
+              "SJM": {
+                "allocation": 0.04,
+                "position": "short"
+              },
+              "HSY": {
+                "allocation": 0.035,
+                "position": "short"
+              },
+              "ADM": {
+                "allocation": 0.035,
+                "position": "short"
+              },
+              "ENR": {
+                "allocation": 0.035,
+                "position": "short"
+              },
+              "SPB": {
+                "allocation": 0.03,
+                "position": "short"
+              },
+              "CLX": {
+                "allocation": 0.03,
+                "position": "short"
+              },
+              "ELF": {
+                "allocation": 0.03,
+                "position": "short"
+              },
+              "OLPX": {
+                "allocation": 0.025,
+                "position": "short"
+              },
+              "EL": {
+                "allocation": 0.025,
+                "position": "short"
+              }
+            }
+          },
+          "explanation": "Successful retry with corrected arguments",
+          "timestamp": "2025-09-16T13:28:33.562241",
+          "success_count": 1
+        },
+        {
+          "correct_args": {
+            "portfolio_dict": {
+              "BJ": {
+                "allocation": 0.065,
+                "position": "long"
+              },
+              "KR": {
+                "allocation": 0.06,
+                "position": "long"
+              },
+              "COST": {
+                "allocation": 0.065,
+                "position": "long"
+              },
+              "MNST": {
+                "allocation": 0.07,
+                "position": "long"
+              },
+              "KO": {
+                "allocation": 0.06,
+                "position": "long"
+              },
+              "CCEP": {
+                "allocation": 0.055,
+                "position": "long"
+              },
+              "SAM": {
+                "allocation": 0.05,
+                "position": "long"
+              },
+              "CAG": {
+                "allocation": 0.055,
+                "position": "long"
+              },
+              "GIS": {
+                "allocation": 0.055,
+                "position": "long"
+              },
+              "POST": {
+                "allocation": 0.05,
+                "position": "long"
+              },
+              "PG": {
+                "allocation": 0.07,
+                "position": "long"
+              },
+              "CL": {
+                "allocation": 0.06,
+                "position": "long"
+              },
+              "KMB": {
+                "allocation": 0.055,
+                "position": "long"
+              },
+              "EPC": {
+                "allocation": 0.05,
+                "position": "long"
+              },
+              "HLF": {
+                "allocation": 0.05,
+                "position": "long"
+              },
+              "ODD": {
+                "allocation": 0.05,
+                "position": "long"
+              },
+              "RLX": {
+                "allocation": 0.045,
+                "position": "long"
+              },
+              "MDLZ": {
+                "allocation": 0.05,
+                "position": "long"
+              },
+              "CHD": {
+                "allocation": 0.05,
+                "position": "long"
+              },
+              "PM": {
+                "allocation": 0.055,
+                "position": "long"
+              },
+              "UNFI": {
+                "allocation": 0.065,
+                "position": "short"
+              },
+              "TGT": {
+                "allocation": 0.06,
+                "position": "short"
+              },
+              "PRMB": {
+                "allocation": 0.06,
+                "position": "short"
+              },
+              "TAP": {
+                "allocation": 0.055,
+                "position": "short"
+              },
+              "STZ": {
+                "allocation": 0.055,
+                "position": "short"
+              },
+              "SJM": {
+                "allocation": 0.055,
+                "position": "short"
+              },
+              "HSY": {
+                "allocation": 0.055,
+                "position": "short"
+              },
+              "ADM": {
+                "allocation": 0.055,
+                "position": "short"
+              },
+              "ENR": {
+                "allocation": 0.055,
+                "position": "short"
+              },
+              "SPB": {
+                "allocation": 0.045,
+                "position": "short"
+              },
+              "CLX": {
+                "allocation": 0.045,
+                "position": "short"
+              },
+              "ELF": {
+                "allocation": 0.04,
+                "position": "short"
+              }
+            }
+          },
+          "explanation": "Successful retry with corrected arguments",
+          "timestamp": "2025-09-16T14:43:28.783136",
+          "success_count": 1
         }
       ],
       "auto_solution": {
@@ -2161,34 +2423,6 @@
       "error_pattern": "exposure_calculator() missing 1 required positional argument: 'portfolio_dict'",
       "occurrences": [
         {
-          "timestamp": "2025-09-12T11:23:31.656918",
-          "args": {
-            "exposure_type": "long"
-          },
-          "full_error": "exposure_calculator() missing 1 required positional argument: 'portfolio_dict'"
-        },
-        {
-          "timestamp": "2025-09-12T11:23:31.662998",
-          "args": {
-            "exposure_type": "short"
-          },
-          "full_error": "exposure_calculator() missing 1 required positional argument: 'portfolio_dict'"
-        },
-        {
-          "timestamp": "2025-09-15T16:51:15.377879",
-          "args": {
-            "exposure_type": "net"
-          },
-          "full_error": "exposure_calculator() missing 1 required positional argument: 'portfolio_dict'"
-        },
-        {
-          "timestamp": "2025-09-15T16:51:15.385305",
-          "args": {
-            "exposure_type": "gross"
-          },
-          "full_error": "exposure_calculator() missing 1 required positional argument: 'portfolio_dict'"
-        },
-        {
           "timestamp": "2025-09-15T17:53:56.097635",
           "args": {
             "exposure_type": "net"
@@ -2227,6 +2461,34 @@
           "timestamp": "2025-09-15T18:21:32.815020",
           "args": {
             "exposure_type": "gross"
+          },
+          "full_error": "exposure_calculator() missing 1 required positional argument: 'portfolio_dict'"
+        },
+        {
+          "timestamp": "2025-09-16T13:27:42.170578",
+          "args": {
+            "exposure_type": "net"
+          },
+          "full_error": "exposure_calculator() missing 1 required positional argument: 'portfolio_dict'"
+        },
+        {
+          "timestamp": "2025-09-16T13:27:42.186256",
+          "args": {
+            "exposure_type": "gross"
+          },
+          "full_error": "exposure_calculator() missing 1 required positional argument: 'portfolio_dict'"
+        },
+        {
+          "timestamp": "2025-09-16T13:27:42.196775",
+          "args": {
+            "exposure_type": "long"
+          },
+          "full_error": "exposure_calculator() missing 1 required positional argument: 'portfolio_dict'"
+        },
+        {
+          "timestamp": "2025-09-16T13:27:42.209775",
+          "args": {
+            "exposure_type": "short"
           },
           "full_error": "exposure_calculator() missing 1 required positional argument: 'portfolio_dict'"
         }
@@ -2620,6 +2882,132 @@
           },
           "explanation": "Successful retry with corrected arguments",
           "timestamp": "2025-09-12T11:23:47.918533",
+          "success_count": 1
+        },
+        {
+          "correct_args": {
+            "portfolio_dict": {
+              "KR": {
+                "allocation": 0.065,
+                "position": "long"
+              },
+              "PG": {
+                "allocation": 0.06,
+                "position": "long"
+              },
+              "KO": {
+                "allocation": 0.055,
+                "position": "long"
+              },
+              "COST": {
+                "allocation": 0.045,
+                "position": "long"
+              },
+              "MNST": {
+                "allocation": 0.05,
+                "position": "long"
+              },
+              "CCEP": {
+                "allocation": 0.045,
+                "position": "long"
+              },
+              "CAG": {
+                "allocation": 0.045,
+                "position": "long"
+              },
+              "GIS": {
+                "allocation": 0.045,
+                "position": "long"
+              },
+              "POST": {
+                "allocation": 0.04,
+                "position": "long"
+              },
+              "CL": {
+                "allocation": 0.04,
+                "position": "long"
+              },
+              "KMB": {
+                "allocation": 0.035,
+                "position": "long"
+              },
+              "EPC": {
+                "allocation": 0.035,
+                "position": "long"
+              },
+              "HLF": {
+                "allocation": 0.035,
+                "position": "long"
+              },
+              "ODD": {
+                "allocation": 0.03,
+                "position": "long"
+              },
+              "RLX": {
+                "allocation": 0.03,
+                "position": "long"
+              },
+              "UNFI": {
+                "allocation": 0.045,
+                "position": "short"
+              },
+              "TGT": {
+                "allocation": 0.045,
+                "position": "short"
+              },
+              "PRMB": {
+                "allocation": 0.045,
+                "position": "short"
+              },
+              "TAP": {
+                "allocation": 0.045,
+                "position": "short"
+              },
+              "STZ": {
+                "allocation": 0.04,
+                "position": "short"
+              },
+              "SJM": {
+                "allocation": 0.04,
+                "position": "short"
+              },
+              "HSY": {
+                "allocation": 0.035,
+                "position": "short"
+              },
+              "ADM": {
+                "allocation": 0.035,
+                "position": "short"
+              },
+              "ENR": {
+                "allocation": 0.035,
+                "position": "short"
+              },
+              "SPB": {
+                "allocation": 0.03,
+                "position": "short"
+              },
+              "CLX": {
+                "allocation": 0.03,
+                "position": "short"
+              },
+              "ELF": {
+                "allocation": 0.03,
+                "position": "short"
+              },
+              "OLPX": {
+                "allocation": 0.025,
+                "position": "short"
+              },
+              "EL": {
+                "allocation": 0.025,
+                "position": "short"
+              }
+            },
+            "exposure_type": "net"
+          },
+          "explanation": "Successful retry with corrected arguments",
+          "timestamp": "2025-09-16T13:28:26.323221",
           "success_count": 1
         }
       ],
@@ -5083,7 +5471,399 @@
       ],
       "solutions": [],
       "auto_solution": null
+    },
+    "build_portfolio:unknown_error": {
+      "tool_name": "build_portfolio",
+      "error_pattern": "'final_portfolio'",
+      "occurrences": [
+        {
+          "timestamp": "2025-09-16T13:35:24.437842",
+          "args": {
+            "portfolio_dict": {
+              "KR": {
+                "allocation": 0.08,
+                "position": "long"
+              },
+              "MNST": {
+                "allocation": 0.07,
+                "position": "long"
+              },
+              "CCEP": {
+                "allocation": 0.065,
+                "position": "long"
+              },
+              "PG": {
+                "allocation": 0.03,
+                "position": "long"
+              },
+              "KO": {
+                "allocation": 0.03,
+                "position": "long"
+              },
+              "EPC": {
+                "allocation": 0.055,
+                "position": "long"
+              },
+              "HLF": {
+                "allocation": 0.06,
+                "position": "long"
+              },
+              "ODD": {
+                "allocation": 0.065,
+                "position": "long"
+              },
+              "RLX": {
+                "allocation": 0.045,
+                "position": "long"
+              },
+              "MDLZ": {
+                "allocation": 0.045,
+                "position": "long"
+              },
+              "CALM": {
+                "allocation": 0.045,
+                "position": "long"
+              },
+              "KOOL": {
+                "allocation": 0.04,
+                "position": "long"
+              },
+              "CELH": {
+                "allocation": 0.05,
+                "position": "long"
+              },
+              "FIZZ": {
+                "allocation": 0.045,
+                "position": "long"
+              },
+              "BRBR": {
+                "allocation": 0.04,
+                "position": "long"
+              },
+              "KRFT": {
+                "allocation": 0.03,
+                "position": "long"
+              },
+              "SPTN": {
+                "allocation": 0.025,
+                "position": "long"
+              },
+              "TGT": {
+                "allocation": 0.035,
+                "position": "short"
+              },
+              "UNFI": {
+                "allocation": 0.04,
+                "position": "short"
+              },
+              "PRMB": {
+                "allocation": 0.045,
+                "position": "short"
+              },
+              "TAP": {
+                "allocation": 0.05,
+                "position": "short"
+              },
+              "STZ": {
+                "allocation": 0.035,
+                "position": "short"
+              },
+              "HSY": {
+                "allocation": 0.04,
+                "position": "short"
+              },
+              "ADM": {
+                "allocation": 0.035,
+                "position": "short"
+              },
+              "ENR": {
+                "allocation": 0.035,
+                "position": "short"
+              },
+              "CLX": {
+                "allocation": 0.035,
+                "position": "short"
+              },
+              "ELF": {
+                "allocation": 0.04,
+                "position": "short"
+              },
+              "OLPX": {
+                "allocation": 0.04,
+                "position": "short"
+              },
+              "ACI": {
+                "allocation": 0.035,
+                "position": "short"
+              },
+              "GO": {
+                "allocation": 0.03,
+                "position": "short"
+              }
+            }
+          },
+          "full_error": "'final_portfolio'"
+        },
+        {
+          "timestamp": "2025-09-16T13:35:39.315282",
+          "args": {
+            "portfolio_dict": {
+              "KR": {
+                "allocation": 0.08,
+                "position": "long"
+              },
+              "MNST": {
+                "allocation": 0.07,
+                "position": "long"
+              },
+              "CCEP": {
+                "allocation": 0.065,
+                "position": "long"
+              },
+              "PG": {
+                "allocation": 0.03,
+                "position": "long"
+              },
+              "KO": {
+                "allocation": 0.03,
+                "position": "long"
+              },
+              "EPC": {
+                "allocation": 0.055,
+                "position": "long"
+              },
+              "HLF": {
+                "allocation": 0.06,
+                "position": "long"
+              },
+              "ODD": {
+                "allocation": 0.065,
+                "position": "long"
+              },
+              "RLX": {
+                "allocation": 0.045,
+                "position": "long"
+              },
+              "MDLZ": {
+                "allocation": 0.045,
+                "position": "long"
+              },
+              "CALM": {
+                "allocation": 0.045,
+                "position": "long"
+              },
+              "KOOL": {
+                "allocation": 0.04,
+                "position": "long"
+              },
+              "CELH": {
+                "allocation": 0.05,
+                "position": "long"
+              },
+              "FIZZ": {
+                "allocation": 0.045,
+                "position": "long"
+              },
+              "BRBR": {
+                "allocation": 0.04,
+                "position": "long"
+              },
+              "KRFT": {
+                "allocation": 0.03,
+                "position": "long"
+              },
+              "SPTN": {
+                "allocation": 0.025,
+                "position": "long"
+              },
+              "TGT": {
+                "allocation": 0.035,
+                "position": "short"
+              },
+              "UNFI": {
+                "allocation": 0.04,
+                "position": "short"
+              },
+              "PRMB": {
+                "allocation": 0.045,
+                "position": "short"
+              },
+              "TAP": {
+                "allocation": 0.05,
+                "position": "short"
+              },
+              "STZ": {
+                "allocation": 0.035,
+                "position": "short"
+              },
+              "HSY": {
+                "allocation": 0.04,
+                "position": "short"
+              },
+              "ADM": {
+                "allocation": 0.035,
+                "position": "short"
+              },
+              "ENR": {
+                "allocation": 0.035,
+                "position": "short"
+              },
+              "CLX": {
+                "allocation": 0.035,
+                "position": "short"
+              },
+              "ELF": {
+                "allocation": 0.04,
+                "position": "short"
+              },
+              "OLPX": {
+                "allocation": 0.04,
+                "position": "short"
+              },
+              "ACI": {
+                "allocation": 0.035,
+                "position": "short"
+              },
+              "GO": {
+                "allocation": 0.03,
+                "position": "short"
+              }
+            }
+          },
+          "full_error": "'final_portfolio'"
+        },
+        {
+          "timestamp": "2025-09-16T13:37:54.318776",
+          "args": {
+            "portfolio_dict": {
+              "KR": {
+                "allocation": 0.08,
+                "position": "long"
+              },
+              "MNST": {
+                "allocation": 0.07,
+                "position": "long"
+              },
+              "CCEP": {
+                "allocation": 0.065,
+                "position": "long"
+              },
+              "PG": {
+                "allocation": 0.03,
+                "position": "long"
+              },
+              "KO": {
+                "allocation": 0.03,
+                "position": "long"
+              },
+              "EPC": {
+                "allocation": 0.055,
+                "position": "long"
+              },
+              "HLF": {
+                "allocation": 0.06,
+                "position": "long"
+              },
+              "ODD": {
+                "allocation": 0.065,
+                "position": "long"
+              },
+              "RLX": {
+                "allocation": 0.045,
+                "position": "long"
+              },
+              "MDLZ": {
+                "allocation": 0.045,
+                "position": "long"
+              },
+              "CALM": {
+                "allocation": 0.045,
+                "position": "long"
+              },
+              "KOOL": {
+                "allocation": 0.04,
+                "position": "long"
+              },
+              "CELH": {
+                "allocation": 0.05,
+                "position": "long"
+              },
+              "FIZZ": {
+                "allocation": 0.045,
+                "position": "long"
+              },
+              "BRBR": {
+                "allocation": 0.04,
+                "position": "long"
+              },
+              "KRFT": {
+                "allocation": 0.03,
+                "position": "long"
+              },
+              "SPTN": {
+                "allocation": 0.025,
+                "position": "long"
+              },
+              "TGT": {
+                "allocation": 0.035,
+                "position": "short"
+              },
+              "UNFI": {
+                "allocation": 0.04,
+                "position": "short"
+              },
+              "PRMB": {
+                "allocation": 0.045,
+                "position": "short"
+              },
+              "TAP": {
+                "allocation": 0.05,
+                "position": "short"
+              },
+              "STZ": {
+                "allocation": 0.035,
+                "position": "short"
+              },
+              "HSY": {
+                "allocation": 0.04,
+                "position": "short"
+              },
+              "ADM": {
+                "allocation": 0.035,
+                "position": "short"
+              },
+              "ENR": {
+                "allocation": 0.035,
+                "position": "short"
+              },
+              "CLX": {
+                "allocation": 0.035,
+                "position": "short"
+              },
+              "ELF": {
+                "allocation": 0.04,
+                "position": "short"
+              },
+              "OLPX": {
+                "allocation": 0.04,
+                "position": "short"
+              },
+              "ACI": {
+                "allocation": 0.035,
+                "position": "short"
+              },
+              "GO": {
+                "allocation": 0.03,
+                "position": "short"
+              }
+            }
+          },
+          "full_error": "'final_portfolio'"
+        }
+      ],
+      "solutions": [],
+      "auto_solution": null
     }
   },
-  "last_updated": "2025-09-16T10:27:18.509997"
+  "last_updated": "2025-09-16T14:43:28.783136"
 }

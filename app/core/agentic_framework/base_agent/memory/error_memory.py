@@ -21,7 +21,12 @@ class ToolErrorMemory:
         self.verbose = verbose
         
         # Memory storage path
-        self.memory_path = Path(__file__).parent / "memory_store" / "tool_error_memory.json"
+        # Resolve the path to ensure it's absolute
+        memory_base_dir = Path(__file__).resolve().parent
+        self.memory_path = memory_base_dir / "memory_store" / "tool_error_memory.json"
+        
+        # Ensure the directory exists
+        self.memory_path.parent.mkdir(parents=True, exist_ok=True)
         
         # In-memory storage
         self.error_patterns: Dict[str, Dict[str, Any]] = {}

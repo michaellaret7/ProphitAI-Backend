@@ -16,7 +16,7 @@ from scipy.cluster.hierarchy import linkage, fcluster
 from scipy.spatial.distance import squareform
 from datetime import datetime
 from concurrent.futures import ThreadPoolExecutor, as_completed
-from backend.src.repositories.price_data import fetch_bulk_price_data_for_tickers
+from app.repositories.price_data import fetch_bulk_price_data_for_tickers
 
 
 def identify_market_themes(tickers, start_date, end_date, num_clusters=None, min_cluster_size=2):

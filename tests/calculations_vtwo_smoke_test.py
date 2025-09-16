@@ -1,7 +1,7 @@
 import os
 from typing import Dict, Any
 
-from backend.src.agentic_framework.base_agent.agent import BaseAgent
+from app.core.agentic_framework.base_agent.agent import BaseAgent
 
 
 def create_and_run_simple_agent() -> Dict[str, Any]:
@@ -39,8 +39,5 @@ def create_and_run_simple_agent() -> Dict[str, Any]:
     return result
 
 
-if __name__ == "__main__":
-    # create_and_run_simple_agent()
-    from backend.testing.vector_storage.build import seed_corpus_from_agent_messages
-    seed_corpus_from_agent_messages()
+
 

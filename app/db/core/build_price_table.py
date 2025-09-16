@@ -10,6 +10,7 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 import io
 import csv
 import sys
+from pathlib import Path
 
 def bulk_insert_with_copy(session, table_name, data_to_insert):
     """
@@ -154,7 +155,8 @@ class TransferPriceData:
         return df
 
 if __name__ == "__main__":
-    ticker_file = "backend/src/db/core/tickers_with_no_data.txt"
+    # Use Path to reference the ticker file in the same directory
+    ticker_file = Path(__file__).parent / "tickers_with_no_data.txt"
     num_tickers_to_process = 25
 
     for i in range(40):

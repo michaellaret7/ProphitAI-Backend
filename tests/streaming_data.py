@@ -14,7 +14,7 @@ import math
 from datetime import datetime
 from typing import List, Dict, Any
 from dotenv import load_dotenv
-from backend.src.calculations_v2.core.helpers import pct_change
+from app.core.calculations.core.helpers import pct_change
 
 load_dotenv()
 

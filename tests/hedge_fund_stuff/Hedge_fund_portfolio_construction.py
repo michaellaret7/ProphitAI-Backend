@@ -388,7 +388,7 @@ def main():
     """
     Simple example showing how to use ThemeAnalysis with price data
     """
-    from backend.src.repositories.price_data import fetch_bulk_price_data_for_tickers
+    from app.repositories.price_data import fetch_bulk_price_data_for_tickers
     
     # 1. Define theme instruments
     ai_stocks = ['NVDA', 'MSFT', 'GOOGL', 'AMD']
@@ -494,7 +494,7 @@ def demo_theme_identification():
     """
     Demonstrate theme identification using dummy economic data
     """
-    from backend.src.repositories.price_data import fetch_bulk_price_data_for_tickers
+    from app.repositories.price_data import fetch_bulk_price_data_for_tickers
     
     # 1. Create dummy economic data
     dates = pd.date_range('2023-01-01', '2024-01-01', freq='D')

@@ -5,7 +5,7 @@ from app.api.controller.prophit_alts_controller import (
 
 router = APIRouter()
 
-@router.get("/fund/{fund_name}/performance-data")
+@router.get("/prophit-alts/fund/{fund_name}/performance-data")
 async def get_fund_final_positions(fund_name: str):
     """
     Get fund performance data by fund name

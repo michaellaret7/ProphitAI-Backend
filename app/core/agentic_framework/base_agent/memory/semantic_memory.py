@@ -23,8 +23,13 @@ class SemanticMemory:
         self.verbose = verbose
         
         # Memory storage path - each agent type has its own file
-        self.memory_dir = Path(__file__).parent / "memory_store" / "semantic_memory"
-
+        # Resolve the path to ensure it's absolute
+        memory_base_dir = Path(__file__).resolve().parent
+        self.memory_dir = memory_base_dir / "memory_store" / "semantic_memory"
+        
+        # Ensure the directory exists
+        self.memory_dir.mkdir(parents=True, exist_ok=True)
+        
         self.memory_path = self.memory_dir / f"{self.agent_type}_memory.json"
         
         # In-memory storage

@@ -14,10 +14,17 @@ class MessageLogger:
         self.save_messages = save_messages
         self.verbose = verbose
         self.model_name = model_name
+        self.last_llm_received_tokens = None  # Track the last llm_received_tokens value
         
         if self.save_messages:
-            # Updated path since this file is now in core/ subfolder
-            self.messages_log_path = Path(__file__).parent.parent.parent / "agent_output" / "agent_messages.json"
+            # Get the agentic_framework directory path more robustly
+            # From logger.py: core/ -> base_agent/ -> agentic_framework/
+            agentic_framework_dir = Path(__file__).resolve().parent.parent.parent
+            self.messages_log_path = agentic_framework_dir / "agent_output" / "agent_messages.json"
+            
+            # Ensure the directory exists
+            self.messages_log_path.parent.mkdir(parents=True, exist_ok=True)
+            
             # Clear the messages file at start
             try:
                 with open(self.messages_log_path, "w", encoding="utf-8") as f:
@@ -84,6 +91,7 @@ class MessageLogger:
             # Include the exact input tokens being sent to LLM
             if input_tokens is not None:
                 data["llm_received_tokens"] = int(input_tokens)
+                self.last_llm_received_tokens = int(input_tokens)  # Track the last value
 
             with open(self.messages_log_path, "w", encoding="utf-8") as f:
                 json.dump(data, f, indent=2, ensure_ascii=False)
@@ -147,7 +155,7 @@ class MessageLogger:
                     "final_text": result["final_text"],
                     "iterations": result["iterations"],
                     "stopped_reason": result["stopped_reason"],
-                    "total_tokens": result["total_tokens"]
+                    "total_tokens": self.last_llm_received_tokens if self.last_llm_received_tokens is not None else result.get("total_tokens", 0)
                 },
                 "messages": combined_messages,
                 "message_count": len(combined_messages),

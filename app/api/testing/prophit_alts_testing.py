@@ -1,6 +1,6 @@
 import unittest
 from fastapi.testclient import TestClient
-from backend.main import app
+from main import app  # Import from project root main.py
 
 class TestProphitAltsEndpoints(unittest.TestCase):
     def setUp(self):

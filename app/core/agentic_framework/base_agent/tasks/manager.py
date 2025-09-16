@@ -16,8 +16,13 @@ class TaskManager:
         self.execution_history: List[Dict] = []
         self.structured_plan: Optional[TodoList] = None  # Store the structured plan
         
-        # Path for task state file - updated path since this is now in tasks/ subfolder
-        self.state_path = Path(__file__).parent.parent.parent / "agent_output" / "task_state.json"
+        # Get the agentic_framework directory path more robustly
+        # From manager.py: tasks/ -> base_agent/ -> agentic_framework/
+        agentic_framework_dir = Path(__file__).resolve().parent.parent.parent
+        self.state_path = agentic_framework_dir / "agent_output" / "task_state.json"
+        
+        # Ensure the directory exists
+        self.state_path.parent.mkdir(parents=True, exist_ok=True)
     
     def add_structured_plan(self, plan: TodoList):
         """Add a structured plan from the planning tool."""
