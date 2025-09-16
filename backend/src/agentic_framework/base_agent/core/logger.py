@@ -4,6 +4,7 @@ import json
 from typing import List, Dict, Any
 from datetime import datetime
 from pathlib import Path
+ 
 
 
 class MessageLogger:
@@ -17,21 +18,14 @@ class MessageLogger:
         if self.save_messages:
             # Updated path since this file is now in core/ subfolder
             self.messages_log_path = Path(__file__).parent.parent.parent / "agent_output" / "agent_messages.json"
-            self.live_messages_log_path = Path(__file__).parent.parent.parent / "agent_output" / "live_agent_messages.json"
             # Clear the messages file at start
             try:
                 with open(self.messages_log_path, "w", encoding="utf-8") as f:
                     json.dump({}, f)
             except Exception:
                 pass
-            # Clear the live messages file at start
-            try:
-                with open(self.live_messages_log_path, "w", encoding="utf-8") as f:
-                    json.dump({}, f)
-            except Exception:
-                pass
     
-    def save_messages_to_json(self, messages: List[Dict[str, Any]], iteration: int, total_tokens: int = None) -> None:
+    def save_messages_to_json(self, messages: List[Dict[str, Any]], iteration: int, total_tokens: int = None, input_tokens: int = None) -> None:
         """Append new messages to agent_messages.json (full workflow log)."""
         if not self.save_messages:
             return
@@ -87,8 +81,9 @@ class MessageLogger:
                 "messages": combined_messages,
                 "message_count": len(combined_messages)
             }
-            if total_tokens is not None:
-                data["live_total_tokens"] = int(total_tokens)
+            # Include the exact input tokens being sent to LLM
+            if input_tokens is not None:
+                data["llm_received_tokens"] = int(input_tokens)
 
             with open(self.messages_log_path, "w", encoding="utf-8") as f:
                 json.dump(data, f, indent=2, ensure_ascii=False)
@@ -97,49 +92,6 @@ class MessageLogger:
             if self.verbose:
                 print(f"⚠️ Failed to save messages: {e}")
 
-    def save_live_messages_to_json(self, messages: List[Dict[str, Any]], iteration: int, total_tokens: int = None) -> None:
-        """Save the actual input messages used for the next model call to live_agent_messages.json."""
-        if not self.save_messages:
-            return
-        try:
-            serializable_messages = []
-            for msg in messages:
-                if not isinstance(msg, dict):
-                    continue
-                serializable_msg = {"role": msg.get("role"), "content": msg.get("content", "")}
-                if "tool_calls" in msg and msg["tool_calls"]:
-                    try:
-                        serializable_msg["tool_calls"] = [
-                            {
-                                "id": tc.id,
-                                "function": {
-                                    "name": getattr(tc.function, "name", None),
-                                    "arguments": getattr(tc.function, "arguments", None),
-                                },
-                            }
-                            for tc in msg["tool_calls"]
-                        ]
-                    except Exception:
-                        serializable_msg["tool_calls"] = []
-                if "tool_call_id" in msg:
-                    serializable_msg["tool_call_id"] = msg.get("tool_call_id")
-                serializable_messages.append(serializable_msg)
-
-            data = {
-                "iteration": iteration,
-                "timestamp": datetime.now().isoformat(),
-                "messages": serializable_messages,
-                "message_count": len(serializable_messages)
-            }
-            if total_tokens is not None:
-                data["live_total_tokens"] = int(total_tokens)
-
-            with open(self.live_messages_log_path, "w", encoding="utf-8") as f:
-                json.dump(data, f, indent=2, ensure_ascii=False)
-        except Exception as e:
-            if self.verbose:
-                print(f"⚠️ Failed to save live messages: {e}")
-    
     def save_final_json(self, messages: List[Dict[str, Any]], result: Dict[str, Any]) -> None:
         """Append final messages to the full workflow log and include final result summary."""
         if not self.save_messages:

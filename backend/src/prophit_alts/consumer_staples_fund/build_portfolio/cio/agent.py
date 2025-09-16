@@ -5,7 +5,7 @@ from backend.src.agentic_framework.base_agent.memory.semantic_memory import Sema
 
 class CIOAgent(BaseAgent):
     def __init__(self):
-        super().__init__(cio_system_prompt, cio_user_prompt, max_iterations=125, plan_first=True, save_messages=True, model="gpt-4.1", verbose=True, memory_refresh_interval=8)
+        super().__init__(cio_system_prompt, cio_user_prompt, max_iterations=250, plan_first=True, save_messages=True, model="gpt-5", verbose=True, memory_refresh_interval=10)
         
         register_cio_tools(self)
 

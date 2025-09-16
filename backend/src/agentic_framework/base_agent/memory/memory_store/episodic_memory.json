@@ -1,1 +1,413 @@
-[]
+[
+  {
+    "timestamp": "2025-09-16T14:18:27.956014",
+    "title": "Portfolio V1 Construction",
+    "event": "portfolio_v1",
+    "context": {
+      "MNST": {
+        "allocation": 0.085,
+        "position": "long"
+      },
+      "KO": {
+        "allocation": 0.08,
+        "position": "long"
+      },
+      "PG": {
+        "allocation": 0.08,
+        "position": "long"
+      },
+      "BJ": {
+        "allocation": 0.07,
+        "position": "long"
+      },
+      "COST": {
+        "allocation": 0.07,
+        "position": "long"
+      },
+      "CCEP": {
+        "allocation": 0.067,
+        "position": "long"
+      },
+      "CL": {
+        "allocation": 0.065,
+        "position": "long"
+      },
+      "CAG": {
+        "allocation": 0.065,
+        "position": "long"
+      },
+      "GIS": {
+        "allocation": 0.06,
+        "position": "long"
+      },
+      "KR": {
+        "allocation": 0.06,
+        "position": "long"
+      },
+      "KMB": {
+        "allocation": 0.055,
+        "position": "long"
+      },
+      "EPC": {
+        "allocation": 0.05,
+        "position": "long"
+      },
+      "HLF": {
+        "allocation": 0.05,
+        "position": "long"
+      },
+      "ODD": {
+        "allocation": 0.05,
+        "position": "long"
+      },
+      "RLX": {
+        "allocation": 0.045,
+        "position": "long"
+      },
+      "POST": {
+        "allocation": 0.04,
+        "position": "long"
+      },
+      "SAM": {
+        "allocation": 0.038,
+        "position": "long"
+      },
+      "UNFI": {
+        "allocation": 0.08,
+        "position": "short"
+      },
+      "TGT": {
+        "allocation": 0.08,
+        "position": "short"
+      },
+      "SJM": {
+        "allocation": 0.075,
+        "position": "short"
+      },
+      "HSY": {
+        "allocation": 0.07,
+        "position": "short"
+      },
+      "ADM": {
+        "allocation": 0.07,
+        "position": "short"
+      },
+      "ENR": {
+        "allocation": 0.067,
+        "position": "short"
+      },
+      "SPB": {
+        "allocation": 0.067,
+        "position": "short"
+      },
+      "CLX": {
+        "allocation": 0.06,
+        "position": "short"
+      },
+      "ELF": {
+        "allocation": 0.055,
+        "position": "short"
+      },
+      "OLPX": {
+        "allocation": 0.052,
+        "position": "short"
+      },
+      "EL": {
+        "allocation": 0.05,
+        "position": "short"
+      },
+      "PRMB": {
+        "allocation": 0.045,
+        "position": "short"
+      },
+      "TAP": {
+        "allocation": 0.045,
+        "position": "short"
+      },
+      "STZ": {
+        "allocation": 0.04,
+        "position": "short"
+      }
+    },
+    "outcome": "Portfolio V1 constructed with 17 longs and 14 shorts, allocations targeted for net +0.30, gross 2.0.",
+    "tags": [
+      "portfolio_v1",
+      "long_short",
+      "consumer_staples"
+    ]
+  },
+  {
+    "timestamp": "2025-09-16T14:21:21.721433",
+    "title": "Portfolio V2 Construction",
+    "event": "portfolio_v2",
+    "context": {
+      "MNST": {
+        "allocation": 0.092,
+        "position": "long"
+      },
+      "KO": {
+        "allocation": 0.075,
+        "position": "long"
+      },
+      "PG": {
+        "allocation": 0.072,
+        "position": "long"
+      },
+      "BJ": {
+        "allocation": 0.08,
+        "position": "long"
+      },
+      "COST": {
+        "allocation": 0.076,
+        "position": "long"
+      },
+      "CCEP": {
+        "allocation": 0.073,
+        "position": "long"
+      },
+      "CL": {
+        "allocation": 0.056,
+        "position": "long"
+      },
+      "CAG": {
+        "allocation": 0.052,
+        "position": "long"
+      },
+      "GIS": {
+        "allocation": 0.054,
+        "position": "long"
+      },
+      "KR": {
+        "allocation": 0.061,
+        "position": "long"
+      },
+      "KMB": {
+        "allocation": 0.047,
+        "position": "long"
+      },
+      "EPC": {
+        "allocation": 0.057,
+        "position": "long"
+      },
+      "HLF": {
+        "allocation": 0.048,
+        "position": "long"
+      },
+      "ODD": {
+        "allocation": 0.058,
+        "position": "long"
+      },
+      "RLX": {
+        "allocation": 0.054,
+        "position": "long"
+      },
+      "POST": {
+        "allocation": 0.041,
+        "position": "long"
+      },
+      "SAM": {
+        "allocation": 0.042,
+        "position": "long"
+      },
+      "UNFI": {
+        "allocation": 0.079,
+        "position": "short"
+      },
+      "TGT": {
+        "allocation": 0.079,
+        "position": "short"
+      },
+      "SJM": {
+        "allocation": 0.072,
+        "position": "short"
+      },
+      "HSY": {
+        "allocation": 0.068,
+        "position": "short"
+      },
+      "ADM": {
+        "allocation": 0.051,
+        "position": "short"
+      },
+      "ENR": {
+        "allocation": 0.064,
+        "position": "short"
+      },
+      "SPB": {
+        "allocation": 0.055,
+        "position": "short"
+      },
+      "CLX": {
+        "allocation": 0.058,
+        "position": "short"
+      },
+      "ELF": {
+        "allocation": 0.054,
+        "position": "short"
+      },
+      "OLPX": {
+        "allocation": 0.051,
+        "position": "short"
+      },
+      "EL": {
+        "allocation": 0.051,
+        "position": "short"
+      },
+      "PRMB": {
+        "allocation": 0.037,
+        "position": "short"
+      },
+      "TAP": {
+        "allocation": 0.035,
+        "position": "short"
+      },
+      "STZ": {
+        "allocation": 0.031,
+        "position": "short"
+      }
+    },
+    "outcome": "Portfolio V2 constructed with higher net exposure (~+30%), lower intra-group correlation, improved alpha factor tilts, and gross near 2.0.",
+    "tags": [
+      "portfolio_v2",
+      "long_short",
+      "consumer_staples"
+    ]
+  },
+  {
+    "timestamp": "2025-09-16T14:24:06.223387",
+    "title": "Portfolio V3 Construction",
+    "event": "portfolio_v3",
+    "context": {
+      "MNST": {
+        "allocation": 0.1,
+        "position": "long"
+      },
+      "KO": {
+        "allocation": 0.073,
+        "position": "long"
+      },
+      "PG": {
+        "allocation": 0.07,
+        "position": "long"
+      },
+      "BJ": {
+        "allocation": 0.088,
+        "position": "long"
+      },
+      "COST": {
+        "allocation": 0.08,
+        "position": "long"
+      },
+      "CCEP": {
+        "allocation": 0.071,
+        "position": "long"
+      },
+      "CL": {
+        "allocation": 0.054,
+        "position": "long"
+      },
+      "CAG": {
+        "allocation": 0.05,
+        "position": "long"
+      },
+      "GIS": {
+        "allocation": 0.052,
+        "position": "long"
+      },
+      "KR": {
+        "allocation": 0.062,
+        "position": "long"
+      },
+      "KMB": {
+        "allocation": 0.046,
+        "position": "long"
+      },
+      "EPC": {
+        "allocation": 0.061,
+        "position": "long"
+      },
+      "HLF": {
+        "allocation": 0.047,
+        "position": "long"
+      },
+      "ODD": {
+        "allocation": 0.065,
+        "position": "long"
+      },
+      "RLX": {
+        "allocation": 0.058,
+        "position": "long"
+      },
+      "POST": {
+        "allocation": 0.047,
+        "position": "long"
+      },
+      "SAM": {
+        "allocation": 0.045,
+        "position": "long"
+      },
+      "UNFI": {
+        "allocation": 0.073,
+        "position": "short"
+      },
+      "TGT": {
+        "allocation": 0.073,
+        "position": "short"
+      },
+      "SJM": {
+        "allocation": 0.069,
+        "position": "short"
+      },
+      "HSY": {
+        "allocation": 0.066,
+        "position": "short"
+      },
+      "ADM": {
+        "allocation": 0.041,
+        "position": "short"
+      },
+      "ENR": {
+        "allocation": 0.062,
+        "position": "short"
+      },
+      "SPB": {
+        "allocation": 0.042,
+        "position": "short"
+      },
+      "CLX": {
+        "allocation": 0.056,
+        "position": "short"
+      },
+      "ELF": {
+        "allocation": 0.052,
+        "position": "short"
+      },
+      "OLPX": {
+        "allocation": 0.05,
+        "position": "short"
+      },
+      "EL": {
+        "allocation": 0.05,
+        "position": "short"
+      },
+      "PRMB": {
+        "allocation": 0.03,
+        "position": "short"
+      },
+      "TAP": {
+        "allocation": 0.028,
+        "position": "short"
+      },
+      "STZ": {
+        "allocation": 0.025,
+        "position": "short"
+      }
+    },
+    "outcome": "Portfolio V3 constructed with net exposure approaching +30%, gross exposure ~1.9, diversified alpha, improved factor tilts, and all hard constraints intact.",
+    "tags": [
+      "portfolio_v3",
+      "long_short",
+      "consumer_staples"
+    ]
+  }
+]

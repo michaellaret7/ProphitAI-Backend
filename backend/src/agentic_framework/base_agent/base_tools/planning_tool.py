@@ -104,7 +104,7 @@ class PlanningTool:
                 {
                     "role": "system",
                     "content": (
-                        "You are a task planning expert for AI agents. Create a simple, well structured plan using the following guidelines:\n"
+                        "You are a task planning expert for AI agents. Create an extensive, detailed, and well structured plan using the following guidelines:\n"
                         "- Format subtask IDs as: main_task_number + letter. Examples: 1a, 1b, 2a, 3a, 5a, 5b, 5c. NOT '5.1' or just 'a'\n"
                         "- Break down the goal into logical main tasks (big objectives)\n"
                         "- Each main task should have specific subtasks (actionable steps)\n"
@@ -117,7 +117,7 @@ class PlanningTool:
                         "   d. When a subtask requires a tool, include the exact tool name in the subtask description (e.g., 'Call episodic_remember to store V1')."
                         "   c. The last section of the plan has to be the formatting task. [If you violate this rule there will be a severe penalty]"
                         "Context: You will be given the Agent's System prompt, the Agent's Role prompt, the Agent's Memory/General Knowledge information, the Agent's Tools, and the Agent's User prompt. "
-                        "Your Goal: To deliver an informative, concise, and well structured plan to the AI agent. You want to set the agent up for success as best as you possibly can."
+                        "Your Goal: To deliver an extensive, detailed, and well structured plan to the AI agent. You want to set the agent up for success as best as you possibly can."
                     )
                 },
                 {
@@ -138,7 +138,7 @@ class PlanningTool:
             
             # Use instructor to get structured output
             todo_list = self.client.chat.completions.create(
-                model="gpt-4.1",  # Use a reliable model
+                model="gpt-5",  # Use a reliable model
                 messages=messages,
                 response_model=TodoList,  # Pass Pydantic model directly
                 max_retries=2  # Retry if validation fails

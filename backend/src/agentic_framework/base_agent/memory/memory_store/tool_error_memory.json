@@ -1158,6 +1158,22 @@
             "reason": "Recorded baseline risk metrics. Flagged CASY for outsized tail-risk contribution. Other positions within moderate risk range."
           },
           "full_error": "TaskManager.update_task_status() got an unexpected keyword argument 'confidence'"
+        },
+        {
+          "timestamp": "2025-09-16T09:23:13.223534",
+          "args": {
+            "task_id": "3",
+            "status": "in_progress",
+            "evidence": {
+              "observations": [
+                "Baseline v1 portfolio constructed: 14 longs and 8 shorts, allocations sum to 1.0. All positions based on fundamental and momentum alignment, with preferred weight to higher conviction/thematically diversified longs.",
+                "Long picks are diversified across sub-industries (beverages, household, personal care, food, retail), all showing value, margin, or FCF leadership, and/or positive trend signals. Shorts are all deteriorating or overvalued with negative trend confirmation and margin/FCF risk."
+              ]
+            },
+            "confidence": 0.95,
+            "reason": "Portfolio v1 created from analyst and fundamental/momentum screens. Ready to output as per user schema."
+          },
+          "full_error": "TaskManager.update_task_status() got an unexpected keyword argument 'confidence'"
         }
       ],
       "solutions": [
@@ -1177,6 +1193,22 @@
           },
           "explanation": "Successful retry with corrected arguments",
           "timestamp": "2025-08-27T15:43:30.250422",
+          "success_count": 1
+        },
+        {
+          "correct_args": {
+            "task_id": "3",
+            "status": "completed",
+            "evidence": {
+              "observations": [
+                "Baseline v1 portfolio constructed: 14 longs and 8 shorts, allocations sum to 1.0. All positions based on fundamental and momentum alignment, with preferred weight to higher conviction/thematically diversified longs.",
+                "Long picks are diversified across beverages, household, personal care, food, and retail; all show value, margin, or FCF leadership and/or positive trend signals. Shorts are deteriorating or overvalued with negative trend confirmation and margin/FCF risk."
+              ]
+            },
+            "reason": "Portfolio v1 constructed and logged in episodic memory. Ready to output in user schema and advance to v1 analytics."
+          },
+          "explanation": "Successful retry with corrected arguments",
+          "timestamp": "2025-09-16T09:23:16.022490",
           "success_count": 1
         }
       ],
@@ -1204,23 +1236,7 @@
       "error_pattern": "'str' object has no attribute 'astype'",
       "occurrences": [
         {
-          "timestamp": "2025-09-15T17:53:21.915486",
-          "args": {
-            "ticker": "BJ",
-            "factor": "all"
-          },
-          "full_error": "Unknown factor: all"
-        },
-        {
-          "timestamp": "2025-09-15T17:53:21.931637",
-          "args": {
-            "ticker": "KR",
-            "factor": "all"
-          },
-          "full_error": "Unknown factor: all"
-        },
-        {
-          "timestamp": "2025-09-15T17:53:21.943478",
+          "timestamp": "2025-09-16T09:21:50.066179",
           "args": {
             "ticker": "COST",
             "factor": "all"
@@ -1228,7 +1244,7 @@
           "full_error": "Unknown factor: all"
         },
         {
-          "timestamp": "2025-09-15T17:53:21.951746",
+          "timestamp": "2025-09-16T09:21:50.074417",
           "args": {
             "ticker": "UNFI",
             "factor": "all"
@@ -1236,7 +1252,7 @@
           "full_error": "Unknown factor: all"
         },
         {
-          "timestamp": "2025-09-15T17:53:21.958885",
+          "timestamp": "2025-09-16T09:21:50.082601",
           "args": {
             "ticker": "TGT",
             "factor": "all"
@@ -1244,7 +1260,7 @@
           "full_error": "Unknown factor: all"
         },
         {
-          "timestamp": "2025-09-15T17:53:21.965410",
+          "timestamp": "2025-09-16T09:21:50.091268",
           "args": {
             "ticker": "MNST",
             "factor": "all"
@@ -1252,7 +1268,7 @@
           "full_error": "Unknown factor: all"
         },
         {
-          "timestamp": "2025-09-15T17:53:21.971702",
+          "timestamp": "2025-09-16T09:21:50.099304",
           "args": {
             "ticker": "KO",
             "factor": "all"
@@ -1260,7 +1276,7 @@
           "full_error": "Unknown factor: all"
         },
         {
-          "timestamp": "2025-09-15T17:53:21.977453",
+          "timestamp": "2025-09-16T09:21:50.107463",
           "args": {
             "ticker": "CCEP",
             "factor": "all"
@@ -1268,7 +1284,7 @@
           "full_error": "Unknown factor: all"
         },
         {
-          "timestamp": "2025-09-15T17:53:21.983377",
+          "timestamp": "2025-09-16T09:21:50.116283",
           "args": {
             "ticker": "SAM",
             "factor": "all"
@@ -1276,9 +1292,25 @@
           "full_error": "Unknown factor: all"
         },
         {
-          "timestamp": "2025-09-15T17:53:21.989655",
+          "timestamp": "2025-09-16T09:21:50.125821",
           "args": {
             "ticker": "PRMB",
+            "factor": "all"
+          },
+          "full_error": "Unknown factor: all"
+        },
+        {
+          "timestamp": "2025-09-16T09:21:50.134493",
+          "args": {
+            "ticker": "TAP",
+            "factor": "all"
+          },
+          "full_error": "Unknown factor: all"
+        },
+        {
+          "timestamp": "2025-09-16T09:21:50.142730",
+          "args": {
+            "ticker": "STZ",
             "factor": "all"
           },
           "full_error": "Unknown factor: all"
@@ -1301,17 +1333,17 @@
           },
           "explanation": "Successful retry with corrected arguments",
           "timestamp": "2025-09-15T17:53:29.144512",
-          "success_count": 1
+          "success_count": 4
         }
       ],
       "auto_solution": {
         "correct_args": {
-          "ticker": "KO",
+          "ticker": "BJ",
           "factor": "value"
         },
         "explanation": "Successful retry with corrected arguments",
-        "timestamp": "2025-09-11T14:14:20.946656",
-        "success_count": 1
+        "timestamp": "2025-09-15T17:53:29.144512",
+        "success_count": 4
       }
     },
     "update_task_status:missing_status": {
@@ -2848,11 +2880,6 @@
       "error_pattern": "register_cio_tools.<locals>.<lambda>() missing 1 required positional argument: 'portfolio_dict'",
       "occurrences": [
         {
-          "timestamp": "2025-09-11T11:39:08.800200",
-          "args": {},
-          "full_error": "register_cio_tools.<locals>.<lambda>() missing 1 required positional argument: 'portfolio_dict'"
-        },
-        {
           "timestamp": "2025-09-11T11:39:13.858402",
           "args": {
             "portfolio_dict": {
@@ -3503,6 +3530,11 @@
             }
           },
           "full_error": "build_portfolio() got an unexpected keyword argument 'portfolio_dict'. Did you mean 'portfolio_data'?"
+        },
+        {
+          "timestamp": "2025-09-16T10:27:13.002140",
+          "args": {},
+          "full_error": "build_portfolio() missing 1 required positional argument: 'portfolio_dict'"
         }
       ],
       "solutions": [
@@ -3609,6 +3641,139 @@
           },
           "explanation": "Successful retry with corrected arguments",
           "timestamp": "2025-09-12T15:25:57.708768",
+          "success_count": 1
+        },
+        {
+          "correct_args": {
+            "portfolio_dict": {
+              "MNST": {
+                "allocation": 0.1,
+                "position": "long"
+              },
+              "KO": {
+                "allocation": 0.073,
+                "position": "long"
+              },
+              "PG": {
+                "allocation": 0.07,
+                "position": "long"
+              },
+              "BJ": {
+                "allocation": 0.088,
+                "position": "long"
+              },
+              "COST": {
+                "allocation": 0.08,
+                "position": "long"
+              },
+              "CCEP": {
+                "allocation": 0.071,
+                "position": "long"
+              },
+              "CL": {
+                "allocation": 0.054,
+                "position": "long"
+              },
+              "CAG": {
+                "allocation": 0.05,
+                "position": "long"
+              },
+              "GIS": {
+                "allocation": 0.052,
+                "position": "long"
+              },
+              "KR": {
+                "allocation": 0.062,
+                "position": "long"
+              },
+              "KMB": {
+                "allocation": 0.046,
+                "position": "long"
+              },
+              "EPC": {
+                "allocation": 0.061,
+                "position": "long"
+              },
+              "HLF": {
+                "allocation": 0.047,
+                "position": "long"
+              },
+              "ODD": {
+                "allocation": 0.065,
+                "position": "long"
+              },
+              "RLX": {
+                "allocation": 0.058,
+                "position": "long"
+              },
+              "POST": {
+                "allocation": 0.047,
+                "position": "long"
+              },
+              "SAM": {
+                "allocation": 0.045,
+                "position": "long"
+              },
+              "UNFI": {
+                "allocation": 0.073,
+                "position": "short"
+              },
+              "TGT": {
+                "allocation": 0.073,
+                "position": "short"
+              },
+              "SJM": {
+                "allocation": 0.069,
+                "position": "short"
+              },
+              "HSY": {
+                "allocation": 0.066,
+                "position": "short"
+              },
+              "ADM": {
+                "allocation": 0.041,
+                "position": "short"
+              },
+              "ENR": {
+                "allocation": 0.062,
+                "position": "short"
+              },
+              "SPB": {
+                "allocation": 0.042,
+                "position": "short"
+              },
+              "CLX": {
+                "allocation": 0.056,
+                "position": "short"
+              },
+              "ELF": {
+                "allocation": 0.052,
+                "position": "short"
+              },
+              "OLPX": {
+                "allocation": 0.05,
+                "position": "short"
+              },
+              "EL": {
+                "allocation": 0.05,
+                "position": "short"
+              },
+              "PRMB": {
+                "allocation": 0.03,
+                "position": "short"
+              },
+              "TAP": {
+                "allocation": 0.028,
+                "position": "short"
+              },
+              "STZ": {
+                "allocation": 0.025,
+                "position": "short"
+              }
+            }
+          },
+          "explanation": "Successful retry with corrected arguments",
+          "timestamp": "2025-09-16T10:27:18.509997",
           "success_count": 1
         }
       ],
@@ -4920,5 +5085,5 @@
       "auto_solution": null
     }
   },
-  "last_updated": "2025-09-15T18:22:56.391849"
+  "last_updated": "2025-09-16T10:27:18.509997"
 }
