@@ -502,3 +502,94 @@ class AgentUtilities:
             "observation": s.observation,
             "analysis": s.analysis,
         }
+    
+    def parse_agent_output(
+        self,
+        final_text: str,
+        client,
+        llm: str,
+        response_format,
+        output_key: str,
+        fallback_formats: Optional[List[tuple]] = None,
+        verbose: bool = True
+    ) -> str:
+        """
+        Parse agent output text into structured JSON format.
+        
+        Args:
+            final_text: Raw output text from agent
+            client: OpenAI client instance
+            llm: Model name for parsing
+            response_format: Primary Pydantic model for parsing
+            output_key: Key name for the parsed data (e.g., 'portfolio', 'recommendations')
+            fallback_formats: Optional list of (format, key) tuples for fallback parsing
+            verbose: Whether to print debug messages
+        
+        Returns:
+            JSON string of parsed data
+        """
+        # Strip "Final Answer:" prefix if present
+        final_text = final_text.strip()
+        if final_text.startswith("Final Answer:"):
+            final_text = final_text[len("Final Answer:"):].strip()
+        
+        # Try primary format
+        try:
+            final_comp = client.chat.completions.parse(
+                model=llm,
+                messages=[
+                    {"role": "system", "content": f"Convert the output to match the schema format with a '{output_key}' key."},
+                    {"role": "user", "content": final_text},
+                ],
+                response_format=response_format,
+            )
+            parsed = final_comp.choices[0].message.parsed
+            
+            # Build output data
+            output_data = {
+                output_key: [item.model_dump() for item in getattr(parsed, output_key)]
+            }
+            
+            # For CRO agent with suggestions - handle both keys if present
+            if hasattr(parsed, 'suggestions'):
+                output_data['suggestions'] = [item.model_dump() for item in parsed.suggestions]
+            
+            return json.dumps(output_data)
+            
+        except Exception as e:
+            if verbose:
+                print(f"⚠️ {response_format.__name__} parse failed: {e}")
+            
+            # Try fallback formats if provided
+            if fallback_formats:
+                for fallback_format, fallback_key in fallback_formats:
+                    try:
+                        final_comp = client.chat.completions.parse(
+                            model=llm,
+                            messages=[
+                                {"role": "system", "content": f"Convert the output to match the schema format with a '{fallback_key}' key."},
+                                {"role": "user", "content": final_text},
+                            ],
+                            response_format=fallback_format,
+                        )
+                        parsed = final_comp.choices[0].message.parsed
+                        
+                        output_data = {
+                            fallback_key: [item.model_dump() for item in getattr(parsed, fallback_key)]
+                        }
+                        
+                        # Add empty suggestions for CRO fallback case
+                        if fallback_key == 'portfolio' and response_format.__name__ == 'PortfolioWithSuggestions':
+                            output_data['suggestions'] = []
+                        
+                        return json.dumps(output_data)
+                        
+                    except Exception as e2:
+                        if verbose:
+                            print(f"⚠️ {fallback_format.__name__} fallback failed: {e2}")
+                        continue
+            
+            # If all parsing fails, return original
+            if verbose:
+                print(f"⚠️ All parsing failed, keeping original")
+            return final_text

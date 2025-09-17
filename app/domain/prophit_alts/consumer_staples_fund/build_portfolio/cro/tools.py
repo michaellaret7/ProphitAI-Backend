@@ -6,6 +6,8 @@ from app.core.calculations.returns.calculator import ReturnsCalculator
 from app.repositories.price_data import fetch_bulk_price_data_for_tickers
 from app.utils.validation_utils import normalize_portfolio_input
 from app.models.portfolio_models import PortfolioInput
+from app.db.core.db_config import ProphitAltsSession
+from app.db.core.prophit_alts_models import FundInitialPosition, Fund
 
 # Consumer Staples Fund initial portfolio configuration
 INITIAL_PORTFOLIO_DICT = {
@@ -49,8 +51,22 @@ def get_initial_portfolio_dict():
     """
     Get the initial portfolio dictionary.
     """
-    return INITIAL_PORTFOLIO_DICT
+    session = ProphitAltsSession()
+    initial_positions = session.query(FundInitialPosition).join(Fund).filter(Fund.fund_name == "consumer_staples_fund").all()
 
+    INITIAL_PORTFOLIO_DICT = {}
+
+    for position in initial_positions:
+        INITIAL_PORTFOLIO_DICT[position.ticker_name] = {
+            "conviction": position.conviction,
+            "position": position.position.value
+        }
+    
+    INITIAL_PORTFOLIO_DICT = {t: {"allocation": float(p.conviction), "position": p.position.value} for t, p in INITIAL_PORTFOLIO_DICT.items()}
+
+    session.close()
+
+    return INITIAL_PORTFOLIO_DICT   
 
 def calculate_correlation_matrix(portfolio_dict: PortfolioInput | dict = None) -> dict:
     """

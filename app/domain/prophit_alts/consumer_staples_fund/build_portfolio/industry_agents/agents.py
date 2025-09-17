@@ -23,7 +23,7 @@ class IndustryRecommendations(BaseModel):
 class IndustryAgent(BaseAgent):
     def __init__(self, industry: str):
         self.industry = industry
-        super().__init__(*build_industry_prompt(industry), max_iterations=75, plan_first=True, save_messages=True, model="gpt-4.1", verbose=True, memory_refresh_interval=8, use_episodic_memory=False)
+        super().__init__(*build_industry_prompt(industry), max_iterations=250, plan_first=True, save_messages=True, model="gpt-5", verbose=True, memory_refresh_interval=8, use_episodic_memory=False)
         
         register_industry_tools(self)
 
@@ -57,28 +57,15 @@ class IndustryAgent(BaseAgent):
         if not final_text:
             return result
 
-        if final_text.startswith("Final Answer:"):
-            final_text = final_text[len("Final Answer:"):].strip()
-
-        try:
-            final_comp = self.client.chat.completions.parse(
-                model=self.llm,
-                messages=[
-                    {"role": "system", "content": "Convert the JSON array to match the schema format with a 'recommendations' key."},
-                    {"role": "user", "content": final_text},
-                ],
-                response_format=IndustryRecommendations,
-            )
-
-            parsed: IndustryRecommendations = final_comp.choices[0].message.parsed
-            output_data = {
-                "recommendations": [item.model_dump() for item in parsed.recommendations]
-            }
-            result["final_text"] = json.dumps(output_data)
-        except Exception as e:
-            if self.verbose:
-                print(f"⚠️ IndustryRecommendations parse failed, keeping original: {e}")
-            pass
+        # Use utility function for consistent parsing
+        result["final_text"] = self.utilities.parse_agent_output(
+            final_text=final_text,
+            client=self.client,
+            llm=self.llm,
+            response_format=IndustryRecommendations,
+            output_key="recommendations",
+            verbose=self.verbose
+        )
 
         return result["final_text"]
 
@@ -121,12 +108,16 @@ class IndustryAgent(BaseAgent):
 
 
 if __name__ == "__main__":
-    agent = IndustryAgent(industry="beverages")
+    industries = ["beverages", "consumer_staples_distribution_and_retail", "food_products", "household_products", "personal_care_products", "tobacco"]
+
+    agent = IndustryAgent(industry=industries[0])
     result = agent.run()
+    # agent.save_initial_positions(fund_name="consumer_staples_fund", recommendations_json=result)
     print("="*100)
     print("Industry Agent Result:")
     print("="*100)
     print(result)
+
 
 
     

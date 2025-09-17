@@ -1,7 +1,20 @@
+from typing_extensions import List
+from pydantic import BaseModel
 from app.core.agentic_framework.base_agent import BaseAgent
 from app.domain.prophit_alts.consumer_staples_fund.build_portfolio.prompts.cio_agent_prompts import cio_system_prompt, cio_user_prompt
 from .tool_registry import register_cio_tools
 from app.core.agentic_framework.base_agent.memory.semantic_memory import SemanticMemory
+from typing import Literal
+
+class CIOPortfolioItem(BaseModel):
+	ticker: str
+	position: Literal["long", "short"]
+	thesis: str
+	key_drivers: str
+	allocation: float
+
+class FinalPortfolio(BaseModel):
+	portfolio: List[CIOPortfolioItem]
 
 class CIOAgent(BaseAgent):
     def __init__(self):
@@ -11,7 +24,7 @@ class CIOAgent(BaseAgent):
 
     def _initialize_semantic_memory(self):
         """Initialize CIO-specific semantic memories for portfolio construction."""
-        # Initialize semantic memory for CRO agent
+        # Initialize semantic memory for CIO agent
         self.semantic_memory = SemanticMemory(agent_type='cio', save_memory=True, verbose=self.verbose)
         
         if self.verbose:
@@ -22,15 +35,23 @@ class CIOAgent(BaseAgent):
                 print(f"🧠 CIO Agent loaded with {total_memories} portfolio construction memories")
 
     def run(self):
-        result = super().run()
+        result = super().run()  # Run main BaseAgent workflow
 
         final_text = (result.get("final_text") or "").strip()
+        
         if not final_text:
             return result
-
-        if final_text.startswith("Final Answer:"):
-            final_text = final_text[len("Final Answer:"):].strip()
-
+        
+        # Use utility function for consistent parsing
+        result["final_text"] = self.utilities.parse_agent_output(
+            final_text=final_text,
+            client=self.client,
+            llm=self.llm,
+            response_format=FinalPortfolio,
+            output_key="portfolio",
+            verbose=self.verbose
+        )
+        
         return result["final_text"]
 
 

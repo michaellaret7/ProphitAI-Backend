@@ -286,7 +286,7 @@
     ]
   },
   {
-    "timestamp": "2025-09-16T18:50:49.619691",
+    "timestamp": "2025-09-16T18:55:06.136915",
     "title": "portfolio_v3",
     "event": "portfolio_v3",
     "context": {
@@ -415,7 +415,7 @@
         "position": "short"
       }
     },
-    "outcome": "{'net_exposure': 0.32, 'long_count': 20, 'short_count': 12, 'status': 'Net and gross exposures, counts, and diversification constraints met. Ready for full V3 analytics.'}",
+    "outcome": "{'net_exposure': 0.32, 'gross_exposure': 1.52, 'long_count': 20, 'short_count': 12, 'status': 'All exposures, counts, diversification constraints, and risk metrics met. V3 is fully compliant and robust.'}",
     "tags": [
       "portfolio",
       "v3",

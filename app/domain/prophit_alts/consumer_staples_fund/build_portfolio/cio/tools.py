@@ -449,9 +449,43 @@ def build_portfolio(portfolio_dict: any):
     
     Returns:
         Dict in format: {"TICKER": {"allocation": 0.x, "position": "long/short"}, ...}
+        Or error message if build fails
     """
     # Parse any input into portfolio dict format using the canonical converter
-    portfolio_dict = _to_canonical_portfolio(portfolio_dict)
+    try:
+        portfolio_dict = _to_canonical_portfolio(portfolio_dict)
+    except Exception as e:
+        return f"Error parsing portfolio: {str(e)}"
+
+    # Debug: Check which tickers have price data available
+    from datetime import datetime, timedelta
+    from app.core.calculations.core import DataService
+    
+    ds = DataService()
+    end = datetime.now()
+    start = end - timedelta(days=252)
+    requested_tickers = list(portfolio_dict.keys())
+    
+    # Check price data availability
+    price_map = ds.get_bulk_close_series(requested_tickers, start, end)
+    missing_tickers = []
+    empty_tickers = []
+    
+    for ticker in requested_tickers:
+        if ticker not in price_map:
+            missing_tickers.append(ticker)
+        elif price_map[ticker] is None or price_map[ticker].empty:
+            empty_tickers.append(ticker)
+    
+    if missing_tickers or empty_tickers:
+        error_msg = []
+        if missing_tickers:
+            error_msg.append(f"Tickers not found in database: {', '.join(missing_tickers)}")
+        if empty_tickers:
+            error_msg.append(f"Tickers with no price data: {', '.join(empty_tickers)}")
+        
+        # Return detailed error about which tickers are problematic
+        return f"Cannot build portfolio - {'; '.join(error_msg)}. Please use only tickers with available price data."
 
     built_portfolio = CorrelationPortfolioBuilder().build_portfolio(
         tickers=portfolio_dict,  
@@ -463,12 +497,20 @@ def build_portfolio(portfolio_dict: any):
         max_position_weight=0.10,
     )
     
-    return built_portfolio["final_portfolio"]
+    # Check if the build was successful
+    if "error" in built_portfolio:
+        # Return the error message for debugging
+        return f"Portfolio build failed: {built_portfolio['error']}"
+    
+    if "status" in built_portfolio and built_portfolio["status"] == "success":
+        if "final_portfolio" in built_portfolio:
+            return built_portfolio["final_portfolio"]
+        else:
+            return "Error: Build succeeded but final_portfolio not found in result"
+    
+    # If we get here, something unexpected happened
+    return f"Unexpected result structure: {list(built_portfolio.keys())}"
 
 if __name__ == "__main__":
-    sample_portfolio = """"arguments": "{\"portfolio_dict\":{\"BJ\":{\"allocation\":0.075,\"position\":\"long\"},\"KR\":{\"allocation\":0.075,\"position\":\"long\"},\"COST\":{\"allocation\":0.075,\"position\":\"long\"},\"MNST\":{\"allocation\":0.075,\"position\":\"long\"},\"KO\":{\"allocation\":0.075,\"position\":\"long\"},\"CCEP\":{\"allocation\":0.075,\"position\":\"long\"},\"SAM\":{\"allocation\":0.075,\"position\":\"long\"},\"CAG\":{\"allocation\":0.075,\"position\":\"long\"},\"GIS\":{\"allocation\":0.075,\"position\":\"long\"},\"POST\":{\"allocation\":0.075,\"position\":\"long\"},\"PG\":{\"allocation\":0.075,\"position\":\"long\"},\"CL\":{\"allocation\":0.075,\"position\":\"long\"},\"KMB\":{\"allocation\":0.075,\"position\":\"long\"},\"EPC\":{\"allocation\":0.075,\"position\":\"long\"},\"HLF\":{\"allocation\":0.075,\"position\":\"long\"},\"ODD\":{\"allocation\":0.075,\"position\":\"long\"},\"RLX\":{\"allocation\":0.075,\"position\":\"long\"},\"WBA\":{\"allocation\":0.05,\"position\":\"short\"},\"UNFI\":{\"allocation\":0.05,\"position\":\"short\"},\"TGT\":{\"allocation\":0.05,\"position\":\"short\"},\"PRMB\":{\"allocation\":0.05,\"position\":\"short\"},\"TAP\":{\"allocation\":0.05,\"position\":\"short\"},\"STZ\":{\"allocation\":0.05,\"position\":\"short\"},\"SJM\":{\"allocation\":0.05,\"position\":\"short\"},\"HSY\":{\"allocation\":0.05,\"position\":\"short\"},\"ADM\":{\"allocation\":0.05,\"position\":\"short\"},\"ENR\":{\"allocation\":0.05,\"position\":\"short\"},\"SPB\":{\"allocation\":0.05,\"position\":\"short\"},\"CLX\":{\"allocation\":0.05,\"position\":\"short\"},\"ELF\":{\"allocation\":0.05,\"position\":\"short\"},\"OLPX\":{\"allocation\":0.05,\"position\":\"short\"},\"EL\":{\"allocation\":0.05,\"position\":\"short\"}},\"exposure_type\":\"net\"}"""
-
-
-    sample_portfolio = parse_portfolio_with_gpt(sample_portfolio)
-    pairs = correlation_matrix(sample_portfolio, lookback_days=252)
-    print(pairs)
+    sample_portfolio = """"arguments": "{\"portfolio_dict\":{\"BJ\":{\"allocation\":0.055,\"position\":\"long\"},\"COST\":{\"allocation\":0.055,\"position\":\"long\"},\"MNST\":{\"allocation\":0.06,\"position\":\"long\"},\"KO\":{\"allocation\":0.045,\"position\":\"long\"},\"CCEP\":{\"allocation\":0.06,\"position\":\"long\"},\"SAM\":{\"allocation\":0.05,\"position\":\"long\"},\"EPC\":{\"allocation\":0.055,\"position\":\"long\"},\"HLF\":{\"allocation\":0.05,\"position\":\"long\"},\"ODD\":{\"allocation\":0.05,\"position\":\"long\"},\"RLX\":{\"allocation\":0.05,\"position\":\"long\"},\"PG\":{\"allocation\":0.05,\"position\":\"long\"},\"CL\":{\"allocation\":0.04,\"position\":\"long\"},\"MDLZ\":{\"allocation\":0.04,\"position\":\"long\"},\"CHD\":{\"allocation\":0.04,\"position\":\"long\"},\"FLO\":{\"allocation\":0.04,\"position\":\"long\"},\"GIS\":{\"allocation\":0.04,\"position\":\"long\"},\"KR\":{\"allocation\":0.05,\"position\":\"long\"},\"PM\":{\"allocation\":0.05,\"position\":\"long\"},\"UNFI\":{\"allocation\":0.06,\"position\":\"short\"},\"TGT\":{\"allocation\":0.055,\"position\":\"short\"},\"PRMB\":{\"allocation\":0.055,\"position\":\"short\"},\"TAP\":{\"allocation\":0.05,\"position\":\"short\"},\"STZ\":{\"allocation\":0.05,\"position\":\"short\"},\"HSY\":{\"allocation\":0.05,\"position\":\"short\"},\"ENR\":{\"allocation\":0.055,\"position\":\"short\"},\"SPB\":{\"allocation\":0.05,\"position\":\"short\"},\"CLX\":{\"allocation\":0.045,\"position\":\"short\"},\"ELF\":{\"allocation\":0.045,\"position\":\"short\"},\"CELH\":{\"allocation\":0.045,\"position\":\"short\"},\"MO\":{\"allocation\":0.045,\"position\":\"short\"}}}"""
+    print(build_portfolio(sample_portfolio))

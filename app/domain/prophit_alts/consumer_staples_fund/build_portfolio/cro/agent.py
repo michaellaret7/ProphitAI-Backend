@@ -4,7 +4,6 @@ from app.domain.prophit_alts.consumer_staples_fund.build_portfolio.cro.tool_regi
 from app.domain.prophit_alts.consumer_staples_fund.build_portfolio.prompts.cro_agent_prompts import cro_system_prompt, cro_user_prompt
 from pydantic import BaseModel
 from typing import List, Literal
-import json
 
 print(f"""
 ╔═══════════════════════════════════════════════╗                                             
@@ -37,7 +36,7 @@ class PortfolioWithSuggestions(BaseModel):
 
 class CROAgent(BaseAgent):
     def __init__(self, system_prompt: str = cro_system_prompt, user_prompt: str = cro_user_prompt):
-        super().__init__(system_prompt, user_prompt, max_iterations=75, save_messages=True, model="gpt-4.1", verbose=True, memory_refresh_interval=10)
+        super().__init__(system_prompt, user_prompt, max_iterations=250, save_messages=True, model="gpt-5", verbose=True, memory_refresh_interval=10)
         
         register_cro_tools(self)
     
@@ -61,57 +60,16 @@ class CROAgent(BaseAgent):
         if not final_text:
             return result
         
-        # Strip "Final Answer:" prefix if present
-        if final_text.startswith("Final Answer:"):
-            final_text = final_text[len("Final Answer:"):].strip()
-        
-        try:
-            # First try to parse as PortfolioWithSuggestions (new format)
-            # Use OpenAI to parse final output and return a PortfolioWithSuggestions Pydantic Object
-            final_comp = self.client.chat.completions.parse(
-                model=self.llm,
-                messages=[
-                    {"role": "system", "content": "Convert the output to match the PortfolioWithSuggestions schema format with both 'portfolio' and 'suggestions' keys. If no suggestions are provided, use an empty suggestions array."},
-                    {"role": "user", "content": final_text},
-                ],
-                response_format=PortfolioWithSuggestions,
-            )
-            parsed: PortfolioWithSuggestions = final_comp.choices[0].message.parsed
-            
-            # Format output to include both portfolio and suggestions
-            output_data = {
-                "portfolio": [item.model_dump() for item in parsed.portfolio],
-                "suggestions": [item.model_dump() for item in parsed.suggestions]
-            }
-            result["final_text"] = json.dumps(output_data)
-            
-        except Exception as e:
-            if self.verbose:
-                print(f"⚠️ PortfolioWithSuggestions parse failed, trying FinalPortfolio fallback: {e}")
-            
-            # Fallback to original FinalPortfolio parsing for backward compatibility
-            try:
-                final_comp = self.client.chat.completions.parse(
-                    model=self.llm,
-                    messages=[
-                        {"role": "system", "content": "Convert the JSON array to match the schema format with a 'portfolio' key."},
-                        {"role": "user", "content": final_text},
-                    ],
-                    response_format=FinalPortfolio,
-                )
-                parsed: FinalPortfolio = final_comp.choices[0].message.parsed
-                
-                # Format as portfolio-only output (empty suggestions)
-                output_data = {
-                    "portfolio": [item.model_dump() for item in parsed.portfolio],
-                    "suggestions": []
-                }
-                result["final_text"] = json.dumps(output_data)
-                
-            except Exception as e2:
-                if self.verbose:
-                    print(f"⚠️ All parsing failed, keeping original: {e2}")
-                pass
+        # Use utility function for consistent parsing with fallback support
+        result["final_text"] = self.utilities.parse_agent_output(
+            final_text=final_text,
+            client=self.client,
+            llm=self.llm,
+            response_format=PortfolioWithSuggestions,
+            output_key="portfolio",
+            fallback_formats=[(FinalPortfolio, "portfolio")],
+            verbose=self.verbose
+        )
         
         return result["final_text"]
 
