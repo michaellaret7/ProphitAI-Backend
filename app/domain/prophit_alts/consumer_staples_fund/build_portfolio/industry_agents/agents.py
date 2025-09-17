@@ -1,5 +1,6 @@
 from app.core.agentic_framework.base_agent import BaseAgent
 from app.core.agentic_framework.base_agent.memory.semantic_memory import SemanticMemory
+from app.db.core.prophit_alts_models import FundInitialPosition
 from app.domain.prophit_alts.consumer_staples_fund.build_portfolio.prompts.industry_prompts import build_industry_prompt
 from .tools import get_eligible_tickers, get_base_ticker_info
 from .tool_registry import register_industry_tools
@@ -110,9 +111,12 @@ class IndustryAgent(BaseAgent):
 if __name__ == "__main__":
     industries = ["beverages", "consumer_staples_distribution_and_retail", "food_products", "household_products", "personal_care_products", "tobacco"]
 
-    agent = IndustryAgent(industry=industries[0])
+    agent = IndustryAgent(industry=industries[1])
     result = agent.run()
-    # agent.save_initial_positions(fund_name="consumer_staples_fund", recommendations_json=result)
+
+    # ok = agent.save_initial_positions(fund_name="consumer_staples_fund", recommendations_json=result)
+    # print(ok)
+
     print("="*100)
     print("Industry Agent Result:")
     print("="*100)

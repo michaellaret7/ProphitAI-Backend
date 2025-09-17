@@ -177,19 +177,3 @@ def vacuum_table(session, schema_name, table_name, full=True, analyze=True):
         print("-" * 40)
 
 
-if __name__ == '__main__':
-    session = MarketSession()
-    
-    # Run the health checks
-    get_cache_hit_ratio(session)
-    get_table_and_index_bloat(session)
-    
-    # --- Example of how to run a VACUUM ---
-    # WARNING: VACUUM FULL will lock the table. Run during a maintenance window.
-    # To run this, uncomment the following lines:
-    
-    # print("\nStarting database maintenance...")
-    # vacuum_table(session, 'price_data', 'prices', full=True, analyze=True)
-    # vacuum_table(session, 'ticker_universe', 'tickers', full=True, analyze=True)
-    
-    session.close() 

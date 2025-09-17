@@ -8,9 +8,10 @@ from app.db.core.market_data_models import *
 from sqlalchemy import func
 from sqlalchemy.orm import aliased
 from app.db.core.prophit_alts_models import *
+from app.utils.decorators.database import with_session, with_transaction, with_sessions
 
-def retrieve_portfolio(email: str = None, workos_id: str = None, user_id: uuid.UUID = None, is_current: bool = None, portfolio_id: uuid.UUID = None):
-    session = UserSession()
+@with_session('user')
+def retrieve_portfolio(email: str = None, workos_id: str = None, user_id: uuid.UUID = None, is_current: bool = None, portfolio_id: uuid.UUID = None, session=None):
     
     user = None
     if user_id:
@@ -20,11 +21,9 @@ def retrieve_portfolio(email: str = None, workos_id: str = None, user_id: uuid.U
     elif workos_id:
         user = session.query(User).filter(User.workos_id == workos_id).first()
     else:
-        session.close()
         raise ValueError("At least one identifier (email, workos_id, or user_id) must be provided")
     
     if not user:
-        session.close()
         return []
     
     # Build the query based on parameters
@@ -38,13 +37,10 @@ def retrieve_portfolio(email: str = None, workos_id: str = None, user_id: uuid.U
     portfolio = query.all()
     portfolio = [serialize_sqlalchemy_obj(p) for p in portfolio]
     
-    session.close()
     return portfolio
 
-def add_portfolio(portfolio, company_name, user_email, portfolio_name):
-    user_session = UserSession()
-    market_session = MarketSession()
-
+@with_sessions(user_session='user', market_session='market')
+def add_portfolio(portfolio, company_name, user_email, portfolio_name, user_session=None, market_session=None):
     company_id = user_session.query(Company).filter(Company.name == company_name).first().id
     user_id = user_session.query(User).filter(User.email == user_email).first().id
     portfolio_uuid = uuid.uuid4()
@@ -64,13 +60,12 @@ def add_portfolio(portfolio, company_name, user_email, portfolio_name):
             company_id=company_id,
             user_id=user_id,
         ))
-
+    
+    # Commit the transaction for user_session
     user_session.commit()
-    user_session.close()
-    market_session.close()
 
-def list_portfolios(email: str = None, workos_id: str = None, user_id: uuid.UUID = None):
-    session = UserSession()
+@with_session('user')
+def list_portfolios(email: str = None, workos_id: str = None, user_id: uuid.UUID = None, session=None):
     
     user = None
     if user_id:
@@ -80,11 +75,9 @@ def list_portfolios(email: str = None, workos_id: str = None, user_id: uuid.UUID
     elif workos_id:
         user = session.query(User).filter(User.workos_id == workos_id).first()
     else:
-        session.close()
         raise ValueError("At least one identifier (email, workos_id, or user_id) must be provided")
     
     if not user:
-        session.close()
         return []
     
     # Create a subquery with row numbers partitioned by portfolio_id
@@ -125,17 +118,14 @@ def list_portfolios(email: str = None, workos_id: str = None, user_id: uuid.UUID
             'user_id': str(row.user_id)
         })
     
-    session.close()
     return result
 
-def add_initial_positions(positions: dict, industry: str, fund_name: str):
-    session = ProphitAltsSession()
-    market_session = MarketSession()
-
+@with_sessions(prophit_session='prophit', market_session='market')
+def add_initial_positions(positions: dict, industry: str, fund_name: str, prophit_session=None, market_session=None):
     for position in positions['long']:
-        session.add(FundInitialPosition(
+        prophit_session.add(FundInitialPosition(
             id=uuid.uuid4(),
-            fund_id=session.query(Fund).filter(Fund.fund_name == fund_name).first().id,
+            fund_id=prophit_session.query(Fund).filter(Fund.fund_name == fund_name).first().id,
             fund_name=fund_name,
             ticker_id=market_session.query(Ticker).filter(Ticker.ticker == position['ticker']).first().id,
             ticker_name=position['ticker'],
@@ -148,9 +138,9 @@ def add_initial_positions(positions: dict, industry: str, fund_name: str):
         ))
 
     for position in positions['short']:
-        session.add(FundInitialPosition(
+        prophit_session.add(FundInitialPosition(
             id=uuid.uuid4(),
-            fund_id=session.query(Fund).filter(Fund.fund_name == fund_name).first().id,
+            fund_id=prophit_session.query(Fund).filter(Fund.fund_name == fund_name).first().id,
             fund_name=fund_name,
             ticker_id=market_session.query(Ticker).filter(Ticker.ticker == position['ticker']).first().id,
             ticker_name=position['ticker'],
@@ -162,10 +152,9 @@ def add_initial_positions(positions: dict, industry: str, fund_name: str):
             date_updated=datetime.now(),
         ))   
 
-    session.commit()
-    session.close()
-    market_session.close()
-
+    # Commit the transaction for prophit_session
+    prophit_session.commit()
+    
     return True
 
 #TODO: add an add final positions function

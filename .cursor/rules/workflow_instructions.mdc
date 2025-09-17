@@ -1,7 +1,6 @@
 ---
-alwaysApply: true
+alwaysApply: false
 ---
-
 1. First think through the problem, read the codebase for relevant files, and write a plan to the planning/todo.md file. (if the todo.md file contains an old task, clear the entire file before beginning). 
     a. Always check the [file_structure.md] file and the [schema.json] file before starting any work
 2. The plan should have a list of todo items that you can check off as you complete them

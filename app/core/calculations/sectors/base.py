@@ -5,6 +5,7 @@ from functools import wraps
 import pandas as pd
 from app.db.core.market_data_models import Ticker
 from app.db.core.db_config import MarketSession
+from app.utils.decorators.database import with_session
 from app.core.calculations.factors.growth import GrowthFactors
 from app.core.calculations.factors.value import ValueFactors
 from app.core.calculations.factors.momentum import MomentumFactors
@@ -15,7 +16,8 @@ from datetime import datetime, timedelta
 
 GroupingLevel = Literal["sector", "industry", "sub_industry"]
 
-def get_tickers_by_grouping(grouping_value: str, grouping_level: GroupingLevel) -> List[str]:
+@with_session('market')
+def get_tickers_by_grouping(grouping_value: str, grouping_level: GroupingLevel, session=None) -> List[str]:
     """Get tickers for a given grouping level and value.
     
     Args:
@@ -28,8 +30,6 @@ def get_tickers_by_grouping(grouping_value: str, grouping_level: GroupingLevel) 
     # Normalize the grouping value
     grouping_value = grouping_value.lower()
     
-    session = MarketSession()
-    
     # Query based on grouping level
     if grouping_level == "sector":
         tickers = session.query(Ticker).filter(Ticker.sector == grouping_value).all()
@@ -39,8 +39,6 @@ def get_tickers_by_grouping(grouping_value: str, grouping_level: GroupingLevel) 
         tickers = session.query(Ticker).filter(Ticker.sub_industry == grouping_value).all()
     else:
         raise ValueError(f"Invalid grouping level: {grouping_level}")
-    
-    session.close()
     
     # Extract ticker symbols
     tickers_list = [ticker.ticker for ticker in tickers]

@@ -6,6 +6,7 @@ from app.core.calculations.factors.momentum import MomentumFactors
 from app.core.calculations.factors.quality import QualityFactors
 from app.core.calculations.factors.volatility import VolatilityFactors
 from app.core.calculations.core.data_service import DataService
+from app.utils.decorators.database import with_session
 from app.core.calculations.returns.calculator import ReturnsCalculator
 from app.repositories.fundamental_data import get_fundamental_data
 from app.repositories.news_data import get_press_releases, get_stock_news, get_price_target_news
@@ -23,23 +24,14 @@ from datetime import datetime, timedelta
 from app.db.core.db_config import MarketSession
 from app.db.core.market_data_models import Ticker
 from typing import List
+from app.utils.decorators.price_data import with_price_data
 
-def get_weekly_returns(ticker: str):
+@with_price_data(lookback_days=252, include_dividends=False)
+def get_weekly_returns(ticker: str, price_data=None, **kwargs):
     """Get weekly returns for the last year for a given ticker."""
-    ds = DataService()
-    end_date = datetime.now()
-    start_date = end_date - timedelta(days=252)
-    
-    # Get price data for the ticker
-    price_data = ds.get_price_data(ticker, start_date, end_date)
-    if price_data is None or price_data.frame.empty:
-        return {"error": f"No price data available for {ticker}"}
-    
-    # Get closing prices
-    close_prices = price_data.frame['close']
     
     # Resample to weekly and calculate returns
-    weekly_prices = close_prices.resample('W').last()
+    weekly_prices = price_data.resample('W').last()
     weekly_returns = weekly_prices.pct_change().dropna()
     
     # Convert to dictionary with string dates and format as percentages
@@ -158,19 +150,17 @@ def fetch_repository_data(ticker: str, data_type: str, limit: int | None = None)
 
     return {"error": f"Unknown data_type: {data_type}"}
 
-def get_eligible_tickers(industry: str):
+@with_session('market')
+def get_eligible_tickers(industry: str, session=None):
     """Get the eligible tickers for a given industry."""
-    market_session = MarketSession()
     industry = industry.lower()
-    tickers = market_session.query(Ticker).filter(Ticker.industry == industry, Ticker.market_cap > 600_000_000).all()
-    market_session.close()
+    tickers = session.query(Ticker).filter(Ticker.industry == industry, Ticker.market_cap > 600_000_000).all()
     return [ticker.ticker for ticker in tickers]
 
-def get_base_ticker_info(tickers: List[str]):
+@with_session('market')
+def get_base_ticker_info(tickers: List[str], session=None):
     """Get the base ticker info for a given list of tickers."""
-    market_session = MarketSession()
-    ticker_objects = market_session.query(Ticker).filter(Ticker.ticker.in_(tickers)).all()
-    market_session.close()
+    ticker_objects = session.query(Ticker).filter(Ticker.ticker.in_(tickers)).all()
     
     # Convert SQLAlchemy objects to dictionaries
     result = []
@@ -194,4 +184,4 @@ def get_base_ticker_info(tickers: List[str]):
 
 
 if __name__ == "__main__":
-    print(get_base_ticker_info(["AAPL", "MSFT", "KO"]))
+    print(get_weekly_returns("AAPL"))

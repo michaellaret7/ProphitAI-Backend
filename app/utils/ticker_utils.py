@@ -6,7 +6,9 @@ from dotenv import load_dotenv
 from app.utils.choose_model_and_client import openai_model_and_client
 from app.db.core.db_config import MarketSession
 from app.db.core.market_data_models import *
+from app.utils.decorators.database import with_session
 from app.utils.serialize_output import serialize_sqlalchemy_obj
+from app.utils.decorators.database import with_session
 
 # Load environment variables from .env file
 load_dotenv()
@@ -63,21 +65,20 @@ def name_to_ticker(company_name):
     # Last resort: return uppercase input
     return company_name.upper() 
 
-def get_most_recent_price(ticker):
+@with_session('market')
+def get_most_recent_price(ticker, session=None):
     """Get just the most recent close price for a ticker"""
     ticker = ticker.upper()
-    session = MarketSession()
 
     price = session.query(Ticker).filter(Ticker.ticker == ticker).first()
     price = price.price
     
-    session.close()
     return price
 
-def get_eligible_tickers(industry: str, market_cap: int, price: int = None, dollar_volume: int = None):
+@with_session('market')
+def get_eligible_tickers(industry: str, market_cap: int, price: int = None, dollar_volume: int = None, session=None):
    ticker_list = []
 
-   session = MarketSession()
    if price is None:
       tickers = session.query(Ticker).filter(Ticker.industry == industry, Ticker.market_cap > market_cap).all()
    else:
@@ -91,6 +92,5 @@ def get_eligible_tickers(industry: str, market_cap: int, price: int = None, doll
    for ticker in tickers:
       ticker_list.append(ticker['ticker'])
 
-   session.close()
-
    return ticker_list
+

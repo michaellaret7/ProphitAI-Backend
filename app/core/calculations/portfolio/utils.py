@@ -1,0 +1,175 @@
+"""Portfolio calculation utilities to reduce code duplication."""
+
+from datetime import datetime, timedelta, timezone
+from typing import Dict, Tuple, Optional
+import pandas as pd
+
+from app.core.calculations.core.data_service import DataService
+from app.core.calculations.returns.calculator import ReturnsCalculator, PortfolioReturnsCalculator
+
+
+def prepare_portfolio_data(
+    portfolio: Dict,
+    lookback_days: int = 252,
+    include_dividends: bool = True,
+    include_benchmark: Optional[str] = None
+) -> Tuple[Dict[str, float], Dict[str, pd.Series], Dict[str, pd.Series], pd.Series]:
+    """
+    Common utility to prepare portfolio data for calculations.
+    
+    Args:
+        portfolio: Dict with structure {"TICKER": {"position": "long/short", "allocation": 0.xx}}
+        lookback_days: Number of days to look back for historical data
+        include_dividends: Whether to fetch dividend data
+        include_benchmark: Optional benchmark ticker to include (e.g., "SPY")
+    
+    Returns:
+        Tuple of:
+        - weights: Dict[str, float] with signed weights (negative for shorts)
+        - price_data: Dict[str, pd.Series] of price series
+        - dividend_data: Dict[str, pd.Series] of dividend series (or None if not requested)
+        - portfolio_returns: pd.Series of weighted portfolio returns
+    """
+    # 1. Date range
+    end = datetime.now(timezone.utc)
+    start = end - timedelta(days=lookback_days)
+    
+    # 2. Get tickers
+    tickers = list(portfolio.keys())
+    if include_benchmark and include_benchmark not in tickers:
+        tickers.append(include_benchmark)
+    
+    # 3. Fetch price data
+    ds = DataService()
+    price_data = ds.get_bulk_close_series(tickers, start, end)
+    
+    # 4. Get dividend data if requested
+    dividend_data = {}
+    if include_dividends:
+        for ticker in tickers:
+            try:
+                div_data = ds.get_dividends(ticker, start, end)
+                dividend_data[ticker] = div_data.series
+            except:
+                dividend_data[ticker] = None
+    
+    # 5. Convert portfolio to weights (negative for shorts)
+    weights = {}
+    for ticker, details in portfolio.items():
+        if details["position"].lower() == "short":
+            weights[ticker] = -abs(details["allocation"])
+        else:
+            weights[ticker] = abs(details["allocation"])
+    
+    return weights, price_data, dividend_data
+
+
+def get_portfolio_returns(
+    portfolio: Dict,
+    lookback_days: int = 252,
+    use_total_returns: bool = True,
+    dropna: bool = True,
+    renormalize_each_day: bool = False,
+    normalization: str = "gross"
+) -> Tuple[pd.Series, Dict[str, float]]:
+    """
+    Calculate portfolio returns from portfolio dict.
+    
+    Args:
+        portfolio: Dict with structure {"TICKER": {"position": "long/short", "allocation": 0.xx}}
+        lookback_days: Number of days to look back
+        use_total_returns: Whether to include dividends in returns
+        dropna: Whether to drop days with missing data
+        renormalize_each_day: Whether to renormalize weights daily
+        normalization: "gross" or "net" exposure normalization
+    
+    Returns:
+        Tuple of:
+        - portfolio_returns: pd.Series of weighted portfolio returns
+        - weights: Dict of signed weights used
+    """
+    # Get all the data
+    weights, price_data, dividend_data = prepare_portfolio_data(
+        portfolio, 
+        lookback_days, 
+        include_dividends=use_total_returns
+    )
+    
+    # Calculate individual ticker returns
+    ticker_returns = {}
+    for ticker in weights:
+        if ticker in price_data and not price_data[ticker].empty:
+            if use_total_returns:
+                divs = dividend_data.get(ticker)
+                ticker_returns[ticker] = ReturnsCalculator.total_returns(price_data[ticker], divs)
+            else:
+                ticker_returns[ticker] = ReturnsCalculator.daily_price_returns(price_data[ticker])
+    
+    # Calculate weighted portfolio returns
+    portfolio_returns = PortfolioReturnsCalculator.weighted_daily_returns(
+        ticker_returns=ticker_returns,
+        weights=weights,
+        dropna=dropna,
+        renormalize_each_day=renormalize_each_day,
+        normalization=normalization
+    )
+    
+    return portfolio_returns, weights
+
+
+def get_benchmark_returns(
+    benchmark: str = "SPY",
+    start: datetime = None,
+    end: datetime = None,
+    lookback_days: int = None,
+    use_total_returns: bool = True
+) -> pd.Series:
+    """
+    Get benchmark returns for comparison.
+    
+    Args:
+        benchmark: Benchmark ticker
+        start/end: Date range (if not provided, uses lookback_days)
+        lookback_days: Alternative to start/end
+        use_total_returns: Whether to include dividends
+    
+    Returns:
+        pd.Series of benchmark returns
+    """
+    if not end:
+        end = datetime.now(timezone.utc)
+    
+    if not start:
+        if lookback_days:
+            start = end - timedelta(days=lookback_days)
+        else:
+            raise ValueError("Must provide either start date or lookback_days")
+    
+    ds = DataService()
+    bench_prices = ds.get_bulk_close_series([benchmark], start, end).get(benchmark)
+    
+    if bench_prices is None or bench_prices.empty:
+        raise ValueError(f"No price data for benchmark {benchmark}")
+    
+    if use_total_returns:
+        try:
+            div_data = ds.get_dividends(benchmark, start, end)
+            bench_divs = div_data.series
+        except:
+            bench_divs = None
+        return ReturnsCalculator.total_returns(bench_prices, bench_divs)
+    else:
+        return ReturnsCalculator.daily_price_returns(bench_prices)
+
+def format_correlation_matrix(correlation_matrix: pd.DataFrame) -> dict:
+    tickers = list(correlation_matrix.columns)
+    values = correlation_matrix.values
+    pairs: dict[str, float] = {}
+    n = len(tickers)
+    for i in range(n):
+        for j in range(i + 1, n):
+            val = float(values[i, j])
+            if val > 0.5:
+                key = f"{tickers[i]}|{tickers[j]}"
+                pairs[key] = round(val, 3)
+    return pairs

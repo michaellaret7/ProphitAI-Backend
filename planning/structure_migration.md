@@ -1,243 +1,151 @@
-# Backend Structure Migration Plan
+# Database Session Decorator Implementation Plan
 
 ## Overview
-This document outlines the migration from the current `backend/src/` structure to a cleaner `app/` structure.
+Implement decorators to eliminate repetitive database session management code across the codebase.
 
-## Target Structure
+**Impact:** 56+ session creation instances across 26 files can be simplified.
 
-```
-ProphitAI/
-├── app/
-│   ├── api/
-│   │   ├── routes/
-│   │   └── controllers/
-│   ├── services/
-│   ├── repositories/
-│   ├── models/
-│   │   ├── requests/
-│   │   ├── responses/
-│   │   └── domain/
-│   ├── domain/
-│   │   ├── portfolio_optimization/
-│   │   ├── prophit_alts/
-│   │   ├── prophit_gpt/
-│   │   └── stress_test/
-│   ├── db/
-│   │   ├── core/
-│   │   ├── jobs/
-│   │   └── monitor/
-│   ├── core/
-│   ├── utils/
-│   ├── middleware/
-│   └── core_libs/
-│       ├── calculations/
-│       └── agent_framework/
-├── tests/
-├── scripts/
-└── main.py
-```
+## Decorators to Implement
 
-## Migration Steps
+### 1. @with_session decorator
+- **Purpose:** Auto-manage database session lifecycle (create, provide, close)
+- **Location:** `app/utils/decorators/database.py`
+- **Session Types:** 'market', 'user', 'prophit'
 
-### Phase 1: Setup New Structure (No Code Changes)
-1. Create the new directory structure
-   ```bash
-   mkdir -p app/{api,services,repositories,models,domain,db,core,utils,middleware,core_libs}
-   mkdir -p app/api/{routes,controllers}
-   mkdir -p app/models/{requests,responses,domain}
-   mkdir -p app/core_libs/{calculations,agent_framework}
-   mkdir -p tests/{unit,integration,smoke}
-   mkdir -p scripts
-   ```
+### 2. @with_transaction decorator  
+- **Purpose:** Handle transactions with automatic commit/rollback
+- **Location:** `app/utils/decorators/database.py`
+- **Use Cases:** Write operations that need commit/rollback logic
 
-### Phase 2: Move Core Libraries
-1. **Move calculations_v2 → app/core_libs/calculations/**
-   ```bash
-   mv backend/src/calculations_v2/* app/core_libs/calculations/
-   ```
+### 3. @with_sessions decorator (NEW)
+- **Purpose:** Handle multiple database sessions in one function
+- **Location:** `app/utils/decorators/database.py`
+- **Use Cases:** Functions needing both UserSession and MarketSession
+- **Example:** `add_portfolio`, `add_initial_positions`
 
-2. **Move agentic_framework → app/core_libs/agent_framework/**
-   ```bash
-   mv backend/src/agentic_framework/* app/core_libs/agent_framework/
-   ```
+## Files to Refactor
 
-### Phase 3: Move API Layer
-1. **Routes**
-   - `backend/src/api/routes/*.py` → `app/api/routes/`
-   - Rename files for clarity:
-     - `user_routes.py` → `users.py`
-     - `prophit_alts_router.py` → `prophit_alts.py`
+### High Priority - Repositories (20 functions)
+These have the cleanest patterns and will show immediate benefit:
 
-2. **Controllers**
-   - `backend/src/api/controller/*.py` → `app/api/controllers/`
+#### app/repositories/price_data.py (3 instances)
+- [ ] `get_price_data_15_mins()` - MarketSession
+- [ ] `get_price_data_daily()` - MarketSession with try-finally
+- [ ] `get_dividends_series()` - MarketSession with try-finally
 
-3. **Response Models**
-   - `backend/src/api/response_envelope.py` → `app/models/responses/envelope.py`
+#### app/repositories/user_data.py (5 instances)
+- [ ] `add_user()` - UserSession with commit
+- [ ] `update_user_workos_id()` - UserSession with commit
+- [ ] `add_company_user()` - UserSession
+- [ ] `add_company()` - UserSession with commit
+- [ ] `get_user_current_portfolio()` - UserSession
 
-4. **Dependencies**
-   - `backend/src/auth/dependencies.py` → `app/api/dependencies.py`
+#### app/repositories/portfolio_data.py (6 instances)  
+- [ ] `retrieve_portfolio()` - UserSession
+- [ ] `add_portfolio()` - UserSession + MarketSession with commit
+- [ ] `list_portfolios()` - UserSession
+- [ ] `add_initial_positions()` - ProphitAltsSession + MarketSession
 
-### Phase 4: Move Data Layer
-1. **Repositories**
-   - `backend/src/repositories/*.py` → `app/repositories/`
-   - Rename for consistency:
-     - `portfolio_data.py` → `portfolio.py`
-     - `price_data.py` → `price.py`
-     - `prophit_alts_data.py` → `prophit_alts.py`
-     - `user_data.py` → `user.py`
+#### app/repositories/news_data.py (3 instances)
+- [ ] `get_press_releases()` - MarketSession with try-finally
+- [ ] `get_stock_news()` - MarketSession with try-finally
+- [ ] `get_price_target_news()` - MarketSession with try-finally
 
-2. **Database**
-   - `backend/src/db/*` → `app/db/`
-   - Keep entire structure as-is
+#### app/repositories/ratings_data.py (5 instances)
+- [ ] `get_stock_grades_individual()` - MarketSession
+- [ ] `get_stock_grades_summary()` - MarketSession
+- [ ] `get_ratings()` - MarketSession
+- [ ] `get_analyst_recommendations()` - MarketSession
+- [ ] `get_price_target_summary()` - MarketSession with try-finally
 
-3. **Models**
-   - `backend/src/data_models/*.py` → `app/models/domain/`
+#### app/repositories/etf_data.py (2 instances)
+- [ ] `get_etf_info()` - MarketSession with try-finally
+- [ ] `get_etf_holdings()` - MarketSession with try-finally
 
-### Phase 5: Move Business Logic
-1. **Services**
-   - `backend/src/services/*.py` → `app/services/`
+#### app/repositories/transcripts_data.py (2 instances)
+- [ ] `get_earnings_transcripts()` - MarketSession with try-finally
+- [ ] `get_latest_transcript()` - MarketSession
 
-2. **Domain Logic**
-   - `backend/src/portfolio_optimization/` → `app/domain/portfolio_optimization/`
-   - `backend/src/prophit_alts/` → `app/domain/prophit_alts/`
-   - `backend/src/prophit_gpt/` → `app/domain/prophit_gpt/`
-   - `backend/src/stress_test/` → `app/domain/stress_test/`
+#### app/repositories/prophit_alts_data.py (1 instance)
+- [ ] `get_fund_final_positions()` - ProphitAltsSession with try-finally
 
-### Phase 6: Move Utilities
-1. **Utils**
-   - `backend/src/utils/*.py` → `app/utils/`
-   - Rename for clarity:
-     - `validation_utils.py` → `validation.py`
-     - `serialize_output.py` → `serialize.py`
-     - `parsing_utils.py` → `parsers.py`
-     - `ticker_utils.py` → `ticker.py`
-     - `file_utils.py` → `file.py`
-     - `choose_model_and_client.py` → `model_selector.py`
+### Medium Priority - Database Jobs (7 functions)
+These have more complex patterns but would benefit:
 
-2. **Core Utilities**
-   - `backend/src/utils/logging_config.py` → `app/core/logging.py`
-   - Create `app/core/exceptions.py` for custom exceptions
-   - Create `app/core/security.py` for minimal auth utilities
+#### app/db/jobs/fundamental_data.py (2 instances)
+- [ ] `_update_single_ticker_fundamentals()` - Complex transaction handling
+- [ ] Other methods with session management
 
-### Phase 7: Move Tests
-1. **Test Files**
-   - `backend/testing/*.py` → `tests/`
-   - `backend/src/api/testing/*.py` → `tests/api/`
-   - Organize by type: unit/, integration/, smoke/
+#### app/db/jobs/ticker_table.py (3 instances)
+- [ ] Functions with MarketSession and commit/rollback
 
-### Phase 8: Update Entry Point
-1. **Main Application**
-   - `backend/main.py` → `app/main.py`
-   - Create new `main.py` at root:
-   ```python
-   # main.py
-   if __name__ == "__main__":
-       import uvicorn
-       uvicorn.run("app.main:app", host="0.0.0.0", port=8000, reload=True)
-   ```
+#### app/db/jobs/price_table.py (2 instances)
+- [ ] Functions with MarketSession and commit/rollback
 
-## Import Updates Required
+#### app/db/core/add_etf.py (2 instances)
+- [ ] `_load_dividends()` - MarketSession with rollback
+- [ ] `load_etf_data()` - MarketSession with complex error handling
 
-### Old Import Pattern
-```python
-from backend.src.repositories.portfolio_data import get_portfolio
-from backend.src.calculations_v2.factors.growth import GrowthCalculator
-from backend.src.agentic_framework.base_agent import BaseAgent
-```
+### Lower Priority - Other Files (29 instances)
+These have varied patterns and may need custom handling:
 
-### New Import Pattern
-```python
-from app.repositories.portfolio import get_portfolio
-from app.core_libs.calculations.factors.growth import GrowthCalculator
-from app.core_libs.agent_framework.base_agent import BaseAgent
-```
+#### app/domain/prophit_alts/consumer_staples_fund/build_portfolio/
+- [ ] cio/tools.py (3 instances)
+- [ ] cro/tools.py (1 instance)
+- [ ] industry_agents/tools.py (2 instances)
+- [ ] prompts/industry_prompts.py (1 instance)
 
-## Update Script
-Create a script to automatically update imports:
+#### app/core/calculations/
+- [ ] core/data_service.py (2 instances)
+- [ ] portfolio/concentration.py (1 instance)
+- [ ] factors/momentum.py (1 instance)
+- [ ] sectors/base.py (1 instance)
 
-```python
-# scripts/update_imports.py
-import os
-import re
+#### Other files
+- [ ] app/utils/ticker_utils.py (2 instances)
+- [ ] app/services/prophit_alts_service.py (2 instances)
+- [ ] app/domain/stress_test/performance_analysis.py (1 instance)
+- [ ] app/db/monitor/query_performance_check.py (1 instance)
+- [ ] app/db/monitor/health_check.py (1 instance with rollback)
+- [ ] app/db/core/build_price_table.py (1 instance)
 
-IMPORT_MAPPINGS = {
-    r'from backend\.src\.repositories\.portfolio_data': 'from app.repositories.portfolio',
-    r'from backend\.src\.repositories\.price_data': 'from app.repositories.price',
-    r'from backend\.src\.repositories\.user_data': 'from app.repositories.user',
-    r'from backend\.src\.repositories\.prophit_alts_data': 'from app.repositories.prophit_alts',
-    r'from backend\.src\.calculations_v2': 'from app.core_libs.calculations',
-    r'from backend\.src\.agentic_framework': 'from app.core_libs.agent_framework',
-    r'from backend\.src\.api\.response_envelope': 'from app.models.responses.envelope',
-    r'from backend\.src\.api\.controller': 'from app.api.controllers',
-    r'from backend\.src\.api\.routes': 'from app.api.routes',
-    r'from backend\.src\.services': 'from app.services',
-    r'from backend\.src\.db': 'from app.db',
-    r'from backend\.src\.utils': 'from app.utils',
-    r'from backend\.src\.portfolio_optimization': 'from app.domain.portfolio_optimization',
-    r'from backend\.src\.prophit_alts': 'from app.domain.prophit_alts',
-    r'from backend\.src\.prophit_gpt': 'from app.domain.prophit_gpt',
-    r'from backend\.src\.stress_test': 'from app.domain.stress_test',
-    r'from backend\.src\.data_models': 'from app.models.domain',
-    r'from backend\.src\.auth\.dependencies': 'from app.api.dependencies',
-}
+## Implementation Steps
 
-def update_imports_in_file(filepath):
-    with open(filepath, 'r') as f:
-        content = f.read()
-    
-    for old_pattern, new_pattern in IMPORT_MAPPINGS.items():
-        content = re.sub(old_pattern, new_pattern, content)
-    
-    with open(filepath, 'w') as f:
-        f.write(content)
+### Phase 1: Create Decorators (Day 1)
+1. [x] Create `app/utils/decorators/database.py`
+2. [x] Implement `@with_session` decorator
+3. [x] Implement `@with_transaction` decorator
+4. [x] Add unit tests for decorators
 
-def update_all_imports(root_dir='app'):
-    for root, dirs, files in os.walk(root_dir):
-        for file in files:
-            if file.endswith('.py'):
-                filepath = os.path.join(root, file)
-                update_imports_in_file(filepath)
-                print(f"Updated: {filepath}")
+### Phase 2: Refactor Repositories (Day 2-3)
+5. [x] Refactor price_data.py (test thoroughly)
+6. [x] Refactor user_data.py
+7. [x] Refactor portfolio_data.py (now uses with_sessions for multi-db)
+8. [x] Refactor news_data.py
+9. [x] Refactor ratings_data.py
+10. [x] Refactor etf_data.py
+11. [x] Refactor transcripts_data.py
+12. [x] Refactor prophit_alts_data.py
 
-if __name__ == "__main__":
-    update_all_imports()
-```
+### Phase 4: Refactor Remaining Files (Day 5)
+17. [ ] Refactor calculation modules
+18. [ ] Refactor prophit_alts modules
+19. [ ] Refactor utility and service files
 
-## Testing Strategy
+### Phase 5: Testing & Documentation (Day 6)
+20. [ ] Run comprehensive test suite
+21. [ ] Update documentation
+22. [ ] Code review
 
-### 1. Pre-Migration Tests
-- Run all existing tests and document passing status
-- Create smoke tests for critical paths
+## Benefits
+- **Lines Removed:** ~280-350 lines of boilerplate code
+- **Files Simplified:** 26 files
+- **Functions Improved:** 56+ functions
+- **Consistency:** Uniform session handling across codebase
+- **Safety:** Guaranteed session cleanup and proper transaction handling
+- **Maintainability:** Single point of control for session logic
 
-### 2. Post-Migration Validation
-- **Import Test**: Verify all imports resolve correctly
-- **API Test**: Ensure all endpoints respond
-- **Database Test**: Confirm database connections work
-- **Unit Tests**: Run all unit tests
-- **Integration Tests**: Run integration test suite
-
-### 3. Rollback Plan
-- Keep backup of original `backend/` folder
-- Document any configuration changes
-- Maintain ability to revert if issues arise
-
-## Cleanup Tasks
-
-After successful migration:
-1. Remove old `backend/` directory
-2. Update `.gitignore` if needed
-3. Update README.md with new structure
-4. Update deployment scripts
-5. Update CI/CD pipelines
-6. Archive old structure documentation
-
-## Success Criteria
-
-- [ ] All tests pass
-- [ ] API endpoints functional
-- [ ] No import errors
-- [ ] Database operations work
-- [ ] Agent framework operational
-- [ ] Calculations work correctly
-- [ ] Documentation updated
-- [ ] Team informed of changes
+## Notes
+- Some functions use multiple sessions (e.g., MarketSession + UserSession) - these may need special handling
+- Complex transaction patterns in db/jobs may require custom decorators
+- Consider creating specialized decorators for common query patterns

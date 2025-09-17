@@ -3,11 +3,12 @@ import pandas as pd
 import numpy as np
 from app.core.calculations.risk.calculator import RiskCalculator
 from app.core.calculations.returns.calculator import ReturnsCalculator
-from app.repositories.price_data import fetch_bulk_price_data_for_tickers
+from app.core.calculations.portfolio.utils import prepare_portfolio_data, get_portfolio_returns, get_benchmark_returns
 from app.utils.validation_utils import normalize_portfolio_input
 from app.models.portfolio_models import PortfolioInput
 from app.db.core.db_config import ProphitAltsSession
 from app.db.core.prophit_alts_models import FundInitialPosition, Fund
+from app.utils.decorators.database import with_session
 
 # Consumer Staples Fund initial portfolio configuration
 INITIAL_PORTFOLIO_DICT = {
@@ -47,11 +48,11 @@ INITIAL_PORTFOLIO_DICT = {
 }
 
 
-def get_initial_portfolio_dict():
+@with_session('prophit')
+def get_initial_portfolio_dict(session=None):
     """
     Get the initial portfolio dictionary.
     """
-    session = ProphitAltsSession()
     initial_positions = session.query(FundInitialPosition).join(Fund).filter(Fund.fund_name == "consumer_staples_fund").all()
 
     INITIAL_PORTFOLIO_DICT = {}
@@ -63,8 +64,6 @@ def get_initial_portfolio_dict():
         }
     
     INITIAL_PORTFOLIO_DICT = {t: {"allocation": float(p.conviction), "position": p.position.value} for t, p in INITIAL_PORTFOLIO_DICT.items()}
-
-    session.close()
 
     return INITIAL_PORTFOLIO_DICT   
 
@@ -84,8 +83,23 @@ def calculate_correlation_matrix(portfolio_dict: PortfolioInput | dict = None) -
     # Get tickers from portfolio
     tickers = list(portfolio_dict.keys())
     
-    # Use shared helper for returns (v2)
-    returns_df = _get_portfolio_returns_data(tickers)
+    # Use utility to get portfolio data
+    weights, price_data, dividend_data = prepare_portfolio_data(
+        portfolio=portfolio_dict,
+        lookback_days=252,
+        include_dividends=False  # Don't need dividends for correlation
+    )
+    
+    if not price_data:
+        return {"error": "No price data available"}
+    
+    # Calculate returns for each ticker
+    returns_df = pd.DataFrame({
+        ticker: ReturnsCalculator.daily_price_returns(prices)
+        for ticker, prices in price_data.items()
+        if prices is not None and not prices.empty
+    }).dropna()
+    
     if returns_df.empty:
         return {"error": "No price data available"}
     
@@ -119,8 +133,23 @@ def calculate_covariance_matrix(portfolio_dict: PortfolioInput | dict = None) ->
     # Get tickers from portfolio
     tickers = list(portfolio_dict.keys())
     
-    # Use shared helper for returns (v2)
-    returns_df = _get_portfolio_returns_data(tickers)
+    # Use utility to get portfolio data
+    weights, price_data, dividend_data = prepare_portfolio_data(
+        portfolio=portfolio_dict,
+        lookback_days=252,
+        include_dividends=False  # Don't need dividends for covariance
+    )
+    
+    if not price_data:
+        return {"error": "No price data available"}
+    
+    # Calculate returns for each ticker
+    returns_df = pd.DataFrame({
+        ticker: ReturnsCalculator.daily_price_returns(prices)
+        for ticker, prices in price_data.items()
+        if prices is not None and not prices.empty
+    }).dropna()
+    
     if returns_df.empty:
         return {"error": "No price data available"}
     
@@ -137,42 +166,6 @@ def calculate_covariance_matrix(portfolio_dict: PortfolioInput | dict = None) ->
     }
     
     return result
-
-
-def _get_portfolio_returns_data(tickers: list, days_back: int = 252) -> pd.DataFrame:
-    """
-    Helper function to get returns data for portfolio tickers.
-    
-    Parameters:
-    - tickers: List of ticker symbols
-    - days_back: Number of days to fetch (default 365)
-    
-    Returns:
-    - DataFrame with returns data for each ticker
-    """
-    end_date = datetime.now()
-    start_date = end_date - timedelta(days=days_back)
-    
-    # Fetch price data
-    prices_map = fetch_bulk_price_data_for_tickers(
-        tickers, 
-        start_date.strftime('%Y-%m-%d'), 
-        end_date.strftime('%Y-%m-%d'), 
-        frequency='daily'
-    )
-    
-    if not prices_map:
-        return pd.DataFrame()
-    
-    # Create DataFrame and calculate returns using v2 ReturnsCalculator
-    prices_df = pd.DataFrame(prices_map)
-    returns_df = pd.DataFrame({
-        col: ReturnsCalculator.daily_price_returns(prices_df[col])
-        for col in prices_df.columns
-    }).dropna()
-
-    return returns_df
-
 
 def vol_es(portfolio_dict: PortfolioInput | dict = None, horizon_days: int = 1, conf: float = 0.99, method: str = 'param') -> dict:
     """
@@ -197,24 +190,18 @@ def vol_es(portfolio_dict: PortfolioInput | dict = None, horizon_days: int = 1, 
         portfolio_dict = {t: {"allocation": float(p.allocation), "position": p.position.value} for t, p in normalized.root.items()}
     except ValueError as e:
         return {"error": str(e)}
-
-    # Get tickers and weights from portfolio
-    tickers = list(portfolio_dict.keys())
-    weights_series = pd.Series({
-        ticker: portfolio_dict[ticker]['allocation'] * (1 if portfolio_dict[ticker]['position'] == 'long' else -1)
-        for ticker in tickers
-    })
     
     try:
-        # Get returns data
-        returns_df = _get_portfolio_returns_data(tickers)
+        # Get portfolio returns using the utility
+        portfolio_returns, _ = get_portfolio_returns(
+            portfolio=portfolio_dict,
+            lookback_days=252,
+            use_total_returns=False,  # Use price returns for volatility metrics
+            dropna=True
+        )
         
-        if returns_df.empty:
+        if portfolio_returns is None or portfolio_returns.empty:
             return {"error": "No price data available for portfolio tickers"}
-        
-        # Calculate portfolio returns (weights aligned to columns)
-        aligned_weights = weights_series.reindex(returns_df.columns).fillna(0.0)
-        portfolio_returns = (returns_df.mul(aligned_weights, axis=1)).sum(axis=1)
 
         # Calculate VaR/ES and volatility using calculations_v2
         if method == 'param':
@@ -284,8 +271,22 @@ def risk_contribution(portfolio_dict: PortfolioInput | dict = None, metric: str 
     })
     
     try:
-        # Get returns data
-        returns_df = _get_portfolio_returns_data(tickers)
+        # Get portfolio data using utility
+        weights_dict, price_data, _ = prepare_portfolio_data(
+            portfolio=portfolio_dict,
+            lookback_days=252,
+            include_dividends=False
+        )
+        
+        if not price_data:
+            return {"error": "No price data available for portfolio tickers"}
+        
+        # Calculate returns for each ticker
+        returns_df = pd.DataFrame({
+            ticker: ReturnsCalculator.daily_price_returns(prices)
+            for ticker, prices in price_data.items()
+            if prices is not None and not prices.empty
+        }).dropna()
         
         if returns_df.empty:
             return {"error": "No price data available for portfolio tickers"}
@@ -360,24 +361,18 @@ def drawdown_profile(portfolio_dict: PortfolioInput | dict = None) -> dict:
         portfolio_dict = {t: {"allocation": float(p.allocation), "position": p.position.value} for t, p in normalized.root.items()}
     except ValueError as e:
         return {"error": str(e)}
-
-    # Get tickers and weights from portfolio
-    tickers = list(portfolio_dict.keys())
-    weights = {ticker: portfolio_dict[ticker]['allocation'] * (1 if portfolio_dict[ticker]['position'] == 'long' else -1) 
-              for ticker in tickers}
     
     try:
-        # Get returns data for last 2 years for better drawdown analysis
-        returns_df = _get_portfolio_returns_data(tickers, days_back=504)
+        # Get portfolio returns using the utility for last 2 years
+        portfolio_returns, weights = get_portfolio_returns(
+            portfolio=portfolio_dict,
+            lookback_days=504,  # 2 years for better drawdown analysis
+            use_total_returns=False,  # Use price returns for drawdown analysis
+            dropna=True
+        )
         
-        if returns_df.empty:
+        if portfolio_returns is None or portfolio_returns.empty:
             return {"error": "No price data available"}
-        
-        # Calculate weighted portfolio returns
-        portfolio_returns = pd.Series(0, index=returns_df.index)
-        for ticker in tickers:
-            if ticker in returns_df.columns:
-                portfolio_returns += returns_df[ticker] * weights[ticker]
         
         # Calculate cumulative portfolio value (NAV)
         portfolio_nav = (1 + portfolio_returns).cumprod()
