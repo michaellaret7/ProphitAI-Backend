@@ -12,7 +12,7 @@ from app.core.calculations.returns import PortfolioReturnsCalculator, ReturnsCal
 from app.core.calculations.performance import PerformanceCalculator
 from app.core.calculations.risk import RiskCalculator
 from app.core.calculations.portfolio.factor_tilt import portfolio_factor_tilts
-from app.core.calculations.portfolio.utils import prepare_portfolio_data, get_portfolio_returns, get_benchmark_returns, format_correlation_matrix
+from app.core.calculations.portfolio.utils import prepare_portfolio_data, get_portfolio_returns, get_benchmark_returns
 from app.utils.gpt_parser import parse_portfolio_with_gpt
 from app.models.portfolio_models import PortfolioInput
 from app.db.core.market_data_models import Ticker
@@ -88,10 +88,8 @@ def correlation_matrix(portfolio_dict: PortfolioInput | dict, lookback_days: int
     corr = CorrelationAnalysis.correlation_matrix(returns_df)
     if corr is None or corr.empty:
         return {}
-    
-    pairs = format_correlation_matrix(corr)
 
-    return pairs
+    return corr
 
 def calculate_portfolio_past_performance(
     portfolio_dict: PortfolioInput | dict,
