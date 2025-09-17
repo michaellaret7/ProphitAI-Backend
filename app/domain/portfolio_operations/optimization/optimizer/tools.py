@@ -19,7 +19,9 @@ def get_group_tickers(group_type: str, group_value: str, session=None):
         ticker.pop('dollar_volume')
     return tickers
 
+
 if __name__ == "__main__":
     print(get_token_count(get_group_tickers("industry", "equity_etfs")))
     print(get_token_count(get_group_tickers("sector", "etf")))
     print(get_group_tickers("industry", "equity_etfs"))
+    

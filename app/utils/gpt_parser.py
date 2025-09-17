@@ -5,6 +5,7 @@ from typing import Type, TypeVar, Dict, List
 from pydantic import BaseModel, Field
 from app.utils.choose_model_and_client import openai_model_and_client
 import json
+from app.models.portfolio_models import PortfolioInput
 
 T = TypeVar('T', bound=BaseModel)
 
@@ -98,3 +99,22 @@ def parse_portfolio_with_gpt(data: any) -> Dict:
         }
     
     return portfolio_dict
+
+
+def canonical_portfolio(portfolio: PortfolioInput | dict) -> Dict[str, Dict]:
+    """Convert any portfolio format to canonical dictionary using GPT parser."""
+    # If already in the correct format, return as-is
+    if isinstance(portfolio, dict):
+        # Check if it's already in canonical format
+        if all(isinstance(v, dict) and 'allocation' in v and 'position' in v for v in portfolio.values()):
+            # Ensure position is lowercase and allocation is float
+            return {
+                ticker: {
+                    "allocation": float(config['allocation']),
+                    "position": config['position'].lower() if isinstance(config['position'], str) else config['position']
+                }
+                for ticker, config in portfolio.items()
+            }
+    
+    # Use GPT parser for any other format
+    return parse_portfolio_with_gpt(portfolio)
