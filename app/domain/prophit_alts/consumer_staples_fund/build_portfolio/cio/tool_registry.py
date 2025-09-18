@@ -1,22 +1,15 @@
-from app.domain.prophit_alts.consumer_staples_fund.build_portfolio.industry_agents.tools import (
-    calc_industry_factor_benchmark_calculations,
-    calc_sub_industry_factor_benchmark_calculations,
-    calculate_ticker_factors,
-    get_fundamental_data,
-    fetch_repository_data,
-)
-from app.domain.prophit_alts.consumer_staples_fund.build_portfolio.cio.tools import (
-    get_analyst_picks,
-    correlation_matrix,
-    calculate_portfolio_past_performance,
-    exposure_calculator,
-    industry_concentration,
-    VaR_calculator,
-    calculate_portfolio_beta_vs_index,
-    factor_tilts_for_portfolio,
-    pull_rest_of_ticker_pool,
-    build_portfolio,
-)
+from app.core.agentic_framework.base_agent.tool_lib.agent_specific.cio import get_analyst_picks, pull_rest_of_ticker_pool
+from app.core.calculations.sectors.industry import calc_industry_factor_benchmark_calculations
+from app.core.calculations.sectors.sub_industry import calc_sub_industry_factor_benchmark_calculations
+from app.core.agentic_framework.base_agent.tool_lib.portfolio.corr_matrix import correlation_matrix
+from app.core.agentic_framework.base_agent.tool_lib.portfolio.past_performance import calculate_portfolio_past_performance
+from app.core.agentic_framework.base_agent.tool_lib.portfolio.builder import build_portfolio
+from app.core.agentic_framework.base_agent.tool_lib.portfolio.beta import calculate_portfolio_beta_vs_index
+from app.core.agentic_framework.base_agent.tool_lib.portfolio.factor_tilts import factor_tilts_for_portfolio
+from app.core.agentic_framework.base_agent.tool_lib.portfolio.concentration import exposure_calculator, industry_concentration, VaR_calculator
+from app.core.agentic_framework.base_agent.tool_lib.ticker.factors import calculate_ticker_factors
+from app.core.agentic_framework.base_agent.tool_lib.data.repository import fetch_repository_data
+from app.repositories.fundamental_data import get_fundamental_data
 
 def register_cio_tools(agent):
     agent.add_tool(
@@ -188,7 +181,7 @@ def register_cio_tools(agent):
             "required": ["portfolio_dict"],
             "additionalProperties": False
         },
-        function=lambda portfolio_dict: correlation_matrix(portfolio_dict, lookback_days=252),
+        function=lambda portfolio_dict: correlation_matrix(portfolio_dict),
     )
 
     # Tool 3: Calculate Portfolio Past Performance

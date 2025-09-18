@@ -1,13 +1,13 @@
-from .tools import (
+from app.core.agentic_framework.base_agent.tool_lib.agent_specific.industry import (
     get_eligible_tickers,
     calc_industry_factor_benchmark_calculations,
     calc_sub_industry_factor_benchmark_calculations,
-    calculate_ticker_factors,
     get_weekly_returns,
-    get_fundamental_data,
-    fetch_repository_data,
     get_base_ticker_info,
 )
+from app.core.agentic_framework.base_agent.tool_lib.ticker.factors import calculate_ticker_factors
+from app.core.agentic_framework.base_agent.tool_lib.data.repository import fetch_repository_data
+from app.repositories.fundamental_data import get_fundamental_data
 
 def register_industry_tools(agent):
     agent.add_tool(

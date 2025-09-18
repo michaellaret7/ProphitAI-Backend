@@ -1,7 +1,7 @@
 from typing_extensions import List
 from pydantic import BaseModel
 from app.core.agentic_framework.base_agent import BaseAgent
-from app.domain.prophit_alts.consumer_staples_fund.build_portfolio.prompts.cio_agent_prompts import cio_system_prompt, cio_user_prompt
+from app.domain.prophit_alts.consumer_staples_fund.build_portfolio.prompts import cio_system_prompt, cio_user_prompt
 from .tool_registry import register_cio_tools
 from app.core.agentic_framework.base_agent.memory.semantic_memory import SemanticMemory
 from typing import Literal

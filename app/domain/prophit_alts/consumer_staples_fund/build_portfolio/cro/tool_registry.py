@@ -1,7 +1,14 @@
-from app.domain.prophit_alts.consumer_staples_fund.build_portfolio.cro.tools import *
+from app.core.agentic_framework.base_agent.tool_lib.portfolio.corr_matrix import correlation_matrix
 from app.domain.stress_test.runner import run_stress_test_workflow
 from app.db.core.db_config import ProphitAltsSession
 from app.db.core.prophit_alts_models import *
+from app.core.agentic_framework.base_agent.tool_lib.agent_specific.cro import (
+    get_initial_portfolio_dict, 
+    calculate_covariance_matrix, 
+    vol_es, 
+    risk_contribution, 
+    drawdown_profile
+)
 
 def register_cro_tools(agent):
     """
@@ -60,7 +67,7 @@ def register_cro_tools(agent):
             "required": ["portfolio_dict"],
             "additionalProperties": False
         },
-        function=lambda portfolio_dict: calculate_correlation_matrix(portfolio_dict)
+        function=lambda portfolio_dict: correlation_matrix(portfolio_dict)
     )
 
     agent.add_tool(

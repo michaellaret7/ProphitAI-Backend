@@ -1,5 +1,6 @@
-from app.domain.prophit_alts.consumer_staples_fund.build_portfolio.industry_agents.tools import get_eligible_tickers
+from app.core.agentic_framework.base_agent.tool_lib.agent_specific.industry import get_eligible_tickers
 from app.db.core.db_config import MarketSession
+from app.utils.decorators.database import with_session
 from app.db.core.market_data_models import *
 from app.utils.serialize_output import serialize_sqlalchemy_obj
 
@@ -291,10 +292,13 @@ Example:
 </JSON Schema>
 """
 
-def build_industry_prompt(industry):
+
+@with_session('market')
+def build_industry_prompt(industry, session=None):
     tickers = get_eligible_tickers(industry)
-    session = MarketSession()
+
     sub_industries = session.query(Ticker).filter(Ticker.industry == industry).all()
+
     sub_industries_list = []
     for sub_industry in sub_industries:
         if sub_industry.sub_industry not in sub_industries_list:

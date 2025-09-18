@@ -4,7 +4,7 @@ import numpy as np
 from app.core.calculations.risk.calculator import RiskCalculator
 from app.core.calculations.returns.calculator import ReturnsCalculator
 from app.core.calculations.portfolio.utils import prepare_portfolio_data, get_portfolio_returns, get_benchmark_returns
-from app.utils.validation_utils import normalize_portfolio_input
+from app.utils.gpt_parser import canonical_portfolio
 from app.models.portfolio_models import PortfolioInput
 from app.db.core.db_config import ProphitAltsSession
 from app.db.core.prophit_alts_models import FundInitialPosition, Fund
@@ -67,56 +67,6 @@ def get_initial_portfolio_dict(session=None):
 
     return INITIAL_PORTFOLIO_DICT   
 
-def calculate_correlation_matrix(portfolio_dict: PortfolioInput | dict = None) -> dict:
-    """
-    Calculate the correlation matrix for the given portfolio.
-    """
-    if not portfolio_dict:
-        return {"error": "Portfolio dictionary is required"}
-    
-    try:
-        normalized = normalize_portfolio_input(portfolio_dict)
-        portfolio_dict = {t: {"allocation": float(p.allocation), "position": p.position.value} for t, p in normalized.root.items()}
-    except ValueError as e:
-        return {"error": str(e)}
-
-    # Get tickers from portfolio
-    tickers = list(portfolio_dict.keys())
-    
-    # Use utility to get portfolio data
-    weights, price_data, dividend_data = prepare_portfolio_data(
-        portfolio=portfolio_dict,
-        lookback_days=252,
-        include_dividends=False  # Don't need dividends for correlation
-    )
-    
-    if not price_data:
-        return {"error": "No price data available"}
-    
-    # Calculate returns for each ticker
-    returns_df = pd.DataFrame({
-        ticker: ReturnsCalculator.daily_price_returns(prices)
-        for ticker, prices in price_data.items()
-        if prices is not None and not prices.empty
-    }).dropna()
-    
-    if returns_df.empty:
-        return {"error": "No price data available"}
-    
-    # Calculate correlation matrix using calculations_v2
-    correlation_matrix = RiskCalculator.correlation_matrix(returns_df)
-    
-    # Round all values to 3 decimal places
-    correlation_matrix = correlation_matrix.round(3)
-    
-    # Convert to dictionary format
-    result = {
-        'tickers': tickers,
-        'correlation_matrix': correlation_matrix.to_dict()
-    }
-    
-    return result
-
 def calculate_covariance_matrix(portfolio_dict: PortfolioInput | dict = None) -> dict:
     """
     Calculate the covariance matrix for the given portfolio.
@@ -125,9 +75,8 @@ def calculate_covariance_matrix(portfolio_dict: PortfolioInput | dict = None) ->
         return {"error": "Portfolio dictionary is required"}
     
     try:
-        normalized = normalize_portfolio_input(portfolio_dict)
-        portfolio_dict = {t: {"allocation": float(p.allocation), "position": p.position.value} for t, p in normalized.root.items()}
-    except ValueError as e:
+        portfolio_dict = canonical_portfolio(portfolio_dict)
+    except Exception as e:
         return {"error": str(e)}
 
     # Get tickers from portfolio
@@ -186,9 +135,8 @@ def vol_es(portfolio_dict: PortfolioInput | dict = None, horizon_days: int = 1, 
         return {"error": "Portfolio dictionary is required"}
     
     try:
-        normalized = normalize_portfolio_input(portfolio_dict)
-        portfolio_dict = {t: {"allocation": float(p.allocation), "position": p.position.value} for t, p in normalized.root.items()}
-    except ValueError as e:
+        portfolio_dict = canonical_portfolio(portfolio_dict)
+    except Exception as e:
         return {"error": str(e)}
     
     try:
@@ -258,9 +206,8 @@ def risk_contribution(portfolio_dict: PortfolioInput | dict = None, metric: str 
         return {"error": "Portfolio dictionary is required"}
     
     try:
-        normalized = normalize_portfolio_input(portfolio_dict)
-        portfolio_dict = {t: {"allocation": float(p.allocation), "position": p.position.value} for t, p in normalized.root.items()}
-    except ValueError as e:
+        portfolio_dict = canonical_portfolio(portfolio_dict)
+    except Exception as e:
         return {"error": str(e)}
 
     # Get tickers and weights from portfolio
@@ -357,9 +304,8 @@ def drawdown_profile(portfolio_dict: PortfolioInput | dict = None) -> dict:
         return {"error": "Portfolio dictionary is required"}
     
     try:
-        normalized = normalize_portfolio_input(portfolio_dict)
-        portfolio_dict = {t: {"allocation": float(p.allocation), "position": p.position.value} for t, p in normalized.root.items()}
-    except ValueError as e:
+        portfolio_dict = canonical_portfolio(portfolio_dict)
+    except Exception as e:
         return {"error": str(e)}
     
     try:

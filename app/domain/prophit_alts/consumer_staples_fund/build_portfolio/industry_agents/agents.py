@@ -1,13 +1,12 @@
 from app.core.agentic_framework.base_agent import BaseAgent
 from app.core.agentic_framework.base_agent.memory.semantic_memory import SemanticMemory
-from app.db.core.prophit_alts_models import FundInitialPosition
-from app.domain.prophit_alts.consumer_staples_fund.build_portfolio.prompts.industry_prompts import build_industry_prompt
-from .tools import get_eligible_tickers, get_base_ticker_info
+from app.domain.prophit_alts.consumer_staples_fund.build_portfolio.prompts import build_industry_prompt
 from .tool_registry import register_industry_tools
 from pydantic import BaseModel
 from typing import List, Literal
 import json
 import time
+from app.core.agentic_framework.base_agent.tool_lib.agent_specific.industry import get_eligible_tickers
 
 class IndustryRecommendation(BaseModel):
     ticker: str
