@@ -2,12 +2,11 @@ from app.utils.gpt_parser import canonical_portfolio
 from app.core.calculations.portfolio.utils import get_portfolio_returns, get_benchmark_returns
 from app.core.calculations.risk.calculator import RiskCalculator
 from app.models.portfolio_models import PortfolioInput
-from typing import Dict
 
 def calculate_portfolio_beta_vs_index(
-    portfolio_dict: PortfolioInput | Dict[str, Dict], 
+    portfolio_dict: PortfolioInput | dict, 
     lookback_days: int = 252,
-    index_ticker: str = None,
+    index_ticker: str = "SPY",
 ) -> float:
     """
     Calculate CAPM beta for a long/short portfolio vs index.

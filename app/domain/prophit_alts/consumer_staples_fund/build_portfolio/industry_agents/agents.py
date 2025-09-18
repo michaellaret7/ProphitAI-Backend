@@ -110,7 +110,7 @@ class IndustryAgent(BaseAgent):
 if __name__ == "__main__":
     industries = ["beverages", "consumer_staples_distribution_and_retail", "food_products", "household_products", "personal_care_products", "tobacco"]
 
-    agent = IndustryAgent(industry=industries[1])
+    agent = IndustryAgent(industry=industries[0])
     result = agent.run()
 
     # ok = agent.save_initial_positions(fund_name="consumer_staples_fund", recommendations_json=result)
