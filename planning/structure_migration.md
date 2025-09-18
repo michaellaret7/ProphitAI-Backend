@@ -1,151 +1,80 @@
-# Database Session Decorator Implementation Plan
+### Goal
+Remove dead/unused code in `backend/src/agentic_framework/**` to simplify maintenance, reduce surface area, and adhere to DRY and simplicity principles.
 
-## Overview
-Implement decorators to eliminate repetitive database session management code across the codebase.
+### Scope (files to touch)
+- `backend/src/agentic_framework/base_agent/base_tools/calculator.py`
+- `backend/src/agentic_framework/base_agent/memory/episodic_memory.py`
+- `backend/src/agentic_framework/base_agent/tasks/manager.py`
+- `backend/src/agentic_framework/base_agent/tasks/execution_engine.py`
+- `backend/src/agentic_framework/base_agent/events/manager.py`
+- `backend/src/agentic_framework/base_agent/memory/error_memory.py` (duplicate entry cleanup)
 
-**Impact:** 56+ session creation instances across 26 files can be simplified.
+### Deletion checklist (what to remove)
 
-## Decorators to Implement
+- `base_tools/calculator.py`
+  - [x] Remove the unused "operation"/`**kwargs` branch (advanced ops: add/subtract/multiply/divide/etc.)
+  - [x] Keep only the `expression` evaluation path used by the tool registration
+  - Rationale: Tool schema only passes `expression`; wrapper lambda is `calculator(expression)`. No callsites use `operation`.
 
-### 1. @with_session decorator
-- **Purpose:** Auto-manage database session lifecycle (create, provide, close)
-- **Location:** `app/utils/decorators/database.py`
-- **Session Types:** 'market', 'user', 'prophit'
+- `memory/episodic_memory.py`
+  - [ ] Remove `get_latest(...)`
+  - [ ] Remove `summarize_older(...)`
+  - Rationale: Not referenced anywhere; tool surface only exposes `append` (episodic_remember) and `recall`.
 
-### 2. @with_transaction decorator  
-- **Purpose:** Handle transactions with automatic commit/rollback
-- **Location:** `app/utils/decorators/database.py`
-- **Use Cases:** Write operations that need commit/rollback logic
+- `tasks/manager.py`
+  - [ ] Remove `modify_task_in_plan(...)`
+  - [ ] Remove `add_subtask_to_plan(...)`
+  - [ ] Remove `reorder_main_tasks(...)`
+  - [ ] Remove `get_task_status_prompt(...)`
+  - Rationale: No usages found; plan editing is exposed via `add_main_task_to_plan` and `remove_main_task_from_plan` only.
 
-### 3. @with_sessions decorator (NEW)
-- **Purpose:** Handle multiple database sessions in one function
-- **Location:** `app/utils/decorators/database.py`
-- **Use Cases:** Functions needing both UserSession and MarketSession
-- **Example:** `add_portfolio`, `add_initial_positions`
+- `tasks/execution_engine.py`
+  - [ ] Remove `force_advance_task(...)`
+  - Rationale: No usages found; advancement is handled by `advance_task_progression` and intelligent validation.
 
-## Files to Refactor
+- `events/manager.py`
+  - [ ] Remove `get_event_history(...)`
+  - [ ] Remove `get_listener_count(...)`
+  - Rationale: Not used anywhere; event consumption is direct via `on(...)` and `emit(...)`.
 
-### High Priority - Repositories (20 functions)
-These have the cleanest patterns and will show immediate benefit:
+- `memory/error_memory.py`
+  - [ ] Remove duplicated `add_known_solution` block for `stress_test` (duplicate appears twice)
+  - Rationale: Exact duplicate entry provides no value and risks confusion.
 
-#### app/repositories/price_data.py (3 instances)
-- [ ] `get_price_data_15_mins()` - MarketSession
-- [ ] `get_price_data_daily()` - MarketSession with try-finally
-- [ ] `get_dividends_series()` - MarketSession with try-finally
+### Implementation TODOs
+- Search/confirm unused status
+  - [x] Grep repo for each symbol above to confirm zero references (beyond their own file definitions)
 
-#### app/repositories/user_data.py (5 instances)
-- [ ] `add_user()` - UserSession with commit
-- [ ] `update_user_workos_id()` - UserSession with commit
-- [ ] `add_company_user()` - UserSession
-- [ ] `add_company()` - UserSession with commit
-- [ ] `get_user_current_portfolio()` - UserSession
+- Minimal, surgical deletions
+  - [x] Prune the `operation` branch from `calculator.py` while preserving expression evaluation
+  - [ ] Delete `get_latest` and `summarize_older` from `episodic_memory.py`
+  - [ ] Remove unused plan-edit helpers from `tasks/manager.py` (modify/reorder/add_subtask/status_prompt)
+  - [ ] Delete `force_advance_task` from `tasks/execution_engine.py`
+  - [ ] Remove `get_event_history` and `get_listener_count` from `events/manager.py`
+  - [ ] Remove duplicate `add_known_solution` entry in `error_memory.py`
 
-#### app/repositories/portfolio_data.py (6 instances)  
-- [ ] `retrieve_portfolio()` - UserSession
-- [ ] `add_portfolio()` - UserSession + MarketSession with commit
-- [ ] `list_portfolios()` - UserSession
-- [ ] `add_initial_positions()` - ProphitAltsSession + MarketSession
+- Cleanups
+  - [ ] Remove now-unused imports in modified files
+  - [ ] Ensure any `__all__` or package `__init__` do not reference deleted symbols
 
-#### app/repositories/news_data.py (3 instances)
-- [ ] `get_press_releases()` - MarketSession with try-finally
-- [ ] `get_stock_news()` - MarketSession with try-finally
-- [ ] `get_price_target_news()` - MarketSession with try-finally
+### Non‑Goals
+- No behavior changes to active tools, task execution, or memory APIs actually used by the agent
+- No new files or folders
+- No public API additions
 
-#### app/repositories/ratings_data.py (5 instances)
-- [ ] `get_stock_grades_individual()` - MarketSession
-- [ ] `get_stock_grades_summary()` - MarketSession
-- [ ] `get_ratings()` - MarketSession
-- [ ] `get_analyst_recommendations()` - MarketSession
-- [ ] `get_price_target_summary()` - MarketSession with try-finally
+### Validation Plan (post‑change)
+- Safety/usage validation
+  - [ ] For each deleted symbol, `rg` the workspace to confirm no remaining references
 
-#### app/repositories/etf_data.py (2 instances)
-- [ ] `get_etf_info()` - MarketSession with try-finally
-- [ ] `get_etf_holdings()` - MarketSession with try-finally
+- Build/lint/tests
+  - [ ] Run linters to catch unused imports after deletion
+  - [ ] Run existing agent flows (e.g., CIO/CRO) to ensure no runtime errors
+  - [ ] Execute `backend/testing/calculations_vtwo_smoke_test.py` to verify core agent path still functions
 
-#### app/repositories/transcripts_data.py (2 instances)
-- [ ] `get_earnings_transcripts()` - MarketSession with try-finally
-- [ ] `get_latest_transcript()` - MarketSession
+- Runtime smoke
+  - [ ] Exercise `free_search` tool to confirm `perplexity_free_search` still works
+  - [ ] Confirm episodic memory tools (`episodic_remember`, `episodic_recall`) operate normally
+  - [ ] Confirm task management tools function (advance, add/remove task, analytics)
 
-#### app/repositories/prophit_alts_data.py (1 instance)
-- [ ] `get_fund_final_positions()` - ProphitAltsSession with try-finally
-
-### Medium Priority - Database Jobs (7 functions)
-These have more complex patterns but would benefit:
-
-#### app/db/jobs/fundamental_data.py (2 instances)
-- [ ] `_update_single_ticker_fundamentals()` - Complex transaction handling
-- [ ] Other methods with session management
-
-#### app/db/jobs/ticker_table.py (3 instances)
-- [ ] Functions with MarketSession and commit/rollback
-
-#### app/db/jobs/price_table.py (2 instances)
-- [ ] Functions with MarketSession and commit/rollback
-
-#### app/db/core/add_etf.py (2 instances)
-- [ ] `_load_dividends()` - MarketSession with rollback
-- [ ] `load_etf_data()` - MarketSession with complex error handling
-
-### Lower Priority - Other Files (29 instances)
-These have varied patterns and may need custom handling:
-
-#### app/domain/prophit_alts/consumer_staples_fund/build_portfolio/
-- [ ] cio/tools.py (3 instances)
-- [ ] cro/tools.py (1 instance)
-- [ ] industry_agents/tools.py (2 instances)
-- [ ] prompts/industry_prompts.py (1 instance)
-
-#### app/core/calculations/
-- [ ] core/data_service.py (2 instances)
-- [ ] portfolio/concentration.py (1 instance)
-- [ ] factors/momentum.py (1 instance)
-- [ ] sectors/base.py (1 instance)
-
-#### Other files
-- [ ] app/utils/ticker_utils.py (2 instances)
-- [ ] app/services/prophit_alts_service.py (2 instances)
-- [ ] app/domain/stress_test/performance_analysis.py (1 instance)
-- [ ] app/db/monitor/query_performance_check.py (1 instance)
-- [ ] app/db/monitor/health_check.py (1 instance with rollback)
-- [ ] app/db/core/build_price_table.py (1 instance)
-
-## Implementation Steps
-
-### Phase 1: Create Decorators (Day 1)
-1. [x] Create `app/utils/decorators/database.py`
-2. [x] Implement `@with_session` decorator
-3. [x] Implement `@with_transaction` decorator
-4. [x] Add unit tests for decorators
-
-### Phase 2: Refactor Repositories (Day 2-3)
-5. [x] Refactor price_data.py (test thoroughly)
-6. [x] Refactor user_data.py
-7. [x] Refactor portfolio_data.py (now uses with_sessions for multi-db)
-8. [x] Refactor news_data.py
-9. [x] Refactor ratings_data.py
-10. [x] Refactor etf_data.py
-11. [x] Refactor transcripts_data.py
-12. [x] Refactor prophit_alts_data.py
-
-### Phase 4: Refactor Remaining Files (Day 5)
-17. [ ] Refactor calculation modules
-18. [ ] Refactor prophit_alts modules
-19. [ ] Refactor utility and service files
-
-### Phase 5: Testing & Documentation (Day 6)
-20. [ ] Run comprehensive test suite
-21. [ ] Update documentation
-22. [ ] Code review
-
-## Benefits
-- **Lines Removed:** ~280-350 lines of boilerplate code
-- **Files Simplified:** 26 files
-- **Functions Improved:** 56+ functions
-- **Consistency:** Uniform session handling across codebase
-- **Safety:** Guaranteed session cleanup and proper transaction handling
-- **Maintainability:** Single point of control for session logic
-
-## Notes
-- Some functions use multiple sessions (e.g., MarketSession + UserSession) - these may need special handling
-- Complex transaction patterns in db/jobs may require custom decorators
-- Consider creating specialized decorators for common query patterns
+### Review (to fill after implementation)
+- Summarize removals, any incidental cleanups, and validation outcomes. Note any follow-ups if additional dead code surfaces during linting.

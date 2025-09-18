@@ -49,7 +49,7 @@ Portfolio Tools:
     b. Returns a flat dict of pairs with corr > 0.5: {{"TICKER1|TICKER2": 0.712, ...}} (values rounded to 3 decimals)
     c. Essential for identifying concentration/diversification risks
     d. Input dictionary format: {{"ticker": {{"allocation": 0.05, "position": "long|short"}}}}
-4. calculate_portfolio_past_performance(portfolio_dict=DICTIONARY) → Compute performance metrics
+4. calculate_portfolio_performance(portfolio_dict=DICTIONARY) → Compute performance metrics
     a. Returns CAGR, Sharpe, Sortino, Beta, Alpha, Information ratio, max drawdown, etc.
     b. Uses 3 years of historical data with SPY as benchmark and 2% risk-free rate
     c. Essential for backtesting and performance evaluation

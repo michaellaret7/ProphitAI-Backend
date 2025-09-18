@@ -1,5 +1,5 @@
 from app.core.agentic_framework.base_agent import BaseAgent
-from app.domain.prophit_alts.consumer_staples_fund.build_portfolio.prompts.macro_agent_prompts import macro_analyst_system_prompt, macro_analyst_user_prompt
+from app.domain.prophit_alts.consumer_staples_fund.build_portfolio.macro_agent_prompts import macro_analyst_system_prompt, macro_analyst_user_prompt
 import re
 import json
 import sys

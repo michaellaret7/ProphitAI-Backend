@@ -1,7 +1,7 @@
 from app.core.agentic_framework.base_agent.agent import BaseAgent
 from app.core.agentic_framework.base_agent.memory.semantic_memory import SemanticMemory
 from app.domain.prophit_alts.consumer_staples_fund.build_portfolio.cro.tool_registry import register_cro_tools
-from app.domain.prophit_alts.consumer_staples_fund.build_portfolio.prompts import cro_system_prompt, cro_user_prompt
+from app.domain.prophit_alts.consumer_staples_fund.build_portfolio.cro.prompts import cro_system_prompt, cro_user_prompt
 from pydantic import BaseModel
 from typing import List, Literal
 

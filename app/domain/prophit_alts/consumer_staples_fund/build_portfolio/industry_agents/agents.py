@@ -1,6 +1,6 @@
 from app.core.agentic_framework.base_agent import BaseAgent
 from app.core.agentic_framework.base_agent.memory.semantic_memory import SemanticMemory
-from app.domain.prophit_alts.consumer_staples_fund.build_portfolio.prompts import build_industry_prompt
+from app.domain.prophit_alts.consumer_staples_fund.build_portfolio.industry_agents.prompts import build_industry_prompt
 from .tool_registry import register_industry_tools
 from pydantic import BaseModel
 from typing import List, Literal

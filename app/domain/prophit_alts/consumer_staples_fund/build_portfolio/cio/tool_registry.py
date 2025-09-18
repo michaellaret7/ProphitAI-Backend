@@ -2,7 +2,7 @@ from app.core.agentic_framework.base_agent.tool_lib.agent_specific.cio import ge
 from app.core.calculations.sectors.industry import calc_industry_factor_benchmark_calculations
 from app.core.calculations.sectors.sub_industry import calc_sub_industry_factor_benchmark_calculations
 from app.core.agentic_framework.base_agent.tool_lib.portfolio.corr_matrix import correlation_matrix
-from app.core.agentic_framework.base_agent.tool_lib.portfolio.past_performance import calculate_portfolio_past_performance
+from app.core.agentic_framework.base_agent.tool_lib.portfolio.performance import calculate_portfolio_performance
 from app.core.agentic_framework.base_agent.tool_lib.portfolio.builder import build_portfolio
 from app.core.agentic_framework.base_agent.tool_lib.portfolio.beta import calculate_portfolio_beta_vs_index
 from app.core.agentic_framework.base_agent.tool_lib.portfolio.factor_tilts import factor_tilts_for_portfolio
@@ -186,7 +186,7 @@ def register_cio_tools(agent):
 
     # Tool 3: Calculate Portfolio Past Performance
     agent.add_tool(
-        name="calculate_portfolio_past_performance",
+        name="calculate_portfolio_performance",
         description="Compute comprehensive performance metrics for a portfolio using 3 years of historical data. Returns metrics including CAGR, Sharpe ratio, Sortino ratio, Beta, Alpha, Information ratio, Treynor ratio, tracking error, Omega ratio, Burke ratio, Sterling ratio, Martin ratio, max drawdown, win rate, profit factor, tail ratio, ulcer index, Calmar ratios, and annualized returns. All values are rounded to 5 decimal places. Uses SPY as benchmark and 2% risk-free rate.",
         parameters={
             "type": "object",
@@ -199,7 +199,7 @@ def register_cio_tools(agent):
             "required": ["portfolio_dict"],
             "additionalProperties": False
         },
-        function=lambda portfolio_dict: calculate_portfolio_past_performance(
+        function=lambda portfolio_dict: calculate_portfolio_performance(
             portfolio_dict, rf_annual=0.02, lookback_years=3, benchmark="SPY"
         ),
     )

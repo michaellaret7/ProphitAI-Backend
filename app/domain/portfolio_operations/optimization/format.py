@@ -1,14 +1,9 @@
-from .concentration import sector_concentration, correlation_matrix
-from .performance import (
-    calculate_portfolio_performance, 
-    calculate_portfolio_returns_metrics, 
-    calculate_ticker_performances, 
-    calculate_sector_performances, 
-    calculate_industry_performances, 
-    calculate_subindustry_performances
-    )
-from app.utils.token_count import get_token_count
-
+from app.core.calculations.portfolio.concentration import PortfolioConcentration
+from app.core.agentic_framework.base_agent.tool_lib.portfolio.corr_matrix import correlation_matrix
+from app.core.agentic_framework.base_agent.tool_lib.portfolio.performance import calculate_portfolio_performance
+from app.core.agentic_framework.base_agent.tool_lib.portfolio.returns import calculate_portfolio_returns_metrics
+from app.core.agentic_framework.base_agent.tool_lib.portfolio.ticker_performance import calculate_ticker_performances
+from app.core.agentic_framework.base_agent.tool_lib.portfolio.group_performance import calculate_group_performances
 # Define the user portfolio
 long_only_portfolio = {
     "AAPL": {"position": "long", "allocation": 0.07},
@@ -89,25 +84,27 @@ dividend_portfolio = {
     "EFAD": {"position": "long", "allocation": 0.08}
 }
 
-def format_data(user_portfolio: dict):
-    metrics, pf_returns = calculate_portfolio_performance(user_portfolio)
-    
-    portfolio_performance = {
-        "metrics": metrics,
-        "returns": {ts.strftime("%Y-%m-%d"): round(float(v), 4) for ts, v in pf_returns.items()}
+def sector_concentration(portfolio_dict: dict):
+    return {
+        "industry": PortfolioConcentration(portfolio_dict).industry_concentration(),
+        "sub_industry": PortfolioConcentration(portfolio_dict).sub_industry_concentration(),
+        "sector": PortfolioConcentration(portfolio_dict).sector_concentration()
     }
+
+def format_data(user_portfolio: dict):
+    performance = calculate_portfolio_performance(user_portfolio)
 
     cm_df = correlation_matrix(user_portfolio)
     ticker_df = calculate_ticker_performances(user_portfolio)
-    sector_df = calculate_sector_performances(user_portfolio)
-    industry_df = calculate_industry_performances(user_portfolio)
-    subindustry_df = calculate_subindustry_performances(user_portfolio)
+    sector_df = calculate_group_performances(user_portfolio, group_by="sector")
+    industry_df = calculate_group_performances(user_portfolio, group_by="industry")
+    subindustry_df = calculate_group_performances(user_portfolio, group_by="sub_industry")
 
     payload = {
         "portfolio": user_portfolio,
         "sector_concentration": sector_concentration(user_portfolio),  # if DF: .round(4).to_dict("records")
-        "correlation_matrix": cm_df.round(4).to_dict(),                # nested dict
-        "portfolio_performance": portfolio_performance,                # dict
+        "correlation_matrix": cm_df,                                   # already formatted dict
+        "portfolio_performance": performance,                # dict
         "portfolio_returns_metrics": calculate_portfolio_returns_metrics(user_portfolio),  # already dict
         "ticker_performances": ticker_df.round(4).to_dict("records"),
         "sector_performances": sector_df.round(4).to_dict("records"),
@@ -115,7 +112,3 @@ def format_data(user_portfolio: dict):
         "subindustry_performances": subindustry_df.round(4).to_dict("records"),
     }
     return payload
-
-if __name__ == "__main__":
-    # print(format_data(long_only_portfolio))
-    print(get_token_count(format_data(long_only_portfolio)))
