@@ -1,5 +1,6 @@
 from app.core.agentic_framework.base_agent import BaseAgent
 from app.core.agentic_framework.base_agent.memory.semantic_memory import SemanticMemory
+from app.db.core.prophit_alts_models import Fund
 from app.domain.prophit_alts.consumer_staples_fund.build_portfolio.industry_agents.prompts import build_industry_prompt
 from .tool_registry import register_industry_tools
 from pydantic import BaseModel
@@ -7,6 +8,9 @@ from typing import List, Literal
 import json
 import time
 from app.core.agentic_framework.base_agent.tool_lib.agent_specific.industry import get_eligible_tickers
+from app.utils.decorators.database import with_session
+from app.db.core.prophit_alts_models import FundInitialPosition
+
 
 class IndustryRecommendation(BaseModel):
     ticker: str
@@ -61,7 +65,7 @@ class IndustryAgent(BaseAgent):
         result["final_text"] = self.utilities.parse_agent_output(
             final_text=final_text,
             client=self.client,
-            llm=self.llm,
+            llm=self.model,
             response_format=IndustryRecommendations,
             output_key="recommendations",
             verbose=self.verbose
@@ -108,20 +112,19 @@ class IndustryAgent(BaseAgent):
 
 
 if __name__ == "__main__":
-    industries = ["beverages", "consumer_staples_distribution_and_retail", "food_products", "household_products", "personal_care_products", "tobacco"]
+    industries = ["beverages", "consumer_staples_distribution_and_retail", "food_products", "household_products", "tobacco"]
+    completed = ["personal_care_products"]
 
     agent = IndustryAgent(industry=industries[0])
     result = agent.run()
-
-    # ok = agent.save_initial_positions(fund_name="consumer_staples_fund", recommendations_json=result)
-    # print(ok)
 
     print("="*100)
     print("Industry Agent Result:")
     print("="*100)
     print(result)
 
-
-
-    
+    x = input("Would you like to save the positions? (y/n): ")
+    if x == "y":
+        ok = agent.save_initial_positions(fund_name="consumer_staples_fund", recommendations_json=result)
+        print(ok)
 

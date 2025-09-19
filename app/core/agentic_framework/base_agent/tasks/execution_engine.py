@@ -325,7 +325,10 @@ class PlanExecutionEngine:
         Returns:
             True if task was updated based on the result
         """
-        if not self.current_main_task:
+        # Early return if no current task (plan already completed)
+        if self.current_main_task is None:
+            if self.verbose:
+                print("Tool result received after plan completion - ignoring")
             return False
         
         # Add tool result to observations using TaskManager

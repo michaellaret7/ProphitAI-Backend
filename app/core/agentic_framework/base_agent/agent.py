@@ -44,8 +44,7 @@ class BaseAgent:
                 memory_refresh_interval: int = 6,
             ):
         
-        self.model_name = model
-        self.llm, self.client = openai_model_and_client()
+        self.model, self.client = openai_model_and_client(model=model)
 
         self.system_prompt = system_prompt
         self.user_prompt = user_prompt
@@ -58,8 +57,6 @@ class BaseAgent:
         self.use_episodic_memory = use_episodic_memory
         self.memory_refresh_interval = memory_refresh_interval
         
-        # Validation behavior is strict and enforced engine-side
-
         # OpenAI tools and local dispatch map
         self.tools: List[Dict[str, Any]] = []
         self.tool_functions: Dict[str, Callable[..., Any]] = {}
@@ -77,7 +74,7 @@ class BaseAgent:
         self._arg_parser: Optional[ToolArgumentParser] = None
         
         # Initialize helper classes
-        self.message_logger = MessageLogger(save_messages=save_messages, verbose=verbose, model_name=self.model_name)
+        self.message_logger = MessageLogger(save_messages=save_messages, verbose=verbose, model_name=self.model)
         self.task_manager = TaskManager(verbose=verbose)
         self.utilities = AgentUtilities(self)
 
@@ -418,7 +415,7 @@ class BaseAgent:
             )
 
         # Save initial messages (after optional plan-first injection to keep logs aligned)
-        initial_token_count = get_chat_token_count(messages, model=self.llm)
+        initial_token_count = get_chat_token_count(messages, model=self.model)
         self.message_logger.save_messages_to_json(messages, iteration=0, total_tokens=self.total_tokens, input_tokens=initial_token_count)
 
         final_text: Optional[str] = None
@@ -504,10 +501,8 @@ class BaseAgent:
                         )
                     })
 
-            temperature = None if "gpt-5" in self.llm else 0.8
-
             # Calculate the EXACT tokens being sent to LLM using proper chat format counting
-            input_tokens = get_chat_token_count(messages, model=self.llm)
+            input_tokens = get_chat_token_count(messages, model=self.model)
             
             # Calculate actual token count for logging
             # For the first iteration, use the initial message tokens for accurate cumulative reporting
@@ -519,11 +514,10 @@ class BaseAgent:
             self.message_logger.save_messages_to_json(messages, iteration=i, total_tokens=log_token_count, input_tokens=input_tokens)
 
             response = self.client.chat.completions.create(
-                model=self.llm,
+                model=self.model,
                 messages=messages,
                 tools=self.tools if self.tools else None,
                 tool_choice="auto" if self.tools else None,
-                temperature=temperature        
             )
 
             choice = response.choices[0]
@@ -906,7 +900,7 @@ class BaseAgent:
 
             self.trace.append(step)
             
-            current_context_size = get_chat_token_count(messages, model=self.llm)
+            current_context_size = get_chat_token_count(messages, model=self.model)
             self.message_logger.save_messages_to_json(messages, iteration=i, total_tokens=self.total_tokens, input_tokens=current_context_size)
 
             # Enhanced iteration tracking with plan-driven execution awareness

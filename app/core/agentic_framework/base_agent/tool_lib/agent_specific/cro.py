@@ -67,55 +67,6 @@ def get_initial_portfolio_dict(session=None):
 
     return INITIAL_PORTFOLIO_DICT   
 
-def calculate_covariance_matrix(portfolio_dict: PortfolioInput | dict = None) -> dict:
-    """
-    Calculate the covariance matrix for the given portfolio.
-    """
-    if not portfolio_dict:
-        return {"error": "Portfolio dictionary is required"}
-    
-    try:
-        portfolio_dict = canonical_portfolio(portfolio_dict)
-    except Exception as e:
-        return {"error": str(e)}
-
-    # Get tickers from portfolio
-    tickers = list(portfolio_dict.keys())
-    
-    # Use utility to get portfolio data
-    weights, price_data, dividend_data = prepare_portfolio_data(
-        portfolio=portfolio_dict,
-        lookback_days=252,
-        include_dividends=False  # Don't need dividends for covariance
-    )
-    
-    if not price_data:
-        return {"error": "No price data available"}
-    
-    # Calculate returns for each ticker
-    returns_df = pd.DataFrame({
-        ticker: ReturnsCalculator.daily_price_returns(prices)
-        for ticker, prices in price_data.items()
-        if prices is not None and not prices.empty
-    }).dropna()
-    
-    if returns_df.empty:
-        return {"error": "No price data available"}
-    
-    # Calculate covariance matrix using calculations_v2 (daily)
-    covariance_matrix = RiskCalculator.covariance_matrix(returns_df, annualize=False)
-    
-    # Round all values to 6 decimal places (covariance values are typically smaller)
-    covariance_matrix = covariance_matrix.round(6)
-    
-    # Convert to dictionary format
-    result = {
-        'tickers': tickers,
-        'covariance_matrix': covariance_matrix.to_dict()
-    }
-    
-    return result
-
 def vol_es(portfolio_dict: PortfolioInput | dict = None, horizon_days: int = 1, conf: float = 0.99, method: str = 'param') -> dict:
     """
     Calculate Volatility, Value at Risk (VaR), and Expected Shortfall (ES) for portfolio.

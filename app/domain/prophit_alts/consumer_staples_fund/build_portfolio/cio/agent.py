@@ -46,7 +46,7 @@ class CIOAgent(BaseAgent):
         result["final_text"] = self.utilities.parse_agent_output(
             final_text=final_text,
             client=self.client,
-            llm=self.llm,
+            llm=self.model,
             response_format=FinalPortfolio,
             output_key="portfolio",
             verbose=self.verbose

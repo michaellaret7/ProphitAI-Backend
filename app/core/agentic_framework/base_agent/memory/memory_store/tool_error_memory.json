@@ -6086,27 +6086,117 @@
             "factor": "size"
           },
           "full_error": "Unknown factor: size"
+        },
+        {
+          "timestamp": "2025-09-19T10:27:30.680965",
+          "args": {
+            "industry": "personal_care_products",
+            "factor": "size"
+          },
+          "full_error": "Unknown factor: size"
         }
       ],
-      "solutions": [],
-      "auto_solution": null
+      "solutions": [
+        {
+          "correct_args": {
+            "industry": "personal_care_products",
+            "factor": "volatility"
+          },
+          "explanation": "Successful retry with corrected arguments",
+          "timestamp": "2025-09-19T10:27:43.268205",
+          "success_count": 1
+        }
+      ],
+      "auto_solution": {
+        "correct_args": {
+          "industry": "personal_care_products",
+          "factor": "volatility"
+        },
+        "explanation": "Successful retry with corrected arguments",
+        "timestamp": "2025-09-19T10:27:43.268205",
+        "success_count": 1
+      }
     },
     "fetch_repository_data:missing_session": {
       "tool_name": "fetch_repository_data",
       "error_pattern": "get_press_releases() got an unexpected keyword argument 'session'",
       "occurrences": [
         {
-          "timestamp": "2025-09-18T18:03:51.577578",
+          "timestamp": "2025-09-19T09:41:05.209037",
           "args": {
-            "ticker": "PRMB",
+            "ticker": "PG",
+            "data_type": "stock_news"
+          },
+          "full_error": "get_stock_news() got an unexpected keyword argument 'session'"
+        },
+        {
+          "timestamp": "2025-09-19T09:41:05.216582",
+          "args": {
+            "ticker": "KMB",
+            "data_type": "stock_news"
+          },
+          "full_error": "get_stock_news() got an unexpected keyword argument 'session'"
+        },
+        {
+          "timestamp": "2025-09-19T10:29:24.312217",
+          "args": {
+            "ticker": "BRBR",
+            "data_type": "stock_news"
+          },
+          "full_error": "get_stock_news() got an unexpected keyword argument 'session'"
+        },
+        {
+          "timestamp": "2025-09-19T10:29:24.320385",
+          "args": {
+            "ticker": "EPC",
+            "data_type": "stock_news"
+          },
+          "full_error": "get_stock_news() got an unexpected keyword argument 'session'"
+        },
+        {
+          "timestamp": "2025-09-19T10:29:24.328354",
+          "args": {
+            "ticker": "ELF",
+            "data_type": "stock_news"
+          },
+          "full_error": "get_stock_news() got an unexpected keyword argument 'session'"
+        },
+        {
+          "timestamp": "2025-09-19T10:29:24.340208",
+          "args": {
+            "ticker": "COTY",
+            "data_type": "stock_news"
+          },
+          "full_error": "get_stock_news() got an unexpected keyword argument 'session'"
+        },
+        {
+          "timestamp": "2025-09-19T10:29:27.381403",
+          "args": {
+            "ticker": "BRBR",
             "data_type": "press_releases"
           },
           "full_error": "get_press_releases() got an unexpected keyword argument 'session'"
         },
         {
-          "timestamp": "2025-09-18T18:03:51.584307",
+          "timestamp": "2025-09-19T10:29:27.398012",
           "args": {
-            "ticker": "COCO",
+            "ticker": "EPC",
+            "data_type": "press_releases"
+          },
+          "full_error": "get_press_releases() got an unexpected keyword argument 'session'"
+        },
+        {
+          "timestamp": "2025-09-19T10:29:27.409550",
+          "args": {
+            "ticker": "ELF",
+            "data_type": "press_releases"
+          },
+          "full_error": "get_press_releases() got an unexpected keyword argument 'session'"
+        },
+        {
+          "timestamp": "2025-09-19T10:29:27.419148",
+          "args": {
+            "ticker": "COTY",
             "data_type": "press_releases"
           },
           "full_error": "get_press_releases() got an unexpected keyword argument 'session'"
@@ -6120,6 +6210,24 @@
           },
           "explanation": "Successful retry with corrected arguments",
           "timestamp": "2025-09-18T18:06:53.868478",
+          "success_count": 1
+        },
+        {
+          "correct_args": {
+            "ticker": "CHD",
+            "data_type": "analyst_recommendations"
+          },
+          "explanation": "Successful retry with corrected arguments",
+          "timestamp": "2025-09-19T09:41:07.700998",
+          "success_count": 1
+        },
+        {
+          "correct_args": {
+            "ticker": "BRBR",
+            "data_type": "analyst_recommendations"
+          },
+          "explanation": "Successful retry with corrected arguments",
+          "timestamp": "2025-09-19T10:29:34.589550",
           "success_count": 1
         }
       ],
@@ -6138,51 +6246,72 @@
       "error_pattern": "'module' object is not callable",
       "occurrences": [
         {
-          "timestamp": "2025-09-18T18:07:56.306947",
+          "timestamp": "2025-09-19T08:15:40.139257",
           "args": {
-            "expression": "# TAP 12-1 momentum (skip last 4 weeks):\n((1+0.0532)*(1-0.0013)*(1-0.0074)*(1-0.0089)*(1+0.1124)*(1-0.0005)*(1+0.0159)*(1+0.0093)*(1-0.0362)*(1-0.0122)*(1+0.0278)*(1+0.0102)*(1-0.0075)*(1-0.032)*(1-0.0332)*(1+0.0134)*(1-0.0509)*(1+0.0408)*(1-0.0538)*(1-0.0039)*(1-0.0297)*(1-0.0271)*(1-0.0502)*(1-0.0127)*(1+0.0417)*(1+0.0117)*(1+0.0012)*(1+0.0224))*100-100"
+            "expression": "(531510000/1103658000)*100"
           },
           "full_error": "'module' object is not callable"
         },
         {
-          "timestamp": "2025-09-18T18:08:02.017067",
+          "timestamp": "2025-09-19T09:42:23.867370",
           "args": {
-            "expression": "# TAP 12-1 momentum (skip last 4 weeks):\n((1+0.0532)*(1-0.0013)*(1-0.0074)*(1-0.0089)*(1+0.1124)*(1-0.0005)*(1+0.0159)*(1+0.0093)*(1-0.0362)*(1-0.0122)*(1+0.0278)*(1+0.0102)*(1-0.0075)*(1-0.032)*(1-0.0332)*(1+0.0134)*(1-0.0509)*(1+0.0408)*(1-0.0538)*(1-0.0039)*(1-0.0297)*(1-0.0271)*(1-0.0502)*(1-0.0127)*(1+0.0417)*(1+0.0117)*(1+0.0012))*100-100"
+            "expression": "(CHD.price_to_book - 7.4964) / 7.4964"
           },
           "full_error": "'module' object is not callable"
         },
         {
-          "timestamp": "2025-09-18T18:08:06.408317",
+          "timestamp": "2025-09-19T09:42:25.265162",
           "args": {
-            "expression": "((1+0.0532)*(1-0.0013)*(1-0.0074)*(1-0.0089)*(1+0.1124)*(1-0.0005)*(1+0.0159)*(1+0.0093)*(1-0.0362)*(1-0.0122)*(1+0.0278)*(1+0.0102)*(1-0.0075)*(1-0.032)*(1-0.0332)*(1+0.0134)*(1-0.0509)*(1+0.0408)*(1-0.0538)*(1-0.0039)*(1-0.0297)*(1-0.0271)*(1-0.0502)*(1-0.0127)*(1+0.0417)*(1+0.0117)*(1+0.0012))-1"
+            "expression": "(5.3255-7.4964)/7.4964"
           },
           "full_error": "'module' object is not callable"
         },
         {
-          "timestamp": "2025-09-18T18:08:26.879275",
+          "timestamp": "2025-09-19T09:42:34.028099",
           "args": {
-            "expression": "# Compute FCF yield and EV/EBIT for TAP (as test):\n# FCF yield = free cash flow / market cap, EV/EBIT = enterprise value / EBIT\n# Use available: FCF yield for TAP from factors = 0.0962 (9.62%), EV/EBIT = 9.7521\nFCF_yield_TAP = 0.0962\nEV_EBIT_TAP = 9.7521\nROIC_TAP = 0.0241\n# Assume WACC proxy = 8% (sector median); ROIC-WACC = 0.0241-0.08 = -0.0559\nFCF_yield_TAP, EV_EBIT_TAP, ROIC_TAP-0.08"
+            "expression": "sum([-0.0213,-0.0168,-0.0885,-0.0037,-0.0007])"
           },
           "full_error": "'module' object is not callable"
         },
         {
-          "timestamp": "2025-09-18T18:08:48.658889",
+          "timestamp": "2025-09-19T09:53:35.956976",
           "args": {
-            "expression": "0.0241-0.08"
+            "expression": "(228.3e6/4.65e9)*100"
           },
           "full_error": "'module' object is not callable"
         },
         {
-          "timestamp": "2025-09-18T18:10:12.931095",
+          "timestamp": "2025-09-19T09:53:37.810884",
           "args": {
-            "expression": "# TAP composite score = 0.2*0.0962 + 0.25*0.0241 + 0.15*(-0.1069) + 0.25*0.2 + 0.15*0.25\n# Value=FCF yield, Quality=ROIC, Momentum=6m (contrarian), Catalysts=strong (proxy: 0.2), Risk=low (proxy: 0.25)\n0.2*0.0962+0.25*0.0241+0.15*(-0.1069)+0.25*0.2+0.15*0.25"
+            "expression": "(199600000/4650000000)*100"
           },
           "full_error": "'module' object is not callable"
         },
         {
-          "timestamp": "2025-09-18T18:11:30.295525",
+          "timestamp": "2025-09-19T10:29:43.052035",
           "args": {
-            "expression": "# TAP: FCF_yield=0.0962, EV_EBIT=9.75; CCEP: FCF_yield=0.108, EV_EBIT=11.3; SAM: FCF_yield=0.091, EV_EBIT=21.6; MNST: FCF_yield=0.03, EV_EBIT=28.9; CELH: unknown, P/E=147; STZ: unknown, P/E negative; KDP: unknown, P/E=24.5; \n# Sector EV/EBIT: 22, FCF_yield: 0.03.\n# TAP: (0.0962-0.03)/0.03, (22-9.75)/22; CCEP: (0.108-0.03)/0.03, (22-11.3)/22; SAM: (0.091-0.03)/0.03, (22-21.6)/22; MNST: (0.03-0.03)/0.03, (22-28.9)/22; KDP: (0.03-0.03)/0.03, (22-24.5)/22.\n0.0962-0.03,0.108-0.03,0.091-0.03,0.03-0.03,0.03-0.03"
+            "expression": "((1+0.0108)^12-1) for ELF; ((1-0.0154)^12-1) for BRBR; ((1-0.0098)^12-1) for EPC; ((1-0.01)^12-1) for COTY"
+          },
+          "full_error": "'module' object is not callable"
+        },
+        {
+          "timestamp": "2025-09-19T10:29:45.118795",
+          "args": {
+            "expression": "(1+0.0108)^12-1"
+          },
+          "full_error": "'module' object is not callable"
+        },
+        {
+          "timestamp": "2025-09-19T11:00:44.802679",
+          "args": {
+            "expression": "((1-0.0041)*(1-0.0167)*(1+0.0066)*(1+0.0045)*(1-0.0593)*(1-0.0119)*(1-0.2793)*(1-0.0162)*(1+0.0401)*(1+0.0288)*(1-0.0387)*(1-0.0352)*(1-0.0362))-1"
+          },
+          "full_error": "'module' object is not callable"
+        },
+        {
+          "timestamp": "2025-09-19T11:01:59.009714",
+          "args": {
+            "expression": "((1+0.0009)*(1+0.0559)*(1+0.1039)*(1-0.0568)*(1+0.0559)*(1-0.0682)*(1-0.1245)*(1+0.0409)*(1+0.0454)*(1+0.0029)*(1-0.0258)*(1-0.073)*(1-0.0371))-1"
           },
           "full_error": "'module' object is not callable"
         }
@@ -6191,5 +6320,5 @@
       "auto_solution": null
     }
   },
-  "last_updated": "2025-09-18T18:11:30.295583"
+  "last_updated": "2025-09-19T11:01:59.009978"
 }

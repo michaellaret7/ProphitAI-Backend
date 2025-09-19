@@ -225,3 +225,91 @@ The `cro_memory.json` follows the alternate schema:
   }
 }
 ```
+
+---
+
+# Execution Engine Post-Completion Error Fix
+
+## Issue Summary
+**Date:** September 19, 2025  
+**Location:** `app/core/agentic_framework/base_agent/tasks/execution_engine.py`  
+**Error:** `AttributeError: 'NoneType' object has no attribute 'id'` at line 391-392
+
+## Problem Description
+After an agent successfully completes all tasks in its plan, the execution engine crashes when trying to process a lingering tool result. The crash occurs because:
+1. Plan completes and triggers `plan_completed` event
+2. `current_main_task` is cleared (set to `None`)
+3. A final tool result is still being processed
+4. Code tries to access `self.current_main_task.id` on the `None` object
+
+## Root Cause Analysis
+The execution engine doesn't properly handle tool results that arrive after plan completion. There's a race condition between:
+- Plan completion cleanup (which clears `current_main_task`)
+- Tool result processing (which still references `current_main_task`)
+
+## Fix Plan
+
+### Step 1: Add Defensive Check
+**File:** `app/core/agentic_framework/base_agent/tasks/execution_engine.py`  
+**Method:** `update_task_from_tool_result()`  
+**Line:** ~385-392
+
+**Current problematic code:**
+```python
+def update_task_from_tool_result(self, name, observation):
+    # ... existing code ...
+    self.current_main_task.id,  # Line that crashes
+```
+
+**Fix approach:**
+Add a guard clause to check if `current_main_task` exists before accessing its properties:
+```python
+def update_task_from_tool_result(self, name, observation):
+    # Early return if no current task (plan already completed)
+    if self.current_main_task is None:
+        if self.verbose:
+            print("ℹ️ Tool result received after plan completion - ignoring")
+        return
+    
+    # ... rest of existing code ...
+    self.current_main_task.id,  # Now safe
+```
+
+### Step 2: Review Related Methods
+Check other methods that might have similar issues:
+- Any method that accesses `self.current_main_task`
+- Any method that processes tool results
+- Methods called during/after plan completion
+
+### Step 3: Test Scenarios
+1. **Normal completion:** Run agent that completes all tasks normally
+2. **Tool lag scenario:** Simulate delayed tool results after plan completion
+3. **Early termination:** Test agent stopping mid-execution
+4. **Multiple iterations:** Test agents with 50+ iterations (like the failing case)
+
+### Implementation Priority
+**Severity:** Medium-High  
+**Impact:** Prevents agent crashes after successful completion  
+**Effort:** Low (simple defensive check)  
+**Priority:** Should be fixed before next agent run to prevent crashes
+
+## Alternative Solutions Considered
+
+1. **Queue Management:** Implement a tool result queue that gets cleared on plan completion
+   - Pros: Clean separation of concerns
+   - Cons: More complex, requires refactoring
+
+2. **State Machine:** Add explicit state transitions (RUNNING → COMPLETING → COMPLETED)
+   - Pros: Clearer state management
+   - Cons: Significant refactoring needed
+
+3. **Simple Guard Clause** (Recommended)
+   - Pros: Minimal change, immediate fix, easy to understand
+   - Cons: Doesn't address underlying timing issue
+
+## Expected Outcome
+After implementing the fix:
+- Agents will complete successfully without crashing
+- Late-arriving tool results will be safely ignored
+- No change to normal operation flow
+- Clear log message when post-completion results are dropped

@@ -4,7 +4,7 @@
     "agent": "tobacco_industry",
     "domain": "Tobacco industry stock picking",
     "purpose": "Nuanced concepts for a portfolio construction/stock picking agent (not a trading agent).",
-    "last_updated": "2025-09-09",
+    "last_updated": "2025-09-19",
     "memories": {
       "investable_tickers": [],
       "industry": "tobacco",

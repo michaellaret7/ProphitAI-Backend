@@ -64,7 +64,7 @@ class CROAgent(BaseAgent):
         result["final_text"] = self.utilities.parse_agent_output(
             final_text=final_text,
             client=self.client,
-            llm=self.llm,
+            llm=self.model,
             response_format=PortfolioWithSuggestions,
             output_key="portfolio",
             fallback_formats=[(FinalPortfolio, "portfolio")],
