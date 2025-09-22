@@ -1,0 +1,126 @@
+from app.core.calculations.portfolio.utils import get_portfolio_returns
+from app.core.calculations.returns.calculator import ReturnsCalculator
+import numpy as np
+from app.models.portfolio_models import PortfolioInput
+from app.utils.gpt_parser import canonical_portfolio
+
+def calculate_portfolio_returns_metrics(portfolio_dict: PortfolioInput | dict, lookback_days=252):
+    """Calculate and display simple portfolio metrics.
+    
+    Returns:
+        dict: Contains annualized returns, volatility, and weekly cumulative returns
+    """
+    portfolio_dict = canonical_portfolio(portfolio_dict)
+
+    # Get price-only returns
+    portfolio_price_returns, _ = get_portfolio_returns(
+        portfolio=portfolio_dict,
+        lookback_days=lookback_days,
+        use_total_returns=False,
+        dropna=True
+    )
+    
+    # Get total returns
+    portfolio_total_returns, _ = get_portfolio_returns(
+        portfolio=portfolio_dict,
+        lookback_days=lookback_days,
+        use_total_returns=True,
+        dropna=True
+    )
+    
+    # Calculate metrics
+    ann_price_return = ReturnsCalculator.annualized_return(portfolio_price_returns, 252)
+    ann_total_return = ReturnsCalculator.annualized_return(portfolio_total_returns, 252)
+    ann_volatility = portfolio_total_returns.std() * np.sqrt(252)
+    
+    # Calculate weekly cumulative returns and convert to rounded dict
+    weekly_cumulative = (1 + portfolio_total_returns).resample('W').prod() - 1
+    weekly_returns = {ts.strftime('%Y-%m-%d'): round(val, 4) for ts, val in weekly_cumulative.items()}
+    
+    # Calculate cumulative return over period
+    total_cumulative = (1 + portfolio_total_returns).prod() - 1
+    
+    return {
+        "ann_price_return": round(ann_price_return, 4),
+        "ann_total_return": round(ann_total_return, 4),
+        "ann_volatility": round(ann_volatility, 4),
+        "weekly_returns": weekly_returns,
+        "cumulative_return": round(total_cumulative, 4)
+    }
+
+
+# Tool Schema Constants
+CALCULATE_PORTFOLIO_RETURNS_METRICS_DESCRIPTION = (
+    "Calculate and display simple portfolio return metrics including annualized returns, volatility, and weekly cumulative returns. "
+    "Returns both price-only and total returns (with dividends) for comparison. "
+    "CRITICAL: You MUST ALWAYS include the portfolio_dict parameter with ALL holdings. "
+    "Example: calculate_portfolio_returns_metrics(portfolio_dict={'AAPL': {'allocation': 0.5, 'position': 'long'}, 'KO': {'allocation': 0.5, 'position': 'long'}}, lookback_days=252)"
+)
+
+CALCULATE_PORTFOLIO_RETURNS_METRICS_PARAMETERS = {
+    "type": "object",
+    "properties": {
+        "portfolio_dict": {
+            "type": "object",
+            "description": (
+                "**MANDATORY - DO NOT OMIT THIS PARAMETER.** "
+                "Complete portfolio with ALL holdings. "
+                "Keys = ticker symbols (e.g., 'AAPL'). "
+                "Values = objects with 'allocation' (decimal 0-1) and 'position' ('long'/'short'). "
+                "You MUST include this parameter with all portfolio tickers."
+                "\n\n"
+                """Example of CORRECT function call:
+                calculate_portfolio_returns_metrics(
+                    portfolio_dict={
+                        "AAPL": {"allocation": 0.125, "position": "long"},
+                        "MSFT": {"allocation": 0.125, "position": "long"},
+                        "AMZN": {"allocation": 0.125, "position": "long"},
+                        "TSLA": {"allocation": 0.125, "position": "long"},
+                        "META": {"allocation": 0.125, "position": "long"},
+                        "SPY": {"allocation": 0.125, "position": "long"},
+                        "QQQ": {"allocation": 0.125, "position": "long"},
+                        "IWM": {"allocation": 0.125, "position": "long"}
+                    },
+                    lookback_days=252
+                )"""
+            ),
+            "patternProperties": {
+                "^[A-Z]{1,5}$": {
+                    "type": "object",
+                    "properties": {
+                        "allocation": {
+                            "type": "number",
+                            "description": "Weight as decimal (e.g., 0.125 for 12.5%)",
+                            "minimum": 0,
+                            "maximum": 1
+                        },
+                        "position": {
+                            "type": "string",
+                            "description": "Must be 'long' or 'short'",
+                            "enum": ["long", "short"]
+                        }
+                    },
+                    "required": ["allocation", "position"],
+                    "additionalProperties": False
+                }
+            },
+            "minProperties": 1,
+            "additionalProperties": False
+        },
+        "lookback_days": {
+            "type": "integer",
+            "description": "Number of trading days to analyze (default 252 = ~1 year)",
+            "default": 252,
+            "minimum": 21
+        },
+    },
+    "required": ["portfolio_dict"],
+    "additionalProperties": False
+}
+
+CALCULATE_PORTFOLIO_RETURNS_METRICS_TOOL = {
+    "name": "calculate_portfolio_returns_metrics",
+    "description": CALCULATE_PORTFOLIO_RETURNS_METRICS_DESCRIPTION,
+    "parameters": CALCULATE_PORTFOLIO_RETURNS_METRICS_PARAMETERS,
+    "function": calculate_portfolio_returns_metrics,
+}

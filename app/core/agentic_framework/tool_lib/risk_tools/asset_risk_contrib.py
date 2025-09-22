@@ -1,0 +1,182 @@
+from app.core.calculations.portfolio.utils import prepare_portfolio_data
+from app.core.calculations.returns.calculator import ReturnsCalculator
+from app.core.calculations.risk.calculator import RiskCalculator
+from app.models.portfolio_models import PortfolioInput
+import pandas as pd
+from app.utils.gpt_parser import canonical_portfolio
+import numpy as np
+
+def risk_contribution(portfolio_dict: PortfolioInput | dict = None, metric: str = 'vol') -> dict:
+    """
+    Calculate Total Risk and risk contributions by asset.
+    
+    Parameters:
+    - portfolio_dict: Portfolio configuration mapping ticker -> {allocation, position}
+    - metric: Risk metric to decompose {'vol', 'var'}
+    
+    Returns:
+    - TR: Total Risk (portfolio level)
+    - MCTR: Marginal Contribution to Total Risk (per asset)
+    - CTR_pct: Component Total Risk as percentage (per asset)
+    """
+    if not portfolio_dict:
+        return {"error": "Portfolio dictionary is required"}
+    
+    try:
+        portfolio_dict = canonical_portfolio(portfolio_dict)
+    except Exception as e:
+        return {"error": str(e)}
+
+    # Get tickers and weights from portfolio
+    tickers = list(portfolio_dict.keys())
+    weights_series = pd.Series({
+        ticker: portfolio_dict[ticker]['allocation'] * (1 if portfolio_dict[ticker]['position'] == 'long' else -1)
+        for ticker in tickers
+    })
+    
+    try:
+        # Get portfolio data using utility
+        weights_dict, price_data, _ = prepare_portfolio_data(
+            portfolio=portfolio_dict,
+            lookback_days=252,
+            include_dividends=False
+        )
+        
+        if not price_data:
+            return {"error": "No price data available for portfolio tickers"}
+        
+        # Calculate returns for each ticker
+        returns_df = pd.DataFrame({
+            ticker: ReturnsCalculator.daily_price_returns(prices)
+            for ticker, prices in price_data.items()
+            if prices is not None and not prices.empty
+        }).dropna()
+        
+        if returns_df.empty:
+            return {"error": "No price data available for portfolio tickers"}
+        
+        # Calculate covariance matrix using v2
+        cov_matrix = RiskCalculator.covariance_matrix(returns_df, annualize=False)
+
+        # Align weights to covariance columns
+        aligned_weights = weights_series.reindex(cov_matrix.columns).fillna(0.0)
+        w = aligned_weights.to_numpy(dtype=float)
+        Sigma = cov_matrix.to_numpy(dtype=float)
+
+        if metric == 'vol':
+            # Volatility-based risk contribution
+            portfolio_variance = float(w @ Sigma @ w)
+            total_risk = float(np.sqrt(max(portfolio_variance, 0.0)))  # Portfolio volatility
+            if total_risk == 0.0:
+                marginal_contrib = np.zeros_like(w)
+                component_contrib = np.zeros_like(w)
+                ctr_pct = np.zeros_like(w)
+            else:
+                marginal_contrib = (Sigma @ w) / total_risk
+                component_contrib = w * marginal_contrib
+                ctr_pct = (component_contrib / total_risk) * 100.0
+
+        elif metric == 'var':
+            # VaR-based risk contribution using v2 marginal_var
+            mv_series, cv_series = RiskCalculator.marginal_var(aligned_weights, cov_matrix, confidence=0.99, as_percent_of_portfolio_var=False)
+            total_risk = float(cv_series.sum())
+            marginal_contrib = mv_series.reindex(cov_matrix.columns).to_numpy(dtype=float)
+            component_contrib = cv_series.reindex(cov_matrix.columns).to_numpy(dtype=float)
+            if total_risk != 0.0:
+                ctr_pct = (component_contrib / total_risk) * 100.0
+            else:
+                ctr_pct = np.zeros_like(component_contrib)
+
+        else:
+            return {"error": f"Invalid metric '{metric}'. Use 'vol' or 'var'"}
+        
+        # Build result dictionary
+        result = {
+            'metric': metric,
+            'TR': round(float(total_risk), 6),
+            'MCTR': {ticker: round(float(marginal_contrib[i]), 6) for i, ticker in enumerate(cov_matrix.columns)},
+            'CTR_pct': {ticker: round(float(ctr_pct[i]), 2) for i, ticker in enumerate(cov_matrix.columns)}
+        }
+        
+        return result
+        
+    except Exception as e:
+        return {"error": f"Failed to calculate risk_contribution: {str(e)}"}
+
+
+# Tool Schema Constants
+RISK_CONTRIBUTION_DESCRIPTION = (
+    "Calculate total risk and risk contributions by asset using either volatility ('vol') or Value at Risk ('var') decomposition. "
+    "Returns total risk (TR), marginal contribution to total risk (MCTR) per asset, and component total risk as percentage (CTR_pct) per asset. "
+    "CRITICAL: You MUST ALWAYS include the portfolio_dict parameter with ALL holdings and specify 'metric' as 'vol' or 'var'. "
+    "Example: risk_contribution(portfolio_dict={'AAPL': {'allocation': 0.5, 'position': 'long'}, 'TSLA': {'allocation': 0.5, 'position': 'short'}}, metric='vol')"
+)
+
+RISK_CONTRIBUTION_PARAMETERS = {
+    "type": "object",
+    "properties": {
+        "portfolio_dict": {
+            "type": "object",
+            "description": (
+                "**MANDATORY - DO NOT OMIT THIS PARAMETER.** "
+                "Complete portfolio with ALL holdings. "
+                "Keys = ticker symbols (e.g., 'AAPL'). "
+                "Values = objects with 'allocation' (decimal 0-1) and 'position' ('long'/'short'). "
+                "You MUST include this parameter with all portfolio tickers."
+                "\n\n"
+                """Example of CORRECT function call:
+                risk_contribution(
+                    portfolio_dict={
+                        "AAPL": {"allocation": 0.125, "position": "long"},
+                        "MSFT": {"allocation": 0.125, "position": "long"},
+                        "AMZN": {"allocation": 0.125, "position": "long"},
+                        "TSLA": {"allocation": 0.125, "position": "short"},
+                        "META": {"allocation": 0.125, "position": "short"},
+                        "SPY": {"allocation": 0.125, "position": "long"},
+                        "QQQ": {"allocation": 0.125, "position": "long"},
+                        "IWM": {"allocation": 0.125, "position": "short"}
+                    },
+                    metric="vol"
+                )"""
+            ),
+            "patternProperties": {
+                "^[A-Z]{1,5}$": {
+                    "type": "object",
+                    "properties": {
+                        "allocation": {
+                            "type": "number",
+                            "description": "Weight as decimal (e.g., 0.125 for 12.5%)",
+                            "minimum": 0,
+                            "maximum": 1
+                        },
+                        "position": {
+                            "type": "string",
+                            "description": "Must be 'long' or 'short'",
+                            "enum": ["long", "short"]
+                        }
+                    },
+                    "required": ["allocation", "position"],
+                    "additionalProperties": False
+                }
+            },
+            "minProperties": 1,
+            "additionalProperties": False
+        },
+        "metric": {
+            "type": "string",
+            "description": "Risk metric to decompose. 'vol' calculates volatility-based risk contributions, 'var' calculates Value at Risk-based contributions.",
+            "enum": ["vol", "var"],
+            "default": "vol"
+        },
+    },
+    "required": ["portfolio_dict", "metric"],
+    "additionalProperties": False
+}
+
+RISK_CONTRIBUTION_TOOL = {
+    "name": "portfolio_risk_contribution_by_asset",
+    "description": RISK_CONTRIBUTION_DESCRIPTION,
+    "parameters": RISK_CONTRIBUTION_PARAMETERS,
+    "function": risk_contribution,
+}
+
