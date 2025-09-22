@@ -26,6 +26,9 @@ class PlanExecutionEngine:
         self.current_subtask: Optional[SubTask] = None
         self.plan_loaded: bool = False
         
+        # Set back-reference so task manager can trigger advancement
+        self.task_manager.execution_engine = self
+        
         # Initialize task validator for intelligent completion detection
         self.task_validator = TaskValidator(verbose=verbose)
     
@@ -39,6 +42,17 @@ class PlanExecutionEngine:
             True if plan loaded successfully
         """
         try:
+            # CRITICAL: Reset all task completion states to ensure fresh execution
+            # This prevents the circular validation bug where pre-marked tasks skip execution
+            for task in plan.tasks:
+                task.status = TaskStatus.PENDING
+                task.completion_evidence = []
+                task.observations = []
+                for subtask in task.subtasks:
+                    subtask.completed = False
+                    subtask.completion_evidence = []
+                    subtask.observations = []
+            
             # Store the plan in task manager
             self.task_manager.add_structured_plan(plan)
             
@@ -331,12 +345,17 @@ class PlanExecutionEngine:
                 print("Tool result received after plan completion - ignoring")
             return False
         
+        # if the plan auto-advances during this method.
+        active_task_id = self.current_main_task.id
+        active_subtask_id = self.current_subtask.id if self.current_subtask else None
+        predicted_tools = list(self.current_main_task.predicted_tool_use or [])
+
         # Add tool result to observations using TaskManager
         observation = f"Tool '{tool_name}' returned: {str(result)[:200]}"
 
         # Always add observation to main task
         self.task_manager.add_task_observation(
-            self.current_main_task.id,
+            active_task_id,
             observation
         )
 
@@ -347,9 +366,9 @@ class PlanExecutionEngine:
         if self.current_subtask and is_relevant:
             # Add observation to subtask only when relevant
             self.task_manager.add_task_observation(
-                self.current_main_task.id,
+                active_task_id,
                 observation,
-                self.current_subtask.id
+                active_subtask_id
             )
 
             # Collect evidence respecting error-awareness
@@ -363,7 +382,7 @@ class PlanExecutionEngine:
         
         # Check if this tool was predicted for this task and assess completion
         task_completion_triggered = False
-        if tool_name in self.current_main_task.predicted_tool_use:
+        if tool_name in predicted_tools:
             if self.verbose:
                 print(f"  📊 Tool '{tool_name}' execution recorded for predicted task tool")
             
@@ -378,16 +397,20 @@ class PlanExecutionEngine:
                             print(f"  🚀 Auto-advanced: {message}")
                         task_completion_triggered = True
         
-        # Add completion evidence to main task using automatic evidence collection
+        # Add completion evidence to appropriate level (avoid duplicating on main if attached to subtask)
         evidence_items = self.collect_evidence_from_tool_result(tool_name, result)
-        for evidence in evidence_items:
-            # Avoid adding misleading success evidence at main-task level when error occurred
-            if self._looks_like_success_evidence(evidence) and is_error:
-                continue
-            self.task_manager.add_task_evidence(
-                self.current_main_task.id,
-                evidence
-            )
+        if self.current_subtask and is_relevant:
+            # Evidence already attached to subtask above; skip duplicating on main task
+            pass
+        else:
+            for evidence in evidence_items:
+                # Avoid adding misleading success evidence at main-task level when error occurred
+                if self._looks_like_success_evidence(evidence) and is_error:
+                    continue
+                self.task_manager.add_task_evidence(
+                    active_task_id,
+                    evidence
+                )
         
         # State is already saved by TaskManager methods
         
@@ -550,6 +573,16 @@ class PlanExecutionEngine:
         if not plan:
             return None
         
+        # Re-evaluate BLOCKED tasks: if dependencies are now met, unblock to PENDING
+        for task in plan.tasks:
+            if task.status == TaskStatus.BLOCKED:
+                if self.check_task_dependencies_met(task.id):
+                    self.task_manager.update_main_task_status(
+                        task.id,
+                        TaskStatus.PENDING,
+                        "Dependencies met; unblocked"
+                    )
+
         # Find first pending task with satisfied dependencies
         for task in plan.tasks:
             if task.status == TaskStatus.PENDING:
@@ -757,7 +790,8 @@ class PlanExecutionEngine:
             predicted = [str(t).strip().lower() for t in (main_task.predicted_tool_use or [])]
             in_predicted = tool in predicted
             in_description = tool in str(subtask.description).lower()
-            return in_predicted and in_description
+            # Relaxed relevance: predicted OR mentioned in subtask description
+            return in_predicted or in_description
         except Exception:
             return False
 
@@ -824,18 +858,30 @@ class PlanExecutionEngine:
             return success, f"Skipped failed task, {message}"
         
         elif recovery_strategy == "alternative":
-            # Mark as failed but continue with alternative approach
-            self.task_manager.mark_task_failed(
-                task_id,
-                error_message,
-                "Try alternative approach or tools for this task"
-            )
+            # Don't mark as failed - instead mark current subtask as complete with alternative approach
+            # This allows progression to continue
             
-            # Add alternative approach suggestion to evidence
+            # Add evidence about using alternative approach
             self.task_manager.add_task_evidence(
                 task_id,
-                "Consider alternative tools or approach for task completion"
+                f"Alternative approach used due to: {error_message}"
             )
+            
+            # If there's a current subtask, mark it as complete to allow progression
+            if self.current_subtask:
+                self.task_manager.update_subtask_status(
+                    self.current_main_task.id,
+                    self.current_subtask.id,
+                    True,  # Mark as complete
+                    f"Completed with alternative approach: {error_message}"
+                )
+                
+                # Now advance to next subtask
+                success, message = self.advance_task_progression()
+                if success:
+                    return True, f"Task {task_id} continued with alternative approach, {message}"
+                else:
+                    return True, f"Task {task_id} used alternative approach, but no next subtask"
             
             return True, f"Task {task_id} marked for alternative approach"
         

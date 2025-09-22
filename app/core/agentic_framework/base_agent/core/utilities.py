@@ -59,6 +59,98 @@ class AgentUtilities:
         except Exception:
             pass
     
+    def _get_function_params(self, func: callable) -> List[str]:
+        """Extract parameter names from a function signature.
+        
+        Args:
+            func: The function to inspect
+            
+        Returns:
+            List of parameter names excluding 'self' and var args
+        """
+        try:
+            import inspect
+            sig = inspect.signature(func)
+            params = []
+            for pname, p in sig.parameters.items():
+                if pname != 'self' and p.kind not in (inspect.Parameter.VAR_POSITIONAL, inspect.Parameter.VAR_KEYWORD):
+                    params.append(pname)
+            return params
+        except Exception:
+            return []
+    
+    def _attempt_auto_retry(self, name: str, args: Dict[str, Any], error_msg: str, 
+                           error_response: str, func: callable) -> Any:
+        """Helper method to attempt auto-retry with error memory solution.
+        
+        Args:
+            name: Tool name
+            args: Original arguments that failed
+            error_msg: The error message
+            error_response: The formatted error response
+            func: The tool function
+            
+        Returns:
+            Retry result if successful, error response otherwise
+        """
+        if not self.agent.error_memory or not func:
+            return error_response
+            
+        error_key = self.agent.error_memory.record_error(name, args, error_msg)
+        solution = self.agent.error_memory.get_solution(name, error_msg)
+        
+        if solution:
+            if self.agent.verbose:
+                print(f"🔄 Auto-retrying {name} with corrected arguments from memory")
+            
+            # Get expected params for merging
+            expected_params = self._get_function_params(func)
+            
+            retry_args = self._merge_args_with_solution(args, solution.get('example_args', {}), expected_params)
+            
+            # Store error info for tracking
+            self.agent.last_tool_error = {
+                'tool_name': name,
+                'error_key': error_key,
+                'error_message': error_msg,
+                'failed_args': args
+            }
+            
+            # Attempt retry
+            retry_result = self.execute_tool_safe(name, retry_args, is_retry=True)
+            
+            # Check if retry was successful
+            if not isinstance(retry_result, str) or not any(retry_result.startswith(e) for e in ["Error", "Unhandled"]):
+                if self.agent.verbose:
+                    print(f"✅ Auto-retry successful for {name}!")
+                self.agent.error_memory.record_solution(
+                    error_key,
+                    retry_args,
+                    "Auto-retry with memory solution succeeded"
+                )
+                self.agent.last_tool_error = None
+                self.agent.last_tool_auto_retry_success = True
+                return retry_result
+            else:
+                # Retry failed
+                if self.agent.verbose:
+                    print(f"⚠️ Auto-retry failed for {name}")
+                return (
+                    f"{error_response}\n\n"
+                    f"💡 AUTO-RETRY ATTEMPTED:\n"
+                    f"{solution['guidance']}\n\n"
+                    f"Manual correction may be needed."
+                )
+        else:
+            # No solution found, store error for future learning
+            self.agent.last_tool_error = {
+                'tool_name': name,
+                'error_key': error_key,
+                'error_message': error_msg,
+                'failed_args': args
+            }
+            return error_response
+    
     def execute_tool_safe(self, name: str, args: Dict[str, Any], is_retry: bool = False):
         """Safely execute a tool with error handling, memory, and auto-retry."""
         if not name:
@@ -106,78 +198,9 @@ class AgentUtilities:
             except Exception:
                 pass
             
-            # Record error and check for solutions if error memory is enabled
-            if self.agent.error_memory and not is_retry:  # Only attempt auto-retry on first failure
-                error_key = self.agent.error_memory.record_error(name, args, error_msg)
-                solution = self.agent.error_memory.get_solution(name, error_msg)
-                
-                if solution and solution.get('confidence', 0) >= 0.7:
-                    # High confidence solution found, attempt auto-retry
-                    if self.agent.verbose:
-                        print(f"🔄 Auto-retrying {name} with corrected arguments from memory (confidence: {solution['confidence']:.2f})")
-                    
-                    # Attempt retry with solution's example args or merge with original
-                    expected_params = []
-                    try:
-                        import inspect
-                        sig = inspect.signature(func)
-                        for pname, p in sig.parameters.items():
-                            if pname != 'self' and p.kind not in (inspect.Parameter.VAR_POSITIONAL, inspect.Parameter.VAR_KEYWORD):
-                                expected_params.append(pname)
-                    except Exception:
-                        pass
-                    retry_args = self._merge_args_with_solution(args, solution.get('example_args', {}), expected_params)
-                    
-                    # Store error info for tracking
-                    self.agent.last_tool_error = {
-                        'tool_name': name,
-                        'error_key': error_key,
-                        'error_message': error_msg,
-                        'failed_args': args
-                    }
-                    
-                    # Attempt retry
-                    retry_result = self.execute_tool_safe(name, retry_args, is_retry=True)
-                    
-                    # Check if retry was successful
-                    if not isinstance(retry_result, str) or not retry_result.startswith("Error"):
-                        if self.agent.verbose:
-                            print(f"✅ Auto-retry successful for {name}!")
-                        # Record the successful solution
-                        self.agent.error_memory.record_solution(
-                            error_key,
-                            retry_args,
-                            "Auto-retry with memory solution succeeded"
-                        )
-                        self.agent.last_tool_error = None  # Clear error
-                        return retry_result
-                    else:
-                        # Retry also failed, return original error with guidance
-                        if self.agent.verbose:
-                            print(f"⚠️ Auto-retry failed for {name}, returning guidance")
-                        return (
-                            f"{error_response}\n\n"
-                            f"💡 AUTO-RETRY ATTEMPTED BUT FAILED:\n"
-                            f"{solution['guidance']}\n\n"
-                            f"Manual correction may be needed."
-                        )
-                else:
-                    # No high-confidence solution, store error for future learning
-                    self.agent.last_tool_error = {
-                        'tool_name': name,
-                        'error_key': error_key if self.agent.error_memory else None,
-                        'error_message': error_msg,
-                        'failed_args': args
-                    }
-                    
-                    # If solution exists but low confidence, provide guidance
-                    if solution:
-                        return (
-                            f"{error_response}\n\n"
-                            f"💡 SOLUTION FOUND (low confidence: {solution.get('confidence', 0):.2f}):\n"
-                            f"{solution['guidance']}\n\n"
-                            f"Please verify and retry."
-                        )
+            # Attempt auto-retry if not already a retry
+            if not is_retry:
+                return self._attempt_auto_retry(name, args, error_msg, error_response, func)
             
             return error_response
             
@@ -185,63 +208,9 @@ class AgentUtilities:
             error_msg = str(e)
             error_response = f"Unhandled error in tool '{name}': {error_msg}"
             
-            # Record error and check for solutions if error memory is enabled
-            if self.agent.error_memory and not is_retry:  # Only attempt auto-retry on first failure
-                error_key = self.agent.error_memory.record_error(name, args, error_msg)
-                solution = self.agent.error_memory.get_solution(name, error_msg)
-                
-                if solution and solution.get('confidence', 0) >= 0.7:
-                    # High confidence solution found, attempt auto-retry
-                    if self.agent.verbose:
-                        print(f"🔄 Auto-retrying {name} after general error (confidence: {solution['confidence']:.2f})")
-                    
-                    # Attempt retry with solution's example args or merge with original
-                    expected_params = []
-                    try:
-                        import inspect
-                        sig = inspect.signature(func)
-                        for pname, p in sig.parameters.items():
-                            if pname != 'self' and p.kind not in (inspect.Parameter.VAR_POSITIONAL, inspect.Parameter.VAR_KEYWORD):
-                                expected_params.append(pname)
-                    except Exception:
-                        pass
-                    retry_args = self._merge_args_with_solution(args, solution.get('example_args', {}), expected_params)
-                    
-                    # Store error info for tracking
-                    self.agent.last_tool_error = {
-                        'tool_name': name,
-                        'error_key': error_key,
-                        'error_message': error_msg,
-                        'failed_args': args
-                    }
-                    
-                    # Attempt retry
-                    retry_result = self.execute_tool_safe(name, retry_args, is_retry=True)
-                    
-                    # Check if retry was successful
-                    if not isinstance(retry_result, str) or (not retry_result.startswith("Error") and not retry_result.startswith("Unhandled")):
-                        if self.agent.verbose:
-                            print(f"✅ Auto-retry successful for {name}!")
-                        # Record the successful solution
-                        self.agent.error_memory.record_solution(
-                            error_key,
-                            retry_args,
-                            "Auto-retry with memory solution succeeded"
-                        )
-                        self.agent.last_tool_error = None  # Clear error
-                        return retry_result
-                    else:
-                        # Retry also failed
-                        if self.agent.verbose:
-                            print(f"⚠️ Auto-retry failed for {name}")
-                else:
-                    # No high-confidence solution, store error for future learning
-                    self.agent.last_tool_error = {
-                        'tool_name': name,
-                        'error_key': error_key if self.agent.error_memory else None,
-                        'error_message': error_msg,
-                        'failed_args': args
-                    }
+            # Attempt auto-retry if not already a retry
+            if not is_retry:
+                return self._attempt_auto_retry(name, args, error_msg, error_response, func)
             
             return error_response
 
@@ -294,6 +263,12 @@ class AgentUtilities:
         # Start with solution template
         merged = solution_args.copy()
         expected = set(expected_params or [])
+        
+        # Special case: if solution needs portfolio_dict and we can infer one, use it
+        if 'portfolio_dict' in merged and merged['portfolio_dict']:
+            inferred = self._infer_portfolio_dict_from_context()
+            if inferred:
+                merged['portfolio_dict'] = inferred
         
         # Remap common synonyms to expected param names if needed
         synonyms_map = {

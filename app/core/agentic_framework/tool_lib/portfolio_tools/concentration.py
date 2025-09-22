@@ -118,6 +118,8 @@ EXPOSURE_CALCULATOR_TOOL = {
     "function": exposure_calculator,
 }
 
+# ------------------------------------------------------------- #
+
 INDUSTRY_CONCENTRATION_DESCRIPTION = (
     "Calculate portfolio concentration by industry or sub-industry. "
     "CRITICAL: You MUST ALWAYS include the portfolio_dict parameter with ALL holdings and specify 'industry_level' as 'industry' or 'sub_industry'. "
@@ -191,6 +193,8 @@ INDUSTRY_CONCENTRATION_TOOL = {
     "parameters": INDUSTRY_CONCENTRATION_PARAMETERS,
     "function": industry_concentration,
 }
+
+# ------------------------------------------------------------- #
 
 VAR_CALCULATOR_DESCRIPTION = (
     "Calculate Value at Risk (VaR) at portfolio, industry, or sub-industry level. "

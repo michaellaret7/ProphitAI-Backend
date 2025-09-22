@@ -66,3 +66,26 @@ def get_initial_portfolio_dict(session=None):
     INITIAL_PORTFOLIO_DICT = {t: {"allocation": float(p.conviction), "position": p.position.value} for t, p in INITIAL_PORTFOLIO_DICT.items()}
 
     return INITIAL_PORTFOLIO_DICT   
+
+
+# Tool Schema Constants
+GET_INITIAL_PORTFOLIO_DICT_DESCRIPTION = (
+    "Get the Consumer Staples Fund's initial portfolio dictionary from the database with tickers and their conviction levels. "
+    "Returns dictionary format with ticker symbols as keys and objects containing 'allocation' (decimal conviction) and 'position' ('long'/'short') as values. "
+    "NO PARAMETERS REQUIRED: This tool takes no arguments and should be called with empty parameters '{}'. "
+    "WHEN TO USE: (1) ALWAYS START HERE - get the baseline portfolio before any analysis, (2) Portfolio construction - use as template for modifications, (3) Allocation reference - understand CIO's conviction levels, (4) Comparison base - measure changes against original structure."
+)
+
+GET_INITIAL_PORTFOLIO_DICT_PARAMETERS = {
+    "type": "object",
+    "properties": {},
+    "required": [],
+    "additionalProperties": False
+}
+
+GET_INITIAL_PORTFOLIO_DICT_TOOL = {
+    "name": "get_initial_portfolio_dict",
+    "description": GET_INITIAL_PORTFOLIO_DICT_DESCRIPTION,
+    "parameters": GET_INITIAL_PORTFOLIO_DICT_PARAMETERS,
+    "function": get_initial_portfolio_dict,
+}

@@ -9,8 +9,8 @@ def register_base_tools(agent: Any) -> None:
     - Lambdas capture `agent` and access attributes at call-time.
     """
     # Local imports to avoid circular dependencies at module import time
-    from app.core.agentic_framework.base_agent.tool_lib.base_tools.search_engine_tool import AgentSearchEngine
-    from app.core.agentic_framework.base_agent.tool_lib.base_tools import calculator
+    from app.core.agentic_framework.tool_lib.base_tools.search_engine_tool import AgentSearchEngine
+    from app.core.agentic_framework.tool_lib.base_tools import calculator
 
     search_description = (
         "The free_search tool searches the web. Provide a detailed query that will be "
@@ -38,7 +38,9 @@ def register_base_tools(agent: Any) -> None:
     agent.add_tool(
         name="calculator",
         description=(
-            "Perform mathematical calculations. Provide the expression string and the tool returns the result."
+            "LAST RESORT TOOL - ONLY use when absolutely necessary for complex mathematical calculations "
+            "that cannot be done with other tools. Most metrics are already calculated in factor tools. "
+            "Provide the expression string and the tool returns the result."
         ),
         parameters={
             "type": "object",

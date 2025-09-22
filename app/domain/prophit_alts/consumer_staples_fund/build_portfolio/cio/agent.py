@@ -3,7 +3,7 @@ from pydantic import BaseModel
 from app.core.agentic_framework.base_agent import BaseAgent
 from app.domain.prophit_alts.consumer_staples_fund.build_portfolio.cio.prompts import cio_system_prompt, cio_user_prompt
 from .tool_registry import register_cio_tools
-from app.core.agentic_framework.base_agent.memory.semantic_memory import SemanticMemory
+from app.core.agentic_framework.base_agent.memory.domain_memory import DomainMemory
 from typing import Literal
 
 class CIOPortfolioItem(BaseModel):
@@ -22,13 +22,13 @@ class CIOAgent(BaseAgent):
         
         register_cio_tools(self)
 
-    def _initialize_semantic_memory(self):
-        """Initialize CIO-specific semantic memories for portfolio construction."""
-        # Initialize semantic memory for CIO agent
-        self.semantic_memory = SemanticMemory(agent_type='cio', save_memory=True, verbose=self.verbose)
+    def _initialize_domain_memory(self):
+        """Initialize CIO-specific domain memories for portfolio construction."""
+        # Initialize domain memory for CIO agent
+        self.domain_memory = DomainMemory(agent_type='cio', save_memory=True, verbose=self.verbose)
         
         if self.verbose:
-            total_memories = sum(len(m) for m in self.semantic_memory.memories.values())
+            total_memories = sum(len(m) for m in self.domain_memory.memories.values())
             if total_memories == 0:
                 print("⚠️ No CIO memories found - agent will have no portfolio construction knowledge!")
             else:

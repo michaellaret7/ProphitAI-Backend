@@ -15,6 +15,7 @@ class TaskManager:
         self.verbose = verbose
         self.execution_history: List[Dict] = []
         self.structured_plan: Optional[TodoList] = None  # Store the structured plan
+        self.execution_engine = None  # Will be set by execution engine
         
         # Get the agentic_framework directory path more robustly
         # From manager.py: tasks/ -> base_agent/ -> agentic_framework/
@@ -372,6 +373,59 @@ class TaskManager:
         if self.verbose:
             print(f"📝 Task status update: {task_id} -> {status}")
         
+        # Convert task_id to int if it's a string number
+        try:
+            task_id_int = int(task_id) if isinstance(task_id, str) and task_id.isdigit() else None
+        except:
+            task_id_int = None
+        
+        # Update the actual task status in the structured plan
+        task_was_updated = False
+        if task_id_int and self.structured_plan:
+            for task in self.structured_plan.tasks:
+                if task.id == task_id_int:
+                    # Map string status to TaskStatus enum
+                    status_map = {
+                        'started': TaskStatus.IN_PROGRESS,
+                        'in_progress': TaskStatus.IN_PROGRESS,
+                        'completed': TaskStatus.COMPLETED,
+                        'failed': TaskStatus.FAILED,
+                        'blocked': TaskStatus.BLOCKED
+                    }
+                    if status in status_map:
+                        task.status = status_map[status]
+                        task_was_updated = True
+                    break
+
+        # If not a main task id, attempt to interpret as subtask id (e.g., '1c') and update accordingly
+        subtask_was_updated = False
+        if not task_id_int and self.structured_plan:
+            for task in self.structured_plan.tasks:
+                for subtask in task.subtasks:
+                    if subtask.id == str(task_id):
+                        # Only treat certain statuses; mark completed True/False
+                        should_complete = status == 'completed'
+                        # Update via TaskManager API to ensure persistence and history
+                        self.update_subtask_status(task.id, subtask.id, should_complete, reason)
+                        subtask_was_updated = True
+
+                        # If this is the current subtask and it's completed, auto-advance progression
+                        if (should_complete and 
+                            self.execution_engine and 
+                            self.execution_engine.plan_loaded and
+                            self.execution_engine.current_main_task and
+                            self.execution_engine.current_main_task.id == task.id and
+                            self.execution_engine.current_subtask and
+                            self.execution_engine.current_subtask.id == subtask.id):
+                            if self.verbose:
+                                print(f"🔄 Current subtask {subtask.id} marked complete, checking for advancement...")
+                            success, message = self.execution_engine.advance_task_progression()
+                            if success and self.verbose:
+                                print(f"✅ Progressed: {message}")
+                        break
+                if subtask_was_updated:
+                    break
+        
         # Log the update for backward compatibility
         self.execution_history.append({
             'timestamp': datetime.now().isoformat(),
@@ -384,6 +438,22 @@ class TaskManager:
         
         # Save state
         self.save_state()
+        
+        # Check if we should advance the execution engine
+        if (task_was_updated and 
+            status == 'completed' and 
+            self.execution_engine and 
+            self.execution_engine.plan_loaded and
+            self.execution_engine.current_main_task and
+            self.execution_engine.current_main_task.id == task_id_int):
+            
+            if self.verbose:
+                print(f"🔄 Current task marked complete, checking for advancement...")
+            
+            # Trigger task advancement
+            success, message = self.execution_engine.advance_task_progression()
+            if success and self.verbose:
+                print(f"✅ Task advanced: {message}")
         
         return {"success": True, "task_id": task_id, "status": status}
     

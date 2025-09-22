@@ -1,5 +1,7 @@
 from app.core.agentic_framework.base_agent import BaseAgent
-from app.core.agentic_framework.base_agent.memory.semantic_memory import SemanticMemory
+from app.core.agentic_framework.base_agent.memory.domain_memory import DomainMemory
+from app.db.core.db_config import ProphitAltsSession, MarketSession
+from app.db.core.market_data_models import Ticker
 from app.db.core.prophit_alts_models import Fund
 from app.domain.prophit_alts.consumer_staples_fund.build_portfolio.industry_agents.prompts import build_industry_prompt
 from .tool_registry import register_industry_tools
@@ -7,10 +9,9 @@ from pydantic import BaseModel
 from typing import List, Literal
 import json
 import time
-from app.core.agentic_framework.base_agent.tool_lib.agent_specific.industry import get_eligible_tickers
+from app.core.agentic_framework.tool_lib.agent_specific_tools.industry import get_eligible_tickers
 from app.utils.decorators.database import with_session
 from app.db.core.prophit_alts_models import FundInitialPosition
-
 
 class IndustryRecommendation(BaseModel):
     ticker: str
@@ -27,28 +28,28 @@ class IndustryRecommendations(BaseModel):
 class IndustryAgent(BaseAgent):
     def __init__(self, industry: str):
         self.industry = industry
-        super().__init__(*build_industry_prompt(industry), max_iterations=250, plan_first=True, save_messages=True, model="gpt-5", verbose=True, memory_refresh_interval=8, use_episodic_memory=False)
+        super().__init__(*build_industry_prompt(industry), max_iterations=250, plan_first=True, save_messages=True, verbose=True, memory_refresh_interval=8, use_episodic_memory=False)
         
         register_industry_tools(self)
 
-    def _initialize_semantic_memory(self):
-        """Initialize {industry}-specific semantic memories for risk management."""
+    def _initialize_domain_memory(self):
+        """Initialize {industry}-specific domain memories for risk management."""
  
         agent_type = self.industry
 
-        self.semantic_memory = SemanticMemory(agent_type=agent_type, save_memory=True, verbose=self.verbose)
+        self.domain_memory = DomainMemory(agent_type=agent_type, save_memory=True, verbose=self.verbose)
         
         try:
             eligible_tickers = get_eligible_tickers(agent_type) or []
         except Exception:
             eligible_tickers = []
-        self.semantic_memory.tickers = eligible_tickers
+        self.domain_memory.tickers = eligible_tickers
         
         if self.verbose:
-            print(f"🧾 Injected {len(eligible_tickers)} eligible tickers into semantic memory for {self.industry}")
+            print(f"🧾 Injected {len(eligible_tickers)} eligible tickers into domain memory for {self.industry}")
         
         if self.verbose:
-            total_memories = sum(len(m) for m in self.semantic_memory.memories.values())
+            total_memories = sum(len(m) for m in self.domain_memory.memories.values())
             if total_memories == 0:
                 print(f"⚠️ No {self.industry} memories found - agent will have no {self.industry} knowledge!")
             else:
@@ -112,8 +113,8 @@ class IndustryAgent(BaseAgent):
 
 
 if __name__ == "__main__":
-    industries = ["beverages", "consumer_staples_distribution_and_retail", "food_products", "household_products", "tobacco"]
-    completed = ["personal_care_products"]
+    industries = ["household_products", "tobacco"]
+    completed = ["personal_care_products", "beverages", "consumer_staples_distribution_and_retail", "food_products"]
 
     agent = IndustryAgent(industry=industries[0])
     result = agent.run()
@@ -123,8 +124,19 @@ if __name__ == "__main__":
     print("="*100)
     print(result)
 
-    x = input("Would you like to save the positions? (y/n): ")
-    if x == "y":
-        ok = agent.save_initial_positions(fund_name="consumer_staples_fund", recommendations_json=result)
-        print(ok)
+    ok = agent.save_initial_positions(fund_name="consumer_staples_fund", recommendations_json=result)
+    print(ok)
+
+    # session = ProphitAltsSession()
+    # x = session.query(FundInitialPosition).join(Fund).filter(Fund.fund_name == "consumer_staples_fund").all()
+    # for i in x:
+    #     print(i.ticker_name)
+    #     print(i.position.value)
+    #     print(i.industry)
+    #     print(i.conviction)
+    #     print(i.reasoning)
+    #     print("="*100)
+    # session.close()
+    
+    
 

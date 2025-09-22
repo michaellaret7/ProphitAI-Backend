@@ -1,5 +1,5 @@
 from app.core.agentic_framework.base_agent.agent import BaseAgent
-from app.core.agentic_framework.base_agent.memory.semantic_memory import SemanticMemory
+from app.core.agentic_framework.base_agent.memory.domain_memory import DomainMemory
 from app.domain.prophit_alts.consumer_staples_fund.build_portfolio.cro.tool_registry import register_cro_tools
 from app.domain.prophit_alts.consumer_staples_fund.build_portfolio.cro.prompts import cro_system_prompt, cro_user_prompt
 from pydantic import BaseModel
@@ -40,13 +40,13 @@ class CROAgent(BaseAgent):
         
         register_cro_tools(self)
     
-    def _initialize_semantic_memory(self):
-        """Initialize CRO-specific semantic memories for risk management."""
-        # Initialize semantic memory for CRO agent
-        self.semantic_memory = SemanticMemory(agent_type='cro', save_memory=True, verbose=self.verbose)
+    def _initialize_domain_memory(self):
+        """Initialize CRO-specific domain memories for risk management."""
+        # Initialize domain memory for CRO agent
+        self.domain_memory = DomainMemory(agent_type='cro', save_memory=True, verbose=self.verbose)
         
         if self.verbose:
-            total_memories = sum(len(m) for m in self.semantic_memory.memories.values())
+            total_memories = sum(len(m) for m in self.domain_memory.memories.values())
             if total_memories == 0:
                 print("⚠️ No CRO memories found - agent will have no risk management knowledge!")
             else:

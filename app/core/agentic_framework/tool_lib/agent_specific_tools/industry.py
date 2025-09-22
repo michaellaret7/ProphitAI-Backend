@@ -14,21 +14,6 @@ from app.db.core.market_data_models import Ticker
 from typing import List
 from app.utils.decorators.price_data import with_price_data
 
-@with_price_data(lookback_days=252, include_dividends=False)
-def get_weekly_returns(ticker: str, price_data=None, **kwargs):
-    """Get weekly returns for the last year for a given ticker."""
-    
-    # Resample to weekly and calculate returns
-    weekly_prices = price_data.resample('W').last()
-    weekly_returns = weekly_prices.pct_change().dropna()
-    
-    # Convert to dictionary with string dates and format as percentages
-    return {
-        "ticker": ticker,
-        "weekly_returns": {str(date.date()): f"{round(ret * 100, 2)}%" for date, ret in weekly_returns.items()},
-        "total_weeks": len(weekly_returns),
-        "average_weekly_return": f"{round(weekly_returns.mean() * 100, 2)}%" if not weekly_returns.empty else "0%"
-    }
 
 @with_session('market')
 def get_eligible_tickers(industry: str, session=None):
@@ -63,5 +48,64 @@ def get_base_ticker_info(tickers: List[str], session=None):
     return result
 
 
-if __name__ == "__main__":
-    print(get_weekly_returns("AAPL"))
+# Tool Schema Constants
+GET_ELIGIBLE_TICKERS_DESCRIPTION = (
+    "Get eligible tickers for a given industry that meet minimum market cap requirements (>$600M). "
+    "Returns list of ticker symbols filtered by industry and market capitalization. "
+    "Data source: Market database with ticker information and market cap filters. "
+    "CRITICAL: You MUST provide the industry parameter as a valid industry name. "
+    "Example: get_eligible_tickers(industry='Food Products')"
+)
+
+GET_ELIGIBLE_TICKERS_PARAMETERS = {
+    "type": "object",
+    "properties": {
+        "industry": {
+            "type": "string",
+            "description": "Industry name to filter tickers by (e.g., 'Food Products', 'Beverages', 'Household Products')"
+        }
+    },
+    "required": ["industry"],
+    "additionalProperties": False
+}
+
+GET_ELIGIBLE_TICKERS_TOOL = {
+    "name": "get_eligible_tickers",
+    "description": GET_ELIGIBLE_TICKERS_DESCRIPTION,
+    "parameters": GET_ELIGIBLE_TICKERS_PARAMETERS,
+    "function": get_eligible_tickers,
+}
+
+# ------------------------------------------------------------- #
+
+GET_BASE_TICKER_INFO_DESCRIPTION = (
+    "Get comprehensive base ticker information for a list of tickers including sector, industry, market cap, volume, and fundamental metrics. "
+    "Returns list of dictionaries with detailed ticker information including sector, industry, sub_industry, price, market_cap, avg_volume, eps, pe, and dollar_volume. "
+    "Data source: Market database with comprehensive ticker metadata. "
+    "CRITICAL: You MUST provide the tickers parameter as a list of valid stock symbols. "
+    "Example: get_base_ticker_info(tickers=['AAPL', 'MSFT', 'TSLA'])"
+)
+
+GET_BASE_TICKER_INFO_PARAMETERS = {
+    "type": "object",
+    "properties": {
+        "tickers": {
+            "type": "array",
+            "items": {
+                "type": "string",
+                "pattern": "^[A-Z]{1,5}$"
+            },
+            "description": "List of stock ticker symbols to get information for (e.g., ['AAPL', 'MSFT', 'TSLA'])",
+            "minItems": 1
+        }
+    },
+    "required": ["tickers"],
+    "additionalProperties": False
+}
+
+GET_BASE_TICKER_INFO_TOOL = {
+    "name": "get_base_ticker_info",
+    "description": GET_BASE_TICKER_INFO_DESCRIPTION,
+    "parameters": GET_BASE_TICKER_INFO_PARAMETERS,
+    "function": get_base_ticker_info,
+}

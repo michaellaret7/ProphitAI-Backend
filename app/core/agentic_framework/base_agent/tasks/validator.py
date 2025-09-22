@@ -109,9 +109,8 @@ class TaskValidator:
         """
         validation_results = []
         
-        # Check if already marked complete
-        if subtask.completed:
-            validation_results.append((True, 1.0, "Subtask marked as completed"))
+        # DO NOT auto-validate based on completed flag - require actual evidence
+        # The completed flag should be a result of validation, not an input to it
         
         # Check evidence count
         evidence_count = len(subtask.completion_evidence)

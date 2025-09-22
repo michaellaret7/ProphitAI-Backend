@@ -3,14 +3,14 @@
 │   │   ├── controller/
 │   │   │   ├── prophit_alts_controller.py
 │   │   │   └── user_controller.py
+│   │   ├── prophit_alts.py
+│   │   ├── response_envelope.py
 │   │   ├── routes/
 │   │   │   ├── prophit_alts_router.py
 │   │   │   └── user_routes.py
 │   │   ├── testing/
 │   │   │   ├── prophit_alts_testing.py
 │   │   │   └── user_testing.py
-│   │   ├── prophit_alts.py
-│   │   ├── response_envelope.py
 │   │   └── user.py
 │   ├── core/
 │   │   ├── agentic_framework/
@@ -20,11 +20,6 @@
 │   │   │   ├── base_agent/
 │   │   │   │   ├── __init__.py
 │   │   │   │   ├── agent.py
-│   │   │   │   ├── base_tools/
-│   │   │   │   │   ├── __init__.py
-│   │   │   │   │   ├── calculator.py
-│   │   │   │   │   ├── planning_tool.py
-│   │   │   │   │   └── search_engine_tool.py
 │   │   │   │   ├── core/
 │   │   │   │   │   ├── __init__.py
 │   │   │   │   │   ├── arg_parser.py
@@ -35,21 +30,22 @@
 │   │   │   │   │   └── manager.py
 │   │   │   │   ├── memory/
 │   │   │   │   │   ├── __init__.py
+│   │   │   │   │   ├── domain_memory.py
 │   │   │   │   │   ├── episodic_memory.py
 │   │   │   │   │   ├── error_memory.py
-│   │   │   │   │   ├── memory_store/
-│   │   │   │   │   │   ├── episodic_memory.json
-│   │   │   │   │   │   ├── semantic_memory/
-│   │   │   │   │   │   │   ├── beverages_memory.json
-│   │   │   │   │   │   │   ├── cio_memory.json
-│   │   │   │   │   │   │   ├── consumer_staples_distribution_and_retail_memory.json
-│   │   │   │   │   │   │   ├── cro_memory.json
-│   │   │   │   │   │   │   ├── food_products_memory.json
-│   │   │   │   │   │   │   ├── household_products_memory.json
-│   │   │   │   │   │   │   ├── personal_care_memory.json
-│   │   │   │   │   │   │   └── tobacco_memory.json
-│   │   │   │   │   │   └── tool_error_memory.json
-│   │   │   │   │   └── semantic_memory.py
+│   │   │   │   │   └── memory_store/
+│   │   │   │   │       ├── domain_memory/
+│   │   │   │   │       │   ├── beverages_memory.json
+│   │   │   │   │       │   ├── cio_memory.json
+│   │   │   │   │       │   ├── consumer_staples_distribution_and_retail_memory.json
+│   │   │   │   │       │   ├── cro_memory.json
+│   │   │   │   │       │   ├── food_products_memory.json
+│   │   │   │   │       │   ├── household_products_memory.json
+│   │   │   │   │       │   ├── optimizer_memory.json
+│   │   │   │   │       │   ├── personal_care_products_memory.json
+│   │   │   │   │       │   └── tobacco_memory.json
+│   │   │   │   │       ├── episodic_memory.json
+│   │   │   │   │       └── tool_error_memory.json
 │   │   │   │   ├── tasks/
 │   │   │   │   │   ├── __init__.py
 │   │   │   │   │   ├── execution_engine.py
@@ -57,6 +53,42 @@
 │   │   │   │   │   ├── models.py
 │   │   │   │   │   └── validator.py
 │   │   │   │   └── tool_registry.py
+│   │   │   └── tool_lib/
+│   │   │       ├── agent_specific_tools/
+│   │   │       │   ├── cio.py
+│   │   │       │   ├── cro.py
+│   │   │       │   └── industry.py
+│   │   │       ├── base_tools/
+│   │   │       │   ├── __init__.py
+│   │   │       │   ├── calculator.py
+│   │   │       │   ├── planning_tool.py
+│   │   │       │   └── search_engine_tool.py
+│   │   │       ├── data_tools/
+│   │   │       │   ├── industry_factors.py
+│   │   │       │   ├── repository.py
+│   │   │       │   ├── stock_screener.py
+│   │   │       │   ├── sub_industry_factors.py
+│   │   │       │   └── ticker_fundamentals.py
+│   │   │       ├── portfolio_tools/
+│   │   │       │   ├── beta.py
+│   │   │       │   ├── builder.py
+│   │   │       │   ├── concentration.py
+│   │   │       │   ├── corr_matrix.py
+│   │   │       │   ├── factor_tilts.py
+│   │   │       │   ├── group_performance.py
+│   │   │       │   ├── performance.py
+│   │   │       │   ├── returns.py
+│   │   │       │   └── ticker_performance.py
+│   │   │       ├── risk_tools/
+│   │   │       │   ├── asset_risk_contrib.py
+│   │   │       │   ├── cov_matrix.py
+│   │   │       │   ├── drawdown_profile.py
+│   │   │       │   ├── stress_test.py
+│   │   │       │   └── vol_es.py
+│   │   │       └── ticker_tools/
+│   │   │           ├── factors.py
+│   │   │           ├── performance.py
+│   │   │           └── weekly_returns.py
 │   │   └── calculations/
 │   │       ├── __init__.py
 │   │       ├── core/
@@ -74,6 +106,8 @@
 │   │       │   ├── quality.py
 │   │       │   ├── value.py
 │   │       │   └── volatility.py
+│   │       ├── machine_learning/
+│   │       │   └── expected_annualized_return.py
 │   │       ├── performance/
 │   │       │   ├── __init__.py
 │   │       │   └── calculator.py
@@ -85,7 +119,8 @@
 │   │       │   │   └── optimizer.py
 │   │       │   ├── concentration.py
 │   │       │   ├── correlation.py
-│   │       │   └── factor_tilt.py
+│   │       │   ├── factor_tilt.py
+│   │       │   └── utils.py
 │   │       ├── returns/
 │   │       │   ├── __init__.py
 │   │       │   └── calculator.py
@@ -97,6 +132,12 @@
 │   │       │   ├── industry.py
 │   │       │   ├── sector.py
 │   │       │   └── sub_industry.py
+│   │       ├── stress_test/
+│   │       │   ├── engine.py
+│   │       │   ├── pairwise_corr_analysis.py
+│   │       │   ├── performance_analysis.py
+│   │       │   ├── runner.py
+│   │       │   └── scenarios.py
 │   │       └── technical/
 │   │           ├── __init__.py
 │   │           └── indicators.py
@@ -120,38 +161,33 @@
 │   ├── domain/
 │   │   ├── portfolio_operations/
 │   │   │   ├── builder/
+│   │   │   │   └── main.py
 │   │   │   └── optimization/
+│   │   │       ├── optimizer/
+│   │   │       │   ├── agent.py
+│   │   │       │   ├── prompts.py
+│   │   │       │   └── tool_registry.py
+│   │   │       └── user_data.py
 │   │   ├── prophit_alts/
-│   │   │   └── consumer_staples_fund/
-│   │   │       ├── build_portfolio/
-│   │   │       │   ├── cio/
-│   │   │       │   │   ├── agent.py
-│   │   │       │   │   ├── tool_registry.py
-│   │   │       │   │   └── tools.py
-│   │   │       │   ├── cro/
-│   │   │       │   │   ├── agent.py
-│   │   │       │   │   ├── tool_registry.py
-│   │   │       │   │   └── tools.py
-│   │   │       │   ├── industry_agents/
-│   │   │       │   │   ├── agents.py
-│   │   │       │   │   ├── tool_registry.py
-│   │   │       │   │   └── tools.py
-│   │   │       │   ├── macro_agent.py
-│   │   │       │   └── prompts/
-│   │   │       │       ├── cio_agent_prompts.py
-│   │   │       │       ├── cro_agent_prompts.py
-│   │   │       │       ├── industry_prompts.py
-│   │   │       │       └── macro_agent_prompts.py
-│   │   │       └── manage_portfolio/
-│   │   │           └── drawdown_management.py
-│   │   ├── prophit_gpt/
-│   │   └── stress_test/
-│   │       ├── engine.py
-│   │       ├── pairwise_corr_analysis.py
-│   │       ├── performance_analysis.py
-│   │       ├── runner.py
-│   │       └── scenarios.py
-│   ├── middleware/
+│   │   │   ├── consumer_staples_fund/
+│   │   │   │   ├── build_portfolio/
+│   │   │   │   │   ├── cio/
+│   │   │   │   │   │   ├── agent.py
+│   │   │   │   │   │   ├── prompts.py
+│   │   │   │   │   │   └── tool_registry.py
+│   │   │   │   │   ├── cro/
+│   │   │   │   │   │   ├── agent.py
+│   │   │   │   │   │   ├── prompts.py
+│   │   │   │   │   │   └── tool_registry.py
+│   │   │   │   │   └── industry_agents/
+│   │   │   │   │       ├── agents.py
+│   │   │   │   │       ├── prompts.py
+│   │   │   │   │       └── tool_registry.py
+│   │   │   │   └── manage_portfolio/
+│   │   │   │       └── drawdown_management.py
+│   │   │   └── tech_ai_fund/
+│   │   └── prophit_gpt/
+│   │       └── main.py
 │   ├── models/
 │   │   ├── performance_models.py
 │   │   ├── phase_two_models.py
@@ -172,10 +208,12 @@
 │   └── utils/
 │       ├── __init__.py
 │       ├── choose_model_and_client.py
-│       ├── formatting.py
+│       ├── decorators/
+│       │   ├── database.py
+│       │   ├── price_data.py
+│       │   └── timer.py
 │       ├── gpt_parser.py
 │       ├── logging_config.py
-│       ├── parsing_utils.py
 │       ├── serialize_output.py
 │       ├── ticker_utils.py
 │       ├── token_count.py
@@ -184,7 +222,6 @@
 │   ├── error_fixer.md
 │   ├── structure_migration.md
 │   └── todo.md
-├── scripts/
 ├── tests/
 │   ├── alpaca_trade.py
 │   ├── calculations_vtwo_smoke_test.py
@@ -192,6 +229,8 @@
 │   ├── hedge_fund_stuff/
 │   │   ├── Hedge_fund_portfolio_construction.py
 │   │   └── Hedge_fund_risk_management.py
+│   ├── research/
+│   │   └── improved_func_schema.py
 │   ├── retail-fund-code.py
 │   ├── streaming_data.py
 │   └── vector_storage/
@@ -203,12 +242,11 @@
 │       ├── INDEX.yml
 │       └── query.py
 ├── file_structure.md
-├── git_helper.md
 ├── main.py
-├── new_stucture.md
 ├── README.md
 ├── requirements.txt
-└── roadmap.md
+├── roadmap.md
+└── tester.py
 
 
 Updates:
@@ -216,11 +254,14 @@ Updates:
 - Now using app/core/calculations/ instead of calculations_v2
 - API structure moved to app/api/ with controller, routes, and testing subdirectories
 - Database models and operations consolidated under app/db/
-- Domain logic organized under app/domain/ with portfolio_operations, prophit_alts, prophit_gpt, and stress_test
+- Domain logic organized under app/domain/ with portfolio_operations, prophit_alts, and prophit_gpt
 - Models moved to app/models/
 - Repositories centralized in app/repositories/
 - Services in app/services/
-- Utils in app/utils/
-- Agentic framework under app/core/agentic_framework/
-- Testing moved to root-level tests/ directory
+- Utils in app/utils/ with decorators subdirectory
+- Agentic framework under app/core/agentic_framework/ with tool_lib structure
+- Stress test functionality moved to app/core/calculations/stress_test/
+- Machine learning calculations in app/core/calculations/machine_learning/
+- Testing moved to root-level tests/ directory with research subdirectory
 - Planning documents in planning/ directory at root level
+- Memory store structure updated with additional domain memories

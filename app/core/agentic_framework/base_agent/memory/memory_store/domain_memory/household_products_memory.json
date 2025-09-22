@@ -1,0 +1,213 @@
+{
+  "agent_memory": {
+    "type": "Domain",
+    "agent": "household_products_industry",
+    "domain": "Household Products industry stock picking",
+    "purpose": "Nuanced concepts for a portfolio construction/stock picking agent.",
+    "last_updated": "2025-09-22",
+    "memories": {
+      "investable_tickers": [],
+      "industry": "household_products",
+      "sections": [
+        {
+          "id": 1,
+          "topic": "Input-Cost Beta (Pulp, Petrochemicals, Corrugate, Freight)",
+          "context": "Tissue/towel & diaper-adjacent SKUs swing with pulp cycles; detergent/cleaners ride resin & surfactant chains (HDPE/PP, LAB/LAS, EO/PO). These indices front-run gross margin inflections and COGS outlooks.",
+          "investment_insight": "Build a COGS watchlist and map category exposure by SKU. Use pulp and plastics/surfactant prints to anticipate pricing needs and GM turns.",
+          "metrics_raw": [
+            "Pulp benchmarks: NBSK, BHKP",
+            "Plastics/resins: HDPE, PP",
+            "Surfactants/chemistry: LAB/LAS, EO/PO",
+            "Packaging/freight cost sensitivity"
+          ]
+        },
+        {
+          "id": 2,
+          "topic": "Regulator-Driven Reformulation (Non-Optional)",
+          "context": "NY 1,4-dioxane caps forced reformulations across detergents/cleaners; EU microplastics restriction (including encapsulated fragrances) is phasing in with multi-year transitions; EPA Safer Choice and disinfectant List N claims create label moats and ongoing compliance costs.",
+          "investment_insight": "Track compliance roadmaps and reformulation milestones; lapses can hit efficacy perception, velocity, and margins.",
+          "metrics_raw": [
+            "NY 1,4-dioxane cap at 1 ppm (effective Dec 31, 2023)",
+            "EU microplastics restriction with phased timelines (encapsulated fragrances impacted)",
+            "EPA Safer Choice and List N claims require maintenance and retesting"
+          ],
+          "metrics_structured": {
+            "ny_14_dioxane_limit_ppm": 1,
+            "eu_microplastics_transition_years": 6
+          }
+        },
+        {
+          "id": 3,
+          "topic": "Private-Label Asymmetry by Subcategory",
+          "context": "Private label penetration and share gains are highest in paper/tissue and commodity cleaners; enzymatic detergents remain more brand-defensible.",
+          "investment_insight": "Names over-indexed to commodity-like subcategories face greater price/mix pressure in downturns and value channels.",
+          "metrics_raw": [
+            "High PL penetration: paper/tissue, commodity cleaners",
+            "Lower PL vulnerability: enzymatic detergents"
+          ]
+        },
+        {
+          "id": 4,
+          "topic": "Channel Power & Structural Pricing Ceilings",
+          "context": "Costco's markup cap compresses gross margin headroom and accelerates trade-down to Kirkland; Walmart OTIF and big-box compliance penalties act like a hidden tax on supply chains.",
+          "investment_insight": "Scrutinize channel mix (club/value) and compliance costs; check whether scale offsets exist.",
+          "metrics_raw": [
+            "Costco markup cap ~14–15%",
+            "Walmart OTIF penalties impact when service levels slip"
+          ],
+          "metrics_structured": {
+            "costco_markup_cap_pct_min": 14,
+            "costco_markup_cap_pct_max": 15
+          }
+        },
+        {
+          "id": 5,
+          "topic": "Digital Shelf as a Leading Indicator",
+          "context": "%ACV/TDP + velocity are gold standard offline; online, share of search (page-1), content quality (ratings/Q&A/pack images), and in-stock rates predict takeaway on Amazon/Instacart.",
+          "investment_insight": "Monitor digital-shelf KPIs weekly to front-run scanner data and detect early momentum or deterioration.",
+          "metrics_raw": [
+            "Share of search / page-1 placement",
+            "Rating count & score, Q&A health, image compliance",
+            "In-stock % and buy-box stability"
+          ]
+        },
+        {
+          "id": 6,
+          "topic": "Subscription Lock-In & Reorder Economics",
+          "context": "Auto-replenishment (e.g., Subscribe & Save) smooths volume and raises switching costs in detergents and other consumables; category growth increasingly tracks digital grocery penetration.",
+          "investment_insight": "Favor portfolios with high recurring reorder penetration and rising subscription share.",
+          "metrics_raw": [
+            "Auto-replenishment penetration",
+            "Reorder rate and churn",
+            "Digital grocery penetration by category"
+          ]
+        },
+        {
+          "id": 7,
+          "topic": "Pack-Price Architecture (PPA) & Shrinkflation Optics",
+          "context": "Unit economics are managed via sizes/formats (mega vs concentrated). Regulatory and media scrutiny of size changes is rising; shrinkflation bite is notably higher in household paper.",
+          "investment_insight": "Differentiate genuine mix upgrades from stealth downsizing; track consumer sentiment and complaint velocity.",
+          "metrics_raw": [
+            "Size/format shifts (concentration, mega-packs)",
+            "Household paper most exposed to shrinkflation optics"
+          ]
+        },
+        {
+          "id": 8,
+          "topic": "Claimability as a Moat in Disinfecting",
+          "context": "\"Kills 99.9%\" and residual-efficacy claims are tightly regulated; maintaining master registrations and updated efficacy protocols is ongoing and costly.",
+          "investment_insight": "Treat claim maintenance like capex; lapses can erase perceived product advantage and shelf velocity.",
+          "metrics_raw": [
+            "Master registration status",
+            "Residual efficacy claim status and retest cadence"
+          ]
+        },
+        {
+          "id": 9,
+          "topic": "Category Captaincy & Shelf Governance Risk",
+          "context": "Category captains influence assortment/planograms, entrenching leaders but drawing scrutiny; loss of captaincy often coincides with share step-downs.",
+          "investment_insight": "Track captaincy status changes as a leading indicator for share shifts.",
+          "metrics_raw": [
+            "Captaincy roles by retailer",
+            "Planogram influence vs. antitrust scrutiny"
+          ]
+        },
+        {
+          "id": 10,
+          "topic": "Promotion Architecture & Trade Spend Quality",
+          "context": "EDLP compresses promo spikes; hi-lo banners reward feature/display. Separate base vs incremental sales—weak brands over-index to promo-driven lifts with poor repeat.",
+          "investment_insight": "Favor brands with healthy base velocity and efficient trade spend; penalize promo-dependent stories.",
+          "metrics_raw": [
+            "Base vs incremental sales mix",
+            "Feature/display lift vs repeat rates",
+            "Trade spend ROI by banner"
+          ]
+        },
+        {
+          "id": 11,
+          "topic": "Enzyme & Chemistry Roadmaps (Quiet Tech Moats)",
+          "context": "Detergent enzyme innovation (cold-water performance, stain removal) is paced by specialty suppliers; availability/pricing shifts can re-order value tiers.",
+          "investment_insight": "Watch supplier disclosures and input availability; chemistry roadmaps can signal future brand hierarchies.",
+          "metrics_raw": [
+            "Enzyme system upgrades (cold-water efficacy)",
+            "Supplier concentration and pricing"
+          ]
+        },
+        {
+          "id": 12,
+          "topic": "Operational Resilience (Single-Point Failures)",
+          "context": "Cyberattacks and plant outages in automated fill/pack networks ripple through category share and promo calendars for multiple quarters.",
+          "investment_insight": "Screen for redundancy, dual sourcing, and inventory visibility; resilience reduces earnings volatility.",
+          "metrics_raw": [
+            "Number of qualified backup plants/lines",
+            "Dual-sourced inputs %"
+          ]
+        },
+        {
+          "id": 13,
+          "topic": "Packaging EPR Fees = Structural COGS Headwind",
+          "context": "California SB 54 and similar EPR laws impose eco-modulated fees by material, pushing brands toward PCR content and lighter packaging over time.",
+          "investment_insight": "Model rising packaging fees and capex for material shifts (PCR adoption, lightweighting) into long-range COGS.",
+          "metrics_raw": [
+            "EPR fee schedules by material",
+            "PCR content targets and timelines"
+          ]
+        },
+        {
+          "id": 14,
+          "topic": "Winning vs Private Label: Scent + Efficacy + Convenience",
+          "context": "Where PL pressures are highest, brands must differentiate on scent systems (encapsulation), dosing convenience (pods, sprays), and verified efficacy; digital reviews amplify perception gaps.",
+          "investment_insight": "Track review velocity/content and sensory claims alongside ACV/TDP to judge pricing power durability.",
+          "metrics_raw": [
+            "Scent encapsulation presence",
+            "Pods/spray adoption",
+            "Review velocity and average rating"
+          ]
+        },
+        {
+          "id": 15,
+          "topic": "KPI Toolkit to Standardize Comps",
+          "context": "A consistent KPI set enables cross-name comparability and earlier reads on inflections across household products.",
+          "investment_insight": "Use this toolkit to structure dashboards and quarterly checklists; tie KPIs to P&L sensitivity by subcategory.",
+          "metrics_structured": {
+            "distribution": [
+              "%ACV",
+              "TDP (breadth + depth)"
+            ],
+            "demand_quality": [
+              "Household penetration",
+              "Repeat rate",
+              "Buy rate per HH",
+              "Base vs incremental sales"
+            ],
+            "digital_shelf": [
+              "Share of search (page-1)",
+              "Content compliance",
+              "In-stock %",
+              "Rating count/score"
+            ],
+            "cogs_watchlist": [
+              "Pulp",
+              "HDPE/PP",
+              "LAB/LAS",
+              "Corrugate",
+              "Freight"
+            ],
+            "regulatory": [
+              "1,4-dioxane compliance",
+              "Safer Choice status",
+              "Microplastics timelines",
+              "Disinfectant claim status"
+            ]
+          }
+        },
+        {
+          "id": 16,
+          "topic": "Value-Driven, Fundamentals Screen (How to Use This)",
+          "context": "Guidance for applying the above dynamics to a value-first stock-picking process within Household Products.",
+          "investment_insight": "Prefer portfolios with defensible categories (lower PL risk), strong TDP/velocity, stable or improving digital-shelf share, demonstrated compliance/reg-ready formulas, and diversified input exposure (or explicit hedging). Haircut/avoid names leaning on promo to hit volume, outsized exposure to pulp/resin without pricing power, lagging reformulation roadmaps (1,4-dioxane/microplastics), or channel mixes over-indexed to club/value banners without scale offsets."
+        }
+      ]
+    }
+  }
+}

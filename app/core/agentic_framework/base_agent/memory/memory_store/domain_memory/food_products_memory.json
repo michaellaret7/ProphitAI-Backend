@@ -1,0 +1,141 @@
+{
+  "agent_memory": {
+    "type": "Domain",
+    "agent": "food_products_industry",
+    "domain": "Food products industry stock picking",
+    "purpose": "Nuanced concepts for a portfolio construction/stock picking agent (not a trading agent).",
+    "last_updated": "2025-09-22",
+    "memories": {
+      "investable_tickers": [],
+      "industry": "food_products",
+      "sections": [
+        {
+          "id": 1,
+          "topic": "Commodity Pass-Through & Hedge Design (Timing Risk)",
+          "context": "Packaged-food P&Ls are dominated by agricultural inputs (cocoa, sugar, coffee, wheat, oils, proteins) and packaging. Most majors use commodity derivatives/forwards to smooth COGS, but programs vary (some don't use hedge accounting; gains/losses sit in corporate and create timing noise). Always map coverage horizon vs. guidance.",
+          "investment_insight": "Underwrite margin durability by aligning hedge coverage horizon with pricing cadence and guidance windows. Identify whether hedge gains/losses flow through COGS or corporate, and handicap quarter-to-quarter EPS volatility from timing mismatches.",
+          "metrics_raw": [
+            "Map hedge coverage horizon vs guidance windows",
+            "Identify accounting location of hedge gains/losses (COGS vs corporate)"
+          ]
+        },
+        {
+          "id": 2,
+          "topic": "Acute Input Shocks Create Multi-Quarter Margin Air-Pockets",
+          "context": "Cocoa spiked to record highs in 2024–25 on West African crop disease and weather—material for chocolate/cookies/cereal makers. Price/mix often lags COGS for several quarters at some brands.",
+          "investment_insight": "Validate exposure mix and hedge roll-off schedules. Names with heavier cocoa/coffee/sugar mix and thin hedges face near-term margin compression; faster price-pack architecture and promo discipline can narrow the lag.",
+          "metrics_raw": [
+            "Cocoa: record highs in 2024–25",
+            "Lag between COGS inflation and price/mix recovery: multi-quarter"
+          ]
+        },
+        {
+          "id": 3,
+          "topic": "Structural Price Floors from Policy (Sugar)",
+          "context": "The U.S. sugar program (TRQs/marketing allotments) structurally lifts domestic sugar prices above world levels—important for confectionery, bakery, and categories using HFCS/sugar.",
+          "investment_insight": "Normalize input baskets for U.S. sugar policy; favor portfolios less sugar-intensive or with superior pass-through mechanisms."
+        },
+        {
+          "id": 4,
+          "topic": "Packaging Is a Material COGS Lever",
+          "context": "Resin (PET/HDPE/PP) often represents the majority of plastic packaging cost; aluminum/glass swings matter too. When resin cycles tighten, margin elasticity shows up quickly in spreads.",
+          "investment_insight": "Screen for contracts indexed to resin/aluminum and suppliers with scale. Packaging-light formats and redesigns can be hidden margin tailwinds.",
+          "metrics_raw": [
+            "Resin share of plastic packaging costs: often majority",
+            "Aluminum/glass price swings flow through quickly"
+          ]
+        },
+        {
+          "id": 5,
+          "topic": "Retailer Concentration & Compliance Deductions",
+          "context": "Walmart/Costco/Kroger concentration can be >10–20% of a branded CPG's sales. OTIF/SQEP chargebacks (e.g., high delivery targets; penalties for failures) can leak gross-to-net and distort quarterly margins.",
+          "investment_insight": "Scrutinize customer concentration, OTIF/SQEP deduction trends, and supply-chain reliability. Small execution misses can produce outsized gross-to-net leakage.",
+          "metrics_structured": {
+            "otif_delivery_target_pct_approx": 98,
+            "compliance_penalty_pct_of_cogs_approx": 3
+          }
+        },
+        {
+          "id": 6,
+          "topic": "Trade Spend Is Huge and Opaque",
+          "context": "Promotions, slotting, displays, and buy-downs typically run low-teens to 20%+ of gross sales. Mis-execution means a large share fails to earn its keep. Net price realization can swing on trade-spend cycles.",
+          "investment_insight": "Track scan-data lift vs. shipments and commentary on elevated trade investment. Prioritize ROI discipline on trade over sheer spend levels.",
+          "metrics_raw": [
+            "Trade spend: low-teens to 20%+ of gross sales"
+          ]
+        },
+        {
+          "id": 7,
+          "topic": "Price-Pack Architecture (PPA) Governs Elasticity",
+          "context": "Pack resizing, multipacks, and channel-specific formats are the levers behind pricing power. Brands actively managing PPA with retailers show better volume retention after price hikes.",
+          "investment_insight": "Reward issuers with robust PPA test-and-learn cadence; penalize those relying on across-the-board list price with weak pack strategy."
+        },
+        {
+          "id": 8,
+          "topic": "Private Label Is the Real Share Enemy",
+          "context": "In down-cycle wallets, retailer brands take mix; 2024–25 saw private-label share gains and pressure on mid-tier brands. Some private-label manufacturers faced their own volume whipsaws as consumers traded down then bought less.",
+          "investment_insight": "Handicap private-label penetration by category and key account strategy. Moaty brands with taste/health credentials and superior execution withstand PL encroachment better."
+        },
+        {
+          "id": 9,
+          "topic": "Regulatory Step-Ups Create Non-Linearity in Costs/Sourcing",
+          "context": "Multiple rules raise compliance burdens and may reshape sourcing.",
+          "investment_insight": "Identify portfolios exposed to cocoa/coffee/palm/soy and additive reformulation risk; favor firms ahead on traceability and QA.",
+          "additional_notes": [
+            "EU Deforestation Regulation (EUDR) imposes traceability obligations for cocoa/coffee/palm/soy supply chains starting for many firms in late 2025.",
+            "California AB 418 pushes certain additive reformulations.",
+            "FSMA Rule 204 (traceability) raises recall/QA costs; recalls still hover around hundreds per year across FDA/USDA."
+          ],
+          "metrics_structured": {
+            "eudr_effective_date_for_large_medium_firms": "2025-12-30",
+            "fsma_rule_204_traceability_start_year": 2026,
+            "recalls_per_year_approx": 300
+          }
+        },
+        {
+          "id": 10,
+          "topic": "GLP-1 Demand Effects Are Category-Specific",
+          "context": "Evidence so far shows modest basket changes (e.g., fewer high-calorie snacks) in GLP-1 cohorts, with more sensitivity in indulgent categories.",
+          "investment_insight": "Do not overgeneralize; pressure is not uniform. Re-rate risk is higher for indulgent calorie-dense categories without credible better-for-you (BFY) pivots."
+        },
+        {
+          "id": 11,
+          "topic": "Assortment/SKU Rationalization",
+          "context": "Retailers are pruning long tails. Brands that earn shelf with velocity and differentiated pack sizes keep space and promo; others are culled.",
+          "investment_insight": "Favor management teams proactively simplifying SKU tails and reinvesting in winners; penalize cluttered portfolios with low-velocity SKUs."
+        },
+        {
+          "id": 12,
+          "topic": "Channel Mix (Club/Dollar/E-Comm/Foodservice) Matters",
+          "context": "Dollar/club growth shifts price-mix and promo cadence; foodservice rebounds can cushion certain categories. Mix and integration (e.g., grain JVs) can buffer commodity cycles.",
+          "investment_insight": "Underwrite incremental margins by channel. Structural tilt toward club/dollar can compress brand ASPs but lift velocity; foodservice exposure can diversify volatility."
+        },
+        {
+          "id": 13,
+          "topic": "Protein Cycles Have Different Math",
+          "context": "For packaged meats (beef/pork/turkey), cattle/hog cycles and disease (avian flu) swing spreads. Margin recovery depends on herd rebuild timing and contract structures.",
+          "investment_insight": "Track USDA cycle commentary, exposure mix, and customer contract terms (cost-plus vs fixed).",
+          "metrics_raw": [
+            "Herd rebuild timing drives spread normalization"
+          ]
+        },
+        {
+          "id": 14,
+          "topic": "Inventory Accounting Can Cloud Comparability",
+          "context": "Some U.S. food names still use LIFO for portions of inventory; in high inflation, LIFO can depress GAAP gross margin but shift cash taxes timing.",
+          "investment_insight": "Normalize for LIFO/FIFO methodology and reserves when benchmarking margins and cash conversion."
+        },
+        {
+          "id": 15,
+          "topic": "Scanner (Sell-Out) vs Shipments (Sell-In) Gaps",
+          "context": "Forward-buying/trade loading around price changes and promo windows can create 1–2 quarter noise in reported revenue.",
+          "investment_insight": "Prioritize syndicated scanner data over shipments for run-rate demand. Read management's 'inventory in channel' color before extrapolating quarterly trends.",
+          "metrics_structured": {
+            "sell_in_sell_out_gap_quarters_min": 1,
+            "sell_in_sell_out_gap_quarters_max": 2
+          }
+        }
+      ]
+    }
+  }
+}

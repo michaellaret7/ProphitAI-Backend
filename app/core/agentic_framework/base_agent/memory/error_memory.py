@@ -308,7 +308,7 @@ class ToolErrorMemory:
         self._save_memory()
         
         if self.verbose:
-            print(f"➕ Added known solution for: {error_key}")
+            print(f"+ Added known solution for: {error_key}")
     
     def get_stats(self) -> Dict[str, Any]:
         """Get statistics about the error memory.
@@ -358,13 +358,54 @@ def initialize_common_solutions():
         explanation="Extract portfolio from either from get_initial_portfolio_dict() previous tool call if you want to test the initial portfolio but if you want to test a new portfolio you must pass the new portfolio in the correct dict format, don't pass empty dict"
     )
     
+    # Add solution for calculate_portfolio_performance
     memory.add_known_solution(
-        tool_name="stress_test",
-        error_pattern="portfolio argument cannot be empty",
+        tool_name="calculate_portfolio_performance",
+        error_pattern="missing 1 required positional argument: 'portfolio_dict'",
         correct_args={
-            "portfolio": {"CASY": {"conviction": 0.1, "position": "long"}, "CELH": {"conviction": 0.1, "position": "long"}}
+            "portfolio_dict": {
+                "AAPL": {"position": "long", "allocation": 0.05},
+                "MSFT": {"position": "long", "allocation": 0.05}
+            }
         },
-        explanation="Extract portfolio from either from get_initial_portfolio_dict() previous tool call if you want to test the initial portfolio but if you want to test a new portfolio you must pass the new portfolio in the correct dict format, don't pass empty dict"
+        explanation="Portfolio dict required with tickers as keys and position/allocation info. Extract from context or use portfolio from previous tool calls."
+    )
+    
+    # Add solution for calculate_portfolio_beta_vs_index
+    memory.add_known_solution(
+        tool_name="calculate_portfolio_beta_vs_index",
+        error_pattern="missing 1 required positional argument: 'portfolio_dict'",
+        correct_args={
+            "portfolio_dict": {
+                "AAPL": {"position": "long", "allocation": 0.05},
+                "MSFT": {"position": "long", "allocation": 0.05}
+            },
+            "index_ticker": "SPY"
+        },
+        explanation="Both portfolio_dict and index_ticker are required. Extract portfolio from context and specify index like SPY, QQQ, etc."
+    )
+    
+    # Add solution for correlation_matrix
+    memory.add_known_solution(
+        tool_name="correlation_matrix",
+        error_pattern="missing 1 required positional argument: 'portfolio_dict'",
+        correct_args={
+            "portfolio_dict": {
+                "AAPL": {"position": "long", "allocation": 0.05},
+                "MSFT": {"position": "long", "allocation": 0.05}
+            }
+        },
+        explanation="Portfolio dict required. Extract from context or use portfolio from previous tool calls."
+    )
+    
+    # Add solution for get_ticker_performance_and_risk  
+    memory.add_known_solution(
+        tool_name="get_ticker_performance_and_risk",
+        error_pattern="missing 1 required positional argument: 'ticker'",
+        correct_args={
+            "ticker": "AAPL"
+        },
+        explanation="Ticker must be provided as a single ticker symbol string"
     )
     
     return memory

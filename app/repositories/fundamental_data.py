@@ -1,7 +1,6 @@
 from app.core.calculations.core.data_service import DataService
 from typing import Dict, Any, Optional, Literal
 
-
 def get_fundamental_data(
     ticker: str,
     statement_type: Literal["income_statement", "balance_sheet", "cash_flow", "financial_ratios", "analyst_estimates"],

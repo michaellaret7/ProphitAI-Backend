@@ -67,6 +67,8 @@ GET_ANALYST_PICKS_TOOL = {
     "function": get_analyst_picks,
 }
 
+# ------------------------------------------------------------- #
+
 PULL_REST_OF_TICKER_POOL_DESCRIPTION = (
     "Return remaining consumer staples tickers not already in fund initial positions, "
     "filtered by sector and minimum market cap."

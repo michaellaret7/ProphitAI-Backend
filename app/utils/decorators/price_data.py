@@ -49,26 +49,39 @@ def with_bulk_price_data(lookback_days=252, include_dividends=True):
     """
     def decorator(func):
         @wraps(func)
-        def wrapper(tickers, *args, **kwargs):
+        def wrapper(*args, **kwargs):
             # Get date range
             end = datetime.now(timezone.utc)
             start = end - timedelta(days=lookback_days)
             
             # Fetch price data
             ds = DataService()
-            price_series = ds.get_bulk_close_series(tickers, start, end)
+            # Support either 'ticker' (single) or 'tickers' (list/iterable) inputs
+            tickers_param = None
+            if 'tickers' in kwargs and kwargs['tickers']:
+                tickers_param = kwargs['tickers']
+            elif 'ticker' in kwargs and kwargs['ticker']:
+                tickers_param = [kwargs['ticker']]
+            elif len(args) > 0:
+                tickers_param = args[0]
+            else:
+                return {"error": "No ticker(s) provided to decorated function"}
+
+            if isinstance(tickers_param, str):
+                tickers_list = [tickers_param]
+            else:
+                try:
+                    tickers_list = list(tickers_param)
+                except Exception:
+                    tickers_list = [str(tickers_param)]
+
+            price_series = ds.get_bulk_close_series(tickers_list, start, end)
             
             kwargs['price_data'] = price_series
             
-            # Get dividend data if requested
-            if include_dividends:
-                try:
-                    div_data = ds.get_dividends(tickers, start, end)
-                    kwargs['dividend_data'] = div_data.series
-                except:
-                    kwargs['dividend_data'] = None
-            
-            return func(tickers, *args, **kwargs)
+            # Avoid injecting dividend_data here to prevent unexpected kwargs
+            # The wrapped function can fetch dividends as needed.
+            return func(*args, **kwargs)
         
         return wrapper
     return decorator

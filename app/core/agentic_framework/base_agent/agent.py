@@ -1,7 +1,7 @@
 import json
 from typing import List, Dict, Any, Callable, Optional
 from dotenv import load_dotenv
-from app.core.agentic_framework.base_agent.tool_lib.base_tools.planning_tool import PlanningTool
+from app.core.agentic_framework.tool_lib.base_tools.planning_tool import PlanningTool
 from app.utils.choose_model_and_client import *
 from app.utils.token_count import get_chat_token_count
 
@@ -14,7 +14,7 @@ from .core.arg_parser import ToolArgumentParser
 from .events.manager import EventManager, AgentEvent
 from .tasks.validator import TaskValidator
 from .memory.error_memory import ToolErrorMemory
-from .memory.semantic_memory import SemanticMemory
+from .memory.domain_memory import DomainMemory
 from .memory.episodic_memory import EpisodicMemory
 from .tool_registry import register_base_tools, register_task_management_tools
 
@@ -45,6 +45,9 @@ class BaseAgent:
             ):
         
         self.model, self.client = openai_model_and_client(model=model)
+        # self.model, self.client = grok_model_and_client(model=model)
+        print(f"Using model: {self.model}")
+        print(f"Using client: {self.client}")
 
         self.system_prompt = system_prompt
         self.user_prompt = user_prompt
@@ -101,10 +104,14 @@ class BaseAgent:
         
         # Track last tool error for retry guidance
         self.last_tool_error: Optional[Dict] = None
+        self.last_tool_auto_retry_success: bool = False  # Track if last tool was auto-retried successfully
         
-        # Initialize semantic memory (child classes override this)
-        self.semantic_memory: Optional[SemanticMemory] = None
-        self._initialize_semantic_memory()
+        # Track consecutive failures to prevent infinite loops
+        self.consecutive_failures: Dict[str, int] = {}  # tool_name -> count
+        
+        # Initialize domain memory (child classes override this)
+        self.domain_memory: Optional[DomainMemory] = None
+        self._initialize_domain_memory()
 
         # Initialize episodic memory (blank each session if enabled)
         self.episodic = EpisodicMemory(reset_on_init=True) if self.use_episodic_memory else None
@@ -125,9 +132,9 @@ class BaseAgent:
         # Register event handlers
         self._register_event_handlers()
 
-    def _initialize_semantic_memory(self):
-        """Initialize semantic memory - override in child classes for agent-specific memories."""
-        # Base agent doesn't have semantic memory by default
+    def _initialize_domain_memory(self):
+        """Initialize domain memory - override in child classes for agent-specific memories."""
+        # Base agent doesn't have domain memory by default
         # Child agents should override this to load their specific memories
         pass
     
@@ -385,9 +392,9 @@ class BaseAgent:
             {"role": "system", "content": self.utilities.system_rules()},
         ]
         
-        # Inject semantic memories if available
-        if self.semantic_memory:
-            memory_context = self.semantic_memory.format_memories_for_prompt()
+        # Inject domain memories if available
+        if self.domain_memory:
+            memory_context = self.domain_memory.format_memories_for_prompt()
             if memory_context:
                 messages.append({"role": "system", "content": memory_context})
         
@@ -479,17 +486,17 @@ class BaseAgent:
                         "content": plan_prompt
                     })
             
-            # Periodically re-inject semantic memory to keep it fresh in context
-            if (self.semantic_memory and 
+            # Periodically re-inject domain memory to keep it fresh in context
+            if (self.domain_memory and 
                 self.memory_refresh_interval > 0 and 
                 i > 1 and 
                 i % self.memory_refresh_interval == 0):
                 
                 # Use concise format for refresh to avoid context bloat
-                memory_refresh = self.semantic_memory.format_memories_for_prompt(concise=False)
+                memory_refresh = self.domain_memory.format_memories_for_prompt(concise=False)
                 if memory_refresh:
                     if self.verbose:
-                        print(f"  🔄 Refreshing semantic memory (every {self.memory_refresh_interval} iterations)")
+                        print(f"  🔄 Refreshing domain memory (every {self.memory_refresh_interval} iterations)")
                     
                     # Inject as a user message to reinforce the concepts
                     messages.append({
@@ -513,6 +520,7 @@ class BaseAgent:
             # Before model call, write the full input message stream
             self.message_logger.save_messages_to_json(messages, iteration=i, total_tokens=log_token_count, input_tokens=input_tokens)
 
+            # USE threads in the completions api if you dont want to manage state
             response = self.client.chat.completions.create(
                 model=self.model,
                 messages=messages,
@@ -567,9 +575,35 @@ class BaseAgent:
 
                     # Stagnation detection to detect if the agent is stuck in a loop
                     self.utilities.update_stagnation(name, args)
-
-                    observation = self.utilities.execute_tool_safe(name, args)
-                    step.observation = observation
+                    
+                    # Reset auto-retry flag before each tool call
+                    self.last_tool_auto_retry_success = False
+                    
+                    # Check for consecutive failures with same tool
+                    error_key = f"{name}:{json.dumps(args, sort_keys=True)}"
+                    if error_key in self.consecutive_failures and self.consecutive_failures[error_key] >= 3:
+                        if self.verbose:
+                            print(f"⚠️ Skipping {name} - failed 3 times with same args")
+                        observation = f"Skipped after 3 consecutive failures with same arguments"
+                        step.observation = observation
+                    else:
+                        observation = self.utilities.execute_tool_safe(name, args)
+                        step.observation = observation
+                        
+                        # Track failures/successes
+                        if isinstance(observation, str) and observation.startswith("Error"):
+                            self.consecutive_failures[error_key] = self.consecutive_failures.get(error_key, 0) + 1
+                        else:
+                            # Reset on success
+                            if error_key in self.consecutive_failures:
+                                del self.consecutive_failures[error_key]
+                    
+                    # Check if this was an auto-retry that succeeded
+                    # If so, we want to skip adding the error message entirely
+                    if self.last_tool_auto_retry_success:
+                        # The observation is already the successful result
+                        # We'll mark it as auto-retry when we add the message
+                        pass
                     
                     # Handle structured planning tool results and load into execution engine
                     if name == "create_structured_plan":
@@ -639,12 +673,27 @@ class BaseAgent:
                     if self.verbose:
                         print(f"  tool_call -> {name} args={json.dumps(args, sort_keys=True)}")
                         print("  observation:", self.utilities.stringify(observation))
+                        
+                        # If this was a successful auto-retry, indicate it
+                        if self.last_tool_auto_retry_success:
+                            print("🔄 Note: This was a successful auto-retry after initial failure")
 
+                    # Check if this was a successful auto-retry
+                    if self.last_tool_auto_retry_success:
+                        # Auto-retry succeeded internally - mark it
+                        observation_content = (
+                            f"✅ AUTO-RETRY SUCCESS\n"
+                            f"{self.utilities.stringify(observation)}"
+                        )
+                        self.last_tool_auto_retry_success = False  # Reset flag
+                    else:
+                        observation_content = self.utilities.stringify(observation)
+                    
                     # tie tool result back to the tool_call_id
                     messages.append({
                         "role": "tool",
                         "tool_call_id": tc.id,
-                        "content": self.utilities.stringify(observation),
+                        "content": observation_content,
                     })
 
                 # Update task progress and status automatically
