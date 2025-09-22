@@ -1,3 +1,4 @@
+import yaml
 from app.utils.gpt_parser import canonical_portfolio
 from app.core.calculations.portfolio.utils import get_portfolio_returns, get_benchmark_returns
 from app.core.calculations.risk.calculator import RiskCalculator
@@ -7,7 +8,7 @@ def calculate_portfolio_beta_vs_index(
     portfolio_dict: PortfolioInput | dict, 
     lookback_days: int = 252,
     index_ticker: str = "SPY",
-) -> float:
+) -> str:
     """
     Calculate CAPM beta for a long/short portfolio vs index.
     
@@ -29,7 +30,7 @@ def calculate_portfolio_beta_vs_index(
     )
     
     if portfolio_returns is None or portfolio_returns.empty:
-        return float('nan')
+        return yaml.dump({"beta": None}, default_flow_style=False)
     
     # Get index returns using utility function
     index_returns = get_benchmark_returns(
@@ -39,16 +40,17 @@ def calculate_portfolio_beta_vs_index(
     )
     
     if index_returns is None or index_returns.empty:
-        return float('nan')
+        return yaml.dump({"beta": None}, default_flow_style=False)
     
     # Calculate and return beta
-    return RiskCalculator.beta(portfolio_returns, index_returns)
+    beta = RiskCalculator.beta(portfolio_returns, index_returns)
+    return yaml.dump({"beta": float(beta) if not float('nan') else None}, default_flow_style=False)
 
 CALCULATE_PORTFOLIO_BETA_VS_INDEX_DESCRIPTION = (
-    "Calculate CAPM beta for a long/short portfolio versus a specified market index using 252 trading days of historical data. "
-    "Beta measures the portfolio's systematic risk relative to the index. A beta of 1.0 means the portfolio moves with the market, >1.0 means more volatile than market, <1.0 means less volatile. "
-    "CRITICAL: You MUST ALWAYS include the portfolio_dict parameter with ALL holdings and specify 'index_ticker'. "
-    "Example: calculate_portfolio_beta_vs_index(portfolio_dict={'AAPL': {'allocation': 0.5, 'position': 'long'}, 'MSFT': {'allocation': 0.5, 'position': 'long'}}, index_ticker='SPY')"
+    "Calculate CAPM beta for a long/short portfolio versus SPY benchmark using 252 trading days of historical data. "
+    "Beta measures the portfolio's systematic risk relative to the market. A beta of 1.0 means the portfolio moves with the market, >1.0 means more volatile than market, <1.0 means less volatile. "
+    "CRITICAL: You MUST ALWAYS include the portfolio_dict parameter with ALL holdings. "
+    "Example: calculate_portfolio_beta_vs_index(portfolio_dict={'AAPL': {'allocation': 0.5, 'position': 'long'}, 'MSFT': {'allocation': 0.5, 'position': 'long'}})"
 )
 
 CALCULATE_PORTFOLIO_BETA_VS_INDEX_PARAMETERS = {
@@ -61,7 +63,8 @@ CALCULATE_PORTFOLIO_BETA_VS_INDEX_PARAMETERS = {
                 "Complete portfolio with ALL holdings. "
                 "Keys = ticker symbols (e.g., 'AAPL'). "
                 "Values = objects with 'allocation' (decimal 0-1) and 'position' ('long'/'short'). "
-                "You MUST include this parameter with all portfolio tickers."
+                "You MUST include this parameter with all portfolio tickers. "
+                "Uses SPY benchmark by default."
                 "\n\n"
                 """Example of CORRECT function call:
                 calculate_portfolio_beta_vs_index(
@@ -74,8 +77,7 @@ CALCULATE_PORTFOLIO_BETA_VS_INDEX_PARAMETERS = {
                         "SPY": {"allocation": 0.125, "position": "long"},
                         "QQQ": {"allocation": 0.125, "position": "long"},
                         "IWM": {"allocation": 0.125, "position": "long"}
-                    },
-                    index_ticker="SPY"
+                    }
                 )"""
             ),
             "patternProperties": {
@@ -100,13 +102,9 @@ CALCULATE_PORTFOLIO_BETA_VS_INDEX_PARAMETERS = {
             },
             "minProperties": 1,
             "additionalProperties": False
-        },
-        "index_ticker": {
-            "type": "string",
-            "description": "Market index ticker to calculate beta against. Common indices: 'SPY' (S&P 500), 'QQQ' (NASDAQ 100), 'IWM' (Russell 2000), 'DIA' (Dow Jones), 'VTI' (Total Market).",
-        },
+        }
     },
-    "required": ["portfolio_dict", "index_ticker"],
+    "required": ["portfolio_dict"],
     "additionalProperties": False
 }
 

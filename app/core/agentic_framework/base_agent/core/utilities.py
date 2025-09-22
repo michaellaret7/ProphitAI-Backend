@@ -285,7 +285,7 @@ class AgentUtilities:
         
         # For portfolio-specific tools, try to extract portfolio data from context
         if 'portfolio' in solution_args and not failed_args.get('portfolio'):
-            # Check if there's a get_initial_portfolio_dict result in recent observations
+            # Check if there's a get_final_portfolio_dict result in recent observations
             if hasattr(self.agent, 'recent_observations'):
                 for obs in reversed(self.agent.recent_observations[-5:]):  # Check last 5 observations
                     if isinstance(obs, dict) and any(key in obs for key in ['portfolio', 'positions', 'holdings']):

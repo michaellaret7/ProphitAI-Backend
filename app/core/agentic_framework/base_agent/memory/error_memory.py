@@ -346,7 +346,7 @@ def initialize_common_solutions():
         correct_args={
             "portfolio": {"CASY": {"conviction": 0.1, "position": "long"}, "CELH": {"conviction": 0.1, "position": "long"}}
         },
-        explanation="Extract portfolio from either from get_initial_portfolio_dict() previous tool call if you want to test the initial portfolio but if you want to test a new portfolio you must pass the new portfolio in the correct dict format, don't pass empty dict"
+        explanation="Extract portfolio from either from get_final_portfolio_dict() previous tool call if you want to test the initial portfolio but if you want to test a new portfolio you must pass the new portfolio in the correct dict format, don't pass empty dict"
     )
     
     memory.add_known_solution(
@@ -355,7 +355,7 @@ def initialize_common_solutions():
         correct_args={
             "portfolio": {"CASY": {"conviction": 0.1, "position": "long"}, "CELH": {"conviction": 0.1, "position": "long"}}
         },
-        explanation="Extract portfolio from either from get_initial_portfolio_dict() previous tool call if you want to test the initial portfolio but if you want to test a new portfolio you must pass the new portfolio in the correct dict format, don't pass empty dict"
+        explanation="Extract portfolio from either from get_final_portfolio_dict() previous tool call if you want to test the initial portfolio but if you want to test a new portfolio you must pass the new portfolio in the correct dict format, don't pass empty dict"
     )
     
     # Add solution for calculate_portfolio_performance

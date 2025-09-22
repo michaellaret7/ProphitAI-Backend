@@ -1,3 +1,4 @@
+import yaml
 from app.core.calculations.portfolio.utils import get_portfolio_returns, get_benchmark_returns
 from app.core.calculations.returns.calculator import ReturnsCalculator
 from app.core.calculations.risk.calculator import RiskCalculator
@@ -8,7 +9,7 @@ from app.models.portfolio_models import PortfolioInput
 from app.utils.gpt_parser import canonical_portfolio
 
 
-def calculate_portfolio_performance(portfolio_dict: PortfolioInput | dict, lookback_days=DEFAULT_TRADING_DAYS*3, use_total_returns=True, rf_annual=DEFAULT_RF_ANNUAL, benchmark="SPY"):
+def calculate_portfolio_performance(portfolio_dict: PortfolioInput | dict, lookback_days=756, use_total_returns=True, rf_annual=0.04, benchmark="SPY") -> str:
     """Unified portfolio performance calculation combining all metrics.
     
     Args:
@@ -22,7 +23,7 @@ def calculate_portfolio_performance(portfolio_dict: PortfolioInput | dict, lookb
         dict: All performance metrics rounded to 4 decimals
     """
     if not portfolio_dict:
-        return {}
+        return yaml.dump({}, default_flow_style=False)
     
     portfolio_dict = canonical_portfolio(portfolio_dict)
     
@@ -36,7 +37,7 @@ def calculate_portfolio_performance(portfolio_dict: PortfolioInput | dict, lookb
     )
     
     if portfolio_returns is None or portfolio_returns.empty:
-        return {}
+        return yaml.dump({}, default_flow_style=False)
     
     # Get benchmark returns
     benchmark_returns = get_benchmark_returns(
@@ -102,7 +103,7 @@ def calculate_portfolio_performance(portfolio_dict: PortfolioInput | dict, lookb
             return x
     
     # Return all metrics
-    return {
+    return yaml.dump({
         # Core returns
         # "cagr": _rd(cagr),
         "annualized_return": _rd(ann_return),
@@ -142,7 +143,7 @@ def calculate_portfolio_performance(portfolio_dict: PortfolioInput | dict, lookb
         "pain_index": _rd(pain_index),
         "tail_ratio": _rd(tail_ratio),
         "ulcer_index": _rd(ulcer_index),
-    }
+    }, default_flow_style=False)
 
 
 # Tool Schema Constants
@@ -164,7 +165,8 @@ CALCULATE_PORTFOLIO_PERFORMANCE_PARAMETERS = {
                 "Complete portfolio with ALL holdings. "
                 "Keys = ticker symbols (e.g., 'AAPL'). "
                 "Values = objects with 'allocation' (decimal 0-1) and 'position' ('long'/'short'). "
-                "You MUST include this parameter with all portfolio tickers."
+                "You MUST include this parameter with all portfolio tickers. "
+                "Uses 3-year lookback (756 days) and SPY benchmark by default."
                 "\n\n"
                 """Example of CORRECT function call:
                 calculate_portfolio_performance(
@@ -177,9 +179,7 @@ CALCULATE_PORTFOLIO_PERFORMANCE_PARAMETERS = {
                         "SPY": {"allocation": 0.125, "position": "long"},
                         "QQQ": {"allocation": 0.125, "position": "long"},
                         "IWM": {"allocation": 0.125, "position": "long"}
-                    },
-                    lookback_days=252,
-                    benchmark="SPY"
+                    }
                 )"""
             ),
             "patternProperties": {
@@ -204,30 +204,6 @@ CALCULATE_PORTFOLIO_PERFORMANCE_PARAMETERS = {
             },
             "minProperties": 1,
             "additionalProperties": False
-        },
-        "lookback_days": {
-            "type": "integer",
-            "description": "Trading days to analyze (default 252 = ~1 year)",
-            "default": 252,
-            "minimum": 21
-        },
-        "use_total_returns": {
-            "type": "boolean",
-            "description": "Include dividends (true) or price-only (false)",
-            "default": True
-        },
-        "rf_annual": {
-            "type": "number",
-            "description": "Annual risk-free rate (default 0.04 = 4%)",
-            "default": 0.04,
-            "minimum": 0,
-            "maximum": 1
-        },
-        "benchmark": {
-            "type": "string",
-            "description": "Benchmark ticker (default 'SPY')",
-            "default": "SPY",
-            "pattern": "^[A-Z]{1,6}$"
         }
     },
     "required": ["portfolio_dict"],  # This is critical

@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import numpy as np
 import pandas as pd
+import matplotlib.pyplot as plt
 
 
 class ReturnsCalculator:
@@ -160,160 +161,72 @@ class PortfolioReturnsCalculator:
         portfolio_daily = PortfolioReturnsCalculator.weighted_total_returns(ticker_dividends, ticker_closes, weights, **kwargs)
         return ReturnsCalculator.annualized_return(portfolio_daily, trading_days)
 
+def plot_portfolio_returns(portfolio_daily: pd.Series, ticker_closes: dict, weights: dict):
+    """Simple plotting function for portfolio returns visualization."""
+    
+    # Create figure with subplots
+    fig, axes = plt.subplots(2, 2, figsize=(15, 10))
+    fig.suptitle('Consumer Staples Portfolio Analysis', fontsize=16, fontweight='bold')
+    
+    # 1. Portfolio cumulative returns
+    if not portfolio_daily.empty:
+        cumulative_returns = (1 + portfolio_daily).cumprod()
+        axes[0, 0].plot(cumulative_returns.index, cumulative_returns.values, linewidth=2, color='blue')
+        axes[0, 0].set_title('Portfolio Cumulative Returns')
+        axes[0, 0].set_ylabel('Cumulative Return')
+        axes[0, 0].grid(True, alpha=0.3)
+        axes[0, 0].tick_params(axis='x', rotation=45)
+    
+    # 2. Portfolio daily returns distribution
+    if not portfolio_daily.empty:
+        axes[0, 1].hist(portfolio_daily.dropna(), bins=50, alpha=0.7, color='green', edgecolor='black')
+        axes[0, 1].set_title('Daily Returns Distribution')
+        axes[0, 1].set_xlabel('Daily Return')
+        axes[0, 1].set_ylabel('Frequency')
+        axes[0, 1].grid(True, alpha=0.3)
+        axes[0, 1].axvline(portfolio_daily.mean(), color='red', linestyle='--', label=f'Mean: {portfolio_daily.mean():.4f}')
+        axes[0, 1].legend()
+    
+    # 3. Rolling volatility (30-day)
+    if not portfolio_daily.empty:
+        rolling_vol = portfolio_daily.rolling(window=30).std() * np.sqrt(252)
+        axes[1, 0].plot(rolling_vol.index, rolling_vol.values, linewidth=2, color='orange')
+        axes[1, 0].set_title('30-Day Rolling Volatility (Annualized)')
+        axes[1, 0].set_ylabel('Volatility')
+        axes[1, 0].grid(True, alpha=0.3)
+        axes[1, 0].tick_params(axis='x', rotation=45)
+    
+    # 4. Top 10 positions by absolute weight
+    abs_weights = {ticker: abs(weight) for ticker, weight in weights.items()}
+    top_10 = sorted(abs_weights.items(), key=lambda x: x[1], reverse=True)[:10]
+    
+    if top_10:
+        tickers_top = [item[0] for item in top_10]
+        weights_top = [item[1] for item in top_10]
+        colors = ['red' if weights[t] < 0 else 'blue' for t in tickers_top]
+        
+        bars = axes[1, 1].bar(range(len(tickers_top)), weights_top, color=colors, alpha=0.7)
+        axes[1, 1].set_title('Top 10 Positions by Absolute Weight')
+        axes[1, 1].set_ylabel('Weight')
+        axes[1, 1].set_xticks(range(len(tickers_top)))
+        axes[1, 1].set_xticklabels(tickers_top, rotation=45, ha='right')
+        axes[1, 1].grid(True, alpha=0.3)
+        
+        # Add legend
+        from matplotlib.patches import Patch
+        legend_elements = [Patch(facecolor='blue', alpha=0.7, label='Long'),
+                          Patch(facecolor='red', alpha=0.7, label='Short')]
+        axes[1, 1].legend(handles=legend_elements)
+    
+    plt.tight_layout()
+    plt.show()
+
 
 if __name__ == "__main__":
-    # Portfolio from JSON
-    portfolio = {"MNST": {
-        "allocation": 0.05,
-        "position": "long"
-      },
-      "COST": {
-        "allocation": 0.05,
-        "position": "long"
-      },
-      "KR": {
-        "allocation": 0.05,
-        "position": "long"
-      },
-      "BJ": {
-        "allocation": 0.05,
-        "position": "long"
-      },
-      "PG": {
-        "allocation": 0.05,
-        "position": "long"
-      },
-      "CL": {
-        "allocation": 0.05,
-        "position": "long"
-      },
-      "EPC": {
-        "allocation": 0.05,
-        "position": "long"
-      },
-      "HLF": {
-        "allocation": 0.05,
-        "position": "long"
-      },
-      "ODD": {
-        "allocation": 0.05,
-        "position": "long"
-      },
-      "CCEP": {
-        "allocation": 0.05,
-        "position": "long"
-      },
-      "RLX": {
-        "allocation": 0.05,
-        "position": "long"
-      },
-      "CHD": {
-        "allocation": 0.05,
-        "position": "long"
-      },
-      "MDLZ": {
-        "allocation": 0.05,
-        "position": "long"
-      },
-      "PEP": {
-        "allocation": 0.05,
-        "position": "long"
-      },
-      "WMT": {
-        "allocation": 0.05,
-        "position": "long"
-      },
-      "CASY": {
-        "allocation": 0.05,
-        "position": "long"
-      },
-      "SMPL": {
-        "allocation": 0.05,
-        "position": "long"
-      },
-      "CELH": {
-        "allocation": 0.05,
-        "position": "long"
-      },
-      "FRPT": {
-        "allocation": 0.05,
-        "position": "long"
-      },
-      "UVV": {
-        "allocation": 0.05,
-        "position": "long"
-      },
-      "UNFI": {
-        "allocation": 0.04,
-        "position": "short"
-      },
-      "TGT": {
-        "allocation": 0.04,
-        "position": "short"
-      },
-      "PRMB": {
-        "allocation": 0.04,
-        "position": "short"
-      },
-      "TAP": {
-        "allocation": 0.04,
-        "position": "short"
-      },
-      "STZ": {
-        "allocation": 0.04,
-        "position": "short"
-      },
-      "HSY": {
-        "allocation": 0.04,
-        "position": "short"
-      },
-      "ADM": {
-        "allocation": 0.04,
-        "position": "short"
-      },
-      "ENR": {
-        "allocation": 0.04,
-        "position": "short"
-      },
-      "SPB": {
-        "allocation": 0.04,
-        "position": "short"
-      },
-      "CLX": {
-        "allocation": 0.04,
-        "position": "short"
-      },
-      "DLTR": {
-        "allocation": 0.04,
-        "position": "short"
-      },
-      "OLPX": {
-        "allocation": 0.04,
-        "position": "short"
-      },
-      "EL": {
-        "allocation": 0.04,
-        "position": "short"
-      },
-      "MO": {
-        "allocation": 0.04,
-        "position": "short"
-      },
-      "KDP": {
-        "allocation": 0.04,
-        "position": "short"
-      }}
+    portfolio = {"portfolio": [{"ticker": "MO", "position": "long", "thesis": "Resilient cash returns at a trough multiple; smoke-free transition progressing", "key_drivers": "Dividend growth, on! pouch share gains, pricing resilience", "allocation": 0.10028}, {"ticker": "KMB", "position": "long", "thesis": "Margin recovery and portfolio focus under Powering Care; Suzano JV creates value", "key_drivers": "Cost savings, premiumization/innovation, improved 2025 outlook", "allocation": 0.09459}, {"ticker": "INGR", "position": "long", "thesis": "Value ingredients supplier with cost-plus pass-through and mix shift to specialties", "key_drivers": "Traceability/regulatory tailwinds, specialty growth, stable FCF", "allocation": 0.095}, {"ticker": "GIS", "position": "long", "thesis": "Margin mean reversion and portfolio optimization despite near-term softness", "key_drivers": "Pet food growth, SKU rationalization, yogurt divest proceeds discipline", "allocation": 0.04037}, {"ticker": "KO", "position": "long", "thesis": "Global brand with pricing power and resilient system economics", "key_drivers": "RGM execution, innovation pipeline, international bottler leverage", "allocation": 0.08245}, {"ticker": "DG", "position": "long", "thesis": "Trade-down beneficiary with self-help; comps/margins repairing", "key_drivers": "Store remodels, delivery partnerships, shrink control", "allocation": 0.07489}, {"ticker": "BJ", "position": "long", "thesis": "Club model value with resilient membership and private label mix", "key_drivers": "Renewal rates, private label penetration, traffic", "allocation": 0.02779}, {"ticker": "PPC", "position": "long", "thesis": "Poultry margin upcycle with improved mix and cash returns", "key_drivers": "Feed cost relief, foodservice mix, capacity expansion/special dividend", "allocation": 0.07188}, {"ticker": "IPAR", "position": "long", "thesis": "Prestige fragrance compounder with asset-light model", "key_drivers": "Coach license extension, Longchamp agreement, strong FCF", "allocation": 0.06883}, {"ticker": "KDP", "position": "long", "thesis": "Margin normalization and diversified beverage categories", "key_drivers": "Pricing/mix, supply normalization, improving FCF conversion", "allocation": 0.0696}, {"ticker": "CL", "position": "long", "thesis": "Global staple with pricing power and steady organic growth", "key_drivers": "Oral care innovation, EM exposure, margin discipline", "allocation": 0.03158}, {"ticker": "KVUE", "position": "long", "thesis": "Defensive consumer health with robust FCF and pricing agility", "key_drivers": "RGM levers, TSA exit efficiencies, pipeline execution", "allocation": 0.05708}, {"ticker": "CCEP", "position": "long", "thesis": "Quality KO bottler with advantaged distribution and pricing", "key_drivers": "Local execution, pricing/mix, route-to-market strength", "allocation": 0.06676}, {"ticker": "REYN", "position": "long", "thesis": "FCF-rich packaging at a discount; deleveraging underway", "key_drivers": "Resin tailwinds, cost control, cash-led debt paydown", "allocation": 0.08154}, {"ticker": "SAM", "position": "long", "thesis": "Earnings/margin inflection with low leverage", "key_drivers": "Innovation cadence, seasonality, cost discipline", "allocation": 0.02808}, {"ticker": "ACI", "position": "long", "thesis": "Discount grocer contrarian value with improving operations", "key_drivers": "Loyalty/data monetization, supply chain self-help, mix", "allocation": 0.02046}, {"ticker": "RLX", "position": "long", "thesis": "Cash-rich ENDS player at deep value in China", "key_drivers": "Balance sheet strength, volume stabilization, shareholder returns", "allocation": 0.04158}, {"ticker": "ADM", "position": "long", "thesis": "Ag origination/crush at cycle-normal valuation", "key_drivers": "Crush spreads, merchandising, disciplined capital returns", "allocation": 0.05139}, {"ticker": "LW", "position": "long", "thesis": "Value-added frozen potatoes with pricing power to QSRs", "key_drivers": "Capacity additions, customer contracts, margin resilience", "allocation": 0.04633}, {"ticker": "HSY", "position": "short", "thesis": "Cocoa-driven margin compression with compliance cost overhang", "key_drivers": "EUDR traceability costs, COGS pressure vs pricing, valuation risk", "allocation": 0.10755}, {"ticker": "CLX", "position": "short", "thesis": "Elevated leverage and operational fragility; recovery largely priced", "key_drivers": "IT/ops spend, slower volume recovery, balance sheet risk", "allocation": 0.09972}, {"ticker": "CELH", "position": "short", "thesis": "Perfection multiple with normalization/competition risk", "key_drivers": "Shelf/promo resets, category competition, valuation de-rate", "allocation": 0.05564}, {"ticker": "ELF", "position": "short", "thesis": "Stretched valuation into tariff/execution risk", "key_drivers": "China sourcing and tariff sensitivity, integration execution", "allocation": 0.05243}, {"ticker": "EL", "position": "short", "thesis": "Travel retail reset and China softness; execution risk", "key_drivers": "Tariff headwinds, PRGP/Beauty Reimagined risk, valuation", "allocation": 0.05098}, {"ticker": "FRPT", "position": "short", "thesis": "Premium pet food with thin profitability amid promo creep", "key_drivers": "Trade-down risk, input volatility, margin sensitivity", "allocation": 0.04972}, {"ticker": "UTZ", "position": "short", "thesis": "High-multiple snacks into rising promo pressure", "key_drivers": "Private label share gains, promo intensity, input costs", "allocation": 0.06362}, {"ticker": "SFM", "position": "short", "thesis": "Rich valuation vs softening momentum and trade-down risk", "key_drivers": "Price gaps vs mass, promotional environment, elasticity", "allocation": 0.06105}, {"ticker": "VITL", "position": "short", "thesis": "Egg price normalization and private label competition risk", "key_drivers": "Dozen-pricing trends, mix pressure, margin compression", "allocation": 0.04508}, {"ticker": "COTY", "position": "short", "thesis": "Soft consumer beauty with FX/tariff headwinds and weak quality", "key_drivers": "Destocking, leverage/coverage risk, execution", "allocation": 0.04266}, {"ticker": "WDFC", "position": "short", "thesis": "Perfection multiple with slowing growth and low FCF yield", "key_drivers": "Volume elasticity, valuation re-rate, cost pressure", "allocation": 0.06675}, {"ticker": "USFD", "position": "short", "thesis": "Distributor de-rating risk as margins normalize from cycle highs", "key_drivers": "Cost volatility, operating leverage reversal, guidance risk", "allocation": 0.06316}, {"ticker": "PFGC", "position": "short", "thesis": "Thin profitability and normalization risk vs prior cycle highs", "key_drivers": "Spread compression, execution sensitivity, valuation", "allocation": 0.05801}, {"ticker": "STZ", "position": "short", "thesis": "Peak-ish margins/returns with elevated leverage; regulatory risk", "key_drivers": "TTB scrutiny, RTD exposure, earnings quality", "allocation": 0.03461}]}
     
-    from app.utils.gpt_parser import parse_portfolio_with_gpt
-    portfolio = parse_portfolio_with_gpt(portfolio)
-
-    from app.core.calculations.portfolio.build.builder import CorrelationPortfolioBuilder
-    builder = CorrelationPortfolioBuilder()
-    portfolio = builder.build_portfolio(portfolio, target_annual_vol=0.17, portfolio_value=1_000_000, leverage=2.0, target_net_exposure=0.20, lookback_days=252, max_position_weight=0.10)
-    portfolio = portfolio["final_portfolio"]
-
-    portfolio = parse_portfolio_with_gpt(portfolio)
-    print(portfolio)
+    from app.utils.gpt_parser import canonical_portfolio
+    portfolio = canonical_portfolio(portfolio)
 
     # Convert to weights dict (negative for shorts)
     weights = {}
@@ -332,7 +245,7 @@ if __name__ == "__main__":
     
     # Fetch price data for last year
     end_date = datetime.now()
-    start_date = end_date - timedelta(days=252*4)
+    start_date = end_date - timedelta(days=252*2)
     
     # Get price data
     ticker_closes = {}
@@ -396,6 +309,13 @@ if __name__ == "__main__":
         print(f"Long positions: {sum(1 for w in weights.values() if w > 0)}")
         print(f"Short positions: {sum(1 for w in weights.values() if w < 0)}")
         print(f"Net exposure: {sum(weights.values()):.1%}")
+        
+        # Graph the portfolio returns
+        plot_portfolio_returns(portfolio_daily, ticker_closes, weights)
+    else:
+        print("No price data available for portfolio analysis")
+
+
 
 
 

@@ -1,8 +1,9 @@
+import yaml
 import math
 from typing import Dict, Any
 
 
-def calculator(expression: str) -> Dict[str, Any]:
+def calculator(expression: str) -> str:
     """
     Evaluate a mathematical expression safely.
 
@@ -55,22 +56,22 @@ def calculator(expression: str) -> Dict[str, Any]:
     if expression:
         try:
             result = safe_eval(expression)
-            return {
+            return yaml.dump({
                 'success': True,
                 'result': result,
                 'input': expression
-            }
+            }, default_flow_style=False)
         except Exception as e:
-            return {
+            return yaml.dump({
                 'success': False,
                 'error': str(e),
                 'input': expression
-            }
+            }, default_flow_style=False)
     # No expression provided
-    return {
+    return yaml.dump({
         'success': False,
         'error': "No expression provided.",
         'input': None
-    }
+    }, default_flow_style=False)
 
 

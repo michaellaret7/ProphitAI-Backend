@@ -93,11 +93,11 @@ class FundFinalPosition(ProphitAltsBase):
     
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     fund_id = Column(UUID(as_uuid=True), ForeignKey('prophit_alts_funds.funds.id'), nullable=False, index=True)
+    fund_name = Column(String, nullable=False)  # Denormalized for convenience
     ticker_id = Column(UUID(as_uuid=True), nullable=False, index=True)
     ticker_name = Column(String, nullable=False)
     position = Column(Enum(PositionType), nullable=False)
     industry = Column(String, nullable=False)
-    risk_allocation = Column(Float, nullable=False)
     portfolio_allocation = Column(Float, nullable=False)  # Percentage of total portfolio
     reasoning = Column(String, nullable=False)
     date_created = Column(DateTime, default=datetime.utcnow, nullable=False)

@@ -1,10 +1,11 @@
+import yaml
 from app.core.calculations.portfolio.utils import get_portfolio_returns
 from app.core.calculations.returns.calculator import ReturnsCalculator
 import numpy as np
 from app.models.portfolio_models import PortfolioInput
 from app.utils.gpt_parser import canonical_portfolio
 
-def calculate_portfolio_returns_metrics(portfolio_dict: PortfolioInput | dict, lookback_days=252):
+def calculate_portfolio_returns_metrics(portfolio_dict: PortfolioInput | dict, lookback_days=252) -> str:
     """Calculate and display simple portfolio metrics.
     
     Returns:
@@ -40,13 +41,13 @@ def calculate_portfolio_returns_metrics(portfolio_dict: PortfolioInput | dict, l
     # Calculate cumulative return over period
     total_cumulative = (1 + portfolio_total_returns).prod() - 1
     
-    return {
+    return yaml.dump({
         "ann_price_return": round(ann_price_return, 4),
         "ann_total_return": round(ann_total_return, 4),
         "ann_volatility": round(ann_volatility, 4),
         "weekly_returns": weekly_returns,
         "cumulative_return": round(total_cumulative, 4)
-    }
+    }, default_flow_style=False)
 
 
 # Tool Schema Constants
@@ -54,7 +55,7 @@ CALCULATE_PORTFOLIO_RETURNS_METRICS_DESCRIPTION = (
     "Calculate and display simple portfolio return metrics including annualized returns, volatility, and weekly cumulative returns. "
     "Returns both price-only and total returns (with dividends) for comparison. "
     "CRITICAL: You MUST ALWAYS include the portfolio_dict parameter with ALL holdings. "
-    "Example: calculate_portfolio_returns_metrics(portfolio_dict={'AAPL': {'allocation': 0.5, 'position': 'long'}, 'KO': {'allocation': 0.5, 'position': 'long'}}, lookback_days=252)"
+    "Example: calculate_portfolio_returns_metrics(portfolio_dict={'AAPL': {'allocation': 0.5, 'position': 'long'}, 'KO': {'allocation': 0.5, 'position': 'long'}})"
 )
 
 CALCULATE_PORTFOLIO_RETURNS_METRICS_PARAMETERS = {
@@ -67,7 +68,8 @@ CALCULATE_PORTFOLIO_RETURNS_METRICS_PARAMETERS = {
                 "Complete portfolio with ALL holdings. "
                 "Keys = ticker symbols (e.g., 'AAPL'). "
                 "Values = objects with 'allocation' (decimal 0-1) and 'position' ('long'/'short'). "
-                "You MUST include this parameter with all portfolio tickers."
+                "You MUST include this parameter with all portfolio tickers. "
+                "Uses 1-year lookback (252 days) by default."
                 "\n\n"
                 """Example of CORRECT function call:
                 calculate_portfolio_returns_metrics(
@@ -80,8 +82,7 @@ CALCULATE_PORTFOLIO_RETURNS_METRICS_PARAMETERS = {
                         "SPY": {"allocation": 0.125, "position": "long"},
                         "QQQ": {"allocation": 0.125, "position": "long"},
                         "IWM": {"allocation": 0.125, "position": "long"}
-                    },
-                    lookback_days=252
+                    }
                 )"""
             ),
             "patternProperties": {
@@ -106,13 +107,7 @@ CALCULATE_PORTFOLIO_RETURNS_METRICS_PARAMETERS = {
             },
             "minProperties": 1,
             "additionalProperties": False
-        },
-        "lookback_days": {
-            "type": "integer",
-            "description": "Number of trading days to analyze (default 252 = ~1 year)",
-            "default": 252,
-            "minimum": 21
-        },
+        }
     },
     "required": ["portfolio_dict"],
     "additionalProperties": False

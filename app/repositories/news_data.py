@@ -28,13 +28,13 @@ def get_press_releases(
     end: Optional[datetime] = None,
     limit: Optional[int] = None,
     ascending: bool = True,
+    session=None,  # Accept session parameter from decorator
 ) -> Dict[str, Any]:
     """Fetch press releases for a ticker within an optional date range.
 
     Returns a dict with 'ticker', 'count', and 'items' (list of dicts).
     """
     # session is injected by decorator
-    session = locals().get('session')
     q = (
         session.query(PressRelease)
         .join(Ticker)
@@ -68,9 +68,9 @@ def get_stock_news(
     end: Optional[datetime] = None,
     limit: Optional[int] = None,
     ascending: bool = True,
+    session=None,  # Accept session parameter from decorator
 ) -> Dict[str, Any]:
     """Fetch general stock news for a ticker within an optional date range."""
-    session = locals().get('session')
     q = (
         session.query(StockNews)
         .join(Ticker)
@@ -104,9 +104,9 @@ def get_price_target_news(
     end: Optional[datetime] = None,
     limit: Optional[int] = None,
     ascending: bool = True,
+    session=None,  # Accept session parameter from decorator
 ) -> Dict[str, Any]:
     """Fetch price target related news for a ticker within an optional date range."""
-    session = locals().get('session')
     q = (
         session.query(PriceTargetNews)
         .join(Ticker)

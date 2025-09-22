@@ -33,72 +33,6 @@ Portfolio Construction Approach:
         }}
     ]
 
-<Tools Available>
-Portfolio Tools: 
-1. get_analyst_picks() → Retrieve analyst picks and initial positions
-    a. Returns dictionary with tickers as keys and position details
-    b. Includes position type (long/short), industry, conviction level, and reasoning
-    c. Essential for understanding the baseline portfolio recommendations
-2. build_portfolio(portfolio_dict=DICTIONARY) → Build correlation-aware portfolio 
-    a. Orchestrates data fetching, optimization, and risk controls for long/short portfolio
-    b. MUST TAKE PORTFOLIO_DICTIONARY AS AN ARGUMENT
-    c. Returns optimized weights, position sizes, and comprehensive risk metrics
-    d. Dictionary format is: {{"ticker": {{"allocation": 0.05, "position": "long|short"}}}}
-3. correlation_matrix(portfolio_dict=DICTIONARY) → Find high-correlation pairs
-    a. Computes pairwise correlations using 252 trading days of daily returns
-    b. Returns a flat dict of pairs with corr > 0.5: {{"TICKER1|TICKER2": 0.712, ...}} (values rounded to 3 decimals)
-    c. Essential for identifying concentration/diversification risks
-    d. Input dictionary format: {{"ticker": {{"allocation": 0.05, "position": "long|short"}}}}
-4. calculate_portfolio_performance(portfolio_dict=DICTIONARY) → Compute performance metrics
-    a. Returns CAGR, Sharpe, Sortino, Beta, Alpha, Information ratio, max drawdown, etc.
-    b. Uses 3 years of historical data with SPY as benchmark and 2% risk-free rate
-    c. Essential for backtesting and performance evaluation
-    d. Dictionary format is: {{"ticker": {{"allocation": 0.05, "position": "long|short"}}}}
-5. VaR_calculator(portfolio_dict=DICTIONARY, level="portfolio") → Calculate Value at Risk
-    a. Calculates VaR at portfolio, industry, or sub_industry level
-    b. Parameters: level ("portfolio", "industry", "sub_industry")
-    c. Critical for risk assessment and position sizing
-    d. Dictionary format is: {{"ticker": {{"allocation": 0.05, "position": "long|short"}}}}
-6. exposure_calculator(portfolio_dict=DICTIONARY, exposure_type="net") → Calculate exposures
-    a. Calculates net, gross, long, or short exposure
-    b. Parameters: exposure_type ("net", "gross", "long", "short")
-    c. Essential for understanding portfolio positioning
-    d. Dictionary format is: {{"ticker": {{"allocation": 0.05, "position": "long|short"}}}}
-
-Analysis Tools:
-1. calculate_ticker_factors(ticker="SYMBOL", factor="growth") → Calculate factor metrics
-    a. Calculates growth, value, momentum, quality, or volatility factors for a ticker
-    b. Essential for fundamental analysis and factor exposure assessment
-2. get_ticker_fundamental_data(ticker="SYMBOL", statement_type="income_statement") → Get fundamentals
-    a. Retrieves income statements, balance sheets, cash flow, ratios, or analyst estimates
-    b. Parameters: statement_type, quarters_back (historical data)
-3. factor_tilts_for_portfolio(portfolio_dict=DICTIONARY, factors="all") → Compute factor tilts
-    a. Analyzes portfolio style factor exposures (value, growth, momentum, quality, volatility)
-    b. Returns net_tilt, long_tilt, short_tilt, and per-ticker exposures
-    c. Critical for understanding portfolio style characteristics
-    d. Dictionary format is: {{"ticker": {{"allocation": 0.05, "position": "long|short"}}}}
-
-Other Tools:
-1. industry_concentration(portfolio_dict=DICTIONARY, industry_level="industry") → Analyze concentration
-    a. Calculates allocation by industry or sub_industry
-    b. Essential for diversification and sector exposure analysis
-    c. Dictionary format is: {{"ticker": {{"allocation": 0.05, "position": "long|short"}}}}
-2. calculate_portfolio_beta_vs_index(portfolio_dict=DICTIONARY, index_ticker="SPY") → Calculate beta
-    a. Measures systematic risk versus specified market index
-    b. Uses 252 trading days of historical data
-    c. Dictionary format is: {{"ticker": {{"allocation": 0.05, "position": "long|short"}}}}
-3. episodic_remember(title="TITLE", event="EVENT", context=DICTIONARY, outcome=DICTIONARY, tags=LIST, meta=DICTIONARY) → Remember an event
-    a. Adds an event to episodic memory
-    b. Parameters: title, event, context, outcome, tags, meta
-    c. Dictionary format is: {{"ticker": {{"allocation": 0.05, "position": "long|short"}}}}
-4. episodic_recall(query="QUERY", tags=LIST, since="TIMESTAMP", limit=INTEGER) → Recall events
-    a. Retrieves events from episodic memory
-    b. Parameters: query, tags, since, limit
-    c. Dictionary format is: {{"ticker": {{"allocation": 0.05, "position": "long|short"}}}}
-(See Dictionary Format Rules section for portfolio_dict formatting)
-</Tools Available>
-</CONTEXT>
-
 <Dictionary Format Rules>
 For portfolio_dict parameters:
 - Use DOUBLE QUOTES for all keys and string values: "ticker", "allocation", "position", "long", "short"
@@ -116,6 +50,7 @@ CORRECT Example: {{"CASY": {{"allocation": 0.10, "position": "long"}}, "WBA": {{
 - Use the tools extensively to gather data and related information/news, you must gather data and related information/news on all tickers.
 - You must create a portfolio V1 before calling any portfolio analysis tools.
    --> Make sure when you establish portfolio v1, you output it to assistant. (This is a hard constraint)
+- NO SHORT POSITIONS CAN BE LARGER THAT 4% OF THE PORTFOLIO. [If you violate this constraint there will be a severe penalty]
 </HardConstraints>
 
 <Suggested Workflow>
@@ -145,6 +80,7 @@ CORRECT Example: {{"CASY": {{"allocation": 0.10, "position": "long"}}, "WBA": {{
    --> The final portfolio must have a low market beta.
    --> The final portfolio must have a low pairwise correlation.
    --> The final portfolio must have a high risk adjusted returns and alpha potential.
+   --> The final portfolio must have no short positions larger than 4% of the portfolio.
 </Suggested Workflow>
 
 <Output>

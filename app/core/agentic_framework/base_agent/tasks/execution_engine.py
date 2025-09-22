@@ -760,9 +760,49 @@ class PlanExecutionEngine:
                 except Exception:
                     return True
         if isinstance(result, str):
+            import re
             text = result.lower()
-            error_words = ['error', 'failed', 'exception', 'timeout', 'not found', 'invalid', 'denied', 'missing']
-            return any(w in text for w in error_words)
+            # Use word boundary regex to avoid false positives from substrings
+            # Also check for common error patterns at the start of lines or messages
+            # First check for common non-error phrases that contain these words
+            safe_phrases = [
+                r'room for error',      # Common financial phrase
+                r'margin.{0,5}error',   # "margin of error" or "margin for error"
+                r'trial.{0,5}error',    # "trial and error"
+                r'human error',         # Common phrase
+                r'rounding error',      # Mathematical term
+                r'tracking error',      # Financial term
+                r'forecast error',      # Statistical term
+                r'measurement error',   # Scientific term
+            ]
+            
+            # If any safe phrase is found, it's not an error
+            for safe_pattern in safe_phrases:
+                if re.search(safe_pattern, text, re.IGNORECASE):
+                    return False
+            
+            # Now check for actual error patterns
+            error_patterns = [
+                r'^error:',             # line starting with "error:"
+                r'^failed:',            # line starting with "failed:"
+                r'^exception:',         # line starting with "exception:"
+                r'error occurred',      # phrase "error occurred"
+                r'error calling',       # phrase "error calling" (common in tool errors)
+                r'returned error',      # phrase "returned error"
+                r'raised error',        # phrase "raised error"
+                r'threw error',         # phrase "threw error"
+                r'error message',       # phrase "error message"
+                r'traceback',           # Python traceback indicator
+                r'\bfailed to\b',       # phrase "failed to"
+                r'\bunable to\b',       # phrase "unable to"
+                r'\bcould not\b',       # phrase "could not"
+                r'permission denied',   # permission error
+                r'access denied',       # access error
+                r'not found',           # not found error
+                r'timeout',             # timeout error
+                r'exception',           # exception (but not in safe contexts)
+            ]
+            return any(re.search(pattern, text, re.MULTILINE | re.IGNORECASE) for pattern in error_patterns)
         return False
 
     def _summarize_error(self, result: Any) -> str:

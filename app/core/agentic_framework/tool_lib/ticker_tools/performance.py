@@ -1,3 +1,4 @@
+import yaml
 from datetime import datetime, timedelta, timezone
 import json
 from typing import Optional, Dict, Any
@@ -21,7 +22,7 @@ def get_ticker_performance_and_risk(
     ticker: str,
     *,
     price_data: dict[str, pd.Series] | None = None,
-) -> Dict[str, Dict[str, Any]]:
+) -> str:
     """Performance and risk metrics over a fixed 3-year window for a single ticker.
 
     - Accepts a single ticker symbol (decorator fetches close series into price_data)
@@ -104,7 +105,7 @@ def get_ticker_performance_and_risk(
         if close is not None and not close.empty:
             close = _adjust_for_splits(close)
         if close is None or close.empty:
-            return {"error": f"no price data for {tkr}"}
+            return yaml.dump({"error": f"no price data for {tkr}"}, default_flow_style=False)
 
         if include_dividends:
             try:
@@ -116,7 +117,7 @@ def get_ticker_performance_and_risk(
         else:
             r = ReturnsCalculator.daily_price_returns(close)
         if r.empty:
-            return {"error": f"failed to compute returns for {tkr}"}
+            return yaml.dump({"error": f"failed to compute returns for {tkr}"}, default_flow_style=False)
 
         # Risk
         ann_vol = RiskCalculator.annualized_volatility(r)
@@ -258,16 +259,16 @@ def get_ticker_performance_and_risk(
         }
         returns = _round_map(returns, ndigits=4)
 
-        return {
+        return yaml.dump({
             "ticker": tkr,
             "market_ticker": market_ticker.upper() if market_ticker else None,
             "num_observations": int(len(r)),
             "risk": risk,
             "performance": perf,
             "returns": returns,
-        }
+        }, default_flow_style=False)
     except Exception as e:
-        return {"error": f"failed to compute metrics for {tkr}: {e}"}
+        return yaml.dump({"error": f"failed to compute metrics for {tkr}: {e}"}, default_flow_style=False)
 
 
 # Tool Schema Constants

@@ -1,6 +1,7 @@
+import yaml
 from app.core.calculations.sectors.sub_industry import calc_sub_industry_factor_benchmark_calculations
 
-def get_sub_industry_benchmark_calculations(sub_industry: str, factor: str) -> dict:
+def get_sub_industry_benchmark_calculations(sub_industry: str, factor: str) -> str:
     """Get the sub-industry benchmark calculations for a given sub-industry and factor.
     
     Args:
@@ -10,7 +11,7 @@ def get_sub_industry_benchmark_calculations(sub_industry: str, factor: str) -> d
     Returns:
         Dictionary containing the benchmark calculations
     """
-    return calc_sub_industry_factor_benchmark_calculations(sub_industry, factor).to_dict()
+    return yaml.dump(calc_sub_industry_factor_benchmark_calculations(sub_industry, factor).to_dict(), default_flow_style=False)
 
 
 # Tool Schema Constants

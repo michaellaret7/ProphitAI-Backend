@@ -1,18 +1,19 @@
+import yaml
 from app.core.calculations.stress_test.runner import run_stress_test_workflow
 from app.models.portfolio_models import PortfolioInput
 from app.utils.gpt_parser import canonical_portfolio
 import json
 
-def stress_test(portfolio_dict: PortfolioInput | dict = None) -> dict:
+def stress_test(portfolio_dict: PortfolioInput | dict = None) -> str:
     """
     Run comprehensive stress tests on a portfolio including market crash scenarios (-20%, -30%, -40%), sector rotation stress, interest rate shock, inflation spike, and correlation breakdown scenarios.
     """
     if not portfolio_dict:
-        return {"error": "Portfolio dictionary is required"}
+        return yaml.dump({"error": "Portfolio dictionary is required"}, default_flow_style=False)
 
     portfolio_dict = canonical_portfolio(portfolio_dict)
 
-    return run_stress_test_workflow(portfolio_dict)
+    return yaml.dump(run_stress_test_workflow(portfolio_dict), default_flow_style=False)
 
 
 # Tool Schema Constants

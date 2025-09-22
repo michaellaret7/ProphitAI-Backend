@@ -1,7 +1,8 @@
+import yaml
 from app.utils.decorators.price_data import with_price_data
 
 @with_price_data(lookback_days=252, include_dividends=False)
-def get_weekly_returns(ticker: str, price_data=None, **kwargs):
+def get_weekly_returns(ticker: str, price_data=None, **kwargs) -> str:
     """Get weekly returns for the last year for a given ticker."""
     
     # Resample to weekly and calculate returns
@@ -9,12 +10,12 @@ def get_weekly_returns(ticker: str, price_data=None, **kwargs):
     weekly_returns = weekly_prices.pct_change().dropna()
     
     # Convert to dictionary with string dates and format as percentages
-    return {
+    return yaml.dump({
         "ticker": ticker,
         "weekly_returns": {str(date.date()): f"{round(ret * 100, 2)}%" for date, ret in weekly_returns.items()},
         "total_weeks": len(weekly_returns),
         "average_weekly_return": f"{round(weekly_returns.mean() * 100, 2)}%" if not weekly_returns.empty else "0%"
-    }
+    }, default_flow_style=False)
 
 # Tool Schema Constants
 GET_WEEKLY_RETURNS_DESCRIPTION = (

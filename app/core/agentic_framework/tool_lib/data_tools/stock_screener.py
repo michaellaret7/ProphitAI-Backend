@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import yaml
 from typing import Any, Dict, List, Optional, Tuple, Union, Set
 
 import pandas as pd
@@ -358,9 +359,9 @@ class StockScreener:
                 df_display[col] = df_display[col].apply(_fmt_large)
         return df_display
 
-def screener(criteria_dict: Dict[str, Any]) -> Dict[str, Any]:
+def screener(criteria_dict: Dict[str, Any]) -> str:
     df = StockScreener().screen(**criteria_dict)
-    return df.to_dict('records')
+    return yaml.dump(df.to_dict('records'), default_flow_style=False)
 
 
 # Tool Schema Constants

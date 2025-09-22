@@ -111,32 +111,3 @@ class IndustryAgent(BaseAgent):
         except Exception:
             return False
 
-
-if __name__ == "__main__":
-    industries = ["household_products", "tobacco"]
-    completed = ["personal_care_products", "beverages", "consumer_staples_distribution_and_retail", "food_products"]
-
-    agent = IndustryAgent(industry=industries[0])
-    result = agent.run()
-
-    print("="*100)
-    print("Industry Agent Result:")
-    print("="*100)
-    print(result)
-
-    ok = agent.save_initial_positions(fund_name="consumer_staples_fund", recommendations_json=result)
-    print(ok)
-
-    # session = ProphitAltsSession()
-    # x = session.query(FundInitialPosition).join(Fund).filter(Fund.fund_name == "consumer_staples_fund").all()
-    # for i in x:
-    #     print(i.ticker_name)
-    #     print(i.position.value)
-    #     print(i.industry)
-    #     print(i.conviction)
-    #     print(i.reasoning)
-    #     print("="*100)
-    # session.close()
-    
-    
-

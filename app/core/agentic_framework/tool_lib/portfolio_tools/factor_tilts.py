@@ -1,3 +1,4 @@
+import yaml
 from app.db.core.prophit_alts_models import FundInitialPosition
 from app.db.core.market_data_models import Ticker
 from app.db.core.db_config import ProphitAltsSession, MarketSession
@@ -5,10 +6,10 @@ from app.utils.gpt_parser import canonical_portfolio
 from app.core.calculations.portfolio.factor_tilt import portfolio_factor_tilts
 from app.models.portfolio_models import PortfolioInput
 
-def factor_tilts_for_portfolio(portfolio_dict: PortfolioInput | dict, factors: str) -> dict:
+def factor_tilts_for_portfolio(portfolio_dict: PortfolioInput | dict, factors: str) -> str:
     """Compute and print factor tilts (value/growth/momentum/quality/volatility)."""
     if not portfolio_dict:
-        return {}
+        return yaml.dump({}, default_flow_style=False)
     portfolio_dict = canonical_portfolio(portfolio_dict)
 
     # Convert portfolio dict to signed weights expected by calculations_v2
@@ -43,18 +44,19 @@ def factor_tilts_for_portfolio(portfolio_dict: PortfolioInput | dict, factors: s
         return {k: res.get(k) for k in ["factor", "net_tilt", "long_tilt", "short_tilt"] if k in res}
 
     if factors == "all":
-        return {
+        result = {
             "value": _summary(_round_tilt_output(portfolio_factor_tilts(weights, "value"))),
             "growth": _summary(_round_tilt_output(portfolio_factor_tilts(weights, "growth"))),
             "momentum": _summary(_round_tilt_output(portfolio_factor_tilts(weights, "momentum"))),
             "quality": _summary(_round_tilt_output(portfolio_factor_tilts(weights, "quality"))),
             "volatility": _summary(_round_tilt_output(portfolio_factor_tilts(weights, "volatility")))
         }
+        return yaml.dump(result, default_flow_style=False)
 
     if factors not in ["value", "growth", "momentum", "quality", "volatility", "all"]:
-        raise ValueError(f"Invalid factor: {factors}")
+        return yaml.dump({"error": f"Invalid factor: {factors}"}, default_flow_style=False)
 
-    return _round_tilt_output(portfolio_factor_tilts(weights, factors))
+    return yaml.dump(_round_tilt_output(portfolio_factor_tilts(weights, factors)), default_flow_style=False)
 
 # Tool Schema Constants
 FACTOR_TILTS_FOR_PORTFOLIO_DESCRIPTION = (

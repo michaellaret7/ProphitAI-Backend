@@ -1,10 +1,11 @@
+import yaml
 from app.core.calculations.portfolio.utils import get_portfolio_returns
 from app.core.calculations.risk.calculator import RiskCalculator
 from app.models.portfolio_models import PortfolioInput
 from app.utils.gpt_parser import canonical_portfolio
 import numpy as np
 
-def drawdown_profile(portfolio_dict: PortfolioInput | dict = None) -> dict:
+def drawdown_profile(portfolio_dict: PortfolioInput | dict = None) -> str:
     """
     Analyze portfolio drawdown characteristics.
     
@@ -18,12 +19,12 @@ def drawdown_profile(portfolio_dict: PortfolioInput | dict = None) -> dict:
     - episodes: List of drawdown episodes with start/end dates and recovery times
     """
     if not portfolio_dict:
-        return {"error": "Portfolio dictionary is required"}
+        return yaml.dump({"error": "Portfolio dictionary is required"}, default_flow_style=False)
     
     try:
         portfolio_dict = canonical_portfolio(portfolio_dict)
     except Exception as e:
-        return {"error": str(e)}
+        return yaml.dump({"error": str(e)}, default_flow_style=False)
     
     try:
         # Get portfolio returns using the utility for last 2 years
@@ -35,7 +36,7 @@ def drawdown_profile(portfolio_dict: PortfolioInput | dict = None) -> dict:
         )
         
         if portfolio_returns is None or portfolio_returns.empty:
-            return {"error": "No price data available"}
+            return yaml.dump({"error": "No price data available"}, default_flow_style=False)
         
         # Calculate cumulative portfolio value (NAV)
         portfolio_nav = (1 + portfolio_returns).cumprod()
@@ -108,10 +109,10 @@ def drawdown_profile(portfolio_dict: PortfolioInput | dict = None) -> dict:
             'current_drawdown': round(float(drawdown.iloc[-1]), 4)
         }
         
-        return result
+        return yaml.dump(result, default_flow_style=False)
         
     except Exception as e:
-        return {"error": f"Failed to calculate drawdown_profile: {str(e)}"}
+        return yaml.dump({"error": f"Failed to calculate drawdown_profile: {str(e)}"}, default_flow_style=False)
 
 
 # Tool Schema Constants

@@ -1,5 +1,6 @@
-from app.core.agentic_framework.tool_lib.agent_specific_tools.cro import GET_INITIAL_PORTFOLIO_DICT_TOOL
+from app.core.agentic_framework.tool_lib.agent_specific_tools.cro import GET_FINAL_PORTFOLIO_DICT_TOOL
 from app.core.agentic_framework.tool_lib.portfolio_tools.corr_matrix import CORRELATION_MATRIX_TOOL
+from app.core.agentic_framework.tool_lib.agent_specific_tools.cro import GET_FINAL_PORTFOLIO_DICT_TOOL
 from app.core.agentic_framework.tool_lib.risk_tools.vol_es import VOL_ES_TOOL
 from app.core.agentic_framework.tool_lib.risk_tools.asset_risk_contrib import RISK_CONTRIBUTION_TOOL
 from app.core.agentic_framework.tool_lib.risk_tools.drawdown_profile import DRAWDOWN_PROFILE_TOOL
@@ -17,7 +18,7 @@ def register_cro_tools(agent):
     Args:
         agent: The CROAgent instance to register tools with
     """
-    agent.add_tool(**GET_INITIAL_PORTFOLIO_DICT_TOOL)
+    agent.add_tool(**GET_FINAL_PORTFOLIO_DICT_TOOL)
     agent.add_tool(**CORRELATION_MATRIX_TOOL)
     agent.add_tool(**CALCULATE_COVARIANCE_MATRIX_TOOL)
     agent.add_tool(**VOL_ES_TOOL)

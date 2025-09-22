@@ -1,3 +1,4 @@
+import yaml
 from app.core.calculations.portfolio.utils import prepare_portfolio_data, get_benchmark_returns
 from app.core.calculations.returns.calculator import ReturnsCalculator
 from app.core.calculations.risk.calculator import RiskCalculator
@@ -7,7 +8,7 @@ import numpy as np
 from app.models.portfolio_models import PortfolioInput
 from app.utils.gpt_parser import canonical_portfolio
 
-def calculate_ticker_performances(portfolio_dict: PortfolioInput | dict, lookback_days: int = 252, use_total_returns: bool = True, benchmark: str = "SPY") -> pd.DataFrame:
+def calculate_ticker_performances(portfolio_dict: PortfolioInput | dict, lookback_days: int = 504, use_total_returns: bool = True, benchmark: str = "SPY") -> str:
     """Return a DataFrame of performance metrics for each ticker in the portfolio.
 
     Reuses shared utilities and calculators to fetch data and compute metrics.
@@ -139,7 +140,7 @@ def calculate_ticker_performances(portfolio_dict: PortfolioInput | dict, lookbac
         existing = [c for c in cols if c in df.columns]
         df = df[existing]
 
-    return df
+    return yaml.dump(df.to_dict('records'), default_flow_style=False)
 
 # Tool Schema Constants
 CALCULATE_TICKER_PERFORMANCES_DESCRIPTION = (
@@ -148,7 +149,7 @@ CALCULATE_TICKER_PERFORMANCES_DESCRIPTION = (
     "Omega, Sterling, Burke, Martin ratios, capture ratios, win rates, profit factors, pain index, tail ratio, "
     "gain/loss ratio, ulcer index, max drawdown, annual returns, and volatility. "
     "CRITICAL: You MUST ALWAYS include the portfolio_dict parameter with ALL holdings. "
-    "Example: calculate_ticker_performances(portfolio_dict={'AAPL': {'allocation': 0.5, 'position': 'long'}, 'KO': {'allocation': 0.5, 'position': 'long'}}, benchmark='SPY')"
+    "Example: calculate_ticker_performances(portfolio_dict={'AAPL': {'allocation': 0.5, 'position': 'long'}, 'KO': {'allocation': 0.5, 'position': 'long'}})"
 )
 
 CALCULATE_TICKER_PERFORMANCES_PARAMETERS = {
@@ -161,7 +162,8 @@ CALCULATE_TICKER_PERFORMANCES_PARAMETERS = {
                 "Complete portfolio with ALL holdings. "
                 "Keys = ticker symbols (e.g., 'AAPL'). "
                 "Values = objects with 'allocation' (decimal 0-1) and 'position' ('long'/'short'). "
-                "You MUST include this parameter with all portfolio tickers."
+                "You MUST include this parameter with all portfolio tickers. "
+                "Uses 2-year lookback (504 days), total returns, and SPY benchmark by default."
                 "\n\n"
                 """Example of CORRECT function call:
                 calculate_ticker_performances(
@@ -174,8 +176,7 @@ CALCULATE_TICKER_PERFORMANCES_PARAMETERS = {
                         "SPY": {"allocation": 0.125, "position": "long"},
                         "QQQ": {"allocation": 0.125, "position": "long"},
                         "IWM": {"allocation": 0.125, "position": "long"}
-                    },
-                    benchmark="SPY"
+                    }
                 )"""
             ),
             "patternProperties": {
@@ -200,23 +201,7 @@ CALCULATE_TICKER_PERFORMANCES_PARAMETERS = {
             },
             "minProperties": 1,
             "additionalProperties": False
-        },
-        "lookback_days": {
-            "type": "integer",
-            "description": "Number of trading days to analyze (default 504 = ~2 years)",
-            "default": 504,
-            "minimum": 21
-        },
-        "use_total_returns": {
-            "type": "boolean",
-            "description": "Include dividends (true) or price-only (false)",
-            "default": True
-        },
-        "benchmark": {
-            "type": "string",
-            "description": "Benchmark ticker symbol for relative metrics (default 'SPY')",
-            "default": "SPY"
-        },
+        }
     },
     "required": ["portfolio_dict"],
     "additionalProperties": False

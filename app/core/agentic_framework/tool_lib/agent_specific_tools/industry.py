@@ -1,3 +1,4 @@
+import yaml
 from app.core.calculations.sectors.industry import *
 from app.core.calculations.sectors.sub_industry import *
 from app.core.calculations.factors.growth import GrowthFactors
@@ -16,14 +17,14 @@ from app.utils.decorators.price_data import with_price_data
 
 
 @with_session('market')
-def get_eligible_tickers(industry: str, session=None):
+def get_eligible_tickers(industry: str, session=None) -> str:
     """Get the eligible tickers for a given industry."""
     industry = industry.lower()
     tickers = session.query(Ticker).filter(Ticker.industry == industry, Ticker.market_cap > 600_000_000).all()
-    return [ticker.ticker for ticker in tickers]
+    return yaml.dump([ticker.ticker for ticker in tickers], default_flow_style=False)
 
 @with_session('market')
-def get_base_ticker_info(tickers: List[str], session=None):
+def get_base_ticker_info(tickers: List[str], session=None) -> str:
     """Get the base ticker info for a given list of tickers."""
     ticker_objects = session.query(Ticker).filter(Ticker.ticker.in_(tickers)).all()
     
@@ -45,7 +46,7 @@ def get_base_ticker_info(tickers: List[str], session=None):
         }
         result.append(ticker_dict)
     
-    return result
+    return yaml.dump(result, default_flow_style=False)
 
 
 # Tool Schema Constants

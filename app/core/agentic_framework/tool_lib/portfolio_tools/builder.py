@@ -1,9 +1,10 @@
+import yaml
 from app.utils.gpt_parser import canonical_portfolio
 from app.core.calculations.portfolio.build.builder import CorrelationPortfolioBuilder
 from app.core.calculations.core import DataService
 from datetime import datetime, timedelta
 
-def build_portfolio(portfolio_dict: any):
+def build_portfolio(portfolio_dict: any) -> str:
     """
     Parse ANY portfolio data into a proper portfolio dict and build optimized portfolio
     
@@ -22,7 +23,7 @@ def build_portfolio(portfolio_dict: any):
     try:
         portfolio_dict = canonical_portfolio(portfolio_dict)
     except Exception as e:
-        return f"Error parsing portfolio: {str(e)}"
+        return yaml.dump({"error": f"Error parsing portfolio: {str(e)}"}, default_flow_style=False)
 
     # Debug: Check which tickers have price data available
     ds = DataService()
@@ -49,7 +50,7 @@ def build_portfolio(portfolio_dict: any):
             error_msg.append(f"Tickers with no price data: {', '.join(empty_tickers)}")
         
         # Return detailed error about which tickers are problematic
-        return f"Cannot build portfolio - {'; '.join(error_msg)}. Please use only tickers with available price data."
+        return yaml.dump({"error": f"Cannot build portfolio - {'; '.join(error_msg)}. Please use only tickers with available price data."}, default_flow_style=False)
 
     built_portfolio = CorrelationPortfolioBuilder().build_portfolio(
         tickers=portfolio_dict,  
@@ -64,16 +65,16 @@ def build_portfolio(portfolio_dict: any):
     # Check if the build was successful
     if "error" in built_portfolio:
         # Return the error message for debugging
-        return f"Portfolio build failed: {built_portfolio['error']}"
+        return yaml.dump({"error": f"Portfolio build failed: {built_portfolio['error']}"}, default_flow_style=False)
     
     if "status" in built_portfolio and built_portfolio["status"] == "success":
         if "final_portfolio" in built_portfolio:
-            return built_portfolio["final_portfolio"]
+            return yaml.dump(built_portfolio["final_portfolio"], default_flow_style=False)
         else:
-            return "Error: Build succeeded but final_portfolio not found in result"
+            return yaml.dump({"error": "Build succeeded but final_portfolio not found in result"}, default_flow_style=False)
     
     # If we get here, something unexpected happened
-    return f"Unexpected result structure: {list(built_portfolio.keys())}"
+    return yaml.dump({"error": f"Unexpected result structure: {list(built_portfolio.keys())}"}, default_flow_style=False)
 
 
 # Tool Schema Constants

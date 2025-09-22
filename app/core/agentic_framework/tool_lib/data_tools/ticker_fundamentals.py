@@ -1,4 +1,10 @@
-from app.repositories.fundamental_data import get_fundamental_data
+import yaml
+from app.repositories.fundamental_data import get_fundamental_data as _get_fundamental_data
+
+def get_fundamental_data(ticker: str, statement_type: str, quarters_back: int = 2) -> str:
+    """Wrapper function to return YAML format."""
+    result = _get_fundamental_data(ticker, statement_type, quarters_back)
+    return yaml.dump(result, default_flow_style=False)
 
 # Tool Schema Constants
 GET_TICKER_FUNDAMENTAL_DATA_DESCRIPTION = (

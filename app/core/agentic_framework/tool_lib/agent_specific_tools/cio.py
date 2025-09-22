@@ -1,9 +1,10 @@
+import yaml
 from app.db.core.prophit_alts_models import FundInitialPosition, Fund
 from app.db.core.market_data_models import Ticker
 from app.utils.decorators.database import with_sessions
 from app.db.core.db_config import ProphitAltsSession, MarketSession
 
-def get_analyst_picks():
+def get_analyst_picks() -> str:
     session = ProphitAltsSession()
     initial_positions = session.query(FundInitialPosition).join(Fund).filter(Fund.fund_name == "consumer_staples_fund").all()
 
@@ -18,9 +19,9 @@ def get_analyst_picks():
     
     session.close()
 
-    return initial_positions_dict
+    return yaml.dump(initial_positions_dict, default_flow_style=False)
 
-def pull_rest_of_ticker_pool():
+def pull_rest_of_ticker_pool() -> str:
     session = ProphitAltsSession()
     market_session = MarketSession()
 
@@ -44,7 +45,7 @@ def pull_rest_of_ticker_pool():
     session.close()
     market_session.close()
 
-    return ticker_pool_list
+    return yaml.dump(ticker_pool_list, default_flow_style=False)
 
 
 # Tool Schema Constants
@@ -85,3 +86,9 @@ PULL_REST_OF_TICKER_POOL_TOOL = {
     "parameters": PULL_REST_OF_TICKER_POOL_PARAMETERS,
     "function": pull_rest_of_ticker_pool,
 }
+
+
+
+if __name__ == "__main__":
+    print(get_analyst_picks())
+    print(pull_rest_of_ticker_pool())

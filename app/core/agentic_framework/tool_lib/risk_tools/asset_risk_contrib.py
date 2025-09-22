@@ -1,3 +1,4 @@
+import yaml
 from app.core.calculations.portfolio.utils import prepare_portfolio_data
 from app.core.calculations.returns.calculator import ReturnsCalculator
 from app.core.calculations.risk.calculator import RiskCalculator
@@ -6,7 +7,7 @@ import pandas as pd
 from app.utils.gpt_parser import canonical_portfolio
 import numpy as np
 
-def risk_contribution(portfolio_dict: PortfolioInput | dict = None, metric: str = 'vol') -> dict:
+def risk_contribution(portfolio_dict: PortfolioInput | dict = None, metric: str = 'vol') -> str:
     """
     Calculate Total Risk and risk contributions by asset.
     
@@ -20,12 +21,12 @@ def risk_contribution(portfolio_dict: PortfolioInput | dict = None, metric: str 
     - CTR_pct: Component Total Risk as percentage (per asset)
     """
     if not portfolio_dict:
-        return {"error": "Portfolio dictionary is required"}
+        return yaml.dump({"error": "Portfolio dictionary is required"}, default_flow_style=False)
     
     try:
         portfolio_dict = canonical_portfolio(portfolio_dict)
     except Exception as e:
-        return {"error": str(e)}
+        return yaml.dump({"error": str(e)}, default_flow_style=False)
 
     # Get tickers and weights from portfolio
     tickers = list(portfolio_dict.keys())
@@ -43,7 +44,7 @@ def risk_contribution(portfolio_dict: PortfolioInput | dict = None, metric: str 
         )
         
         if not price_data:
-            return {"error": "No price data available for portfolio tickers"}
+            return yaml.dump({"error": "No price data available for portfolio tickers"}, default_flow_style=False)
         
         # Calculate returns for each ticker
         returns_df = pd.DataFrame({
@@ -53,7 +54,7 @@ def risk_contribution(portfolio_dict: PortfolioInput | dict = None, metric: str 
         }).dropna()
         
         if returns_df.empty:
-            return {"error": "No price data available for portfolio tickers"}
+            return yaml.dump({"error": "No price data available for portfolio tickers"}, default_flow_style=False)
         
         # Calculate covariance matrix using v2
         cov_matrix = RiskCalculator.covariance_matrix(returns_df, annualize=False)
@@ -88,7 +89,7 @@ def risk_contribution(portfolio_dict: PortfolioInput | dict = None, metric: str 
                 ctr_pct = np.zeros_like(component_contrib)
 
         else:
-            return {"error": f"Invalid metric '{metric}'. Use 'vol' or 'var'"}
+            return yaml.dump({"error": f"Invalid metric '{metric}'. Use 'vol' or 'var'"}, default_flow_style=False)
         
         # Build result dictionary
         result = {
@@ -98,10 +99,10 @@ def risk_contribution(portfolio_dict: PortfolioInput | dict = None, metric: str 
             'CTR_pct': {ticker: round(float(ctr_pct[i]), 2) for i, ticker in enumerate(cov_matrix.columns)}
         }
         
-        return result
+        return yaml.dump(result, default_flow_style=False)
         
     except Exception as e:
-        return {"error": f"Failed to calculate risk_contribution: {str(e)}"}
+        return yaml.dump({"error": f"Failed to calculate risk_contribution: {str(e)}"}, default_flow_style=False)
 
 
 # Tool Schema Constants

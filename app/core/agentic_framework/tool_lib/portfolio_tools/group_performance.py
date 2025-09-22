@@ -1,3 +1,4 @@
+import yaml
 from app.core.calculations.portfolio.utils import prepare_portfolio_data
 from app.core.calculations.returns.calculator import ReturnsCalculator
 from app.core.calculations.risk.calculator import RiskCalculator
@@ -8,14 +9,14 @@ from app.utils.gpt_parser import canonical_portfolio
 from app.db.core.db_config import MarketSession
 from app.db.core.market_data_models import Ticker
 
-def calculate_group_performances(portfolio_dict: PortfolioInput | dict, lookback_days: int = 252*3, use_total_returns: bool = True, group_by: str = None) -> pd.DataFrame:
+def calculate_group_performances(portfolio_dict: PortfolioInput | dict, lookback_days: int = 756, use_total_returns: bool = True, group_by: str = None) -> str:
     """Generic grouping performance calculator.
 
     Returns a DataFrame with columns: [group_label, ann_total_return, ann_volatility]
     where group_label column name equals group_by.
     """
     if not portfolio_dict:
-        return pd.DataFrame(columns=[group_by, "ann_total_return", "ann_volatility"])
+        return yaml.dump([], default_flow_style=False)
     
     portfolio_dict = canonical_portfolio(portfolio_dict)
     
@@ -29,7 +30,7 @@ def calculate_group_performances(portfolio_dict: PortfolioInput | dict, lookback
 
     tickers = list(weights.keys())
     if not tickers:
-        return pd.DataFrame(columns=[group_by, "ann_total_return", "ann_volatility"])
+        return yaml.dump([], default_flow_style=False)
 
     # 2) Per-ticker return series
     per_ticker_returns: dict[str, pd.Series] = {}
@@ -44,7 +45,7 @@ def calculate_group_performances(portfolio_dict: PortfolioInput | dict, lookback
             per_ticker_returns[t] = ReturnsCalculator.daily_price_returns(s)
 
     if not per_ticker_returns:
-        return pd.DataFrame(columns=[group_by, "ann_total_return", "ann_volatility"])
+        return yaml.dump([], default_flow_style=False)
 
     # 3) Map tickers to group labels
     field = group_by
@@ -99,7 +100,7 @@ def calculate_group_performances(portfolio_dict: PortfolioInput | dict, lookback
     if not out.empty:
         # Stable ordering by label
         out = out[[group_by, "ann_total_return", "ann_volatility"]]
-    return out
+    return yaml.dump(out.to_dict('records'), default_flow_style=False)
 
 # Tool Schema Constants
 CALCULATE_GROUP_PERFORMANCES_DESCRIPTION = (
@@ -120,7 +121,8 @@ CALCULATE_GROUP_PERFORMANCES_PARAMETERS = {
                 "Complete portfolio with ALL holdings. "
                 "Keys = ticker symbols (e.g., 'AAPL'). "
                 "Values = objects with 'allocation' (decimal 0-1) and 'position' ('long'/'short'). "
-                "You MUST include this parameter with all portfolio tickers."
+                "You MUST include this parameter with all portfolio tickers. "
+                "Uses 3-year lookback (756 days) and total returns by default."
                 "\n\n"
                 """Example of CORRECT function call:
                 calculate_group_performances(
@@ -159,17 +161,6 @@ CALCULATE_GROUP_PERFORMANCES_PARAMETERS = {
             },
             "minProperties": 1,
             "additionalProperties": False
-        },
-        "lookback_days": {
-            "type": "integer",
-            "description": "Number of trading days to analyze (default 756 = ~3 years)",
-            "default": 756,
-            "minimum": 21
-        },
-        "use_total_returns": {
-            "type": "boolean",
-            "description": "Include dividends (true) or price-only (false)",
-            "default": True
         },
         "group_by": {
             "type": "string",

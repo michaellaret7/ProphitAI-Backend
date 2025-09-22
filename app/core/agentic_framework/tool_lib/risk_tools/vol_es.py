@@ -1,3 +1,4 @@
+import yaml
 from app.core.calculations.portfolio.utils import get_portfolio_returns
 from app.core.calculations.risk.calculator import RiskCalculator
 from app.models.portfolio_models import PortfolioInput
@@ -5,7 +6,7 @@ from app.utils.gpt_parser import canonical_portfolio
 
 import numpy as np
 
-def vol_es(portfolio_dict: PortfolioInput | dict = None, horizon_days: int = 1, conf: float = 0.99, method: str = 'param') -> dict:
+def vol_es(portfolio_dict: PortfolioInput | dict = None, horizon_days: int = 1, conf: float = 0.99, method: str = 'param') -> str:
     """
     Calculate Volatility, Value at Risk (VaR), and Expected Shortfall (ES) for portfolio.
     
@@ -21,12 +22,12 @@ def vol_es(portfolio_dict: PortfolioInput | dict = None, horizon_days: int = 1, 
     - vol: Portfolio volatility (annualized)
     """
     if not portfolio_dict:
-        return {"error": "Portfolio dictionary is required"}
+        return yaml.dump({"error": "Portfolio dictionary is required"}, default_flow_style=False)
     
     try:
         portfolio_dict = canonical_portfolio(portfolio_dict)
     except Exception as e:
-        return {"error": str(e)}
+        return yaml.dump({"error": str(e)}, default_flow_style=False)
     
     try:
         # Get portfolio returns using the utility
@@ -38,7 +39,7 @@ def vol_es(portfolio_dict: PortfolioInput | dict = None, horizon_days: int = 1, 
         )
         
         if portfolio_returns is None or portfolio_returns.empty:
-            return {"error": "No price data available for portfolio tickers"}
+            return yaml.dump({"error": "No price data available for portfolio tickers"}, default_flow_style=False)
 
         # Calculate VaR/ES and volatility using calculations_v2
         if method == 'param':
@@ -52,9 +53,9 @@ def vol_es(portfolio_dict: PortfolioInput | dict = None, horizon_days: int = 1, 
             annual_vol = RiskCalculator.annualized_volatility(portfolio_returns)
             
         elif method == 'ewma':
-            return {"error": "Method 'ewma' not supported with calculations_v2. Use 'param' or 'hist'."}
+            return yaml.dump({"error": "Method 'ewma' not supported with calculations_v2. Use 'param' or 'hist'."}, default_flow_style=False)
         else:
-            return {"error": f"Invalid method '{method}'. Use 'param' or 'hist'"}
+            return yaml.dump({"error": f"Invalid method '{method}'. Use 'param' or 'hist'"}, default_flow_style=False)
 
         # Scale VaR for time horizon and annualize
         var_scaled = float(var_1day) * np.sqrt(horizon_days)
@@ -72,10 +73,10 @@ def vol_es(portfolio_dict: PortfolioInput | dict = None, horizon_days: int = 1, 
             'var_annual': round(float(var_annual), 6)
         }
 
-        return result
+        return yaml.dump(result, default_flow_style=False)
         
     except Exception as e:
-        return {"error": f"Failed to calculate vol_es: {str(e)}"}
+        return yaml.dump({"error": f"Failed to calculate vol_es: {str(e)}"}, default_flow_style=False)
 
 
 # Tool Schema Constants

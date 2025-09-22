@@ -18,7 +18,7 @@
               }
             }
           },
-          "explanation": "Extract portfolio from either from get_initial_portfolio_dict() previous tool call if you want to test the initial portfolio but if you want to test a new portfolio you must pass the new portfolio in the correct dict format, don't pass empty dict",
+          "explanation": "Extract portfolio from either from get_final_portfolio_dict() previous tool call if you want to test the initial portfolio but if you want to test a new portfolio you must pass the new portfolio in the correct dict format, don't pass empty dict",
           "timestamp": "2025-08-18T14:14:38.429191",
           "success_count": 10
         }
@@ -36,7 +36,7 @@
             }
           }
         },
-        "explanation": "Extract portfolio from either from get_initial_portfolio_dict() previous tool call if you want to test the initial portfolio but if you want to test a new portfolio you must pass the new portfolio in the correct dict format, don't pass empty dict",
+        "explanation": "Extract portfolio from either from get_final_portfolio_dict() previous tool call if you want to test the initial portfolio but if you want to test a new portfolio you must pass the new portfolio in the correct dict format, don't pass empty dict",
         "timestamp": "2025-08-18T14:14:38.429191",
         "success_count": 10
       }
@@ -123,7 +123,7 @@
               }
             }
           },
-          "explanation": "Extract portfolio from either from get_initial_portfolio_dict() previous tool call if you want to test the initial portfolio but if you want to test a new portfolio you must pass the new portfolio in the correct dict format, don't pass empty dict",
+          "explanation": "Extract portfolio from either from get_final_portfolio_dict() previous tool call if you want to test the initial portfolio but if you want to test a new portfolio you must pass the new portfolio in the correct dict format, don't pass empty dict",
           "timestamp": "2025-08-18T14:14:38.430194",
           "success_count": 10
         },
@@ -7064,6 +7064,14 @@
             "factor": "size"
           },
           "full_error": "Unknown factor: size"
+        },
+        {
+          "timestamp": "2025-09-22T13:10:47.955012",
+          "args": {
+            "industry": "tobacco",
+            "factor": "size"
+          },
+          "full_error": "Unknown factor: size"
         }
       ],
       "solutions": [
@@ -7083,6 +7091,15 @@
           },
           "explanation": "Successful retry with corrected arguments",
           "timestamp": "2025-09-19T18:54:18.085637",
+          "success_count": 1
+        },
+        {
+          "correct_args": {
+            "industry": "tobacco",
+            "factor": "volatility"
+          },
+          "explanation": "Successful retry with corrected arguments",
+          "timestamp": "2025-09-22T13:11:06.736132",
           "success_count": 1
         }
       ],
@@ -7738,10 +7755,300 @@
             "group_by": "position"
           },
           "full_error": "calculate_group_performances() missing 1 required positional argument: 'portfolio_dict'"
+        },
+        {
+          "timestamp": "2025-09-22T14:49:03.859761",
+          "args": {
+            "lookback_days": 756,
+            "use_total_returns": true,
+            "group_by": "industry"
+          },
+          "full_error": "calculate_group_performances() missing 1 required positional argument: 'portfolio_dict'"
+        },
+        {
+          "timestamp": "2025-09-22T14:49:03.878238",
+          "args": {
+            "lookback_days": 756,
+            "use_total_returns": true,
+            "group_by": "sub_industry"
+          },
+          "full_error": "calculate_group_performances() missing 1 required positional argument: 'portfolio_dict'"
         }
       ],
-      "solutions": [],
-      "auto_solution": null
+      "solutions": [
+        {
+          "correct_args": {
+            "portfolio_dict": {
+              "MO": {
+                "allocation": 0.08,
+                "position": "long"
+              },
+              "KMB": {
+                "allocation": 0.08,
+                "position": "long"
+              },
+              "INGR": {
+                "allocation": 0.07,
+                "position": "long"
+              },
+              "GIS": {
+                "allocation": 0.07,
+                "position": "long"
+              },
+              "KO": {
+                "allocation": 0.07,
+                "position": "long"
+              },
+              "DG": {
+                "allocation": 0.08,
+                "position": "long"
+              },
+              "BJ": {
+                "allocation": 0.065,
+                "position": "long"
+              },
+              "PPC": {
+                "allocation": 0.065,
+                "position": "long"
+              },
+              "IPAR": {
+                "allocation": 0.065,
+                "position": "long"
+              },
+              "KDP": {
+                "allocation": 0.065,
+                "position": "long"
+              },
+              "CL": {
+                "allocation": 0.06,
+                "position": "long"
+              },
+              "KVUE": {
+                "allocation": 0.055,
+                "position": "long"
+              },
+              "CCEP": {
+                "allocation": 0.055,
+                "position": "long"
+              },
+              "REYN": {
+                "allocation": 0.055,
+                "position": "long"
+              },
+              "TAP": {
+                "allocation": 0.055,
+                "position": "long"
+              },
+              "SAM": {
+                "allocation": 0.055,
+                "position": "long"
+              },
+              "ACI": {
+                "allocation": 0.06,
+                "position": "long"
+              },
+              "RLX": {
+                "allocation": 0.045,
+                "position": "long"
+              },
+              "HSY": {
+                "allocation": 0.09,
+                "position": "short"
+              },
+              "CLX": {
+                "allocation": 0.08,
+                "position": "short"
+              },
+              "COST": {
+                "allocation": 0.08,
+                "position": "short"
+              },
+              "STZ": {
+                "allocation": 0.07,
+                "position": "short"
+              },
+              "ELF": {
+                "allocation": 0.07,
+                "position": "short"
+              },
+              "CELH": {
+                "allocation": 0.07,
+                "position": "short"
+              },
+              "EL": {
+                "allocation": 0.06,
+                "position": "short"
+              },
+              "FRPT": {
+                "allocation": 0.06,
+                "position": "short"
+              },
+              "UTZ": {
+                "allocation": 0.06,
+                "position": "short"
+              },
+              "SFM": {
+                "allocation": 0.06,
+                "position": "short"
+              },
+              "VITL": {
+                "allocation": 0.05,
+                "position": "short"
+              },
+              "COTY": {
+                "allocation": 0.05,
+                "position": "short"
+              },
+              "WDFC": {
+                "allocation": 0.05,
+                "position": "short"
+              }
+            },
+            "lookback_days": 756,
+            "use_total_returns": true,
+            "group_by": "industry"
+          },
+          "explanation": "Successful retry with corrected arguments",
+          "timestamp": "2025-09-22T14:49:32.791113",
+          "success_count": 1
+        }
+      ],
+      "auto_solution": {
+        "correct_args": {
+          "portfolio_dict": {
+            "MO": {
+              "allocation": 0.08,
+              "position": "long"
+            },
+            "KMB": {
+              "allocation": 0.08,
+              "position": "long"
+            },
+            "INGR": {
+              "allocation": 0.07,
+              "position": "long"
+            },
+            "GIS": {
+              "allocation": 0.07,
+              "position": "long"
+            },
+            "KO": {
+              "allocation": 0.07,
+              "position": "long"
+            },
+            "DG": {
+              "allocation": 0.08,
+              "position": "long"
+            },
+            "BJ": {
+              "allocation": 0.065,
+              "position": "long"
+            },
+            "PPC": {
+              "allocation": 0.065,
+              "position": "long"
+            },
+            "IPAR": {
+              "allocation": 0.065,
+              "position": "long"
+            },
+            "KDP": {
+              "allocation": 0.065,
+              "position": "long"
+            },
+            "CL": {
+              "allocation": 0.06,
+              "position": "long"
+            },
+            "KVUE": {
+              "allocation": 0.055,
+              "position": "long"
+            },
+            "CCEP": {
+              "allocation": 0.055,
+              "position": "long"
+            },
+            "REYN": {
+              "allocation": 0.055,
+              "position": "long"
+            },
+            "TAP": {
+              "allocation": 0.055,
+              "position": "long"
+            },
+            "SAM": {
+              "allocation": 0.055,
+              "position": "long"
+            },
+            "ACI": {
+              "allocation": 0.06,
+              "position": "long"
+            },
+            "RLX": {
+              "allocation": 0.045,
+              "position": "long"
+            },
+            "HSY": {
+              "allocation": 0.09,
+              "position": "short"
+            },
+            "CLX": {
+              "allocation": 0.08,
+              "position": "short"
+            },
+            "COST": {
+              "allocation": 0.08,
+              "position": "short"
+            },
+            "STZ": {
+              "allocation": 0.07,
+              "position": "short"
+            },
+            "ELF": {
+              "allocation": 0.07,
+              "position": "short"
+            },
+            "CELH": {
+              "allocation": 0.07,
+              "position": "short"
+            },
+            "EL": {
+              "allocation": 0.06,
+              "position": "short"
+            },
+            "FRPT": {
+              "allocation": 0.06,
+              "position": "short"
+            },
+            "UTZ": {
+              "allocation": 0.06,
+              "position": "short"
+            },
+            "SFM": {
+              "allocation": 0.06,
+              "position": "short"
+            },
+            "VITL": {
+              "allocation": 0.05,
+              "position": "short"
+            },
+            "COTY": {
+              "allocation": 0.05,
+              "position": "short"
+            },
+            "WDFC": {
+              "allocation": 0.05,
+              "position": "short"
+            }
+          },
+          "lookback_days": 756,
+          "use_total_returns": true,
+          "group_by": "industry"
+        },
+        "explanation": "Successful retry with corrected arguments",
+        "timestamp": "2025-09-22T14:49:32.791113",
+        "success_count": 1
+      }
     },
     "calculate_portfolio_performance:missing_portfolio_dict": {
       "tool_name": "calculate_portfolio_performance",
@@ -8400,24 +8707,6 @@
       "error_pattern": "get_stock_news() got an unexpected keyword argument 'session'",
       "occurrences": [
         {
-          "timestamp": "2025-09-22T10:34:40.340749",
-          "args": {
-            "ticker": "UNFI",
-            "data_type": "stock_news",
-            "limit": 4
-          },
-          "full_error": "get_stock_news() got an unexpected keyword argument 'session'"
-        },
-        {
-          "timestamp": "2025-09-22T10:34:40.358982",
-          "args": {
-            "ticker": "TBBB",
-            "data_type": "stock_news",
-            "limit": 4
-          },
-          "full_error": "get_stock_news() got an unexpected keyword argument 'session'"
-        },
-        {
           "timestamp": "2025-09-22T10:34:40.371193",
           "args": {
             "ticker": "DLTR",
@@ -8470,11 +8759,514 @@
             "limit": 4
           },
           "full_error": "get_stock_news() got an unexpected keyword argument 'session'"
+        },
+        {
+          "timestamp": "2025-09-22T13:11:50.535360",
+          "args": {
+            "ticker": "PM",
+            "data_type": "stock_news"
+          },
+          "full_error": "get_stock_news() got an unexpected keyword argument 'session'"
+        },
+        {
+          "timestamp": "2025-09-22T13:12:03.978451",
+          "args": {
+            "ticker": "RLX",
+            "data_type": "stock_news"
+          },
+          "full_error": "get_stock_news() got an unexpected keyword argument 'session'"
+        },
+        {
+          "timestamp": "2025-09-22T13:57:32.485615",
+          "args": {
+            "ticker": "PRMB",
+            "data_type": "stock_news"
+          },
+          "full_error": "get_stock_news() got an unexpected keyword argument 'session'"
+        },
+        {
+          "timestamp": "2025-09-22T13:57:32.495194",
+          "args": {
+            "ticker": "PRMW",
+            "data_type": "stock_news"
+          },
+          "full_error": "get_stock_news() got an unexpected keyword argument 'session'"
         }
       ],
-      "solutions": [],
-      "auto_solution": null
+      "solutions": [
+        {
+          "correct_args": {
+            "ticker": "PM",
+            "data_type": "analyst_recommendations"
+          },
+          "explanation": "Successful retry with corrected arguments",
+          "timestamp": "2025-09-22T13:11:50.637577",
+          "success_count": 1
+        },
+        {
+          "correct_args": {
+            "ticker": "RLX",
+            "data_type": "analyst_recommendations"
+          },
+          "explanation": "Successful retry with corrected arguments",
+          "timestamp": "2025-09-22T13:12:04.096016",
+          "success_count": 1
+        }
+      ],
+      "auto_solution": {
+        "correct_args": {
+          "ticker": "PM",
+          "data_type": "analyst_recommendations"
+        },
+        "explanation": "Successful retry with corrected arguments",
+        "timestamp": "2025-09-22T13:11:50.637577",
+        "success_count": 1
+      }
+    },
+    "stock_screener:missing_criteria_dict": {
+      "tool_name": "stock_screener",
+      "error_pattern": "screener() missing 1 required positional argument: 'criteria_dict'",
+      "occurrences": [
+        {
+          "timestamp": "2025-09-22T14:37:32.174228",
+          "args": {},
+          "full_error": "screener() missing 1 required positional argument: 'criteria_dict'"
+        }
+      ],
+      "solutions": [
+        {
+          "correct_args": {
+            "criteria_dict": {
+              "sector": "equity_sector_consumer_staples",
+              "market_cap": [
+                2000000000,
+                null
+              ],
+              "pe_ratio": [
+                0,
+                18
+              ],
+              "ev_ebit": [
+                0,
+                14
+              ],
+              "fcf_yield": [
+                0.04,
+                null
+              ],
+              "roe": [
+                0.12,
+                null
+              ],
+              "operating_margin": [
+                0.1,
+                null
+              ],
+              "debt_to_equity": [
+                0,
+                1.5
+              ],
+              "interest_coverage": [
+                4,
+                null
+              ],
+              "momentum_12_1": [
+                0.0,
+                null
+              ],
+              "momentum_3m": [
+                0.0,
+                null
+              ],
+              "limit": 50,
+              "columns": [
+                "ticker",
+                "company_name",
+                "industry",
+                "sub_industry",
+                "market_cap",
+                "pe_ratio",
+                "ev_ebit",
+                "fcf_yield",
+                "roe",
+                "debt_to_equity",
+                "gross_margin",
+                "operating_margin",
+                "interest_coverage",
+                "momentum_12_1",
+                "momentum_3m",
+                "dividend_yield",
+                "net_debt_to_ebitda"
+              ],
+              "sort_by": [
+                "-fcf_yield",
+                "-roe"
+              ]
+            }
+          },
+          "explanation": "Successful retry with corrected arguments",
+          "timestamp": "2025-09-22T14:38:06.392555",
+          "success_count": 1
+        }
+      ],
+      "auto_solution": {
+        "correct_args": {
+          "criteria_dict": {
+            "sector": "equity_sector_consumer_staples",
+            "market_cap": [
+              2000000000,
+              null
+            ],
+            "pe_ratio": [
+              0,
+              18
+            ],
+            "ev_ebit": [
+              0,
+              14
+            ],
+            "fcf_yield": [
+              0.04,
+              null
+            ],
+            "roe": [
+              0.12,
+              null
+            ],
+            "operating_margin": [
+              0.1,
+              null
+            ],
+            "debt_to_equity": [
+              0,
+              1.5
+            ],
+            "interest_coverage": [
+              4,
+              null
+            ],
+            "momentum_12_1": [
+              0.0,
+              null
+            ],
+            "momentum_3m": [
+              0.0,
+              null
+            ],
+            "limit": 50,
+            "columns": [
+              "ticker",
+              "company_name",
+              "industry",
+              "sub_industry",
+              "market_cap",
+              "pe_ratio",
+              "ev_ebit",
+              "fcf_yield",
+              "roe",
+              "debt_to_equity",
+              "gross_margin",
+              "operating_margin",
+              "interest_coverage",
+              "momentum_12_1",
+              "momentum_3m",
+              "dividend_yield",
+              "net_debt_to_ebitda"
+            ],
+            "sort_by": [
+              "-fcf_yield",
+              "-roe"
+            ]
+          }
+        },
+        "explanation": "Successful retry with corrected arguments",
+        "timestamp": "2025-09-22T14:38:06.392555",
+        "success_count": 1
+      }
+    },
+    "calculate_portfolio_returns_metrics:missing_portfolio_dict": {
+      "tool_name": "calculate_portfolio_returns_metrics",
+      "error_pattern": "calculate_portfolio_returns_metrics() missing 1 required positional argument: 'portfolio_dict'",
+      "occurrences": [
+        {
+          "timestamp": "2025-09-22T14:48:27.967342",
+          "args": {
+            "lookback_days": 252
+          },
+          "full_error": "calculate_portfolio_returns_metrics() missing 1 required positional argument: 'portfolio_dict'"
+        }
+      ],
+      "solutions": [
+        {
+          "correct_args": {
+            "portfolio_dict": {
+              "MO": {
+                "allocation": 0.08,
+                "position": "long"
+              },
+              "KMB": {
+                "allocation": 0.08,
+                "position": "long"
+              },
+              "INGR": {
+                "allocation": 0.07,
+                "position": "long"
+              },
+              "GIS": {
+                "allocation": 0.07,
+                "position": "long"
+              },
+              "KO": {
+                "allocation": 0.07,
+                "position": "long"
+              },
+              "DG": {
+                "allocation": 0.08,
+                "position": "long"
+              },
+              "BJ": {
+                "allocation": 0.065,
+                "position": "long"
+              },
+              "PPC": {
+                "allocation": 0.065,
+                "position": "long"
+              },
+              "IPAR": {
+                "allocation": 0.065,
+                "position": "long"
+              },
+              "KDP": {
+                "allocation": 0.065,
+                "position": "long"
+              },
+              "CL": {
+                "allocation": 0.06,
+                "position": "long"
+              },
+              "KVUE": {
+                "allocation": 0.055,
+                "position": "long"
+              },
+              "CCEP": {
+                "allocation": 0.055,
+                "position": "long"
+              },
+              "REYN": {
+                "allocation": 0.055,
+                "position": "long"
+              },
+              "TAP": {
+                "allocation": 0.055,
+                "position": "long"
+              },
+              "SAM": {
+                "allocation": 0.055,
+                "position": "long"
+              },
+              "ACI": {
+                "allocation": 0.06,
+                "position": "long"
+              },
+              "RLX": {
+                "allocation": 0.045,
+                "position": "long"
+              },
+              "HSY": {
+                "allocation": 0.09,
+                "position": "short"
+              },
+              "CLX": {
+                "allocation": 0.08,
+                "position": "short"
+              },
+              "COST": {
+                "allocation": 0.08,
+                "position": "short"
+              },
+              "STZ": {
+                "allocation": 0.07,
+                "position": "short"
+              },
+              "ELF": {
+                "allocation": 0.07,
+                "position": "short"
+              },
+              "CELH": {
+                "allocation": 0.07,
+                "position": "short"
+              },
+              "EL": {
+                "allocation": 0.06,
+                "position": "short"
+              },
+              "FRPT": {
+                "allocation": 0.06,
+                "position": "short"
+              },
+              "UTZ": {
+                "allocation": 0.06,
+                "position": "short"
+              },
+              "SFM": {
+                "allocation": 0.06,
+                "position": "short"
+              },
+              "VITL": {
+                "allocation": 0.05,
+                "position": "short"
+              },
+              "COTY": {
+                "allocation": 0.05,
+                "position": "short"
+              },
+              "WDFC": {
+                "allocation": 0.05,
+                "position": "short"
+              }
+            },
+            "lookback_days": 252
+          },
+          "explanation": "Successful retry with corrected arguments",
+          "timestamp": "2025-09-22T14:48:52.045150",
+          "success_count": 1
+        }
+      ],
+      "auto_solution": {
+        "correct_args": {
+          "portfolio_dict": {
+            "MO": {
+              "allocation": 0.08,
+              "position": "long"
+            },
+            "KMB": {
+              "allocation": 0.08,
+              "position": "long"
+            },
+            "INGR": {
+              "allocation": 0.07,
+              "position": "long"
+            },
+            "GIS": {
+              "allocation": 0.07,
+              "position": "long"
+            },
+            "KO": {
+              "allocation": 0.07,
+              "position": "long"
+            },
+            "DG": {
+              "allocation": 0.08,
+              "position": "long"
+            },
+            "BJ": {
+              "allocation": 0.065,
+              "position": "long"
+            },
+            "PPC": {
+              "allocation": 0.065,
+              "position": "long"
+            },
+            "IPAR": {
+              "allocation": 0.065,
+              "position": "long"
+            },
+            "KDP": {
+              "allocation": 0.065,
+              "position": "long"
+            },
+            "CL": {
+              "allocation": 0.06,
+              "position": "long"
+            },
+            "KVUE": {
+              "allocation": 0.055,
+              "position": "long"
+            },
+            "CCEP": {
+              "allocation": 0.055,
+              "position": "long"
+            },
+            "REYN": {
+              "allocation": 0.055,
+              "position": "long"
+            },
+            "TAP": {
+              "allocation": 0.055,
+              "position": "long"
+            },
+            "SAM": {
+              "allocation": 0.055,
+              "position": "long"
+            },
+            "ACI": {
+              "allocation": 0.06,
+              "position": "long"
+            },
+            "RLX": {
+              "allocation": 0.045,
+              "position": "long"
+            },
+            "HSY": {
+              "allocation": 0.09,
+              "position": "short"
+            },
+            "CLX": {
+              "allocation": 0.08,
+              "position": "short"
+            },
+            "COST": {
+              "allocation": 0.08,
+              "position": "short"
+            },
+            "STZ": {
+              "allocation": 0.07,
+              "position": "short"
+            },
+            "ELF": {
+              "allocation": 0.07,
+              "position": "short"
+            },
+            "CELH": {
+              "allocation": 0.07,
+              "position": "short"
+            },
+            "EL": {
+              "allocation": 0.06,
+              "position": "short"
+            },
+            "FRPT": {
+              "allocation": 0.06,
+              "position": "short"
+            },
+            "UTZ": {
+              "allocation": 0.06,
+              "position": "short"
+            },
+            "SFM": {
+              "allocation": 0.06,
+              "position": "short"
+            },
+            "VITL": {
+              "allocation": 0.05,
+              "position": "short"
+            },
+            "COTY": {
+              "allocation": 0.05,
+              "position": "short"
+            },
+            "WDFC": {
+              "allocation": 0.05,
+              "position": "short"
+            }
+          },
+          "lookback_days": 252
+        },
+        "explanation": "Successful retry with corrected arguments",
+        "timestamp": "2025-09-22T14:48:52.045150",
+        "success_count": 1
+      }
     }
   },
-  "last_updated": "2025-09-22T10:56:02.245241"
+  "last_updated": "2025-09-22T14:49:32.791323"
 }

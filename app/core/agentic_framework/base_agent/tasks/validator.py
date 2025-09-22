@@ -145,7 +145,12 @@ class TaskValidator:
                     for t in parent_task.predicted_tool_use:
                         if str(t).lower() in desc_lower:
                             relevant_tools.append(str(t).lower())
-                has_error_evidence = any('error' in str(ev).lower() for ev in subtask.completion_evidence)
+                import re
+                # Use word boundary check to avoid false positives like "grocer" containing "error"
+                has_error_evidence = any(
+                    re.search(r'\berror\b', str(ev), re.IGNORECASE) 
+                    for ev in subtask.completion_evidence
+                )
                 has_relevant_tool_evidence = False
                 if relevant_tools:
                     for ev in subtask.completion_evidence:

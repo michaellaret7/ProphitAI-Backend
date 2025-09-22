@@ -1,3 +1,4 @@
+import yaml
 from app.core.calculations.portfolio.utils import prepare_portfolio_data
 from app.core.calculations.returns.calculator import ReturnsCalculator
 from app.core.calculations.portfolio.correlation import CorrelationAnalysis
@@ -5,7 +6,7 @@ from app.models.portfolio_models import PortfolioInput
 import pandas as pd
 from app.utils.gpt_parser import canonical_portfolio
 
-def correlation_matrix(portfolio_dict: PortfolioInput | dict) -> dict:
+def correlation_matrix(portfolio_dict: PortfolioInput | dict) -> str:
     """
     Calculate pairwise correlations and return as records for easy LLM consumption.
 
@@ -17,12 +18,12 @@ def correlation_matrix(portfolio_dict: PortfolioInput | dict) -> dict:
     }
     """
     if not portfolio_dict:
-        return {"correlations": []}
+        return yaml.dump({"correlations": []}, default_flow_style=False)
 
     try:
         portfolio_dict = canonical_portfolio(portfolio_dict)
     except ValueError:
-        return {"correlations": []}
+        return yaml.dump({"correlations": []}, default_flow_style=False)
 
     # Use utility to get portfolio data
     weights, price_data, dividend_data = prepare_portfolio_data(
@@ -32,7 +33,7 @@ def correlation_matrix(portfolio_dict: PortfolioInput | dict) -> dict:
     )
 
     if not price_data:
-        return {"correlations": []}
+        return yaml.dump({"correlations": []}, default_flow_style=False)
 
     # Calculate returns for each ticker
     returns_df = pd.DataFrame({
@@ -42,12 +43,12 @@ def correlation_matrix(portfolio_dict: PortfolioInput | dict) -> dict:
     }).dropna()
 
     if returns_df.empty:
-        return {"correlations": []}
+        return yaml.dump({"correlations": []}, default_flow_style=False)
 
     # Compute correlation matrix and round
     corr_df = CorrelationAnalysis.correlation_matrix(returns_df)
     if corr_df is None or corr_df.empty:
-        return {"correlations": []}
+        return yaml.dump({"correlations": []}, default_flow_style=False)
     corr_df = corr_df.round(3)
 
     # Use the correlation matrix's own column order to avoid key-order drift
@@ -68,7 +69,7 @@ def correlation_matrix(portfolio_dict: PortfolioInput | dict) -> dict:
                 "corr": value
             })
 
-    return {"correlations": records}
+    return yaml.dump({"correlations": records}, default_flow_style=False)
 
 
 # Tool Schema Constants
