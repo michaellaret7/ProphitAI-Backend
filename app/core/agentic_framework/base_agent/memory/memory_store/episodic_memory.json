@@ -1,1 +1,73 @@
-[]
+[
+  {
+    "timestamp": "2025-09-22T19:57:51.455954",
+    "title": "Baseline Portfolio V0",
+    "event": "portfolio_snapshot_v0",
+    "outcome": "33 holdings loaded (19 longs, 14 shorts); gross long 1.15048, gross short 0.85098, net 0.29950; short-cap breaches identified (13 of 14).",
+    "tags": [
+      "baseline",
+      "portfolio",
+      "snapshot",
+      "V0"
+    ]
+  },
+  {
+    "timestamp": "2025-09-22T20:00:17.054541",
+    "title": "Baseline Risk V0",
+    "event": "baseline_risk_suite_v0",
+    "outcome": "VaR 2.044% (1D,99%), ES 2.342%, vol 13.95% ann.; Max DD -14.49%; stress worst: Credit Crunch -16.28%; key risk drivers: ELF, CELH, FRPT; correlation clusters in beverages/household/distributors; many shorts >4% cap.",
+    "tags": [
+      "baseline",
+      "risk",
+      "V0"
+    ]
+  },
+  {
+    "timestamp": "2025-09-22T20:01:40.958494",
+    "title": "Market Research V0",
+    "event": "market_research_v0",
+    "outcome": "Sticky inflation with cautious Fed cuts; USD strength; persistent trade-down; mixed commodity inputs (cocoa/sugar high); beauty volatility/tariffs/China; distributor margins normalizing. Implications logged for rebalancing: resize high-vol shorts, trim beauty cluster risk and IPAR, manage beverage/household cluster, keep value grocers and defensives.",
+    "tags": [
+      "research",
+      "macro",
+      "staples",
+      "V0"
+    ]
+  },
+  {
+    "timestamp": "2025-09-22T20:19:26.532177",
+    "title": "Iteration 1 Results",
+    "event": "iteration_1_results_v1",
+    "outcome": "Material risk reduction with caps on shorts, trims in clustered longs; VaR 1.715%, ES 1.965%, vol 11.70% ann.; Max DD -10.81%; credit stress -11.55%; constraints clean (shorts <=4%, longs 18, shorts 14, net ~30%).",
+    "tags": [
+      "iteration",
+      "V1",
+      "risk",
+      "improved"
+    ]
+  },
+  {
+    "timestamp": "2025-09-22T20:25:05.456312",
+    "title": "Iteration 2 Results",
+    "event": "iteration_2_results_v2",
+    "outcome": "Further de-risked: VaR 1.644%, ES 1.884%, vol 11.22% ann.; Max DD -10.34%; severe stress improved (Credit Crunch -10.41%); distributor cluster reduced; dropped IPAR. Constraints clean, net ~30%, shorts ≤4%.",
+    "tags": [
+      "iteration",
+      "V2",
+      "risk",
+      "improved"
+    ]
+  },
+  {
+    "timestamp": "2025-09-22T20:32:45.117953",
+    "title": "Final Portfolio Vfinal",
+    "event": "final_portfolio_vfinal",
+    "outcome": "Selected V2 as final: 17 longs / 14 shorts; net ~0.300; VaR 1.644% (1D,99%), ES 1.884%, vol 11.22% ann.; Max DD -10.34%; improved severe stress outcomes; all shorts <= 4%.",
+    "tags": [
+      "final",
+      "portfolio",
+      "Vfinal",
+      "risk"
+    ]
+  }
+]

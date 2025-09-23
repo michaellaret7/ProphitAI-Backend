@@ -6,6 +6,7 @@ from app.core.agentic_framework.tool_lib.risk_tools.asset_risk_contrib import RI
 from app.core.agentic_framework.tool_lib.risk_tools.drawdown_profile import DRAWDOWN_PROFILE_TOOL
 from app.core.agentic_framework.tool_lib.risk_tools.cov_matrix import CALCULATE_COVARIANCE_MATRIX_TOOL
 from app.core.agentic_framework.tool_lib.risk_tools.stress_test import STRESS_TEST_TOOL
+from app.core.agentic_framework.tool_lib.risk_tools.pairwise_corr_analysis import PAIRWISE_CORR_ANALYSIS_TOOL
 
 def register_cro_tools(agent):
     """
@@ -25,5 +26,6 @@ def register_cro_tools(agent):
     agent.add_tool(**RISK_CONTRIBUTION_TOOL)
     agent.add_tool(**DRAWDOWN_PROFILE_TOOL)
     agent.add_tool(**STRESS_TEST_TOOL)
+    agent.add_tool(**PAIRWISE_CORR_ANALYSIS_TOOL)
 
 
