@@ -98,7 +98,7 @@ def get_user_basic_info(email: str, session=None) -> Optional[Dict[str, Any]]:
     }
 
 @with_transaction('user')
-def add_user(email:str, first_name:str, last_name:str, workos_id: Optional[str] = None, session=None):
+def add_user(email: str, first_name: str, last_name: str, workos_id: Optional[str] = None, session=None):
     user = session.query(User).filter(User.email == email).first()
     if user:
         return user, 'User already exists'
@@ -112,6 +112,7 @@ def add_user(email:str, first_name:str, last_name:str, workos_id: Optional[str] 
     )
 
     session.add(user)
+    # add creation date column
     # commit handled by decorator
 
 @with_transaction('user')
@@ -170,5 +171,4 @@ def get_user_current_portfolio(email: str, session=None):
     
     return portfolio
 
-if __name__ == "__main__":
-    print(get_all_user_data('michaellaret7@gmail.com'))
+# TODO: Add new user is most urgent route 

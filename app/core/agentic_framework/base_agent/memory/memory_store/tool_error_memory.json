@@ -5082,20 +5082,6 @@
       "error_pattern": "register_cio_tools.<locals>.<lambda>() missing 1 required positional argument: 'portfolio_dict'",
       "occurrences": [
         {
-          "timestamp": "2025-09-15T18:21:32.836720",
-          "args": {
-            "index_ticker": "SPY"
-          },
-          "full_error": "register_cio_tools.<locals>.<lambda>() missing 1 required positional argument: 'portfolio_dict'"
-        },
-        {
-          "timestamp": "2025-09-19T14:18:37.101995",
-          "args": {
-            "index_ticker": "SPY"
-          },
-          "full_error": "register_optimizer_tools.<locals>.<lambda>() missing 1 required positional argument: 'portfolio_dict'"
-        },
-        {
           "timestamp": "2025-09-19T14:43:17.928619",
           "args": {
             "index_ticker": "SPY"
@@ -5140,6 +5126,16 @@
         },
         {
           "timestamp": "2025-09-24T09:09:49.861172",
+          "args": {},
+          "full_error": "calculate_portfolio_beta_vs_index() missing 1 required positional argument: 'portfolio_dict'"
+        },
+        {
+          "timestamp": "2025-09-24T18:34:46.121872",
+          "args": {},
+          "full_error": "calculate_portfolio_beta_vs_index() missing 1 required positional argument: 'portfolio_dict'"
+        },
+        {
+          "timestamp": "2025-09-24T18:35:09.404070",
           "args": {},
           "full_error": "calculate_portfolio_beta_vs_index() missing 1 required positional argument: 'portfolio_dict'"
         }
@@ -5292,7 +5288,7 @@
           },
           "explanation": "Successful retry with corrected arguments",
           "timestamp": "2025-09-23T17:09:08.074655",
-          "success_count": 7
+          "success_count": 11
         }
       ],
       "auto_solution": {
@@ -5442,7 +5438,7 @@
         },
         "explanation": "Successful retry with corrected arguments",
         "timestamp": "2025-09-23T17:09:08.074655",
-        "success_count": 7
+        "success_count": 11
       }
     },
     "industry_concentration:missing_portfolio_dict": {
@@ -8070,6 +8066,34 @@
             "group_by": "industry"
           },
           "full_error": "calculate_group_performances() missing 1 required positional argument: 'portfolio_dict'"
+        },
+        {
+          "timestamp": "2025-09-24T18:32:56.049141",
+          "args": {
+            "group_by": "industry"
+          },
+          "full_error": "calculate_group_performances() missing 1 required positional argument: 'portfolio_dict'"
+        },
+        {
+          "timestamp": "2025-09-24T18:33:01.045750",
+          "args": {
+            "group_by": "sub_industry"
+          },
+          "full_error": "calculate_group_performances() missing 1 required positional argument: 'portfolio_dict'"
+        },
+        {
+          "timestamp": "2025-09-24T18:33:06.252937",
+          "args": {
+            "group_by": "industry"
+          },
+          "full_error": "calculate_group_performances() missing 1 required positional argument: 'portfolio_dict'"
+        },
+        {
+          "timestamp": "2025-09-24T18:33:10.965315",
+          "args": {
+            "group_by": "industry"
+          },
+          "full_error": "calculate_group_performances() missing 1 required positional argument: 'portfolio_dict'"
         }
       ],
       "solutions": [
@@ -8207,7 +8231,143 @@
           },
           "explanation": "Successful retry with corrected arguments",
           "timestamp": "2025-09-22T14:49:32.791113",
-          "success_count": 3
+          "success_count": 9
+        },
+        {
+          "correct_args": {
+            "portfolio_dict": {
+              "MO": {
+                "allocation": 0.08,
+                "position": "long"
+              },
+              "KMB": {
+                "allocation": 0.08,
+                "position": "long"
+              },
+              "INGR": {
+                "allocation": 0.07,
+                "position": "long"
+              },
+              "GIS": {
+                "allocation": 0.07,
+                "position": "long"
+              },
+              "KO": {
+                "allocation": 0.07,
+                "position": "long"
+              },
+              "DG": {
+                "allocation": 0.08,
+                "position": "long"
+              },
+              "BJ": {
+                "allocation": 0.065,
+                "position": "long"
+              },
+              "PPC": {
+                "allocation": 0.065,
+                "position": "long"
+              },
+              "IPAR": {
+                "allocation": 0.065,
+                "position": "long"
+              },
+              "KDP": {
+                "allocation": 0.065,
+                "position": "long"
+              },
+              "CL": {
+                "allocation": 0.06,
+                "position": "long"
+              },
+              "KVUE": {
+                "allocation": 0.055,
+                "position": "long"
+              },
+              "CCEP": {
+                "allocation": 0.055,
+                "position": "long"
+              },
+              "REYN": {
+                "allocation": 0.055,
+                "position": "long"
+              },
+              "TAP": {
+                "allocation": 0.055,
+                "position": "long"
+              },
+              "SAM": {
+                "allocation": 0.055,
+                "position": "long"
+              },
+              "ACI": {
+                "allocation": 0.06,
+                "position": "long"
+              },
+              "RLX": {
+                "allocation": 0.045,
+                "position": "long"
+              },
+              "HSY": {
+                "allocation": 0.09,
+                "position": "short"
+              },
+              "CLX": {
+                "allocation": 0.08,
+                "position": "short"
+              },
+              "COST": {
+                "allocation": 0.08,
+                "position": "short"
+              },
+              "STZ": {
+                "allocation": 0.07,
+                "position": "short"
+              },
+              "ELF": {
+                "allocation": 0.07,
+                "position": "short"
+              },
+              "CELH": {
+                "allocation": 0.07,
+                "position": "short"
+              },
+              "EL": {
+                "allocation": 0.06,
+                "position": "short"
+              },
+              "FRPT": {
+                "allocation": 0.06,
+                "position": "short"
+              },
+              "UTZ": {
+                "allocation": 0.06,
+                "position": "short"
+              },
+              "SFM": {
+                "allocation": 0.06,
+                "position": "short"
+              },
+              "VITL": {
+                "allocation": 0.05,
+                "position": "short"
+              },
+              "COTY": {
+                "allocation": 0.05,
+                "position": "short"
+              },
+              "WDFC": {
+                "allocation": 0.05,
+                "position": "short"
+              }
+            },
+            "lookback_days": 756,
+            "use_total_returns": true,
+            "group_by": "sub_industry"
+          },
+          "explanation": "Successful retry with corrected arguments",
+          "timestamp": "2025-09-24T18:33:04.729414",
+          "success_count": 2
         }
       ],
       "auto_solution": {
@@ -8344,7 +8504,7 @@
         },
         "explanation": "Successful retry with corrected arguments",
         "timestamp": "2025-09-22T14:49:32.791113",
-        "success_count": 3
+        "success_count": 9
       }
     },
     "calculate_portfolio_performance:missing_portfolio_dict": {
@@ -9910,6 +10070,21 @@
           "timestamp": "2025-09-24T09:09:48.892832",
           "args": {},
           "full_error": "correlation_matrix() missing 1 required positional argument: 'portfolio_dict'"
+        },
+        {
+          "timestamp": "2025-09-24T18:33:31.526601",
+          "args": {},
+          "full_error": "correlation_matrix() missing 1 required positional argument: 'portfolio_dict'"
+        },
+        {
+          "timestamp": "2025-09-24T18:34:45.755725",
+          "args": {},
+          "full_error": "correlation_matrix() missing 1 required positional argument: 'portfolio_dict'"
+        },
+        {
+          "timestamp": "2025-09-24T18:35:08.878887",
+          "args": {},
+          "full_error": "correlation_matrix() missing 1 required positional argument: 'portfolio_dict'"
         }
       ],
       "solutions": [
@@ -10052,7 +10227,7 @@
           },
           "explanation": "Successful retry with corrected arguments",
           "timestamp": "2025-09-23T08:18:40.093591",
-          "success_count": 9
+          "success_count": 15
         }
       ],
       "auto_solution": {
@@ -10194,7 +10369,7 @@
         },
         "explanation": "Successful retry with corrected arguments",
         "timestamp": "2025-09-23T08:18:40.093591",
-        "success_count": 9
+        "success_count": 15
       }
     },
     "portfolio_stress_test:unknown_error": {
@@ -11601,6 +11776,41 @@
             "exposure_type": "gross"
           },
           "full_error": "exposure_calculator() missing 1 required positional argument: 'portfolio_dict'"
+        },
+        {
+          "timestamp": "2025-09-24T18:33:34.671917",
+          "args": {
+            "exposure_type": "net"
+          },
+          "full_error": "exposure_calculator() missing 1 required positional argument: 'portfolio_dict'"
+        },
+        {
+          "timestamp": "2025-09-24T18:33:35.768584",
+          "args": {
+            "exposure_type": "gross"
+          },
+          "full_error": "exposure_calculator() missing 1 required positional argument: 'portfolio_dict'"
+        },
+        {
+          "timestamp": "2025-09-24T18:34:12.581508",
+          "args": {
+            "exposure_type": "long"
+          },
+          "full_error": "exposure_calculator() missing 1 required positional argument: 'portfolio_dict'"
+        },
+        {
+          "timestamp": "2025-09-24T18:34:12.725333",
+          "args": {
+            "exposure_type": "short"
+          },
+          "full_error": "exposure_calculator() missing 1 required positional argument: 'portfolio_dict'"
+        },
+        {
+          "timestamp": "2025-09-24T18:35:09.285892",
+          "args": {
+            "exposure_type": "net"
+          },
+          "full_error": "exposure_calculator() missing 1 required positional argument: 'portfolio_dict'"
         }
       ],
       "solutions": [
@@ -11752,7 +11962,7 @@
           },
           "explanation": "Successful retry with corrected arguments",
           "timestamp": "2025-09-23T17:48:03.501755",
-          "success_count": 3
+          "success_count": 7
         },
         {
           "correct_args": {
@@ -11902,6 +12112,306 @@
           },
           "explanation": "Successful retry with corrected arguments",
           "timestamp": "2025-09-24T09:09:50.719491",
+          "success_count": 4
+        },
+        {
+          "correct_args": {
+            "portfolio_dict": {
+              "AEE": {
+                "allocation": 0.015,
+                "position": "long"
+              },
+              "APP": {
+                "allocation": 0.042,
+                "position": "long"
+              },
+              "ARM": {
+                "allocation": 0.026,
+                "position": "long"
+              },
+              "AVGO": {
+                "allocation": 0.034,
+                "position": "long"
+              },
+              "BSX": {
+                "allocation": 0.051,
+                "position": "long"
+              },
+              "CEG": {
+                "allocation": 0.025,
+                "position": "long"
+              },
+              "CMS": {
+                "allocation": 0.036,
+                "position": "long"
+              },
+              "CRDO": {
+                "allocation": 0.012,
+                "position": "long"
+              },
+              "DGNX": {
+                "allocation": 0.009,
+                "position": "long"
+              },
+              "EIS": {
+                "allocation": 0.037,
+                "position": "long"
+              },
+              "EMQQ": {
+                "allocation": 0.013,
+                "position": "long"
+              },
+              "EQIX": {
+                "allocation": 0.081,
+                "position": "long"
+              },
+              "EXOD": {
+                "allocation": 0.013,
+                "position": "long"
+              },
+              "FITB": {
+                "allocation": 0.005,
+                "position": "long"
+              },
+              "FR": {
+                "allocation": 0.013,
+                "position": "long"
+              },
+              "FUFU": {
+                "allocation": 0.01,
+                "position": "long"
+              },
+              "GREK": {
+                "allocation": 0.021,
+                "position": "long"
+              },
+              "IGSB": {
+                "allocation": 0.031,
+                "position": "long"
+              },
+              "IIPR": {
+                "allocation": 0.037,
+                "position": "long"
+              },
+              "INTR": {
+                "allocation": 0.013,
+                "position": "long"
+              },
+              "JPM": {
+                "allocation": 0.043,
+                "position": "long"
+              },
+              "MTSI": {
+                "allocation": 0.018,
+                "position": "long"
+              },
+              "MU": {
+                "allocation": 0.016,
+                "position": "long"
+              },
+              "NLR": {
+                "allocation": 0.019,
+                "position": "long"
+              },
+              "NRG": {
+                "allocation": 0.055,
+                "position": "long"
+              },
+              "NU": {
+                "allocation": 0.01,
+                "position": "long"
+              },
+              "NVDA": {
+                "allocation": 0.065,
+                "position": "long"
+              },
+              "OKLO": {
+                "allocation": 0.021,
+                "position": "long"
+              },
+              "PLTR": {
+                "allocation": 0.027,
+                "position": "long"
+              },
+              "SGDM": {
+                "allocation": 0.016,
+                "position": "long"
+              },
+              "SLVR": {
+                "allocation": 0.036,
+                "position": "long"
+              },
+              "STAG": {
+                "allocation": 0.013,
+                "position": "long"
+              },
+              "TRNO": {
+                "allocation": 0.018,
+                "position": "long"
+              },
+              "VCSH": {
+                "allocation": 0.03,
+                "position": "long"
+              },
+              "WEC": {
+                "allocation": 0.02,
+                "position": "long"
+              }
+            },
+            "exposure_type": "long"
+          },
+          "explanation": "Successful retry with corrected arguments",
+          "timestamp": "2025-09-24T18:34:12.705227",
+          "success_count": 2
+        },
+        {
+          "correct_args": {
+            "portfolio_dict": {
+              "AEE": {
+                "allocation": 0.015,
+                "position": "long"
+              },
+              "APP": {
+                "allocation": 0.042,
+                "position": "long"
+              },
+              "ARM": {
+                "allocation": 0.026,
+                "position": "long"
+              },
+              "AVGO": {
+                "allocation": 0.034,
+                "position": "long"
+              },
+              "BSX": {
+                "allocation": 0.051,
+                "position": "long"
+              },
+              "CEG": {
+                "allocation": 0.025,
+                "position": "long"
+              },
+              "CMS": {
+                "allocation": 0.036,
+                "position": "long"
+              },
+              "CRDO": {
+                "allocation": 0.012,
+                "position": "long"
+              },
+              "DGNX": {
+                "allocation": 0.009,
+                "position": "long"
+              },
+              "EIS": {
+                "allocation": 0.037,
+                "position": "long"
+              },
+              "EMQQ": {
+                "allocation": 0.013,
+                "position": "long"
+              },
+              "EQIX": {
+                "allocation": 0.081,
+                "position": "long"
+              },
+              "EXOD": {
+                "allocation": 0.013,
+                "position": "long"
+              },
+              "FITB": {
+                "allocation": 0.005,
+                "position": "long"
+              },
+              "FR": {
+                "allocation": 0.013,
+                "position": "long"
+              },
+              "FUFU": {
+                "allocation": 0.01,
+                "position": "long"
+              },
+              "GREK": {
+                "allocation": 0.021,
+                "position": "long"
+              },
+              "IGSB": {
+                "allocation": 0.031,
+                "position": "long"
+              },
+              "IIPR": {
+                "allocation": 0.037,
+                "position": "long"
+              },
+              "INTR": {
+                "allocation": 0.013,
+                "position": "long"
+              },
+              "JPM": {
+                "allocation": 0.043,
+                "position": "long"
+              },
+              "MTSI": {
+                "allocation": 0.018,
+                "position": "long"
+              },
+              "MU": {
+                "allocation": 0.016,
+                "position": "long"
+              },
+              "NLR": {
+                "allocation": 0.019,
+                "position": "long"
+              },
+              "NRG": {
+                "allocation": 0.055,
+                "position": "long"
+              },
+              "NU": {
+                "allocation": 0.01,
+                "position": "long"
+              },
+              "NVDA": {
+                "allocation": 0.065,
+                "position": "long"
+              },
+              "OKLO": {
+                "allocation": 0.021,
+                "position": "long"
+              },
+              "PLTR": {
+                "allocation": 0.027,
+                "position": "long"
+              },
+              "SGDM": {
+                "allocation": 0.016,
+                "position": "long"
+              },
+              "SLVR": {
+                "allocation": 0.036,
+                "position": "long"
+              },
+              "STAG": {
+                "allocation": 0.013,
+                "position": "long"
+              },
+              "TRNO": {
+                "allocation": 0.018,
+                "position": "long"
+              },
+              "VCSH": {
+                "allocation": 0.03,
+                "position": "long"
+              },
+              "WEC": {
+                "allocation": 0.02,
+                "position": "long"
+              }
+            },
+            "exposure_type": "short"
+          },
+          "explanation": "Successful retry with corrected arguments",
+          "timestamp": "2025-09-24T18:34:12.826615",
           "success_count": 2
         }
       ],
@@ -12053,7 +12563,7 @@
         },
         "explanation": "Successful retry with corrected arguments",
         "timestamp": "2025-09-23T17:48:03.501755",
-        "success_count": 3
+        "success_count": 7
       }
     },
     "calculate_ticker_performances:missing_portfolio_dict": {
@@ -12062,6 +12572,11 @@
       "occurrences": [
         {
           "timestamp": "2025-09-23T17:48:15.315972",
+          "args": {},
+          "full_error": "calculate_ticker_performances() missing 1 required positional argument: 'portfolio_dict'"
+        },
+        {
+          "timestamp": "2025-09-24T18:33:15.766144",
           "args": {},
           "full_error": "calculate_ticker_performances() missing 1 required positional argument: 'portfolio_dict'"
         }
@@ -12214,7 +12729,7 @@
           },
           "explanation": "Successful retry with corrected arguments",
           "timestamp": "2025-09-23T17:48:28.420186",
-          "success_count": 1
+          "success_count": 3
         }
       ],
       "auto_solution": {
@@ -12364,7 +12879,7 @@
         },
         "explanation": "Successful retry with corrected arguments",
         "timestamp": "2025-09-23T17:48:28.420186",
-        "success_count": 1
+        "success_count": 3
       }
     },
     "portfolio_industry_concentration:missing_portfolio_dict": {
@@ -12412,5 +12927,5 @@
       "auto_solution": null
     }
   },
-  "last_updated": "2025-09-24T12:17:15.603396"
+  "last_updated": "2025-09-24T18:35:09.878316"
 }

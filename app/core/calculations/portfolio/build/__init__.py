@@ -4,12 +4,12 @@ Holds orchestrator, optimizer, reporter, and visualizer for correlation-aware
 portfolio construction.
 """
 
-from .builder import CorrelationPortfolioBuilder
 from .optimizer import PortfolioOptimizer
+from .simple_allocator import SimplePortfolioAllocator
 
 __all__ = [
-    'CorrelationPortfolioBuilder',
     'PortfolioOptimizer',
+    'SimplePortfolioAllocator',
 ]
 
 

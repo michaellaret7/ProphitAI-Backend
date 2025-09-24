@@ -177,30 +177,116 @@ class PortfolioOptimizer:
     def apply_constraints(self, weights: pd.Series, 
                          max_position_weight: float = 0.10,
                          min_position_weight: float = 0.0) -> pd.Series:
-        """Apply position constraints to weights.
-        
-        Args:
-            weights: Raw weights
-            max_position_weight: Maximum weight per position
-            min_position_weight: Minimum weight per position
-            
-        Returns:
-            Constrained weights normalized to sum to 1
+        """Apply per-name min/max caps and project onto the simplex.
+
+        This performs a bounded-simplex projection so that the returned weights:
+          - are within [min_position_weight, max_position_weight] elementwise
+          - are non-negative and finite
+          - sum exactly to 1.0
+          - stay as close as possible to the original weights in proportion
         """
         if weights.empty:
             return weights
-        
-        # Apply min/max constraints
-        constrained = weights.clip(lower=min_position_weight, upper=max_position_weight)
-        
-        # Renormalize to sum to 1
-        total = constrained.sum()
-        if total > 0:
-            return constrained / total
+
+        w = pd.Series(weights.astype(float).clip(lower=0.0).fillna(0.0), index=weights.index)
+
+        n = len(w)
+        if n == 0:
+            return w
+
+        # Handle degenerate bounds
+        max_w = float(max_position_weight) if max_position_weight is not None else 1.0
+        max_w = max(0.0, min(1.0, max_w))
+        min_w = float(min_position_weight) if min_position_weight is not None else 0.0
+        min_w = max(0.0, min(max_w, min_w))
+
+        # Feasibility checks and shortcuts
+        # If bounds force equal weights (e.g., min_w * n >= 1), use equal weight
+        if min_w * n >= 1.0:
+            return pd.Series(np.full(n, 1.0 / n), index=w.index)
+
+        # If max bound is extremely small but feasible, start from clipped
+        if max_w <= 0.0:
+            return pd.Series(np.full(n, 1.0 / n), index=w.index)
+
+        # Initial normalization to avoid numerical issues
+        s = float(w.sum())
+        if s <= 0.0 or not np.isfinite(s):
+            w = pd.Series(np.full(n, 1.0 / n), index=w.index)
         else:
-            # If all weights are zero, return equal weights
-            n = len(weights)
-            return pd.Series(np.full(n, 1.0 / n), index=weights.index)
+            w = w / s
+
+        # Water-filling style projection onto bounded simplex
+        lower = pd.Series(np.full(n, min_w), index=w.index)
+        upper = pd.Series(np.full(n, max_w), index=w.index)
+
+        fixed = pd.Series(np.zeros(n, dtype=bool), index=w.index)
+        alloc = pd.Series(np.zeros(n, dtype=float), index=w.index)
+        remaining_mass = 1.0
+
+        # To preserve proportions for non-fixed names
+        base = w.copy()
+        base[base < 0.0] = 0.0
+        if float(base.sum()) <= 0.0:
+            base = pd.Series(np.full(n, 1.0 / n), index=w.index)
+
+        iteration_guard = 0
+        while True:
+            iteration_guard += 1
+            if iteration_guard > 5 * n:
+                # Safety break to avoid infinite loops; fallback to equal within bounds
+                eq = pd.Series(np.full(n, remaining_mass / max(1, (~fixed).sum())), index=w.index)
+                alloc[~fixed] = eq[~fixed]
+                break
+
+            active = ~fixed
+            if not active.any():
+                break
+
+            base_active = base[active]
+            total_base = float(base_active.sum())
+            if total_base <= 0.0 or not np.isfinite(total_base):
+                # Distribute equally among active if base degenerate
+                proposed = pd.Series(np.full(active.sum(), remaining_mass / active.sum()), index=base_active.index)
+            else:
+                scale = remaining_mass / total_base
+                proposed = base_active * scale
+
+            # Enforce bounds on proposed
+            hit_upper = proposed > upper[active]
+            hit_lower = proposed < lower[active]
+
+            if not hit_upper.any() and not hit_lower.any():
+                alloc[active] = proposed
+                break
+
+            # Fix any that hit bounds and update remaining mass
+            if hit_upper.any():
+                idx = proposed[hit_upper].index
+                alloc[idx] = upper[idx]
+                fixed[idx] = True
+            if hit_lower.any():
+                idx = proposed[hit_lower].index
+                alloc[idx] = lower[idx]
+                fixed[idx] = True
+
+            remaining_mass = 1.0 - float(alloc[fixed].sum())
+            if remaining_mass < 0.0:
+                # Numerical guard
+                remaining_mass = 0.0
+            # Re-weight base for remaining active set only
+            if active.any():
+                base = base.where(~fixed, 0.0)
+
+        # Final small numerical cleanup
+        alloc = alloc.clip(lower=lower, upper=upper)
+        total = float(alloc.sum())
+        if total > 0.0:
+            alloc = alloc / total
+        else:
+            alloc = pd.Series(np.full(n, 1.0 / n), index=w.index)
+
+        return alloc
     
     def calculate_position_sizes(self, weights: pd.Series, 
                                 portfolio_value: float,
@@ -226,8 +312,7 @@ class PortfolioOptimizer:
         
         return position_sizes
     
-    def optimize_weights_risk_based(self, cov: pd.DataFrame, 
-                                   base_convictions: Optional[pd.Series] = None) -> pd.Series:
+    def optimize_weights_risk_based(self, cov: pd.DataFrame, base_convictions: Optional[pd.Series] = None) -> pd.Series:
         """Calculate risk-based weights using inverse risk weighting.
         
         This is the original correlation portfolio builder's approach:

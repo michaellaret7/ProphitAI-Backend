@@ -11,7 +11,7 @@ from app.core.agentic_framework.tool_lib.portfolio_tools.performance import CALC
 from app.core.agentic_framework.tool_lib.portfolio_tools.returns import CALCULATE_PORTFOLIO_RETURNS_METRICS_TOOL
 from app.core.agentic_framework.tool_lib.portfolio_tools.group_performance import CALCULATE_GROUP_PERFORMANCES_TOOL
 from app.core.agentic_framework.tool_lib.portfolio_tools.ticker_performance import CALCULATE_TICKER_PERFORMANCES_TOOL
-from app.core.agentic_framework.tool_lib.portfolio_tools.builder import BUILD_PORTFOLIO_TOOL
+from app.core.agentic_framework.tool_lib.portfolio_tools.build_allocations import BUILD_PORTFOLIO_TOOL
 from app.core.agentic_framework.tool_lib.portfolio_tools.beta import CALCULATE_PORTFOLIO_BETA_VS_INDEX_TOOL
 from app.core.agentic_framework.tool_lib.portfolio_tools.factor_tilts import FACTOR_TILTS_FOR_PORTFOLIO_TOOL
 from app.core.agentic_framework.tool_lib.portfolio_tools.concentration import (

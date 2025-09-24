@@ -14,5 +14,3 @@ async def get_fund_final_positions(fund_name: str):
         fund_name: Name of the fund to retrieve final positions for
     """
     return await get_fund_final_positions_controller(fund_name=fund_name)
-
- 

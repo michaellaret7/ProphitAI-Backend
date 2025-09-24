@@ -1,0 +1,145 @@
+{
+    "portfolio": {
+      "APP": {
+        "allocation": 0.028,
+        "position": "long",
+        "thesis": "High-conviction application software name with strong profitability and momentum; position trimmed to reduce portfolio beta and semi/AI cluster correlation while retaining alpha potential."
+      },
+      "AVGO": {
+        "allocation": 0.015,
+        "position": "long",
+        "thesis": "Quality semiconductor and infrastructure software cash-flow compounder; kept as a small weight to diversify tech alpha without over-concentrating semi correlations."
+      },
+      "BSX": {
+        "allocation": 0.077,
+        "position": "long",
+        "thesis": "Best-in-class medtech growth with low beta, high Sharpe and small drawdowns; a core quality growth anchor that supports higher risk-adjusted returns."
+      },
+      "CB": {
+        "allocation": 0.049,
+        "position": "long",
+        "thesis": "Property & casualty insurer adds a low-correlation, quality/value sleeve; historically resilient with solid ROE and attractive risk-adjusted profile to lower portfolio beta."
+      },
+      "DBMF": {
+        "allocation": 0.116,
+        "position": "long",
+        "thesis": "Managed futures ETF for crisis/trend-following diversification; low correlation to equities and bonds, improves drawdown resilience and Sharpe in macro shocks."
+      },
+      "EIS": {
+        "allocation": 0.007,
+        "position": "long",
+        "thesis": "Small satellite EM exposure retained for differentiated return stream; minimized weight to limit beta while preserving potential idiosyncratic alpha."
+      },
+      "IAU": {
+        "allocation": 0.094,
+        "position": "long",
+        "thesis": "Gold ETF provides a liquid, low-correlation hedge and inflation/stress ballast; historically improves portfolio VaR and correlation profile."
+      },
+      "JNJ": {
+        "allocation": 0.049,
+        "position": "long",
+        "thesis": "Mega-cap pharma with durable cash flows and low beta; quality defensive growth to stabilize returns and reduce pairwise correlations."
+      },
+      "JPM": {
+        "allocation": 0.03,
+        "position": "long",
+        "thesis": "Best-in-class diversified bank with strong risk-adjusted metrics; modest allocation for financials exposure without elevating beta excessively."
+      },
+      "KO": {
+        "allocation": 0.046,
+        "position": "long",
+        "thesis": "Consumer staples franchise with high margins and defensive cash flows; lowers portfolio beta and correlation while contributing steady total return."
+      },
+      "LMT": {
+        "allocation": 0.058,
+        "position": "long",
+        "thesis": "Defense prime with resilient backlog and lower correlation to tech; quality/value tilt that diversifies macro exposure."
+      },
+      "MRK": {
+        "allocation": 0.052,
+        "position": "long",
+        "thesis": "Pharma leader with strong pipeline cash flows and defensive characteristics; improves quality tilt and lowers portfolio volatility."
+      },
+      "NRG": {
+        "allocation": 0.017,
+        "position": "long",
+        "thesis": "Electric utility turnaround with strong Sharpe; retained at a smaller weight to keep alpha contribution while curbing cluster risk."
+      },
+      "NVDA": {
+        "allocation": 0.061,
+        "position": "long",
+        "thesis": "Core AI leader and alpha engine; moderated allocation to reduce semi cluster correlation and beta while preserving upside."
+      },
+      "PG": {
+        "allocation": 0.052,
+        "position": "long",
+        "thesis": "High-quality staples compounder; defensive ballast with consistent margins and low correlation, lifting risk-adjusted returns."
+      },
+      "PLTR": {
+        "allocation": 0.017,
+        "position": "long",
+        "thesis": "AI/data analytics platform with improving profitability and momentum; reduced weight to manage beta yet retain asymmetric upside."
+      },
+      "VCSH": {
+        "allocation": 0.15,
+        "position": "long",
+        "thesis": "Short-term IG corporate bond ETF; low volatility core that dampens drawdowns and lowers total portfolio correlation and beta."
+      },
+      "WEC": {
+        "allocation": 0.082,
+        "position": "long",
+        "thesis": "Quality multi-utility with strong margins and defensive cash flows; enhances stability and lowers pairwise correlations."
+      }
+    },
+    "changes": {
+      "added": {
+        "CB": "Added P&C insurance for low correlation, high quality/value, and defensive cash flows.",
+        "JNJ": "Added mega-cap pharma to lower beta and improve quality tilt.",
+        "MRK": "Added pharma leader for defensive growth and improved risk-adjusted returns.",
+        "KO": "Added staples franchise to reduce beta and add stable total return.",
+        "PG": "Added staples quality compounder to lower correlation and volatility.",
+        "LMT": "Added defense exposure to diversify macro risk and reduce correlation with tech.",
+        "IAU": "Added gold ETF as low-correlation hedge improving VaR and drawdown resilience.",
+        "DBMF": "Added managed futures ETF for crisis alpha and structural diversification."
+      },
+      "removed": {
+        "AEE": "Removed to simplify utilities sleeve and cut cluster correlation.",
+        "ARM": "Removed to reduce semi cluster correlation and valuation-driven risk.",
+        "CEG": "Removed to streamline utilities and lower beta in rate-sensitive names.",
+        "CMS": "Removed to reduce utilities clustering with WEC retained as core.",
+        "CRDO": "Removed due to high stress sensitivity and high correlation within semis.",
+        "DGNX": "Removed for extreme tail risk and illiquidity concerns.",
+        "EMQQ": "Removed due to middling risk-adjusted returns and correlation to growth.",
+        "EQIX": "Removed as REIT underperformer with rate sensitivity and negative alpha.",
+        "EXOD": "Removed speculative software to lower beta/correlation and improve quality tilt.",
+        "FITB": "Removed to reduce financials beta and cyclicality; JPM retained as quality.",
+        "FR": "Removed industrial REIT underperformer and high correlation within REIT cluster.",
+        "FUFU": "Removed speculative profile and poor risk-adjusted metrics.",
+        "GREK": "Removed to simplify EM sleeve and reduce correlation to growth beta.",
+        "IGSB": "Removed to consolidate short credit exposure into VCSH.",
+        "IIPR": "Removed due to persistent underperformance and drawdown risk.",
+        "INTR": "Removed to reduce EM bank volatility and beta.",
+        "MTSI": "Removed to reduce semi cluster and improve risk-adjusted profile.",
+        "MU": "Removed to reduce cyclical semi drawdown risk and high correlation.",
+        "NLR": "Removed to simplify commodities/thematic exposure in favor of IAU/DBMF.",
+        "NU": "Removed to reduce EM fintech beta and volatility.",
+        "OKLO": "Removed high-spec pre-revenue tail risk.",
+        "SGDM": "Removed in favor of purer and lower beta gold exposure via IAU.",
+        "SLVR": "Removed to simplify precious metals exposure and reduce volatility.",
+        "STAG": "Removed REIT underperformer and correlation cluster participant.",
+        "TRNO": "Removed to eliminate REIT cluster and improve rate shock resilience."
+      },
+      "adjusted": {
+        "APP": "Decreased allocation from 0.042 to 0.028 to lower portfolio beta and tech clustering.",
+        "AVGO": "Decreased allocation from 0.034 to 0.015 to reduce semi correlation and drawdown risk.",
+        "BSX": "Increased allocation from 0.051 to 0.077 due to strong low-beta growth and high Sharpe.",
+        "EIS": "Decreased allocation from 0.037 to 0.007 to minimize EM beta while keeping optionality.",
+        "JPM": "Decreased allocation from 0.043 to 0.030 to moderate financials beta while retaining quality exposure.",
+        "NRG": "Decreased allocation from 0.055 to 0.017 to reduce sector cluster risk while keeping alpha driver.",
+        "NVDA": "Decreased allocation from 0.065 to 0.061 to moderate semi cluster concentration while retaining core alpha.",
+        "PLTR": "Decreased allocation from 0.027 to 0.017 to manage beta while keeping asymmetric upside.",
+        "VCSH": "Increased allocation from 0.030 to 0.150 to materially lower volatility and pairwise correlation.",
+        "WEC": "Increased allocation from 0.020 to 0.082 to strengthen defensive ballast and reduce correlation."
+      }
+    }
+  }

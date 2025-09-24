@@ -44,7 +44,6 @@ async def get_user_data_controller(email: str) -> Dict[str, Any]:
         )
     
     except HTTPException:
-        # Re-raise HTTPExceptions (like 404) without modification
         raise
     
     except ValueError as e:

@@ -17,7 +17,7 @@ class User(UserBase):
     __tablename__ = 'users'
     
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    workos_id = Column(String, unique=True, index=True, nullable=True)
+    workos_id = Column(String, unique=True, index=True, nullable=True) #TODO: change to clerk_id
     email = Column(String, nullable=False, unique=True, index=True)
     first_name = Column(String)
     last_name = Column(String)
