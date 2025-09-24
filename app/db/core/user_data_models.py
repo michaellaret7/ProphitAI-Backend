@@ -17,10 +17,11 @@ class User(UserBase):
     __tablename__ = 'users'
     
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    workos_id = Column(String, unique=True, index=True, nullable=True) #TODO: change to clerk_id
+    clerk_id = Column(String, unique=True, index=True, nullable=True)
     email = Column(String, nullable=False, unique=True, index=True)
     first_name = Column(String)
     last_name = Column(String)
+    creation_date = Column(DateTime, default=datetime.utcnow)
     
     # Relationships
     company_associations = relationship('CompanyUser', back_populates='user', cascade='all, delete-orphan')
@@ -40,6 +41,7 @@ class Company(UserBase):
     users = relationship('User', secondary='company_users', viewonly=True)
     # subscriptions = relationship('Subscription', back_populates='company', cascade='all, delete-orphan')
 
+# TODO: Delete these models
 class CompanyUser(UserBase):
     __tablename__ = 'company_users'
     

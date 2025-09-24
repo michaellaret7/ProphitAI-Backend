@@ -11,17 +11,17 @@ from app.db.core.prophit_alts_models import *
 from app.utils.decorators.database import with_session, with_transaction, with_sessions
 
 @with_session('user')
-def retrieve_portfolio(email: str = None, workos_id: str = None, user_id: uuid.UUID = None, is_current: bool = None, portfolio_id: uuid.UUID = None, session=None):
+def retrieve_portfolio(email: str = None, clerk_id: str = None, user_id: uuid.UUID = None, is_current: bool = None, portfolio_id: uuid.UUID = None, session=None):
     
     user = None
     if user_id:
         user = session.query(User).filter(User.id == user_id).first()
     elif email:
         user = session.query(User).filter(User.email == email).first()
-    elif workos_id:
-        user = session.query(User).filter(User.workos_id == workos_id).first()
+    elif clerk_id:
+        user = session.query(User).filter(User.clerk_id == clerk_id).first()
     else:
-        raise ValueError("At least one identifier (email, workos_id, or user_id) must be provided")
+        raise ValueError("At least one identifier (email, clerk_id, or user_id) must be provided")
     
     if not user:
         return []
@@ -65,17 +65,17 @@ def add_portfolio(portfolio, company_name, user_email, portfolio_name, user_sess
     user_session.commit()
 
 @with_session('user')
-def list_portfolios(email: str = None, workos_id: str = None, user_id: uuid.UUID = None, session=None):
+def list_portfolios(email: str = None, clerk_id: str = None, user_id: uuid.UUID = None, session=None):
     
     user = None
     if user_id:
         user = session.query(User).filter(User.id == user_id).first()
     elif email:
         user = session.query(User).filter(User.email == email).first()
-    elif workos_id:
-        user = session.query(User).filter(User.workos_id == workos_id).first()
+    elif clerk_id:
+        user = session.query(User).filter(User.clerk_id == clerk_id).first()
     else:
-        raise ValueError("At least one identifier (email, workos_id, or user_id) must be provided")
+        raise ValueError("At least one identifier (email, clerk_id, or user_id) must be provided")
     
     if not user:
         return []
@@ -157,4 +157,4 @@ def add_initial_positions(positions: dict, industry: str, fund_name: str, prophi
     
     return True
 
-#TODO: add an add final positions function
+#TODO: add final positions function

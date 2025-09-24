@@ -420,10 +420,11 @@
     "User_data (database)": {
       "users": [
         "id (uuid_v4)",
-        "workos_id",
+        "clerk_id",
         "email",
         "first_name",
-        "last_name"
+        "last_name",
+        "creation_date"
       ],
       "companies": [
         "id (uuid_v4)",

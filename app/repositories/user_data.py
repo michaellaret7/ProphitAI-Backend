@@ -40,6 +40,7 @@ def get_all_user_data(email: str, session=None) -> Optional[Dict[str, Any]]:
         'email': user.email,
         'first_name': user.first_name,
         'last_name': user.last_name,
+        'creation_date': user.creation_date.isoformat() if getattr(user, 'creation_date', None) else None,
         'companies': [],
         'portfolios': []
     }
@@ -98,28 +99,29 @@ def get_user_basic_info(email: str, session=None) -> Optional[Dict[str, Any]]:
     }
 
 @with_transaction('user')
-def add_user(email: str, first_name: str, last_name: str, workos_id: Optional[str] = None, session=None):
+def add_user(email: str, first_name: str, last_name: str, clerk_id: Optional[str] = None, session=None):
     user = session.query(User).filter(User.email == email).first()
     if user:
-        return user, 'User already exists'
+        # Return the existing user object for caller handling
+        return user
     
     user = User(
         id = uuid.uuid4(),
-        workos_id=workos_id,
+        clerk_id=clerk_id,
         email=email,
         first_name=first_name,
         last_name=last_name
     )
 
     session.add(user)
-    # add creation date column
-    # commit handled by decorator
+    return user
+
 
 @with_transaction('user')
-def update_user_workos_id(email: str, workos_id: str, session=None) -> None:
+def update_user_clerk_id(email: str, clerk_id: str, session=None) -> None:
     user = session.query(User).filter(User.email == email).first()
-    if user and user.workos_id != workos_id:
-        user.workos_id = workos_id
+    if user and user.clerk_id != clerk_id:
+        user.clerk_id = clerk_id
         # commit handled by decorator
 
 @with_transaction('user')

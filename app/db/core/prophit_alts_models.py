@@ -107,9 +107,9 @@ class FundFinalPosition(ProphitAltsBase):
     fund = relationship('Fund', back_populates='final_positions')
     # Note: ticker relationship would be cross-database, handled at application level
 
-# =============================================================================
-# CONSUMER STAPLES FUND SCHEMA (Legacy - for migration purposes)
-# =============================================================================
+# ===================================================================================
+# CONSUMER STAPLES FUND SCHEMA TODO: Delete these models they are old and deprecated
+# ===================================================================================
 
 class ConsumerStaplesFundTrades(ProphitAltsBase):
     __tablename__ = 'trades'

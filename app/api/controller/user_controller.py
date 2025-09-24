@@ -1,6 +1,6 @@
 from fastapi import HTTPException
 from typing import Optional, Dict, Any
-from app.repositories.user_data import get_all_user_data
+from app.repositories.user_data import get_all_user_data, add_user
 from app.api.response_envelope import ok_envelope
 
 async def get_user_data_controller(email: str) -> Dict[str, Any]:
@@ -55,7 +55,6 @@ async def get_user_data_controller(email: str) -> Dict[str, Any]:
             detail=f"Internal server error: {str(e)}"
         )
 
-
 async def get_user_portfolio_list_controller(email: str) -> Dict[str, Any]:
     """
     Controller to handle user portfolio list retrieval
@@ -96,3 +95,34 @@ async def get_user_portfolio_list_controller(email: str) -> Dict[str, Any]:
         raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")
+
+async def create_user_controller(
+    *,
+    email: str,
+    first_name: str,
+    last_name: str,
+    clerk_id: Optional[str] = None,
+) -> Dict[str, Any]:
+    # Create or retrieve the user
+    add_user(email=email, first_name=first_name, last_name=last_name, clerk_id=clerk_id)
+    # Fetch fresh data with a new session to avoid detached instance issues
+    data = get_all_user_data(email=email)
+    if not data:
+        raise HTTPException(status_code=500, detail="Failed to create user")
+
+    filtered_companies = [{"id": c.get("id")} for c in data.get("companies", [])]
+
+    return ok_envelope(
+        message="User created successfully",
+        kind="users#user",
+        resource_id=data.get("id"),
+        self_link=f"/api/user/data?email={email}",
+        payload={
+            "email": data.get("email"),
+            "firstName": data.get("first_name"),
+            "lastName": data.get("last_name"),
+            "dateCreated": data.get("creation_date"),
+            "companies": filtered_companies,
+        },
+        status=201,
+    )
