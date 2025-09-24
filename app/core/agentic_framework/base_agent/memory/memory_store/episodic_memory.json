@@ -1,73 +1,13 @@
 [
   {
-    "timestamp": "2025-09-22T19:57:51.455954",
-    "title": "Baseline Portfolio V0",
-    "event": "portfolio_snapshot_v0",
-    "outcome": "33 holdings loaded (19 longs, 14 shorts); gross long 1.15048, gross short 0.85098, net 0.29950; short-cap breaches identified (13 of 14).",
+    "timestamp": "2025-09-23T21:46:28.566145",
+    "title": "Portfolio Snapshot - Initial",
+    "event": "portfolio_snapshot_initial",
+    "outcome": "{'portfolio_name': 'Auto/Tech and ETF focused Portfolio', 'as_of': '2025-09-23', 'sum_allocation': 0.931, 'positions': {'AEE': {'allocation': 0.015, 'position': 'long'}, 'APP': {'allocation': 0.042, 'position': 'long'}, 'ARM': {'allocation': 0.026, 'position': 'long'}, 'AVGO': {'allocation': 0.034, 'position': 'long'}, 'BSX': {'allocation': 0.051, 'position': 'long'}, 'CEG': {'allocation': 0.025, 'position': 'long'}, 'CMS': {'allocation': 0.036, 'position': 'long'}, 'CRDO': {'allocation': 0.012, 'position': 'long'}, 'DGNX': {'allocation': 0.009, 'position': 'long'}, 'EIS': {'allocation': 0.037, 'position': 'long'}, 'EMQQ': {'allocation': 0.013, 'position': 'long'}, 'EQIX': {'allocation': 0.081, 'position': 'long'}, 'EXOD': {'allocation': 0.013, 'position': 'long'}, 'FITB': {'allocation': 0.005, 'position': 'long'}, 'FR': {'allocation': 0.013, 'position': 'long'}, 'FUFU': {'allocation': 0.01, 'position': 'long'}, 'GREK': {'allocation': 0.021, 'position': 'long'}, 'IGSB': {'allocation': 0.031, 'position': 'long'}, 'IIPR': {'allocation': 0.037, 'position': 'long'}, 'INTR': {'allocation': 0.013, 'position': 'long'}, 'JPM': {'allocation': 0.043, 'position': 'long'}, 'MTSI': {'allocation': 0.018, 'position': 'long'}, 'MU': {'allocation': 0.016, 'position': 'long'}, 'NLR': {'allocation': 0.019, 'position': 'long'}, 'NRG': {'allocation': 0.055, 'position': 'long'}, 'NU': {'allocation': 0.01, 'position': 'long'}, 'NVDA': {'allocation': 0.065, 'position': 'long'}, 'OKLO': {'allocation': 0.021, 'position': 'long'}, 'PLTR': {'allocation': 0.027, 'position': 'long'}, 'SGDM': {'allocation': 0.016, 'position': 'long'}, 'SLVR': {'allocation': 0.036, 'position': 'long'}, 'STAG': {'allocation': 0.013, 'position': 'long'}, 'TRNO': {'allocation': 0.018, 'position': 'long'}, 'VCSH': {'allocation': 0.03, 'position': 'long'}, 'WEC': {'allocation': 0.02, 'position': 'long'}}}",
     "tags": [
-      "baseline",
       "portfolio",
       "snapshot",
-      "V0"
-    ]
-  },
-  {
-    "timestamp": "2025-09-22T20:00:17.054541",
-    "title": "Baseline Risk V0",
-    "event": "baseline_risk_suite_v0",
-    "outcome": "VaR 2.044% (1D,99%), ES 2.342%, vol 13.95% ann.; Max DD -14.49%; stress worst: Credit Crunch -16.28%; key risk drivers: ELF, CELH, FRPT; correlation clusters in beverages/household/distributors; many shorts >4% cap.",
-    "tags": [
-      "baseline",
-      "risk",
-      "V0"
-    ]
-  },
-  {
-    "timestamp": "2025-09-22T20:01:40.958494",
-    "title": "Market Research V0",
-    "event": "market_research_v0",
-    "outcome": "Sticky inflation with cautious Fed cuts; USD strength; persistent trade-down; mixed commodity inputs (cocoa/sugar high); beauty volatility/tariffs/China; distributor margins normalizing. Implications logged for rebalancing: resize high-vol shorts, trim beauty cluster risk and IPAR, manage beverage/household cluster, keep value grocers and defensives.",
-    "tags": [
-      "research",
-      "macro",
-      "staples",
-      "V0"
-    ]
-  },
-  {
-    "timestamp": "2025-09-22T20:19:26.532177",
-    "title": "Iteration 1 Results",
-    "event": "iteration_1_results_v1",
-    "outcome": "Material risk reduction with caps on shorts, trims in clustered longs; VaR 1.715%, ES 1.965%, vol 11.70% ann.; Max DD -10.81%; credit stress -11.55%; constraints clean (shorts <=4%, longs 18, shorts 14, net ~30%).",
-    "tags": [
-      "iteration",
-      "V1",
-      "risk",
-      "improved"
-    ]
-  },
-  {
-    "timestamp": "2025-09-22T20:25:05.456312",
-    "title": "Iteration 2 Results",
-    "event": "iteration_2_results_v2",
-    "outcome": "Further de-risked: VaR 1.644%, ES 1.884%, vol 11.22% ann.; Max DD -10.34%; severe stress improved (Credit Crunch -10.41%); distributor cluster reduced; dropped IPAR. Constraints clean, net ~30%, shorts ≤4%.",
-    "tags": [
-      "iteration",
-      "V2",
-      "risk",
-      "improved"
-    ]
-  },
-  {
-    "timestamp": "2025-09-22T20:32:45.117953",
-    "title": "Final Portfolio Vfinal",
-    "event": "final_portfolio_vfinal",
-    "outcome": "Selected V2 as final: 17 longs / 14 shorts; net ~0.300; VaR 1.644% (1D,99%), ES 1.884%, vol 11.22% ann.; Max DD -10.34%; improved severe stress outcomes; all shorts <= 4%.",
-    "tags": [
-      "final",
-      "portfolio",
-      "Vfinal",
-      "risk"
+      "task1"
     ]
   }
 ]

@@ -5,6 +5,8 @@ from app.core.agentic_framework.base_agent import BaseAgent
 from app.domain.portfolio_operations.optimization.optimizer.prompts import system_prompt, user_prompt
 from app.domain.portfolio_operations.optimization.optimizer.tool_registry import register_optimizer_tools
 from app.core.agentic_framework.base_agent.memory.domain_memory import DomainMemory
+from app.domain.portfolio_operations.optimization.optimizer.tool_registry import register_optimizer_tools
+from app.domain.prophit_alts.consumer_staples_fund.build_portfolio.cio.tool_registry import register_cio_tools
 
 class OptimizedPosition(BaseModel):
     ticker: str
@@ -24,13 +26,14 @@ class OptimizerAgent(BaseAgent):
             max_iterations=200, 
             plan_first=True,
             save_messages=True, 
-            model="gpt-4.1", 
+            model="gpt-5", 
             verbose=True, 
             memory_refresh_interval=20
         )
         
         register_optimizer_tools(self)
-    
+        register_cio_tools(self)
+        
     def _initialize_domain_memory(self):
         """Initialize Optimizer-specific domain memories for portfolio optimization."""
         # Initialize domain memory for Optimizer agent

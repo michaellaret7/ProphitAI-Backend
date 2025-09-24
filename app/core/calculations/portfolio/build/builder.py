@@ -9,6 +9,7 @@ import pandas as pd
 from app.core.calculations.core import DataService
 from app.core.calculations.returns.calculator import ReturnsCalculator
 from app.core.calculations.risk.calculator import RiskCalculator
+from app.core.calculations.risk.liquidity import LiquidityCalculator
 from app.core.calculations.performance.calculator import PerformanceCalculator
 from app.core.calculations.portfolio.correlation import CorrelationAnalysis
 from app.core.calculations.portfolio.build.optimizer import PortfolioOptimizer
@@ -29,6 +30,7 @@ class CorrelationPortfolioBuilder:
         self.data_service = data_service or DataService()
         self.returns_calc = ReturnsCalculator()
         self.risk_calc = RiskCalculator()
+        self.liquidity_calc = LiquidityCalculator()
         self.perf_calc = PerformanceCalculator()
         self.optimizer = PortfolioOptimizer()
         self.correlation = CorrelationAnalysis()
@@ -36,6 +38,7 @@ class CorrelationPortfolioBuilder:
         # Cache for returns data
         self._returns_cache: Optional[pd.DataFrame] = None
         self._price_cache: Optional[Dict[str, pd.Series]] = None
+        self._liquidity_scores: Optional[Dict[str, float]] = None
     
     def build_portfolio(self, tickers: Dict[str, Dict], target_annual_vol: float, 
                        portfolio_value: float, leverage: float = 1.0,
@@ -71,34 +74,46 @@ class CorrelationPortfolioBuilder:
             if not self._validate_data(price_data):
                 return {"error": "Failed to fetch valid price data"}
             
+            # Step 2.5: Get liquidity scores for all tickers
+            liquidity_scores = self.get_liquidity_scores(clean_tickers)
+            
             # Step 3: Calculate returns
             returns_df = self.calculate_returns(price_data)
             if returns_df.empty:
                 return {"error": "Failed to calculate returns"}
             
-            # Step 4: Calculate optimal weights with long/short positions
+            # Step 4: Calculate optimal weights with proper constraint enforcement
+            # This now handles net exposure and position caps correctly
             weights = self.calculate_optimal_weights_with_positions(
-                returns_df, tickers, target_net_exposure, max_position_weight
+                returns_df, tickers, target_net_exposure, liquidity_scores
             )
             
-            # Step 4.5: Scale weights to achieve target volatility
-            weights = self.scale_to_target_volatility(
-                weights, returns_df, target_annual_vol
+            # Step 4.5: Scale to target volatility while respecting caps
+            # This ensures caps are never violated during volatility scaling
+            weights = self.scale_to_target_volatility_with_caps(
+                weights, returns_df, target_annual_vol, tickers, liquidity_scores
             )
             
-            # Step 5: Generate risk metrics
+            # Step 5: Validate constraints are satisfied
+            validation_errors = self.validate_portfolio_constraints(
+                weights, tickers, liquidity_scores, target_net_exposure
+            )
+            if validation_errors:
+                print(f"WARNING: Constraint violations detected: {validation_errors}")
+            
+            # Step 6: Generate risk metrics
             risk_metrics = self.generate_risk_metrics(weights, returns_df)
             
-            # Step 6: Calculate position sizes with leverage
+            # Step 7: Calculate position sizes with leverage
             position_sizes = self.optimizer.calculate_position_sizes(
                 weights, portfolio_value, leverage
             )
             
-            # Step 7: Calculate exposure metrics
+            # Step 8: Calculate exposure metrics
             long_exposure = sum(w for t, w in weights.items() 
-                              if tickers[t]['position'] == 'long')
+                              if weights[t] > 0)  # Use actual weight sign, not tickers dict
             short_exposure = sum(abs(w) for t, w in weights.items() 
-                               if tickers[t]['position'] == 'short')
+                               if weights[t] < 0)  # Use actual weight sign
             net_exposure = long_exposure - short_exposure
             gross_exposure = long_exposure + short_exposure
             
@@ -128,6 +143,30 @@ class CorrelationPortfolioBuilder:
             
         except Exception as e:
             return {"error": f"Portfolio build failed: {str(e)}"}
+    
+    def get_liquidity_scores(self, tickers: list[str]) -> Dict[str, float]:
+        """Get liquidity scores for all tickers.
+        
+        Args:
+            tickers: List of ticker symbols
+            
+        Returns:
+            Dictionary of liquidity scores (0-1) keyed by ticker
+        """
+        if self._liquidity_scores is not None:
+            # Return cached scores if available
+            return self._liquidity_scores
+        
+        scores = {}
+        for ticker in tickers:
+            try:
+                result = self.liquidity_calc.analyze_ticker(ticker, lookback_days=30)
+                scores[ticker] = result.get('composite_score', 0.5)  # Default to 0.5 if error
+            except:
+                scores[ticker] = 0.5  # Default mid-liquidity on error
+        
+        self._liquidity_scores = scores
+        return scores
     
     def fetch_and_prepare_data(self, tickers: list[str], 
                                lookback_days: int = 252,
@@ -267,22 +306,18 @@ class CorrelationPortfolioBuilder:
         
         return cleaned
     
-    def calculate_optimal_weights_with_positions(self, returns: pd.DataFrame,
-                                                 tickers: Dict[str, Dict],
-                                                 target_net_exposure: Optional[float] = None,
-                                                 max_position_weight: float = 0.10,
-                                                 method: str = "risk_based") -> pd.Series:
-        """Calculate optimal weights considering long/short positions and net exposure.
+    def calculate_raw_optimal_weights(self, returns: pd.DataFrame,
+                                      tickers: Dict[str, Dict],
+                                      method: str = "risk_based") -> pd.Series:
+        """Calculate raw optimal weights without any constraints.
         
         Args:
             returns: DataFrame of returns
             tickers: Dictionary with ticker info including position and allocation
-            target_net_exposure: Target net exposure (None for natural)
-            max_position_weight: Maximum weight per position
             method: Optimization method
             
         Returns:
-            Series of signed weights (negative for shorts)
+            Series of raw optimized weights (negative for shorts)
         """
         if returns.empty:
             return pd.Series()
@@ -291,34 +326,25 @@ class CorrelationPortfolioBuilder:
         long_tickers = [t for t in tickers if tickers[t]['position'] == 'long']
         short_tickers = [t for t in tickers if tickers[t]['position'] == 'short']
         
-        # Get allocations (as decimal allocations, e.g., 0.1 = 10%)
-        # If no allocation specified, use equal weight placeholder
+        # Get allocations
         base_allocations = {}
         for ticker in tickers:
             if ticker in returns.columns:
-                # Allocation is already a decimal (0.1 = 10% allocation)
                 base_allocations[ticker] = tickers[ticker].get('allocation', 0.1)
         
         # Get covariance matrix
         cov = self.correlation.covariance_matrix(returns, annualize=True)
         
-        # Separate allocations by long/short
-        long_allocations = {t: base_allocations[t] for t in long_tickers if t in base_allocations}
-        short_allocations = {t: base_allocations[t] for t in short_tickers if t in base_allocations}
-        
-        # Normalize convictions within each group to sum to 1
+        # Optimize long positions
         long_weights = {}
-        short_weights = {}
-        
-        if long_tickers and long_allocations:
-            # Normalize long allocations
+        if long_tickers and any(t in base_allocations for t in long_tickers):
+            long_allocations = {t: base_allocations[t] for t in long_tickers if t in base_allocations}
             long_alloc_sum = sum(long_allocations.values())
             if long_alloc_sum > 0:
                 long_norm_alloc = {k: v/long_alloc_sum for k, v in long_allocations.items()}
             else:
                 long_norm_alloc = {k: 1.0/len(long_allocations) for k in long_allocations}
             
-            # Apply optimization with allocation-based starting weights
             long_returns = returns[long_tickers]
             long_cov = cov.loc[long_tickers, long_tickers]
             
@@ -329,27 +355,25 @@ class CorrelationPortfolioBuilder:
                 long_opt = self.optimizer.optimize_weights_max_sharpe(expected_returns, long_cov)
             elif method == "min_variance":
                 long_opt = self.optimizer.optimize_weights_min_variance(long_cov)
-            else:  # Default to risk_based
-                # Create base allocations series for risk-based optimization
+            else:  # risk_based
                 alloc_series = pd.Series(long_norm_alloc)
                 long_opt = self.optimizer.optimize_weights_risk_based(long_cov, alloc_series)
             
-            # Blend optimization with allocation weights (50/50 blend)
             for ticker in long_tickers:
                 opt_weight = long_opt.get(ticker, 0)
                 alloc_weight = long_norm_alloc.get(ticker, 0)
-                # Blend optimization result with allocation
                 long_weights[ticker] = 0.5 * opt_weight + 0.5 * alloc_weight
         
-        if short_tickers and short_allocations:
-            # Normalize short allocations
+        # Optimize short positions
+        short_weights = {}
+        if short_tickers and any(t in base_allocations for t in short_tickers):
+            short_allocations = {t: base_allocations[t] for t in short_tickers if t in base_allocations}
             short_alloc_sum = sum(short_allocations.values())
             if short_alloc_sum > 0:
                 short_norm_alloc = {k: v/short_alloc_sum for k, v in short_allocations.items()}
             else:
                 short_norm_alloc = {k: 1.0/len(short_allocations) for k in short_allocations}
             
-            # Apply optimization with allocation-based starting weights
             short_returns = returns[short_tickers]
             short_cov = cov.loc[short_tickers, short_tickers]
             
@@ -360,16 +384,13 @@ class CorrelationPortfolioBuilder:
                 short_opt = self.optimizer.optimize_weights_max_sharpe(expected_returns, short_cov)
             elif method == "min_variance":
                 short_opt = self.optimizer.optimize_weights_min_variance(short_cov)
-            else:  # Default to risk_based
-                # Create base allocations series for risk-based optimization
+            else:  # risk_based
                 alloc_series = pd.Series(short_norm_alloc)
                 short_opt = self.optimizer.optimize_weights_risk_based(short_cov, alloc_series)
             
-            # Blend optimization with allocation weights (50/50 blend)
             for ticker in short_tickers:
                 opt_weight = short_opt.get(ticker, 0)
                 alloc_weight = short_norm_alloc.get(ticker, 0)
-                # Blend optimization result with allocation
                 short_weights[ticker] = 0.5 * opt_weight + 0.5 * alloc_weight
         
         # Normalize within groups
@@ -383,21 +404,74 @@ class CorrelationPortfolioBuilder:
             if short_total > 0:
                 short_weights = {k: v/short_total for k, v in short_weights.items()}
         
-        # Adjust for target net exposure
+        # Combine with appropriate signs (initially equal allocation)
+        final_weights = {}
+        for ticker, weight in long_weights.items():
+            final_weights[ticker] = weight * 0.5  # Initial 50% long
+        for ticker, weight in short_weights.items():
+            final_weights[ticker] = -weight * 0.5  # Initial 50% short
+        
+        return pd.Series(final_weights)
+    
+    def calculate_optimal_weights_with_positions(self, returns: pd.DataFrame,
+                                                 tickers: Dict[str, Dict],
+                                                 target_net_exposure: Optional[float] = None,
+                                                 liquidity_scores: Dict[str, float] = None,
+                                                 method: str = "risk_based") -> pd.Series:
+        """Calculate optimal weights with proper constraint enforcement.
+        
+        Revised approach to handle net exposure correctly:
+        1. Get raw optimal weights
+        2. Apply position caps first (hard constraints)
+        3. Adjust for net exposure within the capped constraints
+        4. Normalize to gross = 1.0 while preserving net/gross ratio
+        """
+        # Step 1: Get raw optimal weights
+        raw_weights = self.calculate_raw_optimal_weights(returns, tickers, method)
+        if raw_weights.empty:
+            return pd.Series()
+        
+        # Step 2: Normalize raw weights initially
+        raw_weights = raw_weights / raw_weights.abs().sum()
+        
+        # Step 3: Apply caps and net exposure together
+        final_weights = self.apply_caps_with_net_exposure(
+            raw_weights, tickers, liquidity_scores, target_net_exposure
+        )
+        
+        return final_weights
+    
+    def enforce_net_exposure(self, weights: pd.Series, tickers: Dict[str, Dict],
+                            target_net_exposure: Optional[float]) -> pd.Series:
+        """Enforce target net exposure on portfolio weights.
+        
+        Args:
+            weights: Raw portfolio weights
+            tickers: Dictionary with position info
+            target_net_exposure: Target net exposure
+            
+        Returns:
+            Weights adjusted for target net exposure
+        """
+        if weights.empty:
+            return weights
+        
+        # Separate long and short weights
+        long_weights = weights[weights > 0].copy()
+        short_weights = weights[weights < 0].abs()
+        
+        # Calculate target allocations
         if target_net_exposure is not None:
-            # Calculate required long/short allocations
             if target_net_exposure >= 0:
-                # Net long
                 long_allocation = (1 + target_net_exposure) / 2
                 short_allocation = (1 - target_net_exposure) / 2
             else:
-                # Net short
                 long_allocation = (1 + target_net_exposure) / 2
                 short_allocation = (1 - target_net_exposure) / 2
         else:
             # Natural exposure based on number of positions
-            n_long = len(long_tickers)
-            n_short = len(short_tickers)
+            n_long = len(long_weights)
+            n_short = len(short_weights)
             total = n_long + n_short
             if total > 0:
                 long_allocation = n_long / total
@@ -406,40 +480,357 @@ class CorrelationPortfolioBuilder:
                 long_allocation = 0.5
                 short_allocation = 0.5
         
-        # Combine with appropriate signs
-        final_weights = {}
-        for ticker, weight in long_weights.items():
-            final_weights[ticker] = weight * long_allocation
-        for ticker, weight in short_weights.items():
-            final_weights[ticker] = -weight * short_allocation  # Negative for shorts
+        # Scale each book to target allocation
+        adjusted_weights = pd.Series(dtype=float)
         
-        # Apply position constraints
-        weights_series = pd.Series(final_weights)
-        for ticker in weights_series.index:
-            if abs(weights_series[ticker]) > max_position_weight:
-                weights_series[ticker] = max_position_weight * (1 if weights_series[ticker] > 0 else -1)
+        if not long_weights.empty:
+            long_sum = long_weights.sum()
+            if long_sum > 0:
+                for ticker in long_weights.index:
+                    adjusted_weights[ticker] = (long_weights[ticker] / long_sum) * long_allocation
         
-        # Renormalize to maintain gross exposure = 1
-        gross = weights_series.abs().sum()
-        if gross > 0:
-            weights_series = weights_series / gross
+        if not short_weights.empty:
+            short_sum = short_weights.sum()
+            if short_sum > 0:
+                for ticker in short_weights.index:
+                    adjusted_weights[ticker] = -(short_weights[ticker] / short_sum) * short_allocation
         
-        return weights_series
+        return adjusted_weights
     
-    def scale_to_target_volatility(self, weights: pd.Series, returns: pd.DataFrame,
-                                  target_annual_vol: float) -> pd.Series:
-        """Scale portfolio weights to achieve target annual volatility.
+    def apply_position_caps_with_redistribution(self, weights: pd.Series, 
+                                               tickers: Dict[str, Dict],
+                                               liquidity_scores: Optional[Dict[str, float]],
+                                               target_net_exposure: Optional[float],
+                                               max_iterations: int = 10) -> pd.Series:
+        """Apply position caps while maintaining net exposure as much as possible.
         
-        This is a critical step from the original implementation that ensures
-        the portfolio achieves the desired risk level.
+        New approach: Don't normalize to gross = 1.0, instead maintain net exposure
+        and let leverage handle the scaling.
+        """
+        if weights.empty:
+            return weights
+        
+        if liquidity_scores is None:
+            liquidity_scores = {}
+        
+        weights = weights.copy()
+        
+        # Store initial net exposure to maintain
+        initial_long = weights[weights > 0].sum()
+        initial_short = weights[weights < 0].abs().sum()
+        initial_net = initial_long - initial_short
+        
+        # Define position caps
+        position_caps = {}
+        for ticker in weights.index:
+            position_type = 'long' if weights[ticker] > 0 else 'short'
+            liquidity_score = liquidity_scores.get(ticker, 0.5)
+            
+            if position_type == 'long':
+                position_caps[ticker] = 0.12  # 12% cap for longs
+            else:  # short
+                if liquidity_score >= 0.55:  # Mid/High liquidity (grades A, B, C)
+                    position_caps[ticker] = 0.05  # 5% cap
+                else:  # Med/Low liquidity (grades D, F)
+                    position_caps[ticker] = 0.03  # 3% cap
+        
+        # Apply caps and track how much we need to redistribute
+        long_excess = 0
+        short_excess = 0
+        
+        # First pass: apply caps
+        for ticker in weights.index:
+            if abs(weights[ticker]) > position_caps[ticker]:
+                if weights[ticker] > 0:
+                    long_excess += weights[ticker] - position_caps[ticker]
+                    weights[ticker] = position_caps[ticker]
+                else:
+                    short_excess += abs(weights[ticker]) - position_caps[ticker]
+                    weights[ticker] = -position_caps[ticker]
+        
+        # Redistribute excess within each book, respecting caps
+        for iteration in range(max_iterations):
+            if long_excess < 0.001 and short_excess < 0.001:
+                break
+            
+            # Redistribute long excess
+            if long_excess > 0:
+                long_mask = weights > 0
+                available_longs = []
+                for ticker in weights[long_mask].index:
+                    room = position_caps[ticker] - weights[ticker]
+                    if room > 0.001:
+                        available_longs.append((ticker, room))
+                
+                if available_longs:
+                    total_room = sum(room for _, room in available_longs)
+                    distributed = 0
+                    for ticker, room in available_longs:
+                        share = min(room, long_excess * (room / total_room))
+                        weights[ticker] += share
+                        distributed += share
+                    long_excess -= distributed
+            
+            # Redistribute short excess
+            if short_excess > 0:
+                short_mask = weights < 0
+                available_shorts = []
+                for ticker in weights[short_mask].index:
+                    room = position_caps[ticker] - abs(weights[ticker])
+                    if room > 0.001:
+                        available_shorts.append((ticker, room))
+                
+                if available_shorts:
+                    total_room = sum(room for _, room in available_shorts)
+                    distributed = 0
+                    for ticker, room in available_shorts:
+                        share = min(room, short_excess * (room / total_room))
+                        weights[ticker] -= share  # Negative for shorts
+                        distributed += share
+                    short_excess -= distributed
+        
+        # Calculate final exposures
+        final_long = weights[weights > 0].sum()
+        final_short = weights[weights < 0].abs().sum()
+        final_net = final_long - final_short
+        
+        # If net exposure has drifted significantly, scale books to restore it
+        if target_net_exposure is not None and abs(final_net - target_net_exposure) > 0.02:
+            # Calculate what the long/short exposures should be for target net
+            # We need: long - short = target_net
+            # And we want to maintain relative sizes as much as possible
+            
+            # Use current gross as basis
+            current_gross = final_long + final_short
+            
+            # Solve: long - short = target_net, long + short = current_gross
+            # Therefore: long = (current_gross + target_net) / 2
+            #           short = (current_gross - target_net) / 2
+            target_long = (current_gross + target_net_exposure) / 2
+            target_short = (current_gross - target_net_exposure) / 2
+            
+            # Scale each book
+            if final_long > 0:
+                long_scale = target_long / final_long
+                # But don't scale up if it would violate caps
+                if long_scale > 1:
+                    long_scale = 1  # Don't scale up, only down
+                for ticker in weights[weights > 0].index:
+                    weights[ticker] *= long_scale
+            
+            if final_short > 0:
+                short_scale = target_short / final_short
+                # But don't scale up if it would violate caps
+                if short_scale > 1:
+                    short_scale = 1  # Don't scale up, only down
+                for ticker in weights[weights < 0].index:
+                    weights[ticker] *= short_scale
+        
+        return weights
+    
+    def apply_caps_with_net_exposure(self, weights: pd.Series,
+                                    tickers: Dict[str, Dict],
+                                    liquidity_scores: Optional[Dict[str, float]],
+                                    target_net_exposure: Optional[float]) -> pd.Series:
+        """Apply position caps while maintaining net exposure as closely as possible.
+        
+        This is the core method that handles the interaction between:
+        1. Position caps (hard constraints)
+        2. Net exposure targets (soft constraint, best effort)
+        3. Gross exposure normalization
+        """
+        if weights.empty:
+            return weights
+        
+        if liquidity_scores is None:
+            liquidity_scores = {}
+        
+        weights = weights.copy()
+        
+        # Define position caps
+        position_caps = {}
+        for ticker in weights.index:
+            position_type = 'long' if weights[ticker] > 0 else 'short'
+            liquidity_score = liquidity_scores.get(ticker, 0.5)
+            
+            if position_type == 'long':
+                position_caps[ticker] = 0.12  # 12% cap for longs
+            else:
+                if liquidity_score >= 0.55:  # Mid/High liquidity
+                    position_caps[ticker] = 0.05  # 5% cap
+                else:
+                    position_caps[ticker] = 0.03  # 3% cap
+        
+        # Calculate maximum possible exposures given caps
+        long_tickers = [t for t in weights.index if weights[t] > 0]
+        short_tickers = [t for t in weights.index if weights[t] < 0]
+        
+        max_long_exposure = sum(position_caps[t] for t in long_tickers)
+        max_short_exposure = sum(position_caps[t] for t in short_tickers)
+        
+        # Calculate achievable target allocations
+        if target_net_exposure is not None:
+            # Ideal allocations
+            ideal_long_alloc = (1 + target_net_exposure) / 2
+            ideal_short_alloc = (1 - target_net_exposure) / 2
+            
+            # Check if ideal allocations are achievable
+            # We want the minimum of ideal allocation and what's possible
+            target_long_alloc = min(ideal_long_alloc, max_long_exposure)
+            target_short_alloc = min(ideal_short_alloc, max_short_exposure)
+            
+            # If we had to reduce one side, adjust the other to maintain ratio if possible
+            if target_long_alloc < ideal_long_alloc:
+                # Longs are constrained, adjust shorts proportionally
+                if ideal_long_alloc > 0:
+                    ratio = target_long_alloc / ideal_long_alloc
+                    target_short_alloc = min(ideal_short_alloc * ratio, max_short_exposure)
+            elif target_short_alloc < ideal_short_alloc:
+                # Shorts are constrained, adjust longs proportionally
+                if ideal_short_alloc > 0:
+                    ratio = target_short_alloc / ideal_short_alloc
+                    target_long_alloc = min(ideal_long_alloc * ratio, max_long_exposure)
+            
+            # Normalize to sum to 1
+            total_alloc = target_long_alloc + target_short_alloc
+            if total_alloc > 1:
+                target_long_alloc = target_long_alloc / total_alloc
+                target_short_alloc = target_short_alloc / total_alloc
+        else:
+            # Natural exposure based on current weights
+            long_sum = weights[weights > 0].sum()
+            short_sum = weights[weights < 0].abs().sum()
+            total = long_sum + short_sum
+            if total > 0:
+                target_long_alloc = long_sum / total
+                target_short_alloc = short_sum / total
+            else:
+                target_long_alloc = 0.5
+                target_short_alloc = 0.5
+        
+        # Separate and scale long/short books to target allocations
+        long_weights = weights[weights > 0].copy()
+        short_weights = weights[weights < 0].abs()
+        
+        # Scale to target allocations
+        if not long_weights.empty:
+            long_sum = long_weights.sum()
+            if long_sum > 0:
+                long_weights = long_weights / long_sum * target_long_alloc
+        
+        if not short_weights.empty:
+            short_sum = short_weights.sum()
+            if short_sum > 0:
+                short_weights = short_weights / short_sum * target_short_alloc
+        
+        # Apply caps with redistribution within each book
+        # Long positions
+        for _ in range(10):  # Max iterations
+            capped_any = False
+            for ticker in long_weights.index:
+                if long_weights[ticker] > position_caps[ticker]:
+                    excess = long_weights[ticker] - position_caps[ticker]
+                    long_weights[ticker] = position_caps[ticker]
+                    capped_any = True
+                    
+                    # Redistribute excess to uncapped longs
+                    available_for_redistribution = []
+                    for other_ticker in long_weights.index:
+                        if other_ticker != ticker:
+                            room = position_caps[other_ticker] - long_weights[other_ticker]
+                            if room > 0.001:
+                                available_for_redistribution.append((other_ticker, room))
+                    
+                    if available_for_redistribution:
+                        total_room = sum(r for _, r in available_for_redistribution)
+                        remaining_excess = excess
+                        for other_ticker, room in available_for_redistribution:
+                            share = min(room, remaining_excess * (room / total_room))
+                            long_weights[other_ticker] += share
+                            remaining_excess -= share
+            
+            if not capped_any:
+                break
+        
+        # Short positions
+        for _ in range(10):  # Max iterations
+            capped_any = False
+            for ticker in short_weights.index:
+                if short_weights[ticker] > position_caps[ticker]:
+                    excess = short_weights[ticker] - position_caps[ticker]
+                    short_weights[ticker] = position_caps[ticker]
+                    capped_any = True
+                    
+                    # Redistribute excess to uncapped shorts
+                    available_for_redistribution = []
+                    for other_ticker in short_weights.index:
+                        if other_ticker != ticker:
+                            room = position_caps[other_ticker] - short_weights[other_ticker]
+                            if room > 0.001:
+                                available_for_redistribution.append((other_ticker, room))
+                    
+                    if available_for_redistribution:
+                        total_room = sum(r for _, r in available_for_redistribution)
+                        remaining_excess = excess
+                        for other_ticker, room in available_for_redistribution:
+                            share = min(room, remaining_excess * (room / total_room))
+                            short_weights[other_ticker] += share
+                            remaining_excess -= share
+            
+            if not capped_any:
+                break
+        
+        # Combine back with appropriate signs
+        final_weights = pd.Series(dtype=float, index=weights.index)
+        for ticker in long_weights.index:
+            final_weights[ticker] = long_weights[ticker]
+        for ticker in short_weights.index:
+            final_weights[ticker] = -short_weights[ticker]
+        
+        # Check actual vs target exposure before normalization
+        pre_norm_long = final_weights[final_weights > 0].sum()
+        pre_norm_short = final_weights[final_weights < 0].abs().sum()
+        pre_norm_net = pre_norm_long - pre_norm_short
+        
+        # Final normalization to ensure gross = 1.0
+        gross = final_weights.abs().sum()
+        if gross > 0:
+            final_weights = final_weights / gross
+        
+        # Debug: Check if net exposure is maintained after normalization
+        final_long = final_weights[final_weights > 0].sum()
+        final_short = final_weights[final_weights < 0].abs().sum()
+        final_net = final_long - final_short
+        
+        if target_net_exposure is not None:
+            print(f"DEBUG: Target net exposure: {target_net_exposure:.2%}")
+            print(f"DEBUG: Pre-norm net: {pre_norm_net:.2%}, gross: {gross:.2%}")
+            print(f"DEBUG: Final net: {final_net:.2%}, long: {final_long:.2%}, short: {final_short:.2%}")
+            
+            # If we're way off target, try a different approach
+            if abs(final_net - target_net_exposure) > 0.1:
+                print(f"WARNING: Net exposure {final_net:.2%} far from target {target_net_exposure:.2%}")
+        
+        return final_weights
+    
+    def scale_to_target_volatility_with_caps(self, weights: pd.Series, returns: pd.DataFrame,
+                                            target_annual_vol: float,
+                                            tickers: Dict[str, Dict],
+                                            liquidity_scores: Optional[Dict[str, float]] = None) -> pd.Series:
+        """Scale portfolio to target volatility while respecting position caps.
+        
+        This method scales the portfolio to achieve target volatility but ensures
+        position caps are never violated.
         
         Args:
-            weights: Portfolio weights (can include negative for shorts)
+            weights: Portfolio weights with caps already applied
             returns: DataFrame of returns
-            target_annual_vol: Target annual volatility (e.g., 0.10 for 10%)
+            target_annual_vol: Target annual volatility
+            tickers: Dictionary with position info
+            liquidity_scores: Liquidity scores per ticker
             
         Returns:
-            Scaled weights to achieve target volatility
+            Scaled weights that respect caps and achieve target vol
         """
         if weights.empty or returns.empty:
             return weights
@@ -448,14 +839,130 @@ class CorrelationPortfolioBuilder:
         portfolio_returns = (returns * weights).sum(axis=1)
         current_vol = self.risk_calc.annualized_volatility(portfolio_returns)
         
-        # Scale weights to achieve target volatility
+        # Calculate ideal scaling factor
         if current_vol > 0 and target_annual_vol > 0:
-            vol_scale = target_annual_vol / current_vol
-            scaled_weights = weights * vol_scale
+            ideal_scale = target_annual_vol / current_vol
+            
+            # If scaling down, we can apply directly
+            if ideal_scale <= 1.0:
+                return weights * ideal_scale
+            
+            # If scaling up, need to respect caps
+            if liquidity_scores is None:
+                liquidity_scores = {}
+            
+            # Define position caps
+            position_caps = {}
+            for ticker in weights.index:
+                position_type = 'long' if weights[ticker] > 0 else 'short'
+                liquidity_score = liquidity_scores.get(ticker, 0.5)
+                
+                if position_type == 'long':
+                    position_caps[ticker] = 0.12  # 12% cap
+                else:
+                    if liquidity_score >= 0.55:  # Mid/High liquidity (grades A, B, C)
+                        position_caps[ticker] = 0.05  # 5% cap
+                    else:  # Med/Low liquidity (grades D, F)
+                        position_caps[ticker] = 0.03  # 3% cap
+            
+            # Scale up to the maximum allowed by caps
+            scaled_weights = weights.copy()
+            max_scale = 1.0
+            
+            for ticker in weights.index:
+                if abs(weights[ticker]) > 0:
+                    # Maximum scale for this position before hitting cap
+                    ticker_max_scale = position_caps[ticker] / abs(weights[ticker])
+                    max_scale = max(max_scale, min(ideal_scale, ticker_max_scale))
+            
+            # Apply the constrained scale
+            scaled_weights = weights * min(ideal_scale, max_scale)
+            
+            # Ensure no position exceeds its cap
+            for ticker in scaled_weights.index:
+                if abs(scaled_weights[ticker]) > position_caps[ticker]:
+                    scaled_weights[ticker] = position_caps[ticker] * (1 if scaled_weights[ticker] > 0 else -1)
             
             return scaled_weights
         
         return weights
+    
+    def scale_to_target_volatility(self, weights: pd.Series, returns: pd.DataFrame,
+                                  target_annual_vol: float) -> pd.Series:
+        """Legacy method - now just calls the new capped version.
+        
+        DEPRECATED: Use scale_to_target_volatility_with_caps instead
+        """
+        # For backward compatibility, but should not be used in new flow
+        if weights.empty or returns.empty:
+            return weights
+        
+        portfolio_returns = (returns * weights).sum(axis=1)
+        current_vol = self.risk_calc.annualized_volatility(portfolio_returns)
+        
+        if current_vol > 0 and target_annual_vol > 0:
+            vol_scale = target_annual_vol / current_vol
+            return weights * vol_scale
+        
+        return weights
+    
+    def validate_portfolio_constraints(self, weights: pd.Series,
+                                      tickers: Dict[str, Dict],
+                                      liquidity_scores: Optional[Dict[str, float]],
+                                      target_net_exposure: Optional[float]) -> list:
+        """Validate that all portfolio constraints are satisfied.
+        
+        Args:
+            weights: Final portfolio weights
+            tickers: Dictionary with position info
+            liquidity_scores: Liquidity scores per ticker
+            target_net_exposure: Target net exposure
+            
+        Returns:
+            List of validation errors (empty if all constraints satisfied)
+        """
+        errors = []
+        
+        if weights.empty:
+            return ["Empty weights"]
+        
+        if liquidity_scores is None:
+            liquidity_scores = {}
+        
+        # Check position caps
+        for ticker in weights.index:
+            weight = abs(weights[ticker])
+            position_type = 'long' if weights[ticker] > 0 else 'short'
+            liquidity_score = liquidity_scores.get(ticker, 0.5)
+            
+            if position_type == 'long':
+                max_cap = 0.12
+                if weight > max_cap + 0.001:  # Small tolerance for rounding
+                    errors.append(f"{ticker}: Long position {weight:.4f} exceeds cap {max_cap}")
+            else:
+                if liquidity_score >= 0.55:  # Mid/High liquidity (grades A, B, C)
+                    max_cap = 0.05
+                else:  # Med/Low liquidity (grades D, F)
+                    max_cap = 0.03
+                if weight > max_cap + 0.001:
+                    errors.append(f"{ticker}: Short position {weight:.4f} exceeds cap {max_cap}")
+        
+        # Check net exposure
+        if target_net_exposure is not None:
+            long_exposure = weights[weights > 0].sum()
+            short_exposure = weights[weights < 0].abs().sum()
+            actual_net = long_exposure - short_exposure
+            
+            # Allow 5% tolerance for net exposure
+            if abs(actual_net - target_net_exposure) > 0.05:
+                errors.append(f"Net exposure {actual_net:.2%} deviates from target {target_net_exposure:.2%}")
+        
+        # Check gross exposure (should be close to 1.0)
+        gross = weights.abs().sum()
+        if abs(gross - 1.0) > 0.01:
+            errors.append(f"Gross exposure {gross:.4f} not normalized to 1.0")
+        
+        return errors
     
     def calculate_returns(self, price_data: Dict[str, pd.Series], 
                          use_cache: bool = True) -> pd.DataFrame:
@@ -492,3 +999,131 @@ class CorrelationPortfolioBuilder:
             return returns_df
         
         return pd.DataFrame()
+
+
+if __name__ == "__main__":
+    """Test the portfolio builder with a fake long/short equity portfolio."""
+    
+    # Create a consumer staples long/short equity portfolio
+    test_portfolio = {
+        # Long positions
+        "ACI": {"allocation": 0.02046, "position": "long"},
+        "ADM": {"allocation": 0.05139, "position": "long"},
+        "CCEP": {"allocation": 0.06676, "position": "long"},
+        "CL": {"allocation": 0.03158, "position": "long"},
+        "GIS": {"allocation": 0.04037, "position": "long"},
+        "INGR": {"allocation": 0.095, "position": "long"},
+        "IPAR": {"allocation": 0.05, "position": "long"},
+        "KDP": {"allocation": 0.0696, "position": "long"},
+        "KMB": {"allocation": 0.10359, "position": "long"},
+        "KO": {"allocation": 0.08445, "position": "long"},
+        "KVUE": {"allocation": 0.05708, "position": "long"},
+        "LW": {"allocation": 0.04633, "position": "long"},
+        "MO": {"allocation": 0.10028, "position": "long"},
+        "PPC": {"allocation": 0.07188, "position": "long"},
+        "REYN": {"allocation": 0.08937, "position": "long"},
+        "RLX": {"allocation": 0.04158, "position": "long"},
+        "SAM": {"allocation": 0.02808, "position": "long"},
+        "BJ": {"allocation": 0.02779, "position": "long"},
+        
+        # Short positions
+        "CELH": {"allocation": 0.05, "position": "short"},
+        "CLX": {"allocation": 0.08, "position": "short"},
+        "COTY": {"allocation": 0.04, "position": "short"},
+        "EL": {"allocation": 0.048, "position": "short"},
+        "ELF": {"allocation": 0.045, "position": "short"},
+        "FRPT": {"allocation": 0.044, "position": "short"},
+        "HSY": {"allocation": 0.08, "position": "short"},
+        "PFGC": {"allocation": 0.045, "position": "short"},
+        "SFM": {"allocation": 0.069, "position": "short"},
+        "STZ": {"allocation": 0.08, "position": "short"},
+        "USFD": {"allocation": 0.045, "position": "short"},
+        "UTZ": {"allocation": 0.08, "position": "short"},
+        "VITL": {"allocation": 0.065, "position": "short"},
+        "WDFC": {"allocation": 0.08, "position": "short"}
+    }
+    
+    # Test parameters
+    target_annual_vol = 0.15       # 15% annual volatility target
+    portfolio_value = 1_000_000    # $1M portfolio
+    leverage = 1.5                  # 1.5x leverage (150% gross exposure)
+    target_net_exposure = 0.35      # 35% net long
+    
+    print("=" * 80)
+    print("PORTFOLIO BUILDER TEST")
+    print("=" * 80)
+    print(f"\nTest Portfolio: {len(test_portfolio)} positions")
+    print(f"Long positions: {sum(1 for t in test_portfolio.values() if t['position'] == 'long')}")
+    print(f"Short positions: {sum(1 for t in test_portfolio.values() if t['position'] == 'short')}")
+    print(f"\nParameters:")
+    print(f"  Target Annual Volatility: {target_annual_vol:.1%}")
+    print(f"  Portfolio Value: ${portfolio_value:,.0f}")
+    print(f"  Leverage: {leverage:.1f}x")
+    print(f"  Target Net Exposure: {target_net_exposure:.1%}")
+    
+    # Build the portfolio
+    print("\n" + "=" * 80)
+    print("Building portfolio with liquidity-based position caps...")
+    print("=" * 80)
+    
+    builder = CorrelationPortfolioBuilder()
+    result = builder.build_portfolio(
+        tickers=test_portfolio,
+        target_annual_vol=target_annual_vol,
+        portfolio_value=portfolio_value,
+        leverage=leverage,
+        target_net_exposure=target_net_exposure,
+        lookback_days=252
+    )
+    
+    # Display results
+    if "error" in result:
+        print(f"\nERROR: {result['error']}")
+    else:
+        print(f"\nStatus: {result['status']}")
+        print(f"\nExposures:")
+        print(f"  Gross Exposure: {result['gross_exposure']:.1%}")
+        print(f"  Net Exposure: {result['actual_net_exposure']:.1%}")
+        print(f"  Long Exposure: {result['long_exposure']:.1%}")
+        print(f"  Short Exposure: {result['short_exposure']:.1%}")
+        
+        print(f"\nRisk Metrics:")
+        risk = result.get('risk_metrics', {})
+        print(f"  Annual Volatility: {risk.get('annual_volatility', 0):.2%}")
+        print(f"  Sharpe Ratio: {risk.get('sharpe_ratio', 0):.2f}")
+        print(f"  Max Drawdown: {risk.get('max_drawdown', 0):.2%}")
+        print(f"  VaR 99%: {risk.get('var_99', 0):.2%}")
+        
+        print(f"\nFinal Portfolio Allocations:")
+        print("-" * 50)
+        final_portfolio = result.get('final_portfolio', {})
+        
+        # Separate and sort by position type
+        longs = [(t, p) for t, p in final_portfolio.items() if p['position'] == 'long']
+        shorts = [(t, p) for t, p in final_portfolio.items() if p['position'] == 'short']
+        
+        longs.sort(key=lambda x: x[1]['allocation'], reverse=True)
+        shorts.sort(key=lambda x: x[1]['allocation'], reverse=True)
+        
+        print("\nLONG POSITIONS:")
+        for ticker, pos in longs:
+            allocation_pct = pos['allocation'] * 100
+            # Check if capped at 12%
+            capped = " [CAPPED]" if abs(allocation_pct - 12.0) < 0.01 else ""
+            print(f"  {ticker:6s}: {allocation_pct:5.2f}%{capped}")
+        
+        print("\nSHORT POSITIONS:")
+        for ticker, pos in shorts:
+            allocation_pct = pos['allocation'] * 100
+            # Check if capped at 3% or 5%
+            if abs(allocation_pct - 5.0) < 0.01:
+                capped = " [CAPPED @ 5% - Mid/High Liquid]"
+            elif abs(allocation_pct - 3.0) < 0.01:
+                capped = " [CAPPED @ 3% - Med/Low Liquid]"
+            else:
+                capped = ""
+            print(f"  {ticker:6s}: {allocation_pct:5.2f}%{capped}")
+        
+        print("\n" + "=" * 80)
+        print("Portfolio build completed successfully!")
+        print("=" * 80)

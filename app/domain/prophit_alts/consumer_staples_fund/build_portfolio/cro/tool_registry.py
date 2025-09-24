@@ -7,6 +7,7 @@ from app.core.agentic_framework.tool_lib.risk_tools.drawdown_profile import DRAW
 from app.core.agentic_framework.tool_lib.risk_tools.cov_matrix import CALCULATE_COVARIANCE_MATRIX_TOOL
 from app.core.agentic_framework.tool_lib.risk_tools.stress_test import STRESS_TEST_TOOL
 from app.core.agentic_framework.tool_lib.risk_tools.pairwise_corr_analysis import PAIRWISE_CORR_ANALYSIS_TOOL
+from app.core.agentic_framework.tool_lib.portfolio_tools.concentration import EXPOSURE_CALCULATOR_TOOL
 
 def register_cro_tools(agent):
     """
@@ -27,5 +28,5 @@ def register_cro_tools(agent):
     agent.add_tool(**DRAWDOWN_PROFILE_TOOL)
     agent.add_tool(**STRESS_TEST_TOOL)
     agent.add_tool(**PAIRWISE_CORR_ANALYSIS_TOOL)
-
+    agent.add_tool(**EXPOSURE_CALCULATOR_TOOL)
 

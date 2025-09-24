@@ -32,14 +32,14 @@ def calculate_portfolio_returns_metrics(portfolio_dict: PortfolioInput | dict, l
     # Calculate metrics
     ann_price_return = ReturnsCalculator.annualized_return(portfolio_price_returns, 252)
     ann_total_return = ReturnsCalculator.annualized_return(portfolio_total_returns, 252)
-    ann_volatility = portfolio_total_returns.std() * np.sqrt(252)
+    ann_volatility = float(portfolio_total_returns.std() * np.sqrt(252))
     
     # Calculate weekly cumulative returns and convert to rounded dict
     weekly_cumulative = (1 + portfolio_total_returns).resample('W').prod() - 1
     weekly_returns = {ts.strftime('%Y-%m-%d'): round(val, 4) for ts, val in weekly_cumulative.items()}
     
     # Calculate cumulative return over period
-    total_cumulative = (1 + portfolio_total_returns).prod() - 1
+    total_cumulative = float((1 + portfolio_total_returns).prod() - 1)
     
     return yaml.dump({
         "ann_price_return": round(ann_price_return, 4),
@@ -119,3 +119,6 @@ CALCULATE_PORTFOLIO_RETURNS_METRICS_TOOL = {
     "parameters": CALCULATE_PORTFOLIO_RETURNS_METRICS_PARAMETERS,
     "function": calculate_portfolio_returns_metrics,
 }
+
+if __name__ == "__main__":
+    print(calculate_portfolio_returns_metrics(portfolio_dict={'AAPL': {'allocation': 0.125, 'position': 'long'}, 'MSFT': {'allocation': 0.125, 'position': 'long'}, 'AMZN': {'allocation': 0.125, 'position': 'long'}, 'TSLA': {'allocation': 0.125, 'position': 'long'}, 'META': {'allocation': 0.125, 'position': 'long'}, 'SPY': {'allocation': 0.125, 'position': 'long'}, 'QQQ': {'allocation': 0.125, 'position': 'long'}, 'IWM': {'allocation': 0.125, 'position': 'long'}}))

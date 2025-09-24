@@ -32,7 +32,7 @@ class AgentUtilities:
         """Return system rules for the agent - Enhanced for GPT-4.1."""
         # More explicit instructions for GPT-4.1 to ensure consistent JSON output
         return (
-            "You are an intelligent ReAct agent. You MUST use one of these two formats:\n"
+            "You MUST use one of these two formats:\n"
             "1. Native tool-calls (preferred if supported)\n"
             "2. JSON format: {\"thought\":\"...\",\"action\":{\"tool\":\"name\",\"args\":{}}}\n\n"
             "3. The list can be as long as you want, the priority is to complete the task at hand as accurately and analytically as possible.\n"
