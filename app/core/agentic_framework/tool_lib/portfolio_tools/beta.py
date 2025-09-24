@@ -1,4 +1,6 @@
 import yaml
+import pandas as pd
+import numpy as np
 from app.utils.gpt_parser import canonical_portfolio
 from app.core.calculations.portfolio.utils import get_portfolio_returns, get_benchmark_returns
 from app.core.calculations.risk.calculator import RiskCalculator
@@ -19,32 +21,45 @@ def calculate_portfolio_beta_vs_index(
     Returns:
         Portfolio beta vs index
     """
-    portfolio_dict = canonical_portfolio(portfolio_dict)
-    
-    # Use utility functions to get portfolio returns
-    portfolio_returns, _ = get_portfolio_returns(
-        portfolio=portfolio_dict,
-        lookback_days=lookback_days + 50,  # Buffer for returns calc
-        use_total_returns=False,  # Use price returns for beta calculation
-        dropna=True
-    )
-    
-    if portfolio_returns is None or portfolio_returns.empty:
-        return yaml.dump({"beta": None}, default_flow_style=False)
-    
-    # Get index returns using utility function
-    index_returns = get_benchmark_returns(
-        benchmark=index_ticker,
-        lookback_days=lookback_days + 50,  # Buffer for returns calc
-        use_total_returns=False  # Use price returns for beta calculation
-    )
-    
-    if index_returns is None or index_returns.empty:
-        return yaml.dump({"beta": None}, default_flow_style=False)
-    
-    # Calculate and return beta
-    beta = RiskCalculator.beta(portfolio_returns, index_returns)
-    return yaml.dump({"beta": float(beta) if not float('nan') else None}, default_flow_style=False)
+    try:
+        portfolio_dict = canonical_portfolio(portfolio_dict)
+        
+        # Use utility functions to get portfolio returns
+        portfolio_returns, _ = get_portfolio_returns(
+            portfolio=portfolio_dict,
+            lookback_days=lookback_days + 50,  # Buffer for returns calc
+            use_total_returns=False,  # Use price returns for beta calculation
+            dropna=True
+        )
+        
+        if portfolio_returns is None or portfolio_returns.empty:
+            print(f"DEBUG: Portfolio returns is None or empty. Portfolio: {list(portfolio_dict.keys())}")
+            return yaml.dump({"beta": None, "error": "No portfolio returns data"}, default_flow_style=False)
+        
+        # Get index returns using utility function
+        index_returns = get_benchmark_returns(
+            benchmark=index_ticker,
+            lookback_days=lookback_days + 50,  # Buffer for returns calc
+            use_total_returns=False  # Use price returns for beta calculation
+        )
+        
+        if index_returns is None or index_returns.empty:
+            print(f"DEBUG: Index returns is None or empty for {index_ticker}")
+            return yaml.dump({"beta": None, "error": f"No index returns data for {index_ticker}"}, default_flow_style=False)
+        
+        # Calculate and return beta
+        beta = RiskCalculator.beta(portfolio_returns, index_returns)
+        
+        # Check if beta is NaN or invalid
+        if pd.isna(beta) or np.isnan(beta):
+            print(f"DEBUG: Beta calculation resulted in NaN. Portfolio returns length: {len(portfolio_returns)}, Index returns length: {len(index_returns)}")
+            return yaml.dump({"beta": None, "error": "Beta calculation resulted in NaN"}, default_flow_style=False)
+        
+        return yaml.dump({"beta": round(float(beta), 3)}, default_flow_style=False)
+        
+    except Exception as e:
+        print(f"DEBUG: Exception in beta calculation: {str(e)}")
+        return yaml.dump({"beta": None, "error": str(e)}, default_flow_style=False)
 
 CALCULATE_PORTFOLIO_BETA_VS_INDEX_DESCRIPTION = (
     "Calculate CAPM beta for a long/short portfolio versus SPY benchmark using 252 trading days of historical data. "

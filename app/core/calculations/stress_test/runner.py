@@ -88,7 +88,11 @@ class StressTestRunner:
         """
         if self._pairwise_corr_analysis is None:
             print("Running pairwise correlation analysis...")
-            baseline_summary, stress_summary = run_pairwise_correlation_analysis(self.portfolio_dict)
+            try:
+                baseline_summary, stress_summary = run_pairwise_correlation_analysis(self.portfolio_dict)
+            except Exception as e:
+                print(f"Warning: Pairwise correlation analysis failed: {e}")
+                baseline_summary, stress_summary = {'baseline_scenario_averages': {'ticker_averages': {}, 'average_portfolio_correlation': 0.0}}, {'stress_scenario_averages': {'ticker_averages': {}, 'average_portfolio_correlation': 0.0}}
             self._pairwise_corr_analysis = {
                 'baseline_summary': baseline_summary,
                 'stress_summary': stress_summary
@@ -120,72 +124,100 @@ class StressTestRunner:
         
         # Process historical scenarios
         for scenario_name, scenario_data in historical_scenarios.items():
-            # Extract ETF shocks (exclude date fields)
-            etf_shocks = {k: v for k, v in scenario_data.items() 
-                          if k not in ['start_date', 'end_date']}
-            
-            # Filter betas for this scenario's ETFs
-            scenario_betas = self._filter_betas_for_scenario(etf_shocks)
-            
-            # Run stress test engine with cached betas
-            engine_results = run_stress_test_engine(
-                self.portfolio_dict,
-                etf_shocks,
-                pre_calculated_betas=scenario_betas
-            )
-            
-            # Convert to format expected by analysis functions
-            scenario_results = self._format_engine_results(
-                engine_results, 
-                scenario_name, 
-                etf_shocks
-            )
-            
-            # Run analysis functions (including pairwise correlation for historical scenarios)
-            analysis_results = {
-                'scenario_name': scenario_name,
-                'scenario_type': 'historical',
-                'etf_shocks': etf_shocks,
-                'stock_returns': engine_results['expected_returns'],
-                'industry_returns': industry_returns_analysis(scenario_results, self.portfolio_dict),
-                'contribution': contribution_analysis(scenario_results, self.portfolio_dict),
-                'performance': performance_analysis(scenario_results, self.portfolio_dict),
-                'pairwise_correlation_analysis': self._get_pairwise_correlation_analysis()
-            }
-            
-            all_results[f'historical_{scenario_name}'] = analysis_results
+            try:
+                # Extract ETF shocks (exclude date fields)
+                etf_shocks = {k: v for k, v in scenario_data.items() 
+                              if k not in ['start_date', 'end_date']}
+                
+                # Filter betas for this scenario's ETFs
+                scenario_betas = self._filter_betas_for_scenario(etf_shocks)
+                
+                # Run stress test engine with cached betas
+                engine_results = run_stress_test_engine(
+                    self.portfolio_dict,
+                    etf_shocks,
+                    pre_calculated_betas=scenario_betas
+                )
+                
+                # Convert to format expected by analysis functions
+                scenario_results = self._format_engine_results(
+                    engine_results, 
+                    scenario_name, 
+                    etf_shocks
+                )
+                
+                # Run analysis functions (including pairwise correlation for historical scenarios)
+                analysis_results = {
+                    'scenario_name': scenario_name,
+                    'scenario_type': 'historical',
+                    'etf_shocks': etf_shocks,
+                    'stock_returns': engine_results['expected_returns'],
+                    'industry_returns': industry_returns_analysis(scenario_results, self.portfolio_dict),
+                    'contribution': contribution_analysis(scenario_results, self.portfolio_dict),
+                    'performance': performance_analysis(scenario_results, self.portfolio_dict),
+                    'pairwise_correlation_analysis': self._get_pairwise_correlation_analysis()
+                }
+                
+                all_results[f'historical_{scenario_name}'] = analysis_results
+                
+            except Exception as e:
+                print(f"Warning: Error processing historical scenario {scenario_name}: {e}")
+                # Create a minimal error result
+                all_results[f'historical_{scenario_name}'] = {
+                    'scenario_name': scenario_name,
+                    'scenario_type': 'historical',
+                    'error': str(e),
+                    'stock_returns': {},
+                    'industry_returns': {},
+                    'contribution': {},
+                    'performance': {}
+                }
         
         # Process hypothetical scenarios
         for scenario_name, etf_shocks in hypothetical_scenarios.items():
-            # Filter betas for this scenario's ETFs
-            scenario_betas = self._filter_betas_for_scenario(etf_shocks)
-            
-            # Run stress test engine with cached betas
-            engine_results = run_stress_test_engine(
-                self.portfolio_dict,
-                etf_shocks,
-                pre_calculated_betas=scenario_betas
-            )
-            
-            # Convert to format expected by analysis functions
-            scenario_results = self._format_engine_results(
-                engine_results, 
-                scenario_name, 
-                etf_shocks
-            )
-            
-            # Run analysis functions
-            analysis_results = {
-                'scenario_name': scenario_name,
-                'scenario_type': 'hypothetical',
-                'etf_shocks': etf_shocks,
-                'stock_returns': engine_results['expected_returns'],
-                'industry_returns': industry_returns_analysis(scenario_results, self.portfolio_dict),
-                'contribution': contribution_analysis(scenario_results, self.portfolio_dict),
-                'performance': performance_analysis(scenario_results, self.portfolio_dict)
-            }
-            
-            all_results[f'hypothetical_{scenario_name}'] = analysis_results
+            try:
+                # Filter betas for this scenario's ETFs
+                scenario_betas = self._filter_betas_for_scenario(etf_shocks)
+                
+                # Run stress test engine with cached betas
+                engine_results = run_stress_test_engine(
+                    self.portfolio_dict,
+                    etf_shocks,
+                    pre_calculated_betas=scenario_betas
+                )
+                
+                # Convert to format expected by analysis functions
+                scenario_results = self._format_engine_results(
+                    engine_results, 
+                    scenario_name, 
+                    etf_shocks
+                )
+                
+                # Run analysis functions
+                analysis_results = {
+                    'scenario_name': scenario_name,
+                    'scenario_type': 'hypothetical',
+                    'etf_shocks': etf_shocks,
+                    'stock_returns': engine_results['expected_returns'],
+                    'industry_returns': industry_returns_analysis(scenario_results, self.portfolio_dict),
+                    'contribution': contribution_analysis(scenario_results, self.portfolio_dict),
+                    'performance': performance_analysis(scenario_results, self.portfolio_dict)
+                }
+                
+                all_results[f'hypothetical_{scenario_name}'] = analysis_results
+                
+            except Exception as e:
+                print(f"Warning: Error processing hypothetical scenario {scenario_name}: {e}")
+                # Create a minimal error result
+                all_results[f'hypothetical_{scenario_name}'] = {
+                    'scenario_name': scenario_name,
+                    'scenario_type': 'hypothetical',
+                    'error': str(e),
+                    'stock_returns': {},
+                    'industry_returns': {},
+                    'contribution': {},
+                    'performance': {}
+                }
         
         return all_results
     

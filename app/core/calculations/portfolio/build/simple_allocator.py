@@ -4,14 +4,16 @@ This class keeps the logic intentionally minimal while leveraging the shared
 calculations infrastructure (DataService, Returns/Risk calculators, Optimizer).
 
 Inputs:
-- portfolio: {ticker: {"conviction": 0..1, "position": "long"|"short"}}
+- portfolio_dict: {ticker: {"conviction": 0..1, "position": "long"|"short"}}
 - target_annual_vol: float (e.g., 0.15 for 15%) [used for diagnostics; allocation
   primarily respects exposure targets to keep this simple]
 - target_gross_exposure: float (sum of |weights|)
 - target_net_exposure: float (sum of weights, positive=net long)
 
 Output:
-- dict[ticker, float]: signed final weights that meet gross/net targets
+- dict[ticker, dict]: structured format with ticker, position, and allocation fields
+  Format: {ticker: {"ticker": str, "position": "long"/"short", "allocation": float}}
+  where allocation is the absolute value of the weight, and position is determined by sign
 
 Design notes (simple yet effective):
 - Within each book (longs, shorts), compute risk-based weights that down-weight
@@ -34,6 +36,7 @@ from app.core.calculations.risk.calculator import RiskCalculator
 from app.core.calculations.performance.calculator import PerformanceCalculator
 from app.core.calculations.portfolio.correlation import CorrelationAnalysis
 from app.core.calculations.portfolio.build.optimizer import PortfolioOptimizer
+from app.utils.gpt_parser import canonical_portfolio
 
 
 class SimplePortfolioAllocator:
@@ -41,7 +44,7 @@ class SimplePortfolioAllocator:
 
     Example usage:
         allocator = SimplePortfolioAllocator(
-            portfolio={
+            portfolio_dict={
                 "AAPL": {"conviction": 0.8, "position": "long"},
                 "MSFT": {"conviction": 0.6, "position": "long"},
                 "TSLA": {"conviction": 0.7, "position": "short"},
@@ -55,7 +58,7 @@ class SimplePortfolioAllocator:
 
     def __init__(
         self,
-        portfolio: Dict[str, Dict[str, float | str]],
+        portfolio_dict: Dict[str, Dict[str, float | str]],
         *,
         target_annual_vol: float,
         target_gross_exposure: float = 1.0,
@@ -63,7 +66,7 @@ class SimplePortfolioAllocator:
         lookback_days: int = 252,
         data_service: Optional[DataService] = None,
     ) -> None:
-        self.portfolio = portfolio or {}
+        self.portfolio_dict = portfolio_dict or {}
         self.target_vol = float(target_annual_vol)
         self.target_gross = float(target_gross_exposure)
         self.target_net = float(target_net_exposure)
@@ -72,7 +75,7 @@ class SimplePortfolioAllocator:
         self.optimizer = PortfolioOptimizer()
 
     # ---------------------------- public API ---------------------------- #
-    def allocate(self) -> Dict[str, float]:
+    def allocate(self) -> Dict[str, Dict[str, str | float]]:
         tickers_long, tickers_short, convictions = self._parse_portfolio()
         if not tickers_long and not tickers_short:
             return {}
@@ -92,23 +95,32 @@ class SimplePortfolioAllocator:
         L, S = self._solve_exposures(self.target_gross, self.target_net)
 
         # Combine signed weights
-        final: Dict[str, float] = {}
+        final_weights: Dict[str, float] = {}
         if not w_long.empty and L > 0:
             wL = (w_long / float(w_long.sum())) * L if float(w_long.sum()) > 0 else w_long
             for tkr, w in wL.items():
-                final[tkr] = float(w)
+                final_weights[tkr] = float(w)
         if not w_short.empty and S > 0:
             wS = (w_short / float(w_short.sum())) * S if float(w_short.sum()) > 0 else w_short
             for tkr, w in wS.items():
-                final[tkr] = -float(w)
+                final_weights[tkr] = -float(w)
 
         # Normalize tiny drift (numeric safety)
-        if final:
-            gross = float(np.sum([abs(x) for x in final.values()]))
+        if final_weights:
+            gross = float(np.sum([abs(x) for x in final_weights.values()]))
             if gross > 0:
                 scale = self.target_gross / gross
-                for k in list(final.keys()):
-                    final[k] = float(final[k] * scale)
+                for k in list(final_weights.keys()):
+                    final_weights[k] = float(final_weights[k] * scale)
+
+        # Convert to structured format
+        final: Dict[str, Dict[str, str | float]] = {}
+        for ticker, weight in final_weights.items():
+            final[ticker] = {
+                "ticker": ticker,
+                "position": "long" if weight >= 0 else "short",
+                "allocation": abs(weight)
+            }
 
         return final
 
@@ -118,7 +130,7 @@ class SimplePortfolioAllocator:
         shorts: list[str] = []
         conv_map: Dict[str, float] = {}
 
-        for t, cfg in (self.portfolio or {}).items():
+        for t, cfg in (self.portfolio_dict or {}).items():
             if not t:
                 continue
             tkr = t.upper()
@@ -207,14 +219,11 @@ class SimplePortfolioAllocator:
         return (L, S)
 
 
-__all__ = ["SimplePortfolioAllocator"]
-
-
 if __name__ == "__main__":
     # Test with the provided consumer staples portfolio
     print("Testing SimplePortfolioAllocator with consumer staples portfolio...")
     
-    # Convert the provided portfolio format to our expected format
+    # Convert the provided portfolio format to conviction format
     portfolio_data = {
         "ACI": {"conviction": 0.6, "position": "long"},
         "ADM": {"conviction": 0.8, "position": "long"},
@@ -250,23 +259,25 @@ if __name__ == "__main__":
         "VITL": {"conviction": 0.6, "position": "short"},
         "WDFC": {"conviction": 0.6, "position": "short"},
     }
+
+    portfolio_data = canonical_portfolio(portfolio_data)
     
     try:
         # Create allocator with market-neutral target (net exposure = 0)
         allocator = SimplePortfolioAllocator(
-            portfolio=portfolio_data,
+            portfolio_dict=portfolio_data,
             target_annual_vol=0.17,
             target_gross_exposure=1.8,
             target_net_exposure=0.3,
-            lookback_days=504  # 3 years of trading days
+            lookback_days=252  # 3 years of trading days
         )
         
         # Run allocation
         weights = allocator.allocate()
 
         print("Allocations:")
-        for ticker, weight in weights.items():
-            print(f"{ticker}: {round(weight*100, 2)}")
+        for ticker, data in weights.items():
+            print(f"{ticker}: {round(data['allocation']*100, 2)}% ({data['position']})")
         
         # Calculate portfolio metrics
         if weights:
@@ -275,6 +286,14 @@ if __name__ == "__main__":
             # Get price and dividend data for total return calculations
             tickers = list(weights.keys())
             price_map = allocator._fetch_prices(tickers)
+            
+            # Convert structured weights back to simple weight dict for calculations
+            simple_weights = {}
+            for ticker, data in weights.items():
+                weight = data['allocation']
+                if data['position'] == 'short':
+                    weight = -weight  # Make short positions negative
+                simple_weights[ticker] = weight
             
             # Build dicts of closes and dividends
             ticker_closes: dict[str, pd.Series] = {}
@@ -299,7 +318,7 @@ if __name__ == "__main__":
                 portfolio_total = PortfolioReturnsCalculator.weighted_total_returns(
                     ticker_dividends,
                     ticker_closes,
-                    weights,
+                    simple_weights,
                     dropna=False,
                     renormalize_each_day=True,
                     normalization="gross",
@@ -313,10 +332,10 @@ if __name__ == "__main__":
                     var_1d = RiskCalculator.historical_var(portfolio_total, confidence=0.99)
                     
                     # Exposures
-                    gross_exposure = sum(abs(w) for w in weights.values())
-                    net_exposure = sum(weights.values())
-                    long_exposure = sum(w for w in weights.values() if w > 0)
-                    short_exposure = abs(sum(w for w in weights.values() if w < 0))
+                    gross_exposure = sum(abs(w) for w in simple_weights.values())
+                    net_exposure = sum(simple_weights.values())
+                    long_exposure = sum(w for w in simple_weights.values() if w > 0)
+                    short_exposure = abs(sum(w for w in simple_weights.values() if w < 0))
                     
                     print(f"Annualized Volatility: {annual_vol:.4f} ({annual_vol*100:.2f}%)")
                     print(f"Annualized Total Return: {annual_return:.4f} ({annual_return*100:.2f}%)")

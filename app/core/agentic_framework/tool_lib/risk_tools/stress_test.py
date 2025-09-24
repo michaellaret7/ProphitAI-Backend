@@ -11,9 +11,14 @@ def stress_test(portfolio_dict: PortfolioInput | dict = None) -> str:
     if not portfolio_dict:
         return yaml.dump({"error": "Portfolio dictionary is required"}, default_flow_style=False)
 
-    portfolio_dict = canonical_portfolio(portfolio_dict)
-
-    return yaml.dump(run_stress_test_workflow(portfolio_dict), default_flow_style=False)
+    try:
+        portfolio_dict = canonical_portfolio(portfolio_dict)
+        results = run_stress_test_workflow(portfolio_dict)
+        return yaml.dump(results, default_flow_style=False)
+    except Exception as e:
+        error_msg = f"Error running stress test: {str(e)}"
+        print(f"Warning: {error_msg}")
+        return yaml.dump({"error": error_msg, "type": "stress_test_error"}, default_flow_style=False)
 
 
 # Tool Schema Constants
@@ -86,3 +91,6 @@ STRESS_TEST_TOOL = {
 }
 
 
+
+if __name__ == "__main__":
+    print(stress_test(portfolio_dict={'AAPL': {'allocation': 0.5, 'position': 'long'}, 'TSLA': {'allocation': 0.5, 'position': 'short'}}))

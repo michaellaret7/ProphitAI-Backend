@@ -29,10 +29,11 @@ def calculate_correlation_matrix(price_data: dict = None, start_date_str: str = 
     price_df = pd.DataFrame(price_data)
 
     # v2 returns and correlation
+    # Build returns without dropping rows globally; let correlation handle pairwise NaNs
     returns_df = pd.DataFrame({
         col: ReturnsCalculator.daily_price_returns(price_df[col])
         for col in price_df.columns
-    }).dropna()
+    })
 
     correlation_matrix = RiskCalculator.correlation_matrix(returns_df)
 
@@ -50,15 +51,26 @@ def pairwise_correlation_analysis(correlation_matrix: pd.DataFrame):
     Returns:
     - dict: Dictionary mapping ticker symbols to their average correlations
     """
+    # Handle empty matrices early
+    if correlation_matrix is None or correlation_matrix.empty:
+        return {}, 0.0
+    
     # Calculate average correlation for each ticker (row-wise mean, excluding NaN diagonal)
     avg_correlations = {}
-    
     for ticker in correlation_matrix.index:
         # Get the row for this ticker and calculate mean (NaN values are automatically excluded)
         avg_correlation = correlation_matrix.loc[ticker].mean()
-        avg_correlations[ticker] = float(round(avg_correlation, 4))
+        # Keep NaN as-is; we'll ignore non-finite values in the portfolio average
+        try:
+            avg_correlations[ticker] = float(round(avg_correlation, 4))
+        except Exception:
+            avg_correlations[ticker] = float('nan')
     
-    portfolio_average_correlation = sum(avg_correlations.values()) / len(avg_correlations)
+    if not avg_correlations:
+        return {}, 0.0
+    
+    finite_vals = [v for v in avg_correlations.values() if np.isfinite(v)]
+    portfolio_average_correlation = float(round(sum(finite_vals) / len(finite_vals), 4)) if finite_vals else 0.0
 
     return avg_correlations, portfolio_average_correlation
 

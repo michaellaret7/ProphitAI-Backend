@@ -1302,22 +1302,6 @@
       "error_pattern": "'str' object has no attribute 'astype'",
       "occurrences": [
         {
-          "timestamp": "2025-09-16T09:21:50.099304",
-          "args": {
-            "ticker": "KO",
-            "factor": "all"
-          },
-          "full_error": "Unknown factor: all"
-        },
-        {
-          "timestamp": "2025-09-16T09:21:50.107463",
-          "args": {
-            "ticker": "CCEP",
-            "factor": "all"
-          },
-          "full_error": "Unknown factor: all"
-        },
-        {
           "timestamp": "2025-09-16T09:21:50.116283",
           "args": {
             "ticker": "SAM",
@@ -1380,6 +1364,22 @@
             "factor": "volatility"
           },
           "full_error": "(psycopg2.OperationalError) could not translate host name \"demo-postgres.ctemwoy8mbzw.us-east-1.rds.amazonaws.com\" to address: No such host is known. \n\n(Background on this error at: https://sqlalche.me/e/20/e3q8)"
+        },
+        {
+          "timestamp": "2025-09-24T12:17:15.113966",
+          "args": {
+            "ticker": "GLDM",
+            "factor": "quality"
+          },
+          "full_error": "'NoneType' object has no attribute 'price'"
+        },
+        {
+          "timestamp": "2025-09-24T12:17:15.603312",
+          "args": {
+            "ticker": "GLDM",
+            "factor": "momentum"
+          },
+          "full_error": "No price data for GLDM between 2025-01-15 12:17:15.429510 and 2025-09-24 12:17:15.429510"
         }
       ],
       "solutions": [
@@ -5082,13 +5082,6 @@
       "error_pattern": "register_cio_tools.<locals>.<lambda>() missing 1 required positional argument: 'portfolio_dict'",
       "occurrences": [
         {
-          "timestamp": "2025-09-15T17:53:56.134272",
-          "args": {
-            "index_ticker": "SPY"
-          },
-          "full_error": "register_cio_tools.<locals>.<lambda>() missing 1 required positional argument: 'portfolio_dict'"
-        },
-        {
           "timestamp": "2025-09-15T18:21:32.836720",
           "args": {
             "index_ticker": "SPY"
@@ -5142,6 +5135,11 @@
         },
         {
           "timestamp": "2025-09-23T17:46:56.781237",
+          "args": {},
+          "full_error": "calculate_portfolio_beta_vs_index() missing 1 required positional argument: 'portfolio_dict'"
+        },
+        {
+          "timestamp": "2025-09-24T09:09:49.861172",
           "args": {},
           "full_error": "calculate_portfolio_beta_vs_index() missing 1 required positional argument: 'portfolio_dict'"
         }
@@ -5294,7 +5292,7 @@
           },
           "explanation": "Successful retry with corrected arguments",
           "timestamp": "2025-09-23T17:09:08.074655",
-          "success_count": 5
+          "success_count": 7
         }
       ],
       "auto_solution": {
@@ -5444,7 +5442,7 @@
         },
         "explanation": "Successful retry with corrected arguments",
         "timestamp": "2025-09-23T17:09:08.074655",
-        "success_count": 5
+        "success_count": 7
       }
     },
     "industry_concentration:missing_portfolio_dict": {
@@ -7769,13 +7767,6 @@
       "error_pattern": "'module' object is not callable",
       "occurrences": [
         {
-          "timestamp": "2025-09-19T09:42:23.867370",
-          "args": {
-            "expression": "(CHD.price_to_book - 7.4964) / 7.4964"
-          },
-          "full_error": "'module' object is not callable"
-        },
-        {
           "timestamp": "2025-09-19T09:42:25.265162",
           "args": {
             "expression": "(5.3255-7.4964)/7.4964"
@@ -7835,6 +7826,13 @@
           "timestamp": "2025-09-23T17:08:55.636211",
           "args": {
             "expression": "0.015+0.042+0.026+0.034+0.051+0.025+0.036+0.012+0.009+0.037+0.013+0.081+0.013+0.005+0.013+0.01+0.021+0.031+0.037+0.013+0.043+0.018+0.016+0.019+0.055+0.01+0.065+0.021+0.027+0.016+0.036+0.013+0.018+0.03+0.02"
+          },
+          "full_error": "'module' object is not callable"
+        },
+        {
+          "timestamp": "2025-09-24T09:59:01.440669",
+          "args": {
+            "expression": "1/0.931"
           },
           "full_error": "'module' object is not callable"
         }
@@ -8065,6 +8063,13 @@
             "group_by": "sub_industry"
           },
           "full_error": "calculate_group_performances() missing 1 required positional argument: 'portfolio_dict'"
+        },
+        {
+          "timestamp": "2025-09-24T09:10:09.551539",
+          "args": {
+            "group_by": "industry"
+          },
+          "full_error": "calculate_group_performances() missing 1 required positional argument: 'portfolio_dict'"
         }
       ],
       "solutions": [
@@ -8202,7 +8207,7 @@
           },
           "explanation": "Successful retry with corrected arguments",
           "timestamp": "2025-09-22T14:49:32.791113",
-          "success_count": 1
+          "success_count": 3
         }
       ],
       "auto_solution": {
@@ -8339,18 +8344,13 @@
         },
         "explanation": "Successful retry with corrected arguments",
         "timestamp": "2025-09-22T14:49:32.791113",
-        "success_count": 1
+        "success_count": 3
       }
     },
     "calculate_portfolio_performance:missing_portfolio_dict": {
       "tool_name": "calculate_portfolio_performance",
       "error_pattern": "register_optimizer_tools.<locals>.<lambda>() missing 1 required positional argument: 'portfolio_dict'",
       "occurrences": [
-        {
-          "timestamp": "2025-09-19T14:56:14.880990",
-          "args": {},
-          "full_error": "register_optimizer_tools.<locals>.<lambda>() missing 1 required positional argument: 'portfolio_dict'"
-        },
         {
           "timestamp": "2025-09-19T15:07:31.914827",
           "args": {},
@@ -8393,6 +8393,11 @@
         },
         {
           "timestamp": "2025-09-23T17:46:47.064547",
+          "args": {},
+          "full_error": "calculate_portfolio_performance() missing 1 required positional argument: 'portfolio_dict'"
+        },
+        {
+          "timestamp": "2025-09-24T09:09:54.345087",
           "args": {},
           "full_error": "calculate_portfolio_performance() missing 1 required positional argument: 'portfolio_dict'"
         }
@@ -8545,7 +8550,7 @@
           },
           "explanation": "Successful retry with corrected arguments",
           "timestamp": "2025-09-23T15:48:21.155644",
-          "success_count": 5
+          "success_count": 7
         }
       ],
       "auto_solution": {
@@ -8695,7 +8700,7 @@
         },
         "explanation": "Successful retry with corrected arguments",
         "timestamp": "2025-09-23T15:48:21.155644",
-        "success_count": 5
+        "success_count": 7
       }
     },
     "calculate_portfolio_returns_metrics:missing_portfolio": {
@@ -9421,6 +9426,11 @@
           "timestamp": "2025-09-22T14:37:32.174228",
           "args": {},
           "full_error": "screener() missing 1 required positional argument: 'criteria_dict'"
+        },
+        {
+          "timestamp": "2025-09-24T09:34:27.320896",
+          "args": {},
+          "full_error": "screener() missing 1 required positional argument: 'criteria_dict'"
         }
       ],
       "solutions": [
@@ -9496,7 +9506,7 @@
           },
           "explanation": "Successful retry with corrected arguments",
           "timestamp": "2025-09-22T14:38:06.392555",
-          "success_count": 1
+          "success_count": 3
         }
       ],
       "auto_solution": {
@@ -9571,7 +9581,7 @@
         },
         "explanation": "Successful retry with corrected arguments",
         "timestamp": "2025-09-22T14:38:06.392555",
-        "success_count": 1
+        "success_count": 3
       }
     },
     "calculate_portfolio_returns_metrics:missing_portfolio_dict": {
@@ -9592,6 +9602,11 @@
         },
         {
           "timestamp": "2025-09-23T17:46:51.764626",
+          "args": {},
+          "full_error": "calculate_portfolio_returns_metrics() missing 1 required positional argument: 'portfolio_dict'"
+        },
+        {
+          "timestamp": "2025-09-24T09:09:50.741770",
           "args": {},
           "full_error": "calculate_portfolio_returns_metrics() missing 1 required positional argument: 'portfolio_dict'"
         }
@@ -9729,7 +9744,7 @@
           },
           "explanation": "Successful retry with corrected arguments",
           "timestamp": "2025-09-22T14:48:52.045150",
-          "success_count": 5
+          "success_count": 7
         }
       ],
       "auto_solution": {
@@ -9864,7 +9879,7 @@
         },
         "explanation": "Successful retry with corrected arguments",
         "timestamp": "2025-09-22T14:48:52.045150",
-        "success_count": 5
+        "success_count": 7
       }
     },
     "calculate_portfolio_correlation_matrix:missing_portfolio_dict": {
@@ -9883,6 +9898,16 @@
         },
         {
           "timestamp": "2025-09-23T17:47:10.809054",
+          "args": {},
+          "full_error": "correlation_matrix() missing 1 required positional argument: 'portfolio_dict'"
+        },
+        {
+          "timestamp": "2025-09-24T08:24:58.428401",
+          "args": {},
+          "full_error": "correlation_matrix() missing 1 required positional argument: 'portfolio_dict'"
+        },
+        {
+          "timestamp": "2025-09-24T09:09:48.892832",
           "args": {},
           "full_error": "correlation_matrix() missing 1 required positional argument: 'portfolio_dict'"
         }
@@ -10027,7 +10052,7 @@
           },
           "explanation": "Successful retry with corrected arguments",
           "timestamp": "2025-09-23T08:18:40.093591",
-          "success_count": 5
+          "success_count": 9
         }
       ],
       "auto_solution": {
@@ -10169,7 +10194,7 @@
         },
         "explanation": "Successful retry with corrected arguments",
         "timestamp": "2025-09-23T08:18:40.093591",
-        "success_count": 5
+        "success_count": 9
       }
     },
     "portfolio_stress_test:unknown_error": {
@@ -10767,6 +10792,302 @@
             }
           },
           "full_error": "division by zero"
+        },
+        {
+          "timestamp": "2025-09-24T08:26:53.949943",
+          "args": {
+            "portfolio_dict": {
+              "AEE": {
+                "allocation": 0.015,
+                "position": "long"
+              },
+              "APP": {
+                "allocation": 0.042,
+                "position": "long"
+              },
+              "ARM": {
+                "allocation": 0.026,
+                "position": "long"
+              },
+              "AVGO": {
+                "allocation": 0.034,
+                "position": "long"
+              },
+              "BSX": {
+                "allocation": 0.051,
+                "position": "long"
+              },
+              "CEG": {
+                "allocation": 0.025,
+                "position": "long"
+              },
+              "CMS": {
+                "allocation": 0.036,
+                "position": "long"
+              },
+              "CRDO": {
+                "allocation": 0.012,
+                "position": "long"
+              },
+              "DGNX": {
+                "allocation": 0.009,
+                "position": "long"
+              },
+              "EIS": {
+                "allocation": 0.037,
+                "position": "long"
+              },
+              "EMQQ": {
+                "allocation": 0.013,
+                "position": "long"
+              },
+              "EQIX": {
+                "allocation": 0.081,
+                "position": "long"
+              },
+              "EXOD": {
+                "allocation": 0.013,
+                "position": "long"
+              },
+              "FITB": {
+                "allocation": 0.005,
+                "position": "long"
+              },
+              "FR": {
+                "allocation": 0.013,
+                "position": "long"
+              },
+              "FUFU": {
+                "allocation": 0.01,
+                "position": "long"
+              },
+              "GREK": {
+                "allocation": 0.021,
+                "position": "long"
+              },
+              "IGSB": {
+                "allocation": 0.031,
+                "position": "long"
+              },
+              "IIPR": {
+                "allocation": 0.037,
+                "position": "long"
+              },
+              "INTR": {
+                "allocation": 0.013,
+                "position": "long"
+              },
+              "JPM": {
+                "allocation": 0.043,
+                "position": "long"
+              },
+              "MTSI": {
+                "allocation": 0.018,
+                "position": "long"
+              },
+              "MU": {
+                "allocation": 0.016,
+                "position": "long"
+              },
+              "NLR": {
+                "allocation": 0.019,
+                "position": "long"
+              },
+              "NRG": {
+                "allocation": 0.055,
+                "position": "long"
+              },
+              "NU": {
+                "allocation": 0.01,
+                "position": "long"
+              },
+              "NVDA": {
+                "allocation": 0.065,
+                "position": "long"
+              },
+              "OKLO": {
+                "allocation": 0.021,
+                "position": "long"
+              },
+              "PLTR": {
+                "allocation": 0.027,
+                "position": "long"
+              },
+              "SGDM": {
+                "allocation": 0.016,
+                "position": "long"
+              },
+              "SLVR": {
+                "allocation": 0.036,
+                "position": "long"
+              },
+              "STAG": {
+                "allocation": 0.013,
+                "position": "long"
+              },
+              "TRNO": {
+                "allocation": 0.018,
+                "position": "long"
+              },
+              "VCSH": {
+                "allocation": 0.03,
+                "position": "long"
+              },
+              "WEC": {
+                "allocation": 0.02,
+                "position": "long"
+              }
+            }
+          },
+          "full_error": "division by zero"
+        },
+        {
+          "timestamp": "2025-09-24T08:27:21.302636",
+          "args": {
+            "portfolio_dict": {
+              "AEE": {
+                "allocation": 0.015,
+                "position": "long"
+              },
+              "APP": {
+                "allocation": 0.042,
+                "position": "long"
+              },
+              "ARM": {
+                "allocation": 0.026,
+                "position": "long"
+              },
+              "AVGO": {
+                "allocation": 0.034,
+                "position": "long"
+              },
+              "BSX": {
+                "allocation": 0.051,
+                "position": "long"
+              },
+              "CEG": {
+                "allocation": 0.025,
+                "position": "long"
+              },
+              "CMS": {
+                "allocation": 0.036,
+                "position": "long"
+              },
+              "CRDO": {
+                "allocation": 0.012,
+                "position": "long"
+              },
+              "DGNX": {
+                "allocation": 0.009,
+                "position": "long"
+              },
+              "EIS": {
+                "allocation": 0.037,
+                "position": "long"
+              },
+              "EMQQ": {
+                "allocation": 0.013,
+                "position": "long"
+              },
+              "EQIX": {
+                "allocation": 0.081,
+                "position": "long"
+              },
+              "EXOD": {
+                "allocation": 0.013,
+                "position": "long"
+              },
+              "FITB": {
+                "allocation": 0.005,
+                "position": "long"
+              },
+              "FR": {
+                "allocation": 0.013,
+                "position": "long"
+              },
+              "FUFU": {
+                "allocation": 0.01,
+                "position": "long"
+              },
+              "GREK": {
+                "allocation": 0.021,
+                "position": "long"
+              },
+              "IGSB": {
+                "allocation": 0.031,
+                "position": "long"
+              },
+              "IIPR": {
+                "allocation": 0.037,
+                "position": "long"
+              },
+              "INTR": {
+                "allocation": 0.013,
+                "position": "long"
+              },
+              "JPM": {
+                "allocation": 0.043,
+                "position": "long"
+              },
+              "MTSI": {
+                "allocation": 0.018,
+                "position": "long"
+              },
+              "MU": {
+                "allocation": 0.016,
+                "position": "long"
+              },
+              "NLR": {
+                "allocation": 0.019,
+                "position": "long"
+              },
+              "NRG": {
+                "allocation": 0.055,
+                "position": "long"
+              },
+              "NU": {
+                "allocation": 0.01,
+                "position": "long"
+              },
+              "NVDA": {
+                "allocation": 0.065,
+                "position": "long"
+              },
+              "OKLO": {
+                "allocation": 0.021,
+                "position": "long"
+              },
+              "PLTR": {
+                "allocation": 0.027,
+                "position": "long"
+              },
+              "SGDM": {
+                "allocation": 0.016,
+                "position": "long"
+              },
+              "SLVR": {
+                "allocation": 0.036,
+                "position": "long"
+              },
+              "STAG": {
+                "allocation": 0.013,
+                "position": "long"
+              },
+              "TRNO": {
+                "allocation": 0.018,
+                "position": "long"
+              },
+              "VCSH": {
+                "allocation": 0.03,
+                "position": "long"
+              },
+              "WEC": {
+                "allocation": 0.02,
+                "position": "long"
+              }
+            }
+          },
+          "full_error": "division by zero"
         }
       ],
       "solutions": [
@@ -10944,6 +11265,13 @@
             "factors": "all"
           },
           "full_error": "factor_tilts_for_portfolio() missing 1 required positional argument: 'portfolio_dict'"
+        },
+        {
+          "timestamp": "2025-09-24T09:09:58.625320",
+          "args": {
+            "factors": "all"
+          },
+          "full_error": "factor_tilts_for_portfolio() missing 1 required positional argument: 'portfolio_dict'"
         }
       ],
       "solutions": [
@@ -11095,7 +11423,7 @@
           },
           "explanation": "Successful retry with corrected arguments",
           "timestamp": "2025-09-23T17:25:12.999073",
-          "success_count": 3
+          "success_count": 5
         }
       ],
       "auto_solution": {
@@ -11246,7 +11574,7 @@
         },
         "explanation": "Successful retry with corrected arguments",
         "timestamp": "2025-09-23T17:25:12.999073",
-        "success_count": 3
+        "success_count": 5
       }
     },
     "portfolio_exposure_calculator:missing_portfolio_dict": {
@@ -11257,6 +11585,20 @@
           "timestamp": "2025-09-23T17:47:36.347801",
           "args": {
             "exposure_type": "net"
+          },
+          "full_error": "exposure_calculator() missing 1 required positional argument: 'portfolio_dict'"
+        },
+        {
+          "timestamp": "2025-09-24T09:09:50.474005",
+          "args": {
+            "exposure_type": "net"
+          },
+          "full_error": "exposure_calculator() missing 1 required positional argument: 'portfolio_dict'"
+        },
+        {
+          "timestamp": "2025-09-24T09:09:50.621195",
+          "args": {
+            "exposure_type": "gross"
           },
           "full_error": "exposure_calculator() missing 1 required positional argument: 'portfolio_dict'"
         }
@@ -11410,7 +11752,157 @@
           },
           "explanation": "Successful retry with corrected arguments",
           "timestamp": "2025-09-23T17:48:03.501755",
-          "success_count": 1
+          "success_count": 3
+        },
+        {
+          "correct_args": {
+            "portfolio_dict": {
+              "AEE": {
+                "allocation": 0.015,
+                "position": "long"
+              },
+              "APP": {
+                "allocation": 0.042,
+                "position": "long"
+              },
+              "ARM": {
+                "allocation": 0.026,
+                "position": "long"
+              },
+              "AVGO": {
+                "allocation": 0.034,
+                "position": "long"
+              },
+              "BSX": {
+                "allocation": 0.051,
+                "position": "long"
+              },
+              "CEG": {
+                "allocation": 0.025,
+                "position": "long"
+              },
+              "CMS": {
+                "allocation": 0.036,
+                "position": "long"
+              },
+              "CRDO": {
+                "allocation": 0.012,
+                "position": "long"
+              },
+              "DGNX": {
+                "allocation": 0.009,
+                "position": "long"
+              },
+              "EIS": {
+                "allocation": 0.037,
+                "position": "long"
+              },
+              "EMQQ": {
+                "allocation": 0.013,
+                "position": "long"
+              },
+              "EQIX": {
+                "allocation": 0.081,
+                "position": "long"
+              },
+              "EXOD": {
+                "allocation": 0.013,
+                "position": "long"
+              },
+              "FITB": {
+                "allocation": 0.005,
+                "position": "long"
+              },
+              "FR": {
+                "allocation": 0.013,
+                "position": "long"
+              },
+              "FUFU": {
+                "allocation": 0.01,
+                "position": "long"
+              },
+              "GREK": {
+                "allocation": 0.021,
+                "position": "long"
+              },
+              "IGSB": {
+                "allocation": 0.031,
+                "position": "long"
+              },
+              "IIPR": {
+                "allocation": 0.037,
+                "position": "long"
+              },
+              "INTR": {
+                "allocation": 0.013,
+                "position": "long"
+              },
+              "JPM": {
+                "allocation": 0.043,
+                "position": "long"
+              },
+              "MTSI": {
+                "allocation": 0.018,
+                "position": "long"
+              },
+              "MU": {
+                "allocation": 0.016,
+                "position": "long"
+              },
+              "NLR": {
+                "allocation": 0.019,
+                "position": "long"
+              },
+              "NRG": {
+                "allocation": 0.055,
+                "position": "long"
+              },
+              "NU": {
+                "allocation": 0.01,
+                "position": "long"
+              },
+              "NVDA": {
+                "allocation": 0.065,
+                "position": "long"
+              },
+              "OKLO": {
+                "allocation": 0.021,
+                "position": "long"
+              },
+              "PLTR": {
+                "allocation": 0.027,
+                "position": "long"
+              },
+              "SGDM": {
+                "allocation": 0.016,
+                "position": "long"
+              },
+              "SLVR": {
+                "allocation": 0.036,
+                "position": "long"
+              },
+              "STAG": {
+                "allocation": 0.013,
+                "position": "long"
+              },
+              "TRNO": {
+                "allocation": 0.018,
+                "position": "long"
+              },
+              "VCSH": {
+                "allocation": 0.03,
+                "position": "long"
+              },
+              "WEC": {
+                "allocation": 0.02,
+                "position": "long"
+              }
+            },
+            "exposure_type": "gross"
+          },
+          "explanation": "Successful retry with corrected arguments",
+          "timestamp": "2025-09-24T09:09:50.719491",
+          "success_count": 2
         }
       ],
       "auto_solution": {
@@ -11561,7 +12053,7 @@
         },
         "explanation": "Successful retry with corrected arguments",
         "timestamp": "2025-09-23T17:48:03.501755",
-        "success_count": 1
+        "success_count": 3
       }
     },
     "calculate_ticker_performances:missing_portfolio_dict": {
@@ -11874,7 +12366,51 @@
         "timestamp": "2025-09-23T17:48:28.420186",
         "success_count": 1
       }
+    },
+    "portfolio_industry_concentration:missing_portfolio_dict": {
+      "tool_name": "portfolio_industry_concentration",
+      "error_pattern": "industry_concentration() missing 1 required positional argument: 'portfolio_dict'",
+      "occurrences": [
+        {
+          "timestamp": "2025-09-24T09:10:09.529427",
+          "args": {
+            "industry_level": "industry"
+          },
+          "full_error": "industry_concentration() missing 1 required positional argument: 'portfolio_dict'"
+        },
+        {
+          "timestamp": "2025-09-24T09:10:09.540417",
+          "args": {
+            "industry_level": "sub_industry"
+          },
+          "full_error": "industry_concentration() missing 1 required positional argument: 'portfolio_dict'"
+        }
+      ],
+      "solutions": [],
+      "auto_solution": null
+    },
+    "portfolio_VaR_calculator:missing_portfolio_dict": {
+      "tool_name": "portfolio_VaR_calculator",
+      "error_pattern": "VaR_calculator() missing 1 required positional argument: 'portfolio_dict'",
+      "occurrences": [
+        {
+          "timestamp": "2025-09-24T09:10:13.207046",
+          "args": {
+            "level": "portfolio"
+          },
+          "full_error": "VaR_calculator() missing 1 required positional argument: 'portfolio_dict'"
+        },
+        {
+          "timestamp": "2025-09-24T09:10:13.219079",
+          "args": {
+            "level": "industry"
+          },
+          "full_error": "VaR_calculator() missing 1 required positional argument: 'portfolio_dict'"
+        }
+      ],
+      "solutions": [],
+      "auto_solution": null
     }
   },
-  "last_updated": "2025-09-23T17:52:02.849299"
+  "last_updated": "2025-09-24T12:17:15.603396"
 }

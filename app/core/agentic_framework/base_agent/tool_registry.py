@@ -49,7 +49,7 @@ def register_base_tools(agent: Any) -> None:
             },
             "required": ["expression"],
         },
-        function=lambda expression: calculator(expression),
+        function=lambda expression: calculator.calculator(expression),
     )
 
     # structured_planning
