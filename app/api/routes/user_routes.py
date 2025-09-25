@@ -1,7 +1,11 @@
 from fastapi import APIRouter, Query
 from pydantic import BaseModel, EmailStr
 from typing import Optional
-from app.api.controller.user_controller import get_user_data_controller, get_user_portfolio_list_controller, create_user_controller
+from app.api.controller.user_controller import (
+    get_user_data_controller,
+    create_user_controller,
+    update_user_controller,
+)
 
 router = APIRouter()
 
@@ -9,6 +13,12 @@ class CreateUserRequest(BaseModel):
     email: EmailStr
     firstName: str
     lastName: str
+    clerkId: Optional[str] = None
+
+class UpdateUserRequest(BaseModel):
+    email: EmailStr
+    firstName: Optional[str] = None
+    lastName: Optional[str] = None
     clerkId: Optional[str] = None
 
 @router.get("/user/data")
@@ -29,12 +39,12 @@ async def create_user(body: CreateUserRequest):
         clerk_id=body.clerkId,
     )
 
-@router.get("/user/portfolios")
-async def get_user_portfolio_list(email: str = Query(None, description="User's email address")):
-    """
-    Get user portfolio list by email
-    
-    Email must be provided.
-    """
-    return await get_user_portfolio_list_controller(email=email)
+@router.patch("/user")
+async def patch_user(body: UpdateUserRequest):
+    return await update_user_controller(
+        email=body.email,
+        first_name=body.firstName,
+        last_name=body.lastName,
+        clerk_id=body.clerkId,
+    )
 

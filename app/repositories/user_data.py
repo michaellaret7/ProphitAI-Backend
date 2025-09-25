@@ -125,6 +125,31 @@ def update_user_clerk_id(email: str, clerk_id: str, session=None) -> None:
         # commit handled by decorator
 
 @with_transaction('user')
+def update_user_fields(
+    email: str,
+    first_name: Optional[str] = None,
+    last_name: Optional[str] = None,
+    clerk_id: Optional[str] = None,
+    session=None
+) -> bool:
+    if not email:
+        raise ValueError("Email must be provided")
+
+    user = session.query(User).filter(User.email == email).first()
+    if not user:
+        return False
+
+    if first_name is not None:
+        user.first_name = first_name
+    if last_name is not None:
+        user.last_name = last_name
+    if clerk_id is not None:
+        user.clerk_id = clerk_id
+
+    # commit handled by decorator
+    return True
+
+@with_transaction('user')
 def add_company_user(email:str, company_name:str, role:str, session=None):
 
     user = session.query(User).filter(User.email == email).first()

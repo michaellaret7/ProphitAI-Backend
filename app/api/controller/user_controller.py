@@ -1,6 +1,6 @@
 from fastapi import HTTPException
 from typing import Optional, Dict, Any
-from app.repositories.user_data import get_all_user_data, add_user
+from app.repositories.user_data import get_all_user_data, add_user, update_user_fields
 from app.api.response_envelope import ok_envelope
 
 async def get_user_data_controller(email: str) -> Dict[str, Any]:
@@ -55,47 +55,6 @@ async def get_user_data_controller(email: str) -> Dict[str, Any]:
             detail=f"Internal server error: {str(e)}"
         )
 
-async def get_user_portfolio_list_controller(email: str) -> Dict[str, Any]:
-    """
-    Controller to handle user portfolio list retrieval
-    """
-    try:
-        if not email:
-            raise HTTPException(status_code=400, detail="Email is required")
-        user_data = get_all_user_data(email=email)
-        if not user_data:
-            raise HTTPException(status_code=404, detail="User not found")
-        
-        portfolios = user_data.get('portfolios', [])
-        # Convert to camelCase keys for response
-        portfolios = [{
-            "name": p.get("name"),
-            "portfolioId": p.get("portfolio_id"),
-            "isCurrent": p.get("is_current")
-        } for p in portfolios]
-        
-        counts = {
-            'currentItemCount': len(portfolios),
-            'itemsPerPage': len(portfolios),
-            'startIndex': 1,
-            'totalItems': len(portfolios),
-        }
-        return ok_envelope(
-            message="User portfolio list retrieved successfully",
-            kind="users#portfolios",
-            resource_id=user_data.get('id') if isinstance(user_data, dict) else None,
-            self_link=f"/api/user/portfolios?email={email}",
-            counts=counts,
-            payload=portfolios,
-        )
-    except HTTPException:
-        # Re-raise HTTPExceptions (like 404) without modification
-        raise
-    except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e))
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")
-
 async def create_user_controller(
     *,
     email: str,
@@ -126,3 +85,54 @@ async def create_user_controller(
         },
         status=201,
     )
+
+async def update_user_controller(
+    *,
+    email: str,
+    first_name: Optional[str] = None,
+    last_name: Optional[str] = None,
+    clerk_id: Optional[str] = None,
+) -> Dict[str, Any]:
+    try:
+        if not email:
+            raise HTTPException(status_code=400, detail="Email is required")
+
+        # Ensure at least one field to update is provided
+        if all(v is None for v in [first_name, last_name, clerk_id]):
+            raise HTTPException(status_code=400, detail="No fields provided to update")
+
+        # Attempt update
+        updated = update_user_fields(
+            email=email,
+            first_name=first_name,
+            last_name=last_name,
+            clerk_id=clerk_id,
+        )
+        if not updated:
+            raise HTTPException(status_code=404, detail="User not found")
+
+        # Return fresh user data in consistent envelope
+        data = get_all_user_data(email=email)
+        if not data:
+            raise HTTPException(status_code=404, detail="User not found after update")
+
+        filtered_companies = [{"id": c.get("id")} for c in data.get("companies", [])]
+
+        return ok_envelope(
+            message="User updated successfully",
+            kind="users#user",
+            resource_id=data.get("id"),
+            self_link=f"/api/user/data?email={email}",
+            payload={
+                "email": data.get("email"),
+                "firstName": data.get("first_name"),
+                "lastName": data.get("last_name"),
+                "companies": filtered_companies,
+            },
+        )
+    except HTTPException:
+        raise
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")
