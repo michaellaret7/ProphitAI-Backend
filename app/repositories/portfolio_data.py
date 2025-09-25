@@ -157,4 +157,77 @@ def add_initial_positions(positions: dict, industry: str, fund_name: str, prophi
     
     return True
 
-#TODO: add final positions function
+@with_transaction('user')
+def update_portfolio(
+    *,
+    email: str = None,
+    user_id: uuid.UUID = None,
+    portfolio_id: uuid.UUID = None,
+    name: Optional[str] = None,
+    is_current: Optional[bool] = None,
+    session=None
+) -> bool:
+    if not portfolio_id:
+        raise ValueError("portfolio_id must be provided")
+
+    user = None
+    if user_id:
+        user = session.query(User).filter(User.id == user_id).first()
+    elif email:
+        user = session.query(User).filter(User.email == email).first()
+    else:
+        raise ValueError("At least one identifier (email or user_id) must be provided")
+
+    if not user:
+        return False
+
+    q = session.query(Portfolio).filter(
+        Portfolio.user_id == user.id,
+        Portfolio.portfolio_id == portfolio_id
+    )
+    rows = q.all()
+    if not rows:
+        return False
+
+    if name is not None:
+        q.update({Portfolio.name: name})
+    if is_current is not None:
+        q.update({Portfolio.is_current: is_current})
+
+    # commit handled by decorator
+    return True
+
+@with_transaction('user')
+def delete_portfolio(
+    *,
+    email: str = None,
+    user_id: uuid.UUID = None,
+    portfolio_id: uuid.UUID = None,
+    session=None
+) -> bool:
+    if not portfolio_id:
+        raise ValueError("portfolio_id must be provided")
+
+    user = None
+    if user_id:
+        user = session.query(User).filter(User.id == user_id).first()
+    elif email:
+        user = session.query(User).filter(User.email == email).first()
+    else:
+        raise ValueError("At least one identifier (email or user_id) must be provided")
+
+    if not user:
+        return False
+
+    q = session.query(Portfolio).filter(
+        Portfolio.user_id == user.id,
+        Portfolio.portfolio_id == portfolio_id
+    )
+    count = q.count()
+    if count == 0:
+        return False
+
+    q.delete(synchronize_session=False)
+    # commit handled by decorator
+    return True
+
