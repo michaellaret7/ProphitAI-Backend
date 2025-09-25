@@ -6,12 +6,17 @@
 │   │   ├── prophit_alts.py
 │   │   ├── response_envelope.py
 │   │   ├── routes/
+│   │   │   ├── agent_runs_router.py
 │   │   │   ├── prophit_alts_router.py
-│   │   │   └── user_routes.py
+│   │   │   ├── user_routes.py
+│   │   │   └── websocket_router.py
 │   │   ├── testing/
 │   │   │   ├── prophit_alts_testing.py
+│   │   │   ├── static/
+│   │   │   │   └── test.html
 │   │   │   └── user_testing.py
-│   │   └── user.py
+│   │   ├── user.py
+│   │   └── websocket.py
 │   ├── core/
 │   │   ├── agentic_framework/
 │   │   │   ├── agent_output/
@@ -177,8 +182,12 @@
 │   │   │   │   │   │   └── tool_registry.py
 │   │   │   │   │   ├── cro/
 │   │   │   │   │   │   ├── agent.py
+│   │   │   │   │   │   ├── portfolio_revisions.json
 │   │   │   │   │   │   ├── prompts.py
 │   │   │   │   │   │   └── tool_registry.py
+│   │   │   │   │   ├── final_portfolio/
+│   │   │   │   │   │   ├── cio.py
+│   │   │   │   │   │   └── prompts.py
 │   │   │   │   │   └── industry_agents/
 │   │   │   │   │       ├── agents.py
 │   │   │   │   │       ├── prompts.py
@@ -204,7 +213,9 @@
 │   │   ├── transcripts_data.py
 │   │   └── user_data.py
 │   ├── services/
-│   │   └── prophit_alts_service.py
+│   │   ├── agent_runs.py
+│   │   ├── prophit_alts_service.py
+│   │   └── websocket_manager_service.py
 │   └── utils/
 │       ├── __init__.py
 │       ├── choose_model_and_client.py
@@ -229,8 +240,7 @@
 │   ├── hedge_fund_stuff/
 │   │   ├── Hedge_fund_portfolio_construction.py
 │   │   └── Hedge_fund_risk_management.py
-│   ├── research/
-│   │   └── improved_func_schema.py
+│   ├── portfolio_allocation.py
 │   ├── retail-fund-code.py
 │   ├── streaming_data.py
 │   └── vector_storage/
@@ -243,25 +253,11 @@
 │       └── query.py
 ├── file_structure.md
 ├── main.py
+├── output.json
 ├── README.md
 ├── requirements.txt
 ├── roadmap.md
+├── t.py
 └── tester.py
 
 
-Updates:
-- Reorganized from backend/ to app/ structure
-- Now using app/core/calculations/ instead of calculations_v2
-- API structure moved to app/api/ with controller, routes, and testing subdirectories
-- Database models and operations consolidated under app/db/
-- Domain logic organized under app/domain/ with portfolio_operations, prophit_alts, and prophit_gpt
-- Models moved to app/models/
-- Repositories centralized in app/repositories/
-- Services in app/services/
-- Utils in app/utils/ with decorators subdirectory
-- Agentic framework under app/core/agentic_framework/ with tool_lib structure
-- Stress test functionality moved to app/core/calculations/stress_test/
-- Machine learning calculations in app/core/calculations/machine_learning/
-- Testing moved to root-level tests/ directory with research subdirectory
-- Planning documents in planning/ directory at root level
-- Memory store structure updated with additional domain memories

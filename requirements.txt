@@ -276,3 +276,4 @@ yfinance==0.2.61
 zope.event==5.1.1
 zope.interface==7.2
 zstandard==0.25.0
+riskfolio-lib==4.3.0

@@ -35,7 +35,6 @@ from app.core.calculations.returns.calculator import ReturnsCalculator, Portfoli
 from app.core.calculations.risk.calculator import RiskCalculator
 from app.core.calculations.performance.calculator import PerformanceCalculator
 from app.core.calculations.portfolio.correlation import CorrelationAnalysis
-from app.core.calculations.portfolio.build.optimizer import PortfolioOptimizer
 from app.utils.gpt_parser import canonical_portfolio
 
 
@@ -72,7 +71,6 @@ class SimplePortfolioAllocator:
         self.target_net = float(target_net_exposure)
         self.lookback_days = int(lookback_days)
         self.ds = data_service or DataService()
-        self.optimizer = PortfolioOptimizer()
 
     # ---------------------------- public API ---------------------------- #
     def allocate(self) -> Dict[str, Dict[str, str | float]]:
@@ -168,6 +166,61 @@ class SimplePortfolioAllocator:
         # Drop rows with any NA to keep covariance well-behaved
         return df.dropna(how="any")
 
+    def optimize_weights_risk_based(
+        self,
+        cov: pd.DataFrame,
+        base_convictions: Optional[pd.Series] = None
+    ) -> pd.Series:
+        """Calculate risk-based weights using inverse risk weighting.
+        
+        This replicates the original correlation portfolio builder approach:
+        - risk score = volatility * (1 + avg_correlation)
+        - weight inversely to risk score
+        """
+        if cov.empty:
+            return pd.Series(dtype=float)
+        
+        n = len(cov)
+        tickers = list(cov.index)
+        
+        # If no base convictions, use equal weight
+        if base_convictions is None:
+            base_convictions = pd.Series(np.full(n, 1.0 / n), index=tickers)
+        
+        # Individual volatilities from diagonal
+        individual_vols = np.sqrt(np.diag(cov.values))
+        
+        # Calculate risk scores for each asset
+        risk_scores: dict[str, float] = {}
+        cov_matrix = cov.values
+        
+        for i, ticker in enumerate(tickers):
+            vol_score = float(individual_vols[i])
+            corr_with_others: list[float] = []
+            for j in range(n):
+                if i != j and individual_vols[i] > 0 and individual_vols[j] > 0:
+                    correlation = cov_matrix[i, j] / (individual_vols[i] * individual_vols[j])
+                    corr_with_others.append(abs(float(correlation)))
+            avg_corr = float(np.mean(corr_with_others)) if corr_with_others else 0.0
+            risk_scores[ticker] = vol_score * (1.0 + avg_corr)
+        
+        max_risk = max(risk_scores.values()) if risk_scores else 1.0
+        
+        # Inverse-risk adjust convictions, then normalize
+        adjusted_weights: dict[str, float] = {}
+        for ticker in tickers:
+            if risk_scores[ticker] > 0:
+                risk_adjustment = float(max_risk / risk_scores[ticker])
+            else:
+                risk_adjustment = 1.0
+            adjusted_weights[ticker] = float(base_convictions.get(ticker, 0.0)) * risk_adjustment
+        
+        weights_series = pd.Series(adjusted_weights)
+        total = float(weights_series.sum())
+        if total > 0.0:
+            weights_series = weights_series / total
+        return weights_series
+
     def _risk_based_book_weights(
         self,
         cov_full: pd.DataFrame,
@@ -191,8 +244,8 @@ class SimplePortfolioAllocator:
         if float(base.sum()) <= 0.0:
             base = pd.Series(np.full(len(sub.index), 1.0 / len(sub.index)), index=sub.index)
 
-        # Use existing risk-based optimizer (vol and avg-corr aware)
-        w = self.optimizer.optimize_weights_risk_based(sub, base_convictions=base)
+        # Use risk-based weights (vol and avg-corr aware)
+        w = self.optimize_weights_risk_based(sub, base_convictions=base)
 
         # Guard: if optimizer returned degenerate weights
         if w is None or w.empty or not np.isfinite(w.values).all():

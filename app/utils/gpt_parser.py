@@ -19,42 +19,6 @@ class PortfolioWrapper(BaseModel):
     """Wrapper to help parse portfolio data"""
     portfolio: List[PortfolioItem]
 
-def parse_with_gpt(
-    data: any,
-    pydantic_model: Type[T],
-    system_prompt: str = None
-) -> T:
-    """
-    Ultra simple function to parse any data into a Pydantic model using GPT-4o
-    
-    Args:
-        data: The data to parse (can be dict, string, etc.)
-        pydantic_model: The Pydantic model class to parse into
-        system_prompt: Optional custom system prompt (defaults to simple parsing instruction)
-    
-    Returns:
-        Parsed Pydantic model instance
-    """
-    model, client = openai_model_and_client('gpt-4o')
-    
-    if system_prompt is None:
-        system_prompt = f"Parse the provided data into the {pydantic_model.__name__} format."
-    
-    # Convert data to string if it's not already
-    data_str = str(data) if not isinstance(data, str) else data
-    
-    # Use OpenAI's structured output parsing
-    completion = client.chat.completions.parse(
-        model=model,
-        messages=[
-            {"role": "system", "content": system_prompt},
-            {"role": "user", "content": data_str}
-        ],
-        response_format=pydantic_model
-    )
-    
-    return completion.choices[0].message.parsed
-
 def parse_portfolio_with_gpt(data: any) -> Dict:
     """
     Parse any data into a portfolio dictionary format

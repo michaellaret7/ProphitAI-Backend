@@ -1,6 +1,6 @@
 import yaml
 from app.utils.gpt_parser import canonical_portfolio
-from app.core.calculations.portfolio.build.simple_allocator import SimplePortfolioAllocator
+from app.core.calculations.portfolio.allocations.simple_allocator import SimplePortfolioAllocator
 
 def build_portfolio(portfolio_dict: any) -> str:
     """
@@ -39,11 +39,11 @@ def build_portfolio(portfolio_dict: any) -> str:
     # Use SimplePortfolioAllocator to build the portfolio
     try:
         allocator = SimplePortfolioAllocator(
-            portfolio_dict=conviction_portfolio,
+            portfolio_dict=portfolio_dict,
             target_annual_vol=0.17,
-            target_gross_exposure=1.0,
-            target_net_exposure=0.0,
-            lookback_days=252
+            target_gross_exposure=1.8,
+            target_net_exposure=0.3,
+            lookback_days=252  # 3 years of trading days
         )
         
         result = allocator.allocate()

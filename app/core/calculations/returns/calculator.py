@@ -145,8 +145,7 @@ class PortfolioReturnsCalculator:
         trading_days: int = 252,
         **kwargs,
     ) -> float:
-        ticker_price_returns = {t: ReturnsCalculator.daily_price_returns(ticker_closes[t])
-                                for t in weights if t in ticker_closes}
+        ticker_price_returns = {t: ReturnsCalculator.daily_price_returns(ticker_closes[t]) for t in weights if t in ticker_closes}
         portfolio_daily = PortfolioReturnsCalculator.weighted_daily_returns(ticker_price_returns, weights, **kwargs)
         return ReturnsCalculator.annualized_return(portfolio_daily, trading_days)
     
