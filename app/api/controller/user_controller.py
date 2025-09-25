@@ -112,7 +112,7 @@ async def update_user_controller(
             raise HTTPException(status_code=404, detail="User not found")
 
         # Return fresh user data in consistent envelope
-        data = get_all_user_data(email=email)
+        data = get_all_user_data(email=email) # TODO: get rid of this and handle the error in the repository
         if not data:
             raise HTTPException(status_code=404, detail="User not found after update")
 

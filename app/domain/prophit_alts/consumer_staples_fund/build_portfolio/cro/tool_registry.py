@@ -20,13 +20,20 @@ def register_cro_tools(agent):
     Args:
         agent: The CROAgent instance to register tools with
     """
+    # Agent-specific
     agent.add_tool(**GET_FINAL_PORTFOLIO_DICT_TOOL)
+
+    # Portfolio analytics
     agent.add_tool(**CORRELATION_MATRIX_TOOL)
+
+    # Risk tools
     agent.add_tool(**CALCULATE_COVARIANCE_MATRIX_TOOL)
     agent.add_tool(**VOL_ES_TOOL)
     agent.add_tool(**RISK_CONTRIBUTION_TOOL)
     agent.add_tool(**DRAWDOWN_PROFILE_TOOL)
     agent.add_tool(**STRESS_TEST_TOOL)
     agent.add_tool(**PAIRWISE_CORR_ANALYSIS_TOOL)
+
+    # Portfolio analytics (concentration)
     agent.add_tool(**EXPOSURE_CALCULATOR_TOOL)
 

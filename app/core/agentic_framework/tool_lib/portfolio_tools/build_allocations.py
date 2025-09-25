@@ -1,6 +1,6 @@
 import yaml
 from app.utils.gpt_parser import canonical_portfolio
-from app.core.calculations.portfolio.allocations.simple_allocator import SimplePortfolioAllocator
+from app.core.calculations.portfolio.allocations import SimplePortfolioAllocator
 
 def build_portfolio(portfolio_dict: any) -> str:
     """

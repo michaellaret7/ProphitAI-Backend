@@ -19,13 +19,22 @@ from app.core.agentic_framework.tool_lib.agent_specific_tools.optimizer import G
 from app.core.agentic_framework.tool_lib.risk_tools.stress_test import STRESS_TEST_TOOL
 
 def register_optimizer_tools(agent):
+    # Agent-specific
     agent.add_tool(**GET_USER_PORTFOLIO_TOOL)
+
+    # Data tools
     agent.add_tool(**GET_INDUSTRY_BENCHMARK_CALCULATIONS_TOOL)
     agent.add_tool(**GET_SUB_INDUSTRY_BENCHMARK_CALCULATIONS_TOOL)
+
+    # Ticker analytics
     agent.add_tool(**CALCULATE_TICKER_FACTORS_TOOL)
+
+    # Data tools (continued)
     agent.add_tool(**GET_TICKER_FUNDAMENTAL_DATA_TOOL)
     agent.add_tool(**FETCH_TICKER_REPOSITORY_DATA_TOOL)
     agent.add_tool(**STOCK_SCREENER_TOOL)
+
+    # Portfolio analytics
     agent.add_tool(**CORRELATION_MATRIX_TOOL)
     agent.add_tool(**CALCULATE_PORTFOLIO_PERFORMANCE_TOOL)
     agent.add_tool(**CALCULATE_PORTFOLIO_RETURNS_METRICS_TOOL)
@@ -36,5 +45,9 @@ def register_optimizer_tools(agent):
     agent.add_tool(**VAR_CALCULATOR_TOOL)
     agent.add_tool(**CALCULATE_PORTFOLIO_BETA_VS_INDEX_TOOL)
     agent.add_tool(**FACTOR_TILTS_FOR_PORTFOLIO_TOOL)
+
+    # Ticker analytics
     agent.add_tool(**GET_TICKER_PERFORMANCE_AND_RISK_TOOL)
+
+    # Risk tools
     agent.add_tool(**STRESS_TEST_TOOL)
