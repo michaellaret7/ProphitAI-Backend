@@ -3,7 +3,16 @@ from app.repositories.fundamental_data import get_fundamental_data as _get_funda
 
 def get_fundamental_data(ticker: str, statement_type: str, quarters_back: int = 2) -> str:
     """Wrapper function to return YAML format."""
+
+    if not isinstance(ticker, str) or not ticker:
+        return "Error: Parameter 'ticker' must be a non-empty string."
+    if not isinstance(statement_type, str) or statement_type not in ["income_statement", "balance_sheet", "cash_flow", "financial_ratios"]:
+        return f"Error: Parameter 'statement_type' must be one of: {', '.join(['income_statement', 'balance_sheet', 'cash_flow', 'financial_ratios'])}."
+    if not isinstance(quarters_back, int) or quarters_back < 1:
+        return "Error: Parameter 'quarters_back' must be a positive integer."
+
     result = _get_fundamental_data(ticker, statement_type, quarters_back)
+    
     return yaml.dump(result, default_flow_style=False)
 
 # Tool Schema Constants

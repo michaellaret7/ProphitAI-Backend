@@ -372,10 +372,9 @@ class TaskValidator:
         if tool_result is None:
             return False, 0.1, f"Tool {tool_name} returned None"
         
-        # Check for error strings
+        # Check for error strings using robust pattern matching
         if isinstance(tool_result, str):
-            error_words = ['error', 'failed', 'exception', 'not found', 'invalid', 'timeout']
-            if any(word in tool_result.lower() for word in error_words):
+            if self._result_has_error(tool_result):
                 return False, 0.2, f"Tool {tool_name} returned error message"
         
         # Check for error in dict results
@@ -424,8 +423,50 @@ class TaskValidator:
             if tool_result.get('error'):
                 return True
         if isinstance(tool_result, str):
-            txt = tool_result.lower()
-            return any(w in txt for w in ['error', 'failed', 'exception', 'timeout', 'invalid', 'not found', 'denied', 'missing'])
+            import re
+            text = tool_result.lower()
+            
+            # First check for common non-error phrases that contain these words
+            safe_phrases = [
+                r'room for error',      # Common financial phrase
+                r'margin.{0,5}error',   # "margin of error" or "margin for error"
+                r'trial.{0,5}error',    # "trial and error"
+                r'human error',         # Common phrase
+                r'rounding error',      # Mathematical term
+                r'tracking error',      # Financial term
+                r'forecast error',      # Statistical term
+                r'measurement error',   # Scientific term
+                r'blend of high prof',  # Specific to investment recommendations
+                r'offers.{0,20}error',  # Company "offers" something with "error" nearby
+                r'ameren',              # Company name that contains "error" substring
+            ]
+            
+            # If any safe phrase is found, it's not an error
+            for safe_pattern in safe_phrases:
+                if re.search(safe_pattern, text, re.IGNORECASE):
+                    return False
+            
+            # Now check for actual error patterns with more precision
+            error_patterns = [
+                r'^error:',             # line starting with "error:"
+                r'^failed:',            # line starting with "failed:"
+                r'^exception:',         # line starting with "exception:"
+                r'error occurred',      # phrase "error occurred"
+                r'error calling',       # phrase "error calling" (common in tool errors)
+                r'returned error',      # phrase "returned error"
+                r'raised error',        # phrase "raised error"
+                r'threw error',         # phrase "threw error"
+                r'error message',       # phrase "error message"
+                r'traceback',           # Python traceback indicator
+                r'\bfailed to\b',       # phrase "failed to"
+                r'\bunable to\b',       # phrase "unable to"
+                r'\bcould not\b',       # phrase "could not"
+                r'permission denied',   # permission error
+                r'access denied',       # access error
+                r'not found',           # not found error
+                r'timeout',             # timeout error
+            ]
+            return any(re.search(pattern, text, re.MULTILINE | re.IGNORECASE) for pattern in error_patterns)
         return False
     
     def _check_evidence_accumulation(self, subtask: SubTask) -> Tuple[bool, float, str]:

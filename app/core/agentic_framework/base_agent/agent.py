@@ -287,6 +287,9 @@ class BaseAgent:
                 r'tracking error',      # Financial term
                 r'forecast error',      # Statistical term
                 r'measurement error',   # Scientific term
+                r'blend of high prof',  # Specific to investment recommendations
+                r'offers.{0,20}error',  # Company "offers" something with "error" nearby
+                r'ameren',              # Company name that contains "error" substring
             ]
             
             # If any safe phrase is found, it's not an error

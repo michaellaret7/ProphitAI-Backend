@@ -1,52 +1,13 @@
 [
   {
-    "timestamp": "2025-09-25T21:32:53.422219",
-    "title": "Starting portfolio & preferences",
-    "event": "starting_portfolio_loaded",
-    "outcome": "Loaded 35 holdings with allocations from get_user_portfolio; preferences logged: lower beta/correlation, higher risk-adjusted returns & alpha; user age 25, net worth $5M, high risk tolerance",
+    "timestamp": "2025-09-26T19:14:13.510521",
+    "title": "Starting portfolio and preferences logged",
+    "event": "starting_portfolio_v1",
+    "outcome": "Logged full starting portfolio positions (allocations sum to 0.931; all long) and user preferences (lower beta/correlation, higher risk-adjusted returns and alpha; high risk tolerance; age 25; net worth $5M).",
     "tags": [
       "portfolio",
-      "start",
-      "preferences",
-      "risk"
-    ]
-  },
-  {
-    "timestamp": "2025-09-25T21:42:43.797272",
-    "title": "Proposed optimized portfolio (v1) snapshot",
-    "event": "proposed_portfolio_v1",
-    "outcome": "Trimmed to 13 names; removed clustered semis and underperforming REITs; consolidated metals to SLVR; consolidated banks to JPM; utilities streamlined to NRG/WEC; ETFs EIS/GREK/NLR retained; VCSH as low-vol sleeve. Next: run heavy analytics and iterate.",
-    "tags": [
-      "portfolio",
-      "proposal",
-      "optimization",
-      "v1"
-    ]
-  },
-  {
-    "timestamp": "2025-09-25T21:48:45.734873",
-    "title": "Final optimized portfolio",
-    "event": "final_portfolio_committed",
-    "outcome": "Reduced to 13 names (gross 0.95); beta ~1.063 (↓ vs 1.053 baseline slightly above but ↓ vs v1), Sharpe 2.339 (↑), Sortino 3.498 (↑), MaxDD -20.8% (~baseline); momentum/growth/quality tilts positive; removed clustered semis and underperforming REITs; consolidated metals to SLVR and credit to VCSH; kept JPM as sole bank.",
-    "tags": [
-      "portfolio",
-      "final",
-      "optimization",
-      "risk-adjusted",
-      "beta"
-    ]
-  },
-  {
-    "timestamp": "2025-09-25T21:54:02.460126",
-    "title": "Final portfolio stored & rationale",
-    "event": "final_portfolio_memory",
-    "outcome": "Final 13-position portfolio saved (gross=0.95, net=0.95): NVDA 0.085, AVGO 0.075, PLTR 0.075, APP 0.06, NRG 0.07, WEC 0.075, JPM 0.085, BSX 0.075, SLVR 0.09, EIS 0.08, GREK 0.07, VCSH 0.07, NLR 0.04. Why it changed: reduced correlation clusters (industrial REITs, semis), dropped low-Sharpe/weak-rated/speculative names, consolidated metals and IG credit sleeves; improved Sharpe (1.98→2.34), Sortino (3.03→3.50), growth/momentum/quality tilts; beta held near baseline (~1.06).",
-    "tags": [
-      "final",
-      "memory",
-      "why_changed",
-      "risk",
-      "return"
+      "starting_state",
+      "user_prefs"
     ]
   }
 ]

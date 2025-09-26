@@ -137,3 +137,12 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 run frontend --> npm run dev
 create venv --> .venv/Scripts/Activate.ps1  
 run backend --> 
+
+Branch Strategy
+main - Production-ready code
+develop - Integration branch for features
+feature/* - New features
+fix/* - Bug fixes
+docs/* - Documentation updates
+refactor/* - Code refactoring
+test/* - Test additions or fixes

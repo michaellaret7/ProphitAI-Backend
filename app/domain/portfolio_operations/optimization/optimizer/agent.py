@@ -32,7 +32,6 @@ class OptimizerAgent(BaseAgent):
         )
         
         register_optimizer_tools(self)
-        register_cio_tools(self)
         
     def _initialize_domain_memory(self):
         """Initialize Optimizer-specific domain memories for portfolio optimization."""

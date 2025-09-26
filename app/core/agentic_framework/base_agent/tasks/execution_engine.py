@@ -494,29 +494,7 @@ class PlanExecutionEngine:
             return False, f"MainTask near completion: {explanation} (confidence: {confidence:.2f})"
         else:
             return False, f"MainTask in progress: {explanation} (confidence: {confidence:.2f})"
-    
-    def force_advance_task(self, reason: str = "Manual advancement") -> Tuple[bool, str]:
-        """Force advancement to next task regardless of completion status.
         
-        Args:
-            reason: Reason for forced advancement
-            
-        Returns:
-            Tuple of (success, message)
-        """
-        if not self.current_main_task:
-            return False, "No current task to advance"
-        
-        # Mark current as completed with reason
-        if self.current_subtask:
-            self.current_subtask.completed = True
-            self.current_subtask.completion_evidence.append(f"Force completed: {reason}")
-        
-        self.current_main_task.completion_evidence.append(f"Force completed: {reason}")
-        
-        # Advance to next
-        return self.advance_task_progression()
-    
     def get_task_dependencies(self, task_id: int) -> List[int]:
         """Get dependencies for a specific task.
         
@@ -774,6 +752,9 @@ class PlanExecutionEngine:
                 r'tracking error',      # Financial term
                 r'forecast error',      # Statistical term
                 r'measurement error',   # Scientific term
+                r'blend of high prof',  # Specific to investment recommendations
+                r'offers.{0,20}error',  # Company "offers" something with "error" nearby
+                r'ameren',              # Company name that contains "error" substring
             ]
             
             # If any safe phrase is found, it's not an error

@@ -63,9 +63,16 @@ async def create_user_controller(
     clerk_id: Optional[str] = None,
 ) -> Dict[str, Any]:
     # Create or retrieve the user
-    add_user(email=email, first_name=first_name, last_name=last_name, clerk_id=clerk_id)
+    user = add_user(email=email, first_name=first_name, last_name=last_name, clerk_id=clerk_id)
     # Fetch fresh data with a new session to avoid detached instance issues
-    data = get_all_user_data(email=email)
+
+    data = {
+        "email": user.email,
+        "first_name": user.first_name,
+        "last_name": user.last_name,
+        "creation_date": user.creation_date,
+    }
+
     if not data:
         raise HTTPException(status_code=500, detail="Failed to create user")
 
@@ -112,7 +119,13 @@ async def update_user_controller(
             raise HTTPException(status_code=404, detail="User not found")
 
         # Return fresh user data in consistent envelope
-        data = get_all_user_data(email=email) # TODO: get rid of this and handle the error in the repository
+        data = {
+            "email": updated.email,
+            "first_name": updated.first_name,
+            "last_name": updated.last_name,
+            "creation_date": updated.creation_date,
+        }
+        
         if not data:
             raise HTTPException(status_code=404, detail="User not found after update")
 

@@ -363,7 +363,6 @@ def screener(criteria_dict: Dict[str, Any]) -> str:
     df = StockScreener().screen(**criteria_dict)
     return yaml.dump(df.to_dict('records'), default_flow_style=False)
 
-
 # Tool Schema Constants
 STOCK_SCREENER_DESCRIPTION = (
     "Screen stocks based on fundamental criteria with flexible filtering, sorting, and column selection. "

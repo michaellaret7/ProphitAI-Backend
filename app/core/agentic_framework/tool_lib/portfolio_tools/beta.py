@@ -22,6 +22,9 @@ def calculate_portfolio_beta_vs_index(
         Portfolio beta vs index
     """
     try:
+        if not isinstance(portfolio_dict, dict):
+            return yaml.dump({"beta": None, "error": "No portfolio_dict provided, try again with a valid portfolio_dict"}, default_flow_style=False)
+        
         portfolio_dict = canonical_portfolio(portfolio_dict)
         
         # Use utility functions to get portfolio returns

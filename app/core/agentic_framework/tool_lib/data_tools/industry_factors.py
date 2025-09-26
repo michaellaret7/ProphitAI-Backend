@@ -11,7 +11,16 @@ def get_industry_benchmark_calculations(industry: str, factor: str) -> str:
     Returns:
         Dictionary containing the benchmark calculations
     """
-    return yaml.dump(calc_industry_factor_benchmark_calculations(industry, factor).to_dict(), default_flow_style=False)
+    # Validate inputs and raise ValueError for invalid arguments
+    valid_factors = {"growth", "value", "momentum", "quality", "volatility"}
+
+    if not isinstance(industry, str) or not industry:
+        return "Error: Parameter 'industry' must be a non-empty string."
+
+    if not isinstance(factor, str) or factor not in valid_factors:
+        return f"Error: Parameter 'factor' must be one of: {', '.join(valid_factors)}."
+
+    return yaml.dump({"result": calc_industry_factor_benchmark_calculations(industry, factor).to_dict(), "success": True}, default_flow_style=False)
 
 # Tool Schema Constants
 GET_INDUSTRY_BENCHMARK_CALCULATIONS_DESCRIPTION = (
@@ -42,3 +51,9 @@ GET_INDUSTRY_BENCHMARK_CALCULATIONS_TOOL = {
     "parameters": GET_INDUSTRY_BENCHMARK_CALCULATIONS_PARAMETERS,
     "function": get_industry_benchmark_calculations,
 }
+
+if __name__ == "__main__":
+    x = get_industry_benchmark_calculations(industry="beverages", factor="growth")
+    print(x)
+    x = yaml.safe_load(x)
+    print(x["success"])

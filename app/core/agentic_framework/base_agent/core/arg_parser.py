@@ -221,6 +221,17 @@ class ToolArgumentParser:
         if param_type != 'object' or param_name in args or not isinstance(args, dict) or len(args) == 0:
             return args
         
+        # Generic wrap: If the tool expects a single object parameter and the
+        # model provided a flattened dict of fields (common in GPT-5), wrap the
+        # entire dict under the required parameter name. This is safe because
+        # none of the top-level keys should match schema property names (which
+        # here only include the single object parameter itself).
+        top_level_property_names = set(properties.keys())
+        if all(k not in top_level_property_names for k in args.keys()):
+            if self._verbose:
+                print(f"🔧 Detected flattened args for single-object tool '{tool_name}'. Wrapping under '{param_name}'.")
+            return {param_name: args}
+
 
         def _looks_like_ticker(k: str) -> bool:
             return isinstance(k, str) and k.isalpha() and 1 <= len(k) <= 10
