@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
-FMP WebSocket Real-Time Stock Streamer
-Streams real-time stock data using WebSocket connection
+FMP WebSocket Real-Time Stock Price Streamer
+Streams and returns real-time stock price data in 5-second intervals
 """
 
 import asyncio
@@ -10,36 +10,45 @@ import os
 import websockets
 import ssl
 import certifi
-import math
+import pandas as pd
 from datetime import datetime
-from typing import List, Dict, Any
+from typing import List, Dict, Any, Optional, AsyncGenerator
+from collections import deque
 from dotenv import load_dotenv
-from app.core.calculations.core.helpers import pct_change
 
 load_dotenv()
 
 # Create an SSL context using certifi's CA bundle to avoid macOS cert issues
 SSL_CONTEXT = ssl.create_default_context(cafile=certifi.where())
 
-class FMPWebSocketStreamer:
-    def __init__(self, api_key: str):
-        """Initialize the WebSocket streamer
+
+class PriceStreamer:
+    """Stream real-time stock prices via WebSocket connection"""
+    
+    def __init__(self, api_key: str, max_history: int = 1000):
+        """Initialize the price streamer
         
         Args:
-            api_key: Your FMP API key
+            api_key: FMP API key for authentication
+            max_history: Maximum number of price updates to store in history
         """
         self.api_key = api_key
         self.ws_url = "wss://websockets.financialmodelingprep.com"
-        self.last_update = {}
-        self.update_interval = 1  # Display updates every 5 seconds
-        self.changed_symbols = set()
-        # Alerts config: {SYMBOL: {"threshold_pct": float, "baseline": Optional[float], "triggered": bool}}
-        self.alerts: Dict[str, Dict[str, Any]] = {}
+        self.current_prices: Dict[str, Dict[str, Any]] = {}
+        self.price_history: deque = deque(maxlen=max_history)
+        self.update_interval = 5  # 5-second intervals
+        self._websocket = None
+        self._running = False
         
     @staticmethod
     def _normalize_message(raw: Dict[str, Any]) -> List[Dict[str, Any]]:
-        """Normalize incoming websocket payloads to a list of flat quote dicts.
-        Handles variations in FMP payload structure.
+        """Convert raw WebSocket message to standardized list format
+        
+        Args:
+            raw: Raw message from WebSocket
+            
+        Returns:
+            List of normalized message dictionaries
         """
         def to_list(payload: Any) -> List[Dict[str, Any]]:
             if isinstance(payload, list):
@@ -48,22 +57,31 @@ class FMPWebSocketStreamer:
                 return [payload]
             return []
 
-        # Many FMP messages wrap data under 'data' or 'd'
+        # Extract payload from common wrapper keys
         payload = raw.get('data', raw.get('d', raw))
-        items = to_list(payload)
-        return items
+        return to_list(payload)
 
     @staticmethod
-    def _extract_fields(message: Dict[str, Any]) -> Dict[str, Any]:
-        """Extract symbol, price, bid/ask and sizes from a single message variant."""
-        # Symbol keys variants
+    def _extract_price_data(message: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+        """Extract price data from a message
+        
+        Args:
+            message: Single message dictionary
+            
+        Returns:
+            Extracted price data or None if symbol not found
+        """
+        # Extract symbol
         symbol = (
             message.get('s')
             or message.get('symbol')
             or message.get('ticker')
         )
+        
+        if not symbol:
+            return None
 
-        # Price variants
+        # Extract price
         price = (
             message.get('p')
             or message.get('price')
@@ -73,7 +91,7 @@ class FMPWebSocketStreamer:
             or message.get('c')
         )
 
-        # Bid/Ask variants
+        # Extract bid/ask
         bid = (
             message.get('b')
             or message.get('bid')
@@ -87,199 +105,253 @@ class FMPWebSocketStreamer:
             or message.get('askPrice')
         )
 
-        # Sizes variants
-        bid_size = (
-            message.get('bs')
-            or message.get('bidSize')
-            or message.get('bSize')
-        )
-        ask_size = (
-            message.get('as')
-            or message.get('askSize')
-            or message.get('aSize')
-        )
-
         def to_float(value: Any) -> float:
+            """Convert value to float safely"""
             try:
-                if value is None:
-                    return 0.0
-                return float(value)
+                return float(value) if value is not None else 0.0
             except (TypeError, ValueError):
                 return 0.0
 
-        def to_int(value: Any) -> int:
-            try:
-                if value is None:
-                    return 0
-                return int(value)
-            except (TypeError, ValueError):
-                return 0
-
-        result = {
+        return {
             'symbol': symbol.upper() if isinstance(symbol, str) else None,
             'price': to_float(price),
             'bid': to_float(bid),
             'ask': to_float(ask),
-            'bid_size': to_int(bid_size),
-            'ask_size': to_int(ask_size)
+            'timestamp': datetime.now()
         }
-        return result
 
-    async def connect_and_stream(self, symbols: List[str]):
-        """Connect to WebSocket and stream data
-        
-        Args:
-            symbols: List of stock symbols to track
-        """
-        async with websockets.connect(self.ws_url, ssl=SSL_CONTEXT) as websocket:
-            # Login with API key
-            login_msg = {
-                "event": "login",
-                "data": {
-                    "apiKey": self.api_key
-                }
-            }
-            await websocket.send(json.dumps(login_msg))
-            
-            # Wait for login confirmation
-            response = await websocket.recv()
-            print(f"Login response: {response}")
-            
-            # Subscribe to symbols
-            subscribe_msg = {
-                "event": "subscribe",
-                "data": {
-                    "ticker": [s.lower() for s in symbols]
-                }
-            }
-            await websocket.send(json.dumps(subscribe_msg))
-            print(f"Subscribed to: {', '.join(symbols)}")
-            print("-" * 80)
-            
-            # Create task for periodic display
-            display_task = asyncio.create_task(self.periodic_display())
-            
-            try:
-                # Receive and process messages
-                async for message in websocket:
-                    data = json.loads(message)
-                    # Handle possibly wrapped/array payloads
-                    for msg in self._normalize_message(data):
-                        self.process_message(msg)
-                    
-            except KeyboardInterrupt:
-                print("\nStream stopped by user")
-            finally:
-                display_task.cancel()
-                # Unsubscribe before closing
-                unsubscribe_msg = {
-                    "event": "unsubscribe",
-                    "data": {
-                        "ticker": [s.lower() for s in symbols]
-                    }
-                }
-                await websocket.send(json.dumps(unsubscribe_msg))
-    
-    def process_message(self, data: Dict[str, Any]):
-        """Process incoming WebSocket message
+    def update_price_data(self, data: Dict[str, Any]) -> None:
+        """Update internal price data store
         
         Args:
             data: Message data from WebSocket
         """
-        fields = self._extract_fields(data)
-        symbol = fields.get('symbol')
-        if symbol:
-            # Merge with existing to preserve values when some fields are missing
-            existing = self.last_update.get(symbol, {})
-            merged = {
-                'price': fields['price'] or existing.get('price', 0.0),
-                'bid': fields['bid'] or existing.get('bid', 0.0),
-                'ask': fields['ask'] or existing.get('ask', 0.0),
-                'bid_size': fields['bid_size'] or existing.get('bid_size', 0),
-                'ask_size': fields['ask_size'] or existing.get('ask_size', 0),
-                'timestamp': datetime.now()
-            }
-            self.last_update[symbol] = merged
-            self.changed_symbols.add(symbol)
-            # Check any registered alerts for this symbol
-            if symbol in self.alerts and merged['price'] > 0:
-                self._check_price_alert(symbol, merged['price'])
-
-    def set_percent_above_alert(self, symbol: str, percent_decimal: float):
-        """Register an alert to print a trade when price rises percent above baseline.
-        Baseline is set on first seen non-zero price after registration.
+        price_info = self._extract_price_data(data)
+        if price_info and price_info['symbol']:
+            symbol = price_info['symbol']
+            # Update or merge with existing data
+            if symbol in self.current_prices:
+                # Keep non-zero values from previous update if current is zero
+                existing = self.current_prices[symbol]
+                self.current_prices[symbol] = {
+                    'price': price_info['price'] or existing.get('price', 0.0),
+                    'bid': price_info['bid'] or existing.get('bid', 0.0),
+                    'ask': price_info['ask'] or existing.get('ask', 0.0),
+                    'timestamp': price_info['timestamp']
+                }
+            else:
+                self.current_prices[symbol] = price_info
+    
+    def get_current_prices(self) -> Dict[str, Dict[str, Any]]:
+        """Get current price data
+        
+        Returns:
+            Dictionary of current price data for all tracked symbols
         """
-        sym = str(symbol).upper()
-        self.alerts[sym] = {
-            "threshold_pct": float(percent_decimal),
-            "baseline": None,
-            "triggered": False,
-        }
-
-    def _check_price_alert(self, symbol: str, current_price: float):
-        cfg = self.alerts.get(symbol)
-        if not cfg:
-            return
-        baseline = cfg.get("baseline")
-        if baseline is None:
-            cfg["baseline"] = float(current_price)
-            print(f"Baseline set for {symbol}: ${current_price:.2f}")
-            return
-        change = pct_change(current_price, baseline, scale=1.0)
-        if change is None or (isinstance(change, float) and math.isnan(change)):
-            return
-        if not cfg.get("triggered") and change >= float(cfg.get("threshold_pct", 0.0)):
-            pct_str = change * 100.0
-            print(f"TRADE: {symbol} +{pct_str:.2f}% from ${baseline:.2f} → ${current_price:.2f}")
-            cfg["triggered"] = True
+        return self.current_prices.copy()
     
-    async def periodic_display(self):
-        """Periodically display the latest data"""
-        while True:
-            await asyncio.sleep(self.update_interval)
-            
-            if self.changed_symbols:
-                timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-                print(f"\n[{timestamp}] Latest Updates:")
-                
-                for symbol in sorted(self.changed_symbols):
-                    data = self.last_update.get(symbol, {})
-                    print(f"{symbol:6} | "
-                          f"Price: ${data['price']:8.2f} | "
-                          f"Bid: ${data['bid']:7.2f} ({data['bid_size']:5}) | "
-                          f"Ask: ${data['ask']:7.2f} ({data['ask_size']:5})")
-                self.changed_symbols.clear()
+    def get_price_history(self) -> List[Dict[str, Any]]:
+        """Get historical price data
+        
+        Returns:
+            List of historical price snapshots
+        """
+        return list(self.price_history)
     
-    def run(self, symbols: List[str]):
-        """Run the WebSocket streamer
+    async def stream_prices(self, symbols: List[str]) -> AsyncGenerator[Dict[str, Dict[str, Any]], None]:
+        """Stream prices as async generator
         
         Args:
             symbols: List of stock symbols to track
+            
+        Yields:
+            Price data dictionary every 5 seconds
         """
-        print(f"Starting WebSocket real-time stream...")
-        print(f"Tracking symbols: {', '.join(symbols)}")
-        print(f"Display interval: {self.update_interval} seconds")
+        self._running = True
         
-        try:
-            asyncio.run(self.connect_and_stream(symbols))
-        except Exception as e:
-            print(f"Error in WebSocket stream: {e}")
-
-def main():
-    # Configuration
-    API_KEY = os.getenv("FMP_API_KEY")
-    SYMBOLS = ["AAPL", "MSFT", "GOOGL", "AMZN", "TSLA"]  # Symbols to track
+        async with websockets.connect(self.ws_url, ssl=SSL_CONTEXT) as websocket:
+            self._websocket = websocket
+            
+            # Authenticate
+            login_msg = {
+                "event": "login",
+                "data": {"apiKey": self.api_key}
+            }
+            await websocket.send(json.dumps(login_msg))
+            
+            # Wait for login confirmation
+            await websocket.recv()
+            
+            # Subscribe to symbols
+            subscribe_msg = {
+                "event": "subscribe",
+                "data": {"ticker": [s.lower() for s in symbols]}
+            }
+            await websocket.send(json.dumps(subscribe_msg))
+            
+            # Start processing messages in background
+            process_task = asyncio.create_task(self._process_messages())
+            
+            try:
+                # Yield price updates at intervals
+                while self._running:
+                    await asyncio.sleep(self.update_interval)
+                    
+                    if self.current_prices:
+                        snapshot = self.current_prices.copy()
+                        # Store in history
+                        self.price_history.append({
+                            'timestamp': datetime.now(),
+                            'data': snapshot
+                        })
+                        # Yield to consumer
+                        yield snapshot
+                        
+            finally:
+                self._running = False
+                process_task.cancel()
+                # Clean disconnect
+                unsubscribe_msg = {
+                    "event": "unsubscribe",
+                    "data": {"ticker": [s.lower() for s in symbols]}
+                }
+                await websocket.send(json.dumps(unsubscribe_msg))
     
-    # Validate API key
-    if not API_KEY:
-        print("Error: Missing FMP_API_KEY environment variable.")
-        print("Set it in your environment or a .env file, e.g., FMP_API_KEY=your_key")
-        print("Get your API key at: https://site.financialmodelingprep.com/developer/docs/pricing")
+    async def _process_messages(self) -> None:
+        """Process incoming WebSocket messages"""
+        while self._running and self._websocket:
+            try:
+                message = await self._websocket.recv()
+                data = json.loads(message)
+                for msg in self._normalize_message(data):
+                    self.update_price_data(msg)
+            except (websockets.exceptions.ConnectionClosed, asyncio.CancelledError):
+                break
+            except Exception:
+                continue
+    
+    def stop(self) -> None:
+        """Stop the price streaming"""
+        self._running = False
+    
+    async def run_with_callback(self, symbols: List[str], callback: callable) -> None:
+        """Run streamer with a callback function
+        
+        Args:
+            symbols: List of stock symbols to track
+            callback: Function to call with price data
+        """
+        async for prices in self.stream_prices(symbols):
+            callback(prices)
+
+
+async def example_usage():
+    """Example of how to use the PriceStreamer with returns tracking"""
+    api_key = os.getenv("FMP_API_KEY")
+    symbols = ["AAPL", "MSFT", "GOOGL", "AMZN", "CRWD"]
+    
+    if not api_key:
         return
     
-    # Use the class-based WebSocket streamer (preferred for robustness)
-    streamer = FMPWebSocketStreamer(API_KEY)
-    # Example: alert when AAPL hits 1% above the initial seen price
-    streamer.set_percent_above_alert("AAPL", 0.01)
-    streamer.run(SYMBOLS)
+    streamer = PriceStreamer(api_key)
+    
+    # Initialize DataFrame columns
+    columns = ['timestamp'] + [f'{sym}_price' for sym in symbols] + \
+              [f'{sym}_return' for sym in symbols] + \
+              [f'{sym}_cum_return' for sym in symbols]
+    
+    returns_df = pd.DataFrame(columns=columns)
+    initial_prices = {}
+    previous_prices = {}
+    
+    # Start cumulative returns at 0
+    initial_row = {'timestamp': datetime.now()}
+    for sym in symbols:
+        initial_row[f'{sym}_price'] = 0.0
+        initial_row[f'{sym}_return'] = 0.0
+        initial_row[f'{sym}_cum_return'] = 0.0
+    returns_df = pd.concat([returns_df, pd.DataFrame([initial_row])], ignore_index=True)
+    
+    # Stream prices and calculate returns
+    async for price_data in streamer.stream_prices(symbols):
+        row_data = {'timestamp': datetime.now()}
+        
+        for symbol in symbols:
+            if symbol in price_data:
+                current_price = price_data[symbol]['price']
+                
+                # Store current price
+                row_data[f'{symbol}_price'] = current_price
+                
+                # Set initial price on first real data
+                if symbol not in initial_prices and current_price > 0:
+                    initial_prices[symbol] = current_price
+                    previous_prices[symbol] = current_price
+                
+                # Calculate returns
+                if symbol in initial_prices and current_price > 0:
+                    # Period return (from previous price)
+                    period_return = ((current_price - previous_prices[symbol]) / previous_prices[symbol]) * 100
+                    row_data[f'{symbol}_return'] = period_return
+                    
+                    # Cumulative return (from initial price)
+                    cum_return = ((current_price - initial_prices[symbol]) / 
+                                initial_prices[symbol]) * 100
+                    row_data[f'{symbol}_cum_return'] = cum_return
+                    
+                    # Update previous price
+                    previous_prices[symbol] = current_price
+                else:
+                    row_data[f'{symbol}_return'] = 0.0
+                    row_data[f'{symbol}_cum_return'] = 0.0
+            else:
+                row_data[f'{symbol}_price'] = 0.0
+                row_data[f'{symbol}_return'] = 0.0
+                row_data[f'{symbol}_cum_return'] = 0.0
+        
+        # Add row to DataFrame
+        returns_df = pd.concat([returns_df, pd.DataFrame([row_data])], ignore_index=True)
+        
+        # Display current state
+        print(f"\n{'='*80}")
+        print(f"Update at {datetime.now().strftime('%H:%M:%S')}")
+        print(f"{'='*80}")
+        
+        # Show latest returns
+        print("\nLatest Returns (%):")
+        for symbol in symbols:
+            if f'{symbol}_price' in row_data and row_data[f'{symbol}_price'] > 0:
+                print(f"  {symbol:6} - Price: ${row_data[f'{symbol}_price']:8.2f} | "
+                      f"Return: {row_data[f'{symbol}_return']:+6.3f}% | "
+                      f"Cum Return: {row_data[f'{symbol}_cum_return']:+6.3f}%")
+        
+        # Show DataFrame summary
+        print(f"\nDataFrame shape: {returns_df.shape}")
+        print("Last 3 rows:")
+        display_cols = ['timestamp'] + [f'{sym}_cum_return' for sym in symbols]
+        print(returns_df[display_cols].tail(3).to_string())
+        
+    return returns_df
 
+def main():
+    """Main entry point for price streaming"""
+    api_key = os.getenv("FMP_API_KEY")
+    
+    if not api_key:
+        print("FMP_API_KEY not found")
+        return
+    
+    # Run the example and get the returns DataFrame
+    returns_df = asyncio.run(example_usage())
+    
+    if returns_df is not None:
+        print("\n" + "="*80)
+        print("FINAL RETURNS DATAFRAME")
+        print("="*80)
+        print(f"Total rows collected: {len(returns_df)}")
+        print("\nFull DataFrame:")
+        print(returns_df.to_string())
+
+
+if __name__ == "__main__":
+    main()
