@@ -5,6 +5,7 @@ from app.core.calculations.portfolio.correlation import CorrelationAnalysis
 from app.models.portfolio_models import PortfolioInput
 import pandas as pd
 from app.utils.gpt_parser import canonical_portfolio
+from app.core.calculations.core.helpers import build_returns_df_from_price_map
 
 def correlation_matrix(portfolio_dict: PortfolioInput | dict) -> str:
     """
@@ -35,12 +36,8 @@ def correlation_matrix(portfolio_dict: PortfolioInput | dict) -> str:
     if not price_data:
         return yaml.dump({"correlations": []}, default_flow_style=False)
 
-    # Calculate returns for each ticker
-    returns_df = pd.DataFrame({
-        ticker: ReturnsCalculator.daily_price_returns(prices)
-        for ticker, prices in price_data.items()
-        if prices is not None and not prices.empty
-    }).dropna()
+    # Calculate returns without dropping rows globally; let correlation handle pairwise NaNs
+    returns_df = build_returns_df_from_price_map(price_data, drop_rows='none', include_dividends=False)
 
     if returns_df.empty:
         return yaml.dump({"correlations": []}, default_flow_style=False)

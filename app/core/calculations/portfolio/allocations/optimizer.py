@@ -22,6 +22,7 @@ from app.repositories.price_data import (
     get_dividends_series,
 )
 from app.core.calculations.returns.calculator import ReturnsCalculator, PortfolioReturnsCalculator
+from app.core.calculations.core.helpers import build_returns_df_for_dates
 from app.core.calculations.performance.calculator import PerformanceCalculator
 from app.utils.gpt_parser import canonical_portfolio
 from app.core.calculations.portfolio.utils import get_portfolio_returns, get_benchmark_returns
@@ -42,35 +43,18 @@ def _build_returns_matrix(
     if not tickers:
         return pd.DataFrame()
 
-    closes: Dict[str, pd.Series] = fetch_bulk_price_data_for_tickers(
-        tickers=tickers,
-        start_date_str=start_date.strftime("%Y-%m-%d"),
-        end_date_str=end_date.strftime("%Y-%m-%d"),
-        frequency="daily",
+    # Build returns with shared helper, dropping rows with any NaNs for stability
+    returns_df = build_returns_df_for_dates(
+        tickers,
+        start_date,
+        end_date,
+        include_dividends=bool(use_total_returns),
+        drop_rows='any',
     )
-
-    ret_map: Dict[str, pd.Series] = {}
-    for t in tickers:
-        series = closes.get(t)
-        if series is None or series.empty:
-            continue
-
-        if use_total_returns:
-            divs = get_dividends_series(t, start_date, end_date)
-            r = ReturnsCalculator.total_returns(series, divs)
-        else:
-            r = ReturnsCalculator.daily_price_returns(series)
-
-        if not r.empty:
-            ret_map[t] = r
-
-    if not ret_map:
+    
+    if returns_df.empty:
         return pd.DataFrame()
 
-    # Align on common dates and drop rows with any NaNs for stable optimization
-    returns_df = pd.concat(ret_map, axis=1)
-    returns_df = returns_df.dropna(how="any")
-    
     # Ensure all data is numeric and convert to float64
     returns_df = returns_df.astype(float)
     

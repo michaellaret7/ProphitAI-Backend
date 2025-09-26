@@ -36,6 +36,7 @@ from app.core.calculations.risk.calculator import RiskCalculator
 from app.core.calculations.performance.calculator import PerformanceCalculator
 from app.core.calculations.portfolio.correlation import CorrelationAnalysis
 from app.utils.gpt_parser import canonical_portfolio
+from app.core.calculations.core.helpers import build_returns_df_from_price_map
 
 
 class SimplePortfolioAllocator:
@@ -80,7 +81,7 @@ class SimplePortfolioAllocator:
 
         # Fetch prices and compute simple daily returns
         price_map = self._fetch_prices(list(set(tickers_long + tickers_short)))
-        returns_df = self._build_returns(price_map)
+        returns_df = self.build_returns_df_from_price_map(price_map, drop_rows='any', include_dividends=False)
         if returns_df.empty:
             return {}
 
@@ -152,19 +153,6 @@ class SimplePortfolioAllocator:
         end = datetime.now(timezone.utc)
         start = end - timedelta(days=self.lookback_days)
         return self.ds.get_bulk_close_series(tickers, start, end)
-
-    def _build_returns(self, price_map: Dict[str, pd.Series]) -> pd.DataFrame:
-        rets: Dict[str, pd.Series] = {}
-        for t, px in (price_map or {}).items():
-            if px is not None and not px.empty:
-                r = ReturnsCalculator.daily_price_returns(px)
-                if r is not None and not r.empty:
-                    rets[t] = r
-        if not rets:
-            return pd.DataFrame()
-        df = pd.concat(rets, axis=1)
-        # Drop rows with any NA to keep covariance well-behaved
-        return df.dropna(how="any")
 
     def optimize_weights_risk_based(
         self,

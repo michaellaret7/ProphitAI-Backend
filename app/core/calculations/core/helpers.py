@@ -1,12 +1,16 @@
 from __future__ import annotations
 
 from typing import Iterable, Optional, Sequence
-from datetime import date
+from datetime import date, datetime, timedelta
 
 import numpy as np
 import pandas as pd
-from app.core.calculations.core.config import DEFAULT_SECTOR_COL, DEFAULT_WINSOR_LIMITS
+import logging
+from app.core.calculations.core.config import DEFAULT_SECTOR_COL, DEFAULT_WINSOR_LIMITS, DEFAULT_TRADING_DAYS
+from app.repositories.price_data import fetch_bulk_price_data_for_tickers, get_dividends_series
+from app.core.calculations.returns.calculator import ReturnsCalculator
 
+logger = logging.getLogger(__name__)
 
 # ------------------------------ Series helpers ------------------------------ #
 def winsorize_series(series: pd.Series, lower: float = 0.025, upper: float = 0.025) -> pd.Series:
@@ -230,3 +234,128 @@ def compose_exposure(
     return df
 
 
+# ------------------------------ Returns DataFrame builders ------------------------------ #
+def build_returns_df_from_price_map(
+    price_map: dict[str, pd.Series],
+    *,
+    drop_rows: str = 'any',  # 'any' | 'all' | 'none'
+    include_dividends: bool = False,
+    dividends_map: dict[str, pd.Series] | None = None,
+) -> pd.DataFrame:
+    """Build a per-ticker daily returns DataFrame from a mapping of close price Series.
+
+    - Cleans indices to datetime and drops invalid dates per series.
+    - Computes price-only or total returns per ticker.
+    - Replaces inf with NaN and drops NaNs within each series.
+    - drop_rows:
+        'any'  -> drop rows with any NaNs across tickers (stable covariance/optimization)
+        'all'  -> drop rows where all tickers are NaN (retain partial overlap)
+        'none' -> keep all rows (pairwise methods handle NaNs)
+    """
+    if not price_map:
+        return pd.DataFrame()
+
+    returns_map: dict[str, pd.Series] = {}
+    for ticker, prices in (price_map or {}).items():
+        if prices is None:
+            continue
+        try:
+            s = pd.Series(prices).astype(float)
+            if s.empty:
+                continue
+            s.index = pd.to_datetime(s.index, errors='coerce')
+            s = s[s.index.notna()]
+            if s.empty:
+                continue
+            if include_dividends:
+                divs = None if dividends_map is None else dividends_map.get(ticker)
+                r = ReturnsCalculator.total_returns(s, divs)
+            else:
+                r = ReturnsCalculator.daily_price_returns(s)
+            if r is None:
+                continue
+            r = pd.Series(r).replace([np.inf, -np.inf], np.nan).dropna().astype(float)
+            if not r.empty:
+                returns_map[ticker] = r
+        except Exception:
+            continue
+
+    if not returns_map:
+        return pd.DataFrame()
+
+    df = pd.concat(returns_map, axis=1)
+    if drop_rows == 'any':
+        df = df.dropna(how='any')
+    elif drop_rows == 'all':
+        df = df.dropna(how='all')
+    # else 'none': keep NaNs for pairwise-compatible methods
+    return df
+
+
+def build_returns_df_for_dates(
+    tickers: list[str],
+    start_date: datetime,
+    end_date: datetime,
+    *,
+    include_dividends: bool = False,
+    drop_rows: str = 'any',
+) -> pd.DataFrame:
+    """Fetch closes for tickers in [start_date, end_date] and build a returns DataFrame.
+
+    - Delegates to `build_returns_df_from_price_map` after fetching prices (and divs if needed).
+    - Applies the same cleaning and drop_rows policy.
+    """
+    if not tickers:
+        return pd.DataFrame()
+
+    start_date_str = start_date.strftime('%Y-%m-%d')
+    end_date_str = end_date.strftime('%Y-%m-%d')
+
+    tickers_norm = [t.strip().upper() for t in tickers if isinstance(t, str) and t.strip()]
+    price_map = fetch_bulk_price_data_for_tickers(tickers_norm, start_date_str, end_date_str, frequency='daily')
+
+    dividends_map: dict[str, pd.Series] | None = None
+    if include_dividends:
+        dividends_map = {}
+        for t in tickers_norm:
+            try:
+                divs = get_dividends_series(t, start_date, end_date)
+            except Exception:
+                divs = pd.Series(dtype=float)
+            dividends_map[t] = divs
+
+    return build_returns_df_from_price_map(
+        price_map,
+        drop_rows=drop_rows,
+        include_dividends=include_dividends,
+        dividends_map=dividends_map,
+    )
+
+
+# ------------------------------ Returns DataFrame helpers ------------------------------ #
+def returns_df(tickers: list[str], lookback_years: int) -> pd.DataFrame:
+    """Create a DataFrame of daily simple returns for `tickers` over `lookback_years`.
+
+    - Skips tickers with insufficient data or non-finite returns.
+    - Drops NaN/inf values per series to avoid contaminating the DataFrame.
+    """
+    if not tickers or lookback_years is None or int(lookback_years) <= 0:
+        return pd.DataFrame()
+
+    start_date = datetime.now() - timedelta(days=int(lookback_years) * DEFAULT_TRADING_DAYS)
+    end_date = datetime.now()
+
+    # Use the generalized date-range builder; retain rows with at least one non-NaN
+    return build_returns_df_for_dates(
+        tickers,
+        start_date,
+        end_date,
+        include_dividends=False,
+        drop_rows='all',
+    )
+
+
+if __name__ == "__main__":
+    tickers = ['AAPL', 'MSFT', 'GOOGL', 'AMZN', 'META', 'TSLA', 'NVDA', 'NFLX', 'INTC']
+    returns_data = returns_df(tickers, 2)
+    print(returns_data)

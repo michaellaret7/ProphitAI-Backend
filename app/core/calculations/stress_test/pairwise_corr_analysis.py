@@ -7,6 +7,7 @@ from app.core.calculations.returns.calculator import ReturnsCalculator
 from app.core.calculations.risk.calculator import RiskCalculator
 from app.utils.validation_utils import normalize_portfolio_input
 from app.models.portfolio_models import PortfolioInput
+from app.core.calculations.core.helpers import build_returns_df_from_price_map
 
 def calculate_correlation_matrix(price_data: dict = None, start_date_str: str = None, end_date_str: str = None, frequency: str = None, tickers: list[str] = None):
     """
@@ -25,15 +26,8 @@ def calculate_correlation_matrix(price_data: dict = None, start_date_str: str = 
     if not price_data:
         price_data = fetch_bulk_price_data_for_tickers(tickers=tickers, start_date_str=start_date_str, end_date_str=end_date_str, frequency=frequency)
 
-    # Convert dict of Series to DataFrame
-    price_df = pd.DataFrame(price_data)
-
-    # v2 returns and correlation
     # Build returns without dropping rows globally; let correlation handle pairwise NaNs
-    returns_df = pd.DataFrame({
-        col: ReturnsCalculator.daily_price_returns(price_df[col])
-        for col in price_df.columns
-    })
+    returns_df = build_returns_df_from_price_map(price_data, drop_rows='none', include_dividends=False)
 
     correlation_matrix = RiskCalculator.correlation_matrix(returns_df)
 

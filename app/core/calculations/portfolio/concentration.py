@@ -7,6 +7,9 @@ from app.repositories.price_data import fetch_bulk_price_data_for_tickers
 from app.core.calculations.core.config import DEFAULT_CONFIDENCE
 from app.core.calculations.returns.calculator import ReturnsCalculator
 from datetime import timedelta
+from app.core.calculations.core.helpers import build_returns_df_for_dates
+import warnings
+warnings.filterwarnings("ignore", category=RuntimeWarning)
 
 
 class PortfolioConcentration:
@@ -34,19 +37,14 @@ class PortfolioConcentration:
         total = float(weights.sum()) if not weights.empty else 0.0
         return weights / total if total > 0 else weights
 
-    def _fetch_returns_df(self) -> pd.DataFrame:
-        start_date_str = self.start_date.strftime('%Y-%m-%d')
-        end_date_str = self.end_date.strftime('%Y-%m-%d')
-        price_map = fetch_bulk_price_data_for_tickers(self.tickers, start_date_str, end_date_str, frequency='daily')
-        if not price_map:
-            return pd.DataFrame()
-        returns_map = {t: ReturnsCalculator.daily_price_returns(s) for t, s in price_map.items()}
-        df = pd.concat(returns_map, axis=1)
-        df = df.dropna(how='any')
-        return df
-
     def _var_grouped(self, label_map: dict[str, str | None]) -> dict:
-        returns_df = self._fetch_returns_df()
+        returns_df = build_returns_df_for_dates(
+            self.tickers,
+            self.start_date,
+            self.end_date,
+            include_dividends=False,
+            drop_rows='any',
+        )
         if returns_df.empty:
             return {}
         weights = self._weights_for(returns_df.columns)
@@ -101,7 +99,13 @@ class PortfolioConcentration:
         Aligns with group VaR logic by leveraging RiskCalculator.marginal_var and
         summing component contributions.
         """
-        returns_df = self._fetch_returns_df()
+        returns_df = build_returns_df_for_dates(
+            self.tickers,
+            self.start_date,
+            self.end_date,
+            include_dividends=False,
+            drop_rows='any',
+        )
         if returns_df.empty:
             return float('nan')
         weights = self._weights_for(returns_df.columns)

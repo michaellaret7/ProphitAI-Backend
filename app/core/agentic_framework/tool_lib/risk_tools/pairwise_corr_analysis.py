@@ -5,6 +5,7 @@ from app.core.calculations.portfolio.utils import prepare_portfolio_data
 from app.core.calculations.returns.calculator import ReturnsCalculator
 from app.models.portfolio_models import PortfolioInput
 from app.utils.gpt_parser import canonical_portfolio
+from app.core.calculations.core.helpers import build_returns_df_from_price_map
 
 def run_pairwise_correlation_analysis(portfolio_dict: PortfolioInput | dict) -> str:
     """
@@ -35,12 +36,8 @@ def run_pairwise_correlation_analysis(portfolio_dict: PortfolioInput | dict) -> 
     if not price_data:
         return yaml.dump({"pairwise_correlations": []})
     
-    # Calculate returns for each ticker
-    returns_df = pd.DataFrame({
-        ticker: ReturnsCalculator.daily_price_returns(prices)
-        for ticker, prices in price_data.items()
-        if prices is not None and not prices.empty
-    }).dropna()
+    # Calculate returns without dropping rows globally; let correlation handle pairwise NaNs
+    returns_df = build_returns_df_from_price_map(price_data, drop_rows='none', include_dividends=False)
     
     if returns_df.empty:
         return yaml.dump({"pairwise_correlations": []})
