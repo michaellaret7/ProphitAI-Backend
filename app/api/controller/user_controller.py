@@ -6,6 +6,7 @@ from app.repositories.user_data import (
     add_user,
     update_user_fields,
     delete_user_by_clerk_id,
+    assign_user_to_company_by_email,
 )
 from app.api.response_envelope import ok_envelope
 
@@ -19,8 +20,6 @@ async def get_user_data_controller(email: str) -> Dict[str, Any]:
 
         user_data = get_all_user_data(email=email)
 
-        # If user data is missing, cler id is null and we need to patch the user account 
-        #TODO: How to get the body from the request 
         if not user_data:
             raise HTTPException(
                 status_code=404, 
@@ -104,6 +103,11 @@ async def get_user_by_clerk_controller(
                 )
                 if not created:
                     raise HTTPException(status_code=500, detail="Failed to create user")
+                # Assign created user to ProphitAI with admin role
+                try:
+                    assign_user_to_company_by_email(email=email, company_name='ProphitAI', role='admin')
+                except Exception:
+                    pass
                 user_data = get_all_user_data_by_clerk_id(clerk_id=clerk_id)
 
         filtered_companies = [{"id": company["id"]} for company in user_data.get("companies", [])]
@@ -165,6 +169,10 @@ async def create_user_controller(
     clerk_id: Optional[str] = None,
 ) -> Dict[str, Any]:
     user = add_user(email=email, first_name=first_name, last_name=last_name, clerk_id=clerk_id)
+    try:
+        assign_user_to_company_by_email(email=email, company_name='ProphitAI', role='admin')
+    except Exception:
+        pass
 
     if not user:
         raise HTTPException(status_code=500, detail="Failed to create user")

@@ -105,58 +105,6 @@ class FundFinalPosition(ProphitAltsBase):
     
     # Relationships
     fund = relationship('Fund', back_populates='final_positions')
-    # Note: ticker relationship would be cross-database, handled at application level
 
-# ===================================================================================
-# CONSUMER STAPLES FUND SCHEMA TODO: Delete these models they are old and deprecated
-# ===================================================================================
-
-class ConsumerStaplesFundTrades(ProphitAltsBase):
-    __tablename__ = 'trades'
-    __table_args__ = {'schema': 'consumer_staples_fund'}
-    
-    id = Column(Integer, primary_key=True, autoincrement=True)
-    ticker_id = Column(UUID(as_uuid=True), nullable=False, index=True)
-    action = Column(String, nullable=False)  # BUY, SELL, etc.
-    dollar_amount = Column(Numeric(15, 2), nullable=False)
-    datetime = Column(DateTime, default=datetime.utcnow, nullable=False)
-    industry = Column(String, nullable=False)
-    
-    # Note: ticker_id references market_data.ticker_universe.tickers.id
-    # This relationship will be enforced at the application level
-
-class ConsumerStaplesFundInitialPicks(ProphitAltsBase):
-    __tablename__ = 'initial_picks'
-    __table_args__ = {'schema': 'consumer_staples_fund'}
-    
-    id = Column(Integer, primary_key=True, autoincrement=True)
-    ticker_id = Column(UUID(as_uuid=True), nullable=False, index=True)
-    ticker_name = Column(String, nullable=False)
-    position = Column(String, nullable=False)
-    industry = Column(String, nullable=False)
-    risk_allocation = Column(Float, nullable=False)
-    reasoning = Column(String, nullable=False)
-    date_created = Column(DateTime, default=datetime.utcnow, nullable=False)
-    date_updated = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
-    
-    # Note: ticker_id references market_data.ticker_universe.tickers.id
-    # This relationship will be enforced at the application level
-
-class ConsumerStaplesFundFinalPortfolio(ProphitAltsBase):
-    __tablename__ = 'final_portfolio'
-    __table_args__ = {'schema': 'consumer_staples_fund'}
-    
-    id = Column(Integer, primary_key=True, autoincrement=True)
-    ticker_id = Column(UUID(as_uuid=True), nullable=False, index=True)
-    ticker_name = Column(String, nullable=False)
-    position = Column(String, nullable=False)
-    industry = Column(String, nullable=False)
-    risk_allocation = Column(Float, nullable=False)
-    reasoning = Column(String, nullable=False)
-    date_created = Column(DateTime, default=datetime.utcnow, nullable=False)
-    date_updated = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
-    
-    # Note: ticker_id references market_data.ticker_universe.tickers.id
-    # This relationship will be enforced at the application level
 
  

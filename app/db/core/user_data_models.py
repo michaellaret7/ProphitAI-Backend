@@ -23,9 +23,12 @@ class User(UserBase):
     last_name = Column(String)
     creation_date = Column(DateTime, default=datetime.utcnow)
     
+    # Direct company association
+    company_id = Column(UUID(as_uuid=True), ForeignKey('companies.id'), nullable=True, index=True)
+    role = Column(String, default='member')
+    
     # Relationships
-    company_associations = relationship('CompanyUser', back_populates='user', cascade='all, delete-orphan')
-    companies = relationship('Company', secondary='company_users', viewonly=True)
+    company = relationship('Company', back_populates='users')
     # subscriptions = relationship('Subscription', back_populates='user', cascade='all, delete-orphan')
 
 class Company(UserBase):
@@ -37,30 +40,8 @@ class Company(UserBase):
     seats = Column(Integer)
     
     # Relationships
-    user_associations = relationship('CompanyUser', back_populates='company', cascade='all, delete-orphan')
-    users = relationship('User', secondary='company_users', viewonly=True)
+    users = relationship('User', back_populates='company')
     # subscriptions = relationship('Subscription', back_populates='company', cascade='all, delete-orphan')
-
-# TODO: Delete these models
-class CompanyUser(UserBase):
-    __tablename__ = 'company_users'
-    
-    id = Column(Integer, primary_key=True)
-    user_id = Column(UUID(as_uuid=True), ForeignKey('users.id', ondelete='CASCADE'), nullable=False, index=True)
-    company_id = Column(UUID(as_uuid=True), ForeignKey('companies.id', ondelete='CASCADE'), nullable=False, index=True)
-    
-    # Additional fields that might be useful
-    role = Column(String, default='member')  # admin, member, viewer, etc.
-    joined_date = Column(DateTime, default=datetime.utcnow)
-    
-    # Relationships
-    user = relationship('User', back_populates='company_associations')
-    company = relationship('Company', back_populates='user_associations')
-    
-    # Unique constraint to prevent duplicate user-company associations
-    __table_args__ = (
-        {'extend_existing': True}  # This allows updating the table definition
-    )
 
 class Portfolio(UserBase):
     __tablename__ = 'portfolios'

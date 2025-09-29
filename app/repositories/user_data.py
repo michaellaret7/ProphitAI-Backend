@@ -21,14 +21,11 @@ def get_all_user_data(email: str, session=None) -> Optional[Dict[str, Any]]:
     if not email:
         raise ValueError("Email must be provided")
     
-    # Build query with eager loading of related data
-    # Using selectinload for portfolios to avoid duplicates
     query = session.query(User).options(
-        joinedload(User.company_associations).joinedload(CompanyUser.company),
+        joinedload(User.company),
         selectinload(User.portfolios)
     )
     
-    # Apply filter by email
     query = query.filter(User.email == email)
     
     user = query.first()
@@ -47,16 +44,15 @@ def get_all_user_data(email: str, session=None) -> Optional[Dict[str, Any]]:
         'portfolios': []
     }
     
-    # Add company information
-    for company_user in user.company_associations:
-        company = company_user.company
+    # Add company information (single company per user)
+    if user.company:
+        company = user.company
         user_data['companies'].append({
             'id': str(company.id),
             'name': company.name,
             'creation_date': company.creation_date.isoformat() if company.creation_date else None,
             'seats': company.seats,
-            'user_role': company_user.role,
-            'joined_date': company_user.joined_date.isoformat() if company_user.joined_date else None
+            'user_role': user.role
         })
     
     # Add portfolio information - deduplicate by portfolio_id
@@ -82,7 +78,7 @@ def get_all_user_data_by_clerk_id(clerk_id: str, session=None) -> Optional[Dict[
         raise ValueError("Clerk ID must be provided")
 
     query = session.query(User).options(
-        joinedload(User.company_associations).joinedload(CompanyUser.company),
+        joinedload(User.company),
         selectinload(User.portfolios)
     )
     query = query.filter(User.clerk_id == clerk_id)
@@ -99,15 +95,14 @@ def get_all_user_data_by_clerk_id(clerk_id: str, session=None) -> Optional[Dict[
         'companies': [],
         'portfolios': []
     }
-    for company_user in user.company_associations:
-        company = company_user.company
+    if user.company:
+        company = user.company
         user_data['companies'].append({
             'id': str(company.id),
             'name': company.name,
             'creation_date': company.creation_date.isoformat() if company.creation_date else None,
             'seats': company.seats,
-            'user_role': company_user.role,
-            'joined_date': company_user.joined_date.isoformat() if company_user.joined_date else None
+            'user_role': user.role
         })
     seen_portfolio_ids = set()
     for portfolio in user.portfolios:
@@ -180,6 +175,8 @@ def update_user_fields(
     first_name: Optional[str] = None,
     last_name: Optional[str] = None,
     clerk_id: Optional[str] = None,
+    company_name: Optional[str] = None,
+    role: Optional[str] = None,
     session=None
 ) -> bool:
     if not email:
@@ -195,31 +192,57 @@ def update_user_fields(
         user.last_name = last_name
     if clerk_id is not None:
         user.clerk_id = clerk_id
+    if company_name is not None:
+        company = session.query(Company).filter(Company.name == company_name).first()
+        if not company:
+            company = Company(id=uuid.uuid4(), name=company_name, creation_date=datetime.now(), seats=0)
+            session.add(company)
+            session.flush()
+        user.company_id = company.id
+    if role is not None:
+        user.role = role
 
     # commit handled by decorator
     return True
 
-# TODO: Delete this when deleting the company user table
 @with_transaction('user')
-def add_company_user(email:str, company_name:str, role:str, session=None):
-
-    user = session.query(User).filter(User.email == email).first()
+def assign_all_users_to_company_by_name(company_name: str, session=None) -> int:
+    """
+    Set company_id for all users to the ID of the company with the given name.
+    Returns the number of rows updated.
+    """
     company = session.query(Company).filter(Company.name == company_name).first()
-
-    if not user:
-        return 'User not found'
     if not company:
-        return 'Company not found'
+        raise ValueError("Company not found")
+    updated = session.query(User).update({User.company_id: company.id}, synchronize_session=False)
+    return updated
 
-    company_user = CompanyUser(
-        company_id=company.id,
-        user_id=user.id,
-        role=role,
-        joined_date=datetime.now()
-    )
+@with_transaction('user')
+def assign_all_users_to_prophitai(session=None) -> int:
+    return assign_all_users_to_company_by_name('ProphitAI', session=session)
 
-    session.add(company_user)
-    # commit handled by decorator
+@with_transaction('user')
+def set_all_users_to_admin(session=None) -> int:
+    """
+    Set role='admin' for all users. Returns number of rows updated.
+    """
+    updated = session.query(User).update({User.role: 'admin'}, synchronize_session=False)
+    return updated
+
+@with_transaction('user')
+def assign_user_to_company_by_email(email: str, company_name: str, role: Optional[str] = None, session=None) -> bool:
+    user = session.query(User).filter(User.email == email).first()
+    if not user:
+        return False
+    company = session.query(Company).filter(Company.name == company_name).first()
+    if not company:
+        company = Company(id=uuid.uuid4(), name=company_name, creation_date=datetime.now(), seats=0)
+        session.add(company)
+        session.flush()
+    user.company_id = company.id
+    if role is not None:
+        user.role = role
+    return True
 
 @with_transaction('user')
 def add_company(company_name:str, seats:int, session=None):

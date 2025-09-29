@@ -424,7 +424,9 @@
         "email",
         "first_name",
         "last_name",
-        "creation_date"
+        "creation_date",
+        "company_id (uuid foreign key)",
+        "role"
       ],
       "companies": [
         "id (uuid_v4)",
@@ -432,11 +434,7 @@
         "creation_date",
         "seats"
       ],
-      "company_users": [
-        "id",
-        "user_id (uuid_v4)",
-        "company_id"
-      ],
+      
       "portfolios": [
         "id (integer)",
         "portfolio_id (uuid)",
