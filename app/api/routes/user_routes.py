@@ -21,14 +21,23 @@ class UpdateUserRequest(BaseModel):
     lastName: Optional[str] = None
     clerkId: Optional[str] = None
 
-@router.get("/user/data")
-async def get_user_data(email: str = Query(None, description="User's email address")):
+@router.get("/user/email")
+async def get_user_data_by_email(email: str = Query(None, description="User's email address")):
     """
     Get complete user data by email
     
     Email must be provided.
     """
     return await get_user_data_controller(email=email)
+
+@router.get("/user")
+async def get_user_data(clerk_id: str = Query(None, description="User's clerk id")):
+    """
+    Get complete user data by clerk id
+    
+    Clerk id must be provided.
+    """
+    return await get_user_data_controller(clerk_id=clerk_id)
 
 @router.post("/user", status_code=201)
 async def create_user(body: CreateUserRequest):
@@ -48,3 +57,6 @@ async def patch_user(body: UpdateUserRequest):
         clerk_id=body.clerkId,
     )
 
+# @router.delete("/user")
+# async def delete_user(clerk_id: str = Query(None, description="User's clerk id")):
+#     return await delete_user_controller(clerk_id=clerk_id)

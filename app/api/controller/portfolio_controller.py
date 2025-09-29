@@ -22,6 +22,7 @@ async def get_user_portfolio_list_controller(email: str) -> Dict[str, Any]:
             "name": p.get("name"),
             "portfolioId": p.get("portfolio_id"),
             "isCurrent": p.get("is_current")
+            #TODO: Add returns to payload and others (refer to portfolios page)
         } for p in portfolios]
         
         counts = {
@@ -46,6 +47,7 @@ async def get_user_portfolio_list_controller(email: str) -> Dict[str, Any]:
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")
 
+#TODO: Get portfolio positions using the uuid 
 
 async def create_portfolio_controller(
     *,

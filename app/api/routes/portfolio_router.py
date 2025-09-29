@@ -26,7 +26,12 @@ class UpdatePortfolioRequest(BaseModel):
     name: Optional[str] = None
     isCurrent: Optional[bool] = None
 
-@router.get("/user/portfolios")
+class DeletePortfolioRequest(BaseModel):
+    email: EmailStr
+    portfolioId: str
+
+#TODO: We want to get the portfolios by uuid
+@router.get("/portfolios")
 async def get_user_portfolio_list(email: str = Query(None, description="User's email address")):
     """
     Get user portfolio list by email
@@ -35,7 +40,7 @@ async def get_user_portfolio_list(email: str = Query(None, description="User's e
     """
     return await get_user_portfolio_list_controller(email=email)
 
-@router.post("/user/portfolios", status_code=201)
+@router.post("/portfolios", status_code=201)
 async def create_portfolio(body: CreatePortfolioRequest):
     return await create_portfolio_controller(
         email=body.email,
@@ -44,7 +49,7 @@ async def create_portfolio(body: CreatePortfolioRequest):
         positions=[p.dict() for p in body.positions],
     )
 
-@router.patch("/user/portfolios")
+@router.patch("/portfolios")
 async def patch_portfolio(body: UpdatePortfolioRequest):
     return await update_portfolio_controller(
         email=body.email,
@@ -53,13 +58,7 @@ async def patch_portfolio(body: UpdatePortfolioRequest):
         is_current=body.isCurrent,
     )
 
-
-class DeletePortfolioRequest(BaseModel):
-    email: EmailStr
-    portfolioId: str
-
-
-@router.delete("/user/portfolios")
+@router.delete("/portfolios")
 async def delete_portfolio(body: DeletePortfolioRequest):
     return await delete_portfolio_controller(
         email=body.email,

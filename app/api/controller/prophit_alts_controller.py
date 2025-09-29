@@ -5,6 +5,8 @@ from app.services.prophit_alts_service import get_fund_landing_page_metrics
 from app.repositories.prophit_alts_data import get_fund_final_positions
 from app.api.response_envelope import ok_envelope
 
+# TODO: Controller function to get fund table 
+
 async def get_fund_final_positions_controller(fund_name: str) -> Dict[str, Any]:
     """
     Controller to handle fund final positions retrieval

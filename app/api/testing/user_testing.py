@@ -8,7 +8,7 @@ class TestUserEndpoints(unittest.TestCase):
     
     def test_get_user_data_with_valid_email(self):
         """Test user data retrieval with valid email"""
-        response = self.client.get("/api/user/data?email=michaellaret7@gmail.com")
+        response = self.client.get("/api/user/email?email=michaellaret7@gmail.com")
         print(f"\n--- Test: Valid Email ---")
         print(f"Status Code: {response.status_code}")
         print(f"Response Headers: {dict(response.headers)}")

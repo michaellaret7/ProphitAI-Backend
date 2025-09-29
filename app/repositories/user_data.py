@@ -4,6 +4,8 @@ from sqlalchemy.orm import joinedload, selectinload
 from typing import Optional, Union, Dict, Any
 from app.utils.serialize_output import serialize_sqlalchemy_obj
 from app.utils.decorators.database import with_session, with_transaction
+from datetime import datetime
+import uuid
 
 @with_session('user')
 def get_all_user_data(email: str, session=None) -> Optional[Dict[str, Any]]:
@@ -110,19 +112,18 @@ def add_user(email: str, first_name: str, last_name: str, clerk_id: Optional[str
         clerk_id=clerk_id,
         email=email,
         first_name=first_name,
-        last_name=last_name
+        last_name=last_name,
+        creation_date=datetime.now()
     )
 
     session.add(user)
     return user
-
 
 @with_transaction('user')
 def update_user_clerk_id(email: str, clerk_id: str, session=None) -> None:
     user = session.query(User).filter(User.email == email).first()
     if user and user.clerk_id != clerk_id:
         user.clerk_id = clerk_id
-        # commit handled by decorator
 
 @with_transaction('user')
 def update_user_fields(
@@ -198,4 +199,3 @@ def get_user_current_portfolio(email: str, session=None):
     
     return portfolio
 
-# TODO: Add new user is most urgent route 

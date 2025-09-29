@@ -10,8 +10,11 @@ async def get_user_data_controller(email: str) -> Dict[str, Any]:
     try:
         if not email:
             raise HTTPException(status_code=400, detail="Email is required")
+
         user_data = get_all_user_data(email=email)
-        
+
+        # If user data is missing, cler id is null and we need to patch the user account 
+        #TODO: How to get the body from the request 
         if not user_data:
             raise HTTPException(
                 status_code=404, 
@@ -62,36 +65,12 @@ async def create_user_controller(
     last_name: str,
     clerk_id: Optional[str] = None,
 ) -> Dict[str, Any]:
-    # Create or retrieve the user
     user = add_user(email=email, first_name=first_name, last_name=last_name, clerk_id=clerk_id)
-    # Fetch fresh data with a new session to avoid detached instance issues
 
-    data = {
-        "email": user.email,
-        "first_name": user.first_name,
-        "last_name": user.last_name,
-        "creation_date": user.creation_date,
-    }
-
-    if not data:
+    if not user:
         raise HTTPException(status_code=500, detail="Failed to create user")
 
-    filtered_companies = [{"id": c.get("id")} for c in data.get("companies", [])]
-
-    return ok_envelope(
-        message="User created successfully",
-        kind="users#user",
-        resource_id=data.get("id"),
-        self_link=f"/api/user/data?email={email}",
-        payload={
-            "email": data.get("email"),
-            "firstName": data.get("first_name"),
-            "lastName": data.get("last_name"),
-            "dateCreated": data.get("creation_date"),
-            "companies": filtered_companies,
-        },
-        status=201,
-    )
+    return {"status": 201, "message": "User created successfully"}
 
 async def update_user_controller(
     *,
@@ -115,37 +94,22 @@ async def update_user_controller(
             last_name=last_name,
             clerk_id=clerk_id,
         )
+
         if not updated:
             raise HTTPException(status_code=404, detail="User not found")
 
-        # Return fresh user data in consistent envelope
-        data = {
-            "email": updated.email,
-            "first_name": updated.first_name,
-            "last_name": updated.last_name,
-            "creation_date": updated.creation_date,
-        }
-        
-        if not data:
-            raise HTTPException(status_code=404, detail="User not found after update")
+        return {"status": 200, "message": "User updated successfully"}
 
-        filtered_companies = [{"id": c.get("id")} for c in data.get("companies", [])]
-
-        return ok_envelope(
-            message="User updated successfully",
-            kind="users#user",
-            resource_id=data.get("id"),
-            self_link=f"/api/user/data?email={email}",
-            payload={
-                "email": data.get("email"),
-                "firstName": data.get("first_name"),
-                "lastName": data.get("last_name"),
-                "companies": filtered_companies,
-            },
-        )
     except HTTPException:
         raise
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")
+
+
+# async def delete_user_controller(clerk_id: str) -> Dict[str, Any]:
+#     deleted = delete_user(clerk_id=clerk_id)
+#     if not deleted:
+#         raise HTTPException(status_code=404, detail="User not found")
+#     return {"status": 200, "message": "User deleted successfully"}

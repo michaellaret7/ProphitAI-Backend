@@ -5,6 +5,7 @@ from app.api.controller.prophit_alts_controller import (
 
 router = APIRouter()
 
+# TODO: Get rid of the 'Prophit' in route. --> alts/fund name/data
 @router.get("/prophit-alts/fund/{fund_name}/performance-data")
 async def get_fund_final_positions(fund_name: str):
     """
@@ -14,3 +15,5 @@ async def get_fund_final_positions(fund_name: str):
         fund_name: Name of the fund to retrieve final positions for
     """
     return await get_fund_final_positions_controller(fund_name=fund_name)
+
+#TODO: get prophit-alts/funds
