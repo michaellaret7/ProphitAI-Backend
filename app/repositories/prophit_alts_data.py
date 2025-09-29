@@ -30,3 +30,16 @@ def get_fund_final_positions(fund_name: str, session=None) -> List[dict]:
     
     return serialized_positions
 
+@with_session('prophit')
+def get_fund_table(session=None) -> List[dict]:
+    """
+    Query fund table from the database.
+    """
+    query = session.query(Fund)
+    table = query.all()
+
+    return [serialize_sqlalchemy_obj(t) for t in table]
+
+if __name__ == "__main__":
+    table = get_fund_table()
+    print(table)

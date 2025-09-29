@@ -1,12 +1,12 @@
 from fastapi import APIRouter
-from app.api.controller.prophit_alts_controller import (
-    get_fund_final_positions_controller
+from app.api.controller.alts_controller import (
+    get_fund_final_positions_controller,
+    get_fund_table_controller
 )
 
 router = APIRouter()
 
-# TODO: Get rid of the 'Prophit' in route. --> alts/fund name/data
-@router.get("/prophit-alts/fund/{fund_name}/performance-data")
+@router.get("/alts/fund/{fund_name}/data")
 async def get_fund_final_positions(fund_name: str):
     """
     Get fund performance data by fund name
@@ -16,4 +16,9 @@ async def get_fund_final_positions(fund_name: str):
     """
     return await get_fund_final_positions_controller(fund_name=fund_name)
 
-#TODO: get prophit-alts/funds
+@router.get("/alts/funds")
+async def get_funds():
+    """
+    Get all funds
+    """
+    return await get_fund_table_controller() 

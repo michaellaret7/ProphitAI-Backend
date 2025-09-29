@@ -74,6 +74,54 @@ def get_all_user_data(email: str, session=None) -> Optional[Dict[str, Any]]:
     return user_data
 
 @with_session('user')
+def get_all_user_data_by_clerk_id(clerk_id: str, session=None) -> Optional[Dict[str, Any]]:
+    """
+    Get complete user data by Clerk ID
+    """
+    if not clerk_id:
+        raise ValueError("Clerk ID must be provided")
+
+    query = session.query(User).options(
+        joinedload(User.company_associations).joinedload(CompanyUser.company),
+        selectinload(User.portfolios)
+    )
+    query = query.filter(User.clerk_id == clerk_id)
+    user = query.first()
+    if not user:
+        return None
+
+    user_data = {
+        'id': str(user.id),
+        'email': user.email,
+        'first_name': user.first_name,
+        'last_name': user.last_name,
+        'creation_date': user.creation_date.isoformat() if getattr(user, 'creation_date', None) else None,
+        'companies': [],
+        'portfolios': []
+    }
+    for company_user in user.company_associations:
+        company = company_user.company
+        user_data['companies'].append({
+            'id': str(company.id),
+            'name': company.name,
+            'creation_date': company.creation_date.isoformat() if company.creation_date else None,
+            'seats': company.seats,
+            'user_role': company_user.role,
+            'joined_date': company_user.joined_date.isoformat() if company_user.joined_date else None
+        })
+    seen_portfolio_ids = set()
+    for portfolio in user.portfolios:
+        portfolio_id = str(portfolio.portfolio_id)
+        if portfolio_id not in seen_portfolio_ids:
+            seen_portfolio_ids.add(portfolio_id)
+            user_data['portfolios'].append({
+                'name': portfolio.name,
+                'portfolio_id': portfolio_id,
+                'is_current': portfolio.is_current
+            })
+    return user_data
+
+@with_session('user')
 def get_user_basic_info(email: str, session=None) -> Optional[Dict[str, Any]]:
     """
     Get basic user info (id, email, first_name, last_name) by email
@@ -95,6 +143,7 @@ def get_user_basic_info(email: str, session=None) -> Optional[Dict[str, Any]]:
     
     return {
         'id': str(user.id),
+        'clerk_id': user.clerk_id,
         'email': user.email,
         'first_name': user.first_name,
         'last_name': user.last_name
@@ -150,6 +199,7 @@ def update_user_fields(
     # commit handled by decorator
     return True
 
+# TODO: Delete this when deleting the company user table
 @with_transaction('user')
 def add_company_user(email:str, company_name:str, role:str, session=None):
 
@@ -198,4 +248,14 @@ def get_user_current_portfolio(email: str, session=None):
     portfolio = [serialize_sqlalchemy_obj(p) for p in portfolio]
     
     return portfolio
+
+@with_transaction('user')
+def delete_user_by_clerk_id(clerk_id: str, session=None) -> bool:
+    if not clerk_id:
+        raise ValueError("Clerk ID must be provided")
+    user = session.query(User).filter(User.clerk_id == clerk_id).first()
+    if not user:
+        return False
+    session.delete(user)
+    return True
 

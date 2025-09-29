@@ -2,10 +2,8 @@ from fastapi import HTTPException
 from typing import Dict, Any
 import json
 from app.services.prophit_alts_service import get_fund_landing_page_metrics
-from app.repositories.prophit_alts_data import get_fund_final_positions
+from app.repositories.prophit_alts_data import get_fund_final_positions, get_fund_table
 from app.api.response_envelope import ok_envelope
-
-# TODO: Controller function to get fund table 
 
 async def get_fund_final_positions_controller(fund_name: str) -> Dict[str, Any]:
     """
@@ -127,7 +125,7 @@ async def get_fund_final_positions_controller(fund_name: str) -> Dict[str, Any]:
             message="Fund final positions retrieved successfully",
             kind="prophitAlts#fundPerformance",
             resource_id=fund_name,
-            self_link=f"/api/prophit-alts/fund/{fund_name}/performance-data",
+            self_link=f"/api/alts/fund/{fund_name}/data",
             updated=(f"{last_date}T00:00:00Z" if last_date else None),
             counts=counts,
             payload={
@@ -138,7 +136,6 @@ async def get_fund_final_positions_controller(fund_name: str) -> Dict[str, Any]:
         )
     
     except HTTPException:
-        # Re-raise HTTPExceptions (like 404) without modification
         raise
     
     except ValueError as e:
@@ -150,4 +147,22 @@ async def get_fund_final_positions_controller(fund_name: str) -> Dict[str, Any]:
             detail=f"Internal server error: {str(e)}"
         )
 
- 
+async def get_fund_table_controller() -> Dict[str, Any]:
+    """
+    Controller to handle fund table retrieval
+    """
+    try:
+        table = get_fund_table()
+        return ok_envelope(
+            message="Fund table retrieved successfully",
+            kind="prophitAlts#fundTable",
+            resource_id="funds",
+            self_link=f"/api/alts/funds",
+            payload=table,
+        )
+    except HTTPException:
+        raise
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")

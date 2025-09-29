@@ -1,10 +1,13 @@
+import email
 from fastapi import APIRouter, Query
 from pydantic import BaseModel, EmailStr
 from typing import Optional
 from app.api.controller.user_controller import (
     get_user_data_controller,
+    get_user_by_clerk_controller,
     create_user_controller,
     update_user_controller,
+    delete_user_controller,
 )
 
 router = APIRouter()
@@ -31,13 +34,22 @@ async def get_user_data_by_email(email: str = Query(None, description="User's em
     return await get_user_data_controller(email=email)
 
 @router.get("/user")
-async def get_user_data(clerk_id: str = Query(None, description="User's clerk id")):
+async def get_user_data(
+    clerkId: str = Query(..., alias="clerkId", description="User's Clerk ID from FE"),
+    email: Optional[EmailStr] = Query(None, description="User email from Clerk (for first-login linking)"),
+):
     """
-    Get complete user data by clerk id
-    
-    Clerk id must be provided.
+    Get user by Clerk ID. If not found, create using Clerk-provided info in query.
     """
-    return await get_user_data_controller(clerk_id=clerk_id)
+    return await get_user_by_clerk_controller(
+        clerk_id=clerkId,
+        email=email,
+    )
+
+@router.delete("/user")
+async def delete_user(clerkId: str = Query(..., alias="clerkId", description="User's Clerk ID")):
+    """Delete user by Clerk ID."""
+    return await delete_user_controller(clerk_id=clerkId)
 
 @router.post("/user", status_code=201)
 async def create_user(body: CreateUserRequest):
@@ -56,7 +68,3 @@ async def patch_user(body: UpdateUserRequest):
         last_name=body.lastName,
         clerk_id=body.clerkId,
     )
-
-# @router.delete("/user")
-# async def delete_user(clerk_id: str = Query(None, description="User's clerk id")):
-#     return await delete_user_controller(clerk_id=clerk_id)

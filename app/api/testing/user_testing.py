@@ -107,5 +107,73 @@ class TestUserEndpoints(unittest.TestCase):
         print(f"Status Code: {response_invalid.status_code}")
         self.assertEqual(response_invalid.status_code, 422)
 
+    def test_get_user_by_clerk_creates_if_missing_then_returns(self):
+        """GET /api/user should create if not found by clerkId, then return envelope."""
+        from uuid import uuid4
+        clerk_id = f"clerk_{uuid4().hex[:12]}"
+        email = f"{uuid4().hex[:8]}@example.com"
+
+        # Should create and return 200 envelope
+        resp = self.client.get(
+            f"/api/user?clerkId={clerk_id}&email={email}&firstName=Auto&lastName=Create"
+        )
+        print(f"\n--- Test: GET /api/user create-if-missing ---")
+        print(f"Status Code: {resp.status_code}")
+        self.assertEqual(resp.status_code, 200)
+        body = resp.json()
+        self.assertIn("status", body)
+        self.assertEqual(body["status"], 200)
+        self.assertIn("data", body)
+        data = body["data"]
+        self.assertIn("selfLink", data)
+        self.assertIn("payload", data)
+        payload = data["payload"]
+        self.assertEqual(payload.get("email"), email)
+
+        # Subsequent call should return existing without needing email
+        resp2 = self.client.get(f"/api/user?clerkId={clerk_id}")
+        print(f"\n--- Test: GET /api/user fetch existing ---")
+        print(f"Status Code: {resp2.status_code}")
+        self.assertEqual(resp2.status_code, 200)
+        body2 = resp2.json()
+        self.assertIn("status", body2)
+        self.assertEqual(body2["status"], 200)
+        data2 = body2["data"]
+        self.assertIn("payload", data2)
+        payload2 = data2["payload"]
+        self.assertEqual(payload2.get("email"), email)
+
+    def test_get_user_by_clerk_missing_email_when_creating(self):
+        """If user not found and email not provided, expect 400."""
+        from uuid import uuid4
+        clerk_id = f"clerk_{uuid4().hex[:12]}"
+        resp = self.client.get(f"/api/user?clerkId={clerk_id}")
+        self.assertIn(resp.status_code, [400, 500])
+        if resp.status_code == 400:
+            body = resp.json()
+            self.assertIn("detail", body)
+            self.assertIn("email", body["detail"])
+
+    def test_delete_user_by_clerk_id(self):
+        """Create a user via GET flow, then delete via DELETE /api/user."""
+        from uuid import uuid4
+        clerk_id = f"clerk_{uuid4().hex[:12]}"
+        email = f"{uuid4().hex[:8]}@example.com"
+        # Ensure exists
+        _ = self.client.get(
+            f"/api/user?clerkId={clerk_id}&email={email}&firstName=To&lastName=Delete"
+        )
+        # Delete
+        resp = self.client.delete(f"/api/user?clerkId={clerk_id}")
+        print(f"\n--- Test: DELETE /api/user ---")
+        print(f"Status Code: {resp.status_code}")
+        self.assertIn(resp.status_code, [200, 404])
+        if resp.status_code == 200:
+            body = resp.json()
+            self.assertIn("status", body)
+            self.assertEqual(body["status"], 200)
+            self.assertIn("data", body)
+            self.assertIn("message", body)
+
 if __name__ == "__main__":
     unittest.main(buffer=False)
