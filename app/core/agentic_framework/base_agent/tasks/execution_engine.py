@@ -1,6 +1,7 @@
 """Plan Execution Engine for driving task execution based on structured plans."""
 
 from typing import Optional, Dict, Any, List, Tuple
+import re
 from datetime import datetime
 from ..events.manager import EventManager, AgentEvent
 from .validator import TaskValidator
@@ -345,10 +346,12 @@ class PlanExecutionEngine:
                 print("Tool result received after plan completion - ignoring")
             return False
         
-        # if the plan auto-advances during this method.
-        active_task_id = self.current_main_task.id
-        active_subtask_id = self.current_subtask.id if self.current_subtask else None
-        predicted_tools = list(self.current_main_task.predicted_tool_use or [])
+        # Snapshot active context so routing cannot be affected if we advance later in this call
+        active_task = self.current_main_task
+        active_subtask = self.current_subtask
+        active_task_id = active_task.id if active_task else None
+        active_subtask_id = active_subtask.id if active_subtask else None
+        predicted_tools = list(active_task.predicted_tool_use or []) if active_task else []
 
         # Add tool result to observations using TaskManager
         observation = f"Tool '{tool_name}' returned: {str(result)[:200]}"
@@ -360,10 +363,21 @@ class PlanExecutionEngine:
         )
 
         # Determine relevance and success (always strict)
-        is_relevant = self._is_tool_relevant(tool_name, self.current_main_task, self.current_subtask)
+        is_relevant = self._is_tool_relevant(tool_name, active_task, active_subtask)
         is_error = self._is_error_result(result)
 
-        if self.current_subtask and is_relevant:
+        # Audit trail: record routing decision
+        try:
+            self.task_manager.record_tool_routing(
+                task_id=active_task_id,
+                subtask_id=active_subtask_id,
+                tool_name=tool_name,
+                is_relevant=is_relevant,
+            )
+        except Exception:
+            pass
+
+        if active_subtask_id and is_relevant:
             # Add observation to subtask only when relevant
             self.task_manager.add_task_observation(
                 active_task_id,
@@ -375,31 +389,28 @@ class PlanExecutionEngine:
             evidence_items = self.collect_evidence_from_tool_result(tool_name, result)
             for evidence in evidence_items:
                 self.task_manager.add_task_evidence(
-                    self.current_main_task.id,
+                    active_task_id,
                     evidence,
-                    self.current_subtask.id
+                    active_subtask_id
                 )
         
         # Check if this tool was predicted for this task and assess completion
-        task_completion_triggered = False
+        should_auto_advance = False
         if tool_name in predicted_tools:
             if self.verbose:
                 print(f"  📊 Tool '{tool_name}' execution recorded for predicted task tool")
             
             # Check if this completes the current subtask
-            if self.current_subtask:
+            if active_subtask is not None:
                 # Simple heuristic: if tool was predicted and executed successfully, subtask may be complete
                 if not isinstance(result, Exception) and result is not None:
                     # Check if we should auto-advance subtask
                     if self._should_auto_advance_subtask(tool_name, result):
-                        success, message = self.advance_task_progression()
-                        if success and self.verbose:
-                            print(f"  🚀 Auto-advanced: {message}")
-                        task_completion_triggered = True
+                        should_auto_advance = True
         
         # Add completion evidence to appropriate level (avoid duplicating on main if attached to subtask)
         evidence_items = self.collect_evidence_from_tool_result(tool_name, result)
-        if self.current_subtask and is_relevant:
+        if active_subtask_id and is_relevant:
             # Evidence already attached to subtask above; skip duplicating on main task
             pass
         else:
@@ -412,6 +423,12 @@ class PlanExecutionEngine:
                     evidence
                 )
         
+        # Advance only after all routing/evidence writes are done
+        if should_auto_advance:
+            success, message = self.advance_task_progression()
+            if success and self.verbose:
+                print(f"  🚀 Auto-advanced: {message}")
+
         # State is already saved by TaskManager methods
         
         return True
@@ -808,11 +825,21 @@ class PlanExecutionEngine:
             return False
         try:
             tool = str(tool_name).strip().lower()
-            predicted = [str(t).strip().lower() for t in (main_task.predicted_tool_use or [])]
-            in_predicted = tool in predicted
-            in_description = tool in str(subtask.description).lower()
-            # Relaxed relevance: predicted OR mentioned in subtask description
-            return in_predicted or in_description
+            # 1) Prefer explicit subtask expected_tools if provided
+            expected = [str(t).strip().lower() for t in getattr(subtask, 'expected_tools', [])]
+            if expected:
+                return tool in expected
+
+            # 2) Otherwise require whole-word match of tool name in subtask description
+            desc = str(subtask.description or "").lower()
+            pattern = r"\b" + re.escape(tool) + r"\b"
+            if re.search(pattern, desc):
+                return True
+
+            # 3) Fallback: allow relevance when the subtask description clearly starts with 'Call <tool>'
+            # This guards against minor punctuation/formatting variations
+            simple_call_pattern = r"\bcall\s+" + re.escape(tool) + r"\b"
+            return re.search(simple_call_pattern, desc) is not None
         except Exception:
             return False
 

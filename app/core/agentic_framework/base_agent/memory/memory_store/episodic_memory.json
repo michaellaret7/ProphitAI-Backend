@@ -1,13 +1,20 @@
 [
   {
-    "timestamp": "2025-09-26T19:14:13.510521",
-    "title": "Starting portfolio and preferences logged",
-    "event": "starting_portfolio_v1",
-    "outcome": "Logged full starting portfolio positions (allocations sum to 0.931; all long) and user preferences (lower beta/correlation, higher risk-adjusted returns and alpha; high risk tolerance; age 25; net worth $5M).",
-    "tags": [
-      "portfolio",
-      "starting_state",
-      "user_prefs"
-    ]
+    "timestamp": "2025-09-29T19:24:50.644796",
+    "title": "portfolio_v1",
+    "event": "portfolio_v1",
+    "outcome": "{'ACI': {'allocation': 0.049, 'position': 'long'}, 'BG': {'allocation': 0.048, 'position': 'long'}, 'BJ': {'allocation': 0.037, 'position': 'long'}, 'CAG': {'allocation': 0.067, 'position': 'long'}, 'CCEP': {'allocation': 0.059, 'position': 'long'}, 'CELH': {'allocation': 0.026, 'position': 'short'}, 'CHD': {'allocation': 0.085, 'position': 'short'}, 'CL': {'allocation': 0.048, 'position': 'long'}, 'CLX': {'allocation': 0.059, 'position': 'short'}, 'COCO': {'allocation': 0.03, 'position': 'short'}, 'COST': {'allocation': 0.066, 'position': 'long'}, 'COTY': {'allocation': 0.027, 'position': 'short'}, 'DG': {'allocation': 0.042, 'position': 'long'}, 'ELF': {'allocation': 0.021, 'position': 'short'}, 'EPC': {'allocation': 0.037, 'position': 'long'}, 'FIZZ': {'allocation': 0.057, 'position': 'short'}, 'FRPT': {'allocation': 0.032, 'position': 'short'}, 'GIS': {'allocation': 0.048, 'position': 'long'}, 'HSY': {'allocation': 0.078, 'position': 'short'}, 'INGR': {'allocation': 0.073, 'position': 'long'}, 'KLG': {'allocation': 0.039, 'position': 'short'}, 'KMB': {'allocation': 0.078, 'position': 'long'}, 'KO': {'allocation': 0.052, 'position': 'long'}, 'KVUE': {'allocation': 0.042, 'position': 'long'}, 'MO': {'allocation': 0.099, 'position': 'long'}, 'ODD': {'allocation': 0.026, 'position': 'long'}, 'PM': {'allocation': 0.04, 'position': 'short'}, 'PPC': {'allocation': 0.041, 'position': 'long'}, 'REYN': {'allocation': 0.054, 'position': 'long'}, 'RLX': {'allocation': 0.033, 'position': 'long'}, 'SFM': {'allocation': 0.035, 'position': 'short'}, 'STZ': {'allocation': 0.043, 'position': 'short'}, 'TGT': {'allocation': 0.053, 'position': 'long'}, 'TPB': {'allocation': 0.049, 'position': 'short'}, 'UTZ': {'allocation': 0.057, 'position': 'short'}, 'WDFC': {'allocation': 0.073, 'position': 'short'}}"
+  },
+  {
+    "timestamp": "2025-09-29T19:30:42.245758",
+    "title": "portfolio_v2",
+    "event": "portfolio_v2",
+    "outcome": "{'ACI': {'allocation': 0.033, 'position': 'long'}, 'BG': {'allocation': 0.027, 'position': 'long'}, 'BJ': {'allocation': 0.043, 'position': 'long'}, 'CCEP': {'allocation': 0.069, 'position': 'long'}, 'CELH': {'allocation': 0.088, 'position': 'short'}, 'CL': {'allocation': 0.034, 'position': 'long'}, 'CLX': {'allocation': 0.165, 'position': 'short'}, 'COCO': {'allocation': 0.024, 'position': 'short'}, 'COST': {'allocation': 0.069, 'position': 'long'}, 'COTY': {'allocation': 0.016, 'position': 'short'}, 'DG': {'allocation': 0.018, 'position': 'long'}, 'GIS': {'allocation': 0.032, 'position': 'long'}, 'HSY': {'allocation': 0.252, 'position': 'short'}, 'INGR': {'allocation': 0.089, 'position': 'long'}, 'KLG': {'allocation': 0.037, 'position': 'short'}, 'KMB': {'allocation': 0.099, 'position': 'long'}, 'KO': {'allocation': 0.111, 'position': 'long'}, 'KVUE': {'allocation': 0.044, 'position': 'long'}, 'MO': {'allocation': 0.177, 'position': 'long'}, 'ODD': {'allocation': 0.026, 'position': 'long'}, 'PM': {'allocation': 0.069, 'position': 'short'}, 'PPC': {'allocation': 0.018, 'position': 'long'}, 'REYN': {'allocation': 0.04, 'position': 'long'}, 'RLX': {'allocation': 0.012, 'position': 'long'}, 'SFM': {'allocation': 0.039, 'position': 'short'}, 'TGT': {'allocation': 0.029, 'position': 'long'}, 'TPB': {'allocation': 0.061, 'position': 'short'}, 'WDFC': {'allocation': 0.08, 'position': 'long'}}"
+  },
+  {
+    "timestamp": "2025-09-29T19:32:34.069095",
+    "title": "portfolio_v3",
+    "event": "portfolio_v3",
+    "outcome": "{'ACI': {'allocation': 0.01, 'position': 'long'}, 'BG': {'allocation': 0.029, 'position': 'long'}, 'BJ': {'allocation': 0.05, 'position': 'long'}, 'CCEP': {'allocation': 0.197, 'position': 'long'}, 'CELH': {'allocation': 0.061, 'position': 'short'}, 'CHD': {'allocation': 0.188, 'position': 'short'}, 'CLX': {'allocation': 0.157, 'position': 'short'}, 'COCO': {'allocation': 0.022, 'position': 'short'}, 'COST': {'allocation': 0.122, 'position': 'long'}, 'COTY': {'allocation': 0.019, 'position': 'short'}, 'GIS': {'allocation': 0.015, 'position': 'long'}, 'INGR': {'allocation': 0.101, 'position': 'long'}, 'KLG': {'allocation': 0.02, 'position': 'short'}, 'KMB': {'allocation': 0.098, 'position': 'long'}, 'KO': {'allocation': 0.162, 'position': 'long'}, 'KVUE': {'allocation': 0.022, 'position': 'long'}, 'MO': {'allocation': 0.142, 'position': 'long'}, 'ODD': {'allocation': 0.009, 'position': 'long'}, 'PM': {'allocation': 0.145, 'position': 'short'}, 'REYN': {'allocation': 0.051, 'position': 'long'}, 'RLX': {'allocation': 0.009, 'position': 'long'}, 'SFM': {'allocation': 0.053, 'position': 'short'}, 'TGT': {'allocation': 0.015, 'position': 'long'}, 'TPB': {'allocation': 0.086, 'position': 'short'}, 'WDFC': {'allocation': 0.017, 'position': 'long'}}"
   }
 ]

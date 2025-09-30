@@ -138,38 +138,4 @@ class EventManager:
             'args': args,
             'result': result
         })
-    
-    def get_event_history(self, event_type: Optional[AgentEvent] = None) -> List[Dict[str, Any]]:
-        """Get event history, optionally filtered by type.
         
-        Args:
-            event_type: Optional event type to filter by
-            
-        Returns:
-            List of event records
-        """
-        if event_type is None:
-            return self.event_history.copy()
-        
-        return [
-            e for e in self.event_history 
-            if e['event'] == event_type.value
-        ]
-    
-    def clear_history(self) -> None:
-        """Clear event history."""
-        self.event_history.clear()
-    
-    def get_listener_count(self, event: Optional[AgentEvent] = None) -> int:
-        """Get count of registered listeners.
-        
-        Args:
-            event: Optional event to get count for, or total if None
-            
-        Returns:
-            Number of registered listeners
-        """
-        if event is None:
-            return sum(len(handlers) for handlers in self.listeners.values())
-        
-        return len(self.listeners.get(event, []))

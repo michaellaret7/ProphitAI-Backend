@@ -309,29 +309,6 @@ class ToolErrorMemory:
         
         if self.verbose:
             print(f"+ Added known solution for: {error_key}")
-    
-    def get_stats(self) -> Dict[str, Any]:
-        """Get statistics about the error memory.
-        
-        Returns:
-            Dict with memory statistics
-        """
-        total_patterns = len(self.error_patterns)
-        patterns_with_solutions = sum(
-            1 for p in self.error_patterns.values() 
-            if p.get('auto_solution')
-        )
-        total_occurrences = sum(
-            len(p['occurrences']) 
-            for p in self.error_patterns.values()
-        )
-        
-        return {
-            'total_patterns': total_patterns,
-            'patterns_with_solutions': patterns_with_solutions,
-            'total_occurrences': total_occurrences,
-            'solution_rate': patterns_with_solutions / max(total_patterns, 1)
-        }
 
 
 # Pre-populate with common portfolio tool errors

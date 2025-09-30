@@ -164,33 +164,7 @@ class DomainMemory:
         except Exception as e:
             if self.verbose:
                 print(f"⚠️ Failed to save domain memory: {e}")
-    
-    def add_memory(self, category: str, memory: Dict[str, Any]) -> None:
-        """Add a domain memory to a category.
         
-        Args:
-            category: Category of memory (e.g., 'risk_management', 'portfolio_construction')
-            memory: Memory content with title, content, keywords, etc.
-        """
-        if category not in self.memories:
-            self.memories[category] = []
-        
-        # Add timestamp if not present
-        if 'created_at' not in memory:
-            memory['created_at'] = datetime.now().isoformat()
-        
-        # Ensure memory has required fields
-        if 'title' not in memory:
-            memory['title'] = f"Memory_{len(self.memories[category])}"
-        if 'keywords' not in memory:
-            memory['keywords'] = []
-        
-        self.memories[category].append(memory)
-        self._save_memories()
-        
-        if self.verbose:
-            print(f"➕ Added memory to {category}: {memory.get('title')}")
-    
     def get_memories_by_category(self, category: str) -> List[Dict[str, Any]]:
         """Get all memories in a specific category.
         
@@ -225,51 +199,7 @@ class DomainMemory:
                     })
         
         return matching_memories
-    
-    def get_all_memories(self) -> Dict[str, List[Dict[str, Any]]]:
-        """Get all memories organized by category.
         
-        Returns:
-            Dict of all memories by category
-        """
-        return self.memories
-    
-    def _extract_field(self, memory: Dict[str, Any], field_type: str) -> Any:
-        """Extract a field from memory with flexible field name matching.
-        
-        Args:
-            memory: Memory dict with various field names
-            field_type: Type of field to extract ('title', 'content', 'application', 'metrics')
-            
-        Returns:
-            Extracted field value or default
-        """
-        field_mappings = {
-            'title': ['title', 'topic', 'name', 'subject', 'heading'],
-            'content': ['content', 'context', 'description', 'details', 'text'],
-            'application': ['application', 'investment_insight', 'investment_angle', 
-                          'strategic_implications', 'investment_implications', 
-                          'expansion_success_factors', 'critical_metrics_to_monitor',
-                          'key_monitoring_points', 'hedging_analysis', 'roi_notes', 
-                          'esg_metrics'],
-            'additional': ['additional_notes', 'notes', 'comments'],
-            'metrics': ['metrics_structured', 'metrics', 'metrics_raw']
-        }
-        
-        # Try each possible field name
-        for field_name in field_mappings.get(field_type, []):
-            if field_name in memory:
-                value = memory[field_name]
-                # Handle list values for application/additional fields
-                if field_type in ['application', 'additional'] and isinstance(value, list):
-                    return ' | '.join(value) if len(value) <= 3 else '\n• ' + '\n• '.join(value)
-                return value
-        
-        # Return defaults
-        if field_type == 'title':
-            return f"Item {memory.get('id', 'Unknown')}"
-        return ""
-    
     def _humanize_key(self, key: Any) -> str:
         """Convert a key into a human-friendly label without relying on schema."""
         try:

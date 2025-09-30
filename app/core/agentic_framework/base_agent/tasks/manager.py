@@ -7,7 +7,6 @@ from datetime import datetime
 from pathlib import Path
 from .models import TaskStatus, TodoList, MainTask, SubTask
 
-
 class TaskManager:
     """Simplified task manager for structured planning system."""
     
@@ -181,6 +180,19 @@ class TaskManager:
         # Save state after update
         self.save_state()
         return True
+
+    def record_tool_routing(self, task_id: int, subtask_id: str, tool_name: str, is_relevant: bool) -> None:
+        """Record a lightweight audit entry for tool routing decisions."""
+        self.execution_history.append({
+            'timestamp': datetime.now().isoformat(),
+            'type': 'tool_routed',
+            'task_id': task_id,
+            'subtask_id': subtask_id,
+            'tool_name': tool_name,
+            'is_relevant': is_relevant,
+        })
+        # Persist audit entry
+        self.save_state()
     
     def get_task_progress_summary(self) -> Dict[str, Any]:
         """Get comprehensive progress summary of the structured plan."""
@@ -255,77 +267,6 @@ class TaskManager:
             "total_evidence_items": len(main_evidence) + sum(len(ev) for ev in subtask_evidence.values()),
             "total_observations": len(main_observations) + sum(len(obs) for obs in subtask_observations.values())
         }
-    
-    def modify_task_in_plan(self, task_id: int, description: str = None, predicted_tools: List[str] = None) -> bool:
-        """Modify an existing task in the structured plan."""
-        main_task = self.get_main_task_by_id(task_id)
-        if not main_task:
-            return False
-        
-        old_description = main_task.description
-        old_tools = main_task.predicted_tool_use.copy()
-        
-        if description:
-            main_task.description = description
-        
-        if predicted_tools:
-            main_task.predicted_tool_use = predicted_tools
-        
-        # Log modification
-        self.execution_history.append({
-            'timestamp': datetime.now().isoformat(),
-            'type': 'task_modified',
-            'task_id': task_id,
-            'old_description': old_description,
-            'new_description': description,
-            'old_tools': old_tools,
-            'new_tools': predicted_tools
-        })
-        
-        if self.verbose:
-            print(f"📝 Modified Task {task_id}")
-            if description:
-                print(f"  Description: {old_description} → {description}")
-            if predicted_tools:
-                print(f"  Tools: {old_tools} → {predicted_tools}")
-        
-        # Save state after modification
-        self.save_state()
-        return True
-    
-    def add_subtask_to_plan(self, main_task_id: int, subtask_id: str, description: str) -> bool:
-        """Add a new subtask to an existing main task."""
-        main_task = self.get_main_task_by_id(main_task_id)
-        if not main_task:
-            return False
-        
-        # Check if subtask ID already exists
-        for existing_subtask in main_task.subtasks:
-            if existing_subtask.id == subtask_id:
-                if self.verbose:
-                    print(f"⚠️ SubTask {subtask_id} already exists in Task {main_task_id}")
-                return False
-        
-        # Create new subtask
-        from .models import SubTask
-        new_subtask = SubTask(id=subtask_id, description=description)
-        main_task.subtasks.append(new_subtask)
-        
-        # Log addition
-        self.execution_history.append({
-            'timestamp': datetime.now().isoformat(),
-            'type': 'subtask_added',
-            'main_task_id': main_task_id,
-            'subtask_id': subtask_id,
-            'description': description
-        })
-        
-        if self.verbose:
-            print(f"➕ Added SubTask {subtask_id} to Task {main_task_id}: {description}")
-        
-        # Save state after addition
-        self.save_state()
-        return True
     
     def get_execution_analytics(self) -> Dict[str, Any]:
         """Get analytics about execution history and patterns."""
@@ -487,27 +428,7 @@ class TaskManager:
         except Exception as e:
             if self.verbose:
                 print(f"⚠️ Failed to save task state: {e}")
-    
-    def load_state(self):
-        """Load task state from JSON."""
-        try:
-            if self.state_path.exists():
-                with open(self.state_path, 'r', encoding='utf-8') as f:
-                    state_data = json.load(f)
-                
-                # Reconstruct structured plan
-                if state_data.get('structured_plan'):
-                    self.structured_plan = TodoList.model_validate(state_data['structured_plan'])
-                
-                self.execution_history = state_data.get('execution_history', [])
-                
-                if self.verbose:
-                    plan_info = f" with structured plan" if self.structured_plan else ""
-                    print(f"📂 Loaded task state{plan_info}")
-        except Exception as e:
-            if self.verbose:
-                print(f"⚠️ Failed to load task state: {e}")
-    
+        
     # === Simplified Task Management ===
     
     def update_task_progress(self, iteration: int) -> None:
@@ -515,10 +436,7 @@ class TaskManager:
         if self.verbose:
             print(f"📝 Task progress update at iteration {iteration}")
         self.save_state()
-    
-    def is_plan_complete(self) -> bool:
-        """Check if all tasks are completed."""
-        return self.all_tasks_complete()
+
     
     def get_incomplete_tasks(self) -> List[Dict[str, Any]]:
         """Get list of incomplete tasks from structured plan."""
@@ -534,22 +452,6 @@ class TaskManager:
                     })
         
         return incomplete
-    
-    def get_task_status_prompt(self, iteration: int) -> str:
-        """Generate simplified analysis direction prompt."""
-        all_complete = self.all_tasks_complete()
-        
-        if all_complete:
-            return (
-                "Analyze the latest tool observations. Based on your analysis, either: "
-                "(a) call another tool to continue iterating, or "
-                "(b) produce a FINAL ANSWER preceded by 'Final Answer:' (all tasks are complete)."
-            )
-        else:
-            return (
-                "Analyze the latest tool observations and continue working. "
-                "Call the appropriate tool to make progress toward your goal."
-            )
 
     # === Advanced Task Management ===
     
@@ -667,57 +569,7 @@ class TaskManager:
         # Save state after removal
         self.save_state()
         return True
-    
-    def reorder_main_tasks(self, new_order: List[int]) -> bool:
-        """Reorder main tasks in the structured plan.
         
-        Args:
-            new_order: List of task IDs in desired order
-            
-        Returns:
-            True if reordering successful
-        """
-        if not self.structured_plan:
-            return False
-        
-        # Validate that all task IDs exist and new_order is complete
-        existing_ids = {task.id for task in self.structured_plan.tasks}
-        new_order_set = set(new_order)
-        
-        if existing_ids != new_order_set:
-            if self.verbose:
-                missing = existing_ids - new_order_set
-                extra = new_order_set - existing_ids
-                print(f"⚠️ Reorder failed: missing {missing}, extra {extra}")
-            return False
-        
-        # Create mapping of ID to task
-        task_map = {task.id: task for task in self.structured_plan.tasks}
-        
-        # Reorder tasks
-        try:
-            self.structured_plan.tasks = [task_map[task_id] for task_id in new_order]
-            
-            # Log reordering
-            self.execution_history.append({
-                'timestamp': datetime.now().isoformat(),
-                'type': 'tasks_reordered',
-                'old_order': list(existing_ids),
-                'new_order': new_order
-            })
-            
-            if self.verbose:
-                print(f"🔄 Reordered tasks: {new_order}")
-            
-            # Save state after reordering
-            self.save_state()
-            return True
-            
-        except Exception as e:
-            if self.verbose:
-                print(f"❌ Reorder failed: {e}")
-            return False
-    
     def mark_task_failed(self, task_id: int, error_message: str, recovery_suggestion: str = None) -> bool:
         """Mark a task as failed and optionally suggest recovery.
         

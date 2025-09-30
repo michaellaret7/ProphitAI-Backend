@@ -46,6 +46,7 @@ class BaseAgent:
         
         self.model, self.client = openai_model_and_client(model=model)
         # self.model, self.client = grok_model_and_client(model=model)
+        # self.model, self.client = claude_model_and_client(model=model)
         print(f"Using model: {self.model}")
         print(f"Using client: {self.client}")
 
@@ -844,6 +845,10 @@ class BaseAgent:
                                 )
                             # Execute sequentially
                             obs = self.utilities.execute_tool_safe(inner_name, inner_args)
+                            # Update execution engine and task progression for each inner tool
+                            self.execution_engine.update_task_from_tool_result(inner_name, obs)
+                            self._check_for_task_failure(inner_name, obs)
+                            self._check_and_advance_task_if_complete()
                             
                             # Emit event for each inner tool
                             self.event_manager.emit_tool_executed(inner_name, inner_args, obs)

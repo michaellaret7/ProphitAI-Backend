@@ -22,8 +22,11 @@ class SubTask(BaseModel):
     )
     description: str
     completed: bool = False
-    completion_evidence: List[str] = []
-    observations: List[str] = []
+    # Use default_factory to avoid shared mutable defaults across instances
+    completion_evidence: List[str] = Field(default_factory=list)
+    observations: List[str] = Field(default_factory=list)
+    # Optional: subtask-scoped expected tools to enable strict relevance checks
+    expected_tools: List[str] = Field(default_factory=list)
     
     @field_validator('id')
     @classmethod
@@ -37,13 +40,13 @@ class MainTask(BaseModel):
     id: int  # e.g., 1, 2, 3
     description: str
     status: TaskStatus = TaskStatus.PENDING
-    subtasks: List[SubTask] = []
-    predicted_tool_use: List[str] = []  # All tools for this main task
-    completion_evidence: List[str] = []
-    observations: List[str] = []
+    subtasks: List[SubTask] = Field(default_factory=list)
+    predicted_tool_use: List[str] = Field(default_factory=list)  # All tools for this main task
+    completion_evidence: List[str] = Field(default_factory=list)
+    observations: List[str] = Field(default_factory=list)
 
 class TodoList(BaseModel):
-    tasks: List[MainTask] = []
+    tasks: List[MainTask] = Field(default_factory=list)
     
     def add_main_task(self, task_id: int, description: str, predicted_tools: List[str] = None) -> MainTask:
         task = MainTask(
