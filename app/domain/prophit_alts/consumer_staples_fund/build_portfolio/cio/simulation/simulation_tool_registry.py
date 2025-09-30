@@ -4,6 +4,10 @@ This module registers simulation-aware versions of all CIO tools that respect
 the September 30, 2024 cutoff date.
 """
 
+from datetime import datetime
+from functools import wraps
+from typing import Callable, Dict, Any
+
 from app.core.agentic_framework.tool_lib.agent_specific_tools.cio import (
     GET_ANALYST_PICKS_TOOL, PULL_REST_OF_TICKER_POOL_TOOL
 )
@@ -22,129 +26,99 @@ from app.core.agentic_framework.tool_lib.portfolio_tools.concentration import (
     EXPOSURE_CALCULATOR_TOOL, INDUSTRY_CONCENTRATION_TOOL, VAR_CALCULATOR_TOOL
 )
 from app.core.agentic_framework.tool_lib.ticker_tools.factors import CALCULATE_TICKER_FACTORS_TOOL
+from app.core.agentic_framework.tool_lib.ticker_tools.performance import GET_TICKER_PERFORMANCE_AND_RISK_TOOL
+from app.domain.prophit_alts.consumer_staples_fund.build_portfolio.cio.simulation.config import SIMULATION_CUTOFF_DATE
 
-from app.domain.prophit_alts.consumer_staples_fund.build_portfolio.cio.simulation.simulation_tools import (
-    fetch_repository_data_simulation,
-    get_fundamental_data_simulation,
-    get_ticker_performance_and_risk_simulation,
-    CALCULATE_PORTFOLIO_RETURNS_METRICS_SIMULATION_TOOL,
-    CORRELATION_MATRIX_SIMULATION_TOOL,
-    CALCULATE_PORTFOLIO_PERFORMANCE_SIMULATION_TOOL,
-    CALCULATE_PORTFOLIO_BETA_VS_INDEX_SIMULATION_TOOL,
+# OLD imports removed - no longer using old simulation_tools.py and simulation_tools_extended.py files
+# All simulation tools are now created via the wrapper factory
+
+# ==================== Simulation Wrapper Factory ==================== #
+
+def create_simulation_tool(production_tool: Dict[str, Any], cutoff_date: datetime) -> Dict[str, Any]:
+    """Create a simulation version of a production tool.
+
+    This function wraps a production tool function to inject the simulation cutoff date
+    without exposing it to the agent. The agent sees the exact same interface as production.
+
+    Args:
+        production_tool: The production tool dict with name, description, parameters, function
+        cutoff_date: The simulation cutoff date to inject
+
+    Returns:
+        New tool dict with wrapped function that injects _simulation_date parameter
+    """
+    base_function = production_tool["function"]
+
+    @wraps(base_function)
+    def simulation_wrapper(*args, **kwargs):
+        # Inject _simulation_date parameter (internal use only)
+        kwargs['_simulation_date'] = cutoff_date
+        return base_function(*args, **kwargs)
+
+    return {
+        "name": production_tool["name"],  # Keep same name
+        "description": f"{production_tool['description']} (SIMULATION MODE - data up to Sept 30, 2024)",
+        "parameters": production_tool["parameters"],  # Keep same parameters
+        "function": simulation_wrapper,  # Use wrapped function
+    }
+
+# ==================== NEW Simulation Tools (Using Wrapper Factory) ==================== #
+
+# Data tools
+from app.core.agentic_framework.tool_lib.data_tools.repository import FETCH_TICKER_REPOSITORY_DATA_TOOL
+from app.core.agentic_framework.tool_lib.data_tools.ticker_fundamentals import GET_TICKER_FUNDAMENTAL_DATA_TOOL
+
+FETCH_TICKER_REPOSITORY_DATA_SIMULATION_TOOL_NEW = create_simulation_tool(
+    FETCH_TICKER_REPOSITORY_DATA_TOOL,
+    SIMULATION_CUTOFF_DATE
 )
-from app.domain.prophit_alts.consumer_staples_fund.build_portfolio.cio.simulation.simulation_tools_extended import (
-    CALCULATE_GROUP_PERFORMANCES_SIMULATION_TOOL,
-    CALCULATE_TICKER_PERFORMANCES_SIMULATION_TOOL,
-    CALCULATE_TICKER_FACTORS_SIMULATION_TOOL,
+
+GET_TICKER_FUNDAMENTAL_DATA_SIMULATION_TOOL_NEW = create_simulation_tool(
+    GET_TICKER_FUNDAMENTAL_DATA_TOOL,
+    SIMULATION_CUTOFF_DATE
 )
 
-# ==================== Simulation-Specific Tool Schemas ==================== #
+# Ticker tools
+GET_TICKER_PERFORMANCE_AND_RISK_SIMULATION_TOOL_NEW = create_simulation_tool(
+    GET_TICKER_PERFORMANCE_AND_RISK_TOOL,
+    SIMULATION_CUTOFF_DATE
+)
 
-# Repository data tool (simulation version)
-FETCH_TICKER_REPOSITORY_DATA_SIMULATION_TOOL = {
-    "name": "fetch_ticker_repository_data",
-    "description": (
-        "Fetch auxiliary data for a ticker (SIMULATION MODE - data limited to Sept 30, 2024). "
-        "Available data types: 'price_target_news', 'grades_individual', 'grades_summary', "
-        "'ratings', 'dividends_series'.\n\n"
-        "UNAVAILABLE data types (will return errors): 'analyst_recommendations', 'earnings_transcripts', "
-        "'latest_transcript', 'press_releases', 'price_target_summary', 'stock_news'.\n\n"
-        "Example: fetch_ticker_repository_data(ticker='AAPL', data_type='ratings')"
-    ),
-    "parameters": {
-        "type": "object",
-        "properties": {
-            "ticker": {
-                "type": "string",
-                "description": "Ticker symbol (e.g., 'AAPL').",
-            },
-            "data_type": {
-                "type": "string",
-                "description": "Type of data to fetch. Only certain types available as of Sept 2024.",
-                "enum": [
-                    "price_target_news",
-                    "grades_individual",
-                    "grades_summary",
-                    "ratings",
-                    "dividends_series",
-                ]
-            },
-            "limit": {
-                "type": "integer",
-                "description": "Optional max number of items.",
-                "minimum": 1,
-                "maximum": 4
-            }
-        },
-        "required": ["ticker", "data_type"],
-    },
-    "function": fetch_repository_data_simulation,
-}
+CALCULATE_TICKER_FACTORS_SIMULATION_TOOL_NEW = create_simulation_tool(
+    CALCULATE_TICKER_FACTORS_TOOL,
+    SIMULATION_CUTOFF_DATE
+)
 
-# Fundamental data tool (simulation version)
-GET_TICKER_FUNDAMENTAL_DATA_SIMULATION_TOOL = {
-    "name": "get_ticker_fundamental_data",
-    "description": (
-        "Get fundamental financial data for a ticker (SIMULATION MODE - data limited to Sept 30, 2024). "
-        "Includes income statements, balance sheets, cash flow statements, and financial ratios.\n\n"
-        "Example: get_ticker_fundamental_data(ticker='KO', statement_type='balance_sheet', quarters_back=2)"
-    ),
-    "parameters": {
-        "type": "object",
-        "properties": {
-            "ticker": {
-                "type": "string",
-                "description": "The ticker symbol (e.g., 'AAPL', 'MSFT', 'KO').",
-            },
-            "statement_type": {
-                "type": "string",
-                "description": "Type of fundamental data to retrieve.",
-                "enum": ["income_statement", "balance_sheet", "cash_flow", "financial_ratios", "analyst_estimates"]
-            },
-            "quarters_back": {
-                "type": "integer",
-                "description": "Number of quarters of historical data to retrieve. Default is 2.",
-                "default": 2
-            },
-        },
-        "required": ["ticker", "statement_type"],
-    },
-    "function": get_fundamental_data_simulation,
-}
+# Portfolio tools
+CALCULATE_PORTFOLIO_RETURNS_METRICS_SIMULATION_TOOL_NEW = create_simulation_tool(
+    CALCULATE_PORTFOLIO_RETURNS_METRICS_TOOL,
+    SIMULATION_CUTOFF_DATE
+)
 
-# Ticker performance tool (simulation version)
-GET_TICKER_PERFORMANCE_AND_RISK_SIMULATION_TOOL = {
-    "name": "get_ticker_performance_and_risk",
-    "description": (
-        "Calculate comprehensive performance and risk metrics for a single ticker over 3 years "
-        "(SIMULATION MODE - using data up to Sept 30, 2024). "
-        "Returns detailed metrics including Sharpe, Sortino, Treynor, Information Ratio, Alpha, "
-        "Omega, Sterling, Burke, Martin ratios, capture ratios, win rates, profit factors, "
-        "risk measures (pain index, tail ratio, gain/loss ratio, ulcer index, max drawdown), "
-        "and returns across multiple timeframes (3Y, 1Y, 6M, 3M). "
-        "CRITICAL: You MUST ALWAYS include the ticker parameter. "
-        "Example: get_ticker_performance_and_risk(ticker='AAPL')"
-    ),
-    "parameters": {
-        "type": "object",
-        "properties": {
-            "ticker": {
-                "type": "string",
-                "description": (
-                    "**MANDATORY - DO NOT OMIT THIS PARAMETER.** "
-                    "The ticker symbol to analyze. Must be a valid stock ticker symbol (e.g., 'AAPL', 'MSFT', 'GOOGL'). "
-                    "The function will automatically fetch 3 years of price and dividend data for analysis (up to Sept 30, 2024)."
-                ),
-                "pattern": "^[A-Z]{1,5}$",
-                "minLength": 1,
-                "maxLength": 5
-            },
-        },
-        "required": ["ticker"],
-        "additionalProperties": False
-    },
-    "function": get_ticker_performance_and_risk_simulation,
-}
+CORRELATION_MATRIX_SIMULATION_TOOL_NEW = create_simulation_tool(
+    CORRELATION_MATRIX_TOOL,
+    SIMULATION_CUTOFF_DATE
+)
+
+CALCULATE_PORTFOLIO_PERFORMANCE_SIMULATION_TOOL_NEW = create_simulation_tool(
+    CALCULATE_PORTFOLIO_PERFORMANCE_TOOL,
+    SIMULATION_CUTOFF_DATE
+)
+
+CALCULATE_PORTFOLIO_BETA_VS_INDEX_SIMULATION_TOOL_NEW = create_simulation_tool(
+    CALCULATE_PORTFOLIO_BETA_VS_INDEX_TOOL,
+    SIMULATION_CUTOFF_DATE
+)
+
+CALCULATE_GROUP_PERFORMANCES_SIMULATION_TOOL_NEW = create_simulation_tool(
+    CALCULATE_GROUP_PERFORMANCES_TOOL,
+    SIMULATION_CUTOFF_DATE
+)
+
+CALCULATE_TICKER_PERFORMANCES_SIMULATION_TOOL_NEW = create_simulation_tool(
+    CALCULATE_TICKER_PERFORMANCES_TOOL,
+    SIMULATION_CUTOFF_DATE
+)
 
 
 def register_cio_simulation_tools(agent):
@@ -157,23 +131,24 @@ def register_cio_simulation_tools(agent):
     agent.add_tool(**GET_INDUSTRY_BENCHMARK_CALCULATIONS_TOOL)
     agent.add_tool(**GET_SUB_INDUSTRY_BENCHMARK_CALCULATIONS_TOOL)
 
-    # Ticker analytics - simulation version (momentum/volatility factors use price data)
-    agent.add_tool(**CALCULATE_TICKER_FACTORS_SIMULATION_TOOL)
-
-    # Data tools - simulation versions
-    agent.add_tool(**GET_TICKER_FUNDAMENTAL_DATA_SIMULATION_TOOL)
-    agent.add_tool(**FETCH_TICKER_REPOSITORY_DATA_SIMULATION_TOOL)
+    # Data tools - NEW simulation versions (using wrapper factory)
+    agent.add_tool(**GET_TICKER_FUNDAMENTAL_DATA_SIMULATION_TOOL_NEW)
+    agent.add_tool(**FETCH_TICKER_REPOSITORY_DATA_SIMULATION_TOOL_NEW)
 
     # Agent-specific tools (these don't need simulation wrapping)
     agent.add_tool(**GET_ANALYST_PICKS_TOOL)
 
-    # Portfolio analytics (ALL simulation versions for data-dependent tools)
-    agent.add_tool(**CORRELATION_MATRIX_SIMULATION_TOOL)  # Simulation version
-    agent.add_tool(**CALCULATE_PORTFOLIO_PERFORMANCE_SIMULATION_TOOL)  # Simulation version
-    agent.add_tool(**CALCULATE_PORTFOLIO_RETURNS_METRICS_SIMULATION_TOOL)  # Simulation version
-    agent.add_tool(**CALCULATE_GROUP_PERFORMANCES_SIMULATION_TOOL)  # Simulation version
-    agent.add_tool(**CALCULATE_TICKER_PERFORMANCES_SIMULATION_TOOL)  # Simulation version
-    agent.add_tool(**CALCULATE_PORTFOLIO_BETA_VS_INDEX_SIMULATION_TOOL)  # Simulation version
+    # Ticker analytics - NEW simulation versions (using wrapper factory)
+    agent.add_tool(**GET_TICKER_PERFORMANCE_AND_RISK_SIMULATION_TOOL_NEW)
+    agent.add_tool(**CALCULATE_TICKER_FACTORS_SIMULATION_TOOL_NEW)
+
+    # Portfolio analytics - NEW simulation versions (using wrapper factory)
+    agent.add_tool(**CALCULATE_PORTFOLIO_RETURNS_METRICS_SIMULATION_TOOL_NEW)
+    agent.add_tool(**CORRELATION_MATRIX_SIMULATION_TOOL_NEW)
+    agent.add_tool(**CALCULATE_PORTFOLIO_PERFORMANCE_SIMULATION_TOOL_NEW)
+    agent.add_tool(**CALCULATE_PORTFOLIO_BETA_VS_INDEX_SIMULATION_TOOL_NEW)
+    agent.add_tool(**CALCULATE_GROUP_PERFORMANCES_SIMULATION_TOOL_NEW)
+    agent.add_tool(**CALCULATE_TICKER_PERFORMANCES_SIMULATION_TOOL_NEW)
 
     # Pure calculation tools (no date dependency - use production versions)
     agent.add_tool(**EXPOSURE_CALCULATOR_TOOL)
@@ -183,6 +158,3 @@ def register_cio_simulation_tools(agent):
 
     # Agent-specific (continued)
     agent.add_tool(**PULL_REST_OF_TICKER_POOL_TOOL)
-
-    # Ticker analytics - simulation version
-    agent.add_tool(**GET_TICKER_PERFORMANCE_AND_RISK_SIMULATION_TOOL)

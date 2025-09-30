@@ -1,4 +1,6 @@
 import yaml
+from typing import Optional
+from datetime import datetime
 import pandas as pd
 import numpy as np
 from app.utils.gpt_parser import canonical_portfolio
@@ -10,6 +12,7 @@ def calculate_portfolio_beta_vs_index(
     portfolio_dict: PortfolioInput | dict,
     lookback_days: int = 252,
     index_ticker: str = "SPY",
+    _simulation_date: Optional[datetime] = None
 ) -> str:
     """
     Calculate CAPM beta for a long/short portfolio vs index.
@@ -32,7 +35,8 @@ def calculate_portfolio_beta_vs_index(
             portfolio=portfolio_dict,
             lookback_days=lookback_days + 50,  # Buffer for returns calc
             use_total_returns=False,  # Use price returns for beta calculation
-            dropna=True
+            dropna=True,
+            _simulation_date=_simulation_date
         )
 
         if portfolio_returns is None or portfolio_returns.empty:
@@ -43,7 +47,8 @@ def calculate_portfolio_beta_vs_index(
         index_returns = get_benchmark_returns(
             benchmark=index_ticker,
             lookback_days=lookback_days + 50,  # Buffer for returns calc
-            use_total_returns=False  # Use price returns for beta calculation
+            use_total_returns=False,  # Use price returns for beta calculation
+            _simulation_date=_simulation_date
         )
 
         if index_returns is None or index_returns.empty:

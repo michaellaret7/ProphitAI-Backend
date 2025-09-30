@@ -6,23 +6,26 @@ import pandas as pd
 
 from app.core.calculations.core.data_service import DataService
 from app.core.calculations.returns.calculator import ReturnsCalculator, PortfolioReturnsCalculator
+from app.utils.simulation_utils import get_end_date, filter_series_by_date
 
 
 def prepare_portfolio_data(
     portfolio: Dict,
     lookback_days: int = 252,
     include_dividends: bool = True,
-    include_benchmark: Optional[str] = None
+    include_benchmark: Optional[str] = None,
+    _simulation_date: Optional[datetime] = None
 ) -> Tuple[Dict[str, float], Dict[str, pd.Series], Dict[str, pd.Series], pd.Series]:
     """
     Common utility to prepare portfolio data for calculations.
-    
+
     Args:
         portfolio: Dict with structure {"TICKER": {"position": "long/short", "allocation": 0.xx}}
         lookback_days: Number of days to look back for historical data
         include_dividends: Whether to fetch dividend data
         include_benchmark: Optional benchmark ticker to include (e.g., "SPY")
-    
+        _simulation_date: INTERNAL USE ONLY - For simulation mode, not exposed to agents
+
     Returns:
         Tuple of:
         - weights: Dict[str, float] with signed weights (negative for shorts)
@@ -31,7 +34,7 @@ def prepare_portfolio_data(
         - portfolio_returns: pd.Series of weighted portfolio returns
     """
     # 1. Date range
-    end = datetime.now(timezone.utc)
+    end = get_end_date(_simulation_date)
     start = end - timedelta(days=lookback_days)
     
     # 2. Get tickers
@@ -42,14 +45,19 @@ def prepare_portfolio_data(
     # 3. Fetch price data
     ds = DataService()
     price_data = ds.get_bulk_close_series(tickers, start, end)
-    
+
+    # Filter price data by simulation date if provided
+    if _simulation_date is not None:
+        for ticker in price_data:
+            price_data[ticker] = filter_series_by_date(price_data[ticker], _simulation_date)
+
     # 4. Get dividend data if requested
     dividend_data = {}
     if include_dividends:
         for ticker in tickers:
             try:
                 div_data = ds.get_dividends(ticker, start, end)
-                dividend_data[ticker] = div_data.series
+                dividend_data[ticker] = filter_series_by_date(div_data.series, _simulation_date)
             except:
                 dividend_data[ticker] = None
     
@@ -70,11 +78,12 @@ def get_portfolio_returns(
     use_total_returns: bool = True,
     dropna: bool = True,
     renormalize_each_day: bool = False,
-    normalization: str = "gross"
+    normalization: str = "gross",
+    _simulation_date: Optional[datetime] = None
 ) -> Tuple[pd.Series, Dict[str, float]]:
     """
     Calculate portfolio returns from portfolio dict.
-    
+
     Args:
         portfolio: Dict with structure {"TICKER": {"position": "long/short", "allocation": 0.xx}}
         lookback_days: Number of days to look back
@@ -82,7 +91,8 @@ def get_portfolio_returns(
         dropna: Whether to drop days with missing data
         renormalize_each_day: Whether to renormalize weights daily
         normalization: "gross" or "net" exposure normalization
-    
+        _simulation_date: INTERNAL USE ONLY - For simulation mode, not exposed to agents
+
     Returns:
         Tuple of:
         - portfolio_returns: pd.Series of weighted portfolio returns
@@ -90,9 +100,10 @@ def get_portfolio_returns(
     """
     # Get all the data
     weights, price_data, dividend_data = prepare_portfolio_data(
-        portfolio, 
-        lookback_days, 
-        include_dividends=use_total_returns
+        portfolio,
+        lookback_days,
+        include_dividends=use_total_returns,
+        _simulation_date=_simulation_date
     )
     
     # Calculate individual ticker returns
@@ -122,39 +133,45 @@ def get_benchmark_returns(
     start: datetime = None,
     end: datetime = None,
     lookback_days: int = None,
-    use_total_returns: bool = True
+    use_total_returns: bool = True,
+    _simulation_date: Optional[datetime] = None
 ) -> pd.Series:
     """
     Get benchmark returns for comparison.
-    
+
     Args:
         benchmark: Benchmark ticker
         start/end: Date range (if not provided, uses lookback_days)
         lookback_days: Alternative to start/end
         use_total_returns: Whether to include dividends
-    
+        _simulation_date: INTERNAL USE ONLY - For simulation mode, not exposed to agents
+
     Returns:
         pd.Series of benchmark returns
     """
     if not end:
-        end = datetime.now(timezone.utc)
-    
+        end = get_end_date(_simulation_date)
+
     if not start:
         if lookback_days:
             start = end - timedelta(days=lookback_days)
         else:
             raise ValueError("Must provide either start date or lookback_days")
-    
+
     ds = DataService()
     bench_prices = ds.get_bulk_close_series([benchmark], start, end).get(benchmark)
-    
+
+    # Filter by simulation date if provided
+    bench_prices = filter_series_by_date(bench_prices, _simulation_date)
+
     if bench_prices is None or bench_prices.empty:
         raise ValueError(f"No price data for benchmark {benchmark}")
-    
+
     if use_total_returns:
         try:
             div_data = ds.get_dividends(benchmark, start, end)
             bench_divs = div_data.series
+            bench_divs = filter_series_by_date(bench_divs, _simulation_date)
         except:
             bench_divs = None
         return ReturnsCalculator.total_returns(bench_prices, bench_divs)

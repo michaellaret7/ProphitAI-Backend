@@ -1,4 +1,6 @@
 import yaml
+from typing import Optional
+from datetime import datetime
 from app.core.calculations.portfolio.utils import prepare_portfolio_data
 from app.core.calculations.returns.calculator import ReturnsCalculator
 from app.core.calculations.portfolio.correlation import CorrelationAnalysis
@@ -7,9 +9,13 @@ import pandas as pd
 from app.utils.gpt_parser import canonical_portfolio
 from app.core.calculations.core.helpers import build_returns_df_from_price_map
 
-def correlation_matrix(portfolio_dict: PortfolioInput | dict) -> str:
+def correlation_matrix(portfolio_dict: PortfolioInput | dict, _simulation_date: Optional[datetime] = None) -> str:
     """
     Calculate pairwise correlations and return as records for easy LLM consumption.
+
+    Args:
+        portfolio_dict: Portfolio holdings
+        _simulation_date: INTERNAL USE ONLY - For simulation mode, not exposed to agents
 
     Output shape:
     {
@@ -31,7 +37,8 @@ def correlation_matrix(portfolio_dict: PortfolioInput | dict) -> str:
         weights, price_data, dividend_data = prepare_portfolio_data(
             portfolio=portfolio_dict,
             lookback_days=252,
-            include_dividends=False
+            include_dividends=False,
+            _simulation_date=_simulation_date
         )
 
         if not price_data:

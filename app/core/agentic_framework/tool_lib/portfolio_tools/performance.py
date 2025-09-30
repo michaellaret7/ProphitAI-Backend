@@ -1,4 +1,6 @@
 import yaml
+from typing import Optional
+from datetime import datetime
 from app.core.calculations.portfolio.utils import get_portfolio_returns, get_benchmark_returns
 from app.core.calculations.returns.calculator import ReturnsCalculator
 from app.core.calculations.risk.calculator import RiskCalculator
@@ -9,7 +11,8 @@ from app.models.portfolio_models import PortfolioInput
 from app.utils.gpt_parser import canonical_portfolio
 
 
-def calculate_portfolio_performance(portfolio_dict: PortfolioInput | dict, lookback_days=756, use_total_returns=True, rf_annual=0.04, benchmark="SPY") -> str:
+def calculate_portfolio_performance(portfolio_dict: PortfolioInput | dict, lookback_days=756, use_total_returns=True, rf_annual=0.04, benchmark="SPY",
+    _simulation_date: Optional[datetime] = None) -> str:
     """Unified portfolio performance calculation combining all metrics.
 
     Args:
@@ -35,7 +38,9 @@ def calculate_portfolio_performance(portfolio_dict: PortfolioInput | dict, lookb
             use_total_returns=use_total_returns,
             dropna=True,
             normalization="gross"
-        )
+        , _simulation_date=_simulation_date)
+
+        print(f"portfolio_returns: {portfolio_returns}")
 
         if portfolio_returns is None or portfolio_returns.empty:
             return yaml.dump({"success": True, "data": {}}, default_flow_style=False)
@@ -44,7 +49,8 @@ def calculate_portfolio_performance(portfolio_dict: PortfolioInput | dict, lookb
         benchmark_returns = get_benchmark_returns(
             benchmark=benchmark,
             lookback_days=lookback_days,
-            use_total_returns=use_total_returns
+            use_total_returns=use_total_returns,
+            _simulation_date=_simulation_date
         )
 
         # Calculate RF series for metrics that need it

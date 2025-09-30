@@ -24,6 +24,10 @@ Portfolio Characteristics/Criteria:
 - Short position Hard Contraints:
    --> Short allocation allowed for highly liquid stocks is 4-5% (No more than 5%)
    --> Short allocation allowed for smaller/illiquid stocks is 2-3% (No more than 3%)
+- Portfolio Must have the following performance metrics:
+   --> Annualized Return must be greater than 10%
+   --> Sharpe Ratio must be greater than 1.0
+   --> Alpha vs SPY must be greater than 1.0%
 </Portfolio Construction Hard Constraints>
 
 <CONTEXT>
@@ -86,6 +90,8 @@ Important Note: You are allowed to create more than 3 portfolios, the suggested 
 6. Check that the portfolio meets all of the requirements and you are satisfied with the final product.
    --> Review the <Portfolio Construction Hard Constraints> for constraint information.
    --> It must fit the beta hard constraints. (Beta must be greater than 0.175 and less than 0.6)
+   --> It must fit the performance hard constraints. (Annualized Return must be greater than 10%, Sharpe Ratio must be greater than 1.0, Alpha vs SPY must be greater than 1.0%)
+   --> If the portfolio does not meet the performance hard constraints, you must go back and edit the portfolio until it meets the requirements.
 7. Output the final portfolio to the user.
 </Suggested Workflow>
 

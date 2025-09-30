@@ -1,8 +1,17 @@
 import yaml
+from typing import Optional
+from datetime import datetime
 from app.repositories.fundamental_data import get_fundamental_data as _get_fundamental_data
 
-def get_fundamental_data(ticker: str, statement_type: str, quarters_back: int = 2) -> str:
-    """Wrapper function to return YAML format."""
+def get_fundamental_data(ticker: str, statement_type: str, quarters_back: int = 2, _simulation_date: Optional[datetime] = None) -> str:
+    """Wrapper function to return YAML format.
+
+    Args:
+        ticker: Stock ticker symbol
+        statement_type: Type of fundamental statement
+        quarters_back: Number of quarters to look back
+        _simulation_date: INTERNAL USE ONLY - For simulation mode, not exposed to agents
+    """
 
     if not isinstance(ticker, str) or not ticker:
         return yaml.dump({"success": False, "error": "Parameter 'ticker' must be a non-empty string."}, default_flow_style=False)

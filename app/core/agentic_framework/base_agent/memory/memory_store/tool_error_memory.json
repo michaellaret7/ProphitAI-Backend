@@ -8515,41 +8515,6 @@
       "error_pattern": "register_optimizer_tools.<locals>.<lambda>() missing 1 required positional argument: 'portfolio_dict'",
       "occurrences": [
         {
-          "timestamp": "2025-09-19T15:07:31.914827",
-          "args": {},
-          "full_error": "register_optimizer_tools.<locals>.<lambda>() missing 1 required positional argument: 'portfolio_dict'"
-        },
-        {
-          "timestamp": "2025-09-19T15:07:33.045479",
-          "args": {},
-          "full_error": "register_optimizer_tools.<locals>.<lambda>() missing 1 required positional argument: 'portfolio_dict'"
-        },
-        {
-          "timestamp": "2025-09-19T15:07:35.033323",
-          "args": {},
-          "full_error": "register_optimizer_tools.<locals>.<lambda>() missing 1 required positional argument: 'portfolio_dict'"
-        },
-        {
-          "timestamp": "2025-09-19T15:07:36.323265",
-          "args": {},
-          "full_error": "register_optimizer_tools.<locals>.<lambda>() missing 1 required positional argument: 'portfolio_dict'"
-        },
-        {
-          "timestamp": "2025-09-19T15:07:40.229334",
-          "args": {},
-          "full_error": "register_optimizer_tools.<locals>.<lambda>() missing 1 required positional argument: 'portfolio_dict'"
-        },
-        {
-          "timestamp": "2025-09-19T15:46:16.058627",
-          "args": {},
-          "full_error": "register_optimizer_tools.<locals>.<lambda>() missing 1 required positional argument: 'portfolio_dict'"
-        },
-        {
-          "timestamp": "2025-09-23T15:48:14.418315",
-          "args": {},
-          "full_error": "calculate_portfolio_performance() missing 1 required positional argument: 'portfolio_dict'"
-        },
-        {
           "timestamp": "2025-09-23T17:21:58.259360",
           "args": {},
           "full_error": "calculate_portfolio_performance() missing 1 required positional argument: 'portfolio_dict'"
@@ -8561,6 +8526,41 @@
         },
         {
           "timestamp": "2025-09-24T09:09:54.345087",
+          "args": {},
+          "full_error": "calculate_portfolio_performance() missing 1 required positional argument: 'portfolio_dict'"
+        },
+        {
+          "timestamp": "2025-09-30T17:27:40.043441",
+          "args": {},
+          "full_error": "calculate_portfolio_performance() missing 1 required positional argument: 'portfolio_dict'"
+        },
+        {
+          "timestamp": "2025-09-30T17:31:39.765136",
+          "args": {},
+          "full_error": "calculate_portfolio_performance() missing 1 required positional argument: 'portfolio_dict'"
+        },
+        {
+          "timestamp": "2025-09-30T17:35:49.384395",
+          "args": {},
+          "full_error": "calculate_portfolio_performance() missing 1 required positional argument: 'portfolio_dict'"
+        },
+        {
+          "timestamp": "2025-09-30T17:38:16.192317",
+          "args": {},
+          "full_error": "calculate_portfolio_performance() missing 1 required positional argument: 'portfolio_dict'"
+        },
+        {
+          "timestamp": "2025-09-30T17:41:23.791934",
+          "args": {},
+          "full_error": "calculate_portfolio_performance() missing 1 required positional argument: 'portfolio_dict'"
+        },
+        {
+          "timestamp": "2025-09-30T17:41:52.087093",
+          "args": {},
+          "full_error": "calculate_portfolio_performance() missing 1 required positional argument: 'portfolio_dict'"
+        },
+        {
+          "timestamp": "2025-09-30T17:42:58.492818",
           "args": {},
           "full_error": "calculate_portfolio_performance() missing 1 required positional argument: 'portfolio_dict'"
         }
@@ -8713,7 +8713,7 @@
           },
           "explanation": "Successful retry with corrected arguments",
           "timestamp": "2025-09-23T15:48:21.155644",
-          "success_count": 7
+          "success_count": 21
         }
       ],
       "auto_solution": {
@@ -8863,7 +8863,7 @@
         },
         "explanation": "Successful retry with corrected arguments",
         "timestamp": "2025-09-23T15:48:21.155644",
-        "success_count": 7
+        "success_count": 21
       }
     },
     "calculate_portfolio_returns_metrics:missing_portfolio": {
@@ -9752,13 +9752,6 @@
       "error_pattern": "calculate_portfolio_returns_metrics() missing 1 required positional argument: 'portfolio_dict'",
       "occurrences": [
         {
-          "timestamp": "2025-09-22T14:48:27.967342",
-          "args": {
-            "lookback_days": 252
-          },
-          "full_error": "calculate_portfolio_returns_metrics() missing 1 required positional argument: 'portfolio_dict'"
-        },
-        {
           "timestamp": "2025-09-23T17:21:53.001189",
           "args": {},
           "full_error": "calculate_portfolio_returns_metrics() missing 1 required positional argument: 'portfolio_dict'"
@@ -9770,6 +9763,41 @@
         },
         {
           "timestamp": "2025-09-24T09:09:50.741770",
+          "args": {},
+          "full_error": "calculate_portfolio_returns_metrics() missing 1 required positional argument: 'portfolio_dict'"
+        },
+        {
+          "timestamp": "2025-09-30T16:09:20.715762",
+          "args": {},
+          "full_error": "calculate_portfolio_returns_metrics() missing 1 required positional argument: 'portfolio_dict'"
+        },
+        {
+          "timestamp": "2025-09-30T17:27:36.329696",
+          "args": {},
+          "full_error": "calculate_portfolio_returns_metrics() missing 1 required positional argument: 'portfolio_dict'"
+        },
+        {
+          "timestamp": "2025-09-30T17:31:36.147565",
+          "args": {},
+          "full_error": "calculate_portfolio_returns_metrics() missing 1 required positional argument: 'portfolio_dict'"
+        },
+        {
+          "timestamp": "2025-09-30T17:35:43.492428",
+          "args": {},
+          "full_error": "calculate_portfolio_returns_metrics() missing 1 required positional argument: 'portfolio_dict'"
+        },
+        {
+          "timestamp": "2025-09-30T17:38:12.612817",
+          "args": {},
+          "full_error": "calculate_portfolio_returns_metrics() missing 1 required positional argument: 'portfolio_dict'"
+        },
+        {
+          "timestamp": "2025-09-30T17:41:20.127103",
+          "args": {},
+          "full_error": "calculate_portfolio_returns_metrics() missing 1 required positional argument: 'portfolio_dict'"
+        },
+        {
+          "timestamp": "2025-09-30T17:41:48.548197",
           "args": {},
           "full_error": "calculate_portfolio_returns_metrics() missing 1 required positional argument: 'portfolio_dict'"
         }
@@ -9907,7 +9935,7 @@
           },
           "explanation": "Successful retry with corrected arguments",
           "timestamp": "2025-09-22T14:48:52.045150",
-          "success_count": 7
+          "success_count": 21
         }
       ],
       "auto_solution": {
@@ -10042,7 +10070,7 @@
         },
         "explanation": "Successful retry with corrected arguments",
         "timestamp": "2025-09-22T14:48:52.045150",
-        "success_count": 7
+        "success_count": 21
       }
     },
     "calculate_portfolio_correlation_matrix:missing_portfolio_dict": {
@@ -11760,34 +11788,6 @@
       "error_pattern": "exposure_calculator() missing 1 required positional argument: 'portfolio_dict'",
       "occurrences": [
         {
-          "timestamp": "2025-09-26T14:47:06.655257",
-          "args": {
-            "exposure_type": "gross"
-          },
-          "full_error": "exposure_calculator() missing 1 required positional argument: 'portfolio_dict'"
-        },
-        {
-          "timestamp": "2025-09-26T14:47:06.748687",
-          "args": {
-            "exposure_type": "net"
-          },
-          "full_error": "exposure_calculator() missing 1 required positional argument: 'portfolio_dict'"
-        },
-        {
-          "timestamp": "2025-09-30T11:56:45.985526",
-          "args": {
-            "exposure_type": "net"
-          },
-          "full_error": "exposure_calculator() missing 1 required positional argument: 'portfolio_dict'"
-        },
-        {
-          "timestamp": "2025-09-30T11:56:46.156088",
-          "args": {
-            "exposure_type": "gross"
-          },
-          "full_error": "exposure_calculator() missing 1 required positional argument: 'portfolio_dict'"
-        },
-        {
           "timestamp": "2025-09-30T11:56:46.294273",
           "args": {
             "exposure_type": "long"
@@ -11824,6 +11824,34 @@
         },
         {
           "timestamp": "2025-09-30T14:03:43.734398",
+          "args": {
+            "exposure_type": "short"
+          },
+          "full_error": "exposure_calculator() missing 1 required positional argument: 'portfolio_dict'"
+        },
+        {
+          "timestamp": "2025-09-30T15:09:10.664419",
+          "args": {
+            "exposure_type": "net"
+          },
+          "full_error": "exposure_calculator() missing 1 required positional argument: 'portfolio_dict'"
+        },
+        {
+          "timestamp": "2025-09-30T15:09:10.797658",
+          "args": {
+            "exposure_type": "gross"
+          },
+          "full_error": "exposure_calculator() missing 1 required positional argument: 'portfolio_dict'"
+        },
+        {
+          "timestamp": "2025-09-30T15:09:10.925529",
+          "args": {
+            "exposure_type": "long"
+          },
+          "full_error": "exposure_calculator() missing 1 required positional argument: 'portfolio_dict'"
+        },
+        {
+          "timestamp": "2025-09-30T15:09:11.125113",
           "args": {
             "exposure_type": "short"
           },
@@ -11979,7 +12007,7 @@
           },
           "explanation": "Successful retry with corrected arguments",
           "timestamp": "2025-09-23T17:48:03.501755",
-          "success_count": 13
+          "success_count": 15
         },
         {
           "correct_args": {
@@ -12129,7 +12157,7 @@
           },
           "explanation": "Successful retry with corrected arguments",
           "timestamp": "2025-09-24T09:09:50.719491",
-          "success_count": 10
+          "success_count": 12
         },
         {
           "correct_args": {
@@ -12279,7 +12307,7 @@
           },
           "explanation": "Successful retry with corrected arguments",
           "timestamp": "2025-09-24T18:34:12.705227",
-          "success_count": 6
+          "success_count": 8
         },
         {
           "correct_args": {
@@ -12429,7 +12457,7 @@
           },
           "explanation": "Successful retry with corrected arguments",
           "timestamp": "2025-09-24T18:34:12.826615",
-          "success_count": 6
+          "success_count": 8
         }
       ],
       "auto_solution": {
@@ -12580,7 +12608,7 @@
         },
         "explanation": "Successful retry with corrected arguments",
         "timestamp": "2025-09-23T17:48:03.501755",
-        "success_count": 13
+        "success_count": 15
       }
     },
     "calculate_ticker_performances:missing_portfolio_dict": {
@@ -12594,6 +12622,16 @@
         },
         {
           "timestamp": "2025-09-24T18:33:15.766144",
+          "args": {},
+          "full_error": "calculate_ticker_performances() missing 1 required positional argument: 'portfolio_dict'"
+        },
+        {
+          "timestamp": "2025-09-30T17:27:47.330486",
+          "args": {},
+          "full_error": "calculate_ticker_performances() missing 1 required positional argument: 'portfolio_dict'"
+        },
+        {
+          "timestamp": "2025-09-30T17:34:38.726062",
           "args": {},
           "full_error": "calculate_ticker_performances() missing 1 required positional argument: 'portfolio_dict'"
         }
@@ -12746,7 +12784,7 @@
           },
           "explanation": "Successful retry with corrected arguments",
           "timestamp": "2025-09-23T17:48:28.420186",
-          "success_count": 3
+          "success_count": 7
         }
       ],
       "auto_solution": {
@@ -12896,7 +12934,7 @@
         },
         "explanation": "Successful retry with corrected arguments",
         "timestamp": "2025-09-23T17:48:28.420186",
-        "success_count": 3
+        "success_count": 7
       }
     },
     "portfolio_industry_concentration:missing_portfolio_dict": {
@@ -14388,5 +14426,5 @@
       "auto_solution": null
     }
   },
-  "last_updated": "2025-09-30T14:06:36.899334"
+  "last_updated": "2025-09-30T17:43:03.381266"
 }

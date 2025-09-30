@@ -1,4 +1,6 @@
 import yaml
+from typing import Optional
+from datetime import datetime
 from app.core.calculations.portfolio.utils import prepare_portfolio_data
 from app.core.calculations.returns.calculator import ReturnsCalculator
 from app.core.calculations.risk.calculator import RiskCalculator
@@ -9,7 +11,7 @@ from app.utils.gpt_parser import canonical_portfolio
 from app.db.core.db_config import MarketSession
 from app.db.core.market_data_models import Ticker
 
-def calculate_group_performances(portfolio_dict: PortfolioInput | dict, lookback_days: int = 756, use_total_returns: bool = True, group_by: str = None) -> str:
+def calculate_group_performances(portfolio_dict: PortfolioInput | dict, lookback_days: int = 756, use_total_returns: bool = True, group_by: str = None, _simulation_date: Optional[datetime] = None) -> str:
     """Generic grouping performance calculator.
 
     Returns a DataFrame with columns: [group_label, ann_total_return, ann_volatility]
@@ -27,6 +29,7 @@ def calculate_group_performances(portfolio_dict: PortfolioInput | dict, lookback
             lookback_days=lookback_days,
             include_dividends=use_total_returns,
             include_benchmark=None,
+            _simulation_date=_simulation_date
         )
 
         tickers = list(weights.keys())

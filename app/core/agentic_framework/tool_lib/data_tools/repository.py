@@ -1,4 +1,5 @@
 import yaml
+from typing import Optional
 from app.repositories.ratings_data import get_stock_grades_individual, get_stock_grades_summary, get_ratings, get_analyst_recommendations, get_price_target_summary
 from app.repositories.etf_data import get_etf_info, get_etf_holdings
 from app.repositories.transcripts_data import get_earnings_transcripts, get_latest_transcript
@@ -6,9 +7,16 @@ from app.repositories.price_data import get_dividends_series
 from datetime import datetime, timedelta
 from app.repositories.news_data import get_press_releases, get_stock_news, get_price_target_news
 from app.utils.decorators.database import with_session
+from app.utils.simulation_utils import get_date_range, filter_series_by_date
 
-def fetch_repository_data(ticker: str, data_type: str, limit: int | None = None) -> str:
+def fetch_repository_data(ticker: str, data_type: str, limit: int | None = None, _simulation_date: Optional[datetime] = None) -> str:
     """Route to repository functions based on data_type.
+
+    Args:
+        ticker: Stock ticker symbol
+        data_type: Type of data to fetch
+        limit: Optional limit on number of items
+        _simulation_date: INTERNAL USE ONLY - For simulation mode, not exposed to agents
 
     Supported data_type values:
       - press_releases, stock_news, price_target_news
@@ -20,9 +28,8 @@ def fetch_repository_data(ticker: str, data_type: str, limit: int | None = None)
     """
     try:
         t = (data_type or "").strip().lower()
-        now = datetime.now()
-        start_news = now - timedelta(days=180)
-        start_divs = now - timedelta(days=365)
+        start_news, now = get_date_range(_simulation_date, lookback_days=180)
+        start_divs, _ = get_date_range(_simulation_date, lookback_days=365)
 
         if t in ["press_releases", "press-release", "press"]:
             data = get_press_releases(ticker, start=start_news, end=now, limit=50, ascending=False)
@@ -72,6 +79,7 @@ def fetch_repository_data(ticker: str, data_type: str, limit: int | None = None)
 
         if t == "dividends_series":
             s = get_dividends_series(ticker, start_divs, now)
+            s = filter_series_by_date(s, _simulation_date)
             items = [{"date": str(idx.date()), "amount": float(val)} for idx, val in s.items()]
             data = {"ticker": ticker.upper(), "count": len(items), "items": items}
             return yaml.dump({"success": True, "data": data}, default_flow_style=False)

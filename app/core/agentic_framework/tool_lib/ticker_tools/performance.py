@@ -16,14 +16,22 @@ from app.core.calculations.core.config import (
     DEFAULT_CONFIDENCE,
 )
 from app.utils.decorators.price_data import with_bulk_price_data
+from app.utils.simulation_utils import get_end_date, filter_series_by_date
 
 @with_bulk_price_data(lookback_days=252 * 3, include_dividends=True)
 def get_ticker_performance_and_risk(
     ticker: str,
     *,
     price_data: dict[str, pd.Series] | None = None,
+    _simulation_date: Optional[datetime] = None,
 ) -> str:
     """Performance and risk metrics over a fixed 3-year window for a single ticker.
+
+    Args:
+        ticker: Stock ticker symbol
+        price_data: Optional pre-fetched price data (from decorator)
+        _simulation_date: INTERNAL USE ONLY - For simulation mode, not exposed to agents.
+                         If provided, uses this as cutoff date instead of current time.
 
     - Accepts a single ticker symbol (decorator fetches close series into price_data)
     - Always includes dividends in calculations
@@ -33,7 +41,7 @@ def get_ticker_performance_and_risk(
     market_ticker = "SPY"
     include_dividends = True
     ds = DataService()
-    end_dt = datetime.now(timezone.utc)
+    end_dt = get_end_date(_simulation_date)
     start_dt = end_dt - timedelta(days=252 * 3)
 
     def _adjust_for_splits(prices: pd.Series) -> pd.Series:
@@ -74,6 +82,7 @@ def get_ticker_performance_and_risk(
     try:
         mkt_df = ds.get_price_data(market_ticker, start_dt, end_dt).frame
         mkt_close = mkt_df["close"].astype(float).dropna()
+        mkt_close = filter_series_by_date(mkt_close, _simulation_date)
         rm = ReturnsCalculator.daily_price_returns(mkt_close)
     except Exception:
         rm = None
@@ -101,6 +110,10 @@ def get_ticker_performance_and_risk(
             # Fallback fetch if decorator missed it
             px_df = ds.get_price_data(tkr, start_dt, end_dt).frame
             close = px_df["close"].astype(float).dropna()
+
+        # Filter by simulation date if provided
+        close = filter_series_by_date(close, _simulation_date)
+
         # Heuristic split-adjust for price-only return comparability (TradingView often uses adjusted)
         if close is not None and not close.empty:
             close = _adjust_for_splits(close)
@@ -110,6 +123,7 @@ def get_ticker_performance_and_risk(
         if include_dividends:
             try:
                 divs = ds.get_dividends(tkr, start_dt, end_dt).series
+                divs = filter_series_by_date(divs, _simulation_date)
                 divs = divs.reindex(close.index).fillna(0.0)
             except Exception:
                 divs = None

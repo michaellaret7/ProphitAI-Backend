@@ -1,12 +1,19 @@
 import yaml
+from typing import Optional
+from datetime import datetime
 from app.core.calculations.portfolio.utils import get_portfolio_returns
 from app.core.calculations.returns.calculator import ReturnsCalculator
 import numpy as np
 from app.models.portfolio_models import PortfolioInput
 from app.utils.gpt_parser import canonical_portfolio
 
-def calculate_portfolio_returns_metrics(portfolio_dict: PortfolioInput | dict, lookback_days=252) -> str:
+def calculate_portfolio_returns_metrics(portfolio_dict: PortfolioInput | dict, lookback_days=252, _simulation_date: Optional[datetime] = None) -> str:
     """Calculate and display simple portfolio metrics.
+
+    Args:
+        portfolio_dict: Portfolio holdings
+        lookback_days: Historical lookback period
+        _simulation_date: INTERNAL USE ONLY - For simulation mode, not exposed to agents
 
     Returns:
         dict: Contains annualized returns, volatility, and weekly cumulative returns
@@ -19,7 +26,8 @@ def calculate_portfolio_returns_metrics(portfolio_dict: PortfolioInput | dict, l
             portfolio=portfolio_dict,
             lookback_days=lookback_days,
             use_total_returns=False,
-            dropna=True
+            dropna=True,
+            _simulation_date=_simulation_date
         )
 
         # Get total returns
@@ -27,7 +35,8 @@ def calculate_portfolio_returns_metrics(portfolio_dict: PortfolioInput | dict, l
             portfolio=portfolio_dict,
             lookback_days=lookback_days,
             use_total_returns=True,
-            dropna=True
+            dropna=True,
+            _simulation_date=_simulation_date
         )
 
         # Calculate metrics

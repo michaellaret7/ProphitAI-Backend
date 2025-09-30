@@ -1,4 +1,5 @@
 import yaml
+from typing import Optional
 from app.core.calculations.factors.growth import GrowthFactors
 from app.core.calculations.factors.value import ValueFactors
 from app.core.calculations.factors.quality import QualityFactors
@@ -6,9 +7,16 @@ from app.core.calculations.factors.momentum import MomentumFactors
 from app.core.calculations.factors.volatility import VolatilityFactors
 from app.core.calculations.core import DataService
 from datetime import datetime, timedelta
+from app.utils.simulation_utils import get_end_date, filter_series_by_date
 
-def calculate_ticker_factors(ticker: str, factor: str) -> str:
-    """Calculate all factor metrics for a given ticker and factor type."""
+def calculate_ticker_factors(ticker: str, factor: str, _simulation_date: Optional[datetime] = None) -> str:
+    """Calculate all factor metrics for a given ticker and factor type.
+
+    Args:
+        ticker: Stock ticker symbol
+        factor: Factor type to calculate
+        _simulation_date: INTERNAL USE ONLY - For simulation mode, not exposed to agents
+    """
     try:
         # Growth, Value, and Quality factors take ticker string directly
         if factor in ["growth", "value", "quality"]:
@@ -23,7 +31,7 @@ def calculate_ticker_factors(ticker: str, factor: str) -> str:
         # Momentum and Volatility factors need price series
         elif factor in ["momentum", "volatility"]:
             ds = DataService()
-            end_date = datetime.now()
+            end_date = get_end_date(_simulation_date)
             start_date = end_date - timedelta(days=252)  # ~1 year of data
 
             # Get price data for ticker (and SPY for market-relative metrics)
@@ -32,18 +40,22 @@ def calculate_ticker_factors(ticker: str, factor: str) -> str:
                 return yaml.dump({"success": False, "error": f"No price data available for {ticker}"}, default_flow_style=False)
 
             price_series = price_data.frame['close']
+            price_series = filter_series_by_date(price_series, _simulation_date)
 
             # Get SPY data for both momentum and volatility
             spy_data = ds.get_price_data("SPY", start_date, end_date)
             spy_prices = spy_data.frame['close'] if spy_data and not spy_data.frame.empty else None
+            spy_prices = filter_series_by_date(spy_prices, _simulation_date)
 
             if factor == "momentum":
                 # Get additional data for momentum calculations
                 volume_series = price_data.frame.get('volume', None)
+                volume_series = filter_series_by_date(volume_series, _simulation_date)
 
                 # Get dividends if available
                 try:
                     divs = ds.get_dividends(ticker, start_date, end_date).series
+                    divs = filter_series_by_date(divs, _simulation_date)
                     divs = divs.reindex(price_series.index).fillna(0.0)
                 except Exception:
                     divs = None

@@ -1,20 +1,31 @@
+# ProphitAI File Structure
+
+```
+├── .claude/
+│   ├── commands/
+│   │   └── explain.md
+│   └── settings.local.json
 ├── app/
 │   ├── api/
 │   │   ├── controller/
-│   │   │   ├── prophit_alts_controller.py
+│   │   │   ├── alts_controller.py
+│   │   │   ├── portfolio_controller.py
 │   │   │   └── user_controller.py
-│   │   ├── prophit_alts.py
-│   │   ├── response_envelope.py
 │   │   ├── routes/
 │   │   │   ├── agent_runs_router.py
-│   │   │   ├── prophit_alts_router.py
+│   │   │   ├── alts_router.py
+│   │   │   ├── portfolio_router.py
 │   │   │   ├── user_routes.py
 │   │   │   └── websocket_router.py
 │   │   ├── testing/
-│   │   │   ├── prophit_alts_testing.py
+│   │   │   ├── alts_testing.py
+│   │   │   ├── portfolio_testing.py
 │   │   │   ├── static/
 │   │   │   │   └── test.html
 │   │   │   └── user_testing.py
+│   │   ├── portfolio.py
+│   │   ├── prophit_alts.py
+│   │   ├── response_envelope.py
 │   │   ├── user.py
 │   │   └── websocket.py
 │   ├── core/
@@ -23,8 +34,6 @@
 │   │   │   │   ├── agent_messages.json
 │   │   │   │   └── task_state.json
 │   │   │   ├── base_agent/
-│   │   │   │   ├── __init__.py
-│   │   │   │   ├── agent.py
 │   │   │   │   ├── core/
 │   │   │   │   │   ├── __init__.py
 │   │   │   │   │   ├── arg_parser.py
@@ -34,35 +43,40 @@
 │   │   │   │   │   ├── __init__.py
 │   │   │   │   │   └── manager.py
 │   │   │   │   ├── memory/
+│   │   │   │   │   ├── memory_store/
+│   │   │   │   │   │   ├── domain_memory/
+│   │   │   │   │   │   │   ├── beverages_memory.json
+│   │   │   │   │   │   │   ├── cio_memory.json
+│   │   │   │   │   │   │   ├── consumer_staples_distribution_and_retail_memory.json
+│   │   │   │   │   │   │   ├── cro_memory.json
+│   │   │   │   │   │   │   ├── food_products_memory.json
+│   │   │   │   │   │   │   ├── household_products_memory.json
+│   │   │   │   │   │   │   ├── optimizer_memory.json
+│   │   │   │   │   │   │   ├── personal_care_products_memory.json
+│   │   │   │   │   │   │   └── tobacco_memory.json
+│   │   │   │   │   │   ├── episodic_memory.json
+│   │   │   │   │   │   └── tool_error_memory.json
 │   │   │   │   │   ├── __init__.py
 │   │   │   │   │   ├── domain_memory.py
 │   │   │   │   │   ├── episodic_memory.py
-│   │   │   │   │   ├── error_memory.py
-│   │   │   │   │   └── memory_store/
-│   │   │   │   │       ├── domain_memory/
-│   │   │   │   │       │   ├── beverages_memory.json
-│   │   │   │   │       │   ├── cio_memory.json
-│   │   │   │   │       │   ├── consumer_staples_distribution_and_retail_memory.json
-│   │   │   │   │       │   ├── cro_memory.json
-│   │   │   │   │       │   ├── food_products_memory.json
-│   │   │   │   │       │   ├── household_products_memory.json
-│   │   │   │   │       │   ├── optimizer_memory.json
-│   │   │   │   │       │   ├── personal_care_products_memory.json
-│   │   │   │   │       │   └── tobacco_memory.json
-│   │   │   │   │       ├── episodic_memory.json
-│   │   │   │   │       └── tool_error_memory.json
+│   │   │   │   │   └── error_memory.py
 │   │   │   │   ├── tasks/
 │   │   │   │   │   ├── __init__.py
 │   │   │   │   │   ├── execution_engine.py
 │   │   │   │   │   ├── manager.py
 │   │   │   │   │   ├── models.py
 │   │   │   │   │   └── validator.py
+│   │   │   │   ├── __init__.py
+│   │   │   │   ├── agent.py
 │   │   │   │   └── tool_registry.py
+│   │   │   ├── evaluation/
+│   │   │   │   └── plan.md
 │   │   │   └── tool_lib/
 │   │   │       ├── agent_specific_tools/
 │   │   │       │   ├── cio.py
 │   │   │       │   ├── cro.py
-│   │   │       │   └── industry.py
+│   │   │       │   ├── industry.py
+│   │   │       │   └── optimizer.py
 │   │   │       ├── base_tools/
 │   │   │       │   ├── __init__.py
 │   │   │       │   ├── calculator.py
@@ -76,7 +90,7 @@
 │   │   │       │   └── ticker_fundamentals.py
 │   │   │       ├── portfolio_tools/
 │   │   │       │   ├── beta.py
-│   │   │       │   ├── builder.py
+│   │   │       │   ├── build_allocations.py
 │   │   │       │   ├── concentration.py
 │   │   │       │   ├── corr_matrix.py
 │   │   │       │   ├── factor_tilts.py
@@ -88,6 +102,7 @@
 │   │   │       │   ├── asset_risk_contrib.py
 │   │   │       │   ├── cov_matrix.py
 │   │   │       │   ├── drawdown_profile.py
+│   │   │       │   ├── pairwise_corr_analysis.py
 │   │   │       │   ├── stress_test.py
 │   │   │       │   └── vol_es.py
 │   │   │       └── ticker_tools/
@@ -95,7 +110,6 @@
 │   │   │           ├── performance.py
 │   │   │           └── weekly_returns.py
 │   │   └── calculations/
-│   │       ├── __init__.py
 │   │       ├── core/
 │   │       │   ├── __init__.py
 │   │       │   ├── config.py
@@ -117,11 +131,12 @@
 │   │       │   ├── __init__.py
 │   │       │   └── calculator.py
 │   │       ├── portfolio/
-│   │       │   ├── __init__.py
-│   │       │   ├── build/
+│   │       │   ├── allocations/
 │   │       │   │   ├── __init__.py
-│   │       │   │   ├── builder.py
-│   │       │   │   └── optimizer.py
+│   │       │   │   ├── allocator.py
+│   │       │   │   ├── optimizer.py
+│   │       │   │   └── rebalancer.py
+│   │       │   ├── __init__.py
 │   │       │   ├── concentration.py
 │   │       │   ├── correlation.py
 │   │       │   ├── factor_tilt.py
@@ -131,7 +146,8 @@
 │   │       │   └── calculator.py
 │   │       ├── risk/
 │   │       │   ├── __init__.py
-│   │       │   └── calculator.py
+│   │       │   ├── calculator.py
+│   │       │   └── liquidity.py
 │   │       ├── sectors/
 │   │       │   ├── base.py
 │   │       │   ├── industry.py
@@ -143,9 +159,10 @@
 │   │       │   ├── performance_analysis.py
 │   │       │   ├── runner.py
 │   │       │   └── scenarios.py
-│   │       └── technical/
-│   │           ├── __init__.py
-│   │           └── indicators.py
+│   │       ├── technical/
+│   │       │   ├── __init__.py
+│   │       │   └── indicators.py
+│   │       └── __init__.py
 │   ├── db/
 │   │   ├── core/
 │   │   │   ├── add_etf.py
@@ -172,11 +189,16 @@
 │   │   │       │   ├── agent.py
 │   │   │       │   ├── prompts.py
 │   │   │       │   └── tool_registry.py
-│   │   │       └── user_data.py
+│   │   │       └── main.py
 │   │   ├── prophit_alts/
 │   │   │   ├── consumer_staples_fund/
 │   │   │   │   ├── build_portfolio/
 │   │   │   │   │   ├── cio/
+│   │   │   │   │   │   ├── simulation/
+│   │   │   │   │   │   │   ├── __init__.py
+│   │   │   │   │   │   │   ├── config.py
+│   │   │   │   │   │   │   ├── simulation_agent.py
+│   │   │   │   │   │   │   └── simulation_tool_registry.py
 │   │   │   │   │   │   ├── agent.py
 │   │   │   │   │   │   ├── prompts.py
 │   │   │   │   │   │   └── tool_registry.py
@@ -217,47 +239,41 @@
 │   │   ├── prophit_alts_service.py
 │   │   └── websocket_manager_service.py
 │   └── utils/
-│       ├── __init__.py
-│       ├── choose_model_and_client.py
 │       ├── decorators/
 │       │   ├── database.py
 │       │   ├── price_data.py
 │       │   └── timer.py
+│       ├── __init__.py
+│       ├── choose_model_and_client.py
 │       ├── gpt_parser.py
 │       ├── logging_config.py
 │       ├── serialize_output.py
+│       ├── simulation_utils.py
 │       ├── ticker_utils.py
 │       ├── token_count.py
 │       └── validation_utils.py
+├── notebooks/
+│   └── portfolio_analysis.ipynb
 ├── planning/
 │   ├── error_fixer.md
 │   ├── structure_migration.md
 │   └── todo.md
 ├── tests/
-│   ├── alpaca_trade.py
-│   ├── calculations_vtwo_smoke_test.py
-│   ├── cluster_analysis.py
 │   ├── hedge_fund_stuff/
 │   │   ├── Hedge_fund_portfolio_construction.py
 │   │   └── Hedge_fund_risk_management.py
-│   ├── portfolio_allocation.py
+│   ├── vector_storage/
+│   │   ├── INDEX.yml
+│   │   ├── build.py
+│   │   ├── corpus.txt
+│   │   └── query.py
+│   ├── alpaca_trade.py
+│   ├── cluster_analysis.py
 │   ├── retail-fund-code.py
-│   ├── streaming_data.py
-│   └── vector_storage/
-│       ├── build.py
-│       ├── corpus.faiss
-│       ├── corpus.txt
-│       ├── docs.jsonl
-│       ├── embeddings.npy
-│       ├── INDEX.yml
-│       └── query.py
+│   └── streaming_data.py
+├── CLAUDE.md
+├── README.md
 ├── file_structure.md
 ├── main.py
-├── output.json
-├── README.md
-├── requirements.txt
-├── roadmap.md
-├── t.py
-└── tester.py
-
-
+└── requirements.txt
+```

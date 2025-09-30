@@ -1,4 +1,6 @@
 import yaml
+from typing import Optional
+from datetime import datetime
 from app.core.calculations.portfolio.utils import prepare_portfolio_data, get_benchmark_returns
 from app.core.calculations.returns.calculator import ReturnsCalculator
 from app.core.calculations.risk.calculator import RiskCalculator
@@ -8,7 +10,7 @@ import numpy as np
 from app.models.portfolio_models import PortfolioInput
 from app.utils.gpt_parser import canonical_portfolio
 
-def calculate_ticker_performances(portfolio_dict: PortfolioInput | dict, lookback_days: int = 504, use_total_returns: bool = True, benchmark: str = "SPY") -> str:
+def calculate_ticker_performances(portfolio_dict: PortfolioInput | dict, lookback_days: int = 504, use_total_returns: bool = True, benchmark: str = "SPY", _simulation_date: Optional[datetime] = None) -> str:
     """Return a DataFrame of performance metrics for each ticker in the portfolio.
 
     Reuses shared utilities and calculators to fetch data and compute metrics.
@@ -31,6 +33,7 @@ def calculate_ticker_performances(portfolio_dict: PortfolioInput | dict, lookbac
             lookback_days=lookback_days,
             include_dividends=use_total_returns,
             include_benchmark=None,
+            _simulation_date=_simulation_date
         )
 
         # Build per-ticker daily returns
@@ -50,6 +53,7 @@ def calculate_ticker_performances(portfolio_dict: PortfolioInput | dict, lookbac
             benchmark=benchmark,
             lookback_days=lookback_days,
             use_total_returns=use_total_returns,
+            _simulation_date=_simulation_date
         )
 
         rows: list[dict] = []
