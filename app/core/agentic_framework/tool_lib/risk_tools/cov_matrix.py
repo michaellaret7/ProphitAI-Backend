@@ -10,63 +10,65 @@ from app.core.calculations.core.helpers import build_returns_df_from_price_map
 def calculate_covariance_matrix(portfolio_dict: PortfolioInput | dict = None) -> str:
     """
     Calculate covariance matrix for portfolio tickers using historical returns data.
-    
+
     Parameters:
     - portfolio_dict: Portfolio configuration mapping ticker -> {allocation, position}
-    
+
     Returns:
     - Dictionary with tickers list and covariance matrix as nested dictionary
     """
-    if not portfolio_dict:
-        return yaml.dump({"tickers": [], "covariance_matrix": {}}, default_flow_style=False)
-    
     try:
-        portfolio_dict = canonical_portfolio(portfolio_dict)
-    except Exception as e:
-        return yaml.dump({"error": str(e)}, default_flow_style=False)
+        if not portfolio_dict:
+            return yaml.dump({"success": False, "error": "Portfolio dictionary is required"}, default_flow_style=False)
 
-    # Get tickers and prepare portfolio data
-    tickers = list(portfolio_dict.keys())
-    
-    try:
+        try:
+            portfolio_dict = canonical_portfolio(portfolio_dict)
+        except Exception as e:
+            return yaml.dump({"success": False, "error": str(e)}, default_flow_style=False)
+
+        # Get tickers and prepare portfolio data
+        tickers = list(portfolio_dict.keys())
+
         # Get portfolio data using utility
         weights_dict, price_data, _ = prepare_portfolio_data(
             portfolio=portfolio_dict,
             lookback_days=252,
             include_dividends=False
         )
-        
+
         if not price_data:
-            return yaml.dump({"error": "No price data available for portfolio tickers"}, default_flow_style=False)
-        
+            return yaml.dump({"success": False, "error": "No price data available for portfolio tickers"}, default_flow_style=False)
+
         # Calculate returns and drop rows with any NaNs for stable covariance
         returns_df = build_returns_df_from_price_map(price_data, drop_rows='any', include_dividends=False)
-        
+
         if returns_df.empty:
-            return yaml.dump({"error": "No valid returns data available"}, default_flow_style=False)
-        
+            return yaml.dump({"success": False, "error": "No valid returns data available"}, default_flow_style=False)
+
         # Calculate covariance matrix using RiskCalculator
         cov_matrix = RiskCalculator.covariance_matrix(returns_df, annualize=False)
-        
+
         if cov_matrix.empty:
-            return yaml.dump({"error": "Failed to calculate covariance matrix"}, default_flow_style=False)
-        
+            return yaml.dump({"success": False, "error": "Failed to calculate covariance matrix"}, default_flow_style=False)
+
         # Convert to dictionary format
         tickers_list = list(cov_matrix.columns)
         cov_dict = {}
-        
+
         for ticker in tickers_list:
             cov_dict[ticker] = {}
             for other_ticker in tickers_list:
                 cov_dict[ticker][other_ticker] = round(float(cov_matrix.loc[ticker, other_ticker]), 6)
-        
-        return yaml.dump({
+
+        result = {
             "tickers": tickers_list,
             "covariance_matrix": cov_dict
-        }, default_flow_style=False)
-        
+        }
+
+        return yaml.dump({"success": True, "data": result}, default_flow_style=False)
+
     except Exception as e:
-        return yaml.dump({"error": f"Failed to calculate covariance matrix: {str(e)}"}, default_flow_style=False)
+        return yaml.dump({"success": False, "error": f"Failed to calculate covariance matrix: {str(e)}"}, default_flow_style=False)
 
 
 # Tool Schema Constants

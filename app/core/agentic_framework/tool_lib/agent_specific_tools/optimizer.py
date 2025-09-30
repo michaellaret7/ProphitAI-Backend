@@ -2,28 +2,31 @@ import yaml
 from app.db.core.user_data_models import Portfolio, User
 from app.utils.decorators.database import with_session
 
-@with_session('user')   
+@with_session('user')
 def get_user_portfolio(session=None):
-    email = "michaellaret7@gmail.com"
-    user = session.query(User).filter(User.email == email).first().id
-    portfolio = session.query(Portfolio).filter(Portfolio.user_id == user, Portfolio.name == "Auto/Tech and ETF focused Portfolio").all()
+    try:
+        email = "michaellaret7@gmail.com"
+        user = session.query(User).filter(User.email == email).first().id
+        portfolio = session.query(Portfolio).filter(Portfolio.user_id == user, Portfolio.name == "Auto/Tech and ETF focused Portfolio").all()
 
-    positions = {}
-    for position in portfolio:
-        positions[position.ticker] = {
-            "ticker": position.ticker,
-            "sector": position.sector,
-            "industry": position.industry,
-            "sub_industry": position.sub_industry,
-            "allocation": position.allocation/100,
-            "portfolio": position.name,
-            "supporting_metrics": position.supporting_metrics,
-            "reason_for_rec": position.reason_for_rec
-        }
+        positions = {}
+        for position in portfolio:
+            positions[position.ticker] = {
+                "ticker": position.ticker,
+                "sector": position.sector,
+                "industry": position.industry,
+                "sub_industry": position.sub_industry,
+                "allocation": position.allocation/100,
+                "portfolio": position.name,
+                "supporting_metrics": position.supporting_metrics,
+                "reason_for_rec": position.reason_for_rec
+            }
 
-    session.close()
+        session.close()
 
-    return yaml.dump(positions, default_flow_style=False)
+        return yaml.dump({"success": True, "data": positions}, default_flow_style=False)
+    except Exception as e:
+        return yaml.dump({"success": False, "error": str(e)}, default_flow_style=False)
 
 
 # Tool Schema Constants

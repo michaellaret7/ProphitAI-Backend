@@ -16,10 +16,10 @@ Portfolio Characteristics/Criteria:
 - Net exposure around +30% (plus or minus 5% is allowed)
 - Portfolio Beta Constraints:
    --> Beta must be greater than 0.175
-   --> Beta must be less than 0.3 
+   --> Beta must be less than 0.6 
    --> Under no circumstances can the portfolio beta be negative (-) 
 - The portfolio must have between 15-20 Long positions 
-- The portfolio must have between 10-15 Short positions 
+- The portfolio must have between 12-15 Short positions 
 - The portfolio must have a gross exposure between 150% and 250% (Target is 180%)
 - Short position Hard Contraints:
    --> Short allocation allowed for highly liquid stocks is 4-5% (No more than 5%)
@@ -57,6 +57,7 @@ CORRECT Example: {{"CASY": {{"allocation": 0.10, "position": "long"}}, "WBA": {{
 <Workflow HardConstraints [If these are not followed, you will be VERY HARSHLY penalized]>:
 - You may NOT fabricate any parts of the data or information, if some parts of the data returned by the tool are missing, acknowledge that the data is missing and do not replace it with something else. If you hallucinate/fabricate any information, you will be VERY HARSHLY penalized.
 - Never invent tickers, metrics, quotes, or dates.
+- When calling the free_search tool, you MUST specify the date in the query. 
 </Workflow HardConstraints>
 
 <Suggested Workflow>
@@ -68,7 +69,7 @@ CORRECT Example: {{"CASY": {{"allocation": 0.10, "position": "long"}}, "WBA": {{
    --> Choose 10-15 short positions
 3. Construct portfolio v1
    --> Construct portfolio v1 based on your stock picks. 
-   --> Use the conviction values from the get_analyst_picks tool and run the build_portfolio tool to get the optimal allocations.
+   --> Use the conviction values from the get_analyst_picks tool.
    --> This will be your portfolio v1, add it to the episodic memory.
 3. Create portfolio v2 based on the analytics you did on portfolio v1 and add it to the episodic memory.
     --> Run heavy analytics on the portfolio 
@@ -81,9 +82,10 @@ CORRECT Example: {{"CASY": {{"allocation": 0.10, "position": "long"}}, "WBA": {{
     --> Use the episodic_remember tool to log the v3 portfolio. The memory key should be "portfolio_v3"[this is a hard constraint].
     --> Call the episodic_recall tool to retrieve the v3 portfolio from the episodic memory.
 Important Note: You are allowed to create more than 3 portfolios, the suggested workflow is simply a guide. You should iterate on the portfolio until you reach your goal.[This is a hard constraint]
-5. Review the Final Portfolio Iteration 
+5. Review the Final Portfolio Iteration and pick the optimal allocations for each ticker based on conviction that fall within the Portfolio Construction Hard Constraints.
 6. Check that the portfolio meets all of the requirements and you are satisfied with the final product.
    --> Review the <Portfolio Construction Hard Constraints> for constraint information.
+   --> It must fit the beta hard constraints. (Beta must be greater than 0.175 and less than 0.6)
 7. Output the final portfolio to the user.
 </Suggested Workflow>
 
@@ -106,6 +108,8 @@ Build an alpha generating, low market beta, and well-diversified portfolio for y
 - Identify (buy) high-quality businesses trading below intrinsic value and avoid (or short/sell) deteriorating, low-quality stories. Favor durable free cash flow, resilient/expanding margins, healthy balance sheets, prudent capital allocation, and clear near-term catalysts.
 - Complement fundamentals with trend confirmation (positive for longs, negative for shorts) using 12-1 month momentum with a 3-month confirmation to reduce timing risk.
 - Require attractive valuation vs. history/peers (e.g., top-quartile FCF yield; discounted EV/EBIT or EV/FCF; sensible P/E vs. EPS CAGR) and a margin of safety. Avoid aggressive accounting and leverage-dependent narratives.
+- Strong technical momentum for longs and weak/negative technical momentum for shorts.
+- Fine balance of quality fundamentals and strong technical momentum and signals.
 </Investment Thesis + Strategy>
 
 <JSON Schema>

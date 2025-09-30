@@ -18,51 +18,67 @@ def fetch_repository_data(ticker: str, data_type: str, limit: int | None = None)
       - earnings_transcripts, latest_transcript
       - dividends_series
     """
-    t = (data_type or "").strip().lower()
-    now = datetime.now()
-    start_news = now - timedelta(days=180)
-    start_divs = now - timedelta(days=365)
+    try:
+        t = (data_type or "").strip().lower()
+        now = datetime.now()
+        start_news = now - timedelta(days=180)
+        start_divs = now - timedelta(days=365)
 
-    if t in ["press_releases", "press-release", "press"]:
-        return yaml.dump(get_press_releases(ticker, start=start_news, end=now, limit=50, ascending=False), default_flow_style=False)
-    if t in ["stock_news", "news"]:
-        return yaml.dump(get_stock_news(ticker, start=start_news, end=now, limit=50, ascending=False), default_flow_style=False)
-    if t in ["price_target_news", "pt_news"]:
-        return yaml.dump(get_price_target_news(ticker, start=start_news, end=now, limit=50, ascending=False), default_flow_style=False)
+        if t in ["press_releases", "press-release", "press"]:
+            data = get_press_releases(ticker, start=start_news, end=now, limit=50, ascending=False)
+            return yaml.dump({"success": True, "data": data}, default_flow_style=False)
+        if t in ["stock_news", "news"]:
+            data = get_stock_news(ticker, start=start_news, end=now, limit=50, ascending=False)
+            return yaml.dump({"success": True, "data": data}, default_flow_style=False)
+        if t in ["price_target_news", "pt_news"]:
+            data = get_price_target_news(ticker, start=start_news, end=now, limit=50, ascending=False)
+            return yaml.dump({"success": True, "data": data}, default_flow_style=False)
 
-    if t in ["grades_individual", "grades_detail"]:
-        return yaml.dump(get_stock_grades_individual(ticker, start=start_news, end=now), default_flow_style=False)
-    if t in ["grades_summary", "grades"]:
-        return yaml.dump(get_stock_grades_summary(ticker, start=start_news, end=now), default_flow_style=False)
-    if t == "ratings":
-        return yaml.dump(get_ratings(ticker, start=start_news, end=now), default_flow_style=False)
-    if t in ["analyst_recommendations", "analyst_recomendations", "recommendations"]:
-        return yaml.dump(get_analyst_recommendations(ticker, start=start_news, end=now), default_flow_style=False)
-    if t == "price_target_summary":
-        return yaml.dump(get_price_target_summary(ticker), default_flow_style=False)
+        if t in ["grades_individual", "grades_detail"]:
+            data = get_stock_grades_individual(ticker, start=start_news, end=now)
+            return yaml.dump({"success": True, "data": data}, default_flow_style=False)
+        if t in ["grades_summary", "grades"]:
+            data = get_stock_grades_summary(ticker, start=start_news, end=now)
+            return yaml.dump({"success": True, "data": data}, default_flow_style=False)
+        if t == "ratings":
+            data = get_ratings(ticker, start=start_news, end=now)
+            return yaml.dump({"success": True, "data": data}, default_flow_style=False)
+        if t in ["analyst_recommendations", "analyst_recomendations", "recommendations"]:
+            data = get_analyst_recommendations(ticker, start=start_news, end=now)
+            return yaml.dump({"success": True, "data": data}, default_flow_style=False)
+        if t == "price_target_summary":
+            data = get_price_target_summary(ticker)
+            return yaml.dump({"success": True, "data": data}, default_flow_style=False)
 
-    if t == "etf_info":
-        return yaml.dump(get_etf_info(ticker), default_flow_style=False)
-    if t == "etf_holdings":
-        return yaml.dump(get_etf_holdings(ticker), default_flow_style=False)
+        if t == "etf_info":
+            data = get_etf_info(ticker)
+            return yaml.dump({"success": True, "data": data}, default_flow_style=False)
+        if t == "etf_holdings":
+            data = get_etf_holdings(ticker)
+            return yaml.dump({"success": True, "data": data}, default_flow_style=False)
 
-    if t == "earnings_transcripts":
-        # Default last 2 years; honor optional limit for number of transcripts
-        return yaml.dump(get_earnings_transcripts(
-            ticker,
-            start_year=now.year - 2,
-            end_year=now.year,
-            limit=limit,
-        ), default_flow_style=False)
-    if t == "latest_transcript":
-        return yaml.dump(get_latest_transcript(ticker), default_flow_style=False)
+        if t == "earnings_transcripts":
+            # Default last 2 years; honor optional limit for number of transcripts
+            data = get_earnings_transcripts(
+                ticker,
+                start_year=now.year - 2,
+                end_year=now.year,
+                limit=limit,
+            )
+            return yaml.dump({"success": True, "data": data}, default_flow_style=False)
+        if t == "latest_transcript":
+            data = get_latest_transcript(ticker)
+            return yaml.dump({"success": True, "data": data}, default_flow_style=False)
 
-    if t == "dividends_series":
-        s = get_dividends_series(ticker, start_divs, now)
-        items = [{"date": str(idx.date()), "amount": float(val)} for idx, val in s.items()]
-        return yaml.dump({"ticker": ticker.upper(), "count": len(items), "items": items}, default_flow_style=False)
+        if t == "dividends_series":
+            s = get_dividends_series(ticker, start_divs, now)
+            items = [{"date": str(idx.date()), "amount": float(val)} for idx, val in s.items()]
+            data = {"ticker": ticker.upper(), "count": len(items), "items": items}
+            return yaml.dump({"success": True, "data": data}, default_flow_style=False)
 
-    return yaml.dump({"error": f"Unknown data_type: {data_type}"}, default_flow_style=False)
+        return yaml.dump({"success": False, "error": f"Unknown data_type: {data_type}"}, default_flow_style=False)
+    except Exception as e:
+        return yaml.dump({"success": False, "error": str(e)}, default_flow_style=False)
 
 
 # Tool Schema Constants

@@ -1,5 +1,6 @@
 from app.utils.choose_model_and_client import perplexity_model_and_client, openai_model_and_client
-import re 
+import re
+import yaml
 
 class AgentSearchEngine:
     def perplexity_free_search(self, query: str):
@@ -35,7 +36,7 @@ class AgentSearchEngine:
         - News
         - Research
         - Insights
-        - Analyst Estimates 
+        - Analyst Estimates
         - Analyst Reports
         - Economic Forecasts
         - Economic Data
@@ -61,18 +62,25 @@ class AgentSearchEngine:
             cleaned_content = re.sub(r'\[\d+\]', '', content)
             # Remove content between <think> and </think> tags (including the tags)
             cleaned_content = re.sub(r'<think>.*?</think>', '', cleaned_content, flags=re.DOTALL)
-            
-            return cleaned_content
-        
+
+            return yaml.dump({
+                'success': True,
+                'data': cleaned_content,
+                'query': query
+            }, default_flow_style=False)
+
         except Exception as e:
-            print(f"Error: {e}")
-            return None
+            return yaml.dump({
+                'success': False,
+                'error': str(e),
+                'query': query
+            }, default_flow_style=False)
     
     def openai_search(self, query: str):
-        model, client = openai_model_and_client('o3') 
         """
         Processes a user query using the Deep Research API for detailed market analysis.
         """
+        model, client = openai_model_and_client('o3')
         system_message = """
     You are a professional financial analyst preparing a structured, data-driven report. Your task is to analyze the user's query about the macroeconomic environment and its implications for the stock market.
 
@@ -94,18 +102,33 @@ class AgentSearchEngine:
                     {"type": "web_search_preview"}
                 ]
             )
-            
+
             # For deep research response, the final report is in the last output item
             if hasattr(response, 'output') and response.output:
                 final_report = response.output[-1]
                 if hasattr(final_report, 'content'):
-                    return final_report.content[0].text
-            return "No response generated"
-            
+                    report_text = final_report.content[0].text
+                    return yaml.dump({
+                        'success': True,
+                        'data': report_text,
+                        'query': query
+                    }, default_flow_style=False)
+
+            return yaml.dump({
+                'success': False,
+                'error': "No response generated",
+                'query': query
+            }, default_flow_style=False)
+
         except AttributeError as e:
-            print(f"AttributeError: {e}")
-            print("Make sure you have the latest OpenAI library: pip install --upgrade openai")
-            return None
+            return yaml.dump({
+                'success': False,
+                'error': f"AttributeError: {str(e)}. Make sure you have the latest OpenAI library: pip install --upgrade openai",
+                'query': query
+            }, default_flow_style=False)
         except Exception as e:
-            print(f"Error: {e}")
-            return None
+            return yaml.dump({
+                'success': False,
+                'error': str(e),
+                'query': query
+            }, default_flow_style=False)

@@ -5,10 +5,10 @@ from app.core.calculations.portfolio.allocations import SimplePortfolioAllocator
 def build_portfolio(portfolio_dict: any) -> str:
     """
     Build optimized long/short portfolio using SimplePortfolioAllocator with risk-based optimization.
-    
+
     Accepts any portfolio format and auto-converts to canonical format using GPT parser.
     Uses conviction values for allocation logic with risk-based weights and exposure targets.
-    
+
     Args:
         portfolio_dict: Any format - string, dict, list, etc.
         Examples:
@@ -16,7 +16,7 @@ def build_portfolio(portfolio_dict: any) -> str:
             - {"AAPL": {"conviction": 0.8, "position": "long"}}  # Conviction format
             - {"AAPL": 0.8, "MSFT": -0.6}  # Simple dict (negative = short)
             - [("AAPL", 0.8, "long"), ("MSFT", 0.6, "short")]  # List of tuples
-    
+
     Returns:
         YAML string with structured portfolio: {"TICKER": {"ticker": str, "position": "long/short", "allocation": float}, ...}
         Allocation values are rounded to 3 decimal places.
@@ -26,7 +26,7 @@ def build_portfolio(portfolio_dict: any) -> str:
     try:
         canonical_portfolio_dict = canonical_portfolio(portfolio_dict)
     except Exception as e:
-        return yaml.dump({"error": f"Error parsing portfolio: {str(e)}"}, default_flow_style=False)
+        return yaml.dump({"success": False, "error": f"Error parsing portfolio: {str(e)}"}, default_flow_style=False)
 
     # Convert canonical format (allocation) to conviction format for SimplePortfolioAllocator
     conviction_portfolio = {}
@@ -45,9 +45,9 @@ def build_portfolio(portfolio_dict: any) -> str:
             target_net_exposure=0.3,
             lookback_days=252  # 3 years of trading days
         )
-        
+
         result = allocator.allocate()
-        
+
         # Round allocation values to 3 decimal places
         rounded_result = {}
         for ticker, data in result.items():
@@ -56,11 +56,11 @@ def build_portfolio(portfolio_dict: any) -> str:
                 "position": data["position"],
                 "allocation": round(data["allocation"], 3)
             }
-        
-        return yaml.dump(rounded_result, default_flow_style=False)
-        
+
+        return yaml.dump({"success": True, "data": rounded_result}, default_flow_style=False)
+
     except Exception as e:
-        return yaml.dump({"error": f"Error building portfolio: {str(e)}"}, default_flow_style=False)
+        return yaml.dump({"success": False, "error": f"Error building portfolio: {str(e)}"}, default_flow_style=False)
 
 
 # Tool Schema Constants

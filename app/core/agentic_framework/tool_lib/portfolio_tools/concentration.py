@@ -4,44 +4,55 @@ from app.core.calculations.portfolio.concentration import PortfolioConcentration
 from app.models.portfolio_models import PortfolioInput
 
 def exposure_calculator(portfolio_dict: PortfolioInput | dict, exposure_type: str) -> str:
-    portfolio_dict = canonical_portfolio(portfolio_dict)
-    if exposure_type == "net":
-        result = PortfolioConcentration(portfolio_dict).net_exposure()
-    elif exposure_type == "gross":
-        result = PortfolioConcentration(portfolio_dict).gross_exposure()
-    elif exposure_type == "long":
-        result = PortfolioConcentration(portfolio_dict).long_exposure()
-    elif exposure_type == "short":
-        result = PortfolioConcentration(portfolio_dict).short_exposure()
-    else:
-        return yaml.dump({"error": f"Invalid exposure type: {exposure_type}"}, default_flow_style=False)
-    return yaml.dump({"exposure": result, "type": exposure_type}, default_flow_style=False)
+    try:
+        portfolio_dict = canonical_portfolio(portfolio_dict)
+        if exposure_type == "net":
+            result = PortfolioConcentration(portfolio_dict).net_exposure()
+        elif exposure_type == "gross":
+            result = PortfolioConcentration(portfolio_dict).gross_exposure()
+        elif exposure_type == "long":
+            result = PortfolioConcentration(portfolio_dict).long_exposure()
+        elif exposure_type == "short":
+            result = PortfolioConcentration(portfolio_dict).short_exposure()
+        else:
+            return yaml.dump({"success": False, "error": f"Invalid exposure type: {exposure_type}"}, default_flow_style=False)
+        return yaml.dump({"success": True, "data": {"exposure": result, "type": exposure_type}}, default_flow_style=False)
+    except Exception as e:
+        return yaml.dump({"success": False, "error": str(e)}, default_flow_style=False)
 
 def industry_concentration(portfolio_dict: PortfolioInput | dict, industry_level: str) -> str:
-    portfolio_dict = canonical_portfolio(portfolio_dict)
-    if industry_level == "industry":
-        res = PortfolioConcentration(portfolio_dict).industry_concentration()
-    elif industry_level == "sub_industry":
-        res = PortfolioConcentration(portfolio_dict).sub_industry_concentration()
-    else:
-        raise ValueError(f"Invalid industry level: {industry_level}")
-    # Round values to 5 decimals for cleaner display
-    return yaml.dump({k: round(float(v), 5) for k, v in res.items()}, default_flow_style=False)
+    try:
+        portfolio_dict = canonical_portfolio(portfolio_dict)
+        if industry_level == "industry":
+            res = PortfolioConcentration(portfolio_dict).industry_concentration()
+        elif industry_level == "sub_industry":
+            res = PortfolioConcentration(portfolio_dict).sub_industry_concentration()
+        else:
+            return yaml.dump({"success": False, "error": f"Invalid industry level: {industry_level}"}, default_flow_style=False)
+        # Round values to 5 decimals for cleaner display
+        data = {k: round(float(v), 5) for k, v in res.items()}
+        return yaml.dump({"success": True, "data": data}, default_flow_style=False)
+    except Exception as e:
+        return yaml.dump({"success": False, "error": str(e)}, default_flow_style=False)
 
 def VaR_calculator(portfolio_dict: PortfolioInput | dict, level: str) -> str:
-    portfolio_dict = canonical_portfolio(portfolio_dict)
-    if level == "industry":
-        res = PortfolioConcentration(portfolio_dict).industry_var()
-    elif level == "sub_industry":
-        res = PortfolioConcentration(portfolio_dict).sub_industry_var()
-    elif level == "portfolio":
-        # Single float
-        val = PortfolioConcentration(portfolio_dict).portfolio_var()
-        return yaml.dump({"VaR": round(float(val), 5) if val is not None else None}, default_flow_style=False)
-    else:
-        return yaml.dump({"error": f"Invalid level: {level}"}, default_flow_style=False)
-    # Ensure dict results are rounded to 5 decimals
-    return yaml.dump({k: round(float(v), 5) for k, v in res.items()}, default_flow_style=False)
+    try:
+        portfolio_dict = canonical_portfolio(portfolio_dict)
+        if level == "industry":
+            res = PortfolioConcentration(portfolio_dict).industry_var()
+            data = {k: round(float(v), 5) for k, v in res.items()}
+        elif level == "sub_industry":
+            res = PortfolioConcentration(portfolio_dict).sub_industry_var()
+            data = {k: round(float(v), 5) for k, v in res.items()}
+        elif level == "portfolio":
+            # Single float
+            val = PortfolioConcentration(portfolio_dict).portfolio_var()
+            data = {"VaR": round(float(val), 5) if val is not None else None}
+        else:
+            return yaml.dump({"success": False, "error": f"Invalid level: {level}"}, default_flow_style=False)
+        return yaml.dump({"success": True, "data": data}, default_flow_style=False)
+    except Exception as e:
+        return yaml.dump({"success": False, "error": str(e)}, default_flow_style=False)
 
 
 # Tool Schema Constants

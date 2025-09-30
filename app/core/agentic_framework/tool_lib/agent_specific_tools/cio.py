@@ -5,47 +5,53 @@ from app.utils.decorators.database import with_sessions
 from app.db.core.db_config import ProphitAltsSession, MarketSession
 
 def get_analyst_picks() -> str:
-    session = ProphitAltsSession()
-    initial_positions = session.query(FundInitialPosition).join(Fund).filter(Fund.fund_name == "consumer_staples_fund").all()
+    try:
+        session = ProphitAltsSession()
+        initial_positions = session.query(FundInitialPosition).join(Fund).filter(Fund.fund_name == "consumer_staples_fund").all()
 
-    initial_positions_dict = {}
-    for position in initial_positions:
-        initial_positions_dict[position.ticker_name] = {
-            "position": position.position.value,
-            "industry": position.industry,
-            "conviction": position.conviction,
-            "reasoning": position.reasoning
-        }
-    
-    session.close()
+        initial_positions_dict = {}
+        for position in initial_positions:
+            initial_positions_dict[position.ticker_name] = {
+                "position": position.position.value,
+                "industry": position.industry,
+                "conviction": position.conviction,
+                "reasoning": position.reasoning
+            }
 
-    return yaml.dump(initial_positions_dict, default_flow_style=False)
+        session.close()
+
+        return yaml.dump({"success": True, "data": initial_positions_dict}, default_flow_style=False)
+    except Exception as e:
+        return yaml.dump({"success": False, "error": str(e)}, default_flow_style=False)
 
 def pull_rest_of_ticker_pool() -> str:
-    session = ProphitAltsSession()
-    market_session = MarketSession()
+    try:
+        session = ProphitAltsSession()
+        market_session = MarketSession()
 
-    ticker_pool = session.query(FundInitialPosition).all()
+        ticker_pool = session.query(FundInitialPosition).all()
 
-    tickers = []
-    for position in ticker_pool:
-        tickers.append(position.ticker_name)
-    
-    ticker_pool_list = []
+        tickers = []
+        for position in ticker_pool:
+            tickers.append(position.ticker_name)
 
-    rest_of_ticker_pool = market_session.query(Ticker).filter(
-        Ticker.ticker.notin_(tickers), 
-        Ticker.sector == "equity_sector_consumer_staples",
-        Ticker.market_cap > 600_000_000
-    ).all()
+        ticker_pool_list = []
 
-    for ticker in rest_of_ticker_pool:
-        ticker_pool_list.append(ticker.ticker)
+        rest_of_ticker_pool = market_session.query(Ticker).filter(
+            Ticker.ticker.notin_(tickers),
+            Ticker.sector == "equity_sector_consumer_staples",
+            Ticker.market_cap > 600_000_000
+        ).all()
 
-    session.close()
-    market_session.close()
+        for ticker in rest_of_ticker_pool:
+            ticker_pool_list.append(ticker.ticker)
 
-    return yaml.dump(ticker_pool_list, default_flow_style=False)
+        session.close()
+        market_session.close()
+
+        return yaml.dump({"success": True, "data": ticker_pool_list}, default_flow_style=False)
+    except Exception as e:
+        return yaml.dump({"success": False, "error": str(e)}, default_flow_style=False)
 
 
 # Tool Schema Constants

@@ -8,25 +8,25 @@ import numpy as np
 def drawdown_profile(portfolio_dict: PortfolioInput | dict = None) -> str:
     """
     Analyze portfolio drawdown characteristics.
-    
+
     Parameters:
     - portfolio_dict: Portfolio configuration mapping ticker -> {allocation, position}
-    
+
     Returns:
     - max_dd: Maximum drawdown (worst peak-to-trough decline)
-    - avg_dd: Average drawdown across all episodes  
+    - avg_dd: Average drawdown across all episodes
     - ulcer: Ulcer Index (measure of drawdown severity and duration)
     - episodes: List of drawdown episodes with start/end dates and recovery times
     """
-    if not portfolio_dict:
-        return yaml.dump({"error": "Portfolio dictionary is required"}, default_flow_style=False)
-    
     try:
-        portfolio_dict = canonical_portfolio(portfolio_dict)
-    except Exception as e:
-        return yaml.dump({"error": str(e)}, default_flow_style=False)
-    
-    try:
+        if not portfolio_dict:
+            return yaml.dump({"success": False, "error": "Portfolio dictionary is required"}, default_flow_style=False)
+
+        try:
+            portfolio_dict = canonical_portfolio(portfolio_dict)
+        except Exception as e:
+            return yaml.dump({"success": False, "error": str(e)}, default_flow_style=False)
+
         # Get portfolio returns using the utility for last 2 years
         portfolio_returns, weights = get_portfolio_returns(
             portfolio=portfolio_dict,
@@ -34,10 +34,10 @@ def drawdown_profile(portfolio_dict: PortfolioInput | dict = None) -> str:
             use_total_returns=False,  # Use price returns for drawdown analysis
             dropna=True
         )
-        
+
         if portfolio_returns is None or portfolio_returns.empty:
-            return yaml.dump({"error": "No price data available"}, default_flow_style=False)
-        
+            return yaml.dump({"success": False, "error": "No price data available"}, default_flow_style=False)
+
         # Calculate cumulative portfolio value (NAV)
         portfolio_nav = (1 + portfolio_returns).cumprod()
 
@@ -49,25 +49,25 @@ def drawdown_profile(portfolio_dict: PortfolioInput | dict = None) -> str:
 
         # Calculate key metrics using v2 for max drawdown and ulcer index
         max_drawdown = float(RiskCalculator.max_drawdown(portfolio_nav))
-        
+
         # Find drawdown episodes
         episodes = []
         in_drawdown = False
         episode_start = None
         episode_peak = None
-        
+
         for i, (date, dd_value) in enumerate(drawdown.items()):
             if not in_drawdown and dd_value < -0.001:  # Start of drawdown (>0.1% decline)
                 in_drawdown = True
                 episode_start = date
                 episode_peak = running_max.iloc[i]
-                
+
             elif in_drawdown and dd_value >= -0.001:  # End of drawdown
                 if episode_start is not None:
                     episode_end = date
                     episode_trough = portfolio_nav.loc[episode_start:episode_end].min()
                     episode_max_dd = (episode_trough - episode_peak) / episode_peak
-                    
+
                     # Calculate recovery time (days to get back to peak)
                     recovery_date = None
                     future_nav = portfolio_nav[episode_end:]
@@ -77,7 +77,7 @@ def drawdown_profile(portfolio_dict: PortfolioInput | dict = None) -> str:
                         recovery_days = (recovery_date - episode_start).days
                     else:
                         recovery_days = None  # Not yet recovered
-                    
+
                     episodes.append({
                         'start_date': episode_start.strftime('%Y-%m-%d'),
                         'end_date': episode_end.strftime('%Y-%m-%d'),
@@ -86,19 +86,19 @@ def drawdown_profile(portfolio_dict: PortfolioInput | dict = None) -> str:
                         'recovery_days': recovery_days,
                         'recovered': recovery_days is not None
                     })
-                
+
                 in_drawdown = False
                 episode_start = None
-        
+
         # Calculate average drawdown
         if episodes:
             avg_drawdown = float(np.mean([ep['max_drawdown'] for ep in episodes]))
         else:
             avg_drawdown = 0.0
-        
+
         # Calculate Ulcer Index (RMS of drawdowns) via v2
         ulcer_index = float(RiskCalculator.ulcer_index(portfolio_nav))
-        
+
         result = {
             'analysis_period_days': len(portfolio_nav),
             'max_dd': round(max_drawdown, 4),
@@ -108,11 +108,11 @@ def drawdown_profile(portfolio_dict: PortfolioInput | dict = None) -> str:
             'episodes': episodes,
             'current_drawdown': round(float(drawdown.iloc[-1]), 4)
         }
-        
-        return yaml.dump(result, default_flow_style=False)
-        
+
+        return yaml.dump({"success": True, "data": result}, default_flow_style=False)
+
     except Exception as e:
-        return yaml.dump({"error": f"Failed to calculate drawdown_profile: {str(e)}"}, default_flow_style=False)
+        return yaml.dump({"success": False, "error": f"Failed to calculate drawdown_profile: {str(e)}"}, default_flow_style=False)
 
 
 # Tool Schema Constants

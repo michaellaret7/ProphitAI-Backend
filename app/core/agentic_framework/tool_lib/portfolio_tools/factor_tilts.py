@@ -8,55 +8,59 @@ from app.models.portfolio_models import PortfolioInput
 
 def factor_tilts_for_portfolio(portfolio_dict: PortfolioInput | dict, factors: str) -> str:
     """Compute and print factor tilts (value/growth/momentum/quality/volatility)."""
-    if not portfolio_dict:
-        return yaml.dump({}, default_flow_style=False)
-    portfolio_dict = canonical_portfolio(portfolio_dict)
+    try:
+        if not portfolio_dict:
+            return yaml.dump({"success": True, "data": {}}, default_flow_style=False)
+        portfolio_dict = canonical_portfolio(portfolio_dict)
 
-    # Convert portfolio dict to signed weights expected by calculations_v2
-    # Positive for longs, negative for shorts
-    weights = {}
-    for t, cfg in portfolio_dict.items():
-        try:
-            alloc = float(cfg.get("allocation", 0.0) or 0.0)
-        except Exception:
-            alloc = 0.0
-        pos = (cfg.get("position") or "long").lower()
-        weights[t] = -alloc if pos == "short" else alloc
+        # Convert portfolio dict to signed weights expected by calculations_v2
+        # Positive for longs, negative for shorts
+        weights = {}
+        for t, cfg in portfolio_dict.items():
+            try:
+                alloc = float(cfg.get("allocation", 0.0) or 0.0)
+            except Exception:
+                alloc = 0.0
+            pos = (cfg.get("position") or "long").lower()
+            weights[t] = -alloc if pos == "short" else alloc
 
-    # Helper to round numeric values to 4 decimals in the tilt output
-    def _round_tilt_output(res: dict) -> dict:
-        if not isinstance(res, dict):
-            return res
-        out = {}
-        for k, v in res.items():
-            if k == "per_ticker_exposure" and isinstance(v, dict):
-                out[k] = {tk: (round(float(tv), 4) if isinstance(tv, (int, float)) else tv) for tk, tv in v.items()}
-            elif isinstance(v, (int, float)):
-                out[k] = round(float(v), 4)
-            else:
-                out[k] = v
-        return out
+        # Helper to round numeric values to 4 decimals in the tilt output
+        def _round_tilt_output(res: dict) -> dict:
+            if not isinstance(res, dict):
+                return res
+            out = {}
+            for k, v in res.items():
+                if k == "per_ticker_exposure" and isinstance(v, dict):
+                    out[k] = {tk: (round(float(tv), 4) if isinstance(tv, (int, float)) else tv) for tk, tv in v.items()}
+                elif isinstance(v, (int, float)):
+                    out[k] = round(float(v), 4)
+                else:
+                    out[k] = v
+            return out
 
-    # Keep only summary fields for "all" output
-    def _summary(res: dict) -> dict:
-        if not isinstance(res, dict):
-            return res
-        return {k: res.get(k) for k in ["factor", "net_tilt", "long_tilt", "short_tilt"] if k in res}
+        # Keep only summary fields for "all" output
+        def _summary(res: dict) -> dict:
+            if not isinstance(res, dict):
+                return res
+            return {k: res.get(k) for k in ["factor", "net_tilt", "long_tilt", "short_tilt"] if k in res}
 
-    if factors == "all":
-        result = {
-            "value": _summary(_round_tilt_output(portfolio_factor_tilts(weights, "value"))),
-            "growth": _summary(_round_tilt_output(portfolio_factor_tilts(weights, "growth"))),
-            "momentum": _summary(_round_tilt_output(portfolio_factor_tilts(weights, "momentum"))),
-            "quality": _summary(_round_tilt_output(portfolio_factor_tilts(weights, "quality"))),
-            "volatility": _summary(_round_tilt_output(portfolio_factor_tilts(weights, "volatility")))
-        }
-        return yaml.dump(result, default_flow_style=False)
+        if factors == "all":
+            result = {
+                "value": _summary(_round_tilt_output(portfolio_factor_tilts(weights, "value"))),
+                "growth": _summary(_round_tilt_output(portfolio_factor_tilts(weights, "growth"))),
+                "momentum": _summary(_round_tilt_output(portfolio_factor_tilts(weights, "momentum"))),
+                "quality": _summary(_round_tilt_output(portfolio_factor_tilts(weights, "quality"))),
+                "volatility": _summary(_round_tilt_output(portfolio_factor_tilts(weights, "volatility")))
+            }
+            return yaml.dump({"success": True, "data": result}, default_flow_style=False)
 
-    if factors not in ["value", "growth", "momentum", "quality", "volatility", "all"]:
-        return yaml.dump({"error": f"Invalid factor: {factors}"}, default_flow_style=False)
+        if factors not in ["value", "growth", "momentum", "quality", "volatility", "all"]:
+            return yaml.dump({"success": False, "error": f"Invalid factor: {factors}"}, default_flow_style=False)
 
-    return yaml.dump(_round_tilt_output(portfolio_factor_tilts(weights, factors)), default_flow_style=False)
+        data = _round_tilt_output(portfolio_factor_tilts(weights, factors))
+        return yaml.dump({"success": True, "data": data}, default_flow_style=False)
+    except Exception as e:
+        return yaml.dump({"success": False, "error": str(e)}, default_flow_style=False)
 
 # Tool Schema Constants
 FACTOR_TILTS_FOR_PORTFOLIO_DESCRIPTION = (

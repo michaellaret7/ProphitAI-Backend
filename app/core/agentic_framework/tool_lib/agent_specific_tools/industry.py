@@ -19,34 +19,41 @@ from app.utils.decorators.price_data import with_price_data
 @with_session('market')
 def get_eligible_tickers(industry: str, session=None) -> str:
     """Get the eligible tickers for a given industry."""
-    industry = industry.lower()
-    tickers = session.query(Ticker).filter(Ticker.industry == industry, Ticker.market_cap > 600_000_000).all()
-    return yaml.dump([ticker.ticker for ticker in tickers], default_flow_style=False)
+    try:
+        industry = industry.lower()
+        tickers = session.query(Ticker).filter(Ticker.industry == industry, Ticker.market_cap > 600_000_000).all()
+        ticker_list = [ticker.ticker for ticker in tickers]
+        return yaml.dump({"success": True, "data": ticker_list}, default_flow_style=False)
+    except Exception as e:
+        return yaml.dump({"success": False, "error": str(e)}, default_flow_style=False)
 
 @with_session('market')
 def get_base_ticker_info(tickers: List[str], session=None) -> str:
     """Get the base ticker info for a given list of tickers."""
-    ticker_objects = session.query(Ticker).filter(Ticker.ticker.in_(tickers)).all()
-    
-    # Convert SQLAlchemy objects to dictionaries
-    result = []
-    for ticker in ticker_objects:
-        ticker_dict = {
-            'ticker': ticker.ticker,
-            'sector': ticker.sector,
-            'industry': ticker.industry,
-            'sub_industry': ticker.sub_industry,
-            'is_etf': ticker.is_etf,
-            'price': ticker.price,
-            'market_cap': float(ticker.market_cap) if ticker.market_cap else None,
-            'avg_volume': float(ticker.avg_volume) if ticker.avg_volume else None,
-            'eps': ticker.eps,
-            'pe': ticker.pe,
-            'dollar_volume': float(ticker.dollar_volume) if ticker.dollar_volume else None,
-        }
-        result.append(ticker_dict)
-    
-    return yaml.dump(result, default_flow_style=False)
+    try:
+        ticker_objects = session.query(Ticker).filter(Ticker.ticker.in_(tickers)).all()
+
+        # Convert SQLAlchemy objects to dictionaries
+        result = []
+        for ticker in ticker_objects:
+            ticker_dict = {
+                'ticker': ticker.ticker,
+                'sector': ticker.sector,
+                'industry': ticker.industry,
+                'sub_industry': ticker.sub_industry,
+                'is_etf': ticker.is_etf,
+                'price': ticker.price,
+                'market_cap': float(ticker.market_cap) if ticker.market_cap else None,
+                'avg_volume': float(ticker.avg_volume) if ticker.avg_volume else None,
+                'eps': ticker.eps,
+                'pe': ticker.pe,
+                'dollar_volume': float(ticker.dollar_volume) if ticker.dollar_volume else None,
+            }
+            result.append(ticker_dict)
+
+        return yaml.dump({"success": True, "data": result}, default_flow_style=False)
+    except Exception as e:
+        return yaml.dump({"success": False, "error": str(e)}, default_flow_style=False)
 
 
 # Tool Schema Constants

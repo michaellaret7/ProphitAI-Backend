@@ -7,47 +7,50 @@ from app.utils.gpt_parser import canonical_portfolio
 
 def calculate_portfolio_returns_metrics(portfolio_dict: PortfolioInput | dict, lookback_days=252) -> str:
     """Calculate and display simple portfolio metrics.
-    
+
     Returns:
         dict: Contains annualized returns, volatility, and weekly cumulative returns
     """
-    portfolio_dict = canonical_portfolio(portfolio_dict)
+    try:
+        portfolio_dict = canonical_portfolio(portfolio_dict)
 
-    # Get price-only returns
-    portfolio_price_returns, _ = get_portfolio_returns(
-        portfolio=portfolio_dict,
-        lookback_days=lookback_days,
-        use_total_returns=False,
-        dropna=True
-    )
-    
-    # Get total returns
-    portfolio_total_returns, _ = get_portfolio_returns(
-        portfolio=portfolio_dict,
-        lookback_days=lookback_days,
-        use_total_returns=True,
-        dropna=True
-    )
-    
-    # Calculate metrics
-    ann_price_return = ReturnsCalculator.annualized_return(portfolio_price_returns, 252)
-    ann_total_return = ReturnsCalculator.annualized_return(portfolio_total_returns, 252)
-    ann_volatility = float(portfolio_total_returns.std() * np.sqrt(252))
-    
-    # Calculate weekly cumulative returns and convert to rounded dict
-    weekly_cumulative = (1 + portfolio_total_returns).resample('W').prod() - 1
-    weekly_returns = {ts.strftime('%Y-%m-%d'): round(val, 4) for ts, val in weekly_cumulative.items()}
-    
-    # Calculate cumulative return over period
-    total_cumulative = float((1 + portfolio_total_returns).prod() - 1)
-    
-    return yaml.dump({
-        "ann_price_return": round(ann_price_return, 4),
-        "ann_total_return": round(ann_total_return, 4),
-        "ann_volatility": round(ann_volatility, 4),
-        "weekly_returns": weekly_returns,
-        "cumulative_return": round(total_cumulative, 4)
-    }, default_flow_style=False)
+        # Get price-only returns
+        portfolio_price_returns, _ = get_portfolio_returns(
+            portfolio=portfolio_dict,
+            lookback_days=lookback_days,
+            use_total_returns=False,
+            dropna=True
+        )
+
+        # Get total returns
+        portfolio_total_returns, _ = get_portfolio_returns(
+            portfolio=portfolio_dict,
+            lookback_days=lookback_days,
+            use_total_returns=True,
+            dropna=True
+        )
+
+        # Calculate metrics
+        ann_price_return = ReturnsCalculator.annualized_return(portfolio_price_returns, 252)
+        ann_total_return = ReturnsCalculator.annualized_return(portfolio_total_returns, 252)
+        ann_volatility = float(portfolio_total_returns.std() * np.sqrt(252))
+
+        # Calculate weekly cumulative returns and convert to rounded dict
+        weekly_cumulative = (1 + portfolio_total_returns).resample('W').prod() - 1
+        weekly_returns = {ts.strftime('%Y-%m-%d'): round(val, 4) for ts, val in weekly_cumulative.items()}
+
+        # Calculate cumulative return over period
+        total_cumulative = float((1 + portfolio_total_returns).prod() - 1)
+
+        return yaml.dump({"success": True, "data": {
+            "ann_price_return": round(ann_price_return, 4),
+            "ann_total_return": round(ann_total_return, 4),
+            "ann_volatility": round(ann_volatility, 4),
+            "weekly_returns": weekly_returns,
+            "cumulative_return": round(total_cumulative, 4)
+        }}, default_flow_style=False)
+    except Exception as e:
+        return yaml.dump({"success": False, "error": str(e)}, default_flow_style=False)
 
 
 # Tool Schema Constants

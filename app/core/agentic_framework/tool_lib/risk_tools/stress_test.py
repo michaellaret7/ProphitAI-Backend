@@ -8,17 +8,17 @@ def stress_test(portfolio_dict: PortfolioInput | dict = None) -> str:
     """
     Run comprehensive stress tests on a portfolio including market crash scenarios (-20%, -30%, -40%), sector rotation stress, interest rate shock, inflation spike, and correlation breakdown scenarios.
     """
-    if not portfolio_dict:
-        return yaml.dump({"error": "Portfolio dictionary is required"}, default_flow_style=False)
-
     try:
+        if not portfolio_dict:
+            return yaml.dump({"success": False, "error": "Portfolio dictionary is required"}, default_flow_style=False)
+
         portfolio_dict = canonical_portfolio(portfolio_dict)
         results = run_stress_test_workflow(portfolio_dict)
-        return yaml.dump(results, default_flow_style=False)
+        return yaml.dump({"success": True, "data": results}, default_flow_style=False)
     except Exception as e:
         error_msg = f"Error running stress test: {str(e)}"
         print(f"Warning: {error_msg}")
-        return yaml.dump({"error": error_msg, "type": "stress_test_error"}, default_flow_style=False)
+        return yaml.dump({"success": False, "error": error_msg}, default_flow_style=False)
 
 
 # Tool Schema Constants

@@ -260,70 +260,39 @@ class BaseAgent:
     
     def _check_for_task_failure(self, tool_name: str, observation: Any) -> None:
         """Check if tool result indicates task failure and handle automatically.
-        
+
         Args:
             tool_name: Name of the executed tool
             observation: Tool execution result
         """
         if not self.execution_engine.plan_loaded:
             return
-        
+
         # Check for obvious failure indicators
         failure_indicators = []
-        
+
         if isinstance(observation, Exception):
             failure_indicators.append(f"Tool {tool_name} raised exception: {str(observation)}")
-        
+
         elif isinstance(observation, str):
-            import re
-            text = observation.lower()
-            
-            # First check for common non-error phrases that contain these words
-            safe_phrases = [
-                r'room for error',      # Common financial phrase
-                r'margin.{0,5}error',   # "margin of error" or "margin for error"
-                r'trial.{0,5}error',    # "trial and error"
-                r'human error',         # Common phrase
-                r'rounding error',      # Mathematical term
-                r'tracking error',      # Financial term
-                r'forecast error',      # Statistical term
-                r'measurement error',   # Scientific term
-                r'blend of high prof',  # Specific to investment recommendations
-                r'offers.{0,20}error',  # Company "offers" something with "error" nearby
-                r'ameren',              # Company name that contains "error" substring
-            ]
-            
-            # If any safe phrase is found, it's not an error
-            is_safe = any(re.search(safe_pattern, text, re.IGNORECASE) for safe_pattern in safe_phrases)
-            if not is_safe:
-                # Check for actual error patterns
-                error_patterns = [
-                    r'^error:',             # line starting with "error:"
-                    r'^failed:',            # line starting with "failed:"
-                    r'^exception:',         # line starting with "exception:"
-                    r'error occurred',      # phrase "error occurred"
-                    r'error calling',       # phrase "error calling" (common in tool errors)
-                    r'returned error',      # phrase "returned error"
-                    r'raised error',        # phrase "raised error"
-                    r'threw error',         # phrase "threw error"
-                    r'error message',       # phrase "error message"
-                    r'traceback',           # Python traceback indicator
-                    r'\bfailed to\b',       # phrase "failed to"
-                    r'\bunable to\b',       # phrase "unable to"
-                    r'\bcould not\b',       # phrase "could not"
-                    r'permission denied',   # permission error
-                    r'access denied',       # access error
-                    r'not found',           # not found error
-                    r'timeout',             # timeout error
-                ]
-                if any(re.search(pattern, text, re.MULTILINE | re.IGNORECASE) for pattern in error_patterns):
-                    failure_indicators.append(f"Tool {tool_name} returned error message")
-        
+            # Try to parse as YAML to check for success field
+            try:
+                import yaml
+                parsed = yaml.safe_load(observation)
+                if isinstance(parsed, dict):
+                    # Check for success field
+                    if parsed.get('success') is False:
+                        error_msg = parsed.get('error', 'Unknown error')
+                        failure_indicators.append(f"Tool {tool_name} returned success=False: {error_msg}")
+            except Exception:
+                # If YAML parsing fails, observation is not a structured response
+                # This is acceptable - not all tools have been updated yet
+                pass
+
         elif isinstance(observation, dict):
             if observation.get('success') is False:
-                failure_indicators.append(f"Tool {tool_name} returned success=False")
-            if 'error' in observation and observation['error']:
-                failure_indicators.append(f"Tool {tool_name} returned error: {observation['error']}")
+                error_msg = observation.get('error', 'Unknown error')
+                failure_indicators.append(f"Tool {tool_name} returned success=False: {error_msg}")
         
         # If multiple failure indicators detected, suggest failure handling
         if len(failure_indicators) >= 1:

@@ -5,14 +5,18 @@ def get_fundamental_data(ticker: str, statement_type: str, quarters_back: int = 
     """Wrapper function to return YAML format."""
 
     if not isinstance(ticker, str) or not ticker:
-        return "Error: Parameter 'ticker' must be a non-empty string."
+        return yaml.dump({"success": False, "error": "Parameter 'ticker' must be a non-empty string."}, default_flow_style=False)
     if not isinstance(statement_type, str) or statement_type not in ["income_statement", "balance_sheet", "cash_flow", "financial_ratios"]:
-        return f"Error: Parameter 'statement_type' must be one of: {', '.join(['income_statement', 'balance_sheet', 'cash_flow', 'financial_ratios'])}."
+        return yaml.dump({"success": False, "error": f"Parameter 'statement_type' must be one of: {', '.join(['income_statement', 'balance_sheet', 'cash_flow', 'financial_ratios'])}."}, default_flow_style=False)
     if not isinstance(quarters_back, int) or quarters_back < 1:
-        return "Error: Parameter 'quarters_back' must be a positive integer."
+        return yaml.dump({"success": False, "error": "Parameter 'quarters_back' must be a positive integer."}, default_flow_style=False)
 
-    result = _get_fundamental_data(ticker, statement_type, quarters_back)
-    
+    try:
+        data = _get_fundamental_data(ticker, statement_type, quarters_back)
+        result = {"success": True, "data": data}
+    except Exception as e:
+        result = {"success": False, "error": f"Failed to retrieve fundamental data: {str(e)}"}
+
     return yaml.dump(result, default_flow_style=False)
 
 # Tool Schema Constants

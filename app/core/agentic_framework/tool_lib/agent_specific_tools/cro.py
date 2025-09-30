@@ -16,18 +16,21 @@ def get_final_portfolio_dict(session=None) -> str:
     """
     Get the initial portfolio dictionary.
     """
-    positions_query = session.query(FundFinalPosition).filter(FundFinalPosition.fund_name == "consumer_staples_fund").all()
+    try:
+        positions_query = session.query(FundFinalPosition).filter(FundFinalPosition.fund_name == "consumer_staples_fund").all()
 
-    final_positions = {}
-    for position in positions_query:
-        final_positions[position.ticker_name] = {
-            "ticker": position.ticker_name,
-            "allocation": position.portfolio_allocation,
-            "position": position.position.value,
-            "thesis": position.reasoning,
-        }
+        final_positions = {}
+        for position in positions_query:
+            final_positions[position.ticker_name] = {
+                "ticker": position.ticker_name,
+                "allocation": position.portfolio_allocation,
+                "position": position.position.value,
+                "thesis": position.reasoning,
+            }
 
-    return yaml.dump(final_positions, default_flow_style=False)  
+        return yaml.dump({"success": True, "data": final_positions}, default_flow_style=False)
+    except Exception as e:
+        return yaml.dump({"success": False, "error": str(e)}, default_flow_style=False)  
 
 # Tool Schema Constants
 GET_FINAL_PORTFOLIO_DICT_DESCRIPTION = (

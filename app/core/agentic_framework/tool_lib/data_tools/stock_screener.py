@@ -360,8 +360,19 @@ class StockScreener:
         return df_display
 
 def screener(criteria_dict: Dict[str, Any]) -> str:
-    df = StockScreener().screen(**criteria_dict)
-    return yaml.dump(df.to_dict('records'), default_flow_style=False)
+    try:
+        df = StockScreener().screen(**criteria_dict)
+        result = {
+            "success": True,
+            "data": df.to_dict('records')
+        }
+        return yaml.dump(result, default_flow_style=False)
+    except Exception as e:
+        result = {
+            "success": False,
+            "error": f"Stock screening failed: {str(e)}"
+        }
+        return yaml.dump(result, default_flow_style=False)
 
 # Tool Schema Constants
 STOCK_SCREENER_DESCRIPTION = (

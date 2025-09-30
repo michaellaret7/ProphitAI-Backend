@@ -3,24 +3,28 @@ from app.core.calculations.sectors.industry import calc_industry_factor_benchmar
 
 def get_industry_benchmark_calculations(industry: str, factor: str) -> str:
     """Get the industry benchmark calculations for a given industry and factor.
-    
+
     Args:
         industry: The industry to get the benchmark calculations for
         factor: The factor to get the benchmark calculations for
-        
+
     Returns:
         Dictionary containing the benchmark calculations
     """
-    # Validate inputs and raise ValueError for invalid arguments
-    valid_factors = {"growth", "value", "momentum", "quality", "volatility"}
+    try:
+        # Validate inputs and raise ValueError for invalid arguments
+        valid_factors = {"growth", "value", "momentum", "quality", "volatility"}
 
-    if not isinstance(industry, str) or not industry:
-        return "Error: Parameter 'industry' must be a non-empty string."
+        if not isinstance(industry, str) or not industry:
+            return yaml.dump({"success": False, "error": "Parameter 'industry' must be a non-empty string."}, default_flow_style=False)
 
-    if not isinstance(factor, str) or factor not in valid_factors:
-        return f"Error: Parameter 'factor' must be one of: {', '.join(valid_factors)}."
+        if not isinstance(factor, str) or factor not in valid_factors:
+            return yaml.dump({"success": False, "error": f"Parameter 'factor' must be one of: {', '.join(valid_factors)}."}, default_flow_style=False)
 
-    return yaml.dump({"result": calc_industry_factor_benchmark_calculations(industry, factor).to_dict(), "success": True}, default_flow_style=False)
+        data = calc_industry_factor_benchmark_calculations(industry, factor).to_dict()
+        return yaml.dump({"success": True, "data": data}, default_flow_style=False)
+    except Exception as e:
+        return yaml.dump({"success": False, "error": str(e)}, default_flow_style=False)
 
 # Tool Schema Constants
 GET_INDUSTRY_BENCHMARK_CALCULATIONS_DESCRIPTION = (

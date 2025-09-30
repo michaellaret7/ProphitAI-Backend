@@ -11,48 +11,48 @@ from app.core.calculations.core.helpers import build_returns_df_from_price_map
 def risk_contribution(portfolio_dict: PortfolioInput | dict = None, metric: str = 'vol') -> str:
     """
     Calculate Total Risk and risk contributions by asset.
-    
+
     Parameters:
     - portfolio_dict: Portfolio configuration mapping ticker -> {allocation, position}
     - metric: Risk metric to decompose {'vol', 'var'}
-    
+
     Returns:
     - TR: Total Risk (portfolio level)
     - MCTR: Marginal Contribution to Total Risk (per asset)
     - CTR_pct: Component Total Risk as percentage (per asset)
     """
-    if not portfolio_dict:
-        return yaml.dump({"error": "Portfolio dictionary is required"}, default_flow_style=False)
-    
     try:
-        portfolio_dict = canonical_portfolio(portfolio_dict)
-    except Exception as e:
-        return yaml.dump({"error": str(e)}, default_flow_style=False)
+        if not portfolio_dict:
+            return yaml.dump({"success": False, "error": "Portfolio dictionary is required"}, default_flow_style=False)
 
-    # Get tickers and weights from portfolio
-    tickers = list(portfolio_dict.keys())
-    weights_series = pd.Series({
-        ticker: portfolio_dict[ticker]['allocation'] * (1 if portfolio_dict[ticker]['position'] == 'long' else -1)
-        for ticker in tickers
-    })
-    
-    try:
+        try:
+            portfolio_dict = canonical_portfolio(portfolio_dict)
+        except Exception as e:
+            return yaml.dump({"success": False, "error": str(e)}, default_flow_style=False)
+
+        # Get tickers and weights from portfolio
+        tickers = list(portfolio_dict.keys())
+        weights_series = pd.Series({
+            ticker: portfolio_dict[ticker]['allocation'] * (1 if portfolio_dict[ticker]['position'] == 'long' else -1)
+            for ticker in tickers
+        })
+
         # Get portfolio data using utility
         weights_dict, price_data, _ = prepare_portfolio_data(
             portfolio=portfolio_dict,
             lookback_days=252,
             include_dividends=False
         )
-        
+
         if not price_data:
-            return yaml.dump({"error": "No price data available for portfolio tickers"}, default_flow_style=False)
-        
+            return yaml.dump({"success": False, "error": "No price data available for portfolio tickers"}, default_flow_style=False)
+
         # Calculate returns and drop rows with any NaNs for stable covariance
         returns_df = build_returns_df_from_price_map(price_data, drop_rows='any', include_dividends=False)
-        
+
         if returns_df.empty:
-            return yaml.dump({"error": "No price data available for portfolio tickers"}, default_flow_style=False)
-        
+            return yaml.dump({"success": False, "error": "No price data available for portfolio tickers"}, default_flow_style=False)
+
         # Calculate covariance matrix using v2
         cov_matrix = RiskCalculator.covariance_matrix(returns_df, annualize=False)
 
@@ -86,8 +86,8 @@ def risk_contribution(portfolio_dict: PortfolioInput | dict = None, metric: str 
                 ctr_pct = np.zeros_like(component_contrib)
 
         else:
-            return yaml.dump({"error": f"Invalid metric '{metric}'. Use 'vol' or 'var'"}, default_flow_style=False)
-        
+            return yaml.dump({"success": False, "error": f"Invalid metric '{metric}'. Use 'vol' or 'var'"}, default_flow_style=False)
+
         # Build result dictionary
         result = {
             'metric': metric,
@@ -95,11 +95,11 @@ def risk_contribution(portfolio_dict: PortfolioInput | dict = None, metric: str 
             'MCTR': {ticker: round(float(marginal_contrib[i]), 6) for i, ticker in enumerate(cov_matrix.columns)},
             'CTR_pct': {ticker: round(float(ctr_pct[i]), 2) for i, ticker in enumerate(cov_matrix.columns)}
         }
-        
-        return yaml.dump(result, default_flow_style=False)
-        
+
+        return yaml.dump({"success": True, "data": result}, default_flow_style=False)
+
     except Exception as e:
-        return yaml.dump({"error": f"Failed to calculate risk_contribution: {str(e)}"}, default_flow_style=False)
+        return yaml.dump({"success": False, "error": f"Failed to calculate risk_contribution: {str(e)}"}, default_flow_style=False)
 
 
 # Tool Schema Constants

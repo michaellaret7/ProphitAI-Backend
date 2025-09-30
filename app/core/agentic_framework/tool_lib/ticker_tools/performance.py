@@ -105,7 +105,7 @@ def get_ticker_performance_and_risk(
         if close is not None and not close.empty:
             close = _adjust_for_splits(close)
         if close is None or close.empty:
-            return yaml.dump({"error": f"no price data for {tkr}"}, default_flow_style=False)
+            return yaml.dump({"success": False, "error": f"no price data for {tkr}"}, default_flow_style=False)
 
         if include_dividends:
             try:
@@ -117,7 +117,7 @@ def get_ticker_performance_and_risk(
         else:
             r = ReturnsCalculator.daily_price_returns(close)
         if r.empty:
-            return yaml.dump({"error": f"failed to compute returns for {tkr}"}, default_flow_style=False)
+            return yaml.dump({"success": False, "error": f"failed to compute returns for {tkr}"}, default_flow_style=False)
 
         # Risk
         ann_vol = RiskCalculator.annualized_volatility(r)
@@ -260,15 +260,18 @@ def get_ticker_performance_and_risk(
         returns = _round_map(returns, ndigits=4)
 
         return yaml.dump({
-            "ticker": tkr,
-            "market_ticker": market_ticker.upper() if market_ticker else None,
-            "num_observations": int(len(r)),
-            "risk": risk,
-            "performance": perf,
-            "returns": returns,
+            "success": True,
+            "data": {
+                "ticker": tkr,
+                "market_ticker": market_ticker.upper() if market_ticker else None,
+                "num_observations": int(len(r)),
+                "risk": risk,
+                "performance": perf,
+                "returns": returns,
+            }
         }, default_flow_style=False)
     except Exception as e:
-        return yaml.dump({"error": f"failed to compute metrics for {tkr}: {e}"}, default_flow_style=False)
+        return yaml.dump({"success": False, "error": f"failed to compute metrics for {tkr}: {e}"}, default_flow_style=False)
 
 
 # Tool Schema Constants

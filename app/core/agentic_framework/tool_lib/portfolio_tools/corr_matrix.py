@@ -18,55 +18,58 @@ def correlation_matrix(portfolio_dict: PortfolioInput | dict) -> str:
       ]
     }
     """
-    if not portfolio_dict:
-        return yaml.dump({"correlations": []}, default_flow_style=False)
-
     try:
-        portfolio_dict = canonical_portfolio(portfolio_dict)
-    except ValueError:
-        return yaml.dump({"correlations": []}, default_flow_style=False)
+        if not portfolio_dict:
+            return yaml.dump({"success": True, "data": {"correlations": []}}, default_flow_style=False)
 
-    # Use utility to get portfolio data
-    weights, price_data, dividend_data = prepare_portfolio_data(
-        portfolio=portfolio_dict,
-        lookback_days=252,
-        include_dividends=False
-    )
+        try:
+            portfolio_dict = canonical_portfolio(portfolio_dict)
+        except ValueError:
+            return yaml.dump({"success": True, "data": {"correlations": []}}, default_flow_style=False)
 
-    if not price_data:
-        return yaml.dump({"correlations": []}, default_flow_style=False)
+        # Use utility to get portfolio data
+        weights, price_data, dividend_data = prepare_portfolio_data(
+            portfolio=portfolio_dict,
+            lookback_days=252,
+            include_dividends=False
+        )
 
-    # Calculate returns without dropping rows globally; let correlation handle pairwise NaNs
-    returns_df = build_returns_df_from_price_map(price_data, drop_rows='none', include_dividends=False)
+        if not price_data:
+            return yaml.dump({"success": True, "data": {"correlations": []}}, default_flow_style=False)
 
-    if returns_df.empty:
-        return yaml.dump({"correlations": []}, default_flow_style=False)
+        # Calculate returns without dropping rows globally; let correlation handle pairwise NaNs
+        returns_df = build_returns_df_from_price_map(price_data, drop_rows='none', include_dividends=False)
 
-    # Compute correlation matrix and round
-    corr_df = CorrelationAnalysis.correlation_matrix(returns_df)
-    if corr_df is None or corr_df.empty:
-        return yaml.dump({"correlations": []}, default_flow_style=False)
-    corr_df = corr_df.round(3)
+        if returns_df.empty:
+            return yaml.dump({"success": True, "data": {"correlations": []}}, default_flow_style=False)
 
-    # Use the correlation matrix's own column order to avoid key-order drift
-    ordered_tickers = [t for t in corr_df.columns if t in corr_df.index]
+        # Compute correlation matrix and round
+        corr_df = CorrelationAnalysis.correlation_matrix(returns_df)
+        if corr_df is None or corr_df.empty:
+            return yaml.dump({"success": True, "data": {"correlations": []}}, default_flow_style=False)
+        corr_df = corr_df.round(3)
 
-    # Build records for unique pairs (upper triangle, excluding diagonal)
-    records = []
-    for i, t1 in enumerate(ordered_tickers):
-        for j in range(i + 1, len(ordered_tickers)):
-            t2 = ordered_tickers[j]
-            value = corr_df.loc[t1, t2]
-            try:
-                value = float(value)
-            except Exception:
-                pass
-            records.append({
-                "pair": f"{t1} | {t2}",
-                "corr": value
-            })
+        # Use the correlation matrix's own column order to avoid key-order drift
+        ordered_tickers = [t for t in corr_df.columns if t in corr_df.index]
 
-    return yaml.dump({"correlations": records}, default_flow_style=False)
+        # Build records for unique pairs (upper triangle, excluding diagonal)
+        records = []
+        for i, t1 in enumerate(ordered_tickers):
+            for j in range(i + 1, len(ordered_tickers)):
+                t2 = ordered_tickers[j]
+                value = corr_df.loc[t1, t2]
+                try:
+                    value = float(value)
+                except Exception:
+                    pass
+                records.append({
+                    "pair": f"{t1} | {t2}",
+                    "corr": value
+                })
+
+        return yaml.dump({"success": True, "data": {"correlations": records}}, default_flow_style=False)
+    except Exception as e:
+        return yaml.dump({"success": False, "error": str(e)}, default_flow_style=False)
 
 
 # Tool Schema Constants
