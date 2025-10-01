@@ -160,3 +160,7 @@ Each agent registers relevant tools via `register_*_tools(agent)` functions that
 - `.env`: Environment variables (API keys, DB credentials) - **NEVER COMMIT**
 - `app/core/agentic_framework/base_agent/agent.py`: Core agent implementation
 - `app/core/agentic_framework/base_agent/tasks/models.py`: Task/planning data models
+
+## Important Rules
+
+- Never create a README.md for a specific functionality or new new unless specifically requested
