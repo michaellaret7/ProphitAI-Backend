@@ -2,6 +2,8 @@ from sqlalchemy import text
 from datetime import datetime
 import time
 
+#TODO: make this into a wrapper for the repositories functions for consistent query performance monitoring
+
 def analyze_query_performance(query, session):
     """
     Analyzes the performance of a SQLAlchemy query by printing its

@@ -44,9 +44,9 @@ class BaseAgent:
                 memory_refresh_interval: int = 6,
             ):
         
-        self.model, self.client = openai_model_and_client(model=model)
+        # self.model, self.client = openai_model_and_client(model=model)
         # self.model, self.client = grok_model_and_client(model=model)
-        # self.model, self.client = claude_model_and_client(model=model)
+        self.model, self.client = claude_model_and_client(model=model)
         print(f"Using model: {self.model}")
         print(f"Using client: {self.client}")
 
@@ -68,6 +68,9 @@ class BaseAgent:
         # Trace and accounting
         self.trace: List[StepTrace] = []
         self.total_tokens: int = 0
+
+        # Token counting cache for performance optimization
+        self._cached_token_count: int = 0  # Incremental token count to avoid recounting entire message history
 
         # Stagnation detection
         self._recent_actions: List[str] = []  # serialized (tool_name + sorted args)
@@ -383,6 +386,36 @@ class BaseAgent:
             tool_registry[func_def.get('name')] = func_def
         self._arg_parser = ToolArgumentParser(tool_registry, verbose=self.verbose)
 
+    def _update_token_count(self, new_messages: List[Dict[str, Any]]) -> int:
+        """Update token count incrementally by only counting new messages.
+
+        This method implements a performance optimization to avoid recounting
+        the entire message history on every iteration. Instead, it:
+        1. On first call: counts all messages and caches the result
+        2. On subsequent calls: only counts new messages and adds to cache
+
+        Args:
+            new_messages: List of new messages to add to token count
+
+        Returns:
+            Current total token count
+
+        Note:
+            This assumes messages are only appended, never modified or removed.
+            If message history is manipulated, call with all messages to reset cache.
+        """
+        if self._cached_token_count == 0:
+            # First time: count everything (includes system + initial messages)
+            # This will be called on initialization with the full message list
+            self._cached_token_count = get_chat_token_count(new_messages, model=self.model)
+        else:
+            # Subsequent times: only count NEW messages
+            if new_messages:
+                new_token_count = get_chat_token_count(new_messages, model=self.model)
+                self._cached_token_count += new_token_count
+
+        return self._cached_token_count
+
     # --- Core run loop -----------------------------------------------------
     def run(self) -> Dict[str, Any]:
         # Create argument parser now that all tools (base + child class) are registered
@@ -432,7 +465,8 @@ class BaseAgent:
             )
 
         # Save initial messages (after optional plan-first injection to keep logs aligned)
-        initial_token_count = get_chat_token_count(messages, model=self.model)
+        # Initialize token cache with full message history
+        initial_token_count = self._update_token_count(messages)
         self.message_logger.save_messages_to_json(messages, iteration=0, total_tokens=self.total_tokens, input_tokens=initial_token_count)
 
         final_text: Optional[str] = None
@@ -443,6 +477,9 @@ class BaseAgent:
         # Track plan loading for context injection
         plan_loaded_this_iteration: bool = False
         plan_start_context: Optional[str] = None
+
+        # Track previous message count for incremental token counting
+        previous_message_count: int = len(messages)
 
         for i in range(1, self.max_iterations + 1):
             # Reset plan loading tracking for this iteration
@@ -518,9 +555,12 @@ class BaseAgent:
                         )
                     })
 
-            # Calculate the EXACT tokens being sent to LLM using proper chat format counting
-            input_tokens = get_chat_token_count(messages, model=self.model)
-            
+            # Calculate tokens incrementally (only count new messages since last iteration)
+            current_message_count = len(messages)
+            new_messages_added = messages[previous_message_count:current_message_count]
+            input_tokens = self._update_token_count(new_messages_added)
+            previous_message_count = current_message_count  # Update for next iteration
+
             # Calculate actual token count for logging
             # For the first iteration, use the initial message tokens for accurate cumulative reporting
             log_token_count = self.total_tokens
@@ -962,8 +1002,9 @@ class BaseAgent:
                     )
 
             self.trace.append(step)
-            
-            current_context_size = get_chat_token_count(messages, model=self.model)
+
+            # Use cached token count (already updated incrementally above)
+            current_context_size = self._cached_token_count
             self.message_logger.save_messages_to_json(messages, iteration=i, total_tokens=self.total_tokens, input_tokens=current_context_size)
 
             # Enhanced iteration tracking with plan-driven execution awareness

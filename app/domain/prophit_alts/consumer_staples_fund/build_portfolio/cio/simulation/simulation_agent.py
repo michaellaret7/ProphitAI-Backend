@@ -55,7 +55,7 @@ class CIOSimulationAgent(BaseAgent):
         max_iterations: int = 250,
         plan_first: bool = True,
         save_messages: bool = True,
-        model: str = "gpt-4.1",
+        # model: str = "gpt-4.1",
         verbose: bool = True,
         memory_refresh_interval: int = 20,
     ):
@@ -84,7 +84,7 @@ class CIOSimulationAgent(BaseAgent):
             max_iterations=max_iterations,
             plan_first=plan_first,
             save_messages=save_messages,
-            model=model,
+            # model=model,
             verbose=verbose,
             memory_refresh_interval=memory_refresh_interval,
         )

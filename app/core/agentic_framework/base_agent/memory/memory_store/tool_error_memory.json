@@ -9752,16 +9752,6 @@
       "error_pattern": "calculate_portfolio_returns_metrics() missing 1 required positional argument: 'portfolio_dict'",
       "occurrences": [
         {
-          "timestamp": "2025-09-23T17:21:53.001189",
-          "args": {},
-          "full_error": "calculate_portfolio_returns_metrics() missing 1 required positional argument: 'portfolio_dict'"
-        },
-        {
-          "timestamp": "2025-09-23T17:46:51.764626",
-          "args": {},
-          "full_error": "calculate_portfolio_returns_metrics() missing 1 required positional argument: 'portfolio_dict'"
-        },
-        {
           "timestamp": "2025-09-24T09:09:50.741770",
           "args": {},
           "full_error": "calculate_portfolio_returns_metrics() missing 1 required positional argument: 'portfolio_dict'"
@@ -9798,6 +9788,16 @@
         },
         {
           "timestamp": "2025-09-30T17:41:48.548197",
+          "args": {},
+          "full_error": "calculate_portfolio_returns_metrics() missing 1 required positional argument: 'portfolio_dict'"
+        },
+        {
+          "timestamp": "2025-10-01T10:16:58.802579",
+          "args": {},
+          "full_error": "calculate_portfolio_returns_metrics() missing 1 required positional argument: 'portfolio_dict'"
+        },
+        {
+          "timestamp": "2025-10-01T10:22:00.099235",
           "args": {},
           "full_error": "calculate_portfolio_returns_metrics() missing 1 required positional argument: 'portfolio_dict'"
         }
@@ -9935,7 +9935,7 @@
           },
           "explanation": "Successful retry with corrected arguments",
           "timestamp": "2025-09-22T14:48:52.045150",
-          "success_count": 21
+          "success_count": 25
         }
       ],
       "auto_solution": {
@@ -10070,7 +10070,7 @@
         },
         "explanation": "Successful retry with corrected arguments",
         "timestamp": "2025-09-22T14:48:52.045150",
-        "success_count": 21
+        "success_count": 25
       }
     },
     "calculate_portfolio_correlation_matrix:missing_portfolio_dict": {
@@ -12634,6 +12634,11 @@
           "timestamp": "2025-09-30T17:34:38.726062",
           "args": {},
           "full_error": "calculate_ticker_performances() missing 1 required positional argument: 'portfolio_dict'"
+        },
+        {
+          "timestamp": "2025-10-01T10:17:03.697361",
+          "args": {},
+          "full_error": "calculate_ticker_performances() missing 1 required positional argument: 'portfolio_dict'"
         }
       ],
       "solutions": [
@@ -12784,7 +12789,7 @@
           },
           "explanation": "Successful retry with corrected arguments",
           "timestamp": "2025-09-23T17:48:28.420186",
-          "success_count": 7
+          "success_count": 9
         }
       ],
       "auto_solution": {
@@ -12934,7 +12939,7 @@
         },
         "explanation": "Successful retry with corrected arguments",
         "timestamp": "2025-09-23T17:48:28.420186",
-        "success_count": 7
+        "success_count": 9
       }
     },
     "portfolio_industry_concentration:missing_portfolio_dict": {
@@ -14426,5 +14431,5 @@
       "auto_solution": null
     }
   },
-  "last_updated": "2025-09-30T17:43:03.381266"
+  "last_updated": "2025-10-01T10:22:03.796272"
 }

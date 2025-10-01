@@ -1,10 +1,42 @@
-# ProphitAI File Structure
+# ProphitAI - Project File Structure
+
+**Generated:** 2025-10-01
+
+## Main Folder Overview
+
+- **app/**: Main application code
+  - **core/**: Core framework and calculation engines
+    - **agentic_framework/**: AI agent system with tools, memory, and task management
+    - **calculations/**: Financial calculations (risk, performance, factors, portfolio)
+  - **domain/**: Domain-specific implementations (ProphitAlts funds, portfolio operations)
+  - **api/**: FastAPI routes, controllers, and WebSocket support
+  - **db/**: Database models, jobs, and monitoring
+  - **repositories/**: Data access layer
+  - **models/**: Pydantic models and schemas
+  - **utils/**: Utility functions and decorators
+  - **services/**: Business logic services
+
+- **tests/**: Test files and experimental code
+- **notebooks/**: Jupyter notebooks for analysis
+- **planning/**: Development planning documents
+- **.claude/**: Claude Code configuration
+
+## Complete Directory Structure
 
 ```
+.
 ├── .claude/
+│   ├── agents/
+│   │   └── code_review.md
 │   ├── commands/
-│   │   └── explain.md
+│   │   ├── explain.md
+│   │   └── fl_structure.md
+│   ├── CLAUDE.md
 │   └── settings.local.json
+├── .cursor/
+│   ├── error_fixing.mdc
+│   ├── main_code_generation_rule.mdc
+│   └── workflow_instructions.mdc
 ├── app/
 │   ├── api/
 │   │   ├── controller/
@@ -18,10 +50,10 @@
 │   │   │   ├── user_routes.py
 │   │   │   └── websocket_router.py
 │   │   ├── testing/
-│   │   │   ├── alts_testing.py
-│   │   │   ├── portfolio_testing.py
 │   │   │   ├── static/
 │   │   │   │   └── test.html
+│   │   │   ├── alts_testing.py
+│   │   │   ├── portfolio_testing.py
 │   │   │   └── user_testing.py
 │   │   ├── portfolio.py
 │   │   ├── prophit_alts.py
@@ -70,6 +102,7 @@
 │   │   │   │   ├── agent.py
 │   │   │   │   └── tool_registry.py
 │   │   │   ├── evaluation/
+│   │   │   │   ├── hallucinations.md
 │   │   │   │   └── plan.md
 │   │   │   └── tool_lib/
 │   │   │       ├── agent_specific_tools/
@@ -253,7 +286,10 @@
 │       ├── token_count.py
 │       └── validation_utils.py
 ├── notebooks/
-│   └── portfolio_analysis.ipynb
+│   ├── data.ipynb
+│   ├── portfolio_analysis.ipynb
+│   ├── test_repository_data_dates.ipynb
+│   └── user_db.ipynb
 ├── planning/
 │   ├── error_fixer.md
 │   ├── structure_migration.md
@@ -265,13 +301,18 @@
 │   ├── vector_storage/
 │   │   ├── INDEX.yml
 │   │   ├── build.py
+│   │   ├── corpus.faiss
 │   │   ├── corpus.txt
+│   │   ├── docs.jsonl
+│   │   ├── embeddings.npy
 │   │   └── query.py
 │   ├── alpaca_trade.py
 │   ├── cluster_analysis.py
 │   ├── retail-fund-code.py
 │   └── streaming_data.py
-├── CLAUDE.md
+├── .env
+├── .env.example
+├── .gitignore
 ├── README.md
 ├── file_structure.md
 ├── main.py
