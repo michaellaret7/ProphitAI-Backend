@@ -361,6 +361,12 @@ class StockScreener:
 
 def screener(criteria_dict: Dict[str, Any]) -> str:
     try:
+        if not criteria_dict or not isinstance(criteria_dict, dict):
+            return yaml.dump({
+                "success": False,
+                "error": "criteria_dict parameter is required and must be a dictionary"
+            }, default_flow_style=False)
+
         df = StockScreener().screen(**criteria_dict)
         result = {
             "success": True,

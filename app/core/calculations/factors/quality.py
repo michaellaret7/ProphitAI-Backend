@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from typing import Optional, Iterable, List, Dict
-from datetime import date, timedelta
+from datetime import date, datetime, timedelta, timezone
 
 import numpy as np
 
@@ -13,6 +13,7 @@ from app.core.calculations.core.helpers import (
     sector_zscore,
     ttm,
     sort_rows_desc_by_date,
+    filter_rows_by_cutoff_date,
 )
 from app.utils.ticker_utils import get_most_recent_price
 import pandas as pd
@@ -30,10 +31,22 @@ class QualityFactors:
     cash flow to debt, conservative financing, ROCE.
     """
 
-    def __init__(self, ticker: str, data_service: DataService | None = None, filing_lag_days: int | None = None):
+    def __init__(
+        self,
+        ticker: str,
+        data_service: DataService | None = None,
+        as_of_date: Optional[datetime] = None,
+        filing_lag_days: int = 0
+    ):
         self.ticker = ticker.upper()
         self.ds = data_service or DataService()
         self.fund: FundamentalData = self.ds.get_fundamentals(self.ticker)
+
+        # As-of alignment controls (for simulation mode)
+        self.as_of_date: Optional[datetime] = as_of_date
+        self.filing_lag_days: int = int(filing_lag_days) if filing_lag_days and filing_lag_days > 0 else 0
+        self._effective_end_dt: datetime = as_of_date if as_of_date is not None else datetime.now(timezone.utc)
+        self._cutoff_date = (self._effective_end_dt - timedelta(days=self.filing_lag_days)).date()
 
         # Defensive sort by period end date desc
         ists = sort_rows_desc_by_date(self.fund.income_statements)
@@ -42,16 +55,12 @@ class QualityFactors:
         frs = sort_rows_desc_by_date(self.fund.financial_ratios)
         ests = sort_rows_desc_by_date(self.fund.analyst_estimates)
 
-        # Optional filing lag handling: if provided, drop the most recent statements not older than lag
-        if filing_lag_days is not None and filing_lag_days > 0:
-            lag = timedelta(days=int(filing_lag_days))
-            cutoff_date = (ists[0].date - lag) if ists and getattr(ists[0], 'date', None) else None
-            if cutoff_date is not None:
-                ists = [x for x in ists if getattr(x, 'date', date.min) <= cutoff_date]
-                bss = [x for x in bss if getattr(x, 'date', date.min) <= cutoff_date]
-                cfs = [x for x in cfs if getattr(x, 'date', date.min) <= cutoff_date]
-                frs = [x for x in frs if getattr(x, 'date', date.min) <= cutoff_date]
-                ests = [x for x in ests if getattr(x, 'date', date.min) <= cutoff_date]
+        # As-of cutoff filter to avoid look-ahead
+        ists = filter_rows_by_cutoff_date(ists, self._cutoff_date)
+        bss = filter_rows_by_cutoff_date(bss, self._cutoff_date)
+        cfs = filter_rows_by_cutoff_date(cfs, self._cutoff_date)
+        frs = filter_rows_by_cutoff_date(frs, self._cutoff_date)
+        ests = filter_rows_by_cutoff_date(ests, self._cutoff_date)
 
         # Basics
         self.net_income = float(ists[0].netIncome) if ists and ists[0].netIncome is not None else None
@@ -483,39 +492,41 @@ class QualityFactors:
     
     @classmethod
     def calc_all_bulk(
-        cls, 
-        tickers: list[str], 
+        cls,
+        tickers: list[str],
         data_service: DataService | None = None,
-        filing_lag_days: int | None = None
+        as_of_date: Optional[datetime] = None,
+        filing_lag_days: int = 0
     ) -> pd.DataFrame:
         """Calculate all quality factors for multiple tickers using bulk data fetching.
-        
+
         Args:
             tickers: List of ticker symbols
             data_service: Optional DataService instance (created if not provided)
-            filing_lag_days: Optional filing lag in days
-        
+            as_of_date: Optional as-of date for calculations
+            filing_lag_days: Filing lag in days
+
         Returns:
             DataFrame with tickers as rows and quality metrics as columns
         """
         ds = data_service or DataService()
-        
+
         # Bulk fetch fundamental data for all tickers
         fundamentals = ds.get_bulk_fundamentals(tickers)
-        
+
         # Calculate quality factors for each ticker
         all_results = {}
         for ticker in tickers:
             ticker = ticker.upper()
             if ticker in fundamentals:
                 try:
-                    # Create QualityFactors instance (it will use cached fundamentals from DataService)
-                    qf = cls(ticker, data_service=ds, filing_lag_days=filing_lag_days)
+                    # Create QualityFactors instance with as_of_date
+                    qf = cls(ticker, data_service=ds, as_of_date=as_of_date, filing_lag_days=filing_lag_days)
                     all_results[ticker] = qf.calc_all()
                 except Exception as e:
                     print(f"Error calculating quality factors for {ticker}: {e}")
                     all_results[ticker] = {}
-        
+
         # Convert to DataFrame
         df = pd.DataFrame(all_results).T
         return df

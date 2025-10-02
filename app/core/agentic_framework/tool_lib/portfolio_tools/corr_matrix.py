@@ -8,7 +8,11 @@ from app.models.portfolio_models import PortfolioInput
 import pandas as pd
 from app.utils.gpt_parser import canonical_portfolio
 from app.core.calculations.core.helpers import build_returns_df_from_price_map
+from app.utils.decorators.tool_validation import log_simulation_data_range, validate_required_args, validate_portfolio_dict
 
+@validate_required_args('portfolio_dict')
+@validate_portfolio_dict()
+@log_simulation_data_range()
 def correlation_matrix(portfolio_dict: PortfolioInput | dict, _simulation_date: Optional[datetime] = None) -> str:
     """
     Calculate pairwise correlations and return as records for easy LLM consumption.

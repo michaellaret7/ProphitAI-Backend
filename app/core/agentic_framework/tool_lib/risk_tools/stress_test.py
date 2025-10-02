@@ -2,8 +2,11 @@ import yaml
 from app.core.calculations.stress_test.runner import run_stress_test_workflow
 from app.models.portfolio_models import PortfolioInput
 from app.utils.gpt_parser import canonical_portfolio
+from app.utils.decorators.tool_validation import validate_required_args, validate_portfolio_dict
 import json
 
+@validate_required_args('portfolio_dict')
+@validate_portfolio_dict()
 def stress_test(portfolio_dict: PortfolioInput | dict = None) -> str:
     """
     Run comprehensive stress tests on a portfolio including market crash scenarios (-20%, -30%, -40%), sector rotation stress, interest rate shock, inflation spike, and correlation breakdown scenarios.

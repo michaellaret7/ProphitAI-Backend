@@ -5,9 +5,13 @@ from app.core.calculations.risk.calculator import RiskCalculator
 from app.models.portfolio_models import PortfolioInput
 import pandas as pd
 from app.utils.gpt_parser import canonical_portfolio
+from app.utils.decorators.tool_validation import validate_required_args, validate_portfolio_dict, validate_enum_arg
 import numpy as np
 from app.core.calculations.core.helpers import build_returns_df_from_price_map
 
+@validate_required_args('portfolio_dict', 'metric')
+@validate_portfolio_dict()
+@validate_enum_arg("metric", ["vol", "var"])
 def risk_contribution(portfolio_dict: PortfolioInput | dict = None, metric: str = 'vol') -> str:
     """
     Calculate Total Risk and risk contributions by asset.

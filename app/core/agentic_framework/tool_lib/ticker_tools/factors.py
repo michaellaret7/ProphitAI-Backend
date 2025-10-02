@@ -8,7 +8,12 @@ from app.core.calculations.factors.volatility import VolatilityFactors
 from app.core.calculations.core import DataService
 from datetime import datetime, timedelta
 from app.utils.simulation_utils import get_end_date, filter_series_by_date
+from app.utils.decorators.tool_validation import validate_ticker_arg, validate_enum_arg
+from app.utils.decorators.tool_validation import log_simulation_data_range
 
+@validate_ticker_arg()
+@validate_enum_arg("factor", ["growth", "value", "quality", "momentum", "volatility"])
+@log_simulation_data_range()
 def calculate_ticker_factors(ticker: str, factor: str, _simulation_date: Optional[datetime] = None) -> str:
     """Calculate all factor metrics for a given ticker and factor type.
 
@@ -21,11 +26,11 @@ def calculate_ticker_factors(ticker: str, factor: str, _simulation_date: Optiona
         # Growth, Value, and Quality factors take ticker string directly
         if factor in ["growth", "value", "quality"]:
             if factor == "growth":
-                result = GrowthFactors(ticker).calc_all()
+                result = GrowthFactors(ticker, as_of_date=_simulation_date).calc_all()
             elif factor == "value":
-                result = ValueFactors(ticker).calc_all()
+                result = ValueFactors(ticker, as_of_date=_simulation_date).calc_all()
             else:  # quality
-                result = QualityFactors(ticker).calc_all()
+                result = QualityFactors(ticker, as_of_date=_simulation_date).calc_all()
             return yaml.dump({"success": True, "data": result}, default_flow_style=False)
 
         # Momentum and Volatility factors need price series

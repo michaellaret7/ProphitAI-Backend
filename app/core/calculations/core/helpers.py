@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Iterable, Optional, Sequence
+from typing import Iterable, Optional, Sequence, List
 from datetime import date, datetime, timedelta
 
 import numpy as np
@@ -11,6 +11,33 @@ from app.repositories.price_data import fetch_bulk_price_data_for_tickers, get_d
 from app.core.calculations.returns.calculator import ReturnsCalculator
 
 logger = logging.getLogger(__name__)
+
+# ------------------------------ Date filtering helpers ------------------------------ #
+def filter_rows_by_cutoff_date(rows: List, cutoff_date: date) -> List:
+    """Filter fundamental data rows to only include those on or before cutoff_date.
+
+    Args:
+        rows: List of fundamental data rows with 'date' attribute
+        cutoff_date: date object representing the cutoff
+
+    Returns:
+        Filtered list of rows
+    """
+    if not rows:
+        return []
+    filtered = []
+    for r in rows:
+        try:
+            d = getattr(r, 'date', None)
+            if d is None:
+                continue
+            # Handle both datetime.date and datetime.datetime objects
+            dd = d.date() if hasattr(d, 'date') and callable(d.date) else d
+            if dd is not None and dd <= cutoff_date:
+                filtered.append(r)
+        except Exception:
+            continue
+    return filtered
 
 # ------------------------------ Series helpers ------------------------------ #
 def winsorize_series(series: pd.Series, lower: float = 0.025, upper: float = 0.025) -> pd.Series:

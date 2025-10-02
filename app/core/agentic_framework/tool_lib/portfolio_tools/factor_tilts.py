@@ -5,13 +5,21 @@ from app.db.core.db_config import ProphitAltsSession, MarketSession
 from app.utils.gpt_parser import canonical_portfolio
 from app.core.calculations.portfolio.factor_tilt import portfolio_factor_tilts
 from app.models.portfolio_models import PortfolioInput
+from app.utils.decorators.tool_validation import log_simulation_data_range, validate_required_args, validate_portfolio_dict, validate_enum_arg
 
-def factor_tilts_for_portfolio(portfolio_dict: PortfolioInput | dict, factors: str) -> str:
+@validate_required_args('portfolio_dict', 'factors')
+@validate_portfolio_dict()
+@validate_enum_arg("factors", ["all", "value", "growth", "momentum", "quality", "volatility"])
+@log_simulation_data_range()
+def factor_tilts_for_portfolio(portfolio_dict: PortfolioInput | dict, factors: str, **kwargs) -> str:
     """Compute and print factor tilts (value/growth/momentum/quality/volatility)."""
     try:
         if not portfolio_dict:
             return yaml.dump({"success": True, "data": {}}, default_flow_style=False)
         portfolio_dict = canonical_portfolio(portfolio_dict)
+
+        # Extract simulation date if present (for backtesting/simulation)
+        end_date = kwargs.get('_simulation_date', None)
 
         # Convert portfolio dict to signed weights expected by calculations_v2
         # Positive for longs, negative for shorts
@@ -46,18 +54,18 @@ def factor_tilts_for_portfolio(portfolio_dict: PortfolioInput | dict, factors: s
 
         if factors == "all":
             result = {
-                "value": _summary(_round_tilt_output(portfolio_factor_tilts(weights, "value"))),
-                "growth": _summary(_round_tilt_output(portfolio_factor_tilts(weights, "growth"))),
-                "momentum": _summary(_round_tilt_output(portfolio_factor_tilts(weights, "momentum"))),
-                "quality": _summary(_round_tilt_output(portfolio_factor_tilts(weights, "quality"))),
-                "volatility": _summary(_round_tilt_output(portfolio_factor_tilts(weights, "volatility")))
+                "value": _summary(_round_tilt_output(portfolio_factor_tilts(weights, "value", end=end_date))),
+                "growth": _summary(_round_tilt_output(portfolio_factor_tilts(weights, "growth", end=end_date))),
+                "momentum": _summary(_round_tilt_output(portfolio_factor_tilts(weights, "momentum", end=end_date))),
+                "quality": _summary(_round_tilt_output(portfolio_factor_tilts(weights, "quality", end=end_date))),
+                "volatility": _summary(_round_tilt_output(portfolio_factor_tilts(weights, "volatility", end=end_date)))
             }
             return yaml.dump({"success": True, "data": result}, default_flow_style=False)
 
         if factors not in ["value", "growth", "momentum", "quality", "volatility", "all"]:
             return yaml.dump({"success": False, "error": f"Invalid factor: {factors}"}, default_flow_style=False)
 
-        data = _round_tilt_output(portfolio_factor_tilts(weights, factors))
+        data = _round_tilt_output(portfolio_factor_tilts(weights, factors, end=end_date))
         return yaml.dump({"success": True, "data": data}, default_flow_style=False)
     except Exception as e:
         return yaml.dump({"success": False, "error": str(e)}, default_flow_style=False)

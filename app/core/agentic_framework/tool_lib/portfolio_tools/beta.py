@@ -7,7 +7,13 @@ from app.utils.gpt_parser import canonical_portfolio
 from app.core.calculations.portfolio.utils import get_portfolio_returns, get_benchmark_returns
 from app.core.calculations.risk.calculator import RiskCalculator
 from app.models.portfolio_models import PortfolioInput
+from app.utils.decorators.tool_validation import validate_ticker_arg, validate_numeric_arg, log_simulation_data_range, validate_portfolio_dict, validate_required_args
 
+@validate_required_args('portfolio_dict')
+@validate_portfolio_dict()
+@validate_ticker_arg("index_ticker")
+@validate_numeric_arg("lookback_days", positive_only=True)
+@log_simulation_data_range()
 def calculate_portfolio_beta_vs_index(
     portfolio_dict: PortfolioInput | dict,
     lookback_days: int = 252,

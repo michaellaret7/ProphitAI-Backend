@@ -1,4 +1,5 @@
 import json
+from datetime import datetime
 from typing import List, Dict, Any, Callable, Optional
 from dotenv import load_dotenv
 from app.core.agentic_framework.tool_lib.base_tools.planning_tool import PlanningTool
@@ -29,24 +30,26 @@ class BaseAgent:
       (d) Returns a clean structured trace
     """
 
-    def __init__(self, 
-                system_prompt: str, 
-                user_prompt: str, 
-                *, 
-                model: str = None, 
-                max_iterations: int = 75, 
-                verbose: bool = True, 
-                plan_first: bool = True, 
-                final_keywords: Optional[List[str]] = None, 
+    def __init__(self,
+                system_prompt: str,
+                user_prompt: str,
+                *,
+                model: str = None,
+                max_iterations: int = 75,
+                verbose: bool = True,
+                plan_first: bool = True,
+                final_keywords: Optional[List[str]] = None,
                 save_messages: bool = True,
                 use_error_memory: bool = True,
                 use_episodic_memory: bool = True,
                 memory_refresh_interval: int = 6,
+                simulation_date: Optional[datetime] = None,
             ):
         
-        # self.model, self.client = openai_model_and_client(model=model)
+        self.model, self.client = openai_model_and_client(model=model)
         # self.model, self.client = grok_model_and_client(model=model)
-        self.model, self.client = claude_model_and_client(model=model)
+        # self.model, self.client = claude_model_and_client(model=model)
+
         print(f"Using model: {self.model}")
         print(f"Using client: {self.client}")
 
@@ -60,6 +63,7 @@ class BaseAgent:
         self.use_error_memory = use_error_memory
         self.use_episodic_memory = use_episodic_memory
         self.memory_refresh_interval = memory_refresh_interval
+        self.simulation_date = simulation_date  # For simulation mode: inject _simulation_date into all tool calls
         
         # OpenAI tools and local dispatch map
         self.tools: List[Dict[str, Any]] = []
@@ -630,7 +634,9 @@ class BaseAgent:
                     self.last_tool_auto_retry_success = False
                     
                     # Check for consecutive failures with same tool
-                    error_key = f"{name}:{json.dumps(args, sort_keys=True)}"
+                    # Filter out _simulation_date for error key (not JSON serializable)
+                    error_key_args = {k: v for k, v in args.items() if k != '_simulation_date'}
+                    error_key = f"{name}:{json.dumps(error_key_args, sort_keys=True)}"
                     if error_key in self.consecutive_failures and self.consecutive_failures[error_key] >= 3:
                         if self.verbose:
                             print(f"⚠️ Skipping {name} - failed 3 times with same args")
@@ -721,7 +727,9 @@ class BaseAgent:
                         self.recent_observations.pop(0)
 
                     if self.verbose:
-                        print(f"  tool_call -> {name} args={json.dumps(args, sort_keys=True)}")
+                        # Filter out _simulation_date for logging (not JSON serializable)
+                        log_args = {k: v for k, v in args.items() if k != '_simulation_date'}
+                        print(f"  tool_call -> {name} args={json.dumps(log_args, sort_keys=True)}")
                         print("  observation:", self.utilities.stringify(observation))
                         
                         # If this was a successful auto-retry, indicate it
@@ -920,7 +928,9 @@ class BaseAgent:
                             self.recent_observations.pop(0)
 
                         if self.verbose:
-                            print(f"  tool_call(content) -> {name} args={json.dumps(args, sort_keys=True)}")
+                            # Filter out _simulation_date for logging (not JSON serializable)
+                            log_args = {k: v for k, v in args.items() if k != '_simulation_date'}
+                            print(f"  tool_call(content) -> {name} args={json.dumps(log_args, sort_keys=True)}")
                             print("  observation:", self.utilities.stringify(observation))
 
                         messages.append({"role": "assistant", "content": assistant_raw})

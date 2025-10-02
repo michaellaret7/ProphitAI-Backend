@@ -3,8 +3,11 @@ from app.core.calculations.portfolio.utils import get_portfolio_returns
 from app.core.calculations.risk.calculator import RiskCalculator
 from app.models.portfolio_models import PortfolioInput
 from app.utils.gpt_parser import canonical_portfolio
+from app.utils.decorators.tool_validation import validate_required_args, validate_portfolio_dict
 import numpy as np
 
+@validate_required_args('portfolio_dict')
+@validate_portfolio_dict()
 def drawdown_profile(portfolio_dict: PortfolioInput | dict = None) -> str:
     """
     Analyze portfolio drawdown characteristics.

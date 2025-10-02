@@ -1,27 +1,37 @@
 import yaml
+import pandas as pd
 from app.core.calculations.sectors.industry import calc_industry_factor_benchmark_calculations
+from app.utils.decorators.tool_validation import validate_required_args, validate_enum_arg
 
-def get_industry_benchmark_calculations(industry: str, factor: str) -> str:
+@validate_required_args('industry', 'factor')
+@validate_enum_arg("factor", ["growth", "value", "momentum", "quality", "volatility"])
+def get_industry_benchmark_calculations(industry: str, factor: str, **kwargs) -> str:
     """Get the industry benchmark calculations for a given industry and factor.
 
     Args:
         industry: The industry to get the benchmark calculations for
         factor: The factor to get the benchmark calculations for
+        **kwargs: Additional keyword arguments (accepts _simulation_date for compatibility)
 
     Returns:
         Dictionary containing the benchmark calculations
     """
     try:
-        # Validate inputs and raise ValueError for invalid arguments
-        valid_factors = {"growth", "value", "momentum", "quality", "volatility"}
-
         if not isinstance(industry, str) or not industry:
             return yaml.dump({"success": False, "error": "Parameter 'industry' must be a non-empty string."}, default_flow_style=False)
 
-        if not isinstance(factor, str) or factor not in valid_factors:
-            return yaml.dump({"success": False, "error": f"Parameter 'factor' must be one of: {', '.join(valid_factors)}."}, default_flow_style=False)
+        # Extract _simulation_date from kwargs for simulation mode
+        _simulation_date = kwargs.get('_simulation_date', None)
 
-        data = calc_industry_factor_benchmark_calculations(industry, factor).to_dict()
+        data = calc_industry_factor_benchmark_calculations(industry, factor, as_of_date=_simulation_date).to_dict()
+
+        # Check if data is empty (industry not found or no tickers)
+        if not data or all(v is None or (isinstance(v, float) and pd.isna(v)) for v in data.values()):
+            return yaml.dump({
+                "success": False,
+                "error": f"No data found for industry '{industry}'. Please check the industry name. Example: 'beverages', 'food_products'"
+            }, default_flow_style=False)
+
         return yaml.dump({"success": True, "data": data}, default_flow_style=False)
     except Exception as e:
         return yaml.dump({"success": False, "error": str(e)}, default_flow_style=False)

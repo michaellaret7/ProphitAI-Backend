@@ -1,4 +1,6 @@
 import yaml
+from typing import Optional
+from datetime import datetime
 from app.core.calculations.portfolio.utils import prepare_portfolio_data
 from app.core.calculations.returns.calculator import ReturnsCalculator
 from app.core.calculations.risk.calculator import RiskCalculator
@@ -6,8 +8,10 @@ from app.models.portfolio_models import PortfolioInput
 import pandas as pd
 from app.utils.gpt_parser import canonical_portfolio
 from app.core.calculations.core.helpers import build_returns_df_from_price_map
+from app.utils.decorators.tool_validation import log_simulation_data_range
 
-def calculate_covariance_matrix(portfolio_dict: PortfolioInput | dict = None) -> str:
+@log_simulation_data_range()
+def calculate_covariance_matrix(portfolio_dict: PortfolioInput | dict = None, _simulation_date: Optional[datetime] = None, **kwargs) -> str:
     """
     Calculate covariance matrix for portfolio tickers using historical returns data.
 
@@ -33,7 +37,8 @@ def calculate_covariance_matrix(portfolio_dict: PortfolioInput | dict = None) ->
         weights_dict, price_data, _ = prepare_portfolio_data(
             portfolio=portfolio_dict,
             lookback_days=252,
-            include_dividends=False
+            include_dividends=False,
+            _simulation_date=_simulation_date
         )
 
         if not price_data:

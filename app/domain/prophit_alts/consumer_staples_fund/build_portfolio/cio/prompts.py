@@ -13,17 +13,14 @@ Portfolio Characteristics/Criteria:
 </Goal>
 
 <Portfolio Construction Hard Constraints (every item in this section is a hard constraint, if any of these constraints are violated, you will be VERY HARSHLY penalized)>
-- Net exposure around +30% (plus or minus 5% is allowed)
+- Net exposure around +10-40% (plus or minus 5% is allowed) --> flexible with the range
 - Portfolio Beta Constraints:
-   --> Beta must be greater than 0.175
-   --> Beta must be less than 0.6 
+   --> Beta must be greater than 0.1
+   --> Beta must be less than 0.4
    --> Under no circumstances can the portfolio beta be negative (-) 
-- The portfolio must have between 15-20 Long positions 
-- The portfolio must have between 12-15 Short positions 
-- The portfolio must have a gross exposure between 150% and 250% (Target is 180%)
-- Short position Hard Contraints:
-   --> Short allocation allowed for highly liquid stocks is 4-5% (No more than 5%)
-   --> Short allocation allowed for smaller/illiquid stocks is 2-3% (No more than 3%)
+- The portfolio must have between 18-20 Long positions [this is a hard constraint and cannot be violated]
+- The portfolio must have between 12-18 Short positions [this is a hard constraint and cannot be violated]
+- The portfolio must have a gross exposure between 150% and 250% (Target is 180%) --> flexible with the range
 - Portfolio Must have the following performance metrics:
    --> Annualized Return must be greater than 10%
    --> Sharpe Ratio must be greater than 1.0
@@ -69,8 +66,8 @@ CORRECT Example: {{"CASY": {{"allocation": 0.10, "position": "long"}}, "WBA": {{
    --> This will be your ticker pool to choose from to construct the portfolio.
 2. Conduct individual stock analysis based on the analyst ticker pool 
    --> Use the tools to extensively gather data on the stocks from the ticker pool.
-   --> Choose 15-20 long positions 
-   --> Choose 10-15 short positions
+   --> Choose 18-20 long positions 
+   --> Choose 12-18 short positions
 3. Construct portfolio v1
    --> Construct portfolio v1 based on your stock picks. 
    --> Use the conviction values from the get_analyst_picks tool.
@@ -89,7 +86,7 @@ Important Note: You are allowed to create more than 3 portfolios, the suggested 
 5. Review the Final Portfolio Iteration and pick the optimal allocations for each ticker based on conviction that fall within the Portfolio Construction Hard Constraints.
 6. Check that the portfolio meets all of the requirements and you are satisfied with the final product.
    --> Review the <Portfolio Construction Hard Constraints> for constraint information.
-   --> It must fit the beta hard constraints. (Beta must be greater than 0.175 and less than 0.6)
+   --> It must fit the beta hard constraints. (Beta must be greater than 0.1 and less than 0.4)
    --> It must fit the performance hard constraints. (Annualized Return must be greater than 10%, Sharpe Ratio must be greater than 1.0, Alpha vs SPY must be greater than 1.0%)
    --> If the portfolio does not meet the performance hard constraints, you must go back and edit the portfolio until it meets the requirements.
 7. Output the final portfolio to the user.

@@ -1,6 +1,8 @@
 import yaml
 from app.utils.decorators.price_data import with_price_data
+from app.utils.decorators.tool_validation import validate_ticker_arg
 
+@validate_ticker_arg()
 @with_price_data(lookback_days=252, include_dividends=False)
 def get_weekly_returns(ticker: str, price_data=None, **kwargs) -> str:
     """Get weekly returns for the last year for a given ticker."""

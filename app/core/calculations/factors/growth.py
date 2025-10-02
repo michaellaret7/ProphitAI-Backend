@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from typing import Optional, Iterable, List, Dict
-from datetime import date
+from datetime import date, datetime, timedelta, timezone
 
 from app.core.calculations.core.data_service import DataService
 from app.core.calculations.core.models import FundamentalData
@@ -16,6 +16,7 @@ from app.core.calculations.core.helpers import (
     yoy_growth,
     residualize,
     compose_exposure,
+    filter_rows_by_cutoff_date,
 )
 import numpy as np
 from scipy import stats
@@ -32,7 +33,14 @@ class GrowthFactors:
     operating cash flow growth.
     """
 
-    def __init__(self, ticker: str, data_service: DataService | None = None, fundamental_data: FundamentalData | None = None):
+    def __init__(
+        self,
+        ticker: str,
+        data_service: DataService | None = None,
+        fundamental_data: FundamentalData | None = None,
+        as_of_date: Optional[datetime] = None,
+        filing_lag_days: int = 0
+    ):
         self.ticker = ticker.upper()
         self.ds = data_service or DataService()
         # Use provided fundamental data or fetch it
@@ -41,12 +49,25 @@ class GrowthFactors:
         else:
             self.fund: FundamentalData = self.ds.get_fundamentals(self.ticker)
 
+        # As-of alignment controls (for simulation mode)
+        self.as_of_date: Optional[datetime] = as_of_date
+        self.filing_lag_days: int = int(filing_lag_days) if filing_lag_days and filing_lag_days > 0 else 0
+        self._effective_end_dt: datetime = as_of_date if as_of_date is not None else datetime.now(timezone.utc)
+        self._cutoff_date = (self._effective_end_dt - timedelta(days=self.filing_lag_days)).date()
+
         # Defensive sort by date descending where possible
         ists = sort_rows_desc_by_date(self.fund.income_statements)
         bss = sort_rows_desc_by_date(self.fund.balance_sheets)
         cfs = sort_rows_desc_by_date(self.fund.cash_flow_statements)
         frs = sort_rows_desc_by_date(self.fund.financial_ratios)
         ests = sort_rows_desc_by_date(self.fund.analyst_estimates)
+
+        # As-of cutoff filter to avoid look-ahead
+        ists = filter_rows_by_cutoff_date(ists, self._cutoff_date)
+        bss = filter_rows_by_cutoff_date(bss, self._cutoff_date)
+        cfs = filter_rows_by_cutoff_date(cfs, self._cutoff_date)
+        frs = filter_rows_by_cutoff_date(frs, self._cutoff_date)
+        ests = filter_rows_by_cutoff_date(ests, self._cutoff_date)
 
         # Detect statement frequency and compute span in years using actual dates when available
         income_dates = self._extract_dates(ists)
@@ -473,35 +494,43 @@ class GrowthFactors:
         return results
     
     @classmethod
-    def calc_all_bulk(cls, tickers: List[str], data_service: DataService | None = None) -> pd.DataFrame:
+    def calc_all_bulk(
+        cls,
+        tickers: List[str],
+        data_service: DataService | None = None,
+        as_of_date: Optional[datetime] = None,
+        filing_lag_days: int = 0
+    ) -> pd.DataFrame:
         """Calculate all growth factors for multiple tickers using bulk data fetching.
-        
+
         Args:
             tickers: List of ticker symbols
             data_service: Optional DataService instance (created if not provided)
-        
+            as_of_date: Optional as-of date for calculations
+            filing_lag_days: Filing lag in days
+
         Returns:
             DataFrame with tickers as rows and growth metrics as columns
         """
         ds = data_service or DataService()
-        
+
         # Bulk fetch fundamental data for all tickers
         fundamentals = ds.get_bulk_fundamentals(tickers)
-        
+
         # Calculate growth factors for each ticker
         all_results = {}
         for ticker in tickers:
             ticker = ticker.upper()
             if ticker in fundamentals:
                 try:
-                    # Create GrowthFactors with pre-fetched data
-                    gf = cls(ticker, data_service=ds, fundamental_data=fundamentals[ticker])
+                    # Create GrowthFactors with pre-fetched data and as_of_date
+                    gf = cls(ticker, data_service=ds, fundamental_data=fundamentals[ticker], as_of_date=as_of_date, filing_lag_days=filing_lag_days)
                     all_results[ticker] = gf.calc_all()
                 except Exception as e:
                     print(f"Error calculating growth factors for {ticker}: {e}")
                     # Add NaN row for failed tickers
                     all_results[ticker] = {}
-        
+
         # Convert to DataFrame
         df = pd.DataFrame(all_results).T
         return df

@@ -2,8 +2,14 @@ import yaml
 from typing import Optional
 from datetime import datetime
 from app.repositories.fundamental_data import get_fundamental_data as _get_fundamental_data
+from app.utils.decorators.tool_validation import validate_ticker_arg, validate_enum_arg, validate_numeric_arg
+from app.utils.decorators.tool_validation import log_simulation_data_range
 
-def get_fundamental_data(ticker: str, statement_type: str, quarters_back: int = 2, _simulation_date: Optional[datetime] = None) -> str:
+@validate_ticker_arg()
+@validate_enum_arg("statement_type", ["income_statement", "balance_sheet", "cash_flow", "financial_ratios"])
+@validate_numeric_arg("quarters_back", min_value=1)
+@log_simulation_data_range()
+def get_fundamental_data(ticker: str = None, statement_type: str = None, quarters_back: int = 2, _simulation_date: Optional[datetime] = None) -> str:
     """Wrapper function to return YAML format.
 
     Args:
@@ -13,15 +19,8 @@ def get_fundamental_data(ticker: str, statement_type: str, quarters_back: int = 
         _simulation_date: INTERNAL USE ONLY - For simulation mode, not exposed to agents
     """
 
-    if not isinstance(ticker, str) or not ticker:
-        return yaml.dump({"success": False, "error": "Parameter 'ticker' must be a non-empty string."}, default_flow_style=False)
-    if not isinstance(statement_type, str) or statement_type not in ["income_statement", "balance_sheet", "cash_flow", "financial_ratios"]:
-        return yaml.dump({"success": False, "error": f"Parameter 'statement_type' must be one of: {', '.join(['income_statement', 'balance_sheet', 'cash_flow', 'financial_ratios'])}."}, default_flow_style=False)
-    if not isinstance(quarters_back, int) or quarters_back < 1:
-        return yaml.dump({"success": False, "error": "Parameter 'quarters_back' must be a positive integer."}, default_flow_style=False)
-
     try:
-        data = _get_fundamental_data(ticker, statement_type, quarters_back)
+        data = _get_fundamental_data(ticker, statement_type, quarters_back, _simulation_date=_simulation_date)
         result = {"success": True, "data": data}
     except Exception as e:
         result = {"success": False, "error": f"Failed to retrieve fundamental data: {str(e)}"}

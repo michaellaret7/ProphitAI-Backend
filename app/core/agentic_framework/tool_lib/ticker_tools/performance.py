@@ -16,9 +16,13 @@ from app.core.calculations.core.config import (
     DEFAULT_CONFIDENCE,
 )
 from app.utils.decorators.price_data import with_bulk_price_data
+from app.utils.decorators.tool_validation import validate_ticker_arg
 from app.utils.simulation_utils import get_end_date, filter_series_by_date
+from app.utils.decorators.tool_validation import log_simulation_data_range
 
+@validate_ticker_arg()
 @with_bulk_price_data(lookback_days=252 * 3, include_dividends=True)
+@log_simulation_data_range()
 def get_ticker_performance_and_risk(
     ticker: str,
     *,
@@ -87,8 +91,8 @@ def get_ticker_performance_and_risk(
     except Exception:
         rm = None
 
-    # Normalize ticker to upper-case string
-    tkr = str(ticker).upper()
+    # Normalize ticker (validation handled by @validate_ticker_arg decorator)
+    tkr = ticker.strip().upper()
 
     def _round_map(d: Dict[str, Any], ndigits: int = 4) -> Dict[str, Any]:
         out: Dict[str, Any] = {}

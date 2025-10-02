@@ -1,8 +1,10 @@
 import yaml
 from app.utils.gpt_parser import canonical_portfolio
 from app.core.calculations.portfolio.allocations import SimplePortfolioAllocator
+from app.utils.decorators.tool_validation import validate_required_args
 
-def build_portfolio(portfolio_dict: any) -> str:
+@validate_required_args('portfolio_dict')
+def build_portfolio(portfolio_dict: any, **kwargs) -> str:
     """
     Build optimized long/short portfolio using SimplePortfolioAllocator with risk-based optimization.
 

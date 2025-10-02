@@ -166,8 +166,12 @@ class AgentUtilities:
             if not func:
                 return f"Error: tool '{name}' not found. Available tools: {list(self.agent.tool_functions.keys())}"
         try:
+            # Auto-inject _simulation_date for simulation agents
+            if self.agent.simulation_date is not None and isinstance(args, dict):
+                args['_simulation_date'] = self.agent.simulation_date
+
             result = func(**args) if isinstance(args, dict) else func(args)
-            
+
             # If this was a retry after an error and it succeeded, record the solution
             if self.agent.error_memory and self.agent.last_tool_error:
                 if self.agent.last_tool_error.get('tool_name') == name:
@@ -459,7 +463,9 @@ class AgentUtilities:
     def update_stagnation(self, name: str, args: Dict[str, Any]):
         """Update stagnation detection for repeated actions."""
         name = self._strip_functions_prefix(name)
-        key = f"{name}:{json.dumps(args, sort_keys=True)}"
+        # Filter out _simulation_date for stagnation key (not JSON serializable)
+        stag_args = {k: v for k, v in args.items() if k != '_simulation_date'}
+        key = f"{name}:{json.dumps(stag_args, sort_keys=True)}"
         if key in self.agent._recent_actions:
             self.agent._stuck_count += 1
         else:

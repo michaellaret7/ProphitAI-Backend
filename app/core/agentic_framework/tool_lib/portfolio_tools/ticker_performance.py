@@ -9,7 +9,11 @@ import pandas as pd
 import numpy as np
 from app.models.portfolio_models import PortfolioInput
 from app.utils.gpt_parser import canonical_portfolio
+from app.utils.decorators.tool_validation import log_simulation_data_range, validate_portfolio_dict, validate_required_args
 
+@validate_required_args('portfolio_dict')
+@validate_portfolio_dict()
+@log_simulation_data_range()
 def calculate_ticker_performances(portfolio_dict: PortfolioInput | dict, lookback_days: int = 504, use_total_returns: bool = True, benchmark: str = "SPY", _simulation_date: Optional[datetime] = None) -> str:
     """Return a DataFrame of performance metrics for each ticker in the portfolio.
 

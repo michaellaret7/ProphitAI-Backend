@@ -3,9 +3,15 @@ from app.core.calculations.portfolio.utils import get_portfolio_returns
 from app.core.calculations.risk.calculator import RiskCalculator
 from app.models.portfolio_models import PortfolioInput
 from app.utils.gpt_parser import canonical_portfolio
+from app.utils.decorators.tool_validation import validate_required_args, validate_portfolio_dict, validate_numeric_arg, validate_enum_arg
 
 import numpy as np
 
+@validate_required_args('portfolio_dict')
+@validate_portfolio_dict()
+@validate_numeric_arg("horizon_days", min_value=1)
+@validate_numeric_arg("conf", min_value=0.5, max_value=0.999)
+@validate_enum_arg("method", ["param", "hist"])
 def vol_es(portfolio_dict: PortfolioInput | dict = None, horizon_days: int = 1, conf: float = 0.99, method: str = 'param') -> str:
     """
     Calculate Volatility, Value at Risk (VaR), and Expected Shortfall (ES) for portfolio.

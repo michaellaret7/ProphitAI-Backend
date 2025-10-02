@@ -31,7 +31,7 @@ def register_base_tools(agent: Any) -> None:
             },
             "required": ["query"],
         },
-        function=lambda query: AgentSearchEngine().perplexity_free_search(query),
+        function=lambda query, **kwargs: AgentSearchEngine().perplexity_free_search(query),
     )
 
     # calculator
@@ -49,7 +49,7 @@ def register_base_tools(agent: Any) -> None:
             },
             "required": ["expression"],
         },
-        function=lambda expression: calculator.calculator(expression),
+        function=lambda expression, **kwargs: calculator.calculator(expression),
     )
 
     # structured_planning
@@ -64,7 +64,7 @@ def register_base_tools(agent: Any) -> None:
             "properties": {},
             "required": [],
         },
-        function=lambda: agent.planning_tool.create_plan_from_agent(),
+        function=lambda **kwargs: agent.planning_tool.create_plan_from_agent(),
     )
 
     # Task progression tools
@@ -79,7 +79,7 @@ def register_base_tools(agent: Any) -> None:
             "properties": {},
             "required": [],
         },
-        function=lambda: agent.execution_engine.advance_task_progression(),
+        function=lambda **kwargs: agent.execution_engine.advance_task_progression(),
     )
 
     agent.add_tool(
@@ -92,7 +92,7 @@ def register_base_tools(agent: Any) -> None:
             "properties": {},
             "required": [],
         },
-        function=lambda: agent.execution_engine.get_current_task_context(),
+        function=lambda **kwargs: agent.execution_engine.get_current_task_context(),
     )
 
     agent.add_tool(
@@ -105,7 +105,7 @@ def register_base_tools(agent: Any) -> None:
             "properties": {},
             "required": [],
         },
-        function=lambda: agent.execution_engine.get_execution_summary(),
+        function=lambda **kwargs: agent.execution_engine.get_execution_summary(),
     )
 
     # Real-time state management tools
@@ -119,7 +119,7 @@ def register_base_tools(agent: Any) -> None:
             "properties": {},
             "required": [],
         },
-        function=lambda: agent.task_manager.get_task_progress_summary(),
+        function=lambda **kwargs: agent.task_manager.get_task_progress_summary(),
     )
 
     agent.add_tool(
@@ -134,7 +134,7 @@ def register_base_tools(agent: Any) -> None:
             },
             "required": ["task_id"],
         },
-        function=lambda task_id: agent.task_manager.get_task_evidence_summary(task_id),
+        function=lambda task_id, **kwargs: agent.task_manager.get_task_evidence_summary(task_id),
     )
 
     agent.add_tool(
@@ -151,7 +151,7 @@ def register_base_tools(agent: Any) -> None:
             },
             "required": ["task_id", "evidence"],
         },
-        function=lambda task_id, evidence, subtask_id=None: agent.task_manager.add_task_evidence(task_id, evidence, subtask_id),
+        function=lambda task_id, evidence, subtask_id=None, **kwargs: agent.task_manager.add_task_evidence(task_id, evidence, subtask_id),
     )
 
     agent.add_tool(
@@ -164,7 +164,7 @@ def register_base_tools(agent: Any) -> None:
             "properties": {},
             "required": [],
         },
-        function=lambda: agent.task_manager.get_execution_analytics(),
+        function=lambda **kwargs: agent.task_manager.get_execution_analytics(),
     )
 
     agent.add_tool(
@@ -177,7 +177,7 @@ def register_base_tools(agent: Any) -> None:
             "properties": {},
             "required": [],
         },
-        function=lambda: agent.execution_engine.get_intelligent_completion_analysis(),
+        function=lambda **kwargs: agent.execution_engine.get_intelligent_completion_analysis(),
     )
 
     agent.add_tool(
@@ -191,7 +191,7 @@ def register_base_tools(agent: Any) -> None:
             "properties": {},
             "required": [],
         },
-        function=lambda: agent._check_plan_completion_status(),
+        function=lambda **kwargs: agent._check_plan_completion_status(),
     )
 
     # Advanced task management tools
@@ -210,7 +210,7 @@ def register_base_tools(agent: Any) -> None:
             },
             "required": ["task_id", "description"],
         },
-        function=lambda task_id, description, predicted_tools=None, insert_after=None: 
+        function=lambda task_id, description, predicted_tools=None, insert_after=None, **kwargs:
             agent.task_manager.add_main_task_to_plan(task_id, description, predicted_tools, insert_after),
     )
 
@@ -227,7 +227,7 @@ def register_base_tools(agent: Any) -> None:
             },
             "required": ["task_id"],
         },
-        function=lambda task_id, reason="Manual removal": 
+        function=lambda task_id, reason="Manual removal", **kwargs:
             agent.task_manager.remove_main_task_from_plan(task_id, reason),
     )
 
@@ -245,7 +245,7 @@ def register_base_tools(agent: Any) -> None:
             },
             "required": ["error_message"],
         },
-        function=lambda error_message, recovery_strategy="retry": 
+        function=lambda error_message, recovery_strategy="retry", **kwargs:
             agent.execution_engine.handle_task_failure(error_message, recovery_strategy),
     )
 
@@ -259,7 +259,7 @@ def register_base_tools(agent: Any) -> None:
             "properties": {},
             "required": [],
         },
-        function=lambda: agent.execution_engine.create_plan_analytics_report(),
+        function=lambda **kwargs: agent.execution_engine.create_plan_analytics_report(),
     )
 
     agent.add_tool(
@@ -274,7 +274,7 @@ def register_base_tools(agent: Any) -> None:
             },
             "required": [],
         },
-        function=lambda max_parallel=2: agent.execution_engine.simulate_parallel_execution(max_parallel),
+        function=lambda max_parallel=2, **kwargs: agent.execution_engine.simulate_parallel_execution(max_parallel),
     )
 
     agent.add_tool(
@@ -287,7 +287,7 @@ def register_base_tools(agent: Any) -> None:
             "properties": {},
             "required": [],
         },
-        function=lambda: agent.task_manager.get_plan_health_status(),
+        function=lambda **kwargs: agent.task_manager.get_plan_health_status(),
     )
 
     # Episodic memory tools (optional)
@@ -309,7 +309,7 @@ def register_base_tools(agent: Any) -> None:
                 },
                 "required": ["title", "event"],
             },
-            function=lambda title, event, context=None, outcome=None, tags=None, meta=None: \
+            function=lambda title, event, context=None, outcome=None, tags=None, meta=None, **kwargs: \
                 agent.episodic.append(title=title, event=event, context=context, outcome=outcome, tags=tags, meta=meta),
         )
 
@@ -328,7 +328,7 @@ def register_base_tools(agent: Any) -> None:
                 },
                 "required": [],
             },
-            function=lambda query=None, tags=None, since=None, limit=20: \
+            function=lambda query=None, tags=None, since=None, limit=20, **kwargs: \
                 agent.episodic.recall(query=query, tags=tags, since=since, limit=limit),
         )
 
@@ -373,7 +373,7 @@ def register_task_management_tools(agent: Any) -> None:
             },
             "required": ["task_id", "status"]
         },
-        function=lambda **kwargs: agent.task_manager.update_task_status(**kwargs)
+        function=lambda **kwargs: agent.task_manager.update_task_status(**{k: v for k, v in kwargs.items() if k != '_simulation_date'})
     )
 
     # Mark task complete (simplified version)
@@ -398,7 +398,7 @@ def register_task_management_tools(agent: Any) -> None:
             },
             "required": ["task_id"]
         },
-        function=lambda task_id, outputs=None, summary=None: agent.task_manager.update_task_status(
+        function=lambda task_id, outputs=None, summary=None, **kwargs: agent.task_manager.update_task_status(
             task_id=task_id,
             status="completed",
             evidence={"outputs": outputs or {}, "summary": summary} if (outputs or summary) else None,

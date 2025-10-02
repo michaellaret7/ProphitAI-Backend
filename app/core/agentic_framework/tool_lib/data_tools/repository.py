@@ -8,7 +8,15 @@ from datetime import datetime, timedelta
 from app.repositories.news_data import get_press_releases, get_stock_news, get_price_target_news
 from app.utils.decorators.database import with_session
 from app.utils.simulation_utils import get_date_range, filter_series_by_date
+from app.utils.decorators.tool_validation import validate_ticker_arg, validate_numeric_arg
+from app.utils.decorators.tool_validation import log_simulation_data_range
+from app.domain.prophit_alts.consumer_staples_fund.build_portfolio.cio.simulation.config import (
+    AVAILABLE_DATA_TYPES, is_data_type_available, get_unavailable_data_message
+)
 
+@validate_ticker_arg()
+@validate_numeric_arg("limit", min_value=1)
+@log_simulation_data_range()
 def fetch_repository_data(ticker: str, data_type: str, limit: int | None = None, _simulation_date: Optional[datetime] = None) -> str:
     """Route to repository functions based on data_type.
 
@@ -28,6 +36,15 @@ def fetch_repository_data(ticker: str, data_type: str, limit: int | None = None,
     """
     try:
         t = (data_type or "").strip().lower()
+
+        # Check data availability in simulation mode
+        if _simulation_date is not None and not is_data_type_available(t):
+            return yaml.dump({
+                "success": False,
+                "error": get_unavailable_data_message(t),
+                "suggestion": f"Available data types as of {_simulation_date.date()}: {sorted(list(AVAILABLE_DATA_TYPES))}"
+            }, default_flow_style=False)
+
         start_news, now = get_date_range(_simulation_date, lookback_days=180)
         start_divs, _ = get_date_range(_simulation_date, lookback_days=365)
 

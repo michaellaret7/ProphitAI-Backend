@@ -6,7 +6,10 @@ from app.core.calculations.returns.calculator import ReturnsCalculator
 from app.models.portfolio_models import PortfolioInput
 from app.utils.gpt_parser import canonical_portfolio
 from app.core.calculations.core.helpers import build_returns_df_from_price_map
+from app.utils.decorators.tool_validation import validate_required_args, validate_portfolio_dict
 
+@validate_required_args('portfolio_dict')
+@validate_portfolio_dict()
 def run_pairwise_correlation_analysis(portfolio_dict: PortfolioInput | dict) -> str:
     """
     Run pairwise correlation analysis on portfolio returns data and return results in YAML format.

@@ -14,8 +14,8 @@ from app.domain.prophit_alts.consumer_staples_fund.build_portfolio.cio.prompts i
     cio_system_prompt,
     cio_user_prompt,
 )
-from app.domain.prophit_alts.consumer_staples_fund.build_portfolio.cio.simulation.simulation_tool_registry import (
-    register_cio_simulation_tools,
+from app.domain.prophit_alts.consumer_staples_fund.build_portfolio.cio.tool_registry import (
+    register_cio_tools,
 )
 from app.domain.prophit_alts.consumer_staples_fund.build_portfolio.cio.simulation.config import (
     SIMULATION_CUTOFF_DATE,
@@ -32,11 +32,9 @@ class CIOPortfolioItem(BaseModel):
     key_drivers: str
     allocation: float
 
-
 class FinalPortfolio(BaseModel):
     """Schema for the final portfolio output."""
     portfolio: List[CIOPortfolioItem]
-
 
 class CIOSimulationAgent(BaseAgent):
     """CIO Agent for simulation/backtesting with historical data cutoff.
@@ -55,7 +53,7 @@ class CIOSimulationAgent(BaseAgent):
         max_iterations: int = 250,
         plan_first: bool = True,
         save_messages: bool = True,
-        # model: str = "gpt-4.1",
+        model: str = "gpt-5",
         verbose: bool = True,
         memory_refresh_interval: int = 20,
     ):
@@ -73,24 +71,24 @@ class CIOSimulationAgent(BaseAgent):
         self.cutoff_date = cutoff_date
 
         # Inject the simulation date naturally into the system prompt
-        # The model won't know it's a simulation - it will just think today is Sept 30, 2024
         date_injection = f"\nToday's date is {cutoff_date.strftime('%B %d, %Y')}.\n"
         modified_system_prompt = date_injection + cio_system_prompt
 
-        # Initialize base agent with date-injected prompts
+        # Initialize base agent with date-injected prompts and simulation_date parameter
         super().__init__(
             system_prompt=modified_system_prompt,
             user_prompt=cio_user_prompt,
             max_iterations=max_iterations,
             plan_first=plan_first,
             save_messages=save_messages,
-            # model=model,
+            model=model,
             verbose=verbose,
             memory_refresh_interval=memory_refresh_interval,
+            simulation_date=cutoff_date,  # Enable simulation mode - auto-injects _simulation_date into all tool calls
         )
 
-        # Register simulation-aware tools
-        register_cio_simulation_tools(self)
+        # Register CIO tools (simulation_date is auto-injected by BaseAgent)
+        register_cio_tools(self)
 
         if self.verbose:
             print(f"🕰️  CIO Simulation Agent initialized with cutoff date: {self.cutoff_date.strftime('%Y-%m-%d')}")

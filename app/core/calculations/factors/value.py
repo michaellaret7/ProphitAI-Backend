@@ -14,6 +14,7 @@ from app.core.calculations.core.helpers import (
     winsorize_series,
     sector_zscore,
     zscore_series,
+    filter_rows_by_cutoff_date,
 )
 from app.core.calculations.core.config import DEFAULT_SECTOR_COL, DEFAULT_WINSOR_LIMITS
 from app.core.calculations.factors.config import VALUE_WEIGHTS, PRICE_LOOKBACK_DAYS
@@ -67,27 +68,11 @@ class ValueFactors:
         ests = sort_rows_desc_by_date(self.fund.analyst_estimates)
 
         # As-of cutoff filter to avoid look-ahead
-        def _filter_rows_by_cutoff(rows):
-            if not rows:
-                return []
-            out = []
-            for r in rows:
-                try:
-                    d = getattr(r, 'date', None)
-                    if d is None:
-                        continue
-                    dd = d.date() if hasattr(d, 'date') else d
-                    if dd is not None and dd <= self._cutoff_date:
-                        out.append(r)
-                except Exception:
-                    continue
-            return out
-
-        ists = _filter_rows_by_cutoff(ists)
-        bss = _filter_rows_by_cutoff(bss)
-        cfs = _filter_rows_by_cutoff(cfs)
-        frs = _filter_rows_by_cutoff(frs)
-        ests = _filter_rows_by_cutoff(ests)
+        ists = filter_rows_by_cutoff_date(ists, self._cutoff_date)
+        bss = filter_rows_by_cutoff_date(bss, self._cutoff_date)
+        cfs = filter_rows_by_cutoff_date(cfs, self._cutoff_date)
+        frs = filter_rows_by_cutoff_date(frs, self._cutoff_date)
+        ests = filter_rows_by_cutoff_date(ests, self._cutoff_date)
 
         # Prefer diluted shares; fallback to basic
         self.shares_outstanding = None

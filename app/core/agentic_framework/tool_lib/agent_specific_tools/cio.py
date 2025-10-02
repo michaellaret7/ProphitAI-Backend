@@ -4,7 +4,7 @@ from app.db.core.market_data_models import Ticker
 from app.utils.decorators.database import with_sessions
 from app.db.core.db_config import ProphitAltsSession, MarketSession
 
-def get_analyst_picks() -> str:
+def get_analyst_picks(**kwargs) -> str:
     try:
         session = ProphitAltsSession()
         initial_positions = session.query(FundInitialPosition).join(Fund).filter(Fund.fund_name == "consumer_staples_fund").all()
@@ -24,7 +24,7 @@ def get_analyst_picks() -> str:
     except Exception as e:
         return yaml.dump({"success": False, "error": str(e)}, default_flow_style=False)
 
-def pull_rest_of_ticker_pool() -> str:
+def pull_rest_of_ticker_pool(**kwargs) -> str:
     try:
         session = ProphitAltsSession()
         market_session = MarketSession()

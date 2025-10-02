@@ -1,42 +1,40 @@
-# ProphitAI - Project File Structure
+# ProphitAI Project File Structure
 
 **Generated:** 2025-10-01
 
-## Main Folder Overview
+## Main Directory Overview
 
-- **app/**: Main application code
-  - **core/**: Core framework and calculation engines
-    - **agentic_framework/**: AI agent system with tools, memory, and task management
-    - **calculations/**: Financial calculations (risk, performance, factors, portfolio)
-  - **domain/**: Domain-specific implementations (ProphitAlts funds, portfolio operations)
-  - **api/**: FastAPI routes, controllers, and WebSocket support
-  - **db/**: Database models, jobs, and monitoring
-  - **repositories/**: Data access layer
-  - **models/**: Pydantic models and schemas
-  - **utils/**: Utility functions and decorators
-  - **services/**: Business logic services
+- **app/**: Core application code (agentic framework, API, domain logic, calculations, services)
+- **notebooks/**: Jupyter notebooks for analysis and testing
+- **tests/**: Test scripts and experimental code
+- **planning/**: Project planning documents and TODO lists
+- **.claude/**: Claude Code configuration and agent definitions
+- **.cursor/**: Cursor IDE configuration
 
-- **tests/**: Test files and experimental code
-- **notebooks/**: Jupyter notebooks for analysis
-- **planning/**: Development planning documents
-- **.claude/**: Claude Code configuration
+---
 
-## Complete Directory Structure
+## Detailed Structure
 
 ```
-.
+ProphitAI/
+│
 ├── .claude/
 │   ├── agents/
-│   │   └── code_review.md
-│   ├── commands/
+│   │   ├── architect_review.md
+│   │   ├── code_reviewer.md
+│   │   ├── debugger.md
 │   │   ├── explain.md
+│   │   └── quality_enforcer.md
+│   ├── commands/
 │   │   └── fl_structure.md
 │   ├── CLAUDE.md
 │   └── settings.local.json
+│
 ├── .cursor/
 │   ├── error_fixing.mdc
 │   ├── main_code_generation_rule.mdc
 │   └── workflow_instructions.mdc
+│
 ├── app/
 │   ├── api/
 │   │   ├── controller/
@@ -60,6 +58,7 @@
 │   │   ├── response_envelope.py
 │   │   ├── user.py
 │   │   └── websocket.py
+│   │
 │   ├── core/
 │   │   ├── agentic_framework/
 │   │   │   ├── agent_output/
@@ -104,6 +103,8 @@
 │   │   │   ├── evaluation/
 │   │   │   │   ├── hallucinations.md
 │   │   │   │   └── plan.md
+│   │   │   ├── tests/
+│   │   │   │   └── tool_error.py
 │   │   │   └── tool_lib/
 │   │   │       ├── agent_specific_tools/
 │   │   │       │   ├── cio.py
@@ -142,6 +143,7 @@
 │   │   │           ├── factors.py
 │   │   │           ├── performance.py
 │   │   │           └── weekly_returns.py
+│   │   │
 │   │   └── calculations/
 │   │       ├── core/
 │   │       │   ├── __init__.py
@@ -196,6 +198,7 @@
 │   │       │   ├── __init__.py
 │   │       │   └── indicators.py
 │   │       └── __init__.py
+│   │
 │   ├── db/
 │   │   ├── core/
 │   │   │   ├── add_etf.py
@@ -213,6 +216,7 @@
 │   │   └── monitor/
 │   │       ├── health_check.py
 │   │       └── query_performance_check.py
+│   │
 │   ├── domain/
 │   │   ├── portfolio_operations/
 │   │   │   ├── builder/
@@ -224,39 +228,39 @@
 │   │   │       │   └── tool_registry.py
 │   │   │       └── main.py
 │   │   ├── prophit_alts/
-│   │   │   ├── consumer_staples_fund/
-│   │   │   │   ├── build_portfolio/
-│   │   │   │   │   ├── cio/
-│   │   │   │   │   │   ├── simulation/
-│   │   │   │   │   │   │   ├── __init__.py
-│   │   │   │   │   │   │   ├── config.py
-│   │   │   │   │   │   │   ├── simulation_agent.py
-│   │   │   │   │   │   │   └── simulation_tool_registry.py
-│   │   │   │   │   │   ├── agent.py
-│   │   │   │   │   │   ├── prompts.py
-│   │   │   │   │   │   └── tool_registry.py
-│   │   │   │   │   ├── cro/
-│   │   │   │   │   │   ├── agent.py
-│   │   │   │   │   │   ├── portfolio_revisions.json
-│   │   │   │   │   │   ├── prompts.py
-│   │   │   │   │   │   └── tool_registry.py
-│   │   │   │   │   ├── final_portfolio/
-│   │   │   │   │   │   ├── cio.py
-│   │   │   │   │   │   └── prompts.py
-│   │   │   │   │   └── industry_agents/
-│   │   │   │   │       ├── agents.py
-│   │   │   │   │       ├── prompts.py
-│   │   │   │   │       └── tool_registry.py
-│   │   │   │   └── manage_portfolio/
-│   │   │   │       └── drawdown_management.py
-│   │   │   └── tech_ai_fund/
+│   │   │   └── consumer_staples_fund/
+│   │   │       ├── build_portfolio/
+│   │   │       │   ├── cio/
+│   │   │       │   │   ├── simulation/
+│   │   │       │   │   │   ├── __init__.py
+│   │   │       │   │   │   ├── config.py
+│   │   │       │   │   │   └── simulation_agent.py
+│   │   │       │   │   ├── agent.py
+│   │   │       │   │   ├── prompts.py
+│   │   │       │   │   └── tool_registry.py
+│   │   │       │   ├── cro/
+│   │   │       │   │   ├── agent.py
+│   │   │       │   │   ├── portfolio_revisions.json
+│   │   │       │   │   ├── prompts.py
+│   │   │       │   │   └── tool_registry.py
+│   │   │       │   ├── final_portfolio/
+│   │   │       │   │   ├── cio.py
+│   │   │       │   │   └── prompts.py
+│   │   │       │   └── industry_agents/
+│   │   │       │       ├── agents.py
+│   │   │       │       ├── prompts.py
+│   │   │       │       └── tool_registry.py
+│   │   │       └── manage_portfolio/
+│   │   │           └── drawdown_management.py
 │   │   └── prophit_gpt/
 │   │       └── main.py
+│   │
 │   ├── models/
 │   │   ├── performance_models.py
 │   │   ├── phase_two_models.py
 │   │   ├── portfolio_models.py
 │   │   └── style_factors_models.py
+│   │
 │   ├── repositories/
 │   │   ├── etf_data.py
 │   │   ├── fundamental_data.py
@@ -267,15 +271,18 @@
 │   │   ├── ratings_data.py
 │   │   ├── transcripts_data.py
 │   │   └── user_data.py
+│   │
 │   ├── services/
 │   │   ├── agent_runs.py
 │   │   ├── prophit_alts_service.py
 │   │   └── websocket_manager_service.py
+│   │
 │   └── utils/
 │       ├── decorators/
 │       │   ├── database.py
 │       │   ├── price_data.py
-│       │   └── timer.py
+│       │   ├── timer.py
+│       │   └── tool_validation.py
 │       ├── __init__.py
 │       ├── choose_model_and_client.py
 │       ├── gpt_parser.py
@@ -285,15 +292,19 @@
 │       ├── ticker_utils.py
 │       ├── token_count.py
 │       └── validation_utils.py
+│
 ├── notebooks/
 │   ├── data.ipynb
 │   ├── portfolio_analysis.ipynb
 │   ├── test_repository_data_dates.ipynb
+│   ├── testing.ipynb
 │   └── user_db.ipynb
+│
 ├── planning/
 │   ├── error_fixer.md
 │   ├── structure_migration.md
 │   └── todo.md
+│
 ├── tests/
 │   ├── hedge_fund_stuff/
 │   │   ├── Hedge_fund_portfolio_construction.py
@@ -310,6 +321,7 @@
 │   ├── cluster_analysis.py
 │   ├── retail-fund-code.py
 │   └── streaming_data.py
+│
 ├── .env
 ├── .env.example
 ├── .gitignore
@@ -318,3 +330,22 @@
 ├── main.py
 └── requirements.txt
 ```
+
+---
+
+## Key Components
+
+### Core Application (`app/`)
+- **agentic_framework/**: BaseAgent, memory systems, tool libraries, task management
+- **calculations/**: Financial calculations (portfolio, risk, performance, factors)
+- **api/**: FastAPI routes, controllers, WebSocket support
+- **domain/**: Domain-specific agents (CIO, CRO, Industry agents, ProphitAlts)
+- **db/**: Database models, jobs, and monitoring
+- **repositories/**: Data access layer
+- **services/**: Business logic and orchestration
+- **utils/**: Shared utilities and decorators
+
+### Configuration & Planning
+- **.claude/**: Agent definitions and commands for Claude Code
+- **planning/**: Project planning and documentation
+- **notebooks/**: Jupyter notebooks for analysis and experimentation

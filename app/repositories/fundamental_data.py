@@ -1,39 +1,70 @@
 from app.core.calculations.core.data_service import DataService
-from typing import Dict, Any, Optional, Literal
+from typing import Dict, Any, Optional, Literal, List
+from datetime import datetime, date
+
+def _filter_by_cutoff(statements: List, cutoff_date: date) -> List:
+    """Filter statements to only include those on or before cutoff_date.
+
+    Args:
+        statements: List of statement objects with 'date' attribute
+        cutoff_date: Date object representing the cutoff
+
+    Returns:
+        Filtered list of statements
+    """
+    if not statements:
+        return []
+    filtered = []
+    for s in statements:
+        if not hasattr(s, 'date') or s.date is None:
+            continue
+        # s.date is datetime.date from SQLAlchemy Date column
+        if s.date <= cutoff_date:
+            filtered.append(s)
+    return filtered
 
 def get_fundamental_data(
     ticker: str,
     statement_type: Literal["income_statement", "balance_sheet", "cash_flow", "financial_ratios", "analyst_estimates"],
-    quarters_back: int = 1
+    quarters_back: int = 1,
+    _simulation_date: Optional[datetime] = None
 ) -> Dict[str, Any]:
     """
     Retrieve fundamental data from the database for a given ticker.
-    
+
     Args:
         ticker: Stock ticker symbol (e.g., 'AAPL', 'MSFT')
         statement_type: Type of fundamental data to retrieve
         quarters_back: Number of quarters of historical data to retrieve (1 = most recent only)
-    
+        _simulation_date: INTERNAL USE ONLY - For simulation mode, only return data on or before this date
+
     Returns:
         Dictionary containing the requested fundamental data
     """
     ds = DataService()
-    
+
     try:
         # Fetch fundamental data using DataService
         fundamentals = ds.get_fundamentals(ticker.upper())
-        
+
         result = {
             "ticker": ticker.upper(),
             "statement_type": statement_type,
             "quarters_requested": quarters_back,
             "data": []
         }
-        
+
         # Get the appropriate statement list based on type
         if statement_type == "income_statement":
-            statements = fundamentals.income_statements[:quarters_back] if fundamentals.income_statements else []
-            
+            statements = fundamentals.income_statements if fundamentals.income_statements else []
+
+            # Filter by simulation date if provided (simulation mode)
+            if _simulation_date is not None:
+                statements = _filter_by_cutoff(statements, _simulation_date.date())
+
+            # Slice for quarters_back
+            statements = statements[:quarters_back]
+
             for stmt in statements:
                 period_data = {
                     "date": str(stmt.date) if hasattr(stmt, 'date') else None,
@@ -50,8 +81,15 @@ def get_fundamental_data(
                 result["data"].append(period_data)
                 
         elif statement_type == "balance_sheet":
-            statements = fundamentals.balance_sheets[:quarters_back] if fundamentals.balance_sheets else []
-            
+            statements = fundamentals.balance_sheets if fundamentals.balance_sheets else []
+
+            # Filter by simulation date if provided (simulation mode)
+            if _simulation_date is not None:
+                statements = _filter_by_cutoff(statements, _simulation_date.date())
+
+            # Slice for quarters_back
+            statements = statements[:quarters_back]
+
             for stmt in statements:
                 period_data = {
                     "date": str(stmt.date) if hasattr(stmt, 'date') else None,
@@ -72,8 +110,15 @@ def get_fundamental_data(
                 result["data"].append(period_data)
                 
         elif statement_type == "cash_flow":
-            statements = fundamentals.cash_flow_statements[:quarters_back] if fundamentals.cash_flow_statements else []
-            
+            statements = fundamentals.cash_flow_statements if fundamentals.cash_flow_statements else []
+
+            # Filter by simulation date if provided (simulation mode)
+            if _simulation_date is not None:
+                statements = _filter_by_cutoff(statements, _simulation_date.date())
+
+            # Slice for quarters_back
+            statements = statements[:quarters_back]
+
             for stmt in statements:
                 period_data = {
                     "date": str(stmt.date) if hasattr(stmt, 'date') else None,
@@ -88,8 +133,15 @@ def get_fundamental_data(
                 result["data"].append(period_data)
                 
         elif statement_type == "financial_ratios":
-            statements = fundamentals.financial_ratios[:quarters_back] if fundamentals.financial_ratios else []
-            
+            statements = fundamentals.financial_ratios if fundamentals.financial_ratios else []
+
+            # Filter by simulation date if provided (simulation mode)
+            if _simulation_date is not None:
+                statements = _filter_by_cutoff(statements, _simulation_date.date())
+
+            # Slice for quarters_back
+            statements = statements[:quarters_back]
+
             for stmt in statements:
                 period_data = {
                     "date": str(stmt.date) if hasattr(stmt, 'date') else None,
@@ -110,8 +162,15 @@ def get_fundamental_data(
                 result["data"].append(period_data)
                 
         elif statement_type == "analyst_estimates":
-            statements = fundamentals.analyst_estimates[:quarters_back] if fundamentals.analyst_estimates else []
-            
+            statements = fundamentals.analyst_estimates if fundamentals.analyst_estimates else []
+
+            # Filter by simulation date if provided (simulation mode)
+            if _simulation_date is not None:
+                statements = _filter_by_cutoff(statements, _simulation_date.date())
+
+            # Slice for quarters_back
+            statements = statements[:quarters_back]
+
             for stmt in statements:
                 period_data = {
                     "date": str(stmt.date) if hasattr(stmt, 'date') else None,

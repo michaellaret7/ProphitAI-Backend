@@ -1,6 +1,6 @@
 """Base functions for sector/industry/sub-industry calculations following DRY principles."""
 
-from typing import Literal, List, Callable
+from typing import Literal, List, Callable, Optional
 from functools import wraps
 import pandas as pd
 from app.db.core.market_data_models import Ticker
@@ -68,64 +68,66 @@ def winsorized_median(func: Callable[..., pd.DataFrame]) -> Callable[..., pd.Ser
 # ------------------------- Function Factory ------------------------- #
 def create_factor_calculator(factor_type: str):
     """Factory to create factor calculation functions for any grouping level.
-    
+
     Args:
         factor_type: One of 'growth', 'value', 'momentum', 'quality', 'volatility'
-    
+
     Returns:
         Function that calculates factors for a given grouping
     """
-    def calculator(grouping_value: str, grouping_level: GroupingLevel) -> pd.Series:
+    def calculator(grouping_value: str, grouping_level: GroupingLevel, as_of_date: Optional[datetime] = None) -> pd.Series:
         """Calculate winsorized median factors for a grouping."""
         tickers = get_tickers_by_grouping(grouping_value, grouping_level)
-        
+
         if factor_type == 'growth':
-            return calc_growth_factors(tickers)
+            return calc_growth_factors(tickers, as_of_date=as_of_date)
         elif factor_type == 'value':
-            return calc_value_factors(tickers)
+            return calc_value_factors(tickers, as_of_date=as_of_date)
         elif factor_type == 'momentum':
             return calc_momentum_factors(tickers)
         elif factor_type == 'quality':
-            return calc_quality_factors(tickers)
+            return calc_quality_factors(tickers, as_of_date=as_of_date)
         elif factor_type == 'volatility':
             return calc_volatility_factors(tickers)
         else:
             raise ValueError(f"Unknown factor type: {factor_type}")
-    
+
     return calculator
 
 # ------------------------- Functions ------------------------- #
 @winsorized_median
-def calc_growth_factors(tickers: List[str]) -> pd.DataFrame:
+def calc_growth_factors(tickers: List[str], as_of_date: Optional[datetime] = None) -> pd.DataFrame:
     """Calculate winsorized median growth factors for a list of tickers.
-    
+
     Args:
         tickers: List of ticker symbols
-    
+        as_of_date: Optional as-of date for simulation mode
+
     Returns:
         Series with winsorized median of each growth factor
     """
-    return GrowthFactors.calc_all_bulk(tickers)
+    return GrowthFactors.calc_all_bulk(tickers, as_of_date=as_of_date)
 
 @winsorized_median
-def calc_value_factors(tickers: List[str]) -> pd.DataFrame:
+def calc_value_factors(tickers: List[str], as_of_date: Optional[datetime] = None) -> pd.DataFrame:
     """Calculate winsorized median value factors for a list of tickers.
-    
+
     Args:
         tickers: List of ticker symbols
-    
+        as_of_date: Optional as-of date for simulation mode
+
     Returns:
         Series with winsorized median of each value factor
     """
-    return ValueFactors.calc_all_bulk(tickers)
+    return ValueFactors.calc_all_bulk(tickers, as_of_date=as_of_date)
 
 @winsorized_median
 def calc_momentum_factors(tickers: List[str]) -> pd.DataFrame:
     """Calculate winsorized median momentum factors for a list of tickers.
-    
+
     Args:
         tickers: List of ticker symbols
-    
+
     Returns:
         Series with winsorized median of each momentum factor
     """
@@ -135,16 +137,17 @@ def calc_momentum_factors(tickers: List[str]) -> pd.DataFrame:
     return MomentumFactors.calc_all_bulk(tickers, start_date, end_date)
 
 @winsorized_median
-def calc_quality_factors(tickers: List[str]) -> pd.DataFrame:
+def calc_quality_factors(tickers: List[str], as_of_date: Optional[datetime] = None) -> pd.DataFrame:
     """Calculate winsorized median quality factors for a list of tickers.
-    
+
     Args:
         tickers: List of ticker symbols
-    
+        as_of_date: Optional as-of date for simulation mode
+
     Returns:
         Series with winsorized median of each quality factor
     """
-    return QualityFactors.calc_all_bulk(tickers)
+    return QualityFactors.calc_all_bulk(tickers, as_of_date=as_of_date)
 
 @winsorized_median
 def calc_volatility_factors(tickers: List[str]) -> pd.DataFrame:

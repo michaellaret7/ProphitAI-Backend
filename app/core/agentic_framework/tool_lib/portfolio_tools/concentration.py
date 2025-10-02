@@ -2,8 +2,12 @@ import yaml
 from app.utils.gpt_parser import canonical_portfolio
 from app.core.calculations.portfolio.concentration import PortfolioConcentration
 from app.models.portfolio_models import PortfolioInput
+from app.utils.decorators.tool_validation import log_simulation_data_range, validate_required_args, validate_portfolio_dict, validate_enum_arg
 
-def exposure_calculator(portfolio_dict: PortfolioInput | dict, exposure_type: str) -> str:
+@validate_required_args('portfolio_dict', 'exposure_type')
+@validate_portfolio_dict()
+@validate_enum_arg("exposure_type", ["net", "gross", "long", "short"])
+def exposure_calculator(portfolio_dict: PortfolioInput | dict, exposure_type: str, **kwargs) -> str:
     try:
         portfolio_dict = canonical_portfolio(portfolio_dict)
         if exposure_type == "net":
@@ -20,7 +24,10 @@ def exposure_calculator(portfolio_dict: PortfolioInput | dict, exposure_type: st
     except Exception as e:
         return yaml.dump({"success": False, "error": str(e)}, default_flow_style=False)
 
-def industry_concentration(portfolio_dict: PortfolioInput | dict, industry_level: str) -> str:
+@validate_required_args('portfolio_dict', 'industry_level')
+@validate_portfolio_dict()
+@validate_enum_arg("industry_level", ["industry", "sub_industry"])
+def industry_concentration(portfolio_dict: PortfolioInput | dict, industry_level: str, **kwargs) -> str:
     try:
         portfolio_dict = canonical_portfolio(portfolio_dict)
         if industry_level == "industry":
@@ -35,18 +42,25 @@ def industry_concentration(portfolio_dict: PortfolioInput | dict, industry_level
     except Exception as e:
         return yaml.dump({"success": False, "error": str(e)}, default_flow_style=False)
 
-def VaR_calculator(portfolio_dict: PortfolioInput | dict, level: str) -> str:
+@validate_required_args('portfolio_dict', 'level')
+@validate_portfolio_dict()
+@validate_enum_arg("level", ["portfolio", "industry", "sub_industry"])
+@log_simulation_data_range()
+def VaR_calculator(portfolio_dict: PortfolioInput | dict, level: str, **kwargs) -> str:
     try:
         portfolio_dict = canonical_portfolio(portfolio_dict)
+        # Extract simulation date if present (for backtesting/simulation)
+        end_date = kwargs.get('_simulation_date', None)
+
         if level == "industry":
-            res = PortfolioConcentration(portfolio_dict).industry_var()
+            res = PortfolioConcentration(portfolio_dict, end_date=end_date).industry_var()
             data = {k: round(float(v), 5) for k, v in res.items()}
         elif level == "sub_industry":
-            res = PortfolioConcentration(portfolio_dict).sub_industry_var()
+            res = PortfolioConcentration(portfolio_dict, end_date=end_date).sub_industry_var()
             data = {k: round(float(v), 5) for k, v in res.items()}
         elif level == "portfolio":
             # Single float
-            val = PortfolioConcentration(portfolio_dict).portfolio_var()
+            val = PortfolioConcentration(portfolio_dict, end_date=end_date).portfolio_var()
             data = {"VaR": round(float(val), 5) if val is not None else None}
         else:
             return yaml.dump({"success": False, "error": f"Invalid level: {level}"}, default_flow_style=False)
