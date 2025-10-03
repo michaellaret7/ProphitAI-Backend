@@ -88,6 +88,7 @@ def discover_all_tools() -> Dict[str, str]:
 
     # Cache the results
     _TOOL_CACHE = tools
+    
     return tools
 
 

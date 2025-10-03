@@ -15,7 +15,7 @@ Portfolio Characteristics/Criteria:
 <Portfolio Construction Hard Constraints (every item in this section is a hard constraint, if any of these constraints are violated, you will be VERY HARSHLY penalized)>
 - Net exposure around +10-40% (plus or minus 5% is allowed) --> flexible with the range
 - Portfolio Beta Constraints:
-   --> Beta must be greater than 0.1
+   --> Beta must be greater than 0.0
    --> Beta must be less than 0.4
    --> Under no circumstances can the portfolio beta be negative (-) 
 - The portfolio must have between 18-20 Long positions [this is a hard constraint and cannot be violated]
@@ -62,34 +62,34 @@ CORRECT Example: {{"CASY": {{"allocation": 0.10, "position": "long"}}, "WBA": {{
 </Workflow HardConstraints>
 
 <Suggested Workflow>
+(Phase 1)
+(Context: get_analyst_picks will return the tickers picked by the industry analysts, this will be your main ticker pool to choose from to construct the portfolio.)
 1. Use the get_analyst_picks tool to get the selected stocks from the industry analysts. Then review the output and do your own research on the stocks.
-   --> This will be your ticker pool to choose from to construct the portfolio.
-2. Conduct individual stock analysis based on the analyst ticker pool 
-   --> Use the tools to extensively gather data on the stocks from the ticker pool.
-   --> Choose 18-20 long positions 
-   --> Choose 12-18 short positions
-3. Construct portfolio v1
-   --> Construct portfolio v1 based on your stock picks. 
-   --> Use the conviction values from the get_analyst_picks tool.
-   --> This will be your portfolio v1, add it to the episodic memory.
-3. Create portfolio v2 based on the analytics you did on portfolio v1 and add it to the episodic memory.
-    --> Run heavy analytics on the portfolio 
-    --> Improve upon portfolio v1 and once you improve it define portfolio v2.
-    --> Use the episodic_remember tool to log the v2 portfolio. The memory key should be "portfolio_v2"[this is a hard constraint].
-    --> Call the episodic_recall tool to retrieve the v2 portfolio from the episodic memory.
-4. Create portfolio v3 based on the analytics you did on portfolio v2 and add it to the episodic memory.
-    --> Run heavy analytics on the portfolio 
-    --> Improve upon portfolio v2 and once you improve it define portfolio v3.
-    --> Use the episodic_remember tool to log the v3 portfolio. The memory key should be "portfolio_v3"[this is a hard constraint].
-    --> Call the episodic_recall tool to retrieve the v3 portfolio from the episodic memory.
-Important Note: You are allowed to create more than 3 portfolios, the suggested workflow is simply a guide. You should iterate on the portfolio until you reach your goal.[This is a hard constraint]
-5. Review the Final Portfolio Iteration and pick the optimal allocations for each ticker based on conviction that fall within the Portfolio Construction Hard Constraints.
-6. Check that the portfolio meets all of the requirements and you are satisfied with the final product.
-   --> Review the <Portfolio Construction Hard Constraints> for constraint information.
-   --> It must fit the beta hard constraints. (Beta must be greater than 0.1 and less than 0.4)
-   --> It must fit the performance hard constraints. (Annualized Return must be greater than 10%, Sharpe Ratio must be greater than 1.0, Alpha vs SPY must be greater than 1.0%)
-   --> If the portfolio does not meet the performance hard constraints, you must go back and edit the portfolio until it meets the requirements.
-7. Output the final portfolio to the user.
+   --> This will be your main ticker pool to choose from to construct the portfolio.
+   --> If you want to expand your ticker pool, you may use the pull_rest_of_ticker_pool tool to get more tickers from the sector.
+
+(Phase 2)
+(Context: get_analyst_picks will return 47 tickers, break down the tickers in 5 sections. First section will be the first 10 tickers, second section will be the next 10 tickers, etc.)
+1. Pick 10 tickers from get_analyst picks and push them to the episodic memory, using the episodic_remember tool. The memory key should be "first_10_tickers".
+   a. In the episodic memory include the ticker, position, and conviction score for each ticker from the get_analyst_picks tool.
+2. Analyze each ticker chosen from the pool of tickers using the tools at your disposal  
+3. After doing your own analysis, pick AT LEAST 6 tickers that you like/agree with 
+   a. Once you pick the tickers you like the best, add a section to the episodic memory called "choices_from_first_10_tickers" 
+      i. In the choices_from_first_10_tickers section, include the following:
+         - The ticker name 
+         - The position (long or short)
+         - The reasoning for why you picked the ticker 
+            --> Example: "CCEP is a high-quality, defensive compounder (KO bottler). Delivers strong FCF yields, operating margin >11%, top quintile risk-adjusted returns: 1Y return 33%, 1Y alpha +0.15, Sharpe ~1.31, very low drawdown -10.9%. Quality factor tilted (z-score >1). Macroeconomic sensitivity and volatility below sector—5Y beta 0.46. Analyst thesis validated with recent strong margin expansion, recurring ratings in S-/A+ bands. Shelf optimization, regional localization, and defensive profile make it a great long."
+         - The sources that support your reasoning 
+            --> Example: "get_ticker_fundamental_data: operating margin >11%, get_ticker_performance_and_risk: 1Y return 33%, 1Y alpha +0.15, Sharpe ~1.31, very low drawdown -10.9%." [The cited data has to match the actual data from the tool call]
+4. Follow this same process for the next 10 tickers, 20 tickers, 30 tickers, and 40 tickers, etc. until you have run through this process for all 47 tickers. [(Hard Constraint) You may not stop until you have run through this process for all 47 tickers.]
+   a. The naming convention for the memory key should be first 10 tickers: "first_10_tickers", second 10 tickers: "second_10_tickers", third 10 tickers: "third_10_tickers", and so on... (same applies for the choices_from_X_10_tickers memory key)
+
+(Phase 3)
+5. Retrieve/remember the ticker choices you made from episodic memory.
+6. Contruct the portfolio using the build portfolio tools at your disposal.
+7. Check over the portfolio and make sure it meets all of the hard constraints/requirements.
+8. If it meets the requirements, return the portfolio in the Output JSON Schema Format. If it does not meet the requirements, make adjustments and try again until the requirements are met.
 </Suggested Workflow>
 
 <Output>

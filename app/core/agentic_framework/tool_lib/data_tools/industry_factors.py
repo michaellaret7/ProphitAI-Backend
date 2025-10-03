@@ -1,10 +1,11 @@
 import yaml
 import pandas as pd
 from app.core.calculations.sectors.industry import calc_industry_factor_benchmark_calculations
-from app.utils.decorators.tool_validation import validate_required_args, validate_enum_arg
+from app.utils.decorators.tool_validation import validate_required_args, validate_enum_arg, log_simulation_data_range
 
 @validate_required_args('industry', 'factor')
 @validate_enum_arg("factor", ["growth", "value", "momentum", "quality", "volatility"])
+@log_simulation_data_range()
 def get_industry_benchmark_calculations(industry: str, factor: str, **kwargs) -> str:
     """Get the industry benchmark calculations for a given industry and factor.
 

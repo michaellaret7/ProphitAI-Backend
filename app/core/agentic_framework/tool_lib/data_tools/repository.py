@@ -10,7 +10,7 @@ from app.utils.decorators.database import with_session
 from app.utils.simulation_utils import get_date_range, filter_series_by_date
 from app.utils.decorators.tool_validation import validate_ticker_arg, validate_numeric_arg
 from app.utils.decorators.tool_validation import log_simulation_data_range
-from app.domain.prophit_alts.consumer_staples_fund.build_portfolio.cio.simulation.config import (
+from app.domain.prophit_alts.consumer_staples_fund.build_portfolio.simulation.config import (
     AVAILABLE_DATA_TYPES, is_data_type_available, get_unavailable_data_message
 )
 

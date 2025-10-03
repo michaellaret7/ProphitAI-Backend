@@ -14,6 +14,7 @@ from app.core.calculations.core.config import (
     DEFAULT_TRADING_DAYS,
     DEFAULT_RF_ANNUAL,
     DEFAULT_CONFIDENCE,
+    DEFAULT_LOOKBACK_MEDIUM,
 )
 from app.utils.decorators.price_data import with_bulk_price_data
 from app.utils.decorators.tool_validation import validate_ticker_arg
@@ -21,7 +22,7 @@ from app.utils.simulation_utils import get_end_date, filter_series_by_date
 from app.utils.decorators.tool_validation import log_simulation_data_range
 
 @validate_ticker_arg()
-@with_bulk_price_data(lookback_days=252 * 3, include_dividends=True)
+@with_bulk_price_data(lookback_days=DEFAULT_LOOKBACK_MEDIUM, include_dividends=True)
 @log_simulation_data_range()
 def get_ticker_performance_and_risk(
     ticker: str,
@@ -29,7 +30,7 @@ def get_ticker_performance_and_risk(
     price_data: dict[str, pd.Series] | None = None,
     _simulation_date: Optional[datetime] = None,
 ) -> str:
-    """Performance and risk metrics over a fixed 3-year window for a single ticker.
+    """Performance and risk metrics over a fixed 2-year window for a single ticker.
 
     Args:
         ticker: Stock ticker symbol
@@ -41,12 +42,13 @@ def get_ticker_performance_and_risk(
     - Always includes dividends in calculations
     - Always uses SPY as the market benchmark
     """
-    # Fixed parameters
+    # Fixed parameters (2 years of trading days - Bloomberg standard for beta)
     market_ticker = "SPY"
     include_dividends = True
     ds = DataService()
     end_dt = get_end_date(_simulation_date)
-    start_dt = end_dt - timedelta(days=252 * 3)
+    # Convert trading days to calendar days for date range: 504 trading days * (365/252) ≈ 730 calendar days
+    start_dt = end_dt - timedelta(days=int(DEFAULT_LOOKBACK_MEDIUM * 365 / 252))
 
     def _adjust_for_splits(prices: pd.Series) -> pd.Series:
         """Return split-adjusted close series inferred from large price jumps.
@@ -294,11 +296,11 @@ def get_ticker_performance_and_risk(
 
 # Tool Schema Constants
 GET_TICKER_PERFORMANCE_AND_RISK_DESCRIPTION = (
-    "Calculate comprehensive performance and risk metrics for a single ticker over 3 years of data. "
+    "Calculate comprehensive performance and risk metrics for a single ticker over 2 years of data (Bloomberg standard). "
     "Returns detailed metrics including risk measures (Sharpe, Sortino, Treynor, Information Ratio, Alpha, "
     "Omega, Sterling, Burke, Martin ratios), performance metrics (capture ratios, win rates, profit factors), "
     "risk measures (pain index, tail ratio, gain/loss ratio, ulcer index, max drawdown), and returns "
-    "across multiple timeframes (3Y, 1Y, 6M, 3M). "
+    "across multiple timeframes (2Y, 1Y, 6M, 3M). "
     "CRITICAL: You MUST ALWAYS include the ticker parameter. "
     "Example: get_ticker_performance_and_risk(ticker='AAPL')"
 )
@@ -311,7 +313,7 @@ GET_TICKER_PERFORMANCE_AND_RISK_PARAMETERS = {
             "description": (
                 "**MANDATORY - DO NOT OMIT THIS PARAMETER.** "
                 "The ticker symbol to analyze. Must be a valid stock ticker symbol (e.g., 'AAPL', 'MSFT', 'GOOGL'). "
-                "The function will automatically fetch 3 years of price and dividend data for analysis."
+                "The function will automatically fetch 2 years of price and dividend data for analysis (Bloomberg standard for beta calculation)."
             ),
             "pattern": "^[A-Z]{1,5}$",
             "minLength": 1,

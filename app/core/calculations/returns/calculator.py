@@ -277,10 +277,10 @@ if __name__ == "__main__":
     
     # Get tickers
     tickers = list(weights.keys())
-    
+
     # Fetch price data for last year
     end_date = datetime.now()
-    start_date = end_date - timedelta(days=252*2)
+    start_date = end_date - timedelta(days=365*2)
     
     # Get price data
     ticker_closes = {}

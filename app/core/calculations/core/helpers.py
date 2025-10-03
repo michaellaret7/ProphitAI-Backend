@@ -369,7 +369,7 @@ def returns_df(tickers: list[str], lookback_years: int) -> pd.DataFrame:
     if not tickers or lookback_years is None or int(lookback_years) <= 0:
         return pd.DataFrame()
 
-    start_date = datetime.now() - timedelta(days=int(lookback_years) * DEFAULT_TRADING_DAYS)
+    start_date = datetime.now() - timedelta(days=int(lookback_years) * 365)
     end_date = datetime.now()
 
     # Use the generalized date-range builder; retain rows with at least one non-NaN

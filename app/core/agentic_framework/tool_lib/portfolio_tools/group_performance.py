@@ -4,6 +4,7 @@ from datetime import datetime
 from app.core.calculations.portfolio.utils import prepare_portfolio_data
 from app.core.calculations.returns.calculator import ReturnsCalculator
 from app.core.calculations.risk.calculator import RiskCalculator
+from app.core.calculations.core.config import DEFAULT_LOOKBACK_LONG
 import pandas as pd
 import numpy as np
 from app.models.portfolio_models import PortfolioInput
@@ -15,7 +16,7 @@ from app.utils.decorators.tool_validation import log_simulation_data_range, vali
 @validate_required_args('portfolio_dict', 'group_by')
 @validate_portfolio_dict()
 @log_simulation_data_range()
-def calculate_group_performances(portfolio_dict: PortfolioInput | dict, lookback_days: int = 756, use_total_returns: bool = True, group_by: str = None, _simulation_date: Optional[datetime] = None) -> str:
+def calculate_group_performances(portfolio_dict: PortfolioInput | dict, lookback_days: int = DEFAULT_LOOKBACK_LONG, use_total_returns: bool = True, group_by: str = None, _simulation_date: Optional[datetime] = None) -> str:
     """Generic grouping performance calculator.
 
     Returns a DataFrame with columns: [group_label, ann_total_return, ann_volatility]
@@ -132,7 +133,7 @@ CALCULATE_GROUP_PERFORMANCES_PARAMETERS = {
                 "Keys = ticker symbols (e.g., 'AAPL'). "
                 "Values = objects with 'allocation' (decimal 0-1) and 'position' ('long'/'short'). "
                 "You MUST include this parameter with all portfolio tickers. "
-                "Uses 3-year lookback (756 days) and total returns by default."
+                "Uses 3-year lookback (756 days) and total returns by default (industry standard)."
                 "\n\n"
                 """Example of CORRECT function call:
                 calculate_group_performances(

@@ -9,6 +9,7 @@ from pydantic import BaseModel
 from typing import List, Literal
 import json
 import time
+import yaml
 from app.core.agentic_framework.tool_lib.agent_specific_tools.industry import get_eligible_tickers
 from app.utils.decorators.database import with_session
 from app.db.core.prophit_alts_models import FundInitialPosition
@@ -38,13 +39,19 @@ class IndustryAgent(BaseAgent):
         agent_type = self.industry
 
         self.domain_memory = DomainMemory(agent_type=agent_type, save_memory=True, verbose=self.verbose)
-        
+
         try:
-            eligible_tickers = get_eligible_tickers(agent_type) or []
+            eligible_tickers_response = get_eligible_tickers(agent_type)
+            # Reason: get_eligible_tickers returns YAML string, need to parse it
+            parsed_response = yaml.safe_load(eligible_tickers_response)
+            if parsed_response and parsed_response.get("success"):
+                eligible_tickers = parsed_response.get("data", [])
+            else:
+                eligible_tickers = []
         except Exception:
             eligible_tickers = []
         self.domain_memory.tickers = eligible_tickers
-        
+
         if self.verbose:
             print(f"🧾 Injected {len(eligible_tickers)} eligible tickers into domain memory for {self.industry}")
         

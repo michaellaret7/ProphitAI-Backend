@@ -37,7 +37,7 @@ def calculate_ticker_factors(ticker: str, factor: str, _simulation_date: Optiona
         elif factor in ["momentum", "volatility"]:
             ds = DataService()
             end_date = get_end_date(_simulation_date)
-            start_date = end_date - timedelta(days=252)  # ~1 year of data
+            start_date = end_date - timedelta(days=365)  # ~1 year of data
 
             # Get price data for ticker (and SPY for market-relative metrics)
             price_data = ds.get_price_data(ticker, start_date, end_date)

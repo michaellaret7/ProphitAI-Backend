@@ -1,6 +1,7 @@
 import yaml
 from app.core.calculations.portfolio.utils import get_portfolio_returns
 from app.core.calculations.risk.calculator import RiskCalculator
+from app.core.calculations.core.config import DEFAULT_LOOKBACK_LONG
 from app.models.portfolio_models import PortfolioInput
 from app.utils.gpt_parser import canonical_portfolio
 from app.utils.decorators.tool_validation import validate_required_args, validate_portfolio_dict
@@ -30,10 +31,10 @@ def drawdown_profile(portfolio_dict: PortfolioInput | dict = None) -> str:
         except Exception as e:
             return yaml.dump({"success": False, "error": str(e)}, default_flow_style=False)
 
-        # Get portfolio returns using the utility for last 2 years
+        # Get portfolio returns using the utility for last 3 years (industry standard for risk analysis)
         portfolio_returns, weights = get_portfolio_returns(
             portfolio=portfolio_dict,
-            lookback_days=504,  # 2 years for better drawdown analysis
+            lookback_days=DEFAULT_LOOKBACK_LONG,  # 3 years for comprehensive drawdown analysis
             use_total_returns=False,  # Use price returns for drawdown analysis
             dropna=True
         )

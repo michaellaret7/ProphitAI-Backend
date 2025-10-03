@@ -1,6 +1,7 @@
 import yaml
 from app.utils.gpt_parser import canonical_portfolio
 from app.core.calculations.portfolio.allocations import SimplePortfolioAllocator
+from app.core.calculations.core.config import DEFAULT_LOOKBACK_LONG
 from app.utils.decorators.tool_validation import validate_required_args
 
 @validate_required_args('portfolio_dict')
@@ -45,7 +46,7 @@ def build_portfolio(portfolio_dict: any, **kwargs) -> str:
             target_annual_vol=0.17,
             target_gross_exposure=1.8,
             target_net_exposure=0.3,
-            lookback_days=252  # 3 years of trading days
+            lookback_days=DEFAULT_LOOKBACK_LONG  # 3 years of trading days (industry standard)
         )
 
         result = allocator.allocate()

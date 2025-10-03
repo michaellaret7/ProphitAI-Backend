@@ -18,7 +18,7 @@ class PortfolioConcentration:
         self.tickers = list(self.portfolio_dict.keys())
         self.confidence = confidence
         self.end_date = end_date or datetime.now()
-        self.start_date = start_date or (self.end_date - timedelta(days=252))
+        self.start_date = start_date or (self.end_date - timedelta(days=365))
 
         session = MarketSession()
         try:

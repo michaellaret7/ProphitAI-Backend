@@ -1,10 +1,11 @@
 from __future__ import annotations
 
 import yaml
-from typing import Any, Dict, List, Optional, Tuple, Union, Set
+from typing import Any, Dict, List, Optional, Union, Set, Tuple
 
 import pandas as pd
-from sqlalchemy import and_, asc, desc, func
+from pydantic import BaseModel, Field
+from sqlalchemy import and_, asc, desc, func, or_
 from sqlalchemy.orm import aliased
 
 from app.db.core.db_config import MarketSession
@@ -16,9 +17,100 @@ from app.db.core.market_data_models import (
     AnalystRecommendation,
     PriceTargetSummary,
 )
+from app.utils.gpt_parser import parse_with_gpt
 
-Numeric = Union[int, float]
-Range = Tuple[Optional[Numeric], Optional[Numeric]]
+
+class ScreenerConstraints(BaseModel):
+    """Pydantic model for stock screener constraints parsed from natural language."""
+
+    # Valuation filters
+    market_cap_min: Optional[float] = Field(None, description="Minimum market cap in dollars")
+    market_cap_max: Optional[float] = Field(None, description="Maximum market cap in dollars")
+    avg_volume_min: Optional[float] = Field(None, description="Minimum average volume")
+    avg_volume_max: Optional[float] = Field(None, description="Maximum average volume")
+    pe_ratio_min: Optional[float] = Field(None, description="Minimum P/E ratio")
+    pe_ratio_max: Optional[float] = Field(None, description="Maximum P/E ratio")
+    pb_ratio_min: Optional[float] = Field(None, description="Minimum price-to-book ratio")
+    pb_ratio_max: Optional[float] = Field(None, description="Maximum price-to-book ratio")
+    ps_ratio_min: Optional[float] = Field(None, description="Minimum price-to-sales ratio")
+    ps_ratio_max: Optional[float] = Field(None, description="Maximum price-to-sales ratio")
+    price_to_cash_flow_min: Optional[float] = Field(None, description="Minimum price-to-cash-flow ratio")
+    price_to_cash_flow_max: Optional[float] = Field(None, description="Maximum price-to-cash-flow ratio")
+    price_to_fcf_min: Optional[float] = Field(None, description="Minimum price-to-free-cash-flow ratio")
+    price_to_fcf_max: Optional[float] = Field(None, description="Maximum price-to-free-cash-flow ratio")
+    price_to_ocf_min: Optional[float] = Field(None, description="Minimum price-to-operating-cash-flow ratio")
+    price_to_ocf_max: Optional[float] = Field(None, description="Maximum price-to-operating-cash-flow ratio")
+    peg_ratio_min: Optional[float] = Field(None, description="Minimum PEG ratio")
+    peg_ratio_max: Optional[float] = Field(None, description="Maximum PEG ratio")
+    enterprise_value_multiple_min: Optional[float] = Field(None, description="Minimum EV/EBITDA")
+    enterprise_value_multiple_max: Optional[float] = Field(None, description="Maximum EV/EBITDA")
+    price_fair_value_min: Optional[float] = Field(None, description="Minimum price/fair value")
+    price_fair_value_max: Optional[float] = Field(None, description="Maximum price/fair value")
+    dividend_yield_min: Optional[float] = Field(None, description="Minimum dividend yield (decimal)")
+    dividend_yield_max: Optional[float] = Field(None, description="Maximum dividend yield (decimal)")
+
+    # Profitability filters
+    roe_min: Optional[float] = Field(None, description="Minimum return on equity (decimal)")
+    roe_max: Optional[float] = Field(None, description="Maximum return on equity (decimal)")
+    roa_min: Optional[float] = Field(None, description="Minimum return on assets (decimal)")
+    roa_max: Optional[float] = Field(None, description="Maximum return on assets (decimal)")
+    roic_min: Optional[float] = Field(None, description="Minimum return on invested capital (decimal)")
+    roic_max: Optional[float] = Field(None, description="Maximum return on invested capital (decimal)")
+    gross_margin_min: Optional[float] = Field(None, description="Minimum gross margin (decimal)")
+    gross_margin_max: Optional[float] = Field(None, description="Maximum gross margin (decimal)")
+    operating_margin_min: Optional[float] = Field(None, description="Minimum operating margin (decimal)")
+    operating_margin_max: Optional[float] = Field(None, description="Maximum operating margin (decimal)")
+    net_margin_min: Optional[float] = Field(None, description="Minimum net margin (decimal)")
+    net_margin_max: Optional[float] = Field(None, description="Maximum net margin (decimal)")
+
+    # Financial health filters
+    debt_to_equity_min: Optional[float] = Field(None, description="Minimum debt-to-equity ratio")
+    debt_to_equity_max: Optional[float] = Field(None, description="Maximum debt-to-equity ratio")
+    current_ratio_min: Optional[float] = Field(None, description="Minimum current ratio")
+    current_ratio_max: Optional[float] = Field(None, description="Maximum current ratio")
+    quick_ratio_min: Optional[float] = Field(None, description="Minimum quick ratio")
+    quick_ratio_max: Optional[float] = Field(None, description="Maximum quick ratio")
+    interest_coverage_min: Optional[float] = Field(None, description="Minimum interest coverage ratio")
+    interest_coverage_max: Optional[float] = Field(None, description="Maximum interest coverage ratio")
+
+    # Efficiency filters
+    asset_turnover_min: Optional[float] = Field(None, description="Minimum asset turnover ratio")
+    asset_turnover_max: Optional[float] = Field(None, description="Maximum asset turnover ratio")
+    inventory_turnover_min: Optional[float] = Field(None, description="Minimum inventory turnover ratio")
+    inventory_turnover_max: Optional[float] = Field(None, description="Maximum inventory turnover ratio")
+
+    # ETF-specific filters
+    expense_ratio_min: Optional[float] = Field(None, description="Minimum expense ratio (for ETFs)")
+    expense_ratio_max: Optional[float] = Field(None, description="Maximum expense ratio (for ETFs)")
+    assets_under_management_min: Optional[float] = Field(None, description="Minimum AUM (for ETFs)")
+    assets_under_management_max: Optional[float] = Field(None, description="Maximum AUM (for ETFs)")
+    holdings_count_min: Optional[float] = Field(None, description="Minimum number of holdings (for ETFs)")
+    holdings_count_max: Optional[float] = Field(None, description="Maximum number of holdings (for ETFs)")
+
+    # Rating filters
+    overall_score_min: Optional[float] = Field(None, description="Minimum overall rating score")
+    overall_score_max: Optional[float] = Field(None, description="Maximum overall rating score")
+    analyst_rating_score_min: Optional[float] = Field(None, description="Minimum analyst rating score")
+    analyst_rating_score_max: Optional[float] = Field(None, description="Maximum analyst rating score")
+
+    # Price target filters
+    price_target_last_month_min: Optional[float] = Field(None, description="Minimum analyst price target (last month)")
+    price_target_last_month_max: Optional[float] = Field(None, description="Maximum analyst price target (last month)")
+    price_target_last_quarter_min: Optional[float] = Field(None, description="Minimum analyst price target (last quarter)")
+    price_target_last_quarter_max: Optional[float] = Field(None, description="Maximum analyst price target (last quarter)")
+    price_target_last_year_min: Optional[float] = Field(None, description="Minimum analyst price target (last year)")
+    price_target_last_year_max: Optional[float] = Field(None, description="Maximum analyst price target (last year)")
+
+    # Classification filters
+    sector: Optional[Union[str, List[str]]] = Field(None, description="Sector or list of sectors")
+    industry: Optional[Union[str, List[str]]] = Field(None, description="Industry or list of industries")
+    sub_industry: Optional[Union[str, List[str]]] = Field(None, description="Sub-industry or list of sub-industries")
+
+    # Display options
+    limit: int = Field(100, description="Maximum results to return")
+    offset: int = Field(0, description="Results to skip")
+    sort_by: Optional[List[str]] = Field(None, description="Fields to sort by (prefix with '-' for desc)")
+    columns: Optional[List[str]] = Field(None, description="Specific columns to return")
 
 class StockScreener:
     """
@@ -58,7 +150,6 @@ class StockScreener:
         session = MarketSession()
         try:
             required_models = self._determine_required_models(filters, sort_by, columns)
-            latest_refs = self._build_latest_refs(session, required_models)
 
             q = session.query(Ticker)
 
@@ -69,39 +160,67 @@ class StockScreener:
             an = aliased(AnalystRecommendation)
             pts = aliased(PriceTargetSummary)
 
-            # Join sequences (include latest subqueries when available)
+            # Join sequences - join directly to tables first, then use subqueries in WHERE
             if FinancialRatio in required_models:
-                fr_latest = latest_refs.get(FinancialRatio)
-                if fr_latest is not None:
-                    q = q.outerjoin(fr_latest, fr_latest.c.ticker_id == Ticker.id)
-                    q = q.outerjoin(fr, and_(fr.ticker_id == Ticker.id, fr.date == fr_latest.c.max_date))
-                else:
-                    q = q.outerjoin(fr, fr.ticker_id == Ticker.id)
+                q = q.outerjoin(fr, fr.ticker_id == Ticker.id)
 
             if ETFInfo in required_models:
                 q = q.outerjoin(etf, etf.ticker_id == Ticker.id)
 
             if Rating in required_models:
-                rat_latest = latest_refs.get(Rating)
-                if rat_latest is not None:
-                    q = q.outerjoin(rat_latest, rat_latest.c.ticker_id == Ticker.id)
-                    q = q.outerjoin(rat, and_(rat.ticker_id == Ticker.id, rat.date == rat_latest.c.max_date))
-                else:
-                    q = q.outerjoin(rat, rat.ticker_id == Ticker.id)
+                q = q.outerjoin(rat, rat.ticker_id == Ticker.id)
 
             if AnalystRecommendation in required_models:
-                an_latest = latest_refs.get(AnalystRecommendation)
-                if an_latest is not None:
-                    q = q.outerjoin(an_latest, an_latest.c.ticker_id == Ticker.id)
-                    q = q.outerjoin(an, and_(an.ticker_id == Ticker.id, an.date == an_latest.c.max_date))
-                else:
-                    q = q.outerjoin(an, an.ticker_id == Ticker.id)
+                q = q.outerjoin(an, an.ticker_id == Ticker.id)
 
             if PriceTargetSummary in required_models:
                 q = q.outerjoin(pts, pts.ticker_id == Ticker.id)
 
             # WHERE
             where_clauses = []
+
+            # Add latest date filters for time-series tables (using OR NULL to preserve outer join semantics)
+            if FinancialRatio in required_models:
+                # Only include records with the latest date for each ticker (or NULL if no match)
+                where_clauses.append(
+                    or_(
+                        fr.date == None,  # NULL from outer join
+                        fr.date.in_(
+                            session.query(func.max(FinancialRatio.date))
+                            .filter(FinancialRatio.ticker_id == Ticker.id)
+                            .correlate(Ticker)
+                            .scalar_subquery()
+                        )
+                    )
+                )
+
+            if Rating in required_models:
+                where_clauses.append(
+                    or_(
+                        rat.date == None,
+                        rat.date.in_(
+                            session.query(func.max(Rating.date))
+                            .filter(Rating.ticker_id == Ticker.id)
+                            .correlate(Ticker)
+                            .scalar_subquery()
+                        )
+                    )
+                )
+
+            if AnalystRecommendation in required_models:
+                where_clauses.append(
+                    or_(
+                        an.date == None,
+                        an.date.in_(
+                            session.query(func.max(AnalystRecommendation.date))
+                            .filter(AnalystRecommendation.ticker_id == Ticker.id)
+                            .correlate(Ticker)
+                            .scalar_subquery()
+                        )
+                    )
+                )
+
+            # Add user-specified filters
             for key, value in filters.items():
                 col = self._resolve_column(key, ticker=Ticker, fr=fr, etf=etf, rat=rat, an=an, pts=pts)
                 if col is None:
@@ -158,6 +277,9 @@ class StockScreener:
             # Ticker convenience
             "market_cap": (Ticker, "market_cap"),
             "avg_volume": (Ticker, "avg_volume"),
+            "sector": (Ticker, "sector"),
+            "industry": (Ticker, "industry"),
+            "sub_industry": (Ticker, "sub_industry"),
             "pe_ratio": (FinancialRatio, "priceEarningsRatio"),
             "pb_ratio": (FinancialRatio, "priceToBookRatio"),
             "ps_ratio": (FinancialRatio, "priceToSalesRatio"),
@@ -359,14 +481,136 @@ class StockScreener:
                 df_display[col] = df_display[col].apply(_fmt_large)
         return df_display
 
-def screener(criteria_dict: Dict[str, Any]) -> str:
-    try:
-        if not criteria_dict or not isinstance(criteria_dict, dict):
-            return yaml.dump({
-                "success": False,
-                "error": "criteria_dict parameter is required and must be a dictionary"
-            }, default_flow_style=False)
+def screener(constraints: str) -> str:
+    """
+    Screen stocks based on fundamental criteria using natural language.
 
+    Args:
+        constraints: Natural language description of screening criteria
+            Examples:
+            - "Find large-cap tech stocks with PE < 20 and ROE > 15%"
+            - "Show profitable food companies with market cap over $5B, sorted by dividend yield"
+            - "Mid-cap value stocks with low debt and high margins"
+
+    Returns:
+        YAML string with success status and screener results
+    """
+    try:
+        # System prompt with comprehensive interpretation guidelines
+        system_prompt = """Parse stock screening criteria into structured format.
+        Convert natural language descriptions into specific numeric constraints.
+
+        IMPORTANT LIMITATIONS - These metrics are NOT AVAILABLE and should be IGNORED:
+        - Beta (stock volatility relative to market)
+        - Sharpe ratio
+        - Returns (1M, 3M, 6M, 1Y, annualized returns, momentum)
+        - Correlation (to sectors, indices, or other stocks)
+        - Any performance/risk metrics derived from price history
+
+        If the user requests these metrics, set them to null/None and DO NOT include them in sort_by or columns.
+        This screener ONLY supports fundamental data and valuation metrics listed below.
+
+        Common interpretations:
+        - "large cap" → market_cap_min: 10000000000 (10B)
+        - "mid cap" → market_cap_min: 2000000000, market_cap_max: 10000000000
+        - "small cap" → market_cap_max: 2000000000
+        - "mega cap" → market_cap_min: 200000000000 (200B)
+        - "value stocks" → pe_ratio_max: 20, pb_ratio_max: 3
+        - "growth stocks" → roe_min: 0.15, gross_margin_min: 0.30
+        - "high dividend" → dividend_yield_min: 0.03
+        - "dividend stocks" → dividend_yield_min: 0.02
+        - "profitable" → net_margin_min: 0.05
+        - "highly profitable" → net_margin_min: 0.15
+        - "financially healthy" → current_ratio_min: 1.5, debt_to_equity_max: 1.0
+        - "low debt" → debt_to_equity_max: 0.5
+        - "no debt" → debt_to_equity_max: 0.1
+        - "high volume" → avg_volume_min: 1000000
+        - "liquid" → avg_volume_min: 500000
+
+        For percentages, ALWAYS convert to decimals (15% → 0.15, 3% → 0.03).
+        For dollar amounts, use full numbers (1B → 1000000000, 5M → 5000000).
+        Sector names usually start with "equity_sector_" prefix (e.g., "equity_sector_technology").
+        Industry names use underscores (e.g., "food_products", "semiconductors_and_semiconductor_equipment").
+        Sub-industry names use underscores (e.g., "semiconductors", "beverages", "food_products").
+        Sort descending with "-" prefix (e.g., ["-market_cap"], ["-dividend_yield"]).
+
+        Extract ALL relevant criteria from the query, but ONLY use supported fundamental metrics.
+        """
+
+        # Parse natural language to structured constraints
+        parsed = parse_with_gpt(constraints, ScreenerConstraints, system_prompt)
+
+        # Build criteria dictionary for StockScreener
+        criteria_dict = {}
+
+        # Helper to add range filter
+        def add_range(key: str, min_val: Optional[float], max_val: Optional[float]):
+            if min_val is not None or max_val is not None:
+                criteria_dict[key] = (min_val, max_val)
+
+        # Add all valuation filters
+        add_range("market_cap", parsed.market_cap_min, parsed.market_cap_max)
+        add_range("avg_volume", parsed.avg_volume_min, parsed.avg_volume_max)
+        add_range("pe_ratio", parsed.pe_ratio_min, parsed.pe_ratio_max)
+        add_range("pb_ratio", parsed.pb_ratio_min, parsed.pb_ratio_max)
+        add_range("ps_ratio", parsed.ps_ratio_min, parsed.ps_ratio_max)
+        add_range("price_to_cash_flow", parsed.price_to_cash_flow_min, parsed.price_to_cash_flow_max)
+        add_range("price_to_fcf", parsed.price_to_fcf_min, parsed.price_to_fcf_max)
+        add_range("price_to_ocf", parsed.price_to_ocf_min, parsed.price_to_ocf_max)
+        add_range("peg_ratio", parsed.peg_ratio_min, parsed.peg_ratio_max)
+        add_range("enterprise_value_multiple", parsed.enterprise_value_multiple_min, parsed.enterprise_value_multiple_max)
+        add_range("price_fair_value", parsed.price_fair_value_min, parsed.price_fair_value_max)
+        add_range("dividend_yield", parsed.dividend_yield_min, parsed.dividend_yield_max)
+
+        # Add profitability filters
+        add_range("roe", parsed.roe_min, parsed.roe_max)
+        add_range("roa", parsed.roa_min, parsed.roa_max)
+        add_range("roic", parsed.roic_min, parsed.roic_max)
+        add_range("gross_margin", parsed.gross_margin_min, parsed.gross_margin_max)
+        add_range("operating_margin", parsed.operating_margin_min, parsed.operating_margin_max)
+        add_range("net_margin", parsed.net_margin_min, parsed.net_margin_max)
+
+        # Add financial health filters
+        add_range("debt_to_equity", parsed.debt_to_equity_min, parsed.debt_to_equity_max)
+        add_range("current_ratio", parsed.current_ratio_min, parsed.current_ratio_max)
+        add_range("quick_ratio", parsed.quick_ratio_min, parsed.quick_ratio_max)
+        add_range("interest_coverage", parsed.interest_coverage_min, parsed.interest_coverage_max)
+
+        # Add efficiency filters
+        add_range("asset_turnover", parsed.asset_turnover_min, parsed.asset_turnover_max)
+        add_range("inventory_turnover", parsed.inventory_turnover_min, parsed.inventory_turnover_max)
+
+        # Add ETF-specific filters
+        add_range("expense_ratio", parsed.expense_ratio_min, parsed.expense_ratio_max)
+        add_range("assets_under_management", parsed.assets_under_management_min, parsed.assets_under_management_max)
+        add_range("holdings_count", parsed.holdings_count_min, parsed.holdings_count_max)
+
+        # Add rating filters
+        add_range("overall_score", parsed.overall_score_min, parsed.overall_score_max)
+        add_range("analyst_rating_score", parsed.analyst_rating_score_min, parsed.analyst_rating_score_max)
+
+        # Add price target filters
+        add_range("price_target_last_month", parsed.price_target_last_month_min, parsed.price_target_last_month_max)
+        add_range("price_target_last_quarter", parsed.price_target_last_quarter_min, parsed.price_target_last_quarter_max)
+        add_range("price_target_last_year", parsed.price_target_last_year_min, parsed.price_target_last_year_max)
+
+        # Add classification filters
+        if parsed.sector is not None:
+            criteria_dict["sector"] = parsed.sector
+        if parsed.industry is not None:
+            criteria_dict["industry"] = parsed.industry
+        if parsed.sub_industry is not None:
+            criteria_dict["sub_industry"] = parsed.sub_industry
+
+        # Add display options
+        criteria_dict["limit"] = parsed.limit
+        criteria_dict["offset"] = parsed.offset
+        if parsed.sort_by is not None:
+            criteria_dict["sort_by"] = parsed.sort_by
+        if parsed.columns is not None:
+            criteria_dict["columns"] = parsed.columns
+
+        # Execute screen
         df = StockScreener().screen(**criteria_dict)
         result = {
             "success": True,
@@ -382,72 +626,57 @@ def screener(criteria_dict: Dict[str, Any]) -> str:
 
 # Tool Schema Constants
 STOCK_SCREENER_DESCRIPTION = (
-    "Screen stocks based on fundamental criteria with flexible filtering, sorting, and column selection. "
-    "Supports filtering by market cap, P/E ratio, P/B ratio, ROE, debt-to-equity, margins, and more. "
-    "Can sort by any available field and select specific columns for output. "
-    "CRITICAL: You MUST ALWAYS include criteria_dict parameter with your screening criteria. "
-    "Examples: "
-    "1) screener({'market_cap': (1000000000, None), 'pe_ratio': (0, 20), 'limit': 50}) - Large cap value stocks "
-    "2) screener({'sector': 'equity_sector_technology', 'roe': (0.15, None), 'sort_by': ['-market_cap']}) - High ROE tech stocks "
-    "3) screener({'industry': 'equity_industry_software', 'gross_margin': (0.4, None), 'columns': ['ticker', 'market_cap', 'pe_ratio', 'gross_margin']}) - Profitable software companies "
-    "4) screener({'market_cap': (500000000, 5000000000), 'debt_to_equity': (0, 0.5), 'current_ratio': (1.5, None), 'limit': 25}) - Mid-cap financially stable stocks"
+    "Screen stocks based on FUNDAMENTAL criteria using natural language.\n"
+    "\n**IMPORTANT LIMITATIONS:**"
+    "\n  ❌ NOT SUPPORTED: Beta, Sharpe ratio, returns (1M/3M/6M/1Y), correlation, momentum, or any performance/risk metrics"
+    "\n  ✓ SUPPORTED: Only fundamental data (valuation, profitability, financial health, efficiency)"
+    "\n\n**Usage:** Describe your screening criteria in plain English using the 'constraints' parameter."
+    "\n\n**Examples:**"
+    "\n  • stock_screener(constraints='Find large-cap tech stocks with PE ratio under 20 and ROE above 15%')"
+    "\n  • stock_screener(constraints='Show profitable food companies with market cap over $5B, sorted by dividend yield')"
+    "\n  • stock_screener(constraints='Mid-cap value stocks with low debt and high margins')"
+    "\n  • stock_screener(constraints='High dividend stocks in healthcare sector with strong balance sheets')"
+    "\n  • stock_screener(constraints='Growth stocks with ROE > 20%, operating margin > 15%, limit 20 results')"
+    "\n\n**Supported Criteria:**"
+    "\n  • Valuation: market cap, avg volume, P/E, P/B, P/S, PEG, EV/EBITDA, price/FCF, dividend yield"
+    "\n  • Profitability: ROE, ROA, ROIC, gross/operating/net margins"
+    "\n  • Financial Health: debt-to-equity, current/quick ratio, interest coverage"
+    "\n  • Efficiency: asset turnover, inventory turnover"
+    "\n  • Classification: sector, industry, sub_industry"
+    "\n  • ETF Metrics: expense ratio, AUM, holdings count"
+    "\n  • Ratings: analyst ratings, price targets"
+    "\n  • Display: limit, offset, sort_by, columns"
+    "\n\n**NOT Supported (use separate tools for these):**"
+    "\n  • Beta, Sharpe ratio, volatility"
+    "\n  • Returns over time periods (1M, 3M, 6M, 1Y, YTD)"
+    "\n  • Correlation to indices/sectors/stocks"
+    "\n  • Momentum indicators"
+    "\n  • Any metrics requiring price history analysis"
+    "\n\n**Tips:**"
+    "\n  • Use descriptive terms: 'large-cap' ($10B+), 'mid-cap' ($2-10B), 'small-cap' (<$2B)"
+    "\n  • Percentages work: 'ROE > 15%', 'dividend yield above 3%'"
+    "\n  • Natural comparisons: 'PE < 20', 'debt-to-equity under 0.5'"
+    "\n  • Sorting: 'sorted by market cap', 'order by dividend yield descending'"
+    "\n  • Result control: 'show 50 results', 'limit 20'"
+    "\n  • For performance metrics: Use stock_screener to get candidates, then calculate beta/returns/Sharpe separately"
 )
 
 STOCK_SCREENER_PARAMETERS = {
     "type": "object",
     "properties": {
-        "criteria_dict": {
-            "type": "object",
+        "constraints": {
+            "type": "string",
             "description": (
-                "**MANDATORY - DO NOT OMIT THIS PARAMETER.** "
-                "Dictionary containing screening criteria, sorting, and output options. "
-                "Supports filtering by any available field with tuple ranges (min, max), exact values, or lists. "
-                "Use 'sort_by' for ordering (prefix with '-' for descending). "
-                "Use 'columns' to select specific output fields. "
-                "Use 'limit' to control number of results. "
-                "Use 'offset' to skip results for pagination."
-                "\n\n"
-                "Available filter fields include: "
-                "market_cap, pe_ratio, pb_ratio, ps_ratio, roe, roa, debt_to_equity, current_ratio, "
-                "gross_margin, operating_margin, net_margin, dividend_yield, sector, industry, etc."
-                "\n\n"
-                """Example 1 - Large cap value stocks:
-                screener({
-                    "market_cap": (1000000000, None),
-                    "pe_ratio": (0, 20),
-                    "pb_ratio": (0, 2),
-                    "limit": 50
-                })"""
-                "\n\n"
-                """Example 2 - High ROE tech stocks:
-                screener({
-                    "sector": "equity_sector_technology",
-                    "roe": (0.15, None),
-                    "sort_by": ["-market_cap"],
-                    "limit": 30
-                })"""
-                "\n\n"
-                """Example 3 - Profitable software companies:
-                screener({
-                    "industry": "equity_industry_software",
-                    "gross_margin": (0.4, None),
-                    "columns": ["ticker", "market_cap", "pe_ratio", "gross_margin", "roe"],
-                    "limit": 25
-                })"""
-                "\n\n"
-                """Example 4 - Mid-cap financially stable stocks:
-                screener({
-                    "market_cap": (500000000, 5000000000),
-                    "debt_to_equity": (0, 0.5),
-                    "current_ratio": (1.5, None),
-                    "sort_by": ["-roe"],
-                    "limit": 25
-                })"""
-            ),
-            "additionalProperties": True
-        },
+                "Natural language description of stock screening criteria. "
+                "Describe the filters, sorting, and display options in plain English. "
+                "The LLM will parse this into specific screening parameters. "
+                "Examples: 'large-cap tech stocks with PE < 20 and ROE > 15%', "
+                "'profitable dividend stocks sorted by yield', "
+                "'growth companies with strong margins and low debt'."
+            )
+        }
     },
-    "required": ["criteria_dict"],
+    "required": ["constraints"],
     "additionalProperties": False
 }
 
@@ -459,3 +688,13 @@ STOCK_SCREENER_TOOL = {
 }
 
 
+if __name__ == "__main__":
+    print(screener(constraints="Find me stocks in the semiconductors sub industry with a PE greater than 10"))
+    from app.db.core.db_config import MarketSession
+    from app.db.core.market_data_models import Ticker
+    with MarketSession() as session:
+        tickers = session.query(Ticker).filter(Ticker.sub_industry == "semiconductors").all()
+    
+    print(len(tickers))
+    print(tickers[0].pe)
+        

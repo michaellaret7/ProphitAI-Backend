@@ -4,6 +4,7 @@ from datetime import datetime
 from app.core.calculations.portfolio.utils import prepare_portfolio_data
 from app.core.calculations.returns.calculator import ReturnsCalculator
 from app.core.calculations.portfolio.correlation import CorrelationAnalysis
+from app.core.calculations.core.config import DEFAULT_LOOKBACK_SHORT
 from app.models.portfolio_models import PortfolioInput
 import pandas as pd
 from app.utils.gpt_parser import canonical_portfolio
@@ -40,7 +41,7 @@ def correlation_matrix(portfolio_dict: PortfolioInput | dict, _simulation_date: 
         # Use utility to get portfolio data
         weights, price_data, dividend_data = prepare_portfolio_data(
             portfolio=portfolio_dict,
-            lookback_days=252,
+            lookback_days=DEFAULT_LOOKBACK_SHORT,
             include_dividends=False,
             _simulation_date=_simulation_date
         )

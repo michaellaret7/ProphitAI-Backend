@@ -4,6 +4,7 @@ from datetime import datetime
 from app.core.calculations.portfolio.utils import prepare_portfolio_data
 from app.core.calculations.returns.calculator import ReturnsCalculator
 from app.core.calculations.risk.calculator import RiskCalculator
+from app.core.calculations.core.config import DEFAULT_LOOKBACK_SHORT
 from app.models.portfolio_models import PortfolioInput
 import pandas as pd
 from app.utils.gpt_parser import canonical_portfolio
@@ -36,7 +37,7 @@ def calculate_covariance_matrix(portfolio_dict: PortfolioInput | dict = None, _s
         # Get portfolio data using utility
         weights_dict, price_data, _ = prepare_portfolio_data(
             portfolio=portfolio_dict,
-            lookback_days=252,
+            lookback_days=DEFAULT_LOOKBACK_SHORT,
             include_dividends=False,
             _simulation_date=_simulation_date
         )

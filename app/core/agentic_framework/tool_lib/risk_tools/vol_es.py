@@ -1,6 +1,7 @@
 import yaml
 from app.core.calculations.portfolio.utils import get_portfolio_returns
 from app.core.calculations.risk.calculator import RiskCalculator
+from app.core.calculations.core.config import DEFAULT_LOOKBACK_SHORT
 from app.models.portfolio_models import PortfolioInput
 from app.utils.gpt_parser import canonical_portfolio
 from app.utils.decorators.tool_validation import validate_required_args, validate_portfolio_dict, validate_numeric_arg, validate_enum_arg
@@ -39,7 +40,7 @@ def vol_es(portfolio_dict: PortfolioInput | dict = None, horizon_days: int = 1, 
         # Get portfolio returns using the utility
         portfolio_returns, _ = get_portfolio_returns(
             portfolio=portfolio_dict,
-            lookback_days=252,
+            lookback_days=DEFAULT_LOOKBACK_SHORT,
             use_total_returns=False,  # Use price returns for volatility metrics
             dropna=True
         )

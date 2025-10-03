@@ -201,11 +201,11 @@ class AgentUtilities:
                         return self.execute_tool_safe(name, retry_args, is_retry=True)
             except Exception:
                 pass
-            
+
             # Attempt auto-retry if not already a retry
             if not is_retry:
                 return self._attempt_auto_retry(name, args, error_msg, error_response, func)
-            
+
             return error_response
             
         except Exception as e:

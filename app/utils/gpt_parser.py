@@ -19,41 +19,60 @@ class PortfolioWrapper(BaseModel):
     """Wrapper to help parse portfolio data"""
     portfolio: List[PortfolioItem]
 
-def parse_portfolio_with_gpt(data: any) -> Dict:
+def parse_with_gpt(query: str, target_model: Type[T], system_prompt: str = None) -> T:
     """
-    Parse any data into a portfolio dictionary format
-    
+    Generic LLM parser that converts natural language to structured Pydantic models.
+
     Args:
-        data: Any input data (string, dict, list, etc.)
-    
+        query: Natural language input to parse
+        target_model: Pydantic model class to parse into
+        system_prompt: Optional custom system prompt (default provides generic instructions)
+
     Returns:
-        Dict in format: {"TICKER": {"allocation": 0.x, "position": "long/short"}, ...}
+        Parsed instance of target_model
     """
     model, client = openai_model_and_client('gpt-4o')
-    
-    # Convert data to string
-    data_str = str(data) if not isinstance(data, str) else data
-    
-    system_prompt = """Parse the input into a portfolio format. 
-    Extract tickers, allocations (as decimals between 0-1), and positions (long/short).
-    Examples of input formats you might see:
-    - "AAPL 10% long, MSFT 5% short"  
-    - {"AAPL": 0.1, "MSFT": -0.05}
-    - [("AAPL", 0.1, "long"), ("MSFT", 0.05, "short")]
-    Always output as a list of portfolio items."""
-    
-    # Parse to intermediate format
+
+    if system_prompt is None:
+        system_prompt = f"""Parse the user's input into the requested structured format.
+        Extract all relevant information and populate the fields accurately.
+        If information is not provided, leave fields as None/null."""
+
     completion = client.chat.completions.parse(
         model=model,
         messages=[
             {"role": "system", "content": system_prompt},
-            {"role": "user", "content": data_str}
+            {"role": "user", "content": query}
         ],
-        response_format=PortfolioWrapper
+        response_format=target_model
     )
-    
-    parsed = completion.choices[0].message.parsed
-    
+
+    return completion.choices[0].message.parsed
+
+def parse_portfolio_with_gpt(data: any) -> Dict:
+    """
+    Parse any data into a portfolio dictionary format
+
+    Args:
+        data: Any input data (string, dict, list, etc.)
+
+    Returns:
+        Dict in format: {"TICKER": {"allocation": 0.x, "position": "long/short"}, ...}
+    """
+    # Convert data to string
+    data_str = str(data) if not isinstance(data, str) else data
+
+    system_prompt = """Parse the input into a portfolio format.
+    Extract tickers, allocations (as decimals between 0-1), and positions (long/short).
+    Examples of input formats you might see:
+    - "AAPL 10% long, MSFT 5% short"
+    - {"AAPL": 0.1, "MSFT": -0.05}
+    - [("AAPL", 0.1, "long"), ("MSFT", 0.05, "short")]
+    Always output as a list of portfolio items."""
+
+    # Parse using generic parser
+    parsed = parse_with_gpt(data_str, PortfolioWrapper, system_prompt)
+
     # Convert to desired dict format
     portfolio_dict = {}
     for item in parsed.portfolio:
@@ -61,9 +80,8 @@ def parse_portfolio_with_gpt(data: any) -> Dict:
             "allocation": item.allocation,
             "position": item.position.lower()
         }
-    
-    return portfolio_dict
 
+    return portfolio_dict
 
 def canonical_portfolio(portfolio: PortfolioInput | dict) -> Dict[str, Dict]:
     """Convert any portfolio format to canonical dictionary using GPT parser."""

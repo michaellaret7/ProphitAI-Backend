@@ -341,6 +341,65 @@ def validate_required_args(*required_arg_names: str) -> Callable:
     return decorator
 
 
+def validate_tickers_arg(arg_name: str = "tickers") -> Callable:
+    """Decorator to validate a list of tickers argument.
+
+    Args:
+        arg_name: Name of the tickers parameter to validate (default: "tickers")
+
+    Returns:
+        Decorator that validates tickers list format before calling the function
+
+    Example:
+        @validate_tickers_arg()
+        def get_ticker_data(tickers: List[str]) -> str:
+            # tickers is guaranteed to be valid list of strings
+            ...
+    """
+    def decorator(func: Callable) -> Callable:
+        @wraps(func)
+        def wrapper(*args, **kwargs):
+            tickers = _get_arg_value(arg_name, args, kwargs, func)
+
+            if tickers is None:
+                return _build_yaml_error(
+                    f"Missing required argument: '{arg_name}'. Example: {arg_name}=['AAPL', 'MSFT']"
+                )
+
+            if not isinstance(tickers, list):
+                return _build_yaml_error(
+                    f"Invalid {arg_name} type: expected list, got {type(tickers).__name__}. Example: {arg_name}=['AAPL', 'MSFT']"
+                )
+
+            if not tickers:
+                return _build_yaml_error(
+                    f"Empty {arg_name} list provided. Example: {arg_name}=['AAPL', 'MSFT']"
+                )
+
+            # Validate each ticker in the list
+            for ticker in tickers:
+                if not isinstance(ticker, str):
+                    return _build_yaml_error(
+                        f"Invalid ticker type in {arg_name}: expected string, got {type(ticker).__name__}. Example: {arg_name}=['AAPL', 'MSFT']"
+                    )
+
+                ticker_clean = ticker.strip().upper()
+
+                if not ticker_clean:
+                    return _build_yaml_error(
+                        f"Empty ticker string found in {arg_name}. Example: {arg_name}=['AAPL', 'MSFT']"
+                    )
+
+                if ticker_clean.isdigit():
+                    return _build_yaml_error(
+                        f"Invalid ticker in {arg_name}: '{ticker_clean}' appears to be numeric. Tickers must be valid stock symbols. Example: {arg_name}=['AAPL', 'MSFT']"
+                    )
+
+            return func(*args, **kwargs)
+        return wrapper
+    return decorator
+
+
 def log_simulation_data_range(data_extractor: Optional[Callable] = None) -> Callable:
     """Decorator to log the date range of data being used in simulation/production mode.
 

@@ -1,14 +1,29 @@
 import yaml
+from datetime import datetime
+from typing import Optional
 from app.utils.decorators.price_data import with_price_data
-from app.utils.decorators.tool_validation import validate_ticker_arg
+from app.utils.decorators.tool_validation import validate_ticker_arg, log_simulation_data_range
+from app.utils.simulation_utils import filter_series_by_date
+from app.core.calculations.core.config import DEFAULT_LOOKBACK_SHORT
 
 @validate_ticker_arg()
-@with_price_data(lookback_days=252, include_dividends=False)
-def get_weekly_returns(ticker: str, price_data=None, **kwargs) -> str:
-    """Get weekly returns for the last year for a given ticker."""
+@with_price_data(lookback_days=DEFAULT_LOOKBACK_SHORT, include_dividends=False)
+@log_simulation_data_range()
+def get_weekly_returns(ticker: str, price_data=None, _simulation_date: Optional[datetime] = None, **kwargs) -> str:
+    """Get weekly returns for the last year for a given ticker.
+
+    Args:
+        ticker: Stock ticker symbol
+        price_data: Optional pre-fetched price data (from decorator)
+        _simulation_date: INTERNAL USE ONLY - For simulation mode, not exposed to agents.
+                         If provided, uses this as cutoff date instead of current time.
+    """
     try:
+        # Filter price data by simulation date if provided
+        filtered_data = filter_series_by_date(price_data, _simulation_date)
+
         # Resample to weekly and calculate returns
-        weekly_prices = price_data.resample('W').last()
+        weekly_prices = filtered_data.resample('W').last()
         weekly_returns = weekly_prices.pct_change().dropna()
 
         # Convert to dictionary with string dates and format as percentages

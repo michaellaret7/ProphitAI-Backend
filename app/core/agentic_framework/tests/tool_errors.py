@@ -17,12 +17,7 @@ if str(project_root) not in sys.path:
 
 from app.core.agentic_framework.base_agent.agent import BaseAgent
 from app.core.agentic_framework.tests.tool_error_handling.tool_loader import load_tool_by_name
-from app.core.agentic_framework.tests.tool_error_handling.test_scenarios import (
-    get_scenarios_for_tool,
-    get_portfolio_tool_scenarios,
-    get_ticker_factor_scenarios,
-    TOOL_SCENARIOS
-)
+from app.core.agentic_framework.tests.tool_error_handling.test_scenarios import get_basic_test_scenarios
 
 def generate_test_prompt(tool_name: str, error_scenarios: List[str]) -> str:
     """
@@ -67,7 +62,7 @@ def generate_test_prompt(tool_name: str, error_scenarios: List[str]) -> str:
 
 def test_tool_with_agent(
     tool_name: str,
-    error_scenarios: List[str],
+    error_scenarios: List[str] = None,
     model: str = "gpt-4.1",
     max_iterations: int = 15,
     simulation_mode: bool = True,
@@ -80,8 +75,8 @@ def test_tool_with_agent(
 
     Args:
         tool_name: Name of the tool to test (e.g., "calculate_portfolio_performance")
-        error_scenarios: List of error scenario descriptions to test
-        model: LLM model to use (default: "gpt-4o-mini")
+        error_scenarios: List of error scenario descriptions to test (default: uses basic 3 scenarios)
+        model: LLM model to use (default: "gpt-4.1")
         max_iterations: Maximum iterations for agent (default: 15)
         simulation_mode: If True, use simulation_date; if False, use production (None) (default: True)
         simulation_date: Date for simulation mode (default: 2024-09-30, ignored if simulation_mode=False)
@@ -91,21 +86,19 @@ def test_tool_with_agent(
         Final agent result/answer
 
     Example:
-        # Test in simulation mode (with historical data cutoff)
-        result = test_tool_with_agent(
-            tool_name="calculate_portfolio_performance",
-            error_scenarios=[...],
-            simulation_mode=True,
-            simulation_date=datetime(2024, 9, 30)
-        )
+        # Simple usage - uses basic 3 scenarios automatically
+        result = test_tool_with_agent("calculate_portfolio_performance")
 
-        # Test in production mode (with live data)
+        # Custom scenarios
         result = test_tool_with_agent(
             tool_name="calculate_portfolio_performance",
-            error_scenarios=[...],
-            simulation_mode=False
+            error_scenarios=["Pass invalid ticker", "Pass empty portfolio"],
         )
     """
+    # Use basic scenarios if none provided
+    if error_scenarios is None:
+        error_scenarios = get_basic_test_scenarios()
+
     # Determine simulation date based on mode
     agent_simulation_date = simulation_date if simulation_mode else None
     mode_label = "SIMULATION" if simulation_mode else "PRODUCTION"
@@ -174,56 +167,35 @@ def test_tool_with_agent(
     return result
 
 
+def test_tool(tool_name: str, **kwargs) -> str:
+    """
+    Simplified convenience function - just type the tool name to test it.
+
+    Uses the basic 3 test scenarios automatically:
+    1. Pass wrong type for first parameter
+    2. Omit required parameter
+    3. Call correctly with valid parameters
+
+    Args:
+        tool_name: Name of the tool to test
+        **kwargs: Optional arguments to pass to test_tool_with_agent
+                  (model, max_iterations, simulation_mode, verbose, etc.)
+
+    Returns:
+        Final agent result
+
+    Example:
+        # Simplest usage
+        test_tool("calculate_portfolio_performance")
+
+        # With custom settings
+        test_tool("calculate_ticker_performance", verbose=False, model="gpt-4o")
+    """
+    return test_tool_with_agent(tool_name, **kwargs)
+
+
 if __name__ == "__main__":
-    """Example usage of the modular test function with scenario library."""
+    """Example usage."""
 
-    print("="*80)
-    print("SIMULATION DATA LEAKAGE FIX - TOOL TESTING")
-    print("="*80)
-    print("Testing tools that were recently fixed for simulation date filtering\n")
-
-
-    # result1 = test_tool_with_agent(
-    #     tool_name="get_ticker_fundamental_data",
-    #     error_scenarios=get_scenarios_for_tool("get_ticker_fundamental_data"),
-    #     simulation_mode=True,
-    #     simulation_date=datetime(2024, 9, 30),
-    #     max_iterations=15
-    # )
-
-    # result2 = test_tool_with_agent(
-    #     tool_name="calculate_ticker_factors",
-    #     error_scenarios=get_scenarios_for_tool("calculate_ticker_factors"),
-    #     simulation_mode=True,
-    #     simulation_date=datetime(2024, 9, 30),
-    #     max_iterations=15
-    # )
-
-    # result3 = test_tool_with_agent(
-    #     tool_name="get_industry_benchmark_calculations",
-    #     error_scenarios=get_scenarios_for_tool("get_industry_benchmark_calculations"),
-    #     simulation_mode=True,
-    #     simulation_date=datetime(2024, 9, 30),
-    #     max_iterations=15
-    # )
-
-    result4 = test_tool_with_agent(
-        tool_name="get_sub_industry_benchmark_calculations",
-        error_scenarios=get_scenarios_for_tool("get_sub_industry_benchmark_calculations"),
-        simulation_mode=True,
-        simulation_date=datetime(2024, 9, 30),
-        max_iterations=15
-    )
-
-    result5 = test_tool_with_agent(
-        tool_name="calculate_portfolio_performance",
-        error_scenarios=get_scenarios_for_tool("calculate_portfolio_performance"),
-        simulation_mode=True,
-        simulation_date=datetime(2024, 9, 30),
-        max_iterations=15
-    )
-
-    print("\n" + "="*80)
-    print("All test scenarios configured!")
-    print("Uncomment the test you want to run above")
-    print("="*80)
+    # Test a single tool with default settings
+    test_tool("calculate_portfolio_correlation_matrix")

@@ -1,10 +1,11 @@
 import yaml
 import pandas as pd
 from app.core.calculations.sectors.sub_industry import calc_sub_industry_factor_benchmark_calculations
-from app.utils.decorators.tool_validation import validate_required_args, validate_enum_arg
+from app.utils.decorators.tool_validation import validate_required_args, validate_enum_arg, log_simulation_data_range
 
 @validate_required_args('sub_industry', 'factor')
 @validate_enum_arg("factor", ["growth", "value", "momentum", "quality", "volatility"])
+@log_simulation_data_range()
 def get_sub_industry_benchmark_calculations(sub_industry: str, factor: str, **kwargs) -> str:
     """Get the sub-industry benchmark calculations for a given sub-industry and factor.
 

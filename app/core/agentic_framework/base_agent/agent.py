@@ -46,8 +46,8 @@ class BaseAgent:
                 simulation_date: Optional[datetime] = None,
             ):
         
-        self.model, self.client = openai_model_and_client(model=model)
-        # self.model, self.client = grok_model_and_client(model=model)
+        # self.model, self.client = openai_model_and_client(model=model)
+        self.model, self.client = grok_model_and_client(model=model)
         # self.model, self.client = claude_model_and_client(model=model)
 
         print(f"Using model: {self.model}")

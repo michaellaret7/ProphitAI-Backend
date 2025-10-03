@@ -17,7 +17,7 @@ from app.domain.prophit_alts.consumer_staples_fund.build_portfolio.cio.prompts i
 from app.domain.prophit_alts.consumer_staples_fund.build_portfolio.cio.tool_registry import (
     register_cio_tools,
 )
-from app.domain.prophit_alts.consumer_staples_fund.build_portfolio.cio.simulation.config import (
+from app.domain.prophit_alts.consumer_staples_fund.build_portfolio.simulation.config import (
     SIMULATION_CUTOFF_DATE,
 )
 from app.core.agentic_framework.base_agent.memory.domain_memory import DomainMemory
@@ -53,7 +53,7 @@ class CIOSimulationAgent(BaseAgent):
         max_iterations: int = 250,
         plan_first: bool = True,
         save_messages: bool = True,
-        model: str = "gpt-5",
+        model: str = "gpt-4.1",
         verbose: bool = True,
         memory_refresh_interval: int = 20,
     ):

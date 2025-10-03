@@ -5,6 +5,7 @@ from app.core.calculations.portfolio.utils import prepare_portfolio_data, get_be
 from app.core.calculations.returns.calculator import ReturnsCalculator
 from app.core.calculations.risk.calculator import RiskCalculator
 from app.core.calculations.performance.calculator import PerformanceCalculator
+from app.core.calculations.core.config import DEFAULT_LOOKBACK_MEDIUM
 import pandas as pd
 import numpy as np
 from app.models.portfolio_models import PortfolioInput
@@ -14,7 +15,7 @@ from app.utils.decorators.tool_validation import log_simulation_data_range, vali
 @validate_required_args('portfolio_dict')
 @validate_portfolio_dict()
 @log_simulation_data_range()
-def calculate_ticker_performances(portfolio_dict: PortfolioInput | dict, lookback_days: int = 504, use_total_returns: bool = True, benchmark: str = "SPY", _simulation_date: Optional[datetime] = None) -> str:
+def calculate_ticker_performances(portfolio_dict: PortfolioInput | dict, lookback_days: int = DEFAULT_LOOKBACK_MEDIUM, use_total_returns: bool = True, benchmark: str = "SPY", _simulation_date: Optional[datetime] = None) -> str:
     """Return a DataFrame of performance metrics for each ticker in the portfolio.
 
     Reuses shared utilities and calculators to fetch data and compute metrics.
@@ -174,7 +175,7 @@ CALCULATE_TICKER_PERFORMANCES_PARAMETERS = {
                 "Keys = ticker symbols (e.g., 'AAPL'). "
                 "Values = objects with 'allocation' (decimal 0-1) and 'position' ('long'/'short'). "
                 "You MUST include this parameter with all portfolio tickers. "
-                "Uses 2-year lookback (504 days), total returns, and SPY benchmark by default."
+                "Uses 2-year lookback (504 days), total returns, and SPY benchmark by default (matches Bloomberg standard for beta)."
                 "\n\n"
                 """Example of CORRECT function call:
                 calculate_ticker_performances(

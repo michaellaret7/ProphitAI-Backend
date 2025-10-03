@@ -4,6 +4,7 @@ from app.db.core.prophit_alts_models import *
 from app.db.core.market_data_models import *
 from app.utils.serialize_output import serialize_sqlalchemy_obj
 from app.repositories.price_data import fetch_bulk_price_data_for_tickers
+from app.core.calculations.core.config import DEFAULT_LOOKBACK_LONG
 import numpy as np
 import pandas as pd
 from datetime import datetime, timedelta
@@ -24,7 +25,7 @@ class ProphitAltsServices:
     - exposures: long_exposure, short_exposure, gross_exposure, net_exposure (decimals)
     """
 
-    def __init__(self, fund_name: str, lookback_days: int = 504, frequency: str = 'daily'):
+    def __init__(self, fund_name: str, lookback_days: int = DEFAULT_LOOKBACK_LONG, frequency: str = 'daily'):
         self.fund_name = fund_name
         self.lookback_days = lookback_days
         self.frequency = frequency

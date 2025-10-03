@@ -10,6 +10,25 @@ from typing import Optional
 import pandas as pd
 
 
+def _normalize_cutoff_date(cutoff_date: Optional[datetime]) -> Optional[datetime]:
+    """Normalize timezone-aware datetime to naive for comparison with price data.
+
+    Args:
+        cutoff_date: Datetime that may be timezone-aware
+
+    Returns:
+        Timezone-naive datetime (or None if input is None)
+
+    Reason: Price data from DataService typically has timezone-naive DatetimeIndex,
+            so we strip timezone info to enable pandas comparison operations
+    """
+    if cutoff_date is None:
+        return None
+    if cutoff_date.tzinfo is not None:
+        return cutoff_date.replace(tzinfo=None)
+    return cutoff_date
+
+
 def get_end_date(simulation_date: Optional[datetime] = None) -> datetime:
     """Get the effective end date for calculations.
 
@@ -33,13 +52,15 @@ def get_date_range(
 
     Args:
         simulation_date: Optional cutoff date for simulation mode
-        lookback_days: Number of days to look back from end date
+        lookback_days: Number of trading days to look back from end date
 
     Returns:
         Tuple of (start_date, end_date)
     """
     end = get_end_date(simulation_date)
-    start = end - timedelta(days=lookback_days)
+    # Convert lookback_days (trading days) to calendar days
+    calendar_days = int(lookback_days * 365 / 252)
+    start = end - timedelta(days=calendar_days)
     return start, end
 
 
@@ -61,6 +82,8 @@ def filter_series_by_date(
 
     if not isinstance(series.index, pd.DatetimeIndex):
         series.index = pd.to_datetime(series.index)
+
+    cutoff_date = _normalize_cutoff_date(cutoff_date)
 
     return series[series.index <= cutoff_date]
 
@@ -87,4 +110,7 @@ def filter_dataframe_by_date(
         return df
 
     df[date_column] = pd.to_datetime(df[date_column])
+
+    cutoff_date = _normalize_cutoff_date(cutoff_date)
+
     return df[df[date_column] <= cutoff_date]

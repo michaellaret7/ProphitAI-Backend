@@ -6,7 +6,7 @@ from app.core.calculations.returns.calculator import ReturnsCalculator
 from app.core.calculations.risk.calculator import RiskCalculator
 from app.core.calculations.performance.calculator import PerformanceCalculator
 import pandas as pd
-from app.core.calculations.core.config import DEFAULT_RF_ANNUAL, DEFAULT_TRADING_DAYS
+from app.core.calculations.core.config import DEFAULT_RF_ANNUAL, DEFAULT_TRADING_DAYS, DEFAULT_LOOKBACK_LONG
 from app.models.portfolio_models import PortfolioInput
 from app.utils.gpt_parser import canonical_portfolio
 from app.utils.decorators.tool_validation import log_simulation_data_range, validate_portfolio_dict, validate_required_args
@@ -15,7 +15,7 @@ from app.utils.decorators.tool_validation import log_simulation_data_range, vali
 @validate_required_args('portfolio_dict')
 @validate_portfolio_dict()
 @log_simulation_data_range()
-def calculate_portfolio_performance(portfolio_dict: PortfolioInput | dict, lookback_days=504, use_total_returns=True, rf_annual=0.04, benchmark="SPY",
+def calculate_portfolio_performance(portfolio_dict: PortfolioInput | dict, lookback_days=DEFAULT_LOOKBACK_LONG, use_total_returns=True, rf_annual=0.04, benchmark="SPY",
     _simulation_date: Optional[datetime] = None) -> str:
     """Unified portfolio performance calculation combining all metrics.
 
@@ -178,7 +178,7 @@ CALCULATE_PORTFOLIO_PERFORMANCE_PARAMETERS = {
                 "Keys = ticker symbols (e.g., 'AAPL'). "
                 "Values = objects with 'allocation' (decimal 0-1) and 'position' ('long'/'short'). "
                 "You MUST include this parameter with all portfolio tickers. "
-                "Uses 3-year lookback (756 days) and SPY benchmark by default."
+                "Uses 3-year lookback (756 days) and SPY benchmark by default (industry standard for Sharpe/Sortino ratios)."
                 "\n\n"
                 """Example of CORRECT function call:
                 calculate_portfolio_performance(

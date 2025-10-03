@@ -82,7 +82,7 @@ def run_pairwise_correlation_analysis(portfolio_dict: PortfolioInput | dict):
         tickers = list(portfolio_dict.keys()) if isinstance(portfolio_dict, dict) else []
 
     # Prepare all date ranges needed
-    baseline_start = (datetime.now() - timedelta(days=252)).strftime("%Y-%m-%d")
+    baseline_start = (datetime.now() - timedelta(days=365)).strftime("%Y-%m-%d")
     baseline_end = datetime.now().strftime("%Y-%m-%d")
     
     # Fetch baseline data once

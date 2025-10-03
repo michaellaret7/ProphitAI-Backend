@@ -3,6 +3,7 @@ from typing import Optional
 from datetime import datetime
 from app.core.calculations.portfolio.utils import get_portfolio_returns
 from app.core.calculations.returns.calculator import ReturnsCalculator
+from app.core.calculations.core.config import DEFAULT_LOOKBACK_LONG
 import numpy as np
 from app.models.portfolio_models import PortfolioInput
 from app.utils.gpt_parser import canonical_portfolio
@@ -11,7 +12,7 @@ from app.utils.decorators.tool_validation import log_simulation_data_range, vali
 @validate_required_args('portfolio_dict')
 @validate_portfolio_dict()
 @log_simulation_data_range()
-def calculate_portfolio_returns_metrics(portfolio_dict: PortfolioInput | dict, lookback_days=252, _simulation_date: Optional[datetime] = None) -> str:
+def calculate_portfolio_returns_metrics(portfolio_dict: PortfolioInput | dict, lookback_days=DEFAULT_LOOKBACK_LONG, _simulation_date: Optional[datetime] = None) -> str:
     """Calculate and display simple portfolio metrics.
 
     Args:
@@ -86,7 +87,7 @@ CALCULATE_PORTFOLIO_RETURNS_METRICS_PARAMETERS = {
                 "Keys = ticker symbols (e.g., 'AAPL'). "
                 "Values = objects with 'allocation' (decimal 0-1) and 'position' ('long'/'short'). "
                 "You MUST include this parameter with all portfolio tickers. "
-                "Uses 1-year lookback (252 days) by default."
+                "Uses 3-year lookback (756 days) by default (industry standard for portfolio returns analysis)."
                 "\n\n"
                 """Example of CORRECT function call:
                 calculate_portfolio_returns_metrics(

@@ -52,7 +52,8 @@ def get_simulation_start_date(lookback_days: int) -> datetime:
     """Get the simulation start date based on lookback period.
 
     Args:
-        lookback_days: Number of days to look back from cutoff date
+        lookback_days: Number of calendar days to look back from cutoff date
+                      (Note: this is calendar days, not trading days)
 
     Returns:
         datetime: The start date for data fetching

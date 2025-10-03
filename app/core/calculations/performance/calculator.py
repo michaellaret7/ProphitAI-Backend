@@ -633,7 +633,7 @@ if __name__ == "__main__":
         ]
         benchmark = "SPY"
         end = datetime.now(timezone.utc)
-        start = end - timedelta(days=252 * 3)
+        start = end - timedelta(days=365 * 3)
 
         # Bulk fetch closing price series via DataService
         ds = DataService()
