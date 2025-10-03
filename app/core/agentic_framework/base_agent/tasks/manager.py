@@ -16,14 +16,10 @@ class TaskManager:
         self.structured_plan: Optional[TodoList] = None  # Store the structured plan
         self.execution_engine = None  # Will be set by execution engine
 
-        # Use provided output directory or create a default one
-        if output_dir:
-            self.state_path = output_dir / "task_state.json"
-        else:
-            # Default to project root agent_output directory
-            # From manager.py: tasks/ -> base_agent/ -> agentic_framework/ -> core/ -> app/ -> project_root/
-            project_root = Path(__file__).resolve().parent.parent.parent.parent.parent.parent
-            self.state_path = project_root / "agent_output" / "task_state.json"
+        if not output_dir:
+            raise ValueError("output_dir is required for TaskManager")
+
+        self.state_path = output_dir / "task_state.json"
 
         # Ensure the directory exists
         self.state_path.parent.mkdir(parents=True, exist_ok=True)

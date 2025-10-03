@@ -19,6 +19,7 @@ from .tasks.validator import TaskValidator
 from .memory.domain_memory import DomainMemory
 from .memory.episodic_memory import EpisodicMemory
 from .tool_registry import register_base_tools, register_task_management_tools
+from .utils.path_utils import create_agent_output_dir
 
 load_dotenv()
 
@@ -86,19 +87,7 @@ class BaseAgent:
 
         # Create shared output directory for this agent run
         if save_messages:
-            # Get the project root directory (go up from agent.py to ProphitAI root)
-            # From agent.py: base_agent/ -> agentic_framework/ -> core/ -> app/ -> ProphitAI/
-            project_root = Path(__file__).resolve().parent.parent.parent.parent.parent
-
-            # Create directory structure: agent_output/{date}/{agent_name}_{time}/
-            current_datetime = datetime.now()
-            date_folder = current_datetime.strftime("%Y-%m-%d")
-            time_str = current_datetime.strftime("%H%M%S")  # Short time format (HHMMSS)
-            agent_folder = f"{self.agent_name}_{time_str}"
-
-            # Build the full path
-            self.output_dir = project_root / "agent_output" / date_folder / agent_folder
-            self.output_dir.mkdir(parents=True, exist_ok=True)
+            self.output_dir = create_agent_output_dir(self.agent_name)
         else:
             self.output_dir = None
 
@@ -133,7 +122,10 @@ class BaseAgent:
         self._initialize_domain_memory()
 
         # Initialize episodic memory (blank each session if enabled)
-        self.episodic = EpisodicMemory(reset_on_init=True) if self.use_episodic_memory else None
+        self.episodic = EpisodicMemory(
+            output_dir=self.output_dir,
+            reset_on_init=True
+        ) if self.use_episodic_memory else None
 
         # Register built-ins (after episodic is initialized so episodic tools are available)
         register_base_tools(self)

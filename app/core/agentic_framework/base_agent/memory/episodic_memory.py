@@ -19,13 +19,18 @@ class EpisodicMemory:
         self,
         path: Optional[Union[str, Path]] = None,
         *,
+        output_dir: Optional[Path] = None,
         reset_on_init: bool = False,
     ) -> None:
-        # Default to sibling memory_store/episodic_memory.json
+        # If explicit path provided, use it (highest priority)
         if path is None:
-            # Resolve the path to ensure it's absolute
-            memory_base_dir = Path(__file__).resolve().parent
-            path = memory_base_dir / "memory_store" / "episodic_memory.json"
+            if output_dir:
+                # Use agent-specific output directory
+                path = output_dir / "episodic_memory.json"
+            else:
+                # Fallback to legacy location for backward compatibility
+                memory_base_dir = Path(__file__).resolve().parent
+                path = memory_base_dir / "memory_store" / "episodic_memory.json"
 
         self.path: Path = Path(path)
         self._ensure_storage()

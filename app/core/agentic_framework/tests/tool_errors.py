@@ -193,3 +193,5 @@ def test_tool(tool_name: str, **kwargs) -> str:
 
 if __name__ == "__main__":
     test_tool("get_ticker_performance_and_risk")
+
+    # look into data center reits 

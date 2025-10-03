@@ -16,25 +16,10 @@ class MessageLogger:
         self.last_llm_received_tokens = None  # Track the last llm_received_tokens value
 
         if self.save_messages:
-            # Use provided output directory or create a default one (for backward compatibility)
-            if output_dir:
-                self.messages_log_path = output_dir / "agent_messages.json"
-            else:
-                # Get the project root directory (go up from logger.py to ProphitAI root)
-                # From logger.py: core/ -> base_agent/ -> agentic_framework/ -> core/ -> app/ -> ProphitAI/
-                project_root = Path(__file__).resolve().parent.parent.parent.parent.parent
+            if not output_dir:
+                raise ValueError("output_dir is required when save_messages=True")
 
-                # Create directory structure: agent_output/{date}/{agent_name}_{time}/
-                current_datetime = datetime.now()
-                date_folder = current_datetime.strftime("%Y-%m-%d")
-                time_str = current_datetime.strftime("%H%M%S")  # Short time format (HHMMSS)
-                agent_folder = f"{self.agent_name}_{time_str}"
-
-                # Build the full path
-                output_dir = project_root / "agent_output" / date_folder / agent_folder
-                output_dir.mkdir(parents=True, exist_ok=True)
-
-                self.messages_log_path = output_dir / "agent_messages.json"
+            self.messages_log_path = output_dir / "agent_messages.json"
 
             # Clear the messages file at start
             try:

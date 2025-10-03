@@ -692,7 +692,7 @@ STOCK_SCREENER_PARAMETERS = {
             "type": "string",
             "description": (
                 "Natural language description of FUNDAMENTAL stock screening criteria. "
-                "⚠️ DO NOT include: beta, Sharpe ratio, Sortino ratio, volatility, annualized volatility, "
+                "⚠️ DO NOT include: Sharpe ratio, Sortino ratio, volatility, annualized volatility, "
                 "returns, momentum, correlation, alpha, standard deviation, or any price-derived metrics. "
                 "✓ ONLY include: fundamental metrics like P/E, ROE, margins, debt ratios, market cap, "
                 "sector, industry, dividend yield, profitability ratios, efficiency ratios. "
@@ -714,14 +714,4 @@ STOCK_SCREENER_TOOL = {
     "function": screener,
 }
 
-
-if __name__ == "__main__":
-    print(screener(constraints="Find me stocks in the semiconductors sub industry with a PE greater than 10"))
-    from app.db.core.db_config import MarketSession
-    from app.db.core.models.market_data_models import Ticker
-    with MarketSession() as session:
-        tickers = session.query(Ticker).filter(Ticker.sub_industry == "semiconductors").all()
-    
-    print(len(tickers))
-    print(tickers[0].pe)
         

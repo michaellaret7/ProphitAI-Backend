@@ -67,6 +67,9 @@ Goal: You goal is to take a user's portfolio and optimize it based on the streng
         - Use the screener tool to find new tickers to replace the weaknesses.
 6. Once you have completed the analysis, it is time to build the new/optimized portfolio.
     - Use the screener tool to find new tickers to replace the weaknesses.
+        --> Use the screener tool at least 3 times to find new tickers to replace the weaknesses.
+        --> This is the most important tool at your displosal for the optimization purposes.
+        --> Refer to the optimization memory for the available sectors/industries/ and subindustries for the screener tool.
     - Define the new/optimized portfolio and add it to the episodic memory.
     - Run heavy analytics on the new/optimized portfolio.
 7. Run iterative analytics on the new portfolio to improve it.
