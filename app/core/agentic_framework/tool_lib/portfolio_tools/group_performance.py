@@ -10,7 +10,7 @@ import numpy as np
 from app.models.portfolio_models import PortfolioInput
 from app.utils.gpt_parser import canonical_portfolio
 from app.db.core.db_config import MarketSession
-from app.db.core.market_data_models import Ticker
+from app.db.core.models.market_data_models import Ticker
 from app.utils.decorators.tool_validation import log_simulation_data_range, validate_portfolio_dict, validate_required_args
 
 @validate_required_args('portfolio_dict', 'group_by')

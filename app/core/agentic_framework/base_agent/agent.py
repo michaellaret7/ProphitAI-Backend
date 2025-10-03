@@ -1,6 +1,7 @@
 import json
 from datetime import datetime
 from typing import List, Dict, Any, Callable, Optional
+from pathlib import Path
 from dotenv import load_dotenv
 from app.core.agentic_framework.tool_lib.base_tools.planning_tool import PlanningTool
 from app.utils.choose_model_and_client import *
@@ -12,9 +13,9 @@ from .tasks.execution_engine import PlanExecutionEngine
 from .core.logger import MessageLogger
 from .core.utilities import AgentUtilities, StepTrace
 from .core.arg_parser import ToolArgumentParser
+from .core.parser import parse_tool_result
 from .events.manager import EventManager, AgentEvent
 from .tasks.validator import TaskValidator
-from .memory.error_memory import ToolErrorMemory
 from .memory.domain_memory import DomainMemory
 from .memory.episodic_memory import EpisodicMemory
 from .tool_registry import register_base_tools, register_task_management_tools
@@ -40,14 +41,13 @@ class BaseAgent:
                 plan_first: bool = True,
                 final_keywords: Optional[List[str]] = None,
                 save_messages: bool = True,
-                use_error_memory: bool = True,
                 use_episodic_memory: bool = True,
                 memory_refresh_interval: int = 6,
                 simulation_date: Optional[datetime] = None,
             ):
-        
-        # self.model, self.client = openai_model_and_client(model=model)
-        self.model, self.client = grok_model_and_client(model=model)
+
+        self.model, self.client = openai_model_and_client(model=model)
+        # self.model, self.client = grok_model_and_client(model=model)
         # self.model, self.client = claude_model_and_client(model=model)
 
         print(f"Using model: {self.model}")
@@ -60,10 +60,10 @@ class BaseAgent:
         self.plan_first = plan_first  # always plan first
         self.final_keywords = final_keywords or ["Final Answer:", "FINAL ANSWER:"]
         self.save_messages = save_messages
-        self.use_error_memory = use_error_memory
         self.use_episodic_memory = use_episodic_memory
         self.memory_refresh_interval = memory_refresh_interval
         self.simulation_date = simulation_date  # For simulation mode: inject _simulation_date into all tool calls
+        self.agent_name = self.__class__.__name__ #this is for logging the agent output 
         
         # OpenAI tools and local dispatch map
         self.tools: List[Dict[str, Any]] = []
@@ -83,10 +83,35 @@ class BaseAgent:
         
         # Initialize argument parser (will be set after tools are registered)
         self._arg_parser: Optional[ToolArgumentParser] = None
-        
+
+        # Create shared output directory for this agent run
+        if save_messages:
+            # Get the project root directory (go up from agent.py to ProphitAI root)
+            # From agent.py: base_agent/ -> agentic_framework/ -> core/ -> app/ -> ProphitAI/
+            project_root = Path(__file__).resolve().parent.parent.parent.parent.parent
+
+            # Create directory structure: agent_output/{date}/{agent_name}_{time}/
+            current_datetime = datetime.now()
+            date_folder = current_datetime.strftime("%Y-%m-%d")
+            time_str = current_datetime.strftime("%H%M%S")  # Short time format (HHMMSS)
+            agent_folder = f"{self.agent_name}_{time_str}"
+
+            # Build the full path
+            self.output_dir = project_root / "agent_output" / date_folder / agent_folder
+            self.output_dir.mkdir(parents=True, exist_ok=True)
+        else:
+            self.output_dir = None
+
         # Initialize helper classes
-        self.message_logger = MessageLogger(save_messages=save_messages, verbose=verbose, model_name=self.model)
-        self.task_manager = TaskManager(verbose=verbose)
+        self.message_logger = MessageLogger(
+            save_messages=save_messages,
+            verbose=verbose,
+            model_name=self.model,
+            agent_name=self.agent_name,
+            output_dir=self.output_dir
+        )
+        
+        self.task_manager = TaskManager(verbose=verbose, output_dir=self.output_dir)
         self.utilities = AgentUtilities(self)
 
         # Register task management tools after task manager is initialized
@@ -95,25 +120,11 @@ class BaseAgent:
         # Initialize event system
         self.event_manager = EventManager(verbose=verbose)
         self.task_validator = TaskValidator(verbose=verbose)
-        
-        # Initialize error memory system
-        if self.use_error_memory:
-            self.error_memory = ToolErrorMemory(save_memory=True, verbose=verbose)
-            # Pre-populate with common solutions
-            if not self.error_memory.error_patterns:
-                from .memory.error_memory import initialize_common_solutions
-                self.error_memory = initialize_common_solutions()
-        else:
-            self.error_memory = None
-        
+
         # Track recent tool executions for validation
         self.recent_tool_executions: List[Dict] = []
         self.recent_observations: List[Any] = []
-        
-        # Track last tool error for retry guidance
-        self.last_tool_error: Optional[Dict] = None
-        self.last_tool_auto_retry_success: bool = False  # Track if last tool was auto-retried successfully
-        
+
         # Track consecutive failures to prevent infinite loops
         self.consecutive_failures: Dict[str, int] = {}  # tool_name -> count
         
@@ -275,31 +286,16 @@ class BaseAgent:
         if not self.execution_engine.plan_loaded:
             return
 
-        # Check for obvious failure indicators
+        # Check for obvious failure indicators using standardized parser
         failure_indicators = []
 
-        if isinstance(observation, Exception):
-            failure_indicators.append(f"Tool {tool_name} raised exception: {str(observation)}")
+        # Parse observation to dict format
+        parsed_obs = parse_tool_result(observation, verbose=self.verbose)
 
-        elif isinstance(observation, str):
-            # Try to parse as YAML to check for success field
-            try:
-                import yaml
-                parsed = yaml.safe_load(observation)
-                if isinstance(parsed, dict):
-                    # Check for success field
-                    if parsed.get('success') is False:
-                        error_msg = parsed.get('error', 'Unknown error')
-                        failure_indicators.append(f"Tool {tool_name} returned success=False: {error_msg}")
-            except Exception:
-                # If YAML parsing fails, observation is not a structured response
-                # This is acceptable - not all tools have been updated yet
-                pass
-
-        elif isinstance(observation, dict):
-            if observation.get('success') is False:
-                error_msg = observation.get('error', 'Unknown error')
-                failure_indicators.append(f"Tool {tool_name} returned success=False: {error_msg}")
+        # Check for failure
+        if parsed_obs.get('success') is False:
+            error_msg = parsed_obs.get('error', 'Unknown error')
+            failure_indicators.append(f"Tool {tool_name} returned success=False: {error_msg}")
         
         # If multiple failure indicators detected, suggest failure handling
         if len(failure_indicators) >= 1:
@@ -629,10 +625,7 @@ class BaseAgent:
 
                     # Stagnation detection to detect if the agent is stuck in a loop
                     self.utilities.update_stagnation(name, args)
-                    
-                    # Reset auto-retry flag before each tool call
-                    self.last_tool_auto_retry_success = False
-                    
+
                     # Check for consecutive failures with same tool
                     # Filter out _simulation_date for error key (not JSON serializable)
                     error_key_args = {k: v for k, v in args.items() if k != '_simulation_date'}
@@ -645,22 +638,19 @@ class BaseAgent:
                     else:
                         observation = self.utilities.execute_tool_safe(name, args)
                         step.observation = observation
-                        
-                        # Track failures/successes
-                        if isinstance(observation, str) and observation.startswith("Error"):
+
+                        # Track failures/successes using dict-based parsing
+                        parsed_obs = parse_tool_result(observation, verbose=self.verbose)
+
+                        if parsed_obs.get('success') is False:
                             self.consecutive_failures[error_key] = self.consecutive_failures.get(error_key, 0) + 1
+                            if self.verbose:
+                                error_msg = parsed_obs.get('error', 'Unknown error')
+                                print(f"⚠️ Tool failed: {error_msg}")
                         else:
                             # Reset on success
                             if error_key in self.consecutive_failures:
                                 del self.consecutive_failures[error_key]
-                    
-                    # Check if this was an auto-retry that succeeded
-                    # If so, we want to skip adding the error message entirely
-                    if self.last_tool_auto_retry_success:
-                        # The observation is already the successful result
-                        # We'll mark it as auto-retry when we add the message
-                        pass
-                    
                     # Handle structured planning tool results and load into execution engine
                     if name == "create_structured_plan":
                         plan_result = observation
@@ -731,22 +721,9 @@ class BaseAgent:
                         log_args = {k: v for k, v in args.items() if k != '_simulation_date'}
                         print(f"  tool_call -> {name} args={json.dumps(log_args, sort_keys=True)}")
                         print("  observation:", self.utilities.stringify(observation))
-                        
-                        # If this was a successful auto-retry, indicate it
-                        if self.last_tool_auto_retry_success:
-                            print("🔄 Note: This was a successful auto-retry after initial failure")
 
-                    # Check if this was a successful auto-retry
-                    if self.last_tool_auto_retry_success:
-                        # Auto-retry succeeded internally - mark it
-                        observation_content = (
-                            f"✅ AUTO-RETRY SUCCESS\n"
-                            f"{self.utilities.stringify(observation)}"
-                        )
-                        self.last_tool_auto_retry_success = False  # Reset flag
-                    else:
-                        observation_content = self.utilities.stringify(observation)
-                    
+                    observation_content = self.utilities.stringify(observation)
+
                     # tie tool result back to the tool_call_id
                     messages.append({
                         "role": "tool",

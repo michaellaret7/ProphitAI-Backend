@@ -34,7 +34,6 @@ The heart of ProphitAI - a sophisticated autonomous agent system for portfolio m
 - **Memory Systems** (`base_agent/memory/`):
   - `domain_memory.py`: Agent-specific knowledge (CIO portfolio construction patterns)
   - `episodic_memory.py`: Recent successful tool executions for learning
-  - `error_memory.py`: Tracks tool errors and solutions to avoid repeated mistakes
 
 - **Tool Library** (`tool_lib/`):
   - `data_tools/`: Market data, fundamentals, stock screening
@@ -79,7 +78,6 @@ Agents follow a planning-then-execution workflow:
 ### Memory-Enhanced Learning
 - **Domain Memory**: Pre-loaded patterns (e.g., CIO portfolio construction knowledge)
 - **Episodic Memory**: Recent successful tool executions, refreshed every N iterations
-- **Error Memory**: Tracks tool failures and solutions to prevent repeated errors
 
 ### Tool Registration
 Each agent registers relevant tools via `register_*_tools(agent)` functions that:

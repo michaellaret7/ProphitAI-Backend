@@ -1,7 +1,7 @@
 from concurrent.futures import ThreadPoolExecutor, as_completed
 import pandas as pd
 from app.db.core.db_config import MarketSession
-from app.db.core.market_data_models import *
+from app.db.core.models.market_data_models import *
 from datetime import datetime, timedelta
 import logging
 from app.utils.decorators.database import with_session

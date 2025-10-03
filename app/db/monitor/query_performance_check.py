@@ -156,7 +156,7 @@ def check_index_usage(table_name, schema_name, session):
 
 if __name__ == "__main__":
     from app.db.core.db_config import MarketSession
-    from app.db.core.market_data_models import Price, Ticker, FinancialRatio
+    from app.db.core.models.market_data_models import Price, Ticker, FinancialRatio
     
     session = MarketSession()
     

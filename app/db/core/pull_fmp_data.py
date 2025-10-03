@@ -224,3 +224,10 @@ class FMP_API_DATA:
         """
         url = f"https://financialmodelingprep.com/api/v3/quote/{ticker}"
         return self._make_fmp_api_request(url)
+
+    def get_company_profile(self, ticker: str):
+        """
+        Retrieves company profile including beta, IPO date, and company details.
+        """
+        url = f"https://financialmodelingprep.com/api/v3/profile/{ticker}"
+        return self._make_fmp_api_request(url)

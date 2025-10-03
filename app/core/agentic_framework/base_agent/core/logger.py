@@ -4,27 +4,38 @@ import json
 from typing import List, Dict, Any
 from datetime import datetime
 from pathlib import Path
- 
-
 
 class MessageLogger:
     """Manages message logging and saving for agent conversations."""
-    
-    def __init__(self, save_messages: bool = True, verbose: bool = True, model_name: str = None):
+
+    def __init__(self, save_messages: bool = True, verbose: bool = True, model_name: str = None, agent_name: str = None, output_dir: Path = None):
         self.save_messages = save_messages
         self.verbose = verbose
         self.model_name = model_name
+        self.agent_name = agent_name or "BaseAgent"
         self.last_llm_received_tokens = None  # Track the last llm_received_tokens value
-        
+
         if self.save_messages:
-            # Get the agentic_framework directory path more robustly
-            # From logger.py: core/ -> base_agent/ -> agentic_framework/
-            agentic_framework_dir = Path(__file__).resolve().parent.parent.parent
-            self.messages_log_path = agentic_framework_dir / "agent_output" / "agent_messages.json"
-            
-            # Ensure the directory exists
-            self.messages_log_path.parent.mkdir(parents=True, exist_ok=True)
-            
+            # Use provided output directory or create a default one (for backward compatibility)
+            if output_dir:
+                self.messages_log_path = output_dir / "agent_messages.json"
+            else:
+                # Get the project root directory (go up from logger.py to ProphitAI root)
+                # From logger.py: core/ -> base_agent/ -> agentic_framework/ -> core/ -> app/ -> ProphitAI/
+                project_root = Path(__file__).resolve().parent.parent.parent.parent.parent
+
+                # Create directory structure: agent_output/{date}/{agent_name}_{time}/
+                current_datetime = datetime.now()
+                date_folder = current_datetime.strftime("%Y-%m-%d")
+                time_str = current_datetime.strftime("%H%M%S")  # Short time format (HHMMSS)
+                agent_folder = f"{self.agent_name}_{time_str}"
+
+                # Build the full path
+                output_dir = project_root / "agent_output" / date_folder / agent_folder
+                output_dir.mkdir(parents=True, exist_ok=True)
+
+                self.messages_log_path = output_dir / "agent_messages.json"
+
             # Clear the messages file at start
             try:
                 with open(self.messages_log_path, "w", encoding="utf-8") as f:

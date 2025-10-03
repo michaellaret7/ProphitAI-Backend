@@ -2,7 +2,7 @@
 Cut the position when its 5% below the highest max of the holding period 
 if appl was in the portfolio and its high from the duration of the holding period was 100 and the price hits 95, cut the position
 """
-from app.db.core.market_data_models import Price, Ticker
+from app.db.core.models.market_data_models import Price, Ticker
 from app.db.core.db_config import MarketSession
 from datetime import datetime, timedelta
 import pandas as pd

@@ -425,7 +425,7 @@ class MomentumFactors:
             DataFrame with tickers as rows and momentum metrics as columns
         """
         from app.core.calculations.core.data_service import DataService
-        from app.db.core.market_data_models import Ticker as TickerModel
+        from app.db.core.models.market_data_models import Ticker as TickerModel
         from app.db.core.db_config import MarketSession
         
         ds = DataService()

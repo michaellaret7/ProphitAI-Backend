@@ -1,6 +1,6 @@
 import yaml
-from app.db.core.prophit_alts_models import FundInitialPosition, Fund
-from app.db.core.market_data_models import Ticker
+from app.db.core.models.prophit_alts_models import FundInitialPosition, Fund
+from app.db.core.models.market_data_models import Ticker
 from app.utils.decorators.database import with_sessions
 from app.db.core.db_config import ProphitAltsSession, MarketSession
 

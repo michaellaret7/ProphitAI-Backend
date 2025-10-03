@@ -7,12 +7,11 @@ from .tasks.execution_engine import PlanExecutionEngine
 from .tasks.models import TaskStatus, TodoList, MainTask, SubTask
 from .events.manager import EventManager, AgentEvent
 from .tasks.validator import TaskValidator
-from .memory.error_memory import ToolErrorMemory, initialize_common_solutions
 from .memory.domain_memory import DomainMemory
 
 __all__ = [
-    'BaseAgent', 
-    'StepTrace', 
+    'BaseAgent',
+    'StepTrace',
     'TaskManager',
     'PlanExecutionEngine',
     'TaskStatus',
@@ -22,7 +21,5 @@ __all__ = [
     'EventManager',
     'AgentEvent',
     'TaskValidator',
-    'ToolErrorMemory',
-    'initialize_common_solutions',
     'DomainMemory'
 ]

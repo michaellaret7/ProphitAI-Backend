@@ -59,7 +59,6 @@ def generate_test_prompt(tool_name: str, error_scenarios: List[str]) -> str:
 
     return prompt
 
-
 def test_tool_with_agent(
     tool_name: str,
     error_scenarios: List[str] = None,
@@ -138,13 +137,12 @@ def test_tool_with_agent(
         user_prompt=user_prompt,
         model=model,
         max_iterations=max_iterations,
-        use_error_memory=False,
         use_episodic_memory=False,
         verbose=verbose,
         plan_first=False,
         final_keywords=["Final Answer:", "FINAL ANSWER:"],
         save_messages=False,
-        simulation_date=agent_simulation_date
+        simulation_date=agent_simulation_date,
     )
 
     # Register the tool
@@ -193,9 +191,5 @@ def test_tool(tool_name: str, **kwargs) -> str:
     """
     return test_tool_with_agent(tool_name, **kwargs)
 
-
 if __name__ == "__main__":
-    """Example usage."""
-
-    # Test a single tool with default settings
-    test_tool("calculate_portfolio_correlation_matrix")
+    test_tool("get_ticker_performance_and_risk")

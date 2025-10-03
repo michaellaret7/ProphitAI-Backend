@@ -1,5 +1,5 @@
 import yaml
-from app.db.core.user_data_models import Portfolio, User
+from app.db.core.models.user_data_models import Portfolio, User
 from app.utils.decorators.database import with_session
 
 @with_session('user')

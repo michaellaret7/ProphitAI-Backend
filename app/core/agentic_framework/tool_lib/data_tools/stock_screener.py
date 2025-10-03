@@ -9,7 +9,7 @@ from sqlalchemy import and_, asc, desc, func, or_
 from sqlalchemy.orm import aliased
 
 from app.db.core.db_config import MarketSession
-from app.db.core.market_data_models import (
+from app.db.core.models.market_data_models import (
     Ticker,
     FinancialRatio,
     ETFInfo,
@@ -105,6 +105,15 @@ class ScreenerConstraints(BaseModel):
     sector: Optional[Union[str, List[str]]] = Field(None, description="Sector or list of sectors")
     industry: Optional[Union[str, List[str]]] = Field(None, description="Industry or list of industries")
     sub_industry: Optional[Union[str, List[str]]] = Field(None, description="Sub-industry or list of sub-industries")
+
+    # Company profile filters
+    beta_min: Optional[float] = Field(None, description="Minimum beta")
+    beta_max: Optional[float] = Field(None, description="Maximum beta")
+    is_actively_trading: Optional[bool] = Field(None, description="Filter for actively trading stocks")
+    is_adr: Optional[bool] = Field(None, description="Filter for ADRs (American Depositary Receipts)")
+    is_fund: Optional[bool] = Field(None, description="Filter for funds")
+    shares_outstanding_min: Optional[float] = Field(None, description="Minimum shares outstanding")
+    shares_outstanding_max: Optional[float] = Field(None, description="Maximum shares outstanding")
 
     # Display options
     limit: int = Field(100, description="Maximum results to return")
@@ -280,6 +289,13 @@ class StockScreener:
             "sector": (Ticker, "sector"),
             "industry": (Ticker, "industry"),
             "sub_industry": (Ticker, "sub_industry"),
+            "beta": (Ticker, "beta"),
+            "is_actively_trading": (Ticker, "is_actively_trading"),
+            "is_adr": (Ticker, "is_adr"),
+            "is_fund": (Ticker, "is_fund"),
+            "ipo_date": (Ticker, "ipo_date"),
+            "earnings_announcement": (Ticker, "earnings_announcement"),
+            "shares_outstanding": (Ticker, "shares_outstanding"),
             "pe_ratio": (FinancialRatio, "priceEarningsRatio"),
             "pb_ratio": (FinancialRatio, "priceToBookRatio"),
             "ps_ratio": (FinancialRatio, "priceToSalesRatio"),
@@ -500,32 +516,29 @@ def screener(constraints: str) -> str:
         system_prompt = """Parse stock screening criteria into structured format.
         Convert natural language descriptions into specific numeric constraints.
 
-        IMPORTANT LIMITATIONS - These metrics are NOT AVAILABLE and should be IGNORED:
-        - Beta (stock volatility relative to market)
-        - Sharpe ratio
-        - Returns (1M, 3M, 6M, 1Y, annualized returns, momentum)
-        - Correlation (to sectors, indices, or other stocks)
-        - Any performance/risk metrics derived from price history
+        ⚠️ CRITICAL LIMITATIONS - The following metrics are COMPLETELY UNAVAILABLE:
+        ❌ Alpha, Sharpe ratio, Sortino ratio (risk-adjusted returns)
+        ❌ Volatility, annualized volatility, standard deviation (price variability)
+        ❌ Returns over ANY time period (1M, 3M, 6M, 1Y, YTD, annualized)
+        ❌ Correlation to any index, sector, or stock
+        ❌ Momentum, relative strength, price trends
+        ❌ VaR, CVaR, drawdowns, tracking error, information ratio
+        ✅ Beta is available
 
-        If the user requests these metrics, set them to null/None and DO NOT include them in sort_by or columns.
-        This screener ONLY supports fundamental data and valuation metrics listed below.
+        If the user requests ANY of these metrics:
+        1. Set them to null/None
+        2. DO NOT include them in sort_by
+        3. DO NOT include them in columns
+        4. DO NOT attempt to approximate them with fundamental metrics
 
-        Common interpretations:
-        - "large cap" → market_cap_min: 10000000000 (10B)
-        - "mid cap" → market_cap_min: 2000000000, market_cap_max: 10000000000
-        - "small cap" → market_cap_max: 2000000000
-        - "mega cap" → market_cap_min: 200000000000 (200B)
-        - "value stocks" → pe_ratio_max: 20, pb_ratio_max: 3
-        - "growth stocks" → roe_min: 0.15, gross_margin_min: 0.30
-        - "high dividend" → dividend_yield_min: 0.03
-        - "dividend stocks" → dividend_yield_min: 0.02
-        - "profitable" → net_margin_min: 0.05
-        - "highly profitable" → net_margin_min: 0.15
-        - "financially healthy" → current_ratio_min: 1.5, debt_to_equity_max: 1.0
-        - "low debt" → debt_to_equity_max: 0.5
-        - "no debt" → debt_to_equity_max: 0.1
-        - "high volume" → avg_volume_min: 1000000
-        - "liquid" → avg_volume_min: 500000
+        This screener EXCLUSIVELY supports fundamental and static data metrics below.
+
+        Example queries:
+        - "Find large-cap technology stocks with P/E ratio under 20, ROE above 15%, and beta less than 1.2"
+        - "Show profitable healthcare companies with market cap over $5B, sorted by dividend yield, exclude ADRs"
+        - "Mid-cap value stocks with low debt-to-equity (under 0.5), high operating margins (over 15%), and actively trading"
+        - "Growth stocks in consumer staples with ROE > 20%, gross margin > 30%, beta between 0.8 and 1.5, not funds"
+        - "High dividend defensive stocks: dividend yield above 3%, beta under 1.0, current ratio above 1.5, shares outstanding over 100M"
 
         For percentages, ALWAYS convert to decimals (15% → 0.15, 3% → 0.03).
         For dollar amounts, use full numbers (1B → 1000000000, 5M → 5000000).
@@ -602,6 +615,16 @@ def screener(constraints: str) -> str:
         if parsed.sub_industry is not None:
             criteria_dict["sub_industry"] = parsed.sub_industry
 
+        # Add company profile filters
+        add_range("beta", parsed.beta_min, parsed.beta_max)
+        add_range("shares_outstanding", parsed.shares_outstanding_min, parsed.shares_outstanding_max)
+        if parsed.is_actively_trading is not None:
+            criteria_dict["is_actively_trading"] = parsed.is_actively_trading
+        if parsed.is_adr is not None:
+            criteria_dict["is_adr"] = parsed.is_adr
+        if parsed.is_fund is not None:
+            criteria_dict["is_fund"] = parsed.is_fund
+
         # Add display options
         criteria_dict["limit"] = parsed.limit
         criteria_dict["offset"] = parsed.offset
@@ -626,39 +649,40 @@ def screener(constraints: str) -> str:
 
 # Tool Schema Constants
 STOCK_SCREENER_DESCRIPTION = (
-    "Screen stocks based on FUNDAMENTAL criteria using natural language.\n"
-    "\n**IMPORTANT LIMITATIONS:**"
-    "\n  ❌ NOT SUPPORTED: Beta, Sharpe ratio, returns (1M/3M/6M/1Y), correlation, momentum, or any performance/risk metrics"
-    "\n  ✓ SUPPORTED: Only fundamental data (valuation, profitability, financial health, efficiency)"
-    "\n\n**Usage:** Describe your screening criteria in plain English using the 'constraints' parameter."
-    "\n\n**Examples:**"
-    "\n  • stock_screener(constraints='Find large-cap tech stocks with PE ratio under 20 and ROE above 15%')"
-    "\n  • stock_screener(constraints='Show profitable food companies with market cap over $5B, sorted by dividend yield')"
-    "\n  • stock_screener(constraints='Mid-cap value stocks with low debt and high margins')"
-    "\n  • stock_screener(constraints='High dividend stocks in healthcare sector with strong balance sheets')"
-    "\n  • stock_screener(constraints='Growth stocks with ROE > 20%, operating margin > 15%, limit 20 results')"
+    "⚠️ FUNDAMENTAL DATA ONLY - LIMITED PRICE-BASED METRICS ⚠️\n"
+    "\nScreen stocks based on FUNDAMENTAL criteria using natural language.\n"
+    "\n**CRITICAL: This tool has LIMITED support for price-derived metrics:**"
+    "\n  ✓ SUPPORTED: Beta (company profile data)"
+    "\n  ❌ NOT supported: Alpha, Sharpe ratio, Sortino ratio, volatility, annualized volatility"
+    "\n  ❌ NOT supported: Returns (1M/3M/6M/1Y/YTD), momentum, correlation, standard deviation"
+    "\n  ❌ NOT supported: VaR, CVaR, drawdowns, tracking error, information ratio"
+    "\n  ✓ ONLY use: Fundamental data (valuation ratios, profitability metrics, balance sheet ratios) and beta"
+    "\n\n**Workflow for advanced risk metrics:**"
+    "\n  1. Use stock_screener to filter by fundamentals (ROE, margins, debt, beta, etc.)"
+    "\n  2. Get the resulting ticker list"
+    "\n  3. THEN use separate risk_tools or ticker_performance_metrics for Sharpe/alpha/volatility"
     "\n\n**Supported Criteria:**"
     "\n  • Valuation: market cap, avg volume, P/E, P/B, P/S, PEG, EV/EBITDA, price/FCF, dividend yield"
     "\n  • Profitability: ROE, ROA, ROIC, gross/operating/net margins"
     "\n  • Financial Health: debt-to-equity, current/quick ratio, interest coverage"
     "\n  • Efficiency: asset turnover, inventory turnover"
     "\n  • Classification: sector, industry, sub_industry"
+    "\n  • Company Profile: beta, is_actively_trading, is_adr, is_fund, shares_outstanding, ipo_date, earnings_announcement"
     "\n  • ETF Metrics: expense ratio, AUM, holdings count"
     "\n  • Ratings: analyst ratings, price targets"
     "\n  • Display: limit, offset, sort_by, columns"
-    "\n\n**NOT Supported (use separate tools for these):**"
-    "\n  • Beta, Sharpe ratio, volatility"
-    "\n  • Returns over time periods (1M, 3M, 6M, 1Y, YTD)"
-    "\n  • Correlation to indices/sectors/stocks"
-    "\n  • Momentum indicators"
-    "\n  • Any metrics requiring price history analysis"
+    "\n\n**Examples:**"
+    "\n  • stock_screener(constraints='Find large-cap tech stocks with PE ratio under 20 and ROE above 15%')"
+    "\n  • stock_screener(constraints='Show profitable food companies with market cap over $5B, sorted by dividend yield')"
+    "\n  • stock_screener(constraints='Mid-cap value stocks with low debt and high margins')"
+    "\n  • stock_screener(constraints='High dividend stocks in healthcare sector with strong balance sheets')"
+    "\n  • stock_screener(constraints='Growth stocks with ROE > 20%, operating margin > 15%, limit 20 results')"
     "\n\n**Tips:**"
     "\n  • Use descriptive terms: 'large-cap' ($10B+), 'mid-cap' ($2-10B), 'small-cap' (<$2B)"
     "\n  • Percentages work: 'ROE > 15%', 'dividend yield above 3%'"
     "\n  • Natural comparisons: 'PE < 20', 'debt-to-equity under 0.5'"
     "\n  • Sorting: 'sorted by market cap', 'order by dividend yield descending'"
     "\n  • Result control: 'show 50 results', 'limit 20'"
-    "\n  • For performance metrics: Use stock_screener to get candidates, then calculate beta/returns/Sharpe separately"
 )
 
 STOCK_SCREENER_PARAMETERS = {
@@ -667,9 +691,12 @@ STOCK_SCREENER_PARAMETERS = {
         "constraints": {
             "type": "string",
             "description": (
-                "Natural language description of stock screening criteria. "
-                "Describe the filters, sorting, and display options in plain English. "
-                "The LLM will parse this into specific screening parameters. "
+                "Natural language description of FUNDAMENTAL stock screening criteria. "
+                "⚠️ DO NOT include: beta, Sharpe ratio, Sortino ratio, volatility, annualized volatility, "
+                "returns, momentum, correlation, alpha, standard deviation, or any price-derived metrics. "
+                "✓ ONLY include: fundamental metrics like P/E, ROE, margins, debt ratios, market cap, "
+                "sector, industry, dividend yield, profitability ratios, efficiency ratios. "
+                "For risk metrics, first screen by fundamentals, then use separate risk calculation tools. "
                 "Examples: 'large-cap tech stocks with PE < 20 and ROE > 15%', "
                 "'profitable dividend stocks sorted by yield', "
                 "'growth companies with strong margins and low debt'."
@@ -691,7 +718,7 @@ STOCK_SCREENER_TOOL = {
 if __name__ == "__main__":
     print(screener(constraints="Find me stocks in the semiconductors sub industry with a PE greater than 10"))
     from app.db.core.db_config import MarketSession
-    from app.db.core.market_data_models import Ticker
+    from app.db.core.models.market_data_models import Ticker
     with MarketSession() as session:
         tickers = session.query(Ticker).filter(Ticker.sub_industry == "semiconductors").all()
     

@@ -1,8 +1,8 @@
 from app.core.agentic_framework.base_agent import BaseAgent
 from app.core.agentic_framework.base_agent.memory.domain_memory import DomainMemory
 from app.db.core.db_config import ProphitAltsSession, MarketSession
-from app.db.core.market_data_models import Ticker
-from app.db.core.prophit_alts_models import Fund
+from app.db.core.models.market_data_models import Ticker
+from app.db.core.models.prophit_alts_models import Fund
 from app.domain.prophit_alts.consumer_staples_fund.build_portfolio.industry_agents.prompts import build_industry_prompt
 from .tool_registry import register_industry_tools
 from pydantic import BaseModel
@@ -12,7 +12,7 @@ import time
 import yaml
 from app.core.agentic_framework.tool_lib.agent_specific_tools.industry import get_eligible_tickers
 from app.utils.decorators.database import with_session
-from app.db.core.prophit_alts_models import FundInitialPosition
+from app.db.core.models.prophit_alts_models import FundInitialPosition
 
 class IndustryRecommendation(BaseModel):
     ticker: str

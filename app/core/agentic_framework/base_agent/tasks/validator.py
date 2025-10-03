@@ -3,6 +3,8 @@
 from typing import List, Dict, Any, Tuple, Optional, Callable
 import re
 import json
+import yaml
+from ..core.parser import parse_tool_result
 
 from .models import MainTask, SubTask, TaskStatus
 
@@ -372,18 +374,14 @@ class TaskValidator:
         if tool_result is None:
             return False, 0.1, f"Tool {tool_name} returned None"
         
-        # Check for error strings using robust pattern matching
-        if isinstance(tool_result, str):
-            if self._result_has_error(tool_result):
-                return False, 0.2, f"Tool {tool_name} returned error message"
-        
-        # Check for error in dict results
-        if isinstance(tool_result, dict):
-            if tool_result.get('success') is False:
-                return False, 0.2, f"Tool {tool_name} returned success=False"
-            if 'error' in tool_result:
-                return False, 0.2, f"Tool {tool_name} returned error key"
-        
+        # Parse tool result to standardized dict format
+        parsed_result = parse_tool_result(tool_result, verbose=False)
+
+        # Check for failure using success field
+        if parsed_result.get('success') is False:
+            error_msg = parsed_result.get('error', 'Unknown error')
+            return False, 0.2, f"Tool {tool_name} failed: {error_msg}"
+
         # If we get here, tool appears successful
         return True, 0.8, f"Tool {tool_name} executed successfully"
     

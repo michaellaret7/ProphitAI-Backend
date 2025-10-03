@@ -2,7 +2,9 @@
 
 from typing import Optional, Dict, Any, List, Tuple
 import re
+import yaml
 from datetime import datetime
+from ..core.parser import parse_tool_result
 from ..events.manager import EventManager, AgentEvent
 from .validator import TaskValidator
 from .manager import TaskManager
@@ -702,25 +704,26 @@ class PlanExecutionEngine:
         # Basic evidence: tool execution (success path only)
         evidence_items.append(f"Successfully executed tool '{tool_name}'")
 
-        # Analyze result for specific evidence (success path)
-        if isinstance(result, dict):
-            if result.get('success'):
-                evidence_items.append(f"Tool {tool_name} returned success=True")
+        # Parse result to check for success and extract data
+        parsed_result = parse_tool_result(result, verbose=False)
 
-            # Look for data indicators
-            data_keys = ['data', 'results', 'output', 'response', 'items']
-            for key in data_keys:
-                if key in result and result[key]:
-                    evidence_items.append(f"Tool {tool_name} returned {key} with content")
+        if parsed_result.get('success') is True:
+            evidence_items.append(f"Tool {tool_name} returned success=True")
 
-        elif isinstance(result, list):
-            if len(result) > 0:
-                evidence_items.append(f"Tool {tool_name} returned list with {len(result)} items")
+            # Check for data in the parsed result
+            if 'data' in parsed_result and parsed_result['data']:
+                data = parsed_result['data']
 
-        elif isinstance(result, str):
-            text = result.strip()
-            if len(text) > 20:
-                evidence_items.append(f"Tool {tool_name} returned substantial text output")
+                # Analyze the data for evidence
+                if isinstance(data, dict):
+                    if data:
+                        evidence_items.append(f"Tool returned data with {len(data)} keys")
+                elif isinstance(data, list):
+                    if len(data) > 0:
+                        evidence_items.append(f"Tool returned list with {len(data)} items")
+                elif isinstance(data, str):
+                    if len(data.strip()) > 20:
+                        evidence_items.append(f"Tool returned substantial text output")
 
         # Check for completion-indicating tool names (success path)
         completion_indicators = {
@@ -743,65 +746,9 @@ class PlanExecutionEngine:
 
     # --- Helper methods for strict validation ---
     def _is_error_result(self, result: Any) -> bool:
-        if isinstance(result, Exception):
-            return True
-        if isinstance(result, dict):
-            if result.get('success') is False:
-                return True
-            err_val = result.get('error')
-            if err_val:
-                try:
-                    return bool(str(err_val).strip())
-                except Exception:
-                    return True
-        if isinstance(result, str):
-            import re
-            text = result.lower()
-            # Use word boundary regex to avoid false positives from substrings
-            # Also check for common error patterns at the start of lines or messages
-            # First check for common non-error phrases that contain these words
-            safe_phrases = [
-                r'room for error',      # Common financial phrase
-                r'margin.{0,5}error',   # "margin of error" or "margin for error"
-                r'trial.{0,5}error',    # "trial and error"
-                r'human error',         # Common phrase
-                r'rounding error',      # Mathematical term
-                r'tracking error',      # Financial term
-                r'forecast error',      # Statistical term
-                r'measurement error',   # Scientific term
-                r'blend of high prof',  # Specific to investment recommendations
-                r'offers.{0,20}error',  # Company "offers" something with "error" nearby
-                r'ameren',              # Company name that contains "error" substring
-            ]
-            
-            # If any safe phrase is found, it's not an error
-            for safe_pattern in safe_phrases:
-                if re.search(safe_pattern, text, re.IGNORECASE):
-                    return False
-            
-            # Now check for actual error patterns
-            error_patterns = [
-                r'^error:',             # line starting with "error:"
-                r'^failed:',            # line starting with "failed:"
-                r'^exception:',         # line starting with "exception:"
-                r'error occurred',      # phrase "error occurred"
-                r'error calling',       # phrase "error calling" (common in tool errors)
-                r'returned error',      # phrase "returned error"
-                r'raised error',        # phrase "raised error"
-                r'threw error',         # phrase "threw error"
-                r'error message',       # phrase "error message"
-                r'traceback',           # Python traceback indicator
-                r'\bfailed to\b',       # phrase "failed to"
-                r'\bunable to\b',       # phrase "unable to"
-                r'\bcould not\b',       # phrase "could not"
-                r'permission denied',   # permission error
-                r'access denied',       # access error
-                r'not found',           # not found error
-                r'timeout',             # timeout error
-                r'exception',           # exception (but not in safe contexts)
-            ]
-            return any(re.search(pattern, text, re.MULTILINE | re.IGNORECASE) for pattern in error_patterns)
-        return False
+        """Check if result is an error using standardized parsing."""
+        parsed = parse_tool_result(result, verbose=False)
+        return parsed.get('success') is False
 
     def _summarize_error(self, result: Any) -> str:
         try:

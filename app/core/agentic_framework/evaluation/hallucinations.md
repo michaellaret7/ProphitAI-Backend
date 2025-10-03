@@ -1,4 +1,4 @@
-# >à Agent Hallucination Detection: Comprehensive Research & Brainstorming
+# >ï¿½ Agent Hallucination Detection: Comprehensive Research & Brainstorming
 
 Based on my research of 2025 state-of-the-art techniques and deep analysis of your ProphitAI agentic framework, here are **12 innovative approaches** to detect agent hallucinations during workflow execution:
 
@@ -21,7 +21,7 @@ Based on my research of 2025 state-of-the-art techniques and deep analysis of yo
 ### 3. **Chain-of-Thought Validation**
 **Problem**: Agent makes claims not grounded in tool data
 **Solution**: Extract factual claims from reasoning; cross-reference with observations
-**Example**: Claims "AAPL negatively correlated with SPY" ’ verify vs actual `correlation_matrix` output
+**Example**: Claims "AAPL negatively correlated with SPY" ï¿½ verify vs actual `correlation_matrix` output
 
 ---
 
@@ -33,11 +33,6 @@ Based on my research of 2025 state-of-the-art techniques and deep analysis of yo
 **Example**: Tool showed VaR=5% at iteration 10, agent claims VaR=15% at iteration 20 without new calculation
 **Integration**: Extend [episodic_memory.py](app/core/agentic_framework/base_agent/memory/episodic_memory.py)
 
-### 5. **Error Memory Pattern Matching**
-**Problem**: Agent repeats errors that previously failed
-**Solution**: Before tool execution, check `ToolErrorMemory` for similar failures
-**Enhancement**: Add hallucination-specific error patterns to [error_memory.py](app/core/agentic_framework/base_agent/memory/error_memory.py)
-
 ---
 
 ## **Category 3: Statistical & Confidence-Based**
@@ -45,7 +40,7 @@ Based on my research of 2025 state-of-the-art techniques and deep analysis of yo
 ### 6. **Multi-Sample Consistency Testing**
 **Problem**: Non-deterministic hallucinations in critical decisions
 **Solution**: Run same reasoning 3-5 times (temp=0.7); flag high variance
-**Example**: Portfolio allocation varies >20% across samples ’ unreliable
+**Example**: Portfolio allocation varies >20% across samples ï¿½ unreliable
 **Use Case**: Final portfolio selection, risk assessments
 
 ### 7. **Uncertainty Quantification via Token Probabilities**
@@ -61,13 +56,13 @@ Based on my research of 2025 state-of-the-art techniques and deep analysis of yo
 ### 8. **Dual-Agent Verification System** P High Impact
 **Problem**: Single agent can hallucinate without detection
 **Solution**: Lightweight "hallucination judge" agent verifies main agent's claims
-**Example**: CIO builds portfolio ’ Judge verifies risk claims against tool observations
+**Example**: CIO builds portfolio ï¿½ Judge verifies risk claims against tool observations
 **Architecture**: Small agent with focused prompt: "Check if claims match evidence"
 
 ### 9. **Contextual Grounding Scorer (RAG-style)**
 **Problem**: No automated quality score for claim faithfulness
 **Solution**: LLM-as-judge scores each claim's grounding in tool observations (0-1)
-**Example**: "Sharpe ratio is 1.8" ’ verify `performance` tool was called with matching result
+**Example**: "Sharpe ratio is 1.8" ï¿½ verify `performance` tool was called with matching result
 **Integration**: Custom Braintrust scorer for evaluation framework
 
 ---
@@ -93,12 +88,12 @@ Based on my research of 2025 state-of-the-art techniques and deep analysis of yo
 ### 12. **Financial Constraint Validator** P Quick Win
 **Problem**: Mathematical/financial impossibilities
 **Solution**: Hard constraint checks (allocations sum to 1.0, no negative prices, etc.)
-**Example**: Portfolio allocations sum to 1.15 ’ caught immediately
+**Example**: Portfolio allocations sum to 1.15 ï¿½ caught immediately
 **Implementation**: New module `app/core/agentic_framework/validators/financial_validators.py`
 
 ---
 
-## **<¯ Priority Implementation Roadmap**
+## **<ï¿½ Priority Implementation Roadmap**
 
 ### **Phase 1: Quick Wins (1-2 days)**
 1.  Tool Output Verification Layer (#1)
@@ -111,13 +106,13 @@ Based on my research of 2025 state-of-the-art techniques and deep analysis of yo
 6. =% Chain-of-Thought Validation (#3)
 
 ### **Phase 3: Advanced (2-3 weeks)**
-7. =€ Multi-Sample Consistency Testing (#6)
-8. =€ Contextual Grounding Scorer (#9)
-9. =€ Uncertainty Quantification (#7)
+7. =ï¿½ Multi-Sample Consistency Testing (#6)
+8. =ï¿½ Contextual Grounding Scorer (#9)
+9. =ï¿½ Uncertainty Quantification (#7)
 
 ---
 
-## **=Ê Key Metrics to Track**
+## **=ï¿½ Key Metrics to Track**
 
 1. **Hallucination Detection Rate**: % of runs where hallucination caught
 2. **False Positive Rate**: % of valid reasoning flagged incorrectly
@@ -129,16 +124,15 @@ Based on my research of 2025 state-of-the-art techniques and deep analysis of yo
 
 ## **= Integration Points with Your Existing Systems**
 
-- **Braintrust Evaluation** ’ Add hallucination scorers (#8, #9)
-- **Episodic Memory** ’ Extend for contradiction detection (#4)
-- **Error Memory** ’ Add hallucination patterns (#5)
-- **Task Execution Engine** ’ Plan-tool alignment (#10, #11)
-- **Tool Registry** ’ Add output validators (#1)
-- **MessageLogger** ’ Track hallucination events
+- **Braintrust Evaluation** ï¿½ Add hallucination scorers (#8, #9)
+- **Episodic Memory** ï¿½ Extend for contradiction detection (#4)
+- **Task Execution Engine** ï¿½ Plan-tool alignment (#10, #11)
+- **Tool Registry** ï¿½ Add output validators (#1)
+- **MessageLogger** ï¿½ Track hallucination events
 
 ---
 
-## **=¡ Novel Techniques from 2025 Research**
+## **=ï¿½ Novel Techniques from 2025 Research**
 
 - **Semantic Entropy** (Nature 2024): Measure uncertainty in meaning-space
 - **Agentic Self-Assessment**: Agents evaluate their own responses before finalizing

@@ -5,7 +5,7 @@ import yfinance as yf
 from dotenv import load_dotenv
 from app.utils.choose_model_and_client import openai_model_and_client
 from app.db.core.db_config import MarketSession
-from app.db.core.market_data_models import *
+from app.db.core.models.market_data_models import *
 from app.utils.decorators.database import with_session
 from app.utils.serialize_output import serialize_sqlalchemy_obj
 from app.utils.decorators.database import with_session

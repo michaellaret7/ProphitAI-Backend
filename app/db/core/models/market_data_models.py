@@ -15,14 +15,14 @@ import uuid
 class Ticker(MarketBase):
     __tablename__ = 'tickers'
     __table_args__ = {'schema': 'ticker_universe'}
-    
+
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     ticker = Column(String, nullable=False, unique=True, index=True)
     sector = Column(String, index=True)
     industry = Column(String, index=True)
     sub_industry = Column(String)
     is_etf = Column(Boolean, default=False)
-    
+
     # Quote data columns
     price = Column(Float)
     market_cap = Column(Numeric)
@@ -31,6 +31,15 @@ class Ticker(MarketBase):
     pe = Column(Float)
     dollar_volume = Column(Numeric)  # Calculated as avg_volume * price
     last_updated = Column(DateTime)  # Track when quote data was last updated
+
+    # Additional company profile data
+    beta = Column(Float)
+    is_actively_trading = Column(Boolean)
+    is_adr = Column(Boolean)
+    is_fund = Column(Boolean)
+    ipo_date = Column(Date)
+    earnings_announcement = Column(DateTime)
+    shares_outstanding = Column(Numeric)
     
     # Relationships - using lazy='dynamic' for large collections
     balance_sheets = relationship('BalanceSheet', back_populates='ticker', lazy='dynamic')

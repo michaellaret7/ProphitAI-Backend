@@ -3,7 +3,7 @@ from __future__ import annotations
 from typing import Dict, Any, Optional, List
 
 from app.db.core.db_config import MarketSession
-from app.db.core.market_data_models import Ticker, EarningsTranscript
+from app.db.core.models.market_data_models import Ticker, EarningsTranscript
 from app.utils.decorators.database import with_session
 
 

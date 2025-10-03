@@ -1,5 +1,5 @@
 from app.db.core.db_config import ProphitAltsSession
-from app.db.core.prophit_alts_models import *
+from app.db.core.models.prophit_alts_models import *
 from app.utils.serialize_output import serialize_sqlalchemy_obj
 from app.utils.decorators.database import with_session
 from typing import Optional, List

@@ -4,7 +4,7 @@ from typing import List, Dict, Any, Optional
 from datetime import datetime
 
 from app.db.core.db_config import MarketSession
-from app.db.core.market_data_models import (
+from app.db.core.models.market_data_models import (
     Ticker,
     StockGradesIndividual,
     StockGradesSummary,

@@ -2,11 +2,13 @@ from typing import List, Dict, Optional
 from pydantic import BaseModel
 from typing_extensions import Literal
 from app.core.agentic_framework.base_agent import BaseAgent
-from app.domain.portfolio_operations.optimization.optimizer.prompts import system_prompt, user_prompt
-from app.domain.portfolio_operations.optimization.optimizer.tool_registry import register_optimizer_tools
+from .prompts import system_prompt, user_prompt
+from .tool_registry import register_optimizer_tools
+from .tool_registry import register_optimizer_tools
 from app.core.agentic_framework.base_agent.memory.domain_memory import DomainMemory
-from app.domain.portfolio_operations.optimization.optimizer.tool_registry import register_optimizer_tools
 from app.domain.prophit_alts.consumer_staples_fund.build_portfolio.cio.tool_registry import register_cio_tools
+
+#TODO: Add a portfolio compare tool to compare the new proposed portfolio to the old one that needed optimizaiton
 
 class OptimizedPosition(BaseModel):
     ticker: str

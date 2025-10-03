@@ -1,6 +1,6 @@
 import yaml
-from app.db.core.prophit_alts_models import FundInitialPosition
-from app.db.core.market_data_models import Ticker
+from app.db.core.models.prophit_alts_models import FundInitialPosition
+from app.db.core.models.market_data_models import Ticker
 from app.db.core.db_config import ProphitAltsSession, MarketSession
 from app.utils.gpt_parser import canonical_portfolio
 from app.core.calculations.portfolio.factor_tilt import portfolio_factor_tilts

@@ -1,13 +1,13 @@
 from app.db.core.db_config import UserSession, MarketSession, ProphitAltsSession
-from app.db.core.user_data_models import *
+from app.db.core.models.user_data_models import *
 from app.utils.serialize_output import serialize_sqlalchemy_obj
 from typing import Optional
 import uuid
 from datetime import datetime, timedelta
-from app.db.core.market_data_models import *
+from app.db.core.models.market_data_models import *
 from sqlalchemy import func
 from sqlalchemy.orm import aliased
-from app.db.core.prophit_alts_models import *
+from app.db.core.models.prophit_alts_models import *
 from app.utils.decorators.database import with_session, with_transaction, with_sessions
 
 @with_session('user')

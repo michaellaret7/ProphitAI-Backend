@@ -1,6 +1,6 @@
 from app.repositories.price_data import get_price_data_15_mins
 from app.db.core.db_config import MarketSession, market_engine
-from app.db.core.market_data_models import Ticker, Price
+from app.db.core.models.market_data_models import Ticker, Price
 from datetime import datetime, timedelta
 from sqlalchemy import insert, extract, text
 from app.db.core.pull_fmp_data import FMP_API_DATA

@@ -8,7 +8,7 @@ from app.core.calculations.portfolio.utils import prepare_portfolio_data, get_po
 from app.utils.gpt_parser import canonical_portfolio
 from app.models.portfolio_models import PortfolioInput
 from app.db.core.db_config import ProphitAltsSession
-from app.db.core.prophit_alts_models import FundFinalPosition
+from app.db.core.models.prophit_alts_models import FundFinalPosition
 from app.utils.decorators.database import with_session
 
 @with_session('prophit')

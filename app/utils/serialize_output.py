@@ -1,5 +1,5 @@
 from app.db.core.db_config import UserSession
-from app.db.core.user_data_models import *
+from app.db.core.models.user_data_models import *
 
 def serialize_sqlalchemy_obj(obj):
         """Convert SQLAlchemy object to dictionary"""

@@ -5,7 +5,7 @@ industry returns, contribution analysis, and performance metrics.
 """
 
 from app.db.core.db_config import MarketSession
-from app.db.core.market_data_models import Ticker
+from app.db.core.models.market_data_models import Ticker
 from typing import Optional
 from app.utils.validation_utils import normalize_portfolio_input
 from app.models.portfolio_models import PortfolioInput

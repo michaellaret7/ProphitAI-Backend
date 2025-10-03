@@ -11,7 +11,7 @@ from app.repositories.price_data import (
     fetch_bulk_price_data_for_tickers,
 )
 from app.db.core.db_config import MarketSession
-from app.db.core.market_data_models import (
+from app.db.core.models.market_data_models import (
     Dividend,
     Ticker,
     CashFlowStatement,

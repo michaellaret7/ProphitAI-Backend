@@ -54,7 +54,7 @@ class IndustrySimulationAgent(BaseAgent):
         max_iterations: int = 250,
         plan_first: bool = True,
         save_messages: bool = True,
-        # model: str = "gpt-5",
+        model: str = "gpt-5",
         verbose: bool = True,
         memory_refresh_interval: int = 8,
     ):
@@ -228,7 +228,7 @@ class IndustrySimulationAgent(BaseAgent):
 if __name__ == "__main__":
     # Example usage
     # agent = IndustrySimulationAgent(industry="food_products", verbose=True)
-    agent = IndustrySimulationAgent(industry="beverages", verbose=True)
+    agent = IndustrySimulationAgent(industry="personal_care_products", verbose=True)
 
     result = agent.run()
 

@@ -12,7 +12,7 @@ from app.utils.decorators.tool_validation import log_simulation_data_range, vali
 from app.core.calculations.returns.calculator import ReturnsCalculator
 from datetime import datetime, timedelta
 from app.db.core.db_config import MarketSession
-from app.db.core.market_data_models import Ticker
+from app.db.core.models.market_data_models import Ticker
 from typing import List
 from app.utils.decorators.price_data import with_price_data
 

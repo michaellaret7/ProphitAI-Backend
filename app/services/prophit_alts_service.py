@@ -1,7 +1,7 @@
 from app.repositories.prophit_alts_data import get_fund_final_positions
 from app.db.core.db_config import ProphitAltsSession, MarketSession
-from app.db.core.prophit_alts_models import *
-from app.db.core.market_data_models import *
+from app.db.core.models.prophit_alts_models import *
+from app.db.core.models.market_data_models import *
 from app.utils.serialize_output import serialize_sqlalchemy_obj
 from app.repositories.price_data import fetch_bulk_price_data_for_tickers
 from app.core.calculations.core.config import DEFAULT_LOOKBACK_LONG

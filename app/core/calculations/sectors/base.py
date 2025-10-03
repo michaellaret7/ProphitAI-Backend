@@ -3,7 +3,7 @@
 from typing import Literal, List, Callable, Optional
 from functools import wraps
 import pandas as pd
-from app.db.core.market_data_models import Ticker
+from app.db.core.models.market_data_models import Ticker
 from app.db.core.db_config import MarketSession
 from app.utils.decorators.database import with_session
 from app.core.calculations.factors.growth import GrowthFactors
