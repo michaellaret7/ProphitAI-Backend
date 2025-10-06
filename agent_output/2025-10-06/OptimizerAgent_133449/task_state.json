@@ -1,0 +1,971 @@
+{
+  "timestamp": "2025-10-06T13:41:12.212711",
+  "structured_plan": {
+    "tasks": [
+      {
+        "id": 1,
+        "description": "Intake user portfolio and log context to memory",
+        "status": "in_progress",
+        "subtasks": [
+          {
+            "id": "1a",
+            "description": "Call get_user_portfolio to retrieve full holdings with allocations and metadata",
+            "completed": true,
+            "completion_evidence": [
+              "Successfully executed tool 'get_user_portfolio'",
+              "Tool get_user_portfolio returned success=True",
+              "Tool returned data with 35 keys",
+              "Data retrieval completed"
+            ],
+            "observations": [
+              "Tool 'get_user_portfolio' returned: data:\n  AEE:\n    allocation: 0.015\n    industry: multi_utilities\n    portfolio: Auto/Tech and ETF focused Portfolio\n    reason_for_rec: Ameren (AEE) offers a blend of high profitability (23.3% average"
+            ],
+            "expected_tools": [
+              "get_user_portfolio"
+            ]
+          },
+          {
+            "id": "1b",
+            "description": "Construct exact one-line portfolio_dict with all tickers, allocations, and positions (double-quoted keys)",
+            "completed": false,
+            "completion_evidence": [],
+            "observations": [],
+            "expected_tools": []
+          },
+          {
+            "id": "1c",
+            "description": "Call episodic_remember to store full portfolio positions snapshot (V1)",
+            "completed": false,
+            "completion_evidence": [],
+            "observations": [],
+            "expected_tools": [
+              "episodic_remember"
+            ]
+          },
+          {
+            "id": "1d",
+            "description": "Call episodic_remember to store user preferences (risk tolerance, beta/correlation targets)",
+            "completed": false,
+            "completion_evidence": [],
+            "observations": [],
+            "expected_tools": [
+              "episodic_remember"
+            ]
+          },
+          {
+            "id": "1e",
+            "description": "Call add_task_evidence to attach portfolio_dict and preferences to this plan",
+            "completed": false,
+            "completion_evidence": [],
+            "observations": [],
+            "expected_tools": [
+              "add_task_evidence"
+            ]
+          }
+        ],
+        "predicted_tool_use": [
+          "get_user_portfolio",
+          "episodic_remember",
+          "add_task_evidence"
+        ],
+        "completion_evidence": [
+          "Successfully executed tool 'create_structured_plan'",
+          "Tool create_structured_plan returned success=True",
+          "Creation completed",
+          "Constructed exact one-line portfolio_dict with all tickers, allocations, positions: {\"AEE\":{\"allocation\":0.015,\"position\":\"long\"},\"APP\":{\"allocation\":0.042,\"position\":\"long\"},\"ARM\":{\"allocation\":0.026,\"position\":\"long\"},\"AVGO\":{\"allocation\":0.034,\"position\":\"long\"},\"BSX\":{\"allocation\":0.051,\"position\":\"long\"},\"CEG\":{\"allocation\":0.025,\"position\":\"long\"},\"CMS\":{\"allocation\":0.036,\"position\":\"long\"},\"CRDO\":{\"allocation\":0.012,\"position\":\"long\"},\"DGNX\":{\"allocation\":0.009,\"position\":\"long\"},\"EIS\":{\"allocation\":0.037,\"position\":\"long\"},\"EMQQ\":{\"allocation\":0.013,\"position\":\"long\"},\"EQIX\":{\"allocation\":0.081,\"position\":\"long\"},\"EXOD\":{\"allocation\":0.013,\"position\":\"long\"},\"FITB\":{\"allocation\":0.005,\"position\":\"long\"},\"FR\":{\"allocation\":0.013,\"position\":\"long\"},\"FUFU\":{\"allocation\":0.01,\"position\":\"long\"},\"GREK\":{\"allocation\":0.021,\"position\":\"long\"},\"IGSB\":{\"allocation\":0.031,\"position\":\"long\"},\"IIPR\":{\"allocation\":0.037,\"position\":\"long\"},\"INTR\":{\"allocation\":0.013,\"position\":\"long\"},\"JPM\":{\"allocation\":0.043,\"position\":\"long\"},\"MTSI\":{\"allocation\":0.018,\"position\":\"long\"},\"MU\":{\"allocation\":0.016,\"position\":\"long\"},\"NLR\":{\"allocation\":0.019,\"position\":\"long\"},\"NRG\":{\"allocation\":0.055,\"position\":\"long\"},\"NU\":{\"allocation\":0.01,\"position\":\"long\"},\"NVDA\":{\"allocation\":0.065,\"position\":\"long\"},\"OKLO\":{\"allocation\":0.021,\"position\":\"long\"},\"PLTR\":{\"allocation\":0.027,\"position\":\"long\"},\"SGDM\":{\"allocation\":0.016,\"position\":\"long\"},\"SLVR\":{\"allocation\":0.036,\"position\":\"long\"},\"STAG\":{\"allocation\":0.013,\"position\":\"long\"},\"TRNO\":{\"allocation\":0.018,\"position\":\"long\"},\"VCSH\":{\"allocation\":0.03,\"position\":\"long\"},\"WEC\":{\"allocation\":0.02,\"position\":\"long\"}}",
+          "Successfully executed tool 'add_task_evidence'",
+          "Tool add_task_evidence returned success=True",
+          "Successfully executed tool 'episodic_remember'",
+          "Tool episodic_remember returned success=True",
+          "Successfully executed tool 'episodic_remember'",
+          "Tool episodic_remember returned success=True",
+          "User preferences attached to plan: {\"age\":25,\"net_worth\":5000000,\"risk_tolerance\":\"high\",\"objectives\":[\"lower beta\",\"lower pairwise correlation\",\"higher risk-adjusted returns (Sharpe/Sortino)\",\"higher alpha potential\"],\"notes\":\"Aggressive growth mandate; comfortable with volatility and thematic exposures; accepts drawdowns for diversification and Sharpe gains.\"}",
+          "Successfully executed tool 'add_task_evidence'",
+          "Tool add_task_evidence returned success=True",
+          "Successfully executed tool 'update_task_status'",
+          "Tool update_task_status returned success=True"
+        ],
+        "observations": [
+          "Tool 'create_structured_plan' returned: {'success': True, 'plan': {'tasks': [{'id': 1, 'description': 'Intake user portfolio and log context to memory', 'status': <TaskStatus.PENDING: 'pending'>, 'subtasks': [{'id': '1a', 'description': 'Ca",
+          "Tool 'get_user_portfolio' returned: data:\n  AEE:\n    allocation: 0.015\n    industry: multi_utilities\n    portfolio: Auto/Tech and ETF focused Portfolio\n    reason_for_rec: Ameren (AEE) offers a blend of high profitability (23.3% average",
+          "Tool 'add_task_evidence' returned: True",
+          "Tool 'episodic_remember' returned: {'timestamp': '2025-10-06T17:40:20.209260', 'title': 'User Portfolio Snapshot (Baseline)', 'event': 'portfolio_positions_v1', 'outcome': \"{'AEE': {'allocation': 0.015, 'position': 'long'}, 'APP': {'al",
+          "Tool 'episodic_remember' returned: {'timestamp': '2025-10-06T17:40:42.784090', 'title': 'User Preferences Snapshot', 'event': 'user_preferences_v1', 'outcome': \"{'age': 25, 'net_worth': 5000000, 'risk_tolerance': 'high', 'objectives': ",
+          "Tool 'add_task_evidence' returned: True",
+          "Tool 'update_task_status' returned: {'success': True, 'task_id': '1', 'status': 'in_progress'}"
+        ]
+      },
+      {
+        "id": 2,
+        "description": "Run baseline portfolio analytics (parallelizable where possible)",
+        "status": "pending",
+        "subtasks": [
+          {
+            "id": "2a",
+            "description": "Call check_parallel_execution_options to schedule baseline metrics in parallel",
+            "completed": false,
+            "completion_evidence": [],
+            "observations": [],
+            "expected_tools": [
+              "check_parallel_execution_options"
+            ]
+          },
+          {
+            "id": "2b",
+            "description": "Call calculate_portfolio_correlation_matrix with full portfolio_dict",
+            "completed": false,
+            "completion_evidence": [],
+            "observations": [],
+            "expected_tools": [
+              "calculate_portfolio_correlation_matrix"
+            ]
+          },
+          {
+            "id": "2c",
+            "description": "Call calculate_portfolio_beta_vs_index with full portfolio_dict",
+            "completed": false,
+            "completion_evidence": [],
+            "observations": [],
+            "expected_tools": [
+              "calculate_portfolio_beta_vs_index"
+            ]
+          },
+          {
+            "id": "2d",
+            "description": "Call calculate_portfolio_returns_metrics with full portfolio_dict",
+            "completed": false,
+            "completion_evidence": [],
+            "observations": [],
+            "expected_tools": [
+              "calculate_portfolio_returns_metrics"
+            ]
+          },
+          {
+            "id": "2e",
+            "description": "Call calculate_portfolio_performance with full portfolio_dict",
+            "completed": false,
+            "completion_evidence": [],
+            "observations": [],
+            "expected_tools": [
+              "calculate_portfolio_performance"
+            ]
+          },
+          {
+            "id": "2f",
+            "description": "Call portfolio_exposure_calculator (gross, net, long, short) with full portfolio_dict",
+            "completed": false,
+            "completion_evidence": [],
+            "observations": [],
+            "expected_tools": [
+              "portfolio_exposure_calculator"
+            ]
+          },
+          {
+            "id": "2g",
+            "description": "Call portfolio_industry_concentration (industry and sub_industry) with full portfolio_dict",
+            "completed": false,
+            "completion_evidence": [],
+            "observations": [],
+            "expected_tools": [
+              "portfolio_industry_concentration"
+            ]
+          },
+          {
+            "id": "2h",
+            "description": "Call calculate_portfolio_factor_tilts with factors='all' and full portfolio_dict",
+            "completed": false,
+            "completion_evidence": [],
+            "observations": [],
+            "expected_tools": [
+              "calculate_portfolio_factor_tilts"
+            ]
+          },
+          {
+            "id": "2i",
+            "description": "Call portfolio_VaR_calculator at portfolio, industry, and sub-industry levels",
+            "completed": false,
+            "completion_evidence": [],
+            "observations": [],
+            "expected_tools": [
+              "portfolio_VaR_calculator"
+            ]
+          },
+          {
+            "id": "2j",
+            "description": "Call portfolio_stress_test with full portfolio_dict",
+            "completed": false,
+            "completion_evidence": [],
+            "observations": [],
+            "expected_tools": [
+              "portfolio_stress_test"
+            ]
+          },
+          {
+            "id": "2k",
+            "description": "Call calculate_group_performances (group_by='industry') with full portfolio_dict",
+            "completed": false,
+            "completion_evidence": [],
+            "observations": [],
+            "expected_tools": [
+              "calculate_group_performances"
+            ]
+          },
+          {
+            "id": "2l",
+            "description": "Call calculate_ticker_performances with full portfolio_dict",
+            "completed": false,
+            "completion_evidence": [],
+            "observations": [],
+            "expected_tools": [
+              "calculate_ticker_performances"
+            ]
+          },
+          {
+            "id": "2m",
+            "description": "Call add_task_evidence to attach all baseline analytics outputs",
+            "completed": false,
+            "completion_evidence": [],
+            "observations": [],
+            "expected_tools": [
+              "add_task_evidence"
+            ]
+          }
+        ],
+        "predicted_tool_use": [
+          "check_parallel_execution_options",
+          "calculate_portfolio_correlation_matrix",
+          "calculate_portfolio_beta_vs_index",
+          "calculate_portfolio_returns_metrics",
+          "calculate_portfolio_performance",
+          "portfolio_exposure_calculator",
+          "portfolio_industry_concentration",
+          "calculate_portfolio_factor_tilts",
+          "portfolio_VaR_calculator",
+          "portfolio_stress_test",
+          "calculate_group_performances",
+          "calculate_ticker_performances",
+          "add_task_evidence"
+        ],
+        "completion_evidence": [],
+        "observations": []
+      },
+      {
+        "id": 3,
+        "description": "Ticker-level fundamentals, factors, and sentiment sweep",
+        "status": "pending",
+        "subtasks": [
+          {
+            "id": "3a",
+            "description": "Call calculate_ticker_factors for each holding across factors: growth, value, quality, momentum, volatility",
+            "completed": false,
+            "completion_evidence": [],
+            "observations": [],
+            "expected_tools": [
+              "calculate_ticker_factors"
+            ]
+          },
+          {
+            "id": "3b",
+            "description": "Call fetch_ticker_repository_data for each holding: stock_news, press_releases, ratings, price_target_summary",
+            "completed": false,
+            "completion_evidence": [],
+            "observations": [],
+            "expected_tools": [
+              "fetch_ticker_repository_data"
+            ]
+          },
+          {
+            "id": "3c",
+            "description": "Optionally call get_ticker_fundamental_data (financial ratios or analyst estimates) for red-flag names",
+            "completed": false,
+            "completion_evidence": [],
+            "observations": [],
+            "expected_tools": [
+              "get_ticker_fundamental_data"
+            ]
+          },
+          {
+            "id": "3d",
+            "description": "Synthesize strengths and weaknesses per ticker (momentum, quality, leverage, sentiment)",
+            "completed": false,
+            "completion_evidence": [],
+            "observations": [],
+            "expected_tools": []
+          },
+          {
+            "id": "3e",
+            "description": "Call add_task_evidence to attach the strengths/weaknesses matrix",
+            "completed": false,
+            "completion_evidence": [],
+            "observations": [],
+            "expected_tools": [
+              "add_task_evidence"
+            ]
+          }
+        ],
+        "predicted_tool_use": [
+          "calculate_ticker_factors",
+          "fetch_ticker_repository_data",
+          "get_ticker_fundamental_data",
+          "add_task_evidence"
+        ],
+        "completion_evidence": [],
+        "observations": []
+      },
+      {
+        "id": 4,
+        "description": "Identify risk drivers, clusters, and weak/high-risk tickers",
+        "status": "pending",
+        "subtasks": [
+          {
+            "id": "4a",
+            "description": "Cluster tickers using correlation outputs; flag high-corr clusters for diversification",
+            "completed": false,
+            "completion_evidence": [],
+            "observations": [],
+            "expected_tools": []
+          },
+          {
+            "id": "4b",
+            "description": "Rank tickers by risk contribution using per-ticker vol, drawdown, and scenario losses",
+            "completed": false,
+            "completion_evidence": [],
+            "observations": [],
+            "expected_tools": []
+          },
+          {
+            "id": "4c",
+            "description": "Create keep/resize/replace list with rationale",
+            "completed": false,
+            "completion_evidence": [],
+            "observations": [],
+            "expected_tools": []
+          },
+          {
+            "id": "4d",
+            "description": "Call add_task_evidence to attach triage list and rationales",
+            "completed": false,
+            "completion_evidence": [],
+            "observations": [],
+            "expected_tools": [
+              "add_task_evidence"
+            ]
+          },
+          {
+            "id": "4e",
+            "description": "Call update_task_status to mark analysis phase progress",
+            "completed": false,
+            "completion_evidence": [],
+            "observations": [],
+            "expected_tools": [
+              "update_task_status"
+            ]
+          }
+        ],
+        "predicted_tool_use": [
+          "add_task_evidence",
+          "update_task_status"
+        ],
+        "completion_evidence": [],
+        "observations": []
+      },
+      {
+        "id": 5,
+        "description": "Source replacement candidates with stock_screener (3+ runs)",
+        "status": "pending",
+        "subtasks": [
+          {
+            "id": "5a",
+            "description": "Call stock_screener: low-beta (<0.9), high quality (ROE>15%, net margin>12%), low debt (D/E<0.5); prefer underrepresented sectors; limit 30",
+            "completed": false,
+            "completion_evidence": [],
+            "observations": [],
+            "expected_tools": [
+              "stock_screener"
+            ]
+          },
+          {
+            "id": "5b",
+            "description": "Call stock_screener: high growth (ROE>20%, op margin>15%), reasonable valuation (PE<30, PEG<2), beta 0.9–1.2; limit 30",
+            "completed": false,
+            "completion_evidence": [],
+            "observations": [],
+            "expected_tools": [
+              "stock_screener"
+            ]
+          },
+          {
+            "id": "5c",
+            "description": "Call stock_screener: defensive/low-corr stocks/ETFs (staples/utilities/healthcare), dividend yield>2%, beta<0.8; include ETFs (expense ratio<0.5%); limit 30",
+            "completed": false,
+            "completion_evidence": [],
+            "observations": [],
+            "expected_tools": [
+              "stock_screener"
+            ]
+          },
+          {
+            "id": "5d",
+            "description": "Call stock_screener: momentum + quality (ROE>20%, gross margin>40%), moderate debt (D/E<0.8); limit 30",
+            "completed": false,
+            "completion_evidence": [],
+            "observations": [],
+            "expected_tools": [
+              "stock_screener"
+            ]
+          },
+          {
+            "id": "5e",
+            "description": "Call add_task_evidence to attach all screener outputs and shortlists",
+            "completed": false,
+            "completion_evidence": [],
+            "observations": [],
+            "expected_tools": [
+              "add_task_evidence"
+            ]
+          }
+        ],
+        "predicted_tool_use": [
+          "stock_screener",
+          "add_task_evidence"
+        ],
+        "completion_evidence": [],
+        "observations": []
+      },
+      {
+        "id": 6,
+        "description": "Construct optimized portfolio V1 and analyze",
+        "status": "pending",
+        "subtasks": [
+          {
+            "id": "6a",
+            "description": "Draft adds/removes/resizes per triage and screener; target lower beta & correlation, higher Sharpe",
+            "completed": false,
+            "completion_evidence": [],
+            "observations": [],
+            "expected_tools": []
+          },
+          {
+            "id": "6b",
+            "description": "Assemble new one-line portfolio_dict (sum allocations=1.0; double-quoted keys)",
+            "completed": false,
+            "completion_evidence": [],
+            "observations": [],
+            "expected_tools": []
+          },
+          {
+            "id": "6c",
+            "description": "Re-run key analytics on V1: correlation, beta, returns metrics, performance, exposures, factor tilts, VaR, stress, group performance, concentration",
+            "completed": false,
+            "completion_evidence": [],
+            "observations": [],
+            "expected_tools": [
+              "calculate_portfolio_correlation_matrix",
+              "calculate_portfolio_beta_vs_index",
+              "calculate_portfolio_returns_metrics",
+              "calculate_portfolio_performance",
+              "portfolio_exposure_calculator",
+              "calculate_portfolio_factor_tilts",
+              "portfolio_VaR_calculator",
+              "portfolio_stress_test",
+              "calculate_group_performances",
+              "portfolio_industry_concentration"
+            ]
+          },
+          {
+            "id": "6d",
+            "description": "Call episodic_remember to store Optimized Portfolio V1 (full positions and rationales)",
+            "completed": false,
+            "completion_evidence": [],
+            "observations": [],
+            "expected_tools": [
+              "episodic_remember"
+            ]
+          },
+          {
+            "id": "6e",
+            "description": "Compare baseline vs V1; quantify improvements (beta, corr, Sharpe/Sortino, drawdown)",
+            "completed": false,
+            "completion_evidence": [],
+            "observations": [],
+            "expected_tools": []
+          },
+          {
+            "id": "6f",
+            "description": "Call add_task_evidence to attach V1 analytics and comparison",
+            "completed": false,
+            "completion_evidence": [],
+            "observations": [],
+            "expected_tools": [
+              "add_task_evidence"
+            ]
+          }
+        ],
+        "predicted_tool_use": [
+          "calculate_portfolio_correlation_matrix",
+          "calculate_portfolio_beta_vs_index",
+          "calculate_portfolio_returns_metrics",
+          "calculate_portfolio_performance",
+          "portfolio_exposure_calculator",
+          "calculate_portfolio_factor_tilts",
+          "portfolio_VaR_calculator",
+          "portfolio_stress_test",
+          "calculate_group_performances",
+          "portfolio_industry_concentration",
+          "episodic_remember",
+          "add_task_evidence"
+        ],
+        "completion_evidence": [],
+        "observations": []
+      },
+      {
+        "id": 7,
+        "description": "Iterative optimization to meet targets and diversify",
+        "status": "pending",
+        "subtasks": [
+          {
+            "id": "7a",
+            "description": "Define target ranges (beta<1, lower average pairwise corr, improved Sharpe/Sortino)",
+            "completed": false,
+            "completion_evidence": [],
+            "observations": [],
+            "expected_tools": []
+          },
+          {
+            "id": "7b",
+            "description": "Tune allocations +/- and re-run fast checks: beta, correlation, returns metrics, VaR, stress",
+            "completed": false,
+            "completion_evidence": [],
+            "observations": [],
+            "expected_tools": [
+              "calculate_portfolio_beta_vs_index",
+              "calculate_portfolio_correlation_matrix",
+              "calculate_portfolio_returns_metrics",
+              "portfolio_VaR_calculator",
+              "portfolio_stress_test"
+            ]
+          },
+          {
+            "id": "7c",
+            "description": "If targets unmet, call stock_screener with refined constraints to swap candidates",
+            "completed": false,
+            "completion_evidence": [],
+            "observations": [],
+            "expected_tools": [
+              "stock_screener"
+            ]
+          },
+          {
+            "id": "7d",
+            "description": "Lock Final portfolio_dict; call episodic_remember to store Final Optimized Portfolio with full positions",
+            "completed": false,
+            "completion_evidence": [],
+            "observations": [],
+            "expected_tools": [
+              "episodic_remember"
+            ]
+          },
+          {
+            "id": "7e",
+            "description": "Call add_task_evidence to attach final analytics and decisions",
+            "completed": false,
+            "completion_evidence": [],
+            "observations": [],
+            "expected_tools": [
+              "add_task_evidence"
+            ]
+          }
+        ],
+        "predicted_tool_use": [
+          "calculate_portfolio_beta_vs_index",
+          "calculate_portfolio_correlation_matrix",
+          "calculate_portfolio_returns_metrics",
+          "portfolio_VaR_calculator",
+          "portfolio_stress_test",
+          "stock_screener",
+          "episodic_remember",
+          "add_task_evidence"
+        ],
+        "completion_evidence": [],
+        "observations": []
+      },
+      {
+        "id": 8,
+        "description": "Completion checks and execution summary",
+        "status": "pending",
+        "subtasks": [
+          {
+            "id": "8a",
+            "description": "Call get_completion_analysis to validate readiness and confidence",
+            "completed": false,
+            "completion_evidence": [],
+            "observations": [],
+            "expected_tools": [
+              "get_completion_analysis"
+            ]
+          },
+          {
+            "id": "8b",
+            "description": "Call check_plan_completion_status to confirm plan readiness",
+            "completed": false,
+            "completion_evidence": [],
+            "observations": [],
+            "expected_tools": [
+              "check_plan_completion_status"
+            ]
+          },
+          {
+            "id": "8c",
+            "description": "Call get_execution_summary to capture end-to-end summary",
+            "completed": false,
+            "completion_evidence": [],
+            "observations": [],
+            "expected_tools": [
+              "get_execution_summary"
+            ]
+          },
+          {
+            "id": "8d",
+            "description": "Call mark_task_complete for upstream main tasks as they finish",
+            "completed": false,
+            "completion_evidence": [],
+            "observations": [],
+            "expected_tools": [
+              "mark_task_complete"
+            ]
+          }
+        ],
+        "predicted_tool_use": [
+          "get_completion_analysis",
+          "check_plan_completion_status",
+          "get_execution_summary",
+          "mark_task_complete"
+        ],
+        "completion_evidence": [],
+        "observations": []
+      },
+      {
+        "id": 9,
+        "description": "Formatting task: Produce strict JSON output per schema (last step)",
+        "status": "pending",
+        "subtasks": [
+          {
+            "id": "9a",
+            "description": "Prepare final JSON with 'portfolio' (allocations, position, thesis) and 'changes' (added/removed/adjusted)",
+            "completed": false,
+            "completion_evidence": [],
+            "observations": [],
+            "expected_tools": []
+          },
+          {
+            "id": "9b",
+            "description": "Validate JSON: double quotes for keys, numeric allocations, sum allocations=1.0, one top-level object",
+            "completed": false,
+            "completion_evidence": [],
+            "observations": [],
+            "expected_tools": []
+          },
+          {
+            "id": "9c",
+            "description": "Output ONLY the strict JSON object as the final answer",
+            "completed": false,
+            "completion_evidence": [],
+            "observations": [],
+            "expected_tools": []
+          }
+        ],
+        "predicted_tool_use": [],
+        "completion_evidence": [],
+        "observations": []
+      }
+    ]
+  },
+  "execution_history": [
+    {
+      "timestamp": "2025-10-06T13:37:52.579961",
+      "type": "main_task_status_update",
+      "task_id": 1,
+      "old_status": "pending",
+      "new_status": "in_progress",
+      "reason": "Plan execution started"
+    },
+    {
+      "timestamp": "2025-10-06T13:37:52.581262",
+      "type": "subtask_status_update",
+      "main_task_id": 1,
+      "subtask_id": "1a",
+      "old_completed": false,
+      "new_completed": false,
+      "reason": "Subtask initialized"
+    },
+    {
+      "timestamp": "2025-10-06T13:37:52.583360",
+      "type": "observation_added",
+      "task_id": 1,
+      "subtask_id": null,
+      "observation": "Tool 'create_structured_plan' returned: {'success': True, 'plan': {'tasks': [{'id': 1, 'description': 'Intake user portfolio and log context to memory', 'status': <TaskStatus.PENDING: 'pending'>, 'subtasks': [{'id': '1a', 'description': 'Ca"
+    },
+    {
+      "timestamp": "2025-10-06T13:37:52.584658",
+      "type": "tool_routed",
+      "task_id": 1,
+      "subtask_id": "1a",
+      "tool_name": "create_structured_plan",
+      "is_relevant": false
+    },
+    {
+      "timestamp": "2025-10-06T13:37:52.585710",
+      "type": "evidence_added",
+      "task_id": 1,
+      "subtask_id": null,
+      "evidence": "Successfully executed tool 'create_structured_plan'"
+    },
+    {
+      "timestamp": "2025-10-06T13:37:52.586766",
+      "type": "evidence_added",
+      "task_id": 1,
+      "subtask_id": null,
+      "evidence": "Tool create_structured_plan returned success=True"
+    },
+    {
+      "timestamp": "2025-10-06T13:37:52.588301",
+      "type": "evidence_added",
+      "task_id": 1,
+      "subtask_id": null,
+      "evidence": "Creation completed"
+    },
+    {
+      "timestamp": "2025-10-06T13:38:23.388638",
+      "type": "observation_added",
+      "task_id": 1,
+      "subtask_id": null,
+      "observation": "Tool 'get_user_portfolio' returned: data:\n  AEE:\n    allocation: 0.015\n    industry: multi_utilities\n    portfolio: Auto/Tech and ETF focused Portfolio\n    reason_for_rec: Ameren (AEE) offers a blend of high profitability (23.3% average"
+    },
+    {
+      "timestamp": "2025-10-06T13:38:23.410551",
+      "type": "tool_routed",
+      "task_id": 1,
+      "subtask_id": "1a",
+      "tool_name": "get_user_portfolio",
+      "is_relevant": true
+    },
+    {
+      "timestamp": "2025-10-06T13:38:23.411177",
+      "type": "observation_added",
+      "task_id": 1,
+      "subtask_id": "1a",
+      "observation": "Tool 'get_user_portfolio' returned: data:\n  AEE:\n    allocation: 0.015\n    industry: multi_utilities\n    portfolio: Auto/Tech and ETF focused Portfolio\n    reason_for_rec: Ameren (AEE) offers a blend of high profitability (23.3% average"
+    },
+    {
+      "timestamp": "2025-10-06T13:38:23.449326",
+      "type": "evidence_added",
+      "task_id": 1,
+      "subtask_id": "1a",
+      "evidence": "Successfully executed tool 'get_user_portfolio'"
+    },
+    {
+      "timestamp": "2025-10-06T13:38:23.449914",
+      "type": "evidence_added",
+      "task_id": 1,
+      "subtask_id": "1a",
+      "evidence": "Tool get_user_portfolio returned success=True"
+    },
+    {
+      "timestamp": "2025-10-06T13:38:23.450376",
+      "type": "evidence_added",
+      "task_id": 1,
+      "subtask_id": "1a",
+      "evidence": "Tool returned data with 35 keys"
+    },
+    {
+      "timestamp": "2025-10-06T13:38:23.450822",
+      "type": "evidence_added",
+      "task_id": 1,
+      "subtask_id": "1a",
+      "evidence": "Data retrieval completed"
+    },
+    {
+      "timestamp": "2025-10-06T13:38:23.526303",
+      "type": "subtask_status_update",
+      "main_task_id": 1,
+      "subtask_id": "1a",
+      "old_completed": false,
+      "new_completed": true,
+      "reason": "Auto-completed via task progression"
+    },
+    {
+      "timestamp": "2025-10-06T13:39:47.134542",
+      "type": "evidence_added",
+      "task_id": 1,
+      "subtask_id": null,
+      "evidence": "Constructed exact one-line portfolio_dict with all tickers, allocations, positions: {\"AEE\":{\"allocation\":0.015,\"position\":\"long\"},\"APP\":{\"allocation\":0.042,\"position\":\"long\"},\"ARM\":{\"allocation\":0.026,\"position\":\"long\"},\"AVGO\":{\"allocation\":0.034,\"position\":\"long\"},\"BSX\":{\"allocation\":0.051,\"position\":\"long\"},\"CEG\":{\"allocation\":0.025,\"position\":\"long\"},\"CMS\":{\"allocation\":0.036,\"position\":\"long\"},\"CRDO\":{\"allocation\":0.012,\"position\":\"long\"},\"DGNX\":{\"allocation\":0.009,\"position\":\"long\"},\"EIS\":{\"allocation\":0.037,\"position\":\"long\"},\"EMQQ\":{\"allocation\":0.013,\"position\":\"long\"},\"EQIX\":{\"allocation\":0.081,\"position\":\"long\"},\"EXOD\":{\"allocation\":0.013,\"position\":\"long\"},\"FITB\":{\"allocation\":0.005,\"position\":\"long\"},\"FR\":{\"allocation\":0.013,\"position\":\"long\"},\"FUFU\":{\"allocation\":0.01,\"position\":\"long\"},\"GREK\":{\"allocation\":0.021,\"position\":\"long\"},\"IGSB\":{\"allocation\":0.031,\"position\":\"long\"},\"IIPR\":{\"allocation\":0.037,\"position\":\"long\"},\"INTR\":{\"allocation\":0.013,\"position\":\"long\"},\"JPM\":{\"allocation\":0.043,\"position\":\"long\"},\"MTSI\":{\"allocation\":0.018,\"position\":\"long\"},\"MU\":{\"allocation\":0.016,\"position\":\"long\"},\"NLR\":{\"allocation\":0.019,\"position\":\"long\"},\"NRG\":{\"allocation\":0.055,\"position\":\"long\"},\"NU\":{\"allocation\":0.01,\"position\":\"long\"},\"NVDA\":{\"allocation\":0.065,\"position\":\"long\"},\"OKLO\":{\"allocation\":0.021,\"position\":\"long\"},\"PLTR\":{\"allocation\":0.027,\"position\":\"long\"},\"SGDM\":{\"allocation\":0.016,\"position\":\"long\"},\"SLVR\":{\"allocation\":0.036,\"position\":\"long\"},\"STAG\":{\"allocation\":0.013,\"position\":\"long\"},\"TRNO\":{\"allocation\":0.018,\"position\":\"long\"},\"VCSH\":{\"allocation\":0.03,\"position\":\"long\"},\"WEC\":{\"allocation\":0.02,\"position\":\"long\"}}"
+    },
+    {
+      "timestamp": "2025-10-06T13:39:47.137149",
+      "type": "observation_added",
+      "task_id": 1,
+      "subtask_id": null,
+      "observation": "Tool 'add_task_evidence' returned: True"
+    },
+    {
+      "timestamp": "2025-10-06T13:39:47.138860",
+      "type": "tool_routed",
+      "task_id": 1,
+      "subtask_id": "1b",
+      "tool_name": "add_task_evidence",
+      "is_relevant": false
+    },
+    {
+      "timestamp": "2025-10-06T13:39:47.140396",
+      "type": "evidence_added",
+      "task_id": 1,
+      "subtask_id": null,
+      "evidence": "Successfully executed tool 'add_task_evidence'"
+    },
+    {
+      "timestamp": "2025-10-06T13:39:47.142014",
+      "type": "evidence_added",
+      "task_id": 1,
+      "subtask_id": null,
+      "evidence": "Tool add_task_evidence returned success=True"
+    },
+    {
+      "timestamp": "2025-10-06T13:40:20.210375",
+      "type": "observation_added",
+      "task_id": 1,
+      "subtask_id": null,
+      "observation": "Tool 'episodic_remember' returned: {'timestamp': '2025-10-06T17:40:20.209260', 'title': 'User Portfolio Snapshot (Baseline)', 'event': 'portfolio_positions_v1', 'outcome': \"{'AEE': {'allocation': 0.015, 'position': 'long'}, 'APP': {'al"
+    },
+    {
+      "timestamp": "2025-10-06T13:40:20.212631",
+      "type": "tool_routed",
+      "task_id": 1,
+      "subtask_id": "1b",
+      "tool_name": "episodic_remember",
+      "is_relevant": false
+    },
+    {
+      "timestamp": "2025-10-06T13:40:20.214296",
+      "type": "evidence_added",
+      "task_id": 1,
+      "subtask_id": null,
+      "evidence": "Successfully executed tool 'episodic_remember'"
+    },
+    {
+      "timestamp": "2025-10-06T13:40:20.215923",
+      "type": "evidence_added",
+      "task_id": 1,
+      "subtask_id": null,
+      "evidence": "Tool episodic_remember returned success=True"
+    },
+    {
+      "timestamp": "2025-10-06T13:40:42.785371",
+      "type": "observation_added",
+      "task_id": 1,
+      "subtask_id": null,
+      "observation": "Tool 'episodic_remember' returned: {'timestamp': '2025-10-06T17:40:42.784090', 'title': 'User Preferences Snapshot', 'event': 'user_preferences_v1', 'outcome': \"{'age': 25, 'net_worth': 5000000, 'risk_tolerance': 'high', 'objectives': "
+    },
+    {
+      "timestamp": "2025-10-06T13:40:42.788818",
+      "type": "tool_routed",
+      "task_id": 1,
+      "subtask_id": "1b",
+      "tool_name": "episodic_remember",
+      "is_relevant": false
+    },
+    {
+      "timestamp": "2025-10-06T13:40:42.790648",
+      "type": "evidence_added",
+      "task_id": 1,
+      "subtask_id": null,
+      "evidence": "Successfully executed tool 'episodic_remember'"
+    },
+    {
+      "timestamp": "2025-10-06T13:40:42.792137",
+      "type": "evidence_added",
+      "task_id": 1,
+      "subtask_id": null,
+      "evidence": "Tool episodic_remember returned success=True"
+    },
+    {
+      "timestamp": "2025-10-06T13:41:08.982270",
+      "type": "evidence_added",
+      "task_id": 1,
+      "subtask_id": null,
+      "evidence": "User preferences attached to plan: {\"age\":25,\"net_worth\":5000000,\"risk_tolerance\":\"high\",\"objectives\":[\"lower beta\",\"lower pairwise correlation\",\"higher risk-adjusted returns (Sharpe/Sortino)\",\"higher alpha potential\"],\"notes\":\"Aggressive growth mandate; comfortable with volatility and thematic exposures; accepts drawdowns for diversification and Sharpe gains.\"}"
+    },
+    {
+      "timestamp": "2025-10-06T13:41:08.984939",
+      "type": "observation_added",
+      "task_id": 1,
+      "subtask_id": null,
+      "observation": "Tool 'add_task_evidence' returned: True"
+    },
+    {
+      "timestamp": "2025-10-06T13:41:08.986773",
+      "type": "tool_routed",
+      "task_id": 1,
+      "subtask_id": "1b",
+      "tool_name": "add_task_evidence",
+      "is_relevant": false
+    },
+    {
+      "timestamp": "2025-10-06T13:41:08.988477",
+      "type": "evidence_added",
+      "task_id": 1,
+      "subtask_id": null,
+      "evidence": "Successfully executed tool 'add_task_evidence'"
+    },
+    {
+      "timestamp": "2025-10-06T13:41:08.990233",
+      "type": "evidence_added",
+      "task_id": 1,
+      "subtask_id": null,
+      "evidence": "Tool add_task_evidence returned success=True"
+    },
+    {
+      "timestamp": "2025-10-06T13:41:12.201744",
+      "task_id": "1",
+      "status": "in_progress",
+      "reason": "Subtasks 1a and 1b completed; 1c and 1d logged to memory; proceeding to finalize Task 1 and start baseline analytics.",
+      "evidence": {
+        "observations": [
+          "Portfolio retrieved via get_user_portfolio",
+          "One-line portfolio_dict constructed and attached as evidence",
+          "User preferences logged to episodic memory and attached to plan"
+        ],
+        "confidence": 0.9
+      },
+      "iteration": null
+    },
+    {
+      "timestamp": "2025-10-06T13:41:12.206111",
+      "type": "observation_added",
+      "task_id": 1,
+      "subtask_id": null,
+      "observation": "Tool 'update_task_status' returned: {'success': True, 'task_id': '1', 'status': 'in_progress'}"
+    },
+    {
+      "timestamp": "2025-10-06T13:41:12.208019",
+      "type": "tool_routed",
+      "task_id": 1,
+      "subtask_id": "1b",
+      "tool_name": "update_task_status",
+      "is_relevant": false
+    },
+    {
+      "timestamp": "2025-10-06T13:41:12.209577",
+      "type": "evidence_added",
+      "task_id": 1,
+      "subtask_id": null,
+      "evidence": "Successfully executed tool 'update_task_status'"
+    },
+    {
+      "timestamp": "2025-10-06T13:41:12.211216",
+      "type": "evidence_added",
+      "task_id": 1,
+      "subtask_id": null,
+      "evidence": "Tool update_task_status returned success=True"
+    }
+  ]
+}

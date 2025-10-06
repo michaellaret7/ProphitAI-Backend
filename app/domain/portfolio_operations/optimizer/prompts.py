@@ -5,33 +5,9 @@ Objectives
 - Primary: maximize risk-adjusted return (Sharpe/Sortino) while lowering beta and pairwise correlation.
 - Secondary: preserve/boost alpha potential, improve drawdown resilience, and respect exposure constraints.
 
-Hard Constraints (enforce all)
-- Always call tools with a valid portfolio_dict (one line, JSON, double quotes, no trailing commas).
-- Weights: enforce sum of weights for long/short as required by target gross/net if provided; otherwise ensure ∑|w| ≤ 1 and report actual gross/net.
-- Bounds: 0 ≤ long weights ≤ 0.15 each (suggested), -0.10 ≤ short weights ≤ 0 (suggested). No position with |w| < 0.005 unless justified.
-- Diversification: any single name ≤ 20% of gross; any sector ≤ 35% gross unless evidence supports override.
-- Liquidity sanity: exclude tickers with ADV too low for position size (if liquidity data available); otherwise flag risk.
-- Consistency: all tickers uppercase; no duplicates; no NaNs; currency = USD unless stated.
-
-Required Analytics (use tools; don't fabricate)
-- Correlation matrix, risk contribution, drawdown profile, exposure calculator, stress tests.
-- Performance block: Sharpe, Sortino, max drawdown, beta vs benchmark (default SPY), diversification ratio/HHI, and (if available) factor exposure summary.
-
-Tool Use & Reliability
-- If a tool errors (e.g., "missing 1 required positional argument: 'portfolio_dict'"), immediately retry once with the complete portfolio_dict from working memory.
-- Never invent numbers; every metric must come from a tool result. If a metric is unavailable, state "unavailable".
-
-Memory Policy
-- Log the full starting portfolio and user preferences to episodic memory (hard constraint).
-- After optimization, log the final portfolio and a short "why it changed" summary.
-
-Output Rules
-- Final message MUST be strict JSON in the schema defined by the user prompt (no prose outside JSON).
-- Allocations must obey bounds and rounding to 4-6 decimals; include a "changes" section describing adds/removes/adjustments.
-- Include a brief one-sentence "thesis" per position (concise, evidence-based).
-
-Reasoning Visibility
-- Think step-by-step internally but DO NOT reveal chain-of-thought. Output only the required JSON and tool-derived facts.
+IMPORTANT RULES:
+- Do not overcomplicate the constraints in the stock_screener tool. Keep it to 3-4 constraints. If they are too complex, the tool will most likely return [].
+- If a tool returns success: False, pause the process and retry the tool. Once it yields success: True, continue with the process.
 """
 
 user_prompt = """

@@ -1,0 +1,34 @@
+[
+  {
+    "timestamp": "2025-10-06T18:34:16.038057",
+    "title": "User Portfolio and Preferences (Initial State)",
+    "event": "current_portfolio_and_preferences_initial",
+    "outcome": "Portfolio: {\"AEE\": {\"allocation\": 0.015, \"position\": \"long\"}, \"APP\": {\"allocation\": 0.042, \"position\": \"long\"}, \"ARM\": {\"allocation\": 0.026, \"position\": \"long\"}, \"AVGO\": {\"allocation\": 0.034, \"position\": \"long\"}, \"BSX\": {\"allocation\": 0.051, \"position\": \"long\"}, \"CEG\": {\"allocation\": 0.025, \"position\": \"long\"}, \"CMS\": {\"allocation\": 0.036, \"position\": \"long\"}, \"CRDO\": {\"allocation\": 0.012, \"position\": \"long\"}, \"DGNX\": {\"allocation\": 0.009, \"position\": \"long\"}, \"EIS\": {\"allocation\": 0.037, \"position\": \"long\"}, \"EMQQ\": {\"allocation\": 0.013, \"position\": \"long\"}, \"EQIX\": {\"allocation\": 0.081, \"position\": \"long\"}, \"EXOD\": {\"allocation\": 0.013, \"position\": \"long\"}, \"FITB\": {\"allocation\": 0.005, \"position\": \"long\"}, \"FR\": {\"allocation\": 0.013, \"position\": \"long\"}, \"FUFU\": {\"allocation\": 0.01, \"position\": \"long\"}, \"GREK\": {\"allocation\": 0.021, \"position\": \"long\"}, \"IGSB\": {\"allocation\": 0.031, \"position\": \"long\"}, \"IIPR\": {\"allocation\": 0.037, \"position\": \"long\"}, \"INTR\": {\"allocation\": 0.013, \"position\": \"long\"}, \"JPM\": {\"allocation\": 0.043, \"position\": \"long\"}, \"MTSI\": {\"allocation\": 0.018, \"position\": \"long\"}, \"MU\": {\"allocation\": 0.016, \"position\": \"long\"}, \"NLR\": {\"allocation\": 0.019, \"position\": \"long\"}, \"NRG\": {\"allocation\": 0.055, \"position\": \"long\"}, \"NU\": {\"allocation\": 0.01, \"position\": \"long\"}, \"NVDA\": {\"allocation\": 0.065, \"position\": \"long\"}, \"OKLO\": {\"allocation\": 0.021, \"position\": \"long\"}, \"PLTR\": {\"allocation\": 0.027, \"position\": \"long\"}, \"SGDM\": {\"allocation\": 0.016, \"position\": \"long\"}, \"SLVR\": {\"allocation\": 0.036, \"position\": \"long\"}, \"STAG\": {\"allocation\": 0.013, \"position\": \"long\"}, \"TRNO\": {\"allocation\": 0.018, \"position\": \"long\"}, \"VCSH\": {\"allocation\": 0.03, \"position\": \"long\"}, \"WEC\": {\"allocation\": 0.02, \"position\": \"long\"}}\nUser Preferences: Age 25, Net Worth $5M, High risk tolerance, seeks lower beta and correlation, higher risk-adjusted and alpha potential returns.",
+    "tags": [
+      "portfolio",
+      "user_profile",
+      "initial_state"
+    ]
+  },
+  {
+    "timestamp": "2025-10-06T18:37:36.679507",
+    "title": "New Optimized Portfolio Constructed",
+    "event": "optimized_portfolio_created",
+    "outcome": "Portfolio changes finalized: Core keeps (NVDA, APP, AVGO, PLTR, BSX, NRG, JPM, EQIX, SGDM, SLVR, GREK, VCSH, IGSB) retained/rightsized for risk-adjusted return, alpha, and correlation minimization. Added new low-beta, high Sharpe/ROE assets: LLY (biopharma), CL, CLX, KMB (household/consumer staples). Removed high-vol, low-sharpe/alpha, stress-vulnerable or high-correlation names per prior analysis. Allocations tuned for drawdown/risk parity simultaneously maintaining growth and defensive tilts. Ready for analytics iteration.",
+    "tags": [
+      "optimized_portfolio",
+      "allocation",
+      "removal_addition_evidence"
+    ]
+  },
+  {
+    "timestamp": "2025-10-06T18:38:09.445533",
+    "title": "Optimized Portfolio and Rationale (Logged)",
+    "event": "log_optimized_portfolio_final",
+    "outcome": "Optimized portfolio includes core technology/growth anchors (NVDA, APP, AVGO, PLTR), durable return generators (BSX, JPM, NRG, EQIX), non-correlated commodity and macro hedges (SGDM, SLVR), global/EM exposure (GREK), and strong defensive/quality/low-beta names (LLY, CL, CLX, KMB, VCSH, IGSB). Removed high-risk/high-correlation, low-Sharpe, or structurally weak tickers (FR, CRDO, DGNX, IIPR, TRNO, STAG, OKLO, FUFU, NLR, EXOD). Allocations tuned for risk preference, sectoral/industry diversification, alpha, and tail risk resilience. Rationale: Maximized risk-adjusted return, suppressed beta/correlation, and achieved portfolio balance per user goals.",
+    "tags": [
+      "final_portfolio_log",
+      "optimization_rationale"
+    ]
+  }
+]

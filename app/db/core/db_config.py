@@ -7,9 +7,24 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
+# Reason: Build connection strings from components if full URLs contain placeholders
+def get_database_url(env_var: str, db_name: str) -> str:
+    """Get database URL, constructing from components if needed."""
+    url = os.getenv(env_var)
+
+    # If URL contains unsubstituted variables, build from components
+    if url and ('${' in url or '${{' in url):
+        db_user = os.getenv("DB_USER")
+        db_password = os.getenv("DB_PASSWORD")
+        db_host = os.getenv("DB_HOST")
+        db_port = os.getenv("DB_PORT")
+        return f"postgresql://{db_user}:{db_password}@{db_host}:{db_port}/{db_name}"
+
+    return url
+
 # Create engines with connection pooling
 market_engine = create_engine(
-    os.getenv("MARKET_DATA"),
+    get_database_url("MARKET_DATA", "market_data"),
     pool_size=20,
     max_overflow=0,
     pool_pre_ping=True,  # Verify connections before using
@@ -17,7 +32,7 @@ market_engine = create_engine(
 )
 
 user_engine = create_engine(
-    os.getenv("USER_DATA"),
+    get_database_url("USER_DATA", "user_data"),
     pool_size=10,
     max_overflow=5,
     pool_pre_ping=True,
@@ -25,7 +40,7 @@ user_engine = create_engine(
 )
 
 prophit_alts_engine = create_engine(
-    os.getenv("PROPHIT_ALTS"),
+    get_database_url("PROPHIT_ALTS", "prophit_alts"),
     pool_size=10,
     max_overflow=5,
     pool_pre_ping=True,

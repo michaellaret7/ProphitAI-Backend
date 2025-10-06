@@ -292,10 +292,41 @@ def register_base_tools(agent: Any) -> None:
 
     # Episodic memory tools (optional)
     if getattr(agent, "use_episodic_memory", False) and getattr(agent, "episodic", None) is not None:
+        def episodic_remember_impl(title, event, context=None, outcome=None, tags=None, meta=None, **kwargs):
+            """Wrapper for episodic_remember that returns structured YAML response."""
+            import yaml
+            try:
+                entry = agent.episodic.append(
+                    title=title,
+                    event=event,
+                    context=context,
+                    outcome=outcome,
+                    tags=tags,
+                    meta=meta
+                )
+                result = {
+                    "success": True,
+                    "message": "Memory entry appended successfully",
+                    "entry": {
+                        "title": entry.get("title"),
+                        "event": entry.get("event"),
+                        "timestamp": entry.get("timestamp")
+                    }
+                }
+                return yaml.dump(result, default_flow_style=False, sort_keys=False)
+            except Exception as e:
+                result = {
+                    "success": False,
+                    "error": str(e),
+                    "message": "Failed to append memory entry"
+                }
+                return yaml.dump(result, default_flow_style=False, sort_keys=False)
+
         agent.add_tool(
             name="episodic_remember",
             description=(
-                "Append an episodic memory entry. Use for key milestones or facts you may want to recall later."
+                "Append an episodic memory entry. Use for key milestones or facts you may want to recall later. "
+                "Returns YAML with success status."
             ),
             parameters={
                 "type": "object",
@@ -309,14 +340,34 @@ def register_base_tools(agent: Any) -> None:
                 },
                 "required": ["title", "event"],
             },
-            function=lambda title, event, context=None, outcome=None, tags=None, meta=None, **kwargs: \
-                agent.episodic.append(title=title, event=event, context=context, outcome=outcome, tags=tags, meta=meta),
+            function=episodic_remember_impl,
         )
+
+        def episodic_recall_impl(query=None, tags=None, since=None, limit=20, **kwargs):
+            """Wrapper for episodic_recall that returns structured YAML response."""
+            import yaml
+            try:
+                entries = agent.episodic.recall(query=query, tags=tags, since=since, limit=limit)
+                result = {
+                    "success": True,
+                    "message": f"Retrieved {len(entries)} memory entries",
+                    "count": len(entries),
+                    "entries": entries
+                }
+                return yaml.dump(result, default_flow_style=False, sort_keys=False)
+            except Exception as e:
+                result = {
+                    "success": False,
+                    "error": str(e),
+                    "message": "Failed to recall memory entries"
+                }
+                return yaml.dump(result, default_flow_style=False, sort_keys=False)
 
         agent.add_tool(
             name="episodic_recall",
             description=(
-                "Recall episodic memories by keyword, tags, or since a timestamp. Returns most recent first."
+                "Recall episodic memories by keyword, tags, or since a timestamp. Returns most recent first. "
+                "Returns YAML with success status."
             ),
             parameters={
                 "type": "object",
@@ -328,8 +379,7 @@ def register_base_tools(agent: Any) -> None:
                 },
                 "required": [],
             },
-            function=lambda query=None, tags=None, since=None, limit=20, **kwargs: \
-                agent.episodic.recall(query=query, tags=tags, since=since, limit=limit),
+            function=episodic_recall_impl,
         )
 
 

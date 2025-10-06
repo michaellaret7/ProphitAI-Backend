@@ -6,6 +6,9 @@ from .tool_registry import register_cio_tools
 from app.core.agentic_framework.base_agent.memory.domain_memory import DomainMemory
 from typing import Literal
 
+#TODO: Break this down into multiple Sub Agents and then run them in parallel. This will fix the context degredation issue.
+#TODO: Must do this, it will be much more effective
+
 class CIOPortfolioItem(BaseModel):
 	ticker: str
 	position: Literal["long", "short"]

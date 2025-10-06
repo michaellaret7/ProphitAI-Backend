@@ -683,6 +683,7 @@ STOCK_SCREENER_DESCRIPTION = (
     "\n  • Natural comparisons: 'PE < 20', 'debt-to-equity under 0.5'"
     "\n  • Sorting: 'sorted by market cap', 'order by dividend yield descending'"
     "\n  • Result control: 'show 50 results', 'limit 20'"
+    "\n  • Important Rule: Keep the constraints simple, do not overcomplicate them."
 )
 
 STOCK_SCREENER_PARAMETERS = {
@@ -714,4 +715,6 @@ STOCK_SCREENER_TOOL = {
     "function": screener,
 }
 
-        
+
+if __name__ == "__main__":
+    print(screener(constraints='Find large-cap consumer_staples and health_care companies with ROE > 15%, beta < 0.8'))
