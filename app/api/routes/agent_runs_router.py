@@ -3,7 +3,7 @@ from uuid import uuid4
 from fastapi import APIRouter
 
 from app.services.agent_runs import start_agent_run
-from app.domain.portfolio_operations.optimization.optimizer.agent import OptimizerAgent
+from app.domain.portfolio_operations.optimizer.agent import OptimizerAgent
 
 router = APIRouter()
 

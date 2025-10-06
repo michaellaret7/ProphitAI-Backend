@@ -8,6 +8,7 @@ Objectives
 IMPORTANT RULES:
 - Do not overcomplicate the constraints in the stock_screener tool. Keep it to 3-4 constraints. If they are too complex, the tool will most likely return [].
 - If a tool returns success: False, pause the process and retry the tool. Once it yields success: True, continue with the process.
+- Make sure you look at etfs as well as stocks with the stock screener.
 """
 
 user_prompt = """
