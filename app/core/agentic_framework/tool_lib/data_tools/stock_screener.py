@@ -102,9 +102,12 @@ class ScreenerConstraints(BaseModel):
     price_target_last_year_max: Optional[float] = Field(None, description="Maximum analyst price target (last year)")
 
     # Classification filters
-    sector: Optional[Union[str, List[str]]] = Field(None, description="Sector or list of sectors")
-    industry: Optional[Union[str, List[str]]] = Field(None, description="Industry or list of industries")
-    sub_industry: Optional[Union[str, List[str]]] = Field(None, description="Sub-industry or list of sub-industries")
+    sector: Optional[Union[str, List[str]]] = Field(None, description="Sector or list of sectors to INCLUDE")
+    industry: Optional[Union[str, List[str]]] = Field(None, description="Industry or list of industries to INCLUDE")
+    sub_industry: Optional[Union[str, List[str]]] = Field(None, description="Sub-industry or list of sub-industries to INCLUDE")
+    sector_exclude: Optional[Union[str, List[str]]] = Field(None, description="Sector or list of sectors to EXCLUDE")
+    industry_exclude: Optional[Union[str, List[str]]] = Field(None, description="Industry or list of industries to EXCLUDE")
+    sub_industry_exclude: Optional[Union[str, List[str]]] = Field(None, description="Sub-industry or list of sub-industries to EXCLUDE")
 
     # Company profile filters
     beta_min: Optional[float] = Field(None, description="Minimum beta")
@@ -231,10 +234,14 @@ class StockScreener:
 
             # Add user-specified filters
             for key, value in filters.items():
-                col = self._resolve_column(key, ticker=Ticker, fr=fr, etf=etf, rat=rat, an=an, pts=pts)
+                # Handle exclusion filters separately
+                is_exclude = key.endswith('_exclude')
+                col_key = key[:-8] if is_exclude else key  # Remove '_exclude' suffix
+
+                col = self._resolve_column(col_key, ticker=Ticker, fr=fr, etf=etf, rat=rat, an=an, pts=pts)
                 if col is None:
                     continue
-                condition = self._parse_filter_condition(col, value)
+                condition = self._parse_filter_condition(col, value, exclude=is_exclude)
                 if condition is not None:
                     where_clauses.append(condition)
             if where_clauses:
@@ -426,7 +433,7 @@ class StockScreener:
             return aliases.get("pts")
         return model
 
-    def _parse_filter_condition(self, column: Any, value: Any):
+    def _parse_filter_condition(self, column: Any, value: Any, exclude: bool = False):
         if isinstance(value, tuple) and len(value) == 2:
             min_val, max_val = value
             if min_val is not None and max_val is not None:
@@ -437,13 +444,13 @@ class StockScreener:
                 return column <= max_val
             return None
         if isinstance(value, list):
-            return column.in_(value)
+            return column.notin_(value) if exclude else column.in_(value)
         if isinstance(value, bool):
-            return column == value
+            return column != value if exclude else column == value
         if isinstance(value, (int, float)):
-            return column == value
+            return column != value if exclude else column == value
         if isinstance(value, str):
-            return column == value
+            return column != value if exclude else column == value
         return None
 
     def _build_select_columns(
@@ -516,22 +523,37 @@ def screener(constraints: str) -> str:
         system_prompt = """Parse stock screening criteria into structured format.
         Convert natural language descriptions into specific numeric constraints.
 
-        ⚠️ CRITICAL LIMITATIONS - The following metrics are COMPLETELY UNAVAILABLE:
-        ❌ Alpha, Sharpe ratio, Sortino ratio (risk-adjusted returns)
-        ❌ Volatility, annualized volatility, standard deviation (price variability)
-        ❌ Returns over ANY time period (1M, 3M, 6M, 1Y, YTD, annualized)
-        ❌ Correlation to any index, sector, or stock
-        ❌ Momentum, relative strength, price trends
-        ❌ VaR, CVaR, drawdowns, tracking error, information ratio
-        ✅ Beta is available
+        ⚠️ CRITICAL LIMITATIONS - SNAPSHOT DATA ONLY, NO TIME-SERIES ANALYSIS:
 
-        If the user requests ANY of these metrics:
+        ❌ UNAVAILABLE - All price-based time-series metrics:
+        • Alpha, Sharpe ratio, Sortino ratio (risk-adjusted returns)
+        • Volatility, annualized volatility, standard deviation (price variability)
+        • Returns over ANY time period (1M, 3M, 6M, 1Y, YTD, annualized)
+        • Correlation to any index, sector, or stock
+        • Momentum, relative strength, price trends
+        • VaR, CVaR, drawdowns, tracking error, information ratio
+
+        ❌ UNAVAILABLE - All growth/change metrics requiring historical comparison:
+        • Revenue growth (any period: 1Y, 3Y, 5Y, YoY, QoQ)
+        • EPS growth, earnings growth, profit growth
+        • Sales growth, EBITDA growth, FCF growth
+        • Any metric comparing current vs. historical values
+        • Trailing growth rates, forward growth rates
+
+        ✅ AVAILABLE - Current snapshot data only:
+        • Beta (single point-in-time estimate)
+        • Current financial ratios (P/E, P/B, ROE, margins, debt ratios, etc.)
+        • Current market data (market cap, price, volume)
+        • Static company info (sector, industry, shares outstanding)
+
+        If the user requests ANY unavailable metrics:
         1. Set them to null/None
         2. DO NOT include them in sort_by
         3. DO NOT include them in columns
         4. DO NOT attempt to approximate them with fundamental metrics
+        5. IGNORE any growth-related criteria completely
 
-        This screener EXCLUSIVELY supports fundamental and static data metrics below.
+        This screener EXCLUSIVELY supports point-in-time fundamental snapshot data.
 
         Example queries:
         - "Find large-cap technology stocks with P/E ratio under 20, ROE above 15%, and beta less than 1.2"
@@ -542,9 +564,40 @@ def screener(constraints: str) -> str:
 
         For percentages, ALWAYS convert to decimals (15% → 0.15, 3% → 0.03).
         For dollar amounts, use full numbers (1B → 1000000000, 5M → 5000000).
-        Sector names usually start with "equity_sector_" prefix (e.g., "equity_sector_technology").
-        Industry names use underscores (e.g., "food_products", "semiconductors_and_semiconductor_equipment").
-        Sub-industry names use underscores (e.g., "semiconductors", "beverages", "food_products").
+
+        **CRITICAL - Sector/Industry Naming Conventions:**
+
+        • EXACT sector names (use these EXACTLY as written):
+          - equity_sector_communication_services
+          - equity_sector_consumer_discretionary
+          - equity_sector_consumer_staples
+          - equity_sector_energy
+          - equity_sector_financials
+          - equity_sector_health_care (NOT healthcare!)
+          - equity_sector_industrials
+          - equity_sector_information_technology (NOT just technology!)
+          - equity_sector_materials
+          - equity_sector_real_estate
+          - equity_sector_utilities
+
+        • Industry names use underscores and full names:
+          - REITs → "diversified_reits", "specialized_reits", "mortgage_reits"
+          - Banks → "banks", "regional_banks", "diversified_banks"
+          - Technology → "software", "semiconductors_and_semiconductor_equipment", "it_services"
+          - Healthcare → "biotechnology", "pharmaceuticals", "health_care_equipment_and_supplies"
+
+        • Sub-industries also use underscores (e.g., "semiconductors", "beverages", "food_products")
+
+        • "Defensive" stocks are NOT a sector - use: equity_sector_consumer_staples, equity_sector_utilities, equity_sector_health_care
+
+        **CRITICAL - Include vs. Exclude:**
+        • Use "sector", "industry", "sub_industry" fields for stocks TO INCLUDE
+        • Use "sector_exclude", "industry_exclude", "sub_industry_exclude" for stocks TO EXCLUDE
+        • When query says "exclude X" or "avoid Y" → use the _exclude fields
+        • Examples:
+          - "Exclude REITs and banks" → industry_exclude: ["diversified_reits", "banks"]
+          - "Only tech stocks" → industry: ["software", "semiconductors_and_semiconductor_equipment"]
+
         Sort descending with "-" prefix (e.g., ["-market_cap"], ["-dividend_yield"]).
 
         Extract ALL relevant criteria from the query, but ONLY use supported fundamental metrics.
@@ -552,6 +605,16 @@ def screener(constraints: str) -> str:
 
         # Parse natural language to structured constraints
         parsed = parse_with_gpt(constraints, ScreenerConstraints, system_prompt)
+
+        # Debug: Print parsed constraints
+        print("\n" + "="*80)
+        print("STOCK SCREENER DEBUG - Parsed Constraints:")
+        print("="*80)
+        print(f"Original query: {constraints}")
+        print("\nParsed constraints (non-null values only):")
+        for field, value in parsed.model_dump(exclude_none=True).items():
+            print(f"  {field}: {value}")
+        print("="*80 + "\n")
 
         # Build criteria dictionary for StockScreener
         criteria_dict = {}
@@ -607,13 +670,21 @@ def screener(constraints: str) -> str:
         add_range("price_target_last_quarter", parsed.price_target_last_quarter_min, parsed.price_target_last_quarter_max)
         add_range("price_target_last_year", parsed.price_target_last_year_min, parsed.price_target_last_year_max)
 
-        # Add classification filters
+        # Add classification filters (include)
         if parsed.sector is not None:
             criteria_dict["sector"] = parsed.sector
         if parsed.industry is not None:
             criteria_dict["industry"] = parsed.industry
         if parsed.sub_industry is not None:
             criteria_dict["sub_industry"] = parsed.sub_industry
+
+        # Add classification filters (exclude)
+        if parsed.sector_exclude is not None:
+            criteria_dict["sector_exclude"] = parsed.sector_exclude
+        if parsed.industry_exclude is not None:
+            criteria_dict["industry_exclude"] = parsed.industry_exclude
+        if parsed.sub_industry_exclude is not None:
+            criteria_dict["sub_industry_exclude"] = parsed.sub_industry_exclude
 
         # Add company profile filters
         add_range("beta", parsed.beta_min, parsed.beta_max)
@@ -635,6 +706,20 @@ def screener(constraints: str) -> str:
 
         # Execute screen
         df = StockScreener().screen(**criteria_dict)
+
+        # Debug: Print results summary
+        print("\n" + "="*80)
+        print("STOCK SCREENER DEBUG - Results Summary:")
+        print("="*80)
+        print(f"Total results found: {len(df)}")
+        if len(df) > 0:
+            print(f"Columns: {list(df.columns)}")
+            print(f"\nFirst 3 results:")
+            print(df.head(3).to_string())
+        else:
+            print("No results found - query may be too restrictive or data may be missing")
+        print("="*80 + "\n")
+
         result = {
             "success": True,
             "data": df.to_dict('records')
@@ -649,25 +734,33 @@ def screener(constraints: str) -> str:
 
 # Tool Schema Constants
 STOCK_SCREENER_DESCRIPTION = (
-    "⚠️ FUNDAMENTAL DATA ONLY - LIMITED PRICE-BASED METRICS ⚠️\n"
-    "\nScreen stocks based on FUNDAMENTAL criteria using natural language.\n"
-    "\n**CRITICAL: This tool has LIMITED support for price-derived metrics:**"
-    "\n  ✓ SUPPORTED: Beta (company profile data)"
-    "\n  ❌ NOT supported: Alpha, Sharpe ratio, Sortino ratio, volatility, annualized volatility"
-    "\n  ❌ NOT supported: Returns (1M/3M/6M/1Y/YTD), momentum, correlation, standard deviation"
-    "\n  ❌ NOT supported: VaR, CVaR, drawdowns, tracking error, information ratio"
-    "\n  ✓ ONLY use: Fundamental data (valuation ratios, profitability metrics, balance sheet ratios) and beta"
-    "\n\n**Workflow for advanced risk metrics:**"
-    "\n  1. Use stock_screener to filter by fundamentals (ROE, margins, debt, beta, etc.)"
+    "⚠️ SNAPSHOT DATA ONLY - NO TIME-SERIES OR GROWTH METRICS ⚠️\n"
+    "\nScreen stocks based on CURRENT FUNDAMENTAL DATA using natural language.\n"
+    "\n**CRITICAL LIMITATIONS - This tool provides POINT-IN-TIME data only:**"
+    "\n\n❌ UNAVAILABLE - No time-series analysis:"
+    "\n  • Alpha, Sharpe ratio, Sortino ratio, volatility, standard deviation"
+    "\n  • Returns over ANY period (1M, 3M, 6M, 1Y, YTD, annualized)"
+    "\n  • Momentum, correlation, price trends, drawdowns"
+    "\n  • Revenue growth, EPS growth, earnings growth (any period)"
+    "\n  • Sales growth, profit growth, EBITDA growth, FCF growth"
+    "\n  • ANY metric requiring historical comparison or growth rates"
+    "\n\n✓ AVAILABLE - Current snapshot metrics only:"
+    "\n  • Beta (point-in-time estimate)"
+    "\n  • Current valuation ratios (P/E, P/B, P/S, PEG, EV/EBITDA, dividend yield)"
+    "\n  • Current profitability (ROE, ROA, ROIC, margins)"
+    "\n  • Current financial health (debt ratios, liquidity ratios)"
+    "\n  • Static attributes (sector, industry, market cap, shares outstanding)"
+    "\n\n**Workflow for time-series metrics:**"
+    "\n  1. Use stock_screener to filter by current fundamentals (ROE, margins, debt, beta)"
     "\n  2. Get the resulting ticker list"
-    "\n  3. THEN use separate risk_tools or ticker_performance_metrics for Sharpe/alpha/volatility"
-    "\n\n**Supported Criteria:**"
+    "\n  3. THEN use separate tools for growth/returns/volatility analysis on those tickers"
+    "\n\n**Supported Criteria (all current values):**"
     "\n  • Valuation: market cap, avg volume, P/E, P/B, P/S, PEG, EV/EBITDA, price/FCF, dividend yield"
     "\n  • Profitability: ROE, ROA, ROIC, gross/operating/net margins"
     "\n  • Financial Health: debt-to-equity, current/quick ratio, interest coverage"
     "\n  • Efficiency: asset turnover, inventory turnover"
     "\n  • Classification: sector, industry, sub_industry"
-    "\n  • Company Profile: beta, is_actively_trading, is_adr, is_fund, shares_outstanding, ipo_date, earnings_announcement"
+    "\n  • Company Profile: beta, is_actively_trading, is_adr, is_fund, shares_outstanding"
     "\n  • ETF Metrics: expense ratio, AUM, holdings count"
     "\n  • Ratings: analyst ratings, price targets"
     "\n  • Display: limit, offset, sort_by, columns"
@@ -676,14 +769,14 @@ STOCK_SCREENER_DESCRIPTION = (
     "\n  • stock_screener(constraints='Show profitable food companies with market cap over $5B, sorted by dividend yield')"
     "\n  • stock_screener(constraints='Mid-cap value stocks with low debt and high margins')"
     "\n  • stock_screener(constraints='High dividend stocks in healthcare sector with strong balance sheets')"
-    "\n  • stock_screener(constraints='Growth stocks with ROE > 20%, operating margin > 15%, limit 20 results')"
+    "\n  • stock_screener(constraints='Stocks with ROE > 20%, operating margin > 15%, beta < 1.0, limit 20 results')"
     "\n\n**Tips:**"
     "\n  • Use descriptive terms: 'large-cap' ($10B+), 'mid-cap' ($2-10B), 'small-cap' (<$2B)"
     "\n  • Percentages work: 'ROE > 15%', 'dividend yield above 3%'"
     "\n  • Natural comparisons: 'PE < 20', 'debt-to-equity under 0.5'"
     "\n  • Sorting: 'sorted by market cap', 'order by dividend yield descending'"
     "\n  • Result control: 'show 50 results', 'limit 20'"
-    "\n  • Important Rule: Keep the constraints simple, do not overcomplicate them."
+    "\n  • DO NOT request growth rates, returns, or any time-series metrics"
 )
 
 STOCK_SCREENER_PARAMETERS = {
@@ -692,15 +785,16 @@ STOCK_SCREENER_PARAMETERS = {
         "constraints": {
             "type": "string",
             "description": (
-                "Natural language description of FUNDAMENTAL stock screening criteria. "
-                "⚠️ DO NOT include: Sharpe ratio, Sortino ratio, volatility, annualized volatility, "
-                "returns, momentum, correlation, alpha, standard deviation, or any price-derived metrics. "
-                "✓ ONLY include: fundamental metrics like P/E, ROE, margins, debt ratios, market cap, "
-                "sector, industry, dividend yield, profitability ratios, efficiency ratios. "
-                "For risk metrics, first screen by fundamentals, then use separate risk calculation tools. "
+                "Natural language description of stock screening criteria using CURRENT SNAPSHOT DATA ONLY. "
+                "⚠️ NO TIME-SERIES METRICS: DO NOT include revenue growth, EPS growth, earnings growth, "
+                "sales growth, returns (any period), Sharpe ratio, volatility, momentum, correlation, "
+                "alpha, or ANY metric requiring historical comparison. "
+                "✓ SNAPSHOT METRICS ONLY: Use P/E, P/B, ROE, ROA, ROIC, margins, debt ratios, market cap, "
+                "beta, sector, industry, dividend yield, current ratios. "
+                "For growth/time-series analysis, first screen by current fundamentals, then analyze tickers separately. "
                 "Examples: 'large-cap tech stocks with PE < 20 and ROE > 15%', "
                 "'profitable dividend stocks sorted by yield', "
-                "'growth companies with strong margins and low debt'."
+                "'companies with strong current margins and low debt'."
             )
         }
     },
@@ -717,4 +811,32 @@ STOCK_SCREENER_TOOL = {
 
 
 if __name__ == "__main__":
-    print(screener(constraints='Find large-cap consumer_staples and health_care companies with ROE > 15%, beta < 0.8'))
+    # Test queries to validate parsing and debugging
+    test_queries = [
+        # Test 1: Exclusion logic with low beta defensive stocks
+        "Find large-cap defensive stocks with beta below 0.7, ROE above 15%, and operating margin above 20%. Exclude REITs, banks, and utilities. Limit 15 results.",
+
+        # Test 2: Multi-sector tech screen with valuation constraints
+        "Show mid to large-cap technology and software companies with PE ratio under 25, gross margin above 60%, and debt-to-equity below 0.5. Limit 20 results sorted by market cap.",
+
+        # Test 3: High-quality dividend stocks with exclusions
+        "Find dividend-paying stocks with yield above 2.5%, current ratio above 1.5, ROE above 12%, and beta between 0.5 and 1.0. Exclude financials and real estate sectors. Limit 10 results.",
+
+        # Test 4: Growth stocks with profitability filters
+        "Large-cap growth stocks in healthcare and consumer discretionary with ROE above 20%, net margin above 15%, and PEG ratio below 2.0. Exclude biotechnology. Limit 12 results.",
+
+        # Test 5: Value stocks with balance sheet strength
+        "Mid-cap value stocks with PE under 15, price-to-book below 3, current ratio above 2, debt-to-equity below 0.3, and ROE above 10%. Limit 25 results sorted by ROE descending.",
+    ]
+
+    for i, query in enumerate(test_queries, 1):
+        print(f"\n{'#'*80}")
+        print(f"TEST QUERY {i}/{len(test_queries)}")
+        print(f"{'#'*80}\n")
+        result = screener(constraints=query)
+        print(f"\n{'='*80}\n")
+
+        # Small pause between queries for readability
+        import time
+        if i < len(test_queries):
+            time.sleep(0.5)

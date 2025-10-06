@@ -11,24 +11,22 @@ from app.utils.decorators.tool_validation import validate_ticker_arg, validate_n
 
 @validate_required_args('portfolio_dict')
 @validate_portfolio_dict()
-@validate_ticker_arg("index_ticker")
 @validate_numeric_arg("lookback_days", positive_only=True)
 @log_simulation_data_range()
 def calculate_portfolio_beta_vs_index(
     portfolio_dict: PortfolioInput | dict,
     lookback_days: int = 252,
-    index_ticker: str = "SPY",
     _simulation_date: Optional[datetime] = None
 ) -> str:
     """
-    Calculate CAPM beta for a long/short portfolio vs index.
+    Calculate CAPM beta for a long/short portfolio vs SPY index.
 
     Args:
         portfolio_dict: Dict of {ticker: {"allocation": float, "position": "long/short"}}
         lookback_days: Number of days of historical data to use
 
     Returns:
-        Portfolio beta vs index
+        Portfolio beta vs SPY index
     """
     try:
         if not isinstance(portfolio_dict, dict):
@@ -49,17 +47,17 @@ def calculate_portfolio_beta_vs_index(
             print(f"DEBUG: Portfolio returns is None or empty. Portfolio: {list(portfolio_dict.keys())}")
             return yaml.dump({"success": False, "error": "No portfolio returns data"}, default_flow_style=False)
 
-        # Get index returns using utility function
+        # Get index returns using utility function (hardcoded to SPY)
         index_returns = get_benchmark_returns(
-            benchmark=index_ticker,
+            benchmark="SPY",
             lookback_days=lookback_days + 50,  # Buffer for returns calc
             use_total_returns=False,  # Use price returns for beta calculation
             _simulation_date=_simulation_date
         )
 
         if index_returns is None or index_returns.empty:
-            print(f"DEBUG: Index returns is None or empty for {index_ticker}")
-            return yaml.dump({"success": False, "error": f"No index returns data for {index_ticker}"}, default_flow_style=False)
+            print(f"DEBUG: Index returns is None or empty for SPY")
+            return yaml.dump({"success": False, "error": "No index returns data for SPY"}, default_flow_style=False)
 
         # Calculate and return beta
         beta = RiskCalculator.beta(portfolio_returns, index_returns)
@@ -76,8 +74,8 @@ def calculate_portfolio_beta_vs_index(
         return yaml.dump({"success": False, "error": str(e)}, default_flow_style=False)
 
 CALCULATE_PORTFOLIO_BETA_VS_INDEX_DESCRIPTION = (
-    "Calculate CAPM beta for a long/short portfolio versus SPY benchmark using 252 trading days of historical data. "
-    "Beta measures the portfolio's systematic risk relative to the market. A beta of 1.0 means the portfolio moves with the market, >1.0 means more volatile than market, <1.0 means less volatile. "
+    "Calculate CAPM beta for a long/short portfolio versus SPY benchmark (hardcoded) using 252 trading days of historical data. "
+    "Beta measures the portfolio's systematic risk relative to SPY. A beta of 1.0 means the portfolio moves with SPY, >1.0 means more volatile than SPY, <1.0 means less volatile. "
     "CRITICAL: You MUST ALWAYS include the portfolio_dict parameter with ALL holdings. "
     "Example: calculate_portfolio_beta_vs_index(portfolio_dict={'AAPL': {'allocation': 0.5, 'position': 'long'}, 'MSFT': {'allocation': 0.5, 'position': 'long'}})"
 )
