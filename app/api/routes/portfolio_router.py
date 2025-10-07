@@ -37,13 +37,13 @@ class PortfolioReturnsRequest(BaseModel):
 
 #TODO: We want to get the portfolios by uuid
 @router.get("/portfolios")
-async def get_user_portfolio_list(email: str = Query(None, description="User's email address")):
+def get_user_portfolio_list(email: str = Query("michaellaret7@gmail.com", description="User's email address")):
     """
     Get user portfolio list by email
-    
-    Email must be provided.
+
+    Email defaults to hardcoded value until auth is setup.
     """
-    return await get_user_portfolio_list_controller(email=email)
+    return get_user_portfolio_list_controller(email=email)
 
 @router.post("/portfolios", status_code=201)
 async def create_portfolio(body: CreatePortfolioRequest):
@@ -70,10 +70,13 @@ async def delete_portfolio(body: DeletePortfolioRequest):
         portfolio_id=body.portfolioId,
     )
 
-@router.post("/portfolios/returns")
-async def get_portfolio_returns(body: PortfolioReturnsRequest):
+@router.get("/portfolios/{portfolioId}/returns")
+async def get_portfolio_returns(
+    portfolioId: str,
+    years: int = Query(2, description="Number of years of historical data", ge=1, le=10),
+):
     return await get_portfolio_returns_controller(
-        email=body.email,
-        portfolio_id=body.portfolioId,
+        portfolio_id=portfolioId,
+        years=years,
     )
 

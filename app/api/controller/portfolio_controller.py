@@ -1,22 +1,27 @@
 from fastapi import HTTPException
 from typing import Dict, Any, List, Optional
 import uuid
-from app.repositories.portfolio_data import add_portfolio, update_portfolio, delete_portfolio
-from app.repositories.user_data import get_all_user_data
+from app.repositories.portfolio_data import add_portfolio, update_portfolio, delete_portfolio, list_portfolios
+from app.repositories.user_data import get_all_user_data, get_user_basic_info
 from app.api.response_envelope import ok_envelope
 
-async def get_user_portfolio_list_controller(email: str) -> Dict[str, Any]:
+def get_user_portfolio_list_controller(email: str = "michaellaret7@gmail.com") -> Dict[str, Any]:
     """
     Controller to handle user portfolio list retrieval
     """
     try:
         if not email:
             raise HTTPException(status_code=400, detail="Email is required")
-        user_data = get_all_user_data(email=email)
+        
+        # Get user info first
+        user_data = get_user_basic_info(email=email)
+        user_id = user_data.get('id')
         if not user_data:
             raise HTTPException(status_code=404, detail="User not found")
         
-        portfolios = user_data.get('portfolios', [])
+        # Get portfolios by user_id
+        portfolios = list_portfolios(email=email)
+        print(portfolios)
         # Convert to camelCase keys for response
         portfolios = [{
             "name": p.get("name"),
@@ -46,8 +51,6 @@ async def get_user_portfolio_list_controller(email: str) -> Dict[str, Any]:
         raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")
-
-#TODO: Get portfolio positions using the uuid 
 
 async def create_portfolio_controller(
     *,
@@ -231,12 +234,10 @@ async def delete_portfolio_controller(
 
 async def get_portfolio_returns_controller(
     *,
-    email: str,
     portfolio_id: str,
+    years: int = 2,
 ) -> Dict[str, Any]:
     try:
-        if not email:
-            raise HTTPException(status_code=400, detail="Email is required")
         if not portfolio_id:
             raise HTTPException(status_code=400, detail="portfolioId is required")
 
@@ -248,13 +249,11 @@ async def get_portfolio_returns_controller(
         import pandas as pd
         import numpy as np
 
+        email = "michaellaret7@gmail.com"
         positions = retrieve_portfolio(email=email, portfolio_id=uuid.UUID(portfolio_id))
         if not positions:
             raise HTTPException(status_code=404, detail="Portfolio not found")
 
-        # Build weights dict from positions
-        # Note: allocations are stored as percentages (e.g., 7.5 for 7.5%)
-        # so we must divide by 100 to get decimal weights
         weights = {}
         for pos in positions:
             ticker = pos.get('ticker')
@@ -265,9 +264,9 @@ async def get_portfolio_returns_controller(
         if not weights:
             raise HTTPException(status_code=400, detail="Portfolio has no valid positions")
 
-        # Fetch price data for last 2 years using bulk fetch
+        # Fetch price data using bulk fetch
         end_date = datetime.now()
-        start_date = end_date - timedelta(days=365*2)
+        start_date = end_date - timedelta(days=365*years)
 
         tickers = list(weights.keys())
         ticker_closes = fetch_bulk_price_data_for_tickers(
@@ -314,7 +313,7 @@ async def get_portfolio_returns_controller(
             message="Portfolio returns retrieved successfully",
             kind="portfolio#returns",
             resource_id=portfolio_id,
-            self_link=f"/api/portfolio/returns?email={email}&portfolioId={portfolio_id}",
+            self_link=f"/api/portfolio/returns?portfolioId={portfolio_id}",
             payload=returns_data,
         )
     except HTTPException:
@@ -323,3 +322,5 @@ async def get_portfolio_returns_controller(
         raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")
+
+

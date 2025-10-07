@@ -8,11 +8,12 @@ class TestPortfolioEndpoints(unittest.TestCase):
         self.client = TestClient(app)
 
     def test_get_user_portfolio_list_with_valid_email(self):
-        """Test user portfolio list retrieval with valid email"""
-        response = self.client.get("/api/user/portfolios?email=michaellaret7@gmail.com")
+        """Test user portfolio list retrieval with hardcoded email"""
+        response = self.client.get("/api/portfolios")
         print(f"\n--- Test: Valid Email - Portfolio List ---")
         print(f"Status Code: {response.status_code}")
         print(f"Response Headers: {dict(response.headers)}")
+        print(f"Response Body: {response.text}")
 
         self.assertIn(response.status_code, [200, 404])
 
@@ -38,6 +39,10 @@ class TestPortfolioEndpoints(unittest.TestCase):
                 self.assertIn(k, data)
             # camelCase on portfolio items
             if len(data["payload"]) > 0:
+                print(f"\n--- Portfolio Names ---")
+                for p in data["payload"]:
+                    portfolio_name = p.get("name") or p.get("portfolioName") or "Unnamed"
+                    print(f"Portfolio: {portfolio_name}")
                 p = data["payload"][0]
                 self.assertIn("portfolioId", p)
                 self.assertIn("isCurrent", p)
@@ -45,12 +50,13 @@ class TestPortfolioEndpoints(unittest.TestCase):
             print("User not found - this is expected for test email")
 
     def test_get_user_portfolio_list_without_email(self):
-        """Test user portfolio list endpoint without email parameter"""
-        response = self.client.get("/api/user/portfolios")
+        """Test user portfolio list endpoint without email parameter - uses default"""
+        response = self.client.get("/api/portfolios")
         print(f"\n--- Test: No Email Parameter - Portfolio List ---")
         print(f"Status Code: {response.status_code}")
 
-        self.assertIn(response.status_code, [400, 404])
+        # With default email hardcoded, this should return 200
+        self.assertEqual(response.status_code, 200)
 
 
 if __name__ == "__main__":
