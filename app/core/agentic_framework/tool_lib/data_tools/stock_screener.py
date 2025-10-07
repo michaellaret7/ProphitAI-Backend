@@ -590,6 +590,12 @@ def screener(constraints: str) -> str:
 
         • "Defensive" stocks are NOT a sector - use: equity_sector_consumer_staples, equity_sector_utilities, equity_sector_health_care
 
+        **CRITICAL - ETF Identification:**
+        • To find ETFs: set sector = "etf" (NOT is_fund = True!)
+        • is_fund = True includes MLPs, BDCs, closed-end funds, REITs (NOT traditional ETFs)
+        • ETF industries: "equity_etfs", "fixed_income_etfs", "commodity_etfs", "alternative_etfs", "cryptocurrency_etfs"
+        • Example: "Show ETFs" → sector: "etf"
+
         **CRITICAL - Include vs. Exclude:**
         • Use "sector", "industry", "sub_industry" fields for stocks TO INCLUDE
         • Use "sector_exclude", "industry_exclude", "sub_industry_exclude" for stocks TO EXCLUDE
@@ -597,6 +603,7 @@ def screener(constraints: str) -> str:
         • Examples:
           - "Exclude REITs and banks" → industry_exclude: ["diversified_reits", "banks"]
           - "Only tech stocks" → industry: ["software", "semiconductors_and_semiconductor_equipment"]
+          - "Show ETFs" → sector: "etf"
 
         Sort descending with "-" prefix (e.g., ["-market_cap"], ["-dividend_yield"]).
 
@@ -760,8 +767,8 @@ STOCK_SCREENER_DESCRIPTION = (
     "\n  • Financial Health: debt-to-equity, current/quick ratio, interest coverage"
     "\n  • Efficiency: asset turnover, inventory turnover"
     "\n  • Classification: sector, industry, sub_industry"
-    "\n  • Company Profile: beta, is_actively_trading, is_adr, is_fund, shares_outstanding"
-    "\n  • ETF Metrics: expense ratio, AUM, holdings count"
+    "\n  • Company Profile: beta, is_actively_trading, is_adr, shares_outstanding"
+    "\n  • ETF Filters: Use sector='etf' to find ETFs (NOT is_fund). ETF-specific: expense ratio, AUM, holdings count"
     "\n  • Ratings: analyst ratings, price targets"
     "\n  • Display: limit, offset, sort_by, columns"
     "\n\n**Examples:**"

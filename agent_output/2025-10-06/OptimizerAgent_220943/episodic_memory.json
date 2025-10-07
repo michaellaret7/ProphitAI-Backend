@@ -1,0 +1,45 @@
+[
+  {
+    "timestamp": "2025-10-07T02:10:21.614894",
+    "title": "User Portfolio & Preferences Snapshot",
+    "event": "initial_portfolio_and_preferences",
+    "outcome": "Portfolio positions, allocations, and user risk preferences logged for optimization. Portfolio is a diversified, concentrated mix of tech/semis (NVDA, ARM, AVGO, CRDO, MU, MTSI, etc.), software, utilities (NRG, CEG, OKLO, etc.), banks (JPM, NU, INTR, FITB), industrial/REIT exposure (EQIX, FR, IIPR, STAG, TRNO), and a range of ETFs (EIS, EMQQ, GREK, SLVR, SGDM, NLR, VCSH, IGSB). User is 25, high net worth ($5M), very high risk tolerance, seeking low beta, low correlation, high risk-adjusted returns and alpha potential. Full portfolio positions detailed for analytic traceability.",
+    "tags": [
+      "portfolio",
+      "preferences",
+      "risk_tolerance",
+      "initial_log"
+    ]
+  },
+  {
+    "timestamp": "2025-10-07T02:13:47.746147",
+    "title": "Drafted New/Optimized Portfolio with Rationale",
+    "event": "optimized_portfolio_draft",
+    "outcome": "New portfolio constructed: high conviction tech, healthcare, and strategic non-tech alpha with strong risk control. Portfolio reduces correlation and catastrophic risk versus original, incorporates new low beta/uncorrelated names: CNC, DHR, MDLZ, ABBV, ERIE. Major clusters (speculative semis, pre-revenue and high beta REITs) removed. Defenses (credit, commodity alpha) retained/optimized. Allocations rebalanced to maximize Sharpe/Sortino and reduce beta/correlation. Rationale for each change documented per structured plan.",
+    "tags": [
+      "portfolio",
+      "optimization",
+      "risk_control",
+      "alpha",
+      "allocation",
+      "removal",
+      "addition"
+    ]
+  },
+  {
+    "timestamp": "2025-10-07T02:13:57.885796",
+    "title": "Optimized Portfolio Logged",
+    "event": "final_optimized_portfolio",
+    "outcome": "Full optimized portfolio and allocation/rationale logged in memory. Includes all tickers, allocation, and portfolio thesis; summarizes removals/additions and reasons for each adjustment to maximize risk-adjusted performance, reduce beta/correlation, and improve alpha potential for a high-risk-tolerance user.",
+    "tags": [
+      "portfolio",
+      "final",
+      "optimization",
+      "allocation",
+      "thesis",
+      "removal",
+      "addition",
+      "risk-adjusted-return"
+    ]
+  }
+]

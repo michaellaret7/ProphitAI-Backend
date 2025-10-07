@@ -15,7 +15,7 @@ app = FastAPI(
 # Configure CORS
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # Configure appropriately for production
+    allow_origins=["http://localhost:5173"],  # Configure appropriately for production
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -29,6 +29,10 @@ app.include_router(ws_router, prefix="/api")
 
 # Serve test frontend (WebSocket stream viewer)
 app.mount("/static", StaticFiles(directory="app/api/testing/static"), name="static")
+
+@app.get("/")
+def read_root():
+    return {"message": "ProphitAI API is running!"}
 
 # Health check endpoint
 @app.get("/health")

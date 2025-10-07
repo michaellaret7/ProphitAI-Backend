@@ -163,3 +163,4 @@ Each agent registers relevant tools via `register_*_tools(agent)` functions that
 
 - Never create a README.md for a specific functionality or new new unless specifically requested
 - Do not be afraid to disagree with me. If I say something or ask you a question do not hesitate to correct me. The most important thing is being correct and writing effective code
+- Always use the fetch_bulk_price_data_for_tickers function for stock price fetching unless told otherwise

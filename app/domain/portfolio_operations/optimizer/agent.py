@@ -7,6 +7,7 @@ from .tool_registry import register_optimizer_tools
 from .tool_registry import register_optimizer_tools
 from app.core.agentic_framework.base_agent.memory.domain_memory import DomainMemory
 from app.domain.prophit_alts.consumer_staples_fund.build_portfolio.cio.tool_registry import register_cio_tools
+from app.utils.decorators.timer import timer
 
 #TODO: Add a portfolio compare tool to compare the new proposed portfolio to the old one that needed optimizaiton
 
@@ -67,11 +68,15 @@ class OptimizerAgent(BaseAgent):
         
         return result["final_text"]
 
-if __name__ == "__main__":
+@timer
+def main():
     agent = OptimizerAgent()
     result = agent.run()
-    
+
     print("="*100)
     print("Optimizer Agent Result:")
     print("="*100)
     print(result)
+    
+if __name__ == "__main__":
+    main()
