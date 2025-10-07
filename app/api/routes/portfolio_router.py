@@ -32,8 +32,8 @@ class DeletePortfolioRequest(BaseModel):
     portfolioId: str
 
 class PortfolioReturnsRequest(BaseModel):
-    email: EmailStr = "michaellaret7@gmail.com"
-    portfolioId: str = "01be5cf2-a1fe-45b0-b9a4-cf9cc1a94b36"
+    email: EmailStr
+    portfolioId: str
 
 #TODO: We want to get the portfolios by uuid
 @router.get("/portfolios")

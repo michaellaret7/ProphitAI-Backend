@@ -253,12 +253,14 @@ async def get_portfolio_returns_controller(
             raise HTTPException(status_code=404, detail="Portfolio not found")
 
         # Build weights dict from positions
+        # Note: allocations are stored as percentages (e.g., 7.5 for 7.5%)
+        # so we must divide by 100 to get decimal weights
         weights = {}
         for pos in positions:
             ticker = pos.get('ticker')
             allocation = pos.get('allocation')
             if ticker and allocation is not None:
-                weights[ticker] = float(allocation)
+                weights[ticker] = float(allocation) / 100.0
 
         if not weights:
             raise HTTPException(status_code=400, detail="Portfolio has no valid positions")
@@ -290,13 +292,22 @@ async def get_portfolio_returns_controller(
         # Calculate cumulative returns
         cumulative_returns = (1 + portfolio_daily).cumprod()
 
-        # Convert to list of dict with date and cumulative return
+        # Calculate NAV progression starting at $1,000,000
+        initial_nav = 1_000_000
+        nav_progression = cumulative_returns * initial_nav
+
+        # Convert to list of dict with date, cumulative return, and NAV
         returns_data = [
             {
                 "date": date.isoformat(),
-                "cumulativeReturn": float(cum_ret) if np.isfinite(cum_ret) else None
+                "cumulativeReturn": float(cum_ret) if np.isfinite(cum_ret) else None,
+                "nav": float(nav) if np.isfinite(nav) else None
             }
-            for date, cum_ret in cumulative_returns.items()
+            for date, cum_ret, nav in zip(
+                cumulative_returns.index,
+                cumulative_returns.values,
+                nav_progression.values
+            )
         ]
 
         return ok_envelope(
