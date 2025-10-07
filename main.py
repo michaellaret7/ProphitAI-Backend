@@ -1,10 +1,10 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
-from app.api.prophit_alts import router as prophit_alts_router
-from app.api.user import router as user_router
-from app.api.portfolio import router as portfolio_router
-from app.api.websocket import router as ws_router
+from app.api.routes.alts_router import router as prophit_alts_router
+from app.api.routes.user_routes import router as user_router
+from app.api.routes.portfolio_router import router as portfolio_router
+from app.api.routes.websocket_router import router as ws_router
 
 app = FastAPI(
     title="ProphitAI API",

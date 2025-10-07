@@ -1,5 +1,5 @@
 from fastapi import APIRouter
-from app.api.controller.alts_controller import (
+from app.api.controller.alts import (
     get_fund_final_positions_controller,
     get_fund_table_controller
 )

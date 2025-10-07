@@ -2,7 +2,7 @@ import email
 from fastapi import APIRouter, Query
 from pydantic import BaseModel, EmailStr
 from typing import Optional
-from app.api.controller.user_controller import (
+from app.api.controller.user import (
     get_user_data_controller,
     get_user_by_clerk_controller,
     create_user_controller,

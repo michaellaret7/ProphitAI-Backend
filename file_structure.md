@@ -38,7 +38,7 @@ ProphitAI/
 ├── app/
 │   ├── api/
 │   │   ├── controller/
-│   │   │   ├── alts_controller.py
+│   │   │   ├── alts.py
 │   │   │   ├── portfolio_controller.py
 │   │   │   └── user_controller.py
 │   │   ├── routes/

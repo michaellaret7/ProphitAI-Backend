@@ -5,10 +5,11 @@ from app.db.core.models.market_data_models import *
 from app.utils.serialize_output import serialize_sqlalchemy_obj
 from app.repositories.price_data import fetch_bulk_price_data_for_tickers
 from app.core.calculations.core.config import DEFAULT_LOOKBACK_LONG
+from app.utils.case_conversion import dict_keys_to_camel, list_of_dicts_to_camel, PORTFOLIO_KEY_MAP
 import numpy as np
 import pandas as pd
 from datetime import datetime, timedelta
-from typing import Dict
+from typing import Dict, Any, List
 import json
 
 class ProphitAltsServices:
@@ -309,6 +310,100 @@ class ProphitAltsServices:
             for idx, val in self.underwater_series.items()
         ]
 
+    def get_fund_performance_data(self) -> Dict[str, Any]:
+        """
+        Get formatted fund performance data for API response.
+
+        Returns positions, metrics, and time series data in camelCase format
+        ready for ok_envelope. This method consolidates all the business logic
+        that was previously in the controller.
+
+        Returns:
+            Dict with 'payload', 'counts', and 'updated' keys for ok_envelope
+
+        Raises:
+            ValueError: If no positions found for fund
+        """
+        # Get positions from repository
+        positions_raw = get_fund_final_positions(fund_name=self.fund_name)
+
+        if not positions_raw:
+            raise ValueError(f"No final positions found for fund: {self.fund_name}")
+
+        # Filter out internal fields not needed in API response
+        fields_to_exclude = {"id", "fund_id", "ticker_id", "reasoning", "date_created", "date_updated"}
+        positions_filtered = [
+            {k: v for k, v in position.items() if k not in fields_to_exclude}
+            for position in positions_raw
+        ]
+
+        # Round numeric allocation fields
+        for p in positions_filtered:
+            for key in ('risk_allocation', 'portfolio_allocation'):
+                if key in p and p[key] is not None:
+                    try:
+                        p[key] = round(float(p[key]), 3)
+                    except (ValueError, TypeError):
+                        pass
+
+        # Convert positions to camelCase
+        positions_camel = list_of_dicts_to_camel(positions_filtered, key_map=PORTFOLIO_KEY_MAP)
+
+        # Get metrics (already computed in __init__)
+        metrics = self.get_metrics()
+
+        # Convert metrics to camelCase
+        metrics_camel = dict_keys_to_camel(metrics, key_map=PORTFOLIO_KEY_MAP, recursive=True)
+
+        # Extract time-series data from metrics
+        series_keys = {
+            'navPerformanceDaily',
+            'returnDistribution',
+            'rolling12mReturnsDaily',
+            'monthlyReturnHistory',
+            'underwaterDaily',
+        }
+
+        series = {}
+        for sk in list(series_keys):
+            if sk in metrics_camel:
+                series[sk] = metrics_camel.pop(sk)
+
+        # Build calculated data items array for counts
+        calc_items = []
+        if metrics_camel:
+            calc_items.append({'type': 'metrics', 'data': dict(metrics_camel)})
+        for sk, sv in series.items():
+            if isinstance(sv, list):
+                calc_items.append({'type': sk, 'data': sv})
+
+        # Extract last date for updated timestamp
+        nav_series = series.get('navPerformanceDaily')
+        last_date = None
+        if isinstance(nav_series, list) and len(nav_series) > 0:
+            last_date = nav_series[-1].get('date')
+
+        # Build counts metadata
+        counts = {
+            'currentItemCount': len(calc_items),
+            'itemsPerPage': len(calc_items),
+            'startIndex': 1,
+            'totalItems': len(calc_items),
+        }
+
+        # Build payload
+        payload = {
+            "metrics": metrics_camel,
+            "performanceData": positions_camel,
+            **series,
+        }
+
+        return {
+            'payload': payload,
+            'counts': counts,
+            'updated': f"{last_date}T00:00:00Z" if last_date else None
+        }
+
 def get_portfolio_nav_performance(fund_name: str, starting_nav: float = 100.0) -> str:
     """
     Return daily NAV series for the portfolio as a JSON string list of {date, value}.
@@ -316,7 +411,6 @@ def get_portfolio_nav_performance(fund_name: str, starting_nav: float = 100.0) -
     svc = ProphitAltsServices(fund_name)
     result = svc.get_nav_performance(starting_nav) if not svc.portfolio_returns.empty else []
     return json.dumps(result)
-
 
 def get_portfolio_return_distribution(fund_name: str, bin_count: int = 50) -> str:
     """
@@ -350,6 +444,3 @@ def get_fund_landing_page_metrics(fund_name: str) -> dict:
 if __name__ == "__main__":
     _metrics_json = get_fund_landing_page_metrics(fund_name="consumer_staples_fund")
     metrics = json.loads(_metrics_json)
-    print(metrics)
-
-    print(list(metrics.keys()))
