@@ -12,7 +12,6 @@ from functools import wraps
 from typing import Callable, Any, List, Optional
 import inspect
 
-
 # ============================================================================
 # SHARED HELPER FUNCTIONS
 # ============================================================================
@@ -456,6 +455,65 @@ def log_simulation_data_range(data_extractor: Optional[Callable] = None) -> Call
 
             # Execute the function
             result = func(*args, **kwargs)
+
+            # In simulation mode, try to extract and log actual data ranges used
+            if _simulation_date:
+                try:
+                    data_ranges_found = []
+
+                    # Check if price_data was passed in kwargs (from @with_bulk_price_data decorator)
+                    price_data = kwargs.get('price_data')
+                    if price_data is not None:
+                        if isinstance(price_data, dict):
+                            # Dict of ticker -> Series
+                            for ticker_key, series in price_data.items():
+                                if isinstance(series, pd.Series) and hasattr(series, 'index'):
+                                    if isinstance(series.index, pd.DatetimeIndex) and len(series) > 0:
+                                        data_ranges_found.append({
+                                            'name': f'price_data[{ticker_key}]',
+                                            'start': series.index.min(),
+                                            'end': series.index.max(),
+                                            'count': len(series),
+                                            'cutoff_ok': series.index.max() <= _simulation_date
+                                        })
+                        elif isinstance(price_data, pd.Series) and hasattr(price_data, 'index'):
+                            # Single Series
+                            if isinstance(price_data.index, pd.DatetimeIndex) and len(price_data) > 0:
+                                data_ranges_found.append({
+                                    'name': 'price_data',
+                                    'start': price_data.index.min(),
+                                    'end': price_data.index.max(),
+                                    'count': len(price_data),
+                                    'cutoff_ok': price_data.index.max() <= _simulation_date
+                                })
+
+                    # Also check portfolio_dict if it exists (for portfolio tools)
+                    portfolio = kwargs.get('portfolio_dict')
+                    if portfolio and isinstance(portfolio, dict):
+                        ticker_list = list(portfolio.keys())
+                        if ticker_list:
+                            data_ranges_found.append({
+                                'name': f'portfolio ({len(ticker_list)} tickers)',
+                                'tickers': ticker_list[:5],  # Show first 5
+                                'total': len(ticker_list)
+                            })
+
+                    # Print data ranges if found
+                    if data_ranges_found:
+                        print(f"  📅 ACTUAL DATA USED:")
+                        for dr in data_ranges_found:
+                            if 'start' in dr:
+                                cutoff_status = "✅" if dr.get('cutoff_ok', True) else "⚠️ EXCEEDS CUTOFF"
+                                print(f"    • {dr['name']}: {dr['start'].date()} → {dr['end'].date()} "
+                                      f"({dr['count']} points) {cutoff_status}")
+                            elif 'tickers' in dr:
+                                tickers_shown = ', '.join(dr['tickers'])
+                                if dr['total'] > 5:
+                                    tickers_shown += f", ... (+{dr['total'] - 5} more)"
+                                print(f"    • {dr['name']}: {tickers_shown}")
+                except Exception:
+                    # Don't fail the function if logging fails
+                    pass
 
             # Try to extract data for date range logging (if extractor provided)
             if data_extractor:

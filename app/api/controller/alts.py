@@ -3,17 +3,30 @@ from typing import Dict, Any
 from app.services.alts import ProphitAltsServices
 from app.repositories.prophit_alts_data import get_fund_table
 from app.api.response_envelope import ok_envelope
+from app.redis.client import cache
 
 async def get_fund_final_positions_controller(fund_name: str) -> Dict[str, Any]:
     """
-    Controller to handle fund final positions retrieval
+    Controller to handle fund final positions retrieval with caching
+
+    Cache TTL: 1 hour (3600s)
+    Cache key pattern: alts:fund:{fund_name}
     """
     try:
-        # Delegate to service
+        # Generate cache key
+        cache_key = f"alts:fund:{fund_name}"
+
+        # Try to get from cache
+        cached_data = await cache.get(cache_key)
+        if cached_data:
+            return cached_data
+
+        # Cache miss - compute fund data
         service = ProphitAltsServices(fund_name)
         data = service.get_fund_performance_data()
 
-        return ok_envelope(
+        # Build response
+        response = ok_envelope(
             message="Fund final positions retrieved successfully",
             kind="prophitAlts#fundPerformance",
             resource_id=fund_name,
@@ -22,6 +35,12 @@ async def get_fund_final_positions_controller(fund_name: str) -> Dict[str, Any]:
             counts=data['counts'],
             payload=data['payload'],
         )
+
+        # Cache for 1 hour (3600 seconds)
+        await cache.set(cache_key, response, ttl=3600)
+
+        return response
+
     except HTTPException:
         raise
     except ValueError as e:

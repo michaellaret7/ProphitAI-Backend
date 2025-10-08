@@ -4,6 +4,7 @@ from app.services.portfolio import PortfolioService
 from app.services.portfolio_returns import PortfolioReturnsService
 from app.services.portfolio_metrics import PortfolioMetricsService
 from app.api.response_envelope import ok_envelope
+from app.redis.client import cache
 
 async def create_portfolio_controller(
     *,
@@ -13,7 +14,7 @@ async def create_portfolio_controller(
     positions: List[Dict[str, Any]],
 ) -> Dict[str, Any]:
     """
-    Controller to handle portfolio creation
+    Controller to handle portfolio creation with cache invalidation
     """
     try:
         # Delegate to service
@@ -24,6 +25,9 @@ async def create_portfolio_controller(
             portfolio_name=portfolio_name,
             positions=positions
         )
+
+        # Invalidate user portfolio list cache (new portfolio added)
+        await cache.clear_pattern(f"user:portfolios:{email}")
 
         return ok_envelope(
             message="Portfolio created successfully",
@@ -50,7 +54,7 @@ async def update_portfolio_controller(
     is_current: Optional[bool] = None,
 ) -> Dict[str, Any]:
     """
-    Controller to handle portfolio updates
+    Controller to handle portfolio updates with cache invalidation
     """
     try:
         # Delegate to service
@@ -61,6 +65,10 @@ async def update_portfolio_controller(
             name=name,
             is_current=is_current
         )
+
+        # Invalidate portfolio cache - clear all cached data for this portfolio
+        await cache.clear_pattern(f"portfolio:returns:{portfolio_id}:*")
+        await cache.clear_pattern(f"portfolio:metrics:{portfolio_id}:*")
 
         return ok_envelope(
             message="Portfolio updated successfully",
@@ -84,7 +92,7 @@ async def delete_portfolio_controller(
     portfolio_id: str,
 ) -> Dict[str, Any]:
     """
-    Controller to handle portfolio deletion
+    Controller to handle portfolio deletion with cache invalidation
     """
     try:
         # Delegate to service
@@ -93,6 +101,10 @@ async def delete_portfolio_controller(
             email=email,
             portfolio_id=portfolio_id
         )
+
+        # Invalidate portfolio cache - clear all cached data for this portfolio
+        await cache.clear_pattern(f"portfolio:returns:{portfolio_id}:*")
+        await cache.clear_pattern(f"portfolio:metrics:{portfolio_id}:*")
 
         return ok_envelope(
             message="Portfolio deleted successfully",
@@ -115,26 +127,44 @@ async def get_portfolio_returns_controller(
     years: int = 2,
 ) -> Dict[str, Any]:
     """
-    Controller to handle portfolio returns calculation
+    Controller to handle portfolio returns calculation with caching
+
+    Cache TTL: 1 hour (3600s)
+    Cache key pattern: portfolio:returns:{portfolio_id}:{years}
     """
     try:
         if not portfolio_id:
             raise HTTPException(status_code=400, detail="portfolioId is required")
 
-        # Delegate to service
+        # Generate cache key
+        cache_key = f"portfolio:returns:{portfolio_id}:{years}"
+
+        # Try to get from cache
+        cached_data = await cache.get(cache_key)
+        if cached_data:
+            return cached_data
+
+        # Cache miss - compute returns
         service = PortfolioReturnsService(
             portfolio_id=portfolio_id,
             years=years
         )
         returns_data = service.get_returns_series()
 
-        return ok_envelope(
+        # Build response
+        response = ok_envelope(
             message="Portfolio returns retrieved successfully",
             kind="portfolio#returns",
             resource_id=portfolio_id,
             self_link=f"/api/portfolio/returns?portfolioId={portfolio_id}",
             payload=returns_data,
         )
+
+        # Cache for 1 hour (3600 seconds)
+        await cache.set(cache_key, response, ttl=3600)
+
+        return response
+
     except HTTPException:
         raise
     except ValueError as e:
@@ -175,26 +205,44 @@ async def get_portfolio_metrics_controller(
     years: int = 2,
 ) -> Dict[str, Any]:
     """
-    Controller to handle portfolio metrics retrieval for dashboard cards/tooltips
+    Controller to handle portfolio metrics retrieval for dashboard cards/tooltips with caching
+
+    Cache TTL: 1 hour (3600s)
+    Cache key pattern: portfolio:metrics:{portfolio_id}:{years}
     """
     try:
         if not portfolio_id:
             raise HTTPException(status_code=400, detail="portfolioId is required")
 
-        # Delegate to service
+        # Generate cache key
+        cache_key = f"portfolio:metrics:{portfolio_id}:{years}"
+
+        # Try to get from cache
+        cached_data = await cache.get(cache_key)
+        if cached_data:
+            return cached_data
+
+        # Cache miss - compute metrics
         service = PortfolioMetricsService(
             portfolio_id=portfolio_id,
             years=years
         )
         metrics_data = service.get_all_metrics()
 
-        return ok_envelope(
+        # Build response
+        response = ok_envelope(
             message="Portfolio metrics retrieved successfully",
             kind="portfolio#metrics",
             resource_id=portfolio_id,
             self_link=f"/api/portfolio/metrics?portfolioId={portfolio_id}",
             payload=metrics_data,
         )
+
+        # Cache for 1 hour (3600 seconds)
+        await cache.set(cache_key, response, ttl=3600)
+
+        return response
+
     except HTTPException:
         raise
     except ValueError as e:

@@ -1,0 +1,32 @@
+[
+  {
+    "timestamp": "2025-10-08T19:42:09.222026",
+    "title": "first_10_tickers",
+    "event": "first_10_tickers",
+    "outcome": "[{'ticker': 'ACI', 'position': 'LONG', 'conviction': 0.65}, {'ticker': 'BG', 'position': 'LONG', 'conviction': 0.7}, {'ticker': 'BJ', 'position': 'LONG', 'conviction': 0.62}, {'ticker': 'CAG', 'position': 'LONG', 'conviction': 0.78}, {'ticker': 'CCEP', 'position': 'LONG', 'conviction': 0.65}, {'ticker': 'CELH', 'position': 'SHORT', 'conviction': 0.7}, {'ticker': 'CHD', 'position': 'SHORT', 'conviction': 0.73}, {'ticker': 'CL', 'position': 'LONG', 'conviction': 0.62}, {'ticker': 'CLX', 'position': 'SHORT', 'conviction': 0.66}, {'ticker': 'COCO', 'position': 'SHORT', 'conviction': 0.62}]"
+  },
+  {
+    "timestamp": "2025-10-08T19:42:13.968840",
+    "title": "second_10_tickers",
+    "event": "second_10_tickers",
+    "outcome": "[{'ticker': 'COST', 'position': 'SHORT', 'conviction': 0.7}, {'ticker': 'COTY', 'position': 'SHORT', 'conviction': 0.64}, {'ticker': 'DG', 'position': 'LONG', 'conviction': 0.7}, {'ticker': 'EL', 'position': 'SHORT', 'conviction': 0.67}, {'ticker': 'ELF', 'position': 'SHORT', 'conviction': 0.68}, {'ticker': 'EPC', 'position': 'LONG', 'conviction': 0.72}, {'ticker': 'FIZZ', 'position': 'SHORT', 'conviction': 0.66}, {'ticker': 'FRPT', 'position': 'SHORT', 'conviction': 0.72}, {'ticker': 'GIS', 'position': 'LONG', 'conviction': 0.65}, {'ticker': 'HSY', 'position': 'SHORT', 'conviction': 0.8}]"
+  },
+  {
+    "timestamp": "2025-10-08T19:42:17.098356",
+    "title": "third_10_tickers",
+    "event": "third_10_tickers",
+    "outcome": "[{'ticker': 'INGR', 'position': 'LONG', 'conviction': 0.72}, {'ticker': 'IPAR', 'position': 'LONG', 'conviction': 0.78}, {'ticker': 'KDP', 'position': 'LONG', 'conviction': 0.62}, {'ticker': 'KLG', 'position': 'SHORT', 'conviction': 0.74}, {'ticker': 'KMB', 'position': 'LONG', 'conviction': 0.75}, {'ticker': 'KO', 'position': 'LONG', 'conviction': 0.58}, {'ticker': 'KVUE', 'position': 'LONG', 'conviction': 0.66}, {'ticker': 'MO', 'position': 'LONG', 'conviction': 0.8}, {'ticker': 'ODD', 'position': 'LONG', 'conviction': 0.7}, {'ticker': 'OLPX', 'position': 'SHORT', 'conviction': 0.6}]"
+  },
+  {
+    "timestamp": "2025-10-08T19:42:20.191518",
+    "title": "fourth_10_tickers",
+    "event": "fourth_10_tickers",
+    "outcome": "[{'ticker': 'PFGC', 'position': 'SHORT', 'conviction': 0.68}, {'ticker': 'PM', 'position': 'SHORT', 'conviction': 0.55}, {'ticker': 'PPC', 'position': 'LONG', 'conviction': 0.68}, {'ticker': 'PRMB', 'position': 'SHORT', 'conviction': 0.68}, {'ticker': 'REYN', 'position': 'LONG', 'conviction': 0.68}, {'ticker': 'RLX', 'position': 'LONG', 'conviction': 0.58}, {'ticker': 'SAM', 'position': 'LONG', 'conviction': 0.7}, {'ticker': 'SFM', 'position': 'SHORT', 'conviction': 0.6}, {'ticker': 'STZ', 'position': 'SHORT', 'conviction': 0.6}, {'ticker': 'TAP', 'position': 'LONG', 'conviction': 0.72}]"
+  },
+  {
+    "timestamp": "2025-10-08T19:42:23.334417",
+    "title": "fifth_10_tickers",
+    "event": "fifth_10_tickers",
+    "outcome": "[{'ticker': 'TGT', 'position': 'LONG', 'conviction': 0.78}, {'ticker': 'TPB', 'position': 'SHORT', 'conviction': 0.78}, {'ticker': 'USFD', 'position': 'SHORT', 'conviction': 0.62}, {'ticker': 'UTZ', 'position': 'SHORT', 'conviction': 0.76}, {'ticker': 'UVV', 'position': 'SHORT', 'conviction': 0.6}, {'ticker': 'VITL', 'position': 'SHORT', 'conviction': 0.68}, {'ticker': 'WDFC', 'position': 'SHORT', 'conviction': 0.7}]"
+  }
+]

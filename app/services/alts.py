@@ -337,14 +337,23 @@ class ProphitAltsServices:
             for position in positions_raw
         ]
 
-        # Round numeric allocation fields
+        # Round numeric allocation fields and clean position enum values
         for p in positions_filtered:
+            # Round allocations
             for key in ('risk_allocation', 'portfolio_allocation'):
                 if key in p and p[key] is not None:
                     try:
                         p[key] = round(float(p[key]), 3)
                     except (ValueError, TypeError):
                         pass
+
+            # Clean position enum: "PositionType.SHORT" -> "SHORT"
+            if 'position' in p and p['position']:
+                position_str = str(p['position'])
+                if 'SHORT' in position_str.upper():
+                    p['position'] = 'SHORT'
+                elif 'LONG' in position_str.upper():
+                    p['position'] = 'LONG'
 
         # Convert positions to camelCase
         positions_camel = list_of_dicts_to_camel(positions_filtered, key_map=PORTFOLIO_KEY_MAP)
