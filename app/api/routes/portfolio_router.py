@@ -7,6 +7,7 @@ from app.api.controller.portfolio import (
     update_portfolio_controller,
     delete_portfolio_controller,
     get_portfolio_returns_controller,
+    get_portfolio_metrics_controller,
 )
 
 router = APIRouter()
@@ -76,6 +77,21 @@ async def get_portfolio_returns(
     years: int = Query(2, description="Number of years of historical data", ge=1, le=10),
 ):
     return await get_portfolio_returns_controller(
+        portfolio_id=portfolioId,
+        years=years,
+    )
+
+@router.get("/portfolios/{portfolioId}/metrics")
+async def get_portfolio_metrics(
+    portfolioId: str,
+    years: int = Query(2, description="Number of years of historical data", ge=1, le=10),
+):
+    """
+    Get portfolio metrics for dashboard cards and tooltips.
+
+    Returns risk metrics, asset allocation, and risk exposure.
+    """
+    return await get_portfolio_metrics_controller(
         portfolio_id=portfolioId,
         years=years,
     )

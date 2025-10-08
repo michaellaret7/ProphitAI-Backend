@@ -2,6 +2,7 @@ from fastapi import HTTPException
 from typing import Dict, Any, List, Optional
 from app.services.portfolio import PortfolioService
 from app.services.portfolio_returns import PortfolioReturnsService
+from app.services.portfolio_metrics import PortfolioMetricsService
 from app.api.response_envelope import ok_envelope
 
 async def create_portfolio_controller(
@@ -160,6 +161,39 @@ def get_user_portfolio_list_controller(email: str = "michaellaret7@gmail.com") -
             self_link=f"/api/user/portfolios?email={email}",
             counts=data['counts'],
             payload=data['portfolios'],
+        )
+    except HTTPException:
+        raise
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")
+
+async def get_portfolio_metrics_controller(
+    *,
+    portfolio_id: str,
+    years: int = 2,
+) -> Dict[str, Any]:
+    """
+    Controller to handle portfolio metrics retrieval for dashboard cards/tooltips
+    """
+    try:
+        if not portfolio_id:
+            raise HTTPException(status_code=400, detail="portfolioId is required")
+
+        # Delegate to service
+        service = PortfolioMetricsService(
+            portfolio_id=portfolio_id,
+            years=years
+        )
+        metrics_data = service.get_all_metrics()
+
+        return ok_envelope(
+            message="Portfolio metrics retrieved successfully",
+            kind="portfolio#metrics",
+            resource_id=portfolio_id,
+            self_link=f"/api/portfolio/metrics?portfolioId={portfolio_id}",
+            payload=metrics_data,
         )
     except HTTPException:
         raise
