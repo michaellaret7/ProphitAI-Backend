@@ -5,6 +5,7 @@ from app.api.routes.alts_router import router as prophit_alts_router
 from app.api.routes.user_routes import router as user_router
 from app.api.routes.portfolio_router import router as portfolio_router
 from app.api.routes.websocket_router import router as ws_router
+from app.api.routes.price_router import router as price_router
 
 app = FastAPI(
     title="ProphitAI API",
@@ -26,6 +27,7 @@ app.include_router(prophit_alts_router, prefix="/api")
 app.include_router(user_router, prefix="/api")
 app.include_router(portfolio_router, prefix="/api")
 app.include_router(ws_router, prefix="/api")
+app.include_router(price_router, prefix="/api")
 
 # Serve test frontend (WebSocket stream viewer)
 app.mount("/static", StaticFiles(directory="app/api/testing/static"), name="static")
