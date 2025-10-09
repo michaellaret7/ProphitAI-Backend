@@ -231,3 +231,34 @@ def delete_portfolio(
     # commit handled by decorator
     return True
 
+@with_session('user')
+def get_all_portfolio_ids(email: str = None, user_id: uuid.UUID = None, session=None):
+    """
+    Get all unique portfolio IDs for a user.
+
+    Args:
+        email: User email
+        user_id: User UUID
+        session: Database session (injected by decorator)
+
+    Returns:
+        List of portfolio UUIDs
+    """
+    user = None
+    if user_id:
+        user = session.query(User).filter(User.id == user_id).first()
+    elif email:
+        user = session.query(User).filter(User.email == email).first()
+    else:
+        raise ValueError("At least one identifier (email or user_id) must be provided")
+
+    if not user:
+        return []
+
+    # Get distinct portfolio IDs for the user
+    portfolio_ids = session.query(Portfolio.portfolio_id).filter(
+        Portfolio.user_id == user.id
+    ).distinct().all()
+
+    return [pid[0] for pid in portfolio_ids]
+

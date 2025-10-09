@@ -1,7 +1,8 @@
 from typing import Dict, Any
 from app.services.portfolio_returns import PortfolioReturnsService
 from app.services.portfolio import PortfolioService
-
+from app.db.core.db_config import MarketSession
+from app.db.core.models.market_data_models import Ticker
 
 class PortfolioMetricsService:
     """
@@ -11,9 +12,10 @@ class PortfolioMetricsService:
     Leverages existing calculation services to avoid code duplication (DRY).
 
     Precomputed attributes:
-    - risk_metrics: Volatility, max drawdown, Sharpe ratio, VaR
-    - asset_allocation: Breakdown by asset class
-    - risk_exposure: Categorical risk levels
+    - risk_metrics: Annualized return, volatility, max drawdown, Sharpe ratio, VaR
+    - asset_allocation: Breakdown by sector
+    - top_performers: Top 2 performing tickers
+    - worst_performers: Worst 2 performing tickers
 
     Args:
         portfolio_id: UUID of the portfolio
@@ -34,7 +36,8 @@ class PortfolioMetricsService:
         # Initialize state
         self.risk_metrics: Dict[str, float] = {}
         self.asset_allocation: Dict[str, float] = {}
-        self.risk_exposure: Dict[str, str] = {}
+        self.top_performers: list = []
+        self.worst_performers: list = []
 
         # Precompute all metrics
         self._calculate_metrics()
@@ -68,7 +71,8 @@ class PortfolioMetricsService:
 
         # Build risk metrics response
         self.risk_metrics = {
-            "volatility": summary.get('volatility', 0.0),
+            "annualized_return": summary.get('annualized_return', 0.0),
+            "annualized_volatility": summary.get('volatility', 0.0),
             "max_drawdown": summary.get('max_drawdown', 0.0),
             "sharpe_ratio": summary.get('sharpe_ratio', 0.0),
             "var_95": round(var_95_dollar, 0)
@@ -82,97 +86,83 @@ class PortfolioMetricsService:
         )
 
         self.asset_allocation = self._calculate_asset_allocation(positions)
-        self.risk_exposure = self._assess_risk_exposure(
-            volatility=summary.get('volatility', 0.0),
-            max_drawdown=summary.get('max_drawdown', 0.0),
-            positions=positions
-        )
+
+        # Calculate top and worst performers
+        ticker_performance = self._calculate_ticker_performance(returns_service)
+        self.top_performers = ticker_performance['top']
+        self.worst_performers = ticker_performance['worst']
 
     def _calculate_asset_allocation(self, positions) -> Dict[str, float]:
         """
-        Group positions by asset class/sector.
+        Group positions by sector from database.
 
         Args:
-            positions: List of position dicts with ticker, allocation, sector
+            positions: List of position dicts with ticker, allocation
 
         Returns:
-            Dict mapping asset class to total allocation percentage
+            Dict mapping sector names to total allocation percentage
         """
-        allocation = {
-            "equities": 0.0,
-            "etfs": 0.0,
-            "fixed_income": 0.0,
-            "commodities": 0.0,
-            "alternatives": 0.0,
-            "cash": 0.0
-        }
+        allocation = {}
 
         for position in positions:
             ticker = position.get('ticker', '')
-            alloc = float(position.get('allocation', 0.0))  # Convert to float
+            alloc = float(position.get('allocation', 0.0))
 
-            # Simple heuristic: classify by ticker patterns
-            # TODO: Replace with proper asset class field from DB
-            if any(bond in ticker.upper() for bond in ['TLT', 'IEF', 'SHY', 'BND', 'AGG']):
-                allocation['fixed_income'] += alloc
-            elif any(etf in ticker.upper() for etf in ['SPY', 'QQQ', 'IWM', 'VTI', 'VOO']):
-                allocation['etfs'] += alloc
-            elif any(comm in ticker.upper() for comm in ['GLD', 'SLV', 'USO', 'DBC']):
-                allocation['commodities'] += alloc
-            elif ticker.upper() in ['BIL', 'SGOV']:
-                allocation['cash'] += alloc
+            # Fetch sector from database
+            with MarketSession() as session:
+                ticker_obj = session.query(Ticker).filter(Ticker.ticker == ticker).first()
+                sector = ticker_obj.sector if ticker_obj and ticker_obj.sector else 'Other'
+
+            # Add allocation to sector
+            if sector in allocation:
+                allocation[sector] += alloc
             else:
-                allocation['equities'] += alloc
+                allocation[sector] = alloc
 
-        return {k: round(v, 1) for k, v in allocation.items()}
+        # Calculate total allocated and assign remainder to cash
+        total_allocated = sum(allocation.values())
+        if total_allocated < 100.0:
+            allocation['Cash'] = round(100.0 - total_allocated, 1)
 
-    def _assess_risk_exposure(
-        self,
-        volatility: float,
-        max_drawdown: float,
-        positions
-    ) -> Dict[str, str]:
+        # Clean up sector names: remove prefix, capitalize, remove underscores
+        cleaned_allocation = {}
+        for sector, value in allocation.items():
+            # Remove 'equity_sector_' prefix if present
+            clean_sector = sector.replace('equity_sector_', '')
+            # Replace underscores with spaces and title case
+            clean_sector = clean_sector.replace('_', ' ').title()
+            cleaned_allocation[clean_sector] = round(value, 1)
+
+        return cleaned_allocation
+
+    def _calculate_ticker_performance(self, returns_service: PortfolioReturnsService) -> Dict[str, list]:
         """
-        Determine categorical risk levels.
+        Calculate top 2 and worst 2 performing tickers based on total return.
 
         Args:
-            volatility: Annualized volatility (%)
-            max_drawdown: Max drawdown (%)
-            positions: List of positions
+            returns_service: PortfolioReturnsService instance with price data
 
         Returns:
-            Dict mapping risk type to level ('low', 'medium', 'high')
+            Dict with 'top' and 'worst' lists containing ticker performance data
         """
-        # Market risk based on volatility
-        if volatility > 20:
-            market_risk = "high"
-        elif volatility > 12:
-            market_risk = "medium"
-        else:
-            market_risk = "low"
+        ticker_returns = {}
 
-        # Credit risk based on fixed income allocation
-        # TODO: Enhance with credit ratings when available
-        credit_risk = "medium"
+        # Calculate total return for each ticker over the period
+        for ticker, prices in returns_service.price_data.items():
+            if len(prices) > 0:
+                total_return = ((prices.iloc[-1] - prices.iloc[0]) / prices.iloc[0]) * 100
+                ticker_returns[ticker] = total_return
 
-        # Liquidity risk based on position concentration
-        num_positions = len(positions)
-        if num_positions < 5:
-            liquidity_risk = "high"
-        elif num_positions < 15:
-            liquidity_risk = "medium"
-        else:
-            liquidity_risk = "low"
+        # Sort by return
+        sorted_tickers = sorted(ticker_returns.items(), key=lambda x: x[1], reverse=True)
 
-        # Currency risk - placeholder
-        # TODO: Implement based on international exposure
-        currency_risk = "low"
+        # Get top 2 and worst 2
+        top_2 = [{"ticker": t[0], "return": round(t[1], 2)} for t in sorted_tickers[:2]]
+        worst_2 = [{"ticker": t[0], "return": round(t[1], 2)} for t in sorted_tickers[-2:]]
 
         return {
-            "market_risk": market_risk,
-            "credit_risk": credit_risk,
-            "liquidity_risk": liquidity_risk,
-            "currency_risk": currency_risk
+            "top": top_2,
+            "worst": worst_2
         }
 
     def get_all_metrics(self) -> Dict[str, Any]:
@@ -180,10 +170,11 @@ class PortfolioMetricsService:
         Get all metrics for API response.
 
         Returns:
-            Dict with risk_metrics, asset_allocation, risk_exposure
+            Dict with risk_metrics, asset_allocation, top_performers, worst_performers
         """
         return {
             "risk_metrics": self.risk_metrics,
             "asset_allocation": self.asset_allocation,
-            "risk_exposure": self.risk_exposure
+            "top_performers": self.top_performers,
+            "worst_performers": self.worst_performers
         }
