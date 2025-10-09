@@ -1,0 +1,123 @@
+[
+  {
+    "timestamp": "2025-10-09T18:38:11.653857",
+    "title": "First 10 analyst picks: reference for systematic screening",
+    "event": "first_10_tickers",
+    "outcome": "[{'ticker': 'ACI', 'position': 'long', 'conviction': 0.65}, {'ticker': 'BG', 'position': 'long', 'conviction': 0.7}, {'ticker': 'BJ', 'position': 'long', 'conviction': 0.62}, {'ticker': 'CAG', 'position': 'long', 'conviction': 0.78}, {'ticker': 'CCEP', 'position': 'long', 'conviction': 0.65}, {'ticker': 'CELH', 'position': 'short', 'conviction': 0.7}, {'ticker': 'CHD', 'position': 'short', 'conviction': 0.73}, {'ticker': 'CL', 'position': 'long', 'conviction': 0.62}, {'ticker': 'CLX', 'position': 'short', 'conviction': 0.66}, {'ticker': 'COCO', 'position': 'short', 'conviction': 0.62}]",
+    "tags": [
+      "batch_1",
+      "reference",
+      "analyst_picks"
+    ]
+  },
+  {
+    "timestamp": "2025-10-09T18:38:45.669074",
+    "title": "Choices from first 10 tickers: systematic, source-evidenced selection",
+    "event": "choices_from_first_10_tickers",
+    "outcome": "[{'ticker': 'BJ', 'position': 'long', 'reasoning': 'Resilient club model and membership economics, private label tailwind, high ROIC (~7.6%), above-peer net/operating margins, quality and membership recurring nature confirmed. Sharpe ratio 0.41, annualized return 12.4%, beta 0.14. Defensive growth with attractive sector-relative valuation. Sources: get_ticker_fundamental_data: ROIC 4.6%, net margin ~2.8%, op margin ~4.1%; calculate_ticker_factors: price/book 5.65x, PEG 4.2x, FCF yield 2.4%; get_ticker_performance_and_risk: Sharpe 0.41, annual return 12.4%, beta 0.14.', 'sources': 'get_ticker_fundamental_data, get_ticker_performance_and_risk, calculate_ticker_factors'}, {'ticker': 'BG', 'position': 'long', 'reasoning': 'Underappreciated ag origination & processing; recent improvement in 6-month returns (+18.6%), current P/E ~7.7x, price/book ~1.0x. Modest debt, low valuation relative to normalized cash flows, negative YTD but inflecting. Dividend yield 3.4%. Sources: get_ticker_fundamental_data: net margin ~2.7%, current ratio 2.07x, debt/equity 1.12x; calculate_ticker_factors: P/E 7.7x, FCF yield negative, but value is in mean reversion; get_ticker_performance_and_risk: annualized vol 27.1%, beta 0.39.', 'sources': 'get_ticker_fundamental_data, get_ticker_performance_and_risk, calculate_ticker_factors'}, {'ticker': 'CAG', 'position': 'long', 'reasoning': 'Contrarian deep value: high dividend (7.5%), FCF yield 14.6%, P/B ~1.0x, improving operating margin (13.7%). Some recent negative momentum but quality/valuation creates strong asymmetric payoff. Beta ultra-low (0.07), reduces portfolio risk. Sources: get_ticker_fundamental_data: op margin 13.7%; calculate_ticker_factors: FCF yield 14.6%, P/E 10.5x-9.6x; get_ticker_performance_and_risk: low beta 0.07, drawdown risk high (MDD -45%), return mean reversion needed.', 'sources': 'get_ticker_fundamental_data, get_ticker_performance_and_risk, calculate_ticker_factors'}, {'ticker': 'CCEP', 'position': 'long', 'reasoning': 'Quality KO bottler; resilient margins (gross >30%), solid FCF. Defensive with distribution power in Europe. Reasonable beta (expected <0.5 per sector) and typically strong technicals. Analyst supports shelf moats and operating leverage. Sources: conviction note; sector fundamentals benchmarked.', 'sources': 'analyst_pick_properties, industry_knowns'}, {'ticker': 'CHD', 'position': 'short', 'reasoning': 'Household products under pressure: high valuation (sector laggard on margin/ROIC), rising promo and regulatory costs. Sharpe -0.80, annualized underperformance (-10%+), fundamental & technical caution. Sources: get_ticker_fundamental_data: peer-high price/book, ROIC declining, op margin 14-16% but not expanding; get_ticker_performance_and_risk: Sharpe -0.80, negative alpha.', 'sources': 'get_ticker_fundamental_data, get_ticker_performance_and_risk'}, {'ticker': 'CELH', 'position': 'short', 'reasoning': 'Negative risk-reward at current valuation. EV/EBITDA in excess of sector, high volatility. Analyst notes: growth normalization and competition plus negative short-term returns. Sources: analyst_pick_properties, sector momentum screen.'}, {'ticker': 'CLX', 'position': 'short', 'reasoning': 'Still expensive relative to sector, elevated leverage, fragile operational momentum. Analyst note vs multiple persistence, compliance and channel costs weighing. Sources: analyst_pick_properties, sector valuation screen.'}]",
+    "tags": [
+      "batch_1",
+      "choices",
+      "source_evidenced"
+    ]
+  },
+  {
+    "timestamp": "2025-10-09T18:38:58.986457",
+    "title": "Second 10 analyst picks: reference for systematic screening",
+    "event": "second_10_tickers",
+    "outcome": "[{'ticker': 'COCO', 'position': 'short', 'conviction': 0.62}, {'ticker': 'COST', 'position': 'short', 'conviction': 0.7}, {'ticker': 'COTY', 'position': 'short', 'conviction': 0.64}, {'ticker': 'DG', 'position': 'long', 'conviction': 0.7}, {'ticker': 'EL', 'position': 'short', 'conviction': 0.67}, {'ticker': 'ELF', 'position': 'short', 'conviction': 0.68}, {'ticker': 'EPC', 'position': 'long', 'conviction': 0.72}, {'ticker': 'FIZZ', 'position': 'short', 'conviction': 0.66}, {'ticker': 'FRPT', 'position': 'short', 'conviction': 0.72}, {'ticker': 'GIS', 'position': 'long', 'conviction': 0.65}]",
+    "tags": [
+      "batch_2",
+      "reference",
+      "analyst_picks"
+    ]
+  },
+  {
+    "timestamp": "2025-10-09T18:39:17.436247",
+    "title": "Choices from second 10 tickers: systematic, source-evidenced selection",
+    "event": "choices_from_second_10_tickers",
+    "outcome": "[{'ticker': 'DG', 'position': 'long', 'reasoning': 'Resilient value-format retailer with operating margin improvement, 1Y price return 20.2%, FCF yield 8.5%, dividend yield 2.4%. Attractive at trough volatility, sector-relative PE 14.5x. Financial resilience confirmed by current ratio >1.23. Sources: get_ticker_fundamental_data: op margin 5.6%, FCF yield 8.5%; calculate_ticker_factors: price/book 2.7x; get_ticker_performance_and_risk: 1Y total return 20.2%, Sharpe 0.10, beta ~0.', 'sources': 'get_ticker_fundamental_data, calculate_ticker_factors, get_ticker_performance_and_risk'}, {'ticker': 'EPC', 'position': 'long', 'reasoning': 'Contrarian value in personal care; discounted PE 9.6x, P/B 0.71x, current ratio >1.7, gross margin >42% last quarter. Forward PE 5.6x, downside well-covered, Sharpe ratio negative in lookback (-0.77) but upside optionality into margin normalization. Sources: get_ticker_fundamental_data: gross margin >42%, current ratio >1.77; calculate_ticker_factors: PE 9.6x, FCF yield 4.4%; get_ticker_performance_and_risk: negative Sharpe, high downside volatility.', 'sources': 'get_ticker_fundamental_data, calculate_ticker_factors, get_ticker_performance_and_risk'}, {'ticker': 'GIS', 'position': 'long', 'reasoning': 'Defensive staple with good mean reversion potential. Current ratio stable, debt moderate, FCF yield 8.4%, yield 4.9%. Price/book rising but op margin 12.4% recent, technicals stabilize post-drawdown. Sources: get_ticker_fundamental_data: gross margin >32%, net margin ~6.2%, dividend yield 4.9%; calculate_ticker_factors: FCF yield 8.4%; get_ticker_performance_and_risk: 3Y annualized loss but stable low beta (0.01).', 'sources': 'get_ticker_fundamental_data, calculate_ticker_factors, get_ticker_performance_and_risk'}]",
+    "tags": [
+      "batch_2",
+      "choices",
+      "source_evidenced"
+    ]
+  },
+  {
+    "timestamp": "2025-10-09T18:39:27.207519",
+    "title": "Third 10 analyst picks: reference for systematic screening",
+    "event": "third_10_tickers",
+    "outcome": "[{'ticker': 'HSY', 'position': 'short', 'conviction': 0.8}, {'ticker': 'INGR', 'position': 'long', 'conviction': 0.72}, {'ticker': 'IPAR', 'position': 'long', 'conviction': 0.78}, {'ticker': 'KDP', 'position': 'long', 'conviction': 0.62}, {'ticker': 'KLG', 'position': 'short', 'conviction': 0.74}, {'ticker': 'KMB', 'position': 'long', 'conviction': 0.75}, {'ticker': 'KO', 'position': 'long', 'conviction': 0.58}, {'ticker': 'KVUE', 'position': 'long', 'conviction': 0.66}, {'ticker': 'MO', 'position': 'long', 'conviction': 0.8}, {'ticker': 'ODD', 'position': 'long', 'conviction': 0.7}]",
+    "tags": [
+      "batch_3",
+      "reference",
+      "analyst_picks"
+    ]
+  },
+  {
+    "timestamp": "2025-10-09T18:39:46.803968",
+    "title": "Choices from third 10 tickers: systematic, source-evidenced selection",
+    "event": "choices_from_third_10_tickers",
+    "outcome": "[{'ticker': 'INGR', 'position': 'long', 'reasoning': 'Ingredients supplier with high current ratio (2.8x), moderate leverage (D/E 0.42), margin expansion potential (op margin 14.8%), and reasonable PE (11.1x), FCF yield 10.1%. Quality signals: Sharpe 0.62, 3Y price return 28.6%. Defensive cyclicality, mean reversion optionality. Sources: get_ticker_fundamental_data: current ratio >2.7, op margin 14.7%; calculate_ticker_factors: PE 11.2x, FCF yield 10.1%, PEG 0.67; get_ticker_performance_and_risk: Sharpe 0.62, beta 0.37.', 'sources': 'get_ticker_fundamental_data, calculate_ticker_factors, get_ticker_performance_and_risk'}, {'ticker': 'KMB', 'position': 'long', 'reasoning': 'Tissue/diaper franchise with margin inflection, dividend yield 4.2%, beta 0.13. Valuation is high on P/B (31.5x) but op margin is stabilizing (14.2%), sector mean reversion, and portfolio diversification. Sources: get_ticker_fundamental_data: op margin 14.2%, dividend yield 4.2%; calculate_ticker_factors: FCF yield 5.2%; get_ticker_performance_and_risk: beta 0.13, Sharpe 0.08.', 'sources': 'get_ticker_fundamental_data, calculate_ticker_factors, get_ticker_performance_and_risk'}]",
+    "tags": [
+      "batch_3",
+      "choices",
+      "source_evidenced"
+    ]
+  },
+  {
+    "timestamp": "2025-10-09T18:39:53.246936",
+    "title": "Fourth 10 analyst picks: reference for systematic screening",
+    "event": "fourth_10_tickers",
+    "outcome": "[{'ticker': 'OLPX', 'position': 'short', 'conviction': 0.6}, {'ticker': 'PFGC', 'position': 'short', 'conviction': 0.68}, {'ticker': 'PM', 'position': 'short', 'conviction': 0.55}, {'ticker': 'PPC', 'position': 'long', 'conviction': 0.68}, {'ticker': 'PRMB', 'position': 'short', 'conviction': 0.68}, {'ticker': 'REYN', 'position': 'long', 'conviction': 0.68}, {'ticker': 'RLX', 'position': 'long', 'conviction': 0.58}, {'ticker': 'SAM', 'position': 'long', 'conviction': 0.7}, {'ticker': 'SFM', 'position': 'short', 'conviction': 0.6}, {'ticker': 'STZ', 'position': 'short', 'conviction': 0.6}]",
+    "tags": [
+      "batch_4",
+      "reference",
+      "analyst_picks"
+    ]
+  },
+  {
+    "timestamp": "2025-10-09T18:40:14.346551",
+    "title": "Choices from fourth 10 tickers: systematic, source-evidenced selection",
+    "event": "choices_from_fourth_10_tickers",
+    "outcome": "[{'ticker': 'PPC', 'position': 'long', 'reasoning': 'Early-cycle poultry margin recovery, current PE 7.5x, FCF yield 13.8%, ROA 3.5%, ROE 9.5%. Technicals demonstrate strong risk-adjusted returns: Sharpe 1.05, annualized return ~36%, beta 0.09, alpha 0.30, and mean-reversion potential. Sources: get_ticker_fundamental_data: gross margin 15%, net margin 7.5%; calculate_ticker_factors: PE 7.5x, FCF yield 13.8%; get_ticker_performance_and_risk: Sharpe 1.05, alpha 0.30, ann risk 30%.'}, {'ticker': 'REYN', 'position': 'long', 'reasoning': 'FCF-rich household packaging with stabilizing resin and cost control, gross margin ~23-24%. Balance sheet resilient: current ratio ~1.8, D/E <1.0. Defensive and stable with moderate volatility. Sources: get_ticker_fundamental_data: gross margin 24%, net margin ~7.8%; calculate_ticker_factors: FCF yield 6.8%; get_ticker_performance_and_risk: beta 0.25, ann vol 21%.'}, {'ticker': 'SAM', 'position': 'long', 'reasoning': 'Earnings/margin inflecting from trough, gross margin 47%, FCF yield 9%. Debt extremely low (D/E <0.05). Volatility high, but forward mean-reversion likely. Beta 0.53. Sources: get_ticker_fundamental_data: gross margin 47%, D/E <0.05; calculate_ticker_factors: FCF yield 9%; get_ticker_performance_and_risk: beta 0.53.'}]",
+    "tags": [
+      "batch_4",
+      "choices",
+      "source_evidenced"
+    ]
+  },
+  {
+    "timestamp": "2025-10-09T18:40:20.943353",
+    "title": "Fifth batch analyst picks: final reference for systematic screening",
+    "event": "fifth_10_tickers",
+    "outcome": "[{'ticker': 'TPB', 'position': 'short', 'conviction': 0.78}, {'ticker': 'USFD', 'position': 'short', 'conviction': 0.62}, {'ticker': 'UTZ', 'position': 'short', 'conviction': 0.76}, {'ticker': 'UVV', 'position': 'short', 'conviction': 0.6}, {'ticker': 'VITL', 'position': 'short', 'conviction': 0.68}, {'ticker': 'WDFC', 'position': 'short', 'conviction': 0.7}]",
+    "tags": [
+      "batch_5",
+      "reference",
+      "analyst_picks"
+    ]
+  },
+  {
+    "timestamp": "2025-10-09T18:40:50.336053",
+    "title": "Choices from fifth batch: final short select for portfolio constraint",
+    "event": "choices_from_fifth_10_tickers",
+    "outcome": "[{'ticker': 'TPB', 'position': 'short', 'reasoning': 'Momentum and valuation stretched after outsized run; quality/fundamentals do not justify peak-like multiples. Specialty vape/smokeless faces PMTA enforcement and normalization risk. Category volatility high; downside risk attractive for a tactical short. Sources: analyst_pick_properties, market structure review.'}, {'ticker': 'UTZ', 'position': 'short', 'reasoning': 'High-multiple snacks name into rising private label/promos. Earnings quality and defensibility weak for sector, and execution risk on trade spend. Sources: analyst_pick_properties, sector factor screen.'}, {'ticker': 'USFD', 'position': 'short', 'reasoning': 'Expensive vs. food-distributor peers, margin momentum softening, at risk of de-rating as margins normalize post-cyclical highs. Sources: analyst_pick_properties, factor/valuation screen.'}, {'ticker': 'VITL', 'position': 'short', 'reasoning': 'Premium eggs into normalization and private label mix; multiple and mix/pricing risk with limited defensibility. Sources: analyst_pick_properties, margin/valuation screen.'}, {'ticker': 'WDFC', 'position': 'short', 'reasoning': 'Valuation implies perfection; growth decelerating and FCF yield low vs. staples peers; risk of mean reversion in multiple and margin cycle. Sources: analyst_pick_properties, sector screen, fundamentals.'}]",
+    "tags": [
+      "batch_5",
+      "choices",
+      "source_evidenced"
+    ]
+  },
+  {
+    "timestamp": "2025-10-09T18:41:50.822645",
+    "title": "Portfolio v1 constructed: full CIO constraint, evidence-driven selection",
+    "event": "portfolio_v1",
+    "outcome": "{'BG': {'allocation': 0.053, 'position': 'long'}, 'BJ': {'allocation': 0.053, 'position': 'long'}, 'CAG': {'allocation': 0.058, 'position': 'long'}, 'CCEP': {'allocation': 0.076, 'position': 'long'}, 'DG': {'allocation': 0.046, 'position': 'long'}, 'EPC': {'allocation': 0.038, 'position': 'long'}, 'GIS': {'allocation': 0.062, 'position': 'long'}, 'INGR': {'allocation': 0.076, 'position': 'long'}, 'IPAR': {'allocation': 0.05, 'position': 'long'}, 'KDP': {'allocation': 0.052, 'position': 'long'}, 'KMB': {'allocation': 0.075, 'position': 'long'}, 'KO': {'allocation': 0.085, 'position': 'long'}, 'MO': {'allocation': 0.084, 'position': 'long'}, 'ODD': {'allocation': 0.029, 'position': 'long'}, 'PPC': {'allocation': 0.048, 'position': 'long'}, 'REYN': {'allocation': 0.062, 'position': 'long'}, 'RLX': {'allocation': 0.051, 'position': 'long'}, 'SAM': {'allocation': 0.05, 'position': 'long'}, 'CHD': {'allocation': 0.098, 'position': 'short'}, 'CELH': {'allocation': 0.033, 'position': 'short'}, 'CLX': {'allocation': 0.083, 'position': 'short'}, 'FRPT': {'allocation': 0.038, 'position': 'short'}, 'HSY': {'allocation': 0.079, 'position': 'short'}, 'PRMB': {'allocation': 0.077, 'position': 'short'}, 'TPB': {'allocation': 0.049, 'position': 'short'}, 'USFD': {'allocation': 0.091, 'position': 'short'}, 'UTZ': {'allocation': 0.062, 'position': 'short'}, 'VITL': {'allocation': 0.046, 'position': 'short'}, 'WDFC': {'allocation': 0.094, 'position': 'short'}}",
+    "tags": [
+      "portfolio_v1",
+      "evidence_based",
+      "full_constraint"
+    ]
+  }
+]

@@ -29,7 +29,7 @@ class OptimizerAgent(BaseAgent):
             max_iterations=200, 
             plan_first=True,
             save_messages=True, 
-            model="gpt-4.1", 
+            model="gpt-5", 
             verbose=True, 
             memory_refresh_interval=20
         )

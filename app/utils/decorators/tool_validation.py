@@ -400,24 +400,26 @@ def validate_tickers_arg(arg_name: str = "tickers") -> Callable:
 
 
 def log_simulation_data_range(data_extractor: Optional[Callable] = None) -> Callable:
-    """Decorator to log the date range of data being used in simulation/production mode.
+    """Decorator to log the date range of data being used in both simulation and production modes.
 
     This decorator inspects the _simulation_date parameter and logs information about
-    the data range being used by the tool. It helps with debugging simulation issues.
+    the data range being used by the tool. In simulation mode, it validates that data
+    doesn't exceed the cutoff date. In production mode, it shows the actual data ranges
+    used for transparency and debugging.
 
     Args:
         data_extractor: Optional callable that extracts data (pd.Series/DataFrame) from
                        function execution context for date range inspection.
                        Function signature: data_extractor(result, kwargs, locals_dict)
-                       If not provided, logs only simulation mode status.
+                       If not provided, logs only mode status and price_data if available.
 
     Returns:
-        Decorator that logs simulation data range information
+        Decorator that logs data range information
 
     Example:
         @log_simulation_data_range()
         def get_ticker_data(ticker: str, _simulation_date: Optional[datetime] = None) -> str:
-            # Will log simulation mode automatically
+            # Will log mode and actual data ranges automatically
             ...
     """
     def decorator(func: Callable) -> Callable:
@@ -456,64 +458,74 @@ def log_simulation_data_range(data_extractor: Optional[Callable] = None) -> Call
             # Execute the function
             result = func(*args, **kwargs)
 
-            # In simulation mode, try to extract and log actual data ranges used
-            if _simulation_date:
-                try:
-                    data_ranges_found = []
+            # Try to extract and log actual data ranges used (for both simulation and production)
+            try:
+                data_ranges_found = []
 
-                    # Check if price_data was passed in kwargs (from @with_bulk_price_data decorator)
-                    price_data = kwargs.get('price_data')
-                    if price_data is not None:
-                        if isinstance(price_data, dict):
-                            # Dict of ticker -> Series
-                            for ticker_key, series in price_data.items():
-                                if isinstance(series, pd.Series) and hasattr(series, 'index'):
-                                    if isinstance(series.index, pd.DatetimeIndex) and len(series) > 0:
-                                        data_ranges_found.append({
-                                            'name': f'price_data[{ticker_key}]',
-                                            'start': series.index.min(),
-                                            'end': series.index.max(),
-                                            'count': len(series),
-                                            'cutoff_ok': series.index.max() <= _simulation_date
-                                        })
-                        elif isinstance(price_data, pd.Series) and hasattr(price_data, 'index'):
-                            # Single Series
-                            if isinstance(price_data.index, pd.DatetimeIndex) and len(price_data) > 0:
-                                data_ranges_found.append({
-                                    'name': 'price_data',
-                                    'start': price_data.index.min(),
-                                    'end': price_data.index.max(),
-                                    'count': len(price_data),
-                                    'cutoff_ok': price_data.index.max() <= _simulation_date
-                                })
+                # Check if price_data was passed in kwargs (from @with_bulk_price_data decorator)
+                price_data = kwargs.get('price_data')
+                if price_data is not None:
+                    if isinstance(price_data, dict):
+                        # Dict of ticker -> Series
+                        for ticker_key, series in price_data.items():
+                            if isinstance(series, pd.Series) and hasattr(series, 'index'):
+                                if isinstance(series.index, pd.DatetimeIndex) and len(series) > 0:
+                                    data_range = {
+                                        'name': f'price_data[{ticker_key}]',
+                                        'start': series.index.min(),
+                                        'end': series.index.max(),
+                                        'count': len(series)
+                                    }
+                                    # Only validate cutoff in simulation mode
+                                    if _simulation_date:
+                                        data_range['cutoff_ok'] = series.index.max() <= _simulation_date
+                                    data_ranges_found.append(data_range)
+                    elif isinstance(price_data, pd.Series) and hasattr(price_data, 'index'):
+                        # Single Series
+                        if isinstance(price_data.index, pd.DatetimeIndex) and len(price_data) > 0:
+                            data_range = {
+                                'name': 'price_data',
+                                'start': price_data.index.min(),
+                                'end': price_data.index.max(),
+                                'count': len(price_data)
+                            }
+                            # Only validate cutoff in simulation mode
+                            if _simulation_date:
+                                data_range['cutoff_ok'] = price_data.index.max() <= _simulation_date
+                            data_ranges_found.append(data_range)
 
-                    # Also check portfolio_dict if it exists (for portfolio tools)
-                    portfolio = kwargs.get('portfolio_dict')
-                    if portfolio and isinstance(portfolio, dict):
-                        ticker_list = list(portfolio.keys())
-                        if ticker_list:
-                            data_ranges_found.append({
-                                'name': f'portfolio ({len(ticker_list)} tickers)',
-                                'tickers': ticker_list[:5],  # Show first 5
-                                'total': len(ticker_list)
-                            })
+                # Also check portfolio_dict if it exists (for portfolio tools)
+                portfolio = kwargs.get('portfolio_dict')
+                if portfolio and isinstance(portfolio, dict):
+                    ticker_list = list(portfolio.keys())
+                    if ticker_list:
+                        data_ranges_found.append({
+                            'name': f'portfolio ({len(ticker_list)} tickers)',
+                            'tickers': ticker_list[:5],  # Show first 5
+                            'total': len(ticker_list)
+                        })
 
-                    # Print data ranges if found
-                    if data_ranges_found:
-                        print(f"  📅 ACTUAL DATA USED:")
-                        for dr in data_ranges_found:
-                            if 'start' in dr:
+                # Print data ranges if found
+                if data_ranges_found:
+                    print(f"  📅 ACTUAL DATA USED:")
+                    for dr in data_ranges_found:
+                        if 'start' in dr:
+                            # Show cutoff validation only in simulation mode
+                            if _simulation_date:
                                 cutoff_status = "✅" if dr.get('cutoff_ok', True) else "⚠️ EXCEEDS CUTOFF"
                                 print(f"    • {dr['name']}: {dr['start'].date()} → {dr['end'].date()} "
                                       f"({dr['count']} points) {cutoff_status}")
-                            elif 'tickers' in dr:
-                                tickers_shown = ', '.join(dr['tickers'])
-                                if dr['total'] > 5:
-                                    tickers_shown += f", ... (+{dr['total'] - 5} more)"
-                                print(f"    • {dr['name']}: {tickers_shown}")
-                except Exception:
-                    # Don't fail the function if logging fails
-                    pass
+                            else:
+                                print(f"    • {dr['name']}: {dr['start'].date()} → {dr['end'].date()} "
+                                      f"({dr['count']} points)")
+                        elif 'tickers' in dr:
+                            tickers_shown = ', '.join(dr['tickers'])
+                            if dr['total'] > 5:
+                                tickers_shown += f", ... (+{dr['total'] - 5} more)"
+                            print(f"    • {dr['name']}: {tickers_shown}")
+            except Exception:
+                # Don't fail the function if logging fails
+                pass
 
             # Try to extract data for date range logging (if extractor provided)
             if data_extractor:

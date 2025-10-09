@@ -275,7 +275,7 @@ ProphitAI/
 │   ├── services/
 │   │   ├── agent_runs.py
 │   │   ├── prophit_alts_service.py
-│   │   └── websocket_manager_service.py
+│   │   └── websocket_manager.py
 │   │
 │   └── utils/
 │       ├── decorators/

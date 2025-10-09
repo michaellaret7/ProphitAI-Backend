@@ -1,5 +1,6 @@
 import yaml
-from typing import Optional
+from typing import Optional, Dict, Any
+import numpy as np
 from app.core.calculations.factors.growth import GrowthFactors
 from app.core.calculations.factors.value import ValueFactors
 from app.core.calculations.factors.quality import QualityFactors
@@ -10,6 +11,31 @@ from datetime import datetime, timedelta
 from app.utils.simulation_utils import get_end_date, filter_series_by_date
 from app.utils.decorators.tool_validation import validate_ticker_arg, validate_enum_arg
 from app.utils.decorators.tool_validation import log_simulation_data_range
+
+
+def _convert_numpy_to_python(obj: Any) -> Any:
+    """Recursively convert NumPy types to native Python types for YAML serialization.
+
+    Args:
+        obj: Object that may contain NumPy types
+
+    Returns:
+        Object with NumPy types converted to Python types
+    """
+    if isinstance(obj, dict):
+        return {key: _convert_numpy_to_python(value) for key, value in obj.items()}
+    elif isinstance(obj, list):
+        return [_convert_numpy_to_python(item) for item in obj]
+    elif isinstance(obj, np.integer):
+        return int(obj)
+    elif isinstance(obj, np.floating):
+        return float(obj)
+    elif isinstance(obj, np.ndarray):
+        return obj.tolist()
+    elif isinstance(obj, (np.bool_, bool)):
+        return bool(obj)
+    else:
+        return obj
 
 @validate_ticker_arg()
 @validate_enum_arg("factor", ["growth", "value", "quality", "momentum", "volatility"])
@@ -31,6 +57,9 @@ def calculate_ticker_factors(ticker: str, factor: str, _simulation_date: Optiona
                 result = ValueFactors(ticker, as_of_date=_simulation_date).calc_all()
             else:  # quality
                 result = QualityFactors(ticker, as_of_date=_simulation_date).calc_all()
+
+            # Convert NumPy types to Python types for YAML serialization
+            result = _convert_numpy_to_python(result)
             return yaml.dump({"success": True, "data": result}, default_flow_style=False)
 
         # Momentum and Volatility factors need price series
@@ -73,6 +102,9 @@ def calculate_ticker_factors(ticker: str, factor: str, _simulation_date: Optiona
                 ).calc_all()
             else:  # volatility
                 result = VolatilityFactors(price_series, spy_price_series=spy_prices).calc_all()
+
+            # Convert NumPy types to Python types for YAML serialization
+            result = _convert_numpy_to_python(result)
             return yaml.dump({"success": True, "data": result}, default_flow_style=False)
 
         else:
