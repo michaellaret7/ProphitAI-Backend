@@ -365,6 +365,51 @@ class AgentUtilities:
             "analysis": s.analysis,
         }
     
+    def parse_agent_dict_output(
+        self,
+        final_text: str,
+        response_format,
+        verbose: bool = True
+    ) -> str:
+        """
+        Parse agent output for dict-based models without using OpenAI structured outputs.
+        Used for models with Dict[str, ...] fields that don't work with OpenAI's schema validation.
+
+        Args:
+            final_text: Raw output text from agent
+            response_format: Pydantic model for validation
+            verbose: Whether to print debug messages
+
+        Returns:
+            JSON string of parsed data
+        """
+        # Strip "Final Answer:" prefix if present
+        final_text = final_text.strip()
+        if final_text.startswith("Final Answer:"):
+            final_text = final_text[len("Final Answer:"):].strip()
+
+        # Try to parse as JSON directly (agent outputs valid JSON)
+        try:
+            parsed_json = json.loads(final_text)
+
+            # Validate with Pydantic model
+            try:
+                validated = response_format.model_validate(parsed_json)
+                if verbose:
+                    print(f"✅ {response_format.__name__} validated successfully")
+                return json.dumps(validated.model_dump())
+            except Exception as validation_error:
+                if verbose:
+                    print(f"⚠️ Pydantic validation warning: {validation_error}")
+                # Return original if validation fails but JSON is valid
+                return json.dumps(parsed_json)
+
+        except json.JSONDecodeError as e:
+            if verbose:
+                print(f"⚠️ JSON decode failed: {e}")
+                print("⚠️ Returning original text")
+            return final_text
+
     def parse_agent_output(
         self,
         final_text: str,
@@ -377,7 +422,8 @@ class AgentUtilities:
     ) -> str:
         """
         Parse agent output text into structured JSON format.
-        
+        Supports both list-based (CIO, CRO, Industry) and dict-based (Optimizer) outputs.
+
         Args:
             final_text: Raw output text from agent
             client: OpenAI client instance
@@ -386,7 +432,7 @@ class AgentUtilities:
             output_key: Key name for the parsed data (e.g., 'portfolio', 'recommendations')
             fallback_formats: Optional list of (format, key) tuples for fallback parsing
             verbose: Whether to print debug messages
-        
+
         Returns:
             JSON string of parsed data
         """
@@ -394,34 +440,54 @@ class AgentUtilities:
         final_text = final_text.strip()
         if final_text.startswith("Final Answer:"):
             final_text = final_text[len("Final Answer:"):].strip()
-        
+
         # Try primary format
         try:
             final_comp = client.chat.completions.parse(
                 model=llm,
                 messages=[
-                    {"role": "system", "content": f"Convert the output to match the schema format with a '{output_key}' key."},
+                    {"role": "system", "content": "Convert the output to match the schema format."},
                     {"role": "user", "content": final_text},
                 ],
                 response_format=response_format,
             )
             parsed = final_comp.choices[0].message.parsed
-            
-            # Build output data
-            output_data = {
-                output_key: [item.model_dump() for item in getattr(parsed, output_key)]
-            }
-            
-            # For CRO agent with suggestions - handle both keys if present
-            if hasattr(parsed, 'suggestions'):
-                output_data['suggestions'] = [item.model_dump() for item in parsed.suggestions]
-            
+
+            # Get the primary output attribute
+            primary_output = getattr(parsed, output_key)
+
+            # Handle both list-based and dict-based outputs
+            if isinstance(primary_output, list):
+                # List-based output (CIO, CRO, Industry agents)
+                output_data = {
+                    output_key: [item.model_dump() for item in primary_output]
+                }
+            elif isinstance(primary_output, dict):
+                # Dict-based output (Optimizer agent)
+                output_data = {
+                    output_key: {k: v.model_dump() for k, v in primary_output.items()}
+                }
+            else:
+                # Fallback: use parsed model dump
+                output_data = parsed.model_dump()
+
+            # Handle additional keys (e.g., CRO 'suggestions', Optimizer 'changes')
+            for attr_name in ['suggestions', 'changes']:
+                if hasattr(parsed, attr_name):
+                    attr_value = getattr(parsed, attr_name)
+                    if isinstance(attr_value, list):
+                        output_data[attr_name] = [item.model_dump() for item in attr_value]
+                    elif hasattr(attr_value, 'model_dump'):
+                        output_data[attr_name] = attr_value.model_dump()
+                    else:
+                        output_data[attr_name] = attr_value
+
             return json.dumps(output_data)
-            
+
         except Exception as e:
             if verbose:
                 print(f"⚠️ {response_format.__name__} parse failed: {e}")
-            
+
             # Try fallback formats if provided
             if fallback_formats:
                 for fallback_format, fallback_key in fallback_formats:
@@ -429,28 +495,37 @@ class AgentUtilities:
                         final_comp = client.chat.completions.parse(
                             model=llm,
                             messages=[
-                                {"role": "system", "content": f"Convert the output to match the schema format with a '{fallback_key}' key."},
+                                {"role": "system", "content": "Convert the output to match the schema format."},
                                 {"role": "user", "content": final_text},
                             ],
                             response_format=fallback_format,
                         )
                         parsed = final_comp.choices[0].message.parsed
-                        
-                        output_data = {
-                            fallback_key: [item.model_dump() for item in getattr(parsed, fallback_key)]
-                        }
-                        
+
+                        # Handle list vs dict for fallback too
+                        fallback_output = getattr(parsed, fallback_key)
+                        if isinstance(fallback_output, list):
+                            output_data = {
+                                fallback_key: [item.model_dump() for item in fallback_output]
+                            }
+                        elif isinstance(fallback_output, dict):
+                            output_data = {
+                                fallback_key: {k: v.model_dump() for k, v in fallback_output.items()}
+                            }
+                        else:
+                            output_data = parsed.model_dump()
+
                         # Add empty suggestions for CRO fallback case
                         if fallback_key == 'portfolio' and response_format.__name__ == 'PortfolioWithSuggestions':
                             output_data['suggestions'] = []
-                        
+
                         return json.dumps(output_data)
-                        
+
                     except Exception as e2:
                         if verbose:
                             print(f"⚠️ {fallback_format.__name__} fallback failed: {e2}")
                         continue
-            
+
             # If all parsing fails, return original
             if verbose:
                 print(f"⚠️ All parsing failed, keeping original")

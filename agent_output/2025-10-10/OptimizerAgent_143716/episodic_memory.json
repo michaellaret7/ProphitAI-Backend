@@ -1,0 +1,17 @@
+[
+  {
+    "timestamp": "2025-10-10T18:38:16.647665",
+    "title": "Portfolio Positions & High-Risk Preference Log",
+    "event": "user_portfolio_and_preferences_oct2025",
+    "outcome": "Portfolio holdings (allocations, sectors, detailed tickers) and high risk tolerance, young/high net worth user. Preferences: lower beta, lower pairwise correlation, higher risk-adjusted returns, alpha potential. User profile: Age 25, Net Worth $5,000,000, High Risk Tolerance. Portfolio: AEE (0.015), APP (0.042), ARM (0.026), AVGO (0.034), BSX (0.051), CEG (0.025), CMS (0.036), CRDO (0.012), DGNX (0.009), EIS (0.037), EMQQ (0.013), EQIX (0.081), EXOD (0.013), FITB (0.005), FR (0.013), FUFU (0.01), GREK (0.021), IGSB (0.031), IIPR (0.037), INTR (0.013), JPM (0.043), MTSI (0.018), MU (0.016), NLR (0.019), NRG (0.055), NU (0.01), NVDA (0.065), OKLO (0.021), PLTR (0.027), SGDM (0.016), SLVR (0.036), STAG (0.013), TRNO (0.018), VCSH (0.03), WEC (0.02).",
+    "tags": [
+      "portfolio",
+      "positions",
+      "preferences",
+      "high-risk",
+      "beta",
+      "correlation",
+      "alpha"
+    ]
+  }
+]

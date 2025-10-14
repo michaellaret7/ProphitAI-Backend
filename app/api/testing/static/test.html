@@ -34,13 +34,100 @@
     .dot.connected { background: var(--primary); }
     .dot.error { background: #ef4444; }
 
-    .toolbar { display:flex; gap:.5rem; flex-wrap: wrap; margin: 16px 0 20px; }
-    input[type="text"] {
-      padding:.6rem .7rem; border:1px solid var(--border); background:#0b1220; color:var(--text);
-      border-radius:.5rem; min-width: 320px; outline: none;
+    .toolbar {
+      display: flex;
+      gap: 1.5rem;
+      flex-wrap: wrap;
+      margin: 24px 0 28px;
+      align-items: center;
     }
-    button { padding:.55rem .85rem; border-radius:.5rem; border:1px solid var(--border); background:#101826; color: var(--text); cursor:pointer; }
-    button:hover { background:#0b1220; }
+
+    .control-group {
+      display: flex;
+      gap: 0.75rem;
+      align-items: center;
+      padding: 0.5rem;
+      border-radius: 0.75rem;
+      background: rgba(15, 23, 42, 0.4);
+      border: 1px solid var(--border);
+    }
+
+    input[type="text"] {
+      padding: 0.75rem 1rem;
+      border: 1px solid var(--border);
+      background: #0b1220;
+      color: var(--text);
+      border-radius: 0.625rem;
+      min-width: 360px;
+      outline: none;
+      font-size: 14px;
+      transition: all 0.2s ease;
+      box-shadow: inset 0 2px 4px rgba(0,0,0,0.1);
+    }
+
+    input[type="text"]:focus {
+      border-color: var(--primary);
+      box-shadow: 0 0 0 3px rgba(34, 197, 94, 0.1), inset 0 2px 4px rgba(0,0,0,0.1);
+    }
+
+    button {
+      padding: 0.7rem 1.1rem;
+      border-radius: 0.625rem;
+      border: 1px solid var(--border);
+      background: #101826;
+      color: var(--text);
+      cursor: pointer;
+      font-size: 14px;
+      font-weight: 500;
+      transition: all 0.2s ease;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.15);
+    }
+
+    button:hover {
+      background: #0b1220;
+      border-color: var(--accent);
+      transform: translateY(-1px);
+      box-shadow: 0 4px 8px rgba(0,0,0,0.25);
+    }
+
+    button:active {
+      transform: translateY(0);
+      box-shadow: 0 1px 2px rgba(0,0,0,0.2);
+    }
+
+    button.primary {
+      background: linear-gradient(135deg, var(--primary), var(--primary-weak));
+      border-color: var(--primary);
+      color: #fff;
+      font-weight: 600;
+    }
+
+    button.primary:hover {
+      background: linear-gradient(135deg, var(--primary-weak), #15803d);
+      box-shadow: 0 4px 12px rgba(34, 197, 94, 0.3);
+    }
+
+    button.secondary {
+      background: rgba(96, 165, 250, 0.1);
+      border-color: #3b82f6;
+      color: #60a5fa;
+    }
+
+    button.secondary:hover {
+      background: rgba(96, 165, 250, 0.2);
+      border-color: #60a5fa;
+    }
+
+    button.danger {
+      background: rgba(239, 68, 68, 0.1);
+      border-color: #dc2626;
+      color: #ef4444;
+    }
+
+    button.danger:hover {
+      background: rgba(239, 68, 68, 0.2);
+      border-color: #ef4444;
+    }
 
     .log { width: 100%; border:1px solid var(--border); border-radius: .75rem; padding: 12px; background: #0b1220; }
 
@@ -325,12 +412,18 @@
     </div>
 
     <div class="toolbar">
-      <button onclick="startRun()">Start Optimizer Run</button>
-      <input id="runId" type="text" placeholder="existing run_id (optional)" />
-      <button onclick="connect()">Connect</button>
-      <button onclick="disconnect()">Disconnect</button>
-      <button onclick="clearLog()">Clear</button>
-      <button id="copyBtn" onclick="copyRunId()">Copy run_id</button>
+      <button class="primary" onclick="startRun()">Start Optimizer Run</button>
+
+      <div class="control-group">
+        <input id="runId" type="text" placeholder="Enter existing run_id (optional)" />
+        <button class="secondary" onclick="connect()">Connect</button>
+        <button onclick="disconnect()">Disconnect</button>
+      </div>
+
+      <div class="control-group">
+        <button id="copyBtn" onclick="copyRunId()">Copy run_id</button>
+        <button class="danger" onclick="clearLog()">Clear Log</button>
+      </div>
     </div>
 
     <div id="log" class="log"></div>

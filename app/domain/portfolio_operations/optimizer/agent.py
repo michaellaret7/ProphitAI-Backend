@@ -1,25 +1,27 @@
-from typing import List, Dict, Optional
-from pydantic import BaseModel
+from typing import Dict, Optional
+from pydantic import BaseModel, Field
 from typing_extensions import Literal
 from app.core.agentic_framework.base_agent import BaseAgent
 from .prompts import system_prompt, user_prompt
 from .tool_registry import register_optimizer_tools
-from .tool_registry import register_optimizer_tools
 from app.core.agentic_framework.base_agent.memory.domain_memory import DomainMemory
-from app.domain.prophit_alts.consumer_staples_fund.build_portfolio.cio.tool_registry import register_cio_tools
 from app.utils.decorators.timer import timer
 
 #TODO: Add a portfolio compare tool to compare the new proposed portfolio to the old one that needed optimizaiton
 
-class OptimizedPosition(BaseModel):
-    ticker: str
+class PortfolioPosition(BaseModel):
     allocation: float
     position: Literal["long", "short"]
-    changes_from_original: str
+    thesis: str
+
+class PortfolioChanges(BaseModel):
+    added: Optional[Dict[str, str]] = Field(default_factory=dict, description="Tickers added and reasons")
+    removed: Optional[Dict[str, str]] = Field(default_factory=dict, description="Tickers removed and reasons")
+    adjusted: Optional[Dict[str, str]] = Field(default_factory=dict, description="Adjustments made and descriptions")
 
 class OptimizedPortfolio(BaseModel):
-    portfolio: List[OptimizedPosition]
-    optimization_summary: str
+    portfolio: Dict[str, PortfolioPosition] = Field(description="Optimized portfolio with ticker -> position details")
+    changes: PortfolioChanges = Field(description="Portfolio changes made during optimization")
 
 class OptimizerAgent(BaseAgent):
     def __init__(self):
@@ -29,7 +31,7 @@ class OptimizerAgent(BaseAgent):
             max_iterations=200, 
             plan_first=True,
             save_messages=True, 
-            model="gpt-5", 
+            model="gpt-4.1", 
             verbose=True, 
             memory_refresh_interval=20
         )
@@ -52,20 +54,17 @@ class OptimizerAgent(BaseAgent):
         result = super().run()  # Run main BaseAgent workflow
 
         final_text = (result.get("final_text") or "").strip()
-        
+
         if not final_text:
             return result
-        
-        # Use utility function for consistent parsing
-        result["final_text"] = self.utilities.parse_agent_output(
+
+        # Use dict-specific parser (avoids OpenAI structured output issues with Dict fields)
+        result["final_text"] = self.utilities.parse_agent_dict_output(
             final_text=final_text,
-            client=self.client,
-            llm=self.model,
             response_format=OptimizedPortfolio,
-            output_key="portfolio",
             verbose=self.verbose
         )
-        
+
         return result["final_text"]
 
 @timer

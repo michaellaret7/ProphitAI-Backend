@@ -84,19 +84,22 @@ def attach_agent_stream(
     def on_tool_executed(data):
         try:
             tool_name = (data or {}).get("tool_name")
-            if tool_name not in ("add_task_evidence", "update_task_status"):
-                return
             args = (data or {}).get("args") or {}
-            # Recreate compact arguments string
-            arguments_str = json.dumps(args, ensure_ascii=False, separators=(",", ":"))
 
+            # Send all tool calls to the websocket (just the tool name)
+            _send({
+                "type": "tool_call",
+                "tool_name": tool_name,
+            })
+
+            # Also handle specific tools for evidence and task state
             if tool_name == "add_task_evidence":
                 # Keep existing evidence stream intact
                 _send({
                     "type": "evidence",
-                    "arguments": arguments_str,
+                    "arguments": json.dumps(args, ensure_ascii=False, separators=(",", ":")),
                 })
-            else:
+            elif tool_name == "update_task_status":
                 # Broadcast full hierarchical task state instead of raw status
                 state = _build_task_state()
                 _send({

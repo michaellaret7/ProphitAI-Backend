@@ -1,0 +1,37 @@
+[
+  {
+    "timestamp": "2025-10-10T21:15:02.760021",
+    "title": "User Portfolio and Preferences Snapshot",
+    "event": "user_portfolio_logged",
+    "outcome": "Portfolio positions (tickers, allocations, supporting metrics, sectors, and rationale) and user preferences (age: 25, net worth: $5M, high risk tolerance, wants lower beta and pairwise correlation, higher risk-adjusted returns and alpha potential) logged for downstream portfolio optimization analysis.",
+    "tags": [
+      "portfolio",
+      "user_preferences",
+      "2025-10-10"
+    ]
+  },
+  {
+    "timestamp": "2025-10-10T21:17:37.866347",
+    "title": "Optimized Portfolio Definition",
+    "event": "optimized_portfolio_defined",
+    "outcome": "Portfolio allocations redefined: weakest REIT/utilities cluster (EQIX, IIPR, FR, STAG, TRNO, AEE) removed and replaced with lower-beta/low-correlation diversifiers JXI, VIXY, ABBV, HAE, and TMCI. Risky outliers (NRG, DGNX, CRDO, OKLO, MTSI) trimmed for proper offense/defense balance. Sectors/industries now include additional global and healthcare exposures to dampen correlation and raise Sharpe/Sortino. All changes kept in portfolio_dict format for downstream analytics.",
+    "tags": [
+      "portfolio",
+      "optimization",
+      "allocations",
+      "2025-10-10"
+    ]
+  },
+  {
+    "timestamp": "2025-10-10T21:17:44.694738",
+    "title": "Optimized Portfolio and Change Log",
+    "event": "portfolio_update_logged",
+    "outcome": "Optimized equity/ETF portfolio finalized. Six REIT/utilities names removed; allocations shifted to new defensive, low-beta, and quality healthcare/global/alternative exposures. NRG, DGNX, OKLO, CRDO, and MTSI trimmed for risk and clustering. Added JXI, VIXY, ABBV, HAE, and TMCI for sector and correlation diversification. All adjustments tracked; structure now ready for risk/return analytics loop.",
+    "tags": [
+      "portfolio",
+      "changes",
+      "diversification",
+      "2025-10-10"
+    ]
+  }
+]
