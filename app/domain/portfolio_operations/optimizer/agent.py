@@ -25,12 +25,29 @@ class OptimizedPortfolio(BaseModel):
     changes: PortfolioChanges = Field(description="Portfolio changes made during optimization")
 
 class OptimizerAgent(BaseAgent):
-    def __init__(self, portfolio_id: str):
+    def __init__(
+        self,
+        portfolio_id: str,
+        risk_tolerance: str = None,
+        time_horizon: str = None,
+        investment_goals: str = None,
+        sectors_to_exclude: str = None,
+        sectors_to_include: str = None,
+        tickers_to_keep: str = None,
+        tickers_to_exclude: str = None
+        ):
         """
         Initialize OptimizerAgent with a specific portfolio to optimize.
 
         Args:
             portfolio_id: UUID of the portfolio to optimize (must be a valid UUID format)
+            risk_tolerance: User's risk tolerance (optional)
+            time_horizon: User's investment time horizon (optional)
+            investment_goals: User's investment goals (optional)
+            sectors_to_exclude: Sectors to exclude from portfolio (optional)
+            sectors_to_include: Sectors to include in portfolio (optional)
+            tickers_to_keep: Tickers that must be kept in portfolio (optional)
+            tickers_to_exclude: Tickers to exclude from portfolio (optional)
 
         Raises:
             ValueError: If portfolio_id is not provided or is invalid format
@@ -49,25 +66,20 @@ class OptimizerAgent(BaseAgent):
             )
 
         self.portfolio_id = portfolio_id
+        self.risk_tolerance = risk_tolerance
+        self.time_horizon = time_horizon
+        self.investment_goals = investment_goals
+        self.sectors_to_exclude = sectors_to_exclude
+        self.sectors_to_include = sectors_to_include
+        self.tickers_to_keep = tickers_to_keep
+        self.tickers_to_exclude = tickers_to_exclude
 
-        # Inject portfolio_id into user prompt with clear instruction
-        dynamic_user_prompt = user_prompt.replace(
-            "1. Use the get_user_portfolio tool to get the user's portfolio.",
-            f"1. CRITICAL: Use the get_user_portfolio tool with EXACTLY this portfolio_id parameter: '{portfolio_id}' (this is the target portfolio UUID for optimization)."
-        )
-
-        # Also inject into system prompt for extra clarity
-        dynamic_system_prompt = f"""{system_prompt}
-
-CRITICAL CONTEXT:
-- Target portfolio_id for this optimization: '{portfolio_id}'
-- You MUST use this exact UUID when calling get_user_portfolio
-- Do NOT modify or change this UUID in any way
-"""
+        # Build dynamic prompt with proper None handling
+        self.dynamic_user_prompt = self._build_dynamic_prompt()
 
         super().__init__(
-            system_prompt=dynamic_system_prompt,
-            user_prompt=dynamic_user_prompt,
+            system_prompt=system_prompt,
+            user_prompt=self.dynamic_user_prompt,
             max_iterations=200,
             plan_first=True,
             save_messages=True,
@@ -77,7 +89,30 @@ CRITICAL CONTEXT:
         )
 
         register_optimizer_tools(self)
-        
+
+    def _build_dynamic_prompt(self) -> str:
+        """
+        Build the user prompt with proper handling of None/empty values.
+        Replaces template placeholders with actual values or 'Not specified' for None values.
+        """
+        prompt = user_prompt.replace("{{PORTFOLIO_ID}}", self.portfolio_id)
+
+        # Replace each field, using 'Not specified' for None values
+        replacements = {
+            "{{RISK_TOLERANCE}}": self.risk_tolerance or "Not specified",
+            "{{INVESTMENT_GOALS}}": self.investment_goals or "Not specified",
+            "{{TIME_HORIZON}}": self.time_horizon or "Not specified",
+            "{{SECTORS_TO_INCLUDE}}": self.sectors_to_include or "Not specified",
+            "{{SECTORS_TO_EXCLUDE}}": self.sectors_to_exclude or "Not specified",
+            "{{TICKERS_TO_KEEP}}": self.tickers_to_keep or "Not specified",
+            "{{TICKERS_TO_EXCLUDE}}": self.tickers_to_exclude or "Not specified"
+        }
+
+        for placeholder, value in replacements.items():
+            prompt = prompt.replace(placeholder, value)
+
+        return prompt
+
     def _initialize_domain_memory(self):
         """Initialize Optimizer-specific domain memories for portfolio optimization."""
         # Initialize domain memory for Optimizer agent
@@ -110,7 +145,16 @@ CRITICAL CONTEXT:
 @timer
 def main():
     portfolio_id = "01be5cf2-a1fe-45b0-b9a4-cf9cc1a94b36"
-    agent = OptimizerAgent(portfolio_id=portfolio_id)
+    agent = OptimizerAgent(
+        portfolio_id=portfolio_id,
+        risk_tolerance="high",
+        time_horizon="long",
+        investment_goals="growth, income, capital preservation",
+        sectors_to_exclude="technology",
+        sectors_to_include="financials",
+        tickers_to_keep="AAPL, MSFT, GOOG, AMZN, FB",
+        tickers_to_exclude="TSLA, NVDA, AMD, INTC, QCOM"
+    )
     result = agent.run()
 
     print("="*100)

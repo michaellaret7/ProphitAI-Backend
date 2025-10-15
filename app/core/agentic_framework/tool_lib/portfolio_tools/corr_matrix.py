@@ -11,6 +11,8 @@ from app.utils.gpt_parser import canonical_portfolio
 from app.core.calculations.core.helpers import build_returns_df_from_price_map
 from app.utils.decorators.tool_validation import log_simulation_data_range, validate_required_args, validate_portfolio_dict
 
+#TODO: Let the model decide the amount it wants to see. Top correlations or correlations above a certain threshold. Dont just pass the entire matrix.
+
 @validate_required_args('portfolio_dict')
 @validate_portfolio_dict()
 @log_simulation_data_range()

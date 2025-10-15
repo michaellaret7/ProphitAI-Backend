@@ -15,11 +15,18 @@ IMPORTANT RULES:
 user_prompt = """
 Goal: You goal is to take a user's portfolio and optimize it based on the strengths and weaknesses of the portfolio and the user's preferences.
 
-<User Preferences>
-- Lower beta and lower pairwise correlation.
-- Higher risk adjusted returns and alpha potential.
-- The user is 25 years old, has a net worth of $5,000,000 and has a high risk tolerance.
-</User Preferences>
+<CRITICAL User Portfolio Preferences>
+- portfolio_id: {{PORTFOLIO_ID}}
+    --> Use the get_user_portfolio tool to get the user's portfolio.
+        CRITICAL: Use the get_user_portfolio tool with EXACTLY this portfolio_id parameter: '{{PORTFOLIO_ID}}' (this is the target portfolio UUID for optimization).
+- Risk Tolerance: {{RISK_TOLERANCE}}
+- Investment Goals: {{INVESTMENT_GOALS}}
+- Time Horizon: {{TIME_HORIZON}}
+- Sectors to Include: {{SECTORS_TO_INCLUDE}}
+- Sectors to Exclude: {{SECTORS_TO_EXCLUDE}}
+- Tickers to Keep: {{TICKERS_TO_KEEP}}
+- Tickers to Exclude: {{TICKERS_TO_EXCLUDE}}
+</CRITICAL User Portfolio Preferences>
 
 <Suggested Workflow>
 1. Use the get_user_portfolio tool to get the user's portfolio.
