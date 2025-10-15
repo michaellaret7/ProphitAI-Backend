@@ -4,7 +4,16 @@
       "Bash(source:*)",
       "Bash(python:*)",
       "WebSearch",
-      "Bash(tree:*)"
+      "Bash(tree:*)",
+      "Bash(curl:*)",
+      "Bash(python3:*)",
+      "Bash(lsof:*)",
+      "Bash(xargs kill:*)",
+      "Bash(find:*)",
+      "Bash(mkdir:*)",
+      "Bash(mv:*)",
+      "Bash(timeout:*)",
+      "Bash(pytest:*)"
     ],
     "deny": [],
     "ask": []

@@ -12,7 +12,15 @@ from app.utils.decorators.database import with_session, with_transaction, with_s
 
 @with_session('user')
 def retrieve_portfolio(email: str = None, clerk_id: str = None, user_id: uuid.UUID = None, is_current: bool = None, portfolio_id: uuid.UUID = None, session=None):
-    
+
+    # If portfolio_id is provided, query directly by portfolio_id (no user lookup needed)
+    if portfolio_id:
+        query = session.query(Portfolio).filter(Portfolio.portfolio_id == portfolio_id)
+        portfolio = query.all()
+        portfolio = [serialize_sqlalchemy_obj(p) for p in portfolio]
+        return portfolio
+
+    # Otherwise, require a user identifier
     user = None
     if user_id:
         user = session.query(User).filter(User.id == user_id).first()
@@ -21,22 +29,20 @@ def retrieve_portfolio(email: str = None, clerk_id: str = None, user_id: uuid.UU
     elif clerk_id:
         user = session.query(User).filter(User.clerk_id == clerk_id).first()
     else:
-        raise ValueError("At least one identifier (email, clerk_id, or user_id) must be provided")
-    
+        raise ValueError("At least one identifier (email, clerk_id, user_id, or portfolio_id) must be provided")
+
     if not user:
         return []
-    
+
     # Build the query based on parameters
     query = session.query(Portfolio).filter(Portfolio.user_id == user.id)
-    
+
     if is_current:
         query = query.filter(Portfolio.is_current == True)
-    elif portfolio_id:
-        query = query.filter(Portfolio.portfolio_id == portfolio_id)
-    
+
     portfolio = query.all()
     portfolio = [serialize_sqlalchemy_obj(p) for p in portfolio]
-    
+
     return portfolio
 
 @with_sessions(user_session='user', market_session='market')

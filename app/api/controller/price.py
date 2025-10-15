@@ -1,6 +1,6 @@
 from fastapi import HTTPException
 from typing import Dict, Any, List
-from app.services.price import PriceService
+from app.services.shared import PriceService
 from app.api.response_envelope import ok_envelope
 from app.utils.decorators.api_decorators import handle_controller_errors
 

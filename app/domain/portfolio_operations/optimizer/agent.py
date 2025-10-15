@@ -1,4 +1,5 @@
 from typing import Dict, Optional
+import uuid
 from pydantic import BaseModel, Field
 from typing_extensions import Literal
 from app.core.agentic_framework.base_agent import BaseAgent
@@ -24,18 +25,57 @@ class OptimizedPortfolio(BaseModel):
     changes: PortfolioChanges = Field(description="Portfolio changes made during optimization")
 
 class OptimizerAgent(BaseAgent):
-    def __init__(self):
+    def __init__(self, portfolio_id: str):
+        """
+        Initialize OptimizerAgent with a specific portfolio to optimize.
+
+        Args:
+            portfolio_id: UUID of the portfolio to optimize (must be a valid UUID format)
+
+        Raises:
+            ValueError: If portfolio_id is not provided or is invalid format
+        """
+        if not portfolio_id:
+            raise ValueError("portfolio_id is required")
+
+        # Basic UUID format validation
+        try:
+            uuid.UUID(portfolio_id)
+        except (ValueError, AttributeError) as e:
+            raise ValueError(
+                f"Invalid portfolio_id format: '{portfolio_id}'. "
+                f"Must be a valid UUID (e.g., 'b07e9c3b-01a1-4431-9b5f-2048c1bc7e11'). "
+                f"Error: {str(e)}"
+            )
+
+        self.portfolio_id = portfolio_id
+
+        # Inject portfolio_id into user prompt with clear instruction
+        dynamic_user_prompt = user_prompt.replace(
+            "1. Use the get_user_portfolio tool to get the user's portfolio.",
+            f"1. CRITICAL: Use the get_user_portfolio tool with EXACTLY this portfolio_id parameter: '{portfolio_id}' (this is the target portfolio UUID for optimization)."
+        )
+
+        # Also inject into system prompt for extra clarity
+        dynamic_system_prompt = f"""{system_prompt}
+
+CRITICAL CONTEXT:
+- Target portfolio_id for this optimization: '{portfolio_id}'
+- You MUST use this exact UUID when calling get_user_portfolio
+- Do NOT modify or change this UUID in any way
+"""
+
         super().__init__(
-            system_prompt=system_prompt, 
-            user_prompt=user_prompt, 
-            max_iterations=200, 
+            system_prompt=dynamic_system_prompt,
+            user_prompt=dynamic_user_prompt,
+            max_iterations=200,
             plan_first=True,
-            save_messages=True, 
-            model="gpt-4.1", 
-            verbose=True, 
+            save_messages=True,
+            model="gpt-4.1",
+            verbose=True,
             memory_refresh_interval=20
         )
-        
+
         register_optimizer_tools(self)
         
     def _initialize_domain_memory(self):
@@ -69,13 +109,14 @@ class OptimizerAgent(BaseAgent):
 
 @timer
 def main():
-    agent = OptimizerAgent()
+    portfolio_id = "01be5cf2-a1fe-45b0-b9a4-cf9cc1a94b36"
+    agent = OptimizerAgent(portfolio_id=portfolio_id)
     result = agent.run()
 
     print("="*100)
     print("Optimizer Agent Result:")
     print("="*100)
     print(result)
-    
+
 if __name__ == "__main__":
     main()

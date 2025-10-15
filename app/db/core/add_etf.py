@@ -313,33 +313,62 @@ class OptimizedETFDataLoader:
     def _load_etf_holdings(self):
         """Load ETF holdings data."""
         print(f"[{self.ticker}] Loading ETF holdings...")
-        
-        # Check for existing holdings first
+
+        # Check for existing holdings first and get their assets
         existing_holdings = self.session.query(ETFHolding).filter(ETFHolding.ticker_id == self.ticker_id).all()
+        existing_assets = set()
+
         if existing_holdings:
-            print(f"[{self.ticker}] Found {len(existing_holdings)} existing holdings to remove")
-            for h in existing_holdings[:3]:  # Show first 3 for debugging
-                print(f"  - Asset: '{h.asset}' Name: {h.name}")
-        
-        # Delete existing holdings to refresh
-        deleted_count = self.session.query(ETFHolding).filter(ETFHolding.ticker_id == self.ticker_id).delete()
-        if deleted_count > 0:
-            print(f"[{self.ticker}] Removed {deleted_count} existing holdings")
-            self.session.flush()  # Make deletion visible within the transaction
+            print(f"[{self.ticker}] Found {len(existing_holdings)} existing holdings")
+            existing_assets = {h.asset for h in existing_holdings}
+            print(f"[{self.ticker}] Existing assets: {', '.join(list(existing_assets)[:5])}{'...' if len(existing_assets) > 5 else ''}")
+
+            # Try to delete existing holdings
+            try:
+                deleted_count = self.session.query(ETFHolding).filter(ETFHolding.ticker_id == self.ticker_id).delete()
+                self.session.flush()  # Flush but don't commit - stay in transaction
+                print(f"[{self.ticker}] Removed {deleted_count} existing holdings (pending commit)")
+            except Exception as e:
+                print(f"[{self.ticker}] Warning: Could not delete existing holdings: {e}")
+                print(f"[{self.ticker}] Will skip duplicate assets during insertion")
         
         holdings_data = self.fmp_api.get_etf_holdings(self.ticker)
-        
+
         if holdings_data:
             holdings_records = []
-            
+            skipped_duplicates = []
+            seen_assets = set()  # Track assets we've already processed in this batch
+
             for holding in holdings_data:
                 # Get asset and clean it (remove extra whitespace)
                 asset = (holding.get('asset', '') or '').strip()
-                
+
                 # Skip if no asset identifier or empty after stripping
                 if not asset:
                     continue
-                
+
+                # Check for duplicate assets in existing data (in case deletion failed)
+                if existing_assets and asset in existing_assets:
+                    skipped_duplicates.append(asset)
+                    continue
+
+                # Handle duplicates in the current batch
+                # If we've seen this asset already, make it unique by appending the name
+                if asset in seen_assets:
+                    name = holding.get('name', '')
+                    if name:
+                        # Create a unique identifier by combining asset and part of the name
+                        # For example: JPY becomes JPY_CASH or JPY_USD
+                        name_suffix = name.replace(' ', '_').replace('/', '_')[:20]  # Limit suffix length
+                        unique_asset = f"{asset}_{name_suffix}"
+                        print(f"[{self.ticker}] Duplicate asset '{asset}' found, using unique identifier: '{unique_asset}'")
+                        asset = unique_asset
+                    else:
+                        print(f"[{self.ticker}] Skipping duplicate asset '{asset}' with no distinguishing name")
+                        continue
+
+                seen_assets.add(asset)
+
                 holding_record = {
                     'ticker_id': self.ticker_id,
                     'asset': asset,
@@ -351,16 +380,24 @@ class OptimizedETFDataLoader:
                     'marketValue': holding.get('marketValue'),  # camelCase to match database
                     'updatedAt': datetime.now(timezone.utc)  # camelCase to match database, using UTC
                 }
-                
+
                 holdings_records.append(holding_record)
-            
+
+            if skipped_duplicates:
+                print(f"[{self.ticker}] ⚠️ Skipped {len(skipped_duplicates)} duplicate assets: {', '.join(skipped_duplicates[:5])}{'...' if len(skipped_duplicates) > 5 else ''}")
+
             if holdings_records:
-                # Bulk insert holdings - using camelCase to match database columns
-                ordered_columns = ['ticker_id', 'asset', 'name', 'isin', 'securityCusip', 
-                                 'sharesNumber', 'weightPercentage', 'marketValue', 'updatedAt']
-                bulk_insert_with_copy(self.session, ETFHolding.__table__.fullname, holdings_records, ordered_columns)
-                
-                print(f"[{self.ticker}] ✅ Loaded {len(holdings_records)} holdings")
+                try:
+                    # Bulk insert holdings - using camelCase to match database columns
+                    ordered_columns = ['ticker_id', 'asset', 'name', 'isin', 'securityCusip',
+                                     'sharesNumber', 'weightPercentage', 'marketValue', 'updatedAt']
+                    bulk_insert_with_copy(self.session, ETFHolding.__table__.fullname, holdings_records, ordered_columns)
+
+                    print(f"[{self.ticker}] ✅ Loaded {len(holdings_records)} holdings")
+                except Exception as e:
+                    print(f"[{self.ticker}] ❌ Error inserting holdings: {e}")
+                    # Don't attempt individual inserts - let the caller handle the error
+                    raise
             else:
                 print(f"[{self.ticker}] ⚠️ No valid holdings data found")
         else:
@@ -565,12 +602,30 @@ def load_multiple_etfs(etf_list, years_of_history=2):
 
 
 if __name__ == "__main__":
-    load_single_etf(
-        "RSPS", 
-        sector="etf", 
-        industry="equity_etfs", 
-        sub_industry="equal_weighted", 
-        years_of_history=4,  # Use 4 years for faster loading
-        allow_partial_reload=False  # This will complete missing data
-    )
+    # Clean up any partial data from previous failed attempts
+    etfs_to_load = ["WTAI", "ARTY"]
+
+    etfs_to_load = ["BOTZ", "AIQ", "IGPT", "ARKQ", "THNQ", "AIAI", "AIQU", "ARCI"]
+
+
+
+    print("Cleaning up any existing partial data...")
+    for ticker in etfs_to_load:
+        try:
+            cleanup_etf_data(ticker)
+        except Exception as e:
+            print(f"Cleanup for {ticker} failed (may not exist): {e}")
+
+    print("\nLoading ETFs with fresh data...")
+    for ticker in etfs_to_load:
+        load_single_etf(
+            ticker,
+            sector="etf",
+            industry="equity_etfs",
+            sub_industry="defense",
+            years_of_history=4,
+            allow_partial_reload=False
+        )
+        print(f"\nCompleted loading {ticker}\n")
+
 
