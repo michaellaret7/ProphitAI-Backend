@@ -57,6 +57,7 @@ class Portfolio(UserBase):
     sub_industry = Column(String)
     allocation = Column(Float)
     is_current = Column(Boolean, default=True, index=True)
+    is_discretionary = Column(Boolean, default=False, index=True)
     
     # New fields for recommendations
     supporting_metrics = Column(JSONB, nullable=True)

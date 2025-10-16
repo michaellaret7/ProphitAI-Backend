@@ -64,7 +64,8 @@ def get_all_user_data(email: str, session=None) -> Optional[Dict[str, Any]]:
             user_data['portfolios'].append({
                 'name': portfolio.name,
                 'portfolio_id': portfolio_id,
-                'is_current': portfolio.is_current
+                'is_current': portfolio.is_current,
+                'is_discretionary': portfolio.is_discretionary
             })
     
     return user_data
@@ -112,7 +113,8 @@ def get_all_user_data_by_clerk_id(clerk_id: str, session=None) -> Optional[Dict[
             user_data['portfolios'].append({
                 'name': portfolio.name,
                 'portfolio_id': portfolio_id,
-                'is_current': portfolio.is_current
+                'is_current': portfolio.is_current,
+                'is_discretionary': portfolio.is_discretionary
             })
     return user_data
 

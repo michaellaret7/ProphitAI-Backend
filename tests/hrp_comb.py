@@ -519,19 +519,10 @@ if __name__ == "__main__":
     from app.db.core.models.user_data_models import Portfolio
     from app.utils.serialize_output import serialize_sqlalchemy_obj
 
+    tickers = ["IGSB", "ARCC", "IVZ", "AVGO", "NVDA", "BSX", "VWO", "KLAC", "COST", "WMT", "GLD", "IAU"]
 
-    UserSession = UserSession()
-    portfolio = UserSession.query(Portfolio).filter(Portfolio.portfolio_id == "4925a201-5f96-4ee6-9494-4a4d06599757").all()
-    portfolio = [serialize_sqlalchemy_obj(p) for p in portfolio]
-
-    tickers = []
-    for p in portfolio:
-        tickers.append(p["ticker"])
-
-    directions_dict = {p["ticker"]: p["allocation"] for p in portfolio}
+    directions_dict = {"IGSB": 0.1, "ARCC": 0.1, "IVZ": 0.1, "AVGO": 0.1, "NVDA": 0.1, "BSX": 0.1, "VWO": 0.1, "KLAC": 0.1, "COST": 0.1, "WMT": 0.1, "GLD": 0.1, "IAU": 0.1}
     
-    UserSession.close()
-
     start_date = '2022-10-09'
     end_date = '2025-10-09'
 

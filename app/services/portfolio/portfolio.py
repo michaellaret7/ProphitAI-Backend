@@ -227,7 +227,8 @@ class PortfolioService:
         portfolios_formatted = [{
             "name": p.get("name"),
             "portfolioId": p.get("portfolio_id"),
-            "isCurrent": p.get("is_current")
+            "isCurrent": p.get("is_current"),
+            "isDiscretionary": p.get("is_discretionary")
         } for p in portfolios]
 
         # Build counts metadata

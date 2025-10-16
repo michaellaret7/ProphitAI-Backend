@@ -318,107 +318,107 @@ class DomainMemory:
         
         return lines
     
-    def format_memories_for_prompt(self, categories: List[str] = None, 
+    def format_memories_for_prompt(self, categories: List[str] = None,
                                   keywords: List[str] = None,
                                   concise: bool = False) -> str:
         """Format relevant memories as context for the agent prompt.
-        
+
         Args:
             categories: Optional list of categories to include
             keywords: Optional list of keywords to filter by
             concise: If True, format in a more compact way for refresh injections
-            
+
         Returns:
             Formatted string of relevant memories
         """
-        relevant_memories = []
-        
-        # Get memories by category
-        if categories:
-            for category in categories:
-                for memory in self.get_memories_by_category(category):
-                    payload = memory if isinstance(memory, dict) else {'content': self._stringify_value(memory)}
-                    relevant_memories.append({
-                        'category': category,
-                        **payload
-                    })
-        
-        # Get memories by keywords
-        if keywords:
-            keyword_memories = self.get_memories_by_keywords(keywords)
-            # Avoid duplicates
-            for km in keyword_memories:
-                if km not in relevant_memories:
-                    relevant_memories.append(km)
-        
-        # If no filters, get all
+        # Determine which memories to include
         if not categories and not keywords:
-            for category, memories in self.memories.items():
-                for memory in memories:
-                    payload = memory if isinstance(memory, dict) else {'content': self._stringify_value(memory)}
-                    relevant_memories.append({
-                        'category': category,
-                        **payload
-                    })
-        
-        if not relevant_memories:
+            # Get all memories
+            memory_data = self.memories
+        else:
+            # Filter by categories or keywords
+            memory_data = {}
+            if categories:
+                for category in categories:
+                    if category in self.memories:
+                        memory_data[category] = self.memories[category]
+            if keywords:
+                keyword_memories = self.get_memories_by_keywords(keywords)
+                for km in keyword_memories:
+                    cat = km.get('category', 'general')
+                    if cat not in memory_data:
+                        memory_data[cat] = []
+                    memory_data[cat].append({k: v for k, v in km.items() if k != 'category'})
+
+        if not memory_data:
             return ""
-        
-        # Group memories back by category for robust rendering
-        grouped: Dict[str, List[Dict[str, Any]]] = {}
-        for mem in relevant_memories:
-            cat = mem.get('category', 'general')
-            # Avoid duplicating the helper key inside the payload
-            payload = {k: v for k, v in mem.items() if k != 'category'}
-            grouped.setdefault(cat, []).append(payload)
-        
+
         # Format as context
         if concise:
             formatted = []
             current_date = self.get_current_date()
             if current_date:
                 formatted.append(f"Date: {current_date}")
-            for category, items in grouped.items():
-                formatted.append(f"- [{category.upper()}] {len(items)} item(s)")
+            for category, items in memory_data.items():
+                count = len(items) if isinstance(items, list) else 1
+                formatted.append(f"- [{category.upper()}] {count} item(s)")
             return "\n".join(formatted)
-        
+
         # Full format for initial context
         formatted = ["RELEVANT KNOWLEDGE BASE"]
         formatted.append("=" * 50)
-        
+
         # Add current date at the top of knowledge base
         current_date = self.get_current_date()
         if current_date:
             formatted.append(f"\nCURRENT DATE: {current_date}")
             formatted.append("")
-        
+
         # Include industry if present
         if hasattr(self, 'industry') and self.industry:
             formatted.append(f"Industry: {self.industry}")
             formatted.append("")
-        
+
         # Include tickers if present
         if hasattr(self, 'tickers') and self.tickers:
             formatted.append("Tickers")
             formatted.extend(self._format_generic(self.tickers, indent_level=1))
             formatted.append("")
-        
-        for category, items in grouped.items():
+
+        # Format each category
+        for category, items in memory_data.items():
             formatted.append("")
             formatted.append(f"[{category.upper()}]")
             formatted.append("-" * 50)
-            
-            for idx, item in enumerate(items, start=1):
-                formatted.append(f"\n{idx}. Memory Item")
-                formatted.extend(self._format_generic(item, indent_level=1))
-                
-                # Add separator between items if not last
-                if idx < len(items):
-                    formatted.append("\n" + "." * 30)
-        
+
+            # Handle both list-based and dict-based memory structures
+            if isinstance(items, list):
+                # List of memory items (original structure)
+                for idx, item in enumerate(items, start=1):
+                    formatted.append(f"\n{idx}. Memory Item")
+                    formatted.extend(self._format_generic(item, indent_level=1))
+
+                    if idx < len(items):
+                        formatted.append("\n" + "." * 30)
+
+            elif isinstance(items, dict):
+                # Dictionary of named examples/scenarios (optimizer structure)
+                for idx, (example_name, example_data) in enumerate(items.items(), start=1):
+                    # Convert snake_case to Title Case for display
+                    display_name = example_name.replace('_', ' ').title()
+                    formatted.append(f"\n{idx}. {display_name}")
+                    formatted.extend(self._format_generic(example_data, indent_level=1))
+
+                    if idx < len(items):
+                        formatted.append("\n" + "." * 30)
+            else:
+                # Single scalar value
+                formatted.append("\n1. Memory Item")
+                formatted.extend(self._format_generic(items, indent_level=1))
+
         formatted.append("=" * 50)
         formatted.append("Use the above knowledge to inform your analysis and decisions.")
-        
+
         return "\n".join(formatted)
     
     def get_current_date(self) -> Optional[str]:
