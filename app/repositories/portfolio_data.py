@@ -237,6 +237,53 @@ def delete_portfolio(
     # commit handled by decorator
     return True
 
+@with_transaction('user')
+def delete_portfolio_by_name(
+    *,
+    portfolio_name: str,
+    email: str = None,
+    user_id: uuid.UUID = None,
+    session=None
+) -> int:
+    """
+    Delete all positions for a portfolio by name.
+
+    Args:
+        portfolio_name: Name of the portfolio to delete
+        email: User email
+        user_id: User UUID
+        session: Database session (injected by decorator)
+
+    Returns:
+        Number of positions deleted
+    """
+    if not portfolio_name:
+        raise ValueError("portfolio_name must be provided")
+
+    user = None
+    if user_id:
+        user = session.query(User).filter(User.id == user_id).first()
+    elif email:
+        user = session.query(User).filter(User.email == email).first()
+    else:
+        raise ValueError("At least one identifier (email or user_id) must be provided")
+
+    if not user:
+        return 0
+
+    # Delete all positions with this portfolio name and user_id
+    q = session.query(Portfolio).filter(
+        Portfolio.user_id == user.id,
+        Portfolio.name == portfolio_name
+    )
+    count = q.count()
+
+    if count > 0:
+        q.delete(synchronize_session=False)
+
+    # commit handled by decorator
+    return count
+
 @with_session('user')
 def get_all_portfolio_ids(email: str = None, user_id: uuid.UUID = None, session=None):
     """
