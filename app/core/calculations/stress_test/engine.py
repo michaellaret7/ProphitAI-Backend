@@ -2,6 +2,7 @@ import pandas as pd
 import numpy as np
 from datetime import datetime, timedelta
 from app.repositories.price_data import fetch_bulk_price_data_for_tickers
+from app.utils.time_utils import get_current_utc_time
 from app.core.calculations.risk import RiskCalculator
 from app.core.calculations.returns import ReturnsCalculator
 from app.core.calculations.stress_test.scenarios import historical_scenarios, hypothetical_scenarios
@@ -38,8 +39,8 @@ def get_portfolio_betas(portfolio: list, etf_shocks: dict, period_days: int = 25
     Get the portfolio betas for a given portfolio and etf shocks.
     Uses bulk data fetching for efficiency with robust error handling.
     """
-    # Calculate date range
-    end_date = datetime.now()
+    # Calculate date range (using UTC time)
+    end_date = get_current_utc_time()
     start_date = end_date - timedelta(days=period_days)
     start_date_str = start_date.strftime('%Y-%m-%d')
     end_date_str = end_date.strftime('%Y-%m-%d')

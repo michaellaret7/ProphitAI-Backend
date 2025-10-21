@@ -1,4 +1,5 @@
 from __future__ import annotations
+from app.utils.time_utils import get_current_utc_time
 
 import numpy as np
 import pandas as pd
@@ -279,7 +280,7 @@ if __name__ == "__main__":
     tickers = list(weights.keys())
 
     # Fetch price data for last year
-    end_date = datetime.now()
+    end_date = get_current_utc_time()
     start_date = end_date - timedelta(days=365*2)
     
     # Get price data

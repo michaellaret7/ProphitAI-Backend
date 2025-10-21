@@ -2,6 +2,7 @@ import pandas as pd
 import numpy as np
 from app.repositories.price_data import fetch_bulk_price_data_for_tickers
 from datetime import datetime, timedelta
+from app.utils.time_utils import get_current_utc_time
 from app.core.calculations.stress_test.scenarios import historical_scenarios
 from app.core.calculations.returns.calculator import ReturnsCalculator
 from app.core.calculations.risk.calculator import RiskCalculator
@@ -82,8 +83,8 @@ def run_pairwise_correlation_analysis(portfolio_dict: PortfolioInput | dict):
         tickers = list(portfolio_dict.keys()) if isinstance(portfolio_dict, dict) else []
 
     # Prepare all date ranges needed
-    baseline_start = (datetime.now() - timedelta(days=365)).strftime("%Y-%m-%d")
-    baseline_end = datetime.now().strftime("%Y-%m-%d")
+    baseline_start = (get_current_utc_time() - timedelta(days=365)).strftime("%Y-%m-%d")
+    baseline_end = get_current_utc_time().strftime("%Y-%m-%d")
     
     # Fetch baseline data once
     baseline_price_data = fetch_bulk_price_data_for_tickers(

@@ -1,4 +1,5 @@
 from __future__ import annotations
+from app.utils.time_utils import get_current_utc_time
 from typing import Optional, Sequence
 import numpy as np
 import pandas as pd
@@ -174,7 +175,7 @@ if __name__ == "__main__":
     from app.core.calculations.core.config import DEFAULT_LOOKBACK_LONG
     from datetime import datetime, timedelta
 
-    end_date = datetime.now()
+    end_date = get_current_utc_time()
     # Convert trading days to calendar days for 3-year lookback
     start_date = end_date - timedelta(days=int(DEFAULT_LOOKBACK_LONG * 365 / 252))
 

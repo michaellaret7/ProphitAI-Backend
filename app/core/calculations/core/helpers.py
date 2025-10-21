@@ -7,6 +7,7 @@ import numpy as np
 import pandas as pd
 import logging
 from app.core.calculations.core.config import DEFAULT_SECTOR_COL, DEFAULT_WINSOR_LIMITS, DEFAULT_TRADING_DAYS
+from app.utils.time_utils import get_current_utc_time
 from app.repositories.price_data import fetch_bulk_price_data_for_tickers, get_dividends_series
 from app.core.calculations.returns.calculator import ReturnsCalculator
 
@@ -369,8 +370,8 @@ def returns_df(tickers: list[str], lookback_years: int) -> pd.DataFrame:
     if not tickers or lookback_years is None or int(lookback_years) <= 0:
         return pd.DataFrame()
 
-    start_date = datetime.now() - timedelta(days=int(lookback_years) * 365)
-    end_date = datetime.now()
+    end_date = get_current_utc_time()
+    start_date = end_date - timedelta(days=int(lookback_years) * 365)
 
     # Use the generalized date-range builder; retain rows with at least one non-NaN
     return build_returns_df_for_dates(

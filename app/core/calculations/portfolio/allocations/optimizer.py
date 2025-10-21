@@ -4,6 +4,7 @@ import os
 from datetime import datetime, timedelta
 from typing import Dict, Any, List
 from app.utils.gpt_parser import canonical_portfolio
+from app.utils.time_utils import get_current_utc_time
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
@@ -110,7 +111,7 @@ def optimize_portfolio_weights(
     long_tickers = [t for t, data in portfolio_canonical.items() if data.get("position") == "long"]
     short_tickers = [t for t, data in portfolio_canonical.items() if data.get("position") == "short"]
 
-    end = datetime.now()
+    end = get_current_utc_time()  # Use UTC time
     # Convert lookback_days (trading days) to calendar days
     calendar_days = int(lookback_days * 365 / 252)
     start = end - timedelta(days=calendar_days)

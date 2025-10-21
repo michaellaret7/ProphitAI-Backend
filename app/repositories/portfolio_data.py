@@ -4,6 +4,7 @@ from app.utils.serialize_output import serialize_sqlalchemy_obj
 from typing import Optional
 import uuid
 from datetime import datetime, timedelta
+from app.utils.time_utils import get_current_utc_time
 from app.db.core.models.market_data_models import *
 from sqlalchemy import func
 from sqlalchemy.orm import aliased
@@ -61,8 +62,8 @@ def add_portfolio(portfolio, company_name, user_email, portfolio_name, user_sess
             sub_industry=market_session.query(Ticker).filter(Ticker.ticker == positions.ticker).first().sub_industry,
             allocation=positions.allocation,
             is_current=False,
-            created_date=datetime.now(),
-            updated_date=datetime.now(),
+            created_date=get_current_utc_time(),
+            updated_date=get_current_utc_time(),
             company_id=company_id,
             user_id=user_id,
         ))
@@ -139,8 +140,8 @@ def add_initial_positions(positions: dict, industry: str, fund_name: str, prophi
             industry=industry,
             conviction=position['allocation']/100,
             reasoning=position['reasoning'],
-            date_created=datetime.now(),
-            date_updated=datetime.now(),
+            date_created=get_current_utc_time(),
+            date_updated=get_current_utc_time(),
         ))
 
     for position in positions['short']:
@@ -154,8 +155,8 @@ def add_initial_positions(positions: dict, industry: str, fund_name: str, prophi
             industry=industry,
             conviction=position['allocation']/100,
             reasoning=position['reasoning'],
-            date_created=datetime.now(),
-            date_updated=datetime.now(),
+            date_created=get_current_utc_time(),
+            date_updated=get_current_utc_time(),
         ))   
 
     # Commit the transaction for prophit_session

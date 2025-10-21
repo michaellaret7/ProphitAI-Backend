@@ -87,6 +87,31 @@ Each agent registers relevant tools via `register_*_tools(agent)` functions that
 
 ## Development Guidelines
 
+### Timezone Handling (CRITICAL)
+**All datetime operations MUST use UTC time to ensure data consistency**
+
+- **NEVER use `datetime.now()`** - This returns server local time and causes timezone misalignment
+- **ALWAYS use `get_current_utc_time()`** from `app.utils.time_utils` for current time
+- **Database stores UTC timestamps as naive datetimes** - All times are in UTC without timezone info
+- **Price data from FMP API arrives in EST** - Converted to UTC before storage
+
+#### Required Import
+```python
+from app.utils.time_utils import get_current_utc_time, get_utc_date_str, get_utc_days_ago
+```
+
+#### Available Functions
+- `get_current_utc_time()` - Returns current UTC time as naive datetime
+- `get_utc_date_str()` - Returns current UTC date as 'YYYY-MM-DD' string
+- `get_utc_days_ago(days)` - Returns UTC time N days ago
+- `get_utc_date_range(lookback_days)` - Returns (start_date, end_date) tuple
+
+#### Why This Matters
+- Server runs in EST (4 hours behind UTC)
+- Database stores all timestamps in UTC
+- Using local time causes 4-hour data misalignment
+- Results in incorrect calculations, missing recent data, and wrong backtesting results
+
 ### Core Development Philosophy
 **KISS (Keep It Simple, Stupid)**
 - Simplicity should be a key goal in design. Choose straightforward solutions over complex ones whenever possible. Simple solutions are easier to understand, maintain, and debug.

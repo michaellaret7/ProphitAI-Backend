@@ -2,6 +2,7 @@ from app.db.core.db_config import MarketSession
 from app.db.core.models.market_data_models import *
 from app.db.core.pull_fmp_data import FMP_API_DATA
 from datetime import datetime
+from app.utils.time_utils import get_current_utc_time
 from decimal import Decimal
 from sqlalchemy import update
 from concurrent.futures import ThreadPoolExecutor, as_completed
@@ -80,7 +81,7 @@ class UpdateTickerTable:
                     'eps': quote.get('eps'),
                     'pe': quote.get('pe'),
                     'dollar_volume': dollar_volume,
-                    'last_updated': datetime.now(),
+                    'last_updated': get_current_utc_time(),
                     'beta': profile.get('beta'),
                     'is_actively_trading': profile.get('isActivelyTrading'),
                     'is_adr': profile.get('isAdr'),

@@ -2,6 +2,7 @@ from app.db.core.db_config import MarketSession
 from app.db.core.models.market_data_models import *
 from app.db.core.pull_fmp_data import FMP_API_DATA
 from datetime import datetime, timedelta, date
+from app.utils.time_utils import get_current_utc_time
 from decimal import Decimal
 import time
 import threading
@@ -938,7 +939,7 @@ class UpdateFundamentalData:
         """Update earnings transcripts with smart quarterly logic"""
         try:
             # Get current year and quarter
-            current_date = datetime.now()
+            current_date = get_current_utc_time()
             current_year = current_date.year
             current_quarter = (current_date.month - 1) // 3 + 1
             

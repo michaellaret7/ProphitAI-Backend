@@ -2,6 +2,7 @@ from app.db.core.models.market_data_models import *
 from app.db.core.db_config import *
 import pandas as pd
 from datetime import datetime
+from app.utils.time_utils import get_current_utc_time
 from app.core.calculations.risk.calculator import RiskCalculator
 from app.repositories.price_data import fetch_bulk_price_data_for_tickers
 from app.core.calculations.core.config import DEFAULT_CONFIDENCE
@@ -17,7 +18,7 @@ class PortfolioConcentration:
         self.portfolio_dict = portfolio_dict or {}
         self.tickers = list(self.portfolio_dict.keys())
         self.confidence = confidence
-        self.end_date = end_date or datetime.now()
+        self.end_date = end_date or get_current_utc_time()
         self.start_date = start_date or (self.end_date - timedelta(days=365))
 
         session = MarketSession()

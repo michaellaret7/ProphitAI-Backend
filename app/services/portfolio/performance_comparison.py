@@ -11,6 +11,7 @@ import uuid
 import pandas as pd
 import numpy as np
 from app.repositories.price_data import fetch_bulk_price_data_for_tickers
+from app.utils.time_utils import get_current_utc_time
 from app.repositories.portfolio_data import retrieve_portfolio
 from app.core.calculations.returns.calculator import PortfolioReturnsCalculator, ReturnsCalculator
 
@@ -96,8 +97,8 @@ class PortfolioPerformanceComparisonService:
         Raises:
             ValueError: If unable to fetch price data
         """
-        # Calculate date range
-        end_date = datetime.now()
+        # Calculate date range (using UTC time)
+        end_date = get_current_utc_time()
         start_date = end_date - timedelta(days=365 * self.years)
 
         # Get all unique tickers from both portfolios

@@ -12,6 +12,7 @@ import numpy as np
 import pandas as pd
 from typing import Dict, Optional, Union, Tuple
 from datetime import datetime, timedelta
+from app.utils.time_utils import get_current_utc_time
 import logging
 
 logger = logging.getLogger(__name__)
@@ -540,7 +541,7 @@ class LiquidityCalculator:
         from datetime import datetime, timedelta
         
         # Get price data
-        end_date = datetime.now()
+        end_date = get_current_utc_time()
         start_date = end_date - timedelta(days=price_data_days)
         
         # Fetch OHLCV data

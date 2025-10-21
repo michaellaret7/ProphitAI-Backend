@@ -2,6 +2,7 @@ from typing import Dict, List
 import pandas as pd
 from datetime import datetime, timedelta
 from app.repositories.prophit_alts_data import get_fund_final_positions
+from app.utils.time_utils import get_current_utc_time
 from app.repositories.price_data import get_price_data_daily
 from app.core.calculations.returns.calculator import ReturnsCalculator
 from app.core.calculations.portfolio.correlation import CorrelationAnalysis
@@ -45,8 +46,8 @@ class AltsCorrelationService:
         if len(tickers) < 2:
             raise ValueError(f"Need at least 2 tickers to compute correlation matrix, found {len(tickers)}")
 
-        # Fetch price data for all tickers
-        end_date = datetime.now()
+        # Fetch price data for all tickers (using UTC time)
+        end_date = get_current_utc_time()
         start_date = end_date - timedelta(days=int(DEFAULT_LOOKBACK_SHORT * 365 / 252))
 
         ticker_returns: Dict[str, pd.Series] = {}

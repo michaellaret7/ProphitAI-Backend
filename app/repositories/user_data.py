@@ -5,6 +5,7 @@ from typing import Optional, Union, Dict, Any
 from app.utils.serialize_output import serialize_sqlalchemy_obj
 from app.utils.decorators.database import with_session, with_transaction
 from datetime import datetime
+from app.utils.time_utils import get_current_utc_time
 import uuid
 
 @with_session('user')
@@ -159,7 +160,7 @@ def add_user(email: str, first_name: str, last_name: str, clerk_id: Optional[str
         email=email,
         first_name=first_name,
         last_name=last_name,
-        creation_date=datetime.now()
+        creation_date=get_current_utc_time()
     )
 
     session.add(user)
@@ -197,7 +198,7 @@ def update_user_fields(
     if company_name is not None:
         company = session.query(Company).filter(Company.name == company_name).first()
         if not company:
-            company = Company(id=uuid.uuid4(), name=company_name, creation_date=datetime.now(), seats=0)
+            company = Company(id=uuid.uuid4(), name=company_name, creation_date=get_current_utc_time(), seats=0)
             session.add(company)
             session.flush()
         user.company_id = company.id
@@ -238,7 +239,7 @@ def assign_user_to_company_by_email(email: str, company_name: str, role: Optiona
         return False
     company = session.query(Company).filter(Company.name == company_name).first()
     if not company:
-        company = Company(id=uuid.uuid4(), name=company_name, creation_date=datetime.now(), seats=0)
+        company = Company(id=uuid.uuid4(), name=company_name, creation_date=get_current_utc_time(), seats=0)
         session.add(company)
         session.flush()
     user.company_id = company.id
@@ -251,7 +252,7 @@ def add_company(company_name:str, seats:int, session=None):
     company = Company(
         id = uuid.uuid4(),
         name=company_name,
-        creation_date=datetime.now(),
+        creation_date=get_current_utc_time(),
         seats=seats
     )
     session.add(company)

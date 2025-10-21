@@ -4,6 +4,7 @@ from app.db.core.pull_fmp_data import FMP_API_DATA
 from datetime import datetime, timedelta, timezone
 import time
 from app.utils.serialize_output import serialize_sqlalchemy_obj
+from app.utils.time_utils import get_current_utc_time
 from sqlalchemy import func
 from sqlalchemy.dialects.postgresql import insert
 import pytz
@@ -45,7 +46,7 @@ class UpdatePriceTable():
             
             # Calculate date range (add 15 minutes to last_date to avoid duplicates)
             from_date = last_date + timedelta(minutes=15)
-            to_date = datetime.now()
+            to_date = get_current_utc_time()
             
             # Skip if data is already current (within 15 minutes)
             if (to_date - last_date).total_seconds() < 900:  # 900 seconds = 15 minutes

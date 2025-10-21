@@ -1,6 +1,7 @@
 from typing import List, Dict, Any
 from datetime import datetime, timedelta
 from app.repositories.price_data import fetch_bulk_price_data_for_tickers
+from app.utils.time_utils import get_current_utc_time
 
 
 class PriceService:
@@ -22,8 +23,8 @@ class PriceService:
         Raises:
             ValueError: If no price data found for any ticker
         """
-        # Calculate date range
-        end_date = datetime.now()
+        # Calculate date range (using UTC time for consistency)
+        end_date = get_current_utc_time()
         start_date = end_date - timedelta(days=days)
 
         # Format dates as strings

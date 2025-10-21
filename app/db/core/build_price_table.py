@@ -4,6 +4,7 @@ from app.db.core.models.market_data_models import Ticker, Price
 from datetime import datetime, timedelta
 from sqlalchemy import insert, extract, text
 from app.db.core.pull_fmp_data import FMP_API_DATA
+from app.utils.time_utils import get_current_utc_time, get_utc_date_str
 import pandas as pd
 import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
@@ -50,7 +51,7 @@ class TransferPriceData:
     def __init__(self, ticker):
         self.ticker = ticker
         self.start_date = '1900-01-01'
-        self.end_date = datetime.now().strftime('%Y-%m-%d')
+        self.end_date = get_utc_date_str()  # Use UTC date
         self.interval = '15T'
         self.batch_size = 2000  # Optimal batch size for PostgreSQL
 
@@ -112,8 +113,8 @@ class TransferPriceData:
     def get_intraday_prices_for_ticker(self):
         fmp_api = FMP_API_DATA()
         all_data = []
-        to_date = datetime.now()
-        limit_date = datetime.now() - timedelta(days=6*365)
+        to_date = get_current_utc_time()  # Use UTC time
+        limit_date = get_current_utc_time() - timedelta(days=6*365)  # Use UTC time
         last_fetched_date_str = ''
 
         while to_date > limit_date:

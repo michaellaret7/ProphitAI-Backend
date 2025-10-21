@@ -11,6 +11,7 @@ import pandas as pd
 from datetime import datetime, timedelta
 from typing import Dict, Any, List
 import json
+from app.utils.time_utils import get_current_utc_time
 
 class ProphitAltsServices:
     """
@@ -83,8 +84,8 @@ class ProphitAltsServices:
         if 'SPY' not in self.tickers:
             self.tickers.append('SPY')
 
-        # Fetch prices ONCE
-        end_date = datetime.now()
+        # Fetch prices ONCE (using UTC time)
+        end_date = get_current_utc_time()
         start_date = end_date - timedelta(days=self.lookback_days)
         start_date_str = start_date.strftime('%Y-%m-%d')
         end_date_str = end_date.strftime('%Y-%m-%d')
@@ -155,8 +156,8 @@ class ProphitAltsServices:
 
         trading_days = 252
 
-        # YTD
-        current_year = datetime.now().year
+        # YTD (using UTC time)
+        current_year = get_current_utc_time().year
         ytd_returns = self.portfolio_returns[self.portfolio_returns.index.year == current_year]
         if not ytd_returns.empty:
             ytd_return = (1 + ytd_returns).prod() - 1

@@ -13,6 +13,7 @@ from app.core.calculations.factors.quality import QualityFactors
 from app.core.calculations.factors.volatility import VolatilityFactors
 from app.core.calculations.core.helpers import winsorize_series
 from datetime import datetime, timedelta
+from app.utils.time_utils import get_current_utc_time
 
 GroupingLevel = Literal["sector", "industry", "sub_industry"]
 
@@ -133,7 +134,7 @@ def calc_momentum_factors(tickers: List[str]) -> pd.DataFrame:
     """
     # Use last 3 years of data for momentum calculations (industry standard)
     from app.core.calculations.core.config import DEFAULT_LOOKBACK_LONG
-    end_date = datetime.now()
+    end_date = get_current_utc_time()
     start_date = end_date - timedelta(days=int(DEFAULT_LOOKBACK_LONG * 365 / 252))
     return MomentumFactors.calc_all_bulk(tickers, start_date, end_date)
 
@@ -162,6 +163,6 @@ def calc_volatility_factors(tickers: List[str]) -> pd.DataFrame:
     """
     # Use last 3 years of data for volatility calculations (industry standard)
     from app.core.calculations.core.config import DEFAULT_LOOKBACK_LONG
-    end_date = datetime.now()
+    end_date = get_current_utc_time()
     start_date = end_date - timedelta(days=int(DEFAULT_LOOKBACK_LONG * 365 / 252))
     return VolatilityFactors.calc_all_bulk(tickers, start_date, end_date)
