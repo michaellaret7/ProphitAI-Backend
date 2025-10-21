@@ -41,8 +41,9 @@ def calculate_portfolio_performance(portfolio_dict: PortfolioInput | dict, lookb
             lookback_days=lookback_days,
             use_total_returns=use_total_returns,
             dropna=False,
-            normalization="gross"
-        , _simulation_date=_simulation_date)
+            normalization="gross",
+            _simulation_date=_simulation_date
+        )
 
 
         if portfolio_returns is None or portfolio_returns.empty:

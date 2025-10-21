@@ -603,29 +603,39 @@ def load_multiple_etfs(etf_list, years_of_history=2):
 
 if __name__ == "__main__":
     # Clean up any partial data from previous failed attempts
-    etfs_to_load = ["WTAI", "ARTY"]
+    etfs_to_load = ['STOT', 'PRIV', 'TOTL', 'HYBL']
 
-    etfs_to_load = ["BOTZ", "AIQ", "IGPT", "ARKQ", "THNQ", "AIAI", "AIQU", "ARCI"]
-
-
-
-    print("Cleaning up any existing partial data...")
-    for ticker in etfs_to_load:
-        try:
-            cleanup_etf_data(ticker)
-        except Exception as e:
-            print(f"Cleanup for {ticker} failed (may not exist): {e}")
-
-    print("\nLoading ETFs with fresh data...")
-    for ticker in etfs_to_load:
-        load_single_etf(
-            ticker,
-            sector="etf",
-            industry="equity_etfs",
-            sub_industry="defense",
-            years_of_history=4,
-            allow_partial_reload=False
-        )
-        print(f"\nCompleted loading {ticker}\n")
+    load_single_etf(
+        'STOT',
+        sector="etf",
+        industry="fixed_income_etfs",
+        sub_industry="credit",
+        years_of_history=4,
+        allow_partial_reload=False
+    )
+    load_single_etf(
+        'PRIV',
+        sector="etf",
+        industry="fixed_income_etfs",
+        sub_industry="credit",
+        years_of_history=4,
+        allow_partial_reload=False
+    )
+    load_single_etf(
+        'TOTL',
+        sector="etf",
+        industry="fixed_income_etfs",
+        sub_industry="abs_and_mbs",
+        years_of_history=4,
+        allow_partial_reload=False
+    )
+    load_single_etf(
+        'HYBL',
+        sector="etf",
+        industry="fixed_income_etfs",
+        sub_industry="credit",
+        years_of_history=4,
+        allow_partial_reload=False
+    )
 
 

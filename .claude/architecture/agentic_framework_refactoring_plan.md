@@ -1,8 +1,9 @@
 # Agentic Framework Refactoring Plan
 
 **Date:** 2025-10-14
-**Status:** Draft
+**Status:** Approved for Implementation
 **Priority:** High
+**Review Grade:** B+ (with targeted improvements implemented)
 
 ---
 
@@ -12,16 +13,17 @@ The `app/core/agentic_framework/` is the heart of ProphitAI but has accumulated 
 
 **Key Issues Identified:**
 - Multiple files exceed code constraints (agent.py: 1130 lines, execution_engine.py: 1116 lines)
-- Complex dependencies and tight coupling between components
+- Circular dependencies between TaskManager and ExecutionEngine
 - Duplication in tool registration and result parsing logic
-- Over-engineered validation systems
-- Unclear separation of concerns in the task management system
+- Over-engineered validation systems (593 lines for simple checks)
+- Speculative features that add complexity without runtime value
 
-**Estimated Impact:**
+**Expected Impact:**
 - Reduce total LOC by ~25-30%
 - Improve maintainability score from ~40% to ~75%
 - Enable easier testing and extensibility
 - Align with KISS, YAGNI, and DRY principles
+- 100% file size compliance (<500 lines per file)
 
 ---
 
@@ -340,6 +342,7 @@ base_agent/tasks/
 base_agent/tasks/
 ├── execution_engine.py (task execution only, ~300 lines)
 ├── completion_validator.py (simple validator, ~80 lines)
+├── legacy_validator.py (preserve old validator as fallback/reference)
 └── analytics.py (includes execution analytics, ~150 lines total)
 ```
 
@@ -350,8 +353,8 @@ base_agent/tasks/
 - Check dependencies
 - **Remove:** Analytics (lines 985-1116), stagnation checks, parallel simulation
 
-**completion_validator.py (simplified):**
-- Replace 593-line TaskValidator with simple rules:
+**completion_validator.py (simplified with feature flag):**
+- Create new simplified validator with basic rules:
   ```python
   def is_subtask_complete(subtask: SubTask) -> bool:
       has_evidence = len(subtask.completion_evidence) >= 1
@@ -365,11 +368,14 @@ base_agent/tasks/
   ```
 - **Reduction:** 593 lines → ~80 lines (86% reduction)
 - **Justification:** Complex confidence scoring and pattern matching adds minimal value
+- **IMPORTANT:** Preserve old validator in `legacy_validator.py` for fallback and comparison
+- **Add telemetry** to compare old vs new validator decisions in production
 
 **Rationale:**
 - KISS: Simple completion rules instead of complex validation
 - YAGNI: Remove speculative analytics features
 - DRY: Use shared tool result parser
+- Safety: Keep old implementation for rollback if needed
 
 #### 1.4 Consolidate Tool Result Parsing (DRY fix)
 
@@ -465,35 +471,58 @@ class TaskStore(Protocol):
 
 **Current Problem:**
 ```
-TaskManager ←→ ExecutionEngine (circular via back-reference)
+TaskManager ←→ ExecutionEngine (circular via back-reference at line 33)
 ```
 
-**Solution: Event-Based Communication**
+**Solution: Simple Callback Injection (NOT Event Bus)**
 
-```
-base_agent/events/
-├── __init__.py
-├── event_bus.py (central event bus)
-└── task_events.py (task-related events)
-```
+**Why callbacks over events:**
+- Event bus adds architectural overhead without clear benefit
+- Callbacks are simpler, more explicit, and easier to debug
+- No need for event infrastructure for 2-3 components
+- Violates KISS principle to add event system for simple use case
 
 **Pattern:**
 ```python
-# ExecutionEngine emits events instead of calling TaskManager directly
-event_bus.emit(TaskStatusChanged(task_id=1, new_status=TaskStatus.COMPLETED))
+# execution_engine.py - Takes callback, not concrete TaskManager
+class PlanExecutionEngine:
+    def __init__(
+        self,
+        task_store: TaskStore,  # Interface, not concrete class
+        on_task_complete: Optional[Callable[[int], None]] = None,
+        on_task_advance: Optional[Callable[[int, str], None]] = None,
+        verbose: bool = True
+    ):
+        self.task_store = task_store
+        self.on_task_complete = on_task_complete
+        self.on_task_advance = on_task_advance
+        # NO back-reference needed
 
-# TaskManager listens for events and updates state
-@event_bus.on(TaskStatusChanged)
-def handle_status_change(event):
-    self.update_task_status(event.task_id, event.new_status)
+    def advance_task_progression(self):
+        # Update via interface
+        self.task_store.update_task_status(...)
+
+        # Notify via callback
+        if self.on_task_complete:
+            self.on_task_complete(task_id)
+
+# agent.py - Wire up dependencies
+task_manager = TaskManager(...)
+execution_engine = PlanExecutionEngine(
+    task_store=task_manager,
+    on_task_complete=lambda task_id: task_manager.handle_completion(task_id),
+    on_task_advance=lambda task_id, reason: task_manager.handle_advancement(task_id, reason)
+)
 ```
 
 **Impact:**
 - No circular dependencies
-- Components loosely coupled
-- Easier to test and extend
+- Components loosely coupled via callbacks
+- Simpler than event bus
+- Easy to test (inject mock callbacks)
+- Explicit control flow (not hidden in events)
 
-#### 2.3 Introduce Dependency Injection
+#### 2.3 Introduce Dependency Injection (Properly)
 
 **Current: Components create their own dependencies**
 ```python
@@ -506,7 +535,7 @@ self.execution_engine = PlanExecutionEngine(
 )
 ```
 
-**Refactored: Inject dependencies**
+**Refactored: Pure DI with factory method**
 ```python
 # agent.py
 def __init__(
@@ -514,20 +543,46 @@ def __init__(
     system_prompt: str,
     user_prompt: str,
     *,
-    task_store: Optional[TaskStore] = None,
-    task_executor: Optional[TaskExecutor] = None,
-    completion_checker: Optional[CompletionChecker] = None,
+    task_store: TaskStore,  # Required, no default (pure DI)
+    task_executor: TaskExecutor,  # Required
+    completion_checker: CompletionChecker,  # Required
     ...
 ):
-    self.task_store = task_store or TaskManager(...)
-    self.task_executor = task_executor or ExecutionEngine(...)
-    self.completion_checker = completion_checker or SimpleValidator(...)
+    # Pure dependency injection, no defaults
+    self.task_store = task_store
+    self.task_executor = task_executor
+    self.completion_checker = completion_checker
+
+# Add factory method for convenience
+@classmethod
+def create_default(
+    cls,
+    system_prompt: str,
+    user_prompt: str,
+    **kwargs
+) -> 'BaseAgent':
+    """Convenience factory with standard dependencies."""
+    task_manager = TaskManager(...)
+    return cls(
+        system_prompt=system_prompt,
+        user_prompt=user_prompt,
+        task_store=task_manager,
+        task_executor=ExecutionEngine(task_store=task_manager, ...),
+        completion_checker=SimpleValidator(...),
+        **kwargs
+    )
 ```
 
+**Why no defaults in constructor:**
+- Defaults defeat the purpose of DI (maintains tight coupling)
+- Factory method provides convenience without compromising testability
+- Constructor clearly shows all dependencies
+
 **Benefits:**
-- Can inject mocks for testing
+- Can inject mocks for testing (no need to override defaults)
 - Can swap implementations easily
-- Dependencies explicit in constructor
+- Dependencies explicit and required
+- Factory hides complexity for common use cases
 
 ---
 
@@ -678,67 +733,72 @@ base_agent/
 - Easy to find relevant code
 - Logical grouping by functionality
 
-#### 4.2 Standardize Tool Registration
+#### 4.2 Simplify Tool Registration (Keep Explicit Approach)
 
 **Current Issues:**
 - `tool_registry.py` has 457 lines registering tools via lambdas
-- Tools registered by calling `register_X_tools(agent)` functions
-- Hard to discover available tools
-- Hard to extend with custom tools
+- Some duplication in registration logic
 
-**Proposed: Decorator-Based Registration**
+**Decision: Keep explicit registration, just simplify it**
+
+**Why NOT use decorators:**
+- Decorators with complex arguments are harder to debug
+- Current explicit `register_*_tools()` functions are actually more maintainable
+- Decorator magic makes control flow less obvious
+- No significant benefit over current approach
+
+**Proposed: Simplified explicit registration**
 
 ```python
-# tool_lib/registry.py
+# tools/registry.py
 class ToolRegistry:
-    """Central registry for all agent tools."""
+    def __init__(self):
+        self.tools: Dict[str, ToolDefinition] = {}
 
-    _tools: Dict[str, ToolDefinition] = {}
+    def add(self, tool: ToolDefinition):
+        """Add a tool to the registry."""
+        self.tools[tool.name] = tool
 
-    @classmethod
-    def register(cls, name: str, description: str, parameters: Dict):
-        """Decorator to register a tool."""
-        def decorator(func):
-            cls._tools[name] = ToolDefinition(
-                name=name,
-                description=description,
-                parameters=parameters,
-                function=func
-            )
-            return func
-        return decorator
+    def add_all(self, tools: List[ToolDefinition]):
+        """Add multiple tools at once."""
+        for tool in tools:
+            self.add(tool)
 
-    @classmethod
-    def get_tools(cls, categories: List[str] = None) -> Dict[str, ToolDefinition]:
+    def get_by_category(self, category: str) -> List[ToolDefinition]:
         """Get tools by category."""
-        if not categories:
-            return cls._tools
-        return {
-            name: tool for name, tool in cls._tools.items()
-            if tool.category in categories
-        }
-```
+        return [t for t in self.tools.values() if t.category == category]
 
-**Usage:**
-```python
-# tool_lib/data_tools/stock_screener.py
-from ..registry import ToolRegistry
+# tools/data_tools.py
+def get_data_tools() -> List[ToolDefinition]:
+    """Return all data tools."""
+    return [
+        ToolDefinition(
+            name="screen_stocks",
+            func=screen_stocks,
+            description="Screen stocks based on criteria",
+            parameters={...},
+            category="data"
+        ),
+        ToolDefinition(
+            name="get_fundamentals",
+            func=get_fundamentals,
+            description="Get fundamental data",
+            parameters={...},
+            category="data"
+        ),
+    ]
 
-@ToolRegistry.register(
-    name="screen_stocks",
-    description="Screen stocks based on criteria",
-    parameters={...},
-    category="data"
-)
-def screen_stocks(criteria: Dict) -> Dict:
-    ...
+# Usage in agent
+registry = ToolRegistry()
+registry.add_all(get_data_tools())
+registry.add_all(get_risk_tools())
 ```
 
 **Benefits:**
-- Self-documenting tool registration
-- Easy to discover tools
-- Can filter tools by category
-- No need for separate registration functions
+- Clear, explicit registration (easy to understand)
+- No decorator magic to debug
+- Tools grouped by module
+- Easy to discover (just read the `get_X_tools()` function)
 
 #### 4.3 Simplify Tool Library Structure
 
@@ -755,12 +815,10 @@ tool_lib/
 
 **Issues:**
 - `stock_screener.py` is 848 lines (violates constraint)
-- Unclear why some tools are "agent_specific" vs others
-- No consistent pattern for tool organization
 
 **Proposed Changes:**
 
-1. **Split stock_screener.py:**
+1. **Split stock_screener.py by screening strategy:**
 ```
 tool_lib/data_tools/
 ├── screener/
@@ -772,97 +830,136 @@ tool_lib/data_tools/
 └── ...
 ```
 
-2. **Merge agent_specific_tools into core categories:**
-- `agent_specific_tools/cio.py` → `portfolio_tools/construction.py`
-- `agent_specific_tools/cro.py` → `risk_tools/analysis.py`
-- `agent_specific_tools/industry.py` → `data_tools/industry_analysis.py`
-- `agent_specific_tools/optimizer.py` → `portfolio_tools/optimization.py`
+2. **Keep agent_specific_tools separate (REVISED):**
+- **Do NOT merge** into core categories
+- Agent-specific vs general-purpose is a valid architectural distinction
+- Maintains semantic meaning of "this tool is for CIO agent"
+- Better discoverability for developers working on specific agents
+- **Instead, improve organization:**
+```
+tool_lib/agent_specific_tools/
+├── cio/
+│   ├── __init__.py
+│   └── portfolio_construction.py
+├── cro/
+│   ├── __init__.py
+│   └── risk_analysis.py
+├── industry/
+│   ├── __init__.py
+│   └── sector_analysis.py
+└── optimizer/
+    ├── __init__.py
+    └── optimization.py
+```
 
-3. **Result:** Clearer organization, no special "agent_specific" category
+3. **Result:** Clearer organization, maintains domain-driven design pattern
 
 ---
 
 ## Implementation Roadmap
 
-### Phase 1: Critical Size Reductions (Week 1)
+### Implementation Priorities
 
-**Day 1-2: Extract from agent.py**
-- Create `execution/react_loop.py`
-- Create `execution/tool_executor.py`
-- Create `prompting/context_builder.py`
-- Reduce agent.py from 1130 → ~400 lines
+**Phase 1: Quick Wins (High Impact, Low Risk)**
+1. Extract `ToolResultParser` - eliminates 200+ lines of duplication
+2. Simplify validation to ~80 lines (preserve old as `legacy_validator.py`)
+3. Remove unused analytics - 256 lines removed
+4. Add Protocol interfaces for TaskStore and TaskExecutor
 
-**Day 3-4: Simplify execution_engine.py**
-- Remove analytics methods (lines 985-1116)
-- Move to optional `tasks/analytics.py`
-- Reduce from 1116 → ~400 lines
+**Phase 2: Decouple Dependencies (High Impact, Medium Risk)**
+5. Break circular dependency with callbacks (NOT event bus)
+6. Split `agent.py` into logical modules (don't over-split - keep ReAct loop cohesive)
+7. Add feature flags for gradual migration
+8. Implement dependency injection with factory pattern
 
-**Day 5: Simplify manager.py**
-- Move analytics to `tasks/analytics.py`
-- Remove duplicate update flows
-- Reduce from 741 → ~250 lines
+**Phase 3: Structural Cleanup (Medium Impact, Medium Risk)**
+9. Split `execution_engine.py` (keep cohesive functionality together)
+10. Split `manager.py` (state management vs analytics)
+11. Reorganize directory structure
+12. Split `stock_screener.py` by screening strategy
 
-**Day 6-7: Consolidate validation**
-- Create simple `tasks/validator.py` (~80 lines)
-- Delete complex TaskValidator (593 lines)
-- Create unified `core/result_parser.py`
+**Phase 4: Testing & Validation (Critical for Success)**
+13. Comprehensive testing strategy (see Testing section below)
+14. Feature flag rollout and A/B testing
+15. Performance validation and benchmarking
+16. Documentation updates
 
-### Phase 2: Decouple Dependencies (Week 2)
+### Feature Flag Strategy
 
-**Day 8-9: Define interfaces**
-- Create `interfaces/` directory
-- Define TaskStore, TaskExecutor, CompletionChecker protocols
-- Update implementations to match interfaces
+**Critical for safe incremental rollout:**
 
-**Day 10-11: Break circular dependencies**
-- Implement event-based communication
-- Remove TaskManager → ExecutionEngine back-reference
-- Test with dependency injection
+```python
+# config.py
+class RefactoringFlags:
+    """Feature flags for gradual refactoring rollout."""
 
-**Day 12-14: Refactor agent initialization**
-- Add dependency injection to BaseAgent
-- Create builder pattern for agent construction
-- Update domain-specific agents (CIO, CRO, etc.)
+    USE_NEW_VALIDATOR = os.getenv("USE_NEW_VALIDATOR", "false") == "true"
+    USE_NEW_RESULT_PARSER = os.getenv("USE_NEW_RESULT_PARSER", "false") == "true"
+    USE_CALLBACK_PATTERN = os.getenv("USE_CALLBACK_PATTERN", "false") == "true"
 
-### Phase 3: Remove Unused Code (Week 3)
+    # Percentage-based rollout
+    NEW_VALIDATOR_ROLLOUT_PCT = int(os.getenv("NEW_VALIDATOR_ROLLOUT_PCT", "0"))
 
-**Day 15: Delete analytics**
-- Remove parallel execution simulation
-- Remove health metrics
-- Remove plan analytics report
-- Create optional analytics module if needed
+# In code:
+if RefactoringFlags.USE_NEW_VALIDATOR:
+    validator = CompletionValidator()
+else:
+    validator = TaskValidator()  # Legacy
+```
 
-**Day 16: Simplify tool routing**
-- Remove tool routing audit system
-- Add debug logging where useful
-- Clean up execution history
+**Benefits:**
+- Test in production with small % of traffic
+- Instant rollback via environment variable
+- Compare old vs new behavior side-by-side
+- A/B testing to validate improvements
 
-**Day 17-18: Reorganize directory structure**
-- Move files to new structure
-- Update all imports
-- Run tests to verify
+### Comprehensive Testing Strategy
 
-**Day 19-21: Tool library cleanup**
-- Split stock_screener.py into modules
-- Merge agent_specific_tools
-- Implement decorator-based registration
+**Pre-Refactoring (Establish Baseline):**
+1. **Golden Outputs:** Capture 10+ successful agent executions as reference
+2. **Performance Baseline:** Benchmark iteration speed, token usage, success rate
+3. **Integration Test Suite:** Create comprehensive tests for all agent flows
+4. **Regression Test Harness:** Automated comparison of outputs before/after
 
-### Phase 4: Testing & Documentation (Week 4)
+**During Refactoring (Continuous Validation):**
+1. **Minimum 80% test coverage** for new code
+2. **All golden outputs must match** (or differences explained)
+3. **Performance within 5% of baseline**
+4. **Unit tests for each extracted component**
+5. **Integration tests for component interactions**
 
-**Day 22-24: Unit tests**
-- Test each component in isolation
-- Test interface implementations
-- Test event-based communication
+**Testing Checklist:**
+- [ ] Unit tests for ToolResultParser
+- [ ] Unit tests for SimpleValidator vs LegacyValidator comparison
+- [ ] Integration tests for callback-based communication
+- [ ] Integration tests for Protocol implementations
+- [ ] Full agent execution tests (CIO, CRO, Industry agents)
+- [ ] Performance benchmarks (iteration speed, memory usage)
+- [ ] LLM provider compatibility (OpenAI, Claude, Grok)
+- [ ] Rollback procedure validation
 
-**Day 25-26: Integration tests**
-- Test full agent execution
-- Test task management flows
-- Test tool execution
+### Rollback Procedures
 
-**Day 27-28: Documentation**
-- Update CLAUDE.md with new structure
-- Document interfaces and contracts
-- Add architecture diagrams
+**Each phase must have clear rollback plan:**
+
+1. **Phase 1 Rollback:**
+   - Revert to legacy validator via feature flag
+   - Revert to old result parser if issues found
+   - Analytics can be restored from `legacy_analytics.py`
+
+2. **Phase 2 Rollback:**
+   - Restore back-reference if callbacks fail
+   - Feature flags allow instant revert to old pattern
+   - Keep old initialization pattern available
+
+3. **Phase 3 Rollback:**
+   - Git branch strategy allows clean revert
+   - Each file split is independent (can revert individually)
+
+4. **Emergency Rollback:**
+   - All feature flags default to `false` (old behavior)
+   - Can toggle flags in production without deployment
+   - Legacy code preserved for full system rollback
 
 ---
 
@@ -917,20 +1014,47 @@ tool_lib/data_tools/
 **Risk:** Refactoring core execution logic could break existing agents
 
 **Mitigation:**
-1. Create comprehensive test suite before refactoring
+1. Create comprehensive test suite BEFORE refactoring (see Testing Strategy)
 2. Use feature flags to gradually migrate to new code
 3. Keep old code path available during transition
 4. Test with all domain-specific agents (CIO, CRO, Industry, Optimizer)
+5. Capture golden outputs for regression testing
+6. Implement rollback procedures for each phase
 
-### Medium Risk: Performance Degradation
+### High Risk: Data Migration Issues
 
-**Risk:** Event-based communication could add overhead
+**Risk:** Saved agent plans/state files may break with new models
 
 **Mitigation:**
-1. Benchmark current performance baseline
-2. Profile event bus implementation
-3. Use synchronous events (no async overhead)
-4. Compare performance metrics before/after
+1. Version all state files with schema version number
+2. Provide migration scripts for old → new format
+3. Support reading both old and new formats during transition
+4. Test migration with production data samples
+5. Document breaking changes in state format
+
+### High Risk: LLM Provider Compatibility
+
+**Risk:** Changes to tool execution may affect different LLM providers differently
+
+**Mitigation:**
+1. Test with ALL providers (OpenAI, Claude, Grok) at each phase
+2. Create provider-specific integration tests
+3. Validate tool calling format compatibility
+4. Monitor error rates per provider after changes
+5. Have provider-specific rollback capability
+
+### Medium Risk: Validator Over-Simplification
+
+**Risk:** 86% reduction in validation logic may remove handling of real-world edge cases
+
+**Mitigation:**
+1. **Preserve old validator** in `legacy_validator.py` as fallback
+2. **Add telemetry** to compare old vs new validator decisions
+3. **Monitor validation accuracy** in production with both validators
+4. **Feature flag** to switch between validators instantly
+5. **Start conservative:** Keep more validation initially, remove incrementally
+6. **Track false positives/negatives:** Log cases where validators disagree
+7. Be prepared to add complexity back based on production failures
 
 ### Medium Risk: Interface Instability
 
@@ -941,22 +1065,55 @@ tool_lib/data_tools/
 2. Iterate based on actual usage
 3. Use Protocol (structural typing) for flexibility
 4. Document breaking changes clearly
+5. Version interfaces if breaking changes needed
+
+### Medium Risk: Performance Degradation
+
+**Risk:** New abstractions could add overhead (though callback pattern is lightweight)
+
+**Mitigation:**
+1. Benchmark current performance baseline BEFORE refactoring
+2. Profile each change with realistic agent workloads
+3. Compare metrics: iteration speed, memory usage, token consumption
+4. Set acceptable performance bounds (within 5% of baseline)
+5. Rollback if performance degrades beyond acceptable threshold
+
+### Low Risk: Production Data Loss
+
+**Risk:** Bugs in refactored code could corrupt agent state
+
+**Mitigation:**
+1. Automated backups of agent state before/after execution
+2. State validation on save/load
+3. Canary deployments (test with subset of traffic first)
+4. Ability to restore from backups automatically
 
 ### Low Risk: Lost Functionality
 
 **Risk:** Removing analytics might be needed later
 
 **Mitigation:**
-1. Move analytics to optional module (don't delete)
+1. Move analytics to `legacy_analytics.py` (don't delete)
 2. Document what was removed and why
 3. Keep as reference if needed in future
 4. Can be re-added if use case emerges
+
+### Low Risk: Knowledge Transfer
+
+**Risk:** Multiple developers working on refactoring need coordination
+
+**Mitigation:**
+1. Clear documentation of each phase
+2. Code review checkpoints between phases
+3. Pair programming for complex extractions
+4. Regular sync meetings during active refactoring
+5. Shared understanding of architecture goals
 
 ---
 
 ## Specific Code Examples
 
-### Example 1: Simplified Validation
+### Example 1: Simplified Validation with Telemetry
 
 **Before (validator.py - 593 lines):**
 ```python
@@ -984,43 +1141,75 @@ class TaskValidator:
         # ... 60 more lines of complex validation logic
 ```
 
-**After (completion_validator.py - ~80 lines):**
+**After (completion_validator.py - ~80 lines with telemetry):**
 ```python
 class CompletionValidator:
     """Simple rule-based validation for task completion."""
 
-    @staticmethod
-    def is_subtask_complete(subtask: SubTask) -> bool:
+    def __init__(self, metrics_collector: Optional[MetricsCollector] = None):
+        self.metrics = metrics_collector
+
+    def is_subtask_complete(self, subtask: SubTask) -> bool:
         """Check if subtask is complete using simple rules."""
         # Rule 1: Must have evidence
         if not subtask.completion_evidence:
-            return False
+            result = False
+        else:
+            # Rule 2: Evidence shouldn't contain errors
+            has_error = any(
+                'error' in str(e).lower() or 'failed' in str(e).lower()
+                for e in subtask.completion_evidence
+            )
+            # Rule 3: Marked as completed
+            result = not has_error and subtask.completed
 
-        # Rule 2: Evidence shouldn't contain errors
-        for evidence in subtask.completion_evidence:
-            evidence_lower = evidence.lower()
-            if 'error' in evidence_lower or 'failed' in evidence_lower:
-                return False
+        # Record decision for comparison with legacy validator
+        if self.metrics:
+            self.metrics.record_validation(
+                task_id=subtask.id,
+                decision=result,
+                evidence_count=len(subtask.completion_evidence),
+                validator_type="simple"
+            )
 
-        # Rule 3: Marked as completed
-        return subtask.completed
+        return result
 
-    @staticmethod
-    def is_main_task_complete(task: MainTask) -> bool:
+    def is_main_task_complete(self, task: MainTask) -> bool:
         """Check if main task is complete."""
         if task.subtasks:
-            return all(CompletionValidator.is_subtask_complete(st)
-                      for st in task.subtasks)
+            return all(self.is_subtask_complete(st) for st in task.subtasks)
         return task.status == TaskStatus.COMPLETED
+```
+
+**Legacy validator preserved in tasks/legacy_validator.py:**
+```python
+# tasks/legacy_validator.py
+# Preserved for fallback and comparison
+# Original 593-line implementation moved here unchanged
+class LegacyValidator:
+    # ... original implementation ...
+```
+
+**Feature flag usage:**
+```python
+# execution_engine.py
+from app.config import RefactoringFlags
+
+if RefactoringFlags.USE_NEW_VALIDATOR:
+    self.validator = CompletionValidator(metrics_collector=metrics)
+else:
+    self.validator = LegacyValidator()
 ```
 
 **Benefits:**
 - 593 lines → 80 lines (86% reduction)
 - Clear, understandable rules
 - No complex confidence scoring
-- Sufficient for actual needs
+- **Safety:** Old validator preserved for rollback
+- **Telemetry:** Can compare old vs new decisions in production
+- **Incremental:** Can switch via feature flag
 
-### Example 2: Unified Result Parsing
+### Example 2: Unified Result Parsing (Enhanced)
 
 **Before: 4 different implementations**
 
@@ -1051,15 +1240,21 @@ def _is_error_result(self, result: Any) -> bool:
     return parsed.get('success') is False
 ```
 
-**After: Single source of truth**
+**After: Single source of truth with robust error detection**
 
 ```python
 # core/result_parser.py
-from typing import Any, Dict, Optional, Tuple
+from typing import Any, Dict, Optional
 import yaml
 
 class ToolResultParser:
     """Unified parser for all tool results."""
+
+    # Error indicators that suggest failure
+    ERROR_INDICATORS = [
+        'error', 'failed', 'exception', 'traceback',
+        'invalid', 'not found', 'does not exist'
+    ]
 
     @staticmethod
     def parse(result: Any) -> Dict[str, Any]:
@@ -1073,14 +1268,25 @@ class ToolResultParser:
                 "error": str (if failure)
             }
         """
-        # Handle YAML string results
+        # Handle string results
         if isinstance(result, str):
+            # Try YAML parsing first
             try:
                 parsed = yaml.safe_load(result)
                 if isinstance(parsed, dict):
-                    return parsed
-            except:
+                    return ToolResultParser.parse(parsed)
+            except yaml.YAMLError:
                 pass
+
+            # Check for error indicators in string
+            result_lower = result.lower()
+            has_error = any(indicator in result_lower
+                          for indicator in ToolResultParser.ERROR_INDICATORS)
+
+            if has_error:
+                return {"success": False, "error": result}
+            else:
+                return {"success": True, "data": result}
 
         # Handle dict results
         if isinstance(result, dict):
@@ -1142,12 +1348,13 @@ else:
 ```
 
 **Benefits:**
-- Single implementation (DRY)
+- Single implementation (DRY) - eliminates 200+ lines of duplication
 - Consistent behavior everywhere
+- Enhanced error detection
 - Easy to test
 - Clear API
 
-### Example 3: Event-Based Decoupling
+### Example 3: Callback-Based Decoupling (Simpler than Events)
 
 **Before: Circular dependency**
 ```python
@@ -1169,7 +1376,7 @@ class TaskManager:
 class PlanExecutionEngine:
     def __init__(self, task_manager: TaskManager, ...):
         self.task_manager = task_manager
-        # Create circular reference
+        # Create circular reference (line 33)
         self.task_manager.execution_engine = self
 
     def update_task_from_tool_result(self, tool_name: str, result: Any):
@@ -1178,88 +1385,104 @@ class PlanExecutionEngine:
         self.task_manager.add_task_evidence(task_id, evidence)
 ```
 
-**After: Event-based communication**
+**After: Simple callback injection (no event bus needed)**
 ```python
-# events/task_events.py
-from dataclasses import dataclass
-from ..tasks.models import TaskStatus
+# interfaces/task_store.py
+from typing import Protocol, Optional
+from ..tasks.models import TodoList, TaskStatus
 
-@dataclass
-class TaskStatusChanged:
-    task_id: int
-    new_status: TaskStatus
-    reason: str
+class TaskStore(Protocol):
+    """Interface for task state management."""
 
-@dataclass
-class TaskEvidenceAdded:
-    task_id: int
-    subtask_id: Optional[str]
-    evidence: str
+    def get_plan(self) -> Optional[TodoList]:
+        """Get the current plan."""
+        ...
 
-@dataclass
-class ToolExecuted:
-    task_id: int
-    subtask_id: Optional[str]
-    tool_name: str
-    result: Any
+    def update_task_status(self, task_id: int, status: TaskStatus, reason: str) -> bool:
+        """Update task status."""
+        ...
+
+    def add_evidence(self, task_id: int, evidence: str, subtask_id: Optional[str] = None) -> bool:
+        """Add completion evidence."""
+        ...
+
+# tasks/execution_engine.py
+class PlanExecutionEngine:
+    def __init__(
+        self,
+        task_store: TaskStore,  # Interface, not concrete TaskManager
+        on_task_complete: Optional[Callable[[int], None]] = None,
+        on_task_advance: Optional[Callable[[int, str], None]] = None,
+        verbose: bool = True
+    ):
+        self.task_store = task_store  # Interface dependency
+        self.on_task_complete = on_task_complete
+        self.on_task_advance = on_task_advance
+        # NO back-reference, NO circular dependency
+
+    def advance_task_progression(self):
+        # Update via interface
+        self.task_store.update_task_status(task_id, TaskStatus.COMPLETED, reason)
+
+        # Notify via callback
+        if self.on_task_complete:
+            self.on_task_complete(task_id)
+
+    def update_task_from_tool_result(self, tool_name: str, result: Any):
+        # Update state via interface
+        evidence = self._collect_evidence(tool_name, result)
+        self.task_store.add_evidence(task_id, evidence, subtask_id)
+
+        # Notify via callback
+        if self.on_task_advance:
+            self.on_task_advance(task_id, "tool_completed")
 
 # tasks/manager.py
 class TaskManager:
-    def __init__(self, event_bus: EventBus, ...):
-        self.event_bus = event_bus
-        self._register_handlers()
+    """Implements TaskStore protocol - no back-reference needed."""
 
-    def _register_handlers(self):
-        self.event_bus.on(TaskStatusChanged, self._handle_status_change)
-        self.event_bus.on(TaskEvidenceAdded, self._handle_evidence_added)
+    def __init__(self, ...):
+        # No reference to execution engine!
+        pass
 
-    def _handle_status_change(self, event: TaskStatusChanged):
-        # Update state only
-        task = self.get_task(event.task_id)
-        task.status = event.new_status
+    def get_plan(self) -> Optional[TodoList]:
+        return self.plan
+
+    def update_task_status(self, task_id: int, status: TaskStatus, reason: str) -> bool:
+        # Pure state management, no side effects
+        task = self._find_task(task_id)
+        task.status = status
         self.save_state()
+        return True
 
-    def _handle_evidence_added(self, event: TaskEvidenceAdded):
-        # Add evidence only
-        task = self.get_task(event.task_id)
-        if event.subtask_id:
-            subtask = task.get_subtask(event.subtask_id)
-            subtask.completion_evidence.append(event.evidence)
+    def add_evidence(self, task_id: int, evidence: str, subtask_id: Optional[str] = None) -> bool:
+        # Pure state management
+        if subtask_id:
+            subtask = self._find_subtask(task_id, subtask_id)
+            subtask.completion_evidence.append(evidence)
         else:
-            task.completion_evidence.append(event.evidence)
+            task = self._find_task(task_id)
+            task.completion_evidence.append(evidence)
         self.save_state()
+        return True
 
-# tasks/executor.py
-class TaskExecutor:
-    def __init__(self, event_bus: EventBus, task_store: TaskStore, ...):
-        self.event_bus = event_bus
-        self.task_store = task_store
-        self._register_handlers()
-
-    def _register_handlers(self):
-        self.event_bus.on(ToolExecuted, self._handle_tool_executed)
-
-    def _handle_tool_executed(self, event: ToolExecuted):
-        # Update execution state and emit new events
-        evidence = self._collect_evidence(event.tool_name, event.result)
-
-        self.event_bus.emit(TaskEvidenceAdded(
-            task_id=event.task_id,
-            subtask_id=event.subtask_id,
-            evidence=evidence
-        ))
-
-        # Check if task should be advanced
-        if self._should_advance():
-            self.advance_task_progression()
+# agent.py - Wire up dependencies
+task_manager = TaskManager(verbose=True, output_dir=output_dir)
+execution_engine = PlanExecutionEngine(
+    task_store=task_manager,  # Inject interface
+    on_task_complete=lambda tid: self._handle_task_completion(tid),
+    on_task_advance=lambda tid, reason: self._handle_task_advancement(tid, reason),
+    verbose=True
+)
 ```
 
 **Benefits:**
-- No circular dependencies
-- Components loosely coupled
-- Easy to add new handlers
-- Clear separation of concerns
-- Testable in isolation
+- No circular dependencies (clean one-way flow)
+- No event bus infrastructure needed (KISS principle)
+- Simpler than events (explicit callbacks, easy to trace)
+- Easy to test (inject mock callbacks)
+- Clear control flow (callbacks are explicit, not hidden in event handlers)
+- Protocol interface enables dependency inversion without event complexity
 
 ---
 
@@ -1350,33 +1573,56 @@ class TaskExecutor:
 
 ## Conclusion
 
-This refactoring plan provides a systematic approach to cleaning up the agentic framework while preserving functionality. The key principles are:
+This refactoring plan provides a systematic approach to cleaning up the agentic framework while preserving functionality and minimizing risk. The key principles are:
 
-1. **KISS**: Simplify validation, remove over-engineering
-2. **YAGNI**: Delete speculative analytics and simulation features
-3. **DRY**: Consolidate duplicate parsing and validation logic
-4. **SRP**: Split large files into focused components
-5. **DIP**: Introduce interfaces and dependency injection
+1. **KISS**: Simplify validation (593→80 lines), use callbacks instead of event bus
+2. **YAGNI**: Delete speculative analytics and simulation features (256 lines)
+3. **DRY**: Consolidate duplicate parsing and validation logic (200+ lines eliminated)
+4. **SRP**: Split large files into focused components (no file >500 lines)
+5. **DIP**: Introduce Protocol interfaces with callback injection
 
 **Expected Outcomes:**
-- 32% reduction in total code
-- 100% file size compliance
-- Significantly improved maintainability
-- Better testability
-- Easier extensibility
+- 32% reduction in total code (~11,800 → ~8,000 lines)
+- 100% file size compliance (0 files over 500 lines)
+- Significantly improved maintainability (+35% average improvement)
+- Better testability (isolated components with clear interfaces)
+- Easier extensibility (protocol-based architecture)
 
-**Implementation Timeline:** 4 weeks with proper testing
+**Key Success Factors:**
+1. **Feature flags** for safe incremental rollout
+2. **Comprehensive testing** with golden outputs and regression baselines
+3. **Preserved fallbacks** (legacy validator, old analytics) for rollback capability
+4. **Telemetry** to validate improvements in production
+5. **Callback pattern** instead of event bus (simpler, more explicit)
+
+**Implementation Approach:**
+1. Phase 1: Quick wins (ToolResultParser, simplified validator, remove analytics)
+2. Phase 2: Decouple with callbacks and protocols
+3. Phase 3: Structural cleanup (file splits, directory reorg)
+4. Phase 4: Testing and validation
+
+**Critical Requirements:**
+- Establish performance baseline BEFORE starting
+- Create golden outputs for regression testing
+- Test with all LLM providers (OpenAI, Claude, Grok)
+- Feature flags for gradual rollout
+- Documented rollback procedures for each phase
+- Preserve legacy implementations for comparison
 
 **Next Steps:**
-1. Review and approve this plan
-2. Create feature branch for refactoring
-3. Begin Phase 1 (critical size reductions)
-4. Test thoroughly at each stage
-5. Merge incrementally to reduce risk
+1. ✅ Review and approve this plan (Status: Approved)
+2. Establish baseline metrics and golden outputs
+3. Create feature flag infrastructure
+4. Create feature branch: `refactor/agentic-framework`
+5. Begin Phase 1 (quick wins with high impact, low risk)
+6. Test thoroughly with feature flags at each stage
+7. Merge incrementally with ability to rollback
 
 ---
 
-**Document Version:** 1.0
-**Last Updated:** 2025-10-14
-**Author:** Claude (Sonnet 4.5)
-**Review Status:** Pending
+**Document Version:** 2.0 (Revised based on architectural review)
+**Last Updated:** 2025-10-21
+**Original Author:** Claude (Sonnet 4.5)
+**Reviewed By:** code-refactor agent + architecture-advisor agent
+**Review Grade:** B+ → Targeted improvements implemented
+**Status:** Approved for Implementation

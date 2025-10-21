@@ -79,10 +79,10 @@ class UpdatePriceTable():
         """Convert FMP API response to Price records and bulk insert"""
         if not price_data:
             return 0
-        
+
         # Set up timezone objects
         est = pytz.timezone('US/Eastern')
-        
+
         # Convert FMP data to Price model format
         price_records = []
         for record in price_data:
@@ -90,13 +90,13 @@ class UpdatePriceTable():
             # Skip records without required date field
             if not record.get('date'):
                 continue
-            
+
             # Parse the datetime and localize to EST
             dt = datetime.strptime(record['date'], '%Y-%m-%d %H:%M:%S')
             dt_est = est.localize(dt)
             # Convert to UTC
             dt_utc = dt_est.astimezone(timezone.utc)
-            
+
             price_records.append({
                 'ticker_id': ticker_id,
                 'datetime': dt_utc.replace(tzinfo=None),  # Remove timezone info for storage
@@ -179,6 +179,93 @@ class UpdatePriceTable():
         print(f"Errors: {self.errors}")
         print(f"Time elapsed: {elapsed_time:.2f} seconds")
         print(f"Average time per ticker: {elapsed_time/self.total_tickers:.2f} seconds")
+
+    def recover_ticker_data(self, ticker_symbol: str):
+        """
+        Recover data for a specific ticker by re-fetching from FMP API.
+
+        Args:
+            ticker_symbol: Ticker symbol (e.g., 'VIXY', 'AAPL')
+
+        Returns:
+            int: Number of records inserted, -1 on error, 0 if no new data
+        """
+        print("="*70)
+        print(f"DATA RECOVERY FOR {ticker_symbol}")
+        print("="*70)
+
+        # Get ticker from database
+        session = MarketSession()
+        ticker = session.query(Ticker).filter(Ticker.ticker == ticker_symbol).first()
+
+        if not ticker:
+            print(f"❌ ERROR: Ticker '{ticker_symbol}' not found in database")
+            session.close()
+            return -1
+
+        ticker_id = str(ticker.id)
+        print(f"\n✓ Found {ticker_symbol}")
+        print(f"  Ticker ID: {ticker_id}")
+
+        # Get the last date we have data for
+        last_date = session.query(func.max(Price.datetime)).filter(
+            Price.ticker_id == ticker.id
+        ).scalar()
+
+        if not last_date:
+            print(f"\n⚠️  No existing price data found for {ticker_symbol}")
+            print("Cannot determine recovery start date.")
+            session.close()
+            return -1
+
+        # Get total records before recovery
+        records_before = session.query(func.count(Price.datetime)).filter(
+            Price.ticker_id == ticker.id
+        ).scalar()
+
+        print(f"  Last date in DB: {last_date}")
+        print(f"  Records before recovery: {records_before}")
+
+        session.close()
+
+        # Fetch and insert new data
+        print(f"\n📡 Fetching data from {last_date} to current time...")
+        print("   (FMP API will return EST data, automatically converted to UTC)")
+
+        records_inserted = self.update_prices_for_single_ticker(ticker_id, last_date)
+
+        # Show results
+        print("\n" + "="*70)
+        print("RECOVERY RESULTS")
+        print("="*70)
+
+        if records_inserted > 0:
+            print(f"✅ SUCCESS!")
+            print(f"   New records inserted: {records_inserted}")
+            print(f"   Total records now: {records_before + records_inserted}")
+
+            # Verify the new last date
+            session = MarketSession()
+            new_last_date = session.query(func.max(Price.datetime)).filter(
+                Price.ticker_id == ticker.id
+            ).scalar()
+            session.close()
+
+            print(f"   Updated last date: {new_last_date}")
+
+        elif records_inserted == 0:
+            print(f"⚠️  No new data available")
+            print("   Possible reasons:")
+            print("   - Data is already up to date")
+            print("   - No trading activity since last update")
+            print("   - API returned no new records")
+
+        else:
+            print(f"❌ ERROR occurred during recovery")
+            print("   Check the error messages above for details")
+
+        print("="*70)
+        return records_inserted
 
 
 if __name__ == "__main__":

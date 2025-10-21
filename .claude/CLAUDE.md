@@ -187,6 +187,8 @@ from app.utils.time_utils import get_current_utc_time, get_utc_date_str, get_utc
 ## Important Rules
 
 - Never create a README.md for a specific functionality or new new unless specifically requested
+- Do not create an excess of test files.
+  --> For example sometimes you create a test file and then a fixed test file. Just create and fix the one
 - Do not be afraid to disagree with me. If I say something or ask you a question do not hesitate to correct me. The most important thing is being correct and writing effective code
 - Always use the fetch_bulk_price_data_for_tickers function for stock price fetching unless told otherwise
 - Never, create **Backwards Compatibility**, if there is a change that needs to be made, built the new solution and change everything that it affects. Backwards compatibilty violates our design principles. 
