@@ -13,7 +13,17 @@
       "Bash(mkdir:*)",
       "Bash(mv:*)",
       "Bash(timeout:*)",
-      "Bash(pytest:*)"
+      "Bash(pytest:*)",
+      "Bash(taskkill //PID 44988 //F)",
+      "Bash(.venv/Scripts/python.exe -c \"import asyncio; from app.api.controller.portfolio import get_portfolio_factor_tilt_controller; result = asyncio.run(get_portfolio_factor_tilt_controller(weights={''AAPL'': 25.0}, factor=''growth'', years=1)); print(''Result:'', result.get(''status''))\")",
+      "Bash(.venv/Scripts/python.exe -c \"from app.api.controller import portfolio; print(''''All imports successful''''); print(dir(portfolio))\")",
+      "Bash(.venv/Scripts/uvicorn.exe main:app --host 0.0.0.0 --port 8000 --log-level debug)",
+      "Bash(.venv/Scripts/python.exe main.py)",
+      "Bash(.venv/Scripts/python.exe test_endpoint.py)",
+      "Bash(del test_factor_tilt_fix.py)",
+      "Bash(.venv/Scripts/python.exe test_levered_portfolio.py)",
+      "Bash(.venv/Scripts/python.exe test_factor_api_output.py)",
+      "Bash(.venv/Scripts/python.exe:*)"
     ],
     "deny": [],
     "ask": []

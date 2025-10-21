@@ -14,6 +14,7 @@ from app.api.controller.portfolio import (
     get_portfolio_sub_industry_concentration_controller,
     get_portfolio_performance_comparison_controller,
     get_portfolio_factor_tilt_controller,
+    get_portfolio_stress_returns_controller,
 )
 
 router = APIRouter()
@@ -51,6 +52,12 @@ class PortfolioFactorTiltRequest(BaseModel):
     weights: Dict[str, float]
     factor: str
     years: Optional[int] = 1
+
+class PortfolioStressReturnsRequest(BaseModel):
+    weights: Dict[str, float]
+    start_date: str
+    end_date: str
+    frequency: Optional[str] = 'daily'
 
 #TODO: We want to get the portfolios by uuid
 @router.get("/portfolios")
@@ -214,4 +221,36 @@ async def get_portfolio_factor_tilt(body: PortfolioFactorTiltRequest):
         weights=body.weights,
         factor=body.factor,
         years=body.years,
+    )
+
+@router.post("/portfolios/stress-returns")
+async def get_portfolio_stress_returns(body: PortfolioStressReturnsRequest):
+    """
+    Calculate portfolio and SPY returns with metrics at different frequencies.
+
+    Analyzes portfolio performance during a specific time period at daily, hourly, or 15-minute
+    intervals. Returns time series of returns for both portfolio and SPY, plus metrics
+    (total return, volatility, max drawdown, Sharpe ratio).
+
+    Returns:
+    - portfolio_returns: List of daily/hourly/15min returns
+    - spy_returns: List of daily/hourly/15min returns
+    - portfolio_metrics: total_return, volatility, max_drawdown, sharpe_ratio
+    - spy_metrics: total_return, volatility, max_drawdown, sharpe_ratio
+
+    Cache TTL: 1 hour (3600s)
+
+    Example request body:
+    {
+        "weights": {"AAPL": 25.0, "MSFT": 25.0, "GOOGL": 25.0, "AMZN": 25.0},
+        "start_date": "2024-01-01",
+        "end_date": "2024-03-31",
+        "frequency": "daily"
+    }
+    """
+    return await get_portfolio_stress_returns_controller(
+        weights=body.weights,
+        start_date=body.start_date,
+        end_date=body.end_date,
+        frequency=body.frequency,
     )

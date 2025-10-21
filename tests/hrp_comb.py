@@ -1,10 +1,3 @@
-# bounded_hrp_combined.py
-# MIT License
-# Unified HRP implementation supporting both long-only and long/short portfolios
-# Requires: numpy, pandas, scipy, cvxpy (>=1.3)
-# For variance-cap and L1 (gross) constraints, install a conic solver:
-#   pip install ecos scs
-
 import sys
 from pathlib import Path
 from math import sqrt

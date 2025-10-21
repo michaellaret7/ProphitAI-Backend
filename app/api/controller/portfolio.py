@@ -1,5 +1,6 @@
 from fastapi import HTTPException
 from typing import Dict, Any, List, Optional
+from datetime import datetime
 from app.services.portfolio import (
     PortfolioService,
     PortfolioReturnsService,
@@ -8,6 +9,7 @@ from app.services.portfolio import (
     PortfolioPerformanceComparisonService,
     PortfolioFactorTiltService,
 )
+from app.services.portfolio.stress_returns import StressReturnsService
 from app.api.response_envelope import ok_envelope
 from app.redis.client import cache
 from app.utils.decorators.api_decorators import handle_controller_errors
@@ -475,5 +477,72 @@ async def get_portfolio_factor_tilt_controller(
 
     # Cache for 6 hours (21600 seconds)
     await cache.set(cache_key, response, ttl=21600)
+
+    return response
+
+
+@handle_controller_errors
+async def get_portfolio_stress_returns_controller(
+    *,
+    weights: Dict[str, float],
+    start_date: str,
+    end_date: str,
+    frequency: str = 'daily',
+) -> Dict[str, Any]:
+    """
+    Controller to handle portfolio stress returns calculation with caching.
+
+    Calculates portfolio and SPY returns with metrics at different frequencies
+    (daily, hourly, 15mins) for a specific time period.
+
+    Cache TTL: 1 hour (3600s)
+    Cache key pattern: portfolio:stress:{weights_hash}:{start_date}:{end_date}:{frequency}
+
+    Args:
+        weights: Dict of ticker -> allocation percentage (e.g., {"AAPL": 25.0})
+        start_date: Start date in YYYY-MM-DD format
+        end_date: End date in YYYY-MM-DD format
+        frequency: Time interval - 'daily', 'hourly', or '15mins'
+
+    Returns:
+        Dict with portfolio_returns, spy_returns, portfolio_metrics, spy_metrics
+    """
+    if not weights:
+        raise ValueError("weights is required")
+    if not start_date or not end_date:
+        raise ValueError("start_date and end_date are required")
+
+    # Generate cache key using sorted weights for consistency
+    import hashlib
+    import json
+    weights_str = json.dumps(weights, sort_keys=True)
+    weights_hash = hashlib.md5(weights_str.encode()).hexdigest()[:12]
+    cache_key = f"portfolio:stress:{weights_hash}:{start_date}:{end_date}:{frequency}"
+
+    # Try to get from cache
+    cached_data = await cache.get(cache_key)
+    if cached_data:
+        return cached_data
+
+    # Cache miss - compute stress returns
+    service = StressReturnsService(
+        weights=weights,
+        start_date=datetime.strptime(start_date, '%Y-%m-%d'),
+        end_date=datetime.strptime(end_date, '%Y-%m-%d'),
+        frequency=frequency
+    )
+    stress_data = service.get_data()
+
+    # Build response
+    response = ok_envelope(
+        message=f"Portfolio stress returns calculated successfully",
+        kind="portfolio#stressReturns",
+        resource_id=f"{weights_hash}_{start_date}_{end_date}",
+        self_link=f"/api/portfolios/stress-returns",
+        payload=stress_data,
+    )
+
+    # Cache for 1 hour (3600 seconds)
+    await cache.set(cache_key, response, ttl=3600)
 
     return response

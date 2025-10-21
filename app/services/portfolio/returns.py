@@ -162,7 +162,7 @@ class PortfolioReturnsService:
 
         returns_data = [
             {
-                "date": date.isoformat(),
+                "date": (date if date.tz else pd.Timestamp(date, tz='UTC')).isoformat(),
                 "cumulativeReturn": float(cum_ret) if np.isfinite(cum_ret) else None,
                 "nav": float(nav) if np.isfinite(nav) else None
             }

@@ -200,6 +200,12 @@ def portfolio_factor_tilts(
     ex = frame[exposure_col].astype(float)
     w = w.loc[avail].astype(float)
 
+    # Reason: Convert percentage weights to decimals, preserving leverage
+    # If any weight > 1.5, assume percentages and divide by 100
+    # This preserves gross/net exposure for levered portfolios (e.g., 130/30)
+    if w.abs().max() > 1.5:
+        w = w / 100.0
+
     # Net tilt (signed weights)
     net_tilt = float((w * ex.reindex(w.index)).sum()) if not w.empty else np.nan
 
@@ -220,13 +226,38 @@ def portfolio_factor_tilts(
         else np.nan
     )
 
+    # Reason: Convert NaN to None for JSON serialization (long-only portfolios have no short tilt)
+    def nan_to_none(value):
+        """Convert NaN/inf to None for JSON compliance."""
+        if value is None:
+            return None
+        if isinstance(value, (float, np.floating, np.number)):
+            if np.isnan(value) or np.isinf(value):
+                return None
+            return float(value)  # Ensure it's a Python float, not numpy type
+        if isinstance(value, (int, np.integer)):
+            return int(value)  # Ensure it's a Python int, not numpy type
+        return value
+
+    # Build per-ticker exposure dict with proper NaN handling
+    per_ticker_exposure = {}
+    for t in avail:
+        try:
+            if t in ex.index:
+                val = ex.loc[t]
+                per_ticker_exposure[t] = nan_to_none(val)
+            else:
+                per_ticker_exposure[t] = None
+        except Exception:
+            per_ticker_exposure[t] = None
+
     return {
         "factor": factor,
         "exposure_col": exposure_col,
-        "net_tilt": net_tilt,
-        "long_tilt": long_tilt,
-        "short_tilt": short_tilt,
-        "per_ticker_exposure": {t: float(ex.get(t)) if t in ex.index else np.nan for t in avail},
+        "net_tilt": nan_to_none(net_tilt),
+        "long_tilt": nan_to_none(long_tilt),
+        "short_tilt": nan_to_none(short_tilt),
+        "per_ticker_exposure": per_ticker_exposure,
     }
 
 

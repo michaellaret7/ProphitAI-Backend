@@ -274,7 +274,7 @@ class PortfolioPerformanceComparisonService:
         # Convert to list of dicts
         returns_data = [
             {
-                "date": date.isoformat(),
+                "date": (date if date.tz else pd.Timestamp(date, tz='UTC')).isoformat(),
                 "current": float(row['current']) if np.isfinite(row['current']) else None,
                 "optimized": float(row['optimized']) if np.isfinite(row['optimized']) else None,
                 "spy": float(row['spy']) if np.isfinite(row['spy']) else None,
@@ -315,7 +315,7 @@ class PortfolioPerformanceComparisonService:
         # Convert to list of dicts
         drawdowns_data = [
             {
-                "date": date.isoformat(),
+                "date": (date if date.tz else pd.Timestamp(date, tz='UTC')).isoformat(),
                 "current": float(row['current']) if np.isfinite(row['current']) else None,
                 "optimized": float(row['optimized']) if np.isfinite(row['optimized']) else None,
             }

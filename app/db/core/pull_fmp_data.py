@@ -3,6 +3,7 @@ import requests
 from dotenv import load_dotenv
 import json
 from datetime import datetime, timedelta
+import pandas as pd
 
 class FMP_API_DATA: 
     def __init__(self):
@@ -231,3 +232,20 @@ class FMP_API_DATA:
         """
         url = f"https://financialmodelingprep.com/api/v3/profile/{ticker}"
         return self._make_fmp_api_request(url)
+    
+    def get_isin_lookup(self, isin: str):
+        """
+        Retrieves security information by ISIN (International Securities Identification Number).
+        Returns symbol, security type, and other details.
+        """
+        url = f"https://financialmodelingprep.com/stable/search-isin?isin={isin}"
+        return self._make_fmp_api_request(url)
+
+    def get_company_notes(self, ticker: str):
+        """
+        Retrieves company notes and bonds information for a given stock ticker.
+        """
+        url = f"https://financialmodelingprep.com/stable/company-notes?symbol={ticker}"
+        return self._make_fmp_api_request(url)
+
+

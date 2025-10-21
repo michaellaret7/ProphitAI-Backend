@@ -1,9 +1,3 @@
-# bounded_hrp.py
-# MIT License
-# Requires: numpy, pandas, scipy, cvxpy (>=1.3)
-# For variance-cap and L1 (gross) constraints, install a conic solver:
-#   pip install ecos scs
-
 import sys
 from pathlib import Path
 from math import sqrt, isclose
