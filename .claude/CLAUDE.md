@@ -187,6 +187,7 @@ from app.utils.time_utils import get_current_utc_time, get_utc_date_str, get_utc
 ## Important Rules
 
 - Never create a README.md for a specific functionality or new new unless specifically requested
+- If you have any intermittent thoughts that you want to write down/take notes on write them in the .claude/NOTEPAD.md file
 - Do not create an excess of test files.
   --> For example sometimes you create a test file and then a fixed test file. Just create and fix the one
 - Do not be afraid to disagree with me. If I say something or ask you a question do not hesitate to correct me. The most important thing is being correct and writing effective code

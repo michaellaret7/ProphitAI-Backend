@@ -19,11 +19,168 @@ The `app/core/agentic_framework/` is the heart of ProphitAI but has accumulated 
 - Speculative features that add complexity without runtime value
 
 **Expected Impact:**
-- Reduce total LOC by ~25-30%
+- Reduce total LOC by ~54% (~3,801 → ~1,740 lines)
 - Improve maintainability score from ~40% to ~75%
 - Enable easier testing and extensibility
 - Align with KISS, YAGNI, and DRY principles
 - 100% file size compliance (<500 lines per file)
+- ZERO legacy files or backwards compatibility code
+
+---
+
+## Target State: Final Refactored Structure
+
+This is the complete structure after all refactoring is complete:
+
+```
+app/core/agentic_framework/
+│
+├── base_agent/
+│   │
+│   ├── __init__.py
+│   │
+│   ├── agent.py                                (~300 lines) ✅
+│   │   └── BaseAgent (orchestration only)
+│   │
+│   ├── core/
+│   │   ├── __init__.py
+│   │   ├── arg_parser.py                      (unchanged)
+│   │   ├── logger.py                          (unchanged)
+│   │   ├── utilities.py                       (unchanged)
+│   │   └── result_parser.py                   (~120 lines) ✅ NEW - DRY fix
+│   │       └── ToolResultParser
+│   │           - parse(result) -> Dict[success, data/error]
+│   │           - is_success(result) -> bool
+│   │           - is_error(result) -> bool
+│   │           - Replaces parser.py completely
+│   │
+│   ├── execution/                             [NEW DIRECTORY]
+│   │   ├── __init__.py
+│   │   ├── react_executor.py                  (~400 lines) ✅ NEW
+│   │   │   └── ReActExecutor
+│   │   │       - execute_iteration()
+│   │   │       - handle_tool_calls()
+│   │   │       - check_finality()
+│   │   └── stagnation_tracker.py             (~80 lines) ✅ NEW
+│   │       └── StagnationTracker
+│   │           - update(tool_name, args)
+│   │           - is_stagnating() -> bool
+│   │           - get_recovery_message() -> str
+│   │           - reset()
+│   │
+│   ├── prompting/                             [NEW DIRECTORY]
+│   │   ├── __init__.py
+│   │   └── context_builder.py                (~150 lines) ✅ NEW
+│   │       └── ContextBuilder
+│   │           - build_initial_messages()
+│   │           - build_task_prompt()
+│   │           - build_plan_context()
+│   │           - build_rejection_message()
+│   │
+│   ├── interfaces/                            [NEW DIRECTORY]
+│   │   ├── __init__.py
+│   │   ├── task_store.py                     (~50 lines) ✅ NEW - Protocol
+│   │   │   └── TaskStore(Protocol)
+│   │   ├── task_executor.py                  (~50 lines) ✅ NEW - Protocol
+│   │   │   └── TaskExecutor(Protocol)
+│   │   └── completion_checker.py             (~30 lines) ✅ NEW - Protocol
+│   │       └── CompletionChecker(Protocol)
+│   │
+│   ├── tasks/
+│   │   ├── __init__.py
+│   │   ├── models.py                         (unchanged)
+│   │   ├── manager.py                        (~180 lines) ✅ REFACTORED
+│   │   │   └── TaskManager (implements TaskStore)
+│   │   │       - State management ONLY
+│   │   │       - NO analytics code
+│   │   │       - NO back-reference
+│   │   ├── executor.py                       (~280 lines) ✅ REFACTORED
+│   │   │   └── PlanExecutionEngine (implements TaskExecutor)
+│   │   │       - Uses callbacks (NOT events, NOT back-references)
+│   │   │       - NO analytics code
+│   │   │       - get_completion_status() (simple, no confidence)
+│   │   └── validator.py                      (~100 lines) ✅ COMPLETELY REPLACED
+│   │       └── CompletionValidator (implements CompletionChecker)
+│   │           - is_subtask_complete() -> bool
+│   │           - is_main_task_complete() -> bool
+│   │           - get_completion_status() -> Dict (simple status, NO confidence)
+│   │           - NO confidence scoring
+│   │           - NO arbitrary thresholds
+│   │           - NO complex regex patterns
+│   │
+│   ├── memory/                                (unchanged)
+│   │   ├── __init__.py
+│   │   ├── domain_memory.py
+│   │   └── episodic_memory.py
+│   │
+│   ├── utils/                                 (unchanged)
+│   │   ├── __init__.py
+│   │   └── path_utils.py
+│   │
+│   └── tool_registry.py                      (~200 lines)
+│
+├── tool_lib/                                  ✅ NO CHANGES - ALL COMPLIANT
+│   │
+│   ├── base_tools/                           (4 files, all <200 lines)
+│   │   ├── calculator.py                     (77 lines)
+│   │   ├── planning_tool.py                  (197 lines)
+│   │   └── search_engine_tool.py             (133 lines)
+│   │
+│   ├── data_tools/                           (4 main files, all <200 lines)
+│   │   ├── industry_factors.py               (73 lines)
+│   │   ├── repository.py                     (157 lines)
+│   │   ├── sub_industry_factors.py           (68 lines)
+│   │   ├── ticker_fundamentals.py            (61 lines)
+│   │   └── stock_screener/                   (already modularized)
+│   │       ├── models.py                     (244 lines)
+│   │       ├── query_builder.py              (347 lines)
+│   │       ├── tool.py                       (357 lines)
+│   │       └── utils.py                      (261 lines)
+│   │
+│   ├── portfolio_tools/                      (9 files, all <300 lines)
+│   │   ├── beta.py                           (143 lines)
+│   │   ├── build_allocations.py              (141 lines)
+│   │   ├── concentration.py                  (297 lines)
+│   │   ├── corr_matrix.py                    (155 lines)
+│   │   ├── factor_tilts.py                   (147 lines)
+│   │   ├── group_performance.py              (190 lines)
+│   │   ├── performance.py                    (231 lines)
+│   │   ├── returns.py                        (141 lines)
+│   │   └── ticker_performance.py             (226 lines)
+│   │
+│   ├── risk_tools/                           (6 files, all <200 lines)
+│   │   ├── asset_risk_contrib.py             (185 lines)
+│   │   ├── cov_matrix.py                     (148 lines)
+│   │   ├── drawdown_profile.py               (189 lines)
+│   │   ├── pairwise_corr_analysis.py         (148 lines)
+│   │   ├── stress_test.py                    (98 lines)
+│   │   └── vol_es.py                         (177 lines)
+│   │
+│   ├── ticker_tools/                         (3 files, all <350 lines)
+│   │   ├── factors.py                        (142 lines)
+│   │   ├── performance.py                    (332 lines)
+│   │   └── weekly_returns.py                 (68 lines)
+│   │
+│   └── agent_specific_tools/                 (4 files, all <160 lines)
+│       ├── cio.py                            (99 lines)
+│       ├── cro.py                            (55 lines)
+│       ├── industry.py                       (153 lines)
+│       └── optimizer.py                      (77 lines)
+│
+└── config.py                                  [NEW FILE] ✅
+    └── RefactoringFlags
+        - USE_NEW_VALIDATOR
+        - USE_NEW_RESULT_PARSER
+        - USE_CALLBACK_PATTERN
+```
+
+**Key Highlights:**
+- ✅ **Zero files over 500 lines** (100% compliance)
+- ✅ **NO legacy files** (no backwards compatibility)
+- ✅ **NO analytics** (YAGNI compliance)
+- ✅ **NO events directory** (replaced with callbacks)
+- ✅ **Protocol-based architecture** (DIP compliance)
+- ✅ **54% code reduction** (3,801 → 1,740 lines)
 
 ---
 
@@ -340,10 +497,8 @@ base_agent/tasks/
 
 ```
 base_agent/tasks/
-├── execution_engine.py (task execution only, ~300 lines)
-├── completion_validator.py (simple validator, ~80 lines)
-├── legacy_validator.py (preserve old validator as fallback/reference)
-└── analytics.py (includes execution analytics, ~150 lines total)
+├── executor.py (task execution only, ~280 lines)
+└── validator.py (~100 lines) - COMPLETELY REPLACED
 ```
 
 **execution_engine.py should ONLY:**
@@ -353,29 +508,43 @@ base_agent/tasks/
 - Check dependencies
 - **Remove:** Analytics (lines 985-1116), stagnation checks, parallel simulation
 
-**completion_validator.py (simplified with feature flag):**
-- Create new simplified validator with basic rules:
+**validator.py (completely replaced - NO confidence scoring):**
+- Replace 593-line validator with ~100 lines of simple boolean checks
+- Methods return `bool` or simple `Dict` - NO confidence scores
   ```python
   def is_subtask_complete(subtask: SubTask) -> bool:
-      has_evidence = len(subtask.completion_evidence) >= 1
-      no_errors = not any('error' in str(e).lower() for e in subtask.completion_evidence)
-      return has_evidence and no_errors and subtask.completed
+      if not subtask.completion_evidence:
+          return False
+      for evidence in subtask.completion_evidence:
+          if 'error' in str(evidence).lower() or 'failed' in str(evidence).lower():
+              return False
+      return subtask.completed
 
   def is_main_task_complete(task: MainTask) -> bool:
       if task.subtasks:
           return all(is_subtask_complete(st) for st in task.subtasks)
       return task.status == TaskStatus.COMPLETED
+
+  def get_completion_status(task: MainTask) -> Dict:
+      # Simple status for get_completion_analysis tool
+      # NO confidence scoring, just facts
+      return {
+          'is_complete': is_main_task_complete(task),
+          'subtasks_completed': count,
+          'subtasks_total': total,
+          'progress_percent': percentage,
+          'evidence_count': len(task.completion_evidence)
+      }
   ```
-- **Reduction:** 593 lines → ~80 lines (86% reduction)
-- **Justification:** Complex confidence scoring and pattern matching adds minimal value
-- **IMPORTANT:** Preserve old validator in `legacy_validator.py` for fallback and comparison
-- **Add telemetry** to compare old vs new validator decisions in production
+- **Reduction:** 593 lines → ~100 lines (83% reduction)
+- **NO Legacy Files:** Old validator DELETED, all code updated atomically
+- **NO Confidence Scoring:** Arbitrary thresholds removed
 
 **Rationale:**
-- KISS: Simple completion rules instead of complex validation
-- YAGNI: Remove speculative analytics features
+- KISS: Simple boolean checks instead of complex scoring
+- YAGNI: No speculative confidence algorithms
 - DRY: Use shared tool result parser
-- Safety: Keep old implementation for rollback if needed
+- Clean Break: No backwards compatibility cruft
 
 #### 1.4 Consolidate Tool Result Parsing (DRY fix)
 
@@ -588,26 +757,22 @@ def create_default(
 
 ### Phase 3: Remove Unused Features (Priority: Medium)
 
-#### 3.1 Delete Unused Analytics
+#### 3.1 Delete Unused Analytics (NO "Optional" Module)
 
 **Remove from execution_engine.py:**
 - `simulate_parallel_execution()` (lines 946-983) - 38 lines
 - `create_plan_analytics_report()` (lines 985-1067) - 83 lines
 - `_generate_execution_recommendations()` (lines 1069-1116) - 48 lines
-- **Total:** 169 lines removed
+- **Total:** 169 lines DELETED
 
 **Remove from manager.py:**
 - `get_execution_analytics()` (lines 271-310) - 40 lines
 - `get_plan_health_status()` (lines 693-739) - 47 lines
-- **Total:** 87 lines removed
+- **Total:** 87 lines DELETED
 
-**Move to optional analytics module if needed:**
-```
-base_agent/tasks/
-└── optional_analytics.py (if analytics ever needed, implement here)
-```
+**NO "optional" or "legacy" modules:** If analytics are needed in future, build fresh. Don't preserve unused code.
 
-**Impact:** ~256 lines removed, complexity reduced
+**Impact:** ~256 lines permanently removed, complexity reduced
 
 #### 3.2 Simplify Tool Routing Audit
 
@@ -683,50 +848,50 @@ base_agent/
 │
 ├── core/
 │   ├── __init__.py
-│   ├── result_parser.py (unified result parsing)
-│   └── logger.py (message logging)
+│   ├── arg_parser.py (unchanged)
+│   ├── logger.py (unchanged)
+│   ├── utilities.py (unchanged)
+│   └── result_parser.py (~120 lines) - NEW, replaces parser.py
 │
 ├── execution/
 │   ├── __init__.py
-│   ├── react_loop.py (main execution loop)
-│   ├── tool_executor.py (tool dispatch & execution)
-│   └── stagnation_detector.py (stagnation detection)
+│   ├── react_executor.py (~400 lines) - NEW
+│   └── stagnation_tracker.py (~80 lines) - NEW
 │
 ├── prompting/
 │   ├── __init__.py
-│   ├── context_builder.py (context & memory injection)
-│   └── plan_prompter.py (plan-driven prompts)
+│   └── context_builder.py (~150 lines) - NEW
 │
 ├── tasks/
 │   ├── __init__.py
-│   ├── models.py (Pydantic task models)
-│   ├── manager.py (state management only, ~200 lines)
-│   ├── executor.py (task execution, ~300 lines)
-│   ├── validator.py (simple validation, ~80 lines)
-│   └── analytics.py (optional analytics)
+│   ├── models.py (unchanged)
+│   ├── manager.py (~180 lines - analytics DELETED)
+│   ├── executor.py (~280 lines - analytics DELETED)
+│   └── validator.py (~100 lines - COMPLETELY REPLACED)
 │
 ├── interfaces/
 │   ├── __init__.py
-│   ├── task_store.py
-│   ├── task_executor.py
-│   └── completion_checker.py
+│   ├── task_store.py (~50 lines) - NEW
+│   ├── task_executor.py (~50 lines) - NEW
+│   └── completion_checker.py (~30 lines) - NEW
 │
 ├── memory/
 │   ├── __init__.py
-│   ├── domain_memory.py
-│   └── episodic_memory.py
+│   ├── domain_memory.py (unchanged)
+│   └── episodic_memory.py (unchanged)
 │
-├── events/
+├── utils/
 │   ├── __init__.py
-│   ├── event_bus.py
-│   ├── task_events.py
-│   └── manager.py (current EventManager)
+│   └── path_utils.py (unchanged)
 │
-└── utils/
-    ├── __init__.py
-    ├── path_utils.py
-    └── token_counter.py
+└── tool_registry.py (~200 lines)
 ```
+
+**DELETED:**
+- ❌ events/ directory (entire folder) - replaced with callbacks
+- ❌ core/parser.py - replaced by result_parser.py
+- ❌ analytics.py - not created (YAGNI)
+- ❌ legacy_validator.py - not created (no backwards compatibility)
 
 **Benefits:**
 - Clear separation of concerns
@@ -1571,58 +1736,330 @@ execution_engine = PlanExecutionEngine(
 
 ---
 
-## Conclusion
+---
 
-This refactoring plan provides a systematic approach to cleaning up the agentic framework while preserving functionality and minimizing risk. The key principles are:
+## IMPLEMENTATION CHECKLIST
 
-1. **KISS**: Simplify validation (593→80 lines), use callbacks instead of event bus
-2. **YAGNI**: Delete speculative analytics and simulation features (256 lines)
-3. **DRY**: Consolidate duplicate parsing and validation logic (200+ lines eliminated)
-4. **SRP**: Split large files into focused components (no file >500 lines)
-5. **DIP**: Introduce Protocol interfaces with callback injection
-
-**Expected Outcomes:**
-- 32% reduction in total code (~11,800 → ~8,000 lines)
-- 100% file size compliance (0 files over 500 lines)
-- Significantly improved maintainability (+35% average improvement)
-- Better testability (isolated components with clear interfaces)
-- Easier extensibility (protocol-based architecture)
-
-**Key Success Factors:**
-1. **Feature flags** for safe incremental rollout
-2. **Comprehensive testing** with golden outputs and regression baselines
-3. **Preserved fallbacks** (legacy validator, old analytics) for rollback capability
-4. **Telemetry** to validate improvements in production
-5. **Callback pattern** instead of event bus (simpler, more explicit)
-
-**Implementation Approach:**
-1. Phase 1: Quick wins (ToolResultParser, simplified validator, remove analytics)
-2. Phase 2: Decouple with callbacks and protocols
-3. Phase 3: Structural cleanup (file splits, directory reorg)
-4. Phase 4: Testing and validation
-
-**Critical Requirements:**
-- Establish performance baseline BEFORE starting
-- Create golden outputs for regression testing
-- Test with all LLM providers (OpenAI, Claude, Grok)
-- Feature flags for gradual rollout
-- Documented rollback procedures for each phase
-- Preserve legacy implementations for comparison
-
-**Next Steps:**
-1. ✅ Review and approve this plan (Status: Approved)
-2. Establish baseline metrics and golden outputs
-3. Create feature flag infrastructure
-4. Create feature branch: `refactor/agentic-framework`
-5. Begin Phase 1 (quick wins with high impact, low risk)
-6. Test thoroughly with feature flags at each stage
-7. Merge incrementally with ability to rollback
+**Migration Order:** Write New → Test → Switch → Delete Old (NO backwards compatibility)
 
 ---
 
-**Document Version:** 2.0 (Revised based on architectural review)
+### PHASE 0: Pre-Refactoring Setup
+
+**Establish Baseline (Do First):**
+- [x] Run full test suite and capture results
+- [x] Capture 5-10 successful agent executions as "golden outputs"
+- [x] Benchmark performance: iteration speed, token usage, memory
+- [x] Document current behavior of all domain agents (CIO, CRO, Industry)
+- [x] Create git branch: `refactor/agentic-framework`
+- [x] Backup current codebase
+
+---
+
+### PHASE 1: Create New Core Components (Write New Code)
+
+**Goal:** Write all new modules WITHOUT breaking existing system and keeping 100% of the current code functionality the same
+
+#### 1.1 Create New Directories
+- [ ] Create `base_agent/interfaces/` directory
+- [ ] Create `base_agent/execution/` directory
+- [ ] Create `base_agent/prompting/` directory
+- [ ] Create `config.py` in root
+
+#### 1.2 Create Protocol Interfaces (~130 lines total)
+- [ ] Write `base_agent/interfaces/task_store.py` (~50 lines)
+  - TaskStore Protocol with: get_plan(), update_task_status(), add_evidence()
+- [ ] Write `base_agent/interfaces/task_executor.py` (~50 lines)
+  - TaskExecutor Protocol with: load_plan(), get_current_task_context(), advance_task_progression()
+- [ ] Write `base_agent/interfaces/completion_checker.py` (~30 lines)
+  - CompletionChecker Protocol with: is_subtask_complete(), is_main_task_complete()
+
+#### 1.3 Create ToolResultParser (~120 lines)
+- [ ] Write `base_agent/core/result_parser.py`
+  - ToolResultParser.parse(result) -> Dict[success, data/error]
+  - ToolResultParser.is_success(result) -> bool
+  - ToolResultParser.is_error(result) -> bool
+  - ToolResultParser.get_data(result) -> Any
+  - ToolResultParser.get_error(result) -> str
+- [ ] Add unit tests for ToolResultParser
+
+#### 1.4 Create New Validator (~100 lines)
+- [ ] Write `base_agent/tasks/validator_new.py` (temp name)
+  - CompletionValidator class
+  - is_subtask_complete(subtask) -> bool
+  - is_main_task_complete(task) -> bool
+  - get_completion_status(task) -> Dict (simple, NO confidence)
+  - should_advance_from_tool_result(tool_name, result, subtask) -> bool
+- [ ] Add unit tests for CompletionValidator
+
+#### 1.5 Create Feature Flags (~30 lines)
+- [ ] Write `config.py`
+  - RefactoringFlags class
+  - USE_NEW_VALIDATOR flag
+  - USE_NEW_RESULT_PARSER flag
+  - USE_CALLBACK_PATTERN flag
+
+**Checkpoint: All new core components exist, old system still works**
+
+---
+
+### PHASE 2: Update Existing Files (Manager & Executor)
+
+**Goal:** Refactor manager.py and execution_engine.py to use new patterns
+
+#### 2.1 Refactor manager.py (741 → ~180 lines)
+- [ ] Add import: `from ..interfaces.task_store import TaskStore`
+- [ ] Make TaskManager implicitly implement TaskStore Protocol
+- [ ] **DELETE analytics methods:**
+  - [ ] Delete get_execution_analytics() (lines ~271-310)
+  - [ ] Delete get_plan_health_status() (lines ~693-739)
+  - [ ] Delete any analytics tracking variables
+- [ ] **DELETE duplicate task update flows:**
+  - [ ] Consolidate update_main_task_status() and update_task_status()
+- [ ] Test manager.py still works with execution_engine.py
+- [ ] Run existing tests
+
+#### 2.2 Refactor execution_engine.py (1116 → ~280 lines)
+- [ ] **ADD Protocol imports and callbacks:**
+  ```python
+  from ..interfaces.task_store import TaskStore
+  from ..interfaces.task_executor import TaskExecutor
+  from typing import Optional, Callable
+  ```
+- [ ] **UPDATE __init__ signature:**
+  ```python
+  def __init__(
+      self,
+      task_store: TaskStore,  # Interface
+      on_task_complete: Optional[Callable[[int], None]] = None,
+      on_task_advance: Optional[Callable[[int, str], None]] = None,
+      verbose: bool = True
+  ):
+  ```
+- [ ] **DELETE back-reference:** Remove `self.task_manager.execution_engine = self`
+- [ ] **DELETE EventManager:** Remove all event_manager calls
+- [ ] **REPLACE with callbacks:** Add callback invocations
+  ```python
+  if self.on_task_complete:
+      self.on_task_complete(task_id)
+  ```
+- [ ] **DELETE analytics methods:**
+  - [ ] Delete simulate_parallel_execution() (lines ~946-983)
+  - [ ] Delete create_plan_analytics_report() (lines ~985-1067)
+  - [ ] Delete _generate_execution_recommendations() (lines ~1069-1116)
+- [ ] Keep using OLD validator for now (still imports from validator.py)
+- [ ] Test execution_engine.py works with new manager.py
+- [ ] Run existing tests
+
+#### 2.3 Rename execution_engine.py
+- [ ] Rename `tasks/execution_engine.py` to `tasks/executor.py`
+- [ ] Update all imports in codebase
+- [ ] Update all references to PlanExecutionEngine
+
+**Checkpoint: Manager and executor refactored, still using old validator**
+
+---
+
+### PHASE 3: Extract Agent Components
+
+**Goal:** Split agent.py into focused modules
+
+#### 3.1 Create ReActExecutor (~400 lines)
+- [ ] Write `base_agent/execution/react_executor.py`
+  - ReActExecutor class
+  - Extract main loop logic from agent.py (lines 476-1015)
+  - execute_iteration(iteration, messages) -> IterationResult
+  - handle_tool_calls(tool_calls, messages) -> List[ToolResult]
+  - check_finality(assistant_message) -> FinalityCheck
+- [ ] Test ReActExecutor in isolation
+
+#### 3.2 Create StagnationTracker (~80 lines)
+- [ ] Write `base_agent/execution/stagnation_tracker.py`
+  - StagnationTracker class
+  - Extract from agent.py (lines 80-84, 617-620, 1016-1077)
+  - update(tool_name, args) -> None
+  - is_stagnating() -> bool
+  - get_recovery_message(task_context) -> str
+  - reset() -> None
+- [ ] Test StagnationTracker in isolation
+
+#### 3.3 Create ContextBuilder (~150 lines)
+- [ ] Write `base_agent/prompting/context_builder.py`
+  - ContextBuilder class
+  - Extract from agent.py (lines 199-270, 424-463, 500-548, 668-688, 729-748, 752-799)
+  - build_initial_messages(plan_first) -> List[Dict]
+  - build_task_prompt(iteration, task_context) -> str
+  - build_plan_context(task_context) -> str
+  - build_rejection_message(completion_status) -> str
+  - build_periodic_status_update(iteration, task_context) -> str
+- [ ] Test ContextBuilder in isolation
+
+#### 3.4 Refactor agent.py (1130 → ~300 lines)
+- [ ] Import new modules: ReActExecutor, StagnationTracker, ContextBuilder
+- [ ] Update __init__ to create helper components
+- [ ] Update run() to delegate to new modules
+- [ ] Wire up callbacks for execution_engine:
+  ```python
+  self.execution_engine = PlanExecutionEngine(
+      task_store=self.task_manager,
+      on_task_complete=self._handle_task_complete,
+      on_task_advance=self._handle_task_advance,
+  )
+  ```
+- [ ] Test agent.py with new structure
+- [ ] Run full integration tests
+
+**Checkpoint: Agent.py refactored into modules, everything still works**
+
+---
+
+### PHASE 4: Switch to New Validator (Atomic)
+
+**Goal:** Replace old validator with new one in single commit
+
+#### 4.1 Update All Imports (Single Commit)
+- [ ] Search codebase for: `from .tasks.validator import TaskValidator`
+- [ ] List ALL files that import old validator
+- [ ] **IN ONE COMMIT:**
+  - [ ] Update executor.py to import CompletionValidator from validator_new
+  - [ ] Update all method calls:
+    - OLD: `is_complete, confidence, explanation = self.task_validator.validate_main_task_completion(task)`
+    - NEW: `is_complete = self.validator.is_main_task_complete(task)`
+  - [ ] Update agent.py if it imports validator
+  - [ ] Update manager.py if it imports validator
+  - [ ] Update any tool files that import validator
+  - [ ] Rename `validator_new.py` → `validator.py` (overwrites old)
+
+#### 4.2 Test New Validator
+- [ ] Run full test suite
+- [ ] Compare outputs with golden outputs
+- [ ] Test with CIO agent
+- [ ] Test with CRO agent
+- [ ] Test with Industry agent
+- [ ] Verify no regressions
+
+**Checkpoint: New validator in place, old validator replaced**
+
+---
+
+### PHASE 5: Delete Old Code (Final Cleanup)
+
+**Goal:** Remove all replaced/unused code
+
+#### 5.1 Delete Replaced Files
+- [ ] Delete `base_agent/core/parser.py` (replaced by result_parser.py)
+- [ ] Delete `base_agent/events/manager.py`
+- [ ] Delete `base_agent/events/__init__.py`
+- [ ] Delete `base_agent/events/` directory
+
+#### 5.2 Verify Deletions
+- [ ] Search codebase for imports of deleted files
+- [ ] Ensure no broken imports
+- [ ] Run full test suite
+- [ ] Verify all tests pass
+
+**Checkpoint: Old code deleted, system clean**
+
+---
+
+### PHASE 6: Final Validation & Documentation
+
+**Goal:** Ensure everything works and document changes
+
+#### 6.1 Comprehensive Testing
+- [ ] Run full test suite (all tests pass)
+- [ ] Compare with golden outputs (outputs match)
+- [ ] Performance benchmarks (within 5% of baseline)
+- [ ] Test with OpenAI
+- [ ] Test with Claude
+- [ ] Test with Grok (if applicable)
+- [ ] Test all domain agents (CIO, CRO, Industry, Optimizer)
+- [ ] Manual testing of key workflows
+
+#### 6.2 Code Quality Checks
+- [ ] All files under 500 lines
+- [ ] No circular dependencies
+- [ ] No duplicate code (grep for common patterns)
+- [ ] All new code has docstrings
+- [ ] No TODOs or FIXMEs
+
+#### 6.3 Documentation
+- [ ] Update CLAUDE.md with new structure
+- [ ] Document new interfaces (TaskStore, TaskExecutor, CompletionChecker)
+- [ ] Document migration (what changed, why)
+- [ ] Update any relevant README files
+- [ ] Create CHANGELOG entry
+
+#### 6.4 Final Metrics
+- [ ] Count total lines: `find base_agent -name "*.py" | xargs wc -l`
+- [ ] Verify: ~1,740 lines (down from ~3,801)
+- [ ] Verify: 0 files over 500 lines
+- [ ] Verify: 54% code reduction achieved
+
+---
+
+### PHASE 7: Merge & Deploy
+
+**Goal:** Integrate changes into main codebase
+
+#### 7.1 Pre-Merge Checklist
+- [ ] All tests pass
+- [ ] All checkpoints completed
+- [ ] No breaking changes for domain agents
+- [ ] Documentation updated
+- [ ] Code reviewed
+
+#### 7.2 Merge Strategy
+- [ ] Create PR: `refactor/agentic-framework` → `main`
+- [ ] Get code review
+- [ ] Address review comments
+- [ ] Squash commits or keep history (decide)
+- [ ] Merge to main
+
+#### 7.3 Post-Merge Validation
+- [ ] Deploy to staging
+- [ ] Run smoke tests in staging
+- [ ] Monitor for errors
+- [ ] Deploy to production (if applicable)
+- [ ] Monitor production metrics
+
+---
+
+## Summary
+
+**Total Reduction:** 3,801 lines → 1,740 lines (54% reduction)
+
+**Files Modified:**
+- agent.py: 1130 → ~300 lines
+- manager.py: 741 → ~180 lines
+- executor.py (was execution_engine.py): 1116 → ~280 lines
+- validator.py: 593 → ~100 lines (COMPLETELY REPLACED)
+
+**Files Created:**
+- interfaces/task_store.py (~50 lines)
+- interfaces/task_executor.py (~50 lines)
+- interfaces/completion_checker.py (~30 lines)
+- core/result_parser.py (~120 lines)
+- execution/react_executor.py (~400 lines)
+- execution/stagnation_tracker.py (~80 lines)
+- prompting/context_builder.py (~150 lines)
+- config.py (~30 lines)
+
+**Files Deleted:**
+- events/ (entire directory)
+- core/parser.py
+
+**Principles Achieved:**
+- ✅ KISS: No complex confidence scoring, simple callbacks
+- ✅ YAGNI: No analytics, no speculative features
+- ✅ DRY: Single ToolResultParser, no duplicate validation
+- ✅ SRP: Each file has one clear responsibility
+- ✅ DIP: Protocol interfaces, callback injection
+- ✅ No Backwards Compatibility: Clean break, no legacy files
+
+---
+
+**Document Version:** 3.0 (Implementation Checklist Added)
 **Last Updated:** 2025-10-21
-**Original Author:** Claude (Sonnet 4.5)
-**Reviewed By:** code-refactor agent + architecture-advisor agent
-**Review Grade:** B+ → Targeted improvements implemented
-**Status:** Approved for Implementation
+**Status:** Ready for Implementation
+**Estimated Effort:** 6-8 weeks with proper testing
