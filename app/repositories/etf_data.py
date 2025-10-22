@@ -40,7 +40,6 @@ def get_etf_info(ticker: str, session=None) -> Dict[str, Any]:
         "sectorsList": getattr(row, "sectorsList", None),
     }
 
-
 @with_session('market')
 def get_etf_holdings(ticker: str, session=None) -> Dict[str, Any]:
     """Fetch ETF holdings for a given ticker."""

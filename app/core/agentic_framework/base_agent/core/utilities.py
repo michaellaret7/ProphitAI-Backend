@@ -342,18 +342,15 @@ class AgentUtilities:
                 return "<unserializable observation>"
     
     def update_stagnation(self, name: str, args: Dict[str, Any]):
-        """Update stagnation detection for repeated actions."""
+        """Update stagnation detection for repeated actions.
+
+        NOTE: This method now delegates to StagnationTracker (Phase 3 refactor).
+        """
         name = self._strip_functions_prefix(name)
         # Filter out _simulation_date for stagnation key (not JSON serializable)
         stag_args = {k: v for k, v in args.items() if k != '_simulation_date'}
-        key = f"{name}:{json.dumps(stag_args, sort_keys=True)}"
-        if key in self.agent._recent_actions:
-            self.agent._stuck_count += 1
-        else:
-            self.agent._stuck_count = 0
-        self.agent._recent_actions.append(key)
-        if len(self.agent._recent_actions) > 16:
-            self.agent._recent_actions.pop(0)
+        # Delegate to StagnationTracker (Phase 3 refactor)
+        self.agent.stagnation_tracker.update(name, stag_args)
     
     def trace_to_dict(self, s: StepTrace) -> Dict[str, Any]:
         """Convert StepTrace to dictionary."""

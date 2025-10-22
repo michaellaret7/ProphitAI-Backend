@@ -139,10 +139,11 @@ class PlanningTool:
             
             # Use instructor to get structured output
             todo_list = self.client.chat.completions.create(
-                model="gpt-5",  # Use a reliable model
+                model="gpt-5-mini",  # Use a reliable model
                 messages=messages,
                 response_model=TodoList,  # Pass Pydantic model directly
-                max_retries=2  # Retry if validation fails
+                max_retries=2,  # Retry if validation fails
+                reasoning_effort="low"
             )
             
             # Return the structured plan as JSON

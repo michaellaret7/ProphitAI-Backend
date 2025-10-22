@@ -128,7 +128,7 @@ def register_base_tools(agent: Any) -> None:
             "properties": {},
             "required": [],
         },
-        function=lambda **kwargs: agent.task_manager.get_task_progress_summary(),
+        function=lambda **kwargs: agent.task_manager.progress.get_summary(),
     )
 
     agent.add_tool(
@@ -200,7 +200,7 @@ def register_base_tools(agent: Any) -> None:
             "properties": {},
             "required": [],
         },
-        function=lambda **kwargs: agent._check_plan_completion_status(),
+        function=lambda **kwargs: _check_plan_completion_status_impl(agent),
     )
 
     # Advanced task management tools
@@ -390,6 +390,39 @@ def register_base_tools(agent: Any) -> None:
             },
             function=episodic_recall_impl,
         )
+
+
+def _check_plan_completion_status_impl(agent: Any) -> dict:
+    """Helper function to check plan completion status (inlined from agent method).
+
+    This function was extracted from agent._check_plan_completion_status() to remove
+    the wrapper method. It directly calls execution_engine methods.
+
+    Args:
+        agent: The agent instance
+
+    Returns:
+        Dictionary with completion status and context
+    """
+    if not agent.execution_engine.plan_loaded:
+        return {"plan_loaded": False, "can_finalize": True}
+
+    task_context = agent.execution_engine.get_current_task_context()
+    execution_summary = agent.execution_engine.get_execution_summary()
+
+    # Check if all tasks are completed
+    all_complete = (task_context.get("status") != "executing" or
+                   execution_summary.get('completed_main_tasks', 0) == execution_summary.get('total_main_tasks', 0))
+
+    return {
+        "plan_loaded": True,
+        "all_tasks_complete": all_complete,
+        "can_finalize": all_complete,
+        "progress_percentage": task_context.get('progress', {}).get('percentage', 0),
+        "completed_tasks": execution_summary.get('completed_main_tasks', 0),
+        "total_tasks": execution_summary.get('total_main_tasks', 0),
+        "current_task": task_context.get('main_task', {}).get('id') if task_context.get("status") == "executing" else None
+    }
 
 
 def register_task_management_tools(agent: Any) -> None:
