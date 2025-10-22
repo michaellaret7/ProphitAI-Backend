@@ -571,25 +571,25 @@ The refactoring will be done in 5 phases:
 **What**: Add new directories for organized code
 **Files**: Create 3 new directories
 **Checklist**:
-- [ ] Create `app/core/agentic_framework/base_agent/interfaces/` directory
-- [ ] Create `app/core/agentic_framework/base_agent/execution/` directory
-- [ ] Create `app/core/agentic_framework/base_agent/prompting/` directory
-- [ ] Create `app/core/agentic_framework/config.py` file
+- [x] Create `app/core/agentic_framework/base_agent/protocols/` directory
+- [x] Create `app/core/agentic_framework/base_agent/execution/` directory
+- [x] Create `app/core/agentic_framework/base_agent/prompting/` directory
+- [x] Create `app/core/agentic_framework/config.py` file
 
 **Validation**: Directories exist, no errors on import
 
 #### 1.2: Create Protocol Interfaces (~130 lines total)
-**What**: Define abstract interfaces using Python Protocols
-**Files**: 3 new files in `interfaces/`
+**What**: Define Python Protocols for structural typing
+**Files**: 3 new files in `protocols/`
 **Checklist**:
-- [ ] Write `interfaces/__init__.py` (empty)
-- [ ] Write `interfaces/task_store.py` (~50 lines)
+- [x] Write `protocols/__init__.py` (empty)
+- [x] Write `protocols/task_store.py` (~50 lines)
   - Define TaskStore Protocol
   - Methods: get_plan(), update_task_status(), update_subtask_status(), add_evidence(), add_observation()
-- [ ] Write `interfaces/task_executor.py` (~50 lines)
+- [x] Write `protocols/task_executor.py` (~50 lines)
   - Define TaskExecutor Protocol
   - Methods: load_plan(), get_current_task(), advance_task_progression()
-- [ ] Write `interfaces/completion_checker.py` (~30 lines)
+- [x] Write `protocols/completion_checker.py` (~30 lines)
   - Define CompletionChecker Protocol
   - Methods: is_subtask_complete(), is_main_task_complete()
 
@@ -599,12 +599,12 @@ The refactoring will be done in 5 phases:
 **What**: Single source of truth for parsing tool results
 **Files**: 1 new file in `core/`
 **Checklist**:
-- [ ] Write `core/result_parser.py` (~120 lines)
+- [x] Write `core/result_parser.py` (~120 lines)
   - Class: ToolResultParser
   - Methods: parse(), is_success(), is_error(), get_data(), get_error()
   - Handle all result types: dict, str, Exception, None
-- [ ] Write unit tests for ToolResultParser
-- [ ] Test with example tool results from actual tools
+- [x] Write unit tests for ToolResultParser
+- [x] Test with example tool results from actual tools
 
 **Validation**: All tests pass, handles edge cases
 
@@ -612,29 +612,29 @@ The refactoring will be done in 5 phases:
 **What**: Replace 592-line validator with modular, context-aware validator (boolean returns, NO confidence scores)
 **Files**: New folder `tasks/validation/` with 3 modules
 **Checklist**:
-- [ ] Create `tasks/validation/` folder structure
-- [ ] Write `tasks/validation/__init__.py` (~10 lines)
+- [x] Create `tasks/validation/` folder structure
+- [x] Write `tasks/validation/__init__.py` (18 lines)
   - Export main validator class and functions
-- [ ] Write `tasks/validation/patterns.py` (~40 lines)
-  - Constant: SAFE_PHRASES (11 finance-specific patterns)
+- [x] Write `tasks/validation/patterns.py` (42 lines)
+  - Constant: SAFE_PHRASES (12 finance-specific patterns)
     - Examples: 'tracking error', 'margin of error', 'ameren' (stock ticker)
   - Constant: ERROR_PATTERNS (17 real error indicators)
     - Examples: '^error:', 'error occurred', r'\bfailed to\b'
   - NO logic, just data constants
-- [ ] Write `tasks/validation/error_detection.py` (~80 lines)
+- [x] Write `tasks/validation/error_detection.py` (132 lines)
   - Function: has_error(text: str) -> bool
   - Function: has_error_in_dict(result: dict) -> bool
   - Function: has_error_in_result(tool_result: Any) -> bool
   - Logic: Check SAFE_PHRASES first (prevent false positives), then ERROR_PATTERNS
   - Use word boundary regex for precision
-- [ ] Write `tasks/validation/completion_validator.py` (~120 lines)
+- [x] Write `tasks/validation/completion_validator.py` (136 lines)
   - Class: CompletionValidator (implements CompletionChecker protocol)
   - Method: is_subtask_complete(subtask) -> bool
   - Method: is_main_task_complete(task) -> bool
   - Method: get_completion_status(task) -> Dict[str, Any]
   - Uses error_detection.has_error() for evidence validation
   - Returns simple boolean (NO confidence scores)
-- [ ] Write unit tests for each module
+- [x] Write unit tests for each module
   - Test safe phrases don't trigger false positives ("Ameren", "tracking error")
   - Test actual errors are detected ("error occurred", "failed to connect")
   - Test with real task/subtask objects from actual agent runs
@@ -645,12 +645,12 @@ The refactoring will be done in 5 phases:
 **What**: Enable gradual rollout of new components
 **Files**: 1 new file `config.py`
 **Checklist**:
-- [ ] Write `config.py` at framework root (~30 lines)
+- [x] Write `config.py` at framework root (~30 lines)
   - Class: RefactoringFlags
   - Flag: USE_NEW_VALIDATOR (default: False)
   - Flag: USE_NEW_RESULT_PARSER (default: False)
   - Flag: USE_CALLBACK_PATTERN (default: False)
-- [ ] Test flags can be toggled via environment variables
+- [x] Test flags can be toggled via environment variables
 
 **Validation**: Flags work, default to False (old behavior)
 
@@ -668,7 +668,7 @@ The refactoring will be done in 5 phases:
 **Checklist**:
 - [ ] Add imports:
   ```python
-  from ..interfaces.task_store import TaskStore
+  from ..protocols.task_store import TaskStore
   from typing import Optional, Callable
   ```
 - [ ] **BREAK CIRCULAR DEPENDENCY** - Update `__init__` signature (line ~16-20):
@@ -713,8 +713,8 @@ The refactoring will be done in 5 phases:
 **Checklist**:
 - [ ] Add Protocol imports:
   ```python
-  from ..interfaces.task_store import TaskStore
-  from ..interfaces.task_executor import TaskExecutor
+  from ..protocols.task_store import TaskStore
+  from ..protocols.task_executor import TaskExecutor
   from typing import Optional, Callable
   ```
 - [ ] Update `__init__` signature:
@@ -1148,27 +1148,27 @@ The refactoring will be done in 5 phases:
 
 This section provides step-by-step instructions for key tasks with exact code, files, and techniques.
 
-### GUIDE 1.2: Create Protocol Interfaces
+### GUIDE 1.2: Create Protocols for Structural Typing
 
-**Context**: We need abstract interfaces so ExecutionEngine can depend on abstractions (TaskStore) rather than concrete classes (TaskManager). This enables dependency inversion and breaks circular dependencies.
+**Context**: We define Protocols so ExecutionEngine can depend on abstractions (TaskStore) rather than concrete classes (TaskManager). This enables dependency inversion and breaks circular dependencies using Python's structural typing.
 
 **Files to Create**:
-1. `app/core/agentic_framework/base_agent/interfaces/__init__.py`
-2. `app/core/agentic_framework/base_agent/interfaces/task_store.py`
-3. `app/core/agentic_framework/base_agent/interfaces/task_executor.py`
-4. `app/core/agentic_framework/base_agent/interfaces/completion_checker.py`
+1. `app/core/agentic_framework/base_agent/protocols/__init__.py`
+2. `app/core/agentic_framework/base_agent/protocols/task_store.py`
+3. `app/core/agentic_framework/base_agent/protocols/task_executor.py`
+4. `app/core/agentic_framework/base_agent/protocols/completion_checker.py`
 
 #### Execution Steps
 
-**Step 1**: Create interfaces directory
+**Step 1**: Create protocols directory
 ```bash
-mkdir -p app/core/agentic_framework/base_agent/interfaces
+mkdir -p app/core/agentic_framework/base_agent/protocols
 ```
 
 **Step 2**: Create `__init__.py`
 ```python
-# app/core/agentic_framework/base_agent/interfaces/__init__.py
-"""Protocol interfaces for dependency inversion."""
+# app/core/agentic_framework/base_agent/protocols/__init__.py
+"""Protocols for dependency inversion and structural typing."""
 
 from .task_store import TaskStore
 from .task_executor import TaskExecutor
@@ -1184,7 +1184,7 @@ __all__ = ['TaskStore', 'TaskExecutor', 'CompletionChecker']
 **Step 6**: Verify imports work
 ```python
 # test_protocols.py
-from app.core.agentic_framework.base_agent.interfaces import (
+from app.core.agentic_framework.base_agent.protocols import (
     TaskStore,
     TaskExecutor,
     CompletionChecker
@@ -1267,7 +1267,7 @@ See full implementation in Section 1 above - includes complete CompletionValidat
 1. **Update imports** (add at top):
    ```python
    from typing import Optional, Callable
-   from ..interfaces.task_store import TaskStore
+   from ..protocols.task_store import TaskStore
    ```
 
 2. **Update `__init__` signature** (lines 17-36):
@@ -1397,7 +1397,7 @@ app/core/agentic_framework/base_agent/
 ├── tool_registry.py                   (457 lines)  ✅
 ├── config.py                          (~30 lines)  ✅ NEW - feature flags
 │
-├── interfaces/                         ✨ NEW - Protocol-based abstractions
+├── protocols/                         ✨ NEW - Protocol-based abstractions
 │   ├── __init__.py                    (~10 lines)  ✅
 │   ├── task_store.py                  (~80 lines)  ✅ TaskStore Protocol
 │   ├── task_executor.py               (~50 lines)  ✅ TaskExecutor Protocol
@@ -1462,7 +1462,7 @@ TOTALS:
 | **NEW: context_builder.py** | 0 | ~150 lines | +150 lines | ✅ Extracted from agent.py |
 | **NEW: stagnation_tracker.py** | 0 | ~80 lines | +80 lines | ✅ Extracted from agent.py |
 | **NEW: result_parser.py** | 0 | ~120 lines | +120 lines | ✅ Unified 4 parsers |
-| **NEW: interfaces/** (4 files) | 0 | ~170 lines | +170 lines | ✅ Protocol abstractions |
+| **NEW: protocols/** (4 files) | 0 | ~170 lines | +170 lines | ✅ Protocol abstractions |
 | **NEW: validation/** (3 files) | 0 | ~120 lines | +120 lines | ✅ Context-aware validator (modular) |
 | **DELETED: events/** | ~150 lines | 0 | -150 lines | ✅ Replaced by callbacks |
 | **DELETED: parser.py** | ~80 lines | 0 | -80 lines | ✅ Replaced by result_parser.py |
@@ -1615,7 +1615,7 @@ app/core/agentic_framework/
 │   ├── agent.py                       (~300 lines)  ✅ Refactored
 │   ├── tool_registry.py               (457 lines)   ✅
 │   │
-│   ├── interfaces/                     ✨ NEW FOLDER
+│   ├── protocols/                     ✨ NEW FOLDER
 │   │   ├── __init__.py                (~10 lines)
 │   │   ├── task_store.py              (~80 lines)   Protocol
 │   │   ├── task_executor.py           (~50 lines)   Protocol
@@ -1672,7 +1672,7 @@ app/core/agentic_framework/
 #### 2. Code Organization
 - **Before**: Mixed responsibilities, god objects
 - **After**: Clear separation by concern
-  - `interfaces/`: Protocol definitions
+  - `protocols/`: Protocol definitions
   - `execution/`: ReAct loop and stagnation tracking
   - `prompting/`: Context and prompt generation
   - `tasks/`: Task management, execution, validation
