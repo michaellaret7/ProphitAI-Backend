@@ -73,7 +73,7 @@ Based on my research of 2025 state-of-the-art techniques and deep analysis of yo
 **Problem**: Agent invents tools or skips required tools
 **Solution**: Compare actual tool calls vs `predicted_tools` from structured plan
 **Example**: Plan says use `get_covariance_matrix` but agent invented "calculate_correlation"
-**Where**: Extend `PlanExecutionEngine` in [execution_engine.py](app/core/agentic_framework/base_agent/tasks/execution_engine.py)
+**Where**: Extend `PlanExecutor` in [plan_executor.py](app/core/agentic_framework/base_agent/tasks/executor/plan_executor.py)
 
 ### 11. **Completion Evidence Validator**
 **Problem**: Agent claims task complete without doing the work

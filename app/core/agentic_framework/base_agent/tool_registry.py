@@ -1,4 +1,16 @@
 from typing import Any
+from app.core.agentic_framework.tool_lib.base_tools.task_tools import (
+    update_task_status,
+    UPDATE_TASK_STATUS_DESCRIPTION,
+    UPDATE_TASK_STATUS_PARAMETERS,
+    mark_task_complete,
+    MARK_TASK_COMPLETE_DESCRIPTION,
+    MARK_TASK_COMPLETE_PARAMETERS
+)
+
+# Local imports to avoid circular dependencies at module import time
+from app.core.agentic_framework.tool_lib.base_tools.search_engine_tool import AgentSearchEngine
+from app.core.agentic_framework.tool_lib.base_tools import calculator
 
 def register_base_tools(agent: Any) -> None:
     """
@@ -8,9 +20,6 @@ def register_base_tools(agent: Any) -> None:
     - Imports are local to avoid circular dependencies.
     - Lambdas capture `agent` and access attributes at call-time.
     """
-    # Local imports to avoid circular dependencies at module import time
-    from app.core.agentic_framework.tool_lib.base_tools.search_engine_tool import AgentSearchEngine
-    from app.core.agentic_framework.tool_lib.base_tools import calculator
 
     search_description = (
         "The free_search tool searches the web. Provide a detailed query that will be "
@@ -384,74 +393,27 @@ def register_base_tools(agent: Any) -> None:
 
 
 def register_task_management_tools(agent: Any) -> None:
-    """
-    Register task management tools on the provided agent.
+    """Register task management tools on the provided agent.
 
     Notes:
-    - Imports are not required; lambdas use `agent` methods.
-    - Kept separate from base tools for clarity.
+    - Imports from tool_lib.base_tools.task_tools
+    - Lambdas wrap tool functions with agent parameter
     """
-    # Update task status with evidence
+
+    # Update task status tool
     agent.add_tool(
         name="update_task_status",
-        description="Update the status of a task with evidence of completion or progress",
-        parameters={
-            "type": "object",
-            "properties": {
-                "task_id": {
-                    "type": "string",
-                    "description": "Task identifier (e.g., 'task_1' or just '1' for step 1)"
-                },
-                "status": {
-                    "type": "string",
-                    "enum": ["started", "in_progress", "completed", "failed", "blocked"],
-                    "description": "New task status"
-                },
-                "evidence": {
-                    "type": "object",
-                    "description": "Evidence supporting the status change",
-                    "properties": {
-                        "outputs": {"type": "object", "description": "Task outputs/results"},
-                        "observations": {"type": "array", "items": {"type": "string"}},
-                        "confidence": {"type": "number", "minimum": 0, "maximum": 1}
-                    }
-                },
-                "reason": {
-                    "type": "string",
-                    "description": "Explanation for the status change"
-                }
-            },
-            "required": ["task_id", "status"]
-        },
-        function=lambda **kwargs: agent.task_manager.update_task_status(**{k: v for k, v in kwargs.items() if k != '_simulation_date'})
+        description=UPDATE_TASK_STATUS_DESCRIPTION,
+        parameters=UPDATE_TASK_STATUS_PARAMETERS,
+        function=lambda task_id, status, reason=None, evidence=None, **kwargs:
+            update_task_status(agent, task_id, status, reason, evidence)
     )
 
-    # Mark task complete (simplified version)
+    # Mark task complete tool
     agent.add_tool(
         name="mark_task_complete",
-        description="Mark a task as complete with optional outputs",
-        parameters={
-            "type": "object",
-            "properties": {
-                "task_id": {
-                    "type": "string",
-                    "description": "Task identifier (e.g., 'task_1' or just '1' for step 1)"
-                },
-                "outputs": {
-                    "type": "object",
-                    "description": "Task outputs/results"
-                },
-                "summary": {
-                    "type": "string",
-                    "description": "Brief summary of what was accomplished"
-                }
-            },
-            "required": ["task_id"]
-        },
-        function=lambda task_id, outputs=None, summary=None, **kwargs: agent.task_manager.update_task_status(
-            task_id=task_id,
-            status="completed",
-            evidence={"outputs": outputs or {}, "summary": summary} if (outputs or summary) else None,
-            reason=summary
-        )
+        description=MARK_TASK_COMPLETE_DESCRIPTION,
+        parameters=MARK_TASK_COMPLETE_PARAMETERS,
+        function=lambda task_id, outputs=None, summary=None, **kwargs:
+            mark_task_complete(agent, task_id, summary, outputs)
     )

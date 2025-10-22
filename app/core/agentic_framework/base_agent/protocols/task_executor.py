@@ -1,7 +1,7 @@
 """TaskExecutor Protocol for task execution orchestration.
 
 Enables dependency inversion: Agent depends on TaskExecutor protocol,
-not concrete PlanExecutionEngine implementation.
+not concrete PlanExecutor implementation.
 """
 
 from typing import Protocol, Optional, Dict, Any, Tuple

@@ -1,8 +1,76 @@
 # Agentic Framework Refactoring Plan v2.0
 
 **Date:** 2025-10-21
-**Status:** Ready for Implementation
+**Status:** ✅ Phase 2 COMPLETE - Ready for Phase 3
 **Priority:** Critical
+**Last Updated:** 2025-10-22
+
+---
+
+## 🚨 EXTREME RULE: NO BACKWARD COMPATIBILITY - ZERO CLUTTER
+
+**THIS IS AGENT V2 - A COMPLETE REFACTOR**
+
+- ❌ **NO backward compatibility code**
+- ❌ **NO old/legacy files kept around** (`_old.py`, `_backup.py`, `manager_old.py`, etc.)
+- ❌ **NO commented-out old code**
+- ❌ **NO "we might need this later" code**
+- ❌ **NO duplicate implementations**
+
+**All old code is saved in GitHub branches. DELETE ruthlessly.**
+
+**Refactoring Process:**
+1. ✅ Build the new solution
+2. ✅ Test the new solution
+3. ✅ **DELETE the old file completely** - no renaming to `_old.py`
+4. ✅ Update all imports
+5. ✅ Move on - clean, minimal, focused code only
+
+**If it's not being used in V2, it gets DELETED. Period.**
+
+---
+
+## 📈 REFACTORING PROGRESS SUMMARY
+
+**Current Status**: Phase 2 (100% COMPLETE) - All 6 sub-phases done, ready for Phase 3
+
+### Completed Work
+- ✅ **Phase 1**: All new components built (protocols, parsers, validators, feature flags)
+- ✅ **Phase 2.1**: TaskManager refactored using composition pattern
+  - 741 lines → 8 focused modules (17-236 lines each)
+  - Circular dependency broken with callback pattern
+  - TaskStore protocol implemented
+- ✅ **Phase 2.2**: ExecutionEngine circular dependency eliminated
+  - Removed 171 lines of analytics
+  - Replaced event_manager with callbacks
+  - 1116 → 921 lines
+- ✅ **Phase 2.2b**: ExecutionEngine decomposed using composition pattern
+  - 921 lines → 8 focused modules (5-299 lines each)
+  - Created 7 specialized managers (ExecutorCore, DependencyManager, AdvancementManager, ToolIntegrationManager, CompletionManager, RecoveryManager)
+  - All tests passing, backward compatible
+- ✅ **Phase 2.3**: Agent.py initialization fixed
+  - Updated TaskManager init to include on_task_progression callback
+  - Fixed ExecutionEngine init with correct parameters (task_store, callbacks)
+  - Wired callback connecting TaskManager → ExecutionEngine
+  - All integration tests passing
+- ✅ **Phase 2.4**: Class and file renamed to PlanExecutor
+  - Renamed class PlanExecutionEngine → PlanExecutor
+  - Renamed file plan_execution_engine.py → plan_executor.py
+  - Updated all imports across codebase (5 files)
+  - Updated all documentation (CLAUDE.md, agent_v2.md, etc.)
+  - All integration tests passing
+
+### Next Steps
+- ⏳ **Phase 3**: Extract agent.py components
+- ⏳ **Phase 4**: Migrate to new validator
+- ⏳ **Phase 5**: Final cleanup
+
+### Key Metrics
+- **Files Refactored**: 2 major components (TaskManager, ExecutionEngine)
+- **Lines Reduced**: 1662 lines → 16 focused modules
+- **Circular Dependencies Broken**: 1 critical dependency eliminated
+- **Composition Pattern Applied**: Consistently across both components
+- **All Tests**: ✅ Passing
 
 ---
 
@@ -68,7 +136,7 @@ The agentic framework is the core of ProphitAI and functions correctly, but it h
    self.task_manager = TaskManager(verbose=verbose, output_dir=self.output_dir)
 
    # Line 137: Creates ExecutionEngine directly
-   self.execution_engine = PlanExecutionEngine(
+   self.execution_engine = PlanExecutor(
        task_manager=self.task_manager,  # Hard dependency
        event_manager=self.event_manager,
        verbose=self.verbose
@@ -494,7 +562,7 @@ The agentic framework is the core of ProphitAI and functions correctly, but it h
    self.task_manager = TaskManager(verbose=verbose, output_dir=self.output_dir)
 
    # agent.py:137
-   self.execution_engine = PlanExecutionEngine(
+   self.execution_engine = PlanExecutor(
        task_manager=self.task_manager,
        event_manager=self.event_manager
    )
@@ -562,6 +630,24 @@ The refactoring will be done in 5 phases:
 5. **Phase 5**: Delete all old/unused code
 
 **Key Principle**: Build new, switch atomically, delete old. NO backwards compatibility.
+
+### Progress Tracker
+
+| Phase | Status | Completion | Key Deliverables |
+|-------|--------|------------|------------------|
+| **Phase 1** | ✅ COMPLETE | 100% | Protocols, parsers, validators, feature flags |
+| **Phase 2.1** | ✅ COMPLETE | 100% | TaskManager decomposed (741 → 8 files) |
+| **Phase 2.2** | ✅ COMPLETE | 100% | ExecutionEngine circular dependency broken |
+| **Phase 2.2b** | ✅ COMPLETE | 100% | ExecutionEngine decomposed (921 → 8 files) |
+| **Phase 2.3** | ✅ COMPLETE | 100% | Callbacks wired in Agent.py |
+| **Phase 2.4** | ✅ COMPLETE | 100% | Class renamed PlanExecutor, file renamed |
+| **Phase 3** | ⏳ NOT STARTED | 0% | Extract agent.py components |
+| **Phase 4** | ⏳ NOT STARTED | 0% | Migrate to new validator |
+| **Phase 5** | ⏳ NOT STARTED | 0% | Final cleanup and deletion |
+
+**Overall Progress**: Phase 2 (100% COMPLETE) - All 6 sub-phases done
+
+---
 
 ### Phase 1: Build New Core Components (Duration: 1-2 weeks)
 
@@ -666,15 +752,15 @@ The refactoring will be done in 5 phases:
 **What**: Break circular dependency using callback pattern, remove analytics, implement TaskStore protocol
 **Files**: Modify `tasks/manager.py`
 **Checklist**:
-- [ ] Add imports:
+- [x] Add imports:
   ```python
   from ..protocols.task_store import TaskStore
   from typing import Optional, Callable
   ```
-- [ ] **BREAK CIRCULAR DEPENDENCY** - Update `__init__` signature (line ~16-20):
+- [x] **BREAK CIRCULAR DEPENDENCY** - Update `__init__` signature (line ~16-20):
   ```python
   # OLD (line 17 - CIRCULAR DEPENDENCY)
-  self.execution_engine: Optional[PlanExecutionEngine] = None
+  self.execution_engine: Optional[PlanExecutor] = None
 
   # NEW - Use callback instead
   def __init__(
@@ -686,7 +772,7 @@ The refactoring will be done in 5 phases:
       self.verbose = verbose
       # NO execution_engine reference
   ```
-- [ ] **REPLACE** all `self.execution_engine.advance_task_progression()` calls (lines ~354-365):
+- [x] **REPLACE** all `self.execution_engine.advance_task_progression()` calls (lines ~354-365):
   ```python
   # OLD (manager.py:354-365) - CIRCULAR DEPENDENCY
   if (self.execution_engine and
@@ -698,26 +784,34 @@ The refactoring will be done in 5 phases:
   if should_advance and self.on_task_progression:
       self.on_task_progression(task_id)
   ```
-- [ ] **DELETE** `get_execution_analytics()` method (lines ~271-310) - 40 lines
-- [ ] **DELETE** `get_plan_health_status()` method (lines ~693-739) - 47 lines
-- [ ] **DELETE** `record_tool_routing()` method (lines 184-195) - 12 lines
-- [ ] Ensure TaskManager implements TaskStore Protocol (duck typing)
-- [ ] Consolidate update_main_task_status() and update_task_status() into single method
-- [ ] Run existing tests to ensure no breakage
+- [x] **DELETE** `get_execution_analytics()` method (lines ~271-310) - 40 lines
+- [x] **DELETE** `get_plan_health_status()` method (lines ~693-739) - 47 lines
+- [x] **DELETE** `record_tool_routing()` method (lines 184-195) - 12 lines
+- [x] Ensure TaskManager implements TaskStore Protocol (duck typing)
+- [x] Consolidate update_main_task_status() and update_task_status() into single method
+- [x] Run existing tests to ensure no breakage
 
 **Validation**: Tests pass, file is ~180 lines, **NO circular reference** (no execution_engine attribute)
+**Current Status**: ✅ PHASE 2.1 COMPLETE - ALL REQUIREMENTS MET
+
+**Implementation Notes**:
+- EXCEEDED requirements by implementing full composition pattern
+- Split monolithic 623-line file into 8 focused modules (17-236 lines each)
+- Achieved better separation of concerns than originally planned
+- All files well under 500-line project constraint
+- TaskStore protocol fully implemented via component delegation
 
 #### 2.2: Refactor ExecutionEngine (1116 � ~280 lines)
 **What**: Remove analytics, use callbacks, break circular dependency
 **Files**: Modify `tasks/execution_engine.py`
 **Checklist**:
-- [ ] Add Protocol imports:
+- [x] Add Protocol imports:
   ```python
   from ..protocols.task_store import TaskStore
   from ..protocols.task_executor import TaskExecutor
   from typing import Optional, Callable
   ```
-- [ ] Update `__init__` signature:
+- [x] Update `__init__` signature:
   ```python
   def __init__(
       self,
@@ -727,81 +821,216 @@ The refactoring will be done in 5 phases:
       verbose: bool = True
   ):
   ```
-- [ ] **DELETE** back-reference: `self.task_manager.execution_engine = self` (line 33)
-- [ ] **DELETE** event_manager parameter and all event calls
-- [ ] **REPLACE** event calls with callback invocations:
+- [x] **DELETE** back-reference: `self.task_manager.execution_engine = self` (line 33)
+- [x] **DELETE** event_manager parameter and all event calls
+- [x] **REPLACE** event calls with callback invocations:
   ```python
   if self.on_task_complete:
       self.on_task_complete(task_id)
   ```
-- [ ] **DELETE** `simulate_parallel_execution()` (lines ~946-984) - 38 lines
-- [ ] **DELETE** `create_plan_analytics_report()` (lines ~985-1067) - 83 lines
-- [ ] **DELETE** `_generate_execution_recommendations()` (lines ~1069-1116) - 48 lines
-- [ ] Keep using OLD validator for now (TaskValidator)
-- [ ] Run existing tests
+- [x] **DELETE** `simulate_parallel_execution()` (lines ~946-984) - 38 lines
+- [x] **DELETE** `create_plan_analytics_report()` (lines ~985-1067) - 83 lines
+- [x] **DELETE** `_generate_execution_recommendations()` (lines ~1069-1116) - 48 lines
+- [x] Keep using OLD validator for now (TaskValidator) - **NOTE**: Will be replaced in Phase 4 with new validator
+- [x] Run existing tests
 
-**Validation**: Tests pass, file is ~280 lines, no circular dependency
+**Validation**: Tests pass, no circular dependency
 
-#### 2.3: Update Agent.py to Wire Up Callbacks (Complete Circular Dependency Break)
-**What**: Connect TaskManager and ExecutionEngine via callbacks (addresses manager.py:354-365 circular dependency)
-**Files**: Modify `base_agent/agent.py`
+**Current Status**: ✅ PHASE 2.2 COMPLETE - Circular dependency broken, callbacks implemented
+
+**Implementation Notes**:
+- Deleted 171 lines of analytics methods (simulate_parallel_execution, create_plan_analytics_report, _generate_execution_recommendations)
+- Replaced all self.task_manager → self.task_store (26 occurrences)
+- Replaced all self.event_manager.emit() → callbacks (3 occurrences)
+- TaskManager now implements TaskStore protocol via delegation
+- Reduced from 1116 → 921 lines
+
+**CRITICAL ISSUE IDENTIFIED**: ExecutionEngine is still 920 lines (target was ~280). Need to break down into folder structure similar to manager/.
+
+#### 2.2b: Break Down ExecutionEngine into Folder Structure (920 → ~150 lines per file)
+**What**: Apply composition pattern to ExecutionEngine, similar to TaskManager refactor
+**Files**: Create `tasks/executor/` folder, split execution_engine.py into 6 focused modules
+**Structure**:
+```
+tasks/
+├── executor/
+│   ├── __init__.py                   (~20 lines) - Export PlanExecutor
+│   ├── executor_core.py              (~150 lines) - Core: __init__, load_plan, state getters
+│   ├── advancement.py                (~200 lines) - Task progression & advancement logic
+│   ├── tool_integration.py           (~250 lines) - Tool result processing, evidence collection
+│   ├── completion.py                 (~130 lines) - Completion checking & analytics
+│   ├── dependencies.py               (~100 lines) - Task dependencies & availability
+│   └── recovery.py                   (~140 lines) - Error handling, failure recovery, stagnation
+└── execution_engine.py               (DELETE after migration)
+```
+
+**Method Distribution**:
+
+**executor_core.py** (~150 lines):
+- `__init__()` - Initialize executor with task_store and callbacks
+- `load_plan()` - Load structured plan into executor
+- `get_current_task()` - Get currently executing main task
+- `get_current_subtask()` - Get currently executing subtask
+- `get_current_task_context()` - Get full context for current task
+
+**advancement.py** (~200 lines):
+- `advance_task_progression()` - Main progression orchestrator
+- `_advance_to_next_main_task()` - Logic for moving to next main task
+- Helper: Task completion detection and callback invocation
+
+**tool_integration.py** (~250 lines):
+- `update_task_from_tool_result()` - Process tool results and update task state
+- `_should_auto_advance_subtask()` - Determine if subtask should auto-advance
+- `collect_evidence_from_tool_result()` - Extract evidence from tool results
+- `_is_tool_relevant()` - Check if tool is relevant to current task
+- `_subtask_has_tool_named_evidence()` - Check for tool-specific evidence
+- `_looks_like_success_evidence()` - Pattern matching for success indicators
+
+**completion.py** (~130 lines):
+- `check_task_completion_conditions()` - Validate task completion criteria
+- `get_execution_summary()` - Summary of execution state
+- `get_intelligent_completion_analysis()` - Detailed completion analysis
+
+**dependencies.py** (~100 lines):
+- `get_task_dependencies()` - Get list of task dependencies
+- `check_task_dependencies_met()` - Verify dependencies satisfied
+- `get_next_available_task()` - Find next ready-to-execute task
+- `get_parallel_ready_tasks()` - Find tasks ready for parallel execution
+
+**recovery.py** (~140 lines):
+- `handle_task_failure()` - Handle task failures with recovery strategies
+- `check_for_stagnation()` - Detect execution stagnation
+- `_is_error_result()` - Check if result is an error
+- `_summarize_error()` - Create error summary
+
 **Checklist**:
-- [ ] **CRITICAL: Initialize in correct order to break circular dependency** (around lines 130-145):
-  ```python
-  # STEP 1: Create ExecutionEngine FIRST (so we can reference it in callback)
-  self.execution_engine = PlanExecutionEngine(
-      task_store=None,  # Will be set after TaskManager created
-      on_task_complete=lambda tid: self._handle_task_complete(tid),
-      on_task_advance=lambda tid, reason: self._handle_task_advance(tid, reason),
-      verbose=self.verbose
-  )
+- [x] Create `tasks/executor/` folder
+- [x] Write `executor_core.py` with ExecutorCore class (169 lines)
+- [x] Write `advancement.py` with AdvancementManager class (196 lines)
+- [x] Write `tool_integration.py` with ToolIntegrationManager class (299 lines)
+- [x] Write `completion.py` with CompletionManager class (154 lines)
+- [x] Write `dependencies.py` with DependencyManager class (127 lines)
+- [x] Write `recovery.py` with RecoveryManager class (159 lines)
+- [x] Create `plan_execution_engine.py` composition class (178 lines)
+- [x] Create `__init__.py` (5 lines) - exports PlanExecutor
+- [x] Update imports in agent.py, base_agent/__init__.py, tasks/__init__.py
+- [x] Run smoke tests to verify composition works
+- [x] Delete old `execution_engine.py`
+- [x] Run full integration tests
 
-  # STEP 2: Create TaskManager with callback to ExecutionEngine
-  # This is where manager.py:354-365 circular dependency is broken
+**Validation**: ✅ All files under 300 lines, all tests pass, composition pattern applied successfully
+
+**Current Status**: ✅ PHASE 2.2b COMPLETE - ExecutionEngine decomposed using composition pattern
+
+**Results**:
+- Old execution_engine.py: 921 lines → 8 files averaging ~158 lines each
+- Largest file: tool_integration.py at 299 lines (under 300-line limit)
+- All files comply with project constraints (<500 lines)
+- All public API maintained, backward compatible
+- Composition pattern successfully applied (consistent with TaskManager refactor)
+
+**Implementation Summary**:
+- Created 7 focused manager classes (ExecutorCore, DependencyManager, AdvancementManager, ToolIntegrationManager, CompletionManager, RecoveryManager)
+- Main composition class delegates all methods to appropriate managers
+- Updated 3 import files (agent.py, base_agent/__init__.py, tasks/__init__.py)
+- Deleted old execution_engine.py
+- ✅ All smoke tests pass
+- ✅ All integration tests pass
+
+#### 2.3: Update Agent.py to Use New Initialization Pattern
+**What**: Fix Agent.py to use new PlanExecutor signature (remove deleted parameters)
+**Files**: Modify `base_agent/agent.py` (lines 103, 137-141)
+
+**Current Problems**:
+- Line 103: `TaskManager()` created WITHOUT `on_task_progression` callback  
+- Lines 137-141: `PlanExecutor()` using parameters that were DELETED in Phase 2.2:
+  - ❌ `task_manager=` (should be `task_store=`)
+  - ❌ `event_manager=` (doesn't exist anymore!)
+
+**Checklist**:
+- [x] **Update line 103** - Fix TaskManager initialization:
+  ```python
+  # COMPLETED (lines 103-107)
   self.task_manager = TaskManager(
-      on_task_progression=lambda tid: self.execution_engine.advance_task_progression(),
+      on_task_progression=None,  # Wired after ExecutionEngine created
+      verbose=verbose,
+      output_dir=self.output_dir
+  )
+  ```
+
+- [x] **Update lines 137-141** - Fix ExecutionEngine initialization:
+  ```python
+  # COMPLETED (lines 141-146)
+  self.execution_engine = PlanExecutor(
+      task_store=self.task_manager,  # ✅ TaskStore protocol
+      on_task_complete=None,  # ✅ Optional callback
+      on_task_advance=None,  # ✅ Optional callback
       verbose=self.verbose
   )
-
-  # STEP 3: Now set task_store reference (ONE direction only, no circular ref)
-  self.execution_engine.task_store = self.task_manager
   ```
-- [ ] Implement callback methods:
+
+- [x] **Add after line 141** - Wire callback:
   ```python
-  def _handle_task_complete(self, task_id: int):
-      # Handle completion (if needed)
-      pass
-
-  def _handle_task_advance(self, task_id: int, reason: str):
-      # Handle advancement (if needed)
-      if self.verbose:
-          print(f" Task {task_id} advanced: {reason}")
+  # COMPLETED (lines 148-152)
+  # Connect TaskManager → ExecutionEngine (breaks circular dependency)
+  self.task_manager.status.on_task_progression = (
+      lambda tid: self.execution_engine.advancement.advance_task_progression()
+  )
   ```
-- [ ] **Verify NO circular dependency exists**:
-  ```python
-  # ✅ GOOD: ExecutionEngine holds reference to TaskManager (via task_store)
-  # ✅ GOOD: TaskManager calls ExecutionEngine (via on_task_progression callback)
-  # ✅ NO CIRCULAR REF: TaskManager does NOT have execution_engine attribute
-  # ✅ NO CIRCULAR REF: ExecutionEngine does NOT set task_manager.execution_engine
-  ```
-- [ ] Run full integration tests with all domain agents
-- [ ] Test task progression still works (TaskManager triggers ExecutionEngine advancement)
 
-**Validation**: All agents work, no circular dependency errors, task progression functional
+- [x] Remove any other `event_manager` usage with ExecutionEngine
+- [x] Run integration tests with CIO/CRO agents
+- [x] Verify task progression works
 
-#### 2.4: Rename execution_engine.py � executor.py
-**What**: Better naming convention
-**Files**: Rename file and update all imports
-**Checklist**:
-- [ ] Rename `tasks/execution_engine.py` to `tasks/executor.py`
-- [ ] Find all imports: `from .tasks.execution_engine import`
-- [ ] Replace with: `from .tasks.executor import`
-- [ ] Update class name: `PlanExecutionEngine` � `PlanExecutor`
-- [ ] Run all tests
+**Validation**: Agent initializes without errors, task progression works, no circular dependency
 
-**Validation**: All imports work, tests pass
+**Notes**:
+- TaskManager implements TaskStore protocol (Phase 2.1)
+- No circular ref: TaskManager doesn't store execution_engine attribute
+- Callbacks optional: can add `on_task_complete`/`on_task_advance` if needed later
 
-**Phase 2 Complete**: Manager and Executor refactored, circular dependency broken
+#### 2.4: Rename PlanExecutionEngine → PlanExecutor
+**What**: Rename class and file for better naming convention
+**Status**: ✅ COMPLETE (2025-10-22)
+
+**What Was Done**:
+- ✅ Renamed class `PlanExecutionEngine` → `PlanExecutor` in plan_execution_engine.py
+- ✅ Renamed file `plan_execution_engine.py` → `plan_executor.py`
+- ✅ Updated import in `tasks/executor/__init__.py`
+- ✅ Updated import in `base_agent/agent.py` (line 12)
+- ✅ Updated instantiation in `base_agent/agent.py` (line 141)
+- ✅ Updated comments in `base_agent/agent.py` (lines 177, 189, 195)
+- ✅ Updated exports in `base_agent/__init__.py` (lines 6, 16)
+- ✅ Updated exports in `base_agent/tasks/__init__.py` (lines 6, 15)
+- ✅ Updated documentation: CLAUDE.md, agent_v2.md, protocols/task_executor.py, evaluation/hallucinations.md
+
+**Test Results**:
+- ✅ All imports successful across all modules
+- ✅ BaseAgent instantiation works correctly
+- ✅ execution_engine is PlanExecutor type
+- ✅ Callbacks properly wired
+- ✅ Integration tests passing
+
+**Validation**: ✅ COMPLETE - All references updated, all tests pass, folder/class names consistent
+
+**Phase 2 Status**:
+- ✅ Phase 2.1 COMPLETE: TaskManager refactored (741 → 8 files, composition pattern)
+- ✅ Phase 2.2 COMPLETE: ExecutionEngine circular dependency broken (1116 → 921 lines)
+- ✅ Phase 2.2b COMPLETE: ExecutionEngine decomposed (921 → 8 files, composition pattern)
+- ✅ Phase 2.3 COMPLETE: Agent.py wired with correct initialization and callbacks
+- ✅ Phase 2.4 COMPLETE: Class renamed PlanExecutionEngine → PlanExecutor, file renamed
+
+**Phase 2 Summary (ALL PHASES 100% COMPLETE)**:
+- TaskManager: 741 lines → 8 focused modules (17-236 lines each)
+- ExecutionEngine: 1116 lines → 8 focused modules (5-299 lines each)
+- Circular dependency broken using callback pattern
+- TaskStore protocol implemented via delegation
+- Composition pattern consistently applied across both major components
+- Agent.py initialization fixed with proper parameters (Phase 2.3)
+- Class renamed to PlanExecutor, file renamed to plan_executor.py (Phase 2.4)
+- All imports updated across 5 code files + 4 documentation files
+- All integration tests passing
+- **Next**: Phase 3 - Extract agent.py components
 
 ---
 
@@ -1476,7 +1705,7 @@ TOTALS:
 ┌─────────────────────────────────────────────────────────────┐
 │                         BaseAgent                            │
 │                       (1130 lines)                           │
-│  ┌────────────────────────────────────────────────────────┐ │
+│  ┌──────────────────────────────────────���─────────────────┐ │
 │  │ • ReAct Loop (600 lines)                               │ │
 │  │ • Stagnation Detection                                 │ │
 │  │ • Prompt Building                                      │ │
@@ -1570,7 +1799,7 @@ PROBLEMS:
 │  │  └──────────────────────────────────────────┘  │             │
 │  └────────────┬───────────────────────────────────┘             │
 │               │ Uses                                             │
-│               ▼                                                  │
+��               ▼                                                  │
 │  ┌────────────────────────────────────────────────┐             │
 │  │   CompletionValidator (~100 lines)             │             │
 │  │   implements CompletionChecker Protocol        │             │

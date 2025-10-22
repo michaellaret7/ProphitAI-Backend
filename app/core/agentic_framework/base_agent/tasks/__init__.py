@@ -3,7 +3,7 @@
 from .models import TaskStatus, TodoList, MainTask, SubTask
 from .manager import TaskManager
 from .validator import TaskValidator
-from .execution_engine import PlanExecutionEngine
+from .executor import PlanExecutor
 
 __all__ = [
     'TaskStatus',
@@ -12,5 +12,5 @@ __all__ = [
     'SubTask',
     'TaskManager',
     'TaskValidator',
-    'PlanExecutionEngine'
+    'PlanExecutor'
 ]

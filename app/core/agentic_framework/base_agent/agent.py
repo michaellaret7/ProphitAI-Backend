@@ -9,7 +9,7 @@ from app.utils.token_count import get_chat_token_count
 
 # Import helper classes
 from .tasks.manager import TaskManager
-from .tasks.execution_engine import PlanExecutionEngine
+from .tasks.executor import PlanExecutor
 from .core.logger import MessageLogger
 from .core.utilities import AgentUtilities, StepTrace
 from .core.arg_parser import ToolArgumentParser
@@ -100,7 +100,11 @@ class BaseAgent:
             output_dir=self.output_dir
         )
         
-        self.task_manager = TaskManager(verbose=verbose, output_dir=self.output_dir)
+        self.task_manager = TaskManager(
+            on_task_progression=None,  # Will wire up after ExecutionEngine created
+            verbose=verbose,
+            output_dir=self.output_dir
+        )
         self.utilities = AgentUtilities(self)
 
         # Register task management tools after task manager is initialized
@@ -134,10 +138,17 @@ class BaseAgent:
         self.planning_tool = PlanningTool(agent=self)
         
         # Initialize execution engine for structured plan execution
-        self.execution_engine = PlanExecutionEngine(
-            task_manager=self.task_manager, 
-            event_manager=self.event_manager,
-            verbose=self.verbose,
+        self.execution_engine = PlanExecutor(
+            task_store=self.task_manager,  # TaskManager implements TaskStore protocol
+            on_task_complete=None,  # Optional callback
+            on_task_advance=None,  # Optional callback
+            verbose=self.verbose
+        )
+
+        # Wire TaskManager -> ExecutionEngine callback (breaks circular dependency)
+        # When task completes, TaskManager calls ExecutionEngine to advance
+        self.task_manager.status.on_task_progression = (
+            lambda tid: self.execution_engine.advancement.advance_task_progression()
         )
         
         # Register event handlers
@@ -163,7 +174,7 @@ class BaseAgent:
         return tools_info
 
     def _register_event_handlers(self):
-        """Register event handlers for monitoring (progression handled by PlanExecutionEngine)."""
+        """Register event handlers for monitoring (progression handled by PlanExecutor)."""
         
         # Simple tool execution tracking for monitoring only
         def on_tool_executed(data: Dict):
@@ -175,13 +186,13 @@ class BaseAgent:
             if len(self.recent_tool_executions) > 20:  # Keep last 20
                 self.recent_tool_executions.pop(0)
             
-            # Note: Task progression is now handled automatically by PlanExecutionEngine
+            # Note: Task progression is now handled automatically by PlanExecutor
             # No manual task management needed in event handlers
         
         # Register only the monitoring handler
         self.event_manager.on(AgentEvent.TOOL_EXECUTED, on_tool_executed)
         
-        # Note: Task completion and failure events are handled automatically by PlanExecutionEngine
+        # Note: Task completion and failure events are handled automatically by PlanExecutor
         # Old manual progression handlers removed to prevent conflicts
     
     def add_tool(self, name: str, description: str, parameters: Dict, function: Callable):

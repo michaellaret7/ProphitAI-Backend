@@ -27,7 +27,7 @@ The heart of ProphitAI - a sophisticated autonomous agent system for portfolio m
 
 - **Task Management System** (`base_agent/tasks/`):
   - `manager.py`: TodoList with MainTask/SubTask hierarchy
-  - `execution_engine.py`: PlanExecutionEngine for executing task plans
+  - `plan_executor.py`: PlanExecutor for executing task plans
   - `models.py`: Pydantic models (TodoList, MainTask, SubTask, TaskStatus)
   - `validator.py`: Task validation logic
 
