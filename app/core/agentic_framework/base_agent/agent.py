@@ -52,6 +52,8 @@ class BaseAgent:
                 user_prompt: str,
                 *,
                 model: str = None,
+                reasoning_effort: str = None,
+                temperature: float = None,
                 max_iterations: int = 75,
                 verbose: bool = True,
                 plan_first: bool = True,
@@ -59,7 +61,7 @@ class BaseAgent:
                 save_messages: bool = True,
                 use_episodic_memory: bool = True,
                 memory_refresh_interval: int = 6,
-                simulation_date: Optional[datetime] = None,
+                simulation_date: Optional[datetime] = None
             ):
 
         self.model, self.client = openai_model_and_client(model=model)
@@ -70,6 +72,7 @@ class BaseAgent:
         self.system_prompt = system_prompt
         self.user_prompt = user_prompt
         self.max_iterations = max_iterations
+        self.reasoning_effort = reasoning_effort
         self.verbose = verbose
         self.plan_first = plan_first  # always plan first
         self.final_keywords = final_keywords or ["Final Answer:", "FINAL ANSWER:"]
@@ -78,6 +81,7 @@ class BaseAgent:
         self.memory_refresh_interval = memory_refresh_interval
         self.simulation_date = simulation_date  # For simulation mode: inject _simulation_date into all tool calls
         self.agent_name = self.__class__.__name__ #this is for logging the agent output 
+        self.temperature = temperature
         
         # OpenAI tools and local dispatch map
         self.tools: List[Dict[str, Any]] = []
@@ -119,7 +123,7 @@ class BaseAgent:
         self.utilities = AgentUtilities(self)
 
         # Register task management tools after task manager is initialized
-        register_task_management_tools(self)
+        # register_task_management_tools(self)
 
         self.task_validator = TaskValidator(verbose=verbose)
 

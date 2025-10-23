@@ -19,7 +19,7 @@ def update_task_status(
         task_id: Task ID as string (int for main task, e.g. '1a' for subtask)
         status: Status string ('started', 'in_progress', 'completed', 'failed', 'blocked')
         reason: Optional reason for status change
-        evidence: Optional evidence dict with outputs, observations, confidence
+        evidence: Optional evidence dict with outputs and observations
 
     Returns:
         YAML formatted string with success status and task details
@@ -130,8 +130,7 @@ UPDATE_TASK_STATUS_PARAMETERS = {
             "description": "Evidence supporting the status change",
             "properties": {
                 "outputs": {"type": "object", "description": "Task outputs/results"},
-                "observations": {"type": "array", "items": {"type": "string"}},
-                "confidence": {"type": "number", "minimum": 0, "maximum": 1}
+                "observations": {"type": "array", "items": {"type": "string"}}
             }
         },
         "reason": {

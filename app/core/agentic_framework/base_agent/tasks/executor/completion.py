@@ -4,7 +4,7 @@ Responsibilities:
 - Validate task/subtask completion conditions
 - Generate execution summaries
 - Provide intelligent completion analysis
-- Interface with TaskValidator for confidence scoring
+- Interface with CompletionValidator for boolean validation
 """
 
 from typing import Tuple, Dict, Any, TYPE_CHECKING

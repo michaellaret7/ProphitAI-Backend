@@ -104,8 +104,13 @@ class AgentExecutionLoop:
                     response = self.agent.client.chat.completions.create(
                         model=self.agent.model,
                         messages=messages,
-                        tools=tools if tools else None
+                        tools=tools if tools else None,
+                        **({"reasoning_effort": self.agent.reasoning_effort} if getattr(self.agent, "reasoning_effort", None) is not None else {}),
+                        **({"temperature": self.agent.temperature} if getattr(self.agent, "temperature", None) is not None else {}),
                     )
+
+                    # Accumulate actual token usage from LLM response
+                    self.agent.utilities.accumulate_usage(response)
 
                     assistant_message = response.choices[0].message
                     assistant_raw = assistant_message.content or ""

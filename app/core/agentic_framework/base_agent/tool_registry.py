@@ -179,7 +179,7 @@ def register_base_tools(agent: Any) -> None:
     agent.add_tool(
         name="get_completion_analysis",
         description=(
-            "Get intelligent completion analysis with confidence scores and validation breakdown for current tasks."
+            "Get intelligent completion analysis with validation breakdown for current tasks."
         ),
         parameters={
             "type": "object",
