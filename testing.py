@@ -34,7 +34,7 @@ class TestAgentTwo(BaseAgent):
             system_prompt=system_prompt,
             user_prompt=user_prompt,
             max_iterations=500,
-            plan_first=False,
+            plan_first=True,
             save_messages=True,
             model="gpt-5-mini",
             verbose=True,

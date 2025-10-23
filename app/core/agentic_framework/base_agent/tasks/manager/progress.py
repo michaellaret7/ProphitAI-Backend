@@ -110,4 +110,4 @@ class TaskProgressManager:
             iteration: Current iteration number
         """
         if self.core.verbose:
-            print(f"📝 Task progress update at iteration {iteration}")
+            print(f"Task progress update at iteration {iteration}")

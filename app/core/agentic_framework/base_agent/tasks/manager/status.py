@@ -38,7 +38,7 @@ class TaskStatusManager:
         main_task = self.core.get_main_task_by_id(task_id)
         if not main_task:
             if self.core.verbose:
-                print(f"⚠️ Main task {task_id} not found")
+                print(f"Main task {task_id} not found")
             return False
 
         old_status = main_task.status
@@ -55,12 +55,12 @@ class TaskStatusManager:
         })
 
         if self.core.verbose:
-            print(f"📋 Main Task {task_id}: {old_status.value} → {status.value}")
+            print(f"Main Task {task_id}: {old_status.value} -> {status.value}")
 
         # Trigger callback if task completed
         if status == TaskStatus.COMPLETED and self.on_task_progression:
             if self.core.verbose:
-                print(f"🔄 Task {task_id} marked complete, triggering progression callback...")
+                print(f"Task {task_id} marked complete, triggering progression callback...")
             self.on_task_progression(task_id)
 
         return True
@@ -80,7 +80,7 @@ class TaskStatusManager:
         subtask = self.core.get_subtask_by_id(main_task_id, subtask_id)
         if not subtask:
             if self.core.verbose:
-                print(f"⚠️ SubTask {subtask_id} in Task {main_task_id} not found")
+                print(f"SubTask {subtask_id} in Task {main_task_id} not found")
             return False
 
         old_completed = subtask.completed
@@ -98,7 +98,7 @@ class TaskStatusManager:
         })
 
         if self.core.verbose:
-            status_icon = "✅" if completed else "⏸️"
+            status_icon = "[✓]" if completed else "[ ]"
             print(f"  {status_icon} SubTask {subtask_id}: {'completed' if completed else 'pending'}")
 
         return True

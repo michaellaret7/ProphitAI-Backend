@@ -42,7 +42,7 @@ class TaskManagerCore:
         self.structured_plan = plan
 
         if self.verbose:
-            print(f"📝 Added structured plan with {len(plan.tasks)} main tasks")
+            print(f"Added structured plan with {len(plan.tasks)} main tasks")
 
     def get_current_structured_plan(self) -> Optional[TodoList]:
         """Get the current structured plan.

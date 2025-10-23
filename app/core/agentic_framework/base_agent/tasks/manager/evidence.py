@@ -43,14 +43,14 @@ class TaskEvidenceManager:
             if subtask:
                 subtask.completion_evidence.append(evidence)
                 if self.core.verbose:
-                    print(f"  📊 Evidence added to SubTask {subtask_id}: {evidence}")
+                    print(f"  Evidence added to SubTask {subtask_id}: {evidence}")
             else:
                 return False
         else:
             # Add evidence to main task
             main_task.completion_evidence.append(evidence)
             if self.core.verbose:
-                print(f"📊 Evidence added to Task {task_id}: {evidence}")
+                print(f"Evidence added to Task {task_id}: {evidence}")
 
         # Log evidence addition
         self.core.execution_history.append({

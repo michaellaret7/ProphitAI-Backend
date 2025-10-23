@@ -123,7 +123,7 @@ class BaseAgent:
         self.utilities = AgentUtilities(self)
 
         # Register task management tools after task manager is initialized
-        # register_task_management_tools(self)
+        register_task_management_tools(self)
 
         self.task_validator = TaskValidator(verbose=verbose)
 

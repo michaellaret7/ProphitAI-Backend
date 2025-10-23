@@ -44,14 +44,14 @@ class TaskAdvancedManager:
         """
         if not self.core.structured_plan:
             if self.core.verbose:
-                print("⚠️ Cannot add task: no structured plan loaded")
+                print("Cannot add task: no structured plan loaded")
             return False
 
         # Check if task ID already exists
         for existing_task in self.core.structured_plan.tasks:
             if existing_task.id == task_id:
                 if self.core.verbose:
-                    print(f"⚠️ Task {task_id} already exists")
+                    print(f"Task {task_id} already exists")
                 return False
 
         # Create new main task
@@ -91,7 +91,7 @@ class TaskAdvancedManager:
 
         if self.core.verbose:
             position = f"after Task {insert_after}" if insert_after else "at end"
-            print(f"➕ Added Main Task {task_id} {position}: {description}")
+            print(f"Added Main Task {task_id} {position}: {description}")
 
         return True
 
@@ -120,7 +120,7 @@ class TaskAdvancedManager:
 
         if not task_to_remove:
             if self.core.verbose:
-                print(f"⚠️ Task {task_id} not found for removal")
+                print(f"Task {task_id} not found for removal")
             return False
 
         # Remove the task
@@ -136,7 +136,7 @@ class TaskAdvancedManager:
         })
 
         if self.core.verbose:
-            print(f"❌ Removed Main Task {task_id}: {task_to_remove.description}")
+            print(f"Removed Main Task {task_id}: {task_to_remove.description}")
 
         return True
 
@@ -182,9 +182,9 @@ class TaskAdvancedManager:
         })
 
         if self.core.verbose:
-            print(f"❌ Task {task_id} marked as FAILED: {error_message}")
+            print(f"Task {task_id} marked as FAILED: {error_message}")
             if recovery_suggestion:
-                print(f"  💡 Recovery suggestion: {recovery_suggestion}")
+                print(f"  Recovery suggestion: {recovery_suggestion}")
 
         return True
 
@@ -204,7 +204,7 @@ class TaskAdvancedManager:
 
         if main_task.status != TaskStatus.FAILED:
             if self.core.verbose:
-                print(f"⚠️ Task {task_id} is not in FAILED status (current: {main_task.status.value})")
+                print(f"Task {task_id} is not in FAILED status (current: {main_task.status.value})")
             return False
 
         # Reset task status and clear failure evidence
@@ -231,6 +231,6 @@ class TaskAdvancedManager:
         })
 
         if self.core.verbose:
-            print(f"🔄 Task {task_id} reset for retry: {retry_reason}")
+            print(f"Task {task_id} reset for retry: {retry_reason}")
 
         return True

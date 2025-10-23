@@ -59,7 +59,9 @@ class TaskManager:
 
     def add_structured_plan(self, plan: TodoList) -> None:
         """Add a structured plan (delegates to core)."""
-        return self.core.add_structured_plan(plan)
+        result = self.core.add_structured_plan(plan)
+        self.persistence.save_state()
+        return result
 
     def get_current_structured_plan(self) -> Optional[TodoList]:
         """Get current plan (delegates to core)."""
@@ -75,24 +77,42 @@ class TaskManager:
 
     def update_main_task_status(self, task_id: int, status: TaskStatus, reason: str = None) -> bool:
         """Update main task status (delegates to status)."""
-        return self.status.update_main_task(task_id, status, reason)
+        result = self.status.update_main_task(task_id, status, reason)
+        if result:
+            self.persistence.save_state()
+        return result
 
     def update_subtask_status(self, main_task_id: int, subtask_id: str, completed: bool, reason: str = None) -> bool:
         """Update subtask status (delegates to status)."""
-        return self.status.update_subtask(main_task_id, subtask_id, completed, reason)
+        result = self.status.update_subtask(main_task_id, subtask_id, completed, reason)
+        if result:
+            self.persistence.save_state()
+        return result
 
     def add_task_evidence(self, task_id: int, evidence: str, subtask_id: str = None) -> bool:
         """Add task evidence (delegates to evidence)."""
-        return self.evidence.add_evidence(task_id, evidence, subtask_id)
+        result = self.evidence.add_evidence(task_id, evidence, subtask_id)
+        if result:
+            self.persistence.save_state()
+        return result
 
     def add_task_observation(self, task_id: int, observation: str, subtask_id: str = None) -> bool:
         """Add task observation (delegates to evidence)."""
-        return self.evidence.add_observation(task_id, observation, subtask_id)
+        result = self.evidence.add_observation(task_id, observation, subtask_id)
+        if result:
+            self.persistence.save_state()
+        return result
 
     def mark_task_failed(self, task_id: int, failure_reason: str, subtask_id: str = None) -> bool:
         """Mark task as failed (delegates to advanced)."""
-        return self.advanced.mark_task_failed(task_id, failure_reason, subtask_id)
+        result = self.advanced.mark_task_failed(task_id, failure_reason, subtask_id)
+        if result:
+            self.persistence.save_state()
+        return result
 
     def retry_failed_task(self, task_id: int, retry_reason: str = "Manual retry") -> bool:
         """Retry a failed task (delegates to advanced)."""
-        return self.advanced.retry_failed_task(task_id, retry_reason)
+        result = self.advanced.retry_failed_task(task_id, retry_reason)
+        if result:
+            self.persistence.save_state()
+        return result

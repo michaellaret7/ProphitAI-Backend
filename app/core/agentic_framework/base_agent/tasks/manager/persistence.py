@@ -40,4 +40,4 @@ class TaskPersistenceManager:
                 json.dump(state_data, f, indent=2, ensure_ascii=False)
         except Exception as e:
             if self.core.verbose:
-                print(f"⚠️ Failed to save task state: {e}")
+                print(f"Failed to save task state: {e}")
