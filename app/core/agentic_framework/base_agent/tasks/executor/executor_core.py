@@ -9,7 +9,7 @@ Responsibilities:
 
 from typing import Optional, Dict, Any, Callable
 from ...protocols.task_store import TaskStore
-from ..validator import TaskValidator
+from ..validation.completion_validator import CompletionValidator as TaskValidator
 from ..models import TodoList, MainTask, SubTask, TaskStatus
 
 

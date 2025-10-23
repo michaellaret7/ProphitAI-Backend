@@ -5,7 +5,7 @@ import re
 import yaml
 from typing import List, Dict, Any, Optional, Callable
 from dataclasses import dataclass
-from .parser import parse_tool_result
+from .result_parser import parse_tool_result
 
 
 @dataclass

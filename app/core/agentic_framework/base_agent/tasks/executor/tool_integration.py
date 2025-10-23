@@ -10,7 +10,7 @@ Responsibilities:
 
 from typing import List, Optional, Any, TYPE_CHECKING
 import re
-from ...core.parser import parse_tool_result
+from ...core.result_parser import parse_tool_result
 from ..models import MainTask, SubTask
 
 if TYPE_CHECKING:
@@ -136,22 +136,13 @@ class ToolIntegrationManager:
         if not self.core.current_subtask:
             return False
 
-        # Use TaskValidator for intelligent completion analysis
-        should_complete, confidence, reason = self.core.task_validator.validate_tool_result_for_completion(
-            tool_name=tool_name,
-            tool_result=result,
-            current_task=self.core.current_main_task,
-            current_subtask=self.core.current_subtask
+        # Check the subtask for completion using TaskValidator
+        subtask_complete = self.core.task_validator.is_subtask_complete(
+            self.core.current_subtask
         )
 
-        if self.core.verbose and should_complete:
-            print(f"  🔍 Intelligent validation suggests subtask completion: {reason}")
-
-        # Also check the subtask itself for completion
-        subtask_complete, subtask_confidence, subtask_reason = self.core.task_validator.validate_subtask_completion(
-            self.core.current_subtask,
-            self.core.current_main_task
-        )
+        if self.core.verbose and subtask_complete:
+            print(f"  🔍 Subtask completion detected")
 
         # Require relevance, success, and explicit tool-named evidence (always strict)
         is_relevant = self._is_tool_relevant(tool_name, self.core.current_main_task, self.core.current_subtask)
@@ -160,8 +151,8 @@ class ToolIntegrationManager:
         if not (is_relevant and not is_error and has_tool_named_evidence):
             return False
 
-        # Auto-advance if either validator suggests completion with high confidence
-        return (should_complete and confidence >= 0.6) or (subtask_complete and subtask_confidence >= 0.7)
+        # Auto-advance if validator confirms completion
+        return subtask_complete
 
     def collect_evidence_from_tool_result(self, tool_name: str, result: Any) -> List[str]:
         """Automatically collect evidence from tool results.

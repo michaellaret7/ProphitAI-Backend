@@ -3,7 +3,7 @@
 This replaces 4 different parsing implementations across the codebase:
 - core/parser.py:parse_tool_result()
 - core/utilities.py:execute_tool_safe()
-- tasks/validator.py:_analyze_tool_success()
+- tasks/validator.py:_analyze_tool_success() (DELETED - old validator removed in Phase 4)
 - tasks/execution_engine.py:_is_error_result()
 
 All tools return YAML strings with {"success": bool, "data"/"error": ...} format.
@@ -219,4 +219,46 @@ class ToolResultParser:
     def __repr__(self) -> str:
         """String representation for debugging."""
         return f"ToolResultParser(success={self.is_success()}, data={self.has_data()}, error={self.has_error()})"
+
+    def to_dict(self) -> Dict[str, Any]:
+        """Get parsed result as dict (alias for parse() for clarity).
+
+        Returns:
+            Parsed result dict
+        """
+        return self._parsed
+
+
+# Backward-compatible function wrapper for migration from parser.py
+def parse_tool_result(observation: Any, verbose: bool = False) -> Dict[str, Any]:
+    """Parse tool result into standardized dict format.
+
+    This is a backward-compatible wrapper function that maintains the same API
+    as the old parser.py:parse_tool_result() function while using the new
+    ToolResultParser class underneath.
+
+    NOTE: This wrapper was added during migration from parser.py to result_parser.py.
+    The new parser fixes bugs in the old parser (e.g., recognizes uppercase 'Error' fields).
+
+    Args:
+        observation: Raw tool output (YAML string, dict, or other)
+        verbose: Whether to print debug messages
+
+    Returns:
+        Dict with 'success' bool and 'data'/'error' fields:
+        - {"success": True, "data": ...} on success
+        - {"success": False, "error": "..."} on failure
+
+    Examples:
+        >>> parse_tool_result("success: true\\ndata: {foo: bar}")
+        {"success": True, "data": {"foo": "bar"}}
+
+        >>> parse_tool_result({"success": False, "error": "Invalid"})
+        {"success": False, "error": "Invalid"}
+
+        >>> parse_tool_result("Error: Tool failed")
+        {"success": False, "error": "Error: Tool failed"}
+    """
+    parser = ToolResultParser(observation, verbose)
+    return parser.parse()
 

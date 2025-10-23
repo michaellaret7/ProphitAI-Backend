@@ -411,8 +411,7 @@ def _check_plan_completion_status_impl(agent: Any) -> dict:
     execution_summary = agent.execution_engine.get_execution_summary()
 
     # Check if all tasks are completed
-    all_complete = (task_context.get("status") != "executing" or
-                   execution_summary.get('completed_main_tasks', 0) == execution_summary.get('total_main_tasks', 0))
+    all_complete = (task_context.get("status") != "executing" or execution_summary.get('completed_main_tasks', 0) == execution_summary.get('total_main_tasks', 0))
 
     return {
         "plan_loaded": True,

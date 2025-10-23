@@ -11,7 +11,7 @@ from dataclasses import dataclass
 if TYPE_CHECKING:
     from ..agent import BaseAgent
 
-from ..core.parser import parse_tool_result
+from ..core.result_parser import parse_tool_result
 
 
 @dataclass
@@ -92,9 +92,6 @@ class ToolCallHandler:
                 if should_complete:
                     self.agent.execution_engine.advancement.advance_task_progression()
 
-            # Emit tool executed event
-            self.agent.event_manager.emit_tool_executed(name, args, observation)
-
             # Track observation for validation
             self._track_observation(observation)
 
@@ -166,9 +163,6 @@ class ToolCallHandler:
             should_complete, reason = self.agent.execution_engine.check_task_completion_conditions()
             if should_complete:
                 self.agent.execution_engine.advancement.advance_task_progression()
-
-        # Emit event
-        self.agent.event_manager.emit_tool_executed(name, args, observation)
 
         # Track observation
         self._track_observation(observation)
@@ -335,9 +329,6 @@ class ToolCallHandler:
                 should_complete, reason = self.agent.execution_engine.check_task_completion_conditions()
                 if should_complete:
                     self.agent.execution_engine.advancement.advance_task_progression()
-
-            # Emit event
-            self.agent.event_manager.emit_tool_executed(inner_name, inner_args, obs)
 
             aggregated_results.append({
                 "tool": inner_name,

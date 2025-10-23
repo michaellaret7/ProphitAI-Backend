@@ -13,9 +13,8 @@ from .tasks.executor import PlanExecutor
 from .core.logger import MessageLogger
 from .core.utilities import AgentUtilities, StepTrace
 from .core.arg_parser import ToolArgumentParser
-from .core.parser import parse_tool_result
-from .events.manager import EventManager, AgentEvent
-from .tasks.validator import TaskValidator
+from .core.result_parser import parse_tool_result
+from .tasks.validation.completion_validator import CompletionValidator as TaskValidator
 from .memory.domain_memory import DomainMemory
 from .memory.episodic_memory import EpisodicMemory
 from .tool_registry import register_base_tools, register_task_management_tools
@@ -30,12 +29,22 @@ from .prompting.context_builder import ContextBuilder
 load_dotenv()
 
 class BaseAgent:
-    """
-    Refactored BaseAgent with:
-      (a) Native tool-calls + JSON ReAct
-      (b) No eval() anywhere (safe JSON parsing only)
-      (c) Loop/stop/summary management
-      (d) Returns a clean structured trace
+    """Foundation agent implementing ReAct pattern with native LLM tool calling.
+
+    This agent executes autonomous task completion through:
+    - ReAct loop with native tool calling (OpenAI/Claude/Grok)
+    - Structured task planning and execution via PlanExecutor
+    - Memory systems (domain and episodic)
+    - Stagnation detection and recovery
+    - Full execution tracing and token accounting
+
+    Architecture (Phase 3 Refactor):
+    - AgentExecutionLoop: Multi-iteration loop management
+    - IterationResponseProcessor: Single response processing
+    - ContextBuilder: Message and context injection
+    - StagnationTracker: Detects and handles stagnation
+    - TaskManager: Task planning and progress tracking
+    - PlanExecutor: Structured plan execution engine
     """
 
     def __init__(self,
@@ -54,8 +63,6 @@ class BaseAgent:
             ):
 
         self.model, self.client = openai_model_and_client(model=model)
-        # self.model, self.client = grok_model_and_client(model=model)
-        # self.model, self.client = claude_model_and_client(model=model)
 
         print(f"Using model: {self.model}")
         print(f"Using client: {self.client}")
@@ -113,9 +120,7 @@ class BaseAgent:
 
         # Register task management tools after task manager is initialized
         register_task_management_tools(self)
-        
-        # Initialize event system
-        self.event_manager = EventManager(verbose=verbose)
+
         self.task_validator = TaskValidator(verbose=verbose)
 
         # Track recent tool executions for validation
@@ -159,9 +164,6 @@ class BaseAgent:
         self.context_builder = ContextBuilder(self)
         self.agent_execution_loop = AgentExecutionLoop(self)
 
-        # Register event handlers
-        self._register_event_handlers()
-
     def _initialize_domain_memory(self):
         """Initialize domain memory - override in child classes for agent-specific memories."""
         # Base agent doesn't have domain memory by default
@@ -169,7 +171,12 @@ class BaseAgent:
         pass
     
     def get_available_tools(self) -> Dict[str, Dict[str, Any]]:
-        """Return all available tools and their information."""
+        """Return all available tools and their information.
+
+        Returns:
+            Dictionary mapping tool names to their definitions including
+            description, parameters schema, and required arguments.
+        """
         tools_info = {}
         for tool in self.tools:
             func_def = tool.get('function', {})
@@ -181,34 +188,20 @@ class BaseAgent:
             }
         return tools_info
 
-    def _register_event_handlers(self):
-        """Register event handlers for monitoring (progression handled by PlanExecutor)."""
-        
-        # Simple tool execution tracking for monitoring only
-        def on_tool_executed(data: Dict):
-            tool_name = data.get('tool_name')
-            result = data.get('result')
-            
-            # Track for validation
-            self.recent_tool_executions.append({'tool_name': tool_name, 'result': result})
-            if len(self.recent_tool_executions) > 20:  # Keep last 20
-                self.recent_tool_executions.pop(0)
-            
-            # Note: Task progression is now handled automatically by PlanExecutor
-            # No manual task management needed in event handlers
-        
-        # Register only the monitoring handler
-        self.event_manager.on(AgentEvent.TOOL_EXECUTED, on_tool_executed)
-        
-        # Note: Task completion and failure events are handled automatically by PlanExecutor
-        # Old manual progression handlers removed to prevent conflicts
-    
     def add_tool(self, name: str, description: str, parameters: Dict, function: Callable):
+        """Register a new tool for the agent to use.
+
+        Args:
+            name: Tool name (used in LLM function calling)
+            description: Tool description for LLM context
+            parameters: JSON schema defining tool parameters
+            function: Callable implementing the tool logic
+        """
         tool_def = {
             "type": "function",
             "function": {
-                "name": name, 
-                "description": description, 
+                "name": name,
+                "description": description,
                 "parameters": parameters
             }
         }

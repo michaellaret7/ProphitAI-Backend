@@ -38,31 +38,22 @@ class CompletionManager:
 
         # First check current subtask if active
         if self.core.current_subtask:
-            is_complete, confidence, explanation = self.core.task_validator.validate_subtask_completion(
-                self.core.current_subtask,
-                self.core.current_main_task
+            is_complete = self.core.task_validator.is_subtask_complete(
+                self.core.current_subtask
             )
 
             if is_complete:
-                return True, f"SubTask completion detected: {explanation} (confidence: {confidence:.2f})"
-
-            # If subtask not complete but has high confidence, consider it close
-            if confidence >= 0.6:
-                return False, f"SubTask near completion: {explanation} (confidence: {confidence:.2f})"
+                return True, "SubTask completion detected"
 
         # Check main task completion
-        is_complete, confidence, explanation = self.core.task_validator.validate_main_task_completion(
+        is_complete = self.core.task_validator.is_main_task_complete(
             self.core.current_main_task
         )
 
         if is_complete:
-            return True, f"MainTask completion detected: {explanation} (confidence: {confidence:.2f})"
-
-        # Return confidence-based assessment
-        if confidence >= 0.7:
-            return False, f"MainTask near completion: {explanation} (confidence: {confidence:.2f})"
+            return True, "MainTask completion detected"
         else:
-            return False, f"MainTask in progress: {explanation} (confidence: {confidence:.2f})"
+            return False, "MainTask in progress"
 
     def get_execution_summary(self) -> Dict[str, Any]:
         """Get a summary of the current execution state.
@@ -111,22 +102,19 @@ class CompletionManager:
             }
         }
 
-        # Get main task completion confidence
-        main_confidence, main_breakdown = self.core.task_validator.get_completion_confidence(
-            self.core.current_main_task,
-            self.core.current_subtask
+        # Get main task completion status
+        main_complete = self.core.task_validator.is_main_task_complete(
+            self.core.current_main_task
         )
 
         analysis["main_task_analysis"] = {
-            "confidence": main_confidence,
-            "breakdown": main_breakdown
+            "is_complete": main_complete
         }
 
         # Get current subtask analysis if available
         if self.core.current_subtask:
-            subtask_complete, subtask_confidence, subtask_explanation = self.core.task_validator.validate_subtask_completion(
-                self.core.current_subtask,
-                self.core.current_main_task
+            subtask_complete = self.core.task_validator.is_subtask_complete(
+                self.core.current_subtask
             )
 
             analysis["current_subtask"] = {
@@ -134,9 +122,7 @@ class CompletionManager:
                 "description": self.core.current_subtask.description,
                 "completed": self.core.current_subtask.completed,
                 "validation": {
-                    "is_complete": subtask_complete,
-                    "confidence": subtask_confidence,
-                    "explanation": subtask_explanation
+                    "is_complete": subtask_complete
                 }
             }
 

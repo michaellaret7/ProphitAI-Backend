@@ -2,7 +2,7 @@
 
 from .models import TaskStatus, TodoList, MainTask, SubTask
 from .manager import TaskManager
-from .validator import TaskValidator
+from .validation.completion_validator import CompletionValidator as TaskValidator
 from .executor import PlanExecutor
 
 __all__ = [
