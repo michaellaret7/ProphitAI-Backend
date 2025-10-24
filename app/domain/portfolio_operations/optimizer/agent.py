@@ -83,9 +83,10 @@ class OptimizerAgent(BaseAgent):
             max_iterations=200,
             plan_first=True,
             save_messages=True,
-            model="gpt-4.1",
+            model="gpt-5-mini",
             verbose=True,
-            memory_refresh_interval=20
+            memory_refresh_interval=20,
+            reasoning_effort="high"
         )
 
         register_optimizer_tools(self)
@@ -144,7 +145,7 @@ class OptimizerAgent(BaseAgent):
 
 @timer
 def main():
-    portfolio_id = "01be5cf2-a1fe-45b0-b9a4-cf9cc1a94b36"
+    portfolio_id = "26da638b-5602-4e07-aeba-08dc1052bd86"
     agent = OptimizerAgent(
         portfolio_id=portfolio_id,
         risk_tolerance="high",

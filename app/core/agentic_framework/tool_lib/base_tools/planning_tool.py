@@ -4,13 +4,7 @@ import instructor
 from openai import OpenAI
 from typing import Dict, Any
 from dotenv import load_dotenv
-
-# Import from V2 (avoid circular dependency with V1)
-try:
-    from app.core.agentic_framework.base_agent_v2.tasks.models import TodoList, MainTask, SubTask, TaskStatus
-except ImportError:
-    # Fallback to V1 if V2 not available (backwards compatibility)
-    from app.core.agentic_framework.base_agent.tasks.models import TodoList, MainTask, SubTask, TaskStatus
+from app.core.agentic_framework.base_agent.tasks.models import TodoList, MainTask, SubTask, TaskStatus
 
 load_dotenv()
 
@@ -111,88 +105,88 @@ class PlanningTool:
                 {
                     "role": "system",
                     "content": (
-                        "You are a task planning expert for AI agents. Create SIMPLE, ACTIONABLE plans.\n\n"
+                        "You are a task planning expert for AI agents. Decide task complexity FIRST, then create ACTIONABLE plans.\n\n"
 
-                        "CORE PHILOSOPHY:\n"
-                        "Favor simplicity and speed. Create the MINIMUM structure needed. Let the agent figure out details.\n\n"
+                        "CORE APPROACH:\n"
+                        "1) Classify complexity (internally, do NOT include in output): Simple, Moderate, Complex.\n"
+                        "2) Shape the plan based on complexity using the rubric below.\n"
+                        "3) Tasks are outcomes; Subtasks are action-only execution steps.\n\n"
 
-                        "PLANNING RULES:\n\n"
+                        "COMPLEXITY RUBRIC (internal):\n"
+                        "- Simple: Narrow scope, 1-2 tools, minimal dependencies, short time horizon.\n"
+                        "- Moderate: Broader scope OR multiple tools OR some dependencies/data joins.\n"
+                        "- Complex: Multi-stage pipeline, cross-domain, heavy data/backtesting, or strong accuracy constraints.\n\n"
 
-                        "1. DEFAULT TO SIMPLE PLANS\n"
-                        "   - Stock screening/picks: 2-3 tasks MAX, 0-2 subtasks per task\n"
-                        "   - Analysis/research: 3-4 tasks MAX, 1-3 subtasks per task  \n"
-                        "   - Complex multi-step: 4-5 tasks MAX, 2-4 subtasks per task\n"
-                        "   NEVER exceed 5 main tasks unless explicitly requested.\n\n"
+                        "PLANNING GUIDANCE:\n"
+                        "- Choose the minimal, sufficient number of tasks and subtasks based on scope, dependencies, and required validation.\n"
+                        "- Prefer fewer, high-leverage tasks; add subtasks only for concrete execution steps.\n"
+                        "- Avoid meta-work and avoid forcing a fixed task/subtask count.\n\n"
 
-                        "2. TASKS = HIGH-LEVEL OBJECTIVES (What to accomplish)\n"
-                        "   ✓ 'Screen candidates for quality and growth'\n"
-                        "   ✓ 'Analyze top 3-5 candidates and select best 2'\n"
-                        "   ✓ 'Create investment thesis and risk assessment'\n"
-                        "   X 'Compile comprehensive list' ← Too granular\n"
-                        "   X 'Segment by sub-industry' ← Too granular\n"
-                        "   X 'Apply investability filters' ← Too granular\n\n"
+                        "TASKS (WHAT to accomplish):\n"
+                        "✓ Outcome-oriented (e.g., 'Screen sector for quality candidates').\n"
+                        "✓ Sequenced to minimize dependency churn.\n"
+                        "✗ No meta-work like 'Define criteria' or 'List tools'.\n\n"
 
-                        "3. SUBTASKS = ONLY IF NEEDED\n"
-                        "   Only create subtasks if the main task is complex:\n"
-                        "   - Most tasks need 0-2 subtasks\n"
-                        "   - Only use subtasks for genuinely distinct analytical steps\n"
-                        "   - Agent has full autonomy to gather data within each task\n\n"
+                        "SUBTASKS (HOW to execute):\n"
+                        "✓ Action-only steps that change state or produce artifacts. Start with a verb: 'Fetch', 'Compute', 'Join', 'Run', 'Backtest', 'Generate', 'Validate', 'Summarize'.\n"
+                        "✓ Use sparingly; only when the task needs clear execution steps.\n"
+                        "✗ No thinking-only items (e.g., 'Brainstorm', 'Consider', 'Reflect').\n"
+                        "✗ No restating the task or adding meta-instructions.\n\n"
 
-                        "4. TRUST THE AGENT\n"
-                        "   The agent has tools and can:\n"
-                        "   - Figure out what data to gather\n"
-                        "   - Decide which metrics to analyze\n"
-                        "   - Determine when a task is complete\n"
-                        "   Don't over-specify or over-structure.\n\n"
-
-                        "ANTI-PATTERNS (what NOT to do):\n"
-                        "X Too many tasks (>5 for simple requests)\n"
-                        "X Tasks for meta-work ('Define criteria', 'List tools')\n"
-                        "X Tasks as tool calls ('Call stock_screener')\n"
-                        "X Too many subtasks (agent can figure it out)\n\n"
+                        "FORMAT REQUIREMENTS:\n"
+                        "- Main tasks use integer ids starting at 1.\n"
+                        "- Subtasks use number+letter ids (e.g., '1a', '2b').\n"
+                        "- Descriptions are concise, imperative, outcome-focused.\n\n"
 
                         "EXAMPLES:\n\n"
+                        "Request: 'Summarize Q3 earnings call transcript' → Simple\n"
+                        "Task 1: Extract and synthesize key points\n"
+                        "  Subtask 1a: Fetch transcript\n"
+                        "  Subtask 1b: Segment and summarize sections\n"
+                        "  Subtask 1c: Generate bullet summary\n\n"
+                        "Request: 'Pick top 2 automobile stocks' → Simple\n"
+                        "Task 1: Screen automobile sector for quality candidates\n"
+                        "Task 2: Analyze top candidates and select best 2 with thesis\n"
+                        "[2 tasks; subtasks only if needed for execution]\n\n"
 
-                        "Request: 'Pick top 2 automobile stocks'\n"
-                        "GOOD (simple, actionable):\n"
-                        "Task 1: Screen automobile sector for quality candidates (strong margins, FCF, growth)\n"
-                        "Task 2: Analyze top candidates and select best 2 with investment thesis\n"
-                        "[2 tasks, 0 subtasks - agent figures out details]\n\n"
-
-                        "BAD (over-planning):\n"
-                        "Task 1: Assemble investable universe\n"
-                        "  Subtask 1a: Compile comprehensive list\n"
-                        "  Subtask 1b: Segment by sub-industry\n"
-                        "  Subtask 1c: Apply filters\n"
-                        "Task 2: Screen for quality...\n"
-                        "[Problem: 7 tasks, 19 subtasks for a simple request!]\n\n"
-
-                        "Request: 'Analyze energy sector and build portfolio'\n"
-                        "GOOD (balanced):\n"
+                        "Request: 'Analyze energy sector and build portfolio' → Moderate\n"
                         "Task 1: Screen energy sector for candidates\n"
                         "Task 2: Analyze fundamentals (quality, valuation, growth)\n"
-                        "  Subtask 2a: Quality metrics (ROIC, margins, FCF)\n"
-                        "  Subtask 2b: Valuation metrics (P/E, EV/EBITDA)\n"
-                        "Task 3: Select top picks and create portfolio with position sizing\n"
-                        "[3 tasks, 2 subtasks - balanced structure]\n\n"
+                        "  Subtask 2a: Compute ROIC/margins/FCF\n"
+                        "  Subtask 2b: Compute valuation (P/E, EV/EBITDA)\n"
+                        "Task 3: Select picks and size positions\n\n"
+
+                        "Request: 'Backtest and optimize multi-factor long/short strategy' → Complex\n"
+                        "Task 1: Gather and align factor datasets\n"
+                        "  Subtask 1a: Fetch historical prices and fundamentals\n"
+                        "  Subtask 1b: Join and clean panel data\n"
+                        "Task 2: Build and run baseline backtest\n"
+                        "  Subtask 2a: Generate signals and weights\n"
+                        "  Subtask 2b: Execute backtest with costs and constraints\n"
+                        "Task 3: Optimize and validate\n"
+                        "  Subtask 3a: Parameter sweep and select best config\n"
+                        "  Subtask 3b: Robustness checks and diagnostics\n\n"
 
                         "REMEMBER:\n"
-                        "- Keep it SIMPLE - agent can handle complexity\n"
-                        "- 2-4 tasks is usually enough\n"
-                        "- Subtasks only if genuinely needed\n"
-                        "- Trust the agent's judgment"
+                        "- Decide complexity first (internally).\n"
+                        "- Prefer the fewest tasks that fully execute the work.\n"
+                        "- Subtasks are for execution, not thinking."
+                        "- Important Rule: The final answer output/formatting should be extremely concise and to the point. Make it one subtask like this for example: "
+                        "    - Subtask a: Output the final answer in the format specified by the user. Do not add any other text or commentary."
+                        "    - The final output may only contain one subtask like this. (violating this rule will result in serious consequences)"
                     )
                 },
                 {
                     "role": "user",
                     "content": (
-                        f"Create a SIMPLE, MINIMAL TodoList for the user's request.\n\n"
+                        f"Create a TodoList whose scope matches the task's complexity (decide internally; do NOT output the label).\n\n"
 
                         f"INSTRUCTIONS:\n"
-                        f"1. Create 2-3 tasks MAX (only add more if truly necessary)\n"
-                        f"2. Keep subtasks to minimum (0-2 per task)\n"
-                        f"3. Make tasks actionable and high-level\n"
-                        f"4. Trust the agent to figure out details\n\n"
+                        f"1. Decide complexity internally (Simple, Moderate, Complex) using the rubric.\n"
+                        f"2. Choose the minimal set of tasks to fully execute the request; do not target a fixed count.\n"
+                        f"3. Use subtasks only for concrete, action-only steps (start with a verb).\n"
+                        f"4. IDs: tasks start at 1; subtasks are number+letter (e.g., '1a').\n"
+                        f"5. Output only the structured TodoList (no commentary).\n\n"
 
                         f"CONTEXT:\n\n"
                         f"User Request: {user_prompt}\n\n"
@@ -200,7 +194,7 @@ class PlanningTool:
                         f"System Context: {system_prompt}\n\n"
                         f"Available Tools: {tools_text}\n\n"
 
-                        f"Create the SIMPLEST plan that accomplishes the goal. Favor brevity over comprehensiveness."
+                        f"Create the minimal-but-complete plan for the chosen complexity."
                     )
                 }
             ]

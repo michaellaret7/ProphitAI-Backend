@@ -622,3 +622,342 @@ class ExecutionEngineProtocol(Protocol):
 3. If accepting, update CLAUDE.md to note that refactoring components may exceed 100 lines when extracting from large monoliths
 
 **Code Quality**: Despite violations, the code is well-structured, tested, and maintainable. The extractions successfully isolate concerns and will significantly reduce agent.py complexity.
+
+---
+
+---
+
+# AGENT PLANNING/EXECUTION FAILURE ANALYSIS
+
+**Date**: 2025-10-24
+**Test Run**: TestFinancialAgentV2_092900
+**Status**: 🚨 CRITICAL - Agent took 20+ iterations for single subtask, plan not followed
+
+---
+
+## 🚨 THE PROBLEM
+
+**Agent Performance**:
+- **Subtask 1a**: 20 tool calls, never completed
+- **Subtasks 1b-3c**: Never started (0 tool calls each)
+- **Total messages**: 73 (extremely high)
+- **Outcome**: Agent stuck in loop, unable to complete even the first subtask
+
+**Root Cause**: **Tool capability mismatch** - The subtask requires capabilities the tool doesn't have.
+
+---
+
+## 📊 WHAT HAPPENED
+
+### The Task
+**Subtask 1a (from task_state.json:12)**:
+> "Run stock_screener on the provided tickers with constraints: is_actively_trading = true, market_cap > $300M, avg_volume > 100k; output matching tickers."
+
+**The Problem**: The agent was given a list of ~35 tickers (WGO, NIO, THO, GM, TSLA, etc.) and asked to screen **only those specific tickers** using stock_screener.
+
+### Tool Call Pattern (23 iterations)
+
+1. **Iterations 1-4**: Called `stock_screener` 4 times with different phrasings
+   - "Find actively trading stocks from this list: WGO, NIO, THO, GM..."
+   - "From this list only: WGO, NIO, THO..."
+   - "Screen only these tickers: WGO, NIO, THO..."
+   - "From this exact list only: WGO, NIO..."
+
+2. **Every call returned WRONG tickers**: SYBT, JMIA, HHH, S (none of which were in the requested list!)
+
+3. **Iterations 5-10**: Agent pivoted to `get_ticker_fundamental_data`
+   - Manually fetched data for TSLA, LI, RACE individually
+   - Trying to work around the stock_screener limitation
+
+4. **Iterations 11-18**: Kept retrying `stock_screener` with different syntax
+   - "ticker in (TSLA, LI, RACE)..."
+   - "Show market_cap for tickers TSLA, LI, RACE..."
+   - Different constraint phrasings
+
+5. **Iterations 19-20**: Tried `free_search` to get market cap data externally
+
+6. **Iteration 23**: Final attempt with yet another stock_screener phrasing
+
+**The agent NEVER realized the tool fundamentally cannot do what the subtask asks.**
+
+---
+
+## 🔍 ROOT CAUSE ANALYSIS
+
+### Why Did This Happen?
+
+**1. Tool Capability Mismatch**
+
+I examined the `stock_screener` tool implementation:
+
+**File**: [app/core/agentic_framework/tool_lib/data_tools/stock_screener/tool.py](app/core/agentic_framework/tool_lib/data_tools/stock_screener/tool.py)
+
+**File**: [app/core/agentic_framework/tool_lib/data_tools/stock_screener/models.py:40-143](app/core/agentic_framework/tool_lib/data_tools/stock_screener/models.py#L40-L143)
+
+**The ScreenerConstraints model does NOT have**:
+- ❌ No `tickers` field
+- ❌ No `ticker_list` field
+- ❌ No `symbols` field
+- ❌ No way to specify an explicit list of tickers to screen from
+
+**What the tool CAN do**:
+- ✅ Filter by sector, industry, sub_industry
+- ✅ Filter by market_cap ranges, P/E ranges, ROE ranges, etc.
+- ✅ Filter by is_actively_trading, is_adr, is_fund booleans
+- ✅ Search the ENTIRE database with filters
+
+**What the tool CANNOT do**:
+- ❌ Screen a specific user-provided list of tickers
+- ❌ Take a ticker universe as input
+
+**The Subtask Asked For Something Impossible**: "Run stock_screener on the provided tickers..."
+
+This is like asking someone to "find red apples in this bag of apples" when they only have a tool that can search an entire orchard by color, but not restrict the search to a specific bag.
+
+---
+
+### Why Did the Agent Not Realize This?
+
+**2. No Tool Capability Introspection**
+
+The agent has:
+- ✅ Tool descriptions (what the tool does)
+- ✅ Tool parameters (what inputs it accepts)
+- ❌ NO mechanism to realize "this tool cannot do what my subtask requires"
+
+The agent kept trying different natural language phrasings, hoping the LLM-based parser would magically understand "from this list only: TSLA, LI...". But the parser converts natural language to ScreenerConstraints, which has no ticker_list field.
+
+**3. Plan Validation Gap**
+
+When the agent created the plan with subtask 1a, there was:
+- ❌ No validation that stock_screener can accept a ticker list
+- ❌ No checking if the tool's ScreenerConstraints supports this use case
+- ❌ No warning that the subtask may be impossible
+
+**4. No Early Stopping**
+
+After 4 failed attempts with stock_screener returning wrong tickers, the agent should have:
+- Recognized the tool doesn't support ticker filtering
+- Updated its approach or marked subtask as infeasible
+- Asked for clarification or used alternative tools
+
+Instead, it kept trying variations for 20 iterations.
+
+---
+
+## 🎯 SPECIFIC ISSUES IDENTIFIED
+
+### Issue 1: Tool Schema Doesn't Match Agent Expectations
+
+**Problem**: The PlanningTool creates subtasks based on natural language understanding of what tools *should* do, not what they *actually* can do.
+
+**Example**:
+- Planning: "Use stock_screener to filter these 35 tickers"
+- Reality: stock_screener cannot filter a specific ticker list
+- Result: Infinite loop of failed attempts
+
+**Fix Needed**: Planning should validate tool capabilities before creating subtasks.
+
+---
+
+### Issue 2: No Feedback Loop to Planning
+
+**Problem**: When a subtask proves infeasible, there's no way to:
+- Mark it as impossible
+- Revise the plan
+- Create an alternative approach
+
+The agent is stuck executing an impossible subtask indefinitely.
+
+**Fix Needed**: Allow agents to revise plans when hitting blockers.
+
+---
+
+### Issue 3: Stagnation Detection Insufficient
+
+**Problem**: The agent made 20 tool calls for one subtask and never triggered stagnation detection or recovery.
+
+From the code, stagnation tracking looks at:
+- Repeated identical tool calls
+- Repeated observations
+
+But it doesn't detect:
+- Repeated SIMILAR tool calls (same tool, different args)
+- Repeated failure patterns (tool always returns wrong data)
+
+**Fix Needed**: Smarter stagnation detection that recognizes failure patterns.
+
+---
+
+### Issue 4: Tool Result Validation Missing
+
+**Problem**: The agent called stock_screener asking for tickers [WGO, NIO, THO, GM, TSLA...] but received [SYBT, JMIA, HHH, S].
+
+There's no validation that says: "Wait, the result contains NONE of the tickers I asked for. This tool doesn't work the way I expected."
+
+**Fix Needed**: Add result validation that checks if tool output matches expectations.
+
+---
+
+## 💡 RECOMMENDATIONS
+
+### Immediate Fixes (High Priority)
+
+1. **Add Ticker Filter to stock_screener**
+   - Add `tickers: Optional[List[str]]` to ScreenerConstraints
+   - Filter results to only include tickers in the provided list
+   - Update tool description to mention this capability
+   - **Time**: 30 min
+   - **Impact**: Fixes this exact failure mode
+
+2. **Add Result Validation**
+   - After tool execution, check if result makes sense for the request
+   - Example: If asking for specific tickers, validate returned tickers are in the request
+   - **Time**: 1 hour
+   - **Impact**: Catches tool capability mismatches early
+
+3. **Improve Stagnation Detection**
+   - Track similar tool calls (same tool, similar constraints)
+   - Trigger after 3-5 similar failed attempts, not 20+
+   - **Time**: 1 hour
+   - **Impact**: Prevents infinite loops
+
+### Medium-Term Improvements
+
+4. **Plan Validation During Planning**
+   - Before finalizing a plan, validate each subtask's tool calls are feasible
+   - Check tool schemas support the required parameters
+   - **Time**: 2 hours
+   - **Impact**: Prevents impossible plans from being created
+
+5. **Allow Plan Revision**
+   - When a subtask fails repeatedly, allow agent to revise the plan
+   - Mark subtasks as "blocked" or "infeasible"
+   - Generate alternative approach
+   - **Time**: 3 hours
+   - **Impact**: Agents can recover from planning mistakes
+
+6. **Tool Capability Documentation**
+   - Make it clearer what each tool CAN and CANNOT do
+   - Include explicit limitations in tool descriptions
+   - **Time**: 2 hours
+   - **Impact**: Better planning from the start
+
+### Long-Term Architecture Changes
+
+7. **Two-Phase Planning**
+   - Phase 1: High-level task breakdown (what needs to be done)
+   - Phase 2: Validate feasibility + tool mapping (can our tools do this?)
+   - Only execute after Phase 2 validation passes
+   - **Time**: 1 day
+   - **Impact**: Systematic prevention of infeasible plans
+
+8. **Tool Capability Registry**
+   - Formalize what each tool can/cannot do in machine-readable format
+   - Planning agent checks registry before assigning tool to subtask
+   - **Time**: 2 days
+   - **Impact**: Planning becomes constraint-aware
+
+---
+
+## 📋 CONCRETE EXAMPLE: How to Fix This Specific Case
+
+### Option A: Fix the Tool (Recommended)
+
+**Add ticker filtering to stock_screener**:
+
+```python
+# models.py
+class ScreenerConstraints(BaseModel):
+    # ... existing fields ...
+
+    # NEW: Allow filtering to specific tickers
+    tickers: Optional[List[str]] = Field(
+        None,
+        description="Optional list of specific tickers to filter results to"
+    )
+```
+
+```python
+# query_builder.py (StockScreener.screen method)
+def screen(self, tickers=None, **criteria):
+    # ... existing query logic ...
+
+    # NEW: Filter to specific tickers if provided
+    if tickers:
+        query = query.filter(Ticker.symbol.in_(tickers))
+
+    # ... rest of method ...
+```
+
+**Why this is best**: The tool should support this common use case.
+
+---
+
+### Option B: Fix the Plan (Alternative)
+
+**Rewrite subtask 1a to use appropriate tools**:
+
+**Bad (current)**:
+```
+Subtask 1a: Run stock_screener on the provided tickers with constraints...
+```
+
+**Good (revised)**:
+```
+Subtask 1a: For each ticker in the provided list (WGO, NIO, THO, GM, TSLA, ...),
+fetch profile data and filter to those matching: is_actively_trading = true,
+market_cap > $300M, avg_volume > 100k. Use get_ticker_profile_data or similar.
+```
+
+**Why this works**: Uses tools that can handle specific tickers (get_ticker_* functions).
+
+**Downside**: Less efficient (35 individual calls vs 1 screen), but at least it works.
+
+---
+
+## 🎯 SUCCESS CRITERIA
+
+After fixes, the agent should:
+- ✅ Complete subtask 1a in ≤5 iterations
+- ✅ Return correct tickers from the provided list
+- ✅ Detect if a subtask is infeasible within 3-5 attempts
+- ✅ Either revise plan or alert that task cannot be completed as specified
+- ✅ Not spend 20+ iterations on a single subtask
+
+---
+
+## 📈 PRIORITY ASSESSMENT
+
+| Fix | Priority | Effort | Impact |
+|-----|----------|--------|--------|
+| 1. Add ticker filter to stock_screener | 🔥 Critical | 30 min | Direct fix |
+| 2. Result validation | 🔥 Critical | 1 hour | Prevents loops |
+| 3. Better stagnation detection | ⚠️ High | 1 hour | Faster recovery |
+| 4. Plan validation | ⚠️ High | 2 hours | Prevents bad plans |
+| 5. Plan revision capability | 💡 Medium | 3 hours | Adaptive agents |
+| 6. Tool capability docs | 💡 Medium | 2 hours | Better planning |
+| 7. Two-phase planning | 🎯 Nice-to-have | 1 day | Systematic fix |
+| 8. Tool capability registry | 🎯 Nice-to-have | 2 days | Architecture improvement |
+
+**Recommended Immediate Action**: Fix #1 (add ticker filter) + Fix #2 (result validation) = 1.5 hours, solves 80% of the problem.
+
+---
+
+## ✅ NEXT STEPS
+
+1. **Decide on approach**:
+   - Option A: Fix stock_screener tool (30 min, recommended)
+   - Option B: Improve planning to use alternative tools (1 hour)
+
+2. **Implement result validation** (1 hour)
+
+3. **Improve stagnation detection** (1 hour)
+
+4. **Re-test with same prompt** to verify agent completes task in <10 iterations
+
+5. **Consider medium-term improvements** (plan validation, revision capability)
+
+---
+
+**Bottom Line**: The agent planning looks good on paper but fails in execution because **the plan references tool capabilities that don't exist**. The agent has no way to detect this early and gets stuck trying impossible approaches. Fix the tool or fix the planning, and add validation to catch mismatches early.
