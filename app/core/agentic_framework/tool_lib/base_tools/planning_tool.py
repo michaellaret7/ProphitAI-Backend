@@ -4,7 +4,14 @@ import instructor
 from openai import OpenAI
 from typing import Dict, Any
 from dotenv import load_dotenv
-from app.core.agentic_framework.base_agent.tasks.models import TodoList, MainTask, SubTask, TaskStatus
+
+# Import from V2 (avoid circular dependency with V1)
+try:
+    from app.core.agentic_framework.base_agent_v2.tasks.models import TodoList, MainTask, SubTask, TaskStatus
+except ImportError:
+    # Fallback to V1 if V2 not available (backwards compatibility)
+    from app.core.agentic_framework.base_agent.tasks.models import TodoList, MainTask, SubTask, TaskStatus
+
 load_dotenv()
 
 class PlanningTool:
@@ -104,35 +111,96 @@ class PlanningTool:
                 {
                     "role": "system",
                     "content": (
-                        "You are a task planning expert for AI agents. Create an extensive, detailed, and well structured plan using the following guidelines:\n"
-                        "- Format subtask IDs as: main_task_number + letter. Examples: 1a, 1b, 2a, 3a, 5a, 5b, 5c. NOT '5.1' or just 'a'\n"
-                        "- Break down the goal into logical main tasks (big objectives)\n"
-                        "- Each main task should have specific subtasks (actionable steps)\n"
-                        "- Define which tools will be needed for each main task\n"
-                        "- Consider the system context and available capabilities\n\n"
-                        "- Be extremely concise and informative when writing the decriptions for the Main Task and the Sub Task\n\n"
-                        "Important Information:\n\n"
-                        "   a. The Observation section of the tasks is for the Agent to record the tool observations. DO NOT WRITE ANYTHING IN THERE.\n\n"
-                        "   b. If there is a section of the plan that does not require a tool call, do not populate the predicted_tool_use section of the plan.\n\n"
-                        "   d. When a subtask requires a tool, include the exact tool name in the subtask description (e.g., 'Call episodic_remember to store V1').\n\n"
-                        "   c. The last section of the plan has to be the formatting task. [If you violate this rule there will be a severe penalty]\n\n"
-                        "   d. Thinking Framework: Think Step by Step" #this is new, testing it out
-                        "Context: You will be given the Agent's System prompt, the Agent's Role prompt, the Agent's Memory/General Knowledge information, the Agent's Tools, and the Agent's User prompt. "
-                        "Your Goal: To deliver an extensive, detailed, and well structured plan to the AI agent. You want to set the agent up for success as best as you possibly can."
+                        "You are a task planning expert for AI agents. Create SIMPLE, ACTIONABLE plans.\n\n"
+
+                        "CORE PHILOSOPHY:\n"
+                        "Favor simplicity and speed. Create the MINIMUM structure needed. Let the agent figure out details.\n\n"
+
+                        "PLANNING RULES:\n\n"
+
+                        "1. DEFAULT TO SIMPLE PLANS\n"
+                        "   - Stock screening/picks: 2-3 tasks MAX, 0-2 subtasks per task\n"
+                        "   - Analysis/research: 3-4 tasks MAX, 1-3 subtasks per task  \n"
+                        "   - Complex multi-step: 4-5 tasks MAX, 2-4 subtasks per task\n"
+                        "   NEVER exceed 5 main tasks unless explicitly requested.\n\n"
+
+                        "2. TASKS = HIGH-LEVEL OBJECTIVES (What to accomplish)\n"
+                        "   ✓ 'Screen candidates for quality and growth'\n"
+                        "   ✓ 'Analyze top 3-5 candidates and select best 2'\n"
+                        "   ✓ 'Create investment thesis and risk assessment'\n"
+                        "   X 'Compile comprehensive list' ← Too granular\n"
+                        "   X 'Segment by sub-industry' ← Too granular\n"
+                        "   X 'Apply investability filters' ← Too granular\n\n"
+
+                        "3. SUBTASKS = ONLY IF NEEDED\n"
+                        "   Only create subtasks if the main task is complex:\n"
+                        "   - Most tasks need 0-2 subtasks\n"
+                        "   - Only use subtasks for genuinely distinct analytical steps\n"
+                        "   - Agent has full autonomy to gather data within each task\n\n"
+
+                        "4. TRUST THE AGENT\n"
+                        "   The agent has tools and can:\n"
+                        "   - Figure out what data to gather\n"
+                        "   - Decide which metrics to analyze\n"
+                        "   - Determine when a task is complete\n"
+                        "   Don't over-specify or over-structure.\n\n"
+
+                        "ANTI-PATTERNS (what NOT to do):\n"
+                        "X Too many tasks (>5 for simple requests)\n"
+                        "X Tasks for meta-work ('Define criteria', 'List tools')\n"
+                        "X Tasks as tool calls ('Call stock_screener')\n"
+                        "X Too many subtasks (agent can figure it out)\n\n"
+
+                        "EXAMPLES:\n\n"
+
+                        "Request: 'Pick top 2 automobile stocks'\n"
+                        "GOOD (simple, actionable):\n"
+                        "Task 1: Screen automobile sector for quality candidates (strong margins, FCF, growth)\n"
+                        "Task 2: Analyze top candidates and select best 2 with investment thesis\n"
+                        "[2 tasks, 0 subtasks - agent figures out details]\n\n"
+
+                        "BAD (over-planning):\n"
+                        "Task 1: Assemble investable universe\n"
+                        "  Subtask 1a: Compile comprehensive list\n"
+                        "  Subtask 1b: Segment by sub-industry\n"
+                        "  Subtask 1c: Apply filters\n"
+                        "Task 2: Screen for quality...\n"
+                        "[Problem: 7 tasks, 19 subtasks for a simple request!]\n\n"
+
+                        "Request: 'Analyze energy sector and build portfolio'\n"
+                        "GOOD (balanced):\n"
+                        "Task 1: Screen energy sector for candidates\n"
+                        "Task 2: Analyze fundamentals (quality, valuation, growth)\n"
+                        "  Subtask 2a: Quality metrics (ROIC, margins, FCF)\n"
+                        "  Subtask 2b: Valuation metrics (P/E, EV/EBITDA)\n"
+                        "Task 3: Select top picks and create portfolio with position sizing\n"
+                        "[3 tasks, 2 subtasks - balanced structure]\n\n"
+
+                        "REMEMBER:\n"
+                        "- Keep it SIMPLE - agent can handle complexity\n"
+                        "- 2-4 tasks is usually enough\n"
+                        "- Subtasks only if genuinely needed\n"
+                        "- Trust the agent's judgment"
                     )
                 },
                 {
                     "role": "user",
                     "content": (
-                        f"Create a concise todo list that breaks this down into main tasks and subtasks. "
-                        "Make sure to define which tools will be needed for each main task based on the available tools. "
-                        "Structure it as big main tasks and then the small subtasks to complete each main task. "
-                        "Below you will find all of your context needs."
-                        f"Agent's Tools: {tools_text}\n"
-                        f"Agent's System Prompt: {system_prompt}\n"
-                        f"Agent's Memory/General Knowledge information: {memory_context}\n"
-                        f"Agent's Role Prompt: {role_prompt}\n"
-                        f"Agent's User Prompt: {user_prompt}"
+                        f"Create a SIMPLE, MINIMAL TodoList for the user's request.\n\n"
+
+                        f"INSTRUCTIONS:\n"
+                        f"1. Create 2-3 tasks MAX (only add more if truly necessary)\n"
+                        f"2. Keep subtasks to minimum (0-2 per task)\n"
+                        f"3. Make tasks actionable and high-level\n"
+                        f"4. Trust the agent to figure out details\n\n"
+
+                        f"CONTEXT:\n\n"
+                        f"User Request: {user_prompt}\n\n"
+                        f"Agent Role: {role_prompt}\n\n"
+                        f"System Context: {system_prompt}\n\n"
+                        f"Available Tools: {tools_text}\n\n"
+
+                        f"Create the SIMPLEST plan that accomplishes the goal. Favor brevity over comprehensiveness."
                     )
                 }
             ]
@@ -143,7 +211,7 @@ class PlanningTool:
                 messages=messages,
                 response_model=TodoList,  # Pass Pydantic model directly
                 max_retries=2,  # Retry if validation fails
-                reasoning_effort="low"
+                reasoning_effort="high"
             )
             
             # Return the structured plan as JSON

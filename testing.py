@@ -26,6 +26,8 @@ system_prompt = "You are a financial analyst at a hedge fund."
 user_prompt = """
 Find me three stocks in the energy sector that are undervalued, have a good growth outlook, and have strong momentum.
 Return the tickers to me in json format with the ticker, your reasoning for the pick, and the important metrics that you used to make the pick.
+Once you make the picks, construct a macro portfolio centered around the energy tickers you picked.
+Create and add proper hedging strategies.
 """
 
 class TestAgentTwo(BaseAgent):
