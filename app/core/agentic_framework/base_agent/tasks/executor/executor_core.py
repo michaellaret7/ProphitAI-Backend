@@ -130,12 +130,13 @@ class ExecutorCore:
         """Get context about the current task for agent prompting.
 
         Returns:
-            Dictionary with current task information
+            Dictionary with current task information including success field
         """
         if not self.plan_loaded or not self.current_main_task:
-            return {"status": "no_plan"}
+            return {"success": True, "status": "no_plan"}
 
         context = {
+            "success": True,
             "status": "executing",
             "main_task": {
                 "id": self.current_main_task.id,

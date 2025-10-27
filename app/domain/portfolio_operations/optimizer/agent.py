@@ -83,10 +83,9 @@ class OptimizerAgent(BaseAgent):
             max_iterations=200,
             plan_first=True,
             save_messages=True,
-            model="gpt-5-mini",
+            model="gpt-4.1",
             verbose=True,
-            memory_refresh_interval=20,
-            reasoning_effort="high"
+            memory_refresh_interval=20
         )
 
         register_optimizer_tools(self)

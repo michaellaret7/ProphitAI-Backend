@@ -171,15 +171,17 @@ class AgentExecutionLoop:
         NO CONFIDENCE SCORING - Uses ContextBuilder which already removed it.
 
         This method injects:
-        1. Plan status updates every 3 iterations (if plan-driven execution active)
+        1. Plan status updates every 6 iterations (if plan-driven execution active)
         2. Domain memory refresh at configured interval
+        3. Reasoning checkpoints at key phase transitions (Phase 2.2)
 
         Args:
             messages: Message list to append context to
             iteration: Current iteration number
         """
-        # Inject plan status update every 3 iterations
-        if iteration > 1 and iteration % 3 == 0:
+        # Inject plan status update every 6 iterations
+        # Rationale: Reduce context bloat; agent doesn't forget task in 6 iterations
+        if iteration > 1 and iteration % 6 == 0:
             plan_context = self.context_builder.build_plan_context(iteration)
             if plan_context:
                 messages.append({"role": "user", "content": plan_context})
@@ -191,6 +193,16 @@ class AgentExecutionLoop:
         )
         if memory_msg:
             messages.append({"role": "user", "content": memory_msg})
+
+        # Phase 2.2: Inject reasoning checkpoints at phase transitions
+        # This prompts the agent to USE the reasoning tools added in Phase 2.1
+        checkpoint_type = self.context_builder.should_inject_checkpoint(iteration)
+        if checkpoint_type:
+            checkpoint_msg = self.context_builder.build_reasoning_checkpoint(checkpoint_type)
+            if checkpoint_msg:
+                messages.append({"role": "user", "content": checkpoint_msg})
+                if self.agent.verbose:
+                    print(f"  💭 Reasoning checkpoint injected: {checkpoint_type}")
 
     def _handle_stagnation(self, iteration: int, messages: List[Dict]) -> Optional[str]:
         """Handle stagnation detection and recovery using StagnationTracker.

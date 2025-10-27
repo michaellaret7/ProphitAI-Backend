@@ -4,7 +4,7 @@
     "agent": "optimizer",
     "domain": "Portfolio optimization examples and anti-patterns",
     "purpose": "Reference examples that illustrate effective and ineffective portfolio optimization approaches",
-    "last_updated": "2025-10-24",
+    "last_updated": "2025-10-27",
     "memories": {
       "bad_example_excessive_removal": {
         "portfolio_snapshot": {

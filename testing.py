@@ -18,3 +18,4 @@ def print_all_stocks(session=None):
 
 # print_all_portfolios()
 print_all_stocks()
+

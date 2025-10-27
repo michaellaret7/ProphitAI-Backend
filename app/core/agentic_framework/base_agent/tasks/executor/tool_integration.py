@@ -11,11 +11,71 @@ Responsibilities:
 from typing import List, Optional, Any, TYPE_CHECKING
 import re
 from ...core.result_parser import parse_tool_result
-from ..models import MainTask, SubTask
+from ..models import MainTask, SubTask, TaskStatus
 
 if TYPE_CHECKING:
     from .executor_core import ExecutorCore
     from .advancement import AdvancementManager
+
+
+# ============================================================================
+# Evidence Logging Configuration
+# ============================================================================
+# Philosophy: Only log evidence for significant events and insights,
+# not routine status updates or simple successes.
+
+# Tools that should ALWAYS log evidence (important events)
+ALWAYS_LOG_EVIDENCE = {
+    'create_structured_plan',
+    'mark_task_complete',
+    'episodic_remember',
+}
+
+# Tools that should NEVER log evidence (routine task management)
+NEVER_LOG_EVIDENCE = {
+    'update_task_status',
+    'get_current_task_info',
+    'get_completion_analysis',
+}
+
+
+def should_log_evidence(tool_name: str, result: Any) -> bool:
+    """Determine if tool result warrants evidence logging.
+
+    Only logs evidence for significant events to reduce overhead.
+
+    Args:
+        tool_name: Name of executed tool
+        result: Tool result
+
+    Returns:
+        True if evidence should be logged
+    """
+    # Always log these important events
+    if tool_name in ALWAYS_LOG_EVIDENCE:
+        return True
+
+    # Never log routine task management
+    if tool_name in NEVER_LOG_EVIDENCE:
+        return False
+
+    # For analytical tools, only log if result has substance or errors
+    parsed = parse_tool_result(result, verbose=False)
+
+    # Always log failures prominently
+    if parsed.get('success') is False:
+        return True
+
+    # Log if there's actual data (not just success=True)
+    if 'data' in parsed and parsed['data']:
+        return True
+
+    # Log if there are warnings or errors
+    if 'error' in parsed or 'warning' in parsed:
+        return True
+
+    # Default: don't log routine successes
+    return False
 
 
 class ToolIntegrationManager:
@@ -30,6 +90,45 @@ class ToolIntegrationManager:
         """
         self.core = core
         self.advancement = advancement
+
+    def _get_current_task_from_state(self):
+        """Get the ACTUAL current task from stored plan state, not cached reference.
+
+        This ensures we always route to the correct task even after advancements.
+
+        Returns:
+            Tuple of (current_main_task, current_subtask) from actual plan state
+        """
+        plan = self.core.task_store.get_current_structured_plan()
+        if not plan:
+            return None, None
+
+        # Find the task with status=in_progress
+        current_task = None
+        for task in plan.tasks:
+            if task.status == TaskStatus.IN_PROGRESS:
+                current_task = task
+                break
+
+        # If no task is in_progress, find the first pending task
+        if not current_task:
+            for task in plan.tasks:
+                if task.status == TaskStatus.PENDING:
+                    current_task = task
+                    break
+
+        if not current_task:
+            return None, None
+
+        # Find the first incomplete subtask
+        current_subtask = None
+        if current_task.subtasks:
+            for subtask in current_task.subtasks:
+                if not subtask.completed:
+                    current_subtask = subtask
+                    break
+
+        return current_task, current_subtask
 
     def update_task_from_tool_result(self, tool_name: str, result: Any) -> bool:
         """Update task progress based on tool execution result.
@@ -47,9 +146,15 @@ class ToolIntegrationManager:
                 print("Tool result received after plan completion - ignoring")
             return False
 
-        # Snapshot active context so routing cannot be affected if we advance later in this call
-        active_task = self.core.current_main_task
-        active_subtask = self.core.current_subtask
+        # BUG FIX: Get ACTUAL current task from state, not cached reference
+        # This ensures evidence routes to the correct task after advancements
+        active_task, active_subtask = self._get_current_task_from_state()
+
+        # Fallback to core reference if state query fails
+        if active_task is None:
+            active_task = self.core.current_main_task
+            active_subtask = self.core.current_subtask
+
         active_task_id = active_task.id if active_task else None
         active_subtask_id = active_subtask.id if active_subtask else None
         predicted_tools = list(active_task.predicted_tool_use or []) if active_task else []
@@ -157,6 +262,8 @@ class ToolIntegrationManager:
     def collect_evidence_from_tool_result(self, tool_name: str, result: Any) -> List[str]:
         """Automatically collect evidence from tool results.
 
+        Only collects evidence for significant events to reduce overhead.
+
         Args:
             tool_name: Name of the executed tool
             result: Result from tool execution
@@ -164,6 +271,10 @@ class ToolIntegrationManager:
         Returns:
             List of evidence strings extracted from the result
         """
+        # Check if we should log evidence for this tool
+        if not should_log_evidence(tool_name, result):
+            return []  # Return empty list, no evidence
+
         evidence_items = []
 
         is_error = self._is_error_result(result)
@@ -171,49 +282,25 @@ class ToolIntegrationManager:
         if is_error:
             # Record explicit failure evidence without implying success
             message = self._summarize_error(result)
-            evidence_items.append(f"Tool {tool_name} returned error{': ' + message if message else ''}")
+            evidence_items.append(f"⚠️ Tool {tool_name} FAILED{': ' + message if message else ''}")
             return evidence_items
 
         # Basic evidence: tool execution (success path only)
-        evidence_items.append(f"Successfully executed tool '{tool_name}'")
+        # Use more concise format
+        evidence_items.append(f"Executed '{tool_name}'")
 
         # Parse result to check for success and extract data
         parsed_result = parse_tool_result(result, verbose=False)
 
-        if parsed_result.get('success') is True:
-            evidence_items.append(f"Tool {tool_name} returned success=True")
+        # For successful analytical tools, log key insights only
+        if parsed_result.get('success') is True and 'data' in parsed_result:
+            data = parsed_result['data']
 
-            # Check for data in the parsed result
-            if 'data' in parsed_result and parsed_result['data']:
-                data = parsed_result['data']
-
-                # Analyze the data for evidence
-                if isinstance(data, dict):
-                    if data:
-                        evidence_items.append(f"Tool returned data with {len(data)} keys")
-                elif isinstance(data, list):
-                    if len(data) > 0:
-                        evidence_items.append(f"Tool returned list with {len(data)} items")
-                elif isinstance(data, str):
-                    if len(data.strip()) > 20:
-                        evidence_items.append(f"Tool returned substantial text output")
-
-        # Check for completion-indicating tool names (success path)
-        completion_indicators = {
-            'get': 'Data retrieval completed',
-            'fetch': 'Data fetching completed',
-            'retrieve': 'Data retrieval completed',
-            'analyze': 'Analysis completed',
-            'calculate': 'Calculation completed',
-            'process': 'Processing completed',
-            'create': 'Creation completed',
-            'generate': 'Generation completed'
-        }
-
-        for indicator, evidence_text in completion_indicators.items():
-            if indicator in tool_name.lower():
-                evidence_items.append(evidence_text)
-                break
+            # Add concise data summary
+            if isinstance(data, dict) and data:
+                evidence_items.append(f"Retrieved data with {len(data)} fields")
+            elif isinstance(data, list) and len(data) > 0:
+                evidence_items.append(f"Retrieved {len(data)} items")
 
         return evidence_items
 

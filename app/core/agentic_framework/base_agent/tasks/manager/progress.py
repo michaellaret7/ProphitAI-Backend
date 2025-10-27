@@ -26,10 +26,10 @@ class TaskProgressManager:
         """Get comprehensive progress summary of the structured plan.
 
         Returns:
-            Dict containing progress metrics and percentages
+            Dict containing progress metrics and percentages with success field
         """
         if not self.core.structured_plan:
-            return {"status": "no_plan"}
+            return {"success": True, "status": "no_plan"}
 
         total_main_tasks = len(self.core.structured_plan.tasks)
         completed_main_tasks = sum(
@@ -66,6 +66,7 @@ class TaskProgressManager:
             overall_progress = main_progress
 
         return {
+            "success": True,
             "total_main_tasks": total_main_tasks,
             "completed_main_tasks": completed_main_tasks,
             "in_progress_main_tasks": in_progress_main_tasks,

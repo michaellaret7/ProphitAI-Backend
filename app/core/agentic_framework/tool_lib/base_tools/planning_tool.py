@@ -122,15 +122,24 @@ class PlanningTool:
                         "- Prefer fewer, high-leverage tasks; add subtasks only for concrete execution steps.\n"
                         "- Avoid meta-work and avoid forcing a fixed task/subtask count.\n\n"
 
+                        "SUBTASK GRANULARITY (right-sizing):\n"
+                        "- Simple tasks: 0-2 subtasks (or no subtasks if steps are obvious)\n"
+                        "- Moderate tasks: 2-4 subtasks\n"
+                        "- Complex tasks: 3-6 subtasks maximum\n"
+                        "- AVOID: Breaking every tool call into a separate subtask\n"
+                        "- PREFER: Grouping related actions (e.g., 'Run and analyze core metrics' vs. 'Run metric 1', 'Run metric 2', ...)\n"
+                        "- INCLUDE: Synthesis/analysis subtasks for complex multi-tool phases\n\n"
+
                         "TASKS (WHAT to accomplish):\n"
                         "✓ Outcome-oriented (e.g., 'Screen sector for quality candidates').\n"
                         "✓ Sequenced to minimize dependency churn.\n"
                         "✗ No meta-work like 'Define criteria' or 'List tools'.\n\n"
 
                         "SUBTASKS (HOW to execute):\n"
-                        "✓ Action-only steps that change state or produce artifacts. Start with a verb: 'Fetch', 'Compute', 'Join', 'Run', 'Backtest', 'Generate', 'Validate', 'Summarize'.\n"
-                        "✓ Use sparingly; only when the task needs clear execution steps.\n"
-                        "✗ No thinking-only items (e.g., 'Brainstorm', 'Consider', 'Reflect').\n"
+                        "✓ Action steps that change state or produce artifacts. Start with a verb: 'Fetch', 'Compute', 'Join', 'Run', 'Backtest', 'Generate', 'Validate'.\n"
+                        "✓ Synthesis and analysis steps are VALUABLE: 'Synthesize metrics and form strategy', 'Analyze trade-offs and select approach', 'Review results and adjust strategy'.\n"
+                        "✓ Thinking subtasks create space for reasoning—use them for complex analysis requiring synthesis across multiple data points.\n"
+                        "✓ Use sparingly; only when the task needs clear execution steps or deep analysis.\n"
                         "✗ No restating the task or adding meta-instructions.\n\n"
 
                         "FORMAT REQUIREMENTS:\n"
@@ -151,10 +160,11 @@ class PlanningTool:
 
                         "Request: 'Analyze energy sector and build portfolio' → Moderate\n"
                         "Task 1: Screen energy sector for candidates\n"
-                        "Task 2: Analyze fundamentals (quality, valuation, growth)\n"
-                        "  Subtask 2a: Compute ROIC/margins/FCF\n"
-                        "  Subtask 2b: Compute valuation (P/E, EV/EBITDA)\n"
-                        "Task 3: Select picks and size positions\n\n"
+                        "Task 2: Analyze fundamentals and form investment thesis\n"
+                        "  Subtask 2a: Compute and synthesize quality metrics (ROIC, margins, FCF)\n"
+                        "  Subtask 2b: Assess valuation and compare to sector peers\n"
+                        "  Subtask 2c: Form conviction ranking with supporting evidence\n"
+                        "Task 3: Select picks and size positions based on thesis\n\n"
 
                         "Request: 'Backtest and optimize multi-factor long/short strategy' → Complex\n"
                         "Task 1: Gather and align factor datasets\n"

@@ -59,16 +59,17 @@ class CompletionManager:
         """Get a summary of the current execution state.
 
         Returns:
-            Dictionary with execution summary
+            Dictionary with execution summary including success field
         """
         plan = self.core.task_store.get_current_structured_plan()
         if not plan:
-            return {"status": "no_plan"}
+            return {"success": True, "status": "no_plan"}
 
         completed_main = sum(1 for t in plan.tasks if t.status == TaskStatus.COMPLETED)
         total_main = len(plan.tasks)
 
         summary = {
+            "success": True,
             "plan_loaded": self.core.plan_loaded,
             "total_main_tasks": total_main,
             "completed_main_tasks": completed_main,
@@ -89,12 +90,13 @@ class CompletionManager:
         """Get detailed completion analysis using the TaskValidator.
 
         Returns:
-            Dictionary with comprehensive completion analysis
+            Dictionary with comprehensive completion analysis including success field
         """
         if not self.core.current_main_task:
-            return {"status": "no_current_task"}
+            return {"success": True, "status": "no_current_task"}
 
         analysis = {
+            "success": True,
             "current_main_task": {
                 "id": self.core.current_main_task.id,
                 "description": self.core.current_main_task.description,

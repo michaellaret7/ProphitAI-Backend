@@ -432,14 +432,18 @@ def register_task_management_tools(agent: Any) -> None:
     - Lambdas wrap tool functions with agent parameter
     """
 
-    # Update task status tool
-    agent.add_tool(
-        name="update_task_status",
-        description=UPDATE_TASK_STATUS_DESCRIPTION,
-        parameters=UPDATE_TASK_STATUS_PARAMETERS,
-        function=lambda task_id, status, reason=None, evidence=None, **kwargs:
-            update_task_status(agent, task_id, status, reason, evidence)
-    )
+    # Update task status tool - REMOVED in Phase 1.4
+    # Rationale: System auto-advances tasks via check_task_completion_conditions()
+    # Agent can still use mark_task_complete for explicit completion with summary
+    # Removing this tool eliminates ~25-30 redundant tool calls per optimization run
+    #
+    # agent.add_tool(
+    #     name="update_task_status",
+    #     description=UPDATE_TASK_STATUS_DESCRIPTION,
+    #     parameters=UPDATE_TASK_STATUS_PARAMETERS,
+    #     function=lambda task_id, status, reason=None, evidence=None, **kwargs:
+    #         update_task_status(agent, task_id, status, reason, evidence)
+    # )
 
     # Mark task complete tool
     agent.add_tool(
@@ -448,4 +452,156 @@ def register_task_management_tools(agent: Any) -> None:
         parameters=MARK_TASK_COMPLETE_PARAMETERS,
         function=lambda task_id, outputs=None, summary=None, **kwargs:
             mark_task_complete(agent, task_id, summary, outputs)
+    )
+
+
+def register_reasoning_tools(agent: Any) -> None:
+    """Register metacognitive reasoning tools on the provided agent.
+
+    These tools enable the agent to pause and reason about data rather than
+    mechanically executing the next tool call.
+
+    Notes:
+    - Imports from tool_lib.base_tools.reasoning_tools
+    - Added in Phase 2.1 of reasoning enhancement
+    """
+    from ..tool_lib.base_tools.reasoning_tools import (
+        synthesize_observations,
+        form_hypothesis,
+        reflect_on_strategy,
+        compare_alternatives
+    )
+
+    # Synthesize observations tool
+    agent.add_tool(
+        name="synthesize_observations",
+        description=(
+            "Analyze multiple observations together to identify patterns and form insights. "
+            "Use this after gathering data from multiple tools to connect the dots and form strategy. "
+            "This is a reflection tool - it prompts you to think deeply about data you've already gathered."
+        ),
+        parameters={
+            "type": "object",
+            "properties": {
+                "observations": {
+                    "type": "array",
+                    "items": {"type": "string"},
+                    "description": "List of 2-10 key observations to synthesize"
+                },
+                "context": {
+                    "type": "string",
+                    "description": "Domain/problem context (e.g., 'portfolio risk analysis')"
+                },
+                "goal": {
+                    "type": "string",
+                    "description": "What you want to achieve with this synthesis"
+                }
+            },
+            "required": ["observations", "context"]
+        },
+        function=synthesize_observations
+    )
+
+    # Form hypothesis tool
+    agent.add_tool(
+        name="form_hypothesis",
+        description=(
+            "Form a testable hypothesis and plan validation. "
+            "Use when you have a theory to test or in iterative refinement phases. "
+            "Helps structure your thinking and test assumptions explicitly."
+        ),
+        parameters={
+            "type": "object",
+            "properties": {
+                "hypothesis": {
+                    "type": "string",
+                    "description": "Your hypothesis statement (specific and testable)"
+                },
+                "supporting_evidence": {
+                    "type": "array",
+                    "items": {"type": "string"},
+                    "description": "Evidence that led to this hypothesis"
+                },
+                "test_plan": {
+                    "type": "string",
+                    "description": "How you'll test this hypothesis"
+                }
+            },
+            "required": ["hypothesis", "supporting_evidence", "test_plan"]
+        },
+        function=form_hypothesis
+    )
+
+    # Reflect on strategy tool
+    agent.add_tool(
+        name="reflect_on_strategy",
+        description=(
+            "Reflect on current strategy and decide if adjustment is needed. "
+            "Use midway through multi-step processes to evaluate progress and consider pivoting. "
+            "Enables metacognitive evaluation of your approach."
+        ),
+        parameters={
+            "type": "object",
+            "properties": {
+                "current_approach": {
+                    "type": "string",
+                    "description": "Your current strategy description"
+                },
+                "results_so_far": {
+                    "type": "array",
+                    "items": {"type": "string"},
+                    "description": "What you've accomplished/learned"
+                },
+                "remaining_goals": {
+                    "type": "array",
+                    "items": {"type": "string"},
+                    "description": "What you still need to achieve"
+                },
+                "challenges_encountered": {
+                    "type": "array",
+                    "items": {"type": "string"},
+                    "description": "Obstacles or unexpected findings"
+                }
+            },
+            "required": ["current_approach", "results_so_far", "remaining_goals"]
+        },
+        function=reflect_on_strategy
+    )
+
+    # Compare alternatives tool
+    agent.add_tool(
+        name="compare_alternatives",
+        description=(
+            "Compare multiple alternatives against criteria to make selection. "
+            "Use when you have multiple candidate solutions and need to pick the best. "
+            "Structures decision-making with explicit trade-off analysis."
+        ),
+        parameters={
+            "type": "object",
+            "properties": {
+                "alternatives": {
+                    "type": "array",
+                    "items": {
+                        "type": "object",
+                        "properties": {
+                            "name": {"type": "string"},
+                            "description": {"type": "string"}
+                        },
+                        "required": ["name", "description"]
+                    },
+                    "description": "List of alternatives with name and description"
+                },
+                "criteria": {
+                    "type": "array",
+                    "items": {"type": "string"},
+                    "description": "Criteria to evaluate against"
+                },
+                "context": {
+                    "type": "string",
+                    "description": "What decision you're making"
+                }
+            },
+            "required": ["alternatives", "criteria", "context"]
+        },
+        function=compare_alternatives
     )

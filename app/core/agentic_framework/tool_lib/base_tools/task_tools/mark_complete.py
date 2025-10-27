@@ -33,6 +33,25 @@ def mark_task_complete(
 
         task_id_int = int(task_id)
 
+        # BUG FIX: Validate all subtasks are complete before marking task complete
+        # This prevents agents from bypassing plan execution by manually completing tasks
+        plan = agent.execution_engine.get_current_structured_plan()
+        if plan:
+            for task in plan.tasks:
+                if task.id == task_id_int:
+                    if task.subtasks:
+                        incomplete_subtasks = [st for st in task.subtasks if not st.completed]
+                        if incomplete_subtasks:
+                            incomplete_ids = [st.id for st in incomplete_subtasks]
+                            return yaml.dump({
+                                "success": False,
+                                "error": f"Cannot mark task {task_id} complete: {len(incomplete_subtasks)} subtask(s) still incomplete",
+                                "incomplete_subtasks": incomplete_ids,
+                                "suggestion": "Complete all subtasks before marking task complete, or use get_current_task_info to check status",
+                                "task_id": task_id
+                            }, default_flow_style=False)
+                    break
+
         # Update task status to completed
         success = agent.task_manager.status.update_main_task(
             task_id_int,

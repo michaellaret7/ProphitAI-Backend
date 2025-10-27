@@ -107,11 +107,11 @@ class TaskEvidenceManager:
             task_id: Main task ID
 
         Returns:
-            Dict containing all evidence and observations for task and subtasks
+            Dict containing all evidence and observations for task and subtasks with success field
         """
         main_task = self.core.get_main_task_by_id(task_id)
         if not main_task:
-            return {"error": f"Task {task_id} not found"}
+            return {"success": False, "error": f"Task {task_id} not found"}
 
         # Collect evidence from main task and subtasks
         main_evidence = main_task.completion_evidence
@@ -125,6 +125,7 @@ class TaskEvidenceManager:
             subtask_observations[subtask.id] = subtask.observations
 
         return {
+            "success": True,
             "task_id": task_id,
             "task_description": main_task.description,
             "task_status": main_task.status.value,

@@ -17,7 +17,7 @@ from .core.result_parser import parse_tool_result
 from .tasks.validation.completion_validator import CompletionValidator as TaskValidator
 from .memory.domain_memory import DomainMemory
 from .memory.episodic_memory import EpisodicMemory
-from .tool_registry import register_base_tools, register_task_management_tools
+from .tool_registry import register_base_tools, register_task_management_tools, register_reasoning_tools
 from .utils.path_utils import create_agent_output_dir
 
 # Import extracted components (Phase 3)
@@ -60,7 +60,7 @@ class BaseAgent:
                 final_keywords: Optional[List[str]] = None,
                 save_messages: bool = True,
                 use_episodic_memory: bool = True,
-                memory_refresh_interval: int = 6,
+                memory_refresh_interval: int = 10,  # Less frequent memory refresh to reduce overhead
                 simulation_date: Optional[datetime] = None
             ):
 
@@ -146,7 +146,8 @@ class BaseAgent:
 
         # Register built-ins (after episodic is initialized so episodic tools are available)
         register_base_tools(self)
-        
+        register_reasoning_tools(self)  # Phase 2.1: Add reasoning tools for synthesis and analysis
+
         # Initialize planning tool with agent context
         self.planning_tool = PlanningTool(agent=self)
         

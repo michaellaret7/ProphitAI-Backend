@@ -28,6 +28,36 @@ class AdvancementManager:
         self.core = core
         self.dependencies = dependencies
 
+    def _refresh_core_task_references(self):
+        """Refresh core task references from task store after updates.
+
+        BUG FIX: After task store updates, the core.current_main_task and
+        core.current_subtask may point to stale objects. This method refreshes
+        them to point to the updated objects from the stored plan.
+        """
+        if not self.core.current_main_task:
+            return
+
+        plan = self.core.task_store.get_current_structured_plan()
+        if not plan:
+            return
+
+        # Find the current task by ID in the refreshed plan
+        current_task_id = self.core.current_main_task.id
+        current_subtask_id = self.core.current_subtask.id if self.core.current_subtask else None
+
+        for task in plan.tasks:
+            if task.id == current_task_id:
+                self.core.current_main_task = task
+
+                # If we have a current subtask, find it in the refreshed task
+                if current_subtask_id and task.subtasks:
+                    for subtask in task.subtasks:
+                        if subtask.id == current_subtask_id:
+                            self.core.current_subtask = subtask
+                            break
+                break
+
     def advance_task_progression(self) -> Tuple[bool, str]:
         """Move to next subtask or main task.
 
@@ -59,14 +89,27 @@ class AdvancementManager:
                     "Auto-completed via task progression"
                 )
 
-                # Move to next subtask
-                self.core.current_subtask = self.core.current_main_task.subtasks[current_subtask_idx + 1]
+                # BUG FIX: Refresh core references to get updated objects from task store
+                self._refresh_core_task_references()
 
-                if self.core.verbose:
+                # Move to next subtask (now from refreshed task object)
+                current_subtask_idx = -1
+                for i, st in enumerate(self.core.current_main_task.subtasks):
+                    if st.completed:
+                        current_subtask_idx = i
+                    else:
+                        break
+
+                if current_subtask_idx >= 0 and current_subtask_idx < len(self.core.current_main_task.subtasks) - 1:
+                    self.core.current_subtask = self.core.current_main_task.subtasks[current_subtask_idx + 1]
+                else:
+                    self.core.current_subtask = None
+
+                if self.core.verbose and self.core.current_subtask:
                     print(f"  ✅ Completed SubTask {self.core.current_main_task.subtasks[current_subtask_idx].id}")
                     print(f"  → Moving to SubTask {self.core.current_subtask.id}: {self.core.current_subtask.description}")
 
-                return True, f"Advanced to subtask {self.core.current_subtask.id}"
+                return True, f"Advanced to subtask {self.core.current_subtask.id if self.core.current_subtask else 'none'}"
             else:
                 # No more subtasks, complete main task
                 if self.core.current_subtask:
@@ -135,6 +178,9 @@ class AdvancementManager:
                 "Started next available task"
             )
 
+            # BUG FIX: Refresh core references after status update
+            self._refresh_core_task_references()
+
             # Set first subtask if available
             if self.core.current_main_task.subtasks:
                 self.core.current_subtask = self.core.current_main_task.subtasks[0]
@@ -145,6 +191,8 @@ class AdvancementManager:
                     False,
                     "Subtask activated"
                 )
+                # Refresh again after subtask update
+                self._refresh_core_task_references()
             else:
                 self.core.current_subtask = None
 

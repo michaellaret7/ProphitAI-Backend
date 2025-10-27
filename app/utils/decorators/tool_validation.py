@@ -494,17 +494,6 @@ def log_simulation_data_range(data_extractor: Optional[Callable] = None) -> Call
                                 data_range['cutoff_ok'] = price_data.index.max() <= _simulation_date
                             data_ranges_found.append(data_range)
 
-                # Also check portfolio_dict if it exists (for portfolio tools)
-                portfolio = kwargs.get('portfolio_dict')
-                if portfolio and isinstance(portfolio, dict):
-                    ticker_list = list(portfolio.keys())
-                    if ticker_list:
-                        data_ranges_found.append({
-                            'name': f'portfolio ({len(ticker_list)} tickers)',
-                            'tickers': ticker_list[:5],  # Show first 5
-                            'total': len(ticker_list)
-                        })
-
                 # Print data ranges if found
                 if data_ranges_found:
                     print(f"  📅 ACTUAL DATA USED:")
@@ -518,11 +507,6 @@ def log_simulation_data_range(data_extractor: Optional[Callable] = None) -> Call
                             else:
                                 print(f"    • {dr['name']}: {dr['start'].date()} → {dr['end'].date()} "
                                       f"({dr['count']} points)")
-                        elif 'tickers' in dr:
-                            tickers_shown = ', '.join(dr['tickers'])
-                            if dr['total'] > 5:
-                                tickers_shown += f", ... (+{dr['total'] - 5} more)"
-                            print(f"    • {dr['name']}: {tickers_shown}")
             except Exception:
                 # Don't fail the function if logging fails
                 pass
