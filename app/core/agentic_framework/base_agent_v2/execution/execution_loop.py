@@ -5,10 +5,16 @@ Simple ReAct iteration loop.
 
 from typing import Dict, Any, TYPE_CHECKING
 import json
-from pathlib import Path
 from app.core.agentic_framework.base_agent_v2.utils.models import PrintMode
 from app.core.agentic_framework.base_agent_v2.planning.plan_prompt import plan_prompt
 from app.core.agentic_framework.base_agent_v2.planning.plan_parser import parse_plan_with_gpt
+from app.core.agentic_framework.base_agent_v2.utils.models import *
+from app.core.agentic_framework.base_agent_v2.execution.utils import (
+    is_final,
+    extract_final_answer,
+    build_plan_context,
+    write_messages_to_file
+)
 
 if TYPE_CHECKING:
     from ..agent import SimpleAgent
@@ -46,11 +52,32 @@ class ExecutionLoop:
         for i in range(1, self.agent.max_iterations + 1):
             print(f"\n--- Iteration {i} ---")
 
+            # Planning phase: inject planning prompt (iteration 1 only)
             if i == 1 and self.agent.plan_first:
                 self.agent.messages.append({
                     "role": "system",
                     "content": plan_prompt
                 })
+
+            # Execution phase: inject plan status and remove old planning prompt (iteration 2+)
+            # If we dont remove the planning prompt, the agent will keep planning and executing the same tasks over and over again
+            if i > 1 and self.agent.plan and self.agent.plan.tasks:
+                messages_before = len(self.agent.messages)
+                self.agent.messages = [msg for msg in self.agent.messages if not (msg.get("role") == "system" and "🚨 CRITICAL INSTRUCTION" in msg.get("content", ""))]
+                messages_after = len(self.agent.messages)
+
+                if messages_before != messages_after:
+                    print(f"🗑️  Removed planning prompt from message history (planning phase complete)")
+
+                plan_context = build_plan_context(self.agent)
+                print(f"📊 Injecting plan status into context...")
+                self.agent.messages.append({
+                    "role": "system",
+                    "content": plan_context
+                })
+
+                if self.agent.print_mode == PrintMode.DEBUG or self.agent.print_mode == PrintMode.VERBOSE:
+                    print(f"Plan context: {plan_context}")
 
             try:
                 # Call LLM
@@ -76,8 +103,7 @@ class ExecutionLoop:
 
                 # Track tokens
                 if hasattr(response, 'usage') and response.usage:
-                    if self.agent.print_mode == PrintMode.DEBUG:
-                        print(f"Usage: {response.usage}")
+                    print(f"Usage: {response.usage.total_tokens}")
                     self.agent.total_tokens = int(response.usage.total_tokens)
 
                 assistant_message = response.choices[0].message
@@ -86,7 +112,6 @@ class ExecutionLoop:
                 # Parse plan on first iteration if plan_first is enabled
                 if i == 1 and self.agent.plan_first and assistant_text:
                     plan, error = parse_plan_with_gpt(assistant_text)
-                    print(f"Plan: {plan}")
 
                     if error:
                         print(f"❌ Plan parsing failed: {error}")
@@ -96,17 +121,20 @@ class ExecutionLoop:
                         })
                         continue
                     else:
-                        print(f" Plan parsed successfully!")
+                        self.agent.plan = plan
+                        print(f"✅ Plan parsed successfully!")
                         print(f"   Tasks: {len(plan.tasks)}")
 
-                        if self.agent.print_mode == PrintMode.DEBUG:
-                            print(f"   Plan: {plan.model_dump_json(indent=2)}")
+                        # if self.agent.print_mode == PrintMode.DEBUG or self.agent.print_mode == PrintMode.VERBOSE:
+                        #     print(f"   Plan details: {plan.model_dump_json(indent=2)}")
 
                         # Add assistant response to history
                         self.agent.messages.append({
                             "role": "assistant",
                             "content": assistant_text
                         })
+
+                        print(f"📋 Plan created. Moving to execution phase...")
 
                         continue
 
@@ -118,8 +146,8 @@ class ExecutionLoop:
                     self.agent.tool_handler.handle_tool_calls(assistant_message.tool_calls)
                 
                 # Check for finality
-                elif self._is_final(assistant_text):
-                    final_answer = self._extract_final_answer(assistant_text)
+                elif is_final(assistant_text):
+                    final_answer = extract_final_answer(assistant_text)
                     stop_reason = "final_answer"
                     break
 
@@ -136,7 +164,7 @@ class ExecutionLoop:
                 continue
 
         # Write complete message history to file
-        self._write_messages_to_file()
+        write_messages_to_file(self.agent)
 
         return {
             "final_answer": final_answer or "No final answer reached",
@@ -144,80 +172,3 @@ class ExecutionLoop:
             "total_tokens": self.agent.total_tokens,
             "stop_reason": stop_reason
         }
-
-    def _is_final(self, text: str) -> bool:
-        """Check if text contains finality marker.
-
-        Args:
-            text: Assistant response text
-
-        Returns:
-            True if text indicates final answer
-        """
-        if not text:
-            return False
-        text_lower = text.strip().lower()
-        return text_lower.startswith("final answer:") or "final answer:" in text_lower
-
-    def _extract_final_answer(self, text: str) -> str:
-        """Extract final answer text after marker.
-
-        Args:
-            text: Full assistant response
-
-        Returns:
-            Text after "Final Answer:" marker
-        """
-        text = text.strip()
-        lower_text = text.lower()
-        final_idx = lower_text.find("final answer:")
-
-        if final_idx >= 0:
-            return text[final_idx + 13:].strip()
-
-        return text
-
-    def _write_messages_to_file(self) -> None:
-        """Write complete message history to markdown file after execution."""
-        try:
-            # Get path to base_agent_v2 directory
-            base_agent_v2_dir = Path(__file__).parent.parent
-            output_file = base_agent_v2_dir / "l.md"
-
-            # Build markdown content
-            content = "# Agent Message History\n\n"
-            content += f"Total Messages: {len(self.agent.messages)}\n\n"
-            content += "---\n\n"
-
-            for idx, message in enumerate(self.agent.messages, 1):
-                role = message.get("role", "unknown")
-                content += f"## Message {idx} - Role: {role}\n\n"
-
-                # Handle content
-                if message.get("content"):
-                    content += f"**Content:**\n```\n{message['content']}\n```\n\n"
-
-                # Handle tool calls
-                if message.get("tool_calls"):
-                    content += "**Tool Calls:**\n"
-                    for tool_call in message["tool_calls"]:
-                        tool_name = tool_call.function.name
-                        tool_args = tool_call.function.arguments
-                        content += f"- Tool: `{tool_name}`\n"
-                        content += f"  - ID: `{tool_call.id}`\n"
-                        content += f"  - Arguments:\n```json\n{tool_args}\n```\n\n"
-
-                # Handle tool call ID (for tool response messages)
-                if message.get("tool_call_id"):
-                    content += f"**Tool Call ID:** `{message['tool_call_id']}`\n\n"
-
-                content += "---\n\n"
-
-            # Write to file
-            with open(output_file, 'w', encoding='utf-8') as f:
-                f.write(content)
-
-            print(f"\n📝 Message history written to: {output_file}")
-
-        except Exception as e:
-            print(f"\n⚠️ Failed to write message history: {e}")

@@ -9,6 +9,7 @@ from app.core.agentic_framework.base_agent_v2.utils.resolve_llm import resolve_l
 from app.core.agentic_framework.base_agent_v2.execution.execution_loop import ExecutionLoop
 from app.core.agentic_framework.base_agent_v2.execution.tool_handler import ToolHandler
 from app.core.agentic_framework.base_agent_v2.utils.models import PrintMode
+from app.core.agentic_framework.base_agent_v2.tool_registry import register_base_tools
 
 load_dotenv()
 
@@ -62,6 +63,7 @@ class SimpleAgent:
 
         # State and planning args
         self.plan_first = plan_first
+        self.plan = None  # Parsed plan from planning phase
 
         # Tool registry
         self.tools: List[Dict[str, Any]] = []
@@ -74,6 +76,9 @@ class SimpleAgent:
         # Initialize components
         self.tool_handler = ToolHandler(self)
         self.execution_loop = ExecutionLoop(self)
+
+        # Base Tool Registry
+        register_base_tools(self)
 
         print(f"Initialized Agent with model: {self.model}")
 
