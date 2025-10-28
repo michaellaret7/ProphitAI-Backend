@@ -5,13 +5,15 @@ Simple tool execution and message management.
 
 import json
 from typing import List, Dict, Any, TYPE_CHECKING
+from app.core.agentic_framework.base_agent_v2.execution.tool_validation import check_tool_success
 from app.core.agentic_framework.base_agent_v2.utils.models import PrintMode
 from app.core.agentic_framework.base_agent_v2.logging.message_logger import write_messages_to_yaml
+from app.core.agentic_framework.base_agent_v2.logging.tool_trace import log_tool_call
 import yaml
 from app.core.agentic_framework.base_agent_v2.utils.models import TaskStatus
 
 if TYPE_CHECKING:
-    from ..agent import SimpleAgent
+    from ..agent import BaseAgent
 
 # ANSI colors
 _GREEN = "\033[32m"
@@ -30,13 +32,15 @@ class ToolHandler:
     - Update message history
     """
 
-    def __init__(self, agent: 'SimpleAgent'):
+    def __init__(self, agent: 'BaseAgent'):
         """Initialize with agent reference.
 
         Args:
-            agent: Parent SimpleAgent instance
+            agent: Parent BaseAgent instance
         """
         self.agent = agent
+        self.retry = False
+        self.tool_call_history = []  # Track all tool calls for this run
 
     def handle_tool_calls(self, tool_calls: List[Any]) -> None:
         """Execute tool calls and update message history.
@@ -71,9 +75,18 @@ class ToolHandler:
             # Execute tool and return the result
             result = self._execute_tool(name, args)
 
-            # NOTE: We need to check if the tool was su
+            # NOTE: We need to check if the tool was successful and if not, we need to add the tool to the tool trace file
+            tool_validation = check_tool_success(name, args, result, self.agent)
+
+            # Parse validation and add to history
+            tool_validation_dict = yaml.safe_load(tool_validation)
+            self.tool_call_history.append(tool_validation_dict)
+
+            # Write entire tool call history to tools.yaml
+            log_tool_call(self.tool_call_history)
+
+            success = tool_validation_dict["success"]
             
-            # Print result in DEBUG mode or truncated in VERBOSE
             if self.agent.print_mode == PrintMode.DEBUG:
                 print(f"  ← Result: {result}")
             elif self.agent.print_mode in [PrintMode.VERBOSE, PrintMode.PRODUCTION]:
@@ -83,14 +96,20 @@ class ToolHandler:
                 else:
                     print(f"   ✓ Result: {result_str}")
 
-            # Add tool result to messages
-            self.agent.messages.append({
-                "role": "tool",
-                "tool_call_id": tool_call.id,
-                "content": self._stringify(result)
-            })
+            if success:
+                # if tool call was successful, append the tool result to the messages
+                self.agent.messages.append({
+                    "role": "tool",
+                    "tool_call_id": tool_call.id,
+                    "content": self._stringify(result)
+                })
+            else:
+                self.agent.messages.append({
+                    "role": "tool",
+                    "tool_call_id": tool_call.id,
+                    "content": yaml.dump(tool_validation_dict, default_flow_style=False, sort_keys=False)
+                })
 
-        # Write messages to YAML file after all tool calls are processed
         try:
             write_messages_to_yaml(self.agent.messages)
         except Exception as e:

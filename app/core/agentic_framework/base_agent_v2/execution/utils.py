@@ -11,7 +11,7 @@ from app.core.agentic_framework.base_agent_v2.utils.models import TaskStatus
 from app.core.agentic_framework.base_agent_v2.logging.task_state_logger import format_plan_state
 
 if TYPE_CHECKING:
-    from ..agent import SimpleAgent
+    from ..agent import BaseAgent
 
 
 def is_final(text: str) -> bool:
@@ -48,11 +48,11 @@ def extract_final_answer(text: str) -> str:
     return text
 
 
-def build_plan_context(agent: 'SimpleAgent', is_first_execution: bool = False) -> str:
+def build_plan_context(agent: 'BaseAgent', is_first_execution: bool = False) -> str:
     """Build a plan context message to inject into the conversation.
 
     Args:
-        agent: The SimpleAgent instance with plan and tasks
+        agent: The BaseAgent instance with plan and tasks
         is_first_execution: Whether this is the first execution iteration (after planning)
 
     Returns:

@@ -14,9 +14,10 @@ from app.core.agentic_framework.base_agent_v2.execution.utils import (
     extract_final_answer,
     build_plan_context
 )
+from app.core.agentic_framework.base_agent_v2.logging.message_logger import write_messages_to_yaml
 
 if TYPE_CHECKING:
-    from ..agent import SimpleAgent
+    from ..agent import BaseAgent
 
 
 class ExecutionLoop:
@@ -30,11 +31,11 @@ class ExecutionLoop:
     - Track tokens
     """
 
-    def __init__(self, agent: 'SimpleAgent'):
+    def __init__(self, agent: 'BaseAgent'):
         """Initialize with agent reference.
 
         Args:
-            agent: Parent SimpleAgent instance
+            agent: Parent BaseAgent instance
         """
         self.agent = agent
 
@@ -152,11 +153,24 @@ class ExecutionLoop:
                 # Handle tool calls
                 if assistant_message.tool_calls: #if tool calls are in the assistant message, we need to execute the underlying function and return the output
                     self.agent.tool_handler.handle_tool_calls(assistant_message.tool_calls)
-                
+
                 # Check for finality
                 elif is_final(assistant_text):
                     final_answer = extract_final_answer(assistant_text)
                     stop_reason = "final_answer"
+
+                    # Add final answer to message history
+                    self.agent.messages.append({
+                        "role": "assistant",
+                        "content": assistant_text
+                    })
+
+                    # Log final answer to messages.yaml
+                    try:
+                        write_messages_to_yaml(self.agent.messages)
+                    except Exception as e:
+                        print(f"⚠️  Warning: Failed to write final answer to messages.yaml: {e}")
+
                     break
 
                 # LLM returned text without tools or finality

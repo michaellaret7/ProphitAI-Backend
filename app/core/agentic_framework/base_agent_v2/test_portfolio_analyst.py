@@ -4,7 +4,7 @@ This agent analyzes a portfolio to identify strengths/weaknesses and proposes
 evidence-backed trade ideas using portfolio and ticker tools.
 """
 
-from app.core.agentic_framework.base_agent_v2.agent import SimpleAgent
+from app.core.agentic_framework.base_agent_v2.agent import BaseAgent
 from app.core.agentic_framework.base_agent_v2.utils.models import PrintMode
 
 # Import tool definitions from tool_lib
@@ -33,7 +33,7 @@ from app.core.agentic_framework.tool_lib.data_tools.ticker_fundamentals import (
 )
 
 
-def register_portfolio_analysis_tools(agent: SimpleAgent) -> None:
+def register_portfolio_analysis_tools(agent: BaseAgent) -> None:
     """Register all tools needed for portfolio analysis."""
 
     # Portfolio-level tools
@@ -129,15 +129,15 @@ Take your time and be thorough. Use the available tools to gather evidence befor
 """
 
     # Initialize agent
-    agent = SimpleAgent(
+    agent = BaseAgent(
         system_prompt=system_prompt,
         user_prompt=user_prompt,
-        provider="anthropic",  # Use OpenAI
-        # model="gpt-5",  # Use GPT-4o for complex analysis
+        provider="openai",  # Use OpenAI
+        model="gpt-5",  # Use GPT-4o for complex analysis
         max_iterations=100,  # Allow many iterations for thorough analysis
-        print_mode=PrintMode.PRODUCTION,
+        print_mode=PrintMode.DEBUG,
         plan_first=True,  # Create a plan before executing
-        reasoning_effort="high"
+        reasoning_effort="low"
     )
 
     # Register analysis tools

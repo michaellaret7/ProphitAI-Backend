@@ -168,7 +168,6 @@ def update_tasks(
     try:
         write_task_state_to_file(plan)
     except Exception as e:
-        # Don't fail the update if logging fails
         print(f"⚠️  Warning: Failed to write task state to file: {e}")
 
     return yaml.dump({
@@ -190,7 +189,7 @@ Use this tool to track your progress as you work through the plan:
 
 **CRITICAL - THE WORK: SECTION:**
 When marking tasks as "complete", the work_summary parameter becomes the "Work:" section - this is THE PRIMARY
-PLACE where your reasoning, thinking, observations, analysis, decisions, and conclusions are recorded.
+PLACE where your reasoning, thinking, observations, analysis, decisions, and conclusions are recorded. Be highly analytical and detailed.
 
 The work_summary is NOT just a brief summary. It is the COMPLETE RECORD of your cognitive work and must include:
   - Your analytical reasoning and thought process throughout the task

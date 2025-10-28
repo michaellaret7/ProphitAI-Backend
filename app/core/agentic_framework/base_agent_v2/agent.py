@@ -13,8 +13,7 @@ from app.core.agentic_framework.base_agent_v2.tool_registry import register_base
 
 load_dotenv()
 
-
-class SimpleAgent:
+class BaseAgent:
     """Minimal autonomous agent implementing ReAct pattern.
 
     Responsibilities:

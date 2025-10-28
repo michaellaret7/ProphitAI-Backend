@@ -4,7 +4,7 @@ This is a minimal test that demonstrates the agent's core capabilities
 with a simple portfolio analysis task.
 """
 
-from app.core.agentic_framework.base_agent_v2.agent import SimpleAgent
+from app.core.agentic_framework.base_agent_v2.agent import BaseAgent
 from app.core.agentic_framework.base_agent_v2.utils.models import PrintMode
 
 # Import minimal tool set
@@ -16,7 +16,7 @@ from app.core.agentic_framework.tool_lib.ticker_tools.performance import (
 )
 
 
-def register_simple_tools(agent: SimpleAgent) -> None:
+def register_simple_tools(agent: BaseAgent) -> None:
     """Register minimal tool set for simple test."""
     tools = [
         CALCULATE_PORTFOLIO_RETURNS_METRICS_TOOL,
@@ -56,7 +56,7 @@ Portfolio: {sample_portfolio}
 """
 
     # Initialize agent with simple settings
-    agent = SimpleAgent(
+    agent = BaseAgent(
         system_prompt=system_prompt,
         user_prompt=user_prompt,
         provider="anthropic",
