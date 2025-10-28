@@ -12,8 +12,7 @@ from app.core.agentic_framework.base_agent_v2.utils.models import *
 from app.core.agentic_framework.base_agent_v2.execution.utils import (
     is_final,
     extract_final_answer,
-    build_plan_context,
-    write_messages_to_file
+    build_plan_context
 )
 
 if TYPE_CHECKING:
@@ -72,11 +71,24 @@ class ExecutionLoop:
                 # First execution iteration (i==2) gets detailed workflow, later iterations get reminders
                 is_first_execution = (i == 2)
                 plan_context = build_plan_context(self.agent, is_first_execution=is_first_execution)
-                print(f"📊 Injecting plan status into context...")
-                self.agent.messages.append({
-                    "role": "system",
-                    "content": plan_context
-                })
+
+                # Find existing plan status message and update it, or append if not found
+                plan_status_updated = False
+                for msg in self.agent.messages:
+                    if msg.get("role") == "system" and "## Current Plan Status" in msg.get("content", ""):
+                        # Update existing plan status message
+                        msg["content"] = plan_context
+                        plan_status_updated = True
+                        print(f"📊 Updated existing plan status in context...")
+                        break
+
+                # If no existing plan status found, append new one (first time only)
+                if not plan_status_updated:
+                    print(f"📊 Injecting plan status into context...")
+                    self.agent.messages.append({
+                        "role": "system",
+                        "content": plan_context
+                    })
 
                 # if self.agent.print_mode == PrintMode.DEBUG or self.agent.print_mode == PrintMode.VERBOSE:
                 #     print(f"Plan context: {plan_context}")
@@ -159,9 +171,6 @@ class ExecutionLoop:
                 if self.agent.print_mode == PrintMode.DEBUG:
                     print(f"⚠️ Error in iteration {i}: {e}")
                 continue
-
-        # Write complete message history to file
-        write_messages_to_file(self.agent)
 
         return {
             "final_answer": final_answer or "No final answer reached",

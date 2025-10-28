@@ -1,12 +1,12 @@
-"""Message Logger - Logs conversation messages to messages.json file."""
+"""Message Logger - Logs conversation messages to messages.yaml file."""
 
-import json
+import yaml
 from pathlib import Path
 from typing import List, Dict, Any, Optional
 
 
-def write_messages_to_json(messages: List[Dict[str, Any]], output_dir: Optional[str] = None) -> None:
-    """Write message history to messages.json file.
+def write_messages_to_yaml(messages: List[Dict[str, Any]], output_dir: Optional[str] = None) -> None:
+    """Write message history to messages.yaml file.
 
     Args:
         messages: List of message dictionaries from the agent
@@ -18,11 +18,11 @@ def write_messages_to_json(messages: List[Dict[str, Any]], output_dir: Optional[
     # Default to base_agent_v2 directory (same location as task_state.yaml)
     if output_dir is None:
         base_agent_v2_dir = Path(__file__).parent.parent
-        output_path = base_agent_v2_dir / "messages.json"
+        output_path = base_agent_v2_dir / "messages.yaml"
     else:
-        output_path = Path(output_dir) / "messages.json"
+        output_path = Path(output_dir) / "messages.yaml"
 
-    # Convert messages to JSON-serializable format
+    # Convert messages to YAML-serializable format
     serializable_messages = []
     for msg in messages:
         serializable_msg = {"role": msg.get("role")}
@@ -52,6 +52,6 @@ def write_messages_to_json(messages: List[Dict[str, Any]], output_dir: Optional[
 
         serializable_messages.append(serializable_msg)
 
-    # Write to file with pretty formatting
+    # Write to file with YAML formatting
     with open(output_path, 'w', encoding='utf-8') as f:
-        json.dump(serializable_messages, f, indent=2, ensure_ascii=False)
+        yaml.dump(serializable_messages, f, default_flow_style=False, sort_keys=False, allow_unicode=True)

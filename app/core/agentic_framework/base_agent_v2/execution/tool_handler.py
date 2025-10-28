@@ -6,7 +6,7 @@ Simple tool execution and message management.
 import json
 from typing import List, Dict, Any, TYPE_CHECKING
 from app.core.agentic_framework.base_agent_v2.utils.models import PrintMode
-from app.core.agentic_framework.base_agent_v2.logging.message_logger import write_messages_to_json
+from app.core.agentic_framework.base_agent_v2.logging.message_logger import write_messages_to_yaml
 
 if TYPE_CHECKING:
     from ..agent import SimpleAgent
@@ -55,7 +55,7 @@ class ToolHandler:
             args_json = tool_call.function.arguments or "{}"
 
             # Parse arguments
-            args = self._parse_arguments(args_json) #Parse arguments from the tool call output
+            args = self._parse_arguments(args_json) # Parse arguments from the tool call output
 
             # Print tool call with arguments in VERBOSE and DEBUG modes
             if self.agent.print_mode in [PrintMode.VERBOSE, PrintMode.DEBUG]:
@@ -69,6 +69,8 @@ class ToolHandler:
 
             # Execute tool
             result = self._execute_tool(name, args)
+
+            # TODO: Add catching if the tool failed and also adding to a tool trace file
 
             # Print result in DEBUG mode or truncated in VERBOSE
             if self.agent.print_mode == PrintMode.DEBUG:
@@ -87,12 +89,12 @@ class ToolHandler:
                 "content": self._stringify(result)
             })
 
-        # Write messages to JSON file after all tool calls are processed
+        # Write messages to YAML file after all tool calls are processed
         try:
-            write_messages_to_json(self.agent.messages)
+            write_messages_to_yaml(self.agent.messages)
         except Exception as e:
             # Don't fail tool execution if logging fails
-            print(f"⚠️  Warning: Failed to write messages to JSON: {e}")
+            print(f"⚠️  Warning: Failed to write messages to YAML: {e}")
 
     def _parse_arguments(self, args_json: str) -> Dict[str, Any]:
         """Parse tool arguments from JSON string.
