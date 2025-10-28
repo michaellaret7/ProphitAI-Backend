@@ -1,6 +1,7 @@
 """Task Management Tool - Update plan task statuses during execution."""
 
-from typing import List, Optional, Dict, Any
+import yaml
+from typing import List, Optional
 from app.core.agentic_framework.base_agent_v2.utils.models import TaskStatus
 from app.core.agentic_framework.base_agent_v2.logging.task_state_logger import write_task_state_to_file
 
@@ -11,7 +12,7 @@ def update_tasks(
     subtasks: Optional[List[str]] = None,
     status: str = "in_progress",
     work_summary: Optional[str] = None
-) -> Dict[str, Any]:
+) -> str:
     """Update the status of tasks and subtasks in the plan.
 
     Args:
@@ -19,21 +20,37 @@ def update_tasks(
         main_task: The main task ID to update (e.g., "1", "2", "3")
         subtasks: Optional list of subtask IDs to update (e.g., ["1a", "1b"])
         status: New status - "not_started", "in_progress", or "complete"
-        work_summary: REQUIRED when marking complete - substantive summary of work done (min 100 chars)
+        work_summary: **CRITICAL WHEN MARKING COMPLETE** - This is the "Work:" section where ALL your
+                     reasoning, thinking, analysis, decisions, observations, and conclusions MUST go.
+                     This is not just a summary - it's the primary record of your cognitive work. Include:
+                     - Your analytical reasoning and thought process
+                     - The specific data/tools you used and why
+                     - ALL observations made during the analysis
+                     - Key findings, insights, and patterns discovered
+                     - Decisions made and their rationale
+                     - Quantitative results and their interpretation
+                     - Conclusions drawn from the analysis
+                     Minimum 100 characters required.
 
     Returns:
-        Dictionary with success status and updated tasks
+        YAML string with success status and updated tasks
 
     Examples:
         update_tasks(plan, main_task="4", subtasks=["4a", "4b"], status="complete",
-                    work_summary="Analyzed portfolio concentration and identified 65% exposure to Technology sector...")
+                    work_summary="Analyzed portfolio concentration using portfolio_industry_concentration tool. "
+                                "Reasoning: Examined sector distribution to identify concentration risks. "
+                                "Observations: Noted clustering in technology sector with multiple semiconductor holdings. "
+                                "Key findings: Semiconductors represent 32% (NVDA 15%, INTC 10%, AVGO 7%), "
+                                "Software 20% (MSFT 12%, PLTR 8%), combined Technology exposure 64%. "
+                                "Decision: This extreme concentration creates significant sector-specific risk. "
+                                "Conclusion: Portfolio requires diversification into Healthcare and Financials.")
         update_tasks(plan, main_task="5", status="in_progress")
     """
     if not plan or not plan.tasks:
-        return {
+        return yaml.dump({
             "success": False,
             "error": "No plan available to update"
-        }
+        }, default_flow_style=False)
 
     # Normalize status string to enum
     status_map = {
@@ -47,41 +64,49 @@ def update_tasks(
 
     status_enum = status_map.get(status.lower())
     if not status_enum:
-        return {
+        return yaml.dump({
             "success": False,
             "error": f"Invalid status: {status}. Must be one of: not_started, in_progress, complete"
-        }
+        }, default_flow_style=False)
 
     # Validate work_summary when marking complete
     MIN_WORK_SUMMARY_LENGTH = 100
     if status_enum == TaskStatus.COMPLETE:
         if not work_summary or work_summary.strip() == "":
-            return {
+            return yaml.dump({
                 "success": False,
-                "error": "WORK EVIDENCE REQUIRED: You must provide a 'work_summary' parameter when marking tasks as complete. This should describe what you actually did and what you found/concluded."
-            }
+                "error": "WORK EVIDENCE REQUIRED: You must provide a 'work_summary' parameter when marking tasks as complete. "
+                       "This is the 'Work:' section - the PRIMARY record of your reasoning, thinking, observations, analysis, "
+                       "decisions, and conclusions. This is where ALL your cognitive work must be documented."
+            }, default_flow_style=False)
 
         if len(work_summary.strip()) < MIN_WORK_SUMMARY_LENGTH:
-            return {
+            return yaml.dump({
                 "success": False,
-                "error": f"INSUFFICIENT WORK EVIDENCE: work_summary must be at least {MIN_WORK_SUMMARY_LENGTH} characters. You provided {len(work_summary.strip())} characters. Please provide a substantive summary of the work you completed."
-            }
+                "error": f"INSUFFICIENT WORK EVIDENCE: work_summary must be at least {MIN_WORK_SUMMARY_LENGTH} characters. "
+                       f"You provided {len(work_summary.strip())} characters. The 'Work:' section is where your ENTIRE "
+                       f"analytical process goes - reasoning, observations, findings, decisions, conclusions. Provide a "
+                       f"comprehensive record of your cognitive work, not just a brief note."
+            }, default_flow_style=False)
 
         # Check for lazy/gaming attempts
         lazy_phrases = ["done", "completed", "finished", "task complete", "all set"]
         if work_summary.strip().lower() in lazy_phrases:
-            return {
+            return yaml.dump({
                 "success": False,
-                "error": "INSUFFICIENT WORK EVIDENCE: work_summary appears to be a placeholder. Please provide a substantive summary describing what analysis you performed, what data you examined, and what conclusions you reached."
-            }
+                "error": "INSUFFICIENT WORK EVIDENCE: work_summary appears to be a placeholder. The 'Work:' section must "
+                       "contain your COMPLETE analytical thinking: What reasoning did you apply? What observations did you "
+                       "make? What data did you examine? What patterns did you discover? What decisions did you make and why? "
+                       "What conclusions did you reach? This is the core record of your cognitive work."
+            }, default_flow_style=False)
 
     # Find the main task
     task = next((t for t in plan.tasks if t.id == main_task), None)
     if not task:
-        return {
+        return yaml.dump({
             "success": False,
             "error": f"Task {main_task} not found in plan"
-        }
+        }, default_flow_style=False)
 
     updated = []
 
@@ -124,10 +149,10 @@ def update_tasks(
             incomplete_subtasks = [st for st in task.subtasks if st.status != TaskStatus.COMPLETE]
             if incomplete_subtasks:
                 incomplete_ids = [st.id for st in incomplete_subtasks]
-                return {
+                return yaml.dump({
                     "success": False,
                     "error": f"Cannot mark task {main_task} as complete: subtasks {incomplete_ids} are not yet complete. Complete all subtasks first."
-                }
+                }, default_flow_style=False)
 
         old_status = task.status.value
         task.status = status_enum
@@ -146,11 +171,13 @@ def update_tasks(
         # Don't fail the update if logging fails
         print(f"⚠️  Warning: Failed to write task state to file: {e}")
 
-    return {
+    return yaml.dump({
         "success": True,
-        "updated": updated,
-        "message": f"Successfully updated {len(updated)} item(s)"
-    }
+        "data": {
+            "updated": updated,
+            "message": f"Successfully updated {len(updated)} item(s)"
+        }
+    }, default_flow_style=False)
 
 
 # Tool schema for agent registration
@@ -161,13 +188,20 @@ Use this tool to track your progress as you work through the plan:
 - Mark tasks as "complete" when you finish them - **REQUIRES work_summary parameter**
 - You can update both the main task and its subtasks in a single call
 
-**IMPORTANT:** When marking tasks as "complete", you MUST provide a work_summary parameter (minimum 100 characters) describing:
-  - What analysis you performed
-  - What data/tools you used
-  - What you discovered or concluded
-  - Key findings or decisions made
+**CRITICAL - THE WORK: SECTION:**
+When marking tasks as "complete", the work_summary parameter becomes the "Work:" section - this is THE PRIMARY
+PLACE where your reasoning, thinking, observations, analysis, decisions, and conclusions are recorded.
 
-This prevents marking tasks complete without actually doing the work."""
+The work_summary is NOT just a brief summary. It is the COMPLETE RECORD of your cognitive work and must include:
+  - Your analytical reasoning and thought process throughout the task
+  - The specific data/tools you used and WHY you chose them
+  - ALL observations you made during the analysis (patterns, anomalies, relationships)
+  - Key findings, insights, and discoveries
+  - Decisions you made and the rationale behind each decision
+  - Quantitative results and how you interpreted them
+  - Final conclusions drawn from your analysis
+
+Minimum 100 characters required. This section demonstrates you actually performed the analytical work."""
 
 UPDATE_TASKS_PARAMETERS = {
     "type": "object",
@@ -188,7 +222,7 @@ UPDATE_TASKS_PARAMETERS = {
         },
         "work_summary": {
             "type": "string",
-            "description": "REQUIRED when status='complete'. Substantive summary (min 100 chars) describing what work was done, what data was analyzed, what was discovered/concluded. Example: 'Analyzed portfolio concentration using portfolio_industry_concentration tool. Found 65% exposure to Technology sector (NVDA, AAPL, MSFT). Identified concentration risk and recommended diversification into Healthcare and Financials.'"
+            "description": "REQUIRED when status='complete'. This becomes the 'Work:' section - THE PRIMARY RECORD of your reasoning, thinking, observations, analysis, decisions, and conclusions (min 100 chars). Must include: (1) Your analytical reasoning/thought process, (2) Tools/data used and WHY, (3) ALL observations made, (4) Key findings and insights, (5) Decisions and their rationale, (6) Quantitative results and interpretation, (7) Final conclusions. Example: 'Analyzed portfolio concentration using portfolio_industry_concentration tool. Reasoning: Needed to identify sector-specific risks. Observations: Noted extreme clustering in tech sector with multiple overlapping semiconductor positions. Findings: 65% exposure to Technology sector (NVDA 15%, AAPL 12%, MSFT 12%, others). Semiconductors alone represent 32%. Decision: This concentration level exceeds prudent risk limits. Conclusion: Must diversify into Healthcare and Financials to reduce tech exposure below 40%.'"
         }
     },
     "required": ["main_task", "status"]

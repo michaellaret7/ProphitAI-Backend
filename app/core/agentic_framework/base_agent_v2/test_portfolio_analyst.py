@@ -134,8 +134,8 @@ Take your time and be thorough. Use the available tools to gather evidence befor
         user_prompt=user_prompt,
         provider="anthropic",  # Use OpenAI
         # model="gpt-5",  # Use GPT-4o for complex analysis
-        max_iterations=60,  # Allow many iterations for thorough analysis
-        print_mode=PrintMode.DEBUG,
+        max_iterations=100,  # Allow many iterations for thorough analysis
+        print_mode=PrintMode.PRODUCTION,
         plan_first=True,  # Create a plan before executing
         reasoning_effort="high"
     )

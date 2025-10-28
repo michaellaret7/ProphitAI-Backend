@@ -7,6 +7,8 @@ import json
 from typing import List, Dict, Any, TYPE_CHECKING
 from app.core.agentic_framework.base_agent_v2.utils.models import PrintMode
 from app.core.agentic_framework.base_agent_v2.logging.message_logger import write_messages_to_yaml
+import yaml
+from app.core.agentic_framework.base_agent_v2.utils.models import TaskStatus
 
 if TYPE_CHECKING:
     from ..agent import SimpleAgent
@@ -58,24 +60,23 @@ class ToolHandler:
             args = self._parse_arguments(args_json) # Parse arguments from the tool call output
 
             # Print tool call with arguments in VERBOSE and DEBUG modes
-            if self.agent.print_mode in [PrintMode.VERBOSE, PrintMode.DEBUG]:
-                print(f"\nCalling tool: {_GREEN}{name}{_RESET}")
-                if args:
-                    print(f"   Arguments:")
-                    for key, value in args.items():
-                        print(f"     - {_YELLOW}{key}: {value}{_RESET}")
-                else:
-                    print(f"   Arguments: {_YELLOW}(none){_RESET}")
+            print(f"\nCalling tool: {_GREEN}{name}{_RESET}")
+            if args:
+                print(f"   Arguments:")
+                for key, value in args.items():
+                    print(f"     - {_YELLOW}{key}: {value}{_RESET}")
+            else:
+                print(f"   Arguments: {_YELLOW}(none){_RESET}")
 
-            # Execute tool
+            # Execute tool and return the result
             result = self._execute_tool(name, args)
 
-            # TODO: Add catching if the tool failed and also adding to a tool trace file
-
+            # NOTE: We need to check if the tool was su
+            
             # Print result in DEBUG mode or truncated in VERBOSE
             if self.agent.print_mode == PrintMode.DEBUG:
                 print(f"  ← Result: {result}")
-            elif self.agent.print_mode == PrintMode.VERBOSE:
+            elif self.agent.print_mode in [PrintMode.VERBOSE, PrintMode.PRODUCTION]:
                 result_str = str(result)
                 if len(result_str) > 200:
                     print(f"   ✓ Result: {result_str[:200]}... (truncated)")

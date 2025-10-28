@@ -79,7 +79,6 @@ class ExecutionLoop:
                         # Update existing plan status message
                         msg["content"] = plan_context
                         plan_status_updated = True
-                        print(f"📊 Updated existing plan status in context...")
                         break
 
                 # If no existing plan status found, append new one (first time only)
@@ -117,7 +116,7 @@ class ExecutionLoop:
 
                 # Track tokens
                 if hasattr(response, 'usage') and response.usage:
-                    print(f"Usage: {response.usage.total_tokens}")
+                    print(f"Token Usage: {response.usage.total_tokens}")
                     self.agent.total_tokens = int(response.usage.total_tokens)
 
                 assistant_message = response.choices[0].message
