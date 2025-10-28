@@ -69,7 +69,9 @@ class ExecutionLoop:
                 if messages_before != messages_after:
                     print(f"🗑️  Removed planning prompt from message history (planning phase complete)")
 
-                plan_context = build_plan_context(self.agent)
+                # First execution iteration (i==2) gets detailed workflow, later iterations get reminders
+                is_first_execution = (i == 2)
+                plan_context = build_plan_context(self.agent, is_first_execution=is_first_execution)
                 print(f"📊 Injecting plan status into context...")
                 self.agent.messages.append({
                     "role": "system",
@@ -125,16 +127,11 @@ class ExecutionLoop:
                         print(f"✅ Plan parsed successfully!")
                         print(f"   Tasks: {len(plan.tasks)}")
 
-                        # if self.agent.print_mode == PrintMode.DEBUG or self.agent.print_mode == PrintMode.VERBOSE:
-                        #     print(f"   Plan details: {plan.model_dump_json(indent=2)}")
-
                         # Add assistant response to history
                         self.agent.messages.append({
                             "role": "assistant",
                             "content": assistant_text
                         })
-
-                        print(f"📋 Plan created. Moving to execution phase...")
 
                         continue
 

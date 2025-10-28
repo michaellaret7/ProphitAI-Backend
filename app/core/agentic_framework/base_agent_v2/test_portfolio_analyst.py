@@ -86,15 +86,15 @@ def main():
     }
 
     # System prompt - defines the agent's role and capabilities
-    system_prompt = """You are a senior portfolio analyst with expertise in quantitative analysis and fundamental research.
+    system_prompt = """
+Role: You are a senior portfolio analyst with expertise in quantitative analysis and fundamental research.
+Task: Your task is to perform a comprehensive portfolio analysis and provide actionable insights.
 
 Your capabilities include:
 - Portfolio-level analysis: returns, volatility, exposures, concentrations, correlations, beta
 - Ticker-level analysis: performance metrics, risk-adjusted returns, factor exposures, fundamentals
 - Risk assessment: VaR, correlations, industry concentrations
 - Trade idea generation: evidence-backed recommendations
-
-Your task is to perform a comprehensive portfolio analysis and provide actionable insights.
 """
 
     # User prompt - specific task with the portfolio
@@ -115,17 +115,11 @@ Please perform the following analysis:
    - Correlation analysis between holdings
    - Value at Risk (VaR) assessment
 
-3. **Individual Position Analysis**:
-   - Identify the strongest performers (pick top 2-3 positions)
-   - Identify the weakest performers (pick bottom 2-3 positions)
-   - Analyze factor exposures for key positions
-   - Review fundamentals for positions showing concerns
-
-4. **Strengths & Weaknesses**:
+3. **Strengths & Weaknesses**:
    - Summarize portfolio strengths (what's working well)
    - Summarize portfolio weaknesses (areas of concern)
 
-5. **Trade Idea**:
+4. **Trade Idea**:
    - Based on your analysis, propose ONE specific trade idea
    - The trade should address a weakness OR capitalize on a strength
    - Back your recommendation with specific evidence from your analysis
@@ -138,10 +132,10 @@ Take your time and be thorough. Use the available tools to gather evidence befor
     agent = SimpleAgent(
         system_prompt=system_prompt,
         user_prompt=user_prompt,
-        provider="openai",  # Use OpenAI
-        model="gpt-5-mini",  # Use GPT-4o for complex analysis
+        provider="anthropic",  # Use OpenAI
+        # model="gpt-5",  # Use GPT-4o for complex analysis
         max_iterations=60,  # Allow many iterations for thorough analysis
-        print_mode=PrintMode.VERBOSE,
+        print_mode=PrintMode.DEBUG,
         plan_first=True,  # Create a plan before executing
         reasoning_effort="high"
     )

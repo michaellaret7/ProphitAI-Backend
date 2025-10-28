@@ -49,11 +49,12 @@ def extract_final_answer(text: str) -> str:
     return text
 
 
-def build_plan_context(agent: 'SimpleAgent') -> str:
+def build_plan_context(agent: 'SimpleAgent', is_first_execution: bool = False) -> str:
     """Build a plan context message to inject into the conversation.
 
     Args:
         agent: The SimpleAgent instance with plan and tasks
+        is_first_execution: Whether this is the first execution iteration (after planning)
 
     Returns:
         Formatted string with current plan status including all subtasks
@@ -72,7 +73,7 @@ def build_plan_context(agent: 'SimpleAgent') -> str:
     all_tasks_complete = (completed_tasks == total_tasks)
 
     if all_tasks_complete:
-        context += "** ALL TASKS COMPLETE**\n\n"
+        context += "**ALL TASKS COMPLETE**\n\n"
         context += "You have completed all planned tasks. Now you MUST provide your final answer.\n\n"
         context += "**REQUIRED ACTION:** Provide a comprehensive final answer by starting your response with 'Final Answer:' followed by your complete analysis and recommendations.\n\n"
         context += "Example format:\n"
@@ -113,13 +114,29 @@ def build_plan_context(agent: 'SimpleAgent') -> str:
         context += "\n"
 
     # Add workflow instructions
-    context += "\n**Workflow for this iteration:**\n"
-    context += "1. Identify the next task/subtask to work on\n"
-    context += "2. Use tools to complete the work for that task/subtask\n"
-    context += "3. After completing the work, mark the task/subtask as 'complete' using the update_tasks tool\n"
-    context += "4. Move to the next task/subtask\n\n"
-    context += "**Example:** update_tasks(main_task='2', subtasks=['2b'], status='complete')\n\n"
-    context += "**Note:** Only mark tasks as complete AFTER you have actually done the work."
+    if is_first_execution:
+        # Detailed workflow for first execution iteration
+        context += "\n## 🎯 EXECUTION WORKFLOW\n\n"
+        context += "**The following is how an iteration should look for this workflow:**\n\n"
+        context += "1. Identify the current task and subtask to work on and mark it in progress using the update_tasks tool\n"
+        context += "2. Complete the work item\n"
+        context += "3. Mark the subtask as complete using the update_tasks tool and provide reasoning/evidence for the completion\n"
+        context += "4. Continue to the next subtask or main task\n\n"
+        context += "**⚠️ CRITICAL RULES [If you break any of these rules, you will be penalized harshly]:**\n\n"
+        context += "- You are NOT allowed to mark a main task as complete until ALL subtasks are complete\n"
+        context += "- You MUST mark the task/subtask as in progress BEFORE you start working on it\n"
+        context += "- You may ONLY mark tasks as complete AFTER you have actually done the work\n"
+        context += "- You MUST always think out loud and provide your reasoning for the actions you take\n"
+        context += "- You must NEVER leave the content field blank when calling update_tasks\n\n"
+        context += "**Example:** update_tasks(main_task='2', subtasks=['2b'], status='in_progress', content='Starting work on data collection')\n"
+    else:
+        # Shorter reminder for subsequent iterations
+        context += "\n**Workflow Reminder:**\n"
+        context += "1. Identify the next task/subtask to work on and mark as in_progress\n"
+        context += "2. Complete the work\n"
+        context += "3. Mark as complete with reasoning/evidence\n"
+        context += "4. Move to the next task/subtask\n\n"
+        context += "**Remember:** Mark in_progress BEFORE starting, complete AFTER finishing, never leave content blank.\n"
 
     return context
 

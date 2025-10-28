@@ -61,10 +61,11 @@ def register_base_tools(agent: Any) -> None:
         name="update_tasks",
         description=UPDATE_TASKS_DESCRIPTION,
         parameters=UPDATE_TASKS_PARAMETERS,
-        function=lambda main_task, subtasks=None, status="in_progress", **kwargs: update_tasks(
+        function=lambda main_task, subtasks=None, status="in_progress", work_summary=None, **kwargs: update_tasks(
             plan=agent.plan,
             main_task=main_task,
             subtasks=subtasks,
-            status=status
+            status=status,
+            work_summary=work_summary
         ),
     )
