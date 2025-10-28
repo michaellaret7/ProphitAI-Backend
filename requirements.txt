@@ -28,7 +28,7 @@ arch==7.2.0
 alpaca-py==0.42.0
 
 # Optimization
-cvxpy==1.5.0  # Added based on usage in tests
+# cvxpy==1.5.0  # Added based on usage in tests
 
 # Database and ORM
 SQLAlchemy==2.0.41
