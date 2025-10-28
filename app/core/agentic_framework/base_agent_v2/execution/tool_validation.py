@@ -14,7 +14,7 @@ data:
     positions: 5
 """
 
-def check_tool_success(name: str, args: dict, result: str, agent: 'BaseAgent') -> None:
+def validate_tool_call(name: str, args: dict, result: str, agent: 'BaseAgent') -> None:
     """Validate tool execution success and display in-progress tasks.
 
     Args:
@@ -60,6 +60,15 @@ def check_tool_success(name: str, args: dict, result: str, agent: 'BaseAgent') -
 
     except Exception as e:
         print(f"⚠️ Error validating tool result: {e}")
+        return yaml.dump({
+            "success": False,
+            "error": f"Tool validation failed: {str(e)}",
+            "tool_name": name,
+            "args": args,
+            "tool_payload": {},
+            "main_tasks_in_progress": [],
+            "subtasks_in_progress": []
+        }, default_flow_style=False, sort_keys=False)
 
 if __name__ == "__main__":
-    print(check_tool_success(name = "calculate_ticker_factors", args = {"ticker": "AAPL", "factor": "growth"}, result = str, agent = None))
+    print(validate_tool_call(name = "calculate_ticker_factors", args = {"ticker": "AAPL", "factor": "growth"}, result = str, agent = None))

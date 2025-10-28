@@ -151,6 +151,7 @@ class ExecutionLoop:
                     print(f"Assistant: {assistant_text}")
 
                 # Handle tool calls
+                # Handle tool call retries here 
                 if assistant_message.tool_calls: #if tool calls are in the assistant message, we need to execute the underlying function and return the output
                     self.agent.tool_handler.handle_tool_calls(assistant_message.tool_calls)
 

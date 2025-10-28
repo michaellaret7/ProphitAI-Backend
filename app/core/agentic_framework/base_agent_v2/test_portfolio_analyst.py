@@ -132,12 +132,12 @@ Take your time and be thorough. Use the available tools to gather evidence befor
     agent = BaseAgent(
         system_prompt=system_prompt,
         user_prompt=user_prompt,
-        provider="openai",  # Use OpenAI
-        model="gpt-5",  # Use GPT-4o for complex analysis
+        provider="anthropic",  # Use OpenAI
+        # model="",  # Use GPT-4o for complex analysis
         max_iterations=100,  # Allow many iterations for thorough analysis
         print_mode=PrintMode.DEBUG,
         plan_first=True,  # Create a plan before executing
-        reasoning_effort="low"
+        reasoning_effort="high"
     )
 
     # Register analysis tools

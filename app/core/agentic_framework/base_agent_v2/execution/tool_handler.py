@@ -5,7 +5,7 @@ Simple tool execution and message management.
 
 import json
 from typing import List, Dict, Any, TYPE_CHECKING
-from app.core.agentic_framework.base_agent_v2.execution.tool_validation import check_tool_success
+from app.core.agentic_framework.base_agent_v2.execution.tool_validation import validate_tool_call
 from app.core.agentic_framework.base_agent_v2.utils.models import PrintMode
 from app.core.agentic_framework.base_agent_v2.logging.message_logger import write_messages_to_yaml
 from app.core.agentic_framework.base_agent_v2.logging.tool_trace import log_tool_call
@@ -76,17 +76,18 @@ class ToolHandler:
             result = self._execute_tool(name, args)
 
             # NOTE: We need to check if the tool was successful and if not, we need to add the tool to the tool trace file
-            tool_validation = check_tool_success(name, args, result, self.agent)
+            tool_validation = validate_tool_call(name, args, result, self.agent)
 
             # Parse validation and add to history
             tool_validation_dict = yaml.safe_load(tool_validation)
+
+            success, message = self._check_tool_success(tool_validation_dict)
+            
             self.tool_call_history.append(tool_validation_dict)
 
             # Write entire tool call history to tools.yaml
             log_tool_call(self.tool_call_history)
 
-            success = tool_validation_dict["success"]
-            
             if self.agent.print_mode == PrintMode.DEBUG:
                 print(f"  ← Result: {result}")
             elif self.agent.print_mode in [PrintMode.VERBOSE, PrintMode.PRODUCTION]:
@@ -155,6 +156,52 @@ class ToolHandler:
             error_msg = f"Error executing {name}: {str(e)}"
             print(f"  ⚠️ {error_msg}")
             return {"error": error_msg}
+    
+    def _check_tool_success(self, tool_validation_dict: dict) -> tuple[bool, str]:
+        """Check if the tool call was successful.
+
+        A tool is considered successful only if:
+        1. success field is True, AND
+        2. data field is populated (non-empty)
+
+        Args:
+            tool_validation_dict: Dictionary containing tool validation information
+                Expected format: {'success': bool, 'data': any, 'error': str (optional)}
+
+        Returns:
+            Tuple of (is_successful: bool, error_message: str or None)
+            - (True, None) if success=True AND data is non-empty
+            - (False, error_msg) if success=False OR data is empty
+        """
+        # Get success field (default to True for backward compatibility)
+        success = tool_validation_dict.get("success", True)
+
+        # If success is explicitly False, tool failed
+        if not success:
+            error = tool_validation_dict.get("error", "Unknown error")
+            return False, error
+
+        # Success is True - now check if data is populated
+        data = tool_validation_dict.get("data")
+
+        # Check for None
+        if data is None:
+            return False, "Tool returned success=True but data is None (no data available)"
+
+        # Check for empty dict
+        if isinstance(data, dict) and len(data) == 0:
+            return False, "Tool returned success=True but data is empty dict (no data available)"
+
+        # Check for empty list
+        if isinstance(data, list) and len(data) == 0:
+            return False, "Tool returned success=True but data is empty list (no data available)"
+
+        # Check for empty/whitespace string
+        if isinstance(data, str) and data.strip() == "":
+            return False, "Tool returned success=True but data is empty string (no data available)"
+
+        # Success is True AND data is populated - tool succeeded!
+        return True, None
 
     def _stringify(self, obj: Any) -> str:
         """Convert any object to string for LLM consumption.
