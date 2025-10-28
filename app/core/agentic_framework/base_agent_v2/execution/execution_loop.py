@@ -78,8 +78,8 @@ class ExecutionLoop:
                     "content": plan_context
                 })
 
-                if self.agent.print_mode == PrintMode.DEBUG or self.agent.print_mode == PrintMode.VERBOSE:
-                    print(f"Plan context: {plan_context}")
+                # if self.agent.print_mode == PrintMode.DEBUG or self.agent.print_mode == PrintMode.VERBOSE:
+                #     print(f"Plan context: {plan_context}")
 
             try:
                 # Call LLM

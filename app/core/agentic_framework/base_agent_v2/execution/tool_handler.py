@@ -6,6 +6,7 @@ Simple tool execution and message management.
 import json
 from typing import List, Dict, Any, TYPE_CHECKING
 from app.core.agentic_framework.base_agent_v2.utils.models import PrintMode
+from app.core.agentic_framework.base_agent_v2.logging.message_logger import write_messages_to_json
 
 if TYPE_CHECKING:
     from ..agent import SimpleAgent
@@ -85,6 +86,13 @@ class ToolHandler:
                 "tool_call_id": tool_call.id,
                 "content": self._stringify(result)
             })
+
+        # Write messages to JSON file after all tool calls are processed
+        try:
+            write_messages_to_json(self.agent.messages)
+        except Exception as e:
+            # Don't fail tool execution if logging fails
+            print(f"⚠️  Warning: Failed to write messages to JSON: {e}")
 
     def _parse_arguments(self, args_json: str) -> Dict[str, Any]:
         """Parse tool arguments from JSON string.
