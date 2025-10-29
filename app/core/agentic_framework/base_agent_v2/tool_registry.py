@@ -5,6 +5,11 @@ from app.core.agentic_framework.tool_lib.base_tools.task_management import (
     UPDATE_TASKS_DESCRIPTION,
     UPDATE_TASKS_PARAMETERS
 )
+from app.core.agentic_framework.tool_lib.base_tools.notes import (
+    write_note as notes_write,
+    WRITE_NOTE_DESCRIPTION,
+    WRITE_NOTE_PARAMETERS,
+)
 from typing import Any
 
 def register_base_tools(agent: Any) -> None:
@@ -68,5 +73,17 @@ def register_base_tools(agent: Any) -> None:
             status=status,
             work_summary=work_summary,
             output_dir=getattr(agent, "output_dir", None)
+        ),
+    )
+
+    # write_note (notes)
+    agent.add_tool(
+        name="write_note",
+        description=WRITE_NOTE_DESCRIPTION,
+        parameters=WRITE_NOTE_PARAMETERS,
+        function=lambda title, content, **kwargs: notes_write(
+            title=title,
+            content=content,
+            output_dir=str(getattr(agent, "output_dir", ""))
         ),
     )

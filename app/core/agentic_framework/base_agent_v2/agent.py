@@ -11,6 +11,7 @@ from app.core.agentic_framework.base_agent_v2.execution.tool_handler import Tool
 from app.core.agentic_framework.base_agent_v2.utils.models import PrintMode
 from app.core.agentic_framework.base_agent_v2.tool_registry import register_base_tools
 from app.core.agentic_framework.base_agent_v2.utils.path_utils import create_agent_output_dir
+from app.core.agentic_framework.base_agent_v2.logging.notes import ensure_notes_file
 
 load_dotenv()
 
@@ -68,6 +69,7 @@ class BaseAgent:
         # Tool registry
         self.tools: List[Dict[str, Any]] = []
         self.tool_functions: Dict[str, Callable] = {}
+        self.tool_schemas: Dict[str, Any] = {}
 
         # Execution state
         self.messages: List[Dict[str, Any]] = []
@@ -76,6 +78,7 @@ class BaseAgent:
         # Agent identity and per-run output location
         self.agent_name = self.__class__.__name__
         self.output_dir = create_agent_output_dir(self.agent_name)
+        ensure_notes_file(getattr(self, "output_dir", None), getattr(self, "agent_name", "Agent"))
 
         # Initialize components
         self.tool_handler = ToolHandler(self)
@@ -111,6 +114,7 @@ class BaseAgent:
         }
         self.tools.append(tool_def)
         self.tool_functions[name] = function
+        self.tool_schemas[name] = parameters
 
         print(f"Registered tool: {name}")
 

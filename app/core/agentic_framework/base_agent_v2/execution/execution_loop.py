@@ -95,10 +95,7 @@ class ExecutionLoop:
                         "content": plan_context
                     })
 
-                # if self.agent.print_mode == PrintMode.DEBUG or self.agent.print_mode == PrintMode.VERBOSE:
-                #     print(f"Plan context: {plan_context}")
-
-            # Inject per-turn THINK reminder (ephemeral)
+            # Inject per-turn THINK reminder (ephemeral) and clear prior failure summaries
             self.agent.messages = [
                 msg for msg in self.agent.messages
                 if not (msg.get("role") == "system" and "## THINK AT EACH STEP" in msg.get("content", ""))
