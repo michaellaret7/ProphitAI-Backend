@@ -10,6 +10,7 @@ from app.core.agentic_framework.base_agent_v2.execution.execution_loop import Ex
 from app.core.agentic_framework.base_agent_v2.execution.tool_handler import ToolHandler
 from app.core.agentic_framework.base_agent_v2.utils.models import PrintMode
 from app.core.agentic_framework.base_agent_v2.tool_registry import register_base_tools
+from app.core.agentic_framework.base_agent_v2.utils.path_utils import create_agent_output_dir
 
 load_dotenv()
 
@@ -72,6 +73,10 @@ class BaseAgent:
         self.messages: List[Dict[str, Any]] = []
         self.total_tokens: int = 0
 
+        # Agent identity and per-run output location
+        self.agent_name = self.__class__.__name__
+        self.output_dir = create_agent_output_dir(self.agent_name)
+
         # Initialize components
         self.tool_handler = ToolHandler(self)
         self.execution_loop = ExecutionLoop(self)
@@ -118,6 +123,7 @@ class BaseAgent:
         # Build initial messages
         self.messages = [
             {"role": "system", "content": self.system_prompt},
+            {"role": "system", "content": "## PER-TURN OUTPUT SCHEMA\nThinking: Why this step? What am I getting out of this step? Is this step productive and helpful? Be thorough, detailed, and precise in your thinking. \nNextStep: next actionable step to take.\n"},
             {"role": "user", "content": self.user_prompt}
         ]
 

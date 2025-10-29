@@ -125,19 +125,23 @@ Please perform the following analysis:
    - Back your recommendation with specific evidence from your analysis
    - Be specific: What to buy/sell, how much, and why
 
-Take your time and be thorough. Use the available tools to gather evidence before making conclusions.
+Take your time and be thorough. Use the available tools to gather evidence before making conclusions. Be concise in your final answer.
+
+Rules:
+- Under no circumstances should you skip any main or sub tasks. (there will be severe consequences if you do)
+- You are never allowed to list all of the subtasks in a main task as in progress, the most subtasks that can be in progress at once is 2.
 """
 
     # Initialize agent
     agent = BaseAgent(
         system_prompt=system_prompt,
         user_prompt=user_prompt,
-        provider="anthropic",  # Use OpenAI
-        # model="",  # Use GPT-4o for complex analysis
+        provider="openai",  # Use OpenAI
+        model="gpt-5-mini",  # Use GPT-4o for complex analysis
         max_iterations=100,  # Allow many iterations for thorough analysis
         print_mode=PrintMode.DEBUG,
         plan_first=True,  # Create a plan before executing
-        reasoning_effort="high"
+        reasoning_effort="medium"
     )
 
     # Register analysis tools

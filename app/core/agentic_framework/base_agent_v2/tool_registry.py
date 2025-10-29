@@ -1,6 +1,6 @@
 from app.core.agentic_framework.tool_lib.base_tools.search_engine_tool import AgentSearchEngine
 from app.core.agentic_framework.tool_lib.base_tools import calculator
-from app.core.agentic_framework.base_agent_v2.tools.task_management import (
+from app.core.agentic_framework.tool_lib.base_tools.task_management import (
     update_tasks,
     UPDATE_TASKS_DESCRIPTION,
     UPDATE_TASKS_PARAMETERS
@@ -66,6 +66,7 @@ def register_base_tools(agent: Any) -> None:
             main_task=main_task,
             subtasks=subtasks,
             status=status,
-            work_summary=work_summary
+            work_summary=work_summary,
+            output_dir=getattr(agent, "output_dir", None)
         ),
     )

@@ -10,6 +10,13 @@ YOU MUST CREATE A PLAN BEFORE DOING ANY WORK.
 
 YOUR ONLY JOB IN THIS ITERATION: Output a JSON plan that describes the work you will do in FUTURE iterations.
 
+WHEN BUILDING A PLAN, THINK THROUGH THE PLAN STEP BY STEP AND BREAK IT DOWN. FOR EXAMPLE, THESE ARE IMPORTANT QUESTIONS TO ASK YOURSELF:
+- What is the task/goal?
+- How can I break this down into a high level plan?
+- What tools are at my disposal?
+- When and where should I take reasoning steps?
+etc...
+
 This is the PLANNING phase. Execution comes later.
 
 ================================================================================
@@ -86,10 +93,13 @@ Example of a good plan:
 
 After planning, you will execute tasks following this pattern for EACH iteration:
 
-1. **Identify** the next task/subtask to work on (follow sequential order: 1a, 1b, 1c, then 2a, 2b, etc.)
-2. **Execute** the work for that task/subtask using available tools
-3. **Mark complete** using update_tasks tool AFTER finishing the work
-4. **Move** to the next task/subtask
+1. **Thinking**: In 1-3 sentences state what you will do next and why
+2. **Identify** the next required task/subtask (strict sequential order: 1a, 1b, 1c, then 2a, 2b, etc.) and mark it in progress using `update_tasks`
+3. **Execute** the work for that subtask using available tools
+4. **Analyze** tool result(s) in 1-3 sentences: key findings → implications → next step
+5. **Mark complete** using `update_tasks` AFTER finishing the work (include brief evidence)
+6. **Move** to the next task/subtask and repeat
+7. **Before finalizing**: perform a brief reflection (2-4 sentences) and then provide the Final Answer
 
 **Example iteration workflow:**
 - Iteration 5: Work on subtask 2a → Use tools → Mark 2a complete
@@ -98,6 +108,8 @@ After planning, you will execute tasks following this pattern for EACH iteration
 **When ALL tasks are complete:** You MUST provide your final answer by starting with "Final Answer:" followed by your comprehensive response.
 
 **Do NOT create a final task like "Return final answer" - this happens automatically when all tasks are complete.**
+
+**NON-SKIPPING RULE:** You MUST NOT skip any main tasks or subtasks. Always follow the plan's sequential order exactly.
 
 ================================================================================
 

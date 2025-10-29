@@ -88,10 +88,13 @@ def build_plan_context(agent: 'BaseAgent', is_first_execution: bool = False) -> 
 
     context += "\n## 🎯 EXECUTION WORKFLOW\n\n"
     context += "**The following is how an iteration should look for this workflow:**\n\n"
-    context += "1. Identify the current task and subtask to work on and mark it in progress using the update_tasks tool\n"
-    context += "2. Complete the work item\n"
-    context += "3. Mark the subtask as complete using the update_tasks tool and provide reasoning/evidence for the completion\n"
-    context += "4. Continue to the next subtask or main task\n\n"
+    context += "1. Brief 'Thinking:' (1-3 sentences: what and why)\n"
+    context += "2. Identify current task/subtask and mark in progress (use update_tasks)\n"
+    context += "3. Complete the work item (use tools if needed)\n"
+    context += "4. Analyze tool result (1-3 sentences: findings → implication → next step)\n"
+    context += "5. Mark subtask complete with evidence (use update_tasks)\n"
+    context += "6. Continue to the next subtask or main task\n"
+    context += "7. Before finalizing: Reflect (2-4 sentences), then provide the Final Answer\n\n"
     context += "**⚠️ CRITICAL RULES [If you break any of these rules, you will be penalized harshly]:**\n\n"
     context += "- You are NOT allowed to mark a main task as complete until ALL subtasks are complete\n"
     context += "- You MUST mark the task/subtask as in progress BEFORE you start working on it\n"
@@ -99,6 +102,7 @@ def build_plan_context(agent: 'BaseAgent', is_first_execution: bool = False) -> 
     context += "- You MUST always think out loud and provide your reasoning for the actions you take\n"
     context += "- You must NEVER leave the content field blank when calling update_tasks\n\n"
     context += "**Example:** update_tasks(main_task='2', subtasks=['2b'], status='in_progress', content='Starting work on data collection')\n"
+    context += "You are never allowed to skip any main or sub tasks under any circumstances! Violating this rule will result in severe consequences.\n"
 
 
     return context

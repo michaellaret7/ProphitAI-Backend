@@ -52,6 +52,11 @@ class ExecutionLoop:
         for i in range(1, self.agent.max_iterations + 1):
             print(f"\n--- Iteration {i} ---")
 
+            # Track current iteration for logging purposes
+            self.agent.current_iteration = i
+            if not hasattr(self.agent, '_iteration_message_indices'):
+                self.agent._iteration_message_indices = {}
+
             # Planning phase: inject planning prompt (iteration 1 only)
             if i == 1 and self.agent.plan_first:
                 self.agent.messages.append({
@@ -92,6 +97,25 @@ class ExecutionLoop:
 
                 # if self.agent.print_mode == PrintMode.DEBUG or self.agent.print_mode == PrintMode.VERBOSE:
                 #     print(f"Plan context: {plan_context}")
+
+            # Inject per-turn THINK reminder (ephemeral)
+            self.agent.messages = [
+                msg for msg in self.agent.messages
+                if not (msg.get("role") == "system" and "## THINK AT EACH STEP" in msg.get("content", ""))
+            ]
+            self.agent.messages.append({
+                "role": "system",
+                "content": (
+                    "## THINK AT EACH STEP\n"
+                    "If there are tool result(s) above, ANALYZE them first: summarize key findings, important observations, explain any insights you have gained from the data.\n"
+                    "Your goal for the analysis is to gain insights and understanding of the data, and to use that understanding to form your final answer. Be highly analytical and detailed in your analysis."
+                    "Then write your 'Thinking:' explaining what you will do and why, what is the next step, and why it's important.\n"
+                    "If you will call a tool or tools, say which one and why it is being called.\n"
+                )
+            })
+
+            # Record message index for iteration banner (after all system message injection)
+            self.agent._iteration_message_indices[i] = len(self.agent.messages) - 1
 
             try:
                 # Call LLM
@@ -139,20 +163,19 @@ class ExecutionLoop:
                         print(f"✅ Plan parsed successfully!")
                         print(f"   Tasks: {len(plan.tasks)}")
 
-                        # Add assistant response to history
-                        self.agent.messages.append({
-                            "role": "assistant",
-                            "content": assistant_text
-                        })
-
                         continue
 
                 if assistant_text:
                     print(f"Assistant: {assistant_text}")
 
                 # Handle tool calls
-                # Handle tool call retries here 
                 if assistant_message.tool_calls: #if tool calls are in the assistant message, we need to execute the underlying function and return the output
+                    # Preserve the model's visible reasoning even when it chose tools
+                    self.agent.messages.append({
+                        "role": "assistant",
+                        "content": assistant_text,
+                        "tool_calls": assistant_message.tool_calls
+                    })
                     self.agent.tool_handler.handle_tool_calls(assistant_message.tool_calls)
 
                 # Check for finality
@@ -168,7 +191,8 @@ class ExecutionLoop:
 
                     # Log final answer to messages.yaml
                     try:
-                        write_messages_to_yaml(self.agent.messages)
+                        iteration_indices = getattr(self.agent, "_iteration_message_indices", None)
+                        write_messages_to_yaml(self.agent.messages, output_dir=getattr(self.agent, "output_dir", None), iteration_indices=iteration_indices)
                     except Exception as e:
                         print(f"⚠️  Warning: Failed to write final answer to messages.yaml: {e}")
 

@@ -48,12 +48,15 @@ class ToolHandler:
         Args:
             tool_calls: List of tool call objects from LLM
         """
-        # Add assistant message with tool calls
-        self.agent.messages.append({
-            "role": "assistant",
-            "content": "",
-            "tool_calls": tool_calls
-        })
+        # Add assistant message with tool calls (skip if already added by execution loop)
+        last = self.agent.messages[-1] if self.agent.messages else None
+        already_added = isinstance(last, dict) and last.get("role") == "assistant" and last.get("tool_calls")
+        if not already_added:
+            self.agent.messages.append({
+                "role": "assistant",
+                "content": "",
+                "tool_calls": tool_calls
+            })
 
         # Execute each tool
         for tool_call in tool_calls:
@@ -75,7 +78,6 @@ class ToolHandler:
             # Execute tool and return the result
             result = self._execute_tool(name, args)
 
-            # NOTE: We need to check if the tool was successful and if not, we need to add the tool to the tool trace file
             tool_validation = validate_tool_call(name, args, result, self.agent)
 
             # Parse validation and add to history
@@ -86,7 +88,7 @@ class ToolHandler:
             self.tool_call_history.append(tool_validation_dict)
 
             # Write entire tool call history to tools.yaml
-            log_tool_call(self.tool_call_history)
+            log_tool_call(self.tool_call_history, output_dir=getattr(self.agent, "output_dir", None))
 
             if self.agent.print_mode == PrintMode.DEBUG:
                 print(f"  ← Result: {result}")
@@ -105,6 +107,7 @@ class ToolHandler:
                     "content": self._stringify(result)
                 })
             else:
+                # Append validator-wrapped failure (includes 'data' and 'error')
                 self.agent.messages.append({
                     "role": "tool",
                     "tool_call_id": tool_call.id,
@@ -112,7 +115,8 @@ class ToolHandler:
                 })
 
         try:
-            write_messages_to_yaml(self.agent.messages)
+            iteration_indices = getattr(self.agent, "_iteration_message_indices", None)
+            write_messages_to_yaml(self.agent.messages, output_dir=getattr(self.agent, "output_dir", None), iteration_indices=iteration_indices)
         except Exception as e:
             # Don't fail tool execution if logging fails
             print(f"⚠️  Warning: Failed to write messages to YAML: {e}")

@@ -34,6 +34,7 @@ def validate_tool_call(name: str, args: dict, result: str, agent: 'BaseAgent') -
         tool_payload = yaml.safe_load(result)
         success = tool_payload.get("success", False)
         data = tool_payload.get("data", {})
+        error = tool_payload.get("error") if not success else None
 
         main_tasks_in_progress = []
         subtasks_in_progress = []
@@ -55,7 +56,8 @@ def validate_tool_call(name: str, args: dict, result: str, agent: 'BaseAgent') -
             "args": args,
             "main_tasks_in_progress": main_tasks_in_progress,
             "subtasks_in_progress": subtasks_in_progress,
-            "tool_payload": data,
+            "data": data,
+            "error": error,
         }, default_flow_style=False, sort_keys=False)
 
     except Exception as e:
@@ -65,10 +67,7 @@ def validate_tool_call(name: str, args: dict, result: str, agent: 'BaseAgent') -
             "error": f"Tool validation failed: {str(e)}",
             "tool_name": name,
             "args": args,
-            "tool_payload": {},
             "main_tasks_in_progress": [],
             "subtasks_in_progress": []
         }, default_flow_style=False, sort_keys=False)
 
-if __name__ == "__main__":
-    print(validate_tool_call(name = "calculate_ticker_factors", args = {"ticker": "AAPL", "factor": "growth"}, result = str, agent = None))

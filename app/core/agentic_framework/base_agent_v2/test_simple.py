@@ -43,24 +43,17 @@ def main():
     }
 
     # Simple system prompt
-    system_prompt = """
-You are a portfolio analyst. Analyze portfolios using the available tools and provide clear insights.
-"""
+    system_prompt = "Solve the following riddle, remember think through this problem step by step and provide your final answer."
 
     # Simple task
-    user_prompt = f"""Analyze this portfolio and tell me:
-1. What are the portfolio's returns and risk metrics?
-2. Which individual stock has performed best?
-
-Portfolio: {sample_portfolio}
-"""
+    user_prompt = "Riddle: A farmer wants to cross a river with a wolf, a goat, and a cabbage. He can only take one thing with him at a time. If he leaves the wolf alone with the goat, the wolf will eat the goat. If he leaves the goat alone with the cabbage, the goat will eat the cabbage. How can he cross the river safely?"
 
     # Initialize agent with simple settings
     agent = BaseAgent(
         system_prompt=system_prompt,
         user_prompt=user_prompt,
         provider="anthropic",
-        max_iterations=15,
+        max_iterations=150,
         print_mode=PrintMode.DEBUG,
         plan_first=True,  # No planning for simple test
         reasoning_effort="high"
@@ -70,7 +63,7 @@ Portfolio: {sample_portfolio}
     print("\n" + "="*80)
     print("SIMPLE AGENT TEST")
     print("="*80)
-    register_simple_tools(agent)
+    # register_simple_tools(agent)
 
     # Run agent
     result = agent.run()

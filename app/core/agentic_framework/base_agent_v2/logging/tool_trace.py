@@ -5,18 +5,21 @@ Logs tool validation output to tools.yaml.
 
 import yaml
 from pathlib import Path
-from typing import List, Dict, Any
+from typing import List, Dict, Any, Optional
 from app.utils.time_utils import get_current_utc_time
 
 
-def log_tool_call(tool_call_history: List[Dict[str, Any]]) -> None:
+def log_tool_call(tool_call_history: List[Dict[str, Any]], output_dir: Optional[str] = None) -> None:
     """Write entire tool call history to tools.yaml.
 
     Args:
         tool_call_history: List of tool validation dictionaries
     """
     # Get path to tools.yaml
-    tool_trace_file = Path(__file__).parent.parent / "tools.yaml"
+    if output_dir is None:
+        tool_trace_file = Path(__file__).parent.parent / "tools.yaml"
+    else:
+        tool_trace_file = Path(output_dir) / "tools.yaml"
 
     # Add timestamp to each entry
     timestamped_history = []

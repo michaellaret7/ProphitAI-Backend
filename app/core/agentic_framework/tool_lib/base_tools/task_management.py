@@ -11,7 +11,9 @@ def update_tasks(
     main_task: str,
     subtasks: Optional[List[str]] = None,
     status: str = "in_progress",
-    work_summary: Optional[str] = None
+    work_summary: Optional[str] = None,
+    *,
+    output_dir: Optional[str] = None
 ) -> str:
     """Update the status of tasks and subtasks in the plan.
 
@@ -166,7 +168,7 @@ def update_tasks(
 
     # Log the updated plan state to file
     try:
-        write_task_state_to_file(plan)
+        write_task_state_to_file(plan, output_dir=output_dir)
     except Exception as e:
         print(f"⚠️  Warning: Failed to write task state to file: {e}")
 
