@@ -7,14 +7,12 @@ from app.core.calculations.portfolio.correlation import CorrelationAnalysis
 from app.core.calculations.core.config import DEFAULT_LOOKBACK_SHORT
 from app.models.portfolio_models import PortfolioInput
 import pandas as pd
-from app.utils.gpt_parser import canonical_portfolio
 from app.core.calculations.core.helpers import build_returns_df_from_price_map
-from app.utils.decorators.tool_validation import log_simulation_data_range, validate_required_args, validate_portfolio_dict
+from app.utils.decorators.tool_validation import log_simulation_data_range
+from app.utils.tool_validator import ToolValidator
 
 #TODO: Let the model decide the amount it wants to see. Top correlations or correlations above a certain threshold. Dont just pass the entire matrix.
 
-@validate_required_args('portfolio_dict')
-@validate_portfolio_dict()
 @log_simulation_data_range()
 def correlation_matrix(portfolio_dict: PortfolioInput | dict, _simulation_date: Optional[datetime] = None) -> str:
     """
@@ -31,14 +29,17 @@ def correlation_matrix(portfolio_dict: PortfolioInput | dict, _simulation_date: 
       ]
     }
     """
-    try:
-        if not portfolio_dict:
-            return yaml.dump({"success": True, "data": {"correlations": []}}, default_flow_style=False)
+    # Validate inputs
+    v = ToolValidator()
+    v.require_portfolio('portfolio_dict', portfolio_dict, normalize=True)
 
-        try:
-            portfolio_dict = canonical_portfolio(portfolio_dict)
-        except ValueError:
-            return yaml.dump({"success": True, "data": {"correlations": []}}, default_flow_style=False)
+    if not v.is_valid():
+        return v.error_response()
+
+    # Get validated/normalized values
+    portfolio_dict = v.get('portfolio_dict')
+
+    try:
 
         # Use utility to get portfolio data
         weights, price_data, dividend_data = prepare_portfolio_data(

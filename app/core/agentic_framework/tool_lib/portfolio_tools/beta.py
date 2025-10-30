@@ -3,15 +3,12 @@ from typing import Optional
 from datetime import datetime
 import pandas as pd
 import numpy as np
-from app.utils.gpt_parser import canonical_portfolio
 from app.core.calculations.portfolio.utils import get_portfolio_returns, get_benchmark_returns
 from app.core.calculations.risk.calculator import RiskCalculator
 from app.models.portfolio_models import PortfolioInput
-from app.utils.decorators.tool_validation import validate_ticker_arg, validate_numeric_arg, log_simulation_data_range, validate_portfolio_dict, validate_required_args
+from app.utils.decorators.tool_validation import log_simulation_data_range
+from app.utils.tool_validator import ToolValidator
 
-@validate_required_args('portfolio_dict')
-@validate_portfolio_dict()
-@validate_numeric_arg("lookback_days", positive_only=True)
 @log_simulation_data_range()
 def calculate_portfolio_beta_vs_index(
     portfolio_dict: PortfolioInput | dict,
@@ -28,11 +25,19 @@ def calculate_portfolio_beta_vs_index(
     Returns:
         Portfolio beta vs SPY index
     """
-    try:
-        if not isinstance(portfolio_dict, dict):
-            return yaml.dump({"success": False, "error": "No portfolio_dict provided, try again with a valid portfolio_dict"}, default_flow_style=False)
+    # Validate inputs
+    v = ToolValidator()
+    v.require_portfolio('portfolio_dict', portfolio_dict, normalize=True)
+    v.require_numeric('lookback_days', lookback_days, min_val=1, positive_only=True)
 
-        portfolio_dict = canonical_portfolio(portfolio_dict)
+    if not v.is_valid():
+        return v.error_response()
+
+    # Get validated/normalized values
+    portfolio_dict = v.get('portfolio_dict')
+    lookback_days = v.get('lookback_days')
+
+    try:
 
         # Use utility functions to get portfolio returns
         portfolio_returns, _ = get_portfolio_returns(

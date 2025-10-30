@@ -4,6 +4,7 @@ from app.repositories.ratings_data import get_stock_grades_individual, get_stock
 from app.repositories.etf_data import get_etf_info, get_etf_holdings
 from app.repositories.transcripts_data import get_earnings_transcripts, get_latest_transcript
 from app.repositories.price_data import get_dividends_series
+from app.repositories.fundamental_data import get_analyst_estimates
 from datetime import datetime, timedelta
 from app.repositories.news_data import get_press_releases, get_stock_news, get_price_target_news
 from app.utils.decorators.database import with_session
@@ -23,7 +24,7 @@ def fetch_repository_data(ticker: str, data_type: str, limit: int | None = None,
     Args:
         ticker: Stock ticker symbol
         data_type: Type of data to fetch
-        limit: Optional limit on number of items
+        limit: Optional limit on number of items (quarters for analyst_estimates)
         _simulation_date: INTERNAL USE ONLY - For simulation mode, not exposed to agents
 
     Supported data_type values:
@@ -33,6 +34,7 @@ def fetch_repository_data(ticker: str, data_type: str, limit: int | None = None,
       - etf_info, etf_holdings
       - earnings_transcripts, latest_transcript
       - dividends_series
+      - analyst_estimates (limit controls number of quarters, default 4)
     """
     try:
         t = (data_type or "").strip().lower()
@@ -101,6 +103,14 @@ def fetch_repository_data(ticker: str, data_type: str, limit: int | None = None,
             data = {"ticker": ticker.upper(), "count": len(items), "items": items}
             return yaml.dump({"success": True, "data": data}, default_flow_style=False)
 
+        if t in ["analyst_estimates", "estimates"]:
+            # Use limit if provided, otherwise default to 4 quarters
+            quarters = limit if limit else 4
+            result = get_analyst_estimates(ticker, quarters_back=quarters, _simulation_date=_simulation_date)
+            if "error" in result:
+                return yaml.dump({"success": False, "error": result["error"]}, default_flow_style=False)
+            return yaml.dump({"success": True, "data": result}, default_flow_style=False)
+
         return yaml.dump({"success": False, "error": f"Unknown data_type: {data_type}"}, default_flow_style=False)
     except Exception as e:
         return yaml.dump({"success": False, "error": str(e)}, default_flow_style=False)
@@ -111,7 +121,7 @@ FETCH_TICKER_REPOSITORY_DATA_DESCRIPTION = (
     "Fetch auxiliary data for a ticker. Supported data_type: "
     "'press_releases','stock_news','price_target_news','grades_individual','grades_summary',"
     "'ratings','analyst_recommendations','price_target_summary','etf_info','etf_holdings',"
-    ",'dividends_series'.\n\n"
+    "'dividends_series','analyst_estimates'.\n\n"
     "Example: fetch_ticker_repository_data(ticker='AAPL', data_type='stock_news', limit=3)"
 )
 
@@ -136,14 +146,15 @@ FETCH_TICKER_REPOSITORY_DATA_PARAMETERS = {
                 "price_target_summary",
                 "etf_info",
                 "etf_holdings",
-                "dividends_series"
+                "dividends_series",
+                "analyst_estimates"
             ]
         },
         "limit": {
             "type": "integer",
-            "description": "Optional max number of items (applies to dividends_series).",
+            "description": "Optional max number of items. For analyst_estimates: quarters (default 4).",
             "minimum": 1,
-            "maximum": 4
+            "maximum": 12
         }
     },
     "required": ["ticker", "data_type"],

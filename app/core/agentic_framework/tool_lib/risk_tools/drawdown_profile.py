@@ -3,12 +3,9 @@ from app.core.calculations.portfolio.utils import get_portfolio_returns
 from app.core.calculations.risk.calculator import RiskCalculator
 from app.core.calculations.core.config import DEFAULT_LOOKBACK_LONG
 from app.models.portfolio_models import PortfolioInput
-from app.utils.gpt_parser import canonical_portfolio
-from app.utils.decorators.tool_validation import validate_required_args, validate_portfolio_dict
 import numpy as np
+from app.utils.tool_validator import ToolValidator
 
-@validate_required_args('portfolio_dict')
-@validate_portfolio_dict()
 def drawdown_profile(portfolio_dict: PortfolioInput | dict = None) -> str:
     """
     Analyze portfolio drawdown characteristics.
@@ -22,14 +19,17 @@ def drawdown_profile(portfolio_dict: PortfolioInput | dict = None) -> str:
     - ulcer: Ulcer Index (measure of drawdown severity and duration)
     - episodes: List of drawdown episodes with start/end dates and recovery times
     """
-    try:
-        if not portfolio_dict:
-            return yaml.dump({"success": False, "error": "Portfolio dictionary is required"}, default_flow_style=False)
+    # Validate inputs
+    v = ToolValidator()
+    v.require_portfolio('portfolio_dict', portfolio_dict, normalize=True)
 
-        try:
-            portfolio_dict = canonical_portfolio(portfolio_dict)
-        except Exception as e:
-            return yaml.dump({"success": False, "error": str(e)}, default_flow_style=False)
+    if not v.is_valid():
+        return v.error_response()
+
+    # Get validated/normalized values
+    portfolio_dict = v.get('portfolio_dict')
+
+    try:
 
         # Get portfolio returns using the utility for last 3 years (industry standard for risk analysis)
         portfolio_returns, weights = get_portfolio_returns(

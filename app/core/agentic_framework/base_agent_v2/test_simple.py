@@ -42,28 +42,36 @@ def main():
         "NVDA": {"allocation": 0.25, "position": "long"},
     }
 
-    # Simple system prompt
-    system_prompt = "Solve the following riddle, remember think through this problem step by step and provide your final answer."
+    system_prompt = """
+    You are a simple agent that will be used to test the agentic framework.
+    Your task is to calculate the portfolio returns metrics for the following portfolio:
+    # Example fake portfolio (3 stocks, realistic allocations)
+    # (This will be echoed for the LLM. The actual data object is `sample_portfolio` in the code.)
+    # AAPL: 40% (long), MSFT: 35% (long), NVDA: 25% (long)
+    Portfolio:
+    - AAPL: allocation 0.40, position long
+    - MSFT: allocation 0.35, position long
+    - NVDA: allocation 0.25, position long
+    """
+    user_prompt = "Calculate the portfolio returns metrics for the portfolio. All you have to do is calc the portfolio metrics, you don't need to do anything else. Keep the plan EXTREMELY short and concise."
 
-    # Simple task
-    user_prompt = "Riddle: A farmer wants to cross a river with a wolf, a goat, and a cabbage. He can only take one thing with him at a time. If he leaves the wolf alone with the goat, the wolf will eat the goat. If he leaves the goat alone with the cabbage, the goat will eat the cabbage. How can he cross the river safely?"
-
-    # Initialize agent with simple settings
     agent = BaseAgent(
         system_prompt=system_prompt,
         user_prompt=user_prompt,
-        provider="anthropic",
+        provider="openai",
+        model="gpt-4.1",
         max_iterations=150,
         print_mode=PrintMode.DEBUG,
         plan_first=True,  # No planning for simple test
-        reasoning_effort="high"
+        # reasoning_effort="low"
     )
 
     # Register tools
     print("\n" + "="*80)
     print("SIMPLE AGENT TEST")
     print("="*80)
-    # register_simple_tools(agent)
+
+    register_simple_tools(agent)
 
     # Run agent
     result = agent.run()

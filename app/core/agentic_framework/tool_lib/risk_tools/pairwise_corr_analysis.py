@@ -5,12 +5,9 @@ from app.core.calculations.portfolio.utils import prepare_portfolio_data
 from app.core.calculations.returns.calculator import ReturnsCalculator
 from app.core.calculations.core.config import DEFAULT_LOOKBACK_SHORT
 from app.models.portfolio_models import PortfolioInput
-from app.utils.gpt_parser import canonical_portfolio
 from app.core.calculations.core.helpers import build_returns_df_from_price_map
-from app.utils.decorators.tool_validation import validate_required_args, validate_portfolio_dict
+from app.utils.tool_validator import ToolValidator
 
-@validate_required_args('portfolio_dict')
-@validate_portfolio_dict()
 def run_pairwise_correlation_analysis(portfolio_dict: PortfolioInput | dict) -> str:
     """
     Run pairwise correlation analysis on portfolio returns data and return results in YAML format.
@@ -21,14 +18,17 @@ def run_pairwise_correlation_analysis(portfolio_dict: PortfolioInput | dict) -> 
     Returns:
         YAML formatted string containing pairwise correlations
     """
-    try:
-        if not portfolio_dict:
-            return yaml.dump({"success": False, "error": "Portfolio dictionary is required"}, default_flow_style=False)
+    # Validate inputs
+    v = ToolValidator()
+    v.require_portfolio('portfolio_dict', portfolio_dict, normalize=True)
 
-        try:
-            portfolio_dict = canonical_portfolio(portfolio_dict)
-        except ValueError as e:
-            return yaml.dump({"success": False, "error": str(e)}, default_flow_style=False)
+    if not v.is_valid():
+        return v.error_response()
+
+    # Get validated/normalized values
+    portfolio_dict = v.get('portfolio_dict')
+
+    try:
 
         # Use utility to get portfolio data
         weights, price_data, dividend_data = prepare_portfolio_data(

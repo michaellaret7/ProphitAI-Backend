@@ -6,11 +6,9 @@ from app.core.calculations.returns.calculator import ReturnsCalculator
 from app.core.calculations.core.config import DEFAULT_LOOKBACK_LONG
 import numpy as np
 from app.models.portfolio_models import PortfolioInput
-from app.utils.gpt_parser import canonical_portfolio
-from app.utils.decorators.tool_validation import log_simulation_data_range, validate_portfolio_dict, validate_required_args
+from app.utils.decorators.tool_validation import log_simulation_data_range
+from app.utils.tool_validator import ToolValidator
 
-@validate_required_args('portfolio_dict')
-@validate_portfolio_dict()
 @log_simulation_data_range()
 def calculate_portfolio_returns_metrics(portfolio_dict: PortfolioInput | dict, lookback_days=DEFAULT_LOOKBACK_LONG, _simulation_date: Optional[datetime] = None) -> str:
     """Calculate and display simple portfolio metrics.
@@ -23,8 +21,19 @@ def calculate_portfolio_returns_metrics(portfolio_dict: PortfolioInput | dict, l
     Returns:
         dict: Contains annualized returns, volatility, and weekly cumulative returns
     """
+    # Validate inputs
+    v = ToolValidator()
+    v.require_portfolio('portfolio_dict', portfolio_dict, normalize=True)
+    v.optional_numeric('lookback_days', lookback_days, default=DEFAULT_LOOKBACK_LONG, min_val=1, positive_only=True)
+
+    if not v.is_valid():
+        return v.error_response()
+
+    # Get validated/normalized values
+    portfolio_dict = v.get('portfolio_dict')
+    lookback_days = v.get('lookback_days')
+
     try:
-        portfolio_dict = canonical_portfolio(portfolio_dict)
 
         # Get price-only returns
         portfolio_price_returns, _ = get_portfolio_returns(

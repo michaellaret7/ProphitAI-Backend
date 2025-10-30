@@ -200,29 +200,53 @@ def get_fundamental_data(
         }
 
 
+def get_analyst_estimates(
+    ticker: str,
+    quarters_back: int = 4,
+    _simulation_date: Optional[datetime] = None
+) -> Dict[str, Any]:
+    """
+    Retrieve analyst estimates for a given ticker.
+
+    Args:
+        ticker: Stock ticker symbol (e.g., 'AAPL', 'MSFT')
+        quarters_back: Number of quarters of estimates to retrieve (default: 4)
+        _simulation_date: INTERNAL USE ONLY - For simulation mode, only return data on or before this date
+
+    Returns:
+        Dictionary containing analyst estimates data
+    """
+    return get_fundamental_data(
+        ticker=ticker,
+        statement_type="analyst_estimates",
+        quarters_back=quarters_back,
+        _simulation_date=_simulation_date
+    )
+
+
 def get_all_fundamentals(ticker: str, quarters_back: int = 1) -> Dict[str, Any]:
     """
     Retrieve all types of fundamental data for a given ticker.
-    
+
     Args:
         ticker: Stock ticker symbol
         quarters_back: Number of quarters of historical data to retrieve
-    
+
     Returns:
         Dictionary containing all fundamental data types
     """
     statement_types = ["income_statement", "balance_sheet", "cash_flow", "financial_ratios", "analyst_estimates"]
-    
+
     result = {
         "ticker": ticker.upper(),
         "quarters_requested": quarters_back
     }
-    
+
     for statement_type in statement_types:
         data = get_fundamental_data(ticker, statement_type, quarters_back)
         if "error" not in data:
             result[statement_type] = data["data"]
         else:
             result[statement_type] = {"error": data.get("error", "Unknown error")}
-    
+
     return result

@@ -4,6 +4,7 @@ from functools import wraps
 from datetime import datetime, timedelta, timezone
 from app.core.calculations.core.data_service import DataService
 from app.core.calculations.core.config import DEFAULT_LOOKBACK_SHORT
+import yaml
 
 def with_price_data(lookback_days=DEFAULT_LOOKBACK_SHORT, include_dividends=True):
     """
@@ -31,7 +32,7 @@ def with_price_data(lookback_days=DEFAULT_LOOKBACK_SHORT, include_dividends=True
             price_series = ds.get_bulk_close_series([ticker], start, end).get(ticker)
 
             if price_series is None or price_series.empty:
-                return {"error": f"No price data available for {ticker}"}
+                return yaml.dump({"success": False, "error": f"No price data available for {ticker}"}, default_flow_style=False)
 
             kwargs['price_data'] = price_series
 
@@ -74,7 +75,7 @@ def with_bulk_price_data(lookback_days=DEFAULT_LOOKBACK_SHORT, include_dividends
             elif len(args) > 0:
                 tickers_param = args[0]
             else:
-                return {"error": "No ticker(s) provided to decorated function"}
+                return yaml.dump({"success": False, "error": "No ticker(s) provided to decorated function"}, default_flow_style=False)
 
             if isinstance(tickers_param, str):
                 tickers_list = [tickers_param]

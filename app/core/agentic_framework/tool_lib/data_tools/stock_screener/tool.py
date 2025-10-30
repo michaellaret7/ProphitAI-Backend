@@ -260,6 +260,13 @@ def _log_results_summary(df: pd.DataFrame, warnings: List[str]):
 
 def _format_success_response(df: pd.DataFrame, warnings: List[str]) -> str:
     """Format successful screening response as YAML."""
+    # Return a failure message if no results were found
+    if df is None or len(df) == 0:
+        return yaml.dump({
+            "success": False,
+            "error": "No results found. Alter your query and try again."
+        }, default_flow_style=False)
+
     result = {
         "success": True,
         "data": df.to_dict('records'),

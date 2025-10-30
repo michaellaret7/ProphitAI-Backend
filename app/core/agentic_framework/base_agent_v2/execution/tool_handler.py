@@ -100,14 +100,12 @@ class ToolHandler:
                     print(f"   ✓ Result: {result_str}")
 
             if success:
-                # if tool call was successful, append the tool result to the messages
                 self.agent.messages.append({
                     "role": "tool",
                     "tool_call_id": tool_call.id,
                     "content": self._stringify(result)
                 })
             else:
-                # Append validator-wrapped failure (includes 'data' and 'error')
                 self.agent.messages.append({
                     "role": "tool",
                     "tool_call_id": tool_call.id,

@@ -1,15 +1,23 @@
 import yaml
-from app.utils.gpt_parser import canonical_portfolio
 from app.core.calculations.portfolio.concentration import PortfolioConcentration
 from app.models.portfolio_models import PortfolioInput
-from app.utils.decorators.tool_validation import log_simulation_data_range, validate_required_args, validate_portfolio_dict, validate_enum_arg
+from app.utils.decorators.tool_validation import log_simulation_data_range
+from app.utils.tool_validator import ToolValidator
 
-@validate_required_args('portfolio_dict', 'exposure_type')
-@validate_portfolio_dict()
-@validate_enum_arg("exposure_type", ["net", "gross", "long", "short"])
 def exposure_calculator(portfolio_dict: PortfolioInput | dict, exposure_type: str, **kwargs) -> str:
+    # Validate inputs
+    v = ToolValidator()
+    v.require_portfolio('portfolio_dict', portfolio_dict, normalize=True)
+    v.require_enum('exposure_type', exposure_type, ['net', 'gross', 'long', 'short'])
+
+    if not v.is_valid():
+        return v.error_response()
+
+    # Get validated/normalized values
+    portfolio_dict = v.get('portfolio_dict')
+    exposure_type = v.get('exposure_type')
+
     try:
-        portfolio_dict = canonical_portfolio(portfolio_dict)
         if exposure_type == "net":
             result = PortfolioConcentration(portfolio_dict).net_exposure()
         elif exposure_type == "gross":
@@ -24,12 +32,20 @@ def exposure_calculator(portfolio_dict: PortfolioInput | dict, exposure_type: st
     except Exception as e:
         return yaml.dump({"success": False, "error": str(e)}, default_flow_style=False)
 
-@validate_required_args('portfolio_dict', 'industry_level')
-@validate_portfolio_dict()
-@validate_enum_arg("industry_level", ["industry", "sub_industry"])
 def industry_concentration(portfolio_dict: PortfolioInput | dict, industry_level: str, **kwargs) -> str:
+    # Validate inputs
+    v = ToolValidator()
+    v.require_portfolio('portfolio_dict', portfolio_dict, normalize=True)
+    v.require_enum('industry_level', industry_level, ['industry', 'sub_industry'])
+
+    if not v.is_valid():
+        return v.error_response()
+
+    # Get validated/normalized values
+    portfolio_dict = v.get('portfolio_dict')
+    industry_level = v.get('industry_level')
+
     try:
-        portfolio_dict = canonical_portfolio(portfolio_dict)
         if industry_level == "industry":
             res = PortfolioConcentration(portfolio_dict).industry_concentration()
         elif industry_level == "sub_industry":
@@ -42,13 +58,21 @@ def industry_concentration(portfolio_dict: PortfolioInput | dict, industry_level
     except Exception as e:
         return yaml.dump({"success": False, "error": str(e)}, default_flow_style=False)
 
-@validate_required_args('portfolio_dict', 'level')
-@validate_portfolio_dict()
-@validate_enum_arg("level", ["portfolio", "industry", "sub_industry"])
 @log_simulation_data_range()
 def VaR_calculator(portfolio_dict: PortfolioInput | dict, level: str, **kwargs) -> str:
+    # Validate inputs
+    v = ToolValidator()
+    v.require_portfolio('portfolio_dict', portfolio_dict, normalize=True)
+    v.require_enum('level', level, ['portfolio', 'industry', 'sub_industry'])
+
+    if not v.is_valid():
+        return v.error_response()
+
+    # Get validated/normalized values
+    portfolio_dict = v.get('portfolio_dict')
+    level = v.get('level')
+
     try:
-        portfolio_dict = canonical_portfolio(portfolio_dict)
         # Extract simulation date if present (for backtesting/simulation)
         end_date = kwargs.get('_simulation_date', None)
 

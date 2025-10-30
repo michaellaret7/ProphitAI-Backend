@@ -17,6 +17,8 @@ def get_weekly_returns(ticker: str, price_data=None, _simulation_date: Optional[
         price_data: Optional pre-fetched price data (from decorator)
         _simulation_date: INTERNAL USE ONLY - For simulation mode, not exposed to agents.
                          If provided, uses this as cutoff date instead of current time.
+
+    Note: Uses @validate_ticker_arg() decorator to validate BEFORE @with_price_data fetches data.
     """
     try:
         # Filter price data by simulation date if provided

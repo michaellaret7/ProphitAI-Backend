@@ -53,8 +53,9 @@ def write_note(title: str, content: str, *, output_dir: Optional[str] = None) ->
 
 
 WRITE_NOTE_DESCRIPTION = (
-    "Append a timestamped entry to the current agent run's notes.md file. "
-    "Use for brief logs, decisions, or reminders during execution."
+    "Write free-form reasoning and analysis to this run's notes.md. "
+    "Use it as a live notepad for thoughts, reasoning, hypotheses, alternatives, decisions, trade-offs, anomalies, and super key findings. "
+    "Intended for a single run; capture any amount of reasoning or commentary. "
 )
 
 WRITE_NOTE_PARAMETERS = {

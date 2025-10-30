@@ -3,16 +3,9 @@ from app.core.calculations.portfolio.utils import get_portfolio_returns
 from app.core.calculations.risk.calculator import RiskCalculator
 from app.core.calculations.core.config import DEFAULT_LOOKBACK_SHORT
 from app.models.portfolio_models import PortfolioInput
-from app.utils.gpt_parser import canonical_portfolio
-from app.utils.decorators.tool_validation import validate_required_args, validate_portfolio_dict, validate_numeric_arg, validate_enum_arg
-
 import numpy as np
+from app.utils.tool_validator import ToolValidator
 
-@validate_required_args('portfolio_dict')
-@validate_portfolio_dict()
-@validate_numeric_arg("horizon_days", min_value=1)
-@validate_numeric_arg("conf", min_value=0.5, max_value=0.999)
-@validate_enum_arg("method", ["param", "hist"])
 def vol_es(portfolio_dict: PortfolioInput | dict = None, horizon_days: int = 1, conf: float = 0.99, method: str = 'param') -> str:
     """
     Calculate Volatility, Value at Risk (VaR), and Expected Shortfall (ES) for portfolio.
@@ -28,14 +21,23 @@ def vol_es(portfolio_dict: PortfolioInput | dict = None, horizon_days: int = 1, 
     - ES: Expected Shortfall (conditional VaR)
     - vol: Portfolio volatility (annualized)
     """
-    try:
-        if not portfolio_dict:
-            return yaml.dump({"success": False, "error": "Portfolio dictionary is required"}, default_flow_style=False)
+    # Validate inputs
+    v = ToolValidator()
+    v.require_portfolio('portfolio_dict', portfolio_dict, normalize=True)
+    v.require_numeric('horizon_days', horizon_days, min_val=1)
+    v.require_numeric('conf', conf, min_val=0.5, max_val=0.999)
+    v.require_enum('method', method, ['param', 'hist'])
 
-        try:
-            portfolio_dict = canonical_portfolio(portfolio_dict)
-        except Exception as e:
-            return yaml.dump({"success": False, "error": str(e)}, default_flow_style=False)
+    if not v.is_valid():
+        return v.error_response()
+
+    # Get validated/normalized values
+    portfolio_dict = v.get('portfolio_dict')
+    horizon_days = v.get('horizon_days')
+    conf = v.get('conf')
+    method = v.get('method')
+
+    try:
 
         # Get portfolio returns using the utility
         portfolio_returns, _ = get_portfolio_returns(
@@ -46,7 +48,7 @@ def vol_es(portfolio_dict: PortfolioInput | dict = None, horizon_days: int = 1, 
         )
 
         if portfolio_returns is None or portfolio_returns.empty:
-            return yaml.dump({"success": False, "error": "No price data available for portfolio tickers"}, default_flow_style=False)
+            return yaml.dump({"success": False, "error": "No price data available for portfolio tickers, move on to the next tool"}, default_flow_style=False)
 
         # Calculate VaR/ES and volatility using calculations_v2
         if method == 'param':
@@ -176,3 +178,4 @@ VOL_ES_TOOL = {
     "parameters": VOL_ES_PARAMETERS,
     "function": vol_es,
 }
+

@@ -2,21 +2,27 @@ import yaml
 from app.db.core.models.prophit_alts_models import FundInitialPosition
 from app.db.core.models.market_data_models import Ticker
 from app.db.core.db_config import ProphitAltsSession, MarketSession
-from app.utils.gpt_parser import canonical_portfolio
 from app.core.calculations.portfolio.factor_tilt import portfolio_factor_tilts
 from app.models.portfolio_models import PortfolioInput
-from app.utils.decorators.tool_validation import log_simulation_data_range, validate_required_args, validate_portfolio_dict, validate_enum_arg
+from app.utils.decorators.tool_validation import log_simulation_data_range
+from app.utils.tool_validator import ToolValidator
 
-@validate_required_args('portfolio_dict', 'factors')
-@validate_portfolio_dict()
-@validate_enum_arg("factors", ["all", "value", "growth", "momentum", "quality", "volatility"])
 @log_simulation_data_range()
 def factor_tilts_for_portfolio(portfolio_dict: PortfolioInput | dict, factors: str, **kwargs) -> str:
     """Compute and print factor tilts (value/growth/momentum/quality/volatility)."""
+    # Validate inputs
+    v = ToolValidator()
+    v.require_portfolio('portfolio_dict', portfolio_dict, normalize=True)
+    v.require_enum('factors', factors, ['all', 'value', 'growth', 'momentum', 'quality', 'volatility'])
+
+    if not v.is_valid():
+        return v.error_response()
+
+    # Get validated/normalized values
+    portfolio_dict = v.get('portfolio_dict')
+    factors = v.get('factors')
+
     try:
-        if not portfolio_dict:
-            return yaml.dump({"success": True, "data": {}}, default_flow_style=False)
-        portfolio_dict = canonical_portfolio(portfolio_dict)
 
         # Extract simulation date if present (for backtesting/simulation)
         end_date = kwargs.get('_simulation_date', None)

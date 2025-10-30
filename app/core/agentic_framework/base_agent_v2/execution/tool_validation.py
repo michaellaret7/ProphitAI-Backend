@@ -1,6 +1,7 @@
 """Tool validation utilities."""
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, List, Dict, Any
+import builtins
 import yaml
 from app.core.agentic_framework.base_agent_v2.utils.models import TaskStatus
 

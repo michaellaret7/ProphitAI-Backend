@@ -1,21 +1,24 @@
 import yaml
 from app.core.calculations.stress_test.runner import run_stress_test_workflow
 from app.models.portfolio_models import PortfolioInput
-from app.utils.gpt_parser import canonical_portfolio
-from app.utils.decorators.tool_validation import validate_required_args, validate_portfolio_dict
 import json
+from app.utils.tool_validator import ToolValidator
 
-@validate_required_args('portfolio_dict')
-@validate_portfolio_dict()
 def stress_test(portfolio_dict: PortfolioInput | dict = None) -> str:
     """
     Run comprehensive stress tests on a portfolio including market crash scenarios (-20%, -30%, -40%), sector rotation stress, interest rate shock, inflation spike, and correlation breakdown scenarios.
     """
-    try:
-        if not portfolio_dict:
-            return yaml.dump({"success": False, "error": "Portfolio dictionary is required"}, default_flow_style=False)
+    # Validate inputs
+    v = ToolValidator()
+    v.require_portfolio('portfolio_dict', portfolio_dict, normalize=True)
 
-        portfolio_dict = canonical_portfolio(portfolio_dict)
+    if not v.is_valid():
+        return v.error_response()
+
+    # Get validated/normalized values
+    portfolio_dict = v.get('portfolio_dict')
+
+    try:
         results = run_stress_test_workflow(portfolio_dict)
         return yaml.dump({"success": True, "data": results}, default_flow_style=False)
     except Exception as e:

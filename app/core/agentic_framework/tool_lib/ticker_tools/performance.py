@@ -17,9 +17,8 @@ from app.core.calculations.core.config import (
     DEFAULT_LOOKBACK_MEDIUM,
 )
 from app.utils.decorators.price_data import with_bulk_price_data
-from app.utils.decorators.tool_validation import validate_ticker_arg
 from app.utils.simulation_utils import get_end_date, filter_series_by_date
-from app.utils.decorators.tool_validation import log_simulation_data_range
+from app.utils.decorators.tool_validation import validate_ticker_arg, log_simulation_data_range
 
 @validate_ticker_arg()
 @with_bulk_price_data(lookback_days=DEFAULT_LOOKBACK_MEDIUM, include_dividends=True)
@@ -41,6 +40,8 @@ def get_ticker_performance_and_risk(
     - Accepts a single ticker symbol (decorator fetches close series into price_data)
     - Always includes dividends in calculations
     - Always uses SPY as the market benchmark
+
+    Note: Uses @validate_ticker_arg() decorator to validate BEFORE @with_bulk_price_data fetches data.
     """
     # Fixed parameters (2 years of trading days - Bloomberg standard for beta)
     market_ticker = "SPY"
@@ -48,7 +49,7 @@ def get_ticker_performance_and_risk(
     ds = DataService()
     end_dt = get_end_date(_simulation_date)
     # Convert trading days to calendar days for date range: 504 trading days * (365/252) ≈ 730 calendar days
-    start_dt = end_dt - timedelta(days=int(DEFAULT_LOOKBACK_MEDIUM * 365 / 252))
+    start_dt = end_dt - timedelta(days=365)
 
     def _adjust_for_splits(prices: pd.Series) -> pd.Series:
         """Return split-adjusted close series inferred from large price jumps.

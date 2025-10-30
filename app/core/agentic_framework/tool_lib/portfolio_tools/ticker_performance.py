@@ -9,11 +9,9 @@ from app.core.calculations.core.config import DEFAULT_LOOKBACK_MEDIUM
 import pandas as pd
 import numpy as np
 from app.models.portfolio_models import PortfolioInput
-from app.utils.gpt_parser import canonical_portfolio
-from app.utils.decorators.tool_validation import log_simulation_data_range, validate_portfolio_dict, validate_required_args
+from app.utils.decorators.tool_validation import log_simulation_data_range
+from app.utils.tool_validator import ToolValidator
 
-@validate_required_args('portfolio_dict')
-@validate_portfolio_dict()
 @log_simulation_data_range()
 def calculate_ticker_performances(portfolio_dict: PortfolioInput | dict, lookback_days: int = DEFAULT_LOOKBACK_MEDIUM, use_total_returns: bool = True, benchmark: str = "SPY", _simulation_date: Optional[datetime] = None) -> str:
     """Return a DataFrame of performance metrics for each ticker in the portfolio.
@@ -29,8 +27,19 @@ def calculate_ticker_performances(portfolio_dict: PortfolioInput | dict, lookbac
     Returns:
         pd.DataFrame where each row corresponds to a ticker and columns are metrics.
     """
+    # Validate inputs
+    v = ToolValidator()
+    v.require_portfolio('portfolio_dict', portfolio_dict, normalize=True)
+    v.optional_numeric('lookback_days', lookback_days, default=DEFAULT_LOOKBACK_MEDIUM, min_val=1, positive_only=True)
+
+    if not v.is_valid():
+        return v.error_response()
+
+    # Get validated/normalized values
+    portfolio_dict = v.get('portfolio_dict')
+    lookback_days = v.get('lookback_days')
+
     try:
-        portfolio_dict = canonical_portfolio(portfolio_dict)
 
         # Fetch inputs via shared utilities
         weights, price_data, dividend_data = prepare_portfolio_data(

@@ -8,12 +8,10 @@ from app.core.calculations.performance.calculator import PerformanceCalculator
 import pandas as pd
 from app.core.calculations.core.config import DEFAULT_RF_ANNUAL, DEFAULT_TRADING_DAYS, DEFAULT_LOOKBACK_LONG
 from app.models.portfolio_models import PortfolioInput
-from app.utils.gpt_parser import canonical_portfolio
-from app.utils.decorators.tool_validation import log_simulation_data_range, validate_portfolio_dict, validate_required_args
+from app.utils.decorators.tool_validation import log_simulation_data_range
+from app.utils.tool_validator import ToolValidator
 
 
-@validate_required_args('portfolio_dict')
-@validate_portfolio_dict()
 @log_simulation_data_range()
 def calculate_portfolio_performance(portfolio_dict: PortfolioInput | dict, lookback_days=DEFAULT_LOOKBACK_LONG, use_total_returns=True, rf_annual=0.04, benchmark="SPY",
     _simulation_date: Optional[datetime] = None) -> str:
@@ -29,11 +27,21 @@ def calculate_portfolio_performance(portfolio_dict: PortfolioInput | dict, lookb
     Returns:
         dict: All performance metrics rounded to 4 decimals
     """
-    try:
-        if not portfolio_dict:
-            return yaml.dump({"success": True, "data": {}}, default_flow_style=False)
+    # Validate inputs
+    v = ToolValidator()
+    v.require_portfolio('portfolio_dict', portfolio_dict, normalize=True)
+    v.optional_numeric('lookback_days', lookback_days, default=DEFAULT_LOOKBACK_LONG, min_val=1, positive_only=True)
+    v.optional_numeric('rf_annual', rf_annual, default=0.04, min_val=0, max_val=1)
 
-        portfolio_dict = canonical_portfolio(portfolio_dict)
+    if not v.is_valid():
+        return v.error_response()
+
+    # Get validated/normalized values
+    portfolio_dict = v.get('portfolio_dict')
+    lookback_days = v.get('lookback_days')
+    rf_annual = v.get('rf_annual')
+
+    try:
 
         # Get portfolio returns
         portfolio_returns, weights = get_portfolio_returns(

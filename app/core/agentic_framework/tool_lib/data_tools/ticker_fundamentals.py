@@ -29,7 +29,7 @@ def get_fundamental_data(ticker: str = None, statement_type: str = None, quarter
 
 # Tool Schema Constants
 GET_TICKER_FUNDAMENTAL_DATA_DESCRIPTION = (
-    "Get fundamental financial data for a ticker including income statements, balance sheets, cash flow statements, financial ratios, or analyst estimates.\n\n"
+    "Get fundamental financial data for a ticker including income statements, balance sheets, cash flow statements, or financial ratios.\n\n"
     "Example: get_ticker_fundamental_data(ticker='KO', statement_type='balance_sheet', quarters_back=2)"
 )
 
@@ -42,8 +42,8 @@ GET_TICKER_FUNDAMENTAL_DATA_PARAMETERS = {
         },
         "statement_type": {
             "type": "string",
-            "description": "Type of fundamental data to retrieve. Must be one of: 'income_statement', 'balance_sheet', 'cash_flow', 'financial_ratios', 'analyst_estimates'.",
-            "enum": ["income_statement", "balance_sheet", "cash_flow", "financial_ratios", "analyst_estimates"]
+            "description": "Type of fundamental data to retrieve. Must be one of: 'income_statement', 'balance_sheet', 'cash_flow', 'financial_ratios'.",
+            "enum": ["income_statement", "balance_sheet", "cash_flow", "financial_ratios"]
         },
         "quarters_back": {
             "type": "integer",
