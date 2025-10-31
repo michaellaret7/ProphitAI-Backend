@@ -39,7 +39,7 @@ class RedisCache:
                 encoding="utf-8",
                 socket_connect_timeout=10,  # Increased for initial connection
                 socket_timeout=30,  # Increased for large data transfers
-                ssl_cert_reqs=None  # Required for rediss:// connections
+                # ssl_cert_reqs=None  # Required for rediss:// connections
             )
             
             # Test connection
