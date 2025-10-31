@@ -8,7 +8,7 @@ Provides services for:
 """
 
 from app.services.shared.agent_runs import start_agent_run, RESULT_CACHE_KEY_TEMPLATE, RESULT_CACHE_TTL
-from app.services.shared.price import PriceService, TickerReturnsService
+from app.services.shared.price import PriceService
 from app.services.shared.websocket_manager import (
     WebSocketConnectionManager,
     ws_manager,
@@ -20,7 +20,6 @@ __all__ = [
     'RESULT_CACHE_KEY_TEMPLATE',
     'RESULT_CACHE_TTL',
     'PriceService',
-    'TickerReturnsService',
     'WebSocketConnectionManager',
     'ws_manager',
     'attach_agent_stream',
