@@ -13,6 +13,7 @@ from app.api.routes.cache_router import router as cache_router
 from app.api.routes.agent_runs_router import router as agent_runs_router
 from app.redis.client import cache
 from app.api.routes.broker_router import router as broker_router
+from app.api.routes.ticker_router import router as ticker_router
 
 # Configure logging to show cache hit/miss INFO messages
 logging.basicConfig(
@@ -68,6 +69,7 @@ app.include_router(price_router, prefix="/api")
 app.include_router(cache_router, prefix="/api")
 app.include_router(agent_runs_router, prefix="/api")
 app.include_router(broker_router, prefix="/api")
+app.include_router(ticker_router, prefix="/api")
 
 # Serve test frontend (WebSocket stream viewer)
 app.mount("/static", StaticFiles(directory="app/api/testing/static"), name="static")
