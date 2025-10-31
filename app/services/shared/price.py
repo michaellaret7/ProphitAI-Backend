@@ -70,6 +70,81 @@ class PriceService:
         }
 
 
+class TickerReturnsService:
+    """
+    Service for calculating and formatting daily returns for a single ticker
+    """
+
+    def get_ticker_returns(self, ticker: str, years: int) -> Dict[str, Any]:
+        """
+        Calculate daily returns for a ticker over specified number of years.
+
+        Args:
+            ticker: Stock ticker symbol
+            years: Number of years of historical data (1-10)
+
+        Returns:
+            Dict containing payload for response envelope with daily returns
+
+        Raises:
+            ValueError: If no price data found or invalid parameters
+        """
+        # Validate inputs
+        if not ticker:
+            raise ValueError("Ticker is required")
+        if years < 1 or years > 10:
+            raise ValueError("Years must be between 1 and 10")
+
+        # Calculate date range
+        end_date = datetime.now()
+        start_date = end_date - timedelta(days=years * 365)
+
+        # Format dates as strings
+        start_date_str = start_date.strftime('%Y-%m-%d')
+        end_date_str = end_date.strftime('%Y-%m-%d')
+
+        # Fetch price data
+        price_data_map = fetch_bulk_price_data_for_tickers(
+            tickers=[ticker.upper()],
+            start_date_str=start_date_str,
+            end_date_str=end_date_str,
+            frequency='daily'
+        )
+
+        ticker_upper = ticker.upper()
+        if not price_data_map or ticker_upper not in price_data_map:
+            raise ValueError(f"No price data found for ticker: {ticker}")
+
+        # Get price series
+        price_series = price_data_map[ticker_upper]
+
+        if price_series.empty:
+            raise ValueError(f"No price data found for ticker: {ticker}")
+
+        # Calculate daily returns (as decimals: 0.015 = 1.5% gain)
+        returns_series = price_series.pct_change()
+
+        # Remove first NaN value from pct_change()
+        returns_series = returns_series.dropna()
+
+        # Format returns data
+        returns_data = [
+            {
+                "date": date.strftime('%Y-%m-%d'),
+                "return": round(float(ret), 6)  # Round to 6 decimal places for precision
+            }
+            for date, ret in returns_series.items()
+        ]
+
+        return {
+            'ticker': ticker_upper,
+            'returns': returns_data,
+            'startDate': start_date_str,
+            'endDate': end_date_str,
+            'totalDataPoints': len(returns_data)
+        }
+
+
 if __name__ == "__main__":
     price_service = PriceService()
     print(price_service.get_stock_prices(['AAPL', 'MSFT'], 365))
