@@ -1132,7 +1132,10 @@ class UpdateFundamentalData:
             print(f"Fundamental data update failed: {e}")
             raise
         finally:
-            session.close()
+            try:
+                session.close()
+            except Exception as e:
+                print(f"Warning: Error closing session (data was saved successfully): {e}")
     
     def _print_summary(self, duration, results):
         """Print a detailed summary of the update process"""

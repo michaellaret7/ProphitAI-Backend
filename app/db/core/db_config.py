@@ -28,6 +28,7 @@ market_engine = create_engine(
     pool_size=20,
     max_overflow=0,
     pool_pre_ping=True,  # Verify connections before using
+    pool_recycle=3600,  # Recycle connections after 1 hour
     echo=False  # Set to True for debugging
 )
 
@@ -36,6 +37,7 @@ user_engine = create_engine(
     pool_size=10,
     max_overflow=5,
     pool_pre_ping=True,
+    pool_recycle=3600,
     echo=False
 )
 
@@ -44,6 +46,7 @@ prophit_alts_engine = create_engine(
     pool_size=10,
     max_overflow=5,
     pool_pre_ping=True,
+    pool_recycle=3600,
     echo=False
 )
 
