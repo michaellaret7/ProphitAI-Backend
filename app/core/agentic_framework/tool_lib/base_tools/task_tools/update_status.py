@@ -4,7 +4,6 @@ import yaml
 from typing import Dict, Any, Optional
 from app.core.agentic_framework.base_agent.tasks.models import TaskStatus
 
-
 def update_task_status(
     agent,
     task_id: str,

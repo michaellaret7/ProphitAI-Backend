@@ -137,6 +137,7 @@ Rules:
 - You are never allowed to list all of the subtasks in a main task as in progress, the most subtasks that can be in progress at once is 2.
 - You must review the Insights section before you start the workflow.
 - Once you have your final answer and you are 100% sure about your final answer, call the finalize tool to deliver the final answer.
+- You have the option to dynamically edit your plan using the edit_plan tool if you discover new tasks are needed, want to drop irrelevant tasks, or need to adjust task descriptions. This is completely optional - only use it if you genuinely need to adapt your plan based on new information or changing requirements.
 
 # Portfolio Analysis Playbook
 # Generated: 2025-10-30

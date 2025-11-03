@@ -5,6 +5,11 @@ from app.core.agentic_framework.tool_lib.base_tools.task_management import (
     UPDATE_TASKS_DESCRIPTION,
     UPDATE_TASKS_PARAMETERS
 )
+from app.core.agentic_framework.tool_lib.base_tools.edit_plan import (
+    create_edit_plan_wrapper,
+    EDIT_PLAN_DESCRIPTION,
+    EDIT_PLAN_PARAMETERS
+)
 from app.core.agentic_framework.tool_lib.base_tools.notes import (
     write_note as notes_write,
     WRITE_NOTE_DESCRIPTION,
@@ -79,6 +84,14 @@ def register_base_tools(agent: Any) -> None:
             work_summary=work_summary,
             output_dir=getattr(agent, "output_dir", None)
         ),
+    )
+
+    # edit_plan (dynamic plan modification)
+    agent.add_tool(
+        name="edit_plan",
+        description=EDIT_PLAN_DESCRIPTION,
+        parameters=EDIT_PLAN_PARAMETERS,
+        function=create_edit_plan_wrapper(agent),
     )
 
     # write_note (notes)

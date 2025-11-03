@@ -107,6 +107,14 @@ class AgentExecutionLoop:
                         tools=tools if tools else None,
                         **({"reasoning_effort": self.agent.reasoning_effort} if getattr(self.agent, "reasoning_effort", None) is not None else {}),
                         **({"temperature": self.agent.temperature} if getattr(self.agent, "temperature", None) is not None else {}),
+                        **({
+                            "extra_body": {
+                                "thinking": {
+                                    "type": "enabled",
+                                    "budget_tokens": 2000
+                                }
+                            }
+                        } if (getattr(self.agent, "extended_thinking", False) and getattr(self.agent, "provider", "").lower() == "anthropic") else {})
                     )
 
                     # Accumulate actual token usage from LLM response

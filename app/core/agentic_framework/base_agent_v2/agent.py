@@ -36,6 +36,7 @@ class BaseAgent:
         print_mode: Union[str, PrintMode] = PrintMode.VERBOSE,
         reasoning_effort: str = None,
         temperature: float = None,
+        extended_thinking: bool = False,
         plan_first: bool = True,
     ):
         """Initialize agent.
@@ -61,6 +62,7 @@ class BaseAgent:
         # API Call parameters
         self.reasoning_effort = reasoning_effort
         self.temperature = temperature
+        self.extended_thinking = extended_thinking
 
         # State and planning args
         self.plan_first = plan_first
