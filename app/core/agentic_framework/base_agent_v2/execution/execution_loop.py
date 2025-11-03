@@ -10,7 +10,6 @@ from app.core.agentic_framework.base_agent_v2.planning.plan_prompt import plan_p
 from app.core.agentic_framework.base_agent_v2.planning.plan_parser import parse_plan_with_gpt
 from app.core.agentic_framework.base_agent_v2.utils.models import *
 from app.core.agentic_framework.base_agent_v2.execution.utils import (
-    is_final,
     extract_final_answer,
     build_plan_context
 )
@@ -175,27 +174,27 @@ class ExecutionLoop:
                     })
                     self.agent.tool_handler.handle_tool_calls(assistant_message.tool_calls)
 
-                # Check for finality
-                elif is_final(assistant_text):
-                    final_answer = extract_final_answer(assistant_text)
-                    stop_reason = "final_answer"
-
-                    # Add final answer to message history
-                    self.agent.messages.append({
-                        "role": "assistant",
-                        "content": assistant_text
-                    })
-
-                    # Log final answer to messages.yaml
+                    # Detect finalize tool and terminate with provided answer
+                    # This looks for the function name "finalize" in the tool calls
                     try:
-                        iteration_indices = getattr(self.agent, "_iteration_message_indices", None)
-                        write_messages_to_yaml(self.agent.messages, output_dir=getattr(self.agent, "output_dir", None), iteration_indices=iteration_indices)
-                    except Exception as e:
-                        print(f"⚠️  Warning: Failed to write final answer to messages.yaml: {e}")
+                        for tc in assistant_message.tool_calls:
+                            name = getattr(tc.function, "name", "")
+                            if name in ("finalize", "final_answer", "final_answer_tool"):
+                                import json as _json
+                                args = {}
+                                try:
+                                    args = _json.loads(getattr(tc.function, "arguments", "") or "{}")
+                                except Exception:
+                                    args = {}
+                                    
+                                final_answer = args.get("answer") or extract_final_answer(assistant_text or "")
+                                stop_reason = "finalize_tool"
 
-                    break
+                                raise StopIteration
+                    except StopIteration:
+                        break
 
-                # LLM returned text without tools or finality
+                # LLM returned text without tools
                 else:
                     self.agent.messages.append({
                         "role": "assistant",

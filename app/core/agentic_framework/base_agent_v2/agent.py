@@ -126,9 +126,10 @@ class BaseAgent:
         """
         # Build initial messages
         self.messages = [
-            {"role": "system", "content": self.system_prompt},
             {"role": "system", "content": "## PER-TURN OUTPUT SCHEMA\nThinking: Why this step? What am I getting out of this step? Is this step productive and helpful? Be thorough, detailed, and precise in your thinking. \nNextStep: next actionable step to take.\n"},
-            {"role": "user", "content": self.user_prompt}
+            {"role": "system", "content": self.system_prompt},
+            {"role": "user", "content": self.user_prompt},
+            
         ]
 
         print(f"\n{'='*60}")

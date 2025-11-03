@@ -136,6 +136,7 @@ Rules:
 - You are never allowed to skip any main or sub tasks. (there will be severe consequences if you do)
 - You are never allowed to list all of the subtasks in a main task as in progress, the most subtasks that can be in progress at once is 2.
 - You must review the Insights section before you start the workflow.
+- Once you have your final answer and you are 100% sure about your final answer, call the finalize tool to deliver the final answer.
 
 # Portfolio Analysis Playbook
 # Generated: 2025-10-30
@@ -807,7 +808,7 @@ meta_insights:
         provider="anthropic",  # Use OpenAI
         model="claude-haiku-4-5-20251001",  # Use GPT-4o for complex analysis
         max_iterations=100,  # Allow many iterations for thorough analysis
-        print_mode=PrintMode.VERBOSE,
+        print_mode=PrintMode.DEBUG,
         plan_first=True,  # Create a plan before executing
         reasoning_effort="high",
         temperature=0.5

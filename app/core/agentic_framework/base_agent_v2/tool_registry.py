@@ -10,6 +10,11 @@ from app.core.agentic_framework.tool_lib.base_tools.notes import (
     WRITE_NOTE_DESCRIPTION,
     WRITE_NOTE_PARAMETERS,
 )
+from app.core.agentic_framework.tool_lib.base_tools.finalize import (
+    finalize as finalize_tool,
+    FINALIZE_DESCRIPTION,
+    FINALIZE_PARAMETERS,
+)
 from typing import Any
 
 def register_base_tools(agent: Any) -> None:
@@ -86,4 +91,12 @@ def register_base_tools(agent: Any) -> None:
             content=content,
             output_dir=str(getattr(agent, "output_dir", ""))
         ),
+    )
+
+    # finalize (final answer)
+    agent.add_tool(
+        name="finalize",
+        description=FINALIZE_DESCRIPTION,
+        parameters=FINALIZE_PARAMETERS,
+        function=lambda answer, meta=None, **kwargs: finalize_tool(answer=answer, meta=meta),
     )

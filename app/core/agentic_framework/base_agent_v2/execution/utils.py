@@ -1,7 +1,6 @@
 """Execution utilities for the ExecutionLoop.
 
 Contains helper functions for:
-- Finality detection
 - Final answer extraction
 - Plan context building
 """
@@ -12,22 +11,6 @@ from app.core.agentic_framework.base_agent_v2.logging.task_state_logger import f
 
 if TYPE_CHECKING:
     from ..agent import BaseAgent
-
-
-def is_final(text: str) -> bool:
-    """Check if text contains finality marker.
-
-    Args:
-        text: Assistant response text
-
-    Returns:
-        True if text indicates final answer
-    """
-    if not text:
-        return False
-    text_lower = text.strip().lower()
-    return text_lower.startswith("final answer:") or "final answer:" in text_lower
-
 
 def extract_final_answer(text: str) -> str:
     """Extract final answer text after marker.
