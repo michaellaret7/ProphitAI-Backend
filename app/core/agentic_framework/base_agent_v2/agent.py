@@ -13,6 +13,8 @@ from app.core.agentic_framework.base_agent_v2.tool_registry import register_base
 from app.core.agentic_framework.base_agent_v2.utils.path_utils import create_agent_output_dir
 from app.core.agentic_framework.base_agent_v2.logging.notes import ensure_notes_file
 from app.core.agentic_framework.base_agent_v2.utils.agent_message import UNIVERSAL_AGENT_MESSAGE
+from datetime import datetime
+from typing import Optional
 
 load_dotenv()
 
@@ -37,7 +39,8 @@ class BaseAgent:
         print_mode: Union[str, PrintMode] = PrintMode.VERBOSE,
         reasoning_effort: str = None,
         temperature: float = None,
-        plan_first: bool = True
+        plan_first: bool = True,
+        simulation_date: Optional[datetime] = None
     ):
         """Initialize agent.
 
@@ -49,6 +52,9 @@ class BaseAgent:
             print_mode: Output verbosity ('production', 'verbose', or 'debug')
             reasoning_effort: Reasoning effort level
             temperature: Temperature for the API call
+            simulation_date: Optional datetime for backtesting. If provided, automatically
+                           injects _simulation_date into all tool calls to enable historical
+                           data filtering and prevent look-ahead bias.
         """
         self.provider = provider
         self.model, self.client = resolve_llm_and_client(provider=self.provider, model=model)
@@ -66,6 +72,7 @@ class BaseAgent:
         # State and planning args
         self.plan_first = plan_first
         self.plan = None  # Parsed plan from planning phase
+        self.simulation_date = simulation_date  # For simulation mode: inject _simulation_date into all tool calls
 
         # Tool registry
         self.tools: List[Dict[str, Any]] = []

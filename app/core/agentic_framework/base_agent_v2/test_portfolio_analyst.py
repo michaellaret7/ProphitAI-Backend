@@ -6,6 +6,8 @@ evidence-backed trade ideas using portfolio and ticker tools.
 
 from app.core.agentic_framework.base_agent_v2.agent import BaseAgent
 from app.core.agentic_framework.base_agent_v2.utils.models import PrintMode
+from datetime import datetime
+import random
 
 # Import tool definitions from tool_lib
 from app.core.agentic_framework.tool_lib.portfolio_tools.concentration import (
@@ -66,27 +68,35 @@ def register_portfolio_analysis_tools(agent: BaseAgent) -> None:
 def main():
     """Run portfolio analysis agent on a sample portfolio."""
 
-    # Sample portfolio - Mix of strong performers and weak performers
-    # This portfolio hasn't been rebalanced and shows both winners and losers
-    sample_portfolio = {
-        # Strong performers (AI/Tech winners)
-        "NVDA": {"allocation": 0.15, "position": "long"},   # 15% Nvidia - AI chip leader
-        "PLTR": {"allocation": 0.08, "position": "long"},   # 8% Palantir - AI/Data analytics
-        "AVGO": {"allocation": 0.07, "position": "long"},   # 7% Broadcom - Semiconductors
-        "HIMS": {"allocation": 0.06, "position": "long"},   # 6% Hims & Hers - Telehealth
+    # Build a random 15-position portfolio with 60% equities and 40% ETFs
+    equity_candidates = [
+        "AAPL", "MSFT", "GOOGL", "AMZN", "IBM", "ORCL", "CSCO", "INTC", "JNJ",
+        "MRK", "ABBV", "PG", "KO", "PEP", "WMT", "HD", "XOM", "CVX", "JPM", "BAC"
+    ]
+    etf_candidates = [
+        "SPY", "VOO", "VTI", "IVV", "IWM", "EFA", "EEM", "AGG", "BND", "LQD",
+        "HYG", "VNQ", "XLV", "XLF", "XLE", "XLU", "XLI", "XLY", "XLC", "XLB"
+    ]
+    excluded_high_growth = {"NVDA", "PLTR"}
+    equity_pool = [t for t in equity_candidates if t not in excluded_high_growth]
 
-        # Solid large caps (moderate performers)
-        "AAPL": {"allocation": 0.12, "position": "long"},   # 12% Apple - Steady performer
-        "MSFT": {"allocation": 0.12, "position": "long"},   # 12% Microsoft - AI exposure
-        "JPM": {"allocation": 0.08, "position": "long"},    # 8% JPMorgan - Financials
+    equities_count, etfs_count = 9, 6  # total 15 positions
+    selected_equities = random.sample(equity_pool, equities_count)
+    selected_etfs = random.sample(etf_candidates, etfs_count)
 
-        # Weak performers (losers needing review)
-        "INTC": {"allocation": 0.10, "position": "long"},   # 10% Intel - Down 60% in 2024
-        "KR": {"allocation": 0.09, "position": "long"},    # 9% Walgreens - Down 64% in 2024
-        "MRNA": {"allocation": 0.07, "position": "long"},   # 7% Moderna - Down 60%, post-COVID decline
-        "EL": {"allocation": 0.04, "position": "long"},     # 4% Estée Lauder - China exposure issues
-        "GLOB": {"allocation": 0.02, "position": "long"},   # 2% Globant - Down 57% in 2025
-    }
+    def generate_weights(count, total):
+        raw = [random.random() for _ in range(count)]
+        s = sum(raw) or 1.0
+        return [w / s * total for w in raw]
+
+    equity_weights = generate_weights(equities_count, 0.60)
+    etf_weights = generate_weights(etfs_count, 0.40)
+
+    sample_portfolio = {}
+    for ticker, w in zip(selected_equities, equity_weights):
+        sample_portfolio[ticker] = {"allocation": round(w, 4), "position": "long"}
+    for ticker, w in zip(selected_etfs, etf_weights):
+        sample_portfolio[ticker] = {"allocation": round(w, 4), "position": "long"}
 
     # System prompt - defines the agent's role and capabilities
     system_prompt = """
@@ -125,10 +135,37 @@ Please perform the following analysis:
    - Summarize portfolio weaknesses (areas of concern)
 
 4. **Trade Idea**:
-   - Based on your analysis, propose ONE specific trade idea
+   - Based on your analysis, propose TWO-FOUR specific trade ideas
    - The trade should address a weakness OR capitalize on a strength
    - Back your recommendation with specific evidence from your analysis
    - Be specific: What to buy/sell, how much, and why
+
+Output JSON Format:
+{{
+    "initial_portfolio": {{
+        "TICKER": {{
+            "allocation": 0.10,
+            "position": "long"
+        }}
+    }},
+    "final_portfolio": {{
+        "TICKER": {{
+            "allocation": 0.10,
+            "position": "long"
+        }}
+    }},
+    "changes": {{
+        "added": {{
+            "TICKER": "Reason for adding this ticker"
+        }},
+        "removed": {{
+            "TICKER": "Reason for removing this ticker"
+        }},
+        "adjusted": {{
+            "TICKER": "Reason for allocation adjustment"
+        }}
+    }}
+}}
 
 Take your time and be thorough. Use the available tools to gather evidence before making conclusions. Be concise in your final answer.
 
@@ -145,13 +182,14 @@ Rules:
         system_prompt=system_prompt,
         user_prompt=user_prompt,
         provider="anthropic",  # Use OpenAI
-        model="claude-haiku-4-5-20251001",
-        # model="claude-sonnet-4-5-20250929",  # Use GPT-4o for complex analysis
+        # model="claude-haiku-4-5-20251001",
+        model="claude-sonnet-4-5-20250929",  # Use GPT-4o for complex analysis
         max_iterations=100,  # Allow many iterations for thorough analysis
         print_mode=PrintMode.VERBOSE,
         plan_first=True,  # Create a plan before executing
         temperature=0.7,
-        reasoning_effort="high"
+        reasoning_effort="high",
+        simulation_date=datetime(2024, 1, 1)
     )
 
     # Register analysis tools

@@ -1,4 +1,6 @@
 import yaml
+from datetime import datetime
+from typing import Optional
 from app.core.calculations.portfolio.utils import prepare_portfolio_data
 from app.core.calculations.returns.calculator import ReturnsCalculator
 from app.core.calculations.risk.calculator import RiskCalculator
@@ -8,14 +10,22 @@ import pandas as pd
 import numpy as np
 from app.core.calculations.core.helpers import build_returns_df_from_price_map
 from app.utils.tool_validator import ToolValidator
+from app.utils.decorators.tool_validation import log_simulation_data_range
 
-def risk_contribution(portfolio_dict: PortfolioInput | dict = None, metric: str = 'vol') -> str:
+@log_simulation_data_range()
+def risk_contribution(
+    portfolio_dict: PortfolioInput | dict = None,
+    metric: str = 'vol',
+    *,
+    _simulation_date: Optional[datetime] = None
+) -> str:
     """
     Calculate Total Risk and risk contributions by asset.
 
     Parameters:
     - portfolio_dict: Portfolio configuration mapping ticker -> {allocation, position}
     - metric: Risk metric to decompose {'vol', 'var'}
+    - _simulation_date: INTERNAL USE ONLY - For simulation mode, not exposed to agents
 
     Returns:
     - TR: Total Risk (portfolio level)
@@ -47,7 +57,8 @@ def risk_contribution(portfolio_dict: PortfolioInput | dict = None, metric: str 
         weights_dict, price_data, _ = prepare_portfolio_data(
             portfolio=portfolio_dict,
             lookback_days=DEFAULT_LOOKBACK_SHORT,
-            include_dividends=False
+            include_dividends=False,
+            _simulation_date=_simulation_date
         )
 
         if not price_data:

@@ -1,6 +1,7 @@
 import yaml
 from typing import Optional
 from datetime import datetime
+import pandas as pd
 from app.core.calculations.portfolio.utils import get_portfolio_returns
 from app.core.calculations.returns.calculator import ReturnsCalculator
 from app.core.calculations.core.config import DEFAULT_LOOKBACK_LONG
@@ -53,6 +54,20 @@ def calculate_portfolio_returns_metrics(portfolio_dict: PortfolioInput | dict, l
             _simulation_date=_simulation_date
         )
 
+        # Log actual data range
+        if isinstance(portfolio_total_returns, pd.Series) and len(portfolio_total_returns) > 0:
+            if hasattr(portfolio_total_returns, 'index') and isinstance(portfolio_total_returns.index, pd.DatetimeIndex):
+                start_date = portfolio_total_returns.index.min().date()
+                end_date = portfolio_total_returns.index.max().date()
+                count = len(portfolio_total_returns)
+                print(f"  📅 ACTUAL DATA USED:")
+                # Check if data exceeds simulation cutoff
+                if _simulation_date:
+                    cutoff_ok = portfolio_total_returns.index.max() <= _simulation_date
+                    cutoff_status = "✅" if cutoff_ok else "⚠️ EXCEEDS CUTOFF"
+                    print(f"    • portfolio_returns: {start_date} → {end_date} ({count} points) {cutoff_status}")
+                else:
+                    print(f"    • portfolio_returns: {start_date} → {end_date} ({count} points)")
 
         # Calculate metrics
         ann_price_return = ReturnsCalculator.annualized_return(portfolio_price_returns, 252)

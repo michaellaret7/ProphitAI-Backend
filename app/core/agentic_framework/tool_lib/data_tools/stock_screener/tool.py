@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+from datetime import datetime
 from typing import Any, Dict, List, Optional
 
 import pandas as pd
@@ -186,7 +187,7 @@ def _check_industry_mismatch(parsed: ScreenerConstraints, criteria: Dict) -> Lis
 
 # ============================= Main Tool Interface ============================= #
 
-def screener(constraints: str) -> str:
+def screener(constraints: str, *, _simulation_date: Optional[datetime] = None) -> str:
     """
     Screen stocks based on fundamental criteria using natural language.
 
@@ -196,9 +197,17 @@ def screener(constraints: str) -> str:
             - "Find large-cap tech stocks with PE < 20 and ROE > 15%"
             - "Show profitable food companies with market cap over $5B, sorted by dividend yield"
             - "Mid-cap value stocks with low debt and high margins"
+        _simulation_date: INTERNAL USE ONLY - Not currently used. Screener queries
+                         most recent fundamental data snapshot only. Historical
+                         fundamental data screening not yet supported.
 
     Returns:
         YAML string with success status and screener results
+
+    Note:
+        Simulation mode is not currently supported for the stock screener.
+        The tool always returns results based on the most recent fundamental
+        data available in the database, regardless of simulation_date.
     """
     try:
         # Parse natural language to structured constraints

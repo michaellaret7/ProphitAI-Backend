@@ -1,17 +1,27 @@
 import yaml
+from datetime import datetime
+from typing import Optional
+import pandas as pd
 from app.core.calculations.portfolio.utils import get_portfolio_returns
 from app.core.calculations.risk.calculator import RiskCalculator
 from app.core.calculations.core.config import DEFAULT_LOOKBACK_LONG
 from app.models.portfolio_models import PortfolioInput
 import numpy as np
 from app.utils.tool_validator import ToolValidator
+from app.utils.decorators.tool_validation import log_simulation_data_range
 
-def drawdown_profile(portfolio_dict: PortfolioInput | dict = None) -> str:
+@log_simulation_data_range()
+def drawdown_profile(
+    portfolio_dict: PortfolioInput | dict = None,
+    *,
+    _simulation_date: Optional[datetime] = None
+) -> str:
     """
     Analyze portfolio drawdown characteristics.
 
     Parameters:
     - portfolio_dict: Portfolio configuration mapping ticker -> {allocation, position}
+    - _simulation_date: INTERNAL USE ONLY - For simulation mode, not exposed to agents
 
     Returns:
     - max_dd: Maximum drawdown (worst peak-to-trough decline)
@@ -36,11 +46,26 @@ def drawdown_profile(portfolio_dict: PortfolioInput | dict = None) -> str:
             portfolio=portfolio_dict,
             lookback_days=DEFAULT_LOOKBACK_LONG,  # 3 years for comprehensive drawdown analysis
             use_total_returns=False,  # Use price returns for drawdown analysis
-            dropna=True
+            dropna=True,
+            _simulation_date=_simulation_date
         )
 
         if portfolio_returns is None or portfolio_returns.empty:
             return yaml.dump({"success": False, "error": "No price data available"}, default_flow_style=False)
+
+        # Log actual data range
+        if isinstance(portfolio_returns, pd.Series) and len(portfolio_returns) > 0:
+            if hasattr(portfolio_returns, 'index') and isinstance(portfolio_returns.index, pd.DatetimeIndex):
+                start_date = portfolio_returns.index.min().date()
+                end_date = portfolio_returns.index.max().date()
+                count = len(portfolio_returns)
+                print(f"  📅 ACTUAL DATA USED:")
+                if _simulation_date:
+                    cutoff_ok = portfolio_returns.index.max() <= _simulation_date
+                    cutoff_status = "✅" if cutoff_ok else "⚠️ EXCEEDS CUTOFF"
+                    print(f"    • drawdown_data: {start_date} → {end_date} ({count} points) {cutoff_status}")
+                else:
+                    print(f"    • drawdown_data: {start_date} → {end_date} ({count} points)")
 
         # Calculate cumulative portfolio value (NAV)
         portfolio_nav = (1 + portfolio_returns).cumprod()

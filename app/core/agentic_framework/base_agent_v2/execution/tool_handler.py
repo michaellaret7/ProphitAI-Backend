@@ -69,9 +69,14 @@ class ToolHandler:
             # Print tool call with arguments in VERBOSE and DEBUG modes
             print(f"\nCalling tool: {_GREEN}{name}{_RESET}")
             if args:
-                print(f"   Arguments:")
-                for key, value in args.items():
-                    print(f"     - {_YELLOW}{key}: {value}{_RESET}")
+                # Filter out internal parameters for display
+                display_args = {k: v for k, v in args.items() if k != '_simulation_date'}
+                if display_args:
+                    print(f"   Arguments:")
+                    for key, value in display_args.items():
+                        print(f"     - {_YELLOW}{key}: {value}{_RESET}")
+                else:
+                    print(f"   Arguments: {_YELLOW}(none){_RESET}")
             else:
                 print(f"   Arguments: {_YELLOW}(none){_RESET}")
 
@@ -152,7 +157,13 @@ class ToolHandler:
             return {"error": error_msg}
 
         try:
-            result = func(**args)
+            # Auto-inject _simulation_date for simulation agents
+            # Make a copy to avoid modifying original args dict (used in validation/logging)
+            execution_args = args.copy()
+            if self.agent.simulation_date is not None and isinstance(execution_args, dict):
+                execution_args['_simulation_date'] = self.agent.simulation_date
+
+            result = func(**execution_args)
             return result
         except Exception as e:
             error_msg = f"Error executing {name}: {str(e)}"
