@@ -95,19 +95,30 @@ class ExecutionLoop:
                         "content": plan_context
                     })
 
-            # Inject per-turn THINK reminder (ephemeral) and clear prior failure summaries
+            # Inject per-turn THINK reminder (ephemeral) - maximizes reasoning at each iteration
             self.agent.messages = [
                 msg for msg in self.agent.messages
-                if not (msg.get("role") == "system" and "## THINK AT EACH STEP" in msg.get("content", ""))
+                if not (msg.get("role") == "system" and "## THINK DEEPLY THIS ITERATION" in msg.get("content", ""))
             ]
             self.agent.messages.append({
                 "role": "system",
                 "content": (
-                    "## THINK AT EACH STEP\n"
-                    "If there are tool result(s) above, ANALYZE them first: summarize key findings, important observations, explain any insights you have gained from the data.\n"
-                    "Your goal for the analysis is to gain insights and understanding of the data, and to use that understanding to form your final answer. Be highly analytical and detailed in your analysis."
-                    "Then write your 'Thinking:' explaining what you will do and why, what is the next step, and why it's important.\n"
-                    "If you will call a tool or tools, say which one and why it is being called.\n"
+                    "## THINK DEEPLY THIS ITERATION\n\n"
+                    "Before acting, engage in RIGOROUS thinking. Follow your PER-TURN OUTPUT SCHEMA.\n\n"
+                    "**If tool results exist above, analyze them deeply:**\n"
+                    "- What are the specific numbers/metrics? What do they MEAN in context?\n"
+                    "- What patterns, anomalies, or insights emerge from this data?\n"
+                    "- How does this integrate with previous findings? Does it confirm or contradict earlier hypotheses?\n"
+                    "- What are the limitations, caveats, or gaps in this data?\n"
+                    "- What is the CUMULATIVE picture emerging from all findings so far?\n\n"
+                    "**Then plan your next action strategically:**\n"
+                    "- What specific question am I answering? How does this advance my goal?\n"
+                    "- What alternatives exist? Why is my chosen approach superior?\n"
+                    "- If calling tools: which tools, what parameters, and WHY these specific choices?\n"
+                    "- What do I expect to learn? How will I use this information?\n"
+                    "- Self-critique: Am I being thorough enough? Any unjustified assumptions? Overlooked angles?\n\n"
+                    "Be COMPREHENSIVE in analysis, STRATEGIC in planning, and RIGOROUS in self-evaluation.\n"
+                    "Depth and precision over speed. Think like an expert analyst, not a task-completion robot.\n"
                 )
             })
 
@@ -123,14 +134,6 @@ class ExecutionLoop:
                     tool_choice="auto",
                     **({"reasoning_effort": self.agent.reasoning_effort} if getattr(self.agent, "reasoning_effort", None) is not None else {}),
                     **({"temperature": self.agent.temperature} if getattr(self.agent, "temperature", None) is not None else {}),
-                    **({
-                        "extra_body": {
-                            "thinking": {
-                                "type": "enabled",
-                                "budget_tokens": 2000
-                            }
-                        }
-                    } if (getattr(self.agent, "extended_thinking", False) and getattr(self.agent, "provider", "").lower() == "anthropic") else {})
                 )
 
                 if self.agent.print_mode == PrintMode.DEBUG:

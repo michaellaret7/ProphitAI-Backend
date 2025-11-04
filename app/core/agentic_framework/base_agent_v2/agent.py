@@ -12,6 +12,7 @@ from app.core.agentic_framework.base_agent_v2.utils.models import PrintMode
 from app.core.agentic_framework.base_agent_v2.tool_registry import register_base_tools
 from app.core.agentic_framework.base_agent_v2.utils.path_utils import create_agent_output_dir
 from app.core.agentic_framework.base_agent_v2.logging.notes import ensure_notes_file
+from app.core.agentic_framework.base_agent_v2.utils.agent_message import UNIVERSAL_AGENT_MESSAGE
 
 load_dotenv()
 
@@ -36,8 +37,7 @@ class BaseAgent:
         print_mode: Union[str, PrintMode] = PrintMode.VERBOSE,
         reasoning_effort: str = None,
         temperature: float = None,
-        extended_thinking: bool = False,
-        plan_first: bool = True,
+        plan_first: bool = True
     ):
         """Initialize agent.
 
@@ -62,7 +62,6 @@ class BaseAgent:
         # API Call parameters
         self.reasoning_effort = reasoning_effort
         self.temperature = temperature
-        self.extended_thinking = extended_thinking
 
         # State and planning args
         self.plan_first = plan_first
@@ -128,10 +127,9 @@ class BaseAgent:
         """
         # Build initial messages
         self.messages = [
-            {"role": "system", "content": "## PER-TURN OUTPUT SCHEMA\nThinking: Why this step? What am I getting out of this step? Is this step productive and helpful? Be thorough, detailed, and precise in your thinking. \nNextStep: next actionable step to take.\n"},
+            {"role": "system", "content": UNIVERSAL_AGENT_MESSAGE},
             {"role": "system", "content": self.system_prompt},
             {"role": "user", "content": self.user_prompt},
-            
         ]
 
         print(f"\n{'='*60}")
