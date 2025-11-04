@@ -1,6 +1,7 @@
 from app.core.calculations.core.data_service import DataService
 from typing import Dict, Any, Optional, Literal, List
 from datetime import datetime, date
+from decimal import Decimal
 
 def _filter_by_cutoff(statements: List, cutoff_date: date) -> List:
     """Filter statements to only include those on or before cutoff_date.
@@ -22,6 +23,44 @@ def _filter_by_cutoff(statements: List, cutoff_date: date) -> List:
         if s.date <= cutoff_date:
             filtered.append(s)
     return filtered
+
+
+def _serialize_sa_model(instance: Any) -> Dict[str, Any]:
+    """Serialize a SQLAlchemy model instance to a JSON-ready dict with all columns.
+
+    - Includes every column present on the model table
+    - Converts Decimal to float
+    - Converts date/datetime to ISO string
+    """
+    data: Dict[str, Any] = {}
+    # Fallback if instance doesn't expose __table__
+    columns = getattr(getattr(instance, "__table__", None), "columns", None)
+    if columns is None:
+        # best-effort: include public attrs only
+        for key, value in instance.__dict__.items():
+            if key.startswith("_"):
+                continue
+            if isinstance(value, (datetime, date)):
+                data[key] = str(value)
+            elif isinstance(value, Decimal):
+                data[key] = float(value)
+            else:
+                data[key] = float(value) if isinstance(value, (int, float)) else value
+        return data
+
+    for col in columns:
+        name = col.name
+        value = getattr(instance, name, None)
+        if value is None:
+            data[name] = None
+            continue
+        if isinstance(value, (datetime, date)):
+            data[name] = str(value)
+        elif isinstance(value, Decimal):
+            data[name] = float(value)
+        else:
+            data[name] = value
+    return data
 
 def get_fundamental_data(
     ticker: str,
@@ -226,3 +265,63 @@ def get_all_fundamentals(ticker: str, quarters_back: int = 1) -> Dict[str, Any]:
             result[statement_type] = {"error": data.get("error", "Unknown error")}
     
     return result
+
+
+def get_all_columns_fundamentals(
+    ticker: str,
+    statement_type: Literal["income_statement", "balance_sheet", "cash_flow", "financial_ratios", "analyst_estimates"],
+    quarters_back: int = 1,
+    _simulation_date: Optional[datetime] = None
+) -> Dict[str, Any]:
+    """
+    Retrieve fundamentals with ALL columns/fields as stored in the DB for a given ticker and statement type.
+
+    This mirrors get_fundamental_data but returns the full model payload using _serialize_sa_model.
+    """
+    ds = DataService()
+    try:
+        fundamentals = ds.get_fundamentals(ticker.upper())
+        result = {
+            "ticker": ticker.upper(),
+            "statement_type": statement_type,
+            "quarters_requested": quarters_back,
+            "data": []
+        }
+
+        if statement_type == "income_statement":
+            statements = fundamentals.income_statements if fundamentals.income_statements else []
+        elif statement_type == "balance_sheet":
+            statements = fundamentals.balance_sheets if fundamentals.balance_sheets else []
+        elif statement_type == "cash_flow":
+            statements = fundamentals.cash_flow_statements if fundamentals.cash_flow_statements else []
+        elif statement_type == "financial_ratios":
+            statements = fundamentals.financial_ratios if fundamentals.financial_ratios else []
+        elif statement_type == "analyst_estimates":
+            statements = fundamentals.analyst_estimates if fundamentals.analyst_estimates else []
+        else:
+            return {"error": f"Invalid statement_type: {statement_type}"}
+
+        if _simulation_date is not None:
+            statements = _filter_by_cutoff(statements, _simulation_date.date())
+
+        statements = statements[:quarters_back]
+
+        for stmt in statements:
+            period_data = _serialize_sa_model(stmt)
+            if statement_type == "balance_sheet":
+                try:
+                    if getattr(stmt, 'totalCurrentAssets', None) is not None and getattr(stmt, 'totalCurrentLiabilities', None) is not None:
+                        period_data["workingCapital"] = float(stmt.totalCurrentAssets - stmt.totalCurrentLiabilities)
+                except Exception:
+                    period_data["workingCapital"] = None
+            result["data"].append(period_data)
+
+        result["quarters_returned"] = len(result["data"])
+        return result
+    except Exception as e:
+        return {
+            "ticker": ticker.upper(),
+            "statement_type": statement_type,
+            "error": f"Failed to fetch fundamental data: {str(e)}"
+        }
+

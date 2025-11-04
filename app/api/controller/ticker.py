@@ -9,7 +9,7 @@ from typing import Any, Dict
 
 from app.api.response_envelope import ok_envelope
 from app.redis.client import cache
-from app.repositories.fundamental_data import get_all_fundamentals
+from app.repositories.fundamental_data import get_all_columns_fundamentals
 from app.utils.decorators.api_decorators import handle_controller_errors
 
 
@@ -20,10 +20,11 @@ async def get_ticker_fundamentals_controller(
     quarters_back: int = 4,
 ) -> Dict[str, Any]:
     """
-    Retrieve all fundamental financial data for a ticker.
+    Retrieve all fundamental financial data for a ticker (full column payloads).
 
     Returns income statements, balance sheets, cash flow statements,
-    and financial ratios in a single response.
+    financial ratios, and analyst estimates in a single response, using
+    all available fields from the database for each statement type.
 
     Cache TTL: 1 day (86400s)
 
@@ -42,11 +43,26 @@ async def get_ticker_fundamentals_controller(
     if cached_data:
         return cached_data
 
-    # Cache miss - fetch from database
-    fundamentals = get_all_fundamentals(
-        ticker=ticker,
-        quarters_back=quarters_back,
-    )
+    # Cache miss - fetch from database (full columns for each statement type)
+    statement_types = [
+        "income_statement",
+        "balance_sheet",
+        "cash_flow",
+        "financial_ratios",
+        "analyst_estimates",
+    ]
+
+    fundamentals: Dict[str, Any] = {
+        "ticker": ticker.upper(),
+        "quarters_requested": quarters_back,
+    }
+    for stype in statement_types:
+        data = get_all_columns_fundamentals(
+            ticker=ticker,
+            statement_type=stype,
+            quarters_back=quarters_back,
+        )
+        fundamentals[stype] = data.get("data") if isinstance(data, dict) and "error" not in data else {"error": data.get("error", "Unknown error")}
 
     # Build response envelope
     response = ok_envelope(
