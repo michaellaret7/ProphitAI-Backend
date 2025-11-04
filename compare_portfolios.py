@@ -5,45 +5,49 @@ Calculates and compares performance metrics for initial vs final portfolios.
 """
 
 import yaml
+from datetime import datetime
 from app.core.agentic_framework.tool_lib.portfolio_tools.performance import calculate_portfolio_performance
 from app.core.agentic_framework.tool_lib.portfolio_tools.returns import calculate_portfolio_returns_metrics
+from app.utils.time_utils import get_current_utc_time
 
 # Define portfolios
 final_portfolio = {
-    "MSFT": {"allocation": 0.10, "position": "long"},
-    "PG": {"allocation": 0.0643, "position": "long"},
-    "CSCO": {"allocation": 0.0565, "position": "long"},
-    "WMT": {"allocation": 0.024, "position": "long"},
-    "IBM": {"allocation": 0.1408, "position": "long"},
-    "ABBV": {"allocation": 0.0844, "position": "long"},
-    "JNJ": {"allocation": 0.0724, "position": "long"},
-    "PEP": {"allocation": 0.068, "position": "long"},
-    "EEM": {"allocation": 0.0393, "position": "long"},
-    "IWM": {"allocation": 0.0227, "position": "long"},
-    "XLE": {"allocation": 0.063, "position": "long"},
-    "AGG": {"allocation": 0.1054, "position": "long"},
-    "XLC": {"allocation": 0.0736, "position": "long"},
-    "VTI": {"allocation": 0.0056, "position": "long"},
-    "TFC": {"allocation": 0.04, "position": "long"},
-    "ARCC": {"allocation": 0.04, "position": "long"}
+    "MSFT": {"allocation": 0.0973, "position": "long"},
+    "AMZN": {"allocation": 0.0387, "position": "long"},
+    "JPM": {"allocation": 0.1239, "position": "long"},
+    "XOM": {"allocation": 0.0743, "position": "long"},
+    "PG": {"allocation": 0.0327, "position": "long"},
+    "ORCL": {"allocation": 0.0583, "position": "long"},
+    "AAPL": {"allocation": 0.0255, "position": "long"},
+    "PEP": {"allocation": 0.0633, "position": "long"},
+    "JNJ": {"allocation": 0.0061, "position": "long"},
+    "VNQ": {"allocation": 0.0305, "position": "long"},
+    "HYG": {"allocation": 0.0105, "position": "long"},
+    "EEM": {"allocation": 0.0241, "position": "long"},
+    "XLB": {"allocation": 0.0709, "position": "long"},
+    "XLE": {"allocation": 0.0571, "position": "long"},
+    "XLC": {"allocation": 0.127, "position": "long"},
+    "LLY": {"allocation": 0.06, "position": "long"},
+    "AMGN": {"allocation": 0.05, "position": "long"},
+    "LMT": {"allocation": 0.05, "position": "long"}
 }
 
 initial_portfolio = {
-    "MSFT": {"allocation": 0.0724, "position": "long"},
-    "PG": {"allocation": 0.0643, "position": "long"},
-    "CSCO": {"allocation": 0.0706, "position": "long"},
-    "WMT": {"allocation": 0.024, "position": "long"},
-    "IBM": {"allocation": 0.1408, "position": "long"},
-    "ABBV": {"allocation": 0.0222, "position": "long"},
-    "BAC": {"allocation": 0.0172, "position": "long"},
-    "JNJ": {"allocation": 0.1206, "position": "long"},
-    "PEP": {"allocation": 0.068, "position": "long"},
-    "EEM": {"allocation": 0.0561, "position": "long"},
-    "IWM": {"allocation": 0.0227, "position": "long"},
-    "XLE": {"allocation": 0.063, "position": "long"},
-    "AGG": {"allocation": 0.1054, "position": "long"},
-    "XLC": {"allocation": 0.1472, "position": "long"},
-    "VTI": {"allocation": 0.0056, "position": "long"}
+    "MSFT": {"allocation": 0.0973, "position": "long"},
+    "AMZN": {"allocation": 0.0087, "position": "long"},
+    "JPM": {"allocation": 0.1239, "position": "long"},
+    "XOM": {"allocation": 0.1243, "position": "long"},
+    "PG": {"allocation": 0.0327, "position": "long"},
+    "ORCL": {"allocation": 0.1183, "position": "long"},
+    "AAPL": {"allocation": 0.0255, "position": "long"},
+    "PEP": {"allocation": 0.0633, "position": "long"},
+    "JNJ": {"allocation": 0.0061, "position": "long"},
+    "VNQ": {"allocation": 0.0605, "position": "long"},
+    "HYG": {"allocation": 0.0405, "position": "long"},
+    "EEM": {"allocation": 0.0441, "position": "long"},
+    "XLB": {"allocation": 0.0709, "position": "long"},
+    "XLE": {"allocation": 0.0571, "position": "long"},
+    "XLC": {"allocation": 0.127, "position": "long"}
 }
 
 def validate_portfolio(portfolio_dict, name):
@@ -89,10 +93,17 @@ def calculate_and_display_performance(portfolio_dict, name):
     print(f"{name} Performance Metrics")
     print(f"{'=' * 60}")
 
+    # Calculate days from 2023-12-31 to today
+    start_date = datetime(2023, 12, 31)
+    current_date = get_current_utc_time()
+    lookback_days = (current_date - start_date).days
+
+    print(f"  Period: 2023-12-31 to {current_date.strftime('%Y-%m-%d')} ({lookback_days} days)")
+
     # Calculate comprehensive performance metrics
     result = calculate_portfolio_performance(
         portfolio_dict=portfolio_dict,
-        lookback_days=756,  # 3 years
+        lookback_days=lookback_days,
         use_total_returns=True,
         rf_annual=0.04,
         benchmark="SPY"
