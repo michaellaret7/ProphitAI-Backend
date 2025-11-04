@@ -21,6 +21,7 @@ async def get_ticker_fundamentals(
     ),
     quarters_back: int = Query(
         4,
+        alias="quartersBack",
         description="Number of historical quarters to return (max 32 quarters = 8 years)",
         ge=1,
         le=32,
