@@ -17,11 +17,14 @@ async def get_stock_prices(
     request: StockPriceRequest = Depends(parse_stock_price_request)
 ):
     """
-    Get stock price data for one or more tickers over the last X days
+    Get OHLCV stock price data for one or more tickers over the last X days
 
     Args:
         request: Validated request containing tickers and days parameters
             - tickers: List of ticker symbols (e.g., ['AAPL', 'MSFT', 'GOOGL'])
             - days: Number of days of historical price data to retrieve
+
+    Returns:
+        OHLCV data including open, high, low, close, and volume for each date
     """
     return await get_stock_prices_controller(tickers=request.tickers, days=request.days)

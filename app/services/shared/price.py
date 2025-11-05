@@ -1,6 +1,6 @@
 from typing import List, Dict, Any
 from datetime import datetime, timedelta
-from app.repositories.price_data import fetch_bulk_price_data_for_tickers
+from app.repositories.price_data import fetch_bulk_ohlcv_data_for_tickers
 from app.utils.time_utils import get_current_utc_time
 
 
@@ -11,14 +11,14 @@ class PriceService:
 
     def get_stock_prices(self, tickers: List[str], days: int) -> Dict[str, Any]:
         """
-        Fetch stock price data for multiple tickers over specified number of days.
+        Fetch OHLCV stock price data for multiple tickers over specified number of days.
 
         Args:
             tickers: List of stock ticker symbols
             days: Number of days of historical data to retrieve
 
         Returns:
-            Dict containing payload and counts for response envelope
+            Dict containing payload (with open, high, low, close, volume) and counts for response envelope
 
         Raises:
             ValueError: If no price data found for any ticker
@@ -31,12 +31,11 @@ class PriceService:
         start_date_str = start_date.strftime('%Y-%m-%d')
         end_date_str = end_date.strftime('%Y-%m-%d')
 
-        # Fetch price data using the bulk function
-        price_data_map = fetch_bulk_price_data_for_tickers(
+        # Fetch OHLCV data using the bulk function
+        price_data_map = fetch_bulk_ohlcv_data_for_tickers(
             tickers=tickers,
             start_date_str=start_date_str,
-            end_date_str=end_date_str,
-            frequency='daily'
+            end_date_str=end_date_str
         )
 
         if not price_data_map:
@@ -44,15 +43,19 @@ class PriceService:
 
         # Transform data into response format
         payload = []
-        for ticker, price_series in price_data_map.items():
+        for ticker, price_df in price_data_map.items():
             ticker_data = {
                 "ticker": ticker,
                 "data": [
                     {
                         "date": date.strftime('%Y-%m-%d'),
-                        "close": float(price)
+                        "open": float(row['open']),
+                        "high": float(row['high']),
+                        "low": float(row['low']),
+                        "close": float(row['close']),
+                        "volume": int(row['volume'])
                     }
-                    for date, price in price_series.items()
+                    for date, row in price_df.iterrows()
                 ]
             }
             payload.append(ticker_data)
