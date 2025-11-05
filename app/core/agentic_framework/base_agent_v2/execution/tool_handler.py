@@ -9,6 +9,7 @@ from app.core.agentic_framework.base_agent_v2.execution.tool_validation import v
 from app.core.agentic_framework.base_agent_v2.utils.models import PrintMode
 from app.core.agentic_framework.base_agent_v2.logging.message_logger import write_messages_to_yaml
 from app.core.agentic_framework.base_agent_v2.logging.tool_trace import log_tool_call
+from app.core.agentic_framework.base_agent_v2.context_manager import prune_completed_task_messages
 import yaml
 from app.core.agentic_framework.base_agent_v2.utils.models import TaskStatus
 
@@ -58,6 +59,11 @@ class ToolHandler:
                 "tool_calls": tool_calls
             })
 
+        # Track the index of the current assistant message (needed for pruning exclusion)
+        # CRITICAL: When pruning, we must exclude this message to avoid removing it while
+        # we're still processing its tool_calls (would orphan tool responses)
+        current_assistant_idx = len(self.agent.messages) - 1
+
         # Execute each tool
         for tool_call in tool_calls:
             name = tool_call.function.name
@@ -82,6 +88,65 @@ class ToolHandler:
 
             # Execute tool and return the result
             result = self._execute_tool(name, args)
+
+            # Context window management: Prune old tool calls at state transitions
+            # Key insight: Delete tool calls only AFTER the next state is reached
+            # This prevents infinite loops - model needs to see state transitions
+
+            # When marking a task complete, prune old in_progress calls for that task
+            if name == "update_tasks" and args.get("status") in ("complete", "completed"):
+                try:
+                    result_dict = yaml.safe_load(result) if isinstance(result, str) else result
+                    if result_dict.get("success"):
+                        main_task = args.get("main_task")
+                        subtasks = args.get("subtasks")
+
+                        # Prune in_progress tool calls for THIS task (excluding current complete)
+                        # Model has seen the in_progress status, now we can clean it up
+                        self.agent.messages = prune_completed_task_messages(
+                            messages=self.agent.messages,
+                            main_task=main_task,
+                            subtasks=subtasks,
+                            exclude_index=current_assistant_idx,
+                            verbose=(self.agent.print_mode != PrintMode.PRODUCTION),
+                            prune_status="in_progress"  # Only prune in_progress calls
+                        )
+
+                        # Recalculate index after pruning
+                        for i in range(len(self.agent.messages) - 1, -1, -1):
+                            msg = self.agent.messages[i]
+                            if msg.get("role") == "assistant" and msg.get("tool_calls") == tool_calls:
+                                current_assistant_idx = i
+                                break
+
+                except Exception as e:
+                    if self.agent.print_mode == PrintMode.DEBUG:
+                        print(f"⚠️  Warning: Failed to prune in_progress messages: {e}")
+
+            # When starting a new task, prune ALL old completed calls
+            elif name == "update_tasks" and args.get("status") == "in_progress":
+                try:
+                    result_dict = yaml.safe_load(result) if isinstance(result, str) else result
+                    if result_dict.get("success"):
+                        # Prune ALL completed tool calls from ALL tasks (excluding current in_progress)
+                        # Model has seen the completions, now we can clean them up
+                        self.agent.messages = prune_completed_task_messages(
+                            messages=self.agent.messages,
+                            exclude_index=current_assistant_idx,
+                            verbose=(self.agent.print_mode != PrintMode.PRODUCTION),
+                            prune_all_completed=True  # Prune ALL completed tasks
+                        )
+
+                        # Recalculate index after pruning
+                        for i in range(len(self.agent.messages) - 1, -1, -1):
+                            msg = self.agent.messages[i]
+                            if msg.get("role") == "assistant" and msg.get("tool_calls") == tool_calls:
+                                current_assistant_idx = i
+                                break
+
+                except Exception as e:
+                    if self.agent.print_mode == PrintMode.DEBUG:
+                        print(f"⚠️  Warning: Failed to prune completed messages: {e}")
 
             tool_validation = validate_tool_call(name, args, result, self.agent)
 
