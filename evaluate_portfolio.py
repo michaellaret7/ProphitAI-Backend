@@ -15,79 +15,272 @@ from app.core.calculations.portfolio.utils import get_portfolio_returns, get_ben
 
 
 # Define portfolio to evaluate
-portfolio = {
-    "LLY": {
-        "allocation": 0.0619,
-        "position": "long"
-    },
-    "JNJ": {
-        "allocation": 0.0567,
-        "position": "long"
-    },
-    "AMGN": {
-        "allocation": 0.0464,
-        "position": "long"
-    },
-    "UNH": {
-        "allocation": 0.0412,
-        "position": "long"
-    },
-    "MSFT": {
-        "allocation": 0.0619,
-        "position": "long"
-    },
-    "ADBE": {
-        "allocation": 0.0515,
-        "position": "long"
-    },
-    "ORCL": {
-        "allocation": 0.0412,
-        "position": "long"
-    },
-    "JPM": {
-        "allocation": 0.0619,
-        "position": "long"
-    },
-    "BLK": {
-        "allocation": 0.0412,
-        "position": "long"
-    },
-    "PG": {
-        "allocation": 0.0515,
-        "position": "long"
-    },
-    "KO": {
-        "allocation": 0.0515,
-        "position": "long"
-    },
-    "CAT": {
-        "allocation": 0.0722,
-        "position": "long"
-    },
-    "HD": {
-        "allocation": 0.0515,
-        "position": "long"
-    },
-    "BND": {
-        "allocation": 0.1340,
-        "position": "long"
-    },
-    "SHY": {
-        "allocation": 0.0515,
-        "position": "long"
-    },
-    "SCHD": {
-        "allocation": 0.0722,
-        "position": "long"
-    },
-    "VEA": {
-        "allocation": 0.0309,
-        "position": "long"
-    },
-    "XLU": {
-        "allocation": 0.0206,
-        "position": "long"
-    }
+# portfolio = {
+#     "LLY": {
+#         "allocation": 0.0619,
+#         "position": "long"
+#     },
+#     "JNJ": {
+#         "allocation": 0.0567,
+#         "position": "long"
+#     },
+#     "AMGN": {
+#         "allocation": 0.0464,
+#         "position": "long"
+#     },
+#     "UNH": {
+#         "allocation": 0.0412,
+#         "position": "long"
+#     },
+#     "MSFT": {
+#         "allocation": 0.0619,
+#         "position": "long"
+#     },
+#     "ADBE": {
+#         "allocation": 0.0515,
+#         "position": "long"
+#     },
+#     "ORCL": {
+#         "allocation": 0.0412,
+#         "position": "long"
+#     },
+#     "JPM": {
+#         "allocation": 0.0619,
+#         "position": "long"
+#     },
+#     "BLK": {
+#         "allocation": 0.0412,
+#         "position": "long"
+#     },
+#     "PG": {
+#         "allocation": 0.0515,
+#         "position": "long"
+#     },
+#     "KO": {
+#         "allocation": 0.0515,
+#         "position": "long"
+#     },
+#     "CAT": {
+#         "allocation": 0.0722,
+#         "position": "long"
+#     },
+#     "HD": {
+#         "allocation": 0.0515,
+#         "position": "long"
+#     },
+#     "BND": {
+#         "allocation": 0.1340,
+#         "position": "long"
+#     },
+#     "SHY": {
+#         "allocation": 0.0515,
+#         "position": "long"
+#     },
+#     "SCHD": {
+#         "allocation": 0.0722,
+#         "position": "long"
+#     },
+#     "VEA": {
+#         "allocation": 0.0309,
+#         "position": "long"
+#     },
+#     "XLU": {
+#         "allocation": 0.0206,
+#         "position": "long"
+#     }
+# }
+
+# portfolio = {    
+#     "AAPL": {
+#       "allocation": 0.1126,
+#       "position": "long"
+#     },
+#     "ADBE": {
+#       "allocation": 0.0751,
+#       "position": "long"
+#     },
+#     "LRCX": {
+#       "allocation": 0.0469,
+#       "position": "long"
+#     },
+#     "GILD": {
+#       "allocation": 0.0751,
+#       "position": "long"
+#     },
+#     "IDXX": {
+#       "allocation": 0.0563,
+#       "position": "long"
+#     },
+#     "MEDP": {
+#       "allocation": 0.0563,
+#       "position": "long"
+#     },
+#     "PGR": {
+#       "allocation": 0.0657,
+#       "position": "long"
+#     },
+#     "V": {
+#       "allocation": 0.05,
+#       "position": "long"
+#     },
+#     "HD": {
+#       "allocation": 0.0657,
+#       "position": "long"
+#     },
+#     "KO": {
+#       "allocation": 0.0469,
+#       "position": "long"
+#     },
+#     "LMT": {
+#       "allocation": 0.0563,
+#       "position": "long"
+#     },
+#     "SPY": {
+#       "allocation": 0.12,
+#       "position": "long"
+#     },
+#     "SPLV": {
+#       "allocation": 0.08,
+#       "position": "long"
+#     },
+#     "VYM": {
+#       "allocation": 0.05,
+#       "position": "long"
+#     },
+#     "EFA": {
+#       "allocation": 0.03,
+#       "position": "long"
+#     },
+#     "SHV": {
+#       "allocation": 0.02,
+#       "position": "long"
+#     }
+# }
+
+# portfolio = {
+#     "KLAC": {
+#       "allocation": 0.08,
+#       "position": "long"
+#     },
+#     "GILD": {
+#       "allocation": 0.08,
+#       "position": "long"
+#     },
+#     "PGR": {
+#       "allocation": 0.08,
+#       "position": "long"
+#     },
+#     "LMT": {
+#       "allocation": 0.07,
+#       "position": "long"
+#     },
+#     "MO": {
+#       "allocation": 0.07,
+#       "position": "long"
+#     },
+#     "PFE": {
+#       "allocation": 0.07,
+#       "position": "long"
+#     },
+#     "TRV": {
+#       "allocation": 0.06,
+#       "position": "long"
+#     },
+#     "ADBE": {
+#       "allocation": 0.06,
+#       "position": "long"
+#     },
+#     "UPS": {
+#       "allocation": 0.06,
+#       "position": "long"
+#     },
+#     "ET": {
+#       "allocation": 0.06,
+#       "position": "long"
+#     },
+#     "SPY": {
+#       "allocation": 0.10,
+#       "position": "long"
+#     },
+#     "VXUS": {
+#       "allocation": 0.08,
+#       "position": "long"
+#     },
+#     "BND": {
+#       "allocation": 0.08,
+#       "position": "long"
+#     },
+#     "XLV": {
+#       "allocation": 0.03,
+#       "position": "long"
+#     },
+#     "VYM": {
+#       "allocation": 0.02,
+#       "position": "long"
+#     }
+# }
+
+portfolio = { # OUTPERFORMED SPY!!
+    "KLAC": {
+          "allocation": 0.07,
+          "position": "long"
+      },
+      "LRCX": {
+          "allocation": 0.07,
+          "position": "long"
+      },
+      "ORCL": {
+          "allocation": 0.07,
+          "position": "long"
+      },
+      "LLY": {
+          "allocation": 0.07,
+          "position": "long"
+      },
+      "AMGN": {
+          "allocation": 0.07,
+          "position": "long"
+      },
+      "ABBV": {
+          "allocation": 0.07,
+          "position": "long"
+      },
+      "PGR": {
+          "allocation": 0.07,
+          "position": "long"
+      },
+      "MA": {
+          "allocation": 0.07,
+          "position": "long"
+      },
+      "BA": {
+          "allocation": 0.07,
+          "position": "long"
+      },
+      "MSI": {
+          "allocation": 0.07,
+          "position": "long"
+      },
+      "SPY": {
+          "allocation": 0.06,
+          "position": "long"
+      },
+      "BND": {
+          "allocation": 0.06,
+          "position": "long"
+      },
+      "VEA": {
+          "allocation": 0.06,
+          "position": "long"
+      },
+      "VIG": {
+          "allocation": 0.06,
+          "position": "long"
+      },
+      "XLK": {
+          "allocation": 0.06,
+          "position": "long"
+      }
 }
 
 

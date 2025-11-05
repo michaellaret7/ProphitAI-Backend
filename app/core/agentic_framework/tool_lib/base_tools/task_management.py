@@ -184,10 +184,30 @@ def update_tasks(
 # Tool schema for agent registration
 UPDATE_TASKS_DESCRIPTION = """Update the status of tasks and subtasks in your execution plan.
 
-Use this tool to track your progress as you work through the plan:
-- Mark tasks as "in_progress" when you start working on them
-- Mark tasks as "complete" when you finish them - **REQUIRES work_summary parameter**
-- You can update both the main task and its subtasks in a single call
+**CRITICAL WORKFLOW - Follow this pattern for EACH subtask:**
+1. When you START a subtask: update_tasks(subtasks=["2a"], status="in_progress")
+2. Do the work (call tools, analyze data, think deeply)
+3. When you FINISH that subtask: update_tasks(subtasks=["2a"], status="complete", work_summary="...")
+4. Move to next subtask: update_tasks(subtasks=["2b"], status="in_progress")
+5. Repeat
+
+**IMPORTANT - Complete tasks INDIVIDUALLY as you finish them:**
+- Complete subtask 2a → mark it "complete" → then start 2b
+- Complete subtask 2b → mark it "complete" → then start 2c
+- DO NOT batch multiple subtasks with status="in_progress" and say "Completed 2a, 2b, 2c" in work_summary
+- Each subtask gets its own "complete" call when you finish it
+
+**Examples:**
+✅ CORRECT - Individual completion:
+  update_tasks(main_task="2", subtasks=["2a"], status="in_progress")
+  [do work on 2a]
+  update_tasks(main_task="2", subtasks=["2a"], status="complete", work_summary="Analyzed X using Y tool...")
+  update_tasks(main_task="2", subtasks=["2b"], status="in_progress")
+  [do work on 2b]
+  update_tasks(main_task="2", subtasks=["2b"], status="complete", work_summary="Evaluated Z...")
+
+❌ WRONG - Batching with in_progress:
+  update_tasks(main_task="2", subtasks=["2a","2b","2c"], status="in_progress", work_summary="Completed all subtasks...")
 
 **CRITICAL - THE WORK: SECTION:**
 When marking tasks as "complete", the work_summary parameter becomes the "Work:" section - this is THE PRIMARY
@@ -214,12 +234,12 @@ UPDATE_TASKS_PARAMETERS = {
         "subtasks": {
             "type": "array",
             "items": {"type": "string"},
-            "description": "Optional list of subtask IDs to update (e.g., ['1a', '1b'])"
+            "description": "List of subtask IDs to update. IMPORTANT: Update ONE subtask at a time when marking complete. Example: ['2a'] when finishing 2a, then ['2b'] when finishing 2b. Do NOT batch multiple subtasks like ['2a','2b','2c'] with status='in_progress'."
         },
         "status": {
             "type": "string",
             "enum": ["not_started", "in_progress", "complete"],
-            "description": "New status for the task(s). Use 'in_progress' when starting, 'complete' when finished."
+            "description": "New status: 'in_progress' when STARTING work, 'complete' when FINISHED. Mark each subtask 'complete' individually as you finish it, don't batch them."
         },
         "work_summary": {
             "type": "string",

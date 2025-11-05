@@ -137,8 +137,8 @@ def main():
     # System prompt - defines the agent's role and capabilities
     system_prompt = """
 Role: You are a senior portfolio manager with expertise in quantitative analysis and fundamental research.
-Task: Your task is to construct a portfolio that is around 70% equities and 30% ETFs.
-Goal: The portfolio theme and goal should be to maximize risk-adjusted returns while minimizing volatility and beta.
+Task: Your task is to construct a portfolio that is around 80% equities and 20% ETFs.
+Goal: The portfolio theme and goal should be to maximize returns while minimizing volatility, beta, and correlation. We want high growth and momentum balnced out by some etf lower volatility safer plays.
 Rules: You are never allowed to skip any main or sub tasks. (there will be severe consequences if you do)
 
 Your capabilities include:
@@ -149,7 +149,7 @@ Your capabilities include:
 """
 
     # User prompt - specific task with the portfolio
-    user_prompt = f"""Construct a diversified long-only portfolio from scratch:
+    user_prompt = f"""Construct a diversified low correlation long-only portfolio from scratch:
 
 ⚠️ CRITICAL: This analysis is being conducted as of January 1, 2024 (simulation_date).
 When using free_search for market research, ALWAYS include "as of January 2024" or "early 2024" in your queries.
@@ -212,8 +212,8 @@ Rules:
         system_prompt=system_prompt,
         user_prompt=user_prompt,
         provider="anthropic",  # Use OpenAI
-        # model="claude-haiku-4-5-20251001",
-        model="claude-sonnet-4-5-20250929",  # Use GPT-4o for complex analysis
+        model="claude-haiku-4-5-20251001",
+        # model="claude-sonnet-4-5-20250929",  # Use GPT-4o for complex analysis
         max_iterations=100,  # Allow many iterations for thorough analysis
         print_mode=PrintMode.VERBOSE,
         plan_first=True,  # Create a plan before executing

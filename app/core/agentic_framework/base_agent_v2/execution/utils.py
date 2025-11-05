@@ -82,9 +82,12 @@ def build_plan_context(agent: 'BaseAgent', is_first_execution: bool = False) -> 
     context += "- You are NOT allowed to mark a main task as complete until ALL subtasks are complete\n"
     context += "- You MUST mark the task/subtask as in progress BEFORE you start working on it\n"
     context += "- You may ONLY mark tasks as complete AFTER you have actually done the work\n"
+    context += "- **COMPLETE SUBTASKS ONE AT A TIME**: When you finish a subtask, mark it status='complete' immediately. DO NOT batch multiple subtasks with status='in_progress' and say 'Completed 2a, 2b, 2c' in work_summary. Each subtask gets its own complete call.\n"
     context += "- You MUST always think out loud and provide your reasoning for the actions you take\n"
     context += "- You must NEVER leave the content field blank when calling update_tasks\n\n"
-    context += "**Example:** update_tasks(main_task='2', subtasks=['2b'], status='in_progress', content='Starting work on data collection')\n"
+    context += "**Examples:**\n"
+    context += "✅ CORRECT: update_tasks(main_task='2', subtasks=['2a'], status='complete', work_summary='Analyzed data using tool X...')\n"
+    context += "❌ WRONG: update_tasks(main_task='2', subtasks=['2a','2b','2c'], status='in_progress', work_summary='Completed all subtasks')\n\n"
     context += "You are never allowed to skip any main or sub tasks under any circumstances! Violating this rule will result in severe consequences.\n"
 
 

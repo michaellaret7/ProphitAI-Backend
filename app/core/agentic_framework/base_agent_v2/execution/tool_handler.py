@@ -9,7 +9,7 @@ from app.core.agentic_framework.base_agent_v2.execution.tool_validation import v
 from app.core.agentic_framework.base_agent_v2.utils.models import PrintMode
 from app.core.agentic_framework.base_agent_v2.logging.message_logger import write_messages_to_yaml
 from app.core.agentic_framework.base_agent_v2.logging.tool_trace import log_tool_call
-from app.core.agentic_framework.base_agent_v2.context_manager import prune_completed_task_messages
+from app.core.agentic_framework.base_agent_v2.context_manager import prune_completed_task_messages, prune_note_content
 import yaml
 from app.core.agentic_framework.base_agent_v2.utils.models import TaskStatus
 
@@ -182,9 +182,28 @@ class ToolHandler:
                     "content": yaml.dump(tool_validation_dict, default_flow_style=False, sort_keys=False)
                 })
 
+        # Write messages to YAML with pruned write_note content (for logging only)
+        # CRITICAL: We prune ONLY for YAML writing, NOT for self.agent.messages
+        # If we modify self.agent.messages, the LLM will see "[pruned]" in context
+        # and copy the pattern in future iterations!
         try:
+            import copy
             iteration_indices = getattr(self.agent, "_iteration_message_indices", None)
-            write_messages_to_yaml(self.agent.messages, output_dir=getattr(self.agent, "output_dir", None), iteration_indices=iteration_indices)
+
+            # CRITICAL: Deep copy messages before pruning!
+            # prune_note_content modifies tool_call objects IN PLACE, so even a shallow
+            # copy would still modify the original objects in self.agent.messages
+            messages_copy = copy.deepcopy(self.agent.messages)
+
+            # Prune the deep copy (keeps self.agent.messages untouched)
+            pruned_messages_for_yaml = prune_note_content(
+                messages=messages_copy,
+                exclude_index=None,  # Prune all write_note calls for YAML
+                verbose=(self.agent.print_mode != PrintMode.PRODUCTION)
+            )
+
+            # Write the pruned version to YAML (not self.agent.messages!)
+            write_messages_to_yaml(pruned_messages_for_yaml, output_dir=getattr(self.agent, "output_dir", None), iteration_indices=iteration_indices)
         except Exception as e:
             # Don't fail tool execution if logging fails
             print(f"⚠️  Warning: Failed to write messages to YAML: {e}")

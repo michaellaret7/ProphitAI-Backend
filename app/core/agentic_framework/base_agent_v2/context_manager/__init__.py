@@ -1,11 +1,13 @@
 """Context Manager - Manages conversation context window.
 
-This module provides utilities for pruning completed task messages
-to keep the context window manageable while preserving work summaries
-in the plan status block.
+This module provides utilities for pruning messages to keep the context
+window manageable:
+- Prune completed task messages while preserving work summaries
+- Prune note content while keeping note titles visible
 """
 
 from .message_pruner import prune_completed_task_messages
+from .notes_pruner import prune_note_content
 from .utils import (
     parse_tool_call_arguments,
     find_tool_response_index,
@@ -15,7 +17,8 @@ from .utils import (
 
 __all__ = [
     "prune_completed_task_messages",
-    "parse_tool_call_arguments", 
+    "prune_note_content",
+    "parse_tool_call_arguments",
     "find_tool_response_index",
     "count_messages_by_role",
     "get_message_token_estimate"

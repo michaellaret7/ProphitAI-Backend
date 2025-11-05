@@ -57,14 +57,16 @@ def main():
     """
 
     user_prompt = """
-    Your task is to analyze the portfolio and provide a comprehensive assessment.
+    Your task is to analyze the portfolio and provide a comprehensive assessment and write many notes using the notes tool.
+    Then you are supposed to use the retrieve_notes tool to retrieve the notes and use them to analyze the portfolio and provide a comprehensive assessment.
     """
 
     agent = BaseAgent(
         system_prompt=system_prompt,
         user_prompt=user_prompt,
         provider="anthropic",
-        model="claude-sonnet-4-5-20250929",  # Use Sonnet for better reasoning
+        # model="claude-sonnet-4-5-20250929",  # Use Sonnet for better reasoning
+        model="claude-haiku-4-5-20251001",
         max_iterations=150,
         print_mode=PrintMode.DEBUG,
         plan_first=True  # Create plan first

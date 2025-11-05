@@ -4,9 +4,13 @@ from app.models.portfolio_models import PortfolioInput
 import json
 from app.utils.tool_validator import ToolValidator
 
-def stress_test(portfolio_dict: PortfolioInput | dict = None) -> str:
+def stress_test(portfolio_dict: PortfolioInput | dict = None, _simulation_date: str = None) -> str:
     """
     Run comprehensive stress tests on a portfolio including market crash scenarios (-20%, -30%, -40%), sector rotation stress, interest rate shock, inflation spike, and correlation breakdown scenarios.
+
+    Args:
+        portfolio_dict: Portfolio to stress test
+        _simulation_date: Optional simulation date (injected by agent framework, not used by tool)
     """
     # Validate inputs
     v = ToolValidator()

@@ -10,10 +10,15 @@ from app.core.agentic_framework.tool_lib.base_tools.edit_plan import (
     EDIT_PLAN_DESCRIPTION,
     EDIT_PLAN_PARAMETERS
 )
-from app.core.agentic_framework.tool_lib.base_tools.notes import (
+from app.core.agentic_framework.tool_lib.base_tools.write_notes import (
     write_note as notes_write,
     WRITE_NOTE_DESCRIPTION,
     WRITE_NOTE_PARAMETERS,
+)
+from app.core.agentic_framework.tool_lib.base_tools.retrieve_notes import (
+    retrieve_notes as notes_retrieve,
+    RETRIEVE_NOTES_DESCRIPTION,
+    RETRIEVE_NOTES_PARAMETERS,
 )
 from app.core.agentic_framework.tool_lib.base_tools.finalize import (
     finalize as finalize_tool,
@@ -102,6 +107,17 @@ def register_base_tools(agent: Any) -> None:
         function=lambda title, content, **kwargs: notes_write(
             title=title,
             content=content,
+            output_dir=str(getattr(agent, "output_dir", ""))
+        ),
+    )
+
+    # retrieve_notes (read notes)
+    agent.add_tool(
+        name="retrieve_notes",
+        description=RETRIEVE_NOTES_DESCRIPTION,
+        parameters=RETRIEVE_NOTES_PARAMETERS,
+        function=lambda title, **kwargs: notes_retrieve(
+            title=title,
             output_dir=str(getattr(agent, "output_dir", ""))
         ),
     )
