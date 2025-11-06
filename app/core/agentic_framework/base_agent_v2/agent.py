@@ -82,6 +82,7 @@ class BaseAgent:
         # Execution state
         self.messages: List[Dict[str, Any]] = []
         self.total_tokens: int = 0
+        self.note_titles: List[str] = []  # Track note titles for display
 
         # Agent identity and per-run output location
         self.agent_name = self.__class__.__name__

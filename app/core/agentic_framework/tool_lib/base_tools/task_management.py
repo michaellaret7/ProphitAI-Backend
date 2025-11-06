@@ -112,6 +112,27 @@ def update_tasks(
 
     updated = []
 
+    # WORKFLOW ENFORCEMENT: Prevent starting new subtasks while others are in_progress
+    if subtasks and status_enum == TaskStatus.IN_PROGRESS:
+        for subtask_id in subtasks:
+            # Check if OTHER subtasks in this main task are still in_progress
+            in_progress_subtasks = [st.id for st in task.subtasks
+                                   if st.status == TaskStatus.IN_PROGRESS
+                                   and st.id != subtask_id]
+
+            if in_progress_subtasks:
+                return yaml.dump({
+                    "success": False,
+                    "error": f"⚠️ WORKFLOW VIOLATION: Cannot start subtask {subtask_id} while {in_progress_subtasks} "
+                           f"{'is' if len(in_progress_subtasks) == 1 else 'are'} still in_progress.\n\n"
+                           f"You need to mark the in_progress task as finished if it's finished. "
+                           f"If it's not finished, please complete the task first.\n\n"
+                           f"To fix this, call:\n"
+                           f"update_tasks(main_task='{main_task}', subtasks={in_progress_subtasks}, "
+                           f"status='complete', work_summary='...')\n\n"
+                           f"Remember: Complete each subtask BEFORE moving to the next one."
+                }, default_flow_style=False)
+
     # Update subtasks if provided
     if subtasks:
         for subtask_id in subtasks:

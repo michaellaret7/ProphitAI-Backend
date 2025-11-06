@@ -110,8 +110,3 @@ RETRIEVE_NOTES_PARAMETERS = {
     "required": ["title"],
 }
 
-# Test code - output_dir should be the directory path, NOT the full file path
-output_dir = "/Users/michaellaret/Desktop/ProphitAI/agent_output/2025-11-05/BaseAgent_152643"
-
-if __name__ == "__main__":
-    print(retrieve_notes(title="AAPL Individual Analysis - Performance and Risk Profile", output_dir=output_dir))

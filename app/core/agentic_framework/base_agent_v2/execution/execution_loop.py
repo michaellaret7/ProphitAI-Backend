@@ -95,6 +95,23 @@ class ExecutionLoop:
                         "content": plan_context
                     })
 
+            # Inject available notes reminder (updated each iteration)
+            # Remove old notes message and inject fresh one with current titles
+            self.agent.messages = [
+                msg for msg in self.agent.messages
+                if not (msg.get("role") == "system" and "AVAILABLE NOTES IN NOTEBOOK" in msg.get("content", ""))
+            ]
+            if self.agent.note_titles:
+                notes_list = "\n".join(f"  - {title}" for title in self.agent.note_titles)
+                self.agent.messages.append({
+                    "role": "system",
+                    "content": (
+                        f"📓 AVAILABLE NOTES IN NOTEBOOK (use retrieve_notes tool):\n"
+                        f"{notes_list}\n\n"
+                        f"Remember: Use retrieve_notes with the EXACT title to recall your previous analysis."
+                    )
+                })
+
             # Inject per-turn THINK reminder (ephemeral) - maximizes reasoning at each iteration
             self.agent.messages = [
                 msg for msg in self.agent.messages

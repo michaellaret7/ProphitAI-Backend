@@ -220,69 +220,259 @@ from app.core.calculations.portfolio.utils import get_portfolio_returns, get_ben
 #     }
 # }
 
-portfolio = { # OUTPERFORMED SPY!!
-    "KLAC": {
-          "allocation": 0.07,
-          "position": "long"
-      },
-      "LRCX": {
-          "allocation": 0.07,
-          "position": "long"
-      },
-      "ORCL": {
-          "allocation": 0.07,
-          "position": "long"
-      },
-      "LLY": {
-          "allocation": 0.07,
-          "position": "long"
-      },
-      "AMGN": {
-          "allocation": 0.07,
-          "position": "long"
-      },
-      "ABBV": {
-          "allocation": 0.07,
-          "position": "long"
-      },
-      "PGR": {
-          "allocation": 0.07,
-          "position": "long"
-      },
-      "MA": {
-          "allocation": 0.07,
-          "position": "long"
-      },
-      "BA": {
-          "allocation": 0.07,
-          "position": "long"
-      },
-      "MSI": {
-          "allocation": 0.07,
-          "position": "long"
-      },
-      "SPY": {
-          "allocation": 0.06,
-          "position": "long"
-      },
-      "BND": {
-          "allocation": 0.06,
-          "position": "long"
-      },
-      "VEA": {
-          "allocation": 0.06,
-          "position": "long"
-      },
-      "VIG": {
-          "allocation": 0.06,
-          "position": "long"
-      },
-      "XLK": {
-          "allocation": 0.06,
-          "position": "long"
-      }
-}
+# portfolio = { # OUTPERFORMED SPY!!
+#     "KLAC": {
+#           "allocation": 0.07,
+#           "position": "long"
+#       },
+#       "LRCX": {
+#           "allocation": 0.07,
+#           "position": "long"
+#       },
+#       "ORCL": {
+#           "allocation": 0.07,
+#           "position": "long"
+#       },
+#       "LLY": {
+#           "allocation": 0.07,
+#           "position": "long"
+#       },
+#       "AMGN": {
+#           "allocation": 0.07,
+#           "position": "long"
+#       },
+#       "ABBV": {
+#           "allocation": 0.07,
+#           "position": "long"
+#       },
+#       "PGR": {
+#           "allocation": 0.07,
+#           "position": "long"
+#       },
+#       "MA": {
+#           "allocation": 0.07,
+#           "position": "long"
+#       },
+#       "BA": {
+#           "allocation": 0.07,
+#           "position": "long"
+#       },
+#       "MSI": {
+#           "allocation": 0.07,
+#           "position": "long"
+#       },
+#       "SPY": {
+#           "allocation": 0.06,
+#           "position": "long"
+#       },
+#       "BND": {
+#           "allocation": 0.06,
+#           "position": "long"
+#       },
+#       "VEA": {
+#           "allocation": 0.06,
+#           "position": "long"
+#       },
+#       "VIG": {
+#           "allocation": 0.06,
+#           "position": "long"
+#       },
+#       "XLK": {
+#           "allocation": 0.06,
+#           "position": "long"
+#       }
+# }
 
+portfolio = { # 2022 Outperformed SPY!!
+    "IDXX": {
+      "allocation": 0.09,
+      "position": "long",
+      "sector": "Healthcare",
+      "rationale": "Medical devices with 5.5-7.1% CAGR growth. Sharpe 2.06, CAGR 88%, strong quality fundamentals. Aligned with aging demographics and digital health transformation themes from January 2022 research."
+    },
+    "ZTS": {
+      "allocation": 0.09,
+      "position": "long",
+      "sector": "Healthcare",
+      "rationale": "Pharma/animal health with excellent quality (Altman Z-score 5.82). Sharpe 1.76, low beta 0.84, strong momentum (3M +25.7%, 6M +31.3%). Provides defensive healthcare exposure."
+    },
+    "LLY": {
+      "allocation": 0.09,
+      "position": "long",
+      "sector": "Healthcare",
+      "rationale": "Large-cap pharma with very low beta 0.51. Sharpe 1.29, CAGR 52%, EPS growth +56%. Provides defensive characteristics to reduce portfolio volatility while maintaining growth exposure."
+    },
+    "SHW": {
+      "allocation": 0.09,
+      "position": "long",
+      "sector": "Materials",
+      "rationale": "Chemicals/paint with low beta 0.71 and strong momentum. Sharpe 2.04, CAGR 66%, RSI 65.6. Quality fundamentals (ROE 18.8%). Cyclical recovery play with strong risk-adjusted returns."
+    },
+    "UNP": {
+      "allocation": 0.08,
+      "position": "long",
+      "sector": "Industrials",
+      "rationale": "Transportation/railroads with beta 0.92. Sharpe 1.33, CAGR 41%, strong fundamentals (ROE 10.3%). Provides cyclical recovery exposure and solid momentum (3M +28.5%)."
+    },
+    "PEP": {
+      "allocation": 0.08,
+      "position": "long",
+      "sector": "Consumer Staples",
+      "rationale": "Defensive consumer staples with very low beta 0.49. Provides portfolio ballast and dividend income. Outperformed in 2022 bear market (down only 3.98% vs S&P 500 -17% in first 8 months)."
+    },
+    "KO": {
+      "allocation": 0.08,
+      "position": "long",
+      "sector": "Consumer Staples",
+      "rationale": "Defensive beverages with very low beta 0.54. 60+ year dividend growth history. Provides diversification from growth stocks and downside protection during market stress."
+    },
+    "TRGP": {
+      "allocation": 0.05,
+      "position": "long",
+      "sector": "Energy",
+      "rationale": "Midstream/pipeline for energy exposure and inflation hedge. Sharpe 1.22, CAGR 104%. Aligned with January 2022 energy sector +19% outperformance driven by supply-demand imbalance."
+    },
+    "FCX": {
+      "allocation": 0.05,
+      "position": "long",
+      "sector": "Materials",
+      "rationale": "Copper/mining for cyclical recovery and inflation hedge. Exceptional ROE 34.8%, Sharpe 2.23, CAGR 194%, value metrics P/E 2.17. Limited to 5% allocation due to high beta 1.80."
+    },
+    "VTI": {
+      "allocation": 0.10,
+      "position": "long",
+      "asset_class": "ETF",
+      "rationale": "Broad US market diversification at low cost (0.03% ER). Provides baseline market exposure complementing equity picks across all market cap sizes."
+    },
+    "EFA": {
+      "allocation": 0.07,
+      "position": "long",
+      "asset_class": "ETF",
+      "rationale": "International developed markets (0.08% ER). Provides geographic diversification and currency hedging, reducing US-specific risk. Complements US equity and ETF exposure."
+    },
+    "BND": {
+      "allocation": 0.09,
+      "position": "long",
+      "asset_class": "ETF",
+      "rationale": "Broad bond market (0.03% ER). Provides portfolio ballast with lower volatility during equity downturns. Negative correlation with equities (-0.2 to 0.15 range)."
+    },
+    "XLU": {
+      "allocation": 0.04,
+      "position": "long",
+      "asset_class": "ETF",
+      "rationale": "Utilities sector (0.13% ER). Defensive characteristics, inflation hedging, dividend income (3-4% yields). Low correlation with equities provides diversification benefits."
+    }
+}
+# portfolio = {
+#     "VTI": {
+#       "allocation": 0.10,
+#       "position": "long",
+#       "name": "Vanguard Total Stock Market ETF",
+#       "category": "Core Market Beta"
+#     },
+#     "QQQ": {
+#       "allocation": 0.08,
+#       "position": "long",
+#       "name": "Invesco QQQ (Nasdaq-100)",
+#       "category": "Growth/Momentum"
+#     },
+#     "XLK": {
+#       "allocation": 0.08,
+#       "position": "long",
+#       "name": "Technology Sector SPDR",
+#       "category": "Growth/Momentum"
+#     },
+#     "VYM": {
+#       "allocation": 0.04,
+#       "position": "long",
+#       "name": "Vanguard High Dividend Yield",
+#       "category": "Value/Dividend"
+#     },
+#     "XLF": {
+#       "allocation": 0.04,
+#       "position": "long",
+#       "name": "Financial Sector SPDR",
+#       "category": "Value/Dividend"
+#     },
+#     "XLV": {
+#       "allocation": 0.05,
+#       "position": "long",
+#       "name": "Healthcare Sector SPDR",
+#       "category": "Defensive"
+#     },
+#     "XLU": {
+#       "allocation": 0.03,
+#       "position": "long",
+#       "name": "Utilities Sector SPDR",
+#       "category": "Defensive"
+#     },
+#     "VWO": {
+#       "allocation": 0.10,
+#       "position": "long",
+#       "name": "Vanguard FTSE Emerging Markets",
+#       "category": "International/EM"
+#     },
+#     "IEMG": {
+#       "allocation": 0.06,
+#       "position": "long",
+#       "name": "iShares Core MSCI Emerging Markets",
+#       "category": "International/EM"
+#     },
+#     "XLE": {
+#       "allocation": 0.10,
+#       "position": "long",
+#       "name": "Energy Sector SPDR",
+#       "category": "Energy"
+#     },
+#     "IEF": {
+#       "allocation": 0.05,
+#       "position": "long",
+#       "name": "iShares 7-10 Year Treasury Bond",
+#       "category": "Fixed Income"
+#     },
+#     "TLT": {
+#       "allocation": 0.03,
+#       "position": "long",
+#       "name": "iShares 20+ Year Treasury Bond",
+#       "category": "Fixed Income"
+#     },
+#     "LQD": {
+#       "allocation": 0.10,
+#       "position": "long",
+#       "name": "iShares Investment Grade Corporate",
+#       "category": "Fixed Income"
+#     },
+#     "HYG": {
+#       "allocation": 0.02,
+#       "position": "long",
+#       "name": "iShares High Yield Corporate",
+#       "category": "Fixed Income"
+#     },
+#     "SCHP": {
+#       "allocation": 0.04,
+#       "position": "long",
+#       "name": "Schwab U.S. TIPS ETF",
+#       "category": "Fixed Income"
+#     },
+#     "DBC": {
+#       "allocation": 0.03,
+#       "position": "long",
+#       "name": "Commodities Select Sector SPDR",
+#       "category": "Commodities"
+#     },
+#     "REMX": {
+#       "allocation": 0.03,
+#       "position": "long",
+#       "name": "VanEck Rare Earth/Strategic Metals",
+#       "category": "Commodities"
+#     },
+#     "VNQ": {
+#       "allocation": 0.02,
+#       "position": "long",
+#       "name": "Vanguard Real Estate ETF",
+#       "category": "Commodities/Alternatives"
+#     }
+# }
 
 def validate_portfolio(portfolio_dict):
     """Validate portfolio allocations sum to 1.0"""
@@ -556,7 +746,7 @@ def main():
     # Calculate and display performance
     metrics = calculate_and_display_performance(
         portfolio,
-        start_date_str="2023-12-31",
+        start_date_str="2022-01-01",
         benchmark="SPY",
         rf_annual=0.002
     )
@@ -565,7 +755,7 @@ def main():
         # Plot returns vs benchmark
         plot_returns_vs_benchmark(
             portfolio,
-            start_date_str="2023-12-31",
+            start_date_str="2022-01-01",
             benchmark="SPY"
         )
 

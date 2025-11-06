@@ -89,6 +89,20 @@ class ToolHandler:
             # Execute tool and return the result
             result = self._execute_tool(name, args)
 
+            # Track note titles for display when write_note succeeds
+            if name == "write_note":
+                try:
+                    result_dict = yaml.safe_load(result) if isinstance(result, str) else result
+                    if result_dict.get("success") and "title" in args:
+                        title = args["title"]
+                        if title not in self.agent.note_titles:
+                            self.agent.note_titles.append(title)
+                            if self.agent.print_mode != PrintMode.PRODUCTION:
+                                print(f"📝 Added note title to notebook: '{title}'")
+                except Exception as e:
+                    if self.agent.print_mode == PrintMode.DEBUG:
+                        print(f"⚠️  Warning: Failed to track note title: {e}")
+
             # Context window management: Prune old tool calls at state transitions
             # Key insight: Delete tool calls only AFTER the next state is reached
             # This prevents infinite loops - model needs to see state transitions
