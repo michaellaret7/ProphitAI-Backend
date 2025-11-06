@@ -52,11 +52,26 @@ def write_note(title: str, content: str, *, output_dir: Optional[str] = None) ->
         }, default_flow_style=False)
 
 
-WRITE_NOTE_DESCRIPTION = (
-    "Write free-form reasoning and analysis to this run's notes.md. "
-    "Use it as a live notepad for thoughts, reasoning, hypotheses, alternatives, decisions, trade-offs, anomalies, and super key findings. "
-    "Intended for a single run; capture any amount of reasoning or commentary. "
-)
+WRITE_NOTE_DESCRIPTION = """Write free-form reasoning and analysis to this run's notes.md file.
+
+**When to use:**
+- Store detailed research findings, stock analysis, or thesis development
+- Capture complex reasoning, hypotheses, alternatives, decisions, and trade-offs
+- Document anomalies, key insights, or important calculations
+- Save expensive API call results that you might need later
+- Record intermediate conclusions before moving to next phase
+
+**IMPORTANT:** Notes you write can be retrieved later using retrieve_notes(title).
+Always use clear, descriptive titles so you can easily retrieve them in later phases.
+
+**Example titles:**
+- "Stock Screening Results - Consumer Staples"
+- "Valuation Analysis - AAPL"
+- "Portfolio Thesis and Investment Drivers"
+- "Risk Factor Analysis"
+
+Think of this as your persistent memory across the workflow.
+"""
 
 WRITE_NOTE_PARAMETERS = {
     "type": "object",

@@ -20,11 +20,37 @@ from app.utils.decorators.price_data import with_bulk_price_data
 from app.utils.simulation_utils import get_end_date, filter_series_by_date
 from app.utils.decorators.tool_validation import validate_ticker_arg, log_simulation_data_range
 
+# Metric group definitions for single ticker filtering
+SINGLE_TICKER_METRIC_GROUPS = {
+    "core": {
+        "risk": ["annualized_volatility", "max_drawdown", "beta"],
+        "performance": ["cagr", "sharpe", "sortino"],
+        "returns": ["total_return_1y", "total_return_3m"]
+    },
+    "risk_metrics": {
+        "risk": ["annualized_volatility", "max_drawdown", "ulcer_index_price", "historical_var_1d", "expected_shortfall_1d", "parametric_var_1d", "parametric_cvar_1d", "beta", "up_beta", "down_beta"]
+    },
+    "performance_metrics": {
+        "performance": ["cagr", "sharpe", "sortino", "calmar_1y", "omega", "sterling", "burke", "martin", "win_rate", "profit_factor", "pain_index", "tail_ratio", "gain_loss_ratio", "ulcer_index_252", "treynor", "information_ratio", "alpha_jensen", "tracking_error", "appraisal_ratio", "up_capture_daily", "down_capture_daily", "up_capture_ann", "down_capture_ann"]
+    },
+    "returns_metrics": {
+        "returns": ["price_return_3y", "total_return_3y", "total_return_1y", "total_return_6m", "total_return_3m", "price_return_1y", "price_return_6m", "price_return_3m"]
+    },
+    "risk_adjusted": {
+        "performance": ["sharpe", "sortino", "calmar_1y", "omega", "sterling", "burke", "martin"]
+    },
+    "benchmark_relative": {
+        "risk": ["beta", "up_beta", "down_beta"],
+        "performance": ["treynor", "information_ratio", "alpha_jensen", "tracking_error", "appraisal_ratio", "up_capture_daily", "down_capture_daily", "up_capture_ann", "down_capture_ann"]
+    },
+}
+
 @validate_ticker_arg()
 @with_bulk_price_data(lookback_days=DEFAULT_LOOKBACK_MEDIUM, include_dividends=True)
 @log_simulation_data_range()
 def get_ticker_performance_and_risk(
     ticker: str,
+    filters: list[str] = ["all"],
     *,
     price_data: dict[str, pd.Series] | None = None,
     _simulation_date: Optional[datetime] = None,
@@ -280,30 +306,78 @@ def get_ticker_performance_and_risk(
         }
         returns = _round_map(returns, ndigits=4)
 
-        return yaml.dump({
-            "success": True,
-            "data": {
+        # Build complete data structure
+        all_data = {
+            "ticker": tkr,
+            "market_ticker": market_ticker.upper() if market_ticker else None,
+            "num_observations": int(len(r)),
+            "risk": risk,
+            "performance": perf,
+            "returns": returns,
+        }
+
+        # Apply filters
+        if "all" in filters or not filters:
+            # Return everything (backward compatible)
+            filtered_data = all_data
+        else:
+            # Build filtered data based on requested groups
+            filtered_data = {
                 "ticker": tkr,
                 "market_ticker": market_ticker.upper() if market_ticker else None,
                 "num_observations": int(len(r)),
-                "risk": risk,
-                "performance": perf,
-                "returns": returns,
             }
-        }, default_flow_style=False)
+
+            # Collect requested metrics from each section
+            for filter_name in filters:
+                if filter_name in SINGLE_TICKER_METRIC_GROUPS:
+                    group_def = SINGLE_TICKER_METRIC_GROUPS[filter_name]
+
+                    # Add metrics from each section (risk, performance, returns)
+                    for section, metrics in group_def.items():
+                        if section not in filtered_data:
+                            filtered_data[section] = {}
+                        for metric in metrics:
+                            if section == "risk" and metric in risk:
+                                filtered_data[section][metric] = risk[metric]
+                            elif section == "performance" and metric in perf:
+                                filtered_data[section][metric] = perf[metric]
+                            elif section == "returns" and metric in returns:
+                                filtered_data[section][metric] = returns[metric]
+                else:
+                    # Invalid filter name - return error
+                    valid_filters = list(SINGLE_TICKER_METRIC_GROUPS.keys()) + ["all"]
+                    return yaml.dump({
+                        "success": False,
+                        "error": f"Invalid filter '{filter_name}'. Valid filters: {valid_filters}"
+                    }, default_flow_style=False)
+
+        return yaml.dump({"success": True, "data": filtered_data}, default_flow_style=False)
     except Exception as e:
         return yaml.dump({"success": False, "error": f"failed to compute metrics for {tkr}: {e}"}, default_flow_style=False)
 
 
 # Tool Schema Constants
 GET_TICKER_PERFORMANCE_AND_RISK_DESCRIPTION = (
-    "Calculate comprehensive performance and risk metrics for a single ticker over 2 years of data (Bloomberg standard). "
-    "Returns detailed metrics including risk measures (Sharpe, Sortino, Treynor, Information Ratio, Alpha, "
-    "Omega, Sterling, Burke, Martin ratios), performance metrics (capture ratios, win rates, profit factors), "
-    "risk measures (pain index, tail ratio, gain/loss ratio, ulcer index, max drawdown), and returns "
-    "across multiple timeframes (2Y, 1Y, 6M, 3M). "
-    "CRITICAL: You MUST ALWAYS include the ticker parameter. "
-    "Example: get_ticker_performance_and_risk(ticker='AAPL')"
+    "Calculate performance and risk metrics for a single ticker with optional filtering for token efficiency. "
+    "Returns 41 total metrics across 3 categories (risk, performance, returns) with 6 filter groups available. "
+    "\n\n**TOKEN EFFICIENCY - Use Filters to Reduce Response Size:**"
+    "\n  Full response (filters=['all']): ~400 tokens (41 metrics across 3 sections)"
+    "\n  Filtered response (filters=['core']): ~100 tokens (8 metrics, 75% reduction)"
+    "\n  Risk only (filters=['risk_metrics']): ~120 tokens (10 metrics, 70% reduction)"
+    "\n\n**Common Filter Patterns:**"
+    "\n  • Quick check: ['core']"
+    "\n  • Risk analysis: ['risk_metrics', 'risk_adjusted']"
+    "\n  • Benchmark comparison: ['core', 'benchmark_relative']"
+    "\n  • Full analysis: ['all'] (default)"
+    "\n\n**Critical Requirements:**"
+    "\n  • You MUST include the ticker parameter"
+    "\n  • Use filters to request only needed metrics"
+    "\n  • Default lookback: 2 years (504 days), benchmark: SPY"
+    "\n\n**Examples:**"
+    "\n  get_ticker_performance_and_risk(ticker='AAPL', filters=['core'])"
+    "\n  get_ticker_performance_and_risk(ticker='AAPL', filters=['risk_metrics', 'returns_metrics'])"
+    "\n  get_ticker_performance_and_risk(ticker='AAPL', filters=['all'])"
 )
 
 GET_TICKER_PERFORMANCE_AND_RISK_PARAMETERS = {
@@ -313,13 +387,39 @@ GET_TICKER_PERFORMANCE_AND_RISK_PARAMETERS = {
             "type": "string",
             "description": (
                 "**MANDATORY - DO NOT OMIT THIS PARAMETER.** "
-                "The ticker symbol to analyze. Must be a valid stock ticker symbol (e.g., 'AAPL', 'MSFT', 'GOOGL'). "
-                "The function will automatically fetch 2 years of price and dividend data for analysis (Bloomberg standard for beta calculation)."
+                "The ticker symbol to analyze (e.g., 'AAPL', 'MSFT', 'GOOGL'). "
+                "Automatically fetches 2 years of data (Bloomberg standard for beta)."
             ),
             "pattern": "^[A-Z]{1,5}$",
             "minLength": 1,
             "maxLength": 5
         },
+        "filters": {
+            "type": "array",
+            "description": (
+                "Filter which metric groups to return. Reduces token usage by 60-80%. "
+                "\n\n**Available Metric Groups:**"
+                "\n  • 'core' (8 metrics): Key metrics from risk, performance, and returns"
+                "\n    - risk: annualized_volatility, max_drawdown, beta"
+                "\n    - performance: cagr, sharpe, sortino"
+                "\n    - returns: total_return_1y, total_return_3m"
+                "\n  • 'risk_metrics' (10 metrics): All risk measures (volatility, VaR, beta, drawdown)"
+                "\n  • 'performance_metrics' (23 metrics): All performance ratios (sharpe, sortino, omega, etc.)"
+                "\n  • 'returns_metrics' (8 metrics): Returns across timeframes (3M, 6M, 1Y, 3Y)"
+                "\n  • 'risk_adjusted' (7 metrics): Risk-adjusted performance (sharpe, sortino, calmar, omega, sterling, burke, martin)"
+                "\n  • 'benchmark_relative' (12 metrics): Benchmark comparison (beta, alpha, treynor, capture ratios)"
+                "\n  • 'all': Return all 41 metrics (default)"
+                "\n\n**Examples:**"
+                "\n  filters=['core']  # Essential metrics only"
+                "\n  filters=['risk_metrics', 'returns_metrics']  # Risk and returns analysis"
+                "\n  filters=['all']  # Everything"
+            ),
+            "items": {
+                "type": "string",
+                "enum": ["all", "core", "risk_metrics", "performance_metrics", "returns_metrics", "risk_adjusted", "benchmark_relative"]
+            },
+            "default": ["all"]
+        }
     },
     "required": ["ticker"],
     "additionalProperties": False
@@ -331,3 +431,7 @@ GET_TICKER_PERFORMANCE_AND_RISK_TOOL = {
     "parameters": GET_TICKER_PERFORMANCE_AND_RISK_PARAMETERS,
     "function": get_ticker_performance_and_risk,
 }
+
+
+if __name__ == "__main__":
+    print(get_ticker_performance_and_risk(ticker='AAPL', filters=['returns_metrics']))

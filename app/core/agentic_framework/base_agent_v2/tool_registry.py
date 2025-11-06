@@ -127,5 +127,9 @@ def register_base_tools(agent: Any) -> None:
         name="finalize",
         description=FINALIZE_DESCRIPTION,
         parameters=FINALIZE_PARAMETERS,
-        function=lambda answer, meta=None, **kwargs: finalize_tool(answer=answer, meta=meta),
+        function=lambda answer, meta=None, **kwargs: finalize_tool(
+            answer=answer,
+            plan=agent.plan,
+            meta=meta
+        ),
     )

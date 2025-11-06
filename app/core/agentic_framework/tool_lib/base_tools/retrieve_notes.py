@@ -87,13 +87,35 @@ def retrieve_notes(title: str, *, output_dir: Optional[str] = None) -> str:
         }, default_flow_style=False)
 
 
-RETRIEVE_NOTES_DESCRIPTION = (
-    "Retrieve notes from this run's notes.md file by searching for a title. "
-    "CRITICAL: The title parameter must EXACTLY match the title you used when calling write_note. "
-    "Use the EXACT SAME title string that was passed to write_note's 'title' parameter. "
-    "The search is case-insensitive and matches partial titles, but you should use the exact title "
-    "from write_note for best results. Returns all notes whose titles contain the search string."
-)
+RETRIEVE_NOTES_DESCRIPTION = """Retrieves previously stored analysis notes and insights from this run's notes.md file.
+
+**CRITICAL: Use this tool at these specific times:**
+1. **START of new analysis phase** - Check for previous work to maintain continuity
+2. **Before portfolio construction** - Review thesis, drivers, risk factors from earlier research
+3. **Before finalization** - Ensure all previous insights are incorporated into final answer
+4. **After every 5-10 tool calls** - Reconnect with earlier findings to maintain coherence
+5. **When connecting phases** - Bridge gap between research → analysis → decision making
+6. **When you feel you're missing context** - Previous notes may contain critical insights
+
+**Why this matters:**
+- Notes contain deep analysis that shouldn't be lost or forgotten
+- Prevents repeating expensive API calls and redundant analysis
+- Maintains consistency and coherence across long workflows
+- Connects insights across different analytical phases
+- Ensures final decisions incorporate ALL previous research
+
+**Example workflow:**
+Research Phase → write_note("Stock Analysis Findings", content)
+[... other work ...]
+Analysis Phase → retrieve_notes("Stock Analysis") ← DON'T SKIP THIS
+Portfolio Phase → retrieve_notes("Stock Analysis") ← CRITICAL for thesis consistency
+Finalization → retrieve_notes("Stock Analysis") ← Ensure nothing is lost
+
+**Technical details:**
+- The title parameter must match the title you used in write_note (case-insensitive, partial match)
+- Returns all notes whose titles contain the search string
+- Use the EXACT SAME title string that was passed to write_note for best results
+"""
 
 RETRIEVE_NOTES_PARAMETERS = {
     "type": "object",

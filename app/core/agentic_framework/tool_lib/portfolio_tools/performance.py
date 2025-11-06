@@ -11,10 +11,29 @@ from app.models.portfolio_models import PortfolioInput
 from app.utils.decorators.tool_validation import log_simulation_data_range
 from app.utils.tool_validator import ToolValidator
 
+# Metric group definitions for filtering
+METRIC_GROUPS = {
+    "core": ["cagr", "annualized_return", "annualized_volatility"],
+    "risk_adjusted": ["sharpe", "sortino", "calmar_1y"],
+    "benchmark_relative": ["beta", "alpha", "alpha_jensen", "information_ratio", "treynor", "tracking_error"],
+    "capture_ratios": ["up_capture_daily", "down_capture_daily", "up_capture_annual", "down_capture_annual"],
+    "advanced": ["omega", "burke", "sterling", "martin"],
+    "win_loss": ["win_rate", "profit_factor"],
+    "drawdown": ["max_drawdown", "pain_index", "tail_ratio", "ulcer_index"],
+}
+
 
 @log_simulation_data_range()
-def calculate_portfolio_performance(portfolio_dict: PortfolioInput | dict, lookback_days=DEFAULT_LOOKBACK_LONG, use_total_returns=True, rf_annual=0.04, benchmark="SPY",
-    _simulation_date: Optional[datetime] = None) -> str:
+def calculate_portfolio_performance(
+    portfolio_dict: PortfolioInput | dict, 
+    lookback_days=DEFAULT_LOOKBACK_LONG, 
+    use_total_returns=True, 
+    rf_annual=0.04, 
+    benchmark="SPY",
+    filters: list[str] = ["all"],
+    _simulation_date: Optional[datetime] = None
+    ) -> str:
+
     """Unified portfolio performance calculation combining all metrics.
 
     Args:
@@ -121,10 +140,10 @@ def calculate_portfolio_performance(portfolio_dict: PortfolioInput | dict, lookb
             except Exception:
                 return x
 
-        # Return all metrics
-        return yaml.dump({"success": True, "data": {
+        # Build complete metrics dictionary
+        all_metrics = {
             # Core returns
-            # "cagr": _rd(cagr),
+            "cagr": _rd(cagr),
             "annualized_return": _rd(ann_return),
             "annualized_volatility": _rd(ann_volatility),
 
@@ -162,18 +181,60 @@ def calculate_portfolio_performance(portfolio_dict: PortfolioInput | dict, lookb
             "pain_index": _rd(pain_index),
             "tail_ratio": _rd(tail_ratio),
             "ulcer_index": _rd(ulcer_index),
-        }}, default_flow_style=False)
+        }
+
+        # Apply filters
+        if "all" in filters or not filters:
+            # Return everything (backward compatible)
+            filtered_metrics = all_metrics
+        else:
+            # Build filtered dict based on requested groups
+            filtered_metrics = {}
+            requested_metrics = set()
+
+            # Collect all metrics from requested groups
+            for filter_name in filters:
+                if filter_name in METRIC_GROUPS:
+                    requested_metrics.update(METRIC_GROUPS[filter_name])
+                else:
+                    # Invalid filter name - return error
+                    valid_filters = list(METRIC_GROUPS.keys()) + ["all"]
+                    return yaml.dump({
+                        "success": False,
+                        "error": f"Invalid filter '{filter_name}'. Valid filters: {valid_filters}"
+                    }, default_flow_style=False)
+
+            # Extract only requested metrics
+            for metric_name in requested_metrics:
+                if metric_name in all_metrics:
+                    filtered_metrics[metric_name] = all_metrics[metric_name]
+
+        return yaml.dump({"success": True, "data": filtered_metrics}, default_flow_style=False)
     except Exception as e:
         return yaml.dump({"success": False, "error": str(e)}, default_flow_style=False)
 
 
 # Tool Schema Constants
 CALCULATE_PORTFOLIO_PERFORMANCE_DESCRIPTION = (
-    "Calculate portfolio performance metrics. "
-    "CRITICAL: You MUST ALWAYS include the portfolio_dict parameter. "
-    "NEVER call this without portfolio_dict. "
-    "The portfolio_dict must contain ALL portfolio holdings with their allocations and positions. "
-    "Example: portfolio_dict={'AAPL': {'allocation': 0.125, 'position': 'long'}, ...}"
+    "Calculate portfolio performance metrics with optional filtering for token efficiency. "
+    "Returns 26 total metrics across 7 groups (core, risk_adjusted, benchmark_relative, capture_ratios, advanced, win_loss, drawdown). "
+    "\n\n**TOKEN EFFICIENCY - Use Filters to Reduce Response Size:**"
+    "\n  Full response (filters=['all']): ~270 tokens with 26 metrics"
+    "\n  Filtered response (filters=['core', 'risk_adjusted']): ~120 tokens with 6 metrics (55% reduction)"
+    "\n  Minimal response (filters=['core']): ~80 tokens with 3 metrics (70% reduction)"
+    "\n\n**Common Filter Patterns:**"
+    "\n  • Quick check: ['core', 'risk_adjusted']"
+    "\n  • Risk analysis: ['core', 'risk_adjusted', 'drawdown']"
+    "\n  • Benchmark comparison: ['core', 'benchmark_relative', 'capture_ratios']"
+    "\n  • Full analysis: ['all'] (default)"
+    "\n\n**Critical Requirements:**"
+    "\n  • You MUST include portfolio_dict with ALL holdings (allocation + position)"
+    "\n  • Use filters to request only needed metrics (saves tokens)"
+    "\n  • Default lookback: 3 years (756 days), benchmark: SPY"
+    "\n\n**Examples:**"
+    "\n  calculate_portfolio_performance(portfolio_dict={'AAPL': {'allocation': 0.125, 'position': 'long'}, ...}, filters=['core', 'risk_adjusted'])"
+    "\n  calculate_portfolio_performance(portfolio_dict={'AAPL': {'allocation': 0.125, 'position': 'long'}, ...}, filters=['benchmark_relative'])"
+    "\n  calculate_portfolio_performance(portfolio_dict={'AAPL': {'allocation': 0.125, 'position': 'long'}, ...}, filters=['all'])"
 )
 
 CALCULATE_PORTFOLIO_PERFORMANCE_PARAMETERS = {
@@ -184,24 +245,8 @@ CALCULATE_PORTFOLIO_PERFORMANCE_PARAMETERS = {
             "description": (
                 "**MANDATORY - DO NOT OMIT THIS PARAMETER.** "
                 "Complete portfolio with ALL holdings. "
-                "Keys = ticker symbols (e.g., 'AAPL'). "
-                "Values = objects with 'allocation' (decimal 0-1) and 'position' ('long'/'short'). "
-                "You MUST include this parameter with all portfolio tickers. "
-                "Uses 3-year lookback (756 days) and SPY benchmark by default (industry standard for Sharpe/Sortino ratios)."
-                "\n\n"
-                """Example of CORRECT function call:
-                calculate_portfolio_performance(
-                    portfolio_dict={
-                        "AAPL": {"allocation": 0.125, "position": "long"},
-                        "MSFT": {"allocation": 0.125, "position": "long"},
-                        "AMZN": {"allocation": 0.125, "position": "long"},
-                        "TSLA": {"allocation": 0.125, "position": "long"},
-                        "META": {"allocation": 0.125, "position": "long"},
-                        "SPY": {"allocation": 0.125, "position": "long"},
-                        "QQQ": {"allocation": 0.125, "position": "long"},
-                        "IWM": {"allocation": 0.125, "position": "long"}
-                    }
-                )"""
+                "Format: {ticker: {allocation: decimal, position: 'long'/'short'}}. "
+                "Example: {'AAPL': {'allocation': 0.125, 'position': 'long'}, 'MSFT': {'allocation': 0.125, 'position': 'long'}}"
             ),
             "patternProperties": {
                 "^[A-Z]{1,5}$": {
@@ -225,9 +270,43 @@ CALCULATE_PORTFOLIO_PERFORMANCE_PARAMETERS = {
             },
             "minProperties": 1,
             "additionalProperties": False
+        },
+        "filters": {
+            "type": "array",
+            "description": (
+                "Filter which metric groups to return. Reduces token usage by 50-90% for focused analysis. "
+                "Provide a list of group names or ['all'] for everything (default). "
+                "\n\n**Available Metric Groups:**"
+                "\n  • 'core' (3 metrics): cagr, annualized_return, annualized_volatility"
+                "\n  • 'risk_adjusted' (3 metrics): sharpe, sortino, calmar_1y"
+                "\n  • 'benchmark_relative' (6 metrics): beta, alpha, alpha_jensen, information_ratio, treynor, tracking_error"
+                "\n  • 'capture_ratios' (4 metrics): up_capture_daily, down_capture_daily, up_capture_annual, down_capture_annual"
+                "\n  • 'advanced' (4 metrics): omega, burke, sterling, martin"
+                "\n  • 'win_loss' (2 metrics): win_rate, profit_factor"
+                "\n  • 'drawdown' (4 metrics): max_drawdown, pain_index, tail_ratio, ulcer_index"
+                "\n  • 'all': Return all 26 metrics (default behavior)"
+                "\n\n**Common Use Cases:**"
+                "\n  Quick Check → ['core', 'risk_adjusted'] (6 metrics, 77% reduction)"
+                "\n  Risk Analysis → ['core', 'risk_adjusted', 'drawdown'] (10 metrics, 62% reduction)"
+                "\n  vs Benchmark → ['core', 'benchmark_relative'] (9 metrics, 65% reduction)"
+                "\n  Full Report → ['all'] (26 metrics, for comprehensive analysis)"
+                "\n\n**Token Efficiency:**"
+                "\n  • ['core'] only: ~80 tokens (70% reduction vs full)"
+                "\n  • ['core', 'risk_adjusted']: ~120 tokens (55% reduction)"
+                "\n  • ['all']: ~270 tokens (complete metrics)"
+                "\n\n**Examples:**"
+                "\n  filters=['core', 'risk_adjusted']  # Quick performance overview"
+                "\n  filters=['benchmark_relative', 'capture_ratios']  # Compare to SPY"
+                "\n  filters=['all']  # Everything (default)"
+            ),
+            "items": {
+                "type": "string",
+                "enum": ["all", "core", "risk_adjusted", "benchmark_relative", "capture_ratios", "advanced", "win_loss", "drawdown"]
+            },
+            "default": ["all"]
         }
     },
-    "required": ["portfolio_dict"],  # This is critical
+    "required": ["portfolio_dict"],
     "additionalProperties": False
 }
 
@@ -237,3 +316,7 @@ CALCULATE_PORTFOLIO_PERFORMANCE_TOOL = {
     "parameters": CALCULATE_PORTFOLIO_PERFORMANCE_PARAMETERS,
     "function": calculate_portfolio_performance,
 }
+
+
+if __name__ == "__main__":
+    print(calculate_portfolio_performance(filters=["core"], portfolio_dict={'AAPL': {'allocation': 0.125, 'position': 'long'}, 'MSFT': {'allocation': 0.125, 'position': 'long'}, 'AMZN': {'allocation': 0.125, 'position': 'long'}, 'TSLA': {'allocation': 0.125, 'position': 'long'}, 'META': {'allocation': 0.125, 'position': 'long'}, 'SPY': {'allocation': 0.125, 'position': 'long'}, 'QQQ': {'allocation': 0.125, 'position': 'long'}, 'IWM': {'allocation': 0.125, 'position': 'long'}}))

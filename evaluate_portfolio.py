@@ -363,6 +363,8 @@ portfolio = { # 2022 Outperformed SPY!!
       "rationale": "Utilities sector (0.13% ER). Defensive characteristics, inflation hedging, dividend income (3-4% yields). Low correlation with equities provides diversification benefits."
     }
 }
+
+
 # portfolio = {
 #     "VTI": {
 #       "allocation": 0.10,
