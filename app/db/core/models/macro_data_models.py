@@ -29,18 +29,22 @@ class GovernmentBondRates(MacroDataBase):
     Data includes yield curves and various maturities.
     Column names follow format: {number}{period} where period is 'm' (months) or 'y' (years)
     Example: 1m = 1 month, 3m = 3 months, 1y = 1 year, 10y = 10 years
+
+    Note: Each country has a single UUID. All rows for a country share the same id (country identifier).
+    Primary key is composite: (id, date)
     """
     __tablename__ = 'gov_bond_rates'
     __table_args__ = (
         UniqueConstraint('country', 'date', name='uq_country_date'),
     )
 
-    # Primary key
-    id: Mapped[UUID] = mapped_column(primary_key=True, default=uuid4, init=False)
+    # Composite primary key: (id, date)
+    # id represents the country (same UUID for all rows of a country)
+    id: Mapped[UUID] = mapped_column(primary_key=True)
 
     # Country and date
     country: Mapped[str] = mapped_column(String, nullable=False, index=True)
-    date: Mapped[date] = mapped_column(Date, nullable=False, index=True)
+    date: Mapped[date] = mapped_column(Date, primary_key=True, nullable=False, index=True)
 
     # Treasury maturities - months
     m1: Mapped[Optional[float]] = mapped_column(Float, name='1m', default=None)
@@ -59,8 +63,8 @@ class GovernmentBondRates(MacroDataBase):
     y30: Mapped[Optional[float]] = mapped_column(Float, name='30y', default=None)
 
     # Metadata (UTC timestamps)
-    created_at: Mapped[Optional[datetime]] = mapped_column(DateTime, default=None, init=False)
-    updated_at: Mapped[Optional[datetime]] = mapped_column(DateTime, default=None, init=False)
+    created_at: Mapped[Optional[datetime]] = mapped_column(DateTime, default=None)
+    updated_at: Mapped[Optional[datetime]] = mapped_column(DateTime, default=None)
 
 
 # =============================================================================
@@ -76,19 +80,21 @@ class CommodityPrices(MacroDataBase):
     - Open, High, Low, Close prices
     - Volume
 
-    Unique constraint ensures one record per symbol per date.
+    Note: Each symbol has a single UUID. All rows for a symbol share the same id (symbol identifier).
+    Primary key is composite: (id, date)
     """
     __tablename__ = 'commodity_prices'
     __table_args__ = (
         UniqueConstraint('symbol', 'date', name='uq_commodity_symbol_date'),
     )
 
-    # Primary key
-    id: Mapped[UUID] = mapped_column(primary_key=True, default=uuid4, init=False)
+    # Composite primary key: (id, date)
+    # id represents the symbol (same UUID for all rows of a symbol)
+    id: Mapped[UUID] = mapped_column(primary_key=True)
 
     # Commodity identifier and date
     symbol: Mapped[str] = mapped_column(String, nullable=False, index=True)
-    date: Mapped[date] = mapped_column(Date, nullable=False, index=True)
+    date: Mapped[date] = mapped_column(Date, primary_key=True, nullable=False, index=True)
 
     # OHLCV data
     open: Mapped[Optional[float]] = mapped_column(Float, default=None)
@@ -98,5 +104,5 @@ class CommodityPrices(MacroDataBase):
     volume: Mapped[Optional[float]] = mapped_column(Float, default=None)
 
     # Metadata (UTC timestamps)
-    created_at: Mapped[Optional[datetime]] = mapped_column(DateTime, default=None, init=False)
-    updated_at: Mapped[Optional[datetime]] = mapped_column(DateTime, default=None, init=False)
+    created_at: Mapped[Optional[datetime]] = mapped_column(DateTime, default=None)
+    updated_at: Mapped[Optional[datetime]] = mapped_column(DateTime, default=None)

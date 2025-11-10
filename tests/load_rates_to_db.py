@@ -6,6 +6,9 @@ This script:
 2. Processes and validates the data
 3. Inserts into the gov_bond_rates table (public schema)
 4. Handles duplicates with upsert logic
+
+Note: Each country has a single UUID. This script will look up existing country UUIDs
+or create new ones for new countries.
 """
 import sys
 from pathlib import Path
@@ -14,6 +17,7 @@ import os
 import requests
 import time
 from datetime import datetime, timedelta
+from uuid import uuid4, UUID
 from sqlalchemy import text
 from sqlalchemy.dialects.postgresql import insert
 from dotenv import load_dotenv
@@ -40,6 +44,33 @@ def create_schema_and_tables():
     MacroDataBase.metadata.create_all(macro_data_engine)
 
     print("✓ Tables ready")
+
+
+def get_or_create_country_uuid(country, session):
+    """
+    Get the UUID for a country, or create a new one if it doesn't exist.
+
+    Args:
+        country: Country code (e.g., 'US', 'GB', 'JP')
+        session: Database session
+
+    Returns:
+        UUID for the country
+    """
+    # Try to get existing UUID for this country
+    result = session.execute(
+        text("SELECT DISTINCT id FROM gov_bond_rates WHERE country = :country LIMIT 1"),
+        {"country": country}
+    )
+    row = result.fetchone()
+
+    if row:
+        return row[0]  # Return existing UUID
+    else:
+        # Generate new UUID for new country
+        new_uuid = uuid4()
+        print(f"  → Generated new UUID for {country}: {new_uuid}")
+        return new_uuid
 
 
 def get_country_rates_from_api(country, start_date, end_date):
@@ -152,31 +183,37 @@ def load_dataframe_to_database(df, country):
     df['created_at'] = current_time
     df['updated_at'] = current_time
 
-    # Select only columns that exist in the database model
-    db_columns = [
-        'country', 'date',
-        '1m', '2m', '3m', '6m',
-        '1y', '2y', '3y', '5y', '7y', '10y', '20y', '30y',
-        'created_at', 'updated_at'
-    ]
-
-    # Keep only columns that exist in both dataframe and database
-    available_columns = [col for col in db_columns if col in df.columns]
-    df = df[available_columns]
-
-    # Remove rows with no rate data (all rate columns are null)
-    rate_columns = [col for col in available_columns if col not in ['country', 'date', 'created_at', 'updated_at']]
-    df = df.dropna(subset=rate_columns, how='all')
-
-    if df.empty:
-        return 0
-
-    # Convert dataframe to list of dicts for SQLAlchemy
-    records = df.to_dict('records')
-
     # Use PostgreSQL INSERT ... ON CONFLICT for upsert
     session = MacroDataSession()
     try:
+        # Get or create UUID for this country
+        country_uuid = get_or_create_country_uuid(country, session)
+
+        # Add country UUID to all records
+        df['id'] = str(country_uuid)
+
+        # Select only columns that exist in the database model
+        db_columns = [
+            'id', 'country', 'date',
+            '1m', '2m', '3m', '6m',
+            '1y', '2y', '3y', '5y', '7y', '10y', '20y', '30y',
+            'created_at', 'updated_at'
+        ]
+
+        # Keep only columns that exist in both dataframe and database
+        available_columns = [col for col in db_columns if col in df.columns]
+        df = df[available_columns]
+
+        # Remove rows with no rate data (all rate columns are null)
+        rate_columns = [col for col in available_columns if col not in ['id', 'country', 'date', 'created_at', 'updated_at']]
+        df = df.dropna(subset=rate_columns, how='all')
+
+        if df.empty:
+            return 0
+
+        # Convert dataframe to list of dicts for SQLAlchemy
+        records = df.to_dict('records')
+
         # Batch insert with ON CONFLICT DO UPDATE
         stmt = insert(GovernmentBondRates).values(records)
 

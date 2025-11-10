@@ -8,8 +8,7 @@ from functools import wraps
 from typing import Any, Callable, Optional
 import logging
 
-from app.db.core.db_config import MarketSession, UserSession, ProphitAltsSession
-
+from app.db.core.db_config import MarketSession, UserSession, ProphitAltsSession, MacroDataSession
 
 logger = logging.getLogger(__name__)
 
@@ -19,11 +18,12 @@ def _get_session_class(session_type: str):
         'market': MarketSession,
         'user': UserSession,
         'prophit': ProphitAltsSession,
+        'macro': MacroDataSession,
     }
     try:
         return mapping[session_type]
     except KeyError:
-        raise ValueError(f"Unsupported session_type '{session_type}'. Use 'market', 'user', or 'prophit'.")
+        raise ValueError(f"Unsupported session_type '{session_type}'. Use 'market', 'user', 'prophit', or 'macro'.")
 
 
 def with_session(session_type: str = 'market') -> Callable[[Callable[..., Any]], Callable[..., Any]]:

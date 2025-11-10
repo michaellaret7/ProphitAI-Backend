@@ -5,6 +5,7 @@ from datetime import datetime
 from dotenv import load_dotenv
 from pathlib import Path
 import sys
+from uuid import uuid5, NAMESPACE_DNS
 from sqlalchemy.dialects.postgresql import insert
 
 # Add parent directory to path for imports
@@ -15,6 +16,21 @@ from app.db.core.models.macro_data_models import CommodityPrices
 from app.utils.time_utils import get_current_utc_time
 
 load_dotenv()
+
+
+def get_symbol_uuid(symbol: str):
+    """
+    Generate a deterministic UUID for a commodity symbol.
+    Same symbol always gets the same UUID.
+
+    Args:
+        symbol: Commodity symbol (e.g., 'GCUSD')
+
+    Returns:
+        UUID for the symbol
+    """
+    return uuid5(NAMESPACE_DNS, f"commodity.{symbol}")
+
 
 def get_commodity_data(symbol, from_date=None, to_date=None, interval='1day'):
     """
@@ -94,11 +110,13 @@ def push_commodity_data_to_db(symbol: str, df: pd.DataFrame) -> int:
     session = MacroDataSession()
     try:
         current_time = get_current_utc_time()
+        symbol_uuid = get_symbol_uuid(symbol)
 
         # Prepare records for insertion
         records = []
         for _, row in df.iterrows():
             records.append({
+                'id': symbol_uuid,
                 'symbol': symbol,
                 'date': row['date'],
                 'open': float(row['open']) if pd.notna(row['open']) else None,
@@ -129,12 +147,12 @@ def push_commodity_data_to_db(symbol: str, df: pd.DataFrame) -> int:
         session.execute(stmt)
         session.commit()
 
-        print(f"✓ Inserted/updated {len(records)} records for {symbol}")
+        print(f"Inserted/updated {len(records)} records for {symbol}")
         return len(records)
 
     except Exception as e:
         session.rollback()
-        print(f"✗ Error inserting data for {symbol}: {e}")
+        print(f"Error inserting data for {symbol}: {e}")
         raise
     finally:
         session.close()
@@ -169,13 +187,11 @@ def fetch_and_store_commodity_data(symbol: str, from_date=None, to_date=None, in
     return count
 
 
-
-
 if __name__ == "__main__":
     # Example: Get gold data for 2024
     # df = get_commodity_data("LBUSD", from_date="2025-01-01", to_date="2024-12-31")
     commodity_tickers = [
-        "ZQUSD",  # 30-Day Fed Funds Futures
+        # "ZQUSD",  # 30-Day Fed Funds Futures
         "ALIUSD",  # Aluminum
         "ZMUSD",  # Soybean Meal
         "GCUSD",  # Gold
@@ -217,7 +233,6 @@ if __name__ == "__main__":
             print(f"{ticker}: {count} records loaded")
         except Exception as e:
             print(f"Failed to load {ticker}: {e}")
-    
 
 """
 commodity_tickers = [
