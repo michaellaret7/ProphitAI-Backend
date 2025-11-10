@@ -147,3 +147,53 @@ class EconomicIndicators(MacroDataBase):
     # Metadata (UTC timestamps)
     created_at: Mapped[Optional[datetime]] = mapped_column(DateTime, default=None)
     updated_at: Mapped[Optional[datetime]] = mapped_column(DateTime, default=None)
+
+
+# =============================================================================
+# ECONOMIC CALENDAR (PUBLIC SCHEMA)
+# =============================================================================
+
+@dataclass
+class EconomicCalendar(MacroDataBase):
+    """
+    Economic calendar events and data releases.
+
+    Stores scheduled economic data releases including:
+    - Event name and release date/time
+    - Country and currency information
+    - Actual, previous, and estimate values
+    - Change metrics and impact level
+
+    Note: Each event is uniquely identified by event name, date, and country.
+    id field stores the country UUID (matches gov_bond_rates table)
+    """
+    __tablename__ = 'economic_calendar'
+    __table_args__ = (
+        UniqueConstraint('event', 'date', 'country', name='uq_event_date_country'),
+    )
+
+    # Auto-incrementing primary key
+    event_id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
+
+    # Country UUID (matches gov_bond_rates table)
+    id: Mapped[UUID] = mapped_column(nullable=False, index=True)
+
+    # Event metadata
+    event: Mapped[str] = mapped_column(String(500), nullable=False, index=True)
+    date: Mapped[datetime] = mapped_column(DateTime, nullable=False, index=True)
+    country: Mapped[str] = mapped_column(String(10), nullable=False, index=True)
+    currency: Mapped[Optional[str]] = mapped_column(String(10), default=None)
+
+    # Event values
+    actual: Mapped[Optional[float]] = mapped_column(Float, default=None)
+    previous: Mapped[Optional[float]] = mapped_column(Float, default=None)
+    estimate: Mapped[Optional[float]] = mapped_column(Float, default=None)
+    change: Mapped[Optional[float]] = mapped_column(Float, default=None)
+    change_percentage: Mapped[Optional[float]] = mapped_column(Float, default=None)
+
+    # Event importance
+    impact: Mapped[Optional[str]] = mapped_column(String(20), default=None, index=True)
+
+    # Metadata (UTC timestamps)
+    created_at: Mapped[Optional[datetime]] = mapped_column(DateTime, default=None)
+    updated_at: Mapped[Optional[datetime]] = mapped_column(DateTime, default=None)

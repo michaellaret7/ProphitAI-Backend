@@ -1,5 +1,5 @@
 from app.db.core.db_config import MacroDataSession
-from app.db.core.models.macro_data_models import CommodityPrices, GovernmentBondRates, EconomicIndicators
+from app.db.core.models.macro_data_models import CommodityPrices, GovernmentBondRates, EconomicIndicators, EconomicCalendar
 from app.utils.decorators.database import with_session
 from pydantic import BaseModel, ConfigDict
 from datetime import datetime, date
@@ -128,9 +128,71 @@ def get_economic_indicators(
     indicators = query.all()
 
     return DataFrame([
-        {   
+        {
             'indicator': indicator.indicator,
             'date': indicator.date,
             'value': indicator.value
         } for indicator in indicators
     ])
+
+
+@with_session('macro')
+def get_economic_calendar(
+    country: str,
+    start_date: Optional[date] = None,
+    end_date: Optional[date] = None,
+    event: Optional[str] = None,
+    session=None
+):
+    """
+    Fetch economic calendar events for a given country.
+
+    Args:
+        country: Country code (e.g., "US", "UK", "CA", "FR", "DE", "IT", "JP")
+        start_date: Optional start date for filtering (inclusive)
+        end_date: Optional end date for filtering (inclusive)
+        event: Optional event name filter (partial match, case-insensitive)
+        session: Database session (injected by decorator)
+
+    Returns:
+        DataFrame with columns: event_id, id (country UUID), event, date, country,
+                                currency, actual, previous, estimate, change,
+                                change_percentage, impact
+    """
+    query = session.query(EconomicCalendar).filter(EconomicCalendar.country == country)
+
+    # Add date filters if provided
+    if start_date:
+        query = query.filter(EconomicCalendar.date >= start_date)
+    if end_date:
+        query = query.filter(EconomicCalendar.date <= end_date)
+
+    # Add event filter if provided (partial match, case-insensitive)
+    if event:
+        query = query.filter(EconomicCalendar.event.ilike(f'%{event}%'))
+
+    # Order by date ascending
+    query = query.order_by(EconomicCalendar.date.asc())
+
+    events = query.all()
+
+    # Convert to DataFrame
+    df = DataFrame([
+        {
+            'event_id': event.event_id,
+            'id': event.id,
+            'event': event.event,
+            'date': event.date,
+            'country': event.country,
+            'currency': event.currency,
+            'actual': event.actual,
+            'previous': event.previous,
+            'estimate': event.estimate,
+            'change': event.change,
+            'change_percentage': event.change_percentage,
+            'impact': event.impact
+        }
+        for event in events
+    ])
+
+    return df
