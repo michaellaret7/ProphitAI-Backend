@@ -106,3 +106,44 @@ class CommodityPrices(MacroDataBase):
     # Metadata (UTC timestamps)
     created_at: Mapped[Optional[datetime]] = mapped_column(DateTime, default=None)
     updated_at: Mapped[Optional[datetime]] = mapped_column(DateTime, default=None)
+
+
+# =============================================================================
+# ECONOMIC INDICATORS (PUBLIC SCHEMA)
+# =============================================================================
+
+@dataclass
+class EconomicIndicators(MacroDataBase):
+    """
+    US Economic Indicators time series data.
+
+    Stores historical data for macroeconomic indicators including:
+    - Labor market (unemployment, payrolls, jobless claims)
+    - Growth & output (GDP, industrial production, retail sales)
+    - Inflation & prices (CPI, inflation rate)
+    - Credit & rates (Federal Funds Rate)
+    - Consumer metrics (consumer sentiment)
+    - Business (vehicle sales)
+
+    Note: Each indicator has a single UUID. All rows for an indicator share the same id (indicator identifier).
+    Primary key is composite: (id, date)
+    """
+    __tablename__ = 'economic_indicators'
+    __table_args__ = (
+        UniqueConstraint('indicator', 'date', name='uq_indicator_date'),
+    )
+
+    # Composite primary key: (id, date)
+    # id represents the indicator (same UUID for all rows of an indicator)
+    id: Mapped[UUID] = mapped_column(primary_key=True)
+
+    # Indicator identifier and date
+    indicator: Mapped[str] = mapped_column(String, nullable=False, index=True)
+    date: Mapped[date] = mapped_column(Date, primary_key=True, nullable=False, index=True)
+
+    # Value
+    value: Mapped[Optional[float]] = mapped_column(Float, default=None)
+
+    # Metadata (UTC timestamps)
+    created_at: Mapped[Optional[datetime]] = mapped_column(DateTime, default=None)
+    updated_at: Mapped[Optional[datetime]] = mapped_column(DateTime, default=None)
