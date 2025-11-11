@@ -5,6 +5,7 @@ import pandas as pd
 import numpy as np
 from app.core.calculations.portfolio.utils import get_portfolio_returns, get_benchmark_returns
 from app.core.calculations.risk.calculator import RiskCalculator
+from app.core.calculations.core.config import DEFAULT_LOOKBACK_MEDIUM
 from app.models.portfolio_models import PortfolioInput
 from app.utils.decorators.tool_validation import log_simulation_data_range
 from app.utils.tool_validator import ToolValidator
@@ -12,7 +13,7 @@ from app.utils.tool_validator import ToolValidator
 @log_simulation_data_range()
 def calculate_portfolio_beta_vs_index(
     portfolio_dict: PortfolioInput | dict,
-    lookback_days: int = 252,
+    lookback_days: int = DEFAULT_LOOKBACK_MEDIUM,
     _simulation_date: Optional[datetime] = None
 ) -> str:
     """
@@ -20,7 +21,7 @@ def calculate_portfolio_beta_vs_index(
 
     Args:
         portfolio_dict: Dict of {ticker: {"allocation": float, "position": "long/short"}}
-        lookback_days: Number of days of historical data to use
+        lookback_days: Number of days of historical data to use (default: 504 days / 2 years)
 
     Returns:
         Portfolio beta vs SPY index
@@ -79,7 +80,7 @@ def calculate_portfolio_beta_vs_index(
         return yaml.dump({"success": False, "error": str(e)}, default_flow_style=False)
 
 CALCULATE_PORTFOLIO_BETA_VS_INDEX_DESCRIPTION = (
-    "Calculate CAPM beta for a long/short portfolio versus SPY benchmark (hardcoded) using 252 trading days of historical data. "
+    "Calculate CAPM beta for a long/short portfolio versus SPY benchmark (hardcoded) using 504 trading days (2 years) of historical data. "
     "Beta measures the portfolio's systematic risk relative to SPY. A beta of 1.0 means the portfolio moves with SPY, >1.0 means more volatile than SPY, <1.0 means less volatile. "
     "CRITICAL: You MUST ALWAYS include the portfolio_dict parameter with ALL holdings. "
     "Example: calculate_portfolio_beta_vs_index(portfolio_dict={'AAPL': {'allocation': 0.5, 'position': 'long'}, 'MSFT': {'allocation': 0.5, 'position': 'long'}})"

@@ -221,7 +221,7 @@ Rules:
         plan_first=True,  # Create a plan before executing
         # temperature=0.7,
         reasoning_effort="high",
-        simulation_date=datetime(2022, 1, 1)
+        simulation_date=datetime(2023, 1, 1)
     )
 
     # Register analysis tools
