@@ -9,6 +9,7 @@ from app.db.core.models.market_data_models import (
     PressRelease,
     StockNews,
     PriceTargetNews,
+    StockGradeNews,
 )
 from app.utils.decorators.database import with_session
 
@@ -131,5 +132,44 @@ def get_price_target_news(
             "priceWhenPosted": getattr(r, "priceWhenPosted", None),
             "newsPublisher": getattr(r, "newsPublisher", None),
             "analystCompany": getattr(r, "analystCompany", None),
+        })
+    return {"ticker": ticker.upper(), "count": len(items), "items": items}
+
+
+@with_session('market')
+def get_stock_grade_news(
+    ticker: str,
+    *,
+    start: Optional[datetime] = None,
+    end: Optional[datetime] = None,
+    limit: Optional[int] = None,
+    ascending: bool = True,
+    session=None,  # Accept session parameter from decorator
+) -> Dict[str, Any]:
+    """Fetch stock grade/rating news for a ticker within an optional date range."""
+    q = (
+        session.query(StockGradeNews)
+        .join(Ticker)
+        .filter(Ticker.ticker == ticker.upper())
+    )
+    if start is not None:
+        q = q.filter(StockGradeNews.publishedDate >= start)
+    if end is not None:
+        q = q.filter(StockGradeNews.publishedDate <= end)
+    q = q.order_by(StockGradeNews.publishedDate.asc() if ascending else StockGradeNews.publishedDate.desc())
+    if limit is not None and limit > 0:
+        q = q.limit(int(limit))
+    rows: List[StockGradeNews] = q.all()
+    items: List[Dict[str, Any]] = []
+    for r in rows:
+        items.append({
+            "publishedDate": _serialize_dt(r.publishedDate),
+            "newsTitle": getattr(r, "newsTitle", None),
+            "gradingCompany": getattr(r, "gradingCompany", None),
+            "newGrade": getattr(r, "newGrade", None),
+            "previousGrade": getattr(r, "previousGrade", None),
+            "action": getattr(r, "action", None),
+            "priceWhenPosted": getattr(r, "priceWhenPosted", None),
+            "newsPublisher": getattr(r, "newsPublisher", None),
         })
     return {"ticker": ticker.upper(), "count": len(items), "items": items}

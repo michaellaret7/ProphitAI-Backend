@@ -16,6 +16,7 @@ from app.api.routes.broker_router import router as broker_router
 from app.api.routes.ticker_router import router as ticker_router
 from app.api.routes.technical_router import router as technical_router
 from app.api.routes.macro_router import router as macro_router
+from app.api.routes.news_router import router as news_router
 
 # Configure logging to show cache hit/miss INFO messages
 logging.basicConfig(
@@ -74,6 +75,7 @@ app.include_router(broker_router, prefix="/api")
 app.include_router(ticker_router, prefix="/api")
 app.include_router(technical_router, prefix="/api")
 app.include_router(macro_router, prefix="/api")
+app.include_router(news_router, prefix="/api")
 
 # Serve test frontend (WebSocket stream viewer)
 app.mount("/static", StaticFiles(directory="app/api/testing/static"), name="static")
