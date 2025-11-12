@@ -12,13 +12,13 @@ from app.core.agentic_framework.base_agent.utils.models import PrintMode
 from app.core.agentic_framework.base_agent.tool_registry import register_base_tools
 from app.core.agentic_framework.base_agent.utils.path_utils import create_agent_output_dir
 from app.core.agentic_framework.base_agent.logging.notes import ensure_notes_file
-from app.core.agentic_framework.base_agent.utils.agent_message import UNIVERSAL_AGENT_MESSAGE
+from app.core.agentic_framework.base_agent.utils.sub_agent_message import SUB_AGENT_MESSAGE
 from datetime import datetime
 from typing import Optional
 
 load_dotenv()
 
-class BaseAgent:
+class SubAgent:
     """Minimal autonomous agent implementing ReAct pattern.
 
     Responsibilities:
@@ -30,13 +30,13 @@ class BaseAgent:
 
     def __init__(
         self,
-        system_prompt: str,
-        user_prompt: str,
+        system_prompt: str = SUB_AGENT_MESSAGE,
+        user_prompt: str = None,
         *,
         model: str = None,
         provider: str = None,
-        max_iterations: int = 100,
-        print_mode: Union[str, PrintMode] = PrintMode.VERBOSE,
+        max_iterations: int = 30,
+        print_mode: Union[str, PrintMode] = PrintMode.PRODUCTION,
         reasoning_effort: str = None,
         temperature: float = None,
         plan_first: bool = True,
@@ -135,8 +135,7 @@ class BaseAgent:
         """
         # Build initial messages
         self.messages = [
-            {"role": "system", "content": UNIVERSAL_AGENT_MESSAGE},
-            {"role": "system", "content": self.system_prompt},
+            {"role": "system", "content": SUB_AGENT_MESSAGE},
             {"role": "user", "content": self.user_prompt},
         ]
 

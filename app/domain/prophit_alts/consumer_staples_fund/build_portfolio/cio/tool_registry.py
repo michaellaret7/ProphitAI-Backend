@@ -4,7 +4,7 @@ from app.core.agentic_framework.tool_lib.agent_specific_tools.cio import (
 from app.core.agentic_framework.tool_lib.data_tools.industry_factors import GET_INDUSTRY_BENCHMARK_CALCULATIONS_TOOL
 from app.core.agentic_framework.tool_lib.data_tools.sub_industry_factors import GET_SUB_INDUSTRY_BENCHMARK_CALCULATIONS_TOOL
 from app.core.agentic_framework.tool_lib.data_tools.ticker_fundamentals import GET_TICKER_FUNDAMENTAL_DATA_TOOL
-from app.core.agentic_framework.tool_lib.data_tools.repository import FETCH_TICKER_REPOSITORY_DATA_TOOL
+from app.core.agentic_framework.tool_lib.data_tools.ticker_repository import FETCH_TICKER_REPOSITORY_DATA_TOOL
 from app.core.agentic_framework.tool_lib.data_tools.stock_screener import STOCK_SCREENER_TOOL
 from app.core.agentic_framework.tool_lib.portfolio_tools.corr_matrix import CORRELATION_MATRIX_TOOL
 from app.core.agentic_framework.tool_lib.portfolio_tools.performance import CALCULATE_PORTFOLIO_PERFORMANCE_TOOL

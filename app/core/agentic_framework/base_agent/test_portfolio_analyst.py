@@ -223,7 +223,7 @@ Rules:
         max_iterations=100,  # Allow many iterations for thorough analysis
         print_mode=PrintMode.VERBOSE,
         plan_first=True,  # Create a plan before executing
-        # temperature=0.7,
+        temperature=0.7,
         reasoning_effort="high",
         simulation_date=datetime(2023, 1, 1)
     )
