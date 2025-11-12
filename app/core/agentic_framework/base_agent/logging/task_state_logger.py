@@ -8,7 +8,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Optional
 
 if TYPE_CHECKING:
-    from app.core.agentic_framework.base_agent_v2.utils.models import Plan
+    from app.core.agentic_framework.base_agent.utils.models import Plan
 
 
 def format_plan_state(plan: 'Plan') -> str:
@@ -57,7 +57,7 @@ def write_task_state_to_file(plan: 'Plan', output_dir: Optional[str] = None) -> 
 
     Args:
         plan: The agent's Plan object containing tasks and subtasks
-        output_dir: Directory to write the file to (defaults to base_agent_v2 directory)
+        output_dir: Directory to write the file to (defaults to base_agent directory)
     """
     if not plan or not plan.tasks:
         return
@@ -65,10 +65,10 @@ def write_task_state_to_file(plan: 'Plan', output_dir: Optional[str] = None) -> 
     # Format the plan
     formatted_state = format_plan_state(plan)
 
-    # Default to base_agent_v2 directory (same location as message history)
+    # Default to base_agent directory (same location as message history)
     if output_dir is None:
-        base_agent_v2_dir = Path(__file__).parent.parent
-        output_path = base_agent_v2_dir / "task_state.yaml"
+        base_agent_dir = Path(__file__).parent.parent
+        output_path = base_agent_dir / "task_state.yaml"
     else:
         output_path = Path(output_dir) / "task_state.yaml"
 

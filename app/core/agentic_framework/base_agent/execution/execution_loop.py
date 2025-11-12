@@ -5,15 +5,15 @@ Simple ReAct iteration loop.
 
 from typing import Dict, Any, TYPE_CHECKING
 import json
-from app.core.agentic_framework.base_agent_v2.utils.models import PrintMode
-from app.core.agentic_framework.base_agent_v2.planning.plan_prompt import plan_prompt
-from app.core.agentic_framework.base_agent_v2.planning.plan_parser import parse_plan_with_gpt
-from app.core.agentic_framework.base_agent_v2.utils.models import *
-from app.core.agentic_framework.base_agent_v2.execution.utils import (
+from app.core.agentic_framework.base_agent.utils.models import PrintMode
+from app.core.agentic_framework.base_agent.planning.plan_prompt import plan_prompt
+from app.core.agentic_framework.base_agent.planning.plan_parser import parse_plan_with_gpt
+from app.core.agentic_framework.base_agent.utils.models import *
+from app.core.agentic_framework.base_agent.execution.utils import (
     extract_final_answer,
     build_plan_context
 )
-from app.core.agentic_framework.base_agent_v2.logging.message_logger import write_messages_to_yaml
+from app.core.agentic_framework.base_agent.logging.message_logger import write_messages_to_yaml
 from app.core.agentic_framework.tool_lib.base_tools.edit_plan import edit_plan
 
 if TYPE_CHECKING:

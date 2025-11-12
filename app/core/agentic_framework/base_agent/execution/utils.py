@@ -6,8 +6,8 @@ Contains helper functions for:
 """
 
 from typing import TYPE_CHECKING
-from app.core.agentic_framework.base_agent_v2.utils.models import TaskStatus
-from app.core.agentic_framework.base_agent_v2.logging.task_state_logger import format_plan_state
+from app.core.agentic_framework.base_agent.utils.models import TaskStatus
+from app.core.agentic_framework.base_agent.logging.task_state_logger import format_plan_state
 
 if TYPE_CHECKING:
     from ..agent import BaseAgent

@@ -3,7 +3,7 @@
 from typing import TYPE_CHECKING, List, Dict, Any
 import builtins
 import yaml
-from app.core.agentic_framework.base_agent_v2.utils.models import TaskStatus
+from app.core.agentic_framework.base_agent.utils.models import TaskStatus
 
 if TYPE_CHECKING:
     from ..agent import BaseAgent

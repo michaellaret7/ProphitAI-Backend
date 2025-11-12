@@ -4,8 +4,8 @@ This agent analyzes a portfolio to identify strengths/weaknesses and proposes
 evidence-backed trade ideas using portfolio and ticker tools.
 """
 
-from app.core.agentic_framework.base_agent_v2.agent import BaseAgent
-from app.core.agentic_framework.base_agent_v2.utils.models import PrintMode
+from app.core.agentic_framework.base_agent.agent import BaseAgent
+from app.core.agentic_framework.base_agent.utils.models import PrintMode
 from datetime import datetime
 import random
 
@@ -60,6 +60,9 @@ from app.core.agentic_framework.tool_lib.portfolio_tools.performance import (
 from app.core.agentic_framework.tool_lib.portfolio_tools.corr_matrix import (
     CORRELATION_MATRIX_TOOL,
 )
+from app.core.agentic_framework.tool_lib.ticker_tools.technicals import (
+    TECHNICALS_TOOL,
+)
 
 
 
@@ -80,6 +83,7 @@ def register_portfolio_analysis_tools(agent: BaseAgent) -> None:
         CALCULATE_TICKER_FACTORS_TOOL,
         GET_TICKER_FUNDAMENTAL_DATA_TOOL,
         STOCK_SCREENER_TOOL,
+        TECHNICALS_TOOL,
 
         # Portfolio construction & risk tools
         BUILD_PORTFOLIO_TOOL,

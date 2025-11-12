@@ -2,8 +2,8 @@
 
 import yaml
 from typing import List, Optional
-from app.core.agentic_framework.base_agent_v2.utils.models import TaskStatus
-from app.core.agentic_framework.base_agent_v2.logging.task_state_logger import write_task_state_to_file
+from app.core.agentic_framework.base_agent.utils.models import TaskStatus
+from app.core.agentic_framework.base_agent.logging.task_state_logger import write_task_state_to_file
 
 
 def update_tasks(

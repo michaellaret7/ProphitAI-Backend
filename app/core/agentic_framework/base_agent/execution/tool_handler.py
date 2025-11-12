@@ -5,13 +5,13 @@ Simple tool execution and message management.
 
 import json
 from typing import List, Dict, Any, TYPE_CHECKING
-from app.core.agentic_framework.base_agent_v2.execution.tool_validation import validate_tool_call
-from app.core.agentic_framework.base_agent_v2.utils.models import PrintMode
-from app.core.agentic_framework.base_agent_v2.logging.message_logger import write_messages_to_yaml
-from app.core.agentic_framework.base_agent_v2.logging.tool_trace import log_tool_call
-from app.core.agentic_framework.base_agent_v2.context_manager import prune_completed_task_messages, prune_note_content
+from app.core.agentic_framework.base_agent.execution.tool_validation import validate_tool_call
+from app.core.agentic_framework.base_agent.utils.models import PrintMode
+from app.core.agentic_framework.base_agent.logging.message_logger import write_messages_to_yaml
+from app.core.agentic_framework.base_agent.logging.tool_trace import log_tool_call
+from app.core.agentic_framework.base_agent.context_manager import prune_completed_task_messages, prune_note_content
 import yaml
-from app.core.agentic_framework.base_agent_v2.utils.models import TaskStatus
+from app.core.agentic_framework.base_agent.utils.models import TaskStatus
 
 if TYPE_CHECKING:
     from ..agent import BaseAgent

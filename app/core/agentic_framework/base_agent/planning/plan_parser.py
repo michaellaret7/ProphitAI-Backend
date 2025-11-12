@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import Optional, Tuple
 
-from app.core.agentic_framework.base_agent_v2.utils.models import Plan
+from app.core.agentic_framework.base_agent.utils.models import Plan
 from app.utils.gpt_parser import parse_with_gpt
 
 def parse_plan_with_gpt(content: str, system_prompt: Optional[str] = None) -> Tuple[Optional[Plan], Optional[str]]:

@@ -6,8 +6,8 @@ create a simple plan and then modify it using various edit operations.
 NOTE: edit_plan is now a base tool and is automatically registered with all agents.
 """
 
-from app.core.agentic_framework.base_agent_v2.agent import BaseAgent
-from app.core.agentic_framework.base_agent_v2.utils.models import PrintMode
+from app.core.agentic_framework.base_agent.agent import BaseAgent
+from app.core.agentic_framework.base_agent.utils.models import PrintMode
 
 # Import minimal tool set
 from app.core.agentic_framework.tool_lib.portfolio_tools.returns import (

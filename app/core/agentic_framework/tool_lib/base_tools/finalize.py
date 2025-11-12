@@ -14,7 +14,7 @@ def finalize(answer: str, *, plan=None, meta: Optional[dict] = None) -> str:
     """
     # WORKFLOW ENFORCEMENT: Validate all tasks are complete before finalizing
     if plan and plan.tasks:
-        from app.core.agentic_framework.base_agent_v2.utils.models import TaskStatus
+        from app.core.agentic_framework.base_agent.utils.models import TaskStatus
 
         incomplete_main_tasks = [t for t in plan.tasks if t.status != TaskStatus.COMPLETE]
 

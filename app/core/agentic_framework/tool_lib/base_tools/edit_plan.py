@@ -1,6 +1,6 @@
 from typing import Optional, Literal
 import re
-from app.core.agentic_framework.base_agent_v2.utils.models import Plan, TaskStatus, PlanTask, PlanSubtask
+from app.core.agentic_framework.base_agent.utils.models import Plan, TaskStatus, PlanTask, PlanSubtask
 
 TaskAction = Literal["add", "drop", "edit"]
 TaskType = Literal["main_task", "subtask"]
@@ -231,7 +231,7 @@ def create_edit_plan_wrapper(agent):
         Wrapped function that can be registered as a tool
     """
     import yaml
-    from app.core.agentic_framework.base_agent_v2.logging.task_state_logger import write_task_state_to_file
+    from app.core.agentic_framework.base_agent.logging.task_state_logger import write_task_state_to_file
 
     def _edit_plan_wrapper(action, task_type, task_id, parent_task_id=None, description=None, status=None, priority=None, insert_position=None, **_kwargs):
         """Wrapper to handle edit_plan execution and return proper response."""

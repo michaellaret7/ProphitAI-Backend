@@ -1,4 +1,4 @@
-"""Model/client resolver for base_agent_v2."""
+"""Model/client resolver for base_agent."""
 
 from typing import Optional, Tuple, Any
 

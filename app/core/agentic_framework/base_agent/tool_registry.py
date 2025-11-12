@@ -1,16 +1,31 @@
-from typing import Any
-from app.core.agentic_framework.tool_lib.base_tools.task_tools import (
-    update_task_status,
-    UPDATE_TASK_STATUS_DESCRIPTION,
-    UPDATE_TASK_STATUS_PARAMETERS,
-    mark_task_complete,
-    MARK_TASK_COMPLETE_DESCRIPTION,
-    MARK_TASK_COMPLETE_PARAMETERS
-)
-
-# Local imports to avoid circular dependencies at module import time
 from app.core.agentic_framework.tool_lib.base_tools.search_engine_tool import AgentSearchEngine
 from app.core.agentic_framework.tool_lib.base_tools import calculator
+from app.core.agentic_framework.tool_lib.base_tools.task_management import (
+    update_tasks,
+    UPDATE_TASKS_DESCRIPTION,
+    UPDATE_TASKS_PARAMETERS
+)
+from app.core.agentic_framework.tool_lib.base_tools.edit_plan import (
+    create_edit_plan_wrapper,
+    EDIT_PLAN_DESCRIPTION,
+    EDIT_PLAN_PARAMETERS
+)
+from app.core.agentic_framework.tool_lib.base_tools.write_notes import (
+    write_note as notes_write,
+    WRITE_NOTE_DESCRIPTION,
+    WRITE_NOTE_PARAMETERS,
+)
+from app.core.agentic_framework.tool_lib.base_tools.retrieve_notes import (
+    retrieve_notes as notes_retrieve,
+    RETRIEVE_NOTES_DESCRIPTION,
+    RETRIEVE_NOTES_PARAMETERS,
+)
+from app.core.agentic_framework.tool_lib.base_tools.finalize import (
+    finalize as finalize_tool,
+    FINALIZE_DESCRIPTION,
+    FINALIZE_PARAMETERS,
+)
+from typing import Any
 
 def register_base_tools(agent: Any) -> None:
     """
@@ -61,547 +76,60 @@ def register_base_tools(agent: Any) -> None:
         function=lambda expression, **kwargs: calculator.calculator(expression),
     )
 
-    # structured_planning
+    # update_tasks (task management)
     agent.add_tool(
-        name="create_structured_plan",
-        description=(
-            "Create a comprehensive structured plan using the agent's context. "
-            "Returns a TodoList with main tasks and subtasks for accomplishing the user's goal."
+        name="update_tasks",
+        description=UPDATE_TASKS_DESCRIPTION,
+        parameters=UPDATE_TASKS_PARAMETERS,
+        function=lambda main_task, subtasks=None, status="in_progress", work_summary=None, **kwargs: update_tasks(
+            plan=agent.plan,
+            main_task=main_task,
+            subtasks=subtasks,
+            status=status,
+            work_summary=work_summary,
+            output_dir=getattr(agent, "output_dir", None)
         ),
-        parameters={
-            "type": "object",
-            "properties": {},
-            "required": [],
-        },
-        function=lambda **kwargs: agent.planning_tool.create_plan_from_agent(),
     )
 
-    # Task progression tools
+    # edit_plan (dynamic plan modification)
     agent.add_tool(
-        name="advance_to_next_task",
-        description=(
-            "Advance to the next task or subtask in the structured plan. "
-            "Use this when you have completed the current task and want to move to the next one."
+        name="edit_plan",
+        description=EDIT_PLAN_DESCRIPTION,
+        parameters=EDIT_PLAN_PARAMETERS,
+        function=create_edit_plan_wrapper(agent),
+    )
+
+    # write_note (notes)
+    agent.add_tool(
+        name="write_note",
+        description=WRITE_NOTE_DESCRIPTION,
+        parameters=WRITE_NOTE_PARAMETERS,
+        function=lambda title, content, **kwargs: notes_write(
+            title=title,
+            content=content,
+            output_dir=str(getattr(agent, "output_dir", ""))
         ),
-        parameters={
-            "type": "object",
-            "properties": {},
-            "required": [],
-        },
-        function=lambda **kwargs: agent.execution_engine.advance_task_progression(),
     )
 
+    # retrieve_notes (read notes)
     agent.add_tool(
-        name="get_current_task_info",
-        description=(
-            "Get information about the current task being worked on, including progress and context."
+        name="retrieve_notes",
+        description=RETRIEVE_NOTES_DESCRIPTION,
+        parameters=RETRIEVE_NOTES_PARAMETERS,
+        function=lambda title, **kwargs: notes_retrieve(
+            title=title,
+            output_dir=str(getattr(agent, "output_dir", ""))
         ),
-        parameters={
-            "type": "object",
-            "properties": {},
-            "required": [],
-        },
-        function=lambda **kwargs: agent.execution_engine.get_current_task_context(),
     )
 
+    # finalize (final answer)
     agent.add_tool(
-        name="get_execution_summary",
-        description=(
-            "Get a comprehensive summary of the current execution state and progress through the plan."
+        name="finalize",
+        description=FINALIZE_DESCRIPTION,
+        parameters=FINALIZE_PARAMETERS,
+        function=lambda answer, meta=None, **kwargs: finalize_tool(
+            answer=answer,
+            plan=agent.plan,
+            meta=meta
         ),
-        parameters={
-            "type": "object",
-            "properties": {},
-            "required": [],
-        },
-        function=lambda **kwargs: agent.execution_engine.get_execution_summary(),
-    )
-
-    # Real-time state management tools
-    agent.add_tool(
-        name="get_task_progress_summary",
-        description=(
-            "Get detailed progress summary including main task and subtask completion percentages."
-        ),
-        parameters={
-            "type": "object",
-            "properties": {},
-            "required": [],
-        },
-        function=lambda **kwargs: agent.task_manager.progress.get_summary(),
-    )
-
-    agent.add_tool(
-        name="get_task_evidence",
-        description=(
-            "Get evidence summary for a specific task, including all collected evidence and observations."
-        ),
-        parameters={
-            "type": "object",
-            "properties": {
-                "task_id": {"type": "integer", "description": "ID of the task to get evidence for"}
-            },
-            "required": ["task_id"],
-        },
-        function=lambda task_id, **kwargs: agent.task_manager.get_task_evidence_summary(task_id),
-    )
-
-    agent.add_tool(
-        name="add_task_evidence",
-        description=(
-            "Add completion evidence to a task or subtask to help track progress."
-        ),
-        parameters={
-            "type": "object",
-            "properties": {
-                "task_id": {"type": "integer", "description": "ID of the main task"},
-                "evidence": {"type": "string", "description": "Evidence description"},
-                "subtask_id": {"type": "string", "description": "Optional subtask ID if evidence is for a subtask"}
-            },
-            "required": ["task_id", "evidence"],
-        },
-        function=lambda task_id, evidence, subtask_id=None, **kwargs: agent.task_manager.add_task_evidence(task_id, evidence, subtask_id),
-    )
-
-    agent.add_tool(
-        name="get_execution_analytics",
-        description=(
-            "Get analytics about execution patterns, task activity, and evidence collection."
-        ),
-        parameters={
-            "type": "object",
-            "properties": {},
-            "required": [],
-        },
-        function=lambda **kwargs: agent.task_manager.get_execution_analytics(),
-    )
-
-    agent.add_tool(
-        name="get_completion_analysis",
-        description=(
-            "Get intelligent completion analysis with validation breakdown for current tasks."
-        ),
-        parameters={
-            "type": "object",
-            "properties": {},
-            "required": [],
-        },
-        function=lambda **kwargs: agent.execution_engine.get_intelligent_completion_analysis(),
-    )
-
-    agent.add_tool(
-        name="check_plan_completion_status",
-        description=(
-            "Check overall plan completion status and determine if ready for final answer. "
-            "Use this to understand your progress through the structured plan."
-        ),
-        parameters={
-            "type": "object",
-            "properties": {},
-            "required": [],
-        },
-        function=lambda **kwargs: _check_plan_completion_status_impl(agent),
-    )
-
-    # Advanced task management tools
-    agent.add_tool(
-        name="add_task_to_plan",
-        description=(
-            "Add a new main task to the structured plan at a specific position."
-        ),
-        parameters={
-            "type": "object",
-            "properties": {
-                "task_id": {"type": "integer", "description": "ID for the new task"},
-                "description": {"type": "string", "description": "Task description"},
-                "predicted_tools": {"type": "array", "items": {"type": "string"}, "description": "Tools predicted for this task"},
-                "insert_after": {"type": "integer", "description": "Task ID to insert after (optional)"}
-            },
-            "required": ["task_id", "description"],
-        },
-        function=lambda task_id, description, predicted_tools=None, insert_after=None, **kwargs:
-            agent.task_manager.add_main_task_to_plan(task_id, description, predicted_tools, insert_after),
-    )
-
-    agent.add_tool(
-        name="remove_task_from_plan",
-        description=(
-            "Remove a main task from the structured plan."
-        ),
-        parameters={
-            "type": "object",
-            "properties": {
-                "task_id": {"type": "integer", "description": "ID of task to remove"},
-                "reason": {"type": "string", "description": "Reason for removal"}
-            },
-            "required": ["task_id"],
-        },
-        function=lambda task_id, reason="Manual removal", **kwargs:
-            agent.task_manager.remove_main_task_from_plan(task_id, reason),
-    )
-
-    agent.add_tool(
-        name="handle_task_failure",
-        description=(
-            "Handle current task failure with intelligent recovery strategies. "
-            "Use when a task cannot be completed and you need to recover."
-        ),
-        parameters={
-            "type": "object",
-            "properties": {
-                "error_message": {"type": "string", "description": "Description of the failure"},
-                "recovery_strategy": {"type": "string", "enum": ["retry", "skip", "alternative"], "description": "Recovery strategy to use"}
-            },
-            "required": ["error_message"],
-        },
-        function=lambda error_message, recovery_strategy="retry", **kwargs:
-            agent.execution_engine.handle_task_failure(error_message, recovery_strategy),
-    )
-
-    agent.add_tool(
-        name="get_plan_analytics_report",
-        description=(
-            "Get comprehensive analytics report for plan execution including health, complexity, and recommendations."
-        ),
-        parameters={
-            "type": "object",
-            "properties": {},
-            "required": [],
-        },
-        function=lambda **kwargs: agent.execution_engine.create_plan_analytics_report(),
-    )
-
-    agent.add_tool(
-        name="check_parallel_execution_options",
-        description=(
-            "Check what tasks can be executed in parallel and get simulation of parallel execution benefits."
-        ),
-        parameters={
-            "type": "object",
-            "properties": {
-                "max_parallel": {"type": "integer", "description": "Maximum number of parallel tasks (default: 2)"}
-            },
-            "required": [],
-        },
-        function=lambda max_parallel=2, **kwargs: agent.execution_engine.simulate_parallel_execution(max_parallel),
-    )
-
-    agent.add_tool(
-        name="get_plan_health_status",
-        description=(
-            "Get overall health status of plan execution with failure/blocked task analysis."
-        ),
-        parameters={
-            "type": "object",
-            "properties": {},
-            "required": [],
-        },
-        function=lambda **kwargs: agent.task_manager.get_plan_health_status(),
-    )
-
-    # Episodic memory tools (optional)
-    if getattr(agent, "use_episodic_memory", False) and getattr(agent, "episodic", None) is not None:
-        def episodic_remember_impl(title, event, context=None, outcome=None, tags=None, meta=None, **kwargs):
-            """Wrapper for episodic_remember that returns structured YAML response."""
-            import yaml
-            try:
-                entry = agent.episodic.append(
-                    title=title,
-                    event=event,
-                    context=context,
-                    outcome=outcome,
-                    tags=tags,
-                    meta=meta
-                )
-                result = {
-                    "success": True,
-                    "message": "Memory entry appended successfully",
-                    "entry": {
-                        "title": entry.get("title"),
-                        "event": entry.get("event"),
-                        "timestamp": entry.get("timestamp")
-                    }
-                }
-                return yaml.dump(result, default_flow_style=False, sort_keys=False)
-            except Exception as e:
-                result = {
-                    "success": False,
-                    "error": str(e),
-                    "message": "Failed to append memory entry"
-                }
-                return yaml.dump(result, default_flow_style=False, sort_keys=False)
-
-        agent.add_tool(
-            name="episodic_remember",
-            description=(
-                "Append an episodic memory entry. Use for key milestones or facts you may want to recall later. "
-                "Returns YAML with success status."
-            ),
-            parameters={
-                "type": "object",
-                "properties": {
-                    "title": {"type": "string", "description": "Short human-readable label"},
-                    "event": {"type": "string", "description": "Machine-oriented event key"},
-                    "context": {"type": "object", "description": "Arbitrary context/details"},
-                    "outcome": {"type": ["string", "object"], "description": "Outcome snapshot"},
-                    "tags": {"type": "array", "items": {"type": "string"}, "description": "Tags for retrieval"},
-                    "meta": {"type": "object", "description": "Extra metadata"}
-                },
-                "required": ["title", "event"],
-            },
-            function=episodic_remember_impl,
-        )
-
-        def episodic_recall_impl(query=None, tags=None, since=None, limit=20, **kwargs):
-            """Wrapper for episodic_recall that returns structured YAML response."""
-            import yaml
-            try:
-                entries = agent.episodic.recall(query=query, tags=tags, since=since, limit=limit)
-                result = {
-                    "success": True,
-                    "message": f"Retrieved {len(entries)} memory entries",
-                    "count": len(entries),
-                    "entries": entries
-                }
-                return yaml.dump(result, default_flow_style=False, sort_keys=False)
-            except Exception as e:
-                result = {
-                    "success": False,
-                    "error": str(e),
-                    "message": "Failed to recall memory entries"
-                }
-                return yaml.dump(result, default_flow_style=False, sort_keys=False)
-
-        agent.add_tool(
-            name="episodic_recall",
-            description=(
-                "Recall episodic memories by keyword, tags, or since a timestamp. Returns most recent first. "
-                "Returns YAML with success status."
-            ),
-            parameters={
-                "type": "object",
-                "properties": {
-                    "query": {"type": "string", "description": "Keyword to search (optional)"},
-                    "tags": {"type": "array", "items": {"type": "string"}, "description": "Tags filter (optional)"},
-                    "since": {"type": "string", "description": "ISO timestamp to filter newer entries (optional)"},
-                    "limit": {"type": "integer", "description": "Max entries to return (default 20)"}
-                },
-                "required": [],
-            },
-            function=episodic_recall_impl,
-        )
-
-
-def _check_plan_completion_status_impl(agent: Any) -> dict:
-    """Helper function to check plan completion status (inlined from agent method).
-
-    This function was extracted from agent._check_plan_completion_status() to remove
-    the wrapper method. It directly calls execution_engine methods.
-
-    Args:
-        agent: The agent instance
-
-    Returns:
-        Dictionary with completion status and context
-    """
-    if not agent.execution_engine.plan_loaded:
-        return {"plan_loaded": False, "can_finalize": True}
-
-    task_context = agent.execution_engine.get_current_task_context()
-    execution_summary = agent.execution_engine.get_execution_summary()
-
-    # Check if all tasks are completed
-    all_complete = (task_context.get("status") != "executing" or execution_summary.get('completed_main_tasks', 0) == execution_summary.get('total_main_tasks', 0))
-
-    return {
-        "plan_loaded": True,
-        "all_tasks_complete": all_complete,
-        "can_finalize": all_complete,
-        "progress_percentage": task_context.get('progress', {}).get('percentage', 0),
-        "completed_tasks": execution_summary.get('completed_main_tasks', 0),
-        "total_tasks": execution_summary.get('total_main_tasks', 0),
-        "current_task": task_context.get('main_task', {}).get('id') if task_context.get("status") == "executing" else None
-    }
-
-
-def register_task_management_tools(agent: Any) -> None:
-    """Register task management tools on the provided agent.
-
-    Notes:
-    - Imports from tool_lib.base_tools.task_tools
-    - Lambdas wrap tool functions with agent parameter
-    """
-
-    # Update task status tool - REMOVED in Phase 1.4
-    # Rationale: System auto-advances tasks via check_task_completion_conditions()
-    # Agent can still use mark_task_complete for explicit completion with summary
-    # Removing this tool eliminates ~25-30 redundant tool calls per optimization run
-    #
-    # agent.add_tool(
-    #     name="update_task_status",
-    #     description=UPDATE_TASK_STATUS_DESCRIPTION,
-    #     parameters=UPDATE_TASK_STATUS_PARAMETERS,
-    #     function=lambda task_id, status, reason=None, evidence=None, **kwargs:
-    #         update_task_status(agent, task_id, status, reason, evidence)
-    # )
-
-    # Mark task complete tool
-    agent.add_tool(
-        name="mark_task_complete",
-        description=MARK_TASK_COMPLETE_DESCRIPTION,
-        parameters=MARK_TASK_COMPLETE_PARAMETERS,
-        function=lambda task_id, outputs=None, summary=None, **kwargs:
-            mark_task_complete(agent, task_id, summary, outputs)
-    )
-
-
-def register_reasoning_tools(agent: Any) -> None:
-    """Register metacognitive reasoning tools on the provided agent.
-
-    These tools enable the agent to pause and reason about data rather than
-    mechanically executing the next tool call.
-
-    Notes:
-    - Imports from tool_lib.base_tools.reasoning_tools
-    - Added in Phase 2.1 of reasoning enhancement
-    """
-    from ..tool_lib.base_tools.reasoning_tools import (
-        synthesize_observations,
-        form_hypothesis,
-        reflect_on_strategy,
-        compare_alternatives
-    )
-
-    # Synthesize observations tool
-    agent.add_tool(
-        name="synthesize_observations",
-        description=(
-            "Analyze multiple observations together to identify patterns and form insights. "
-            "Use this after gathering data from multiple tools to connect the dots and form strategy. "
-            "This is a reflection tool - it prompts you to think deeply about data you've already gathered."
-        ),
-        parameters={
-            "type": "object",
-            "properties": {
-                "observations": {
-                    "type": "array",
-                    "items": {"type": "string"},
-                    "description": "List of 2-10 key observations to synthesize"
-                },
-                "context": {
-                    "type": "string",
-                    "description": "Domain/problem context (e.g., 'portfolio risk analysis')"
-                },
-                "goal": {
-                    "type": "string",
-                    "description": "What you want to achieve with this synthesis"
-                }
-            },
-            "required": ["observations", "context"]
-        },
-        function=synthesize_observations
-    )
-
-    # Form hypothesis tool
-    agent.add_tool(
-        name="form_hypothesis",
-        description=(
-            "Form a testable hypothesis and plan validation. "
-            "Use when you have a theory to test or in iterative refinement phases. "
-            "Helps structure your thinking and test assumptions explicitly."
-        ),
-        parameters={
-            "type": "object",
-            "properties": {
-                "hypothesis": {
-                    "type": "string",
-                    "description": "Your hypothesis statement (specific and testable)"
-                },
-                "supporting_evidence": {
-                    "type": "array",
-                    "items": {"type": "string"},
-                    "description": "Evidence that led to this hypothesis"
-                },
-                "test_plan": {
-                    "type": "string",
-                    "description": "How you'll test this hypothesis"
-                }
-            },
-            "required": ["hypothesis", "supporting_evidence", "test_plan"]
-        },
-        function=form_hypothesis
-    )
-
-    # Reflect on strategy tool
-    agent.add_tool(
-        name="reflect_on_strategy",
-        description=(
-            "Reflect on current strategy and decide if adjustment is needed. "
-            "Use midway through multi-step processes to evaluate progress and consider pivoting. "
-            "Enables metacognitive evaluation of your approach."
-        ),
-        parameters={
-            "type": "object",
-            "properties": {
-                "current_approach": {
-                    "type": "string",
-                    "description": "Your current strategy description"
-                },
-                "results_so_far": {
-                    "type": "array",
-                    "items": {"type": "string"},
-                    "description": "What you've accomplished/learned"
-                },
-                "remaining_goals": {
-                    "type": "array",
-                    "items": {"type": "string"},
-                    "description": "What you still need to achieve"
-                },
-                "challenges_encountered": {
-                    "type": "array",
-                    "items": {"type": "string"},
-                    "description": "Obstacles or unexpected findings"
-                }
-            },
-            "required": ["current_approach", "results_so_far", "remaining_goals"]
-        },
-        function=reflect_on_strategy
-    )
-
-    # Compare alternatives tool
-    agent.add_tool(
-        name="compare_alternatives",
-        description=(
-            "Compare multiple alternatives against criteria to make selection. "
-            "Use when you have multiple candidate solutions and need to pick the best. "
-            "Structures decision-making with explicit trade-off analysis."
-        ),
-        parameters={
-            "type": "object",
-            "properties": {
-                "alternatives": {
-                    "type": "array",
-                    "items": {
-                        "type": "object",
-                        "properties": {
-                            "name": {"type": "string"},
-                            "description": {"type": "string"}
-                        },
-                        "required": ["name", "description"]
-                    },
-                    "description": "List of alternatives with name and description"
-                },
-                "criteria": {
-                    "type": "array",
-                    "items": {"type": "string"},
-                    "description": "Criteria to evaluate against"
-                },
-                "context": {
-                    "type": "string",
-                    "description": "What decision you're making"
-                }
-            },
-            "required": ["alternatives", "criteria", "context"]
-        },
-        function=compare_alternatives
     )

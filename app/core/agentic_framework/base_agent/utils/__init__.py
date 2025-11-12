@@ -1,1 +1,1 @@
-"""Utility functions for BaseAgent."""
+"""Utilities for base_agent."""
