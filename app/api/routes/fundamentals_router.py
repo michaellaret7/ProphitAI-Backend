@@ -8,11 +8,23 @@ from app.api.controller.fundamentals import (
     get_stock_grades_individual_controller,
     get_stock_grades_summary_controller,
     get_ratings_controller,
+    get_stock_peers_controller,
+    get_esg_disclosures_controller,
+    get_revenue_product_segmentation_controller,
+    get_revenue_geographic_segmentation_controller,
+    get_institutional_holder_analytics_controller,
+    get_institutional_positions_summary_controller,
 )
 from app.models.fundamentals_models import (
     AnalystEstimatesRequest,
     AnalystDataRequest,
     PriceTargetRequest,
+)
+from app.models.company_models import (
+    PeersRequest,
+    ESGRequest,
+    RevenueSegmentationRequest,
+    InstitutionalOwnershipRequest,
 )
 
 router = APIRouter()
@@ -200,4 +212,142 @@ async def get_ratings(
         ticker=request.ticker,
         start_date=request.start_date,
         end_date=request.end_date,
+    )
+
+
+def parse_peers_request(
+    ticker: str = Path(..., description="Stock ticker symbol"),
+) -> PeersRequest:
+    """Parse and validate ticker into PeersRequest model"""
+    return PeersRequest(ticker=ticker)
+
+
+def parse_esg_request(
+    ticker: str = Path(..., description="Stock ticker symbol"),
+) -> ESGRequest:
+    """Parse and validate ticker into ESGRequest model"""
+    return ESGRequest(ticker=ticker)
+
+
+def parse_revenue_segmentation_request(
+    ticker: str = Path(..., description="Stock ticker symbol"),
+) -> RevenueSegmentationRequest:
+    """Parse and validate ticker into RevenueSegmentationRequest model"""
+    return RevenueSegmentationRequest(ticker=ticker)
+
+
+def parse_institutional_ownership_request(
+    ticker: str = Path(..., description="Stock ticker symbol"),
+    year: int = Query(..., description="Year (e.g., 2025)", ge=2000, le=2100),
+    quarter: int = Query(..., description="Quarter (1-4)", ge=1, le=4),
+) -> InstitutionalOwnershipRequest:
+    """Parse and validate parameters into InstitutionalOwnershipRequest model"""
+    return InstitutionalOwnershipRequest(ticker=ticker, year=year, quarter=quarter)
+
+
+@router.get("/fundamentals/{ticker}/peers")
+async def get_stock_peers(
+    request: PeersRequest = Depends(parse_peers_request)
+):
+    """
+    Get peer companies for a ticker
+
+    Args:
+        ticker: Stock ticker symbol (e.g., 'AAPL', 'MSFT')
+
+    Returns:
+        List of peer companies in the same sector/industry
+    """
+    return await get_stock_peers_controller(ticker=request.ticker)
+
+
+@router.get("/fundamentals/{ticker}/esg")
+async def get_esg_disclosures(
+    request: ESGRequest = Depends(parse_esg_request)
+):
+    """
+    Get ESG (Environmental, Social, Governance) disclosures for a ticker
+
+    Args:
+        ticker: Stock ticker symbol (e.g., 'AAPL', 'MSFT')
+
+    Returns:
+        ESG ratings and sustainability metrics
+    """
+    return await get_esg_disclosures_controller(ticker=request.ticker)
+
+
+@router.get("/fundamentals/{ticker}/revenue/product-segmentation")
+async def get_revenue_product_segmentation(
+    request: RevenueSegmentationRequest = Depends(parse_revenue_segmentation_request)
+):
+    """
+    Get revenue breakdown by product segments for a ticker
+
+    Args:
+        ticker: Stock ticker symbol (e.g., 'AAPL', 'MSFT')
+
+    Returns:
+        Revenue segmentation data broken down by product lines/segments
+    """
+    return await get_revenue_product_segmentation_controller(ticker=request.ticker)
+
+
+@router.get("/fundamentals/{ticker}/revenue/geographic-segmentation")
+async def get_revenue_geographic_segmentation(
+    request: RevenueSegmentationRequest = Depends(parse_revenue_segmentation_request)
+):
+    """
+    Get revenue breakdown by geographic regions for a ticker
+
+    Args:
+        ticker: Stock ticker symbol (e.g., 'AAPL', 'MSFT')
+
+    Returns:
+        Revenue segmentation data broken down by geographic regions
+    """
+    return await get_revenue_geographic_segmentation_controller(ticker=request.ticker)
+
+
+@router.get("/fundamentals/{ticker}/ownership/institutional-analytics")
+async def get_institutional_holder_analytics(
+    request: InstitutionalOwnershipRequest = Depends(parse_institutional_ownership_request)
+):
+    """
+    Get institutional ownership analytics for a ticker
+
+    Args:
+        ticker: Stock ticker symbol (e.g., 'AAPL', 'MSFT')
+        year: Year (e.g., 2025)
+        quarter: Quarter (1-4)
+
+    Returns:
+        Institutional holder analytics data for the specified quarter
+    """
+    return await get_institutional_holder_analytics_controller(
+        ticker=request.ticker,
+        year=request.year,
+        quarter=request.quarter,
+    )
+
+
+@router.get("/fundamentals/{ticker}/ownership/institutional-positions")
+async def get_institutional_positions_summary(
+    request: InstitutionalOwnershipRequest = Depends(parse_institutional_ownership_request)
+):
+    """
+    Get institutional ownership positions summary for a ticker
+
+    Args:
+        ticker: Stock ticker symbol (e.g., 'AAPL', 'MSFT')
+        year: Year (e.g., 2025)
+        quarter: Quarter (1-4)
+
+    Returns:
+        Summary of institutional positions for the specified quarter
+    """
+    return await get_institutional_positions_summary_controller(
+        ticker=request.ticker,
+        year=request.year,
+        quarter=request.quarter,
     )
