@@ -698,6 +698,15 @@ FastAPI provides automatic interactive API docs:
 
 ---
 
+## Stock Screener - Troubleshooting Empty Results
+
+- Use exact sector tokens: `equity_sector_*` (e.g., `equity_sector_health_care`).
+- For ETFs, set `sector="etf"`; use ETF industries like `equity_etfs` or `fixed_income_etfs`.
+- Expense ratio and AUM fields may be sparse; relax or remove those filters if no results.
+- The screener now returns `warnings` in responses when results are empty to guide adjustments.
+
+---
+
 ### **Questions or Issues:**
 
 Contact backend team for:

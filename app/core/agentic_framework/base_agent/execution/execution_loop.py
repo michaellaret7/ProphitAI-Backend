@@ -50,7 +50,11 @@ class ExecutionLoop:
 
         # Main loop
         for i in range(1, self.agent.max_iterations + 1):
-            print(f"\n--- Iteration {i} ---")
+            if self.agent.print_mode == PrintMode.PRODUCTION:
+                # Minimal iteration marker
+                print(f"\n[{i}]", end=" ", flush=True)
+            else:
+                print(f"\n--- Iteration {i} ---")
 
             # Track current iteration for logging purposes
             self.agent.current_iteration = i
@@ -72,7 +76,8 @@ class ExecutionLoop:
                 messages_after = len(self.agent.messages)
 
                 if messages_before != messages_after:
-                    print(f"🗑️  Removed planning prompt from message history (planning phase complete)")
+                    if self.agent.print_mode in [PrintMode.VERBOSE, PrintMode.DEBUG]:
+                        print(f"🗑️  Removed planning prompt from message history (planning phase complete)")
 
                 # First execution iteration (i==2) gets detailed workflow, later iterations get reminders
                 is_first_execution = (i == 2)
@@ -89,7 +94,8 @@ class ExecutionLoop:
 
                 # If no existing plan status found, append new one (first time only)
                 if not plan_status_updated:
-                    print(f"📊 Injecting plan status into context...")
+                    if self.agent.print_mode in [PrintMode.VERBOSE, PrintMode.DEBUG]:
+                        print(f"📊 Injecting plan status into context...")
                     self.agent.messages.append({
                         "role": "system",
                         "content": plan_context

@@ -220,68 +220,131 @@ from app.core.calculations.portfolio.utils import get_portfolio_returns, get_ben
 #     }
 # }
 
-portfolio = { # OUTPERFORMED SPY!!
-    "KLAC": {
-          "allocation": 0.07,
-          "position": "long"
-      },
-      "LRCX": {
-          "allocation": 0.07,
-          "position": "long"
-      },
-      "ORCL": {
-          "allocation": 0.07,
-          "position": "long"
-      },
-      "LLY": {
-          "allocation": 0.07,
-          "position": "long"
-      },
-      "AMGN": {
-          "allocation": 0.07,
-          "position": "long"
-      },
-      "ABBV": {
-          "allocation": 0.07,
-          "position": "long"
-      },
-      "PGR": {
-          "allocation": 0.07,
-          "position": "long"
-      },
-      "MA": {
-          "allocation": 0.07,
-          "position": "long"
-      },
-      "BA": {
-          "allocation": 0.07,
-          "position": "long"
-      },
-      "MSI": {
-          "allocation": 0.07,
-          "position": "long"
-      },
-      "SPY": {
-          "allocation": 0.06,
-          "position": "long"
-      },
-      "BND": {
-          "allocation": 0.06,
-          "position": "long"
-      },
-      "VEA": {
-          "allocation": 0.06,
-          "position": "long"
-      },
-      "VIG": {
-          "allocation": 0.06,
-          "position": "long"
-      },
-      "XLK": {
-          "allocation": 0.06,
-          "position": "long"
-      }
-}
+# portfolio = { # OUTPERFORMED SPY!!
+#     "KLAC": {
+#           "allocation": 0.07,
+#           "position": "long"
+#       },
+#       "LRCX": {
+#           "allocation": 0.07,
+#           "position": "long"
+#       },
+#       "ORCL": {
+#           "allocation": 0.07,
+#           "position": "long"
+#       },
+#       "LLY": {
+#           "allocation": 0.07,
+#           "position": "long"
+#       },
+#       "AMGN": {
+#           "allocation": 0.07,
+#           "position": "long"
+#       },
+#       "ABBV": {
+#           "allocation": 0.07,
+#           "position": "long"
+#       },
+#       "PGR": {
+#           "allocation": 0.07,
+#           "position": "long"
+#       },
+#       "MA": {
+#           "allocation": 0.07,
+#           "position": "long"
+#       },
+#       "BA": {
+#           "allocation": 0.07,
+#           "position": "long"
+#       },
+#       "MSI": {
+#           "allocation": 0.07,
+#           "position": "long"
+#       },
+#       "SPY": {
+#           "allocation": 0.06,
+#           "position": "long"
+#       },
+#       "BND": {
+#           "allocation": 0.06,
+#           "position": "long"
+#       },
+#       "VEA": {
+#           "allocation": 0.06,
+#           "position": "long"
+#       },
+#       "VIG": {
+#           "allocation": 0.06,
+#           "position": "long"
+#       },
+#       "XLK": {
+#           "allocation": 0.06,
+#           "position": "long"
+#       }
+# }
+
+portfolio = {
+    "WES": {
+      "allocation": 0.08,
+      "position": "long"
+    },
+    "PRU": {
+      "allocation": 0.06,
+      "position": "long"
+    },
+    "PGR": {
+      "allocation": 0.06,
+      "position": "long"
+    },
+    "GILD": {
+      "allocation": 0.03,
+      "position": "long"
+    },
+    "MEDP": {
+      "allocation": 0.06,
+      "position": "long"
+    },
+    "CAT": {
+      "allocation": 0.11,
+      "position": "long"
+    },
+    "PEP": {
+      "allocation": 0.10,
+      "position": "long"
+    },
+    "KO": {
+      "allocation": 0.05,
+      "position": "long"
+    },
+    "FCX": {
+      "allocation": 0.04,
+      "position": "long"
+    },
+    "MSFT": {
+      "allocation": 0.07,
+      "position": "long"
+    },
+    "AAPL": {
+      "allocation": 0.07,
+      "position": "long"
+    },
+    "VTI": {
+      "allocation": 0.1,
+      "position": "long"
+    },
+    "IEFA": {
+      "allocation": 0.07,
+      "position": "long"
+    },
+    "BND": {
+      "allocation": 0.07,
+      "position": "long"
+    },
+    "VTV": {
+      "allocation": 0.03,
+      "position": "long"
+    }
+}   
 
 # portfolio = { # 2022 Outperformed SPY!!
 #     "IDXX": {

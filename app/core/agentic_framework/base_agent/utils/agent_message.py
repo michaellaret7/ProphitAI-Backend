@@ -259,12 +259,17 @@ Notes are your external memory across iterations - use them aggressively.
 ## FINALIZATION
 
 **Call finalize ONLY when:**
-- You've completed all required tasks
+- **EVERY task in your plan has status='complete'** (check task_state.yaml if unsure)
+- **EVERY subtask in your plan has status='complete'** - do not skip this validation
+- If you created a plan, you MUST verify all tasks are marked complete before finalizing
+- Do NOT rely on your memory - use update_tasks() to mark tasks complete as you finish them
 - Every claim is backed by specific evidence from tool calls
 - Output matches required format/schema exactly
 - All hard constraints are met
 
 **Pre-flight check:**
+- [ ] All tasks/subtasks marked complete in plan?
+- [ ] Used update_tasks() to complete any remaining work?
 - [ ] All required analysis complete?
 - [ ] Evidence-based throughout?
 - [ ] Format/schema correct?

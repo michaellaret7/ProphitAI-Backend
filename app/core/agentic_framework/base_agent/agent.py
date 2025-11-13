@@ -140,10 +140,15 @@ class BaseAgent:
             {"role": "user", "content": self.user_prompt},
         ]
 
-        print(f"\n{'='*60}")
-        print(f"Starting agent run")
-        print(f"Task: {self.user_prompt}")
-        print(f"{'='*60}\n")
+        if self.print_mode in [PrintMode.VERBOSE, PrintMode.DEBUG, PrintMode.PRODUCTION]:
+            print(f"\n{'='*60}")
+            print(f"Starting agent run")
+            print(f"Task: {self.user_prompt}")
+            print(f"{'='*60}\n")
+        elif self.print_mode == PrintMode.SUBAGENT:
+            print(f"Starting sub-agent run")
+            print(f"Task: {self.user_prompt}")
+            print(f"{'='*60}\n")
 
         # Delegate to execution loop
         result = self.execution_loop.execute()

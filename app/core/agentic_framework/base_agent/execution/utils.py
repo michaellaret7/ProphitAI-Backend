@@ -12,6 +12,33 @@ from app.core.agentic_framework.base_agent.logging.task_state_logger import form
 if TYPE_CHECKING:
     from ..agent import BaseAgent
 
+
+def are_all_tasks_complete(plan) -> bool:
+    """Check if ALL tasks and subtasks are complete.
+
+    Args:
+        plan: The Plan object containing tasks and subtasks
+
+    Returns:
+        True only if every task and every subtask has status=COMPLETE
+    """
+    if not plan or not plan.tasks:
+        return False
+
+    for task in plan.tasks:
+        # Check main task status
+        if task.status != TaskStatus.COMPLETE:
+            return False
+
+        # Check all subtasks if they exist
+        if task.subtasks:
+            for subtask in task.subtasks:
+                if subtask.status != TaskStatus.COMPLETE:
+                    return False
+
+    return True
+
+
 def extract_final_answer(text: str) -> str:
     """Extract final answer text after marker.
 
@@ -51,8 +78,9 @@ def build_plan_context(agent: 'BaseAgent', is_first_execution: bool = False) -> 
     context = "## Current Plan Status\n\n"
     context += f"Progress: {completed_tasks}/{total_tasks} main tasks completed\n\n"
 
-    # Check if ALL tasks are complete - if so, prompt for final answer
-    all_tasks_complete = (completed_tasks == total_tasks)
+    # Check if ALL tasks AND subtasks are complete - if so, prompt for final answer
+    # CRITICAL: Must check both main tasks and all subtasks to prevent premature finalization
+    all_tasks_complete = are_all_tasks_complete(agent.plan)
 
     if all_tasks_complete:
         context += "**ALL TASKS COMPLETE**\n\n"
@@ -77,12 +105,16 @@ def build_plan_context(agent: 'BaseAgent', is_first_execution: bool = False) -> 
     context += "4. Analyze tool result (1-3 sentences: findings → implication → next step)\n"
     context += "5. Mark subtask complete with evidence (use update_tasks)\n"
     context += "6. Continue to the next subtask or main task\n"
-    context += "7. Before finalizing: Reflect (2-4 sentences), then provide the Final Answer\n\n"
+    context += "7. Before finalizing: Verify ALL tasks/subtasks are marked complete\n"
+    context += "8. If any task is 'in progress', complete it first using update_tasks()\n"
+    context += "9. Only call finalize() after every task shows status='complete'\n"
+    context += "10. Provide your final answer using the finalize tool\n\n"
     context += "**⚠️ CRITICAL RULES [If you break any of these rules, you will be penalized harshly]:**\n\n"
     context += "- You are NOT allowed to mark a main task as complete until ALL subtasks are complete\n"
     context += "- You MUST mark the task/subtask as in progress BEFORE you start working on it\n"
     context += "- You may ONLY mark tasks as complete AFTER you have actually done the work\n"
     context += "- **COMPLETE SUBTASKS ONE AT A TIME**: When you finish a subtask, mark it status='complete' immediately. DO NOT batch multiple subtasks with status='in_progress' and say 'Completed 2a, 2b, 2c' in work_summary. Each subtask gets its own complete call.\n"
+    context += "- **NEVER CALL FINALIZE WITH INCOMPLETE TASKS**: Before calling finalize(), verify EVERY task and subtask is marked 'complete'. If any work remains, complete it first with update_tasks().\n"
     context += "- You MUST always think out loud and provide your reasoning for the actions you take\n"
     context += "- You must NEVER leave the content field blank when calling update_tasks\n\n"
     context += "**Examples:**\n"

@@ -74,7 +74,14 @@ def finalize(answer: str, *, plan=None, meta: Optional[dict] = None) -> str:
 
 FINALIZE_DESCRIPTION = (
     "CRITICAL: This is the ONLY tool to use when you are DONE and ready to deliver the final answer. "
-    "Calling this tool TERMINATES the run. Do not summarize or continue planning afterwards. "
+    "Calling this tool TERMINATES the run. Do not summarize or continue planning afterwards.\n\n"
+    "⚠️  BEFORE CALLING THIS TOOL - VALIDATION REQUIRED:\n"
+    "1. If you created a plan, verify EVERY task has status='complete'\n"
+    "2. Verify EVERY subtask has status='complete' - do not skip this check\n"
+    "3. If any task/subtask is still 'in progress', call update_tasks() to complete it first\n"
+    "4. Do NOT call this tool if you have incomplete work - it will reject your attempt\n\n"
+    "This tool validates your plan state. If any tasks are incomplete, you will receive an error "
+    "message and must complete them before trying again.\n\n"
     "Provide the COMPLETE final answer as a single string in the 'answer' field."
 )
 

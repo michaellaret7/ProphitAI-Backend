@@ -73,18 +73,32 @@ class ToolHandler:
             args = self._parse_arguments(args_json) # Parse arguments from the tool call output
 
             # Print tool call with arguments in VERBOSE and DEBUG modes
-            print(f"\nCalling tool: {_GREEN}{name}{_RESET}")
+            if self.agent.print_mode in [PrintMode.VERBOSE, PrintMode.DEBUG]:
+                print(f"\n[Agent] Calling tool: {_GREEN}{name}{_RESET}")
+            elif self.agent.print_mode == PrintMode.SUBAGENT:
+                print(f"\n[Sub-agent] Calling tool: {_GREEN}{name}{_RESET}")
+            elif self.agent.print_mode == PrintMode.PRODUCTION:
+                # Minimal output: just tool name, no formatting
+                print(f"  → {name}")
+
             if args:
                 # Filter out internal parameters for display
                 display_args = {k: v for k, v in args.items() if k != '_simulation_date'}
                 if display_args:
-                    print(f"   Arguments:")
-                    for key, value in display_args.items():
-                        print(f"     - {_YELLOW}{key}: {value}{_RESET}")
+                    if self.agent.print_mode in [PrintMode.VERBOSE, PrintMode.DEBUG]:
+                        # Print the arguments in a pretty format
+                        print(f"   Arguments:")
+                        for key, value in display_args.items():
+                            print(f"     - {_YELLOW}{key}: {value}{_RESET}")
+                    elif self.agent.print_mode == PrintMode.SUBAGENT:
+                        print(f"   [Sub-agent] Arguments: {_YELLOW}SUCCESSFULLY PARSED{_RESET}")
+                    # PRODUCTION mode: no argument output
                 else:
-                    print(f"   Arguments: {_YELLOW}(none){_RESET}")
+                    if self.agent.print_mode != PrintMode.PRODUCTION:
+                        print(f"   Arguments: {_YELLOW}(none){_RESET}")
             else:
-                print(f"   Arguments: {_YELLOW}(none){_RESET}")
+                if self.agent.print_mode != PrintMode.PRODUCTION:
+                    print(f"   Arguments: {_YELLOW}(none){_RESET}")
 
             # Execute tool and return the result
             result = self._execute_tool(name, args)
@@ -176,12 +190,15 @@ class ToolHandler:
 
             if self.agent.print_mode == PrintMode.DEBUG:
                 print(f"  ← Result: {result}")
-            elif self.agent.print_mode in [PrintMode.VERBOSE, PrintMode.PRODUCTION]:
+            elif self.agent.print_mode == PrintMode.VERBOSE:
                 result_str = str(result)
                 if len(result_str) > 200:
                     print(f"   ✓ Result: {result_str[:200]}... (truncated)")
                 else:
                     print(f"   ✓ Result: {result_str}")
+            elif self.agent.print_mode == PrintMode.SUBAGENT:
+                print(f"[Sub-agent] {name} tool call successful: {success}")
+            # PRODUCTION mode: no result output
 
             if success:
                 self.agent.messages.append({

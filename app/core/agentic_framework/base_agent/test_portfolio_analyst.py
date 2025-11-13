@@ -155,14 +155,14 @@ Your capabilities include:
     # User prompt - specific task with the portfolio
     user_prompt = f"""Construct a diversified low correlation long-only portfolio from scratch:
 
-⚠️ CRITICAL: This analysis is being conducted as of January 1, 2022 (simulation_date).
+CRITICAL: This analysis is being conducted as of January 1, 2022 (simulation_date).
 When using free_search for market research, ALWAYS include "as of January 2022" or "early 2022" in your queries.
 
 Please perform the following tasks:
 
 1. **Market Research & Economic Context**:
    - Use free_search to research macroeconomic conditions, sector outlooks, and market themes as of January 2022
-   - ⚠️ CRITICAL: Include "as of January 2022" or "early 2022" in EVERY free_search query
+   - CRITICAL: Include "as of January 2022" or "early 2022" in EVERY free_search query
    - Identify opportunities and risks based on early 2022 market conditions
 
 2. **Define Portfolio Structure**:
@@ -216,15 +216,15 @@ Rules:
         system_prompt=system_prompt,
         user_prompt=user_prompt,
         # provider="openai",
-        # model="gpt-5",
+        # model="gpt-4.1",
         provider="anthropic",  # Use OpenAI
         model="claude-haiku-4-5-20251001",
         # model="claude-sonnet-4-5-20250929",  # Use GPT-4o for complex analysis
-        max_iterations=100,  # Allow many iterations for thorough analysis
+        max_iterations=150,  # Allow many iterations for thorough analysis
         print_mode=PrintMode.VERBOSE,
         plan_first=True,  # Create a plan before executing
         temperature=0.7,
-        reasoning_effort="high",
+        # reasoning_effort="medium",
         simulation_date=datetime(2023, 1, 1)
     )
 

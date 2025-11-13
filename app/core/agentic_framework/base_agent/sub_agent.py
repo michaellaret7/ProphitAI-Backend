@@ -35,7 +35,7 @@ class SubAgent:
         *,
         model: str = None,
         provider: str = None,
-        max_iterations: int = 30,
+        max_iterations: int = None,
         print_mode: Union[str, PrintMode] = PrintMode.PRODUCTION,
         reasoning_effort: str = None,
         temperature: float = None,

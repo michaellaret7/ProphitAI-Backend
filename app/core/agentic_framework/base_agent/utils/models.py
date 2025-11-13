@@ -19,6 +19,7 @@ class PrintMode(str, Enum):
     PRODUCTION = "production"
     VERBOSE = "verbose"
     DEBUG = "debug"
+    SUBAGENT = "subagent"
 
 # Plan status enum
 class TaskStatus(str, Enum):

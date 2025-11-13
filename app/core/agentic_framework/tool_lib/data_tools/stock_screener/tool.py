@@ -30,6 +30,55 @@ logger = logging.getLogger(__name__)
 
 # ============================= Parsing ============================= #
 
+def _correct_misplaced_classifications(parsed: ScreenerConstraints, original_text: str) -> ScreenerConstraints:
+    """
+    Fix common issues where sector tokens are mistakenly parsed into industry/sub_industry
+    and infer ETFs from the original text when sector is missing.
+    """
+    def _is_sector_token(s: str) -> bool:
+        return isinstance(s, str) and s.startswith("equity_sector_")
+
+    def _move_tokens(value, dst_attr: str):
+        moved = []
+        if isinstance(value, str) and _is_sector_token(value):
+            moved.append(value)
+            value = None
+        elif isinstance(value, list):
+            keep = []
+            for v in value:
+                if _is_sector_token(v):
+                    moved.append(v)
+                else:
+                    keep.append(v)
+            value = keep or None
+        if moved:
+            current = getattr(parsed, dst_attr)
+            if current is None:
+                setattr(parsed, dst_attr, moved[0] if len(moved) == 1 else moved)
+            else:
+                if isinstance(current, str):
+                    cur_list = [current]
+                else:
+                    cur_list = list(current)
+                for v in moved:
+                    if v not in cur_list:
+                        cur_list.append(v)
+                setattr(parsed, dst_attr, cur_list[0] if len(cur_list) == 1 else cur_list)
+        return value
+
+    # Move sector identifiers out of industry/sub_industry fields
+    parsed.industry = _move_tokens(parsed.industry, "sector")
+    parsed.sub_industry = _move_tokens(parsed.sub_industry, "sector")
+    parsed.industry_exclude = _move_tokens(parsed.industry_exclude, "sector_exclude")
+    parsed.sub_industry_exclude = _move_tokens(parsed.sub_industry_exclude, "sector_exclude")
+
+    # Infer ETF sector from query text when not explicitly parsed
+    if isinstance(original_text, str) and "etf" in original_text.lower() and parsed.sector is None:
+        parsed.sector = "etf"
+
+    return parsed
+
+
 def parse_screener_constraints(constraints: str) -> ScreenerConstraints:
     """
     Parse natural language screening criteria into structured constraints.
@@ -42,6 +91,9 @@ def parse_screener_constraints(constraints: str) -> ScreenerConstraints:
     """
     # Parse with GPT
     parsed = parse_with_gpt(constraints, ScreenerConstraints, SCREENER_SYSTEM_PROMPT)
+
+    # Correct common misplacements (e.g., sector tokens in industry)
+    parsed = _correct_misplaced_classifications(parsed, constraints)
 
     # Normalize sector and industry names using fuzzy matching
     logger.info("Normalizing sector/industry names...")
@@ -185,6 +237,31 @@ def _check_industry_mismatch(parsed: ScreenerConstraints, criteria: Dict) -> Lis
     return warnings
 
 
+def _check_etf_metadata_coverage(parsed: ScreenerConstraints, criteria: Dict[str, Any]) -> List[str]:
+    """Warn when ETF metadata filters likely exclude due to sparse coverage."""
+    warnings: List[str] = []
+
+    def _has(prefix: str) -> bool:
+        return any(k == prefix or k.startswith(f"{prefix}_") for k in criteria.keys())
+
+    def _is_etf_sector(sector_val: Any) -> bool:
+        if sector_val is None:
+            return False
+        if isinstance(sector_val, str):
+            return sector_val.lower() == "etf"
+        if isinstance(sector_val, list):
+            return any(isinstance(s, str) and s.lower() == "etf" for s in sector_val)
+        return False
+
+    if _is_etf_sector(parsed.sector) and (_has("expense_ratio") or _has("assets_under_management")):
+        warnings.append(
+            "ETF filters on expense ratio or AUM may exclude funds due to missing metadata. "
+            "Try relaxing thresholds or removing one of these filters."
+        )
+
+    return warnings
+
+
 # ============================= Main Tool Interface ============================= #
 
 def screener(constraints: str, *, _simulation_date: Optional[datetime] = None) -> str:
@@ -271,10 +348,13 @@ def _format_success_response(df: pd.DataFrame, warnings: List[str]) -> str:
     """Format successful screening response as YAML."""
     # Return a failure message if no results were found
     if df is None or len(df) == 0:
-        return yaml.dump({
+        result = {
             "success": False,
             "error": "No results found. Alter your query and try again."
-        }, default_flow_style=False)
+        }
+        if warnings:
+            result["warnings"] = warnings
+        return yaml.dump(result, default_flow_style=False)
 
     result = {
         "success": True,

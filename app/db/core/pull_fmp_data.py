@@ -247,5 +247,40 @@ class FMP_API_DATA:
         """
         url = f"https://financialmodelingprep.com/stable/company-notes?symbol={ticker}"
         return self._make_fmp_api_request(url)
+    
+    def get_stock_peers(self, ticker: str):
+        """
+        Retrieves stock peers for a given ticker.
+        Returns a list of peer companies in the same sector/industry.
+        """
+        url = f"https://financialmodelingprep.com/stable/stock-peers?symbol={ticker}"
+        return self._make_fmp_api_request(url)
 
+    def get_esg_disclosures(self, ticker: str):
+        """
+        Retrieves ESG (Environmental, Social, Governance) disclosures for a given stock ticker.
+        Returns ESG ratings and sustainability metrics.
+        """
+        url = f"https://financialmodelingprep.com/stable/esg-disclosures?symbol={ticker}"
+        return self._make_fmp_api_request(url)
 
+    def get_institutional_holder_analytics(self, ticker: str, year: int, quarter: int):
+        """
+        Retrieves institutional ownership analytics for a given stock ticker.
+        Returns holder analytics data for specified year and quarter.
+
+        Args:
+            ticker (str): The stock ticker symbol (e.g., 'AAPL').
+            year (int): The year (e.g., 2025).
+            quarter (int): The quarter (1-4).
+        """
+        url = f"https://financialmodelingprep.com/stable/institutional-ownership/extract-analytics/holder?symbol={ticker}&year={year}&quarter={quarter}"
+        return self._make_fmp_api_request(url)
+
+if __name__ == "__main__":
+    fmp_api_data = FMP_API_DATA()
+    print(fmp_api_data.get_stock_peers("AAPL"))
+    print(fmp_api_data.get_esg_disclosures("AAPL"))
+    print(fmp_api_data.get_revenue_product_segmentation("AAPL"))
+    print(fmp_api_data.get_revenue_geographic_segmentation("AAPL"))
+    print(fmp_api_data.get_institutional_holder_analytics("AAPL", 2025, 1))
