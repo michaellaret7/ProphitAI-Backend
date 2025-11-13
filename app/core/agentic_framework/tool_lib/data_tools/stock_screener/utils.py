@@ -246,6 +246,7 @@ For dollar amounts, use full numbers (1B → 1000000000, 5M → 5000000).
 • is_fund = True includes MLPs, BDCs, closed-end funds, REITs (NOT traditional ETFs)
 • ETF industries: "equity_etfs", "fixed_income_etfs", "commodity_etfs", "alternative_etfs", "cryptocurrency_etfs"
 • Example: "Show ETFs" → sector: "etf"
+• If the query mentions "ETF" and sector is not set, set sector = "etf".
 
 **CRITICAL - Include vs. Exclude:**
 • Use "sector", "industry", "sub_industry" fields for stocks TO INCLUDE

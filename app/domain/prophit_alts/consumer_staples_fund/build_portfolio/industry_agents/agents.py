@@ -29,7 +29,7 @@ class IndustryRecommendations(BaseModel):
 class IndustryAgent(BaseAgent):
     def __init__(self, industry: str):
         self.industry = industry
-        super().__init__(*build_industry_prompt(industry), max_iterations=250, plan_first=True, save_messages=True, verbose=True, memory_refresh_interval=8, use_episodic_memory=False)
+        super().__init__(*build_industry_prompt(industry), max_iterations=250, plan_first=True, save_messages=True, verbose=True, memory_refresh_interval=8, use_episodic_memory=True, model="gpt-5-mini", reasoning_effort="high")
         
         register_industry_tools(self)
 

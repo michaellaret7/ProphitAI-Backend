@@ -2,9 +2,7 @@ import yaml
 from app.utils.gpt_parser import canonical_portfolio
 from app.core.calculations.portfolio.allocations import SimplePortfolioAllocator
 from app.core.calculations.core.config import DEFAULT_LOOKBACK_LONG
-from app.utils.decorators.tool_validation import validate_required_args
 
-@validate_required_args('portfolio_dict')
 def build_portfolio(portfolio_dict: any, **kwargs) -> str:
     """
     Build optimized long/short portfolio using SimplePortfolioAllocator with risk-based optimization.
@@ -25,6 +23,14 @@ def build_portfolio(portfolio_dict: any, **kwargs) -> str:
         Allocation values are rounded to 3 decimal places.
         Returns error message if build fails.
     """
+    # Validate portfolio_dict is not None
+    if portfolio_dict is None:
+        return yaml.dump({
+            "success": False,
+            "error": "Missing required argument: 'portfolio_dict'. Please try again with a valid portfolio. "
+                     "Example: portfolio_dict={'AAPL': {'conviction': 0.8, 'position': 'long'}, 'MSFT': {'conviction': 0.6, 'position': 'long'}}"
+        }, default_flow_style=False)
+
     # Parse any input into portfolio dict format using the canonical converter
     try:
         canonical_portfolio_dict = canonical_portfolio(portfolio_dict)

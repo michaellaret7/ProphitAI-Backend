@@ -5,7 +5,6 @@ from typing_extensions import Literal
 from app.core.agentic_framework.base_agent import BaseAgent
 from .prompts import system_prompt, user_prompt
 from .tool_registry import register_optimizer_tools
-from app.core.agentic_framework.base_agent.memory.domain_memory import DomainMemory
 from app.utils.decorators.timer import timer
 
 #TODO: Add a portfolio compare tool to compare the new proposed portfolio to the old one that needed optimizaiton
@@ -113,17 +112,17 @@ class OptimizerAgent(BaseAgent):
 
         return prompt
 
-    def _initialize_domain_memory(self):
-        """Initialize Optimizer-specific domain memories for portfolio optimization."""
-        # Initialize domain memory for Optimizer agent
-        self.domain_memory = DomainMemory(agent_type='optimizer', save_memory=True, verbose=self.verbose)
+    # def _initialize_domain_memory(self):
+    #     """Initialize Optimizer-specific domain memories for portfolio optimization."""
+    #     # Initialize domain memory for Optimizer agent
+    #     self.domain_memory = DomainMemory(agent_type='optimizer', save_memory=True, verbose=self.verbose)
         
-        if self.verbose:
-            total_memories = sum(len(m) for m in self.domain_memory.memories.values())
-            if total_memories == 0:
-                print("⚠️ No Optimizer memories found - agent will have no optimization knowledge!")
-            else:
-                print(f"🧠 Optimizer Agent loaded with {total_memories} optimization memories")
+    #     if self.verbose:
+    #         total_memories = sum(len(m) for m in self.domain_memory.memories.values())
+    #         if total_memories == 0:
+    #             print("⚠️ No Optimizer memories found - agent will have no optimization knowledge!")
+    #         else:
+    #             print(f"🧠 Optimizer Agent loaded with {total_memories} optimization memories")
 
     def run(self):
         result = super().run()  # Run main BaseAgent workflow
@@ -144,7 +143,7 @@ class OptimizerAgent(BaseAgent):
 
 @timer
 def main():
-    portfolio_id = "01be5cf2-a1fe-45b0-b9a4-cf9cc1a94b36"
+    portfolio_id = "26da638b-5602-4e07-aeba-08dc1052bd86"
     agent = OptimizerAgent(
         portfolio_id=portfolio_id,
         risk_tolerance="high",

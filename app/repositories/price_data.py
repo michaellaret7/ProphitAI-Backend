@@ -162,7 +162,6 @@ def fetch_bulk_price_data_for_tickers(tickers: list, start_date_str: str, end_da
                 
     return price_data_map
 
-
 def fetch_bulk_ohlcv_data_for_tickers(tickers: list, start_date_str: str, end_date_str: str):
     """
     Fetch full OHLCV DataFrames for multiple tickers in parallel.

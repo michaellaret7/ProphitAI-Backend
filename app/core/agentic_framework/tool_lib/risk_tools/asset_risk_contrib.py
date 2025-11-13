@@ -1,39 +1,50 @@
 import yaml
+from datetime import datetime
+from typing import Optional
 from app.core.calculations.portfolio.utils import prepare_portfolio_data
 from app.core.calculations.returns.calculator import ReturnsCalculator
 from app.core.calculations.risk.calculator import RiskCalculator
 from app.core.calculations.core.config import DEFAULT_LOOKBACK_SHORT
 from app.models.portfolio_models import PortfolioInput
 import pandas as pd
-from app.utils.gpt_parser import canonical_portfolio
-from app.utils.decorators.tool_validation import validate_required_args, validate_portfolio_dict, validate_enum_arg
 import numpy as np
 from app.core.calculations.core.helpers import build_returns_df_from_price_map
+from app.utils.tool_validator import ToolValidator
+from app.utils.decorators.tool_validation import log_simulation_data_range
 
-@validate_required_args('portfolio_dict', 'metric')
-@validate_portfolio_dict()
-@validate_enum_arg("metric", ["vol", "var"])
-def risk_contribution(portfolio_dict: PortfolioInput | dict = None, metric: str = 'vol') -> str:
+@log_simulation_data_range()
+def risk_contribution(
+    portfolio_dict: PortfolioInput | dict = None,
+    metric: str = 'vol',
+    *,
+    _simulation_date: Optional[datetime] = None
+) -> str:
     """
     Calculate Total Risk and risk contributions by asset.
 
     Parameters:
     - portfolio_dict: Portfolio configuration mapping ticker -> {allocation, position}
     - metric: Risk metric to decompose {'vol', 'var'}
+    - _simulation_date: INTERNAL USE ONLY - For simulation mode, not exposed to agents
 
     Returns:
     - TR: Total Risk (portfolio level)
     - MCTR: Marginal Contribution to Total Risk (per asset)
     - CTR_pct: Component Total Risk as percentage (per asset)
     """
-    try:
-        if not portfolio_dict:
-            return yaml.dump({"success": False, "error": "Portfolio dictionary is required"}, default_flow_style=False)
+    # Validate inputs
+    v = ToolValidator()
+    v.require_portfolio('portfolio_dict', portfolio_dict, normalize=True)
+    v.require_enum('metric', metric, ['vol', 'var'])
 
-        try:
-            portfolio_dict = canonical_portfolio(portfolio_dict)
-        except Exception as e:
-            return yaml.dump({"success": False, "error": str(e)}, default_flow_style=False)
+    if not v.is_valid():
+        return v.error_response()
+
+    # Get validated/normalized values (portfolio already normalized by validator)
+    portfolio_dict = v.get('portfolio_dict')
+    metric = v.get('metric')
+
+    try:
 
         # Get tickers and weights from portfolio
         tickers = list(portfolio_dict.keys())
@@ -46,7 +57,8 @@ def risk_contribution(portfolio_dict: PortfolioInput | dict = None, metric: str 
         weights_dict, price_data, _ = prepare_portfolio_data(
             portfolio=portfolio_dict,
             lookback_days=DEFAULT_LOOKBACK_SHORT,
-            include_dividends=False
+            include_dividends=False,
+            _simulation_date=_simulation_date
         )
 
         if not price_data:

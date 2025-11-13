@@ -1,16 +1,15 @@
 import yaml
 from typing import Optional
 from datetime import datetime
+import pandas as pd
 from app.core.calculations.portfolio.utils import get_portfolio_returns
 from app.core.calculations.returns.calculator import ReturnsCalculator
 from app.core.calculations.core.config import DEFAULT_LOOKBACK_LONG
 import numpy as np
 from app.models.portfolio_models import PortfolioInput
-from app.utils.gpt_parser import canonical_portfolio
-from app.utils.decorators.tool_validation import log_simulation_data_range, validate_portfolio_dict, validate_required_args
+from app.utils.decorators.tool_validation import log_simulation_data_range
+from app.utils.tool_validator import ToolValidator
 
-@validate_required_args('portfolio_dict')
-@validate_portfolio_dict()
 @log_simulation_data_range()
 def calculate_portfolio_returns_metrics(portfolio_dict: PortfolioInput | dict, lookback_days=DEFAULT_LOOKBACK_LONG, _simulation_date: Optional[datetime] = None) -> str:
     """Calculate and display simple portfolio metrics.
@@ -23,8 +22,19 @@ def calculate_portfolio_returns_metrics(portfolio_dict: PortfolioInput | dict, l
     Returns:
         dict: Contains annualized returns, volatility, and weekly cumulative returns
     """
+    # Validate inputs
+    v = ToolValidator()
+    v.require_portfolio('portfolio_dict', portfolio_dict, normalize=True)
+    v.optional_numeric('lookback_days', lookback_days, default=DEFAULT_LOOKBACK_LONG, min_val=1, positive_only=True)
+
+    if not v.is_valid():
+        return v.error_response()
+
+    # Get validated/normalized values
+    portfolio_dict = v.get('portfolio_dict')
+    lookback_days = v.get('lookback_days')
+
     try:
-        portfolio_dict = canonical_portfolio(portfolio_dict)
 
         # Get price-only returns
         portfolio_price_returns, _ = get_portfolio_returns(
@@ -44,6 +54,20 @@ def calculate_portfolio_returns_metrics(portfolio_dict: PortfolioInput | dict, l
             _simulation_date=_simulation_date
         )
 
+        # Log actual data range
+        if isinstance(portfolio_total_returns, pd.Series) and len(portfolio_total_returns) > 0:
+            if hasattr(portfolio_total_returns, 'index') and isinstance(portfolio_total_returns.index, pd.DatetimeIndex):
+                start_date = portfolio_total_returns.index.min().date()
+                end_date = portfolio_total_returns.index.max().date()
+                count = len(portfolio_total_returns)
+                print(f"  📅 ACTUAL DATA USED:")
+                # Check if data exceeds simulation cutoff
+                if _simulation_date:
+                    cutoff_ok = portfolio_total_returns.index.max() <= _simulation_date
+                    cutoff_status = "✅" if cutoff_ok else "⚠️ EXCEEDS CUTOFF"
+                    print(f"    • portfolio_returns: {start_date} → {end_date} ({count} points) {cutoff_status}")
+                else:
+                    print(f"    • portfolio_returns: {start_date} → {end_date} ({count} points)")
 
         # Calculate metrics
         ann_price_return = ReturnsCalculator.annualized_return(portfolio_price_returns, 252)
