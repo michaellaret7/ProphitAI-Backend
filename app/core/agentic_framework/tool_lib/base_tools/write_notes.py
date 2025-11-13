@@ -30,7 +30,7 @@ def write_note(title: str, content: str, *, output_dir: Optional[str] = None) ->
             "",
             body,
             "",
-            "---",
+            "---END_NOTE---",
             "",
         ]
 

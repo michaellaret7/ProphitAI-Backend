@@ -40,7 +40,7 @@ def retrieve_notes(title: str, *, output_dir: Optional[str] = None) -> str:
         # Format: ## 2025-11-05T15:28:10.561460+00:00 - Title
         note_header_pattern = re.compile(r'^##\s+\d{4}-\d{2}-\d{2}T[\d:\.+\-]+\s+-\s+(.+)$')
 
-        for line in lines:
+        for i, line in enumerate(lines):
             # Check for note header (## timestamp - title)
             match = note_header_pattern.match(line)
             if match:
@@ -52,13 +52,38 @@ def retrieve_notes(title: str, *, output_dir: Optional[str] = None) -> str:
                 current_note = [line]
                 current_title = match.group(1)  # Extract title from regex match
                 in_note = True
-            elif line.strip() == '---':
-                # End of note
+            elif line.strip() == '---END_NOTE---':
+                # New delimiter - always marks end of note
                 if in_note and current_title and title.lower() in current_title.lower():
                     matching_notes.append('\n'.join(current_note))
                 current_note = []
                 current_title = None
                 in_note = False
+            elif line.strip() == '---':
+                # Legacy delimiter - only treat as end marker if followed by blank line or another note
+                # This prevents treating markdown horizontal rules (---) as note boundaries
+                next_line_idx = i + 1
+                is_end_marker = False
+
+                if next_line_idx >= len(lines):
+                    # EOF - this is an end marker
+                    is_end_marker = True
+                elif lines[next_line_idx].strip() == '':
+                    # Blank line after --- could be end marker
+                    # Check if followed by another note header or EOF
+                    peek_idx = next_line_idx + 1
+                    if peek_idx >= len(lines) or note_header_pattern.match(lines[peek_idx]):
+                        is_end_marker = True
+
+                if is_end_marker:
+                    if in_note and current_title and title.lower() in current_title.lower():
+                        matching_notes.append('\n'.join(current_note))
+                    current_note = []
+                    current_title = None
+                    in_note = False
+                elif in_note:
+                    # Not an end marker - include it in the note content
+                    current_note.append(line)
             elif in_note:
                 current_note.append(line)
 
