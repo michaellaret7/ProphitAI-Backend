@@ -3,7 +3,7 @@ from typing import List
 from app.api.controller.price import get_stock_prices_controller
 from app.models.price_models import StockPriceRequest
 
-router = APIRouter()
+router = APIRouter(tags=["Stock Prices 💵"])
 
 def parse_stock_price_request(
     tickers: List[str] = Query(..., description="List of stock ticker symbols", min_length=1),

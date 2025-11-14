@@ -10,7 +10,7 @@ from app.api.controller.user import (
     delete_user_controller,
 )
 
-router = APIRouter()
+router = APIRouter(tags=["User Management 👤"])
 
 class CreateUserRequest(BaseModel):
     email: EmailStr

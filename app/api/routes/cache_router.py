@@ -2,7 +2,7 @@ from fastapi import APIRouter, Query
 from typing import Dict, Any
 from app.redis.client import cache
 
-router = APIRouter(tags=["cache"])
+router = APIRouter(tags=["Cache Management 💾"])
 
 
 @router.delete("/cache/clear")

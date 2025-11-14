@@ -8,7 +8,7 @@ from fastapi import APIRouter, Query
 
 from app.api.controller.ticker import get_ticker_fundamentals_controller
 
-router = APIRouter()
+router = APIRouter(tags=["Ticker Data 🎯"])
 
 
 @router.get("/ticker/fundamentals")

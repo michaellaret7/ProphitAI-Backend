@@ -9,7 +9,7 @@ from app.api.controller.technical import (
     get_pivot_points_controller,
 )
 
-router = APIRouter()
+router = APIRouter(tags=["Technical Analysis 📉"])
 
 
 class PivotType(str, Enum):

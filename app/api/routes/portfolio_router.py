@@ -17,7 +17,7 @@ from app.api.controller.portfolio import (
     get_portfolio_stress_returns_controller,
 )
 
-router = APIRouter()
+router = APIRouter(tags=["Portfolios 💼"])
 
 class PositionModel(BaseModel):
     ticker: str
