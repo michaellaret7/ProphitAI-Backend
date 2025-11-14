@@ -6,7 +6,7 @@ from app.api.controller.broker import (
     add_broker_portfolio_controller,
 )
 
-router = APIRouter()
+router = APIRouter(tags=["Broker Support 🏦"])
 
 class SyncBrokerPortfolioRequest(BaseModel):
     portfolioName: str

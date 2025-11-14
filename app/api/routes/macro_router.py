@@ -8,9 +8,13 @@ from app.api.controller.macro import (
     get_bond_rates_controller,
     get_economic_indicator_controller,
     get_economic_calendar_controller,
+    get_sector_performance_controller,
+    get_sector_pe_controller,
+    get_industry_performance_controller,
+    get_industry_pe_controller,
 )
 
-router = APIRouter()
+router = APIRouter(tags=["Macro Data 🌍"])
 
 
 @router.get("/macro/commodities")
@@ -387,4 +391,386 @@ async def get_economic_calendar(
         start_date=startDate,
         end_date=endDate,
         event=event,
+    )
+
+
+@router.get("/macro/sector/performance")
+async def get_sector_performance(
+    sector: str = Query(..., description="Sector name (e.g., 'Technology', 'Healthcare', 'Financial Services')"),
+    startDate: Optional[str] = Query(None, description="Start date (YYYY-MM-DD)", alias="startDate"),
+    endDate: Optional[str] = Query(None, description="End date (YYYY-MM-DD)", alias="endDate"),
+):
+    """
+    Get historical sector performance data.
+
+    ## Overview
+    Retrieves historical price performance data for a specific sector, showing percentage changes over time.
+
+    VALID_SECTORS = {
+      "Technology",
+      "Healthcare",
+      "Financial Services",
+      "Consumer Cyclical",
+      "Consumer Defensive",
+      "Industrials",
+      "Energy",
+      "Utilities",
+      "Real Estate",
+      "Basic Materials",
+      "Communication Services",
+  }
+
+    ## Example Usage:
+    ```
+    GET /api/macro/sector/performance?sector=Technology
+    GET /api/macro/sector/performance?sector=Healthcare&startDate=2024-01-01&endDate=2024-12-31
+    GET /api/macro/sector/performance?sector=Financial Services&startDate=2024-06-01
+    ```
+
+    ## Response Format:
+    ```json
+    {
+      "status": 200,
+      "message": "Sector performance data retrieved successfully",
+      "data": {
+        "kind": "macro#sectorPerformance",
+        "id": "Technology",
+        "selfLink": "/api/macro/sector/performance?sector=Technology&startDate=2024-01-01&endDate=2024-12-31",
+        "currentItemCount": 252,
+        "totalItems": 252,
+        "payload": {
+          "sector": "Technology",
+          "startDate": "2024-01-01",
+          "endDate": "2024-12-31",
+          "data": [
+            {
+              "date": "2024-01-02",
+              "changesPercentage": 1.25
+            },
+            {
+              "date": "2024-01-03",
+              "changesPercentage": -0.45
+            }
+          ]
+        }
+      }
+    }
+    ```
+
+    ## Notes:
+    - Sector names are case-insensitive
+    - If startDate and endDate are not provided, returns all available data
+    - changesPercentage represents daily percentage change
+    - Data is cached for 1 day for performance
+    - Useful for sector rotation strategies, relative strength analysis, and thematic investing
+    """
+    return await get_sector_performance_controller(
+        sector=sector,
+        start_date=startDate,
+        end_date=endDate,
+    )
+
+
+@router.get("/macro/sector/pe")
+async def get_sector_pe(
+    sector: str = Query(..., description="Sector name (e.g., 'Technology', 'Healthcare', 'Financial Services')"),
+    startDate: Optional[str] = Query(None, description="Start date (YYYY-MM-DD)", alias="startDate"),
+    endDate: Optional[str] = Query(None, description="End date (YYYY-MM-DD)", alias="endDate"),
+):
+    """
+    Get historical sector P/E ratio data.
+
+    ## Overview
+    Retrieves historical price-to-earnings ratio data for a specific sector, useful for valuation analysis
+    and identifying overvalued/undervalued sectors relative to historical norms.
+
+    VALID_SECTORS = {
+      "Technology",
+      "Healthcare",
+      "Financial Services",
+      "Consumer Cyclical",
+      "Consumer Defensive",
+      "Industrials",
+      "Energy",
+      "Utilities",
+      "Real Estate",
+      "Basic Materials",
+      "Communication Services",
+  }
+
+    ## Example Usage:
+    ```
+    GET /api/macro/sector/pe?sector=Technology
+    GET /api/macro/sector/pe?sector=Healthcare&startDate=2023-01-01&endDate=2024-12-31
+    GET /api/macro/sector/pe?sector=Energy&startDate=2024-01-01
+    ```
+
+    ## Response Format:
+    ```json
+    {
+      "status": 200,
+      "message": "Sector P/E data retrieved successfully",
+      "data": {
+        "kind": "macro#sectorPE",
+        "id": "Technology",
+        "selfLink": "/api/macro/sector/pe?sector=Technology&startDate=2023-01-01&endDate=2024-12-31",
+        "currentItemCount": 504,
+        "totalItems": 504,
+        "payload": {
+          "sector": "Technology",
+          "startDate": "2023-01-01",
+          "endDate": "2024-12-31",
+          "data": [
+            {
+              "date": "2023-01-02",
+              "pe": 24.56
+            },
+            {
+              "date": "2023-01-03",
+              "pe": 24.72
+            }
+          ]
+        }
+      }
+    }
+    ```
+
+    ## Use Cases:
+    - **Valuation Analysis**: Compare current P/E to historical averages to identify overvalued/undervalued sectors
+    - **Mean Reversion**: Identify sectors trading at extreme P/E multiples likely to revert to mean
+    - **Sector Rotation**: Rotate into sectors with attractive valuations relative to history
+    - **Earnings Growth**: Combine with performance data to identify sectors with pricing power
+
+    ## Notes:
+    - Sector names are case-insensitive
+    - If startDate and endDate are not provided, returns all available data
+    - P/E ratios are aggregated from constituent companies in each sector
+    - Data is cached for 1 day for performance
+    - Negative P/E values may indicate sector-wide losses
+    """
+    return await get_sector_pe_controller(
+        sector=sector,
+        start_date=startDate,
+        end_date=endDate,
+    )
+
+
+@router.get("/macro/industry/performance")
+async def get_industry_performance(
+    industry: str = Query(..., description="Industry name (e.g., 'Software - Application', 'Biotechnology', 'Banks - Regional')"),
+    startDate: Optional[str] = Query(None, description="Start date (YYYY-MM-DD)", alias="startDate"),
+    endDate: Optional[str] = Query(None, description="End date (YYYY-MM-DD)", alias="endDate"),
+):
+    """
+    Get historical industry performance data.
+
+    ## Overview
+    Retrieves historical price performance data for a specific industry, providing more granular analysis
+    than sector-level data. Industries are sub-categories within sectors.
+
+    **IMPORTANT**: Industry names must use FMP's specific format (e.g., "Software - Application", not just "Software").
+
+    ## Common Industry Names (FMP Format):
+
+    ### Technology Sector:
+    - Software - Application
+    - Software - Infrastructure
+    - Semiconductors
+    - Hardware
+    - Electronic Equipment
+
+    ### Healthcare Sector:
+    - Biotechnology
+    - Drug Manufacturers - General
+    - Drug Manufacturers - Specialty & Generic
+    - Medical Devices
+    - Healthcare Providers & Services
+
+    ### Financial Services Sector:
+    - Banks - Regional
+    - Banks - Diversified
+    - Insurance - Life
+    - Insurance - Property & Casualty
+    - Asset Management
+    - Capital Markets
+
+    ### Consumer Cyclical Sector:
+    - Auto Manufacturers
+    - Retail - Apparel & Specialty
+    - Retail - Cyclical
+    - Restaurants
+    - Travel & Leisure
+
+    ### Consumer Defensive Sector:
+    - Beverages - Non-Alcoholic
+    - Beverages - Alcoholic
+    - Food Products
+    - Household Products
+    - Tobacco
+
+    ### Industrials Sector:
+    - Aerospace & Defense
+    - Construction
+    - Machinery
+    - Airlines
+    - Transportation & Logistics
+
+    ### Energy Sector:
+    - Oil & Gas - E&P
+    - Oil & Gas - Refining & Marketing
+    - Oil & Gas - Equipment & Services
+    - Coal
+
+    ### Other:
+    - Utilities - Regulated Electric
+    - Real Estate - Services
+    - Chemicals
+    - Metals & Mining
+    - Telecom Services
+
+    ## Example Usage:
+    ```
+    GET /api/macro/industry/performance?industry=Software - Application
+    GET /api/macro/industry/performance?industry=Biotechnology&startDate=2024-01-01&endDate=2024-12-31
+    GET /api/macro/industry/performance?industry=Banks - Regional&startDate=2024-06-01
+    ```
+
+    ## Response Format:
+    ```json
+    {
+      "status": 200,
+      "message": "Industry performance data retrieved successfully",
+      "data": {
+        "kind": "macro#industryPerformance",
+        "id": "Software",
+        "selfLink": "/api/macro/industry/performance?industry=Software&startDate=2024-01-01&endDate=2024-12-31",
+        "currentItemCount": 252,
+        "totalItems": 252,
+        "payload": {
+          "industry": "Software - Application",
+          "startDate": "2024-01-01",
+          "endDate": "2024-12-31",
+          "data": [
+            {
+              "date": "2024-01-02",
+              "changesPercentage": 1.45
+            },
+            {
+              "date": "2024-01-03",
+              "changesPercentage": -0.32
+            }
+          ]
+        }
+      }
+    }
+    ```
+
+    ## Notes:
+    - Industry names can contain letters, spaces, hyphens, and ampersands
+    - If startDate and endDate are not provided, returns all available data
+    - changesPercentage represents daily percentage change
+    - Data is cached for 1 day for performance
+    - More granular than sector data for precise thematic investing
+    """
+    return await get_industry_performance_controller(
+        industry=industry,
+        start_date=startDate,
+        end_date=endDate,
+    )
+
+
+@router.get("/macro/industry/pe")
+async def get_industry_pe(
+    industry: str = Query(..., description="Industry name (e.g., 'Software - Application', 'Biotechnology', 'Banks - Regional')"),
+    startDate: Optional[str] = Query(None, description="Start date (YYYY-MM-DD)", alias="startDate"),
+    endDate: Optional[str] = Query(None, description="End date (YYYY-MM-DD)", alias="endDate"),
+):
+    """
+    Get historical industry P/E ratio data.
+
+    ## Overview
+    Retrieves historical price-to-earnings ratio data for a specific industry, enabling granular valuation
+    analysis at the industry level rather than broad sector level.
+
+    **IMPORTANT**: Industry names must use FMP's specific format (e.g., "Software - Application", not just "Software").
+
+    ## Example Industries by Typical P/E Range:
+
+    ### High-Growth Industries (typically higher P/E):
+    - Software - Application (20-40x)
+    - Software - Infrastructure (20-40x)
+    - Biotechnology (varies, often no earnings)
+    - Semiconductors (15-30x)
+    - Internet Content & Information (20-35x)
+
+    ### Value Industries (typically lower P/E):
+    - Banks - Regional (8-15x)
+    - Banks - Diversified (8-15x)
+    - Insurance - Life (10-18x)
+    - Insurance - Property & Casualty (10-18x)
+    - Oil & Gas - E&P (8-12x)
+    - Utilities - Regulated Electric (12-20x)
+
+    ### Cyclical Industries:
+    - Auto Manufacturers (6-12x)
+    - Construction (10-18x)
+    - Aerospace & Defense (15-25x)
+    - Chemicals (12-20x)
+    - Metals & Mining (8-15x)
+
+    ## Example Usage:
+    ```
+    GET /api/macro/industry/pe?industry=Software - Application
+    GET /api/macro/industry/pe?industry=Biotechnology&startDate=2023-01-01&endDate=2024-12-31
+    GET /api/macro/industry/pe?industry=Banks - Regional&startDate=2024-01-01
+    ```
+
+    ## Response Format:
+    ```json
+    {
+      "status": 200,
+      "message": "Industry P/E data retrieved successfully",
+      "data": {
+        "kind": "macro#industryPE",
+        "id": "Software",
+        "selfLink": "/api/macro/industry/pe?industry=Software&startDate=2023-01-01&endDate=2024-12-31",
+        "currentItemCount": 504,
+        "totalItems": 504,
+        "payload": {
+          "industry": "Software - Application",
+          "startDate": "2023-01-01",
+          "endDate": "2024-12-31",
+          "data": [
+            {
+              "date": "2023-01-02",
+              "pe": 28.45
+            },
+            {
+              "date": "2023-01-03",
+              "pe": 28.62
+            }
+          ]
+        }
+      }
+    }
+    ```
+
+    ## Use Cases:
+    - **Relative Valuation**: Compare P/E ratios across related industries (e.g., Software vs. Hardware)
+    - **Industry Cycles**: Identify industries at peak/trough valuations
+    - **Stock Selection**: Find undervalued stocks within fairly valued industries
+    - **Earnings Quality**: Industries with stable P/E ratios may have higher earnings quality
+
+    ## Notes:
+    - Industry names can contain letters, spaces, hyphens, and ampersands
+    - If startDate and endDate are not provided, returns all available data
+    - P/E ratios are aggregated from constituent companies in each industry
+    - Data is cached for 1 day for performance
+    - Some industries (e.g., Biotechnology) may have negative or very high P/E due to lack of earnings
+    - More precise than sector-level P/E for bottom-up analysis
+    """
+    return await get_industry_pe_controller(
+        industry=industry,
+        start_date=startDate,
+        end_date=endDate,
     )

@@ -27,7 +27,7 @@ from app.models.company_models import (
     InstitutionalOwnershipRequest,
 )
 
-router = APIRouter()
+router = APIRouter(tags=["Company Fundamentals 🏢"])
 
 
 def parse_analyst_estimates_request(

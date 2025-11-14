@@ -9,7 +9,7 @@ from app.api.controller.news import (
 )
 from app.models.news_models import NewsRequest
 
-router = APIRouter()
+router = APIRouter(tags=["News & Media 📰"])
 
 
 def parse_news_request(
@@ -48,7 +48,7 @@ async def get_stock_news(
         ascending: Sort order by date (default: true for oldest first)
 
     Returns:
-        News items with published date, title, publisher, site, and text content
+        News items with published date, title, publisher, site, text content, image URL, and article URL
     """
     return await get_stock_news_controller(
         ticker=request.ticker,
@@ -74,7 +74,7 @@ async def get_press_releases(
         ascending: Sort order by date (default: true for oldest first)
 
     Returns:
-        Press releases with published date, title, publisher, site, and text content
+        Press releases with published date, title, publisher, site, text content, image URL, and article URL
     """
     return await get_press_releases_controller(
         ticker=request.ticker,
@@ -101,7 +101,7 @@ async def get_price_target_news(
 
     Returns:
         Price target news with analyst name, company, price target, adjusted price target,
-        price when posted, and news publisher information
+        price when posted, news publisher information, and article URL
     """
     return await get_price_target_news_controller(
         ticker=request.ticker,
@@ -128,7 +128,7 @@ async def get_stock_grade_news(
 
     Returns:
         Stock grade news with grading company, new grade, previous grade, action,
-        price when posted, and news publisher information
+        price when posted, news publisher information, and article URL
     """
     return await get_stock_grade_news_controller(
         ticker=request.ticker,

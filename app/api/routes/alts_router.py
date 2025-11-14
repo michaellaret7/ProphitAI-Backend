@@ -10,7 +10,7 @@ from app.api.controller.alts import (
     get_fund_correlation_matrix_controller,
 )
 
-router = APIRouter()
+router = APIRouter(tags=["Prophit Alts 📈"])
 
 @router.get("/alts/fund/{fund_name}/data")
 async def get_fund_final_positions(fund_name: str):

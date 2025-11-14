@@ -57,6 +57,8 @@ def get_press_releases(
             "title": getattr(r, "title", None),
             "site": getattr(r, "site", None),
             "text": getattr(r, "text", None),
+            "image": getattr(r, "image", None),
+            "url": getattr(r, "url", None),
         })
     return {"ticker": ticker.upper(), "count": len(items), "items": items}
 
@@ -93,6 +95,8 @@ def get_stock_news(
             "title": getattr(r, "title", None),
             "site": getattr(r, "site", None),
             "text": getattr(r, "text", None),
+            "image": getattr(r, "image", None),
+            "url": getattr(r, "url", None),
         })
     return {"ticker": ticker.upper(), "count": len(items), "items": items}
 
@@ -132,6 +136,7 @@ def get_price_target_news(
             "priceWhenPosted": getattr(r, "priceWhenPosted", None),
             "newsPublisher": getattr(r, "newsPublisher", None),
             "analystCompany": getattr(r, "analystCompany", None),
+            "url": getattr(r, "newsURL", None),
         })
     return {"ticker": ticker.upper(), "count": len(items), "items": items}
 
@@ -171,5 +176,6 @@ def get_stock_grade_news(
             "action": getattr(r, "action", None),
             "priceWhenPosted": getattr(r, "priceWhenPosted", None),
             "newsPublisher": getattr(r, "newsPublisher", None),
+            "url": getattr(r, "newsURL", None),
         })
     return {"ticker": ticker.upper(), "count": len(items), "items": items}

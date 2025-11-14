@@ -302,11 +302,85 @@ class FMP_API_DATA:
         """
         url = f"https://financialmodelingprep.com/stable/institutional-ownership/extract-analytics/holder?symbol={ticker}&year={year}&quarter={quarter}"
         return self._make_fmp_api_request(url)
+    
+    def get_historical_sector_performance(self, sector: str, from_date: str = None, to_date: str = None):
+        """
+        Retrieves historical sector performance for a given sector.
+        Returns historical performance data for the specified sector.
 
-if __name__ == "__main__":
-    fmp_api_data = FMP_API_DATA()
-    print(fmp_api_data.get_stock_peers("AAPL"))
-    print(fmp_api_data.get_esg_disclosures("AAPL"))
-    print(fmp_api_data.get_revenue_product_segmentation("AAPL"))
-    print(fmp_api_data.get_revenue_geographic_segmentation("AAPL"))
-    print(fmp_api_data.get_institutional_holder_analytics("AAPL", 2025, 1))
+        Args:
+            sector (str): The sector name (e.g., 'Energy', 'Technology', 'Healthcare').
+            from_date (str, optional): Start date in YYYY-MM-DD format (e.g., '2024-02-01').
+            to_date (str, optional): End date in YYYY-MM-DD format (e.g., '2024-03-01').
+        """
+        url = f"https://financialmodelingprep.com/stable/historical-sector-performance?sector={sector}"
+        if from_date:
+            url += f"&from={from_date}"
+        if to_date:
+            url += f"&to={to_date}"
+        return self._make_fmp_api_request(url)
+
+    def get_historical_industry_performance(self, industry: str, from_date: str = None, to_date: str = None):
+        """
+        Retrieves historical industry performance for a given industry.
+        Returns historical performance data for the specified industry.
+
+        Args:
+            industry (str): The industry name (e.g., 'Biotechnology', 'Software', 'Banks').
+            from_date (str, optional): Start date in YYYY-MM-DD format (e.g., '2024-02-01').
+            to_date (str, optional): End date in YYYY-MM-DD format (e.g., '2024-03-01').
+        """
+        url = f"https://financialmodelingprep.com/stable/historical-industry-performance?industry={industry}"
+        if from_date:
+            url += f"&from={from_date}"
+        if to_date:
+            url += f"&to={to_date}"
+        return self._make_fmp_api_request(url)
+
+    def get_historical_sector_pe(self, sector: str, from_date: str = None, to_date: str = None):
+        """
+        Retrieves historical P/E ratio data for a given sector.
+        Returns historical price-to-earnings ratios for the specified sector.
+
+        Args:
+            sector (str): The sector name (e.g., 'Energy', 'Technology', 'Healthcare').
+            from_date (str, optional): Start date in YYYY-MM-DD format (e.g., '2024-02-01').
+            to_date (str, optional): End date in YYYY-MM-DD format (e.g., '2024-03-01').
+        """
+        url = f"https://financialmodelingprep.com/stable/historical-sector-pe?sector={sector}"
+        if from_date:
+            url += f"&from={from_date}"
+        if to_date:
+            url += f"&to={to_date}"
+        return self._make_fmp_api_request(url)
+
+    def get_historical_industry_pe(self, industry: str, from_date: str = None, to_date: str = None):
+        """
+        Retrieves historical P/E ratio data for a given industry.
+        Returns historical price-to-earnings ratios for the specified industry.
+
+        Args:
+            industry (str): The industry name (e.g., 'Biotechnology', 'Software', 'Banks').
+            from_date (str, optional): Start date in YYYY-MM-DD format (e.g., '2024-02-01').
+            to_date (str, optional): End date in YYYY-MM-DD format (e.g., '2024-03-01').
+        """
+        url = f"https://financialmodelingprep.com/stable/historical-industry-pe?industry={industry}"
+        if from_date:
+            url += f"&from={from_date}"
+        if to_date:
+            url += f"&to={to_date}"
+        return self._make_fmp_api_request(url)
+
+from app.db.core.db_config import MarketSession
+from app.db.core.models.market_data_models import StockNews, Ticker
+from app.utils.serialize_output import serialize_sqlalchemy_obj
+
+session = MarketSession()
+ticker = session.query(Ticker).filter(Ticker.ticker == 'AAPL').first().id
+news = session.query(StockNews)\
+    .filter(StockNews.ticker_id == ticker)\
+    .order_by(StockNews.publishedDate.desc())\
+    .first()
+print(serialize_sqlalchemy_obj(news))
+session.close()
+print(ticker)
