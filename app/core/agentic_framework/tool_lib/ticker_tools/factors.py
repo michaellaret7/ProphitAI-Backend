@@ -9,8 +9,8 @@ from app.core.calculations.factors.volatility import VolatilityFactors
 from app.core.calculations.core import DataService
 from datetime import datetime, timedelta
 from app.utils.simulation_utils import get_end_date, filter_series_by_date
-from app.utils.decorators.tool_validation import validate_ticker_arg, validate_enum_arg
 from app.utils.decorators.tool_validation import log_simulation_data_range
+from app.utils.tool_validator import ToolValidator
 
 
 def _convert_numpy_to_python(obj: Any) -> Any:
@@ -37,8 +37,6 @@ def _convert_numpy_to_python(obj: Any) -> Any:
     else:
         return obj
 
-@validate_ticker_arg()
-@validate_enum_arg("factor", ["growth", "value", "quality", "momentum", "volatility"])
 @log_simulation_data_range()
 def calculate_ticker_factors(ticker: str, factor: str, _simulation_date: Optional[datetime] = None) -> str:
     """Calculate all factor metrics for a given ticker and factor type.
@@ -48,6 +46,18 @@ def calculate_ticker_factors(ticker: str, factor: str, _simulation_date: Optiona
         factor: Factor type to calculate
         _simulation_date: INTERNAL USE ONLY - For simulation mode, not exposed to agents
     """
+    # Validate inputs
+    v = ToolValidator()
+    v.require_ticker('ticker', ticker)
+    v.require_enum('factor', factor, ['growth', 'value', 'quality', 'momentum', 'volatility'])
+
+    if not v.is_valid():
+        return v.error_response()
+
+    # Get validated/normalized values (ticker is already uppercased by validator)
+    ticker = v.get('ticker')
+    factor = v.get('factor')
+
     try:
         # Growth, Value, and Quality factors take ticker string directly
         if factor in ["growth", "value", "quality"]:
@@ -105,6 +115,7 @@ def calculate_ticker_factors(ticker: str, factor: str, _simulation_date: Optiona
 
             # Convert NumPy types to Python types for YAML serialization
             result = _convert_numpy_to_python(result)
+            
             return yaml.dump({"success": True, "data": result}, default_flow_style=False)
 
         else:
@@ -115,7 +126,7 @@ def calculate_ticker_factors(ticker: str, factor: str, _simulation_date: Optiona
 
 # Tool Schema Constants
 CALCULATE_TICKER_FACTORS_DESCRIPTION = (
-    "Calculate all factor metrics for a given ticker and factor type. Can calculate growth, value, momentum, quality, or volatility factors.\n\n"
+    "Calculate factor metrics for a given ticker and factor type. Can calculate growth, value, momentum, quality, or volatility factors.\n\n"
     "Example: calculate_ticker_factors(ticker='KO', factor='growth')"
 )
 

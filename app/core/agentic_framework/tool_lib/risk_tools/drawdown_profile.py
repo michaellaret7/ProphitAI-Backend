@@ -1,20 +1,27 @@
 import yaml
+from datetime import datetime
+from typing import Optional
+import pandas as pd
 from app.core.calculations.portfolio.utils import get_portfolio_returns
 from app.core.calculations.risk.calculator import RiskCalculator
 from app.core.calculations.core.config import DEFAULT_LOOKBACK_LONG
 from app.models.portfolio_models import PortfolioInput
-from app.utils.gpt_parser import canonical_portfolio
-from app.utils.decorators.tool_validation import validate_required_args, validate_portfolio_dict
 import numpy as np
+from app.utils.tool_validator import ToolValidator
+from app.utils.decorators.tool_validation import log_simulation_data_range
 
-@validate_required_args('portfolio_dict')
-@validate_portfolio_dict()
-def drawdown_profile(portfolio_dict: PortfolioInput | dict = None) -> str:
+@log_simulation_data_range()
+def drawdown_profile(
+    portfolio_dict: PortfolioInput | dict = None,
+    *,
+    _simulation_date: Optional[datetime] = None
+) -> str:
     """
     Analyze portfolio drawdown characteristics.
 
     Parameters:
     - portfolio_dict: Portfolio configuration mapping ticker -> {allocation, position}
+    - _simulation_date: INTERNAL USE ONLY - For simulation mode, not exposed to agents
 
     Returns:
     - max_dd: Maximum drawdown (worst peak-to-trough decline)
@@ -22,25 +29,43 @@ def drawdown_profile(portfolio_dict: PortfolioInput | dict = None) -> str:
     - ulcer: Ulcer Index (measure of drawdown severity and duration)
     - episodes: List of drawdown episodes with start/end dates and recovery times
     """
-    try:
-        if not portfolio_dict:
-            return yaml.dump({"success": False, "error": "Portfolio dictionary is required"}, default_flow_style=False)
+    # Validate inputs
+    v = ToolValidator()
+    v.require_portfolio('portfolio_dict', portfolio_dict, normalize=True)
 
-        try:
-            portfolio_dict = canonical_portfolio(portfolio_dict)
-        except Exception as e:
-            return yaml.dump({"success": False, "error": str(e)}, default_flow_style=False)
+    if not v.is_valid():
+        return v.error_response()
+
+    # Get validated/normalized values
+    portfolio_dict = v.get('portfolio_dict')
+
+    try:
 
         # Get portfolio returns using the utility for last 3 years (industry standard for risk analysis)
         portfolio_returns, weights = get_portfolio_returns(
             portfolio=portfolio_dict,
             lookback_days=DEFAULT_LOOKBACK_LONG,  # 3 years for comprehensive drawdown analysis
             use_total_returns=False,  # Use price returns for drawdown analysis
-            dropna=True
+            dropna=True,
+            _simulation_date=_simulation_date
         )
 
         if portfolio_returns is None or portfolio_returns.empty:
             return yaml.dump({"success": False, "error": "No price data available"}, default_flow_style=False)
+
+        # Log actual data range
+        if isinstance(portfolio_returns, pd.Series) and len(portfolio_returns) > 0:
+            if hasattr(portfolio_returns, 'index') and isinstance(portfolio_returns.index, pd.DatetimeIndex):
+                start_date = portfolio_returns.index.min().date()
+                end_date = portfolio_returns.index.max().date()
+                count = len(portfolio_returns)
+                print(f"  📅 ACTUAL DATA USED:")
+                if _simulation_date:
+                    cutoff_ok = portfolio_returns.index.max() <= _simulation_date
+                    cutoff_status = "✅" if cutoff_ok else "⚠️ EXCEEDS CUTOFF"
+                    print(f"    • drawdown_data: {start_date} → {end_date} ({count} points) {cutoff_status}")
+                else:
+                    print(f"    • drawdown_data: {start_date} → {end_date} ({count} points)")
 
         # Calculate cumulative portfolio value (NAV)
         portfolio_nav = (1 + portfolio_returns).cumprod()

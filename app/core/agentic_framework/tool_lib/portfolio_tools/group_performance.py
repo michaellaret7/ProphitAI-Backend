@@ -8,13 +8,11 @@ from app.core.calculations.core.config import DEFAULT_LOOKBACK_LONG
 import pandas as pd
 import numpy as np
 from app.models.portfolio_models import PortfolioInput
-from app.utils.gpt_parser import canonical_portfolio
 from app.db.core.db_config import MarketSession
 from app.db.core.models.market_data_models import Ticker
-from app.utils.decorators.tool_validation import log_simulation_data_range, validate_portfolio_dict, validate_required_args
+from app.utils.decorators.tool_validation import log_simulation_data_range
+from app.utils.tool_validator import ToolValidator
 
-@validate_required_args('portfolio_dict', 'group_by')
-@validate_portfolio_dict()
 @log_simulation_data_range()
 def calculate_group_performances(portfolio_dict: PortfolioInput | dict, lookback_days: int = DEFAULT_LOOKBACK_LONG, use_total_returns: bool = True, group_by: str = None, _simulation_date: Optional[datetime] = None) -> str:
     """Generic grouping performance calculator.
@@ -22,11 +20,21 @@ def calculate_group_performances(portfolio_dict: PortfolioInput | dict, lookback
     Returns a DataFrame with columns: [group_label, ann_total_return, ann_volatility]
     where group_label column name equals group_by.
     """
-    try:
-        if not portfolio_dict:
-            return yaml.dump({"success": True, "data": []}, default_flow_style=False)
+    # Validate inputs
+    v = ToolValidator()
+    v.require_portfolio('portfolio_dict', portfolio_dict, normalize=True)
+    v.require_enum('group_by', group_by, ['industry', 'sub_industry'])
+    v.optional_numeric('lookback_days', lookback_days, default=DEFAULT_LOOKBACK_LONG, min_val=1, positive_only=True)
 
-        portfolio_dict = canonical_portfolio(portfolio_dict)
+    if not v.is_valid():
+        return v.error_response()
+
+    # Get validated/normalized values
+    portfolio_dict = v.get('portfolio_dict')
+    group_by = v.get('group_by')
+    lookback_days = v.get('lookback_days')
+
+    try:
 
         # 1) Data and weights
         weights, price_data, dividend_data = prepare_portfolio_data(

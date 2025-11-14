@@ -7,10 +7,8 @@ from fastapi.staticfiles import StaticFiles
 from app.api.routes.alts_router import router as prophit_alts_router
 from app.api.routes.user_routes import router as user_router
 from app.api.routes.portfolio_router import router as portfolio_router
-from app.api.routes.websocket_router import router as ws_router
 from app.api.routes.price_router import router as price_router
 from app.api.routes.cache_router import router as cache_router
-from app.api.routes.agent_runs_router import router as agent_runs_router
 from app.redis.client import cache
 from app.api.routes.broker_router import router as broker_router
 from app.api.routes.ticker_router import router as ticker_router
@@ -68,10 +66,8 @@ app.add_middleware(
 app.include_router(prophit_alts_router, prefix="/api")
 app.include_router(user_router, prefix="/api")
 app.include_router(portfolio_router, prefix="/api")
-app.include_router(ws_router, prefix="/api")
 app.include_router(price_router, prefix="/api")
 app.include_router(cache_router, prefix="/api")
-app.include_router(agent_runs_router, prefix="/api")
 app.include_router(broker_router, prefix="/api")
 app.include_router(ticker_router, prefix="/api")
 app.include_router(technical_router, prefix="/api")

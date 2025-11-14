@@ -1,25 +1,15 @@
-"""Base agent module - backward compatibility exports."""
+"""Simple Base Agent V2 - Phase 1
 
-from .agent import BaseAgent
-from .core.utilities import StepTrace
-from .tasks.manager import TaskManager
-from .tasks.execution_engine import PlanExecutionEngine
-from .tasks.models import TaskStatus, TodoList, MainTask, SubTask
-from .events.manager import EventManager, AgentEvent
-from .tasks.validator import TaskValidator
-from .memory.domain_memory import DomainMemory
+Minimal autonomous agent framework with:
+- BaseAgent: Main orchestrator
+- ExecutionLoop: ReAct iteration loop
+- ToolHandler: Tool execution and formatting
 
-__all__ = [
-    'BaseAgent',
-    'StepTrace',
-    'TaskManager',
-    'PlanExecutionEngine',
-    'TaskStatus',
-    'TodoList',
-    'MainTask',
-    'SubTask',
-    'EventManager',
-    'AgentEvent',
-    'TaskValidator',
-    'DomainMemory'
-]
+Total: ~200 lines, clean separation of concerns.
+"""
+
+from app.core.agentic_framework.base_agent.agent import BaseAgent
+from app.core.agentic_framework.base_agent.execution.execution_loop import ExecutionLoop
+from app.core.agentic_framework.base_agent.execution.tool_handler import ToolHandler
+
+__all__ = ['BaseAgent', 'ExecutionLoop', 'ToolHandler']

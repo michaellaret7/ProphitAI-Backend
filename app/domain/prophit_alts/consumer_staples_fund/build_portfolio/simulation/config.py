@@ -8,7 +8,7 @@ from datetime import datetime
 from typing import Set
 
 # Simulation cutoff date - agent will behave as if this is "today"
-SIMULATION_CUTOFF_DATE = datetime(2024, 9, 30, 23, 59, 59)
+SIMULATION_CUTOFF_DATE = datetime(2025, 6, 15, 23, 59, 59)
 
 # Data types that have sufficient data BEFORE the September 2024 cutoff
 # Based on validation results showing earliest data availability

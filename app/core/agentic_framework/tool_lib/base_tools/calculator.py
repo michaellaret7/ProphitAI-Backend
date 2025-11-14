@@ -11,11 +11,10 @@ def calculator(expression: str) -> str:
         expression (str): Mathematical expression to evaluate (e.g., "2 + 3 * 4").
 
     Returns:
-        Dict[str, Any]:
-            - 'success' (bool)
-            - 'result' (float) when successful
-            - 'error' (str) when unsuccessful
-            - 'input' (str): original expression
+        str: YAML-formatted result with:
+            - 'success' (bool): Whether evaluation succeeded
+            - 'data' (dict): Contains 'result' (float) and 'input' (str) when successful
+            - 'error' (str): Error message when unsuccessful
     """
     
     def safe_eval(expr: str) -> float:
@@ -58,20 +57,22 @@ def calculator(expression: str) -> str:
             result = safe_eval(expression)
             return yaml.dump({
                 'success': True,
-                'result': result,
-                'input': expression
+                'data': {
+                    'result': result,
+                    'input': expression
+                }
             }, default_flow_style=False)
         except Exception as e:
             return yaml.dump({
                 'success': False,
                 'error': str(e),
-                'input': expression
+                'data': {}
             }, default_flow_style=False)
     # No expression provided
     return yaml.dump({
         'success': False,
         'error': "No expression provided.",
-        'input': None
+        'data': {}
     }, default_flow_style=False)
 
 

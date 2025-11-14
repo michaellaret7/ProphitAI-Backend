@@ -54,9 +54,11 @@ class IndustrySimulationAgent(BaseAgent):
         max_iterations: int = 250,
         plan_first: bool = True,
         save_messages: bool = True,
-        model: str = "gpt-5",
+        model: str = "gpt-5-mini",
+        reasoning_effort: str = "high",
         verbose: bool = True,
         memory_refresh_interval: int = 8,
+        use_episodic_memory: bool = True
     ):
         """Initialize the Industry Simulation Agent.
 
@@ -67,8 +69,10 @@ class IndustrySimulationAgent(BaseAgent):
             plan_first: Whether to create a plan before executing
             save_messages: Whether to save conversation messages
             model: LLM model to use
+            reasoning_effort: Reasoning effort to use
             verbose: Whether to print verbose output
             memory_refresh_interval: How often to refresh episodic memory
+            use_episodic_memory: Whether to use episodic memory
         """
         self.industry = industry
         self.cutoff_date = cutoff_date
@@ -85,10 +89,11 @@ class IndustrySimulationAgent(BaseAgent):
             max_iterations=max_iterations,
             plan_first=plan_first,
             save_messages=save_messages,
-            # model=model,
+            model=model,
+            reasoning_effort=reasoning_effort,
             verbose=verbose,
             memory_refresh_interval=memory_refresh_interval,
-            use_episodic_memory=False,
+            use_episodic_memory=use_episodic_memory,
             simulation_date=cutoff_date,  # Enable simulation mode - auto-injects _simulation_date into all tool calls
         )
 

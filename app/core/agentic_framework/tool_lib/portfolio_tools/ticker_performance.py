@@ -9,13 +9,29 @@ from app.core.calculations.core.config import DEFAULT_LOOKBACK_MEDIUM
 import pandas as pd
 import numpy as np
 from app.models.portfolio_models import PortfolioInput
-from app.utils.gpt_parser import canonical_portfolio
-from app.utils.decorators.tool_validation import log_simulation_data_range, validate_portfolio_dict, validate_required_args
+from app.utils.decorators.tool_validation import log_simulation_data_range
+from app.utils.tool_validator import ToolValidator
 
-@validate_required_args('portfolio_dict')
-@validate_portfolio_dict()
+# Metric group definitions for per-ticker filtering
+TICKER_METRIC_GROUPS = {
+    "core": ["ann_total_return", "ann_volatility", "max_drawdown"],
+    "risk_adjusted": ["sharpe", "sortino", "treynor", "info", "alpha"],
+    "advanced": ["omega", "sterling", "burke", "martin"],
+    "capture_ratios": ["up_cap_daily", "down_cap_daily", "up_cap_ann", "down_cap_ann"],
+    "win_loss": ["win_rate", "pf_ret", "pf_eq", "pain", "tail_ratio", "gain_loss"],
+    "risk_metrics": ["ulcer", "ulcer_252pct"],
+}
+
 @log_simulation_data_range()
-def calculate_ticker_performances(portfolio_dict: PortfolioInput | dict, lookback_days: int = DEFAULT_LOOKBACK_MEDIUM, use_total_returns: bool = True, benchmark: str = "SPY", _simulation_date: Optional[datetime] = None) -> str:
+def calculate_ticker_performances(
+    portfolio_dict: PortfolioInput | dict, 
+    lookback_days: int = DEFAULT_LOOKBACK_MEDIUM, 
+    use_total_returns: bool = True, 
+    benchmark: str = "SPY", 
+    filters: list[str] = ["all"],
+    _simulation_date: Optional[datetime] = None
+    ) -> str:
+
     """Return a DataFrame of performance metrics for each ticker in the portfolio.
 
     Reuses shared utilities and calculators to fetch data and compute metrics.
@@ -29,8 +45,19 @@ def calculate_ticker_performances(portfolio_dict: PortfolioInput | dict, lookbac
     Returns:
         pd.DataFrame where each row corresponds to a ticker and columns are metrics.
     """
+    # Validate inputs
+    v = ToolValidator()
+    v.require_portfolio('portfolio_dict', portfolio_dict, normalize=True)
+    v.optional_numeric('lookback_days', lookback_days, default=DEFAULT_LOOKBACK_MEDIUM, min_val=1, positive_only=True)
+
+    if not v.is_valid():
+        return v.error_response()
+
+    # Get validated/normalized values
+    portfolio_dict = v.get('portfolio_dict')
+    lookback_days = v.get('lookback_days')
+
     try:
-        portfolio_dict = canonical_portfolio(portfolio_dict)
 
         # Fetch inputs via shared utilities
         weights, price_data, dividend_data = prepare_portfolio_data(
@@ -136,16 +163,38 @@ def calculate_ticker_performances(portfolio_dict: PortfolioInput | dict, lookbac
                 rows.append({"ticker": ticker})
 
         df = pd.DataFrame(rows)
-        # Optional: stable column ordering if data present
-        cols = [
-            "ticker",
-            "sharpe", "sortino", "treynor", "info", "alpha",
-            "omega", "sterling", "burke", "martin",
-            "up_cap_daily", "down_cap_daily", "up_cap_ann", "down_cap_ann",
-            "win_rate", "pf_ret", "pf_eq", "pain", "tail_ratio", "gain_loss",
-            "ulcer", "ulcer_252pct",
-            "max_drawdown", "ann_total_return", "ann_volatility",
-        ]
+
+        # Apply filters
+        if "all" in filters or not filters:
+            # Return all columns (backward compatible)
+            cols = [
+                "ticker",
+                "sharpe", "sortino", "treynor", "info", "alpha",
+                "omega", "sterling", "burke", "martin",
+                "up_cap_daily", "down_cap_daily", "up_cap_ann", "down_cap_ann",
+                "win_rate", "pf_ret", "pf_eq", "pain", "tail_ratio", "gain_loss",
+                "ulcer", "ulcer_252pct",
+                "max_drawdown", "ann_total_return", "ann_volatility",
+            ]
+        else:
+            # Build filtered column list based on requested groups
+            requested_metrics = set()
+
+            for filter_name in filters:
+                if filter_name in TICKER_METRIC_GROUPS:
+                    requested_metrics.update(TICKER_METRIC_GROUPS[filter_name])
+                else:
+                    # Invalid filter name - return error
+                    valid_filters = list(TICKER_METRIC_GROUPS.keys()) + ["all"]
+                    return yaml.dump({
+                        "success": False,
+                        "error": f"Invalid filter '{filter_name}'. Valid filters: {valid_filters}"
+                    }, default_flow_style=False)
+
+            # Always include ticker column, then requested metrics
+            cols = ["ticker"] + sorted(requested_metrics)
+
+        # Select only existing columns in the specified order
         if not df.empty:
             existing = [c for c in cols if c in df.columns]
             df = df[existing]
@@ -156,12 +205,23 @@ def calculate_ticker_performances(portfolio_dict: PortfolioInput | dict, lookbac
 
 # Tool Schema Constants
 CALCULATE_TICKER_PERFORMANCES_DESCRIPTION = (
-    "Calculate comprehensive performance metrics for each ticker in the portfolio. "
-    "Returns a DataFrame with detailed risk-adjusted metrics including Sharpe, Sortino, Treynor, Information Ratio, Alpha, "
-    "Omega, Sterling, Burke, Martin ratios, capture ratios, win rates, profit factors, pain index, tail ratio, "
-    "gain/loss ratio, ulcer index, max drawdown, annual returns, and volatility. "
-    "CRITICAL: You MUST ALWAYS include the portfolio_dict parameter with ALL holdings. "
-    "Example: calculate_ticker_performances(portfolio_dict={'AAPL': {'allocation': 0.5, 'position': 'long'}, 'KO': {'allocation': 0.5, 'position': 'long'}})"
+    "Calculate performance metrics for each ticker in the portfolio with optional filtering for token efficiency. "
+    "Returns 25 metrics per ticker across 6 groups (core, risk_adjusted, advanced, capture_ratios, win_loss, risk_metrics). "
+    "\n\n**TOKEN EFFICIENCY - Use Filters to Reduce Response Size:**"
+    "\n  Full response (filters=['all']): ~300 tokens per ticker (25 metrics)"
+    "\n  Filtered response (filters=['core', 'risk_adjusted']): ~100 tokens per ticker (8 metrics, 67% reduction)"
+    "\n  Minimal response (filters=['core']): ~40 tokens per ticker (3 metrics, 87% reduction)"
+    "\n\n**Common Filter Patterns:**"
+    "\n  • Quick check: ['core', 'risk_adjusted']"
+    "\n  • Compare tickers: ['core', 'risk_adjusted', 'capture_ratios']"
+    "\n  • Full analysis: ['all'] (default)"
+    "\n\n**Critical Requirements:**"
+    "\n  • You MUST include portfolio_dict with ALL holdings"
+    "\n  • Use filters to request only needed metrics per ticker"
+    "\n  • Default lookback: 2 years (504 days), benchmark: SPY"
+    "\n\n**Examples:**"
+    "\n  calculate_ticker_performances(portfolio_dict={'AAPL': {'allocation': 0.5, 'position': 'long'}, ...}, filters=['core', 'risk_adjusted'])"
+    "\n  calculate_ticker_performances(portfolio_dict={'AAPL': {'allocation': 0.5, 'position': 'long'}, ...}, filters=['all'])"
 )
 
 CALCULATE_TICKER_PERFORMANCES_PARAMETERS = {
@@ -172,24 +232,8 @@ CALCULATE_TICKER_PERFORMANCES_PARAMETERS = {
             "description": (
                 "**MANDATORY - DO NOT OMIT THIS PARAMETER.** "
                 "Complete portfolio with ALL holdings. "
-                "Keys = ticker symbols (e.g., 'AAPL'). "
-                "Values = objects with 'allocation' (decimal 0-1) and 'position' ('long'/'short'). "
-                "You MUST include this parameter with all portfolio tickers. "
-                "Uses 2-year lookback (504 days), total returns, and SPY benchmark by default (matches Bloomberg standard for beta)."
-                "\n\n"
-                """Example of CORRECT function call:
-                calculate_ticker_performances(
-                    portfolio_dict={
-                        "AAPL": {"allocation": 0.125, "position": "long"},
-                        "MSFT": {"allocation": 0.125, "position": "long"},
-                        "AMZN": {"allocation": 0.125, "position": "long"},
-                        "TSLA": {"allocation": 0.125, "position": "long"},
-                        "META": {"allocation": 0.125, "position": "long"},
-                        "SPY": {"allocation": 0.125, "position": "long"},
-                        "QQQ": {"allocation": 0.125, "position": "long"},
-                        "IWM": {"allocation": 0.125, "position": "long"}
-                    }
-                )"""
+                "Format: {ticker: {allocation: decimal, position: 'long'/'short'}}. "
+                "Example: {'AAPL': {'allocation': 0.5, 'position': 'long'}, 'MSFT': {'allocation': 0.5, 'position': 'long'}}"
             ),
             "patternProperties": {
                 "^[A-Z]{1,5}$": {
@@ -213,6 +257,28 @@ CALCULATE_TICKER_PERFORMANCES_PARAMETERS = {
             },
             "minProperties": 1,
             "additionalProperties": False
+        },
+        "filters": {
+            "type": "array",
+            "description": (
+                "Filter which metric groups to return per ticker. Reduces token usage by 60-90%. "
+                "\n\n**Available Metric Groups:**"
+                "\n  • 'core' (3 metrics): ann_total_return, ann_volatility, max_drawdown"
+                "\n  • 'risk_adjusted' (5 metrics): sharpe, sortino, treynor, info, alpha"
+                "\n  • 'advanced' (4 metrics): omega, sterling, burke, martin"
+                "\n  • 'capture_ratios' (4 metrics): up_cap_daily, down_cap_daily, up_cap_ann, down_cap_ann"
+                "\n  • 'win_loss' (6 metrics): win_rate, pf_ret, pf_eq, pain, tail_ratio, gain_loss"
+                "\n  • 'risk_metrics' (2 metrics): ulcer, ulcer_252pct"
+                "\n  • 'all': Return all 25 metrics per ticker (default)"
+                "\n\n**Examples:**"
+                "\n  filters=['core', 'risk_adjusted']  # Compare tickers on key metrics"
+                "\n  filters=['all']  # Full analysis"
+            ),
+            "items": {
+                "type": "string",
+                "enum": ["all", "core", "risk_adjusted", "advanced", "capture_ratios", "win_loss", "risk_metrics"]
+            },
+            "default": ["all"]
         }
     },
     "required": ["portfolio_dict"],
@@ -225,3 +291,6 @@ CALCULATE_TICKER_PERFORMANCES_TOOL = {
     "parameters": CALCULATE_TICKER_PERFORMANCES_PARAMETERS,
     "function": calculate_ticker_performances,
 }
+
+if __name__ == "__main__":
+    print(calculate_ticker_performances(portfolio_dict={'AAPL': {'allocation': 0.125, 'position': 'long'}, 'MSFT': {'allocation': 0.125, 'position': 'long'}, 'AMZN': {'allocation': 0.125, 'position': 'long'}, 'TSLA': {'allocation': 0.125, 'position': 'long'}, 'META': {'allocation': 0.125, 'position': 'long'}, 'SPY': {'allocation': 0.125, 'position': 'long'}, 'QQQ': {'allocation': 0.125, 'position': 'long'}, 'IWM': {'allocation': 0.125, 'position': 'long'}}, filters=["core"]))

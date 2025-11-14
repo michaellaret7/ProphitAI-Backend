@@ -1,40 +1,51 @@
 import pandas as pd
 import yaml
+from datetime import datetime
+from typing import Optional
 from app.core.calculations.portfolio.correlation import CorrelationAnalysis
 from app.core.calculations.portfolio.utils import prepare_portfolio_data
 from app.core.calculations.returns.calculator import ReturnsCalculator
 from app.core.calculations.core.config import DEFAULT_LOOKBACK_SHORT
 from app.models.portfolio_models import PortfolioInput
-from app.utils.gpt_parser import canonical_portfolio
 from app.core.calculations.core.helpers import build_returns_df_from_price_map
-from app.utils.decorators.tool_validation import validate_required_args, validate_portfolio_dict
+from app.utils.tool_validator import ToolValidator
+from app.utils.decorators.tool_validation import log_simulation_data_range
 
-@validate_required_args('portfolio_dict')
-@validate_portfolio_dict()
-def run_pairwise_correlation_analysis(portfolio_dict: PortfolioInput | dict) -> str:
+@log_simulation_data_range()
+def run_pairwise_correlation_analysis(
+    portfolio_dict: PortfolioInput | dict,
+    *,
+    _simulation_date: Optional[datetime] = None
+) -> str:
     """
     Run pairwise correlation analysis on portfolio returns data and return results in YAML format.
 
     Args:
         portfolio_dict: Portfolio dictionary with allocations
+        _simulation_date: INTERNAL USE ONLY - For simulation mode, not exposed to agents.
+                         If provided, uses this as cutoff date instead of current time.
 
     Returns:
         YAML formatted string containing pairwise correlations
     """
-    try:
-        if not portfolio_dict:
-            return yaml.dump({"success": False, "error": "Portfolio dictionary is required"}, default_flow_style=False)
+    # Validate inputs
+    v = ToolValidator()
+    v.require_portfolio('portfolio_dict', portfolio_dict, normalize=True)
 
-        try:
-            portfolio_dict = canonical_portfolio(portfolio_dict)
-        except ValueError as e:
-            return yaml.dump({"success": False, "error": str(e)}, default_flow_style=False)
+    if not v.is_valid():
+        return v.error_response()
+
+    # Get validated/normalized values
+    portfolio_dict = v.get('portfolio_dict')
+
+    try:
 
         # Use utility to get portfolio data
         weights, price_data, dividend_data = prepare_portfolio_data(
             portfolio=portfolio_dict,
             lookback_days=DEFAULT_LOOKBACK_SHORT,
-            include_dividends=False
+            include_dividends=False,
+            _simulation_date=_simulation_date
         )
 
         if not price_data:
@@ -42,6 +53,21 @@ def run_pairwise_correlation_analysis(portfolio_dict: PortfolioInput | dict) -> 
 
         # Calculate returns without dropping rows globally; let correlation handle pairwise NaNs
         returns_df = build_returns_df_from_price_map(price_data, drop_rows='none', include_dividends=False)
+
+        # Log actual data range (summary)
+        if isinstance(returns_df, pd.DataFrame) and not returns_df.empty:
+            if hasattr(returns_df, 'index') and isinstance(returns_df.index, pd.DatetimeIndex):
+                start_date = returns_df.index.min().date()
+                end_date = returns_df.index.max().date()
+                count = len(returns_df)
+                print(f"  📅 ACTUAL DATA USED:")
+                # Check if data exceeds simulation cutoff
+                if _simulation_date:
+                    cutoff_ok = returns_df.index.max() <= _simulation_date
+                    cutoff_status = "✅" if cutoff_ok else "⚠️ EXCEEDS CUTOFF"
+                    print(f"    • correlation_data: {start_date} → {end_date} ({count} points) {cutoff_status}")
+                else:
+                    print(f"    • correlation_data: {start_date} → {end_date} ({count} points)")
 
         if returns_df.empty:
             return yaml.dump({"success": False, "error": "No valid returns data available"}, default_flow_style=False)
