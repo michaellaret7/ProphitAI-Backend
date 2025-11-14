@@ -11,8 +11,45 @@ from app.api.response_envelope import ok_envelope
 from app.redis.client import cache
 from app.repositories.fundamental_data import get_all_columns_fundamentals
 from app.utils.decorators.api_decorators import handle_controller_errors
+from app.db.core.db_config import MarketSession
+from app.db.core.models.market_data_models import Ticker
+from fastapi import HTTPException
+from app.utils.serialize_output import serialize_sqlalchemy_obj
 
 
+@handle_controller_errors
+async def get_ticker_info_controller(
+    *,
+    ticker: str,
+) -> Dict[str, Any]:
+    """
+    Retrieve basic ticker information and metadata.
+
+    Returns ticker details including price, market cap, sector, industry,
+    beta, and other key metrics from the tickers table.
+
+    Args:
+        ticker: Stock ticker symbol (e.g., 'AAPL')
+
+    Returns:
+        Response envelope with ticker info payload
+    """
+    with MarketSession() as session:
+        ticker_obj = session.query(Ticker).filter(Ticker.ticker == ticker.upper()).first()
+
+        if not ticker_obj:
+            raise HTTPException(status_code=404, detail=f"Ticker {ticker.upper()} not found")
+
+        response = ok_envelope(
+            message=f"Ticker info for {ticker.upper()} retrieved successfully",
+            kind="ticker#info",
+            resource_id=ticker.upper(),
+            self_link=f"/api/ticker/info?ticker={ticker.upper()}",
+            payload=serialize_sqlalchemy_obj(ticker_obj),
+        )
+    return response
+
+    
 @handle_controller_errors
 async def get_ticker_fundamentals_controller(
     *,

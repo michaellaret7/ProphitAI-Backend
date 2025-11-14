@@ -14,7 +14,14 @@
           "eps",
           "pe",
           "dollar_volume",
-          "last_updated"
+          "last_updated",
+          "beta",
+          "is_actively_trading",
+          "is_adr",
+          "is_fund",
+          "ipo_date",
+          "earnings_announcement",
+          "shares_outstanding"
         ]
       },
       "fundamental_data (schema)": {
@@ -445,6 +452,7 @@
         "sub_industry",
         "allocation",
         "is_current",
+        "is_discretionary",
         "supporting_metrics (jsonb)",
         "reason_for_rec (text)",
         "created_date",
@@ -491,11 +499,11 @@
         "final_positions (table)": [
           "id (uuid, primary key)",
           "fund_id (uuid, foreign key references prophit_alts_funds.funds.id)",
+          "fund_name (string)",
           "ticker_id (uuid, references market_data.ticker_universe.tickers.id)",
           "ticker_name (string)",
           "position (enum: LONG, SHORT)",
           "industry (string)",
-          "risk_allocation (float)",
           "portfolio_allocation (float)",
           "reasoning (string)",
           "date_created (datetime)",
@@ -533,6 +541,69 @@
           "reasoning (string)",
           "date_created (datetime)",
           "date_updated (datetime)"
+        ]
+      }
+    },
+    "macro_data (database)": {
+      "public (schema)": {
+        "gov_bond_rates (table)": [
+          "id (uuid, composite primary key with date, represents country)",
+          "country (string, indexed)",
+          "date (date, composite primary key, indexed)",
+          "1m (float, nullable)",
+          "2m (float, nullable)",
+          "3m (float, nullable)",
+          "6m (float, nullable)",
+          "1y (float, nullable)",
+          "2y (float, nullable)",
+          "3y (float, nullable)",
+          "5y (float, nullable)",
+          "7y (float, nullable)",
+          "10y (float, nullable)",
+          "20y (float, nullable)",
+          "30y (float, nullable)",
+          "created_at (datetime, nullable)",
+          "updated_at (datetime, nullable)",
+          "unique constraint on (country, date)"
+        ],
+        "commodity_prices (table)": [
+          "id (uuid, composite primary key with date, represents symbol)",
+          "symbol (string, indexed)",
+          "date (date, composite primary key, indexed)",
+          "open (float, nullable)",
+          "high (float, nullable)",
+          "low (float, nullable)",
+          "close (float, nullable)",
+          "volume (float, nullable)",
+          "created_at (datetime, nullable)",
+          "updated_at (datetime, nullable)",
+          "unique constraint on (symbol, date)"
+        ],
+        "economic_indicators (table)": [
+          "id (uuid, composite primary key with date, represents indicator)",
+          "indicator (string, indexed)",
+          "date (date, composite primary key, indexed)",
+          "value (float, nullable)",
+          "created_at (datetime, nullable)",
+          "updated_at (datetime, nullable)",
+          "unique constraint on (indicator, date)"
+        ],
+        "economic_calendar (table)": [
+          "event_id (integer, primary key, autoincrement)",
+          "id (uuid, country identifier, indexed)",
+          "event (string, indexed)",
+          "date (datetime, indexed)",
+          "country (string, indexed)",
+          "currency (string, nullable)",
+          "actual (float, nullable)",
+          "previous (float, nullable)",
+          "estimate (float, nullable)",
+          "change (float, nullable)",
+          "change_percentage (float, nullable)",
+          "impact (string, indexed, nullable)",
+          "created_at (datetime, nullable)",
+          "updated_at (datetime, nullable)",
+          "unique constraint on (event, date, country)"
         ]
       }
     }
