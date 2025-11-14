@@ -128,6 +128,13 @@ class FMP_API_DATA:
         url = f"https://financialmodelingprep.com/stable/etf/info?symbol={ticker}"
         return self._make_fmp_api_request(url)
 
+    def get_etf_country_weightings(self, ticker: str):
+        """
+        Retrieves country weightings for a given ETF.
+        """
+        url = f"https://financialmodelingprep.com/stable/etf/country-weightings?symbol={ticker}"
+        return self._make_fmp_api_request(url)
+
     def get_dividends(self, ticker: str):
         """
         Retrieves dividend information for a given stock.
@@ -370,17 +377,3 @@ class FMP_API_DATA:
         if to_date:
             url += f"&to={to_date}"
         return self._make_fmp_api_request(url)
-
-from app.db.core.db_config import MarketSession
-from app.db.core.models.market_data_models import StockNews, Ticker
-from app.utils.serialize_output import serialize_sqlalchemy_obj
-
-session = MarketSession()
-ticker = session.query(Ticker).filter(Ticker.ticker == 'AAPL').first().id
-news = session.query(StockNews)\
-    .filter(StockNews.ticker_id == ticker)\
-    .order_by(StockNews.publishedDate.desc())\
-    .first()
-print(serialize_sqlalchemy_obj(news))
-session.close()
-print(ticker)
