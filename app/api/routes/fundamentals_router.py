@@ -14,6 +14,7 @@ from app.api.controller.fundamentals import (
     get_revenue_geographic_segmentation_controller,
     get_institutional_holder_analytics_controller,
     get_institutional_positions_summary_controller,
+    get_company_notes_controller,
 )
 from app.models.fundamentals_models import (
     AnalystEstimatesRequest,
@@ -25,6 +26,7 @@ from app.models.company_models import (
     ESGRequest,
     RevenueSegmentationRequest,
     InstitutionalOwnershipRequest,
+    CompanyNotesRequest,
 )
 
 router = APIRouter(tags=["Company Fundamentals 🏢"])
@@ -351,3 +353,27 @@ async def get_institutional_positions_summary(
         year=request.year,
         quarter=request.quarter,
     )
+
+
+def parse_company_notes_request(
+    ticker: str = Path(..., description="Stock ticker symbol"),
+) -> CompanyNotesRequest:
+    """Parse and validate ticker into CompanyNotesRequest model"""
+    return CompanyNotesRequest(ticker=ticker)
+
+
+@router.get("/fundamentals/{ticker}/company-notes")
+async def get_company_notes(
+    request: CompanyNotesRequest = Depends(parse_company_notes_request)
+):
+    """
+    Get company notes and bonds information for a ticker
+
+    Args:
+        ticker: Stock ticker symbol (e.g., 'AAPL', 'MSFT')
+
+    Returns:
+        Company notes and bonds data including ISIN, CUSIP, maturity date, coupon rate,
+        issue date, face value, and other bond details
+    """
+    return await get_company_notes_controller(ticker=request.ticker)

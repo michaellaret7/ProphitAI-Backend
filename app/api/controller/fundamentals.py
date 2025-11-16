@@ -356,3 +356,32 @@ async def get_institutional_positions_summary_controller(
         counts={"totalItems": len(data) if isinstance(data, list) else 1, "currentItemCount": len(data) if isinstance(data, list) else 1},
         payload=data,
     )
+
+
+@handle_controller_errors
+async def get_company_notes_controller(ticker: str) -> Dict[str, Any]:
+    """
+    Controller to handle company notes and bonds data retrieval for a ticker
+    """
+    fmp_api = FMP_API_DATA()
+    data = fmp_api.get_company_notes(ticker)
+
+    # Handle None response
+    if data is None:
+        return ok_envelope(
+            message=f"No company notes data found for {ticker}",
+            kind="fundamentals#companyNotes",
+            resource_id=ticker,
+            self_link=f"/api/fundamentals/{ticker}/company-notes",
+            counts={"totalItems": 0, "currentItemCount": 0},
+            payload=[],
+        )
+
+    return ok_envelope(
+        message="Company notes retrieved successfully",
+        kind="fundamentals#companyNotes",
+        resource_id=ticker,
+        self_link=f"/api/fundamentals/{ticker}/company-notes",
+        counts={"totalItems": len(data) if isinstance(data, list) else 1, "currentItemCount": len(data) if isinstance(data, list) else 1},
+        payload=data,
+    )

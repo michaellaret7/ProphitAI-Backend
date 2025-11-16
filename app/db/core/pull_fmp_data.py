@@ -163,6 +163,13 @@ class FMP_API_DATA:
         url = f"https://financialmodelingprep.com/stable/news/general-latest?limit={limit}"
         return self._make_fmp_api_request(url)
 
+    def get_fmp_articles(self, page: int = 0, limit: int = 1000):
+        """
+        Retrieves FMP articles.
+        """
+        url = f"https://financialmodelingprep.com/stable/fmp-articles?page={page}&limit={limit}"
+        return self._make_fmp_api_request(url)
+
     def get_earnings_transcript(self, ticker: str, year: int, quarter: int):
         """
         Retrieves the earnings call transcript for a given stock, year, and quarter.
@@ -376,4 +383,27 @@ class FMP_API_DATA:
             url += f"&from={from_date}"
         if to_date:
             url += f"&to={to_date}"
+        return self._make_fmp_api_request(url)
+
+    def get_mergers_acquisitions_latest(self, page: int = 0, limit: int = 1000):
+        """
+        Retrieves the latest mergers and acquisitions data.
+        Returns information about recent M&A transactions including acquiring and target companies.
+
+        Args:
+            page (int): The page number for pagination. Defaults to 0.
+            limit (int): The number of records per page. Defaults to 1000.
+        """
+        url = f"https://financialmodelingprep.com/stable/mergers-acquisitions-latest?page={page}&limit={limit}"
+        return self._make_fmp_api_request(url)
+
+    def get_mergers_acquisitions_search(self, name: str):
+        """
+        Searches for mergers and acquisitions by company name.
+        Returns M&A transactions involving the specified company.
+
+        Args:
+            name (str): The company name to search for (e.g., 'MICROSOFT', 'APPLE').
+        """
+        url = f"https://financialmodelingprep.com/stable/mergers-acquisitions-search?name={name}"
         return self._make_fmp_api_request(url)

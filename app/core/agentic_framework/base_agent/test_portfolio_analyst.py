@@ -155,21 +155,21 @@ Your capabilities include:
     # User prompt - specific task with the portfolio
     user_prompt = f"""Construct a diversified low correlation long-only portfolio from scratch:
 
-CRITICAL: This analysis is being conducted as of January 1, 2022 (simulation_date).
-When using free_search for market research, ALWAYS include "as of January 2022" or "early 2022" in your queries.
+CRITICAL: This analysis is being conducted as of January 1, 2023 (simulation_date).
+When using free_search for market research, ALWAYS include "as of January 2023" or "early 2023" in your queries.
 
 Please perform the following tasks:
 
 1. **Market Research & Economic Context**:
-   - Use free_search to research macroeconomic conditions, sector outlooks, and market themes as of January 2022
-   - CRITICAL: Include "as of January 2022" or "early 2022" in EVERY free_search query
-   - Identify opportunities and risks based on early 2022 market conditions
+   - Use free_search to research macroeconomic conditions, sector outlooks, and market themes as of January 2023
+   - CRITICAL: Include "as of January 2023" or "early 2023" in EVERY free_search query
+   - Identify opportunities and risks based on early 2023 market conditions
 
 2. **Define Portfolio Structure**:
    - Define target sector breakdown for equities (Technology, Healthcare, Financials, Consumer, Industrials, Energy, etc.)
    - Define ETF categories needed (core market, sector tilts, international, fixed income, etc.)
    - Specify diversification rules (sector limits, position limits, industry limits)
-   - Justify structure based on 2022 market research
+   - Justify structure based on 2023 market research
 
 3. **Portfolio Objectives & Constraints**:
    - Target mix: 70% equities, 30% ETFs
@@ -180,7 +180,7 @@ Please perform the following tasks:
 4. **Selection & Sizing**:
    - Use stock_screener and available tools to select equities and ETFs
    - Propose tickers and weights that sum to 1.0
-   - Provide a brief rationale for each holding tied to your structure and 2022 research
+   - Provide a brief rationale for each holding tied to your structure and 2023 research
 
 5. **Risk & Diversification Checks**:
    - Report beta vs SPY, VaR, industry concentration, and pairwise correlations
@@ -216,7 +216,7 @@ Rules:
         system_prompt=system_prompt,
         user_prompt=user_prompt,
         # provider="openai",
-        # model="gpt-4.1",
+        # model="gpt-5.1",
         provider="anthropic",  # Use OpenAI
         model="claude-haiku-4-5-20251001",
         # model="claude-sonnet-4-5-20250929",  # Use GPT-4o for complex analysis

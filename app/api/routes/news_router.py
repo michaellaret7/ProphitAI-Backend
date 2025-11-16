@@ -6,6 +6,8 @@ from app.api.controller.news import (
     get_press_releases_controller,
     get_price_target_news_controller,
     get_stock_grade_news_controller,
+    get_general_news_controller,
+    get_fmp_articles_controller,
 )
 from app.models.news_models import NewsRequest
 
@@ -137,3 +139,37 @@ async def get_stock_grade_news(
         limit=request.limit,
         ascending=request.ascending,
     )
+
+
+@router.get("/news/general")
+async def get_general_news(
+    limit: int = Query(1000, gt=0, le=1000, description="Maximum number of news items to return")
+):
+    """
+    Get general market news (not ticker-specific)
+
+    Args:
+        limit: Maximum number of news items to return (default: 1000, max: 1000)
+
+    Returns:
+        General news items with published date, title, publisher, site, text content, image URL, and article URL
+    """
+    return await get_general_news_controller(limit=limit)
+
+
+@router.get("/news/fmp-articles")
+async def get_fmp_articles(
+    page: int = Query(0, ge=0, description="Page number for pagination (starts at 0)"),
+    limit: int = Query(1000, gt=0, le=1000, description="Maximum number of articles to return per page")
+):
+    """
+    Get FMP articles (Financial Modeling Prep original content)
+
+    Args:
+        page: Page number for pagination (default: 0)
+        limit: Maximum number of articles to return per page (default: 1000, max: 1000)
+
+    Returns:
+        FMP articles with date, title, content, image URL, link, author, and tags
+    """
+    return await get_fmp_articles_controller(page=page, limit=limit)

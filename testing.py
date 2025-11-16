@@ -124,17 +124,25 @@
 #     else:
 #         print("Failed to authenticate. Check your credentials.")
 
-from functools import cache
-from functools import lru_cache
-import time
+
 from app.db.core.db_config import MarketSession
 from app.db.core.models.market_data_models import *
-from app.utils.decorators.database import with_session
 from app.utils.serialize_output import serialize_sqlalchemy_obj
-from app.utils.decorators.database import with_session
+from app.db.core.pull_fmp_data import FMP_API_DATA
 
-@cache # this caches expensive recurring calculations
-def fibonacci(n):
-    if n <= 1:
-        return n
-    return fibonacci(n - 1) + fibonacci(n - 2) # Takes several seconds
+with MarketSession() as session:
+    ticker_obj = (
+        session.query(Ticker)
+        .filter(Ticker.ticker == "AAPL")
+        .first()
+    )
+
+fmp_api = FMP_API_DATA()
+company_profile = fmp_api.get_company_profile("AAPL")
+
+ticker_obj.description = company_profile[0]["description"]
+
+data = serialize_sqlalchemy_obj(ticker_obj)
+data["description"] = ticker_obj.description  # <-- add here
+
+print(data)

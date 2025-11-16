@@ -284,67 +284,68 @@ from app.core.calculations.portfolio.utils import get_portfolio_returns, get_ben
 # }
 
 portfolio = {
-    "WES": {
-      "allocation": 0.08,
-      "position": "long"
-    },
-    "PRU": {
-      "allocation": 0.06,
-      "position": "long"
-    },
-    "PGR": {
-      "allocation": 0.06,
-      "position": "long"
-    },
-    "GILD": {
-      "allocation": 0.03,
-      "position": "long"
-    },
-    "MEDP": {
-      "allocation": 0.06,
-      "position": "long"
-    },
-    "CAT": {
-      "allocation": 0.11,
-      "position": "long"
-    },
-    "PEP": {
-      "allocation": 0.10,
-      "position": "long"
-    },
-    "KO": {
-      "allocation": 0.05,
-      "position": "long"
-    },
-    "FCX": {
-      "allocation": 0.04,
-      "position": "long"
-    },
-    "MSFT": {
-      "allocation": 0.07,
-      "position": "long"
-    },
-    "AAPL": {
-      "allocation": 0.07,
-      "position": "long"
-    },
-    "VTI": {
-      "allocation": 0.1,
-      "position": "long"
-    },
-    "IEFA": {
-      "allocation": 0.07,
-      "position": "long"
-    },
-    "BND": {
-      "allocation": 0.07,
-      "position": "long"
-    },
-    "VTV": {
-      "allocation": 0.03,
-      "position": "long"
-    }
-}   
+      "WFRD": {
+          "allocation": 0.075,
+          "position": "long"
+      },
+      "HESM": {
+          "allocation": 0.060,
+          "position": "long"
+      },
+      "JPM": {
+          "allocation": 0.086,
+          "position": "long"
+      },
+      "LMT": {
+          "allocation": 0.086,
+          "position": "long"
+      },
+      "GILD": {
+          "allocation": 0.075,
+          "position": "long"
+      },
+      "AMGN": {
+          "allocation": 0.065,
+          "position": "long"
+      },
+      "GIS": {
+          "allocation": 0.054,
+          "position": "long"
+      },
+      "SEE": {
+          "allocation": 0.054,
+          "position": "long"
+      },
+      "NTAP": {
+          "allocation": 0.054,
+          "position": "long"
+      },
+      "UI": {
+          "allocation": 0.043,
+          "position": "long"
+      },
+      "SHW": {
+          "allocation": 0.043,
+          "position": "long"
+      },
+      "QQQ": {
+          "allocation": 0.110,
+          "position": "long"
+      },
+      "VXUS": {
+          "allocation": 0.060,
+          "position": "long"
+      },
+      "BND": {
+          "allocation": 0.090,
+          "position": "long"
+      },
+      "GLD": {
+          "allocation": 0.040,
+          "position": "long"
+      }
+}
+
 
 # portfolio = { # 2022 Outperformed SPY!!
 #     "IDXX": {

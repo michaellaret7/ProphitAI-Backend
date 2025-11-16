@@ -12,6 +12,8 @@ from app.api.controller.macro import (
     get_sector_pe_controller,
     get_industry_performance_controller,
     get_industry_pe_controller,
+    get_mergers_acquisitions_latest_controller,
+    get_mergers_acquisitions_search_controller,
 )
 
 router = APIRouter(tags=["Macro Data 🌍"])
@@ -773,4 +775,102 @@ async def get_industry_pe(
         industry=industry,
         start_date=startDate,
         end_date=endDate,
+    )
+
+
+@router.get("/macro/mergers-acquisitions/latest")
+async def get_mergers_acquisitions_latest(
+    page: int = Query(0, ge=0, description="Page number for pagination (starts at 0)"),
+    limit: int = Query(1000, gt=0, le=1000, description="Maximum number of M&A transactions to return per page"),
+):
+    """
+    Get latest mergers and acquisitions transactions.
+
+    ## Overview
+    Retrieves the most recent M&A transactions across all companies, providing insights into corporate activity,
+    consolidation trends, and strategic acquisitions.
+
+    ## Example Usage:
+    ```
+    GET /api/macro/mergers-acquisitions/latest
+    GET /api/macro/mergers-acquisitions/latest?page=0&limit=100
+    GET /api/macro/mergers-acquisitions/latest?page=1&limit=500
+    ```
+
+    ## Response Format:
+    Returns M&A transaction data including:
+    - **Transaction Details**: Deal date, announcement date, completion date
+    - **Companies Involved**: Acquiring company and target company names
+    - **Deal Value**: Transaction value and deal terms
+    - **Transaction Type**: Merger, acquisition, joint venture, etc.
+    - **Industry**: Sectors involved in the transaction
+    - **Status**: Completed, pending, terminated
+
+    ## Use Cases:
+    - **M&A Trend Analysis**: Track corporate consolidation activity over time
+    - **Sector Analysis**: Identify which industries are experiencing high M&A activity
+    - **Strategic Insights**: Understand competitive dynamics and market positioning
+    - **Event-Driven Trading**: Track potential arbitrage opportunities
+    - **Deal Flow Monitoring**: Stay informed about latest corporate transactions
+
+    ## Notes:
+    - Pagination supported via page and limit parameters
+    - Default returns up to 1000 transactions (page=0, limit=1000)
+    - Transactions are sorted by most recent first
+    - Useful for tracking market consolidation trends and corporate strategy
+    """
+    return await get_mergers_acquisitions_latest_controller(
+        page=page,
+        limit=limit,
+    )
+
+
+@router.get("/macro/mergers-acquisitions/search")
+async def get_mergers_acquisitions_search(
+    name: str = Query(..., description="Company name to search for (e.g., 'MICROSOFT', 'APPLE', 'META')"),
+):
+    """
+    Search for mergers and acquisitions by company name.
+
+    ## Overview
+    Retrieves all M&A transactions involving a specific company, either as the acquirer or the target.
+    This endpoint helps analyze a company's acquisition history and growth strategy.
+
+    ## Example Usage:
+    ```
+    GET /api/macro/mergers-acquisitions/search?name=MICROSOFT
+    GET /api/macro/mergers-acquisitions/search?name=APPLE
+    GET /api/macro/mergers-acquisitions/search?name=META
+    GET /api/macro/mergers-acquisitions/search?name=Berkshire Hathaway
+    ```
+
+    ## Response Format:
+    Returns M&A transactions where the company appears as either acquirer or target, including:
+    - **Transaction Details**: Deal date, announcement date, completion date
+    - **Role**: Whether the company was the acquirer or target
+    - **Counterparty**: The other company involved in the transaction
+    - **Deal Value**: Transaction value and consideration type (cash, stock, mixed)
+    - **Rationale**: Strategic reasoning behind the transaction
+    - **Status**: Completed, pending, or terminated
+
+    ## Use Cases:
+    - **Corporate Strategy Analysis**: Understand a company's acquisition strategy and patterns
+    - **Growth Vector Analysis**: Identify areas where companies are expanding via M&A
+    - **Competitive Intelligence**: Track competitor acquisitions and strategic moves
+    - **Due Diligence**: Research a company's historical M&A activity
+    - **Investment Thesis**: Evaluate management's capital allocation decisions
+
+    ## Search Tips:
+    - Company names are case-insensitive
+    - Use the company's common name (e.g., "MICROSOFT" not "Microsoft Corporation")
+    - Partial names may work but full names are more accurate
+    - Returns transactions where the company is either acquirer or acquired
+
+    ## Notes:
+    - Returns all historical M&A transactions for the specified company
+    - Useful for analyzing corporate development and inorganic growth strategies
+    - Helps understand management's capital allocation priorities
+    """
+    return await get_mergers_acquisitions_search_controller(
+        name=name,
     )

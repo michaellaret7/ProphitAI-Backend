@@ -1,9 +1,9 @@
 import logging
 import asyncio
 from contextlib import asynccontextmanager
-from fastapi import FastAPI
+from dotenv import load_dotenv
+from fastapi import FastAPI, Depends
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.staticfiles import StaticFiles
 from app.api.routes.alts_router import router as prophit_alts_router
 from app.api.routes.user_routes import router as user_router
 from app.api.routes.portfolio_router import router as portfolio_router
@@ -17,6 +17,10 @@ from app.api.routes.macro_router import router as macro_router
 from app.api.routes.news_router import router as news_router
 from app.api.routes.fundamentals_router import router as fundamentals_router
 from app.api.routes.etf_router import router as etf_router
+from app.api.auth.api_key import validate_api_key
+
+# Load environment variables from .env file
+load_dotenv()
 
 # Configure logging to show cache hit/miss INFO messages
 logging.basicConfig(
@@ -60,25 +64,23 @@ app.add_middleware(
     ],
     allow_credentials=True,
     allow_methods=["*"],
-    allow_headers=["*"],
+    allow_headers=["*"],  # Allows all headers including X-API-Key
 )
 
-# Include routers
-app.include_router(prophit_alts_router, prefix="/api")
-app.include_router(user_router, prefix="/api")
-app.include_router(portfolio_router, prefix="/api")
-app.include_router(price_router, prefix="/api")
-app.include_router(cache_router, prefix="/api")
-app.include_router(broker_router, prefix="/api")
-app.include_router(ticker_router, prefix="/api")
-app.include_router(technical_router, prefix="/api")
-app.include_router(macro_router, prefix="/api")
-app.include_router(news_router, prefix="/api")
-app.include_router(fundamentals_router, prefix="/api")
-app.include_router(etf_router, prefix="/api")
-
-# Serve test frontend (WebSocket stream viewer)
-app.mount("/static", StaticFiles(directory="app/api/testing/static"), name="static")
+# Include routers with API key authentication
+# All /api routes require valid API key in X-API-Key header
+app.include_router(prophit_alts_router, prefix="/api", dependencies=[Depends(validate_api_key)])
+app.include_router(user_router, prefix="/api", dependencies=[Depends(validate_api_key)])
+app.include_router(portfolio_router, prefix="/api", dependencies=[Depends(validate_api_key)])
+app.include_router(price_router, prefix="/api", dependencies=[Depends(validate_api_key)])
+app.include_router(cache_router, prefix="/api", dependencies=[Depends(validate_api_key)])
+app.include_router(broker_router, prefix="/api", dependencies=[Depends(validate_api_key)])
+app.include_router(ticker_router, prefix="/api", dependencies=[Depends(validate_api_key)])
+app.include_router(technical_router, prefix="/api", dependencies=[Depends(validate_api_key)])
+app.include_router(macro_router, prefix="/api", dependencies=[Depends(validate_api_key)])
+app.include_router(news_router, prefix="/api", dependencies=[Depends(validate_api_key)])
+app.include_router(fundamentals_router, prefix="/api", dependencies=[Depends(validate_api_key)])
+app.include_router(etf_router, prefix="/api", dependencies=[Depends(validate_api_key)])
 
 @app.get("/")
 def read_root():

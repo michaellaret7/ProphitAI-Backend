@@ -8,6 +8,7 @@ cash flow statements, and financial ratios) for individual tickers.
 from typing import Any, Dict
 
 from app.api.response_envelope import ok_envelope
+from app.db.core.pull_fmp_data import FMP_API_DATA
 from app.redis.client import cache
 from app.repositories.fundamental_data import get_all_columns_fundamentals
 from app.utils.decorators.api_decorators import handle_controller_errors
@@ -35,7 +36,20 @@ async def get_ticker_info_controller(
         Response envelope with ticker info payload
     """
     with MarketSession() as session:
-        ticker_obj = session.query(Ticker).filter(Ticker.ticker == ticker.upper()).first()
+        ticker_obj = (
+            session.query(Ticker)
+            .filter(Ticker.ticker == ticker.upper())
+            .first()
+        )
+
+        # Add company description data from FMP
+        fmp_api = FMP_API_DATA()
+        company_profile = fmp_api.get_company_profile(ticker.upper())
+
+        ticker_obj.description = company_profile[0]["description"]
+
+        data = serialize_sqlalchemy_obj(ticker_obj)
+        data["description"] = ticker_obj.description  # <-- add here
 
         if not ticker_obj:
             raise HTTPException(status_code=404, detail=f"Ticker {ticker.upper()} not found")
@@ -45,7 +59,7 @@ async def get_ticker_info_controller(
             kind="ticker#info",
             resource_id=ticker.upper(),
             self_link=f"/api/ticker/info?ticker={ticker.upper()}",
-            payload=serialize_sqlalchemy_obj(ticker_obj),
+            payload=data,
         )
     return response
 

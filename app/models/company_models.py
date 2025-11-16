@@ -61,3 +61,16 @@ class InstitutionalOwnershipRequest(BaseModel):
         if not v or not v.strip():
             raise ValueError("Ticker must be provided and non-empty")
         return v.upper().strip()
+
+
+class CompanyNotesRequest(BaseModel):
+    """Request model for fetching company notes and bonds data"""
+    ticker: str = Field(..., description="Stock ticker symbol")
+
+    @field_validator('ticker')
+    @classmethod
+    def validate_ticker(cls, v):
+        """Ensure ticker is uppercase and non-empty"""
+        if not v or not v.strip():
+            raise ValueError("Ticker must be provided and non-empty")
+        return v.upper().strip()
