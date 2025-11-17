@@ -245,6 +245,6 @@ if __name__ == "__main__":
 
     # Start streaming with specific start and end times (UTC)
     # Example: Start at 2:30 PM UTC (9:30 AM EST), end at 9:00 PM UTC (4:00 PM EST)
-    df = stream(tickers, start_time="14:55", end_time="21:00")
+    df = stream(tickers, start_time="15:50", end_time="21:00")
     
 

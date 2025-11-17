@@ -5,7 +5,6 @@ from pydantic import BaseModel, ConfigDict
 from datetime import datetime, date
 from pandas import DataFrame
 from typing import Optional
-import matplotlib.pyplot as plt
 
 
 @with_session('macro')

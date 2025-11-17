@@ -1,3 +1,4 @@
+import asyncio
 from fastapi import HTTPException
 from typing import Dict, Any, Optional
 from app.db.core.pull_fmp_data import FMP_API_DATA
@@ -16,7 +17,8 @@ async def get_stock_news_controller(
     Controller to handle stock news data retrieval for a ticker from FMP
     """
     fmp_api = FMP_API_DATA()
-    data = fmp_api.get_stock_news(ticker=ticker, limit=limit, from_date=from_date, to_date=to_date)
+    # Reason: Run blocking HTTP request in thread pool to prevent event loop blocking
+    data = await asyncio.to_thread(fmp_api.get_stock_news, ticker=ticker, limit=limit, from_date=from_date, to_date=to_date)
 
     if data is None:
         raise HTTPException(status_code=500, detail="Failed to retrieve stock news from FMP API")
@@ -45,7 +47,8 @@ async def get_press_releases_controller(
     Controller to handle press releases data retrieval for a ticker from FMP
     """
     fmp_api = FMP_API_DATA()
-    data = fmp_api.get_press_releases(ticker=ticker, limit=limit, from_date=from_date, to_date=to_date)
+    # Reason: Run blocking HTTP request in thread pool to prevent event loop blocking
+    data = await asyncio.to_thread(fmp_api.get_press_releases, ticker=ticker, limit=limit, from_date=from_date, to_date=to_date)
 
     if data is None:
         raise HTTPException(status_code=500, detail="Failed to retrieve press releases from FMP API")
@@ -74,7 +77,8 @@ async def get_price_target_news_controller(
     Note: FMP price target news endpoint uses pagination (page) instead of date filtering
     """
     fmp_api = FMP_API_DATA()
-    data = fmp_api.get_price_target_news(ticker=ticker, page=page, limit=limit)
+    # Reason: Run blocking HTTP request in thread pool to prevent event loop blocking
+    data = await asyncio.to_thread(fmp_api.get_price_target_news, ticker=ticker, page=page, limit=limit)
 
     if data is None:
         raise HTTPException(status_code=500, detail="Failed to retrieve price target news from FMP API")
@@ -103,7 +107,8 @@ async def get_stock_grade_news_controller(
     Note: FMP stock grade news endpoint uses pagination (page) instead of date filtering
     """
     fmp_api = FMP_API_DATA()
-    data = fmp_api.get_stock_grade_news(ticker=ticker, page=page, limit=limit)
+    # Reason: Run blocking HTTP request in thread pool to prevent event loop blocking
+    data = await asyncio.to_thread(fmp_api.get_stock_grade_news, ticker=ticker, page=page, limit=limit)
 
     if data is None:
         raise HTTPException(status_code=500, detail="Failed to retrieve stock grade news from FMP API")
@@ -131,7 +136,8 @@ async def get_general_news_controller(
     Controller to handle general news retrieval from FMP
     """
     fmp_api = FMP_API_DATA()
-    data = fmp_api.get_general_news(limit=limit, from_date=from_date, to_date=to_date)
+    # Reason: Run blocking HTTP request in thread pool to prevent event loop blocking
+    data = await asyncio.to_thread(fmp_api.get_general_news, limit=limit, from_date=from_date, to_date=to_date)
 
     if data is None:
         raise HTTPException(status_code=500, detail="Failed to retrieve general news from FMP API")
@@ -159,7 +165,8 @@ async def get_fmp_articles_controller(
     Controller to handle FMP articles retrieval
     """
     fmp_api = FMP_API_DATA()
-    data = fmp_api.get_fmp_articles(page=page, limit=limit, from_date=from_date, to_date=to_date)
+    # Reason: Run blocking HTTP request in thread pool to prevent event loop blocking
+    data = await asyncio.to_thread(fmp_api.get_fmp_articles, page=page, limit=limit, from_date=from_date, to_date=to_date)
 
     if data is None:
         raise HTTPException(status_code=500, detail="Failed to retrieve FMP articles from API")

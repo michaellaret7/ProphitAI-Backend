@@ -5,6 +5,7 @@ Handles fetching fundamental financial data (income statements, balance sheets,
 cash flow statements, and financial ratios) for individual tickers.
 """
 
+import asyncio
 from typing import Any, Dict
 
 from app.api.response_envelope import ok_envelope
@@ -44,7 +45,8 @@ async def get_ticker_info_controller(
 
         # Add company description data from FMP
         fmp_api = FMP_API_DATA()
-        company_profile = fmp_api.get_company_profile(ticker.upper())
+        # Reason: Run blocking HTTP request in thread pool to prevent event loop blocking
+        company_profile = await asyncio.to_thread(fmp_api.get_company_profile, ticker.upper())
 
         ticker_obj.description = company_profile[0]["description"]
 

@@ -1,5 +1,6 @@
 """Controllers for macro data endpoints."""
 
+import asyncio
 from typing import Dict, Any, Optional
 from fastapi import HTTPException
 
@@ -56,7 +57,8 @@ async def get_commodity_prices_controller(
         start_date=start_date,
         end_date=end_date,
     )
-    data = service.get_prices()
+    # Reason: Run blocking DB query + data processing in thread pool to prevent event loop blocking
+    data = await asyncio.to_thread(service.get_prices)
 
     # Build response envelope
     response = ok_envelope(
@@ -112,7 +114,9 @@ async def get_bond_rates_controller(
         start_date=start_date,
         end_date=end_date,
     )
-    data = service.get_rates()
+    # Reason: Run blocking DB query + data processing in thread pool to prevent event loop blocking
+    # This prevents the API from freezing when processing large datasets (8,970+ rows with 13 fields each)
+    data = await asyncio.to_thread(service.get_rates)
 
     # Build response envelope
     response = ok_envelope(
@@ -168,7 +172,8 @@ async def get_economic_indicator_controller(
         start_date=start_date,
         end_date=end_date,
     )
-    data = service.get_indicator_data()
+    # Reason: Run blocking DB query + data processing in thread pool to prevent event loop blocking
+    data = await asyncio.to_thread(service.get_indicator_data)
 
     # Build response envelope
     response = ok_envelope(
@@ -228,7 +233,8 @@ async def get_economic_calendar_controller(
         end_date=end_date,
         event=event,
     )
-    data = service.get_calendar_events()
+    # Reason: Run blocking DB query + data processing in thread pool to prevent event loop blocking
+    data = await asyncio.to_thread(service.get_calendar_events)
 
     # Build response envelope
     response = ok_envelope(
@@ -284,7 +290,8 @@ async def get_sector_performance_controller(
         start_date=start_date,
         end_date=end_date,
     )
-    data = service.get_performance()
+    # Reason: Run blocking DB query + data processing in thread pool to prevent event loop blocking
+    data = await asyncio.to_thread(service.get_performance)
 
     # Build response envelope
     response = ok_envelope(
@@ -340,7 +347,8 @@ async def get_sector_pe_controller(
         start_date=start_date,
         end_date=end_date,
     )
-    data = service.get_pe_ratios()
+    # Reason: Run blocking DB query + data processing in thread pool to prevent event loop blocking
+    data = await asyncio.to_thread(service.get_pe_ratios)
 
     # Build response envelope
     response = ok_envelope(
@@ -396,7 +404,8 @@ async def get_industry_performance_controller(
         start_date=start_date,
         end_date=end_date,
     )
-    data = service.get_performance()
+    # Reason: Run blocking DB query + data processing in thread pool to prevent event loop blocking
+    data = await asyncio.to_thread(service.get_performance)
 
     # Build response envelope
     response = ok_envelope(
@@ -452,7 +461,8 @@ async def get_industry_pe_controller(
         start_date=start_date,
         end_date=end_date,
     )
-    data = service.get_pe_ratios()
+    # Reason: Run blocking DB query + data processing in thread pool to prevent event loop blocking
+    data = await asyncio.to_thread(service.get_pe_ratios)
 
     # Build response envelope
     response = ok_envelope(
@@ -481,7 +491,9 @@ async def get_mergers_acquisitions_latest_controller(
     Controller to handle latest M&A data retrieval
     """
     fmp_api = FMP_API_DATA()
-    data = fmp_api.get_mergers_acquisitions_latest(page=page, limit=limit)
+    # Reason: Run blocking HTTP request in thread pool to prevent event loop blocking
+    # FMP API uses requests.get() which is synchronous and blocks during network I/O
+    data = await asyncio.to_thread(fmp_api.get_mergers_acquisitions_latest, page=page, limit=limit)
 
     if data is None:
         raise HTTPException(status_code=500, detail="Failed to retrieve M&A data from FMP API")
@@ -506,7 +518,9 @@ async def get_mergers_acquisitions_search_controller(
     Controller to handle M&A search by company name
     """
     fmp_api = FMP_API_DATA()
-    data = fmp_api.get_mergers_acquisitions_search(name=name)
+    # Reason: Run blocking HTTP request in thread pool to prevent event loop blocking
+    # FMP API uses requests.get() which is synchronous and blocks during network I/O
+    data = await asyncio.to_thread(fmp_api.get_mergers_acquisitions_search, name=name)
 
     if data is None:
         raise HTTPException(status_code=500, detail="Failed to retrieve M&A data from FMP API")
