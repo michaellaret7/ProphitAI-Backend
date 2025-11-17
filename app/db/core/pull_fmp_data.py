@@ -142,32 +142,71 @@ class FMP_API_DATA:
         url = f"https://financialmodelingprep.com/stable/dividends?symbol={ticker}"
         return self._make_fmp_api_request(url)
 
-    def get_press_releases(self, ticker: str, limit: int = 1000):
+    def get_press_releases(self, ticker: str, limit: int = 1000, from_date: str = None, to_date: str = None):
         """
         Retrieves press releases for a given stock.
+
+        Args:
+            ticker (str): The stock ticker symbol.
+            limit (int): Maximum number of results to return. Defaults to 1000.
+            from_date (str, optional): Start date in YYYY-MM-DD format.
+            to_date (str, optional): End date in YYYY-MM-DD format.
         """
         url = f"https://financialmodelingprep.com/stable/news/press-releases?symbols={ticker}&limit={limit}"
+        if from_date:
+            url += f"&from={from_date}"
+        if to_date:
+            url += f"&to={to_date}"
         return self._make_fmp_api_request(url)
 
-    def get_stock_news(self, ticker: str, limit: int = 1000):
+    def get_stock_news(self, ticker: str, limit: int = 1000, from_date: str = None, to_date: str = None):
         """
         Retrieves news for a given stock.
+
+        Args:
+            ticker (str): The stock ticker symbol.
+            limit (int): Maximum number of results to return. Defaults to 1000.
+            from_date (str, optional): Start date in YYYY-MM-DD format.
+            to_date (str, optional): End date in YYYY-MM-DD format.
         """
         url = f"https://financialmodelingprep.com/stable/news/stock?symbols={ticker}&limit={limit}"
+        if from_date:
+            url += f"&from={from_date}"
+        if to_date:
+            url += f"&to={to_date}"
         return self._make_fmp_api_request(url)
 
-    def get_general_news(self, limit: int = 1000):
+    def get_general_news(self, limit: int = 1000, from_date: str = None, to_date: str = None):
         """
         Retrieves general news.
+
+        Args:
+            limit (int): Maximum number of results to return. Defaults to 1000.
+            from_date (str, optional): Start date in YYYY-MM-DD format.
+            to_date (str, optional): End date in YYYY-MM-DD format.
         """
         url = f"https://financialmodelingprep.com/stable/news/general-latest?limit={limit}"
+        if from_date:
+            url += f"&from={from_date}"
+        if to_date:
+            url += f"&to={to_date}"
         return self._make_fmp_api_request(url)
 
-    def get_fmp_articles(self, page: int = 0, limit: int = 1000):
+    def get_fmp_articles(self, page: int = 0, limit: int = 1000, from_date: str = None, to_date: str = None):
         """
         Retrieves FMP articles.
+
+        Args:
+            page (int): Page number for pagination. Defaults to 0.
+            limit (int): Maximum number of results to return per page. Defaults to 1000.
+            from_date (str, optional): Start date in YYYY-MM-DD format.
+            to_date (str, optional): End date in YYYY-MM-DD format.
         """
         url = f"https://financialmodelingprep.com/stable/fmp-articles?page={page}&limit={limit}"
+        if from_date:
+            url += f"&from={from_date}"
+        if to_date:
+            url += f"&to={to_date}"
         return self._make_fmp_api_request(url)
 
     def get_earnings_transcript(self, ticker: str, year: int, quarter: int):
@@ -238,6 +277,25 @@ class FMP_API_DATA:
         Retrieves full quote information including current price and market cap.
         """
         url = f"https://financialmodelingprep.com/api/v3/quote/{ticker}"
+        return self._make_fmp_api_request(url)
+
+    def get_batch_quote(self, symbols):
+        """
+        Retrieves batch quote information for multiple symbols at once.
+        
+        Args:
+            symbols: Either a list of ticker symbols (e.g., ['AAPL', 'MSFT', 'GOOGL'])
+                    or a comma-separated string (e.g., 'AAPL,MSFT,GOOGL')
+        
+        Returns:
+            list: A list of quote dictionaries containing price, volume, market cap, and other data
+        """
+        if isinstance(symbols, list):
+            symbols_str = ','.join(symbols)
+        else:
+            symbols_str = symbols
+        
+        url = f"https://financialmodelingprep.com/stable/batch-quote?symbols={symbols_str}"
         return self._make_fmp_api_request(url)
 
     def get_company_profile(self, ticker: str):

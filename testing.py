@@ -125,24 +125,126 @@
 #         print("Failed to authenticate. Check your credentials.")
 
 
-from app.db.core.db_config import MarketSession
-from app.db.core.models.market_data_models import *
-from app.utils.serialize_output import serialize_sqlalchemy_obj
+
 from app.db.core.pull_fmp_data import FMP_API_DATA
+from app.utils.time_utils import get_current_utc_time
+from pydantic import BaseModel
+from datetime import datetime
+import pandas as pd
+import time
 
-with MarketSession() as session:
-    ticker_obj = (
-        session.query(Ticker)
-        .filter(Ticker.ticker == "AAPL")
-        .first()
-    )
+class Quote(BaseModel):
+    timestamp: datetime
+    symbol: str
+    price: float
+    day_high: float
+    day_low: float
+    open: float
+    volume: int
 
-fmp_api = FMP_API_DATA()
-company_profile = fmp_api.get_company_profile("AAPL")
+def retrieve_live_quotes(tickers: list[str]):
+    fmp_api = FMP_API_DATA()
+    quotes = fmp_api.get_batch_quote(tickers)
+    
+    quotes = {d["symbol"]: d for d in quotes}
 
-ticker_obj.description = company_profile[0]["description"]
+    x = []
 
-data = serialize_sqlalchemy_obj(ticker_obj)
-data["description"] = ticker_obj.description  # <-- add here
+    for symbol, quote in quotes.items():
+        quote = Quote(
+            timestamp=get_current_utc_time().replace(second=0, microsecond=0),
+            symbol=symbol,
+            price=quote["price"],
+            day_high=quote["dayHigh"],
+            day_low=quote["dayLow"],
+            open=quote["open"],
+            volume=quote["volume"]
+        )
+        x.append(quote)
+    
 
-print(data)
+    return x
+
+def stream(tickers: list[str], output_file: str = "live_quotes.csv", start_time: str = None, end_time: str = None):
+    """
+    Stream live quote data for given tickers, updating every minute.
+
+    Args:
+        tickers: List of ticker symbols to stream
+        output_file: CSV filename to save data (default: "live_quotes.csv")
+        start_time: Time to start streaming in "HH:MM" format (e.g., "09:30"). If None, starts immediately.
+        end_time: Time to stop streaming in "HH:MM" format (e.g., "16:00"). If None, runs indefinitely.
+
+    Returns:
+        DataFrame containing all collected quotes with columns:
+        timestamp, symbol, price, day_high, day_low, open, volume
+    """
+    # Initialize empty dataframe
+    df = pd.DataFrame()
+
+    # Wait until start_time if provided
+    if start_time:
+        start_hour, start_minute = map(int, start_time.split(':'))
+        while True:
+            current_time = get_current_utc_time()
+            if current_time.hour > start_hour or (current_time.hour == start_hour and current_time.minute >= start_minute):
+                break
+            wait_seconds = ((start_hour - current_time.hour) * 3600 + 
+                           (start_minute - current_time.minute) * 60 - 
+                           current_time.second)
+            print(f"Waiting until {start_time} to start streaming... ({wait_seconds} seconds)")
+            time.sleep(min(60, wait_seconds))
+        print(f"Starting stream at {start_time}")
+
+    try:
+        while True:
+            # Check if we've reached end_time
+            if end_time:
+                end_hour, end_minute = map(int, end_time.split(':'))
+                current_time = get_current_utc_time()
+                if current_time.hour > end_hour or (current_time.hour == end_hour and current_time.minute >= end_minute):
+                    print(f"\nReached end time {end_time}")
+                    print(f"Final dataframe contains {len(df)} records")
+                    print(f"Data saved to {output_file}")
+                    return df
+
+            # Retrieve live quotes
+            quotes = retrieve_live_quotes(tickers)
+
+            # Convert quotes to dataframe rows
+            quote_dicts = [quote.model_dump() for quote in quotes]
+            new_df = pd.DataFrame(quote_dicts)
+
+            # Append to main dataframe
+            df = pd.concat([df, new_df], ignore_index=True)
+
+            # Write to CSV file
+            df.to_csv(output_file, index=False)
+            
+            print(f"Updated {output_file} - Total records: {len(df)}")
+            print(df.tail(len(tickers)))
+
+            # Reason: Calculate seconds until next minute to sync to top of minute
+            # If started at 7:52:37, next update will be at 7:53:00
+            current_time = get_current_utc_time()
+            seconds_until_next_minute = 60 - current_time.second
+            time.sleep(seconds_until_next_minute)
+
+    except KeyboardInterrupt:
+        print("\n\nStreaming stopped by user")
+        print(f"Final dataframe contains {len(df)} records")
+        print(f"Data saved to {output_file}")
+        return df
+
+    return df
+
+
+if __name__ == "__main__":
+    # Example usage: stream quotes for a list of tickers
+    tickers = ["AAPL", "MSFT", "GOOGL", "TSLA", "NVDA", "META", "SPY", "QQQ", "IWM", "DIA"]
+
+    # Start streaming with specific start and end times (UTC)
+    # Example: Start at 2:30 PM UTC (9:30 AM EST), end at 9:00 PM UTC (4:00 PM EST)
+    df = stream(tickers, start_time="14:55", end_time="21:00")
+    
+

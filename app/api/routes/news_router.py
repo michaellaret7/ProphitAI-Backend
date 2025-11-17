@@ -1,6 +1,5 @@
-from fastapi import APIRouter, Query, Path, Depends
+from fastapi import APIRouter, Query, Path
 from typing import Optional
-from datetime import datetime
 from app.api.controller.news import (
     get_stock_news_controller,
     get_press_releases_controller,
@@ -9,158 +8,146 @@ from app.api.controller.news import (
     get_general_news_controller,
     get_fmp_articles_controller,
 )
-from app.models.news_models import NewsRequest
 
 router = APIRouter(tags=["News & Media 📰"])
 
 
-def parse_news_request(
-    ticker: str = Path(..., description="Stock ticker symbol"),
-    start_date: Optional[str] = Query(None, description="Start date (ISO format: YYYY-MM-DD or YYYY-MM-DDTHH:MM:SS)"),
-    end_date: Optional[str] = Query(None, description="End date (ISO format: YYYY-MM-DD or YYYY-MM-DDTHH:MM:SS)"),
-    limit: Optional[int] = Query(None, gt=0, le=1000, description="Maximum number of items to return"),
-    ascending: bool = Query(True, description="Sort by date ascending (true) or descending (false)"),
-) -> NewsRequest:
-    """Parse and validate query parameters into NewsRequest model"""
-    # Convert string dates to datetime objects if provided
-    start_dt = datetime.fromisoformat(start_date) if start_date else None
-    end_dt = datetime.fromisoformat(end_date) if end_date else None
-
-    return NewsRequest(
-        ticker=ticker,
-        start_date=start_dt,
-        end_date=end_dt,
-        limit=limit,
-        ascending=ascending,
-    )
-
-
 @router.get("/news/{ticker}/stock-news")
 async def get_stock_news(
-    request: NewsRequest = Depends(parse_news_request)
+    ticker: str = Path(..., description="Stock ticker symbol"),
+    limit: int = Query(1000, gt=0, le=1000, description="Maximum number of news items to return"),
+    from_date: Optional[str] = Query(None, description="Start date (YYYY-MM-DD format)"),
+    to_date: Optional[str] = Query(None, description="End date (YYYY-MM-DD format)"),
 ):
     """
-    Get general stock news for a ticker
+    Get general stock news for a ticker from FMP
 
     Args:
         ticker: Stock ticker symbol (e.g., 'AAPL', 'MSFT')
-        start_date: Optional start date for filtering news
-        end_date: Optional end date for filtering news
-        limit: Optional maximum number of news items to return (default: all)
-        ascending: Sort order by date (default: true for oldest first)
+        limit: Maximum number of news items to return (default: 1000, max: 1000)
+        from_date: Optional start date for filtering news (YYYY-MM-DD format)
+        to_date: Optional end date for filtering news (YYYY-MM-DD format)
 
     Returns:
         News items with published date, title, publisher, site, text content, image URL, and article URL
     """
     return await get_stock_news_controller(
-        ticker=request.ticker,
-        start_date=request.start_date,
-        end_date=request.end_date,
-        limit=request.limit,
-        ascending=request.ascending,
+        ticker=ticker,
+        limit=limit,
+        from_date=from_date,
+        to_date=to_date,
     )
 
 
 @router.get("/news/{ticker}/press-releases")
 async def get_press_releases(
-    request: NewsRequest = Depends(parse_news_request)
+    ticker: str = Path(..., description="Stock ticker symbol"),
+    limit: int = Query(1000, gt=0, le=1000, description="Maximum number of press releases to return"),
+    from_date: Optional[str] = Query(None, description="Start date (YYYY-MM-DD format)"),
+    to_date: Optional[str] = Query(None, description="End date (YYYY-MM-DD format)"),
 ):
     """
-    Get company press releases for a ticker
+    Get company press releases for a ticker from FMP
 
     Args:
         ticker: Stock ticker symbol (e.g., 'AAPL', 'MSFT')
-        start_date: Optional start date for filtering press releases
-        end_date: Optional end date for filtering press releases
-        limit: Optional maximum number of press releases to return (default: all)
-        ascending: Sort order by date (default: true for oldest first)
+        limit: Maximum number of press releases to return (default: 1000, max: 1000)
+        from_date: Optional start date for filtering press releases (YYYY-MM-DD format)
+        to_date: Optional end date for filtering press releases (YYYY-MM-DD format)
 
     Returns:
         Press releases with published date, title, publisher, site, text content, image URL, and article URL
     """
     return await get_press_releases_controller(
-        ticker=request.ticker,
-        start_date=request.start_date,
-        end_date=request.end_date,
-        limit=request.limit,
-        ascending=request.ascending,
+        ticker=ticker,
+        limit=limit,
+        from_date=from_date,
+        to_date=to_date,
     )
 
 
 @router.get("/news/{ticker}/price-targets")
 async def get_price_target_news(
-    request: NewsRequest = Depends(parse_news_request)
+    ticker: str = Path(..., description="Stock ticker symbol"),
+    page: int = Query(0, ge=0, description="Page number for pagination (starts at 0)"),
+    limit: int = Query(1000, gt=0, le=1000, description="Maximum number of price target news items to return per page"),
 ):
     """
-    Get analyst price target news for a ticker
+    Get analyst price target news for a ticker from FMP
 
     Args:
         ticker: Stock ticker symbol (e.g., 'AAPL', 'MSFT')
-        start_date: Optional start date for filtering price target news
-        end_date: Optional end date for filtering price target news
-        limit: Optional maximum number of price target news items to return (default: all)
-        ascending: Sort order by date (default: true for oldest first)
+        page: Page number for pagination (default: 0)
+        limit: Maximum number of price target news items to return per page (default: 1000, max: 1000)
 
     Returns:
         Price target news with analyst name, company, price target, adjusted price target,
         price when posted, news publisher information, and article URL
+
+    Note:
+        This endpoint uses pagination instead of date filtering
     """
     return await get_price_target_news_controller(
-        ticker=request.ticker,
-        start_date=request.start_date,
-        end_date=request.end_date,
-        limit=request.limit,
-        ascending=request.ascending,
+        ticker=ticker,
+        page=page,
+        limit=limit,
     )
 
 
 @router.get("/news/{ticker}/stock-grades")
 async def get_stock_grade_news(
-    request: NewsRequest = Depends(parse_news_request)
+    ticker: str = Path(..., description="Stock ticker symbol"),
+    page: int = Query(0, ge=0, description="Page number for pagination (starts at 0)"),
+    limit: int = Query(1000, gt=0, le=1000, description="Maximum number of stock grade news items to return per page"),
 ):
     """
-    Get analyst stock grade/rating news for a ticker
+    Get analyst stock grade/rating news for a ticker from FMP
 
     Args:
         ticker: Stock ticker symbol (e.g., 'AAPL', 'MSFT')
-        start_date: Optional start date for filtering stock grade news
-        end_date: Optional end date for filtering stock grade news
-        limit: Optional maximum number of stock grade news items to return (default: all)
-        ascending: Sort order by date (default: true for oldest first)
+        page: Page number for pagination (default: 0)
+        limit: Maximum number of stock grade news items to return per page (default: 1000, max: 1000)
 
     Returns:
         Stock grade news with grading company, new grade, previous grade, action,
         price when posted, news publisher information, and article URL
+
+    Note:
+        This endpoint uses pagination instead of date filtering
     """
     return await get_stock_grade_news_controller(
-        ticker=request.ticker,
-        start_date=request.start_date,
-        end_date=request.end_date,
-        limit=request.limit,
-        ascending=request.ascending,
+        ticker=ticker,
+        page=page,
+        limit=limit,
     )
 
 
 @router.get("/news/general")
 async def get_general_news(
-    limit: int = Query(1000, gt=0, le=1000, description="Maximum number of news items to return")
+    limit: int = Query(1000, gt=0, le=1000, description="Maximum number of news items to return"),
+    from_date: Optional[str] = Query(None, description="Start date (YYYY-MM-DD format)"),
+    to_date: Optional[str] = Query(None, description="End date (YYYY-MM-DD format)")
 ):
     """
     Get general market news (not ticker-specific)
 
     Args:
         limit: Maximum number of news items to return (default: 1000, max: 1000)
+        from_date: Optional start date for filtering news (YYYY-MM-DD format)
+        to_date: Optional end date for filtering news (YYYY-MM-DD format)
 
     Returns:
         General news items with published date, title, publisher, site, text content, image URL, and article URL
     """
-    return await get_general_news_controller(limit=limit)
+    return await get_general_news_controller(limit=limit, from_date=from_date, to_date=to_date)
 
 
 @router.get("/news/fmp-articles")
 async def get_fmp_articles(
     page: int = Query(0, ge=0, description="Page number for pagination (starts at 0)"),
-    limit: int = Query(1000, gt=0, le=1000, description="Maximum number of articles to return per page")
+    limit: int = Query(1000, gt=0, le=1000, description="Maximum number of articles to return per page"),
+    from_date: Optional[str] = Query(None, description="Start date (YYYY-MM-DD format)"),
+    to_date: Optional[str] = Query(None, description="End date (YYYY-MM-DD format)")
 ):
     """
     Get FMP articles (Financial Modeling Prep original content)
@@ -168,8 +155,10 @@ async def get_fmp_articles(
     Args:
         page: Page number for pagination (default: 0)
         limit: Maximum number of articles to return per page (default: 1000, max: 1000)
+        from_date: Optional start date for filtering articles (YYYY-MM-DD format)
+        to_date: Optional end date for filtering articles (YYYY-MM-DD format)
 
     Returns:
         FMP articles with date, title, content, image URL, link, author, and tags
     """
-    return await get_fmp_articles_controller(page=page, limit=limit)
+    return await get_fmp_articles_controller(page=page, limit=limit, from_date=from_date, to_date=to_date)
