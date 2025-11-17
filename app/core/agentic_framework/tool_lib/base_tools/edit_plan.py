@@ -231,6 +231,7 @@ def create_edit_plan_wrapper(agent):
         Wrapped function that can be registered as a tool
     """
     import yaml
+from app.core.agentic_framework.tool_lib.common.responses import success_response, error_response
     from app.core.agentic_framework.base_agent.logging.task_state_logger import write_task_state_to_file
 
     def _edit_plan_wrapper(action, task_type, task_id, parent_task_id=None, description=None, status=None, priority=None, insert_position=None, **_kwargs):
@@ -268,19 +269,13 @@ def create_edit_plan_wrapper(agent):
             if action == "add" and insert_position is not None and task_type == "subtask":
                 message += f" at position {insert_position} (subsequent tasks auto-renamed)"
 
-            return yaml.dump({
-                "success": True,
-                "data": {
+            return success_response( {
                     "message": message,
                     "action": action,
                     "task_id": task_id
-                }
-            }, default_flow_style=False)
+                })
         except Exception as e:
-            return yaml.dump({
-                "success": False,
-                "error": str(e)
-            }, default_flow_style=False)
+            return error_response(e)
 
     return _edit_plan_wrapper
 

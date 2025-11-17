@@ -1,4 +1,3 @@
-import yaml
 from typing import Optional
 from datetime import datetime
 import pandas as pd
@@ -9,6 +8,8 @@ from app.core.calculations.core.config import DEFAULT_LOOKBACK_MEDIUM
 from app.models.portfolio_models import PortfolioInput
 from app.utils.decorators.tool_validation import log_simulation_data_range
 from app.utils.tool_validator import ToolValidator
+from app.core.agentic_framework.tool_lib.common.schemas import PORTFOLIO_DICT_SCHEMA
+from app.core.agentic_framework.tool_lib.common.responses import success_response, error_response
 
 @log_simulation_data_range()
 def calculate_portfolio_beta_vs_index(
@@ -51,7 +52,7 @@ def calculate_portfolio_beta_vs_index(
 
         if portfolio_returns is None or portfolio_returns.empty:
             print(f"DEBUG: Portfolio returns is None or empty. Portfolio: {list(portfolio_dict.keys())}")
-            return yaml.dump({"success": False, "error": "No portfolio returns data"}, default_flow_style=False)
+            return error_response("No portfolio returns data")
 
         # Get index returns using utility function (hardcoded to SPY)
         index_returns = get_benchmark_returns(
@@ -63,7 +64,7 @@ def calculate_portfolio_beta_vs_index(
 
         if index_returns is None or index_returns.empty:
             print(f"DEBUG: Index returns is None or empty for SPY")
-            return yaml.dump({"success": False, "error": "No index returns data for SPY"}, default_flow_style=False)
+            return error_response("No index returns data for SPY")
 
         # Calculate and return beta
         beta = RiskCalculator.beta(portfolio_returns, index_returns)
@@ -71,13 +72,13 @@ def calculate_portfolio_beta_vs_index(
         # Check if beta is NaN or invalid
         if pd.isna(beta) or np.isnan(beta):
             print(f"DEBUG: Beta calculation resulted in NaN. Portfolio returns length: {len(portfolio_returns)}, Index returns length: {len(index_returns)}")
-            return yaml.dump({"success": False, "error": "Beta calculation resulted in NaN"}, default_flow_style=False)
+            return error_response("Beta calculation resulted in NaN")
 
-        return yaml.dump({"success": True, "data": {"beta": round(float(beta), 3)}}, default_flow_style=False)
+        return success_response({"beta": round(float(beta), 3)})
 
     except Exception as e:
         print(f"DEBUG: Exception in beta calculation: {str(e)}")
-        return yaml.dump({"success": False, "error": str(e)}, default_flow_style=False)
+        return error_response(e)
 
 CALCULATE_PORTFOLIO_BETA_VS_INDEX_DESCRIPTION = (
     "Calculate CAPM beta for a long/short portfolio versus SPY benchmark (hardcoded) using 504 trading days (2 years) of historical data. "
@@ -89,53 +90,7 @@ CALCULATE_PORTFOLIO_BETA_VS_INDEX_DESCRIPTION = (
 CALCULATE_PORTFOLIO_BETA_VS_INDEX_PARAMETERS = {
     "type": "object",
     "properties": {
-        "portfolio_dict": {
-            "type": "object",
-            "description": (
-                "**MANDATORY - DO NOT OMIT THIS PARAMETER.** "
-                "Complete portfolio with ALL holdings. "
-                "Keys = ticker symbols (e.g., 'AAPL'). "
-                "Values = objects with 'allocation' (decimal 0-1) and 'position' ('long'/'short'). "
-                "You MUST include this parameter with all portfolio tickers. "
-                "Uses SPY benchmark by default."
-                "\n\n"
-                """Example of CORRECT function call:
-                calculate_portfolio_beta_vs_index(
-                    portfolio_dict={
-                        "AAPL": {"allocation": 0.125, "position": "long"},
-                        "MSFT": {"allocation": 0.125, "position": "long"},
-                        "AMZN": {"allocation": 0.125, "position": "long"},
-                        "TSLA": {"allocation": 0.125, "position": "long"},
-                        "META": {"allocation": 0.125, "position": "long"},
-                        "SPY": {"allocation": 0.125, "position": "long"},
-                        "QQQ": {"allocation": 0.125, "position": "long"},
-                        "IWM": {"allocation": 0.125, "position": "long"}
-                    }
-                )"""
-            ),
-            "patternProperties": {
-                "^[A-Z]{1,5}$": {
-                    "type": "object",
-                    "properties": {
-                        "allocation": {
-                            "type": "number",
-                            "description": "Weight as decimal (e.g., 0.125 for 12.5%)",
-                            "minimum": 0,
-                            "maximum": 1
-                        },
-                        "position": {
-                            "type": "string",
-                            "description": "Must be 'long' or 'short'",
-                            "enum": ["long", "short"]
-                        }
-                    },
-                    "required": ["allocation", "position"],
-                    "additionalProperties": False
-                }
-            },
-            "minProperties": 1,
-            "additionalProperties": False
-        }
+        "portfolio_dict": PORTFOLIO_DICT_SCHEMA
     },
     "required": ["portfolio_dict"],
     "additionalProperties": False

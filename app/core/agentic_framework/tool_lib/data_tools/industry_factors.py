@@ -1,4 +1,4 @@
-import yaml
+from app.core.agentic_framework.tool_lib.common.responses import success_response, error_response
 import pandas as pd
 from app.core.calculations.sectors.industry import calc_industry_factor_benchmark_calculations
 from app.utils.decorators.tool_validation import validate_required_args, validate_enum_arg, log_simulation_data_range
@@ -19,7 +19,7 @@ def get_industry_benchmark_calculations(industry: str, factor: str, **kwargs) ->
     """
     try:
         if not isinstance(industry, str) or not industry:
-            return yaml.dump({"success": False, "error": "Parameter 'industry' must be a non-empty string."}, default_flow_style=False)
+            return error_response("Parameter 'industry' must be a non-empty string.")
 
         # Extract _simulation_date from kwargs for simulation mode
         _simulation_date = kwargs.get('_simulation_date', None)
@@ -28,14 +28,11 @@ def get_industry_benchmark_calculations(industry: str, factor: str, **kwargs) ->
 
         # Check if data is empty (industry not found or no tickers)
         if not data or all(v is None or (isinstance(v, float) and pd.isna(v)) for v in data.values()):
-            return yaml.dump({
-                "success": False,
-                "error": f"No data found for industry '{industry}'. Please check the industry name. Example: 'beverages', 'food_products'"
-            }, default_flow_style=False)
+            return error_response(f"No data found for industry '{industry}'. Please check the industry name. Example: 'beverages', 'food_products'")
 
-        return yaml.dump({"success": True, "data": data}, default_flow_style=False)
+        return success_response(data)
     except Exception as e:
-        return yaml.dump({"success": False, "error": str(e)}, default_flow_style=False)
+        return error_response(e)
 
 # Tool Schema Constants
 GET_INDUSTRY_BENCHMARK_CALCULATIONS_DESCRIPTION = (
@@ -67,8 +64,3 @@ GET_INDUSTRY_BENCHMARK_CALCULATIONS_TOOL = {
     "function": get_industry_benchmark_calculations,
 }
 
-if __name__ == "__main__":
-    x = get_industry_benchmark_calculations(industry="beverages", factor="growth")
-    print(x)
-    x = yaml.safe_load(x)
-    print(x["success"])

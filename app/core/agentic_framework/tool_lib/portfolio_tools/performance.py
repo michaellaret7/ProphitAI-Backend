@@ -1,4 +1,3 @@
-import yaml
 from typing import Optional
 from datetime import datetime
 from app.core.calculations.portfolio.utils import get_portfolio_returns, get_benchmark_returns
@@ -10,6 +9,8 @@ from app.core.calculations.core.config import DEFAULT_RF_ANNUAL, DEFAULT_TRADING
 from app.models.portfolio_models import PortfolioInput
 from app.utils.decorators.tool_validation import log_simulation_data_range
 from app.utils.tool_validator import ToolValidator
+from app.core.agentic_framework.tool_lib.common.schemas import PORTFOLIO_DICT_SCHEMA
+from app.core.agentic_framework.tool_lib.common.responses import success_response, error_response
 
 # Metric group definitions for filtering
 METRIC_GROUPS = {
@@ -74,7 +75,7 @@ def calculate_portfolio_performance(
 
 
         if portfolio_returns is None or portfolio_returns.empty:
-            return yaml.dump({"success": True, "data": {}}, default_flow_style=False)
+            return success_response({})
 
         # Get benchmark returns
         benchmark_returns = get_benchmark_returns(
@@ -199,19 +200,16 @@ def calculate_portfolio_performance(
                 else:
                     # Invalid filter name - return error
                     valid_filters = list(METRIC_GROUPS.keys()) + ["all"]
-                    return yaml.dump({
-                        "success": False,
-                        "error": f"Invalid filter '{filter_name}'. Valid filters: {valid_filters}"
-                    }, default_flow_style=False)
+                    return error_response(f"Invalid filter '{filter_name}'. Valid filters: {valid_filters}")
 
             # Extract only requested metrics
             for metric_name in requested_metrics:
                 if metric_name in all_metrics:
                     filtered_metrics[metric_name] = all_metrics[metric_name]
 
-        return yaml.dump({"success": True, "data": filtered_metrics}, default_flow_style=False)
+        return success_response(filtered_metrics)
     except Exception as e:
-        return yaml.dump({"success": False, "error": str(e)}, default_flow_style=False)
+        return error_response(e)
 
 
 # Tool Schema Constants
@@ -240,37 +238,7 @@ CALCULATE_PORTFOLIO_PERFORMANCE_DESCRIPTION = (
 CALCULATE_PORTFOLIO_PERFORMANCE_PARAMETERS = {
     "type": "object",
     "properties": {
-        "portfolio_dict": {
-            "type": "object",
-            "description": (
-                "**MANDATORY - DO NOT OMIT THIS PARAMETER.** "
-                "Complete portfolio with ALL holdings. "
-                "Format: {ticker: {allocation: decimal, position: 'long'/'short'}}. "
-                "Example: {'AAPL': {'allocation': 0.125, 'position': 'long'}, 'MSFT': {'allocation': 0.125, 'position': 'long'}}"
-            ),
-            "patternProperties": {
-                "^[A-Z]{1,5}$": {
-                    "type": "object",
-                    "properties": {
-                        "allocation": {
-                            "type": "number",
-                            "description": "Weight as decimal (e.g., 0.125 for 12.5%)",
-                            "minimum": 0,
-                            "maximum": 1
-                        },
-                        "position": {
-                            "type": "string",
-                            "description": "Must be 'long' or 'short'",
-                            "enum": ["long", "short"]
-                        }
-                    },
-                    "required": ["allocation", "position"],
-                    "additionalProperties": False
-                }
-            },
-            "minProperties": 1,
-            "additionalProperties": False
-        },
+        "portfolio_dict": PORTFOLIO_DICT_SCHEMA,
         "filters": {
             "type": "array",
             "description": (

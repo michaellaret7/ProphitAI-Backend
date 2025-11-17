@@ -1,5 +1,5 @@
 from typing import Optional
-import yaml
+from app.core.agentic_framework.tool_lib.common.responses import success_response, error_response
 
 
 def finalize(answer: str, *, plan=None, meta: Optional[dict] = None) -> str:
@@ -57,19 +57,12 @@ def finalize(answer: str, *, plan=None, meta: Optional[dict] = None) -> str:
                 "are properly tracked and marked complete."
             )
 
-            return yaml.dump({
-                "success": False,
-                "error": error_msg
-            }, default_flow_style=False)
+            return error_response(error_msg)
 
-    payload = {
-        "success": True,
-        "data": {
-            "answer": (answer or "").strip(),
-            "meta": meta or {},
-        },
-    }
-    return yaml.dump(payload, default_flow_style=False, sort_keys=False)
+    return success_response({
+        "answer": (answer or "").strip(),
+        "meta": meta or {},
+    })
 
 
 FINALIZE_DESCRIPTION = (

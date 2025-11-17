@@ -1,4 +1,3 @@
-import yaml
 from datetime import datetime
 from typing import Optional
 from app.core.calculations.portfolio.utils import prepare_portfolio_data
@@ -11,6 +10,8 @@ import numpy as np
 from app.core.calculations.core.helpers import build_returns_df_from_price_map
 from app.utils.tool_validator import ToolValidator
 from app.utils.decorators.tool_validation import log_simulation_data_range
+from app.core.agentic_framework.tool_lib.common.schemas import PORTFOLIO_DICT_SCHEMA
+from app.core.agentic_framework.tool_lib.common.responses import success_response, error_response
 
 @log_simulation_data_range()
 def risk_contribution(
@@ -62,13 +63,13 @@ def risk_contribution(
         )
 
         if not price_data:
-            return yaml.dump({"success": False, "error": "No price data available for portfolio tickers"}, default_flow_style=False)
+            return error_response("No price data available for portfolio tickers")
 
         # Calculate returns and drop rows with any NaNs for stable covariance
         returns_df = build_returns_df_from_price_map(price_data, drop_rows='any', include_dividends=False)
 
         if returns_df.empty:
-            return yaml.dump({"success": False, "error": "No price data available for portfolio tickers"}, default_flow_style=False)
+            return error_response("No price data available for portfolio tickers")
 
         # Calculate covariance matrix using v2
         cov_matrix = RiskCalculator.covariance_matrix(returns_df, annualize=False)
@@ -103,7 +104,7 @@ def risk_contribution(
                 ctr_pct = np.zeros_like(component_contrib)
 
         else:
-            return yaml.dump({"success": False, "error": f"Invalid metric '{metric}'. Use 'vol' or 'var'"}, default_flow_style=False)
+            return error_response(f"Invalid metric '{metric}'. Use 'vol' or 'var'")
 
         # Build result dictionary
         result = {
@@ -113,10 +114,10 @@ def risk_contribution(
             'CTR_pct': {ticker: round(float(ctr_pct[i]), 2) for i, ticker in enumerate(cov_matrix.columns)}
         }
 
-        return yaml.dump({"success": True, "data": result}, default_flow_style=False)
+        return success_response(result)
 
     except Exception as e:
-        return yaml.dump({"success": False, "error": f"Failed to calculate risk_contribution: {str(e)}"}, default_flow_style=False)
+        return error_response(f"Failed to calculate risk_contribution: {str(e)}")
 
 
 # Tool Schema Constants
@@ -130,53 +131,7 @@ RISK_CONTRIBUTION_DESCRIPTION = (
 RISK_CONTRIBUTION_PARAMETERS = {
     "type": "object",
     "properties": {
-        "portfolio_dict": {
-            "type": "object",
-            "description": (
-                "**MANDATORY - DO NOT OMIT THIS PARAMETER.** "
-                "Complete portfolio with ALL holdings. "
-                "Keys = ticker symbols (e.g., 'AAPL'). "
-                "Values = objects with 'allocation' (decimal 0-1) and 'position' ('long'/'short'). "
-                "You MUST include this parameter with all portfolio tickers."
-                "\n\n"
-                """Example of CORRECT function call:
-                risk_contribution(
-                    portfolio_dict={
-                        "AAPL": {"allocation": 0.125, "position": "long"},
-                        "MSFT": {"allocation": 0.125, "position": "long"},
-                        "AMZN": {"allocation": 0.125, "position": "long"},
-                        "TSLA": {"allocation": 0.125, "position": "short"},
-                        "META": {"allocation": 0.125, "position": "short"},
-                        "SPY": {"allocation": 0.125, "position": "long"},
-                        "QQQ": {"allocation": 0.125, "position": "long"},
-                        "IWM": {"allocation": 0.125, "position": "short"}
-                    },
-                    metric="vol"
-                )"""
-            ),
-            "patternProperties": {
-                "^[A-Z]{1,5}$": {
-                    "type": "object",
-                    "properties": {
-                        "allocation": {
-                            "type": "number",
-                            "description": "Weight as decimal (e.g., 0.125 for 12.5%)",
-                            "minimum": 0,
-                            "maximum": 1
-                        },
-                        "position": {
-                            "type": "string",
-                            "description": "Must be 'long' or 'short'",
-                            "enum": ["long", "short"]
-                        }
-                    },
-                    "required": ["allocation", "position"],
-                    "additionalProperties": False
-                }
-            },
-            "minProperties": 1,
-            "additionalProperties": False
-        },
+        "portfolio_dict": PORTFOLIO_DICT_SCHEMA,
         "metric": {
             "type": "string",
             "description": "Risk metric to decompose. 'vol' calculates volatility-based risk contributions, 'var' calculates Value at Risk-based contributions.",

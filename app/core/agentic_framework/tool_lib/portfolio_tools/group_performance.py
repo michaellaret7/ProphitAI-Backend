@@ -1,4 +1,3 @@
-import yaml
 from typing import Optional
 from datetime import datetime
 from app.core.calculations.portfolio.utils import prepare_portfolio_data
@@ -12,6 +11,8 @@ from app.db.core.db_config import MarketSession
 from app.db.core.models.market_data_models import Ticker
 from app.utils.decorators.tool_validation import log_simulation_data_range
 from app.utils.tool_validator import ToolValidator
+from app.core.agentic_framework.tool_lib.common.schemas import PORTFOLIO_DICT_SCHEMA
+from app.core.agentic_framework.tool_lib.common.responses import success_response, error_response
 
 @log_simulation_data_range()
 def calculate_group_performances(portfolio_dict: PortfolioInput | dict, lookback_days: int = DEFAULT_LOOKBACK_LONG, use_total_returns: bool = True, group_by: str = None, _simulation_date: Optional[datetime] = None) -> str:
@@ -47,7 +48,7 @@ def calculate_group_performances(portfolio_dict: PortfolioInput | dict, lookback
 
         tickers = list(weights.keys())
         if not tickers:
-            return yaml.dump({"success": True, "data": []}, default_flow_style=False)
+            return success_response([])
 
         # 2) Per-ticker return series
         per_ticker_returns: dict[str, pd.Series] = {}
@@ -62,7 +63,7 @@ def calculate_group_performances(portfolio_dict: PortfolioInput | dict, lookback
                 per_ticker_returns[t] = ReturnsCalculator.daily_price_returns(s)
 
         if not per_ticker_returns:
-            return yaml.dump({"success": True, "data": []}, default_flow_style=False)
+            return success_response([])
 
         # 3) Map tickers to group labels
         field = group_by
@@ -117,9 +118,9 @@ def calculate_group_performances(portfolio_dict: PortfolioInput | dict, lookback
         if not out.empty:
             # Stable ordering by label
             out = out[[group_by, "ann_total_return", "ann_volatility"]]
-        return yaml.dump({"success": True, "data": out.to_dict('records')}, default_flow_style=False)
+        return success_response(out.to_dict('records'))
     except Exception as e:
-        return yaml.dump({"success": False, "error": str(e)}, default_flow_style=False)
+        return error_response(e)
 
 # Tool Schema Constants
 CALCULATE_GROUP_PERFORMANCES_DESCRIPTION = (
@@ -133,54 +134,7 @@ CALCULATE_GROUP_PERFORMANCES_DESCRIPTION = (
 CALCULATE_GROUP_PERFORMANCES_PARAMETERS = {
     "type": "object",
     "properties": {
-        "portfolio_dict": {
-            "type": "object",
-            "description": (
-                "**MANDATORY - DO NOT OMIT THIS PARAMETER.** "
-                "Complete portfolio with ALL holdings. "
-                "Keys = ticker symbols (e.g., 'AAPL'). "
-                "Values = objects with 'allocation' (decimal 0-1) and 'position' ('long'/'short'). "
-                "You MUST include this parameter with all portfolio tickers. "
-                "Uses 3-year lookback (756 days) and total returns by default (industry standard)."
-                "\n\n"
-                """Example of CORRECT function call:
-                calculate_group_performances(
-                    portfolio_dict={
-                        "AAPL": {"allocation": 0.125, "position": "long"},
-                        "MSFT": {"allocation": 0.125, "position": "long"},
-                        "AMZN": {"allocation": 0.125, "position": "long"},
-                        "TSLA": {"allocation": 0.125, "position": "long"},
-                        "META": {"allocation": 0.125, "position": "long"},
-                        "SPY": {"allocation": 0.125, "position": "long"},
-                        "QQQ": {"allocation": 0.125, "position": "long"},
-                        "IWM": {"allocation": 0.125, "position": "long"}
-                    },
-                    group_by="industry"
-                )"""
-            ),
-            "patternProperties": {
-                "^[A-Z]{1,5}$": {
-                    "type": "object",
-                    "properties": {
-                        "allocation": {
-                            "type": "number",
-                            "description": "Weight as decimal (e.g., 0.125 for 12.5%)",
-                            "minimum": 0,
-                            "maximum": 1
-                        },
-                        "position": {
-                            "type": "string",
-                            "description": "Must be 'long' or 'short'",
-                            "enum": ["long", "short"]
-                        }
-                    },
-                    "required": ["allocation", "position"],
-                    "additionalProperties": False
-                }
-            },
-            "minProperties": 1,
-            "additionalProperties": False
-        },
+        "portfolio_dict": PORTFOLIO_DICT_SCHEMA,
         "group_by": {
             "type": "string",
             "description": "Field to group by for performance analysis. Must be 'industry' or 'sub_industry'.",

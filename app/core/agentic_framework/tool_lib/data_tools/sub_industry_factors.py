@@ -1,4 +1,4 @@
-import yaml
+from app.core.agentic_framework.tool_lib.common.responses import success_response, error_response
 import pandas as pd
 from app.core.calculations.sectors.sub_industry import calc_sub_industry_factor_benchmark_calculations
 from app.utils.decorators.tool_validation import validate_required_args, validate_enum_arg, log_simulation_data_range
@@ -19,7 +19,7 @@ def get_sub_industry_benchmark_calculations(sub_industry: str, factor: str, **kw
     """
     try:
         if not isinstance(sub_industry, str) or not sub_industry:
-            return yaml.dump({"success": False, "error": "Parameter 'sub_industry' must be a non-empty string."}, default_flow_style=False)
+            return error_response("Parameter 'sub_industry' must be a non-empty string.")
 
         # Extract _simulation_date from kwargs for simulation mode
         _simulation_date = kwargs.get('_simulation_date', None)
@@ -28,14 +28,11 @@ def get_sub_industry_benchmark_calculations(sub_industry: str, factor: str, **kw
 
         # Check if data is empty (sub_industry not found or no tickers)
         if not data or all(v is None or (isinstance(v, float) and pd.isna(v)) for v in data.values()):
-            return yaml.dump({
-                "success": False,
-                "error": f"No data found for sub_industry '{sub_industry}'. Please check the sub_industry name. Example: 'soft_drinks', 'packaged_foods_meats'"
-            }, default_flow_style=False)
+            return error_response(f"No data found for sub_industry '{sub_industry}'. Please check the sub_industry name. Example: 'soft_drinks', 'packaged_foods_meats'")
 
-        return yaml.dump({"success": True, "data": data}, default_flow_style=False)
+        return success_response(data)
     except Exception as e:
-        return yaml.dump({"success": False, "error": str(e)}, default_flow_style=False)
+        return error_response(e)
 
 
 # Tool Schema Constants

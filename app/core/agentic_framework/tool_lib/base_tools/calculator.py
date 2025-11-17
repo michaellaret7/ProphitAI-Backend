@@ -1,4 +1,5 @@
 import yaml
+from app.core.agentic_framework.tool_lib.common.responses import success_response, error_response
 import math
 from typing import Dict, Any
 
@@ -55,24 +56,13 @@ def calculator(expression: str) -> str:
     if expression:
         try:
             result = safe_eval(expression)
-            return yaml.dump({
-                'success': True,
-                'data': {
-                    'result': result,
-                    'input': expression
-                }
-            }, default_flow_style=False)
+            return success_response({
+                'result': result,
+                'input': expression
+            })
         except Exception as e:
-            return yaml.dump({
-                'success': False,
-                'error': str(e),
-                'data': {}
-            }, default_flow_style=False)
+            return error_response(str(e))
     # No expression provided
-    return yaml.dump({
-        'success': False,
-        'error': "No expression provided.",
-        'data': {}
-    }, default_flow_style=False)
+    return error_response("No expression provided.")
 
 

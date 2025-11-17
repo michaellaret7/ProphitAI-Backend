@@ -1,9 +1,9 @@
-import yaml
 from typing import Optional
 from datetime import datetime
 from app.repositories.fundamental_data import get_fundamental_data as _get_fundamental_data
 from app.utils.decorators.tool_validation import validate_ticker_arg, validate_enum_arg, validate_numeric_arg
 from app.utils.decorators.tool_validation import log_simulation_data_range
+from app.core.agentic_framework.tool_lib.common.responses import success_response, error_response
 
 @validate_ticker_arg()
 @validate_enum_arg("statement_type", ["income_statement", "balance_sheet", "cash_flow", "financial_ratios"])
@@ -21,11 +21,9 @@ def get_fundamental_data(ticker: str = None, statement_type: str = None, quarter
 
     try:
         data = _get_fundamental_data(ticker, statement_type, quarters_back, _simulation_date=_simulation_date)
-        result = {"success": True, "data": data}
+        return success_response(data)
     except Exception as e:
-        result = {"success": False, "error": f"Failed to retrieve fundamental data: {str(e)}"}
-
-    return yaml.dump(result, default_flow_style=False)
+        return error_response(f"Failed to retrieve fundamental data: {str(e)}")
 
 # Tool Schema Constants
 GET_TICKER_FUNDAMENTAL_DATA_DESCRIPTION = (

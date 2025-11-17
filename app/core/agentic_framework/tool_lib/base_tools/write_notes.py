@@ -1,6 +1,7 @@
 from pathlib import Path
 from typing import Optional
 import yaml
+from app.core.agentic_framework.tool_lib.common.responses import success_response, error_response
 from app.utils.time_utils import get_utc_timestamp_str
 
 
@@ -37,19 +38,13 @@ def write_note(title: str, content: str, *, output_dir: Optional[str] = None) ->
         with notes_path.open("a", encoding="utf-8") as f:
             f.write("\n".join(entry_lines))
 
-        return yaml.dump({
-            "success": True,
-            "data": {
+        return success_response( {
                 "file": str(notes_path),
                 "title": safe_title,
                 "timestamp": timestamp,
-            },
-        }, default_flow_style=False)
+            },)
     except Exception as e:
-        return yaml.dump({
-            "success": False,
-            "error": str(e),
-        }, default_flow_style=False)
+        return error_response(str(e),)
 
 
 WRITE_NOTE_DESCRIPTION = """Write free-form reasoning and analysis to this run's notes.md file.

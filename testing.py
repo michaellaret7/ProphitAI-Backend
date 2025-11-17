@@ -131,6 +131,7 @@ from app.utils.time_utils import get_current_utc_time
 from pydantic import BaseModel
 from datetime import datetime
 import pandas as pd
+import numpy as np
 import time
 
 class Quote(BaseModel):
@@ -177,7 +178,7 @@ def stream(tickers: list[str], output_file: str = "live_quotes.csv", start_time:
 
     Returns:
         DataFrame containing all collected quotes with columns:
-        timestamp, symbol, price, day_high, day_low, open, volume
+        timestamp, symbol, price, day_high, day_low, open, volume, log_returns
     """
     # Initialize empty dataframe
     df = pd.DataFrame()
@@ -218,6 +219,10 @@ def stream(tickers: list[str], output_file: str = "live_quotes.csv", start_time:
             # Append to main dataframe
             df = pd.concat([df, new_df], ignore_index=True)
 
+            # Calculate cumulative log returns for each ticker (from first price)
+            df = df.sort_values(['symbol', 'timestamp'])
+            df['log_returns'] = df.groupby('symbol')['price'].transform(lambda x: np.log(x / x.iloc[0]))
+
             # Write to CSV file
             df.to_csv(output_file, index=False)
             
@@ -245,6 +250,6 @@ if __name__ == "__main__":
 
     # Start streaming with specific start and end times (UTC)
     # Example: Start at 2:30 PM UTC (9:30 AM EST), end at 9:00 PM UTC (4:00 PM EST)
-    df = stream(tickers, start_time="15:50", end_time="21:00")
+    df = stream(tickers)
     
 

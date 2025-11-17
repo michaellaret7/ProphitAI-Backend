@@ -1,4 +1,3 @@
-import yaml
 from datetime import datetime
 from typing import Optional
 import pandas as pd
@@ -9,6 +8,8 @@ from app.models.portfolio_models import PortfolioInput
 import numpy as np
 from app.utils.tool_validator import ToolValidator
 from app.utils.decorators.tool_validation import log_simulation_data_range
+from app.core.agentic_framework.tool_lib.common.schemas import PORTFOLIO_DICT_SCHEMA
+from app.core.agentic_framework.tool_lib.common.responses import success_response, error_response
 
 @log_simulation_data_range()
 def vol_es(
@@ -62,7 +63,7 @@ def vol_es(
         )
 
         if portfolio_returns is None or portfolio_returns.empty:
-            return yaml.dump({"success": False, "error": "No price data available for portfolio tickers, move on to the next tool"}, default_flow_style=False)
+            return error_response("No price data available for portfolio tickers, move on to the next tool")
 
         # Log actual data range
         if isinstance(portfolio_returns, pd.Series) and len(portfolio_returns) > 0:
@@ -90,9 +91,9 @@ def vol_es(
             annual_vol = RiskCalculator.annualized_volatility(portfolio_returns)
 
         elif method == 'ewma':
-            return yaml.dump({"success": False, "error": "Method 'ewma' not supported with calculations_v2. Use 'param' or 'hist'."}, default_flow_style=False)
+            return error_response("Method 'ewma' not supported with calculations_v2. Use 'param' or 'hist'.")
         else:
-            return yaml.dump({"success": False, "error": f"Invalid method '{method}'. Use 'param' or 'hist'"}, default_flow_style=False)
+            return error_response(f"Invalid method '{method}'. Use 'param' or 'hist'")
 
         # Scale VaR for time horizon and annualize
         var_scaled = float(var_1day) * np.sqrt(horizon_days)
@@ -110,10 +111,10 @@ def vol_es(
             'var_annual': round(float(var_annual), 6)
         }
 
-        return yaml.dump({"success": True, "data": result}, default_flow_style=False)
+        return success_response(result)
 
     except Exception as e:
-        return yaml.dump({"success": False, "error": f"Failed to calculate vol_es: {str(e)}"}, default_flow_style=False)
+        return error_response(f"Failed to calculate vol_es: {str(e)}")
 
 
 # Tool Schema Constants
@@ -127,55 +128,7 @@ VOL_ES_DESCRIPTION = (
 VOL_ES_PARAMETERS = {
     "type": "object",
     "properties": {
-        "portfolio_dict": {
-            "type": "object",
-            "description": (
-                "**MANDATORY - DO NOT OMIT THIS PARAMETER.** "
-                "Complete portfolio with ALL holdings. "
-                "Keys = ticker symbols (e.g., 'AAPL'). "
-                "Values = objects with 'allocation' (decimal 0-1) and 'position' ('long'/'short'). "
-                "You MUST include this parameter with all portfolio tickers."
-                "\n\n"
-                """Example of CORRECT function call:
-                vol_es(
-                    portfolio_dict={
-                        "AAPL": {"allocation": 0.125, "position": "long"},
-                        "MSFT": {"allocation": 0.125, "position": "long"},
-                        "AMZN": {"allocation": 0.125, "position": "long"},
-                        "TSLA": {"allocation": 0.125, "position": "short"},
-                        "META": {"allocation": 0.125, "position": "short"},
-                        "SPY": {"allocation": 0.125, "position": "long"},
-                        "QQQ": {"allocation": 0.125, "position": "long"},
-                        "IWM": {"allocation": 0.125, "position": "short"}
-                    },
-                    method="param",
-                    conf=0.99,
-                    horizon_days=1
-                )"""
-            ),
-            "patternProperties": {
-                "^[A-Z]{1,5}$": {
-                    "type": "object",
-                    "properties": {
-                        "allocation": {
-                            "type": "number",
-                            "description": "Weight as decimal (e.g., 0.125 for 12.5%)",
-                            "minimum": 0,
-                            "maximum": 1
-                        },
-                        "position": {
-                            "type": "string",
-                            "description": "Must be 'long' or 'short'",
-                            "enum": ["long", "short"]
-                        }
-                    },
-                    "required": ["allocation", "position"],
-                    "additionalProperties": False
-                }
-            },
-            "minProperties": 1,
-            "additionalProperties": False
-        },
+        "portfolio_dict": PORTFOLIO_DICT_SCHEMA,
         "horizon_days": {
             "type": "integer",
             "description": "Time horizon for risk calculation in days (default: 1 day)",

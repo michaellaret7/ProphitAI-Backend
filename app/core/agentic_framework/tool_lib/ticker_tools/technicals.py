@@ -1,5 +1,5 @@
 import pandas as pd
-import yaml
+from app.core.agentic_framework.tool_lib.common.responses import success_response, error_response
 from typing import Optional, List, Dict, Union, Any
 from app.repositories.price_data import get_price_data_daily
 from app.core.calculations.technical.indicators import TechnicalIndicators
@@ -176,20 +176,16 @@ def run_technicals(
             invalid_indicators.append(ind)
 
     if invalid_indicators:
-        return yaml.dump({
-            "success": False,
-            "error": f"Unknown indicators: {', '.join(invalid_indicators)}. "
-                    f"Available indicators: {', '.join(sorted(available_indicators))}"
-        }, default_flow_style=False)
+        return error_response(
+            f"Unknown indicators: {', '.join(invalid_indicators)}. "
+            f"Available indicators: {', '.join(sorted(available_indicators))}"
+        )
 
     try:
         # Fetch weekly OHLCV data
         weekly_df = _fetch_weekly_ohlcv(ticker, weeks_back, _simulation_date)
         if weekly_df.empty:
-            return yaml.dump({
-                "success": False,
-                "error": f"No price data available for {ticker}"
-            }, default_flow_style=False)
+            return error_response(f"No price data available for {ticker}")
 
         # Initialize technical indicators calculator
         tech = TechnicalIndicators(weekly_df)
@@ -246,13 +242,10 @@ def run_technicals(
             # Convert to string table format
             results[indicator_lower] = _convert_df_to_string(indicator_df)
 
-        return yaml.dump({"success": True, "data": results}, default_flow_style=False)
+        return success_response(results)
 
     except Exception as e:
-        return yaml.dump({
-            "success": False,
-            "error": f"Failed to calculate technical indicators for {ticker}: {str(e)}"
-        }, default_flow_style=False)
+        return error_response(f"Failed to calculate technical indicators for {ticker}: {str(e)}")
 
 
 # Tool schema for agent registration

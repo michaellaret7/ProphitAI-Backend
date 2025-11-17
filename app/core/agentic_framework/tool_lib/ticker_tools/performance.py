@@ -1,4 +1,4 @@
-import yaml
+from app.core.agentic_framework.tool_lib.common.responses import success_response, error_response
 from datetime import datetime, timedelta, timezone
 import json
 from typing import Optional, Dict, Any
@@ -151,7 +151,7 @@ def get_ticker_performance_and_risk(
         if close is not None and not close.empty:
             close = _adjust_for_splits(close)
         if close is None or close.empty:
-            return yaml.dump({"success": False, "error": f"no price data for {tkr}"}, default_flow_style=False)
+            return error_response(f"no price data for {tkr}")
 
         if include_dividends:
             try:
@@ -164,7 +164,7 @@ def get_ticker_performance_and_risk(
         else:
             r = ReturnsCalculator.daily_price_returns(close)
         if r.empty:
-            return yaml.dump({"success": False, "error": f"failed to compute returns for {tkr}"}, default_flow_style=False)
+            return error_response(f"failed to compute returns for {tkr}")
 
         # Risk
         ann_vol = RiskCalculator.annualized_volatility(r)
@@ -347,14 +347,11 @@ def get_ticker_performance_and_risk(
                 else:
                     # Invalid filter name - return error
                     valid_filters = list(SINGLE_TICKER_METRIC_GROUPS.keys()) + ["all"]
-                    return yaml.dump({
-                        "success": False,
-                        "error": f"Invalid filter '{filter_name}'. Valid filters: {valid_filters}"
-                    }, default_flow_style=False)
+                    return error_response(f"Invalid filter '{filter_name}'. Valid filters: {valid_filters}")
 
-        return yaml.dump({"success": True, "data": filtered_data}, default_flow_style=False)
+        return success_response(filtered_data)
     except Exception as e:
-        return yaml.dump({"success": False, "error": f"failed to compute metrics for {tkr}: {e}"}, default_flow_style=False)
+        return error_response(f"failed to compute metrics for {tkr}: {e}")
 
 
 # Tool Schema Constants

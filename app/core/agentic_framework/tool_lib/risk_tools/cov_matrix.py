@@ -1,4 +1,3 @@
-import yaml
 from typing import Optional
 from datetime import datetime
 from app.core.calculations.portfolio.utils import prepare_portfolio_data
@@ -10,6 +9,8 @@ import pandas as pd
 from app.utils.gpt_parser import canonical_portfolio
 from app.core.calculations.core.helpers import build_returns_df_from_price_map
 from app.utils.decorators.tool_validation import log_simulation_data_range
+from app.core.agentic_framework.tool_lib.common.schemas import PORTFOLIO_DICT_SCHEMA
+from app.core.agentic_framework.tool_lib.common.responses import success_response, error_response
 
 @log_simulation_data_range()
 def calculate_covariance_matrix(portfolio_dict: PortfolioInput | dict = None, _simulation_date: Optional[datetime] = None, **kwargs) -> str:
@@ -24,12 +25,12 @@ def calculate_covariance_matrix(portfolio_dict: PortfolioInput | dict = None, _s
     """
     try:
         if not portfolio_dict:
-            return yaml.dump({"success": False, "error": "Portfolio dictionary is required"}, default_flow_style=False)
+            return error_response("Portfolio dictionary is required")
 
         try:
             portfolio_dict = canonical_portfolio(portfolio_dict)
         except Exception as e:
-            return yaml.dump({"success": False, "error": str(e)}, default_flow_style=False)
+            return error_response(e)
 
         # Get tickers and prepare portfolio data
         tickers = list(portfolio_dict.keys())
@@ -43,19 +44,19 @@ def calculate_covariance_matrix(portfolio_dict: PortfolioInput | dict = None, _s
         )
 
         if not price_data:
-            return yaml.dump({"success": False, "error": "No price data available for portfolio tickers"}, default_flow_style=False)
+            return error_response("No price data available for portfolio tickers")
 
         # Calculate returns and drop rows with any NaNs for stable covariance
         returns_df = build_returns_df_from_price_map(price_data, drop_rows='any', include_dividends=False)
 
         if returns_df.empty:
-            return yaml.dump({"success": False, "error": "No valid returns data available"}, default_flow_style=False)
+            return error_response("No valid returns data available")
 
         # Calculate covariance matrix using RiskCalculator
         cov_matrix = RiskCalculator.covariance_matrix(returns_df, annualize=False)
 
         if cov_matrix.empty:
-            return yaml.dump({"success": False, "error": "Failed to calculate covariance matrix"}, default_flow_style=False)
+            return error_response("Failed to calculate covariance matrix")
 
         # Convert to dictionary format
         tickers_list = list(cov_matrix.columns)
@@ -71,10 +72,10 @@ def calculate_covariance_matrix(portfolio_dict: PortfolioInput | dict = None, _s
             "covariance_matrix": cov_dict
         }
 
-        return yaml.dump({"success": True, "data": result}, default_flow_style=False)
+        return success_response(result)
 
     except Exception as e:
-        return yaml.dump({"success": False, "error": f"Failed to calculate covariance matrix: {str(e)}"}, default_flow_style=False)
+        return error_response(f"Failed to calculate covariance matrix: {str(e)}")
 
 
 # Tool Schema Constants
@@ -89,52 +90,7 @@ CALCULATE_COVARIANCE_MATRIX_DESCRIPTION = (
 CALCULATE_COVARIANCE_MATRIX_PARAMETERS = {
     "type": "object",
     "properties": {
-        "portfolio_dict": {
-            "type": "object",
-            "description": (
-                "**MANDATORY - DO NOT OMIT THIS PARAMETER.** "
-                "Complete portfolio with ALL holdings. "
-                "Keys = ticker symbols (e.g., 'AAPL'). "
-                "Values = objects with 'allocation' (decimal 0-1) and 'position' ('long'/'short'). "
-                "You MUST include this parameter with all portfolio tickers."
-                "\n\n"
-                """Example of CORRECT function call:
-                calculate_covariance_matrix(
-                    portfolio_dict={
-                        "AAPL": {"allocation": 0.125, "position": "long"},
-                        "MSFT": {"allocation": 0.125, "position": "long"},
-                        "AMZN": {"allocation": 0.125, "position": "long"},
-                        "TSLA": {"allocation": 0.125, "position": "short"},
-                        "META": {"allocation": 0.125, "position": "short"},
-                        "SPY": {"allocation": 0.125, "position": "long"},
-                        "QQQ": {"allocation": 0.125, "position": "long"},
-                        "IWM": {"allocation": 0.125, "position": "short"}
-                    }
-                )"""
-            ),
-            "patternProperties": {
-                "^[A-Z]{1,5}$": {
-                    "type": "object",
-                    "properties": {
-                        "allocation": {
-                            "type": "number",
-                            "description": "Weight as decimal (e.g., 0.125 for 12.5%)",
-                            "minimum": 0,
-                            "maximum": 1
-                        },
-                        "position": {
-                            "type": "string",
-                            "description": "Must be 'long' or 'short'",
-                            "enum": ["long", "short"]
-                        }
-                    },
-                    "required": ["allocation", "position"],
-                    "additionalProperties": False
-                }
-            },
-            "minProperties": 1,
-            "additionalProperties": False
-        },
+        "portfolio_dict": PORTFOLIO_DICT_SCHEMA,
     },
     "required": ["portfolio_dict"],
     "additionalProperties": False

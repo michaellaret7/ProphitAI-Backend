@@ -1,5 +1,4 @@
 import pandas as pd
-import yaml
 from datetime import datetime
 from typing import Optional
 from app.core.calculations.portfolio.correlation import CorrelationAnalysis
@@ -10,6 +9,8 @@ from app.models.portfolio_models import PortfolioInput
 from app.core.calculations.core.helpers import build_returns_df_from_price_map
 from app.utils.tool_validator import ToolValidator
 from app.utils.decorators.tool_validation import log_simulation_data_range
+from app.core.agentic_framework.tool_lib.common.schemas import PORTFOLIO_DICT_SCHEMA
+from app.core.agentic_framework.tool_lib.common.responses import success_response, error_response
 
 @log_simulation_data_range()
 def run_pairwise_correlation_analysis(
@@ -49,7 +50,7 @@ def run_pairwise_correlation_analysis(
         )
 
         if not price_data:
-            return yaml.dump({"success": False, "error": "No price data available for portfolio tickers"}, default_flow_style=False)
+            return error_response("No price data available for portfolio tickers")
 
         # Calculate returns without dropping rows globally; let correlation handle pairwise NaNs
         returns_df = build_returns_df_from_price_map(price_data, drop_rows='none', include_dividends=False)
@@ -70,14 +71,14 @@ def run_pairwise_correlation_analysis(
                     print(f"    • correlation_data: {start_date} → {end_date} ({count} points)")
 
         if returns_df.empty:
-            return yaml.dump({"success": False, "error": "No valid returns data available"}, default_flow_style=False)
+            return error_response("No valid returns data available")
 
         # Use the pairwise correlation function from calculations folder
         pairwise_df = CorrelationAnalysis.pairwise_correlation_analysis(returns_df)
 
         # Convert to dictionary format for YAML
         if pairwise_df.empty:
-            return yaml.dump({"success": False, "error": "Failed to calculate pairwise correlations"}, default_flow_style=False)
+            return error_response("Failed to calculate pairwise correlations")
 
         # Round correlation values to 3 decimal places
         pairwise_df['correlation'] = pairwise_df['correlation'].round(3)
@@ -98,10 +99,10 @@ def run_pairwise_correlation_analysis(
         }
 
         # Return as YAML string
-        return yaml.dump({"success": True, "data": output}, default_flow_style=False, sort_keys=False)
+        return success_response(output)
 
     except Exception as e:
-        return yaml.dump({"success": False, "error": f"Failed to run pairwise correlation analysis: {str(e)}"}, default_flow_style=False)
+        return error_response(f"Failed to run pairwise correlation analysis: {str(e)}")
 
 
 # Tool Schema Constants
@@ -115,52 +116,7 @@ PAIRWISE_CORR_ANALYSIS_DESCRIPTION = (
 PAIRWISE_CORR_ANALYSIS_PARAMETERS = {
     "type": "object",
     "properties": {
-        "portfolio_dict": {
-            "type": "object",
-            "description": (
-                "**MANDATORY - DO NOT OMIT THIS PARAMETER.** "
-                "Complete portfolio with ALL holdings. "
-                "Keys = ticker symbols (e.g., 'AAPL'). "
-                "Values = objects with 'allocation' (decimal 0-1) and 'position' ('long'/'short'). "
-                "You MUST include this parameter with all portfolio tickers."
-                "\n\n"
-                """Example of CORRECT function call:
-                run_pairwise_correlation_analysis(
-                    portfolio_dict={
-                        "AAPL": {"allocation": 0.125, "position": "long"},
-                        "MSFT": {"allocation": 0.125, "position": "long"},
-                        "AMZN": {"allocation": 0.125, "position": "long"},
-                        "TSLA": {"allocation": 0.125, "position": "short"},
-                        "META": {"allocation": 0.125, "position": "short"},
-                        "SPY": {"allocation": 0.125, "position": "long"},
-                        "QQQ": {"allocation": 0.125, "position": "long"},
-                        "IWM": {"allocation": 0.125, "position": "short"}
-                    }
-                )"""
-            ),
-            "patternProperties": {
-                "^[A-Z]{1,5}$": {
-                    "type": "object",
-                    "properties": {
-                        "allocation": {
-                            "type": "number",
-                            "description": "Weight as decimal (e.g., 0.125 for 12.5%)",
-                            "minimum": 0,
-                            "maximum": 1
-                        },
-                        "position": {
-                            "type": "string",
-                            "description": "Must be 'long' or 'short'",
-                            "enum": ["long", "short"]
-                        }
-                    },
-                    "required": ["allocation", "position"],
-                    "additionalProperties": False
-                }
-            },
-            "minProperties": 1,
-            "additionalProperties": False
-        },
+        "portfolio_dict": PORTFOLIO_DICT_SCHEMA,
     },
     "required": ["portfolio_dict"],
     "additionalProperties": False

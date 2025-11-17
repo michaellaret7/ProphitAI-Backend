@@ -2,7 +2,7 @@ from app.core.agentic_framework.base_agent.sub_agent import SubAgent
 from app.core.agentic_framework.base_agent.utils.models import PrintMode
 from typing import Optional
 from datetime import datetime
-import yaml
+from app.core.agentic_framework.tool_lib.common.responses import success_response, error_response
 
 # Import tool definitions from tool_lib
 from app.core.agentic_framework.tool_lib.data_tools.ticker_fundamentals import GET_TICKER_FUNDAMENTAL_DATA_TOOL
@@ -128,11 +128,11 @@ def ticker_analyst_sub_agent(ticker: str, _simulation_date: Optional[datetime] =
 
         final_answer = output["final_answer"]
 
-        return yaml.dump({"success": True, "data": final_answer}, default_flow_style=False)
+        return success_response(final_answer)
     except Exception as e:
         error_msg = f"Error running ticker analyst sub-agent: {str(e)}"
         print(f"⚠️  {error_msg}")
-        return yaml.dump({"success": False, "error": error_msg}, default_flow_style=False)
+        return error_response(error_msg)
 
 # Tool Schema Constants
 TICKER_ANALYST_DESCRIPTION = (

@@ -1,4 +1,4 @@
-import yaml
+from app.core.agentic_framework.tool_lib.common.responses import success_response, error_response
 from app.db.core.models.user_data_models import Portfolio
 from app.utils.decorators.database import with_session
 
@@ -21,10 +21,7 @@ def get_user_portfolio(portfolio_id: str, session=None):
         ).all()
 
         if not portfolio_positions:
-            return yaml.dump({
-                "success": False,
-                "error": f"No portfolio found with id: {portfolio_id}"
-            }, default_flow_style=False)
+            return error_response(f"No portfolio found with id: {portfolio_id}")
 
         positions = {}
         for position in portfolio_positions:
@@ -42,9 +39,9 @@ def get_user_portfolio(portfolio_id: str, session=None):
 
         session.close()
 
-        return yaml.dump({"success": True, "data": positions}, default_flow_style=False)
+        return success_response(positions)
     except Exception as e:
-        return yaml.dump({"success": False, "error": str(e)}, default_flow_style=False)
+        return error_response(e)
 
 
 # Tool Schema Constants

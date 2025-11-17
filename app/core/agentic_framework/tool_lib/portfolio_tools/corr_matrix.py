@@ -1,4 +1,3 @@
-import yaml
 from typing import Optional
 from datetime import datetime
 from app.core.calculations.portfolio.utils import prepare_portfolio_data
@@ -9,7 +8,9 @@ from app.models.portfolio_models import PortfolioInput
 import pandas as pd
 from app.core.calculations.core.helpers import build_returns_df_from_price_map
 from app.utils.decorators.tool_validation import log_simulation_data_range
+from app.core.agentic_framework.tool_lib.common.schemas import PORTFOLIO_DICT_SCHEMA
 from app.utils.tool_validator import ToolValidator
+from app.core.agentic_framework.tool_lib.common.responses import success_response, error_response
 
 @log_simulation_data_range()
 def correlation_matrix(portfolio_dict: PortfolioInput | dict, filter: str = "all", _simulation_date: Optional[datetime] = None) -> str:
@@ -48,18 +49,18 @@ def correlation_matrix(portfolio_dict: PortfolioInput | dict, filter: str = "all
         )
 
         if not price_data:
-            return yaml.dump({"success": True, "data": {"correlations": []}}, default_flow_style=False)
+            return success_response({"correlations": []})
 
         # Calculate returns without dropping rows globally; let correlation handle pairwise NaNs
         returns_df = build_returns_df_from_price_map(price_data, drop_rows='none', include_dividends=False)
 
         if returns_df.empty:
-            return yaml.dump({"success": True, "data": {"correlations": []}}, default_flow_style=False)
+            return success_response({"correlations": []})
 
         # Compute correlation matrix and round
         corr_df = CorrelationAnalysis.correlation_matrix(returns_df)
         if corr_df is None or corr_df.empty:
-            return yaml.dump({"success": True, "data": {"correlations": []}}, default_flow_style=False)
+            return success_response({"correlations": []})
         corr_df = corr_df.round(3)
 
         # Use the correlation matrix's own column order to avoid key-order drift
@@ -112,14 +113,14 @@ def correlation_matrix(portfolio_dict: PortfolioInput | dict, filter: str = "all
                             "corr": value
                         })
                 else:
-                    return yaml.dump({"success": False, "error": "Invalid filter"}, default_flow_style=False)
-        
-        if records == []:
-            return yaml.dump({"success": False, "error": f"There are no correlations in this matrix fitting the {filter} criteria"}, default_flow_style=False)
+                    return error_response("Invalid filter")
 
-        return yaml.dump({"success": True, "data": {"correlations": records}}, default_flow_style=False)
+        if records == []:
+            return error_response(f"There are no correlations in this matrix fitting the {filter} criteria")
+
+        return success_response({"correlations": records})
     except Exception as e:
-        return yaml.dump({"success": False, "error": str(e)}, default_flow_style=False)
+        return error_response(e)
 
 
 # Tool Schema Constants
@@ -163,37 +164,7 @@ CORRELATION_MATRIX_DESCRIPTION = (
 CORRELATION_MATRIX_PARAMETERS = {
     "type": "object",
     "properties": {
-        "portfolio_dict": {
-            "type": "object",
-            "description": (
-                "**MANDATORY - DO NOT OMIT THIS PARAMETER.** "
-                "Complete portfolio with ALL holdings. "
-                "Format: {ticker: {allocation: decimal, position: 'long'/'short'}}. "
-                "Example: {'AAPL': {'allocation': 0.125, 'position': 'long'}, 'MSFT': {'allocation': 0.125, 'position': 'long'}}"
-            ),
-            "patternProperties": {
-                "^[A-Z]{1,5}$": {
-                    "type": "object",
-                    "properties": {
-                        "allocation": {
-                            "type": "number",
-                            "description": "Weight as decimal (e.g., 0.125 for 12.5%)",
-                            "minimum": 0,
-                            "maximum": 1
-                        },
-                        "position": {
-                            "type": "string",
-                            "description": "Must be 'long' or 'short'",
-                            "enum": ["long", "short"]
-                        }
-                    },
-                    "required": ["allocation", "position"],
-                    "additionalProperties": False
-                }
-            },
-            "minProperties": 1,
-            "additionalProperties": False
-        },
+        "portfolio_dict": PORTFOLIO_DICT_SCHEMA,
         "filter": {
             "type": "string",
             "description": (

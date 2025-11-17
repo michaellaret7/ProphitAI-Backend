@@ -1,7 +1,8 @@
-import yaml
 from app.utils.gpt_parser import canonical_portfolio
 from app.core.calculations.portfolio.allocations import SimplePortfolioAllocator
 from app.core.calculations.core.config import DEFAULT_LOOKBACK_LONG
+from app.core.agentic_framework.tool_lib.common.schemas import PORTFOLIO_DICT_SCHEMA
+from app.core.agentic_framework.tool_lib.common.responses import success_response, error_response
 
 def build_portfolio(portfolio_dict: any, **kwargs) -> str:
     """
@@ -25,17 +26,16 @@ def build_portfolio(portfolio_dict: any, **kwargs) -> str:
     """
     # Validate portfolio_dict is not None
     if portfolio_dict is None:
-        return yaml.dump({
-            "success": False,
-            "error": "Missing required argument: 'portfolio_dict'. Please try again with a valid portfolio. "
-                     "Example: portfolio_dict={'AAPL': {'conviction': 0.8, 'position': 'long'}, 'MSFT': {'conviction': 0.6, 'position': 'long'}}"
-        }, default_flow_style=False)
+        return error_response(
+            "Missing required argument: 'portfolio_dict'. Please try again with a valid portfolio. "
+            "Example: portfolio_dict={'AAPL': {'conviction': 0.8, 'position': 'long'}, 'MSFT': {'conviction': 0.6, 'position': 'long'}}"
+        )
 
     # Parse any input into portfolio dict format using the canonical converter
     try:
         canonical_portfolio_dict = canonical_portfolio(portfolio_dict)
     except Exception as e:
-        return yaml.dump({"success": False, "error": f"Error parsing portfolio: {str(e)}"}, default_flow_style=False)
+        return error_response(f"Error parsing portfolio: {str(e)}")
 
     # Convert canonical format (allocation) to conviction format for SimplePortfolioAllocator
     conviction_portfolio = {}
@@ -66,10 +66,10 @@ def build_portfolio(portfolio_dict: any, **kwargs) -> str:
                 "allocation": round(data["allocation"], 3)
             }
 
-        return yaml.dump({"success": True, "data": rounded_result}, default_flow_style=False)
+        return success_response(rounded_result)
 
     except Exception as e:
-        return yaml.dump({"success": False, "error": f"Error building portfolio: {str(e)}"}, default_flow_style=False)
+        return error_response(f"Error building portfolio: {str(e)}")
 
 
 # Tool Schema Constants
@@ -86,55 +86,7 @@ BUILD_PORTFOLIO_DESCRIPTION = (
 BUILD_PORTFOLIO_PARAMETERS = {
     "type": "object",
     "properties": {
-        "portfolio_dict": {
-            "type": "object",
-            "description": ( 
-                "**MANDATORY - DO NOT OMIT THIS PARAMETER.** "
-                "Portfolio data in ANY format - the function will auto-convert to canonical format. "
-                "Supports: string format, dict with convictions, simple dict, list of tuples, etc. "
-                "Keys = ticker symbols (e.g., 'AAPL'). "
-                "Values = objects with 'conviction' (decimal 0-1) and 'position' ('long'/'short'). "
-                "You MUST include this parameter with all portfolio tickers."
-                "\n\n"
-                """Example formats supported:
-                1. Conviction format: {"AAPL": {"conviction": 0.8, "position": "long"}}
-                2. String format: "AAPL 80% long, MSFT 60% short"
-                3. Simple dict: {"AAPL": 0.8, "MSFT": -0.6}  # negative = short
-                4. List of tuples: [("AAPL", 0.8, "long"), ("MSFT", 0.6, "short")]
-                
-                Example function call:
-                build_portfolio(
-                    portfolio_dict={
-                        "AAPL": {"conviction": 0.8, "position": "long"},
-                        "MSFT": {"conviction": 0.6, "position": "long"},
-                        "TSLA": {"conviction": 0.7, "position": "short"},
-                        "GOOGL": {"conviction": 0.5, "position": "long"}
-                    }
-                )"""
-            ),
-            "patternProperties": {
-                "^[A-Z]{1,5}$": {
-                    "type": "object",
-                    "properties": {
-                        "conviction": {
-                            "type": "number",
-                            "description": "Conviction level as decimal (e.g., 0.8 for 80% conviction)",
-                            "minimum": 0,
-                            "maximum": 1
-                        },
-                        "position": {
-                            "type": "string",
-                            "description": "Must be 'long' or 'short'",
-                            "enum": ["long", "short"]
-                        }
-                    },
-                    "required": ["conviction", "position"],
-                    "additionalProperties": False
-                }
-            },
-            "minProperties": 1,
-            "additionalProperties": False
-        },
+        "portfolio_dict": PORTFOLIO_DICT_SCHEMA,
     },
     "required": ["portfolio_dict"],
     "additionalProperties": False

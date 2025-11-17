@@ -1,8 +1,9 @@
-import yaml
 from app.core.calculations.stress_test.runner import run_stress_test_workflow
 from app.models.portfolio_models import PortfolioInput
 import json
 from app.utils.tool_validator import ToolValidator
+from app.core.agentic_framework.tool_lib.common.schemas import PORTFOLIO_DICT_SCHEMA
+from app.core.agentic_framework.tool_lib.common.responses import success_response, error_response
 
 def stress_test(portfolio_dict: PortfolioInput | dict = None, _simulation_date: str = None) -> str:
     """
@@ -24,11 +25,11 @@ def stress_test(portfolio_dict: PortfolioInput | dict = None, _simulation_date: 
 
     try:
         results = run_stress_test_workflow(portfolio_dict)
-        return yaml.dump({"success": True, "data": results}, default_flow_style=False)
+        return success_response(results)
     except Exception as e:
         error_msg = f"Error running stress test: {str(e)}"
         print(f"Warning: {error_msg}")
-        return yaml.dump({"success": False, "error": error_msg}, default_flow_style=False)
+        return error_response(error_msg)
 
 
 # Tool Schema Constants
@@ -42,52 +43,7 @@ STRESS_TEST_DESCRIPTION = (
 STRESS_TEST_PARAMETERS = {
     "type": "object",
     "properties": {
-        "portfolio_dict": {
-            "type": "object",
-            "description": (
-                "**MANDATORY - DO NOT OMIT THIS PARAMETER.** "
-                "Complete portfolio with ALL holdings. "
-                "Keys = ticker symbols (e.g., 'AAPL'). "
-                "Values = objects with 'allocation' (decimal 0-1) and 'position' ('long'/'short'). "
-                "You MUST include this parameter with all portfolio tickers."
-                "\n\n"
-                """Example of CORRECT function call:
-                stress_test(
-                    portfolio_dict={
-                        "AAPL": {"allocation": 0.125, "position": "long"},
-                        "MSFT": {"allocation": 0.125, "position": "long"},
-                        "AMZN": {"allocation": 0.125, "position": "long"},
-                        "TSLA": {"allocation": 0.125, "position": "short"},
-                        "META": {"allocation": 0.125, "position": "short"},
-                        "SPY": {"allocation": 0.125, "position": "long"},
-                        "QQQ": {"allocation": 0.125, "position": "long"},
-                        "IWM": {"allocation": 0.125, "position": "short"}
-                    }
-                )"""
-            ),
-            "patternProperties": {
-                "^[A-Z]{1,5}$": {
-                    "type": "object",
-                    "properties": {
-                        "allocation": {
-                            "type": "number",
-                            "description": "Weight as decimal (e.g., 0.125 for 12.5%)",
-                            "minimum": 0,
-                            "maximum": 1
-                        },
-                        "position": {
-                            "type": "string",
-                            "description": "Must be 'long' or 'short'",
-                            "enum": ["long", "short"]
-                        }
-                    },
-                    "required": ["allocation", "position"],
-                    "additionalProperties": False
-                }
-            },
-            "minProperties": 1,
-            "additionalProperties": False
-        },
+        "portfolio_dict": PORTFOLIO_DICT_SCHEMA,
     },
     "required": ["portfolio_dict"],
     "additionalProperties": False

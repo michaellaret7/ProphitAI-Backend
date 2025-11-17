@@ -1,4 +1,4 @@
-import yaml
+from app.core.agentic_framework.tool_lib.common.responses import success_response, error_response
 from app.core.calculations.sectors.industry import *
 from app.core.calculations.sectors.sub_industry import *
 from app.core.calculations.factors.growth import GrowthFactors
@@ -30,9 +30,9 @@ def get_eligible_tickers(industry: str, _simulation_date: datetime = None, sessi
         industry = industry.lower()
         tickers = session.query(Ticker).filter(Ticker.industry == industry, Ticker.market_cap > 600_000_000).all()
         ticker_list = [ticker.ticker for ticker in tickers]
-        return yaml.dump({"success": True, "data": ticker_list}, default_flow_style=False)
+        return success_response(ticker_list)
     except Exception as e:
-        return yaml.dump({"success": False, "error": str(e)}, default_flow_style=False)
+        return error_response(e)
 
 @validate_tickers_arg()
 @with_session('market')
@@ -85,9 +85,9 @@ def get_base_ticker_info(tickers: List[str], _simulation_date: datetime = None, 
             }
             result.append(ticker_dict)
 
-        return yaml.dump({"success": True, "data": result}, default_flow_style=False)
+        return success_response(result)
     except Exception as e:
-        return yaml.dump({"success": False, "error": str(e)}, default_flow_style=False)
+        return error_response(e)
 
 
 # Tool Schema Constants

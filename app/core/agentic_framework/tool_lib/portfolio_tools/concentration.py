@@ -1,8 +1,9 @@
-import yaml
 from app.core.calculations.portfolio.concentration import PortfolioConcentration
 from app.models.portfolio_models import PortfolioInput
 from app.utils.decorators.tool_validation import log_simulation_data_range
 from app.utils.tool_validator import ToolValidator
+from app.core.agentic_framework.tool_lib.common.schemas import PORTFOLIO_DICT_SCHEMA
+from app.core.agentic_framework.tool_lib.common.responses import success_response, error_response
 
 def exposure_calculator(portfolio_dict: PortfolioInput | dict, exposure_type: str, **kwargs) -> str:
     # Validate inputs
@@ -27,10 +28,10 @@ def exposure_calculator(portfolio_dict: PortfolioInput | dict, exposure_type: st
         elif exposure_type == "short":
             result = PortfolioConcentration(portfolio_dict).short_exposure()
         else:
-            return yaml.dump({"success": False, "error": f"Invalid exposure type: {exposure_type}"}, default_flow_style=False)
-        return yaml.dump({"success": True, "data": {"exposure": result, "type": exposure_type}}, default_flow_style=False)
+            return error_response(f"Invalid exposure type: {exposure_type}")
+        return success_response({"exposure": result, "type": exposure_type})
     except Exception as e:
-        return yaml.dump({"success": False, "error": str(e)}, default_flow_style=False)
+        return error_response(e)
 
 def industry_concentration(portfolio_dict: PortfolioInput | dict, industry_level: str, **kwargs) -> str:
     # Validate inputs
@@ -51,12 +52,12 @@ def industry_concentration(portfolio_dict: PortfolioInput | dict, industry_level
         elif industry_level == "sub_industry":
             res = PortfolioConcentration(portfolio_dict).sub_industry_concentration()
         else:
-            return yaml.dump({"success": False, "error": f"Invalid industry level: {industry_level}"}, default_flow_style=False)
+            return error_response(f"Invalid industry level: {industry_level}")
         # Round values to 5 decimals for cleaner display
         data = {k: round(float(v), 5) for k, v in res.items()}
-        return yaml.dump({"success": True, "data": data}, default_flow_style=False)
+        return success_response(data)
     except Exception as e:
-        return yaml.dump({"success": False, "error": str(e)}, default_flow_style=False)
+        return error_response(e)
 
 @log_simulation_data_range()
 def VaR_calculator(portfolio_dict: PortfolioInput | dict, level: str, **kwargs) -> str:
@@ -87,10 +88,10 @@ def VaR_calculator(portfolio_dict: PortfolioInput | dict, level: str, **kwargs) 
             val = PortfolioConcentration(portfolio_dict, end_date=end_date).portfolio_var()
             data = {"VaR": round(float(val), 5) if val is not None else None}
         else:
-            return yaml.dump({"success": False, "error": f"Invalid level: {level}"}, default_flow_style=False)
-        return yaml.dump({"success": True, "data": data}, default_flow_style=False)
+            return error_response(f"Invalid level: {level}")
+        return success_response(data)
     except Exception as e:
-        return yaml.dump({"success": False, "error": str(e)}, default_flow_style=False)
+        return error_response(e)
 
 
 # Tool Schema Constants
@@ -105,53 +106,7 @@ EXPOSURE_CALCULATOR_DESCRIPTION = (
 EXPOSURE_CALCULATOR_PARAMETERS = {
     "type": "object",
     "properties": {
-        "portfolio_dict": {
-            "type": "object",
-            "description": (
-                "**MANDATORY - DO NOT OMIT THIS PARAMETER.** "
-                "Complete portfolio with ALL holdings. "
-                "Keys = ticker symbols (e.g., 'AAPL'). "
-                "Values = objects with 'allocation' (decimal 0-1) and 'position' ('long'/'short'). "
-                "You MUST include this parameter with all portfolio tickers."
-                "\n\n"
-                """Example of CORRECT function call:
-                exposure_calculator(
-                    portfolio_dict={
-                        "AAPL": {"allocation": 0.125, "position": "long"},
-                        "MSFT": {"allocation": 0.125, "position": "long"},
-                        "AMZN": {"allocation": 0.125, "position": "long"},
-                        "TSLA": {"allocation": 0.125, "position": "long"},
-                        "META": {"allocation": 0.125, "position": "long"},
-                        "SPY": {"allocation": 0.125, "position": "long"},
-                        "QQQ": {"allocation": 0.125, "position": "long"},
-                        "IWM": {"allocation": 0.125, "position": "long"}
-                    },
-                    exposure_type="gross"
-                )"""
-            ),
-            "patternProperties": {
-                "^[A-Z]{1,5}$": {
-                    "type": "object",
-                    "properties": {
-                        "allocation": {
-                            "type": "number",
-                            "description": "Weight as decimal (e.g., 0.125 for 12.5%)",
-                            "minimum": 0,
-                            "maximum": 1
-                        },
-                        "position": {
-                            "type": "string",
-                            "description": "Must be 'long' or 'short'",
-                            "enum": ["long", "short"]
-                        }
-                    },
-                    "required": ["allocation", "position"],
-                    "additionalProperties": False
-                }
-            },
-            "minProperties": 1,
-            "additionalProperties": False
-        },
+        "portfolio_dict": PORTFOLIO_DICT_SCHEMA,
         "exposure_type": {
             "type": "string",
             "description": "Type of exposure to calculate. Must be one of: 'net' (long minus short), 'gross' (sum of absolute values), 'long' (sum of long positions), or 'short' (sum of short positions).",
@@ -181,53 +136,7 @@ INDUSTRY_CONCENTRATION_DESCRIPTION = (
 INDUSTRY_CONCENTRATION_PARAMETERS = {
     "type": "object",
     "properties": {
-        "portfolio_dict": {
-            "type": "object",
-            "description": (
-                "**MANDATORY - DO NOT OMIT THIS PARAMETER.** "
-                "Complete portfolio with ALL holdings. "
-                "Keys = ticker symbols (e.g., 'AAPL'). "
-                "Values = objects with 'allocation' (decimal 0-1) and 'position' ('long'/'short'). "
-                "You MUST include this parameter with all portfolio tickers."
-                "\n\n"
-                """Example of CORRECT function call:
-                industry_concentration(
-                    portfolio_dict={
-                        "AAPL": {"allocation": 0.125, "position": "long"},
-                        "MSFT": {"allocation": 0.125, "position": "long"},
-                        "AMZN": {"allocation": 0.125, "position": "long"},
-                        "TSLA": {"allocation": 0.125, "position": "long"},
-                        "META": {"allocation": 0.125, "position": "long"},
-                        "SPY": {"allocation": 0.125, "position": "long"},
-                        "QQQ": {"allocation": 0.125, "position": "long"},
-                        "IWM": {"allocation": 0.125, "position": "long"}
-                    },
-                    industry_level="sub_industry"
-                )"""
-            ),
-            "patternProperties": {
-                "^[A-Z]{1,5}$": {
-                    "type": "object",
-                    "properties": {
-                        "allocation": {
-                            "type": "number",
-                            "description": "Weight as decimal (e.g., 0.125 for 12.5%)",
-                            "minimum": 0,
-                            "maximum": 1
-                        },
-                        "position": {
-                            "type": "string",
-                            "description": "Must be 'long' or 'short'",
-                            "enum": ["long", "short"]
-                        }
-                    },
-                    "required": ["allocation", "position"],
-                    "additionalProperties": False
-                }
-            },
-            "minProperties": 1,
-            "additionalProperties": False
-        },
+        "portfolio_dict": PORTFOLIO_DICT_SCHEMA,
         "industry_level": {
             "type": "string",
             "description": "Level of industry aggregation. 'industry' provides broader categories (e.g., 'Food Products'), while 'sub_industry' provides more granular categories (e.g., 'Packaged Foods').",
@@ -257,53 +166,7 @@ VAR_CALCULATOR_DESCRIPTION = (
 VAR_CALCULATOR_PARAMETERS = {
     "type": "object",
     "properties": {
-        "portfolio_dict": {
-            "type": "object",
-            "description": (
-                "**MANDATORY - DO NOT OMIT THIS PARAMETER.** "
-                "Complete portfolio with ALL holdings. "
-                "Keys = ticker symbols (e.g., 'AAPL'). "
-                "Values = objects with 'allocation' (decimal 0-1) and 'position' ('long'/'short'). "
-                "You MUST include this parameter with all portfolio tickers."
-                "\n\n"
-                """Example of CORRECT function call:
-                VaR_calculator(
-                    portfolio_dict={
-                        "AAPL": {"allocation": 0.125, "position": "long"},
-                        "MSFT": {"allocation": 0.125, "position": "long"},
-                        "AMZN": {"allocation": 0.125, "position": "long"},
-                        "TSLA": {"allocation": 0.125, "position": "long"},
-                        "META": {"allocation": 0.125, "position": "long"},
-                        "SPY": {"allocation": 0.125, "position": "long"},
-                        "QQQ": {"allocation": 0.125, "position": "long"},
-                        "IWM": {"allocation": 0.125, "position": "long"}
-                    },
-                    level="industry"
-                )"""
-            ),
-            "patternProperties": {
-                "^[A-Z]{1,5}$": {
-                    "type": "object",
-                    "properties": {
-                        "allocation": {
-                            "type": "number",
-                            "description": "Weight as decimal (e.g., 0.125 for 12.5%)",
-                            "minimum": 0,
-                            "maximum": 1
-                        },
-                        "position": {
-                            "type": "string",
-                            "description": "Must be 'long' or 'short'",
-                            "enum": ["long", "short"]
-                        }
-                    },
-                    "required": ["allocation", "position"],
-                    "additionalProperties": False
-                }
-            },
-            "minProperties": 1,
-            "additionalProperties": False
-        },
+        "portfolio_dict": PORTFOLIO_DICT_SCHEMA,
         "level": {
             "type": "string",
             "description": "Level at which to calculate VaR. 'portfolio' calculates overall portfolio VaR, 'industry' calculates VaR by industry groups, 'sub_industry' calculates VaR by sub-industry groups.",

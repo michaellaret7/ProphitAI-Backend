@@ -1,4 +1,3 @@
-import yaml
 from app.db.core.models.prophit_alts_models import FundInitialPosition
 from app.db.core.models.market_data_models import Ticker
 from app.db.core.db_config import ProphitAltsSession, MarketSession
@@ -6,6 +5,8 @@ from app.core.calculations.portfolio.factor_tilt import portfolio_factor_tilts
 from app.models.portfolio_models import PortfolioInput
 from app.utils.decorators.tool_validation import log_simulation_data_range
 from app.utils.tool_validator import ToolValidator
+from app.core.agentic_framework.tool_lib.common.schemas import PORTFOLIO_DICT_SCHEMA
+from app.core.agentic_framework.tool_lib.common.responses import success_response, error_response
 
 @log_simulation_data_range()
 def factor_tilts_for_portfolio(portfolio_dict: PortfolioInput | dict, factors: str, **kwargs) -> str:
@@ -66,15 +67,15 @@ def factor_tilts_for_portfolio(portfolio_dict: PortfolioInput | dict, factors: s
                 "quality": _summary(_round_tilt_output(portfolio_factor_tilts(weights, "quality", end=end_date))),
                 "volatility": _summary(_round_tilt_output(portfolio_factor_tilts(weights, "volatility", end=end_date)))
             }
-            return yaml.dump({"success": True, "data": result}, default_flow_style=False)
+            return success_response(result)
 
         if factors not in ["value", "growth", "momentum", "quality", "volatility", "all"]:
-            return yaml.dump({"success": False, "error": f"Invalid factor: {factors}"}, default_flow_style=False)
+            return error_response(f"Invalid factor: {factors}")
 
         data = _round_tilt_output(portfolio_factor_tilts(weights, factors, end=end_date))
-        return yaml.dump({"success": True, "data": data}, default_flow_style=False)
+        return success_response(data)
     except Exception as e:
-        return yaml.dump({"success": False, "error": str(e)}, default_flow_style=False)
+        return error_response(e)
 
 # Tool Schema Constants
 FACTOR_TILTS_FOR_PORTFOLIO_DESCRIPTION = (
@@ -86,53 +87,7 @@ FACTOR_TILTS_FOR_PORTFOLIO_DESCRIPTION = (
 FACTOR_TILTS_FOR_PORTFOLIO_PARAMETERS = {
     "type": "object",
     "properties": {
-        "portfolio_dict": {
-            "type": "object",
-            "description": (
-                "**MANDATORY - DO NOT OMIT THIS PARAMETER.** "
-                "Complete portfolio with ALL holdings. "
-                "Keys = ticker symbols (e.g., 'AAPL'). "
-                "Values = objects with 'allocation' (decimal 0-1) and 'position' ('long'/'short'). "
-                "You MUST include this parameter with all portfolio tickers."
-                "\n\n"
-                """Example of CORRECT function call:
-                factor_tilts_for_portfolio(
-                    portfolio_dict={
-                        "AAPL": {"allocation": 0.125, "position": "long"},
-                        "MSFT": {"allocation": 0.125, "position": "long"},
-                        "AMZN": {"allocation": 0.125, "position": "long"},
-                        "TSLA": {"allocation": 0.125, "position": "long"},
-                        "META": {"allocation": 0.125, "position": "long"},
-                        "SPY": {"allocation": 0.125, "position": "long"},
-                        "QQQ": {"allocation": 0.125, "position": "long"},
-                        "IWM": {"allocation": 0.125, "position": "long"}
-                    },
-                    factors="all"
-                )"""
-            ),
-            "patternProperties": {
-                "^[A-Z]{1,5}$": {
-                    "type": "object",
-                    "properties": {
-                        "allocation": {
-                            "type": "number",
-                            "description": "Weight as decimal (e.g., 0.125 for 12.5%)",
-                            "minimum": 0,
-                            "maximum": 1
-                        },
-                        "position": {
-                            "type": "string",
-                            "description": "Must be 'long' or 'short'",
-                            "enum": ["long", "short"]
-                        }
-                    },
-                    "required": ["allocation", "position"],
-                    "additionalProperties": False
-                }
-            },
-            "minProperties": 1,
-            "additionalProperties": False
-        },
+        "portfolio_dict": PORTFOLIO_DICT_SCHEMA,
         "factors": {
             "type": "string",
             "description": (

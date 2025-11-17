@@ -1,6 +1,6 @@
 from app.db.core.db_config import MarketSession
 from app.db.core.models.market_data_models import *
-import yaml
+from app.core.agentic_framework.tool_lib.common.responses import success_response, error_response
 from datetime import datetime
 from typing import Optional
 
@@ -19,7 +19,7 @@ def get_sector_tickers(sector: str, _simulation_date: Optional[datetime] = None)
 
         sector_info = [{'ticker': ticker.ticker} for ticker in sector_info]
 
-        return yaml.dump({"success": True, "data": sector_info}, default_flow_style=False)
+        return success_response(sector_info)
 
 def get_sector_industries(sector: str, _simulation_date: Optional[datetime] = None) -> str:
     """Get the industry hierarchy for a sector.
@@ -55,7 +55,7 @@ def get_sector_industries(sector: str, _simulation_date: Optional[datetime] = No
             for ind, subs in sorted(industry_to_subs.items(), key=lambda kv: kv[0])
         ]
 
-        return yaml.dump({"success": True, "data": tree}, default_flow_style=False)
+        return success_response(tree)
 
 
 # Tool Schema Constants

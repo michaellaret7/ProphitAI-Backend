@@ -1,6 +1,7 @@
 from app.utils.choose_model_and_client import perplexity_model_and_client, openai_model_and_client
 import re
 import yaml
+from app.core.agentic_framework.tool_lib.common.responses import success_response, error_response
 
 class AgentSearchEngine:
     def perplexity_free_search(self, query: str):
@@ -63,18 +64,13 @@ class AgentSearchEngine:
             # Remove content between <think> and </think> tags (including the tags)
             cleaned_content = re.sub(r'<think>.*?</think>', '', cleaned_content, flags=re.DOTALL)
 
-            return yaml.dump({
-                'success': True,
+            return success_response({
                 'data': cleaned_content,
                 'query': query
-            }, default_flow_style=False)
+            })
 
         except Exception as e:
-            return yaml.dump({
-                'success': False,
-                'error': str(e),
-                'query': query
-            }, default_flow_style=False)
+            return error_response(f"{str(e)} (query: {query})")
     
     def openai_search(self, query: str):
         """
@@ -108,27 +104,14 @@ class AgentSearchEngine:
                 final_report = response.output[-1]
                 if hasattr(final_report, 'content'):
                     report_text = final_report.content[0].text
-                    return yaml.dump({
-                        'success': True,
+                    return success_response({
                         'data': report_text,
                         'query': query
-                    }, default_flow_style=False)
+                    })
 
-            return yaml.dump({
-                'success': False,
-                'error': "No response generated",
-                'query': query
-            }, default_flow_style=False)
+            return error_response(f"No response generated (query: {query})")
 
         except AttributeError as e:
-            return yaml.dump({
-                'success': False,
-                'error': f"AttributeError: {str(e)}. Make sure you have the latest OpenAI library: pip install --upgrade openai",
-                'query': query
-            }, default_flow_style=False)
+            return error_response(f"AttributeError: {str(e)}. Make sure you have the latest OpenAI library: pip install --upgrade openai (query: {query})")
         except Exception as e:
-            return yaml.dump({
-                'success': False,
-                'error': str(e),
-                'query': query
-            }, default_flow_style=False)
+            return error_response(f"{str(e)} (query: {query})")

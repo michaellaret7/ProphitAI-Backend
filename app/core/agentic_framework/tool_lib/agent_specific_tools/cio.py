@@ -1,4 +1,4 @@
-import yaml
+from app.core.agentic_framework.tool_lib.common.responses import success_response, error_response
 from app.db.core.models.prophit_alts_models import FundInitialPosition, Fund
 from app.db.core.models.market_data_models import Ticker
 from app.utils.decorators.database import with_sessions
@@ -20,9 +20,9 @@ def get_analyst_picks(**kwargs) -> str:
 
         session.close()
 
-        return yaml.dump({"success": True, "data": initial_positions_dict}, default_flow_style=False)
+        return success_response(initial_positions_dict)
     except Exception as e:
-        return yaml.dump({"success": False, "error": str(e)}, default_flow_style=False)
+        return error_response(e)
 
 def pull_rest_of_ticker_pool(**kwargs) -> str:
     try:
@@ -49,9 +49,9 @@ def pull_rest_of_ticker_pool(**kwargs) -> str:
         session.close()
         market_session.close()
 
-        return yaml.dump({"success": True, "data": ticker_pool_list}, default_flow_style=False)
+        return success_response(ticker_pool_list)
     except Exception as e:
-        return yaml.dump({"success": False, "error": str(e)}, default_flow_style=False)
+        return error_response(e)
 
 
 # Tool Schema Constants

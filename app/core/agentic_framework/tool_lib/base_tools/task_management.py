@@ -1,6 +1,7 @@
 """Task Management Tool - Update plan task statuses during execution."""
 
 import yaml
+from app.core.agentic_framework.tool_lib.common.responses import success_response, error_response
 from typing import List, Optional
 from app.core.agentic_framework.base_agent.utils.models import TaskStatus
 from app.core.agentic_framework.base_agent.logging.task_state_logger import write_task_state_to_file
@@ -49,10 +50,7 @@ def update_tasks(
         update_tasks(plan, main_task="5", status="in_progress")
     """
     if not plan or not plan.tasks:
-        return yaml.dump({
-            "success": False,
-            "error": "No plan available to update"
-        }, default_flow_style=False)
+        return error_response("No plan available to update")
 
     # Normalize status string to enum
     status_map = {
@@ -66,49 +64,36 @@ def update_tasks(
 
     status_enum = status_map.get(status.lower())
     if not status_enum:
-        return yaml.dump({
-            "success": False,
-            "error": f"Invalid status: {status}. Must be one of: not_started, in_progress, complete"
-        }, default_flow_style=False)
+        return error_response(f"Invalid status: {status}. Must be one of: not_started, in_progress, complete")
 
     # Validate work_summary when marking complete
     MIN_WORK_SUMMARY_LENGTH = 100
     if status_enum == TaskStatus.COMPLETE:
         if not work_summary or work_summary.strip() == "":
-            return yaml.dump({
-                "success": False,
-                "error": "WORK EVIDENCE REQUIRED: You must provide a 'work_summary' parameter when marking tasks as complete. "
+            return error_response("WORK EVIDENCE REQUIRED: You must provide a 'work_summary' parameter when marking tasks as complete. "
                        "This is the 'Work:' section - the PRIMARY record of your reasoning, thinking, observations, analysis, "
-                       "decisions, and conclusions. This is where ALL your cognitive work must be documented."
-            }, default_flow_style=False)
+                       "decisions, and conclusions. This is where ALL your cognitive work must be documented.")
 
         if len(work_summary.strip()) < MIN_WORK_SUMMARY_LENGTH:
-            return yaml.dump({
-                "success": False,
-                "error": f"INSUFFICIENT WORK EVIDENCE: work_summary must be at least {MIN_WORK_SUMMARY_LENGTH} characters. "
-                       f"You provided {len(work_summary.strip())} characters. The 'Work:' section is where your ENTIRE "
-                       f"analytical process goes - reasoning, observations, findings, decisions, conclusions. Provide a "
-                       f"comprehensive record of your cognitive work, not just a brief note."
-            }, default_flow_style=False)
+            return error_response(
+                f"INSUFFICIENT WORK EVIDENCE: work_summary must be at least {MIN_WORK_SUMMARY_LENGTH} characters. "
+                f"You provided {len(work_summary.strip())} characters. The 'Work:' section is where your ENTIRE "
+                f"analytical process goes - reasoning, observations, findings, decisions, conclusions. Provide a "
+                f"comprehensive record of your cognitive work, not just a brief note."
+            )
 
         # Check for lazy/gaming attempts
         lazy_phrases = ["done", "completed", "finished", "task complete", "all set"]
         if work_summary.strip().lower() in lazy_phrases:
-            return yaml.dump({
-                "success": False,
-                "error": "INSUFFICIENT WORK EVIDENCE: work_summary appears to be a placeholder. The 'Work:' section must "
+            return error_response("INSUFFICIENT WORK EVIDENCE: work_summary appears to be a placeholder. The 'Work:' section must "
                        "contain your COMPLETE analytical thinking: What reasoning did you apply? What observations did you "
                        "make? What data did you examine? What patterns did you discover? What decisions did you make and why? "
-                       "What conclusions did you reach? This is the core record of your cognitive work."
-            }, default_flow_style=False)
+                       "What conclusions did you reach? This is the core record of your cognitive work.")
 
     # Find the main task
     task = next((t for t in plan.tasks if t.id == main_task), None)
     if not task:
-        return yaml.dump({
-            "success": False,
-            "error": f"Task {main_task} not found in plan"
-        }, default_flow_style=False)
+        return error_response(f"Task {main_task} not found in plan")
 
     updated = []
 
@@ -121,17 +106,16 @@ def update_tasks(
                                    and st.id != subtask_id]
 
             if in_progress_subtasks:
-                return yaml.dump({
-                    "success": False,
-                    "error": f"⚠️ WORKFLOW VIOLATION: Cannot start subtask {subtask_id} while {in_progress_subtasks} "
-                           f"{'is' if len(in_progress_subtasks) == 1 else 'are'} still in_progress.\n\n"
-                           f"You need to mark the in_progress task as finished if it's finished. "
-                           f"If it's not finished, please complete the task first.\n\n"
-                           f"To fix this, call:\n"
-                           f"update_tasks(main_task='{main_task}', subtasks={in_progress_subtasks}, "
-                           f"status='complete', work_summary='...')\n\n"
-                           f"Remember: Complete each subtask BEFORE moving to the next one."
-                }, default_flow_style=False)
+                return error_response(
+                    f"⚠️ WORKFLOW VIOLATION: Cannot start subtask {subtask_id} while {in_progress_subtasks} "
+                    f"{'is' if len(in_progress_subtasks) == 1 else 'are'} still in_progress.\n\n"
+                    f"You need to mark the in_progress task as finished if it's finished. "
+                    f"If it's not finished, please complete the task first.\n\n"
+                    f"To fix this, call:\n"
+                    f"update_tasks(main_task='{main_task}', subtasks={in_progress_subtasks}, "
+                    f"status='complete', work_summary='...')\n\n"
+                    f"Remember: Complete each subtask BEFORE moving to the next one."
+                )
 
     # Update subtasks if provided
     if subtasks:
@@ -172,10 +156,7 @@ def update_tasks(
             incomplete_subtasks = [st for st in task.subtasks if st.status != TaskStatus.COMPLETE]
             if incomplete_subtasks:
                 incomplete_ids = [st.id for st in incomplete_subtasks]
-                return yaml.dump({
-                    "success": False,
-                    "error": f"Cannot mark task {main_task} as complete: subtasks {incomplete_ids} are not yet complete. Complete all subtasks first."
-                }, default_flow_style=False)
+                return error_response(f"Cannot mark task {main_task} as complete: subtasks {incomplete_ids} are not yet complete. Complete all subtasks first.")
 
         old_status = task.status.value
         task.status = status_enum
@@ -193,13 +174,10 @@ def update_tasks(
     except Exception as e:
         print(f"⚠️  Warning: Failed to write task state to file: {e}")
 
-    return yaml.dump({
-        "success": True,
-        "data": {
-            "updated": updated,
-            "message": f"Successfully updated {len(updated)} item(s)"
-        }
-    }, default_flow_style=False)
+    return success_response({
+        "updated": updated,
+        "message": f"Successfully updated {len(updated)} item(s)"
+    })
 
 
 # Tool schema for agent registration

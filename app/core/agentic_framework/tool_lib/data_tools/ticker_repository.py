@@ -1,4 +1,4 @@
-import yaml
+from app.core.agentic_framework.tool_lib.common.responses import success_response, error_response
 from typing import Optional
 from app.repositories.ratings_data import get_stock_grades_individual, get_stock_grades_summary, get_ratings, get_analyst_recommendations, get_price_target_summary
 from app.repositories.etf_data import get_etf_info, get_etf_holdings
@@ -41,47 +41,46 @@ def fetch_repository_data(ticker: str, data_type: str, limit: int | None = None,
 
         # Check data availability in simulation mode
         if _simulation_date is not None and not is_data_type_available(t):
-            return yaml.dump({
-                "success": False,
-                "error": get_unavailable_data_message(t),
-                "suggestion": f"Available data types as of {_simulation_date.date()}: {sorted(list(AVAILABLE_DATA_TYPES))}"
-            }, default_flow_style=False)
+            return error_response(
+                f"{get_unavailable_data_message(t)} "
+                f"Available data types as of {_simulation_date.date()}: {sorted(list(AVAILABLE_DATA_TYPES))}"
+            )
 
         start_news, now = get_date_range(_simulation_date, lookback_days=180)
         start_divs, _ = get_date_range(_simulation_date, lookback_days=365)
 
         if t in ["press_releases", "press-release", "press"]:
             data = get_press_releases(ticker, start=start_news, end=now, limit=50, ascending=False)
-            return yaml.dump({"success": True, "data": data}, default_flow_style=False)
+            return success_response(data)
         if t in ["stock_news", "news"]:
             data = get_stock_news(ticker, start=start_news, end=now, limit=50, ascending=False)
-            return yaml.dump({"success": True, "data": data}, default_flow_style=False)
+            return success_response(data)
         if t in ["price_target_news", "pt_news"]:
             data = get_price_target_news(ticker, start=start_news, end=now, limit=50, ascending=False)
-            return yaml.dump({"success": True, "data": data}, default_flow_style=False)
+            return success_response(data)
 
         if t in ["grades_individual", "grades_detail"]:
             data = get_stock_grades_individual(ticker, start=start_news, end=now)
-            return yaml.dump({"success": True, "data": data}, default_flow_style=False)
+            return success_response(data)
         if t in ["grades_summary", "grades"]:
             data = get_stock_grades_summary(ticker, start=start_news, end=now)
-            return yaml.dump({"success": True, "data": data}, default_flow_style=False)
+            return success_response(data)
         if t == "ratings":
             data = get_ratings(ticker, start=start_news, end=now)
-            return yaml.dump({"success": True, "data": data}, default_flow_style=False)
+            return success_response(data)
         if t in ["analyst_recommendations", "analyst_recomendations", "recommendations"]:
             data = get_analyst_recommendations(ticker, start=start_news, end=now)
-            return yaml.dump({"success": True, "data": data}, default_flow_style=False)
+            return success_response(data)
         if t == "price_target_summary":
             data = get_price_target_summary(ticker)
-            return yaml.dump({"success": True, "data": data}, default_flow_style=False)
+            return success_response(data)
 
         if t == "etf_info":
             data = get_etf_info(ticker)
-            return yaml.dump({"success": True, "data": data}, default_flow_style=False)
+            return success_response(data)
         if t == "etf_holdings":
             data = get_etf_holdings(ticker)
-            return yaml.dump({"success": True, "data": data}, default_flow_style=False)
+            return success_response(data)
 
         if t == "earnings_transcripts":
             # Default last 2 years; honor optional limit for number of transcripts
@@ -91,29 +90,29 @@ def fetch_repository_data(ticker: str, data_type: str, limit: int | None = None,
                 end_year=now.year,
                 limit=limit,
             )
-            return yaml.dump({"success": True, "data": data}, default_flow_style=False)
+            return success_response(data)
         if t == "latest_transcript":
             data = get_latest_transcript(ticker)
-            return yaml.dump({"success": True, "data": data}, default_flow_style=False)
+            return success_response(data)
 
         if t == "dividends_series":
             s = get_dividends_series(ticker, start_divs, now)
             s = filter_series_by_date(s, _simulation_date)
             items = [{"date": str(idx.date()), "amount": float(val)} for idx, val in s.items()]
             data = {"ticker": ticker.upper(), "count": len(items), "items": items}
-            return yaml.dump({"success": True, "data": data}, default_flow_style=False)
+            return success_response(data)
 
         if t in ["analyst_estimates", "estimates"]:
             # Use limit if provided, otherwise default to 4 quarters
             quarters = limit if limit else 4
             result = get_analyst_estimates(ticker, quarters_back=quarters, _simulation_date=_simulation_date)
             if "error" in result:
-                return yaml.dump({"success": False, "error": result["error"]}, default_flow_style=False)
-            return yaml.dump({"success": True, "data": result}, default_flow_style=False)
+                return error_response(result["error"])
+            return success_response(result)
 
-        return yaml.dump({"success": False, "error": f"Unknown data_type: {data_type}"}, default_flow_style=False)
+        return error_response(f"Unknown data_type: {data_type}")
     except Exception as e:
-        return yaml.dump({"success": False, "error": str(e)}, default_flow_style=False)
+        return error_response(e)
 
 
 # Tool Schema Constants

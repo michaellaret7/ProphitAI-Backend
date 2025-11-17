@@ -1,4 +1,4 @@
-import yaml
+from app.core.agentic_framework.tool_lib.common.responses import success_response, error_response
 from typing import Optional, Dict, Any
 import numpy as np
 from app.core.calculations.factors.growth import GrowthFactors
@@ -70,7 +70,7 @@ def calculate_ticker_factors(ticker: str, factor: str, _simulation_date: Optiona
 
             # Convert NumPy types to Python types for YAML serialization
             result = _convert_numpy_to_python(result)
-            return yaml.dump({"success": True, "data": result}, default_flow_style=False)
+            return success_response(result)
 
         # Momentum and Volatility factors need price series
         elif factor in ["momentum", "volatility"]:
@@ -81,7 +81,7 @@ def calculate_ticker_factors(ticker: str, factor: str, _simulation_date: Optiona
             # Get price data for ticker (and SPY for market-relative metrics)
             price_data = ds.get_price_data(ticker, start_date, end_date)
             if price_data is None or price_data.frame.empty:
-                return yaml.dump({"success": False, "error": f"No price data available for {ticker}"}, default_flow_style=False)
+                return error_response(f"No price data available for {ticker}")
 
             price_series = price_data.frame['close']
             price_series = filter_series_by_date(price_series, _simulation_date)
@@ -116,12 +116,12 @@ def calculate_ticker_factors(ticker: str, factor: str, _simulation_date: Optiona
             # Convert NumPy types to Python types for YAML serialization
             result = _convert_numpy_to_python(result)
             
-            return yaml.dump({"success": True, "data": result}, default_flow_style=False)
+            return success_response(result)
 
         else:
-            return yaml.dump({"success": False, "error": f"Unknown factor: {factor}"}, default_flow_style=False)
+            return error_response(f"Unknown factor: {factor}")
     except Exception as e:
-        return yaml.dump({"success": False, "error": f"Failed to calculate {factor} factors for {ticker}: {str(e)}"}, default_flow_style=False)
+        return error_response(f"Failed to calculate {factor} factors for {ticker}: {str(e)}")
 
 
 # Tool Schema Constants

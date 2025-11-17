@@ -10,6 +10,7 @@ import pandas as pd
 import yaml
 
 from app.utils.gpt_parser import parse_with_gpt
+from app.core.agentic_framework.tool_lib.common.responses import success_response, error_response
 
 from .models import (
     HIGH_DIVIDEND_YIELD_THRESHOLD,
@@ -348,30 +349,22 @@ def _format_success_response(df: pd.DataFrame, warnings: List[str]) -> str:
     """Format successful screening response as YAML."""
     # Return a failure message if no results were found
     if df is None or len(df) == 0:
-        result = {
-            "success": False,
-            "error": "No results found. Alter your query and try again."
-        }
+        error_msg = "No results found. Alter your query and try again."
         if warnings:
-            result["warnings"] = warnings
-        return yaml.dump(result, default_flow_style=False)
+            error_msg += f" Warnings: {', '.join(warnings)}"
+        return error_response(error_msg)
 
-    result = {
-        "success": True,
+    data = {
         "data": df.to_dict('records'),
         "warnings": warnings if warnings else None
     }
-    return yaml.dump(result, default_flow_style=False)
+    return success_response(data)
 
 
 def _format_error_response(error: Exception) -> str:
     """Format error response as YAML."""
-    result = {
-        "success": False,
-        "error": f"Stock screening failed: {str(error)}",
-        "error_type": type(error).__name__,
-    }
-    return yaml.dump(result, default_flow_style=False)
+    error_msg = f"Stock screening failed: {str(error)} (error_type: {type(error).__name__})"
+    return error_response(error_msg)
 
 
 # ============================= Tool Schema ============================= #

@@ -1,4 +1,4 @@
-import yaml
+from app.core.agentic_framework.tool_lib.common.responses import success_response, error_response
 from datetime import datetime, timedelta
 import pandas as pd
 import numpy as np
@@ -28,9 +28,9 @@ def get_final_portfolio_dict(session=None) -> str:
                 "thesis": position.reasoning,
             }
 
-        return yaml.dump({"success": True, "data": final_positions}, default_flow_style=False)
+        return success_response(final_positions)
     except Exception as e:
-        return yaml.dump({"success": False, "error": str(e)}, default_flow_style=False)  
+        return error_response(e)  
 
 # Tool Schema Constants
 GET_FINAL_PORTFOLIO_DICT_DESCRIPTION = (

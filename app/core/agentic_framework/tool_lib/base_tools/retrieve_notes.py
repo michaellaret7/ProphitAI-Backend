@@ -4,6 +4,7 @@ from pathlib import Path
 from typing import Optional
 import re
 import yaml
+from app.core.agentic_framework.tool_lib.common.responses import success_response, error_response
 
 
 def retrieve_notes(title: str, *, output_dir: Optional[str] = None) -> str:
@@ -19,10 +20,7 @@ def retrieve_notes(title: str, *, output_dir: Optional[str] = None) -> str:
     try:
         notes_path = Path(output_dir) / "notes.md" if output_dir else Path("notes.md")
         if not notes_path.exists():
-            return yaml.dump({
-                "success": False,
-                "error": "No notes file found",
-            }, default_flow_style=False)
+            return error_response("No notes file found",)
 
         # Read the entire notes file
         content = notes_path.read_text(encoding="utf-8")
@@ -92,24 +90,15 @@ def retrieve_notes(title: str, *, output_dir: Optional[str] = None) -> str:
             matching_notes.append('\n'.join(current_note))
 
         if matching_notes:
-            return yaml.dump({
-                "success": True,
-                "data": {
+            return success_response( {
                     "notes": matching_notes,
                     "count": len(matching_notes),
-                },
-            }, default_flow_style=False)
+                },)
         else:
-            return yaml.dump({
-                "success": False,
-                "error": f"No notes found with title containing '{title}'",
-            }, default_flow_style=False)
+            return error_response(f"No notes found with title containing '{title}'")
 
     except Exception as e:
-        return yaml.dump({
-            "success": False,
-            "error": str(e),
-        }, default_flow_style=False)
+        return error_response(str(e),)
 
 
 RETRIEVE_NOTES_DESCRIPTION = """Retrieves previously stored analysis notes and insights from this run's notes.md file.

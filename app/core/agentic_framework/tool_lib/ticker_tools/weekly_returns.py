@@ -1,4 +1,4 @@
-import yaml
+from app.core.agentic_framework.tool_lib.common.responses import success_response, error_response
 from datetime import datetime
 from typing import Optional
 from app.utils.decorators.price_data import with_price_data
@@ -29,17 +29,14 @@ def get_weekly_returns(ticker: str, price_data=None, _simulation_date: Optional[
         weekly_returns = weekly_prices.pct_change().dropna()
 
         # Convert to dictionary with string dates and format as percentages
-        return yaml.dump({
-            "success": True,
-            "data": {
-                "ticker": ticker,
-                "weekly_returns": {str(date.date()): f"{round(ret * 100, 2)}%" for date, ret in weekly_returns.items()},
-                "total_weeks": len(weekly_returns),
-                "average_weekly_return": f"{round(weekly_returns.mean() * 100, 2)}%" if not weekly_returns.empty else "0%"
-            }
-        }, default_flow_style=False)
+        return success_response({
+            "ticker": ticker,
+            "weekly_returns": {str(date.date()): f"{round(ret * 100, 2)}%" for date, ret in weekly_returns.items()},
+            "total_weeks": len(weekly_returns),
+            "average_weekly_return": f"{round(weekly_returns.mean() * 100, 2)}%" if not weekly_returns.empty else "0%"
+        })
     except Exception as e:
-        return yaml.dump({"success": False, "error": f"Failed to get weekly returns for {ticker}: {str(e)}"}, default_flow_style=False)
+        return error_response(f"Failed to get weekly returns for {ticker}: {str(e)}")
 
 # Tool Schema Constants
 GET_WEEKLY_RETURNS_DESCRIPTION = (
