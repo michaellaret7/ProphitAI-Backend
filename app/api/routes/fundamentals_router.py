@@ -34,17 +34,14 @@ router = APIRouter(tags=["Company Fundamentals 🏢"])
 
 def parse_analyst_estimates_request(
     ticker: str = Path(..., description="Stock ticker symbol"),
-    quarters_back: int = Query(4, gt=0, le=20, description="Number of quarters of estimates to retrieve"),
-    simulation_date: Optional[str] = Query(None, description="Simulation date for backtesting (ISO format: YYYY-MM-DD or YYYY-MM-DDTHH:MM:SS)"),
+    periods_back: int = Query(None, gt=0, le=100, description="Number of periods to retrieve (quarters or years depending on period)"),
+    period: str = Query('quarter', description="Reporting period: 'quarter' or 'annual'"),
 ) -> AnalystEstimatesRequest:
     """Parse and validate query parameters into AnalystEstimatesRequest model"""
-    # Convert string date to datetime object if provided
-    sim_dt = datetime.fromisoformat(simulation_date) if simulation_date else None
-
     return AnalystEstimatesRequest(
         ticker=ticker,
-        quarters_back=quarters_back,
-        simulation_date=sim_dt,
+        periods_back=periods_back,
+        period=period,
     )
 
 
@@ -85,17 +82,17 @@ async def get_analyst_estimates(
 
     Args:
         ticker: Stock ticker symbol (e.g., 'AAPL', 'MSFT')
-        quarters_back: Number of quarters of estimates to retrieve (default: 4, max: 20)
-        simulation_date: Optional simulation date for backtesting purposes
+        periods_back: Number of periods to retrieve (default: 4, max: 100)
+        period: Reporting period - 'quarter' or 'annual' (default: 'quarter')
 
     Returns:
         Analyst estimates including EPS average/high/low, Revenue average/high/low,
-        EBITDA average, EBIT average, and Net Income average for each quarter
+        EBITDA average, EBIT average, and Net Income average for each period
     """
     return await get_analyst_estimates_controller(
         ticker=request.ticker,
-        quarters_back=request.quarters_back,
-        simulation_date=request.simulation_date,
+        periods_back=request.periods_back,
+        period=request.period
     )
 
 

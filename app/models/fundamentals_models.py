@@ -6,8 +6,8 @@ from datetime import datetime
 class AnalystEstimatesRequest(BaseModel):
     """Request model for fetching analyst estimates data"""
     ticker: str = Field(..., description="Stock ticker symbol")
-    quarters_back: int = Field(4, gt=0, le=20, description="Number of quarters of estimates to retrieve")
-    simulation_date: Optional[datetime] = Field(None, description="Simulation date for backtesting (optional)")
+    periods_back: int = Field(4, gt=0, le=100, description="Number of periods to retrieve (quarters or years depending on period)")
+    period: str = Field('quarter', description="Reporting period: 'quarter' or 'annual'")
 
     @field_validator('ticker')
     @classmethod
@@ -16,6 +16,14 @@ class AnalystEstimatesRequest(BaseModel):
         if not v or not v.strip():
             raise ValueError("Ticker must be provided and non-empty")
         return v.upper().strip()
+
+    @field_validator('period')
+    @classmethod
+    def validate_period(cls, v):
+        """Ensure period is either 'quarter' or 'annual'"""
+        if v not in ['quarter', 'annual']:
+            raise ValueError("Period must be either 'quarter' or 'annual'")
+        return v.lower()
 
 
 class AnalystDataRequest(BaseModel):

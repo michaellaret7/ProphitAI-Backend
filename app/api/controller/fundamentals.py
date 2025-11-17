@@ -18,27 +18,36 @@ from app.db.core.pull_fmp_data import FMP_API_DATA
 @handle_controller_errors
 async def get_analyst_estimates_controller(
     ticker: str,
-    quarters_back: int = 4,
-    simulation_date: Optional[datetime] = None,
+    periods_back: int = None,
+    period: str = 'quarter',
 ) -> Dict[str, Any]:
     """
     Controller to handle analyst estimates data retrieval for a ticker
     """
     # Delegate to repository
-    data = get_fundamental_data(
-        ticker=ticker,
-        statement_type="analyst_estimates",
-        quarters_back=quarters_back,
-        _simulation_date=simulation_date,
-    )
+    fmp = FMP_API_DATA()
+    # Reason: Map periods_back to limit parameter for FMP API
+    limit = periods_back if periods_back else 1000
+    data = await asyncio.to_thread(fmp.get_analyst_estimates, ticker, period=period, page=0, limit=limit)
+
+    # Handle None response
+    if data is None:
+        return ok_envelope(
+            message=f"No analyst estimates data found for {ticker}",
+            kind="fundamentals#analystEstimates",
+            resource_id=ticker,
+            self_link=f"/api/fundamentals/{ticker}/analyst-estimates",
+            counts={"totalItems": 0, "currentItemCount": 0},
+            payload=[],
+        )
 
     return ok_envelope(
         message="Analyst estimates retrieved successfully",
         kind="fundamentals#analystEstimates",
         resource_id=ticker,
         self_link=f"/api/fundamentals/{ticker}/analyst-estimates",
-        counts={"totalItems": len(data['data']), "currentItemCount": len(data['data'])},
-        payload=data['data'],
+        counts={"totalItems": len(data) if isinstance(data, list) else 0, "currentItemCount": len(data) if isinstance(data, list) else 0},
+        payload=data,
     )
 
 

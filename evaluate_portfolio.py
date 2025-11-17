@@ -284,66 +284,66 @@ from app.core.calculations.portfolio.utils import get_portfolio_returns, get_ben
 # }
 
 portfolio = {
-      "WFRD": {
-          "allocation": 0.075,
-          "position": "long"
-      },
-      "HESM": {
-          "allocation": 0.060,
-          "position": "long"
-      },
-      "JPM": {
-          "allocation": 0.086,
-          "position": "long"
-      },
-      "LMT": {
-          "allocation": 0.086,
-          "position": "long"
-      },
-      "GILD": {
-          "allocation": 0.075,
-          "position": "long"
-      },
-      "AMGN": {
-          "allocation": 0.065,
-          "position": "long"
-      },
-      "GIS": {
-          "allocation": 0.054,
-          "position": "long"
-      },
-      "SEE": {
-          "allocation": 0.054,
-          "position": "long"
-      },
-      "NTAP": {
-          "allocation": 0.054,
-          "position": "long"
-      },
-      "UI": {
-          "allocation": 0.043,
-          "position": "long"
-      },
-      "SHW": {
-          "allocation": 0.043,
-          "position": "long"
-      },
-      "QQQ": {
-          "allocation": 0.110,
-          "position": "long"
-      },
-      "VXUS": {
-          "allocation": 0.060,
-          "position": "long"
-      },
-      "BND": {
-          "allocation": 0.090,
-          "position": "long"
-      },
-      "GLD": {
-          "allocation": 0.040,
-          "position": "long"
-      }
+    "ORCL": {
+        "allocation": 0.0636,
+        "position": "long"
+    },
+    "MSFT": {
+        "allocation": 0.0636,
+        "position": "long"
+    },
+    "LLY": {
+        "allocation": 0.0636,
+        "position": "long"
+    },
+    "MRK": {
+        "allocation": 0.0636,
+        "position": "long"
+    },
+    "JPM": {
+        "allocation": 0.0636,
+        "position": "long"
+    },
+    "BAC": {
+        "allocation": 0.0636,
+        "position": "long"
+    },
+    "KO": {
+        "allocation": 0.0636,
+        "position": "long"
+    },
+    "XOM": {
+        "allocation": 0.0636,
+        "position": "long"
+    },
+    "DUK": {
+        "allocation": 0.0636,
+        "position": "long"
+    },
+    "CAT": {
+        "allocation": 0.0636,
+        "position": "long"
+    },
+    "AAPL": {
+        "allocation": 0.0636,
+        "position": "long"
+    },
+    "SCHD": {
+        "allocation": 0.10,
+        "position": "long"
+    },
+    "IEMG": {
+        "allocation": 0.10,
+        "position": "long"
+    },
+    "BND": {
+        "allocation": 0.08,
+        "position": "long"
+    },
+    "DGRO": {
+        "allocation": 0.02,
+        "position": "long"
+    }
 }
 
 
