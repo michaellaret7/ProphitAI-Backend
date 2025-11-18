@@ -137,26 +137,33 @@ async def get_stock_grades_individual_controller(
 @handle_controller_errors
 async def get_stock_grades_summary_controller(
     ticker: str,
-    start_date: Optional[datetime] = None,
-    end_date: Optional[datetime] = None,
+    limit: int = 100
 ) -> Dict[str, Any]:
     """
     Controller to handle aggregated stock grades summary data retrieval for a ticker
     """
-    # Delegate to repository
-    data = get_stock_grades_summary(
-        ticker=ticker,
-        start=start_date,
-        end=end_date,
-    )
+
+    fmp_api = FMP_API_DATA()
+    # Reason: Run blocking HTTP request in thread pool to prevent event loop blocking
+    data = await asyncio.to_thread(fmp_api.get_stock_grades_summary, ticker, limit=limit)
+
+    if not data:
+        return ok_envelope(
+            message=f"No stock grades summary data found for {ticker}",
+            kind="fundamentals#stockGradesSummary",
+            resource_id=ticker,
+            self_link=f"/api/fundamentals/{ticker}/grades/summary",
+            counts={"totalItems": 0, "currentItemCount": 0},
+            payload=[],
+        )
 
     return ok_envelope(
         message="Stock grades summary retrieved successfully",
         kind="fundamentals#stockGradesSummary",
         resource_id=ticker,
         self_link=f"/api/fundamentals/{ticker}/grades/summary",
-        counts={"totalItems": data['count'], "currentItemCount": data['count']},
-        payload=data['items'],
+        counts={"totalItems": len(data), "currentItemCount": len(data)},
+        payload=data,
     )
 
 
@@ -402,3 +409,4 @@ async def get_company_notes_controller(ticker: str) -> Dict[str, Any]:
         counts={"totalItems": len(data) if isinstance(data, list) else 1, "currentItemCount": len(data) if isinstance(data, list) else 1},
         payload=data,
     )
+

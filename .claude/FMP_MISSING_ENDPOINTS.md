@@ -47,7 +47,7 @@
 
 ---
 
-## Missing Endpoints by Category (193+ endpoints)
+## Missing Endpoints by Category
 
 ### Company Information (11 missing)
 - /profile-cik
@@ -62,11 +62,6 @@
 - /key-executives
 - /governance-executive-compensation
 - /executive-compensation-benchmark
-
-### Quote - Batch (3 missing)
-- /batch-quote-short
-- /batch-aftermarket-trade
-- /batch-aftermarket-quote
 
 ### Quote - Exchange & Asset Lists (7 missing)
 - /batch-exchange-quote
@@ -90,13 +85,6 @@
 - /balance-sheet-statement-growth
 - /cash-flow-statement-growth
 - /financial-growth
-- /financial-reports-dates
-- /financial-reports-json
-- /financial-reports-xlsx
-- /income-statement-as-reported
-- /balance-sheet-statement-as-reported
-- /cash-flow-statement-as-reported
-- /financial-statement-full-as-reported
 
 ### Economics (4 missing)
 - /treasury-rates
@@ -140,15 +128,6 @@
 - /price-target-consensus
 - /grades-consensus
 
-### Market Performance (6 missing)
-- /sector-performance-snapshot
-- /industry-performance-snapshot
-- /sector-pe-snapshot
-- /industry-pe-snapshot
-- /biggest-gainers
-- /biggest-losers
-- /most-actives
-
 ### Technical Indicators (9 missing)
 - /technical-indicators/sma
 - /technical-indicators/ema
@@ -190,14 +169,6 @@
 - /insider-trading/statistics
 - /acquisition-of-beneficial-ownership
 
-### Indexes (7 missing)
-- /index-list
-- /sp500-constituent
-- /nasdaq-constituent
-- /dowjones-constituent
-- /historical-sp500-constituent
-- /historical-nasdaq-constituent
-- /historical-dowjones-constituent
 
 ### Market Hours (3 missing)
 - /exchange-market-hours
@@ -264,39 +235,3 @@
 - /cash-flow-statement-growth-bulk
 - /eod-bulk
 
----
-
-## Summary
-- **Total endpoints in PDF:** ~257
-- **Currently implemented:** 43
-- **Missing endpoints:** ~214
-
-## Priority Recommendations for Implementation
-Based on common usage patterns for institutional portfolio management:
-
-### High Priority
-1. TTM Financial Statements (income-statement-ttm, balance-sheet-statement-ttm, cash-flow-statement-ttm)
-2. Financial Growth Metrics (income-statement-growth, balance-sheet-statement-growth, cash-flow-statement-growth)
-3. Earnings Calendar & Earnings data
-4. Economic Indicators & Treasury Rates
-5. Stock Splits data
-6. Institutional Ownership Latest & Extract
-7. Technical Indicators (SMA, EMA, RSI)
-8. Bulk endpoints for batch processing
-9. Index constituents (SP500, Nasdaq, Dow Jones)
-10. DCF Valuation endpoints
-
-### Medium Priority
-1. Insider Trading data
-2. SEC Filings
-3. Market screeners
-4. Additional quote formats
-5. Senate/House trading
-6. ETF sector weightings
-7. Market gainers/losers/actives
-
-### Lower Priority
-1. Forex/Crypto specific endpoints
-2. Commitment of Traders
-3. Crowdfunding
-4. Some specialized technical indicators

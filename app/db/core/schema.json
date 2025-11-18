@@ -295,11 +295,6 @@
           "year",
           "date",
           "content"
-        ],
-        "fundamental_reports (table)": [
-          "ticker_id",
-          "date",
-          "content"
         ]
       },
       "price_data (schema)": {

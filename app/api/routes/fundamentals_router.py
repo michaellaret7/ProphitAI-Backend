@@ -34,7 +34,7 @@ router = APIRouter(tags=["Company Fundamentals 🏢"])
 
 def parse_analyst_estimates_request(
     ticker: str = Path(..., description="Stock ticker symbol"),
-    periods_back: int = Query(None, gt=0, le=100, description="Number of periods to retrieve (quarters or years depending on period)"),
+    periods_back: int = Query(4, gt=0, le=100, description="Number of periods to retrieve (quarters or years depending on period)"),
     period: str = Query('quarter', description="Reporting period: 'quarter' or 'annual'"),
 ) -> AnalystEstimatesRequest:
     """Parse and validate query parameters into AnalystEstimatesRequest model"""
@@ -173,18 +173,14 @@ async def get_stock_grades_summary(
 
     Args:
         ticker: Stock ticker symbol (e.g., 'AAPL', 'MSFT')
-        start_date: Optional start date for filtering grades
-        end_date: Optional end date for filtering grades
-        limit: Optional maximum number of summaries to return (default: all)
-        ascending: Sort order by date (default: true for oldest first)
+        limit: Maximum number of summaries to return (default: 100, max: 1000)
 
     Returns:
         Aggregated counts of strong buy, buy, hold, sell, and strong sell ratings
     """
     return await get_stock_grades_summary_controller(
         ticker=request.ticker,
-        start_date=request.start_date,
-        end_date=request.end_date,
+        limit=request.limit or 100,
     )
 
 

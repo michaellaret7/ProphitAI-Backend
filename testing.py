@@ -248,8 +248,9 @@ if __name__ == "__main__":
     # Example usage: stream quotes for a list of tickers
     tickers = ["AAPL", "MSFT", "GOOGL", "TSLA", "NVDA", "META", "SPY", "QQQ", "IWM", "DIA"]
 
-    # Start streaming with specific start and end times (UTC)
-    # Example: Start at 2:30 PM UTC (9:30 AM EST), end at 9:00 PM UTC (4:00 PM EST)
-    df = stream(tickers)
+    # # Start streaming with specific start and end times (UTC)
+    # # Example: Start at 2:30 PM UTC (9:30 AM EST), end at 9:00 PM UTC (4:00 PM EST)
+    df = stream(tickers, start_time="14:45", end_time="21:00")
+
     
 

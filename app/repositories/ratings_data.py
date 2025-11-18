@@ -44,13 +44,11 @@ def get_stock_grades_individual(ticker: str, *, start: Optional[datetime] = None
 
 
 @with_session('market')
-def get_stock_grades_summary(ticker: str, *, start: Optional[datetime] = None, end: Optional[datetime] = None, session=None) -> Dict[str, Any]:
+def get_stock_grades_summary(ticker: str, *, limit: Optional[int] = None, session=None) -> Dict[str, Any]:
     q = session.query(StockGradesSummary).join(Ticker).filter(Ticker.ticker == ticker.upper())
-    if start is not None:
-        q = q.filter(StockGradesSummary.date >= start)
-    if end is not None:
-        q = q.filter(StockGradesSummary.date <= end)
-    q = q.order_by(StockGradesSummary.date.asc())
+    q = q.order_by(StockGradesSummary.date.desc())
+    if limit is not None:
+        q = q.limit(limit)
     rows: List[StockGradesSummary] = q.all()
     items: List[Dict[str, Any]] = []
     for r in rows:
