@@ -56,7 +56,7 @@ def macro_indicators(
 
     # Fetch data for each indicator and format separately
     # Reason: Each indicator has different release schedules (daily, weekly, monthly) so keep separate
-    indicator_outputs = []
+    results = {}
 
     for indicator in indicators:
         df = get_economic_indicators(
@@ -83,25 +83,22 @@ def macro_indicators(
             df[f'{indicator}_value'] = df[f'{indicator}_value'].round(3)
 
             # Convert date column to ISO format strings
-            df['date'] = df['date'].astype(str)
+            df['date'] = df['date'].dt.strftime('%Y-%m-%d')
 
-            # Convert to string format
-            indicator_table = df.to_string(index=False, header=True)
-            indicator_outputs.append(indicator_table)
-
-    # Combine all indicator outputs with spacing
-    if indicator_outputs:
-        results = "\n\n".join(indicator_outputs)
-    else:
-        results = "No data available for the specified indicators and date range."
+            # Convert to list of dictionaries
+            results[indicator] = df.to_dict(orient='records')
+    
+    if not results:
+        return success_response("No data available for the specified indicators and date range.")
 
     return success_response(results)
+
 
 
 # Tool Schema Constants
 MACRO_INDICATORS_DESCRIPTION = (
     "Fetch historical economic indicator data for one or more macroeconomic indicators. "
-    "Returns time-series data with date, indicator name, and value for each indicator requested. "
+    "Returns a dictionary where keys are indicator names and values are lists of data points (date and value). "
     "\n\n**Available Indicators (16 total):**"
     "\n  • Price Indices: CPI, inflationRate"
     "\n  • Economic Output: GDP, realGDP, nominalPotentialGDP, realGDPPerCapita"

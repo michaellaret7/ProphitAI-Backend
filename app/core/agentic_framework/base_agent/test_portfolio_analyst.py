@@ -216,14 +216,14 @@ Rules:
         system_prompt=system_prompt,
         user_prompt=user_prompt,
         # provider="openai",
-        # model="gpt-5.1",
+        # model="gpt-5-mini",
         provider="anthropic",  # Use OpenAI
-        model="claude-haiku-4-5-20251001",
-        # model="claude-sonnet-4-5-20250929",  # Use GPT-4o for complex analysis
+        # model="claude-haiku-4-5-20251001",
+        model="claude-sonnet-4-5-20250929", 
         max_iterations=150,  # Allow many iterations for thorough analysis
-        print_mode=PrintMode.VERBOSE,
+        print_mode=PrintMode.DEBUG,
         plan_first=True,  # Create a plan before executing
-        temperature=0.7,
+        # temperature=0.7,
         # reasoning_effort="medium",
         simulation_date=datetime(2023, 1, 1)
     )

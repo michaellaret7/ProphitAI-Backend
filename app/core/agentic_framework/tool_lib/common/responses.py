@@ -21,6 +21,14 @@ def success_response(data: Any) -> str:
         >>> success_response({"metric": 0.5})
         'success: true\\ndata:\\n  metric: 0.5\\n'
     """
+        # Custom representer for multi-line strings to use literal block style
+    def str_representer(dumper, data):
+        if isinstance(data, str) and '\n' in data:  # Multi-line string
+            return dumper.represent_scalar('tag:yaml.org,2002:str', data, style='|')
+        return dumper.represent_scalar('tag:yaml.org,2002:str', data)
+    
+    yaml.add_representer(str, str_representer)
+    
     return yaml.dump({"success": True, "data": data}, default_flow_style=False)
 
 

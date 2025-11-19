@@ -138,10 +138,10 @@ def macro_commodities(
         resampled_df['date'] = resampled_df['date'].astype(str)
 
         # Convert to string format
-        results = resampled_df.to_string(index=False)
+        results = resampled_df.to_dict(orient='records')
     else:
         results = "No data available for the specified commodities and date range."
-
+    
     return success_response(results)
 
 # Tool Schema Constants

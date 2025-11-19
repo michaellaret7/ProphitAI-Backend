@@ -114,7 +114,7 @@ def macro_rates(
         resampled_df['date'] = resampled_df['date'].astype(str)
 
         # Convert to string format
-        results = resampled_df.to_string(index=False)
+        results = resampled_df.to_dict(orient='records')
     else:
         results = "No data available for the specified countries and date range."
 

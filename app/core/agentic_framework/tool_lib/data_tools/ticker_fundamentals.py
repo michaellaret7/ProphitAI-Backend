@@ -4,6 +4,12 @@ from app.repositories.fundamental_data import get_fundamental_data as _get_funda
 from app.utils.decorators.tool_validation import validate_ticker_arg, validate_enum_arg, validate_numeric_arg
 from app.utils.decorators.tool_validation import log_simulation_data_range
 from app.core.agentic_framework.tool_lib.common.responses import success_response, error_response
+import pandas as pd
+import tiktoken
+
+def _count_tokens(text: str) -> int:
+    """Count the number of tokens in a string using tiktoken."""
+    return len(tiktoken.encoding_for_model("gpt-4o").encode(text))
 
 @validate_ticker_arg()
 @validate_enum_arg("statement_type", ["income_statement", "balance_sheet", "cash_flow", "financial_ratios"])

@@ -180,8 +180,27 @@ def stream(tickers: list[str], output_file: str = "live_quotes.csv", start_time:
         DataFrame containing all collected quotes with columns:
         timestamp, symbol, price, day_high, day_low, open, volume, log_returns
     """
-    # Initialize empty dataframe
+    # Check if file exists and load previous data if it's from a different day
+    import os
     df = pd.DataFrame()
+    
+    if os.path.exists(output_file):
+        try:
+            existing_df = pd.read_csv(output_file)
+            if not existing_df.empty:
+                existing_df['timestamp'] = pd.to_datetime(existing_df['timestamp'])
+                current_date = get_current_utc_time().date()
+                last_date = existing_df['timestamp'].max().date()
+                
+                # If data is from a previous day, keep it and append new data
+                if last_date < current_date:
+                    df = existing_df
+                    print(f"Loaded {len(existing_df)} existing records from previous days")
+                else:
+                    print(f"Starting fresh for today")
+        except Exception as e:
+            print(f"Could not load existing data: {e}")
+            df = pd.DataFrame()
 
     # Wait until start_time if provided
     if start_time:
@@ -246,11 +265,9 @@ def stream(tickers: list[str], output_file: str = "live_quotes.csv", start_time:
 
 if __name__ == "__main__":
     # Example usage: stream quotes for a list of tickers
-    tickers = ["AAPL", "MSFT", "GOOGL", "TSLA", "NVDA", "META", "SPY", "QQQ", "IWM", "DIA"]
+    tickers = ["AAPL", "MSFT", "GOOGL", "TSLA", "NVDA", "META", "SPY", "QQQ", "IWM", "DIA", "NVDA", "CRWV", "BTC"]
 
     # # Start streaming with specific start and end times (UTC)
     # # Example: Start at 2:30 PM UTC (9:30 AM EST), end at 9:00 PM UTC (4:00 PM EST)
     df = stream(tickers, start_time="14:45", end_time="21:00")
-
-    
 

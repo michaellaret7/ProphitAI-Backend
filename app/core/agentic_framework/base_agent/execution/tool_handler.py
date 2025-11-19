@@ -12,6 +12,7 @@ from app.core.agentic_framework.base_agent.logging.tool_trace import log_tool_ca
 from app.core.agentic_framework.base_agent.context_manager import prune_completed_task_messages, prune_note_content
 import yaml
 from app.core.agentic_framework.base_agent.utils.models import TaskStatus
+from app.core.agentic_framework.tool_lib.common.responses import error_response
 
 if TYPE_CHECKING:
     from ..agent import BaseAgent
@@ -269,7 +270,7 @@ class ToolHandler:
         if not func:
             error_msg = f"Tool '{name}' not found. Available: {list(self.agent.tool_functions.keys())}"
             print(f"  ⚠️ {error_msg}")
-            return {"error": error_msg}
+            return error_response(error_msg)
 
         try:
             # Auto-inject _simulation_date for simulation agents
@@ -283,7 +284,7 @@ class ToolHandler:
         except Exception as e:
             error_msg = f"Error executing {name}: {str(e)}"
             print(f"  ⚠️ {error_msg}")
-            return {"error": error_msg}
+            return error_response(error_msg)
     
     def _check_tool_success(self, tool_validation_dict: dict) -> tuple[bool, str]:
         """Check if the tool call was successful.
