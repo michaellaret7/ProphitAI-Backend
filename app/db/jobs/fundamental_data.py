@@ -968,14 +968,22 @@ class UpdateFundamentalData:
                     # Fetch transcript from API
                     data = self.fmp_api.get_earnings_transcript(ticker_symbol, year, quarter)
                     
-                    # Check if data is a dictionary (not a list) and has content
-                    if data and isinstance(data, dict) and data.get('content'):
+                    # Handle both list and dict responses from API
+                    transcript_data = None
+                    if data:
+                        if isinstance(data, list) and len(data) > 0:
+                            transcript_data = data[0]
+                        elif isinstance(data, dict):
+                            transcript_data = data
+                    
+                    # Check if we have valid transcript data with content
+                    if transcript_data and transcript_data.get('content'):
                         record = {
                             'ticker_id': ticker_id,
                             'period': str(quarter),
                             'year': year,
-                            'date': self._safe_date(data.get('date')),
-                            'content': data.get('content')
+                            'date': self._safe_date(transcript_data.get('date')),
+                            'content': transcript_data.get('content')
                         }
                         
                         stmt = insert(EarningsTranscript).values(record)

@@ -79,9 +79,9 @@ class ToolHandler:
             elif self.agent.print_mode == PrintMode.SUBAGENT:
                 print(f"\n[Sub-agent] Calling tool: {_GREEN}{name}{_RESET}")
             elif self.agent.print_mode == PrintMode.PRODUCTION:
-                # Minimal output: just tool name, no formatting
                 print(f"  → {name}")
 
+            # NOTE: This is entirely for printing the arguments to the console. It is not used for any functionality
             if args:
                 # Filter out internal parameters for display
                 display_args = {k: v for k, v in args.items() if k != '_simulation_date'}
@@ -189,6 +189,7 @@ class ToolHandler:
             # Write entire tool call history to tools.yaml
             log_tool_call(self.tool_call_history, output_dir=getattr(self.agent, "output_dir", None))
 
+            # NOTE: This is entirely for printing the result to the console. It is not used for any functionality
             if self.agent.print_mode == PrintMode.DEBUG:
                 print(f"  ← Result: {result}")
             elif self.agent.print_mode == PrintMode.VERBOSE:

@@ -40,7 +40,8 @@ class MarketAnalyst(SubAgent):
         super().__init__(
             user_prompt=NEW_MARKET_ANALYST_USER_PROMPT,
             provider="anthropic",
-            model="claude-sonnet-4-5-20250929", 
+            # model="claude-sonnet-4-5-20250929", 
+            model="claude-haiku-4-5-20251001",
             max_iterations=75,
             print_mode=PrintMode.DEBUG,
             temperature=0.5,

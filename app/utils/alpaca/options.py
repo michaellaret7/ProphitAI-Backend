@@ -52,7 +52,6 @@ class OptionsService:
         self.alpaca = alpaca
         self.trading = alpaca.get_client()  # trading client from your client.py
         self.data = OptionHistoricalDataClient(alpaca.api_key, alpaca.secret_key)
-        # normalize feed: "indicative" (free) or "opra" (paid)
         self.feed = "opra" if str(feed).lower().startswith("opra") else "indicative"
 
     @staticmethod
