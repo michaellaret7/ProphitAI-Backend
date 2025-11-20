@@ -1,9 +1,11 @@
 from app.db.core.pull_fmp_data import FMP_API_DATA
 from app.core.agentic_framework.tool_lib.common.responses import success_response, error_response
-from app.utils.serialize_output import serialize_sqlalchemy_obj
+from app.utils.decorators.tool_validation import log_simulation_data_range
+from app.utils.tool_validator import ToolValidator
+from app.utils.time_utils import get_current_utc_time
 from pydantic import BaseModel
 from datetime import datetime, timedelta
-from typing import List, Dict
+from typing import List, Dict, Optional
 import tiktoken
 import pandas as pd
 
@@ -88,14 +90,19 @@ def _fetch_news_with_sliding_window(limit_per_window: int = 75, from_date: str =
 
     return all_data
 
-def get_general_news(article_limit: int = 500, from_date: str = None, to_date: str = None):
+@log_simulation_data_range()
+def get_general_news(
+    row_limit: int = 500,
+    days_back: int = 30,
+    _simulation_date: Optional[datetime] = None
+):
     """
     Get general news using sliding window approach for large date ranges.
 
     Args:
-        article_limit: Maximum number of results to return (applied after fetching, max 500)
-        from_date: Start date in YYYY-MM-DD format
-        to_date: End date in YYYY-MM-DD format
+        row_limit: Maximum number of results to return (max 1000)
+        days_back: Number of days to look back from today (or simulation date). Default 30 days.
+        _simulation_date: INTERNAL USE ONLY - For simulation mode, not exposed to agents
 
     Returns:
         Success response with list of news articles or error response
@@ -106,32 +113,30 @@ def get_general_news(article_limit: int = 500, from_date: str = None, to_date: s
         'NYTimes', 'New York Times', 'Barrons', 'Financial Times'
     ]
 
-    try:
-        # Validate limit
-        if article_limit <= 0:
-            return error_response("Article limit must be a positive integer, try again with a valid limit.")
-        if article_limit > 500:
-            article_limit = 500
-        
-        # Validate date format if provided
-        if from_date:
-            try:
-                datetime.strptime(from_date, '%Y-%m-%d')
-            except ValueError:
-                return error_response(f"Invalid from_date format: {from_date}. Expected YYYY-MM-DD, please try again.")
-        
-        if to_date:
-            try:
-                datetime.strptime(to_date, '%Y-%m-%d')
-            except ValueError:
-                return error_response(f"Invalid to_date format: {to_date}. Expected YYYY-MM-DD, please try again.")
-        
-        # Validate date range logic
-        if from_date and to_date:
-            if datetime.strptime(from_date, '%Y-%m-%d') > datetime.strptime(to_date, '%Y-%m-%d'):
-                return error_response("from_date cannot be after to_date")
+    # Validate inputs using ToolValidator
+    v = ToolValidator()
+    v.require_numeric('row_limit', row_limit, min_val=1, max_val=1000)
+    v.require_numeric('days_back', days_back, min_val=1, max_val=1095)
 
-        data = _fetch_news_with_sliding_window(limit_per_window=1000, from_date=from_date, to_date=to_date)
+    if not v.is_valid():
+        return v.error_response()
+
+    # Get validated values
+    row_limit = v.get('row_limit')
+    days_back = v.get('days_back')
+
+    try:
+        # Determine "today" - use simulation date if provided, otherwise current UTC time
+        to_date = _simulation_date if _simulation_date else get_current_utc_time()
+
+        # Calculate from_date as to_date minus days_back
+        from_date = to_date - timedelta(days=days_back)
+
+        # Format dates as YYYY-MM-DD strings
+        from_date_str = from_date.strftime('%Y-%m-%d')
+        to_date_str = to_date.strftime('%Y-%m-%d')
+
+        data = _fetch_news_with_sliding_window(limit_per_window=1000, from_date=from_date_str, to_date=to_date_str)
 
         if not isinstance(data, list):
             return error_response(f"Failed to retrieve general news from FMP API. Moving on to next tool.")
@@ -143,7 +148,7 @@ def get_general_news(article_limit: int = 500, from_date: str = None, to_date: s
             if item.get('publisher') in TIER_1_PUBLISHERS
         ]
 
-        filtered_data = sorted(filtered_data, key=lambda x: x['publishedDate'], reverse=True)[:article_limit]
+        filtered_data = sorted(filtered_data, key=lambda x: x['publishedDate'], reverse=True)[:row_limit]
 
         df = pd.DataFrame(filtered_data)
         # Handle case where filtered_data is empty to avoid KeyError
@@ -153,14 +158,13 @@ def get_general_news(article_limit: int = 500, from_date: str = None, to_date: s
             # Update filtered_data with the cleaned dates
             for i, item in enumerate(filtered_data):
                 item['publishedDate'] = str(df.iloc[i]['publishedDate'])
-
+        
         results = df.to_dict(orient='records')
 
         return success_response(results)
 
     except Exception as e:
         return error_response(f"Error retrieving general news: {str(e)}")
-
 
 
 # Tool Schema Constants
@@ -179,30 +183,28 @@ GET_GENERAL_NEWS_DESCRIPTION = (
     "\n  - Tracking major financial events"
     "\n  - Researching specific time periods"
     "\n\n**Examples:**"
-    "\n  get_general_news(article_limit=10)"
-    "\n  get_general_news(from_date='2023-01-01', to_date='2023-01-31')"
+    "\n  get_general_news(row_limit=10, days_back=7)"
+    "\n  get_general_news(row_limit=50, days_back=30)"
 )
 
 GET_GENERAL_NEWS_PARAMETERS = {
     "type": "object",
     "properties": {
-        "article_limit": {
+        "row_limit": {
             "type": "integer",
             "description": (
-                "Maximum number of articles to return (max 500). "
+                "Maximum number of articles to return (max 1000). "
                 "Default is 500."
             ),
             "default": 500
         },
-        "from_date": {
-            "type": "string",
-            "description": "Start date for news search in YYYY-MM-DD format.",
-            "default": None
-        },
-        "to_date": {
-            "type": "string",
-            "description": "End date for news search in YYYY-MM-DD format.",
-            "default": None
+        "days_back": {
+            "type": "integer",
+            "description": (
+                "Number of days to look back from today. "
+                "Range: 1-1095 days. Default is 30 days."
+            ),
+            "default": 30
         }
     },
     "additionalProperties": False

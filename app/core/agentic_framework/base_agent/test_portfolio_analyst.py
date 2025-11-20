@@ -30,7 +30,7 @@ from app.core.agentic_framework.tool_lib.ticker_tools.performance import (
 from app.core.agentic_framework.tool_lib.ticker_tools.factors import (
     CALCULATE_TICKER_FACTORS_TOOL,
 )
-from app.core.agentic_framework.tool_lib.data_tools.ticker_fundamentals import (
+from app.core.agentic_framework.tool_lib.data_tools.fundamentals import (
     GET_TICKER_FUNDAMENTAL_DATA_TOOL,
 )
 from app.core.agentic_framework.tool_lib.data_tools.stock_screener.tool import STOCK_SCREENER_TOOL
@@ -173,8 +173,7 @@ Please perform the following tasks:
 
 3. **Portfolio Objectives & Constraints**:
    - Target mix: 70% equities, 30% ETFs
-   - Total positions: ~15
-   - Exclude highly speculative names such as NVDA and PLTR
+   - Total positions: 15-20 [This is a hard constraint, violating this will result in severe consequences]
    - Aim for balanced sector and factor exposure per your defined structure
 
 4. **Selection & Sizing**:
@@ -216,16 +215,15 @@ Rules:
         system_prompt=system_prompt,
         user_prompt=user_prompt,
         # provider="openai",
-        # model="gpt-5-mini",
+        # model="gpt-5.1",
         provider="anthropic",  # Use OpenAI
-        # model="claude-haiku-4-5-20251001",
-        model="claude-sonnet-4-5-20250929", 
+        model="claude-haiku-4-5-20251001",
+        # model="claude-sonnet-4-5-20250929", 
         max_iterations=150,  # Allow many iterations for thorough analysis
         print_mode=PrintMode.DEBUG,
         plan_first=True,  # Create a plan before executing
         # temperature=0.7,
-        # reasoning_effort="medium",
-        simulation_date=datetime(2023, 1, 1)
+        reasoning_effort="none"
     )
 
     # Register analysis tools

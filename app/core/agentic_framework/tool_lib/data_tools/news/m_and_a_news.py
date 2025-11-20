@@ -1,7 +1,10 @@
-from app.db.core.pull_fmp_data import FMP_API_DATA
 from app.core.agentic_framework.tool_lib.common.responses import success_response, error_response
-from pydantic import BaseModel
-from typing import List, Dict
+from app.utils.decorators.tool_validation import log_simulation_data_range
+from app.utils.tool_validator import ToolValidator
+from app.utils.time_utils import get_current_utc_time
+from app.db.core.pull_fmp_data import FMP_API_DATA
+from datetime import datetime, timedelta
+from typing import List, Dict, Optional
 import pandas as pd
 import tiktoken
 
@@ -45,23 +48,48 @@ def _deduplicate_ma_data(data: List[Dict]) -> List[Dict]:
     return df.to_dict('records')
 
 
-def get_mergers_acquisitions(row_limit: int = 200):
+@log_simulation_data_range()
+def get_mergers_acquisitions(
+    row_limit: int = 200,
+    days_back: int = 365,
+    _simulation_date: Optional[datetime] = None
+):
     """
     Get latest mergers and acquisitions data from FMP with automatic deduplication.
 
     Args:
-        row_limit: Maximum number of results (default: 200)
+        row_limit: Maximum number of results to return (max 1000)
+        days_back: Number of days to look back from today (or simulation date). Default 365 days.
+        _simulation_date: INTERNAL USE ONLY - For simulation mode, not exposed to agents
 
     Returns:
         Success response with deduplicated M&A transactions or error response
     """
+    # Validate inputs using ToolValidator
+    v = ToolValidator()
+    v.require_numeric('row_limit', row_limit, min_val=1, max_val=1000)
+    v.require_numeric('days_back', days_back, min_val=1, max_val=3650)
+
+    if not v.is_valid():
+        return v.error_response()
+
+    # Get validated values
+    row_limit = v.get('row_limit')
+    days_back = v.get('days_back')
+
     try:
+        # Determine "today" - use simulation date if provided, otherwise current UTC time
+        to_date = _simulation_date if _simulation_date else get_current_utc_time()
+
+        # Calculate from_date as to_date minus days_back
+        from_date = to_date - timedelta(days=days_back)
+
         fmp_api = FMP_API_DATA()
         data = fmp_api.get_mergers_acquisitions_latest(page=0, limit=1000)
-        
+
         if data is None:
             return error_response("Failed to retrieve M&A data from FMP API")
-            
+
         if not isinstance(data, list):
             return error_response("Invalid data format received from FMP API")
 
@@ -69,23 +97,33 @@ def get_mergers_acquisitions(row_limit: int = 200):
         deduplicated_data = _deduplicate_ma_data(data)
 
         df = pd.DataFrame(deduplicated_data)
+
+        # Convert transactionDate to datetime for filtering
         df['transactionDate'] = pd.to_datetime(df['transactionDate'])
+
+        # Filter by date range (from_date to to_date)
+        df = df[(df['transactionDate'] >= from_date) & (df['transactionDate'] <= to_date)]
+
+        # Sort by date descending (most recent first)
         df = df.sort_values('transactionDate', ascending=False)
         df = df.reset_index(drop=True)
+
         df.drop(columns=['acceptedDate', 'link', 'cik', 'targetedCik'], inplace=True)
         df.rename(columns={'targetedCompanyName': 'acquiredCompanyName', 'targetedSymbol': 'acquiredCompanySymbol'}, inplace=True)
         df = df.head(row_limit)
-        
+
         # Format date to string to avoid Timestamp object serialization issues
         df['transactionDate'] = df['transactionDate'].dt.strftime('%Y-%m-%d')
-        
+
         results = df.to_dict(orient='records')
-        
+
         return success_response(results)
 
     except Exception as e:
         return error_response(f"Error retrieving M&A data: {str(e)}")
 
+if __name__ == "__main__":
+    print(get_mergers_acquisitions(row_limit=10, days_back=30, _simulation_date=datetime(2025, 1, 1)))
 
 # Tool Schema Constants
 GET_MERGERS_ACQUISITIONS_DESCRIPTION = (
@@ -104,8 +142,8 @@ GET_MERGERS_ACQUISITIONS_DESCRIPTION = (
     "\n  - Identifying consolidation trends in sectors"
     "\n  - Finding details on specific recent deals"
     "\n\n**Examples:**"
-    "\n  get_mergers_acquisitions(row_limit=50)"
-    "\n  get_mergers_acquisitions()  # Uses default limit of 200"
+    "\n  get_mergers_acquisitions(row_limit=50, days_back=180)"
+    "\n  get_mergers_acquisitions(row_limit=100, days_back=730)  # Last 2 years"
 )
 
 GET_MERGERS_ACQUISITIONS_PARAMETERS = {
@@ -114,11 +152,18 @@ GET_MERGERS_ACQUISITIONS_PARAMETERS = {
         "row_limit": {
             "type": "integer",
             "description": (
-                "Maximum number of M&A transactions to return. "
-                "Default is 200. The tool fetches more data internally and deduplicates, "
-                "then limits the result to this number."
+                "Maximum number of M&A transactions to return (max 1000). "
+                "Default is 200."
             ),
             "default": 200
+        },
+        "days_back": {
+            "type": "integer",
+            "description": (
+                "Number of days to look back from today. "
+                "Range: 1-3650 days. Default is 365 days (1 year)."
+            ),
+            "default": 365
         }
     },
     "additionalProperties": False

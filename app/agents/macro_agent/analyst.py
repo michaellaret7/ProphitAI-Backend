@@ -15,13 +15,12 @@ from app.core.agentic_framework.tool_lib.macro_tools.indicators import MACRO_IND
 from app.core.agentic_framework.tool_lib.macro_tools.rates import MACRO_RATES_TOOL
 from app.core.agentic_framework.tool_lib.macro_tools.commodities import MACRO_COMMODITIES_TOOL
 from app.core.agentic_framework.tool_lib.ticker_tools.weekly_returns import GET_WEEKLY_RETURNS_TOOL
-from app.agents.market_analyst.prompts import MARKET_ANALYST_USER_PROMPT, NEW_MARKET_ANALYST_USER_PROMPT
-from app.core.agentic_framework.tool_lib.data_tools.sector_perf import GET_SECTOR_PERFORMANCE_TOOL
-from app.core.agentic_framework.tool_lib.data_tools.sector_pe import GET_SECTOR_PE_TOOL
+from app.agents.macro_agent.prompts import MARKET_ANALYST_USER_PROMPT, NEW_MARKET_ANALYST_USER_PROMPT
+from app.core.agentic_framework.tool_lib.data_tools.sectors import GET_SECTOR_PERFORMANCE_TOOL, GET_SECTOR_PE_TOOL
 
 #TODO: This macro analyst agent will be its own agent that will have and run sub agents. The optimizer and builder will use the output of this agent to make their decisions.
 # The macro analyst will run ONCE every week to refresh the latest data driven macro backdrop and outlook
-
+# THIS IS UNFINISHED, BUILD THIS AFTER THE OPTIMIZATION AGENT IS FINISHED
 
 class MarketAnalyst(SubAgent):
     """Specialized agent for comprehensive market and sector analysis.

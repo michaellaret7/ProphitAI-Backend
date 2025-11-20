@@ -144,6 +144,7 @@ def macro_commodities(
     
     return success_response(results)
 
+
 # Tool Schema Constants
 MACRO_COMMODITIES_DESCRIPTION = (
     "Fetch historical commodity price data (OHLCV) for one or more commodities. "

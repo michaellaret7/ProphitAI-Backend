@@ -25,7 +25,8 @@
       "Bash(.venv/Scripts/python.exe test_factor_api_output.py)",
       "Bash(.venv/Scripts/python.exe:*)",
       "Bash(cat:*)",
-      "Bash(.venv/bin/python:*)"
+      "Bash(.venv/bin/python:*)",
+      "Bash(sed -i:*)"
     ],
     "deny": [],
     "ask": []

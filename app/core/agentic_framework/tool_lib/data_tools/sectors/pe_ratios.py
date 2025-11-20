@@ -1,52 +1,28 @@
+"""Sector P/E ratio tools.
+
+This module provides tools for fetching historical Price-to-Earnings ratios
+for sectors, enabling valuation analysis and sector comparison.
+"""
+
 from app.db.core.pull_fmp_data import FMP_API_DATA
 from datetime import datetime, timedelta
 import pandas as pd
 from app.core.agentic_framework.tool_lib.common.responses import success_response, error_response
+from .mappings import SECTOR_MAPPING, FMP_TO_EQUITY_SECTOR
 
-# Sector name mappings
-SECTOR_MAPPING = {
-    'equity_sector_information_technology': 'Technology',
-    'equity_sector_health_care': 'Healthcare',
-    'equity_sector_financials': 'Financial Services',
-    'equity_sector_consumer_discretionary': 'Consumer Cyclical',
-    'equity_sector_consumer_staples': 'Consumer Defensive',
-    'equity_sector_industrials': 'Industrials',
-    'equity_sector_communication_services': 'Communication Services',
-    'equity_sector_energy': 'Energy',
-    'equity_sector_materials': 'Basic Materials',
-    'equity_sector_utilities': 'Utilities',
-    'equity_sector_real_estate': 'Real Estate'
-}
-
-# Reverse mapping: FMP sector name -> equity_sector format
-FMP_TO_EQUITY_SECTOR = {
-    'Technology': 'equity_sector_information_technology',
-    'Healthcare': 'equity_sector_health_care',
-    'Financial Services': 'equity_sector_financials',
-    'Consumer Cyclical': 'equity_sector_consumer_discretionary',
-    'Consumer Defensive': 'equity_sector_consumer_staples',
-    'Industrials': 'equity_sector_industrials',
-    'Communication Services': 'equity_sector_communication_services',
-    'Energy': 'equity_sector_energy',
-    'Basic Materials': 'equity_sector_materials',
-    'Utilities': 'equity_sector_utilities',
-    'Real Estate': 'equity_sector_real_estate'
-}
-
-def get_sector_performance(sectors: list[str] | None = None, years_back: int = 1, frequency: str = 'weekly') -> str:
-    """Get the historical weekly performance of one or more sectors.
+def get_sector_pe(sectors: list[str] | None = None, years_back: int = 1, frequency: str = 'weekly') -> str:
+    """Get the historical weekly P/E ratios of one or more sectors.
 
     Args:
-        sectors: List of sectors to get performance for. Must use internal format
+        sectors: List of sectors to get P/E ratios for. Must use internal format
                 (e.g., 'equity_sector_information_technology').
                 If None, fetches all available sectors.
         years_back: Number of years back to retrieve data from. Defaults to 1.
-        frequency: Data frequency - 'weekly' or 'daily'. Defaults to 'weekly'.
 
     Returns:
-        YAML formatted string with weekly sector performance data in wide format.
-        Each week includes: date (Friday - last trading day of week), {sector_name}_avg_change for each sector.
-        Weekly values represent the cumulative performance for that week (sum of daily changes).
+        YAML formatted string with weekly sector P/E ratio data in wide format.
+        Each week includes: date (Friday - last trading day of week), {sector_name}_pe for each sector.
+        Weekly values represent the P/E ratio at the end of the week (last value).
     """
     # If no sectors specified, fetch all
     if sectors is None:
@@ -88,21 +64,21 @@ def get_sector_performance(sectors: list[str] | None = None, years_back: int = 1
         fmp_sector = SECTOR_MAPPING[equity_sector]
 
         # Fetch data for this sector
-        data = fmp.get_historical_sector_performance(fmp_sector, from_date=from_date, to_date=to_date)
+        data = fmp.get_historical_sector_pe(fmp_sector, from_date=from_date, to_date=to_date)
 
         if data:
             df = pd.DataFrame(data)
 
-            # Keep only date and averageChange columns
-            df = df[['date', 'averageChange']].copy()
+            # Keep only date and pe columns
+            df = df[['date', 'pe']].copy()
 
-            # Rename averageChange column to include sector name
+            # Rename pe column to include sector name
             df.rename(columns={
-                'averageChange': f'{equity_sector}_avg_change'
+                'pe': f'{equity_sector}_pe'
             }, inplace=True)
 
-            # Convert averageChange to float and round
-            df[f'{equity_sector}_avg_change'] = df[f'{equity_sector}_avg_change'].astype(float).round(2)
+            # Convert pe to float and round
+            df[f'{equity_sector}_pe'] = df[f'{equity_sector}_pe'].astype(float).round(2)
 
             # Merge with existing data on date
             if merged_df is None:
@@ -123,25 +99,27 @@ def get_sector_performance(sectors: list[str] | None = None, years_back: int = 1
         # Using 'W-FRI' to end weeks on Friday (last trading day) instead of Sunday
         merged_df = merged_df.set_index('date')
 
-        # Get all avg_change columns
-        avg_change_cols = [col for col in merged_df.columns if col.endswith('_avg_change')]
+        # Get all pe columns
+        pe_cols = [col for col in merged_df.columns if col.endswith('_pe')]
 
-        # For avg_change: sum the daily changes to get total weekly performance
+        # For P/E ratios: take the last value of the week (Friday's P/E)
+        # Reason: P/E ratios are not additive, we want the most recent valuation metric
         resampled_df = pd.DataFrame()
-        if avg_change_cols:
+
+        if pe_cols:
             if frequency == 'weekly':
-                resampled_df = merged_df[avg_change_cols].resample('W-FRI').sum()
+                resampled_df = merged_df[pe_cols].resample('W-FRI').last()
             else:  # daily
-                resampled_df = merged_df[avg_change_cols]
+                resampled_df = merged_df[pe_cols]
 
         # Reset index to get date back as column
         resampled_df = resampled_df.reset_index()
 
         # Drop rows with all NaN values (weeks with no data)
-        resampled_df = resampled_df.dropna(how='all', subset=avg_change_cols)
+        resampled_df = resampled_df.dropna(how='all', subset=pe_cols)
 
         # Round to 2 decimal places
-        for col in avg_change_cols:
+        for col in pe_cols:
             if col in resampled_df.columns:
                 resampled_df[col] = resampled_df[col].round(2)
 
@@ -156,13 +134,13 @@ def get_sector_performance(sectors: list[str] | None = None, years_back: int = 1
 
         return success_response(resampled_df.to_dict(orient='records'))
     else:
-        return error_response(f"No data found for sectors: {sectors}")
+        return error_response(f"No P/E data found for sectors: {sectors}")
 
 
 # Tool Schema Constants
-GET_SECTOR_PERFORMANCE_DESCRIPTION = (
-    "Fetch historical weekly performance data for one or more sectors. "
-    "Returns time-series data showing cumulative weekly percentage changes for each sector. "
+GET_SECTOR_PE_DESCRIPTION = (
+    "Fetch historical weekly Price-to-Earnings (P/E) ratios for one or more sectors. "
+    "Returns time-series data showing valuation metrics for each sector over time. "
     "Data is resampled to weekly frequency (Friday as week-end) to reduce token usage while maintaining trend information."
     "\n\n**Available Sectors (11 total):**"
     "\n  - equity_sector_information_technology"
@@ -178,27 +156,32 @@ GET_SECTOR_PERFORMANCE_DESCRIPTION = (
     "\n  - equity_sector_real_estate"
     "\n\n**Data Format:**"
     "\n  - Wide format: one row per week with columns for each sector"
-    "\n  - Column naming: {sector_name}_avg_change"
+    "\n  - Column naming: {sector_name}_pe"
     "\n  - date: Friday (last trading day of week)"
-    "\n  - Weekly values: Sum of daily percentage changes for that week"
+    "\n  - Weekly values: P/E ratio at end of week (Friday's most recent value)"
     "\n\n**Use Cases:**"
-    "\n  - Compare sector performance: sectors=['equity_sector_technology', 'equity_sector_financials']"
-    "\n  - Track single sector: sectors=['equity_sector_energy']"
-    "\n  - All sectors overview: sectors=None (returns all 11, use sparingly)"
-    "\n  - Historical analysis: years_back=3 for 3-year performance trends"
+    "\n  - Valuation comparison: sectors=['equity_sector_technology', 'equity_sector_financials']"
+    "\n  - Track sector valuation: sectors=['equity_sector_energy']"
+    "\n  - Market-wide valuation: sectors=None (returns all 11, use sparingly)"
+    "\n  - Historical valuation trends: years_back=3 for 3-year P/E history"
+    "\n  - Identify overvalued/undervalued sectors"
+    "\n\n**P/E Ratio Interpretation:**"
+    "\n  - Higher P/E: Market expects higher growth, potentially overvalued"
+    "\n  - Lower P/E: Market expects lower growth, potentially undervalued"
+    "\n  - Compare to historical averages to assess current valuation levels"
     "\n\n**Examples:**"
-    "\n  get_sector_performance(sectors=['equity_sector_information_technology'], years_back=1)"
-    "\n  get_sector_performance(sectors=['equity_sector_financials', 'equity_sector_energy'], years_back=2)"
-    "\n  get_sector_performance(sectors=None, years_back=1)  # All sectors"
+    "\n  get_sector_pe(sectors=['equity_sector_information_technology'], years_back=1)"
+    "\n  get_sector_pe(sectors=['equity_sector_financials', 'equity_sector_energy'], years_back=2)"
+    "\n  get_sector_pe(sectors=None, years_back=1)  # All sectors"
 )
 
-GET_SECTOR_PERFORMANCE_PARAMETERS = {
+GET_SECTOR_PE_PARAMETERS = {
     "type": "object",
     "properties": {
         "sectors": {
             "type": "array",
             "description": (
-                "List of sector identifiers to fetch. If omitted, fetches all 11 sectors (use sparingly). "
+                "List of sector identifiers to fetch P/E ratios for. If omitted, fetches all 11 sectors (use sparingly). "
                 "Must use internal equity_sector format."
             ),
             "items": {
@@ -222,7 +205,7 @@ GET_SECTOR_PERFORMANCE_PARAMETERS = {
         "years_back": {
             "type": "integer",
             "description": (
-                "Number of years of historical data to fetch. "
+                "Number of years of historical P/E data to fetch. "
                 "Default is 1 year. Data is resampled to weekly frequency."
             ),
             "default": 1,
@@ -242,11 +225,9 @@ GET_SECTOR_PERFORMANCE_PARAMETERS = {
     "additionalProperties": False
 }
 
-GET_SECTOR_PERFORMANCE_TOOL = {
-    "name": "get_sector_performance",
-    "description": GET_SECTOR_PERFORMANCE_DESCRIPTION,
-    "parameters": GET_SECTOR_PERFORMANCE_PARAMETERS,
-    "function": get_sector_performance,
+GET_SECTOR_PE_TOOL = {
+    "name": "get_sector_pe",
+    "description": GET_SECTOR_PE_DESCRIPTION,
+    "parameters": GET_SECTOR_PE_PARAMETERS,
+    "function": get_sector_pe,
 }
-
-

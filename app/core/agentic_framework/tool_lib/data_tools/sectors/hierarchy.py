@@ -1,3 +1,9 @@
+"""Sector hierarchy and ticker grouping tools.
+
+This module provides tools for exploring the GICS sector structure and retrieving
+tickers at different levels of the hierarchy (sector, industry, sub-industry).
+"""
+
 from app.db.core.db_config import MarketSession
 from app.db.core.models.market_data_models import *
 from app.core.agentic_framework.tool_lib.common.responses import success_response
@@ -146,4 +152,3 @@ GET_SECTOR_INDUSTRIES_TOOL = {
     "parameters": GET_SECTOR_INDUSTRIES_PARAMETERS,
     "function": get_sector_industries,
 }
-

@@ -4,7 +4,7 @@ from app.core.agentic_framework.tool_lib.agent_specific_tools.industry import (
 )
 from app.core.agentic_framework.tool_lib.ticker_tools.factors import CALCULATE_TICKER_FACTORS_TOOL
 from app.core.agentic_framework.tool_lib.data_tools.ticker_repository import FETCH_TICKER_REPOSITORY_DATA_TOOL
-from app.core.agentic_framework.tool_lib.data_tools.ticker_fundamentals import GET_TICKER_FUNDAMENTAL_DATA_TOOL
+from app.core.agentic_framework.tool_lib.data_tools.fundamentals import GET_TICKER_FUNDAMENTAL_DATA_TOOL
 from app.core.agentic_framework.tool_lib.data_tools.industry_factors import GET_INDUSTRY_BENCHMARK_CALCULATIONS_TOOL
 from app.core.agentic_framework.tool_lib.data_tools.sub_industry_factors import GET_SUB_INDUSTRY_BENCHMARK_CALCULATIONS_TOOL
 from app.core.agentic_framework.tool_lib.ticker_tools.factors import CALCULATE_TICKER_FACTORS_TOOL

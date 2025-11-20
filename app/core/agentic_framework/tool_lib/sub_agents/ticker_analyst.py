@@ -5,7 +5,7 @@ from datetime import datetime
 from app.core.agentic_framework.tool_lib.common.responses import success_response, error_response
 
 # Import tool definitions from tool_lib
-from app.core.agentic_framework.tool_lib.data_tools.ticker_fundamentals import GET_TICKER_FUNDAMENTAL_DATA_TOOL
+from app.core.agentic_framework.tool_lib.data_tools.fundamentals import GET_TICKER_FUNDAMENTAL_DATA_TOOL
 from app.core.agentic_framework.tool_lib.data_tools.ticker_repository import FETCH_TICKER_REPOSITORY_DATA_TOOL
 from app.core.agentic_framework.tool_lib.ticker_tools.performance import GET_TICKER_PERFORMANCE_AND_RISK_TOOL
 from app.core.agentic_framework.tool_lib.ticker_tools.factors import CALCULATE_TICKER_FACTORS_TOOL
