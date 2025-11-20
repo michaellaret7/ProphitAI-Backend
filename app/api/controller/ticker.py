@@ -130,3 +130,37 @@ async def get_ticker_fundamentals_controller(
     await cache.set(cache_key, response, ttl=86400)
 
     return response
+
+
+@handle_controller_errors
+async def get_ttm_ratios_for_ticker_comps_controller(
+    tickers: list[str],
+) -> Dict[str, Any]:
+    """
+    Retrieve TTM ratios for a list of tickers
+    """
+    fmp = FMP_API_DATA()
+
+    data = {}
+    for t in tickers:
+        data[t] = await asyncio.to_thread(fmp.get_ratios_ttm, t)
+    
+    if not data:
+        return ok_envelope(
+            message=f"No TTM ratios found for ticker comps {tickers}",
+            kind="ticker#ttmRatiosForTickerComps",
+            resource_id=tickers,
+            self_link=f"/api/ticker/ttm-ratios-for-ticker-comps?tickers={tickers}",
+            counts={"totalItems": 0, "currentItemCount": 0},
+            payload=[],
+        )
+    
+    return ok_envelope(
+        message="TTM ratios for ticker comps retrieved successfully",
+        kind="ticker#ttmRatiosForTickerComps",
+        resource_id=tickers,
+        self_link=f"/api/ticker/ttm-ratios-for-ticker-comps?tickers={tickers}",
+        counts={"totalItems": len(data) if isinstance(data, list) else 0, "currentItemCount": len(data) if isinstance(data, list) else 0},
+        payload=data,
+    )
+

@@ -5,6 +5,7 @@ from app.api.controller.fundamentals import (
     get_analyst_estimates_controller,
     get_analyst_recommendations_controller,
     get_price_target_summary_controller,
+    get_price_target_consensus_controller,
     get_stock_grades_individual_controller,
     get_stock_grades_summary_controller,
     get_ratings_controller,
@@ -15,6 +16,7 @@ from app.api.controller.fundamentals import (
     get_institutional_holder_analytics_controller,
     get_institutional_positions_summary_controller,
     get_company_notes_controller,
+    get_earnings_calls_transcripts_controller,
 )
 from app.models.fundamentals_models import (
     AnalystEstimatesRequest,
@@ -27,6 +29,7 @@ from app.models.company_models import (
     RevenueSegmentationRequest,
     InstitutionalOwnershipRequest,
     CompanyNotesRequest,
+    EarningsTranscriptRequest,
 )
 
 router = APIRouter(tags=["Company Fundamentals 🏢"])
@@ -135,6 +138,31 @@ async def get_price_target_summary(
         last month, last quarter, last year, and all-time periods
     """
     return await get_price_target_summary_controller(
+        ticker=request.ticker,
+    )
+
+
+@router.get("/fundamentals/{ticker}/price-target-consensus")
+async def get_price_target_consensus(
+    request: PriceTargetRequest = Depends(parse_price_target_request)
+):
+    """
+    Get price target consensus for a ticker
+
+    Args:
+        ticker: Stock ticker symbol (e.g., 'AAPL', 'MSFT')
+
+    Returns:
+        Current analyst price target consensus including:
+        - Target high: Highest price target from analysts
+        - Target low: Lowest price target from analysts
+        - Target consensus: Average/median consensus price target
+        - Target median: Median price target
+        - Number of analysts providing targets
+
+    Example: GET /api/fundamentals/AAPL/price-target-consensus
+    """
+    return await get_price_target_consensus_controller(
         ticker=request.ticker,
     )
 
@@ -370,3 +398,39 @@ async def get_company_notes(
         issue date, face value, and other bond details
     """
     return await get_company_notes_controller(ticker=request.ticker)
+
+
+def parse_earnings_transcript_request(
+    ticker: str = Path(..., description="Stock ticker symbol"),
+    year: int = Query(..., description="Year (e.g., 2025)", ge=2000, le=2100),
+    quarter: int = Query(..., description="Quarter (1-4)", ge=1, le=4),
+    quarters_back: int = Query(1, description="Number of quarters to fetch (default: 1, max: 20)", ge=1, le=20),
+) -> EarningsTranscriptRequest:
+    """Parse and validate parameters into EarningsTranscriptRequest model"""
+    return EarningsTranscriptRequest(ticker=ticker, year=year, quarter=quarter, quarters_back=quarters_back)
+
+
+@router.get("/fundamentals/{ticker}/earnings-calls-transcripts")
+async def get_earnings_calls_transcripts(
+    request: EarningsTranscriptRequest = Depends(parse_earnings_transcript_request)
+):
+    """
+    Get earnings calls transcripts for a ticker
+
+    Args:
+        ticker: Stock ticker symbol (e.g., 'AAPL', 'MSFT')
+        year: Year (e.g., 2025)
+        quarter: Quarter (1-4)
+        quarters_back: Number of quarters to fetch (default: 1, max: 20)
+
+    Returns:
+        Full transcript(s) of the earnings call(s) for the specified quarter(s).
+        If quarters_back=1, returns single transcript data.
+        If quarters_back>1, returns array of {year, quarter, data} objects.
+    """
+    return await get_earnings_calls_transcripts_controller(
+        ticker=request.ticker,
+        year=request.year,
+        quarter=request.quarter,
+        quarters_back=request.quarters_back,
+    )

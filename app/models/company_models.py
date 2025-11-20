@@ -74,3 +74,19 @@ class CompanyNotesRequest(BaseModel):
         if not v or not v.strip():
             raise ValueError("Ticker must be provided and non-empty")
         return v.upper().strip()
+
+
+class EarningsTranscriptRequest(BaseModel):
+    """Request model for fetching earnings calls transcripts"""
+    ticker: str = Field(..., description="Stock ticker symbol")
+    year: int = Field(..., description="Year (e.g., 2025)", ge=2000, le=2100)
+    quarter: int = Field(..., description="Quarter (1-4)", ge=1, le=4)
+    quarters_back: int = Field(1, description="Number of quarters to fetch (default: 1, max: 20)", ge=1, le=20)
+
+    @field_validator('ticker')
+    @classmethod
+    def validate_ticker(cls, v):
+        """Ensure ticker is uppercase and non-empty"""
+        if not v or not v.strip():
+            raise ValueError("Ticker must be provided and non-empty")
+        return v.upper().strip()
