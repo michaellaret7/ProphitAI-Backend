@@ -31,10 +31,12 @@ async def get_ticker_info(
 
     Returns comprehensive ticker details including:
     - Basic info: ticker symbol, sector, industry, sub_industry
-    - Market data: price, market_cap, avg_volume, dollar_volume
-    - Valuation: eps, pe ratio, beta
+    - Market data: avg_volume, dollar_volume
+    - Valuation: eps, beta
     - Status: is_etf, is_actively_trading, is_adr, is_fund
     - Other: ipo_date, earnings_announcement, shares_outstanding
+
+    For real-time price, market_cap, and PE ratio, use GET /api/price/quote
 
     Example: GET /api/ticker/info?ticker=AAPL
     """

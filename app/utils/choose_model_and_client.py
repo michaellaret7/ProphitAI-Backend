@@ -102,7 +102,7 @@ def claude_model_and_client(model: str = None):
 
     return model, client
 
-def openai_huggingface_model_and_client(model: str = None):
+def huggingface_model_and_client(model: str = None):
     """
     Create an OpenAI model name and client instance.
     
@@ -110,16 +110,16 @@ def openai_huggingface_model_and_client(model: str = None):
         model: Model name to use (default: from OPENAI_MODEL env var)
         
     Returns:
-        tuple: (model_name, openai_client) for OpenAI API
+        tuple: (model_name, openai_client) for HuggingFace API
     """
-    HUGGINGFACE_API_KEY = os.getenv("HUGGINGFACE_API_KEY")
+    HF_TOKEN = os.getenv("HF_TOKEN")
 
     if model is None:
         model = os.environ.get("HUGGINGFACE_MODEL")
 
     client = OpenAI(
         base_url="https://router.huggingface.co/v1",
-        api_key=HUGGINGFACE_API_KEY,
+        api_key=HF_TOKEN,
     )
 
     return model, client

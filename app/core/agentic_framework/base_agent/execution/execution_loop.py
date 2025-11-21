@@ -150,6 +150,7 @@ class ExecutionLoop:
 
             try:
                 # Call LLM
+                #TODO: Have this output a specific format to a pydantic dataclass for the response every time and it should always have a reasoning field 
                 response = self.agent.client.chat.completions.create(
                     model=self.agent.model,
                     messages=self.agent.messages,

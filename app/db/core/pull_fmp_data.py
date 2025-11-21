@@ -305,10 +305,77 @@ class FMP_API_DATA:
         url = f"https://financialmodelingprep.com/api/v3/profile/{ticker}"
         return self._make_fmp_api_request(url)
     
+    def search_by_symbol(self, query: str):
+        """
+        Searches for securities by ticker symbol.
+
+        Args:
+            query (str): The ticker symbol to search for (e.g., 'MSFT', 'AAPL').
+
+        Returns:
+            list: Matching securities with symbol, name, currency, exchange info.
+        """
+        url = f"https://financialmodelingprep.com/stable/search-symbol?query={query}"
+        return self._make_fmp_api_request(url)
+
+    def search_by_name(self, query: str):
+        """
+        Searches for securities by company name.
+
+        Args:
+            query (str): The company name to search for (e.g., 'Apple', 'Microsoft').
+
+        Returns:
+            list: Matching securities with symbol, name, currency, exchange info.
+        """
+        url = f"https://financialmodelingprep.com/stable/search-name?query={query}"
+        return self._make_fmp_api_request(url)
+
+    def search_by_cusip(self, cusip: str):
+        """
+        Searches for securities by CUSIP identifier.
+
+        Args:
+            cusip (str): The CUSIP number (e.g., '037833100' for Apple).
+
+        Returns:
+            list: Matching securities with symbol, name, and CUSIP info.
+        """
+        url = f"https://financialmodelingprep.com/stable/search-cusip?cusip={cusip}"
+        return self._make_fmp_api_request(url)
+
+    def search_by_isin(self, isin: str):
+        """
+        Searches for securities by ISIN (International Securities Identification Number).
+
+        Args:
+            isin (str): The ISIN number (e.g., 'US0378331005' for Apple).
+
+        Returns:
+            list: Matching securities with symbol, name, and ISIN info.
+        """
+        url = f"https://financialmodelingprep.com/stable/search-isin?isin={isin}"
+        return self._make_fmp_api_request(url)
+
+    def search_by_cik(self, cik: str):
+        """
+        Searches for securities by CIK (SEC Central Index Key).
+
+        Args:
+            cik (str): The CIK number (e.g., '320193' for Apple).
+
+        Returns:
+            list: Matching securities with symbol, name, and CIK info.
+        """
+        url = f"https://financialmodelingprep.com/stable/search-cik?cik={cik}"
+        return self._make_fmp_api_request(url)
+
     def get_isin_lookup(self, isin: str):
         """
         Retrieves security information by ISIN (International Securities Identification Number).
         Returns symbol, security type, and other details.
+
+        Note: Consider using search_by_isin() instead for consistency.
         """
         url = f"https://financialmodelingprep.com/stable/search-isin?isin={isin}"
         return self._make_fmp_api_request(url)

@@ -27,8 +27,8 @@ async def get_ticker_info_controller(
     """
     Retrieve basic ticker information and metadata.
 
-    Returns ticker details including price, market cap, sector, industry,
-    beta, and other key metrics from the tickers table.
+    Returns ticker details including sector, industry, beta, and other
+    key metrics from the tickers table. For price data, use /price/quote.
 
     Args:
         ticker: Stock ticker symbol (e.g., 'AAPL')
@@ -51,7 +51,11 @@ async def get_ticker_info_controller(
         ticker_obj.description = company_profile[0]["description"]
 
         data = serialize_sqlalchemy_obj(ticker_obj)
-        data["description"] = ticker_obj.description  # <-- add here
+        data["description"] = ticker_obj.description
+
+        # Remove price-related fields (use /price/quote endpoint instead)
+        for field in ["price", "pe", "market_cap"]:
+            data.pop(field, None)
 
         if not ticker_obj:
             raise HTTPException(status_code=404, detail=f"Ticker {ticker.upper()} not found")
@@ -132,6 +136,20 @@ async def get_ticker_fundamentals_controller(
     return response
 
 
+# Duplicate TTM ratio fields to remove (keeping cleaner named versions)
+TTM_RATIO_FIELDS_TO_REMOVE = [
+    "priceEarningsRatioTTM",          # duplicate of peRatioTTM
+    "priceBookValueRatioTTM",         # duplicate of priceToBookRatioTTM
+    "priceFairValueTTM",              # duplicate
+    "priceSalesRatioTTM",             # duplicate of priceToSalesRatioTTM
+    "priceCashFlowRatioTTM",          # duplicate of priceToOperatingCashFlowsRatioTTM
+    "ebitPerRevenueTTM",              # duplicate of operatingProfitMarginTTM
+    "cashFlowCoverageRatiosTTM",      # duplicate of cashFlowToDebtRatioTTM
+    "dividendYielPercentageTTM",      # duplicate of dividendYielTTM (just * 100)
+    "priceEarningsToGrowthRatioTTM",  # duplicate of pegRatioTTM
+]
+
+
 @handle_controller_errors
 async def get_ttm_ratios_for_ticker_comps_controller(
     tickers: list[str],
@@ -143,8 +161,14 @@ async def get_ttm_ratios_for_ticker_comps_controller(
 
     data = {}
     for t in tickers:
-        data[t] = await asyncio.to_thread(fmp.get_ratios_ttm, t)
-    
+        raw_data = await asyncio.to_thread(fmp.get_ratios_ttm, t)
+        # Remove duplicate fields
+        if raw_data and isinstance(raw_data, list) and len(raw_data) > 0:
+            cleaned = {k: v for k, v in raw_data[0].items() if k not in TTM_RATIO_FIELDS_TO_REMOVE}
+            data[t] = cleaned
+        else:
+            data[t] = raw_data
+
     if not data:
         return ok_envelope(
             message=f"No TTM ratios found for ticker comps {tickers}",
