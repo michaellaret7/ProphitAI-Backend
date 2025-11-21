@@ -240,26 +240,38 @@ async def get_price_target_consensus_controller(
 @handle_controller_errors
 async def get_stock_grades_individual_controller(
     ticker: str,
-    start_date: Optional[datetime] = None,
-    end_date: Optional[datetime] = None,
+    limit: int = 500
 ) -> Dict[str, Any]:
     """
     Controller to handle individual stock grades data retrieval for a ticker
+
+    Args:
+        ticker: Stock ticker symbol
+        limit: Maximum number of grades to return (default: 500)
     """
-    # Delegate to repository
-    data = get_stock_grades_individual(
-        ticker=ticker,
-        start=start_date,
-        end=end_date,
-    )
+    fmp = FMP_API_DATA()
+    data = await asyncio.to_thread(fmp.get_stock_grades_individual, ticker, limit=limit)
+
+    if not data:
+        return ok_envelope(
+            message=f"No stock grades individual data found for {ticker}",
+            kind="fundamentals#stockGradesIndividual",
+            resource_id=ticker,
+            self_link=f"/api/fundamentals/{ticker}/grades/individual",
+            counts={"totalItems": 0, "currentItemCount": 0},
+            payload=[],
+        )
+
+    # Reason: FMP API doesn't respect limit parameter, so we slice the data manually
+    limited_data = data[:limit]
 
     return ok_envelope(
         message="Individual stock grades retrieved successfully",
         kind="fundamentals#stockGradesIndividual",
         resource_id=ticker,
         self_link=f"/api/fundamentals/{ticker}/grades/individual",
-        counts={"totalItems": data['count'], "currentItemCount": data['count']},
-        payload=data['items'],
+        counts={"totalItems": len(limited_data), "currentItemCount": len(limited_data)},
+        payload=limited_data,
     )
 
 
@@ -539,3 +551,5 @@ async def get_company_notes_controller(ticker: str) -> Dict[str, Any]:
         payload=data,
     )
 
+if __name__ == "__main__":
+    print(asyncio.run(get_stock_grades_individual_controller("AAPL")))

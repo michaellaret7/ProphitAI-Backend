@@ -761,7 +761,7 @@ class UpdateFundamentalData:
                                 'gradingCompany': item.get('gradingCompany', ''),  # Keep original case for storage
                                 'previousGrade': item.get('previousGrade'),
                                 'newGrade': item.get('newGrade'),
-                                'action': item.get('gradeAction')
+                                'action': item.get('action')
                             }
                 
                 if unique_records:

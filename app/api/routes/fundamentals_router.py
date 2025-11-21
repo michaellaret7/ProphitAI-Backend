@@ -169,26 +169,23 @@ async def get_price_target_consensus(
 
 @router.get("/fundamentals/{ticker}/grades/individual")
 async def get_stock_grades_individual(
-    request: AnalystDataRequest = Depends(parse_analyst_data_request)
+    ticker: str = Path(..., description="Stock ticker symbol"),
+    limit: int = Query(500, gt=0, le=10000, description="Maximum number of grades to return (default: 500)")
 ):
     """
     Get individual analyst grade changes for a ticker
 
     Args:
         ticker: Stock ticker symbol (e.g., 'AAPL', 'MSFT')
-        start_date: Optional start date for filtering grades
-        end_date: Optional end date for filtering grades
-        limit: Optional maximum number of grades to return (default: all)
-        ascending: Sort order by date (default: true for oldest first)
+        limit: Maximum number of grades to return (default: 500, max: 10000)
 
     Returns:
         Individual analyst grade changes with grading company, previous grade,
         new grade, and action (upgrade/downgrade/initiated/reiterated)
     """
     return await get_stock_grades_individual_controller(
-        ticker=request.ticker,
-        start_date=request.start_date,
-        end_date=request.end_date,
+        ticker=ticker,
+        limit=limit,
     )
 
 

@@ -14,6 +14,7 @@ from app.api.controller.macro import (
     get_industry_pe_controller,
     get_mergers_acquisitions_latest_controller,
     get_mergers_acquisitions_search_controller,
+    get_fx_historical_prices_controller,
 )
 
 router = APIRouter(tags=["Macro Data 🌍"])
@@ -873,4 +874,69 @@ async def get_mergers_acquisitions_search(
     """
     return await get_mergers_acquisitions_search_controller(
         name=name,
+    )
+
+
+@router.get("/macro/fx/historical-prices")
+async def get_fx_historical_prices(
+    pair: str = Query(..., description="FX pair (e.g., 'EURUSD', 'GBPUSD', 'USDJPY')"),
+    fromDate: Optional[str] = Query(None, description="Start date (YYYY-MM-DD)", alias="fromDate"),
+    toDate: Optional[str] = Query(None, description="End date (YYYY-MM-DD)", alias="toDate"),
+):
+    """
+    Get historical FX prices for a currency pair.
+
+    ## Overview
+    Retrieves historical OHLC price data for foreign exchange currency pairs.
+
+    ## Common FX Pairs:
+    - **EURUSD**: Euro / US Dollar
+    - **GBPUSD**: British Pound / US Dollar
+    - **USDJPY**: US Dollar / Japanese Yen
+    - **USDCHF**: US Dollar / Swiss Franc
+    - **AUDUSD**: Australian Dollar / US Dollar
+    - **USDCAD**: US Dollar / Canadian Dollar
+    - **NZDUSD**: New Zealand Dollar / US Dollar
+
+    ## Example Usage:
+    ```
+    GET /api/macro/fx/historical-prices?pair=EURUSD
+    GET /api/macro/fx/historical-prices?pair=EURUSD&fromDate=2024-01-01&toDate=2024-12-31
+    GET /api/macro/fx/historical-prices?pair=GBPUSD&fromDate=2024-06-01
+    ```
+
+    ## Response Format:
+    ```json
+    {
+      "status": 200,
+      "message": "FX historical prices retrieved successfully",
+      "data": {
+        "kind": "macro#fxHistoricalPrices",
+        "id": "EURUSD",
+        "selfLink": "/api/macro/fx/historical-prices?pair=EURUSD&fromDate=2024-01-01&toDate=2024-12-31",
+        "currentItemCount": 252,
+        "totalItems": 252,
+        "payload": [
+          {
+            "date": "2024-01-02",
+            "open": 1.1045,
+            "high": 1.1089,
+            "low": 1.1023,
+            "close": 1.1067,
+            "volume": 123456
+          }
+        ]
+      }
+    }
+    ```
+
+    ## Notes:
+    - If fromDate and toDate are not provided, returns all available data
+    - Data is cached for 1 day for performance
+    - Useful for currency analysis, hedging strategies, and international portfolio management
+    """
+    return await get_fx_historical_prices_controller(
+        pair=pair,
+        from_date=fromDate,
+        to_date=toDate,
     )

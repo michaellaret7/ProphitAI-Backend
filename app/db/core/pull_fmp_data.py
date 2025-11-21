@@ -1603,6 +1603,27 @@ class FMP_API_DATA:
         url = "https://financialmodelingprep.com/stable/forex-list"
         return self._make_fmp_api_request(url)
 
+    def get_forex_historical_prices(self, pair: str, from_date: str = None, to_date: str = None):
+        """
+        Retrieves historical end-of-day prices for a forex pair.
+
+        Args:
+            pair (str): The forex pair symbol (e.g., 'EURUSD', 'GBPUSD', 'USDJPY').
+            from_date (str, optional): Start date in YYYY-MM-DD format.
+            to_date (str, optional): End date in YYYY-MM-DD format.
+
+        Returns:
+            dict: Contains 'symbol' and 'historical' list with date, open, high, low, close, volume.
+        """
+        url = f"https://financialmodelingprep.com/api/v3/historical-price-full/{pair}"
+        if from_date:
+            url += f"?from={from_date}"
+            if to_date:
+                url += f"&to={to_date}"
+        elif to_date:
+            url += f"?to={to_date}"
+        return self._make_fmp_api_request(url)
+
     # Crypto Endpoints
     def get_cryptocurrency_list(self):
         """
@@ -1980,6 +2001,3 @@ class FMP_API_DATA:
         return self._make_fmp_api_request(url)
 
 
-if __name__ == "__main__":
-    pull_fmp_data = FMP_API_DATA()
-    print(pull_fmp_data.get_stock_grades_summary('AAPL', limit=100))

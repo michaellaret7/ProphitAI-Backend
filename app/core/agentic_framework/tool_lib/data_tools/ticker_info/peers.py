@@ -10,8 +10,9 @@ import numpy as np
 from app.db.core.models.market_data_models import Ticker
 from app.db.core.db_config import MarketSession
 from app.utils.serialize_output import serialize_sqlalchemy_obj
+
 import warnings
-warnings.filterwarnings("ignore", category=UserWarning)
+warnings.filterwarnings("ignore", category=RuntimeWarning)
 
 @log_simulation_data_range()
 def get_ticker_peers(ticker: str, **kwargs) -> str:

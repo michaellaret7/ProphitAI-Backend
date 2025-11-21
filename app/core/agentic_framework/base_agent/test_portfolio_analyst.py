@@ -30,7 +30,7 @@ from app.core.agentic_framework.tool_lib.ticker_tools.performance import (
 from app.core.agentic_framework.tool_lib.ticker_tools.factors import (
     CALCULATE_TICKER_FACTORS_TOOL,
 )
-from app.core.agentic_framework.tool_lib.data_tools.fundamentals import (
+from app.core.agentic_framework.tool_lib.data_tools.ticker_fundamentals import (
     GET_TICKER_FUNDAMENTAL_DATA_TOOL,
 )
 from app.core.agentic_framework.tool_lib.data_tools.stock_screener.tool import STOCK_SCREENER_TOOL

@@ -536,3 +536,28 @@ async def get_mergers_acquisitions_search_controller(
         counts={"totalItems": len(items), "currentItemCount": len(items)},
         payload=items,
     )
+
+async def get_fx_historical_prices_controller(
+    pair: str,
+    from_date: Optional[str] = None,
+    to_date: Optional[str] = None,
+) -> Dict[str, Any]:
+    """
+    Controller to handle FX historical prices retrieval
+    """
+    fmp_api = FMP_API_DATA()
+    data = await asyncio.to_thread(fmp_api.get_forex_historical_prices, pair=pair, from_date=from_date, to_date=to_date)
+
+    if data is None:
+        raise HTTPException(status_code=500, detail="Failed to retrieve FX historical prices from FMP API")
+
+    return ok_envelope(
+        message="FX historical prices retrieved successfully",
+        kind="macro#fxHistoricalPrices",
+        resource_id=pair,
+        self_link=f"/api/macro/fx/historical-prices?pair={pair}&fromDate={from_date}&endDate={to_date}",
+        counts={"totalItems": len(data["historical"]), "currentItemCount": len(data["historical"])},
+        payload=data["historical"],
+    )
+
+
