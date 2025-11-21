@@ -137,7 +137,9 @@ def get_analyst_estimates(ticker: str, periods_back: int = 4, period: str = 'qua
     except Exception as e:
         return error_response(f"Failed to retrieve analyst estimates: {str(e)}")
 
-
+if __name__ == "__main__":
+    x = get_analyst_estimates(ticker='AAPL')
+    print(x)
 
 # Tool Schema Constants
 GET_ANALYST_ESTIMATES_DESCRIPTION = (

@@ -8,7 +8,6 @@ from datetime import datetime, timedelta, timezone
 from app.core.calculations.returns.calculator import ReturnsCalculator
 from app.core.calculations.core.config import DEFAULT_TRADING_DAYS, DEFAULT_RF_ANNUAL
 
-
 class PerformanceCalculator:
     """Core performance ratios based on a daily returns series."""
 

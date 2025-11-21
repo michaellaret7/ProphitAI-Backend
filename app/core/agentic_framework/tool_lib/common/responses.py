@@ -28,8 +28,8 @@ def success_response(data: Any) -> str:
         return dumper.represent_scalar('tag:yaml.org,2002:str', data)
     
     yaml.add_representer(str, str_representer)
-    
-    return yaml.dump({"success": True, "data": data}, default_flow_style=False)
+
+    return yaml.dump({"success": True, "data": data}, default_flow_style=False, sort_keys=False)
 
 
 def error_response(error: str | Exception) -> str:
