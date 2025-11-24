@@ -23,10 +23,13 @@ def get_database_url(env_var: str, db_name: str) -> str:
     return url
 
 # Create engines with connection pooling
+# Reason: Increased pool_size and max_overflow to handle production concurrent requests
+# pool_timeout set to 10s to fail faster than default 30s
 market_engine = create_engine(
     get_database_url("MARKET_DATA", "market_data"),
-    pool_size=20,
-    max_overflow=0,
+    pool_size=40,  # Permanent connections in pool
+    max_overflow=20,  # Additional temporary connections for bursts
+    pool_timeout=10,  # Fail faster if pool exhausted (instead of 30s default)
     pool_pre_ping=True,  # Verify connections before using
     pool_recycle=3600,  # Recycle connections after 1 hour
     echo=False  # Set to True for debugging

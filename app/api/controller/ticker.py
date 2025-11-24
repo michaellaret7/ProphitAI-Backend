@@ -36,6 +36,7 @@ async def get_ticker_info_controller(
     Returns:
         Response envelope with ticker info payload
     """
+    # Reason: Query database first and close session immediately to prevent connection pool exhaustion
     with MarketSession() as session:
         ticker_obj = (
             session.query(Ticker)
@@ -43,30 +44,32 @@ async def get_ticker_info_controller(
             .first()
         )
 
-        # Add company description data from FMP
-        fmp_api = FMP_API_DATA()
-        # Reason: Run blocking HTTP request in thread pool to prevent event loop blocking
-        company_profile = await asyncio.to_thread(fmp_api.get_company_profile, ticker.upper())
-
-        ticker_obj.description = company_profile[0]["description"]
-
-        data = serialize_sqlalchemy_obj(ticker_obj)
-        data["description"] = ticker_obj.description
-
-        # Remove price-related fields (use /price/quote endpoint instead)
-        for field in ["price", "pe", "market_cap"]:
-            data.pop(field, None)
-
         if not ticker_obj:
             raise HTTPException(status_code=404, detail=f"Ticker {ticker.upper()} not found")
 
-        response = ok_envelope(
-            message=f"Ticker info for {ticker.upper()} retrieved successfully",
-            kind="ticker#info",
-            resource_id=ticker.upper(),
-            self_link=f"/api/ticker/info?ticker={ticker.upper()}",
-            payload=data,
-        )
+        # Serialize data while session is still active
+        data = serialize_sqlalchemy_obj(ticker_obj)
+
+    # Session is now closed - safe to make external API calls
+    fmp_api = FMP_API_DATA()
+    # Reason: Run blocking HTTP request in thread pool to prevent event loop blocking
+    company_profile = await asyncio.to_thread(fmp_api.get_company_profile, ticker.upper())
+
+    # Add description from FMP
+    if company_profile and isinstance(company_profile, list) and len(company_profile) > 0:
+        data["description"] = company_profile[0].get("description", "")
+
+    # Remove price-related fields (use /price/quote endpoint instead)
+    for field in ["price", "pe", "market_cap"]:
+        data.pop(field, None)
+
+    response = ok_envelope(
+        message=f"Ticker info for {ticker.upper()} retrieved successfully",
+        kind="ticker#info",
+        resource_id=ticker.upper(),
+        self_link=f"/api/ticker/info?ticker={ticker.upper()}",
+        payload=data,
+    )
     return response
 
     
