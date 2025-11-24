@@ -17,6 +17,7 @@ from app.api.routes.macro_router import router as macro_router
 from app.api.routes.news_router import router as news_router
 from app.api.routes.fundamentals_router import router as fundamentals_router
 from app.api.routes.etf_router import router as etf_router
+from app.api.routes.search_router import router as search_router
 from app.api.auth.api_key import validate_api_key
 
 # Load environment variables from .env file
@@ -81,6 +82,7 @@ app.include_router(macro_router, prefix="/api", dependencies=[Depends(validate_a
 app.include_router(news_router, prefix="/api", dependencies=[Depends(validate_api_key)])
 app.include_router(fundamentals_router, prefix="/api", dependencies=[Depends(validate_api_key)])
 app.include_router(etf_router, prefix="/api", dependencies=[Depends(validate_api_key)])
+app.include_router(search_router, prefix="/api", dependencies=[Depends(validate_api_key)])
 
 @app.get("/")
 def read_root():
