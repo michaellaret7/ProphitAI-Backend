@@ -4,6 +4,7 @@ from dotenv import load_dotenv
 import json
 from datetime import datetime, timedelta
 import pandas as pd
+import time
 
 class FMP_API_DATA: 
     def __init__(self):
@@ -20,13 +21,26 @@ class FMP_API_DATA:
         separator = '&' if '?' in url else '?'
         full_url = f"{url}{separator}apikey={self.api_key}"
         
-        try:
-            response = requests.get(full_url)
-            response.raise_for_status()
-            return response.json()
-        except requests.exceptions.RequestException as e:
-            print(f"An error occurred: {e}")
-            return None
+        max_retries = 5
+        for attempt in range(max_retries):
+            try:
+                response = requests.get(full_url)
+                
+                if response.status_code == 429:
+                    wait_time = 2 ** attempt  # Exponential backoff: 1, 2, 4, 8, 16s
+                    print(f"Rate limit hit (429). Retrying in {wait_time} seconds...")
+                    time.sleep(wait_time)
+                    continue
+                
+                response.raise_for_status()
+                return response.json()
+            except requests.exceptions.RequestException as e:
+                if attempt == max_retries - 1:
+                    print(f"An error occurred after {max_retries} attempts: {e}")
+                    return None
+                time.sleep(1)
+        
+        return None
 
     def get_analyst_estimates(self, ticker: str, period: str = 'quarter', page: int = 0, limit: int = 1000):
         """
