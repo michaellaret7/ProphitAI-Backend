@@ -6,7 +6,7 @@ def main():
     print("Updating ticker table...")
     print("="*100)
     update_ticker_table = UpdateTickerTable()
-    update_ticker_table.run_update_parallel()
+    update_ticker_table.run_update_parallel(max_workers=1)
 
     print("="*100)
 
@@ -16,7 +16,7 @@ def main():
     # First show the current state
     last_price_dict = update_price_table.create_last_price_dict()
     print(f"Found {len(last_price_dict)} tickers with price data\n")
-    update_price_table.update_all_ticker_prices(max_workers=10)
+    update_price_table.update_all_ticker_prices(max_workers=1)
 
     print("="*100)
 
