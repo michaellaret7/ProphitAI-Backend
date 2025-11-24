@@ -20,11 +20,11 @@ def main():
 
     print("="*100)
 
-    print("\nUpdating fundamental data...\n")
-    print("="*100)
-    updater = UpdateFundamentalData()
-    # Uncomment to run full update
-    updater.update_all_fundamentals(max_workers=5) 
+    # print("\nUpdating fundamental data...\n")
+    # print("="*100)
+    # updater = UpdateFundamentalData()
+    # # Uncomment to run full update
+    # updater.update_all_fundamentals(max_workers=5) 
 
     print("="*100)
     print("\nAll updates completed successfully!\n")
