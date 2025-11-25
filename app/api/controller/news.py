@@ -181,3 +181,38 @@ async def get_fmp_articles_controller(
         counts={"totalItems": len(items), "currentItemCount": len(items), "startIndex": page * limit},
         payload=items,
     )
+
+@handle_controller_errors
+async def get_crpyto_news_general_controller(
+    limit: int = 1000,
+    page: int = 1
+) -> Dict[str, Any]:
+    """
+    Controller to handle crypto news general retrieval from FMP
+    """
+    fmp_api = FMP_API_DATA()
+    data = await asyncio.to_thread(fmp_api.get_latest_crypto_news, page=page, limit=limit)
+    if data is None:
+        raise HTTPException(status_code=500, detail="Failed to retrieve crypto news from FMP API")
+
+    # Convert to list if not already
+    items = data if isinstance(data, list) else []
+
+    return ok_envelope(
+        message="Crypto news retrieved successfully",
+        kind="news#cryptoNews",
+        self_link=f"/api/news/crypto-news?limit={limit}",
+        counts={"totalItems": len(items), "currentItemCount": len(items)},
+        payload=items
+    )
+
+if __name__ == "__main__":
+    import asyncio
+    import pandas as pd
+    from app.db.core.pull_fmp_data import FMP_API_DATA
+    fmp_api = FMP_API_DATA()
+    data = asyncio.run(get_crpyto_news_general_controller())
+    # print(data['data']['payload'])
+    df = pd.DataFrame(data['data']['payload'])
+    pd.set_option('display.max_rows', None)
+    print(df)

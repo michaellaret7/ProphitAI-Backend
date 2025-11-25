@@ -1,5 +1,5 @@
 import os
-import json
+import orjson
 import logging
 import asyncio
 from redis.asyncio import Redis
@@ -65,7 +65,7 @@ class RedisCache:
             value = await self.client.get(key)
             if value:
                 logger.info(f"✅ Cache HIT: {key}")
-                return json.loads(value)
+                return orjson.loads(value)
             logger.info(f"❌ Cache MISS: {key}")
             return None
             
@@ -79,7 +79,7 @@ class RedisCache:
             return False
             
         try:
-            serialized = json.dumps(value, default=str)
+            serialized = orjson.dumps(value, default=str).decode()
             await self.client.setex(key, ttl, serialized)
             logger.info(f"💾 Cache SET: {key} (TTL: {ttl}s)")
             return True

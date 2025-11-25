@@ -10,9 +10,10 @@ from typing import List
 from app.api.controller.ticker import (
     get_ticker_fundamentals_controller,
     get_ticker_info_controller,
+    get_batch_ticker_info_controller,
     get_ttm_ratios_for_ticker_comps_controller,
 )
-from app.models.ticker_models import TTMRatiosTickerCompsRequest
+from app.models.ticker_models import BatchTickerInfoRequest, TTMRatiosTickerCompsRequest
 
 router = APIRouter(tags=["Ticker Data 🎯"])
 
@@ -41,6 +42,41 @@ async def get_ticker_info(
     Example: GET /api/ticker/info?ticker=AAPL
     """
     return await get_ticker_info_controller(ticker=ticker)
+
+
+@router.post("/ticker/info/batch")
+async def get_batch_ticker_info(body: BatchTickerInfoRequest):
+    """
+    Get basic ticker information for multiple tickers in a single request.
+
+    Optimized batch endpoint that reduces database overhead by fetching all tickers
+    in one query and parallelizing FMP API calls for company profiles.
+
+    Returns a dictionary mapping each ticker to its info, plus a list of any
+    tickers that were not found in the database.
+
+    Response payload structure:
+    - data: Dictionary mapping ticker -> ticker info
+    - missing_tickers: List of tickers not found
+
+    Cache TTL: 1 day (86400s)
+
+    Example request body:
+    {
+        "tickers": ["AAPL", "MSFT", "GOOGL", "INVALID_TICKER"]
+    }
+
+    Example response payload:
+    {
+        "data": {
+            "AAPL": {...ticker info...},
+            "MSFT": {...ticker info...},
+            "GOOGL": {...ticker info...}
+        },
+        "missing_tickers": ["INVALID_TICKER"]
+    }
+    """
+    return await get_batch_ticker_info_controller(tickers=body.tickers)
 
 
 @router.get("/ticker/fundamentals")

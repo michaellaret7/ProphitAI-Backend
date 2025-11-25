@@ -1,6 +1,7 @@
-from app.db.jobs.fundamental_data import UpdateFundamentalData
+from app.db.jobs.fundamentals_table import UpdateFundamentalData
 from app.db.jobs.ticker_table import UpdateTickerTable
 from app.db.jobs.price_table import UpdatePriceTable
+from app.db.jobs.macro_table import UpdateCommodityPrices
 
 def main():
     print("Updating ticker table...")
@@ -20,13 +21,20 @@ def main():
 
     print("="*100)
 
+    print("\nUpdating commodity prices...\n")
+    print("="*100)
+    updater = UpdateCommodityPrices()
+    results = updater.update_all_commodities()
+
+    print("="*100)
+
     # print("\nUpdating fundamental data...\n")
     # print("="*100)
     # updater = UpdateFundamentalData()
     # # Uncomment to run full update
     # updater.update_all_fundamentals(max_workers=5) 
 
-    print("="*100)
+    # print("="*100)
     print("\nAll updates completed successfully!\n")
 
 if __name__ == "__main__":

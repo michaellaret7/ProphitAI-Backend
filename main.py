@@ -4,6 +4,8 @@ from contextlib import asynccontextmanager
 from dotenv import load_dotenv
 from fastapi import FastAPI, Depends
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.middleware.gzip import GZipMiddleware
+from fastapi.responses import ORJSONResponse
 from app.api.routes.alts_router import router as prophit_alts_router
 from app.api.routes.user_routes import router as user_router
 from app.api.routes.portfolio_router import router as portfolio_router
@@ -18,6 +20,7 @@ from app.api.routes.news_router import router as news_router
 from app.api.routes.fundamentals_router import router as fundamentals_router
 from app.api.routes.etf_router import router as etf_router
 from app.api.routes.search_router import router as search_router
+from app.api.routes.crypto_router import router as crypto_router
 from app.api.auth.api_key import validate_api_key
 
 # Load environment variables from .env file
@@ -52,7 +55,8 @@ app = FastAPI(
     title="ProphitAI API",
     version="1.0.0",
     description="API for ProphitAI services",
-    lifespan=lifespan
+    lifespan=lifespan,
+    default_response_class=ORJSONResponse
 )
 
 # Configure CORS
@@ -67,6 +71,9 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],  # Allows all headers including X-API-Key
 )
+
+# Enable gzip compression for responses > 1KB
+app.add_middleware(GZipMiddleware, minimum_size=1000)
 
 # Include routers with API key authentication
 # All /api routes require valid API key in X-API-Key header
@@ -83,6 +90,7 @@ app.include_router(news_router, prefix="/api", dependencies=[Depends(validate_ap
 app.include_router(fundamentals_router, prefix="/api", dependencies=[Depends(validate_api_key)])
 app.include_router(etf_router, prefix="/api", dependencies=[Depends(validate_api_key)])
 app.include_router(search_router, prefix="/api", dependencies=[Depends(validate_api_key)])
+app.include_router(crypto_router, prefix="/api", dependencies=[Depends(validate_api_key)])
 
 @app.get("/")
 def read_root():

@@ -272,11 +272,11 @@ class FMP_API_DATA:
         url = f"https://financialmodelingprep.com/stable/grades-news?symbol={ticker}&page={page}&limit={limit}"
         return self._make_fmp_api_request(url)
 
-    def get_intraday_prices_for_ticker(self, ticker: str, from_date: datetime, to_date: datetime):
+    def get_intraday_prices_for_ticker(self, ticker: str, from_date: datetime, to_date: datetime, interval: str = '15min'):
         """
         Retrieves 15-minute interval price data for a ticker for the last two weeks.
         """
-        url = f"https://financialmodelingprep.com/api/v3/historical-chart/15min/{ticker}?from={from_date.strftime('%Y-%m-%d')}&to={to_date.strftime('%Y-%m-%d')}"
+        url = f"https://financialmodelingprep.com/api/v3/historical-chart/{interval}/{ticker}?from={from_date.strftime('%Y-%m-%d')}&to={to_date.strftime('%Y-%m-%d')}"
         return self._make_fmp_api_request(url)
     
     def get_daily_prices_for_ticker(self, ticker: str, from_date: datetime, to_date: datetime):

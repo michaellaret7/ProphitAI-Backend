@@ -154,6 +154,102 @@ TTM_RATIO_FIELDS_TO_REMOVE = [
 
 
 @handle_controller_errors
+async def get_batch_ticker_info_controller(
+    tickers: list[str],
+) -> Dict[str, Any]:
+    """
+    Retrieve basic ticker information for multiple tickers in a single request.
+
+    Optimized batch endpoint that:
+    - Fetches all ticker data in one DB query using .in_() filter
+    - Parallelizes FMP API calls for company profiles
+    - Returns a dictionary mapping ticker -> info
+
+    Cache TTL: 1 day (86400s)
+    Cache key pattern: ticker:info:batch:{sorted_tickers_hash}
+
+    Args:
+        tickers: List of stock ticker symbols (max 50, deduplicated)
+
+    Returns:
+        Response envelope with batch ticker info payload as dict
+    """
+    # Generate cache key from sorted tickers for consistent caching
+    sorted_tickers = sorted(tickers)
+    cache_key = f"ticker:info:batch:{hash(tuple(sorted_tickers))}"
+
+    # Try cache first
+    cached_data = await cache.get(cache_key)
+    if cached_data:
+        return cached_data
+
+    # Cache miss - fetch from database using .in_() filter (1 query for all tickers)
+    with MarketSession() as session:
+        ticker_objs = (
+            session.query(Ticker)
+            .filter(Ticker.ticker.in_(tickers))
+            .all()
+        )
+
+        # Serialize data while session is still active
+        ticker_data_map = {
+            obj.ticker: serialize_sqlalchemy_obj(obj)
+            for obj in ticker_objs
+        }
+
+    # Identify found vs missing tickers
+    found_tickers = set(ticker_data_map.keys())
+    missing_tickers = set(tickers) - found_tickers
+
+    # Session is now closed - safe to make external API calls
+    fmp_api = FMP_API_DATA()
+
+    # Fetch company profiles in parallel using asyncio.gather
+    async def fetch_profile(ticker: str):
+        """Helper to fetch single company profile"""
+        return ticker, await asyncio.to_thread(fmp_api.get_company_profile, ticker)
+
+    # Run all FMP API calls concurrently
+    profile_results = await asyncio.gather(
+        *[fetch_profile(ticker) for ticker in found_tickers],
+        return_exceptions=True
+    )
+
+    # Process profile results and add descriptions
+    for result in profile_results:
+        # Skip failed requests (exceptions)
+        if isinstance(result, Exception):
+            continue
+
+        ticker, profile = result
+        if profile and isinstance(profile, list) and len(profile) > 0:
+            ticker_data_map[ticker]["description"] = profile[0].get("description", "")
+
+    # Remove price-related fields from all tickers (use /price/quote endpoint instead)
+    for ticker_data in ticker_data_map.values():
+        for field in ["price", "pe", "market_cap"]:
+            ticker_data.pop(field, None)
+
+    # Build response envelope
+    response = ok_envelope(
+        message=f"Batch ticker info retrieved successfully ({len(found_tickers)} found, {len(missing_tickers)} not found)",
+        kind="ticker#batchInfo",
+        resource_id=",".join(sorted_tickers),
+        self_link=f"/api/ticker/info/batch",
+        counts={"totalRequested": len(tickers), "found": len(found_tickers), "notFound": len(missing_tickers)},
+        payload={
+            "data": ticker_data_map,
+            "missing_tickers": list(missing_tickers)
+        },
+    )
+
+    # Cache for 1 day
+    await cache.set(cache_key, response, ttl=86400)
+
+    return response
+
+
+@handle_controller_errors
 async def get_ttm_ratios_for_ticker_comps_controller(
     tickers: list[str],
 ) -> Dict[str, Any]:
