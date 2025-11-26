@@ -1,10 +1,12 @@
 from concurrent.futures import ThreadPoolExecutor, as_completed
+from numpy import extract
 import pandas as pd
 from app.db.core.db_config import MarketSession
 from app.db.core.models.market_data_models import *
 from datetime import datetime, timedelta
 import logging
 from app.utils.decorators.database import with_session
+from sqlalchemy import extract, and_
 
 logger = logging.getLogger(__name__)
 
@@ -62,57 +64,37 @@ def get_price_data_daily(ticker: str, start_date: datetime, end_date: datetime, 
     Much more efficient than fetching 15-min data and resampling.
     """
     ticker = ticker.upper()
-    from sqlalchemy import text
     
-    # Simple and efficient SQL query
-    sql_query = text("""
-    WITH daily_data AS (
-        SELECT 
-            DATE(p.datetime) as date,
-            p.datetime,
-            p.open,
-            p.high,
-            p.low,
-            p.close,
-            p.volume,
-            ROW_NUMBER() OVER (PARTITION BY DATE(p.datetime) ORDER BY p.datetime ASC) as rn_first,
-            ROW_NUMBER() OVER (PARTITION BY DATE(p.datetime) ORDER BY p.datetime DESC) as rn_last
-        FROM price_data.prices p
-        JOIN ticker_universe.tickers t ON p.ticker_id = t.id
-        WHERE t.ticker = :ticker
-            AND p.datetime >= :start_date
-            AND p.datetime <= :end_date
-    )
-    SELECT 
-        date,
-        MAX(CASE WHEN rn_first = 1 THEN open END) as open,
-        MAX(high) as high,
-        MIN(low) as low,
-        MAX(CASE WHEN rn_last = 1 THEN close END) as close,
-        SUM(volume) as volume
-    FROM daily_data
-    GROUP BY date
-    ORDER BY date
-    """)
+
+    # Query for 21:00 UTC rows within the date range
+    query = session.query(Price).join(Ticker).filter(
+        Ticker.ticker == ticker,
+        Price.datetime >= start_date,
+        Price.datetime <= end_date,
+        extract('hour', Price.datetime) == 21,
+        extract('minute', Price.datetime) == 0
+    ).order_by(Price.datetime.asc())  # Sort by date ascending
+
+    rows = query.all()
     
-    # Execute query
-    df = pd.read_sql(
-        sql_query,
-        session.bind,
-        params={
-            'ticker': ticker,
-            'start_date': start_date,
-            'end_date': end_date
+    # Convert to DataFrame to match expected return type
+    data = [
+        {
+            'date': row.datetime.date(),  # Use .date() to remove time
+            'open': row.open,
+            'high': row.high,
+            'low': row.low,
+            'close': row.close,
+            'volume': row.volume
         }
-    )
+        for row in rows
+    ]
     
-    if df.empty:
-        ticker_exists = session.query(Ticker).filter(Ticker.ticker == ticker).first()
-        if not ticker_exists:
-            logger.debug("Ticker '%s' not found in database", ticker)
-        else:
-            logger.debug("Ticker '%s' exists but no price data for date range %s to %s", ticker, start_date, end_date)
-            
+    df = pd.DataFrame(data)
+
+    if not df.empty:
+        pass # Optional: set as index if needed
+        
     return df
 
 def fetch_bulk_price_data_for_tickers(tickers: list, start_date_str: str, end_date_str: str, frequency: str = 'daily'):
@@ -230,4 +212,5 @@ def get_dividends_series(ticker: str, start_date: datetime, end_date: datetime, 
     # Prefer adjusted dividend if available, fallback to raw
     data = {pd.to_datetime(r.date): float(r.adjDividend if r.adjDividend is not None else (r.dividend or 0.0)) for r in rows}
     return pd.Series(data).sort_index()
+
 

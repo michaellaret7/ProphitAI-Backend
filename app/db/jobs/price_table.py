@@ -1,7 +1,7 @@
 from app.db.core.db_config import MarketSession
 from app.db.core.models.market_data_models import Ticker, Price
 from app.db.core.pull_fmp_data import FMP_API_DATA
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timedelta, timezone, time as dt_time
 import time
 from app.utils.serialize_output import serialize_sqlalchemy_obj
 from app.utils.time_utils import get_current_utc_time
@@ -10,6 +10,24 @@ from sqlalchemy.dialects.postgresql import insert
 import pytz
 from concurrent.futures import ThreadPoolExecutor, as_completed
 import threading
+
+# EOD time in UTC (21:00 = 4PM EST market close)
+EOD_HOUR_UTC = 21
+EOD_MINUTE_UTC = 0
+
+# Max value for PostgreSQL Integer (32-bit signed)
+MAX_INT32 = 2147483647
+
+
+def is_after_market_close() -> bool:
+    """Check if current time is after market close (5PM EST).
+
+    Uses EST timezone so DST is handled automatically.
+    Returns True if current EST time is >= 17:00 (5PM).
+    """
+    est = pytz.timezone('US/Eastern')
+    current_est = datetime.now(est)
+    return current_est.hour >= 17
 
 class UpdatePriceTable():
     def __init__(self):
@@ -97,6 +115,11 @@ class UpdatePriceTable():
             # Convert to UTC
             dt_utc = dt_est.astimezone(timezone.utc)
 
+            # Cap volume to max int32 to avoid PostgreSQL integer overflow
+            volume = record.get('volume')
+            if volume is not None and volume > MAX_INT32:
+                volume = MAX_INT32
+
             price_records.append({
                 'ticker_id': ticker_id,
                 'datetime': dt_utc.replace(tzinfo=None),  # Remove timezone info for storage
@@ -104,7 +127,7 @@ class UpdatePriceTable():
                 'high': record.get('high'),
                 'low': record.get('low'),
                 'close': record.get('close'),
-                'volume': record.get('volume')
+                'volume': volume
             })
         
         # Use PostgreSQL's ON CONFLICT to handle duplicates
@@ -179,6 +202,182 @@ class UpdatePriceTable():
         print(f"Errors: {self.errors}")
         print(f"Time elapsed: {elapsed_time:.2f} seconds")
         print(f"Average time per ticker: {elapsed_time/self.total_tickers:.2f} seconds")
+
+    def update_eod_prices(self, max_workers=10):
+        """Update EOD (21:00 UTC) prices for all tickers, backfilling any missing days.
+
+        For each ticker, finds the last 21:00 UTC row and fetches daily data from
+        that date to today. All EOD rows are inserted at 21:00 UTC regardless of DST.
+        Uses on_conflict_do_update to overwrite any existing rows.
+        """
+        print(f"\n{'='*50}")
+        print("UPDATING EOD PRICES")
+        print(f"{'='*50}")
+
+        # Get all tickers
+        session = MarketSession()
+        tickers = session.query(Ticker).all()
+        session.close()
+
+        if not tickers:
+            print("No tickers found")
+            return
+
+        # Reset counters
+        self.total_tickers = len(tickers)
+        self.total_records = 0
+        self.successful_updates = 0
+        self.errors = 0
+        self.processed = 0
+
+        print(f"Updating EOD prices for {self.total_tickers} tickers using {max_workers} threads...")
+        start_time = time.time()
+
+        # Use ThreadPoolExecutor for parallel processing
+        with ThreadPoolExecutor(max_workers=max_workers) as executor:
+            futures = {
+                executor.submit(self._update_eod_for_ticker, ticker): ticker.ticker
+                for ticker in tickers
+            }
+
+            for future in as_completed(futures):
+                try:
+                    future.result()
+                except Exception as e:
+                    ticker_symbol = futures[future]
+                    print(f"Error processing EOD for {ticker_symbol}: {e}")
+                    with self.lock:
+                        self.errors += 1
+
+        # Final summary
+        elapsed_time = time.time() - start_time
+        print(f"\n{'='*50}")
+        print("EOD UPDATE COMPLETE!")
+        print(f"{'='*50}")
+        print(f"Total tickers processed: {self.total_tickers}")
+        print(f"Successful updates: {self.successful_updates}")
+        print(f"Total EOD records upserted: {self.total_records}")
+        print(f"Errors: {self.errors}")
+        print(f"Time elapsed: {elapsed_time:.2f} seconds")
+
+    def _update_eod_for_ticker(self, ticker: Ticker):
+        """Update EOD prices for a single ticker, backfilling any missing days (thread-safe).
+
+        Finds the last 21:00 UTC row and fetches daily data from that date to today,
+        upserting all missing EOD rows at 21:00 UTC.
+        """
+        session = MarketSession()
+        try:
+            from sqlalchemy import extract
+
+            # Find the last 21:00 UTC row for this ticker
+            last_eod = session.query(func.max(Price.datetime)).filter(
+                Price.ticker_id == ticker.id,
+                extract('hour', Price.datetime) == EOD_HOUR_UTC,
+                extract('minute', Price.datetime) == EOD_MINUTE_UTC
+            ).scalar()
+
+            # Get today's date in EST
+            est = pytz.timezone('US/Eastern')
+            today_est = datetime.now(est).date()
+
+            # Determine start date for fetching
+            if last_eod:
+                # Start from the day after the last EOD row
+                start_date = last_eod.date() + timedelta(days=1)
+            else:
+                # No EOD rows exist - get the earliest price date for this ticker
+                first_price = session.query(func.min(Price.datetime)).filter(
+                    Price.ticker_id == ticker.id
+                ).scalar()
+                if first_price:
+                    start_date = first_price.date()
+                else:
+                    return 0
+
+            # Skip if already up to date
+            if start_date > today_est:
+                with self.lock:
+                    self.processed += 1
+                return 0
+
+            # Fetch daily data from start_date to today
+            eod_data = self.fmp_api.get_daily_prices_for_ticker(
+                ticker.ticker,
+                datetime.combine(start_date, dt_time(0, 0)),
+                datetime.combine(today_est, dt_time(23, 59))
+            )
+
+            if not eod_data or 'historical' not in eod_data or not eod_data['historical']:
+                with self.lock:
+                    self.processed += 1
+                return 0
+
+            # Build records for all days returned
+            records = []
+            for day_data in eod_data['historical']:
+                date_str = day_data.get('date')
+                if not date_str:
+                    continue
+
+                # Build the 21:00 UTC datetime (always 21:00 regardless of DST)
+                date_obj = datetime.strptime(date_str, '%Y-%m-%d')
+                eod_datetime = datetime.combine(date_obj.date(), dt_time(EOD_HOUR_UTC, EOD_MINUTE_UTC))
+
+                # Cap volume
+                volume = day_data.get('volume')
+                if volume is not None and volume > MAX_INT32:
+                    volume = MAX_INT32
+
+                records.append({
+                    'ticker_id': str(ticker.id),
+                    'datetime': eod_datetime,
+                    'open': day_data.get('open'),
+                    'high': day_data.get('high'),
+                    'low': day_data.get('low'),
+                    'close': day_data.get('close'),
+                    'volume': volume
+                })
+
+            if not records:
+                with self.lock:
+                    self.processed += 1
+                return 0
+
+            # Bulk upsert all EOD records
+            stmt = insert(Price).values(records)
+            stmt = stmt.on_conflict_do_update(
+                index_elements=['ticker_id', 'datetime'],
+                set_={
+                    'open': stmt.excluded.open,
+                    'high': stmt.excluded.high,
+                    'low': stmt.excluded.low,
+                    'close': stmt.excluded.close,
+                    'volume': stmt.excluded.volume
+                }
+            )
+            result = session.execute(stmt)
+            session.commit()
+
+            with self.lock:
+                self.processed += 1
+                if result.rowcount > 0:
+                    self.successful_updates += 1
+                    self.total_records += result.rowcount
+
+                if self.processed % 50 == 0:
+                    print(f"EOD Progress: {self.processed}/{self.total_tickers} tickers processed")
+
+            return result.rowcount
+
+        except Exception as e:
+            print(f"Error updating EOD for {ticker.ticker}: {str(e)}")
+            session.rollback()
+            with self.lock:
+                self.errors += 1
+            return -1
+        finally:
+            session.close()
 
     def recover_ticker_data(self, ticker_symbol: str):
         """
