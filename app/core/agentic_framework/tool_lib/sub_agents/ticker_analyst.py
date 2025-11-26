@@ -5,8 +5,22 @@ from datetime import datetime
 from app.core.agentic_framework.tool_lib.common.responses import success_response, error_response
 
 # Import tool definitions from tool_lib
-from app.core.agentic_framework.tool_lib.data_tools.fundamentals import GET_TICKER_FUNDAMENTAL_DATA_TOOL
-from app.core.agentic_framework.tool_lib.data_tools.ticker_repository import FETCH_TICKER_REPOSITORY_DATA_TOOL
+from app.core.agentic_framework.tool_lib.data_tools.ticker_fundamentals import (
+    GET_TICKER_FUNDAMENTAL_DATA_TOOL, 
+    GET_ANALYST_ESTIMATES_TOOL
+)
+from app.core.agentic_framework.tool_lib.data_tools.ticker_info import (
+    GET_STOCK_RATINGS_TOOL,
+    GET_PRICE_TARGET_DATA_TOOL
+)
+from app.core.agentic_framework.tool_lib.data_tools.news import (
+    GET_TICKER_NEWS_TOOL,
+    GET_PRESS_RELEASES_TOOL
+)
+from app.core.agentic_framework.tool_lib.data_tools.corporate_actions import (
+    GET_EARNINGS_TRANSCRIPTS_TOOL,
+    GET_DIVIDEND_HISTORY_TOOL
+)
 from app.core.agentic_framework.tool_lib.ticker_tools.performance import GET_TICKER_PERFORMANCE_AND_RISK_TOOL
 from app.core.agentic_framework.tool_lib.ticker_tools.factors import CALCULATE_TICKER_FACTORS_TOOL
 from app.core.agentic_framework.tool_lib.ticker_tools.technicals import TECHNICALS_TOOL
@@ -30,16 +44,17 @@ def build_ticker_analysis_prompt(ticker: str) -> str:
         f"   - statement_type=income_statement (last 4q)\n"
         f"   - statement_type=cash_flow (last 4q)\n"
         f"   - statement_type=balance_sheet (last 4q)\n"
-        f"2) Repository (fetch_ticker_repository_data):\n"
-        f"   - analyst_estimates (limit=4) for revisions/run-rate\n"
-        f"   - ratings, analyst_recommendations, price_target_summary\n"
-        f"   - stock_news and press_releases (last ~180 days) for catalysts\n"
-        f"   - latest_transcript if available; otherwise earnings_transcripts(limit=1)\n"
-        f"   - dividends_series for shareholder returns\n"
-        f"3) Technicals (run_technicals):\n"
+        f"2) Estimates & Sentiment:\n"
+        f"   - get_analyst_estimates (limit=4) for revisions/run-rate\n"
+        f"   - get_stock_ratings, get_price_target_data for street setup\n"
+        f"3) News & Events:\n"
+        f"   - get_ticker_news, get_press_releases (last ~180 days) for catalysts\n"
+        f"   - get_earnings_call_transcripts(limit=1) if available\n"
+        f"   - get_dividend_history for shareholder returns\n"
+        f"4) Technicals (run_technicals):\n"
         f"   - indicators=['moving_averages','rsi','macd','adx','bollinger_bands','atr'] (weeks_back=52)\n"
         f"   - Report latest readings with dates; note trend vs MAs and momentum/volatility.\n"
-        f"4) Performance & Risk (get_ticker_performance_and_risk):\n"
+        f"5) Performance & Risk (get_ticker_performance_and_risk):\n"
         f"   - Start with filters=['core']; add 'risk_metrics' or 'performance_metrics' only if needed.\n"
         f"   - Focus: vol, max_drawdown, beta; Sharpe, Sortino, CAGR; trailing total returns (3m/6m/1y/3y).\n"
         f"\n"
@@ -84,7 +99,13 @@ class TickerAnalyst(SubAgent):
         
         tools = [
             GET_TICKER_FUNDAMENTAL_DATA_TOOL,
-            FETCH_TICKER_REPOSITORY_DATA_TOOL,
+            GET_ANALYST_ESTIMATES_TOOL,
+            GET_STOCK_RATINGS_TOOL,
+            GET_PRICE_TARGET_DATA_TOOL,
+            GET_TICKER_NEWS_TOOL,
+            GET_PRESS_RELEASES_TOOL,
+            GET_EARNINGS_TRANSCRIPTS_TOOL,
+            GET_DIVIDEND_HISTORY_TOOL,
             GET_TICKER_PERFORMANCE_AND_RISK_TOOL,
             CALCULATE_TICKER_FACTORS_TOOL,
             TECHNICALS_TOOL

@@ -1,7 +1,7 @@
 from app.db.jobs.fundamentals_table import UpdateFundamentalData
 from app.db.jobs.ticker_table import UpdateTickerTable
 from app.db.jobs.price_table import UpdatePriceTable
-from app.db.jobs.macro_table import UpdateCommodityPrices
+from app.db.jobs.macro_table import update_all_macro_data
 
 def main():
     print("Updating ticker table...")
@@ -21,10 +21,9 @@ def main():
 
     print("="*100)
 
-    print("\nUpdating commodity prices...\n")
+    print("\nUpdating macro data (commodities, economic indicators, calendar)...\n")
     print("="*100)
-    updater = UpdateCommodityPrices()
-    results = updater.update_all_commodities()
+    results = update_all_macro_data()
 
     print("="*100)
 

@@ -122,9 +122,6 @@ def get_mergers_acquisitions(
     except Exception as e:
         return error_response(f"Error retrieving M&A data: {str(e)}")
 
-if __name__ == "__main__":
-    print(get_mergers_acquisitions(row_limit=10, days_back=30, _simulation_date=datetime(2025, 1, 1)))
-
 # Tool Schema Constants
 GET_MERGERS_ACQUISITIONS_DESCRIPTION = (
     "Fetch the latest mergers and acquisitions (M&A) transactions. "
