@@ -366,11 +366,16 @@ def backfill_all_tickers(max_workers: int = 10) -> dict:
 
 
 if __name__ == "__main__":
-    # To test on a single ticker, uncomment the line below:
-    # backfill_single_ticker('AAPL')
-
-    # To run on all tickers from CSV, uncomment the line below:
-    backfill_all_tickers(max_workers=8)
-
+    market_session = MarketSession()
+    query = market_session.query(Price).join(Ticker).filter(Ticker.ticker == 'AAL').order_by(Price.datetime.desc()).all()
+    df = pd.DataFrame([{
+        'datetime': row.datetime,
+        'open': row.open,
+        'close': row.close,
+        'volume': row.volume
+    } for row in query])
+    print(df.head(100))
+    print(df.tail(100))
+    market_session.close()
 
 
