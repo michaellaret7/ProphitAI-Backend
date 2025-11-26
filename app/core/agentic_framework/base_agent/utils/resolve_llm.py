@@ -8,7 +8,7 @@ from app.utils.choose_model_and_client import (
     deepseek_model_and_client,
     grok_model_and_client,
     perplexity_model_and_client,
-    openai_huggingface_model_and_client,
+    huggingface_model_and_client,
     gemini_model_and_client,
     llama_model_and_client,
 )
@@ -47,7 +47,7 @@ def resolve_llm_and_client(
     if provider_key == "perplexity":
         return perplexity_model_and_client(model=model)
     if provider_key in ("huggingface", "openai_hf", "hf"):
-        return openai_huggingface_model_and_client(model=model)
+        return huggingface_model_and_client(model=model)
     if provider_key == "gemini":
         return gemini_model_and_client(model=model)
     if provider_key in ("llama", "together", "together_ai"):

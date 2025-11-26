@@ -1,6 +1,7 @@
 """Tool Handler - Phase 1
 
 Simple tool execution and message management.
+Supports parallel execution via asyncio when multiple tools are requested.
 """
 
 import json
@@ -200,7 +201,6 @@ class ToolHandler:
                     print(f"   ✓ Result: {result_str}")
             elif self.agent.print_mode == PrintMode.SUBAGENT:
                 print(f"[Sub-agent] {name} tool call successful: {success}")
-            # PRODUCTION mode: no result output
 
             if success:
                 self.agent.messages.append({

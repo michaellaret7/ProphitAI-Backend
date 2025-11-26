@@ -284,66 +284,25 @@ from app.core.calculations.portfolio.utils import get_portfolio_returns, get_ben
 # }
 
 portfolio = {
-    "ORCL": {
-        "allocation": 0.0636,
-        "position": "long"
-    },
-    "MSFT": {
-        "allocation": 0.0636,
-        "position": "long"
-    },
-    "LLY": {
-        "allocation": 0.0636,
-        "position": "long"
-    },
-    "MRK": {
-        "allocation": 0.0636,
-        "position": "long"
-    },
-    "JPM": {
-        "allocation": 0.0636,
-        "position": "long"
-    },
-    "BAC": {
-        "allocation": 0.0636,
-        "position": "long"
-    },
-    "KO": {
-        "allocation": 0.0636,
-        "position": "long"
-    },
-    "XOM": {
-        "allocation": 0.0636,
-        "position": "long"
-    },
-    "DUK": {
-        "allocation": 0.0636,
-        "position": "long"
-    },
-    "CAT": {
-        "allocation": 0.0636,
-        "position": "long"
-    },
-    "AAPL": {
-        "allocation": 0.0636,
-        "position": "long"
-    },
-    "SCHD": {
-        "allocation": 0.10,
-        "position": "long"
-    },
-    "IEMG": {
-        "allocation": 0.10,
-        "position": "long"
-    },
-    "BND": {
-        "allocation": 0.08,
-        "position": "long"
-    },
-    "DGRO": {
-        "allocation": 0.02,
-        "position": "long"
-    }
+    "NVDA": {"allocation": 0.07, "position": "long"},
+    "AAPL": {"allocation": 0.05, "position": "long"},
+    "LRCX": {"allocation": 0.03, "position": "long"},
+    "GILD": {"allocation": 0.08, "position": "long"},
+    "WMT": {"allocation": 0.06, "position": "long"},
+    "MO": {"allocation": 0.04, "position": "long"},
+    "PG": {"allocation": 0.08, "position": "long"},
+    "CCEP": {"allocation": 0.05, "position": "long"},
+    "UBER": {"allocation": 0.05, "position": "long"},
+    "FERG": {"allocation": 0.03, "position": "long"},
+    "TT": {"allocation": 0.03, "position": "long"},
+    "MA": {"allocation": 0.05, "position": "long"},
+    "JPM": {"allocation": 0.05, "position": "long"},
+    "SLB": {"allocation": 0.015, "position": "long"},
+    "XOM": {"allocation": 0.015, "position": "long"},
+    "AGG": {"allocation": 0.12, "position": "long"},
+    "VEA": {"allocation": 0.06, "position": "long"},
+    "VWO": {"allocation": 0.04, "position": "long"},
+    "SPLV": {"allocation": 0.08, "position": "long"}
 }
 
 

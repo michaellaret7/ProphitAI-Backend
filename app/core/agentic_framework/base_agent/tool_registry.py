@@ -25,6 +25,11 @@ from app.core.agentic_framework.tool_lib.base_tools.finalize import (
     FINALIZE_DESCRIPTION,
     FINALIZE_PARAMETERS,
 )
+from app.core.agentic_framework.tool_lib.base_tools.think import (
+    think,
+    THINK_DESCRIPTION,
+    THINK_PARAMETERS,
+)
 from typing import Any
 
 def register_base_tools(agent: Any) -> None:
@@ -132,4 +137,12 @@ def register_base_tools(agent: Any) -> None:
             plan=agent.plan,
             meta=meta
         ),
+    )
+
+    # think (structured reasoning)
+    agent.add_tool(
+        name="think",
+        description=THINK_DESCRIPTION,
+        parameters=THINK_PARAMETERS,
+        function=lambda thought, **kwargs: think(thought=thought),
     )

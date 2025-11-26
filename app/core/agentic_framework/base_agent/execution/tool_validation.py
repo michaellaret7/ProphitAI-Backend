@@ -8,31 +8,19 @@ from app.core.agentic_framework.base_agent.utils.models import TaskStatus
 if TYPE_CHECKING:
     from ..agent import BaseAgent
 
-str = """
-success: true
-data:
-    portfolio_value: 1000000
-    positions: 5
-"""
-
-def validate_tool_call(name: str, args: dict, result: str, agent: 'BaseAgent') -> None:
+def validate_tool_call(name: str, args: dict, result: Any, agent: 'BaseAgent') -> str:
     """Validate tool execution success and display in-progress tasks.
 
     Args:
-        result: YAML-formatted tool result string
+        result: Tool result (dict or YAML string)
         agent: Agent instance containing plan and tasks
-
-    Example tool result from LLM:
-        ```yaml
-        success: true
-        message: "Task completed successfully"
-        data:
-          portfolio_value: 1000000
-          positions: 5
-        ```
     """
     try:
-        tool_payload = yaml.safe_load(result)
+        if isinstance(result, dict):
+            tool_payload = result
+        else:
+            tool_payload = yaml.safe_load(result)
+            
         success = tool_payload.get("success", False)
         data = tool_payload.get("data", {})
         error = tool_payload.get("error") if not success else None
