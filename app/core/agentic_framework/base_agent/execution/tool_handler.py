@@ -10,7 +10,7 @@ from app.core.agentic_framework.base_agent.execution.tool_validation import vali
 from app.core.agentic_framework.base_agent.utils.models import PrintMode
 from app.core.agentic_framework.base_agent.logging.message_logger import write_messages_to_yaml
 from app.core.agentic_framework.base_agent.logging.tool_trace import log_tool_call
-from app.core.agentic_framework.base_agent.context_manager import prune_completed_task_messages, prune_note_content
+from app.core.agentic_framework.base_agent.context_manager import prune_completed_task_messages, prune_note_content, prune_think_content
 import yaml
 from app.core.agentic_framework.base_agent.utils.models import TaskStatus
 from app.core.agentic_framework.tool_lib.common.responses import error_response
@@ -214,6 +214,17 @@ class ToolHandler:
                     "tool_call_id": tool_call.id,
                     "content": yaml.dump(tool_validation_dict, default_flow_style=False, sort_keys=False)
                 })
+
+            # Prune think tool arguments from actual context (not just YAML)
+            # Unlike write_note, we DO prune from self.agent.messages because:
+            # 1. The thought is preserved in the tool response
+            # 2. The argument is redundant - model already generated it and sees result
+            if name == "think":
+                self.agent.messages = prune_think_content(
+                    messages=self.agent.messages,
+                    exclude_index=None,  # Prune all think arguments
+                    verbose=(self.agent.print_mode != PrintMode.PRODUCTION)
+                )
 
         # Write messages to YAML with pruned write_note content (for logging only)
         # CRITICAL: We prune ONLY for YAML writing, NOT for self.agent.messages

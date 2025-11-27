@@ -25,9 +25,10 @@ from .utils import (
     normalize_industry_names,
     normalize_sector_names,
 )
+import warnings
+warnings.filterwarnings("ignore", category=RuntimeWarning)
 
 logger = logging.getLogger(__name__)
-
 
 # ============================= Parsing ============================= #
 

@@ -64,6 +64,8 @@ def get_sector_industries(sector: str, _simulation_date: Optional[datetime] = No
 
         return success_response(tree)
 
+if __name__ == "__main__":
+    print(get_sector_industries("equity_sector_consumer_staples"))
 
 # Tool Schema Constants
 GET_GROUP_TICKERS_DESCRIPTION = (

@@ -283,28 +283,103 @@ from app.core.calculations.portfolio.utils import get_portfolio_returns, get_ben
 #       }
 # }
 
-portfolio = {
-    "NVDA": {"allocation": 0.07, "position": "long"},
-    "AAPL": {"allocation": 0.05, "position": "long"},
-    "LRCX": {"allocation": 0.03, "position": "long"},
-    "GILD": {"allocation": 0.08, "position": "long"},
-    "WMT": {"allocation": 0.06, "position": "long"},
-    "MO": {"allocation": 0.04, "position": "long"},
-    "PG": {"allocation": 0.08, "position": "long"},
-    "CCEP": {"allocation": 0.05, "position": "long"},
-    "UBER": {"allocation": 0.05, "position": "long"},
-    "FERG": {"allocation": 0.03, "position": "long"},
-    "TT": {"allocation": 0.03, "position": "long"},
-    "MA": {"allocation": 0.05, "position": "long"},
-    "JPM": {"allocation": 0.05, "position": "long"},
-    "SLB": {"allocation": 0.015, "position": "long"},
-    "XOM": {"allocation": 0.015, "position": "long"},
-    "AGG": {"allocation": 0.12, "position": "long"},
-    "VEA": {"allocation": 0.06, "position": "long"},
-    "VWO": {"allocation": 0.04, "position": "long"},
-    "SPLV": {"allocation": 0.08, "position": "long"}
-}
+# portfolio = { # Outperformed SPY!!
+#     "NVDA": {"allocation": 0.07, "position": "long"},
+#     "AAPL": {"allocation": 0.05, "position": "long"},
+#     "LRCX": {"allocation": 0.03, "position": "long"},
+#     "GILD": {"allocation": 0.08, "position": "long"},
+#     "WMT": {"allocation": 0.06, "position": "long"},
+#     "MO": {"allocation": 0.04, "position": "long"},
+#     "PG": {"allocation": 0.08, "position": "long"},
+#     "CCEP": {"allocation": 0.05, "position": "long"},
+#     "UBER": {"allocation": 0.05, "position": "long"},
+#     "FERG": {"allocation": 0.03, "position": "long"},
+#     "TT": {"allocation": 0.03, "position": "long"},
+#     "MA": {"allocation": 0.05, "position": "long"},
+#     "JPM": {"allocation": 0.05, "position": "long"},
+#     "SLB": {"allocation": 0.015, "position": "long"},
+#     "XOM": {"allocation": 0.015, "position": "long"},
+#     "AGG": {"allocation": 0.12, "position": "long"},
+#     "VEA": {"allocation": 0.06, "position": "long"},
+#     "VWO": {"allocation": 0.04, "position": "long"},
+#     "SPLV": {"allocation": 0.08, "position": "long"}
+# }
 
+
+portfolio = { # Outperformed SPY!!
+    "AXP": {
+        "allocation": 0.06,
+        "position": "long"
+    },
+    "ALL": {
+        "allocation": 0.06,
+        "position": "long"
+    },
+    "MPLX": {
+        "allocation": 0.06,
+        "position": "long"
+    },
+    "FTI": {
+        "allocation": 0.06,
+        "position": "long"
+    },
+    "CRWD": {
+        "allocation": 0.06,
+        "position": "long"
+    },
+    "TRGP": {
+        "allocation": 0.06,
+        "position": "long"
+    },
+    "PGR": {
+        "allocation": 0.06,
+        "position": "long"
+    },
+    "WES": {
+        "allocation": 0.06,
+        "position": "long"
+    },
+    "GILD": {
+        "allocation": 0.06,
+        "position": "long"
+    },
+    "BMY": {
+        "allocation": 0.06,
+        "position": "long"
+    },
+    "ZM": {
+        "allocation": 0.05,
+        "position": "long"
+    },
+    "AMP": {
+        "allocation": 0.05,
+        "position": "long"
+    },
+    "BND": {
+        "allocation": 0.085,
+        "position": "long"
+    },
+    "IWM": {
+        "allocation": 0.06,
+        "position": "long"
+    },
+    "IEMG": {
+        "allocation": 0.04,
+        "position": "long"
+    },
+    "VDE": {
+        "allocation": 0.04,
+        "position": "long"
+    },
+    "VHT": {
+        "allocation": 0.03,
+        "position": "long"
+    },
+    "XLF": {
+        "allocation": 0.045,
+        "position": "long"
+    }
+}
 
 # portfolio = { # 2022 Outperformed SPY!!
 #     "IDXX": {

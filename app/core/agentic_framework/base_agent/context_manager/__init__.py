@@ -8,6 +8,7 @@ window manageable:
 
 from .message_pruner import prune_completed_task_messages
 from .notes_pruner import prune_note_content
+from .think_pruner import prune_think_content
 from .utils import (
     parse_tool_call_arguments,
     find_tool_response_index,
@@ -18,6 +19,7 @@ from .utils import (
 __all__ = [
     "prune_completed_task_messages",
     "prune_note_content",
+    "prune_think_content",
     "parse_tool_call_arguments",
     "find_tool_response_index",
     "count_messages_by_role",
