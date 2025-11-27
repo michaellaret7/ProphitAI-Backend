@@ -13,6 +13,10 @@ from app.core.agentic_framework.base_agent.execution.utils import (
     extract_final_answer,
     build_plan_context
 )
+from app.core.agentic_framework.base_agent.execution.tool_handler_async import (
+    should_run_parallel,
+    execute_tools_parallel
+)
 from app.core.agentic_framework.base_agent.logging.message_logger import write_messages_to_yaml
 from app.core.agentic_framework.tool_lib.base_tools.edit_plan import edit_plan
 
@@ -202,18 +206,26 @@ class ExecutionLoop:
 
                 # Handle tool calls
                 if assistant_message.tool_calls: #if tool calls are in the assistant message, we need to execute the underlying function and return the output
+
+                    tool_calls = assistant_message.tool_calls # --> create the tool calls variable out of assistant_message.tool calls just for simplicity sake
+
                     # Preserve the model's visible reasoning even when it chose tools
                     self.agent.messages.append({
                         "role": "assistant",
                         "content": assistant_text,
-                        "tool_calls": assistant_message.tool_calls
+                        "tool_calls": tool_calls
                     })
-                    self.agent.tool_handler.handle_tool_calls(assistant_message.tool_calls)
+
+                    # NOTE: This Conditional statement says if there are multiple tool calls returned for this iteration, we should run the tools in parallel (using async) else run the regular sequential tool calls
+                    if should_run_parallel(tool_calls):
+                        execute_tools_parallel(self.agent.tool_handler, tool_calls, len(self.agent.messages) - 1)
+                    else:
+                        self.agent.tool_handler.handle_tool_calls(tool_calls)
 
                     # Detect finalize tool and terminate with provided answer
                     # This looks for the function name "finalize" in the tool calls
                     try:
-                        for tc in assistant_message.tool_calls:
+                        for tc in tool_calls:
                             name = getattr(tc.function, "name", "")
                             if name in ("finalize", "final_answer", "final_answer_tool"):
                                 import json as _json

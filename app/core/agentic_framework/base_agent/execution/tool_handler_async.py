@@ -11,7 +11,10 @@ import yaml
 from app.core.agentic_framework.base_agent.execution.tool_validation import validate_tool_call
 from app.core.agentic_framework.base_agent.utils.models import PrintMode
 from app.core.agentic_framework.base_agent.logging.tool_trace import log_tool_call
+from app.core.agentic_framework.base_agent.logging.message_logger import write_messages_to_yaml
+from app.core.agentic_framework.base_agent.context_manager import prune_note_content
 from app.core.agentic_framework.tool_lib.common.responses import error_response
+import copy
 
 if TYPE_CHECKING:
     from app.core.agentic_framework.base_agent.execution.tool_handler import ToolHandler
@@ -193,5 +196,23 @@ def execute_tools_parallel(
 
     # Log tool call history
     log_tool_call(tool_handler.tool_call_history, output_dir=getattr(agent, "output_dir", None))
+
+    # Write messages to YAML with pruned write_note content (for logging only)
+    # Mirrors the behavior in tool_handler.handle_tool_calls()
+    try:
+        iteration_indices = getattr(agent, "_iteration_message_indices", None)
+        messages_copy = copy.deepcopy(agent.messages)
+        pruned_messages = prune_note_content(
+            messages=messages_copy,
+            exclude_index=None,
+            verbose=(agent.print_mode != PrintMode.PRODUCTION)
+        )
+        write_messages_to_yaml(
+            pruned_messages,
+            output_dir=getattr(agent, "output_dir", None),
+            iteration_indices=iteration_indices
+        )
+    except Exception as e:
+        print(f"⚠️  Warning: Failed to write messages to YAML: {e}")
 
 
