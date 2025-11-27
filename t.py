@@ -365,25 +365,6 @@ def backfill_all_tickers(max_workers: int = 10) -> dict:
     return summary
 
 
-if __name__ == "__main__":
-    market_session = MarketSession()
-    query = market_session.query(Price).join(Ticker).filter(Ticker.ticker == 'AAL').order_by(Price.datetime.desc()).all()
 
-    df = pd.DataFrame([{
-        'datetime': row.datetime,
-        'open': row.open,
-        'high': row.high,
-        'low': row.low,
-        'close': row.close,
-        'volume': row.volume
-    } for row in query])
-
-    print(df.head(100))
-    print(df.tail(100))
-    market_session.close()
-
-    fmp = FMP_API_DATA()
-    fmp_data = fmp.get_daily_prices_for_ticker('AAL', datetime(2025, 1, 1), datetime(2025, 1, 31))
-    print(fmp_data)
 
 

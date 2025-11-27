@@ -8,7 +8,7 @@ Handles migrations for 4 separate databases:
 - macro_data (MacroDataBase)
 
 Usage (from project root):
-    alembic -c app/db/alembic_migration/alembic.ini -x db=<database_name> <command>
+    alembic -c app/db/alembic_migration/alembic.ini --name <database_name> <command>
 """
 import os
 import sys
@@ -63,17 +63,17 @@ DB_CONFIGS = {
 
 def get_db_name() -> str:
     """
-    Get the database name from -x db=<name> argument.
+    Get the database name from --name argument (config section).
 
     Raises:
         ValueError: If database not specified or unknown database name.
     """
-    x_args = context.get_x_argument(as_dictionary=True)
-    db_name = x_args.get("db")
+    # config.config_ini_section is set by --name flag
+    db_name = config.config_ini_section
 
-    if not db_name:
+    if db_name == "alembic" or not db_name:
         raise ValueError(
-            "Database not specified. Use: alembic -c app/db/alembic_migration/alembic.ini -x db=<database_name> <command>\n"
+            "Database not specified. Use: alembic -c app/db/alembic_migration/alembic.ini --name <database_name> <command>\n"
             f"Available databases: {', '.join(DB_CONFIGS.keys())}"
         )
 
@@ -110,7 +110,6 @@ def run_migrations_offline() -> None:
         literal_binds=True,
         dialect_opts={"paramstyle": "named"},
         version_table=f"alembic_version_{db_name}",
-        version_locations=[get_version_locations(db_name)],
         include_schemas=True,
         compare_type=True,
         compare_server_default=True,
@@ -139,7 +138,6 @@ def run_migrations_online() -> None:
             connection=connection,
             target_metadata=base.metadata,
             version_table=f"alembic_version_{db_name}",
-            version_locations=[get_version_locations(db_name)],
             include_schemas=True,
             compare_type=True,
             compare_server_default=True,

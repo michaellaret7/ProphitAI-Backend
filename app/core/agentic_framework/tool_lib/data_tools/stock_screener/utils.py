@@ -37,6 +37,33 @@ def market_session():
 
 # ============================= Field Normalization ============================= #
 
+# Cache for valid field values to avoid repeated DB queries
+_valid_field_values_cache: dict = {}
+
+
+def get_valid_field_values(field_name: str, model: Any = Ticker) -> List[str]:
+    """
+    Get all valid values for a field from the database.
+
+    Uses a module-level cache to avoid repeated DB queries.
+
+    Args:
+        field_name: Database field name ('sector', 'industry', 'sub_industry')
+        model: SQLAlchemy model containing the field
+
+    Returns:
+        List of valid field values
+    """
+    cache_key = f"{model.__tablename__}.{field_name}"
+    if cache_key not in _valid_field_values_cache:
+        with market_session() as session:
+            field = getattr(model, field_name)
+            _valid_field_values_cache[cache_key] = [
+                row[0] for row in session.query(field).distinct().all() if row[0]
+            ]
+    return _valid_field_values_cache[cache_key]
+
+
 def normalize_field_names(
     values: Union[str, List[str], None],
     field_name: str,

@@ -88,45 +88,40 @@ class StockScreener:
             # WHERE
             where_clauses = []
 
-            # Add latest date filters for time-series tables (using OR NULL to preserve outer join semantics)
+            # Reason: Add latest date filters for time-series tables using correlated subqueries.
+            # Using == with scalar_subquery ensures only the latest record per ticker is returned.
+            # OR NULL preserves outer join semantics for tickers without matching records.
             if FinancialRatio in required_models:
-                # Reason: Only include records with the latest date for each ticker (or NULL if no match)
+                latest_fr_date = (
+                    session.query(func.max(FinancialRatio.date))
+                    .filter(FinancialRatio.ticker_id == Ticker.id)
+                    .correlate(Ticker)
+                    .scalar_subquery()
+                )
                 where_clauses.append(
-                    or_(
-                        fr.date == None,  # NULL from outer join
-                        fr.date.in_(
-                            session.query(func.max(FinancialRatio.date))
-                            .filter(FinancialRatio.ticker_id == Ticker.id)
-                            .correlate(Ticker)
-                            .scalar_subquery()
-                        )
-                    )
+                    or_(fr.date == None, fr.date == latest_fr_date)
                 )
 
             if Rating in required_models:
+                latest_rat_date = (
+                    session.query(func.max(Rating.date))
+                    .filter(Rating.ticker_id == Ticker.id)
+                    .correlate(Ticker)
+                    .scalar_subquery()
+                )
                 where_clauses.append(
-                    or_(
-                        rat.date == None,
-                        rat.date.in_(
-                            session.query(func.max(Rating.date))
-                            .filter(Rating.ticker_id == Ticker.id)
-                            .correlate(Ticker)
-                            .scalar_subquery()
-                        )
-                    )
+                    or_(rat.date == None, rat.date == latest_rat_date)
                 )
 
             if AnalystRecommendation in required_models:
+                latest_an_date = (
+                    session.query(func.max(AnalystRecommendation.date))
+                    .filter(AnalystRecommendation.ticker_id == Ticker.id)
+                    .correlate(Ticker)
+                    .scalar_subquery()
+                )
                 where_clauses.append(
-                    or_(
-                        an.date == None,
-                        an.date.in_(
-                            session.query(func.max(AnalystRecommendation.date))
-                            .filter(AnalystRecommendation.ticker_id == Ticker.id)
-                            .correlate(Ticker)
-                            .scalar_subquery()
-                        )
-                    )
+                    or_(an.date == None, an.date == latest_an_date)
                 )
 
             # Add user-specified filters
@@ -186,6 +181,17 @@ class StockScreener:
         for k, v in friendly_aliases.items():
             self._synonyms[k] = v
 
+    # Reason: Default columns used when none specified - must match _build_select_columns
+    DEFAULT_SELECT_COLUMNS = [
+        "ticker",
+        "sector",
+        "industry",
+        "price",
+        "market_cap",
+        "avg_volume",
+        "pe_ratio",
+    ]
+
     def _determine_required_models(
         self,
         filters: Dict[str, Any],
@@ -221,9 +227,13 @@ class StockScreener:
             for s in sort_by:
                 key = s[1:] if s.startswith("-") else s
                 add_for_key(key)
-        if columns:
-            for c in columns:
-                add_for_key(c)
+
+        # Reason: When columns is None, default columns are used in _build_select_columns.
+        # Must include them here to ensure required tables are JOINed.
+        effective_columns = columns if columns else self.DEFAULT_SELECT_COLUMNS
+        for c in effective_columns:
+            add_for_key(c)
+
         return required
 
     def _resolve_column(self, key: str, **aliases) -> Optional[Any]:
@@ -325,16 +335,7 @@ class StockScreener:
         resolved: List[Any] = []
         if columns is None:
             # Reason: Use default columns plus any filtered columns
-            default_keys = [
-                "ticker",
-                "sector",
-                "industry",
-                "price",
-                "market_cap",
-                "avg_volume",
-                "pe_ratio",
-            ]
-            keys = list(dict.fromkeys(default_keys + list(filters.keys())))
+            keys = list(dict.fromkeys(self.DEFAULT_SELECT_COLUMNS + list(filters.keys())))
         else:
             keys = columns
         for key in keys:

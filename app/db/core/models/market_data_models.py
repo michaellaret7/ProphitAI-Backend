@@ -52,6 +52,7 @@ class Ticker(MarketBase):
     dividends = relationship('Dividend', back_populates='ticker', lazy='dynamic')
     earnings_transcripts = relationship('EarningsTranscript', back_populates='ticker', lazy='dynamic')
     prices = relationship('Price', back_populates='ticker', lazy='dynamic')
+    daily_prices = relationship('DailyPrices', back_populates='ticker', lazy='dynamic')
     press_releases = relationship('PressRelease', back_populates='ticker', lazy='dynamic')
     stock_news = relationship('StockNews', back_populates='ticker', lazy='dynamic')
     price_target_news = relationship('PriceTargetNews', back_populates='ticker', lazy='dynamic')
@@ -398,7 +399,7 @@ class EarningsTranscript(MarketBase):
 class Price(MarketBase):
     __tablename__ = 'prices'
     __table_args__ = {'schema': 'price_data'}
-    
+
     ticker_id = Column(UUID(as_uuid=True), ForeignKey('ticker_universe.tickers.id'), primary_key=True, index=True)
     datetime = Column(DateTime, primary_key=True, index=True)
     open = Column(Float)
@@ -406,9 +407,25 @@ class Price(MarketBase):
     low = Column(Float)
     close = Column(Float)
     volume = Column(Integer)
-    
+
     # Relationship
     ticker = relationship('Ticker', back_populates='prices')
+
+class DailyPrices(MarketBase):
+    __tablename__ = 'daily_prices'
+    __table_args__ = {'schema': 'price_data'}
+
+    ticker_id = Column(UUID(as_uuid=True), ForeignKey('ticker_universe.tickers.id'), primary_key=True, index=True)
+    datetime = Column(DateTime, primary_key=True, index=True)
+    open = Column(Float)
+    high = Column(Float)
+    low = Column(Float)
+    close = Column(Float)
+    adj_close = Column(Float)
+    volume = Column(Integer)
+
+    # Relationship
+    ticker = relationship('Ticker', back_populates='daily_prices')
 
 # =============================================================================
 # NEWS DATA SCHEMA

@@ -22,8 +22,10 @@ from .models import (
 from .query_builder import StockScreener
 from .utils import (
     SCREENER_SYSTEM_PROMPT,
+    get_valid_field_values,
     normalize_industry_names,
     normalize_sector_names,
+    normalize_sub_industry_names,
 )
 import warnings
 warnings.filterwarnings("ignore", category=RuntimeWarning)
@@ -34,21 +36,24 @@ logger = logging.getLogger(__name__)
 
 def _correct_misplaced_classifications(parsed: ScreenerConstraints, original_text: str) -> ScreenerConstraints:
     """
-    Fix common issues where sector tokens are mistakenly parsed into industry/sub_industry
-    and infer ETFs from the original text when sector is missing.
+    Fix common issues where tokens are mistakenly parsed into wrong classification fields:
+    - Sector tokens in industry/sub_industry fields -> move to sector
+    - Sub_industry tokens in industry field -> move to sub_industry
+    - Infer ETFs from original text when sector is missing
     """
     def _is_sector_token(s: str) -> bool:
         return isinstance(s, str) and s.startswith("equity_sector_")
 
-    def _move_tokens(value, dst_attr: str):
+    def _move_tokens_by_predicate(value, predicate, dst_attr: str):
+        """Move tokens matching predicate to destination attribute."""
         moved = []
-        if isinstance(value, str) and _is_sector_token(value):
+        if isinstance(value, str) and predicate(value):
             moved.append(value)
             value = None
         elif isinstance(value, list):
             keep = []
             for v in value:
-                if _is_sector_token(v):
+                if predicate(v):
                     moved.append(v)
                 else:
                     keep.append(v)
@@ -69,10 +74,22 @@ def _correct_misplaced_classifications(parsed: ScreenerConstraints, original_tex
         return value
 
     # Move sector identifiers out of industry/sub_industry fields
-    parsed.industry = _move_tokens(parsed.industry, "sector")
-    parsed.sub_industry = _move_tokens(parsed.sub_industry, "sector")
-    parsed.industry_exclude = _move_tokens(parsed.industry_exclude, "sector_exclude")
-    parsed.sub_industry_exclude = _move_tokens(parsed.sub_industry_exclude, "sector_exclude")
+    parsed.industry = _move_tokens_by_predicate(parsed.industry, _is_sector_token, "sector")
+    parsed.sub_industry = _move_tokens_by_predicate(parsed.sub_industry, _is_sector_token, "sector")
+    parsed.industry_exclude = _move_tokens_by_predicate(parsed.industry_exclude, _is_sector_token, "sector_exclude")
+    parsed.sub_industry_exclude = _move_tokens_by_predicate(parsed.sub_industry_exclude, _is_sector_token, "sector_exclude")
+
+    # Reason: Check if industry values are actually sub_industries and move them
+    # This handles cases where GPT puts sub_industry names in the industry field
+    valid_industries = set(get_valid_field_values('industry'))
+    valid_sub_industries = set(get_valid_field_values('sub_industry'))
+
+    def _is_sub_industry_not_industry(s: str) -> bool:
+        """Return True if s is a valid sub_industry but NOT a valid industry."""
+        return isinstance(s, str) and s in valid_sub_industries and s not in valid_industries
+
+    parsed.industry = _move_tokens_by_predicate(parsed.industry, _is_sub_industry_not_industry, "sub_industry")
+    parsed.industry_exclude = _move_tokens_by_predicate(parsed.industry_exclude, _is_sub_industry_not_industry, "sub_industry_exclude")
 
     # Infer ETF sector from query text when not explicitly parsed
     if isinstance(original_text, str) and "etf" in original_text.lower() and parsed.sector is None:
@@ -97,12 +114,14 @@ def parse_screener_constraints(constraints: str) -> ScreenerConstraints:
     # Correct common misplacements (e.g., sector tokens in industry)
     parsed = _correct_misplaced_classifications(parsed, constraints)
 
-    # Normalize sector and industry names using fuzzy matching
-    logger.info("Normalizing sector/industry names...")
+    # Normalize sector, industry, and sub_industry names using fuzzy matching
+    logger.info("Normalizing sector/industry/sub_industry names...")
     parsed.sector = normalize_sector_names(parsed.sector)
     parsed.sector_exclude = normalize_sector_names(parsed.sector_exclude)
     parsed.industry = normalize_industry_names(parsed.industry)
     parsed.industry_exclude = normalize_industry_names(parsed.industry_exclude)
+    parsed.sub_industry = normalize_sub_industry_names(parsed.sub_industry)
+    parsed.sub_industry_exclude = normalize_sub_industry_names(parsed.sub_industry_exclude)
 
     return parsed
 
@@ -367,6 +386,8 @@ def _format_error_response(error: Exception) -> str:
     error_msg = f"Stock screening failed: {str(error)} (error_type: {type(error).__name__})"
     return error_response(error_msg)
 
+if __name__ == "__main__":
+    print(screener("Find agricultural products and services stocks with price over 30"))
 
 # ============================= Tool Schema ============================= #
 
