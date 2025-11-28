@@ -53,6 +53,7 @@ class PriceService:
                         "high": float(row['high']),
                         "low": float(row['low']),
                         "close": float(row['close']),
+                        "adj_close": float(row['adj_close']),
                         "volume": int(row['volume'])
                     }
                     for date, row in price_df.iterrows()
@@ -138,3 +139,8 @@ class PriceService:
             'payload': payload,
             'counts': counts
         }
+
+if __name__ == "__main__":
+    service = PriceService()
+    data = service.get_stock_prices(tickers=['AAPL', 'GOOG', 'MSFT', 'AMZN', 'TSLA', 'NVDA', 'META', 'IBM', 'ORCL', 'SAP'], days=200)
+    print(data)
