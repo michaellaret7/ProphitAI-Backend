@@ -407,30 +407,28 @@ class MomentumFactors:
     
     @classmethod
     def calc_all_bulk(
-        cls, 
-        tickers: list[str], 
+        cls,
+        tickers: list[str],
         start_date: datetime,
         end_date: datetime,
         market_ticker: str = "SPY"
     ) -> pd.DataFrame:
         """Calculate all momentum factors for multiple tickers using bulk data fetching.
-        
+
         Args:
             tickers: List of ticker symbols
             start_date: Start date for price data
             end_date: End date for price data
             market_ticker: Market benchmark ticker for idiosyncratic calculations
-        
+
         Returns:
             DataFrame with tickers as rows and momentum metrics as columns
         """
-        from app.core.calculations.core.data_service import DataService
         from app.db.core.models.market_data_models import Ticker as TickerModel
         from app.db.core.db_config import MarketSession
-        
-        ds = DataService()
-        
-        # Simple sector ETF mapping 
+        from app.repositories.price_data import fetch_bulk_ohlcv_data_for_tickers
+
+        # Simple sector ETF mapping
         SECTOR_ETF_MAP = {
             'equity_sector_information_technology': 'XLK',
             'equity_sector_financials': 'XLF',
@@ -444,60 +442,55 @@ class MomentumFactors:
             'equity_sector_real_estate': 'XLRE',
             'equity_sector_materials': 'XLB'
         }
-        
-        # Get sector for each ticker
+
+        # Bulk fetch sectors for all tickers in a single query
         ticker_sectors = {}
         session = MarketSession()
-        for ticker in tickers:
-            ticker_obj = session.query(TickerModel).filter(TickerModel.ticker == ticker.upper()).first()
-            if ticker_obj and ticker_obj.sector:
-                ticker_sectors[ticker.upper()] = ticker_obj.sector
+        upper_tickers = [t.upper() for t in tickers]
+        ticker_objs = session.query(TickerModel).filter(
+            TickerModel.ticker.in_(upper_tickers)
+        ).all()
+        for ticker_obj in ticker_objs:
+            if ticker_obj.sector:
+                ticker_sectors[ticker_obj.ticker] = ticker_obj.sector
         session.close()
-        
+
         # Determine unique sector ETFs needed
         sector_etfs = set()
         for sector in ticker_sectors.values():
             if sector in SECTOR_ETF_MAP:
                 sector_etfs.add(SECTOR_ETF_MAP[sector])
-        
-        # Bulk fetch full price data (includes volume) for all tickers plus market and sector ETFs
-        all_tickers = list(tickers) + [market_ticker] + list(sector_etfs)
-        
-        # Get full price data with volume
+
+        # Bulk fetch full OHLCV data for all tickers plus market and sector ETFs (PARALLEL)
+        all_tickers = list(set(upper_tickers + [market_ticker] + list(sector_etfs)))
+        start_str = start_date.strftime('%Y-%m-%d')
+        end_str = end_date.strftime('%Y-%m-%d')
+
+        ohlcv_data = fetch_bulk_ohlcv_data_for_tickers(all_tickers, start_str, end_str)
+
+        # Extract close and volume from OHLCV data
         price_data = {}
         volume_data = {}
-        for ticker in all_tickers:
-            try:
-                price_frame = ds.get_price_data(ticker, start_date, end_date).frame
-                if price_frame is not None and not price_frame.empty:
-                    price_data[ticker] = price_frame['close']
-                    if 'volume' in price_frame.columns:
-                        volume_data[ticker] = price_frame['volume']
-            except Exception:
-                pass
-        
+        for ticker, df in ohlcv_data.items():
+            if df is not None and not df.empty:
+                price_data[ticker] = df['close']
+                if 'volume' in df.columns:
+                    volume_data[ticker] = df['volume']
+
         # Get market prices
         market_px = price_data.get(market_ticker)
-        
+
         # Calculate momentum factors for each ticker
         all_results = {}
-        for ticker in tickers:
-            ticker = ticker.upper()
+        for ticker in upper_tickers:
             if ticker in price_data:
                 try:
                     px = price_data[ticker]
-                    vol = volume_data.get(ticker)  # Get volume if available
-                    
-                    # Get dividends if available
-                    try:
-                        divs = ds.get_dividends(ticker, start_date, end_date).series
-                        divs = divs.reindex(px.index).fillna(0.0)
-                    except Exception:
-                        divs = None
-                    
+                    vol = volume_data.get(ticker)
+
                     # Align market series to asset index
                     mkt_aligned = market_px.reindex(px.index) if market_px is not None else None
-                    
+
                     # Get sector ETF price data if available
                     sector_px = None
                     if ticker in ticker_sectors:
@@ -506,68 +499,21 @@ class MomentumFactors:
                             sector_etf = SECTOR_ETF_MAP[sector]
                             if sector_etf in price_data:
                                 sector_px = price_data[sector_etf].reindex(px.index)
-                    
-                    # Create MomentumFactors instance with volume and sector data
-                    mf = cls(px, volume_series=vol, dividends_series=divs, 
+
+                    # Create MomentumFactors instance (skip dividends for bulk - minimal impact)
+                    mf = cls(px, volume_series=vol, dividends_series=None,
                             market_price_series=mkt_aligned, sector_price_series=sector_px)
                     all_results[ticker] = mf.calc_all()
                 except Exception as e:
                     print(f"Error calculating momentum factors for {ticker}: {e}")
                     all_results[ticker] = {}
-        
+
         # Convert to DataFrame
         df = pd.DataFrame(all_results).T
         return df
 
 
-if __name__ == "__main__":
-    # Smoke test: compute momentum attributes and composite for a small ticker set
-    from app.core.calculations.core.data_service import DataService
-    print("[momentum] smoke test starting...")
-    try:
-        tickers = ["AAPL", "MSFT", "AMZN", "GOOGL", "NVDA"]
-        ds = DataService()
-        end = datetime.now(timezone.utc)
-        start = end - timedelta(days=800)
-        price_map = ds.get_bulk_close_series(tickers, start, end)
-        # Fetch market benchmark (SPY) for idiosyncratic momentum; fallback to equal-weight index
-        market_ticker = "SPY"
-        try:
-            market_map = ds.get_bulk_close_series([market_ticker], start, end)
-            market_px = market_map.get(market_ticker)
-        except Exception:
-            market_px = None
-        if market_px is None or market_px.empty:
-            # Fallback: build equal-weighted market index from available prices
-            try:
-                df_px = pd.DataFrame(price_map)
-                eq_ret = df_px.pct_change().mean(axis=1).fillna(0.0)
-                market_px = (1.0 + eq_ret).cumprod()
-            except Exception:
-                market_px = None
-                
-        rows = []
-        for tkr, px in price_map.items():
-            # Dividends (optional)
-            try:
-                divs = ds.get_dividends(tkr, start, end).series
-                divs = divs.reindex(px.index).fillna(0.0)
-            except Exception:
-                divs = None
-            # Align market series to asset index if available
-            mkt_aligned = market_px.reindex(px.index) if market_px is not None else None
-            mf = MomentumFactors(px, dividends_series=divs, market_price_series=mkt_aligned)
-            attrs = mf.compute_attributes()
-            rows.append({"ticker": tkr, **attrs})
 
-        frame = pd.DataFrame(rows)
-        # Compose exposure (global z if no sector column)
-        frame = MomentumFactors.compose_momentum_exposure(frame)
-        frame = MomentumFactors.orthogonalize_momentum(frame)
-        cols = ["ticker", "r12_1", "r6_1", "r3_1", "idio_mom", "momentum_exposure_raw", "momentum_exposure"]
-        print(frame[cols].to_string(index=False))
-    except Exception as e:
-        print(f"[momentum] smoke test failed: {e}")
 
 
 

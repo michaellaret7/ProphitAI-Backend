@@ -5,6 +5,14 @@ UNIVERSAL_AGENT_MESSAGE = """
 
 You are an autonomous agent using a ReAct (Reasoning + Acting) framework.
 
+## CRITICAL: THINK AND WRITE_NOTE TOOLS
+
+**These are your most important cognitive tools - use them FREQUENTLY:**
+
+**think():** Reason through your approach, analyze trade-offs, process complex results, debug issues. This tool is FREE and dramatically improves output quality - call it liberally throughout your execution.
+
+**write_note():** Capture key findings, document decisions and rationale, offload analysis to free context. Don't lose important insights - write them down immediately. **You should be writing multiple notes throughout every execution** - after each major analysis, discovery, or decision point.
+
 ## REASONING & DECISION-MAKING
 
 **Before each action:**

@@ -26,9 +26,9 @@ _RESET = "\033[0m"
 
 # Tools that modify agent state and must run sequentially
 SEQUENTIAL_ONLY_TOOLS = {
-    "update_tasks",
+    # "update_tasks",
     "write_note",
-    "edit_plan",
+    # "edit_plan",
     "finalize",
     "think"
 }
@@ -113,9 +113,11 @@ def execute_tools_parallel(
     agent = tool_handler.agent
     num_tools = len(tool_calls)
 
-    # Print parallel execution header
+    # Print parallel execution header (all modes)
     if agent.print_mode in [PrintMode.VERBOSE, PrintMode.DEBUG]:
         print(f"\n{_CYAN}🔀 Parallel execution: {num_tools} tools{_RESET}")
+    elif agent.print_mode == PrintMode.SUBAGENT:
+        print(f"\n[Sub-agent] 🔀 Parallel execution: {num_tools} tools")
     elif agent.print_mode == PrintMode.PRODUCTION:
         print(f"  🔀 {num_tools} tools (parallel)")
 
@@ -127,8 +129,10 @@ def execute_tools_parallel(
         args = tool_handler._parse_arguments(args_json)
         parsed_calls.append((tool_call, name, args))
 
-        # Print tool names being executed
+        # Print tool names being executed (all modes)
         if agent.print_mode in [PrintMode.VERBOSE, PrintMode.DEBUG]:
+            print(f"   → {_GREEN}{name}{_RESET}")
+        elif agent.print_mode == PrintMode.SUBAGENT:
             print(f"   → {_GREEN}{name}{_RESET}")
         elif agent.print_mode == PrintMode.PRODUCTION:
             print(f"    → {name}")
@@ -169,16 +173,20 @@ def execute_tools_parallel(
         # Add to tool call history
         tool_handler.tool_call_history.append(tool_validation_dict)
 
-        # Print result summary
+        # Print result summary (all modes)
+        status = "✓" if success else "✗"
         if agent.print_mode == PrintMode.DEBUG:
             print(f"   {_GREEN}{name}{_RESET} ← {result}")
         elif agent.print_mode == PrintMode.VERBOSE:
             result_str = str(result)
-            status = "✓" if success else "✗"
             if len(result_str) > 100:
                 print(f"   {status} {_GREEN}{name}{_RESET}: {result_str[:100]}...")
             else:
                 print(f"   {status} {_GREEN}{name}{_RESET}: {result_str}")
+        elif agent.print_mode == PrintMode.SUBAGENT:
+            print(f"   {status} {_GREEN}{name}{_RESET}")
+        elif agent.print_mode == PrintMode.PRODUCTION:
+            print(f"    {status} {name}")
 
         # Append tool result message to conversation
         if success:

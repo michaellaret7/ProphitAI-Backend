@@ -65,6 +65,15 @@ SECTOR_ANALYST_PARAMETERS = {
                 "equity_sector_utilities",
                 "equity_sector_real_estate"
             ]
+        },
+        "query": {
+            "type": "string",
+            "description": (
+                "Optional preferences or guidance from the orchestrating agent. Use this to provide "
+                "specific focus areas, constraints, or analytical preferences for the sector analysis. "
+                "Examples: 'Focus on high-growth companies with strong momentum', "
+                "'Prioritize value stocks with low P/E ratios', 'Look for defensive plays with high dividend yields'."
+            )
         }
     },
     "required": ["sector"],

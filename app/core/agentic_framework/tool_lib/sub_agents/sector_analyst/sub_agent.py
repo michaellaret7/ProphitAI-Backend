@@ -24,7 +24,11 @@ from app.core.agentic_framework.tool_lib.data_tools.ticker_info import (
     GET_STOCK_RATINGS_TOOL,
     GET_PRICE_TARGET_DATA_TOOL,
 )
-from pydantic import BaseModel
+
+from app.core.agentic_framework.tool_lib.sub_agents.sector_analyst.prompts import (
+    SECTOR_ANALYST_PROMPT,
+    build_orchestrator_context,
+)
 
 class SectorAnalyst(SubAgent):
     def __init__(self, user_prompt: str = None, sector: str = None, simulation_date: Optional[datetime] = None) -> None:
@@ -68,11 +72,26 @@ class SectorAnalyst(SubAgent):
                 function=tool["function"]
             )
 
-def run_sector_analyst(sector: str, _simulation_date: Optional[datetime] = None) -> str:
-    """Execute sector analysis using the SectorAnalyst subagent."""
+def run_sector_analyst(
+    sector: str,
+    query: Optional[str] = None,
+    _simulation_date: Optional[datetime] = None
+) -> str:
+    """Execute sector analysis using the SectorAnalyst subagent.
+
+    Args:
+        sector: The market sector to analyze.
+        query: Optional orchestrator preferences/guidance for the analysis.
+        _simulation_date: Optional simulation date for backtesting.
+    """
     try:
+        orchestrator_context = build_orchestrator_context(query)
+        user_prompt = SECTOR_ANALYST_PROMPT.format(
+            sector=sector,
+            orchestrator_context=orchestrator_context
+        )
         sector_analyst = SectorAnalyst(
-            user_prompt=f"Analyze the performance and valuation of the {sector} sector", 
+            user_prompt=user_prompt,
             sector=sector,
             simulation_date=_simulation_date
         )
@@ -82,3 +101,11 @@ def run_sector_analyst(sector: str, _simulation_date: Optional[datetime] = None)
         error_msg = f"Error running sector analyst sub-agent: {str(e)}"
         print(f"⚠️  {error_msg}")
         return error_response(error_msg)
+
+
+if __name__ == "__main__":
+    print(run_sector_analyst(
+        sector="equity_sector_information_technology", 
+        query="Focus on high-growth companies with strong momentum in the software and semiconductor industries"
+        )
+    )

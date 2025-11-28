@@ -450,6 +450,12 @@ def get_current_est_time() -> datetime:
     return datetime.now(est)
 
 
+def is_after_market_close() -> bool:
+    """Check if current EST time is after market close (5PM EST)."""
+    current_est = get_current_est_time()
+    return current_est.hour >= 17
+
+
 def run_price_updates(max_workers: int = 10):
     """
     Run price table updates based on current EST time.
