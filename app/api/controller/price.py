@@ -6,7 +6,7 @@ from app.api.response_envelope import ok_envelope
 from app.redis.client import cache
 from app.utils.decorators.api_decorators import handle_controller_errors
 from app.db.core.pull_fmp_data import FMP_API_DATA
-
+from typing import Literal
 
 @handle_controller_errors
 async def get_stock_prices_controller(tickers: List[str], days: int) -> Dict[str, Any]:
@@ -54,3 +54,31 @@ async def get_quote_controller(ticker: str) -> Dict[str, Any]:
         self_link=f"/api/price/quote?ticker={ticker.upper()}",
         payload=data[0] if isinstance(data, list) and len(data) > 0 else data,
     )
+
+@handle_controller_errors
+async def get_stock_prices_intraday_controller(tickers: List[str], days: int, frequency: Literal['15mins', 'hourly'] = '15mins') -> Dict[str, Any]:
+    """
+    Controller to handle intraday stock price data retrieval for multiple tickers.
+
+    Args:
+        tickers: List of stock ticker symbols
+        days: Number of days of historical data
+        frequency: Data interval - '15mins' or 'hourly'
+
+    Returns:
+        Response envelope with intraday OHLCV data
+    """
+    service = PriceService()
+    data = service.get_stock_prices_intraday(tickers=tickers, days=days, frequency=frequency)
+
+    return ok_envelope(
+        message="Stock intraday price data retrieved successfully",
+        kind="price#stockPricesIntraday",
+        resource_id=",".join(tickers),
+        self_link=f"/api/price/stocks/intraday?tickers={','.join(tickers)}&days={days}&frequency={frequency}",
+        counts=data['counts'],
+        payload=data['payload'],
+    )
+
+if __name__ == "__main__":
+    print(asyncio.run(get_stock_prices_intraday_controller(tickers=['AAPL', 'GOOG', 'MSFT', 'AMZN', 'TSLA', 'NVDA', 'META', 'IBM', 'ORCL', 'SAP'], days=200, frequency='15mins')))

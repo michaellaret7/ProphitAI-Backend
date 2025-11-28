@@ -147,7 +147,7 @@ def fetch_bulk_price_data_for_tickers(tickers: list, start_date_str: str, end_da
                 
     return price_data_map
 
-def fetch_bulk_ohlcv_data_for_tickers(tickers: list, start_date_str: str, end_date_str: str):
+def fetch_bulk_ohlcv_data_for_tickers(tickers: list, start_date_str: str, end_date_str: str, frequency: str = 'daily'):
     """
     Fetch full OHLCV DataFrames for multiple tickers in parallel.
 
@@ -159,23 +159,35 @@ def fetch_bulk_ohlcv_data_for_tickers(tickers: list, start_date_str: str, end_da
     - tickers: List of ticker symbols
     - start_date_str: Start date in 'YYYY-MM-DD' format
     - end_date_str: End date in 'YYYY-MM-DD' format
+    - frequency: Data frequency - 'daily', '15mins', or 'hourly'
 
     Returns:
     - dict: Mapping of ticker to DataFrame with columns [open, high, low, close, volume]
-            Index is date (DatetimeIndex)
+            Index is date/datetime (DatetimeIndex)
 
     Example:
         >>> data = fetch_bulk_ohlcv_data_for_tickers(['AAPL', 'SPY'], '2024-01-01', '2024-12-31')
         >>> data['AAPL']  # Returns full DataFrame with OHLCV columns
+        >>> data_15m = fetch_bulk_ohlcv_data_for_tickers(['AAPL'], '2024-01-01', '2024-01-05', frequency='15mins')
     """
     # Convert string dates to datetime objects
     start_date = datetime.strptime(start_date_str, '%Y-%m-%d')
     end_date = datetime.strptime(end_date_str, '%Y-%m-%d')
 
+    # Select appropriate data fetch function based on frequency
+    if frequency == 'daily':
+        get_price_data_func = get_price_data_daily
+    elif frequency == '15mins':
+        get_price_data_func = get_price_data_15_mins
+    elif frequency == 'hourly':
+        get_price_data_func = get_price_data_hourly
+    else:
+        raise ValueError(f"Invalid frequency: {frequency}. Must be 'daily', '15mins', or 'hourly'")
+
     price_data_map = {}
     with ThreadPoolExecutor(max_workers=20) as executor:
         future_to_ticker = {
-            executor.submit(get_price_data_daily, ticker, start_date, end_date): ticker
+            executor.submit(get_price_data_func, ticker, start_date, end_date): ticker
             for ticker in tickers
         }
         for future in as_completed(future_to_ticker):
@@ -183,9 +195,13 @@ def fetch_bulk_ohlcv_data_for_tickers(tickers: list, start_date_str: str, end_da
             try:
                 data = future.result()
                 if data is not None and not data.empty:
-                    # Set date as index and return full DataFrame
-                    data['date'] = pd.to_datetime(data['date'])
-                    price_data_map[ticker] = data.set_index('date')
+                    if frequency == 'daily':
+                        # Daily data has 'date' column that needs to be set as index
+                        data['date'] = pd.to_datetime(data['date'])
+                        price_data_map[ticker] = data.set_index('date')
+                    else:
+                        # 15mins and hourly data already have datetime as index
+                        price_data_map[ticker] = data
             except Exception as e:
                 logger.error(f"Error fetching OHLCV data for {ticker}: {e}")
 
