@@ -58,43 +58,46 @@ def get_price_data_hourly(ticker: str, start_date: datetime, end_date: datetime)
     return hourly_data_df
 
 @with_session('market')
-def get_price_data_daily(ticker: str, start_date: datetime, end_date: datetime, session=None):
+def get_price_data_daily(ticker: str, start_date: datetime = None, end_date: datetime = None, session=None):
     """
     Fetches daily aggregated price data directly from the database.
     Much more efficient than fetching 15-min data and resampling.
+    If start_date or end_date is None, queries all available data.
     """
     ticker = ticker.upper()
     
+    # Base query
+    query = session.query(DailyPrices).join(Ticker).filter(Ticker.ticker == ticker)
 
-    # Query for 21:00 UTC rows within the date range
-    query = session.query(Price).join(Ticker).filter(
-        Ticker.ticker == ticker,
-        Price.datetime >= start_date,
-        Price.datetime <= end_date,
-        extract('hour', Price.datetime) == 21,
-        extract('minute', Price.datetime) == 0
-    ).order_by(Price.datetime.asc())  # Sort by date ascending
+    # Apply date filters if provided
+    if start_date:
+        query = query.filter(DailyPrices.datetime >= start_date)
+    if end_date:
+        query = query.filter(DailyPrices.datetime <= end_date)
+
+    query = query.order_by(DailyPrices.datetime.asc())  # Sort by date ascending
 
     rows = query.all()
-    
+
     # Convert to DataFrame to match expected return type
     data = [
         {
-            'date': row.datetime.date(),  # Use .date() to remove time
+            'date': row.datetime,
             'open': row.open,
             'high': row.high,
             'low': row.low,
             'close': row.close,
+            'adj_close': row.adj_close,
             'volume': row.volume
         }
         for row in rows
     ]
-    
+
     df = pd.DataFrame(data)
 
     if not df.empty:
         pass # Optional: set as index if needed
-        
+
     return df
 
 def fetch_bulk_price_data_for_tickers(tickers: list, start_date_str: str, end_date_str: str, frequency: str = 'daily'):
@@ -214,3 +217,7 @@ def get_dividends_series(ticker: str, start_date: datetime, end_date: datetime, 
     return pd.Series(data).sort_index()
 
 
+if __name__ == "__main__":
+    df = get_price_data_15_mins('NRDS', datetime(2020, 1, 1), datetime(2025, 11, 27))
+    print(df.head())
+    print(df.tail(20))

@@ -2,7 +2,7 @@
 """
 Complete Market Data Models for all tables in the market_data database
 """
-from sqlalchemy import Column, Integer, String, Float, DateTime, Boolean, Text, ForeignKey, Date, Numeric, JSON
+from sqlalchemy import Column, Integer, BigInteger, String, Float, DateTime, Boolean, Text, ForeignKey, Date, Numeric, JSON
 from sqlalchemy.orm import relationship
 from sqlalchemy.dialects.postgresql import UUID
 from app.db.core.db_config import MarketBase
@@ -422,7 +422,7 @@ class DailyPrices(MarketBase):
     low = Column(Float)
     close = Column(Float)
     adj_close = Column(Float)
-    volume = Column(Integer)
+    volume = Column(BigInteger)
 
     # Relationship
     ticker = relationship('Ticker', back_populates='daily_prices')
