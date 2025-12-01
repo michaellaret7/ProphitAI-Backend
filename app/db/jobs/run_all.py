@@ -25,7 +25,7 @@ def main():
     # If after market close (5PM EST), also update EOD prices
     if is_after_market_close():
         print("\nMarket closed - updating EOD prices...")
-        update_price_table.update_eod_prices(max_workers=2)
+        update_price_table.update_daily_prices(max_workers=2)
 
     time.sleep(60)
     print("="*100)
