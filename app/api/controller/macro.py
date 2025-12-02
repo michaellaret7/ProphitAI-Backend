@@ -561,3 +561,29 @@ async def get_fx_historical_prices_controller(
     )
 
 
+@handle_controller_errors
+async def get_index_list_controller() -> Dict[str, Any]:
+    """
+    Controller to retrieve list of all available market indexes.
+
+    Returns:
+        Response envelope with list of indexes (symbol, name, exchange, currency)
+    """
+    fmp_api = FMP_API_DATA()
+    data = await asyncio.to_thread(fmp_api.get_index_list)
+
+    if data is None:
+        raise HTTPException(status_code=500, detail="Failed to retrieve index list from FMP API")
+
+    items = data if isinstance(data, list) else []
+
+    return ok_envelope(
+        message="Index list retrieved successfully",
+        kind="macro#indexList",
+        resource_id="all",
+        self_link="/api/macro/index/list",
+        counts={"totalItems": len(items), "currentItemCount": len(items)},
+        payload=items,
+    )
+
+

@@ -8,6 +8,7 @@ import csv
 import logging
 from pathlib import Path
 from concurrent.futures import ThreadPoolExecutor, as_completed
+from tkinter import E
 from uuid import UUID
 
 import pandas as pd
@@ -83,10 +84,14 @@ def load_tickers_from_csv() -> list[dict]:
 def calculate_ebit_cagr(fmp_api: FMP_API_DATA, ticker: str, years: int) -> float | None:
     """Calculate EBIT CAGR from annual income statements.
 
-    Returns None if:
+    CAGR is only valid for profitable companies. Returns None if:
     - Insufficient data
     - Either EBIT value is missing or zero
-    - EBIT values have opposite signs (ratio negative, CAGR undefined)
+    - Either EBIT value is negative (unprofitable companies excluded from growth screens)
+
+    Reason: CAGR assumes compounding which is invalid for negative values.
+    "Losing less money" is not growth - unprofitable companies should be
+    evaluated using different metrics (loss improvement %, EBIT delta, etc.).
     """
     income_statements = fmp_api.get_income_statements(ticker, period='annual')
 
@@ -96,17 +101,15 @@ def calculate_ebit_cagr(fmp_api: FMP_API_DATA, ticker: str, years: int) -> float
     ending_ebit = income_statements[0].get('operatingIncome')
     beginning_ebit = income_statements[years - 1].get('operatingIncome')
 
-    if not ending_ebit or not beginning_ebit or beginning_ebit == 0:
+    if not ending_ebit or not beginning_ebit:
         return None
 
-    ratio = ending_ebit / beginning_ebit
-
-    # CAGR is undefined when ratio is negative (values crossed zero)
-    # Reason: Raising negative number to fractional power produces complex number
-    if ratio < 0:
+    # CAGR only valid when both values are positive (profitable company)
+    # Unprofitable companies (negative EBIT) should be excluded from growth screens
+    if beginning_ebit <= 0 or ending_ebit <= 0:
         return None
 
-    cagr = ratio ** (1 / years) - 1
+    cagr = (ending_ebit / beginning_ebit) ** (1 / years) - 1
     return round(cagr, 4)
 
 
@@ -308,4 +311,18 @@ def test_single_ticker() -> None:
 
 
 if __name__ == "__main__":
-    run_screener_build()
+    from app.utils.serialize_output import serialize_sqlalchemy_obj
+    with MarketSession() as session:
+        result = session.query(EquityScreener, Ticker).join(Ticker).filter(
+            Ticker.market_cap > 1_000_000_000,
+            Ticker.is_actively_trading == True,
+            Ticker.is_etf == False,
+            EquityScreener.alpha_vs_sector > 0.2,
+            EquityScreener.beta_vs_sector < 0.7,
+            EquityScreener.ebit_cagr_5yr > 0.2
+        ).first()
+
+        print(serialize_sqlalchemy_obj(result[0]))
+        print(result[0].ticker.ticker)
+
+

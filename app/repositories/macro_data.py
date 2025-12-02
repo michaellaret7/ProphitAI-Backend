@@ -2,7 +2,7 @@ from app.db.core.db_config import MacroDataSession
 from app.db.core.models.macro_data_models import CommodityPrices, GovernmentBondRates, EconomicIndicators, EconomicCalendar
 from app.utils.decorators.database import with_session
 from pydantic import BaseModel, ConfigDict
-from datetime import datetime, date
+from datetime import datetime, date, timedelta
 from pandas import DataFrame
 from typing import Optional
 
@@ -164,7 +164,9 @@ def get_economic_calendar(
     if start_date:
         query = query.filter(EconomicCalendar.date >= start_date)
     if end_date:
-        query = query.filter(EconomicCalendar.date <= end_date)
+        # Use < next day to include entire end_date (events through 23:59:59)
+        # Reason: Database column is DateTime, so <= date compares against midnight only
+        query = query.filter(EconomicCalendar.date < end_date + timedelta(days=1))
 
     # Add event filter if provided (partial match, case-insensitive)
     if event:

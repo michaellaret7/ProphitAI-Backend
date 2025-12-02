@@ -15,6 +15,7 @@ from app.api.controller.macro import (
     get_mergers_acquisitions_latest_controller,
     get_mergers_acquisitions_search_controller,
     get_fx_historical_prices_controller,
+    get_index_list_controller,
 )
 
 router = APIRouter(tags=["Macro Data 🌍"])
@@ -940,3 +941,63 @@ async def get_fx_historical_prices(
         from_date=fromDate,
         to_date=toDate,
     )
+
+
+@router.get("/macro/index/list")
+async def get_index_list():
+    """
+    Get list of all available market indexes.
+
+    ## Overview
+    Retrieves a comprehensive list of stock market indexes across global exchanges.
+
+    ## Example Usage:
+    ```
+    GET /api/macro/index/list
+    ```
+
+    ## Response Format:
+    ```json
+    {
+      "status": 200,
+      "message": "Index list retrieved successfully",
+      "data": {
+        "kind": "macro#indexList",
+        "id": "all",
+        "selfLink": "/api/macro/index/list",
+        "currentItemCount": 100,
+        "totalItems": 100,
+        "payload": [
+          {
+            "symbol": "^GSPC",
+            "name": "S&P 500",
+            "exchange": "INDEX",
+            "currency": "USD"
+          },
+          {
+            "symbol": "^DJI",
+            "name": "Dow Jones Industrial Average",
+            "exchange": "INDEX",
+            "currency": "USD"
+          }
+        ]
+      }
+    }
+    ```
+
+    ## Common Indexes:
+    - **^GSPC**: S&P 500
+    - **^DJI**: Dow Jones Industrial Average
+    - **^IXIC**: NASDAQ Composite
+    - **^RUT**: Russell 2000
+    - **^VIX**: CBOE Volatility Index
+    - **^FTSE**: FTSE 100
+    - **^N225**: Nikkei 225
+    - **^GDAXI**: DAX
+
+    ## Notes:
+    - Returns all available indexes from FMP
+    - Use the symbol from this list for index price queries
+    - Index symbols typically start with ^ character
+    """
+    return await get_index_list_controller()

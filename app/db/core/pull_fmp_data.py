@@ -729,6 +729,16 @@ class FMP_API_DATA:
         url = "https://financialmodelingprep.com/stable/batch-index-quotes"
         return self._make_fmp_api_request(url)
 
+    def get_index_list(self):
+        """
+        Retrieves a comprehensive list of stock market indexes across global exchanges.
+
+        Returns:
+            list: List of indexes with symbol, name, exchange, and currency.
+        """
+        url = "https://financialmodelingprep.com/stable/index-list"
+        return self._make_fmp_api_request(url)
+
     # Financial Statements & Ratios Endpoints
     def get_latest_financial_statements(self, ticker: str):
         """
@@ -2081,7 +2091,3 @@ class FMP_API_DATA:
         url = f"https://financialmodelingprep.com/stable/eod-bulk?date={date}"
         return self._make_fmp_api_request(url)
 
-
-if __name__ == "__main__":
-    fmp_api = FMP_API_DATA()
-    print(fmp_api.get_daily_prices_for_ticker('^GSPC', datetime(2024, 1, 1), datetime(2024, 12, 31)))
