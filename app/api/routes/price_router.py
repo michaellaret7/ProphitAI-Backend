@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Query, Depends
 from typing import List, Literal
-from app.api.controller.price import get_stock_prices_controller, get_quote_controller, get_stock_prices_intraday_controller
+from app.api.controller.price import get_stock_prices_controller, get_quote_controller, get_stock_prices_intraday_controller, index_price_data_controller
 from app.models.price_models import StockPriceRequest
 
 router = APIRouter(tags=["Stock Prices 💵"])
@@ -81,3 +81,21 @@ async def get_stock_prices_intraday(
         days=days,
         frequency=frequency
     )
+
+
+@router.get("/price/index")
+async def index_price_data(
+    ticker: str = Query(..., description="Stock ticker symbol (e.g., '^GSPC'). You must add the ^ symbol to the beginning of the index symbol."),
+    days: int = Query(..., gt=0, description="Number of days back to index")
+):
+    """
+    Index price data for a single ticker.
+
+    Args:
+        ticker: Stock ticker symbol
+        days: Number of days back to index data from
+
+    Returns:
+        Indexed price data payload
+    """
+    return await index_price_data_controller(ticker=ticker, days=days)
