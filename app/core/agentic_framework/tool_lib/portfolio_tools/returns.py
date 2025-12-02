@@ -3,7 +3,7 @@ from datetime import datetime
 import pandas as pd
 from app.core.calculations.portfolio.utils import get_portfolio_returns
 from app.core.calculations.returns.calculator import ReturnsCalculator
-from app.core.calculations.core.config import DEFAULT_LOOKBACK_LONG
+from app.core.calculations.core.config import DEFAULT_LOOKBACK_3Y
 import numpy as np
 from app.models.portfolio_models import PortfolioInput
 from app.utils.decorators.tool_validation import log_simulation_data_range
@@ -12,7 +12,7 @@ from app.core.agentic_framework.tool_lib.common.schemas import PORTFOLIO_DICT_SC
 from app.core.agentic_framework.tool_lib.common.responses import success_response, error_response
 
 @log_simulation_data_range()
-def calculate_portfolio_returns_metrics(portfolio_dict: PortfolioInput | dict, lookback_days=DEFAULT_LOOKBACK_LONG, _simulation_date: Optional[datetime] = None) -> str:
+def calculate_portfolio_returns_metrics(portfolio_dict: PortfolioInput | dict, lookback_days=DEFAULT_LOOKBACK_3Y, _simulation_date: Optional[datetime] = None) -> str:
     """Calculate and display simple portfolio metrics.
 
     Args:
@@ -26,7 +26,7 @@ def calculate_portfolio_returns_metrics(portfolio_dict: PortfolioInput | dict, l
     # Validate inputs
     v = ToolValidator()
     v.require_portfolio('portfolio_dict', portfolio_dict, normalize=True)
-    v.optional_numeric('lookback_days', lookback_days, default=DEFAULT_LOOKBACK_LONG, min_val=1, positive_only=True)
+    v.optional_numeric('lookback_days', lookback_days, default=DEFAULT_LOOKBACK_3Y, min_val=1, positive_only=True)
 
     if not v.is_valid():
         return v.error_response()

@@ -151,9 +151,7 @@ class SimplePortfolioAllocator:
 
     def _fetch_prices(self, tickers: list[str]) -> Dict[str, pd.Series]:
         end = datetime.now(timezone.utc)
-        # Convert lookback_days (trading days) to calendar days
-        calendar_days = int(self.lookback_days * 365 / 252)
-        start = end - timedelta(days=calendar_days)
+        start = end - timedelta(days=self.lookback_days)
         return self.ds.get_bulk_close_series(tickers, start, end)
 
     def optimize_weights_risk_based(

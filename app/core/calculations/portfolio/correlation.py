@@ -172,12 +172,11 @@ if __name__ == "__main__":
     # Fetch prices and compute daily returns
     from app.repositories.price_data import get_price_data_daily
     from app.core.calculations.returns.calculator import ReturnsCalculator
-    from app.core.calculations.core.config import DEFAULT_LOOKBACK_LONG
+    from app.core.calculations.core.config import DEFAULT_LOOKBACK_3Y
     from datetime import datetime, timedelta
 
     end_date = get_current_utc_time()
-    # Convert trading days to calendar days for 3-year lookback
-    start_date = end_date - timedelta(days=int(DEFAULT_LOOKBACK_LONG * 365 / 252))
+    start_date = end_date - timedelta(days=DEFAULT_LOOKBACK_3Y)
 
     ticker_returns: dict[str, pd.Series] = {}
     for t in tickers:

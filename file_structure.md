@@ -115,7 +115,7 @@ ProphitAI/
 │   │   │       │   ├── __init__.py
 │   │   │       │   ├── calculator.py
 │   │   │       │   ├── planning_tool.py
-│   │   │       │   └── search_engine_tool.py
+│   │   │       │   └── search_engine.py
 │   │   │       ├── data_tools/
 │   │   │       │   ├── industry_factors.py
 │   │   │       │   ├── repository.py

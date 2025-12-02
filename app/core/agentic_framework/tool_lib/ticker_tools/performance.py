@@ -14,7 +14,7 @@ from app.core.calculations.core.config import (
     DEFAULT_TRADING_DAYS,
     DEFAULT_RF_ANNUAL,
     DEFAULT_CONFIDENCE,
-    DEFAULT_LOOKBACK_MEDIUM,
+    DEFAULT_LOOKBACK_2Y,
 )
 from app.utils.decorators.price_data import with_bulk_price_data
 from app.utils.simulation_utils import get_end_date, filter_series_by_date
@@ -46,7 +46,7 @@ SINGLE_TICKER_METRIC_GROUPS = {
 }
 
 @validate_ticker_arg()
-@with_bulk_price_data(lookback_days=DEFAULT_LOOKBACK_MEDIUM, include_dividends=True)
+@with_bulk_price_data(lookback_days=DEFAULT_LOOKBACK_2Y, include_dividends=True)
 @log_simulation_data_range()
 def get_ticker_performance_and_risk(
     ticker: str,

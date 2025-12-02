@@ -5,10 +5,10 @@ import pandas as pd
 from app.utils.decorators.price_data import with_price_data
 from app.utils.decorators.tool_validation import validate_ticker_arg, log_simulation_data_range
 from app.utils.simulation_utils import filter_series_by_date
-from app.core.calculations.core.config import DEFAULT_LOOKBACK_SHORT
+from app.core.calculations.core.config import DEFAULT_LOOKBACK_1Y
 
 @validate_ticker_arg()
-@with_price_data(lookback_days=DEFAULT_LOOKBACK_SHORT, include_dividends=False)
+@with_price_data(lookback_days=DEFAULT_LOOKBACK_1Y, include_dividends=False)
 @log_simulation_data_range()
 def get_weekly_returns(ticker: str, price_data=None, _simulation_date: Optional[datetime] = None, **kwargs) -> str:
     """Get weekly returns for the last year for a given ticker.

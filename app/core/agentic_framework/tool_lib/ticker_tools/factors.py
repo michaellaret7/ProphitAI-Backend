@@ -12,6 +12,21 @@ from app.utils.simulation_utils import get_end_date, filter_series_by_date
 from app.utils.decorators.tool_validation import log_simulation_data_range
 from app.utils.tool_validator import ToolValidator
 
+# Sector to ETF mapping for sector-relative momentum
+SECTOR_ETF_MAP = {
+    'equity_sector_information_technology': 'XLK',
+    'equity_sector_financials': 'XLF',
+    'equity_sector_health_care': 'XLV',
+    'equity_sector_consumer_discretionary': 'XLY',
+    'equity_sector_communication_services': 'XLC',
+    'equity_sector_industrials': 'XLI',
+    'equity_sector_consumer_staples': 'XLP',
+    'equity_sector_energy': 'XLE',
+    'equity_sector_utilities': 'XLU',
+    'equity_sector_real_estate': 'XLRE',
+    'equity_sector_materials': 'XLB'
+}
+
 
 def _convert_numpy_to_python(obj: Any) -> Any:
     """Recursively convert NumPy types to native Python types for YAML serialization.
@@ -76,7 +91,9 @@ def calculate_ticker_factors(ticker: str, factor: str, _simulation_date: Optiona
         elif factor in ["momentum", "volatility"]:
             ds = DataService()
             end_date = get_end_date(_simulation_date)
-            start_date = end_date - timedelta(days=365)  # ~1 year of data
+            # Use 450 calendar days (~300 trading days) to ensure all metrics work
+            # Reason: 12-month ex-1m needs 273 trading days, idio_momentum_log needs 273
+            start_date = end_date - timedelta(days=450)
 
             # Get price data for ticker (and SPY for market-relative metrics)
             price_data = ds.get_price_data(ticker, start_date, end_date)
@@ -104,12 +121,33 @@ def calculate_ticker_factors(ticker: str, factor: str, _simulation_date: Optiona
                 except Exception:
                     divs = None
 
+                # Get sector ETF data for sector-relative momentum
+                sector_prices = None
+                try:
+                    from app.db.core.db_config import MarketSession
+                    from app.db.core.models.market_data_models import Ticker as TickerModel
+                    with MarketSession() as session:
+                        ticker_obj = session.query(TickerModel).filter(
+                            TickerModel.ticker == ticker.upper()
+                        ).first()
+                        if ticker_obj and ticker_obj.sector:
+                            sector_etf = SECTOR_ETF_MAP.get(ticker_obj.sector)
+                            if sector_etf:
+                                sector_data = ds.get_price_data(sector_etf, start_date, end_date)
+                                if sector_data and not sector_data.frame.empty:
+                                    sector_prices = sector_data.frame['close']
+                                    sector_prices = filter_series_by_date(sector_prices, _simulation_date)
+                except Exception:
+                    sector_prices = None
+
                 result = MomentumFactors(
                     price_series=price_series,
                     volume_series=volume_series,
                     market_price_series=spy_prices,
+                    sector_price_series=sector_prices,
                     dividends_series=divs
                 ).calc_all()
+
             else:  # volatility
                 result = VolatilityFactors(price_series, spy_price_series=spy_prices).calc_all()
 
@@ -123,12 +161,43 @@ def calculate_ticker_factors(ticker: str, factor: str, _simulation_date: Optiona
     except Exception as e:
         return error_response(f"Failed to calculate {factor} factors for {ticker}: {str(e)}")
 
+if __name__ == "__main__":
+    print(calculate_ticker_factors(ticker='AAL', factor='volatility'))
 
 # Tool Schema Constants
-CALCULATE_TICKER_FACTORS_DESCRIPTION = (
-    "Calculate factor metrics for a given ticker and factor type. Can calculate growth, value, momentum, quality, or volatility factors.\n\n"
-    "Example: calculate_ticker_factors(ticker='KO', factor='growth')"
-)
+CALCULATE_TICKER_FACTORS_DESCRIPTION = """Calculate quantitative factor metrics for stock analysis.
+
+**FACTORS:**
+
+1. **MOMENTUM** - Trend & relative strength (trend-following, timing)
+   - r12_1/r6_1/r3_1: Academic momentum returns (t-X to t-1). Positive = outperforming
+   - pct_from_52w_high: Distance from peak. Near 0 = strong, negative = weak
+   - rsi: 0-100 oscillator. >70 overbought, <30 oversold
+   - idio_momentum: Stock-specific momentum vs market
+
+2. **VALUE** - Valuation metrics (finding undervalued stocks)
+   - trailing_pe/forward_pe: Price/Earnings. Lower = cheaper
+   - earnings_yield/fcf_yield: Yield ratios. Higher = more value
+   - ev_to_ebitda: Enterprise multiple. Lower = cheaper
+   - peg_ratio: PE/Growth. <1 = undervalued vs growth
+
+3. **GROWTH** - Earnings & revenue trajectory (GARP, growth investing)
+   - eps_growth_rate/eps_cagr: Historical earnings growth
+   - forward_eps_growth: Analyst expectations
+   - revenue_growth_rate/sales_ttm_yoy: Top-line growth
+
+4. **QUALITY** - Financial health (avoiding distress, finding moats)
+   - roic/roe: Capital efficiency. Higher = better
+   - gross_profitability: Novy-Marx quality factor
+   - altman_z_score: Bankruptcy risk. >3 safe, <1.8 distress
+   - accruals_ratio: Earnings quality. Near 0 = cash-backed
+
+5. **VOLATILITY** - Risk metrics (position sizing, risk management)
+   - realized_vol_30d/90d/252d: Price volatility
+   - beta_1yr: Market sensitivity. >1 = more volatile
+   - max_drawdown_1yr: Largest peak-to-trough decline
+
+Example: calculate_ticker_factors(ticker='AAPL', factor='momentum')"""
 
 CALCULATE_TICKER_FACTORS_PARAMETERS = {
     "type": "object",

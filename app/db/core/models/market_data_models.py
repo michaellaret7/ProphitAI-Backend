@@ -62,6 +62,7 @@ class Ticker(MarketBase):
     rating_scores = relationship('Rating', back_populates='ticker', lazy='dynamic')
     analyst_recommendations = relationship('AnalystRecommendation', back_populates='ticker', lazy='dynamic')
     price_target_summary = relationship('PriceTargetSummary', back_populates='ticker', uselist=False)
+    equity_screener = relationship('EquityScreener', back_populates='ticker', uselist=False)
 
 # =============================================================================
 # FUNDAMENTAL DATA SCHEMA
@@ -580,7 +581,7 @@ class AnalystRecommendation(MarketBase):
 class PriceTargetSummary(MarketBase):
     __tablename__ = 'price_target_summary'
     __table_args__ = {'schema': 'grades_and_ratings_data'}
-    
+
     ticker_id = Column(UUID(as_uuid=True), ForeignKey('ticker_universe.tickers.id'), primary_key=True, index=True)
     lastMonthCount = Column(Integer)
     lastMonthAvgPriceTarget = Column(Float)
@@ -591,6 +592,95 @@ class PriceTargetSummary(MarketBase):
     allTimeCount = Column(Integer)
     allTimeAvgPriceTarget = Column(Float)
     publishers = Column(JSON)  # Storing as JSON array
-    
+
     # Relationship
     ticker = relationship('Ticker', back_populates='price_target_summary')
+
+
+# =============================================================================
+# SCREENER DATA SCHEMA
+# =============================================================================
+
+class EquityScreener(MarketBase):
+    """
+    Equity screener table containing calculated metrics for stock screening.
+    Combines momentum, performance, risk, and fundamental ratio data.
+    """
+    __tablename__ = 'equity_screener'
+    __table_args__ = {'schema': 'screener_data'}
+
+    ticker_id = Column(UUID(as_uuid=True), ForeignKey('ticker_universe.tickers.id'), primary_key=True, index=True)
+    updated_at = Column(DateTime, index=True)
+
+    # Momentum metrics
+    momentum_1m = Column(Float)
+    momentum_3m = Column(Float)
+    momentum_6m = Column(Float)
+
+    # Performance metrics
+    ann_return = Column(Float)
+    ann_vol = Column(Float)
+
+    # Beta metrics
+    beta_vs_spy = Column(Float)
+    beta_vs_sector = Column(Float)
+
+    # Alpha metrics
+    alpha_vs_spy = Column(Float)
+    alpha_vs_sector = Column(Float)
+
+    # Growth metrics
+    ebit_cagr_5yr = Column(Float)
+    ebit_cagr_3yr = Column(Float)
+
+    # TTM Valuation ratios
+    dividend_yield_ttm = Column(Float)
+    pe_ratio_ttm = Column(Float)
+    peg_ratio_ttm = Column(Float)
+    price_to_book_ratio_ttm = Column(Float)
+    price_to_sales_ratio_ttm = Column(Float)
+    price_to_free_cash_flows_ratio_ttm = Column(Float)
+    price_to_operating_cash_flows_ratio_ttm = Column(Float)
+    enterprise_value_multiple_ttm = Column(Float)
+
+    # TTM Profitability ratios
+    payout_ratio_ttm = Column(Float)
+    gross_profit_margin_ttm = Column(Float)
+    operating_profit_margin_ttm = Column(Float)
+    pretax_profit_margin_ttm = Column(Float)
+    net_profit_margin_ttm = Column(Float)
+
+    # TTM Return ratios
+    return_on_assets_ttm = Column(Float)
+    return_on_equity_ttm = Column(Float)
+    return_on_capital_employed_ttm = Column(Float)
+
+    # TTM Cash flow ratios
+    operating_cash_flow_sales_ratio_ttm = Column(Float)
+    free_cash_flow_operating_cash_flow_ratio_ttm = Column(Float)
+    capital_expenditure_coverage_ratio_ttm = Column(Float)
+    dividend_paid_and_capex_coverage_ratio_ttm = Column(Float)
+
+    # TTM Debt/Solvency ratios
+    debt_ratio_ttm = Column(Float)
+    debt_equity_ratio_ttm = Column(Float)
+    long_term_debt_to_capitalization_ttm = Column(Float)
+    total_debt_to_capitalization_ttm = Column(Float)
+    interest_coverage_ttm = Column(Float)
+    cash_flow_to_debt_ratio_ttm = Column(Float)
+    short_term_coverage_ratios_ttm = Column(Float)
+    company_equity_multiplier_ttm = Column(Float)
+
+    # TTM Liquidity ratios
+    quick_ratio_ttm = Column(Float)
+    cash_ratio_ttm = Column(Float)
+
+    # TTM Efficiency/Activity ratios
+    cash_conversion_cycle_ttm = Column(Float)
+    receivables_turnover_ttm = Column(Float)
+    payables_turnover_ttm = Column(Float)
+    inventory_turnover_ttm = Column(Float)
+    asset_turnover_ttm = Column(Float)
+
+    # Relationship
+    ticker = relationship('Ticker', back_populates='equity_screener')

@@ -2082,3 +2082,6 @@ class FMP_API_DATA:
         return self._make_fmp_api_request(url)
 
 
+if __name__ == "__main__":
+    fmp_api = FMP_API_DATA()
+    print(fmp_api.get_daily_prices_for_ticker('^GSPC', datetime(2024, 1, 1), datetime(2024, 12, 31)))

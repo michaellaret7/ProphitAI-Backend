@@ -1,6 +1,6 @@
-from app.core.agentic_framework.tool_lib.base_tools.search_engine_tool import AgentSearchEngine
+from app.core.agentic_framework.tool_lib.base_tools.search_engine import AgentSearchEngine
 from app.core.agentic_framework.tool_lib.base_tools import calculator
-from app.core.agentic_framework.tool_lib.base_tools.task_management import (
+from app.core.agentic_framework.tool_lib.base_tools.update_task import (
     update_tasks,
     UPDATE_TASKS_DESCRIPTION,
     UPDATE_TASKS_PARAMETERS

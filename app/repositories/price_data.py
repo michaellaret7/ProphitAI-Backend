@@ -147,7 +147,7 @@ def fetch_bulk_price_data_for_tickers(tickers: list, start_date_str: str, end_da
                 
     return price_data_map
 
-def fetch_bulk_ohlcv_data_for_tickers(tickers: list, start_date_str: str, end_date_str: str, frequency: str = 'daily'):
+def fetch_bulk_ohlcv_data_for_tickers(tickers: list, start_date_str: str, end_date_str: str, frequency: str = 'daily', returns: bool = False):
     """
     Fetch full OHLCV DataFrames for multiple tickers in parallel.
 
@@ -198,10 +198,31 @@ def fetch_bulk_ohlcv_data_for_tickers(tickers: list, start_date_str: str, end_da
                     if frequency == 'daily':
                         # Daily data has 'date' column that needs to be set as index
                         data['date'] = pd.to_datetime(data['date'])
-                        price_data_map[ticker] = data.set_index('date')
+                        df = data.set_index('date')
                     else:
                         # 15mins and hourly data already have datetime as index
-                        price_data_map[ticker] = data
+                        df = data
+                    
+                    # --- NEW LOGIC START ---
+                    if returns:
+                        # Calculate cumulative returns based on adj_close if available, else close
+                        target_col = 'adj_close'
+
+                        if target_col in df.columns:
+                            # 1. Calculate simple daily returns
+                            total_returns = df[target_col].pct_change()
+                            price_returns = df['close'].pct_change()
+
+                            df['returns'] = total_returns
+                            
+                            # 2. Calculate cumulative returns: (1 + r).cumprod() - 1
+                            # This shows total return % (e.g., 0.10 for 10% total gain)
+                            df['cum_total_returns'] = (1 + total_returns).cumprod() - 1
+                            df['cum_price_returns'] = (1 + price_returns).cumprod() - 1
+                    # --- NEW LOGIC END ---
+
+                    price_data_map[ticker] = df
+                    
             except Exception as e:
                 logger.error(f"Error fetching OHLCV data for {ticker}: {e}")
 
@@ -232,8 +253,3 @@ def get_dividends_series(ticker: str, start_date: datetime, end_date: datetime, 
     data = {pd.to_datetime(r.date): float(r.adjDividend if r.adjDividend is not None else (r.dividend or 0.0)) for r in rows}
     return pd.Series(data).sort_index()
 
-
-if __name__ == "__main__":
-    df = get_price_data_15_mins('NRDS', datetime(2020, 1, 1), datetime(2025, 11, 27))
-    print(df.head())
-    print(df.tail(20))

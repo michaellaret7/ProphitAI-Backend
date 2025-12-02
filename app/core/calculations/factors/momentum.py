@@ -97,17 +97,22 @@ class MomentumFactors:
         return self._window_return(self.prices, lookback=MOMENTUM_LOOKBACK["6M"], skip_end=skip)
 
     def twelve_month_return_ex1m(self) -> Optional[float]:
+        """12-month return ending 1 month ago (12 months of return, shifted back 1 month)."""
         return self._window_return(self.prices, lookback=MOMENTUM_LOOKBACK["12M"], skip_end=MOMENTUM_LOOKBACK["SKIP_RECENT"])
 
-    # Canonical ex-1m windows
+    # Canonical ex-1m windows (Academic Jegadeesh & Titman standard)
+    # These calculate return FROM t-X TO t-1, not a X-month window ending at t-1
     def r12_1(self) -> Optional[float]:
-        return self.twelve_month_return_ex1m()
+        """Academic 12-1 momentum: Price(t-1) / Price(t-12) - 1 (11 months of return)."""
+        return self._window_return(self.prices, lookback=MOMENTUM_LOOKBACK["R12_1_SPAN"], skip_end=MOMENTUM_LOOKBACK["SKIP_RECENT"])
 
     def r6_1(self) -> Optional[float]:
-        return self.six_month_return(skip=MOMENTUM_LOOKBACK["SKIP_RECENT"])
+        """Academic 6-1 momentum: Price(t-1) / Price(t-6) - 1 (5 months of return)."""
+        return self._window_return(self.prices, lookback=MOMENTUM_LOOKBACK["R6_1_SPAN"], skip_end=MOMENTUM_LOOKBACK["SKIP_RECENT"])
 
     def r3_1(self) -> Optional[float]:
-        return self.three_month_return(skip=MOMENTUM_LOOKBACK["SKIP_RECENT"])
+        """Academic 3-1 momentum: Price(t-1) / Price(t-3) - 1 (2 months of return)."""
+        return self._window_return(self.prices, lookback=MOMENTUM_LOOKBACK["R3_1_SPAN"], skip_end=MOMENTUM_LOOKBACK["SKIP_RECENT"])
 
     # ------------------------- 52w high ------------------------- #
     def pct_from_52w_high(self, window: int = None) -> Optional[float]:

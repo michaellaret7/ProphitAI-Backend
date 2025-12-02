@@ -52,15 +52,13 @@ def get_date_range(
 
     Args:
         simulation_date: Optional cutoff date for simulation mode
-        lookback_days: Number of trading days to look back from end date
+        lookback_days: Number of calendar days to look back from end date
 
     Returns:
         Tuple of (start_date, end_date)
     """
     end = get_end_date(simulation_date)
-    # Convert lookback_days (trading days) to calendar days
-    calendar_days = int(lookback_days * 365 / 252)
-    start = end - timedelta(days=calendar_days)
+    start = end - timedelta(days=lookback_days)
     return start, end
 
 

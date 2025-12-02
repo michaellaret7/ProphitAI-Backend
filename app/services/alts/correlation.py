@@ -6,7 +6,7 @@ from app.utils.time_utils import get_current_utc_time
 from app.repositories.price_data import get_price_data_daily
 from app.core.calculations.returns.calculator import ReturnsCalculator
 from app.core.calculations.portfolio.correlation import CorrelationAnalysis
-from app.core.calculations.core.config import DEFAULT_LOOKBACK_SHORT
+from app.core.calculations.core.config import DEFAULT_LOOKBACK_1Y
 
 
 class AltsCorrelationService:
@@ -48,7 +48,7 @@ class AltsCorrelationService:
 
         # Fetch price data for all tickers (using UTC time)
         end_date = get_current_utc_time()
-        start_date = end_date - timedelta(days=int(DEFAULT_LOOKBACK_SHORT * 365 / 252))
+        start_date = end_date - timedelta(days=DEFAULT_LOOKBACK_1Y)
 
         ticker_returns: Dict[str, pd.Series] = {}
         failed_tickers = []
@@ -118,7 +118,7 @@ class AltsCorrelationService:
             "metadata": {
                 "total_tickers": len(tickers_ordered),
                 "failed_tickers": failed_tickers if failed_tickers else None,
-                "lookback_days": DEFAULT_LOOKBACK_SHORT,
+                "lookback_days": DEFAULT_LOOKBACK_1Y,
                 "date_range": {
                     "start": start_date.strftime("%Y-%m-%d"),
                     "end": end_date.strftime("%Y-%m-%d")

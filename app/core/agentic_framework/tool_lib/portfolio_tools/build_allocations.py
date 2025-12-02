@@ -1,6 +1,6 @@
 from app.utils.gpt_parser import canonical_portfolio
 from app.core.calculations.portfolio.allocations import SimplePortfolioAllocator
-from app.core.calculations.core.config import DEFAULT_LOOKBACK_LONG
+from app.core.calculations.core.config import DEFAULT_LOOKBACK_3Y
 from app.core.agentic_framework.tool_lib.common.schemas import PORTFOLIO_DICT_SCHEMA
 from app.core.agentic_framework.tool_lib.common.responses import success_response, error_response
 
@@ -52,7 +52,7 @@ def build_portfolio(portfolio_dict: any, **kwargs) -> str:
             target_annual_vol=0.17,
             target_gross_exposure=1.8,
             target_net_exposure=0.3,
-            lookback_days=DEFAULT_LOOKBACK_LONG  # 3 years of trading days (industry standard)
+            lookback_days=DEFAULT_LOOKBACK_3Y  # 3 years of calendar days
         )
 
         result = allocator.allocate()

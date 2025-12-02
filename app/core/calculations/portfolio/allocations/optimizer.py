@@ -112,9 +112,7 @@ def optimize_portfolio_weights(
     short_tickers = [t for t, data in portfolio_canonical.items() if data.get("position") == "short"]
 
     end = get_current_utc_time()  # Use UTC time
-    # Convert lookback_days (trading days) to calendar days
-    calendar_days = int(lookback_days * 365 / 252)
-    start = end - timedelta(days=calendar_days)
+    start = end - timedelta(days=lookback_days)
 
     returns_df = _build_returns_matrix(
         tickers, start, end, use_total_returns=use_total_returns

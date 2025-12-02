@@ -94,3 +94,20 @@ def get_eligible_tickers(industry: str, market_cap: int, price: int = None, doll
 
    return ticker_list
 
+
+def get_sector_etf(sector: str):
+    SECTOR_ETF_MAP = {
+        'equity_sector_information_technology': 'XLK',
+        'equity_sector_financials': 'XLF',
+        'equity_sector_health_care': 'XLV',
+        'equity_sector_consumer_discretionary': 'XLY',
+        'equity_sector_communication_services': 'XLC',
+        'equity_sector_industrials': 'XLI',
+        'equity_sector_consumer_staples': 'XLP',
+        'equity_sector_energy': 'XLE',
+        'equity_sector_utilities': 'XLU',
+        'equity_sector_real_estate': 'XLRE',
+        'equity_sector_materials': 'XLB',
+    }
+
+    return SECTOR_ETF_MAP.get(sector)

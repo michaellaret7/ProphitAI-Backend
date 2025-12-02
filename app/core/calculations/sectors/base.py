@@ -133,9 +133,9 @@ def calc_momentum_factors(tickers: List[str]) -> pd.DataFrame:
         Series with winsorized median of each momentum factor
     """
     # Use last 3 years of data for momentum calculations (industry standard)
-    from app.core.calculations.core.config import DEFAULT_LOOKBACK_LONG
+    from app.core.calculations.core.config import DEFAULT_LOOKBACK_3Y
     end_date = get_current_utc_time()
-    start_date = end_date - timedelta(days=int(DEFAULT_LOOKBACK_LONG * 365 / 252))
+    start_date = end_date - timedelta(days=DEFAULT_LOOKBACK_3Y)
     return MomentumFactors.calc_all_bulk(tickers, start_date, end_date)
 
 @winsorized_median
@@ -162,7 +162,7 @@ def calc_volatility_factors(tickers: List[str]) -> pd.DataFrame:
         Series with winsorized median of each volatility factor
     """
     # Use last 3 years of data for volatility calculations (industry standard)
-    from app.core.calculations.core.config import DEFAULT_LOOKBACK_LONG
+    from app.core.calculations.core.config import DEFAULT_LOOKBACK_3Y
     end_date = get_current_utc_time()
-    start_date = end_date - timedelta(days=int(DEFAULT_LOOKBACK_LONG * 365 / 252))
+    start_date = end_date - timedelta(days=DEFAULT_LOOKBACK_3Y)
     return VolatilityFactors.calc_all_bulk(tickers, start_date, end_date)

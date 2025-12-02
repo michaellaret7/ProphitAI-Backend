@@ -35,9 +35,7 @@ def prepare_portfolio_data(
     """
     # 1. Date range
     end = get_end_date(_simulation_date)
-    # Convert lookback_days (trading days) to calendar days
-    calendar_days = int(lookback_days * 365 / 252)
-    start = end - timedelta(days=calendar_days)
+    start = end - timedelta(days=lookback_days)
     
     # 2. Get tickers
     tickers = list(portfolio.keys())
@@ -156,9 +154,7 @@ def get_benchmark_returns(
 
     if not start:
         if lookback_days:
-            # Convert lookback_days (trading days) to calendar days
-            calendar_days = int(lookback_days * 365 / 252)
-            start = end - timedelta(days=calendar_days)
+            start = end - timedelta(days=lookback_days)
         else:
             raise ValueError("Must provide either start date or lookback_days")
 

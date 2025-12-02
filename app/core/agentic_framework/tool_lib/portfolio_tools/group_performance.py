@@ -3,7 +3,7 @@ from datetime import datetime
 from app.core.calculations.portfolio.utils import prepare_portfolio_data
 from app.core.calculations.returns.calculator import ReturnsCalculator
 from app.core.calculations.risk.calculator import RiskCalculator
-from app.core.calculations.core.config import DEFAULT_LOOKBACK_LONG
+from app.core.calculations.core.config import DEFAULT_LOOKBACK_3Y
 import pandas as pd
 import numpy as np
 from app.models.portfolio_models import PortfolioInput
@@ -15,7 +15,7 @@ from app.core.agentic_framework.tool_lib.common.schemas import PORTFOLIO_DICT_SC
 from app.core.agentic_framework.tool_lib.common.responses import success_response, error_response
 
 @log_simulation_data_range()
-def calculate_group_performances(portfolio_dict: PortfolioInput | dict, lookback_days: int = DEFAULT_LOOKBACK_LONG, use_total_returns: bool = True, group_by: str = None, _simulation_date: Optional[datetime] = None) -> str:
+def calculate_group_performances(portfolio_dict: PortfolioInput | dict, lookback_days: int = DEFAULT_LOOKBACK_3Y, use_total_returns: bool = True, group_by: str = None, _simulation_date: Optional[datetime] = None) -> str:
     """Generic grouping performance calculator.
 
     Returns a DataFrame with columns: [group_label, ann_total_return, ann_volatility]
@@ -25,7 +25,7 @@ def calculate_group_performances(portfolio_dict: PortfolioInput | dict, lookback
     v = ToolValidator()
     v.require_portfolio('portfolio_dict', portfolio_dict, normalize=True)
     v.require_enum('group_by', group_by, ['industry', 'sub_industry'])
-    v.optional_numeric('lookback_days', lookback_days, default=DEFAULT_LOOKBACK_LONG, min_val=1, positive_only=True)
+    v.optional_numeric('lookback_days', lookback_days, default=DEFAULT_LOOKBACK_3Y, min_val=1, positive_only=True)
 
     if not v.is_valid():
         return v.error_response()

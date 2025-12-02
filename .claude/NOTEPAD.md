@@ -1612,7 +1612,7 @@ Registers all 4 reasoning tools with:
 
 **Import added (Line 20):**
 ```python
-from .tool_registry import register_base_tools, register_task_management_tools, register_reasoning_tools
+from .tool_registry import register_base_tools, register_update_task_tools, register_reasoning_tools
 ```
 
 **Registration call added (Line 149):**

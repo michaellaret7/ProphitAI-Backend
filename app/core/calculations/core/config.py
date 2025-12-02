@@ -17,10 +17,10 @@ DEFAULT_CONFIDENCE: float = 0.99
 DEFAULT_SECTOR_COL: str = "sector"
 DEFAULT_WINSOR_LIMITS: tuple[float, float] = (0.025, 0.025)
 
-# Standard lookback periods (in trading days)
-DEFAULT_LOOKBACK_SHORT: int = 252    # 1 year - for quick reference and short-term analysis
-DEFAULT_LOOKBACK_MEDIUM: int = 504   # 2 years - for portfolio/risk analysis
-DEFAULT_LOOKBACK_LONG: int = 756     # 3 years - for deep historical analysis
+# Standard lookback periods (in calendar days for use with timedelta)
+DEFAULT_LOOKBACK_1Y: int = 365     # 1 year
+DEFAULT_LOOKBACK_2Y: int = 730     # 2 years
+DEFAULT_LOOKBACK_3Y: int = 1095    # 3 years
 
 __all__ = [
     "DEFAULT_TRADING_DAYS",
@@ -28,9 +28,9 @@ __all__ = [
     "DEFAULT_CONFIDENCE",
     "DEFAULT_SECTOR_COL",
     "DEFAULT_WINSOR_LIMITS",
-    "DEFAULT_LOOKBACK_SHORT",
-    "DEFAULT_LOOKBACK_MEDIUM",
-    "DEFAULT_LOOKBACK_LONG",
+    "DEFAULT_LOOKBACK_1Y",
+    "DEFAULT_LOOKBACK_2Y",
+    "DEFAULT_LOOKBACK_3Y",
 ]
 
 

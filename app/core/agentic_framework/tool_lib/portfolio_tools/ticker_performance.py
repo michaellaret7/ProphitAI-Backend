@@ -4,7 +4,7 @@ from app.core.calculations.portfolio.utils import prepare_portfolio_data, get_be
 from app.core.calculations.returns.calculator import ReturnsCalculator
 from app.core.calculations.risk.calculator import RiskCalculator
 from app.core.calculations.performance.calculator import PerformanceCalculator
-from app.core.calculations.core.config import DEFAULT_LOOKBACK_MEDIUM
+from app.core.calculations.core.config import DEFAULT_LOOKBACK_2Y
 import pandas as pd
 import numpy as np
 from app.models.portfolio_models import PortfolioInput
@@ -26,7 +26,7 @@ TICKER_METRIC_GROUPS = {
 @log_simulation_data_range()
 def calculate_ticker_performances(
     portfolio_dict: PortfolioInput | dict, 
-    lookback_days: int = DEFAULT_LOOKBACK_MEDIUM, 
+    lookback_days: int = DEFAULT_LOOKBACK_2Y, 
     use_total_returns: bool = True, 
     benchmark: str = "SPY", 
     filters: list[str] = ["all"],
@@ -49,7 +49,7 @@ def calculate_ticker_performances(
     # Validate inputs
     v = ToolValidator()
     v.require_portfolio('portfolio_dict', portfolio_dict, normalize=True)
-    v.optional_numeric('lookback_days', lookback_days, default=DEFAULT_LOOKBACK_MEDIUM, min_val=1, positive_only=True)
+    v.optional_numeric('lookback_days', lookback_days, default=DEFAULT_LOOKBACK_2Y, min_val=1, positive_only=True)
 
     if not v.is_valid():
         return v.error_response()

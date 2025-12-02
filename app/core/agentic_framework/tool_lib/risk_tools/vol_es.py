@@ -3,7 +3,7 @@ from typing import Optional
 import pandas as pd
 from app.core.calculations.portfolio.utils import get_portfolio_returns
 from app.core.calculations.risk.calculator import RiskCalculator
-from app.core.calculations.core.config import DEFAULT_LOOKBACK_SHORT
+from app.core.calculations.core.config import DEFAULT_LOOKBACK_1Y
 from app.models.portfolio_models import PortfolioInput
 import numpy as np
 from app.utils.tool_validator import ToolValidator
@@ -56,7 +56,7 @@ def vol_es(
         # Get portfolio returns using the utility
         portfolio_returns, _ = get_portfolio_returns(
             portfolio=portfolio_dict,
-            lookback_days=DEFAULT_LOOKBACK_SHORT,
+            lookback_days=DEFAULT_LOOKBACK_1Y,
             use_total_returns=False,  # Use price returns for volatility metrics
             dropna=True,
             _simulation_date=_simulation_date

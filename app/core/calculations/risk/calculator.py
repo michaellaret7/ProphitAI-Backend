@@ -3,7 +3,10 @@ from __future__ import annotations
 import numpy as np
 import pandas as pd
 from app.core.calculations.core.config import DEFAULT_CONFIDENCE
+import warnings
 
+from app.repositories.price_data import fetch_bulk_ohlcv_data_for_tickers 
+warnings.filterwarnings('ignore', category=RuntimeWarning)
 
 def _to_psd(cov: np.ndarray, floor: float = 1e-12) -> np.ndarray:
     """Make covariance matrix positive semi-definite in a numerically stable way.
@@ -321,5 +324,4 @@ class RiskCalculator:
         running_max = equity.cummax()
         drawdowns = (equity / running_max) - 1.0
         return float(np.sqrt(np.mean(np.square(drawdowns))))
-
 

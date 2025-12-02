@@ -5,7 +5,7 @@ from app.core.calculations.returns.calculator import ReturnsCalculator
 from app.core.calculations.risk.calculator import RiskCalculator
 from app.core.calculations.performance.calculator import PerformanceCalculator
 import pandas as pd
-from app.core.calculations.core.config import DEFAULT_RF_ANNUAL, DEFAULT_TRADING_DAYS, DEFAULT_LOOKBACK_LONG
+from app.core.calculations.core.config import DEFAULT_RF_ANNUAL, DEFAULT_TRADING_DAYS, DEFAULT_LOOKBACK_3Y
 from app.models.portfolio_models import PortfolioInput
 from app.utils.decorators.tool_validation import log_simulation_data_range
 from app.utils.tool_validator import ToolValidator
@@ -27,7 +27,7 @@ METRIC_GROUPS = {
 @log_simulation_data_range()
 def calculate_portfolio_performance(
     portfolio_dict: PortfolioInput | dict, 
-    lookback_days=DEFAULT_LOOKBACK_LONG, 
+    lookback_days=DEFAULT_LOOKBACK_3Y, 
     use_total_returns=True, 
     rf_annual=0.04, 
     benchmark="SPY",
@@ -50,7 +50,7 @@ def calculate_portfolio_performance(
     # Validate inputs
     v = ToolValidator()
     v.require_portfolio('portfolio_dict', portfolio_dict, normalize=True)
-    v.optional_numeric('lookback_days', lookback_days, default=DEFAULT_LOOKBACK_LONG, min_val=1, positive_only=True)
+    v.optional_numeric('lookback_days', lookback_days, default=DEFAULT_LOOKBACK_3Y, min_val=1, positive_only=True)
     v.optional_numeric('rf_annual', rf_annual, default=0.04, min_val=0, max_val=1)
 
     if not v.is_valid():

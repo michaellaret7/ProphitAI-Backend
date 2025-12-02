@@ -9,12 +9,19 @@ from app.core.calculations.core.config import DEFAULT_TRADING_DAYS
 # ============ TIME HORIZONS ============
 # Momentum lookback periods (in trading days)
 MOMENTUM_LOOKBACK = {
+    # Raw period lengths
     "1M": 21,
     "3M": 63,
     "6M": 126,
     "12M": 252,
     "SKIP_RECENT": 21,  # Skip most recent month for momentum
     "IDIO_LOOKBACK": 60,  # Idiosyncratic momentum window
+    # Academic "X-1" momentum windows (Jegadeesh & Titman, 1993)
+    # These are the spans FROM t-X TO t-1 (excluding most recent month)
+    # Formula: Price(t-1) / Price(t-X) - 1
+    "R12_1_SPAN": 231,  # 252 - 21 = return from t-12 to t-1 (11 months)
+    "R6_1_SPAN": 105,   # 126 - 21 = return from t-6 to t-1 (5 months)
+    "R3_1_SPAN": 42,    # 63 - 21 = return from t-3 to t-1 (2 months)
 }
 
 # Volatility calculation windows (in trading days)

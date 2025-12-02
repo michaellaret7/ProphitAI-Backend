@@ -4,7 +4,7 @@ import pandas as pd
 import numpy as np
 from app.core.calculations.portfolio.utils import get_portfolio_returns, get_benchmark_returns
 from app.core.calculations.risk.calculator import RiskCalculator
-from app.core.calculations.core.config import DEFAULT_LOOKBACK_MEDIUM
+from app.core.calculations.core.config import DEFAULT_LOOKBACK_2Y
 from app.models.portfolio_models import PortfolioInput
 from app.utils.decorators.tool_validation import log_simulation_data_range
 from app.utils.tool_validator import ToolValidator
@@ -14,7 +14,7 @@ from app.core.agentic_framework.tool_lib.common.responses import success_respons
 @log_simulation_data_range()
 def calculate_portfolio_beta_vs_index(
     portfolio_dict: PortfolioInput | dict,
-    lookback_days: int = DEFAULT_LOOKBACK_MEDIUM,
+    lookback_days: int = DEFAULT_LOOKBACK_2Y,
     _simulation_date: Optional[datetime] = None
 ) -> str:
     """

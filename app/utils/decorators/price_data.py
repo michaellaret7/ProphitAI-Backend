@@ -3,10 +3,10 @@
 from functools import wraps
 from datetime import datetime, timedelta, timezone
 from app.core.calculations.core.data_service import DataService
-from app.core.calculations.core.config import DEFAULT_LOOKBACK_SHORT
+from app.core.calculations.core.config import DEFAULT_LOOKBACK_1Y
 import yaml
 
-def with_price_data(lookback_days=DEFAULT_LOOKBACK_SHORT, include_dividends=True):
+def with_price_data(lookback_days=DEFAULT_LOOKBACK_1Y, include_dividends=True):
     """
     Decorator that fetches price and dividend data for a ticker before running the function.
 
@@ -23,9 +23,7 @@ def with_price_data(lookback_days=DEFAULT_LOOKBACK_SHORT, include_dividends=True
             # Reason: Simulation mode requires fetching historical data up to cutoff date
             simulation_date = kwargs.get('_simulation_date')
             end = simulation_date if simulation_date else datetime.now(timezone.utc)
-            # Convert lookback_days (trading days) to calendar days
-            calendar_days = int(lookback_days * 365 / 252)
-            start = end - timedelta(days=calendar_days)
+            start = end - timedelta(days=lookback_days)
 
             # Fetch price data
             ds = DataService()
@@ -49,7 +47,7 @@ def with_price_data(lookback_days=DEFAULT_LOOKBACK_SHORT, include_dividends=True
         return wrapper
     return decorator
 
-def with_bulk_price_data(lookback_days=DEFAULT_LOOKBACK_SHORT, include_dividends=True):
+def with_bulk_price_data(lookback_days=DEFAULT_LOOKBACK_1Y, include_dividends=True):
     """
     Decorator that fetches price and dividend data for a list of tickers before running the function.
     """
@@ -60,9 +58,7 @@ def with_bulk_price_data(lookback_days=DEFAULT_LOOKBACK_SHORT, include_dividends
             # Reason: Simulation mode requires fetching historical data up to cutoff date
             simulation_date = kwargs.get('_simulation_date')
             end = simulation_date if simulation_date else datetime.now(timezone.utc)
-            # Convert lookback_days (trading days) to calendar days
-            calendar_days = int(lookback_days * 365 / 252)
-            start = end - timedelta(days=calendar_days)
+            start = end - timedelta(days=lookback_days)
 
             # Fetch price data
             ds = DataService()

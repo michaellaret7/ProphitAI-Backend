@@ -1,11 +1,12 @@
 from app.repositories.price_data import get_price_data_15_mins
 from app.db.core.db_config import MarketSession, market_engine
 from app.db.core.models.market_data_models import (
-    Ticker, Price, ETFInfo, ETFHolding, Dividend
+    Ticker, Price, DailyPrices, ETFInfo, ETFHolding, Dividend
 )
 from app.db.core.pull_fmp_data import FMP_API_DATA
 from datetime import datetime, timedelta, timezone
-from sqlalchemy import insert, update
+from sqlalchemy import update
+from sqlalchemy.dialects.postgresql import insert
 import pandas as pd
 import time
 import io
@@ -257,7 +258,75 @@ class OptimizedETFDataLoader:
         
         print(f"[{self.ticker}] After deduplication: {len(df):,} records")
         return df
-    
+
+    def _load_daily_prices(self):
+        """Load daily OHLCV data into DailyPrices table."""
+        print(f"[{self.ticker}] Loading daily prices...")
+
+        # Check if daily price data already exists
+        existing_count = self.session.query(DailyPrices).filter(
+            DailyPrices.ticker_id == self.ticker_id
+        ).count()
+
+        if existing_count > 0:
+            print(f"[{self.ticker}] 🐬 {existing_count:,} daily price records already exist")
+            return True
+
+        # Calculate date range
+        end_date = datetime.now(timezone.utc)
+        start_date = end_date - timedelta(days=365 * self.years_of_history)
+
+        try:
+            print(f"[{self.ticker}] Fetching daily prices from {start_date.strftime('%Y-%m-%d')} to {end_date.strftime('%Y-%m-%d')}...")
+
+            daily_data = self.fmp_api.get_daily_prices_for_ticker(
+                self.ticker,
+                start_date,
+                end_date
+            )
+
+            if not daily_data or 'historical' not in daily_data or not daily_data['historical']:
+                print(f"[{self.ticker}] ⚠️ No daily price data found from API")
+                return False
+
+            # Build records for insertion
+            daily_records = []
+            for day_data in daily_data['historical']:
+                date_str = day_data.get('date')
+                if not date_str:
+                    continue
+
+                # Parse the date - store as datetime at midnight for consistency
+                date_obj = datetime.strptime(date_str, '%Y-%m-%d')
+
+                daily_records.append({
+                    'ticker_id': self.ticker_id,
+                    'datetime': date_obj,
+                    'open': day_data.get('open'),
+                    'high': day_data.get('high'),
+                    'low': day_data.get('low'),
+                    'close': day_data.get('close'),
+                    'adj_close': day_data.get('adjClose'),
+                    'volume': day_data.get('volume')
+                })
+
+            if not daily_records:
+                print(f"[{self.ticker}] ⚠️ No valid daily price records to insert")
+                return False
+
+            # Bulk insert with conflict handling
+            stmt = insert(DailyPrices).values(daily_records)
+            stmt = stmt.on_conflict_do_nothing(index_elements=['ticker_id', 'datetime'])
+            result = self.session.execute(stmt)
+            self.session.flush()
+
+            print(f"[{self.ticker}] ✅ Loaded {len(daily_records):,} daily price records")
+            return True
+
+        except Exception as e:
+            print(f"[{self.ticker}] ❌ Error loading daily prices: {e}")
+            return False
+
     def _load_etf_info(self):
         """Load ETF metadata into etf_info table."""
         print(f"[{self.ticker}] Loading ETF info...")
@@ -337,6 +406,7 @@ class OptimizedETFDataLoader:
         if holdings_data:
             holdings_records = []
             skipped_duplicates = []
+            duplicate_count = 0  # Track how many duplicates we handled
             seen_assets = set()  # Track assets we've already processed in this batch
 
             for holding in holdings_data:
@@ -353,19 +423,32 @@ class OptimizedETFDataLoader:
                     continue
 
                 # Handle duplicates in the current batch
-                # If we've seen this asset already, make it unique by appending the name
+                # If we've seen this asset already, make it unique by appending the name + counter
                 if asset in seen_assets:
+                    duplicate_count += 1
                     name = holding.get('name', '')
                     if name:
                         # Create a unique identifier by combining asset and part of the name
-                        # For example: JPY becomes JPY_CASH or JPY_USD
-                        name_suffix = name.replace(' ', '_').replace('/', '_')[:20]  # Limit suffix length
+                        name_suffix = name.replace(' ', '_').replace('/', '_')[:20]
                         unique_asset = f"{asset}_{name_suffix}"
-                        print(f"[{self.ticker}] Duplicate asset '{asset}' found, using unique identifier: '{unique_asset}'")
+
+                        # If still a duplicate, append a counter until unique
+                        counter = 1
+                        base_asset = unique_asset
+                        while unique_asset in seen_assets:
+                            counter += 1
+                            unique_asset = f"{base_asset}_{counter}"
+
                         asset = unique_asset
                     else:
-                        print(f"[{self.ticker}] Skipping duplicate asset '{asset}' with no distinguishing name")
-                        continue
+                        # No name to distinguish - use counter only
+                        counter = 1
+                        base_asset = asset
+                        unique_asset = f"{asset}_{counter}"
+                        while unique_asset in seen_assets:
+                            counter += 1
+                            unique_asset = f"{base_asset}_{counter}"
+                        asset = unique_asset
 
                 seen_assets.add(asset)
 
@@ -382,6 +465,9 @@ class OptimizedETFDataLoader:
                 }
 
                 holdings_records.append(holding_record)
+
+            if duplicate_count > 0:
+                print(f"[{self.ticker}] ℹ️ Renamed {duplicate_count} duplicate assets to unique identifiers")
 
             if skipped_duplicates:
                 print(f"[{self.ticker}] ⚠️ Skipped {len(skipped_duplicates)} duplicate assets: {', '.join(skipped_duplicates[:5])}{'...' if len(skipped_duplicates) > 5 else ''}")
@@ -489,11 +575,14 @@ class OptimizedETFDataLoader:
                     self.session.rollback()
                     return
             
-            # 4. Load ETF-specific data
+            # 4. Load daily prices
+            self._load_daily_prices()
+
+            # 5. Load ETF-specific data
             self._load_etf_info()
             self._load_etf_holdings()
-            
-            # 5. Load dividend data
+
+            # 6. Load dividend data
             self._load_dividends()
             
             # Commit all changes
@@ -531,14 +620,16 @@ def cleanup_etf_data(ticker):
         etf_info_deleted = session.query(ETFInfo).filter(ETFInfo.ticker_id == ticker_id).delete()
         dividends_deleted = session.query(Dividend).filter(Dividend.ticker_id == ticker_id).delete()
         prices_deleted = session.query(Price).filter(Price.ticker_id == ticker_id).delete()
-        
+        daily_prices_deleted = session.query(DailyPrices).filter(DailyPrices.ticker_id == ticker_id).delete()
+
         # Finally delete the ticker
         session.delete(ticker_obj)
-        
+
         session.commit()
-        
+
         print(f"[{ticker}] Cleanup complete:")
-        print(f"  - Deleted {prices_deleted:,} price records")
+        print(f"  - Deleted {prices_deleted:,} intraday price records")
+        print(f"  - Deleted {daily_prices_deleted:,} daily price records")
         print(f"  - Deleted {holdings_deleted} holdings")
         print(f"  - Deleted ETF info: {'Yes' if etf_info_deleted else 'No'}")
         print(f"  - Deleted {dividends_deleted} dividend records")
@@ -602,40 +693,579 @@ def load_multiple_etfs(etf_list, years_of_history=2):
 
 
 if __name__ == "__main__":
-    # Clean up any partial data from previous failed attempts
-    etfs_to_load = ['STOT', 'PRIV', 'TOTL', 'HYBL']
+    # ============================================
+    # HEALTHCARE / BIOTECH ETFs
+    # ============================================
 
     load_single_etf(
-        'STOT',
+        'XBI',
         sector="etf",
-        industry="fixed_income_etfs",
-        sub_industry="credit",
-        years_of_history=4,
-        allow_partial_reload=False
-    )
-    load_single_etf(
-        'PRIV',
-        sector="etf",
-        industry="fixed_income_etfs",
-        sub_industry="credit",
-        years_of_history=4,
-        allow_partial_reload=False
-    )
-    load_single_etf(
-        'TOTL',
-        sector="etf",
-        industry="fixed_income_etfs",
-        sub_industry="abs_and_mbs",
-        years_of_history=4,
-        allow_partial_reload=False
-    )
-    load_single_etf(
-        'HYBL',
-        sector="etf",
-        industry="fixed_income_etfs",
-        sub_industry="credit",
-        years_of_history=4,
+        industry="equity_etfs",
+        sub_industry="sectors",
+        years_of_history=5,
         allow_partial_reload=False
     )
 
+    load_single_etf(
+        'IBB',
+        sector="etf",
+        industry="equity_etfs",
+        sub_industry="sectors",
+        years_of_history=5,
+        allow_partial_reload=False
+    )
 
+    load_single_etf(
+        'VHT',
+        sector="etf",
+        industry="equity_etfs",
+        sub_industry="sectors",
+        years_of_history=5,
+        allow_partial_reload=False
+    )
+
+    load_single_etf(
+        'IYH',
+        sector="etf",
+        industry="equity_etfs",
+        sub_industry="sectors",
+        years_of_history=5,
+        allow_partial_reload=False
+    )
+
+    # ============================================
+    # REIT ETFs
+    # ============================================
+
+    load_single_etf(
+        'SCHH',
+        sector="etf",
+        industry="equity_etfs",
+        sub_industry="u_s_sector_reits",
+        years_of_history=5,
+        allow_partial_reload=False
+    )
+
+    load_single_etf(
+        'IYR',
+        sector="etf",
+        industry="equity_etfs",
+        sub_industry="u_s_sector_reits",
+        years_of_history=5,
+        allow_partial_reload=False
+    )
+
+    load_single_etf(
+        'USRT',
+        sector="etf",
+        industry="equity_etfs",
+        sub_industry="u_s_sector_reits",
+        years_of_history=5,
+        allow_partial_reload=False
+    )
+
+    load_single_etf(
+        'ICF',
+        sector="etf",
+        industry="equity_etfs",
+        sub_industry="u_s_sector_reits",
+        years_of_history=5,
+        allow_partial_reload=False
+    )
+
+    # ============================================
+    # NUCLEAR / URANIUM ETFs
+    # ============================================
+
+    load_single_etf(
+        'NUKZ',
+        sector="etf",
+        industry="equity_etfs",
+        sub_industry="energy",
+        years_of_history=5,
+        allow_partial_reload=False
+    )
+
+    # ============================================
+    # BUFFER / DEFINED OUTCOME ETFs
+    # ============================================
+
+    load_single_etf(
+        'BUFR',
+        sector="etf",
+        industry="alternative_etfs",
+        sub_industry="strategies",
+        years_of_history=5,
+        allow_partial_reload=False
+    )
+
+    load_single_etf(
+        'PJAN',
+        sector="etf",
+        industry="alternative_etfs",
+        sub_industry="strategies",
+        years_of_history=5,
+        allow_partial_reload=False
+    )
+
+    load_single_etf(
+        'UJAN',
+        sector="etf",
+        industry="alternative_etfs",
+        sub_industry="strategies",
+        years_of_history=5,
+        allow_partial_reload=False
+    )
+
+    load_single_etf(
+        'PSFF',
+        sector="etf",
+        industry="alternative_etfs",
+        sub_industry="strategies",
+        years_of_history=5,
+        allow_partial_reload=False
+    )
+
+    # ============================================
+    # ACTIVE SMALL CAP VALUE ETFs (Avantis/Dimensional)
+    # ============================================
+
+    load_single_etf(
+        'AVUV',
+        sector="etf",
+        industry="equity_etfs",
+        sub_industry="factors",
+        years_of_history=5,
+        allow_partial_reload=False
+    )
+
+    load_single_etf(
+        'AVUS',
+        sector="etf",
+        industry="equity_etfs",
+        sub_industry="factors",
+        years_of_history=5,
+        allow_partial_reload=False
+    )
+
+    load_single_etf(
+        'DFAT',
+        sector="etf",
+        industry="equity_etfs",
+        sub_industry="factors",
+        years_of_history=5,
+        allow_partial_reload=False
+    )
+
+    load_single_etf(
+        'DFSV',
+        sector="etf",
+        industry="equity_etfs",
+        sub_industry="factors",
+        years_of_history=5,
+        allow_partial_reload=False
+    )
+
+    load_single_etf(
+        'DFAC',
+        sector="etf",
+        industry="equity_etfs",
+        sub_industry="factors",
+        years_of_history=5,
+        allow_partial_reload=False
+    )
+
+    load_single_etf(
+        'DFAI',
+        sector="etf",
+        industry="equity_etfs",
+        sub_industry="developed_countries",
+        years_of_history=5,
+        allow_partial_reload=False
+    )
+
+    load_single_etf(
+        'AVDV',
+        sector="etf",
+        industry="equity_etfs",
+        sub_industry="developed_countries",
+        years_of_history=5,
+        allow_partial_reload=False
+    )
+
+    load_single_etf(
+        'AVES',
+        sector="etf",
+        industry="equity_etfs",
+        sub_industry="emerging_markets",
+        years_of_history=5,
+        allow_partial_reload=False
+    )
+
+    # ============================================
+    # ARK ETFs (Active Thematic)
+    # ============================================
+
+    load_single_etf(
+        'ARKW',
+        sector="etf",
+        industry="equity_etfs",
+        sub_industry="artificial_intelligence",
+        years_of_history=5,
+        allow_partial_reload=False
+    )
+
+    load_single_etf(
+        'ARKG',
+        sector="etf",
+        industry="equity_etfs",
+        sub_industry="sectors",
+        years_of_history=5,
+        allow_partial_reload=False
+    )
+
+    load_single_etf(
+        'ARKF',
+        sector="etf",
+        industry="equity_etfs",
+        sub_industry="sectors",
+        years_of_history=5,
+        allow_partial_reload=False
+    )
+
+    # ============================================
+    # SMALL CAP ETFs (Core Index)
+    # ============================================
+
+    load_single_etf(
+        'IWN',
+        sector="etf",
+        industry="equity_etfs",
+        sub_industry="us_major_index",
+        years_of_history=5,
+        allow_partial_reload=False
+    )
+
+    load_single_etf(
+        'IJS',
+        sector="etf",
+        industry="equity_etfs",
+        sub_industry="factors",
+        years_of_history=5,
+        allow_partial_reload=False
+    )
+
+    load_single_etf(
+        'SCHA',
+        sector="etf",
+        industry="equity_etfs",
+        sub_industry="us_major_index",
+        years_of_history=5,
+        allow_partial_reload=False
+    )
+
+    load_single_etf(
+        'VIOO',
+        sector="etf",
+        industry="equity_etfs",
+        sub_industry="us_major_index",
+        years_of_history=5,
+        allow_partial_reload=False
+    )
+
+    load_single_etf(
+        'CALF',
+        sector="etf",
+        industry="equity_etfs",
+        sub_industry="fundamental",
+        years_of_history=5,
+        allow_partial_reload=False
+    )
+
+    # ============================================
+    # INTERNATIONAL SMALL CAP ETFs
+    # ============================================
+
+    load_single_etf(
+        'VSS',
+        sector="etf",
+        industry="equity_etfs",
+        sub_industry="single_country_small_and_mid_caps",
+        years_of_history=5,
+        allow_partial_reload=False
+    )
+
+    load_single_etf(
+        'DGS',
+        sector="etf",
+        industry="equity_etfs",
+        sub_industry="single_country_small_and_mid_caps",
+        years_of_history=5,
+        allow_partial_reload=False
+    )
+
+    # ============================================
+    # ADDITIONAL DIVIDEND / INCOME ETFs
+    # ============================================
+
+    load_single_etf(
+        'DIV',
+        sector="etf",
+        industry="equity_etfs",
+        sub_industry="dividend_strategies",
+        years_of_history=5,
+        allow_partial_reload=False
+    )
+
+    load_single_etf(
+        'SPYD',
+        sector="etf",
+        industry="equity_etfs",
+        sub_industry="dividend_strategies",
+        years_of_history=5,
+        allow_partial_reload=False
+    )
+
+    load_single_etf(
+        'HDV',
+        sector="etf",
+        industry="equity_etfs",
+        sub_industry="dividend_strategies",
+        years_of_history=5,
+        allow_partial_reload=False
+    )
+
+    load_single_etf(
+        'VIG',
+        sector="etf",
+        industry="equity_etfs",
+        sub_industry="dividend_strategies",
+        years_of_history=5,
+        allow_partial_reload=False
+    )
+
+    # ============================================
+    # ESG / SUSTAINABLE ETFs
+    # ============================================
+
+    load_single_etf(
+        'ESGU',
+        sector="etf",
+        industry="equity_etfs",
+        sub_industry="environmental_social_and_corporate_governance",
+        years_of_history=5,
+        allow_partial_reload=False
+    )
+
+    load_single_etf(
+        'SUSA',
+        sector="etf",
+        industry="equity_etfs",
+        sub_industry="environmental_social_and_corporate_governance",
+        years_of_history=5,
+        allow_partial_reload=False
+    )
+
+    # ============================================
+    # MID CAP ETFs
+    # ============================================
+
+    load_single_etf(
+        'VO',
+        sector="etf",
+        industry="equity_etfs",
+        sub_industry="us_major_index",
+        years_of_history=5,
+        allow_partial_reload=False
+    )
+
+    load_single_etf(
+        'IJK',
+        sector="etf",
+        industry="equity_etfs",
+        sub_industry="factors",
+        years_of_history=5,
+        allow_partial_reload=False
+    )
+
+    load_single_etf(
+        'IJJ',
+        sector="etf",
+        industry="equity_etfs",
+        sub_industry="factors",
+        years_of_history=5,
+        allow_partial_reload=False
+    )
+
+    # ============================================
+    # ADDITIONAL TREASURY / BOND ETFs
+    # ============================================
+
+    load_single_etf(
+        'IEI',
+        sector="etf",
+        industry="fixed_income_etfs",
+        sub_industry="treasuries",
+        years_of_history=5,
+        allow_partial_reload=False
+    )
+
+    load_single_etf(
+        'SHV',
+        sector="etf",
+        industry="fixed_income_etfs",
+        sub_industry="treasuries",
+        years_of_history=5,
+        allow_partial_reload=False
+    )
+
+    load_single_etf(
+        'GOVT',
+        sector="etf",
+        industry="fixed_income_etfs",
+        sub_industry="treasuries",
+        years_of_history=5,
+        allow_partial_reload=False
+    )
+
+    load_single_etf(
+        'STIP',
+        sector="etf",
+        industry="fixed_income_etfs",
+        sub_industry="interest_rate_and_inflation_hedge",
+        years_of_history=5,
+        allow_partial_reload=False
+    )
+
+    load_single_etf(
+        'TFLR',
+        sector="etf",
+        industry="fixed_income_etfs",
+        sub_industry="senior_loans",
+        years_of_history=5,
+        allow_partial_reload=False
+    )
+
+    # ============================================
+    # MUNICIPAL BOND ETFs
+    # ============================================
+
+    load_single_etf(
+        'MUB',
+        sector="etf",
+        industry="fixed_income_etfs",
+        sub_industry="u_s_municipal_bond_etfs",
+        years_of_history=5,
+        allow_partial_reload=False
+    )
+
+    load_single_etf(
+        'VTEB',
+        sector="etf",
+        industry="fixed_income_etfs",
+        sub_industry="u_s_municipal_bond_etfs",
+        years_of_history=5,
+        allow_partial_reload=False
+    )
+
+    # ============================================
+    # INTERNATIONAL BOND ETFs
+    # ============================================
+
+    load_single_etf(
+        'IAGG',
+        sector="etf",
+        industry="fixed_income_etfs",
+        sub_industry="sovereign",
+        years_of_history=5,
+        allow_partial_reload=False
+    )
+
+    load_single_etf(
+        'IGOV',
+        sector="etf",
+        industry="fixed_income_etfs",
+        sub_industry="sovereign",
+        years_of_history=5,
+        allow_partial_reload=False
+    )
+
+    load_single_etf(
+        'EMB',
+        sector="etf",
+        industry="fixed_income_etfs",
+        sub_industry="emerging_markets",
+        years_of_history=5,
+        allow_partial_reload=False
+    )
+
+    load_single_etf(
+        'VWOB',
+        sector="etf",
+        industry="fixed_income_etfs",
+        sub_industry="emerging_markets",
+        years_of_history=5,
+        allow_partial_reload=False
+    )
+
+    # ============================================
+    # GLOBAL / INTERNATIONAL EQUITY ETFs
+    # ============================================
+
+    load_single_etf(
+        'ACWX',
+        sector="etf",
+        industry="equity_etfs",
+        sub_industry="global_equities",
+        years_of_history=5,
+        allow_partial_reload=False
+    )
+
+    load_single_etf(
+        'CWI',
+        sector="etf",
+        industry="equity_etfs",
+        sub_industry="global_equities",
+        years_of_history=5,
+        allow_partial_reload=False
+    )
+
+    # ============================================
+    # ADDITIONAL FACTOR / SMART BETA ETFs
+    # ============================================
+
+    load_single_etf(
+        'FNDX',
+        sector="etf",
+        industry="equity_etfs",
+        sub_industry="fundamental",
+        years_of_history=5,
+        allow_partial_reload=False
+    )
+
+    load_single_etf(
+        'RSP',
+        sector="etf",
+        industry="equity_etfs",
+        sub_industry="equal_weighted",
+        years_of_history=5,
+        allow_partial_reload=False
+    )
+
+    load_single_etf(
+        'QQQE',
+        sector="etf",
+        industry="equity_etfs",
+        sub_industry="equal_weighted",
+        years_of_history=5,
+        allow_partial_reload=False
+    )
+
+    load_single_etf(
+        'QQQM',
+        sector="etf",
+        industry="equity_etfs",
+        sub_industry="us_major_index",
+        years_of_history=5,
+        allow_partial_reload=False
+    )
