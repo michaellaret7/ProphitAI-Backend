@@ -80,5 +80,24 @@ async def get_stock_prices_intraday_controller(tickers: List[str], days: int, fr
         payload=data['payload'],
     )
 
-if __name__ == "__main__":
-    print(asyncio.run(get_stock_prices_intraday_controller(tickers=['AAPL', 'GOOG', 'MSFT', 'AMZN', 'TSLA', 'NVDA', 'META', 'IBM', 'ORCL', 'SAP'], days=200, frequency='15mins')))
+
+@handle_controller_errors
+async def index_price_data_controller(ticker: str, days: int) -> Dict[str, Any]:
+    """
+    Controller to handle indexing of price data for a single ticker.
+    """
+    from datetime import datetime, timedelta
+    to_date = datetime.now()
+    from_date = to_date - timedelta(days=days)
+
+    fmp = FMP_API_DATA()
+    data = await asyncio.to_thread(fmp.get_daily_prices_for_ticker, ticker, from_date, to_date)
+
+    return ok_envelope(
+        message="Price data indexed successfully",
+        kind="price#priceDataIndexed",
+        resource_id=ticker,
+        self_link=f"/api/price/index?ticker={ticker}&days={days}",
+        payload=data,
+    )
+
