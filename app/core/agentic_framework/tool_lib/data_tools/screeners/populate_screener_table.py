@@ -14,16 +14,16 @@
 # import pandas as pd
 # from sqlalchemy.dialects.postgresql import insert
 
-from app.db.core.db_config import MarketSession
-from app.db.core.models.market_data_models import Ticker, EquityScreener
-from app.core.calculations.factors.momentum import MomentumFactors
-from app.repositories.price_data import fetch_bulk_ohlcv_data_for_tickers
-from app.core.calculations.returns.calculator import ReturnsCalculator
-from app.core.calculations.risk.calculator import RiskCalculator
-from app.core.calculations.performance.calculator import PerformanceCalculator
-from app.utils.ticker_utils import get_sector_etf
-from app.utils.time_utils import get_current_utc_time, get_utc_days_ago
-from app.db.core.pull_fmp_data import FMP_API_DATA
+# from app.db.core.db_config import MarketSession
+# from app.db.core.models.market_data_models import Ticker, EquityScreener
+# from app.core.calculations.factors.momentum import MomentumFactors
+# from app.repositories.price_data import fetch_bulk_ohlcv_data_for_tickers
+# from app.core.calculations.returns.calculator import ReturnsCalculator
+# from app.core.calculations.risk.calculator import RiskCalculator
+# from app.core.calculations.performance.calculator import PerformanceCalculator
+# from app.utils.ticker_utils import get_sector_etf
+# from app.utils.time_utils import get_current_utc_time, get_utc_days_ago
+# from app.db.core.pull_fmp_data import FMP_API_DATA
 
 # logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 # logger = logging.getLogger(__name__)
@@ -326,4 +326,342 @@ from app.db.core.pull_fmp_data import FMP_API_DATA
 #         print(result[0].ticker.ticker)
 
 
-    
+# """
+# Screener Metrics Calculator
+
+# Calculates NEW metrics for the equity screener (not already in EquityScreener table):
+# 1. Information Ratio (ann_return / ann_vol)
+# 2. 3yr Revenue CAGR
+# 3. YoY EBIT Growth (%)
+# 4. YoY Operating Margin Change (ppt)
+# 5. 5-yr ROCE Change (ppt)
+# 6. YoY EPS Growth (%)
+# 7. YoY FCF Growth (%)
+
+# Note: PEG, Operating Margin, ROCE, Interest Coverage, OCF/Sales are already
+# available in EquityScreener from ratios-ttm data.
+# """
+# from __future__ import annotations
+
+# from dataclasses import dataclass
+# from typing import Optional, List
+
+# import numpy as np
+
+# from app.core.calculations.core.data_service import DataService
+# from app.core.calculations.core.models import FundamentalData
+# from app.core.calculations.core.helpers import sort_rows_desc_by_date, safe_divide
+
+
+# @dataclass
+# class ScreenerMetrics:
+#     """Container for calculated screener metrics."""
+#     ticker: str
+#     information_ratio: Optional[float] = None
+#     revenue_cagr_3yr: Optional[float] = None
+#     ebit_growth_yoy: Optional[float] = None
+#     operating_margin_change_yoy: Optional[float] = None
+#     roce_change_5yr: Optional[float] = None
+#     eps_growth_yoy: Optional[float] = None
+#     fcf_growth_yoy: Optional[float] = None
+
+
+# class ScreenerMetricsCalculator:
+#     """
+#     Calculates NEW screener metrics from fundamental data.
+
+#     Data Requirements:
+#     - ann_return, ann_vol: From existing EquityScreener (for information_ratio)
+#     - Income statements (annual, 5+ years): For revenue CAGR, EBIT growth, EPS growth, margin changes
+#     - Cash flow statements (annual, 2+ years): For FCF growth
+#     - Financial ratios (annual, 5+ years): For ROCE change
+#     - Balance sheets (annual, 5+ years): Fallback for ROCE calculation
+#     """
+
+#     def __init__(
+#         self,
+#         ticker: str,
+#         data_service: Optional[DataService] = None,
+#         fundamental_data: Optional[FundamentalData] = None,
+#         ann_return: Optional[float] = None,
+#         ann_vol: Optional[float] = None,
+#     ):
+#         self.ticker = ticker.upper()
+#         self.ds = data_service or DataService()
+#         self.ann_return = ann_return
+#         self.ann_vol = ann_vol
+
+#         # Fetch or use provided fundamental data
+#         if fundamental_data is not None:
+#             self.fund = fundamental_data
+#         else:
+#             self.fund = self.ds.get_fundamentals(self.ticker)
+
+#         # Sort statements by date descending (most recent first)
+#         self.income_statements = sort_rows_desc_by_date(self.fund.income_statements)
+#         self.balance_sheets = sort_rows_desc_by_date(self.fund.balance_sheets)
+#         self.cash_flow_statements = sort_rows_desc_by_date(self.fund.cash_flow_statements)
+#         self.financial_ratios = sort_rows_desc_by_date(self.fund.financial_ratios)
+
+#     # -------------------- Information Ratio -------------------- #
+#     def calc_information_ratio(self) -> float:
+#         """Information Ratio = Annualized Return / Annualized Volatility."""
+#         if self.ann_return is None or self.ann_vol is None:
+#             return np.nan
+#         return safe_divide(self.ann_return, self.ann_vol)
+
+#     # -------------------- 3yr Revenue CAGR -------------------- #
+#     def calc_revenue_cagr_3yr(self) -> float:
+#         """3-year Revenue CAGR from annual income statements."""
+#         annual_stmts = self._filter_annual_statements(self.income_statements)
+#         if len(annual_stmts) < 4:  # Need current + 3 years ago
+#             return np.nan
+
+#         current_rev = getattr(annual_stmts[0], 'revenue', None)
+#         rev_3yr_ago = getattr(annual_stmts[3], 'revenue', None)
+
+#         return self._cagr(current_rev, rev_3yr_ago, years=3)
+
+#     # -------------------- YoY EBIT Growth -------------------- #
+#     def calc_ebit_growth_yoy(self) -> float:
+#         """Year-over-year EBIT growth from annual income statements."""
+#         annual_stmts = self._filter_annual_statements(self.income_statements)
+#         if len(annual_stmts) < 2:
+#             return np.nan
+
+#         # Use operatingIncome as EBIT proxy
+#         current_ebit = getattr(annual_stmts[0], 'operatingIncome', None)
+#         prev_ebit = getattr(annual_stmts[1], 'operatingIncome', None)
+
+#         return self._pct_change(current_ebit, prev_ebit)
+
+#     # -------------------- YoY EPS Growth -------------------- #
+#     def calc_eps_growth_yoy(self) -> float:
+#         """Year-over-year EPS growth from annual income statements."""
+#         annual_stmts = self._filter_annual_statements(self.income_statements)
+#         if len(annual_stmts) < 2:
+#             return np.nan
+
+#         current_eps = getattr(annual_stmts[0], 'eps', None)
+#         prev_eps = getattr(annual_stmts[1], 'eps', None)
+
+#         return self._pct_change(current_eps, prev_eps)
+
+#     # -------------------- YoY FCF Growth -------------------- #
+#     def calc_fcf_growth_yoy(self) -> float:
+#         """Year-over-year Free Cash Flow growth from annual cash flow statements."""
+#         annual_stmts = self._filter_annual_statements(self.cash_flow_statements)
+#         if len(annual_stmts) < 2:
+#             return np.nan
+
+#         current_fcf = getattr(annual_stmts[0], 'freeCashFlow', None)
+#         prev_fcf = getattr(annual_stmts[1], 'freeCashFlow', None)
+
+#         return self._pct_change(current_fcf, prev_fcf)
+
+#     # -------------------- YoY Operating Margin Change -------------------- #
+#     def calc_operating_margin_change_yoy(self) -> float:
+#         """Year-over-year change in operating margin (percentage points)."""
+#         annual_ratios = self._filter_annual_statements(self.financial_ratios)
+#         if len(annual_ratios) >= 2:
+#             current_margin = self._safe_get_attr(annual_ratios[0], 'operatingProfitMargin')
+#             prev_margin = self._safe_get_attr(annual_ratios[1], 'operatingProfitMargin')
+#             if not np.isnan(current_margin) and not np.isnan(prev_margin):
+#                 return current_margin - prev_margin
+
+#         # Fallback: calculate from income statements
+#         annual_stmts = self._filter_annual_statements(self.income_statements)
+#         if len(annual_stmts) < 2:
+#             return np.nan
+
+#         curr_op_income = getattr(annual_stmts[0], 'operatingIncome', None)
+#         curr_revenue = getattr(annual_stmts[0], 'revenue', None)
+#         prev_op_income = getattr(annual_stmts[1], 'operatingIncome', None)
+#         prev_revenue = getattr(annual_stmts[1], 'revenue', None)
+
+#         curr_margin = safe_divide(curr_op_income, curr_revenue)
+#         prev_margin = safe_divide(prev_op_income, prev_revenue)
+
+#         if np.isnan(curr_margin) or np.isnan(prev_margin):
+#             return np.nan
+
+#         return curr_margin - prev_margin
+
+#     # -------------------- 5-yr ROCE Change -------------------- #
+#     def calc_roce_change_5yr(self) -> float:
+#         """5-year change in ROCE (percentage points)."""
+#         annual_ratios = self._filter_annual_statements(self.financial_ratios)
+#         if len(annual_ratios) >= 6:
+#             current_roce = self._safe_get_attr(annual_ratios[0], 'returnOnCapitalEmployed')
+#             roce_5yr_ago = self._safe_get_attr(annual_ratios[5], 'returnOnCapitalEmployed')
+#             if not np.isnan(current_roce) and not np.isnan(roce_5yr_ago):
+#                 return current_roce - roce_5yr_ago
+
+#         # Fallback: calculate ROCE from statements
+#         # ROCE = EBIT / (Total Assets - Current Liabilities)
+#         annual_income = self._filter_annual_statements(self.income_statements)
+#         annual_balance = self._filter_annual_statements(self.balance_sheets)
+
+#         if len(annual_income) < 6 or len(annual_balance) < 6:
+#             return np.nan
+
+#         curr_roce = self._calc_roce(annual_income[0], annual_balance[0])
+#         prev_roce = self._calc_roce(annual_income[5], annual_balance[5])
+
+#         if np.isnan(curr_roce) or np.isnan(prev_roce):
+#             return np.nan
+
+#         return curr_roce - prev_roce
+
+#     def _calc_roce(self, income_stmt, balance_sheet) -> float:
+#         """Calculate ROCE from income statement and balance sheet."""
+#         ebit = getattr(income_stmt, 'operatingIncome', None)
+#         total_assets = getattr(balance_sheet, 'totalAssets', None)
+#         current_liab = getattr(balance_sheet, 'totalCurrentLiabilities', None)
+
+#         if ebit is None or total_assets is None or current_liab is None:
+#             return np.nan
+
+#         capital_employed = float(total_assets) - float(current_liab)
+#         return safe_divide(ebit, capital_employed)
+
+#     # -------------------- Helper Methods -------------------- #
+#     def _filter_annual_statements(self, statements: List) -> List:
+#         """Filter statements to only annual (not quarterly) based on date gaps."""
+#         if not statements or len(statements) < 2:
+#             return statements
+
+#         dates = [getattr(s, 'date', None) for s in statements if getattr(s, 'date', None)]
+#         if len(dates) < 2:
+#             return statements
+
+#         # If gap between first two is ~90 days, it's quarterly
+#         gap = abs((dates[0] - dates[1]).days)
+#         if 60 <= gap <= 120:
+#             return statements[::4]  # Take every 4th for annual
+
+#         return statements
+
+#     @staticmethod
+#     def _cagr(end_value: Optional[float], start_value: Optional[float], years: float) -> float:
+#         """Calculate Compound Annual Growth Rate."""
+#         if end_value is None or start_value is None or years <= 0:
+#             return np.nan
+#         try:
+#             if float(start_value) <= 0 or float(end_value) <= 0:
+#                 return np.nan
+#             return (float(end_value) / float(start_value)) ** (1.0 / years) - 1.0
+#         except Exception:
+#             return np.nan
+
+#     @staticmethod
+#     def _pct_change(current: Optional[float], previous: Optional[float]) -> float:
+#         """Calculate percentage change."""
+#         if current is None or previous is None:
+#             return np.nan
+#         try:
+#             if float(previous) == 0:
+#                 return np.nan
+#             return (float(current) - float(previous)) / abs(float(previous))
+#         except Exception:
+#             return np.nan
+
+#     @staticmethod
+#     def _safe_get_attr(obj, attr: str) -> float:
+#         """Safely get attribute and convert to float."""
+#         try:
+#             val = getattr(obj, attr, None)
+#             if val is None:
+#                 return np.nan
+#             return float(val)
+#         except Exception:
+#             return np.nan
+
+#     # -------------------- Calculate All -------------------- #
+#     def calc_all(self) -> ScreenerMetrics:
+#         """Calculate all screener metrics."""
+#         return ScreenerMetrics(
+#             ticker=self.ticker,
+#             information_ratio=self._round_or_nan(self.calc_information_ratio()),
+#             revenue_cagr_3yr=self._round_or_nan(self.calc_revenue_cagr_3yr()),
+#             ebit_growth_yoy=self._round_or_nan(self.calc_ebit_growth_yoy()),
+#             operating_margin_change_yoy=self._round_or_nan(self.calc_operating_margin_change_yoy()),
+#             roce_change_5yr=self._round_or_nan(self.calc_roce_change_5yr()),
+#             eps_growth_yoy=self._round_or_nan(self.calc_eps_growth_yoy()),
+#             fcf_growth_yoy=self._round_or_nan(self.calc_fcf_growth_yoy()),
+#         )
+
+#     @staticmethod
+#     def _round_or_nan(value: float, decimals: int = 4) -> Optional[float]:
+#         """Round value or return None if NaN."""
+#         if value is None or np.isnan(value) or np.isinf(value):
+#             return None
+#         return round(value, decimals)
+
+
+# def update_all_screener_growth_metrics():
+#     """
+#     Update all records in the equity_screener table with the new growth metrics.
+#     Uses ann_return and ann_vol from the existing screener record for information_ratio.
+#     """
+#     from app.db.core.db_config import MarketSession
+#     from app.db.core.models.market_data_models import EquityScreener, Ticker
+
+#     ds = DataService()
+#     updated_count = 0
+#     error_count = 0
+
+#     with MarketSession() as session:
+#         # Get all screener records with their ticker symbols
+#         records = (
+#             session.query(EquityScreener, Ticker.ticker)
+#             .join(Ticker, EquityScreener.ticker_id == Ticker.id)
+#             .all()
+#         )
+
+#         total = len(records)
+#         print(f"Found {total} records to update")
+
+#         for i, (screener_record, ticker_symbol) in enumerate(records):
+#             try:
+#                 # Get ann_return and ann_vol from existing screener record
+#                 ann_return = float(screener_record.ann_return) if screener_record.ann_return else None
+#                 ann_vol = float(screener_record.ann_vol) if screener_record.ann_vol else None
+
+#                 # Calculate new metrics
+#                 calc = ScreenerMetricsCalculator(
+#                     ticker=ticker_symbol,
+#                     data_service=ds,
+#                     ann_return=ann_return,
+#                     ann_vol=ann_vol,
+#                 )
+#                 metrics = calc.calc_all()
+
+#                 # Update the record
+#                 screener_record.information_ratio = metrics.information_ratio
+#                 screener_record.revenue_cagr_3yr = metrics.revenue_cagr_3yr
+#                 screener_record.ebit_growth_yoy = metrics.ebit_growth_yoy
+#                 screener_record.eps_growth_yoy = metrics.eps_growth_yoy
+#                 screener_record.fcf_growth_yoy = metrics.fcf_growth_yoy
+#                 screener_record.operating_margin_change_yoy = metrics.operating_margin_change_yoy
+#                 screener_record.roce_change_5yr = metrics.roce_change_5yr
+
+#                 updated_count += 1
+
+#                 # Progress logging every 50 records
+#                 if (i + 1) % 50 == 0:
+#                     print(f"Processed {i + 1}/{total} records...")
+#                     session.commit()  # Commit in batches
+
+#             except Exception as e:
+#                 print(f"Error processing {ticker_symbol}: {e}")
+#                 error_count += 1
+#                 continue
+
+#         # Final commit
+#         session.commit()
+
+#     print(f"\nCompleted: {updated_count} updated, {error_count} errors out of {total} total")
+
+
+

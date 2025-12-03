@@ -283,6 +283,7 @@ EQUITY_SCREENER_DESCRIPTION = (
     "  • Classification: sectors, industries, sub_industries\n"
     "  • Price/Volume: price, market_cap, avg_volume, eps, dollar_volume\n"
     "  • Momentum: momentum_1m/3m/6m, ann_return, ann_vol, beta/alpha vs spy/sector\n"
+    "  • Growth: information_ratio, revenue_cagr_3yr, ebit/eps/fcf_growth_yoy, margin/roce changes\n"
     "  • Valuation: pe_ratio_ttm, peg_ratio_ttm, price_to_book/sales/fcf ratios\n"
     "  • Profitability: gross/operating/net margins, ROA, ROE, ROCE\n"
     "  • Debt: debt_ratio, debt_equity_ratio, interest_coverage\n"
@@ -358,6 +359,14 @@ EQUITY_SCREENER_PARAMETERS = {
         "alpha_vs_sector": _range_param("Alpha relative to sector."),
         "ebit_cagr_5yr": _range_param("5-year EBIT compound annual growth rate."),
         "ebit_cagr_3yr": _range_param("3-year EBIT compound annual growth rate."),
+        # Calculated Growth Metrics
+        "information_ratio": _range_param("Information ratio (annualized return / annualized volatility)."),
+        "revenue_cagr_3yr": _range_param("3-year revenue compound annual growth rate (decimal)."),
+        "ebit_growth_yoy": _range_param("Year-over-year EBIT growth (decimal, e.g., 0.15 = 15%)."),
+        "eps_growth_yoy": _range_param("Year-over-year EPS growth (decimal)."),
+        "fcf_growth_yoy": _range_param("Year-over-year free cash flow growth (decimal)."),
+        "operating_margin_change_yoy": _range_param("Year-over-year change in operating margin (decimal, percentage points)."),
+        "roce_change_5yr": _range_param("5-year change in return on capital employed (decimal, percentage points)."),
         # Valuation Ratios
         "dividend_yield_ttm": _range_param("TTM dividend yield (decimal, e.g., 0.03 = 3%)."),
         "pe_ratio_ttm": _range_param("TTM price-to-earnings ratio."),

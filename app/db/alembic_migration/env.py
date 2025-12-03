@@ -21,6 +21,11 @@ from alembic import context
 project_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 sys.path.insert(0, project_root)
 
+# command to run migrations: alembic -c app/db/alembic_migration/alembic.ini --name market_data upgrade head 
+# command to run migrations: alembic -c app/db/alembic_migration/alembic.ini --name user_data upgrade head 
+# command to run migrations: alembic -c app/db/alembic_migration/alembic.ini --name prophit_alts upgrade head 
+# command to run migrations: alembic -c app/db/alembic_migration/alembic.ini --name macro_data upgrade head 
+
 from dotenv import load_dotenv
 load_dotenv()
 

@@ -63,6 +63,7 @@ class Ticker(MarketBase):
     analyst_recommendations = relationship('AnalystRecommendation', back_populates='ticker', lazy='dynamic')
     price_target_summary = relationship('PriceTargetSummary', back_populates='ticker', uselist=False)
     equity_screener = relationship('EquityScreener', back_populates='ticker', uselist=False)
+    etf_screener = relationship('ETFScreener', back_populates='ticker', uselist=False)
 
 # =============================================================================
 # FUNDAMENTAL DATA SCHEMA
@@ -633,6 +634,15 @@ class EquityScreener(MarketBase):
     ebit_cagr_5yr = Column(Float)
     ebit_cagr_3yr = Column(Float)
 
+    # Calculated growth metrics
+    information_ratio = Column(Float)
+    revenue_cagr_3yr = Column(Float)
+    ebit_growth_yoy = Column(Float)
+    eps_growth_yoy = Column(Float)
+    fcf_growth_yoy = Column(Float)
+    operating_margin_change_yoy = Column(Float)
+    roce_change_5yr = Column(Float)
+
     # TTM Valuation ratios
     dividend_yield_ttm = Column(Float)
     pe_ratio_ttm = Column(Float)
@@ -684,3 +694,42 @@ class EquityScreener(MarketBase):
 
     # Relationship
     ticker = relationship('Ticker', back_populates='equity_screener')
+
+
+class ETFScreener(MarketBase):
+    """
+    ETF screener table containing calculated metrics for ETF screening.
+    Includes performance, risk, and cost metrics.
+    """
+    __tablename__ = 'etf_screener'
+    __table_args__ = {'schema': 'screener_data'}
+
+    ticker_id = Column(UUID(as_uuid=True), ForeignKey('ticker_universe.tickers.id'), primary_key=True, index=True)
+    updated_at = Column(DateTime, index=True)
+
+    # Classification
+    industry = Column(String, index=True)
+    subindustry = Column(String, index=True)
+
+    # Cost metrics
+    expense_ratio = Column(Float)
+    nav = Column(Float)
+
+    # Performance metrics
+    ann_vol = Column(Float)
+    ann_ret = Column(Float)
+    information_ratio = Column(Float)
+
+    # Risk metrics
+    beta = Column(Float)
+    alpha = Column(Float)
+
+    # Income metrics
+    dividend_yield_ttm = Column(Float)
+
+    # Size metrics
+    market_cap = Column(Numeric)
+    dollar_volume = Column(Numeric)
+
+    # Relationship
+    ticker = relationship('Ticker', back_populates='etf_screener')

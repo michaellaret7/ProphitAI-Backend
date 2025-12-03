@@ -13,7 +13,7 @@ from app.core.agentic_framework.tool_lib.data_tools.factors import (
     GET_INDUSTRY_FACTOR_BENCHMARK_TOOL,
     GET_SUB_INDUSTRY_FACTOR_BENCHMARK_TOOL,
 )
-from app.core.agentic_framework.tool_lib.data_tools.stock_screener import STOCK_SCREENER_TOOL
+from app.core.agentic_framework.tool_lib.data_tools.screeners.equity import EQUITY_SCREENER_TOOL
 from app.core.agentic_framework.tool_lib.ticker_tools.factors import CALCULATE_TICKER_FACTORS_TOOL
 from app.core.agentic_framework.tool_lib.ticker_tools.performance import GET_TICKER_PERFORMANCE_AND_RISK_TOOL
 from app.core.agentic_framework.tool_lib.data_tools.ticker_fundamentals import (
@@ -52,7 +52,7 @@ class SectorAnalyst(SubAgent):
             GET_INDUSTRY_FACTOR_BENCHMARK_TOOL,
             GET_SUB_INDUSTRY_FACTOR_BENCHMARK_TOOL,
             # Stock Screening & Discovery
-            STOCK_SCREENER_TOOL,
+            EQUITY_SCREENER_TOOL,
             GET_GROUP_TICKERS_TOOL,
             # Ticker Analysis Tools - Essential
             CALCULATE_TICKER_FACTORS_TOOL,

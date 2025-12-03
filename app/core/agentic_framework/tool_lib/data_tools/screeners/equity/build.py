@@ -31,6 +31,14 @@ def build_query(
     alpha_vs_sector: tuple[float | None, float | None] | None = None,
     ebit_cagr_5yr: tuple[float | None, float | None] | None = None,
     ebit_cagr_3yr: tuple[float | None, float | None] | None = None,
+    # Calculated growth metrics
+    information_ratio: tuple[float | None, float | None] | None = None,
+    revenue_cagr_3yr: tuple[float | None, float | None] | None = None,
+    ebit_growth_yoy: tuple[float | None, float | None] | None = None,
+    eps_growth_yoy: tuple[float | None, float | None] | None = None,
+    fcf_growth_yoy: tuple[float | None, float | None] | None = None,
+    operating_margin_change_yoy: tuple[float | None, float | None] | None = None,
+    roce_change_5yr: tuple[float | None, float | None] | None = None,
     # Valuation ratios
     dividend_yield_ttm: tuple[float | None, float | None] | None = None,
     pe_ratio_ttm: tuple[float | None, float | None] | None = None,
