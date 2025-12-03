@@ -2,19 +2,20 @@ from sqlalchemy.orm import query
 from app.db.core.db_config import MarketSession
 from app.db.core.models.market_data_models import Ticker, EquityScreener
 from app.utils.serialize_output import serialize_sqlalchemy_obj
+from typing import List
 
-TICKER_FIELDS = {'sector', 'industry', 'sub_industry', 'price', 'market_cap', 'avg_volume', 'eps', 'pe', 'dollar_volume'}
+TICKER_FIELDS = {'sectors', 'industries', 'sub_industries', 'price', 'market_cap', 'avg_volume', 'eps', 'pe', 'dollar_volume'}
+LIST_TO_COLUMN = {'sectors': 'sector', 'industries': 'industry', 'sub_industries': 'sub_industry'}
 
 def build_query(
     # Ticker table filters
-    sector: str | None = None,
-    industry: str | None = None,
-    sub_industry: str | None = None,
+    sectors: List[str] | None = None,
+    industries: List[str] | None = None,
+    sub_industries: List[str] | None = None,
     price: tuple[float | None, float | None] | None = None,
     market_cap: tuple[float | None, float | None] | None = None,
     avg_volume: tuple[float | None, float | None] | None = None,
     eps: tuple[float | None, float | None] | None = None,
-    pe: tuple[float | None, float | None] | None = None,
     dollar_volume: tuple[float | None, float | None] | None = None,
     # Momentum & Performance metrics (EquityScreener)
     momentum_1m: tuple[float | None, float | None] | None = None,
@@ -72,21 +73,49 @@ def build_query(
 ):
     """Build a screener query with optional filters from Ticker and EquityScreener tables."""
 
+    with MarketSession() as session:
+        valid_sectors = {row[0] for row in session.query(Ticker.sector).distinct().filter(Ticker.sector != 'etf').all()}
+        valid_industries = {row[0] for row in session.query(Ticker.industry).distinct().filter(Ticker.sector != 'etf').all()}
+        valid_sub_industries = {row[0] for row in session.query(Ticker.sub_industry).distinct().filter(Ticker.sector != 'etf').all()}
+
+    # Validate list inputs
+    if sectors:
+        invalid = set(sectors) - valid_sectors
+        if invalid:
+            return f"Invalid sectors: {invalid}"
+    if industries:
+        invalid = set(industries) - valid_industries
+        if invalid:
+            return f"Invalid industries: {invalid}"
+    if sub_industries:
+        invalid = set(sub_industries) - valid_sub_industries
+        if invalid:
+            return f"Invalid sub_industries: {invalid}"
+
+    # All Tickers must have a price of at least 5, we do not want any penny stocks
     params = [Ticker.price >= 5]
     for key, value in locals().items():
         if value is None:
             continue
 
         model = Ticker if key in TICKER_FIELDS else EquityScreener
-        column = getattr(model, key, None)
 
-        # if the instance is a string set it equal to the Ticker obj
-        if isinstance(value, str):
-            params.append(column == value)
-        # if the instance is a tuple this is the min, max range
+        # Map plural param names to singular column names for list fields
+        column_name = LIST_TO_COLUMN.get(key, key)
+        column = getattr(model, column_name, None)
+
+        # Skip if column doesn't exist on model (internal variables from locals())
+        if column is None:
+            continue
+
+        # If the value is a list, use IN clause
+        if isinstance(value, list):
+            params.append(column.in_(value))
+        # If the instance is a tuple this is the min, max range
         elif isinstance(value, tuple):
             min_val, max_val = value
-
+            if min_val is not None and max_val is not None and min_val > max_val:
+                return f"Invalid range for {key}: min ({min_val}) cannot be greater than max ({max_val})"
             if min_val is not None:
                 params.append(column >= min_val)
             if max_val is not None:
@@ -96,4 +125,15 @@ def build_query(
 
 
 
-        
+if __name__ == "__main__":
+    x = build_query(sectors=['equity_sector_energy', 'equity_sector_information_technology'], pe_ratio_ttm=(300, 200))
+
+    # Check if validation returned an error
+    if isinstance(x, str):
+        print(f"Error: {x}")
+    else:
+        session = MarketSession()
+        result = session.query(EquityScreener, Ticker).join(Ticker).filter(*x).all()
+        for equity_screener, ticker in result:
+            print(ticker.ticker)
+        session.close()
