@@ -1,5 +1,6 @@
 from typing import Any
-from app.core.agentic_framework.tool_lib.data_tools.screeners.equity.execute import execute_query
+from app.core.agentic_framework.tool_lib.data_tools.screeners.equity.execute import execute_query as execute_equity_query
+from app.core.agentic_framework.tool_lib.data_tools.screeners.etf.execute import execute_query as execute_etf_query
 from app.api.response_envelope import ok_envelope
 
 
@@ -25,12 +26,12 @@ def run_equity_screener(**kwargs) -> dict[str, Any]:
         else:
             converted_kwargs[key] = value
 
-    results, error = execute_query(**converted_kwargs)
-
-    results = [result.model_dump() for result in results]
+    results, error = execute_equity_query(**converted_kwargs)
 
     if error:
         return {"error": error}
+
+    results = [result.model_dump() for result in results]
 
     return ok_envelope(
         message=f"Equity screener results for '{kwargs}' retrieved successfully",
@@ -41,3 +42,41 @@ def run_equity_screener(**kwargs) -> dict[str, Any]:
         payload=results,
     )
 
+
+def run_etf_screener(**kwargs) -> dict[str, Any]:
+    """
+    Run ETF screener and return JSON-serializable results.
+
+    Args:
+        **kwargs: Screener filters. Numeric ranges use [min, max] arrays
+                  (e.g., market_cap=[1000000000, null] for min $1B).
+                  Classification filters use string arrays
+                  (e.g., industries=['equity_etfs']).
+
+    Returns:
+        dict with 'results' (list of dicts) on success,
+        or 'error' (str) on failure
+    """
+    # Convert lists to tuples for range parameters (API sends JSON arrays)
+    converted_kwargs = {}
+    for key, value in kwargs.items():
+        if isinstance(value, list) and len(value) == 2:
+            converted_kwargs[key] = tuple(value)
+        else:
+            converted_kwargs[key] = value
+
+    results, error = execute_etf_query(**converted_kwargs)
+
+    if error:
+        return {"error": error}
+
+    results = [result.model_dump() for result in results]
+
+    return ok_envelope(
+        message=f"ETF screener results for '{kwargs}' retrieved successfully",
+        kind="screeners#etf",
+        resource_id=kwargs,
+        self_link=f"/api/screeners/etf?{kwargs}",
+        counts={"totalItems": len(results) if results else 0, "currentItemCount": len(results) if results else 0},
+        payload=results,
+    )

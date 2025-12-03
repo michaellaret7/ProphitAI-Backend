@@ -1,9 +1,8 @@
 from fastapi import APIRouter, Query
 from typing import Optional, List
-from app.api.controller.screeners import run_equity_screener
+from app.api.controller.screeners import run_equity_screener, run_etf_screener
 
 router = APIRouter(tags=["Screeners 🔍"])
-
 
 @router.get("/screeners/equity")
 def equity_screener(
@@ -172,3 +171,69 @@ def equity_screener(
             kwargs[field] = [min_val, max_val]
 
     return run_equity_screener(**kwargs)
+
+
+@router.get("/screeners/etf")
+def etf_screener(
+    # Classification filters (lists)
+    industries: Optional[List[str]] = Query(None),
+    sub_industries: Optional[List[str]] = Query(None),
+    # Size metrics (ranges as min/max)
+    market_cap_min: Optional[float] = None,
+    market_cap_max: Optional[float] = None,
+    dollar_volume_min: Optional[float] = None,
+    dollar_volume_max: Optional[float] = None,
+    # Cost metrics
+    expense_ratio_min: Optional[float] = None,
+    expense_ratio_max: Optional[float] = None,
+    nav_min: Optional[float] = None,
+    nav_max: Optional[float] = None,
+    # Performance metrics
+    ann_ret_min: Optional[float] = None,
+    ann_ret_max: Optional[float] = None,
+    ann_vol_min: Optional[float] = None,
+    ann_vol_max: Optional[float] = None,
+    information_ratio_min: Optional[float] = None,
+    information_ratio_max: Optional[float] = None,
+    # Risk metrics
+    beta_min: Optional[float] = None,
+    beta_max: Optional[float] = None,
+    alpha_min: Optional[float] = None,
+    alpha_max: Optional[float] = None,
+    # Income metrics
+    dividend_yield_ttm_min: Optional[float] = None,
+    dividend_yield_ttm_max: Optional[float] = None,
+):
+    """
+    Screen ETFs based on various filters.
+
+    All numeric filters accept min/max parameters (e.g., expense_ratio_min, expense_ratio_max).
+    Classification filters (industries, sub_industries) accept lists.
+
+    Returns matching ETFs with their metrics.
+    """
+    kwargs = {}
+
+    # Classification filters
+    if industries:
+        kwargs["industries"] = industries
+    if sub_industries:
+        kwargs["sub_industries"] = sub_industries
+
+    # Helper to build range tuples from min/max params
+    range_fields = [
+        "market_cap", "dollar_volume",
+        "expense_ratio", "nav",
+        "ann_ret", "ann_vol", "information_ratio",
+        "beta", "alpha",
+        "dividend_yield_ttm",
+    ]
+
+    local_vars = locals()
+    for field in range_fields:
+        min_val = local_vars.get(f"{field}_min")
+        max_val = local_vars.get(f"{field}_max")
+        if min_val is not None or max_val is not None:
+            kwargs[field] = [min_val, max_val]
+
+    return run_etf_screener(**kwargs)

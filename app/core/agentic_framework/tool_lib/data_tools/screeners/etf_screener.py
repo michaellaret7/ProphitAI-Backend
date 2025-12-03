@@ -1,9 +1,16 @@
 from app.core.agentic_framework.tool_lib.data_tools.screeners.etf.execute import execute_query
 from app.core.agentic_framework.tool_lib.common.responses import success_response, error_response
+from app.core.agentic_framework.tool_lib.data_tools.screeners.etf.schema import ETF_SCREENER_DESCRIPTION, ETF_SCREENER_PARAMETERS
 import yaml
 
 def etf_screener(**kwargs):
-    """Screen ETFs based on fundamental, valuation, and performance criteria."""
+    """Screen ETFs based on fundamental, valuation, and performance criteria.
+    
+    Args:
+        **kwargs: Keyword arguments for the ETF screener.
+    Returns:
+        A success response with the results in YAML format, or an error response if the screener fails.
+    """
     # Convert lists to tuples for range parameters (LLM sends JSON arrays)
     converted_kwargs = {}
     for key, value in kwargs.items():
@@ -24,28 +31,11 @@ def etf_screener(**kwargs):
     return success_response(results_yaml)
 
 
-if __name__ == "__main__":
-    results = etf_screener(
-        # industries=['equity_etfs'],
-        # beta=(0, 0.5),
-        # ann_vol=(0, 0.2),
-        # ann_ret=(0.2, None),
-        # alpha=(0.1, None),
-        dividend_yield_ttm=(0.1, None)
-    )
-    print(results)
-
-    from app.repositories.price_data import fetch_bulk_ohlcv_data_for_tickers
-    from app.core.calculations.returns.calculator import ReturnsCalculator
-    from app.core.calculations.performance.calculator import PerformanceCalculator
-
-    data = fetch_bulk_ohlcv_data_for_tickers(['PFFL', 'SPY'], '2024-12-03', '2025-12-03', returns=True)
-
-    print(data['PFFL'])
-
-    returns = ReturnsCalculator.daily_price_returns(data['PFFL']['adj_close'])
-    spy_returns = ReturnsCalculator.daily_price_returns(data['SPY']['adj_close'])
-    alpha = PerformanceCalculator.alpha_jensen(returns, spy_returns, periods_per_year=252)
-    print(alpha)
+ETF_SCREENER_TOOL = {
+    "name": "etf_screener",
+    "description": ETF_SCREENER_DESCRIPTION,
+    "parameters": ETF_SCREENER_PARAMETERS,
+    "function": etf_screener,
+}
 
 
