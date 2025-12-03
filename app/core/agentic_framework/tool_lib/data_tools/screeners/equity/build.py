@@ -1,4 +1,5 @@
 from sqlalchemy.orm import query
+from sqlalchemy import or_
 from app.db.core.db_config import MarketSession
 from app.db.core.models.market_data_models import Ticker, EquityScreener
 from app.utils.serialize_output import serialize_sqlalchemy_obj
@@ -6,6 +7,7 @@ from typing import List
 
 TICKER_FIELDS = {'sectors', 'industries', 'sub_industries', 'price', 'market_cap', 'avg_volume', 'eps', 'pe', 'dollar_volume'}
 LIST_TO_COLUMN = {'sectors': 'sector', 'industries': 'industry', 'sub_industries': 'sub_industry'}
+DOMAIN_FILTERS = {'sectors', 'industries', 'sub_industries'}
 
 def build_query(
     # Ticker table filters
@@ -94,6 +96,10 @@ def build_query(
 
     # All Tickers must have a price of at least 5, we do not want any penny stocks
     params = [Ticker.price >= 5]
+    # Reason: Domain filters (sectors, industries, sub_industries) use OR logic
+    # so that users can select stocks from multiple domains
+    domain_conditions = []
+
     for key, value in locals().items():
         if value is None:
             continue
@@ -110,7 +116,12 @@ def build_query(
 
         # If the value is a list, use IN clause
         if isinstance(value, list):
-            params.append(column.in_(value))
+            condition = column.in_(value)
+            # Domain filters (sectors, industries, sub_industries) use OR logic
+            if key in DOMAIN_FILTERS:
+                domain_conditions.append(condition)
+            else:
+                params.append(condition)
         # If the instance is a tuple this is the min, max range
         elif isinstance(value, tuple):
             min_val, max_val = value
@@ -121,19 +132,11 @@ def build_query(
             if max_val is not None:
                 params.append(column <= max_val)
 
+    # Combine domain conditions with OR logic
+    if domain_conditions:
+        params.append(or_(*domain_conditions))
+
     return params
 
 
 
-if __name__ == "__main__":
-    x = build_query(sectors=['equity_sector_energy', 'equity_sector_information_technology'], pe_ratio_ttm=(300, 200))
-
-    # Check if validation returned an error
-    if isinstance(x, str):
-        print(f"Error: {x}")
-    else:
-        session = MarketSession()
-        result = session.query(EquityScreener, Ticker).join(Ticker).filter(*x).all()
-        for equity_screener, ticker in result:
-            print(ticker.ticker)
-        session.close()

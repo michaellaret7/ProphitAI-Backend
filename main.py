@@ -21,6 +21,7 @@ from app.api.routes.fundamentals_router import router as fundamentals_router
 from app.api.routes.etf_router import router as etf_router
 from app.api.routes.search_router import router as search_router
 from app.api.routes.crypto_router import router as crypto_router
+from app.api.routes.screener_router import router as screener_router
 from app.api.auth.api_key import validate_api_key
 
 # Load environment variables from .env file
@@ -91,6 +92,7 @@ app.include_router(fundamentals_router, prefix="/api", dependencies=[Depends(val
 app.include_router(etf_router, prefix="/api", dependencies=[Depends(validate_api_key)])
 app.include_router(search_router, prefix="/api", dependencies=[Depends(validate_api_key)])
 app.include_router(crypto_router, prefix="/api", dependencies=[Depends(validate_api_key)])
+app.include_router(screener_router, prefix="/api", dependencies=[Depends(validate_api_key)])
 
 @app.get("/")
 def read_root():

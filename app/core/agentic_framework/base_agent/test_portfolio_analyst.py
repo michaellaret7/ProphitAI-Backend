@@ -33,8 +33,9 @@ from app.core.agentic_framework.tool_lib.ticker_tools.factors import (
 from app.core.agentic_framework.tool_lib.data_tools.ticker_fundamentals import (
     GET_TICKER_FUNDAMENTAL_DATA_TOOL,
 )
-from app.core.agentic_framework.tool_lib.data_tools.stock_screener.tool import STOCK_SCREENER_TOOL
-
+from app.core.agentic_framework.tool_lib.data_tools.screeners.equity_screener import (
+    EQUITY_SCREENER_TOOL,
+)
 # Additional tools for portfolio creation and risk analysis
 from app.core.agentic_framework.tool_lib.portfolio_tools.build_allocations import (
     BUILD_PORTFOLIO_TOOL,
@@ -82,7 +83,7 @@ def register_portfolio_analysis_tools(agent: BaseAgent) -> None:
         GET_TICKER_PERFORMANCE_AND_RISK_TOOL,
         CALCULATE_TICKER_FACTORS_TOOL,
         GET_TICKER_FUNDAMENTAL_DATA_TOOL,
-        STOCK_SCREENER_TOOL,
+        EQUITY_SCREENER_TOOL,
         TECHNICALS_TOOL,
 
         # Portfolio construction & risk tools
@@ -160,10 +161,9 @@ When using free_search for market research, ALWAYS include "as of January 2023" 
 
 Please perform the following tasks:
 
-1. **Market Research & Economic Context**:
-   - Use free_search to research macroeconomic conditions, sector outlooks, and market themes as of January 2023
-   - CRITICAL: Include "as of January 2023" or "early 2023" in EVERY free_search query
-   - Identify opportunities and risks based on early 2023 market conditions
+1. Equity Screener(this must be the first step, do not do free_search for market research, use the equity screener tool instead)
+   - Define your target criteeria and run the equity screener tool to find candidates.
+   - Run this tool heavily to find good candidates for the portfolio.
 
 2. **Define Portfolio Structure**:
    - Define target sector breakdown for equities (Technology, Healthcare, Financials, Consumer, Industrials, Energy, etc.)
