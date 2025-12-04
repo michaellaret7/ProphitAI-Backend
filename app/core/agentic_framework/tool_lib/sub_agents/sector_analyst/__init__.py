@@ -1,5 +1,5 @@
 """Sector analyst sub-agent module."""
 
-from .sub_agent import SectorAnalyst
+from .tool_func import run_sector_analyst
 
-__all__ = ['SectorAnalyst']
+__all__ = ['run_sector_analyst']

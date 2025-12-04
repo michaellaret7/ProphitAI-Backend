@@ -1,4 +1,4 @@
-from app.core.agentic_framework.tool_lib.sub_agents.sector_analyst.sub_agent import run_sector_analyst
+from app.core.agentic_framework.tool_lib.sub_agents.sector_analyst.tool_func import run_sector_analyst
 
 SECTOR_ANALYST_DESCRIPTION = (
     "Autonomous sub-agent specialized in comprehensive sector-level analysis and stock research within a specific market sector. "
@@ -50,7 +50,7 @@ SECTOR_ANALYST_PARAMETERS = {
                 "'equity_sector_information_technology', 'equity_sector_health_care', 'equity_sector_financials', "
                 "'equity_sector_consumer_discretionary', 'equity_sector_consumer_staples', 'equity_sector_industrials', "
                 "'equity_sector_communication_services', 'equity_sector_energy', 'equity_sector_materials', "
-                "'equity_sector_utilities', 'equity_sector_real_estate'"
+                "'equity_sector_utilities', 'equity_sector_real_estate', 'etf'"
             ),
             "enum": [
                 "equity_sector_information_technology",
@@ -63,7 +63,8 @@ SECTOR_ANALYST_PARAMETERS = {
                 "equity_sector_energy",
                 "equity_sector_materials",
                 "equity_sector_utilities",
-                "equity_sector_real_estate"
+                "equity_sector_real_estate",
+                "etf"
             ]
         },
         "query": {

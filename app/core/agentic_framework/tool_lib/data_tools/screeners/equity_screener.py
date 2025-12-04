@@ -24,17 +24,6 @@ def equity_screener(**kwargs):
 
     return success_response(results_yaml)
 
-if __name__ == "__main__":
-    # Test with list format (as LLM would send via JSON)
-    results = equity_screener(
-        sectors=['equity_sector_information_technology'],
-        market_cap=(50000000000, None),  # LLM sends arrays, converted to tuples
-        pe_ratio_ttm=[15, 60],
-        momentum_3m=[0.05, None],
-        ann_return=[0.10, None]
-    )
-    print(results)
-
 
 EQUITY_SCREENER_TOOL = {
     "name": "equity_screener",

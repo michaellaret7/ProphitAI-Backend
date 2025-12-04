@@ -71,6 +71,3 @@ def execute_query(**kwargs) -> tuple[List[ETFScreenerResult] | None, str | None]
 
     return results, None
 
-if __name__ == "__main__":
-    results = execute_query(industries=['equity_etfs'], beta=(0, 0.5), ann_vol=(0, 0.2), ann_ret=(0.2, None))
-    print(results)
