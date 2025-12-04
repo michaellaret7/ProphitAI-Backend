@@ -19,7 +19,7 @@ def equity_screener(**kwargs):
         return error_response(error)
 
     # Convert Pydantic models to dicts for clean YAML output
-    results_data = [r.model_dump() for r in results]
+    results_data = [r.model_dump(exclude={"ticker_description"}) for r in results]
     results_yaml = yaml.dump(results_data, default_flow_style=False)
 
     return success_response(results_yaml)

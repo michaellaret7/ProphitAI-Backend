@@ -22,7 +22,7 @@ def get_project_root() -> Path:
 def create_agent_output_dir(agent_name: str) -> Path:
     """Create and return a UTC-timestamped agent output directory.
 
-    Structure: agent_output/{YYYY-MM-DD}/{AgentName}_{HHMMSS}/
+    Structure: agent_output/{YYYY-MM-DD}/{AgentName}_{HHMMSS_ffffff}/
 
     Args:
         agent_name: Logical name of the agent (class name is fine)
@@ -34,7 +34,8 @@ def create_agent_output_dir(agent_name: str) -> Path:
 
     now = get_current_utc_time()
     date_folder = now.strftime("%Y-%m-%d")
-    time_str = now.strftime("%H%M%S")
+    # Reason: Use microseconds (%f) to prevent directory collisions when agents run in parallel
+    time_str = now.strftime("%H%M%S_%f")
     agent_folder = f"{agent_name}_{time_str}"
 
     output_dir = project_root / "agent_output" / date_folder / agent_folder

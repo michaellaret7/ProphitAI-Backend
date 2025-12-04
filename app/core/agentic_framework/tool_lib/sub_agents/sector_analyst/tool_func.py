@@ -37,6 +37,10 @@ def run_sector_analyst(
 
 if __name__ == "__main__":
     print(run_sector_analyst(
-        sector="equity_sector_information_technology",
-        query="Focus on AI infrastructure companies"
+        sector="equity_sector_health_care",
+        query="""Focus on defensive healthcare stocks with resilient business models: home-based care providers,
+        digital health companies, value-based care organizations, and medical device
+        companies benefiting from site-of-care migration. Prioritize companies with
+        pricing power, strong cash flows, and recession-resistant characteristics for
+        2025-2026."""
     ))

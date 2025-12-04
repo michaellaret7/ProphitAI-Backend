@@ -1,5 +1,7 @@
 """Compressed Universal Agent System Message - ~650 tokens"""
 
+# TODO: Improve this prompt to be a little more detailed in the analysis phase.
+
 UNIVERSAL_AGENT_MESSAGE = """
 # CORE OPERATIONAL PRINCIPLES
 

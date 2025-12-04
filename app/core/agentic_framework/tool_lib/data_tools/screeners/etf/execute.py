@@ -10,7 +10,7 @@ from uuid import UUID
 class ETFScreenerResult(BaseModel):
     ticker: str
     industry: Optional[str] = None
-    subindustry: Optional[str] = None
+    sub_industry: Optional[str] = None
     expense_ratio: Optional[float] = None
     nav: Optional[float] = None
     ann_vol: Optional[float] = None
@@ -41,8 +41,10 @@ def execute_query(**kwargs) -> tuple[List[ETFScreenerResult] | None, str | None]
             # Base fields
             data = {
                 'ticker': ticker.ticker,
+                'ticker_name': ticker.ticker_name,
+                'ticker_description': ticker.ticker_description,
                 'industry': ticker.industry,
-                'subindustry': ticker.sub_industry,
+                'sub_industry': ticker.sub_industry,
                 'expense_ratio': etf_screener.expense_ratio/100 if etf_screener.expense_ratio is not None else None,
                 'nav': etf_screener.nav,
                 'ann_vol': etf_screener.ann_vol,

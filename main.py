@@ -69,6 +69,8 @@ app.add_middleware(
         "http://localhost:5173",
         "http://127.0.0.1:5500",  # For local HTML file testing
         "http://localhost:5500",
+        "https://prophitai.onrender.com",  # Production frontend
+        "https://prophitai-frontend.onrender.com",  # Alternative frontend domain
     ],
     allow_credentials=True,
     allow_methods=["*"],

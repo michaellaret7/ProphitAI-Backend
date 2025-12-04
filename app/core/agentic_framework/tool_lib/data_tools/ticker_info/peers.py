@@ -28,17 +28,22 @@ def get_ticker_peers(ticker: str, **kwargs) -> str:
             peer_symbol = peer.get('symbol')
             ticker_info = session.query(Ticker).filter(Ticker.ticker == peer_symbol).first()
 
-            # Reason: Build dictionary with symbol and companyName first, followed by all other data
-            enriched_peer = {
-                'symbol': peer_symbol,
-                'companyName': peer.get('companyName'),
-            }
+            enriched_peer = {}
+            enriched_peer['symbol'] = peer_symbol
 
             # Add Ticker table data if available
             if ticker_info:
+                enriched_peer['companyName'] = ticker_info.ticker_name
+                enriched_peer['description'] = ticker_info.ticker_description
                 enriched_peer['sector'] = ticker_info.sector
                 enriched_peer['industry'] = ticker_info.industry
                 enriched_peer['sub_industry'] = ticker_info.sub_industry
+            else:
+                enriched_peer['companyName'] = None
+                enriched_peer['description'] = None
+                enriched_peer['sector'] = None
+                enriched_peer['industry'] = None
+                enriched_peer['sub_industry'] = None
 
             # Add price and market data
             enriched_peer['price'] = peer.get('price')
@@ -51,11 +56,14 @@ def get_ticker_peers(ticker: str, **kwargs) -> str:
                 enriched_peer['pe'] = ticker_info.pe
                 enriched_peer['dollar_volume'] = float(ticker_info.dollar_volume) if ticker_info.dollar_volume else None
                 enriched_peer['is_etf'] = ticker_info.is_etf
-                enriched_peer['is_actively_trading'] = ticker_info.is_actively_trading
+                # enriched_peer['is_actively_trading'] = ticker_info.is_actively_trading
 
             enriched_peers.append(enriched_peer)
 
     return success_response(enriched_peers)
+
+if __name__ == "__main__":
+    print(get_ticker_peers(ticker='AAPL'))
 
 # Tool Schema Constants
 GET_TICKER_PEERS_DESCRIPTION = (

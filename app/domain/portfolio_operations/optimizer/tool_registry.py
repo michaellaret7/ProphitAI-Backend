@@ -8,10 +8,14 @@ from app.core.agentic_framework.tool_lib.portfolio_tools.concentration import (
 from app.core.agentic_framework.tool_lib.agent_specific_tools.optimizer import GET_USER_PORTFOLIO_TOOL
 from app.core.agentic_framework.tool_lib.sub_agents.sector_analyst import SECTOR_ANALYST_TOOL
 from app.core.agentic_framework.tool_lib.portfolio_tools.build_allocations import BUILD_PORTFOLIO_TOOL
+from app.core.agentic_framework.tool_lib.macro_tools.outlook import MACRO_OUTLOOK_TOOL
 
 def register_optimizer_tools(agent):
     # Get user portfolio tool
     agent.add_tool(**GET_USER_PORTFOLIO_TOOL)
+
+    # Macro outlook tool
+    agent.add_tool(**MACRO_OUTLOOK_TOOL)
 
     # Sector Analyst tool
     agent.add_tool(**SECTOR_ANALYST_TOOL)

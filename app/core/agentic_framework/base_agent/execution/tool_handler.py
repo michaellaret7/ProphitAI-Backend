@@ -71,8 +71,8 @@ class ToolHandler:
             name = tool_call.function.name
             args_json = tool_call.function.arguments or "{}"
 
-            # Parse arguments
-            args = self._parse_arguments(args_json) # Parse arguments from the tool call output
+            # Parse arguments - returns (args_dict, parse_error) tuple
+            args, parse_error = self._parse_arguments(args_json)
 
             # Print tool call with arguments in VERBOSE and DEBUG modes
             if self.agent.print_mode in [PrintMode.VERBOSE, PrintMode.DEBUG]:
@@ -81,6 +81,18 @@ class ToolHandler:
                 print(f"\n[Sub-agent] Calling tool: {_GREEN}{name}{_RESET}")
             elif self.agent.print_mode == PrintMode.PRODUCTION:
                 print(f"  → {name}")
+
+            # Handle parse errors - skip tool execution and return error to agent
+            if parse_error:
+                if self.agent.print_mode != PrintMode.PRODUCTION:
+                    print(f"   ⚠️ Argument parse failed - skipping tool execution")
+                result = error_response(
+                    f"Tool '{name}' was not executed because arguments could not be parsed. "
+                    f"{parse_error}. Please retry the tool call with valid JSON arguments."
+                )
+                # Skip to adding error result to messages
+                self._add_tool_result(tool_call, result, name, args)
+                continue
 
             # NOTE: This is entirely for printing the arguments to the console. It is not used for any functionality
             if args:
@@ -178,42 +190,8 @@ class ToolHandler:
                     if self.agent.print_mode == PrintMode.DEBUG:
                         print(f"⚠️  Warning: Failed to prune completed messages: {e}")
 
-            tool_validation = validate_tool_call(name, args, result, self.agent)
-
-            # Parse validation and add to history
-            tool_validation_dict = yaml.safe_load(tool_validation)
-
-            success, message = self._check_tool_success(tool_validation_dict)
-            
-            self.tool_call_history.append(tool_validation_dict)
-
-            # Write entire tool call history to tools.yaml
-            log_tool_call(self.tool_call_history, output_dir=getattr(self.agent, "output_dir", None))
-
-            # NOTE: This is entirely for printing the result to the console. It is not used for any functionality
-            if self.agent.print_mode == PrintMode.DEBUG:
-                print(f"  ← Result: {result}")
-            elif self.agent.print_mode == PrintMode.VERBOSE:
-                result_str = str(result)
-                if len(result_str) > 200:
-                    print(f"   ✓ Result: {result_str[:200]}... (truncated)")
-                else:
-                    print(f"   ✓ Result: {result_str}")
-            elif self.agent.print_mode == PrintMode.SUBAGENT:
-                print(f"[Sub-agent] {name} tool call successful: {success}")
-
-            if success:
-                self.agent.messages.append({
-                    "role": "tool",
-                    "tool_call_id": tool_call.id,
-                    "content": self._stringify(result)
-                })
-            else:
-                self.agent.messages.append({
-                    "role": "tool",
-                    "tool_call_id": tool_call.id,
-                    "content": yaml.dump(tool_validation_dict, default_flow_style=False, sort_keys=False)
-                })
+            # Add tool result to messages (handles validation, logging, printing)
+            self._add_tool_result(tool_call, result, name, args)
 
             # Prune think tool arguments from actual context (not just YAML)
             # Unlike write_note, we DO prune from self.agent.messages because:
@@ -254,20 +232,25 @@ class ToolHandler:
             # Don't fail tool execution if logging fails
             print(f"⚠️  Warning: Failed to write messages to YAML: {e}")
 
-    def _parse_arguments(self, args_json: str) -> Dict[str, Any]:
+    def _parse_arguments(self, args_json: str) -> tuple[Dict[str, Any], str | None]:
         """Parse tool arguments from JSON string.
 
         Args:
             args_json: JSON string of arguments
 
         Returns:
-            Parsed arguments dictionary
+            Tuple of (parsed_args, error_message):
+            - (dict, None) on success
+            - ({}, error_string) on JSON parse failure
         """
         try:
-            return json.loads(args_json)
-        except json.JSONDecodeError:
-            print(f"  ⚠️ Could not parse args: {args_json}")
-            return {}
+            return json.loads(args_json), None
+        except json.JSONDecodeError as e:
+            # Truncate for display if very long (common with token limit exhaustion)
+            display_json = args_json[:200] + "..." if len(args_json) > 200 else args_json
+            print(f" Could not parse args: {display_json}")
+            error_msg = f"Failed to parse tool arguments (invalid JSON): {str(e)}"
+            return {}, error_msg
 
     def _execute_tool(self, name: str, args: Dict[str, Any]) -> Any:
         """Execute a tool with error handling.
@@ -345,6 +328,62 @@ class ToolHandler:
 
         # Success is True AND data is populated - tool succeeded!
         return True, None
+
+    def _add_tool_result(
+        self,
+        tool_call: Any,
+        result: Any,
+        name: str,
+        args: Dict[str, Any],
+    ) -> bool:
+        """Add a tool result to messages and log it.
+
+        Handles validation, logging, printing, and message appending for tool results.
+
+        Args:
+            tool_call: The tool call object from the LLM
+            result: The result to add (string or object)
+            name: Tool name
+            args: Tool arguments (may be empty on parse failure)
+
+        Returns:
+            bool: True if the tool call was successful, False otherwise
+        """
+        # Validate and log the result
+        tool_validation = validate_tool_call(name, args, result, self.agent)
+        tool_validation_dict = yaml.safe_load(tool_validation)
+        success, _ = self._check_tool_success(tool_validation_dict)
+
+        self.tool_call_history.append(tool_validation_dict)
+        log_tool_call(self.tool_call_history, output_dir=getattr(self.agent, "output_dir", None))
+
+        # Print result status based on print mode
+        if self.agent.print_mode == PrintMode.DEBUG:
+            print(f"  ← Result: {result}")
+        elif self.agent.print_mode == PrintMode.VERBOSE:
+            result_str = str(result)
+            if len(result_str) > 200:
+                print(f"   ✓ Result: {result_str[:200]}... (truncated)")
+            else:
+                print(f"   ✓ Result: {result_str}")
+        elif self.agent.print_mode == PrintMode.SUBAGENT:
+            print(f"[Sub-agent] {name} tool call successful: {success}")
+
+        # Add result to messages - use raw result on success, validation dict on failure
+        if success:
+            self.agent.messages.append({
+                "role": "tool",
+                "tool_call_id": tool_call.id,
+                "content": self._stringify(result)
+            })
+        else:
+            self.agent.messages.append({
+                "role": "tool",
+                "tool_call_id": tool_call.id,
+                "content": yaml.dump(tool_validation_dict, default_flow_style=False, sort_keys=False)
+            })
+
+        return success
 
     def _stringify(self, obj: Any) -> str:
         """Convert any object to string for LLM consumption.

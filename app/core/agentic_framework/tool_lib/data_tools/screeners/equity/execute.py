@@ -36,6 +36,8 @@ def execute_query(**kwargs) -> tuple[List[EquityScreenerResult] | None, str | No
             # Base fields
             data = {
                 'ticker': ticker.ticker,
+                'ticker_name': ticker.ticker_name,
+                'ticker_description': ticker.ticker_description,
                 'sector': ticker.sector,
                 'industry': ticker.industry,
                 'sub_industry': ticker.sub_industry,

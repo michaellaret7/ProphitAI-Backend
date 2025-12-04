@@ -33,9 +33,9 @@ class SectorAnalyst(SubAgent):
     def __init__(self, user_prompt: str = None, sector: str = None, simulation_date: Optional[datetime] = None) -> None:
         super().__init__(
             user_prompt=user_prompt,
-            provider="anthropic",
-            model="claude-haiku-4-5-20251001",
-            max_iterations=50,
+            provider="deepseek",
+            model="deepseek-chat",
+            max_iterations=80,
             print_mode=PrintMode.SUBAGENT,
             temperature=0.7,
             plan_first=True,

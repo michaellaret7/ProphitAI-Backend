@@ -18,6 +18,8 @@ class Ticker(MarketBase):
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     ticker = Column(String, nullable=False, unique=True, index=True)
+    ticker_name = Column(String)
+    ticker_description = Column(Text)
     sector = Column(String, index=True)
     industry = Column(String, index=True)
     sub_industry = Column(String)
@@ -709,7 +711,7 @@ class ETFScreener(MarketBase):
 
     # Classification
     industry = Column(String, index=True)
-    subindustry = Column(String, index=True)
+    sub_industry = Column(String, index=True)
 
     # Cost metrics
     expense_ratio = Column(Float)

@@ -1,12 +1,16 @@
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from app.db.core.db_config import MarketSession
 from app.db.core.models.market_data_models import Ticker
-from app.repositories.price_data import fetch_bulk_ohlcv_data_for_tickers
-from app.core.calculations.performance.calculator import PerformanceCalculator
+from app.db.core.pull_fmp_data import FMP_API_DATA
+from app.utils.serialize_output import serialize_sqlalchemy_obj
 
-ticker = 'QQQ'
 
-data = fetch_bulk_ohlcv_data_for_tickers([ticker, 'SPY'], '2024-11-29', '2025-12-04', frequency='daily', returns=True)
-ticker_returns = data[ticker]['returns'].dropna()
-benchmark_returns = data['SPY']['returns'].dropna()
+with MarketSession() as session:
+    tickers = session.query(Ticker).filter(Ticker.is_etf == False).all()
 
-print(round(PerformanceCalculator.alpha(ticker_returns, benchmark_returns), 4)*100)
+    for ticker in tickers:
+        ticker = serialize_sqlalchemy_obj(ticker)
+        print(ticker['ticker'])
+        print(ticker['ticker_name'])
+        print(ticker['ticker_description'])
+        print('--------------------------------')

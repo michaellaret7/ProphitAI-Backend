@@ -7,6 +7,7 @@ from typing_extensions import Literal
 from app.core.agentic_framework.base_agent import BaseAgent
 from app.core.agentic_framework.base_agent.utils.models import PrintMode
 from app.utils.decorators.timer import timer
+from app.utils.time_utils import get_utc_date_str
 
 from .prompts import system_prompt, user_prompt
 from .tool_registry import register_optimizer_tools
@@ -115,7 +116,8 @@ class OptimizerAgent(BaseAgent):
             "{{SECTORS_TO_INCLUDE}}": self.sectors_to_include or "Not specified",
             "{{SECTORS_TO_EXCLUDE}}": self.sectors_to_exclude or "Not specified",
             "{{TICKERS_TO_KEEP}}": self.tickers_to_keep or "Not specified",
-            "{{TICKERS_TO_EXCLUDE}}": self.tickers_to_exclude or "Not specified"
+            "{{TICKERS_TO_EXCLUDE}}": self.tickers_to_exclude or "Not specified",
+            "{{TODAYS_DATE}}": get_utc_date_str()
         }
 
         for placeholder, value in replacements.items():
@@ -140,25 +142,3 @@ class OptimizerAgent(BaseAgent):
 
         return result["final_text"]
 
-@timer
-def main():
-    portfolio_id = "26da638b-5602-4e07-aeba-08dc1052bd86"
-    agent = OptimizerAgent(
-        portfolio_id=portfolio_id,
-        risk_tolerance="high",
-        time_horizon="long",
-        investment_goals="growth, income, capital preservation",
-        sectors_to_exclude="technology",
-        sectors_to_include="financials",
-        tickers_to_keep="AAPL, MSFT, GOOG, AMZN, FB",
-        tickers_to_exclude="TSLA, NVDA, AMD, INTC, QCOM"
-    )
-    result = agent.run()
-
-    print("="*100)
-    print("Optimizer Agent Result:")
-    print("="*100)
-    print(result)
-
-if __name__ == "__main__":
-    main()

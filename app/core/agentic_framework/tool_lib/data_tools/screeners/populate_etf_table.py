@@ -25,7 +25,7 @@ def load_etfs_from_csv(csv_path: str = "etf.csv") -> pd.DataFrame:
 
 def get_etf_metadata(ticker_ids: list[str]) -> dict:
     """
-    Fetch ETF metadata from database (industry, subindustry, expense_ratio, nav, market_cap, dollar_volume).
+    Fetch ETF metadata from database (industry, sub_industry, expense_ratio, nav, market_cap, dollar_volume).
     Returns dict keyed by ticker_id.
     """
     metadata = {}
@@ -44,7 +44,7 @@ def get_etf_metadata(ticker_ids: list[str]) -> dict:
             metadata[ticker_id_str] = {
                 'ticker': ticker.ticker,
                 'industry': ticker.industry,
-                'subindustry': ticker.sub_industry,
+                'sub_industry': ticker.sub_industry,
                 'market_cap': float(ticker.market_cap) if ticker.market_cap else None,
                 'dollar_volume': float(ticker.dollar_volume) if ticker.dollar_volume else None,
                 'expense_ratio': etf_info.expenseRatio if etf_info else None,
@@ -141,7 +141,7 @@ def calculate_etf_metrics(etf_df: pd.DataFrame, lookback_days: int = 365) -> lis
             'ticker_id': UUID(ticker_id),
             'updated_at': get_current_utc_time(),
             'industry': meta.get('industry'),
-            'subindustry': meta.get('subindustry'),
+            'sub_industry': meta.get('sub_industry'),
             'expense_ratio': meta.get('expense_ratio'),
             'nav': meta.get('nav'),
             'ann_vol': round(ann_vol, 4) if ann_vol and not np.isnan(ann_vol) else None,
