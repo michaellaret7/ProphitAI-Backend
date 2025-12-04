@@ -14,7 +14,7 @@ from .tool_registry import register_optimizer_tools
 if TYPE_CHECKING:
     from app.core.agentic_framework.base_agent.callbacks import StateCallback
 
-#TODO: Add a portfolio compare tool to compare the new proposed portfolio to the old one that needed optimizaiton
+# NOTE: Tool add --> Add a portfolio compare tool to compare the new proposed portfolio to the old one that needed optimizaiton
 
 class PortfolioPosition(BaseModel):
     allocation: float
@@ -86,8 +86,10 @@ class OptimizerAgent(BaseAgent):
         self.dynamic_user_prompt = self._build_dynamic_prompt()
 
         super().__init__(
-            provider="anthropic",
-            model="claude-haiku-4-5",
+            # provider="anthropic",
+            # model="claude-haiku-4-5",
+            provider="deepseek",
+            model="deepseek-chat",
             system_prompt=system_prompt,
             user_prompt=self.dynamic_user_prompt,
             max_iterations=200,
