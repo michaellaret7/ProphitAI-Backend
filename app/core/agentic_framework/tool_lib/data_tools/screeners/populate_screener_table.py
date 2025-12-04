@@ -172,8 +172,8 @@
 #         beta_vs_sector = round(RiskCalculator.beta(df['returns'], sector_df['returns']), 4)
 
 #         # Calculate alpha metrics
-#         alpha_vs_spy = round(PerformanceCalculator.alpha_jensen(df['returns'], spy_df['returns']), 4)
-#         alpha_vs_sector = round(PerformanceCalculator.alpha_jensen(df['returns'], sector_df['returns']), 4)
+#         alpha_vs_spy = round(PerformanceCalculator.alpha(df['returns'], spy_df['returns']), 4)
+#         alpha_vs_sector = round(PerformanceCalculator.alpha(df['returns'], sector_df['returns']), 4)
 
 #         # Fetch TTM ratios from FMP
 #         raw_ratios = fmp_api.get_ratios_ttm(ticker)

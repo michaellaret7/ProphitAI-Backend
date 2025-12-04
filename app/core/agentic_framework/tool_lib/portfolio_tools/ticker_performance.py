@@ -97,7 +97,7 @@ def calculate_ticker_performances(
                 sortino = PerformanceCalculator.sortino_ratio(r)
                 treynor = PerformanceCalculator.treynor_ratio(r, benchmark_returns)
                 info = PerformanceCalculator.information_ratio(r, benchmark_returns)
-                alpha = PerformanceCalculator.alpha_jensen(r, benchmark_returns)
+                alpha = PerformanceCalculator.alpha(r, benchmark_returns)
 
                 # Advanced risk-adjusted metrics
                 omega = PerformanceCalculator.omega_ratio_from_annual(r)

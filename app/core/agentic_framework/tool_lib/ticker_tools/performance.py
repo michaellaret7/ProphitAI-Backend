@@ -31,7 +31,7 @@ SINGLE_TICKER_METRIC_GROUPS = {
         "risk": ["annualized_volatility", "max_drawdown", "ulcer_index_price", "historical_var_1d", "expected_shortfall_1d", "parametric_var_1d", "parametric_cvar_1d", "beta", "up_beta", "down_beta"]
     },
     "performance_metrics": {
-        "performance": ["cagr", "sharpe", "sortino", "calmar_1y", "omega", "sterling", "burke", "martin", "win_rate", "profit_factor", "pain_index", "tail_ratio", "gain_loss_ratio", "ulcer_index_252", "treynor", "information_ratio", "alpha_jensen", "tracking_error", "appraisal_ratio", "up_capture_daily", "down_capture_daily", "up_capture_ann", "down_capture_ann"]
+        "performance": ["cagr", "sharpe", "sortino", "calmar_1y", "omega", "sterling", "burke", "martin", "win_rate", "profit_factor", "pain_index", "tail_ratio", "gain_loss_ratio", "ulcer_index_252", "treynor", "information_ratio", "alpha", "tracking_error", "appraisal_ratio", "up_capture_daily", "down_capture_daily", "up_capture_ann", "down_capture_ann"]
     },
     "returns_metrics": {
         "returns": ["price_return_3y", "total_return_3y", "total_return_1y", "total_return_6m", "total_return_3m", "price_return_1y", "price_return_6m", "price_return_3m"]
@@ -41,7 +41,7 @@ SINGLE_TICKER_METRIC_GROUPS = {
     },
     "benchmark_relative": {
         "risk": ["beta", "up_beta", "down_beta"],
-        "performance": ["treynor", "information_ratio", "alpha_jensen", "tracking_error", "appraisal_ratio", "up_capture_daily", "down_capture_daily", "up_capture_ann", "down_capture_ann"]
+        "performance": ["treynor", "information_ratio", "alpha", "tracking_error", "appraisal_ratio", "up_capture_daily", "down_capture_daily", "up_capture_ann", "down_capture_ann"]
     },
 }
 
@@ -215,7 +215,7 @@ def get_ticker_performance_and_risk(
                 {
                     "treynor": float(PerformanceCalculator.treynor_ratio(r, rm, rf_annual=DEFAULT_RF_ANNUAL, periods_per_year=DEFAULT_TRADING_DAYS)),
                     "information_ratio": float(PerformanceCalculator.information_ratio(r, rm, periods_per_year=DEFAULT_TRADING_DAYS)),
-                    "alpha_jensen": float(PerformanceCalculator.alpha_jensen(r, rm, rf_annual=DEFAULT_RF_ANNUAL, periods_per_year=DEFAULT_TRADING_DAYS)),
+                    "alpha": float(PerformanceCalculator.alpha(r, rm, periods_per_year=DEFAULT_TRADING_DAYS)),
                     "tracking_error": float(PerformanceCalculator.tracking_error(r, rm, periods_per_year=DEFAULT_TRADING_DAYS)),
                     "appraisal_ratio": float(PerformanceCalculator.appraisal_ratio(r, rm, rf_annual=DEFAULT_RF_ANNUAL, periods_per_year=DEFAULT_TRADING_DAYS)),
                 }
@@ -235,7 +235,7 @@ def get_ticker_performance_and_risk(
                 {
                     "treynor": np.nan,
                     "information_ratio": np.nan,
-                    "alpha_jensen": np.nan,
+                    "alpha": np.nan,
                     "tracking_error": np.nan,
                     "appraisal_ratio": np.nan,
                     "up_capture_daily": np.nan,

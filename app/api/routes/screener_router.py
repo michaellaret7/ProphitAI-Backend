@@ -44,6 +44,8 @@ def equity_screener(
     ebit_cagr_5yr_max: Optional[float] = None,
     ebit_cagr_3yr_min: Optional[float] = None,
     ebit_cagr_3yr_max: Optional[float] = None,
+    revenue_cagr_3yr_min: Optional[float] = None,
+    revenue_cagr_3yr_max: Optional[float] = None,
     # Valuation ratios
     dividend_yield_ttm_min: Optional[float] = None,
     dividend_yield_ttm_max: Optional[float] = None,
@@ -144,7 +146,7 @@ def equity_screener(
         "price", "market_cap", "avg_volume", "eps", "dollar_volume",
         "momentum_1m", "momentum_3m", "momentum_6m", "ann_return", "ann_vol",
         "beta_vs_spy", "beta_vs_sector", "alpha_vs_spy", "alpha_vs_sector",
-        "ebit_cagr_5yr", "ebit_cagr_3yr",
+        "ebit_cagr_5yr", "ebit_cagr_3yr", "revenue_cagr_3yr",
         "dividend_yield_ttm", "pe_ratio_ttm", "peg_ratio_ttm",
         "price_to_book_ratio_ttm", "price_to_sales_ratio_ttm",
         "price_to_free_cash_flows_ratio_ttm", "price_to_operating_cash_flows_ratio_ttm",

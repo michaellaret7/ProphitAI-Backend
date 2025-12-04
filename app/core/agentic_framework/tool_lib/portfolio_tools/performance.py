@@ -16,7 +16,7 @@ from app.core.agentic_framework.tool_lib.common.responses import success_respons
 METRIC_GROUPS = {
     "core": ["cagr", "annualized_return", "annualized_volatility"],
     "risk_adjusted": ["sharpe", "sortino", "calmar_1y"],
-    "benchmark_relative": ["beta", "alpha", "alpha_jensen", "information_ratio", "treynor", "tracking_error"],
+    "benchmark_relative": ["beta", "alpha", "information_ratio", "treynor", "tracking_error"],
     "capture_ratios": ["up_capture_daily", "down_capture_daily", "up_capture_annual", "down_capture_annual"],
     "advanced": ["omega", "burke", "sterling", "martin"],
     "win_loss": ["win_rate", "profit_factor"],
@@ -103,15 +103,14 @@ def calculate_portfolio_performance(
         # Benchmark-relative metrics
         if not benchmark_returns.empty:
             beta = RiskCalculator.beta(portfolio_returns, benchmark_returns)
-            alpha = PerformanceCalculator.alpha(portfolio_returns, benchmark_returns, risk_free_daily=rf_daily, trading_days=252)
-            alpha_jensen = PerformanceCalculator.alpha_jensen(portfolio_returns, benchmark_returns)
+            alpha = PerformanceCalculator.alpha(portfolio_returns, benchmark_returns)
             info_ratio = PerformanceCalculator.information_ratio(portfolio_returns, benchmark_returns)
             treynor = PerformanceCalculator.treynor_ratio(portfolio_returns, benchmark_returns, rf_annual=rf_annual, periods_per_year=252)
             tracking_error = PerformanceCalculator.tracking_error(portfolio_returns, benchmark_returns)
             up_cap_daily, down_cap_daily = PerformanceCalculator.capture_ratios(portfolio_returns, benchmark_returns, periods_per_year=None)
             up_cap_ann, down_cap_ann = PerformanceCalculator.capture_ratios(portfolio_returns, benchmark_returns, periods_per_year=252)
         else:
-            beta = alpha = alpha_jensen = info_ratio = treynor = tracking_error = float("nan")
+            beta = alpha = info_ratio = treynor = tracking_error = float("nan")
             up_cap_daily = down_cap_daily = up_cap_ann = down_cap_ann = float("nan")
 
         # Advanced risk-adjusted metrics
@@ -156,7 +155,6 @@ def calculate_portfolio_performance(
             # Benchmark-relative
             "beta": _rd(beta),
             "alpha": _rd(alpha),
-            "alpha_jensen": _rd(alpha_jensen),
             "information_ratio": _rd(info_ratio),
             "treynor": _rd(treynor),
             "tracking_error": _rd(tracking_error),
@@ -217,7 +215,7 @@ CALCULATE_PORTFOLIO_PERFORMANCE_DESCRIPTION = (
     "Calculate portfolio performance metrics with optional filtering for token efficiency. "
     "Returns 26 total metrics across 7 groups (core, risk_adjusted, benchmark_relative, capture_ratios, advanced, win_loss, drawdown). "
     "\n\n**TOKEN EFFICIENCY - Use Filters to Reduce Response Size:**"
-    "\n  Full response (filters=['all']): ~270 tokens with 26 metrics"
+    "\n  Full response (filters=['all']): ~270 tokens with 25 metrics"
     "\n  Filtered response (filters=['core', 'risk_adjusted']): ~120 tokens with 6 metrics (55% reduction)"
     "\n  Minimal response (filters=['core']): ~80 tokens with 3 metrics (70% reduction)"
     "\n\n**Common Filter Patterns:**"
@@ -247,17 +245,17 @@ CALCULATE_PORTFOLIO_PERFORMANCE_PARAMETERS = {
                 "\n\n**Available Metric Groups:**"
                 "\n  • 'core' (3 metrics): cagr, annualized_return, annualized_volatility"
                 "\n  • 'risk_adjusted' (3 metrics): sharpe, sortino, calmar_1y"
-                "\n  • 'benchmark_relative' (6 metrics): beta, alpha, alpha_jensen, information_ratio, treynor, tracking_error"
+                "\n  • 'benchmark_relative' (5 metrics): beta, alpha, information_ratio, treynor, tracking_error"
                 "\n  • 'capture_ratios' (4 metrics): up_capture_daily, down_capture_daily, up_capture_annual, down_capture_annual"
                 "\n  • 'advanced' (4 metrics): omega, burke, sterling, martin"
                 "\n  • 'win_loss' (2 metrics): win_rate, profit_factor"
                 "\n  • 'drawdown' (4 metrics): max_drawdown, pain_index, tail_ratio, ulcer_index"
-                "\n  • 'all': Return all 26 metrics (default behavior)"
+                "\n  • 'all': Return all 25 metrics (default behavior)"
                 "\n\n**Common Use Cases:**"
                 "\n  Quick Check → ['core', 'risk_adjusted'] (6 metrics, 77% reduction)"
                 "\n  Risk Analysis → ['core', 'risk_adjusted', 'drawdown'] (10 metrics, 62% reduction)"
-                "\n  vs Benchmark → ['core', 'benchmark_relative'] (9 metrics, 65% reduction)"
-                "\n  Full Report → ['all'] (26 metrics, for comprehensive analysis)"
+                "\n  vs Benchmark → ['core', 'benchmark_relative'] (8 metrics, 68% reduction)"
+                "\n  Full Report → ['all'] (25 metrics, for comprehensive analysis)"
                 "\n\n**Token Efficiency:**"
                 "\n  • ['core'] only: ~80 tokens (70% reduction vs full)"
                 "\n  • ['core', 'risk_adjusted']: ~120 tokens (55% reduction)"

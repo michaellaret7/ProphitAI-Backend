@@ -277,7 +277,7 @@ def print_portfolio_metrics(
     ann_vol = float(r.std() * np.sqrt(252))
     bench = get_benchmark_returns(lookback_days=lookback_days, use_total_returns=use_total_returns)
     sharpe = float(PerformanceCalculator.sharpe_ratio(r))
-    alpha = float(PerformanceCalculator.alpha_jensen(r, bench))
+    alpha = float(PerformanceCalculator.alpha(r, bench))
     net_exposure = float(sum(w.values()))
     gross_exposure = float(sum(abs(x) for x in w.values()))
     print(f"Annualized Return: {ann_ret}")

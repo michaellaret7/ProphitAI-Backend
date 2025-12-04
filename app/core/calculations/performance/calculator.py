@@ -305,52 +305,40 @@ class PerformanceCalculator:
     def alpha(
         daily_returns: pd.Series,
         market_daily_returns: pd.Series,
-        risk_free_daily: float = (1.0 + DEFAULT_RF_ANNUAL)**(1.0/DEFAULT_TRADING_DAYS) - 1.0,
-        trading_days: int = DEFAULT_TRADING_DAYS,
-    ) -> float:
-        """Backward-compatible wrapper that calls Jensen's alpha (regression intercept).
-
-        Converts daily RF to annual via geometric compounding and delegates to alpha_jensen.
-        """
-        rf_annual = (1.0 + float(risk_free_daily)) ** float(trading_days) - 1.0
-        return PerformanceCalculator.alpha_jensen(
-            daily_returns=daily_returns,
-            market_daily_returns=market_daily_returns,
-            rf_annual=rf_annual,
-            periods_per_year=trading_days,
-        )
-
-    @staticmethod
-    def alpha_jensen(
-        daily_returns: pd.Series,
-        market_daily_returns: pd.Series,
-        rf_annual: float = DEFAULT_RF_ANNUAL,
         periods_per_year: int = DEFAULT_TRADING_DAYS,
     ) -> float:
-        """Jensen's alpha via regression intercept on aligned excess returns.
-
-        Returns annualized alpha (alpha_daily * periods_per_year). Requires ≥20 obs.
+        """Alpha via regression intercept on aligned raw returns (no risk-free).
+        Returns annualized alpha. Requires ≥20 obs.
         """
-        df = pd.concat(
-            [pd.Series(daily_returns, name="p"), pd.Series(market_daily_returns, name="m")],
-            axis=1,
-        ).dropna()
+        df = pd.concat([pd.Series(daily_returns, name="p"), pd.Series(market_daily_returns, name="m")], axis=1).dropna()
+
         if len(df) < 20:
             return np.nan
-        rf_daily = (1.0 + float(rf_annual)) ** (1.0 / float(periods_per_year)) - 1.0
-        y = df["p"].astype(float) - rf_daily
-        x = df["m"].astype(float) - rf_daily
-        # Design matrix with intercept
+
+        y = df["p"].astype(float)
+        x = df["m"].astype(float)
+
+        if not np.isfinite(x).all() or not np.isfinite(y).all():
+            return np.nan
+        if np.isclose(np.var(x.values), 0.0):
+            return np.nan
+
         X = np.column_stack([np.ones(len(x), dtype=float), x.values.astype(float)])
         Y = y.values.astype(float)
+
         try:
             coef, *_ = np.linalg.lstsq(X, Y, rcond=None)
-            alpha_daily = float(coef[0])
+            alpha_daily = float(coef[0])  # intercept
         except Exception:
             return np.nan
+
         if not np.isfinite(alpha_daily):
             return np.nan
-        return float(alpha_daily * float(periods_per_year))
+
+        # Compounded annualization
+        alpha_annual = ((1.0 + alpha_daily) ** float(periods_per_year)) - 1.0
+        return float(alpha_annual)
+
 
     @staticmethod
     def capture_ratios(
@@ -660,7 +648,7 @@ if __name__ == "__main__":
                 sterling = PerformanceCalculator.sterling_ratio_from_returns(r, periods_per_year=DEFAULT_TRADING_DAYS)
                 burke = PerformanceCalculator.burke_ratio(r, periods_per_year=DEFAULT_TRADING_DAYS)
                 martin = PerformanceCalculator.martin_ratio(r, rf_annual=DEFAULT_RF_ANNUAL, periods_per_year=DEFAULT_TRADING_DAYS)
-                alpha = PerformanceCalculator.alpha_jensen(r, rm, rf_annual=DEFAULT_RF_ANNUAL, periods_per_year=DEFAULT_TRADING_DAYS)
+                alpha = PerformanceCalculator.alpha(r, rm, periods_per_year=DEFAULT_TRADING_DAYS)
 
                 # Capture ratios (daily per-period ratio and annualized monthly-style)
                 up_cap_daily, down_cap_daily = PerformanceCalculator.capture_ratios(r, rm, periods_per_year=None, strict_zero_split=True)

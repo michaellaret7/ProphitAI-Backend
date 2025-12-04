@@ -214,6 +214,7 @@ def fetch_bulk_ohlcv_data_for_tickers(tickers: list, start_date_str: str, end_da
                             price_returns = df['close'].pct_change()
 
                             df['returns'] = total_returns
+                            df['price_returns'] = price_returns
                             
                             # 2. Calculate cumulative returns: (1 + r).cumprod() - 1
                             # This shows total return % (e.g., 0.10 for 10% total gain)

@@ -1,9 +1,12 @@
 from app.db.core.db_config import MarketSession
 from app.db.core.models.market_data_models import Ticker
+from app.repositories.price_data import fetch_bulk_ohlcv_data_for_tickers
+from app.core.calculations.performance.calculator import PerformanceCalculator
 
-with MarketSession() as session:
-    valid_industries = {row[0] for row in session.query(Ticker.industry).distinct().filter(Ticker.is_etf == True).all()}
-    valid_sub_industries = {row[0] for row in session.query(Ticker.sub_industry).distinct().filter(Ticker.is_etf == True).all()}
+ticker = 'QQQ'
 
-print(valid_industries)
-print(valid_sub_industries)
+data = fetch_bulk_ohlcv_data_for_tickers([ticker, 'SPY'], '2024-11-29', '2025-12-04', frequency='daily', returns=True)
+ticker_returns = data[ticker]['returns'].dropna()
+benchmark_returns = data['SPY']['returns'].dropna()
+
+print(round(PerformanceCalculator.alpha(ticker_returns, benchmark_returns), 4)*100)
