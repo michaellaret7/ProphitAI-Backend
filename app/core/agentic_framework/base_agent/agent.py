@@ -3,18 +3,20 @@
 Minimal autonomous agent with clean separation of concerns.
 """
 
-from typing import List, Dict, Any, Callable, Union
+from typing import List, Dict, Any, Callable, Union, Optional
+from datetime import datetime
+
 from dotenv import load_dotenv
-from app.core.agentic_framework.base_agent.utils.resolve_llm import resolve_llm_and_client
+
+from app.core.agentic_framework.base_agent.callbacks import NoOpCallback, StateCallback
 from app.core.agentic_framework.base_agent.execution.execution_loop import ExecutionLoop
 from app.core.agentic_framework.base_agent.execution.tool_handler import ToolHandler
-from app.core.agentic_framework.base_agent.utils.models import PrintMode
-from app.core.agentic_framework.base_agent.tool_registry import register_base_tools
-from app.core.agentic_framework.base_agent.utils.path_utils import create_agent_output_dir
 from app.core.agentic_framework.base_agent.logging.notes import ensure_notes_file
+from app.core.agentic_framework.base_agent.tool_registry import register_base_tools
 from app.core.agentic_framework.base_agent.utils.agent_message import UNIVERSAL_AGENT_MESSAGE
-from datetime import datetime
-from typing import Optional
+from app.core.agentic_framework.base_agent.utils.models import PrintMode
+from app.core.agentic_framework.base_agent.utils.path_utils import create_agent_output_dir
+from app.core.agentic_framework.base_agent.utils.resolve_llm import resolve_llm_and_client
 
 load_dotenv()
 
@@ -40,7 +42,8 @@ class BaseAgent:
         reasoning_effort: str = None,
         temperature: float = None,
         plan_first: bool = True,
-        simulation_date: Optional[datetime] = None
+        simulation_date: Optional[datetime] = None,
+        state_callback: Optional[StateCallback] = None,
     ):
         """Initialize agent.
 
@@ -55,6 +58,8 @@ class BaseAgent:
             simulation_date: Optional datetime for backtesting. If provided, automatically
                            injects _simulation_date into all tool calls to enable historical
                            data filtering and prevent look-ahead bias.
+            state_callback: Optional callback for streaming task state updates to frontend.
+                          Defaults to NoOpCallback (does nothing).
         """
         self.provider = provider
         self.model, self.client = resolve_llm_and_client(provider=self.provider, model=model)
@@ -73,6 +78,7 @@ class BaseAgent:
         self.plan_first = plan_first
         self.plan = None  # Parsed plan from planning phase
         self.simulation_date = simulation_date  # For simulation mode: inject _simulation_date into all tool calls
+        self.state_callback = state_callback if state_callback is not None else NoOpCallback() # this is new for the purposes of showing the agent stream on the frontend
 
         # Tool registry
         self.tools: List[Dict[str, Any]] = []

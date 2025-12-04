@@ -219,7 +219,7 @@ class ToolHandler:
             # Unlike write_note, we DO prune from self.agent.messages because:
             # 1. The thought is preserved in the tool response
             # 2. The argument is redundant - model already generated it and sees result
-            # NOTE: Revisit this at a later date, it is confusing the agent
+            # NOTE: Revisit this later, it is confusing the agent I think before we delete it we should add a note to the agent saying we pruned the think content for context management purposes and to not replicate it in the future
             # if name == "think":
             #     self.agent.messages = prune_think_content(
             #         messages=self.agent.messages,
@@ -241,7 +241,7 @@ class ToolHandler:
             messages_copy = copy.deepcopy(self.agent.messages)
 
             # Prune the deep copy (keeps self.agent.messages untouched)
-            # This is not pruning the agent messages, only the yaml output. NOTE --> revisit this please 
+            # This is not pruning the agent messages, only the yaml output. NOTE --> revisit this please and have it actually prune the notes from the agent messages
             pruned_messages_for_yaml = prune_note_content(
                 messages=messages_copy,
                 exclude_index=None,  # Prune all write_note calls for YAML

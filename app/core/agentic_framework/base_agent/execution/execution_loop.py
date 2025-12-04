@@ -199,6 +199,11 @@ class ExecutionLoop:
                         print(f"✅ Plan parsed successfully!")
                         print(f"   Tasks: {len(plan.tasks)}")
 
+                        # Invoke callback for plan streaming
+                        # This is new for the purposes of showing the agent stream on the frontend
+                        if hasattr(self.agent, "state_callback") and self.agent.state_callback is not None:
+                            self.agent.state_callback.on_plan_created(plan)
+
                         continue
 
                 if assistant_text:

@@ -92,7 +92,8 @@ def register_base_tools(agent: Any) -> None:
             subtasks=subtasks,
             status=status,
             work_summary=work_summary,
-            output_dir=getattr(agent, "output_dir", None)
+            output_dir=getattr(agent, "output_dir", None),
+            state_callback=getattr(agent, "state_callback", None) # Added for the purposes of showing the agent stream on the frontend
         ),
     )
 

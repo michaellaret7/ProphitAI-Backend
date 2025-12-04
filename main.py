@@ -6,23 +6,25 @@ from fastapi import FastAPI, Depends
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.gzip import GZipMiddleware
 from fastapi.responses import ORJSONResponse
+from app.api.routes.agent_router import router as agent_router
 from app.api.routes.alts_router import router as prophit_alts_router
-from app.api.routes.user_routes import router as user_router
-from app.api.routes.portfolio_router import router as portfolio_router
-from app.api.routes.price_router import router as price_router
-from app.api.routes.cache_router import router as cache_router
-from app.redis.client import cache
 from app.api.routes.broker_router import router as broker_router
-from app.api.routes.ticker_router import router as ticker_router
-from app.api.routes.technical_router import router as technical_router
+from app.api.routes.cache_router import router as cache_router
+from app.api.routes.crypto_router import router as crypto_router
+from app.api.routes.etf_router import router as etf_router
+from app.api.routes.fundamentals_router import router as fundamentals_router
 from app.api.routes.macro_router import router as macro_router
 from app.api.routes.news_router import router as news_router
-from app.api.routes.fundamentals_router import router as fundamentals_router
-from app.api.routes.etf_router import router as etf_router
-from app.api.routes.search_router import router as search_router
-from app.api.routes.crypto_router import router as crypto_router
+from app.api.routes.portfolio_router import router as portfolio_router
+from app.api.routes.price_router import router as price_router
 from app.api.routes.screener_router import router as screener_router
+from app.api.routes.search_router import router as search_router
+from app.api.routes.technical_router import router as technical_router
+from app.api.routes.ticker_router import router as ticker_router
+from app.api.routes.user_routes import router as user_router
+from app.api.routes.websocket_router import router as websocket_router
 from app.api.auth.api_key import validate_api_key
+from app.redis.client import cache
 
 # Load environment variables from .env file
 load_dotenv()
@@ -93,6 +95,10 @@ app.include_router(etf_router, prefix="/api", dependencies=[Depends(validate_api
 app.include_router(search_router, prefix="/api", dependencies=[Depends(validate_api_key)])
 app.include_router(crypto_router, prefix="/api", dependencies=[Depends(validate_api_key)])
 app.include_router(screener_router, prefix="/api", dependencies=[Depends(validate_api_key)])
+app.include_router(agent_router, prefix="/api", dependencies=[Depends(validate_api_key)])
+
+# WebSocket router - no API key auth (WebSocket handles auth differently)
+app.include_router(websocket_router)
 
 @app.get("/")
 def read_root():

@@ -1,12 +1,18 @@
-from typing import Dict, Optional
 import uuid
+from typing import TYPE_CHECKING, Dict, Optional
+
 from pydantic import BaseModel, Field
 from typing_extensions import Literal
+
 from app.core.agentic_framework.base_agent import BaseAgent
+from app.core.agentic_framework.base_agent.utils.models import PrintMode
+from app.utils.decorators.timer import timer
+
 from .prompts import system_prompt, user_prompt
 from .tool_registry import register_optimizer_tools
-from app.utils.decorators.timer import timer
-from app.core.agentic_framework.base_agent.utils.models import PrintMode
+
+if TYPE_CHECKING:
+    from app.core.agentic_framework.base_agent.callbacks import StateCallback
 
 #TODO: Add a portfolio compare tool to compare the new proposed portfolio to the old one that needed optimizaiton
 
@@ -34,8 +40,9 @@ class OptimizerAgent(BaseAgent):
         sectors_to_exclude: str = None,
         sectors_to_include: str = None,
         tickers_to_keep: str = None,
-        tickers_to_exclude: str = None
-        ):
+        tickers_to_exclude: str = None,
+        state_callback: Optional["StateCallback"] = None,
+    ):
         """
         Initialize OptimizerAgent with a specific portfolio to optimize.
 
@@ -48,6 +55,7 @@ class OptimizerAgent(BaseAgent):
             sectors_to_include: Sectors to include in portfolio (optional)
             tickers_to_keep: Tickers that must be kept in portfolio (optional)
             tickers_to_exclude: Tickers to exclude from portfolio (optional)
+            state_callback: Optional callback for streaming task state updates to frontend.
 
         Raises:
             ValueError: If portfolio_id is not provided or is invalid format
@@ -85,6 +93,7 @@ class OptimizerAgent(BaseAgent):
             max_iterations=200,
             plan_first=True,
             print_mode=PrintMode.DEBUG,
+            state_callback=state_callback,
         )
 
         register_optimizer_tools(self)

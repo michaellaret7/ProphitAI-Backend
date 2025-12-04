@@ -1,10 +1,13 @@
 """Task Management Tool - Update plan task statuses during execution."""
 
-import yaml
-from app.core.agentic_framework.tool_lib.common.responses import success_response, error_response
-from typing import List, Optional
-from app.core.agentic_framework.base_agent.utils.models import TaskStatus
+from typing import TYPE_CHECKING, List, Optional
+
 from app.core.agentic_framework.base_agent.logging.task_state_logger import write_task_state_to_file
+from app.core.agentic_framework.base_agent.utils.models import TaskStatus
+from app.core.agentic_framework.tool_lib.common.responses import error_response, success_response
+
+if TYPE_CHECKING:
+    from app.core.agentic_framework.base_agent.callbacks import StateCallback
 
 
 def update_tasks(
@@ -14,7 +17,8 @@ def update_tasks(
     status: str = "in_progress",
     work_summary: Optional[str] = None,
     *,
-    output_dir: Optional[str] = None
+    output_dir: Optional[str] = None,
+    state_callback: Optional["StateCallback"] = None,
 ) -> str:
     """Update the status of tasks and subtasks in the plan.
 
@@ -34,6 +38,7 @@ def update_tasks(
                      - Quantitative results and their interpretation
                      - Conclusions drawn from the analysis
                      Minimum 100 characters required.
+        state_callback: Optional callback for streaming task state updates to frontend.
 
     Returns:
         YAML string with success status and updated tasks
@@ -125,6 +130,10 @@ def update_tasks(
                 old_st_status = subtask.status.value
                 subtask.status = status_enum
 
+                # Invoke callback for subtask state change
+                if state_callback is not None:
+                    state_callback.on_task_update(main_task, subtask_id, status_enum)
+
                 # Store work summary if marking complete
                 if status_enum == TaskStatus.COMPLETE and work_summary:
                     subtask.work_summary = work_summary.strip()
@@ -141,6 +150,10 @@ def update_tasks(
                 task.status = TaskStatus.IN_PROGRESS
                 updated.append(f"✅ Task {main_task}: not started → in progress (subtask started)")
 
+                # Invoke callback for main task auto-update
+                if state_callback is not None:
+                    state_callback.on_task_update(main_task, None, TaskStatus.IN_PROGRESS)
+
             # If all subtasks are complete, mark main task as complete
             elif all(st.status == TaskStatus.COMPLETE for st in task.subtasks):
                 if task.status != TaskStatus.COMPLETE:
@@ -148,6 +161,10 @@ def update_tasks(
                     task.status = TaskStatus.COMPLETE
                     task.work_summary = work_summary.strip() if work_summary else "All subtasks completed"
                     updated.append(f"✅ Task {main_task}: {old_main_status} → complete (all subtasks complete)")
+
+                    # Invoke callback for main task auto-complete
+                    if state_callback is not None:
+                        state_callback.on_task_update(main_task, None, TaskStatus.COMPLETE)
 
     # Update main task only if no subtasks were specified
     else:
@@ -160,6 +177,10 @@ def update_tasks(
 
         old_status = task.status.value
         task.status = status_enum
+
+        # Invoke callback for main task state change
+        if state_callback is not None:
+            state_callback.on_task_update(main_task, None, status_enum)
 
         # Store work summary if marking complete
         if status_enum == TaskStatus.COMPLETE and work_summary:
@@ -197,7 +218,7 @@ UPDATE_TASKS_DESCRIPTION = """Update the status of tasks and subtasks in your ex
 - Each subtask gets its own "complete" call when you finish it
 
 **Examples:**
-✅ CORRECT - Individual completion:
+CORRECT - Individual completion:
   update_tasks(main_task="2", subtasks=["2a"], status="in_progress")
   [do work on 2a]
   update_tasks(main_task="2", subtasks=["2a"], status="complete", work_summary="Analyzed X using Y tool...")
@@ -205,7 +226,7 @@ UPDATE_TASKS_DESCRIPTION = """Update the status of tasks and subtasks in your ex
   [do work on 2b]
   update_tasks(main_task="2", subtasks=["2b"], status="complete", work_summary="Evaluated Z...")
 
-❌ WRONG - Batching with in_progress:
+WRONG - Batching with in_progress:
   update_tasks(main_task="2", subtasks=["2a","2b","2c"], status="in_progress", work_summary="Completed all subtasks...")
 
 **CRITICAL - THE WORK: SECTION:**
