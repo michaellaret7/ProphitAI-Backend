@@ -12,7 +12,7 @@ from app.core.agentic_framework.base_agent.execution.tool_validation import vali
 from app.core.agentic_framework.base_agent.utils.models import PrintMode
 from app.core.agentic_framework.base_agent.logging.tool_trace import log_tool_call
 from app.core.agentic_framework.base_agent.logging.message_logger import write_messages_to_yaml
-from app.core.agentic_framework.base_agent.context_manager import prune_note_content, prune_think_content
+from app.core.agentic_framework.base_agent.context_manager import prune_note_content
 from app.core.agentic_framework.tool_lib.common.responses import error_response
 import copy
 
@@ -82,7 +82,7 @@ async def _execute_tool_async(
     try:
         # Auto-inject _simulation_date for simulation agents
         execution_args = args.copy()
-        if tool_handler.agent.simulation_date is not None and isinstance(execution_args, dict):
+        if tool_handler.agent.simulation_date is not None:
             execution_args['_simulation_date'] = tool_handler.agent.simulation_date
 
         # Check if function is async
@@ -101,14 +101,19 @@ async def _execute_tool_async(
 def execute_tools_parallel(
     tool_handler: 'ToolHandler',
     tool_calls: List[Any],
-    current_assistant_idx: int
+    current_assistant_idx: int  # NOTE: Currently unused - reserved for future pruning support
 ) -> None:
     """Execute multiple tool calls in parallel using asyncio.
 
     Args:
         tool_handler: ToolHandler instance
         tool_calls: List of tool call objects from LLM
-        current_assistant_idx: Index of current assistant message for pruning
+        current_assistant_idx: Index of current assistant message (reserved for pruning, not yet implemented)
+
+    Note:
+        Unlike the sequential tool_handler.handle_tool_calls(), this function does NOT implement
+        context pruning for update_tasks calls. This is intentional since parallel execution
+        is only used for data-fetching tools (not state-modifying tools like update_tasks).
     """
     agent = tool_handler.agent
     num_tools = len(tool_calls)
@@ -126,8 +131,8 @@ def execute_tools_parallel(
     for tool_call in tool_calls:
         name = tool_call.function.name
         args_json = tool_call.function.arguments or "{}"
-        args = tool_handler._parse_arguments(args_json)
-        parsed_calls.append((tool_call, name, args))
+        args, parse_error = tool_handler._parse_arguments(args_json)
+        parsed_calls.append((tool_call, name, args, parse_error))
 
         # Print tool names being executed (all modes)
         if agent.print_mode in [PrintMode.VERBOSE, PrintMode.DEBUG]:
@@ -137,19 +142,31 @@ def execute_tools_parallel(
         elif agent.print_mode == PrintMode.PRODUCTION:
             print(f"    → {name}")
 
-    # Define async runner for all tools
+    # Helper to create async wrapper for parse errors
+    async def _return_parse_error(err: str):
+        return error_response(f"Argument parse failed: {err}")
+
+    # Define async runner for all tools (skip tools with parse errors)
     async def run_all():
-        tasks = [
-            _execute_tool_async(tool_handler, name, args)
-            for _, name, args in parsed_calls
-        ]
+        tasks = []
+        for tool_call, name, args, parse_error in parsed_calls:
+            if parse_error:
+                # Return parse error as result instead of executing
+                tasks.append(_return_parse_error(parse_error))
+            else:
+                tasks.append(_execute_tool_async(tool_handler, name, args))
         return await asyncio.gather(*tasks, return_exceptions=True)
 
     # Execute all tools in parallel
-    results = asyncio.run(run_all())
+    try:
+        results = asyncio.run(run_all())
+    except Exception as e:
+        # If asyncio.run fails, we still need to add tool responses to prevent malformed history
+        print(f"⚠️ Parallel execution failed: {e}")
+        results = [error_response(f"Parallel execution failed: {e}")] * len(parsed_calls)
 
     # Process results sequentially (for proper message ordering and validation)
-    for (tool_call, name, args), result in zip(parsed_calls, results):
+    for (tool_call, name, args, _parse_error), result in zip(parsed_calls, results):
         # Handle exceptions from gather
         if isinstance(result, Exception):
             result = error_response(f"Error executing {name}: {str(result)}")

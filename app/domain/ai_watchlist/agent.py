@@ -3,7 +3,8 @@ from app.core.agentic_framework.base_agent.callbacks import StateCallback
 from app.core.agentic_framework.base_agent.utils.models import PrintMode
 from app.core.agentic_framework.tool_lib.data_tools.screeners.equity_screener import EQUITY_SCREENER_TOOL
 from app.core.agentic_framework.tool_lib.data_tools.screeners.etf_screener import ETF_SCREENER_TOOL
-from app.domain.ai_watchlist.prompts import system_prompt, user_prompt 
+
+from app.domain.ai_watchlist.prompts import SYSTEM_PROMPT, USER_PROMPT_TEMPLATE
 from typing import Optional
 
 class AiWatchlistAgent(BaseAgent):
@@ -12,7 +13,7 @@ class AiWatchlistAgent(BaseAgent):
         self.user_prompt = self._build_user_prompt()
         
         super().__init__(
-            system_prompt=system_prompt,
+            system_prompt=SYSTEM_PROMPT,
             user_prompt=self.user_prompt,
             max_iterations=50,
             plan_first=True,
@@ -21,7 +22,12 @@ class AiWatchlistAgent(BaseAgent):
         )
     
         tools = [
+            #  Screener Tools
             EQUITY_SCREENER_TOOL,
+            ETF_SCREENER_TOOL,
+
+            #  Ticker Analysis Tools
+
         ]
 
         for tool in tools:
@@ -31,7 +37,7 @@ class AiWatchlistAgent(BaseAgent):
                 parameters=tool["parameters"],
                 function=tool["function"]
             )
-            
+
 
     def _build_user_prompt(self) -> str:  # ← Now at class level (correct)
-        return user_prompt.replace("{{USER_PREFERENCES}}", self.user_preferences)
+        return USER_PROMPT_TEMPLATE.replace("{{USER_PREFERENCES}}", self.user_preferences)
