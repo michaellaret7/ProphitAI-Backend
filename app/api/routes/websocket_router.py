@@ -1,5 +1,6 @@
 """WebSocket router for streaming agent task state updates to frontend."""
 
+import asyncio
 import json
 from datetime import datetime
 from typing import Dict
@@ -7,6 +8,9 @@ from typing import Dict
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect
 
 from app.utils.time_utils import get_current_utc_time
+
+# Heartbeat interval in seconds (keeps connection alive on hosted platforms)
+HEARTBEAT_INTERVAL = 30
 
 router = APIRouter(tags=["Agent WebSocket"])
 
@@ -98,17 +102,34 @@ async def agent_websocket(websocket: WebSocket, execution_id: str):
     - plan_created: When the agent creates its execution plan
     - task_update: When a task/subtask status changes
     - complete: When the agent finishes execution
+    - heartbeat: Periodic keepalive signal
 
     The agent continues running even if this connection closes.
     Poll GET /api/agents/{execution_id}/result for final results.
     """
     await connection_manager.connect(execution_id, websocket)
-    try:
-        # Keep connection alive, waiting for client disconnect
+
+    async def send_heartbeat():
+        """Send periodic heartbeat to keep connection alive."""
         while True:
-            # Wait for any client message (ping/pong or close)
+            await asyncio.sleep(HEARTBEAT_INTERVAL)
+            try:
+                await websocket.send_json({
+                    "type": "heartbeat",
+                    "timestamp": get_current_utc_time().isoformat()
+                })
+            except Exception:
+                break
+
+    heartbeat_task = asyncio.create_task(send_heartbeat())
+
+    try:
+        while True:
             await websocket.receive_text()
     except WebSocketDisconnect:
-        connection_manager.disconnect(execution_id)
+        pass
     except Exception:
+        pass
+    finally:
+        heartbeat_task.cancel()
         connection_manager.disconnect(execution_id)

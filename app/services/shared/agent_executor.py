@@ -181,6 +181,23 @@ class WebSocketCallback:
             # Silently ignore send failures (connection may be closed)
             pass
 
+    def _close_connection(self) -> None:
+        """Gracefully close the WebSocket connection after completion."""
+        async def _close():
+            websocket = connection_manager.active_connections.get(self.execution_id)
+            if websocket:
+                try:
+                    await websocket.close(code=1000, reason="Agent completed")
+                except Exception:
+                    pass
+                connection_manager.disconnect(self.execution_id)
+
+        try:
+            future = asyncio.run_coroutine_threadsafe(_close(), self._loop)
+            future.result(timeout=5.0)
+        except Exception:
+            pass
+
     def on_plan_created(self, plan: Plan) -> None:
         """Called when the agent creates its execution plan.
 
@@ -257,6 +274,9 @@ class WebSocketCallback:
         }
         self._send_async("complete", payload)
 
+        # Gracefully close the WebSocket after sending complete
+        self._close_connection()
+
 
 async def run_agent_background(agent: "BaseAgent", execution_id: str) -> None:
     """Run an agent in the background with WebSocket streaming.
@@ -270,12 +290,29 @@ async def run_agent_background(agent: "BaseAgent", execution_id: str) -> None:
     """
     try:
         # Run the synchronous agent.run() in a thread pool
+        # Pass response_format so parse_with_gpt is called to convert text -> structured JSON
         loop = asyncio.get_running_loop()
-        result = await loop.run_in_executor(None, agent.run)
+        response_format = getattr(agent, 'response_model', None)
+        result = await loop.run_in_executor(
+            None,
+            lambda: agent.run(response_format=response_format)
+        )
 
         # Extract metrics from result
         iterations = result.get("iterations", 0) if isinstance(result, dict) else 0
         tokens = result.get("total_tokens", 0) if isinstance(result, dict) else 0
+
+        # Use parsed_output from parse_with_gpt if available (already validated Pydantic model)
+        # Otherwise fall back to final_answer
+        if "parsed_output" in result and result["parsed_output"] is not None:
+            # parse_with_gpt returns a Pydantic model instance, convert to dict for JSON
+            parsed = result["parsed_output"]
+            if hasattr(parsed, "model_dump"):
+                result["final_answer"] = parsed.model_dump()
+            else:
+                result["final_answer"] = parsed
+            # Remove parsed_output as it's a Pydantic model (not JSON serializable)
+            del result["parsed_output"]
 
         # Update execution state with result
         execution_manager.update_execution(
@@ -287,13 +324,26 @@ async def run_agent_background(agent: "BaseAgent", execution_id: str) -> None:
         )
 
         # Notify via WebSocket that execution is complete (includes final result)
-        if hasattr(agent, "state_callback") and isinstance(agent.state_callback, WebSocketCallback):
-            agent.state_callback.on_agent_finished(
-                execution_id=execution_id,
-                result=result,
-                iterations=iterations,
-                tokens=tokens,
-            )
+        # NOTE: We're in async context here, so use await directly instead of on_agent_finished
+        # (on_agent_finished uses run_coroutine_threadsafe which would deadlock the event loop)
+        # Only send JSON-serializable fields to frontend
+        websocket_payload = {
+            "execution_id": execution_id,
+            "final_answer": result.get("final_answer"),
+            "iterations": iterations,
+            "tokens": tokens,
+            "stop_reason": result.get("stop_reason"),
+        }
+        await connection_manager.send_message(execution_id, "complete", websocket_payload)
+
+        # Gracefully close WebSocket
+        websocket = connection_manager.active_connections.get(execution_id)
+        if websocket:
+            try:
+                await websocket.close(code=1000, reason="Agent completed")
+            except Exception:
+                pass
+            connection_manager.disconnect(execution_id)
 
     except Exception as e:
         # Update execution state with error

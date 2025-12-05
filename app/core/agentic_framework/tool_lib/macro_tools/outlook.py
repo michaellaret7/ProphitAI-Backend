@@ -2,7 +2,12 @@
 In the future this will be a tool that will pull the latest outlook from our macro analyst agent. But tonight we will just return a static outlook.
 """
 
-def get_outlook() -> str:
+def get_outlook() -> dict:
+    """Retrieve the current global macroeconomic outlook.
+
+    Returns:
+        dict: Structured response with success status and outlook data.
+    """
     outlook = """
     Global Macroeconomic Outlook – Next 12 Months
 
@@ -17,7 +22,7 @@ def get_outlook() -> str:
 
     United States: Resilience Meets Sticky Inflation
     * Growth: The U.S. economy continues to defy recession expectations. After growing an estimated 2.8% in 2024, GDP is projected to expand roughly 2.0% in 2025 and cool toward 1.7–2.1% in 2026. Consumer spending remains the backbone of this expansion, supported by a tight labor market and fiscal stimulus.
-    * Inflation: Unlike other advanced economies, U.S. inflation remains above the Federal Reserve’s 2% target, hovering near 3%. High wage growth and new import tariffs (highest since the 1930s) are keeping price pressures elevated. Inflation is expected to peak in mid-2026 as tariff effects materialize before drifting lower.
+    * Inflation: Unlike other advanced economies, U.S. inflation remains above the Federal Reserve's 2% target, hovering near 3%. High wage growth and new import tariffs (highest since the 1930s) are keeping price pressures elevated. Inflation is expected to peak in mid-2026 as tariff effects materialize before drifting lower.
     * Policy: The Federal Reserve is expected to hold rates at current restrictive levels in the near term. A gradual easing cycle may begin late in 2025 or 2026, bringing the fed funds rate to the mid-3% range by the end of 2026.
 
     Eurozone: Stability with Sluggishness
@@ -28,7 +33,7 @@ def get_outlook() -> str:
     China: Structural Deceleration & Policy Easing
     * Growth: The economy is decelerating, projected to grow 4.8–5.0% in 2025 before slowing to ~4.4% in 2026. A "two-speed" economy has emerged: high-tech and consumer services are gaining momentum, while the property sector and traditional industries remain in deep recession.
     * Inflation: China is verging on deflation, with CPI near 0%. Authorities are concerned about "too little" inflation, giving them ample room to stimulate.
-    * Policy: The People’s Bank of China (PBOC) is in easing mode, cutting rates and injecting liquidity. Fiscal policy is proactive, utilizing infrastructure spending and consumption incentives to offset the property market drag.
+    * Policy: The People's Bank of China (PBOC) is in easing mode, cutting rates and injecting liquidity. Fiscal policy is proactive, utilizing infrastructure spending and consumption incentives to offset the property market drag.
 
     Emerging Markets (EM): Leading the Cycle
     * Growth: EM economies are expanding at a moderate pace (~4.0–4.2%), with India and Southeast Asia leading due to supply chain diversification.
@@ -44,7 +49,7 @@ def get_outlook() -> str:
     * The ECB is neutral/dovish as inflation hits targets.
     * The PBOC is actively dovish to fight deflation.
     * EM Central Banks are cutting rates to support growth.
-    Investors face a mixed landscape where interest rate differentials may shift currency trends, particularly eroding the dollar’s yield advantage as U.S. rates eventually plateau.
+    Investors face a mixed landscape where interest rate differentials may shift currency trends, particularly eroding the dollar's yield advantage as U.S. rates eventually plateau.
 
     2. Labor Markets
     Labor markets remain historically tight but are cooling.
@@ -67,7 +72,7 @@ def get_outlook() -> str:
     * Technology & AI: The clear winner. Massive capital expenditure on AI, cloud computing, and semiconductors is fueling growth and equity market sentiment.
     * Services: continues to outpace manufacturing. Travel, hospitality, and business services remain robust.
     * Manufacturing: Remains in a soft patch globally, burdened by high interest rates and tariffs, though defense and renewable energy equipment are bright spots.
-    * Real Estate: The weakest link. China’s property crisis remains a systemic drag. In the West, commercial real estate (office) faces valuation risks from high rates and remote work trends.
+    * Real Estate: The weakest link. China's property crisis remains a systemic drag. In the West, commercial real estate (office) faces valuation risks from high rates and remote work trends.
 
     ### Major Risks
 
@@ -77,7 +82,12 @@ def get_outlook() -> str:
     * Fiscal Debt: Sustainable debt trajectories in the U.S. and some European nations pose medium-term risks to bond markets.
     """
 
-    return outlook
+    return {
+        "success": True,
+        "data": {
+            "outlook": outlook
+        }
+    }
 
 
 # Tool Schema Constants

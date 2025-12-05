@@ -1,5 +1,5 @@
 import uuid
-from typing import TYPE_CHECKING, Dict, Optional
+from typing import TYPE_CHECKING, List, Optional
 
 from pydantic import BaseModel, Field
 from typing_extensions import Literal
@@ -15,23 +15,43 @@ from .tool_registry import register_optimizer_tools
 if TYPE_CHECKING:
     from app.core.agentic_framework.base_agent.callbacks import StateCallback
 
-# NOTE: Tool add --> Add a portfolio compare tool to compare the new proposed portfolio to the old one that needed optimizaiton
 
 class PortfolioPosition(BaseModel):
-    allocation: float
-    position: Literal["long", "short"]
-    thesis: str
+    """Single position in the optimized portfolio."""
+    ticker: str = Field(description="Stock ticker symbol")
+    allocation: float = Field(description="Allocation as decimal between 0 and 1")
+    position: Literal["long", "short"] = Field(description="Position type")
+    thesis: str = Field(description="Investment thesis for this position")
 
-class PortfolioChanges(BaseModel):
-    added: Optional[Dict[str, str]] = Field(default_factory=dict, description="Tickers added and reasons")
-    removed: Optional[Dict[str, str]] = Field(default_factory=dict, description="Tickers removed and reasons")
-    adjusted: Optional[Dict[str, str]] = Field(default_factory=dict, description="Adjustments made and descriptions")
+
+class PortfolioChange(BaseModel):
+    """A single change made during optimization."""
+    ticker: str = Field(description="Stock ticker symbol")
+    change_type: Literal["added", "removed", "adjusted"] = Field(description="Type of change")
+    reason: str = Field(description="Reason for the change")
+
 
 class OptimizedPortfolio(BaseModel):
-    portfolio: Dict[str, PortfolioPosition] = Field(description="Optimized portfolio with ticker -> position details")
-    changes: PortfolioChanges = Field(description="Portfolio changes made during optimization")
+    """Complete output from the portfolio optimizer agent."""
+    # Portfolio positions as a list
+    portfolio: List[PortfolioPosition] = Field(
+        description="List of optimized portfolio positions"
+    )
+    # Changes as a list
+    changes: List[PortfolioChange] = Field(
+        description="List of changes made during optimization. Use empty list [] if none."
+    )
+    # Improvements - flat fields
+    sharpe_ratio: str = Field(description="Sharpe ratio change (e.g., 'Old: 1.82 -> New: 2.14'). Use 'N/A' if not calculated.")
+    annualized_volatility: str = Field(description="Volatility change. Use 'N/A' if not calculated.")
+    beta: str = Field(description="Beta change. Use 'N/A' if not calculated.")
+    correlation: str = Field(description="Correlation change. Use 'N/A' if not calculated.")
+    improvement_notes: str = Field(description="Additional notes on improvements. Use empty string if none.")
+
 
 class OptimizerAgent(BaseAgent):
+    response_model = OptimizedPortfolio  # Current test model - change to OptimizedPortfolio when using full optimizer prompts
+
     def __init__(
         self,
         portfolio_id: str,
@@ -84,18 +104,18 @@ class OptimizerAgent(BaseAgent):
         self.tickers_to_exclude = tickers_to_exclude
 
         # Build dynamic prompt with proper None handling
-        self.dynamic_user_prompt = self._build_dynamic_prompt()
+        dynamic_user_prompt = self._build_dynamic_prompt()
 
         super().__init__(
-            # provider="anthropic",
-            # model="claude-haiku-4-5",
-            provider="deepseek",
-            model="deepseek-chat",
+            provider="anthropic",
+            model="claude-sonnet-4-5-20250929",
+            # provider="deepseek",
+            # model="deepseek-chat",
             system_prompt=system_prompt,
-            user_prompt=self.dynamic_user_prompt,
+            user_prompt=dynamic_user_prompt,
             max_iterations=200,
             plan_first=True,
-            print_mode=PrintMode.DEBUG,
+            print_mode=PrintMode.PRODUCTION,
             state_callback=state_callback,
         )
 
@@ -124,4 +144,5 @@ class OptimizerAgent(BaseAgent):
             prompt = prompt.replace(placeholder, value)
 
         return prompt
+
 

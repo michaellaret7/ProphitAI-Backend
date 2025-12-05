@@ -38,7 +38,7 @@ class AiWatchlistAgent(BaseAgent):
             # provider="deepseek",
             # model="deepseek-chat",
             provider="anthropic",
-            model="claude-haiku-4-5",
+            model="claude-haiku-4-5-20251001",
             system_prompt=SYSTEM_PROMPT,
             user_prompt=self.user_prompt,
             max_iterations=80,
