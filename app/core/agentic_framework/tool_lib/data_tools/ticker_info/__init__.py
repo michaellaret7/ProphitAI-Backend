@@ -1,11 +1,17 @@
 """Ticker information and analysis tools.
 
 This module provides tools for ticker-specific data including:
+- Ticker metadata and company information
 - Stock peer analysis and comparison
 - Analyst price targets and consensus
 - Product segmentation and revenue breakdowns
 - Stock ratings and analyst recommendations
 """
+
+from .info import (
+    get_ticker_info,
+    GET_TICKER_INFO_TOOL,
+)
 
 from .peers import (
     get_ticker_peers,
@@ -28,6 +34,10 @@ from .ratings import (
 )
 
 __all__ = [
+    # Ticker info
+    'get_ticker_info',
+    'GET_TICKER_INFO_TOOL',
+
     # Peer analysis
     'get_ticker_peers',
     'GET_TICKER_PEERS_TOOL',

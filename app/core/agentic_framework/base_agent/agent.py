@@ -17,6 +17,8 @@ from app.core.agentic_framework.base_agent.utils.agent_message import UNIVERSAL_
 from app.core.agentic_framework.base_agent.utils.models import PrintMode
 from app.core.agentic_framework.base_agent.utils.path_utils import create_agent_output_dir
 from app.core.agentic_framework.base_agent.utils.resolve_llm import resolve_llm_and_client
+from pydantic import BaseModel
+from app.utils.gpt_parser import parse_with_gpt
 
 load_dotenv()
 
@@ -134,7 +136,7 @@ class BaseAgent:
 
         print(f"Registered tool: {name}")
 
-    def run(self) -> Dict[str, Any]:
+    def run(self, response_format: Optional[BaseModel] = None) -> Dict[str, Any]:
         """Execute the agent's main ReAct loop.
 
         Returns:
@@ -166,5 +168,13 @@ class BaseAgent:
         print(f"Total tokens: {result['total_tokens']}")
         print(f"Stop reason: {result['stop_reason']}")
         print(f"{'='*60}\n")
+
+        if response_format:
+            final_answer = (result.get("final_answer") or "").strip()
+            if final_answer:
+                result["parsed_output"] = parse_with_gpt(
+                    query=final_answer,
+                    target_model=response_format
+                )
 
         return result

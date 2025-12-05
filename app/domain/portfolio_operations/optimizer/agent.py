@@ -125,20 +125,3 @@ class OptimizerAgent(BaseAgent):
 
         return prompt
 
-    def run(self):
-        result = super().run()  # Run main BaseAgent workflow
-
-        final_text = (result.get("final_text") or "").strip()
-
-        if not final_text:
-            return result
-
-        # Use dict-specific parser (avoids OpenAI structured output issues with Dict fields)
-        result["final_text"] = self.utilities.parse_agent_dict_output(
-            final_text=final_text,
-            response_format=OptimizedPortfolio,
-            verbose=self.verbose
-        )
-
-        return result["final_text"]
-

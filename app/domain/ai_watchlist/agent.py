@@ -3,9 +3,31 @@ from app.core.agentic_framework.base_agent.callbacks import StateCallback
 from app.core.agentic_framework.base_agent.utils.models import PrintMode
 from app.core.agentic_framework.tool_lib.data_tools.screeners.equity_screener import EQUITY_SCREENER_TOOL
 from app.core.agentic_framework.tool_lib.data_tools.screeners.etf_screener import ETF_SCREENER_TOOL
-
+from app.core.agentic_framework.tool_lib.data_tools.sectors import GET_SECTOR_PERFORMANCE_TOOL, GET_SECTOR_PE_TOOL
+from app.core.agentic_framework.tool_lib.data_tools.factors import GET_INDUSTRY_FACTOR_BENCHMARK_TOOL, GET_SUB_INDUSTRY_FACTOR_BENCHMARK_TOOL
+from app.core.agentic_framework.tool_lib.ticker_tools.performance import GET_TICKER_PERFORMANCE_AND_RISK_TOOL
+from app.core.agentic_framework.tool_lib.ticker_tools.factors import CALCULATE_TICKER_FACTORS_TOOL
+from app.core.agentic_framework.tool_lib.data_tools.ticker_fundamentals import GET_TICKER_FUNDAMENTAL_DATA_TOOL
+from app.core.agentic_framework.tool_lib.data_tools.ticker_fundamentals.ttm_ratios import GET_RATIOS_TTM_TOOL
+from app.core.agentic_framework.tool_lib.data_tools.ticker_info import GET_PRODUCT_SEGMENTATION_TOOL, GET_TICKER_PEERS_TOOL
+from app.core.agentic_framework.tool_lib.data_tools.ticker_info.info import GET_TICKER_INFO_TOOL
 from app.domain.ai_watchlist.prompts import SYSTEM_PROMPT, USER_PROMPT_TEMPLATE
-from typing import Optional
+from typing import Optional, List
+from pydantic import BaseModel, Field
+
+class WatchlistItem(BaseModel):
+    """A single ticker recommendation in the watchlist."""
+    ticker: str = Field(..., description="Stock or ETF ticker symbol")
+    name: str = Field(..., description="Full name of the security")
+    theme_fit: str = Field(..., description="Explanation of how this ticker aligns with the investment theme")
+    rationale: str = Field(..., description="Explanation of why this ticker will have strong future returns and performance potential")
+    key_metrics: str = Field(..., description="Financial performance and risk metrics summary")
+
+
+class WatchlistResponse(BaseModel):
+    """Complete AI watchlist response containing recommended tickers."""
+    investment_thesis: str = Field(..., description="Overall investment thesis for the watchlist theme")
+    watchlist: List[WatchlistItem] = Field(..., description="List of recommended tickers")
 
 class AiWatchlistAgent(BaseAgent):
     def __init__(self, user_preferences: str, state_callback: Optional["StateCallback"] = None):
@@ -13,9 +35,13 @@ class AiWatchlistAgent(BaseAgent):
         self.user_prompt = self._build_user_prompt()
         
         super().__init__(
+            # provider="deepseek",
+            # model="deepseek-chat",
+            provider="anthropic",
+            model="claude-haiku-4-5",
             system_prompt=SYSTEM_PROMPT,
             user_prompt=self.user_prompt,
-            max_iterations=50,
+            max_iterations=80,
             plan_first=True,
             print_mode=PrintMode.DEBUG,
             state_callback=state_callback,
@@ -27,7 +53,19 @@ class AiWatchlistAgent(BaseAgent):
             ETF_SCREENER_TOOL,
 
             #  Ticker Analysis Tools
+            GET_TICKER_PERFORMANCE_AND_RISK_TOOL,
+            CALCULATE_TICKER_FACTORS_TOOL,
+            GET_TICKER_FUNDAMENTAL_DATA_TOOL,
+            GET_RATIOS_TTM_TOOL,
+            GET_PRODUCT_SEGMENTATION_TOOL,
+            GET_TICKER_PEERS_TOOL,
+            GET_TICKER_INFO_TOOL,
 
+            #  Sector Analysis Tools
+            GET_SECTOR_PERFORMANCE_TOOL,
+            GET_SECTOR_PE_TOOL,
+            GET_INDUSTRY_FACTOR_BENCHMARK_TOOL,
+            GET_SUB_INDUSTRY_FACTOR_BENCHMARK_TOOL
         ]
 
         for tool in tools:
@@ -37,7 +75,25 @@ class AiWatchlistAgent(BaseAgent):
                 parameters=tool["parameters"],
                 function=tool["function"]
             )
+        
+    def _build_user_prompt(self) -> str:
+        return USER_PROMPT_TEMPLATE.format(user_query=self.user_preferences)
 
 
-    def _build_user_prompt(self) -> str:  # ← Now at class level (correct)
-        return USER_PROMPT_TEMPLATE.replace("{{USER_PREFERENCES}}", self.user_preferences)
+if __name__ == "__main__":
+    import time
+    start_time = time.time()
+    agent = AiWatchlistAgent(
+        user_preferences="Build me a watchlist of 5-10 tickers in the Airlines/Aviation field that are very value/quality driven with strong growth outlook. "
+    )
+    print(agent)
+    result = agent.run(response_format=WatchlistResponse)
+    end_time = time.time()
+    print(f"Time taken: {end_time - start_time:.4f} seconds")
+
+    if result.get("parsed_output"):
+        print(result["parsed_output"].model_dump_json(indent=2))
+    else:
+        print("Raw answer:", result["final_answer"])
+
+

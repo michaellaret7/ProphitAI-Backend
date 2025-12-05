@@ -31,13 +31,13 @@ def parse_with_gpt(query: str, target_model: Type[T], system_prompt: str = None)
     Returns:
         Parsed instance of target_model
     """
-    # model, client = openai_model_and_client('gpt-4o')
-    model, client = huggingface_model_and_client(model="openai/gpt-oss-120b:fireworks-ai")
+    model, client = openai_model_and_client('gpt-5-mini')
+    # model, client = huggingface_model_and_client(model="openai/gpt-oss-120b:fireworks-ai")
 
     if system_prompt is None:
         system_prompt = f"""Parse the user's input into the requested structured format.
         Extract all relevant information and populate the fields accurately.
-        If information is not provided, leave fields as None/null."""
+        If information is not provided, leave fields as None/null, do not make up any information."""
 
     completion = client.chat.completions.parse(
         model=model,
@@ -45,7 +45,8 @@ def parse_with_gpt(query: str, target_model: Type[T], system_prompt: str = None)
             {"role": "system", "content": system_prompt},
             {"role": "user", "content": query}
         ],
-        response_format=target_model
+        response_format=target_model,
+        reasoning_effort="low"
     )
 
     return completion.choices[0].message.parsed
