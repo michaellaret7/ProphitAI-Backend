@@ -57,9 +57,9 @@ USER_PROMPT_TEMPLATE = """
 
 <instructions>
 1. First, articulate what characteristics define securities matching this request
-    a. Map them out in a list of criteria.
+    a. Map them out in a list of criteria that can be screened for.
 2. Then use screeners to build an initial candidate universe
-    a. Use the screeners to build an initial candidate universe.
+    a. Use the screeners to build an initial candidate universe based on the criteria from the previous step.
 3. Analyze top candidates with performance, factor, and fundamental tools
     a. Analyze the top candidates with performance, factor, and fundamental tools.
 4. Construct the final watchlist with data-backed justifications
