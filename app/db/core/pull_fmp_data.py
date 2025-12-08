@@ -128,11 +128,16 @@ class FMP_API_DATA:
         url = f"https://financialmodelingprep.com/stable/revenue-geographic-segmentation?symbol={ticker}"
         return self._make_fmp_api_request(url)
 
-    def get_etf_holdings(self, ticker: str):
+    def get_etf_holdings(self, ticker: str, page: int = 0, limit: int = 100):
         """
         Retrieves holdings for a given ETF or mutual fund.
+
+        Args:
+            ticker (str): The ETF ticker symbol (e.g., 'SPY').
+            page (int): Page number for pagination (default: 0).
+            limit (int): Number of results per page (default: 100).
         """
-        url = f"https://financialmodelingprep.com/stable/etf/holdings?symbol={ticker}"
+        url = f"https://financialmodelingprep.com/stable/etf/holdings?symbol={ticker}&page={page}&limit={limit}"
         return self._make_fmp_api_request(url)
 
     def get_etf_info(self, ticker: str):
@@ -149,11 +154,16 @@ class FMP_API_DATA:
         url = f"https://financialmodelingprep.com/stable/etf/country-weightings?symbol={ticker}"
         return self._make_fmp_api_request(url)
 
-    def get_dividends(self, ticker: str):
+    def get_dividends(self, ticker: str, page: int = 0, limit: int = 100):
         """
         Retrieves dividend information for a given stock.
+
+        Args:
+            ticker (str): The stock ticker symbol (e.g., 'AAPL').
+            page (int): Page number for pagination (default: 0).
+            limit (int): Number of results per page (default: 100).
         """
-        url = f"https://financialmodelingprep.com/stable/dividends?symbol={ticker}"
+        url = f"https://financialmodelingprep.com/stable/dividends?symbol={ticker}&page={page}&limit={limit}"
         return self._make_fmp_api_request(url)
 
     def get_press_releases(self, ticker: str, limit: int = 1000, from_date: str = None, to_date: str = None):
@@ -417,7 +427,7 @@ class FMP_API_DATA:
         url = f"https://financialmodelingprep.com/stable/esg-disclosures?symbol={ticker}"
         return self._make_fmp_api_request(url)
  
-    def get_institutional_holder_analytics(self, ticker: str, year: int, quarter: int):
+    def get_institutional_holder_analytics(self, ticker: str, year: int, quarter: int, page: int = 0, limit: int = 100):
         """
         Retrieves institutional ownership analytics for a given stock ticker.
         Returns holder analytics data for specified year and quarter.
@@ -426,8 +436,10 @@ class FMP_API_DATA:
             ticker (str): The stock ticker symbol (e.g., 'AAPL').
             year (int): The year (e.g., 2025).
             quarter (int): The quarter (1-4).
+            page (int): Page number for pagination (default: 0).
+            limit (int): Number of results per page (default: 100).
         """
-        url = f"https://financialmodelingprep.com/stable/institutional-ownership/extract-analytics/holder?symbol={ticker}&year={year}&quarter={quarter}"
+        url = f"https://financialmodelingprep.com/stable/institutional-ownership/extract-analytics/holder?symbol={ticker}&year={year}&quarter={quarter}&page={page}&limit={limit}"
         return self._make_fmp_api_request(url)
 
     def get_institutional_positions_summary(self, ticker: str, year: int, quarter: int):
@@ -443,19 +455,6 @@ class FMP_API_DATA:
         url = f"https://financialmodelingprep.com/stable/institutional-ownership/symbol-positions-summary?symbol={ticker}&year={year}&quarter={quarter}"
         return self._make_fmp_api_request(url)
 
-    def get_institutional_holder_analytics(self, ticker: str, year: int, quarter: int):
-        """
-        Retrieves institutional ownership analytics for a given stock ticker.
-        Returns holder analytics data for specified year and quarter.
-
-        Args:
-            ticker (str): The stock ticker symbol (e.g., 'AAPL').
-            year (int): The year (e.g., 2025).
-            quarter (int): The quarter (1-4).
-        """
-        url = f"https://financialmodelingprep.com/stable/institutional-ownership/extract-analytics/holder?symbol={ticker}&year={year}&quarter={quarter}"
-        return self._make_fmp_api_request(url)
-    
     def get_historical_sector_performance(self, sector: str, from_date: str = None, to_date: str = None):
         """
         Retrieves historical sector performance for a given sector.
@@ -1144,14 +1143,18 @@ class FMP_API_DATA:
         return self._make_fmp_api_request(url)
 
     # Form 13F / Institutional Ownership Endpoints
-    def get_institutional_ownership_latest(self):
+    def get_institutional_ownership_latest(self, page: int = 0, limit: int = 100):
         """
         Retrieves the latest institutional ownership filings.
+
+        Args:
+            page (int): Page number for pagination (default: 0).
+            limit (int): Number of results per page (default: 100).
         """
-        url = "https://financialmodelingprep.com/stable/institutional-ownership/latest"
+        url = f"https://financialmodelingprep.com/stable/institutional-ownership/latest?page={page}&limit={limit}"
         return self._make_fmp_api_request(url)
 
-    def get_institutional_ownership_extract(self, cik: str, year: int, quarter: int):
+    def get_institutional_ownership_extract(self, cik: str, year: int, quarter: int, page: int = 0, limit: int = 100):
         """
         Retrieves institutional ownership extract for a specific CIK, year, and quarter.
 
@@ -1159,8 +1162,10 @@ class FMP_API_DATA:
             cik (str): The CIK number of the institution.
             year (int): The year (e.g., 2024).
             quarter (int): The quarter (1-4).
+            page (int): Page number for pagination (default: 0).
+            limit (int): Number of results per page (default: 100).
         """
-        url = f"https://financialmodelingprep.com/stable/institutional-ownership/extract?cik={cik}&year={year}&quarter={quarter}"
+        url = f"https://financialmodelingprep.com/stable/institutional-ownership/extract?cik={cik}&year={year}&quarter={quarter}&page={page}&limit={limit}"
         return self._make_fmp_api_request(url)
 
     def get_institutional_ownership_dates(self, cik: str):
@@ -1173,7 +1178,7 @@ class FMP_API_DATA:
         url = f"https://financialmodelingprep.com/stable/institutional-ownership/dates?cik={cik}"
         return self._make_fmp_api_request(url)
 
-    def get_institutional_holder_performance(self, ticker: str, year: int, quarter: int):
+    def get_institutional_holder_performance(self, ticker: str, year: int, quarter: int, page: int = 0, limit: int = 100):
         """
         Retrieves institutional holder performance summary for a given stock.
 
@@ -1181,11 +1186,13 @@ class FMP_API_DATA:
             ticker (str): The stock ticker symbol (e.g., 'AAPL').
             year (int): The year (e.g., 2024).
             quarter (int): The quarter (1-4).
+            page (int): Page number for pagination (default: 0).
+            limit (int): Number of results per page (default: 100).
         """
-        url = f"https://financialmodelingprep.com/stable/institutional-ownership/holder-performance-summary?symbol={ticker}&year={year}&quarter={quarter}"
+        url = f"https://financialmodelingprep.com/stable/institutional-ownership/holder-performance-summary?symbol={ticker}&year={year}&quarter={quarter}&page={page}&limit={limit}"
         return self._make_fmp_api_request(url)
 
-    def get_institutional_holder_industry_breakdown(self, cik: str, year: int, quarter: int):
+    def get_institutional_holder_industry_breakdown(self, cik: str, year: int, quarter: int, page: int = 0, limit: int = 100):
         """
         Retrieves institutional holder industry breakdown.
 
@@ -1193,11 +1200,13 @@ class FMP_API_DATA:
             cik (str): The CIK number of the institution.
             year (int): The year (e.g., 2024).
             quarter (int): The quarter (1-4).
+            page (int): Page number for pagination (default: 0).
+            limit (int): Number of results per page (default: 100).
         """
-        url = f"https://financialmodelingprep.com/stable/institutional-ownership/holder-industry-breakdown?cik={cik}&year={year}&quarter={quarter}"
+        url = f"https://financialmodelingprep.com/stable/institutional-ownership/holder-industry-breakdown?cik={cik}&year={year}&quarter={quarter}&page={page}&limit={limit}"
         return self._make_fmp_api_request(url)
 
-    def get_institutional_industry_summary(self, industry: str, year: int, quarter: int):
+    def get_institutional_industry_summary(self, industry: str, year: int, quarter: int, page: int = 0, limit: int = 100):
         """
         Retrieves institutional ownership summary by industry.
 
@@ -1205,8 +1214,10 @@ class FMP_API_DATA:
             industry (str): The industry name.
             year (int): The year (e.g., 2024).
             quarter (int): The quarter (1-4).
+            page (int): Page number for pagination (default: 0).
+            limit (int): Number of results per page (default: 100).
         """
-        url = f"https://financialmodelingprep.com/stable/institutional-ownership/industry-summary?industry={industry}&year={year}&quarter={quarter}"
+        url = f"https://financialmodelingprep.com/stable/institutional-ownership/industry-summary?industry={industry}&year={year}&quarter={quarter}&page={page}&limit={limit}"
         return self._make_fmp_api_request(url)
 
     # Analyst Endpoints
@@ -1724,58 +1735,74 @@ class FMP_API_DATA:
         return self._make_fmp_api_request(url)
 
     # Senate & House Trading Endpoints
-    def get_senate_trading_latest(self):
+    def get_senate_trading_latest(self, page: int = 0, limit: int = 100):
         """
         Retrieves the latest Senate trading disclosures.
+
+        Args:
+            page (int): Page number for pagination (default: 0).
+            limit (int): Number of results per page (default: 100).
         """
-        url = "https://financialmodelingprep.com/stable/senate-latest"
+        url = f"https://financialmodelingprep.com/stable/senate-latest?page={page}&limit={limit}"
         return self._make_fmp_api_request(url)
 
-    def get_house_trading_latest(self):
+    def get_house_trading_latest(self, page: int = 0, limit: int = 100):
         """
         Retrieves the latest House trading disclosures.
+
+        Args:
+            page (int): Page number for pagination (default: 0).
+            limit (int): Number of results per page (default: 100).
         """
-        url = "https://financialmodelingprep.com/stable/house-latest"
+        url = f"https://financialmodelingprep.com/stable/house-latest?page={page}&limit={limit}"
         return self._make_fmp_api_request(url)
 
-    def get_senate_trades(self, ticker: str):
+    def get_senate_trades(self, ticker: str, page: int = 0, limit: int = 100):
         """
         Retrieves Senate trading disclosures for a specific stock ticker.
 
         Args:
             ticker (str): The stock ticker symbol (e.g., 'AAPL').
+            page (int): Page number for pagination (default: 0).
+            limit (int): Number of results per page (default: 100).
         """
-        url = f"https://financialmodelingprep.com/stable/senate-trades?symbol={ticker}"
+        url = f"https://financialmodelingprep.com/stable/senate-trades?symbol={ticker}&page={page}&limit={limit}"
         return self._make_fmp_api_request(url)
 
-    def get_senate_trades_by_name(self, name: str):
+    def get_senate_trades_by_name(self, name: str, page: int = 0, limit: int = 100):
         """
         Retrieves Senate trading disclosures by senator name.
 
         Args:
             name (str): The senator's name.
+            page (int): Page number for pagination (default: 0).
+            limit (int): Number of results per page (default: 100).
         """
-        url = f"https://financialmodelingprep.com/stable/senate-trades-by-name?name={name}"
+        url = f"https://financialmodelingprep.com/stable/senate-trades-by-name?name={name}&page={page}&limit={limit}"
         return self._make_fmp_api_request(url)
 
-    def get_house_trades(self, ticker: str):
+    def get_house_trades(self, ticker: str, page: int = 0, limit: int = 100):
         """
         Retrieves House trading disclosures for a specific stock ticker.
 
         Args:
             ticker (str): The stock ticker symbol (e.g., 'AAPL').
+            page (int): Page number for pagination (default: 0).
+            limit (int): Number of results per page (default: 100).
         """
-        url = f"https://financialmodelingprep.com/stable/house-trades?symbol={ticker}"
+        url = f"https://financialmodelingprep.com/stable/house-trades?symbol={ticker}&page={page}&limit={limit}"
         return self._make_fmp_api_request(url)
 
-    def get_house_trades_by_name(self, name: str):
+    def get_house_trades_by_name(self, name: str, page: int = 0, limit: int = 100):
         """
         Retrieves House trading disclosures by representative name.
 
         Args:
             name (str): The representative's name.
+            page (int): Page number for pagination (default: 0).
+            limit (int): Number of results per page (default: 100).
         """
-        url = f"https://financialmodelingprep.com/stable/house-trades-by-name?name={name}"
+        url = f"https://financialmodelingprep.com/stable/house-trades-by-name?name={name}&page={page}&limit={limit}"
         return self._make_fmp_api_request(url)
 
     # ESG Endpoints
