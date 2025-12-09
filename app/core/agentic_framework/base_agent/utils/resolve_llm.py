@@ -55,6 +55,8 @@ def resolve_llm_and_client(
             model = "openai/gpt-oss-120b"
         elif model == "Qwen3-235B-Instruct":
             model = "Qwen/Qwen3-235B-A22B-Instruct-2507-tput"
+        elif model == "Qwen3-80B-A3B-Thinking":
+            model = "Qwen/Qwen3-Next-80B-A3B-Thinking"
         elif model == "Kimi-K2-Thinking":
             model = "moonshotai/Kimi-K2-Thinking"
         elif model == "Kimi-K2-Instruct":

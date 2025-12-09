@@ -82,8 +82,4 @@ USER_PROMPT_TEMPLATE = """
     ]
 }}
 </output_format>
-
-<important_rules>
-- You must run the ticker tools in batches
-</important_rules>
 """

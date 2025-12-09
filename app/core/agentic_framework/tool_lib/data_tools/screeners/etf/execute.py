@@ -61,13 +61,17 @@ def execute_query(**kwargs) -> tuple[List[ETFScreenerResult] | None, str | None]
             for key in kwargs:
                 if key in LIST_TO_COLUMN:
                     continue  # Skip list filters, already have sector/industry/sub_industry
+                # Skip parameters that have no actual filter values (e.g., [None, None])
+                param_value = kwargs[key]
+                if isinstance(param_value, (list, tuple)) and all(v is None for v in param_value):
+                    continue
                 # Get value from appropriate model
                 if key in TICKER_FIELDS:
-                    value = float(getattr(ticker, key, None))
+                    raw_value = getattr(ticker, key, None)
                 else:
-                    value = float(getattr(etf_screener, key, None))
-                if value is not None:
-                    data[key] = value
+                    raw_value = getattr(etf_screener, key, None)
+                if raw_value is not None:
+                    data[key] = float(raw_value)
 
             results.append(ETFScreenerResult(**data))
 
