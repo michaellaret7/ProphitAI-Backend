@@ -12,7 +12,7 @@ from app.core.agentic_framework.base_agent.utils.models import PrintMode
 from app.core.agentic_framework.base_agent.base_tool_registry import register_base_tools
 from app.core.agentic_framework.base_agent.utils.path_utils import create_agent_output_dir
 from app.core.agentic_framework.base_agent.logging.notes import ensure_notes_file
-from app.core.agentic_framework.base_agent.utils.sub_agent_message import SUB_AGENT_MESSAGE
+from app.core.agentic_framework.base_agent.utils.messages.sub_agent_message import SUB_AGENT_MESSAGE
 from datetime import datetime
 from typing import Optional
 

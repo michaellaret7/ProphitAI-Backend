@@ -13,6 +13,11 @@ from app.core.agentic_framework.base_agent.execution.utils import (
     extract_final_answer,
     build_plan_context
 )
+from app.core.agentic_framework.base_agent.utils.messages.message_utils import remove_system_messages
+from app.core.agentic_framework.base_agent.utils.messages.execution_loop_msg import (
+    THINK_DEEPLY_MESSAGE,
+    get_finalize_rejected_message
+)
 from app.core.agentic_framework.base_agent.execution.tool_handler_async import (
     should_run_parallel,
     execute_tools_parallel
@@ -20,6 +25,8 @@ from app.core.agentic_framework.base_agent.execution.tool_handler_async import (
 from app.core.agentic_framework.base_agent.logging.message_logger import write_messages_to_yaml
 from app.core.agentic_framework.tool_lib.base_tools.edit_plan import edit_plan
 from app.core.agentic_framework.base_agent.planning.plan_progress import get_plan_progress
+import traceback
+
 if TYPE_CHECKING:
     from ..agent import BaseAgent
 
@@ -104,12 +111,13 @@ class ExecutionLoop:
                         "content": plan_context
                     })
 
-            # Inject available notes reminder (updated each iteration)
-            # Remove old notes message and inject fresh one with current titles
-            self.agent.messages = [
-                msg for msg in self.agent.messages
-                if not (msg.get("role") == "system" and "AVAILABLE NOTES IN NOTEBOOK" in msg.get("content", ""))
-            ]
+            # Remove old system messages before re-injecting fresh versions
+            self.agent.messages = remove_system_messages(
+                self.agent.messages,
+                patterns=["AVAILABLE NOTES IN NOTEBOOK", "## THINK DEEPLY THIS ITERATION"]
+            )
+
+            # Inject available notes reminder if notes exist
             if self.agent.note_titles:
                 notes_list = "\n".join(f"  - {title}" for title in self.agent.note_titles)
                 self.agent.messages.append({
@@ -121,31 +129,10 @@ class ExecutionLoop:
                     )
                 })
 
-            # Inject per-turn THINK reminder (ephemeral) - maximizes reasoning at each iteration
-            self.agent.messages = [
-                msg for msg in self.agent.messages
-                if not (msg.get("role") == "system" and "## THINK DEEPLY THIS ITERATION" in msg.get("content", ""))
-            ]
+            # Inject per-turn THINK reminder
             self.agent.messages.append({
                 "role": "system",
-                "content": (
-                    "## THINK DEEPLY THIS ITERATION\n\n"
-                    "Before acting, engage in RIGOROUS thinking. Follow your PER-TURN OUTPUT SCHEMA.\n\n"
-                    "**If tool results exist above, analyze them deeply:**\n"
-                    "- What are the specific numbers/metrics? What do they MEAN in context?\n"
-                    "- What patterns, anomalies, or insights emerge from this data?\n"
-                    "- How does this integrate with previous findings? Does it confirm or contradict earlier hypotheses?\n"
-                    "- What are the limitations, caveats, or gaps in this data?\n"
-                    "- What is the CUMULATIVE picture emerging from all findings so far?\n\n"
-                    "**Then plan your next action strategically:**\n"
-                    "- What specific question am I answering? How does this advance my goal?\n"
-                    "- What alternatives exist? Why is my chosen approach superior?\n"
-                    "- If calling tools: which tools, what parameters, and WHY these specific choices?\n"
-                    "- What do I expect to learn? How will I use this information?\n"
-                    "- Self-critique: Am I being thorough enough? Any unjustified assumptions? Overlooked angles?\n\n"
-                    "Be COMPREHENSIVE in analysis, STRATEGIC in planning, and RIGOROUS in self-evaluation.\n"
-                    "Depth and precision over speed. Think like an expert analyst, not a task-completion robot.\n"
-                )
+                "content": THINK_DEEPLY_MESSAGE
             })
 
             # Record message index for iteration banner (after all system message injection)
@@ -252,23 +239,7 @@ class ExecutionLoop:
                                 else:
                                     self.agent.messages.append({
                                         "role": "system",
-                                        "content": (
-                                            "## FINALIZE REJECTED - INCOMPLETE TASKS DETECTED\n\n"
-                                            "You attempted to call the finalize tool but your plan has INCOMPLETE TASKS.\n"
-                                            "This is NOT allowed. You MUST complete ALL tasks before finalizing.\n\n"
-                                            f"**Remaining Tasks:**\n{progress}\n\n"
-                                            "**REQUIRED ACTIONS - YOU MUST DO ONE OF THE FOLLOWING:**\n\n"
-                                            "**OPTION 1:** If you already completed the work but forgot to update task status:\n"
-                                            "- Call update_tasks() with status='complete' and work_summary for EACH task\n\n"
-                                            "**OPTION 2:** If you have NOT completed the work:\n"
-                                            "- Execute the remaining tasks NOW\n"
-                                            "- Mark each task complete with update_tasks() after finishing\n"
-                                            "- THEN call finalize\n\n"
-                                            "**PROHIBITED ACTIONS:**\n"
-                                            "- DO NOT call finalize again until ALL tasks show status='complete'\n"
-                                            "- DO NOT skip tasks or mark them complete without doing the work\n"
-                                            "- DO NOT attempt to bypass this check - it will be rejected every time\n"
-                                        )
+                                        "content": get_finalize_rejected_message(progress)
                                     })
 
                     except StopIteration:
@@ -282,8 +253,9 @@ class ExecutionLoop:
                     })
 
             except Exception as e:
-                if self.agent.print_mode == PrintMode.DEBUG:
-                    print(f"⚠️ Error in iteration {i}: {e}")
+                # Always print errors (not just in DEBUG mode)
+                print(f"⚠️ Error in iteration {i}: {e}") # NOTE: This is the error that is printed to the console
+                traceback.print_exc()
                 continue
 
         return {

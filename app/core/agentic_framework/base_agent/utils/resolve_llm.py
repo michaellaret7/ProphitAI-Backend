@@ -10,7 +10,7 @@ from app.utils.choose_model_and_client import (
     perplexity_model_and_client,
     huggingface_model_and_client,
     gemini_model_and_client,
-    llama_model_and_client,
+    together_model_and_client,
 )
 
 
@@ -50,8 +50,8 @@ def resolve_llm_and_client(
         return huggingface_model_and_client(model=model)
     if provider_key == "gemini":
         return gemini_model_and_client(model=model)
-    if provider_key in ("llama", "together", "together_ai"):
-        return llama_model_and_client(model=model)
+    if provider_key in ("together", "together_ai"):
+        return together_model_and_client(model=model)
 
     raise ValueError(f"Unsupported provider: {provider}")
 

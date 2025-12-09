@@ -13,7 +13,7 @@ from app.core.agentic_framework.base_agent.execution.execution_loop import Execu
 from app.core.agentic_framework.base_agent.execution.tool_handler import ToolHandler
 from app.core.agentic_framework.base_agent.logging.notes import ensure_notes_file
 from app.core.agentic_framework.base_agent.base_tool_registry import register_base_tools
-from app.core.agentic_framework.base_agent.utils.agent_message import UNIVERSAL_AGENT_MESSAGE
+from app.core.agentic_framework.base_agent.utils.messages.agent_message import UNIVERSAL_AGENT_MESSAGE
 from app.core.agentic_framework.base_agent.utils.models import PrintMode
 from app.core.agentic_framework.base_agent.utils.path_utils import create_agent_output_dir
 from app.core.agentic_framework.base_agent.utils.resolve_llm import resolve_llm_and_client

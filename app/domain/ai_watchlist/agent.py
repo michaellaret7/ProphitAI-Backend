@@ -21,13 +21,21 @@ class AiWatchlistAgent(BaseAgent):
         self.user_prompt = self._build_user_prompt()
         
         super().__init__(
-            provider="deepseek",
-            model="deepseek-chat",
+            # provider="deepseek",
+            # model="deepseek-chat",
             # provider="anthropic",
+            # model="claude-haiku-4-5-20251001",
             # model="claude-sonnet-4-5-20250929",
+            provider="openai",
+            model="gpt-4.1",
+            # provider="together",
+            # model="openai/gpt-oss-120b",
+            # model="Qwen/Qwen3-235B-A22B-Thinking-2507",
+            # model="Qwen/Qwen3-235B-A22B-Instruct-2507-tput",
+            # model="moonshotai/Kimi-K2-Thinking",
             system_prompt=SYSTEM_PROMPT,
             user_prompt=self.user_prompt,
-            max_iterations=80,
+            max_iterations=200,
             plan_first=True,
             print_mode=PrintMode.VERBOSE,
             state_callback=state_callback,
@@ -71,7 +79,9 @@ if __name__ == "__main__":
     import time
     start_time = time.time()
     agent = AiWatchlistAgent(
-        user_preferences="Build me a watchlist of 5-10 low beta tickers that benefit from continued AI adoption and infrastructure buildout."
+        user_preferences=
+        "Build me a watchlist of mining companies that have spent heavy amounts on capital expenditures in the last 5 years(today is 12/9/2025) and are now looking to have their capital expenditures pay off and start turning a profit in the next 1-2 years.\n"
+        "I want to see companies that have made these capex investments recently, and in the coming years will start to see the benefits of those investments, NOT companies that have already reaped the benefits of their investments or companies that are just beginning their capex programs."
     )
     print(agent)
     result = agent.run(response_format=WatchlistResponse)
