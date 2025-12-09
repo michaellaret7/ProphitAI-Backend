@@ -21,15 +21,15 @@ class AiWatchlistAgent(BaseAgent):
         self.user_prompt = self._build_user_prompt()
         
         super().__init__(
-            # provider="deepseek",
-            # model="deepseek-chat",
-            provider="anthropic",
-            model="claude-haiku-4-5-20251001",
+            provider="deepseek",
+            model="deepseek-chat",
+            # provider="anthropic",
+            # model="claude-sonnet-4-5-20250929",
             system_prompt=SYSTEM_PROMPT,
             user_prompt=self.user_prompt,
             max_iterations=80,
             plan_first=True,
-            print_mode=PrintMode.DEBUG,
+            print_mode=PrintMode.PRODUCTION,
             state_callback=state_callback,
         )
     
@@ -70,7 +70,7 @@ if __name__ == "__main__":
     import time
     start_time = time.time()
     agent = AiWatchlistAgent(
-        user_preferences="Build me a watchlist of 5-10 tickers in the Airlines/Aviation field that are very value/quality driven with strong growth outlook. "
+        user_preferences="Build me a watchlist of 5-10 low beta tickers that benefit from continued AI adoption and infrastructure buildout."
     )
     print(agent)
     result = agent.run(response_format=WatchlistResponse)
