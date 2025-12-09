@@ -4,6 +4,7 @@ from app.db.core.db_config import MarketSession
 from app.db.core.models.market_data_models import Ticker, EquityScreener
 from app.utils.serialize_output import serialize_sqlalchemy_obj
 from typing import List
+from app.core.agentic_framework.tool_lib.data_tools.screeners.find_similar_section import find_similar_sections, format_invalid_sections_error
 
 TICKER_FIELDS = {'sectors', 'industries', 'sub_industries', 'price', 'market_cap', 'avg_volume', 'eps', 'pe', 'dollar_volume'}
 LIST_TO_COLUMN = {'sectors': 'sector', 'industries': 'industry', 'sub_industries': 'sub_industry'}
@@ -89,18 +90,24 @@ def build_query(
         valid_sub_industries = {row[0] for row in session.query(Ticker.sub_industry).distinct().filter(Ticker.sector != 'etf').all()}
 
     # Validate list inputs
+    errors = []
     if sectors:
-        invalid = set(sectors) - valid_sectors
-        if invalid:
-            return f"Invalid sectors: {invalid}"
+        invalid_sectors = set(sectors) - valid_sectors
+        if invalid_sectors:
+            similar_sectors = find_similar_sections(invalid_sectors, valid_sectors)
+            errors.append(format_invalid_sections_error("sectors", invalid_sectors, similar_sectors))
     if industries:
-        invalid = set(industries) - valid_industries
-        if invalid:
-            return f"Invalid industries: {invalid}"
+        invalid_industries = set(industries) - valid_industries
+        if invalid_industries:
+            similar_industries = find_similar_sections(invalid_industries, valid_industries)
+            errors.append(format_invalid_sections_error("industries", invalid_industries, similar_industries))
     if sub_industries:
-        invalid = set(sub_industries) - valid_sub_industries
-        if invalid:
-            return f"Invalid sub_industries: {invalid}"
+        invalid_sub_industries = set(sub_industries) - valid_sub_industries
+        if invalid_sub_industries:
+            similar_sub_industries = find_similar_sections(invalid_sub_industries, valid_sub_industries)
+            errors.append(format_invalid_sections_error("sub_industries", invalid_sub_industries, similar_sub_industries))
+    if errors:
+        return "\n".join(errors)
 
     # All Tickers must have a price of at least 5, we do not want any penny stocks
     params = [Ticker.price >= 5]
@@ -145,6 +152,4 @@ def build_query(
         params.append(or_(*domain_conditions))
 
     return params
-
-
 

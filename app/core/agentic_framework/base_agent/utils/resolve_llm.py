@@ -51,6 +51,20 @@ def resolve_llm_and_client(
     if provider_key == "gemini":
         return gemini_model_and_client(model=model)
     if provider_key in ("together", "together_ai"):
+        if model == "openai-gpt-oss-120b" or model == "openai/gpt-oss-120b":
+            model = "openai/gpt-oss-120b"
+        elif model == "Qwen3-235B-Instruct":
+            model = "Qwen/Qwen3-235B-A22B-Instruct-2507-tput"
+        elif model == "Kimi-K2-Thinking":
+            model = "moonshotai/Kimi-K2-Thinking"
+        elif model == "Kimi-K2-Instruct":
+            model = "moonshotai/Kimi-K2-Instruct-0905"
+        elif model == "meta-llama-4-maverick":
+            model = "meta-llama/Llama-4-Maverick-17B-128E-Instruct-FP8"
+        elif model == "meta-llama-4-scout":
+            model = "meta-llama/Llama-4-Scout-17B-16E-Instruct"
+        elif model == "ministral-3-14B":
+            model = "mistralai/Ministral-3-14B-Instruct-2512"
         return together_model_and_client(model=model)
 
     raise ValueError(f"Unsupported provider: {provider}")

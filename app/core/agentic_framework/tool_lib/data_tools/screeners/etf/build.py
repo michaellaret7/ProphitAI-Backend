@@ -1,5 +1,6 @@
 from sqlalchemy.orm import query
 from sqlalchemy import or_
+from app.core.agentic_framework.tool_lib.data_tools.screeners.find_similar_section import find_similar_sections, format_invalid_sections_error
 from app.db.core.db_config import MarketSession
 from app.db.core.models.market_data_models import Ticker, ETFScreener
 from app.utils.serialize_output import serialize_sqlalchemy_obj
@@ -31,14 +32,20 @@ def build_query(
         valid_industries = {row[0] for row in session.query(Ticker.industry).distinct().filter(Ticker.is_etf == True).all()}
         valid_sub_industries = {row[0] for row in session.query(Ticker.sub_industry).distinct().filter(Ticker.is_etf == True).all()}
 
+    # Validate list inputs
+    errors = []
     if industries:
-        invalid = set(industries) - valid_industries
-        if invalid:
-            return f"Invalid industries: {invalid}"
+        invalid_industries = set(industries) - valid_industries
+        if invalid_industries:
+            similar_industries = find_similar_sections(invalid_industries, valid_industries)
+            errors.append(format_invalid_sections_error("industries", invalid_industries, similar_industries))
     if sub_industries:
-        invalid = set(sub_industries) - valid_sub_industries
-        if invalid:
-            return f"Invalid sub_industries: {invalid}"
+        invalid_sub_industries = set(sub_industries) - valid_sub_industries
+        if invalid_sub_industries:
+            similar_sub_industries = find_similar_sections(invalid_sub_industries, valid_sub_industries)
+            errors.append(format_invalid_sections_error("sub_industries", invalid_sub_industries, similar_sub_industries))
+    if errors:
+        return "\n".join(errors)
 
     # All Tickers must have a price of at least 5, we do not want any penny stocks
     params = [Ticker.price >= 5]
