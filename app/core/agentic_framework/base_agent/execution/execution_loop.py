@@ -19,7 +19,7 @@ from app.core.agentic_framework.base_agent.execution.tool_handler_async import (
 )
 from app.core.agentic_framework.base_agent.logging.message_logger import write_messages_to_yaml
 from app.core.agentic_framework.tool_lib.base_tools.edit_plan import edit_plan
-
+from app.core.agentic_framework.base_agent.planning.plan_progress import get_plan_progress
 if TYPE_CHECKING:
     from ..agent import BaseAgent
 
@@ -55,7 +55,6 @@ class ExecutionLoop:
         # Main loop
         for i in range(1, self.agent.max_iterations + 1):
             if self.agent.print_mode == PrintMode.PRODUCTION:
-                # Minimal iteration marker
                 print(f"\n[{i}]", end=" ", flush=True)
             else:
                 print(f"\n--- Iteration {i} ---")
@@ -153,7 +152,7 @@ class ExecutionLoop:
             self.agent._iteration_message_indices[i] = len(self.agent.messages) - 1
 
             try:
-                # Call LLM
+                # NOTE: This code block is what calls the LLM and gets the response (this is the main LLM call and the engine of the agent)
                 #TODO: Have this output a specific format to a pydantic dataclass for the response every time and it should always have a reasoning field 
                 response = self.agent.client.chat.completions.create(
                     model=self.agent.model,
@@ -214,14 +213,16 @@ class ExecutionLoop:
 
                     tool_calls = assistant_message.tool_calls # --> create the tool calls variable out of assistant_message.tool calls just for simplicity sake
 
-                    # Preserve the model's visible reasoning even when it chose tools
+                    # Preserve the model's visible reasoning even when it choses to use tools
                     self.agent.messages.append({
                         "role": "assistant",
                         "content": assistant_text,
                         "tool_calls": tool_calls
                     })
 
-                    # NOTE: This Conditional statement says if there are multiple tool calls returned for this iteration, we should run the tools in parallel (using async) else run the regular sequential tool calls
+                    # NOTE: This conditional statement says if there are multiple tool calls returned for this iteration from the LLM, run the tools in parallel (using async) else run the regular sequential tool calls
+                    # NOTE: This is where the tool calls are handled and called 
+                    # NOTE: This code resides in tool_handler.py and tool_handler_async.py
                     if should_run_parallel(tool_calls):
                         execute_tools_parallel(self.agent.tool_handler, tool_calls, len(self.agent.messages) - 1)
                     else:
@@ -232,18 +233,44 @@ class ExecutionLoop:
                     try:
                         for tc in tool_calls:
                             name = getattr(tc.function, "name", "")
-                            if name in ("finalize", "final_answer", "final_answer_tool"):
-                                import json as _json
-                                args = {}
-                                try:
-                                    args = _json.loads(getattr(tc.function, "arguments", "") or "{}")
-                                except Exception:
-                                    args = {}
-                                    
-                                final_answer = args.get("answer") or extract_final_answer(assistant_text or "")
-                                stop_reason = "finalize_tool"
 
-                                raise StopIteration
+                            # Only check plan progress when finalize is called
+                            if name in ("finalize", "final_answer", "final_answer_tool"):
+                                progress, completion = get_plan_progress(self.agent.plan)
+
+                                if completion:
+                                    args = {}
+                                    try:
+                                        args = json.loads(getattr(tc.function, "arguments", "") or "{}")
+                                    except Exception:
+                                        args = {}
+
+                                    final_answer = args.get("answer") or extract_final_answer(assistant_text or "")
+                                    stop_reason = "finalize_tool"
+
+                                    raise StopIteration
+                                else:
+                                    self.agent.messages.append({
+                                        "role": "system",
+                                        "content": (
+                                            "## FINALIZE REJECTED - INCOMPLETE TASKS DETECTED\n\n"
+                                            "You attempted to call the finalize tool but your plan has INCOMPLETE TASKS.\n"
+                                            "This is NOT allowed. You MUST complete ALL tasks before finalizing.\n\n"
+                                            f"**Remaining Tasks:**\n{progress}\n\n"
+                                            "**REQUIRED ACTIONS - YOU MUST DO ONE OF THE FOLLOWING:**\n\n"
+                                            "**OPTION 1:** If you already completed the work but forgot to update task status:\n"
+                                            "- Call update_tasks() with status='complete' and work_summary for EACH task\n\n"
+                                            "**OPTION 2:** If you have NOT completed the work:\n"
+                                            "- Execute the remaining tasks NOW\n"
+                                            "- Mark each task complete with update_tasks() after finishing\n"
+                                            "- THEN call finalize\n\n"
+                                            "**PROHIBITED ACTIONS:**\n"
+                                            "- DO NOT call finalize again until ALL tasks show status='complete'\n"
+                                            "- DO NOT skip tasks or mark them complete without doing the work\n"
+                                            "- DO NOT attempt to bypass this check - it will be rejected every time\n"
+                                        )
+                                    })
+
                     except StopIteration:
                         break
 

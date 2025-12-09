@@ -9,7 +9,7 @@ from app.core.agentic_framework.base_agent.utils.resolve_llm import resolve_llm_
 from app.core.agentic_framework.base_agent.execution.execution_loop import ExecutionLoop
 from app.core.agentic_framework.base_agent.execution.tool_handler import ToolHandler
 from app.core.agentic_framework.base_agent.utils.models import PrintMode
-from app.core.agentic_framework.base_agent.tool_registry import register_base_tools
+from app.core.agentic_framework.base_agent.base_tool_registry import register_base_tools
 from app.core.agentic_framework.base_agent.utils.path_utils import create_agent_output_dir
 from app.core.agentic_framework.base_agent.logging.notes import ensure_notes_file
 from app.core.agentic_framework.base_agent.utils.sub_agent_message import SUB_AGENT_MESSAGE

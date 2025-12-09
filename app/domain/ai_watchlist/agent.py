@@ -29,8 +29,9 @@ class AiWatchlistAgent(BaseAgent):
             user_prompt=self.user_prompt,
             max_iterations=80,
             plan_first=True,
-            print_mode=PrintMode.PRODUCTION,
+            print_mode=PrintMode.VERBOSE,
             state_callback=state_callback,
+            temperature=0.7,
         )
     
         tools = [
