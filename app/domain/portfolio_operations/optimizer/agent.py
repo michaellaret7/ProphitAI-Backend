@@ -2,6 +2,7 @@ import uuid
 from typing import TYPE_CHECKING, List, Optional
 
 from pydantic import BaseModel, Field
+from sqlalchemy.orm import identity
 from typing_extensions import Literal
 
 from app.core.agentic_framework.base_agent import BaseAgent
@@ -75,8 +76,12 @@ class OptimizerAgent(BaseAgent):
         dynamic_user_prompt = self._build_dynamic_prompt()
 
         super().__init__(
-            provider="anthropic",
-            model="claude-sonnet-4-5-20250929",
+            # provider="anthropic",
+            # model="claude-sonnet-4-5-20250929",
+            # provider="grok",
+            # model="grok-4-1-fast-reasoning",
+            provider="together",
+            model="Kimi-K2-instruct",
             # provider="deepseek",
             # model="deepseek-chat",
             system_prompt=system_prompt,
@@ -114,3 +119,22 @@ class OptimizerAgent(BaseAgent):
         return prompt
 
 
+if __name__ == "__main__":
+    from app.db.core.models.user_data_models import Portfolio, User
+    from app.db.core.models.market_data_models import Ticker, Price
+    from app.db.core.db_config import UserSession, MarketSession, ProphitAltsSession
+    from app.repositories.price_data import fetch_bulk_ohlcv_data_for_tickers
+
+    with UserSession() as user_session:
+        uuid_id = user_session.query(Portfolio).first().portfolio_id
+    
+    agent = OptimizerAgent(
+        portfolio_id=str(uuid_id),
+        risk_tolerance="medium",
+        time_horizon="2-3 years",
+        investment_goals="growth",
+        sectors_to_exclude="real estate",
+        sectors_to_include="technology, energy, utilities",
+        tickers_to_keep="TSLA",
+        tickers_to_exclude="AAPL"
+    ).run()

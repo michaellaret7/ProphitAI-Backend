@@ -130,10 +130,10 @@ class ExecutionLoop:
                 })
 
             # Inject per-turn THINK reminder
-            self.agent.messages.append({
-                "role": "system",
-                "content": THINK_DEEPLY_MESSAGE
-            })
+            # self.agent.messages.append({
+            #     "role": "system",
+            #     "content": THINK_DEEPLY_MESSAGE
+            # })
 
             # Record message index for iteration banner (after all system message injection)
             self.agent._iteration_message_indices[i] = len(self.agent.messages) - 1

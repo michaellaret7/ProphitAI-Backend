@@ -114,7 +114,8 @@ def fetch_bulk_price_data_for_tickers(tickers: list, start_date_str: str, end_da
     """
     # Convert string dates to datetime objects
     start_date = datetime.strptime(start_date_str, '%Y-%m-%d')
-    end_date = datetime.strptime(end_date_str, '%Y-%m-%d')
+    # Set end_date to end of day (23:59:59) to include all data on the end date
+    end_date = datetime.strptime(end_date_str, '%Y-%m-%d').replace(hour=23, minute=59, second=59)
 
     if frequency == 'daily':
         get_price_data_func = get_price_data_daily
@@ -172,7 +173,8 @@ def fetch_bulk_ohlcv_data_for_tickers(tickers: list, start_date_str: str, end_da
     """
     # Convert string dates to datetime objects
     start_date = datetime.strptime(start_date_str, '%Y-%m-%d')
-    end_date = datetime.strptime(end_date_str, '%Y-%m-%d')
+    # Set end_date to end of day (23:59:59) to include all data on the end date
+    end_date = datetime.strptime(end_date_str, '%Y-%m-%d').replace(hour=23, minute=59, second=59)
 
     # Select appropriate data fetch function based on frequency
     if frequency == 'daily':
