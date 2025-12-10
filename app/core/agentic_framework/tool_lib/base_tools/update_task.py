@@ -137,9 +137,9 @@ def update_tasks(
                 # Store work summary if marking complete
                 if status_enum == TaskStatus.COMPLETE and work_summary:
                     subtask.work_summary = work_summary.strip()
-                    updated.append(f"Subtask {subtask_id}: {old_st_status} → {status_enum.value} (with work evidence)")
+                    updated.append(f"Subtask {subtask_id}: changed from {old_st_status} to {status_enum.value} (with work evidence)")
                 else:
-                    updated.append(f"Subtask {subtask_id}: {old_st_status} → {status_enum.value}")
+                    updated.append(f"Subtask {subtask_id}: changed from {old_st_status} to {status_enum.value}")
             else:
                 updated.append(f"⚠️ Subtask {subtask_id} not found in task {main_task}")
 
@@ -148,7 +148,7 @@ def update_tasks(
             # If any subtask is in progress, mark main task as in progress
             if status_enum == TaskStatus.IN_PROGRESS and task.status == TaskStatus.NOT_STARTED:
                 task.status = TaskStatus.IN_PROGRESS
-                updated.append(f"✅ Task {main_task}: not started → in progress (subtask started)")
+                updated.append(f"Task {main_task}: changed from not started to in progress (subtask started)")
 
                 # Invoke callback for main task auto-update
                 if state_callback is not None:
@@ -160,7 +160,7 @@ def update_tasks(
                     old_main_status = task.status.value
                     task.status = TaskStatus.COMPLETE
                     task.work_summary = work_summary.strip() if work_summary else "All subtasks completed"
-                    updated.append(f"✅ Task {main_task}: {old_main_status} → complete (all subtasks complete)")
+                    updated.append(f"Task {main_task}: changed from {old_main_status} to complete (all subtasks complete)")
 
                     # Invoke callback for main task auto-complete
                     if state_callback is not None:
@@ -185,9 +185,9 @@ def update_tasks(
         # Store work summary if marking complete
         if status_enum == TaskStatus.COMPLETE and work_summary:
             task.work_summary = work_summary.strip()
-            updated.append(f"Task {main_task}: {old_status} → {status_enum.value} (with work evidence)")
+            updated.append(f"Task {main_task}: changed from {old_status} to {status_enum.value} (with work evidence)")
         else:
-            updated.append(f"Task {main_task}: {old_status} → {status_enum.value}")
+            updated.append(f"Task {main_task}: changed from {old_status} to {status_enum.value}")
 
     # Log the updated plan state to file
     try:
@@ -212,8 +212,8 @@ UPDATE_TASKS_DESCRIPTION = """Update the status of tasks and subtasks in your ex
 5. Repeat
 
 **IMPORTANT - Complete tasks INDIVIDUALLY as you finish them:**
-- Complete subtask 2a → mark it "complete" → then start 2b
-- Complete subtask 2b → mark it "complete" → then start 2c
+- Complete subtask 2a, mark it "complete", then start 2b
+- Complete subtask 2b, mark it "complete", then start 2c
 - DO NOT batch multiple subtasks with status="in_progress" and say "Completed 2a, 2b, 2c" in work_summary
 - Each subtask gets its own "complete" call when you finish it
 

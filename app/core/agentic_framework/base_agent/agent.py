@@ -160,13 +160,18 @@ class BaseAgent:
             print(f"{'='*60}\n")
 
         # Delegate to execution loop
+        start_time = datetime.now()
         result = self.execution_loop.execute()
+        end_time = datetime.now()
+        duration = end_time - start_time
 
         print(f"\n{'='*60}")
         print(f"Agent run complete")
         print(f"Iterations: {result['iterations']}")
         print(f"Total tokens: {result['total_tokens']}")
         print(f"Stop reason: {result['stop_reason']}")
+        print(f"Time taken: {duration}")
+        print(f"Model: {self.model} ({self.provider})")
         print(f"{'='*60}\n")
 
         if response_format:

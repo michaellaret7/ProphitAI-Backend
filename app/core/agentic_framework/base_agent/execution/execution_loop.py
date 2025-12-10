@@ -114,7 +114,10 @@ class ExecutionLoop:
             # Remove old system messages before re-injecting fresh versions
             self.agent.messages = remove_system_messages(
                 self.agent.messages,
-                patterns=["AVAILABLE NOTES IN NOTEBOOK", "## THINK DEEPLY THIS ITERATION"]
+                patterns=[
+                    "AVAILABLE NOTES IN NOTEBOOK", 
+                    "## THINK DEEPLY THIS ITERATION"
+                ]
             )
 
             # Inject available notes reminder if notes exist
@@ -129,11 +132,13 @@ class ExecutionLoop:
                     )
                 })
 
-            # Inject per-turn THINK reminder
-            # self.agent.messages.append({
-            #     "role": "system",
-            #     "content": THINK_DEEPLY_MESSAGE
-            # })
+            # NOTE: This is a reminder to the agent to think deeply every 5 iterations
+            # NOTE: If we use high thinking models this prompt every iteration confuses the model because they already think internally
+            if self.agent.current_iteration % 5 == 0:
+                self.agent.messages.append({
+                    "role": "system",
+                    "content": THINK_DEEPLY_MESSAGE
+                })
 
             # Record message index for iteration banner (after all system message injection)
             self.agent._iteration_message_indices[i] = len(self.agent.messages) - 1
