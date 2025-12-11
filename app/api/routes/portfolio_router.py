@@ -1,5 +1,5 @@
-from fastapi import APIRouter, Query
-from pydantic import BaseModel, EmailStr
+from fastapi import APIRouter, Query, Depends, Path, HTTPException
+from pydantic import BaseModel
 from typing import List, Optional, Dict
 from app.api.controller.portfolio import (
     get_user_portfolio_list_controller,
@@ -16,42 +16,46 @@ from app.api.controller.portfolio import (
     get_portfolio_factor_tilt_controller,
     get_portfolio_stress_returns_controller,
 )
+from app.api.auth.clerk import get_clerk_user_id
+from app.repositories.user_data import get_all_user_data_by_clerk_id
 
 router = APIRouter(tags=["Portfolios 💼"])
+
+
+async def get_user_id_from_clerk(clerk_id: str = Depends(get_clerk_user_id)) -> str:
+    """Get internal database user_id from Clerk ID."""
+    user_data = get_all_user_data_by_clerk_id(clerk_id=clerk_id)
+    if not user_data:
+        raise HTTPException(status_code=404, detail="User not found")
+    return user_data.get("id")
 
 class PositionModel(BaseModel):
     ticker: str
     allocation: float
 
+
 class CreatePortfolioRequest(BaseModel):
-    email: EmailStr
     companyName: str
     portfolioName: str
     positions: List[PositionModel]
 
+
 class UpdatePortfolioRequest(BaseModel):
-    email: EmailStr
-    portfolioId: str
     name: Optional[str] = None
     isCurrent: Optional[bool] = None
 
-class DeletePortfolioRequest(BaseModel):
-    email: EmailStr
-    portfolioId: str
-
-class PortfolioReturnsRequest(BaseModel):
-    email: EmailStr
-    portfolioId: str
 
 class PortfolioPerformanceComparisonRequest(BaseModel):
     portfolioId: str
     optimizedWeights: Dict[str, float]
     years: Optional[int] = 2
 
+
 class PortfolioFactorTiltRequest(BaseModel):
     weights: Dict[str, float]
     factor: str
     years: Optional[int] = 1
+
 
 class PortfolioStressReturnsRequest(BaseModel):
     weights: Dict[str, float]
@@ -59,135 +63,131 @@ class PortfolioStressReturnsRequest(BaseModel):
     end_date: str
     frequency: Optional[str] = 'daily'
 
-#TODO: We want to get the portfolios by uuid
 @router.get("/portfolios")
-def get_user_portfolio_list(email: str = Query("michaellaret7@gmail.com", description="User's email address")):
-    """
-    Get user portfolio list by email
-
-    Email defaults to hardcoded value until auth is setup.
-    """
-    return get_user_portfolio_list_controller(email=email)
+async def get_user_portfolio_list(user_id: str = Depends(get_user_id_from_clerk)):
+    """Get all portfolios for the authenticated user."""
+    return await get_user_portfolio_list_controller(user_id=user_id)
 
 @router.post("/portfolios", status_code=201)
-async def create_portfolio(body: CreatePortfolioRequest):
+async def create_portfolio(
+    body: CreatePortfolioRequest,
+    user_id: str = Depends(get_user_id_from_clerk),
+):
+    """Create a new portfolio for the authenticated user."""
     return await create_portfolio_controller(
-        email=body.email,
+        user_id=user_id,
         company_name=body.companyName,
         portfolio_name=body.portfolioName,
-        positions=[p.dict() for p in body.positions],
+        positions=[p.model_dump() for p in body.positions],
     )
 
-@router.patch("/portfolios")
-async def patch_portfolio(body: UpdatePortfolioRequest):
+@router.patch("/portfolios/{portfolioId}")
+async def patch_portfolio(
+    body: UpdatePortfolioRequest,
+    portfolioId: str = Path(..., description="Portfolio ID"),
+    user_id: str = Depends(get_user_id_from_clerk),
+):
+    """Update an existing portfolio (rename or set as current)."""
     return await update_portfolio_controller(
-        email=body.email,
-        portfolio_id=body.portfolioId,
+        user_id=user_id,
+        portfolio_id=portfolioId,
         name=body.name,
         is_current=body.isCurrent,
     )
 
-@router.delete("/portfolios")
-async def delete_portfolio(body: DeletePortfolioRequest):
+
+@router.delete("/portfolios/{portfolioId}")
+async def delete_portfolio(
+    portfolioId: str = Path(..., description="Portfolio ID"),
+    user_id: str = Depends(get_user_id_from_clerk),
+):
+    """Delete a portfolio."""
     return await delete_portfolio_controller(
-        email=body.email,
-        portfolio_id=body.portfolioId,
+        user_id=user_id,
+        portfolio_id=portfolioId,
     )
 
 @router.get("/portfolios/{portfolioId}/returns")
 async def get_portfolio_returns(
-    portfolioId: str,
+    portfolioId: str = Path(..., description="Portfolio ID"),
     years: int = Query(2, description="Number of years of historical data", ge=1, le=10),
+    user_id: str = Depends(get_user_id_from_clerk),
 ):
+    """Get portfolio returns time series."""
     return await get_portfolio_returns_controller(
         portfolio_id=portfolioId,
+        user_id=user_id,
         years=years,
     )
 
 @router.get("/portfolios/{portfolioId}/metrics")
 async def get_portfolio_metrics(
-    portfolioId: str,
+    portfolioId: str = Path(..., description="Portfolio ID"),
     years: int = Query(2, description="Number of years of historical data", ge=1, le=10),
+    user_id: str = Depends(get_user_id_from_clerk),
 ):
-    """
-    Get portfolio metrics for dashboard cards and tooltips.
-
-    Returns risk metrics, asset allocation, and risk exposure.
-    """
+    """Get portfolio metrics for dashboard cards and tooltips."""
     return await get_portfolio_metrics_controller(
         portfolio_id=portfolioId,
+        user_id=user_id,
         years=years,
     )
 
 @router.get("/portfolios/{portfolioId}/positions")
-async def get_portfolio_positions(portfolioId: str):
-    """
-    Get positions for a specific portfolio.
-
-    Returns a list of positions with ticker and allocation for the given portfolio ID.
-
-    Cache TTL: 1 day (86400s)
-    Cache key pattern: portfolio:positions:{portfolio_id}
-    """
+async def get_portfolio_positions(
+    portfolioId: str = Path(..., description="Portfolio ID"),
+    user_id: str = Depends(get_user_id_from_clerk),
+):
+    """Get positions for a specific portfolio."""
     return await get_portfolio_positions_controller(
         portfolio_id=portfolioId,
+        user_id=user_id,
     )
 
 @router.get("/portfolios/{portfolioId}/sectors")
-async def get_portfolio_sectors(portfolioId: str):
-    """
-    Get portfolio sector concentration as percentage allocations.
-
-    Returns a dictionary mapping sector names to allocation percentages.
-
-    Cache TTL: 1 day (86400s)
-    Cache key pattern: portfolio:sectors:{portfolio_id}
-    """
+async def get_portfolio_sectors(
+    portfolioId: str = Path(..., description="Portfolio ID"),
+    user_id: str = Depends(get_user_id_from_clerk),
+):
+    """Get portfolio sector concentration as percentage allocations."""
     return await get_portfolio_sector_concentration_controller(
         portfolio_id=portfolioId,
+        user_id=user_id,
     )
+
 
 @router.get("/portfolios/{portfolioId}/industries")
-async def get_portfolio_industries(portfolioId: str):
-    """
-    Get portfolio industry concentration as percentage allocations.
-
-    Returns a dictionary mapping industry names to allocation percentages.
-
-    Cache TTL: 1 day (86400s)
-    Cache key pattern: portfolio:industries:{portfolio_id}
-    """
+async def get_portfolio_industries(
+    portfolioId: str = Path(..., description="Portfolio ID"),
+    user_id: str = Depends(get_user_id_from_clerk),
+):
+    """Get portfolio industry concentration as percentage allocations."""
     return await get_portfolio_industry_concentration_controller(
         portfolio_id=portfolioId,
+        user_id=user_id,
     )
 
-@router.get("/portfolios/{portfolioId}/sub-industries")
-async def get_portfolio_sub_industries(portfolioId: str):
-    """
-    Get portfolio sub-industry concentration as percentage allocations.
 
-    Cache TTL: 1 day (86400s)
-    Cache key pattern: portfolio:sub_industries:{portfolio_id}
-    """
+@router.get("/portfolios/{portfolioId}/sub-industries")
+async def get_portfolio_sub_industries(
+    portfolioId: str = Path(..., description="Portfolio ID"),
+    user_id: str = Depends(get_user_id_from_clerk),
+):
+    """Get portfolio sub-industry concentration as percentage allocations."""
     return await get_portfolio_sub_industry_concentration_controller(
         portfolio_id=portfolioId,
+        user_id=user_id,
     )
 
 @router.post("/portfolios/performance-comparison")
-async def get_portfolio_performance_comparison(body: PortfolioPerformanceComparisonRequest):
-    """
-    Compare performance between current and optimized portfolios against SPY benchmark.
-
-    Returns comprehensive performance data including:
-    - Returns time series (indexed to 100)
-    - Drawdown time series (underwater chart)
-    - Risk & performance metrics (Sharpe, Sortino, volatility, VaR, max drawdown, returns)
-
-    This endpoint is designed to be called after portfolio optimization to provide
-    detailed performance comparison data for visualization.
-    """
+async def get_portfolio_performance_comparison(
+    body: PortfolioPerformanceComparisonRequest,
+    user_id: str = Depends(get_user_id_from_clerk),
+):
+    """Compare performance between current and optimized portfolios against SPY benchmark."""
     return await get_portfolio_performance_comparison_controller(
         portfolio_id=body.portfolioId,
+        user_id=user_id,
         optimized_weights=body.optimizedWeights,
         years=body.years,
     )

@@ -22,8 +22,10 @@ from app.api.routes.search_router import router as search_router
 from app.api.routes.technical_router import router as technical_router
 from app.api.routes.ticker_router import router as ticker_router
 from app.api.routes.user_routes import router as user_router
+from app.api.routes.watchlist_routes import router as watchlist_router
 from app.api.routes.websocket_router import router as websocket_router
 from app.api.auth.api_key import validate_api_key
+from app.api.auth.clerk import clerk_auth
 from app.redis.client import cache
 
 # Load environment variables from .env file
@@ -59,7 +61,8 @@ app = FastAPI(
     version="1.0.0",
     description="API for ProphitAI services",
     lifespan=lifespan,
-    default_response_class=ORJSONResponse
+    default_response_class=ORJSONResponse,
+    swagger_ui_parameters={"persistAuthorization": True}
 )
 
 # Configure CORS
@@ -80,24 +83,31 @@ app.add_middleware(
 # Enable gzip compression for responses > 1KB
 app.add_middleware(GZipMiddleware, minimum_size=1000)
 
-# Include routers with API key authentication
-# All /api routes require valid API key in X-API-Key header
-app.include_router(prophit_alts_router, prefix="/api", dependencies=[Depends(validate_api_key)])
-app.include_router(user_router, prefix="/api", dependencies=[Depends(validate_api_key)])
-app.include_router(portfolio_router, prefix="/api", dependencies=[Depends(validate_api_key)])
-app.include_router(price_router, prefix="/api", dependencies=[Depends(validate_api_key)])
-app.include_router(cache_router, prefix="/api", dependencies=[Depends(validate_api_key)])
-app.include_router(broker_router, prefix="/api", dependencies=[Depends(validate_api_key)])
-app.include_router(ticker_router, prefix="/api", dependencies=[Depends(validate_api_key)])
-app.include_router(technical_router, prefix="/api", dependencies=[Depends(validate_api_key)])
-app.include_router(macro_router, prefix="/api", dependencies=[Depends(validate_api_key)])
-app.include_router(news_router, prefix="/api", dependencies=[Depends(validate_api_key)])
-app.include_router(fundamentals_router, prefix="/api", dependencies=[Depends(validate_api_key)])
-app.include_router(etf_router, prefix="/api", dependencies=[Depends(validate_api_key)])
-app.include_router(search_router, prefix="/api", dependencies=[Depends(validate_api_key)])
-app.include_router(crypto_router, prefix="/api", dependencies=[Depends(validate_api_key)])
-app.include_router(screener_router, prefix="/api", dependencies=[Depends(validate_api_key)])
-app.include_router(agent_router, prefix="/api", dependencies=[Depends(validate_api_key)])
+# Authentication dependencies
+auth_dependencies = [
+    Depends(validate_api_key),
+    # Depends(clerk_auth)
+]
+
+# Include routers with dual authentication
+# All /api routes require: 1) valid API key in X-API-Key header, 2) valid Clerk JWT in Authorization header
+app.include_router(prophit_alts_router, prefix="/api", dependencies=auth_dependencies)
+app.include_router(user_router, prefix="/api", dependencies=auth_dependencies)
+app.include_router(portfolio_router, prefix="/api", dependencies=auth_dependencies)
+app.include_router(price_router, prefix="/api", dependencies=auth_dependencies)
+app.include_router(cache_router, prefix="/api", dependencies=auth_dependencies)
+app.include_router(broker_router, prefix="/api", dependencies=auth_dependencies)
+app.include_router(ticker_router, prefix="/api", dependencies=auth_dependencies)
+app.include_router(technical_router, prefix="/api", dependencies=auth_dependencies)
+app.include_router(macro_router, prefix="/api", dependencies=auth_dependencies)
+app.include_router(news_router, prefix="/api", dependencies=auth_dependencies)
+app.include_router(fundamentals_router, prefix="/api", dependencies=auth_dependencies)
+app.include_router(etf_router, prefix="/api", dependencies=auth_dependencies)
+app.include_router(search_router, prefix="/api", dependencies=auth_dependencies)
+app.include_router(crypto_router, prefix="/api", dependencies=auth_dependencies)
+app.include_router(screener_router, prefix="/api", dependencies=auth_dependencies)
+app.include_router(agent_router, prefix="/api", dependencies=auth_dependencies)
+app.include_router(watchlist_router, prefix="/api", dependencies=auth_dependencies)
 
 # WebSocket router - no API key auth (WebSocket handles auth differently)
 app.include_router(websocket_router)

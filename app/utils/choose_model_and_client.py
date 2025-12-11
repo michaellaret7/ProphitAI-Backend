@@ -38,12 +38,12 @@ MODEL_ALIASES = {
     "openai-gpt-oss-120b": {
         "together": "openai/gpt-oss-120b",
         "fireworks": "accounts/fireworks/models/gpt-oss-120b",
-        "groq": "openai/gpt-oss-120b",
+        "groq": "openai/gpt-oss-120b", # NOTE: groq runs this model extremely fast, use this for fast inference if using this model
     },
     "openai-gpt-oss-20b": {
         "together": "openai/gpt-oss-20b",
         "fireworks": "accounts/fireworks/models/gpt-oss-20b",
-        "groq": "openai/gpt-oss-20b",
+        "groq": "openai/gpt-oss-20b", # NOTE: groq runs this model extremely fast, use this for fast inference if using this model
     },
 
     "deepseek-v3p2": {
@@ -69,14 +69,9 @@ MODEL_ALIASES = {
         "fireworks": "accounts/fireworks/models/kimi-k2-instruct-0905",
     },
 
-    "ministral-3-14B-instruct": {
-        "together": "mistralai/Ministral-3-14B-Instruct-2512",
-        "fireworks": "accounts/fireworks/models/ministral-3-14b-instruct-2512",
-    },
-
     "glm-4-6": {
         "fireworks": "accounts/fireworks/models/glm-4p6",
-    }    
+    }
 }
 
 

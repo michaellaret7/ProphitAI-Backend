@@ -7,6 +7,7 @@ from app.utils.decorators.database import with_session, with_transaction
 from datetime import datetime
 from app.utils.time_utils import get_current_utc_time
 import uuid
+from app.db.core.pull_fmp_data import FMP_API_DATA
 
 @with_session('user')
 def get_all_user_data(email: str, session=None) -> Optional[Dict[str, Any]]:
@@ -37,6 +38,7 @@ def get_all_user_data(email: str, session=None) -> Optional[Dict[str, Any]]:
     # Format user data
     user_data = {
         'id': str(user.id),
+        'clerk_id': user.clerk_id,
         'email': user.email,
         'first_name': user.first_name,
         'last_name': user.last_name,
@@ -44,7 +46,7 @@ def get_all_user_data(email: str, session=None) -> Optional[Dict[str, Any]]:
         'companies': [],
         'portfolios': []
     }
-    
+
     # Add company information (single company per user)
     if user.company:
         company = user.company
@@ -72,6 +74,62 @@ def get_all_user_data(email: str, session=None) -> Optional[Dict[str, Any]]:
     return user_data
 
 @with_session('user')
+def get_all_user_data_by_id(user_id: str, session=None) -> Optional[Dict[str, Any]]:
+    """
+    Get complete user data by internal user ID (UUID).
+
+    Args:
+        user_id: Internal database user UUID
+
+    Returns:
+        Dictionary containing complete user data, or None if not found
+    """
+    if not user_id:
+        raise ValueError("User ID must be provided")
+
+    query = session.query(User).options(
+        joinedload(User.company),
+        selectinload(User.portfolios)
+    )
+    query = query.filter(User.id == user_id)
+    user = query.first()
+    if not user:
+        return None
+
+    user_data = {
+        'id': str(user.id),
+        'clerk_id': user.clerk_id,
+        'email': user.email,
+        'first_name': user.first_name,
+        'last_name': user.last_name,
+        'creation_date': user.creation_date.isoformat() if getattr(user, 'creation_date', None) else None,
+        'companies': [],
+        'portfolios': []
+    }
+    if user.company:
+        company = user.company
+        user_data['companies'].append({
+            'id': str(company.id),
+            'name': company.name,
+            'creation_date': company.creation_date.isoformat() if company.creation_date else None,
+            'seats': company.seats,
+            'user_role': user.role
+        })
+    seen_portfolio_ids = set()
+    for portfolio in user.portfolios:
+        portfolio_id = str(portfolio.portfolio_id)
+        if portfolio_id not in seen_portfolio_ids:
+            seen_portfolio_ids.add(portfolio_id)
+            user_data['portfolios'].append({
+                'name': portfolio.name,
+                'portfolio_id': portfolio_id,
+                'is_current': portfolio.is_current,
+                'is_discretionary': portfolio.is_discretionary
+            })
+    return user_data
+
+
+@with_session('user')
 def get_all_user_data_by_clerk_id(clerk_id: str, session=None) -> Optional[Dict[str, Any]]:
     """
     Get complete user data by Clerk ID
@@ -90,6 +148,7 @@ def get_all_user_data_by_clerk_id(clerk_id: str, session=None) -> Optional[Dict[
 
     user_data = {
         'id': str(user.id),
+        'clerk_id': user.clerk_id,
         'email': user.email,
         'first_name': user.first_name,
         'last_name': user.last_name,
@@ -146,6 +205,13 @@ def get_user_basic_info(email: str, session=None) -> Optional[Dict[str, Any]]:
         'first_name': user.first_name,
         'last_name': user.last_name
     }
+
+@with_session('user')
+def email_exists(email: str, session=None) -> bool:
+    """Check if a user with the given email exists."""
+    if not email:
+        return False
+    return session.query(User).filter(User.email == email).first() is not None
 
 @with_transaction('user')
 def add_user(email: str, first_name: str, last_name: str, clerk_id: Optional[str] = None, session=None):
@@ -206,6 +272,28 @@ def update_user_fields(
         user.role = role
 
     # commit handled by decorator
+    return True
+
+@with_transaction('user')
+def update_user_by_clerk_id(
+    clerk_id: str,
+    first_name: Optional[str] = None,
+    last_name: Optional[str] = None,
+    session=None
+) -> bool:
+    """Update user fields by clerk_id."""
+    if not clerk_id:
+        raise ValueError("Clerk ID must be provided")
+
+    user = session.query(User).filter(User.clerk_id == clerk_id).first()
+    if not user:
+        return False
+
+    if first_name is not None:
+        user.first_name = first_name
+    if last_name is not None:
+        user.last_name = last_name
+
     return True
 
 @with_transaction('user')
@@ -283,5 +371,165 @@ def delete_user_by_clerk_id(clerk_id: str, session=None) -> bool:
     if not user:
         return False
     session.delete(user)
+    return True
+
+@with_session('user')
+def get_user_watchlists(user_id: str, session=None):
+    """Get all watchlists for a user with their items."""
+    if not user_id:
+        raise ValueError("User ID must be provided")
+
+    watchlists = session.query(Watchlist).options(
+        selectinload(Watchlist.items)
+    ).filter(Watchlist.user_id == user_id).all()
+
+    return [
+        {
+            'id': str(w.id),
+            'name': w.name,
+            'creation_date': w.creation_date.isoformat() if w.creation_date else None,
+            'updated_date': w.updated_date.isoformat() if w.updated_date else None,
+            'items': [
+                {
+                    'ticker': item.ticker,
+                    'price_on_inception': item.price_on_inception,
+                    'added_at': item.added_at.isoformat() if item.added_at else None
+                }
+                for item in w.items
+            ]
+        }
+        for w in watchlists
+    ]
+
+@with_session('user')
+def get_watchlist_by_id(watchlist_id: str, session=None):
+    """Get a single watchlist by ID with its items."""
+    if not watchlist_id:
+        raise ValueError("Watchlist ID must be provided")
+
+    watchlist = session.query(Watchlist).options(
+        selectinload(Watchlist.items)
+    ).filter(Watchlist.id == watchlist_id).first()
+
+    if not watchlist:
+        return None
+
+    return {
+        'id': str(watchlist.id),
+        'user_id': str(watchlist.user_id),
+        'name': watchlist.name,
+        'creation_date': watchlist.creation_date.isoformat() if watchlist.creation_date else None,
+        'updated_date': watchlist.updated_date.isoformat() if watchlist.updated_date else None,
+        'items': [
+            {
+                'ticker': item.ticker,
+                'price_on_inception': item.price_on_inception,
+                'added_at': item.added_at.isoformat() if item.added_at else None
+            }
+            for item in watchlist.items
+        ]
+    }
+
+@with_transaction('user')
+def add_watchlist(user_id: str, name: str, session=None):
+    """Create a new watchlist for a user."""
+    if not user_id:
+        raise ValueError("User ID must be provided")
+    if not name:
+        raise ValueError("Name must be provided")
+
+    watchlist = Watchlist(user_id=user_id, name=name, creation_date=get_current_utc_time())
+    session.add(watchlist)
+    session.flush()
+
+    return {
+        'id': str(watchlist.id),
+        'user_id': str(watchlist.user_id),
+        'name': watchlist.name,
+        'creation_date': watchlist.creation_date.isoformat() if watchlist.creation_date else None
+    }
+
+@with_transaction('user')
+def rename_watchlist(watchlist_id: str, name: str, session=None):
+    """Rename an existing watchlist."""
+    if not watchlist_id:
+        raise ValueError("Watchlist ID must be provided")
+    if not name:
+        raise ValueError("Name must be provided")
+
+    watchlist = session.query(Watchlist).filter(Watchlist.id == watchlist_id).first()
+    if not watchlist:
+        return None
+
+    watchlist.name = name
+    watchlist.updated_date = get_current_utc_time()
+
+    return {
+        'id': str(watchlist.id),
+        'name': watchlist.name,
+        'updated_date': watchlist.updated_date.isoformat()
+    }
+
+@with_transaction('user')
+def delete_watchlist(watchlist_id: str, session=None):
+    """Delete a watchlist and all its items."""
+    if not watchlist_id:
+        raise ValueError("Watchlist ID must be provided")
+
+    watchlist = session.query(Watchlist).filter(Watchlist.id == watchlist_id).first()
+    if not watchlist:
+        return False
+
+    session.delete(watchlist)
+    return True
+
+@with_transaction('user')
+def add_watchlist_item(watchlist_id: str, ticker: str, session=None):
+    """Add a ticker to a watchlist."""
+    if not watchlist_id:
+        raise ValueError("Watchlist ID must be provided")
+    if not ticker:
+        raise ValueError("Ticker must be provided")
+
+    fmp = FMP_API_DATA()
+    try:
+        quote_data = fmp.get_full_quote(ticker)
+        price_on_inception = quote_data[0]['price'] if quote_data else None
+    except (IndexError, KeyError, Exception):
+        price_on_inception = None
+
+    watchlist_item = WatchlistItem(
+        watchlist_id=watchlist_id,
+        ticker=ticker.upper(),
+        price_on_inception=price_on_inception,
+        added_at=get_current_utc_time()
+    )
+    session.add(watchlist_item)
+    session.flush()
+
+    return {
+        'watchlist_id': str(watchlist_item.watchlist_id),
+        'ticker': watchlist_item.ticker,
+        'price_on_inception': watchlist_item.price_on_inception,
+        'added_at': watchlist_item.added_at.isoformat() if watchlist_item.added_at else None
+    }
+
+@with_transaction('user')
+def delete_watchlist_item(watchlist_id: str, ticker: str, session=None):
+    """Remove a ticker from a watchlist."""
+    if not watchlist_id:
+        raise ValueError("Watchlist ID must be provided")
+    if not ticker:
+        raise ValueError("Ticker must be provided")
+
+    watchlist_item = session.query(WatchlistItem).filter(
+        WatchlistItem.watchlist_id == watchlist_id,
+        WatchlistItem.ticker == ticker.upper()
+    ).first()
+
+    if not watchlist_item:
+        return False
+
+    session.delete(watchlist_item)
     return True
 

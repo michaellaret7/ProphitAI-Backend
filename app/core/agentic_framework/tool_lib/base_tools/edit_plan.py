@@ -214,6 +214,31 @@ def edit_plan(
 
     return plan
 
+def _convert_status_string_to_enum(status: str | None) -> TaskStatus | None:
+    """
+    Convert a status string from tool call to TaskStatus enum.
+
+    Handles both underscore format (from schema) and space format (enum values).
+    """
+    if status is None:
+        return None
+
+    # Normalize: replace underscores with spaces and lowercase
+    normalized = status.lower().replace("_", " ")
+
+    # Map to enum
+    status_map = {
+        "not started": TaskStatus.NOT_STARTED,
+        "in progress": TaskStatus.IN_PROGRESS,
+        "complete": TaskStatus.COMPLETE,
+    }
+
+    if normalized not in status_map:
+        raise ValueError(f"Invalid status '{status}'. Must be one of: not_started, in_progress, complete")
+
+    return status_map[normalized]
+
+
 def create_edit_plan_wrapper(agent):
     """
     Create a wrapper function for edit_plan that injects agent.plan.
@@ -237,6 +262,9 @@ def create_edit_plan_wrapper(agent):
     def _edit_plan_wrapper(action, task_type, task_id, parent_task_id=None, description=None, status=None, priority=None, insert_position=None, **_kwargs):
         """Wrapper to handle edit_plan execution and return proper response."""
         try:
+            # Convert status string to TaskStatus enum if provided
+            status_enum = _convert_status_string_to_enum(status)
+
             # Call edit_plan and update agent.plan with the result
             updated_plan = edit_plan(
                 plan=agent.plan,
@@ -245,7 +273,7 @@ def create_edit_plan_wrapper(agent):
                 task_id=task_id,
                 parent_task_id=parent_task_id,
                 description=description,
-                status=status,
+                status=status_enum,
                 priority=priority,
                 insert_position=insert_position
             )
@@ -280,59 +308,66 @@ def create_edit_plan_wrapper(agent):
     return _edit_plan_wrapper
 
 # Tool schema for agent registration
-EDIT_PLAN_DESCRIPTION = """Dynamically modify your execution plan by adding, removing, or editing tasks and subtasks.
+EDIT_PLAN_DESCRIPTION = """Structurally modify your execution plan by ADDING, REMOVING, or completely REWRITING tasks.
 
-Use this tool to adapt your plan as you gain new information or encounter unexpected situations:
-- **ADD tasks**: Insert new main tasks or subtasks into your plan at any position
-- **DROP tasks**: Remove tasks that are no longer relevant or necessary
-- **EDIT tasks**: Update task descriptions, priorities, or statuses
+Use this tool when you need to:
+- **ADD tasks**: Insert entirely new main tasks or subtasks into your plan
+- **DROP tasks**: Completely remove tasks that are no longer relevant
+- **EDIT tasks**: Completely rewrite what a task is (change its description/purpose)
+
+**IMPORTANT: This tool is NOT for status-only updates.**
+If you just need to mark a task as in_progress or complete WITHOUT changing what the task actually is,
+use the `update_task` tool instead. This tool is for when the task itself needs to change.
 
 **INTELLIGENT TASK INSERTION:**
 When adding a subtask with insert_position, the tool AUTOMATICALLY renames all subsequent subtasks to maintain
 sequential numbering. For example, if Task 2 has subtasks ["2a", "2b", "2c"] and you insert a new "2b" at
 position 1, the tool will:
   - Insert your new "2b" at position 1
-  - Automatically rename old "2b" → "2c"
-  - Automatically rename old "2c" → "2d"
+  - Automatically rename old "2b" -> "2c"
+  - Automatically rename old "2c" -> "2d"
   Result: ["2a", "2b (new)", "2c", "2d"]
 
-**WHEN TO USE:**
-- Discovered a new subtask needed for a complex main task → ADD it at the right position
-- Realized a task is no longer relevant to the goal → DROP it
-- Need to update task details or priority → EDIT it
-- Found a critical subtask that should come before existing ones → ADD with insert_position=0
+**WHEN TO USE edit_plan:**
+- Discovered a new subtask needed for a complex main task -> ADD it
+- Realized a task is no longer relevant to the goal -> DROP it
+- Found a critical subtask that should come before existing ones -> ADD with insert_position=0
+- Need to completely change what a task does (rewrite description) -> EDIT it
+
+**REAL-WORLD EXAMPLE:**
+While analyzing AAPL, the agent notices unusual debt levels on the balance sheet that warrant deeper investigation.
+The agent should use edit_plan to ADD a new subtask: "Investigate AAPL's rising long-term debt and interest coverage"
+This allows the agent to adapt its plan based on what it discovers during execution.
+
+**WHEN TO USE update_task INSTEAD:**
+- Need to mark a task as in_progress or complete (status change only) -> use update_task
+- The task itself hasn't changed, you just finished it -> use update_task
 
 **KEY PARAMETERS:**
 - action: "add", "drop", or "edit"
 - task_type: "main_task" or "subtask"
 - task_id: The ID of the task (e.g., "2", "2b", "task_3")
-- insert_position: (Optional) 0-indexed position for ADD operations. Triggers automatic renaming of subsequent tasks.
+- insert_position: (Optional) 0-indexed position for ADD operations
 
 **EXAMPLES:**
 
 # Add a new main task at the end
-edit_plan(plan, action="add", task_type="main_task", task_id="4",
+edit_plan(action="add", task_type="main_task", task_id="4",
          description="Perform final validation", priority=1)
 
 # Add a critical subtask at the beginning of Task 2
-edit_plan(plan, action="add", task_type="subtask", parent_task_id="2",
+edit_plan(action="add", task_type="subtask", parent_task_id="2",
          task_id="2a", description="Validate data inputs first", insert_position=0)
-# Result: Existing "2a", "2b", "2c" become "2b", "2c", "2d"
-
-# Insert a new subtask between existing ones
-edit_plan(plan, action="add", task_type="subtask", parent_task_id="3",
-         task_id="3c", description="Additional analysis step", insert_position=2)
 
 # Remove an unnecessary subtask
-edit_plan(plan, action="drop", task_type="subtask", task_id="5b")
+edit_plan(action="drop", task_type="subtask", task_id="5b")
 
-# Update a main task's description and priority
-edit_plan(plan, action="edit", task_type="main_task", task_id="1",
-         description="Updated task description", priority=3)
+# Remove a main task that's no longer needed
+edit_plan(action="drop", task_type="main_task", task_id="3")
 
-# Update a subtask's status
-edit_plan(plan, action="edit", task_type="subtask", task_id="2c",
-         status="in_progress")"""
+# Completely rewrite what a subtask does (not just status change)
+edit_plan(action="edit", task_type="subtask", task_id="2b",
+         description="Analyze volatility patterns instead of correlation")"""
 
 EDIT_PLAN_PARAMETERS = {
     "type": "object",

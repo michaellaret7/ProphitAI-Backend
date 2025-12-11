@@ -6,8 +6,8 @@ from sqlalchemy import Column, Integer, String, ForeignKey, DateTime, Float, Boo
 from sqlalchemy.orm import relationship
 from sqlalchemy.dialects.postgresql import UUID, JSONB
 import uuid
-from datetime import datetime
 from app.db.core.db_config import UserBase
+from app.utils.time_utils import get_current_utc_time
 
 # =============================================================================
 # USER DATA SCHEMA
@@ -21,14 +21,15 @@ class User(UserBase):
     email = Column(String, nullable=False, unique=True, index=True)
     first_name = Column(String)
     last_name = Column(String)
-    creation_date = Column(DateTime, default=datetime.utcnow)
-    
+    creation_date = Column(DateTime, default=get_current_utc_time)
+
     # Direct company association
     company_id = Column(UUID(as_uuid=True), ForeignKey('companies.id'), nullable=True, index=True)
     role = Column(String, default='member')
     
     # Relationships
     company = relationship('Company', back_populates='users')
+    watchlists = relationship('Watchlist', back_populates='user', cascade='all, delete-orphan')
     # subscriptions = relationship('Subscription', back_populates='user', cascade='all, delete-orphan')
 
 class Company(UserBase):
@@ -36,7 +37,7 @@ class Company(UserBase):
     
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     name = Column(String, nullable=False)
-    creation_date = Column(DateTime, default=datetime.utcnow)
+    creation_date = Column(DateTime, default=get_current_utc_time)
     seats = Column(Integer)
     
     # Relationships
@@ -64,8 +65,8 @@ class Portfolio(UserBase):
     reason_for_rec = Column(Text, nullable=True)
     
     # Additional tracking fields that might be useful
-    created_date = Column(DateTime, default=datetime.utcnow)
-    updated_date = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    created_date = Column(DateTime, default=get_current_utc_time)
+    updated_date = Column(DateTime, default=get_current_utc_time, onupdate=get_current_utc_time)
     
     # If portfolios belong to a company or user, you might want to add:
     company_id = Column(UUID(as_uuid=True), ForeignKey('companies.id', ondelete='CASCADE'), nullable=True, index=True)
@@ -75,4 +76,26 @@ class Portfolio(UserBase):
     company = relationship('Company', backref='portfolios')
     user = relationship('User', backref='portfolios')
 
+class Watchlist(UserBase):
+    __tablename__ = 'watchlists'
+    
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    user_id = Column(UUID(as_uuid=True), ForeignKey('users.id', ondelete='CASCADE'), nullable=False, index=True)
+    name = Column(String, nullable=False)
+    creation_date = Column(DateTime, default=get_current_utc_time)
+    updated_date = Column(DateTime, default=get_current_utc_time, onupdate=get_current_utc_time)
 
+    # Relationships
+    user = relationship('User', back_populates='watchlists')
+    items = relationship('WatchlistItem', back_populates='watchlist', cascade='all, delete-orphan')
+
+class WatchlistItem(UserBase):
+    __tablename__ = 'watchlist_items'
+
+    watchlist_id = Column(UUID(as_uuid=True), ForeignKey('watchlists.id', ondelete='CASCADE'), primary_key=True)
+    ticker = Column(String, primary_key=True)
+    price_on_inception = Column(Float, nullable=True)
+    added_at = Column(DateTime, default=get_current_utc_time)
+
+    # Relationships
+    watchlist = relationship('Watchlist', back_populates='items')

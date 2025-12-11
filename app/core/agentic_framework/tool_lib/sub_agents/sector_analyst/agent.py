@@ -33,10 +33,10 @@ class SectorAnalyst(SubAgent):
     def __init__(self, user_prompt: str = None, sector: str = None, simulation_date: Optional[datetime] = None) -> None:
         super().__init__(
             user_prompt=user_prompt,
-            provider="deepseek",
-            model="deepseek-chat",
+            provider="grok",
+            model="grok-4-1-fast-reasoning",
             max_iterations=80,
-            print_mode=PrintMode.SUBAGENT,
+            print_mode=PrintMode.VERBOSE,
             temperature=0.7,
             plan_first=True,
             simulation_date=simulation_date
@@ -48,7 +48,7 @@ class SectorAnalyst(SubAgent):
             GET_SECTOR_PE_TOOL,
             GET_SECTOR_INDUSTRIES_TOOL,
             # Industry/Sub-Industry Benchmarking
-            GET_INDUSTRY_FACTOR_BENCHMARK_TOOL,
+            # GET_INDUSTRY_FACTOR_BENCHMARK_TOOL,
             GET_SUB_INDUSTRY_FACTOR_BENCHMARK_TOOL,
             # Stock Screening & Discovery
             EQUITY_SCREENER_TOOL,

@@ -1,21 +1,14 @@
 from concurrent.futures import ThreadPoolExecutor, as_completed
-from app.db.core.db_config import MarketSession
+from app.db.core.db_config import UserSession
 from app.db.core.models.market_data_models import Ticker, Price, DailyPrices
+from app.db.core.models.user_data_models import User, Watchlist, WatchlistItem
 from app.db.core.pull_fmp_data import FMP_API_DATA
 from app.utils.serialize_output import serialize_sqlalchemy_obj
+from app.utils.time_utils import get_current_utc_time
 
-with MarketSession() as session:
-    # sectors = {row[0] for row in session.query(Ticker.sector).distinct().filter(Ticker.is_etf == False).all()}
-    # print(sectors)
+with UserSession() as session:
+    # Returns the User object
+    user = session.query(User).join(Watchlist).join(WatchlistItem).filter(User.email == "michaellaret7@gmail.com").first()
 
-    # industries = {row[0] for row in session.query(Ticker.industry).distinct().filter(Ticker.is_etf == False).all()}
-    # print(industries)
-
-    # sub_industries = {row[0] for row in session.query(Ticker.sub_industry).distinct().filter(Ticker.is_etf == False).all()}
-    # print(sub_industries)
-
-    tickers = session.query(Price).join(Ticker).filter(Ticker.ticker == "VRSK").order_by(Price.datetime.asc()).all()
-    daily_prices = session.query(DailyPrices).join(Ticker).filter(Ticker.ticker == "VRSK").order_by(DailyPrices.datetime.asc()).all()
-    for price in tickers:
-        print(price.datetime, price.open, price.high, price.low, price.close)
     
+

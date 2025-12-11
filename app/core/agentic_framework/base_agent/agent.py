@@ -104,7 +104,7 @@ class BaseAgent:
         # Base Tool Registry
         register_base_tools(self)
 
-        print(f"Initialized Agent with model: {self.model}")
+        print(f"Initialized Agent with model: {self.model} (provider: {self.provider})")
 
     # NOTE: add a register tool function that takes a list of tool schemas and runs this add tool code internally. This will normalize the tool registration process.
     def add_tool(
@@ -152,10 +152,6 @@ class BaseAgent:
         if self.print_mode in [PrintMode.VERBOSE, PrintMode.DEBUG, PrintMode.PRODUCTION]:
             print(f"\n{'='*60}")
             print(f"Starting agent run")
-            print(f"Task: {self.user_prompt}")
-            print(f"{'='*60}\n")
-        elif self.print_mode == PrintMode.SUBAGENT:
-            print(f"Starting sub-agent run")
             print(f"Task: {self.user_prompt}")
             print(f"{'='*60}\n")
 

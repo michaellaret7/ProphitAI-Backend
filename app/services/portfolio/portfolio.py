@@ -7,7 +7,7 @@ from app.repositories.portfolio_data import (
     list_portfolios,
     retrieve_portfolio
 )
-from app.repositories.user_data import get_all_user_data, get_user_basic_info
+from app.repositories.user_data import get_all_user_data_by_id
 
 
 class Position:
@@ -29,7 +29,7 @@ class PortfolioService:
     def create_portfolio(
         self,
         *,
-        email: str,
+        user_id: str,
         company_name: str,
         portfolio_name: str,
         positions: List[Dict[str, Any]]
@@ -38,7 +38,7 @@ class PortfolioService:
         Create a new portfolio for a user.
 
         Args:
-            email: User's email address
+            user_id: User's internal database ID
             company_name: Company name for the portfolio
             portfolio_name: Name of the portfolio
             positions: List of dicts with 'ticker' and 'allocation' keys
@@ -49,14 +49,20 @@ class PortfolioService:
         Raises:
             ValueError: If validation fails
         """
-        if not email:
-            raise ValueError("Email is required")
+        if not user_id:
+            raise ValueError("User ID is required")
         if not company_name:
             raise ValueError("Company name is required")
         if not portfolio_name:
             raise ValueError("Portfolio name is required")
         if not positions or not isinstance(positions, list):
             raise ValueError("Positions must be a non-empty list")
+
+        # Get user email for add_portfolio (legacy requirement)
+        user_data = get_all_user_data_by_id(user_id=user_id)
+        if not user_data:
+            raise ValueError("User not found")
+        email = user_data.get("email")
 
         # Transform positions to Position objects
         position_objs = []
@@ -76,12 +82,12 @@ class PortfolioService:
         )
 
         # Return updated portfolio list data
-        return self._get_portfolio_list_data(email)
+        return self._get_portfolio_list_data(user_id)
 
     def update_portfolio(
         self,
         *,
-        email: str,
+        user_id: str,
         portfolio_id: str,
         name: Optional[str] = None,
         is_current: Optional[bool] = None
@@ -90,7 +96,7 @@ class PortfolioService:
         Update an existing portfolio.
 
         Args:
-            email: User's email address
+            user_id: User's internal database ID
             portfolio_id: UUID of the portfolio to update
             name: Optional new name for the portfolio
             is_current: Optional flag to set as current portfolio
@@ -101,14 +107,14 @@ class PortfolioService:
         Raises:
             ValueError: If validation fails or portfolio not found
         """
-        if not email:
-            raise ValueError("Email is required")
+        if not user_id:
+            raise ValueError("User ID is required")
         if not portfolio_id:
             raise ValueError("portfolioId is required")
 
         # Update portfolio in database
         updated = update_portfolio(
-            email=email,
+            user_id=uuid.UUID(user_id),
             portfolio_id=uuid.UUID(portfolio_id),
             name=name,
             is_current=is_current,
@@ -118,19 +124,19 @@ class PortfolioService:
             raise ValueError("Portfolio not found")
 
         # Return updated portfolio list data
-        return self._get_portfolio_list_data(email)
+        return self._get_portfolio_list_data(user_id)
 
     def delete_portfolio(
         self,
         *,
-        email: str,
+        user_id: str,
         portfolio_id: str
     ) -> Dict[str, Any]:
         """
         Delete a portfolio.
 
         Args:
-            email: User's email address
+            user_id: User's internal database ID
             portfolio_id: UUID of the portfolio to delete
 
         Returns:
@@ -139,14 +145,14 @@ class PortfolioService:
         Raises:
             ValueError: If validation fails or portfolio not found
         """
-        if not email:
-            raise ValueError("Email is required")
+        if not user_id:
+            raise ValueError("User ID is required")
         if not portfolio_id:
             raise ValueError("portfolioId is required")
 
         # Delete portfolio from database
         deleted = delete_portfolio(
-            email=email,
+            user_id=uuid.UUID(user_id),
             portfolio_id=uuid.UUID(portfolio_id),
         )
 
@@ -154,14 +160,14 @@ class PortfolioService:
             raise ValueError("Portfolio not found")
 
         # Return updated portfolio list data
-        return self._get_portfolio_list_data(email)
+        return self._get_portfolio_list_data(user_id)
 
-    def get_user_portfolios(self, email: str) -> Dict[str, Any]:
+    def get_user_portfolios(self, user_id: str) -> Dict[str, Any]:
         """
         Get all portfolios for a user.
 
         Args:
-            email: User's email address
+            user_id: User's internal database ID
 
         Returns:
             Dict containing user_data and portfolios for response building
@@ -169,18 +175,18 @@ class PortfolioService:
         Raises:
             ValueError: If user not found
         """
-        if not email:
-            raise ValueError("Email is required")
+        if not user_id:
+            raise ValueError("User ID is required")
 
-        return self._get_portfolio_list_data(email)
+        return self._get_portfolio_list_data(user_id)
 
-    def get_portfolio_positions(self, portfolio_id: str, email: Optional[str] = None) -> List[Dict[str, Any]]:
+    def get_portfolio_positions(self, portfolio_id: str, user_id: Optional[str] = None) -> List[Dict[str, Any]]:
         """
         Get positions for a specific portfolio.
 
         Args:
             portfolio_id: UUID of the portfolio
-            email: Optional email for additional validation
+            user_id: Optional user_id for ownership validation
 
         Returns:
             List of position dictionaries
@@ -192,7 +198,7 @@ class PortfolioService:
             raise ValueError("portfolioId is required")
 
         positions = retrieve_portfolio(
-            email=email,
+            user_id=uuid.UUID(user_id) if user_id else None,
             portfolio_id=uuid.UUID(portfolio_id)
         )
 
@@ -201,7 +207,7 @@ class PortfolioService:
 
         return positions
 
-    def _get_portfolio_list_data(self, email: str) -> Dict[str, Any]:
+    def _get_portfolio_list_data(self, user_id: str) -> Dict[str, Any]:
         """
         Helper method to get user data and formatted portfolio list.
 
@@ -209,7 +215,7 @@ class PortfolioService:
         operations by centralizing the portfolio list retrieval and formatting.
 
         Args:
-            email: User's email address
+            user_id: User's internal database ID
 
         Returns:
             Dict with 'user_data', 'portfolios', and 'counts' keys
@@ -218,7 +224,7 @@ class PortfolioService:
             ValueError: If user not found
         """
         # Get user data
-        user_data = get_all_user_data(email=email)
+        user_data = get_all_user_data_by_id(user_id=user_id)
         if not user_data:
             raise ValueError("User not found")
 
@@ -243,5 +249,5 @@ class PortfolioService:
             'user_data': user_data,
             'portfolios': portfolios_formatted,
             'counts': counts,
-            'email': email
+            'user_id': user_id
         }

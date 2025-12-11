@@ -13,35 +13,48 @@ from app.services.portfolio.stress_returns import StressReturnsService
 from app.api.response_envelope import ok_envelope
 from app.redis.client import cache
 from app.utils.decorators.api_decorators import handle_controller_errors
+from app.repositories.portfolio_data import retrieve_portfolio
+import uuid
+
+
+def _verify_portfolio_ownership(portfolio_id: str, user_id: str) -> None:
+    """Verify that the portfolio belongs to the user."""
+    positions = retrieve_portfolio(portfolio_id=uuid.UUID(portfolio_id))
+    if not positions:
+        raise HTTPException(status_code=404, detail="Portfolio not found")
+    # Check ownership - all positions for a portfolio have the same user_id
+    portfolio_user_id = str(positions[0].get("user_id"))
+    if portfolio_user_id != user_id:
+        raise HTTPException(status_code=403, detail="Access denied")
 
 @handle_controller_errors
 async def create_portfolio_controller(
     *,
-    email: str,
+    user_id: str,
     company_name: str,
     portfolio_name: str,
     positions: List[Dict[str, Any]],
 ) -> Dict[str, Any]:
-    """
-    Controller to handle portfolio creation with cache invalidation
-    """
-    # Delegate to service
+    """Controller to handle portfolio creation with cache invalidation."""
+    if not user_id:
+        raise ValueError("userId is required")
+
     service = PortfolioService()
     data = service.create_portfolio(
-        email=email,
+        user_id=user_id,
         company_name=company_name,
         portfolio_name=portfolio_name,
         positions=positions
     )
 
-    # Invalidate user portfolio list cache (new portfolio added)
-    await cache.clear_pattern(f"user:portfolios:{email}")
+    # Invalidate user portfolio list cache
+    await cache.clear_pattern(f"user:portfolios:{user_id}")
 
     return ok_envelope(
         message="Portfolio created successfully",
         kind="users#portfolios",
         resource_id=data['user_data'].get('id'),
-        self_link=f"/api/user/portfolios?email={email}",
+        self_link=f"/api/portfolios",
         counts=data['counts'],
         payload=data['portfolios'],
         status=201,
@@ -51,24 +64,29 @@ async def create_portfolio_controller(
 @handle_controller_errors
 async def update_portfolio_controller(
     *,
-    email: str,
+    user_id: str,
     portfolio_id: str,
     name: Optional[str] = None,
     is_current: Optional[bool] = None,
 ) -> Dict[str, Any]:
-    """
-    Controller to handle portfolio updates with cache invalidation
-    """
-    # Delegate to service
+    """Controller to handle portfolio updates with cache invalidation."""
+    if not user_id:
+        raise ValueError("userId is required")
+    if not portfolio_id:
+        raise ValueError("portfolioId is required")
+
+    # Verify ownership before update
+    _verify_portfolio_ownership(portfolio_id, user_id)
+
     service = PortfolioService()
     data = service.update_portfolio(
-        email=email,
+        user_id=user_id,
         portfolio_id=portfolio_id,
         name=name,
         is_current=is_current
     )
 
-    # Invalidate portfolio cache - clear all cached data for this portfolio
+    # Invalidate portfolio cache
     await cache.clear_pattern(f"portfolio:returns:{portfolio_id}:*")
     await cache.clear_pattern(f"portfolio:metrics:{portfolio_id}:*")
 
@@ -76,7 +94,7 @@ async def update_portfolio_controller(
         message="Portfolio updated successfully",
         kind="users#portfolios",
         resource_id=data['user_data'].get('id'),
-        self_link=f"/api/user/portfolios?email={email}",
+        self_link=f"/api/portfolios/{portfolio_id}",
         counts=data['counts'],
         payload=data['portfolios'],
     )
@@ -85,20 +103,25 @@ async def update_portfolio_controller(
 @handle_controller_errors
 async def delete_portfolio_controller(
     *,
-    email: str,
+    user_id: str,
     portfolio_id: str,
 ) -> Dict[str, Any]:
-    """
-    Controller to handle portfolio deletion with cache invalidation
-    """
-    # Delegate to service
+    """Controller to handle portfolio deletion with cache invalidation."""
+    if not user_id:
+        raise ValueError("userId is required")
+    if not portfolio_id:
+        raise ValueError("portfolioId is required")
+
+    # Verify ownership before delete
+    _verify_portfolio_ownership(portfolio_id, user_id)
+
     service = PortfolioService()
     data = service.delete_portfolio(
-        email=email,
+        user_id=user_id,
         portfolio_id=portfolio_id
     )
 
-    # Invalidate portfolio cache - clear all cached data for this portfolio
+    # Invalidate portfolio cache
     await cache.clear_pattern(f"portfolio:returns:{portfolio_id}:*")
     await cache.clear_pattern(f"portfolio:metrics:{portfolio_id}:*")
 
@@ -106,7 +129,7 @@ async def delete_portfolio_controller(
         message="Portfolio deleted successfully",
         kind="users#portfolios",
         resource_id=data['user_data'].get('id'),
-        self_link=f"/api/user/portfolios?email={email}",
+        self_link=f"/api/portfolios",
         counts=data['counts'],
         payload=data['portfolios'],
     )
@@ -115,94 +138,86 @@ async def delete_portfolio_controller(
 async def get_portfolio_returns_controller(
     *,
     portfolio_id: str,
+    user_id: str,
     years: int = 2,
 ) -> Dict[str, Any]:
-    """
-    Controller to handle portfolio returns calculation with caching
-
-    Cache TTL: 1 day (86400s)
-    Cache key pattern: portfolio:returns:{portfolio_id}:{years}
-    """
+    """Controller to handle portfolio returns calculation with caching."""
     if not portfolio_id:
         raise ValueError("portfolioId is required")
+    if not user_id:
+        raise ValueError("userId is required")
 
-    # Generate cache key
+    # Verify ownership
+    _verify_portfolio_ownership(portfolio_id, user_id)
+
     cache_key = f"portfolio:returns:{portfolio_id}:{years}"
 
-    # Try to get from cache
     cached_data = await cache.get(cache_key)
     if cached_data:
         return cached_data
 
-    # Cache miss - compute returns
     service = PortfolioReturnsService(
         portfolio_id=portfolio_id,
         years=years
     )
     returns_data = service.get_returns_series()
 
-    # Build response
     response = ok_envelope(
         message="Portfolio returns retrieved successfully",
         kind="portfolio#returns",
         resource_id=portfolio_id,
-        self_link=f"/api/portfolio/returns?portfolioId={portfolio_id}",
+        self_link=f"/api/portfolios/{portfolio_id}/returns",
         payload=returns_data,
     )
 
-    # Cache for 1 day (86400 seconds)
     await cache.set(cache_key, response, ttl=86400)
 
     return response
 
-@handle_controller_errors
-def get_user_portfolio_list_controller(email: str = "michaellaret7@gmail.com") -> Dict[str, Any]:
-    """
-    Controller to handle user portfolio list retrieval
-    """
-    if not email:
-        raise ValueError("Email is required")
 
-    # Delegate to service
+@handle_controller_errors
+async def get_user_portfolio_list_controller(user_id: str) -> Dict[str, Any]:
+    """Controller to handle user portfolio list retrieval."""
+    if not user_id:
+        raise ValueError("userId is required")
+
     service = PortfolioService()
-    data = service.get_user_portfolios(email=email)
+    data = service.get_user_portfolios(user_id=user_id)
 
     return ok_envelope(
         message="User portfolio list retrieved successfully",
         kind="users#portfolios",
         resource_id=data['user_data'].get('id'),
-        self_link=f"/api/user/portfolios?email={email}",
+        self_link=f"/api/portfolios",
         counts=data['counts'],
         payload=data['portfolios'],
     )
+
 
 @handle_controller_errors
 async def get_portfolio_positions_controller(
     *,
     portfolio_id: str,
+    user_id: str,
 ) -> Dict[str, Any]:
-    """
-    Controller to handle portfolio positions retrieval with caching
-
-    Cache TTL: 1 day (86400s)
-    Cache key pattern: portfolio:positions:{portfolio_id}
-    """
+    """Controller to handle portfolio positions retrieval with caching."""
     if not portfolio_id:
         raise ValueError("portfolioId is required")
+    if not user_id:
+        raise ValueError("userId is required")
 
-    # Generate cache key
+    # Verify ownership
+    _verify_portfolio_ownership(portfolio_id, user_id)
+
     cache_key = f"portfolio:positions:{portfolio_id}"
 
-    # Try to get from cache
     cached_data = await cache.get(cache_key)
     if cached_data:
         return cached_data
 
-    # Cache miss - retrieve positions
     service = PortfolioService()
-    positions = service.get_portfolio_positions(portfolio_id=portfolio_id)
+    positions = service.get_portfolio_positions(portfolio_id=portfolio_id, user_id=user_id)
 
-    # Build response
     response = ok_envelope(
         message="Portfolio positions retrieved successfully",
         kind="portfolio#positions",
@@ -211,82 +226,76 @@ async def get_portfolio_positions_controller(
         payload=positions,
     )
 
-    # Cache for 1 day (86400 seconds)
     await cache.set(cache_key, response, ttl=86400)
 
     return response
+
 
 @handle_controller_errors
 async def get_portfolio_metrics_controller(
     *,
     portfolio_id: str,
+    user_id: str,
     years: int = 2,
 ) -> Dict[str, Any]:
-    """
-    Controller to handle portfolio metrics retrieval for dashboard cards/tooltips with caching
-
-    Cache TTL: 1 day (86400s)
-    Cache key pattern: portfolio:metrics:{portfolio_id}:{years}
-    """
+    """Controller to handle portfolio metrics retrieval with caching."""
     if not portfolio_id:
         raise ValueError("portfolioId is required")
+    if not user_id:
+        raise ValueError("userId is required")
 
-    # Generate cache key
+    # Verify ownership
+    _verify_portfolio_ownership(portfolio_id, user_id)
+
     cache_key = f"portfolio:metrics:{portfolio_id}:{years}"
 
-    # Try to get from cache
     cached_data = await cache.get(cache_key)
     if cached_data:
         return cached_data
 
-    # Cache miss - compute metrics
     service = PortfolioMetricsService(
         portfolio_id=portfolio_id,
         years=years
     )
     metrics_data = service.get_all_metrics()
 
-    # Build response
     response = ok_envelope(
         message="Portfolio metrics retrieved successfully",
         kind="portfolio#metrics",
         resource_id=portfolio_id,
-        self_link=f"/api/portfolio/metrics?portfolioId={portfolio_id}",
+        self_link=f"/api/portfolios/{portfolio_id}/metrics",
         payload=metrics_data,
     )
 
-    # Cache for 1 day (86400 seconds)
     await cache.set(cache_key, response, ttl=86400)
 
     return response
+
 
 @handle_controller_errors
 async def get_portfolio_sector_concentration_controller(
     *,
     portfolio_id: str,
+    user_id: str,
 ) -> Dict[str, Any]:
-    """
-    Controller to handle portfolio sector concentration retrieval with caching
-
-    Cache TTL: 1 day (86400s)
-    Cache key pattern: portfolio:sectors:{portfolio_id}
-    """
+    """Controller to handle portfolio sector concentration retrieval with caching."""
     if not portfolio_id:
         raise ValueError("portfolioId is required")
+    if not user_id:
+        raise ValueError("userId is required")
 
-    # Generate cache key
+    # Verify ownership
+    _verify_portfolio_ownership(portfolio_id, user_id)
+
     cache_key = f"portfolio:sectors:{portfolio_id}"
 
-    # Try to get from cache
     cached_data = await cache.get(cache_key)
     if cached_data:
         return cached_data
 
-    # Cache miss - compute sector concentration
     service = PortfolioConcentrationService(portfolio_id=portfolio_id)
     sector_data = service.get_sector_concentration()
 
-    # Build response
     response = ok_envelope(
         message="Portfolio sector concentration retrieved successfully",
         kind="portfolio#sectors",
@@ -295,24 +304,25 @@ async def get_portfolio_sector_concentration_controller(
         payload=sector_data,
     )
 
-    # Cache for 1 day (86400 seconds)
     await cache.set(cache_key, response, ttl=86400)
 
     return response
+
 
 @handle_controller_errors
 async def get_portfolio_industry_concentration_controller(
     *,
     portfolio_id: str,
+    user_id: str,
 ) -> Dict[str, Any]:
-    """
-    Controller to handle portfolio industry concentration retrieval with caching
-
-    Cache TTL: 1 day (86400s)
-    Cache key pattern: portfolio:industries:{portfolio_id}
-    """
+    """Controller to handle portfolio industry concentration retrieval with caching."""
     if not portfolio_id:
         raise ValueError("portfolioId is required")
+    if not user_id:
+        raise ValueError("userId is required")
+
+    # Verify ownership
+    _verify_portfolio_ownership(portfolio_id, user_id)
 
     cache_key = f"portfolio:industries:{portfolio_id}"
 
@@ -335,19 +345,21 @@ async def get_portfolio_industry_concentration_controller(
 
     return response
 
+
 @handle_controller_errors
 async def get_portfolio_sub_industry_concentration_controller(
     *,
     portfolio_id: str,
+    user_id: str,
 ) -> Dict[str, Any]:
-    """
-    Controller to handle portfolio sub-industry concentration retrieval with caching
-
-    Cache TTL: 1 day (86400s)
-    Cache key pattern: portfolio:sub_industries:{portfolio_id}
-    """
+    """Controller to handle portfolio sub-industry concentration retrieval with caching."""
     if not portfolio_id:
         raise ValueError("portfolioId is required")
+    if not user_id:
+        raise ValueError("userId is required")
+
+    # Verify ownership
+    _verify_portfolio_ownership(portfolio_id, user_id)
 
     cache_key = f"portfolio:sub_industries:{portfolio_id}"
 
@@ -370,43 +382,34 @@ async def get_portfolio_sub_industry_concentration_controller(
 
     return response
 
+
 @handle_controller_errors
 async def get_portfolio_performance_comparison_controller(
     *,
     portfolio_id: str,
+    user_id: str,
     optimized_weights: Dict[str, float],
     years: int = 2,
 ) -> Dict[str, Any]:
-    """
-    Controller to handle portfolio performance comparison between current and optimized portfolios.
-
-    This endpoint is designed to be called after portfolio optimization to provide
-    comprehensive performance comparison data including returns, drawdowns, and metrics.
-
-    Args:
-        portfolio_id: UUID of the current portfolio
-        optimized_weights: Dict of ticker -> allocation percentage (e.g., {"AAPL": 10.5, "MSFT": 15.0})
-        years: Number of years of historical data (default 2)
-
-    Returns:
-        Dict with returns, drawdowns, and metrics comparison
-    """
+    """Controller to handle portfolio performance comparison."""
     if not portfolio_id:
         raise ValueError("portfolioId is required")
+    if not user_id:
+        raise ValueError("userId is required")
     if not optimized_weights:
         raise ValueError("optimizedWeights is required")
 
-    # Initialize service and compute performance data
+    # Verify ownership
+    _verify_portfolio_ownership(portfolio_id, user_id)
+
     service = PortfolioPerformanceComparisonService(
         portfolio_id=portfolio_id,
         optimized_weights=optimized_weights,
         years=years
     )
 
-    # Get complete performance data
     performance_data = service.get_performance_data()
 
-    # Build response
     response = ok_envelope(
         message="Portfolio performance comparison retrieved successfully",
         kind="portfolio#performanceComparison",
