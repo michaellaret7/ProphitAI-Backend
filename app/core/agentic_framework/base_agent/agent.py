@@ -16,7 +16,7 @@ from app.core.agentic_framework.base_agent.base_tool_registry import register_ba
 from app.core.agentic_framework.base_agent.utils.messages.agent_message import UNIVERSAL_AGENT_MESSAGE
 from app.core.agentic_framework.base_agent.utils.models import PrintMode
 from app.core.agentic_framework.base_agent.utils.path_utils import create_agent_output_dir
-from app.core.agentic_framework.base_agent.utils.resolve_llm import resolve_llm_and_client
+from app.utils.choose_model_and_client import get_model_and_client
 from pydantic import BaseModel
 from app.utils.gpt_parser import parse_with_gpt
 
@@ -64,7 +64,7 @@ class BaseAgent:
                           Defaults to NoOpCallback (does nothing).
         """
         self.provider = provider
-        self.model, self.client = resolve_llm_and_client(provider=self.provider, model=model)
+        self.model, self.client = get_model_and_client(provider=self.provider, model=model)
 
         self.system_prompt = system_prompt
         self.user_prompt = user_prompt

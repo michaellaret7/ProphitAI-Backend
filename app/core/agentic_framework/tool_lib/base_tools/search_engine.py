@@ -1,11 +1,11 @@
-from app.utils.choose_model_and_client import perplexity_model_and_client, openai_model_and_client
+from app.utils.choose_model_and_client import get_model_and_client
 import re
 import yaml
 from app.core.agentic_framework.tool_lib.common.responses import success_response, error_response
 
 class AgentSearchEngine:
     def perplexity_free_search(self, query: str):
-        model, client = perplexity_model_and_client('sonar-reasoning') # --> initialize model and client for perplexity
+        model, client = get_model_and_client('perplexity', 'sonar-reasoning')
 
         system_prompt = """
         <Role>
@@ -76,7 +76,7 @@ class AgentSearchEngine:
         """
         Processes a user query using the Deep Research API for detailed market analysis.
         """
-        model, client = openai_model_and_client('o3')
+        model, client = get_model_and_client('openai', 'o3')
         system_message = """
     You are a professional financial analyst preparing a structured, data-driven report. Your task is to analyze the user's query about the macroeconomic environment and its implications for the stock market.
 

@@ -21,17 +21,8 @@ class AiWatchlistAgent(BaseAgent):
         self.user_prompt = self._build_user_prompt()
         
         super().__init__(
-            # provider="deepseek",
-            # model="deepseek-chat",
-            # provider="anthropic",
-            # model="claude-haiku-4-5-20251001",
-            # model="claude-sonnet-4-5-20250929",
-            # provider="openai",
-            # model="gpt-4.1",
-            # provider="together",
-            # model="Kimi-K2-Thinking",
-            provider="grok",
-            model="grok-4-1-fast-reasoning",
+            provider="groq",
+            model="qwen/qwen3-32b",
             system_prompt=SYSTEM_PROMPT,
             user_prompt=self.user_prompt,
             max_iterations=200,
@@ -74,22 +65,22 @@ class AiWatchlistAgent(BaseAgent):
         return USER_PROMPT_TEMPLATE.format(user_query=self.user_preferences)
 
 
-# if __name__ == "__main__":
-#     import time
-#     start_time = time.time()
-#     agent = AiWatchlistAgent(
-#         user_preferences=
-#         "Build me a watchlist of mining companies that have spent heavy amounts on capital expenditures in the last 5 years(today is 12/9/2025) and are now looking to have their capital expenditures pay off and start turning a profit in the next 1-2 years.\n"
-#         "I want to see companies that have made these capex investments recently, and in the coming years will start to see the benefits of those investments, NOT companies that have already reaped the benefits of their investments or companies that are just beginning their capex programs."
-#     )
-#     print(agent)
-#     result = agent.run(response_format=WatchlistResponse)
-#     end_time = time.time()
-#     print(f"Time taken: {end_time - start_time:.4f} seconds")
+if __name__ == "__main__":
+    import time
+    start_time = time.time()
+    agent = AiWatchlistAgent(
+        user_preferences=
+        "Build me a watchlist of mining companies that have spent heavy amounts on capital expenditures in the last 5 years(today is 12/9/2025) and are now looking to have their capital expenditures pay off and start turning a profit in the next 1-2 years.\n"
+        "I want to see companies that have made these capex investments recently, and in the coming years will start to see the benefits of those investments, NOT companies that have already reaped the benefits of their investments or companies that are just beginning their capex programs."
+    )
+    print(agent)
+    result = agent.run(response_format=WatchlistResponse)
+    end_time = time.time()
+    print(f"Time taken: {end_time - start_time:.4f} seconds")
 
-#     if result.get("parsed_output"):
-#         print(result["parsed_output"].model_dump_json(indent=2))
-#     else:
-#         print("Raw answer:", result["final_answer"])
+    if result.get("parsed_output"):
+        print(result["parsed_output"].model_dump_json(indent=2))
+    else:
+        print("Raw answer:", result["final_answer"])
 
 

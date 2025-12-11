@@ -3,7 +3,7 @@ Ultra simple GPT-4o parser utility for converting data to Pydantic models
 """
 from typing import Type, TypeVar, Dict, List
 from pydantic import BaseModel, Field
-from app.utils.choose_model_and_client import openai_model_and_client, huggingface_model_and_client
+from app.utils.choose_model_and_client import get_model_and_client
 import json
 from app.models.portfolio_models import PortfolioInput
 
@@ -31,8 +31,8 @@ def parse_with_gpt(query: str, target_model: Type[T], system_prompt: str = None)
     Returns:
         Parsed instance of target_model
     """
-    model, client = openai_model_and_client('gpt-5-mini')
-    # model, client = huggingface_model_and_client(model="openai/gpt-oss-120b:fireworks-ai")
+    model, client = get_model_and_client('openai', 'gpt-5-mini')
+    # model, client = get_model_and_client('huggingface', 'openai/gpt-oss-120b:fireworks-ai')
 
     if system_prompt is None:
         system_prompt = f"""Parse the user's input into the requested structured format.

@@ -3,7 +3,7 @@ from datetime import datetime, timedelta
 from openai import OpenAI
 import yfinance as yf
 from dotenv import load_dotenv
-from app.utils.choose_model_and_client import openai_model_and_client
+from app.utils.choose_model_and_client import get_model_and_client
 from app.db.core.db_config import MarketSession
 from app.db.core.models.market_data_models import *
 from app.utils.decorators.database import with_session
@@ -15,7 +15,7 @@ load_dotenv()
 
 # Load OpenAI credentials from environment
 
-model, client = openai_model_and_client('gpt-4o-mini')
+model, client = get_model_and_client('openai', 'gpt-4o-mini')
 
 def name_to_ticker(company_name):
     """

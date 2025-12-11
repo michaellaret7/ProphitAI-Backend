@@ -6,7 +6,7 @@ import os
 from dotenv import load_dotenv
 import json
 import time
-from app.utils.choose_model_and_client import gemini_model_and_client, openai_model_and_client, claude_model_and_client
+from app.utils.choose_model_and_client import get_model_and_client
 
 load_dotenv()
 
@@ -142,7 +142,7 @@ def transform_gemini_to_openai(gemini_response):
 # print(response.model_dump_json(indent=2))
 
 
-model, client = gemini_model_and_client(model="gemini-3-pro-preview")
+model, client = get_model_and_client('gemini', 'gemini-3-pro-preview')
 
 response = client.chat.completions.create(
     model=model,
@@ -154,7 +154,7 @@ response = client.chat.completions.create(
 print("====GEMINI=====")
 resonse = response 
 
-model, client = openai_model_and_client(model="gpt-4o")
+model, client = get_model_and_client('openai', 'gpt-4o')
 
 response = client.chat.completions.create(
     model=model,
@@ -167,7 +167,7 @@ response = client.chat.completions.create(
 print("====OPENAI=====")
 print(response.model_dump_json(indent=2))
 
-model, client = claude_model_and_client()
+model, client = get_model_and_client('anthropic')
 
 response = client.chat.completions.create(
     model=model,

@@ -1,17 +1,8 @@
 # app/utils/__init__.py
-# Utilities package for common functionality 
+# Utilities package for common functionality
 
-from .choose_model_and_client import (
-    deepseek_model_and_client,
-    openai_model_and_client, 
-    grok_model_and_client, 
-    perplexity_model_and_client
-)
+from .choose_model_and_client import get_model_and_client
 
 __all__ = [
-    "deepseek_model_and_client",
-    "openai_model_and_client",
-    "grok_model_and_client",
-    "perplexity_model_and_client",
-    "strip_formatting"
-] 
+    "get_model_and_client",
+]

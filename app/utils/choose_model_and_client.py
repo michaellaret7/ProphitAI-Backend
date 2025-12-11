@@ -1,161 +1,119 @@
+"""Configuration-driven LLM provider client factory."""
+
 import os
+from dataclasses import dataclass
+from typing import Optional, Tuple
 from openai import OpenAI
 from dotenv import load_dotenv
 
 load_dotenv()
 
-def deepseek_model_and_client(model: str = None):
-    """
-    Create a DeepSeek model name and OpenAI client instance.
+
+@dataclass(frozen=True)
+class ProviderConfig:
+    """Configuration for an LLM provider."""
+    api_key_env: str
+    model_env: str
+    base_url: Optional[str] = None
+
+
+PROVIDER_CONFIGS = {
+    "openai": ProviderConfig("OPENAI_API_KEY", "OPENAI_MODEL"),
+    "anthropic": ProviderConfig("ANTHROPIC_API_KEY", "ANTHROPIC_MODEL", "https://api.anthropic.com/v1"),
+    "gemini": ProviderConfig("GEMINI_API_KEY", "GEMINI_MODEL", "https://generativelanguage.googleapis.com/v1beta/openai/"),
+    "grok": ProviderConfig("GROK_API_KEY", "GROK_MODEL", "https://api.x.ai/v1"),
+
+    "deepseek": ProviderConfig("DEEPSEEK_API_KEY", "DEEPSEEK_MODEL", "https://api.deepseek.com"),
+    "perplexity": ProviderConfig("PERPLEXITY_API_KEY", "PERPLEXITY_MODEL", "https://api.perplexity.ai"),
+    "huggingface": ProviderConfig("HF_TOKEN", "HUGGINGFACE_MODEL", "https://router.huggingface.co/v1"),
     
+    "together": ProviderConfig("TOGETHER_AI_API_KEY", "TOGETHER_MODEL", "https://api.together.xyz/v1"),
+    "fireworks": ProviderConfig("FIREWORKS_API_KEY", "FIREWORKS_MODEL", "https://api.fireworks.ai/inference/v1"),
+    "groq": ProviderConfig("GROQ_API_KEY", "GROQ_MODEL", "https://api.groq.com/openai/v1"),
+}
+
+# Model aliases: friendly_name -> {provider: actual_model_name}
+# Use same friendly name across providers, routes to correct model based on provider
+MODEL_ALIASES = {
+    "openai-gpt-oss-120b": {
+        "together": "openai/gpt-oss-120b",
+        "fireworks": "accounts/fireworks/models/gpt-oss-120b",
+        "groq": "openai/gpt-oss-120b",
+    },
+    "openai-gpt-oss-20b": {
+        "together": "openai/gpt-oss-20b",
+        "fireworks": "accounts/fireworks/models/gpt-oss-20b",
+        "groq": "openai/gpt-oss-20b",
+    },
+
+    "deepseek-v3p2": {
+        "fireworks": "accounts/fireworks/models/deepseek-v3p2",
+        "together": "deepseek-ai/DeepSeek-V3.2-Exp",
+    },
+
+    "Qwen3-235B-instruct": {
+        "together": "Qwen/Qwen3-235B-A22B-Instruct-2507-tput",
+        "fireworks": "accounts/fireworks/models/qwen3-235b-a22b-instruct-2507",
+    },
+    "Qwen3-235B-thinking": {
+        "fireworks": "accounts/fireworks/models/qwen3-235b-a22b-thinking-2507",
+    },
+
+    "Kimi-K2-Thinking": {
+        "together": "moonshotai/Kimi-K2-Thinking",
+        "fireworks": "accounts/fireworks/models/kimi-k2-thinking",
+    },
+    "Kimi-K2-instruct": {
+        "together": "moonshotai/Kimi-K2-Instruct-0905",
+        "groq": "moonshotai/kimi-k2-instruct-0905",
+        "fireworks": "accounts/fireworks/models/kimi-k2-instruct-0905",
+    },
+
+    "ministral-3-14B-instruct": {
+        "together": "mistralai/Ministral-3-14B-Instruct-2512",
+        "fireworks": "accounts/fireworks/models/ministral-3-14b-instruct-2512",
+    },
+
+    "glm-4-6": {
+        "fireworks": "accounts/fireworks/models/glm-4p6",
+    }    
+}
+
+
+def get_model_and_client(provider: Optional[str], model: Optional[str] = None) -> Tuple[str, OpenAI]:
+    """
+    Create a model name and OpenAI-compatible client for any supported provider.
+
     Args:
-        model: Model name to use (default: from DEEPSEEK_MODEL env var)
-        
+        provider: Provider name (openai, anthropic, deepseek, etc.)
+        model: Model name to use (defaults to provider's env var)
+
     Returns:
-        tuple: (model_name, openai_client) for DeepSeek API
-    """
-    DEEPSEEK_API_KEY = os.getenv("DEEPSEEK_API_KEY")
+        tuple: (model_name, openai_client)
 
+    Raises:
+        ValueError: If provider is not supported or missing
+    """
+    if provider is None:
+        raise ValueError("provider must be specified (e.g., 'openai', 'anthropic')")
+
+    provider_key = provider.strip().lower()
+
+    if provider_key not in PROVIDER_CONFIGS:
+        raise ValueError(f"Unsupported provider: {provider}")
+
+    config = PROVIDER_CONFIGS[provider_key]
+
+    api_key = os.getenv(config.api_key_env)
     if model is None:
-        model = os.environ.get("DEEPSEEK_MODEL")
+        model = os.getenv(config.model_env)
 
-    client = OpenAI(api_key=DEEPSEEK_API_KEY, base_url="https://api.deepseek.com")
+    # Apply model aliases (friendly_name -> provider-specific name)
+    if model in MODEL_ALIASES and provider_key in MODEL_ALIASES[model]:
+        model = MODEL_ALIASES[model][provider_key]
 
-    return model, client
+    client_kwargs = {"api_key": api_key}
+    if config.base_url:
+        client_kwargs["base_url"] = config.base_url
 
-def openai_model_and_client(model: str = None):
-    """
-    Create an OpenAI model name and client instance.
-    
-    Args:
-        model: Model name to use (default: from OPENAI_MODEL env var)
-        
-    Returns:
-        tuple: (model_name, openai_client) for OpenAI API
-    """
-    OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
-
-    if model is None:
-        model = os.environ.get("OPENAI_MODEL")
-
-    client = OpenAI(api_key=OPENAI_API_KEY)
-
-    return model, client
-
-def grok_model_and_client(model: str = None):
-    """
-    Create a Grok model name and OpenAI client instance.
-    
-    Args:
-        model: Model name to use (default: from GROK_MODEL env var)
-        
-    Returns:
-        tuple: (model_name, openai_client) for Grok API
-    """
-    GROK_API_KEY = os.getenv("GROK_API_KEY")
-
-    if model is None:
-        model = os.environ.get("GROK_MODEL")
-
-    client = OpenAI(
-        api_key=GROK_API_KEY,
-        base_url="https://api.x.ai/v1",
-    )
-
-    return model, client
-
-def perplexity_model_and_client(model: str = None):
-    """
-    Create a Perplexity model name and OpenAI client instance.
-    
-    Args:
-        model: Model name to use (default: from PERPLEXITY_MODEL env var)
-        
-    Returns:
-        tuple: (model_name, openai_client) for Perplexity API
-    """
-    PERPLEXITY_API_KEY = os.getenv("PERPLEXITY_API_KEY")
-
-    if model is None:
-        model = os.environ.get("PERPLEXITY_MODEL")
-
-    client = OpenAI(api_key=PERPLEXITY_API_KEY, base_url="https://api.perplexity.ai")
-    
-    return model, client
-
-def claude_model_and_client(model: str = None):
-    """
-    Create a Claude model name and OpenAI client instance.
-    
-    Args:
-        model: Model name to use (default: from CLAUDE_MODEL env var)
-        
-    Returns:
-        tuple: (model_name, openai_client) for Claude API
-    """
-    CLAUDE_API_KEY = os.getenv("ANTHROPIC_API_KEY")
-
-    if model is None:
-        model = os.environ.get("ANTHROPIC_MODEL")
-
-    client = OpenAI(api_key=CLAUDE_API_KEY, base_url="https://api.anthropic.com/v1")
-
-    return model, client
-
-def huggingface_model_and_client(model: str = None):
-    """
-    Create an OpenAI model name and client instance.
-    
-    Args:
-        model: Model name to use (default: from OPENAI_MODEL env var)
-        
-    Returns:
-        tuple: (model_name, openai_client) for HuggingFace API
-    """
-    HF_TOKEN = os.getenv("HF_TOKEN")
-
-    if model is None:
-        model = os.environ.get("HUGGINGFACE_MODEL")
-
-    client = OpenAI(
-        base_url="https://router.huggingface.co/v1",
-        api_key=HF_TOKEN,
-    )
-
-    return model, client
-
-def gemini_model_and_client(model: str = None):
-    """
-    Create a Gemini model name and OpenAI client instance.
-    
-    Args:
-        model: Model name to use (default: from GEMINI_MODEL env var)
-        
-    Returns:
-        tuple: (model_name, openai_client) for Gemini API
-    """
-
-    GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
-
-    if model is None:
-        model = os.environ.get("GEMINI_MODEL")
-
-    client = OpenAI(
-        api_key=GEMINI_API_KEY,
-        base_url="https://generativelanguage.googleapis.com/v1beta/openai/"
-    )
-
-    return model, client
-
-def together_model_and_client(model: str = None):
-    api_key = os.getenv("TOGETHER_AI_API_KEY")
-
-    if model is None:
-        model = os.environ.get("TOGETHER_MODEL")
-
-    client = OpenAI(
-        base_url="https://api.together.xyz/v1",
-        api_key=api_key,
-    )
-
-    return model, client
+    return model, OpenAI(**client_kwargs)

@@ -5,7 +5,7 @@ Minimal autonomous agent with clean separation of concerns.
 
 from typing import List, Dict, Any, Callable, Union
 from dotenv import load_dotenv
-from app.core.agentic_framework.base_agent.utils.resolve_llm import resolve_llm_and_client
+from app.utils.choose_model_and_client import get_model_and_client
 from app.core.agentic_framework.base_agent.execution.execution_loop import ExecutionLoop
 from app.core.agentic_framework.base_agent.execution.tool_handler import ToolHandler
 from app.core.agentic_framework.base_agent.utils.models import PrintMode
@@ -57,7 +57,7 @@ class SubAgent:
                            data filtering and prevent look-ahead bias.
         """
         self.provider = provider
-        self.model, self.client = resolve_llm_and_client(provider=self.provider, model=model)
+        self.model, self.client = get_model_and_client(provider=self.provider, model=model)
 
         self.system_prompt = system_prompt
         self.user_prompt = user_prompt
