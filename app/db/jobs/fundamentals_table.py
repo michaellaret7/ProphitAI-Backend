@@ -13,7 +13,6 @@ import json
 
 class UpdateFundamentalData:
     def __init__(self):
-        self.fmp_api = FMP_API_DATA()
         self.lock = threading.Lock()
         
         # Progress tracking counters
@@ -48,9 +47,9 @@ class UpdateFundamentalData:
             return None
         try:
             return Decimal(str(value))
-        except:
+        except (TypeError, ValueError, ArithmeticError):
             return None
-    
+
     def _safe_date(self, date_string):
         """Convert string to date safely"""
         if not date_string:
@@ -59,9 +58,9 @@ class UpdateFundamentalData:
             if isinstance(date_string, str):
                 return datetime.strptime(date_string, '%Y-%m-%d').date()
             return date_string
-        except:
+        except (TypeError, ValueError):
             return None
-    
+
     def _safe_datetime(self, datetime_string):
         """Convert string to datetime safely"""
         if not datetime_string:
@@ -74,21 +73,21 @@ class UpdateFundamentalData:
             else:
                 # Space separated format
                 return datetime.strptime(datetime_string, '%Y-%m-%d %H:%M:%S')
-        except:
+        except (TypeError, ValueError, AttributeError):
             try:
                 # Try date only format
                 return datetime.strptime(datetime_string, '%Y-%m-%d')
-            except:
+            except (TypeError, ValueError):
                 return None 
 
     # =========================================================================
     # CORE FUNDAMENTAL DATA UPDATE METHODS
     # =========================================================================
     
-    def _update_balance_sheets(self, ticker_id: str, ticker_symbol: str, session):
+    def _update_balance_sheets(self, ticker_id: str, ticker_symbol: str, session, fmp_api: FMP_API_DATA):
         """Update balance sheet data for a ticker"""
         try:
-            data = self.fmp_api.get_balance_sheets(ticker_symbol, period='quarter')
+            data = fmp_api.get_balance_sheets(ticker_symbol, period='quarter')
             if not data:
                 return 0
             
@@ -169,10 +168,10 @@ class UpdateFundamentalData:
             print(f"Error updating balance sheets for {ticker_symbol}: {str(e)}")
             return -1 
 
-    def _update_cash_flows(self, ticker_id: str, ticker_symbol: str, session):
+    def _update_cash_flows(self, ticker_id: str, ticker_symbol: str, session, fmp_api: FMP_API_DATA):
         """Update cash flow statement data for a ticker"""
         try:
-            data = self.fmp_api.get_cash_flow_statements(ticker_symbol, period='quarter')
+            data = fmp_api.get_cash_flow_statements(ticker_symbol, period='quarter')
             if not data:
                 return 0
             
@@ -239,10 +238,10 @@ class UpdateFundamentalData:
             print(f"Error updating cash flows for {ticker_symbol}: {str(e)}")
             return -1
     
-    def _update_income_statements(self, ticker_id: str, ticker_symbol: str, session):
+    def _update_income_statements(self, ticker_id: str, ticker_symbol: str, session, fmp_api: FMP_API_DATA):
         """Update income statement data for a ticker"""
         try:
-            data = self.fmp_api.get_income_statements(ticker_symbol, period='quarter')
+            data = fmp_api.get_income_statements(ticker_symbol, period='quarter')
             if not data:
                 return 0
             
@@ -307,10 +306,10 @@ class UpdateFundamentalData:
             print(f"Error updating income statements for {ticker_symbol}: {str(e)}")
             return -1 
 
-    def _update_financial_ratios(self, ticker_id: str, ticker_symbol: str, session):
+    def _update_financial_ratios(self, ticker_id: str, ticker_symbol: str, session, fmp_api: FMP_API_DATA):
         """Update financial ratios data for a ticker"""
         try:
-            data = self.fmp_api.get_financial_ratios(ticker_symbol, period='quarter')
+            data = fmp_api.get_financial_ratios(ticker_symbol, period='quarter')
             if not data:
                 return 0
             
@@ -367,10 +366,10 @@ class UpdateFundamentalData:
             print(f"Error updating financial ratios for {ticker_symbol}: {str(e)}")
             return -1
     
-    def _update_analyst_estimates(self, ticker_id: str, ticker_symbol: str, session):
+    def _update_analyst_estimates(self, ticker_id: str, ticker_symbol: str, session, fmp_api: FMP_API_DATA):
         """Update analyst estimates data for a ticker"""
         try:
-            data = self.fmp_api.get_analyst_estimates(ticker_symbol, period='quarter')
+            data = fmp_api.get_analyst_estimates(ticker_symbol, period='quarter')
             if not data:
                 return 0
             
@@ -420,15 +419,15 @@ class UpdateFundamentalData:
             print(f"Error updating analyst estimates for {ticker_symbol}: {str(e)}")
             return -1
     
-    def _update_etf_holdings(self, ticker_id: str, ticker_symbol: str, session):
+    def _update_etf_holdings(self, ticker_id: str, ticker_symbol: str, session, fmp_api: FMP_API_DATA):
         """Update ETF holdings data (only for ETF tickers)"""
         try:
             # First check if this is an ETF
             ticker = session.query(Ticker).filter(Ticker.id == ticker_id).first()
             if not ticker or not ticker.is_etf:
                 return 0
-            
-            data = self.fmp_api.get_etf_holdings(ticker_symbol)
+
+            data = fmp_api.get_etf_holdings(ticker_symbol)
             if not data:
                 return 0
             
@@ -484,15 +483,15 @@ class UpdateFundamentalData:
             print(f"Error updating ETF holdings for {ticker_symbol}: {str(e)}")
             return -1
     
-    def _update_etf_info(self, ticker_id: str, ticker_symbol: str, session):
+    def _update_etf_info(self, ticker_id: str, ticker_symbol: str, session, fmp_api: FMP_API_DATA):
         """Update ETF info data (only for ETF tickers)"""
         try:
             # First check if this is an ETF
             ticker = session.query(Ticker).filter(Ticker.id == ticker_id).first()
             if not ticker or not ticker.is_etf:
                 return 0
-            
-            data = self.fmp_api.get_etf_info(ticker_symbol)
+
+            data = fmp_api.get_etf_info(ticker_symbol)
             if not data or not isinstance(data, list) or len(data) == 0:
                 return 0
             
@@ -531,10 +530,10 @@ class UpdateFundamentalData:
             print(f"Error updating ETF info for {ticker_symbol}: {str(e)}")
             return -1
     
-    def _update_dividends(self, ticker_id: str, ticker_symbol: str, session):
+    def _update_dividends(self, ticker_id: str, ticker_symbol: str, session, fmp_api: FMP_API_DATA):
         """Update dividend data for a ticker"""
         try:
-            data = self.fmp_api.get_dividends(ticker_symbol)
+            data = fmp_api.get_dividends(ticker_symbol)
             if not data:
                 return 0
             
@@ -572,10 +571,10 @@ class UpdateFundamentalData:
     # NEWS DATA UPDATE METHODS
     # =========================================================================
     
-    def _update_press_releases(self, ticker_id: str, ticker_symbol: str, session):
+    def _update_press_releases(self, ticker_id: str, ticker_symbol: str, session, fmp_api: FMP_API_DATA):
         """Update press releases for a ticker"""
         try:
-            data = self.fmp_api.get_press_releases(ticker_symbol, limit=100)
+            data = fmp_api.get_press_releases(ticker_symbol, limit=100)
             if not data:
                 return 0
             
@@ -610,10 +609,10 @@ class UpdateFundamentalData:
             print(f"Error updating press releases for {ticker_symbol}: {str(e)}")
             return -1
     
-    def _update_stock_news(self, ticker_id: str, ticker_symbol: str, session):
+    def _update_stock_news(self, ticker_id: str, ticker_symbol: str, session, fmp_api: FMP_API_DATA):
         """Update stock news for a ticker"""
         try:
-            data = self.fmp_api.get_stock_news(ticker_symbol, limit=100)
+            data = fmp_api.get_stock_news(ticker_symbol, limit=100)
             if not data:
                 return 0
             
@@ -648,10 +647,10 @@ class UpdateFundamentalData:
             print(f"Error updating stock news for {ticker_symbol}: {str(e)}")
             return -1
     
-    def _update_price_target_news(self, ticker_id: str, ticker_symbol: str, session):
+    def _update_price_target_news(self, ticker_id: str, ticker_symbol: str, session, fmp_api: FMP_API_DATA):
         """Update price target news for a ticker"""
         try:
-            data = self.fmp_api.get_price_target_news(ticker_symbol, limit=100)
+            data = fmp_api.get_price_target_news(ticker_symbol, limit=100)
             if not data:
                 return 0
             
@@ -689,10 +688,10 @@ class UpdateFundamentalData:
             print(f"Error updating price target news for {ticker_symbol}: {str(e)}")
             return -1
     
-    def _update_stock_grade_news(self, ticker_id: str, ticker_symbol: str, session):
+    def _update_stock_grade_news(self, ticker_id: str, ticker_symbol: str, session, fmp_api: FMP_API_DATA):
         """Update stock grade news for a ticker"""
         try:
-            data = self.fmp_api.get_stock_grade_news(ticker_symbol, limit=100)
+            data = fmp_api.get_stock_grade_news(ticker_symbol, limit=100)
             if not data:
                 return 0
             
@@ -734,11 +733,11 @@ class UpdateFundamentalData:
     # GRADES AND RATINGS UPDATE METHODS
     # =========================================================================
     
-    def _update_stock_grades(self, ticker_id: str, ticker_symbol: str, session):
+    def _update_stock_grades(self, ticker_id: str, ticker_symbol: str, session, fmp_api: FMP_API_DATA):
         """Update stock grades (individual and summary) for a ticker"""
         try:
             # Update individual grades
-            individual_data = self.fmp_api.get_stock_grades_individual(ticker_symbol, limit=100)
+            individual_data = fmp_api.get_stock_grades_individual(ticker_symbol, limit=100)
             individual_count = 0
             
             if individual_data:
@@ -775,7 +774,7 @@ class UpdateFundamentalData:
                     individual_count = len(records)
             
             # Update summary grades
-            summary_data = self.fmp_api.get_stock_grades_summary(ticker_symbol, limit=20)
+            summary_data = fmp_api.get_stock_grades_summary(ticker_symbol, limit=20)
             summary_count = 0
             
             if summary_data:
@@ -808,10 +807,10 @@ class UpdateFundamentalData:
             print(f"Error updating stock grades for {ticker_symbol}: {str(e)}")
             return -1
     
-    def _update_rating_scores(self, ticker_id: str, ticker_symbol: str, session):
+    def _update_rating_scores(self, ticker_id: str, ticker_symbol: str, session, fmp_api: FMP_API_DATA):
         """Update rating scores for a ticker"""
         try:
-            data = self.fmp_api.get_rating_scores(ticker_symbol, limit=20)
+            data = fmp_api.get_rating_scores(ticker_symbol, limit=20)
             if not data:
                 return 0
             
@@ -849,10 +848,10 @@ class UpdateFundamentalData:
             print(f"Error updating rating scores for {ticker_symbol}: {str(e)}")
             return -1
     
-    def _update_analyst_recommendations(self, ticker_id: str, ticker_symbol: str, session):
+    def _update_analyst_recommendations(self, ticker_id: str, ticker_symbol: str, session, fmp_api: FMP_API_DATA):
         """Update analyst recommendations for a ticker"""
         try:
-            data = self.fmp_api.get_analyst_recommendations(ticker_symbol)
+            data = fmp_api.get_analyst_recommendations(ticker_symbol)
             if not data:
                 return 0
             
@@ -897,10 +896,10 @@ class UpdateFundamentalData:
             print(f"Error updating analyst recommendations for {ticker_symbol}: {str(e)}")
             return -1
     
-    def _update_price_target_summary(self, ticker_id: str, ticker_symbol: str, session):
+    def _update_price_target_summary(self, ticker_id: str, ticker_symbol: str, session, fmp_api: FMP_API_DATA):
         """Update price target summary for a ticker"""
         try:
-            data = self.fmp_api.get_price_target_summary(ticker_symbol)
+            data = fmp_api.get_price_target_summary(ticker_symbol)
             if not data or not isinstance(data, list) or len(data) == 0:
                 return 0
             
@@ -935,26 +934,26 @@ class UpdateFundamentalData:
     # TRANSCRIPT UPDATE METHOD
     # =========================================================================
     
-    def _update_earnings_transcripts(self, ticker_id: str, ticker_symbol: str, session):
+    def _update_earnings_transcripts(self, ticker_id: str, ticker_symbol: str, session, fmp_api: FMP_API_DATA):
         """Update earnings transcripts with smart quarterly logic"""
         try:
             # Get current year and quarter
             current_date = get_current_utc_time()
             current_year = current_date.year
             current_quarter = (current_date.month - 1) // 3 + 1
-            
+
             # Check last 8 quarters (2 years)
             transcripts_added = 0
-            
+
             for i in range(8):
                 year = current_year - (i // 4)
                 quarter = current_quarter - (i % 4)
-                
+
                 # Adjust for quarter overflow
                 if quarter <= 0:
                     quarter += 4
                     year -= 1
-                
+
                 # Check if transcript already exists
                 existing = session.query(EarningsTranscript).filter(
                     and_(
@@ -963,10 +962,10 @@ class UpdateFundamentalData:
                         EarningsTranscript.period == str(quarter)
                     )
                 ).first()
-                
+
                 if not existing:
                     # Fetch transcript from API
-                    data = self.fmp_api.get_earnings_transcript(ticker_symbol, year, quarter)
+                    data = fmp_api.get_earnings_transcript(ticker_symbol, year, quarter)
                     
                     # Handle both list and dict responses from API
                     transcript_data = None
@@ -1004,13 +1003,16 @@ class UpdateFundamentalData:
         """Update all fundamental data for a single ticker (thread-safe)"""
         ticker_id, ticker_symbol = ticker_data
         session = MarketSession()
-        
+
+        # Create thread-local FMP API instance
+        fmp_api = FMP_API_DATA()
+
         results = {
             'ticker': ticker_symbol,
             'success': True,
             'details': {}
         }
-        
+
         try:
             # Update each data type
             update_methods = [
@@ -1032,13 +1034,13 @@ class UpdateFundamentalData:
                 ('price_targets', self._update_price_target_summary),
                 ('earnings_transcripts', self._update_earnings_transcripts)
             ]
-            
+
             for data_type, update_method in update_methods:
                 try:
                     # Create a savepoint before each update method
                     session.execute(text(f"SAVEPOINT sp_{data_type}"))
-                    
-                    count = update_method(ticker_id, ticker_symbol, session)
+
+                    count = update_method(ticker_id, ticker_symbol, session, fmp_api)
                     results['details'][data_type] = count
                     
                     # If successful, release the savepoint

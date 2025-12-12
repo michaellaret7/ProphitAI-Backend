@@ -4,6 +4,7 @@ from app.db.jobs.price_table import UpdatePriceTable, is_after_market_close
 from app.db.jobs.macro_jobs.commodity_prices_update import UpdateCommodityPrices
 from app.db.jobs.macro_jobs.economic_indicators_update import UpdateEconomicIndicators
 from app.db.jobs.macro_jobs.economic_calendar_update import UpdateEconomicCalendar
+from app.db.jobs.update_screener import UpdateETFScreenerTable, UpdateEquityScreenerTable
 import time
 
 def main():
@@ -51,6 +52,20 @@ def main():
         calendar_updater.update_with_summary()
 
         print("="*100)
+        time.sleep(60)
+
+        print("\nUpdating ETF screener...")
+        etf_updater = UpdateETFScreenerTable()
+        etf_updater.run_update()
+
+        time.sleep(60)
+        print("\nUpdating equity screener...")
+        equity_updater = UpdateEquityScreenerTable()
+        equity_updater.run_update()
+
+        time.sleep(60)
+        print("="*100)
+        
 
 
     print("\nAll updates completed successfully!\n")

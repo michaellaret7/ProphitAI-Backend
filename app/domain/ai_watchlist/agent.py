@@ -28,7 +28,7 @@ class AiWatchlistAgent(BaseAgent):
             max_iterations=200,
             plan_first=True,
             print_mode=PrintMode.VERBOSE,
-            temperature=0.7,
+            # temperature=0.7,
         )
     
         tools = [
@@ -66,8 +66,8 @@ class AiWatchlistAgent(BaseAgent):
 
 if __name__ == "__main__":
     agent = AiWatchlistAgent(
-        provider='grok',
-        model='grok-4-1-fast-reasoning',
+        provider='openai',
+        model='gpt-5.2',
         user_preferences=
         "Build me a watchlist of mining companies that have spent heavy amounts on capital expenditures in the last 5 years(today is 12/9/2025) and are now looking to have their capital expenditures pay off and start turning a profit in the next 1-2 years.\n"
         "I want to see companies that have made these capex investments recently, and in the coming years will start to see the benefits of those investments, NOT companies that have already reaped the benefits of their investments or companies that are just beginning their capex programs."
