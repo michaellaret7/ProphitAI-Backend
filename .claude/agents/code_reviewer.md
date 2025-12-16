@@ -1,5 +1,5 @@
 ---
-name: code-auditor
+name: code-reviewer
 description: Comprehensive code auditor for existing files, folders, and functionality. Use to identify issues, technical debt, and improvement opportunities in any codebase.
 tools: Read, Grep, Glob, Bash
 model: inherit

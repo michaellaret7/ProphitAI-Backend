@@ -12,7 +12,6 @@ from typing import Any, Dict, Optional
 from fastapi import APIRouter, BackgroundTasks, HTTPException
 from pydantic import BaseModel, Field
 
-from app.api.response_envelope import ok_envelope
 from app.services.shared.agent_executor import (
     ExecutionStatus,
     WebSocketCallback,
@@ -31,6 +30,7 @@ class AgentType(str, Enum):
     """
 
     OPTIMIZER = "optimizer"
+    WATCHLIST = "watchlist"
     # Add more BaseAgent-based agents as needed
 
 
@@ -92,6 +92,20 @@ def _create_agent(agent_type: AgentType, parameters: Dict[str, Any], state_callb
             sectors_to_include=parameters.get("sectors_to_include"),
             tickers_to_keep=parameters.get("tickers_to_keep"),
             tickers_to_exclude=parameters.get("tickers_to_exclude"),
+            state_callback=state_callback,
+        )
+
+    elif agent_type == AgentType.WATCHLIST:
+        from app.domain.ai_watchlist.agent import AiWatchlistAgent
+
+        user_preferences = parameters.get("user_preferences")
+        if not user_preferences:
+            raise ValueError("user_preferences is required for watchlist agent")
+
+        return AiWatchlistAgent(
+            user_preferences=user_preferences,
+            provider="fireworks",
+            model="Kimi-K2-instruct",
             state_callback=state_callback,
         )
 

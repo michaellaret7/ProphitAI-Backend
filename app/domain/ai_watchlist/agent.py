@@ -1,5 +1,5 @@
 from app.core.agentic_framework.base_agent.agent import BaseAgent
-from app.core.agentic_framework.base_agent.callbacks import StateCallback
+from app.core.agentic_framework.base_agent.callbacks.state_callback import StateCallback
 from app.core.agentic_framework.base_agent.utils.models import PrintMode
 from app.core.agentic_framework.tool_lib.data_tools.screeners.equity_screener import EQUITY_SCREENER_TOOL
 from app.core.agentic_framework.tool_lib.data_tools.screeners.etf_screener import ETF_SCREENER_TOOL
@@ -16,10 +16,17 @@ from typing import Optional
 from .models import WatchlistResponse
 
 class AiWatchlistAgent(BaseAgent):
-    def __init__(self, user_preferences: str, provider: str = None, model: str = None):
+    def __init__(
+        self,
+        user_preferences: str,
+        provider: str = None,
+        model: str = None,
+        state_callback: Optional[StateCallback] = None,
+    ):
         self.user_preferences = user_preferences
         self.user_prompt = self._build_user_prompt()
-        
+        self.response_model = WatchlistResponse
+
         super().__init__(
             provider=provider,
             model=model,
@@ -28,6 +35,7 @@ class AiWatchlistAgent(BaseAgent):
             max_iterations=200,
             plan_first=True,
             print_mode=PrintMode.VERBOSE,
+            state_callback=state_callback,
             # temperature=0.7,
         )
     
