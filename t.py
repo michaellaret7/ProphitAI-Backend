@@ -8,8 +8,13 @@ from app.utils.time_utils import get_current_utc_time
 
 with UserSession() as session:
     # Returns the User object
-    x = session.query(Company).filter(Company.id == 'c13abf69-e3ff-49b1-95a7-030c1bbef7af').first()
-    print(serialize_sqlalchemy_obj(x))
+    x = session.query(User).all()
+    for u in x:
+        print(serialize_sqlalchemy_obj(u))
+
+        # if u.email == 'michael@prophitai.com':
+        #     session.delete(u)
+        #     session.commit()
 
 
         
