@@ -7,11 +7,12 @@ from app.repositories.user_data import (
     rename_watchlist,
     delete_watchlist,
     add_watchlist_item,
-    delete_watchlist_item,
+    delete_watchlist_item
 )
 from app.api.response_envelope import ok_envelope
 from app.utils.decorators.api_decorators import handle_controller_errors
-
+from app.db.core.pull_fmp_data import FMP_API_DATA
+from app.utils.serialize_output import serialize_sqlalchemy_obj
 
 def _format_watchlist_response(watchlist: dict) -> Dict[str, Any]:
     """Format a single watchlist for API response."""

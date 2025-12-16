@@ -101,3 +101,33 @@ async def index_price_data_controller(ticker: str, days: int) -> Dict[str, Any]:
         payload=data,
     )
 
+@handle_controller_errors
+async def get_price_change_controller(tickers: List[str]) -> Dict[str, Any]:
+    """
+    Controller to handle price change data retrieval for multiple tickers.
+
+    Returns price change percentages (as decimals) for various time periods:
+    1D, 5D, 1M, 3M, 6M, ytd, 1Y, 3Y, 5Y, 10Y, max
+
+    Args:
+        tickers: List of stock ticker symbols
+
+    Returns:
+        Response envelope with price change data for each ticker
+    """
+    fmp = FMP_API_DATA()
+
+    tasks = [asyncio.to_thread(fmp.get_stock_price_change, ticker=ticker) for ticker in tickers]
+    results = await asyncio.gather(*tasks)
+
+    # Flatten results (each API call returns a list with one item)
+    payload = [item for result in results if result for item in result]
+
+    return ok_envelope(
+        message="Price change data retrieved successfully",
+        kind="price#priceChange",
+        resource_id=",".join(tickers),
+        self_link=f"/api/price/price-change?tickers={','.join(tickers)}",
+        counts={"totalItems": len(payload), "currentItemCount": len(payload)},
+        payload=payload,
+    )

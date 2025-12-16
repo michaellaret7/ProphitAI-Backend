@@ -27,6 +27,7 @@ from app.api.routes.websocket_router import router as websocket_router
 from app.api.auth.api_key import validate_api_key
 from app.api.auth.clerk import clerk_auth
 from app.redis.client import cache
+from app.api.routes.webhook_router import router as webhook_router
 
 # Load environment variables from .env file
 load_dotenv()
@@ -108,6 +109,8 @@ app.include_router(crypto_router, prefix="/api", dependencies=auth_dependencies)
 app.include_router(screener_router, prefix="/api", dependencies=auth_dependencies)
 app.include_router(agent_router, prefix="/api", dependencies=auth_dependencies)
 app.include_router(watchlist_router, prefix="/api", dependencies=auth_dependencies)
+# Webhook router - no auth (Clerk calls directly with signature verification)
+app.include_router(webhook_router, prefix="/api")
 
 # WebSocket router - no API key auth (WebSocket handles auth differently)
 app.include_router(websocket_router)

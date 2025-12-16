@@ -321,15 +321,14 @@ def set_all_users_to_admin(session=None) -> int:
     return updated
 
 @with_transaction('user')
-def assign_user_to_company_by_email(email: str, company_name: str, role: Optional[str] = None, session=None) -> bool:
+def assign_user_to_company_by_id(email: str, company_id: str, role: Optional[str] = None, session=None) -> bool:
+    """Assign a user to a company by company ID."""
     user = session.query(User).filter(User.email == email).first()
     if not user:
         return False
-    company = session.query(Company).filter(Company.name == company_name).first()
+    company = session.query(Company).filter(Company.id == company_id).first()
     if not company:
-        company = Company(id=uuid.uuid4(), name=company_name, creation_date=get_current_utc_time(), seats=0)
-        session.add(company)
-        session.flush()
+        return False
     user.company_id = company.id
     if role is not None:
         user.role = role
