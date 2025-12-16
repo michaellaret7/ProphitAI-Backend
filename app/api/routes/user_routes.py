@@ -1,5 +1,5 @@
-from fastapi import APIRouter, Query, Depends
-from pydantic import BaseModel, EmailStr
+from fastapi import APIRouter, Depends
+from pydantic import BaseModel
 from typing import Optional
 from app.api.controller.user import (
     get_user_by_clerk_controller,
@@ -17,24 +17,9 @@ class UpdateUserRequest(BaseModel):
 
 
 @router.get("/user")
-async def get_user(
-    clerk_id: str = Depends(get_clerk_user_id),
-    email: Optional[EmailStr] = Query(None, description="Email (required for first login)"),
-    firstName: Optional[str] = Query(None),
-    lastName: Optional[str] = Query(None),
-):
-    """
-    Get current user. Creates user in DB on first login.
-
-    On first login, pass email/firstName/lastName from Clerk.
-    Subsequent logins only need the JWT (clerk_id extracted automatically).
-    """
-    return await get_user_by_clerk_controller(
-        clerk_id=clerk_id,
-        email=email,
-        first_name=firstName,
-        last_name=lastName,
-    )
+async def get_user(clerk_id: str = Depends(get_clerk_user_id)):
+    """Get current user data."""
+    return await get_user_by_clerk_controller(clerk_id=clerk_id)
 
 
 @router.patch("/user")
