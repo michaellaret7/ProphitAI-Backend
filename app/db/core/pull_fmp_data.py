@@ -322,6 +322,31 @@ class FMP_API_DATA:
         url = f"https://financialmodelingprep.com/stable/batch-quote?symbols={symbols_str}"
         return self._make_fmp_api_request(url)
 
+    def get_stock_price_change(self, ticker: str):
+        """
+        Retrieves stock price change percentages for various time periods.
+
+        Args:
+            ticker: Stock ticker symbol
+
+        Returns:
+            list: Price change data with keys: 1D, 5D, 1M, 3M, 6M, ytd, 1Y, 3Y, 5Y, 10Y, max
+                  Values are returned as decimals (e.g., 0.05 = 5%)
+        """
+        url = f"https://financialmodelingprep.com/api/v3/stock-price-change/{ticker}"
+        data = self._make_fmp_api_request(url)
+
+        if not data:
+            return data
+
+        period_keys = ['1D', '5D', '1M', '3M', '6M', 'ytd', '1Y', '3Y', '5Y', '10Y', 'max']
+        for item in data:
+            for key in period_keys:
+                if key in item and item[key] is not None:
+                    item[key] = item[key] / 100
+
+        return data
+
     def get_company_profile(self, ticker: str):
         """
         Retrieves company profile including beta, IPO date, and company details.

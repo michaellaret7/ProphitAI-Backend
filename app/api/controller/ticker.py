@@ -258,15 +258,23 @@ async def get_ttm_ratios_for_ticker_comps_controller(
     """
     fmp = FMP_API_DATA()
 
+    # Fetch all tickers in parallel
+    async def fetch_ratios(ticker: str):
+        return ticker, await asyncio.to_thread(fmp.get_ratios_ttm, ticker)
+
+    results = await asyncio.gather(*[fetch_ratios(t) for t in tickers], return_exceptions=True)
+
     data = {}
-    for t in tickers:
-        raw_data = await asyncio.to_thread(fmp.get_ratios_ttm, t)
+    for result in results:
+        if isinstance(result, Exception):
+            continue
+        ticker, raw_data = result
         # Remove duplicate fields
         if raw_data and isinstance(raw_data, list) and len(raw_data) > 0:
             cleaned = {k: v for k, v in raw_data[0].items() if k not in TTM_RATIO_FIELDS_TO_REMOVE}
-            data[t] = cleaned
+            data[ticker] = cleaned
         else:
-            data[t] = raw_data
+            data[ticker] = raw_data
 
     if not data:
         return ok_envelope(

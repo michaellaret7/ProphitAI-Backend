@@ -21,7 +21,7 @@ load_dotenv()
 
 logger = logging.getLogger(__name__)
 
-router = APIRouter(tags=["Webhooks"])
+router = APIRouter(tags=["🪝Webhooks"])
 
 CLERK_WEBHOOK_SECRET = os.getenv("CLERK_WEBHOOK_SECRET")
 DEFAULT_COMPANY_ID = "c13abf69-e3ff-49b1-95a7-030c1bbef7af"

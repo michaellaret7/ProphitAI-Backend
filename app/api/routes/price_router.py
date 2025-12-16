@@ -1,6 +1,12 @@
 from fastapi import APIRouter, Query, Depends
 from typing import List, Literal
-from app.api.controller.price import get_stock_prices_controller, get_quote_controller, get_stock_prices_intraday_controller, index_price_data_controller
+from app.api.controller.price import (
+    get_stock_prices_controller,
+    get_quote_controller,
+    get_stock_prices_intraday_controller,
+    index_price_data_controller,
+    get_price_change_controller,
+)
 from app.models.price_models import StockPriceRequest
 
 router = APIRouter(tags=["Stock Prices 💵"])
@@ -99,3 +105,28 @@ async def index_price_data(
         Indexed price data payload
     """
     return await index_price_data_controller(ticker=ticker, days=days)
+
+
+@router.get("/price/price-change")
+async def get_price_change(
+    tickers: List[str] = Query(
+        ...,
+        description="List of stock ticker symbols (e.g., ['AAPL', 'MSFT'])",
+        min_length=1,
+    ),
+):
+    """
+    Get price change percentages for multiple tickers across various time periods.
+
+    Returns percentage changes (as decimals) for:
+    - 1D, 5D: Short-term daily changes
+    - 1M, 3M, 6M: Monthly changes
+    - ytd: Year-to-date change
+    - 1Y, 3Y, 5Y, 10Y: Annual changes
+    - max: All-time change
+
+    Values are decimals (e.g., 0.05 = 5% gain, -0.03 = 3% loss)
+
+    Example: GET /api/price/price-change?tickers=AAPL&tickers=MSFT
+    """
+    return await get_price_change_controller(tickers=[t.upper() for t in tickers])
