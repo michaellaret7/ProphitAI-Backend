@@ -12,9 +12,6 @@ with UserSession() as session:
     for u in x:
         print(serialize_sqlalchemy_obj(u))
 
-        # if u.email == 'michael@prophitai.com':
-        #     session.delete(u)
-        #     session.commit()
 
 
         

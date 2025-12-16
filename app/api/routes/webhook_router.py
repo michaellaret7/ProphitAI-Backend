@@ -15,6 +15,10 @@ from app.repositories.user_data import (
     assign_user_to_company_by_id,
 )
 
+from dotenv import load_dotenv
+
+load_dotenv()
+
 logger = logging.getLogger(__name__)
 
 router = APIRouter(tags=["Webhooks"])
@@ -40,7 +44,7 @@ async def clerk_webhook(request: Request):
 
     # Verify webhook signature
     wh = Webhook(CLERK_WEBHOOK_SECRET)
-    
+
     try:
         event = wh.verify(payload, headers)
     except WebhookVerificationError as e:
