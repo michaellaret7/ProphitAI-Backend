@@ -13,10 +13,6 @@ from app.utils.decorators.database import with_session
 # Load environment variables from .env file
 load_dotenv()
 
-# Load OpenAI credentials from environment
-
-model, client = get_model_and_client('openai', 'gpt-4o-mini')
-
 def name_to_ticker(company_name):
     """
     Convert company name to ticker symbol using OpenAI and yfinance fallback.
@@ -33,6 +29,8 @@ def name_to_ticker(company_name):
 
     # Use OpenAI to identify the ticker
     try:
+        # Reason: Lazy initialization - only create client when actually needed
+        model, client = get_model_and_client('openai', 'gpt-4o-mini')
         response = client.chat.completions.create(
             model=model,
             messages=[
