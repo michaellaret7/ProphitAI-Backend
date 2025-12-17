@@ -1,11 +1,14 @@
-from perplexity import Perplexity
+from perplexity import BaseModel, Perplexity
 from dotenv import load_dotenv
 import os
 import asyncio
 import re
 from perplexity import AsyncPerplexity
 from typing import List, Literal
+from app.core.agentic_framework.evaluation.hallucinations.extract_facts import client
 from app.utils.choose_model_and_client import get_model_and_client
+from app.core.search.utils.clean_text import clean_text
+from pydantic import Field
 
 load_dotenv()
 
@@ -34,7 +37,10 @@ class PerplexityWebSearch:
         self, 
         queries: List[str], 
         recency_filter: Literal["hour", "day", "week", "month", "year"] = None, 
-        max_results_per_query: int = 10
+        max_results_per_query: int = 20,
+        search_after_date_filter: str = None,
+        search_before_date_filter: str = None,
+        search_mode: Literal["web", "academic", "sec"] = None
     ):
         async with self.async_client as client:
             batch_size = 5
@@ -49,7 +55,10 @@ class PerplexityWebSearch:
                         max_results=max_results_per_query,
                         max_tokens=500_000,
                         max_tokens_per_page=10_000,
-                        search_recency_filter=recency_filter
+                        search_recency_filter=recency_filter,
+                        search_after_date_filter=search_after_date_filter,
+                        search_before_date_filter=search_before_date_filter,
+                        search_mode=search_mode
                     )
                     for query in batch
                 ]
@@ -61,11 +70,6 @@ class PerplexityWebSearch:
                 if i + batch_size < len(queries):
                     await asyncio.sleep(1000 / 1000)
             
-            # cleaned_nested_results = [
-            #     [r for r in result.results if len(r.snippet) < 500]
-            #     for result in results
-            # ]
-
             cleaned_nested_results = [
                 [r for r in result.results] for result in results
             ]
@@ -81,10 +85,8 @@ class PerplexityWebSearch:
     ):
         if mode == "deep-research":
             model = "sonar-deep-research"
-        elif mode == "regular-search":
+        else:  # mode == "regular-search"
             model = "sonar-reasoning-pro"
-        else:
-            raise ValueError("Invalid model. Please choose from 'deep-research' or 'regular-search'.")
 
         response = self.client.chat.completions.create(
             model=model,
@@ -111,9 +113,4 @@ class PerplexityWebSearch:
         # Remove <think>...</think> tags and their content
         cleaned_content = re.sub(r'<think>.*?</think>', '', content, flags=re.DOTALL)
         return cleaned_content.strip()
-            
-
-if __name__ == "__main__":
-    search = PerplexityWebSearch()
-    # print(search.batch_search(["Coreweave Recent mergers and acqusitions", "Coreweave Recent product launches"], max_results_per_query=15, recency_filter="year"))
-    print(search.synthesize_search("What is the latest news on Coreweave, whats their latest product launch and have they made any acquisitions or mergers?", search_recency_filter="year", reasoning_effort="high"))
+    

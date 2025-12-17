@@ -43,6 +43,11 @@ openai==1.98.0
 tiktoken==0.9.0
 instructor==1.10.0
 
+# Search APIs
+exa-py>=1.0.0
+perplexity-python>=0.1.0
+tavily-python>=0.3.0
+
 # Data Validation
 pydantic==2.11.5
 pydantic_core==2.33.2
