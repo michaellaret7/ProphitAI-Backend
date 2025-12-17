@@ -19,8 +19,8 @@ class ExaSearch:
         mode: Literal["auto", "fast", "deep"] = "auto",
         doc_type: Literal["company", "research paper", "news article", "pdf", "github", "tweet", "personal site", "people", "financial report"] = None,
         num_results: int = 2,
-        end_published_date: str = "2025-12-18T04:59:59.999Z",
-        start_published_date: str = "2025-11-17T05:00:00.000Z",
+        end_published_date: str = None,
+        start_published_date: str = None,
     ):
         result = self.client.search_and_contents(
             query,
@@ -29,8 +29,8 @@ class ExaSearch:
             type=mode,
             category=doc_type,
             num_results=num_results,
-            end_published_date = "2025-12-18T04:59:59.999Z",
-            start_published_date = "2025-11-17T05:00:00.000Z",
+            end_published_date = end_published_date,
+            start_published_date = start_published_date,
         )
 
         final_results = []

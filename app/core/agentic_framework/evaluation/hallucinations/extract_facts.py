@@ -31,18 +31,8 @@ def extract_facts(text: str) -> List[str]:
         response_format=ClaimsSchema
     )
 
-    return response.choices[0].message.parsed
+    response_parsed = response.choices[0].message.parsed
 
-if __name__ == "__main__":
-    text = """
-    Tesla reported record deliveries of 1.8 million vehicles in 2023, representing a 38% increase from the previous year. 
-    The company's Gigafactory in Berlin produced over 250,000 Model Y vehicles in its first full year of operation. 
-    Elon Musk announced that the Cybertruck would enter mass production in Q3 2024, with initial pricing starting at $39,900 for the base model.
-    Tesla's Full Self-Driving (FSD) software is currently available in 15 countries and has accumulated over 500 million miles of autonomous driving data.
-    The company's energy storage division deployed 14.7 GWh of battery storage systems globally in 2023, making it the largest energy storage provider in North America.
-    Tesla's market capitalization briefly exceeded $1 trillion in November 2023, surpassing the combined value of Toyota, Volkswagen, and Ford.
-    The new 4680 battery cells have achieved a 16% increase in range and reduce production costs by $1,500 per vehicle compared to the previous 2170 cells.
-    """
+    return response_parsed.claims
 
-    for fact in extract_facts(text).claims:
-        print(fact)
+    
