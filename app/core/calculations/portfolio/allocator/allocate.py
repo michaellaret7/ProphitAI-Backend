@@ -18,6 +18,7 @@ Tests:
 
 import warnings
 warnings.filterwarnings("ignore", category=RuntimeWarning)
+warnings.filterwarnings("ignore", message="max_sharpe transforms the optimization problem")
 
 from dataclasses import dataclass
 from typing import Dict, List, Tuple, Set, Optional
@@ -28,17 +29,11 @@ import pandas as pd
 from app.db.core.db_config import MarketSession
 from app.db.core.models.market_data_models import Ticker
 
-from pypfopt import EfficientFrontier, expected_returns, risk_models
+import cvxpy as cp
+from pypfopt import EfficientFrontier, expected_returns, risk_models, objective_functions
 
 from app.repositories.price_data import fetch_bulk_price_data_for_tickers
 from app.utils.time_utils import get_utc_date_str, get_utc_days_ago
-
-
-# One list of tickers (example: 9 equities + 6 bond ETFs)
-TICKERS = [
-    "AAPL", "MSFT", "GOOGL", "AMZN", "META", "NVDA", "JPM", "JNJ", "V",
-    "AGG", "BND", "TLT", "IEF", "LQD", "VCIT"
-]
 
 
 # ------------------------
@@ -47,9 +42,10 @@ TICKERS = [
 
 @dataclass(frozen=True)
 class OptimizerConfig:
-    # Bucket targets (configurable)
-    equity_weight: float = 0.60
-    bond_weight: float = 0.40
+    # Bucket targets with bands (soft constraints)
+    equity_weight_target: float = 0.60
+    bond_weight_target: float = 0.40
+    bucket_band: float = 0.05                 # ±5% flexibility around targets
 
     # Data params
     lookback_days: int = 504
@@ -59,29 +55,33 @@ class OptimizerConfig:
     # Solver params
     risk_free_rate: float = 0.02
 
-    # Position constraints (configurable)
-    min_weight: float = 0.005                 # strictly positive -> no zeros
-    max_weight: Optional[float] = None        # if set, use directly
-    max_weight_multiple: float = 1.5          # else max = multiple * (1/n)
+    # Position constraints (hybrid hard/soft)
+    min_weight: float = 0.01                  # HARD floor - every ticker gets at least 1%
+    soft_max_weight: float = 0.08             # Soft cap - penalty kicks in above 8%
+    hard_max_weight: float = 0.15             # HARD ceiling - absolute max 15%
 
-
-def suggested_max_weight(n_assets: int, multiple: float) -> float:
-    return float(multiple / n_assets)
+    # Regularization penalties
+    l2_gamma: float = 0.1                     # L2 regularization for diversification
+    concentration_gamma: float = 0.5          # Penalty for exceeding soft_max
 
 
 def assert_weights_ok(
     cleaned: Dict[str, float],
     tickers: List[str],
     min_w: float,
-    max_w: float,
+    hard_max_w: float,
 ):
+    """
+    Validate portfolio weights against hard bounds.
+    Soft constraints are handled via penalties in the objective, not validated here.
+    """
     assert set(cleaned.keys()) == set(tickers)
     ws = np.array([cleaned[t] for t in tickers], dtype=float)
 
     assert np.isfinite(ws).all()
     assert abs(ws.sum() - 1.0) <= 1e-4
     assert (ws >= (min_w - 1e-4)).all(), f"Found weight below min_w={min_w}: {cleaned}"
-    assert (ws <= (max_w + 1e-4)).all(), f"Found weight above max_w={max_w}: {cleaned}"
+    assert (ws <= (hard_max_w + 1e-4)).all(), f"Found weight above hard_max_w={hard_max_w}: {cleaned}"
 
 
 # ------------------------
@@ -108,7 +108,7 @@ class PortfolioAllocator:
         if not self.all_tickers:
             raise ValueError("tickers list is empty.")
 
-        # You will implement this classification logic.
+        # Classify tickers into equity vs fixed income
         equities, bonds = self.classify_tickers(self.all_tickers)
 
         # We keep these as sets for membership checks
@@ -118,12 +118,16 @@ class PortfolioAllocator:
         # sanity: every ticker must be classified into exactly one bucket
         self._validate_classification()
 
-        # resolve position bounds (configurable)
+        # Position bounds (hard constraints)
         self.min_w: float = float(self.config.min_weight)
-        if self.config.max_weight is not None:
-            self.max_w: float = float(self.config.max_weight)
-        else:
-            self.max_w = suggested_max_weight(len(self.all_tickers), self.config.max_weight_multiple)
+        self.hard_max_w: float = float(self.config.hard_max_weight)
+        self.soft_max_w: float = float(self.config.soft_max_weight)
+
+        # Bucket bands (soft constraints via inequalities)
+        self.equity_min = self.config.equity_weight_target - self.config.bucket_band
+        self.equity_max = self.config.equity_weight_target + self.config.bucket_band
+        self.bond_min = self.config.bond_weight_target - self.config.bucket_band
+        self.bond_max = self.config.bond_weight_target + self.config.bucket_band
 
         self._validate_config()
 
@@ -169,43 +173,62 @@ class PortfolioAllocator:
             raise ValueError(f"Classified tickers not in input list (unexpected): {sorted(extra)}")
 
     def _validate_config(self):
-        ew = self.config.equity_weight
-        bw = self.config.bond_weight
+        # Validate bucket targets
+        eq_target = self.config.equity_weight_target
+        bnd_target = self.config.bond_weight_target
 
-        if not (0 <= ew <= 1 and 0 <= bw <= 1):
-            raise ValueError("equity_weight and bond_weight must be within [0,1].")
-        if abs((ew + bw) - 1.0) > 1e-9:
-            raise ValueError("Bucket weights must sum to 1.0 (equity_weight + bond_weight).")
+        if not (0 <= eq_target <= 1 and 0 <= bnd_target <= 1):
+            raise ValueError("equity_weight_target and bond_weight_target must be within [0,1].")
+        if abs((eq_target + bnd_target) - 1.0) > 1e-9:
+            raise ValueError("Bucket weight targets must sum to 1.0.")
 
+        # Validate bucket bands
+        if self.config.bucket_band < 0:
+            raise ValueError("bucket_band must be >= 0.")
+        if self.equity_min < 0 or self.bond_min < 0:
+            raise ValueError("Bucket bands result in negative minimums.")
+        if self.equity_max > 1 or self.bond_max > 1:
+            raise ValueError("Bucket bands result in maximums > 1.")
+
+        # Validate position bounds
         if self.min_w < 0:
             raise ValueError("min_weight must be >= 0.")
-        if self.max_w <= 0:
-            raise ValueError("max_weight must be > 0.")
-        if self.min_w >= self.max_w:
-            raise ValueError("min_weight must be < max_weight.")
+        if self.hard_max_w <= 0:
+            raise ValueError("hard_max_weight must be > 0.")
+        if self.soft_max_w <= 0:
+            raise ValueError("soft_max_weight must be > 0.")
+        if self.min_w >= self.hard_max_w:
+            raise ValueError("min_weight must be < hard_max_weight.")
+        if self.soft_max_w > self.hard_max_w:
+            raise ValueError("soft_max_weight must be <= hard_max_weight.")
+
+        # Validate penalty coefficients
+        if self.config.l2_gamma < 0:
+            raise ValueError("l2_gamma must be >= 0.")
+        if self.config.concentration_gamma < 0:
+            raise ValueError("concentration_gamma must be >= 0.")
 
         n = len(self.all_tickers)
         if n * self.min_w > 1.0:
             raise ValueError(f"Infeasible: n*min_weight > 1.0 ({n} * {self.min_w})")
 
-        # Basic feasibility for bucket constraints with min/max:
+        # Basic feasibility check for bucket constraints with hard bounds
         eq_n = len(self.equities)
         bnd_n = len(self.bonds)
 
-        def feasible(bucket_target: float, k: int) -> bool:
-            lo = k * self.min_w
-            hi = k * self.max_w
-            return (bucket_target + 1e-9) >= lo and (bucket_target - 1e-9) <= hi
+        # Check if bucket bands can be satisfied given hard_max constraint
+        eq_feasible_max = eq_n * self.hard_max_w
+        bnd_feasible_max = bnd_n * self.hard_max_w
 
-        if not feasible(ew, eq_n):
+        if self.equity_min > eq_feasible_max:
             raise ValueError(
-                f"Equity bucket infeasible: target={ew} but feasible range is "
-                f"[{eq_n*self.min_w:.4f}, {eq_n*self.max_w:.4f}] given min/max weights."
+                f"Equity bucket infeasible: min={self.equity_min:.2%} but max achievable is "
+                f"{eq_feasible_max:.2%} with {eq_n} assets at hard_max={self.hard_max_w:.2%}."
             )
-        if not feasible(bw, bnd_n):
+        if self.bond_min > bnd_feasible_max:
             raise ValueError(
-                f"Bond bucket infeasible: target={bw} but feasible range is "
-                f"[{bnd_n*self.min_w:.4f}, {bnd_n*self.max_w:.4f}] given min/max weights."
+                f"Bond bucket infeasible: min={self.bond_min:.2%} but max achievable is "
+                f"{bnd_feasible_max:.2%} with {bnd_n} assets at hard_max={self.hard_max_w:.2%}."
             )
 
     # ---------- data ----------
@@ -235,23 +258,46 @@ class PortfolioAllocator:
     # ---------- constraints plumbing (applies to ALL objectives) ----------
 
     def _build_ef(self, mu: pd.Series, S: pd.DataFrame, tickers: List[str]) -> EfficientFrontier:
+        """
+        Build EfficientFrontier with hybrid hard/soft constraints:
+        - Hard: min_weight floor, hard_max ceiling
+        - Soft: bucket bands, L2 regularization, concentration penalty
+        """
         eq_idx = [tickers.index(t) for t in tickers if t in self.equities]
         bnd_idx = [tickers.index(t) for t in tickers if t in self.bonds]
 
         if not eq_idx or not bnd_idx:
             raise ValueError("Equity/bond indices empty. Ensure prices columns include those tickers.")
 
-        ef = EfficientFrontier(mu, S, weight_bounds=(self.min_w, self.max_w))
+        # Hard bounds: min_weight floor (1%), hard_max ceiling (15%)
+        ef = EfficientFrontier(mu, S, weight_bounds=(self.min_w, self.hard_max_w))
 
-        # bucket constraints (configurable)
-        ef.add_constraint(lambda w: w[eq_idx].sum() == self.config.equity_weight)
-        ef.add_constraint(lambda w: w[bnd_idx].sum() == self.config.bond_weight)
+        # Bucket bands (inequalities instead of exact equality)
+        ef.add_constraint(lambda w, eq=eq_idx: w[eq].sum() >= self.equity_min)
+        ef.add_constraint(lambda w, eq=eq_idx: w[eq].sum() <= self.equity_max)
+        ef.add_constraint(lambda w, bnd=bnd_idx: w[bnd].sum() >= self.bond_min)
+        ef.add_constraint(lambda w, bnd=bnd_idx: w[bnd].sum() <= self.bond_max)
+
+        # L2 regularization (diversification pressure)
+        if self.config.l2_gamma > 0:
+            ef.add_objective(objective_functions.L2_reg, gamma=self.config.l2_gamma)
+
+        # Concentration penalty: penalize weights above soft_max threshold
+        if self.config.concentration_gamma > 0:
+            soft_max = self.soft_max_w
+            gamma = self.config.concentration_gamma
+
+            def concentration_cost(w, sm=soft_max, g=gamma):
+                excess = cp.pos(w - sm)  # max(0, w - soft_max)
+                return g * cp.sum_squares(excess)
+
+            ef.add_objective(concentration_cost)
 
         return ef
 
     def _finalize(self, ef: EfficientFrontier, tickers: List[str]) -> Dict[str, float]:
         w = ef.clean_weights()
-        assert_weights_ok(w, tickers, min_w=self.min_w, max_w=self.max_w)
+        assert_weights_ok(w, tickers, min_w=self.min_w, hard_max_w=self.hard_max_w)
         return w
 
     def bucket_weights(self, weights: Dict[str, float]) -> Tuple[float, float]:
@@ -298,25 +344,34 @@ class PortfolioAllocator:
 
 
 # ------------------------
-# Runnable script logic (classification stub note)
+# Runnable script logic
 # ------------------------
 
-from typing import Optional, List
-
 def run(
-    tickers: Optional[List[str]] = None,
-    equity_weight: float = 0.60,
-    bond_weight: float = 0.40
+    tickers: List[str],
+    equity_weight_target: float = 0.60,
+    bond_weight_target: float = 0.40
 ) -> None:
-    if tickers is None:
-        tickers = TICKERS
+
+    if not tickers:
+        raise ValueError("tickers list is empty.")
 
     config = OptimizerConfig(
-        equity_weight=equity_weight,
-        bond_weight=bond_weight,
-        min_weight=0.005,
-        max_weight=None,
-        max_weight_multiple=1.5,
+        # Bucket targets with bands
+        equity_weight_target=equity_weight_target,
+        bond_weight_target=bond_weight_target,
+        bucket_band=0.05,                     # ±5% flexibility
+
+        # Position constraints (hybrid hard/soft)
+        min_weight=0.01,                      # HARD 1% floor
+        soft_max_weight=0.08,                 # Soft 8% threshold
+        hard_max_weight=0.15,                 # HARD 15% ceiling
+
+        # Regularization penalties
+        l2_gamma=0.1,                         # Diversification pressure
+        concentration_gamma=0.5,              # Soft max penalty
+
+        # Other params
         risk_free_rate=0.02,
         lookback_days=504,
         frequency="daily",
@@ -337,10 +392,12 @@ def run(
 
     for name, fn in strategies:
         w, (ret, vol, sharpe) = fn()
-        print(f"\n{name} | ret={ret:.4f} vol={vol:.4f} sharpe={sharpe:.4f}")
+        eq_w, bnd_w = opt.bucket_weights(w)
+        print(f"\n{name} | ret={ret:.4f} vol={vol:.4f} sharpe={sharpe:.4f} | eq={eq_w:.2%} bnd={bnd_w:.2%}")
         for t, wt in w.items():
             print(f"  {t}: {wt*100:.2f}%")
 
 
 if __name__ == "__main__":
-    run()
+    tickers = ["AAPL", "MSFT", "GOOGL", "AMZN", "META", "NVDA", "JPM", "JNJ", "V", "AGG", "BND", "TLT", "IEF", "LQD", "VCIT"]
+    run(tickers=tickers, equity_weight_target=0.75, bond_weight_target=0.25)
