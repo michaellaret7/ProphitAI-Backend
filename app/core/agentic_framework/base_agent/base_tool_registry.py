@@ -1,4 +1,8 @@
-from app.core.agentic_framework.tool_lib.base_tools.search_engine import AgentSearchEngine
+from app.core.agentic_framework.tool_lib.base_tools.search_engine import (
+    AgentSearchEngine,
+    LLM_WEB_SEARCH_DESCRIPTION,
+    LLM_WEB_SEARCH_PARAMETERS,
+)
 from app.core.agentic_framework.tool_lib.base_tools import calculator
 from app.core.agentic_framework.tool_lib.base_tools.update_task import (
     update_tasks,
@@ -41,26 +45,17 @@ def register_base_tools(agent: Any) -> None:
     - Lambdas capture `agent` and access attributes at call-time.
     """
 
-    search_description = (
-        "The free_search tool searches the web. Provide a detailed query that will be "
-        "sent to an external search engine."
-    )
-
-    # free_search
+    # llm_web_search (Perplexity-powered web search)
     agent.add_tool(
-        name="free_search",
-        description=search_description,
-        parameters={
-            "type": "object",
-            "properties": {
-                "query": {
-                    "type": "string",
-                    "description": "Detailed query for the search engine.",
-                }
-            },
-            "required": ["query"],
-        },
-        function=lambda query, **kwargs: AgentSearchEngine().perplexity_free_search(query),
+        name="llm_web_search",
+        description=LLM_WEB_SEARCH_DESCRIPTION,
+        parameters=LLM_WEB_SEARCH_PARAMETERS,
+        function=lambda queries, recency_filter=None, reasoning_effort=None, mode="regular-search", **kwargs: AgentSearchEngine().llm_web_search(
+            queries=queries,
+            recency_filter=recency_filter,
+            reasoning_effort=reasoning_effort,
+            mode=mode,
+        ),
     )
 
     # calculator

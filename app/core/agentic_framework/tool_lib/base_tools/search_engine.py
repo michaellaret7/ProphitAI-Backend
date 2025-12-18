@@ -1,117 +1,177 @@
-from app.utils.choose_model_and_client import get_model_and_client
-import re
-import yaml
+"""Search engine tools for BaseAgent.
+
+Provides web search capabilities using Perplexity's API for both raw search results
+and LLM-synthesized answers. These tools enable agents to access real-time information
+from the web to inform their analysis and decision-making.
+"""
+
+import asyncio
+from typing import List, Literal
+
 from app.core.agentic_framework.tool_lib.common.responses import success_response, error_response
+from app.core.search.web_search.perplexity_search import PerplexityWebSearch
 
 class AgentSearchEngine:
-    def perplexity_free_search(self, query: str):
-        model, client = get_model_and_client('perplexity', 'sonar-reasoning')
+    def __init__(self):
+        self.perplexity = PerplexityWebSearch()
 
-        system_prompt = """
-        <Role>
-        Act as an expert researcher in market research and analysis.
-        You have 30 years of experience being a research analyst at the top investment banks and hedge funds in the world
-        </Role>
-
-        <Instructions>
-        You will be given a query and you will need to research the query and return the most relevant and new information.
-        You will need to use the latest data and information to answer the query.
-        You will need to use the latest news and information to answer the query.
-        You will need to use the latest research and information to answer the query.
-        You will need to use the latest analysis and information to answer the query.
-        You will need to use the latest insights and information to answer the query.
-        </Instructions>
-
-        <Rules>
-        You must be as descriptive, informative and detailed as possible.
-        You must be as accurate and factual as possible.
-        You must be as up to date and relevant as possible.
-        Do extensive research on the query and ONLY retrieve information from the top and most reputable sources.
-        You have no output token limit.
-        </Rules>
-
-        <What to search for>
-        - Macro economic data
-        - Industry data
-        - Company data
-        - News
-        - Research
-        - Insights
-        - Analyst Estimates
-        - Analyst Reports
-        - Economic Forecasts
-        - Economic Data
-        - Economic Indicators
-        </What to search for>
+    def web_search(
+        self,
+        queries: List[str],
+        recency_filter: Literal["hour", "day", "week", "month", "year"] = None,
+        max_results_per_query: int = 20,
+        search_after_date_filter: str = None,
+        search_before_date_filter: str = None
+    ) -> dict:
         """
+        Synchronous function that runs async batch search internally.
 
+        Args:
+            queries: List of search queries to execute
+            recency_filter: Filter results by recency (hour, day, week, month, year)
+            max_results_per_query: Maximum results per query
+            search_after_date_filter: Only return results after this date
+            search_before_date_filter: Only return results before this date
+
+        Returns:
+            Success or error response dict containing search results
+        """
         try:
-            messages = [
-                {"role": "system", "content": system_prompt},
-                {"role": "user", "content": query}
-            ]
-
-            # chat completion with streaming
-            response = client.chat.completions.create(
-                model=model,
-                messages=messages,
-                temperature=0.7
+            results = asyncio.run(
+                self.perplexity.batch_search(
+                    queries,
+                    recency_filter,
+                    max_results_per_query,
+                    search_after_date_filter,
+                    search_before_date_filter
+                )
             )
-
-            content = response.choices[0].message.content
-            # Remove numbered references like [1], [2], etc.
-            cleaned_content = re.sub(r'\[\d+\]', '', content)
-            # Remove content between <think> and </think> tags (including the tags)
-            cleaned_content = re.sub(r'<think>.*?</think>', '', cleaned_content, flags=re.DOTALL)
-
-            return success_response({
-                'data': cleaned_content,
-                'query': query
-            })
-
+            return success_response(results)
         except Exception as e:
-            return error_response(f"{str(e)} (query: {query})")
+            return error_response(f"Error executing web search: {str(e)}. Try again with different queries or parameters.")
     
-    def openai_search(self, query: str):
+    def llm_web_search(
+        self,
+        queries: List[str],
+        recency_filter: Literal["hour", "day", "week", "month", "year"] = None,
+        reasoning_effort: Literal["minimal", "low", "medium", "high"] = None,
+        mode: Literal["deep-research", "regular-search"] = "regular-search"
+    ) -> dict:
         """
-        Processes a user query using the Deep Research API for detailed market analysis.
-        """
-        model, client = get_model_and_client('openai', 'o3')
-        system_message = """
-    You are a professional financial analyst preparing a structured, data-driven report. Your task is to analyze the user's query about the macroeconomic environment and its implications for the stock market.
+        Synchronous function that uses LLM to search the web and synthesize results.
 
-    Do:
-    - Focus on data-rich insights: include specific figures, economic indicators (e.g., GDP growth, inflation rates, unemployment), market trends, and statistical data.
-    - Prioritize reliable, up-to-date sources: government economic reports (e.g., from the Federal Reserve, Bureau of Labor Statistics), major financial news outlets (e.g., Bloomberg, Reuters, Wall Street Journal), and reports from reputable financial institutions.
-    - Structure the report with clear headers for different sections (e.g., "Current Macroeconomic Indicators", "Inflation and Monetary Policy", "Geopolitical Factors", "Stock Market Outlook", "Sector-specific Implications").
-    - Include inline citations for all data points and return all source metadata.
-    - Be analytical, objective, and avoid speculation without data-backed reasoning.
-    """
+        Args:
+            queries: List of search queries to execute
+            recency_filter: Filter results by recency (hour, day, week, month, year)
+            reasoning_effort: Level of reasoning effort (minimal, low, medium, high)
+            mode: Search mode - deep-research or regular-search
+
+        Returns:
+            Success or error response dict containing synthesized search results
+        """
         try:
-            response = client.responses.create(
-                model=model,
-                input=[
-                    {"role": "developer", "content": [{"type": "input_text", "text": system_message}]},
-                    {"role": "user", "content": [{"type": "input_text", "text": query}]}
-                ],
-                tools=[
-                    {"type": "web_search_preview"}
-                ]
+            results = asyncio.run(
+                self.perplexity.synthesize_search(
+                    queries,
+                    recency_filter,
+                    reasoning_effort,
+                    mode
+                )
             )
-
-            # For deep research response, the final report is in the last output item
-            if hasattr(response, 'output') and response.output:
-                final_report = response.output[-1]
-                if hasattr(final_report, 'content'):
-                    report_text = final_report.content[0].text
-                    return success_response({
-                        'data': report_text,
-                        'query': query
-                    })
-
-            return error_response(f"No response generated (query: {query})")
-
-        except AttributeError as e:
-            return error_response(f"AttributeError: {str(e)}. Make sure you have the latest OpenAI library: pip install --upgrade openai (query: {query})")
+            return success_response(results)
         except Exception as e:
-            return error_response(f"{str(e)} (query: {query})")
+            return error_response(f"Error searching the web: {str(e)}. Try again with different search parameters.")
+
+
+# =============================================================================
+# Tool Schema: llm_web_search
+# =============================================================================
+
+LLM_WEB_SEARCH_DESCRIPTION = """Search the web using Perplexity's AI-powered search engine to get synthesized,
+well-researched answers based on real-time sources.
+
+**BATCH MULTIPLE QUERIES FOR EFFICIENCY:**
+This tool accepts a LIST of queries. When researching multiple topics, batch them together
+in a single call rather than making separate calls.
+
+Good: queries: ["AAPL Q4 earnings", "MSFT Q4 earnings", "GOOGL Q4 earnings"]
+Bad: Three separate calls with one query each
+
+**USE THIS TOOL WHEN YOU NEED:**
+- Current market news, earnings reports, or company announcements
+- Recent analyst opinions, price targets, or rating changes
+- Macroeconomic data, Fed decisions, or policy changes
+- Industry trends, competitive dynamics, or sector developments
+- Any information that may have changed since your knowledge cutoff
+
+**QUERY TIPS:**
+- Be specific: "NVIDIA Q4 2024 earnings results and guidance" vs "NVIDIA earnings"
+- Include context: "Fed interest rate decision December 2024 and market impact"
+- Specify what you want: "Analyst consensus price target for Apple as of January 2025"
+
+**PARAMETERS:**
+
+queries (REQUIRED - array): List of search queries. Batch multiple for efficiency.
+
+recency_filter: Constrains results to a time window:
+  - "hour": Breaking news, intraday moves
+  - "day": Today's news
+  - "week": Recent developments (good default)
+  - "month": Quarterly trends
+  - "year": Annual comparisons
+
+reasoning_effort: Controls depth vs speed:
+  - "minimal": Quick facts
+  - "low": Standard queries
+  - "medium": Balanced (good default)
+  - "high": Complex topics
+
+mode: Search depth:
+  - "regular-search": Standard, faster (default)
+  - "deep-research": Comprehensive, slower
+
+**EXAMPLES:**
+
+Example 1 - Batch earnings research:
+  queries: ["Microsoft Q4 2024 earnings", "Apple Q4 2024 earnings", "Google Q4 2024 earnings"]
+  recency_filter: "week"
+
+Example 2 - Single breaking news:
+  queries: ["Fed interest rate decision and Powell comments"]
+  recency_filter: "day"
+
+Example 3 - Deep competitive research:
+  queries: ["NVIDIA vs AMD datacenter GPU market share 2024", "AI chip competitive landscape"]
+  reasoning_effort: "high"
+  mode: "deep-research" """
+
+LLM_WEB_SEARCH_PARAMETERS = {
+    "type": "object",
+    "properties": {
+        "queries": {
+            "type": "array",
+            "items": {"type": "string"},
+            "description": (
+                "List of search queries. BATCH MULTIPLE QUERIES for efficiency. "
+                "Example: [\"AAPL Q4 earnings\", \"MSFT Q4 earnings\"]"
+            )
+        },
+        "recency_filter": {
+            "type": "string",
+            "enum": ["hour", "day", "week", "month", "year"],
+            "description": "Filter by recency: hour, day, week, month, or year."
+        },
+        "reasoning_effort": {
+            "type": "string",
+            "enum": ["minimal", "low", "medium", "high"],
+            "description": "Reasoning depth: minimal, low, medium, or high."
+        },
+        "mode": {
+            "type": "string",
+            "enum": ["regular-search", "deep-research"],
+            "default": "regular-search",
+            "description": "regular-search (faster) or deep-research (thorough)."
+        }
+    },
+    "required": ["queries"]
+}

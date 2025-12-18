@@ -4,48 +4,69 @@ Provides standardized YAML response formatting for all tools.
 Follows DRY principle by centralizing response format logic.
 """
 
-import yaml
+from __future__ import annotations
+
+import dataclasses
 from typing import Any
+
+import yaml
+
+_LONG_STRING_THRESHOLD = 200
+_YAML_WIDTH = 10_000
+
+
+class _ToolResponseDumper(yaml.SafeDumper):
+    pass
+
+
+def _str_representer(dumper: yaml.Dumper, value: str):
+    if "\n" in value or len(value) > _LONG_STRING_THRESHOLD:
+        return dumper.represent_scalar("tag:yaml.org,2002:str", value, style="|")
+    return dumper.represent_scalar("tag:yaml.org,2002:str", value)
+
+
+def _unknown_representer(dumper: yaml.Dumper, value: Any):
+    if hasattr(value, "model_dump"):
+        try:
+            return dumper.represent_data(value.model_dump())
+        except Exception:
+            pass
+
+    if hasattr(value, "dict") and callable(getattr(value, "dict")):
+        try:
+            return dumper.represent_data(value.dict())
+        except Exception:
+            pass
+
+    try:
+        if dataclasses.is_dataclass(value):
+            return dumper.represent_data(dataclasses.asdict(value))
+    except Exception:
+        pass
+
+    return dumper.represent_scalar("tag:yaml.org,2002:str", str(value))
+
+
+_ToolResponseDumper.add_representer(str, _str_representer)
+_ToolResponseDumper.add_multi_representer(object, _unknown_representer)
+
+
+def dump_yaml(payload: Any) -> str:
+    return yaml.dump(
+        payload,
+        Dumper=_ToolResponseDumper,
+        default_flow_style=False,
+        sort_keys=False,
+        allow_unicode=True,
+        width=_YAML_WIDTH,
+    )
 
 
 def success_response(data: Any) -> str:
-    """Format successful tool response as YAML.
-
-    Args:
-        data: Result data to return to agent
-
-    Returns:
-        YAML string with success=True and data
-
-    Example:
-        >>> success_response({"metric": 0.5})
-        'success: true\\ndata:\\n  metric: 0.5\\n'
-    """
-        # Custom representer for multi-line strings to use literal block style
-    def str_representer(dumper, data):
-        if isinstance(data, str) and '\n' in data:  # Multi-line string
-            return dumper.represent_scalar('tag:yaml.org,2002:str', data, style='|')
-        return dumper.represent_scalar('tag:yaml.org,2002:str', data)
-    
-    yaml.add_representer(str, str_representer)
-
-    return yaml.dump({"success": True, "data": data}, default_flow_style=False, sort_keys=False)
+    """Format successful tool response as YAML."""
+    return dump_yaml({"success": True, "data": data})
 
 
 def error_response(error: str | Exception) -> str:
-    """Format error tool response as YAML.
-
-    Args:
-        error: Error message or exception
-
-    Returns:
-        YAML string with success=False and error message
-
-    Example:
-        >>> error_response("Invalid input")
-        'success: false\\nerror: Invalid input\\n'
-        >>> error_response(ValueError("Bad value"))
-        'success: false\\nerror: Bad value\\n'
-    """
-    error_msg = str(error)
-    return yaml.dump({"success": False, "error": error_msg}, default_flow_style=False)
+    """Format error tool response as YAML."""
+    return dump_yaml({"success": False, "error": str(error)})

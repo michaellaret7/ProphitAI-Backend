@@ -1,9 +1,17 @@
-from app.db.core.db_config import MarketSession
-from app.db.core.models.market_data_models import Ticker
+from app.core.agentic_framework.base_agent import BaseAgent
+from app.core.agentic_framework.base_agent.utils.messages.agent_message import UNIVERSAL_AGENT_MESSAGE
+from datetime import datetime
+from app.core.agentic_framework.base_agent.utils.models import PrintMode
 
-with MarketSession() as session:
-    valid_industries = {row[0] for row in session.query(Ticker.industry).distinct().filter(Ticker.is_etf == True).all()}
-    valid_sub_industries = {row[0] for row in session.query(Ticker.sub_industry).distinct().filter(Ticker.is_etf == True).all()}
+agent = BaseAgent(
+    system_prompt=UNIVERSAL_AGENT_MESSAGE,
+    user_prompt="Use the web search tool to search for the latest news on the US economy and financial markets.",
+    provider="groq",
+    model="Kimi-K2-instruct",
+    max_iterations=10,
+    print_mode=PrintMode.VERBOSE,
+    plan_first=True
+)
 
-print(valid_industries)
-print(valid_sub_industries)
+result = agent.run()
+print(result)

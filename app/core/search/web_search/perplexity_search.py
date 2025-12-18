@@ -17,20 +17,31 @@ class PerplexityWebSearch:
         self.client = Perplexity(api_key=os.getenv('PERPLEXITY_API_KEY'))
         self.async_client = AsyncPerplexity(api_key=os.getenv('PERPLEXITY_API_KEY'))
 
-    def _deduplicate_results(self, nested_results):
+    def _format_result(self, result) -> dict:
+        """Convert a Pydantic result object to a clean dictionary."""
+        return {
+            "title": getattr(result, 'title', ''),
+            "url": getattr(result, 'url', ''),
+            "snippet": getattr(result, 'snippet', ''),
+            "date": getattr(result, 'date', ''),
+            "last_updated": getattr(result, 'last_updated', '')
+        }
+
+    def _deduplicate_results(self, nested_results) -> List[dict]:
         """
         Flatten and deduplicate results from multiple queries based on URL.
+        Returns clean dictionaries instead of raw Pydantic objects.
         """
         seen_urls = set()
         unique_results = []
-        
+
         for query_results in nested_results:
             for result in query_results:
-                # Basic check for URL existence and uniqueness
-                if hasattr(result, 'url') and result.url and result.url not in seen_urls:
-                    seen_urls.add(result.url)
-                    unique_results.append(result)
-        
+                url = getattr(result, 'url', None)
+                if url and url not in seen_urls:
+                    seen_urls.add(url)
+                    unique_results.append(self._format_result(result))
+
         return unique_results
 
     async def batch_search(
@@ -76,41 +87,76 @@ class PerplexityWebSearch:
 
             return self._deduplicate_results(cleaned_nested_results) 
 
-    def synthesize_search(
-        self, 
-        query: str, 
+    async def synthesize_search(
+        self,
+        queries: List[str],
         search_recency_filter: Literal["hour", "day", "week", "month", "year"] = None,
         reasoning_effort: Literal["minimal", "low", "medium", "high"] = None,
         mode: Literal["deep-research", "regular-search"] = "regular-search"
-    ):
+    ) -> List[str]:
+        """
+        Async batch search that synthesizes results using LLM reasoning.
+
+        Args:
+            queries: List of search queries to execute
+            search_recency_filter: Filter results by recency
+            reasoning_effort: Level of reasoning effort for the model
+            mode: Search mode - deep-research or regular-search
+
+        Returns:
+            List of synthesized search results (one per query)
+        """
         if mode == "deep-research":
             model = "sonar-deep-research"
-        else:  # mode == "regular-search"
+        else:
             model = "sonar-reasoning-pro"
 
-        response = self.client.chat.completions.create(
-            model=model,
-            messages=[
-                {"role": "system", "content": """
-                You are an expert research assistant that searches the web for the most relevant and up-to-date information.
+        system_prompt = """
+You are an expert research assistant that searches the web for the most relevant and up-to-date information.
 
-                Think step by step and be as detailed and thorough as possible in your research, analysis and synthesis:
-                - Search for the most current and authoritative sources
-                - Synthesize information from multiple perspectives
-                - Provide comprehensive coverage of the topic
-                - Include specific data points, dates, and concrete details
-                - Cite key findings and insights
-                - Be analytical and objective in your assessment
+Think step by step and be as detailed and thorough as possible in your research, analysis and synthesis:
+- Search for the most current and authoritative sources
+- Synthesize information from multiple perspectives
+- Provide comprehensive coverage of the topic
+- Include specific data points, dates, and concrete details
+- Cite key findings and insights
+- Be analytical and objective in your assessment
 
-                Your goal is to deliver a complete, well-researched answer that leaves no important information uncovered."""},
-                {"role": "user", "content": query}
-            ],
-            search_recency_filter=search_recency_filter,
-            reasoning_effort=reasoning_effort
-        )
+Your goal is to deliver a complete, well-researched answer that leaves no important information uncovered."""
 
-        content = response.choices[0].message.content
-        # Remove <think>...</think> tags and their content
-        cleaned_content = re.sub(r'<think>.*?</think>', '', content, flags=re.DOTALL)
-        return cleaned_content.strip()
+        async with self.async_client as client:
+            batch_size = 3  # Smaller batch for heavier LLM calls
+            results = []
+
+            for i in range(0, len(queries), batch_size):
+                batch = queries[i:i + batch_size]
+
+                batch_tasks = [
+                    client.chat.completions.create(
+                        model=model,
+                        messages=[
+                            {"role": "system", "content": system_prompt},
+                            {"role": "user", "content": query}
+                        ],
+                        search_recency_filter=search_recency_filter,
+                        reasoning_effort=reasoning_effort
+                    )
+                    for query in batch
+                ]
+
+                batch_results = await asyncio.gather(*batch_tasks)
+                results.extend(batch_results)
+
+                # Add delay between batches to avoid rate limiting
+                if i + batch_size < len(queries):
+                    await asyncio.sleep(1)
+
+            # Clean results - remove <think> tags
+            cleaned_results = []
+            for response in results:
+                content = response.choices[0].message.content
+                cleaned_content = re.sub(r'<think>.*?</think>', '', content, flags=re.DOTALL)
+                cleaned_results.append(cleaned_content.strip())
+
+            return cleaned_results
     

@@ -4,6 +4,7 @@ from typing import TYPE_CHECKING, List, Dict, Any
 import builtins
 import yaml
 from app.core.agentic_framework.base_agent.utils.models import TaskStatus
+from app.core.agentic_framework.tool_lib.common.responses import dump_yaml
 
 if TYPE_CHECKING:
     from ..agent import BaseAgent
@@ -39,7 +40,7 @@ def validate_tool_call(name: str, args: dict, result: Any, agent: 'BaseAgent') -
                     if subtask.status == TaskStatus.IN_PROGRESS:
                         subtasks_in_progress.append(f"Subtask {subtask.id}: {subtask.description}")
 
-        return yaml.dump({
+        return dump_yaml({
             "success": success,
             "tool_name": name,
             "args": args,
@@ -47,16 +48,15 @@ def validate_tool_call(name: str, args: dict, result: Any, agent: 'BaseAgent') -
             "subtasks_in_progress": subtasks_in_progress,
             "data": data,
             "error": error,
-        }, default_flow_style=False, sort_keys=False)
+        })
 
     except Exception as e:
         print(f"⚠️ Error validating tool result: {e}")
-        return yaml.dump({
+        return dump_yaml({
             "success": False,
             "error": f"Tool validation failed: {str(e)}",
             "tool_name": name,
             "args": args,
             "main_tasks_in_progress": [],
             "subtasks_in_progress": []
-        }, default_flow_style=False, sort_keys=False)
-
+        })
