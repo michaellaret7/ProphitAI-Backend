@@ -2,14 +2,16 @@
 """
 Single-file: production-style class + pytest tests + runnable main block.
 
-Features:
-- 60/40 (or any bucket split) enforced for ALL optimization methods (configurable)
-- Min/max position constraints enforced for ALL methods (configurable)
-- No zero weights via min_weight floor (configurable)
-- Real price data fetch via your repository function
+User-requested structure:
+- Class takes ONE list of tickers
+- Class has a method to sort tickers into equity vs fixed income
+  - The method body is intentionally left empty for you to implement
+- 60/40 (or any split) and min/max weight bounds are configurable and enforced
+  for EVERY optimization method via a shared _build_ef() path.
 
 Run:
   python pyportfolioopt_real_data_test.py
+
 Tests:
   pytest -q pyportfolioopt_real_data_test.py
 """
@@ -23,28 +25,74 @@ from typing import Dict, List, Tuple, Set, Optional
 import numpy as np
 import pandas as pd
 
+from app.db.core.db_config import MarketSession
+from app.db.core.models.market_data_models import Ticker
+
 from pypfopt import EfficientFrontier, expected_returns, risk_models
 
 from app.repositories.price_data import fetch_bulk_price_data_for_tickers
 from app.utils.time_utils import get_utc_date_str, get_utc_days_ago
 
-from app.core.calculations.portfolio.allocator.utils import OptimizerConfig, assert_weights_ok, suggested_max_weight
+
+# One list of tickers (example: 9 equities + 6 bond ETFs)
+TICKERS = [
+    "AAPL", "MSFT", "GOOGL", "AMZN", "META", "NVDA", "JPM", "JNJ", "V",
+    "AGG", "BND", "TLT", "IEF", "LQD", "VCIT"
+]
 
 
-# 9 equity tickers (default 60% allocation)
-EQUITY_TICKERS = ["AAPL", "MSFT", "GOOGL", "AMZN", "META", "NVDA", "JPM", "JNJ", "V"]
+# ------------------------
+# Config
+# ------------------------
 
-# 6 bond ETF tickers (default 40% allocation)
-BOND_TICKERS = ["AGG", "BND", "TLT", "IEF", "LQD", "VCIT"]
+@dataclass(frozen=True)
+class OptimizerConfig:
+    # Bucket targets (configurable)
+    equity_weight: float = 0.60
+    bond_weight: float = 0.40
+
+    # Data params
+    lookback_days: int = 504
+    frequency: str = "daily"
+    trading_days: int = 252
+
+    # Solver params
+    risk_free_rate: float = 0.02
+
+    # Position constraints (configurable)
+    min_weight: float = 0.005                 # strictly positive -> no zeros
+    max_weight: Optional[float] = None        # if set, use directly
+    max_weight_multiple: float = 1.5          # else max = multiple * (1/n)
+
+
+def suggested_max_weight(n_assets: int, multiple: float) -> float:
+    return float(multiple / n_assets)
+
+
+def assert_weights_ok(
+    cleaned: Dict[str, float],
+    tickers: List[str],
+    min_w: float,
+    max_w: float,
+):
+    assert set(cleaned.keys()) == set(tickers)
+    ws = np.array([cleaned[t] for t in tickers], dtype=float)
+
+    assert np.isfinite(ws).all()
+    assert abs(ws.sum() - 1.0) <= 1e-4
+    assert (ws >= (min_w - 1e-4)).all(), f"Found weight below min_w={min_w}: {cleaned}"
+    assert (ws <= (max_w + 1e-4)).all(), f"Found weight above max_w={max_w}: {cleaned}"
+
 
 # ------------------------
 # Optimizer class
 # ------------------------
 
-class PortfolioOptimizerBuckets:
+class PortfolioAllocator:
     """
     Portfolio optimizer with:
-    - Two buckets (equities + bonds)
+    - One ticker list input
+    - Internal classification step: sort into equity vs fixed income (stub for you)
     - Configurable bucket targets (e.g., 60/40)
     - Configurable position constraints (min/max)
     - All objectives share identical constraint plumbing
@@ -52,19 +100,25 @@ class PortfolioOptimizerBuckets:
 
     def __init__(
         self,
-        equity_tickers: List[str],
-        bond_tickers: List[str],
+        tickers: List[str],
         config: OptimizerConfig = OptimizerConfig(),
     ):
-        self.equity_tickers = list(equity_tickers)
-        self.bond_tickers = list(bond_tickers)
         self.config = config
+        self.all_tickers: List[str] = list(dict.fromkeys(tickers))  # de-dupe, preserve order
+        if not self.all_tickers:
+            raise ValueError("tickers list is empty.")
 
-        self.all_tickers: List[str] = self.equity_tickers + self.bond_tickers
-        self.equities: Set[str] = set(self.equity_tickers)
-        self.bonds: Set[str] = set(self.bond_tickers)
+        # You will implement this classification logic.
+        equities, bonds = self.classify_tickers(self.all_tickers)
 
-        # resolve bounds
+        # We keep these as sets for membership checks
+        self.equities: Set[str] = set(equities)
+        self.bonds: Set[str] = set(bonds)
+
+        # sanity: every ticker must be classified into exactly one bucket
+        self._validate_classification()
+
+        # resolve position bounds (configurable)
         self.min_w: float = float(self.config.min_weight)
         if self.config.max_weight is not None:
             self.max_w: float = float(self.config.max_weight)
@@ -72,6 +126,47 @@ class PortfolioOptimizerBuckets:
             self.max_w = suggested_max_weight(len(self.all_tickers), self.config.max_weight_multiple)
 
         self._validate_config()
+
+    # ---------- ticker classification ----------
+
+    def classify_tickers(self, tickers: List[str]) -> Tuple[List[str], List[str]]:
+        """
+        Return (equity_tickers, fixed_income_tickers).
+        """
+        fixed_income = []
+        equities = []
+
+        with MarketSession() as session:
+            for ticker in tickers:
+                ticker_obj = session.query(Ticker).filter(Ticker.ticker == ticker).first()
+                if ticker_obj.is_etf and ticker_obj.industry == "fixed_income_etfs":
+                    fixed_income.append(ticker_obj.ticker)
+                else:
+                    equities.append(ticker_obj.ticker)
+
+        return equities, fixed_income
+
+    # ---------- validation ----------
+
+    def _validate_classification(self):
+        if not self.equities:
+            raise ValueError("No equity tickers classified.")
+        if not self.bonds:
+            raise ValueError("No fixed income tickers classified.")
+
+        all_set = set(self.all_tickers)
+        overlap = self.equities.intersection(self.bonds)
+        if overlap:
+            raise ValueError(f"Tickers classified into BOTH equity and fixed income: {sorted(overlap)}")
+
+        classified = self.equities.union(self.bonds)
+        missing = all_set.difference(classified)
+        extra = classified.difference(all_set)
+
+        if missing:
+            raise ValueError(f"Tickers NOT classified into any bucket: {sorted(missing)}")
+        if extra:
+            raise ValueError(f"Classified tickers not in input list (unexpected): {sorted(extra)}")
 
     def _validate_config(self):
         ew = self.config.equity_weight
@@ -94,9 +189,8 @@ class PortfolioOptimizerBuckets:
             raise ValueError(f"Infeasible: n*min_weight > 1.0 ({n} * {self.min_w})")
 
         # Basic feasibility for bucket constraints with min/max:
-        # each bucket must be achievable given min/max and bucket sizes.
-        eq_n = len(self.equity_tickers)
-        bnd_n = len(self.bond_tickers)
+        eq_n = len(self.equities)
+        bnd_n = len(self.bonds)
 
         def feasible(bucket_target: float, k: int) -> bool:
             lo = k * self.min_w
@@ -160,10 +254,9 @@ class PortfolioOptimizerBuckets:
         assert_weights_ok(w, tickers, min_w=self.min_w, max_w=self.max_w)
         return w
 
-    @staticmethod
-    def bucket_weights(weights: Dict[str, float], equities: Set[str], bonds: Set[str]) -> Tuple[float, float]:
-        eq_w = sum(weights[t] for t in equities)
-        bnd_w = sum(weights[t] for t in bonds)
+    def bucket_weights(self, weights: Dict[str, float]) -> Tuple[float, float]:
+        eq_w = sum(weights[t] for t in self.equities)
+        bnd_w = sum(weights[t] for t in self.bonds)
         return float(eq_w), float(bnd_w)
 
     # ---------- objectives (constraints apply automatically) ----------
@@ -172,14 +265,14 @@ class PortfolioOptimizerBuckets:
         ef = self._build_ef(mu, S, tickers)
         ef.min_volatility()
         w = self._finalize(ef, tickers)
-        perf = ef.portfolio_performance(verbose=False)
+        perf = ef.portfolio_performance(verbose=True)
         return w, perf
 
     def optimize_max_sharpe(self, mu: pd.Series, S: pd.DataFrame, tickers: List[str]) -> Tuple[Dict[str, float], Tuple[float, float, float]]:
         ef = self._build_ef(mu, S, tickers)
         ef.max_sharpe(risk_free_rate=self.config.risk_free_rate)
         w = self._finalize(ef, tickers)
-        perf = ef.portfolio_performance(risk_free_rate=self.config.risk_free_rate, verbose=False)
+        perf = ef.portfolio_performance(risk_free_rate=self.config.risk_free_rate, verbose=True)
         return w, perf
 
     def optimize_max_utility(self, mu: pd.Series, S: pd.DataFrame, tickers: List[str], risk_aversion: float = 5.0) -> Tuple[Dict[str, float], Tuple[float, float, float]]:
@@ -205,93 +298,49 @@ class PortfolioOptimizerBuckets:
 
 
 # ------------------------
-# Pytest tests
+# Runnable script logic (classification stub note)
 # ------------------------
 
-def _get_optimizer() -> PortfolioOptimizerBuckets:
-    # everything configurable here
-    cfg = OptimizerConfig(
-        equity_weight=0.60,
-        bond_weight=0.40,
-        min_weight=0.005,          # no zeros
-        max_weight=None,           # compute from multiple
-        max_weight_multiple=1.5,   # ~10% for 15 assets
+from typing import Optional, List
+
+def run(
+    tickers: Optional[List[str]] = None,
+    equity_weight: float = 0.60,
+    bond_weight: float = 0.40
+) -> None:
+    if tickers is None:
+        tickers = TICKERS
+
+    config = OptimizerConfig(
+        equity_weight=equity_weight,
+        bond_weight=bond_weight,
+        min_weight=0.005,
+        max_weight=None,
+        max_weight_multiple=1.5,
         risk_free_rate=0.02,
         lookback_days=504,
         frequency="daily",
         trading_days=252,
     )
-    return PortfolioOptimizerBuckets(EQUITY_TICKERS, BOND_TICKERS, config=cfg)
 
-
-def test_min_vol_enforces_bucket_and_position_constraints():
-    opt = _get_optimizer()
-    prices = opt.fetch_prices()
-    tickers, mu, S = opt.compute_inputs(prices)
-
-    w, perf = opt.optimize_min_vol(mu, S, tickers)
-    eq_w, bnd_w = opt.bucket_weights(w, opt.equities, opt.bonds)
-
-    assert abs(eq_w - opt.config.equity_weight) <= 1e-3
-    assert abs(bnd_w - opt.config.bond_weight) <= 1e-3
-    assert all(np.isfinite(x) for x in perf)
-
-
-def test_max_sharpe_enforces_bucket_and_position_constraints():
-    opt = _get_optimizer()
-    prices = opt.fetch_prices()
-    tickers, mu, S = opt.compute_inputs(prices)
-
-    w, perf = opt.optimize_max_sharpe(mu, S, tickers)
-    eq_w, bnd_w = opt.bucket_weights(w, opt.equities, opt.bonds)
-
-    assert abs(eq_w - opt.config.equity_weight) <= 1e-3
-    assert abs(bnd_w - opt.config.bond_weight) <= 1e-3
-    assert all(np.isfinite(x) for x in perf)
-
-
-# ------------------------
-# Runnable script logic
-# ------------------------
-
-def run_all():
-    opt = _get_optimizer()
+    opt = PortfolioAllocator(tickers=tickers, config=config)
 
     prices = opt.fetch_prices()
-    tickers, mu, S = opt.compute_inputs(prices)
+    ordered_tickers, mu, S = opt.compute_inputs(prices)
 
-    print(f"\nUniverse size: {len(tickers)}")
-    print(f"Bucket target: {opt.config.equity_weight:.2f}/{opt.config.bond_weight:.2f}")
-    print(f"Min weight   : {opt.min_w:.4f}")
-    print(f"Max weight   : {opt.max_w:.4f}")
+    strategies = [
+        ("Min Vol", lambda: opt.optimize_min_vol(mu, S, ordered_tickers)),
+        ("Max Sharpe", lambda: opt.optimize_max_sharpe(mu, S, ordered_tickers)),
+        ("Max Utility", lambda: opt.optimize_max_utility(mu, S, ordered_tickers, risk_aversion=5.0)),
+        ("Efficient Risk", lambda: opt.optimize_efficient_risk(mu, S, ordered_tickers, target_volatility=0.12)),
+    ]
 
-    def _print(label: str, w: Dict[str, float], perf: Tuple[float, float, float]):
-        eq_w, bnd_w = opt.bucket_weights(w, opt.equities, opt.bonds)
-        print(f"\n=== {label} ===")
-        print("bucket :", {"equity": eq_w, "bond": bnd_w})
-        print("perf   :", {"ret": perf[0], "vol": perf[1], "sharpe": perf[2]})
-        print("min_w  :", min(w.values()))
-        print("max_w  :", max(w.values()))
-        print("weights:", w)
-
-    w, perf = opt.optimize_min_vol(mu, S, tickers)
-    _print("Min Vol", w, perf)
-
-    w, perf = opt.optimize_max_sharpe(mu, S, tickers)
-    _print("Max Sharpe", w, perf)
-
-    w, perf = opt.optimize_max_utility(mu, S, tickers, risk_aversion=5.0)
-    _print("Max Utility (risk_aversion=5.0)", w, perf)
-
-    w, perf = opt.optimize_efficient_risk(mu, S, tickers, target_volatility=0.12)
-    _print("Efficient Risk (target_vol=0.12)", w, perf)
-
-    # Efficient return can be infeasible if target_return too high vs realized mu
-    # w, perf = opt.optimize_efficient_return(mu, S, tickers, target_return=0.15)
-    # _print("Efficient Return (target_ret=0.15)", w, perf)
-
-    print("\nAll checks passed ✅")
+    for name, fn in strategies:
+        w, (ret, vol, sharpe) = fn()
+        print(f"\n{name} | ret={ret:.4f} vol={vol:.4f} sharpe={sharpe:.4f}")
+        for t, wt in w.items():
+            print(f"  {t}: {wt*100:.2f}%")
 
 
 if __name__ == "__main__":
-    run_all()
+    run()
