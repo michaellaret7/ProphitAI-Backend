@@ -46,7 +46,7 @@ instructor==1.10.0
 
 # Search APIs
 exa-py>=1.0.0
-perplexity-python>=0.1.0
+perplexityai>=0.22.0
 tavily-python>=0.3.0
 
 # Web Scraping
