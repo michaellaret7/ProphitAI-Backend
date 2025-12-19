@@ -21,7 +21,7 @@ warnings.filterwarnings("ignore", category=RuntimeWarning)
 warnings.filterwarnings("ignore", message="max_sharpe transforms the optimization problem")
 
 from dataclasses import dataclass
-from typing import Dict, List, Tuple, Set, Optional
+from typing import Dict, List, Tuple, Set, Optional, Literal
 
 import numpy as np
 import pandas as pd
@@ -35,7 +35,9 @@ from pypfopt import EfficientFrontier, expected_returns, risk_models, objective_
 from app.repositories.price_data import fetch_bulk_price_data_for_tickers
 from app.utils.time_utils import get_utc_date_str, get_utc_days_ago
 
-from app.core.calculations.portfolio.allocator.utils import OptimizerConfig, assert_weights_ok, calc_num_shares
+from app.core.calculations.portfolio.allocator.utils import OptimizerConfig, validate_weights, calc_num_shares, Allocation, FinalOutput
+
+import json
 
 # ------------------------
 # Optimizer class
@@ -89,17 +91,33 @@ class PortfolioAllocator:
     def classify_tickers(self, tickers: List[str]) -> Tuple[List[str], List[str]]:
         """
         Return (equity_tickers, fixed_income_tickers).
+
+        Raises:
+            ValueError: If any tickers are not found in the database
         """
         fixed_income = []
         equities = []
+        not_found = []
 
         with MarketSession() as session:
+            # Bulk query to avoid N+1 database calls
+            ticker_objs = session.query(Ticker).filter(Ticker.ticker.in_(tickers)).all()
+            ticker_map = {t.ticker: t for t in ticker_objs}
+
             for ticker in tickers:
-                ticker_obj = session.query(Ticker).filter(Ticker.ticker == ticker).first()
+                ticker_obj = ticker_map.get(ticker)
+
+                if not ticker_obj:
+                    not_found.append(ticker)
+                    continue
+
                 if ticker_obj.is_etf and ticker_obj.industry == "fixed_income_etfs":
                     fixed_income.append(ticker_obj.ticker)
                 else:
                     equities.append(ticker_obj.ticker)
+
+        if not_found:
+            raise ValueError(f"Tickers not found in database: {not_found}")
 
         return equities, fixed_income
 
@@ -250,7 +268,7 @@ class PortfolioAllocator:
 
     def _finalize(self, ef: EfficientFrontier, tickers: List[str]) -> Dict[str, float]:
         w = ef.clean_weights()
-        assert_weights_ok(w, tickers, min_w=self.min_w, hard_max_w=self.hard_max_w)
+        validate_weights(w, tickers, min_w=self.min_w, hard_max_w=self.hard_max_w)
         return w
 
     def bucket_weights(self, weights: Dict[str, float]) -> Tuple[float, float]:
@@ -264,7 +282,7 @@ class PortfolioAllocator:
         ef = self._build_ef(mu, S, tickers)
         ef.min_volatility()
         w = self._finalize(ef, tickers)
-        perf = ef.portfolio_performance(verbose=True)
+        perf = ef.portfolio_performance(verbose=False)
         return w, perf
 
     def optimize_max_sharpe(self, mu: pd.Series, S: pd.DataFrame, tickers: List[str]) -> Tuple[Dict[str, float], Tuple[float, float, float]]:
@@ -278,21 +296,21 @@ class PortfolioAllocator:
         ef = self._build_ef(mu, S, tickers)
         ef.max_quadratic_utility(risk_aversion=risk_aversion)
         w = self._finalize(ef, tickers)
-        perf = ef.portfolio_performance(verbose=True)
+        perf = ef.portfolio_performance(verbose=False)
         return w, perf
 
     def optimize_efficient_risk(self, mu: pd.Series, S: pd.DataFrame, tickers: List[str], target_volatility: float = 0.12) -> Tuple[Dict[str, float], Tuple[float, float, float]]:
         ef = self._build_ef(mu, S, tickers)
         ef.efficient_risk(target_volatility=target_volatility)
         w = self._finalize(ef, tickers)
-        perf = ef.portfolio_performance(verbose=True)
+        perf = ef.portfolio_performance(verbose=False)
         return w, perf
 
     def optimize_efficient_return(self, mu: pd.Series, S: pd.DataFrame, tickers: List[str], target_return: float = 0.15) -> Tuple[Dict[str, float], Tuple[float, float, float]]:
         ef = self._build_ef(mu, S, tickers)
         ef.efficient_return(target_return=target_return)
         w = self._finalize(ef, tickers)
-        perf = ef.portfolio_performance(verbose=True)
+        perf = ef.portfolio_performance(verbose=False)
         return w, perf
 
 
@@ -305,6 +323,7 @@ def run(
     equity_weight_target: float = 0.60,
     bond_weight_target: float = 0.40,
     initial_portfolio_value: float = 10_000,
+    strategy: Literal["max_sharpe", "min_vol", "max_utility", "efficient_risk"] = "max_sharpe",
 ) -> None:
 
     if not tickers:
@@ -340,14 +359,43 @@ def run(
     prices = opt.fetch_prices()
     ordered_tickers, mu, S = opt.compute_inputs(prices)
 
-    strategies = [
-        ("Min Vol", lambda: opt.optimize_min_vol(mu, S, ordered_tickers)),
-        ("Max Sharpe", lambda: opt.optimize_max_sharpe(mu, S, ordered_tickers)),
-        ("Max Utility", lambda: opt.optimize_max_utility(mu, S, ordered_tickers, risk_aversion=5.0)),
-        ("Efficient Risk", lambda: opt.optimize_efficient_risk(mu, S, ordered_tickers, target_volatility=0.12)),
-    ]
+    if strategy == "max_sharpe":
+        w, perf = opt.optimize_max_sharpe(mu, S, ordered_tickers)
+    elif strategy == "min_vol":
+        w, perf = opt.optimize_min_vol(mu, S, ordered_tickers)
+    elif strategy == "max_utility":
+        w, perf = opt.optimize_max_utility(mu, S, ordered_tickers, risk_aversion=5.0)
+    elif strategy == "efficient_risk":
+        w, perf = opt.optimize_efficient_risk(mu, S, ordered_tickers, target_volatility=0.12)
+    else:
+        raise ValueError(f"Unknown optimization strategy: {strategy}")
 
-    # add the calc num shares here run the w returned from the funcs here 
+    num_shares = calc_num_shares(w, initial_portfolio_value)
 
-    return strategies
+    allocations = []
+    for ticker, weight in w.items():
+        allocations.append(Allocation(ticker=ticker, weight=weight, num_shares=num_shares[ticker]))
+    
+    perf = {
+        "expected_return": float(round(perf[0], 4)),
+        "volatility": float(round(perf[1], 4)),
+        "sharpe_ratio": float(round(perf[2], 4)),
+    }
+
+    return FinalOutput(allocations=allocations, performance=perf, strategy=strategy)
+
+if __name__ == "__main__":
+    final_output = run(
+        tickers=["AAPL", "MSFT", "GOOGL", "AMZN", "TSLA", "NVDA", "META", "JPM", "V", "JNJ", "UNH", "PG", "AGG", "BND", "TLT", "IEF", "LQD", "VCIT"], 
+        equity_weight_target=0.60, 
+        bond_weight_target=0.40, 
+        initial_portfolio_value=100_000, 
+        strategy="min_vol",
+    )
+
+    final_output = json.loads(final_output.model_dump_json(indent=4))
+    print(final_output["performance"]["sharpe_ratio"])
+    print(final_output["performance"]["volatility"])
+    print(final_output["performance"]["expected_return"])
+
 
