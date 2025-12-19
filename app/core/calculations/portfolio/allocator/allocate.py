@@ -35,54 +35,7 @@ from pypfopt import EfficientFrontier, expected_returns, risk_models, objective_
 from app.repositories.price_data import fetch_bulk_price_data_for_tickers
 from app.utils.time_utils import get_utc_date_str, get_utc_days_ago
 
-
-# ------------------------
-# Config
-# ------------------------
-
-@dataclass(frozen=True)
-class OptimizerConfig:
-    # Bucket targets with bands (soft constraints)
-    equity_weight_target: float = 0.60
-    bond_weight_target: float = 0.40
-    bucket_band: float = 0.05                 # ±5% flexibility around targets
-
-    # Data params
-    lookback_days: int = 504
-    frequency: str = "daily"
-    trading_days: int = 252
-
-    # Solver params
-    risk_free_rate: float = 0.02
-
-    # Position constraints (hybrid hard/soft)
-    min_weight: float = 0.01                  # HARD floor - every ticker gets at least 1%
-    soft_max_weight: float = 0.08             # Soft cap - penalty kicks in above 8%
-    hard_max_weight: float = 0.15             # HARD ceiling - absolute max 15%
-
-    # Regularization penalties
-    l2_gamma: float = 0.1                     # L2 regularization for diversification
-    concentration_gamma: float = 0.5          # Penalty for exceeding soft_max
-
-
-def assert_weights_ok(
-    cleaned: Dict[str, float],
-    tickers: List[str],
-    min_w: float,
-    hard_max_w: float,
-):
-    """
-    Validate portfolio weights against hard bounds.
-    Soft constraints are handled via penalties in the objective, not validated here.
-    """
-    assert set(cleaned.keys()) == set(tickers)
-    ws = np.array([cleaned[t] for t in tickers], dtype=float)
-
-    assert np.isfinite(ws).all()
-    assert abs(ws.sum() - 1.0) <= 1e-4
-    assert (ws >= (min_w - 1e-4)).all(), f"Found weight below min_w={min_w}: {cleaned}"
-    assert (ws <= (hard_max_w + 1e-4)).all(), f"Found weight above hard_max_w={hard_max_w}: {cleaned}"
-
+from app.core.calculations.portfolio.allocator.utils import OptimizerConfig, assert_weights_ok, calc_num_shares
 
 # ------------------------
 # Optimizer class
@@ -318,28 +271,28 @@ class PortfolioAllocator:
         ef = self._build_ef(mu, S, tickers)
         ef.max_sharpe(risk_free_rate=self.config.risk_free_rate)
         w = self._finalize(ef, tickers)
-        perf = ef.portfolio_performance(risk_free_rate=self.config.risk_free_rate, verbose=True)
+        perf = ef.portfolio_performance(risk_free_rate=self.config.risk_free_rate, verbose=False)
         return w, perf
 
     def optimize_max_utility(self, mu: pd.Series, S: pd.DataFrame, tickers: List[str], risk_aversion: float = 5.0) -> Tuple[Dict[str, float], Tuple[float, float, float]]:
         ef = self._build_ef(mu, S, tickers)
         ef.max_quadratic_utility(risk_aversion=risk_aversion)
         w = self._finalize(ef, tickers)
-        perf = ef.portfolio_performance(verbose=False)
+        perf = ef.portfolio_performance(verbose=True)
         return w, perf
 
     def optimize_efficient_risk(self, mu: pd.Series, S: pd.DataFrame, tickers: List[str], target_volatility: float = 0.12) -> Tuple[Dict[str, float], Tuple[float, float, float]]:
         ef = self._build_ef(mu, S, tickers)
         ef.efficient_risk(target_volatility=target_volatility)
         w = self._finalize(ef, tickers)
-        perf = ef.portfolio_performance(verbose=False)
+        perf = ef.portfolio_performance(verbose=True)
         return w, perf
 
     def optimize_efficient_return(self, mu: pd.Series, S: pd.DataFrame, tickers: List[str], target_return: float = 0.15) -> Tuple[Dict[str, float], Tuple[float, float, float]]:
         ef = self._build_ef(mu, S, tickers)
         ef.efficient_return(target_return=target_return)
         w = self._finalize(ef, tickers)
-        perf = ef.portfolio_performance(verbose=False)
+        perf = ef.portfolio_performance(verbose=True)
         return w, perf
 
 
@@ -350,7 +303,8 @@ class PortfolioAllocator:
 def run(
     tickers: List[str],
     equity_weight_target: float = 0.60,
-    bond_weight_target: float = 0.40
+    bond_weight_target: float = 0.40,
+    initial_portfolio_value: float = 10_000,
 ) -> None:
 
     if not tickers:
@@ -360,7 +314,10 @@ def run(
         # Bucket targets with bands
         equity_weight_target=equity_weight_target,
         bond_weight_target=bond_weight_target,
-        bucket_band=0.05,                     # ±5% flexibility
+        bucket_band=0.05,   # ±5% flexibility around targets
+
+        # Initial portfolio value
+        initial_portfolio_value=initial_portfolio_value,
 
         # Position constraints (hybrid hard/soft)
         min_weight=0.01,                      # HARD 1% floor
@@ -390,14 +347,7 @@ def run(
         ("Efficient Risk", lambda: opt.optimize_efficient_risk(mu, S, ordered_tickers, target_volatility=0.12)),
     ]
 
-    for name, fn in strategies:
-        w, (ret, vol, sharpe) = fn()
-        eq_w, bnd_w = opt.bucket_weights(w)
-        print(f"\n{name} | ret={ret:.4f} vol={vol:.4f} sharpe={sharpe:.4f} | eq={eq_w:.2%} bnd={bnd_w:.2%}")
-        for t, wt in w.items():
-            print(f"  {t}: {wt*100:.2f}%")
+    # add the calc num shares here run the w returned from the funcs here 
 
+    return strategies
 
-if __name__ == "__main__":
-    tickers = ["AAPL", "MSFT", "GOOGL", "AMZN", "META", "NVDA", "JPM", "JNJ", "V", "AGG", "BND", "TLT", "IEF", "LQD", "VCIT"]
-    run(tickers=tickers, equity_weight_target=0.75, bond_weight_target=0.25)
