@@ -73,8 +73,6 @@ app.add_middleware(
         "http://localhost:5173",
         "http://127.0.0.1:5500",  # For local HTML file testing
         "http://localhost:5500",
-        "https://prophitai.onrender.com",  # Production frontend
-        "https://prophitai-frontend.onrender.com",  # Alternative frontend domain
         "https://inspiring-melomakarona-dd431a.netlify.app"
     ],
     allow_credentials=True,
@@ -88,7 +86,7 @@ app.add_middleware(GZipMiddleware, minimum_size=1000)
 # Authentication dependencies
 auth_dependencies = [
     Depends(validate_api_key),
-    # Depends(clerk_auth)
+    Depends(clerk_auth)
 ]
 
 # Include routers with dual authentication
