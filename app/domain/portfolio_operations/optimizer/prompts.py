@@ -72,25 +72,24 @@ Execute these steps in order. Batch tool calls where possible.
 Return ONLY valid JSON. No markdown, no preambles.
 
 {
-    "portfolio": {
-        "TICKER": {
-            "allocation": 0.XX,
+    "portfolio": [
+        {
+            "ticker": "AAPL",
+            "allocation": 0.10,
             "position": "long",
             "thesis": "Reason tied to Macro/Fundamentals"
         }
-    },
-    "changes": {
-        "added": { "TICKER": "Why it was added" },
-        "removed": { "TICKER": "Why it was removed" },
-        "adjusted": { "TICKER": "Allocation change reasoning" }
-    },
-    "improvements": {
-        "sharpe_ratio": "Old: X.XX -> New: X.XX",
-        "volatility": "Old: X.XX% -> New: X.XX%",
-        "beta": "Old: X.XX -> New: X.XX",
-        "correlation": "Old: X.XX -> New: X.XX",
-        "notes": "Brief summary of how the portfolio captures the macro thesis."
-    }
+    ],
+    "changes": [
+        {"ticker": "AAPL", "change_type": "added", "reason": "Why it was added"},
+        {"ticker": "XYZ", "change_type": "removed", "reason": "Why it was removed"},
+        {"ticker": "MSFT", "change_type": "adjusted", "reason": "Allocation change reasoning"}
+    ],
+    "sharpe_ratio": "Old: X.XX -> New: X.XX",
+    "annualized_volatility": "Old: X.XX% -> New: X.XX%",
+    "beta": "Old: X.XX -> New: X.XX",
+    "correlation": "Old: X.XX -> New: X.XX",
+    "improvement_notes": "Brief summary of how the portfolio captures the macro thesis."
 }
 </output_format>
 """

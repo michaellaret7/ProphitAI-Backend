@@ -16,25 +16,30 @@ from typing import Optional
 from .models import WatchlistResponse
 
 class AiWatchlistAgent(BaseAgent):
+    response_model = WatchlistResponse
+
     def __init__(
         self,
         user_preferences: str,
-        provider: str = None,
-        model: str = None,
+        print_mode: str = PrintMode.VERBOSE,
         state_callback: Optional[StateCallback] = None,
     ):
-        self.user_preferences = user_preferences
+        if not user_preferences or not user_preferences.strip():
+            raise ValueError("user_preferences is required and cannot be empty")
+
+        self.user_preferences = user_preferences.strip()
         self.user_prompt = self._build_user_prompt()
-        self.response_model = WatchlistResponse
 
         super().__init__(
-            provider=provider,
-            model=model,
+            # provider="gemini",
+            # model="gemini-3-flash-preview",
+            provider="grok",
+            model="grok-4-1-fast-non-reasoning",
             system_prompt=SYSTEM_PROMPT,
             user_prompt=self.user_prompt,
             max_iterations=200,
             plan_first=True,
-            print_mode=PrintMode.VERBOSE,
+            print_mode=print_mode,
             state_callback=state_callback,
             temperature=0.7,
         )
@@ -70,8 +75,4 @@ class AiWatchlistAgent(BaseAgent):
         
     def _build_user_prompt(self) -> str:
         return USER_PROMPT_TEMPLATE.format(user_query=self.user_preferences)
-
-
-
-
 

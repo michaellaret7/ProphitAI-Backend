@@ -1,9 +1,6 @@
+from re import VERBOSE
 import uuid
-from typing import TYPE_CHECKING, List, Optional
-
-from pydantic import BaseModel, Field
-from sqlalchemy.orm import identity
-from typing_extensions import Literal
+from typing import TYPE_CHECKING, Optional
 
 from app.core.agentic_framework.base_agent import BaseAgent
 from app.core.agentic_framework.base_agent.utils.models import PrintMode
@@ -24,14 +21,15 @@ class OptimizerAgent(BaseAgent):
     def __init__(
         self,
         portfolio_id: str,
-        risk_tolerance: str = None,
-        time_horizon: str = None,
-        investment_goals: str = None,
-        sectors_to_exclude: str = None,
-        sectors_to_include: str = None,
-        tickers_to_keep: str = None,
-        tickers_to_exclude: str = None,
+        risk_tolerance: Optional[str] = None,
+        time_horizon: Optional[str] = None,
+        investment_goals: Optional[str] = None,
+        sectors_to_exclude: Optional[str] = None,
+        sectors_to_include: Optional[str] = None,
+        tickers_to_keep: Optional[str] = None,
+        tickers_to_exclude: Optional[str] = None,
         state_callback: Optional["StateCallback"] = None,
+        print_mode: str = PrintMode.VERBOSE,
     ):
         """
         Initialize OptimizerAgent with a specific portfolio to optimize.
@@ -76,15 +74,15 @@ class OptimizerAgent(BaseAgent):
         dynamic_user_prompt = self._build_dynamic_prompt()
 
         super().__init__(
+            # provider="gemini",
+            # model="gemini-3-flash-preview",
             provider="grok",
             model="grok-4-1-fast-non-reasoning",
-            # provider="together",
-            # model="Kimi-K2-Thinking",
             system_prompt=system_prompt,
             user_prompt=dynamic_user_prompt,
             max_iterations=200,
             plan_first=True,
-            print_mode=PrintMode.VERBOSE,
+            print_mode=print_mode,
             state_callback=state_callback,
         )
 
@@ -114,3 +112,14 @@ class OptimizerAgent(BaseAgent):
 
         return prompt
 
+if __name__ == "__main__":
+    agent = OptimizerAgent(
+        portfolio_id="d3445586-64bd-45dd-b696-82c3e90efe63",  # Replace with actual portfolio ID
+        risk_tolerance="moderate",
+        time_horizon="5 years",
+        investment_goals="Growth with some income",
+        tickers_to_keep="AGG, BND, TLT",
+        print_mode=PrintMode.VERBOSE
+    )
+
+    agent.run(response_format=OptimizedPortfolio)

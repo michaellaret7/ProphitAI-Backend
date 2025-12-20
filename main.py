@@ -84,30 +84,29 @@ app.add_middleware(
 app.add_middleware(GZipMiddleware, minimum_size=1000)
 
 # Authentication dependencies
-auth_dependencies = [
-    Depends(validate_api_key),
-    Depends(clerk_auth)
-]
+auth_dependencies = [Depends(validate_api_key), Depends(clerk_auth)]
+api_key_only = [Depends(validate_api_key)]
 
-# Include routers with dual authentication
-# All /api routes require: 1) valid API key in X-API-Key header, 2) valid Clerk JWT in Authorization header
-app.include_router(prophit_alts_router, prefix="/api", dependencies=auth_dependencies)
+# User-specific routes require API key + JWT token
 app.include_router(user_router, prefix="/api", dependencies=auth_dependencies)
 app.include_router(portfolio_router, prefix="/api", dependencies=auth_dependencies)
-app.include_router(price_router, prefix="/api", dependencies=auth_dependencies)
-app.include_router(cache_router, prefix="/api", dependencies=auth_dependencies)
 app.include_router(broker_router, prefix="/api", dependencies=auth_dependencies)
-app.include_router(ticker_router, prefix="/api", dependencies=auth_dependencies)
-app.include_router(technical_router, prefix="/api", dependencies=auth_dependencies)
-app.include_router(macro_router, prefix="/api", dependencies=auth_dependencies)
-app.include_router(news_router, prefix="/api", dependencies=auth_dependencies)
-app.include_router(fundamentals_router, prefix="/api", dependencies=auth_dependencies)
-app.include_router(etf_router, prefix="/api", dependencies=auth_dependencies)
-app.include_router(search_router, prefix="/api", dependencies=auth_dependencies)
-app.include_router(crypto_router, prefix="/api", dependencies=auth_dependencies)
-app.include_router(screener_router, prefix="/api", dependencies=auth_dependencies)
-app.include_router(agent_router, prefix="/api", dependencies=auth_dependencies)
 app.include_router(watchlist_router, prefix="/api", dependencies=auth_dependencies)
+
+# General data routes require API key only (no JWT needed)
+app.include_router(prophit_alts_router, prefix="/api", dependencies=api_key_only)
+app.include_router(price_router, prefix="/api", dependencies=api_key_only)
+app.include_router(cache_router, prefix="/api", dependencies=api_key_only)
+app.include_router(ticker_router, prefix="/api", dependencies=api_key_only)
+app.include_router(technical_router, prefix="/api", dependencies=api_key_only)
+app.include_router(macro_router, prefix="/api", dependencies=api_key_only)
+app.include_router(news_router, prefix="/api", dependencies=api_key_only)
+app.include_router(fundamentals_router, prefix="/api", dependencies=api_key_only)
+app.include_router(etf_router, prefix="/api", dependencies=api_key_only)
+app.include_router(search_router, prefix="/api", dependencies=api_key_only)
+app.include_router(crypto_router, prefix="/api", dependencies=api_key_only)
+app.include_router(screener_router, prefix="/api", dependencies=api_key_only)
+app.include_router(agent_router, prefix="/api", dependencies=api_key_only)
 # Webhook router - no auth (Clerk calls directly with signature verification)
 app.include_router(webhook_router, prefix="/api")
 

@@ -37,8 +37,6 @@ def get_user_portfolio(portfolio_id: str, session=None):
                 "position": "long"  # Default to long, adjust if you have this field in DB
             }
 
-        session.close()
-
         return success_response(positions)
     except Exception as e:
         return error_response(e)

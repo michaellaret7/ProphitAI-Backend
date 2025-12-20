@@ -26,7 +26,8 @@
       "Bash(.venv/Scripts/python.exe:*)",
       "Bash(cat:*)",
       "Bash(.venv/bin/python:*)",
-      "Bash(sed -i:*)"
+      "Bash(sed -i:*)",
+      "WebFetch(domain:ai.google.dev)"
     ],
     "deny": [],
     "ask": []

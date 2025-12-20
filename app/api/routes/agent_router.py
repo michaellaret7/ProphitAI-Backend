@@ -19,8 +19,9 @@ from app.services.shared.agent_executor import (
     run_agent_background,
 )
 
-router = APIRouter(prefix="/agents", tags=["Agent Execution"])
+from app.core.agentic_framework.base_agent.utils.models import PrintMode
 
+router = APIRouter(prefix="/agents", tags=["Agent Execution"])
 
 class AgentType(str, Enum):
     """Available agent types for execution.
@@ -93,6 +94,7 @@ def _create_agent(agent_type: AgentType, parameters: Dict[str, Any], state_callb
             tickers_to_keep=parameters.get("tickers_to_keep"),
             tickers_to_exclude=parameters.get("tickers_to_exclude"),
             state_callback=state_callback,
+            print_mode=PrintMode.PRODUCTION,
         )
 
     elif agent_type == AgentType.WATCHLIST:
@@ -104,9 +106,8 @@ def _create_agent(agent_type: AgentType, parameters: Dict[str, Any], state_callb
 
         return AiWatchlistAgent(
             user_preferences=user_preferences,
-            provider="fireworks",
-            model="Kimi-K2-instruct",
             state_callback=state_callback,
+            print_mode=PrintMode.PRODUCTION,
         )
 
     else:
