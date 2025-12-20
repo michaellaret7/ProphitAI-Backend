@@ -16,8 +16,6 @@ from app.core.agentic_framework.tool_lib.ticker_tools.performance import GET_TIC
 from app.core.agentic_framework.tool_lib.data_tools.ticker_fundamentals import GET_TICKER_FUNDAMENTAL_DATA_TOOL
 from app.core.agentic_framework.tool_lib.data_tools.ticker_info import GET_TICKER_INFO_TOOL
 
-
-
 def register_optimizer_tools(agent):
     # Get user portfolio tool
     agent.add_tool(**GET_USER_PORTFOLIO_TOOL)

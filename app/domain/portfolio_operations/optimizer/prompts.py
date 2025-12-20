@@ -57,11 +57,12 @@ Execute these steps in order. Batch tool calls where possible.
 
 4. **Construction:**
    - Build the final `portfolio_dict`.
-   - Ensure allocation balances conviction with risk management.
    - Verify minimum 10 tickers.
+   - Run `build_portfolio_allocations` to build the final portfolio allocations. Once these allocations are built, do not change them. 
 
 5. **Verification:**
    - Run `calculate_portfolio_performance` or equivalent analytics on the *proposed* portfolio to confirm metric improvements (Lower Volatility, Higher Sharpe) vs the original.
+   - Do one final overview of the portfolio before returning the final output with the finalize tool.
 
 6. **Final Output:**
    - Return ONLY the JSON object below.
