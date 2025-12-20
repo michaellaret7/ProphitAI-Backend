@@ -75,6 +75,7 @@ app.add_middleware(
         "http://localhost:5500",
         "https://prophitai.onrender.com",  # Production frontend
         "https://prophitai-frontend.onrender.com",  # Alternative frontend domain
+        "https://inspiring-melomakarona-dd431a.netlify.app"
     ],
     allow_credentials=True,
     allow_methods=["*"],
