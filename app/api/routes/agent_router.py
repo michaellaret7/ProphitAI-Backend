@@ -18,7 +18,6 @@ from app.services.shared.agent_executor import (
     execution_manager,
     run_agent_background,
 )
-from app.core.agentic_framework.base_agent.utils.models import PrintMode
 
 router = APIRouter(prefix="/agents", tags=["Agent Execution"])
 
@@ -107,10 +106,6 @@ def _create_agent(agent_type: AgentType, parameters: Dict[str, Any], state_callb
             user_preferences=user_preferences,
             provider="fireworks",
             model="Kimi-K2-instruct",
-            temperature=0.7,
-            max_iterations=200,
-            plan_first=True,
-            print_mode=PrintMode.VERBOSE,
             state_callback=state_callback,
         )
 
