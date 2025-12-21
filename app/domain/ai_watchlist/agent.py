@@ -1,19 +1,11 @@
 from app.core.agentic_framework.base_agent.agent import BaseAgent
 from app.core.agentic_framework.base_agent.callbacks.state_callback import StateCallback
 from app.core.agentic_framework.base_agent.utils.models import PrintMode
-from app.core.agentic_framework.tool_lib.data_tools.screeners.equity_screener import EQUITY_SCREENER_TOOL
-from app.core.agentic_framework.tool_lib.data_tools.screeners.etf_screener import ETF_SCREENER_TOOL
-from app.core.agentic_framework.tool_lib.data_tools.sectors import GET_SECTOR_PERFORMANCE_TOOL, GET_SECTOR_PE_TOOL
-from app.core.agentic_framework.tool_lib.data_tools.factors import GET_INDUSTRY_FACTOR_BENCHMARK_TOOL, GET_SUB_INDUSTRY_FACTOR_BENCHMARK_TOOL
-from app.core.agentic_framework.tool_lib.ticker_tools.performance import GET_TICKER_PERFORMANCE_AND_RISK_TOOL
-from app.core.agentic_framework.tool_lib.ticker_tools.factors import CALCULATE_TICKER_FACTORS_TOOL
-from app.core.agentic_framework.tool_lib.data_tools.ticker_fundamentals import GET_TICKER_FUNDAMENTAL_DATA_TOOL
-from app.core.agentic_framework.tool_lib.data_tools.ticker_fundamentals.ttm_ratios import GET_RATIOS_TTM_TOOL
-from app.core.agentic_framework.tool_lib.data_tools.ticker_info import GET_PRODUCT_SEGMENTATION_TOOL, GET_TICKER_PEERS_TOOL
-from app.core.agentic_framework.tool_lib.data_tools.ticker_info.info import GET_TICKER_INFO_TOOL
 from app.domain.ai_watchlist.prompts import SYSTEM_PROMPT, USER_PROMPT_TEMPLATE
 from typing import Optional
 from .models import WatchlistResponse
+from .tool_registry import register_ai_watchlist_tools
+
 
 class AiWatchlistAgent(BaseAgent):
     response_model = WatchlistResponse
@@ -28,51 +20,28 @@ class AiWatchlistAgent(BaseAgent):
             raise ValueError("user_preferences is required and cannot be empty")
 
         self.user_preferences = user_preferences.strip()
-        self.user_prompt = self._build_user_prompt()
+
+        dynamic_user_prompt = self._build_user_prompt()
 
         super().__init__(
-            # provider="gemini",
-            # model="gemini-3-flash-preview",
-            provider="grok",
-            model="grok-4-1-fast-non-reasoning",
+            provider="gemini",
+            model="gemini-3-flash-preview",
+            # provider="grok",
+            # model="grok-4-1-fast-non-reasoning",
+            # provider="fireworks",
+            # model="Kimi-K2-instruct",
             system_prompt=SYSTEM_PROMPT,
-            user_prompt=self.user_prompt,
+            user_prompt=dynamic_user_prompt,
             max_iterations=200,
             plan_first=True,
             print_mode=print_mode,
             state_callback=state_callback,
             temperature=0.7,
         )
-    
-        tools = [
-            #  Screener Tools
-            EQUITY_SCREENER_TOOL,
-            ETF_SCREENER_TOOL,
 
-            #  Ticker Analysis Tools
-            GET_TICKER_PERFORMANCE_AND_RISK_TOOL,
-            CALCULATE_TICKER_FACTORS_TOOL,
-            GET_TICKER_FUNDAMENTAL_DATA_TOOL,
-            GET_RATIOS_TTM_TOOL,
-            GET_PRODUCT_SEGMENTATION_TOOL,
-            GET_TICKER_PEERS_TOOL,
-            GET_TICKER_INFO_TOOL,
+        register_ai_watchlist_tools(self)
 
-            #  Sector Analysis Tools
-            GET_SECTOR_PERFORMANCE_TOOL,
-            GET_SECTOR_PE_TOOL,
-            GET_INDUSTRY_FACTOR_BENCHMARK_TOOL,
-            GET_SUB_INDUSTRY_FACTOR_BENCHMARK_TOOL
-        ]
-
-        for tool in tools:
-            self.add_tool(
-                name=tool["name"],
-                description=tool["description"],
-                parameters=tool["parameters"],
-                function=tool["function"]
-            )
-        
     def _build_user_prompt(self) -> str:
         return USER_PROMPT_TEMPLATE.format(user_query=self.user_preferences)
+
 
