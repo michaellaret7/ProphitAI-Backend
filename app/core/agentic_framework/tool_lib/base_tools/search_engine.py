@@ -5,11 +5,11 @@ and LLM-synthesized answers. These tools enable agents to access real-time infor
 from the web to inform their analysis and decision-making.
 """
 
-import asyncio
 from typing import List, Literal
 
 from app.core.agentic_framework.tool_lib.common.responses import success_response, error_response
 from app.core.search.web_search.perplexity_search import PerplexityWebSearch
+
 
 class AgentSearchEngine:
     def __init__(self):
@@ -24,7 +24,7 @@ class AgentSearchEngine:
         search_before_date_filter: str = None
     ) -> dict:
         """
-        Synchronous function that runs async batch search internally.
+        Execute batch web search with parallel query execution.
 
         Args:
             queries: List of search queries to execute
@@ -37,19 +37,17 @@ class AgentSearchEngine:
             Success or error response dict containing search results
         """
         try:
-            results = asyncio.run(
-                self.perplexity.batch_search(
-                    queries,
-                    recency_filter,
-                    max_results_per_query,
-                    search_after_date_filter,
-                    search_before_date_filter
-                )
+            results = self.perplexity.batch_search(
+                queries,
+                recency_filter,
+                max_results_per_query,
+                search_after_date_filter,
+                search_before_date_filter
             )
             return success_response(results)
         except Exception as e:
             return error_response(f"Error executing web search: {str(e)}. Try again with different queries or parameters.")
-    
+
     def llm_web_search(
         self,
         queries: List[str],
@@ -58,7 +56,7 @@ class AgentSearchEngine:
         mode: Literal["deep-research", "regular-search"] = "regular-search"
     ) -> dict:
         """
-        Synchronous function that uses LLM to search the web and synthesize results.
+        Use LLM to search the web and synthesize results with parallel query execution.
 
         Args:
             queries: List of search queries to execute
@@ -70,13 +68,11 @@ class AgentSearchEngine:
             Success or error response dict containing synthesized search results
         """
         try:
-            results = asyncio.run(
-                self.perplexity.synthesize_search(
-                    queries,
-                    recency_filter,
-                    reasoning_effort,
-                    mode
-                )
+            results = self.perplexity.batch_synthesize_search(
+                queries,
+                recency_filter,
+                reasoning_effort,
+                mode
             )
             return success_response(results)
         except Exception as e:

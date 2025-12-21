@@ -1,9 +1,8 @@
-from perplexity import BaseModel, Perplexity
+from perplexity import Perplexity
 from dotenv import load_dotenv
 import os
-import asyncio
 import re
-from perplexity import AsyncPerplexity
+from concurrent.futures import ThreadPoolExecutor
 from typing import List, Literal
 from app.core.agentic_framework.evaluation.hallucinations.extract_facts import client
 from app.utils.choose_model_and_client import get_model_and_client
@@ -12,10 +11,14 @@ from pydantic import Field
 
 load_dotenv()
 
+
 class PerplexityWebSearch:
     def __init__(self):
-        self.client = Perplexity(api_key=os.getenv('PERPLEXITY_API_KEY'))
-        self.async_client = AsyncPerplexity(api_key=os.getenv('PERPLEXITY_API_KEY'))
+        self._api_key = os.getenv('PERPLEXITY_API_KEY')
+
+    def _get_client(self) -> Perplexity:
+        """Create a new sync client for thread-safe parallel execution."""
+        return Perplexity(api_key=self._api_key)
 
     def _format_result(self, result) -> dict:
         """Convert a Pydantic result object to a clean dictionary."""
@@ -44,50 +47,82 @@ class PerplexityWebSearch:
 
         return unique_results
 
-    async def batch_search(
-        self, 
-        queries: List[str], 
-        recency_filter: Literal["hour", "day", "week", "month", "year"] = None, 
+    def _single_search(
+        self,
+        query: str,
+        recency_filter: Literal["hour", "day", "week", "month", "year"] = None,
+        max_results: int = 20,
+        search_after_date_filter: str = None,
+        search_before_date_filter: str = None,
+        search_mode: Literal["web", "academic", "sec"] = None
+    ):
+        """Execute a single search query using sync client."""
+        with self._get_client() as client:
+            return client.search.create(
+                query=query,
+                max_results=max_results,
+                max_tokens=500_000,
+                max_tokens_per_page=10_000,
+                search_recency_filter=recency_filter,
+                search_after_date_filter=search_after_date_filter,
+                search_before_date_filter=search_before_date_filter,
+                search_mode=search_mode
+            )
+
+    def batch_search(
+        self,
+        queries: List[str],
+        recency_filter: Literal["hour", "day", "week", "month", "year"] = None,
         max_results_per_query: int = 20,
         search_after_date_filter: str = None,
         search_before_date_filter: str = None,
         search_mode: Literal["web", "academic", "sec"] = None
     ):
-        async with self.async_client as client:
-            batch_size = 5
-            results = []
-            
-            for i in range(0, len(queries), batch_size):
-                batch = queries[i:i + batch_size]
-                
-                batch_tasks = [
-                    client.search.create(
-                        query=query, 
-                        max_results=max_results_per_query,
-                        max_tokens=500_000,
-                        max_tokens_per_page=10_000,
-                        search_recency_filter=recency_filter,
-                        search_after_date_filter=search_after_date_filter,
-                        search_before_date_filter=search_before_date_filter,
-                        search_mode=search_mode
-                    )
-                    for query in batch
-                ]
-                
-                batch_results = await asyncio.gather(*batch_tasks)
-                results.extend(batch_results)
-                
-                # Add delay between batches
-                if i + batch_size < len(queries):
-                    await asyncio.sleep(1000 / 1000)
-            
-            cleaned_nested_results = [
-                [r for r in result.results] for result in results
+        """Execute multiple search queries in parallel using ThreadPoolExecutor."""
+        with ThreadPoolExecutor(max_workers=min(len(queries), 5)) as executor:
+            futures = [
+                executor.submit(
+                    self._single_search,
+                    query,
+                    recency_filter,
+                    max_results_per_query,
+                    search_after_date_filter,
+                    search_before_date_filter,
+                    search_mode
+                )
+                for query in queries
             ]
+            results = [f.result() for f in futures]
 
-            return self._deduplicate_results(cleaned_nested_results) 
+        cleaned_nested_results = [
+            [r for r in result.results] for result in results
+        ]
+        return self._deduplicate_results(cleaned_nested_results) 
 
-    async def synthesize_search(
+    def _single_synthesize(
+        self,
+        query: str,
+        model: str,
+        system_prompt: str,
+        search_recency_filter: Literal["hour", "day", "week", "month", "year"] = None,
+        reasoning_effort: Literal["minimal", "low", "medium", "high"] = None
+    ) -> str:
+        """Execute a single LLM-powered search query using sync client."""
+        with self._get_client() as client:
+            response = client.chat.completions.create(
+                model=model,
+                messages=[
+                    {"role": "system", "content": system_prompt},
+                    {"role": "user", "content": query}
+                ],
+                search_recency_filter=search_recency_filter,
+                reasoning_effort=reasoning_effort
+            )
+            content = response.choices[0].message.content
+            # Clean results - remove <think> tags
+            return re.sub(r'<think>.*?</think>', '', content, flags=re.DOTALL).strip()
+
+    def batch_synthesize_search(
         self,
         queries: List[str],
         search_recency_filter: Literal["hour", "day", "week", "month", "year"] = None,
@@ -95,7 +130,8 @@ class PerplexityWebSearch:
         mode: Literal["deep-research", "regular-search"] = "regular-search"
     ) -> List[str]:
         """
-        Async batch search that synthesizes results using LLM reasoning.
+        Batch search that synthesizes results using LLM reasoning.
+        Uses ThreadPoolExecutor for parallel query execution.
 
         Args:
             queries: List of search queries to execute
@@ -124,39 +160,17 @@ Think step by step and be as detailed and thorough as possible in your research,
 
 Your goal is to deliver a complete, well-researched answer that leaves no important information uncovered."""
 
-        async with self.async_client as client:
-            batch_size = 3  # Smaller batch for heavier LLM calls
-            results = []
-
-            for i in range(0, len(queries), batch_size):
-                batch = queries[i:i + batch_size]
-
-                batch_tasks = [
-                    client.chat.completions.create(
-                        model=model,
-                        messages=[
-                            {"role": "system", "content": system_prompt},
-                            {"role": "user", "content": query}
-                        ],
-                        search_recency_filter=search_recency_filter,
-                        reasoning_effort=reasoning_effort
-                    )
-                    for query in batch
-                ]
-
-                batch_results = await asyncio.gather(*batch_tasks)
-                results.extend(batch_results)
-
-                # Add delay between batches to avoid rate limiting
-                if i + batch_size < len(queries):
-                    await asyncio.sleep(1)
-
-            # Clean results - remove <think> tags
-            cleaned_results = []
-            for response in results:
-                content = response.choices[0].message.content
-                cleaned_content = re.sub(r'<think>.*?</think>', '', content, flags=re.DOTALL)
-                cleaned_results.append(cleaned_content.strip())
-
-            return cleaned_results
+        with ThreadPoolExecutor(max_workers=min(len(queries), 3)) as executor:
+            futures = [
+                executor.submit(
+                    self._single_synthesize,
+                    query,
+                    model,
+                    system_prompt,
+                    search_recency_filter,
+                    reasoning_effort
+                )
+                for query in queries
+            ]
+            return [f.result() for f in futures]
     

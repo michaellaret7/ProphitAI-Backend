@@ -24,10 +24,10 @@ class AiWatchlistAgent(BaseAgent):
         dynamic_user_prompt = self._build_user_prompt()
 
         super().__init__(
-            provider="gemini",
-            model="gemini-3-flash-preview",
-            # provider="grok",
-            # model="grok-4-1-fast-non-reasoning",
+            # provider="gemini",
+            # model="gemini-3-flash-preview",
+            provider="grok",
+            model="grok-4-1-fast-non-reasoning",
             # provider="fireworks",
             # model="Kimi-K2-instruct",
             system_prompt=SYSTEM_PROMPT,

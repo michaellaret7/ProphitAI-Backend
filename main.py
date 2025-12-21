@@ -91,7 +91,7 @@ api_key_only = [Depends(validate_api_key)]
 app.include_router(user_router, prefix="/api", dependencies=auth_dependencies)
 app.include_router(portfolio_router, prefix="/api", dependencies=auth_dependencies)
 app.include_router(broker_router, prefix="/api", dependencies=auth_dependencies)
-app.include_router(watchlist_router, prefix="/api", dependencies=auth_dependencies)
+app.include_router(watchlist_router, prefix="/api", dependencies=api_key_only)
 
 # General data routes require API key only (no JWT needed)
 app.include_router(prophit_alts_router, prefix="/api", dependencies=api_key_only)

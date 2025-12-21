@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends, Path, HTTPException
-from pydantic import BaseModel
-from typing import Optional
+from pydantic import BaseModel, Field, field_validator
+from typing import Optional, List
 from app.api.controller.watchlist import (
     get_user_watchlists_controller,
     get_watchlist_controller,
@@ -9,6 +9,7 @@ from app.api.controller.watchlist import (
     delete_watchlist_controller,
     add_watchlist_item_controller,
     delete_watchlist_item_controller,
+    get_watchlist_metrics_controller,
 )
 from app.api.auth.clerk import get_clerk_user_id
 from app.repositories.user_data import get_all_user_data_by_clerk_id
@@ -35,6 +36,38 @@ class RenameWatchlistRequest(BaseModel):
 class AddTickerRequest(BaseModel):
     ticker: str
     priceOnInception: Optional[float] = None
+
+
+class WatchlistMetricsRequest(BaseModel):
+    tickers: List[str] = Field(..., min_length=1, max_length=50)
+
+    @field_validator("tickers")
+    @classmethod
+    def validate_tickers(cls, v):
+        """Normalize and validate ticker symbols."""
+        return [t.upper().strip() for t in v if t.strip()]
+
+
+@router.post("/metrics")
+async def get_watchlist_metrics(body: WatchlistMetricsRequest):
+    """
+    Get all financial metrics for watchlist tickers.
+
+    Returns comprehensive financial data for each ticker organized by category:
+    - performance: Price change percentages (1D, 5D, 1M, 3M, 6M, YTD, 1Y, 3Y, 5Y)
+    - valuation: P/E, PEG, P/B, P/Sales, P/FCF, P/OCF, EV/EBITDA, Div Yield, Payout
+    - profitability: Gross/Op/Pretax/Net Margins, Tax Rate, ROA, ROE, ROCE
+    - cashFlowLeverage: Per-share metrics, debt ratios, interest coverage
+    - operatingMetrics: Liquidity ratios, turnover metrics, cash conversion cycle
+
+    Cache TTL: 5 minutes
+
+    Example request body:
+    {
+        "tickers": ["AAPL", "GOOGL", "TSLA"]
+    }
+    """
+    return await get_watchlist_metrics_controller(tickers=body.tickers)
 
 
 @router.get("")
