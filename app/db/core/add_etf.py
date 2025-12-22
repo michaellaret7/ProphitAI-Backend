@@ -4,51 +4,13 @@ from app.db.core.models.market_data_models import (
     Ticker, Price, DailyPrices, ETFInfo, ETFHolding, Dividend
 )
 from app.db.core.pull_fmp_data import FMP_API_DATA
+from app.db.core.db_utils import bulk_insert_with_copy
 from datetime import datetime, timedelta, timezone
 from sqlalchemy import update
 from sqlalchemy.dialects.postgresql import insert
 import pandas as pd
 import time
-import io
-import csv
 import uuid
-
-
-def bulk_insert_with_copy(session, table_name, data_to_insert, ordered_columns):
-    """
-    Performs a bulk insert using PostgreSQL's COPY command for high performance.
-    IMPORTANT: Does NOT commit - lets the calling code manage the transaction.
-    NOTE: All timestamps are in UTC timezone for consistency.
-    """
-    if not data_to_insert:
-        print("No new data to insert.")
-        return
-    
-    print(f"Preparing to insert {len(data_to_insert):,} records using COPY.")
-    
-    string_buffer = io.StringIO()
-    writer = csv.writer(string_buffer)
-    
-    for row_dict in data_to_insert:
-        writer.writerow([row_dict.get(col) for col in ordered_columns])
-        
-    string_buffer.seek(0)
-    
-    raw_connection = session.connection().connection
-    cursor = raw_connection.cursor()
-    
-    try:
-        # Quote column names to preserve case sensitivity in PostgreSQL
-        quoted_columns = ','.join([f'"{col}"' for col in ordered_columns])
-        copy_sql = f"COPY {table_name} ({quoted_columns}) FROM STDIN WITH (FORMAT CSV)"
-        cursor.copy_expert(sql=copy_sql, file=string_buffer)
-        # DO NOT COMMIT HERE - let the session handle the transaction
-        print("✅ Bulk insertion prepared (will commit with session).")
-    except Exception as e:
-        print(f"❌ Error during COPY: {e}")
-        raise  # Let the session handle rollback
-    finally:
-        cursor.close()
 
 
 class OptimizedETFDataLoader:

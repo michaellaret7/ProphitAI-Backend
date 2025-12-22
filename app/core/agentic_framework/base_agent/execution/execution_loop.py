@@ -18,7 +18,7 @@ from app.core.agentic_framework.base_agent.utils.messages.execution_loop_msg imp
     THINK_DEEPLY_MESSAGE,
     get_finalize_rejected_message
 )
-from app.core.agentic_framework.base_agent.execution.tool_handler_async import (
+from app.core.agentic_framework.base_agent.execution.tool_handler_parallel import (
     should_run_parallel,
     execute_tools_parallel
 )
@@ -214,7 +214,7 @@ class ExecutionLoop:
 
                     # NOTE: This conditional statement says if there are multiple tool calls returned for this iteration from the LLM, run the tools in parallel (using async) else run the regular sequential tool calls
                     # NOTE: This is where the tool calls are handled and called 
-                    # NOTE: This code resides in tool_handler.py and tool_handler_async.py
+                    # NOTE: This code resides in tool_handler.py and tool_handler_parallel.py
                     if should_run_parallel(tool_calls):
                         execute_tools_parallel(self.agent.tool_handler, tool_calls, len(self.agent.messages) - 1)
                     else:

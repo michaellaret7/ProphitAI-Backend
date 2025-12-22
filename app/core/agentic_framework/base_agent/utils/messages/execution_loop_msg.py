@@ -2,7 +2,7 @@
 
 
 THINK_DEEPLY_MESSAGE = (
-    "## THINK DEEPLY THIS ITERATION\n\n"
+    "## THINK DEEPLY AND REFLECT THIS ITERATION\n\n"
     "Before acting, engage in RIGOROUS thinking. Follow your PER-TURN OUTPUT SCHEMA.\n\n"
     "**If tool results exist above, analyze them deeply:**\n"
     "- What are the specific numbers/metrics? What do they MEAN in context?\n"

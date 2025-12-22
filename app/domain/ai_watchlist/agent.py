@@ -26,17 +26,21 @@ class AiWatchlistAgent(BaseAgent):
         super().__init__(
             # provider="gemini",
             # model="gemini-3-flash-preview",
-            provider="grok",
-            model="grok-4-1-fast-non-reasoning",
+            # provider="grok",
+            # model="grok-4-1-fast-non-reasoning",
+            # provider="openai",
+            # model="gpt-5.2",
             # provider="fireworks",
             # model="Kimi-K2-instruct",
+            provider="anthropic",
+            model="claude-sonnet-4-5-20250929",
             system_prompt=SYSTEM_PROMPT,
             user_prompt=dynamic_user_prompt,
             max_iterations=200,
             plan_first=True,
             print_mode=print_mode,
             state_callback=state_callback,
-            temperature=0.7,
+            # temperature=0.7,
         )
 
         register_ai_watchlist_tools(self)
@@ -45,3 +49,7 @@ class AiWatchlistAgent(BaseAgent):
         return USER_PROMPT_TEMPLATE.format(user_query=self.user_preferences)
 
 
+if __name__ == "__main__":
+    agent = AiWatchlistAgent(user_preferences="Find the 5 most undervalued high growth (increasing revenue and margins) tech stocks")
+    response = agent.run(response_format=WatchlistResponse)
+    print(response)
