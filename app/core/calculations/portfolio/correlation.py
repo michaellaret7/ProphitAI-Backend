@@ -158,51 +158,147 @@ class CorrelationAnalysis:
         # else: assumes long-only or already normalized to sum to 1
         return float(np.sum(np.square(w.values)))
 
+    # ------------------ Rolling Correlation Methods ------------------ #
 
-if __name__ == "__main__":
-    portfolio = {"BJ":{"allocation":0.055,"position":"long"},"KR":{"allocation":0.055,"position":"long"},"COST":{"allocation":0.07,"position":"long"},"MNST":{"allocation":0.075,"position":"long"},"KO":{"allocation":0.06,"position":"long"},"CCEP":{"allocation":0.045,"position":"long"},"SAM":{"allocation":0.035,"position":"long"},"CAG":{"allocation":0.04,"position":"long"},"GIS":{"allocation":0.04,"position":"long"},"PG":{"allocation":0.045,"position":"long"},"CL":{"allocation":0.03,"position":"long"},"KMB":{"allocation":0.025,"position":"long"},"EPC":{"allocation":0.03,"position":"long"},"ODD":{"allocation":0.025,"position":"long"},"RLX":{"allocation":0.025,"position":"long"},"LW":{"allocation":0.015,"position":"long"},"PM":{"allocation":0.015,"position":"long"},"WBA":{"allocation":0.04,"position":"short"},"UNFI":{"allocation":0.035,"position":"short"},"TGT":{"allocation":0.04,"position":"short"},"PRMB":{"allocation":0.045,"position":"short"},"TAP":{"allocation":0.045,"position":"short"},"STZ":{"allocation":0.035,"position":"short"},"SJM":{"allocation":0.03,"position":"short"},"HSY":{"allocation":0.015,"position":"short"},"ADM":{"allocation":0.015,"position":"short"},"ENR":{"allocation":0.015,"position":"short"},"SPB":{"allocation":0.03,"position":"short"},"CLX":{"allocation":0.015,"position":"short"},"ELF":{"allocation":0.035,"position":"short"},"OLPX":{"allocation":0.035,"position":"short"},"EL":{"allocation":0.04,"position":"short"},"CELH":{"allocation":0.02,"position":"short"}}
-    
-    # Optional: parse if input is unstructured. Here it's already a dict, so skip.
-    # from app.utils.gpt_parser import parse_portfolio_with_gpt
-    # portfolio = parse_portfolio_with_gpt(portfolio)
+    PERIOD_TO_TRADING_DAYS = {
+        "1M": 21,
+        "3M": 63,
+        "6M": 126,
+        "9M": 189,
+        "1Y": 252,
+        "5Y": 1260,
+    }
 
-    # Build list of tickers from portfolio
-    tickers = list(portfolio.keys())
+    @staticmethod
+    def rolling_avg_correlation(returns_df: pd.DataFrame, window: int) -> list[dict]:
+        """Calculate rolling average pairwise correlation using vectorized operations.
 
-    # Fetch prices and compute daily returns
-    from app.repositories.price_data import get_price_data_daily
-    from app.core.calculations.returns.calculator import ReturnsCalculator
-    from app.core.calculations.core.config import DEFAULT_LOOKBACK_3Y
-    from datetime import datetime, timedelta
+        For each date, computes correlation over the trailing window,
+        then averages all off-diagonal (pairwise) values.
 
-    end_date = get_current_utc_time()
-    start_date = end_date - timedelta(days=DEFAULT_LOOKBACK_3Y)
+        Args:
+            returns_df: DataFrame of daily returns (columns = tickers, index = dates)
+            window: Rolling window size in trading days
 
-    ticker_returns: dict[str, pd.Series] = {}
-    for t in tickers:
-        try:
-            df = get_price_data_daily(t, start_date, end_date)
-            if df is None or df.empty:
-                continue
-            df['date'] = pd.to_datetime(df['date'])
-            close = df.set_index('date')['close']
-            r = ReturnsCalculator.daily_price_returns(close)
-            if not r.empty:
-                ticker_returns[t] = r
-        except Exception as e:
-            print(f"Error fetching/processing {t}: {e}")
+        Returns:
+            List of {"date": str, "avg": float} dicts
+        """
+        if returns_df is None or returns_df.empty:
+            return []
+        if len(returns_df) < window or len(returns_df.columns) < 2:
+            return []
 
-    if not ticker_returns:
-        print("No returns available to compute correlation.")
-    else:
-        returns_df = pd.concat(ticker_returns, axis=1)
-        corr = CorrelationAnalysis.correlation_matrix(returns_df)
-        if corr is None or corr.empty:
-            print("Correlation matrix is empty.")
-        else:
-            # Pretty print rounded matrix
-            print("=== Pairwise Correlation Matrix (daily price returns) ===")
-            print(corr.round(3).to_string())
-    
+        n_tickers = len(returns_df.columns)
+        pair_correlations = []
 
+        # Compute rolling correlation for each unique pair
+        for i in range(n_tickers):
+            for j in range(i + 1, n_tickers):
+                rolling_corr = returns_df.iloc[:, i].rolling(window).corr(
+                    returns_df.iloc[:, j]
+                )
+                pair_correlations.append(rolling_corr)
+
+        if not pair_correlations:
+            return []
+
+        # Stack all pairs and compute mean across pairs for each date
+        stacked = pd.concat(pair_correlations, axis=1)
+        avg_correlation = stacked.mean(axis=1).dropna()
+
+        return [
+            {"date": str(date), "avg": round(float(value), 4)}
+            for date, value in avg_correlation.items()
+        ]
+
+    @staticmethod
+    def multi_period_correlations(
+        returns_df: pd.DataFrame,
+        matrix_periods: list[str] = None,
+        rolling_periods: list[str] = None
+    ) -> dict:
+        """Calculate correlation matrix and rolling correlations for multiple periods.
+
+        Args:
+            returns_df: DataFrame of daily returns (columns = tickers, index = dates)
+            matrix_periods: Periods for correlation matrix (e.g., ["1M", "3M", "6M", "9M", "1Y"])
+            rolling_periods: Periods for rolling avg correlation (e.g., ["1M", "3M", "6M", "1Y", "5Y"])
+
+        Returns:
+            {
+                "matrix": { "1M": { "AAPL": { "MSFT": 0.82, ... }, ... }, ... },
+                "rolling": { "1M": [{ "date": "...", "avg": 0.72 }, ...], ... }
+            }
+        """
+        if matrix_periods is None:
+            matrix_periods = ["1M", "3M", "6M", "9M", "1Y"]
+        if rolling_periods is None:
+            rolling_periods = ["1M", "3M", "6M", "1Y", "5Y"]
+
+        if returns_df is None or returns_df.empty or len(returns_df.columns) < 2:
+            return {"matrix": {}, "rolling": {}}
+
+        # Ensure index is DatetimeIndex for proper period filtering
+        if not isinstance(returns_df.index, pd.DatetimeIndex):
+            returns_df = returns_df.copy()
+            returns_df.index = pd.to_datetime(returns_df.index)
+
+        result = {"matrix": {}, "rolling": {}}
+        today = get_current_utc_time()
+
+        # Calculate correlation matrices for each matrix period
+        for period in matrix_periods:
+            period_start = CorrelationAnalysis._get_period_start(today, period)
+            period_returns = returns_df[returns_df.index >= period_start]
+
+            if len(period_returns) >= 2:
+                corr_matrix = CorrelationAnalysis.correlation_matrix(period_returns)
+                result["matrix"][period] = CorrelationAnalysis._matrix_to_dict(corr_matrix)
+
+        # Calculate rolling correlations for each rolling period
+        for period in rolling_periods:
+            window_days = CorrelationAnalysis.PERIOD_TO_TRADING_DAYS.get(period, 63)
+            result["rolling"][period] = CorrelationAnalysis.rolling_avg_correlation(
+                returns_df, window_days
+            )
+
+        return result
+
+    @staticmethod
+    def _get_period_start(today, period: str):
+        """Convert period string to start date as pandas Timestamp for proper comparison."""
+        from datetime import timedelta
+
+        mapping = {
+            "1M": timedelta(days=30),
+            "3M": timedelta(days=90),
+            "6M": timedelta(days=180),
+            "9M": timedelta(days=270),
+            "1Y": timedelta(days=365),
+            "5Y": timedelta(days=365 * 5),
+        }
+        delta = mapping.get(period, timedelta(days=90))
+        start = today - delta
+
+        # Return as pandas Timestamp for proper comparison with DatetimeIndex
+        return pd.Timestamp(start)
+
+    @staticmethod
+    def _matrix_to_dict(corr_matrix: pd.DataFrame) -> dict[str, dict[str, float]]:
+        """Convert pandas correlation matrix to nested dict, excluding diagonal."""
+        if corr_matrix is None or corr_matrix.empty:
+            return {}
+
+        result = {}
+        tickers = corr_matrix.columns.tolist()
+
+        for ticker1 in tickers:
+            result[ticker1] = {}
+            for ticker2 in tickers:
+                if ticker1 != ticker2:
+                    value = corr_matrix.loc[ticker1, ticker2]
+                    if pd.notna(value):
+                        result[ticker1][ticker2] = round(float(value), 4)
+
+        return result
 

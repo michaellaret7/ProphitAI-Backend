@@ -1,245 +1,19 @@
+"""Watchlist data controller functions for charts and metrics."""
+
 import asyncio
+from datetime import timedelta
 import hashlib
-from fastapi import HTTPException
+import numpy as np
+import pandas as pd
 from typing import Optional, Dict, Any, List
-from app.repositories.user_data import (
-    get_user_watchlists,
-    get_watchlist_by_id,
-    add_watchlist,
-    rename_watchlist,
-    delete_watchlist,
-    add_watchlist_item,
-    delete_watchlist_item
-)
+
 from app.api.response_envelope import ok_envelope
 from app.utils.decorators.api_decorators import handle_controller_errors
 from app.db.core.pull_fmp_data import FMP_API_DATA
-from app.utils.serialize_output import serialize_sqlalchemy_obj
 from app.redis.client import cache
-
-def _format_watchlist_response(watchlist: dict) -> Dict[str, Any]:
-    """Format a single watchlist for API response."""
-    return {
-        "id": watchlist.get("id"),
-        "userId": watchlist.get("user_id"),
-        "name": watchlist.get("name"),
-        "creationDate": watchlist.get("creation_date"),
-        "updatedDate": watchlist.get("updated_date"),
-        "items": [
-            {
-                "ticker": item.get("ticker"),
-                "priceOnInception": item.get("price_on_inception"),
-                "addedAt": item.get("added_at"),
-            }
-            for item in watchlist.get("items", [])
-        ],
-    }
-
-
-def _format_watchlist_item_response(item: dict) -> Dict[str, Any]:
-    """Format a watchlist item for API response."""
-    return {
-        "watchlistId": item.get("watchlist_id"),
-        "ticker": item.get("ticker"),
-        "priceOnInception": item.get("price_on_inception"),
-        "addedAt": item.get("added_at"),
-    }
-
-
-@handle_controller_errors
-async def get_user_watchlists_controller(*, user_id: str) -> Dict[str, Any]:
-    """Get all watchlists for a user."""
-    if not user_id:
-        raise ValueError("userId is required")
-
-    watchlists = get_user_watchlists(user_id=user_id)
-
-    return ok_envelope(
-        message="Watchlists retrieved successfully",
-        kind="watchlists#list",
-        self_link=f"/api/watchlists",
-        counts={"totalItems": len(watchlists)},
-        payload=[_format_watchlist_response(w) for w in watchlists],
-    )
-
-
-@handle_controller_errors
-async def get_watchlist_controller(*, watchlist_id: str, user_id: str) -> Dict[str, Any]:
-    """Get a single watchlist by ID."""
-    if not watchlist_id:
-        raise ValueError("watchlistId is required")
-    if not user_id:
-        raise ValueError("userId is required")
-
-    watchlist = get_watchlist_by_id(watchlist_id=watchlist_id)
-
-    if not watchlist:
-        raise HTTPException(status_code=404, detail="Watchlist not found")
-
-    if watchlist.get("user_id") != user_id:
-        raise HTTPException(status_code=403, detail="Access denied")
-
-    return ok_envelope(
-        message="Watchlist retrieved successfully",
-        kind="watchlists#watchlist",
-        resource_id=watchlist.get("id"),
-        self_link=f"/api/watchlists/{watchlist_id}",
-        payload=_format_watchlist_response(watchlist),
-    )
-
-
-@handle_controller_errors
-async def create_watchlist_controller(*, user_id: str, name: str) -> Dict[str, Any]:
-    """Create a new watchlist for a user."""
-    if not user_id:
-        raise ValueError("userId is required")
-    if not name:
-        raise ValueError("name is required")
-
-    watchlist = add_watchlist(user_id=user_id, name=name)
-
-    return ok_envelope(
-        message="Watchlist created successfully",
-        kind="watchlists#watchlist",
-        resource_id=watchlist.get("id"),
-        self_link=f"/api/watchlists/{watchlist.get('id')}",
-        status=201,
-        payload={
-            "id": watchlist.get("id"),
-            "userId": watchlist.get("user_id"),
-            "name": watchlist.get("name"),
-            "creationDate": watchlist.get("creation_date"),
-        },
-    )
-
-
-@handle_controller_errors
-async def rename_watchlist_controller(
-    *, watchlist_id: str, user_id: str, name: str
-) -> Dict[str, Any]:
-    """Rename an existing watchlist."""
-    if not watchlist_id:
-        raise ValueError("watchlistId is required")
-    if not user_id:
-        raise ValueError("userId is required")
-    if not name:
-        raise ValueError("name is required")
-
-    watchlist = get_watchlist_by_id(watchlist_id=watchlist_id)
-
-    if not watchlist:
-        raise HTTPException(status_code=404, detail="Watchlist not found")
-
-    if watchlist.get("user_id") != user_id:
-        raise HTTPException(status_code=403, detail="Access denied")
-
-    result = rename_watchlist(watchlist_id=watchlist_id, name=name)
-
-    return ok_envelope(
-        message="Watchlist renamed successfully",
-        kind="watchlists#watchlist",
-        resource_id=result.get("id"),
-        self_link=f"/api/watchlists/{watchlist_id}",
-        payload={
-            "id": result.get("id"),
-            "name": result.get("name"),
-            "updatedDate": result.get("updated_date"),
-        },
-    )
-
-
-@handle_controller_errors
-async def delete_watchlist_controller(*, watchlist_id: str, user_id: str) -> Dict[str, Any]:
-    """Delete a watchlist."""
-    if not watchlist_id:
-        raise ValueError("watchlistId is required")
-    if not user_id:
-        raise ValueError("userId is required")
-
-    watchlist = get_watchlist_by_id(watchlist_id=watchlist_id)
-
-    if not watchlist:
-        raise HTTPException(status_code=404, detail="Watchlist not found")
-
-    if watchlist.get("user_id") != user_id:
-        raise HTTPException(status_code=403, detail="Access denied")
-
-    delete_watchlist(watchlist_id=watchlist_id)
-
-    return ok_envelope(
-        message="Watchlist deleted successfully",
-        kind="watchlists#watchlist",
-        resource_id=watchlist_id,
-        self_link=f"/api/watchlists/{watchlist_id}",
-        payload={},
-    )
-
-
-@handle_controller_errors
-async def add_watchlist_item_controller(
-    *, watchlist_id: str, user_id: str, ticker: str
-) -> Dict[str, Any]:
-    """Add a ticker to a watchlist."""
-    if not watchlist_id:
-        raise ValueError("watchlistId is required")
-    if not user_id:
-        raise ValueError("userId is required")
-    if not ticker:
-        raise ValueError("ticker is required")
-
-    watchlist = get_watchlist_by_id(watchlist_id=watchlist_id)
-
-    if not watchlist:
-        raise HTTPException(status_code=404, detail="Watchlist not found")
-
-    if watchlist.get("user_id") != user_id:
-        raise HTTPException(status_code=403, detail="Access denied")
-
-    item = add_watchlist_item(
-        watchlist_id=watchlist_id,
-        ticker=ticker
-    )
-
-    return ok_envelope(
-        message="Ticker added to watchlist",
-        kind="watchlists#item",
-        self_link=f"/api/watchlists/{watchlist_id}/items/{item.get('ticker')}",
-        status=201,
-        payload=_format_watchlist_item_response(item),
-    )
-
-
-@handle_controller_errors
-async def delete_watchlist_item_controller(
-    *, watchlist_id: str, user_id: str, ticker: str
-) -> Dict[str, Any]:
-    """Remove a ticker from a watchlist."""
-    if not watchlist_id:
-        raise ValueError("watchlistId is required")
-    if not user_id:
-        raise ValueError("userId is required")
-    if not ticker:
-        raise ValueError("ticker is required")
-
-    watchlist = get_watchlist_by_id(watchlist_id=watchlist_id)
-
-    if not watchlist:
-        raise HTTPException(status_code=404, detail="Watchlist not found")
-
-    if watchlist.get("user_id") != user_id:
-        raise HTTPException(status_code=403, detail="Access denied")
-
-    deleted = delete_watchlist_item(watchlist_id=watchlist_id, ticker=ticker)
-
-    if not deleted:
-        raise HTTPException(status_code=404, detail="Ticker not found in watchlist")
-
-    return ok_envelope(
-        message="Ticker removed from watchlist",
-        kind="watchlists#item",
-        self_link=f"/api/watchlists/{watchlist_id}/items/{ticker}",
-        payload={},
-    )
+from app.repositories.price_data import fetch_bulk_price_data_for_tickers
+from app.utils.time_utils import get_current_utc_time, get_utc_days_ago
+from app.core.calculations.portfolio.correlation import CorrelationAnalysis
 
 
 def _safe_round(value: Any, decimals: int = 4) -> Any:
@@ -247,8 +21,114 @@ def _safe_round(value: Any, decimals: int = 4) -> Any:
     if value is None:
         return None
     if isinstance(value, (int, float)):
+        if np.isnan(value) or np.isinf(value):
+            return None
         return round(value, decimals)
     return value
+
+
+def _calculate_max_drawdown(prices: pd.Series) -> Optional[float]:
+    """Calculate maximum drawdown from a price series.
+
+    Returns the max drawdown as a negative decimal (e.g., -0.25 for 25% drawdown).
+    """
+    if prices is None or prices.empty or len(prices) < 2:
+        return None
+    prices = prices.dropna()
+    if prices.empty:
+        return None
+    # Normalize to start at 1
+    equity = prices / prices.iloc[0]
+    running_max = equity.cummax()
+    drawdown = (equity / running_max) - 1.0
+    max_dd = float(drawdown.min())
+    return max_dd if np.isfinite(max_dd) else None
+
+
+def _calculate_cagr(prices: pd.Series, years: float) -> Optional[float]:
+    """Calculate Compound Annual Growth Rate from a price series.
+
+    Args:
+        prices: Price series
+        years: Number of years for CAGR calculation
+
+    Returns:
+        CAGR as a decimal (e.g., 0.15 for 15% CAGR)
+    """
+    if prices is None or prices.empty or len(prices) < 2:
+        return None
+    prices = prices.dropna()
+    if prices.empty or years <= 0:
+        return None
+    start_price = prices.iloc[0]
+    end_price = prices.iloc[-1]
+    if start_price <= 0:
+        return None
+    total_return = end_price / start_price
+    cagr = (total_return ** (1.0 / years)) - 1.0
+    return float(cagr) if np.isfinite(cagr) else None
+
+
+def _calculate_performance_from_prices(
+    prices: pd.Series,
+    current_date: pd.Timestamp
+) -> Dict[str, Optional[float]]:
+    """Calculate CAGR and max drawdown metrics from historical price data.
+
+    Args:
+        prices: Full historical price series for a ticker
+        current_date: Current UTC date for period calculations
+
+    Returns:
+        Dictionary with calculated performance metrics
+    """
+    result = {
+        "5Y_CAGR": None,
+        "3M_MaxDD": None,
+        "6M_MaxDD": None,
+        "1Y_MaxDD": None,
+        "5Y_MaxDD": None,
+        "ITD_MaxDD": None,
+    }
+
+    if prices is None or prices.empty:
+        return result
+
+    # Ensure index is DatetimeIndex
+    if not isinstance(prices.index, pd.DatetimeIndex):
+        return result
+
+    prices = prices.sort_index()
+
+    # Define lookback periods in days
+    periods = {
+        "3M": 63,    # ~3 months trading days
+        "6M": 126,   # ~6 months trading days
+        "1Y": 252,   # ~1 year trading days
+        "5Y": 1260,  # ~5 years trading days
+    }
+
+    # Calculate max drawdown for each period
+    for period_name, lookback_days in periods.items():
+        lookback_date = current_date - pd.Timedelta(days=int(lookback_days * 365 / 252))
+        period_prices = prices[prices.index >= lookback_date]
+        if len(period_prices) >= 2:
+            max_dd = _calculate_max_drawdown(period_prices)
+            result[f"{period_name}_MaxDD"] = max_dd
+
+    # ITD (Inception-to-date) max drawdown - use all available data
+    result["ITD_MaxDD"] = _calculate_max_drawdown(prices)
+
+    # 5Y CAGR calculation
+    five_years_ago = current_date - pd.Timedelta(days=5 * 365)
+    five_year_prices = prices[prices.index >= five_years_ago]
+    if len(five_year_prices) >= 252:  # At least 1 year of data
+        actual_days = (five_year_prices.index[-1] - five_year_prices.index[0]).days
+        actual_years = actual_days / 365.0
+        if actual_years >= 1.0:
+            result["5Y_CAGR"] = _calculate_cagr(five_year_prices, actual_years)
+
+    return result
 
 
 def _build_metrics_for_ticker(
@@ -257,22 +137,41 @@ def _build_metrics_for_ticker(
     ratios_data: Dict[str, Any],
     key_metrics_data: Dict[str, Any],
     price_change_data: Dict[str, Any],
+    calculated_performance: Optional[Dict[str, Optional[float]]] = None,
 ) -> Dict[str, Any]:
     """Build structured metrics response for a single ticker.
 
     Organizes FMP data into frontend-friendly categories matching UI tabs.
+
+    Args:
+        ticker: Stock ticker symbol
+        quote_data: Quote data from FMP
+        ratios_data: TTM ratios from FMP
+        key_metrics_data: Key metrics from FMP
+        price_change_data: Price change percentages from FMP
+        calculated_performance: CAGR and max drawdown metrics calculated from historical prices
     """
-    # Performance metrics (price change percentages)
+    if calculated_performance is None:
+        calculated_performance = {}
+
+    # Performance metrics (price change percentages + calculated metrics)
     performance = {
         "1D": _safe_round(price_change_data.get("1D")),
         "5D": _safe_round(price_change_data.get("5D")),
         "1M": _safe_round(price_change_data.get("1M")),
         "3M": _safe_round(price_change_data.get("3M")),
         "6M": _safe_round(price_change_data.get("6M")),
-        "ytd": _safe_round(price_change_data.get("ytd")),
+        "YTD": _safe_round(price_change_data.get("ytd")),
         "1Y": _safe_round(price_change_data.get("1Y")),
         "3Y": _safe_round(price_change_data.get("3Y")),
         "5Y": _safe_round(price_change_data.get("5Y")),
+        # Calculated metrics from historical price data
+        "5Y_CAGR": _safe_round(calculated_performance.get("5Y_CAGR")),
+        "3M_MaxDD": _safe_round(calculated_performance.get("3M_MaxDD")),
+        "6M_MaxDD": _safe_round(calculated_performance.get("6M_MaxDD")),
+        "1Y_MaxDD": _safe_round(calculated_performance.get("1Y_MaxDD")),
+        "5Y_MaxDD": _safe_round(calculated_performance.get("5Y_MaxDD")),
+        "ITD_MaxDD": _safe_round(calculated_performance.get("ITD_MaxDD")),
     }
 
     # Valuation metrics
@@ -321,6 +220,10 @@ def _build_metrics_for_ticker(
         "ltDebtCap": _safe_round(ratios_data.get("longTermDebtToCapitalizationTTM")),
         "debtCap": _safe_round(ratios_data.get("totalDebtToCapitalizationTTM")),
         "intCov": _safe_round(ratios_data.get("interestCoverageTTM"), 2),
+        # Additional metrics
+        "cfDebt": _safe_round(ratios_data.get("cashFlowToDebtRatioTTM"), 2),
+        "stCov": _safe_round(ratios_data.get("shortTermCoverageRatiosTTM"), 2),
+        "eqMult": _safe_round(ratios_data.get("companyEquityMultiplierTTM"), 2),
     }
 
     # Operating Metrics
@@ -406,12 +309,32 @@ async def get_watchlist_metrics_controller(
     async def fetch_price_change(ticker: str):
         return ticker, await asyncio.to_thread(fmp.get_stock_price_change, ticker)
 
-    # Fetch all data in parallel
-    ratios_results, metrics_results, price_results = await asyncio.gather(
+    async def fetch_historical_prices():
+        """Fetch 5+ years of historical price data for CAGR and drawdown calculations."""
+        current_date = get_current_utc_time()
+        # Fetch 6 years of data to ensure 5Y calculations are accurate
+        start_date = get_utc_days_ago(365 * 6)
+        start_str = start_date.strftime("%Y-%m-%d")
+        end_str = current_date.strftime("%Y-%m-%d")
+        return await asyncio.to_thread(
+            fetch_bulk_price_data_for_tickers,
+            tickers,
+            start_str,
+            end_str,
+            "daily"
+        )
+
+    # Fetch all data in parallel (including historical prices)
+    ratios_results, metrics_results, price_results, historical_prices = await asyncio.gather(
         asyncio.gather(*[fetch_ratios(t) for t in tickers], return_exceptions=True),
         asyncio.gather(*[fetch_key_metrics(t) for t in tickers], return_exceptions=True),
         asyncio.gather(*[fetch_price_change(t) for t in tickers], return_exceptions=True),
+        fetch_historical_prices(),
     )
+
+    # Handle case where historical_prices fetch failed
+    if isinstance(historical_prices, Exception):
+        historical_prices = {}
 
     # Process results into maps
     ratios_map = {}
@@ -444,6 +367,18 @@ async def get_watchlist_metrics_controller(
         else:
             price_change_map[ticker] = {}
 
+    # Calculate performance metrics from historical prices
+    current_date = pd.Timestamp(get_current_utc_time())
+    calculated_performance_map = {}
+    for ticker in tickers:
+        prices = historical_prices.get(ticker)
+        if prices is not None and not prices.empty:
+            calculated_performance_map[ticker] = _calculate_performance_from_prices(
+                prices, current_date
+            )
+        else:
+            calculated_performance_map[ticker] = {}
+
     # Build response for each ticker
     payload = {}
     errors = []
@@ -453,6 +388,7 @@ async def get_watchlist_metrics_controller(
         ratios_data = ratios_map.get(ticker, {})
         key_metrics_data = metrics_map.get(ticker, {})
         price_change_data = price_change_map.get(ticker, {})
+        calculated_performance = calculated_performance_map.get(ticker, {})
 
         # Check if we have any data for this ticker
         if not quote_data and not ratios_data:
@@ -465,6 +401,7 @@ async def get_watchlist_metrics_controller(
             ratios_data=ratios_data,
             key_metrics_data=key_metrics_data,
             price_change_data=price_change_data,
+            calculated_performance=calculated_performance,
         )
 
     # Build response envelope
@@ -476,6 +413,64 @@ async def get_watchlist_metrics_controller(
         payload={
             "data": payload,
             "errors": errors if errors else None,
+        },
+    )
+
+    # Cache for 5 minutes
+    await cache.set(cache_key, response, ttl=300)
+
+    return response
+
+
+async def get_watchlist_charts_controller(tickers: List[str]) -> Dict[str, Any]:
+    """Get charts for a list of tickers."""
+
+    # First check cache for the charts data
+    tickers_hash = hashlib.md5(",".join(sorted(tickers)).encode()).hexdigest()
+    cache_key = f"watchlist:charts:{tickers_hash}"
+    cached_data = await cache.get(cache_key)
+    if cached_data:
+        return cached_data
+
+    end_date = get_current_utc_time()
+    start_date = end_date - timedelta(days=365 * 5)  # 5 years
+    start_date_str = start_date.strftime("%Y-%m-%d")
+    end_date_str = end_date.strftime("%Y-%m-%d")
+
+    prices = await asyncio.to_thread(fetch_bulk_price_data_for_tickers, tickers, start_date_str, end_date_str, "daily")
+
+    # Convert pandas Series to dict with date strings as keys for JSON serialization
+    # Reason: pandas Series serialize with numeric indices by default, not date strings
+    prices_serializable = {}
+    for ticker, series in prices.items():
+        if series is not None and not series.empty:
+            # Convert DatetimeIndex to date strings and values to floats
+            prices_serializable[ticker] = {
+                date.strftime("%Y-%m-%d"): round(float(price), 2)
+                for date, price in series.items()
+            }
+
+    # Calculate multi-period correlations from returns
+    if len(prices) > 1:
+        price_df = pd.DataFrame(prices)
+        returns_df = price_df.pct_change().dropna()
+        correlations = CorrelationAnalysis.multi_period_correlations(
+            returns_df,
+            matrix_periods=["1M", "3M", "6M", "9M", "1Y"],
+            rolling_periods=["1M", "3M", "6M", "1Y", "5Y"]
+        )
+    else:
+        correlations = {"matrix": {}, "rolling": {}}
+
+    # Build response envelope
+    response = ok_envelope(
+        message=f"Watchlist charts retrieved successfully ({len(prices_serializable)} tickers)",
+        kind="watchlists#charts",
+        self_link="/api/watchlists/charts",
+        counts={"totalItems": len(prices_serializable)},
+        payload={
+            "data": prices_serializable,
+            "correlations": correlations,
         },
     )
 

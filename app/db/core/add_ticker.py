@@ -1380,17 +1380,3 @@ def load_multiple_tickers(ticker_list):
             continue
 
 
-if __name__ == "__main__":
-    load_single_ticker(
-        'KGC',
-        sector='equity_sector_materials',
-        industry='metals_and_mining',
-        sub_industry='gold'
-    )
-
-    load_single_ticker(
-        'AEM',
-        sector='equity_sector_materials',
-        industry='metals_and_mining',
-        sub_industry='gold'
-    )

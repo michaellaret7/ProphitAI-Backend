@@ -10,6 +10,7 @@ from app.api.controller.watchlist import (
     add_watchlist_item_controller,
     delete_watchlist_item_controller,
     get_watchlist_metrics_controller,
+    get_watchlist_charts_controller,
 )
 from app.api.auth.clerk import get_clerk_user_id
 from app.repositories.user_data import get_all_user_data_by_clerk_id
@@ -46,6 +47,36 @@ class WatchlistMetricsRequest(BaseModel):
     def validate_tickers(cls, v):
         """Normalize and validate ticker symbols."""
         return [t.upper().strip() for t in v if t.strip()]
+
+
+class WatchlistChartsRequest(BaseModel):
+    tickers: List[str] = Field(..., min_length=1, max_length=50)
+
+    @field_validator("tickers")
+    @classmethod
+    def validate_tickers(cls, v):
+        """Normalize and validate ticker symbols."""
+        return [t.upper().strip() for t in v if t.strip()]
+
+
+@router.post("/charts")
+async def get_watchlist_charts(body: WatchlistChartsRequest):
+    """
+    Get price charts and correlation data for watchlist tickers.
+
+    Returns 5 years of daily price data and correlation analysis:
+    - prices: Daily close prices for each ticker
+    - correlations.matrix: Pairwise correlation for each lookback period (1M, 3M, 6M, 9M, 1Y)
+    - correlations.rolling: Rolling avg pairwise correlation using window sizes (1M, 3M, 6M, 1Y, 5Y)
+
+    Cache TTL: 5 minutes
+
+    Example request body:
+    {
+        "tickers": ["AAPL", "GOOGL", "TSLA"]
+    }
+    """
+    return await get_watchlist_charts_controller(tickers=body.tickers)
 
 
 @router.post("/metrics")
