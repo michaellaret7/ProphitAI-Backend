@@ -47,28 +47,41 @@ def retrieve_portfolio(email: str = None, clerk_id: str = None, user_id: uuid.UU
     return portfolio
 
 @with_sessions(user_session='user', market_session='market')
-def add_portfolio(portfolio, company_name, user_email, portfolio_name, user_session=None, market_session=None):
-    company_id = user_session.query(Company).filter(Company.name == company_name).first().id
-    user_id = user_session.query(User).filter(User.email == user_email).first().id
+def add_portfolio(portfolio, user_id: uuid.UUID, portfolio_name, user_session=None, market_session=None):
+    """
+    Add a new portfolio for a user.
+
+    Args:
+        portfolio: List of Position objects with ticker and allocation
+        user_id: User's UUID
+        portfolio_name: Name for the portfolio
+    """
+    user = user_session.query(User).filter(User.id == user_id).first()
+    if not user:
+        raise ValueError("User not found")
+
     portfolio_uuid = uuid.uuid4()
 
     for positions in portfolio:
+        ticker_data = market_session.query(Ticker).filter(Ticker.ticker == positions.ticker).first()
+        if not ticker_data:
+            raise ValueError(f"Ticker {positions.ticker} not found")
+
         user_session.add(Portfolio(
             portfolio_id=portfolio_uuid,
             name=portfolio_name,
             ticker=positions.ticker,
-            sector=market_session.query(Ticker).filter(Ticker.ticker == positions.ticker).first().sector,
-            industry=market_session.query(Ticker).filter(Ticker.ticker == positions.ticker).first().industry,
-            sub_industry=market_session.query(Ticker).filter(Ticker.ticker == positions.ticker).first().sub_industry,
+            sector=ticker_data.sector,
+            industry=ticker_data.industry,
+            sub_industry=ticker_data.sub_industry,
             allocation=positions.allocation,
             is_current=False,
             created_date=get_current_utc_time(),
             updated_date=get_current_utc_time(),
-            company_id=company_id,
-            user_id=user_id,
+            company_id=user.company_id,
+            user_id=user.id,
         ))
-    
-    # Commit the transaction for user_session
+
     user_session.commit()
 
 @with_session('user')
@@ -164,7 +177,7 @@ def add_initial_positions(positions: dict, industry: str, fund_name: str, prophi
     
     return True
 
-@with_transaction('user')
+@with_sessions(user_session='user', market_session='market')
 def update_portfolio(
     *,
     email: str = None,
@@ -172,23 +185,39 @@ def update_portfolio(
     portfolio_id: uuid.UUID = None,
     name: Optional[str] = None,
     is_current: Optional[bool] = None,
-    session=None
+    positions: Optional[dict] = None,
+    user_session=None,
+    market_session=None
 ) -> bool:
+    """
+    Update an existing portfolio's metadata and/or positions.
+
+    Args:
+        email: User email
+        user_id: User UUID
+        portfolio_id: Portfolio UUID to update
+        name: Optional new name for the portfolio
+        is_current: Optional flag to set as current portfolio
+        positions: Optional dict of {ticker: allocation} to replace all positions
+
+    Returns:
+        True if update succeeded, False if portfolio not found
+    """
     if not portfolio_id:
         raise ValueError("portfolio_id must be provided")
 
     user = None
     if user_id:
-        user = session.query(User).filter(User.id == user_id).first()
+        user = user_session.query(User).filter(User.id == user_id).first()
     elif email:
-        user = session.query(User).filter(User.email == email).first()
+        user = user_session.query(User).filter(User.email == email).first()
     else:
         raise ValueError("At least one identifier (email or user_id) must be provided")
 
     if not user:
         return False
 
-    q = session.query(Portfolio).filter(
+    q = user_session.query(Portfolio).filter(
         Portfolio.user_id == user.id,
         Portfolio.portfolio_id == portfolio_id
     )
@@ -201,7 +230,37 @@ def update_portfolio(
     if is_current is not None:
         q.update({Portfolio.is_current: is_current})
 
-    # commit handled by decorator
+    if positions is not None:
+        # Get existing portfolio metadata from first row
+        existing = rows[0]
+        portfolio_name = name if name is not None else existing.name
+        is_current_val = is_current if is_current is not None else existing.is_current
+
+        # Delete all existing positions
+        q.delete(synchronize_session=False)
+
+        # Add new positions
+        for ticker, allocation in positions.items():
+            ticker_data = market_session.query(Ticker).filter(Ticker.ticker == ticker).first()
+            if not ticker_data:
+                raise ValueError(f"Ticker {ticker} not found")
+
+            user_session.add(Portfolio(
+                portfolio_id=portfolio_id,
+                name=portfolio_name,
+                ticker=ticker,
+                sector=ticker_data.sector,
+                industry=ticker_data.industry,
+                sub_industry=ticker_data.sub_industry,
+                allocation=allocation,
+                is_current=is_current_val,
+                created_date=existing.created_date,
+                updated_date=get_current_utc_time(),
+                company_id=user.company_id,
+                user_id=user.id,
+            ))
+
+    user_session.commit()
     return True
 
 @with_transaction('user')

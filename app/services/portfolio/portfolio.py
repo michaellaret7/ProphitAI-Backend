@@ -30,7 +30,6 @@ class PortfolioService:
         self,
         *,
         user_id: str,
-        company_name: str,
         portfolio_name: str,
         positions: List[Dict[str, Any]]
     ) -> Dict[str, Any]:
@@ -39,7 +38,6 @@ class PortfolioService:
 
         Args:
             user_id: User's internal database ID
-            company_name: Company name for the portfolio
             portfolio_name: Name of the portfolio
             positions: List of dicts with 'ticker' and 'allocation' keys
 
@@ -51,18 +49,10 @@ class PortfolioService:
         """
         if not user_id:
             raise ValueError("User ID is required")
-        if not company_name:
-            raise ValueError("Company name is required")
         if not portfolio_name:
             raise ValueError("Portfolio name is required")
         if not positions or not isinstance(positions, list):
             raise ValueError("Positions must be a non-empty list")
-
-        # Get user email for add_portfolio (legacy requirement)
-        user_data = get_all_user_data_by_id(user_id=user_id)
-        if not user_data:
-            raise ValueError("User not found")
-        email = user_data.get("email")
 
         # Transform positions to Position objects
         position_objs = []
@@ -76,8 +66,7 @@ class PortfolioService:
         # Create portfolio in database
         add_portfolio(
             portfolio=position_objs,
-            company_name=company_name,
-            user_email=email,
+            user_id=uuid.UUID(user_id),
             portfolio_name=portfolio_name,
         )
 
@@ -90,7 +79,8 @@ class PortfolioService:
         user_id: str,
         portfolio_id: str,
         name: Optional[str] = None,
-        is_current: Optional[bool] = None
+        is_current: Optional[bool] = None,
+        positions: Optional[Dict[str, float]] = None
     ) -> Dict[str, Any]:
         """
         Update an existing portfolio.
@@ -100,6 +90,7 @@ class PortfolioService:
             portfolio_id: UUID of the portfolio to update
             name: Optional new name for the portfolio
             is_current: Optional flag to set as current portfolio
+            positions: Optional dict of {ticker: allocation} to replace all positions
 
         Returns:
             Dict containing user_data and portfolios for response building
@@ -118,6 +109,7 @@ class PortfolioService:
             portfolio_id=uuid.UUID(portfolio_id),
             name=name,
             is_current=is_current,
+            positions=positions,
         )
 
         if not updated:

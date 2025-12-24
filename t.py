@@ -12,3 +12,17 @@ with MarketSession() as session:
         print(f"\n{sector} Sector - Industries & Sub-Industries:\n")
         for industry, sub_industry in sorted(results, key=lambda x: (x[0] or '', x[1] or '')):
             print(f"  Industry: {industry} | Sub-Industry: {sub_industry}")
+
+with UserSession() as session:
+    users = session.query(User).all()
+    for user in users:
+
+        print("="*100)
+        print(user.id)
+        print("="*100)
+
+        for portfolio in user.portfolios:
+            print(portfolio.portfolio_id)
+
+
+

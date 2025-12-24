@@ -26,7 +26,6 @@ def _verify_portfolio_ownership(portfolio_id: str, user_id: str) -> None:
 async def create_portfolio_controller(
     *,
     user_id: str,
-    company_name: str,
     portfolio_name: str,
     positions: List[Dict[str, Any]],
 ) -> Dict[str, Any]:
@@ -37,7 +36,6 @@ async def create_portfolio_controller(
     service = PortfolioService()
     data = service.create_portfolio(
         user_id=user_id,
-        company_name=company_name,
         portfolio_name=portfolio_name,
         positions=positions
     )
@@ -63,6 +61,7 @@ async def update_portfolio_controller(
     portfolio_id: str,
     name: Optional[str] = None,
     is_current: Optional[bool] = None,
+    positions: Optional[Dict[str, float]] = None,
 ) -> Dict[str, Any]:
     """Controller to handle portfolio updates with cache invalidation."""
     if not user_id:
@@ -78,12 +77,14 @@ async def update_portfolio_controller(
         user_id=user_id,
         portfolio_id=portfolio_id,
         name=name,
-        is_current=is_current
+        is_current=is_current,
+        positions=positions,
     )
 
     # Invalidate portfolio cache
     await cache.clear_pattern(f"portfolio:returns:{portfolio_id}:*")
     await cache.clear_pattern(f"portfolio:metrics:{portfolio_id}:*")
+    await cache.clear_pattern(f"portfolio:positions:{portfolio_id}")
 
     return ok_envelope(
         message="Portfolio updated successfully",

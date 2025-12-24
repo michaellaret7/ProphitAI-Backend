@@ -1,3 +1,4 @@
+import uuid
 from app.utils.alpaca.client import AlpacaClient
 from app.utils.alpaca.portfolio import AlpacaPortfolio
 from app.utils.alpaca.trading import AlpacaTrading
@@ -42,8 +43,7 @@ async def get_alpaca_positions_controller() -> Dict[str, Any]:
 async def add_broker_portfolio_controller(
     *,
     portfolio_name: str,
-    email: str = "michaellaret7@gmail.com",
-    company_name: str = "ProphitAI",
+    user_id: str,
 ) -> Dict[str, Any]:
     """
     Controller to sync Alpaca broker positions to portfolios table.
@@ -53,8 +53,7 @@ async def add_broker_portfolio_controller(
 
     Args:
         portfolio_name: Name for the portfolio
-        email: User email (default: michaellaret7@gmail.com)
-        company_name: Company name (default: ProphitAI)
+        user_id: User's internal database ID
 
     Returns:
         Response envelope with success message
@@ -93,8 +92,7 @@ async def add_broker_portfolio_controller(
     # Save to database using existing portfolio repository
     add_portfolio(
         portfolio=position_objects,
-        company_name=company_name,
-        user_email=email,
+        user_id=uuid.UUID(user_id),
         portfolio_name=portfolio_name,
     )
 

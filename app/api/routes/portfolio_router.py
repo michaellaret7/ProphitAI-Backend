@@ -35,7 +35,6 @@ class PositionModel(BaseModel):
 
 
 class CreatePortfolioRequest(BaseModel):
-    companyName: str
     portfolioName: str
     positions: List[PositionModel]
 
@@ -43,6 +42,7 @@ class CreatePortfolioRequest(BaseModel):
 class UpdatePortfolioRequest(BaseModel):
     name: Optional[str] = None
     isCurrent: Optional[bool] = None
+    positions: Optional[Dict[str, float]] = None  # {ticker: allocation} - replaces all positions
 
 
 class PortfolioPerformanceComparisonRequest(BaseModel):
@@ -76,7 +76,6 @@ async def create_portfolio(
     """Create a new portfolio for the authenticated user."""
     return await create_portfolio_controller(
         user_id=user_id,
-        company_name=body.companyName,
         portfolio_name=body.portfolioName,
         positions=[p.model_dump() for p in body.positions],
     )
@@ -87,12 +86,25 @@ async def patch_portfolio(
     portfolioId: str = Path(..., description="Portfolio ID"),
     user_id: str = Depends(get_user_id_from_clerk),
 ):
-    """Update an existing portfolio (rename or set as current)."""
+    """
+    Update an existing portfolio.
+
+    Can update name, current status, and/or replace all positions.
+    If positions dict is provided, all existing positions are replaced.
+
+    Example request body:
+    {
+        "name": "New Portfolio Name",
+        "isCurrent": true,
+        "positions": {"AAPL": 25.0, "MSFT": 25.0, "GOOGL": 50.0}
+    }
+    """
     return await update_portfolio_controller(
         user_id=user_id,
         portfolio_id=portfolioId,
         name=body.name,
         is_current=body.isCurrent,
+        positions=body.positions,
     )
 
 
