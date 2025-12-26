@@ -33,7 +33,8 @@ class AiWatchlistAgent(BaseAgent):
             # provider="fireworks",
             # model="Kimi-K2-instruct",
             provider="anthropic",
-            model="claude-sonnet-4-5-20250929",
+            # model="claude-sonnet-4-5-20250929",
+            model="claude-haiku-4-5-20251001",
             system_prompt=SYSTEM_PROMPT,
             user_prompt=dynamic_user_prompt,
             max_iterations=200,
@@ -48,8 +49,3 @@ class AiWatchlistAgent(BaseAgent):
     def _build_user_prompt(self) -> str:
         return USER_PROMPT_TEMPLATE.format(user_query=self.user_preferences)
 
-
-if __name__ == "__main__":
-    agent = AiWatchlistAgent(user_preferences="Find the 5 most undervalued high growth (increasing revenue and margins) tech stocks")
-    response = agent.run(response_format=WatchlistResponse)
-    print(response)

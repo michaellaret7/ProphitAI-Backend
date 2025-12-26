@@ -4,12 +4,15 @@ from fastapi import HTTPException
 from typing import Dict, Any, List, Optional
 import uuid
 
+from app.db.core.db_config import UserSession
+from app.db.core.models.user_data_models import Portfolio
 from app.services.portfolio import PortfolioService
 from app.api.response_envelope import ok_envelope
 from app.redis.client import cache
 from app.utils.decorators.api_decorators import handle_controller_errors
 from app.repositories.portfolio_data import retrieve_portfolio
-
+from typing import Literal
+from app.core.calculations.portfolio.allocator.allocate import run
 
 def _verify_portfolio_ownership(portfolio_id: str, user_id: str) -> None:
     """Verify that the portfolio belongs to the user."""
@@ -185,3 +188,58 @@ async def get_portfolio_positions_controller(
     await cache.set(cache_key, response, ttl=86400)
 
     return response
+
+@handle_controller_errors
+async def rebalance_portfolio_controller(
+    *,
+    user_id: str,
+    portfolio_id: Optional[str] = None,
+    tickers: Optional[List[str]] = None,
+    equity_weight_target: Optional[float] = 0.60,
+    bond_weight_target: Optional[float] = 0.40,
+    strategy: Optional[Literal["max_sharpe", "min_vol", "max_utility", "efficient_risk"]] = "max_sharpe",
+    initial_portfolio_value: Optional[float] = 100_000,
+) -> Dict[str, Any]:
+    """Controller to handle portfolio rebalancing."""
+    if not user_id:
+        raise ValueError("userId is required")
+    if not portfolio_id and not tickers:
+        raise ValueError("portfolioId or tickers is required")
+
+    if portfolio_id:
+        _verify_portfolio_ownership(portfolio_id, user_id)
+
+        with UserSession() as session:
+            portfolio = session.query(Portfolio).filter(Portfolio.portfolio_id == portfolio_id).all()
+
+            if not portfolio:
+                raise ValueError("Portfolio not found")
+
+            tickers = [position.ticker for position in portfolio]
+
+    allocations = run(
+        tickers=tickers,
+        equity_weight_target=equity_weight_target,
+        bond_weight_target=bond_weight_target,
+        strategy=strategy,
+        initial_portfolio_value=initial_portfolio_value,
+    )
+
+    allocations = allocations.model_dump()
+
+    # Invalidate portfolio cache after rebalance
+    if portfolio_id:
+        await cache.clear_pattern(f"portfolio:returns:{portfolio_id}:*")
+        await cache.clear_pattern(f"portfolio:metrics:{portfolio_id}:*")
+        await cache.clear_pattern(f"portfolio:positions:{portfolio_id}")
+
+    resource_id = portfolio_id if portfolio_id else "adhoc"
+    self_link = f"/api/portfolios/{portfolio_id}/rebalance" if portfolio_id else "/api/portfolios/rebalance"
+
+    return ok_envelope(
+        message="Portfolio rebalanced successfully",
+        kind="portfolio#rebalance",
+        resource_id=resource_id,
+        self_link=self_link,
+        payload=allocations,
+    )

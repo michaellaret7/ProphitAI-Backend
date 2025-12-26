@@ -6,6 +6,7 @@ from .operations import (
     delete_portfolio_controller,
     get_user_portfolio_list_controller,
     get_portfolio_positions_controller,
+    rebalance_portfolio_controller,
 )
 from .analytics import (
     get_portfolio_returns_controller,
@@ -25,6 +26,7 @@ __all__ = [
     "delete_portfolio_controller",
     "get_user_portfolio_list_controller",
     "get_portfolio_positions_controller",
+    "rebalance_portfolio_controller",
     # Analytics
     "get_portfolio_returns_controller",
     "get_portfolio_metrics_controller",

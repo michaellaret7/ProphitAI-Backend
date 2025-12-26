@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Query, Depends, Path, HTTPException
 from pydantic import BaseModel
-from typing import List, Optional, Dict
+from typing import List, Optional, Dict, Literal
 from app.api.controller.portfolio import (
     get_user_portfolio_list_controller,
     create_portfolio_controller,
@@ -15,6 +15,7 @@ from app.api.controller.portfolio import (
     get_portfolio_performance_comparison_controller,
     get_portfolio_factor_tilt_controller,
     get_portfolio_stress_returns_controller,
+    rebalance_portfolio_controller,
 )
 from app.api.auth.clerk import get_clerk_user_id
 from app.repositories.user_data import get_all_user_data_by_clerk_id
@@ -62,6 +63,15 @@ class PortfolioStressReturnsRequest(BaseModel):
     start_date: str
     end_date: str
     frequency: Optional[str] = 'daily'
+
+
+class RebalancePortfolioRequest(BaseModel):
+    portfolioId: Optional[str] = None
+    tickers: Optional[List[str]] = None
+    equityWeightTarget: Optional[float] = 0.60
+    bondWeightTarget: Optional[float] = 0.40
+    strategy: Optional[Literal["max_sharpe", "min_vol", "max_utility", "efficient_risk"]] = "max_sharpe"
+    initialPortfolioValue: Optional[float] = 100_000
 
 @router.get("/portfolios")
 async def get_user_portfolio_list(user_id: str = Depends(get_user_id_from_clerk)):
@@ -265,4 +275,54 @@ async def get_portfolio_stress_returns(body: PortfolioStressReturnsRequest):
         start_date=body.start_date,
         end_date=body.end_date,
         frequency=body.frequency,
+    )
+
+
+@router.post("/portfolios/rebalance")
+async def rebalance_portfolio(
+    body: RebalancePortfolioRequest,
+    user_id: str = Depends(get_user_id_from_clerk),
+):
+    """
+    Rebalance a portfolio using optimization strategies.
+
+    Optimizes portfolio allocation using one of four strategies:
+    - max_sharpe: Maximize Sharpe ratio (risk-adjusted returns)
+    - min_vol: Minimize portfolio volatility
+    - max_utility: Maximize quadratic utility (return - risk_aversion * variance)
+    - efficient_risk: Target a specific volatility level
+
+    Provide either portfolioId (to rebalance existing portfolio) or tickers list (for adhoc optimization).
+
+    Returns:
+    - allocations: List of {ticker, weight, num_shares} for each position
+    - performance: {expected_return, volatility, sharpe_ratio}
+    - strategy: The optimization strategy used
+
+    Example request body:
+    {
+        "portfolioId": "uuid-here",
+        "equityWeightTarget": 0.60,
+        "bondWeightTarget": 0.40,
+        "strategy": "max_sharpe",
+        "initialPortfolioValue": 100000
+    }
+
+    Or with tickers:
+    {
+        "tickers": ["AAPL", "MSFT", "GOOGL", "AGG", "BND"],
+        "equityWeightTarget": 0.60,
+        "bondWeightTarget": 0.40,
+        "strategy": "min_vol",
+        "initialPortfolioValue": 50000
+    }
+    """
+    return await rebalance_portfolio_controller(
+        user_id=user_id,
+        portfolio_id=body.portfolioId,
+        tickers=body.tickers,
+        equity_weight_target=body.equityWeightTarget,
+        bond_weight_target=body.bondWeightTarget,
+        strategy=body.strategy,
+        initial_portfolio_value=body.initialPortfolioValue,
     )
