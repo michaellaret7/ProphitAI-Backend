@@ -1,6 +1,6 @@
 from app.db.core.db_config import MarketSession, ProphitAltsSession, UserSession
 from app.db.core.models.market_data_models import Ticker, BalanceSheet, Price
-from app.db.core.models.user_data_models import Company, User, PortfolioItem
+from app.db.core.models.user_data_models import Company, User, PortfolioItem, Portfolio
 from app.utils.serialize_output import serialize_sqlalchemy_obj
 import uuid
 # with MarketSession() as session:
@@ -12,12 +12,5 @@ import uuid
 #         print(f"\n{sector} Sector - Industries & Sub-Industries:\n")
 #         for industry, sub_industry in sorted(results, key=lambda x: (x[0] or '', x[1] or '')):
 #             print(f"  Industry: {industry} | Sub-Industry: {sub_industry}")
-
-
-with UserSession() as session:
-    user = session.query(PortfolioItem).filter(PortfolioItem.portfolio_id == uuid.UUID("d3445586-64bd-45dd-b696-82c3e90efe63")).all()
-    for position in user:
-        print(position.ticker)
-
 
 

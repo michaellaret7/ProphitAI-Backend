@@ -62,9 +62,8 @@ class Portfolio(UserBase):
 class PortfolioItem(UserBase):
     __tablename__ = 'portfolio_items'
 
-    id = Column(Integer, primary_key=True, autoincrement=True)
-    portfolio_id = Column(UUID(as_uuid=True), ForeignKey('portfolios.id', ondelete='CASCADE'), nullable=False, index=True)
-    ticker = Column(String, nullable=False)
+    portfolio_id = Column(UUID(as_uuid=True), ForeignKey('portfolios.id', ondelete='CASCADE'), primary_key=True)
+    ticker = Column(String, primary_key=True)
     allocation = Column(Float)
     supporting_metrics = Column(JSONB, nullable=True)
     reason_for_rec = Column(Text, nullable=True)
