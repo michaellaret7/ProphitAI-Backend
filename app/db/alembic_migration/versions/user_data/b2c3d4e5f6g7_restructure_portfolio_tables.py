@@ -24,10 +24,34 @@ depends_on: Union[str, Sequence[str], None] = None
 
 
 def upgrade() -> None:
-    # Step 1: Rename old portfolios table to temp name
+    # Step 1: Drop indexes that may conflict (using raw SQL for IF EXISTS support)
+    # In PostgreSQL, index names are unique within a schema, so we need to drop old indexes
+    # before creating new ones with the same names
+    op.execute("DROP INDEX IF EXISTS ix_portfolios_user_id")
+    op.execute("DROP INDEX IF EXISTS ix_portfolios_name")
+    op.execute("DROP INDEX IF EXISTS ix_portfolios_is_current")
+    op.execute("DROP INDEX IF EXISTS ix_portfolios_is_discretionary")
+    op.execute("DROP INDEX IF EXISTS ix_portfolios_portfolio_id")
+    op.execute("DROP INDEX IF EXISTS ix_portfolios_sector")
+    op.execute("DROP INDEX IF EXISTS ix_portfolios_industry")
+    op.execute("DROP INDEX IF EXISTS ix_portfolios_company_id")
+
+    # Step 2: Handle partial migration state - if portfolios_old exists, drop the new portfolios table
+    # and restore the old one before re-running the migration
+    op.execute("""
+        DO $$
+        BEGIN
+            IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'portfolios_old') THEN
+                DROP TABLE IF EXISTS portfolios CASCADE;
+                ALTER TABLE portfolios_old RENAME TO portfolios;
+            END IF;
+        END $$;
+    """)
+
+    # Step 3: Rename old portfolios table to temp name
     op.rename_table('portfolios', 'portfolios_old')
 
-    # Step 2: Create new portfolios parent table
+    # Step 4: Create new portfolios parent table
     op.create_table(
         'portfolios',
         sa.Column('id', UUID(as_uuid=True), nullable=False),
@@ -45,7 +69,7 @@ def upgrade() -> None:
     op.create_index('ix_portfolios_is_current', 'portfolios', ['is_current'], unique=False)
     op.create_index('ix_portfolios_is_discretionary', 'portfolios', ['is_discretionary'], unique=False)
 
-    # Step 3: Create portfolio_items child table
+    # Step 5: Create portfolio_items child table
     op.create_table(
         'portfolio_items',
         sa.Column('id', sa.Integer(), autoincrement=True, nullable=False),
@@ -61,7 +85,7 @@ def upgrade() -> None:
     )
     op.create_index('ix_portfolio_items_portfolio_id', 'portfolio_items', ['portfolio_id'], unique=False)
 
-    # Step 4: Migrate data from old table to new tables
+    # Step 6: Migrate data from old table to new tables
     # First, insert unique portfolios into the new portfolios table
     # Using portfolio_id from old table as the new id to maintain references
     op.execute("""
@@ -94,7 +118,7 @@ def upgrade() -> None:
         WHERE portfolio_id IN (SELECT id FROM portfolios)
     """)
 
-    # Step 5: Drop old table
+    # Step 7: Drop old table
     op.drop_table('portfolios_old')
 
 
