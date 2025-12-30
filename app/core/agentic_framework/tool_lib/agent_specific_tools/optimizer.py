@@ -1,40 +1,54 @@
 from app.core.agentic_framework.tool_lib.common.responses import success_response, error_response
 from app.db.core.models.user_data_models import Portfolio
-from app.utils.decorators.database import with_session
+from app.db.core.models.market_data_models import Ticker
+from app.utils.decorators.database import with_sessions
+from sqlalchemy.orm import joinedload
+import uuid
 
-@with_session('user')
-def get_user_portfolio(portfolio_id: str, session=None):
+
+@with_sessions(user_session='user', market_session='market')
+def get_user_portfolio(portfolio_id: str, user_session=None, market_session=None):
     """
     Retrieve portfolio positions from database by portfolio_id.
 
     Args:
         portfolio_id: UUID of the portfolio to retrieve
-        session: Database session (injected by decorator)
+        user_session: User database session (injected by decorator)
+        market_session: Market database session (injected by decorator)
 
     Returns:
         YAML string with portfolio positions
     """
     try:
-        # Query portfolio positions by portfolio_id
-        portfolio_positions = session.query(Portfolio).filter(
-            Portfolio.portfolio_id == portfolio_id
-        ).all()
+        # Query portfolio with items eagerly loaded
+        portfolio = user_session.query(Portfolio).options(
+            joinedload(Portfolio.items)
+        ).filter(Portfolio.id == uuid.UUID(portfolio_id)).first()
 
-        if not portfolio_positions:
+        if not portfolio:
             return error_response(f"No portfolio found with id: {portfolio_id}")
 
+        # Batch fetch ticker metadata
+        tickers_in_portfolio = [item.ticker for item in portfolio.items]
+        ticker_data = market_session.query(Ticker).filter(
+            Ticker.ticker.in_(tickers_in_portfolio)
+        ).all()
+        ticker_map = {t.ticker: t for t in ticker_data}
+
+        # Build positions dict
         positions = {}
-        for position in portfolio_positions:
-            positions[position.ticker] = {
-                "ticker": position.ticker,
-                "sector": position.sector,
-                "industry": position.industry,
-                "sub_industry": position.sub_industry,
-                "allocation": position.allocation/100,
-                "portfolio": position.name,
-                "supporting_metrics": position.supporting_metrics,
-                "reason_for_rec": position.reason_for_rec,
-                "position": "long"  # Default to long, adjust if you have this field in DB
+        for item in portfolio.items:
+            ticker_info = ticker_map.get(item.ticker)
+            positions[item.ticker] = {
+                "ticker": item.ticker,
+                "sector": ticker_info.sector if ticker_info else None,
+                "industry": ticker_info.industry if ticker_info else None,
+                "sub_industry": ticker_info.sub_industry if ticker_info else None,
+                "allocation": item.allocation / 100,
+                "portfolio": portfolio.name,
+                "supporting_metrics": item.supporting_metrics,
+                "reason_for_rec": item.reason_for_rec,
+                "position": "long"  # Default to long
             }
 
         return success_response(positions)

@@ -81,8 +81,7 @@ class PortfolioMetricsService:
         # Calculate asset allocation
         portfolio_service = PortfolioService()
         positions = portfolio_service.get_portfolio_positions(
-            portfolio_id=self.portfolio_id,
-            email=self.email
+            portfolio_id=self.portfolio_id
         )
 
         self.asset_allocation = self._calculate_asset_allocation(positions)

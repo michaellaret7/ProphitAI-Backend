@@ -6,6 +6,7 @@ import uuid
 
 from app.db.core.db_config import UserSession
 from app.db.core.models.user_data_models import Portfolio
+from sqlalchemy.orm import joinedload
 from app.services.portfolio import PortfolioService
 from app.api.response_envelope import ok_envelope
 from app.redis.client import cache
@@ -210,12 +211,14 @@ async def rebalance_portfolio_controller(
         _verify_portfolio_ownership(portfolio_id, user_id)
 
         with UserSession() as session:
-            portfolio = session.query(Portfolio).filter(Portfolio.portfolio_id == portfolio_id).all()
+            portfolio = session.query(Portfolio).options(
+                joinedload(Portfolio.items)
+            ).filter(Portfolio.id == uuid.UUID(portfolio_id)).first()
 
             if not portfolio:
                 raise ValueError("Portfolio not found")
 
-            tickers = [position.ticker for position in portfolio]
+            tickers = [item.ticker for item in portfolio.items]
 
     allocations = run(
         tickers=tickers,

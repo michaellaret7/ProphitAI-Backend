@@ -25,16 +25,16 @@ def get_all_user_data(email: str, session=None) -> Optional[Dict[str, Any]]:
     
     query = session.query(User).options(
         joinedload(User.company),
-        selectinload(User.portfolio_items)
+        selectinload(User.portfolios)
     )
-    
+
     query = query.filter(User.email == email)
-    
+
     user = query.first()
-    
+
     if not user:
         return None
-    
+
     # Format user data
     user_data = {
         'id': str(user.id),
@@ -57,20 +57,16 @@ def get_all_user_data(email: str, session=None) -> Optional[Dict[str, Any]]:
             'seats': company.seats,
             'user_role': user.role
         })
-    
-    # Add portfolio information - deduplicate by portfolio_id
-    seen_portfolio_ids = set()
-    for portfolio in user.portfolio_items:
-        portfolio_id = str(portfolio.portfolio_id)
-        if portfolio_id not in seen_portfolio_ids:
-            seen_portfolio_ids.add(portfolio_id)
-            user_data['portfolios'].append({
-                'name': portfolio.name,
-                'portfolio_id': portfolio_id,
-                'is_current': portfolio.is_current,
-                'is_discretionary': portfolio.is_discretionary
-            })
-    
+
+    # Add portfolio information (one row per portfolio in new schema)
+    for portfolio in user.portfolios:
+        user_data['portfolios'].append({
+            'name': portfolio.name,
+            'portfolio_id': str(portfolio.id),
+            'is_current': portfolio.is_current,
+            'is_discretionary': portfolio.is_discretionary
+        })
+
     return user_data
 
 @with_session('user')
@@ -89,7 +85,7 @@ def get_all_user_data_by_id(user_id: str, session=None) -> Optional[Dict[str, An
 
     query = session.query(User).options(
         joinedload(User.company),
-        selectinload(User.portfolio_items)
+        selectinload(User.portfolios)
     )
     query = query.filter(User.id == user_id)
     user = query.first()
@@ -115,17 +111,13 @@ def get_all_user_data_by_id(user_id: str, session=None) -> Optional[Dict[str, An
             'seats': company.seats,
             'user_role': user.role
         })
-    seen_portfolio_ids = set()
-    for portfolio in user.portfolio_items:
-        portfolio_id = str(portfolio.portfolio_id)
-        if portfolio_id not in seen_portfolio_ids:
-            seen_portfolio_ids.add(portfolio_id)
-            user_data['portfolios'].append({
-                'name': portfolio.name,
-                'portfolio_id': portfolio_id,
-                'is_current': portfolio.is_current,
-                'is_discretionary': portfolio.is_discretionary
-            })
+    for portfolio in user.portfolios:
+        user_data['portfolios'].append({
+            'name': portfolio.name,
+            'portfolio_id': str(portfolio.id),
+            'is_current': portfolio.is_current,
+            'is_discretionary': portfolio.is_discretionary
+        })
     return user_data
 
 
@@ -139,7 +131,7 @@ def get_all_user_data_by_clerk_id(clerk_id: str, session=None) -> Optional[Dict[
 
     query = session.query(User).options(
         joinedload(User.company),
-        selectinload(User.portfolio_items)
+        selectinload(User.portfolios)
     )
     query = query.filter(User.clerk_id == clerk_id)
     user = query.first()
@@ -165,17 +157,13 @@ def get_all_user_data_by_clerk_id(clerk_id: str, session=None) -> Optional[Dict[
             'seats': company.seats,
             'user_role': user.role
         })
-    seen_portfolio_ids = set()
-    for portfolio in user.portfolio_items:
-        portfolio_id = str(portfolio.portfolio_id)
-        if portfolio_id not in seen_portfolio_ids:
-            seen_portfolio_ids.add(portfolio_id)
-            user_data['portfolios'].append({
-                'name': portfolio.name,
-                'portfolio_id': portfolio_id,
-                'is_current': portfolio.is_current,
-                'is_discretionary': portfolio.is_discretionary
-            })
+    for portfolio in user.portfolios:
+        user_data['portfolios'].append({
+            'name': portfolio.name,
+            'portfolio_id': str(portfolio.id),
+            'is_current': portfolio.is_current,
+            'is_discretionary': portfolio.is_discretionary
+        })
     return user_data
 
 @with_session('user')
