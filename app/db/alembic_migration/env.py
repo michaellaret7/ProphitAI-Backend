@@ -42,7 +42,7 @@ from app.db.core.models.market_data_models import (
     PressRelease, StockNews, PriceTargetNews, StockGradeNews, StockGradesIndividual,
     StockGradesSummary, Rating, AnalystRecommendation, PriceTargetSummary
 )
-from app.db.core.models.user_data_models import User, Company, Portfolio, Watchlist, WatchlistItem
+from app.db.core.models.user_data_models import User, Company, Portfolio, PortfolioItem, Watchlist, WatchlistItem
 from app.db.core.models.prophit_alts_models import (
     Fund, FundTrade, FundInitialPosition, FundFinalPosition
 )

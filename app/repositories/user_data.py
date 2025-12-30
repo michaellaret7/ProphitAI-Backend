@@ -25,7 +25,7 @@ def get_all_user_data(email: str, session=None) -> Optional[Dict[str, Any]]:
     
     query = session.query(User).options(
         joinedload(User.company),
-        selectinload(User.portfolios)
+        selectinload(User.portfolio_items)
     )
     
     query = query.filter(User.email == email)
@@ -60,7 +60,7 @@ def get_all_user_data(email: str, session=None) -> Optional[Dict[str, Any]]:
     
     # Add portfolio information - deduplicate by portfolio_id
     seen_portfolio_ids = set()
-    for portfolio in user.portfolios:
+    for portfolio in user.portfolio_items:
         portfolio_id = str(portfolio.portfolio_id)
         if portfolio_id not in seen_portfolio_ids:
             seen_portfolio_ids.add(portfolio_id)
@@ -89,7 +89,7 @@ def get_all_user_data_by_id(user_id: str, session=None) -> Optional[Dict[str, An
 
     query = session.query(User).options(
         joinedload(User.company),
-        selectinload(User.portfolios)
+        selectinload(User.portfolio_items)
     )
     query = query.filter(User.id == user_id)
     user = query.first()
@@ -116,7 +116,7 @@ def get_all_user_data_by_id(user_id: str, session=None) -> Optional[Dict[str, An
             'user_role': user.role
         })
     seen_portfolio_ids = set()
-    for portfolio in user.portfolios:
+    for portfolio in user.portfolio_items:
         portfolio_id = str(portfolio.portfolio_id)
         if portfolio_id not in seen_portfolio_ids:
             seen_portfolio_ids.add(portfolio_id)
@@ -139,7 +139,7 @@ def get_all_user_data_by_clerk_id(clerk_id: str, session=None) -> Optional[Dict[
 
     query = session.query(User).options(
         joinedload(User.company),
-        selectinload(User.portfolios)
+        selectinload(User.portfolio_items)
     )
     query = query.filter(User.clerk_id == clerk_id)
     user = query.first()
@@ -166,7 +166,7 @@ def get_all_user_data_by_clerk_id(clerk_id: str, session=None) -> Optional[Dict[
             'user_role': user.role
         })
     seen_portfolio_ids = set()
-    for portfolio in user.portfolios:
+    for portfolio in user.portfolio_items:
         portfolio_id = str(portfolio.portfolio_id)
         if portfolio_id not in seen_portfolio_ids:
             seen_portfolio_ids.add(portfolio_id)
@@ -357,7 +357,7 @@ def get_user_current_portfolio(email: str, session=None):
     
     user_id = user.id
 
-    portfolio = session.query(Portfolio).filter(Portfolio.user_id == user_id, Portfolio.is_current == True).all()
+    portfolio = session.query(PortfolioItem).filter(PortfolioItem.user_id == user_id, PortfolioItem.is_current == True).all()
     portfolio = [serialize_sqlalchemy_obj(p) for p in portfolio]
     
     return portfolio

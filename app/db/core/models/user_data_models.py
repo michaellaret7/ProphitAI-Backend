@@ -46,35 +46,33 @@ class Company(UserBase):
 
 class Portfolio(UserBase):
     __tablename__ = 'portfolios'
-    
-    id = Column(Integer, primary_key=True, autoincrement=True)
-    portfolio_id = Column(UUID(as_uuid=True), nullable=False, index=True)
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    user_id = Column(UUID(as_uuid=True), ForeignKey('users.id', ondelete='CASCADE'), nullable=False, index=True)
     name = Column(String, nullable=False, index=True)
-    ticker = Column(String, nullable=False)
-    
-    # Additional fields
-    sector = Column(String, index=True)
-    industry = Column(String, index=True)
-    sub_industry = Column(String)
-    allocation = Column(Float)
-    is_current = Column(Boolean, default=True, index=True)
-    is_discretionary = Column(Boolean, default=False, index=True)
-    
-    # New fields for recommendations
-    supporting_metrics = Column(JSONB, nullable=True)
-    reason_for_rec = Column(Text, nullable=True)
-    
-    # Additional tracking fields that might be useful
     created_date = Column(DateTime, default=get_current_utc_time)
     updated_date = Column(DateTime, default=get_current_utc_time, onupdate=get_current_utc_time)
-    
-    # If portfolios belong to a company or user, you might want to add:
-    company_id = Column(UUID(as_uuid=True), ForeignKey('companies.id', ondelete='CASCADE'), nullable=True, index=True)
-    user_id = Column(UUID(as_uuid=True), ForeignKey('users.id', ondelete='CASCADE'), nullable=True, index=True)
-    
+    is_current = Column(Boolean, default=False, index=True)
+    is_discretionary = Column(Boolean, default=False, index=True)
+
     # Relationships
-    company = relationship('Company', backref='portfolios')
     user = relationship('User', backref='portfolios')
+    items = relationship('PortfolioItem', back_populates='portfolio', cascade='all, delete-orphan')
+
+class PortfolioItem(UserBase):
+    __tablename__ = 'portfolio_items'
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    portfolio_id = Column(UUID(as_uuid=True), ForeignKey('portfolios.id', ondelete='CASCADE'), nullable=False, index=True)
+    ticker = Column(String, nullable=False)
+    allocation = Column(Float)
+    supporting_metrics = Column(JSONB, nullable=True)
+    reason_for_rec = Column(Text, nullable=True)
+    created_date = Column(DateTime, default=get_current_utc_time)
+    updated_date = Column(DateTime, default=get_current_utc_time, onupdate=get_current_utc_time)
+
+    # Relationships
+    portfolio = relationship('Portfolio', back_populates='items')
 
 class Watchlist(UserBase):
     __tablename__ = 'watchlists'
