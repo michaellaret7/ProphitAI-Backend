@@ -176,6 +176,33 @@ from app.utils.time_utils import get_current_utc_time, get_utc_date_str, get_utc
 - **Pydantic**: https://docs.pydantic.dev/
 - **FastAPI**: https://fastapi.tiangolo.com/
 
+## Notion MCP Integration
+
+The project uses Notion as the primary task management system via MCP (Model Context Protocol).
+
+### Main ToDo Database
+- **Name**: 🌏 Main ToDo
+- **URL**: https://www.notion.so/61b43a77bfb54b21867a2d9850d5eb1a
+- **Data Source ID**: `ab3406fc-f65a-44a3-83d0-d6e1d4ea59ff`
+
+### Database Schema
+| Property | Type | Options |
+|----------|------|---------|
+| Task Name | title | - |
+| Status | status | Not Started, In Progress, Done |
+| Priority | select | Low, Medium, High, Urgent |
+| Category | select | Dad Assigned Items, Refactoring, Agent Framework, Database Ops, General, Agents to Build |
+| Task Type | multi_select | Research, New Tool, API Endpoint, Refactor, Review, Bug, New Feature, Fix |
+| Effort Level | select | Low, Medium, High |
+| Assignee | person | - |
+| Notes | text | - |
+
+### Usage
+- Use `mcp__notion__notion-search` to find tasks
+- Use `mcp__notion__notion-fetch` with the database URL to get schema details
+- Use `mcp__notion__notion-create-pages` with `data_source_id` to create new tasks
+- Use `mcp__notion__notion-update-page` to update task status/properties
+
 ## Important Files
 
 - `main.py`: FastAPI application entrypoint

@@ -27,7 +27,9 @@
       "Bash(cat:*)",
       "Bash(.venv/bin/python:*)",
       "Bash(sed -i:*)",
-      "WebFetch(domain:ai.google.dev)"
+      "WebFetch(domain:ai.google.dev)",
+      "mcp__notion__notion-search",
+      "mcp__notion__notion-fetch"
     ],
     "deny": [],
     "ask": []
