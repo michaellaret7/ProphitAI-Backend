@@ -32,6 +32,7 @@ async def create_portfolio_controller(
     user_id: str,
     portfolio_name: str,
     positions: List[Dict[str, Any]],
+    portfolio_value: Optional[float] = None,
 ) -> Dict[str, Any]:
     """Controller to handle portfolio creation with cache invalidation."""
     if not user_id:
@@ -41,7 +42,8 @@ async def create_portfolio_controller(
     data = service.create_portfolio(
         user_id=user_id,
         portfolio_name=portfolio_name,
-        positions=positions
+        positions=positions,
+        portfolio_value=portfolio_value,
     )
 
     # Invalidate user portfolio list cache
@@ -64,8 +66,9 @@ async def update_portfolio_controller(
     user_id: str,
     portfolio_id: str,
     name: Optional[str] = None,
+    nav: Optional[float] = None,
     is_current: Optional[bool] = None,
-    positions: Optional[Dict[str, float]] = None,
+    positions: Optional[Dict] = None,
 ) -> Dict[str, Any]:
     """Controller to handle portfolio updates with cache invalidation."""
     if not user_id:
@@ -81,6 +84,7 @@ async def update_portfolio_controller(
         user_id=user_id,
         portfolio_id=portfolio_id,
         name=name,
+        nav=nav,
         is_current=is_current,
         positions=positions,
     )

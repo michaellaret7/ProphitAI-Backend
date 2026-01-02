@@ -12,15 +12,17 @@ from app.repositories.user_data import get_all_user_data_by_id
 
 class Position:
     """
-    Simple position object for portfolio creation.
+    Position object for portfolio creation.
 
     Attributes:
         ticker: Stock ticker symbol
         allocation: Position weight as decimal (0.25 = 25%), range 0-1
+        num_shares: Optional number of shares held
     """
-    def __init__(self, ticker: str, allocation: float):
+    def __init__(self, ticker: str, allocation: float, num_shares: Optional[float] = None):
         self.ticker = ticker
         self.allocation = allocation  # Decimal format (0.25 = 25%)
+        self.num_shares = num_shares
 
 
 class PortfolioService:
@@ -37,7 +39,8 @@ class PortfolioService:
         *,
         user_id: str,
         portfolio_name: str,
-        positions: List[Dict[str, Any]]
+        positions: List[Dict[str, Any]],
+        portfolio_value: Optional[float] = None
     ) -> Dict[str, Any]:
         """
         Create a new portfolio for a user.
@@ -45,8 +48,10 @@ class PortfolioService:
         Args:
             user_id: User's internal database ID
             portfolio_name: Name of the portfolio
-            positions: List of dicts with 'ticker' and 'allocation' keys.
+            positions: List of dicts with 'ticker', 'allocation', and optionally 'num_shares'.
                       Allocation must be decimal format (0.25 = 25%)
+            portfolio_value: Optional total portfolio value (NAV). If provided,
+                            num_shares will be calculated for positions that don't have it.
 
         Returns:
             Dict containing user_data and portfolios for response building
@@ -66,15 +71,21 @@ class PortfolioService:
         for p in positions:
             ticker = p.get("ticker")
             allocation = p.get("allocation")
+            num_shares = p.get("num_shares")
             if ticker is None or allocation is None:
                 raise ValueError("Each position requires ticker and allocation")
-            position_objs.append(Position(ticker=ticker, allocation=allocation))
+            position_objs.append(Position(
+                ticker=ticker,
+                allocation=allocation,
+                num_shares=num_shares
+            ))
 
         # Create portfolio in database
         add_portfolio(
             portfolio=position_objs,
             user_id=uuid.UUID(user_id),
             portfolio_name=portfolio_name,
+            portfolio_value=portfolio_value,
         )
 
         # Return updated portfolio list data
@@ -86,8 +97,9 @@ class PortfolioService:
         user_id: str,
         portfolio_id: str,
         name: Optional[str] = None,
+        nav: Optional[float] = None,
         is_current: Optional[bool] = None,
-        positions: Optional[Dict[str, float]] = None
+        positions: Optional[Dict] = None
     ) -> Dict[str, Any]:
         """
         Update an existing portfolio.
@@ -96,9 +108,12 @@ class PortfolioService:
             user_id: User's internal database ID
             portfolio_id: UUID of the portfolio to update
             name: Optional new name for the portfolio
+            nav: Optional new NAV (portfolio value). If provided with positions,
+                 num_shares will be recalculated.
             is_current: Optional flag to set as current portfolio
-            positions: Optional dict of {ticker: allocation} to replace all positions.
-                      Allocation must be decimal format (0.25 = 25%)
+            positions: Optional dict to replace all positions. Supports two formats:
+                      - Simple: {ticker: allocation} - allocation only
+                      - Extended: {ticker: {"allocation": float, "num_shares": float}}
 
         Returns:
             Dict containing user_data and portfolios for response building
@@ -116,6 +131,7 @@ class PortfolioService:
             user_id=uuid.UUID(user_id),
             portfolio_id=uuid.UUID(portfolio_id),
             name=name,
+            nav=nav,
             is_current=is_current,
             positions=positions,
         )
@@ -233,6 +249,7 @@ class PortfolioService:
         portfolios_formatted = [{
             "name": p.get("name"),
             "portfolioId": p.get("portfolio_id"),
+            "nav": p.get("nav"),
             "isCurrent": p.get("is_current"),
             "isDiscretionary": p.get("is_discretionary")
         } for p in portfolios]

@@ -63,6 +63,7 @@ def get_all_user_data(email: str, session=None) -> Optional[Dict[str, Any]]:
         user_data['portfolios'].append({
             'name': portfolio.name,
             'portfolio_id': str(portfolio.id),
+            'nav': portfolio.nav,
             'is_current': portfolio.is_current,
             'is_discretionary': portfolio.is_discretionary
         })
@@ -115,6 +116,7 @@ def get_all_user_data_by_id(user_id: str, session=None) -> Optional[Dict[str, An
         user_data['portfolios'].append({
             'name': portfolio.name,
             'portfolio_id': str(portfolio.id),
+            'nav': portfolio.nav,
             'is_current': portfolio.is_current,
             'is_discretionary': portfolio.is_discretionary
         })
@@ -161,6 +163,7 @@ def get_all_user_data_by_clerk_id(clerk_id: str, session=None) -> Optional[Dict[
         user_data['portfolios'].append({
             'name': portfolio.name,
             'portfolio_id': str(portfolio.id),
+            'nav': portfolio.nav,
             'is_current': portfolio.is_current,
             'is_discretionary': portfolio.is_discretionary
         })
@@ -335,20 +338,43 @@ def add_company(company_name:str, seats:int, session=None):
 
 @with_session('user')
 def get_user_current_portfolio(email: str, session=None):
+    """
+    Get the current portfolio for a user by email.
+
+    Args:
+        email: User's email address
+
+    Returns:
+        List of portfolio items for the current portfolio, or None if no current portfolio
+    """
     if not email:
         raise ValueError("Email must be provided")
-    
+
     user = session.query(User).filter(User.email == email).first()
-    
+
     if not user:
         return None
-    
-    user_id = user.id
 
-    portfolio = session.query(PortfolioItem).filter(PortfolioItem.user_id == user_id, PortfolioItem.is_current == True).all()
-    portfolio = [serialize_sqlalchemy_obj(p) for p in portfolio]
-    
-    return portfolio
+    # Query through Portfolio table (is_current is on Portfolio, not PortfolioItem)
+    current_portfolio = session.query(Portfolio).options(
+        selectinload(Portfolio.items)
+    ).filter(
+        Portfolio.user_id == user.id,
+        Portfolio.is_current == True
+    ).first()
+
+    if not current_portfolio:
+        return None
+
+    # Return portfolio items with nav context
+    return [{
+        'portfolio_id': str(current_portfolio.id),
+        'portfolio_name': current_portfolio.name,
+        'nav': current_portfolio.nav,
+        'ticker': item.ticker,
+        'allocation': item.allocation,
+        'num_shares': item.num_shares,
+    } for item in current_portfolio.items]
 
 @with_transaction('user')
 def delete_user_by_clerk_id(clerk_id: str, session=None) -> bool:

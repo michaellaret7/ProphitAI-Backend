@@ -1,16 +1,19 @@
-from app.db.core.db_config import UserSession, MarketSession, ProphitAltsSession
-from app.db.core.models.user_data_models import *
-from app.utils.serialize_output import serialize_sqlalchemy_obj
-from typing import Optional
+import logging
 import uuid
 from datetime import datetime, timedelta
-from app.utils.time_utils import get_current_utc_time
-from app.db.core.models.market_data_models import *
+from typing import List, Optional, Dict
+
 from sqlalchemy import func
 from sqlalchemy.orm import aliased, joinedload
+
+from app.db.core.db_config import UserSession, MarketSession, ProphitAltsSession
+from app.db.core.models.user_data_models import *
+from app.db.core.models.market_data_models import *
 from app.db.core.models.prophit_alts_models import *
+from app.utils.serialize_output import serialize_sqlalchemy_obj
+from app.utils.time_utils import get_current_utc_time
 from app.utils.decorators.database import with_session, with_transaction, with_sessions
-from typing import List
+from app.core.calculations.portfolio.utils import calc_num_shares
 
 
 def _flatten_portfolio_to_legacy_format(
@@ -53,8 +56,10 @@ def _flatten_portfolio_to_legacy_format(
             result.append({
                 'portfolio_id': str(portfolio.id),
                 'name': portfolio.name,
+                'nav': portfolio.nav,
                 'ticker': item.ticker,
                 'allocation': item.allocation,
+                'num_shares': item.num_shares,
                 'sector': ticker_data.sector if ticker_data else None,
                 'industry': ticker_data.industry if ticker_data else None,
                 'sub_industry': ticker_data.sub_industry if ticker_data else None,
@@ -118,14 +123,29 @@ def retrieve_portfolio(email: str = None, clerk_id: str = None, user_id: uuid.UU
     return _flatten_portfolio_to_legacy_format(portfolios, market_session)
 
 @with_sessions(user_session='user', market_session='market')
-def add_portfolio(portfolio, user_id: uuid.UUID, portfolio_name, user_session=None, market_session=None):
+def add_portfolio(
+    portfolio,
+    user_id: uuid.UUID,
+    portfolio_name: str,
+    portfolio_value: Optional[float] = None,
+    user_session=None,
+    market_session=None
+):
     """
     Add a new portfolio for a user.
 
     Args:
-        portfolio: List of Position objects with ticker and allocation
+        portfolio: List of Position objects with ticker, allocation, and optionally num_shares
         user_id: User's UUID
         portfolio_name: Name for the portfolio
+        portfolio_value: Optional total portfolio value (NAV). If provided and positions
+                        don't have num_shares, will calculate num_shares from allocations.
+
+    Note:
+        If portfolio_value is provided, num_shares will be calculated for each position
+        using: num_shares = allocation * portfolio_value / current_price
+
+        If positions already have num_shares set, those values will be used instead.
     """
     user = user_session.query(User).filter(User.id == user_id).first()
     if not user:
@@ -140,11 +160,23 @@ def add_portfolio(portfolio, user_id: uuid.UUID, portfolio_name, user_session=No
     portfolio_uuid = uuid.uuid4()
     now = get_current_utc_time()
 
+    # Calculate num_shares if portfolio_value is provided
+    num_shares_map: Dict[str, float] = {}
+    if portfolio_value is not None:
+        # Build weights dict from positions
+        weights = {pos.ticker: pos.allocation for pos in portfolio}
+        try:
+            num_shares_map = calc_num_shares(weights, portfolio_value)
+        except ValueError as e:
+            # If price fetch fails, log warning but continue without num_shares
+            logging.warning(f"Could not calculate num_shares: {e}")
+
     # Create one Portfolio record
     new_portfolio = Portfolio(
         id=portfolio_uuid,
         user_id=user.id,
         name=portfolio_name,
+        nav=portfolio_value,
         is_current=False,
         is_discretionary=False,
         created_date=now,
@@ -154,16 +186,23 @@ def add_portfolio(portfolio, user_id: uuid.UUID, portfolio_name, user_session=No
 
     # Create PortfolioItem records for each position
     for position in portfolio:
+        # Use num_shares from position if available, otherwise from calculated map
+        position_num_shares = getattr(position, 'num_shares', None)
+        if position_num_shares is None:
+            position_num_shares = num_shares_map.get(position.ticker)
+
         item = PortfolioItem(
             portfolio_id=portfolio_uuid,
             ticker=position.ticker,
             allocation=position.allocation,
+            num_shares=position_num_shares,
             created_date=now,
             updated_date=now,
         )
         user_session.add(item)
 
     user_session.commit()
+    return portfolio_uuid
 
 @with_session('user')
 def list_portfolios(email: str = None, clerk_id: str = None, user_id: uuid.UUID = None, session=None):
@@ -192,6 +231,7 @@ def list_portfolios(email: str = None, clerk_id: str = None, user_id: uuid.UUID 
     return [{
         'portfolio_id': str(p.id),
         'name': p.name,
+        'nav': p.nav,
         'is_current': p.is_current,
         'is_discretionary': p.is_discretionary,
         'created_date': p.created_date.isoformat() if p.created_date else None,
@@ -242,6 +282,7 @@ def update_portfolio(
     user_id: uuid.UUID = None,
     portfolio_id: uuid.UUID = None,
     name: Optional[str] = None,
+    nav: Optional[float] = None,
     is_current: Optional[bool] = None,
     positions: Optional[dict] = None,
     user_session=None,
@@ -255,11 +296,21 @@ def update_portfolio(
         user_id: User UUID
         portfolio_id: Portfolio UUID to update
         name: Optional new name for the portfolio
+        nav: Optional new NAV (portfolio value). If provided with positions,
+             will recalculate num_shares for each position.
         is_current: Optional flag to set as current portfolio
-        positions: Optional dict of {ticker: allocation} to replace all positions
+        positions: Optional dict to replace all positions. Supports two formats:
+                   - Simple: {ticker: allocation} - allocation only
+                   - Extended: {ticker: {"allocation": float, "num_shares": float}} - both fields
 
     Returns:
         True if update succeeded, False if portfolio not found
+
+    Note:
+        When positions are updated:
+        - If nav is provided and positions use simple format, num_shares will be calculated
+        - If positions use extended format with num_shares, those values are used directly
+        - If neither nav nor num_shares provided, num_shares will be None
     """
     if not portfolio_id:
         raise ValueError("portfolio_id must be provided")
@@ -287,6 +338,8 @@ def update_portfolio(
     # Update metadata if provided
     if name is not None:
         portfolio.name = name
+    if nav is not None:
+        portfolio.nav = nav
     if is_current is not None:
         portfolio.is_current = is_current
     portfolio.updated_date = get_current_utc_time()
@@ -299,6 +352,40 @@ def update_portfolio(
             if not ticker_data:
                 raise ValueError(f"Ticker {ticker} not found")
 
+        # Normalize positions to extract allocation and num_shares
+        # Supports both {ticker: allocation} and {ticker: {allocation, num_shares}}
+        normalized_positions = {}
+        for ticker, value in positions.items():
+            if isinstance(value, dict):
+                # Extended format: {allocation: float, num_shares: float}
+                normalized_positions[ticker] = {
+                    'allocation': value.get('allocation'),
+                    'num_shares': value.get('num_shares'),
+                }
+            else:
+                # Simple format: just allocation
+                normalized_positions[ticker] = {
+                    'allocation': value,
+                    'num_shares': None,
+                }
+
+        # Calculate num_shares if nav is available and positions don't have them
+        effective_nav = nav if nav is not None else portfolio.nav
+        if effective_nav is not None:
+            # Build weights for positions missing num_shares
+            weights_needing_shares = {
+                ticker: data['allocation']
+                for ticker, data in normalized_positions.items()
+                if data['num_shares'] is None and data['allocation'] is not None
+            }
+            if weights_needing_shares:
+                try:
+                    calculated_shares = calc_num_shares(weights_needing_shares, effective_nav)
+                    for ticker, shares in calculated_shares.items():
+                        normalized_positions[ticker]['num_shares'] = shares
+                except ValueError as e:
+                    logging.warning(f"Could not calculate num_shares during update: {e}")
+
         # Delete all existing PortfolioItems
         user_session.query(PortfolioItem).filter(
             PortfolioItem.portfolio_id == portfolio_id
@@ -306,11 +393,12 @@ def update_portfolio(
 
         # Add new PortfolioItems
         now = get_current_utc_time()
-        for ticker, allocation in positions.items():
+        for ticker, data in normalized_positions.items():
             item = PortfolioItem(
                 portfolio_id=portfolio_id,
                 ticker=ticker,
-                allocation=allocation,
+                allocation=data['allocation'],
+                num_shares=data['num_shares'],
                 created_date=now,
                 updated_date=now,
             )

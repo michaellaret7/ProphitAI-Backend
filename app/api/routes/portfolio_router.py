@@ -57,19 +57,29 @@ async def get_user_id_from_clerk(clerk_id: str = Depends(get_clerk_user_id)) -> 
 class PositionModel(BaseModel):
     ticker: str
     allocation: float = Field(..., ge=0.0, le=1.0, description="Allocation as decimal (0.25 = 25%)")
+    num_shares: Optional[float] = Field(default=None, description="Number of shares (calculated from nav if not provided)")
 
 
 class CreatePortfolioRequest(BaseModel):
     portfolioName: str
     positions: List[PositionModel]
+    initialPortfolioValue: Optional[float] = Field(
+        default=None,
+        description="Total portfolio value (NAV). If provided, num_shares will be calculated for each position."
+    )
 
 
 class UpdatePortfolioRequest(BaseModel):
     name: Optional[str] = None
-    isCurrent: Optional[bool] = None
-    positions: Optional[Dict[str, float]] = Field(
+    nav: Optional[float] = Field(
         default=None,
-        description="Positions as {ticker: allocation} where allocation is decimal (0.25 = 25%). Replaces all positions."
+        description="New portfolio value (NAV). If provided with positions, num_shares will be recalculated."
+    )
+    isCurrent: Optional[bool] = None
+    positions: Optional[Dict] = Field(
+        default=None,
+        description="Positions to replace all existing. Supports two formats: "
+                    "{ticker: allocation} or {ticker: {allocation: float, num_shares: float}}"
     )
 
     @field_validator('positions')
@@ -77,7 +87,23 @@ class UpdatePortfolioRequest(BaseModel):
     def validate_allocations(cls, v):
         if v is None:
             return v
-        return validate_decimal_weights(v)
+        # Handle both simple {ticker: allocation} and extended {ticker: {allocation, num_shares}} formats
+        for ticker, value in v.items():
+            if isinstance(value, dict):
+                allocation = value.get('allocation')
+                if allocation is not None and (allocation < 0 or allocation > 1):
+                    raise ValueError(
+                        f"Allocation for {ticker} must be between 0 and 1 (decimal format). "
+                        f"Got {allocation}. Use 0.25 for 25%, not 25.0"
+                    )
+            else:
+                # Simple format: value is allocation directly
+                if value < 0 or value > 1:
+                    raise ValueError(
+                        f"Allocation for {ticker} must be between 0 and 1 (decimal format). "
+                        f"Got {value}. Use 0.25 for 25%, not 25.0"
+                    )
+        return v
 
 
 class PortfolioPerformanceComparisonRequest(BaseModel):
@@ -132,11 +158,27 @@ async def create_portfolio(
     body: CreatePortfolioRequest,
     user_id: str = Depends(get_user_id_from_clerk),
 ):
-    """Create a new portfolio for the authenticated user."""
+    """
+    Create a new portfolio for the authenticated user.
+
+    If initialPortfolioValue is provided, num_shares will be calculated for each position
+    based on current market prices. Positions can optionally include num_shares directly.
+
+    Example request body:
+    {
+        "portfolioName": "My Portfolio",
+        "positions": [
+            {"ticker": "AAPL", "allocation": 0.25},
+            {"ticker": "MSFT", "allocation": 0.25, "num_shares": 10.5}
+        ],
+        "initialPortfolioValue": 100000
+    }
+    """
     return await create_portfolio_controller(
         user_id=user_id,
         portfolio_name=body.portfolioName,
         positions=[p.model_dump() for p in body.positions],
+        portfolio_value=body.initialPortfolioValue,
     )
 
 @router.patch("/portfolios/{portfolioId}")
@@ -148,20 +190,32 @@ async def patch_portfolio(
     """
     Update an existing portfolio.
 
-    Can update name, current status, and/or replace all positions.
+    Can update name, nav, current status, and/or replace all positions.
     If positions dict is provided, all existing positions are replaced.
+    If nav is provided with positions, num_shares will be recalculated.
 
-    Example request body:
+    Example request body (simple format):
     {
         "name": "New Portfolio Name",
+        "nav": 150000,
         "isCurrent": true,
         "positions": {"AAPL": 0.25, "MSFT": 0.25, "GOOGL": 0.50}
+    }
+
+    Example request body (extended format with num_shares):
+    {
+        "nav": 150000,
+        "positions": {
+            "AAPL": {"allocation": 0.25, "num_shares": 50.5},
+            "MSFT": {"allocation": 0.25, "num_shares": 30.2}
+        }
     }
     """
     return await update_portfolio_controller(
         user_id=user_id,
         portfolio_id=portfolioId,
         name=body.name,
+        nav=body.nav,
         is_current=body.isCurrent,
         positions=body.positions,
     )

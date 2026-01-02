@@ -207,8 +207,14 @@ def calc_num_shares(weights: Dict[str, float], portfolio_value: float) -> Dict[s
         Dict mapping ticker symbols to number of shares (float for fractional shares)
 
     Raises:
-        ValueError: If price data is unavailable or invalid for any ticker
+        ValueError: If portfolio_value is invalid or price data is unavailable
     """
+    if portfolio_value is None or portfolio_value <= 0:
+        raise ValueError(f"portfolio_value must be positive, got: {portfolio_value}")
+
+    if not weights:
+        return {}
+
     fmp_data = FMP_API_DATA()
     live_prices = fmp_data.get_batch_quote(list(weights.keys()))
 

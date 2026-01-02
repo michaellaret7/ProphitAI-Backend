@@ -75,18 +75,20 @@ async def add_broker_portfolio_controller(
     if total_market_value <= 0:
         raise ValueError("Total portfolio market value must be greater than 0")
 
-    # Transform Alpaca positions to Position objects with percentage allocations
+    # Transform Alpaca positions to Position objects with decimal allocations
     position_objects = []
     for pos in alpaca_positions:
         ticker = pos['symbol']
         market_value = pos['market_value']
+        qty = pos.get('qty')  # Number of shares from Alpaca
 
-        # Calculate allocation as percentage (0-100 range)
-        allocation_percentage = (market_value / total_market_value) * 100
+        # Calculate allocation as decimal (0-1 range, e.g., 0.25 = 25%)
+        allocation = market_value / total_market_value
 
         position_objects.append(Position(
             ticker=ticker,
-            allocation=allocation_percentage
+            allocation=allocation,
+            num_shares=float(qty) if qty is not None else None
         ))
 
     # Save to database using existing portfolio repository
@@ -94,6 +96,7 @@ async def add_broker_portfolio_controller(
         portfolio=position_objects,
         user_id=uuid.UUID(user_id),
         portfolio_name=portfolio_name,
+        portfolio_value=total_market_value,
     )
 
     return ok_envelope(
