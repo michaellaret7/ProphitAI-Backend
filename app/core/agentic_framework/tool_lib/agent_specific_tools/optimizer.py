@@ -44,7 +44,7 @@ def get_user_portfolio(portfolio_id: str, user_session=None, market_session=None
                 "sector": ticker_info.sector if ticker_info else None,
                 "industry": ticker_info.industry if ticker_info else None,
                 "sub_industry": ticker_info.sub_industry if ticker_info else None,
-                "allocation": item.allocation / 100,
+                "allocation": item.allocation,  # Already decimal (0.25 = 25%)
                 "portfolio": portfolio.name,
                 "supporting_metrics": item.supporting_metrics,
                 "reason_for_rec": item.reason_for_rec,

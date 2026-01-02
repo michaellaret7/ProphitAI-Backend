@@ -6,7 +6,7 @@ from sqlalchemy import Column, Integer, String, Float, DateTime, ForeignKey, Num
 from sqlalchemy.orm import relationship
 from sqlalchemy.dialects.postgresql import UUID
 from app.db.core.db_config import ProphitAltsBase
-from datetime import datetime
+from app.utils.time_utils import get_current_utc_time
 import uuid
 import enum
 
@@ -56,7 +56,7 @@ class FundTrade(ProphitAltsBase):
     ticker_id = Column(UUID(as_uuid=True), nullable=False, index=True)
     action = Column(String, nullable=False)  # BUY, SELL, etc.
     dollar_amount = Column(Numeric(15, 2), nullable=False)
-    datetime = Column(DateTime, default=datetime.utcnow, nullable=False)
+    trade_datetime = Column(DateTime, default=get_current_utc_time, nullable=False)
     industry = Column(String, nullable=False)
     reasoning = Column(String, nullable=True)
     
@@ -75,11 +75,11 @@ class FundInitialPosition(ProphitAltsBase):
     ticker_name = Column(String, nullable=False)
     position = Column(Enum(PositionType), nullable=False)
     industry = Column(String, nullable=False)
-    conviction = Column(Float, nullable=False)
+    conviction = Column(Float, nullable=False)  # Decimal format: 0.25 = 25%, range 0-1
     reasoning = Column(String, nullable=False)
-    date_created = Column(DateTime, default=datetime.utcnow, nullable=False)
-    date_updated = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
-    
+    date_created = Column(DateTime, default=get_current_utc_time, nullable=False)
+    date_updated = Column(DateTime, default=get_current_utc_time, onupdate=get_current_utc_time, nullable=False)
+
     # Relationships
     fund = relationship('Fund', back_populates='initial_positions')
     # Note: ticker relationship would be cross-database, handled at application level
@@ -98,11 +98,11 @@ class FundFinalPosition(ProphitAltsBase):
     ticker_name = Column(String, nullable=False)
     position = Column(Enum(PositionType), nullable=False)
     industry = Column(String, nullable=False)
-    portfolio_allocation = Column(Float, nullable=False)  # Percentage of total portfolio
+    portfolio_allocation = Column(Float, nullable=False)  # Decimal format: 0.25 = 25%, range 0-1
     reasoning = Column(String, nullable=False)
-    date_created = Column(DateTime, default=datetime.utcnow, nullable=False)
-    date_updated = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
-    
+    date_created = Column(DateTime, default=get_current_utc_time, nullable=False)
+    date_updated = Column(DateTime, default=get_current_utc_time, onupdate=get_current_utc_time, nullable=False)
+
     # Relationships
     fund = relationship('Fund', back_populates='final_positions')
 

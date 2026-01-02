@@ -74,13 +74,13 @@ class PortfolioReturnsService:
 
         self.positions = positions
 
-        # Build weights dictionary (convert allocation percentage to decimal)
+        # Build weights dictionary (allocation already in decimal format)
         weights = {}
         for pos in positions:
             ticker = pos.get('ticker')
             allocation = pos.get('allocation')
             if ticker and allocation is not None:
-                weights[ticker] = float(allocation) / 100.0
+                weights[ticker] = float(allocation)  # Already decimal (0.25 = 25%)
 
         if not weights:
             raise ValueError("Portfolio has no valid positions")

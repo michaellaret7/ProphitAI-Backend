@@ -69,11 +69,11 @@ class PortfolioConcentrationService:
 
         # Build portfolio_dict for concentration calculator
         # Note: PortfolioConcentration expects allocations as decimals (0.05 = 5%)
-        # Database stores as percentages (5), so divide by 100
+        # Database stores allocations in decimal format (0.05 = 5%)
         portfolio_dict = {}
         for position in positions:
             ticker = position.get('ticker', '')
-            allocation = float(position.get('allocation', 0.0)) / 100.0  # Convert percentage to decimal
+            allocation = float(position.get('allocation', 0.0))  # Already decimal format
             portfolio_dict[ticker] = {"allocation": allocation}
 
         # Calculate concentration at requested level

@@ -50,6 +50,7 @@ class Portfolio(UserBase):
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     user_id = Column(UUID(as_uuid=True), ForeignKey('users.id', ondelete='CASCADE'), nullable=False, index=True)
     name = Column(String, nullable=False, index=True)
+    nav = Column(Float, nullable=True)  # Net Asset Value - total portfolio value
     created_date = Column(DateTime, default=get_current_utc_time)
     updated_date = Column(DateTime, default=get_current_utc_time, onupdate=get_current_utc_time)
     is_current = Column(Boolean, default=False, index=True)
@@ -64,7 +65,8 @@ class PortfolioItem(UserBase):
 
     portfolio_id = Column(UUID(as_uuid=True), ForeignKey('portfolios.id', ondelete='CASCADE'), primary_key=True)
     ticker = Column(String, primary_key=True)
-    allocation = Column(Float)
+    allocation = Column(Float)  # Decimal format: 0.25 = 25%, range 0-1
+    num_shares = Column(Float, nullable=True)
     supporting_metrics = Column(JSONB, nullable=True)
     reason_for_rec = Column(Text, nullable=True)
     created_date = Column(DateTime, default=get_current_utc_time)

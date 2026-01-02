@@ -209,7 +209,7 @@ def add_initial_positions(positions: dict, industry: str, fund_name: str, prophi
             ticker_name=position['ticker'],
             position=PositionType.LONG,
             industry=industry,
-            conviction=position['allocation']/100,
+            conviction=position['allocation'],  # Already decimal format (0.25 = 25%)
             reasoning=position['reasoning'],
             date_created=get_current_utc_time(),
             date_updated=get_current_utc_time(),
@@ -224,7 +224,7 @@ def add_initial_positions(positions: dict, industry: str, fund_name: str, prophi
             ticker_name=position['ticker'],
             position=PositionType.SHORT,
             industry=industry,
-            conviction=position['allocation']/100,
+            conviction=position['allocation'],  # Already decimal format (0.25 = 25%)
             reasoning=position['reasoning'],
             date_created=get_current_utc_time(),
             date_updated=get_current_utc_time(),

@@ -18,9 +18,12 @@ from app.db.core.models.user_data_models import User
 
 @dataclass
 class Position:
-    """Mock Position object matching expected input format."""
+    """Mock Position object matching expected input format.
+
+    Allocation is in decimal format: 0.25 = 25%
+    """
     ticker: str
-    allocation: float
+    allocation: float  # Decimal format (0.25 = 25%)
 
 
 def get_test_user_id() -> uuid.UUID:
@@ -38,11 +41,12 @@ def test_add_portfolio(user_id: uuid.UUID, portfolio_name: str) -> None:
     print("TEST: add_portfolio")
     print(f"{'='*60}")
 
+    # Allocations in decimal format (0.30 = 30%)
     positions = [
-        Position(ticker="AAPL", allocation=30.0),
-        Position(ticker="MSFT", allocation=25.0),
-        Position(ticker="GOOGL", allocation=25.0),
-        Position(ticker="AMZN", allocation=20.0),
+        Position(ticker="AAPL", allocation=0.30),
+        Position(ticker="MSFT", allocation=0.25),
+        Position(ticker="GOOGL", allocation=0.25),
+        Position(ticker="AMZN", allocation=0.20),
     ]
 
     try:
@@ -133,12 +137,12 @@ def test_update_portfolio(user_id: uuid.UUID, portfolio_id: uuid.UUID) -> None:
         print(f"FAILED: {e}")
         raise
 
-    # Test 2: Update positions
+    # Test 2: Update positions (allocations in decimal format)
     try:
         new_positions = {
-            "AAPL": 40.0,
-            "MSFT": 35.0,
-            "NVDA": 25.0,
+            "AAPL": 0.40,
+            "MSFT": 0.35,
+            "NVDA": 0.25,
         }
         result = update_portfolio(
             user_id=user_id,

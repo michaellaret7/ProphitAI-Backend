@@ -110,7 +110,7 @@ class IndustryAgent(BaseAgent):
 
                 positions[position_side].append({
                     "ticker": ticker,
-                    "allocation": float(conviction)*100,  # repository expects percent, it will divide by 100
+                    "allocation": float(conviction),  # Decimal format (0.25 = 25%)
                     "reasoning": thesis,
                 })
 

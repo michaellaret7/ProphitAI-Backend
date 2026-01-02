@@ -6,8 +6,8 @@ from app.core.calculations.portfolio.allocator.utils import (
     Allocation,
     FinalOutput,
     validate_weights,
-    calc_num_shares,
 )
+from app.core.calculations.portfolio.utils import calc_num_shares
 
 __all__ = [
     "PortfolioAllocator",

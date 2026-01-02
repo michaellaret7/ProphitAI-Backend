@@ -6,6 +6,7 @@ import pandas as pd
 
 from app.core.calculations.core.data_service import DataService
 from app.core.calculations.returns.calculator import ReturnsCalculator, PortfolioReturnsCalculator
+from app.db.core.pull_fmp_data import FMP_API_DATA
 from app.utils.simulation_utils import get_end_date, filter_series_by_date
 
 
@@ -58,7 +59,8 @@ def prepare_portfolio_data(
             try:
                 div_data = ds.get_dividends(ticker, start, end)
                 dividend_data[ticker] = filter_series_by_date(div_data.series, _simulation_date)
-            except:
+            except (ValueError, KeyError, AttributeError):
+                # Reason: Dividend data may not exist for all tickers (e.g., bonds, ETFs)
                 dividend_data[ticker] = None
     
     # 5. Convert portfolio to weights (negative for shorts)
@@ -172,7 +174,8 @@ def get_benchmark_returns(
             div_data = ds.get_dividends(benchmark, start, end)
             bench_divs = div_data.series
             bench_divs = filter_series_by_date(bench_divs, _simulation_date)
-        except:
+        except (ValueError, KeyError, AttributeError):
+            # Reason: Some benchmarks may not have dividend data available
             bench_divs = None
         return ReturnsCalculator.total_returns(bench_prices, bench_divs)
     else:
@@ -190,3 +193,41 @@ def format_correlation_matrix(correlation_matrix: pd.DataFrame) -> dict:
                 key = f"{tickers[i]}|{tickers[j]}"
                 pairs[key] = round(val, 3)
     return pairs
+
+
+def calc_num_shares(weights: Dict[str, float], portfolio_value: float) -> Dict[str, float]:
+    """
+    Calculate the number of shares for each ticker based on weights and portfolio value.
+
+    Args:
+        weights: Dict mapping ticker symbols to weight fractions (must sum to ~1.0)
+        portfolio_value: Total portfolio value in dollars
+
+    Returns:
+        Dict mapping ticker symbols to number of shares (float for fractional shares)
+
+    Raises:
+        ValueError: If price data is unavailable or invalid for any ticker
+    """
+    fmp_data = FMP_API_DATA()
+    live_prices = fmp_data.get_batch_quote(list(weights.keys()))
+
+    if not live_prices:
+        raise ValueError("Failed to fetch live prices from FMP API")
+
+    prices = {}
+    for quote in live_prices:
+        symbol = quote.get("symbol")
+        price = quote.get("price")
+        if symbol and price is not None and price > 0:
+            prices[symbol] = price
+
+    missing = set(weights.keys()) - set(prices.keys())
+    if missing:
+        raise ValueError(f"Missing price data for tickers: {sorted(missing)}")
+
+    num_shares = {}
+    for ticker, weight in weights.items():
+        num_shares[ticker] = weight * portfolio_value / prices[ticker]
+
+    return num_shares

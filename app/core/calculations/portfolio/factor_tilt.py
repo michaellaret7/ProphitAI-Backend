@@ -200,11 +200,8 @@ def portfolio_factor_tilts(
     ex = frame[exposure_col].astype(float)
     w = w.loc[avail].astype(float)
 
-    # Reason: Convert percentage weights to decimals, preserving leverage
-    # If any weight > 1.5, assume percentages and divide by 100
-    # This preserves gross/net exposure for levered portfolios (e.g., 130/30)
-    if w.abs().max() > 1.5:
-        w = w / 100.0
+    # Weights are already in decimal format (0.25 = 25%)
+    # API layer validates inputs are between -1 and 1
 
     # Net tilt (signed weights)
     net_tilt = float((w * ex.reindex(w.index)).sum()) if not w.empty else np.nan

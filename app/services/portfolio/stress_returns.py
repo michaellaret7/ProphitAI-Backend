@@ -14,7 +14,7 @@ class StressReturnsService:
     max drawdown, Sharpe ratio) over a specific time period at daily, hourly, or 15-minute intervals.
 
     Args:
-        weights: Dict mapping ticker to allocation percentage (e.g., {'AAPL': 50.0, 'MSFT': 50.0})
+        weights: Dict mapping ticker to allocation in decimal format (e.g., {'AAPL': 0.5, 'MSFT': 0.5} for 50% each)
         start_date: Start date for analysis
         end_date: End date for analysis
         frequency: Time interval - 'daily', 'hourly', or '15mins'
@@ -22,7 +22,7 @@ class StressReturnsService:
     Example:
         >>> from datetime import datetime
         >>> service = StressReturnsService(
-        ...     weights={'AAPL': 25.0, 'MSFT': 25.0, 'GOOGL': 25.0, 'AMZN': 25.0},
+        ...     weights={'AAPL': 0.25, 'MSFT': 0.25, 'GOOGL': 0.25, 'AMZN': 0.25},  # Decimal format: 0.25 = 25%
         ...     start_date=datetime(2024, 1, 1),
         ...     end_date=datetime(2024, 3, 31),
         ...     frequency='daily'
@@ -54,11 +54,7 @@ class StressReturnsService:
 
     def _fetch_price_data(self):
         """Fetch price data for portfolio tickers and SPY."""
-        # Normalize weights to decimal form
-        normalized_weights = {
-            ticker: weight / 100.0 for ticker, weight in self.weights.items()
-        }
-        self.weights = normalized_weights
+        # Weights are already in decimal form (0.25 = 25%)
 
         # Get all tickers including SPY
         tickers = list(self.weights.keys()) + ['SPY']
@@ -95,7 +91,7 @@ class StressReturnsService:
             # Reindex SPY prices to match all portfolio timestamps
             # Use forward-fill first, then backward-fill for any remaining NaNs at the start
             spy_prices_aligned = self.price_data['SPY'].reindex(all_timestamps)
-            spy_prices_aligned = spy_prices_aligned.fillna(method='bfill').fillna(method='ffill')
+            spy_prices_aligned = spy_prices_aligned.bfill().ffill()
 
             # Calculate returns from aligned prices
             self.spy_returns = spy_prices_aligned.pct_change().fillna(0.0)
@@ -199,8 +195,8 @@ class StressReturnsService:
 
 
 if __name__ == "__main__":
-    # Example usage
-    weights = {'AAPL': 25.0, 'MSFT': 25.0, 'GOOGL': 25.0, 'AMZN': 25.0}
+    # Example usage - weights in decimal format (0.25 = 25%)
+    weights = {'AAPL': 0.25, 'MSFT': 0.25, 'GOOGL': 0.25, 'AMZN': 0.25}
     start_date = datetime(2024, 1, 1)
     end_date = datetime(2024, 3, 31)
     frequency = '15mins'

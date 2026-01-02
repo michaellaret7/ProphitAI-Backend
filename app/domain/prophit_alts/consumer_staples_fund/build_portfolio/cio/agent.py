@@ -1,5 +1,5 @@
 from typing_extensions import List
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from app.core.agentic_framework.base_agent import BaseAgent
 from app.domain.prophit_alts.consumer_staples_fund.build_portfolio.cio.prompts import cio_system_prompt, cio_user_prompt
 from .tool_registry import register_cio_tools
@@ -14,7 +14,7 @@ class CIOPortfolioItem(BaseModel):
 	position: Literal["long", "short"]
 	thesis: str
 	key_drivers: str
-	allocation: float
+	allocation: float = Field(..., ge=0.0, le=1.0, description="Allocation as decimal (0.25 = 25%)")
 
 class FinalPortfolio(BaseModel):
 	portfolio: List[CIOPortfolioItem]

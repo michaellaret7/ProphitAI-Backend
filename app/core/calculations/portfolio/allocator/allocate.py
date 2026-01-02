@@ -35,7 +35,8 @@ from pypfopt import EfficientFrontier, expected_returns, risk_models, objective_
 from app.repositories.price_data import fetch_bulk_price_data_for_tickers
 from app.utils.time_utils import get_utc_date_str, get_utc_days_ago
 
-from app.core.calculations.portfolio.allocator.utils import OptimizerConfig, validate_weights, calc_num_shares, Allocation, FinalOutput
+from app.core.calculations.portfolio.allocator.utils import OptimizerConfig, validate_weights, Allocation, FinalOutput
+from app.core.calculations.portfolio.utils import calc_num_shares
 
 import json
 

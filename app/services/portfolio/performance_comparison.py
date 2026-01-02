@@ -46,7 +46,7 @@ class PortfolioPerformanceComparisonService:
     ):
         self.portfolio_id = portfolio_id
         self.email = email or "michaellaret7@gmail.com"
-        self.optimized_weights = {k: v / 100.0 for k, v in optimized_weights.items()}
+        self.optimized_weights = optimized_weights  # Already decimal format (0.25 = 25%)
         self.years = years
 
         # Initialize state
@@ -77,13 +77,13 @@ class PortfolioPerformanceComparisonService:
         if not positions:
             raise ValueError("Portfolio not found")
 
-        # Build weights dictionary (convert allocation percentage to decimal)
+        # Build weights dictionary (allocation already in decimal format)
         weights = {}
         for pos in positions:
             ticker = pos.get('ticker')
             allocation = pos.get('allocation')
             if ticker and allocation is not None:
-                weights[ticker] = float(allocation) / 100.0
+                weights[ticker] = float(allocation)  # Already decimal (0.25 = 25%)
 
         if not weights:
             raise ValueError("Portfolio has no valid positions")

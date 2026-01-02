@@ -11,10 +11,16 @@ from app.repositories.user_data import get_all_user_data_by_id
 
 
 class Position:
-    """Simple position object for portfolio creation."""
+    """
+    Simple position object for portfolio creation.
+
+    Attributes:
+        ticker: Stock ticker symbol
+        allocation: Position weight as decimal (0.25 = 25%), range 0-1
+    """
     def __init__(self, ticker: str, allocation: float):
         self.ticker = ticker
-        self.allocation = allocation
+        self.allocation = allocation  # Decimal format (0.25 = 25%)
 
 
 class PortfolioService:
@@ -39,7 +45,8 @@ class PortfolioService:
         Args:
             user_id: User's internal database ID
             portfolio_name: Name of the portfolio
-            positions: List of dicts with 'ticker' and 'allocation' keys
+            positions: List of dicts with 'ticker' and 'allocation' keys.
+                      Allocation must be decimal format (0.25 = 25%)
 
         Returns:
             Dict containing user_data and portfolios for response building
@@ -90,7 +97,8 @@ class PortfolioService:
             portfolio_id: UUID of the portfolio to update
             name: Optional new name for the portfolio
             is_current: Optional flag to set as current portfolio
-            positions: Optional dict of {ticker: allocation} to replace all positions
+            positions: Optional dict of {ticker: allocation} to replace all positions.
+                      Allocation must be decimal format (0.25 = 25%)
 
         Returns:
             Dict containing user_data and portfolios for response building

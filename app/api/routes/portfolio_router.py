@@ -1,5 +1,5 @@
 from fastapi import APIRouter, Query, Depends, Path, HTTPException
-from pydantic import BaseModel
+from pydantic import BaseModel, Field, field_validator
 from typing import List, Optional, Dict, Literal
 from app.api.controller.portfolio import (
     get_user_portfolio_list_controller,
@@ -23,6 +23,30 @@ from app.repositories.user_data import get_all_user_data_by_clerk_id
 router = APIRouter(tags=["Portfolios 💼"])
 
 
+def validate_decimal_weights(weights: Dict[str, float], min_val: float = 0, max_val: float = 1) -> Dict[str, float]:
+    """
+    Validate that all weights are in decimal format within the specified range.
+
+    Args:
+        weights: Dict mapping ticker to weight in decimal format
+        min_val: Minimum allowed weight (default 0)
+        max_val: Maximum allowed weight (default 1)
+
+    Returns:
+        The validated weights dict
+
+    Raises:
+        ValueError: If any weight is outside the allowed range
+    """
+    for ticker, weight in weights.items():
+        if weight < min_val or weight > max_val:
+            raise ValueError(
+                f"Weight for {ticker} must be between {min_val} and {max_val} (decimal format). "
+                f"Got {weight}. Use 0.25 for 25%, not 25.0"
+            )
+    return weights
+
+
 async def get_user_id_from_clerk(clerk_id: str = Depends(get_clerk_user_id)) -> str:
     """Get internal database user_id from Clerk ID."""
     user_data = get_all_user_data_by_clerk_id(clerk_id=clerk_id)
@@ -32,7 +56,7 @@ async def get_user_id_from_clerk(clerk_id: str = Depends(get_clerk_user_id)) -> 
 
 class PositionModel(BaseModel):
     ticker: str
-    allocation: float
+    allocation: float = Field(..., ge=0.0, le=1.0, description="Allocation as decimal (0.25 = 25%)")
 
 
 class CreatePortfolioRequest(BaseModel):
@@ -43,26 +67,51 @@ class CreatePortfolioRequest(BaseModel):
 class UpdatePortfolioRequest(BaseModel):
     name: Optional[str] = None
     isCurrent: Optional[bool] = None
-    positions: Optional[Dict[str, float]] = None  # {ticker: allocation} - replaces all positions
+    positions: Optional[Dict[str, float]] = Field(
+        default=None,
+        description="Positions as {ticker: allocation} where allocation is decimal (0.25 = 25%). Replaces all positions."
+    )
+
+    @field_validator('positions')
+    @classmethod
+    def validate_allocations(cls, v):
+        if v is None:
+            return v
+        return validate_decimal_weights(v)
 
 
 class PortfolioPerformanceComparisonRequest(BaseModel):
     portfolioId: str
-    optimizedWeights: Dict[str, float]
+    optimizedWeights: Dict[str, float] = Field(..., description="Weights as {ticker: weight} where weight is decimal (0.25 = 25%)")
     years: Optional[int] = 2
+
+    @field_validator('optimizedWeights')
+    @classmethod
+    def validate_weights(cls, v):
+        return validate_decimal_weights(v)
 
 
 class PortfolioFactorTiltRequest(BaseModel):
-    weights: Dict[str, float]
+    weights: Dict[str, float] = Field(..., description="Weights as {ticker: weight} where weight is decimal (0.25 = 25%). Negative for short positions.")
     factor: str
     years: Optional[int] = 1
 
+    @field_validator('weights')
+    @classmethod
+    def validate_weights(cls, v):
+        return validate_decimal_weights(v, min_val=-1, max_val=1)
+
 
 class PortfolioStressReturnsRequest(BaseModel):
-    weights: Dict[str, float]
+    weights: Dict[str, float] = Field(..., description="Weights as {ticker: weight} where weight is decimal (0.25 = 25%)")
     start_date: str
     end_date: str
     frequency: Optional[str] = 'daily'
+
+    @field_validator('weights')
+    @classmethod
+    def validate_weights(cls, v):
+        return validate_decimal_weights(v)
 
 
 class RebalancePortfolioRequest(BaseModel):
@@ -106,7 +155,7 @@ async def patch_portfolio(
     {
         "name": "New Portfolio Name",
         "isCurrent": true,
-        "positions": {"AAPL": 25.0, "MSFT": 25.0, "GOOGL": 50.0}
+        "positions": {"AAPL": 0.25, "MSFT": 0.25, "GOOGL": 0.50}
     }
     """
     return await update_portfolio_controller(
@@ -234,7 +283,7 @@ async def get_portfolio_factor_tilt(body: PortfolioFactorTiltRequest):
 
     Example request body:
     {
-        "weights": {"AAPL": 10.5, "MSFT": 15.0, "GOOGL": -5.0},
+        "weights": {"AAPL": 0.105, "MSFT": 0.15, "GOOGL": -0.05},
         "factor": "growth",
         "years": 1
     }
@@ -264,7 +313,7 @@ async def get_portfolio_stress_returns(body: PortfolioStressReturnsRequest):
 
     Example request body:
     {
-        "weights": {"AAPL": 25.0, "MSFT": 25.0, "GOOGL": 25.0, "AMZN": 25.0},
+        "weights": {"AAPL": 0.25, "MSFT": 0.25, "GOOGL": 0.25, "AMZN": 0.25},
         "start_date": "2024-01-01",
         "end_date": "2024-03-31",
         "frequency": "daily"

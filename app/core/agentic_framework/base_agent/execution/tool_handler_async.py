@@ -4,6 +4,8 @@ Handles concurrent execution of multiple tool calls using asyncio.
 Used when the LLM requests multiple tools that can safely run in parallel.
 """
 
+#TODO: Delete this its no longer needed, tool handler parallel is the new way to handle mutliple tool calls 
+
 import asyncio
 from typing import List, Dict, Any, TYPE_CHECKING
 import yaml

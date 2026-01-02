@@ -5,7 +5,7 @@ from typing import List
 class PortfolioPosition(BaseModel):
     """Single position in the optimized portfolio."""
     ticker: str = Field(description="Stock ticker symbol")
-    allocation: float = Field(description="Allocation as decimal between 0 and 1")
+    allocation: float = Field(..., ge=0.0, le=1.0, description="Allocation as decimal (0.25 = 25%)")
     position: Literal["long", "short"] = Field(description="Position type")
     thesis: str = Field(description="Investment thesis for this position")
 
