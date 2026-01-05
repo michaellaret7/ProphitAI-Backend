@@ -416,4 +416,28 @@ def get_total_unread_count(user_id: UUID, session=None) -> int:
         logger.error(f"Failed to get total unread count for user {user_id}: {e}")
         return 0
 
+@with_session('user')
+def search_users(search_term: str, session=None) -> list[User]:
+    """
+    Search for users by name or email.
 
+    Args:
+        search_term: Search term to match against user names or emails
+
+    Returns:
+        List of User objects matching the search term
+    """
+    try:
+        return session.query(User).filter(
+            or_(
+                User.first_name.ilike(f"%{search_term}%"),
+                User.last_name.ilike(f"%{search_term}%"),
+                User.email.ilike(f"%{search_term}%")
+            )
+        ).all()
+
+    except SQLAlchemyError as e:
+        
+        logger.error(f"Failed to search users: {e}")
+        return []
+    

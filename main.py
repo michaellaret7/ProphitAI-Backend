@@ -24,6 +24,7 @@ from app.api.routes.ticker_router import router as ticker_router
 from app.api.routes.user_routes import router as user_router
 from app.api.routes.watchlist_routes import router as watchlist_router
 from app.api.routes.websocket_router import router as websocket_router
+from app.api.routes.messaging_router import router as messaging_router
 from app.api.auth.api_key import validate_api_key
 from app.api.auth.clerk import clerk_auth
 from app.redis.client import cache
@@ -112,6 +113,9 @@ app.include_router(webhook_router, prefix="/api")
 
 # WebSocket router - no API key auth (WebSocket handles auth differently)
 app.include_router(websocket_router)
+
+# Messaging router - WebSocket + REST endpoints (auth handled internally)
+app.include_router(messaging_router, prefix="/api")
 
 @app.get("/")
 def read_root():

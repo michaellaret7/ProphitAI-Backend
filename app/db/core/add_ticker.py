@@ -1380,3 +1380,19 @@ def load_multiple_tickers(ticker_list):
             continue
 
 
+if __name__ == "__main__":
+    load_single_ticker(
+        'GOOG',
+        sector='equity_sector_communication_services',
+        industry='interactive_media_and_services',
+        sub_industry='interactive_media_and_services'
+    )
+
+    load_single_ticker(
+        'QSR',
+        sector='equity_sector_consumer_discretionary',
+        industry='hotels__restaurants_and_leisure',
+        sub_industry='restaurants'
+    )
+
+
