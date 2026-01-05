@@ -16,6 +16,7 @@ from app.db.core.models.user_data_models import Message, Conversation, User
 from app.utils.decorators.database import with_session
 from app.utils.time_utils import get_current_utc_time
 from app.utils.serialize_output import serialize_sqlalchemy_obj
+from app.utils.encryption import encrypt_message, decrypt_message
 
 logger = logging.getLogger(__name__)
 
@@ -200,10 +201,13 @@ def create_message(
         Created Message object, or None if creation failed
     """
     try:
+        # Encrypt message content before storing
+        encrypted_content = encrypt_message(content)
+
         message = Message(
             conversation_id=conversation_id,
             sender_id=sender_id,
-            content=content,
+            content=encrypted_content,
             message_type=message_type
         )
         session.add(message)
@@ -250,7 +254,13 @@ def get_messages(
         if before_timestamp:
             query = query.filter(Message.created_at < before_timestamp)
 
-        return query.order_by(Message.created_at.desc()).limit(limit).all()
+        messages = query.order_by(Message.created_at.desc()).limit(limit).all()
+
+        # Decrypt message content
+        for msg in messages:
+            msg.content = decrypt_message(msg.content)
+
+        return messages
     except SQLAlchemyError as e:
         logger.error(f"Failed to get messages for conversation {conversation_id}: {e}")
         return []
@@ -268,9 +278,15 @@ def get_latest_message(conversation_id: UUID, session=None) -> Optional[Message]
         Most recent Message object, or None if no messages exist
     """
     try:
-        return session.query(Message).filter(
+        message = session.query(Message).filter(
             Message.conversation_id == conversation_id
         ).order_by(Message.created_at.desc()).first()
+
+        # Decrypt message content
+        if message:
+            message.content = decrypt_message(message.content)
+
+        return message
     except SQLAlchemyError as e:
         logger.error(f"Failed to get latest message for conversation {conversation_id}: {e}")
         return None

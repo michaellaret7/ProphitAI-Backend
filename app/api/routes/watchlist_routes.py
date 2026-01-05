@@ -69,7 +69,7 @@ async def get_watchlist_charts(body: WatchlistChartsRequest):
     - correlations.matrix: Pairwise correlation for each lookback period (1M, 3M, 6M, 9M, 1Y)
     - correlations.rolling: Rolling avg pairwise correlation using window sizes (1M, 3M, 6M, 1Y, 5Y)
 
-    Cache TTL: 5 minutes
+    Cache TTL: 3 hours
 
     Example request body:
     {
@@ -91,7 +91,7 @@ async def get_watchlist_metrics(body: WatchlistMetricsRequest):
     - cashFlowLeverage: Per-share metrics, debt ratios, interest coverage
     - operatingMetrics: Liquidity ratios, turnover metrics, cash conversion cycle
 
-    Cache TTL: 5 minutes
+    Cache TTL: 24 hours
 
     Example request body:
     {

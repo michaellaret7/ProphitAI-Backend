@@ -180,28 +180,171 @@ from app.utils.time_utils import get_current_utc_time, get_utc_date_str, get_utc
 
 The project uses Notion as the primary task management system via MCP (Model Context Protocol).
 
-### Main ToDo Database
-- **Name**: 🌏 Main ToDo
+### Default User
+- **Name**: Michael Laret
+- **User ID**: `2d0d872b-594c-810c-a2a3-00022bfb858e`
+- **Email**: michaellaret7@gmail.com
+
+### CRITICAL RULES FOR CREATING NOTION TASKS
+
+1. **ALWAYS assign tasks to Michael Laret** using his user ID: `2d0d872b-594c-810c-a2a3-00022bfb858e`
+
+2. **ALWAYS create detailed page content** with:
+   - `## Overview` - Brief description of the task
+   - `## Implementation Steps` - Numbered steps with code examples where applicable
+   - `## Files to Modify` - Checklist of files that need changes
+   - `## Notes` - Any additional context, security considerations, or dependencies
+
+3. **ALWAYS set a Due Date** - Default to today's date if not specified
+
+4. **Example of a well-structured task page:**
+```markdown
+## Overview
+Brief description of what needs to be done and why.
+
+## Implementation Steps
+
+### Step 1: [First Step Title]
+Description and code example:
+\`\`\`python
+# code here
+\`\`\`
+
+### Step 2: [Second Step Title]
+...
+
+## Files to Modify
+- [ ] `path/to/file1.py` - Description of changes
+- [ ] `path/to/file2.py` - Description of changes
+
+## Notes
+- Important considerations
+- Dependencies or prerequisites
+```
+
+---
+
+### 1. Main Database (Project Tasks)
+- **Page URL**: https://www.notion.so/Main-2df3ce2ecd8c8069aba0f1f6d77b4b44
+- **Tasks Database URL**: https://www.notion.so/2df3ce2ecd8c8162a9d3ce6dbae3cf91
+- **Data Source ID**: `2df3ce2e-cd8c-810f-be04-000b0b3bba3e`
+- **Purpose**: Tasks organized by Project (e.g., ProphitChat, ProphitAlts)
+
+| Property | Type | Options |
+|----------|------|---------|
+| Task name | title | - |
+| Status | status | Not Started, In Progress, Done, Archived |
+| Priority | select | Low, Medium, High, Urgent |
+| Domain | select | Back End, Front End |
+| Due | date | - |
+| Assignee | person | - |
+| Project | relation | Links to Projects database |
+| Notes | text | - |
+| Completed on | date | - |
+
+---
+
+### 2. Michael's ToDo's Database
 - **URL**: https://www.notion.so/61b43a77bfb54b21867a2d9850d5eb1a
 - **Data Source ID**: `ab3406fc-f65a-44a3-83d0-d6e1d4ea59ff`
+- **Purpose**: Personal task tracking with categories
 
-### Database Schema
 | Property | Type | Options |
 |----------|------|---------|
 | Task Name | title | - |
 | Status | status | Not Started, In Progress, Done |
 | Priority | select | Low, Medium, High, Urgent |
-| Category | select | Dad Assigned Items, Refactoring, Agent Framework, Database Ops, General, Agents to Build |
-| Task Type | multi_select | Research, New Tool, API Endpoint, Refactor, Review, Bug, New Feature, Fix |
+| Category | select | 🧾 Dad Assigned Items, ⚙️ Refactoring, 🔮 Agent Framework, 📚 Database Ops, 📖 General, 👷 Agents to Build |
+| Task Type | multi_select | 🔮 Research, 🔧 New Tool, 🔌 API Endpoint, 🧹 Refactor, 🔎 Review, 🐛 Bug, 🌟 New Feature, 📐Fix |
 | Effort Level | select | Low, Medium, High |
+| Due Date | date | - |
 | Assignee | person | - |
+| Project | relation | Links to Projects |
 | Notes | text | - |
 
-### Usage
-- Use `mcp__notion__notion-search` to find tasks
-- Use `mcp__notion__notion-fetch` with the database URL to get schema details
-- Use `mcp__notion__notion-create-pages` with `data_source_id` to create new tasks
-- Use `mcp__notion__notion-update-page` to update task status/properties
+---
+
+### 3. Backend Sprints Database
+- **Page URL**: https://www.notion.so/Backend-Sprints-2df3ce2ecd8c8014856ce927f80a94e3
+- **Tasks Database URL**: https://www.notion.so/2df3ce2ecd8c81c0a071f553c9da9524
+- **Data Source ID**: `2df3ce2e-cd8c-81bf-91ca-000b75b96617`
+- **Purpose**: Sprint-based backend development tasks
+
+| Property | Type | Options |
+|----------|------|---------|
+| Task name | title | - |
+| Status | status | Not Started, In Progress, Done, Archived |
+| Priority | select | Low, Medium, High |
+| Due | date | - |
+| Assignee | person | - |
+| Project | relation | Links to Sprint Projects |
+| Completed on | date | - |
+| Sub-tasks | relation | Self-referencing for task hierarchy |
+| Parent-task | relation | Self-referencing for task hierarchy |
+
+---
+
+### MCP Tools Usage
+
+**Search for tasks:**
+```
+mcp__notion__notion-search with query="task name or keyword"
+```
+
+**Fetch database schema:**
+```
+mcp__notion__notion-fetch with id="database URL"
+```
+
+**Create a new task:**
+```
+mcp__notion__notion-create-pages with:
+- parent: {"type": "data_source_id", "data_source_id": "<data_source_id>"}
+- pages: [{"properties": {...}}]
+```
+
+**Update task properties:**
+```
+mcp__notion__notion-update-page with:
+- data: {"page_id": "<page_id>", "command": "update_properties", "properties": {...}}
+```
+
+**Add content to task page:**
+```
+mcp__notion__notion-update-page with:
+- data: {"page_id": "<page_id>", "command": "replace_content", "new_str": "<markdown content>"}
+```
+
+### Quick Reference: Creating a Task
+
+```python
+# 1. Create the task with properties
+mcp__notion__notion-create-pages(
+    parent={"type": "data_source_id", "data_source_id": "2df3ce2e-cd8c-810f-be04-000b0b3bba3e"},
+    pages=[{
+        "properties": {
+            "Task name": "Task title here",
+            "Status": "Not Started",
+            "Priority": "Medium",
+            "Domain": "Back End",
+            "Assignee": "[\"2d0d872b-594c-810c-a2a3-00022bfb858e\"]",
+            "date:Due:start": "2026-01-05",
+            "date:Due:is_datetime": 0,
+            "Project": "[\"<project_page_url>\"]",
+            "Notes": "Brief notes"
+        }
+    }]
+)
+
+# 2. Add detailed content to the page
+mcp__notion__notion-update-page(
+    data={
+        "page_id": "<returned_page_id>",
+        "command": "replace_content",
+        "new_str": "## Overview\n\n..."
+    }
+)
+```
 
 ## Important Files
 

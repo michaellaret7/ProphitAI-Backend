@@ -416,8 +416,8 @@ async def get_watchlist_metrics_controller(
         },
     )
 
-    # Cache for 5 minutes
-    await cache.set(cache_key, response, ttl=300)
+    # Cache for 24 hours - ratios/metrics don't change frequently
+    await cache.set(cache_key, response, ttl=86400)
 
     return response
 
@@ -474,7 +474,7 @@ async def get_watchlist_charts_controller(tickers: List[str]) -> Dict[str, Any]:
         },
     )
 
-    # Cache for 5 minutes
-    await cache.set(cache_key, response, ttl=300)
+    # Cache for 3 hours - price data updates throughout the day
+    await cache.set(cache_key, response, ttl=10800)
 
     return response
