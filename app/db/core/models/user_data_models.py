@@ -2,7 +2,7 @@
 """
 Complete User Data Models for all tables in the user_data database
 """
-from sqlalchemy import Column, Integer, String, ForeignKey, DateTime, Float, Boolean, Text
+from sqlalchemy import Column, Integer, String, ForeignKey, DateTime, Float, Boolean, Text, UniqueConstraint
 from sqlalchemy.orm import relationship
 from sqlalchemy.dialects.postgresql import UUID, JSONB
 import uuid
@@ -98,3 +98,62 @@ class WatchlistItem(UserBase):
 
     # Relationships
     watchlist = relationship('Watchlist', back_populates='items')
+
+
+# =============================================================================
+# MESSAGING SCHEMA
+# =============================================================================
+
+class Conversation(UserBase):
+    """
+    1-on-1 direct message conversation between two users.
+
+    user_1_id and user_2_id should be ordered by UUID when creating
+    to ensure uniqueness (prevents duplicate conversations between same users).
+
+    Read state is tracked via last_read_at timestamps per user.
+    To check unread: user_X_last_read_at < latest_message.created_at
+    To get unread count: COUNT messages WHERE created_at > user_X_last_read_at
+    """
+    __tablename__ = 'conversations'
+    __table_args__ = (
+        UniqueConstraint('user_1_id', 'user_2_id', name='uq_conversation_users'),
+    )
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    user_1_id = Column(UUID(as_uuid=True), ForeignKey('users.id', ondelete='CASCADE'), nullable=False, index=True)
+    user_2_id = Column(UUID(as_uuid=True), ForeignKey('users.id', ondelete='CASCADE'), nullable=False, index=True)
+
+    # Per-user read timestamps (single source of truth for read state)
+    # NULL means user has never opened the conversation
+    user_1_last_read_at = Column(DateTime, nullable=True)
+    user_2_last_read_at = Column(DateTime, nullable=True)
+
+    created_at = Column(DateTime, default=get_current_utc_time)
+    updated_at = Column(DateTime, default=get_current_utc_time, onupdate=get_current_utc_time)
+
+    # Relationships
+    messages = relationship('Message', back_populates='conversation', cascade='all, delete-orphan')
+    user_1 = relationship('User', foreign_keys=[user_1_id])
+    user_2 = relationship('User', foreign_keys=[user_2_id])
+
+
+class Message(UserBase):
+    """
+    Individual message in a DM conversation.
+
+    Read state is NOT stored here - it's derived from Conversation.user_X_last_read_at.
+    A message is "read" by a user if message.created_at <= conversation.user_X_last_read_at.
+    """
+    __tablename__ = 'messages'
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    conversation_id = Column(UUID(as_uuid=True), ForeignKey('conversations.id', ondelete='CASCADE'), nullable=False, index=True)
+    sender_id = Column(UUID(as_uuid=True), ForeignKey('users.id', ondelete='SET NULL'), nullable=True, index=True)
+    content = Column(Text, nullable=False)
+    message_type = Column(String(20), default='text')  # text, image, file
+    created_at = Column(DateTime, default=get_current_utc_time, index=True)
+
+    # Relationships
+    conversation = relationship('Conversation', back_populates='messages')
+    sender = relationship('User')

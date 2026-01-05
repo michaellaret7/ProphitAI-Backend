@@ -2,6 +2,19 @@
 
 These decorators remove repeated boilerplate for creating, committing/rolling back,
 and closing SQLAlchemy sessions across the codebase.
+
+IMPORTANT - Caller Usage:
+    The `session=None` parameter in decorated functions is for the decorator
+    to inject - callers should NEVER pass it explicitly.
+
+    # CORRECT - let decorator handle session
+    user = get_user(user_id)
+
+    # WRONG - breaks decorator logic
+    user = get_user(user_id, session=my_session)
+
+    Exception: Only pass session when intentionally composing multiple
+    repository calls in a single transaction that you manage manually.
 """
 
 from functools import wraps

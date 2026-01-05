@@ -30,7 +30,8 @@
       "WebFetch(domain:ai.google.dev)",
       "mcp__notion__notion-search",
       "mcp__notion__notion-fetch",
-      "mcp__notion__notion-update-page"
+      "mcp__notion__notion-update-page",
+      "Skill(skill-builder)"
     ],
     "deny": [],
     "ask": []
