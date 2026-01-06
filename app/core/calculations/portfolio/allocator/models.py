@@ -6,7 +6,7 @@ All data models, configuration classes, and validation functions for portfolio a
 
 from dataclasses import dataclass
 from enum import Enum
-from typing import Dict, List, Set
+from typing import Dict, List, Literal, Set
 
 import numpy as np
 from pydantic import BaseModel, ConfigDict
@@ -14,6 +14,9 @@ from pydantic import BaseModel, ConfigDict
 
 # Tolerance for numerical precision in weight comparisons
 WEIGHT_TOLERANCE = 1e-4
+
+# Type alias for strategy parameter - single source of truth
+StrategyLiteral = Literal["max_sharpe", "min_vol", "max_utility", "efficient_risk", "efficient_return"]
 
 
 class OptimizationStrategy(str, Enum):
@@ -30,8 +33,10 @@ class OptimizerConfig(BaseModel):
     model_config = ConfigDict(frozen=True)
 
     # Bucket targets with bands (soft constraints)
+    # Targets must sum to 1.0 - auto-adjusted if asset classes are missing
     equity_weight_target: float = 0.60
     bond_weight_target: float = 0.40
+    commodity_weight_target: float = 0.0
     bucket_band: float = 0.05  # ±5% flexibility around targets
 
     initial_portfolio_value: float = 10_000
@@ -77,9 +82,10 @@ class AllocationResult(BaseModel):
 
 @dataclass
 class ClassifiedTickers:
-    """Tickers classified into equity and fixed income buckets."""
+    """Tickers classified into equity, fixed income, and commodity buckets."""
     equities: Set[str]
     bonds: Set[str]
+    commodities: Set[str]
     all_tickers: List[str]
 
     @property
@@ -91,12 +97,25 @@ class ClassifiedTickers:
         return len(self.bonds) > 0
 
     @property
+    def has_commodities(self) -> bool:
+        return len(self.commodities) > 0
+
+    @property
     def equity_count(self) -> int:
         return len(self.equities)
 
     @property
     def bond_count(self) -> int:
         return len(self.bonds)
+
+    @property
+    def commodity_count(self) -> int:
+        return len(self.commodities)
+
+    @property
+    def asset_class_count(self) -> int:
+        """Number of asset classes present."""
+        return sum([self.has_equities, self.has_bonds, self.has_commodities])
 
 
 def validate_weights(

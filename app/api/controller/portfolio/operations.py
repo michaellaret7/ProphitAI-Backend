@@ -12,8 +12,7 @@ from app.api.response_envelope import ok_envelope
 from app.redis.client import cache
 from app.utils.decorators.api_decorators import handle_controller_errors
 from app.repositories.portfolio_data import retrieve_portfolio
-from typing import Literal
-from app.core.calculations.portfolio.allocator import run
+from app.core.calculations.portfolio.allocator import run, StrategyLiteral
 
 def _verify_portfolio_ownership(portfolio_id: str, user_id: str) -> None:
     """Verify that the portfolio belongs to the user."""
@@ -202,7 +201,8 @@ async def rebalance_portfolio_controller(
     tickers: Optional[List[str]] = None,
     equity_weight_target: Optional[float] = 0.60,
     bond_weight_target: Optional[float] = 0.40,
-    strategy: Optional[Literal["max_sharpe", "min_vol", "max_utility", "efficient_risk"]] = "max_sharpe",
+    commodity_weight_target: Optional[float] = 0.0,
+    strategy: Optional[StrategyLiteral] = "max_sharpe",
     initial_portfolio_value: Optional[float] = 100_000,
 ) -> Dict[str, Any]:
     """Controller to handle portfolio rebalancing."""
@@ -228,6 +228,7 @@ async def rebalance_portfolio_controller(
         tickers=tickers,
         equity_weight_target=equity_weight_target,
         bond_weight_target=bond_weight_target,
+        commodity_weight_target=commodity_weight_target,
         strategy=strategy,
         initial_portfolio_value=initial_portfolio_value,
     )

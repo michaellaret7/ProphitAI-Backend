@@ -2,9 +2,10 @@
 Portfolio Allocation Module
 
 Provides optimization-based portfolio allocation with support for:
-- Multiple asset classes (equity, fixed income)
+- Multiple asset classes (equity, fixed income, commodities)
 - Configurable constraints (min/max weights, bucket targets)
 - Multiple optimization strategies (max_sharpe, min_vol, max_utility, etc.)
+- Auto-detection and adjustment of asset class weights
 
 Usage:
     from app.core.calculations.portfolio.allocator import run, allocate, PortfolioAllocator
@@ -17,8 +18,9 @@ Usage:
 
     # Advanced usage with custom config
     config = OptimizerConfig(
-        equity_weight_target=0.70,
+        equity_weight_target=0.60,
         bond_weight_target=0.30,
+        commodity_weight_target=0.10,
         min_weight=0.02,
     )
     result = allocate(tickers, config, strategy="min_vol")
@@ -27,6 +29,7 @@ Usage:
 from app.core.calculations.portfolio.allocator.models import (
     OptimizerConfig,
     OptimizationStrategy,
+    StrategyLiteral,
     Allocation,
     PortfolioPerformance,
     AllocationResult,
@@ -52,6 +55,7 @@ __all__ = [
     # Models
     "OptimizerConfig",
     "OptimizationStrategy",
+    "StrategyLiteral",
     "Allocation",
     "PortfolioPerformance",
     "AllocationResult",

@@ -1,6 +1,7 @@
 from fastapi import APIRouter, Query, Depends, Path, HTTPException
 from pydantic import BaseModel, Field, field_validator
-from typing import List, Optional, Dict, Literal
+from typing import List, Optional, Dict
+from app.core.calculations.portfolio.allocator import StrategyLiteral
 from app.api.controller.portfolio import (
     get_user_portfolio_list_controller,
     create_portfolio_controller,
@@ -145,7 +146,8 @@ class RebalancePortfolioRequest(BaseModel):
     tickers: Optional[List[str]] = None
     equityWeightTarget: Optional[float] = 0.60
     bondWeightTarget: Optional[float] = 0.40
-    strategy: Optional[Literal["max_sharpe", "min_vol", "max_utility", "efficient_risk"]] = "max_sharpe"
+    commodityWeightTarget: Optional[float] = 0.0
+    strategy: Optional[StrategyLiteral] = "max_sharpe"
     initialPortfolioValue: Optional[float] = 100_000
 
 @router.get("/portfolios")
@@ -389,11 +391,12 @@ async def rebalance_portfolio(
     """
     Rebalance a portfolio using optimization strategies.
 
-    Optimizes portfolio allocation using one of four strategies:
+    Optimizes portfolio allocation using one of five strategies:
     - max_sharpe: Maximize Sharpe ratio (risk-adjusted returns)
     - min_vol: Minimize portfolio volatility
     - max_utility: Maximize quadratic utility (return - risk_aversion * variance)
     - efficient_risk: Target a specific volatility level
+    - efficient_return: Target a specific return level
 
     Provide either portfolioId (to rebalance existing portfolio) or tickers list (for adhoc optimization).
 
@@ -406,7 +409,8 @@ async def rebalance_portfolio(
     {
         "portfolioId": "uuid-here",
         "equityWeightTarget": 0.60,
-        "bondWeightTarget": 0.40,
+        "bondWeightTarget": 0.30,
+        "commodityWeightTarget": 0.10,
         "strategy": "max_sharpe",
         "initialPortfolioValue": 100000
     }
@@ -416,6 +420,7 @@ async def rebalance_portfolio(
         "tickers": ["AAPL", "MSFT", "GOOGL", "AGG", "BND"],
         "equityWeightTarget": 0.60,
         "bondWeightTarget": 0.40,
+        "commodityWeightTarget": 0.0,
         "strategy": "min_vol",
         "initialPortfolioValue": 50000
     }
@@ -426,6 +431,7 @@ async def rebalance_portfolio(
         tickers=body.tickers,
         equity_weight_target=body.equityWeightTarget,
         bond_weight_target=body.bondWeightTarget,
+        commodity_weight_target=body.commodityWeightTarget,
         strategy=body.strategy,
         initial_portfolio_value=body.initialPortfolioValue,
     )

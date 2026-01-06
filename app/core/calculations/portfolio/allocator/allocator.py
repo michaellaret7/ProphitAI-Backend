@@ -18,22 +18,51 @@ from app.utils.time_utils import get_utc_date_str, get_utc_days_ago
 
 from app.core.calculations.portfolio.allocator.models import (
     OptimizerConfig,
-    ClassifiedTickers,
+    StrategyLiteral,
 )
 from app.core.calculations.portfolio.allocator.classifier import (
-    classify_tickers,
+    build_classified_tickers,
     auto_adjust_bucket_targets,
 )
 from app.core.calculations.portfolio.allocator.constraints import ConstraintBuilder
 from app.core.calculations.portfolio.allocator.strategies import run_strategy
 
 
+def _check_bucket_overlap(
+    set_a: Set[str],
+    set_b: Set[str],
+    name_a: str,
+    name_b: str,
+) -> None:
+    """Check for overlap between two asset class buckets and raise if found."""
+    overlap = set_a.intersection(set_b)
+    if overlap:
+        raise ValueError(f"Tickers classified into BOTH {name_a} and {name_b}: {sorted(overlap)}")
+
+
+def _check_bucket_feasibility(
+    name: str,
+    target: float,
+    count: int,
+    bucket_min: float,
+    hard_max: float,
+) -> None:
+    """Check if a bucket's constraints are feasible."""
+    if target > 0 and count > 0:
+        feasible_max = count * hard_max
+        if bucket_min > feasible_max:
+            raise ValueError(
+                f"{name} bucket infeasible: min={bucket_min:.2%} but max achievable is "
+                f"{feasible_max:.2%} with {count} assets at hard_max={hard_max:.2%}."
+            )
+
+
 class PortfolioAllocator:
     """
     Portfolio optimizer with:
     - One ticker list input
-    - Internal classification step: sort into equity vs fixed income
-    - Configurable bucket targets (e.g., 60/40)
+    - Internal classification step: sort into equity, fixed income, and commodities
+    - Configurable bucket targets (e.g., 60/30/10)
     - Configurable position constraints (min/max)
     - All objectives share identical constraint plumbing
     """
@@ -47,17 +76,10 @@ class PortfolioAllocator:
         if not self.all_tickers:
             raise ValueError("tickers list is empty.")
 
-        # Classify tickers into equity vs fixed income
-        equities, bonds = classify_tickers(self.all_tickers)
+        # Classify tickers into equity, fixed income, and commodities
+        self.classified = build_classified_tickers(self.all_tickers)
 
-        # Build classified tickers object
-        self.classified = ClassifiedTickers(
-            equities=set(equities),
-            bonds=set(bonds),
-            all_tickers=self.all_tickers,
-        )
-
-        # Auto-adjust bucket targets if only one asset class is present
+        # Auto-adjust bucket targets based on present asset classes
         self.config = auto_adjust_bucket_targets(config, self.classified)
 
         # Build constraint handler (needed by validation)
@@ -69,7 +91,7 @@ class PortfolioAllocator:
         # Validate configuration
         self._validate_config()
 
-    # Backwards compatibility properties
+    # Property accessors
     @property
     def equities(self) -> Set[str]:
         return self.classified.equities
@@ -77,6 +99,10 @@ class PortfolioAllocator:
     @property
     def bonds(self) -> Set[str]:
         return self.classified.bonds
+
+    @property
+    def commodities(self) -> Set[str]:
+        return self.classified.commodities
 
     @property
     def min_w(self) -> float:
@@ -106,21 +132,36 @@ class PortfolioAllocator:
     def bond_max(self) -> float:
         return self.constraint_builder.bond_max
 
+    @property
+    def commodity_min(self) -> float:
+        return self.constraint_builder.commodity_min
+
+    @property
+    def commodity_max(self) -> float:
+        return self.constraint_builder.commodity_max
+
     def _validate_classification(self) -> None:
         """Validate that all tickers are properly classified."""
-        # Only require equities if equity_weight_target > 0
+        # Only require asset class if its weight target > 0
         if self.config.equity_weight_target > 0 and not self.classified.has_equities:
             raise ValueError("No equity tickers classified but equity_weight_target > 0.")
-        # Only require bonds if bond_weight_target > 0
         if self.config.bond_weight_target > 0 and not self.classified.has_bonds:
             raise ValueError("No fixed income tickers classified but bond_weight_target > 0.")
+        if self.config.commodity_weight_target > 0 and not self.classified.has_commodities:
+            raise ValueError("No commodity tickers classified but commodity_weight_target > 0.")
 
+        # Check for overlaps between all pairs
+        bucket_pairs = [
+            (self.classified.equities, self.classified.bonds, "equity", "fixed income"),
+            (self.classified.equities, self.classified.commodities, "equity", "commodities"),
+            (self.classified.bonds, self.classified.commodities, "fixed income", "commodities"),
+        ]
+        for set_a, set_b, name_a, name_b in bucket_pairs:
+            _check_bucket_overlap(set_a, set_b, name_a, name_b)
+
+        # Check for missing/extra classifications
         all_set = set(self.all_tickers)
-        overlap = self.classified.equities.intersection(self.classified.bonds)
-        if overlap:
-            raise ValueError(f"Tickers classified into BOTH equity and fixed income: {sorted(overlap)}")
-
-        classified_set = self.classified.equities.union(self.classified.bonds)
+        classified_set = self.classified.equities.union(self.classified.bonds).union(self.classified.commodities)
         missing = all_set.difference(classified_set)
         extra = classified_set.difference(all_set)
 
@@ -133,11 +174,10 @@ class PortfolioAllocator:
         """Validate optimizer configuration for feasibility."""
         eq_target = self.config.equity_weight_target
         bnd_target = self.config.bond_weight_target
+        cmd_target = self.config.commodity_weight_target
 
-        if not (0 <= eq_target <= 1 and 0 <= bnd_target <= 1):
-            raise ValueError("equity_weight_target and bond_weight_target must be within [0,1].")
-        if abs((eq_target + bnd_target) - 1.0) > 1e-9:
-            raise ValueError("Bucket weight targets must sum to 1.0.")
+        if not (0 <= eq_target <= 1 and 0 <= bnd_target <= 1 and 0 <= cmd_target <= 1):
+            raise ValueError("All weight targets must be within [0,1].")
 
         if self.config.bucket_band < 0:
             raise ValueError("bucket_band must be >= 0.")
@@ -145,10 +185,14 @@ class PortfolioAllocator:
             raise ValueError("Equity bucket band results in negative minimum.")
         if bnd_target > 0 and self.bond_min < 0:
             raise ValueError("Bond bucket band results in negative minimum.")
+        if cmd_target > 0 and self.commodity_min < 0:
+            raise ValueError("Commodity bucket band results in negative minimum.")
         if eq_target > 0 and self.equity_max > 1:
             raise ValueError("Equity bucket band results in maximum > 1.")
         if bnd_target > 0 and self.bond_max > 1:
             raise ValueError("Bond bucket band results in maximum > 1.")
+        if cmd_target > 0 and self.commodity_max > 1:
+            raise ValueError("Commodity bucket band results in maximum > 1.")
 
         if self.min_w < 0:
             raise ValueError("min_weight must be >= 0.")
@@ -170,25 +214,14 @@ class PortfolioAllocator:
         if n * self.min_w > 1.0:
             raise ValueError(f"Infeasible: n*min_weight > 1.0 ({n} * {self.min_w})")
 
-        # Basic feasibility check for bucket constraints with hard bounds
-        eq_n = self.classified.equity_count
-        bnd_n = self.classified.bond_count
-
-        if eq_target > 0 and eq_n > 0:
-            eq_feasible_max = eq_n * self.hard_max_w
-            if self.equity_min > eq_feasible_max:
-                raise ValueError(
-                    f"Equity bucket infeasible: min={self.equity_min:.2%} but max achievable is "
-                    f"{eq_feasible_max:.2%} with {eq_n} assets at hard_max={self.hard_max_w:.2%}."
-                )
-
-        if bnd_target > 0 and bnd_n > 0:
-            bnd_feasible_max = bnd_n * self.hard_max_w
-            if self.bond_min > bnd_feasible_max:
-                raise ValueError(
-                    f"Bond bucket infeasible: min={self.bond_min:.2%} but max achievable is "
-                    f"{bnd_feasible_max:.2%} with {bnd_n} assets at hard_max={self.hard_max_w:.2%}."
-                )
+        # Feasibility check for bucket constraints with hard bounds
+        buckets = [
+            ("Equity", eq_target, self.classified.equity_count, self.equity_min),
+            ("Bond", bnd_target, self.classified.bond_count, self.bond_min),
+            ("Commodity", cmd_target, self.classified.commodity_count, self.commodity_min),
+        ]
+        for name, target, count, bucket_min in buckets:
+            _check_bucket_feasibility(name, target, count, bucket_min, self.hard_max_w)
 
     def fetch_prices(self) -> pd.DataFrame:
         """Fetch historical price data for all tickers."""
@@ -214,84 +247,39 @@ class PortfolioAllocator:
         S = risk_models.sample_cov(prices, frequency=self.config.trading_days)
         return tickers, mu, S
 
-    def bucket_weights(self, weights: Dict[str, float]) -> Tuple[float, float]:
-        """Calculate total weights for equity and bond buckets."""
+    def bucket_weights(self, weights: Dict[str, float]) -> Tuple[float, float, float]:
+        """Calculate total weights for equity, bond, and commodity buckets."""
         return self.constraint_builder.bucket_weights(weights)
 
-    # Optimization methods (delegate to strategies module)
-
-    def optimize_min_vol(
+    def optimize(
         self,
         mu: pd.Series,
         S: pd.DataFrame,
         tickers: List[str],
+        strategy: StrategyLiteral = "max_sharpe",
+        **strategy_params,
     ) -> Tuple[Dict[str, float], Tuple[float, float, float]]:
-        """Minimize portfolio volatility."""
-        return run_strategy(
-            self.constraint_builder,
-            mu, S, tickers,
-            strategy="min_vol",
-            risk_free_rate=self.config.risk_free_rate,
-        )
+        """
+        Run optimization with specified strategy.
 
-    def optimize_max_sharpe(
-        self,
-        mu: pd.Series,
-        S: pd.DataFrame,
-        tickers: List[str],
-    ) -> Tuple[Dict[str, float], Tuple[float, float, float]]:
-        """Maximize Sharpe ratio."""
-        return run_strategy(
-            self.constraint_builder,
-            mu, S, tickers,
-            strategy="max_sharpe",
-            risk_free_rate=self.config.risk_free_rate,
-        )
+        Args:
+            mu: Expected returns series
+            S: Covariance matrix DataFrame
+            tickers: Ordered list of ticker symbols
+            strategy: Optimization strategy to use
+            **strategy_params: Additional parameters for specific strategies:
+                - risk_aversion: For max_utility (default: 5.0)
+                - target_volatility: For efficient_risk (default: 0.20)
+                - target_return: For efficient_return (default: 0.15)
 
-    def optimize_max_utility(
-        self,
-        mu: pd.Series,
-        S: pd.DataFrame,
-        tickers: List[str],
-        risk_aversion: float = 5.0,
-    ) -> Tuple[Dict[str, float], Tuple[float, float, float]]:
-        """Maximize quadratic utility with given risk aversion."""
+        Returns:
+            Tuple of (weights_dict, performance_tuple)
+            where performance_tuple is (expected_return, volatility, sharpe_ratio)
+        """
         return run_strategy(
             self.constraint_builder,
             mu, S, tickers,
-            strategy="max_utility",
+            strategy=strategy,
             risk_free_rate=self.config.risk_free_rate,
-            risk_aversion=risk_aversion,
-        )
-
-    def optimize_efficient_risk(
-        self,
-        mu: pd.Series,
-        S: pd.DataFrame,
-        tickers: List[str],
-        target_volatility: float = 0.20,
-    ) -> Tuple[Dict[str, float], Tuple[float, float, float]]:
-        """Maximize return for a given target volatility."""
-        return run_strategy(
-            self.constraint_builder,
-            mu, S, tickers,
-            strategy="efficient_risk",
-            risk_free_rate=self.config.risk_free_rate,
-            target_volatility=target_volatility,
-        )
-
-    def optimize_efficient_return(
-        self,
-        mu: pd.Series,
-        S: pd.DataFrame,
-        tickers: List[str],
-        target_return: float = 0.15,
-    ) -> Tuple[Dict[str, float], Tuple[float, float, float]]:
-        """Minimize volatility for a given target return."""
-        return run_strategy(
-            self.constraint_builder,
-            mu, S, tickers,
-            strategy="efficient_return",
-            risk_free_rate=self.config.risk_free_rate,
-            target_return=target_return,
+            **strategy_params,
         )

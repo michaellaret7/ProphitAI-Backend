@@ -1,14 +1,14 @@
-from typing import List, Dict, Literal
-from app.core.calculations.portfolio.allocator import run
+from typing import List, Dict
+from app.core.calculations.portfolio.allocator import run, StrategyLiteral
 from app.core.agentic_framework.tool_lib.common.responses import success_response, error_response
 
-# add proper llm error handling
 
 def build_allocations(
-    tickers: List[str], 
-    equity_weight_target: float = 0.60, 
+    tickers: List[str],
+    equity_weight_target: float = 0.60,
     bond_weight_target: float = 0.40,
-    strategy: Literal["max_sharpe", "min_vol", "max_utility", "efficient_risk"] = "max_sharpe",
+    commodity_weight_target: float = 0.0,
+    strategy: StrategyLiteral = "max_sharpe",
     initial_portfolio_value: float = 100_000,
 ) -> Dict[str, float]:
 
@@ -20,6 +20,7 @@ def build_allocations(
             tickers=tickers,
             equity_weight_target=equity_weight_target,
             bond_weight_target=bond_weight_target,
+            commodity_weight_target=commodity_weight_target,
             initial_portfolio_value=initial_portfolio_value,
             strategy=strategy,
         )
@@ -36,10 +37,12 @@ BUILD_PORTFOLIO_DESCRIPTION = (
     "\n  • 'min_vol': Minimize portfolio volatility (most conservative)"
     "\n  • 'max_utility': Maximize expected utility with risk aversion"
     "\n  • 'efficient_risk': Target specific risk level on efficient frontier"
+    "\n  • 'efficient_return': Target specific return level on efficient frontier"
     "\n\n**Parameters:**"
     "\n  • tickers: List of stock/ETF tickers to include in portfolio"
     "\n  • equity_weight_target: Target allocation to equities (default 0.60 = 60%)"
     "\n  • bond_weight_target: Target allocation to bonds (default 0.40 = 40%)"
+    "\n  • commodity_weight_target: Target allocation to commodities (default 0.0 = 0%)"
     "\n  • strategy: Optimization strategy to use"
     "\n  • initial_portfolio_value: Starting portfolio value in USD (default $100,000)"
     "\n\n**Output:**"
@@ -64,10 +67,15 @@ BUILD_PORTFOLIO_PARAMETERS = {
             "description": "Target weight for bond allocation (0.0 to 1.0). Default is 0.40 (40%).",
             "default": 0.40
         },
+        "commodity_weight_target": {
+            "type": "number",
+            "description": "Target weight for commodity allocation (0.0 to 1.0). Default is 0.0 (0%).",
+            "default": 0.0
+        },
         "strategy": {
             "type": "string",
-            "description": "Optimization strategy: 'max_sharpe', 'min_vol', 'max_utility', or 'efficient_risk'.",
-            "enum": ["max_sharpe", "min_vol", "max_utility", "efficient_risk"],
+            "description": "Optimization strategy: 'max_sharpe', 'min_vol', 'max_utility', 'efficient_risk', or 'efficient_return'.",
+            "enum": ["max_sharpe", "min_vol", "max_utility", "efficient_risk", "efficient_return"],
             "default": "max_sharpe"
         },
         "initial_portfolio_value": {
