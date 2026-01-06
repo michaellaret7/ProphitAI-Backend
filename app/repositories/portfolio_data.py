@@ -136,17 +136,19 @@ def add_portfolio(
     Add a new portfolio for a user.
 
     Args:
-        portfolio: List of Position objects with ticker, allocation, and optionally num_shares
+        portfolio: List of Position objects with ticker, allocation, and optionally
+                  num_shares and position_nav
         user_id: User's UUID
         portfolio_name: Name for the portfolio
         portfolio_value: Optional total portfolio value (NAV). If provided and positions
                         don't have num_shares, will calculate num_shares from allocations.
 
     Note:
-        If portfolio_value is provided, num_shares will be calculated for each position
-        using: num_shares = allocation * portfolio_value / current_price
+        If portfolio_value is provided, num_shares and position_nav will be calculated
+        for each position using current prices.
 
-        If positions already have num_shares set, those values will be used instead.
+        If positions already have num_shares or position_nav set, those values will be
+        used instead of calculating them.
     """
     user = user_session.query(User).filter(User.id == user_id).first()
     if not user:
@@ -195,8 +197,10 @@ def add_portfolio(
         if position_num_shares is None:
             position_num_shares = num_shares_map.get(position.ticker)
 
-        # Get position_nav from calculated map
-        position_nav = position_nav_map.get(position.ticker)
+        # Use position_nav from position if available, otherwise from calculated map
+        position_nav = getattr(position, 'position_nav', None)
+        if position_nav is None:
+            position_nav = position_nav_map.get(position.ticker)
 
         item = PortfolioItem(
             portfolio_id=portfolio_uuid,
@@ -309,7 +313,7 @@ def update_portfolio(
         is_current: Optional flag to set as current portfolio
         positions: Optional dict to replace all positions. Supports two formats:
                    - Simple: {ticker: allocation} - allocation only
-                   - Extended: {ticker: {"allocation": float, "num_shares": float}} - both fields
+                   - Extended: {ticker: {"allocation": float, "num_shares": int}} - both fields
 
     Returns:
         True if update succeeded, False if portfolio not found
@@ -365,7 +369,7 @@ def update_portfolio(
         normalized_positions = {}
         for ticker, value in positions.items():
             if isinstance(value, dict):
-                # Extended format: {allocation: float, num_shares: float}
+                # Extended format: {allocation: float, num_shares: int}
                 normalized_positions[ticker] = {
                     'allocation': value.get('allocation'),
                     'num_shares': value.get('num_shares'),

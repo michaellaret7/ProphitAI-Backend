@@ -6,14 +6,11 @@ from app.utils.serialize_output import serialize_sqlalchemy_obj
 u_session = UserSession()
 m_session = MarketSession()
 
-portfolios = u_session.query(Portfolio).all()
+portfolio = u_session.query(Portfolio).filter(Portfolio.id == "30b60287-c277-4437-a539-660bf2d27ba4").first()
 
-for portfolio in portfolios:
-    nav = sum(item.position_nav or 0 for item in portfolio.items)
-    print(f"Portfolio {portfolio.name} NAV: {nav}")
-    portfolio.nav = nav
-    u_session.commit()
-    print("--------------------------------")
+print(f"Portfolio {portfolio.name} NAV: {portfolio.nav}")
+for pos in portfolio.items:
+    print(f"Ticker: {pos.ticker} Allocation: {pos.allocation} Position NAV: {pos.position_nav}")
 
 u_session.close()
 m_session.close()

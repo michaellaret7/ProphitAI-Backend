@@ -195,7 +195,7 @@ def format_correlation_matrix(correlation_matrix: pd.DataFrame) -> dict:
     return pairs
 
 
-def calc_num_shares(weights: Dict[str, float], portfolio_value: float) -> Dict[str, float]:
+def calc_num_shares(weights: Dict[str, float], portfolio_value: float) -> Dict[str, int]:
     """
     Calculate the number of shares for each ticker based on weights and portfolio value.
 
@@ -204,7 +204,7 @@ def calc_num_shares(weights: Dict[str, float], portfolio_value: float) -> Dict[s
         portfolio_value: Total portfolio value in dollars
 
     Returns:
-        Dict mapping ticker symbols to number of shares (float for fractional shares)
+        Dict mapping ticker symbols to number of shares (integer, rounded down)
 
     Raises:
         ValueError: If portfolio_value is invalid or price data is unavailable
@@ -234,17 +234,18 @@ def calc_num_shares(weights: Dict[str, float], portfolio_value: float) -> Dict[s
 
     num_shares = {}
     for ticker, weight in weights.items():
-        num_shares[ticker] = weight * portfolio_value / prices[ticker]
+        # Calculate and round down to whole shares
+        num_shares[ticker] = int(weight * portfolio_value / prices[ticker])
 
     return num_shares
 
 
-def calc_position_navs(positions: Dict[str, float]) -> Dict[str, float]:
+def calc_position_navs(positions: Dict[str, int]) -> Dict[str, float]:
     """
     Calculate position NAV (num_shares * current_price) for each position.
 
     Args:
-        positions: Dict mapping ticker symbols to num_shares
+        positions: Dict mapping ticker symbols to num_shares (integer)
 
     Returns:
         Dict mapping ticker symbols to position_nav values

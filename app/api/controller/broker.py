@@ -88,7 +88,8 @@ async def add_broker_portfolio_controller(
         position_objects.append(Position(
             ticker=ticker,
             allocation=allocation,
-            num_shares=float(qty) if qty is not None else None
+            num_shares=int(float(qty)) if qty is not None else None,
+            position_nav=market_value
         ))
 
     # Save to database using existing portfolio repository

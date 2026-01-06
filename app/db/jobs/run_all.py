@@ -1,4 +1,5 @@
 from app.db.jobs.fundamentals_table import UpdateFundamentalData
+from app.db.jobs.portfolio import UpdatePortfolios
 from app.db.jobs.ticker_table import UpdateTickerTable
 from app.db.jobs.price_table import UpdatePriceTable, is_after_market_close
 from app.db.jobs.macro_jobs.commodity_prices_update import UpdateCommodityPrices
@@ -25,6 +26,14 @@ def main():
     last_price_dict = update_price_table.create_last_price_dict()
     print(f"Found {len(last_price_dict)} tickers with price data\n")
     update_price_table.update_all_ticker_prices(max_workers=2)
+
+    print("\nUpdating portfolio...\n")
+    print("="*100)
+    time.sleep(60)
+    update_portfolio = UpdatePortfolios()
+    update_portfolio.update_portfolios()
+    update_portfolio.close()
+    print("="*100)
 
     # If after market close (5PM EST), also update EOD prices and commodity data
     if is_after_market_close():

@@ -395,8 +395,9 @@ if __name__ == "__main__":
     )
 
     final_output = json.loads(final_output.model_dump_json(indent=4))
-    print(final_output["performance"]["sharpe_ratio"])
-    print(final_output["performance"]["volatility"])
-    print(final_output["performance"]["expected_return"])
+    print(final_output)
+    # print(final_output["performance"]["sharpe_ratio"])
+    # print(final_output["performance"]["volatility"])
+    # print(final_output["performance"]["expected_return"])
 
 

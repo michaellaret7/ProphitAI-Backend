@@ -17,12 +17,20 @@ class Position:
     Attributes:
         ticker: Stock ticker symbol
         allocation: Position weight as decimal (0.25 = 25%), range 0-1
-        num_shares: Optional number of shares held
+        num_shares: Optional number of shares held (integer)
+        position_nav: Optional position value (num_shares * price)
     """
-    def __init__(self, ticker: str, allocation: float, num_shares: Optional[float] = None):
+    def __init__(
+        self,
+        ticker: str,
+        allocation: float,
+        num_shares: Optional[int] = None,
+        position_nav: Optional[float] = None
+    ):
         self.ticker = ticker
         self.allocation = allocation  # Decimal format (0.25 = 25%)
         self.num_shares = num_shares
+        self.position_nav = position_nav
 
 
 class PortfolioService:
@@ -113,7 +121,7 @@ class PortfolioService:
             is_current: Optional flag to set as current portfolio
             positions: Optional dict to replace all positions. Supports two formats:
                       - Simple: {ticker: allocation} - allocation only
-                      - Extended: {ticker: {"allocation": float, "num_shares": float}}
+                      - Extended: {ticker: {"allocation": float, "num_shares": int}}
 
         Returns:
             Dict containing user_data and portfolios for response building

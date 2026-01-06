@@ -33,7 +33,7 @@ class OptimizerConfig(BaseModel):
 class Allocation(BaseModel):
     ticker: str
     weight: float
-    num_shares: float
+    num_shares: int
 
 class FinalOutput(BaseModel):
     allocations: List[Allocation]

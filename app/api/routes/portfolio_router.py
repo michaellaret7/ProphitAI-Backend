@@ -57,7 +57,7 @@ async def get_user_id_from_clerk(clerk_id: str = Depends(get_clerk_user_id)) -> 
 class PositionModel(BaseModel):
     ticker: str
     allocation: float = Field(..., ge=0.0, le=1.0, description="Allocation as decimal (0.25 = 25%)")
-    num_shares: Optional[float] = Field(default=None, description="Number of shares (calculated from nav if not provided)")
+    num_shares: Optional[int] = Field(default=None, description="Number of shares (calculated from nav if not provided)")
 
 
 class CreatePortfolioRequest(BaseModel):
@@ -79,7 +79,7 @@ class UpdatePortfolioRequest(BaseModel):
     positions: Optional[Dict] = Field(
         default=None,
         description="Positions to replace all existing. Supports two formats: "
-                    "{ticker: allocation} or {ticker: {allocation: float, num_shares: float}}"
+                    "{ticker: allocation} or {ticker: {allocation: float, num_shares: int}}"
     )
 
     @field_validator('positions')
