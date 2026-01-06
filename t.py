@@ -1,12 +1,19 @@
 from app.db.core.db_config import MarketSession, UserSession
 from app.db.core.models.market_data_models import Ticker
-from app.db.core.models.user_data_models import User
+from app.db.core.models.user_data_models import *
 from app.utils.serialize_output import serialize_sqlalchemy_obj
 
-with UserSession() as session:
-    users = session.query(User).all()
-    for user in users:
-        print(serialize_sqlalchemy_obj(user))
-        print("--------------------------------")
+u_session = UserSession()
+m_session = MarketSession()
 
-from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())
+portfolios = u_session.query(Portfolio).all()
+
+for portfolio in portfolios:
+    nav = sum(item.position_nav or 0 for item in portfolio.items)
+    print(f"Portfolio {portfolio.name} NAV: {nav}")
+    portfolio.nav = nav
+    u_session.commit()
+    print("--------------------------------")
+
+u_session.close()
+m_session.close()

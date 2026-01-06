@@ -32,7 +32,8 @@
       "mcp__notion__notion-fetch",
       "mcp__notion__notion-update-page",
       "Skill(skill-builder)",
-      "WebFetch(domain:site.financialmodelingprep.com)"
+      "WebFetch(domain:site.financialmodelingprep.com)",
+      "mcp__notion__notion-create-pages"
     ],
     "deny": [],
     "ask": []

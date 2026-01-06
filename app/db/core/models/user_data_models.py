@@ -67,6 +67,7 @@ class PortfolioItem(UserBase):
     ticker = Column(String, primary_key=True)
     allocation = Column(Float)  # Decimal format: 0.25 = 25%, range 0-1
     num_shares = Column(Float, nullable=True)
+    position_nav = Column(Float, nullable=True)  # Position value: num_shares * current_price
     supporting_metrics = Column(JSONB, nullable=True)
     reason_for_rec = Column(Text, nullable=True)
     created_date = Column(DateTime, default=get_current_utc_time)

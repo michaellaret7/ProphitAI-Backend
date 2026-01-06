@@ -13,7 +13,7 @@ from app.db.core.models.prophit_alts_models import *
 from app.utils.serialize_output import serialize_sqlalchemy_obj
 from app.utils.time_utils import get_current_utc_time
 from app.utils.decorators.database import with_session, with_transaction, with_sessions
-from app.core.calculations.portfolio.utils import calc_num_shares
+from app.core.calculations.portfolio.utils import calc_num_shares, calc_position_navs
 
 
 def _flatten_portfolio_to_legacy_format(
@@ -60,6 +60,7 @@ def _flatten_portfolio_to_legacy_format(
                 'ticker': item.ticker,
                 'allocation': item.allocation,
                 'num_shares': item.num_shares,
+                'position_nav': item.position_nav,
                 'sector': ticker_data.sector if ticker_data else None,
                 'industry': ticker_data.industry if ticker_data else None,
                 'sub_industry': ticker_data.sub_industry if ticker_data else None,
@@ -162,11 +163,14 @@ def add_portfolio(
 
     # Calculate num_shares if portfolio_value is provided
     num_shares_map: Dict[str, float] = {}
+    position_nav_map: Dict[str, float] = {}
     if portfolio_value is not None:
         # Build weights dict from positions
         weights = {pos.ticker: pos.allocation for pos in portfolio}
         try:
             num_shares_map = calc_num_shares(weights, portfolio_value)
+            # Calculate position NAVs from the num_shares we just calculated
+            position_nav_map = calc_position_navs(num_shares_map)
         except ValueError as e:
             # If price fetch fails, log warning but continue without num_shares
             logging.warning(f"Could not calculate num_shares: {e}")
@@ -191,11 +195,15 @@ def add_portfolio(
         if position_num_shares is None:
             position_num_shares = num_shares_map.get(position.ticker)
 
+        # Get position_nav from calculated map
+        position_nav = position_nav_map.get(position.ticker)
+
         item = PortfolioItem(
             portfolio_id=portfolio_uuid,
             ticker=position.ticker,
             allocation=position.allocation,
             num_shares=position_num_shares,
+            position_nav=position_nav,
             created_date=now,
             updated_date=now,
         )
@@ -386,6 +394,19 @@ def update_portfolio(
                 except ValueError as e:
                     logging.warning(f"Could not calculate num_shares during update: {e}")
 
+        # Calculate position_navs for all positions that have num_shares
+        positions_for_nav = {
+            ticker: data['num_shares']
+            for ticker, data in normalized_positions.items()
+            if data['num_shares'] is not None
+        }
+        position_nav_map = {}
+        if positions_for_nav:
+            try:
+                position_nav_map = calc_position_navs(positions_for_nav)
+            except Exception as e:
+                logging.warning(f"Could not calculate position_navs during update: {e}")
+
         # Delete all existing PortfolioItems
         user_session.query(PortfolioItem).filter(
             PortfolioItem.portfolio_id == portfolio_id
@@ -399,6 +420,7 @@ def update_portfolio(
                 ticker=ticker,
                 allocation=data['allocation'],
                 num_shares=data['num_shares'],
+                position_nav=position_nav_map.get(ticker),
                 created_date=now,
                 updated_date=now,
             )
