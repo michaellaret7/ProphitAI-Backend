@@ -19,35 +19,49 @@ ProphitAI is a sophisticated portfolio management platform that uses a state-of-
 
 ## Core Features
 
-### 🤖 Autonomous Agentic Framework
+### Autonomous Agentic Framework
 - **BaseAgent Architecture**: Implements ReAct pattern with native tool-calling across OpenAI, Claude, and Grok
 - **Task Management**: Hierarchical TodoList system with MainTask/SubTask tracking
 - **Memory Systems**: Domain memory for agent-specific knowledge + episodic memory for learning from successful executions
-- **Specialized Agents**: CIO (portfolio construction), CRO (risk analysis), Industry analysts
+- **Specialized Agents**: CIO (portfolio construction), CRO (risk analysis), Industry analysts, Macro agents, AI Watchlist agents
+- **Portfolio Optimizer Agent**: Automated portfolio optimization with multiple strategies
 
-### 📊 Portfolio Management
+### Portfolio Management
 - **AI-Driven Construction**: Thesis-driven stock selection with structured allocation recommendations
 - **Alternative Investments**: Specialized funds (Consumer Staples, etc.) with sector-specific agents
+- **Portfolio Allocation**: Intelligent allocation engine with position sizing
 - **Performance Analytics**: Portfolio metrics, concentration analysis, factor tilts, beta calculations
 - **Correlation Analysis**: Multi-asset correlation matrices and group performance tracking
 
-### 🛡️ Risk Management
+### Risk Management
 - **Covariance & VaR/ES**: Statistical risk measures and portfolio volatility analysis
 - **Stress Testing**: Scenario-based stress testing with custom market conditions
 - **Drawdown Analysis**: Historical drawdown profiles and recovery periods
 - **Asset Risk Contribution**: Identify portfolio risk concentrations
+- **Risk Scores**: Comprehensive risk scoring system
 
-### 📈 Data & Analytics
+### Data & Analytics
 - **Market Data**: Real-time and historical price data via bulk fetching
 - **Fundamentals**: Company financials, ratios, and screening tools
 - **Factor Analysis**: Volatility factors, industry/sub-industry analytics
 - **Technical Indicators**: Comprehensive technical analysis toolkit
+- **Market Regime Detection**: ML-powered market regime classification
+- **Sector Analytics**: Sector and industry performance analysis
+- **Crypto Data**: Cryptocurrency market data and analytics
+- **ETF Analytics**: ETF analysis and screening
 
-### 🔌 API & Integration
+### Macro Research
+- **Macro Agent**: AI-powered macroeconomic research and analysis
+- **Economic Indicators**: Integration with economic data sources
+- **Market Regime Analysis**: Automated market environment classification
+
+### API & Integration
 - **RESTful API**: FastAPI-based with automatic OpenAPI/Swagger documentation
 - **WebSocket Support**: Real-time streaming for agent execution and live updates
-- **Interactive Brokers**: Integration via `ib-insync` for live trading and data
-- **Database**: PostgreSQL with SQLAlchemy/Peewee ORM
+- **Alpaca Integration**: Broker integration for trading
+- **Redis Caching**: High-performance caching layer
+- **Database**: PostgreSQL with SQLAlchemy/Peewee ORM and Alembic migrations
+- **Messaging System**: Encrypted messaging infrastructure
 
 ## Technology Stack
 
@@ -55,11 +69,13 @@ ProphitAI is a sophisticated portfolio management platform that uses a state-of-
 - **Framework**: FastAPI 0.115
 - **Database**: PostgreSQL
 - **ORM**: SQLAlchemy, Peewee
+- **Migrations**: Alembic
+- **Caching**: Redis
 - **LLM Providers**: OpenAI, Claude (Anthropic), Grok
 - **Data Science**: Pandas, NumPy, SciPy, scikit-learn
 - **Portfolio Optimization**: Riskfolio-Lib
 - **Validation**: Pydantic 2.x
-- **Brokerage**: ib-insync
+- **Brokerage**: Alpaca
 
 ### Frontend
 - **Framework**: React
@@ -70,9 +86,10 @@ ProphitAI is a sophisticated portfolio management platform that uses a state-of-
 ### Prerequisites
 - **Python**: 3.13.5
 - **PostgreSQL**: Latest version
+- **Redis**: For caching
 - **Node.js**: For frontend development
 - **API Keys**: OpenAI, Claude, Grok (optional)
-- **Interactive Brokers**: Account (for live trading)
+- **Alpaca**: Account (for live trading)
 
 ### Installation
 
@@ -109,15 +126,18 @@ ProphitAI is a sophisticated portfolio management platform that uses a state-of-
    DB_PORT=5432
    DB_NAME=prophitai
 
+   # Redis
+   REDIS_HOST=localhost
+   REDIS_PORT=6379
+
    # LLM API Keys
    OPENAI_API_KEY=your_openai_key
    ANTHROPIC_API_KEY=your_claude_key
    GROK_API_KEY=your_grok_key
 
-   # Interactive Brokers
-   IB_HOST=127.0.0.1
-   IB_PORT=7497
-   IB_CLIENT_ID=1
+   # Alpaca
+   ALPACA_API_KEY=your_alpaca_key
+   ALPACA_SECRET_KEY=your_alpaca_secret
    ```
 
 5. **Set up database**
@@ -125,8 +145,9 @@ ProphitAI is a sophisticated portfolio management platform that uses a state-of-
    # Create PostgreSQL database
    createdb prophitai
 
-   # Run migrations (if applicable)
-   # python -m alembic upgrade head
+   # Run migrations
+   cd app/db/alembic_migration
+   alembic upgrade head
    ```
 
 ### Running the Application
@@ -158,9 +179,25 @@ ProphitAI/
 │   │   ├── routes/                   # API endpoints
 │   │   │   ├── alts_router.py        # Alternative investment portfolios
 │   │   │   ├── portfolio_router.py   # Portfolio operations
+│   │   │   ├── ticker_router.py      # Ticker data and analysis
+│   │   │   ├── fundamentals_router.py # Company fundamentals
+│   │   │   ├── technical_router.py   # Technical analysis
+│   │   │   ├── screener_router.py    # Stock screening
+│   │   │   ├── macro_router.py       # Macroeconomic data
+│   │   │   ├── crypto_router.py      # Cryptocurrency data
+│   │   │   ├── etf_router.py         # ETF analytics
+│   │   │   ├── news_router.py        # News and sentiment
+│   │   │   ├── broker_router.py      # Broker integration
+│   │   │   ├── agent_router.py       # Agent execution
+│   │   │   ├── messaging_router.py   # Messaging system
+│   │   │   ├── watchlist_routes.py   # Watchlist management
 │   │   │   ├── user_routes.py        # User management
+│   │   │   ├── cache_router.py       # Cache management
 │   │   │   └── websocket_router.py   # Real-time streaming
 │   │   └── controller/               # Business logic layer
+│   │
+│   ├── agents/                       # Standalone agents
+│   │   └── macro_agent/              # Macroeconomic research agent
 │   │
 │   ├── core/
 │   │   ├── agentic_framework/        # Core agent system
@@ -170,30 +207,59 @@ ProphitAI/
 │   │   │   │   ├── memory/           # Domain + episodic memory
 │   │   │   │   └── core/             # Parser, logger, utilities
 │   │   │   └── tool_lib/             # Tool library
+│   │   │       ├── base_tools/       # Core utility tools
 │   │   │       ├── data_tools/       # Market data, fundamentals
 │   │   │       ├── risk_tools/       # Risk analytics
 │   │   │       ├── portfolio_tools/  # Portfolio metrics
 │   │   │       ├── ticker_tools/     # Ticker-specific analysis
+│   │   │       ├── macro_tools/      # Macroeconomic tools
+│   │   │       ├── sub_agents/       # Sub-agent orchestration
 │   │   │       └── agent_specific_tools/  # CIO, CRO, Industry tools
 │   │   │
-│   │   └── calculations/             # Core calculation engines
-│   │       ├── risk/                 # Risk calculations
-│   │       ├── performance/          # Performance metrics
-│   │       ├── factors/              # Factor analysis
-│   │       └── stress_test/          # Stress testing
+│   │   ├── calculations/             # Core calculation engines
+│   │   │   ├── core/                 # Core calculation utilities
+│   │   │   ├── risk/                 # Risk calculations
+│   │   │   │   └── scores/           # Risk scoring system
+│   │   │   ├── performance/          # Performance metrics
+│   │   │   ├── factors/              # Factor analysis
+│   │   │   ├── returns/              # Return calculations
+│   │   │   ├── portfolio/            # Portfolio calculations
+│   │   │   │   └── allocator/        # Position allocation
+│   │   │   ├── technical/            # Technical indicators
+│   │   │   │   └── indicator_calcs/  # Indicator calculations
+│   │   │   ├── stress_test/          # Stress testing
+│   │   │   ├── sectors/              # Sector analytics
+│   │   │   ├── market_regime/        # Market regime detection
+│   │   │   └── machine_learning/     # ML models
+│   │   │
+│   │   └── search/                   # Search functionality
+│   │       └── web_search/           # Web search integration
 │   │
 │   ├── domain/                       # Domain-specific agents
 │   │   ├── prophit_alts/             # Alternative investment strategies
 │   │   │   └── consumer_staples_fund/
-│   │   │       └── build_portfolio/  # CIO, CRO, Industry agents
+│   │   │       ├── build_portfolio/  # CIO, CRO, Industry agents
+│   │   │       └── manage_portfolio/ # Portfolio management
 │   │   ├── prophit_gpt/              # Conversational AI assistant
-│   │   └── portfolio_operations/     # Portfolio builder
+│   │   ├── ai_watchlist/             # AI-powered watchlist agent
+│   │   └── portfolio_operations/     # Portfolio operations
+│   │       ├── builder/              # Portfolio builder
+│   │       └── optimizer/            # Portfolio optimizer agent
 │   │
 │   ├── db/                           # Database layer
+│   │   ├── core/                     # Core database models
+│   │   ├── alembic_migration/        # Alembic migrations
+│   │   ├── jobs/                     # Background jobs
+│   │   │   └── macro_jobs/           # Macro data jobs
+│   │   └── monitor/                  # Database monitoring
+│   │
+│   ├── redis/                        # Redis caching layer
 │   ├── models/                       # Pydantic/SQLAlchemy models
 │   ├── repositories/                 # Data access layer
 │   ├── services/                     # Business services
 │   └── utils/                        # Shared utilities
+│       ├── decorators/               # Custom decorators
+│       └── alpaca/                   # Alpaca integration
 │
 ├── frontend/                         # React frontend application
 │   └── src/
@@ -257,17 +323,35 @@ Once the backend is running, visit `http://localhost:8000/docs` for interactive 
 
 ### Key Endpoints
 
-#### Alternative Investments
-- `POST /api/alts/consumer-staples/build` - Build consumer staples portfolio
-- `GET /api/alts/portfolios/{portfolio_id}` - Retrieve portfolio details
-
 #### Portfolio Operations
 - `POST /api/portfolio/optimize` - Optimize portfolio allocations
 - `GET /api/portfolio/{portfolio_id}/risk` - Get risk analytics
 - `POST /api/portfolio/{portfolio_id}/stress-test` - Run stress tests
 
-#### WebSocket
+#### Alternative Investments
+- `POST /api/alts/consumer-staples/build` - Build consumer staples portfolio
+- `GET /api/alts/portfolios/{portfolio_id}` - Retrieve portfolio details
+
+#### Market Data
+- `GET /api/ticker/{symbol}` - Get ticker information
+- `GET /api/price/{symbol}` - Get price data
+- `GET /api/fundamentals/{symbol}` - Get company fundamentals
+- `GET /api/technical/{symbol}` - Get technical indicators
+
+#### Research & Analytics
+- `GET /api/macro/indicators` - Get macroeconomic indicators
+- `GET /api/screener/screen` - Screen stocks by criteria
+- `GET /api/etf/{symbol}` - Get ETF analytics
+- `GET /api/crypto/{symbol}` - Get cryptocurrency data
+- `GET /api/news/{symbol}` - Get news and sentiment
+
+#### Agent Execution
+- `POST /api/agent/execute` - Execute agent task
 - `WS /api/ws/agent-stream` - Real-time agent execution streaming
+
+#### User & Watchlist
+- `GET /api/watchlist` - Get user watchlists
+- `POST /api/watchlist` - Create watchlist
 
 ## Contributing
 
@@ -289,9 +373,12 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 - **FastAPI**: High-performance web framework
 - **Pydantic**: Data validation and settings management
-- **OpenAI/Anthropic**: LLM providers powering the agent framework
+- **OpenAI/Anthropic/xAI**: LLM providers powering the agent framework
 - **Riskfolio-Lib**: Portfolio optimization library
+- **Redis**: In-memory caching
+- **Alembic**: Database migrations
+- **Alpaca**: Brokerage integration
 
 ---
 
-**Built with ❤️ for institutional-grade portfolio management**
+**Built for institutional-grade portfolio management**

@@ -13,7 +13,7 @@ from app.redis.client import cache
 from app.utils.decorators.api_decorators import handle_controller_errors
 from app.repositories.portfolio_data import retrieve_portfolio
 from typing import Literal
-from app.core.calculations.portfolio.allocator.allocate import run
+from app.core.calculations.portfolio.allocator import run
 
 def _verify_portfolio_ownership(portfolio_id: str, user_id: str) -> None:
     """Verify that the portfolio belongs to the user."""

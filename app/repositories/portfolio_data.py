@@ -135,20 +135,23 @@ def add_portfolio(
     """
     Add a new portfolio for a user.
 
+    Uses smart detection to only calculate what's missing:
+    - If position has num_shares and position_nav: use them directly (no API calls)
+    - If position has num_shares but no position_nav: calculate NAV from actual shares
+    - If position has neither: calculate both from allocation + portfolio_value
+
     Args:
         portfolio: List of Position objects with ticker, allocation, and optionally
                   num_shares and position_nav
         user_id: User's UUID
         portfolio_name: Name for the portfolio
-        portfolio_value: Optional total portfolio value (NAV). If provided and positions
-                        don't have num_shares, will calculate num_shares from allocations.
+        portfolio_value: Optional total portfolio value (NAV). Required if positions
+                        don't have num_shares.
 
-    Note:
-        If portfolio_value is provided, num_shares and position_nav will be calculated
-        for each position using current prices.
-
-        If positions already have num_shares or position_nav set, those values will be
-        used instead of calculating them.
+    Flows:
+        - Broker sync: Provides num_shares + position_nav → 0 API calls
+        - Allocator: Provides num_shares only → 1 API call (for position_nav)
+        - API create: Provides allocation only → 2 API calls (for both)
     """
     user = user_session.query(User).filter(User.id == user_id).first()
     if not user:
@@ -163,19 +166,51 @@ def add_portfolio(
     portfolio_uuid = uuid.uuid4()
     now = get_current_utc_time()
 
-    # Calculate num_shares if portfolio_value is provided
-    num_shares_map: Dict[str, float] = {}
-    position_nav_map: Dict[str, float] = {}
-    if portfolio_value is not None:
-        # Build weights dict from positions
-        weights = {pos.ticker: pos.allocation for pos in portfolio}
+    # Step 1: Determine final num_shares for each position
+    final_shares: Dict[str, int] = {}
+    tickers_needing_shares = []
+
+    for pos in portfolio:
+        provided_shares = getattr(pos, 'num_shares', None)
+        if provided_shares is not None:
+            final_shares[pos.ticker] = provided_shares
+        else:
+            tickers_needing_shares.append(pos)
+
+    # Calculate num_shares only for positions that need it
+    if tickers_needing_shares:
+        if portfolio_value is None:
+            logging.warning(
+                f"Positions {[p.ticker for p in tickers_needing_shares]} need num_shares "
+                "but no portfolio_value provided"
+            )
+        else:
+            weights = {p.ticker: p.allocation for p in tickers_needing_shares}
+            try:
+                calculated_shares = calc_num_shares(weights, portfolio_value)
+                final_shares.update(calculated_shares)
+            except ValueError as e:
+                logging.warning(f"Could not calculate num_shares: {e}")
+
+    # Step 2: Determine final position_nav for each position
+    final_navs: Dict[str, float] = {}
+    tickers_needing_nav = []
+
+    for pos in portfolio:
+        provided_nav = getattr(pos, 'position_nav', None)
+        if provided_nav is not None:
+            final_navs[pos.ticker] = provided_nav
+        elif pos.ticker in final_shares:
+            tickers_needing_nav.append(pos.ticker)
+
+    # Calculate position_nav from ACTUAL final shares (not recalculated)
+    if tickers_needing_nav:
+        shares_for_calc = {t: final_shares[t] for t in tickers_needing_nav}
         try:
-            num_shares_map = calc_num_shares(weights, portfolio_value)
-            # Calculate position NAVs from the num_shares we just calculated
-            position_nav_map = calc_position_navs(num_shares_map)
-        except ValueError as e:
-            # If price fetch fails, log warning but continue without num_shares
-            logging.warning(f"Could not calculate num_shares: {e}")
+            calculated_navs = calc_position_navs(shares_for_calc)
+            final_navs.update(calculated_navs)
+        except Exception as e:
+            logging.warning(f"Could not calculate position_navs: {e}")
 
     # Create one Portfolio record
     new_portfolio = Portfolio(
@@ -192,22 +227,12 @@ def add_portfolio(
 
     # Create PortfolioItem records for each position
     for position in portfolio:
-        # Use num_shares from position if available, otherwise from calculated map
-        position_num_shares = getattr(position, 'num_shares', None)
-        if position_num_shares is None:
-            position_num_shares = num_shares_map.get(position.ticker)
-
-        # Use position_nav from position if available, otherwise from calculated map
-        position_nav = getattr(position, 'position_nav', None)
-        if position_nav is None:
-            position_nav = position_nav_map.get(position.ticker)
-
         item = PortfolioItem(
             portfolio_id=portfolio_uuid,
             ticker=position.ticker,
             allocation=position.allocation,
-            num_shares=position_num_shares,
-            position_nav=position_nav,
+            num_shares=final_shares.get(position.ticker),
+            position_nav=final_navs.get(position.ticker),
             created_date=now,
             updated_date=now,
         )
@@ -303,26 +328,25 @@ def update_portfolio(
     """
     Update an existing portfolio's metadata and/or positions.
 
+    Uses smart detection to only calculate what's missing:
+    - If position has num_shares and position_nav: use them directly (no API calls)
+    - If position has num_shares but no position_nav: calculate NAV from actual shares
+    - If position has neither: calculate both from allocation + nav
+
     Args:
         email: User email
         user_id: User UUID
         portfolio_id: Portfolio UUID to update
         name: Optional new name for the portfolio
         nav: Optional new NAV (portfolio value). If provided with positions,
-             will recalculate num_shares for each position.
+             will calculate num_shares for positions that don't have them.
         is_current: Optional flag to set as current portfolio
         positions: Optional dict to replace all positions. Supports two formats:
                    - Simple: {ticker: allocation} - allocation only
-                   - Extended: {ticker: {"allocation": float, "num_shares": int}} - both fields
+                   - Extended: {ticker: {"allocation": float, "num_shares": int, "position_nav": float}}
 
     Returns:
         True if update succeeded, False if portfolio not found
-
-    Note:
-        When positions are updated:
-        - If nav is provided and positions use simple format, num_shares will be calculated
-        - If positions use extended format with num_shares, those values are used directly
-        - If neither nav nor num_shares provided, num_shares will be None
     """
     if not portfolio_id:
         raise ValueError("portfolio_id must be provided")
@@ -364,27 +388,28 @@ def update_portfolio(
             if not ticker_data:
                 raise ValueError(f"Ticker {ticker} not found")
 
-        # Normalize positions to extract allocation and num_shares
-        # Supports both {ticker: allocation} and {ticker: {allocation, num_shares}}
+        # Normalize positions to extract allocation, num_shares, and position_nav
+        # Supports both {ticker: allocation} and {ticker: {allocation, num_shares, position_nav}}
         normalized_positions = {}
         for ticker, value in positions.items():
             if isinstance(value, dict):
-                # Extended format: {allocation: float, num_shares: int}
+                # Extended format: {allocation: float, num_shares: int, position_nav: float}
                 normalized_positions[ticker] = {
                     'allocation': value.get('allocation'),
                     'num_shares': value.get('num_shares'),
+                    'position_nav': value.get('position_nav'),
                 }
             else:
                 # Simple format: just allocation
                 normalized_positions[ticker] = {
                     'allocation': value,
                     'num_shares': None,
+                    'position_nav': None,
                 }
 
-        # Calculate num_shares if nav is available and positions don't have them
+        # Step 1: Calculate num_shares for positions that need them
         effective_nav = nav if nav is not None else portfolio.nav
         if effective_nav is not None:
-            # Build weights for positions missing num_shares
             weights_needing_shares = {
                 ticker: data['allocation']
                 for ticker, data in normalized_positions.items()
@@ -398,16 +423,20 @@ def update_portfolio(
                 except ValueError as e:
                     logging.warning(f"Could not calculate num_shares during update: {e}")
 
-        # Calculate position_navs for all positions that have num_shares
-        positions_for_nav = {
-            ticker: data['num_shares']
-            for ticker, data in normalized_positions.items()
-            if data['num_shares'] is not None
-        }
-        position_nav_map = {}
-        if positions_for_nav:
+        # Step 2: Calculate position_nav only for positions that need it
+        # (have num_shares but no position_nav)
+        tickers_needing_nav = [
+            ticker for ticker, data in normalized_positions.items()
+            if data['num_shares'] is not None and data['position_nav'] is None
+        ]
+        if tickers_needing_nav:
+            shares_for_calc = {
+                t: normalized_positions[t]['num_shares'] for t in tickers_needing_nav
+            }
             try:
-                position_nav_map = calc_position_navs(positions_for_nav)
+                calculated_navs = calc_position_navs(shares_for_calc)
+                for ticker, nav_value in calculated_navs.items():
+                    normalized_positions[ticker]['position_nav'] = nav_value
             except Exception as e:
                 logging.warning(f"Could not calculate position_navs during update: {e}")
 
@@ -424,7 +453,7 @@ def update_portfolio(
                 ticker=ticker,
                 allocation=data['allocation'],
                 num_shares=data['num_shares'],
-                position_nav=position_nav_map.get(ticker),
+                position_nav=data['position_nav'],
                 created_date=now,
                 updated_date=now,
             )

@@ -1,15 +1,38 @@
-from typing import Dict, List
+"""
+Portfolio Allocator Models
+
+All data models, configuration classes, and validation functions for portfolio allocation.
+"""
+
+from dataclasses import dataclass
+from enum import Enum
+from typing import Dict, List, Set
+
 import numpy as np
 from pydantic import BaseModel, ConfigDict
 
 
+# Tolerance for numerical precision in weight comparisons
+WEIGHT_TOLERANCE = 1e-4
+
+
+class OptimizationStrategy(str, Enum):
+    """Available optimization strategies."""
+    MAX_SHARPE = "max_sharpe"
+    MIN_VOL = "min_vol"
+    MAX_UTILITY = "max_utility"
+    EFFICIENT_RISK = "efficient_risk"
+    EFFICIENT_RETURN = "efficient_return"
+
+
 class OptimizerConfig(BaseModel):
+    """Configuration for portfolio optimization."""
     model_config = ConfigDict(frozen=True)
 
     # Bucket targets with bands (soft constraints)
     equity_weight_target: float = 0.60
     bond_weight_target: float = 0.40
-    bucket_band: float = 0.05                 # ±5% flexibility around targets
+    bucket_band: float = 0.05  # ±5% flexibility around targets
 
     initial_portfolio_value: float = 10_000
 
@@ -22,26 +45,58 @@ class OptimizerConfig(BaseModel):
     risk_free_rate: float = 0.02
 
     # Position constraints (hybrid hard/soft)
-    min_weight: float = 0.01                  # HARD floor - every ticker gets at least 1%
-    soft_max_weight: float = 0.08             # Soft cap - penalty kicks in above 8%
-    hard_max_weight: float = 0.15             # HARD ceiling - absolute max 15%
+    min_weight: float = 0.01  # HARD floor - every ticker gets at least 1%
+    soft_max_weight: float = 0.08  # Soft cap - penalty kicks in above 8%
+    hard_max_weight: float = 0.15  # HARD ceiling - absolute max 15%
 
     # Regularization penalties
-    l2_gamma: float = 0.1                     # L2 regularization for diversification
-    concentration_gamma: float = 0.5          # Penalty for exceeding soft_max
+    l2_gamma: float = 0.1  # L2 regularization for diversification
+    concentration_gamma: float = 0.5  # Penalty for exceeding soft_max
+
 
 class Allocation(BaseModel):
+    """Single ticker allocation with weight and share count."""
     ticker: str
     weight: float
     num_shares: int
 
-class FinalOutput(BaseModel):
+
+class PortfolioPerformance(BaseModel):
+    """Portfolio performance metrics."""
+    expected_return: float
+    volatility: float
+    sharpe_ratio: float
+
+
+class AllocationResult(BaseModel):
+    """Complete allocation result with allocations and performance."""
     allocations: List[Allocation]
-    performance: Dict[str, float]
+    performance: PortfolioPerformance
     strategy: str
 
-# Tolerance for numerical precision in weight comparisons
-WEIGHT_TOLERANCE = 1e-4
+
+@dataclass
+class ClassifiedTickers:
+    """Tickers classified into equity and fixed income buckets."""
+    equities: Set[str]
+    bonds: Set[str]
+    all_tickers: List[str]
+
+    @property
+    def has_equities(self) -> bool:
+        return len(self.equities) > 0
+
+    @property
+    def has_bonds(self) -> bool:
+        return len(self.bonds) > 0
+
+    @property
+    def equity_count(self) -> int:
+        return len(self.equities)
+
+    @property
+    def bond_count(self) -> int:
+        return len(self.bonds)
 
 
 def validate_weights(

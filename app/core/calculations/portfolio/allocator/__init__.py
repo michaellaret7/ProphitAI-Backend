@@ -1,20 +1,70 @@
-"""Portfolio allocation module for optimization-based asset allocation."""
+"""
+Portfolio Allocation Module
 
-from app.core.calculations.portfolio.allocator.allocate import PortfolioAllocator, run
-from app.core.calculations.portfolio.allocator.utils import (
+Provides optimization-based portfolio allocation with support for:
+- Multiple asset classes (equity, fixed income)
+- Configurable constraints (min/max weights, bucket targets)
+- Multiple optimization strategies (max_sharpe, min_vol, max_utility, etc.)
+
+Usage:
+    from app.core.calculations.portfolio.allocator import run, allocate, PortfolioAllocator
+
+    # Simple usage with defaults
+    result = run(
+        tickers=["AAPL", "MSFT", "GOOGL", "BND"],
+        strategy="max_sharpe",
+    )
+
+    # Advanced usage with custom config
+    config = OptimizerConfig(
+        equity_weight_target=0.70,
+        bond_weight_target=0.30,
+        min_weight=0.02,
+    )
+    result = allocate(tickers, config, strategy="min_vol")
+"""
+
+from app.core.calculations.portfolio.allocator.models import (
     OptimizerConfig,
+    OptimizationStrategy,
     Allocation,
-    FinalOutput,
+    PortfolioPerformance,
+    AllocationResult,
+    ClassifiedTickers,
     validate_weights,
+    WEIGHT_TOLERANCE,
 )
-from app.core.calculations.portfolio.utils import calc_num_shares
+from app.core.calculations.portfolio.allocator.allocator import PortfolioAllocator
+from app.core.calculations.portfolio.allocator.service import allocate, run
+from app.core.calculations.portfolio.allocator.classifier import (
+    classify_tickers,
+    build_classified_tickers,
+    auto_adjust_bucket_targets,
+)
+from app.core.calculations.portfolio.allocator.strategies import STRATEGIES, run_strategy
+from app.core.calculations.portfolio.allocator.constraints import ConstraintBuilder
 
 __all__ = [
-    "PortfolioAllocator",
+    # Main API
+    "allocate",
     "run",
+    "PortfolioAllocator",
+    # Models
     "OptimizerConfig",
+    "OptimizationStrategy",
     "Allocation",
-    "FinalOutput",
+    "PortfolioPerformance",
+    "AllocationResult",
+    "ClassifiedTickers",
+    # Utilities
+    "classify_tickers",
+    "build_classified_tickers",
+    "auto_adjust_bucket_targets",
     "validate_weights",
-    "calc_num_shares",
+    "WEIGHT_TOLERANCE",
+    # Strategies
+    "STRATEGIES",
+    "run_strategy",
+    # Constraints
+    "ConstraintBuilder",
 ]

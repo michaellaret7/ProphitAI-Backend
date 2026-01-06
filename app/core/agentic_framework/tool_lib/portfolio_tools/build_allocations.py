@@ -1,5 +1,5 @@
 from typing import List, Dict, Literal
-from app.core.calculations.portfolio.allocator.allocate import run
+from app.core.calculations.portfolio.allocator import run
 from app.core.agentic_framework.tool_lib.common.responses import success_response, error_response
 
 # add proper llm error handling
