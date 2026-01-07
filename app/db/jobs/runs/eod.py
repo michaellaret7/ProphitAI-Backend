@@ -2,16 +2,24 @@ from app.db.jobs.price_table import UpdatePriceTable
 from app.db.jobs.macro_jobs.commodity_prices_update import UpdateCommodityPrices
 from app.db.jobs.macro_jobs.economic_indicators_update import UpdateEconomicIndicators
 from app.db.jobs.macro_jobs.economic_calendar_update import UpdateEconomicCalendar
+from app.db.jobs.macro_jobs.us_rates_update import UpdateUSRates
 import time
 
 def main():
     print("=" * 100)
     print("EOD DATA UPDATE JOB")
     print("=" * 100)
-    
+
+    update_price_table = UpdatePriceTable()
+
+    # Capture final intraday prices (2pm-4pm gap)
+    print("Updating final intraday prices...")
+    update_price_table.update_all_ticker_prices(max_workers=2)
+
+    time.sleep(60)
+
     # Update daily EOD prices
     print("Updating daily prices...")
-    update_price_table = UpdatePriceTable()
     update_price_table.update_daily_prices(max_workers=2)
     
     time.sleep(60)
@@ -34,7 +42,14 @@ def main():
     print("Updating economic calendar...")
     calendar_updater = UpdateEconomicCalendar()
     calendar_updater.update_with_summary()
-    
+
+    time.sleep(60)
+
+    # Update US treasury rates
+    print("Updating US treasury rates...")
+    rates_updater = UpdateUSRates()
+    rates_updater.update_with_summary()
+
     print("EOD data update completed!")
 
 if __name__ == "__main__":

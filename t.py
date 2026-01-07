@@ -1,16 +1,34 @@
-from app.db.core.db_config import MarketSession, UserSession
-from app.db.core.models.market_data_models import Ticker
-from app.db.core.models.user_data_models import *
-from app.utils.serialize_output import serialize_sqlalchemy_obj
+"""Quick script to get user UUID and conversation IDs for herman@laret.com"""
+from app.db.core.db_config import UserSession
+from app.db.core.models.user_data_models import User, Conversation
+from sqlalchemy import or_
 
-u_session = UserSession()
-m_session = MarketSession()
+session = UserSession()
 
-portfolio = u_session.query(Portfolio).filter(Portfolio.id == "30b60287-c277-4437-a539-660bf2d27ba4").first()
+# Find user by email
+user = session.query(User).filter(User.email == "herman@laret.com").first()
 
-print(f"Portfolio {portfolio.name} NAV: {portfolio.nav}")
-for pos in portfolio.items:
-    print(f"Ticker: {pos.ticker} Allocation: {pos.allocation} Position NAV: {pos.position_nav}")
+if not user:
+    print("User herman@laret.com not found")
+else:
+    print(f"User: {user.first_name} {user.last_name}")
+    print(f"UUID: {user.id}")
+    print(f"Email: {user.email}")
+    print()
 
-u_session.close()
-m_session.close()
+    # Find all conversations where user is either user_1 or user_2
+    conversations = session.query(Conversation).filter(
+        or_(
+            Conversation.user_1_id == user.id,
+            Conversation.user_2_id == user.id
+        )
+    ).all()
+
+    print(f"Conversations ({len(conversations)}):")
+    for conv in conversations:
+        other_user_id = conv.user_2_id if conv.user_1_id == user.id else conv.user_1_id
+        other_user = session.query(User).filter(User.id == other_user_id).first()
+        other_name = f"{other_user.first_name} {other_user.last_name}" if other_user else "Unknown"
+        print(f"  - ID: {conv.id} (with {other_name})")
+
+session.close()
