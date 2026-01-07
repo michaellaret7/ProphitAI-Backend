@@ -86,11 +86,12 @@ def send_message(
             logger.error(f"Failed to create message in conversation {conversation.id}")
             return None
 
+        # Reason: Use original plaintext content, not message.content which is encrypted
         return MessageResponse(
             id=message.id,
             conversation_id=message.conversation_id,
             sender_id=message.sender_id,
-            content=message.content,
+            content=content,
             message_type=message.message_type,
             created_at=message.created_at
         )
