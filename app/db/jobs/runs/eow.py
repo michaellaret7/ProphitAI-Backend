@@ -1,4 +1,4 @@
-from app.db.jobs.fundamentals_table import UpdateFundamentalData
+from app.db.jobs.fundamentals import FundamentalsUpdater
 
 def main():
     print("=" * 100)
@@ -8,7 +8,7 @@ def main():
     # Update all fundamental data (balance sheets, cash flows, income statements,
     # financial ratios, analyst estimates, ETF data, dividends, news, grades, etc.)
     print("Updating fundamental data for all tickers...")
-    updater = UpdateFundamentalData()
+    updater = FundamentalsUpdater()
     updater.update_all_fundamentals(max_workers=3)
 
     print("End of week fundamental data update completed!")

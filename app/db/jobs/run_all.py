@@ -1,11 +1,12 @@
-from app.db.jobs.fundamentals_table import UpdateFundamentalData
+from app.db.jobs.fundamentals import FundamentalsUpdater
 from app.db.jobs.portfolio import UpdatePortfolios
-from app.db.jobs.ticker_table import UpdateTickerTable
-from app.db.jobs.price_table import UpdatePriceTable, is_after_market_close
-from app.db.jobs.macro_jobs.commodity_prices_update import UpdateCommodityPrices
-from app.db.jobs.macro_jobs.economic_indicators_update import UpdateEconomicIndicators
-from app.db.jobs.macro_jobs.economic_calendar_update import UpdateEconomicCalendar
-from app.db.jobs.update_screener import UpdateETFScreenerTable, UpdateEquityScreenerTable
+from app.db.jobs.market_data import UpdateTickerTable, UpdatePriceTable, is_after_market_close
+from app.db.jobs.macro import (
+    UpdateCommodityPrices,
+    UpdateEconomicIndicators,
+    UpdateEconomicCalendar,
+)
+from app.db.jobs.screeners import UpdateETFScreenerTable, UpdateEquityScreenerTable
 import time
 
 def main():
