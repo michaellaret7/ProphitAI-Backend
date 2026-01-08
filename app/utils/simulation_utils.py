@@ -19,7 +19,7 @@ def _normalize_cutoff_date(cutoff_date: Optional[datetime]) -> Optional[datetime
     Returns:
         Timezone-naive datetime (or None if input is None)
 
-    Reason: Price data from DataService typically has timezone-naive DatetimeIndex,
+    Reason: Price data from the repository typically has timezone-naive DatetimeIndex,
             so we strip timezone info to enable pandas comparison operations
     """
     if cutoff_date is None:

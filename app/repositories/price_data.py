@@ -1,12 +1,10 @@
 from concurrent.futures import ThreadPoolExecutor, as_completed
-from numpy import extract
 import pandas as pd
-from app.db.core.db_config import MarketSession
 from app.db.core.models.market_data_models import *
-from datetime import datetime, timedelta
+from datetime import datetime
 import logging
 from app.utils.decorators.database import with_session
-from sqlalchemy import extract, and_
+from sqlalchemy import extract
 
 logger = logging.getLogger(__name__)
 
@@ -103,14 +101,18 @@ def get_price_data_daily(ticker: str, start_date: datetime = None, end_date: dat
 def fetch_bulk_price_data_for_tickers(tickers: list, start_date_str: str, end_date_str: str, frequency: str = 'daily'):
     """
     Fetch price data for multiple tickers in parallel.
-    
+
     Parameters:
     - tickers: List of ticker symbols
     - start_date_str: Start date in 'YYYY-MM-DD' format
     - end_date_str: End date in 'YYYY-MM-DD' format
-    
+    - frequency: Data frequency - 'daily', '15mins', or 'hourly'
+
     Returns:
-    - dict: Mapping of ticker to price series
+    - dict: Mapping of ticker to price series (adj_close for daily, close for intraday)
+
+    Note: Daily data returns adj_close which accounts for dividends and splits.
+    Use daily_price_returns on this series to get total returns.
     """
     # Convert string dates to datetime objects
     start_date = datetime.strptime(start_date_str, '%Y-%m-%d')
@@ -123,6 +125,8 @@ def fetch_bulk_price_data_for_tickers(tickers: list, start_date_str: str, end_da
         get_price_data_func = get_price_data_15_mins
     elif frequency == 'hourly':
         get_price_data_func = get_price_data_hourly
+    else:
+        raise ValueError(f"Invalid frequency: {frequency}. Must be 'daily', '15mins', or 'hourly'")
 
     price_data_map = {}
     with ThreadPoolExecutor(max_workers=20) as executor:
@@ -137,15 +141,17 @@ def fetch_bulk_price_data_for_tickers(tickers: list, start_date_str: str, end_da
                 if data is not None and not data.empty:
                     # Handle different data formats based on frequency
                     if frequency == 'daily':
-                        # Daily data has 'date' column
+                        # Daily data has 'date' column - use adj_close for total returns
+                        # Reason: adj_close accounts for dividends and splits
                         data['date'] = pd.to_datetime(data['date'])
-                        price_data_map[ticker] = data.set_index('date')['close']
+                        price_col = 'adj_close' if 'adj_close' in data.columns else 'close'
+                        price_data_map[ticker] = data.set_index('date')[price_col]
                     else:
                         # 15mins and hourly data already have datetime as index
                         price_data_map[ticker] = data['close']
             except Exception as e:
                 print(f"Error fetching data for {ticker}: {e}")
-                
+
     return price_data_map
 
 def fetch_bulk_ohlcv_data_for_tickers(tickers: list, start_date_str: str, end_date_str: str, frequency: str = 'daily', returns: bool = False):
@@ -232,27 +238,4 @@ def fetch_bulk_ohlcv_data_for_tickers(tickers: list, start_date_str: str, end_da
     return price_data_map
 
 
-@with_session('market')
-def get_dividends_series(ticker: str, start_date: datetime, end_date: datetime, session=None) -> pd.Series:
-    """Return a pandas Series of dividends for a ticker between dates.
-
-    Index: datetime (ex-dividend date), Values: dividend amount (float)
-    """
-    # Join on ticker and filter by date
-    rows = (
-        session.query(Dividend)
-        .join(Ticker)
-        .filter(
-            Ticker.ticker == ticker.upper(),
-            Dividend.date >= start_date.date(),
-            Dividend.date <= end_date.date(),
-        )
-        .order_by(Dividend.date)
-        .all()
-    )
-    if not rows:
-        return pd.Series(dtype=float)
-    # Prefer adjusted dividend if available, fallback to raw
-    data = {pd.to_datetime(r.date): float(r.adjDividend if r.adjDividend is not None else (r.dividend or 0.0)) for r in rows}
-    return pd.Series(data).sort_index()
 

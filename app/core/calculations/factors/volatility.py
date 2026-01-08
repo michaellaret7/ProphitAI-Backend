@@ -6,7 +6,7 @@ from datetime import datetime, timedelta, timezone
 import numpy as np
 import pandas as pd
 import scipy.stats
-from app.core.calculations.core.helpers import zscore_series, winsorize_series, sector_zscore, compose_exposure
+from app.core.calculations.core.helpers import zscore_series, compose_exposure
 from app.core.calculations.risk.calculator import RiskCalculator
 from app.core.calculations.core.config import DEFAULT_TRADING_DAYS, DEFAULT_SECTOR_COL, DEFAULT_WINSOR_LIMITS
 from app.core.calculations.factors.config import VOLATILITY_WEIGHTS, VOLATILITY_WINDOWS, MIN_SAMPLE_SIZE, MOMENTUM_LOOKBACK
@@ -398,7 +398,7 @@ class VolatilityFactors:
     
     @classmethod
     def calc_all_bulk(
-        cls, 
+        cls,
         tickers: list[str],
         start_date: datetime,
         end_date: datetime,
@@ -407,7 +407,7 @@ class VolatilityFactors:
         filing_lag_days: int = 0
     ) -> pd.DataFrame:
         """Calculate all volatility factors for multiple tickers using bulk data fetching.
-        
+
         Args:
             tickers: List of ticker symbols
             start_date: Start date for price data
@@ -415,20 +415,21 @@ class VolatilityFactors:
             market_ticker: Market benchmark ticker for beta calculations
             as_of_date: Optional as-of date for calculations
             filing_lag_days: Filing lag in days
-        
+
         Returns:
             DataFrame with tickers as rows and volatility metrics as columns
         """
-        from app.core.calculations.core.data_service import DataService
-        ds = DataService()
-        
+        from app.repositories.price_data import fetch_bulk_price_data_for_tickers
+
         # Bulk fetch price data for all tickers plus market
         all_tickers = list(tickers) + [market_ticker]
-        price_map = ds.get_bulk_close_series(all_tickers, start_date, end_date)
-        
+        start_str = start_date.strftime('%Y-%m-%d')
+        end_str = end_date.strftime('%Y-%m-%d')
+        price_map = fetch_bulk_price_data_for_tickers(all_tickers, start_str, end_str, frequency='daily')
+
         # Get market prices
         spy_px = price_map.get(market_ticker)
-        
+
         # Calculate volatility factors for each ticker
         all_results = {}
         for ticker in tickers:
@@ -436,10 +437,10 @@ class VolatilityFactors:
             if ticker in price_map:
                 try:
                     px = price_map[ticker]
-                    
+
                     # Create VolatilityFactors instance
                     vf = cls(
-                        price_series=px, 
+                        price_series=px,
                         spy_price_series=spy_px,
                         as_of_date=as_of_date,
                         filing_lag_days=filing_lag_days
@@ -448,20 +449,22 @@ class VolatilityFactors:
                 except Exception as e:
                     print(f"Error calculating volatility factors for {ticker}: {e}")
                     all_results[ticker] = {}
-        
+
         # Convert to DataFrame
         df = pd.DataFrame(all_results).T
         return df
 
 if __name__ == "__main__":
     # Lightweight smoke test for attributes and composite
-    from app.core.calculations.core.data_service import DataService
+    from app.repositories.price_data import fetch_bulk_price_data_for_tickers
+    from app.utils.time_utils import get_current_utc_time
     try:
         test_tickers = ["AAPL", "MSFT", "AMZN", "GOOGL", "NVDA"]
-        ds = DataService()
-        end = datetime.now(timezone.utc)
+        end = get_current_utc_time()
         start = end - timedelta(days=400)
-        series_map = ds.get_bulk_close_series(test_tickers + ["SPY"], start, end)
+        start_str = start.strftime('%Y-%m-%d')
+        end_str = end.strftime('%Y-%m-%d')
+        series_map = fetch_bulk_price_data_for_tickers(test_tickers + ["SPY"], start_str, end_str, frequency='daily')
         rows = []
         for t in test_tickers:
             try:

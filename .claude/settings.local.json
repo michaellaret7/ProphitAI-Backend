@@ -33,7 +33,11 @@
       "mcp__notion__notion-update-page",
       "Skill(skill-builder)",
       "WebFetch(domain:site.financialmodelingprep.com)",
-      "mcp__notion__notion-create-pages"
+      "mcp__notion__notion-create-pages",
+      "Bash(pyright:*)",
+      "Bash(pip show:*)",
+      "WebFetch(domain:medium.com)",
+      "Bash(PYTHONPATH=/Users/michaellaret/Desktop/ProphitAI python3:*)"
     ],
     "deny": [],
     "ask": []

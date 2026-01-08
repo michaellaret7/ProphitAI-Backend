@@ -183,7 +183,7 @@ class TestBrokerAllocationFormat:
 
         mock_portfolio_instance = MagicMock()
         mock_portfolio_instance.get_positions.return_value = [
-            {"symbol": "AAPL", "market_value": 50000, "qty": "123.45"},
+            {"symbol": "AAPL", "market_value": 50000, "qty": "123"},
         ]
         mock_alpaca_portfolio.return_value = mock_portfolio_instance
 
@@ -195,7 +195,7 @@ class TestBrokerAllocationFormat:
         call_args = mock_add_portfolio.call_args
         positions = call_args.kwargs.get('portfolio') or call_args[1].get('portfolio')
 
-        assert positions[0].num_shares == 123.45
+        assert positions[0].num_shares == 123
 
 
 # ============================================================================
@@ -209,11 +209,11 @@ class TestAPIRequestValidation:
         """PositionModel should accept optional num_shares."""
         from app.api.routes.portfolio_router import PositionModel
 
-        pos = PositionModel(ticker="AAPL", allocation=0.25, num_shares=50.5)
+        pos = PositionModel(ticker="AAPL", allocation=0.25, num_shares=50)
 
         assert pos.ticker == "AAPL"
         assert pos.allocation == 0.25
-        assert pos.num_shares == 50.5
+        assert pos.num_shares == 50
 
     def test_position_model_allocation_must_be_decimal(self):
         """PositionModel should reject allocations > 1 (percentage format)."""

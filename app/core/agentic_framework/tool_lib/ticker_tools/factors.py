@@ -1,12 +1,12 @@
 from app.core.agentic_framework.tool_lib.common.responses import success_response, error_response
-from typing import Optional, Dict, Any
+from typing import Optional, Any
 import numpy as np
 from app.core.calculations.factors.growth import GrowthFactors
 from app.core.calculations.factors.value import ValueFactors
 from app.core.calculations.factors.quality import QualityFactors
 from app.core.calculations.factors.momentum import MomentumFactors
 from app.core.calculations.factors.volatility import VolatilityFactors
-from app.core.calculations.core import DataService
+from app.repositories.price_data import fetch_bulk_ohlcv_data_for_tickers
 from datetime import datetime, timedelta
 from app.utils.simulation_utils import get_end_date, filter_series_by_date
 from app.utils.decorators.tool_validation import log_simulation_data_range
@@ -89,37 +89,41 @@ def calculate_ticker_factors(ticker: str, factor: str, _simulation_date: Optiona
 
         # Momentum and Volatility factors need price series
         elif factor in ["momentum", "volatility"]:
-            ds = DataService()
             end_date = get_end_date(_simulation_date)
             # Use 450 calendar days (~300 trading days) to ensure all metrics work
             # Reason: 12-month ex-1m needs 273 trading days, idio_momentum_log needs 273
             start_date = end_date - timedelta(days=450)
+            start_str = start_date.strftime('%Y-%m-%d')
+            end_str = end_date.strftime('%Y-%m-%d')
 
-            # Get price data for ticker (and SPY for market-relative metrics)
-            price_data = ds.get_price_data(ticker, start_date, end_date)
-            if price_data is None or price_data.frame.empty:
+            # Get price data for ticker and SPY (and optionally sector ETF) in one bulk call
+            tickers_to_fetch = [ticker, "SPY"]
+            ohlcv_data = fetch_bulk_ohlcv_data_for_tickers(tickers_to_fetch, start_str, end_str)
+
+            price_df = ohlcv_data.get(ticker)
+            if price_df is None or price_df.empty:
                 return error_response(f"No price data available for {ticker}")
 
-            price_series = price_data.frame['close']
+            # Reason: adj_close accounts for dividends, use it for price series
+            price_series = price_df['adj_close'] if 'adj_close' in price_df.columns else price_df['close']
             price_series = filter_series_by_date(price_series, _simulation_date)
 
-            # Get SPY data for both momentum and volatility
-            spy_data = ds.get_price_data("SPY", start_date, end_date)
-            spy_prices = spy_data.frame['close'] if spy_data and not spy_data.frame.empty else None
-            spy_prices = filter_series_by_date(spy_prices, _simulation_date)
+            # Get SPY data for market-relative metrics
+            spy_df = ohlcv_data.get("SPY")
+            if spy_df is not None and not spy_df.empty:
+                spy_prices = spy_df['adj_close'] if 'adj_close' in spy_df.columns else spy_df['close']
+                spy_prices = filter_series_by_date(spy_prices, _simulation_date)
+            else:
+                spy_prices = None
 
             if factor == "momentum":
                 # Get additional data for momentum calculations
-                volume_series = price_data.frame.get('volume', None)
-                volume_series = filter_series_by_date(volume_series, _simulation_date)
+                volume_series = price_df.get('volume', None)
+                if volume_series is not None:
+                    volume_series = filter_series_by_date(volume_series, _simulation_date)
 
-                # Get dividends if available
-                try:
-                    divs = ds.get_dividends(ticker, start_date, end_date).series
-                    divs = filter_series_by_date(divs, _simulation_date)
-                    divs = divs.reindex(price_series.index).fillna(0.0)
-                except Exception:
-                    divs = None
+                # Dividend data no longer needed - adj_close accounts for dividends
+                # Reason: adj_close already incorporates dividend adjustments
 
                 # Get sector ETF data for sector-relative momentum
                 sector_prices = None
@@ -133,9 +137,10 @@ def calculate_ticker_factors(ticker: str, factor: str, _simulation_date: Optiona
                         if ticker_obj and ticker_obj.sector:
                             sector_etf = SECTOR_ETF_MAP.get(ticker_obj.sector)
                             if sector_etf:
-                                sector_data = ds.get_price_data(sector_etf, start_date, end_date)
-                                if sector_data and not sector_data.frame.empty:
-                                    sector_prices = sector_data.frame['close']
+                                sector_data = fetch_bulk_ohlcv_data_for_tickers([sector_etf], start_str, end_str)
+                                sector_df = sector_data.get(sector_etf)
+                                if sector_df is not None and not sector_df.empty:
+                                    sector_prices = sector_df['adj_close'] if 'adj_close' in sector_df.columns else sector_df['close']
                                     sector_prices = filter_series_by_date(sector_prices, _simulation_date)
                 except Exception:
                     sector_prices = None
@@ -145,7 +150,7 @@ def calculate_ticker_factors(ticker: str, factor: str, _simulation_date: Optiona
                     volume_series=volume_series,
                     market_price_series=spy_prices,
                     sector_price_series=sector_prices,
-                    dividends_series=divs
+                    dividends_series=None  # No longer needed with adj_close
                 ).calc_all()
 
             else:  # volatility

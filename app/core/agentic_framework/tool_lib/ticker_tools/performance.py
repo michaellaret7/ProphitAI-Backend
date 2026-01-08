@@ -1,12 +1,11 @@
 from app.core.agentic_framework.tool_lib.common.responses import success_response, error_response
-from datetime import datetime, timedelta, timezone
-import json
+from datetime import datetime, timedelta
 from typing import Optional, Dict, Any
 
 import numpy as np
 import pandas as pd
 
-from app.core.calculations.core.data_service import DataService
+from app.repositories.price_data import fetch_bulk_price_data_for_tickers
 from app.core.calculations.returns.calculator import ReturnsCalculator
 from app.core.calculations.performance.calculator import PerformanceCalculator
 from app.core.calculations.risk.calculator import RiskCalculator
@@ -71,8 +70,6 @@ def get_ticker_performance_and_risk(
     """
     # Fixed parameters (2 years of trading days - Bloomberg standard for beta)
     market_ticker = "SPY"
-    include_dividends = True
-    ds = DataService()
     end_dt = get_end_date(_simulation_date)
     # Convert trading days to calendar days for date range: 504 trading days * (365/252) ≈ 730 calendar days
     start_dt = end_dt - timedelta(days=365)
@@ -111,12 +108,20 @@ def get_ticker_performance_and_risk(
             adj.loc[adj.index < when] *= f
         return s / adj
 
+    # Date strings for repository calls
+    start_str = start_dt.strftime('%Y-%m-%d')
+    end_str = end_dt.strftime('%Y-%m-%d')
+
     # Market series for market-dependent metrics
     try:
-        mkt_df = ds.get_price_data(market_ticker, start_dt, end_dt).frame
-        mkt_close = mkt_df["close"].astype(float).dropna()
-        mkt_close = filter_series_by_date(mkt_close, _simulation_date)
-        rm = ReturnsCalculator.daily_price_returns(mkt_close)
+        mkt_data = fetch_bulk_price_data_for_tickers([market_ticker], start_str, end_str)
+        mkt_close = mkt_data.get(market_ticker)
+        if mkt_close is not None:
+            mkt_close = mkt_close.astype(float).dropna()
+            mkt_close = filter_series_by_date(mkt_close, _simulation_date)
+            rm = ReturnsCalculator.daily_price_returns(mkt_close)
+        else:
+            rm = None
     except Exception:
         rm = None
 
@@ -141,8 +146,10 @@ def get_ticker_performance_and_risk(
         close = price_data.get(tkr) if price_data else None
         if close is None or close.empty:
             # Fallback fetch if decorator missed it
-            px_df = ds.get_price_data(tkr, start_dt, end_dt).frame
-            close = px_df["close"].astype(float).dropna()
+            fallback_data = fetch_bulk_price_data_for_tickers([tkr], start_str, end_str)
+            close = fallback_data.get(tkr)
+            if close is not None:
+                close = close.astype(float).dropna()
 
         # Filter by simulation date if provided
         close = filter_series_by_date(close, _simulation_date)
@@ -153,16 +160,8 @@ def get_ticker_performance_and_risk(
         if close is None or close.empty:
             return error_response(f"no price data for {tkr}")
 
-        if include_dividends:
-            try:
-                divs = ds.get_dividends(tkr, start_dt, end_dt).series
-                divs = filter_series_by_date(divs, _simulation_date)
-                divs = divs.reindex(close.index).fillna(0.0)
-            except Exception:
-                divs = None
-            r = ReturnsCalculator.total_returns(close, divs)
-        else:
-            r = ReturnsCalculator.daily_price_returns(close)
+        # Reason: adj_close already accounts for dividends, so daily_price_returns gives total returns
+        r = ReturnsCalculator.daily_price_returns(close)
         if r.empty:
             return error_response(f"failed to compute returns for {tkr}")
 
@@ -248,8 +247,9 @@ def get_ticker_performance_and_risk(
         # Round performance values to 4 decimals
         perf = _round_map(perf, ndigits=4)
 
-        # Returns summary using calendar windows (closer to public site definitions)
-        def _trailing_price_return(prices: pd.Series, months: int) -> float:
+        # Returns summary using calendar windows
+        # Reason: adj_close accounts for dividends, so price returns on adj_close = total returns
+        def _trailing_return(prices: pd.Series, months: int) -> float:
             if prices is None or prices.empty:
                 return np.nan
             end_idx = prices.index[-1]
@@ -263,46 +263,21 @@ def get_ticker_performance_and_risk(
                 return np.nan
             return float(last_px / first_px - 1.0)
 
-        price_return_3y = _trailing_price_return(close, months=36)
-        pr_1y = _trailing_price_return(close, months=12)
-        pr_6m = _trailing_price_return(close, months=6)
-        pr_3m = _trailing_price_return(close, months=3)
-        # Total return windows (reinvested)
-        try:
-            divs_full = DataService().get_dividends(tkr, start_dt, end_dt).series
-            divs_full = divs_full.reindex(close.index).fillna(0.0)
-        except Exception:
-            divs_full = None
-        # 3-year
-        end_idx = close.index[-1]
-        start3 = end_idx - pd.DateOffset(months=36)
-        c3 = close.loc[close.index >= start3]
-        d3 = divs_full.reindex(c3.index) if divs_full is not None else None
-        total_return_3y = float(ReturnsCalculator.holding_period_return_total_reinvested(c3, d3)) if not c3.empty else np.nan
-        # 1-year
-        start1 = end_idx - pd.DateOffset(months=12)
-        c1 = close.loc[close.index >= start1]
-        d1 = divs_full.reindex(c1.index) if divs_full is not None else None
-        total_return_1y = float(ReturnsCalculator.holding_period_return_total_reinvested(c1, d1)) if not c1.empty else np.nan
-        # 6 months
-        start6 = end_idx - pd.DateOffset(months=6)
-        c6 = close.loc[close.index >= start6]
-        d6 = divs_full.reindex(c6.index) if divs_full is not None else None
-        total_return_6m = float(ReturnsCalculator.holding_period_return_total_reinvested(c6, d6)) if not c6.empty else np.nan
-        # 3 months
-        start3m = end_idx - pd.DateOffset(months=3)
-        c3m = close.loc[close.index >= start3m]
-        d3m = divs_full.reindex(c3m.index) if divs_full is not None else None
-        total_return_3m = float(ReturnsCalculator.holding_period_return_total_reinvested(c3m, d3m)) if not c3m.empty else np.nan
+        # Calculate returns for various periods (adj_close gives total returns)
+        return_3y = _trailing_return(close, months=36)
+        return_1y = _trailing_return(close, months=12)
+        return_6m = _trailing_return(close, months=6)
+        return_3m = _trailing_return(close, months=3)
+
         returns: Dict[str, Any] = {
-            "price_return_3y": price_return_3y,
-            "total_return_3y": total_return_3y,
-            "total_return_1y": total_return_1y,
-            "total_return_6m": total_return_6m,
-            "total_return_3m": total_return_3m,
-            "price_return_1y": pr_1y,
-            "price_return_6m": pr_6m,
-            "price_return_3m": pr_3m,
+            "price_return_3y": return_3y,
+            "total_return_3y": return_3y,  # Same as price return since adj_close includes dividends
+            "total_return_1y": return_1y,
+            "total_return_6m": return_6m,
+            "total_return_3m": return_3m,
+            "price_return_1y": return_1y,
+            "price_return_6m": return_6m,
+            "price_return_3m": return_3m,
         }
         returns = _round_map(returns, ndigits=4)
 

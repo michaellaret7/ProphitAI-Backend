@@ -3,7 +3,6 @@ from __future__ import annotations
 import numpy as np
 import pandas as pd
 from app.core.calculations.risk.calculator import RiskCalculator
-from app.core.calculations.core.data_service import DataService
 from datetime import datetime, timedelta, timezone
 from app.core.calculations.returns.calculator import ReturnsCalculator
 from app.core.calculations.core.config import DEFAULT_TRADING_DAYS, DEFAULT_RF_ANNUAL
@@ -609,8 +608,9 @@ class PerformanceCalculator:
 
 
 if __name__ == "__main__":
-    from datetime import datetime, timedelta, timezone
-    from app.core.calculations.core.data_service import DataService
+    from datetime import datetime, timedelta
+    from app.repositories.price_data import fetch_bulk_price_data_for_tickers
+    from app.utils.time_utils import get_current_utc_time
 
     try:
         # Parameters
@@ -619,12 +619,13 @@ if __name__ == "__main__":
             "META", "TSLA", "JPM", "JNJ", "XOM",
         ]
         benchmark = "SPY"
-        end = datetime.now(timezone.utc)
+        end = get_current_utc_time()
         start = end - timedelta(days=365 * 3)
 
-        # Bulk fetch closing price series via DataService
-        ds = DataService()
-        series_map = ds.get_bulk_close_series(test_tickers + [benchmark], start, end)
+        # Bulk fetch closing price series
+        start_str = start.strftime('%Y-%m-%d')
+        end_str = end.strftime('%Y-%m-%d')
+        series_map = fetch_bulk_price_data_for_tickers(test_tickers + [benchmark], start_str, end_str, frequency='daily')
         mkt = series_map.get(benchmark)
         if mkt is None or mkt.empty:
             raise RuntimeError("Benchmark series not available")

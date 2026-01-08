@@ -1,20 +1,15 @@
 from app.core.agentic_framework.tool_lib.common.responses import success_response, error_response
 from app.core.calculations.sectors.industry import *
 from app.core.calculations.sectors.sub_industry import *
-from app.core.calculations.factors.growth import GrowthFactors
-from app.core.calculations.factors.value import ValueFactors
-from app.core.calculations.factors.momentum import MomentumFactors
-from app.core.calculations.factors.quality import QualityFactors
-from app.core.calculations.factors.volatility import VolatilityFactors
-from app.core.calculations.core.data_service import DataService
+from app.repositories.price_data import fetch_bulk_price_data_for_tickers
 from app.utils.decorators.database import with_session
 from app.utils.decorators.tool_validation import log_simulation_data_range, validate_tickers_arg
-from app.core.calculations.returns.calculator import ReturnsCalculator
 from datetime import datetime, timedelta
-from app.db.core.db_config import MarketSession
 from app.db.core.models.market_data_models import Ticker
 from typing import List
-from app.utils.decorators.price_data import with_price_data
+
+# Reason: Buffer for weekends/holidays when fetching historical prices
+WEEKEND_BUFFER_DAYS = 5
 
 
 @with_session('market')
@@ -53,11 +48,12 @@ def get_base_ticker_info(tickers: List[str], _simulation_date: datetime = None, 
         # Reason: In simulation mode, we need historical prices as of the cutoff date
         historical_prices = {}
         if _simulation_date:
-            ds = DataService()
             # Get price data for simulation date (1 day lookback to get the closing price)
-            start_date = _simulation_date - timedelta(days=5)  # Buffer for weekends
+            start_date = _simulation_date - timedelta(days=WEEKEND_BUFFER_DAYS)
             end_date = _simulation_date
-            price_data = ds.get_bulk_close_series(tickers, start_date, end_date)
+            start_str = start_date.strftime('%Y-%m-%d')
+            end_str = end_date.strftime('%Y-%m-%d')
+            price_data = fetch_bulk_price_data_for_tickers(tickers, start_str, end_str, frequency='daily')
 
             for ticker_symbol, prices in price_data.items():
                 if prices is not None and not prices.empty:
