@@ -626,7 +626,7 @@ if __name__ == "__main__":
         start_str = start.strftime('%Y-%m-%d')
         end_str = end.strftime('%Y-%m-%d')
         series_map = fetch_bulk_price_data_for_tickers(test_tickers + [benchmark], start_str, end_str, frequency='daily')
-        mkt = series_map.get(benchmark)
+        mkt = series_map[benchmark] if benchmark in series_map.columns else None
         if mkt is None or mkt.empty:
             raise RuntimeError("Benchmark series not available")
         rm = mkt.astype(float).pct_change(fill_method=None).dropna()
@@ -634,7 +634,7 @@ if __name__ == "__main__":
         rows: list[dict[str, float]] = []
         for t in test_tickers:
             try:
-                s = series_map.get(t)
+                s = series_map[t] if t in series_map.columns else None
                 if s is None or s.empty:
                     rows.append({"ticker": t})
                     continue

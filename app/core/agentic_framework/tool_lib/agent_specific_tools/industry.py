@@ -55,7 +55,8 @@ def get_base_ticker_info(tickers: List[str], _simulation_date: datetime = None, 
             end_str = end_date.strftime('%Y-%m-%d')
             price_data = fetch_bulk_price_data_for_tickers(tickers, start_str, end_str, frequency='daily')
 
-            for ticker_symbol, prices in price_data.items():
+            for ticker_symbol in price_data.columns:
+                prices = price_data[ticker_symbol]
                 if prices is not None and not prices.empty:
                     # Get the last available price before or on simulation date
                     historical_prices[ticker_symbol] = float(prices.iloc[-1])

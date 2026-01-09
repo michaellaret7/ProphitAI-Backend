@@ -53,7 +53,7 @@ class ValueFactors:
                 start_str = start_dt.strftime('%Y-%m-%d')
                 end_str = self._effective_end_dt.strftime('%Y-%m-%d')
                 price_data = fetch_bulk_price_data_for_tickers([self.ticker], start_str, end_str)
-                price_series = price_data.get(self.ticker)
+                price_series = price_data[self.ticker] if self.ticker in price_data.columns else None
                 if price_series is not None and not price_series.empty:
                     last_close = price_series.iloc[-1]
                     self.price = float(last_close) if last_close is not None else None
@@ -569,21 +569,7 @@ class ValueFactors:
         df = pd.DataFrame(all_results).T
         return df
 
-if __name__ == "__main__":
-    # Lightweight smoke test for calc_all_bulk
-    import sys
-    try:
-        test_tickers = ["AAPL", "MSFT", "AMZN", "GOOGL", "NVDA"]
-        
-        # Use the classmethod to get all value factors in a DataFrame
-        value_factors_df = ValueFactors.calc_all_bulk(tickers=test_tickers)
-        
-        print("Calculated Value Factors:")
-        print(value_factors_df.to_string())
 
-    except Exception as e:
-        print(f"[error] Smoke test failed: {e}")
-        sys.exit(1)
 
 
 

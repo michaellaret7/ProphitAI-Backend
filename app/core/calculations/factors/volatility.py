@@ -428,13 +428,13 @@ class VolatilityFactors:
         price_map = fetch_bulk_price_data_for_tickers(all_tickers, start_str, end_str, frequency='daily')
 
         # Get market prices
-        spy_px = price_map.get(market_ticker)
+        spy_px = price_map[market_ticker] if market_ticker in price_map.columns else None
 
         # Calculate volatility factors for each ticker
         all_results = {}
         for ticker in tickers:
             ticker = ticker.upper()
-            if ticker in price_map:
+            if ticker in price_map.columns:
                 try:
                     px = price_map[ticker]
 
@@ -454,44 +454,6 @@ class VolatilityFactors:
         df = pd.DataFrame(all_results).T
         return df
 
-if __name__ == "__main__":
-    # Lightweight smoke test for attributes and composite
-    from app.repositories.price_data import fetch_bulk_price_data_for_tickers
-    from app.utils.time_utils import get_current_utc_time
-    try:
-        test_tickers = ["AAPL", "MSFT", "AMZN", "GOOGL", "NVDA"]
-        end = get_current_utc_time()
-        start = end - timedelta(days=400)
-        start_str = start.strftime('%Y-%m-%d')
-        end_str = end.strftime('%Y-%m-%d')
-        series_map = fetch_bulk_price_data_for_tickers(test_tickers + ["SPY"], start_str, end_str, frequency='daily')
-        rows = []
-        for t in test_tickers:
-            try:
-                px = series_map.get(t)
-                mkt = series_map.get("SPY")
-                if px is None or mkt is None:
-                    continue
-                vf = VolatilityFactors(px, mkt)
-                attrs = vf.compute_attributes()
-                rows.append({"ticker": t, **attrs})
-            except Exception as e:
-                print(f"[warn] Failed computing attributes for {t}: {e}")
-        frame = pd.DataFrame(rows)
-        frame = VolatilityFactors.compose_volatility_exposure(frame)
-        frame = VolatilityFactors.orthogonalize_volatility(frame, exposure_col="vol_exposure_raw", beta_col="beta")
-        cols = [
-            "ticker",
-            "beta",
-            "idio_vol",
-            "realized_vol",
-            "downside_dev",
-            "svlr",
-            "vol_exposure_raw",
-            "vol_exposure",
-        ]
-        print(frame[cols].to_string(index=False))
-    except Exception as e:
-        print(f"[error] Smoke test failed: {e}")
+
 
 

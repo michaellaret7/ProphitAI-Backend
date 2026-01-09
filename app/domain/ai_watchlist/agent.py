@@ -49,3 +49,6 @@ class AiWatchlistAgent(BaseAgent):
     def _build_user_prompt(self) -> str:
         return USER_PROMPT_TEMPLATE.format(user_query=self.user_preferences)
 
+if __name__ == "__main__":
+    agent = AiWatchlistAgent(user_preferences="Build me a watchlist of 1-15 tickers of avaiation and shipping stocks with lowe to mid pe ratios")
+    agent.run()

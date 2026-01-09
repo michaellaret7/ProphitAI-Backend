@@ -27,7 +27,7 @@ def _compute_exposure_frame(
     fundamentals: Dict[str, FundamentalsResult],
     start: datetime,
     end: datetime,
-    price_map: Optional[Dict[str, pd.Series]] = None,
+    price_map: Optional[pd.DataFrame] = None,
 ) -> Tuple[pd.DataFrame, str]:
     """Return a DataFrame with per-ticker attributes and an exposure column for the requested factor.
 
@@ -75,16 +75,16 @@ def _compute_exposure_frame(
 
     if factor_l == "momentum":
         # Fetch prices once (or reuse provided)
-        if price_map is None:
+        if price_map is None or price_map.empty:
             start_str = start.strftime('%Y-%m-%d')
             end_str = end.strftime('%Y-%m-%d')
             price_map = fetch_bulk_price_data_for_tickers(list(tickers) + ["SPY"], start_str, end_str, frequency='daily')
         series_map = price_map
-        spy_px = series_map.get("SPY")
+        spy_px = series_map["SPY"] if "SPY" in series_map.columns else None
         rows = []
         def compute_mom_attrs(t: str) -> dict:
             try:
-                px = series_map.get(t)
+                px = series_map[t] if t in series_map.columns else None
                 if px is None or px.empty:
                     return {"ticker": t}
                 divs = None  # price-only for speed
@@ -124,16 +124,16 @@ def _compute_exposure_frame(
 
     if factor_l == "volatility" or factor_l == "vol":
         # Prices for tickers and SPY for beta/idiosyncratic calculations
-        if price_map is None:
+        if price_map is None or price_map.empty:
             start_str = start.strftime('%Y-%m-%d')
             end_str = end.strftime('%Y-%m-%d')
             price_map = fetch_bulk_price_data_for_tickers(list(tickers) + ["SPY"], start_str, end_str, frequency='daily')
         series_map = price_map
-        spy_px = series_map.get("SPY")
+        spy_px = series_map["SPY"] if "SPY" in series_map.columns else None
         rows = []
         def compute_vol_attrs(t: str) -> dict:
             try:
-                px = series_map.get(t)
+                px = series_map[t] if t in series_map.columns else None
                 if px is None or px.empty:
                     return {"ticker": t}
                 vf = VolatilityFactors(price_series=px, spy_price_series=spy_px)

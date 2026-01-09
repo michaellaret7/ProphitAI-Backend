@@ -264,13 +264,13 @@ def compose_exposure(
 
 # ------------------------------ Returns DataFrame builders ------------------------------ #
 def build_returns_df_from_price_map(
-    price_map: dict[str, pd.Series],
+    price_df: pd.DataFrame,
     *,
     drop_rows: str = 'any',  # 'any' | 'all' | 'none'
     include_dividends: bool = False,
     dividends_map: dict[str, pd.Series] | None = None,
 ) -> pd.DataFrame:
-    """Build a per-ticker daily returns DataFrame from a mapping of close price Series.
+    """Build a per-ticker daily returns DataFrame from a price DataFrame.
 
     - Cleans indices to datetime and drops invalid dates per series.
     - Computes price-only or total returns per ticker.
@@ -280,11 +280,12 @@ def build_returns_df_from_price_map(
         'all'  -> drop rows where all tickers are NaN (retain partial overlap)
         'none' -> keep all rows (pairwise methods handle NaNs)
     """
-    if not price_map:
+    if price_df is None or price_df.empty:
         return pd.DataFrame()
 
     returns_map: dict[str, pd.Series] = {}
-    for ticker, prices in (price_map or {}).items():
+    for ticker in price_df.columns:
+        prices = price_df[ticker]
         if prices is None:
             continue
         try:

@@ -496,10 +496,7 @@ if __name__ == "__main__":
     USE_SECTOR_CAP = False  # set True and fill real labels to enforce caps
 
     print(f"Fetching price data for {len(tickers)} tickers...")
-    price_dict = fetch_bulk_price_data_for_tickers(tickers, start_date, end_date, frequency='daily')
-
-    # Convert to DataFrame
-    prices_df = pd.DataFrame(price_dict)
+    prices_df = fetch_bulk_price_data_for_tickers(tickers, start_date, end_date, frequency='daily')
 
     # Find the latest start date across all tickers (to keep all tickers)
     print("\nData availability:")
@@ -590,8 +587,8 @@ if __name__ == "__main__":
 
     # SPY for context
     print("\nFetching SPY benchmark data...")
-    spy_dict = fetch_bulk_price_data_for_tickers(['SPY'], start_date, end_date, frequency='daily')
-    spy_prices = pd.Series(spy_dict['SPY']).dropna()
+    spy_data = fetch_bulk_price_data_for_tickers(['SPY'], start_date, end_date, frequency='daily')
+    spy_prices = spy_data['SPY'].dropna()
     spy_rets = spy_prices.pct_change(fill_method=None).dropna()
 
     common = port_rets.index.intersection(spy_rets.index)

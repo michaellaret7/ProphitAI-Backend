@@ -45,10 +45,14 @@ def prepare_portfolio_data(
     if include_benchmark and include_benchmark not in tickers:
         tickers.append(include_benchmark)
 
-    # 3. Fetch price data directly from repository
+    # 3. Fetch price data directly from repository (returns DataFrame)
     start_str = start.strftime('%Y-%m-%d')
     end_str = end.strftime('%Y-%m-%d')
-    price_data = fetch_bulk_price_data_for_tickers(tickers, start_str, end_str)
+    price_df = fetch_bulk_price_data_for_tickers(tickers, start_str, end_str)
+
+    # Convert DataFrame to dict for callers that expect Dict[str, pd.Series]
+    # Reason: to_dict('series') returns dict with column names as keys and Series as values
+    price_data: Dict[str, pd.Series] = {str(k): v for k, v in price_df.to_dict('series').items()}
 
     # Filter price data by simulation date if provided
     if _simulation_date is not None:
@@ -161,7 +165,7 @@ def get_benchmark_returns(
     start_str = start.strftime('%Y-%m-%d')
     end_str = end.strftime('%Y-%m-%d')
     price_data = fetch_bulk_price_data_for_tickers([benchmark], start_str, end_str)
-    bench_prices = price_data.get(benchmark)
+    bench_prices = price_data[benchmark] if benchmark in price_data.columns else None
 
     # Filter by simulation date if provided
     bench_prices = filter_series_by_date(bench_prices, _simulation_date)

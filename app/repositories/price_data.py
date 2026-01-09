@@ -98,7 +98,7 @@ def get_price_data_daily(ticker: str, start_date: datetime = None, end_date: dat
 
     return df
 
-def fetch_bulk_price_data_for_tickers(tickers: list, start_date_str: str, end_date_str: str, frequency: str = 'daily'):
+def fetch_bulk_price_data_for_tickers(tickers: list, start_date_str: str, end_date_str: str, frequency: str = 'daily') -> pd.DataFrame:
     """
     Fetch price data for multiple tickers in parallel.
 
@@ -109,10 +109,11 @@ def fetch_bulk_price_data_for_tickers(tickers: list, start_date_str: str, end_da
     - frequency: Data frequency - 'daily', '15mins', or 'hourly'
 
     Returns:
-    - dict: Mapping of ticker to price series (adj_close for daily, close for intraday)
+    - pd.DataFrame: DataFrame with DatetimeIndex and ticker columns containing prices
+                    (adj_close for daily, close for intraday)
 
     Note: Daily data returns adj_close which accounts for dividends and splits.
-    Use daily_price_returns on this series to get total returns.
+    Use daily_price_returns on this data to get total returns.
     """
     # Convert string dates to datetime objects
     start_date = datetime.strptime(start_date_str, '%Y-%m-%d')
@@ -152,7 +153,7 @@ def fetch_bulk_price_data_for_tickers(tickers: list, start_date_str: str, end_da
             except Exception as e:
                 print(f"Error fetching data for {ticker}: {e}")
 
-    return price_data_map
+    return pd.DataFrame(price_data_map)
 
 def fetch_bulk_ohlcv_data_for_tickers(tickers: list, start_date_str: str, end_date_str: str, frequency: str = 'daily', returns: bool = False):
     """

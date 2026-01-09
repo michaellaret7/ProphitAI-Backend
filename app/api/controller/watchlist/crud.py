@@ -334,7 +334,7 @@ async def get_watchlist_metrics_controller(
 
     # Handle case where historical_prices fetch failed
     if isinstance(historical_prices, Exception):
-        historical_prices = {}
+        historical_prices = pd.DataFrame()
 
     # Process results into maps
     ratios_map = {}
@@ -371,7 +371,7 @@ async def get_watchlist_metrics_controller(
     current_date = pd.Timestamp(get_current_utc_time())
     calculated_performance_map = {}
     for ticker in tickers:
-        prices = historical_prices.get(ticker)
+        prices = historical_prices[ticker] if ticker in historical_prices.columns else None
         if prices is not None and not prices.empty:
             calculated_performance_map[ticker] = _calculate_performance_from_prices(
                 prices, current_date
@@ -442,7 +442,8 @@ async def get_watchlist_charts_controller(tickers: List[str]) -> Dict[str, Any]:
     # Convert pandas Series to dict with date strings as keys for JSON serialization
     # Reason: pandas Series serialize with numeric indices by default, not date strings
     prices_serializable = {}
-    for ticker, series in prices.items():
+    for ticker in prices.columns:
+        series = prices[ticker]
         if series is not None and not series.empty:
             # Convert DatetimeIndex to date strings and values to floats
             prices_serializable[ticker] = {
@@ -451,8 +452,8 @@ async def get_watchlist_charts_controller(tickers: List[str]) -> Dict[str, Any]:
             }
 
     # Calculate multi-period correlations from returns
-    if len(prices) > 1:
-        price_df = pd.DataFrame(prices)
+    if len(prices.columns) > 1:
+        price_df = prices  # Already a DataFrame
         returns_df = price_df.pct_change().dropna()
         correlations = CorrelationAnalysis.multi_period_correlations(
             returns_df,

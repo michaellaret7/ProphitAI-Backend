@@ -10,12 +10,12 @@ from app.utils.validation_utils import normalize_portfolio_input
 from app.models.portfolio_models import PortfolioInput
 from app.core.calculations.core.helpers import build_returns_df_from_price_map
 
-def calculate_correlation_matrix(price_data: dict = None, start_date_str: str = None, end_date_str: str = None, frequency: str = None, tickers: list[str] = None):
+def calculate_correlation_matrix(price_data: pd.DataFrame = None, start_date_str: str = None, end_date_str: str = None, frequency: str = None, tickers: list[str] = None):
     """
     Calculate the correlation matrix for the given price data, accounting for position sizes and directions.
-    
+
     Parameters:
-    - price_data: Dict mapping ticker symbols to price Series
+    - price_data: DataFrame with ticker columns and DatetimeIndex containing prices
     - start_date_str: Start date for the price data
     - end_date_str: End date for the price data
     - frequency: Frequency of the price data
@@ -24,7 +24,7 @@ def calculate_correlation_matrix(price_data: dict = None, start_date_str: str = 
     - pd.DataFrame: Correlation matrix
     """
 
-    if not price_data:
+    if price_data is None or price_data.empty:
         price_data = fetch_bulk_price_data_for_tickers(tickers=tickers, start_date_str=start_date_str, end_date_str=end_date_str, frequency=frequency)
 
     # Build returns without dropping rows globally; let correlation handle pairwise NaNs

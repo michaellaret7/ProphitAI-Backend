@@ -285,10 +285,7 @@ if __name__ == "__main__":
     USE_SECTOR_CAP = False  # set True once you pass real labels
 
     print(f"Fetching price data for {len(tickers)} tickers...")
-    price_data = fetch_bulk_price_data_for_tickers(tickers, start_date, end_date, frequency='daily')
-
-    # Convert to DataFrame and handle missing data
-    prices_df = pd.DataFrame(price_data)
+    prices_df = fetch_bulk_price_data_for_tickers(tickers, start_date, end_date, frequency='daily')
 
     # Check data availability for each ticker
     print("\nData availability:")
@@ -362,8 +359,7 @@ if __name__ == "__main__":
     # Fetch SPY benchmark data
     print("\nFetching SPY benchmark data...")
     spy_data = fetch_bulk_price_data_for_tickers(['SPY'], start_date, end_date, frequency='daily')
-    # spy_data is dict-like: {'SPY': Series}
-    spy_prices = pd.Series(spy_data['SPY']).dropna()
+    spy_prices = spy_data['SPY'].dropna()
     spy_returns = spy_prices.pct_change(fill_method=None).dropna()
 
     # Align dates

@@ -228,14 +228,12 @@ class PortfolioAllocator:
         end_date = get_utc_date_str()
         start_date = get_utc_days_ago(self.config.lookback_days).strftime("%Y-%m-%d")
 
-        price_map = fetch_bulk_price_data_for_tickers(
+        prices_df = fetch_bulk_price_data_for_tickers(
             self.all_tickers,
             start_date,
             end_date,
             frequency=self.config.frequency,
-        )
-
-        prices_df = pd.DataFrame(price_map).dropna()
+        ).dropna()
         if prices_df.empty:
             raise ValueError("No price data returned (after dropna). Check tickers/date range.")
         return prices_df

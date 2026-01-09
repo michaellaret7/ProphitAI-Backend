@@ -72,7 +72,7 @@ class StressReturnsService:
         # Calculate daily returns for each ticker
         ticker_returns = {
             ticker: ReturnsCalculator.daily_price_returns(self.price_data[ticker])
-            for ticker in self.weights if ticker in self.price_data
+            for ticker in self.weights if ticker in self.price_data.columns
         }
 
         # Calculate weighted portfolio returns
@@ -84,7 +84,7 @@ class StressReturnsService:
         )
 
         # Calculate SPY returns and align with portfolio returns index
-        if 'SPY' in self.price_data and not self.price_data['SPY'].empty:
+        if 'SPY' in self.price_data.columns and not self.price_data['SPY'].empty:
             # Get the union of all portfolio ticker price timestamps
             all_timestamps = self.portfolio_returns.index
 

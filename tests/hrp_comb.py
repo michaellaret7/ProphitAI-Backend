@@ -520,8 +520,7 @@ if __name__ == "__main__":
     end_date = '2025-10-09'
 
     # Fetch data
-    price_data = fetch_bulk_price_data_for_tickers(tickers, start_date, end_date, frequency='daily')
-    prices_df = pd.DataFrame(price_data)
+    prices_df = fetch_bulk_price_data_for_tickers(tickers, start_date, end_date, frequency='daily')
 
     # Check for sufficient data (60% coverage)
     min_required_points = len(prices_df) * 0.6
@@ -600,8 +599,7 @@ if __name__ == "__main__":
     directions_dict = {p["ticker_name"]: p["position"].value for p in portfolio}
 
     # Fetch data
-    price_data = fetch_bulk_price_data_for_tickers(tickers, start_date, end_date, frequency='daily')
-    prices_df = pd.DataFrame(price_data)
+    prices_df = fetch_bulk_price_data_for_tickers(tickers, start_date, end_date, frequency='daily')
 
     # Check for sufficient data (60% coverage)
     min_required_points = len(prices_df) * 0.6

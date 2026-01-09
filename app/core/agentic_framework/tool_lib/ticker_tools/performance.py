@@ -115,7 +115,7 @@ def get_ticker_performance_and_risk(
     # Market series for market-dependent metrics
     try:
         mkt_data = fetch_bulk_price_data_for_tickers([market_ticker], start_str, end_str)
-        mkt_close = mkt_data.get(market_ticker)
+        mkt_close = mkt_data[market_ticker] if market_ticker in mkt_data.columns else None
         if mkt_close is not None:
             mkt_close = mkt_close.astype(float).dropna()
             mkt_close = filter_series_by_date(mkt_close, _simulation_date)
@@ -143,11 +143,11 @@ def get_ticker_performance_and_risk(
         return out
 
     try:
-        close = price_data.get(tkr) if price_data else None
+        close = price_data[tkr] if (price_data is not None and not price_data.empty and tkr in price_data.columns) else None
         if close is None or close.empty:
             # Fallback fetch if decorator missed it
             fallback_data = fetch_bulk_price_data_for_tickers([tkr], start_str, end_str)
-            close = fallback_data.get(tkr)
+            close = fallback_data[tkr] if tkr in fallback_data.columns else None
             if close is not None:
                 close = close.astype(float).dropna()
 

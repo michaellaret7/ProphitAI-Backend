@@ -38,7 +38,7 @@ def with_price_data(lookback_days=DEFAULT_LOOKBACK_1Y, include_dividends=True):
             start_str = start.strftime('%Y-%m-%d')
             end_str = end.strftime('%Y-%m-%d')
             price_map = fetch_bulk_price_data_for_tickers([ticker], start_str, end_str)
-            price_series = price_map.get(ticker)
+            price_series = price_map[ticker] if ticker in price_map.columns else None
 
             if price_series is None or price_series.empty:
                 return yaml.dump({"success": False, "error": f"No price data available for {ticker}"}, default_flow_style=False)
