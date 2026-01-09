@@ -7,6 +7,10 @@ from .operations import (
     get_user_portfolio_list_controller,
     get_portfolio_positions_controller,
     rebalance_portfolio_controller,
+    get_portfolio_preference_controller,
+    create_portfolio_preference_controller,
+    update_portfolio_preference_controller,
+    delete_portfolio_preference_controller,
 )
 from .analytics import (
     get_portfolio_returns_controller,
@@ -27,6 +31,11 @@ __all__ = [
     "get_user_portfolio_list_controller",
     "get_portfolio_positions_controller",
     "rebalance_portfolio_controller",
+    # Preferences
+    "get_portfolio_preference_controller",
+    "create_portfolio_preference_controller",
+    "update_portfolio_preference_controller",
+    "delete_portfolio_preference_controller",
     # Analytics
     "get_portfolio_returns_controller",
     "get_portfolio_metrics_controller",

@@ -11,7 +11,13 @@ from app.services.portfolio import PortfolioService
 from app.api.response_envelope import ok_envelope
 from app.redis.client import cache
 from app.utils.decorators.api_decorators import handle_controller_errors
-from app.repositories.portfolio_data import retrieve_portfolio
+from app.repositories.portfolio_data import (
+    retrieve_portfolio,
+    get_portfolio_preference,
+    create_portfolio_preference,
+    update_portfolio_preference,
+    delete_portfolio_preference,
+)
 from app.core.calculations.portfolio.allocator import run, StrategyLiteral
 
 def _verify_portfolio_ownership(portfolio_id: str, user_id: str) -> None:
@@ -250,4 +256,150 @@ async def rebalance_portfolio_controller(
         resource_id=resource_id,
         self_link=self_link,
         payload=allocations,
+    )
+
+
+# =============================================================================
+# PORTFOLIO PREFERENCES
+# =============================================================================
+
+@handle_controller_errors
+async def get_portfolio_preference_controller(
+    *,
+    portfolio_id: str,
+    user_id: str,
+) -> Dict[str, Any]:
+    """
+    Controller to retrieve portfolio preferences.
+
+    Cache TTL: 1 hour (3600s)
+    """
+    if not portfolio_id:
+        raise ValueError("portfolioId is required")
+    if not user_id:
+        raise ValueError("userId is required")
+
+    _verify_portfolio_ownership(portfolio_id, user_id)
+
+    cache_key = f"portfolio:preferences:{portfolio_id}"
+    cached_data = await cache.get(cache_key)
+    if cached_data:
+        return cached_data
+
+    preference = get_portfolio_preference(portfolio_id=uuid.UUID(portfolio_id))
+
+    if not preference:
+        raise HTTPException(status_code=404, detail="Portfolio preferences not found")
+
+    response = ok_envelope(
+        message="Portfolio preferences retrieved successfully",
+        kind="portfolio#preferences",
+        resource_id=portfolio_id,
+        self_link=f"/api/portfolios/{portfolio_id}/preferences",
+        payload=preference,
+    )
+
+    await cache.set(cache_key, response, ttl=3600)
+
+    return response
+
+
+@handle_controller_errors
+async def create_portfolio_preference_controller(
+    *,
+    portfolio_id: str,
+    user_id: str,
+    preference_data: Dict[str, Any],
+) -> Dict[str, Any]:
+    """Controller to create portfolio preferences with cache invalidation."""
+    if not portfolio_id:
+        raise ValueError("portfolioId is required")
+    if not user_id:
+        raise ValueError("userId is required")
+
+    _verify_portfolio_ownership(portfolio_id, user_id)
+
+    data = create_portfolio_preference(
+        portfolio_id=uuid.UUID(portfolio_id),
+        **preference_data,
+    )
+
+    # Invalidate cache
+    await cache.clear_pattern(f"portfolio:preferences:{portfolio_id}")
+
+    return ok_envelope(
+        message="Portfolio preferences created successfully",
+        kind="portfolio#preferences",
+        resource_id=portfolio_id,
+        self_link=f"/api/portfolios/{portfolio_id}/preferences",
+        payload=data,
+        status=201,
+    )
+
+
+@handle_controller_errors
+async def update_portfolio_preference_controller(
+    *,
+    portfolio_id: str,
+    user_id: str,
+    preference_data: Dict[str, Any],
+) -> Dict[str, Any]:
+    """Controller to update portfolio preferences with cache invalidation."""
+    if not portfolio_id:
+        raise ValueError("portfolioId is required")
+    if not user_id:
+        raise ValueError("userId is required")
+
+    _verify_portfolio_ownership(portfolio_id, user_id)
+
+    success = update_portfolio_preference(
+        portfolio_id=uuid.UUID(portfolio_id),
+        **preference_data,
+    )
+
+    if not success:
+        raise HTTPException(status_code=404, detail="Portfolio preferences not found")
+
+    # Invalidate cache
+    await cache.clear_pattern(f"portfolio:preferences:{portfolio_id}")
+
+    # Fetch updated preferences
+    updated_preference = get_portfolio_preference(portfolio_id=uuid.UUID(portfolio_id))
+
+    return ok_envelope(
+        message="Portfolio preferences updated successfully",
+        kind="portfolio#preferences",
+        resource_id=portfolio_id,
+        self_link=f"/api/portfolios/{portfolio_id}/preferences",
+        payload=updated_preference,
+    )
+
+
+@handle_controller_errors
+async def delete_portfolio_preference_controller(
+    *,
+    portfolio_id: str,
+    user_id: str,
+) -> Dict[str, Any]:
+    """Controller to delete portfolio preferences with cache invalidation."""
+    if not portfolio_id:
+        raise ValueError("portfolioId is required")
+    if not user_id:
+        raise ValueError("userId is required")
+
+    _verify_portfolio_ownership(portfolio_id, user_id)
+
+    success = delete_portfolio_preference(portfolio_id=uuid.UUID(portfolio_id))
+
+    if not success:
+        raise HTTPException(status_code=404, detail="Portfolio preferences not found")
+
+    # Invalidate cache
+    await cache.clear_pattern(f"portfolio:preferences:{portfolio_id}")
+
+    return ok_envelope(
+        message="Portfolio preferences deleted successfully",
+        kind="portfolio#preferences",
+        resource_id=portfolio_id,
+        self_link=f"/api/portfolios/{portfolio_id}/preferences",
     )
