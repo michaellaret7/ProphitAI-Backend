@@ -99,7 +99,8 @@ class ProphitAltsServices:
 
         # Per-ticker daily returns on union-of-dates
         returns_data = pd.DataFrame()
-        for ticker, prices in price_data.items():
+        for ticker in price_data.columns:
+            prices = price_data[ticker]
             if not prices.empty:
                 series_sorted = prices.sort_index()
                 returns_data[ticker] = series_sorted.pct_change(fill_method=None).replace([np.inf, -np.inf], np.nan)

@@ -1,4 +1,4 @@
-from app.db.jobs.update_screener import UpdateETFScreenerTable, UpdateEquityScreenerTable
+from app.db.jobs.screeners import UpdateETFScreenerTable, UpdateEquityScreenerTable
 import time
 
 def main():

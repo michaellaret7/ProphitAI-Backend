@@ -56,28 +56,28 @@ def get_portfolio_betas(portfolio: list, etf_shocks: dict, period_days: int = 25
         end_date_str, 
         frequency='daily'
     )
-    print(f"Price data fetched for {len(price_data_map)} tickers")
-    
+    print(f"Price data fetched for {len(price_data_map.columns)} tickers")
+
     # Calculate betas using the pre-fetched data with robust error handling
     portfolio_betas = {ticker: {etf: 0.0 for etf in etf_shocks.keys()} for ticker in portfolio}
-    
+
     for ticker in portfolio:
-        if ticker not in price_data_map:
+        if ticker not in price_data_map.columns:
             print(f"Warning: No price data found for {ticker} - setting all betas to 0.0")
             continue
-            
+
         ticker_prices = price_data_map[ticker]
-        
+
         # Validate ticker data has sufficient length
         if len(ticker_prices) < 2:
             print(f"Warning: Insufficient data for {ticker} ({len(ticker_prices)} points) - setting all betas to 0.0")
             continue
-        
+
         for etf in etf_shocks.keys():
-            if etf not in price_data_map:
+            if etf not in price_data_map.columns:
                 print(f"Warning: No price data found for ETF {etf} - setting beta to 0.0")
                 continue
-                
+
             etf_prices = price_data_map[etf]
             
             # Validate ETF data has sufficient length

@@ -1,34 +1,27 @@
-"""Quick script to get user UUID and conversation IDs for herman@laret.com"""
-from app.db.core.db_config import UserSession
-from app.db.core.models.user_data_models import User, Conversation
-from sqlalchemy import or_
+"""Script to print all unique sub-industries in the fixed income ETF industry."""
 
-session = UserSession()
+from sqlalchemy import select, distinct
+from app.db.core.db_config import MarketSession
+from app.db.core.models.market_data_models import Ticker
 
-# Find user by email
-user = session.query(User).filter(User.email == "herman@laret.com").first()
 
-if not user:
-    print("User herman@laret.com not found")
-else:
-    print(f"User: {user.first_name} {user.last_name}")
-    print(f"UUID: {user.id}")
-    print(f"Email: {user.email}")
-    print()
-
-    # Find all conversations where user is either user_1 or user_2
-    conversations = session.query(Conversation).filter(
-        or_(
-            Conversation.user_1_id == user.id,
-            Conversation.user_2_id == user.id
+def get_fixed_income_sub_industries():
+    """Query and print all unique sub-industries in fixed income ETFs."""
+    with MarketSession() as session:
+        query = (
+            select(distinct(Ticker.sub_industry))
+            .where(Ticker.sector == 'etf')
+            .where(Ticker.industry == 'fixed_income_etfs')
+            .where(Ticker.sub_industry.isnot(None))
+            .order_by(Ticker.sub_industry)
         )
-    ).all()
+        result = session.execute(query)
+        sub_industries = [row[0] for row in result]
 
-    print(f"Conversations ({len(conversations)}):")
-    for conv in conversations:
-        other_user_id = conv.user_2_id if conv.user_1_id == user.id else conv.user_1_id
-        other_user = session.query(User).filter(User.id == other_user_id).first()
-        other_name = f"{other_user.first_name} {other_user.last_name}" if other_user else "Unknown"
-        print(f"  - ID: {conv.id} (with {other_name})")
+        print(f"Found {len(sub_industries)} unique sub-industries in fixed income ETFs:\n")
+        for sub_industry in sub_industries:
+            print(f"  - {sub_industry}")
 
-session.close()
+
+if __name__ == "__main__":
+    get_fixed_income_sub_industries()

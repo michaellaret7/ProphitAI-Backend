@@ -51,7 +51,7 @@ class PortfolioPerformanceComparisonService:
 
         # Initialize state
         self.current_weights: Dict[str, float] = {}
-        self.price_data: Dict[str, pd.Series] = {}
+        self.price_data: pd.DataFrame = pd.DataFrame()
         self.spy_prices: pd.Series = pd.Series(dtype=float)
         self.current_returns: pd.Series = pd.Series(dtype=float)
         self.optimized_returns: pd.Series = pd.Series(dtype=float)
@@ -113,12 +113,12 @@ class PortfolioPerformanceComparisonService:
             frequency='daily'
         )
 
-        if not ticker_closes:
+        if ticker_closes.empty:
             raise ValueError("Unable to fetch price data")
 
         # Separate SPY from portfolio tickers
-        self.spy_prices = ticker_closes.pop('SPY', pd.Series(dtype=float))
-        self.price_data = ticker_closes
+        self.spy_prices = ticker_closes['SPY'] if 'SPY' in ticker_closes.columns else pd.Series(dtype=float)
+        self.price_data = ticker_closes.drop(columns=['SPY'], errors='ignore')
 
     def _calculate_returns(self):
         """
@@ -130,7 +130,7 @@ class PortfolioPerformanceComparisonService:
         # Calculate daily returns for each ticker
         ticker_price_returns = {
             ticker: ReturnsCalculator.daily_price_returns(self.price_data[ticker])
-            for ticker in self.price_data
+            for ticker in self.price_data.columns
         }
 
         # Calculate weighted portfolio returns for current portfolio

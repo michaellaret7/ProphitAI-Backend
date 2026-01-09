@@ -172,33 +172,3 @@ class PortfolioConcentration:
                 
         return round(float(short_total), 2)
 
-if __name__ == "__main__":
-    portfolio_dict = {
-        "AAPL": {"allocation": 0.05},
-        "MSFT": {"allocation": 0.05},
-        "GOOGL": {"allocation": 0.05},
-        "AMZN": {"allocation": 0.05},
-        "TSLA": {"allocation": 0.05},
-        "NVDA": {"allocation": 0.05},
-        "META": {"allocation": 0.05},
-        "NFLX": {"allocation": 0.05},
-        "TWTR": {"allocation": 0.05},
-        "SNAP": {"allocation": 0.05},
-        "SQ": {"allocation": 0.05},
-        "SHOP": {"allocation": 0.05},
-        "ZM": {"allocation": 0.05},
-        "CRM": {"allocation": 0.05},
-        "ADBE": {"allocation": 0.05},
-        "AAL": {"allocation": 0.05, "position": "short"},
-    }
-    print(PortfolioConcentration(portfolio_dict).sector_concentration())
-    print(PortfolioConcentration(portfolio_dict).industry_concentration())
-    print(PortfolioConcentration(portfolio_dict).sub_industry_concentration())
-    print(PortfolioConcentration(portfolio_dict).sector_var())
-    print(PortfolioConcentration(portfolio_dict).industry_var())
-    print(PortfolioConcentration(portfolio_dict).sub_industry_var())
-    print(PortfolioConcentration(portfolio_dict).net_exposure())
-    print(PortfolioConcentration(portfolio_dict).gross_exposure())
-    print(PortfolioConcentration(portfolio_dict).long_exposure())
-    print(PortfolioConcentration(portfolio_dict).short_exposure())
-

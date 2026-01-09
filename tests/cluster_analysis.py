@@ -42,8 +42,7 @@ def identify_market_themes(tickers, start_date, end_date, num_clusters=None, min
     """
     
     # Fetch data and calculate returns
-    price_data = fetch_bulk_price_data_for_tickers(tickers, start_date, end_date)
-    prices_df = pd.DataFrame(price_data)
+    prices_df = fetch_bulk_price_data_for_tickers(tickers, start_date, end_date)
     returns = prices_df.pct_change().dropna()
     
     # Calculate correlation and distance matrices

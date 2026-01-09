@@ -1,5 +1,4 @@
-from app.db.jobs.ticker_table import UpdateTickerTable
-from app.db.jobs.price_table import UpdatePriceTable
+from app.db.jobs.market_data import UpdateTickerTable, UpdatePriceTable
 from app.db.jobs.portfolio import UpdatePortfolios
 import time
 

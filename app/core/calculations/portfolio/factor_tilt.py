@@ -1,13 +1,15 @@
 from __future__ import annotations
 
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timedelta
 from typing import Dict, Tuple, Optional
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
 import numpy as np
 import pandas as pd
 
-from app.core.calculations.core.data_service import DataService
+from app.repositories.fundamental_data import get_bulk_fundamentals, FundamentalsResult
+from app.utils.time_utils import get_current_utc_time
+from app.repositories.price_data import fetch_bulk_price_data_for_tickers
 from app.core.calculations.factors import (
     ValueFactors,
     GrowthFactors,
@@ -22,10 +24,10 @@ import warnings; warnings.filterwarnings("ignore", category=FutureWarning)
 def _compute_exposure_frame(
     factor: str,
     tickers: list[str],
-    ds: DataService,
+    fundamentals: Dict[str, FundamentalsResult],
     start: datetime,
     end: datetime,
-    price_map: Optional[Dict[str, pd.Series]] = None,
+    price_map: Optional[pd.DataFrame] = None,
 ) -> Tuple[pd.DataFrame, str]:
     """Return a DataFrame with per-ticker attributes and an exposure column for the requested factor.
 
@@ -34,15 +36,11 @@ def _compute_exposure_frame(
     factor_l = factor.strip().lower()
 
     if factor_l == "value":
-        # Bulk prefetch fundamentals (ValueFactors will hit cache quickly)
-        try:
-            ds.get_bulk_fundamentals(tickers)
-        except Exception:
-            pass
         rows = []
         def compute_value_attrs(t: str) -> dict:
             try:
-                vf = ValueFactors(ticker=t, data_service=ds, as_of_date=end)
+                fund = fundamentals.get(t)
+                vf = ValueFactors(ticker=t, fundamentals=fund, as_of_date=end)
                 attrs = vf.compute_attributes()
                 return {"ticker": t, **attrs}
             except Exception:
@@ -57,18 +55,11 @@ def _compute_exposure_frame(
         return df, "value_exposure"
 
     if factor_l == "growth":
-        # Bulk prefetch fundamentals and inject to GrowthFactors to avoid per-ticker fetch
-        try:
-            fundamentals = ds.get_bulk_fundamentals(tickers)
-        except Exception:
-            fundamentals = {}
         rows = []
         def compute_growth_attrs(t: str) -> dict:
             try:
-                if t in fundamentals:
-                    gf = GrowthFactors(ticker=t, data_service=ds, fundamental_data=fundamentals[t])
-                else:
-                    gf = GrowthFactors(ticker=t, data_service=ds)
+                fund = fundamentals.get(t)
+                gf = GrowthFactors(ticker=t, fundamentals=fund)
                 attrs = gf.compute_attributes()
                 return {"ticker": t, **attrs}
             except Exception:
@@ -84,12 +75,16 @@ def _compute_exposure_frame(
 
     if factor_l == "momentum":
         # Fetch prices once (or reuse provided)
-        series_map = price_map or ds.get_bulk_close_series(list(tickers) + ["SPY"], start, end)
-        spy_px = series_map.get("SPY")
+        if price_map is None or price_map.empty:
+            start_str = start.strftime('%Y-%m-%d')
+            end_str = end.strftime('%Y-%m-%d')
+            price_map = fetch_bulk_price_data_for_tickers(list(tickers) + ["SPY"], start_str, end_str, frequency='daily')
+        series_map = price_map
+        spy_px = series_map["SPY"] if "SPY" in series_map.columns else None
         rows = []
         def compute_mom_attrs(t: str) -> dict:
             try:
-                px = series_map.get(t)
+                px = series_map[t] if t in series_map.columns else None
                 if px is None or px.empty:
                     return {"ticker": t}
                 divs = None  # price-only for speed
@@ -109,15 +104,11 @@ def _compute_exposure_frame(
         return df, "momentum_exposure"
 
     if factor_l == "quality":
-        # Bulk prefetch fundamentals (QualityFactors will read from cache)
-        try:
-            ds.get_bulk_fundamentals(tickers)
-        except Exception:
-            pass
         rows = []
         def compute_quality_attrs(t: str) -> dict:
             try:
-                qf = QualityFactors(ticker=t, data_service=ds)
+                fund = fundamentals.get(t)
+                qf = QualityFactors(ticker=t, fundamentals=fund)
                 attrs = qf.compute_attributes()
                 return {"ticker": t, **attrs}
             except Exception:
@@ -133,12 +124,16 @@ def _compute_exposure_frame(
 
     if factor_l == "volatility" or factor_l == "vol":
         # Prices for tickers and SPY for beta/idiosyncratic calculations
-        series_map = price_map or ds.get_bulk_close_series(list(tickers) + ["SPY"], start, end)
-        spy_px = series_map.get("SPY")
+        if price_map is None or price_map.empty:
+            start_str = start.strftime('%Y-%m-%d')
+            end_str = end.strftime('%Y-%m-%d')
+            price_map = fetch_bulk_price_data_for_tickers(list(tickers) + ["SPY"], start_str, end_str, frequency='daily')
+        series_map = price_map
+        spy_px = series_map["SPY"] if "SPY" in series_map.columns else None
         rows = []
         def compute_vol_attrs(t: str) -> dict:
             try:
-                px = series_map.get(t)
+                px = series_map[t] if t in series_map.columns else None
                 if px is None or px.empty:
                     return {"ticker": t}
                 vf = VolatilityFactors(price_series=px, spy_price_series=spy_px)
@@ -176,17 +171,21 @@ def portfolio_factor_tilts(
     if not weights:
         return {"error": "weights is empty"}
 
-    end_dt = end or datetime.now(timezone.utc)
+    end_dt = end or get_current_utc_time()
     start_dt = start or (end_dt - timedelta(days=DEFAULT_PRICE_LOOKBACK))
 
-    ds = DataService()
     tickers = [t.upper() for t in weights.keys()]
 
     # Pre-fetch prices once to reuse across price-based branches
-    price_map = ds.get_bulk_close_series(list(tickers) + ["SPY"], start_dt, end_dt)
+    start_str = start_dt.strftime('%Y-%m-%d')
+    end_str = end_dt.strftime('%Y-%m-%d')
+    price_map = fetch_bulk_price_data_for_tickers(list(tickers) + ["SPY"], start_str, end_str, frequency='daily')
 
-    # Build exposure frame for the requested factor (reuse price_map)
-    frame, exposure_col = _compute_exposure_frame(factor, tickers, ds, start_dt, end_dt, price_map)
+    # Bulk fetch fundamentals for fundamental-based factors
+    fundamentals = get_bulk_fundamentals(tickers)
+
+    # Build exposure frame for the requested factor (reuse price_map and fundamentals)
+    frame, exposure_col = _compute_exposure_frame(factor, tickers, fundamentals, start_dt, end_dt, price_map)
     if frame is None or frame.empty or exposure_col not in frame.columns:
         return {"error": "failed to compute exposures"}
 

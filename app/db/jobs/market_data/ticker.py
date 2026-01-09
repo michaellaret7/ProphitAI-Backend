@@ -1,44 +1,63 @@
-from app.db.core.db_config import MarketSession
-from app.db.core.models.market_data_models import *
-from app.db.core.pull_fmp_data import FMP_API_DATA
-from datetime import datetime
-from app.utils.time_utils import get_current_utc_time
-from decimal import Decimal
-from sqlalchemy import update
-from concurrent.futures import ThreadPoolExecutor, as_completed
-import time
+"""
+Ticker Table Updater
+
+Updates ticker metadata from FMP API including price, market cap,
+volume, EPS, PE ratio, and company profile information.
+"""
 import threading
+import time
+from concurrent.futures import ThreadPoolExecutor, as_completed
+from datetime import datetime
+from decimal import Decimal
+from typing import Any, List, Tuple
+
+from sqlalchemy import update
+
+from app.db.core.db_config import MarketSession
+from app.db.core.models.market_data_models import Ticker
+from app.db.core.pull_fmp_data import FMP_API_DATA
+from app.utils.time_utils import get_current_utc_time
+
 
 class UpdateTickerTable:
+    """Updates ticker metadata from FMP API."""
+
     def __init__(self):
-        self.lock = threading.Lock()  # For thread-safe progress reporting
+        self.lock = threading.Lock()
         self.total_updated = 0
         self.total_errors = 0
-    
-    def _retrieve_all_tickers(self):
+
+    def _retrieve_all_tickers(self) -> List[Ticker]:
+        """Retrieve all tickers from database."""
         session = MarketSession()
         tickers = session.query(Ticker).all()
         session.close()
         return tickers
 
-    def _retrieve_fmp_full_quote(self, ticker_symbol):
+    def _retrieve_fmp_full_quote(self, ticker_symbol: str) -> List[dict]:
+        """Get full quote data from FMP API."""
         fmp_api = FMP_API_DATA()
         ticker_data = fmp_api.get_full_quote(ticker_symbol)
         return ticker_data
 
-    def _retrieve_fmp_company_profile(self, ticker_symbol):
+    def _retrieve_fmp_company_profile(self, ticker_symbol: str) -> List[dict]:
+        """Get company profile from FMP API."""
         fmp_api = FMP_API_DATA()
         profile_data = fmp_api.get_company_profile(ticker_symbol)
         return profile_data
-    
-    def _retrieve_ticker_data(self, ticker_symbol, session):
+
+    def _retrieve_ticker_data(self, ticker_symbol: str, session) -> Ticker:
+        """Get ticker from database by symbol."""
         ticker = session.query(Ticker).filter(Ticker.ticker == ticker_symbol).first()
         return ticker
-    
-    def _update_single_ticker(self, ticker_data):
+
+    def _update_single_ticker(
+        self,
+        ticker_data: Tuple[Any, str]
+    ) -> Tuple[str, bool, str]:
         """
-        Thread-safe function to update a single ticker
-        Each thread gets its own session for database safety
+        Thread-safe function to update a single ticker.
+        Each thread gets its own session for database safety.
         """
         ticker_id, ticker_symbol = ticker_data
         session = MarketSession()
@@ -61,7 +80,9 @@ class UpdateTickerTable:
                 earnings_announcement = None
                 if quote.get('earningsAnnouncement'):
                     try:
-                        earnings_announcement = datetime.fromisoformat(quote.get('earningsAnnouncement').replace('Z', '+00:00'))
+                        earnings_announcement = datetime.fromisoformat(
+                            quote.get('earningsAnnouncement').replace('Z', '+00:00')
+                        )
                     except (ValueError, AttributeError):
                         pass
 
@@ -113,11 +134,11 @@ class UpdateTickerTable:
             return ticker_symbol, False, f"Error: {str(e)}"
         finally:
             session.close()
-    
-    def run_update_parallel(self, max_workers=5):
+
+    def run_update_parallel(self, max_workers: int = 5) -> List[Tuple[str, bool, str]]:
         """
-        Parallel update using ThreadPoolExecutor
-        Each thread handles its own API call and database update
+        Parallel update using ThreadPoolExecutor.
+        Each thread handles its own API call and database update.
         """
         # Get ticker IDs and symbols only to minimize memory usage
         session = MarketSession()
@@ -155,7 +176,8 @@ class UpdateTickerTable:
                         # Progress report every 100 completed tickers
                         if len(results) % 100 == 0:
                             with self.lock:
-                                print(f"Progress: {len(results)}/{total_tickers} - Updated: {self.total_updated}, Errors: {self.total_errors}")
+                                print(f"Progress: {len(results)}/{total_tickers} - "
+                                      f"Updated: {self.total_updated}, Errors: {self.total_errors}")
                     except Exception as exc:
                         print(f"Ticker {ticker_symbol} generated an exception: {exc}")
                         results.append((ticker_symbol, False, f"Exception: {exc}"))
@@ -186,12 +208,3 @@ class UpdateTickerTable:
 if __name__ == "__main__":
     update_ticker_table = UpdateTickerTable()
     update_ticker_table.run_update_parallel()
-
-
-
-
-
-
-
-
-

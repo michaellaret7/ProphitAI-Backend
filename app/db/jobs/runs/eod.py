@@ -1,8 +1,10 @@
-from app.db.jobs.price_table import UpdatePriceTable
-from app.db.jobs.macro_jobs.commodity_prices_update import UpdateCommodityPrices
-from app.db.jobs.macro_jobs.economic_indicators_update import UpdateEconomicIndicators
-from app.db.jobs.macro_jobs.economic_calendar_update import UpdateEconomicCalendar
-from app.db.jobs.macro_jobs.us_rates_update import UpdateUSRates
+from app.db.jobs.market_data import UpdatePriceTable
+from app.db.jobs.macro import (
+    UpdateCommodityPrices,
+    UpdateEconomicIndicators,
+    UpdateEconomicCalendar,
+    UpdateUSRates,
+)
 import time
 
 def main():

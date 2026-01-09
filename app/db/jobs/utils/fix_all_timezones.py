@@ -6,25 +6,21 @@ Comprehensive timezone fix script that:
 3. Fixes timezone issues using fix_timezone_final logic
 4. Recovers missing data using recover_data logic
 
-Usage: python fix_all_timezones.py [--scan-only] [--dry-run]
+Usage: python -m app.db.jobs.utils.fix_all_timezones [--scan-only] [--dry-run]
 """
 
-import sys
 import csv
 import logging
 from datetime import datetime, timedelta, date
 from typing import List, Dict, Optional
 
-sys.path.append('/Users/michaellaret/Desktop/ProphitAI')
+from sqlalchemy import extract, func, text
+from sqlalchemy.orm import Session
 
 from app.db.core.db_config import MarketSession
 from app.db.core.models.market_data_models import Ticker, Price
 from app.utils.decorators.database import with_session, with_transaction
-from sqlalchemy import extract, func, text
-from sqlalchemy.orm import Session
-
-# Import data recovery functionality
-from app.db.jobs.price_table import UpdatePriceTable
+from app.db.jobs.market_data import UpdatePriceTable
 
 logging.basicConfig(
     level=logging.INFO,
@@ -34,9 +30,6 @@ logger = logging.getLogger(__name__)
 
 CSV_FILE = 'tz_fix.csv'
 
-# =============================================================================
-# TIMEZONE FIX FUNCTIONS
-# =============================================================================
 
 @with_session('market')
 def find_transition_date(ticker_symbol: str, session: Session = None) -> Optional[date]:
@@ -63,9 +56,7 @@ def fix_timezone_final(
     dry_run: bool = False,
     session: Session = None
 ) -> Dict:
-    """
-    Fix timezone using temp table to avoid primary key conflicts.
-    """
+    """Fix timezone using temp table to avoid primary key conflicts."""
     ticker = session.query(Ticker).filter(Ticker.ticker == ticker_symbol).first()
     if not ticker:
         return {'status': 'ERROR', 'message': 'Ticker not found'}
@@ -161,7 +152,7 @@ def fix_timezone_final(
     session.execute(text("DROP TABLE prices_temp"))
 
     session.commit()
-    logger.info("✅ Complete!")
+    logger.info("Complete!")
 
     return {
         'status': 'SUCCESS',
@@ -209,10 +200,6 @@ def verify_fix(ticker_symbol: str, session: Session = None) -> Dict:
         '17:30 (UTC ~1:30PM EST)': count_1730
     }
 
-
-# =============================================================================
-# TIMEZONE DETECTION AND PROCESSING
-# =============================================================================
 
 @with_session('market')
 def detect_timezone_mismatches(session=None) -> List[Dict]:
@@ -272,9 +259,9 @@ def detect_timezone_mismatches(session=None) -> List[Dict]:
                 'industry': ticker.industry or 'N/A'
             })
 
-            logger.info(f"  ⚠️  {ticker.ticker}: {count_930} EST records found")
+            logger.info(f"  {ticker.ticker}: {count_930} EST records found")
 
-    logger.info(f"\n✅ Scan complete: {len(mismatched_tickers)} tickers with timezone issues")
+    logger.info(f"\nScan complete: {len(mismatched_tickers)} tickers with timezone issues")
     return mismatched_tickers
 
 
@@ -289,7 +276,7 @@ def write_to_csv(mismatched_tickers: List[Dict]) -> None:
             writer.writeheader()
             writer.writerows(mismatched_tickers)
 
-    logger.info(f"✅ Written to {CSV_FILE}")
+    logger.info(f"Written to {CSV_FILE}")
 
 
 def read_from_csv() -> List[str]:
@@ -339,18 +326,18 @@ def fix_and_recover_ticker(ticker_symbol: str, dry_run: bool = False) -> Dict:
         results['fix_details'] = fix_result
 
         if fix_result['status'] == 'SUCCESS':
-            logger.info(f"✅ Timezone fix successful")
+            logger.info(f"Timezone fix successful")
             logger.info(f"   UTC duplicates deleted: {fix_result.get('utc_duplicates_deleted', 0)}")
             logger.info(f"   UTC records inserted: {fix_result.get('utc_records_inserted', 0)}")
         elif fix_result['status'] == 'DRY_RUN':
-            logger.info(f"🔍 Dry run - would process {fix_result.get('est_to_convert', 0)} EST records")
-            return results  # Don't proceed with recovery in dry run
+            logger.info(f"Dry run - would process {fix_result.get('est_to_convert', 0)} EST records")
+            return results
         else:
-            logger.warning(f"⚠️  Fix failed: {fix_result.get('message')}")
+            logger.warning(f"Fix failed: {fix_result.get('message')}")
             return results
 
     except Exception as e:
-        logger.error(f"❌ Error fixing timezone: {str(e)}")
+        logger.error(f"Error fixing timezone: {str(e)}")
         results['fix_status'] = 'ERROR'
         results['fix_error'] = str(e)
         return results
@@ -362,12 +349,12 @@ def fix_and_recover_ticker(ticker_symbol: str, dry_run: bool = False) -> Dict:
         results['verify_details'] = verify_result
 
         if verify_result.get('9:30 (EST)', 0) == 0:
-            logger.info(f"✅ Verification passed - no EST timestamps remaining")
+            logger.info(f"Verification passed - no EST timestamps remaining")
         else:
-            logger.warning(f"⚠️  Verification warning - {verify_result.get('9:30 (EST)', 0)} EST timestamps still present")
+            logger.warning(f"Verification warning - {verify_result.get('9:30 (EST)', 0)} EST timestamps still present")
 
     except Exception as e:
-        logger.warning(f"⚠️  Verification error: {str(e)}")
+        logger.warning(f"Verification error: {str(e)}")
 
     # Step 3: Recover data
     logger.info(f"\n[3/3] Recovering missing data for {ticker_symbol}...")
@@ -377,17 +364,17 @@ def fix_and_recover_ticker(ticker_symbol: str, dry_run: bool = False) -> Dict:
         if records_inserted > 0:
             results['recovery_status'] = 'SUCCESS'
             results['records_recovered'] = records_inserted
-            logger.info(f"✅ Recovery successful - {records_inserted} records inserted")
+            logger.info(f"Recovery successful - {records_inserted} records inserted")
         elif records_inserted == 0:
             results['recovery_status'] = 'NO_NEW_DATA'
             results['records_recovered'] = 0
-            logger.info(f"ℹ️  No new data to recover")
+            logger.info(f"No new data to recover")
         else:
             results['recovery_status'] = 'ERROR'
-            logger.warning(f"⚠️  Recovery failed")
+            logger.warning(f"Recovery failed")
 
     except Exception as e:
-        logger.error(f"❌ Error recovering data: {str(e)}")
+        logger.error(f"Error recovering data: {str(e)}")
         results['recovery_status'] = 'ERROR'
         results['recovery_error'] = str(e)
 
@@ -479,10 +466,11 @@ def main():
             # Process all tickers from CSV
             process_all_tickers(dry_run=args.dry_run)
 
-        logger.info("\n✅ Script completed successfully")
+        logger.info("\nScript completed successfully")
 
     except Exception as e:
-        logger.error(f"\n❌ Script failed: {str(e)}", exc_info=True)
+        logger.error(f"\nScript failed: {str(e)}", exc_info=True)
+        import sys
         sys.exit(1)
 
 

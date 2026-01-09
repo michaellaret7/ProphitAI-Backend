@@ -655,12 +655,8 @@ def load_multiple_etfs(etf_list, years_of_history=2):
 
 
 if __name__ == "__main__":
-    # ============================================
-    # HEALTHCARE / BIOTECH ETFs
-    # ============================================
-
     load_single_etf(
-        'XBI',
+        'MOO',
         sector="etf",
         industry="equity_etfs",
         sub_industry="sectors",
@@ -669,78 +665,7 @@ if __name__ == "__main__":
     )
 
     load_single_etf(
-        'IBB',
-        sector="etf",
-        industry="equity_etfs",
-        sub_industry="sectors",
-        years_of_history=5,
-        allow_partial_reload=False
-    )
-
-    load_single_etf(
-        'VHT',
-        sector="etf",
-        industry="equity_etfs",
-        sub_industry="sectors",
-        years_of_history=5,
-        allow_partial_reload=False
-    )
-
-    load_single_etf(
-        'IYH',
-        sector="etf",
-        industry="equity_etfs",
-        sub_industry="sectors",
-        years_of_history=5,
-        allow_partial_reload=False
-    )
-
-    # ============================================
-    # REIT ETFs
-    # ============================================
-
-    load_single_etf(
-        'SCHH',
-        sector="etf",
-        industry="equity_etfs",
-        sub_industry="u_s_sector_reits",
-        years_of_history=5,
-        allow_partial_reload=False
-    )
-
-    load_single_etf(
-        'IYR',
-        sector="etf",
-        industry="equity_etfs",
-        sub_industry="u_s_sector_reits",
-        years_of_history=5,
-        allow_partial_reload=False
-    )
-
-    load_single_etf(
-        'USRT',
-        sector="etf",
-        industry="equity_etfs",
-        sub_industry="u_s_sector_reits",
-        years_of_history=5,
-        allow_partial_reload=False
-    )
-
-    load_single_etf(
-        'ICF',
-        sector="etf",
-        industry="equity_etfs",
-        sub_industry="u_s_sector_reits",
-        years_of_history=5,
-        allow_partial_reload=False
-    )
-
-    # ============================================
-    # NUCLEAR / URANIUM ETFs
-    # ============================================
-
-    load_single_etf(
-        'NUKZ',
+        'AMLP',
         sector="etf",
         industry="equity_etfs",
         sub_industry="energy",
@@ -748,137 +673,8 @@ if __name__ == "__main__":
         allow_partial_reload=False
     )
 
-    # ============================================
-    # BUFFER / DEFINED OUTCOME ETFs
-    # ============================================
-
     load_single_etf(
-        'BUFR',
-        sector="etf",
-        industry="alternative_etfs",
-        sub_industry="strategies",
-        years_of_history=5,
-        allow_partial_reload=False
-    )
-
-    load_single_etf(
-        'PJAN',
-        sector="etf",
-        industry="alternative_etfs",
-        sub_industry="strategies",
-        years_of_history=5,
-        allow_partial_reload=False
-    )
-
-    load_single_etf(
-        'UJAN',
-        sector="etf",
-        industry="alternative_etfs",
-        sub_industry="strategies",
-        years_of_history=5,
-        allow_partial_reload=False
-    )
-
-    load_single_etf(
-        'PSFF',
-        sector="etf",
-        industry="alternative_etfs",
-        sub_industry="strategies",
-        years_of_history=5,
-        allow_partial_reload=False
-    )
-
-    # ============================================
-    # ACTIVE SMALL CAP VALUE ETFs (Avantis/Dimensional)
-    # ============================================
-
-    load_single_etf(
-        'AVUV',
-        sector="etf",
-        industry="equity_etfs",
-        sub_industry="factors",
-        years_of_history=5,
-        allow_partial_reload=False
-    )
-
-    load_single_etf(
-        'AVUS',
-        sector="etf",
-        industry="equity_etfs",
-        sub_industry="factors",
-        years_of_history=5,
-        allow_partial_reload=False
-    )
-
-    load_single_etf(
-        'DFAT',
-        sector="etf",
-        industry="equity_etfs",
-        sub_industry="factors",
-        years_of_history=5,
-        allow_partial_reload=False
-    )
-
-    load_single_etf(
-        'DFSV',
-        sector="etf",
-        industry="equity_etfs",
-        sub_industry="factors",
-        years_of_history=5,
-        allow_partial_reload=False
-    )
-
-    load_single_etf(
-        'DFAC',
-        sector="etf",
-        industry="equity_etfs",
-        sub_industry="factors",
-        years_of_history=5,
-        allow_partial_reload=False
-    )
-
-    load_single_etf(
-        'DFAI',
-        sector="etf",
-        industry="equity_etfs",
-        sub_industry="developed_countries",
-        years_of_history=5,
-        allow_partial_reload=False
-    )
-
-    load_single_etf(
-        'AVDV',
-        sector="etf",
-        industry="equity_etfs",
-        sub_industry="developed_countries",
-        years_of_history=5,
-        allow_partial_reload=False
-    )
-
-    load_single_etf(
-        'AVES',
-        sector="etf",
-        industry="equity_etfs",
-        sub_industry="emerging_markets",
-        years_of_history=5,
-        allow_partial_reload=False
-    )
-
-    # ============================================
-    # ARK ETFs (Active Thematic)
-    # ============================================
-
-    load_single_etf(
-        'ARKW',
-        sector="etf",
-        industry="equity_etfs",
-        sub_industry="artificial_intelligence",
-        years_of_history=5,
-        allow_partial_reload=False
-    )
-
-    load_single_etf(
-        'ARKG',
+        'ITB',
         sector="etf",
         industry="equity_etfs",
         sub_industry="sectors",
@@ -887,7 +683,16 @@ if __name__ == "__main__":
     )
 
     load_single_etf(
-        'ARKF',
+        'OIH',
+        sector="etf",
+        industry="equity_etfs",
+        sub_industry="energy",
+        years_of_history=5,
+        allow_partial_reload=False
+    )
+
+    load_single_etf(
+        'FDN',
         sector="etf",
         industry="equity_etfs",
         sub_industry="sectors",
@@ -895,123 +700,26 @@ if __name__ == "__main__":
         allow_partial_reload=False
     )
 
-    # ============================================
-    # SMALL CAP ETFs (Core Index)
-    # ============================================
-
     load_single_etf(
-        'IWN',
+        'XOP',
         sector="etf",
         industry="equity_etfs",
-        sub_industry="us_major_index",
+        sub_industry="energy",
         years_of_history=5,
         allow_partial_reload=False
     )
 
     load_single_etf(
-        'IJS',
+        'PHO',
         sector="etf",
         industry="equity_etfs",
-        sub_industry="factors",
+        sub_industry="sectors",
         years_of_history=5,
         allow_partial_reload=False
     )
 
     load_single_etf(
-        'SCHA',
-        sector="etf",
-        industry="equity_etfs",
-        sub_industry="us_major_index",
-        years_of_history=5,
-        allow_partial_reload=False
-    )
-
-    load_single_etf(
-        'VIOO',
-        sector="etf",
-        industry="equity_etfs",
-        sub_industry="us_major_index",
-        years_of_history=5,
-        allow_partial_reload=False
-    )
-
-    load_single_etf(
-        'CALF',
-        sector="etf",
-        industry="equity_etfs",
-        sub_industry="fundamental",
-        years_of_history=5,
-        allow_partial_reload=False
-    )
-
-    # ============================================
-    # INTERNATIONAL SMALL CAP ETFs
-    # ============================================
-
-    load_single_etf(
-        'VSS',
-        sector="etf",
-        industry="equity_etfs",
-        sub_industry="single_country_small_and_mid_caps",
-        years_of_history=5,
-        allow_partial_reload=False
-    )
-
-    load_single_etf(
-        'DGS',
-        sector="etf",
-        industry="equity_etfs",
-        sub_industry="single_country_small_and_mid_caps",
-        years_of_history=5,
-        allow_partial_reload=False
-    )
-
-    # ============================================
-    # ADDITIONAL DIVIDEND / INCOME ETFs
-    # ============================================
-
-    load_single_etf(
-        'DIV',
-        sector="etf",
-        industry="equity_etfs",
-        sub_industry="dividend_strategies",
-        years_of_history=5,
-        allow_partial_reload=False
-    )
-
-    load_single_etf(
-        'SPYD',
-        sector="etf",
-        industry="equity_etfs",
-        sub_industry="dividend_strategies",
-        years_of_history=5,
-        allow_partial_reload=False
-    )
-
-    load_single_etf(
-        'HDV',
-        sector="etf",
-        industry="equity_etfs",
-        sub_industry="dividend_strategies",
-        years_of_history=5,
-        allow_partial_reload=False
-    )
-
-    load_single_etf(
-        'VIG',
-        sector="etf",
-        industry="equity_etfs",
-        sub_industry="dividend_strategies",
-        years_of_history=5,
-        allow_partial_reload=False
-    )
-
-    # ============================================
-    # ESG / SUSTAINABLE ETFs
-    # ============================================
-
-    load_single_etf(
-        'ESGU',
+        'PBW',
         sector="etf",
         industry="equity_etfs",
         sub_industry="environmental_social_and_corporate_governance",
@@ -1020,214 +728,10 @@ if __name__ == "__main__":
     )
 
     load_single_etf(
-        'SUSA',
+        'IGV',
         sector="etf",
         industry="equity_etfs",
-        sub_industry="environmental_social_and_corporate_governance",
-        years_of_history=5,
-        allow_partial_reload=False
-    )
-
-    # ============================================
-    # MID CAP ETFs
-    # ============================================
-
-    load_single_etf(
-        'VO',
-        sector="etf",
-        industry="equity_etfs",
-        sub_industry="us_major_index",
-        years_of_history=5,
-        allow_partial_reload=False
-    )
-
-    load_single_etf(
-        'IJK',
-        sector="etf",
-        industry="equity_etfs",
-        sub_industry="factors",
-        years_of_history=5,
-        allow_partial_reload=False
-    )
-
-    load_single_etf(
-        'IJJ',
-        sector="etf",
-        industry="equity_etfs",
-        sub_industry="factors",
-        years_of_history=5,
-        allow_partial_reload=False
-    )
-
-    # ============================================
-    # ADDITIONAL TREASURY / BOND ETFs
-    # ============================================
-
-    load_single_etf(
-        'IEI',
-        sector="etf",
-        industry="fixed_income_etfs",
-        sub_industry="treasuries",
-        years_of_history=5,
-        allow_partial_reload=False
-    )
-
-    load_single_etf(
-        'SHV',
-        sector="etf",
-        industry="fixed_income_etfs",
-        sub_industry="treasuries",
-        years_of_history=5,
-        allow_partial_reload=False
-    )
-
-    load_single_etf(
-        'GOVT',
-        sector="etf",
-        industry="fixed_income_etfs",
-        sub_industry="treasuries",
-        years_of_history=5,
-        allow_partial_reload=False
-    )
-
-    load_single_etf(
-        'STIP',
-        sector="etf",
-        industry="fixed_income_etfs",
-        sub_industry="interest_rate_and_inflation_hedge",
-        years_of_history=5,
-        allow_partial_reload=False
-    )
-
-    load_single_etf(
-        'TFLR',
-        sector="etf",
-        industry="fixed_income_etfs",
-        sub_industry="senior_loans",
-        years_of_history=5,
-        allow_partial_reload=False
-    )
-
-    # ============================================
-    # MUNICIPAL BOND ETFs
-    # ============================================
-
-    load_single_etf(
-        'MUB',
-        sector="etf",
-        industry="fixed_income_etfs",
-        sub_industry="u_s_municipal_bond_etfs",
-        years_of_history=5,
-        allow_partial_reload=False
-    )
-
-    load_single_etf(
-        'VTEB',
-        sector="etf",
-        industry="fixed_income_etfs",
-        sub_industry="u_s_municipal_bond_etfs",
-        years_of_history=5,
-        allow_partial_reload=False
-    )
-
-    # ============================================
-    # INTERNATIONAL BOND ETFs
-    # ============================================
-
-    load_single_etf(
-        'IAGG',
-        sector="etf",
-        industry="fixed_income_etfs",
-        sub_industry="sovereign",
-        years_of_history=5,
-        allow_partial_reload=False
-    )
-
-    load_single_etf(
-        'IGOV',
-        sector="etf",
-        industry="fixed_income_etfs",
-        sub_industry="sovereign",
-        years_of_history=5,
-        allow_partial_reload=False
-    )
-
-    load_single_etf(
-        'EMB',
-        sector="etf",
-        industry="fixed_income_etfs",
-        sub_industry="emerging_markets",
-        years_of_history=5,
-        allow_partial_reload=False
-    )
-
-    load_single_etf(
-        'VWOB',
-        sector="etf",
-        industry="fixed_income_etfs",
-        sub_industry="emerging_markets",
-        years_of_history=5,
-        allow_partial_reload=False
-    )
-
-    # ============================================
-    # GLOBAL / INTERNATIONAL EQUITY ETFs
-    # ============================================
-
-    load_single_etf(
-        'ACWX',
-        sector="etf",
-        industry="equity_etfs",
-        sub_industry="global_equities",
-        years_of_history=5,
-        allow_partial_reload=False
-    )
-
-    load_single_etf(
-        'CWI',
-        sector="etf",
-        industry="equity_etfs",
-        sub_industry="global_equities",
-        years_of_history=5,
-        allow_partial_reload=False
-    )
-
-    # ============================================
-    # ADDITIONAL FACTOR / SMART BETA ETFs
-    # ============================================
-
-    load_single_etf(
-        'FNDX',
-        sector="etf",
-        industry="equity_etfs",
-        sub_industry="fundamental",
-        years_of_history=5,
-        allow_partial_reload=False
-    )
-
-    load_single_etf(
-        'RSP',
-        sector="etf",
-        industry="equity_etfs",
-        sub_industry="equal_weighted",
-        years_of_history=5,
-        allow_partial_reload=False
-    )
-
-    load_single_etf(
-        'QQQE',
-        sector="etf",
-        industry="equity_etfs",
-        sub_industry="equal_weighted",
-        years_of_history=5,
-        allow_partial_reload=False
-    )
-
-    load_single_etf(
-        'QQQM',
-        sector="etf",
-        industry="equity_etfs",
-        sub_industry="us_major_index",
+        sub_industry="sectors",
         years_of_history=5,
         allow_partial_reload=False
     )

@@ -17,6 +17,10 @@ from app.api.controller.portfolio import (
     get_portfolio_factor_tilt_controller,
     get_portfolio_stress_returns_controller,
     rebalance_portfolio_controller,
+    get_portfolio_preference_controller,
+    create_portfolio_preference_controller,
+    update_portfolio_preference_controller,
+    delete_portfolio_preference_controller,
 )
 from app.api.auth.clerk import get_clerk_user_id
 from app.repositories.user_data import get_all_user_data_by_clerk_id
@@ -149,6 +153,130 @@ class RebalancePortfolioRequest(BaseModel):
     commodityWeightTarget: Optional[float] = 0.0
     strategy: Optional[StrategyLiteral] = "max_sharpe"
     initialPortfolioValue: Optional[float] = 100_000
+
+
+# =============================================================================
+# PORTFOLIO PREFERENCES MODELS
+# =============================================================================
+
+RISK_TOLERANCE_VALUES = [
+    'Capital Preservation', 'Income', 'Balanced/Moderate Growth',
+    'Growth', 'Aggressive Growth/Speculation'
+]
+TIME_HORIZON_VALUES = [
+    'Short term (0-2 years)', 'Medium term (3-7 years)', 'Long term (8+ years)'
+]
+LIQUIDITY_NEEDS_VALUES = ['High', 'Medium', 'Low']
+SECTOR_PREFERENCE_VALUES = ['Include', 'Exclude', 'Not Selected']
+
+
+class PortfolioPreferenceRequest(BaseModel):
+    """Request model for creating/updating portfolio preferences."""
+    description: Optional[str] = Field(default=None, description="Portfolio description")
+
+    # Risk Profile
+    riskTolerance: Optional[str] = Field(
+        default=None,
+        description="One of: Capital Preservation, Income, Balanced/Moderate Growth, Growth, Aggressive Growth/Speculation"
+    )
+    investmentTimeHorizon: Optional[str] = Field(
+        default=None,
+        description="One of: Short term (0-2 years), Medium term (3-7 years), Long term (8+ years)"
+    )
+    liquidityNeeds: Optional[str] = Field(
+        default=None,
+        description="One of: High, Medium, Low"
+    )
+
+    # Asset Allocations (decimal 0-1)
+    equitiesAllocation: Optional[float] = Field(default=None, ge=0.0, le=1.0)
+    fixedIncomeAllocation: Optional[float] = Field(default=None, ge=0.0, le=1.0)
+    commoditiesAllocation: Optional[float] = Field(default=None, ge=0.0, le=1.0)
+    currenciesAllocation: Optional[float] = Field(default=None, ge=0.0, le=1.0)
+    cryptocurrenciesAllocation: Optional[float] = Field(default=None, ge=0.0, le=1.0)
+    alternativesHedgeFundsAllocation: Optional[float] = Field(default=None, ge=0.0, le=1.0)
+    alternativesPeVcAllocation: Optional[float] = Field(default=None, ge=0.0, le=1.0)
+    cashAllocation: Optional[float] = Field(default=None, ge=0.0, le=1.0)
+
+    # Equity Sector Preferences
+    equitySectorCommunicationServices: Optional[str] = Field(default=None, description="Include, Exclude, or Not Selected")
+    equitySectorConsumerDiscretionary: Optional[str] = Field(default=None)
+    equitySectorConsumerStaples: Optional[str] = Field(default=None)
+    equitySectorEnergy: Optional[str] = Field(default=None)
+    equitySectorFinancials: Optional[str] = Field(default=None)
+    equitySectorHealthCare: Optional[str] = Field(default=None)
+    equitySectorIndustrials: Optional[str] = Field(default=None)
+    equitySectorInformationTechnology: Optional[str] = Field(default=None)
+    equitySectorMaterials: Optional[str] = Field(default=None)
+    equitySectorRealEstate: Optional[str] = Field(default=None)
+    equitySectorUtilities: Optional[str] = Field(default=None)
+
+    # Fixed Income Sector Preferences
+    fixedIncomeSectorSovereignTreasuries: Optional[str] = Field(default=None)
+    fixedIncomeSectorIgCredit: Optional[str] = Field(default=None)
+    fixedIncomeSectorHighYield: Optional[str] = Field(default=None)
+    fixedIncomeSectorSecuritizedProducts: Optional[str] = Field(default=None)
+
+    # Ticker Lists
+    tickersToInclude: Optional[List[str]] = Field(default=None)
+    tickersToExclude: Optional[List[str]] = Field(default=None)
+
+    @field_validator('riskTolerance')
+    @classmethod
+    def validate_risk_tolerance(cls, v):
+        if v is not None and v not in RISK_TOLERANCE_VALUES:
+            raise ValueError(f"riskTolerance must be one of: {RISK_TOLERANCE_VALUES}")
+        return v
+
+    @field_validator('investmentTimeHorizon')
+    @classmethod
+    def validate_time_horizon(cls, v):
+        if v is not None and v not in TIME_HORIZON_VALUES:
+            raise ValueError(f"investmentTimeHorizon must be one of: {TIME_HORIZON_VALUES}")
+        return v
+
+    @field_validator('liquidityNeeds')
+    @classmethod
+    def validate_liquidity_needs(cls, v):
+        if v is not None and v not in LIQUIDITY_NEEDS_VALUES:
+            raise ValueError(f"liquidityNeeds must be one of: {LIQUIDITY_NEEDS_VALUES}")
+        return v
+
+    def to_snake_case_dict(self) -> dict:
+        """Convert camelCase fields to snake_case for repository."""
+        data = self.model_dump(exclude_none=True)
+        mapping = {
+            'riskTolerance': 'risk_tolerance',
+            'investmentTimeHorizon': 'investment_time_horizon',
+            'liquidityNeeds': 'liquidity_needs',
+            'equitiesAllocation': 'equities_allocation',
+            'fixedIncomeAllocation': 'fixed_income_allocation',
+            'commoditiesAllocation': 'commodities_allocation',
+            'currenciesAllocation': 'currencies_allocation',
+            'cryptocurrenciesAllocation': 'cryptocurrencies_allocation',
+            'alternativesHedgeFundsAllocation': 'alternatives_hedge_funds_allocation',
+            'alternativesPeVcAllocation': 'alternatives_pe_vc_allocation',
+            'cashAllocation': 'cash_allocation',
+            'equitySectorCommunicationServices': 'equity_sector_communication_services',
+            'equitySectorConsumerDiscretionary': 'equity_sector_consumer_discretionary',
+            'equitySectorConsumerStaples': 'equity_sector_consumer_staples',
+            'equitySectorEnergy': 'equity_sector_energy',
+            'equitySectorFinancials': 'equity_sector_financials',
+            'equitySectorHealthCare': 'equity_sector_health_care',
+            'equitySectorIndustrials': 'equity_sector_industrials',
+            'equitySectorInformationTechnology': 'equity_sector_information_technology',
+            'equitySectorMaterials': 'equity_sector_materials',
+            'equitySectorRealEstate': 'equity_sector_real_estate',
+            'equitySectorUtilities': 'equity_sector_utilities',
+            'fixedIncomeSectorSovereignTreasuries': 'fixed_income_sector_sovereign_treasuries',
+            'fixedIncomeSectorIgCredit': 'fixed_income_sector_ig_credit',
+            'fixedIncomeSectorHighYield': 'fixed_income_sector_high_yield',
+            'fixedIncomeSectorSecuritizedProducts': 'fixed_income_sector_securitized_products',
+            'tickersToInclude': 'tickers_to_include',
+            'tickersToExclude': 'tickers_to_exclude',
+        }
+        return {mapping.get(k, k): v for k, v in data.items()}
+
 
 @router.get("/portfolios")
 async def get_user_portfolio_list(user_id: str = Depends(get_user_id_from_clerk)):
@@ -434,4 +562,98 @@ async def rebalance_portfolio(
         commodity_weight_target=body.commodityWeightTarget,
         strategy=body.strategy,
         initial_portfolio_value=body.initialPortfolioValue,
+    )
+
+
+# =============================================================================
+# PORTFOLIO PREFERENCES ENDPOINTS
+# =============================================================================
+
+@router.get("/portfolios/{portfolioId}/preferences")
+async def get_portfolio_preferences(
+    portfolioId: str = Path(..., description="Portfolio ID"),
+    user_id: str = Depends(get_user_id_from_clerk),
+):
+    """
+    Get portfolio preferences and investment guidelines.
+
+    Returns risk profile, asset allocation targets, sector preferences,
+    and ticker restrictions for the specified portfolio.
+    """
+    return await get_portfolio_preference_controller(
+        portfolio_id=portfolioId,
+        user_id=user_id,
+    )
+
+
+@router.post("/portfolios/{portfolioId}/preferences", status_code=201)
+async def create_portfolio_preferences(
+    body: PortfolioPreferenceRequest,
+    portfolioId: str = Path(..., description="Portfolio ID"),
+    user_id: str = Depends(get_user_id_from_clerk),
+):
+    """
+    Create portfolio preferences for a portfolio.
+
+    Sets up investment guidelines including:
+    - Risk profile (tolerance, time horizon, liquidity needs)
+    - Asset allocation targets (equities, fixed income, alternatives, etc.)
+    - Sector preferences (include/exclude for equity and fixed income sectors)
+    - Ticker restrictions (tickers to include or exclude)
+
+    Example request body:
+    {
+        "description": "Growth-oriented portfolio",
+        "riskTolerance": "Growth",
+        "investmentTimeHorizon": "Long term (8+ years)",
+        "liquidityNeeds": "Low",
+        "equitiesAllocation": 0.70,
+        "fixedIncomeAllocation": 0.20,
+        "cashAllocation": 0.10,
+        "equitySectorInformationTechnology": "Include",
+        "equitySectorEnergy": "Exclude",
+        "tickersToExclude": ["XOM", "CVX"]
+    }
+    """
+    return await create_portfolio_preference_controller(
+        portfolio_id=portfolioId,
+        user_id=user_id,
+        preference_data=body.to_snake_case_dict(),
+    )
+
+
+@router.patch("/portfolios/{portfolioId}/preferences")
+async def update_portfolio_preferences(
+    body: PortfolioPreferenceRequest,
+    portfolioId: str = Path(..., description="Portfolio ID"),
+    user_id: str = Depends(get_user_id_from_clerk),
+):
+    """
+    Update portfolio preferences.
+
+    Only provided fields are updated. Omitted fields remain unchanged.
+
+    Example request body (partial update):
+    {
+        "riskTolerance": "Balanced/Moderate Growth",
+        "equitiesAllocation": 0.60,
+        "fixedIncomeAllocation": 0.30
+    }
+    """
+    return await update_portfolio_preference_controller(
+        portfolio_id=portfolioId,
+        user_id=user_id,
+        preference_data=body.to_snake_case_dict(),
+    )
+
+
+@router.delete("/portfolios/{portfolioId}/preferences")
+async def delete_portfolio_preferences(
+    portfolioId: str = Path(..., description="Portfolio ID"),
+    user_id: str = Depends(get_user_id_from_clerk),
+):
+    """Delete portfolio preferences."""
+    return await delete_portfolio_preference_controller(
+        portfolio_id=portfolioId,
+        user_id=user_id,
     )

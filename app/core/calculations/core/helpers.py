@@ -8,7 +8,7 @@ import pandas as pd
 import logging
 from app.core.calculations.core.config import DEFAULT_SECTOR_COL, DEFAULT_WINSOR_LIMITS, DEFAULT_TRADING_DAYS
 from app.utils.time_utils import get_current_utc_time
-from app.repositories.price_data import fetch_bulk_price_data_for_tickers, get_dividends_series
+from app.repositories.price_data import fetch_bulk_price_data_for_tickers
 from app.core.calculations.returns.calculator import ReturnsCalculator
 
 logger = logging.getLogger(__name__)
@@ -264,13 +264,13 @@ def compose_exposure(
 
 # ------------------------------ Returns DataFrame builders ------------------------------ #
 def build_returns_df_from_price_map(
-    price_map: dict[str, pd.Series],
+    price_df: pd.DataFrame,
     *,
     drop_rows: str = 'any',  # 'any' | 'all' | 'none'
     include_dividends: bool = False,
     dividends_map: dict[str, pd.Series] | None = None,
 ) -> pd.DataFrame:
-    """Build a per-ticker daily returns DataFrame from a mapping of close price Series.
+    """Build a per-ticker daily returns DataFrame from a price DataFrame.
 
     - Cleans indices to datetime and drops invalid dates per series.
     - Computes price-only or total returns per ticker.
@@ -280,11 +280,12 @@ def build_returns_df_from_price_map(
         'all'  -> drop rows where all tickers are NaN (retain partial overlap)
         'none' -> keep all rows (pairwise methods handle NaNs)
     """
-    if not price_map:
+    if price_df is None or price_df.empty:
         return pd.DataFrame()
 
     returns_map: dict[str, pd.Series] = {}
-    for ticker, prices in (price_map or {}).items():
+    for ticker in price_df.columns:
+        prices = price_df[ticker]
         if prices is None:
             continue
         try:
@@ -330,8 +331,15 @@ def build_returns_df_for_dates(
 ) -> pd.DataFrame:
     """Fetch closes for tickers in [start_date, end_date] and build a returns DataFrame.
 
-    - Delegates to `build_returns_df_from_price_map` after fetching prices (and divs if needed).
-    - Applies the same cleaning and drop_rows policy.
+    Args:
+        tickers: List of ticker symbols
+        start_date: Start date for price data
+        end_date: End date for price data
+        include_dividends: Deprecated - adj_close already accounts for dividends
+        drop_rows: 'any', 'all', or 'none' for NaN handling
+
+    Note: fetch_bulk_price_data_for_tickers now returns adj_close which accounts for
+    dividends, so price returns on this data are total returns.
     """
     if not tickers:
         return pd.DataFrame()
@@ -342,21 +350,12 @@ def build_returns_df_for_dates(
     tickers_norm = [t.strip().upper() for t in tickers if isinstance(t, str) and t.strip()]
     price_map = fetch_bulk_price_data_for_tickers(tickers_norm, start_date_str, end_date_str, frequency='daily')
 
-    dividends_map: dict[str, pd.Series] | None = None
-    if include_dividends:
-        dividends_map = {}
-        for t in tickers_norm:
-            try:
-                divs = get_dividends_series(t, start_date, end_date)
-            except Exception:
-                divs = pd.Series(dtype=float)
-            dividends_map[t] = divs
-
+    # Dividend data no longer fetched - adj_close accounts for dividends
     return build_returns_df_from_price_map(
         price_map,
         drop_rows=drop_rows,
-        include_dividends=include_dividends,
-        dividends_map=dividends_map,
+        include_dividends=False,  # No longer needed since adj_close handles this
+        dividends_map=None,
     )
 
 

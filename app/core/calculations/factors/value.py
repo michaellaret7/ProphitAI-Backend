@@ -1,27 +1,29 @@
 from __future__ import annotations
 
 from typing import Optional, Dict
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timedelta
 
 import numpy as np
 import pandas as pd
 
-from app.core.calculations.core.data_service import DataService
-from app.core.calculations.core.models import FundamentalData
+from app.repositories.fundamental_data import get_fundamentals_raw, get_bulk_fundamentals, FundamentalsResult
+from app.repositories.price_data import fetch_bulk_price_data_for_tickers
 from app.utils.ticker_utils import get_most_recent_price
+from app.utils.time_utils import get_current_utc_time
 from app.core.calculations.core.helpers import (
     ttm,
     winsorize_series,
     sector_zscore,
     zscore_series,
     filter_rows_by_cutoff_date,
+    sort_rows_desc_by_date,
 )
 from app.core.calculations.core.config import DEFAULT_SECTOR_COL, DEFAULT_WINSOR_LIMITS
 from app.core.calculations.factors.config import VALUE_WEIGHTS, PRICE_LOOKBACK_DAYS
 
 
 class ValueFactors:
-    """Value factor calculations using the unified DataService fundamentals.
+    """Value factor calculations using fundamental data from repository.
 
     Mirrors legacy value factors: P/B, B/M, trailing/forward P/E, earnings yield,
     P/S, P/CF, FCF yield, EV/EBITDA, EV/EBIT, dividend yield, PEG.
@@ -30,27 +32,30 @@ class ValueFactors:
     def __init__(
         self,
         ticker: str,
-        data_service: DataService | None = None,
+        fundamentals: FundamentalsResult | None = None,
         as_of_date: Optional[datetime] = None,
         filing_lag_days: int = 0,
     ):
         self.ticker = ticker.upper()
-        self.ds = data_service or DataService()
-        self.fund: FundamentalData = self.ds.get_fundamentals(self.ticker)
+        # Use provided fundamentals or fetch from repository
+        self.fund: FundamentalsResult = fundamentals or get_fundamentals_raw(self.ticker)
 
         # As-of alignment controls
         self.as_of_date: Optional[datetime] = as_of_date
         self.filing_lag_days: int = int(filing_lag_days) if filing_lag_days and filing_lag_days > 0 else 0
-        self._effective_end_dt: datetime = as_of_date if as_of_date is not None else datetime.now(timezone.utc)
+        self._effective_end_dt: datetime = as_of_date if as_of_date is not None else get_current_utc_time()
         self._cutoff_date = (self._effective_end_dt - timedelta(days=self.filing_lag_days)).date()
 
         # Price aligned to as_of_date if provided, else most recent
         try:
             if self.as_of_date is not None:
                 start_dt = self._effective_end_dt - timedelta(days=PRICE_LOOKBACK_DAYS)
-                price_data = self.ds.get_price_data(self.ticker, start_dt, self._effective_end_dt)
-                if price_data and price_data.frame is not None and not price_data.frame.empty:
-                    last_close = price_data.frame["close"].iloc[-1]
+                start_str = start_dt.strftime('%Y-%m-%d')
+                end_str = self._effective_end_dt.strftime('%Y-%m-%d')
+                price_data = fetch_bulk_price_data_for_tickers([self.ticker], start_str, end_str)
+                price_series = price_data[self.ticker] if self.ticker in price_data.columns else None
+                if price_series is not None and not price_series.empty:
+                    last_close = price_series.iloc[-1]
                     self.price = float(last_close) if last_close is not None else None
                 else:
                     self.price = get_most_recent_price(self.ticker)
@@ -60,7 +65,6 @@ class ValueFactors:
             self.price = get_most_recent_price(self.ticker)
 
         # Defensive sort by date desc using centralized helpers (DRY)
-        from app.core.calculations.core.helpers import sort_rows_desc_by_date
         ists = sort_rows_desc_by_date(self.fund.income_statements)
         bss = sort_rows_desc_by_date(self.fund.balance_sheets)
         cfs = sort_rows_desc_by_date(self.fund.cash_flow_statements)
@@ -298,17 +302,24 @@ class ValueFactors:
             return None
 
     def _get_dps_ttm(self) -> Optional[float]:
+        """Get trailing 12-month dividends per share.
+
+        Note: With adj_close now accounting for dividends, this method approximates
+        DPS from financial ratios data when available.
+        """
         if self._dps_ttm is not None:
             return self._dps_ttm
         try:
-            end = self._effective_end_dt
-            start = end - timedelta(days=365)
-            divs = self.ds.get_dividends(self.ticker, start, end)
-            if divs is None or divs.series is None or divs.series.empty:
-                self._dps_ttm = None
-            else:
-                dps = float(np.nansum(divs.series.values.astype(float)))
-                self._dps_ttm = dps if dps >= 0 else None
+            # Try to get dividend info from financial ratios
+            frs = sort_rows_desc_by_date(self.fund.financial_ratios)
+            frs = filter_rows_by_cutoff_date(frs, self._cutoff_date)
+            if frs:
+                # Try dividendYield * price to get DPS
+                div_yield = getattr(frs[0], 'dividendYield', None)
+                if div_yield is not None and self.price is not None and self.price > 0:
+                    self._dps_ttm = float(div_yield) * self.price
+                    return self._dps_ttm
+            self._dps_ttm = None
             return self._dps_ttm
         except Exception:
             self._dps_ttm = None
@@ -337,7 +348,6 @@ class ValueFactors:
         # bp: (Equity / Shares) / Price
         try:
             if price is not None and shares is not None:
-                from app.core.calculations.core.helpers import sort_rows_desc_by_date
                 equity = getattr(sort_rows_desc_by_date(self.fund.balance_sheets)[0], 'totalStockholdersEquity', None)
                 if equity is not None and float(equity) > 0:
                     bvps = float(equity) / float(shares)
@@ -519,60 +529,47 @@ class ValueFactors:
     
     @classmethod
     def calc_all_bulk(
-        cls, 
-        tickers: list[str], 
-        data_service: DataService | None = None,
+        cls,
+        tickers: list[str],
         as_of_date: Optional[datetime] = None,
         filing_lag_days: int = 0
     ) -> pd.DataFrame:
         """Calculate all value factors for multiple tickers using bulk data fetching.
-        
+
         Args:
             tickers: List of ticker symbols
-            data_service: Optional DataService instance (created if not provided)
             as_of_date: Optional as-of date for calculations
             filing_lag_days: Filing lag in days
-        
+
         Returns:
             DataFrame with tickers as rows and value metrics as columns
         """
-        ds = data_service or DataService()
-        
         # Bulk fetch fundamental data for all tickers
-        fundamentals = ds.get_bulk_fundamentals(tickers)
-        
+        fundamentals = get_bulk_fundamentals(tickers)
+
         # Calculate value factors for each ticker
         all_results = {}
         for ticker in tickers:
-            ticker = ticker.upper()
-            if ticker in fundamentals:
+            ticker_upper = ticker.upper()
+            if ticker_upper in fundamentals:
                 try:
-                    # Create ValueFactors instance (it will use cached fundamentals from DataService)
-                    vf = cls(ticker, data_service=ds, as_of_date=as_of_date, filing_lag_days=filing_lag_days)
-                    all_results[ticker] = vf.calc_all()
+                    # Create ValueFactors instance with pre-fetched fundamentals
+                    vf = cls(
+                        ticker_upper,
+                        fundamentals=fundamentals[ticker_upper],
+                        as_of_date=as_of_date,
+                        filing_lag_days=filing_lag_days
+                    )
+                    all_results[ticker_upper] = vf.calc_all()
                 except Exception as e:
-                    print(f"Error calculating value factors for {ticker}: {e}")
-                    all_results[ticker] = {}
-        
+                    print(f"Error calculating value factors for {ticker_upper}: {e}")
+                    all_results[ticker_upper] = {}
+
         # Convert to DataFrame
         df = pd.DataFrame(all_results).T
         return df
 
-if __name__ == "__main__":
-    # Lightweight smoke test for calc_all_bulk
-    import sys
-    try:
-        test_tickers = ["AAPL", "MSFT", "AMZN", "GOOGL", "NVDA"]
-        
-        # Use the classmethod to get all value factors in a DataFrame
-        value_factors_df = ValueFactors.calc_all_bulk(tickers=test_tickers)
-        
-        print("Calculated Value Factors:")
-        print(value_factors_df.to_string())
 
-    except Exception as e:
-        print(f"[error] Smoke test failed: {e}")
-        sys.exit(1)
 
 
 

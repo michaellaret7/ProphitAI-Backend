@@ -1,29 +1,26 @@
 from __future__ import annotations
 
 from typing import Optional, Iterable, List, Dict
-from datetime import date, datetime, timedelta, timezone
+from datetime import date, datetime, timedelta
 
 import numpy as np
+import pandas as pd
 
-from app.core.calculations.core.data_service import DataService
-from app.core.calculations.core.models import FundamentalData
+from app.repositories.fundamental_data import get_fundamentals_raw, get_bulk_fundamentals, FundamentalsResult
+from app.utils.time_utils import get_current_utc_time
 from app.core.calculations.core.helpers import (
-    winsorize_series,
     zscore_series,
-    sector_zscore,
     ttm,
     sort_rows_desc_by_date,
     filter_rows_by_cutoff_date,
 )
 from app.utils.ticker_utils import get_most_recent_price
-import pandas as pd
-import numpy as np
 from app.core.calculations.core.config import DEFAULT_SECTOR_COL, DEFAULT_WINSOR_LIMITS
 from app.core.calculations.factors.config import QUALITY_WEIGHTS, CORPORATE_TAX_RATE
 
 
 class QualityFactors:
-    """Quality factor calculations using DataService fundamentals.
+    """Quality factor calculations using fundamental data from repository.
 
     Metrics: ROE, ROA, ROIC, gross profitability, gross/net/FCF margins, D/E,
     net debt/EBITDA, interest coverage, quick ratio, Altman Z, accruals, earnings
@@ -34,18 +31,18 @@ class QualityFactors:
     def __init__(
         self,
         ticker: str,
-        data_service: DataService | None = None,
+        fundamentals: FundamentalsResult | None = None,
         as_of_date: Optional[datetime] = None,
         filing_lag_days: int = 0
     ):
         self.ticker = ticker.upper()
-        self.ds = data_service or DataService()
-        self.fund: FundamentalData = self.ds.get_fundamentals(self.ticker)
+        # Use provided fundamentals or fetch from repository
+        self.fund: FundamentalsResult = fundamentals or get_fundamentals_raw(self.ticker)
 
         # As-of alignment controls (for simulation mode)
         self.as_of_date: Optional[datetime] = as_of_date
         self.filing_lag_days: int = int(filing_lag_days) if filing_lag_days and filing_lag_days > 0 else 0
-        self._effective_end_dt: datetime = as_of_date if as_of_date is not None else datetime.now(timezone.utc)
+        self._effective_end_dt: datetime = as_of_date if as_of_date is not None else get_current_utc_time()
         self._cutoff_date = (self._effective_end_dt - timedelta(days=self.filing_lag_days)).date()
 
         # Defensive sort by period end date desc
@@ -494,7 +491,6 @@ class QualityFactors:
     def calc_all_bulk(
         cls,
         tickers: list[str],
-        data_service: DataService | None = None,
         as_of_date: Optional[datetime] = None,
         filing_lag_days: int = 0
     ) -> pd.DataFrame:
@@ -502,51 +498,50 @@ class QualityFactors:
 
         Args:
             tickers: List of ticker symbols
-            data_service: Optional DataService instance (created if not provided)
             as_of_date: Optional as-of date for calculations
             filing_lag_days: Filing lag in days
 
         Returns:
             DataFrame with tickers as rows and quality metrics as columns
         """
-        ds = data_service or DataService()
-
         # Bulk fetch fundamental data for all tickers
-        fundamentals = ds.get_bulk_fundamentals(tickers)
+        fundamentals = get_bulk_fundamentals(tickers)
 
         # Calculate quality factors for each ticker
         all_results = {}
         for ticker in tickers:
-            ticker = ticker.upper()
-            if ticker in fundamentals:
+            ticker_upper = ticker.upper()
+            if ticker_upper in fundamentals:
                 try:
-                    # Create QualityFactors instance with as_of_date
-                    qf = cls(ticker, data_service=ds, as_of_date=as_of_date, filing_lag_days=filing_lag_days)
-                    all_results[ticker] = qf.calc_all()
+                    # Create QualityFactors instance with pre-fetched fundamentals
+                    qf = cls(
+                        ticker_upper,
+                        fundamentals=fundamentals[ticker_upper],
+                        as_of_date=as_of_date,
+                        filing_lag_days=filing_lag_days
+                    )
+                    all_results[ticker_upper] = qf.calc_all()
                 except Exception as e:
-                    print(f"Error calculating quality factors for {ticker}: {e}")
-                    all_results[ticker] = {}
+                    print(f"Error calculating quality factors for {ticker_upper}: {e}")
+                    all_results[ticker_upper] = {}
 
         # Convert to DataFrame
         df = pd.DataFrame(all_results).T
         return df
 
-        
+
 if __name__ == '__main__':
     # Smoke test: compute attributes for a small ticker set and compose a simple quality score
-    from app.core.calculations.core.data_service import DataService
-    from datetime import datetime, timedelta, timezone
     print('[quality] smoke test starting...')
     try:
         tickers = ['AAPL', 'MSFT', 'AMZN', 'GOOGL', 'NVDA', 'LMT', 'XOM', 'TSLA', 'WMT', 'JPM', 'V']
-        ds = DataService()
-        # Bulk prefetch fundamentals to leverage thread pooling and cache
-        fetched = ds.get_bulk_fundamentals(tickers, max_workers=8)
+        # Bulk prefetch fundamentals
+        fetched = get_bulk_fundamentals(tickers)
 
         rows = []
-        for t in fetched.keys():
-            # Uses cached fundamentals loaded by get_bulk_fundamentals
-            q = QualityFactors(t, ds)
+        for t, fund_data in fetched.items():
+            # Uses pre-fetched fundamentals
+            q = QualityFactors(t, fundamentals=fund_data)
             attrs = q.compute_attributes()
             rows.append({'ticker': t, **attrs})
         df = pd.DataFrame(rows)

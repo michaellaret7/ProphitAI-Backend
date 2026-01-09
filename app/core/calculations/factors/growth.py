@@ -1,14 +1,12 @@
 from __future__ import annotations
 
 from typing import Optional, Iterable, List, Dict
-from datetime import date, datetime, timedelta, timezone
+from datetime import date, datetime, timedelta
 
-from app.core.calculations.core.data_service import DataService
-from app.core.calculations.core.models import FundamentalData
+from app.repositories.fundamental_data import get_fundamentals_raw, get_bulk_fundamentals, FundamentalsResult
+from app.utils.time_utils import get_current_utc_time
 from app.core.calculations.core.helpers import (
-    winsorize_series,
     zscore_series,
-    sector_zscore,
     ttm,
     safe_divide,
     sort_rows_desc_by_date,
@@ -26,7 +24,7 @@ from app.core.calculations.factors.config import GROWTH_WEIGHTS
 
 
 class GrowthFactors:
-    """Growth factor calculations backed by DataService fundamentals.
+    """Growth factor calculations using repository fundamentals.
 
     Computes: EPS growth rate, EPS CAGR, revenue growth, sales trend growth factor,
     FCF growth, PEG, ROE growth, ROIC growth, book value per share growth,
@@ -36,23 +34,17 @@ class GrowthFactors:
     def __init__(
         self,
         ticker: str,
-        data_service: DataService | None = None,
-        fundamental_data: FundamentalData | None = None,
+        fundamentals: FundamentalsResult | None = None,
         as_of_date: Optional[datetime] = None,
         filing_lag_days: int = 0
     ):
         self.ticker = ticker.upper()
-        self.ds = data_service or DataService()
-        # Use provided fundamental data or fetch it
-        if fundamental_data is not None:
-            self.fund: FundamentalData = fundamental_data
-        else:
-            self.fund: FundamentalData = self.ds.get_fundamentals(self.ticker)
+        self.fund: FundamentalsResult = fundamentals or get_fundamentals_raw(self.ticker)
 
         # As-of alignment controls (for simulation mode)
         self.as_of_date: Optional[datetime] = as_of_date
         self.filing_lag_days: int = int(filing_lag_days) if filing_lag_days and filing_lag_days > 0 else 0
-        self._effective_end_dt: datetime = as_of_date if as_of_date is not None else datetime.now(timezone.utc)
+        self._effective_end_dt: datetime = as_of_date if as_of_date is not None else get_current_utc_time()
         self._cutoff_date = (self._effective_end_dt - timedelta(days=self.filing_lag_days)).date()
 
         # Defensive sort by date descending where possible
@@ -497,7 +489,6 @@ class GrowthFactors:
     def calc_all_bulk(
         cls,
         tickers: List[str],
-        data_service: DataService | None = None,
         as_of_date: Optional[datetime] = None,
         filing_lag_days: int = 0
     ) -> pd.DataFrame:
@@ -505,17 +496,14 @@ class GrowthFactors:
 
         Args:
             tickers: List of ticker symbols
-            data_service: Optional DataService instance (created if not provided)
             as_of_date: Optional as-of date for calculations
             filing_lag_days: Filing lag in days
 
         Returns:
             DataFrame with tickers as rows and growth metrics as columns
         """
-        ds = data_service or DataService()
-
         # Bulk fetch fundamental data for all tickers
-        fundamentals = ds.get_bulk_fundamentals(tickers)
+        fundamentals = get_bulk_fundamentals(tickers)
 
         # Calculate growth factors for each ticker
         all_results = {}
@@ -524,7 +512,7 @@ class GrowthFactors:
             if ticker in fundamentals:
                 try:
                     # Create GrowthFactors with pre-fetched data and as_of_date
-                    gf = cls(ticker, data_service=ds, fundamental_data=fundamentals[ticker], as_of_date=as_of_date, filing_lag_days=filing_lag_days)
+                    gf = cls(ticker, fundamentals=fundamentals[ticker], as_of_date=as_of_date, filing_lag_days=filing_lag_days)
                     all_results[ticker] = gf.calc_all()
                 except Exception as e:
                     print(f"Error calculating growth factors for {ticker}: {e}")

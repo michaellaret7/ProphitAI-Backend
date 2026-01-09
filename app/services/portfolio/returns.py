@@ -46,7 +46,7 @@ class PortfolioReturnsService:
         # Initialize empty state
         self.positions: List[Dict[str, Any]] = []
         self.weights: Dict[str, float] = {}
-        self.price_data: Dict[str, pd.Series] = {}
+        self.price_data: pd.DataFrame = pd.DataFrame()
         self.daily_returns: pd.Series = pd.Series(dtype=float)
         self.cumulative_returns: pd.Series = pd.Series(dtype=float)
         self.nav_progression: pd.Series = pd.Series(dtype=float)
@@ -107,7 +107,7 @@ class PortfolioReturnsService:
             frequency='daily'
         )
 
-        if not ticker_closes:
+        if ticker_closes.empty:
             raise ValueError("Unable to fetch price data for portfolio")
 
         self.price_data = ticker_closes
@@ -122,7 +122,7 @@ class PortfolioReturnsService:
         # Calculate daily returns for each ticker
         ticker_price_returns = {
             ticker: ReturnsCalculator.daily_price_returns(self.price_data[ticker])
-            for ticker in self.weights if ticker in self.price_data
+            for ticker in self.weights if ticker in self.price_data.columns
         }
 
         # Calculate weighted portfolio returns

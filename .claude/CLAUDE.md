@@ -364,3 +364,4 @@ mcp__notion__notion-update-page(
 - Always use the fetch_bulk_price_data_for_tickers function for stock price fetching unless told otherwise
 - Never, create **Backwards Compatibility**, if there is a change that needs to be made, built the new solution and change everything that it affects. Backwards compatibilty violates our design principles. 
 - Do not ever create code functionality where we have to use arg commands to run it properly --> for example: tests/hrp_comb.py --mode long-only
+- Use the LSP Pyright server whenever you can

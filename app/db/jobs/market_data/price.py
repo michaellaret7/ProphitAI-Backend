@@ -12,20 +12,25 @@ Schedule:
 - 2PM EST: Update intraday prices
 - 5PM EST: Update intraday prices + daily prices
 """
+import threading
+import time
+from concurrent.futures import ThreadPoolExecutor, as_completed
+from datetime import datetime, timedelta, timezone, time as dt_time
+from typing import Dict, List, Optional
+
+import pytz
+from sqlalchemy import func
+from sqlalchemy.dialects.postgresql import insert
 
 from app.db.core.db_config import MarketSession
 from app.db.core.models.market_data_models import Ticker, Price, DailyPrices
 from app.db.core.pull_fmp_data import FMP_API_DATA
-from datetime import datetime, timedelta, timezone, time as dt_time
-import time
 from app.utils.time_utils import get_current_utc_time
-from sqlalchemy import func
-from sqlalchemy.dialects.postgresql import insert
-import pytz
-from concurrent.futures import ThreadPoolExecutor, as_completed
-import threading
 
-class UpdatePriceTable():
+
+class UpdatePriceTable:
+    """Updates intraday and daily price tables."""
+
     def __init__(self):
         self.fmp_api = FMP_API_DATA()
         self.lock = threading.Lock()
@@ -33,23 +38,34 @@ class UpdatePriceTable():
         self.successful_updates = 0
         self.errors = 0
         self.processed = 0
+        self.total_tickers = 0
 
-    def create_last_price_dict(self):
+    def create_last_price_dict(self) -> Dict[str, datetime]:
+        """Create dictionary mapping ticker_id to last price datetime."""
         market_session = MarketSession()
-        
+
         results = market_session.query(
             Price.ticker_id,
             func.max(Price.datetime).label('last_date')
         ).group_by(Price.ticker_id).all()
-        
-        # Convert to dictionary with ticker_id as key and last_date as value
-        dict = {str(row.ticker_id): row.last_date for row in results}
-        
-        market_session.close()
-        return dict
 
-    def update_prices_for_single_ticker(self, ticker_id: str, last_date: datetime):
-        """Update prices for a single ticker from last_date to current time"""
+        # Convert to dictionary with ticker_id as key and last_date as value
+        last_prices = {str(row.ticker_id): row.last_date for row in results}
+
+        market_session.close()
+        return last_prices
+
+    def update_prices_for_single_ticker(
+        self,
+        ticker_id: str,
+        last_date: datetime
+    ) -> int:
+        """
+        Update prices for a single ticker from last_date to current time.
+
+        Returns:
+            Number of records inserted, -1 on error, 0 if no new data
+        """
         market_session = MarketSession()
         try:
             # Get ticker symbol from ticker_id
@@ -57,40 +73,45 @@ class UpdatePriceTable():
             if not ticker:
                 print(f"Ticker not found for ID: {ticker_id}")
                 return 0
-            
+
             # Calculate date range (add 15 minutes to last_date to avoid duplicates)
             from_date = last_date + timedelta(minutes=15)
             to_date = get_current_utc_time()
-            
+
             # Skip if data is already current (within 15 minutes)
             if (to_date - last_date).total_seconds() < 900:  # 900 seconds = 15 minutes
                 return 0
-            
+
             # Fetch data from FMP API
             price_data = self.fmp_api.get_intraday_prices_for_ticker(
-                ticker.ticker, 
-                from_date, 
+                ticker.ticker,
+                from_date,
                 to_date
             )
-            
+
             if not price_data:
                 return 0
-            
+
             # Bulk insert new price records
             records_inserted = self._bulk_insert_prices(market_session, ticker_id, price_data)
             market_session.commit()
-            
+
             return records_inserted
-            
+
         except Exception as e:
             print(f"Error updating ticker {ticker_id}: {str(e)}")
             market_session.rollback()
             return -1
         finally:
             market_session.close()
-    
-    def _bulk_insert_prices(self, session, ticker_id: str, price_data: list):
-        """Convert FMP API response to Price records and bulk insert"""
+
+    def _bulk_insert_prices(
+        self,
+        session,
+        ticker_id: str,
+        price_data: List[dict]
+    ) -> int:
+        """Convert FMP API response to Price records and bulk insert."""
         if not price_data:
             return 0
 
@@ -100,7 +121,6 @@ class UpdatePriceTable():
         # Convert FMP data to Price model format
         price_records = []
         for record in price_data:
-            # FMP returns data like: {"date": "2024-01-01 09:30:00", "open": 100.0, ...}
             # Skip records without required date field
             if not record.get('date'):
                 continue
@@ -120,18 +140,22 @@ class UpdatePriceTable():
                 'close': record.get('close'),
                 'volume': record.get('volume')
             })
-        
+
         # Use PostgreSQL's ON CONFLICT to handle duplicates
         stmt = insert(Price).values(price_records)
         stmt = stmt.on_conflict_do_nothing(index_elements=['ticker_id', 'datetime'])
-        
+
         result = session.execute(stmt)
         return result.rowcount
-    
-    def _update_ticker_thread_safe(self, ticker_id: str, last_date: datetime):
-        """Thread-safe wrapper for updating a single ticker"""
+
+    def _update_ticker_thread_safe(
+        self,
+        ticker_id: str,
+        last_date: datetime
+    ) -> tuple:
+        """Thread-safe wrapper for updating a single ticker."""
         records_inserted = self.update_prices_for_single_ticker(ticker_id, last_date)
-        
+
         with self.lock:
             self.processed += 1
             if records_inserted > 0:
@@ -139,32 +163,32 @@ class UpdatePriceTable():
                 self.total_records += records_inserted
             elif records_inserted == -1:
                 self.errors += 1
-            
+
             # Progress reporting every 50 tickers
             if self.processed % 50 == 0:
                 print(f"Progress: {self.processed}/{self.total_tickers} tickers processed")
-        
+
         return ticker_id, records_inserted
-    
-    def update_all_ticker_prices(self, max_workers=10):
-        """Update prices for all tickers using thread pooling"""
+
+    def update_all_ticker_prices(self, max_workers: int = 10) -> None:
+        """Update prices for all tickers using thread pooling."""
         # Get the last price dictionary
         last_price_dict = self.create_last_price_dict()
-        
+
         if not last_price_dict:
             print("No tickers found with price data")
             return
-        
+
         # Reset counters
         self.total_tickers = len(last_price_dict)
         self.total_records = 0
         self.successful_updates = 0
         self.errors = 0
         self.processed = 0
-        
+
         print(f"Updating prices for {self.total_tickers} tickers using {max_workers} threads...")
         start_time = time.time()
-        
+
         # Use ThreadPoolExecutor for parallel processing
         with ThreadPoolExecutor(max_workers=max_workers) as executor:
             # Submit all tasks
@@ -172,7 +196,7 @@ class UpdatePriceTable():
                 executor.submit(self._update_ticker_thread_safe, ticker_id, last_date): ticker_id
                 for ticker_id, last_date in last_price_dict.items()
             }
-            
+
             # Process completed futures
             for future in as_completed(futures):
                 try:
@@ -181,7 +205,7 @@ class UpdatePriceTable():
                     print(f"Error processing ticker: {e}")
                     with self.lock:
                         self.errors += 1
-        
+
         # Final summary
         elapsed_time = time.time() - start_time
         print(f"\n{'='*50}")
@@ -194,8 +218,9 @@ class UpdatePriceTable():
         print(f"Time elapsed: {elapsed_time:.2f} seconds")
         print(f"Average time per ticker: {elapsed_time/self.total_tickers:.2f} seconds")
 
-    def update_daily_prices(self, max_workers=10):
-        """Update the DailyPrices table with daily OHLCV data for all tickers.
+    def update_daily_prices(self, max_workers: int = 10) -> None:
+        """
+        Update the DailyPrices table with daily OHLCV data for all tickers.
 
         For each ticker, finds the last date in DailyPrices and fetches daily data
         from that date to today. Skips duplicates (on_conflict_do_nothing).
@@ -252,8 +277,9 @@ class UpdatePriceTable():
         print(f"Errors: {self.errors}")
         print(f"Time elapsed: {elapsed_time:.2f} seconds")
 
-    def _update_daily_prices_for_ticker(self, ticker: Ticker):
-        """Update daily prices for a single ticker (thread-safe).
+    def _update_daily_prices_for_ticker(self, ticker: Ticker) -> int:
+        """
+        Update daily prices for a single ticker (thread-safe).
 
         Finds the last date in DailyPrices and fetches daily data from that date to today,
         inserting new rows and skipping duplicates.
@@ -356,7 +382,7 @@ class UpdatePriceTable():
         finally:
             session.close()
 
-    def recover_ticker_data(self, ticker_symbol: str):
+    def recover_ticker_data(self, ticker_symbol: str) -> int:
         """
         Recover data for a specific ticker by re-fetching from FMP API.
 
@@ -364,7 +390,7 @@ class UpdatePriceTable():
             ticker_symbol: Ticker symbol (e.g., 'VIXY', 'AAPL')
 
         Returns:
-            int: Number of records inserted, -1 on error, 0 if no new data
+            Number of records inserted, -1 on error, 0 if no new data
         """
         print("="*70)
         print(f"DATA RECOVERY FOR {ticker_symbol}")
@@ -375,12 +401,12 @@ class UpdatePriceTable():
         ticker = session.query(Ticker).filter(Ticker.ticker == ticker_symbol).first()
 
         if not ticker:
-            print(f"❌ ERROR: Ticker '{ticker_symbol}' not found in database")
+            print(f"ERROR: Ticker '{ticker_symbol}' not found in database")
             session.close()
             return -1
 
         ticker_id = str(ticker.id)
-        print(f"\n✓ Found {ticker_symbol}")
+        print(f"\nFound {ticker_symbol}")
         print(f"  Ticker ID: {ticker_id}")
 
         # Get the last date we have data for
@@ -389,7 +415,7 @@ class UpdatePriceTable():
         ).scalar()
 
         if not last_date:
-            print(f"\n⚠️  No existing price data found for {ticker_symbol}")
+            print(f"\nNo existing price data found for {ticker_symbol}")
             print("Cannot determine recovery start date.")
             session.close()
             return -1
@@ -405,7 +431,7 @@ class UpdatePriceTable():
         session.close()
 
         # Fetch and insert new data
-        print(f"\n📡 Fetching data from {last_date} to current time...")
+        print(f"\nFetching data from {last_date} to current time...")
         print("   (FMP API will return EST data, automatically converted to UTC)")
 
         records_inserted = self.update_prices_for_single_ticker(ticker_id, last_date)
@@ -416,7 +442,7 @@ class UpdatePriceTable():
         print("="*70)
 
         if records_inserted > 0:
-            print(f"✅ SUCCESS!")
+            print(f"SUCCESS!")
             print(f"   New records inserted: {records_inserted}")
             print(f"   Total records now: {records_before + records_inserted}")
 
@@ -430,14 +456,14 @@ class UpdatePriceTable():
             print(f"   Updated last date: {new_last_date}")
 
         elif records_inserted == 0:
-            print(f"⚠️  No new data available")
+            print(f"No new data available")
             print("   Possible reasons:")
             print("   - Data is already up to date")
             print("   - No trading activity since last update")
             print("   - API returned no new records")
 
         else:
-            print(f"❌ ERROR occurred during recovery")
+            print(f"ERROR occurred during recovery")
             print("   Check the error messages above for details")
 
         print("="*70)
@@ -456,7 +482,7 @@ def is_after_market_close() -> bool:
     return current_est.hour >= 17
 
 
-def run_price_updates(max_workers: int = 10):
+def run_price_updates(max_workers: int = 10) -> None:
     """
     Run price table updates based on current EST time.
 

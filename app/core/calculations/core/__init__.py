@@ -1,7 +1,4 @@
-"""Core infrastructure for calculations_v2.
-
-Exports only stable, existing symbols to avoid import errors while Phase 1 is in progress.
-"""
+"""Core infrastructure for calculations_v2."""
 
 from .exceptions import (
     CalculationsError,
@@ -10,8 +7,6 @@ from .exceptions import (
     InvalidParameterError,
     CalculationError,
 )
-from .data_service import DataService
-from .models import PriceData, DividendsData, FundamentalData
 
 __all__ = [
     "CalculationsError",
@@ -19,8 +14,4 @@ __all__ = [
     "InsufficientDataError",
     "InvalidParameterError",
     "CalculationError",
-    "DataService",
-    "PriceData",
-    "DividendsData",
-    "FundamentalData",
 ]
