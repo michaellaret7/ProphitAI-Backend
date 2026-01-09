@@ -1,52 +1,73 @@
-from typing import Dict
+"""
+Portfolio classification utilities.
+
+This module provides functions to classify portfolio positions into asset
+class buckets (equities, fixed income, commodities, etc.) based on ticker
+metadata from the database.
+"""
+from typing import Any, Dict
+
 from sqlalchemy.orm import Session
-from app.db.core.db_config import MarketSession
+
 from app.db.core.models.market_data_models import Ticker
 
-def classify_and_add_tickers(positions: Dict[str, float], session: Session) -> Dict[str, float]:
-    """Classify tickers into buckets. positions = {ticker: allocation}"""
+# Reason: Maps industry values to bucket names for DRY classification logic
+INDUSTRY_TO_BUCKET = {
+    'equity_etfs': 'equities',
+    'fixed_income_etfs': 'fixed_income',
+    'commodity_etfs': 'commodities',
+    'cryptocurrency_etfs': 'cryptocurrencies',
+    'alternative_etfs': 'alternatives',
+    'currency_etfs': 'currencies',
+}
 
-    equities = {}
-    fixed_income = {}
-    commodities = {}
-    cryptocurrencies = {}
-    alternatives = {}
+# Reason: Tickers that represent cash or cash equivalents
+CASH_TICKERS = {'CASH', 'USD', 'SPAXX', 'FDRXX', 'VMFXX'}
+
+# Reason: All possible allocation buckets for consistent return structure
+ALL_BUCKETS = [
+    'equities', 'fixed_income', 'commodities', 'cryptocurrencies',
+    'alternatives', 'currencies', 'cash'
+]
+
+def classify_and_add_tickers(positions: Dict[str, float], session: Session) -> Dict[str, float]:
+    """
+    Classify tickers into asset class buckets and sum allocations.
+
+    Takes a dictionary of ticker positions and classifies each ticker into
+    the appropriate asset class bucket based on its sector/industry metadata.
+
+    Args:
+        positions: Dict mapping ticker symbols to their allocation percentages.
+        session: SQLAlchemy session for querying ticker metadata.
+
+    Returns:
+        Dict mapping bucket names to total allocation percentages.
+        Always includes all buckets with 0.0 for empty ones.
+
+    Example:
+        >>> positions = {'AAPL': 0.25, 'SPY': 0.30, 'TLT': 0.20}
+        >>> classify_and_add_tickers(positions, session)
+        {'equities': 0.55, 'fixed_income': 0.20, 'commodities': 0.0, ...}
+    """
+    buckets: Dict[str, Dict[str, float]] = {bucket: {} for bucket in ALL_BUCKETS}
 
     ticker_objs = session.query(Ticker).filter(Ticker.ticker.in_(positions.keys())).all()
-    ticker_map = {t.ticker: (t.sector, t.industry, t.sub_industry) for t in ticker_objs}
+    ticker_map = {t.ticker: (t.sector, t.industry) for t in ticker_objs}
 
     for ticker, allocation in positions.items():
-        sector, industry, sub_industry = ticker_map.get(ticker, (None, None, None))
-        if sector and sector.startswith('equity_sector_'):
-            equities[ticker] = allocation
-        if industry == 'equity_etfs':
-            equities[ticker] = allocation
-        if industry == 'fixed_income_etfs':
-            fixed_income[ticker] = allocation
-        if industry == 'commodity_etfs':
-            commodities[ticker] = allocation
-        if industry == 'cryptocurrency_etfs':
-            cryptocurrencies[ticker] = allocation
-        if industry == 'alternative_etfs':
-            alternatives[ticker] = allocation
-    
-    allocations = {}
-    if equities:
-        allocations['equities'] = sum(equities.values())
-    if fixed_income:
-        allocations['fixed_income'] = sum(fixed_income.values())
-    if commodities:
-        allocations['commodities'] = sum(commodities.values())
-    if cryptocurrencies:
-        allocations['cryptocurrencies'] = sum(cryptocurrencies.values())
-    if alternatives:
-        allocations['alternatives'] = sum(alternatives.values())
+        sector, industry = ticker_map.get(ticker, (None, None))
+
+        # Reason: Using elif to ensure each ticker is only classified once
+        if ticker.upper() in CASH_TICKERS:
+            buckets['cash'][ticker] = allocation
+        elif sector and sector.startswith('equity_sector_'):
+            buckets['equities'][ticker] = allocation
+        elif industry in INDUSTRY_TO_BUCKET:
+            bucket_name = INDUSTRY_TO_BUCKET[industry]
+            buckets[bucket_name][ticker] = allocation
+
+    # Reason: Sum allocations per bucket, always returning all buckets for consistency
+    allocations = {bucket: sum(tickers.values()) for bucket, tickers in buckets.items()}
 
     return allocations
-
-if __name__ == "__main__":
-    with MarketSession() as session:
-        fake_positions = {'BND': 0.0812153836801942, 'DUK': 0.0812153836801942, 'GOOGL': 0.08529267527087245, 'JNJ': 0.08095840367934576, 'JPM': 0.0828207422920126, 'LRCX': 0.09603618552924603, 'MSFT': 0.0825211381950795, 'MU': 0.08877121155879275, 'NEE': 0.0806410991697794, 'NVDA': 0.08019195150488809, 'TER': 0.08484535775557836, 'AAPL': 0.07828939802032579, 'ABBV': 0.0784164533438851}
-        allocations = classify_and_add_tickers(fake_positions, session)
-        print(allocations)
-        print(f"Total Allocation: {sum(allocations.values())}")
