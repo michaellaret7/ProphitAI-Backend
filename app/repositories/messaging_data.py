@@ -260,7 +260,9 @@ def get_messages(
         for msg in messages:
             msg.content = decrypt_message(msg.content)
 
-        return messages
+        # Reason: Reverse to return oldest-first for chat UI display
+        # (query uses DESC to efficiently fetch most recent messages for pagination)
+        return messages[::-1]
     except SQLAlchemyError as e:
         logger.error(f"Failed to get messages for conversation {conversation_id}: {e}")
         return []
