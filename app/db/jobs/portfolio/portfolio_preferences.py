@@ -175,55 +175,6 @@ class MonitorPortfolio:
 
         return has_drift, drifted_sectors
     
-    def detect_drawdowns(self, threshold: float = -0.10, lookback: Optional[int] = 252) -> Dict[str, float]:
-        """
-        Detect tickers that are *currently* in a drawdown <= threshold.
-
-        Drawdown is measured from the High-Water Mark (HWM):
-            dd_t = nav_t / hwm_t - 1
-
-        Args:
-            threshold: e.g. -0.10 means "currently down 10%+ from peak"
-            lookback:
-                - None -> peak since start_date (inception-to-date HWM)
-                - int  -> rolling HWM window in trading days (e.g. 252 ~ 1Y)
-
-        Returns:
-            Dict[ticker, current_drawdown] for tickers currently breaching the threshold
-            (values are negative floats, e.g. -0.134 == -13.4%)
-        """
-        price_data = fetch_bulk_ohlcv_data_for_tickers(
-            tickers=self.positions.keys(),
-            start_date_str=self.portfolio_created_date.strftime("%Y-%m-%d"),
-            end_date_str=get_current_utc_time().strftime("%Y-%m-%d"),
-            frequency="daily",
-            returns=True,
-        )
-
-        returns_df = pd.DataFrame({t: d["returns"] for t, d in price_data.items()})
-
-        # Drop rows where any ticker is missing (keeps dates aligned across tickers)
-        returns_df = returns_df.dropna(how="any")
-        if returns_df.empty:
-            return {}
-
-        # Returns -> NAV
-        nav = (1.0 + returns_df).cumprod()
-
-        # High-water mark (rolling or inception)
-        if lookback is None:
-            hwm = nav.cummax()
-        else:
-            hwm = nav.rolling(int(lookback), min_periods=1).max()
-
-        # Drawdown series and current drawdown
-        dd = nav / hwm - 1.0
-        current_dd = dd.iloc[-1]
-
-        # Filter tickers currently breaching threshold
-        breached = current_dd[current_dd <= threshold].sort_values()  # most negative first
-        return breached.to_dict()
-
     def detect_drawdowns(self, threshold: float = -0.10) -> Dict[str, Any]:
         """
         Detect positions currently in drawdown below threshold.
@@ -270,9 +221,48 @@ class MonitorPortfolio:
             'threshold': threshold
         }
 
+    def detect_positions_to_reevaluate(self, loss_threshold: float = -0.05) -> Dict[str, Any]:
+        """
+        Flag positions that are underwater (negative total return from entry).
+        More appropriate for portfolio monitoring than drawdown from peak.
+        """
+        price_data = fetch_bulk_ohlcv_data_for_tickers(
+            tickers=self.positions.keys(),
+            start_date_str="2023-01-01", # self.portfolio_created_date.strftime('%Y-%m-%d'),
+            end_date_str=get_current_utc_time().strftime('%Y-%m-%d'),
+            frequency='daily',
+            returns=True
+        )
+        
+        returns_df = pd.DataFrame()
+        for ticker, data in price_data.items():
+            returns_df[ticker] = data['returns']
+        returns_df = returns_df.dropna()
+        
+        # Cumulative wealth index
+        cumulative_wealth = (1 + returns_df).cumprod()
+        
+        # Total return from entry (what actually matters for a portfolio)
+        total_returns = cumulative_wealth.iloc[-1] - 1
+        
+        # Flag positions that are actually losing money
+        flagged_positions = {
+            ticker: {
+                'total_return': float(total_returns[ticker]),
+            }
+            for ticker in total_returns.index
+            if total_returns[ticker] < loss_threshold
+        }
+        
+        return {
+            'flagged_positions': flagged_positions,
+            'needs_reevaluation': len(flagged_positions) > 0,
+            'threshold': loss_threshold
+        }
+
         
 
 if __name__ == "__main__":
     with MonitorPortfolio(portfolio_id="9460b73c-ff64-40aa-8af4-139f55a5a45a") as monitor:
         # print(monitor.detect_allocation_drift())
-        print(monitor.detect_drawdowns())
+        print(monitor.detect_positions_to_reevaluate())

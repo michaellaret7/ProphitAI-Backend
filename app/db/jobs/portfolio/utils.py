@@ -21,9 +21,6 @@ INDUSTRY_TO_BUCKET = {
     'currency_etfs': 'currencies',
 }
 
-# Reason: Tickers that represent cash or cash equivalents
-CASH_TICKERS = {'CASH', 'USD', 'SPAXX', 'FDRXX', 'VMFXX'}
-
 # Reason: All possible allocation buckets for consistent return structure
 ALL_BUCKETS = [
     'equities', 'fixed_income', 'commodities', 'cryptocurrencies',
@@ -58,10 +55,7 @@ def classify_and_add_tickers(positions: Dict[str, float], session: Session) -> D
     for ticker, allocation in positions.items():
         sector, industry = ticker_map.get(ticker, (None, None))
 
-        # Reason: Using elif to ensure each ticker is only classified once
-        if ticker.upper() in CASH_TICKERS:
-            buckets['cash'][ticker] = allocation
-        elif sector and sector.startswith('equity_sector_'):
+        if sector and sector.startswith('equity_sector_'):
             buckets['equities'][ticker] = allocation
         elif industry in INDUSTRY_TO_BUCKET:
             bucket_name = INDUSTRY_TO_BUCKET[industry]
