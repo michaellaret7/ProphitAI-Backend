@@ -11,7 +11,7 @@ from typing import Any
 import pandas as pd
 
 from app.db.core.db_config import UserSession
-from app.db.core.models.user_data_models import Portfolio, PortfolioItem
+from app.db.core.models.user_data_models import Portfolio, PortfolioItem, User
 from app.db.jobs.portfolio.monitor import MonitorPortfolio
 from app.repositories.price_data import build_returns_df
 from app.utils.time_utils import get_current_utc_time
@@ -57,12 +57,15 @@ class BatchMonitorPortfolio:
             print(f"[SKIP] Portfolio {portfolio_id}: {e}")
             return (str(portfolio_id), None)
 
-    def run(self, max_workers: int = 20) -> dict[str, Any]:
+    def run(self, max_workers: int = 3) -> dict[str, Any]:
         """
         Run monitoring for all portfolios in parallel using cached returns data.
 
         Args:
-            max_workers: Maximum number of concurrent threads.
+            max_workers: Maximum number of concurrent threads. Keep low (≤3) to avoid
+                exhausting database connection pool. Each worker uses 2 sessions
+                (MonitorPortfolio) + up to 2 more for messaging = 4 connections.
+                Pool limit is 15 connections.
 
         Returns:
             Dict mapping portfolio_id to tuple of detection results:
@@ -86,7 +89,7 @@ class BatchMonitorPortfolio:
 
 if __name__ == "__main__":
     with UserSession() as session:
-        portfolios = session.query(Portfolio).limit(10).all()
+        portfolios = session.query(Portfolio).join(User).filter(User.email == 'michaellaret7@gmail.com').all()
         portfolio_ids = [portfolio.id for portfolio in portfolios]
 
     batch_monitor = BatchMonitorPortfolio(portfolio_ids)

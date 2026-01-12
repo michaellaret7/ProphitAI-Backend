@@ -118,7 +118,13 @@ def detect_drawdowns(
     else:
         # Filter to tickers that exist in the cached DataFrame
         available_tickers = [t for t in tickers if t in returns_df.columns]
+        if not available_tickers:
+            return DrawdownResult(flagged_positions={}, triggered=False)
         returns_df = returns_df[available_tickers].loc[portfolio_created_date:].dropna()
+
+    # Return early if no data after filtering
+    if returns_df.empty:
+        return DrawdownResult(flagged_positions={}, triggered=False)
 
     # Cumulative wealth index
     cumulative_wealth = (1 + returns_df).cumprod()
@@ -201,6 +207,18 @@ def detect_portfolio_correlation_change(
                 triggered=False
             )
         returns_df = returns_df[available_tickers].tail(lookback_days).dropna()
+
+    # Return early if insufficient data after filtering
+    if returns_df.empty or len(returns_df) < short_span:
+        return PortfolioCorrelationResult(
+            recent_avg=0.0,
+            baseline_avg=0.0,
+            change=0.0,
+            dispersion=0.0,
+            z_score=0.0,
+            trend="N/A",
+            triggered=False
+        )
 
     # 2. Calculate EWMA Correlation Matrices
     # Institutional preference: EWMA reacts faster to shocks

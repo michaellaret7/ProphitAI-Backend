@@ -14,7 +14,7 @@ DRIFT_THRESHOLD = 0.05  # -> 5%
 DRAWDOWN_THRESHOLD = -0.10  # -> 10%
 
 # Portfolio-level correlation thresholds
-PORTFOLIO_CORR_HIGH_THRESHOLD = 0.60  # Avg pairwise correlation above this is concerning
+PORTFOLIO_CORR_HIGH_THRESHOLD = 0.50  # Avg pairwise correlation above this is concerning
 PORTFOLIO_CORR_SPIKE_THRESHOLD = 0.10  # Avg correlation increase above this is concerning
 PORTFOLIO_CORR_ZSCORE_THRESHOLD = 2.0  # Z-score above this is a significant spike
 PORTFOLIO_CORR_DISPERSION_THRESHOLD = 0.15  # Dispersion below this indicates high concentration

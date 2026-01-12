@@ -16,12 +16,10 @@ from app.db.core.models.user_data_models import Portfolio, PortfolioItem, Portfo
 from app.db.jobs.portfolio.detections import (
     detect_allocation_drift,
     detect_drawdowns,
-    detect_portfolio_correlation_change,
-    detect_price_target_changes,
+    detect_portfolio_correlation_change
 )
-
-# Reason: Threshold accounts for floating-point precision while detecting meaningful drift
-PROPHITAI_SYSTEM_USER_ID = UUID("e7ab723f-a415-4f3c-8445-4eaf08cf605e")
+from app.repositories.messaging_data import get_or_create_conversation, create_message
+from app.db.jobs.portfolio.messages import send_portfolio_alert
 
 class MonitorPortfolio:
     """
@@ -47,6 +45,7 @@ class MonitorPortfolio:
         self._positions: Dict[str, float] | None = None
         self._portfolio_created_date: datetime | None = None
         self._user_id: UUID | None = None
+        self._portfolio_name: str | None = None
 
     def __enter__(self) -> "MonitorPortfolio":
         self._user_session = UserSession()
@@ -90,6 +89,12 @@ class MonitorPortfolio:
             raise RuntimeError("MonitorPortfolio must be used as a context manager")
         return self._user_id
 
+    @property
+    def portfolio_name(self) -> str:
+        if self._portfolio_name is None:
+            raise RuntimeError("MonitorPortfolio must be used as a context manager")
+        return self._portfolio_name
+
     def _get_data(self) -> Tuple[Dict[str, float], Dict[str, float]]:
         """
         Fetch portfolio preferences and positions from database.
@@ -109,13 +114,15 @@ class MonitorPortfolio:
         # Reason: Fetch portfolio metadata for downstream calculations and notifications
         portfolio_row = self._user_session.query(
             Portfolio.created_date,
-            Portfolio.user_id
+            Portfolio.user_id,
+            Portfolio.name
         ).filter(
             Portfolio.id == self.portfolio_id
         ).first()
         if portfolio_row:
             self._portfolio_created_date = portfolio_row.created_date
             self._user_id = portfolio_row.user_id
+            self._portfolio_name = portfolio_row.name
         else:
             raise ValueError(f"No portfolio found with id {self.portfolio_id}")
 
@@ -170,37 +177,22 @@ class MonitorPortfolio:
     def notify(self):
         allocation_drift_result = detect_allocation_drift(self.positions, self.preferences, self.market_session)
         drawdown_result = detect_drawdowns(self.positions, self.portfolio_created_date, returns_df=self._returns_df)
-        price_target_changes_result = detect_price_target_changes(self.positions, self.market_session)
         portfolio_correlation_result = detect_portfolio_correlation_change(self.positions, returns_df=self._returns_df)
 
-        if allocation_drift_result.triggered:
-            print("Allocation drift detected")
-            print(allocation_drift_result.flagged_sectors)
-        else:
-            print("No allocation drift detected")
+        if any([allocation_drift_result.triggered, drawdown_result.triggered, portfolio_correlation_result.triggered]):
+            send_portfolio_alert(
+                user_id=self.user_id,
+                portfolio_id=self.portfolio_id,
+                portfolio_name=self.portfolio_name,
+                drift_result=allocation_drift_result,
+                drawdown_result=drawdown_result,
+                correlation_result=portfolio_correlation_result
+            )
 
-        if drawdown_result.triggered:
-            print("Drawdown detected")
-            print(drawdown_result.flagged_positions)
-        else:
-            print("No drawdown detected")
-        if price_target_changes_result.triggered:
-            print("Price target changes detected")
-            print(price_target_changes_result.flagged_positions)
-        else:
-            print("No price target changes detected")
-        if portfolio_correlation_result.triggered:
-            print("Portfolio correlation detected")
-            print(portfolio_correlation_result.recent_avg, portfolio_correlation_result.baseline_avg, portfolio_correlation_result.change, portfolio_correlation_result.dispersion, portfolio_correlation_result.z_score, portfolio_correlation_result.trend)
-        else:
-            print("No portfolio correlation detected")
-
-        return allocation_drift_result, drawdown_result, price_target_changes_result, portfolio_correlation_result
+        return allocation_drift_result, drawdown_result, portfolio_correlation_result
 
 
-if __name__ == "__main__":
-    with MonitorPortfolio(portfolio_id="9460b73c-ff64-40aa-8af4-139f55a5a45a") as monitor:
-        monitor.notify()
+
 
 
 
