@@ -1,5 +1,5 @@
 ---
-name: changes-reviewer
+name: new-code-changes-reviewer
 description: Reviews recent changes in files or folders using git diff. Use immediately after making changes to ensure quality and correctness before committing.
 tools: Read, Bash, Grep, Glob
 model: inherit

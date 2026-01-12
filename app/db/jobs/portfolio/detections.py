@@ -27,7 +27,7 @@ from app.db.jobs.portfolio.models import (
     PriceTargetChangeResult,
 )
 from app.db.jobs.portfolio.utils import classify_and_add_tickers, get_median_price_targets
-from app.repositories.price_data import fetch_bulk_ohlcv_data_for_tickers
+from app.repositories.price_data import build_returns_df
 from app.utils.time_utils import get_current_utc_time
 
 def detect_allocation_drift(
@@ -64,61 +64,6 @@ def detect_allocation_drift(
         triggered=len(flagged_sectors) > 0
     )
 
-def detect_drawdowns(
-    positions: Dict[str, float],
-    portfolio_created_date: datetime
-) -> DrawdownResult:
-    """
-    Detect positions currently in drawdown below threshold.
-
-    Returns:
-        DrawdownResult with:
-            - triggered: True if any position has breached threshold
-            - threshold: The drawdown threshold used
-            - flagged_positions: Dict of positions with drawdown details
-    """
-    price_data = fetch_bulk_ohlcv_data_for_tickers(
-        tickers=positions.keys(),
-        start_date_str=portfolio_created_date.strftime('%Y-%m-%d'),
-        end_date_str=get_current_utc_time().strftime('%Y-%m-%d'),
-        frequency='daily',
-        returns=True
-    )
-
-    returns_df = pd.DataFrame()
-
-    for ticker, data in price_data.items():
-        returns_df[ticker] = data['returns']
-
-    returns_df = returns_df.dropna()
-
-    # Cumulative wealth index
-    cumulative_wealth = (1 + returns_df).cumprod()
-
-    # High water mark and drawdown series
-    high_water_mark = cumulative_wealth.cummax()
-    drawdown_series = (cumulative_wealth - high_water_mark) / high_water_mark
-
-    # Current and max drawdowns
-    current_drawdowns = drawdown_series.iloc[-1]
-    max_drawdowns = drawdown_series.min()
-
-    # Only flagged positions (convert to native Python floats)
-    flagged_positions: Dict[str, DrawdownDetails] = {
-        ticker: DrawdownDetails(
-            current_drawdown=float(current_drawdowns[ticker]),
-            max_drawdown=float(max_drawdowns[ticker]),
-            peak_date=cumulative_wealth[ticker].idxmax().strftime('%Y-%m-%d'),
-        )
-        for ticker in current_drawdowns.index
-        if current_drawdowns[ticker] < DRAWDOWN_THRESHOLD
-    }
-
-    return DrawdownResult(
-        flagged_positions=flagged_positions,
-        triggered=len(flagged_positions) > 0
-    )
-
 def detect_price_target_changes(
     positions: Dict[str, float],
     market_session: MarketSession
@@ -147,9 +92,64 @@ def detect_price_target_changes(
         triggered=len(flagged_positions) > 0
     )
 
+def detect_drawdowns(
+    positions: Dict[str, float],
+    portfolio_created_date: datetime,
+    returns_df: pd.DataFrame | None = None
+) -> DrawdownResult:
+    """
+    Detect positions currently in drawdown below threshold.
+
+    Args:
+        positions: Dict mapping tickers to allocations.
+        portfolio_created_date: Portfolio inception date for filtering.
+        returns_df: Optional pre-fetched returns DataFrame (from batch cache).
+
+    Returns:
+        DrawdownResult with:
+            - triggered: True if any position has breached threshold
+            - threshold: The drawdown threshold used
+            - flagged_positions: Dict of positions with drawdown details
+    """
+    tickers = list(positions.keys())
+
+    if returns_df is None:
+        returns_df = build_returns_df(tickers, portfolio_created_date.strftime('%Y-%m-%d'), get_current_utc_time().strftime('%Y-%m-%d'))
+    else:
+        # Filter to tickers that exist in the cached DataFrame
+        available_tickers = [t for t in tickers if t in returns_df.columns]
+        returns_df = returns_df[available_tickers].loc[portfolio_created_date:].dropna()
+
+    # Cumulative wealth index
+    cumulative_wealth = (1 + returns_df).cumprod()
+
+    # High water mark and drawdown series
+    high_water_mark = cumulative_wealth.cummax()
+    drawdown_series = (cumulative_wealth - high_water_mark) / high_water_mark
+
+    # Current and max drawdowns
+    current_drawdowns = drawdown_series.iloc[-1]
+    max_drawdowns = drawdown_series.min()
+
+    # Only flagged positions (convert to native Python floats)
+    flagged_positions: Dict[str, DrawdownDetails] = {
+        ticker: DrawdownDetails(
+            current_drawdown=float(current_drawdowns[ticker]),
+            max_drawdown=float(max_drawdowns[ticker]),
+            peak_date=cumulative_wealth[ticker].idxmax().strftime('%Y-%m-%d'),
+        )
+        for ticker in current_drawdowns.index
+        if current_drawdowns[ticker] < DRAWDOWN_THRESHOLD
+    }
+
+    return DrawdownResult(
+        flagged_positions=flagged_positions,
+        triggered=len(flagged_positions) > 0
+    )
 
 def detect_portfolio_correlation_change(
     positions: Dict[str, float],
+    returns_df: pd.DataFrame | None = None,
     lookback_days: int = 180,
     short_span: int = 21,  # ~1 trading month
     long_span: int = 63    # ~1 trading quarter
@@ -163,7 +163,8 @@ def detect_portfolio_correlation_change(
 
     Args:
         positions: Dict mapping tickers to their allocations.
-        lookback_days: Total days of price history to fetch.
+        returns_df: Optional pre-fetched returns DataFrame (from batch cache).
+        lookback_days: Total days of price history to use.
         short_span: Days for recent correlation window (~1 trading month).
         long_span: Days for baseline correlation window (~1 trading quarter).
 
@@ -171,6 +172,7 @@ def detect_portfolio_correlation_change(
         PortfolioCorrelationResult with all metrics and triggered status.
     """
     tickers = list(positions.keys())
+
     if len(tickers) < 2:
         return PortfolioCorrelationResult(
             recent_avg=0.0,
@@ -182,16 +184,23 @@ def detect_portfolio_correlation_change(
             triggered=False
         )
 
-    # 1. Fetch data (Reusing your existing fetcher logic)
-    today = get_current_utc_time()
-    price_data = fetch_bulk_ohlcv_data_for_tickers(
-        tickers=tickers,
-        start_date_str=(today - timedelta(days=lookback_days)).strftime('%Y-%m-%d'),
-        end_date_str=today.strftime('%Y-%m-%d'),
-        returns=True
-    )
-    
-    returns_df = pd.DataFrame({t: d['returns'] for t, d in price_data.items()}).dropna()
+    if returns_df is None:
+        returns_df = build_returns_df(tickers, start_date=(get_current_utc_time() - timedelta(days=270)).strftime('%Y-%m-%d'), end_date=get_current_utc_time().strftime('%Y-%m-%d'), frequency='daily')
+        returns_df = returns_df.tail(lookback_days).dropna()
+    else:
+        # Filter to tickers that exist in the cached DataFrame
+        available_tickers = [t for t in tickers if t in returns_df.columns]
+        if len(available_tickers) < 2:
+            return PortfolioCorrelationResult(
+                recent_avg=0.0,
+                baseline_avg=0.0,
+                change=0.0,
+                dispersion=0.0,
+                z_score=0.0,
+                trend="N/A",
+                triggered=False
+            )
+        returns_df = returns_df[available_tickers].tail(lookback_days).dropna()
 
     # 2. Calculate EWMA Correlation Matrices
     # Institutional preference: EWMA reacts faster to shocks

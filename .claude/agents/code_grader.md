@@ -1,5 +1,5 @@
 ---
-name: grader
+name: code-grader
 Description: Debugging specialist for errors, test failures, and unexpected behavior.
 model: inherit
 ---

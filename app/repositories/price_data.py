@@ -238,5 +238,34 @@ def fetch_bulk_ohlcv_data_for_tickers(tickers: list, start_date_str: str, end_da
 
     return price_data_map
 
+def build_returns_df(
+    tickers: list[str],
+    start_date: str,
+    end_date: str,
+    frequency: str = 'daily'
+) -> pd.DataFrame:
+    """
+    Build a returns DataFrame for multiple tickers.
+    """
 
+    price_data = fetch_bulk_ohlcv_data_for_tickers(
+        tickers, 
+        start_date, 
+        end_date, 
+        frequency, 
+        returns=True
+    )
+
+    returns_series = {ticker: data['returns'] for ticker, data in price_data.items()}
+    returns_df = pd.concat(returns_series, axis=1)
+
+    returns_df.index = pd.to_datetime(returns_df.index)
+    returns_df.sort_index(inplace=True)
+    returns_df.dropna(inplace=True)
+
+    return returns_df
+
+if __name__ == "__main__":
+    returns_df = build_returns_df(tickers=['AAPL', 'SPY'], start_date='2024-01-01', end_date='2024-12-31', frequency='daily')
+    print(returns_df)
 

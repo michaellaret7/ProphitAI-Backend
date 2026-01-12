@@ -7,9 +7,11 @@ from target allocations.
 """
 from datetime import datetime
 from typing import Dict, Tuple
+from uuid import UUID
+
+import pandas as pd
 
 from app.db.core.db_config import UserSession, MarketSession
-from app.db.core.models.market_data_models import PriceTargetSummary, Ticker
 from app.db.core.models.user_data_models import Portfolio, PortfolioItem, PortfolioPreference
 from app.db.jobs.portfolio.detections import (
     detect_allocation_drift,
@@ -17,29 +19,6 @@ from app.db.jobs.portfolio.detections import (
     detect_portfolio_correlation_change,
     detect_price_target_changes,
 )
-
-from app.db.jobs.portfolio.utils import classify_and_add_tickers
-from app.repositories.price_data import fetch_bulk_price_data_for_tickers, fetch_bulk_ohlcv_data_for_tickers
-from app.repositories.messaging_data import (
-    create_conversation,
-    get_conversation,
-    get_conversation_by_users,
-    get_or_create_conversation,
-    get_user_conversations,
-    create_message,
-    get_messages,
-    get_latest_message,
-    update_last_read,
-    get_unread_count,
-    get_total_unread_count,
-    search_users,
-)
-from app.utils.time_utils import get_current_utc_time
-import pandas as pd
-from typing import Optional
-from app.db.core.models.user_data_models import User
-from app.utils.serialize_output import serialize_sqlalchemy_obj
-from uuid import UUID
 
 # Reason: Threshold accounts for floating-point precision while detecting meaningful drift
 PROPHITAI_SYSTEM_USER_ID = UUID("e7ab723f-a415-4f3c-8445-4eaf08cf605e")
@@ -59,8 +38,9 @@ class MonitorPortfolio:
                 print(drift_result['flagged_sectors'])
     """
 
-    def __init__(self, portfolio_id: str):
+    def __init__(self, portfolio_id: str, returns_df: pd.DataFrame | None = None):
         self.portfolio_id = portfolio_id
+        self._returns_df = returns_df
         self._user_session: UserSession | None = None
         self._market_session: MarketSession | None = None
         self._preferences: Dict[str, float] | None = None
@@ -189,9 +169,9 @@ class MonitorPortfolio:
     
     def notify(self):
         allocation_drift_result = detect_allocation_drift(self.positions, self.preferences, self.market_session)
-        drawdown_result = detect_drawdowns(self.positions, self.portfolio_created_date)
+        drawdown_result = detect_drawdowns(self.positions, self.portfolio_created_date, returns_df=self._returns_df)
         price_target_changes_result = detect_price_target_changes(self.positions, self.market_session)
-        portfolio_correlation_result = detect_portfolio_correlation_change(self.positions)
+        portfolio_correlation_result = detect_portfolio_correlation_change(self.positions, returns_df=self._returns_df)
 
         if allocation_drift_result.triggered:
             print("Allocation drift detected")
