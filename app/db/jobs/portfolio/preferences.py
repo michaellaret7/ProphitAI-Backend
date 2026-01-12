@@ -11,7 +11,13 @@ from typing import Dict, Tuple
 from app.db.core.db_config import UserSession, MarketSession
 from app.db.core.models.market_data_models import PriceTargetSummary, Ticker
 from app.db.core.models.user_data_models import Portfolio, PortfolioItem, PortfolioPreference
-from app.db.jobs.portfolio.detections import detect_allocation_drift, detect_drawdowns, detect_portfolio_correlation_change, detect_pair_correlation_changes
+from app.db.jobs.portfolio.detections import (
+    detect_allocation_drift,
+    detect_drawdowns,
+    detect_portfolio_correlation_change,
+    detect_price_target_changes,
+)
+
 from app.db.jobs.portfolio.utils import classify_and_add_tickers
 from app.repositories.price_data import fetch_bulk_price_data_for_tickers, fetch_bulk_ohlcv_data_for_tickers
 from app.repositories.messaging_data import (
@@ -184,17 +190,23 @@ class MonitorPortfolio:
         return preferences, positions
     
     def notify(self):
-        drift_result = detect_allocation_drift(self.positions, self.preferences, self.market_session)
-        drawdown_result = detect_drawdowns(self.positions, self.portfolio_created_date)
-        correlations = detect_portfolio_correlation_change(self.positions)
-        pair_correlations = detect_pair_correlation_changes(self.positions)
+        corr = detect_portfolio_correlation_change(self.positions)
+        print(corr)
+        price_targets = detect_price_target_changes(self.positions, self.market_session)
+        print(price_targets)
+        # drift_result = detect_allocation_drift(self.positions, self.preferences, self.market_session)
+        # drawdown_result = detect_drawdowns(self.positions, self.portfolio_created_date)
+        # correlations = detect_portfolio_correlation_change(self.positions)
+        # pair_correlations = detect_pair_correlation_changes(self.positions)
 
-        print(correlations.triggered)
-        print(pair_correlations.triggered)
-        # print(pair_correlations.pairs)
-        print(pair_correlations.flagged_pairs)
-        print(drift_result.triggered)
-        print(drawdown_result.triggered)
+        # if drift_result.triggered:
+        #     print("Drift detected")
+        # if drawdown_result.triggered:
+        #     print("Drawdown detected")
+        # if correlations.triggered:
+        #     print("Correlations detected")
+        # if pair_correlations.triggered:
+            # print("Pair correlations detected")
 
 #         if drift_result.triggered or drawdown_result.triggered:
 #             # Get or create conversation between system and user
@@ -229,47 +241,13 @@ class MonitorPortfolio:
 #                 content=message_content
 #             )
 
-        return drift_result, drawdown_result
+        # return drift_result, drawdown_result
+        return corr, price_targets
 
 if __name__ == "__main__":
-    # with MonitorPortfolio(portfolio_id="9460b73c-ff64-40aa-8af4-139f55a5a45a") as monitor:
-    #     monitor.notify()
+    with MonitorPortfolio(portfolio_id="9460b73c-ff64-40aa-8af4-139f55a5a45a") as monitor:
+        monitor.notify()
 
-    from app.db.core.models.market_data_models import PriceTargetNews
 
-    ticker = "VLO"
 
-    with MarketSession() as market_session:
-        # Option 1: Get price target summary (aggregated)
-        print(f"=== Price Target Summary for {ticker} ===")
-        summary = (market_session.query(PriceTargetSummary)
-                   .join(Ticker)
-                   .filter(Ticker.ticker == ticker)
-                   .first())
-        if summary:
-            print(serialize_sqlalchemy_obj(summary))
-
-        # Option 2: Get most recent individual price targets
-        print(f"\n=== Most Recent Price Targets for {ticker} ===")
-        recent_targets = (market_session.query(PriceTargetNews)
-                          .join(Ticker)
-                          .filter(Ticker.ticker == ticker)
-                          .order_by(PriceTargetNews.publishedDate.desc())
-                          .limit(5)
-                          .all())
-        for item in recent_targets:
-            print(serialize_sqlalchemy_obj(item))
-
-    # with UserSession() as user_session:
-    #     user = user_session.query(User).filter(User.email == "michaellaret7@gmail.com").first()
-    #     if user:
-    #         portfolios = user_session.query(Portfolio).filter(Portfolio.user_id == user.id).all()
-    #         for p in portfolios:
-    #             print(serialize_sqlalchemy_obj(p))
-    
-    # # with UserSession() as user_session:
-    # #     user = user_session.query(User).filter(User.email == "michaellaret7@gmail.com").first()
-
-    # #     if user:
-    # #         print(serialize_sqlalchemy_obj(user))
         

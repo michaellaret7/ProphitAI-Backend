@@ -227,8 +227,3 @@ class UpdatePortfolios:
         self.session.close()
 
 
-if __name__ == "__main__":
-    logging.basicConfig(level=logging.INFO)
-    update_portfolios = UpdatePortfolios()
-    update_portfolios.update_portfolios()
-    update_portfolios.close()

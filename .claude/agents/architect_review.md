@@ -1,7 +1,6 @@
 ---
 name: architecture-advisor
 description: Software architecture and code organization expert. Use proactively when adding features, refactoring, or reviewing project structure. Specializes in Python best practices.
-tools: Read, Grep, Glob, Bash
 model: inherit
 ---
 

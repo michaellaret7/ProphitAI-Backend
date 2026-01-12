@@ -1,4 +1,8 @@
-from itertools import combinations
+"""
+Portfolio detection functions.
+
+Each detection function computes all result fields explicitly, including `triggered`.
+"""
 from typing import Dict
 from datetime import datetime, timedelta
 
@@ -6,23 +10,22 @@ import numpy as np
 import pandas as pd
 
 from app.db.core.db_config import MarketSession
+from app.db.core.models.market_data_models import Ticker
 from app.db.jobs.portfolio.models import (
     DRIFT_THRESHOLD,
     DRAWDOWN_THRESHOLD,
-    PAIR_CORR_HIGH_THRESHOLD,
-    PAIR_CORR_SPIKE_THRESHOLD,
+    PORTFOLIO_CORR_ZSCORE_THRESHOLD,
+    PORTFOLIO_CORR_HIGH_THRESHOLD,
     DriftDetails,
     DriftResult,
     DrawdownDetails,
     DrawdownResult,
-    PairCorrelationDetails,
-    PairCorrelationResult,
     PortfolioCorrelationResult,
 )
-from app.db.jobs.portfolio.utils import classify_and_add_tickers
+from app.db.jobs.portfolio.utils import classify_and_add_tickers, get_median_price_targets
 from app.repositories.price_data import fetch_bulk_ohlcv_data_for_tickers
 from app.utils.time_utils import get_current_utc_time
- 
+
 def detect_allocation_drift(
     positions: Dict[str, float],
     preferences: Dict[str, float],
@@ -52,7 +55,10 @@ def detect_allocation_drift(
                 drift=diff
             )
 
-    return DriftResult(flagged_sectors=flagged_sectors)
+    return DriftResult(
+        flagged_sectors=flagged_sectors,
+        triggered=len(flagged_sectors) > 0
+    )
 
 def detect_drawdowns(
     positions: Dict[str, float],
@@ -104,108 +110,133 @@ def detect_drawdowns(
         if current_drawdowns[ticker] < DRAWDOWN_THRESHOLD
     }
 
-    return DrawdownResult(flagged_positions=flagged_positions)
+    return DrawdownResult(
+        flagged_positions=flagged_positions,
+        triggered=len(flagged_positions) > 0
+    )
+
+def detect_price_target_changes(
+    positions: Dict[str, float],
+    market_session: MarketSession
+) -> Dict[str, float]:
+    """
+    Detect price target changes for all portfolio positions.
+    """
+    detected_price_target_changes: Dict[str, float] = {}
+
+    tickers = list(positions.keys())
+
+    median_price_targets = get_median_price_targets(market_session, tickers)
+    ticker_objs = market_session.query(Ticker).filter(Ticker.ticker.in_(tickers)).all()
+    current_prices = {t.ticker: t.price for t in ticker_objs}
+
+    for ticker, median_price_target in median_price_targets.items():
+        if current_prices[ticker]/median_price_target > 1.05:
+            detected_price_target_changes[ticker] = (current_prices[ticker]/median_price_target) - 1
+
+    print(detected_price_target_changes)
+
+
+    return detected_price_target_changes
+
 
 def detect_portfolio_correlation_change(
     positions: Dict[str, float],
-    recent_window: int = 30,
-    baseline_window: int = 90
+    lookback_days: int = 180,
+    short_span: int = 21,  # ~1 trading month
+    long_span: int = 63    # ~1 trading quarter
 ) -> PortfolioCorrelationResult:
     """
-    Monitor portfolio-level average pairwise correlation.
+    Portfolio-level correlation analysis using pairwise correlation.
+
+    Computes average pairwise correlation over recent and baseline periods,
+    calculates statistical significance via z-score, and determines if
+    correlation levels pose a risk (everything moving together).
+
+    Args:
+        positions: Dict mapping tickers to their allocations.
+        lookback_days: Total days of price history to fetch.
+        short_span: Days for recent correlation window (~1 trading month).
+        long_span: Days for baseline correlation window (~1 trading quarter).
 
     Returns:
-        PortfolioCorrelationResult with:
-            - triggered: True if avg correlation is high or spiked
-            - recent/baseline/change: Correlation values
+        PortfolioCorrelationResult with all metrics and triggered status.
     """
     tickers = list(positions.keys())
-
     if len(tickers) < 2:
-        return PortfolioCorrelationResult(recent=0.0, baseline=0.0, change=0.0)
+        return PortfolioCorrelationResult(
+            recent_avg=0.0,
+            baseline_avg=0.0,
+            change=0.0,
+            dispersion=0.0,
+            z_score=0.0,
+            trend="N/A",
+            triggered=False
+        )
 
+    # 1. Fetch data (Reusing your existing fetcher logic)
     today = get_current_utc_time()
-
     price_data = fetch_bulk_ohlcv_data_for_tickers(
         tickers=tickers,
-        start_date_str=(today - timedelta(days=baseline_window)).strftime('%Y-%m-%d'),
+        start_date_str=(today - timedelta(days=lookback_days)).strftime('%Y-%m-%d'),
         end_date_str=today.strftime('%Y-%m-%d'),
-        frequency='daily',
         returns=True
     )
+    
+    returns_df = pd.DataFrame({t: d['returns'] for t, d in price_data.items()}).dropna()
 
-    returns_df = pd.DataFrame({
-        ticker: data['returns'] for ticker, data in price_data.items()
-    }).dropna()
+    # 2. Calculate EWMA Correlation Matrices
+    # Institutional preference: EWMA reacts faster to shocks
+    recent_corr_matrix = returns_df.tail(short_span).corr()
+    long_term_corr_matrix = returns_df.tail(long_span).corr()
+    
+    # 3. Extract the upper triangle (exclude self-correlation diagonal)
+    mask = np.triu(np.ones_like(recent_corr_matrix, dtype=bool), k=1)
+    recent_values = recent_corr_matrix.where(mask).stack()
+    long_term_values = long_term_corr_matrix.where(mask).stack()
 
-    recent_corr = returns_df.iloc[-recent_window:].corr()
-    baseline_corr = returns_df.iloc[-baseline_window:-recent_window].corr()
+    # 4. Compute Advanced Metrics
+    recent_avg = float(recent_values.mean())
+    baseline_avg = float(long_term_values.mean())
+    change = recent_avg - baseline_avg
+    
+    # Dispersion: High avg correlation + Low dispersion = "Everything is one trade" (Dangerous)
+    dispersion = float(recent_values.std())
 
-    mask = np.triu(np.ones_like(recent_corr, dtype=bool), k=1)
-    recent_avg = float(recent_corr.where(mask).stack().mean())
-    baseline_avg = float(baseline_corr.where(mask).stack().mean())
+    # 5. Trend Significance (Z-Score)
+    # We look at the rolling history of the average correlation to see if the current move is an outlier
+    rolling_avg_history = []
+    for i in range(len(returns_df) - short_span):
+        window = returns_df.iloc[i : i + short_span].corr().where(mask).stack().mean()
+        rolling_avg_history.append(window)
+    
+    hist_mean = np.mean(rolling_avg_history)
+    hist_std = np.std(rolling_avg_history)
+    z_score = (recent_avg - hist_mean) / hist_std if hist_std > 0 else 0
+
+    # 6. Determine Signal
+    trend = "Rising" if change > 0.05 else "Falling" if change < -0.05 else "Stable"
+    triggered = bool(
+        z_score > PORTFOLIO_CORR_ZSCORE_THRESHOLD
+        or recent_avg > PORTFOLIO_CORR_HIGH_THRESHOLD
+    )
 
     return PortfolioCorrelationResult(
-        recent=recent_avg,
-        baseline=baseline_avg,
-        change=recent_avg - baseline_avg
+        recent_avg=round(recent_avg, 4),
+        baseline_avg=round(baseline_avg, 4),
+        change=round(change, 4),
+        dispersion=round(dispersion, 4),
+        z_score=round(float(z_score), 2),
+        trend=trend,
+        triggered=triggered
     )
 
+if __name__ == "__main__":
+    with MarketSession() as market_session:
+        positions = {"BND": 0.5, "AGG": 0.5}
+        positions_two = {"NVDA": 0.25, "IWM": 0.25, "SPY": 0.25, "QQQ": 0.25}
+        corr = detect_portfolio_correlation_change(positions)
+        print(corr)
 
-def detect_pair_correlation_changes(
-    positions: Dict[str, float],
-    recent_window: int = 30,
-    baseline_window: int = 90
-) -> PairCorrelationResult:
-    """
-    Monitor individual pair correlation changes.
-
-    Returns:
-        PairCorrelationResult with:
-            - triggered: True if any pair has high correlation or spiked
-            - pairs: All pair correlations sorted by change
-            - flagged_pairs: Pairs exceeding thresholds
-    """
-    tickers = list(positions.keys())
-
-    if len(tickers) < 2:
-        return PairCorrelationResult(pairs=[], flagged_pairs=[])
-
-    today = get_current_utc_time()
-
-    price_data = fetch_bulk_ohlcv_data_for_tickers(
-        tickers=tickers,
-        start_date_str=(today - timedelta(days=baseline_window)).strftime('%Y-%m-%d'),
-        end_date_str=today.strftime('%Y-%m-%d'),
-        frequency='daily',
-        returns=True
-    )
-
-    returns_df = pd.DataFrame({
-        ticker: data['returns'] for ticker, data in price_data.items()
-    }).dropna()
-
-    recent_corr = returns_df.iloc[-recent_window:].corr()
-    baseline_corr = returns_df.iloc[-baseline_window:-recent_window].corr()
-
-    pairs: list[PairCorrelationDetails] = []
-    for t1, t2 in combinations(tickers, 2):
-        pairs.append(PairCorrelationDetails(
-            pair=f"{t1}/{t2}",
-            recent=float(recent_corr.loc[t1, t2]),
-            baseline=float(baseline_corr.loc[t1, t2]),
-            change=float(recent_corr.loc[t1, t2] - baseline_corr.loc[t1, t2])
-        ))
-
-    pairs.sort(key=lambda x: x.change, reverse=True)
-
-    # Flag pairs based on:
-    # 1. Spike: correlation increased significantly (always flag regardless of levels)
-    # 2. Newly high: correlation is now high BUT wasn't already high at baseline
-    flagged_pairs = [
-        p for p in pairs
-        if p.change > PAIR_CORR_SPIKE_THRESHOLD
-        or (p.recent > PAIR_CORR_HIGH_THRESHOLD and p.baseline < PAIR_CORR_HIGH_THRESHOLD)
-    ]
-
-    return PairCorrelationResult(pairs=pairs, flagged_pairs=flagged_pairs)
+        # price_targets = detect_price_target_changes(positions, market_session)
+        # print(price_targets)
