@@ -6,11 +6,11 @@ user-defined preferences and detect when actual allocations have drifted
 from target allocations.
 """
 from datetime import datetime
-from typing import Any, Dict, Tuple
+from typing import Dict, Tuple
 
 from app.db.core.db_config import UserSession, MarketSession
 from app.db.core.models.user_data_models import Portfolio, PortfolioItem, PortfolioPreference
-from app.db.jobs.portfolio.detections import detect_allocation_drift, detect_drawdowns
+from app.db.jobs.portfolio.detections import detect_allocation_drift, detect_drawdowns, detect_portfolio_correlation_change, detect_pair_correlation_changes
 from app.db.jobs.portfolio.utils import classify_and_add_tickers
 from app.repositories.price_data import fetch_bulk_price_data_for_tickers, fetch_bulk_ohlcv_data_for_tickers
 from app.repositories.messaging_data import (
@@ -49,7 +49,9 @@ class MonitorPortfolio:
 
     Usage:
         with MonitorPortfolio(portfolio_id) as monitor:
-            has_drift, drifted_sectors = monitor.detect_allocation_drift()
+            drift_result, drawdown_result = monitor.notify()
+            if drift_result['triggered']:
+                print(drift_result['flagged_sectors'])
     """
 
     def __init__(self, portfolio_id: str):
@@ -181,47 +183,56 @@ class MonitorPortfolio:
         return preferences, positions
     
     def notify(self):
-        d = detect_allocation_drift(self.positions, self.preferences, self.market_session)
-        dd = detect_drawdowns(self.positions, self.portfolio_created_date)
+        drift_result = detect_allocation_drift(self.positions, self.preferences, self.market_session)
+        drawdown_result = detect_drawdowns(self.positions, self.portfolio_created_date)
+        correlations = detect_portfolio_correlation_change(self.positions)
+        pair_correlations = detect_pair_correlation_changes(self.positions)
 
-        if dd:
-            # Get or create conversation between system and user
-            conversation = get_or_create_conversation(
-                user_1_id=PROPHITAI_SYSTEM_USER_ID,
-                user_2_id=self.user_id
-            )
+        print(correlations.triggered)
+        print(pair_correlations.triggered)
+        # print(pair_correlations.pairs)
+        print(pair_correlations.flagged_pairs)
+        print(drift_result.triggered)
+        print(drawdown_result.triggered)
 
-            # message keys: [@portfolio_name](portfolio:portfolio_id)
-            # ticker keys: [#ticker_name](ticker:ticker_symbol:asset_type)
-            # [&watchlist name](watchlist:watchlist_id) 
+#         if drift_result.triggered or drawdown_result.triggered:
+#             # Get or create conversation between system and user
+#             conversation = get_or_create_conversation(
+#                 user_1_id=PROPHITAI_SYSTEM_USER_ID,
+#                 user_2_id=self.user_id
+#             )
 
-            message_content = f"""
-🚨 Alert 🚨
+#             # message keys: [@portfolio_name](portfolio:portfolio_id)
+#             # ticker keys: [#ticker_name](ticker:ticker_symbol:asset_type)
+#             # [&watchlist name](watchlist:watchlist_id)
 
-Portfolio Drawdown Detected:
-- {len(dd)} positions have drawdowns exceeding threshold.
-- Please monitor [#TSLA](ticker:TSLA:equity)
+#             message_content = f"""
+# 🚨 Alert 🚨
 
-Portfolio Allocation Drift Detected:
-- {len(d)} positions have allocations exceeding threshold.
-- Please monitor [#CRWV](ticker:CRWV:equity)
+# Portfolio Drawdown Detected:
+# - {len(drawdown_result.flagged_positions)} positions have drawdowns exceeding threshold.
+# - Please monitor [#TSLA](ticker:TSLA:equity)
 
-Portfolio in Danger Zone:
-- [@MAGGIES AWESOME PORTFOLIO](portfolio:2b954a4b-5686-48f4-932f-c36ae6ab6078)
-            """
+# Portfolio Allocation Drift Detected:
+# - {len(drift_result.flagged_sectors)} sectors have allocations exceeding threshold.
+# - Please monitor [#CRWV](ticker:CRWV:equity)
 
-            # Send notification
-            create_message(
-                conversation_id=conversation.id,
-                sender_id=PROPHITAI_SYSTEM_USER_ID,
-                content=message_content
-            )
+# Portfolio in Danger Zone:
+# - [@MAGGIES AWESOME PORTFOLIO](portfolio:2b954a4b-5686-48f4-932f-c36ae6ab6078)
+#             """
 
-        return d, dd
+#             # Send notification
+#             create_message(
+#                 conversation_id=conversation.id,
+#                 sender_id=PROPHITAI_SYSTEM_USER_ID,
+#                 content=message_content
+#             )
+
+        return drift_result, drawdown_result
 
 if __name__ == "__main__":
-    with MonitorPortfolio(portfolio_id="2b954a4b-5686-48f4-932f-c36ae6ab6078") as monitor:
-        print(monitor.notify())
+    with MonitorPortfolio(portfolio_id="9460b73c-ff64-40aa-8af4-139f55a5a45a") as monitor:
+        monitor.notify()
 
     # with UserSession() as user_session:
     #     user = user_session.query(User).filter(User.email == "michaellaret7@gmail.com").first()
