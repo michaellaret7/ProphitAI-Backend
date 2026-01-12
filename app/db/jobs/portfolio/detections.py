@@ -16,11 +16,15 @@ from app.db.jobs.portfolio.models import (
     DRAWDOWN_THRESHOLD,
     PORTFOLIO_CORR_ZSCORE_THRESHOLD,
     PORTFOLIO_CORR_HIGH_THRESHOLD,
+    PORTFOLIO_CORR_DISPERSION_THRESHOLD,
+    PRICE_TARGET_CHANGE_THRESHOLD,
     DriftDetails,
     DriftResult,
     DrawdownDetails,
     DrawdownResult,
     PortfolioCorrelationResult,
+    PriceTargetChangeDetails,
+    PriceTargetChangeResult,
 )
 from app.db.jobs.portfolio.utils import classify_and_add_tickers, get_median_price_targets
 from app.repositories.price_data import fetch_bulk_ohlcv_data_for_tickers
@@ -118,11 +122,11 @@ def detect_drawdowns(
 def detect_price_target_changes(
     positions: Dict[str, float],
     market_session: MarketSession
-) -> Dict[str, float]:
+) -> PriceTargetChangeResult:
     """
     Detect price target changes for all portfolio positions.
     """
-    detected_price_target_changes: Dict[str, float] = {}
+    flagged_positions: Dict[str, PriceTargetChangeDetails] = {}
 
     tickers = list(positions.keys())
 
@@ -131,13 +135,17 @@ def detect_price_target_changes(
     current_prices = {t.ticker: t.price for t in ticker_objs}
 
     for ticker, median_price_target in median_price_targets.items():
-        if current_prices[ticker]/median_price_target > 1.05:
-            detected_price_target_changes[ticker] = (current_prices[ticker]/median_price_target) - 1
+        if median_price_target and current_prices[ticker]/median_price_target > (1 + PRICE_TARGET_CHANGE_THRESHOLD):
+            flagged_positions[ticker] = PriceTargetChangeDetails(
+                current_price=float(current_prices[ticker]),
+                target_price=float(median_price_target),
+                deviation=float((current_prices[ticker]/median_price_target) - 1)
+            )
 
-    print(detected_price_target_changes)
-
-
-    return detected_price_target_changes
+    return PriceTargetChangeResult(
+        flagged_positions=flagged_positions,
+        triggered=len(flagged_positions) > 0
+    )
 
 
 def detect_portfolio_correlation_change(
@@ -216,9 +224,13 @@ def detect_portfolio_correlation_change(
 
     # 6. Determine Signal
     trend = "Rising" if change > 0.05 else "Falling" if change < -0.05 else "Stable"
+    
+    high_level = recent_avg > PORTFOLIO_CORR_HIGH_THRESHOLD
+    abnormal_spike = z_score > PORTFOLIO_CORR_ZSCORE_THRESHOLD
+    low_dispersion = dispersion < PORTFOLIO_CORR_DISPERSION_THRESHOLD
+
     triggered = bool(
-        z_score > PORTFOLIO_CORR_ZSCORE_THRESHOLD
-        or recent_avg > PORTFOLIO_CORR_HIGH_THRESHOLD
+        high_level or (abnormal_spike and low_dispersion)
     )
 
     return PortfolioCorrelationResult(
@@ -231,12 +243,3 @@ def detect_portfolio_correlation_change(
         triggered=triggered
     )
 
-if __name__ == "__main__":
-    with MarketSession() as market_session:
-        positions = {"BND": 0.5, "AGG": 0.5}
-        positions_two = {"NVDA": 0.25, "IWM": 0.25, "SPY": 0.25, "QQQ": 0.25}
-        corr = detect_portfolio_correlation_change(positions)
-        print(corr)
-
-        # price_targets = detect_price_target_changes(positions, market_session)
-        # print(price_targets)

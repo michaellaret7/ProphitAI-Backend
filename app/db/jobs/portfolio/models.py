@@ -14,13 +14,11 @@ DRIFT_THRESHOLD = 0.05  # -> 5%
 DRAWDOWN_THRESHOLD = -0.10  # -> 10%
 
 # Portfolio-level correlation thresholds
-PORTFOLIO_CORR_HIGH_THRESHOLD = 0.50  # Avg pairwise correlation above this is concerning
+PORTFOLIO_CORR_HIGH_THRESHOLD = 0.60  # Avg pairwise correlation above this is concerning
 PORTFOLIO_CORR_SPIKE_THRESHOLD = 0.10  # Avg correlation increase above this is concerning
-PORTFOLIO_CORR_ZSCORE_THRESHOLD = 1.5  # Z-score above this is a significant spike
+PORTFOLIO_CORR_ZSCORE_THRESHOLD = 2.0  # Z-score above this is a significant spike
+PORTFOLIO_CORR_DISPERSION_THRESHOLD = 0.15  # Dispersion below this indicates high concentration
 
-# Pair-level correlation thresholds
-PAIR_CORR_HIGH_THRESHOLD = 0.85  # Individual pair correlation above this is highly correlated
-PAIR_CORR_SPIKE_THRESHOLD = 0.40  # Pair correlation increase above this is concerning
 
 # Price target change thresholds
 PRICE_TARGET_CHANGE_THRESHOLD = 0.05  # -> 5%
@@ -74,17 +72,14 @@ class PortfolioCorrelationResult(BaseModel):
     triggered: bool
 
 
-class PairCorrelationDetails(BaseModel):
-    """Details for a single ticker pair correlation."""
-    pair: str
-    recent: float
-    baseline: float
-    change: float
+class PriceTargetChangeDetails(BaseModel):
+    """Details for a single position where price exceeds target."""
+    current_price: float
+    target_price: float
+    deviation: float  # Percentage above target
 
 
-class PairCorrelationResult(BaseModel):
-    """Result of pair-level correlation analysis."""
-    pairs: list[PairCorrelationDetails]
-    flagged_pairs: list[PairCorrelationDetails]
+class PriceTargetChangeResult(BaseModel):
+    """Result of price target change detection."""
+    flagged_positions: Dict[str, PriceTargetChangeDetails]
     triggered: bool
-

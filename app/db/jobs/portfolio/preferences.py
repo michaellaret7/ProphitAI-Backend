@@ -42,8 +42,6 @@ from app.utils.serialize_output import serialize_sqlalchemy_obj
 from uuid import UUID
 
 # Reason: Threshold accounts for floating-point precision while detecting meaningful drift
-DRIFT_THRESHOLD = 0.00005 # -> 5%
-DRAWDOWN_THRESHOLD = -0.10 # -> 10%
 PROPHITAI_SYSTEM_USER_ID = UUID("e7ab723f-a415-4f3c-8445-4eaf08cf605e")
 
 class MonitorPortfolio:
@@ -190,59 +188,35 @@ class MonitorPortfolio:
         return preferences, positions
     
     def notify(self):
-        corr = detect_portfolio_correlation_change(self.positions)
-        print(corr)
-        price_targets = detect_price_target_changes(self.positions, self.market_session)
-        print(price_targets)
-        # drift_result = detect_allocation_drift(self.positions, self.preferences, self.market_session)
-        # drawdown_result = detect_drawdowns(self.positions, self.portfolio_created_date)
-        # correlations = detect_portfolio_correlation_change(self.positions)
-        # pair_correlations = detect_pair_correlation_changes(self.positions)
+        allocation_drift_result = detect_allocation_drift(self.positions, self.preferences, self.market_session)
+        drawdown_result = detect_drawdowns(self.positions, self.portfolio_created_date)
+        price_target_changes_result = detect_price_target_changes(self.positions, self.market_session)
+        portfolio_correlation_result = detect_portfolio_correlation_change(self.positions)
 
-        # if drift_result.triggered:
-        #     print("Drift detected")
-        # if drawdown_result.triggered:
-        #     print("Drawdown detected")
-        # if correlations.triggered:
-        #     print("Correlations detected")
-        # if pair_correlations.triggered:
-            # print("Pair correlations detected")
+        if allocation_drift_result.triggered:
+            print("Allocation drift detected")
+            print(allocation_drift_result.flagged_sectors)
+        else:
+            print("No allocation drift detected")
 
-#         if drift_result.triggered or drawdown_result.triggered:
-#             # Get or create conversation between system and user
-#             conversation = get_or_create_conversation(
-#                 user_1_id=PROPHITAI_SYSTEM_USER_ID,
-#                 user_2_id=self.user_id
-#             )
+        if drawdown_result.triggered:
+            print("Drawdown detected")
+            print(drawdown_result.flagged_positions)
+        else:
+            print("No drawdown detected")
+        if price_target_changes_result.triggered:
+            print("Price target changes detected")
+            print(price_target_changes_result.flagged_positions)
+        else:
+            print("No price target changes detected")
+        if portfolio_correlation_result.triggered:
+            print("Portfolio correlation detected")
+            print(portfolio_correlation_result.recent_avg, portfolio_correlation_result.baseline_avg, portfolio_correlation_result.change, portfolio_correlation_result.dispersion, portfolio_correlation_result.z_score, portfolio_correlation_result.trend)
+        else:
+            print("No portfolio correlation detected")
 
-#             # message keys: [@portfolio_name](portfolio:portfolio_id)
-#             # ticker keys: [#ticker_name](ticker:ticker_symbol:asset_type)
-#             # [&watchlist name](watchlist:watchlist_id)
+        return allocation_drift_result, drawdown_result, price_target_changes_result, portfolio_correlation_result
 
-#             message_content = f"""
-# 🚨 Alert 🚨
-
-# Portfolio Drawdown Detected:
-# - {len(drawdown_result.flagged_positions)} positions have drawdowns exceeding threshold.
-# - Please monitor [#TSLA](ticker:TSLA:equity)
-
-# Portfolio Allocation Drift Detected:
-# - {len(drift_result.flagged_sectors)} sectors have allocations exceeding threshold.
-# - Please monitor [#CRWV](ticker:CRWV:equity)
-
-# Portfolio in Danger Zone:
-# - [@MAGGIES AWESOME PORTFOLIO](portfolio:2b954a4b-5686-48f4-932f-c36ae6ab6078)
-#             """
-
-#             # Send notification
-#             create_message(
-#                 conversation_id=conversation.id,
-#                 sender_id=PROPHITAI_SYSTEM_USER_ID,
-#                 content=message_content
-#             )
-
-        # return drift_result, drawdown_result
-        return corr, price_targets
 
 if __name__ == "__main__":
     with MonitorPortfolio(portfolio_id="9460b73c-ff64-40aa-8af4-139f55a5a45a") as monitor:
