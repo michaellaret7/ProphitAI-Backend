@@ -10,14 +10,34 @@ from typing import Any, Dict, Tuple
 
 from app.db.core.db_config import UserSession, MarketSession
 from app.db.core.models.user_data_models import Portfolio, PortfolioItem, PortfolioPreference
+from app.db.jobs.portfolio.detections import detect_allocation_drift, detect_drawdowns
 from app.db.jobs.portfolio.utils import classify_and_add_tickers
 from app.repositories.price_data import fetch_bulk_price_data_for_tickers, fetch_bulk_ohlcv_data_for_tickers
+from app.repositories.messaging_data import (
+    create_conversation,
+    get_conversation,
+    get_conversation_by_users,
+    get_or_create_conversation,
+    get_user_conversations,
+    create_message,
+    get_messages,
+    get_latest_message,
+    update_last_read,
+    get_unread_count,
+    get_total_unread_count,
+    search_users,
+)
 from app.utils.time_utils import get_current_utc_time
 import pandas as pd
 from typing import Optional
+from app.db.core.models.user_data_models import User
+from app.utils.serialize_output import serialize_sqlalchemy_obj
+from uuid import UUID
 
 # Reason: Threshold accounts for floating-point precision while detecting meaningful drift
 DRIFT_THRESHOLD = 0.00005 # -> 5%
+DRAWDOWN_THRESHOLD = -0.10 # -> 10%
+PROPHITAI_SYSTEM_USER_ID = UUID("e7ab723f-a415-4f3c-8445-4eaf08cf605e")
 
 class MonitorPortfolio:
     """
@@ -39,6 +59,7 @@ class MonitorPortfolio:
         self._preferences: Dict[str, float] | None = None
         self._positions: Dict[str, float] | None = None
         self._portfolio_created_date: datetime | None = None
+        self._user_id: UUID | None = None
 
     def __enter__(self) -> "MonitorPortfolio":
         self._user_session = UserSession()
@@ -76,6 +97,12 @@ class MonitorPortfolio:
             raise RuntimeError("MonitorPortfolio must be used as a context manager")
         return self._market_session
 
+    @property
+    def user_id(self) -> UUID:
+        if self._user_id is None:
+            raise RuntimeError("MonitorPortfolio must be used as a context manager")
+        return self._user_id
+
     def _get_data(self) -> Tuple[Dict[str, float], Dict[str, float]]:
         """
         Fetch portfolio preferences and positions from database.
@@ -92,15 +119,20 @@ class MonitorPortfolio:
         if self._user_session is None:
             raise RuntimeError("_get_data must be called within context manager")
 
-        # Reason: Fetch portfolio creation date for downstream calculations
-        portfolio_row = self._user_session.query(Portfolio.created_date).filter(
+        # Reason: Fetch portfolio metadata for downstream calculations and notifications
+        portfolio_row = self._user_session.query(
+            Portfolio.created_date,
+            Portfolio.user_id
+        ).filter(
             Portfolio.id == self.portfolio_id
         ).first()
         if portfolio_row:
             self._portfolio_created_date = portfolio_row.created_date
+            self._user_id = portfolio_row.user_id
         else:
             raise ValueError(f"No portfolio found with id {self.portfolio_id}")
 
+        # Pull the portfolio preference from the database 
         preferences_row = self._user_session.query(
             PortfolioPreference.equities_allocation,
             PortfolioPreference.fixed_income_allocation,
@@ -147,122 +179,60 @@ class MonitorPortfolio:
             raise ValueError(f"No positions found for portfolio {self.portfolio_id}")
 
         return preferences, positions
-
-    def detect_allocation_drift(self) -> Tuple[bool, Dict[str, dict]]:
-        """
-        Detect if portfolio allocations have drifted from target preferences.
-
-        Returns:
-            Tuple containing:
-                - has_drift: True if any sector has drifted beyond threshold
-                - drifted_sectors: Dict of sectors with drift details including
-                  current_allocation, target_allocation, and drift amount
-        """
-        allocations = classify_and_add_tickers(self.positions, self.market_session)
-
-        drifted_sectors = {}
-        for sector, allocation in allocations.items():
-            preference = self.preferences.get(sector, 0.0)
-            diff = allocation - preference
-            if abs(diff) > DRIFT_THRESHOLD:
-                drifted_sectors[sector] = {
-                    "current_allocation": allocation,
-                    "target_allocation": preference,
-                    "drift": diff
-                }
-
-        has_drift = len(drifted_sectors) > 0
-
-        return has_drift, drifted_sectors
     
-    def detect_drawdowns(self, threshold: float = -0.10) -> Dict[str, Any]:
-        """
-        Detect positions currently in drawdown below threshold.
-        Returns only flagged positions that breach the threshold.
-        """
-        price_data = fetch_bulk_ohlcv_data_for_tickers(
-            tickers=self.positions.keys(),
-            start_date_str=self.portfolio_created_date.strftime('%Y-%m-%d'),
-            end_date_str=get_current_utc_time().strftime('%Y-%m-%d'),
-            frequency='daily',
-            returns=True
-        )
-        
-        returns_df = pd.DataFrame()
-        for ticker, data in price_data.items():
-            returns_df[ticker] = data['returns']
-        returns_df = returns_df.dropna()
-        
-        # Cumulative wealth index
-        cumulative_wealth = (1 + returns_df).cumprod()
-        
-        # High water mark and drawdown series
-        high_water_mark = cumulative_wealth.cummax()
-        drawdown_series = (cumulative_wealth - high_water_mark) / high_water_mark
-        
-        # Current and max drawdowns
-        current_drawdowns = drawdown_series.iloc[-1]
-        max_drawdowns = drawdown_series.min()
-        
-        # Only flagged positions (convert to native Python floats)
-        flagged_positions = {
-            ticker: {
-                'current_drawdown': float(current_drawdowns[ticker]),
-                'max_drawdown': float(max_drawdowns[ticker]),
-                'peak_date': cumulative_wealth[ticker].idxmax().strftime('%Y-%m-%d'),
-            }
-            for ticker in current_drawdowns.index
-            if current_drawdowns[ticker] < threshold
-        }
-        
-        return {
-            'flagged_positions': flagged_positions,
-            'needs_reevaluation': len(flagged_positions) > 0,
-            'threshold': threshold
-        }
+    def notify(self):
+        d = detect_allocation_drift(self.positions, self.preferences, self.market_session)
+        dd = detect_drawdowns(self.positions, self.portfolio_created_date)
 
-    def detect_positions_to_reevaluate(self, loss_threshold: float = -0.05) -> Dict[str, Any]:
-        """
-        Flag positions that are underwater (negative total return from entry).
-        More appropriate for portfolio monitoring than drawdown from peak.
-        """
-        price_data = fetch_bulk_ohlcv_data_for_tickers(
-            tickers=self.positions.keys(),
-            start_date_str="2023-01-01", # self.portfolio_created_date.strftime('%Y-%m-%d'),
-            end_date_str=get_current_utc_time().strftime('%Y-%m-%d'),
-            frequency='daily',
-            returns=True
-        )
-        
-        returns_df = pd.DataFrame()
-        for ticker, data in price_data.items():
-            returns_df[ticker] = data['returns']
-        returns_df = returns_df.dropna()
-        
-        # Cumulative wealth index
-        cumulative_wealth = (1 + returns_df).cumprod()
-        
-        # Total return from entry (what actually matters for a portfolio)
-        total_returns = cumulative_wealth.iloc[-1] - 1
-        
-        # Flag positions that are actually losing money
-        flagged_positions = {
-            ticker: {
-                'total_return': float(total_returns[ticker]),
-            }
-            for ticker in total_returns.index
-            if total_returns[ticker] < loss_threshold
-        }
-        
-        return {
-            'flagged_positions': flagged_positions,
-            'needs_reevaluation': len(flagged_positions) > 0,
-            'threshold': loss_threshold
-        }
+        if dd:
+            # Get or create conversation between system and user
+            conversation = get_or_create_conversation(
+                user_1_id=PROPHITAI_SYSTEM_USER_ID,
+                user_2_id=self.user_id
+            )
 
-        
+            # message keys: [@portfolio_name](portfolio:portfolio_id)
+            # ticker keys: [#ticker_name](ticker:ticker_symbol:asset_type)
+            # [&watchlist name](watchlist:watchlist_id) 
+
+            message_content = f"""
+🚨 Alert 🚨
+
+Portfolio Drawdown Detected:
+- {len(dd)} positions have drawdowns exceeding threshold.
+- Please monitor [#TSLA](ticker:TSLA:equity)
+
+Portfolio Allocation Drift Detected:
+- {len(d)} positions have allocations exceeding threshold.
+- Please monitor [#CRWV](ticker:CRWV:equity)
+
+Portfolio in Danger Zone:
+- [@MAGGIES AWESOME PORTFOLIO](portfolio:2b954a4b-5686-48f4-932f-c36ae6ab6078)
+            """
+
+            # Send notification
+            create_message(
+                conversation_id=conversation.id,
+                sender_id=PROPHITAI_SYSTEM_USER_ID,
+                content=message_content
+            )
+
+        return d, dd
 
 if __name__ == "__main__":
-    with MonitorPortfolio(portfolio_id="9460b73c-ff64-40aa-8af4-139f55a5a45a") as monitor:
-        # print(monitor.detect_allocation_drift())
-        print(monitor.detect_positions_to_reevaluate())
+    with MonitorPortfolio(portfolio_id="2b954a4b-5686-48f4-932f-c36ae6ab6078") as monitor:
+        print(monitor.notify())
+
+    # with UserSession() as user_session:
+    #     user = user_session.query(User).filter(User.email == "michaellaret7@gmail.com").first()
+    #     if user:
+    #         portfolios = user_session.query(Portfolio).filter(Portfolio.user_id == user.id).all()
+    #         for p in portfolios:
+    #             print(serialize_sqlalchemy_obj(p))
+    
+    # # with UserSession() as user_session:
+    # #     user = user_session.query(User).filter(User.email == "michaellaret7@gmail.com").first()
+
+    # #     if user:
+    # #         print(serialize_sqlalchemy_obj(user))
+        
