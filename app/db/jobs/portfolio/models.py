@@ -71,6 +71,19 @@ class PortfolioCorrelationResult(BaseModel):
     trend: Literal["Rising", "Stable", "Falling", "N/A"]
     triggered: bool
 
+    @classmethod
+    def empty(cls) -> "PortfolioCorrelationResult":
+        """Return an empty/default result for insufficient data scenarios."""
+        return cls(
+            recent_avg=0.0,
+            baseline_avg=0.0,
+            change=0.0,
+            dispersion=0.0,
+            z_score=0.0,
+            trend="N/A",
+            triggered=False
+        )
+
 
 class PriceTargetChangeDetails(BaseModel):
     """Details for a single position where price exceeds target."""

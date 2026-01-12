@@ -2,6 +2,8 @@ import logging
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from typing import List, Dict
 
+from sqlalchemy.orm import joinedload
+
 from app.db.core.db_config import UserSession
 from app.db.core.models.user_data_models import Portfolio, PortfolioItem
 from app.db.core.pull_fmp_data import FMP_API_DATA
@@ -22,15 +24,38 @@ class UpdatePortfolios:
     1. position_nav for each item (num_shares * current_price)
     2. portfolio nav (sum of all position_navs)
     3. allocation for each item (position_nav / portfolio_nav)
+
+    Usage:
+        with UpdatePortfolios() as updater:
+            updater.update_portfolios()
     """
 
     def __init__(self):
-        self.session = UserSession()
+        self._session: UserSession | None = None
         self.fmp = FMP_API_DATA()
 
+    def __enter__(self) -> "UpdatePortfolios":
+        self._session = UserSession()
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb) -> None:
+        if self._session:
+            if exc_type is None:
+                self._session.commit()
+            else:
+                self._session.rollback()
+            self._session.close()
+
+    @property
+    def session(self) -> UserSession:
+        if self._session is None:
+            raise RuntimeError("UpdatePortfolios must be used as a context manager")
+        return self._session
+
     def _get_all_portfolios(self) -> List[Portfolio]:
-        """Fetch all portfolios with their items."""
-        return self.session.query(Portfolio).all()
+        """Fetch all portfolios with their items eagerly loaded."""
+        # Reason: joinedload prevents N+1 query - items fetched in single JOIN
+        return self.session.query(Portfolio).options(joinedload(Portfolio.items)).all()
 
     def _fetch_current_prices(self, tickers: List[str]) -> Dict[str, float]:
         """Fetch current prices for a list of tickers."""
@@ -137,7 +162,7 @@ class UpdatePortfolios:
         if portfolio_updates:
             self.session.bulk_update_mappings(Portfolio, portfolio_updates)
 
-        self.session.commit()
+        # Reason: Commit handled by __exit__ - maintains single transaction boundary
         logger.info(
             f"Bulk updated {len(portfolio_updates)} portfolios, "
             f"{len(item_updates)} items"
@@ -221,9 +246,3 @@ class UpdatePortfolios:
 
         logger.info(f"Computed updates for {portfolio.name}: NAV=${portfolio_nav:,.2f}")
         return portfolio_update, item_updates
-
-    def close(self):
-        """Close the database session."""
-        self.session.close()
-
-

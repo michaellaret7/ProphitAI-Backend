@@ -90,10 +90,11 @@ class BatchMonitorPortfolio:
 if __name__ == "__main__":
     with UserSession() as session:
         portfolios = session.query(Portfolio).join(User).filter(User.email == 'michaellaret7@gmail.com').all()
-        portfolio_ids = [portfolio.id for portfolio in portfolios]
+        portfolio_ids = [str(portfolio.id) for portfolio in portfolios]
 
     batch_monitor = BatchMonitorPortfolio(portfolio_ids)
     results = batch_monitor.run()
     print(f"\nProcessed {len(results)} portfolios")
 
     
+

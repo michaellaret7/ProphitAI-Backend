@@ -265,6 +265,26 @@ def build_returns_df(
 
     return returns_df
 
+
+@with_session('market')
+def get_ticker_metadata(tickers: list[str], session=None) -> dict[str, tuple[str | None, str | None]]:
+    """
+    Fetch sector and industry metadata for given tickers.
+
+    Args:
+        tickers: List of ticker symbols to fetch metadata for.
+
+    Returns:
+        Dict mapping ticker symbol to (sector, industry) tuple.
+        Tickers not found in database are excluded from result.
+    """
+    if not tickers:
+        return {}
+
+    ticker_objs = session.query(Ticker).filter(Ticker.ticker.in_(tickers)).all()
+    return {t.ticker: (t.sector, t.industry) for t in ticker_objs}
+
+
 if __name__ == "__main__":
     returns_df = build_returns_df(tickers=['AAPL', 'SPY'], start_date='2024-01-01', end_date='2024-12-31', frequency='daily')
     print(returns_df)

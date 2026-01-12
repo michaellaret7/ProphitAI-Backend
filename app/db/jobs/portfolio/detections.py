@@ -220,6 +220,9 @@ def detect_portfolio_correlation_change(
             triggered=False
         )
 
+    # Reason: Type narrowing assertion - returns_df is guaranteed non-None after above checks
+    assert returns_df is not None
+
     # 2. Calculate EWMA Correlation Matrices
     # Institutional preference: EWMA reacts faster to shocks
     recent_corr_matrix = returns_df.tail(short_span).corr()
@@ -239,14 +242,21 @@ def detect_portfolio_correlation_change(
     dispersion = float(recent_values.std())
 
     # 5. Trend Significance (Z-Score)
+    # Reason: Use Welford's algorithm for O(1) memory instead of O(N) list storage
     # We look at the rolling history of the average correlation to see if the current move is an outlier
-    rolling_avg_history = []
+    n = 0
+    hist_mean = 0.0
+    m2 = 0.0  # Sum of squared differences from the mean
+
     for i in range(len(returns_df) - short_span):
-        window = returns_df.iloc[i : i + short_span].corr().where(mask).stack().mean()
-        rolling_avg_history.append(window)
-    
-    hist_mean = np.mean(rolling_avg_history)
-    hist_std = np.std(rolling_avg_history)
+        window_corr = returns_df.iloc[i : i + short_span].corr().where(mask).stack().mean()
+        n += 1
+        delta = window_corr - hist_mean
+        hist_mean += delta / n
+        delta2 = window_corr - hist_mean
+        m2 += delta * delta2
+
+    hist_std = np.sqrt(m2 / (n - 1)) if n > 1 else 0.0
     z_score = (recent_avg - hist_mean) / hist_std if hist_std > 0 else 0
 
     # 6. Determine Signal
