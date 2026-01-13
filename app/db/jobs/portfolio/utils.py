@@ -8,11 +8,12 @@ metadata from the database, and utilities for persisting alert state.
 from collections import defaultdict
 from datetime import datetime, timedelta
 from statistics import median
-from typing import Dict, List
+from typing import Dict, List, Optional
 from uuid import UUID
 
 from sqlalchemy import func
 from sqlalchemy.orm import Session
+from sqlalchemy.orm.attributes import flag_modified
 
 from app.db.core.models.market_data_models import PriceTargetNews, Ticker
 from app.db.core.models.user_data_models import Portfolio
@@ -24,6 +25,15 @@ from app.db.jobs.portfolio.models import (
 )
 from app.utils.serialize_output import serialize_sqlalchemy_obj
 from app.utils.time_utils import get_current_utc_time
+
+# =============================================================================
+# DEDUPLICATION THRESHOLDS
+# =============================================================================
+# Reason: Define material worsening thresholds to avoid alerting on minor fluctuations
+DRIFT_WORSENING_THRESHOLD = 0.02      # 2% additional drift to consider "worsened"
+DRAWDOWN_WORSENING_THRESHOLD = 0.05   # 5% deeper drawdown to consider "worsened"
+CORRELATION_WORSENING_THRESHOLD = 0.10  # 10% increase in avg correlation
+ALERT_COOLDOWN_HOURS = 168            # 7 days before re-alerting for same condition
 
 # Reason: Maps industry values to bucket names for DRY classification logic
 INDUSTRY_TO_BUCKET = {
@@ -211,12 +221,201 @@ def get_median_price_targets(
     }
 
 
+# =============================================================================
+# ALERT DEDUPLICATION
+# =============================================================================
+
+def _cooldown_passed(last_alerted_at: Optional[str], hours: int = ALERT_COOLDOWN_HOURS) -> bool:
+    """
+    Check if enough time has passed since last alert.
+
+    Args:
+        last_alerted_at: ISO timestamp of last alert, or None if never alerted.
+        hours: Cooldown period in hours.
+
+    Returns:
+        True if cooldown has passed or never alerted before.
+    """
+    if not last_alerted_at:
+        return True
+    last_alert_time = datetime.fromisoformat(last_alerted_at)
+    return get_current_utc_time() - last_alert_time > timedelta(hours=hours)
+
+
+def should_send_drift_alert(
+    current: DriftResult,
+    previous_state: Optional[Dict],
+) -> bool:
+    """
+    Determine if drift alert should be sent based on deduplication rules.
+
+    Returns True if:
+    - Current triggered AND no previous state exists
+    - OR current triggered AND previous was not triggered
+    - OR current triggered AND new sector entered drift territory
+    - OR current triggered AND any sector drift worsened by threshold
+    - OR current triggered AND cooldown period passed
+
+    Args:
+        current: Current drift detection result.
+        previous_state: Previous alert state dict for drift, or None.
+
+    Returns:
+        True if alert should be sent.
+    """
+    if not current.triggered:
+        return False
+
+    # No previous state = new alert
+    if not previous_state:
+        return True
+
+    prev_result = previous_state.get('result', {})
+    prev_triggered = prev_result.get('triggered', False)
+
+    # Previous wasn't triggered = new condition
+    if not prev_triggered:
+        return True
+
+    # Check cooldown
+    if _cooldown_passed(previous_state.get('last_alerted_at')):
+        return True
+
+    # Check for new sectors in drift
+    current_sectors = set(current.flagged_sectors.keys())
+    previous_sectors = set(prev_result.get('flagged_sectors', {}).keys())
+    if current_sectors - previous_sectors:
+        return True
+
+    # Check for material worsening in any sector
+    for sector, details in current.flagged_sectors.items():
+        prev_sector = prev_result.get('flagged_sectors', {}).get(sector, {})
+        prev_drift = abs(prev_sector.get('drift', 0))
+        current_drift = abs(details.drift)
+        if current_drift - prev_drift >= DRIFT_WORSENING_THRESHOLD:
+            return True
+
+    return False
+
+
+def should_send_drawdown_alert(
+    current: DrawdownResult,
+    previous_state: Optional[Dict],
+) -> bool:
+    """
+    Determine if drawdown alert should be sent based on deduplication rules.
+
+    Returns True if:
+    - Current triggered AND no previous state exists
+    - OR current triggered AND previous was not triggered
+    - OR current triggered AND new position entered drawdown
+    - OR current triggered AND any position drawdown worsened by threshold
+    - OR current triggered AND cooldown period passed
+
+    Args:
+        current: Current drawdown detection result.
+        previous_state: Previous alert state dict for drawdown, or None.
+
+    Returns:
+        True if alert should be sent.
+    """
+    if not current.triggered:
+        return False
+
+    # No previous state = new alert
+    if not previous_state:
+        return True
+
+    prev_result = previous_state.get('result', {})
+    prev_triggered = prev_result.get('triggered', False)
+
+    # Previous wasn't triggered = new condition
+    if not prev_triggered:
+        return True
+
+    # Check cooldown
+    if _cooldown_passed(previous_state.get('last_alerted_at')):
+        return True
+
+    # Check for new positions in drawdown
+    current_positions = set(current.flagged_positions.keys())
+    previous_positions = set(prev_result.get('flagged_positions', {}).keys())
+    if current_positions - previous_positions:
+        return True
+
+    # Check for material worsening in any position
+    # Reason: Drawdowns are negative, so -0.20 is worse than -0.15
+    for ticker, details in current.flagged_positions.items():
+        prev_position = prev_result.get('flagged_positions', {}).get(ticker, {})
+        prev_drawdown = prev_position.get('current_drawdown', 0)
+        # More negative = worse, so check if current is threshold more negative
+        if details.current_drawdown - prev_drawdown <= -DRAWDOWN_WORSENING_THRESHOLD:
+            return True
+
+    return False
+
+
+def should_send_correlation_alert(
+    current: PortfolioCorrelationResult,
+    previous_state: Optional[Dict],
+) -> bool:
+    """
+    Determine if correlation alert should be sent based on deduplication rules.
+
+    Returns True if:
+    - Current triggered AND no previous state exists
+    - OR current triggered AND previous was not triggered
+    - OR current triggered AND recent_avg increased by threshold
+    - OR current triggered AND trend changed to "Rising"
+    - OR current triggered AND cooldown period passed
+
+    Args:
+        current: Current correlation detection result.
+        previous_state: Previous alert state dict for correlation, or None.
+
+    Returns:
+        True if alert should be sent.
+    """
+    if not current.triggered:
+        return False
+
+    # No previous state = new alert
+    if not previous_state:
+        return True
+
+    prev_result = previous_state.get('result', {})
+    prev_triggered = prev_result.get('triggered', False)
+
+    # Previous wasn't triggered = new condition
+    if not prev_triggered:
+        return True
+
+    # Check cooldown
+    if _cooldown_passed(previous_state.get('last_alerted_at')):
+        return True
+
+    # Check for material worsening in correlation
+    prev_recent_avg = prev_result.get('recent_avg', 0)
+    if current.recent_avg - prev_recent_avg >= CORRELATION_WORSENING_THRESHOLD:
+        return True
+
+    # Check if trend shifted to Rising (concerning direction)
+    prev_trend = prev_result.get('trend', 'N/A')
+    if current.trend == 'Rising' and prev_trend != 'Rising':
+        return True
+
+    return False
+
+
 def save_alert_state(
     session: Session,
     portfolio_id: UUID,
     drift_result: DriftResult,
     drawdown_result: DrawdownResult,
-    correlation_result: PortfolioCorrelationResult
+    correlation_result: PortfolioCorrelationResult,
+    drift_alerted: bool = False,
+    drawdown_alerted: bool = False,
+    correlation_alerted: bool = False,
 ) -> None:
     """
     Save detection results to portfolio's alert_state column.
@@ -225,7 +424,7 @@ def save_alert_state(
     deduplication logic. Each alert type tracks:
     - result: Full detection result for comparison
     - last_checked_at: When detection last ran (always updated)
-    - last_alerted_at: When alert was last sent (only updated if triggered)
+    - last_alerted_at: When alert was last sent (only updated if alert was sent)
 
     Args:
         session: SQLAlchemy session for the user database.
@@ -233,6 +432,9 @@ def save_alert_state(
         drift_result: Result from allocation drift detection.
         drawdown_result: Result from drawdown detection.
         correlation_result: Result from correlation detection.
+        drift_alerted: Whether a drift alert was actually sent this run.
+        drawdown_alerted: Whether a drawdown alert was actually sent this run.
+        correlation_alerted: Whether a correlation alert was actually sent this run.
     """
     now_iso = get_current_utc_time().isoformat()
 
@@ -246,30 +448,32 @@ def save_alert_state(
     # Start with existing state or empty dict
     alert_state = portfolio.alert_state or {}
 
-    # Update drift - always store result, only update last_alerted_at if triggered
+    # Update drift - always store result, only update last_alerted_at if alert was sent
     prev_drift_alerted = alert_state.get('drift', {}).get('last_alerted_at')
     alert_state['drift'] = {
         'result': drift_result.model_dump(),
         'last_checked_at': now_iso,
-        'last_alerted_at': now_iso if drift_result.triggered else prev_drift_alerted
+        'last_alerted_at': now_iso if drift_alerted else prev_drift_alerted
     }
 
-    # Update drawdown - always store result, only update last_alerted_at if triggered
+    # Update drawdown - always store result, only update last_alerted_at if alert was sent
     prev_drawdown_alerted = alert_state.get('drawdown', {}).get('last_alerted_at')
     alert_state['drawdown'] = {
         'result': drawdown_result.model_dump(),
         'last_checked_at': now_iso,
-        'last_alerted_at': now_iso if drawdown_result.triggered else prev_drawdown_alerted
+        'last_alerted_at': now_iso if drawdown_alerted else prev_drawdown_alerted
     }
 
-    # Update correlation - always store result, only update last_alerted_at if triggered
+    # Update correlation - always store result, only update last_alerted_at if alert was sent
     prev_correlation_alerted = alert_state.get('correlation', {}).get('last_alerted_at')
     alert_state['correlation'] = {
         'result': correlation_result.model_dump(),
         'last_checked_at': now_iso,
-        'last_alerted_at': now_iso if correlation_result.triggered else prev_correlation_alerted
+        'last_alerted_at': now_iso if correlation_alerted else prev_correlation_alerted
     }
 
     portfolio.alert_state = alert_state
+    # Reason: SQLAlchemy doesn't detect in-place mutations of JSONB columns
+    flag_modified(portfolio, 'alert_state')
     session.commit()
 

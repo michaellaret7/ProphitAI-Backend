@@ -5,7 +5,7 @@ This module provides efficient batch monitoring of multiple portfolios by
 fetching price data once for all unique tickers across portfolios.
 """
 from concurrent.futures import ThreadPoolExecutor, as_completed
-from datetime import datetime
+from datetime import datetime, timedelta
 from typing import Any
 
 import pandas as pd
@@ -40,9 +40,17 @@ class BatchMonitorPortfolio:
     
     def _cache_returns_df(self, tickers: list[str]) -> pd.DataFrame:
         print(f"[CACHE] Fetching returns for {len(tickers)} tickers...")
+
+        # Reason: Ensure minimum 180 days of data for correlation detection (requires 21+ days)
+        min_lookback_days = 180
+        min_start_date = get_current_utc_time() - timedelta(days=min_lookback_days)
+
+        # Use the earlier of: oldest portfolio date OR 180 days ago
+        start_date = min(self.oldest_portfolio_created_date, min_start_date)
+
         returns_df = build_returns_df(
             tickers,
-            start_date=self.oldest_portfolio_created_date.strftime('%Y-%m-%d'),
+            start_date=start_date.strftime('%Y-%m-%d'),
             end_date=get_current_utc_time().strftime('%Y-%m-%d'),
             frequency='daily'
         )
@@ -90,10 +98,20 @@ class BatchMonitorPortfolio:
 
 if __name__ == "__main__":
     with UserSession() as session:
-        portfolios = session.query(Portfolio).join(User).filter(User.email == 'michaellaret7@gmail.com').all()
-    
-    for portfolio in portfolios:
-        print(serialize_sqlalchemy_obj(portfolio))
+        portfolios = session.query(Portfolio).join(User).filter(User.email == 'herman@laret.com').all()
+        portfolio_ids = [str(p.id) for p in portfolios]
+
+    print(f"Found {len(portfolio_ids)} portfolios for herman@laret.com")
+
+    if portfolio_ids:
+        batch_monitor = BatchMonitorPortfolio(portfolio_ids)
+        results = batch_monitor.run()
+        print(f"Completed monitoring for {len(results)} portfolios.")
+
+        # Print updated portfolio state
+        with UserSession() as session:
+            for portfolio in session.query(Portfolio).filter(Portfolio.id.in_(portfolio_ids)).all():
+                print(serialize_sqlalchemy_obj(portfolio))
 
 
     

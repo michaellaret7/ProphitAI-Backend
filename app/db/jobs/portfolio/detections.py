@@ -234,12 +234,19 @@ def detect_portfolio_correlation_change(
     long_term_values = long_term_corr_matrix.where(mask).stack()
 
     # 4. Compute Advanced Metrics
+    # Reason: Convert to float and replace NaN with 0.0 for JSON serialization
     recent_avg = float(recent_values.mean())
     baseline_avg = float(long_term_values.mean())
+    if np.isnan(recent_avg):
+        recent_avg = 0.0
+    if np.isnan(baseline_avg):
+        baseline_avg = 0.0
     change = recent_avg - baseline_avg
-    
+
     # Dispersion: High avg correlation + Low dispersion = "Everything is one trade" (Dangerous)
     dispersion = float(recent_values.std())
+    if np.isnan(dispersion):
+        dispersion = 0.0
 
     # 5. Trend Significance (Z-Score)
     # Reason: Use Welford's algorithm for O(1) memory instead of O(N) list storage
@@ -257,7 +264,10 @@ def detect_portfolio_correlation_change(
         m2 += delta * delta2
 
     hist_std = np.sqrt(m2 / (n - 1)) if n > 1 else 0.0
-    z_score = (recent_avg - hist_mean) / hist_std if hist_std > 0 else 0
+    z_score = (recent_avg - hist_mean) / hist_std if hist_std > 0 else 0.0
+    # Reason: Handle NaN/inf from division for JSON serialization
+    if np.isnan(z_score) or np.isinf(z_score):
+        z_score = 0.0
 
     # 6. Determine Signal
     trend = "Rising" if change > 0.05 else "Falling" if change < -0.05 else "Stable"

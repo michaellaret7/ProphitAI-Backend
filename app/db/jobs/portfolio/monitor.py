@@ -19,7 +19,12 @@ from app.db.jobs.portfolio.detections import (
     detect_portfolio_correlation_change
 )
 from app.db.jobs.portfolio.messages import send_portfolio_alert
-from app.db.jobs.portfolio.utils import save_alert_state
+from app.db.jobs.portfolio.utils import (
+    save_alert_state,
+    should_send_drift_alert,
+    should_send_drawdown_alert,
+    should_send_correlation_alert,
+)
 
 class MonitorPortfolio:
     """
@@ -46,6 +51,7 @@ class MonitorPortfolio:
         self._portfolio_created_date: datetime | None = None
         self._user_id: UUID | None = None
         self._portfolio_name: str | None = None
+        self._previous_alert_state: Dict | None = None
 
     def __enter__(self) -> "MonitorPortfolio":
         self._user_session = UserSession()
@@ -95,6 +101,11 @@ class MonitorPortfolio:
             raise RuntimeError("MonitorPortfolio must be used as a context manager")
         return self._portfolio_name
 
+    @property
+    def previous_alert_state(self) -> Dict | None:
+        """Previous alert state from database, or None if never monitored."""
+        return self._previous_alert_state
+
     def _get_data(self) -> Tuple[Dict[str, float], Dict[str, float]]:
         """
         Fetch portfolio preferences and positions from database.
@@ -115,7 +126,8 @@ class MonitorPortfolio:
         portfolio_row = self._user_session.query(
             Portfolio.created_date,
             Portfolio.user_id,
-            Portfolio.name
+            Portfolio.name,
+            Portfolio.alert_state,
         ).filter(
             Portfolio.id == self.portfolio_id
         ).first()
@@ -123,6 +135,7 @@ class MonitorPortfolio:
             self._portfolio_created_date = portfolio_row.created_date
             self._user_id = portfolio_row.user_id
             self._portfolio_name = portfolio_row.name
+            self._previous_alert_state = portfolio_row.alert_state
         else:
             raise ValueError(f"No portfolio found with id {self.portfolio_id}")
 
@@ -175,27 +188,57 @@ class MonitorPortfolio:
         return preferences, positions
     
     def notify(self):
+        """
+        Run all detections and send alerts based on deduplication rules.
+
+        Alerts are only sent when:
+        - The condition is new (no previous alert or previous wasn't triggered)
+        - The condition has materially worsened
+        - The cooldown period has passed (7 days)
+
+        Returns:
+            Tuple of (drift_result, drawdown_result, correlation_result)
+        """
         allocation_drift_result = detect_allocation_drift(self.positions, self.preferences, self.market_session)
         drawdown_result = detect_drawdowns(self.positions, self.portfolio_created_date, returns_df=self._returns_df)
         portfolio_correlation_result = detect_portfolio_correlation_change(self.positions, returns_df=self._returns_df)
 
-        if any([allocation_drift_result.triggered, drawdown_result.triggered, portfolio_correlation_result.triggered]):
+        # Determine which alerts should be sent based on deduplication rules
+        prev_state = self.previous_alert_state or {}
+        send_drift = should_send_drift_alert(
+            allocation_drift_result,
+            prev_state.get('drift')
+        )
+        send_drawdown = should_send_drawdown_alert(
+            drawdown_result,
+            prev_state.get('drawdown')
+        )
+        send_correlation = should_send_correlation_alert(
+            portfolio_correlation_result,
+            prev_state.get('correlation')
+        )
+
+        # Only send alerts that passed deduplication checks
+        if any([send_drift, send_drawdown, send_correlation]):
             send_portfolio_alert(
                 user_id=self.user_id,
                 portfolio_id=self.portfolio_id,
                 portfolio_name=self.portfolio_name,
-                drift_result=allocation_drift_result,
-                drawdown_result=drawdown_result,
-                correlation_result=portfolio_correlation_result
+                drift_result=allocation_drift_result if send_drift else None,
+                drawdown_result=drawdown_result if send_drawdown else None,
+                correlation_result=portfolio_correlation_result if send_correlation else None
             )
 
-        # Persist detection results to alert_state for deduplication
+        # Always persist detection results, but only update last_alerted_at for sent alerts
         save_alert_state(
             session=self._user_session,
             portfolio_id=UUID(self.portfolio_id),
             drift_result=allocation_drift_result,
             drawdown_result=drawdown_result,
-            correlation_result=portfolio_correlation_result
+            correlation_result=portfolio_correlation_result,
+            drift_alerted=send_drift,
+            drawdown_alerted=send_drawdown,
+            correlation_alerted=send_correlation,
         )
 
         return allocation_drift_result, drawdown_result, portfolio_correlation_result
