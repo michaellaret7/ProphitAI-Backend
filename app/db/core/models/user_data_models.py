@@ -55,6 +55,7 @@ class Portfolio(UserBase):
     updated_date = Column(DateTime, default=get_current_utc_time, onupdate=get_current_utc_time)
     is_current = Column(Boolean, default=False, index=True)
     is_discretionary = Column(Boolean, default=False, index=True)
+    alert_state = Column(JSONB, nullable=True)  # Tracks last alert state per type for deduplication
 
     # Relationships
     user = relationship('User', backref='portfolios')

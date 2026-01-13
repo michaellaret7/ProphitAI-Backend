@@ -1,20 +1,27 @@
 """
-Portfolio classification utilities.
+Portfolio monitoring utilities.
 
 This module provides functions to classify portfolio positions into asset
 class buckets (equities, fixed income, commodities, etc.) based on ticker
-metadata from the database.
+metadata from the database, and utilities for persisting alert state.
 """
 from collections import defaultdict
 from datetime import datetime, timedelta
 from statistics import median
 from typing import Dict, List
+from uuid import UUID
 
 from sqlalchemy import func
 from sqlalchemy.orm import Session
 
 from app.db.core.models.market_data_models import PriceTargetNews, Ticker
+from app.db.core.models.user_data_models import Portfolio
 from app.db.core.db_config import MarketSession
+from app.db.jobs.portfolio.models import (
+    DriftResult,
+    DrawdownResult,
+    PortfolioCorrelationResult,
+)
 from app.utils.serialize_output import serialize_sqlalchemy_obj
 from app.utils.time_utils import get_current_utc_time
 
@@ -202,4 +209,67 @@ def get_median_price_targets(
         for ticker, prices in targets_by_ticker.items()
         if prices
     }
+
+
+def save_alert_state(
+    session: Session,
+    portfolio_id: UUID,
+    drift_result: DriftResult,
+    drawdown_result: DrawdownResult,
+    correlation_result: PortfolioCorrelationResult
+) -> None:
+    """
+    Save detection results to portfolio's alert_state column.
+
+    Stores all detection results (triggered or not) with timestamps for
+    deduplication logic. Each alert type tracks:
+    - result: Full detection result for comparison
+    - last_checked_at: When detection last ran (always updated)
+    - last_alerted_at: When alert was last sent (only updated if triggered)
+
+    Args:
+        session: SQLAlchemy session for the user database.
+        portfolio_id: UUID of the portfolio to update.
+        drift_result: Result from allocation drift detection.
+        drawdown_result: Result from drawdown detection.
+        correlation_result: Result from correlation detection.
+    """
+    now_iso = get_current_utc_time().isoformat()
+
+    portfolio = session.query(Portfolio).filter(
+        Portfolio.id == portfolio_id
+    ).first()
+
+    if not portfolio:
+        return
+
+    # Start with existing state or empty dict
+    alert_state = portfolio.alert_state or {}
+
+    # Update drift - always store result, only update last_alerted_at if triggered
+    prev_drift_alerted = alert_state.get('drift', {}).get('last_alerted_at')
+    alert_state['drift'] = {
+        'result': drift_result.model_dump(),
+        'last_checked_at': now_iso,
+        'last_alerted_at': now_iso if drift_result.triggered else prev_drift_alerted
+    }
+
+    # Update drawdown - always store result, only update last_alerted_at if triggered
+    prev_drawdown_alerted = alert_state.get('drawdown', {}).get('last_alerted_at')
+    alert_state['drawdown'] = {
+        'result': drawdown_result.model_dump(),
+        'last_checked_at': now_iso,
+        'last_alerted_at': now_iso if drawdown_result.triggered else prev_drawdown_alerted
+    }
+
+    # Update correlation - always store result, only update last_alerted_at if triggered
+    prev_correlation_alerted = alert_state.get('correlation', {}).get('last_alerted_at')
+    alert_state['correlation'] = {
+        'result': correlation_result.model_dump(),
+        'last_checked_at': now_iso,
+        'last_alerted_at': now_iso if correlation_result.triggered else prev_correlation_alerted
+    }
+
+    portfolio.alert_state = alert_state
+    session.commit()
 

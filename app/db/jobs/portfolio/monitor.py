@@ -18,8 +18,8 @@ from app.db.jobs.portfolio.detections import (
     detect_drawdowns,
     detect_portfolio_correlation_change
 )
-from app.repositories.messaging_data import get_or_create_conversation, create_message
 from app.db.jobs.portfolio.messages import send_portfolio_alert
+from app.db.jobs.portfolio.utils import save_alert_state
 
 class MonitorPortfolio:
     """
@@ -189,11 +189,14 @@ class MonitorPortfolio:
                 correlation_result=portfolio_correlation_result
             )
 
+        # Persist detection results to alert_state for deduplication
+        save_alert_state(
+            session=self._user_session,
+            portfolio_id=UUID(self.portfolio_id),
+            drift_result=allocation_drift_result,
+            drawdown_result=drawdown_result,
+            correlation_result=portfolio_correlation_result
+        )
+
         return allocation_drift_result, drawdown_result, portfolio_correlation_result
 
-
-
-
-
-
-        

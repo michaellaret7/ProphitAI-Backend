@@ -17,6 +17,7 @@ from app.repositories.portfolio_data import (
     create_portfolio_preference,
     update_portfolio_preference,
     delete_portfolio_preference,
+    get_portfolio_alert_state,
 )
 from app.core.calculations.portfolio.allocator import run, StrategyLiteral
 
@@ -403,3 +404,51 @@ async def delete_portfolio_preference_controller(
         resource_id=portfolio_id,
         self_link=f"/api/portfolios/{portfolio_id}/preferences",
     )
+
+
+# =============================================================================
+# PORTFOLIO ALERT STATE
+# =============================================================================
+
+@handle_controller_errors
+async def get_portfolio_alert_state_controller(
+    *,
+    portfolio_id: str,
+    user_id: str,
+) -> Dict[str, Any]:
+    """
+    Controller to retrieve portfolio alert state for risk monitoring.
+
+    Returns the current alert state including drift, drawdown, and correlation
+    detection results with timestamps for deduplication.
+
+    Cache TTL: 5 minutes (300s) - short TTL since alert state changes with each monitoring run
+    """
+    if not portfolio_id:
+        raise ValueError("portfolioId is required")
+    if not user_id:
+        raise ValueError("userId is required")
+
+    _verify_portfolio_ownership(portfolio_id, user_id)
+
+    cache_key = f"portfolio:alert-state:{portfolio_id}"
+    cached_data = await cache.get(cache_key)
+    if cached_data:
+        return cached_data
+
+    alert_state = get_portfolio_alert_state(portfolio_id=uuid.UUID(portfolio_id))
+
+    if alert_state is None:
+        raise HTTPException(status_code=404, detail="Portfolio not found")
+
+    response = ok_envelope(
+        message="Portfolio alert state retrieved successfully",
+        kind="portfolio#alertState",
+        resource_id=portfolio_id,
+        self_link=f"/api/portfolios/{portfolio_id}/alert-state",
+        payload=alert_state,
+    )
+
+    await cache.set(cache_key, response, ttl=300)
+
+    return response

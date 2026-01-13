@@ -15,6 +15,7 @@ from app.db.core.models.user_data_models import Portfolio, PortfolioItem, User
 from app.db.jobs.portfolio.monitor import MonitorPortfolio
 from app.repositories.price_data import build_returns_df
 from app.utils.time_utils import get_current_utc_time
+from app.utils.serialize_output import serialize_sqlalchemy_obj
 
 class BatchMonitorPortfolio:
     def __init__(self, portfolio_ids: list[str]):
@@ -90,11 +91,10 @@ class BatchMonitorPortfolio:
 if __name__ == "__main__":
     with UserSession() as session:
         portfolios = session.query(Portfolio).join(User).filter(User.email == 'michaellaret7@gmail.com').all()
-        portfolio_ids = [str(portfolio.id) for portfolio in portfolios]
+    
+    for portfolio in portfolios:
+        print(serialize_sqlalchemy_obj(portfolio))
 
-    batch_monitor = BatchMonitorPortfolio(portfolio_ids)
-    results = batch_monitor.run()
-    print(f"\nProcessed {len(results)} portfolios")
 
     
 

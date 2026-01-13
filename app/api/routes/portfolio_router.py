@@ -21,6 +21,7 @@ from app.api.controller.portfolio import (
     create_portfolio_preference_controller,
     update_portfolio_preference_controller,
     delete_portfolio_preference_controller,
+    get_portfolio_alert_state_controller,
 )
 from app.api.auth.clerk import get_clerk_user_id
 from app.repositories.user_data import get_all_user_data_by_clerk_id
@@ -654,6 +655,39 @@ async def delete_portfolio_preferences(
 ):
     """Delete portfolio preferences."""
     return await delete_portfolio_preference_controller(
+        portfolio_id=portfolioId,
+        user_id=user_id,
+    )
+
+
+# =============================================================================
+# PORTFOLIO ALERT STATE ENDPOINTS
+# =============================================================================
+
+@router.get("/portfolios/{portfolioId}/alert-state")
+async def get_portfolio_alert_state(
+    portfolioId: str = Path(..., description="Portfolio ID"),
+    user_id: str = Depends(get_user_id_from_clerk),
+):
+    """
+    Get portfolio alert state for risk monitoring.
+
+    Returns the current state of risk detection alerts including:
+    - **drift**: Allocation drift from target preferences
+    - **drawdown**: Position drawdown alerts
+    - **correlation**: Portfolio correlation change alerts
+
+    Each alert type includes:
+    - `result`: Full detection result with flagged items
+    - `last_checked_at`: When the detection last ran
+    - `last_alerted_at`: When an alert was last sent (null if never triggered)
+
+    This data is used by the frontend to display current risk status
+    and by the monitoring system for alert deduplication.
+
+    Cache TTL: 5 minutes (300s)
+    """
+    return await get_portfolio_alert_state_controller(
         portfolio_id=portfolioId,
         user_id=user_id,
     )
