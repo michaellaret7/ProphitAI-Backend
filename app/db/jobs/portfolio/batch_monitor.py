@@ -13,6 +13,7 @@ import pandas as pd
 from app.db.core.db_config import UserSession
 from app.db.core.models.user_data_models import Portfolio, PortfolioItem, User
 from app.db.jobs.portfolio.monitor import MonitorPortfolio
+from app.repositories.portfolio_data import get_all_portfolio_ids
 from app.repositories.price_data import build_returns_df
 from app.utils.time_utils import get_current_utc_time
 from app.utils.serialize_output import serialize_sqlalchemy_obj
@@ -97,22 +98,14 @@ class BatchMonitorPortfolio:
 
 
 if __name__ == "__main__":
-    with UserSession() as session:
-        portfolios = session.query(Portfolio).join(User).filter(User.email == 'herman@laret.com').all()
-        portfolio_ids = [str(p.id) for p in portfolios]
+    user_session = UserSession()
+    portfolio_ids = user_session.query(Portfolio.id).all()
+    portfolio_ids = [pid[0] for pid in portfolio_ids]
+    user_session.close()
 
-    print(f"Found {len(portfolio_ids)} portfolios for herman@laret.com")
-
-    if portfolio_ids:
-        batch_monitor = BatchMonitorPortfolio(portfolio_ids)
-        results = batch_monitor.run()
-        print(f"Completed monitoring for {len(results)} portfolios.")
-
-        # Print updated portfolio state
-        with UserSession() as session:
-            for portfolio in session.query(Portfolio).filter(Portfolio.id.in_(portfolio_ids)).all():
-                print(serialize_sqlalchemy_obj(portfolio))
-
+    batch_monitor = BatchMonitorPortfolio(portfolio_ids)
+    results = batch_monitor.run()
+    print(results)
 
     
 
