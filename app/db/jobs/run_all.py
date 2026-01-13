@@ -31,9 +31,8 @@ def main():
     print("\nUpdating portfolio...\n")
     print("="*100)
     time.sleep(60)
-    update_portfolio = UpdatePortfolios()
-    update_portfolio.update_portfolios()
-    update_portfolio.close()
+    with UpdatePortfolios() as update_portfolio:
+        update_portfolio.update_portfolios()
     print("="*100)
 
     # If after market close (5PM EST), also update EOD prices and commodity data

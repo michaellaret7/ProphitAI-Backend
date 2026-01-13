@@ -136,7 +136,7 @@ class BaseAgent:
 
         print(f"Registered tool: {name}")
 
-    def run(self, response_format: Optional[BaseModel] = None) -> Dict[str, Any]:
+    def run(self, response_format: Optional[type[BaseModel]] = None) -> Dict[str, Any]:
         """Execute the agent's main ReAct loop.
 
         Returns:

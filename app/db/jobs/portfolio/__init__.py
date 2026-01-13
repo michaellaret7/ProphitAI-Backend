@@ -11,9 +11,8 @@ This package contains portfolio-related job modules:
 Usage:
     from app.db.jobs.portfolio import UpdatePortfolios
 
-    updater = UpdatePortfolios()
-    updater.update_portfolios()
-    updater.close()
+    with UpdatePortfolios() as updater:
+        updater.update_portfolios()
 """
 
 from app.db.jobs.portfolio.update import UpdatePortfolios

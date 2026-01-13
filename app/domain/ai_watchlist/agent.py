@@ -51,4 +51,4 @@ class AiWatchlistAgent(BaseAgent):
 
 if __name__ == "__main__":
     agent = AiWatchlistAgent(user_preferences="Build me a watchlist of 1-15 tickers of avaiation and shipping stocks with lowe to mid pe ratios")
-    agent.run()
+    agent.run(output_format=WatchlistResponse)

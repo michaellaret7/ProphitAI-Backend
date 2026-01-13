@@ -22,10 +22,9 @@ def main():
     time.sleep(60)
 
     print("Updating portfolios...")
-    update_portfolio = UpdatePortfolios()
-    update_portfolio.update_portfolios()
-    update_portfolio.close()
-    
+    with UpdatePortfolios() as update_portfolio:
+        update_portfolio.update_portfolios()
+
     print("Intraday update completed!")
 
 if __name__ == "__main__":

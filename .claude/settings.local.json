@@ -37,7 +37,13 @@
       "Bash(pyright:*)",
       "Bash(pip show:*)",
       "WebFetch(domain:medium.com)",
-      "Bash(PYTHONPATH=/Users/michaellaret/Desktop/ProphitAI python3:*)"
+      "Bash(PYTHONPATH=/Users/michaellaret/Desktop/ProphitAI python3:*)",
+      "Bash(done)",
+      "WebFetch(domain:www.fool.com)",
+      "WebFetch(domain:impartoo.com)",
+      "WebFetch(domain:www.etf.com)",
+      "WebFetch(domain:money.usnews.com)",
+      "WebFetch(domain:www.nasdaq.com)"
     ],
     "deny": [],
     "ask": []

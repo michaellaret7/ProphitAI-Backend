@@ -1,35 +1,35 @@
 from app.core.agentic_framework.base_agent.agent import BaseAgent
-
-from app.core.agentic_framework.base_agent.agent import BaseAgent
 from app.core.agentic_framework.base_agent.callbacks.state_callback import StateCallback
 from app.core.agentic_framework.base_agent.utils.models import PrintMode
-from app.domain.ai_watchlist.prompts import SYSTEM_PROMPT, USER_PROMPT_TEMPLATE
 from typing import Optional
-
+from app.db.core.db_config import UserSession
+from app.db.core.models.user_data_models import Portfolio, User
 from app.domain.portfolio_insights.tool_registry import register_portfolio_insights_tools
 from .models import InsightsResponseModel
+from .prompts import build_prompts
+import tiktoken
+
 
 class PortfolioInsightsAgent(BaseAgent):
     response_model = InsightsResponseModel
 
     def __init__(
         self,
-        user_preferences: str,
+        portfolio_id: str,
         print_mode: str = PrintMode.VERBOSE,
         state_callback: Optional[StateCallback] = None,
+        system_prompt: str = None,
+        user_prompt: str = None,
     ):
-        if not user_preferences or not user_preferences.strip():
-            raise ValueError("user_preferences is required and cannot be empty")
 
-        self.user_preferences = user_preferences.strip()
-
-        dynamic_user_prompt = self._build_user_prompt()
+        self.portfolio_id = portfolio_id
+        self.system_prompt, self.user_prompt = build_prompts(portfolio_id)
 
         super().__init__(
             provider="anthropic",
             model="claude-haiku-4-5-20251001",
-            system_prompt=SYSTEM_PROMPT,
-            user_prompt=dynamic_user_prompt,
+            system_prompt=self.system_prompt,
+            user_prompt=self.user_prompt,
             max_iterations=200,
             plan_first=True,
             print_mode=print_mode,
@@ -37,7 +37,16 @@ class PortfolioInsightsAgent(BaseAgent):
         )
 
         register_portfolio_insights_tools(self)
+    
+if __name__ == "__main__":
+    user_session = UserSession()
+    portfolio = user_session.query(Portfolio).join(User).filter(User.email == "michaellaret7@gmail.com").all()
 
-    def _build_user_prompt(self) -> str:
-        return USER_PROMPT_TEMPLATE.format(user_query=self.user_preferences)
+    portfolio_id = [p.id for p in portfolio]
+    portfolio_id = portfolio_id[1]
+    user_session.close()
 
+    agent = PortfolioInsightsAgent(portfolio_id=str(portfolio_id))
+    prompt = agent.user_prompt
+    x = agent.run(response_format=InsightsResponseModel)
+    print(x)

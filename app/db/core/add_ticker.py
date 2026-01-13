@@ -1382,17 +1382,82 @@ def load_multiple_tickers(ticker_list):
 
 if __name__ == "__main__":
     load_single_ticker(
-        'GOOG',
-        sector='equity_sector_communication_services',
-        industry='interactive_media_and_services',
-        sub_industry='interactive_media_and_services'
+        'TM',
+        sector='equity_sector_consumer_discretionary',
+        industry='automobiles',
+        sub_industry='automobile_manufacturers',
+        allow_partial_reload=True
     )
 
     load_single_ticker(
-        'QSR',
-        sector='equity_sector_consumer_discretionary',
-        industry='hotels__restaurants_and_leisure',
-        sub_industry='restaurants'
+        'ASML',
+        sector='equity_sector_information_technology',
+        industry='semiconductors_and_semiconductor_equipment',
+        sub_industry='semiconductor_materials_and_equipment',
+        allow_partial_reload=True
     )
 
+    load_single_ticker(
+        'LVMUY',
+        sector='equity_sector_consumer_discretionary',
+        industry='textiles__apparel_and_luxury_goods',
+        sub_industry='apparel_accessories_and_luxury_goods',
+        allow_partial_reload=True
+    )
+
+    load_single_ticker(
+        'NVO',
+        sector='equity_sector_health_care',
+        industry='pharmaceuticals',
+        sub_industry='pharmaceuticals',
+        allow_partial_reload=True
+    )
+
+    load_single_ticker(
+        'SAP',
+        sector='equity_sector_information_technology',
+        industry='software',
+        sub_industry='application_software',
+        allow_partial_reload=True
+    )
+
+    load_single_ticker(
+        'SHOP',
+        sector='equity_sector_information_technology',
+        industry='software',
+        sub_industry='application_software',
+        allow_partial_reload=True
+    )
+
+    load_single_ticker(
+        'SONY',
+        sector='equity_sector_consumer_discretionary',
+        industry='household_durables',
+        sub_industry='consumer_electronics',
+        allow_partial_reload=True
+    )
+
+    load_single_ticker(
+        'TCEHY',
+        sector='equity_sector_communication_services',
+        industry='interactive_media_and_services',
+        sub_industry='interactive_media_and_services',
+        allow_partial_reload=True
+    )
+
+    load_single_ticker(
+        'TSM',
+        sector='equity_sector_information_technology',
+        industry='semiconductors_and_semiconductor_equipment',
+        sub_industry='semiconductors',
+        allow_partial_reload=True
+    )
+
+    load_single_ticker(
+        'UL',
+        sector='equity_sector_consumer_staples',
+        industry='personal_care_products',
+        sub_industry='personal_care_products',
+        allow_partial_reload=True
+    )
 

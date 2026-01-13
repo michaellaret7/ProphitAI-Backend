@@ -6,6 +6,7 @@ from pydantic import BaseModel, Field
 from app.utils.choose_model_and_client import get_model_and_client
 import json
 from app.models.portfolio_models import PortfolioInput
+from openai import RateLimitError, APIError, AuthenticationError, InternalServerError
 
 T = TypeVar('T', bound=BaseModel)
 
@@ -19,6 +20,33 @@ class PortfolioWrapper(BaseModel):
     """Wrapper to help parse portfolio data"""
     portfolio: List[PortfolioItem]
 
+def _call_parser_with_fallback(messages: List[Dict[str, str]], target_model: Type[T]) -> T:
+    providers = [
+        ('groq', 'moonshotai/kimi-k2-instruct-0905'),
+        ('openai', 'gpt-5-mini'),
+        ('fireworks', 'accounts/fireworks/models/gpt-oss-120b'),
+        ('together', 'Qwen/Qwen3-235B-A22B-Instruct-2507-tput')
+    ]
+
+    last_error = None
+
+    for provider, model_name in providers:
+        try:
+            model, client = get_model_and_client(provider, model_name)
+            completion = client.chat.completions.parse(
+                model=model,
+                messages=messages,
+                response_format=target_model
+            )
+            return completion.choices[0].message.parsed
+
+        except (RateLimitError, APIError, AuthenticationError, InternalServerError) as e:
+            print(f"[GPT Parser] {provider}/{model_name} failed: {e}, trying next...")
+            last_error = e
+            continue
+
+    raise RuntimeError(f"All parser providers failed. Last error: {last_error}")
+
 def parse_with_gpt(query: str, target_model: Type[T], system_prompt: str = None) -> T:
     """
     Generic LLM parser that converts natural language to structured Pydantic models.
@@ -31,25 +59,18 @@ def parse_with_gpt(query: str, target_model: Type[T], system_prompt: str = None)
     Returns:
         Parsed instance of target_model
     """
-    model, client = get_model_and_client('openai', 'gpt-5-mini')
-    # model, client = get_model_and_client('huggingface', 'openai/gpt-oss-120b:fireworks-ai')
 
     if system_prompt is None:
         system_prompt = f"""Parse the user's input into the requested structured format.
         Extract all relevant information and populate the fields accurately.
         If information is not provided, leave fields as None/null, do not make up any information."""
+    
+    parsed = _call_parser_with_fallback([
+        {"role": "system", "content": system_prompt},
+        {"role": "user", "content": query}
+    ], target_model)
 
-    completion = client.chat.completions.parse(
-        model=model,
-        messages=[
-            {"role": "system", "content": system_prompt},
-            {"role": "user", "content": query}
-        ],
-        response_format=target_model,
-        reasoning_effort="low"
-    )
-
-    return completion.choices[0].message.parsed
+    return parsed
 
 def parse_portfolio_with_gpt(data: any) -> Dict:
     """

@@ -51,8 +51,11 @@ def correlation_matrix(portfolio_dict: PortfolioInput | dict, filter: str = "all
         if not price_data:
             return success_response({"correlations": []})
 
+        # Convert price_data dict to DataFrame for build_returns_df_from_price_map
+        price_df = pd.DataFrame(price_data)
+
         # Calculate returns without dropping rows globally; let correlation handle pairwise NaNs
-        returns_df = build_returns_df_from_price_map(price_data, drop_rows='none', include_dividends=False)
+        returns_df = build_returns_df_from_price_map(price_df, drop_rows='none', include_dividends=False)
 
         if returns_df.empty:
             return success_response({"correlations": []})
