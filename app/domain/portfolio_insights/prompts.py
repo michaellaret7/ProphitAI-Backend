@@ -1,6 +1,5 @@
 import json
 
-from pydantic import json_schema
 from app.db.core.db_config import UserSession
 from app.db.core.models.user_data_models import Portfolio
 from .models import InsightsResponseModel
@@ -8,10 +7,16 @@ import yaml
 
 OUTPUT_SCHEMA = json.dumps(InsightsResponseModel.model_json_schema())
 
-def build_prompts(portfolio_id: str) -> str:
+def build_prompts(portfolio_id: str) -> tuple[str, str]:
     with UserSession() as user_session:
         portfolio = user_session.query(Portfolio).filter(Portfolio.id == portfolio_id).first()
+        if portfolio is None:
+            raise ValueError(f"Portfolio not found with id: {portfolio_id}")
+
         portfolio_state = portfolio.alert_state
+        if not portfolio_state:
+            raise ValueError(f"Portfolio {portfolio_id} has no alert_state. Run portfolio monitoring first.")
+
         portfolio_state = yaml.dump(portfolio_state)
 
     # ============================= SYSTEM PROMPT =============================
@@ -34,13 +39,14 @@ You will be given the portfolio state which consists of the following:
 
 <suggested workflow>
 1. Review the portfolios current state and identified flagged risks.
-2. Research the flagged risk using the tools at your disposal.
-3. Provide actionable insights and suggestions for improvement
+2. Research the flagged risks using the tools at your disposal.
+3. Screen for new tickers to replace the tickers contributing to the portfolios flagged risk problems.
+4. Provide actionable insights and suggestions for improvement
     a. Suggest new tickers to add in place of tickers contributing to risk
     b. Suggest tickers to drop 
     c. Suggest a rebalance with different allocations
-    b. etc. 
-4. Return the insights and suggestions in the output format.
+    d. etc. 
+5. Return the insights and suggestions in the output format.
 </suggested workflow>
 
 <important caveats>
@@ -70,8 +76,3 @@ Analyze {portfolio_id} and provide insights on the portfolio.
 """
     return system_prompt, user_prompt
 
-
-if __name__ == "__main__":
-    system_prompt, user_prompt = build_prompts("828f7921-8a3c-4c89-aa22-39888165e0df")
-    print(system_prompt)
-    print(user_prompt)

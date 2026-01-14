@@ -43,7 +43,9 @@
       "WebFetch(domain:impartoo.com)",
       "WebFetch(domain:www.etf.com)",
       "WebFetch(domain:money.usnews.com)",
-      "WebFetch(domain:www.nasdaq.com)"
+      "WebFetch(domain:www.nasdaq.com)",
+      "Bash(cd:*)",
+      "Bash(wc:*)"
     ],
     "deny": [],
     "ask": []

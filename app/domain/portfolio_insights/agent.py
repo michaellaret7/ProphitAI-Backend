@@ -7,7 +7,6 @@ from app.db.core.models.user_data_models import Portfolio, User
 from app.domain.portfolio_insights.tool_registry import register_portfolio_insights_tools
 from .models import InsightsResponseModel
 from .prompts import build_prompts
-import tiktoken
 
 
 class PortfolioInsightsAgent(BaseAgent):
@@ -18,10 +17,7 @@ class PortfolioInsightsAgent(BaseAgent):
         portfolio_id: str,
         print_mode: str = PrintMode.VERBOSE,
         state_callback: Optional[StateCallback] = None,
-        system_prompt: str = None,
-        user_prompt: str = None,
     ):
-
         self.portfolio_id = portfolio_id
         self.system_prompt, self.user_prompt = build_prompts(portfolio_id)
 

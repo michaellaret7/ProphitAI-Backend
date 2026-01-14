@@ -107,10 +107,6 @@ def get_industry_factor_benchmark(
     except Exception as e:
         return error_response(e)
 
-if __name__ == "__main__":
-    x = get_industry_factor_benchmark(industries=['beverages', 'food_products', 'household_products'], factor='growth')
-    print(x)
-    print(get_token_count(x))
 
 # Tool Schema Constants
 GET_INDUSTRY_FACTOR_BENCHMARK_DESCRIPTION = (

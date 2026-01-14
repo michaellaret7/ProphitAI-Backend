@@ -45,11 +45,6 @@ def get_fundamental_data(ticker: str, statement_type: str, quarters_back: int = 
     except Exception as e:
         return error_response(f"Failed to retrieve fundamental data: {str(e)}")
 
-if __name__ == "__main__":
-    x = get_fundamental_data(ticker='AAPL', statement_type='income_statement', quarters_back=2, _simulation_date=datetime(2025, 1, 1))
-    print(x)
-    print(get_token_count(x))
-
 # Tool Schema Constants
 GET_TICKER_FUNDAMENTAL_DATA_DESCRIPTION = (
     "Get fundamental financial data for a ticker including income statements, balance sheets, cash flow statements, or financial ratios.\n\n"

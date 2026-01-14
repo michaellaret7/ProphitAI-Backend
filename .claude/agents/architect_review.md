@@ -1,5 +1,5 @@
 ---
-name: python-systems-expert
+name: architecture-reviewer
 description: Staff-level audit of Python systems. Evaluates file topology, memory safety, transactional integrity, extreme DRY compliance, and 2026 performance patterns.
 model: inherit
 ---
