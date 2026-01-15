@@ -1,6 +1,6 @@
 import asyncio
 from fastapi import HTTPException
-from typing import Dict, Any, Optional
+from typing import Dict, Any, List, Optional
 from app.db.core.pull_fmp_data import FMP_API_DATA
 from app.api.response_envelope import ok_envelope
 from app.utils.decorators.api_decorators import handle_controller_errors
@@ -33,6 +33,79 @@ async def get_stock_news_controller(
         self_link=f"/api/news/{ticker}/stock-news",
         counts={"totalItems": len(items), "currentItemCount": len(items)},
         payload=items,
+    )
+
+
+@handle_controller_errors
+async def get_batch_stock_news_controller(
+    tickers: List[str],
+    limit: int = 100,
+    from_date: Optional[str] = None,
+    to_date: Optional[str] = None,
+) -> Dict[str, Any]:
+    """
+    Controller to retrieve stock news for multiple tickers in a single request.
+
+    Uses FMP's stock news API with comma-separated symbols.
+    No caching since news is time-sensitive.
+
+    Args:
+        tickers: List of stock ticker symbols (max 5)
+        limit: Maximum news items to return (default: 100, max: 500)
+        from_date: Optional start date filter (YYYY-MM-DD)
+        to_date: Optional end date filter (YYYY-MM-DD)
+
+    Returns:
+        Response envelope with batch stock news payload
+    """
+    fmp_api = FMP_API_DATA()
+
+    # Reason: Use batch method to fetch news for all tickers in single API call
+    data = await asyncio.to_thread(
+        fmp_api.get_batch_stock_news,
+        tickers=tickers,
+        limit=limit,
+        from_date=from_date,
+        to_date=to_date
+    )
+
+    if data is None:
+        raise HTTPException(
+            status_code=500,
+            detail="Failed to retrieve stock news from FMP API"
+        )
+
+    # Convert to list if not already
+    items = data if isinstance(data, list) else []
+
+    # Group news by ticker for organized response
+    news_by_ticker: Dict[str, List] = {ticker: [] for ticker in tickers}
+
+    for item in items:
+        # Reason: FMP news includes 'symbol' field to identify which ticker it's for
+        ticker = item.get('symbol', '').upper()
+        if ticker in news_by_ticker:
+            news_by_ticker[ticker].append(item)
+
+    # Identify tickers with no news found
+    tickers_with_news = [t for t in tickers if news_by_ticker[t]]
+    tickers_without_news = [t for t in tickers if not news_by_ticker[t]]
+
+    return ok_envelope(
+        message=f"Batch stock news retrieved ({len(tickers_with_news)} tickers with news, {len(tickers_without_news)} without)",
+        kind="news#batchStockNews",
+        resource_id=",".join(sorted(tickers)),
+        self_link="/api/news/stock-news/batch",
+        counts={
+            "totalRequested": len(tickers),
+            "tickersWithNews": len(tickers_with_news),
+            "tickersWithoutNews": len(tickers_without_news),
+            "totalNewsItems": len(items)
+        },
+        payload={
+            "news_by_ticker": news_by_ticker,
+            "tickers_without_news": tickers_without_news
+        },
     )
 
 

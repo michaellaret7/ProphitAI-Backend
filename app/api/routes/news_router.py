@@ -2,12 +2,14 @@ from fastapi import APIRouter, Query, Path
 from typing import Optional
 from app.api.controller.news import (
     get_stock_news_controller,
+    get_batch_stock_news_controller,
     get_press_releases_controller,
     get_price_target_news_controller,
     get_stock_grade_news_controller,
     get_general_news_controller,
     get_fmp_articles_controller,
 )
+from app.models.news_models import BatchStockNewsRequest
 
 router = APIRouter(tags=["News & Media 📰"])
 
@@ -36,6 +38,47 @@ async def get_stock_news(
         limit=limit,
         from_date=from_date,
         to_date=to_date,
+    )
+
+
+@router.post("/news/stock-news/batch")
+async def get_batch_stock_news(body: BatchStockNewsRequest):
+    """
+    Get stock news for multiple tickers in a single request.
+
+    Efficient batch endpoint that fetches news for up to 5 tickers at once
+    using FMP's stock news API with comma-separated symbols.
+
+    Returns news items grouped by ticker for easy consumption.
+
+    Response payload structure:
+    - news_by_ticker: Dictionary mapping ticker -> list of news items
+    - tickers_without_news: List of tickers that had no news
+
+    News items include:
+    - publishedDate, title, publisher, site
+    - text (content), image URL, article URL
+    - symbol (ticker the news is about)
+
+    Args:
+        tickers: List of stock ticker symbols (max 5)
+        limit: Max news items to return (default: 100, max: 500)
+        from_date: Optional start date filter (YYYY-MM-DD)
+        to_date: Optional end date filter (YYYY-MM-DD)
+
+    Example request body:
+    {
+        "tickers": ["AAPL", "MSFT", "GOOGL"],
+        "limit": 50,
+        "from_date": "2026-01-01",
+        "to_date": "2026-01-15"
+    }
+    """
+    return await get_batch_stock_news_controller(
+        tickers=body.tickers,
+        limit=body.limit,
+        from_date=body.from_date,
+        to_date=body.to_date,
     )
 
 

@@ -200,6 +200,33 @@ class FMP_API_DATA:
             url += f"&to={to_date}"
         return self._make_fmp_api_request(url)
 
+    def get_batch_stock_news(
+        self,
+        tickers: list[str],
+        limit: int = 100,
+        from_date: str = None,
+        to_date: str = None
+    ):
+        """
+        Retrieves news for multiple stocks at once.
+
+        Args:
+            tickers: List of stock ticker symbols.
+            limit: Maximum number of results to return (default: 100).
+            from_date: Optional start date in YYYY-MM-DD format.
+            to_date: Optional end date in YYYY-MM-DD format.
+
+        Returns:
+            list: Combined news items for all tickers, each item includes a 'symbol' field.
+        """
+        symbols_str = ','.join(tickers)
+        url = f"https://financialmodelingprep.com/stable/news/stock?symbols={symbols_str}&limit={limit}"
+        if from_date:
+            url += f"&from={from_date}"
+        if to_date:
+            url += f"&to={to_date}"
+        return self._make_fmp_api_request(url)
+
     def get_general_news(self, limit: int = 1000, from_date: str = None, to_date: str = None):
         """
         Retrieves general news.
