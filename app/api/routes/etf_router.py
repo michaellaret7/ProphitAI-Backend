@@ -6,7 +6,9 @@ from app.api.controller.etf import (
     get_etf_info_controller,
     get_etf_holdings_controller,
     get_etf_country_weightings_controller,
+    get_batch_etf_info_controller,
 )
+from app.models.etf_models import BatchETFInfoRequest
 
 router = APIRouter(tags=["ETF Data 📊"])
 
@@ -218,3 +220,57 @@ async def get_etf_country_weightings(
     - Domestic ETFs (like SPY) will have high concentration in home country
     """
     return await get_etf_country_weightings_controller(symbol=symbol)
+
+
+@router.post("/etf/info/batch")
+async def get_batch_etf_info(request: BatchETFInfoRequest):
+    """
+    Get ETF information for multiple symbols in a single request.
+
+    ## Overview
+    Batch endpoint for fetching ETF metadata for up to 10 ETF symbols at once.
+    Uses parallel API calls internally since FMP doesn't have a native batch endpoint.
+
+    ## Rate Limit
+    Maximum 10 ETF symbols per request to prevent API rate limiting.
+
+    ## Request Body
+    ```json
+    {
+      "symbols": ["SPY", "QQQ", "VTI", "IWM"]
+    }
+    ```
+
+    ## Response Format
+    ```json
+    {
+      "status": 200,
+      "message": "Batch ETF info retrieved successfully (4 found, 0 not found)",
+      "data": {
+        "kind": "etf#batchInfo",
+        "id": "IWM,QQQ,SPY,VTI",
+        "selfLink": "/api/etf/info/batch",
+        "currentItemCount": 4,
+        "totalItems": 4,
+        "payload": {
+          "data": {
+            "SPY": {
+              "symbol": "SPY",
+              "name": "SPDR S&P 500 ETF Trust",
+              "assetClass": "Large Cap Equity",
+              ...
+            },
+            "QQQ": { ... }
+          },
+          "missing_symbols": []
+        }
+      }
+    }
+    ```
+
+    ## Notes
+    - Data is cached for 1 day for performance
+    - Invalid/unknown symbols are returned in `missing_symbols` array
+    - Symbols are automatically uppercased and deduplicated
+    """
+    return await get_batch_etf_info_controller(symbols=request.symbols)

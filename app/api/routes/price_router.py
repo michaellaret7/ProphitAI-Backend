@@ -6,8 +6,9 @@ from app.api.controller.price import (
     get_stock_prices_intraday_controller,
     index_price_data_controller,
     get_price_change_controller,
+    get_batch_quotes_controller,
 )
-from app.models.price_models import StockPriceRequest
+from app.models.price_models import StockPriceRequest, BatchQuoteRequest
 
 router = APIRouter(tags=["Stock Prices 💵"])
 
@@ -130,3 +131,68 @@ async def get_price_change(
     Example: GET /api/price/price-change?tickers=AAPL&tickers=MSFT
     """
     return await get_price_change_controller(tickers=[t.upper() for t in tickers])
+
+
+@router.post("/price/quotes/batch")
+async def get_batch_quotes(request: BatchQuoteRequest):
+    """
+    Get real-time quote data for multiple tickers in a single request.
+
+    ## Overview
+    Batch endpoint for fetching current price quotes for up to 20 tickers at once.
+    Uses FMP's native batch quote API for optimal performance.
+
+    ## Rate Limit
+    Maximum 20 tickers per request.
+
+    ## Request Body
+    ```json
+    {
+      "tickers": ["AAPL", "MSFT", "GOOGL", "NVDA"]
+    }
+    ```
+
+    ## Response Includes (per ticker)
+    - Current price, open, previous close
+    - Day high/low, year high/low
+    - Volume, average volume
+    - Market cap, shares outstanding
+    - PE ratio, EPS
+    - Price change and percent change
+
+    ## Response Format
+    ```json
+    {
+      "status": 200,
+      "message": "Batch quotes retrieved successfully (4 found, 0 not found)",
+      "data": {
+        "kind": "price#batchQuotes",
+        "payload": {
+          "data": {
+            "AAPL": {
+              "symbol": "AAPL",
+              "price": 185.50,
+              "changesPercentage": 1.25,
+              "change": 2.30,
+              "dayLow": 183.20,
+              "dayHigh": 186.10,
+              "yearHigh": 199.62,
+              "yearLow": 164.08,
+              "marketCap": 2890000000000,
+              "volume": 45000000,
+              ...
+            },
+            "MSFT": { ... }
+          },
+          "missing_tickers": []
+        }
+      }
+    }
+    ```
+
+    ## Notes
+    - **No caching**: Returns real-time price data
+    - Invalid/unknown tickers appear in `missing_tickers` array
+    - Tickers are auto-uppercased and deduplicated
+    """
+    return await get_batch_quotes_controller(tickers=request.tickers)

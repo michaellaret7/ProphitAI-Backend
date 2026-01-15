@@ -131,3 +131,55 @@ async def get_price_change_controller(tickers: List[str]) -> Dict[str, Any]:
         counts={"totalItems": len(payload), "currentItemCount": len(payload)},
         payload=payload,
     )
+
+
+@handle_controller_errors
+async def get_batch_quotes_controller(tickers: List[str]) -> Dict[str, Any]:
+    """
+    Controller to retrieve batch quote data for multiple tickers.
+
+    Uses FMP's native batch quote API which accepts comma-separated symbols.
+    No caching since this is real-time price data.
+
+    Args:
+        tickers: List of stock ticker symbols (max 20)
+
+    Returns:
+        Response envelope with batch quotes payload
+    """
+    fmp = FMP_API_DATA()
+
+    # Reason: Use FMP's native batch endpoint for efficiency
+    data = await asyncio.to_thread(fmp.get_batch_quote, tickers)
+
+    if not data:
+        data = []
+
+    # Build a map of ticker -> quote data for easy lookup
+    quotes_map: Dict[str, Dict[str, Any]] = {}
+    found_tickers: List[str] = []
+
+    for quote in data:
+        symbol = quote.get("symbol")
+        if symbol:
+            quotes_map[symbol] = quote
+            found_tickers.append(symbol)
+
+    # Identify missing tickers
+    missing_tickers = [t for t in tickers if t not in quotes_map]
+
+    return ok_envelope(
+        message=f"Batch quotes retrieved successfully ({len(found_tickers)} found, {len(missing_tickers)} not found)",
+        kind="price#batchQuotes",
+        resource_id=",".join(sorted(tickers)),
+        self_link="/api/price/quotes/batch",
+        counts={
+            "totalRequested": len(tickers),
+            "found": len(found_tickers),
+            "notFound": len(missing_tickers)
+        },
+        payload={
+            "data": quotes_map,
+            "missing_tickers": missing_tickers
+        },
+    )
