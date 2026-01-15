@@ -6,6 +6,7 @@ from .operations import (
     delete_portfolio_controller,
     get_user_portfolio_list_controller,
     get_portfolio_positions_controller,
+    get_batch_portfolio_positions_controller,
     rebalance_portfolio_controller,
     get_portfolio_preference_controller,
     create_portfolio_preference_controller,
@@ -32,6 +33,7 @@ __all__ = [
     "delete_portfolio_controller",
     "get_user_portfolio_list_controller",
     "get_portfolio_positions_controller",
+    "get_batch_portfolio_positions_controller",
     "rebalance_portfolio_controller",
     # Preferences
     "get_portfolio_preference_controller",

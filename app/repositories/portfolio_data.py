@@ -123,6 +123,77 @@ def retrieve_portfolio(email: str = None, clerk_id: str = None, user_id: uuid.UU
     portfolios = query.all()
     return _flatten_portfolio_to_legacy_format(portfolios, market_session)
 
+
+@with_sessions(user_session='user', market_session='market')
+def retrieve_portfolios_batch(
+    portfolio_ids: List[uuid.UUID],
+    user_session=None,
+    market_session=None
+) -> Dict[str, List[Dict]]:
+    """
+    Retrieve multiple portfolios with positions in a single optimized query.
+
+    Args:
+        portfolio_ids: List of portfolio UUIDs to retrieve
+
+    Returns:
+        Dict mapping portfolio_id (str) -> list of position dicts
+    """
+    if not portfolio_ids:
+        return {}
+
+    # Single query with eager loading for all portfolios
+    portfolios = user_session.query(Portfolio).options(
+        joinedload(Portfolio.items)
+    ).filter(Portfolio.id.in_(portfolio_ids)).all()
+
+    if not portfolios:
+        return {}
+
+    # Batch fetch all unique tickers across all portfolios
+    all_tickers = set()
+    for portfolio in portfolios:
+        for item in portfolio.items:
+            all_tickers.add(item.ticker)
+
+    ticker_map = {}
+    if all_tickers:
+        tickers = market_session.query(Ticker).filter(
+            Ticker.ticker.in_(list(all_tickers))
+        ).all()
+        ticker_map = {t.ticker: t for t in tickers}
+
+    # Build result dict: portfolio_id -> positions list
+    result = {}
+    for portfolio in portfolios:
+        portfolio_id = str(portfolio.id)
+        positions = []
+        for item in portfolio.items:
+            ticker_data = ticker_map.get(item.ticker)
+            positions.append({
+                'portfolio_id': portfolio_id,
+                'name': portfolio.name,
+                'nav': portfolio.nav,
+                'ticker': item.ticker,
+                'allocation': item.allocation,
+                'num_shares': item.num_shares,
+                'position_nav': item.position_nav,
+                'sector': ticker_data.sector if ticker_data else None,
+                'industry': ticker_data.industry if ticker_data else None,
+                'sub_industry': ticker_data.sub_industry if ticker_data else None,
+                'is_current': portfolio.is_current,
+                'is_discretionary': portfolio.is_discretionary,
+                'supporting_metrics': item.supporting_metrics,
+                'reason_for_rec': item.reason_for_rec,
+                'created_date': portfolio.created_date.isoformat() if portfolio.created_date else None,
+                'updated_date': item.updated_date.isoformat() if item.updated_date else None,
+                'user_id': str(portfolio.user_id),
+            })
+        result[portfolio_id] = positions
+
+    return result
+
+
 @with_sessions(user_session='user', market_session='market')
 def add_portfolio(
     portfolio,

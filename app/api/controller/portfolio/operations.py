@@ -2,6 +2,7 @@
 
 from fastapi import HTTPException
 from typing import Dict, Any, List, Optional
+import hashlib
 import uuid
 
 from app.db.core.db_config import UserSession
@@ -13,6 +14,7 @@ from app.redis.client import cache
 from app.utils.decorators.api_decorators import handle_controller_errors
 from app.repositories.portfolio_data import (
     retrieve_portfolio,
+    retrieve_portfolios_batch,
     get_portfolio_preference,
     create_portfolio_preference,
     update_portfolio_preference,
@@ -199,6 +201,64 @@ async def get_portfolio_positions_controller(
     await cache.set(cache_key, response, ttl=86400)
 
     return response
+
+
+@handle_controller_errors
+async def get_batch_portfolio_positions_controller(
+    *,
+    portfolio_ids: List[str],
+    user_id: str,
+) -> Dict[str, Any]:
+    """
+    Controller for batch portfolio positions retrieval with caching.
+
+    Optimized for dashboard loading - fetches all portfolios and their positions
+    in a single database query instead of making N separate requests.
+
+    Args:
+        portfolio_ids: List of portfolio UUIDs
+        user_id: Authenticated user ID
+
+    Returns:
+        Dict mapping portfolio_id to list of position dicts
+    """
+    if not portfolio_ids:
+        raise ValueError("portfolioIds is required")
+    if not user_id:
+        raise ValueError("userId is required")
+
+    # Verify ownership for all portfolios
+    for portfolio_id in portfolio_ids:
+        _verify_portfolio_ownership(portfolio_id, user_id)
+
+    # Generate cache key from sorted portfolio IDs
+    sorted_ids = sorted(portfolio_ids)
+    ids_str = ",".join(sorted_ids)
+    ids_hash = hashlib.md5(ids_str.encode()).hexdigest()[:12]
+    cache_key = f"portfolio:batch_positions:{ids_hash}"
+
+    cached_data = await cache.get(cache_key)
+    if cached_data:
+        return cached_data
+
+    # Fetch all portfolios in single optimized query
+    positions_by_portfolio = retrieve_portfolios_batch(
+        portfolio_ids=[uuid.UUID(pid) for pid in portfolio_ids]
+    )
+
+    response = ok_envelope(
+        message="Batch portfolio positions retrieved successfully",
+        kind="portfolio#batchPositions",
+        resource_id=ids_hash,
+        self_link="/api/portfolios/batch-positions",
+        payload=positions_by_portfolio,
+    )
+
+    # Cache for 24 hours (same as individual positions)
+    await cache.set(cache_key, response, ttl=86400)
+
+    return response
+
 
 @handle_controller_errors
 async def rebalance_portfolio_controller(

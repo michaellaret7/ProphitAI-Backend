@@ -11,6 +11,7 @@ from app.api.controller.portfolio import (
     get_batch_portfolio_returns_controller,
     get_portfolio_metrics_controller,
     get_portfolio_positions_controller,
+    get_batch_portfolio_positions_controller,
     get_portfolio_sector_concentration_controller,
     get_portfolio_industry_concentration_controller,
     get_portfolio_sub_industry_concentration_controller,
@@ -405,6 +406,33 @@ async def get_batch_portfolio_returns(
         portfolio_ids=portfolio_ids,
         user_id=user_id,
         years=years,
+    )
+
+
+@router.get("/portfolios/batch-positions")
+async def get_batch_portfolio_positions(
+    portfolioIds: str = Query(..., description="Comma-separated list of portfolio IDs"),
+    user_id: str = Depends(get_user_id_from_clerk),
+):
+    """
+    Get positions for multiple portfolios in a single request.
+
+    Optimized for dashboard loading - fetches all portfolios and their positions
+    in a single database query instead of making N separate requests.
+
+    Args:
+        portfolioIds: Comma-separated list of portfolio UUIDs
+
+    Returns:
+        Dict mapping portfolio_id to list of position dicts
+    """
+    portfolio_ids = [pid.strip() for pid in portfolioIds.split(",") if pid.strip()]
+    if not portfolio_ids:
+        raise HTTPException(status_code=400, detail="portfolioIds is required")
+
+    return await get_batch_portfolio_positions_controller(
+        portfolio_ids=portfolio_ids,
+        user_id=user_id,
     )
 
 
