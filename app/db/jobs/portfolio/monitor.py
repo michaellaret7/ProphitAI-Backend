@@ -236,6 +236,7 @@ class MonitorPortfolio:
             drift_result=allocation_drift_result,
             drawdown_result=drawdown_result,
             correlation_result=portfolio_correlation_result,
+            sector_allocation_preferences=self.preferences,
             drift_alerted=send_drift,
             drawdown_alerted=send_drawdown,
             correlation_alerted=send_correlation,

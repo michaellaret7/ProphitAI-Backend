@@ -413,6 +413,7 @@ def save_alert_state(
     drift_result: DriftResult,
     drawdown_result: DrawdownResult,
     correlation_result: PortfolioCorrelationResult,
+    sector_allocation_preferences: Optional[Dict[str, float]] = None,
     drift_alerted: bool = False,
     drawdown_alerted: bool = False,
     correlation_alerted: bool = False,
@@ -426,12 +427,15 @@ def save_alert_state(
     - last_checked_at: When detection last ran (always updated)
     - last_alerted_at: When alert was last sent (only updated if alert was sent)
 
+    Also stores sector allocation preferences for easy comparison with actual allocations.
+
     Args:
         session: SQLAlchemy session for the user database.
         portfolio_id: UUID of the portfolio to update.
         drift_result: Result from allocation drift detection.
         drawdown_result: Result from drawdown detection.
         correlation_result: Result from correlation detection.
+        sector_allocation_preferences: User's target sector allocation percentages.
         drift_alerted: Whether a drift alert was actually sent this run.
         drawdown_alerted: Whether a drawdown alert was actually sent this run.
         correlation_alerted: Whether a correlation alert was actually sent this run.
@@ -452,6 +456,7 @@ def save_alert_state(
     prev_drift_alerted = alert_state.get('drift', {}).get('last_alerted_at')
     alert_state['drift'] = {
         'result': drift_result.model_dump(),
+        'sector_allocation_preferences': sector_allocation_preferences,
         'last_checked_at': now_iso,
         'last_alerted_at': now_iso if drift_alerted else prev_drift_alerted
     }
