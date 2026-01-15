@@ -115,8 +115,8 @@ class ExecutionLoop:
             self.agent.messages = remove_system_messages(
                 self.agent.messages,
                 patterns=[
-                    "AVAILABLE NOTES IN NOTEBOOK", 
-                    "## THINK DEEPLY THIS ITERATION"
+                    "AVAILABLE NOTES IN NOTEBOOK",
+                    "## THINK DEEPLY AND REFLECT THIS ITERATION"
                 ]
             )
 

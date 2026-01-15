@@ -22,8 +22,8 @@ class PortfolioInsightsAgent(BaseAgent):
         self.system_prompt, self.user_prompt = build_prompts(portfolio_id)
 
         super().__init__(
-            provider="anthropic",
-            model="claude-haiku-4-5-20251001",
+            provider="openai",
+            model="gpt-5.2",
             system_prompt=self.system_prompt,
             user_prompt=self.user_prompt,
             max_iterations=200,

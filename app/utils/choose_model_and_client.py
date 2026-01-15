@@ -69,8 +69,8 @@ MODEL_ALIASES = {
         "fireworks": "accounts/fireworks/models/kimi-k2-instruct-0905",
     },
 
-    "glm-4-6": {
-        "fireworks": "accounts/fireworks/models/glm-4p6",
+    "glm-4-7": {
+        "together": "zai-org/GLM-4.7",
     }
 }
 
