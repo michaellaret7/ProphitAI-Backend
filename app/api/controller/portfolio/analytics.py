@@ -3,10 +3,11 @@
 import hashlib
 import json
 from datetime import datetime
-from typing import Dict, Any
+from typing import Dict, Any, List
 
 from app.services.portfolio import (
     PortfolioReturnsService,
+    BatchPortfolioReturnsService,
     PortfolioMetricsService,
     PortfolioConcentrationService,
     PortfolioPerformanceComparisonService,
@@ -373,5 +374,65 @@ async def get_portfolio_stress_returns_controller(
 
     # Cache for 1 hour (3600 seconds)
     await cache.set(cache_key, response, ttl=3600)
+
+    return response
+
+
+@handle_controller_errors
+async def get_batch_portfolio_returns_controller(
+    *,
+    portfolio_ids: List[str],
+    user_id: str,
+    years: int = 2,
+) -> Dict[str, Any]:
+    """
+    Controller to handle batch portfolio returns calculation with caching.
+
+    Optimized for dashboard loading - fetches price data once for all unique
+    tickers across all portfolios instead of N separate fetches.
+
+    Args:
+        portfolio_ids: List of portfolio UUIDs to compute returns for
+        user_id: User ID for ownership verification
+        years: Number of years of historical data (default 2)
+
+    Returns:
+        Dict with returns data for all portfolios
+    """
+    if not portfolio_ids:
+        raise ValueError("portfolioIds is required")
+    if not user_id:
+        raise ValueError("userId is required")
+
+    # Verify ownership for all portfolios
+    for portfolio_id in portfolio_ids:
+        _verify_portfolio_ownership(portfolio_id, user_id)
+
+    # Generate cache key from sorted portfolio IDs
+    sorted_ids = sorted(portfolio_ids)
+    ids_str = ",".join(sorted_ids)
+    ids_hash = hashlib.md5(ids_str.encode()).hexdigest()[:12]
+    cache_key = f"portfolio:batch_returns:{ids_hash}:{years}"
+
+    cached_data = await cache.get(cache_key)
+    if cached_data:
+        return cached_data
+
+    service = BatchPortfolioReturnsService(
+        portfolio_ids=portfolio_ids,
+        years=years
+    )
+    returns_data = service.get_all_returns()
+
+    response = ok_envelope(
+        message="Batch portfolio returns retrieved successfully",
+        kind="portfolio#batchReturns",
+        resource_id=ids_hash,
+        self_link=f"/api/portfolios/batch-returns",
+        payload=returns_data,
+    )
+
+    # Cache for 24 hours (same as individual returns)
+    await cache.set(cache_key, response, ttl=86400)
 
     return response

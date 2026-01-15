@@ -8,6 +8,7 @@ from app.api.controller.portfolio import (
     update_portfolio_controller,
     delete_portfolio_controller,
     get_portfolio_returns_controller,
+    get_batch_portfolio_returns_controller,
     get_portfolio_metrics_controller,
     get_portfolio_positions_controller,
     get_portfolio_sector_concentration_controller,
@@ -375,6 +376,37 @@ async def get_portfolio_returns(
         user_id=user_id,
         years=years,
     )
+
+
+@router.get("/portfolios/batch-returns")
+async def get_batch_portfolio_returns(
+    portfolioIds: str = Query(..., description="Comma-separated list of portfolio IDs"),
+    years: int = Query(3, description="Number of years of historical data", ge=1, le=10),
+    user_id: str = Depends(get_user_id_from_clerk),
+):
+    """
+    Get returns for multiple portfolios in a single request.
+
+    Optimized for dashboard loading - fetches price data once for all unique
+    tickers across portfolios instead of making N separate requests.
+
+    Args:
+        portfolioIds: Comma-separated list of portfolio UUIDs
+        years: Number of years of historical data (default 3)
+
+    Returns:
+        Dict mapping portfolio_id to returns time series
+    """
+    portfolio_ids = [pid.strip() for pid in portfolioIds.split(",") if pid.strip()]
+    if not portfolio_ids:
+        raise HTTPException(status_code=400, detail="portfolioIds is required")
+
+    return await get_batch_portfolio_returns_controller(
+        portfolio_ids=portfolio_ids,
+        user_id=user_id,
+        years=years,
+    )
+
 
 @router.get("/portfolios/{portfolioId}/metrics")
 async def get_portfolio_metrics(

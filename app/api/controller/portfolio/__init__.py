@@ -15,6 +15,7 @@ from .operations import (
 )
 from .analytics import (
     get_portfolio_returns_controller,
+    get_batch_portfolio_returns_controller,
     get_portfolio_metrics_controller,
     get_portfolio_sector_concentration_controller,
     get_portfolio_industry_concentration_controller,
@@ -41,6 +42,7 @@ __all__ = [
     "get_portfolio_alert_state_controller",
     # Analytics
     "get_portfolio_returns_controller",
+    "get_batch_portfolio_returns_controller",
     "get_portfolio_metrics_controller",
     "get_portfolio_sector_concentration_controller",
     "get_portfolio_industry_concentration_controller",
