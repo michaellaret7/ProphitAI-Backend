@@ -84,6 +84,9 @@ pdf2image>=1.17.0
 pytesseract>=0.3.10
 docling>=2.0.0
 
+# Excel Processing
+xlrd>=2.0.1
+
 # Additional Core Dependencies (required by main packages)
 anyio==4.9.0
 sniffio==1.3.1

@@ -8,6 +8,7 @@ import logging
 from pathlib import Path
 from typing import Optional
 
+from app.core.foundry.models.ingestion_output import Document
 import pymupdf
 from pdf2image import convert_from_path
 from pdf2image.exceptions import PDFPageCountError, PDFInfoNotInstalledError
@@ -65,7 +66,7 @@ class PDFIngestor:
         self.min_chars_per_page = min_chars_per_page
         self._docling_converter: Optional[DocumentConverter] = None
 
-    def process(self, file_path: str | Path) -> str:
+    def process(self, file_path: str | Path) -> Document:
         """
         Main entry point to get cleaned text from a PDF.
 
@@ -73,7 +74,7 @@ class PDFIngestor:
             file_path: Path to the PDF file.
 
         Returns:
-            Extracted text content from the PDF.
+            Document with content and metadata.
 
         Raises:
             FileNotFoundError: If the file does not exist.
@@ -85,19 +86,38 @@ class PDFIngestor:
 
         logger.info(f"Processing PDF: {path.name}")
 
+        extraction_method = "digital"
+        page_count = 0
+
         # Option 1: State-of-the-art layout-aware extraction
         if self.high_fidelity:
-            return self._extract_with_docling(str(path))
+            content, page_count = self._extract_with_docling(str(path))
+            extraction_method = "docling"
+        else:
+            # Option 2: Fast Digital Extraction
+            content, page_count = self._extract_digital_text(str(path))
 
-        # Option 2: Fast Digital Extraction
-        text, page_count = self._extract_digital_text(str(path))
+            # Fallback to OCR if digital text is insufficient
+            if self._needs_ocr(content, page_count) and self.use_ocr:
+                logger.info("Digital extraction insufficient, falling back to OCR")
+                content = self._extract_ocr_text(str(path))
+                extraction_method = "ocr"
 
-        # Fallback to OCR if digital text is insufficient
-        if self._needs_ocr(text, page_count) and self.use_ocr:
-            logger.info("Digital extraction insufficient, falling back to OCR")
-            text = self._extract_ocr_text(str(path))
+        metadata = {
+            "filename": path.name,
+            "extension": ".pdf",
+            "size_bytes": path.stat().st_size,
+            "char_count": len(content),
+            "page_count": page_count,
+            "extraction_method": extraction_method,
+            "high_fidelity": self.high_fidelity,
+        }
 
-        return text
+        return Document(
+            content=content,
+            metadata=metadata,
+            source=str(path.absolute()),
+        )
 
     def _extract_digital_text(self, pdf_path: str) -> tuple[str, int]:
         """
@@ -174,7 +194,7 @@ class PDFIngestor:
             logger.error(f"OCR extraction failed: {e}")
             raise RuntimeError(f"OCR extraction failed: {e}") from e
 
-    def _extract_with_docling(self, pdf_path: str) -> str:
+    def _extract_with_docling(self, pdf_path: str) -> tuple[str, int]:
         """
         Advanced extraction preserving layout and tables using Docling.
 
@@ -182,7 +202,7 @@ class PDFIngestor:
             pdf_path: Path to the PDF file.
 
         Returns:
-            Markdown-formatted text with preserved structure.
+            Tuple of (markdown-formatted text, page count).
 
         Raises:
             RuntimeError: If Docling extraction fails.
@@ -194,8 +214,13 @@ class PDFIngestor:
             result = converter.convert(pdf_path)
             markdown = result.document.export_to_markdown()
 
-            logger.debug(f"Docling extraction: {len(markdown)} chars")
-            return markdown
+            # Get page count using pymupdf (docling doesn't expose this directly)
+            doc = pymupdf.open(pdf_path)
+            page_count = len(doc)
+            doc.close()
+
+            logger.debug(f"Docling extraction: {len(markdown)} chars from {page_count} pages")
+            return markdown, page_count
 
         except Exception as e:
             logger.error(f"Docling extraction failed: {e}")
@@ -247,9 +272,4 @@ class PDFIngestor:
         return needs_ocr
 
 
-if __name__ == "__main__":
-    test_path = "app/core/foundry/test_docs/pdf_one.pdf"
 
-    ingestor = PDFIngestor(high_fidelity=True)
-    extracted_text = ingestor.process(test_path)
-    print(extracted_text)
