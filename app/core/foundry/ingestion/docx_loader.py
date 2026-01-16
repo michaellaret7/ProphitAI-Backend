@@ -1,102 +1,53 @@
 """
 Document ingestion module for RAG pipelines.
 
-Handles plain text file extraction for .txt, .md, .rst, .json, .csv, and similar formats.
+Handles plain text file extraction for .rst, .json, .csv, .xml, .yaml, and similar formats.
 """
 import logging
-from pathlib import Path
-
-from app.core.foundry.models.ingestion_output import Document
 
 logger = logging.getLogger(__name__)
 
-# Supported text-based file extensions
-SUPPORTED_EXTENSIONS: set[str] = {
-    ".txt", ".md", ".rst", ".json", ".csv", ".xml", ".yaml", ".yml",
-    ".html", ".htm", ".log", ".ini", ".cfg", ".conf", ".py", ".js",
-    ".ts", ".java", ".cpp", ".c", ".h", ".go", ".rs", ".sql"
-}
 
-
-class DocsIngestor:
+class DocsHandler:
     """
-    A simple document ingestion class for RAG pipelines.
+    Document extraction handler for RAG pipelines.
 
-    Handles plain text files with various extensions. Reads content
-    directly with configurable encoding.
+    Accepts bytes and decodes to text string for various text-based formats.
 
     Attributes:
-        encoding: File encoding (default: utf-8).
-        include_filename: Include filename as header in output.
+        encoding: File encoding for decoding bytes.
     """
 
-    def __init__(
-        self,
-        encoding: str = "utf-8",
-        include_filename: bool = False,
-    ) -> None:
+    def __init__(self, encoding: str = "utf-8") -> None:
         """
-        Initialize DocsIngestor with extraction options.
+        Initialize DocsHandler.
 
         Args:
-            encoding: File encoding for reading text files.
-            include_filename: Whether to include filename as header in output.
+            encoding: File encoding for decoding bytes.
         """
         self.encoding = encoding
-        self.include_filename = include_filename
 
-    def process(self, file_path: str | Path) -> Document:
+    def extract(self, data: bytes) -> str:
         """
-        Main entry point to extract text from a document file.
+        Extract text from bytes.
 
         Args:
-            file_path: Path to the document file.
+            data: Document file content as bytes.
 
         Returns:
-            Document with content and metadata.
+            Decoded text content.
 
         Raises:
-            FileNotFoundError: If the file does not exist.
-            ValueError: If the file format is not supported.
-            RuntimeError: If extraction fails.
+            RuntimeError: If decoding fails.
         """
-        path = Path(file_path)
-        if not path.exists():
-            raise FileNotFoundError(f"File not found: {file_path}")
-
-        suffix = path.suffix.lower()
-        if suffix not in SUPPORTED_EXTENSIONS:
-            logger.warning(f"Extension {suffix} not in known list, attempting read anyway")
-
-        logger.info(f"Processing document: {path.name}")
-
         try:
-            content = path.read_text(encoding=self.encoding)
-
-            if self.include_filename:
-                content = f"--- File: {path.name} ---\n{content}"
-
-            metadata = {
-                "filename": path.name,
-                "extension": suffix,
-                "size_bytes": path.stat().st_size,
-                "char_count": len(content),
-            }
-
-            logger.debug(f"Extracted {len(content)} chars from {path.name}")
-
-            return Document(
-                content=content,
-                metadata=metadata,
-                source=str(path.absolute()),
-            )
+            content = data.decode(self.encoding)
+            logger.debug(f"Decoded {len(content)} chars using {self.encoding}")
+            return content
 
         except UnicodeDecodeError as e:
-            logger.error(f"Encoding error reading {path.name}: {e}")
+            logger.error(f"Encoding error: {e}")
             raise RuntimeError(
-                f"Failed to decode {path.name} with encoding '{self.encoding}'. "
+                f"Failed to decode with encoding '{self.encoding}'. "
                 f"Try a different encoding."
             ) from e
-        except Exception as e:
-            logger.error(f"Document extraction failed: {e}")
-            raise RuntimeError(f"Failed to extract document: {e}") from e

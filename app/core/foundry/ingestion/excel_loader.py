@@ -5,9 +5,8 @@ Handles .xlsx and .xls file extraction with support for merged cells,
 formulas, and multiple sheets. Outputs plain text or markdown tables.
 """
 import logging
-from pathlib import Path
+from io import BytesIO
 
-from app.core.foundry.models.ingestion_output import Document
 from openpyxl import load_workbook
 from openpyxl.worksheet.worksheet import Worksheet
 from openpyxl.cell.cell import MergedCell
@@ -16,11 +15,11 @@ import xlrd
 logger = logging.getLogger(__name__)
 
 
-class ExcelIngestor:
+class ExcelHandler:
     """
-    A unified Excel ingestion class for RAG pipelines.
+    Excel extraction handler for RAG pipelines.
 
-    Handles .xlsx and .xls files with support for:
+    Accepts bytes and extracts text from .xlsx and .xls files with support for:
     - Multiple sheets
     - Merged cells (value propagation)
     - Formula evaluation (computed values)
@@ -39,7 +38,7 @@ class ExcelIngestor:
         skip_empty_rows: bool = True,
     ) -> None:
         """
-        Initialize ExcelIngestor with extraction options.
+        Initialize ExcelHandler.
 
         Args:
             output_format: "text" for plain text, "markdown" for table format.
@@ -53,68 +52,47 @@ class ExcelIngestor:
         self.include_sheet_names = include_sheet_names
         self.skip_empty_rows = skip_empty_rows
 
-    def process(self, file_path: str | Path) -> Document:
+    def extract(self, data: bytes, extension: str = ".xlsx") -> str:
         """
-        Main entry point to extract text from an Excel file.
+        Extract text from Excel bytes.
 
         Args:
-            file_path: Path to the Excel file (.xlsx or .xls).
+            data: Excel file content as bytes.
+            extension: File extension to determine format (.xlsx or .xls).
 
         Returns:
-            Document with content and metadata.
+            Extracted text content.
 
         Raises:
-            FileNotFoundError: If the file does not exist.
             ValueError: If the file format is not supported.
             RuntimeError: If extraction fails.
         """
-        path = Path(file_path)
-        if not path.exists():
-            raise FileNotFoundError(f"File not found: {file_path}")
+        extension = extension.lower()
 
-        suffix = path.suffix.lower()
-        logger.info(f"Processing Excel file: {path.name}")
-
-        if suffix == ".xlsx":
-            content, sheet_count = self._extract_xlsx(path)
-        elif suffix == ".xls":
-            content, sheet_count = self._extract_xls(path)
+        if extension == ".xlsx":
+            return self._extract_xlsx(data)
+        elif extension == ".xls":
+            return self._extract_xls(data)
         else:
-            raise ValueError(f"Unsupported file format: {suffix}. Expected .xlsx or .xls")
+            raise ValueError(f"Unsupported file format: {extension}. Expected .xlsx or .xls")
 
-        metadata = {
-            "filename": path.name,
-            "extension": suffix,
-            "size_bytes": path.stat().st_size,
-            "char_count": len(content),
-            "sheet_count": sheet_count,
-            "output_format": self.output_format,
-        }
-
-        return Document(
-            content=content,
-            metadata=metadata,
-            source=str(path.absolute()),
-        )
-
-    def _extract_xlsx(self, file_path: Path) -> tuple[str, int]:
+    def _extract_xlsx(self, data: bytes) -> str:
         """
-        Extract text from .xlsx files using openpyxl.
+        Extract text from .xlsx bytes using openpyxl.
 
         Args:
-            file_path: Path to the .xlsx file.
+            data: XLSX file content as bytes.
 
         Returns:
-            Tuple of (extracted text content, sheet count).
+            Extracted text content.
 
         Raises:
             RuntimeError: If extraction fails.
         """
         try:
             # Reason: data_only=True returns computed formula values instead of formulas
-            wb = load_workbook(file_path, data_only=True)
+            wb = load_workbook(BytesIO(data), data_only=True)
             sheets_output: list[str] = []
-            sheet_count = len(wb.sheetnames)
 
             for sheet_name in wb.sheetnames:
                 ws = wb[sheet_name]
@@ -125,8 +103,8 @@ class ExcelIngestor:
             wb.close()
 
             result = "\n\n".join(sheets_output)
-            logger.debug(f"Extracted {len(result)} chars from {sheet_count} sheets")
-            return result, sheet_count
+            logger.debug(f"Extracted {len(result)} chars from {len(wb.sheetnames)} sheets")
+            return result
 
         except Exception as e:
             logger.error(f"XLSX extraction failed: {e}")
@@ -143,7 +121,6 @@ class ExcelIngestor:
         Returns:
             Extracted text from the sheet.
         """
-        # Build merged cell map for value propagation
         merged_values = self._build_merged_cell_map(ws)
 
         rows_data: list[list[str]] = []
@@ -153,7 +130,6 @@ class ExcelIngestor:
                 value = self._get_cell_value(cell, merged_values)
                 row_values.append(value)
 
-            # Skip empty rows if configured
             if self.skip_empty_rows and not any(v.strip() for v in row_values):
                 continue
 
@@ -162,7 +138,6 @@ class ExcelIngestor:
         if not rows_data:
             return ""
 
-        # Format output
         if self.output_format == "markdown":
             return self._format_as_markdown(rows_data, sheet_name)
         else:
@@ -184,11 +159,9 @@ class ExcelIngestor:
         merged_values: dict[str, str] = {}
 
         for merged_range in ws.merged_cells.ranges:
-            # Get the top-left cell value
             top_left = ws.cell(merged_range.min_row, merged_range.min_col)
             value = str(top_left.value) if top_left.value is not None else ""
 
-            # Map all cells in the range to this value
             for row in range(merged_range.min_row, merged_range.max_row + 1):
                 for col in range(merged_range.min_col, merged_range.max_col + 1):
                     coord = f"{row},{col}"
@@ -209,46 +182,42 @@ class ExcelIngestor:
         """
         coord = f"{cell.row},{cell.column}"
 
-        # Check if this is a merged cell
         if coord in merged_values:
             return merged_values[coord]
 
-        # Handle MergedCell type (these have no value attribute)
         if isinstance(cell, MergedCell):
             return ""
 
-        # Normal cell
         if cell.value is None:
             return ""
         return str(cell.value)
 
-    def _extract_xls(self, file_path: Path) -> tuple[str, int]:
+    def _extract_xls(self, data: bytes) -> str:
         """
-        Extract text from legacy .xls files using xlrd.
+        Extract text from legacy .xls bytes using xlrd.
 
         Args:
-            file_path: Path to the .xls file.
+            data: XLS file content as bytes.
 
         Returns:
-            Tuple of (extracted text content, sheet count).
+            Extracted text content.
 
         Raises:
             RuntimeError: If extraction fails.
         """
         try:
-            wb = xlrd.open_workbook(str(file_path))
+            wb = xlrd.open_workbook(file_contents=data)
             sheets_output: list[str] = []
-            sheet_count = wb.nsheets
 
-            for sheet_idx in range(sheet_count):
+            for sheet_idx in range(wb.nsheets):
                 sheet = wb.sheet_by_index(sheet_idx)
                 sheet_text = self._extract_sheet_xls(sheet)
                 if sheet_text.strip():
                     sheets_output.append(sheet_text)
 
             result = "\n\n".join(sheets_output)
-            logger.debug(f"Extracted {len(result)} chars from {sheet_count} sheets")
-            return result, sheet_count
+            logger.debug(f"Extracted {len(result)} chars from {wb.nsheets} sheets")
+            return result
 
         except Exception as e:
             logger.error(f"XLS extraction failed: {e}")
@@ -273,7 +242,6 @@ class ExcelIngestor:
                 value = str(cell_value) if cell_value else ""
                 row_values.append(value)
 
-            # Skip empty rows if configured
             if self.skip_empty_rows and not any(v.strip() for v in row_values):
                 continue
 
@@ -282,7 +250,6 @@ class ExcelIngestor:
         if not rows_data:
             return ""
 
-        # Format output
         if self.output_format == "markdown":
             return self._format_as_markdown(rows_data, sheet.name)
         else:
@@ -305,7 +272,6 @@ class ExcelIngestor:
             output.append(f"--- Sheet: {sheet_name} ---")
 
         for row in rows:
-            # Join non-empty cells with spaces
             row_text = " | ".join(v for v in row if v.strip())
             if row_text.strip():
                 output.append(row_text)
@@ -332,20 +298,14 @@ class ExcelIngestor:
             output.append(f"## {sheet_name}")
             output.append("")
 
-        # Calculate column widths for alignment
         num_cols = max(len(row) for row in rows)
-
-        # Normalize row lengths
         normalized_rows = [row + [""] * (num_cols - len(row)) for row in rows]
 
-        # First row as header
         header = normalized_rows[0]
         output.append("| " + " | ".join(h if h.strip() else "-" for h in header) + " |")
         output.append("| " + " | ".join("---" for _ in header) + " |")
 
-        # Data rows
         for row in normalized_rows[1:]:
             output.append("| " + " | ".join(v if v.strip() else "-" for v in row) + " |")
 
         return "\n".join(output)
-

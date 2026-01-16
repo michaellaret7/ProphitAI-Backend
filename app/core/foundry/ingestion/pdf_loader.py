@@ -5,10 +5,9 @@ Handles digital extraction, OCR fallback, and structured output.
 Uses PyMuPDF for fast digital extraction and Docling for layout-aware processing.
 """
 import logging
-from pathlib import Path
+import tempfile
 from typing import Optional
 
-from app.core.foundry.models.ingestion_output import Document
 import pymupdf
 from pdf2image import convert_from_path
 from pdf2image.exceptions import PDFPageCountError, PDFInfoNotInstalledError
@@ -19,28 +18,24 @@ from docling.document_converter import PdfFormatOption
 from docling.datamodel.pipeline_options import PdfPipelineOptions
 import warnings
 
-# Suppress warnings
 warnings.filterwarnings("ignore", category=RuntimeWarning)
 
-# Configure logging
-logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-# Configuration constants
 MIN_CHARS_PER_PAGE: int = 50
 DEFAULT_OCR_LANG: str = "eng"
 
-class PDFIngestor:
-    """
-    A unified PDF ingestion class for RAG pipelines.
 
-    Handles digital extraction, OCR fallback, and structured Markdown output.
-    Uses PyMuPDF for fast digital extraction (570x faster than pypdf).
+class PDFHandler:
+    """
+    PDF extraction handler for RAG pipelines.
+
+    Accepts bytes and extracts text using PyMuPDF (fast) or Docling (high-fidelity).
+    For Docling, bytes are written to a temp file since Docling requires a file path.
 
     Attributes:
         use_ocr: Whether to fall back to OCR for scanned documents.
         ocr_lang: Language code for OCR (default: "eng").
-        high_fidelity: Use Docling for layout-aware extraction.
         min_chars_per_page: Minimum characters per page before triggering OCR fallback.
     """
 
@@ -48,83 +43,54 @@ class PDFIngestor:
         self,
         use_ocr: bool = True,
         ocr_lang: str = DEFAULT_OCR_LANG,
-        high_fidelity: bool = False,
         min_chars_per_page: int = MIN_CHARS_PER_PAGE,
     ) -> None:
         """
-        Initialize PDFIngestor with extraction options.
+        Initialize PDFHandler.
 
         Args:
             use_ocr: Enable OCR fallback for scanned documents.
             ocr_lang: Tesseract language code for OCR.
-            high_fidelity: Use Docling for layout-aware extraction.
             min_chars_per_page: Threshold for OCR fallback detection.
         """
         self.use_ocr = use_ocr
         self.ocr_lang = ocr_lang
-        self.high_fidelity = high_fidelity
         self.min_chars_per_page = min_chars_per_page
         self._docling_converter: Optional[DocumentConverter] = None
 
-    def process(self, file_path: str | Path) -> Document:
+    def extract(self, data: bytes, high_fidelity: bool = False) -> str:
         """
-        Main entry point to get cleaned text from a PDF.
+        Extract text from PDF bytes.
 
         Args:
-            file_path: Path to the PDF file.
+            data: PDF file content as bytes.
+            high_fidelity: Use Docling for layout-aware extraction.
 
         Returns:
-            Document with content and metadata.
+            Extracted text content.
 
         Raises:
-            FileNotFoundError: If the file does not exist.
-            RuntimeError: If extraction fails completely.
+            RuntimeError: If extraction fails.
         """
-        path = Path(file_path)
-        if not path.exists():
-            raise FileNotFoundError(f"File not found: {file_path}")
+        if high_fidelity:
+            return self._extract_with_docling(data)
 
-        logger.info(f"Processing PDF: {path.name}")
+        # Fast digital extraction with PyMuPDF
+        text, page_count = self._extract_digital(data)
 
-        extraction_method = "digital"
-        page_count = 0
+        # Fallback to OCR if digital text is insufficient
+        if self._needs_ocr(text, page_count) and self.use_ocr:
+            logger.info("Digital extraction insufficient, falling back to OCR")
+            text = self._extract_ocr(data)
 
-        # Option 1: State-of-the-art layout-aware extraction
-        if self.high_fidelity:
-            content, page_count = self._extract_with_docling(str(path))
-            extraction_method = "docling"
-        else:
-            # Option 2: Fast Digital Extraction
-            content, page_count = self._extract_digital_text(str(path))
+        return text
 
-            # Fallback to OCR if digital text is insufficient
-            if self._needs_ocr(content, page_count) and self.use_ocr:
-                logger.info("Digital extraction insufficient, falling back to OCR")
-                content = self._extract_ocr_text(str(path))
-                extraction_method = "ocr"
-
-        metadata = {
-            "filename": path.name,
-            "extension": ".pdf",
-            "size_bytes": path.stat().st_size,
-            "char_count": len(content),
-            "page_count": page_count,
-            "extraction_method": extraction_method,
-            "high_fidelity": self.high_fidelity,
-        }
-
-        return Document(
-            content=content,
-            metadata=metadata,
-            source=str(path.absolute()),
-        )
-
-    def _extract_digital_text(self, pdf_path: str) -> tuple[str, int]:
+    def _extract_digital(self, data: bytes) -> tuple[str, int]:
         """
         Fast extraction using PyMuPDF for selectable text.
 
         Args:
-            pdf_path: Path to the PDF file.
+            data: PDF file content as bytes.
 
         Returns:
             Tuple of (extracted text, page count).
@@ -133,7 +99,7 @@ class PDFIngestor:
             RuntimeError: If PyMuPDF extraction fails.
         """
         try:
-            doc = pymupdf.open(pdf_path)
+            doc = pymupdf.open(stream=data, filetype="pdf")
             page_count = len(doc)
             full_text: list[str] = []
 
@@ -145,21 +111,19 @@ class PDFIngestor:
             doc.close()
 
             extracted = "\n".join(full_text)
-            logger.debug(
-                f"Digital extraction: {len(extracted)} chars from {page_count} pages"
-            )
+            logger.debug(f"Digital extraction: {len(extracted)} chars from {page_count} pages")
             return extracted, page_count
 
         except Exception as e:
             logger.error(f"Digital extraction failed: {e}")
             raise RuntimeError(f"PyMuPDF extraction failed: {e}") from e
 
-    def _extract_ocr_text(self, pdf_path: str) -> str:
+    def _extract_ocr(self, data: bytes) -> str:
         """
         Fallback OCR for scanned documents using Tesseract.
 
         Args:
-            pdf_path: Path to the PDF file.
+            data: PDF file content as bytes.
 
         Returns:
             OCR-extracted text content.
@@ -167,19 +131,24 @@ class PDFIngestor:
         Raises:
             RuntimeError: If OCR extraction fails.
         """
-        logger.info(f"Running OCR on {Path(pdf_path).name}...")
+        logger.info("Running OCR extraction...")
 
+        # Reason: pdf2image requires a file path, so we use a temp file
         try:
-            pages = convert_from_path(pdf_path)
-            text_output: list[str] = []
+            with tempfile.NamedTemporaryFile(suffix=".pdf", delete=True) as tmp:
+                tmp.write(data)
+                tmp.flush()
 
-            for i, page in enumerate(pages):
-                text = pytesseract.image_to_string(page, lang=self.ocr_lang)
-                text_output.append(f"--- Page {i + 1} (OCR) ---\n{text}")
+                pages = convert_from_path(tmp.name)
+                text_output: list[str] = []
 
-            extracted = "\n".join(text_output)
-            logger.debug(f"OCR extraction: {len(extracted)} chars from {len(pages)} pages")
-            return extracted
+                for i, page in enumerate(pages):
+                    text = pytesseract.image_to_string(page, lang=self.ocr_lang)
+                    text_output.append(f"--- Page {i + 1} (OCR) ---\n{text}")
+
+                extracted = "\n".join(text_output)
+                logger.debug(f"OCR extraction: {len(extracted)} chars from {len(pages)} pages")
+                return extracted
 
         except PDFInfoNotInstalledError as e:
             logger.error("Poppler not installed - required for pdf2image")
@@ -194,33 +163,35 @@ class PDFIngestor:
             logger.error(f"OCR extraction failed: {e}")
             raise RuntimeError(f"OCR extraction failed: {e}") from e
 
-    def _extract_with_docling(self, pdf_path: str) -> tuple[str, int]:
+    def _extract_with_docling(self, data: bytes) -> str:
         """
         Advanced extraction preserving layout and tables using Docling.
 
+        Docling requires a file path, so bytes are written to a temp file.
+
         Args:
-            pdf_path: Path to the PDF file.
+            data: PDF file content as bytes.
 
         Returns:
-            Tuple of (markdown-formatted text, page count).
+            Markdown-formatted text with preserved structure.
 
         Raises:
             RuntimeError: If Docling extraction fails.
         """
-        logger.info(f"Running Docling extraction on {Path(pdf_path).name}...")
+        logger.info("Running Docling extraction (high-fidelity mode)...")
 
         try:
-            converter = self._get_docling_converter()
-            result = converter.convert(pdf_path)
-            markdown = result.document.export_to_markdown()
+            # Reason: Docling requires a file path, cannot work with bytes directly
+            with tempfile.NamedTemporaryFile(suffix=".pdf", delete=True) as tmp:
+                tmp.write(data)
+                tmp.flush()
 
-            # Get page count using pymupdf (docling doesn't expose this directly)
-            doc = pymupdf.open(pdf_path)
-            page_count = len(doc)
-            doc.close()
+                converter = self._get_docling_converter()
+                result = converter.convert(tmp.name)
+                markdown = result.document.export_to_markdown()
 
-            logger.debug(f"Docling extraction: {len(markdown)} chars from {page_count} pages")
-            return markdown, page_count
+                logger.debug(f"Docling extraction: {len(markdown)} chars")
+                return markdown
 
         except Exception as e:
             logger.error(f"Docling extraction failed: {e}")
@@ -270,6 +241,3 @@ class PDFIngestor:
             )
 
         return needs_ocr
-
-
-
