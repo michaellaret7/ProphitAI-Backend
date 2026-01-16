@@ -1,77 +1,46 @@
-"""Test script for batch quotes endpoint."""
+import pandas as pd
+import numpy as np
+from datetime import datetime, timedelta
 
-import asyncio
-from app.api.controller.price import get_batch_quotes_controller
+def generate_mock_stock_excel(filename="mock_stock_data.xlsx", num_days=100):
+    tickers = ["AAPL", "GOOGL", "MSFT", "AMZN", "TSLA"]
+    data = []
 
+    # Generate dates for the last X days
+    end_date = datetime.now()
+    start_date = end_date - timedelta(days=num_days)
+    date_range = pd.date_range(start=start_date, end=end_date, freq='B') # Business days
 
-async def test_batch_quotes():
-    """Test the batch quotes controller."""
+    for ticker in tickers:
+        # Starting price for the simulation
+        current_price = np.random.uniform(100, 500)
+        
+        for date in date_range:
+            # Simulate a daily price walk (random walk)
+            change = np.random.normal(0, 0.02) # 2% standard deviation
+            open_p = current_price * (1 + change)
+            close_p = open_p * (1 + np.random.normal(0, 0.01))
+            high_p = max(open_p, close_p) * (1 + abs(np.random.normal(0, 0.005)))
+            low_p = min(open_p, close_p) * (1 - abs(np.random.normal(0, 0.005)))
+            volume = np.random.randint(1000000, 10000000)
 
-    # Test with valid stock symbols
-    tickers = ["AAPL", "MSFT", "GOOGL", "NVDA"]
+            data.append([
+                ticker, 
+                date.strftime('%Y-%m-%d'), 
+                round(open_p, 2), 
+                round(high_p, 2), 
+                round(low_p, 2), 
+                round(close_p, 2), 
+                volume
+            ])
+            current_price = close_p # Next day starts where today ended
 
-    print("="*60)
-    print("Testing Batch Quotes Endpoint")
-    print("="*60)
-    print(f"\nRequesting quotes for: {tickers}")
+    # Create DataFrame
+    df = pd.DataFrame(data, columns=["Ticker", "Date", "Open", "High", "Low", "Close", "Volume"])
 
-    result = await get_batch_quotes_controller(tickers=tickers)
-
-    print(f"\nStatus: {result.get('status')}")
-    print(f"Message: {result.get('message')}")
-
-    data = result.get('data', {})
-    payload = data.get('payload', {})
-    quotes_data = payload.get('data', {})
-    missing = payload.get('missing_tickers', [])
-
-    print(f"\nFound: {len(quotes_data)} quotes")
-    print(f"Missing: {len(missing)} tickers")
-
-    if missing:
-        print(f"Missing tickers: {missing}")
-
-    print("\n" + "-"*60)
-    print("Quote Details:")
-    print("-"*60)
-
-    for symbol, quote in quotes_data.items():
-        print(f"\n{symbol}:")
-        print(f"  Price: ${quote.get('price', 'N/A')}")
-        print(f"  Change: {quote.get('change', 'N/A')} ({quote.get('changesPercentage', 'N/A')}%)")
-        print(f"  Day Range: ${quote.get('dayLow', 'N/A')} - ${quote.get('dayHigh', 'N/A')}")
-        print(f"  Volume: {quote.get('volume', 'N/A'):,}")
-        print(f"  Market Cap: ${quote.get('marketCap', 0):,.0f}")
-
-
-async def test_with_invalid_ticker():
-    """Test with a mix of valid and invalid tickers."""
-
-    tickers = ["AAPL", "INVALID_TICKER_XYZ", "MSFT"]
-
-    print("\n" + "="*60)
-    print("Testing with Invalid Ticker")
-    print("="*60)
-    print(f"\nRequesting quotes for: {tickers}")
-
-    result = await get_batch_quotes_controller(tickers=tickers)
-
-    data = result.get('data', {})
-    payload = data.get('payload', {})
-    quotes_data = payload.get('data', {})
-    missing = payload.get('missing_tickers', [])
-
-    print(f"\nFound: {len(quotes_data)} quotes: {list(quotes_data.keys())}")
-    print(f"Missing: {len(missing)} tickers: {missing}")
-
-
-async def main():
-    await test_batch_quotes()
-    await test_with_invalid_ticker()
-    print("\n" + "="*60)
-    print("All tests completed!")
-    print("="*60)
-
+    # Save to Excel
+    df.to_excel(filename, index=False)
+    print(f"Successfully created '{filename}' with {len(df)} rows.")
 
 if __name__ == "__main__":
-    asyncio.run(main())
+    generate_mock_stock_excel()

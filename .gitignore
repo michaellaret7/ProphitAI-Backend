@@ -8,3 +8,6 @@ testing/FinalSectorSheet.xlsx
 git_helper.md
 agent_output/
 live_quotes.csv
+
+*.pdf
+*.xlsx
