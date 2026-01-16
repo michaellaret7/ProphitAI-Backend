@@ -50,7 +50,8 @@
       "WebFetch(domain:www.anthropic.com)",
       "WebFetch(domain:microsoft.github.io)",
       "WebFetch(domain:www.promptingguide.ai)",
-      "WebFetch(domain:www.comet.com)"
+      "WebFetch(domain:www.comet.com)",
+      "Bash(echo:*)"
     ],
     "deny": [],
     "ask": []

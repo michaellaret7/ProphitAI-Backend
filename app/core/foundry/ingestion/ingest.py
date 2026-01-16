@@ -53,7 +53,6 @@ class Ingestor:
         self._pdf_handler = None
         self._excel_handler = None
         self._text_handler = None
-        self._docs_handler = None
 
     @property
     def s3_client(self):
@@ -236,8 +235,6 @@ class Ingestor:
             return self._get_excel_handler().extract(data, extension)
         elif handler_type == "text":
             return self._get_text_handler().extract(data)
-        elif handler_type == "docs":
-            return self._get_docs_handler().extract(data)
         else:
             raise ValueError(f"Unknown handler type: {handler_type}")
 
@@ -313,12 +310,6 @@ class Ingestor:
             from app.core.foundry.ingestion.text_loader import TextHandler
             self._text_handler = TextHandler()
         return self._text_handler
-
-    def _get_docs_handler(self):
-        if self._docs_handler is None:
-            from app.core.foundry.ingestion.docx_loader import DocsHandler
-            self._docs_handler = DocsHandler()
-        return self._docs_handler
 
 
 if __name__ == "__main__":

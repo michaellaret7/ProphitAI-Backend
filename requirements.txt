@@ -128,3 +128,6 @@ frozendict==2.4.6
 sseclient-py==1.8.0
 msgpack==1.1.1
 nest-asyncio==1.6.0
+# Document ingestion dependencies
+openpyxl>=3.1.0
+boto3>=1.28.0
