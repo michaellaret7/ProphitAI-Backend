@@ -10,7 +10,7 @@ from typing import Optional
 import boto3
 from botocore.exceptions import ClientError
 
-from app.core.foundry.models.ingestion_output import Document
+from app.core.foundry.models.document import Document
 from app.core.foundry.ingestion.config import SUPPORTED_EXTENSIONS
 
 from dotenv import load_dotenv
@@ -314,6 +314,6 @@ class Ingestor:
 
 if __name__ == "__main__":
     ingestor = Ingestor()
-    document = ingestor.process("https://prophitai-s3-bucket.s3.us-east-1.amazonaws.com/pdfs/pdf_one.pdf")
+    document = ingestor.process("https://prophitai-s3-bucket.s3.us-east-1.amazonaws.com/pdfs/Kerrisdale-CoreWeave-09-2025.pdf")
     print(f"Metadata: {document.metadata}")
     print(f"Content preview: {document.content}...")

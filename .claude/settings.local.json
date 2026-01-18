@@ -51,7 +51,11 @@
       "WebFetch(domain:microsoft.github.io)",
       "WebFetch(domain:www.promptingguide.ai)",
       "WebFetch(domain:www.comet.com)",
-      "Bash(echo:*)"
+      "Bash(echo:*)",
+      "WebFetch(domain:developers.llamaindex.ai)",
+      "WebFetch(domain:github.com)",
+      "WebFetch(domain:docs.chonkie.ai)",
+      "WebFetch(domain:arxiv.org)"
     ],
     "deny": [],
     "ask": []

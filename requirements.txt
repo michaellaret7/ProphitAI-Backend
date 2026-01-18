@@ -43,6 +43,10 @@ redis>=5.0.0
 openai==1.98.0
 tiktoken==0.9.0
 instructor==1.10.0
+llama-index-core>=0.12.0
+
+# Text Chunking
+chonkie[semantic,voyageai]>=1.0.0
 
 # Search APIs
 exa-py>=1.0.0
