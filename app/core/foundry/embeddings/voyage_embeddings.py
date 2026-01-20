@@ -6,32 +6,38 @@ Generates embeddings from text chunks using Voyage AI's finance-optimized model.
 
 import os
 
+from typing import Optional
 import voyageai  # type: ignore[import-untyped]
 from dotenv import load_dotenv
 
+from pydantic import BaseModel
+
 from app.core.foundry.models.chunk import Chunk
+from app.core.foundry.embeddings.sparse_encoder import SparseEncoder
 
 load_dotenv()
-
 
 def embed_chunks(
     chunks: list[Chunk],
     model: str = "voyage-finance-2",
+    sparse_encoder: Optional[SparseEncoder] = None,
     batch_size: int = 512,
 ) -> list[Chunk]:
     """
     Embed a list of chunks using Voyage AI.
 
-    Populates the embedding field on each Chunk object.
+    Populates the embedding field on each Chunk object. Optionally generates
+    sparse embeddings for hybrid search when a sparse_encoder is provided.
 
     Args:
         chunks: List of Chunk objects from the chunking pipeline.
         model: Voyage AI model. Default "voyage-finance-2".
             Options: voyage-finance-2, voyage-3, voyage-3-lite.
-        batch_size: Texts per API call. Default 128 (Voyage max).
+        sparse_encoder: Optional SparseEncoder for generating BM25 sparse vectors.
+        batch_size: Texts per API call. Default 512.
 
     Returns:
-        List of Chunk objects with embedding field populated.
+        List of Chunk objects with embedding (and optionally sparse_embedding) populated.
 
     Raises:
         ValueError: If VOYAGE_API_KEY is not set.
@@ -59,7 +65,15 @@ def embed_chunks(
         for emb in response.embeddings:
             all_embeddings.append([float(x) for x in emb])
 
-    # Reason: Return new Chunk objects with embedding populated
+    # Reason: Generate sparse embeddings if encoder provided
+    sparse_embeddings: list[dict | None] = []
+    if sparse_encoder is not None:
+        for chunk in chunks:
+            sparse_embeddings.append(sparse_encoder.encode(chunk.text))
+    else:
+        sparse_embeddings = [None] * len(chunks)
+
+    # Reason: Return new Chunk objects with embeddings populated
     return [
         Chunk(
             text=chunk.text,
@@ -68,26 +82,36 @@ def embed_chunks(
             token_count=chunk.token_count,
             metadata=chunk.metadata,
             embedding=embedding,
+            sparse_embedding=sparse_emb,
         )
-        for chunk, embedding in zip(chunks, all_embeddings)
+        for chunk, embedding, sparse_emb in zip(chunks, all_embeddings, sparse_embeddings)
     ]
+
+class QueryEmbedding(BaseModel):
+    """Result of embedding a query for hybrid search."""
+
+    dense: list[float]
+    sparse: Optional[dict] = None
 
 def embed_query(
     text: str,
     model: str = "voyage-finance-2",
-) -> list[float]:
+    sparse_encoder: Optional[SparseEncoder] = None,
+) -> QueryEmbedding:
     """
     Embed a query string for similarity search.
 
     Uses input_type="query" which Voyage recommends for search queries
-    (vs "document" for content being indexed).
+    (vs "document" for content being indexed). Optionally generates a sparse
+    vector for hybrid search when a sparse_encoder is provided.
 
     Args:
         text: Query text to embed.
         model: Voyage AI model. Default "voyage-finance-2".
+        sparse_encoder: Optional SparseEncoder for generating BM25 sparse query vector.
 
     Returns:
-        Embedding vector as list of floats.
+        QueryEmbedding with dense vector and optionally sparse vector.
 
     Raises:
         ValueError: If VOYAGE_API_KEY is not set.
@@ -102,7 +126,13 @@ def embed_query(
         model=model,
         input_type="query",
     )
-    return [float(x) for x in response.embeddings[0]]
+    dense = [float(x) for x in response.embeddings[0]]
+
+    sparse = None
+    if sparse_encoder is not None:
+        sparse = sparse_encoder.encode_query(text)
+
+    return QueryEmbedding(dense=dense, sparse=sparse)
 
 
 

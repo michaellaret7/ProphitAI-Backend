@@ -1,6 +1,0 @@
-model: text-embedding-3-large
-dim: 3072
-chunks: 65
-chunk_strategy: markdown_sections
-chunk_tokens: 800
-chunk_overlap: 120

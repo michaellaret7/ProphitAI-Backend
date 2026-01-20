@@ -18,7 +18,8 @@ class Chunk(BaseModel):
     end_index: int = Field(..., description="Ending character position in original text")
     token_count: int = Field(..., description="Number of tokens in the chunk")
     metadata: dict = Field(default_factory=dict, description="Additional chunk metadata")
-    embedding: Optional[list[float]] = Field(default=None, description="Vector embedding from Voyage AI")
+    embedding: Optional[list[float]] = Field(default=None, description="Dense vector embedding from Voyage AI")
+    sparse_embedding: Optional[dict] = Field(default=None, description="Sparse vector with 'indices' and 'values' keys")
 
     @property
     def char_count(self) -> int:
@@ -27,5 +28,10 @@ class Chunk(BaseModel):
 
     @property
     def has_embedding(self) -> bool:
-        """Check if this chunk has been embedded."""
+        """Check if this chunk has a dense embedding."""
         return self.embedding is not None
+
+    @property
+    def has_sparse_embedding(self) -> bool:
+        """Check if this chunk has a sparse embedding."""
+        return self.sparse_embedding is not None
