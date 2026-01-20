@@ -20,12 +20,89 @@ Key features:
 
 import os
 import re
-from typing import Any, Optional, Union
+from typing import Any, Literal, Optional, Union
 
 from chonkie import SemanticChunker as ChonkieSemanticChunker
-from chonkie.embeddings import OpenAIEmbeddings, VoyageAIEmbeddings
+from chonkie.embeddings import (
+    AutoEmbeddings,
+    BaseEmbeddings,
+    GeminiEmbeddings,
+    LiteLLMEmbeddings,
+    Model2VecEmbeddings,
+    OpenAIEmbeddings,
+    SentenceTransformerEmbeddings,
+    VoyageAIEmbeddings,
+)
 
 from app.core.foundry.models.chunk import Chunk
+
+# Reason: Type alias for supported embedding providers
+EmbeddingProvider = Literal[
+    "voyage",
+    "openai",
+    "gemini",
+    "sentence_transformer",
+    "model2vec",
+    "litellm",
+    "auto",
+]
+
+
+def _create_embedding_model(
+    provider: EmbeddingProvider,
+    model_name: str,
+) -> BaseEmbeddings:
+    """
+    Create an embedding model instance based on provider and model name.
+
+    Uses environment variables for API keys:
+        - VOYAGE_API_KEY: VoyageAI
+        - OPENAI_API_KEY: OpenAI (auto-detected by library)
+        - GOOGLE_API_KEY: Google Gemini
+
+    Args:
+        provider: Embedding provider name.
+        model_name: Model identifier for the provider.
+            - voyage: "voyage-finance-2", "voyage-3", "voyage-3-lite"
+            - openai: "text-embedding-3-small", "text-embedding-3-large"
+            - gemini: "models/text-embedding-004"
+            - sentence_transformer: "all-MiniLM-L6-v2", "all-mpnet-base-v2"
+            - model2vec: "minishlab/potion-base-8M", "minishlab/M2V_base_output"
+            - litellm: Any model supported by LiteLLM
+            - auto: Auto-selects best available
+
+    Returns:
+        Configured embedding model instance.
+
+    Raises:
+        ValueError: If provider is not supported.
+    """
+    if provider == "voyage":
+        return VoyageAIEmbeddings(
+            model=model_name,
+            api_key=os.getenv("VOYAGE_API_KEY"),
+        )
+    elif provider == "openai":
+        return OpenAIEmbeddings(model=model_name)
+    elif provider == "gemini":
+        return GeminiEmbeddings(
+            model=model_name,
+            api_key=os.getenv("GOOGLE_API_KEY"),
+        )
+    elif provider == "sentence_transformer":
+        return SentenceTransformerEmbeddings(model=model_name)
+    elif provider == "model2vec":
+        return Model2VecEmbeddings(model=model_name)
+    elif provider == "litellm":
+        return LiteLLMEmbeddings(model=model_name)
+    elif provider == "auto":
+        return AutoEmbeddings.get_embeddings(model_name)
+    else:
+        raise ValueError(
+            f"Unsupported embedding provider: {provider}. "
+            f"Supported: voyage, openai, gemini, sentence_transformer, "
+            f"model2vec, litellm, auto"
+        )
 
 
 class SemanticChunker:
@@ -44,9 +121,8 @@ class SemanticChunker:
 
     def __init__(
         self,
-        embedding_model: Union[str, object] = VoyageAIEmbeddings(
-            model="voyage-finance-2", api_key=os.getenv("VOYAGE_API_KEY")
-        ),
+        model_name: str = "voyage-finance-2",
+        embedding_provider: EmbeddingProvider = "voyage",
         threshold: float = 0.5,
         chunk_size: int = 512,
         similarity_window: int = 3,
@@ -63,9 +139,17 @@ class SemanticChunker:
         Initialize the semantic chunker.
 
         Args:
-            embedding_model: Model for generating embeddings. Can be:
-                - String model identifier (e.g., "text-embedding-3-large")
-                - Chonkie embedding instance (OpenAIEmbeddings, etc.)
+            model_name: Model identifier for the embedding provider. Examples:
+                - voyage: "voyage-finance-2", "voyage-3", "voyage-3-lite"
+                - openai: "text-embedding-3-small", "text-embedding-3-large"
+                - gemini: "models/text-embedding-004"
+                - sentence_transformer: "all-MiniLM-L6-v2", "all-mpnet-base-v2"
+                - model2vec: "minishlab/potion-base-8M"
+                - litellm: Any LiteLLM-supported model
+                - auto: Auto-selects best available
+            embedding_provider: Embedding provider to use. Default "voyage".
+                Options: voyage, openai, gemini, sentence_transformer,
+                model2vec, litellm, auto.
             threshold: Similarity threshold (0-1). Lower values create larger
                 chunks by grouping more sentences together. Default 0.5.
             chunk_size: Maximum tokens per chunk. Default 512.
@@ -92,13 +176,12 @@ class SemanticChunker:
             delim if delim is not None else [". ", "! ", "\n"]
         )
 
-        # Reason: Store config for inclusion in chunk metadata
-        self._embedding_model_name = (
-            embedding_model if isinstance(embedding_model, str) else type(embedding_model).__name__
-        )
+        embedding_model = _create_embedding_model(embedding_provider, model_name)
+
         self.config = {
             "chunker_type": "semantic",
-            "embedding_model": self._embedding_model_name,
+            "embedding_provider": embedding_provider,
+            "embedding_model": model_name,
             "threshold": threshold,
             "chunk_size": chunk_size,
             "similarity_window": similarity_window,
@@ -163,37 +246,10 @@ class SemanticChunker:
             text = re.sub(pattern, replacement, text, flags=re.IGNORECASE)
         return text
 
-    @classmethod
-    def with_openai(
-        cls,
-        model: str = "text-embedding-3-small",
-        threshold: float = 0.8,
-        chunk_size: int = 512,
-        **kwargs,
-    ) -> "SemanticChunker":
-        """
-        Create chunker with OpenAI embeddings.
-
-        Args:
-            model: OpenAI embedding model name. Default "text-embedding-3-small".
-            threshold: Similarity threshold (0-1). Default 0.8.
-            chunk_size: Maximum tokens per chunk. Default 512.
-            **kwargs: Additional arguments passed to SemanticChunker.
-
-        Returns:
-            SemanticChunker configured with OpenAI embeddings.
-        """
-        embeddings = OpenAIEmbeddings(model=model)
-        return cls(
-            embedding_model=embeddings,
-            threshold=threshold,
-            chunk_size=chunk_size,
-            **kwargs,
-        )
-
     def chunk(
         self,
         text: str,
+        doc_type: str,
         metadata: Optional[dict[str, Any]] = None,
     ) -> list[Chunk]:
         """
@@ -201,6 +257,8 @@ class SemanticChunker:
 
         Args:
             text: Input text to chunk.
+            doc_type: Document type for filtering (e.g., "transcript", "filing",
+                "news", "research", "10k", "10q", "8k").
             metadata: Additional metadata to include with chunks. Merged with
                 default_metadata set at initialization. Per-call metadata takes
                 precedence over default metadata.
@@ -213,9 +271,7 @@ class SemanticChunker:
 
         processed_text = self._preprocess_text(text)
         chonkie_chunks = self.chunker.chunk(processed_text)
-
         total_chunks = len(chonkie_chunks)
-        total_chars = len(text)
 
         # Reason: Merge default metadata with per-call metadata
         merged_metadata = {**self.default_metadata, **(metadata or {})}
@@ -223,17 +279,9 @@ class SemanticChunker:
         chunks = []
         for idx, c in enumerate(chonkie_chunks):
             chunk_metadata = {
-                # Chunk position info
                 "chunk_index": idx,
-                "chunk_number": idx + 1,
                 "total_chunks": total_chunks,
-                # Source document info
-                "total_chars": total_chars,
-                "char_start_pct": round(c.start_index / total_chars * 100, 1),
-                "char_end_pct": round(c.end_index / total_chars * 100, 1),
-                # Chunker config
-                **self.config,
-                # Custom metadata
+                "doc_type": doc_type,
                 **merged_metadata,
             }
 
@@ -249,25 +297,31 @@ class SemanticChunker:
 
         return chunks
 
-    def chunk_batch(self, texts: list[str]) -> list[list[Chunk]]:
+    def chunk_batch(
+        self,
+        texts: list[str],
+        doc_type: str,
+    ) -> list[list[Chunk]]:
         """
         Chunk multiple texts in batch.
 
         Args:
             texts: List of texts to chunk.
+            doc_type: Document type for filtering.
 
         Returns:
             List of chunk lists, one per input text.
         """
-        return [self.chunk(text) for text in texts]
+        return [self.chunk(text, doc_type) for text in texts]
 
     def __call__(
         self,
         text: str,
+        doc_type: str,
         metadata: Optional[dict[str, Any]] = None,
     ) -> list[Chunk]:
-        """Allow callable syntax: chunker(text, metadata={...})."""
-        return self.chunk(text, metadata=metadata)
+        """Allow callable syntax: chunker(text, doc_type, metadata={...})."""
+        return self.chunk(text, doc_type, metadata=metadata)
 
 
 if __name__ == "__main__":
@@ -275,7 +329,7 @@ if __name__ == "__main__":
 
     chunker = SemanticChunker()
     transcript = get_latest_transcript("CRWV")
-    chunks = chunker.chunk(transcript["content"])
+    chunks = chunker.chunk(transcript["content"], doc_type="transcript")
     print(f"Generated {len(chunks)} chunks")
     for chunk in chunks:
         print("\n")

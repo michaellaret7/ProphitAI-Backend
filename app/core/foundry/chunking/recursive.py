@@ -25,7 +25,6 @@ from chonkie import RecursiveLevel, RecursiveRules
 
 from app.core.foundry.models.chunk import Chunk
 
-
 class RecursiveChunker:
     """
     Recursive text chunker using hierarchical delimiter splitting.

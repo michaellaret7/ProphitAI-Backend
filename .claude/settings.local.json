@@ -55,7 +55,8 @@
       "WebFetch(domain:developers.llamaindex.ai)",
       "WebFetch(domain:github.com)",
       "WebFetch(domain:docs.chonkie.ai)",
-      "WebFetch(domain:arxiv.org)"
+      "WebFetch(domain:arxiv.org)",
+      "WebFetch(domain:raw.githubusercontent.com)"
     ],
     "deny": [],
     "ask": []
