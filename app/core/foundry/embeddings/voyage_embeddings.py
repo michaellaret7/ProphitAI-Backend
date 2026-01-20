@@ -72,7 +72,6 @@ def embed_chunks(
         for chunk, embedding in zip(chunks, all_embeddings)
     ]
 
-
 def embed_query(
     text: str,
     model: str = "voyage-finance-2",

@@ -410,7 +410,6 @@ class PineconeManager:
                 flat[key] = str(value)
         return flat
 
-
 if __name__ == "__main__":
     from app.core.foundry.chunking.semantic import SemanticChunker
     from app.repositories.transcripts_data import get_latest_transcript
