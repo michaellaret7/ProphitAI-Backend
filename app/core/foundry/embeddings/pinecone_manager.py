@@ -15,9 +15,6 @@ from pinecone import Pinecone
 
 from app.core.foundry.models.chunk import Chunk
 from app.core.foundry.models.vector import IndexStats, QueryResult, VectorRecord
-from app.core.foundry.embeddings.voyage_embeddings import embed_chunks
-from app.core.foundry.chunking.semantic import SemanticChunker
-from app.repositories.transcripts_data import get_latest_transcript
 
 load_dotenv()
 
@@ -53,14 +50,19 @@ class PineconeManager:
         self.index = None
         self.index_name: Optional[str] = None
 
-    def connect_index(self, name: str) -> None:
+    def connect_index(self, name: str, host: Optional[str] = None) -> None:
         """
         Connect to an existing index for vector operations.
 
         Args:
-            name: Index name to connect to.
+            name: Index name (used for reference).
+            host: Index host URL. If provided, skips the describe_index API call
+                for faster connection. Get from Pinecone console or describe_index().
         """
-        self.index = self.client.Index(name)
+        if host:
+            self.index = self.client.Index(host=host)
+        else:
+            self.index = self.client.Index(name=name)
         self.index_name = name
 
     # =========================================================================
@@ -155,10 +157,19 @@ class PineconeManager:
             flat_metadata = self._flatten_metadata(metadata)
             flat_metadata["text"] = chunk.text
 
+            # Reason: Include sparse values for hybrid search if available
+            sparse_values = None
+            if chunk.sparse_embedding:
+                sparse_values = {
+                    "indices": chunk.sparse_embedding["indices"],
+                    "values": chunk.sparse_embedding["values"],
+                }
+
             vectors.append(
                 VectorRecord(
                     id=vec_id,
                     values=chunk.embedding,
+                    sparse_values=sparse_values,
                     metadata=flat_metadata,
                 )
             )
@@ -413,22 +424,22 @@ class PineconeManager:
 if __name__ == "__main__":
     from app.core.foundry.chunking.semantic import SemanticChunker
     from app.repositories.transcripts_data import get_latest_transcript
-    from app.core.foundry.embeddings.voyage_embeddings import embed_query
     from app.core.foundry.models.metadata import EarningsCallMetadata
+    import time
 
-    chunker = SemanticChunker()
-    transcript = get_latest_transcript("CRWV")
-    metadata = EarningsCallMetadata.from_transcript(transcript)
-    chunks = chunker.chunk(
-        transcript["content"], 
-        doc_type="earnings_call",
-        metadata=metadata.to_chunk_metadata(),
-    )
+    # chunker = SemanticChunker()
+    # transcript = get_latest_transcript("CRWV")
+    # metadata = EarningsCallMetadata.from_transcript(transcript)
+    # chunks = chunker.chunk(
+    #     transcript["content"], 
+    #     doc_type="earnings_call",
+    #     metadata=metadata.to_chunk_metadata(),
+    # )
 
-    for chunk in chunks:
-        chunk.metadata["chunk_id"] = metadata.build_chunk_id(chunk.metadata["chunk_index"])
+    # for chunk in chunks:
+    #     chunk.metadata["chunk_id"] = metadata.build_chunk_id(chunk.metadata["chunk_index"])
 
-    print(chunks)
+    # print(chunks)
 
 
     # transcript = get_latest_transcript("CRWV")

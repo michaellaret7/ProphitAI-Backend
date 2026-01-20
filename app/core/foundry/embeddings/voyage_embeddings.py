@@ -4,16 +4,20 @@ Voyage AI embeddings generator for RAG pipelines.
 Generates embeddings from text chunks using Voyage AI's finance-optimized model.
 """
 
-import os
+from __future__ import annotations
 
-from typing import Optional
+import os
+from typing import Optional, TYPE_CHECKING
+
 import voyageai  # type: ignore[import-untyped]
 from dotenv import load_dotenv
 
 from pydantic import BaseModel
 
 from app.core.foundry.models.chunk import Chunk
-from app.core.foundry.embeddings.sparse_encoder import SparseEncoder
+
+if TYPE_CHECKING:
+    from app.core.foundry.embeddings.sparse_encoder import SparseEncoder
 
 load_dotenv()
 
