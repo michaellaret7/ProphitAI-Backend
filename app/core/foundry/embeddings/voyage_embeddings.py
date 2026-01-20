@@ -73,16 +73,37 @@ def embed_chunks(
     ]
 
 
-if __name__ == "__main__":
-    from app.core.foundry.chunking.semantic import SemanticChunker
-    from app.repositories.transcripts_data import get_latest_transcript
+def embed_query(
+    text: str,
+    model: str = "voyage-finance-2",
+) -> list[float]:
+    """
+    Embed a query string for similarity search.
 
-    chunker = SemanticChunker()
-    transcript = get_latest_transcript("CRWV")
-    chunks = chunker.chunk(transcript["content"], doc_type="transcript")
+    Uses input_type="query" which Voyage recommends for search queries
+    (vs "document" for content being indexed).
 
-    print(f"Generated {len(chunks)} chunks")
+    Args:
+        text: Query text to embed.
+        model: Voyage AI model. Default "voyage-finance-2".
 
-    embedded = embed_chunks(chunks)
-    print(f"Embedded {len(embedded)} chunks")
-    print(f"Embedding dimension: {len(embedded[0].embedding)}")  # type: ignore[arg-type]
+    Returns:
+        Embedding vector as list of floats.
+
+    Raises:
+        ValueError: If VOYAGE_API_KEY is not set.
+    """
+    api_key = os.getenv("VOYAGE_API_KEY")
+    if not api_key:
+        raise ValueError("VOYAGE_API_KEY environment variable not set")
+
+    client = voyageai.Client(api_key=api_key)
+    response = client.embed(
+        texts=[text],
+        model=model,
+        input_type="query",
+    )
+    return [float(x) for x in response.embeddings[0]]
+
+
+

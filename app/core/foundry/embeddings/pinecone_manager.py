@@ -15,6 +15,7 @@ from pinecone import Pinecone
 
 from app.core.foundry.models.chunk import Chunk
 from app.core.foundry.models.vector import IndexStats, QueryResult, VectorRecord
+from app.core.foundry.embeddings.voyage_embeddings import embed_chunks
 
 load_dotenv()
 
@@ -113,12 +114,12 @@ class PineconeManager:
         """
         Upsert embedded Chunk objects to Pinecone.
 
-        Vector IDs are generated from chunk metadata in the format:
-        {ticker}_{doc_type}_{doc_name}_{chunk_index}
+        Uses chunk_id from metadata as the vector ID. If chunk_id is not present,
+        it will be generated from doc_id and chunk_index.
 
         Args:
             chunks: List of Chunk objects with embeddings. Each chunk's metadata
-                must contain: ticker, doc_type, doc_name, chunk_index.
+                must contain: doc_id, chunk_index. Optionally chunk_id.
             namespace: Target namespace.
             batch_size: Vectors per batch. Default 100.
 
@@ -136,20 +137,21 @@ class PineconeManager:
                 raise ValueError(f"Chunk at index {i} has no embedding")
 
             metadata = chunk.metadata
-            required_fields = ["ticker", "doc_type", "doc_name", "chunk_index"]
-            missing = [f for f in required_fields if f not in metadata]
-            if missing:
-                raise ValueError(
-                    f"Chunk at index {i} missing required metadata: {missing}"
-                )
 
-            vec_id = (
-                f"{metadata['ticker']}_{metadata['doc_type']}_"
-                f"{metadata['doc_name']}_{metadata['chunk_index']}"
-            )
+            # Reason: Use chunk_id if present, otherwise build from doc_id + chunk_index
+            if "chunk_id" in metadata:
+                vec_id = metadata["chunk_id"]
+            else:
+                required_fields = ["doc_id", "chunk_index"]
+                missing = [f for f in required_fields if f not in metadata]
+                if missing:
+                    raise ValueError(
+                        f"Chunk at index {i} missing required metadata: {missing}"
+                    )
+                vec_id = f"{metadata['doc_id']}#{metadata['chunk_index']:04d}"
 
             flat_metadata = self._flatten_metadata(metadata)
-            flat_metadata["text"] = chunk.text[:1000]
+            flat_metadata["text"] = chunk.text
 
             vectors.append(
                 VectorRecord(
@@ -407,25 +409,5 @@ class PineconeManager:
         return flat
 
 
-if __name__ == "__main__":
-    from app.core.foundry.chunking.semantic import SemanticChunker
-    from app.repositories.transcripts_data import get_latest_transcript
 
-    transcript = get_latest_transcript("CRWV")
-
-    chunker = SemanticChunker()
-    chunks = chunker.chunk(
-        transcript["content"],
-        doc_type="transcript",
-        metadata={
-            "ticker": "CRWV",
-            "doc_name": f"{transcript['period']}_{transcript['year']}",
-            "quarter": transcript["period"],
-            "year": transcript["year"],
-            "date": transcript["date"],
-        }
-    )
-
-    for chunk in chunks:
-        print(chunk.metadata)
 
