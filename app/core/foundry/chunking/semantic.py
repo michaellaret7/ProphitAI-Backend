@@ -19,7 +19,6 @@ Key features:
 """
 
 import os
-import re
 from typing import Any, Literal, Optional, Union
 
 from chonkie import SemanticChunker as ChonkieSemanticChunker
@@ -34,6 +33,7 @@ from chonkie.embeddings import (
     VoyageAIEmbeddings,
 )
 
+from app.core.foundry.chunking.utils import preprocess_text
 from app.core.foundry.models.chunk import Chunk
 
 # Reason: Type alias for supported embedding providers
@@ -123,10 +123,10 @@ class SemanticChunker:
         self,
         model_name: str = "voyage-finance-2",
         embedding_provider: EmbeddingProvider = "voyage",
-        threshold: float = 0.5,
-        chunk_size: int = 512,
+        threshold: float = 0.4,
+        chunk_size: int = 768,
         similarity_window: int = 3,
-        min_sentences_per_chunk: int = 2,
+        min_sentences_per_chunk: int = 3,
         min_characters_per_sentence: int = 24,
         skip_window: int = 0,
         filter_window: int = 5,
@@ -151,11 +151,11 @@ class SemanticChunker:
                 Options: voyage, openai, gemini, sentence_transformer,
                 model2vec, litellm, auto.
             threshold: Similarity threshold (0-1). Lower values create larger
-                chunks by grouping more sentences together. Default 0.5.
-            chunk_size: Maximum tokens per chunk. Default 512.
+                chunks by grouping more sentences together. Default 0.4.
+            chunk_size: Maximum tokens per chunk. Default 768.
             similarity_window: Number of sentences to consider when calculating
                 similarity between groups. Default 3.
-            min_sentences_per_chunk: Minimum sentences required per chunk. Default 2.
+            min_sentences_per_chunk: Minimum sentences required per chunk. Default 3.
             min_characters_per_sentence: Minimum characters for a valid sentence.
                 Shorter sequences are merged with neighbors. Default 24.
             skip_window: Groups to skip when looking for similar content to merge.
@@ -204,48 +204,6 @@ class SemanticChunker:
             include_delim="prev",
         )
 
-    def _preprocess_text(self, text: str) -> str:
-        """
-        Preprocess text to handle abbreviations that break sentence detection.
-
-        Removes periods from common abbreviations (U.S., Inc., etc.) to prevent
-        the sentence splitter from incorrectly detecting sentence boundaries.
-
-        Args:
-            text: Raw input text.
-
-        Returns:
-            Text with abbreviation periods removed.
-        """
-        # Reason: These abbreviations contain periods that get mistakenly
-        # treated as sentence boundaries, splitting sentences mid-phrase
-        abbreviations = [
-            (r"U\.S\.", "US"),
-            (r"Inc\.", "Inc"),
-            (r"Corp\.", "Corp"),
-            (r"Ltd\.", "Ltd"),
-            (r"Co\.", "Co"),
-            (r"Mr\.", "Mr"),
-            (r"Mrs\.", "Mrs"),
-            (r"Ms\.", "Ms"),
-            (r"Dr\.", "Dr"),
-            (r"vs\.", "vs"),
-            (r"etc\.", "etc"),
-            (r"i\.e\.", "ie"),
-            (r"e\.g\.", "eg"),
-            (r"a\.m\.", "am"),
-            (r"p\.m\.", "pm"),
-            (r"No\.", "No"),
-            (r"Vol\.", "Vol"),
-            (r"Rev\.", "Rev"),
-            (r"Est\.", "Est"),
-            (r"Ave\.", "Ave"),
-            (r"St\.", "St"),
-        ]
-        for pattern, replacement in abbreviations:
-            text = re.sub(pattern, replacement, text, flags=re.IGNORECASE)
-        return text
-
     def chunk(
         self,
         text: str,
@@ -269,7 +227,7 @@ class SemanticChunker:
         if not text or not text.strip():
             return []
 
-        processed_text = self._preprocess_text(text)
+        processed_text = preprocess_text(text)
         chonkie_chunks = self.chunker.chunk(processed_text)
         total_chunks = len(chonkie_chunks)
 
@@ -329,6 +287,7 @@ if __name__ == "__main__":
 
     chunker = SemanticChunker()
     transcript = get_latest_transcript("CRWV")
+    print(transcript["content"][:1000])
     chunks = chunker.chunk(transcript["content"], doc_type="transcript")
     print(f"Generated {len(chunks)} chunks")
     for chunk in chunks:

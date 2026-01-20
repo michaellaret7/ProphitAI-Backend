@@ -16,6 +16,8 @@ from pinecone import Pinecone
 from app.core.foundry.models.chunk import Chunk
 from app.core.foundry.models.vector import IndexStats, QueryResult, VectorRecord
 from app.core.foundry.embeddings.voyage_embeddings import embed_chunks
+from app.core.foundry.chunking.semantic import SemanticChunker
+from app.repositories.transcripts_data import get_latest_transcript
 
 load_dotenv()
 
@@ -409,5 +411,53 @@ class PineconeManager:
         return flat
 
 
+if __name__ == "__main__":
+    from app.core.foundry.chunking.semantic import SemanticChunker
+    from app.repositories.transcripts_data import get_latest_transcript
+    from app.core.foundry.embeddings.voyage_embeddings import embed_query
+    from app.core.foundry.models.metadata import EarningsCallMetadata
 
+    chunker = SemanticChunker()
+    transcript = get_latest_transcript("CRWV")
+    metadata = EarningsCallMetadata.from_transcript(transcript)
+    chunks = chunker.chunk(
+        transcript["content"], 
+        doc_type="earnings_call",
+        metadata=metadata.to_chunk_metadata(),
+    )
+
+    for chunk in chunks:
+        chunk.metadata["chunk_id"] = metadata.build_chunk_id(chunk.metadata["chunk_index"])
+
+    print(chunks)
+
+
+    # transcript = get_latest_transcript("CRWV")
+
+    # # Build identity fields
+    # ticker = "CRWV"
+    # fiscal_year = transcript["year"]
+    # fiscal_quarter = f"{fiscal_year}Q{transcript['period']}"
+    # doc_id = f"earnings_call:{ticker}:{fiscal_quarter}"
+
+    # chunker = SemanticChunker()
+    # chunks = chunker.chunk(
+    #     transcript["content"],
+    #     doc_type="earnings_call",
+    #     metadata={
+    #         "ticker": ticker,
+    #         "doc_id": doc_id,
+    #         "call_date": transcript["date"],
+    #         "fiscal_year": fiscal_year,
+    #         "fiscal_quarter": fiscal_quarter,
+    #     },
+    # )
+
+    # # Build chunk_id after chunking (depends on chunk_index)
+    # for chunk in chunks:
+    #     chunk.metadata["chunk_id"] = f"{doc_id}#{chunk.metadata['chunk_index']:04d}"
+
+    # embedded_chunks = embed_chunks(chunks)
+
+    # manager.upsert_chunks(embedded_chunks, namespace="earnings_calls")
 

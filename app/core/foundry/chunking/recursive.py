@@ -23,6 +23,7 @@ from typing import Any, Callable, Literal, Optional, Union
 from chonkie import RecursiveChunker as ChonkieRecursiveChunker
 from chonkie import RecursiveLevel, RecursiveRules
 
+from app.core.foundry.chunking.utils import preprocess_text
 from app.core.foundry.models.chunk import Chunk
 
 class RecursiveChunker:
@@ -284,7 +285,8 @@ class RecursiveChunker:
         if not text or not text.strip():
             return []
 
-        chonkie_chunks = self.chunker.chunk(text)
+        processed_text = preprocess_text(text)
+        chonkie_chunks = self.chunker.chunk(processed_text)
 
         total_chunks = len(chonkie_chunks)
         total_chars = len(text)
@@ -351,3 +353,5 @@ if __name__ == "__main__":
     print(f"Generated {len(chunks)} chunks")
     for chunk in chunks:
         print(chunk.metadata)
+        print(chunk.text)
+        print("--------------------------------")

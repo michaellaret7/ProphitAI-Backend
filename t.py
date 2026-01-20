@@ -2,9 +2,13 @@ import os
 from dotenv import load_dotenv
 import boto3
 
-load_dotenv()  # loads .env into environment variables
+from app.db.core.models.market_data_models import *
+from app.db.core.db_config import *
+from app.utils.serialize_output import serialize_sqlalchemy_obj
 
-s3 = boto3.client("s3")
-bucket = os.getenv("S3_BUCKET")
+session = MarketSession()
 
+ticker = session.query(Ticker).filter(Ticker.ticker == "CWST").first()
+print(serialize_sqlalchemy_obj(ticker))
 
+session.close()
