@@ -1,14 +1,38 @@
+"""Reranking using Voyage AI for improved retrieval quality."""
+
+import os
+
 import voyageai
 from dotenv import load_dotenv
-import os
+
+from app.core.foundry.models.vector import QueryResult
 
 load_dotenv()
 
+
 def rerank(
     query: str,
-    documents: list[str],
+    results: list[QueryResult],
     model: str = "rerank-2.5",
-) -> list[str]:
+    top_k: int = 5,
+) -> list[QueryResult]:
+    """
+    Rerank QueryResult objects using Voyage AI.
+
+    Args:
+        query: The search query.
+        results: List of QueryResult objects from initial retrieval.
+        model: Voyage rerank model to use.
+        top_k: Number of top results to return after reranking.
+
+    Returns:
+        List of QueryResult objects with updated scores, sorted by relevance.
+    """
+    if not results:
+        return []
+
+    # Extract text from metadata for reranking
+    documents = [r.metadata.get("text", "") for r in results]
 
     client = voyageai.Client(api_key=os.getenv("VOYAGE_API_KEY"))
 
@@ -16,33 +40,21 @@ def rerank(
         query=query,
         documents=documents,
         model=model,
-        top_k=5,
+        top_k=top_k,
     )
 
-    return response
+    # Build reranked QueryResult objects with updated scores
+    reranked = []
+    for item in response.results:
+        original = results[item.index]
+        reranked.append(
+            QueryResult(
+                id=original.id,
+                score=item.relevance_score,
+                values=original.values,
+                metadata=original.metadata,
+            )
+        )
 
+    return reranked
 
-if __name__ == "__main__":
-    query = "What is the company's business model?"
-    documents = [
-        "The company is a technology company that provides software solutions for the energy industry.", 
-        "The company is a technology company that provides software solutions for the energy industry.",
-        "Quarterly earnings exceeded expectations due to strong demand in the Asia-Pacific region.",
-        "New regulatory frameworks in the EU may impact our supply chain logistics.",
-        "The merger with the leading competitor is expected to close by Q4 2025.",
-        "We are investing heavily in AI research to improve our customer support automation.",
-        "Dividend payouts have been suspended to prioritize debt repayment.",
-        "Customer retention rates have dropped slightly following the recent price increase.",
-        "The release of our flagship product has been delayed due to manufacturing constraints.",
-        "Our sustainability initiative aims to reduce carbon emissions by 30% over the next five years.",
-        "Market volatility has led to a cautious outlook for the upcoming fiscal year.",
-        "We have secured a strategic partnership to expand our cloud infrastructure services."
-    ]
-
-    reranked = rerank(query, documents)
-
-    for result in reranked.results:
-        print(f"Document Index: {result.index}")
-        print(f"Score: {result.relevance_score}")
-        print(f"Text: {result.document}")
-        print("-" * 30)

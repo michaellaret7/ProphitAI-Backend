@@ -8,6 +8,7 @@ from dotenv import load_dotenv
 from app.core.foundry.embeddings.pinecone_manager import PineconeManager
 from app.core.foundry.embeddings.voyage_embeddings import embed_query
 from app.core.foundry.models.vector import QueryResult
+from app.core.foundry.retrieval.rerank import rerank as rerank_results
 from app.core.foundry.retrieval.utils import build_metadata_filter
 
 load_dotenv()
@@ -16,10 +17,8 @@ load_dotenv()
 class HybridSearch:
     """Hybrid search combining dense and sparse vectors with alpha weighting."""
 
-    def __init__(self, alpha: float = 0.5, encoder_path: Optional[str] = None):
+    def __init__(self, alpha: float = 0.5, use_rerank: bool = False):
         """Initialize hybrid search with a pre-fitted BM25 encoder."""
-        if alpha < 0 or alpha > 1:
-            raise ValueError("Alpha must be between 0 and 1")
 
         self.alpha = alpha
         self.manager = PineconeManager()
@@ -32,18 +31,24 @@ class HybridSearch:
         from app.core.foundry.embeddings.sparse_encoder import SparseEncoder
 
         self.sparse_encoder = SparseEncoder()
-        self.sparse_encoder.load(encoder_path)
+        self.sparse_encoder.load()
+
+        self.use_rerank = use_rerank
 
     def search(
         self,
         query: str,
-        top_k: int = 10,
+        top_k: int = 5,
         namespace: str = "earnings_calls",
         ticker: Optional[str] = None,
         fiscal_quarter: Optional[str] = None,
         fiscal_year: Optional[int] = None,
     ) -> list[QueryResult]:
         """Execute a hybrid search combining semantic and keyword matching."""
+
+        # Reason: Fetch more results for reranking to improve quality
+        retrieval_top_k = 25 if self.use_rerank else top_k
+
         filters = build_metadata_filter(
             ticker=ticker,
             fiscal_quarter=fiscal_quarter,
@@ -54,15 +59,27 @@ class HybridSearch:
 
         if embedding.sparse is None:
             raise RuntimeError("Sparse embedding not generated. Check encoder.")
-
-        return self.manager.hybrid_query(
+        
+        search_results = self.manager.hybrid_query(
             dense_vector=embedding.dense,
             sparse_vector=embedding.sparse,
-            top_k=top_k,
+            top_k=retrieval_top_k,
             namespace=namespace,
             filter=filters,
             alpha=self.alpha,
         )
+
+        if self.use_rerank:
+            return rerank_results(
+                query=query,
+                results=search_results,
+                top_k=top_k,
+            )
+
+        return search_results
+
+
+        
 
 
 
