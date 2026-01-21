@@ -51,3 +51,4 @@ class VectorSearch:
             namespace=namespace,
             filter=filters,
         )
+

@@ -312,8 +312,3 @@ class Ingestor:
         return self._text_handler
 
 
-if __name__ == "__main__":
-    ingestor = Ingestor()
-    document = ingestor.process("https://prophitai-s3-bucket.s3.us-east-1.amazonaws.com/pdfs/Kerrisdale-CoreWeave-09-2025.pdf")
-    print(f"Metadata: {document.metadata}")
-    print(f"Content preview: {document.content}...")

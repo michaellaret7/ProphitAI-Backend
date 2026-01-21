@@ -32,7 +32,6 @@ from chonkie import RecursiveRules
 
 from app.core.foundry.chunking.utils import preprocess_text
 from app.core.foundry.models.chunk import Chunk
-from app.repositories.transcripts_data import get_earnings_transcripts
 
 from .models import Turn, Unit
 from .patterns import (
@@ -103,12 +102,18 @@ class EarningsCallChunker:
     # Public API
     # -----------------------------
 
-    def chunk(self, text: str, metadata: Optional[dict[str, Any]] = None) -> list[Chunk]:
+    def chunk(
+        self,
+        text: str,
+        doc_type: str,
+        metadata: Optional[dict[str, Any]] = None,
+    ) -> list[Chunk]:
         """
         Chunk an earnings call transcript with structure awareness.
 
         Args:
             text: Raw transcript text.
+            doc_type: Document type for filtering (e.g., "transcript", "earnings_call").
             metadata: Per-call metadata merged into each chunk (overrides defaults).
 
         Returns:
@@ -130,9 +135,10 @@ class EarningsCallChunker:
 
         for i, c in enumerate(chunks):
             chunk_meta = {
-                **merged_default,
                 "chunk_index": i,
                 "total_chunks": total,
+                "doc_type": doc_type,
+                **merged_default,
             }
             final.append(
                 Chunk(
@@ -146,11 +152,16 @@ class EarningsCallChunker:
 
         return self._apply_overlap(final)
 
-    def chunk_batch(self, texts: list[str]) -> list[list[Chunk]]:
-        return [self.chunk(t) for t in texts]
+    def chunk_batch(self, texts: list[str], doc_type: str) -> list[list[Chunk]]:
+        return [self.chunk(t, doc_type) for t in texts]
 
-    def __call__(self, text: str, metadata: Optional[dict[str, Any]] = None) -> list[Chunk]:
-        return self.chunk(text, metadata=metadata)
+    def __call__(
+        self,
+        text: str,
+        doc_type: str,
+        metadata: Optional[dict[str, Any]] = None,
+    ) -> list[Chunk]:
+        return self.chunk(text, doc_type, metadata=metadata)
 
     # -----------------------------
     # Turn parsing
@@ -524,3 +535,19 @@ class EarningsCallChunker:
         return f"{t.speaker}: {body}"
 
 
+if __name__ == "__main__":
+    from app.repositories.transcripts_data import get_latest_transcript
+    from app.core.foundry.models.metadata import EarningsCallMetadata
+    chunker = EarningsCallChunker()
+    transcript = get_latest_transcript("CRWV")
+    print(transcript["content"][:1000])
+    chunks = chunker.chunk(
+        transcript["content"], 
+        doc_type="earnings_call",
+        metadata=EarningsCallMetadata.from_transcript(transcript).to_chunk_metadata(),
+    )
+    print(f"Generated {len(chunks)} chunks")
+    for chunk in chunks:
+        print(chunk.metadata)
+        print(chunk.text)
+        print("--------------------------------")

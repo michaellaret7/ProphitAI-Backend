@@ -21,30 +21,59 @@ if TYPE_CHECKING:
 
 load_dotenv()
 
+class QueryEmbedding(BaseModel):
+    """Result of embedding a query for hybrid search."""
+
+    dense: list[float]
+    sparse: Optional[dict] = None
+
+VOYAGE_MAX_TOKENS = 120_000
+VOYAGE_TOKEN_BUFFER = 20_000  # Safety buffer
+
+
+def _batch_chunks_by_tokens(
+    chunks: list[Chunk],
+    max_tokens: int = VOYAGE_MAX_TOKENS - VOYAGE_TOKEN_BUFFER,
+) -> list[list[Chunk]]:
+    """Group chunks into batches that respect token limits."""
+    batches: list[list[Chunk]] = []
+    current_batch: list[Chunk] = []
+    current_tokens = 0
+
+    for chunk in chunks:
+        chunk_tokens = chunk.token_count or len(chunk.text) // 4  # Fallback estimate
+
+        if current_tokens + chunk_tokens > max_tokens and current_batch:
+            batches.append(current_batch)
+            current_batch = []
+            current_tokens = 0
+
+        current_batch.append(chunk)
+        current_tokens += chunk_tokens
+
+    if current_batch:
+        batches.append(current_batch)
+
+    return batches
+
+
 def embed_chunks(
     chunks: list[Chunk],
     model: str = "voyage-finance-2",
     sparse_encoder: Optional[SparseEncoder] = None,
-    batch_size: int = 512,
 ) -> list[Chunk]:
     """
     Embed a list of chunks using Voyage AI.
 
-    Populates the embedding field on each Chunk object. Optionally generates
-    sparse embeddings for hybrid search when a sparse_encoder is provided.
+    Batches by token count to respect Voyage's 120k token limit per request.
 
     Args:
         chunks: List of Chunk objects from the chunking pipeline.
         model: Voyage AI model. Default "voyage-finance-2".
-            Options: voyage-finance-2, voyage-3, voyage-3-lite.
         sparse_encoder: Optional SparseEncoder for generating BM25 sparse vectors.
-        batch_size: Texts per API call. Default 512.
 
     Returns:
         List of Chunk objects with embedding (and optionally sparse_embedding) populated.
-
-    Raises:
-        ValueError: If VOYAGE_API_KEY is not set.
     """
     if not chunks:
         return []
@@ -54,18 +83,18 @@ def embed_chunks(
         raise ValueError("VOYAGE_API_KEY environment variable not set")
 
     client = voyageai.Client(api_key=api_key)
-    texts = [chunk.text for chunk in chunks]
 
-    # Reason: Process in batches to respect API limits
+    # Batch by token count to stay under Voyage's 120k limit
+    batches = _batch_chunks_by_tokens(chunks)
+
     all_embeddings: list[list[float]] = []
-    for i in range(0, len(texts), batch_size):
-        batch = texts[i : i + batch_size]
+    for batch in batches:
+        texts = [chunk.text for chunk in batch]
         response = client.embed(
-            texts=batch,
+            texts=texts,
             model=model,
             input_type="document",
         )
-        # Reason: Cast to float to satisfy type checker
         for emb in response.embeddings:
             all_embeddings.append([float(x) for x in emb])
 
@@ -90,12 +119,6 @@ def embed_chunks(
         )
         for chunk, embedding, sparse_emb in zip(chunks, all_embeddings, sparse_embeddings)
     ]
-
-class QueryEmbedding(BaseModel):
-    """Result of embedding a query for hybrid search."""
-
-    dense: list[float]
-    sparse: Optional[dict] = None
 
 def embed_query(
     text: str,
