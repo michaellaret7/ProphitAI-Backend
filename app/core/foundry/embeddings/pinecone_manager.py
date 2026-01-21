@@ -18,7 +18,6 @@ from app.core.foundry.models.vector import IndexStats, QueryResult, VectorRecord
 
 load_dotenv()
 
-
 class PineconeManager:
     """
     Manager for Pinecone vector database operations.
@@ -64,6 +63,40 @@ class PineconeManager:
         else:
             self.index = self.client.Index(name=name)
         self.index_name = name
+
+    @staticmethod
+    def _scale_hybrid_vectors(
+        dense: list[float],
+        sparse: dict,
+        alpha: float,
+    ) -> tuple[list[float], dict]:
+        """
+        Scale vectors using convex combination for hybrid search.
+
+        Formula: alpha * dense + (1 - alpha) * sparse
+
+        Args:
+            dense: Dense vector values.
+            sparse: Sparse vector dict with 'indices' and 'values' keys.
+            alpha: Weighting factor between 0 and 1.
+                1.0 = pure dense, 0.0 = pure sparse.
+
+        Returns:
+            Tuple of (scaled_dense, scaled_sparse).
+
+        Raises:
+            ValueError: If alpha is not between 0 and 1.
+        """
+        if alpha < 0 or alpha > 1:
+            raise ValueError("Alpha must be between 0 and 1")
+
+        scaled_dense = [v * alpha for v in dense]
+        scaled_sparse = {
+            "indices": sparse["indices"],
+            "values": [v * (1 - alpha) for v in sparse["values"]],
+        }
+
+        return scaled_dense, scaled_sparse
 
     # =========================================================================
     # Vector Operations
@@ -203,6 +236,65 @@ class PineconeManager:
 
         response = index.query(
             vector=vector,
+            top_k=top_k,
+            namespace=namespace,
+            filter=filter,
+            include_values=include_values,
+            include_metadata=include_metadata,
+        )
+
+        return [
+            QueryResult(
+                id=match.id,
+                score=match.score,
+                values=match.values if include_values else None,
+                metadata=match.metadata or {},
+            )
+            for match in response.matches
+        ]
+
+    def hybrid_query(
+        self,
+        dense_vector: list[float],
+        sparse_vector: dict,
+        top_k: int = 10,
+        namespace: Optional[str] = None,
+        filter: Optional[dict] = None,
+        alpha: float = 0.5,
+        include_values: bool = False,
+        include_metadata: bool = True,
+    ) -> list[QueryResult]:
+        """
+        Query using both dense and sparse vectors with alpha weighting.
+
+        Uses convex combination: alpha * dense + (1 - alpha) * sparse.
+
+        Args:
+            dense_vector: Dense query vector from embedding model.
+            sparse_vector: Sparse query vector dict with 'indices' and 'values' keys.
+            top_k: Number of results to return. Default 10.
+            namespace: Namespace to search. Default searches default namespace.
+            filter: Metadata filter expression.
+            alpha: Weighting between dense and sparse. Default 0.5.
+                1.0 = pure dense (semantic), 0.0 = pure sparse (keyword/BM25).
+            include_values: Include vector values in results. Default False.
+            include_metadata: Include metadata in results. Default True.
+
+        Returns:
+            List of QueryResult objects sorted by similarity.
+
+        Raises:
+            ValueError: If alpha is not between 0 and 1.
+        """
+        index = self._ensure_index()
+
+        scaled_dense, scaled_sparse = self._scale_hybrid_vectors(
+            dense_vector, sparse_vector, alpha
+        )
+
+        response = index.query(
+            vector=scaled_dense,
+            sparse_vector=scaled_sparse,
             top_k=top_k,
             namespace=namespace,
             filter=filter,
@@ -421,53 +513,4 @@ class PineconeManager:
                 flat[key] = str(value)
         return flat
 
-if __name__ == "__main__":
-    from app.core.foundry.chunking.semantic import SemanticChunker
-    from app.repositories.transcripts_data import get_latest_transcript
-    from app.core.foundry.models.metadata import EarningsCallMetadata
-    import time
-
-    # chunker = SemanticChunker()
-    # transcript = get_latest_transcript("CRWV")
-    # metadata = EarningsCallMetadata.from_transcript(transcript)
-    # chunks = chunker.chunk(
-    #     transcript["content"], 
-    #     doc_type="earnings_call",
-    #     metadata=metadata.to_chunk_metadata(),
-    # )
-
-    # for chunk in chunks:
-    #     chunk.metadata["chunk_id"] = metadata.build_chunk_id(chunk.metadata["chunk_index"])
-
-    # print(chunks)
-
-
-    # transcript = get_latest_transcript("CRWV")
-
-    # # Build identity fields
-    # ticker = "CRWV"
-    # fiscal_year = transcript["year"]
-    # fiscal_quarter = f"{fiscal_year}Q{transcript['period']}"
-    # doc_id = f"earnings_call:{ticker}:{fiscal_quarter}"
-
-    # chunker = SemanticChunker()
-    # chunks = chunker.chunk(
-    #     transcript["content"],
-    #     doc_type="earnings_call",
-    #     metadata={
-    #         "ticker": ticker,
-    #         "doc_id": doc_id,
-    #         "call_date": transcript["date"],
-    #         "fiscal_year": fiscal_year,
-    #         "fiscal_quarter": fiscal_quarter,
-    #     },
-    # )
-
-    # # Build chunk_id after chunking (depends on chunk_index)
-    # for chunk in chunks:
-    #     chunk.metadata["chunk_id"] = f"{doc_id}#{chunk.metadata['chunk_index']:04d}"
-
-    # embedded_chunks = embed_chunks(chunks)
-
-    # manager.upsert_chunks(embedded_chunks, namespace="earnings_calls")
 

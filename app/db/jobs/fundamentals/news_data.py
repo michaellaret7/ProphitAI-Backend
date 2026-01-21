@@ -22,7 +22,6 @@ from app.db.core.models.market_data_models import (
 )
 from app.db.core.pull_fmp_data import FMP_API_DATA
 from app.db.jobs.base_updater import BaseUpdater
-from app.utils.time_utils import get_current_utc_time
 
 
 class NewsDataUpdater:
@@ -269,10 +268,11 @@ class NewsDataUpdater:
         fmp_api: FMP_API_DATA
     ) -> int:
         """
-        Update earnings transcripts with smart quarterly logic.
+        Update earnings transcripts using FMP's transcript dates endpoint.
 
-        Checks the last 8 quarters (2 years) and only fetches
+        Fetches available transcript dates from the API, then retrieves
         transcripts that don't already exist in the database.
+        Limited to the most recent 8 transcripts (2 years).
 
         Args:
             ticker_id: UUID of the ticker
@@ -284,27 +284,29 @@ class NewsDataUpdater:
             Number of transcripts added, -1 on error
         """
         try:
-            current_date = get_current_utc_time()
-            current_year = current_date.year
-            current_quarter = (current_date.month - 1) // 3 + 1
+            # Get available transcript dates from FMP API
+            available_dates = fmp_api.get_earnings_transcript_dates(ticker_symbol)
+            if not available_dates:
+                return 0
 
             transcripts_added = 0
 
-            for i in range(8):
-                year = current_year - (i // 4)
-                quarter = current_quarter - (i % 4)
+            # Process the most recent 8 transcripts
+            for item in available_dates[:8]:
+                year = item.get('year')
+                quarter = item.get('quarter')
 
-                # Adjust for quarter overflow
-                if quarter <= 0:
-                    quarter += 4
-                    year -= 1
+                if not year or not quarter:
+                    continue
+
+                period_str = f'Q{quarter}'
 
                 # Check if transcript already exists
                 existing = session.query(EarningsTranscript).filter(
                     and_(
                         EarningsTranscript.ticker_id == ticker_id,
                         EarningsTranscript.year == year,
-                        EarningsTranscript.period == str(quarter)
+                        EarningsTranscript.period == period_str
                     )
                 ).first()
 
@@ -324,7 +326,7 @@ class NewsDataUpdater:
                     if transcript_data and transcript_data.get('content'):
                         record = {
                             'ticker_id': ticker_id,
-                            'period': str(quarter),
+                            'period': period_str,
                             'year': year,
                             'date': self._safe_date(transcript_data.get('date')),
                             'content': transcript_data.get('content')

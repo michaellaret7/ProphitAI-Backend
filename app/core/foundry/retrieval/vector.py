@@ -1,65 +1,53 @@
-from typing import Optional
-from app.core.foundry.embeddings.voyage_embeddings import embed_query
-from app.core.foundry.embeddings.pinecone_manager import PineconeManager
-from app.core.foundry.models.vector import QueryResult
-from dotenv import load_dotenv
+"""Dense vector search using Voyage AI embeddings."""
+
 import os
+from typing import Optional
+
+from dotenv import load_dotenv
+
+from app.core.foundry.embeddings.pinecone_manager import PineconeManager
+from app.core.foundry.embeddings.voyage_embeddings import embed_query
+from app.core.foundry.models.vector import QueryResult
+from app.core.foundry.retrieval.utils import build_metadata_filter
 
 load_dotenv()
 
+
 class VectorSearch:
+    """Dense vector search using semantic embeddings."""
+
     def __init__(self):
+        index_name = os.getenv("PINECONE_INDEX_NAME")
+        if not index_name:
+            raise ValueError("PINECONE_INDEX_NAME environment variable not set")
+
         self.manager = PineconeManager()
-        self.manager.connect_index(name=os.getenv("PINECONE_INDEX_NAME"), host=os.getenv("PINECONE_HOST"))
+        self.manager.connect_index(
+            name=index_name,
+            host=os.getenv("PINECONE_HOST"),
+        )
 
     def search(
-        self, 
-        query: str, 
-        top_k: int = 10, 
+        self,
+        query: str,
+        top_k: int = 10,
         namespace: str = "earnings_calls",
         ticker: Optional[str] = None,
         fiscal_quarter: Optional[str] = None,
         fiscal_year: Optional[int] = None,
     ) -> list[QueryResult]:
+        """Execute a dense vector search."""
+        filters = build_metadata_filter(
+            ticker=ticker,
+            fiscal_quarter=fiscal_quarter,
+            fiscal_year=fiscal_year,
+        )
 
-        filters = {
-            key: value
-            for key, value in (
-                ("ticker", ticker),
-                ("fiscal_quarter", fiscal_quarter),
-                ("fiscal_year", fiscal_year),
-            )
-            if value is not None
-        }
-        print(filters)
+        embedding = embed_query(query)
 
-        embedding = embed_query(query) # Embed the query
-
-        results = self.manager.query(
+        return self.manager.query(
             vector=embedding.dense,
             top_k=top_k,
             namespace=namespace,
-            # filter={
-            #     'ticker': 'CRWV'
-            # },
             filter=filters,
         )
-
-        return [QueryResult(id=result.id, score=result.score, metadata=result.metadata) for result in results]
-
-
-if __name__ == "__main__":
-    import time
-    start_time = time.time()
-    print("starting search")
-    search = VectorSearch()
-    results = search.search(
-        query="What are the risks and uncertainties facing the company?",
-        ticker="CRWV",
-        fiscal_quarter="2025Q3",
-        fiscal_year=2025,
-        namespace="earnings_calls",
-    )
-    print(results)
-    end_time = time.time()
-    print(f"Time taken to search: {end_time - start_time} seconds")

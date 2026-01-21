@@ -54,6 +54,7 @@ class SparseEncoder:
         if not load_path.exists():
             raise FileNotFoundError(f"No encoder found at {load_path}")
 
-        self.encoder = BM25Encoder.load(str(load_path))
+        # Reason: BM25Encoder.load is an instance method, not a class method
+        self.encoder = BM25Encoder().load(str(load_path))
         self.is_fitted = True
 

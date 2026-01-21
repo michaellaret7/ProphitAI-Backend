@@ -66,9 +66,16 @@ class EarningsCallMetadata(BaseModel):
         if not transcript.get("found", True):
             raise ValueError(f"Transcript not found for ticker: {transcript.get('ticker')}")
 
+        # Parse period: database stores as 'Q1', 'Q2', etc. but we need int (1-4)
+        raw_period = transcript["period"]
+        if isinstance(raw_period, str) and raw_period.upper().startswith("Q"):
+            period = int(raw_period[1:])
+        else:
+            period = int(raw_period)
+
         return cls(
             ticker=transcript["ticker"],
-            period=transcript["period"],
+            period=period,
             year=transcript["year"],
             call_date=transcript["date"],
         )

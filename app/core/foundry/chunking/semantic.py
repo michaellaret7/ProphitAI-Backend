@@ -291,8 +291,5 @@ if __name__ == "__main__":
     chunks = chunker.chunk(transcript["content"], doc_type="transcript")
     print(f"Generated {len(chunks)} chunks")
     for chunk in chunks:
-        print("\n")
+        print(chunk.metadata)
         print("--------------------------------")
-        print(f"Chunk {chunk.start_index} - {chunk.end_index}: {chunk.text}")
-        print("--------------------------------")
-        print("\n")
