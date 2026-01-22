@@ -28,9 +28,11 @@ from app.core.foundry.embeddings.voyage_embeddings import embed_chunks
 from app.core.foundry.ingestion import Ingestor
 from app.core.foundry.models.chunk import Chunk
 from app.core.foundry.models.document import Document
-from app.core.foundry.models.metadata import EarningsCallMetadata
+from app.core.foundry.models.metadata import EarningsCallMetadata, ResearchDocumentMetadata
 
 load_dotenv()
+
+RESEARCH_DOC_TYPES = {"macro_research", "equity_research"}
 
 @dataclass
 class IngestedDoc:
@@ -39,6 +41,7 @@ class IngestedDoc:
     metadata: dict
     doc_id: str
     earnings_meta: EarningsCallMetadata | None = None
+    research_meta: ResearchDocumentMetadata | None = None
 
 
 CHUNKERS: dict[str, Callable] = {
@@ -46,7 +49,6 @@ CHUNKERS: dict[str, Callable] = {
     "semantic": lambda: SemanticChunker(),
     "recursive": lambda: RecursiveChunker(),
 }
-
 
 class Pipeline:
     """
@@ -74,7 +76,7 @@ class Pipeline:
         self,
         namespace: str = "earnings_calls",
         doc_type: str = "earnings_call",
-        s3_workers: int = 5,
+        s3_workers: int = 2,
         chunker_type: str = "earnings_call",
     ):
         """
@@ -85,6 +87,8 @@ class Pipeline:
             doc_type: Document type for chunker selection.
             s3_workers: Max parallel workers for S3 fetches.
         """
+        print(f"🚀 Initializing Foundry Pipeline with namespace: {namespace}, doc_type: {doc_type}, chunker_type: {chunker_type}")
+
         self.namespace = namespace
         self.doc_type = doc_type
         self.s3_workers = s3_workers
@@ -171,7 +175,7 @@ class Pipeline:
                 item["content"],
                 source_name="raw_text",
             )
-            ingested.append(self._build_ingested_doc(doc, item.get("metadata", {})))
+            ingested.append(self._build_ingested_doc(doc, item.get("metadata", {}), s3_uri=None))
 
         # Process S3 URIs in parallel
         if s3_uris:
@@ -181,13 +185,18 @@ class Pipeline:
 
         return ingested
 
-    def _ingest_s3_single(self, item: dict) -> IngestedDoc: # --> this function is the one used in the thread pool executor
+    def _ingest_s3_single(self, item: dict) -> IngestedDoc:
         """Ingest a single S3 document."""
         doc = self._ingestor.process(item["uri"])
-        return self._build_ingested_doc(doc, item.get("metadata", {}))
+        return self._build_ingested_doc(doc, item.get("metadata", {}), s3_uri=item["uri"])
 
-    def _build_ingested_doc(self, doc: Document, raw_metadata: dict) -> IngestedDoc:
-        """Build IngestedDoc, using EarningsCallMetadata for earnings calls."""
+    def _build_ingested_doc(
+        self,
+        doc: Document,
+        raw_metadata: dict,
+        s3_uri: str | None = None,
+    ) -> IngestedDoc:
+        """Build IngestedDoc with appropriate metadata extraction."""
         if self.doc_type == "earnings_call":
             earnings_meta = EarningsCallMetadata.from_transcript(raw_metadata)
             return IngestedDoc(
@@ -196,7 +205,24 @@ class Pipeline:
                 doc_id=earnings_meta.doc_id,
                 earnings_meta=earnings_meta,
             )
- 
+
+        if self.doc_type in RESEARCH_DOC_TYPES and s3_uri:
+            research_meta = ResearchDocumentMetadata.from_s3_uri(s3_uri)
+            # Allow user to override fields via raw_metadata
+            overrides = {}
+            if raw_metadata.get("ticker"):
+                overrides["ticker"] = raw_metadata["ticker"]
+            if raw_metadata.get("research_provider"):
+                overrides["research_provider"] = raw_metadata["research_provider"]
+            if overrides:
+                research_meta = research_meta.model_copy(update=overrides)
+            return IngestedDoc(
+                document=doc,
+                metadata=research_meta.to_chunk_metadata(),
+                doc_id=research_meta.doc_id,
+                research_meta=research_meta,
+            )
+
         return IngestedDoc(
             document=doc,
             metadata=raw_metadata,
@@ -216,11 +242,13 @@ class Pipeline:
                 metadata=chunk_metadata,
             )
 
-            # Add chunk_id using EarningsCallMetadata if available
+            # Add chunk_id using structured metadata if available
             for chunk in chunks:
                 chunk_index = chunk.metadata.get("chunk_index", 0)
                 if doc_item.earnings_meta:
                     chunk.metadata["chunk_id"] = doc_item.earnings_meta.build_chunk_id(chunk_index)
+                elif doc_item.research_meta:
+                    chunk.metadata["chunk_id"] = doc_item.research_meta.build_chunk_id(chunk_index)
                 else:
                     chunk.metadata["chunk_id"] = f"{doc_item.doc_id}#{chunk_index:04d}"
 
@@ -243,24 +271,30 @@ class Pipeline:
 
 
 if __name__ == "__main__":
-    from app.repositories.transcripts_data import get_earnings_transcripts
-    from app.core.foundry.utils.delete_embeddings import DeleteEmbeddings
+    import boto3
 
-    # de = DeleteEmbeddings()
-    # de.delete_all(namespace="earnings_calls")
+    bucket = "prophitai-s3-bucket"
+    prefix = "pdfs/macro_research/"
 
-    # Get last 6 transcripts for a ticker
-    ticker = "V"
-    result = get_earnings_transcripts(ticker, limit=12)
+    s3 = boto3.client("s3")
 
-    # Build input list - add ticker to each item since get_earnings_transcripts doesn't include it
-    texts = [
-        {"content": item["content"], "metadata": {**item, "ticker": ticker}}
-        for item in result["items"]
-    ]
+    paginator = s3.get_paginator("list_objects_v2")
 
-    print(f"Processing {len(texts)} transcripts for {ticker}")
+    s3_uris = []
+    for page in paginator.paginate(Bucket=bucket, Prefix=prefix):
+        for obj in page.get("Contents", []):
+            s3_uris.append({"uri": f"s3://{bucket}/{obj['Key']}", "metadata": {}})
+    
+    s3_uris.pop(0)
+    s3_uris.pop(0)
 
-    pipe = Pipeline(namespace="earnings_calls", doc_type="earnings_call", chunker_type="earnings_call")
-    count = pipe.run(texts=texts)
+    print(s3_uris)
+    print(len(s3_uris))
+
+    pipeline = Pipeline(
+        namespace="macro_research",
+        doc_type="macro_research",
+        chunker_type="semantic",
+    )
+    count = pipeline.run(s3_uris=s3_uris)
     print(f"Upserted {count} vectors")

@@ -56,7 +56,8 @@
       "WebFetch(domain:github.com)",
       "WebFetch(domain:docs.chonkie.ai)",
       "WebFetch(domain:arxiv.org)",
-      "WebFetch(domain:raw.githubusercontent.com)"
+      "WebFetch(domain:raw.githubusercontent.com)",
+      "mcp__ide__getDiagnostics"
     ],
     "deny": [],
     "ask": []

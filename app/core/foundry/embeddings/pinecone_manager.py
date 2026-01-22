@@ -457,6 +457,40 @@ class PineconeManager:
         index.delete(delete_all=True, namespace=namespace)
 
     # =========================================================================
+    # Metadata Discovery
+    # =========================================================================
+
+    def get_metadata_keys(self, namespace: Optional[str] = None) -> set[str]:
+        """
+        Discover available metadata keys by sampling vectors from the namespace.
+
+        Fetches a sample of vector IDs and retrieves their metadata to extract
+        all unique keys. Useful for validating filter parameters.
+
+        Args:
+            namespace: Namespace to sample from. Uses default namespace if None.
+
+        Returns:
+            Set of metadata key names found in the sampled vectors.
+            Returns empty set if namespace is empty or has no metadata.
+        """
+        index = self._ensure_index()
+
+        # Reason: Sample vector IDs first, then fetch their metadata
+        vector_ids = self.list_vectors(limit=10, namespace=namespace)
+        if not vector_ids:
+            return set()
+
+        response = index.fetch(ids=vector_ids, namespace=namespace)
+
+        metadata_keys: set[str] = set()
+        for vec_data in response.vectors.values():
+            if vec_data.metadata:
+                metadata_keys.update(vec_data.metadata.keys())
+
+        return metadata_keys
+
+    # =========================================================================
     # Statistics
     # =========================================================================
 

@@ -5,6 +5,7 @@ Handles digital extraction, OCR fallback, and structured output.
 Uses PyMuPDF for fast digital extraction and Docling for layout-aware processing.
 """
 import logging
+import os
 import tempfile
 from typing import Optional
 
@@ -24,7 +25,6 @@ logger = logging.getLogger(__name__)
 
 MIN_CHARS_PER_PAGE: int = 50
 DEFAULT_OCR_LANG: str = "eng"
-
 
 class PDFHandler:
     """
@@ -180,22 +180,31 @@ class PDFHandler:
         """
         logger.info("Running Docling extraction (high-fidelity mode)...")
 
+        # Reason: Docling requires a file path, cannot work with bytes directly.
+        # On Windows, NamedTemporaryFile with delete=True holds exclusive access,
+        # so we use delete=False and manually clean up after Docling reads it.
+        tmp = tempfile.NamedTemporaryFile(suffix=".pdf", delete=False)
+        tmp_path = tmp.name
+
         try:
-            # Reason: Docling requires a file path, cannot work with bytes directly
-            with tempfile.NamedTemporaryFile(suffix=".pdf", delete=True) as tmp:
-                tmp.write(data)
-                tmp.flush()
+            tmp.write(data)
+            tmp.close()  # Reason: Must close before Docling can read on Windows
 
-                converter = self._get_docling_converter()
-                result = converter.convert(tmp.name)
-                markdown = result.document.export_to_markdown()
+            converter = self._get_docling_converter()
+            result = converter.convert(tmp_path)
+            markdown = result.document.export_to_markdown()
 
-                logger.debug(f"Docling extraction: {len(markdown)} chars")
-                return markdown
+            logger.debug(f"Docling extraction: {len(markdown)} chars")
+            return markdown
 
         except Exception as e:
             logger.error(f"Docling extraction failed: {e}")
             raise RuntimeError(f"Docling extraction failed: {e}") from e
+
+        finally:
+            # Reason: Clean up temp file regardless of success/failure
+            if os.path.exists(tmp_path):
+                os.unlink(tmp_path)
 
     def _get_docling_converter(self) -> DocumentConverter:
         """
