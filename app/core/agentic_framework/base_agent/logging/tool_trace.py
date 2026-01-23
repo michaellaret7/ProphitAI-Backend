@@ -14,12 +14,12 @@ def log_tool_call(tool_call_history: List[Dict[str, Any]], output_dir: Optional[
 
     Args:
         tool_call_history: List of tool validation dictionaries
+        output_dir: Directory to write the file to. If None, logging is skipped.
     """
-    # Get path to tools.yaml
     if output_dir is None:
-        tool_trace_file = Path(__file__).parent.parent / "tools.yaml"
-    else:
-        tool_trace_file = Path(output_dir) / "tools.yaml"
+        return
+
+    tool_trace_file = Path(output_dir) / "tools.yaml"
 
     # Add timestamp to each entry
     timestamped_history = []

@@ -10,18 +10,13 @@ def write_messages_to_yaml(messages: List[Dict[str, Any]], output_dir: Optional[
 
     Args:
         messages: List of message dictionaries from the agent
-        output_dir: Directory to write the file to (defaults to base_agent directory)
+        output_dir: Directory to write the file to. If None, logging is skipped.
         iteration_indices: Dict mapping iteration number to message index where it starts
     """
-    if not messages:
+    if not messages or output_dir is None:
         return
 
-    # Default to base_agent directory (same location as task_state.yaml)
-    if output_dir is None:
-        base_agent_dir = Path(__file__).parent.parent
-        output_path = base_agent_dir / "messages.yaml"
-    else:
-        output_path = Path(output_dir) / "messages.yaml"
+    output_path = Path(output_dir) / "messages.yaml"
 
     # Convert messages to YAML-serializable format
     serializable_messages = []

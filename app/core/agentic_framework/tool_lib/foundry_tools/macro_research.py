@@ -107,8 +107,9 @@ def macro_research_search(
 MACRO_RESEARCH_SEARCH_DESCRIPTION = (
     "Search macro and economic research reports using hybrid semantic + keyword search. "
     "Use this tool to find information about interest rates, central bank policy (Fed, ECB, BOJ), "
-    "inflation, economic outlook, market commentary, and macro themes. "
-    "Returns relevant passages from research reports with relevance scores. "
+    "inflation, economic outlook, market commentary, macro themes, and more. "
+    "Returns relevant passages(chunks of text) from research reports with relevance scores. "
+    "When synthesizing the results from this tool, always cite your source(s). Example: 'According to JPMorgan research, the Fed is expected to cut rates by 25 basis points in 2024.'[1 (You will then cite the research report as the number 1 at the bottom of your response)] "
     "Example: macro_research_search(query='What is the Fed outlook for rate cuts?') "
     "Example: macro_research_search(query='Japan central bank policy', research_provider='JPMorgan')"
 )
@@ -124,7 +125,7 @@ MACRO_RESEARCH_SEARCH_PARAMETERS = {
             "type": "integer",
             "description": "Number of results to return (default: 5, max: 25)",
             "minimum": 1,
-            "maximum": 25,
+            "maximum": 10,
             "default": 5
         },
         "research_provider": {
