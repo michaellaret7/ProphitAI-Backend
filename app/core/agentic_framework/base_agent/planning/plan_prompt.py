@@ -10,121 +10,154 @@ YOU MUST CREATE A PLAN BEFORE DOING ANY WORK.
 
 YOUR ONLY JOB IN THIS ITERATION: Output a JSON plan that describes the work you will do in FUTURE iterations.
 
-WHEN BUILDING A PLAN, THINK THROUGH THE PLAN STEP BY STEP AND BREAK IT DOWN. FOR EXAMPLE, THESE ARE IMPORTANT QUESTIONS TO ASK YOURSELF:
-- What is the task/goal?
-- How can I break this down into a high level plan?
-- What tools are at my disposal?
-- When and where should I take reasoning steps?
-etc...
-
-This is the PLANNING phase. Execution comes later.
-
+================================================================================
+PLANNING PRINCIPLES
 ================================================================================
 
-Based on the system prompt, user prompt, available tools, and any other relevant context, create a structured plan. The format of the plan should be in the following JSON format:
+**KEEP PLANS MINIMAL AND PROPORTIONAL TO TASK COMPLEXITY.**
+
+- Simple research query → 1-2 main tasks, 1-3 subtasks each
+- Multi-step analysis → 2-3 main tasks with relevant subtasks
+- Complex portfolio construction → 3-5 main tasks as needed
+
+Ask yourself:
+1. What is the core goal? (Don't overcomplicate it)
+2. What's the minimum number of steps to achieve it?
+3. What tools do I need?
+
+**AVOID OVER-PLANNING.** If the task is "research X and write a summary", you don't need 5 main tasks. You need: (1) Search/gather information, (2) Synthesize and output.
+
+================================================================================
+PLAN FORMAT
+================================================================================
+
+Output your plan in this JSON format:
 {
     "tasks": [
         {
             "id": "1",
             "description": "Task 1",
             "subtasks": [
-                {
-                    "id": "1a",
-                    "description": "Subtask 1a"
-                },
-                {
-                    "id": "1b",
-                    "description": "Subtask 1b"
-                }
+                {"id": "1a", "description": "Subtask 1a"},
+                {"id": "1b", "description": "Subtask 1b"}
             ]
         },
         {
             "id": "2",
             "description": "Task 2",
             "subtasks": [
-                {
-                    "id": "2a",
-                    "description": "Subtask 2a"
-                }
+                {"id": "2a", "description": "Subtask 2a"}
             ]
         }
     ]
 }
 
-Example of a good plan:
+================================================================================
+EXAMPLES
+================================================================================
+
+**Example 1: Simple research query**
+User: "What is the outlook for interest rates? Write a research summary."
+
+GOOD plan (minimal, focused):
 {
     "tasks": [
         {
             "id": "1",
-            "description": "Analyze the portfolio's performance and risk metrics",
+            "description": "Research interest rate outlook",
             "subtasks": [
-                {
-                    "id": "1a",
-                    "description": "Get performance metrics for each ticker in the portfolio"
-                },
-                {
-                    "id": "1b",
-                    "description": "Get risk metrics for each ticker in the portfolio"
-                },
-                {
-                    "id": "1c",
-                    "description": "Analyze and observe the performance and risk metrics"
-                }
+                {"id": "1a", "description": "Search macro research for interest rate analysis and Fed outlook"},
+                {"id": "1b", "description": "Analyze findings and identify key themes"}
             ]
         },
         {
             "id": "2",
-            "description": "Generate final recommendations",
+            "description": "Write research output",
             "subtasks": [
-                {
-                    "id": "2a",
-                    "description": "Summarize key findings"
-                },
-                {
-                    "id": "2b",
-                    "description": "Propose specific trade ideas with evidence"
-                }
+                {"id": "2a", "description": "Synthesize findings into formatted research piece with citations"}
             ]
         }
     ]
 }
 
-**IMPORTANT WORKFLOW INSTRUCTIONS:**
+BAD plan (over-engineered for a simple query):
+{
+    "tasks": [
+        {"id": "1", "description": "Understand the research question", "subtasks": [...]},
+        {"id": "2", "description": "Gather macro data", "subtasks": [...]},
+        {"id": "3", "description": "Analyze historical trends", "subtasks": [...]},
+        {"id": "4", "description": "Compare multiple sources", "subtasks": [...]},
+        {"id": "5", "description": "Generate final output", "subtasks": [...]}
+    ]
+}
+^ This is too many tasks for a simple research query!
 
-After planning, you will execute tasks following this pattern for EACH iteration:
+**Example 2: Portfolio analysis (more complex, warrants more tasks)**
+User: "Analyze this portfolio's risk and recommend improvements."
+
+Appropriate plan:
+{
+    "tasks": [
+        {
+            "id": "1",
+            "description": "Analyze portfolio risk metrics",
+            "subtasks": [
+                {"id": "1a", "description": "Calculate VaR and stress test results"},
+                {"id": "1b", "description": "Assess concentration and correlation risk"}
+            ]
+        },
+        {
+            "id": "2",
+            "description": "Identify improvement opportunities",
+            "subtasks": [
+                {"id": "2a", "description": "Identify overweight/underweight positions"},
+                {"id": "2b", "description": "Research potential diversifying additions"}
+            ]
+        },
+        {
+            "id": "3",
+            "description": "Generate recommendations",
+            "subtasks": [
+                {"id": "3a", "description": "Propose specific changes with rationale"}
+            ]
+        }
+    ]
+}
+
+================================================================================
+EXECUTION WORKFLOW (after planning)
+================================================================================
+
+After planning, execute tasks following this pattern for EACH iteration:
 
 1. **Thinking**: In 1-3 sentences state what you will do next and why
-2. **Identify** the next required task/subtask (strict sequential order: 1a, 1b, 1c, then 2a, 2b, etc.) and mark it in progress using `update_tasks`
+2. **Identify** the next required task/subtask (sequential order: 1a, 1b, then 2a, etc.) and mark it in progress using `update_tasks`
 3. **Execute** the work for that subtask using available tools
 4. **Analyze** tool result(s) in 1-3 sentences: key findings → implications → next step
-5. **Mark complete** using `update_tasks` AFTER finishing the work (include brief evidence)
+5. **Mark complete** using `update_tasks` AFTER finishing the work
 6. **Move** to the next task/subtask and repeat
-7. **Before finalizing**: perform a brief reflection (2-4 sentences) and then provide the Final Answer
+7. **Before finalizing**: provide the Final Answer
 
-**Example iteration workflow:**
-- Iteration 5: Work on subtask 2a → Use tools → Mark 2a complete
-- Iteration 6: Work on subtask 2b → Use tools → Mark 2b complete
+**When ALL tasks are complete:** Start with "Final Answer:" followed by your response.
 
-**When ALL tasks are complete:** You MUST provide your final answer by starting with "Final Answer:" followed by your comprehensive response.
+**Do NOT create a "Return final answer" task - this happens automatically.**
 
-**Do NOT create a final task like "Return final answer" - this happens automatically when all tasks are complete.**
-
-**NON-SKIPPING RULE:** You MUST NOT skip any main tasks or subtasks. Always follow the plan's sequential order exactly.
+**NON-SKIPPING RULE:** Follow the plan's sequential order exactly.
 
 ================================================================================
 
 🚨 REMINDER: THIS IS THE PLANNING PHASE 🚨
 
-You are in iteration 1. Your output should be ONLY the JSON plan above.
+You are in iteration 1. Your output should be ONLY the JSON plan.
 
 DO NOT:
-❌ Call any tools (you'll do this in later iterations)
-❌ Provide analysis (you'll do this after planning)
-❌ Execute tasks (execution comes after planning)
+❌ Call any tools
+❌ Provide analysis
+❌ Execute tasks
 
 DO:
-✅ Output ONLY the JSON plan in the format shown above
-✅ Make the plan comprehensive and detailed
+✅ Output ONLY the JSON plan
+✅ Keep the plan minimal and proportional to task complexity
 ✅ Ensure subtasks are specific and actionable
 
 Now, output your plan in the JSON format shown above. Begin your response with the opening brace {

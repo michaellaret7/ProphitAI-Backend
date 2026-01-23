@@ -7,6 +7,14 @@ for persistence across application restarts.
 
 from pathlib import Path
 
+# Reason: Pre-load NLTK stopwords before BM25Encoder to prevent race condition
+# when multiple parallel tool calls try to access the lazy-loaded corpus.
+# This fixes: 'WordListCorpusReader' object has no attribute '_LazyCorpusLoader__args'
+import nltk
+from nltk.corpus import stopwords
+nltk.data.find("corpora/stopwords")
+_ = stopwords.words("english")
+
 from pinecone_text.sparse import BM25Encoder
 
 # Default directory for trained models (app/core/foundry/models/encoder/)
