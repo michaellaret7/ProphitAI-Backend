@@ -97,7 +97,7 @@ class Pipeline:
         self.delete_s3_after_success = delete_s3_after_success
 
         # Initialize components
-        self._ingestor = Ingestor() # --> import deoc/text ingestion Object 
+        self._ingestor = Ingestor(use_modal_gpu=True) # --> import deoc/text ingestion Object 
 
         self._sparse_encoder = SparseEncoder() # --> import sparse encoder Object
         self._sparse_encoder.load() # --> load the sparse encoder from the file system

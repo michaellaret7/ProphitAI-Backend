@@ -39,6 +39,7 @@ class Ingestor:
         self,
         high_fidelity_pdf: bool = True,
         s3_client: Optional[boto3.client] = None,
+        use_modal_gpu: bool = True,
     ) -> None:
         """
         Initialize Ingestor.
@@ -46,14 +47,17 @@ class Ingestor:
         Args:
             high_fidelity_pdf: Use docling for PDF extraction.
             s3_client: Optional boto3 S3 client. Created lazily if not provided.
+            use_modal_gpu: Use Modal GPU for PDF extraction (requires deployed Modal app).
         """
         self.high_fidelity_pdf = high_fidelity_pdf
         self._s3_client = s3_client
+        self.use_modal_gpu = use_modal_gpu
 
         # Lazy-loaded handlers
         self._pdf_handler = None
         self._excel_handler = None
         self._text_handler = None
+        self._modal_client = None
 
     @property
     def s3_client(self):
@@ -231,6 +235,8 @@ class Ingestor:
             )
 
         if handler_type == "pdf":
+            if self.use_modal_gpu:
+                return self._get_modal_client().extract_from_bytes(data)
             return self._get_pdf_handler().extract(data, self.high_fidelity_pdf)
         elif handler_type == "excel":
             return self._get_excel_handler().extract(data, extension)
@@ -325,21 +331,27 @@ class Ingestor:
             return False
 
     # Lazy handler getters
+    def _get_modal_client(self):
+        if self._modal_client is None:
+            from app.core.foundry.ingestion.modal_ops.client import ModalPDFClient
+            self._modal_client = ModalPDFClient()
+        return self._modal_client
+
     def _get_pdf_handler(self):
         if self._pdf_handler is None:
-            from app.core.foundry.ingestion.pdf_loader import PDFHandler
+            from app.core.foundry.ingestion.doc_loaders.pdf_loader import PDFHandler
             self._pdf_handler = PDFHandler()
         return self._pdf_handler
 
     def _get_excel_handler(self):
         if self._excel_handler is None:
-            from app.core.foundry.ingestion.excel_loader import ExcelHandler
+            from app.core.foundry.ingestion.doc_loaders.excel_loader import ExcelHandler
             self._excel_handler = ExcelHandler()
         return self._excel_handler
 
     def _get_text_handler(self):
         if self._text_handler is None:
-            from app.core.foundry.ingestion.text_loader import TextHandler
+            from app.core.foundry.ingestion.doc_loaders.text_loader import TextHandler
             self._text_handler = TextHandler()
         return self._text_handler
 

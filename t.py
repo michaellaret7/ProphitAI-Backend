@@ -1,19 +1,5 @@
-# my_script.py
-import modal
-import torch
+from app.core.foundry.ingestion import Ingestor
 
-process_pdf = modal.Function.from_name("test", "check_gpu")
-
-# app = modal.App("test")
-
-# @app.function(gpu="T4", image=modal.Image.debian_slim().pip_install("torch", "pytesseract"))
-# def check_gpu() -> dict:
-#     # Your OCR logic
-#     tv = torch.__version__
-#     dc = torch.cuda.device_count()
-#     dn = torch.cuda.get_device_name()
-
-#     return {"text": f"Torch v{tv}, Device count: {dc}, Device name: {dn}"}
-
-x = process_pdf.remote()
-print(x)
+ingestor = Ingestor(use_modal_gpu=True)
+doc = ingestor.process("s3://prophitai-s3-bucket/pdfs/equity_research/1Q26 EPS_ Trimming Estimates and Price Target on the 2Q26 Gu DHI.pdf")
+print(doc.content[:500])
