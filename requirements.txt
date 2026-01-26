@@ -6,9 +6,6 @@ starlette==0.46.2
 
 # API and HTTP
 requests==2.32.3
-httpx==0.28.1
-httpcore==1.0.9
-aiohttp==3.12.15
 
 # Data Processing and Analysis
 numpy==2.2.6
@@ -23,12 +20,11 @@ seaborn==0.13.2
 
 # Financial Data and Analysis
 yfinance==0.2.61
-riskfolio-lib==4.3.0
 arch==7.2.0
 alpaca-py==0.42.0
 
 # Optimization
-cvxpy==1.7.3  # Added based on usage in tests
+cvxpy==1.7.3
 pyportfolioopt==1.5.6
 
 # Database and ORM
@@ -42,20 +38,21 @@ redis>=5.0.0
 # LLM and AI
 openai==1.98.0
 tiktoken==0.9.0
-instructor==1.10.0
-llama-index-core>=0.12.0
 
 # Text Chunking
 chonkie[semantic,voyageai]>=1.0.0
 
+# NLP
+nltk>=3.8.0
+
 # Search APIs
 exa-py>=1.0.0
 perplexityai>=0.22.0
-tavily-python>=0.3.0
 
 # Web Scraping
 playwright==1.55.0
 trafilatura==2.0.0
+readability-lxml>=0.8.0
 
 # Data Validation
 pydantic==2.11.5
@@ -78,9 +75,9 @@ pytz==2025.2
 python-dateutil==2.9.0.post0
 PyYAML==6.0.2
 certifi==2025.4.26
+orjson==3.11.3
 
 # Vector Search
-faiss-cpu==1.12.0
 pinecone==8.0.0
 voyageai>=0.3.0
 pinecone-text>=0.9.0
@@ -93,48 +90,10 @@ docling>=2.0.0
 
 # Excel Processing
 xlrd>=2.0.1
-
-# Additional Core Dependencies (required by main packages)
-anyio==4.9.0
-sniffio==1.3.1
-idna==3.10
-urllib3==2.4.0
-charset-normalizer==3.4.2
-h11==0.16.0
-annotated-types==0.7.0
-orjson==3.11.3
-jinja2==3.1.6
-markupsafe==3.0.2
-email-validator==2.2.0
-frozenlist==1.7.0
-multidict==6.6.4
-yarl==1.20.1
-attrs==25.3.0
-aiosignal==1.4.0
-aiohappyeyeballs==2.6.1
-propcache==0.3.2
-distro==1.9.0
-jiter==0.10.0
-contourpy==1.3.2
-cycler==0.12.1
-fonttools==4.58.4
-kiwisolver==1.4.8
-packaging==24.2
-pillow==11.2.1
-pyparsing==3.2.3
-six==1.17.0
-patsy==1.0.1
-joblib==1.5.1
-threadpoolctl==3.6.0
-multitasking==0.0.11
-html5lib==1.1
-webencodings==0.5.1
-platformdirs==4.3.8
-wrapt==1.17.3
-frozendict==2.4.6
-sseclient-py==1.8.0
-msgpack==1.1.1
-nest-asyncio==1.6.0
-# Document ingestion dependencies
 openpyxl>=3.1.0
+
+# AWS
 boto3>=1.28.0
+
+# Testing
+pytest>=7.0.0

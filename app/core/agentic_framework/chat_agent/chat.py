@@ -65,8 +65,6 @@ def main():
             session.add_assistant_message(response.answer)
 
             print(f"\n[Agent]: {format_markdown(response.answer)}")
-
-            print(session)
             
         except KeyboardInterrupt:
             print("\n\nGoodbye!")

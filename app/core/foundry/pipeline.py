@@ -10,7 +10,6 @@ Processes multiple texts and S3 documents in a single pass:
 
 from __future__ import annotations
 
-import logging
 import os
 import uuid
 from concurrent.futures import ThreadPoolExecutor
@@ -42,6 +41,7 @@ class IngestedDoc:
     doc_id: str
     earnings_meta: EarningsCallMetadata | None = None
     research_meta: ResearchDocumentMetadata | None = None
+    s3_uri: str | None = None  # Track S3 URI for cleanup after processing
 
 
 CHUNKERS: dict[str, Callable] = {
@@ -78,6 +78,7 @@ class Pipeline:
         doc_type: str = "earnings_call",
         s3_workers: int = 2,
         chunker_type: str = "earnings_call",
+        delete_s3_after_success: bool = False,
     ):
         """
         Initialize the pipeline.
@@ -86,12 +87,14 @@ class Pipeline:
             namespace: Pinecone namespace for vectors.
             doc_type: Document type for chunker selection.
             s3_workers: Max parallel workers for S3 fetches.
+            delete_s3_after_success: Delete S3 documents after successful processing.
         """
-        print(f"🚀 Initializing Foundry Pipeline with namespace: {namespace}, doc_type: {doc_type}, chunker_type: {chunker_type}")
+        print(f"Initializing Foundry Pipeline with namespace: {namespace}, doc_type: {doc_type}, chunker_type: {chunker_type}")
 
         self.namespace = namespace
         self.doc_type = doc_type
         self.s3_workers = s3_workers
+        self.delete_s3_after_success = delete_s3_after_success
 
         # Initialize components
         self._ingestor = Ingestor() # --> import deoc/text ingestion Object 
@@ -159,6 +162,10 @@ class Pipeline:
 
         print(f"Upserted {upserted} vectors to namespace '{self.namespace}'")
 
+        # Step 5: Delete S3 documents after successful processing
+        if self.delete_s3_after_success and upserted > 0:
+            self._cleanup_s3_documents(ingested)
+
         return upserted
 
     def _ingest_all(
@@ -204,6 +211,7 @@ class Pipeline:
                 metadata=earnings_meta.to_chunk_metadata(),
                 doc_id=earnings_meta.doc_id,
                 earnings_meta=earnings_meta,
+                s3_uri=s3_uri,
             )
 
         if self.doc_type in RESEARCH_DOC_TYPES and s3_uri:
@@ -221,12 +229,14 @@ class Pipeline:
                 metadata=research_meta.to_chunk_metadata(),
                 doc_id=research_meta.doc_id,
                 research_meta=research_meta,
+                s3_uri=s3_uri,
             )
 
         return IngestedDoc(
             document=doc,
             metadata=raw_metadata,
             doc_id=self._generate_doc_id(raw_metadata),
+            s3_uri=s3_uri,
         )
 
     def _chunk_all(self, ingested: list[IngestedDoc]) -> list[Chunk]:
@@ -255,6 +265,21 @@ class Pipeline:
             all_chunks.extend(chunks)
 
         return all_chunks
+
+    def _cleanup_s3_documents(self, ingested: list[IngestedDoc]) -> None:
+        """Delete S3 documents after successful processing."""
+        s3_docs = [doc for doc in ingested if doc.s3_uri]
+        if not s3_docs:
+            return
+
+        print(f"Cleaning up {len(s3_docs)} S3 documents...")
+
+        deleted_count = 0
+        for doc in s3_docs:
+            if self._ingestor.delete_s3_object(doc.s3_uri):
+                deleted_count += 1
+
+        print(f"Deleted {deleted_count}/{len(s3_docs)} S3 documents")
 
     def _generate_doc_id(self, metadata: dict) -> str:
         """Generate a unique document ID."""

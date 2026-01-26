@@ -6,6 +6,7 @@ Provides a unified interface for ingesting documents from S3 or local paths.
 import logging
 from pathlib import Path
 from typing import Optional
+from urllib.parse import unquote_plus
 
 import boto3
 from botocore.exceptions import ClientError
@@ -290,7 +291,38 @@ class Ingestor:
         if not bucket or not key:
             raise ValueError(f"Invalid S3 HTTPS URL: {https_url}")
 
+        # URL-decode the key (handles %2C -> comma, + -> space, etc.)
+        key = unquote_plus(key)
+
         return bucket, key
+
+    def delete_s3_object(self, s3_uri: str) -> bool:
+        """
+        Delete an object from S3.
+
+        Args:
+            s3_uri: S3 URI (s3://bucket/key) or HTTPS S3 URL.
+
+        Returns:
+            True if deletion succeeded, False otherwise.
+        """
+        try:
+            if s3_uri.startswith("s3://"):
+                bucket, key = self._parse_s3_uri(s3_uri)
+            elif self._is_s3_https_url(s3_uri):
+                bucket, key = self._parse_s3_https_url(s3_uri)
+            else:
+                logger.warning(f"Cannot delete non-S3 URI: {s3_uri}")
+                return False
+
+            logger.info(f"Deleting S3 object: bucket={bucket}, key={key}")
+            self.s3_client.delete_object(Bucket=bucket, Key=key)
+            logger.info(f"Successfully deleted S3 object: {s3_uri}")
+            return True
+
+        except ClientError as e:
+            logger.error(f"Failed to delete S3 object {s3_uri}: {e}")
+            return False
 
     # Lazy handler getters
     def _get_pdf_handler(self):
