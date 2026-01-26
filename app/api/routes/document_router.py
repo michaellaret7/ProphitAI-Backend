@@ -9,33 +9,15 @@ from typing import List
 
 from fastapi import APIRouter, File, UploadFile, Depends, Query
 
-from app.api.controller.foundry.document import (
-    upload_pdfs_controller,
-    ingest_user_documents_controller,
-)
+from app.api.controller.foundry.document import upload_and_ingest_controller
 from app.api.auth.clerk import get_clerk_user_id
 
-router = APIRouter(tags=["Documents 📄"])
+router = APIRouter(tags=["Documents"])
 
 
-@router.post("/documents/upload")
-async def upload_pdfs(
+@router.post("/documents/upload-and-ingest")
+async def upload_and_ingest(
     files: List[UploadFile] = File(..., description="One or more PDF files to upload"),
-    clerk_id: str = Depends(get_clerk_user_id),
-):
-    """
-    Upload one or more PDF documents to S3.
-
-    Requires authentication. Files are stored at:
-    s3://bucket/pdfs/user_uploads/{clerk_id}/{filename}
-
-    Returns S3 URIs for all uploaded files.
-    """
-    return await upload_pdfs_controller(files=files, clerk_id=clerk_id)
-
-
-@router.post("/documents/ingest")
-def ingest_documents(
     clerk_id: str = Depends(get_clerk_user_id),
     delete_after_ingestion: bool = Query(
         default=True,
@@ -43,15 +25,15 @@ def ingest_documents(
     ),
 ):
     """
-    Ingest uploaded documents into the RAG pipeline.
+    Upload documents to S3 and immediately ingest into the RAG pipeline.
 
-    Processes all PDFs previously uploaded by this user from S3 and embeds
-    them into Pinecone. Documents are stored in the 'user_uploads' namespace
-    with user_id metadata for filtering.
+    Unified endpoint that combines upload and ingestion in a single operation.
+    Files are uploaded to S3, then processed through the pipeline into Pinecone.
 
-    Query your documents using the search API with user_id filter.
+    Returns upload metadata and ingestion results.
     """
-    return ingest_user_documents_controller(
+    return await upload_and_ingest_controller(
+        files=files,
         clerk_id=clerk_id,
         delete_after_ingestion=delete_after_ingestion,
     )
