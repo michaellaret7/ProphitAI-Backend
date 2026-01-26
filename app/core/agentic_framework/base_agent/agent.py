@@ -106,7 +106,6 @@ class BaseAgent:
 
         print(f"Initialized Agent with model: {self.model} (provider: {self.provider})")
 
-    # NOTE: add a register tool function that takes a list of tool schemas and runs this add tool code internally. This will normalize the tool registration process.
     def add_tool(
         self,
         name: str,

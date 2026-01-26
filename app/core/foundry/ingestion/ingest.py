@@ -158,8 +158,23 @@ class Ingestor:
         extension = self._get_extension(key)
         filename = Path(key).name
 
-        logger.info(f"Fetching from S3: bucket={bucket}, key={key}")
+        logger.info(f"Processing from S3: bucket={bucket}, key={key}")
 
+        # For PDFs with Modal: send S3 URI directly (Modal downloads from S3)
+        if extension == ".pdf" and self.use_modal_gpu:
+            s3_uri = f"s3://{bucket}/{key}"
+            content = self._get_modal_client().extract_from_s3(s3_uri)
+            metadata = {
+                "filename": filename,
+                "extension": extension,
+                "char_count": len(content),
+                "source_type": "s3",
+                "s3_bucket": bucket,
+                "s3_key": key,
+            }
+            return Document(content=content, metadata=metadata, source=source)
+
+        # Standard path: fetch bytes locally then process
         try:
             response = self.s3_client.get_object(Bucket=bucket, Key=key)
             data = response["Body"].read()

@@ -25,7 +25,7 @@ model_cache = modal.Volume.from_name("docling-model-cache", create_if_missing=Tr
 
 @app.cls(
     image=docling_image,
-    gpu="T4",
+    gpu="L4",
     timeout=600,
     volumes={"/cache": model_cache},
     secrets=[modal.Secret.from_name("aws-credentials")],

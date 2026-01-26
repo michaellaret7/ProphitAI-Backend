@@ -3,7 +3,6 @@ from app.core.agentic_framework.tool_lib.common.responses import success_respons
 import math
 from typing import Dict, Any
 
-
 def calculator(expression: str) -> str:
     """
     Evaluate a mathematical expression safely.
@@ -64,5 +63,24 @@ def calculator(expression: str) -> str:
             return error_response(str(e))
     # No expression provided
     return error_response("No expression provided.")
+
+
+CALCULATOR_DESCRIPTION = (
+    "LAST RESORT TOOL - ONLY use when absolutely necessary for complex mathematical calculations "
+    "that cannot be done with other tools. Most metrics are already calculated in factor tools. "
+    "Provide the expression string and the tool returns the result. "
+    "Supports basic arithmetic (+, -, *, /), parentheses, and math functions (sqrt, sin, cos, tan, log, ln, pi, e)."
+)
+
+CALCULATOR_PARAMETERS = {
+    "type": "object",
+    "properties": {
+        "expression": {
+            "type": "string",
+            "description": "Mathematical expression to evaluate (e.g., '2 + 3 * 4', 'sqrt(16)', 'sin(pi/2)')."
+        }
+    },
+    "required": ["expression"],
+}
 
 

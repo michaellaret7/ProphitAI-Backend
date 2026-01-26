@@ -7,6 +7,10 @@ import re
 
 from app.core.agentic_framework.chat_agent import ChatAgent, ChatSession
 from app.core.agentic_framework.base_agent.utils.models import PrintMode
+from app.core.agentic_framework.tool_lib.foundry_tools.macro_research import (
+    MACRO_RESEARCH_SEARCH_TOOL,
+)
+from app.core.agentic_framework.tool_lib.data_tools.screeners.equity_screener import EQUITY_SCREENER_TOOL
 
 # ANSI color codes
 BOLD = "\033[1m"
@@ -16,6 +20,15 @@ GREEN = "\033[32m"
 YELLOW = "\033[33m"
 BLUE = "\033[34m"
 RESET = "\033[0m"
+
+
+class ResearchAgent(ChatAgent):
+    """ResearchAgent - Agent for conducting research and providing insights."""
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.add_tool(**MACRO_RESEARCH_SEARCH_TOOL)
+        self.add_tool(**EQUITY_SCREENER_TOOL)
 
 
 def format_markdown(text: str) -> str:
@@ -49,7 +62,7 @@ def main():
     print("Press Ctrl+C to exit")
     print("=" * 60)
 
-    agent = ChatAgent(print_mode=PrintMode.PRODUCTION)
+    agent = ResearchAgent(print_mode=PrintMode.PRODUCTION)
     session = ChatSession(session_id="interactive")
 
     while True:
@@ -65,7 +78,7 @@ def main():
             session.add_assistant_message(response.answer)
 
             print(f"\n[Agent]: {format_markdown(response.answer)}")
-            
+
         except KeyboardInterrupt:
             print("\n\nGoodbye!")
             break

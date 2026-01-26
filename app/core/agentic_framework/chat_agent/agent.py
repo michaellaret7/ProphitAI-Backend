@@ -14,13 +14,16 @@ from app.core.agentic_framework.base_agent.utils.models import PrintMode
 from .models import ChatResponse
 from .prompts import CHAT_SYSTEM_PROMPT
 from .execution_loop import ChatExecutionLoop
-from .tool_registry import register_chat_tools
+from .base_tool_registry import register_chat_tools
 
 if TYPE_CHECKING:
     pass
 
 # Import ToolHandler at runtime (duck typing will work for ChatAgent)
 from app.core.agentic_framework.base_agent.execution.tool_handler import ToolHandler  # noqa: E402
+
+# IDEA: The tool calls and their results in the mini execution loop get cached in the chat agent class and then the tool call names and ids get stored in the chat session class so that the llm knows what tools were called.
+# Then we can have a tool called pull from cache that pulls the tool call results from the chat agent class and returns them to the llm, instead of having to re-execute the tool calls.
 
 class ChatAgent:
     """Conversational agent for interactive tool-assisted chat.
@@ -60,7 +63,7 @@ class ChatAgent:
         if provider is None:
             provider = "openai"  # Default provider
 
-        self.model, self.client = get_model_and_client(provider='claude', model='claude-sonnet-4-5-20250929')
+        self.model, self.client = get_model_and_client(provider='anthropic', model='claude-sonnet-4-5-20250929')
 
         # Configuration
         self.max_iterations = max_iterations

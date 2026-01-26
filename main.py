@@ -25,6 +25,7 @@ from app.api.routes.user_routes import router as user_router
 from app.api.routes.watchlist_routes import router as watchlist_router
 from app.api.routes.websocket_router import router as websocket_router
 from app.api.routes.messaging_router import router as messaging_router
+from app.api.routes.document_router import router as document_router
 from app.api.auth.api_key import validate_api_key
 from app.api.auth.clerk import clerk_auth
 from app.redis.client import cache
@@ -94,6 +95,9 @@ app.include_router(user_router, prefix="/api", dependencies=auth_dependencies)
 app.include_router(portfolio_router, prefix="/api", dependencies=auth_dependencies)
 app.include_router(broker_router, prefix="/api", dependencies=auth_dependencies)
 app.include_router(watchlist_router, prefix="/api", dependencies=auth_dependencies)
+
+# Document upload - API key only (user_id passed as query param)
+app.include_router(document_router, prefix="/api", dependencies=api_key_only)
 
 # General data routes require API key only (no JWT needed)
 app.include_router(prophit_alts_router, prefix="/api", dependencies=api_key_only)

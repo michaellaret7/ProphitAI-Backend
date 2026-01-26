@@ -3,7 +3,11 @@ from app.core.agentic_framework.tool_lib.base_tools.search_engine import (
     LLM_WEB_SEARCH_DESCRIPTION,
     LLM_WEB_SEARCH_PARAMETERS,
 )
-from app.core.agentic_framework.tool_lib.base_tools import calculator
+from app.core.agentic_framework.tool_lib.base_tools.calculator import (
+    calculator,
+    CALCULATOR_DESCRIPTION,
+    CALCULATOR_PARAMETERS,
+)
 from app.core.agentic_framework.tool_lib.base_tools.update_task import (
     update_tasks,
     UPDATE_TASKS_DESCRIPTION,
@@ -61,19 +65,9 @@ def register_base_tools(agent: Any) -> None:
     # calculator
     agent.add_tool(
         name="calculator",
-        description=(
-            "LAST RESORT TOOL - ONLY use when absolutely necessary for complex mathematical calculations "
-            "that cannot be done with other tools. Most metrics are already calculated in factor tools. "
-            "Provide the expression string and the tool returns the result."
-        ),
-        parameters={
-            "type": "object",
-            "properties": {
-                "expression": {"type": "string", "description": "Expression to evaluate."}
-            },
-            "required": ["expression"],
-        },
-        function=lambda expression, **kwargs: calculator.calculator(expression),
+        description=CALCULATOR_DESCRIPTION,
+        parameters=CALCULATOR_PARAMETERS,
+        function=lambda expression, **kwargs: calculator(expression),
     )
 
     # update_tasks (task management)

@@ -97,6 +97,7 @@ class Pipeline:
         self.delete_s3_after_success = delete_s3_after_success
 
         # Initialize components
+        # Set Modal to true in the ingestion layer to use the modal GPU for pdf extraction
         self._ingestor = Ingestor(use_modal_gpu=True) # --> import deoc/text ingestion Object 
 
         self._sparse_encoder = SparseEncoder() # --> import sparse encoder Object
@@ -311,8 +312,7 @@ if __name__ == "__main__":
             s3_uris.append({"uri": f"s3://{bucket}/{obj['Key']}", "metadata": {}})
     
     s3_uris.pop(0)
-    s3_uris.pop(0)
-
+    
     print(s3_uris)
     print(len(s3_uris))
 
@@ -320,6 +320,8 @@ if __name__ == "__main__":
         namespace="macro_research",
         doc_type="macro_research",
         chunker_type="semantic",
+        delete_s3_after_success=True,
     )
+
     count = pipeline.run(s3_uris=s3_uris)
     print(f"Upserted {count} vectors")
