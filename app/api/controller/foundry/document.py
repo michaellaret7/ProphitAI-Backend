@@ -1,7 +1,7 @@
 """
-Controller for document operations (upload, etc.).
+Controller for document operations (upload, ingestion).
 
-Handles business logic for document uploads to S3.
+Handles business logic for document uploads to S3 and ingestion into the RAG pipeline.
 """
 
 import os
@@ -13,6 +13,7 @@ import boto3
 from botocore.exceptions import ClientError
 
 from app.api.response_envelope import ok_envelope
+from app.core.foundry.pipeline import Pipeline
 from app.utils.decorators.api_decorators import handle_controller_errors
 from app.utils.time_utils import get_current_utc_time
 
@@ -20,6 +21,8 @@ logger = logging.getLogger(__name__)
 
 # S3 Configuration
 S3_BUCKET = os.getenv("S3_BUCKET", "prophitai-s3-bucket")
+USER_UPLOADS_PREFIX = "pdfs/user_uploads"
+USER_UPLOADS_NAMESPACE = "user_uploads"
 
 # Allowed file types for upload
 ALLOWED_CONTENT_TYPES = {
@@ -32,6 +35,36 @@ MAX_FILE_SIZE_BYTES = MAX_FILE_SIZE_MB * 1024 * 1024
 def _get_s3_client():
     """Get boto3 S3 client."""
     return boto3.client("s3")
+
+
+def _list_user_s3_documents(clerk_id: str) -> List[Dict[str, Any]]:
+    """
+    List all S3 documents for a user.
+
+    Args:
+        clerk_id: The authenticated user's Clerk ID.
+
+    Returns:
+        List of dicts with uri and metadata for each document.
+    """
+    s3_client = _get_s3_client()
+    prefix = f"{USER_UPLOADS_PREFIX}/{clerk_id}/"
+
+    s3_uris = []
+    paginator = s3_client.get_paginator("list_objects_v2")
+
+    for page in paginator.paginate(Bucket=S3_BUCKET, Prefix=prefix):
+        for obj in page.get("Contents", []):
+            key = obj["Key"]
+            # Skip the directory marker itself
+            if key == prefix:
+                continue
+            s3_uris.append({
+                "uri": f"s3://{S3_BUCKET}/{key}",
+                "metadata": {"user_id": clerk_id},
+            })
+
+    return s3_uris
 
 
 async def _upload_single_pdf(
@@ -148,5 +181,61 @@ async def upload_pdfs_controller(
         payload={
             "uploadedFiles": uploaded_files,
             "totalCount": file_count,
+        },
+    )
+
+
+@handle_controller_errors
+def ingest_user_documents_controller(
+    *,
+    clerk_id: str,
+    delete_after_ingestion: bool = True,
+) -> Dict[str, Any]:
+    """
+    Ingest all uploaded documents for a user into the RAG pipeline.
+
+    Lists all PDFs in s3://{bucket}/pdfs/user_uploads/{clerk_id}/ and
+    processes them through the foundry pipeline into Pinecone.
+
+    Documents are embedded into the 'user_uploads' namespace with user_id
+    metadata for filtering.
+
+    Args:
+        clerk_id: The authenticated user's Clerk ID.
+        delete_after_ingestion: Delete S3 documents after successful ingestion.
+
+    Returns:
+        Response with ingestion results.
+
+    Raises:
+        ValueError: If no documents found for user.
+    """
+    s3_uris = _list_user_s3_documents(clerk_id)
+
+    if not s3_uris:
+        raise ValueError(f"No documents found for user {clerk_id}. Upload documents first.")
+
+    logger.info(f"Ingesting {len(s3_uris)} documents for user {clerk_id}")
+
+    pipeline = Pipeline(
+        namespace=USER_UPLOADS_NAMESPACE,
+        doc_type="user_upload",
+        chunker_type="semantic",
+        delete_s3_after_success=delete_after_ingestion,
+    )
+
+    vectors_upserted = pipeline.run(s3_uris=s3_uris)
+
+    logger.info(f"Ingested {vectors_upserted} vectors for user {clerk_id}")
+
+    return ok_envelope(
+        message=f"Successfully ingested {len(s3_uris)} documents ({vectors_upserted} vectors)",
+        kind="documents#ingestionResult",
+        resource_id=None,
+        self_link="/api/documents/ingest",
+        payload={
+            "documentsProcessed": len(s3_uris),
+            "vectorsUpserted": vectors_upserted,
+            "namespace": USER_UPLOADS_NAMESPACE,
         },
     )

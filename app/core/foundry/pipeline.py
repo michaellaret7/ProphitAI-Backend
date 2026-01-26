@@ -27,7 +27,11 @@ from app.core.foundry.embeddings.voyage_embeddings import embed_chunks
 from app.core.foundry.ingestion import Ingestor
 from app.core.foundry.models.chunk import Chunk
 from app.core.foundry.models.document import Document
-from app.core.foundry.models.metadata import EarningsCallMetadata, ResearchDocumentMetadata
+from app.core.foundry.models.metadata import (
+    EarningsCallMetadata,
+    ResearchDocumentMetadata,
+    UserUploadMetadata,
+)
 
 load_dotenv()
 
@@ -41,6 +45,7 @@ class IngestedDoc:
     doc_id: str
     earnings_meta: EarningsCallMetadata | None = None
     research_meta: ResearchDocumentMetadata | None = None
+    user_upload_meta: UserUploadMetadata | None = None
     s3_uri: str | None = None  # Track S3 URI for cleanup after processing
 
 
@@ -233,6 +238,19 @@ class Pipeline:
                 s3_uri=s3_uri,
             )
 
+        if self.doc_type == "user_upload" and s3_uri:
+            user_id = raw_metadata.get("user_id")
+            if not user_id:
+                raise ValueError("user_id required in metadata for user_upload doc_type")
+            upload_meta = UserUploadMetadata.from_s3_uri(s3_uri, user_id=user_id)
+            return IngestedDoc(
+                document=doc,
+                metadata=upload_meta.to_chunk_metadata(),
+                doc_id=upload_meta.doc_id,
+                user_upload_meta=upload_meta,
+                s3_uri=s3_uri,
+            )
+
         return IngestedDoc(
             document=doc,
             metadata=raw_metadata,
@@ -260,6 +278,8 @@ class Pipeline:
                     chunk.metadata["chunk_id"] = doc_item.earnings_meta.build_chunk_id(chunk_index)
                 elif doc_item.research_meta:
                     chunk.metadata["chunk_id"] = doc_item.research_meta.build_chunk_id(chunk_index)
+                elif doc_item.user_upload_meta:
+                    chunk.metadata["chunk_id"] = doc_item.user_upload_meta.build_chunk_id(chunk_index)
                 else:
                     chunk.metadata["chunk_id"] = f"{doc_item.doc_id}#{chunk_index:04d}"
 
@@ -300,7 +320,7 @@ if __name__ == "__main__":
     import boto3
 
     bucket = "prophitai-s3-bucket"
-    prefix = "pdfs/macro_research/"
+    prefix = "pdfs/user_uploads/test_user_1234/"
 
     s3 = boto3.client("s3")
 
@@ -309,16 +329,17 @@ if __name__ == "__main__":
     s3_uris = []
     for page in paginator.paginate(Bucket=bucket, Prefix=prefix):
         for obj in page.get("Contents", []):
-            s3_uris.append({"uri": f"s3://{bucket}/{obj['Key']}", "metadata": {}})
+            s3_uris.append({"uri": f"s3://{bucket}/{obj['Key']}", "metadata": {"user_id": "test_user_1234"}})
     
-    s3_uris.pop(0)
+    if len(s3_uris) > 0:
+        s3_uris.pop(0)
     
     print(s3_uris)
     print(len(s3_uris))
 
     pipeline = Pipeline(
-        namespace="macro_research",
-        doc_type="macro_research",
+        namespace="user_uploads",
+        doc_type="user_upload",
         chunker_type="semantic",
         delete_s3_after_success=True,
     )
