@@ -57,4 +57,3 @@ def rerank(
         )
 
     return reranked
-

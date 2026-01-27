@@ -9,7 +9,7 @@ central banks, and economic outlook.
 from typing import Optional
 
 from app.core.agentic_framework.tool_lib.common.responses import success_response, error_response
-from app.core.foundry.retrieval.hybrid import HybridSearch
+from app.core.foundry.retrieval import HybridSearch
 from app.core.foundry.models.vector import QueryResult
 
 
@@ -19,7 +19,7 @@ from app.core.foundry.models.vector import QueryResult
 
 def macro_research_search(
     query: str,
-    top_k: int = 5,
+    top_k: int = 7,
     research_provider: Optional[str] = None,
     filename: Optional[str] = None,
     _simulation_date: Optional[str] = None,
@@ -64,7 +64,7 @@ def macro_research_search(
         filters["filename"] = filename
 
     try:
-        searcher = HybridSearch(use_rerank=True)
+        searcher = HybridSearch(use_rerank=True, enhanced=True)
 
         results: list[QueryResult] = searcher.search(
             query=query,
@@ -104,29 +104,47 @@ def macro_research_search(
 # TOOL SCHEMA CONSTANTS
 # ==============================================================================
 
-MACRO_RESEARCH_SEARCH_DESCRIPTION = (
-    "Search macro and economic research reports using hybrid semantic + keyword search. "
-    "Use this tool to find information about interest rates, central bank policy (Fed, ECB, BOJ), "
-    "inflation, economic outlook, market commentary, macro themes, and more. "
-    "Returns relevant passages(chunks of text) from research reports with relevance scores. "
-    "When synthesizing the results from this tool, always cite your source(s). Example: 'According to JPMorgan research, the Fed is expected to cut rates by 25 basis points in 2024.'[1 (You will then cite the research report as the number 1 at the bottom of your response)] "
-    "Example: macro_research_search(query='What is the Fed outlook for rate cuts?') "
-    "Example: macro_research_search(query='Japan central bank policy', research_provider='JPMorgan')"
-)
+MACRO_RESEARCH_SEARCH_DESCRIPTION = """Search macro and economic research reports using hybrid semantic + keyword search.
+
+Use this tool to find information about interest rates, central bank policy, inflation, economic outlook, and market commentary.
+
+CRITICAL - Query Formulation:
+Write detailed, specific natural language queries. The search uses semantic embeddings - detailed queries retrieve far better results than keywords.
+
+GOOD queries (detailed, specific, natural language):
+- "What is the Federal Reserve's interest rate outlook and expected policy path for 2026?"
+- "How is the Bank of Japan approaching monetary policy normalization and yield curve control adjustments?"
+- "What are JPMorgan's expectations for Riksbank and Norges Bank rate decisions in Scandinavia?"
+- "European Central Bank inflation expectations and timeline for potential rate cuts in the eurozone"
+- "Impact of US Treasury yields on emerging market fixed income and currency markets"
+
+BAD queries (too vague, keyword-style - DO NOT USE):
+- "Fed rates"
+- "Japan policy"
+- "Scandinavian rates Sweden Norway"
+- "inflation outlook"
+- "ECB cuts"
+
+Always cite your sources. Example: 'According to JPMorgan research, the Fed is expected to cut rates by 25 basis points.'[1]"""
 
 MACRO_RESEARCH_SEARCH_PARAMETERS = {
     "type": "object",
     "properties": {
         "query": {
             "type": "string",
-            "description": "Search query - natural language question or keywords about macro/economic topics"
+            "description": (
+                "A detailed natural language query describing exactly what macro/economic information you need. "
+                "Be specific: include the entity (Fed, ECB, BOJ), the topic (rate outlook, inflation), "
+                "and context (timeline, region). Example: 'What is the Federal Reserve's expected rate path "
+                "and inflation outlook for 2026?' NOT: 'Fed rates 2026'"
+            )
         },
         "top_k": {
             "type": "integer",
             "description": "Number of results to return (default: 5, max: 25)",
-            "minimum": 1,
-            "maximum": 10,
-            "default": 5
+            "minimum": 3,
+            "maximum": 15,
+            "default": 7
         },
         "research_provider": {
             "type": "string",

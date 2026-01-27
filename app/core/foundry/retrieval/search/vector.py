@@ -4,7 +4,7 @@ from typing import Any
 
 from app.core.foundry.embeddings.voyage_embeddings import embed_query
 from app.core.foundry.models.vector import QueryResult
-from app.core.foundry.retrieval.base import BaseSearch
+from app.core.foundry.retrieval.search.base import BaseSearch
 
 
 class VectorSearch(BaseSearch):
@@ -66,7 +66,7 @@ class VectorSearch(BaseSearch):
             search("guidance", ticker=["AAPL", "GOOGL", "MSFT"])
         """
         if self.enhanced:
-            return self._run_enhanced_search(query, namespace, **filters)
+            return self._run_enhanced_search(query, top_k, namespace, **filters)
 
         return self._search_internal(query, top_k, namespace, filters)
 

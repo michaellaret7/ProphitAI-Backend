@@ -4,7 +4,7 @@ from typing import Any
 
 from app.core.foundry.embeddings.voyage_embeddings import embed_query
 from app.core.foundry.models.vector import QueryResult
-from app.core.foundry.retrieval.base import BaseSearch
+from app.core.foundry.retrieval.search.base import BaseSearch
 
 
 class HybridSearch(BaseSearch):
@@ -16,7 +16,6 @@ class HybridSearch(BaseSearch):
         use_rerank: bool = False,
         validate_filters: bool = True,
         enhanced: bool = False,
-        enhanced_top_k: int = 10,
     ):
         """
         Initialize hybrid search with a pre-fitted BM25 encoder.
@@ -27,13 +26,11 @@ class HybridSearch(BaseSearch):
             validate_filters: Whether to validate filter keys against Pinecone metadata.
                 Set to False to skip validation for performance.
             enhanced: Whether to use query decomposition for complex queries.
-            enhanced_top_k: Number of results to return after enhanced search reranking.
         """
         super().__init__(
             use_rerank=use_rerank,
             validate_filters=validate_filters,
             enhanced=enhanced,
-            enhanced_top_k=enhanced_top_k,
         )
         self.alpha = alpha
 
@@ -76,7 +73,7 @@ class HybridSearch(BaseSearch):
     def search(
         self,
         query: str,
-        top_k: int = 5,
+        top_k: int = 7,
         namespace: str = "earnings_calls",
         **filters: Any,
     ) -> list[QueryResult]:
@@ -108,16 +105,16 @@ class HybridSearch(BaseSearch):
             search("guidance", ticker=["AAPL", "GOOGL", "MSFT"])
         """
         if self.enhanced:
-            return self._run_enhanced_search(query, namespace, **filters)
+            return self._run_enhanced_search(query, top_k, namespace, **filters)
 
         return self._search_internal(query, top_k, namespace, filters)
 
 
 if __name__ == "__main__":
-    hybrid_search = HybridSearch(use_rerank=True)
+    hybrid_search = HybridSearch(use_rerank=True, enhanced=True)
 
     results = hybrid_search.search(
-        query="Scandanavia central bank and interest rates.",
+        query="Scandanavia central bank and interest rates. Japanese central bank and interest rates.",
         namespace="macro_research",
         top_k=7,
     )
@@ -126,3 +123,5 @@ if __name__ == "__main__":
         print(result.metadata["text"])
         print(result.score)
         print("--------------------------------")
+
+    print(len(results))

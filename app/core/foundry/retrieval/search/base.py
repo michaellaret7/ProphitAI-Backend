@@ -9,7 +9,7 @@ from dotenv import load_dotenv
 
 from app.core.foundry.embeddings.pinecone_manager import PineconeManager
 from app.core.foundry.models.vector import QueryResult
-from app.core.foundry.retrieval.rerank import rerank as rerank_results
+from app.core.foundry.retrieval.postprocess.rerank import rerank as rerank_results
 from app.core.foundry.retrieval.utils import build_metadata_filter
 
 load_dotenv()
@@ -27,7 +27,6 @@ class BaseSearch(ABC):
         use_rerank: bool = False,
         validate_filters: bool = True,
         enhanced: bool = False,
-        enhanced_top_k: int = 10,
     ):
         """
         Initialize base search with common configuration.
@@ -37,7 +36,6 @@ class BaseSearch(ABC):
             validate_filters: Whether to validate filter keys against Pinecone metadata.
                 Set to False to skip validation for performance.
             enhanced: Whether to use query decomposition for complex queries.
-            enhanced_top_k: Number of results to return after enhanced search reranking.
         """
         self.manager = PineconeManager()
         self.manager.connect_index(
@@ -47,7 +45,6 @@ class BaseSearch(ABC):
         self.use_rerank = use_rerank
         self.validate_filters = validate_filters
         self.enhanced = enhanced
-        self.enhanced_top_k = enhanced_top_k
 
         # Reason: Cache metadata keys per namespace to avoid repeated lookups
         self._metadata_keys_cache: dict[str, set[str]] = {}
@@ -118,6 +115,7 @@ class BaseSearch(ABC):
     def _run_enhanced_search(
         self,
         query: str,
+        top_k: int,
         namespace: str,
         **filters: Any,
     ) -> list[QueryResult]:
@@ -126,6 +124,7 @@ class BaseSearch(ABC):
 
         Args:
             query: The original search query.
+            top_k: Number of results to return after final reranking.
             namespace: Pinecone namespace to search in.
             **filters: Metadata filters passed to each sub-query search.
 
@@ -133,7 +132,9 @@ class BaseSearch(ABC):
             List of QueryResult objects reranked against the original query.
         """
         # Reason: Lazy import to avoid circular dependency
-        from app.core.foundry.retrieval.enhance_query.bd_query import decompose_query
+        from app.core.foundry.retrieval.query_enhancement.decomposer import (
+            decompose_query,
+        )
 
         sub_queries = decompose_query(query)
         max_workers = len(sub_queries.sub_queries)
@@ -145,7 +146,7 @@ class BaseSearch(ABC):
                 executor.submit(
                     self._search_internal,
                     sq.sub_query,
-                    sq.top_k,
+                    top_k,
                     namespace,
                     filters,
                 ): sq
@@ -165,7 +166,7 @@ class BaseSearch(ABC):
                 deduped.append(r)
 
         # Rerank merged results against original query
-        return rerank_results(query=query, results=deduped, top_k=self.enhanced_top_k)
+        return rerank_results(query=query, results=deduped, top_k=top_k)
 
     @abstractmethod
     def _search_internal(

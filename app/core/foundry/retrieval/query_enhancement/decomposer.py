@@ -1,10 +1,9 @@
 """Query decomposition for improved vector database retrieval."""
 
-import json
 from pydantic import BaseModel
 
 from app.utils.choose_model_and_client import get_model_and_client
-from .prompt import QUERY_DECOMPOSITION_PROMPT
+from .prompts import QUERY_DECOMPOSITION_PROMPT
 
 
 class SubQuery(BaseModel):
@@ -30,7 +29,7 @@ def decompose_query(query: str) -> SubQueries:
     Returns:
         SubQueries containing the decomposed sub-queries with top_k values.
     """
-    model, client = get_model_and_client(provider="groq", model="Kimi-K2-instruct")
+    model, client = get_model_and_client(provider="groq", model="openai-gpt-oss-120b")
 
     response = client.chat.completions.parse(
         model=model,
@@ -44,3 +43,7 @@ def decompose_query(query: str) -> SubQueries:
     return response.choices[0].message.parsed
 
 
+if __name__ == "__main__":
+    query = "Bank of Japan interest rate policy, yield curve control adjustments, and potential policy normalization timeline. Scandanavian rates Sweden Norway Denmark"
+    sub_queries = decompose_query(query)
+    print(sub_queries.model_dump_json(indent=4))

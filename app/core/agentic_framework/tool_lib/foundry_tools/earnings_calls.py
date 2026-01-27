@@ -9,7 +9,7 @@ import re
 from typing import Optional
 
 from app.core.agentic_framework.tool_lib.common.responses import success_response, error_response
-from app.core.foundry.retrieval.hybrid import HybridSearch
+from app.core.foundry.retrieval import HybridSearch
 from app.core.foundry.models.vector import QueryResult
 
 
@@ -141,21 +141,40 @@ def earnings_call_search(
 # TOOL SCHEMA CONSTANTS
 # ==============================================================================
 
-EARNINGS_CALL_SEARCH_DESCRIPTION = (
-    "Search earnings call transcripts using hybrid semantic + keyword search. "
-    "Use this tool to find information about company earnings, revenue guidance, margins, "
-    "management commentary, outlook, and quarterly performance. "
-    "Returns relevant passages from earnings call transcripts with relevance scores. "
-    "Example: earnings_call_search(query='revenue guidance', ticker='AAPL', fiscal_year=2025, fiscal_quarter='Q4') "
-    "Example: earnings_call_search(query='margin expansion', ticker='MSFT', fiscal_quarter='2024Q4')"
-)
+EARNINGS_CALL_SEARCH_DESCRIPTION = """Search earnings call transcripts using hybrid semantic + keyword search.
+
+Use this tool to find information about company earnings, revenue, margins, guidance, and management commentary.
+
+CRITICAL - Query Formulation:
+Write detailed, specific natural language queries. The search uses semantic embeddings - detailed queries retrieve far better results than keywords.
+
+GOOD queries (detailed, specific, natural language):
+- "What is Apple's revenue guidance and outlook for the services segment in fiscal 2025?"
+- "How is Microsoft's management describing Azure cloud growth and AI infrastructure investments?"
+- "What are the key drivers behind Tesla's gross margin improvements and cost reduction initiatives?"
+- "How did Amazon's advertising business perform and what is the growth outlook for AWS?"
+- "What challenges is Intel facing in the data center segment and how is management addressing them?"
+
+BAD queries (too vague, keyword-style - DO NOT USE):
+- "revenue guidance"
+- "margins outlook"
+- "AAPL growth"
+- "cloud performance"
+- "AI investments"
+
+Always specify what aspect of the business you're asking about and what kind of information you need."""
 
 EARNINGS_CALL_SEARCH_PARAMETERS = {
     "type": "object",
     "properties": {
         "query": {
             "type": "string",
-            "description": "Search query - natural language question or keywords about company earnings/performance"
+            "description": (
+                "A detailed natural language query describing exactly what earnings information you need. "
+                "Be specific: include the business segment, metric, and context. "
+                "Example: 'What is management's outlook for gross margin improvement and cost efficiency initiatives?' "
+                "NOT: 'margin outlook'"
+            )
         },
         "top_k": {
             "type": "integer",
