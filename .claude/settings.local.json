@@ -60,7 +60,8 @@
       "mcp__ide__getDiagnostics",
       "Bash(grep:*)",
       "WebFetch(domain:modal.com)",
-      "Bash(dir:*)"
+      "Bash(dir:*)",
+      "WebFetch(domain:platform.openai.com)"
     ],
     "deny": [],
     "ask": []

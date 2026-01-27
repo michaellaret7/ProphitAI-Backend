@@ -268,5 +268,8 @@ class ChatAgent:
 
 
 if __name__ == "__main__":
-    agent = ChatAgent()
+    agent = ChatAgent(
+        provider='fireworks',
+        model='Kimi-K2.5'
+    )
     agent.run_interactive()

@@ -68,6 +68,9 @@ MODEL_ALIASES = {
         "groq": "moonshotai/kimi-k2-instruct-0905",
         "fireworks": "accounts/fireworks/models/kimi-k2-instruct-0905",
     },
+    "Kimi-K2.5" :{
+        "fireworks": "accounts/fireworks/models/kimi-k2p5",
+    },
 
     "glm-4-7": {
         "together": "zai-org/GLM-4.7",
