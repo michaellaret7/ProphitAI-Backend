@@ -12,7 +12,13 @@ from pathlib import Path
 # This fixes: 'WordListCorpusReader' object has no attribute '_LazyCorpusLoader__args'
 import nltk
 from nltk.corpus import stopwords
-nltk.data.find("corpora/stopwords")
+
+try:
+    nltk.data.find("corpora/stopwords")
+except LookupError:
+    # Reason: Download stopwords if not found (e.g., fresh Render deployment)
+    nltk.download("stopwords", quiet=True)
+
 _ = stopwords.words("english")
 
 from pinecone_text.sparse import BM25Encoder
