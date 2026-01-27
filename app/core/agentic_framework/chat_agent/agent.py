@@ -6,15 +6,25 @@ Shares infrastructure with BaseAgent (ToolHandler, parallel execution, tool libr
 
 from __future__ import annotations
 
+import re
 from typing import List, Dict, Any, Callable, Optional, TYPE_CHECKING
 
+from app.core.agentic_framework.tool_lib.foundry_tools.macro_research import MACRO_RESEARCH_SEARCH_TOOL
 from app.utils.choose_model_and_client import get_model_and_client
 from app.core.agentic_framework.base_agent.utils.models import PrintMode
 
-from .models import ChatResponse
+from .models import ChatResponse, ChatSession
 from .prompts import CHAT_SYSTEM_PROMPT
 from .execution_loop import ChatExecutionLoop
 from .base_tool_registry import register_chat_tools
+
+# ANSI color codes for terminal formatting
+_BOLD = "\033[1m"
+_DIM = "\033[2m"
+_CYAN = "\033[36m"
+_GREEN = "\033[32m"
+_BLUE = "\033[34m"
+_RESET = "\033[0m"
 
 if TYPE_CHECKING:
     pass
@@ -94,69 +104,7 @@ class ChatAgent:
 
         # Register chat tools
         register_chat_tools(self)
-
-    def add_tool(
-        self,
-        name: str,
-        description: str,
-        parameters: Dict[str, Any],
-        function: Callable,
-    ) -> None:
-        """Register a tool with the agent.
-
-        Same signature as BaseAgent.add_tool() for compatibility.
-
-        Args:
-            name: Tool name (used in tool calls)
-            description: Description of what the tool does
-            parameters: JSON Schema for tool parameters
-            function: Python callable to execute
-        """
-        # Store function for execution
-        self.tool_functions[name] = function
-        self.tool_schemas[name] = parameters
-
-        # Add to tools list (OpenAI function calling format)
-        self.tools.append({
-            "type": "function",
-            "function": {
-                "name": name,
-                "description": description,
-                "parameters": parameters
-            }
-        })
-
-    def run(
-        self,
-        user_message: str,
-        conversation_history: Optional[List[Dict[str, Any]]] = None
-    ) -> ChatResponse:
-        """Run the agent execution loop for a user query.
-
-        Args:
-            user_message: The user's query
-            conversation_history: Previous messages (optional, from ChatSession.get_history())
-
-        Returns:
-            ChatResponse with answer, tool_calls_made, tokens_used, iterations
-        """
-        # Reset state for new request
-        self.total_tokens = 0
-        self.tool_handler.tool_call_history = []
-
-        # Build messages from history + system prompt + new query
-        self.messages = self._build_messages(user_message, conversation_history)
-
-        # Run mini execution loop
-        result = self.execution_loop.execute()
-
-        return ChatResponse(
-            answer=result["answer"],
-            tool_calls_made=result["tool_calls"],
-            tokens_used=result["total_tokens"],
-            iterations=result["iterations"],
-            stop_reason=result["stop_reason"]
-        )
+        self.add_tool(**MACRO_RESEARCH_SEARCH_TOOL)
 
     def _build_messages(
         self,
@@ -197,3 +145,128 @@ class ChatAgent:
         })
 
         return messages
+
+    @staticmethod
+    def _format_markdown(text: str) -> str:
+        """Convert markdown to ANSI-colored terminal output."""
+        lines = text.split("\n")
+        formatted = []
+
+        for line in lines:
+            if line.startswith("###"):
+                line = f"{_BLUE}{_BOLD}{line.lstrip('#').strip()}{_RESET}"
+            elif line.startswith("##"):
+                line = f"{_CYAN}{_BOLD}{line.lstrip('#').strip()}{_RESET}"
+            elif line.startswith("#"):
+                line = f"{_GREEN}{_BOLD}{line.lstrip('#').strip()}{_RESET}"
+            else:
+                # Bold: **text** -> bold
+                line = re.sub(r"\*\*(.+?)\*\*", rf"{_BOLD}\1{_RESET}", line)
+                # Italic: *text* -> dim (avoid matching ** patterns)
+                line = re.sub(r"(?<!\*)\*([^*]+?)\*(?!\*)", rf"{_DIM}\1{_RESET}", line)
+
+            formatted.append(line)
+
+        return "\n".join(formatted)
+    
+    def add_tool(
+        self,
+        name: str,
+        description: str,
+        parameters: Dict[str, Any],
+        function: Callable,
+    ) -> None:
+        """Register a tool with the agent.
+
+        Same signature as BaseAgent.add_tool() for compatibility.
+
+        Args:
+            name: Tool name (used in tool calls)
+            description: Description of what the tool does
+            parameters: JSON Schema for tool parameters
+            function: Python callable to execute
+        """
+        # Store function for execution
+        self.tool_functions[name] = function
+        self.tool_schemas[name] = parameters
+
+        # Add to tools list (OpenAI function calling format)
+        self.tools.append({
+            "type": "function",
+            "function": {
+                "name": name,
+                "description": description,
+                "parameters": parameters
+            }
+        })
+    
+    def run(
+        self,
+        user_message: str,
+        conversation_history: Optional[List[Dict[str, Any]]] = None
+    ) -> ChatResponse:
+        """Run the agent execution loop for a user query.
+
+        Args:
+            user_message: The user's query
+            conversation_history: Previous messages (optional, from ChatSession.get_history())
+
+        Returns:
+            ChatResponse with answer, tool_calls_made, tokens_used, iterations
+        """
+        # Reset state for new request
+        self.total_tokens = 0
+        self.tool_handler.tool_call_history = []
+
+        # Build messages from history + system prompt + new query
+        self.messages = self._build_messages(user_message, conversation_history)
+
+        # Run mini execution loop
+        result = self.execution_loop.execute()
+
+        return ChatResponse(
+            answer=result["answer"],
+            tool_calls_made=result["tool_calls"],
+            tokens_used=result["total_tokens"],
+            iterations=result["iterations"],
+            stop_reason=result["stop_reason"]
+        )
+    
+    def run_interactive(self, session_id: str = "interactive") -> None:
+        """Start an interactive chat session in the terminal.
+
+        Args:
+            session_id: Identifier for the session (default: "interactive")
+        """
+        print("=" * 60)
+        print("ChatAgent Interactive Session")
+        print("Press Ctrl+C to exit")
+        print("=" * 60)
+
+        session = ChatSession(session_id=session_id)
+
+        while True:
+            try:
+                user_input = input("\n[You]: ").strip()
+
+                if not user_input:
+                    continue
+
+                response = self.run(user_input, session.get_history())
+
+                session.add_user_message(user_input)
+                session.add_assistant_message(response.answer)
+
+                print(f"\n[Agent]: {self._format_markdown(response.answer)}")
+
+            except KeyboardInterrupt:
+                print("\n\nGoodbye!")
+                break
+            except Exception as e:
+                print(f"\nError: {e}")
+                continue
+
+
+if __name__ == "__main__":
+    agent = ChatAgent()
+    agent.run_interactive()

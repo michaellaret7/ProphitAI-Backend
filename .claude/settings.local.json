@@ -59,7 +59,8 @@
       "WebFetch(domain:raw.githubusercontent.com)",
       "mcp__ide__getDiagnostics",
       "Bash(grep:*)",
-      "WebFetch(domain:modal.com)"
+      "WebFetch(domain:modal.com)",
+      "Bash(dir:*)"
     ],
     "deny": [],
     "ask": []
