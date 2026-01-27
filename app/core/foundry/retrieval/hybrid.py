@@ -15,6 +15,8 @@ class HybridSearch(BaseSearch):
         alpha: float = 0.5,
         use_rerank: bool = False,
         validate_filters: bool = True,
+        enhanced: bool = False,
+        enhanced_top_k: int = 10,
     ):
         """
         Initialize hybrid search with a pre-fitted BM25 encoder.
@@ -24,8 +26,15 @@ class HybridSearch(BaseSearch):
             use_rerank: Whether to rerank results using a cross-encoder.
             validate_filters: Whether to validate filter keys against Pinecone metadata.
                 Set to False to skip validation for performance.
+            enhanced: Whether to use query decomposition for complex queries.
+            enhanced_top_k: Number of results to return after enhanced search reranking.
         """
-        super().__init__(use_rerank=use_rerank, validate_filters=validate_filters)
+        super().__init__(
+            use_rerank=use_rerank,
+            validate_filters=validate_filters,
+            enhanced=enhanced,
+            enhanced_top_k=enhanced_top_k,
+        )
         self.alpha = alpha
 
         # Reason: Lazy import to avoid heavy imports when only using VectorSearch
@@ -33,6 +42,36 @@ class HybridSearch(BaseSearch):
 
         self.sparse_encoder = SparseEncoder()
         self.sparse_encoder.load()
+
+    def _search_internal(
+        self,
+        query: str,
+        top_k: int,
+        namespace: str,
+        filters: dict[str, Any],
+    ) -> list[QueryResult]:
+        """Internal search method for enhanced search parallelization."""
+        retrieval_top_k, filter_dict = self._prepare_search(
+            top_k=top_k,
+            namespace=namespace,
+            **filters,
+        )
+
+        embedding = embed_query(query, sparse_encoder=self.sparse_encoder)
+
+        if embedding.sparse is None:
+            raise RuntimeError("Sparse embedding not generated. Check encoder.")
+
+        search_results = self.manager.hybrid_query(
+            dense_vector=embedding.dense,
+            sparse_vector=embedding.sparse,
+            top_k=retrieval_top_k,
+            namespace=namespace,
+            filter=filter_dict,
+            alpha=self.alpha,
+        )
+
+        return self._finalize_results(query, search_results, top_k)
 
     def search(
         self,
@@ -68,27 +107,10 @@ class HybridSearch(BaseSearch):
             # Multiple values for a filter
             search("guidance", ticker=["AAPL", "GOOGL", "MSFT"])
         """
-        retrieval_top_k, filter_dict = self._prepare_search(
-            top_k=top_k,
-            namespace=namespace,
-            **filters,
-        )
+        if self.enhanced:
+            return self._run_enhanced_search(query, namespace, **filters)
 
-        embedding = embed_query(query, sparse_encoder=self.sparse_encoder)
-
-        if embedding.sparse is None:
-            raise RuntimeError("Sparse embedding not generated. Check encoder.")
-
-        search_results = self.manager.hybrid_query(
-            dense_vector=embedding.dense,
-            sparse_vector=embedding.sparse,
-            top_k=retrieval_top_k,
-            namespace=namespace,
-            filter=filter_dict,
-            alpha=self.alpha,
-        )
-
-        return self._finalize_results(query, search_results, top_k)
+        return self._search_internal(query, top_k, namespace, filters)
 
 
 if __name__ == "__main__":

@@ -10,6 +10,31 @@ from app.core.foundry.retrieval.base import BaseSearch
 class VectorSearch(BaseSearch):
     """Dense vector search using semantic embeddings."""
 
+    def _search_internal(
+        self,
+        query: str,
+        top_k: int,
+        namespace: str,
+        filters: dict[str, Any],
+    ) -> list[QueryResult]:
+        """Internal search method for enhanced search parallelization."""
+        retrieval_top_k, filter_dict = self._prepare_search(
+            top_k=top_k,
+            namespace=namespace,
+            **filters,
+        )
+
+        embedding = embed_query(query)
+
+        search_results = self.manager.query(
+            vector=embedding.dense,
+            top_k=retrieval_top_k,
+            namespace=namespace,
+            filter=filter_dict,
+        )
+
+        return self._finalize_results(query, search_results, top_k)
+
     def search(
         self,
         query: str,
@@ -40,22 +65,10 @@ class VectorSearch(BaseSearch):
             # Multiple values for a filter
             search("guidance", ticker=["AAPL", "GOOGL", "MSFT"])
         """
-        retrieval_top_k, filter_dict = self._prepare_search(
-            top_k=top_k,
-            namespace=namespace,
-            **filters,
-        )
+        if self.enhanced:
+            return self._run_enhanced_search(query, namespace, **filters)
 
-        embedding = embed_query(query)
-
-        search_results = self.manager.query(
-            vector=embedding.dense,
-            top_k=retrieval_top_k,
-            namespace=namespace,
-            filter=filter_dict,
-        )
-
-        return self._finalize_results(query, search_results, top_k)
+        return self._search_internal(query, top_k, namespace, filters)
 
 
 if __name__ == "__main__":

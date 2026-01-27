@@ -2,6 +2,7 @@
 
 import os
 from abc import ABC, abstractmethod
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from typing import Any
 
 from dotenv import load_dotenv
@@ -21,7 +22,13 @@ class BaseSearch(ABC):
     preparing search parameters, and finalizing results with optional reranking.
     """
 
-    def __init__(self, use_rerank: bool = False, validate_filters: bool = True):
+    def __init__(
+        self,
+        use_rerank: bool = False,
+        validate_filters: bool = True,
+        enhanced: bool = False,
+        enhanced_top_k: int = 10,
+    ):
         """
         Initialize base search with common configuration.
 
@@ -29,6 +36,8 @@ class BaseSearch(ABC):
             use_rerank: Whether to rerank results using a cross-encoder.
             validate_filters: Whether to validate filter keys against Pinecone metadata.
                 Set to False to skip validation for performance.
+            enhanced: Whether to use query decomposition for complex queries.
+            enhanced_top_k: Number of results to return after enhanced search reranking.
         """
         self.manager = PineconeManager()
         self.manager.connect_index(
@@ -37,6 +46,8 @@ class BaseSearch(ABC):
         )
         self.use_rerank = use_rerank
         self.validate_filters = validate_filters
+        self.enhanced = enhanced
+        self.enhanced_top_k = enhanced_top_k
 
         # Reason: Cache metadata keys per namespace to avoid repeated lookups
         self._metadata_keys_cache: dict[str, set[str]] = {}
@@ -103,6 +114,73 @@ class BaseSearch(ABC):
                 top_k=top_k,
             )
         return results
+
+    def _run_enhanced_search(
+        self,
+        query: str,
+        namespace: str,
+        **filters: Any,
+    ) -> list[QueryResult]:
+        """
+        Execute enhanced search with query decomposition and parallel execution.
+
+        Args:
+            query: The original search query.
+            namespace: Pinecone namespace to search in.
+            **filters: Metadata filters passed to each sub-query search.
+
+        Returns:
+            List of QueryResult objects reranked against the original query.
+        """
+        # Reason: Lazy import to avoid circular dependency
+        from app.core.foundry.retrieval.enhance_query.bd_query import decompose_query
+
+        sub_queries = decompose_query(query)
+        max_workers = len(sub_queries.sub_queries)
+
+        all_results: list[QueryResult] = []
+
+        with ThreadPoolExecutor(max_workers=max_workers) as executor:
+            futures = {
+                executor.submit(
+                    self._search_internal,
+                    sq.sub_query,
+                    sq.top_k,
+                    namespace,
+                    filters,
+                ): sq
+                for sq in sub_queries.sub_queries
+            }
+
+            for future in as_completed(futures):
+                results = future.result()
+                all_results.extend(results)
+
+        # Dedupe by ID
+        seen_ids: set[str] = set()
+        deduped: list[QueryResult] = []
+        for r in all_results:
+            if r.id not in seen_ids:
+                seen_ids.add(r.id)
+                deduped.append(r)
+
+        # Rerank merged results against original query
+        return rerank_results(query=query, results=deduped, top_k=self.enhanced_top_k)
+
+    @abstractmethod
+    def _search_internal(
+        self,
+        query: str,
+        top_k: int,
+        namespace: str,
+        filters: dict[str, Any],
+    ) -> list[QueryResult]:
+        """
+        Internal search method for enhanced search parallelization.
+
+        Subclasses must implement this to execute the actual search logic.
+        """
+        pass
 
     @abstractmethod
     def search(
