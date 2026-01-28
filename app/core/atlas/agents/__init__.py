@@ -1,13 +1,6 @@
-"""Agent implementations for the Atlas framework.
-
-Exports:
-    AgentBase: Abstract base class for all agents
-
-Future exports (after migration):
-    DeepAgent: Complex long-running task execution agent (from base_agent)
-    ChatAgent: Lightweight conversational agent (from chat_agent)
-"""
+"""Agent implementations for the Atlas framework."""
 
 from .base import AgentBase
+from .chat_agent import ChatAgent
 
-__all__ = ["AgentBase"]
+__all__ = ["AgentBase", "ChatAgent"]
