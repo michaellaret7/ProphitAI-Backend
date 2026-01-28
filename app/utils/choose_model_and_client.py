@@ -72,6 +72,10 @@ MODEL_ALIASES = {
         "fireworks": "accounts/fireworks/models/kimi-k2p5",
     },
 
+    "nemotron-nano-3-30b": {
+        "fireworks": "accounts/fireworks/models/nemotron-nano-3-30b-a3b",
+    },
+
     "glm-4-7": {
         "together": "zai-org/GLM-4.7",
     },

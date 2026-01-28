@@ -2,5 +2,6 @@
 
 from .base import AgentBase
 from .chat_agent import ChatAgent
+from .deep_agent import DeepAgent
 
-__all__ = ["AgentBase", "ChatAgent"]
+__all__ = ["AgentBase", "ChatAgent", "DeepAgent"]
