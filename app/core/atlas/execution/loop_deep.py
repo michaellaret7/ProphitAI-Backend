@@ -7,7 +7,7 @@ import traceback
 from app.core.agentic_framework.base_agent.utils.models import PrintMode
 from app.core.agentic_framework.base_agent.planning.plan_prompt import plan_prompt
 from app.core.agentic_framework.base_agent.planning.plan_parser import parse_plan_with_gpt
-from app.core.agentic_framework.base_agent.execution.utils import (
+from app.core.atlas.execution.utils import (
     extract_final_answer,
     build_plan_context
 )

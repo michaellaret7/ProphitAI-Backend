@@ -102,7 +102,11 @@ re-run excluding IPOs and note TSLA impact in findings."
 
 **IMPORTANT:** Quality over brevity. A thorough thought that captures your full reasoning is more
 valuable than a short note. Include your observations, hypotheses, trade-offs considered, and
-conclusions reached."""
+conclusions reached.
+
+**CRITICAL:** Do NOT include tool calls inside your thought. The think tool is for pure text reasoning
+only. If you need to call a tool, do it as a separate tool call AFTER the think tool completes. Never
+write tool call syntax, function calls, or tool invocations within the thought parameter."""
 
 THINK_PARAMETERS = {
     "type": "object",
