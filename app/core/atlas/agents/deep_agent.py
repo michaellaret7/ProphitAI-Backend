@@ -7,7 +7,7 @@ from pydantic import BaseModel
 
 from app.core.atlas.models import NoOpCallback, StateCallback
 from app.core.atlas.execution import DeepExecutionLoop, ToolHandler
-from app.core.agentic_framework.base_agent.logging.notes import ensure_notes_file
+from app.core.atlas.logging import ensure_notes_file
 from app.core.agentic_framework.base_agent.base_tool_registry import register_base_tools
 from app.core.atlas.prompts import UNIVERSAL_AGENT_MESSAGE
 from app.core.atlas.models import PrintMode

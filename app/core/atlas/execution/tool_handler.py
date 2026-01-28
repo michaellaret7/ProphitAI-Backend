@@ -4,8 +4,7 @@ import json
 from typing import List, Dict, Any, TYPE_CHECKING
 from app.core.agentic_framework.base_agent.execution.tool_validation import validate_tool_call
 from app.core.atlas.models import PrintMode
-from app.core.agentic_framework.base_agent.logging.message_logger import write_messages_to_yaml
-from app.core.agentic_framework.base_agent.logging.tool_trace import log_tool_call
+from app.core.atlas.logging import write_messages_to_yaml, log_tool_call
 from app.core.atlas.context import prune_completed_task_messages, prune_note_content, prune_think_content
 import yaml
 from app.core.atlas.models import TaskStatus

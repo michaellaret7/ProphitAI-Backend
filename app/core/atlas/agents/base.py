@@ -6,6 +6,8 @@ from typing import List, Dict, Any, Callable, Optional
 from app.core.atlas.models import PrintMode
 from app.utils.choose_model_and_client import get_model_and_client
 
+from app.core.agentic_framework.tool_lib.base_tools.calculator import CALCULATOR_TOOL
+from app.core.agentic_framework.tool_lib.base_tools.think import THINK_TOOL
 
 class AgentBase(ABC):
     """Abstract base class providing shared foundation for DeepAgent and ChatAgent."""
@@ -37,6 +39,8 @@ class AgentBase(ABC):
         self.messages: List[Dict[str, Any]] = []
         self.total_tokens: int = 0
 
+        self.register_default_tools()
+
     def add_tool(
         self,
         name: str,
@@ -56,6 +60,11 @@ class AgentBase(ABC):
         self.tools.append(tool_def)
         self.tool_functions[name] = function
         self.tool_schemas[name] = parameters
+    
+    def register_default_tools(self) -> None:
+        """Register default tools for the agent."""
+        self.add_tool(**CALCULATOR_TOOL)
+        self.add_tool(**THINK_TOOL)
 
     def get_tool_names(self) -> List[str]:
         """Return list of registered tool names."""

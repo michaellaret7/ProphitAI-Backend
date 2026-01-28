@@ -83,4 +83,9 @@ CALCULATOR_PARAMETERS = {
     "required": ["expression"],
 }
 
-
+CALCULATOR_TOOL = {
+    "name": "calculator",
+    "description": CALCULATOR_DESCRIPTION,
+    "parameters": CALCULATOR_PARAMETERS,
+    "function": calculator,
+}

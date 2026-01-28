@@ -66,8 +66,6 @@ class ChatAgent(AgentBase):
         self.note_titles: List[str] = []
         self.output_dir = None
 
-        # Register chat tools
-        register_chat_tools(self)
         self.add_tool(**MACRO_RESEARCH_SEARCH_TOOL)
 
     def _build_messages(
@@ -178,3 +176,4 @@ if __name__ == "__main__":
         print_mode=PrintMode.PRODUCTION
     )
     agent.run_interactive(session_id="test")
+    

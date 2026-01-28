@@ -7,8 +7,7 @@ import copy
 
 from app.core.agentic_framework.base_agent.execution.tool_validation import validate_tool_call
 from app.core.atlas.models import PrintMode
-from app.core.agentic_framework.base_agent.logging.tool_trace import log_tool_call
-from app.core.agentic_framework.base_agent.logging.message_logger import write_messages_to_yaml
+from app.core.atlas.logging import log_tool_call, write_messages_to_yaml
 from app.core.atlas.context import prune_note_content
 from app.core.agentic_framework.tool_lib.common.responses import error_response
 
