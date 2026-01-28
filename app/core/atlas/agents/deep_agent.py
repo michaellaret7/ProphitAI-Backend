@@ -8,10 +8,10 @@ from pydantic import BaseModel
 from app.core.atlas.models import NoOpCallback, StateCallback
 from app.core.atlas.execution import DeepExecutionLoop, ToolHandler
 from app.core.atlas.logging import ensure_notes_file
-from app.core.agentic_framework.base_agent.base_tool_registry import register_base_tools
+from app.core.atlas.tools.deep_registry import register_base_deep_tools
 from app.core.atlas.prompts import UNIVERSAL_AGENT_MESSAGE
 from app.core.atlas.models import PrintMode
-from app.core.agentic_framework.base_agent.utils.path_utils import create_agent_output_dir
+from app.core.atlas.logging import create_agent_output_dir
 from app.utils.gpt_parser import parse_with_gpt
 
 from .base import AgentBase
@@ -76,7 +76,7 @@ class DeepAgent(AgentBase):
         self.execution_loop = DeepExecutionLoop(self)
 
         # Register base tools
-        register_base_tools(self)
+        register_base_deep_tools(self)
 
         print(f"Initialized Agent with model: {self.model} (provider: {self.provider})")
 
@@ -120,8 +120,8 @@ class DeepAgent(AgentBase):
 
 
 if __name__ == "__main__":
-    from app.core.agentic_framework.tool_lib.data_tools.screeners.equity_screener import EQUITY_SCREENER_TOOL
-    from app.core.agentic_framework.tool_lib.ticker_tools.performance import GET_TICKER_PERFORMANCE_AND_RISK_TOOL
+    from app.core.atlas.tools.data.screening import EQUITY_SCREENER_TOOL
+    from app.core.atlas.tools.ticker.performance import GET_TICKER_PERFORMANCE_AND_RISK_TOOL
     agent = DeepAgent(
         system_prompt="You are a helpful assistant that can answer questions and help with tasks using tool calls.",
         user_prompt="Run through the equity screener and find me tickers with low debt that have high alpha.",

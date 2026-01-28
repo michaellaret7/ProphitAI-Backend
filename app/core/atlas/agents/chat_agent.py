@@ -5,12 +5,11 @@ from __future__ import annotations
 import re
 from typing import List, Dict, Any, Optional
 
-from app.core.agentic_framework.tool_lib.foundry_tools.macro_research import MACRO_RESEARCH_SEARCH_TOOL
+from app.core.atlas.tools.foundry.macro_research import MACRO_RESEARCH_SEARCH_TOOL
 from app.core.atlas.models import PrintMode, ChatResponse, ChatSession
 from app.core.atlas.prompts import CHAT_SYSTEM_PROMPT
 from app.core.atlas.execution import ChatExecutionLoop
-from app.core.agentic_framework.chat_agent.base_tool_registry import register_chat_tools
-from app.core.agentic_framework.base_agent.execution.tool_handler import ToolHandler
+from app.core.atlas.execution import ToolHandler
 
 from .base import AgentBase
 
@@ -67,6 +66,8 @@ class ChatAgent(AgentBase):
         self.output_dir = None
 
         self.add_tool(**MACRO_RESEARCH_SEARCH_TOOL)
+
+        print(f"Initialized Agent with model: {self.model} (provider: {self.provider})")
 
     def _build_messages(
         self,

@@ -2,13 +2,13 @@
 
 import json
 from typing import List, Dict, Any, TYPE_CHECKING
-from app.core.agentic_framework.base_agent.execution.tool_validation import validate_tool_call
+from app.core.atlas.tools.validation import validate_tool_call
 from app.core.atlas.models import PrintMode
 from app.core.atlas.logging import write_messages_to_yaml, log_tool_call
 from app.core.atlas.context import prune_completed_task_messages, prune_note_content, prune_think_content
 import yaml
 from app.core.atlas.models import TaskStatus
-from app.core.agentic_framework.tool_lib.common.responses import error_response
+from app.core.atlas.tools.responses import error_response
 
 if TYPE_CHECKING:
     from app.core.atlas.agents import AgentBase

@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Dict, Any, List
 
-from app.core.agentic_framework.base_agent.execution.tool_handler_parallel import (
+from app.core.atlas.execution.tool_handler_parallel import (
     should_run_parallel,
     execute_tools_parallel,
 )

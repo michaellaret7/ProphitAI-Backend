@@ -6,8 +6,7 @@ from typing import List, Dict, Any, Callable, Optional
 from app.core.atlas.models import PrintMode
 from app.utils.choose_model_and_client import get_model_and_client
 
-from app.core.agentic_framework.tool_lib.base_tools.calculator import CALCULATOR_TOOL
-from app.core.agentic_framework.tool_lib.base_tools.think import THINK_TOOL
+from app.core.atlas.tools.base import CALCULATOR_TOOL, THINK_TOOL
 
 class AgentBase(ABC):
     """Abstract base class providing shared foundation for DeepAgent and ChatAgent."""

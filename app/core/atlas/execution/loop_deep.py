@@ -15,7 +15,7 @@ from app.core.atlas.prompts import (
     THINK_DEEPLY_MESSAGE,
     get_finalize_rejected_message
 )
-from app.core.agentic_framework.base_agent.execution.tool_handler_parallel import (
+from app.core.atlas.execution.tool_handler_parallel import (
     should_run_parallel,
     execute_tools_parallel
 )
