@@ -4,15 +4,14 @@ from typing import Dict, Any, TYPE_CHECKING
 import json
 import traceback
 
-from app.core.agentic_framework.base_agent.utils.models import PrintMode
-from app.core.agentic_framework.base_agent.planning.plan_prompt import plan_prompt
-from app.core.agentic_framework.base_agent.planning.plan_parser import parse_plan_with_gpt
+from app.core.atlas.models import PrintMode
+from app.core.atlas.planning import plan_prompt, parse_plan_with_gpt, get_plan_progress
 from app.core.atlas.execution.utils import (
     extract_final_answer,
     build_plan_context
 )
-from app.core.agentic_framework.base_agent.utils.messages.message_utils import remove_system_messages
-from app.core.agentic_framework.base_agent.utils.messages.execution_loop_msg import (
+from app.core.atlas.prompts import (
+    remove_system_messages,
     THINK_DEEPLY_MESSAGE,
     get_finalize_rejected_message
 )
@@ -20,7 +19,6 @@ from app.core.agentic_framework.base_agent.execution.tool_handler_parallel impor
     should_run_parallel,
     execute_tools_parallel
 )
-from app.core.agentic_framework.base_agent.planning.plan_progress import get_plan_progress
 
 if TYPE_CHECKING:
     from app.core.atlas.agents.deep_agent import DeepAgent

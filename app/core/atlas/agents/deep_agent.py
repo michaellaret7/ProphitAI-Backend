@@ -5,12 +5,12 @@ from datetime import datetime
 
 from pydantic import BaseModel
 
-from app.core.agentic_framework.base_agent.callbacks import NoOpCallback, StateCallback
+from app.core.atlas.models import NoOpCallback, StateCallback
 from app.core.atlas.execution import DeepExecutionLoop, ToolHandler
 from app.core.agentic_framework.base_agent.logging.notes import ensure_notes_file
 from app.core.agentic_framework.base_agent.base_tool_registry import register_base_tools
-from app.core.agentic_framework.base_agent.utils.messages.agent_message import UNIVERSAL_AGENT_MESSAGE
-from app.core.agentic_framework.base_agent.utils.models import PrintMode
+from app.core.atlas.prompts import UNIVERSAL_AGENT_MESSAGE
+from app.core.atlas.models import PrintMode
 from app.core.agentic_framework.base_agent.utils.path_utils import create_agent_output_dir
 from app.utils.gpt_parser import parse_with_gpt
 

@@ -3,7 +3,7 @@
 from abc import ABC, abstractmethod
 from typing import List, Dict, Any, Callable, Optional
 
-from app.core.agentic_framework.base_agent.utils.models import PrintMode
+from app.core.atlas.models import PrintMode
 from app.utils.choose_model_and_client import get_model_and_client
 
 

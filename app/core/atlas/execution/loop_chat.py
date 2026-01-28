@@ -8,7 +8,7 @@ from app.core.agentic_framework.base_agent.execution.tool_handler_parallel impor
     should_run_parallel,
     execute_tools_parallel,
 )
-from app.core.agentic_framework.base_agent.utils.models import PrintMode
+from app.core.atlas.models import PrintMode
 
 if TYPE_CHECKING:
     from app.core.atlas.agents.chat_agent import ChatAgent
