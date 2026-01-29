@@ -28,6 +28,8 @@ You will use the following tools to do your research:
     b. Find patterns within the company's earnings calls
     c. Find any other insights from the earnings calls
 4. Extensively use the think tool to synthesize your findings and return a research piece on the stock.
+5. Write an institutional grade research piece on your findings 
+    a. This should be a detailed and extensive research piece based on your findings and research.
 
 Suggestion: Use the think tool as much as possible and write detailed notes on your findings.
 """

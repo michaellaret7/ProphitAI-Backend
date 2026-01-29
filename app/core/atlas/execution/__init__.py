@@ -9,6 +9,8 @@ from .utils import (
     build_plan_context,
     stringify_for_llm,
     check_tool_success,
+    is_finalized,
+    FINALIZE_TOOL_NAMES,
 )
 
 __all__ = [
@@ -21,4 +23,6 @@ __all__ = [
     "build_plan_context",
     "stringify_for_llm",
     "check_tool_success",
+    "is_finalized",
+    "FINALIZE_TOOL_NAMES",
 ]

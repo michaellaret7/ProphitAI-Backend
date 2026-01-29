@@ -4,8 +4,8 @@ import json
 import traceback
 from typing import Dict, Any, TYPE_CHECKING
 
-from app.core.atlas.planning import plan_prompt, parse_plan_with_gpt, get_plan_progress
-from app.core.atlas.execution.utils import extract_final_answer, build_plan_context
+from app.core.atlas.planning import plan_prompt, parse_plan_with_gpt
+from app.core.atlas.execution.utils import extract_final_answer, build_plan_context, is_finalized
 from app.core.atlas.prompts import (
     remove_system_messages,
     THINK_DEEPLY_MESSAGE,
@@ -65,16 +65,16 @@ class DeepExecutionLoop:
 
                 # Handle tool calls or text response
                 if assistant_message.tool_calls:
-                    should_break = self._handle_tool_calls(
-                        assistant_message.tool_calls,
-                        assistant_text
-                    )
-                    if should_break:
+                    self._handle_tool_calls(assistant_message.tool_calls, assistant_text)
+
+                    if is_finalized(assistant_message.tool_calls, self.agent.plan):
                         final_answer, stop_reason = self._extract_final_answer(
                             assistant_message.tool_calls,
                             assistant_text
                         )
                         break
+
+                    self._handle_finalize_rejection(assistant_message.tool_calls)
                 else:
                     self.agent.messages.append({
                         "role": "assistant",
@@ -192,8 +192,8 @@ class DeepExecutionLoop:
 
         return True
 
-    def _handle_tool_calls(self, tool_calls, assistant_text: str) -> bool:
-        """Execute tool calls. Returns True if should break loop (finalize detected)."""
+    def _handle_tool_calls(self, tool_calls, assistant_text: str) -> None:
+        """Execute tool calls and update message history."""
         self.agent.messages.append({
             "role": "assistant",
             "content": assistant_text,
@@ -205,21 +205,20 @@ class DeepExecutionLoop:
         else:
             self.agent.tool_handler.handle_tool_calls(tool_calls)
 
-        # Check for finalize tool
+    def _handle_finalize_rejection(self, tool_calls) -> None:
+        """Inject rejection message if finalize was called but tasks incomplete."""
+        from app.core.atlas.execution.utils import FINALIZE_TOOL_NAMES
+        from app.core.atlas.planning import get_plan_progress
+
         for tc in tool_calls:
             name = getattr(tc.function, "name", "")
-            if name in ("finalize", "final_answer", "final_answer_tool"):
+            if name in FINALIZE_TOOL_NAMES:
                 progress, completion = get_plan_progress(self.agent.plan)
-
-                if completion:
-                    return True
-
-                self.agent.messages.append({
-                    "role": "system",
-                    "content": get_finalize_rejected_message(progress)
-                })
-
-        return False
+                if not completion:
+                    self.agent.messages.append({
+                        "role": "system",
+                        "content": get_finalize_rejected_message(progress)
+                    })
 
     def _extract_final_answer(self, tool_calls, assistant_text: str) -> tuple[str, str]:
         """Extract final answer from finalize tool call."""

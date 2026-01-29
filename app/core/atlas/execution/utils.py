@@ -12,6 +12,7 @@ from typing import TYPE_CHECKING, Any
 
 from app.core.atlas.models import TaskStatus
 from app.core.atlas.logging import format_plan_state
+from app.core.atlas.planning import get_plan_progress
 
 if TYPE_CHECKING:
     from app.core.atlas.agents.deep_agent import DeepAgent
@@ -60,6 +61,29 @@ def check_tool_success(tool_validation_dict: dict) -> tuple[bool, str | None]:
         return False, "Tool returned success=True but data is empty string (no data available)"
 
     return True, None
+
+
+# Tool names that indicate finalization
+FINALIZE_TOOL_NAMES = {"finalize", "final_answer", "final_answer_tool"}
+
+
+def is_finalized(tool_calls, plan) -> bool:
+    """Check if finalize tool was called and all tasks are complete.
+
+    Args:
+        tool_calls: List of tool calls from the LLM response
+        plan: The Plan object containing tasks and subtasks
+
+    Returns:
+        True if a finalize tool was called and all tasks are complete
+    """
+    for tc in tool_calls:
+        name = getattr(tc.function, "name", "")
+        if name in FINALIZE_TOOL_NAMES:
+            _, completion = get_plan_progress(plan)
+            if completion:
+                return True
+    return False
 
 
 def are_all_tasks_complete(plan) -> bool:
