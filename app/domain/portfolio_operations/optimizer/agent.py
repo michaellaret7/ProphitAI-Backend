@@ -73,8 +73,6 @@ class OptimizerAgent(DeepAgent):
         dynamic_user_prompt = self._build_dynamic_prompt()
 
         super().__init__(
-            # provider="gemini",
-            # model="gemini-3-flash-preview",
             provider="grok",
             model="grok-4-1-fast-non-reasoning",
             system_prompt=system_prompt,
@@ -110,15 +108,3 @@ class OptimizerAgent(DeepAgent):
             prompt = prompt.replace(placeholder, value)
 
         return prompt
-
-if __name__ == "__main__":
-    agent = OptimizerAgent(
-        portfolio_id="d3445586-64bd-45dd-b696-82c3e90efe63",  # Replace with actual portfolio ID
-        risk_tolerance="moderate",
-        time_horizon="5 years",
-        investment_goals="Growth with some income",
-        tickers_to_keep="AGG, BND, TLT",
-        print_mode=PrintMode.PRODUCTION
-    )
-
-    agent.run(response_format=OptimizedPortfolio)

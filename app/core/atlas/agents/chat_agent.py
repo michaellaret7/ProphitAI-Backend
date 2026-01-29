@@ -54,7 +54,7 @@ class ChatAgent(AgentBase):
             temperature=temperature,
         )
 
-        self.system_prompt = system_prompt or CHAT_SYSTEM_PROMPT
+        self.system_prompt = CHAT_SYSTEM_PROMPT
 
         # Execution components
         self.tool_handler = ToolHandler(self)  # type: ignore[arg-type]
