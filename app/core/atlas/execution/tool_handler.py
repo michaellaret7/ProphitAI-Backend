@@ -1,36 +1,55 @@
 """Tool Handler - executes tools and manages message history."""
 
+import copy
 import json
+from concurrent.futures import ThreadPoolExecutor
 from typing import List, Dict, Any, TYPE_CHECKING
-from app.core.atlas.tools.validation import validate_tool_call
-from app.core.atlas.models import PrintMode
-from app.core.atlas.logging import write_messages_to_yaml, log_tool_call
-from app.core.atlas.context import prune_completed_task_messages, prune_note_content, prune_think_content
+
 import yaml
-from app.core.atlas.models import TaskStatus
+
+from app.core.atlas.tools.validation import validate_tool_call
+from app.core.atlas.logging import AgentPrinter, write_messages_to_yaml, log_tool_call
+from app.core.atlas.context import prune_completed_task_messages, prune_note_content
 from app.core.atlas.tools.responses import error_response
+from app.core.atlas.execution.utils import stringify_for_llm, check_tool_success
 
 if TYPE_CHECKING:
     from app.core.atlas.agents import AgentBase
 
-# ANSI colors
-_GREEN = "\033[32m"
-_YELLOW = "\033[33m"
-_RESET = "\033[0m"
+# Tools that modify agent state and must run sequentially
+SEQUENTIAL_ONLY_TOOLS = {"write_note", "finalize", "think"}
 
+def should_run_parallel(tool_calls: List[Any]) -> bool:
+    """Determine if tool calls can be executed in parallel.
+
+    Returns False if:
+    - Only one tool call (no benefit from parallelization)
+    - Any tool is in SEQUENTIAL_ONLY_TOOLS (state-modifying tools)
+    """
+    if len(tool_calls) <= 1:
+        return False
+
+    for tool_call in tool_calls:
+        if tool_call.function.name in SEQUENTIAL_ONLY_TOOLS:
+            return False
+
+    return True
 
 class ToolHandler:
     """Handles tool execution and result formatting."""
 
-    def __init__(self, agent: 'AgentBase'):
+    def __init__(self, agent: 'AgentBase', printer: AgentPrinter):
         self.agent = agent
+        self.printer = printer
         self.retry = False
         self.tool_call_history = []
 
     def handle_tool_calls(self, tool_calls: List[Any]) -> None:
         """Execute tool calls and update message history."""
         last = self.agent.messages[-1] if self.agent.messages else None
+
         already_added = isinstance(last, dict) and last.get("role") == "assistant" and last.get("tool_calls")
+
         if not already_added:
             self.agent.messages.append({
                 "role": "assistant",
@@ -42,127 +61,133 @@ class ToolHandler:
 
         for tool_call in tool_calls:
             name = tool_call.function.name
+
             args_json = tool_call.function.arguments or "{}"
 
             args, parse_error = self._parse_arguments(args_json)
 
-            if self.agent.print_mode in [PrintMode.VERBOSE, PrintMode.DEBUG]:
-                print(f"\n[Agent] Calling tool: {_GREEN}{name}{_RESET}")
-            elif self.agent.print_mode == PrintMode.SUBAGENT:
-                print(f"\n[Sub-agent] Calling tool: {_GREEN}{name}{_RESET}")
-            elif self.agent.print_mode == PrintMode.PRODUCTION:
-                print(f"  → {name}")
+            self.printer.tool_call_start(name)
 
             if parse_error:
-                if self.agent.print_mode != PrintMode.PRODUCTION:
-                    print(f"   ⚠️ Argument parse failed - skipping tool execution")
+                self.printer.parse_error(args_json)
+
                 result = error_response(
                     f"Tool '{name}' was not executed because arguments could not be parsed. "
                     f"{parse_error}. Please retry the tool call with valid JSON arguments."
                 )
+
                 self._add_tool_result(tool_call, result, name, args)
+                
                 continue
 
-            if args:
-                display_args = {k: v for k, v in args.items() if k != '_simulation_date'}
-                if display_args:
-                    if self.agent.print_mode in [PrintMode.VERBOSE, PrintMode.DEBUG]:
-                        print(f"   Arguments:")
-                        for key, value in display_args.items():
-                            print(f"     - {_YELLOW}{key}: {value}{_RESET}")
-                    elif self.agent.print_mode == PrintMode.SUBAGENT:
-                        print(f"   [Sub-agent] Arguments: {_YELLOW}SUCCESSFULLY PARSED{_RESET}")
-                else:
-                    if self.agent.print_mode != PrintMode.PRODUCTION:
-                        print(f"   Arguments: {_YELLOW}(none){_RESET}")
-            else:
-                if self.agent.print_mode != PrintMode.PRODUCTION:
-                    print(f"   Arguments: {_YELLOW}(none){_RESET}")
+            self.printer.tool_arguments(args)
 
             result = self._execute_tool(name, args)
 
+            # Track note titles
             if name == "write_note":
-                try:
-                    result_dict = yaml.safe_load(result) if isinstance(result, str) else result
-                    if result_dict.get("success") and "title" in args:
-                        title = args["title"]
-                        if title not in self.agent.note_titles:
-                            self.agent.note_titles.append(title)
-                            if self.agent.print_mode != PrintMode.PRODUCTION:
-                                print(f"📝 Added note title to notebook: '{title}'")
-                except Exception as e:
-                    if self.agent.print_mode == PrintMode.DEBUG:
-                        print(f"⚠️  Warning: Failed to track note title: {e}")
+                self._handle_note_tracking(result, args)
 
-            if name == "update_tasks" and args.get("status") in ("complete", "completed"):
-                try:
-                    result_dict = yaml.safe_load(result) if isinstance(result, str) else result
-                    if result_dict.get("success"):
-                        main_task = args.get("main_task")
-                        subtasks = args.get("subtasks")
-
-                        self.agent.messages = prune_completed_task_messages(
-                            messages=self.agent.messages,
-                            main_task=main_task,
-                            subtasks=subtasks,
-                            exclude_index=current_assistant_idx,
-                            verbose=(self.agent.print_mode != PrintMode.PRODUCTION),
-                            prune_status="in_progress"
-                        )
-
-                        for i in range(len(self.agent.messages) - 1, -1, -1):
-                            msg = self.agent.messages[i]
-                            if msg.get("role") == "assistant" and msg.get("tool_calls") == tool_calls:
-                                current_assistant_idx = i
-                                break
-
-                except Exception as e:
-                    if self.agent.print_mode == PrintMode.DEBUG:
-                        print(f"⚠️  Warning: Failed to prune in_progress messages: {e}")
-
-            elif name == "update_tasks" and args.get("status") == "in_progress":
-                try:
-                    result_dict = yaml.safe_load(result) if isinstance(result, str) else result
-                    if result_dict.get("success"):
-                        self.agent.messages = prune_completed_task_messages(
-                            messages=self.agent.messages,
-                            exclude_index=current_assistant_idx,
-                            verbose=(self.agent.print_mode != PrintMode.PRODUCTION),
-                            prune_all_completed=True
-                        )
-
-                        for i in range(len(self.agent.messages) - 1, -1, -1):
-                            msg = self.agent.messages[i]
-                            if msg.get("role") == "assistant" and msg.get("tool_calls") == tool_calls:
-                                current_assistant_idx = i
-                                break
-
-                except Exception as e:
-                    if self.agent.print_mode == PrintMode.DEBUG:
-                        print(f"⚠️  Warning: Failed to prune completed messages: {e}")
+            # Handle task completion pruning
+            if name == "update_tasks":
+                current_assistant_idx = self._handle_task_update(
+                    result, args, tool_calls, current_assistant_idx
+                )
 
             self._add_tool_result(tool_call, result, name, args)
 
+        self._write_messages_to_yaml()
+
+    def handle_tool_calls_parallel(self, tool_calls: List[Any]) -> None:
+        """Execute multiple tool calls in parallel using ThreadPoolExecutor."""
+        num_tools = len(tool_calls)
+        self.printer.parallel_start(num_tools)
+
+        # Parse all arguments upfront
+        parsed_calls = []
+        for tool_call in tool_calls:
+            name = tool_call.function.name
+            args_json = tool_call.function.arguments or "{}"
+            args, parse_error = self._parse_arguments(args_json)
+            parsed_calls.append((tool_call, name, args, parse_error))
+            self.printer.parallel_tool_queued(name)
+
+        # Execute all tools in parallel
+        results = self._execute_tools_parallel(parsed_calls)
+
+        # Process results sequentially
+        for (tool_call, name, args, _parse_error), result in zip(parsed_calls, results):
+            if name == "write_note":
+                self._handle_note_tracking(result, args)
+
+            self._add_tool_result_parallel(tool_call, result, name, args)
+
+        # Log all tool calls once after parallel execution completes
+        log_tool_call(self.tool_call_history, output_dir=getattr(self.agent, "output_dir", None))
+        self._write_messages_to_yaml()
+
+    def _execute_tools_parallel(
+        self,
+        parsed_calls: List[tuple]
+    ) -> List[Any]:
+        """Execute parsed tool calls in parallel. Returns list of results."""
+        results = []
         try:
-            import copy
-            iteration_indices = getattr(self.agent, "_iteration_message_indices", None)
-            messages_copy = copy.deepcopy(self.agent.messages)
-            pruned_messages_for_yaml = prune_note_content(
-                messages=messages_copy,
-                exclude_index=None,
-                verbose=(self.agent.print_mode != PrintMode.PRODUCTION)
-            )
-            write_messages_to_yaml(pruned_messages_for_yaml, output_dir=getattr(self.agent, "output_dir", None), iteration_indices=iteration_indices)
+            with ThreadPoolExecutor(max_workers=len(parsed_calls)) as executor:
+                futures = []
+                for tool_call, name, args, parse_error in parsed_calls:
+                    if parse_error:
+                        futures.append(None)
+                    else:
+                        futures.append(executor.submit(self._execute_tool, name, args))
+
+                for i, (tool_call, name, args, parse_error) in enumerate(parsed_calls):
+                    if parse_error:
+                        results.append(error_response(f"Argument parse failed: {parse_error}"))
+                    else:
+                        try:
+                            results.append(futures[i].result())
+                        except Exception as e:
+                            results.append(error_response(f"Error executing {name}: {str(e)}"))
         except Exception as e:
-            print(f"⚠️  Warning: Failed to write messages to YAML: {e}")
+            self.printer.error(f"Parallel execution failed: {e}")
+            results = [error_response(f"Parallel execution failed: {e}")] * len(parsed_calls)
+
+        return results
+
+    def _add_tool_result_parallel(
+        self,
+        tool_call: Any,
+        result: Any,
+        name: str,
+        args: Dict[str, Any],
+    ) -> bool:
+        """Add a tool result to messages for parallel execution (uses parallel printer)."""
+        tool_validation = validate_tool_call(name, args, result, self.agent)
+        tool_validation_dict = yaml.safe_load(tool_validation)
+        success, _ = check_tool_success(tool_validation_dict)
+
+        self.tool_call_history.append(tool_validation_dict)
+
+        self.printer.parallel_tool_result(name, result, success)
+
+        content = stringify_for_llm(result) if success else yaml.dump(
+            tool_validation_dict, default_flow_style=False, sort_keys=False
+        )
+        self.agent.messages.append({
+            "role": "tool",
+            "tool_call_id": tool_call.id,
+            "content": content
+        })
+
+        return success
 
     def _parse_arguments(self, args_json: str) -> tuple[Dict[str, Any], str | None]:
         """Parse tool arguments from JSON string."""
         try:
             return json.loads(args_json), None
         except json.JSONDecodeError as e:
-            display_json = args_json[:200] + "..." if len(args_json) > 200 else args_json
-            print(f" Could not parse args: {display_json}")
+            self.printer.parse_error(args_json)
             error_msg = f"Failed to parse tool arguments (invalid JSON): {str(e)}"
             return {}, error_msg
 
@@ -172,44 +197,93 @@ class ToolHandler:
 
         if not func:
             error_msg = f"Tool '{name}' not found. Available: {list(self.agent.tool_functions.keys())}"
-            print(f"  ⚠️ {error_msg}")
+            self.printer.tool_error(error_msg)
             return error_response(error_msg)
 
         try:
             execution_args = args.copy()
             if getattr(self.agent, 'simulation_date', None) is not None and isinstance(execution_args, dict):
                 execution_args['_simulation_date'] = self.agent.simulation_date
-
-            result = func(**execution_args)
-            return result
+            return func(**execution_args)
         except Exception as e:
             error_msg = f"Error executing {name}: {str(e)}"
-            print(f"  ⚠️ {error_msg}")
+            self.printer.tool_error(error_msg)
             return error_response(error_msg)
 
-    def _check_tool_success(self, tool_validation_dict: dict) -> tuple[bool, str]:
-        """Check if the tool call was successful."""
-        success = tool_validation_dict.get("success", True)
+    def _handle_note_tracking(self, result: Any, args: Dict[str, Any]) -> None:
+        """Track note titles when write_note succeeds."""
+        try:
+            result_dict = yaml.safe_load(result) if isinstance(result, str) else result
+            if result_dict.get("success") and "title" in args:
+                title = args["title"]
+                if title not in self.agent.note_titles:
+                    self.agent.note_titles.append(title)
+                    self.printer.note_added(title)
+        except Exception as e:
+            self.printer.warning(f"Failed to track note title: {e}")
 
-        if not success:
-            error = tool_validation_dict.get("error", "Unknown error")
-            return False, error
+    def _handle_task_update(
+        self,
+        result: Any,
+        args: Dict[str, Any],
+        tool_calls: List[Any],
+        current_assistant_idx: int
+    ) -> int:
+        """Handle message pruning when tasks are updated. Returns updated assistant index."""
+        status = args.get("status")
+        if status not in ("complete", "completed", "in_progress"):
+            return current_assistant_idx
 
-        data = tool_validation_dict.get("data")
+        try:
+            result_dict = yaml.safe_load(result) if isinstance(result, str) else result
+            if not result_dict.get("success"):
+                return current_assistant_idx
 
-        if data is None:
-            return False, "Tool returned success=True but data is None (no data available)"
+            if status in ("complete", "completed"):
+                self.agent.messages = prune_completed_task_messages(
+                    messages=self.agent.messages,
+                    main_task=args.get("main_task"),
+                    subtasks=args.get("subtasks"),
+                    exclude_index=current_assistant_idx,
+                    verbose=self.printer.is_verbose,
+                    prune_status="in_progress"
+                )
+            else:  # in_progress
+                self.agent.messages = prune_completed_task_messages(
+                    messages=self.agent.messages,
+                    exclude_index=current_assistant_idx,
+                    verbose=self.printer.is_verbose,
+                    prune_all_completed=True
+                )
 
-        if isinstance(data, dict) and len(data) == 0:
-            return False, "Tool returned success=True but data is empty dict (no data available)"
+            # Recalculate assistant index after pruning
+            for i in range(len(self.agent.messages) - 1, -1, -1):
+                msg = self.agent.messages[i]
+                if msg.get("role") == "assistant" and msg.get("tool_calls") == tool_calls:
+                    return i
 
-        if isinstance(data, list) and len(data) == 0:
-            return False, "Tool returned success=True but data is empty list (no data available)"
+        except Exception as e:
+            self.printer.warning(f"Failed to prune messages: {e}")
 
-        if isinstance(data, str) and data.strip() == "":
-            return False, "Tool returned success=True but data is empty string (no data available)"
+        return current_assistant_idx
 
-        return True, None
+    def _write_messages_to_yaml(self) -> None:
+        """Write pruned messages to YAML for logging."""
+        try:
+            iteration_indices = getattr(self.agent, "_iteration_message_indices", None)
+            messages_copy = copy.deepcopy(self.agent.messages)
+            pruned_messages = prune_note_content(
+                messages=messages_copy,
+                exclude_index=None,
+                verbose=self.printer.is_verbose
+            )
+            write_messages_to_yaml(
+                pruned_messages,
+                output_dir=getattr(self.agent, "output_dir", None),
+                iteration_indices=iteration_indices
+            )
+        except Exception as e:
+            self.printer.warning(f"Failed to write messages to YAML: {e}")
 
     def _add_tool_result(
         self,
@@ -221,56 +295,20 @@ class ToolHandler:
         """Add a tool result to messages and log it."""
         tool_validation = validate_tool_call(name, args, result, self.agent)
         tool_validation_dict = yaml.safe_load(tool_validation)
-        success, _ = self._check_tool_success(tool_validation_dict)
+        success, _ = check_tool_success(tool_validation_dict)
 
         self.tool_call_history.append(tool_validation_dict)
         log_tool_call(self.tool_call_history, output_dir=getattr(self.agent, "output_dir", None))
 
-        if self.agent.print_mode == PrintMode.DEBUG:
-            print(f"  ← Result: {result}")
-        elif self.agent.print_mode == PrintMode.VERBOSE:
-            result_str = str(result)
-            if len(result_str) > 200:
-                print(f"   ✓ Result: {result_str[:200]}... (truncated)")
-            else:
-                print(f"   ✓ Result: {result_str}")
-        elif self.agent.print_mode == PrintMode.SUBAGENT:
-            print(f"[Sub-agent] {name} tool call successful: {success}")
+        self.printer.tool_result(name, result, success)
 
-        if success:
-            self.agent.messages.append({
-                "role": "tool",
-                "tool_call_id": tool_call.id,
-                "content": self._stringify(result)
-            })
-        else:
-            self.agent.messages.append({
-                "role": "tool",
-                "tool_call_id": tool_call.id,
-                "content": yaml.dump(tool_validation_dict, default_flow_style=False, sort_keys=False)
-            })
+        content = stringify_for_llm(result) if success else yaml.dump(
+            tool_validation_dict, default_flow_style=False, sort_keys=False
+        )
+        self.agent.messages.append({
+            "role": "tool",
+            "tool_call_id": tool_call.id,
+            "content": content
+        })
 
         return success
-
-    def _stringify(self, obj: Any) -> str:
-        """Convert any object to string for LLM consumption."""
-        if isinstance(obj, str):
-            return obj
-
-        try:
-            def default_handler(o):
-                if hasattr(o, 'model_dump'):
-                    return o.model_dump()
-                if hasattr(o, 'dict'):
-                    return o.dict()
-                try:
-                    import dataclasses
-                    if dataclasses.is_dataclass(o):
-                        return dataclasses.asdict(o)
-                except Exception:
-                    pass
-                return str(o)
-
-            return json.dumps(obj, default=default_handler, ensure_ascii=False)
-        except Exception:
-            return str(obj)

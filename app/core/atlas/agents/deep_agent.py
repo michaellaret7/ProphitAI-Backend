@@ -7,7 +7,7 @@ from pydantic import BaseModel
 
 from app.core.atlas.models import NoOpCallback, StateCallback, Plan
 from app.core.atlas.execution import DeepExecutionLoop, ToolHandler
-from app.core.atlas.logging import ensure_notes_file
+from app.core.atlas.logging import AgentPrinter, ensure_notes_file
 from app.core.atlas.tools.deep_registry import register_base_deep_tools
 from app.core.atlas.prompts import UNIVERSAL_AGENT_MESSAGE
 from app.core.atlas.models import PrintMode
@@ -72,7 +72,8 @@ class DeepAgent(AgentBase):
         ensure_notes_file(self.output_dir, self.agent_name)
 
         # Execution components
-        self.tool_handler = ToolHandler(self)
+        self.printer = AgentPrinter(self.print_mode)
+        self.tool_handler = ToolHandler(self, self.printer)
         self.execution_loop = DeepExecutionLoop(self)
 
         # Register base tools

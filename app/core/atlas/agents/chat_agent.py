@@ -8,8 +8,8 @@ from typing import List, Dict, Any, Optional
 from app.core.atlas.tools.foundry.macro_research import MACRO_RESEARCH_SEARCH_TOOL
 from app.core.atlas.models import PrintMode, ChatResponse, ChatSession
 from app.core.atlas.prompts import CHAT_SYSTEM_PROMPT
-from app.core.atlas.execution import ChatExecutionLoop
-from app.core.atlas.execution import ToolHandler
+from app.core.atlas.execution import ChatExecutionLoop, ToolHandler
+from app.core.atlas.logging import AgentPrinter
 
 from .base import AgentBase
 
@@ -57,7 +57,8 @@ class ChatAgent(AgentBase):
         self.system_prompt = CHAT_SYSTEM_PROMPT
 
         # Execution components
-        self.tool_handler = ToolHandler(self)  # type: ignore[arg-type]
+        self.printer = AgentPrinter(self.print_mode)
+        self.tool_handler = ToolHandler(self, self.printer)  # type: ignore[arg-type]
         self.execution_loop = ChatExecutionLoop(self)
 
         # Attributes expected by ToolHandler (BaseAgent compatibility)
@@ -65,7 +66,7 @@ class ChatAgent(AgentBase):
         self.note_titles: List[str] = []
         self.output_dir = None
 
-        self.add_tool(**MACRO_RESEARCH_SEARCH_TOOL)
+        # self.add_tool(**MACRO_RESEARCH_SEARCH_TOOL)
 
         print(f"Initialized Agent with model: {self.model} (provider: {self.provider})")
 

@@ -89,7 +89,10 @@ conclusions reached.
 
 **CRITICAL:** Do NOT include tool calls inside your thought. The think tool is for pure text reasoning
 only. If you need to call a tool, do it as a separate tool call AFTER the think tool completes. Never
-write tool call syntax, function calls, or tool invocations within the thought parameter."""
+write tool call syntax, function calls, or tool invocations within the thought parameter.
+
+**PARAMETER CONSTRAINT:** This tool accepts EXACTLY ONE parameter: "thought" (string). Do NOT pass any
+other parameters like subtasks, status, main_task, etc. Those belong to other tools like update_tasks."""
 
 THINK_PARAMETERS = {
     "type": "object",
@@ -104,7 +107,8 @@ THINK_PARAMETERS = {
             )
         }
     },
-    "required": ["thought"]
+    "required": ["thought"],
+    "additionalProperties": False
 }
 
 THINK_TOOL = {
