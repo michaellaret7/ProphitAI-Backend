@@ -1,16 +1,25 @@
-from app.core.agentic_framework.tool_lib.data_tools.ticker_fundamentals.statements import GET_TICKER_FUNDAMENTAL_DATA_TOOL
-from app.core.agentic_framework.tool_lib.data_tools.ticker_fundamentals.ttm_ratios import GET_RATIOS_TTM_TOOL
-from app.core.agentic_framework.tool_lib.portfolio_tools.corr_matrix import CORRELATION_MATRIX_TOOL
-from app.core.agentic_framework.tool_lib.agent_specific_tools.optimizer import GET_USER_PORTFOLIO_TOOL
-from app.core.agentic_framework.tool_lib.data_tools.ticker_info import GET_TICKER_INFO_TOOL
-from app.core.agentic_framework.tool_lib.data_tools.ticker_info import GET_TICKER_PEERS_TOOL
-from app.core.agentic_framework.tool_lib.data_tools.screeners.equity_screener import EQUITY_SCREENER_TOOL
-from app.core.agentic_framework.tool_lib.data_tools.screeners.etf_screener import ETF_SCREENER_TOOL
-from app.core.agentic_framework.tool_lib.ticker_tools.performance import GET_TICKER_PERFORMANCE_AND_RISK_TOOL
-from app.core.agentic_framework.tool_lib.ticker_tools.factors import CALCULATE_TICKER_FACTORS_TOOL
-from app.core.agentic_framework.tool_lib.risk_tools.asset_risk_contrib import RISK_CONTRIBUTION_TOOL
-from app.core.agentic_framework.tool_lib.risk_tools.drawdown_profile import DRAWDOWN_PROFILE_TOOL
-from app.core.agentic_framework.tool_lib.data_tools.sectors.performance import GET_SECTOR_PERFORMANCE_TOOL
+# Atlas tools
+from app.core.atlas.tools.data import (
+    GET_TICKER_FUNDAMENTAL_DATA_TOOL,
+    GET_RATIOS_TTM_TOOL,
+    GET_TICKER_INFO_TOOL,
+    GET_TICKER_PEERS_TOOL,
+    EQUITY_SCREENER_TOOL,
+    ETF_SCREENER_TOOL,
+    GET_SECTOR_PERFORMANCE_TOOL,
+)
+from app.core.atlas.tools.portfolio import (
+    CORRELATION_MATRIX_TOOL,
+    GET_USER_PORTFOLIO_TOOL,
+)
+from app.core.atlas.tools.ticker import (
+    GET_TICKER_PERFORMANCE_AND_RISK_TOOL,
+    CALCULATE_TICKER_FACTORS_TOOL,
+)
+from app.core.atlas.tools.risk import (
+    RISK_CONTRIBUTION_TOOL,
+    DRAWDOWN_PROFILE_TOOL,
+)
 
 def register_portfolio_insights_tools(agent):
     # ------- User portfolio tool -----------

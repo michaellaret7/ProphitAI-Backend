@@ -9,7 +9,7 @@ import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 from datetime import datetime
-from app.core.agentic_framework.tool_lib.portfolio_tools.performance import calculate_portfolio_performance
+from app.core.atlas.tools.portfolio import calculate_portfolio_performance
 from app.utils.time_utils import get_current_utc_time
 from app.core.calculations.portfolio.utils import get_portfolio_returns, get_benchmark_returns
 

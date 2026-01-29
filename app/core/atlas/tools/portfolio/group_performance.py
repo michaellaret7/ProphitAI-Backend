@@ -1,0 +1,153 @@
+from typing import Optional
+from datetime import datetime
+from app.core.calculations.portfolio.utils import prepare_portfolio_data
+from app.core.calculations.returns.calculator import ReturnsCalculator
+from app.core.calculations.risk.calculator import RiskCalculator
+from app.core.calculations.core.config import DEFAULT_LOOKBACK_3Y
+import pandas as pd
+import numpy as np
+from app.models.portfolio_models import PortfolioInput
+from app.db.core.db_config import MarketSession
+from app.db.core.models.market_data_models import Ticker
+from app.utils.decorators.tool_validation import log_simulation_data_range
+from app.utils.tool_validator import ToolValidator
+from app.core.atlas.tools.tool_schemas import PORTFOLIO_DICT_SCHEMA
+from app.core.atlas.tools.responses import success_response, error_response
+
+@log_simulation_data_range()
+def calculate_group_performances(portfolio_dict: PortfolioInput | dict, lookback_days: int = DEFAULT_LOOKBACK_3Y, use_total_returns: bool = True, group_by: str = None, _simulation_date: Optional[datetime] = None) -> str:
+    """Generic grouping performance calculator.
+
+    Returns a DataFrame with columns: [group_label, ann_total_return, ann_volatility]
+    where group_label column name equals group_by.
+    """
+    # Validate inputs
+    v = ToolValidator()
+    v.require_portfolio('portfolio_dict', portfolio_dict, normalize=True)
+    v.require_enum('group_by', group_by, ['industry', 'sub_industry'])
+    v.optional_numeric('lookback_days', lookback_days, default=DEFAULT_LOOKBACK_3Y, min_val=1, positive_only=True)
+
+    if not v.is_valid():
+        return v.error_response()
+
+    # Get validated/normalized values
+    portfolio_dict = v.get('portfolio_dict')
+    group_by = v.get('group_by')
+    lookback_days = v.get('lookback_days')
+
+    try:
+
+        # 1) Data and weights
+        weights, price_data, dividend_data = prepare_portfolio_data(
+            portfolio=portfolio_dict,
+            lookback_days=lookback_days,
+            include_dividends=use_total_returns,
+            include_benchmark=None,
+            _simulation_date=_simulation_date
+        )
+
+        tickers = list(weights.keys())
+        if not tickers:
+            return success_response([])
+
+        # 2) Per-ticker return series
+        per_ticker_returns: dict[str, pd.Series] = {}
+        for t in tickers:
+            s = price_data.get(t)
+            if s is None or s.empty:
+                continue
+            if use_total_returns:
+                divs = dividend_data.get(t)
+                per_ticker_returns[t] = ReturnsCalculator.total_returns(s, divs)
+            else:
+                per_ticker_returns[t] = ReturnsCalculator.daily_price_returns(s)
+
+        if not per_ticker_returns:
+            return success_response([])
+
+        # 3) Map tickers to group labels
+        field = group_by
+        session = MarketSession()
+        try:
+            rows = (
+                session.query(Ticker)
+                .filter(Ticker.ticker.in_([t.upper() for t in tickers]))
+                .all()
+            )
+            ticker_to_group: dict[str, str | None] = {}
+            for r in rows:
+                ticker_to_group[r.ticker] = getattr(r, field, None)
+        finally:
+            session.close()
+
+        # 4) Build group-level returns using gross-exposure normalization (weights normalized by abs-sum)
+        rows: list[dict] = []
+        # Group tickers by label
+        group_to_tickers: dict[str | None, list[str]] = {}
+        for t, lbl in ticker_to_group.items():
+            group_to_tickers.setdefault(lbl if lbl is not None else "Unknown", []).append(t)
+
+        for lbl, group_tickers in group_to_tickers.items():
+            # Align returns and weights
+            r_map = {t: per_ticker_returns[t] for t in group_tickers if t in per_ticker_returns}
+            if not r_map:
+                continue
+            df = pd.concat(r_map, axis=1).dropna(how="any")
+            if df.empty:
+                continue
+            w = pd.Series({t: weights.get(t, 0.0) for t in df.columns}, index=df.columns).astype(float)
+            denom = float(np.abs(w).sum())
+            if denom > 0:
+                w_norm = w / denom
+            else:
+                # Fallback: equal-weight
+                w_norm = pd.Series(1.0 / len(df.columns), index=df.columns)
+
+            grp_returns = (df * w_norm).sum(axis=1)
+            ann_ret = ReturnsCalculator.annualized_return(grp_returns, 252)
+            ann_vol = RiskCalculator.annualized_volatility(grp_returns, 252)
+
+            row = {
+                group_by: lbl,
+                "ann_total_return": round(ann_ret, 4) if np.isfinite(ann_ret) else ann_ret,
+                "ann_volatility": round(ann_vol, 4) if np.isfinite(ann_vol) else ann_vol,
+            }
+            rows.append(row)
+
+        out = pd.DataFrame(rows)
+        if not out.empty:
+            # Stable ordering by label
+            out = out[[group_by, "ann_total_return", "ann_volatility"]]
+        return success_response(out.to_dict('records'))
+    except Exception as e:
+        return error_response(e)
+
+# Tool Schema Constants
+CALCULATE_GROUP_PERFORMANCES_DESCRIPTION = (
+    "Calculate performance metrics grouped by industry or sub-industry. "
+    "Returns a DataFrame with columns: [group_label, ann_total_return, ann_volatility] "
+    "where group_label column name equals group_by parameter. "
+    "CRITICAL: You MUST ALWAYS include the portfolio_dict parameter with ALL holdings and specify 'group_by'. "
+    "Example: calculate_group_performances(portfolio_dict={'AAPL': {'allocation': 0.5, 'position': 'long'}, 'KO': {'allocation': 0.5, 'position': 'long'}}, group_by='industry')"
+)
+
+CALCULATE_GROUP_PERFORMANCES_PARAMETERS = {
+    "type": "object",
+    "properties": {
+        "portfolio_dict": PORTFOLIO_DICT_SCHEMA,
+        "group_by": {
+            "type": "string",
+            "description": "Field to group by for performance analysis. Must be 'industry' or 'sub_industry'.",
+            "enum": ["industry", "sub_industry"]
+        },
+    },
+    "required": ["portfolio_dict", "group_by"],
+    "additionalProperties": False
+}
+
+CALCULATE_GROUP_PERFORMANCES_TOOL = {
+    "name": "calculate_group_performances",
+    "description": CALCULATE_GROUP_PERFORMANCES_DESCRIPTION,
+    "parameters": CALCULATE_GROUP_PERFORMANCES_PARAMETERS,
+    "function": calculate_group_performances,
+}

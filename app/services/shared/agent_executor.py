@@ -13,11 +13,11 @@ from enum import Enum
 from typing import Any, Dict, Optional, TYPE_CHECKING
 
 from app.api.routes.websocket_router import connection_manager
-from app.core.agentic_framework.base_agent.utils.models import Plan, TaskStatus
+from app.core.atlas.models import Plan, TaskStatus
 from app.utils.time_utils import get_current_utc_time
 
 if TYPE_CHECKING:
-    from app.core.agentic_framework.base_agent.agent import BaseAgent
+    from app.core.atlas.agents import DeepAgent as BaseAgent
 
 
 class ExecutionStatus(str, Enum):

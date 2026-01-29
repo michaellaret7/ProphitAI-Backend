@@ -1,19 +1,18 @@
-from app.core.agentic_framework.base_agent.agent import BaseAgent
-from app.core.agentic_framework.base_agent.callbacks.state_callback import StateCallback
-from app.core.agentic_framework.base_agent.utils.models import PrintMode
+from app.core.atlas.agents import DeepAgent
+from app.core.atlas.models import StateCallback, PrintMode
 from app.domain.ai_watchlist.prompts import SYSTEM_PROMPT, USER_PROMPT_TEMPLATE
 from typing import Optional
 from .models import WatchlistResponse
 from .tool_registry import register_ai_watchlist_tools
 
 
-class AiWatchlistAgent(BaseAgent):
+class AiWatchlistAgent(DeepAgent):
     response_model = WatchlistResponse
 
     def __init__(
         self,
         user_preferences: str,
-        print_mode: str = PrintMode.VERBOSE,
+        print_mode: PrintMode = PrintMode.VERBOSE,
         state_callback: Optional[StateCallback] = None,
     ):
         if not user_preferences or not user_preferences.strip():
@@ -31,7 +30,7 @@ class AiWatchlistAgent(BaseAgent):
             # provider="openai",
             # model="gpt-5.2",
             provider="fireworks",
-            model="Kimi-K2-instruct",
+            model="Kimi-K2.5",
             # provider="anthropic",
             # model="claude-haiku-4-5-20251001",
             system_prompt=SYSTEM_PROMPT,
@@ -48,6 +47,3 @@ class AiWatchlistAgent(BaseAgent):
     def _build_user_prompt(self) -> str:
         return USER_PROMPT_TEMPLATE.format(user_query=self.user_preferences)
 
-if __name__ == "__main__":
-    agent = AiWatchlistAgent(user_preferences="Build me a watchlist of 1-15 tickers of avaiation and shipping stocks with lowe to mid pe ratios")
-    agent.run(output_format=WatchlistResponse)

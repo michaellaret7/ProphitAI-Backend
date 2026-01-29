@@ -19,7 +19,7 @@ from app.services.shared.agent_executor import (
     run_agent_background,
 )
 
-from app.core.agentic_framework.base_agent.utils.models import PrintMode
+from app.core.atlas.models import PrintMode
 
 router = APIRouter(prefix="/agents", tags=["Agent Execution"])
 

@@ -5,7 +5,7 @@ from datetime import datetime
 
 from pydantic import BaseModel
 
-from app.core.atlas.models import NoOpCallback, StateCallback
+from app.core.atlas.models import NoOpCallback, StateCallback, Plan
 from app.core.atlas.execution import DeepExecutionLoop, ToolHandler
 from app.core.atlas.logging import ensure_notes_file
 from app.core.atlas.tools.deep_registry import register_base_deep_tools
@@ -55,7 +55,7 @@ class DeepAgent(AgentBase):
 
         # Planning
         self.plan_first = plan_first
-        self.plan = None
+        self.plan: Optional[Plan] = None
 
         # Simulation mode for backtesting
         self.simulation_date = simulation_date

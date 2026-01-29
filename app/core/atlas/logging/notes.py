@@ -1,11 +1,11 @@
 """Notes file utilities for agent runs."""
 
 from pathlib import Path
-from typing import Optional
+from typing import Optional, Union
 from app.utils.time_utils import get_current_utc_time
 
 
-def ensure_notes_file(output_dir: Optional[str], agent_name: str) -> Path:
+def ensure_notes_file(output_dir: Optional[Union[str, Path]], agent_name: str) -> Path:
     """Ensure notes.md exists in the run directory with a header.
 
     Args:

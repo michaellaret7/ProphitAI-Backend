@@ -59,11 +59,12 @@ def extract_final_answer(text: str) -> str:
     return text
 
 
-def build_plan_context(agent: 'DeepAgent') -> str:
+def build_plan_context(agent: 'DeepAgent', is_first_execution: bool = False) -> str:
     """Build a plan context message to inject into the conversation.
 
     Args:
         agent: The agent instance with plan and tasks
+        is_first_execution: Whether this is the first execution iteration (after planning)
 
     Returns:
         Formatted string with current plan status including all subtasks

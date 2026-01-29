@@ -1,6 +1,5 @@
-from app.core.agentic_framework.base_agent.agent import BaseAgent
-from app.core.agentic_framework.base_agent.callbacks.state_callback import StateCallback
-from app.core.agentic_framework.base_agent.utils.models import PrintMode
+from app.core.atlas.agents import DeepAgent
+from app.core.atlas.models import StateCallback, PrintMode
 from typing import Optional
 from app.db.core.db_config import UserSession
 from app.db.core.models.user_data_models import Portfolio, User
@@ -9,13 +8,13 @@ from .models import InsightsResponseModel
 from .prompts import build_prompts
 
 
-class PortfolioInsightsAgent(BaseAgent):
+class PortfolioInsightsAgent(DeepAgent):
     response_model = InsightsResponseModel
 
     def __init__(
         self,
         portfolio_id: str,
-        print_mode: str = PrintMode.VERBOSE,
+        print_mode: PrintMode = PrintMode.VERBOSE,
         state_callback: Optional[StateCallback] = None,
     ):
         self.portfolio_id = portfolio_id

@@ -1,9 +1,8 @@
-from re import VERBOSE
 import uuid
 from typing import TYPE_CHECKING, Optional
 
-from app.core.agentic_framework.base_agent import BaseAgent
-from app.core.agentic_framework.base_agent.utils.models import PrintMode
+from app.core.atlas.agents import DeepAgent
+from app.core.atlas.models import PrintMode
 from app.utils.decorators.timer import timer
 from app.utils.time_utils import get_utc_date_str
 
@@ -13,9 +12,9 @@ from .tool_registry import register_optimizer_tools
 from .models import OptimizedPortfolio
 
 if TYPE_CHECKING:
-    from app.core.agentic_framework.base_agent.callbacks import StateCallback
+    from app.core.atlas.models import StateCallback
 
-class OptimizerAgent(BaseAgent):
+class OptimizerAgent(DeepAgent):
     response_model = OptimizedPortfolio  # Current test model - change to OptimizedPortfolio when using full optimizer prompts
 
     def __init__(
@@ -29,7 +28,7 @@ class OptimizerAgent(BaseAgent):
         tickers_to_keep: Optional[str] = None,
         tickers_to_exclude: Optional[str] = None,
         state_callback: Optional["StateCallback"] = None,
-        print_mode: str = PrintMode.VERBOSE,
+        print_mode: PrintMode = PrintMode.VERBOSE,
     ):
         """
         Initialize OptimizerAgent with a specific portfolio to optimize.
@@ -119,7 +118,7 @@ if __name__ == "__main__":
         time_horizon="5 years",
         investment_goals="Growth with some income",
         tickers_to_keep="AGG, BND, TLT",
-        print_mode=PrintMode.VERBOSE
+        print_mode=PrintMode.PRODUCTION
     )
 
     agent.run(response_format=OptimizedPortfolio)

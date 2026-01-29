@@ -6,8 +6,10 @@ Calculates and compares performance metrics for initial vs final portfolios.
 
 import yaml
 from datetime import datetime
-from app.core.agentic_framework.tool_lib.portfolio_tools.performance import calculate_portfolio_performance
-from app.core.agentic_framework.tool_lib.portfolio_tools.returns import calculate_portfolio_returns_metrics
+from app.core.atlas.tools.portfolio import (
+    calculate_portfolio_performance,
+    calculate_portfolio_returns_metrics,
+)
 from app.utils.time_utils import get_current_utc_time
 
 # Define portfolios
