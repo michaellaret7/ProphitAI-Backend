@@ -4,8 +4,8 @@
 This tool analyzes [aspect] of a portfolio.
 """
 
-from app.core.agentic_framework.tool_lib.common.responses import success_response, error_response
-from app.core.agentic_framework.tool_lib.common.schemas import PORTFOLIO_DICT_SCHEMA
+from app.core.atlas.tool_lib.common.responses import success_response, error_response
+from app.core.atlas.tool_lib.common.schemas import PORTFOLIO_DICT_SCHEMA
 from app.utils.tool_validator import ToolValidator
 from typing import Dict, Any, Optional
 

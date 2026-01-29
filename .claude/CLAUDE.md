@@ -16,7 +16,7 @@ ProphitAI is an AI-powered institutional-grade portfolio management platform tha
 
 ### Core Components
 
-#### 1. Agentic Framework (`app/core/agentic_framework/`)
+#### 1. Agentic Framework (`app/core/atlas/`)
 The heart of ProphitAI - a sophisticated autonomous agent system for portfolio management:
 
 - **BaseAgent** (`base_agent/agent.py`): Foundation for all specialized agents
@@ -351,8 +351,8 @@ mcp__notion__notion-update-page(
 - `main.py`: FastAPI application entrypoint
 - `requirements.txt`: Python dependencies
 - `.env`: Environment variables (API keys, DB credentials) - **NEVER COMMIT**
-- `app/core/agentic_framework/base_agent/agent.py`: Core agent implementation
-- `app/core/agentic_framework/base_agent/tasks/models.py`: Task/planning data models
+- `app/core/atlas/base_agent/agent.py`: Core agent implementation
+- `app/core/atlas/base_agent/tasks/models.py`: Task/planning data models
 
 ## Important Rules
 

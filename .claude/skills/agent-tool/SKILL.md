@@ -10,7 +10,7 @@ Build tools for the ProphitAI agentic framework following established patterns. 
 ## Quick Reference
 
 ```
-Tool Location: app/core/agentic_framework/tool_lib/<category>/<tool_name>.py
+Tool Location: app/core/atlas/tool_lib/<category>/<tool_name>.py
 Schema Format: OpenAI function calling (JSON Schema)
 Response Format: YAML via success_response() / error_response()
 ```
@@ -22,8 +22,8 @@ Every tool file follows this structure:
 ```python
 """Tool description in docstring."""
 
-from app.core.agentic_framework.tool_lib.common.responses import success_response, error_response
-from app.core.agentic_framework.tool_lib.common.schemas import PORTFOLIO_DICT_SCHEMA  # If needed
+from app.core.atlas.tool_lib.common.responses import success_response, error_response
+from app.core.atlas.tool_lib.common.schemas import PORTFOLIO_DICT_SCHEMA  # If needed
 from app.utils.tool_validator import ToolValidator  # For validation
 from typing import Dict, Any, List, Optional
 
@@ -198,7 +198,7 @@ if __name__ == "__main__":
 }
 
 # Portfolio dict (use shared schema)
-from app.core.agentic_framework.tool_lib.common.schemas import PORTFOLIO_DICT_SCHEMA
+from app.core.atlas.tool_lib.common.schemas import PORTFOLIO_DICT_SCHEMA
 
 "portfolio_dict": PORTFOLIO_DICT_SCHEMA  # Reuse standard schema
 ```
@@ -281,7 +281,7 @@ def my_tool(ticker, lookback_days=None, portfolio_dict=None, metric=None) -> str
 ## Response Formatting
 
 ```python
-from app.core.agentic_framework.tool_lib.common.responses import success_response, error_response
+from app.core.atlas.tool_lib.common.responses import success_response, error_response
 
 # Success response
 return success_response({
@@ -319,7 +319,7 @@ except Exception as e:
 
 ```python
 # In agent setup code
-from app.core.agentic_framework.tool_lib.risk_tools.stress_test import (
+from app.core.atlas.tool_lib.risk_tools.stress_test import (
     stress_test,
     STRESS_TEST_DESCRIPTION,
     STRESS_TEST_PARAMETERS
@@ -345,7 +345,7 @@ STRESS_TEST_TOOL = {
 }
 
 # In agent setup
-from app.core.agentic_framework.tool_lib.risk_tools.stress_test import STRESS_TEST_TOOL
+from app.core.atlas.tool_lib.risk_tools.stress_test import STRESS_TEST_TOOL
 
 agent.add_tool(**STRESS_TEST_TOOL)
 ```

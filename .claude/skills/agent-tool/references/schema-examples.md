@@ -78,7 +78,7 @@ TOOL_PARAMETERS = {
 ### Portfolio Dict Schema (Shared)
 
 ```python
-# From app/core/agentic_framework/tool_lib/common/schemas.py
+# From app/core/atlas/tool_lib/common/schemas.py
 PORTFOLIO_DICT_SCHEMA = {
     "type": "object",
     "description": (

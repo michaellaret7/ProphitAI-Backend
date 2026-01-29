@@ -46,7 +46,7 @@
       "WebFetch(domain:www.nasdaq.com)",
       "Bash(cd:*)",
       "Bash(wc:*)",
-      "Bash(for f in \"C:/Users/Michael Laret/OneDrive - Laret/Documents/ProphitAI/app/core/agentic_framework/tool_lib\"/**/*.py)",
+      "Bash(for f in \"C:/Users/Michael Laret/OneDrive - Laret/Documents/ProphitAI/app/core/atlas/tool_lib\"/**/*.py)",
       "WebFetch(domain:www.anthropic.com)",
       "WebFetch(domain:microsoft.github.io)",
       "WebFetch(domain:www.promptingguide.ai)",

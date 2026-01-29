@@ -9,7 +9,7 @@ Tools that fetch and return data without complex processing.
 ```python
 """Fetch ticker information tool."""
 
-from app.core.agentic_framework.tool_lib.common.responses import success_response, error_response
+from app.core.atlas.tool_lib.common.responses import success_response, error_response
 from app.utils.tool_validator import ToolValidator
 from typing import Optional
 
@@ -84,8 +84,8 @@ Tools that operate on portfolio dictionaries.
 ```python
 """Portfolio concentration analysis tool."""
 
-from app.core.agentic_framework.tool_lib.common.responses import success_response, error_response
-from app.core.agentic_framework.tool_lib.common.schemas import PORTFOLIO_DICT_SCHEMA
+from app.core.atlas.tool_lib.common.responses import success_response, error_response
+from app.core.atlas.tool_lib.common.schemas import PORTFOLIO_DICT_SCHEMA
 from app.utils.tool_validator import ToolValidator
 from app.models.portfolio_models import PortfolioInput
 from typing import Dict, Any, Optional
@@ -163,8 +163,8 @@ Tools that perform calculations and return structured results.
 ```python
 """Risk metrics calculation tool."""
 
-from app.core.agentic_framework.tool_lib.common.responses import success_response, error_response
-from app.core.agentic_framework.tool_lib.common.schemas import PORTFOLIO_DICT_SCHEMA
+from app.core.atlas.tool_lib.common.responses import success_response, error_response
+from app.core.atlas.tool_lib.common.schemas import PORTFOLIO_DICT_SCHEMA
 from app.utils.tool_validator import ToolValidator
 from typing import Optional
 import numpy as np
@@ -273,7 +273,7 @@ Tools that need access to agent state, wrapped at registration time.
 ```python
 """Edit plan tool - requires access to agent.plan."""
 
-from app.core.agentic_framework.tool_lib.common.responses import success_response, error_response
+from app.core.atlas.tool_lib.common.responses import success_response, error_response
 from typing import Any, Callable
 
 
@@ -383,8 +383,8 @@ Tools that spawn another agent to handle complex tasks.
 ```python
 """Sector analyst sub-agent tool."""
 
-from app.core.agentic_framework.tool_lib.common.responses import success_response, error_response
-from app.core.agentic_framework.tool_lib.sub_agents.sector_analyst.agent import SectorAnalystAgent
+from app.core.atlas.tool_lib.common.responses import success_response, error_response
+from app.core.atlas.tool_lib.sub_agents.sector_analyst.agent import SectorAnalystAgent
 from typing import Optional
 
 
@@ -475,7 +475,7 @@ Tools that handle multiple items efficiently.
 ```python
 """Batch ticker data retrieval tool."""
 
-from app.core.agentic_framework.tool_lib.common.responses import success_response, error_response
+from app.core.atlas.tool_lib.common.responses import success_response, error_response
 from app.utils.tool_validator import ToolValidator
 from typing import List, Dict, Any
 from concurrent.futures import ThreadPoolExecutor, as_completed

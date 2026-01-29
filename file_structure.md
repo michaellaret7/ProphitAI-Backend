@@ -60,7 +60,7 @@ ProphitAI/
 │   │   └── websocket.py
 │   │
 │   ├── core/
-│   │   ├── agentic_framework/
+│   │   ├── atlas/
 │   │   │   ├── agent_output/
 │   │   │   │   ├── agent_messages.json
 │   │   │   │   └── task_state.json
@@ -336,7 +336,7 @@ ProphitAI/
 ## Key Components
 
 ### Core Application (`app/`)
-- **agentic_framework/**: BaseAgent, memory systems, tool libraries, task management
+- **atlas/**: BaseAgent, memory systems, tool libraries, task management
 - **calculations/**: Financial calculations (portfolio, risk, performance, factors)
 - **api/**: FastAPI routes, controllers, WebSocket support
 - **domain/**: Domain-specific agents (CIO, CRO, Industry agents, ProphitAlts)

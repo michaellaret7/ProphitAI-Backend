@@ -200,7 +200,7 @@ ProphitAI/
 │   │   └── macro_agent/              # Macroeconomic research agent
 │   │
 │   ├── core/
-│   │   ├── agentic_framework/        # Core agent system
+│   │   ├── atlas/        # Core agent system
 │   │   │   ├── base_agent/           # BaseAgent implementation
 │   │   │   │   ├── agent.py          # ReAct pattern + tool calling
 │   │   │   │   ├── tasks/            # Task management (TodoList, etc.)

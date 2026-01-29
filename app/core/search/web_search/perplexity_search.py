@@ -4,8 +4,6 @@ import os
 import re
 from concurrent.futures import ThreadPoolExecutor
 from typing import List, Literal
-from app.core.agentic_framework.evaluation.hallucinations.extract_facts import client
-from app.utils.choose_model_and_client import get_model_and_client
 from app.core.search.utils.clean_text import clean_text
 from pydantic import Field
 
