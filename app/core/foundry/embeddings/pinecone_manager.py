@@ -192,7 +192,7 @@ class PineconeManager:
 
             # Reason: Include sparse values for hybrid search if available
             sparse_values = None
-            if chunk.sparse_embedding:
+            if chunk.sparse_embedding and chunk.sparse_embedding.get("indices"):
                 sparse_values = {
                     "indices": chunk.sparse_embedding["indices"],
                     "values": chunk.sparse_embedding["values"],

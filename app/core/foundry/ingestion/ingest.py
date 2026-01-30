@@ -317,6 +317,57 @@ class Ingestor:
 
         return bucket, key
 
+    def process_batch_s3(self, s3_uris: list[str]) -> list[Document | None]:
+        """
+        Process multiple S3 PDFs in a single Modal batch call.
+
+        Args:
+            s3_uris: List of S3 URIs (s3://bucket/key format).
+
+        Returns:
+            List of Documents (or None for failed extractions) in same order as input.
+        """
+        if not s3_uris:
+            return []
+
+        # Filter to only PDFs that should use Modal
+        pdf_uris = [uri for uri in s3_uris if self._get_extension(uri) == ".pdf"]
+
+        if not pdf_uris:
+            logger.warning("No PDF URIs provided for batch processing")
+            return [None] * len(s3_uris)
+
+        logger.info(f"Batch processing {len(pdf_uris)} PDFs via Modal")
+        results = self._get_modal_client().extract_batch_from_s3(pdf_uris)
+
+        # Build Documents from results, preserving order
+        documents: list[Document | None] = []
+        result_map = {r["s3_uri"]: r for r in results}
+
+        for uri in s3_uris:
+            result = result_map.get(uri)
+            if result is None or result.get("error"):
+                error_msg = result.get("error", "URI not in results") if result else "URI not processed"
+                logger.error(f"Failed to extract {uri}: {error_msg}")
+                documents.append(None)
+                continue
+
+            bucket, key = self._parse_s3_uri(uri)
+            documents.append(Document(
+                content=result["content"],
+                metadata={
+                    "filename": Path(key).name,
+                    "extension": ".pdf",
+                    "char_count": result.get("char_count", len(result["content"])),
+                    "source_type": "s3",
+                    "s3_bucket": bucket,
+                    "s3_key": key,
+                },
+                source=uri,
+            ))
+
+        return documents
+
     def delete_s3_object(self, s3_uri: str) -> bool:
         """
         Delete an object from S3.

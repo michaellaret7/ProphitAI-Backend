@@ -12,7 +12,6 @@ from __future__ import annotations
 
 import os
 import uuid
-from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass
 from typing import Callable
 
@@ -81,7 +80,6 @@ class Pipeline:
         self,
         namespace: str = "earnings_calls",
         doc_type: str = "earnings_call",
-        s3_workers: int = 2,
         chunker_type: str = "earnings_call",
         delete_s3_after_success: bool = False,
     ):
@@ -91,14 +89,13 @@ class Pipeline:
         Args:
             namespace: Pinecone namespace for vectors.
             doc_type: Document type for chunker selection.
-            s3_workers: Max parallel workers for S3 fetches.
+            chunker_type: Type of chunker to use (earnings_call, semantic, recursive).
             delete_s3_after_success: Delete S3 documents after successful processing.
         """
         print(f"Initializing Foundry Pipeline with namespace: {namespace}, doc_type: {doc_type}, chunker_type: {chunker_type}")
 
         self.namespace = namespace
         self.doc_type = doc_type
-        self.s3_workers = s3_workers
         self.delete_s3_after_success = delete_s3_after_success
 
         # Initialize components
@@ -120,6 +117,7 @@ class Pipeline:
         self,
         texts: list[dict] | None = None,
         s3_uris: list[dict] | None = None,
+        s3_batch_size: int = 3,
     ) -> int:
         """
         Process multiple texts and/or S3 documents.
@@ -127,6 +125,7 @@ class Pipeline:
         Args:
             texts: List of {"content": str, "metadata": dict}.
             s3_uris: List of {"uri": str, "metadata": dict}.
+            s3_batch_size: Number of S3 PDFs per Modal batch call (default 3).
 
         Returns:
             Total number of vectors upserted.
@@ -137,17 +136,23 @@ class Pipeline:
         if not texts and not s3_uris:
             return 0
 
-        # Step 1: Ingest all documents using the ingestor Object layer 
-        ingested = self._ingest_all(texts, s3_uris)
+        # Step 1: Ingest all documents (S3 processed in batches to avoid Modal timeout)
+        ingested = self._ingest_all(texts, s3_uris, s3_batch_size)
         if not ingested:
             return 0
 
         print(f"Ingested {len(ingested)} documents")
 
-        # Step 2: Chunk all documents, collect all chunks 
+        # Step 2: Chunk all documents, collect all chunks
         all_chunks = self._chunk_all(ingested)
         if not all_chunks:
             return 0
+
+        # Filter out empty chunks (no tokenizable text = wasted space)
+        pre_filter_count = len(all_chunks)
+        all_chunks = [c for c in all_chunks if c.text.strip()]
+        if pre_filter_count != len(all_chunks):
+            print(f"Filtered out {pre_filter_count - len(all_chunks)} empty chunks")
 
         print(f"Created {len(all_chunks)} chunks from {len(ingested)} documents")
 
@@ -178,8 +183,9 @@ class Pipeline:
         self,
         texts: list[dict],
         s3_uris: list[dict],
+        s3_batch_size: int,
     ) -> list[IngestedDoc]:
-        """Ingest all inputs. S3 fetches run in parallel."""
+        """Ingest all inputs. S3 PDFs processed in batches to avoid Modal timeout."""
         ingested: list[IngestedDoc] = []
 
         # Process texts (instant)
@@ -190,18 +196,23 @@ class Pipeline:
             )
             ingested.append(self._build_ingested_doc(doc, item.get("metadata", {}), s3_uri=None))
 
-        # Process S3 URIs in parallel
-        if s3_uris:
-            with ThreadPoolExecutor(max_workers=self.s3_workers) as executor:
-                s3_results = list(executor.map(self._ingest_s3_single, s3_uris))
-                ingested.extend(s3_results)
+        # Process S3 URIs in batches
+        total_batches = (len(s3_uris) + s3_batch_size - 1) // s3_batch_size if s3_uris else 0
+        for i in range(0, len(s3_uris), s3_batch_size):
+            batch = s3_uris[i:i + s3_batch_size]
+            batch_num = i // s3_batch_size + 1
+            print(f"Processing S3 batch {batch_num}/{total_batches}: {len(batch)} files")
+
+            uri_strings = [item["uri"] for item in batch]
+            documents = self._ingestor.process_batch_s3(uri_strings)
+
+            for item, doc in zip(batch, documents):
+                if doc is None:
+                    print(f"Warning: Failed to process {item['uri']}, skipping")
+                    continue
+                ingested.append(self._build_ingested_doc(doc, item.get("metadata", {}), s3_uri=item["uri"]))
 
         return ingested
-
-    def _ingest_s3_single(self, item: dict) -> IngestedDoc:
-        """Ingest a single S3 document."""
-        doc = self._ingestor.process(item["uri"])
-        return self._build_ingested_doc(doc, item.get("metadata", {}), s3_uri=item["uri"])
 
     def _build_ingested_doc(
         self,
@@ -320,7 +331,7 @@ if __name__ == "__main__":
     import boto3
 
     bucket = "prophitai-s3-bucket"
-    prefix = "pdfs/user_uploads/test_user_1234/"
+    prefix = "pdfs/economics/"
 
     s3 = boto3.client("s3")
 
@@ -329,20 +340,20 @@ if __name__ == "__main__":
     s3_uris = []
     for page in paginator.paginate(Bucket=bucket, Prefix=prefix):
         for obj in page.get("Contents", []):
-            s3_uris.append({"uri": f"s3://{bucket}/{obj['Key']}", "metadata": {"user_id": "test_user_1234"}})
+            s3_uris.append({"uri": f"s3://{bucket}/{obj['Key']}", "metadata": {}})
     
     if len(s3_uris) > 0:
         s3_uris.pop(0)
     
-    print(s3_uris)
     print(len(s3_uris))
+    print(s3_uris)
 
     pipeline = Pipeline(
-        namespace="user_uploads",
-        doc_type="user_upload",
+        namespace="economics",
+        doc_type="economics",
         chunker_type="semantic",
         delete_s3_after_success=True,
     )
 
-    count = pipeline.run(s3_uris=s3_uris)
+    count = pipeline.run(s3_uris=s3_uris, s3_batch_size=2)
     print(f"Upserted {count} vectors")

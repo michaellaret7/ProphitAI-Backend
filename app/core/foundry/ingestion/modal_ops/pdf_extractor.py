@@ -17,16 +17,21 @@ docling_image = (
         "docling>=2.0.0",
         "boto3",
         "torch",
+        "pymupdf",  # For quick text detection
     )
 )
 
 # Cache Docling's ML models across invocations
 model_cache = modal.Volume.from_name("docling-model-cache", create_if_missing=True)
 
+# Minimum characters to consider PDF as having extractable text
+MIN_TEXT_THRESHOLD = 100
+
+
 @app.cls(
     image=docling_image,
     gpu="L4",
-    timeout=600,
+    timeout=1200,
     volumes={"/cache": model_cache},
     secrets=[modal.Secret.from_name("aws-credentials")],
 )
@@ -35,10 +40,9 @@ class PDFExtractor:
 
     @modal.enter()
     def setup(self):
-        """Load Docling converter once on container start."""
+        """Load Docling converters once on container start."""
         import os
 
-        # Point model caches to the mounted volume
         os.environ["HF_HOME"] = "/cache/huggingface"
         os.environ["TORCH_HOME"] = "/cache/torch"
 
@@ -47,15 +51,40 @@ class PDFExtractor:
         from docling.document_converter import PdfFormatOption
         from docling.datamodel.pipeline_options import PdfPipelineOptions
 
-        pipeline_options = PdfPipelineOptions()
-        pipeline_options.do_ocr = True
-        pipeline_options.do_table_structure = True
+        # Converter WITHOUT OCR (fast, for native text PDFs)
+        options_no_ocr = PdfPipelineOptions()
+        options_no_ocr.do_ocr = False
+        options_no_ocr.do_table_structure = True
 
-        self.converter = DocumentConverter(
+        self.converter_no_ocr = DocumentConverter(
             format_options={
-                InputFormat.PDF: PdfFormatOption(pipeline_options=pipeline_options)
+                InputFormat.PDF: PdfFormatOption(pipeline_options=options_no_ocr)
             }
         )
+
+        # Converter WITH OCR (slow, for scanned PDFs)
+        options_ocr = PdfPipelineOptions()
+        options_ocr.do_ocr = True
+        options_ocr.do_table_structure = True
+
+        self.converter_ocr = DocumentConverter(
+            format_options={
+                InputFormat.PDF: PdfFormatOption(pipeline_options=options_ocr)
+            }
+        )
+
+    def _needs_ocr(self, pdf_bytes: bytes) -> bool:
+        """Check if PDF needs OCR by testing for extractable text."""
+        import fitz  # PyMuPDF
+
+        doc = fitz.open(stream=pdf_bytes, filetype="pdf")
+        text = ""
+        # Check first 3 pages
+        for page_num in range(min(3, len(doc))):
+            text += doc[page_num].get_text()
+        doc.close()
+
+        return len(text.strip()) < MIN_TEXT_THRESHOLD
 
     @modal.method()
     def extract_from_s3(self, s3_uri: str) -> dict:
@@ -71,14 +100,24 @@ class PDFExtractor:
         response = s3.get_object(Bucket=bucket, Key=key)
         pdf_bytes = response["Body"].read()
 
+        # Choose converter based on PDF content
+        needs_ocr = self._needs_ocr(pdf_bytes)
+        converter = self.converter_ocr if needs_ocr else self.converter_no_ocr
+        print(f"Processing {s3_uri} | OCR: {needs_ocr}")
+
         with tempfile.NamedTemporaryFile(suffix=".pdf", delete=False) as tmp:
             tmp.write(pdf_bytes)
             tmp_path = tmp.name
 
         try:
-            result = self.converter.convert(tmp_path)
+            result = converter.convert(tmp_path)
             content = result.document.export_to_markdown()
-            return {"content": content, "char_count": len(content), "s3_uri": s3_uri}
+            return {
+                "content": content,
+                "char_count": len(content),
+                "s3_uri": s3_uri,
+                "used_ocr": needs_ocr,
+            }
         finally:
             os.unlink(tmp_path)
 
@@ -100,14 +139,17 @@ class PDFExtractor:
         import tempfile
         import os
 
+        needs_ocr = self._needs_ocr(pdf_bytes)
+        converter = self.converter_ocr if needs_ocr else self.converter_no_ocr
+
         with tempfile.NamedTemporaryFile(suffix=".pdf", delete=False) as tmp:
             tmp.write(pdf_bytes)
             tmp_path = tmp.name
 
         try:
-            result = self.converter.convert(tmp_path)
+            result = converter.convert(tmp_path)
             content = result.document.export_to_markdown()
-            return {"content": content, "char_count": len(content)}
+            return {"content": content, "char_count": len(content), "used_ocr": needs_ocr}
         finally:
             os.unlink(tmp_path)
 
@@ -126,7 +168,7 @@ def main(s3_uri: str | None = None):
     if s3_uri:
         print(f"Extracting from S3: {s3_uri}")
         result = extractor.extract_from_s3.remote(s3_uri)
-        print(f"Extracted {result['char_count']} characters")
+        print(f"Extracted {result['char_count']} characters (OCR: {result['used_ocr']})")
         print(f"Preview: {result['content'][:500]}...")
     else:
         print("No S3 URI provided. Run with --s3-uri to test S3 extraction.")

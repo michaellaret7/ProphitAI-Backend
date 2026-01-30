@@ -3,10 +3,15 @@
 from __future__ import annotations
 
 import re
-from typing import List, Dict, Any, Optional
+from typing import List, Dict, Any, Optional, Union
 
-from app.core.atlas.tools.foundry.macro_research import MACRO_RESEARCH_SEARCH_TOOL
-from app.core.atlas.models import PrintMode, ChatResponse, ChatSession
+from app.core.atlas.models import (
+    PrintMode,
+    ChatResponse,
+    ChatSession,
+    ChatCallback,
+    NoOpChatCallback,
+)
 from app.core.atlas.prompts import CHAT_SYSTEM_PROMPT
 from app.core.atlas.execution import ChatExecutionLoop, ToolHandler
 from app.core.atlas.logging import AgentPrinter
@@ -40,6 +45,7 @@ class ChatAgent(AgentBase):
         print_mode: PrintMode = PrintMode.PRODUCTION,
         temperature: Optional[float] = None,
         system_prompt: Optional[str] = None,
+        chat_callback: Optional[Union[ChatCallback, NoOpChatCallback]] = None,
     ):
         if provider is None:
             provider = "fireworks"
@@ -56,6 +62,14 @@ class ChatAgent(AgentBase):
 
         self.system_prompt = CHAT_SYSTEM_PROMPT
 
+        # Chat streaming callback - defaults to no-op if not provided
+        self.chat_callback: Union[ChatCallback, NoOpChatCallback] = (
+            chat_callback if chat_callback is not None else NoOpChatCallback()
+        )
+
+        # Session identifier for callback events
+        self.session_id: str = "default"
+
         # Execution components
         self.printer = AgentPrinter(self.print_mode)
         self.tool_handler = ToolHandler(self, self.printer)  # type: ignore[arg-type]
@@ -65,8 +79,6 @@ class ChatAgent(AgentBase):
         self.simulation_date = None
         self.note_titles: List[str] = []
         self.output_dir = None
-
-        # self.add_tool(**MACRO_RESEARCH_SEARCH_TOOL)
 
         print(f"Initialized Agent with model: {self.model} (provider: {self.provider})")
 
@@ -147,6 +159,8 @@ class ChatAgent(AgentBase):
         print("Press Ctrl+C to exit")
         print("=" * 60)
 
+        # Set session_id for callback events
+        self.session_id = session_id
         session = ChatSession(session_id=session_id)
 
         while True:
