@@ -1,0 +1,454 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Macro Research Chat</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #1a1a2e;
+            color: #eee;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .header {
+            background: #16213e;
+            padding: 16px 24px;
+            border-bottom: 1px solid #0f3460;
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+
+        .header h1 {
+            font-size: 18px;
+            font-weight: 600;
+            color: #00d9ff;
+        }
+
+        .status {
+            font-size: 12px;
+            padding: 4px 12px;
+            border-radius: 12px;
+            background: #333;
+        }
+
+        .status.connected { background: #0a4d0a; color: #4ade80; }
+        .status.disconnected { background: #4d0a0a; color: #f87171; }
+        .status.processing { background: #4d3a0a; color: #fbbf24; }
+
+        .main-container {
+            display: flex;
+            flex: 1;
+            overflow: hidden;
+        }
+
+        .chat-panel {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            border-right: 1px solid #0f3460;
+        }
+
+        .messages {
+            flex: 1;
+            overflow-y: auto;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+
+        .message {
+            max-width: 85%;
+            padding: 12px 16px;
+            border-radius: 12px;
+            line-height: 1.5;
+        }
+
+        .message.user {
+            align-self: flex-end;
+            background: #0f3460;
+            color: #fff;
+        }
+
+        .message.assistant {
+            align-self: flex-start;
+            background: #1e1e3f;
+            border: 1px solid #333;
+        }
+
+        .message pre {
+            background: #0d0d1a;
+            padding: 12px;
+            border-radius: 8px;
+            overflow-x: auto;
+            margin-top: 8px;
+            font-size: 13px;
+        }
+
+        .input-area {
+            padding: 16px 20px;
+            background: #16213e;
+            border-top: 1px solid #0f3460;
+        }
+
+        .input-row {
+            display: flex;
+            gap: 12px;
+        }
+
+        .input-row input {
+            flex: 1;
+            padding: 12px 16px;
+            border: 1px solid #0f3460;
+            border-radius: 8px;
+            background: #1a1a2e;
+            color: #fff;
+            font-size: 14px;
+        }
+
+        .input-row input:focus {
+            outline: none;
+            border-color: #00d9ff;
+        }
+
+        .input-row button {
+            padding: 12px 24px;
+            background: #00d9ff;
+            color: #000;
+            border: none;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+        }
+
+        .input-row button:disabled {
+            background: #333;
+            color: #666;
+            cursor: not-allowed;
+        }
+
+        .input-row button:hover:not(:disabled) {
+            background: #00b8d9;
+        }
+
+        /* Tool Panel */
+        .tool-panel {
+            width: 400px;
+            background: #12122a;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .tool-panel h2 {
+            padding: 16px;
+            font-size: 14px;
+            font-weight: 600;
+            color: #888;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            border-bottom: 1px solid #0f3460;
+        }
+
+        .tool-events {
+            flex: 1;
+            overflow-y: auto;
+            padding: 12px;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .tool-event {
+            padding: 10px 12px;
+            border-radius: 8px;
+            font-size: 13px;
+            border-left: 3px solid;
+        }
+
+        .tool-event.tool-start {
+            background: #1a2744;
+            border-color: #3b82f6;
+        }
+
+        .tool-event.tool-result {
+            background: #1a3329;
+            border-color: #22c55e;
+        }
+
+        .tool-event.tool-error {
+            background: #331a1a;
+            border-color: #ef4444;
+        }
+
+        .tool-event.iteration {
+            background: #2a2a1a;
+            border-color: #eab308;
+        }
+
+        .tool-event .label {
+            font-weight: 600;
+            color: #00d9ff;
+            margin-bottom: 4px;
+        }
+
+        .tool-event .detail {
+            color: #aaa;
+            font-size: 12px;
+            word-break: break-word;
+        }
+
+        .tool-event pre {
+            background: #0a0a15;
+            padding: 8px;
+            border-radius: 4px;
+            margin-top: 6px;
+            font-size: 11px;
+            max-height: 150px;
+            overflow: auto;
+        }
+
+        /* Session Info */
+        .session-info {
+            padding: 12px 16px;
+            background: #0d0d1a;
+            border-bottom: 1px solid #0f3460;
+            font-size: 12px;
+            color: #666;
+        }
+
+        .session-info span {
+            color: #00d9ff;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>Macro Research Agent</h1>
+        <div id="status" class="status disconnected">Disconnected</div>
+    </div>
+
+    <div class="main-container">
+        <div class="chat-panel">
+            <div class="session-info">
+                Session: <span id="sessionId">Not created</span> |
+                Agent: <span id="agentType">macro_research</span>
+            </div>
+            <div class="messages" id="messages"></div>
+            <div class="input-area">
+                <div class="input-row">
+                    <input type="text" id="messageInput" placeholder="Ask about macro research..." disabled>
+                    <button id="sendBtn" disabled>Send</button>
+                </div>
+            </div>
+        </div>
+
+        <div class="tool-panel">
+            <h2>Tool Activity</h2>
+            <div class="tool-events" id="toolEvents"></div>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE = 'http://localhost:8000/api';
+        const WS_BASE = 'ws://localhost:8000/api';
+        const AGENT_TYPE = 'macro_research';
+
+        let sessionId = null;
+        let ws = null;
+
+        const statusEl = document.getElementById('status');
+        const sessionIdEl = document.getElementById('sessionId');
+        const messagesEl = document.getElementById('messages');
+        const toolEventsEl = document.getElementById('toolEvents');
+        const messageInput = document.getElementById('messageInput');
+        const sendBtn = document.getElementById('sendBtn');
+
+        function setStatus(status, text) {
+            statusEl.className = `status ${status}`;
+            statusEl.textContent = text;
+        }
+
+        function addMessage(role, content) {
+            const div = document.createElement('div');
+            div.className = `message ${role}`;
+
+            // Basic markdown rendering
+            let html = content
+                .replace(/```(\w*)\n([\s\S]*?)```/g, '<pre>$2</pre>')
+                .replace(/`([^`]+)`/g, '<code>$1</code>')
+                .replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
+                .replace(/\n/g, '<br>');
+
+            div.innerHTML = html;
+            messagesEl.appendChild(div);
+            messagesEl.scrollTop = messagesEl.scrollHeight;
+        }
+
+        function addToolEvent(type, data) {
+            const div = document.createElement('div');
+            div.className = `tool-event ${type}`;
+
+            let html = '';
+
+            if (type === 'iteration') {
+                html = `<div class="label">Iteration ${data.iteration}</div>`;
+            } else if (type === 'tool-start') {
+                html = `
+                    <div class="label">${data.tool_name}</div>
+                    <div class="detail">Starting...</div>
+                    <pre>${JSON.stringify(data.arguments, null, 2)}</pre>
+                `;
+            } else if (type === 'tool-result') {
+                const resultPreview = data.result.length > 500
+                    ? data.result.substring(0, 500) + '...'
+                    : data.result;
+                html = `
+                    <div class="label">${data.tool_name}</div>
+                    <div class="detail">${data.success ? 'Success' : 'Failed'} (${data.duration_ms}ms)</div>
+                    <pre>${resultPreview}</pre>
+                `;
+            } else if (type === 'tool-error') {
+                html = `
+                    <div class="label">Error</div>
+                    <div class="detail">${data.error}</div>
+                `;
+            }
+
+            div.innerHTML = html;
+            toolEventsEl.appendChild(div);
+            toolEventsEl.scrollTop = toolEventsEl.scrollHeight;
+        }
+
+        async function createSession() {
+            try {
+                const res = await fetch(`${API_BASE}/chat/sessions`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ agent_type: AGENT_TYPE })
+                });
+
+                if (!res.ok) throw new Error(`HTTP ${res.status}`);
+
+                const data = await res.json();
+                sessionId = data.session_id;
+                sessionIdEl.textContent = sessionId.substring(0, 8) + '...';
+
+                console.log('Session created:', data);
+                connectWebSocket();
+
+            } catch (err) {
+                console.error('Failed to create session:', err);
+                setStatus('disconnected', 'Session Failed');
+            }
+        }
+
+        function connectWebSocket() {
+            ws = new WebSocket(`${WS_BASE}/chat/ws/${sessionId}`);
+
+            ws.onopen = () => {
+                console.log('WebSocket connected');
+                setStatus('connected', 'Connected');
+                messageInput.disabled = false;
+                sendBtn.disabled = false;
+                messageInput.focus();
+            };
+
+            ws.onclose = () => {
+                console.log('WebSocket closed');
+                setStatus('disconnected', 'Disconnected');
+                messageInput.disabled = true;
+                sendBtn.disabled = true;
+            };
+
+            ws.onerror = (err) => {
+                console.error('WebSocket error:', err);
+            };
+
+            ws.onmessage = (event) => {
+                const msg = JSON.parse(event.data);
+                console.log('WS message:', msg);
+
+                switch (msg.type) {
+                    case 'run_started':
+                        setStatus('processing', 'Processing...');
+                        sendBtn.disabled = true;
+                        break;
+
+                    case 'iteration_start':
+                        addToolEvent('iteration', { iteration: msg.payload.iteration });
+                        break;
+
+                    case 'tool_call_start':
+                        addToolEvent('tool-start', msg.payload);
+                        break;
+
+                    case 'tool_call_result':
+                        addToolEvent('tool-result', msg.payload);
+                        break;
+
+                    case 'run_finished':
+                        addMessage('assistant', msg.payload.answer);
+                        setStatus('connected', 'Connected');
+                        sendBtn.disabled = false;
+                        messageInput.focus();
+                        break;
+
+                    case 'run_error':
+                        addToolEvent('tool-error', msg.payload);
+                        setStatus('connected', 'Connected');
+                        sendBtn.disabled = false;
+                        break;
+
+                    case 'heartbeat':
+                        // Ignore heartbeats
+                        break;
+                }
+            };
+        }
+
+        async function sendMessage() {
+            const message = messageInput.value.trim();
+            if (!message || !sessionId) return;
+
+            messageInput.value = '';
+            addMessage('user', message);
+
+            try {
+                const res = await fetch(`${API_BASE}/chat/sessions/${sessionId}/messages`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ message })
+                });
+
+                if (!res.ok) throw new Error(`HTTP ${res.status}`);
+
+            } catch (err) {
+                console.error('Failed to send message:', err);
+                addToolEvent('tool-error', { error: err.message });
+            }
+        }
+
+        // Event listeners
+        sendBtn.addEventListener('click', sendMessage);
+        messageInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter' && !sendBtn.disabled) {
+                sendMessage();
+            }
+        });
+
+        // Initialize
+        createSession();
+    </script>
+</body>
+</html>

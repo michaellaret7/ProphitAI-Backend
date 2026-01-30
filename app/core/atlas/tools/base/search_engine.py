@@ -139,3 +139,13 @@ LLM_WEB_SEARCH_PARAMETERS = {
     },
     "required": ["queries"]
 }
+
+# Singleton instance for tool registration
+_search_engine = AgentSearchEngine()
+
+LLM_WEB_SEARCH_TOOL = {
+    "name": "llm_web_search",
+    "description": LLM_WEB_SEARCH_DESCRIPTION,
+    "parameters": LLM_WEB_SEARCH_PARAMETERS,
+    "function": _search_engine.llm_web_search,
+}

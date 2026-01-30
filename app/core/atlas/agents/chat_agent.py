@@ -72,7 +72,9 @@ class ChatAgent(AgentBase):
 
         # Execution components
         self.printer = AgentPrinter(self.print_mode)
-        self.tool_handler = ToolHandler(self, self.printer)  # type: ignore[arg-type]
+        self.tool_handler = ToolHandler(
+            self, self.printer, chat_callback=self.chat_callback
+        )  # type: ignore[arg-type]
         self.execution_loop = ChatExecutionLoop(self)
 
         # Attributes expected by ToolHandler (BaseAgent compatibility)

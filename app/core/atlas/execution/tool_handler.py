@@ -2,8 +2,9 @@
 
 import copy
 import json
+import time
 from concurrent.futures import ThreadPoolExecutor
-from typing import List, Dict, Any, TYPE_CHECKING
+from typing import List, Dict, Any, Optional, TYPE_CHECKING, Union
 
 import yaml
 
@@ -15,6 +16,7 @@ from app.core.atlas.execution.utils import stringify_for_llm, check_tool_success
 
 if TYPE_CHECKING:
     from app.core.atlas.agents import AgentBase
+    from app.core.atlas.models.callbacks import ChatCallback, NoOpChatCallback
 
 # Tools that modify agent state and must run sequentially
 SEQUENTIAL_ONLY_TOOLS = {"write_note", "finalize", "think"}
@@ -38,9 +40,16 @@ def should_run_parallel(tool_calls: List[Any]) -> bool:
 class ToolHandler:
     """Handles tool execution and result formatting."""
 
-    def __init__(self, agent: 'AgentBase', printer: AgentPrinter):
+    def __init__(
+        self,
+        agent: 'AgentBase',
+        printer: AgentPrinter,
+        chat_callback: Optional[Union["ChatCallback", "NoOpChatCallback"]] = None,
+    ):
         self.agent = agent
         self.printer = printer
+        self.chat_callback = chat_callback
+        self.current_iteration: int = 0  # Set by execution loop for callback events
         self.retry = False
         self.tool_call_history = []
 
@@ -61,12 +70,22 @@ class ToolHandler:
 
         for tool_call in tool_calls:
             name = tool_call.function.name
+            tool_call_id = tool_call.id
 
             args_json = tool_call.function.arguments or "{}"
 
             args, parse_error = self._parse_arguments(args_json)
 
             self.printer.tool_call_start(name)
+
+            # Emit tool call start event
+            if self.chat_callback:
+                self.chat_callback.on_tool_call_start(
+                    tool_call_id=tool_call_id,
+                    tool_name=name,
+                    arguments=args,
+                    iteration=self.current_iteration,
+                )
 
             if parse_error:
                 self.printer.parse_error(args_json)
@@ -77,12 +96,25 @@ class ToolHandler:
                 )
 
                 self._add_tool_result(tool_call, result, name, args)
-                
+
+                # Emit tool result event for parse error
+                if self.chat_callback:
+                    self.chat_callback.on_tool_call_result(
+                        tool_call_id=tool_call_id,
+                        tool_name=name,
+                        result=str(result),
+                        success=False,
+                        duration_ms=0,
+                    )
+
                 continue
 
             self.printer.tool_arguments(args)
 
+            # Execute with timing
+            start_time = time.perf_counter()
             result = self._execute_tool(name, args)
+            duration_ms = int((time.perf_counter() - start_time) * 1000)
 
             # Track note titles
             if name == "write_note":
@@ -94,7 +126,21 @@ class ToolHandler:
                     result, args, tool_calls, current_assistant_idx
                 )
 
-            self._add_tool_result(tool_call, result, name, args)
+            # Add result to messages (returns success after validation)
+            success = self._add_tool_result(tool_call, result, name, args)
+
+            # Emit tool result event AFTER _add_tool_result (reuses success, no duplicate validation)
+            if self.chat_callback:
+                result_str = str(result)
+                if len(result_str) > 2000:
+                    result_str = result_str[:2000] + "... (truncated)"
+                self.chat_callback.on_tool_call_result(
+                    tool_call_id=tool_call_id,
+                    tool_name=name,
+                    result=result_str,
+                    success=success,
+                    duration_ms=duration_ms,
+                )
 
         self._write_messages_to_yaml()
 

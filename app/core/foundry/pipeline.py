@@ -355,5 +355,5 @@ if __name__ == "__main__":
         delete_s3_after_success=True,
     )
 
-    count = pipeline.run(s3_uris=s3_uris, s3_batch_size=2)
+    count = pipeline.run(s3_uris=s3_uris, s3_batch_size=5)
     print(f"Upserted {count} vectors")

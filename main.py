@@ -8,6 +8,7 @@ from fastapi.middleware.gzip import GZipMiddleware
 from fastapi.responses import ORJSONResponse
 from app.api.routes.agent_router import router as agent_router
 from app.api.routes.alts_router import router as prophit_alts_router
+from app.api.routes.chat_router import router as chat_router
 from app.api.routes.broker_router import router as broker_router
 from app.api.routes.cache_router import router as cache_router
 from app.api.routes.crypto_router import router as crypto_router
@@ -121,6 +122,9 @@ app.include_router(websocket_router)
 
 # Messaging router - WebSocket + REST endpoints (auth handled internally)
 app.include_router(messaging_router, prefix="/api")
+
+# Chat router - WebSocket + REST endpoints for interactive agent chat
+app.include_router(chat_router, prefix="/api")
 
 @app.get("/")
 def read_root():
