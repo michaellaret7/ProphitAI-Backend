@@ -8,7 +8,7 @@ from typing import List, Dict, Any, Optional, TYPE_CHECKING, Union
 
 import yaml
 
-from app.core.atlas.tools.validation import validate_tool_call
+from app.core.atlas.execution.validation import validate_tool_call
 from app.core.atlas.logging import AgentPrinter, write_messages_to_yaml, log_tool_call
 from app.core.atlas.context import prune_completed_task_messages, prune_note_content
 from app.core.atlas.tools.responses import error_response

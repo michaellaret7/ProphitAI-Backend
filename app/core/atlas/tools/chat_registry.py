@@ -32,5 +32,6 @@ def register_tools_for_agent_type(agent: "AgentBase", agent_type: str) -> None:
     """
     if agent_type == "macro_research":
         agent.add_tool(**MACRO_RESEARCH_SEARCH_TOOL)
-    elif agent_type == "earnings_call":
+    elif agent_type == "equity_research":
         agent.add_tool(**EARNINGS_CALL_SEARCH_TOOL)
+        
