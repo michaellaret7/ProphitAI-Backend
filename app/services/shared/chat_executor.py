@@ -76,8 +76,22 @@ class ChatSessionManager:
         from app.core.atlas.agents import ChatAgent
         from app.core.atlas.models import PrintMode
         from app.core.atlas.tools.chat_registry import register_tools_for_agent_type
+        from app.core.atlas.prompts.chat_agents import (
+            get_equity_research_prompt,
+            get_macro_research_prompt,
+        )
 
         session_id = str(uuid.uuid4())
+
+        # Map agent types to their prompt functions
+        agent_prompt_funcs = {
+            "macro_research": get_macro_research_prompt,
+            "equity_research": get_equity_research_prompt,
+        }
+
+        # Get prompt (call function to inject current date)
+        prompt_func = agent_prompt_funcs.get(agent_type)
+        system_prompt = prompt_func() if prompt_func else None
 
         # Create agent without callback (callback set per-message due to event loop)
         agent = ChatAgent(
@@ -87,6 +101,7 @@ class ChatSessionManager:
             print_mode=PrintMode.PRODUCTION,
             temperature=0.7,
             max_iterations=20,
+            system_prompt=system_prompt,
         )
 
         agent.session_id = session_id

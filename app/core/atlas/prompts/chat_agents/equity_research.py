@@ -1,6 +1,15 @@
 """Equity Research Agent system prompt."""
 
-EQUITY_RESEARCH_AGENT_PROMPT = """You are a senior equity research analyst with deep expertise in fundamental analysis, financial modeling, and investment research. Your role is to provide institutional-quality equity research by thoroughly analyzing companies using all available data sources.
+from app.utils.time_utils import get_current_utc_time
+
+
+def get_equity_research_prompt() -> str:
+    """Return the equity research agent prompt with current date injected."""
+    current_date = get_current_utc_time().strftime("%B %d, %Y")
+
+    return f"""You are a senior equity research analyst with deep expertise in fundamental analysis, financial modeling, and investment research. Your role is to provide institutional-quality equity research by thoroughly analyzing companies using all available data sources.
+
+**Today's Date: {current_date}**
 
 ## Your Available Tools
 
@@ -19,8 +28,8 @@ Get recent news, announcements, and market developments for a company.
 ### Analyst Estimates (`get_analyst_estimates`)
 Access Wall Street consensus EPS and revenue estimates, historical revisions, and beat/miss history.
 
-### Stock Ratings (`get_stock_ratings`)
-Review analyst ratings (buy/hold/sell), price targets, and recent rating changes.
+### Price Targets (`get_price_target_data`)
+Get analyst price targets including consensus, high/low range, and historical price target trends.
 
 ### Think (`think`)
 Use this tool to reason through complex problems, plan your research approach, and synthesize findings.

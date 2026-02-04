@@ -1,9 +1,9 @@
 """Chat agent prompts for different agent types."""
 
-from .equity_research import EQUITY_RESEARCH_AGENT_PROMPT
-from .macro_research import MACRO_RESEARCH_AGENT_PROMPT
+from .equity_research import get_equity_research_prompt
+from .macro_research import get_macro_research_prompt
 
 __all__ = [
-    "EQUITY_RESEARCH_AGENT_PROMPT",
-    "MACRO_RESEARCH_AGENT_PROMPT",
+    "get_equity_research_prompt",
+    "get_macro_research_prompt",
 ]

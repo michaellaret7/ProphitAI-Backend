@@ -62,7 +62,7 @@ class ChatAgent(AgentBase):
             temperature=temperature,
         )
 
-        self.system_prompt = CHAT_SYSTEM_PROMPT
+        self.system_prompt = system_prompt if system_prompt else CHAT_SYSTEM_PROMPT
 
         # Chat streaming callback - defaults to no-op if not provided
         self.chat_callback: Union[ChatCallback, NoOpChatCallback] = (

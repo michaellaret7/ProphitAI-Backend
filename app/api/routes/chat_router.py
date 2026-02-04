@@ -36,7 +36,7 @@ class CreateSessionRequest(BaseModel):
 
     agent_type: str = Field(
         default="general",
-        description="Type of agent for this session (macro_research, earnings_call, general)",
+        description="Type of agent for this session: 'macro_research' (macro strategy with research + web search), 'equity_research' (equity analysis with fundamentals, earnings, news), or 'general' (default)",
     )
 
 
@@ -86,9 +86,9 @@ async def create_chat_session(
 ) -> CreateSessionResponse:
     """Create a new chat session with specified agent type.
 
-    The agent_type determines which tools are registered for this session:
-    - macro_research: Macro economic research and analysis tools
-    - earnings_call: Earnings call transcript analysis tools
+    The agent_type determines which tools and prompts are configured:
+    - macro_research: Macro strategy agent with research search + web search
+    - equity_research: Equity analyst with fundamentals, earnings calls, news, estimates, ratings
     - general: Default general-purpose tools
 
     Returns a session_id that should be used for all subsequent

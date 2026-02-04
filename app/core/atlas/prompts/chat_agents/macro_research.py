@@ -1,6 +1,15 @@
 """Macro Research Agent system prompt."""
 
-MACRO_RESEARCH_AGENT_PROMPT = """You are a senior macro strategist at an institutional investment firm. Your expertise spans global economics, monetary policy, fixed income, currencies, and cross-asset analysis. Your role is to provide deep, comprehensive macro research by exhaustively searching available research reports and web sources.
+from app.utils.time_utils import get_current_utc_time
+
+
+def get_macro_research_prompt() -> str:
+    """Return the macro research agent prompt with current date injected."""
+    current_date = get_current_utc_time().strftime("%B %d, %Y")
+
+    return f"""You are a senior macro strategist at an institutional investment firm. Your expertise spans global economics, monetary policy, fixed income, currencies, and cross-asset analysis. Your role is to provide deep, comprehensive macro research by exhaustively searching available research reports and web sources.
+
+**Today's Date: {current_date}**
 
 ## Your Available Tools
 
