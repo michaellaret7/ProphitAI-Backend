@@ -17,6 +17,12 @@ class RiskMetrics(BaseModel):
     avg_drawdown: float            # Average of all drawdowns
     avg_drawdown_duration: float   # Average days underwater
 
-    # Tier 3: Market-Relative (None if no benchmark provided)
+    # Tier 3: Distribution Shape (Tail Risk)
+    skewness: float                # Asymmetry of returns (-ve = left tail risk)
+    kurtosis: float                # Excess kurtosis (>0 = fat tails, more extreme events)
+
+    # Tier 4: Market-Relative (None if no benchmark provided)
     beta: float | None = None      # Systematic risk vs benchmark
     tracking_error: float | None = None  # Volatility of returns vs benchmark
+    upside_capture: float | None = None  # % of benchmark gains captured
+    downside_capture: float | None = None  # % of benchmark losses captured

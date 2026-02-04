@@ -214,7 +214,49 @@ def calc_avg_drawdown_duration(daily_returns: pd.Series) -> float:
 
 
 # =============================================================================
-# TIER 3: Market-Relative Metrics
+# TIER 3: Distribution Shape (Tail Risk)
+# =============================================================================
+
+def calc_skewness(daily_returns: pd.Series) -> float:
+    """
+    Calculate skewness of returns distribution.
+
+    Skewness measures asymmetry around the mean:
+    - Negative skew: Left tail is longer (more extreme losses)
+    - Positive skew: Right tail is longer (more extreme gains)
+    - Zero: Symmetric distribution
+
+    Args:
+        daily_returns: Series of daily portfolio returns
+
+    Returns:
+        Skewness coefficient (typically between -3 and +3)
+    """
+    return float(daily_returns.skew())
+
+
+def calc_kurtosis(daily_returns: pd.Series) -> float:
+    """
+    Calculate excess kurtosis of returns distribution.
+
+    Kurtosis measures the "fatness" of tails:
+    - Excess kurtosis > 0 (leptokurtic): Fat tails, more extreme events
+    - Excess kurtosis = 0 (mesokurtic): Normal distribution
+    - Excess kurtosis < 0 (platykurtic): Thin tails, fewer extremes
+
+    Note: Returns EXCESS kurtosis (kurtosis - 3), so normal dist = 0.
+
+    Args:
+        daily_returns: Series of daily portfolio returns
+
+    Returns:
+        Excess kurtosis coefficient (normal distribution = 0)
+    """
+    return float(daily_returns.kurtosis())
+
+
+# =============================================================================
+# TIER 4: Market-Relative Metrics
 # =============================================================================
 
 def calc_beta(daily_returns: pd.Series, benchmark_returns: pd.Series) -> float:
@@ -277,6 +319,88 @@ def calc_tracking_error(daily_returns: pd.Series, benchmark_returns: pd.Series, 
     return te * np.sqrt(252) if annualize else te
 
 
+def calc_upside_capture(daily_returns: pd.Series, benchmark_returns: pd.Series) -> float:
+    """
+    Calculate upside capture ratio.
+
+    Measures what percentage of benchmark gains the portfolio captures
+    during periods when the benchmark is positive.
+
+    Upside capture > 100%: Outperforms in up markets
+    Upside capture < 100%: Underperforms in up markets
+
+    Args:
+        daily_returns: Series of daily portfolio returns
+        benchmark_returns: Series of daily benchmark returns
+
+    Returns:
+        Upside capture as percentage (100 = matches benchmark)
+    """
+    aligned = pd.DataFrame({
+        'portfolio': daily_returns,
+        'benchmark': benchmark_returns
+    }).dropna()
+
+    if len(aligned) < 2:
+        return 0.0
+
+    # Filter for up market days (benchmark > 0)
+    up_market = aligned[aligned['benchmark'] > 0]
+
+    if len(up_market) == 0:
+        return 0.0
+
+    # Use ratio of mean returns (standard methodology)
+    portfolio_avg = float(up_market['portfolio'].mean())
+    benchmark_avg = float(up_market['benchmark'].mean())
+
+    if benchmark_avg == 0:
+        return 0.0
+
+    return (portfolio_avg / benchmark_avg) * 100
+
+
+def calc_downside_capture(daily_returns: pd.Series, benchmark_returns: pd.Series) -> float:
+    """
+    Calculate downside capture ratio.
+
+    Measures what percentage of benchmark losses the portfolio captures
+    during periods when the benchmark is negative.
+
+    Downside capture < 100%: Loses less than benchmark in down markets (good)
+    Downside capture > 100%: Loses more than benchmark in down markets (bad)
+
+    Args:
+        daily_returns: Series of daily portfolio returns
+        benchmark_returns: Series of daily benchmark returns
+
+    Returns:
+        Downside capture as percentage (100 = matches benchmark)
+    """
+    aligned = pd.DataFrame({
+        'portfolio': daily_returns,
+        'benchmark': benchmark_returns
+    }).dropna()
+
+    if len(aligned) < 2:
+        return 0.0
+
+    # Filter for down market days (benchmark < 0)
+    down_market = aligned[aligned['benchmark'] < 0]
+
+    if len(down_market) == 0:
+        return 0.0
+
+    # Use ratio of mean returns (standard methodology)
+    portfolio_avg = float(down_market['portfolio'].mean())
+    benchmark_avg = float(down_market['benchmark'].mean())
+
+    if benchmark_avg == 0:
+        return 0.0
+
+    return (portfolio_avg / benchmark_avg) * 100
+
+
 # =============================================================================
 # Combined Calculation
 # =============================================================================
@@ -309,12 +433,20 @@ def calc_all_risk_metrics(
     avg_drawdown = calc_avg_drawdown(daily_returns)
     avg_drawdown_duration = calc_avg_drawdown_duration(daily_returns)
 
-    # Tier 3: Market-Relative (optional)
+    # Tier 3: Distribution Shape (Tail Risk)
+    skewness = calc_skewness(daily_returns)
+    kurtosis = calc_kurtosis(daily_returns)
+
+    # Tier 4: Market-Relative (optional)
     beta = None
     tracking_error = None
+    upside_capture = None
+    downside_capture = None
     if benchmark_returns is not None:
         beta = calc_beta(daily_returns, benchmark_returns)
         tracking_error = calc_tracking_error(daily_returns, benchmark_returns)
+        upside_capture = calc_upside_capture(daily_returns, benchmark_returns)
+        downside_capture = calc_downside_capture(daily_returns, benchmark_returns)
 
     return RiskMetrics(
         volatility=volatility,
@@ -327,6 +459,10 @@ def calc_all_risk_metrics(
         ulcer_index=ulcer_index,
         avg_drawdown=avg_drawdown,
         avg_drawdown_duration=avg_drawdown_duration,
+        skewness=skewness,
+        kurtosis=kurtosis,
         beta=beta,
         tracking_error=tracking_error,
+        upside_capture=upside_capture,
+        downside_capture=downside_capture,
     )

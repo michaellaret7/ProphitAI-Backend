@@ -80,7 +80,15 @@ class ChatSessionManager:
         session_id = str(uuid.uuid4())
 
         # Create agent without callback (callback set per-message due to event loop)
-        agent = ChatAgent(print_mode=PrintMode.PRODUCTION)
+        agent = ChatAgent(
+            provider='anthropic',
+            model='claude-opus-4-5-20251101',
+            # model='claude-haiku-4-5-20251001',
+            print_mode=PrintMode.PRODUCTION,
+            temperature=0.7,
+            max_iterations=20,
+        )
+
         agent.session_id = session_id
 
         # Register tools ONCE based on agent_type
@@ -273,13 +281,6 @@ class WebSocketChatCallback:
             "result": result_str,
             "success": success,
             "duration_ms": duration_ms,
-        })
-
-    def on_text_delta(self, message_id: str, delta: str) -> None:
-        """Called for streaming text output."""
-        self._send("text_delta", {
-            "message_id": message_id,
-            "delta": delta,
         })
 
     def on_run_finished(

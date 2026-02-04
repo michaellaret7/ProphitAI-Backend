@@ -171,15 +171,6 @@ class ChatCallback(Protocol):
         """
         ...
 
-    def on_text_delta(self, message_id: str, delta: str) -> None:
-        """Called for streaming text output (if supported by LLM).
-
-        Args:
-            message_id: The message being streamed.
-            delta: Incremental text chunk.
-        """
-        ...
-
     def on_run_finished(
         self,
         answer: str,
@@ -245,10 +236,6 @@ class NoOpChatCallback:
         success: bool,
         duration_ms: int,
     ) -> None:
-        """No-op implementation."""
-        pass
-
-    def on_text_delta(self, message_id: str, delta: str) -> None:
         """No-op implementation."""
         pass
 

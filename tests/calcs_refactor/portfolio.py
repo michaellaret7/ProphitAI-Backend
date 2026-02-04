@@ -13,6 +13,7 @@ from app.repositories.portfolio_data import retrieve_portfolio
 from calc_risk_metrics import calc_all_risk_metrics
 from risk_model import RiskMetrics
 
+fetched_tickers = []
 # Fetch portfolio positions and weights
 portfolio_id = uuid.UUID("828f7921-8a3c-4c89-aa22-39888165e0df")
 positions = retrieve_portfolio(portfolio_id=portfolio_id)
@@ -20,11 +21,14 @@ positions = retrieve_portfolio(portfolio_id=portfolio_id)
 tickers = [p['ticker'] for p in positions]
 weights = [p['allocation'] for p in positions]
 
+fetched_tickers.extend(['AAPL', 'MSFT', 'GOOG', 'AMZN', 'TSLA', 'NVDA', 'META', 'NFLX', 'CSCO', 'INTC', 'SPY', 'QQQ'])
+fetched_tickers.extend(tickers)
+
 print(f"Tickers: {tickers}")
 print(f"Weights: {weights}")
 
 # Fetch price data for portfolio tickers
-price_df = fetch_bulk_ohlcv_data_for_tickers(tickers, '2012-01-01', '2026-01-31')
+price_df = fetch_bulk_ohlcv_data_for_tickers(fetched_tickers, '2012-01-01', '2026-01-31')
 price_df = pd.DataFrame({
     ticker: df['adj_close'] for ticker, df in price_df.items()
 }) 
@@ -83,11 +87,18 @@ portfolio = Portfolio(
     benchmark_prices=benchmark_prices
 )
 
-print(f"\n=== Portfolio ===")
-# print(f"Tickers: {portfolio.tickers}")
-# print(f"Weights: {portfolio.weights}")
-print(f"Volatility: {portfolio.risk_metrics.volatility:.2%}")
-# print(f"\nCorrelation Matrix:\n{portfolio.corr_matrix}")
-# print(f"\nCovariance Matrix:\n{portfolio.cov_matrix}")
-print(f"\nLog Returns:\n{portfolio.cumulative_returns}")
-print(f"\nRisk Metrics:\n{portfolio.risk_metrics.volatility:.2%}")
+portfolio_2 = Portfolio(
+    name='User Portfolio 2',
+    tickers=['AAPL', 'MSFT', 'GOOG', 'AMZN', 'TSLA', 'NVDA', 'META', 'NFLX', 'CSCO', 'INTC', 'SPY', 'QQQ'],
+    weights=[0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1],
+    price_df=price_df,
+    benchmark_prices=benchmark_prices
+)
+
+# print(portfolio.risk_metrics)
+print(portfolio_2.risk_metrics.upside_capture)
+print(portfolio_2.risk_metrics.downside_capture)
+# print(portfolio_2.risk_metrics.kurtosis)
+# print(portfolio_2.risk_metrics.skewness)
+
+

@@ -48,10 +48,21 @@ class ToolHandler:
     ):
         self.agent = agent
         self.printer = printer
-        self.chat_callback = chat_callback
+        # Note: chat_callback param kept for backwards compatibility but not used
+        # We always read from agent.chat_callback to get the current callback
         self.current_iteration: int = 0  # Set by execution loop for callback events
         self.retry = False
         self.tool_call_history = []
+
+    @property
+    def chat_callback(self) -> Optional[Union["ChatCallback", "NoOpChatCallback"]]:
+        """Get the current chat callback from the agent.
+
+        This property ensures we always use the agent's current callback,
+        which may be updated after ToolHandler initialization (e.g., when
+        WebSocketChatCallback is set per-message in chat_router).
+        """
+        return getattr(self.agent, 'chat_callback', None)
 
     def handle_tool_calls(self, tool_calls: List[Any]) -> None:
         """Execute tool calls and update message history."""
@@ -149,24 +160,53 @@ class ToolHandler:
         num_tools = len(tool_calls)
         self.printer.parallel_start(num_tools)
 
-        # Parse all arguments upfront
+        # Parse all arguments upfront and emit start events
         parsed_calls = []
         for tool_call in tool_calls:
             name = tool_call.function.name
+            tool_call_id = tool_call.id
+
             args_json = tool_call.function.arguments or "{}"
             args, parse_error = self._parse_arguments(args_json)
+
             parsed_calls.append((tool_call, name, args, parse_error))
+            
             self.printer.parallel_tool_queued(name)
 
-        # Execute all tools in parallel
+            # Emit tool call start event
+            if self.chat_callback:
+                self.chat_callback.on_tool_call_start(
+                    tool_call_id=tool_call_id,
+                    tool_name=name,
+                    arguments=args,
+                    iteration=self.current_iteration,
+                )
+
+        # Execute all tools in parallel (with timing)
+        start_times = {tc.id: time.perf_counter() for tc in tool_calls}
         results = self._execute_tools_parallel(parsed_calls)
+        end_time = time.perf_counter()
 
         # Process results sequentially
         for (tool_call, name, args, _parse_error), result in zip(parsed_calls, results):
             if name == "write_note":
                 self._handle_note_tracking(result, args)
 
-            self._add_tool_result_parallel(tool_call, result, name, args)
+            success = self._add_tool_result_parallel(tool_call, result, name, args)
+
+            # Emit tool result event
+            if self.chat_callback:
+                duration_ms = int((end_time - start_times[tool_call.id]) * 1000)
+                result_str = str(result)
+                if len(result_str) > 2000:
+                    result_str = result_str[:2000] + "... (truncated)"
+                self.chat_callback.on_tool_call_result(
+                    tool_call_id=tool_call.id,
+                    tool_name=name,
+                    result=result_str,
+                    success=success,
+                    duration_ms=duration_ms,
+                )
 
         # Log all tool calls once after parallel execution completes
         log_tool_call(self.tool_call_history, output_dir=getattr(self.agent, "output_dir", None))

@@ -91,8 +91,9 @@ conclusions reached.
 only. If you need to call a tool, do it as a separate tool call AFTER the think tool completes. Never
 write tool call syntax, function calls, or tool invocations within the thought parameter.
 
-**PARAMETER CONSTRAINT:** This tool accepts EXACTLY ONE parameter: "thought" (string). Do NOT pass any
-other parameters like subtasks, status, main_task, etc. Those belong to other tools like update_tasks."""
+**PARAMETER CONSTRAINT:** This tool accepts EXACTLY ONE parameter: "thought" (string).
+Do NOT pass any other parameters. Parameters like top_k, subtasks, status, main_task, query, etc.
+belong to other tools - NOT this one. Only pass {"thought": "your reasoning here"}."""
 
 THINK_PARAMETERS = {
     "type": "object",
@@ -103,7 +104,8 @@ THINK_PARAMETERS = {
                 "Your reasoning, analysis, reflection, or plan. Be thorough - capture your full "
                 "thought process including: observations from data, hypotheses you're forming, "
                 "trade-offs you're weighing, decisions and their rationale, or plans for next steps. "
-                "This is your space for deep analytical thinking."
+                "This is your space for deep analytical thinking. "
+                "IMPORTANT: This is the ONLY parameter this tool accepts - do not pass top_k or any other params."
             )
         }
     },
