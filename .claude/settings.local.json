@@ -64,7 +64,8 @@
       "WebFetch(domain:platform.openai.com)",
       "Bash(.venvScriptspython -c \"from app.core.foundry.retrieval import BaseSearch, VectorSearch, HybridSearch, rerank, build_metadata_filter; print\\(''Main module imports: OK''\\)\")",
       "Bash(.venvScriptspython -c \"from app.core.foundry.retrieval.search import BaseSearch, VectorSearch, HybridSearch; print\\(''Search submodule imports: OK''\\)\")",
-      "WebFetch(domain:langfuse.com)"
+      "WebFetch(domain:langfuse.com)",
+      "WebFetch(domain:en.wikipedia.org)"
     ],
     "deny": [],
     "ask": []

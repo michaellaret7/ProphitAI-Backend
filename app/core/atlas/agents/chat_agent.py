@@ -17,7 +17,9 @@ from app.core.atlas.execution import ChatExecutionLoop, ToolHandler
 from app.core.atlas.logging import AgentPrinter
 
 from .base import AgentBase
-
+from app.core.atlas.tools.foundry.credit_research import CREDIT_RESEARCH_SEARCH_TOOL
+from app.core.atlas.tools.foundry.macro_research import MACRO_RESEARCH_SEARCH_TOOL
+from app.core.atlas.tools.foundry.earnings_calls import EARNINGS_CALL_SEARCH_TOOL
 # ANSI color codes for terminal formatting
 _BOLD = "\033[1m"
 _DIM = "\033[2m"
@@ -189,9 +191,12 @@ class ChatAgent(AgentBase):
 
 if __name__ == "__main__":
     agent = ChatAgent(
-        provider=None,
-        model=None,
+        provider='anthropic',
+        model='claude-opus-4-5-20251101',
         print_mode=PrintMode.PRODUCTION
     )
+    agent.add_tool(**CREDIT_RESEARCH_SEARCH_TOOL)
+    agent.add_tool(**MACRO_RESEARCH_SEARCH_TOOL)
+    agent.add_tool(**EARNINGS_CALL_SEARCH_TOOL)
     agent.run_interactive(session_id="test")
     
