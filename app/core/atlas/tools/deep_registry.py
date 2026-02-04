@@ -4,11 +4,6 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any
 
-from app.core.atlas.tools.base.search_engine import (
-    AgentSearchEngine,
-    LLM_WEB_SEARCH_DESCRIPTION,
-    LLM_WEB_SEARCH_PARAMETERS,
-)
 from app.core.atlas.tools.deep import (
     update_tasks,
     UPDATE_TASKS_DESCRIPTION,
@@ -34,19 +29,6 @@ if TYPE_CHECKING:
 
 def register_base_deep_tools(agent: Any) -> None:
     """Register the base tools on the provided agent."""
-
-    # llm_web_search (Perplexity-powered web search)
-    agent.add_tool(
-        name="llm_web_search",
-        description=LLM_WEB_SEARCH_DESCRIPTION,
-        parameters=LLM_WEB_SEARCH_PARAMETERS,
-        function=lambda queries, recency_filter=None, reasoning_effort=None, mode="regular-search", **kwargs: AgentSearchEngine().llm_web_search(
-            queries=queries,
-            recency_filter=recency_filter,
-            reasoning_effort=reasoning_effort,
-            mode=mode,
-        ),
-    )
 
     # update_tasks (task management)
     agent.add_tool(
