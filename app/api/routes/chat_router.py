@@ -8,7 +8,7 @@ Provides REST and WebSocket endpoints for:
 """
 
 import asyncio
-from typing import TYPE_CHECKING, Any, Dict, List
+from typing import TYPE_CHECKING, Any, Dict, List, Optional
 
 from fastapi import APIRouter, BackgroundTasks, HTTPException, WebSocket, WebSocketDisconnect
 from pydantic import BaseModel, Field
@@ -36,7 +36,11 @@ class CreateSessionRequest(BaseModel):
 
     agent_type: str = Field(
         default="general",
-        description="Type of agent for this session: 'macro_research' (macro strategy with research + web search), 'equity_research' (equity analysis with fundamentals, earnings, news), or 'general' (default)",
+        description="Type of agent for this session: 'macro_research', 'equity_research', 'user_uploads', or 'general' (default)",
+    )
+    user_id: Optional[str] = Field(
+        default=None,
+        description="User ID for user-specific agents (required for 'user_uploads' agent type)",
     )
 
 
@@ -94,7 +98,13 @@ async def create_chat_session(
     Returns a session_id that should be used for all subsequent
     requests and WebSocket connections.
     """
-    session = chat_session_manager.create_session(agent_type=request.agent_type)
+    if request.agent_type == "user_uploads" and not request.user_id:
+        raise HTTPException(status_code=400, detail="user_id is required for user_uploads agent type")
+
+    session = chat_session_manager.create_session(
+        agent_type=request.agent_type,
+        user_id=request.user_id,
+    )
     return CreateSessionResponse(
         session_id=session.session_id,
         agent_type=session.agent_type,

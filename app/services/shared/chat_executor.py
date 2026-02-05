@@ -61,14 +61,19 @@ class ChatSessionManager:
     def __init__(self):
         self._sessions: Dict[str, ChatSessionState] = {}
 
-    def create_session(self, agent_type: str = "general") -> ChatSessionState:
+    def create_session(
+        self,
+        agent_type: str = "general",
+        user_id: Optional[str] = None,
+    ) -> ChatSessionState:
         """Create a new chat session with a configured agent.
 
         Creates a ChatAgent instance and registers tools based on agent_type.
         Tools are registered ONCE here and persist for all messages in session.
 
         Args:
-            agent_type: Type of agent (e.g., "macro_research", "earnings_call").
+            agent_type: Type of agent (e.g., "macro_research", "equity_research", "user_uploads").
+            user_id: User ID for user-specific agents (required for "user_uploads").
 
         Returns:
             The created ChatSessionState with configured agent.
@@ -79,6 +84,7 @@ class ChatSessionManager:
         from app.core.atlas.prompts.chat_agents import (
             get_equity_research_prompt,
             get_macro_research_prompt,
+            get_user_uploads_prompt,
         )
 
         session_id = str(uuid.uuid4())
@@ -89,9 +95,12 @@ class ChatSessionManager:
             "equity_research": get_equity_research_prompt,
         }
 
-        # Get prompt (call function to inject current date)
-        prompt_func = agent_prompt_funcs.get(agent_type)
-        system_prompt = prompt_func() if prompt_func else None
+        # Get prompt (call function to inject current date / user context)
+        if agent_type == "user_uploads" and user_id:
+            system_prompt = get_user_uploads_prompt(user_id)
+        else:
+            prompt_func = agent_prompt_funcs.get(agent_type)
+            system_prompt = prompt_func() if prompt_func else None
 
         # Create agent without callback (callback set per-message due to event loop)
         agent = ChatAgent(

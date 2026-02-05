@@ -9,6 +9,8 @@ from typing import Optional
 
 from pydantic import BaseModel, Field, computed_field
 
+from app.core.foundry.models.metadata.utils import sanitize_for_vector_id
+
 
 class UserUploadMetadata(BaseModel):
     """
@@ -33,7 +35,7 @@ class UserUploadMetadata(BaseModel):
     @property
     def doc_id(self) -> str:
         """Unique document identifier combining user_id and file_name."""
-        safe_name = self.file_name.replace(" ", "_").replace("/", "_")
+        safe_name = sanitize_for_vector_id(self.file_name)
         return f"user_upload:{self.user_id}:{safe_name}:{uuid.uuid4().hex[:8]}"
 
     @classmethod

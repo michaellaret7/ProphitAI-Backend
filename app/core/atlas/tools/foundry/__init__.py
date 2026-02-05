@@ -5,6 +5,7 @@ Tools for searching and retrieving information from the Foundry knowledge base:
 - Macro research reports (economic outlook, rates, central banks)
 - Credit research reports (bonds, spreads, high yield, leveraged loans)
 - Earnings call transcripts (company guidance, performance, outlook)
+- User uploaded documents (user-specific document search)
 """
 
 from .macro_research import (
@@ -28,6 +29,13 @@ from .earnings_calls import (
     EARNINGS_CALL_SEARCH_TOOL,
 )
 
+from .user_uploads import (
+    user_upload_search,
+    USER_UPLOAD_SEARCH_DESCRIPTION,
+    USER_UPLOAD_SEARCH_PARAMETERS,
+    USER_UPLOAD_SEARCH_TOOL,
+)
+
 __all__ = [
     # Macro Research
     "macro_research_search",
@@ -44,4 +52,9 @@ __all__ = [
     "EARNINGS_CALL_SEARCH_DESCRIPTION",
     "EARNINGS_CALL_SEARCH_PARAMETERS",
     "EARNINGS_CALL_SEARCH_TOOL",
+    # User Uploads
+    "user_upload_search",
+    "USER_UPLOAD_SEARCH_DESCRIPTION",
+    "USER_UPLOAD_SEARCH_PARAMETERS",
+    "USER_UPLOAD_SEARCH_TOOL",
 ]

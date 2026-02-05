@@ -27,6 +27,7 @@ from app.core.foundry.ingestion import Ingestor
 from app.core.foundry.models.chunk import Chunk
 from app.core.foundry.models.document import Document
 from app.core.foundry.models.metadata import (
+    DefaultMetadata,
     EarningsCallMetadata,
     ResearchDocumentMetadata,
     UserUploadMetadata,
@@ -45,6 +46,7 @@ class IngestedDoc:
     earnings_meta: EarningsCallMetadata | None = None
     research_meta: ResearchDocumentMetadata | None = None
     user_upload_meta: UserUploadMetadata | None = None
+    default_meta: DefaultMetadata | None = None
     s3_uri: str | None = None  # Track S3 URI for cleanup after processing
 
 
@@ -262,10 +264,19 @@ class Pipeline:
                 s3_uri=s3_uri,
             )
 
+        # Default fallback - use DefaultMetadata to extract file_name from S3 URI
+        if s3_uri:
+            default_meta = DefaultMetadata.from_s3_uri(s3_uri, doc_type=self.doc_type)
+        else:
+            # For raw text, use a generic source name
+            source_name = raw_metadata.get("source_name", "raw_text")
+            default_meta = DefaultMetadata.from_text(source_name, doc_type=self.doc_type)
+
         return IngestedDoc(
             document=doc,
-            metadata=raw_metadata,
-            doc_id=self._generate_doc_id(raw_metadata),
+            metadata=default_meta.to_chunk_metadata(),
+            doc_id=default_meta.doc_id,
+            default_meta=default_meta,
             s3_uri=s3_uri,
         )
 
@@ -291,6 +302,8 @@ class Pipeline:
                     chunk.metadata["chunk_id"] = doc_item.research_meta.build_chunk_id(chunk_index)
                 elif doc_item.user_upload_meta:
                     chunk.metadata["chunk_id"] = doc_item.user_upload_meta.build_chunk_id(chunk_index)
+                elif doc_item.default_meta:
+                    chunk.metadata["chunk_id"] = doc_item.default_meta.build_chunk_id(chunk_index)
                 else:
                     chunk.metadata["chunk_id"] = f"{doc_item.doc_id}#{chunk_index:04d}"
 
@@ -331,7 +344,7 @@ if __name__ == "__main__":
     import boto3
 
     bucket = "prophitai-s3-bucket"
-    prefix = "pdfs/economics/"
+    prefix = "pdfs/taxes/not_embedded/"
 
     s3 = boto3.client("s3")
 
@@ -349,8 +362,8 @@ if __name__ == "__main__":
     print(s3_uris)
 
     pipeline = Pipeline(
-        namespace="economics",
-        doc_type="economics",
+        namespace="tax_docs",
+        doc_type="tax_doc",
         chunker_type="semantic",
         move_to_embedded_after_success=True,
     )

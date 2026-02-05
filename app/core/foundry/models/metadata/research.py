@@ -10,6 +10,7 @@ from typing import Optional
 
 from pydantic import BaseModel, Field, computed_field
 
+from app.core.foundry.models.metadata.utils import sanitize_for_vector_id
 from app.utils.choose_model_and_client import get_model_and_client
 
 
@@ -54,12 +55,13 @@ class ResearchDocumentMetadata(BaseModel):
     @property
     def doc_id(self) -> str:
         """Unique document identifier for the research document."""
-        provider_part = self.research_provider.lower().replace(" ", "_") if self.research_provider else "unknown"
+        provider_part = sanitize_for_vector_id(self.research_provider.lower()) if self.research_provider else "unknown"
         date_part = self.research_date.replace("-", "") if self.research_date else "undated"
 
         if self.ticker:
             return f"{self.document_type}:{self.ticker}:{provider_part}:{date_part}"
-        return f"{self.document_type}:{provider_part}:{self.file_name}:{date_part}"
+        safe_name = sanitize_for_vector_id(self.file_name)
+        return f"{self.document_type}:{provider_part}:{safe_name}:{date_part}"
 
     @classmethod
     def from_s3_uri(
