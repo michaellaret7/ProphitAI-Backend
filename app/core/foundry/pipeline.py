@@ -81,7 +81,7 @@ class Pipeline:
         namespace: str = "earnings_calls",
         doc_type: str = "earnings_call",
         chunker_type: str = "earnings_call",
-        delete_s3_after_success: bool = False,
+        move_to_embedded_after_success: bool = True,
     ):
         """
         Initialize the pipeline.
@@ -90,13 +90,13 @@ class Pipeline:
             namespace: Pinecone namespace for vectors.
             doc_type: Document type for chunker selection.
             chunker_type: Type of chunker to use (earnings_call, semantic, recursive).
-            delete_s3_after_success: Delete S3 documents after successful processing.
+            move_to_embedded_after_success: Move S3 documents from not_embedded to embedded folder after successful processing.
         """
         print(f"Initializing Foundry Pipeline with namespace: {namespace}, doc_type: {doc_type}, chunker_type: {chunker_type}")
 
         self.namespace = namespace
         self.doc_type = doc_type
-        self.delete_s3_after_success = delete_s3_after_success
+        self.move_to_embedded_after_success = move_to_embedded_after_success
 
         # Initialize components
         # Set Modal to true in the ingestion layer to use the modal GPU for pdf extraction
@@ -173,9 +173,9 @@ class Pipeline:
 
         print(f"Upserted {upserted} vectors to namespace '{self.namespace}'")
 
-        # Step 5: Delete S3 documents after successful processing
-        if self.delete_s3_after_success and upserted > 0:
-            self._cleanup_s3_documents(ingested)
+        # Step 5: Move S3 documents from not_embedded to embedded folder
+        if self.move_to_embedded_after_success and upserted > 0:
+            self._move_to_embedded(ingested)
 
         return upserted
 
@@ -298,20 +298,20 @@ class Pipeline:
 
         return all_chunks
 
-    def _cleanup_s3_documents(self, ingested: list[IngestedDoc]) -> None:
-        """Delete S3 documents after successful processing."""
+    def _move_to_embedded(self, ingested: list[IngestedDoc]) -> None:
+        """Move S3 documents from not_embedded to embedded folder after successful processing."""
         s3_docs = [doc for doc in ingested if doc.s3_uri]
         if not s3_docs:
             return
 
-        print(f"Cleaning up {len(s3_docs)} S3 documents...")
+        print(f"Moving {len(s3_docs)} S3 documents to embedded folder...")
 
-        deleted_count = 0
+        moved_count = 0
         for doc in s3_docs:
-            if self._ingestor.delete_s3_object(doc.s3_uri):
-                deleted_count += 1
+            if self._ingestor.move_s3_to_embedded(doc.s3_uri):
+                moved_count += 1
 
-        print(f"Deleted {deleted_count}/{len(s3_docs)} S3 documents")
+        print(f"Moved {moved_count}/{len(s3_docs)} S3 documents to embedded folder")
 
     def _generate_doc_id(self, metadata: dict) -> str:
         """Generate a unique document ID."""
@@ -352,7 +352,7 @@ if __name__ == "__main__":
         namespace="economics",
         doc_type="economics",
         chunker_type="semantic",
-        delete_s3_after_success=True,
+        move_to_embedded_after_success=True,
     )
 
     count = pipeline.run(s3_uris=s3_uris, s3_batch_size=5)

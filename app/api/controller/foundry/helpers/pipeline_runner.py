@@ -19,20 +19,21 @@ logger = logging.getLogger(__name__)
 
 USER_UPLOADS_NAMESPACE = "user_uploads"
 
-def list_user_s3_documents(clerk_id: str) -> List[Dict[str, Any]]:
+def list_user_s3_documents(clerk_id: str, folder: str = "not_embedded") -> List[Dict[str, Any]]:
     """
-    List all S3 documents for a user.
+    List all S3 documents in a user's folder.
 
     Args:
         clerk_id: The authenticated user's Clerk ID.
+        folder: The folder to list documents from ("not_embedded" or "embedded").
 
     Returns:
-        List of dicts with uri and metadata for each document.
+        List of dicts with uri, metadata, filename, and size for each document.
     """
     s3_client = get_s3_client()
-    prefix = f"{USER_UPLOADS_PREFIX}/{clerk_id}/"
+    prefix = f"{USER_UPLOADS_PREFIX}/{clerk_id}/{folder}/"
 
-    s3_uris = []
+    documents = []
     paginator = s3_client.get_paginator("list_objects_v2")
 
     for page in paginator.paginate(Bucket=S3_BUCKET, Prefix=prefix):
@@ -41,25 +42,31 @@ def list_user_s3_documents(clerk_id: str) -> List[Dict[str, Any]]:
             # Skip the directory marker itself
             if key == prefix:
                 continue
-            s3_uris.append({
+
+            filename = key.split("/")[-1]
+            documents.append({
                 "uri": f"s3://{S3_BUCKET}/{key}",
+                "key": key,
+                "filename": filename,
+                "size_bytes": obj.get("Size", 0),
+                "last_modified": obj.get("LastModified").isoformat() if obj.get("LastModified") else None,
                 "metadata": {"user_id": clerk_id},
             })
 
-    return s3_uris
+    return documents
 
 def run_user_pipeline(
     clerk_id: str,
     s3_uris: List[Dict[str, Any]] | None = None,
-    delete_after_ingestion: bool = True,
+    move_to_embedded: bool = True,
 ) -> Dict[str, Any]:
     """
     Run the RAG pipeline for a user's documents.
 
     Args:
         clerk_id: The authenticated user's Clerk ID.
-        s3_uris: Optional list of S3 URIs to process. If None, lists all user docs.
-        delete_after_ingestion: Delete S3 documents after successful ingestion.
+        s3_uris: Optional list of S3 URIs to process. If None, lists all user docs from not_embedded folder.
+        move_to_embedded: Move S3 documents from not_embedded to embedded folder after successful ingestion.
 
     Returns:
         Dict with pipeline results (documents_processed, vectors_upserted, namespace).
@@ -81,7 +88,7 @@ def run_user_pipeline(
         namespace=USER_UPLOADS_NAMESPACE,
         doc_type="user_upload",
         chunker_type="semantic",
-        delete_s3_after_success=delete_after_ingestion,
+        move_to_embedded_after_success=move_to_embedded,
     )
 
     vectors_upserted = pipeline.run(s3_uris=s3_uris)

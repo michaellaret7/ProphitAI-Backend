@@ -368,15 +368,19 @@ class Ingestor:
 
         return documents
 
-    def delete_s3_object(self, s3_uri: str) -> bool:
+    def move_s3_to_embedded(self, s3_uri: str) -> bool:
         """
-        Delete an object from S3.
+        Move an S3 object from not_embedded to embedded folder.
+
+        Example:
+            s3://bucket/pdfs/clerk_123/not_embedded/doc.pdf
+            -> s3://bucket/pdfs/clerk_123/embedded/doc.pdf
 
         Args:
             s3_uri: S3 URI (s3://bucket/key) or HTTPS S3 URL.
 
         Returns:
-            True if deletion succeeded, False otherwise.
+            True if move succeeded, False otherwise.
         """
         try:
             if s3_uri.startswith("s3://"):
@@ -384,16 +388,31 @@ class Ingestor:
             elif self._is_s3_https_url(s3_uri):
                 bucket, key = self._parse_s3_https_url(s3_uri)
             else:
-                logger.warning(f"Cannot delete non-S3 URI: {s3_uri}")
+                logger.warning(f"Cannot move non-S3 URI: {s3_uri}")
                 return False
 
-            logger.info(f"Deleting S3 object: bucket={bucket}, key={key}")
+            if "/not_embedded/" not in key:
+                logger.warning(f"Path doesn't contain /not_embedded/: {key}")
+                return False
+
+            new_key = key.replace("/not_embedded/", "/embedded/")
+
+            logger.info(f"Moving S3 object: {key} -> {new_key}")
+
+            # Copy to embedded folder
+            self.s3_client.copy_object(
+                Bucket=bucket,
+                Key=new_key,
+                CopySource={"Bucket": bucket, "Key": key},
+            )
+
+            # Delete from not_embedded after successful copy
             self.s3_client.delete_object(Bucket=bucket, Key=key)
-            logger.info(f"Successfully deleted S3 object: {s3_uri}")
+            logger.info(f"Successfully moved to: s3://{bucket}/{new_key}")
             return True
 
         except ClientError as e:
-            logger.error(f"Failed to delete S3 object {s3_uri}: {e}")
+            logger.error(f"Failed to move S3 object {s3_uri}: {e}")
             return False
 
     # Lazy handler getters

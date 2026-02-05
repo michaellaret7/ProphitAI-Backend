@@ -55,3 +55,6 @@ def register_tools_for_agent_type(agent: "AgentBase", agent_type: str) -> None:
         agent.add_tool(**GET_TICKER_NEWS_TOOL)
         agent.add_tool(**GET_ANALYST_ESTIMATES_TOOL)
         agent.add_tool(**GET_PRICE_TARGET_DATA_TOOL)
+    
+    # elif agent_type == "user_uploads":
+    #     agent.add_tool(**GET_USER_UPLOADS_TOOL)

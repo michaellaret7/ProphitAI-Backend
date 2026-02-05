@@ -14,7 +14,10 @@ from app.api.controller.foundry.helpers.s3_upload import (
     get_s3_client,
     upload_single_pdf,
 )
-from app.api.controller.foundry.helpers.pipeline_runner import run_user_pipeline
+from app.api.controller.foundry.helpers.pipeline_runner import (
+    run_user_pipeline,
+    list_user_s3_documents,
+)
 from app.utils.decorators.api_decorators import handle_controller_errors
 from app.utils.time_utils import get_current_utc_time
 
@@ -27,18 +30,19 @@ async def upload_and_ingest_controller(
     *,
     files: List[UploadFile],
     clerk_id: str,
-    delete_after_ingestion: bool = True,
+    move_to_embedded: bool = True,
 ) -> Dict[str, Any]:
     """
     Upload documents to S3 and immediately ingest into the RAG pipeline.
 
     Unified endpoint that combines upload and ingestion in a single operation.
-    Files are uploaded to S3, then the pipeline processes them into Pinecone.
+    Files are uploaded to S3 (not_embedded folder), then the pipeline processes them into Pinecone.
+    After successful ingestion, files are moved to the embedded folder.
 
     Args:
         files: List of uploaded files.
         clerk_id: The authenticated user's Clerk ID.
-        delete_after_ingestion: Delete S3 documents after successful ingestion.
+        move_to_embedded: Move S3 documents from not_embedded to embedded folder after successful ingestion.
 
     Returns:
         Response with upload and ingestion results.
@@ -53,7 +57,7 @@ async def upload_and_ingest_controller(
     s3_client = get_s3_client()
     uploaded_at = get_current_utc_time().isoformat() + "Z"
 
-    # Step 1: Upload all files to S3
+    # Step 1: Upload all files to S3 (not_embedded folder)
     uploaded_files = []
     s3_uris = []
 
@@ -74,7 +78,7 @@ async def upload_and_ingest_controller(
     pipeline_result = run_user_pipeline(
         clerk_id=clerk_id,
         s3_uris=s3_uris,
-        delete_after_ingestion=delete_after_ingestion,
+        move_to_embedded=move_to_embedded,
     )
 
     file_count = len(uploaded_files)
@@ -91,5 +95,33 @@ async def upload_and_ingest_controller(
             "documentsProcessed": pipeline_result["documents_processed"],
             "vectorsUpserted": pipeline_result["vectors_upserted"],
             "namespace": pipeline_result["namespace"],
+        },
+    )
+
+
+@handle_controller_errors
+async def get_user_documents_controller(
+    *,
+    clerk_id: str,
+) -> Dict[str, Any]:
+    """
+    Get all embedded documents for a user from S3.
+
+    Args:
+        clerk_id: The authenticated user's Clerk ID.
+
+    Returns:
+        Response with list of embedded documents.
+    """
+    documents = list_user_s3_documents(clerk_id, folder="embedded")
+
+    return ok_envelope(
+        message=f"Found {len(documents)} embedded document{'s' if len(documents) != 1 else ''}",
+        kind="documents#userDocuments",
+        resource_id=None,
+        self_link="/api/documents/user",
+        payload={
+            "documents": documents,
+            "totalDocuments": len(documents),
         },
     )

@@ -29,16 +29,16 @@ def get_s3_client():
 
 def build_s3_key(clerk_id: str, filename: str) -> str:
     """
-    Build the S3 key for a user upload.
+    Build the S3 key for a user upload (goes to not_embedded folder).
 
     Args:
         clerk_id: The authenticated user's Clerk ID.
         filename: Sanitized filename.
 
     Returns:
-        Full S3 key path.
+        Full S3 key path: pdfs/user_uploads/{clerk_id}/not_embedded/{filename}
     """
-    return f"{USER_UPLOADS_PREFIX}/{clerk_id}/{filename}"
+    return f"{USER_UPLOADS_PREFIX}/{clerk_id}/not_embedded/{filename}"
 
 
 async def upload_single_pdf(
