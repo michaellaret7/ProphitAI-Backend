@@ -84,6 +84,7 @@ class ChatSessionManager:
         from app.core.atlas.prompts.chat_agents import (
             get_equity_research_prompt,
             get_macro_research_prompt,
+            get_tax_research_prompt,
             get_user_uploads_prompt,
         )
 
@@ -93,6 +94,7 @@ class ChatSessionManager:
         agent_prompt_funcs = {
             "macro_research": get_macro_research_prompt,
             "equity_research": get_equity_research_prompt,
+            "tax_research": get_tax_research_prompt,
         }
 
         # Get prompt (call function to inject current date / user context)

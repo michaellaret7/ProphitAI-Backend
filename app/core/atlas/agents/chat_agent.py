@@ -22,6 +22,7 @@ from app.core.atlas.tools.foundry.credit_research import CREDIT_RESEARCH_SEARCH_
 from app.core.atlas.tools.foundry.macro_research import MACRO_RESEARCH_SEARCH_TOOL
 from app.core.atlas.tools.foundry.earnings_calls import EARNINGS_CALL_SEARCH_TOOL
 from app.core.atlas.tools.foundry.user_uploads import USER_UPLOAD_SEARCH_TOOL
+from app.core.atlas.tools.foundry.tax_research import TAX_RESEARCH_SEARCH_TOOL
 
 # ANSI color codes for terminal formatting
 _BOLD = "\033[1m"
@@ -199,10 +200,11 @@ if __name__ == "__main__":
         model='claude-opus-4-6',
         print_mode=PrintMode.PRODUCTION
     )
-    agent.add_tool(**CREDIT_RESEARCH_SEARCH_TOOL)
-    agent.add_tool(**MACRO_RESEARCH_SEARCH_TOOL)
-    agent.add_tool(**EARNINGS_CALL_SEARCH_TOOL)
-    agent.add_tool(**USER_UPLOAD_SEARCH_TOOL)
+    # agent.add_tool(**CREDIT_RESEARCH_SEARCH_TOOL)
+    # agent.add_tool(**MACRO_RESEARCH_SEARCH_TOOL)
+    # agent.add_tool(**EARNINGS_CALL_SEARCH_TOOL)
+    # agent.add_tool(**USER_UPLOAD_SEARCH_TOOL)
+    agent.add_tool(**TAX_RESEARCH_SEARCH_TOOL)
     agent.run_interactive(session_id="test")
 
 
