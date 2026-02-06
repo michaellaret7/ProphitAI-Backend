@@ -9,11 +9,8 @@ import os
 import logging
 from fastapi import APIRouter, Request, HTTPException
 from svix.webhooks import Webhook, WebhookVerificationError
-from app.repositories.user_data import (
-    add_user,
-    delete_user_by_clerk_id,
-    assign_user_to_company_by_id,
-)
+from app.repositories.user.user import add_user, delete_user_by_clerk_id
+from app.repositories.user.company import assign_user_to_company_by_id
 
 from dotenv import load_dotenv
 

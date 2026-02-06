@@ -1,28 +1,27 @@
+"""User CRUD repository functions for creating, reading, updating, and deleting user records."""
+
 from app.db.core.models.user_data_models import *
-from app.db.core.db_config import UserSession
 from sqlalchemy.orm import joinedload, selectinload
-from typing import Optional, Union, Dict, Any
-from app.utils.serialize_output import serialize_sqlalchemy_obj
+from typing import Optional, Dict, Any
 from app.utils.decorators.database import with_session, with_transaction
-from datetime import datetime
 from app.utils.time_utils import get_current_utc_time
 import uuid
-from app.db.core.pull_fmp_data import FMP_API_DATA
+
 
 @with_session('user')
 def get_all_user_data(email: str, session=None) -> Optional[Dict[str, Any]]:
     """
     Get complete user data by email
-    
+
     Args:
         email: User's email address
-        
+
     Returns:
         Dictionary containing complete user data with companies and portfolios, or None if not found
     """
     if not email:
         raise ValueError("Email must be provided")
-    
+
     query = session.query(User).options(
         joinedload(User.company),
         selectinload(User.portfolios)
@@ -173,22 +172,22 @@ def get_all_user_data_by_clerk_id(clerk_id: str, session=None) -> Optional[Dict[
 def get_user_basic_info(email: str, session=None) -> Optional[Dict[str, Any]]:
     """
     Get basic user info (id, email, first_name, last_name) by email
-    
+
     Args:
         email: User's email address
-        
+
     Returns:
         Dictionary containing only basic user info, or None if not found
     """
     if not email:
         raise ValueError("Email must be provided")
-    
+
     query = session.query(User).filter(User.email == email)
     user = query.first()
-    
+
     if not user:
         return None
-    
+
     return {
         'id': str(user.id),
         'clerk_id': user.clerk_id,
@@ -210,7 +209,7 @@ def add_user(email: str, first_name: str, last_name: str, clerk_id: Optional[str
     if user:
         # Return the existing user object for caller handling
         return user
-    
+
     user = User(
         id = uuid.uuid4(),
         clerk_id=clerk_id,
@@ -288,95 +287,6 @@ def update_user_by_clerk_id(
     return True
 
 @with_transaction('user')
-def assign_all_users_to_company_by_name(company_name: str, session=None) -> int:
-    """
-    Set company_id for all users to the ID of the company with the given name.
-    Returns the number of rows updated.
-    """
-    company = session.query(Company).filter(Company.name == company_name).first()
-    if not company:
-        raise ValueError("Company not found")
-    updated = session.query(User).update({User.company_id: company.id}, synchronize_session=False)
-    return updated
-
-@with_transaction('user')
-def assign_all_users_to_prophitai(session=None) -> int:
-    return assign_all_users_to_company_by_name('ProphitAI', session=session)
-
-@with_transaction('user')
-def set_all_users_to_admin(session=None) -> int:
-    """
-    Set role='admin' for all users. Returns number of rows updated.
-    """
-    updated = session.query(User).update({User.role: 'admin'}, synchronize_session=False)
-    return updated
-
-@with_transaction('user')
-def assign_user_to_company_by_id(email: str, company_id: str, role: Optional[str] = None, session=None) -> bool:
-    """Assign a user to a company by company ID."""
-    user = session.query(User).filter(User.email == email).first()
-    if not user:
-        return False
-    company = session.query(Company).filter(Company.id == company_id).first()
-    if not company:
-        return False
-    user.company_id = company.id
-    if role is not None:
-        user.role = role
-    return True
-
-@with_transaction('user')
-def add_company(company_name:str, seats:int, session=None):
-    company = Company(
-        id = uuid.uuid4(),
-        name=company_name,
-        creation_date=get_current_utc_time(),
-        seats=seats
-    )
-    session.add(company)
-    # commit handled by decorator
-
-@with_session('user')
-def get_user_current_portfolio(email: str, session=None):
-    """
-    Get the current portfolio for a user by email.
-
-    Args:
-        email: User's email address
-
-    Returns:
-        List of portfolio items for the current portfolio, or None if no current portfolio
-    """
-    if not email:
-        raise ValueError("Email must be provided")
-
-    user = session.query(User).filter(User.email == email).first()
-
-    if not user:
-        return None
-
-    # Query through Portfolio table (is_current is on Portfolio, not PortfolioItem)
-    current_portfolio = session.query(Portfolio).options(
-        selectinload(Portfolio.items)
-    ).filter(
-        Portfolio.user_id == user.id,
-        Portfolio.is_current == True
-    ).first()
-
-    if not current_portfolio:
-        return None
-
-    # Return portfolio items with nav context
-    return [{
-        'portfolio_id': str(current_portfolio.id),
-        'portfolio_name': current_portfolio.name,
-        'nav': current_portfolio.nav,
-        'ticker': item.ticker,
-        'allocation': item.allocation,
-        'num_shares': item.num_shares,
-    } for item in current_portfolio.items]
-
-@with_transaction('user')
 def delete_user_by_clerk_id(clerk_id: str, session=None) -> bool:
     if not clerk_id:
         raise ValueError("Clerk ID must be provided")
@@ -385,164 +295,3 @@ def delete_user_by_clerk_id(clerk_id: str, session=None) -> bool:
         return False
     session.delete(user)
     return True
-
-@with_session('user')
-def get_user_watchlists(user_id: str, session=None):
-    """Get all watchlists for a user with their items."""
-    if not user_id:
-        raise ValueError("User ID must be provided")
-
-    watchlists = session.query(Watchlist).options(
-        selectinload(Watchlist.items)
-    ).filter(Watchlist.user_id == user_id).all()
-
-    return [
-        {
-            'id': str(w.id),
-            'name': w.name,
-            'creation_date': w.creation_date.isoformat() if w.creation_date else None,
-            'updated_date': w.updated_date.isoformat() if w.updated_date else None,
-            'items': [
-                {
-                    'ticker': item.ticker,
-                    'price_on_inception': item.price_on_inception,
-                    'added_at': item.added_at.isoformat() if item.added_at else None
-                }
-                for item in w.items
-            ]
-        }
-        for w in watchlists
-    ]
-
-@with_session('user')
-def get_watchlist_by_id(watchlist_id: str, session=None):
-    """Get a single watchlist by ID with its items."""
-    if not watchlist_id:
-        raise ValueError("Watchlist ID must be provided")
-
-    watchlist = session.query(Watchlist).options(
-        selectinload(Watchlist.items)
-    ).filter(Watchlist.id == watchlist_id).first()
-
-    if not watchlist:
-        return None
-
-    return {
-        'id': str(watchlist.id),
-        'user_id': str(watchlist.user_id),
-        'name': watchlist.name,
-        'creation_date': watchlist.creation_date.isoformat() if watchlist.creation_date else None,
-        'updated_date': watchlist.updated_date.isoformat() if watchlist.updated_date else None,
-        'items': [
-            {
-                'ticker': item.ticker,
-                'price_on_inception': item.price_on_inception,
-                'added_at': item.added_at.isoformat() if item.added_at else None
-            }
-            for item in watchlist.items
-        ]
-    }
-
-@with_transaction('user')
-def add_watchlist(user_id: str, name: str, session=None):
-    """Create a new watchlist for a user."""
-    if not user_id:
-        raise ValueError("User ID must be provided")
-    if not name:
-        raise ValueError("Name must be provided")
-
-    watchlist = Watchlist(user_id=user_id, name=name, creation_date=get_current_utc_time())
-    session.add(watchlist)
-    session.flush()
-
-    return {
-        'id': str(watchlist.id),
-        'user_id': str(watchlist.user_id),
-        'name': watchlist.name,
-        'creation_date': watchlist.creation_date.isoformat() if watchlist.creation_date else None
-    }
-
-@with_transaction('user')
-def rename_watchlist(watchlist_id: str, name: str, session=None):
-    """Rename an existing watchlist."""
-    if not watchlist_id:
-        raise ValueError("Watchlist ID must be provided")
-    if not name:
-        raise ValueError("Name must be provided")
-
-    watchlist = session.query(Watchlist).filter(Watchlist.id == watchlist_id).first()
-    if not watchlist:
-        return None
-
-    watchlist.name = name
-    watchlist.updated_date = get_current_utc_time()
-
-    return {
-        'id': str(watchlist.id),
-        'name': watchlist.name,
-        'updated_date': watchlist.updated_date.isoformat()
-    }
-
-@with_transaction('user')
-def delete_watchlist(watchlist_id: str, session=None):
-    """Delete a watchlist and all its items."""
-    if not watchlist_id:
-        raise ValueError("Watchlist ID must be provided")
-
-    watchlist = session.query(Watchlist).filter(Watchlist.id == watchlist_id).first()
-    if not watchlist:
-        return False
-
-    session.delete(watchlist)
-    return True
-
-@with_transaction('user')
-def add_watchlist_item(watchlist_id: str, ticker: str, session=None):
-    """Add a ticker to a watchlist."""
-    if not watchlist_id:
-        raise ValueError("Watchlist ID must be provided")
-    if not ticker:
-        raise ValueError("Ticker must be provided")
-
-    fmp = FMP_API_DATA()
-    try:
-        quote_data = fmp.get_full_quote(ticker)
-        price_on_inception = quote_data[0]['price'] if quote_data else None
-    except (IndexError, KeyError, Exception):
-        price_on_inception = None
-
-    watchlist_item = WatchlistItem(
-        watchlist_id=watchlist_id,
-        ticker=ticker.upper(),
-        price_on_inception=price_on_inception,
-        added_at=get_current_utc_time()
-    )
-    session.add(watchlist_item)
-    session.flush()
-
-    return {
-        'watchlist_id': str(watchlist_item.watchlist_id),
-        'ticker': watchlist_item.ticker,
-        'price_on_inception': watchlist_item.price_on_inception,
-        'added_at': watchlist_item.added_at.isoformat() if watchlist_item.added_at else None
-    }
-
-@with_transaction('user')
-def delete_watchlist_item(watchlist_id: str, ticker: str, session=None):
-    """Remove a ticker from a watchlist."""
-    if not watchlist_id:
-        raise ValueError("Watchlist ID must be provided")
-    if not ticker:
-        raise ValueError("Ticker must be provided")
-
-    watchlist_item = session.query(WatchlistItem).filter(
-        WatchlistItem.watchlist_id == watchlist_id,
-        WatchlistItem.ticker == ticker.upper()
-    ).first()
-
-    if not watchlist_item:
-        return False
-
-    session.delete(watchlist_item)
-    return True
-

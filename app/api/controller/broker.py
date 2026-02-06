@@ -4,7 +4,7 @@ from app.utils.alpaca.portfolio import AlpacaPortfolio
 from app.utils.alpaca.trading import AlpacaTrading
 from app.utils.decorators.api_decorators import handle_controller_errors
 from app.api.response_envelope import ok_envelope
-from app.repositories.portfolio_data import add_portfolio, delete_portfolio_by_name
+from app.repositories.portfolio.crud import add_portfolio, delete_portfolio_by_name
 from app.services.portfolio.portfolio import Position
 from typing import Dict, Any
 

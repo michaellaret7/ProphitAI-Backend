@@ -9,7 +9,7 @@ import uuid
 import pandas as pd
 import numpy as np
 from app.repositories.price_data import fetch_bulk_ohlcv_data_for_tickers
-from app.repositories.portfolio_data import retrieve_portfolio
+from app.repositories.portfolio.retrieval import retrieve_portfolio
 from calc_risk_metrics import calc_all_risk_metrics
 from risk_model import RiskMetrics
 

@@ -13,7 +13,7 @@ import pandas as pd
 from app.db.core.db_config import UserSession
 from app.db.core.models.user_data_models import Portfolio, PortfolioItem, User
 from app.db.jobs.portfolio.monitor import MonitorPortfolio
-from app.repositories.portfolio_data import get_all_portfolio_ids
+from app.repositories.portfolio.retrieval import get_all_portfolio_ids
 from app.repositories.price_data import build_returns_df
 from app.utils.time_utils import get_current_utc_time
 from app.utils.serialize_output import serialize_sqlalchemy_obj

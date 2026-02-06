@@ -1,6 +1,6 @@
 from fastapi import HTTPException
 from typing import Optional, Dict, Any
-from app.repositories.user_data import (
+from app.repositories.user.user import (
     get_all_user_data_by_clerk_id,
     update_user_by_clerk_id,
     delete_user_by_clerk_id,

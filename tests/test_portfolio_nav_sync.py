@@ -275,7 +275,7 @@ class TestAPIRequestValidation:
 class TestPortfolioDataRepository:
     """Integration tests for portfolio_data repository functions."""
 
-    @patch('app.repositories.portfolio_data.calc_num_shares')
+    @patch('app.repositories.portfolio.crud.calc_num_shares')
     def test_add_portfolio_calculates_num_shares_when_value_provided(self, mock_calc):
         """add_portfolio should calculate num_shares when portfolio_value is provided."""
         mock_calc.return_value = {"AAPL": 250.0, "MSFT": 125.0}
@@ -307,9 +307,9 @@ class TestPortfolioDataRepository:
         ]
 
         # Verify by reading the source
-        from app.repositories import portfolio_data
+        from app.repositories.portfolio import retrieval as portfolio_retrieval
         import inspect
-        source = inspect.getsource(portfolio_data._flatten_portfolio_to_legacy_format)
+        source = inspect.getsource(portfolio_retrieval._flatten_portfolio_to_legacy_format)
 
         assert "'nav': portfolio.nav" in source
         assert "'num_shares': item.num_shares" in source

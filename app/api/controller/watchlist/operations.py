@@ -2,7 +2,7 @@
 
 from typing import Dict, Any
 from fastapi import HTTPException
-from app.repositories.user_data import (
+from app.repositories.user.watchlist import (
     get_user_watchlists,
     get_watchlist_by_id,
     add_watchlist,

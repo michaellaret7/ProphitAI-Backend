@@ -6,7 +6,7 @@ from app.api.controller.broker import (
     add_broker_portfolio_controller,
 )
 from app.api.auth.clerk import get_clerk_user_id
-from app.repositories.user_data import get_all_user_data_by_clerk_id
+from app.repositories.user.user import get_all_user_data_by_clerk_id
 
 router = APIRouter(tags=["Broker Support 🏦"])
 

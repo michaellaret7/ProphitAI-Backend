@@ -13,7 +13,7 @@ from app.api.controller.watchlist import (
     get_watchlist_charts_controller,
 )
 from app.api.auth.clerk import get_clerk_user_id
-from app.repositories.user_data import get_all_user_data_by_clerk_id
+from app.repositories.user.user import get_all_user_data_by_clerk_id
 
 router = APIRouter(prefix="/watchlists", tags=["Watchlists"])
 

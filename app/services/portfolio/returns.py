@@ -3,7 +3,7 @@ import uuid
 from datetime import datetime, timedelta
 import pandas as pd
 import numpy as np
-from app.repositories.portfolio_data import retrieve_portfolio
+from app.repositories.portfolio.retrieval import retrieve_portfolio
 from app.utils.time_utils import get_current_utc_time
 from app.repositories.price_data import fetch_bulk_price_data_for_tickers
 from app.core.calculations.returns.calculator import PortfolioReturnsCalculator, ReturnsCalculator

@@ -12,15 +12,14 @@ from app.services.portfolio import PortfolioService
 from app.api.response_envelope import ok_envelope
 from app.redis.client import cache
 from app.utils.decorators.api_decorators import handle_controller_errors
-from app.repositories.portfolio_data import (
-    retrieve_portfolio,
-    retrieve_portfolios_batch,
+from app.repositories.portfolio.retrieval import retrieve_portfolio, retrieve_portfolios_batch
+from app.repositories.portfolio.preferences import (
     get_portfolio_preference,
     create_portfolio_preference,
     update_portfolio_preference,
     delete_portfolio_preference,
-    get_portfolio_alert_state,
 )
+from app.repositories.portfolio.alerts import get_portfolio_alert_state
 from app.core.calculations.portfolio.allocator import run, StrategyLiteral
 
 def _verify_portfolio_ownership(portfolio_id: str, user_id: str) -> None:
