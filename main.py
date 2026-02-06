@@ -50,7 +50,10 @@ async def lifespan(_app: FastAPI):
     # Startup
     logger.info("🚀 Starting ProphitAI API...")
     await cache.connect()
-    await pdf_service.startup()
+    try:
+        await pdf_service.startup()
+    except Exception as e:
+        logger.warning("PDF service failed to start — PDF generation disabled: %s", e)
 
     # Start background task for cache stats logging every 2 minutes
     stats_task = asyncio.create_task(cache.start_stats_logger(interval_seconds=120))
