@@ -75,7 +75,7 @@ async def clerk_webhook(request: Request):
                 assign_user_to_company_by_id(
                     email=email,
                     company_id=DEFAULT_COMPANY_ID,
-                    role='member'
+                    role='individual'
                 )
             else:
                 logger.warning(f"Failed to create user: {email}")

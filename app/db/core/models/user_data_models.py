@@ -15,7 +15,13 @@ from app.utils.time_utils import get_current_utc_time
 
 class User(UserBase):
     __tablename__ = 'users'
-    
+    __table_args__ = (
+        CheckConstraint(
+            "role IN ('ria', 'client', 'individual', 'system')",
+            name='chk_user_role'
+        ),
+    )
+
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     clerk_id = Column(String, unique=True, index=True, nullable=True)
     email = Column(String, nullable=False, unique=True, index=True)
@@ -25,10 +31,12 @@ class User(UserBase):
 
     # Direct company association
     company_id = Column(UUID(as_uuid=True), ForeignKey('companies.id'), nullable=True, index=True)
-    role = Column(String, default='member')
-    
+    role = Column(String, default='individual')
+    handler_id = Column(UUID(as_uuid=True), ForeignKey('users.id'), nullable=True, index=True)
+
     # Relationships
     company = relationship('Company', back_populates='users')
+    clients = relationship('User', backref='handler', remote_side=[id], foreign_keys=[handler_id])
     watchlists = relationship('Watchlist', back_populates='user', cascade='all, delete-orphan')
     # subscriptions = relationship('Subscription', back_populates='user', cascade='all, delete-orphan')
 
