@@ -1,10 +1,9 @@
 from pydantic import BaseModel
 
-
 class RiskMetrics(BaseModel):
     """Container for portfolio risk metrics."""
     # Tier 1: Essential
-    volatility: float              # Annualized standard deviation
+    volatility: float              # Annualized standard deviation CHANGE THIS TO BE CALLED ANNUALIZED VOLATILITY
     max_drawdown: float            # Maximum peak-to-trough decline
     var_95: float                  # Value at Risk (95% confidence)
     var_99: float                  # Value at Risk (99% confidence)

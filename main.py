@@ -30,6 +30,7 @@ from app.api.routes.document_router import router as document_router
 from app.api.auth.api_key import validate_api_key
 from app.api.auth.clerk import clerk_auth
 from app.redis.client import cache
+from app.services.shared.pdf_service import pdf_service
 from app.api.routes.webhook_router import router as webhook_router
 
 # Load environment variables from .env file
@@ -49,6 +50,7 @@ async def lifespan(_app: FastAPI):
     # Startup
     logger.info("🚀 Starting ProphitAI API...")
     await cache.connect()
+    await pdf_service.startup()
 
     # Start background task for cache stats logging every 2 minutes
     stats_task = asyncio.create_task(cache.start_stats_logger(interval_seconds=120))
@@ -58,6 +60,7 @@ async def lifespan(_app: FastAPI):
     # Shutdown
     logger.info("🛑 Shutting down ProphitAI API...")
     stats_task.cancel()
+    await pdf_service.shutdown()
     await cache.close()
 
 app = FastAPI(

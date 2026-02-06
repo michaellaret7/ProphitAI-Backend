@@ -8,9 +8,11 @@ Provides REST and WebSocket endpoints for:
 """
 
 import asyncio
+import io
 from typing import TYPE_CHECKING, Any, Dict, List, Optional
 
 from fastapi import APIRouter, BackgroundTasks, HTTPException, WebSocket, WebSocketDisconnect
+from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field
 
 from app.api.routes.websocket_router import connection_manager
@@ -18,6 +20,7 @@ from app.services.shared.chat_executor import (
     WebSocketChatCallback,
     chat_session_manager,
 )
+from app.services.shared.pdf_service import pdf_service
 from app.utils.time_utils import get_current_utc_time
 
 if TYPE_CHECKING:
@@ -76,6 +79,20 @@ class MessageHistoryResponse(BaseModel):
     session_id: str = Field(..., description="The session ID")
     messages: List[Dict[str, Any]] = Field(
         ..., description="List of messages with role and content"
+    )
+
+
+class ExportPDFRequest(BaseModel):
+    """Request body for exporting an agent response to PDF."""
+
+    content: str = Field(
+        ...,
+        min_length=1,
+        description="Markdown content from the agent response to convert to PDF",
+    )
+    title: Optional[str] = Field(
+        default=None,
+        description="Optional title displayed at the top of the PDF",
     )
 
 
@@ -185,6 +202,33 @@ async def get_chat_history(session_id: str) -> MessageHistoryResponse:
     return MessageHistoryResponse(
         session_id=session_id,
         messages=chat_session_manager.get_history(session_id),
+    )
+
+
+@router.post("/export-pdf")
+async def export_pdf(request: ExportPDFRequest) -> StreamingResponse:
+    """Convert a single agent response (markdown) to a branded PDF.
+
+    The frontend sends the raw markdown content from a chat message.
+    Returns the PDF as a downloadable file.
+
+    Args:
+        request: The markdown content and optional title.
+
+    Returns:
+        A StreamingResponse with the generated PDF bytes.
+    """
+    pdf_bytes = await pdf_service.generate_pdf(
+        markdown=request.content,
+        title=request.title,
+    )
+
+    return StreamingResponse(
+        io.BytesIO(pdf_bytes),
+        media_type="application/pdf",
+        headers={
+            "Content-Disposition": 'attachment; filename="prophitai_export.pdf"',
+        },
     )
 
 
