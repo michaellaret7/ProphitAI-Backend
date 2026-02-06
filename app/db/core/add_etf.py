@@ -653,4 +653,63 @@ def load_multiple_etfs(etf_list, years_of_history=2):
             print(f"Failed to load {ticker}: {e}")
             continue
 
+if __name__ == "__main__":
+    # --- Fixed Income: MBS & ABS ---
+    load_single_etf(
+        'MBB',
+        sector='etf',
+        industry='fixed_income_etfs',
+        sub_industry='abs_and_mbs',
+        allow_partial_reload=True
+    )
 
+    load_single_etf(
+        'GNMA',
+        sector='etf',
+        industry='fixed_income_etfs',
+        sub_industry='abs_and_mbs',
+        allow_partial_reload=True
+    )
+
+    # --- Fixed Income: Sovereign (Matching your TLT move) ---
+    load_single_etf(
+        'TLH',
+        sector='etf',
+        industry='fixed_income_etfs',
+        sub_industry='sovereign',
+        allow_partial_reload=True
+    )
+
+    load_single_etf(
+        'AGZ',
+        sector='etf',
+        industry='fixed_income_etfs',
+        sub_industry='sovereign',
+        allow_partial_reload=True
+    )
+
+    # --- Fixed Income: Corporate & Credit ---
+    load_single_etf(
+        'MINT',
+        sector='etf',
+        industry='fixed_income_etfs',
+        sub_industry='corporate_bond_etfs',
+        allow_partial_reload=True
+    )
+
+    load_single_etf(
+        'FLOT',
+        sector='etf',
+        industry='fixed_income_etfs',
+        sub_industry='credit',
+        allow_partial_reload=True
+    )
+
+    # --- Fixed Income: Senior Loans ---
+    load_single_etf(
+        'BKLN',
+        sector='etf',
+        industry='fixed_income_etfs',
+        sub_industry='senior_loans',
+        allow_partial_reload=True
+    )
