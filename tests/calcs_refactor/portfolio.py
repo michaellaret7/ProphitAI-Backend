@@ -12,6 +12,8 @@ from app.repositories.price_data import fetch_bulk_ohlcv_data_for_tickers
 from app.repositories.portfolio.retrieval import retrieve_portfolio
 from calc_risk_metrics import calc_all_risk_metrics
 from risk_model import RiskMetrics
+from calc_performance_metrics import calc_all_performance_metrics
+from performance_model import PerformanceMetrics
 
 fetched_tickers = []
 # Fetch portfolio positions and weights
@@ -73,11 +75,14 @@ class Portfolio:
             self.daily_returns,
             self.benchmark_returns
         )
+
+        self.performance_metrics: PerformanceMetrics = calc_all_performance_metrics(
+            self.daily_returns,
+            self.benchmark_returns
+        )
     
-
-
-
-
+import time 
+start_time = time.time()
 portfolio = Portfolio(
     name='User Portfolio',
     tickers=tickers,
@@ -85,7 +90,10 @@ portfolio = Portfolio(
     price_df=price_df,
     benchmark_prices=benchmark_prices
 )
+end_time = time.time()
+print(f"Time taken to create portfolio: {end_time - start_time} seconds")
 
+start_time = time.time()
 portfolio_2 = Portfolio(
     name='User Portfolio 2',
     tickers=['AAPL', 'MSFT', 'GOOG', 'AMZN', 'TSLA', 'NVDA', 'META', 'NFLX', 'CSCO', 'INTC', 'SPY', 'QQQ'],
@@ -93,12 +101,10 @@ portfolio_2 = Portfolio(
     price_df=price_df,
     benchmark_prices=benchmark_prices
 )
+end_time = time.time()
+print(f"Time taken to create portfolio 2: {end_time - start_time} seconds")
 
-# print(portfolio.risk_metrics)
-print(portfolio_2.risk_metrics.upside_capture)
-print(portfolio_2.risk_metrics.downside_capture)
-print(portfolio_2.risk_metrics.max_drawdown_duration)
-# print(portfolio_2.risk_metrics.kurtosis)
-# print(portfolio_2.risk_metrics.skewness)
+print(portfolio_2.performance_metrics)
+print(portfolio_2.risk_metrics)
 
 

@@ -1,10 +1,11 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
+from typing import Optional
 
 class PerformanceMetrics(BaseModel):
     """Container for portfolio performance metrics."""
     #  Tier 1: Core Returns
     annualized_return: float
-    cumulative_return: float
+    cumulative_total_return: float
     alpha: float
 
     # Ratios 
@@ -22,3 +23,4 @@ class PerformanceMetrics(BaseModel):
     momentum_1yr: float
     momentum_3yr: float
     momentum_5yr: float
+
