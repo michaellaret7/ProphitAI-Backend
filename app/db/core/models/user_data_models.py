@@ -31,7 +31,7 @@ class User(UserBase):
 
     # Direct company association
     company_id = Column(UUID(as_uuid=True), ForeignKey('companies.id'), nullable=True, index=True)
-    role = Column(String, default='individual')
+    role = Column(String, nullable=True, default=None)
     handler_id = Column(UUID(as_uuid=True), ForeignKey('users.id'), nullable=True, index=True)
 
     # Relationships

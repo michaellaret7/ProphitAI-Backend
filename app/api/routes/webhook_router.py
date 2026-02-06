@@ -68,11 +68,10 @@ async def clerk_webhook(request: Request):
             )
             if created:
                 logger.info(f"Created user: {email} (clerk_id: {clerk_id})")
-                # Auto-assign to default company
+                # Assign to default company (role set later during onboarding)
                 assign_user_to_company_by_id(
                     email=email,
                     company_id=DEFAULT_COMPANY_ID,
-                    role='individual'
                 )
             else:
                 logger.warning(f"Failed to create user: {email}")

@@ -41,6 +41,7 @@ def get_all_user_data(email: str, session=None) -> Optional[Dict[str, Any]]:
         'email': user.email,
         'first_name': user.first_name,
         'last_name': user.last_name,
+        'role': user.role,
         'creation_date': user.creation_date.isoformat() if getattr(user, 'creation_date', None) else None,
         'companies': [],
         'portfolios': []
@@ -98,6 +99,7 @@ def get_all_user_data_by_id(user_id: str, session=None) -> Optional[Dict[str, An
         'email': user.email,
         'first_name': user.first_name,
         'last_name': user.last_name,
+        'role': user.role,
         'creation_date': user.creation_date.isoformat() if getattr(user, 'creation_date', None) else None,
         'companies': [],
         'portfolios': []
@@ -145,6 +147,7 @@ def get_all_user_data_by_clerk_id(clerk_id: str, session=None) -> Optional[Dict[
         'email': user.email,
         'first_name': user.first_name,
         'last_name': user.last_name,
+        'role': user.role,
         'creation_date': user.creation_date.isoformat() if getattr(user, 'creation_date', None) else None,
         'companies': [],
         'portfolios': []
@@ -285,6 +288,37 @@ def update_user_by_clerk_id(
         user.last_name = last_name
 
     return True
+
+VALID_USER_ROLES = {'ria', 'client', 'individual'}
+
+@with_transaction('user')
+def set_user_role_by_clerk_id(clerk_id: str, role: str, session=None) -> bool:
+    """
+    Set user role during onboarding. Only allowed when role is currently unset.
+
+    Args:
+        clerk_id: Clerk user ID
+        role: One of 'ria', 'client', 'individual'
+
+    Returns:
+        True if role was set, False if user not found
+
+    Raises:
+        ValueError: If role is invalid or already set
+    """
+    if role not in VALID_USER_ROLES:
+        raise ValueError(f"Invalid role '{role}'. Must be one of: {', '.join(VALID_USER_ROLES)}")
+
+    user = session.query(User).filter(User.clerk_id == clerk_id).first()
+    if not user:
+        return False
+
+    if user.role is not None:
+        raise ValueError("Role has already been set")
+
+    user.role = role
+    return True
+
 
 @with_transaction('user')
 def delete_user_by_clerk_id(clerk_id: str, session=None) -> bool:
