@@ -1,136 +1,17 @@
+"""Fundamental statement processing and retrieval functions.
+
+Higher-level functions that build on the base fetchers to provide
+filtered, formatted fundamental data for specific statement types.
+"""
+
 from __future__ import annotations
 
-from concurrent.futures import ThreadPoolExecutor, as_completed
-from dataclasses import dataclass
 from datetime import datetime, date
 from decimal import Decimal
-from typing import Dict, Any, Optional, Literal, List, Iterable
+from typing import Dict, Any, Optional, Literal, List
 
-from app.db.core.models.market_data_models import (
-    Ticker,
-    CashFlowStatement,
-    BalanceSheet,
-    IncomeStatement,
-    FinancialRatio,
-    AnalystEstimate,
-)
-from app.utils.decorators.database import with_session
+from app.repositories.fundamentals.fetchers import get_fundamentals_raw
 
-
-@dataclass
-class FundamentalsResult:
-    """Container for fundamental datasets fetched from the database."""
-
-    ticker: str
-    income_statements: List[Any]
-    balance_sheets: List[Any]
-    cash_flow_statements: List[Any]
-    financial_ratios: List[Any]
-    analyst_estimates: List[Any]
-
-
-@with_session('market')
-def get_fundamentals_raw(ticker: str, session=None) -> FundamentalsResult:
-    """Fetch all fundamental data for a ticker directly from the database.
-
-    Args:
-        ticker: Stock ticker symbol (e.g., 'AAPL', 'MSFT')
-        session: Database session (injected by decorator)
-
-    Returns:
-        FundamentalsResult containing all fundamental data types
-    """
-    tkr = ticker.upper()
-
-    income = (
-        session.query(IncomeStatement)
-        .join(Ticker)
-        .filter(Ticker.ticker == tkr)
-        .order_by(IncomeStatement.date.desc())
-        .all()
-    )
-    balance = (
-        session.query(BalanceSheet)
-        .join(Ticker)
-        .filter(Ticker.ticker == tkr)
-        .order_by(BalanceSheet.date.desc())
-        .all()
-    )
-    cashflow = (
-        session.query(CashFlowStatement)
-        .join(Ticker)
-        .filter(Ticker.ticker == tkr)
-        .order_by(CashFlowStatement.date.desc())
-        .all()
-    )
-    ratios = (
-        session.query(FinancialRatio)
-        .join(Ticker)
-        .filter(Ticker.ticker == tkr)
-        .order_by(FinancialRatio.date.desc())
-        .all()
-    )
-    estimates = (
-        session.query(AnalystEstimate)
-        .join(Ticker)
-        .filter(Ticker.ticker == tkr)
-        .order_by(AnalystEstimate.date.desc())
-        .all()
-    )
-
-    return FundamentalsResult(
-        ticker=tkr,
-        income_statements=income,
-        balance_sheets=balance,
-        cash_flow_statements=cashflow,
-        financial_ratios=ratios,
-        analyst_estimates=estimates,
-    )
-
-
-def get_bulk_fundamentals(
-    tickers: Iterable[str], max_workers: int = 16
-) -> Dict[str, FundamentalsResult]:
-    """Fetch fundamentals for multiple tickers in parallel.
-
-    Args:
-        tickers: Iterable of ticker symbols
-        max_workers: Maximum number of parallel threads
-
-    Returns:
-        Dict mapping ticker to FundamentalsResult for successful fetches
-    """
-    # Deduplicate and normalize tickers
-    unique = []
-    seen = set()
-    for t in tickers:
-        if not t:
-            continue
-        u = t.upper()
-        if u not in seen:
-            seen.add(u)
-            unique.append(u)
-
-    if not unique:
-        return {}
-
-    results: Dict[str, FundamentalsResult] = {}
-
-    with ThreadPoolExecutor(max_workers=max_workers) as executor:
-        future_to_ticker = {
-            executor.submit(get_fundamentals_raw, t): t for t in unique
-        }
-        for fut in as_completed(future_to_ticker):
-            tkr = future_to_ticker[fut]
-            try:
-                data = fut.result()
-                if data is not None:
-                    results[tkr] = data
-            except Exception:
-                # Skip ticker on error
-                pass
-
-    return results
 
 def _filter_by_cutoff(statements: List, cutoff_date: date) -> List:
     """Filter statements to only include those on or before cutoff_date.
@@ -245,7 +126,7 @@ def get_fundamental_data(
                     "shares_outstanding_diluted": float(stmt.weightedAverageShsOutDil) if hasattr(stmt, 'weightedAverageShsOutDil') and stmt.weightedAverageShsOutDil else None,
                 }
                 result["data"].append(period_data)
-                
+
         elif statement_type == "balance_sheet":
             statements = fundamentals.balance_sheets if fundamentals.balance_sheets else []
 
@@ -274,7 +155,7 @@ def get_fundamental_data(
                     ) else None,
                 }
                 result["data"].append(period_data)
-                
+
         elif statement_type == "cash_flow":
             statements = fundamentals.cash_flow_statements if fundamentals.cash_flow_statements else []
 
@@ -297,7 +178,7 @@ def get_fundamental_data(
                     "change_in_cash": float(stmt.changeInCash) if hasattr(stmt, 'changeInCash') and stmt.changeInCash else None,
                 }
                 result["data"].append(period_data)
-                
+
         elif statement_type == "financial_ratios":
             statements = fundamentals.financial_ratios if fundamentals.financial_ratios else []
 
@@ -326,7 +207,7 @@ def get_fundamental_data(
                     "net_margin": float(stmt.netProfitMargin) if hasattr(stmt, 'netProfitMargin') and stmt.netProfitMargin else None,
                 }
                 result["data"].append(period_data)
-                
+
         elif statement_type == "analyst_estimates":
             statements = fundamentals.analyst_estimates if fundamentals.analyst_estimates else []
 
@@ -351,13 +232,13 @@ def get_fundamental_data(
                     "net_income_avg": float(stmt.netIncomeAvg) if hasattr(stmt, 'netIncomeAvg') and stmt.netIncomeAvg else None,
                 }
                 result["data"].append(period_data)
-        
+
         else:
             return {"error": f"Invalid statement_type: {statement_type}"}
-        
+
         result["quarters_returned"] = len(result["data"])
         return result
-        
+
     except Exception as e:
         return {
             "ticker": ticker.upper(),
@@ -474,4 +355,3 @@ def get_all_columns_fundamentals(
             "statement_type": statement_type,
             "error": f"Failed to fetch fundamental data: {str(e)}"
         }
-

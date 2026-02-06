@@ -1,7 +1,7 @@
 from datetime import datetime, timedelta
 from typing import Optional
 import pandas as pd
-from app.repositories.macro_data import get_commodity_prices
+from app.repositories.macro.commodities import get_commodity_prices
 from app.utils.decorators.tool_validation import log_simulation_data_range
 from app.core.atlas.tools.responses import success_response, error_response
 from app.utils.time_utils import get_current_utc_time

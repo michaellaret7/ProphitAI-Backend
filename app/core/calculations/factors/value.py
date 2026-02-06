@@ -6,7 +6,8 @@ from datetime import datetime, timedelta
 import numpy as np
 import pandas as pd
 
-from app.repositories.fundamental_data import get_fundamentals_raw, get_bulk_fundamentals, FundamentalsResult
+from app.repositories.fundamentals.fetchers import get_fundamentals_raw, get_bulk_fundamentals
+from app.repositories.fundamentals.models import FundamentalsResult
 from app.repositories.price_data import fetch_bulk_price_data_for_tickers
 from app.utils.ticker_utils import get_most_recent_price
 from app.utils.time_utils import get_current_utc_time

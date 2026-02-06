@@ -6,7 +6,7 @@ income statements, balance sheets, cash flow statements, and financial ratios.
 
 from typing import Optional
 from datetime import datetime
-from app.repositories.fundamental_data import get_fundamental_data as _get_fundamental_data
+from app.repositories.fundamentals.statements import get_fundamental_data as _get_fundamental_data
 from app.utils.decorators.tool_validation import log_simulation_data_range
 from app.utils.tool_validator import ToolValidator
 from app.core.atlas.tools.responses import success_response, error_response

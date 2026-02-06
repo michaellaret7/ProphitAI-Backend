@@ -1,12 +1,4 @@
-"""
-Risk metrics calculation functions for portfolio analysis.
-
-All functions accept a pandas Series of daily returns and return float values.
-Metrics are organized into three tiers:
-- Tier 1: Essential (volatility, drawdown, VaR, CVaR)
-- Tier 2: Downside-focused (downside deviation, ulcer index, avg drawdown)
-- Tier 3: Market-relative (beta, tracking error) - requires benchmark
-"""
+"""Risk metrics calculation functions for portfolio analysis."""
 
 from typing import cast
 
@@ -21,32 +13,13 @@ from risk_model import RiskMetrics
 # =============================================================================
 
 def calc_volatility(daily_returns: pd.Series, annualize: bool = True) -> float:
-    """
-    Calculate portfolio volatility (standard deviation of returns).
-
-    Args:
-        daily_returns: Series of daily portfolio returns
-        annualize: If True, annualize using sqrt(252)
-
-    Returns:
-        Volatility as decimal (0.20 = 20%)
-    """
+    """Calculate portfolio volatility. Annualized by default using sqrt(252)."""
     vol = float(daily_returns.std())
     return vol * np.sqrt(252) if annualize else vol
 
 
 def calc_drawdown_series(daily_returns: pd.Series) -> pd.Series:
-    """
-    Calculate the drawdown series from daily returns.
-
-    Drawdown measures the decline from a historical peak.
-
-    Args:
-        daily_returns: Series of daily portfolio returns
-
-    Returns:
-        Series of drawdowns (negative values, 0 = at peak)
-    """
+    """Calculate the drawdown series (decline from peak) from daily returns."""
     cumulative = (1 + daily_returns).cumprod()
     running_max = cumulative.cummax()
     drawdown = (cumulative - running_max) / running_max
@@ -54,50 +27,19 @@ def calc_drawdown_series(daily_returns: pd.Series) -> pd.Series:
 
 
 def calc_max_drawdown(daily_returns: pd.Series) -> float:
-    """
-    Calculate maximum drawdown (largest peak-to-trough decline).
-
-    Args:
-        daily_returns: Series of daily portfolio returns
-
-    Returns:
-        Max drawdown as negative decimal (-0.20 = -20%)
-    """
+    """Calculate maximum drawdown (largest peak-to-trough decline)."""
     drawdown = calc_drawdown_series(daily_returns)
     return float(drawdown.min())
 
 
 def calc_var(daily_returns: pd.Series, confidence: float = 0.95) -> float:
-    """
-    Calculate Historical Value at Risk (VaR).
-
-    VaR represents the maximum expected loss at a given confidence level.
-
-    Args:
-        daily_returns: Series of daily portfolio returns
-        confidence: Confidence level (0.95 = 95%, 0.99 = 99%)
-
-    Returns:
-        VaR as negative decimal (daily, not annualized)
-    """
+    """Calculate Historical Value at Risk (VaR) at given confidence level."""
     percentile = (1 - confidence) * 100
     return float(np.percentile(daily_returns, percentile))
 
 
 def calc_cvar(daily_returns: pd.Series, confidence: float = 0.95) -> float:
-    """
-    Calculate Conditional VaR (Expected Shortfall).
-
-    CVaR is the expected loss given that the loss exceeds VaR.
-    More informative than VaR as it captures tail risk.
-
-    Args:
-        daily_returns: Series of daily portfolio returns
-        confidence: Confidence level (0.95 = 95%, 0.99 = 99%)
-
-    Returns:
-        CVaR as negative decimal (daily, not annualized)
-    """
+    """Calculate Conditional VaR (Expected Shortfall) — expected loss beyond VaR."""
     var = calc_var(daily_returns, confidence)
     tail_losses = daily_returns[daily_returns <= var]
     return float(tail_losses.mean()) if len(tail_losses) > 0 else var
@@ -108,20 +50,7 @@ def calc_cvar(daily_returns: pd.Series, confidence: float = 0.95) -> float:
 # =============================================================================
 
 def calc_downside_deviation(daily_returns: pd.Series, threshold: float = 0.0, annualize: bool = True) -> float:
-    """
-    Calculate downside deviation (semi-deviation).
-
-    Only considers returns below the threshold (default 0).
-    Better measure of risk than standard deviation for asymmetric returns.
-
-    Args:
-        daily_returns: Series of daily portfolio returns
-        threshold: Minimum acceptable return (default 0)
-        annualize: If True, annualize using sqrt(252)
-
-    Returns:
-        Downside deviation as decimal
-    """
+    """Calculate downside deviation (semi-deviation below threshold)."""
     downside_returns = daily_returns[daily_returns < threshold]
     if len(downside_returns) == 0:
         return 0.0
@@ -130,87 +59,27 @@ def calc_downside_deviation(daily_returns: pd.Series, threshold: float = 0.0, an
     return downside_dev * np.sqrt(252) if annualize else downside_dev
 
 
+def calc_max_drawdown_duration(daily_returns: pd.Series) -> float:
+    """Calculate max drawdown duration (longest underwater period in trading days)."""
+    nav = (1 + daily_returns).cumprod()
+    hwm = nav.cummax()
+    underwater = nav < hwm
+
+    if not underwater.any():
+        return 0.0
+
+    # Reason: (~underwater).cumsum() creates group IDs that increment at each new peak,
+    # so consecutive underwater days share the same group ID.
+    groups = (~underwater).cumsum()
+    max_duration = groups[underwater].value_counts().max()
+
+    return float(max_duration)
+
+
 def calc_ulcer_index(daily_returns: pd.Series) -> float:
-    """
-    Calculate Ulcer Index.
-
-    Measures both depth and duration of drawdowns.
-    Formula: sqrt(mean(drawdown^2))
-
-    Lower is better. Named because deep, prolonged drawdowns cause "ulcers".
-
-    Args:
-        daily_returns: Series of daily portfolio returns
-
-    Returns:
-        Ulcer index as decimal
-    """
+    """Calculate Ulcer Index — sqrt(mean(drawdown^2)). Measures drawdown depth and duration."""
     drawdown = calc_drawdown_series(daily_returns)
     return float(np.sqrt((drawdown ** 2).mean()))
-
-
-def calc_avg_drawdown(daily_returns: pd.Series) -> float:
-    """
-    Calculate average drawdown across all drawdown periods.
-
-    A drawdown period is a contiguous sequence of underwater days.
-
-    Args:
-        daily_returns: Series of daily portfolio returns
-
-    Returns:
-        Average drawdown as negative decimal
-    """
-    drawdown = calc_drawdown_series(daily_returns)
-
-    # Identify drawdown periods (contiguous sequences where drawdown < 0)
-    in_drawdown = drawdown < 0
-
-    # Find period start boundaries
-    period_starts = in_drawdown & ~in_drawdown.shift(1, fill_value=False)
-
-    # Label each period
-    period_labels = period_starts.cumsum()
-    period_labels[~in_drawdown] = 0
-
-    if period_labels.max() == 0:
-        return 0.0
-
-    # Get minimum (deepest) drawdown for each period
-    period_mins = drawdown.groupby(period_labels).min()
-    period_mins = period_mins[period_mins.index > 0]  # Exclude non-drawdown periods
-
-    return float(period_mins.mean()) if len(period_mins) > 0 else 0.0
-
-
-def calc_avg_drawdown_duration(daily_returns: pd.Series) -> float:
-    """
-    Calculate average drawdown duration in trading days.
-
-    Args:
-        daily_returns: Series of daily portfolio returns
-
-    Returns:
-        Average number of days underwater
-    """
-    drawdown = calc_drawdown_series(daily_returns)
-
-    in_drawdown = drawdown < 0
-
-    # Find period boundaries
-    period_starts = in_drawdown & ~in_drawdown.shift(1, fill_value=False)
-
-    # Label each period
-    period_labels = period_starts.cumsum()
-    period_labels[~in_drawdown] = 0
-
-    if period_labels.max() == 0:
-        return 0.0
-
-    # Count days in each period
-    period_lengths = period_labels[period_labels > 0].groupby(period_labels[period_labels > 0]).count()
-
-    return float(period_lengths.mean()) if len(period_lengths) > 0 else 0.0
 
 
 # =============================================================================
@@ -218,40 +87,12 @@ def calc_avg_drawdown_duration(daily_returns: pd.Series) -> float:
 # =============================================================================
 
 def calc_skewness(daily_returns: pd.Series) -> float:
-    """
-    Calculate skewness of returns distribution.
-
-    Skewness measures asymmetry around the mean:
-    - Negative skew: Left tail is longer (more extreme losses)
-    - Positive skew: Right tail is longer (more extreme gains)
-    - Zero: Symmetric distribution
-
-    Args:
-        daily_returns: Series of daily portfolio returns
-
-    Returns:
-        Skewness coefficient (typically between -3 and +3)
-    """
+    """Calculate skewness of returns distribution."""
     return float(daily_returns.skew())
 
 
 def calc_kurtosis(daily_returns: pd.Series) -> float:
-    """
-    Calculate excess kurtosis of returns distribution.
-
-    Kurtosis measures the "fatness" of tails:
-    - Excess kurtosis > 0 (leptokurtic): Fat tails, more extreme events
-    - Excess kurtosis = 0 (mesokurtic): Normal distribution
-    - Excess kurtosis < 0 (platykurtic): Thin tails, fewer extremes
-
-    Note: Returns EXCESS kurtosis (kurtosis - 3), so normal dist = 0.
-
-    Args:
-        daily_returns: Series of daily portfolio returns
-
-    Returns:
-        Excess kurtosis coefficient (normal distribution = 0)
-    """
+    """Calculate excess kurtosis of returns distribution (normal dist = 0)."""
     return float(daily_returns.kurtosis())
 
 
@@ -260,19 +101,7 @@ def calc_kurtosis(daily_returns: pd.Series) -> float:
 # =============================================================================
 
 def calc_beta(daily_returns: pd.Series, benchmark_returns: pd.Series) -> float:
-    """
-    Calculate portfolio beta relative to benchmark.
-
-    Beta measures systematic risk: how much the portfolio moves with the market.
-    Beta = Cov(Rp, Rm) / Var(Rm)
-
-    Args:
-        daily_returns: Series of daily portfolio returns
-        benchmark_returns: Series of daily benchmark returns (e.g., SPY)
-
-    Returns:
-        Beta coefficient (1.0 = moves with market, >1 = more volatile)
-    """
+    """Calculate portfolio beta relative to benchmark. Beta = Cov(Rp, Rm) / Var(Rm)."""
     aligned = pd.DataFrame({
         'portfolio': daily_returns,
         'benchmark': benchmark_returns
@@ -291,20 +120,7 @@ def calc_beta(daily_returns: pd.Series, benchmark_returns: pd.Series) -> float:
 
 
 def calc_tracking_error(daily_returns: pd.Series, benchmark_returns: pd.Series, annualize: bool = True) -> float:
-    """
-    Calculate tracking error (active risk).
-
-    Measures how closely the portfolio follows the benchmark.
-    Lower tracking error = more passive/index-like.
-
-    Args:
-        daily_returns: Series of daily portfolio returns
-        benchmark_returns: Series of daily benchmark returns
-        annualize: If True, annualize using sqrt(252)
-
-    Returns:
-        Tracking error as decimal
-    """
+    """Calculate tracking error (active risk) relative to benchmark."""
     aligned = pd.DataFrame({
         'portfolio': daily_returns,
         'benchmark': benchmark_returns
@@ -320,22 +136,7 @@ def calc_tracking_error(daily_returns: pd.Series, benchmark_returns: pd.Series, 
 
 
 def calc_upside_capture(daily_returns: pd.Series, benchmark_returns: pd.Series) -> float:
-    """
-    Calculate upside capture ratio.
-
-    Measures what percentage of benchmark gains the portfolio captures
-    during periods when the benchmark is positive.
-
-    Upside capture > 100%: Outperforms in up markets
-    Upside capture < 100%: Underperforms in up markets
-
-    Args:
-        daily_returns: Series of daily portfolio returns
-        benchmark_returns: Series of daily benchmark returns
-
-    Returns:
-        Upside capture as percentage (100 = matches benchmark)
-    """
+    """Calculate upside capture ratio (% of benchmark gains captured in up markets)."""
     aligned = pd.DataFrame({
         'portfolio': daily_returns,
         'benchmark': benchmark_returns
@@ -361,22 +162,7 @@ def calc_upside_capture(daily_returns: pd.Series, benchmark_returns: pd.Series) 
 
 
 def calc_downside_capture(daily_returns: pd.Series, benchmark_returns: pd.Series) -> float:
-    """
-    Calculate downside capture ratio.
-
-    Measures what percentage of benchmark losses the portfolio captures
-    during periods when the benchmark is negative.
-
-    Downside capture < 100%: Loses less than benchmark in down markets (good)
-    Downside capture > 100%: Loses more than benchmark in down markets (bad)
-
-    Args:
-        daily_returns: Series of daily portfolio returns
-        benchmark_returns: Series of daily benchmark returns
-
-    Returns:
-        Downside capture as percentage (100 = matches benchmark)
-    """
+    """Calculate downside capture ratio (% of benchmark losses captured in down markets)."""
     aligned = pd.DataFrame({
         'portfolio': daily_returns,
         'benchmark': benchmark_returns
@@ -409,16 +195,7 @@ def calc_all_risk_metrics(
     daily_returns: pd.Series,
     benchmark_returns: pd.Series | None = None
 ) -> RiskMetrics:
-    """
-    Calculate all risk metrics for a portfolio.
-
-    Args:
-        daily_returns: Series of daily portfolio returns
-        benchmark_returns: Optional benchmark returns for beta/tracking error
-
-    Returns:
-        RiskMetrics dataclass with all metrics
-    """
+    """Calculate all risk metrics for a portfolio. Returns a RiskMetrics instance."""
     # Tier 1: Essential
     volatility = calc_volatility(daily_returns)
     max_drawdown = calc_max_drawdown(daily_returns)
@@ -430,8 +207,7 @@ def calc_all_risk_metrics(
     # Tier 2: Downside-Focused
     downside_deviation = calc_downside_deviation(daily_returns)
     ulcer_index = calc_ulcer_index(daily_returns)
-    avg_drawdown = calc_avg_drawdown(daily_returns)
-    avg_drawdown_duration = calc_avg_drawdown_duration(daily_returns)
+    max_drawdown_duration = calc_max_drawdown_duration(daily_returns)
 
     # Tier 3: Distribution Shape (Tail Risk)
     skewness = calc_skewness(daily_returns)
@@ -457,8 +233,7 @@ def calc_all_risk_metrics(
         cvar_99=cvar_99,
         downside_deviation=downside_deviation,
         ulcer_index=ulcer_index,
-        avg_drawdown=avg_drawdown,
-        avg_drawdown_duration=avg_drawdown_duration,
+        max_drawdown_duration=max_drawdown_duration,
         skewness=skewness,
         kurtosis=kurtosis,
         beta=beta,

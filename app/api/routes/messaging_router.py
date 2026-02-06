@@ -37,7 +37,7 @@ from app.services.messaging import (
     get_unread_count,
     get_or_create_conversation,
 )
-from app.repositories import messaging_data as messages_repo
+from app.repositories import messaging as messages_repo
 from app.utils.time_utils import get_current_utc_time
 
 logger = logging.getLogger(__name__)

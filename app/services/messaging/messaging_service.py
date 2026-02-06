@@ -10,7 +10,7 @@ from uuid import UUID
 
 from app.db.core.db_config import UserSession
 from app.db.core.models.user_data_models import User
-from app.repositories import messaging_data as messages_repo
+from app.repositories import messaging as messages_repo
 from app.models.messaging_models import (
     MessageResponse,
     ConversationResponse,

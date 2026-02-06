@@ -1,6 +1,6 @@
 from datetime import datetime, timedelta
 from typing import Optional
-from app.repositories.macro_data import get_government_bond_rates
+from app.repositories.macro.rates import get_government_bond_rates
 from app.utils.decorators.tool_validation import log_simulation_data_range
 from app.core.atlas.tools.responses import success_response, error_response
 from app.utils.time_utils import get_current_utc_time

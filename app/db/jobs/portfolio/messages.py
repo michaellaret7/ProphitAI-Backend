@@ -11,7 +11,8 @@ from app.db.jobs.portfolio.models import (
     DrawdownResult,
     PortfolioCorrelationResult,
 )
-from app.repositories.messaging_data import get_or_create_conversation, create_message
+from app.repositories.messaging.conversations import get_or_create_conversation
+from app.repositories.messaging.messages import create_message
 
 PROPHITAI_SYSTEM_USER_ID = UUID("e7ab723f-a415-4f3c-8445-4eaf08cf605e")
 

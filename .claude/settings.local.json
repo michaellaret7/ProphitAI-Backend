@@ -67,7 +67,8 @@
       "WebFetch(domain:langfuse.com)",
       "WebFetch(domain:en.wikipedia.org)",
       "WebFetch(domain:mergersandinquisitions.com)",
-      "WebFetch(domain:community.render.com)"
+      "WebFetch(domain:community.render.com)",
+      "WebFetch(domain:gregorygundersen.com)"
     ],
     "deny": [],
     "ask": []

@@ -24,9 +24,6 @@ weights = [p['allocation'] for p in positions]
 fetched_tickers.extend(['AAPL', 'MSFT', 'GOOG', 'AMZN', 'TSLA', 'NVDA', 'META', 'NFLX', 'CSCO', 'INTC', 'SPY', 'QQQ'])
 fetched_tickers.extend(tickers)
 
-print(f"Tickers: {tickers}")
-print(f"Weights: {weights}")
-
 # Fetch price data for portfolio tickers
 price_df = fetch_bulk_ohlcv_data_for_tickers(fetched_tickers, '2012-01-01', '2026-01-31')
 price_df = pd.DataFrame({
@@ -76,6 +73,8 @@ class Portfolio:
             self.daily_returns,
             self.benchmark_returns
         )
+    
+
 
 
 
@@ -98,6 +97,7 @@ portfolio_2 = Portfolio(
 # print(portfolio.risk_metrics)
 print(portfolio_2.risk_metrics.upside_capture)
 print(portfolio_2.risk_metrics.downside_capture)
+print(portfolio_2.risk_metrics.max_drawdown_duration)
 # print(portfolio_2.risk_metrics.kurtosis)
 # print(portfolio_2.risk_metrics.skewness)
 

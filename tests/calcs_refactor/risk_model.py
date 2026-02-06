@@ -13,8 +13,7 @@ class RiskMetrics(BaseModel):
     # Tier 2: Downside-Focused
     downside_deviation: float      # Semi-deviation (negative returns only)
     ulcer_index: float             # Depth and duration of drawdowns
-    avg_drawdown: float            # Average of all drawdowns
-    avg_drawdown_duration: float   # Average days underwater
+    max_drawdown_duration: float   # Maximum duration of a drawdown
 
     # Tier 3: Distribution Shape (Tail Risk)
     skewness: float                # Asymmetry of returns (-ve = left tail risk)

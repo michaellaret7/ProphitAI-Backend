@@ -11,7 +11,7 @@ from typing import Any, Dict
 from app.api.response_envelope import ok_envelope
 from app.db.core.pull_fmp_data import FMP_API_DATA
 from app.redis.client import cache
-from app.repositories.fundamental_data import get_all_columns_fundamentals
+from app.repositories.fundamentals.statements import get_all_columns_fundamentals
 from app.utils.decorators.api_decorators import handle_controller_errors
 from app.db.core.db_config import MarketSession
 from app.db.core.models.market_data_models import Ticker

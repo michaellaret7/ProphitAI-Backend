@@ -537,7 +537,7 @@ class LiquidityCalculator:
             Dictionary containing liquidity analysis results
         """
         from app.repositories.price_data import get_price_data_daily
-        from app.repositories.fundamental_data import get_fundamental_data
+        from app.repositories.fundamentals.statements import get_fundamental_data
         from datetime import datetime, timedelta
         
         # Get price data

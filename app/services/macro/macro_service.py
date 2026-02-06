@@ -3,7 +3,7 @@
 from typing import Dict, Any, Optional
 from datetime import date
 
-from app.repositories.macro_data import (
+from app.repositories.macro import (
     get_commodity_prices,
     get_government_bond_rates,
     get_economic_indicators,
