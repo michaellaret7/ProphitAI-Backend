@@ -1,5 +1,6 @@
 """User CRUD repository functions for creating, reading, updating, and deleting user records."""
 
+from app.db.core.db_config import UserSession
 from app.db.core.models.user_data_models import *
 from sqlalchemy.orm import joinedload, selectinload
 from typing import Optional, Dict, Any
@@ -123,6 +124,66 @@ def get_all_user_data_by_id(user_id: str, session=None) -> Optional[Dict[str, An
         })
     return user_data
 
+@with_session('user')
+def get_all_ria_client_portfolios_by_id(user_id: str, session=None) -> Optional[Dict[str, Any]]:
+    """
+    Get all client portfolios for a RIA by internal user ID (UUID).
+
+    Args:
+        user_id: Internal database RIA user UUID
+
+    Returns:
+        Dictionary containing all client portfolios for the RIA, or None if not found
+    """
+    if not user_id:
+        raise ValueError("User ID must be provided")
+
+    user = session.query(User).options(
+        joinedload(User.company),
+        selectinload(User.portfolios)
+    ).filter(User.id == user_id).first()
+
+    if not user:
+        return None
+
+    # Reason: RIAs don't have their own portfolios — they manage client portfolios
+    if user.role == 'ria':
+        portfolios = session.query(Portfolio).join(
+            User, Portfolio.user_id == User.id
+        ).filter(User.handler_id == user.id).all()
+    else:
+        portfolios = user.portfolios
+
+    user_data = {
+        'id': str(user.id),
+        'clerk_id': user.clerk_id,
+        'email': user.email,
+        'first_name': user.first_name,
+        'last_name': user.last_name,
+        'role': user.role,
+        'creation_date': user.creation_date.isoformat() if getattr(user, 'creation_date', None) else None,
+        'companies': [],
+        'portfolios': []
+    }
+    if user.company:
+        company = user.company
+        user_data['companies'].append({
+            'id': str(company.id),
+            'name': company.name,
+            'creation_date': company.creation_date.isoformat() if company.creation_date else None,
+            'seats': company.seats,
+            'user_role': user.role
+        })
+    for portfolio in portfolios:
+        user_data['portfolios'].append({
+            'name': portfolio.name,
+            'portfolio_id': str(portfolio.id),
+            'user_id': str(portfolio.user_id),
+            'nav': portfolio.nav,
+            'is_current': portfolio.is_current,
+            'is_discretionary': portfolio.is_discretionary
+        })
+    return user_data
 
 @with_session('user')
 def get_all_user_data_by_clerk_id(clerk_id: str, session=None) -> Optional[Dict[str, Any]]:
