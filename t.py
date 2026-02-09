@@ -1,24 +1,16 @@
+"""Re-run monitor for all portfolios belonging to michaellaret7@gmail.com."""
 from app.db.core.db_config import UserSession
 from app.db.core.models.user_data_models import User, Portfolio
-from app.utils.serialize_output import serialize_sqlalchemy_obj
+from app.db.jobs.portfolio.batch_monitor import BatchMonitorPortfolio
 
 session = UserSession()
+user = session.query(User).all()
 
-# 1. Get the RIA
-ria = session.query(User).filter(User.email == 'michaellaret7@gmail.com').first()
-print(f"RIA: {ria.first_name} {ria.last_name} (role: {ria.role})")
+for u in user:
+    print(u.email)
+    print(u.portfolios)
+    for p in u.portfolios:
+        print(p.name)
 
-# 2. Get all portfolios for the RIA's clients (single query via join)
-client_portfolios = session.query(Portfolio).join(
-    User, Portfolio.user_id == User.id
-).filter(
-    User.handler_id == ria.id,
-    Portfolio.is_current == True
-).all()
-
-for p in client_portfolios:
-    print(f"  Portfolio: {p.name} | Client ID: {p.user_id} | Client Email: {p.user.email} | NAV: {p.nav}")
-    for item in p.items:
-        print(f"    Item: {item.ticker} | Allocation: {item.allocation} | Num Shares: {item.num_shares}")
 
 session.close()

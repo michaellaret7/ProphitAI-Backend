@@ -49,11 +49,15 @@ class BatchMonitorPortfolio:
         # Use the earlier of: oldest portfolio date OR 180 days ago
         start_date = min(self.oldest_portfolio_created_date, min_start_date)
 
+        # Reason: drop_na=False because each detection function filters to its own
+        # portfolio's tickers and handles NaN independently. Global dropna across all
+        # portfolios' tickers would eliminate rows where any single ticker has a gap.
         returns_df = build_returns_df(
             tickers,
             start_date=start_date.strftime('%Y-%m-%d'),
             end_date=get_current_utc_time().strftime('%Y-%m-%d'),
-            frequency='daily'
+            frequency='daily',
+            drop_na=False
         )
         print(f"[CACHE] Done. Shape: {returns_df.shape}")
         return returns_df

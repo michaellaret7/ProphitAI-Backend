@@ -81,30 +81,6 @@ class Portfolio:
             self.benchmark_returns
         )
     
-import time 
-start_time = time.time()
-portfolio = Portfolio(
-    name='User Portfolio',
-    tickers=tickers,
-    weights=weights,
-    price_df=price_df,
-    benchmark_prices=benchmark_prices
-)
-end_time = time.time()
-print(f"Time taken to create portfolio: {end_time - start_time} seconds")
 
-start_time = time.time()
-portfolio_2 = Portfolio(
-    name='User Portfolio 2',
-    tickers=['AAPL', 'MSFT', 'GOOG', 'AMZN', 'TSLA', 'NVDA', 'META', 'NFLX', 'CSCO', 'INTC', 'SPY', 'QQQ'],
-    weights=[0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1],
-    price_df=price_df,
-    benchmark_prices=benchmark_prices
-)
-end_time = time.time()
-print(f"Time taken to create portfolio 2: {end_time - start_time} seconds")
-
-print(portfolio_2.performance_metrics)
-print(portfolio_2.risk_metrics)
 
 

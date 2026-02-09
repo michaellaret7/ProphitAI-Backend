@@ -159,7 +159,7 @@ def embed_batch():
 
 
 if __name__ == "__main__":
-    for i in range(2):
+    for i in range(10):
         tickers = read_tickers_from_csv()
 
         print(f"Found {len(tickers)} tickers in CSV. Processing next batch...")

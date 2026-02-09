@@ -242,17 +242,30 @@ def build_returns_df(
     tickers: list[str],
     start_date: str,
     end_date: str,
-    frequency: str = 'daily'
+    frequency: str = 'daily',
+    drop_na: bool = True
 ) -> pd.DataFrame:
     """
     Build a returns DataFrame for multiple tickers.
+
+    Args:
+        tickers: List of ticker symbols.
+        start_date: Start date in 'YYYY-MM-DD' format.
+        end_date: End date in 'YYYY-MM-DD' format.
+        frequency: Data frequency - 'daily', '15mins', or 'hourly'.
+        drop_na: If True, drop rows with any NaN across all columns.
+            Set to False when building a shared cache for multiple portfolios,
+            since each consumer will filter to its own tickers and handle NaN.
+
+    Returns:
+        DataFrame with DatetimeIndex and ticker columns containing returns.
     """
 
     price_data = fetch_bulk_ohlcv_data_for_tickers(
-        tickers, 
-        start_date, 
-        end_date, 
-        frequency, 
+        tickers,
+        start_date,
+        end_date,
+        frequency,
         returns=True
     )
 
@@ -261,7 +274,8 @@ def build_returns_df(
 
     returns_df.index = pd.to_datetime(returns_df.index)
     returns_df.sort_index(inplace=True)
-    returns_df.dropna(inplace=True)
+    if drop_na:
+        returns_df.dropna(inplace=True)
 
     return returns_df
 
