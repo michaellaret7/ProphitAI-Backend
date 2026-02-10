@@ -72,11 +72,4 @@ class PlannerAgent(AgentBase):
 
         return answer
 
-if __name__ == "__main__":
-    agent = PlannerAgent(
-        task="Build a defensive consumer staples portfolio. Screen for companies with strong free cash flow and low leverage, analyze their recent earnings trends and forward guidance, assess the macro backdrop for the sector including inflation and consumer spending headwinds, run risk analysis on the candidate set for correlation and concentration, then construct a final 10-15 stock portfolio with position sizing, investment theses, and key risk drivers for each holding.",
-        provider="anthropic",
-        model="claude-opus-4-6"
-    )
-    result = agent.run()
-    print(result)
+

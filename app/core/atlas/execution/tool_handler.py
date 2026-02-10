@@ -19,7 +19,7 @@ if TYPE_CHECKING:
     from app.core.atlas.models.callbacks import ChatCallback, NoOpChatCallback
 
 # Tools that modify agent state and must run sequentially
-SEQUENTIAL_ONLY_TOOLS = {"write_note", "finalize", "think"}
+SEQUENTIAL_ONLY_TOOLS = {"write_note", "finalize", "think", "update_plan"}
 
 def should_run_parallel(tool_calls: List[Any]) -> bool:
     """Determine if tool calls can be executed in parallel.

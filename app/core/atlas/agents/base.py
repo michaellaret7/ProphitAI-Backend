@@ -38,7 +38,9 @@ class AgentBase(ABC):
         self.messages: List[Dict[str, Any]] = []
         self.total_tokens: int = 0
 
-        self.register_default_tools()
+        # ---- Register default tools ---- #
+        self.add_tool(**THINK_TOOL)
+        self.add_tool(**CALCULATOR_TOOL)
 
     def add_tool(
         self,
@@ -60,11 +62,6 @@ class AgentBase(ABC):
         self.tool_functions[name] = function
         self.tool_schemas[name] = parameters
     
-    def register_default_tools(self) -> None:
-        """Register default tools for the agent."""
-        self.add_tool(**THINK_TOOL)
-        self.add_tool(**CALCULATOR_TOOL)
-
     def get_tool_names(self) -> List[str]:
         """Return list of registered tool names."""
         return list(self.tool_functions.keys())

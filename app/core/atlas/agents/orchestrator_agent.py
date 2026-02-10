@@ -1,21 +1,29 @@
 """OrchestratorAgent - Decomposes complex tasks and delegates to worker agents."""
 
+from functools import partial
 from typing import Optional, List, Dict, Any
 
 from app.core.atlas.agents.base import AgentBase
 from app.core.atlas.models import PrintMode, NoOpChatCallback
+from app.core.atlas.models.new_plan import Plan
 from app.core.atlas.execution import ExecutionLoop, ToolHandler
 from app.core.atlas.logging import AgentPrinter
 from app.core.atlas.tools.worker_agent.setup import DEPLOY_WORKER_TOOL
 from app.core.atlas.tools.base.search_engine import LLM_WEB_SEARCH_TOOL
-from app.core.atlas.prompts.chat_agent_prompts.orchestrator_agent import ORCHESTRATOR_SYSTEM_PROMPT
+from app.core.atlas.tools.orchestrator import UPDATE_PLAN_TOOL, update_plan
+from app.core.atlas.prompts.chat_agent_prompts.orchestrator_agent import (
+    ORCHESTRATOR_SYSTEM_PROMPT,
+    build_plan_prompt,
+)
+from app.core.atlas.planning.agent import PlannerAgent
 
 class OrchestratorAgent(AgentBase):
     """Decomposes complex tasks and delegates sub-tasks to worker agents.
 
-    The orchestrator's only action tools are think and deploy_worker_agent.
-    It plans the work, spawns focused workers with scoped tool sets,
-    and synthesizes their results into a final answer.
+    Supports two modes:
+    - Default: Ad-hoc decomposition using think + deploy_worker_agent.
+    - Plan-first: PlannerAgent generates a structured plan, then the
+      orchestrator executes each task and marks it complete via update_plan.
     """
 
     def __init__(
@@ -27,6 +35,7 @@ class OrchestratorAgent(AgentBase):
         max_iterations: int = 50,
         print_mode: PrintMode = PrintMode.PRODUCTION,
         temperature: Optional[float] = None,
+        plan_first: bool = False,
     ):
         provider = provider or "gemini"
         model = model or "gemini-3-pro-preview"
@@ -40,6 +49,9 @@ class OrchestratorAgent(AgentBase):
         )
 
         self.task = task
+
+        self.plan_first = plan_first
+        self.plan: Optional[Plan] = None
 
         # Attributes required by ExecutionLoop and ToolHandler (duck typing)
         self.chat_callback = NoOpChatCallback()
@@ -59,8 +71,16 @@ class OrchestratorAgent(AgentBase):
 
     def run(self) -> Dict[str, Any]:
         """Execute the orchestrator's task decomposition and delegation loop."""
+
+        if self.plan_first:
+            planner = PlannerAgent(task=self.task, print_mode=PrintMode.PRODUCTION)
+            self.plan = planner.run()
+            self.add_tool(**{**UPDATE_PLAN_TOOL, "function": partial(update_plan, self.plan)})
+
+        system_prompt = build_plan_prompt(self.plan) if self.plan else ORCHESTRATOR_SYSTEM_PROMPT
+
         self.messages = [
-            {"role": "system", "content": ORCHESTRATOR_SYSTEM_PROMPT},
+            {"role": "system", "content": system_prompt},
             {"role": "user", "content": self.task},
         ]
 
@@ -72,31 +92,19 @@ class OrchestratorAgent(AgentBase):
             "tokens_used": result["total_tokens"],
             "iterations": result["iterations"],
             "stop_reason": result["stop_reason"],
+            "plan": self.plan.model_dump() if self.plan else None,
         }
 
 
 if __name__ == "__main__":
     orchestrator_agent = OrchestratorAgent(
-        task="Write me an in depth research report on CUBE and give an investment thesis for the company(whether to buy, sell, or hold).",
+        task="Build a defensive consumer staples portfolio.",
         provider="anthropic",
         model="claude-opus-4-6",
         max_iterations=50,
-        print_mode=PrintMode.PRODUCTION,
+        print_mode=PrintMode.DEBUG,
         temperature=0.7,
+        plan_first=True,
     )
     result = orchestrator_agent.run()
     print(result["answer"])
-    for i, msg in enumerate(orchestrator_agent.messages):
-        # Handle both dict and Pydantic message objects
-        m = msg if isinstance(msg, dict) else msg.model_dump()
-        print(f"\n{'='*60}")
-        print(f"Message {i} | Role: {m.get('role', 'N/A')}")
-        print(f"{'='*60}")
-        if m.get("content"):
-            print(m["content"])
-        if m.get("tool_calls"):
-            for tc in m["tool_calls"]:
-                fn = tc if isinstance(tc, dict) else tc.model_dump()
-                fn = fn.get("function", fn)
-                print(f"\n  Tool Call: {fn.get('name')}")
-                print(f"  Args: {fn.get('arguments')}")

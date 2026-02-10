@@ -1,39 +1,31 @@
 import sys
 from pathlib import Path
+import json
 
 # Add project root and current directory to path for imports
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
-import uuid
 import pandas as pd
 import numpy as np
+import matplotlib.pyplot as plt
 from app.repositories.price_data import fetch_bulk_ohlcv_data_for_tickers
-from app.repositories.portfolio.retrieval import retrieve_portfolio
 from calc_risk_metrics import calc_all_risk_metrics
 from risk_model import RiskMetrics
 from calc_performance_metrics import calc_all_performance_metrics
 from performance_model import PerformanceMetrics
 
-fetched_tickers = []
-# Fetch portfolio positions and weights
-portfolio_id = uuid.UUID("828f7921-8a3c-4c89-aa22-39888165e0df")
-positions = retrieve_portfolio(portfolio_id=portfolio_id)
-
-tickers = [p['ticker'] for p in positions]
-weights = [p['allocation'] for p in positions]
-
-fetched_tickers.extend(['AAPL', 'MSFT', 'GOOG', 'AMZN', 'TSLA', 'NVDA', 'META', 'NFLX', 'CSCO', 'INTC', 'SPY', 'QQQ'])
-fetched_tickers.extend(tickers)
+tickers = ['PM', 'MO', 'KO', 'PG', 'PEP', 'HSY', 'CL', 'MDLZ']
+weights = [0.15, 0.15, 0.125, 0.125, 0.125, 0.125, 0.10, 0.10]
 
 # Fetch price data for portfolio tickers
-price_df = fetch_bulk_ohlcv_data_for_tickers(fetched_tickers, '2012-01-01', '2026-01-31')
+price_df = fetch_bulk_ohlcv_data_for_tickers(tickers, '2020-01-01', '2026-01-31')
 price_df = pd.DataFrame({
     ticker: df['adj_close'] for ticker, df in price_df.items()
 }) 
 
-benchmark_data = fetch_bulk_ohlcv_data_for_tickers(['SPY'], '2012-01-01', '2026-01-31')
-benchmark_prices = benchmark_data['SPY']['adj_close']
+benchmark_data = fetch_bulk_ohlcv_data_for_tickers(['XLP'], '2020-01-01', '2026-01-31')
+benchmark_prices = benchmark_data['XLP']['adj_close']
 
 class Portfolio:
     def __init__(
@@ -82,5 +74,25 @@ class Portfolio:
         )
     
 
+portfolio = Portfolio(
+    name="Portfolio",
+    tickers=tickers,
+    weights=weights,
+    price_df=price_df,
+    benchmark_prices=benchmark_prices
+)
 
+print(json.dumps(portfolio.risk_metrics.model_dump(), indent=4))
+print(json.dumps(portfolio.performance_metrics.model_dump(), indent=4))
 
+benchmark_cumulative = (1 + portfolio.benchmark_returns).cumprod() - 1
+
+plt.plot(portfolio.cumulative_returns.index, portfolio.cumulative_returns * 100, label='Portfolio')
+plt.plot(benchmark_cumulative.index, benchmark_cumulative * 100, label='XLP Benchmark')
+plt.title('Cumulative Returns: Portfolio vs XLP')
+plt.xlabel('Date')
+plt.ylabel('Cumulative Return (%)')
+plt.legend()
+plt.grid(True, alpha=0.3)
+plt.tight_layout()
+plt.show()

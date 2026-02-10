@@ -225,7 +225,7 @@ def calc_all_risk_metrics(
         downside_capture = calc_downside_capture(daily_returns, benchmark_returns)
 
     return RiskMetrics(
-        volatility=volatility,
+        annualized_volatility=volatility,
         max_drawdown=max_drawdown,
         var_95=var_95,
         var_99=var_99,

@@ -31,3 +31,27 @@ Good: "Research AAPL's Q4 2025 earnings results. Pull the income statement and b
 then analyze revenue growth, margin trends, and any notable changes in debt levels.
 Return a structured summary with key metrics and your assessment. Today's date is 2/10/2026."
 """
+
+
+def build_plan_prompt(plan) -> str:
+    """Build the system prompt for plan-first mode.
+
+    Appends the plan tasks to the base orchestrator prompt so the LLM
+    knows exactly what to execute and in what order.
+    """
+    task_lines = "\n".join(
+        f"{t.id}. {t.description}" for t in plan.tasks
+    )
+
+    return ORCHESTRATOR_SYSTEM_PROMPT + f"""
+
+## Your Plan
+
+A structured plan has been created for this task. Execute each task by deploying
+workers with the right tools, then mark it complete with update_plan.
+
+After ALL tasks are marked complete, synthesize all worker results into your final answer.
+
+### Tasks
+{task_lines}
+"""

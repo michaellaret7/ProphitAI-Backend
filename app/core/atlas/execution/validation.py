@@ -27,7 +27,7 @@ def validate_tool_call(name: str, args: dict, result: Any, agent: Any) -> str:
                 if task.status == TaskStatus.IN_PROGRESS:
                     main_tasks_in_progress.append(f"Task {task.id}: {task.description}")
 
-                for subtask in task.subtasks:
+                for subtask in getattr(task, 'subtasks', []):
                     if subtask.status == TaskStatus.IN_PROGRESS:
                         subtasks_in_progress.append(f"Subtask {subtask.id}: {subtask.description}")
 
