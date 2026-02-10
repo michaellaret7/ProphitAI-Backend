@@ -9,6 +9,7 @@ from app.core.atlas.logging import AgentPrinter
 from app.core.atlas.tools.foundry.earnings_calls import EARNINGS_CALL_SEARCH_TOOL
 from app.core.atlas.prompts.worker import WORKER_SYSTEM_PROMPT
 from app.core.atlas.tools.deep.write_notes import WRITE_NOTE_TOOL
+from app.core.atlas.tools.base import LLM_WEB_SEARCH_TOOL
 
 
 class WorkerAgent(AgentBase):
@@ -26,8 +27,8 @@ class WorkerAgent(AgentBase):
         *,
         provider: Optional[str] = None,
         model: Optional[str] = None,
-        max_iterations: int = 20,
-        print_mode: PrintMode = PrintMode.VERBOSE,
+        max_iterations: int = 30,
+        print_mode: PrintMode = PrintMode.PRODUCTION,
         temperature: Optional[float] = None
     ):
         provider = provider or "grok"
@@ -55,7 +56,8 @@ class WorkerAgent(AgentBase):
         self.tool_handler = ToolHandler(self, self.printer, chat_callback=self.chat_callback)
         self.execution_loop = ExecutionLoop(self)
 
-        self.add_tool(**WRITE_NOTE_TOOL)
+        self.add_tool(**WRITE_NOTE_TOOL) # We need to rebuild the write note tool to use this new version.
+        self.add_tool(**LLM_WEB_SEARCH_TOOL)
 
         # Register the dynamically assigned tools
         for tool_def in tools:
@@ -78,12 +80,4 @@ class WorkerAgent(AgentBase):
             "stop_reason": result["stop_reason"],
         }
 
-if __name__ == "__main__":
-    agent = WorkerAgent(
-        task="Find me any trends from the CUBE earnings call transcripts.",
-        provider="gemini",
-        model="gemini-3-pro-preview",
-        tools=[EARNINGS_CALL_SEARCH_TOOL],
-    )
-    result = agent.run()
-    print(result)
+

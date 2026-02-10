@@ -6,7 +6,7 @@ from typing import List, Dict, Any, Callable, Optional
 from app.core.atlas.models import PrintMode
 from app.utils.choose_model_and_client import get_model_and_client
 
-from app.core.atlas.tools.base import CALCULATOR_TOOL, THINK_TOOL, LLM_WEB_SEARCH_TOOL
+from app.core.atlas.tools.base import CALCULATOR_TOOL, THINK_TOOL
 
 class AgentBase(ABC):
     """Abstract base class providing shared foundation for DeepAgent and ChatAgent."""
@@ -63,6 +63,7 @@ class AgentBase(ABC):
     def register_default_tools(self) -> None:
         """Register default tools for the agent."""
         self.add_tool(**THINK_TOOL)
+        self.add_tool(**CALCULATOR_TOOL)
 
     def get_tool_names(self) -> List[str]:
         """Return list of registered tool names."""

@@ -55,7 +55,7 @@ class ChatAgent(AgentBase):
             temperature=temperature,
         )
 
-        self.system_prompt = system_prompt if system_prompt else CHAT_SYSTEM_PROMPT
+        self.system_prompt = CHAT_SYSTEM_PROMPT
 
         # Chat streaming callback - defaults to no-op if not provided
         self.chat_callback: Union[ChatCallback, NoOpChatCallback] = (
@@ -92,6 +92,7 @@ class ChatAgent(AgentBase):
             "content": self.system_prompt
         })
 
+        #  Pull user conversation history from the session and inject into the messages list which will be passed to the LLM.
         if conversation_history:
             for msg in conversation_history:
                 if msg.get("role") in ("user", "assistant"):
@@ -100,6 +101,7 @@ class ChatAgent(AgentBase):
                         "content": msg.get("content", "")
                     })
 
+        #  Add the user's message to the messages list.
         messages.append({
             "role": "user",
             "content": user_message
@@ -116,9 +118,9 @@ class ChatAgent(AgentBase):
         self.total_tokens = 0
         self.tool_handler.tool_call_history = []
 
-        self.messages = self._build_messages(user_message, conversation_history)
+        self.messages = self._build_messages(user_message, conversation_history) # Populate messages list with the args from run() method.
 
-        result = self.execution_loop.execute()
+        result = self.execution_loop.execute() # Pass those messages list to the execution loop.
 
         return ChatResponse(
             answer=result["answer"],
@@ -144,9 +146,9 @@ class ChatAgent(AgentBase):
                 if not user_input:
                     continue
 
-                response = self.run(user_input, session.get_history())
-                session.add_user_message(user_input)
-                session.add_assistant_message(response.answer)
+                response = self.run(user_input, session.get_history()) # Populate the messages list with the user's message and the conversation history.
+                session.add_user_message(user_input) # Add the user's message to the session history.
+                session.add_assistant_message(response.answer) # Add the agent's response to the session history.
 
                 print(f"\n[Agent]: {response.answer}")
 
@@ -156,3 +158,4 @@ class ChatAgent(AgentBase):
             except Exception as e:
                 print(f"\nError: {e}")
                 continue
+
