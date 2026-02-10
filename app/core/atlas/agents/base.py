@@ -62,9 +62,7 @@ class AgentBase(ABC):
     
     def register_default_tools(self) -> None:
         """Register default tools for the agent."""
-        self.add_tool(**CALCULATOR_TOOL)
         self.add_tool(**THINK_TOOL)
-        self.add_tool(**LLM_WEB_SEARCH_TOOL)
 
     def get_tool_names(self) -> List[str]:
         """Return list of registered tool names."""

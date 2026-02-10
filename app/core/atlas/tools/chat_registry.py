@@ -13,6 +13,7 @@ This registry adds ONLY the agent-type-specific tools on top:
 from typing import TYPE_CHECKING
 
 # Macro research tools
+from app.core.atlas.tools.base import LLM_WEB_SEARCH_TOOL
 from app.core.atlas.tools.foundry.macro_research import MACRO_RESEARCH_SEARCH_TOOL
 
 # Equity research tools
@@ -55,6 +56,8 @@ def register_tools_for_agent_type(agent: "AgentBase", agent_type: str) -> None:
             - "tax_research": Tax documents, IRS forms, instructions
             - "general": No additional tools
     """
+    agent.add_tool(**LLM_WEB_SEARCH_TOOL)
+    
     if agent_type == "macro_research":
         agent.add_tool(**MACRO_RESEARCH_SEARCH_TOOL)
 

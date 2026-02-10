@@ -21,6 +21,7 @@ from app.core.atlas.tools.deep import (
     FINALIZE_DESCRIPTION,
     FINALIZE_PARAMETERS,
 )
+from app.core.atlas.tools.base import LLM_WEB_SEARCH_TOOL
 
 if TYPE_CHECKING:
     from app.core.atlas.agents import AgentBase
@@ -29,6 +30,7 @@ if TYPE_CHECKING:
 
 def register_base_deep_tools(agent: Any) -> None:
     """Register the base tools on the provided agent."""
+    agent.add_tool(**LLM_WEB_SEARCH_TOOL)
 
     # update_tasks (task management)
     agent.add_tool(
