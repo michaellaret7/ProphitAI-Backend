@@ -1,6 +1,6 @@
 """Execution loop and tool handling implementations."""
 
-from .loop_chat import ChatExecutionLoop
+from .loop import ExecutionLoop
 from .loop_deep import DeepExecutionLoop
 from .tool_handler import ToolHandler, should_run_parallel
 from .utils import (
@@ -14,7 +14,7 @@ from .utils import (
 )
 
 __all__ = [
-    "ChatExecutionLoop",
+    "ExecutionLoop",
     "DeepExecutionLoop",
     "ToolHandler",
     "should_run_parallel",

@@ -2,8 +2,6 @@
 
 from __future__ import annotations
 
-import os
-import re
 from typing import List, Dict, Any, Optional, Union
 
 from app.core.atlas.models import (
@@ -14,7 +12,7 @@ from app.core.atlas.models import (
     NoOpChatCallback,
 )
 from app.core.atlas.prompts import CHAT_SYSTEM_PROMPT
-from app.core.atlas.execution import ChatExecutionLoop, ToolHandler
+from app.core.atlas.execution import ExecutionLoop, ToolHandler
 from app.core.atlas.logging import AgentPrinter
 
 from .base import AgentBase
@@ -23,15 +21,6 @@ from app.core.atlas.tools.foundry.macro_research import MACRO_RESEARCH_SEARCH_TO
 from app.core.atlas.tools.foundry.earnings_calls import EARNINGS_CALL_SEARCH_TOOL
 from app.core.atlas.tools.foundry.user_uploads import USER_UPLOAD_SEARCH_TOOL
 from app.core.atlas.tools.foundry.tax_research import TAX_RESEARCH_SEARCH_TOOL
-
-# ANSI color codes for terminal formatting
-_BOLD = "\033[1m"
-_DIM = "\033[2m"
-_CYAN = "\033[36m"
-_GREEN = "\033[32m"
-_BLUE = "\033[34m"
-_RESET = "\033[0m"
-
 
 class ChatAgent(AgentBase):
     """Conversational agent for interactive tool-assisted chat.
@@ -54,9 +43,9 @@ class ChatAgent(AgentBase):
         chat_callback: Optional[Union[ChatCallback, NoOpChatCallback]] = None,
     ):
         if provider is None:
-            provider = "fireworks"
+            provider = "grok"
         if model is None:
-            model = "Kimi-K2-instruct"
+            model = "grok-4-1-fast-non-reasoning"
 
         super().__init__(
             provider=provider,
@@ -81,7 +70,7 @@ class ChatAgent(AgentBase):
         self.tool_handler = ToolHandler(
             self, self.printer, chat_callback=self.chat_callback
         )  
-        self.execution_loop = ChatExecutionLoop(self)
+        self.execution_loop = ExecutionLoop(self)
 
         # Attributes expected by ToolHandler (BaseAgent compatibility)
         self.simulation_date = None
@@ -118,27 +107,6 @@ class ChatAgent(AgentBase):
 
         return messages
 
-    @staticmethod
-    def _format_markdown(text: str) -> str:
-        """Convert markdown to ANSI-colored terminal output."""
-        lines = text.split("\n")
-        formatted = []
-
-        for line in lines:
-            if line.startswith("###"):
-                line = f"{_BLUE}{_BOLD}{line.lstrip('#').strip()}{_RESET}"
-            elif line.startswith("##"):
-                line = f"{_CYAN}{_BOLD}{line.lstrip('#').strip()}{_RESET}"
-            elif line.startswith("#"):
-                line = f"{_GREEN}{_BOLD}{line.lstrip('#').strip()}{_RESET}"
-            else:
-                line = re.sub(r"\*\*(.+?)\*\*", rf"{_BOLD}\1{_RESET}", line)
-                line = re.sub(r"(?<!\*)\*([^*]+?)\*(?!\*)", rf"{_DIM}\1{_RESET}", line)
-
-            formatted.append(line)
-
-        return "\n".join(formatted)
-
     def run(
         self,
         user_message: str,
@@ -167,23 +135,20 @@ class ChatAgent(AgentBase):
         print("Press Ctrl+C to exit")
         print("=" * 60)
 
-        # Set session_id for callback events
         self.session_id = session_id
         session = ChatSession(session_id=session_id)
 
         while True:
             try:
                 user_input = input("\n[You]: ").strip()
-
                 if not user_input:
                     continue
 
                 response = self.run(user_input, session.get_history())
-
                 session.add_user_message(user_input)
                 session.add_assistant_message(response.answer)
 
-                print(f"\n[Agent]: {self._format_markdown(response.answer)}")
+                print(f"\n[Agent]: {response.answer}")
 
             except KeyboardInterrupt:
                 print("\n\nGoodbye!")
@@ -191,21 +156,3 @@ class ChatAgent(AgentBase):
             except Exception as e:
                 print(f"\nError: {e}")
                 continue
-
-
-if __name__ == "__main__":
-    agent = ChatAgent(
-        provider='anthropic',
-        # model='claude-opus-4-5-20251101',
-        model='claude-opus-4-6',
-        print_mode=PrintMode.PRODUCTION
-    )
-    # agent.add_tool(**CREDIT_RESEARCH_SEARCH_TOOL)
-    # agent.add_tool(**MACRO_RESEARCH_SEARCH_TOOL)
-    # agent.add_tool(**EARNINGS_CALL_SEARCH_TOOL)
-    # agent.add_tool(**USER_UPLOAD_SEARCH_TOOL)
-    agent.add_tool(**TAX_RESEARCH_SEARCH_TOOL)
-    agent.run_interactive(session_id="test")
-
-
-    

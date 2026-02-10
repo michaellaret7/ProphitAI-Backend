@@ -66,7 +66,6 @@ class AgentBase(ABC):
         self.add_tool(**THINK_TOOL)
         self.add_tool(**LLM_WEB_SEARCH_TOOL)
 
-
     def get_tool_names(self) -> List[str]:
         """Return list of registered tool names."""
         return list(self.tool_functions.keys())

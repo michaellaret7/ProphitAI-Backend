@@ -8,13 +8,13 @@ from typing import TYPE_CHECKING, Dict, Any, List, Optional
 from app.core.atlas.execution.tool_handler import should_run_parallel
 
 if TYPE_CHECKING:
-    from app.core.atlas.agents.chat_agent import ChatAgent
+    from app.core.atlas.agents.base import AgentBase
 
 
-class ChatExecutionLoop:
+class ExecutionLoop:
     """Fast execution loop for chat - no planning, terminates on text-only response."""
 
-    def __init__(self, agent: 'ChatAgent'):
+    def __init__(self, agent: 'AgentBase'):
         self.agent = agent
         self.printer = agent.printer
 

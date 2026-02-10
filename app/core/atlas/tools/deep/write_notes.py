@@ -84,3 +84,10 @@ WRITE_NOTE_PARAMETERS = {
     },
     "required": ["title", "content"],
 }
+
+WRITE_NOTE_TOOL = {
+    "name": "write_note",
+    "description": WRITE_NOTE_DESCRIPTION,
+    "parameters": WRITE_NOTE_PARAMETERS,
+    "function": write_note,
+}

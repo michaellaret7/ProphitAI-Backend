@@ -81,7 +81,7 @@ class ChatSessionManager:
         from app.core.atlas.agents import ChatAgent
         from app.core.atlas.models import PrintMode
         from app.core.atlas.tools.chat_registry import register_tools_for_agent_type
-        from app.core.atlas.prompts.chat_agents import (
+        from app.core.atlas.prompts.chat_agent_prompts import (
             get_equity_research_prompt,
             get_macro_research_prompt,
             get_tax_research_prompt,
