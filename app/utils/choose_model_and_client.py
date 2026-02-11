@@ -5,9 +5,9 @@ from dataclasses import dataclass
 from typing import Optional, Tuple
 from openai import OpenAI
 from dotenv import load_dotenv
+from langfuse.openai import openai
 
 load_dotenv()
-
 
 @dataclass(frozen=True)
 class ProviderConfig:
@@ -88,7 +88,6 @@ MODEL_ALIASES = {
     },
 }
 
-
 def get_model_and_client(provider: Optional[str], model: Optional[str] = None) -> Tuple[str, OpenAI]:
     """
     Create a model name and OpenAI-compatible client for any supported provider.
@@ -124,5 +123,7 @@ def get_model_and_client(provider: Optional[str], model: Optional[str] = None) -
     client_kwargs = {"api_key": api_key}
     if config.base_url:
         client_kwargs["base_url"] = config.base_url
+    
+    # Wrap the openai client with the langfuse openai client.
+    return model, openai.OpenAI(**client_kwargs)
 
-    return model, OpenAI(**client_kwargs)

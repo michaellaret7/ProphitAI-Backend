@@ -21,6 +21,9 @@ from app.core.atlas.tools.foundry.macro_research import MACRO_RESEARCH_SEARCH_TO
 from app.core.atlas.tools.foundry.earnings_calls import EARNINGS_CALL_SEARCH_TOOL
 from app.core.atlas.tools.foundry.user_uploads import USER_UPLOAD_SEARCH_TOOL
 from app.core.atlas.tools.foundry.tax_research import TAX_RESEARCH_SEARCH_TOOL
+from app.core.atlas.tools.ticker.performance import GET_TICKER_PERFORMANCE_AND_RISK_TOOL
+
+from langfuse import propagate_attributes
 
 class ChatAgent(AgentBase):
     """Conversational agent for interactive tool-assisted chat.
@@ -109,26 +112,41 @@ class ChatAgent(AgentBase):
 
         return messages
 
-    def run(
-        self,
-        user_message: str,
-        conversation_history: Optional[List[Dict[str, Any]]] = None
-    ) -> ChatResponse:
+    def run(self, user_message: str, conversation_history: Optional[List[Dict[str, Any]]] = None) -> ChatResponse:
         """Run the agent execution loop for a user query."""
-        self.total_tokens = 0
-        self.tool_handler.tool_call_history = []
 
-        self.messages = self._build_messages(user_message, conversation_history) # Populate messages list with the args from run() method.
+        with self.langfuse.start_as_current_observation(
+            as_type="span",
+            name="chat_agent.run",
+            input=user_message,
+        ) as run_span:
+            self.langfuse.update_current_trace(
+                name="ChatAgent",
+                input=user_message,
+            )
 
-        result = self.execution_loop.execute() # Pass those messages list to the execution loop.
+            self.total_tokens = 0
+            self.tool_handler.tool_call_history = []
 
-        return ChatResponse(
-            answer=result["answer"],
-            tool_calls_made=result["tool_calls"],
-            tokens_used=result["total_tokens"],
-            iterations=result["iterations"],
-            stop_reason=result["stop_reason"]
-        )
+            self.messages = self._build_messages(user_message, conversation_history)
+
+            with propagate_attributes(
+                session_id=self.session_id,
+                tags=["ChatAgent", self.provider],
+                metadata={"model": self.model}
+            ):
+                result = self.execution_loop.execute()
+
+            self.langfuse.update_current_trace(output=result["answer"])
+            run_span.update(output=result["answer"])
+
+            return ChatResponse(
+                answer=result["answer"],
+                tool_calls_made=result["tool_calls"],
+                tokens_used=result["total_tokens"],
+                iterations=result["iterations"],
+                stop_reason=result["stop_reason"]
+            )
 
     def run_interactive(self, session_id: str = "interactive") -> None:
         """Start an interactive chat session in the terminal."""
@@ -159,3 +177,11 @@ class ChatAgent(AgentBase):
                 print(f"\nError: {e}")
                 continue
 
+if __name__ == "__main__":
+    agent = ChatAgent(provider="anthropic", model="claude-opus-4-6")
+    agent.add_tool(**GET_TICKER_PERFORMANCE_AND_RISK_TOOL)
+    agent.run(
+        "Run the ticker performance tool in parallel for the tickers AAPL, MSFT, and GOOG."
+        "Then run the ticker performance tool in parallel for the tickers TSLA, NVDA, and AMD."
+        "Then summarize the results of the 2 iterations and provide a final answer."
+    )

@@ -1,16 +1,23 @@
 """Re-run monitor for all portfolios belonging to michaellaret7@gmail.com."""
+import os
+from app.core.foundry.retrieval.search.hybrid import HybridSearch
 from app.db.core.db_config import UserSession
 from app.db.core.models.user_data_models import User, Portfolio
 from app.db.jobs.portfolio.batch_monitor import BatchMonitorPortfolio
 
-session = UserSession()
-user = session.query(User).all()
+from langfuse import get_client, observe
+from app.core.foundry.embeddings.pinecone_manager import PineconeManager
 
-for u in user:
-    print(u.email)
-    print(u.portfolios)
-    for p in u.portfolios:
-        print(p.name)
+@observe(name="test")
+def retrieve_context() -> str:
+    hybrid_search = HybridSearch(use_rerank=True, enhanced=True)
 
+    results = hybrid_search.search(
+        query="Scandanavia central bank and interest rates. Japanese central bank and interest rates.",
+        namespace="macro_research",
+        top_k=3,
+    )
 
-session.close()
+    return [result.metadata["text"] for result in results]
+
+print(retrieve_context())

@@ -108,7 +108,6 @@ class ChatSessionManager:
         agent = ChatAgent(
             provider='anthropic',
             model='claude-opus-4-5-20251101',
-            # model='claude-haiku-4-5-20251001',
             print_mode=PrintMode.PRODUCTION,
             temperature=0.7,
             max_iterations=20,

@@ -18,6 +18,8 @@ if TYPE_CHECKING:
     from app.core.atlas.agents import AgentBase
     from app.core.atlas.models.callbacks import ChatCallback, NoOpChatCallback
 
+from opentelemetry import context as otel_context
+
 # Tools that modify agent state and must run sequentially
 SEQUENTIAL_ONLY_TOOLS = {"write_note", "finalize", "think", "update_plan"}
 
@@ -216,16 +218,28 @@ class ToolHandler:
         self,
         parsed_calls: List[tuple]
     ) -> List[Any]:
-        """Execute parsed tool calls in parallel. Returns list of results."""
+        """Execute parsed tool calls in parallel. Returns list of results.
+
+        Captures the OTel context from the calling thread and re-attaches it
+        in each worker thread so tool spans nest under the iteration span.
+        """
+        parent_ctx = otel_context.get_current()
         results = []
         try:
             with ThreadPoolExecutor(max_workers=len(parsed_calls)) as executor:
                 futures = []
                 for tool_call, name, args, parse_error in parsed_calls:
                     if parse_error:
-                        futures.append(None)
+                        futures.append(None) # If error parsing the arguments, we don't execute the tool.
                     else:
-                        futures.append(executor.submit(self._execute_tool, name, args))
+                        futures.append(
+                            executor.submit(
+                                self._execute_tool_with_context,
+                                parent_ctx,
+                                name,
+                                args
+                            )
+                        )
 
                 for i, (tool_call, name, args, parse_error) in enumerate(parsed_calls):
                     if parse_error:
@@ -240,6 +254,14 @@ class ToolHandler:
             results = [error_response(f"Parallel execution failed: {e}")] * len(parsed_calls)
 
         return results
+
+    def _execute_tool_with_context(self, ctx, name: str, args: Dict[str, Any]) -> Any:
+        """Execute a tool in a worker thread with the parent OTel context attached."""
+        token = otel_context.attach(ctx)
+        try:
+            return self._execute_tool(name, args)
+        finally:
+            otel_context.detach(token)
 
     def _add_tool_result_parallel(
         self,
@@ -285,16 +307,35 @@ class ToolHandler:
             error_msg = f"Tool '{name}' not found. Available: {list(self.agent.tool_functions.keys())}"
             self.printer.tool_error(error_msg)
             return error_response(error_msg)
+        
+        # This execute tool method is the heart/base of the tool handler.
+        # We want to track the tool executions and results in Langfuse.
+        with self.agent.langfuse.start_as_current_observation(
+            as_type="span",
+            name=f"tool: {name}",
+        ) as tool_span:
 
-        try:
-            execution_args = args.copy()
-            if getattr(self.agent, 'simulation_date', None) is not None and isinstance(execution_args, dict):
-                execution_args['_simulation_date'] = self.agent.simulation_date
-            return func(**execution_args)
-        except Exception as e:
-            error_msg = f"Error executing {name}: {str(e)}"
-            self.printer.tool_error(error_msg)
-            return error_response(error_msg)
+            tool_span.update(input=args, metadata={"tool_name": name})
+
+            try:
+                execution_args = args.copy()
+
+                if getattr(self.agent, 'simulation_date', None) is not None and isinstance(execution_args, dict):
+                    execution_args['_simulation_date'] = self.agent.simulation_date
+
+                result = func(**execution_args)
+                tool_span.update(output=str(result))
+
+                return result
+
+            except Exception as e:
+                error_msg = f"Error executing {name}: {str(e)}"
+
+                tool_span.update(output=error_msg)
+
+                self.printer.tool_error(error_msg)
+                
+                return error_response(error_msg)
 
     def _handle_note_tracking(self, result: Any, args: Dict[str, Any]) -> None:
         """Track note titles when write_note succeeds."""

@@ -3,6 +3,8 @@
 from abc import ABC, abstractmethod
 from typing import List, Dict, Any, Callable, Optional
 
+from langfuse import get_client
+
 from app.core.atlas.models import PrintMode
 from app.utils.choose_model_and_client import get_model_and_client
 
@@ -20,6 +22,9 @@ class AgentBase(ABC):
         print_mode: PrintMode = PrintMode.VERBOSE,
         temperature: Optional[float] = None,
     ):
+        # Observability
+        self.langfuse = get_client()
+
         # LLM client setup
         self.provider = provider
         self.model, self.client = get_model_and_client(provider=provider, model=model)
