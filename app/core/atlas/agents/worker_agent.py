@@ -2,6 +2,8 @@
 
 from typing import Optional, List, Dict, Any
 
+from langfuse import propagate_attributes
+
 from app.core.atlas.agents.base import AgentBase
 from app.core.atlas.models import PrintMode, NoOpChatCallback
 from app.core.atlas.execution import ExecutionLoop, ToolHandler
@@ -31,8 +33,8 @@ class WorkerAgent(AgentBase):
         print_mode: PrintMode = PrintMode.PRODUCTION,
         temperature: Optional[float] = None
     ):
-        provider = provider or "grok"
-        model = model or "grok-4-1-fast-non-reasoning"
+        provider = provider or "gemini"
+        model = model or "gemini-3-pro-preview"
 
         super().__init__(
             provider=provider,
@@ -51,9 +53,11 @@ class WorkerAgent(AgentBase):
         self.note_titles: List[str] = []
         self.output_dir = None
 
-        # Execution components
+        # Execution components (NOTE: Add these to the AgentBase class.)
         self.printer = AgentPrinter(self.print_mode)
-        self.tool_handler = ToolHandler(self, self.printer, chat_callback=self.chat_callback)
+        self.tool_handler = ToolHandler(
+            self, self.printer, chat_callback=self.chat_callback
+        )
         self.execution_loop = ExecutionLoop(self)
 
         self.add_tool(**WRITE_NOTE_TOOL) # We need to rebuild the write note tool to use this new version.
@@ -65,19 +69,43 @@ class WorkerAgent(AgentBase):
 
     def run(self) -> Dict[str, Any]:
         """Execute the worker's task and return the result."""
-        self.messages = [
-            {"role": "system", "content": WORKER_SYSTEM_PROMPT},
-            {"role": "user", "content": self.task},
-        ]
 
-        result = self.execution_loop.execute()
+        with self.langfuse.start_as_current_observation(
+            as_type="span",
+            name="worker_agent.run",
+            input=self.task,
+            model=self.model,
+        ) as run_span:
+            self.langfuse.update_current_trace(
+                name="WorkerAgent",
+                input=self.task,
+                metadata={
+                    "provider": self.provider,
+                    "model": self.model
+                }
+            )
 
-        return {
-            "answer": result["answer"],
-            "tool_calls_made": result["tool_calls"],
-            "tokens_used": result["total_tokens"],
-            "iterations": result["iterations"],
-            "stop_reason": result["stop_reason"],
-        }
+            self.messages = [
+                {"role": "system", "content": WORKER_SYSTEM_PROMPT},
+                {"role": "user", "content": self.task},
+            ]
+
+            with propagate_attributes(
+                session_id=self.session_id,
+                tags=["WorkerAgent", self.provider],
+                metadata={"model": self.model}
+            ):
+                result = self.execution_loop.execute()
+
+            self.langfuse.update_current_trace(output=result["answer"])
+            run_span.update(output=result["answer"])
+
+            return {
+                "answer": result["answer"],
+                "tool_calls_made": result["tool_calls"],
+                "tokens_used": result["total_tokens"],
+                "iterations": result["iterations"],
+                "stop_reason": result["stop_reason"],
+            }
 
 

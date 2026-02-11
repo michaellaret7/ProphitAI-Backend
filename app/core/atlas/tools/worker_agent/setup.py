@@ -83,9 +83,6 @@ from app.core.atlas.tools.ticker.performance import GET_TICKER_PERFORMANCE_AND_R
 from app.core.atlas.tools.ticker.technicals import TECHNICALS_TOOL
 from app.core.atlas.tools.ticker.weekly_returns import GET_WEEKLY_RETURNS_TOOL
 
-from app.core.atlas.tools.worker_agent.worker import deploy_worker_agent
-
-
 # ==============================================================================
 # AVAILABLE TOOLS — name → TOOL dict lookup
 # ==============================================================================
@@ -212,10 +209,19 @@ DEPLOY_WORKER_PARAMETERS = {
     "additionalProperties": False
 }
 
+# Reason: WorkerAgent auto-registers these via AgentBase and its own __init__,
+# so the orchestrator may redundantly request them. Skip silently.
+_WORKER_DEFAULT_TOOLS = {"think", "calculator", "llm_web_search", "write_note"}
+
+
 def _resolve_and_deploy(task: str, tools: List[str]) -> str:
     """Resolve tool name strings to tool dicts, then deploy the worker agent."""
+    from app.core.atlas.tools.worker_agent.worker import deploy_worker_agent
+
     tool_defs = []
     for name in tools:
+        if name in _WORKER_DEFAULT_TOOLS:
+            continue
         tool = AVAILABLE_TOOLS.get(name)
         if tool is None:
             return error_response(

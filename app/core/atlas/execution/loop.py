@@ -69,7 +69,7 @@ class ExecutionLoop:
                         callback.on_iteration_start(iteration=i)
                         self.printer.iteration_start(i, self.agent.max_iterations)
 
-                        response = self._call_llm()
+                        response = self.call_llm()
                         iteration_tokens = self._track_token_usage(response)
 
                         assistant_message = response.choices[0].message
@@ -165,8 +165,9 @@ class ExecutionLoop:
                 callback.on_run_error(error=str(e))
                 raise
 
-    def _call_llm(self):
+    def call_llm(self):
         """Make LLM API call."""
+        
         return self.agent.client.chat.completions.create(
             model=self.agent.model,
             messages=self.agent.messages,

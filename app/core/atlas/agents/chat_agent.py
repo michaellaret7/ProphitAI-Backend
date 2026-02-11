@@ -22,6 +22,7 @@ from app.core.atlas.tools.foundry.earnings_calls import EARNINGS_CALL_SEARCH_TOO
 from app.core.atlas.tools.foundry.user_uploads import USER_UPLOAD_SEARCH_TOOL
 from app.core.atlas.tools.foundry.tax_research import TAX_RESEARCH_SEARCH_TOOL
 from app.core.atlas.tools.ticker.performance import GET_TICKER_PERFORMANCE_AND_RISK_TOOL
+from app.core.atlas.tools.worker_agent.setup import DEPLOY_WORKER_TOOL
 
 from langfuse import propagate_attributes
 
@@ -58,7 +59,7 @@ class ChatAgent(AgentBase):
             temperature=temperature,
         )
 
-        self.system_prompt = CHAT_SYSTEM_PROMPT
+        self.system_prompt = system_prompt if system_prompt is not None else CHAT_SYSTEM_PROMPT
 
         # Chat streaming callback - defaults to no-op if not provided
         self.chat_callback: Union[ChatCallback, NoOpChatCallback] = (
@@ -140,7 +141,7 @@ class ChatAgent(AgentBase):
             self.langfuse.update_current_trace(output=result["answer"])
             run_span.update(output=result["answer"])
 
-            return ChatResponse(
+            return ChatResponse( # Change this to be Agent response class and apply it to all agents.
                 answer=result["answer"],
                 tool_calls_made=result["tool_calls"],
                 tokens_used=result["total_tokens"],
@@ -179,9 +180,9 @@ class ChatAgent(AgentBase):
 
 if __name__ == "__main__":
     agent = ChatAgent(provider="anthropic", model="claude-opus-4-6")
-    agent.add_tool(**GET_TICKER_PERFORMANCE_AND_RISK_TOOL)
+    agent.add_tool(**DEPLOY_WORKER_TOOL)
     agent.run(
-        "Run the ticker performance tool in parallel for the tickers AAPL, MSFT, and GOOG."
-        "Then run the ticker performance tool in parallel for the tickers TSLA, NVDA, and AMD."
-        "Then summarize the results of the 2 iterations and provide a final answer."
+        "Deploy a worker agent to research the performance of the tickers AAPL, MSFT, and GOOG."
+        "Deploy a worker agent to research the performance of the tickers TSLA, NVDA, and AMD."
+        "Summarize the results of the 2 worker agents and provide a final answer."
     )

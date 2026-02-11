@@ -1047,3 +1047,75 @@ Sub-industry: tobacco=30%, soft drinks=25%, packaged foods=22.5%, household prod
 Thesis: Defensive (low beta), quality/value tilted staples with good risk-adjusted returns but high single-industry exposure (tobacco 30%).
 
 ---END_NOTE---
+## 2026-02-11T18:31:40.157049+00:00 - Ticker Analysis: TSLA, NVDA, AMD
+
+# Ticker Performance Analysis: TSLA, NVDA, AMD
+
+## TSLA (Tesla, Inc.)
+- **Price:** ~$423
+- **Performance:**
+  - 1W: +0.8%
+  - 1M: -4.4%
+  - 3M: -4.5%
+  - YTD: -2.9%
+  - 1Y: +21.2%
+- **Risk:**
+  - Volatility: 63.1% (High)
+  - Beta: 2.20
+  - Max Drawdown: -53.8%
+- **Sentiment:**
+  - Analysts: Mixed (17 Buy, 17 Hold, 6 Sell). Score: C+ (2/5).
+  - Catalyst: Solar expansion, Q4 earnings beat.
+
+## NVDA (NVIDIA Corp.)
+- **Price:** ~$191
+- **Performance:**
+  - 3M: -5.3%
+  - 6M: +3.6%
+  - 1Y: +41.2%
+  - *Note: Recent weakness likely due to broader sector consolidation before earnings.*
+- **Risk:**
+  - Volatility: 51.1%
+  - Beta: 1.77
+  - Max Drawdown: -36.9%
+- **Sentiment:**
+  - Analysts: Very Bullish (48 Buy, 3 Hold, 1 Sell). Score: B+ (3/5).
+  - Catalyst: Upcoming earnings Feb 25. Potential OpenAI investment.
+
+## AMD (Advanced Micro Devices)
+- **Price:** ~$210
+- **Performance:**
+  - 3M: -12.5%
+  - 6M: +24.0%
+  - 1Y: +93.3%
+  - *Note: Sharp recent drop post-Q4 earnings (Feb 10) despite record revenue.*
+- **Risk:**
+  - Volatility: 56.1%
+  - Beta: 2.07
+  - Max Drawdown: -63.0%
+- **Sentiment:**
+  - Analysts: Bullish (36 Buy, 12 Hold, 0 Sell). Score: B (3/5).
+  - Catalyst: Post-earnings sell-off ("oversold"). Record Data Center revenue.
+
+---END_NOTE---
+## 2026-02-11T18:43:55.615538+00:00 - Forward Earnings Estimates Extraction
+
+**AAPL Future Estimates (Consensus):**
+*   Q1 2025 (Mar): Rev ~$94.5B, EPS ~$1.63
+*   Q2 2025 (Jun): Rev ~$89.6B, EPS ~$1.44
+*   Q3 2025 (Sep): Rev ~$102.2B, EPS ~$1.78
+*   Q4 2025 (Dec): Rev ~$138.4B, EPS ~$2.67
+
+**MSFT Future Estimates (Consensus):**
+*   Q1 2025 (Mar): Rev ~$68.4B, EPS ~$3.22
+*   Q2 2025 (Jun): Rev ~$73.9B, EPS ~$3.37
+*   Q3 2025 (Sep): Rev ~$75.5B, EPS ~$3.67
+*   Q4 2025 (Dec): Rev ~$80.3B, EPS ~$3.91
+
+**GOOG Future Estimates (Consensus):**
+*   Q1 2025 (Mar): Rev ~$89.2B, EPS ~$2.02
+*   Q2 2025 (Jun): Rev ~$94.0B, EPS ~$2.18
+*   Q3 2025 (Sep): Rev ~$99.9B, EPS ~$2.27
+*   Q4 2025 (Dec): Rev ~$111.3B, EPS ~$2.63
+
+---END_NOTE---

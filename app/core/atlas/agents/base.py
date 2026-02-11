@@ -54,7 +54,12 @@ class AgentBase(ABC):
         parameters: Dict[str, Any],
         function: Callable,
     ) -> None:
-        """Register a tool for the agent to use."""
+        """Register a tool for the agent to use. Skips if already registered."""
+
+        # ------ Skip if tool already registered. This gates dupe tool registration for worker agents. ------ #
+        if name in self.tool_functions:
+            return
+
         tool_def = {
             "type": "function",
             "function": {

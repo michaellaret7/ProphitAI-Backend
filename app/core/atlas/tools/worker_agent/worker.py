@@ -3,7 +3,6 @@
 from typing import List, Dict, Any
 
 from app.core.atlas.agents.worker_agent import WorkerAgent
-from app.core.atlas.models import PrintMode
 from app.core.atlas.tools.responses import success_response, error_response
 
 # TODO: Once this is working, test a complexity arg and a speed arg to dynamically select the model and provider.
@@ -29,8 +28,8 @@ def deploy_worker_agent(task: str, tools: List[Dict[str, Any]]) -> str:
 
         worker_agent = WorkerAgent(
             task=task,
-            provider='grok',
-            model='grok-4-1-fast-non-reasoning',
+            provider='gemini',
+            model='gemini-3-pro-preview',
             tools=tools,
             max_iterations=30,
             temperature=0.7
@@ -39,4 +38,6 @@ def deploy_worker_agent(task: str, tools: List[Dict[str, Any]]) -> str:
         return success_response(worker_agent.run())
     except Exception as e:
         return error_response(e)
+
+
 
