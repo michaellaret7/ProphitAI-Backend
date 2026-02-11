@@ -114,6 +114,7 @@ class ExecutionLoop:
                             loop_span.update(output={
                                 "stop_reason": "answer_ready",
                                 "iterations": i,
+                                "total_tokens": self.agent.total_tokens,
                             })
 
                             return {
@@ -151,6 +152,7 @@ class ExecutionLoop:
                 loop_span.update(output={
                     "stop_reason": "max_iterations",
                     "iterations": self.agent.max_iterations,
+                    "total_tokens": self.agent.total_tokens,
                 })
 
                 return {

@@ -74,16 +74,8 @@ class WorkerAgent(AgentBase):
             as_type="span",
             name="worker_agent.run",
             input=self.task,
-            model=self.model,
+            metadata={"provider": self.provider, "model": self.model},
         ) as run_span:
-            self.langfuse.update_current_trace(
-                name="WorkerAgent",
-                input=self.task,
-                metadata={
-                    "provider": self.provider,
-                    "model": self.model
-                }
-            )
 
             self.messages = [
                 {"role": "system", "content": WORKER_SYSTEM_PROMPT},
@@ -97,7 +89,6 @@ class WorkerAgent(AgentBase):
             ):
                 result = self.execution_loop.execute()
 
-            self.langfuse.update_current_trace(output=result["answer"])
             run_span.update(output=result["answer"])
 
             return {

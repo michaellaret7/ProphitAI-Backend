@@ -1119,3 +1119,359 @@ Thesis: Defensive (low beta), quality/value tilted staples with good risk-adjust
 *   Q4 2025 (Dec): Rev ~$111.3B, EPS ~$2.63
 
 ---END_NOTE---
+## 2026-02-11T21:11:52.868951+00:00 - ULTA Fundamental Analysis Summary - Key Metrics 02/11/2026
+
+**Company Overview**
+- Ticker: ULTA (Ulta Beauty, Inc.)
+- Sector: Consumer Discretionary / Specialty Retail
+- Description: Largest US beauty retailer offering cosmetics, skincare, haircare, salon services across 1,300+ stores + e-comm.
+- Market Cap: **$30.95B**
+- Price: **$690.35**
+- P/E: **26.52**
+- EPS TTM: **$26.03**
+- Beta: **0.83**
+- Shares: **44.84M**
+
+**TTM Financial Ratios**
+- P/E: **25.67**
+- EV/EBITDA: **17.66**
+- ROE: **46.87%**
+- ROA: **16.97%**
+- Debt/Equity: **0.98**
+- Current Ratio: **1.33**
+- Gross Margin: **39.2%**
+- Op Margin: **13.24%**
+- Net Margin: **9.93%**
+- FCF Yield: **~3.4%** (FCF/share $23.27)
+
+**Recent Financial Trends (Latest 4 Quarters to Q3 FY25 11/1/25)**
+- Revenue TTM: **~$11.97B** (stable, holiday strength)
+- Net Income TTM: **~$1.19B**
+- EPS trend: 8.50 (Q4'24) → 6.72 → 5.80 → 5.16 (seasonal)
+- Margins stable, op income ~13-15%
+- Balance: Assets $7.01B, Debt $2.57B, Cash $205M, Inventory $2.74B
+- Cash Flow: OCF TTM strong ~$1.3B annualized, FCF positive annually despite Q3 negative
+
+**Product Segmentation**
+- Limited granular data; historical shows growth in e-comm, salon services ~few %.
+- Core: Cosmetics/fragrances (majority), skincare/haircare, private label, services.
+
+**Earnings History & Outlook**
+- Consistent beats (recent: Q3'25 EPS 5.16 beat avg ~4.61 by 12%)
+- Analyst est: FY26 growth ~5-7% rev, EPS ~$28+ implied.
+- Next earnings: **3/12/26** - expected beat per Zacks.
+
+**Recent News/Catalysts**
+- UAE expansion (1/29/26 store open), women's sports investment.
+- Gen Z nostalgia trend boosting beauty.
+- Institutional accumulation.
+
+**Analyst Views**
+- Consensus: **Moderate Buy** (17 Buy/4 Strong Buy vs 10 Hold/2 Sell)
+- PT: **$694** (median $700, +0.5% upside), recent $753.
+- Fundamental Score: **A-** (exc ROE/ROA, fair valuation).
+
+**Conclusion**: High-quality retailer w/ strong profitability, international growth. Trading fair, mild upside w/ earnings catalyst. Risks: Competition, debt, consumer slowdown.
+
+---END_NOTE---
+## 2026-02-11T21:14:22.781075+00:00 - ULTA vs Peers Summary Metrics
+
+Key findings:
+- Performance (2y CAGR): ULTA 13.9%, DKS 11.8%, EL -15.3%, ELF -34.9%, COTY -53.9%
+- 1Y Returns (approx): ULTA ~80%, EL 49%, DKS -14%, ELF 0%, COTY -62%
+- Value: ULTA PE26 fwd25, cheap vs CD sector 89, premium to retail bench 8
+- Momentum: ULTA r12_1 78% >> peers (EL77% but recent weak, others negative)
+- Risk: ULTA beta0.85 low, DD-44% but peers worse
+- Tech: Bullish uptrend
+ULTA relative leader.
+
+---END_NOTE---
+## 2026-02-11T21:16:17.543118+00:00 - ULTA Financial Summary and Trends
+
+TTM Revenue (latest 4Q): $11.98B, prior TTM $11.30B (+6.9% YoY). Gross margins stable ~39%, op margins 11-15%, net 8-11%. ROE TTM 46.9%, ROA 17%. Debt rising to $2.57B, current ratio 1.33, quick 0.25. FCF TTM positive $23.27/share. Quality high but liquidity inventory-dependent.
+
+---END_NOTE---
+## 2026-02-11T21:16:17.547119+00:00 - ULTA Valuation and Performance Key Metrics
+
+P/E 25.7, PEG 0.26 (cheap for growth), EV/EBITDA 17.9, P/S 2.56. 1Y return +80.5%, vol 36.4%, beta 0.85, Sharpe 0.43. Momentum strong (r12_1 77.8%). Growth fwd EPS +24%.
+
+---END_NOTE---
+## 2026-02-11T21:16:17.549124+00:00 - ULTA Technical Indicators Latest
+
+Price ~$679-690 (02/2026). RSI 69.5 (bullish, nearing OB), MACD hist +6.9 (momentum slowing), above all SMAs (sma52 ~500), Stoch K 81.7/D 88.6 (high), ADX 35.7 (strong uptrend). Near 52w high.
+
+---END_NOTE---
+## 2026-02-11T21:17:49.285216+00:00 - ULTA Beauty Comprehensive Research Summary Feb 2026
+
+## 1. Recent News Key Takeaways
+- Positive momentum: Zacks highlights earnings beat potential for next report (02/10), momentum pick, technicals bullish (above 20DMA).
+- Institutional accumulation: Allianz +979%, AGF +451%, Truist +7%.
+- Strategic initiatives: Launched 'Ulta Beauty Roster' (02/04) - biggest investment in women's sports, targeting Gen Z/young women for National Girls & Women in Sports Day.
+- Trends: Gen Z 2016 nostalgia boosting beauty stocks incl ULTA/ELF (02/07).
+- Stock action: Recent gains (+1.93% to $691 on 02/06, +2.81% prior), Moderate Buy consensus reaffirmed.
+- No major risks noted; upcoming earnings focus.
+
+## 2. Earnings Analysis (No direct transcripts; from web search & estimates)
+- Recent: Q3 FY2026 (ended ~11/01/2025): Revenue $2.9B (+12.9% YoY), strong profitability (net margin 9.93%, ROE 46.33%).
+- EPS beats consistent (e.g., recent $5.14 vs $4.61 est, +$0.53).
+- FY2025 guidance: EPS 25.20-25.50 (analysts 23.96).
+- Loyalty (Ultamate Rewards): 45M active members; AI personalization investments.
+- Omnichannel: CEO Kecia Steelman (since 2025) 'Ulta Beauty Unleashed' - AI personalization, UB Marketplace (100+ new brands), ending Target shop-in-shop Aug 2026.
+- Margins/Capital: Not detailed; strong ROE/ROA.
+- No comp sales/loyalty specifics; positive Q1 2025 comps post-challenges.
+
+## 3. Analyst Ratings & PTs
+- Consensus (02/01): Moderate Buy - 4 Strong Buy, 13 Buy, 9 Hold, 1 Sell, 1 Strong Sell (28 analysts).
+- Recent: Raymond James upgrade to Strong Buy PT$790 (01/21); Piper $775, Oppenheimer $750, MS $750, UBS $780 (rising targets).
+- Consensus PT: $693.73 (High $790, Low $425, Med $700); last month avg $753.
+- Fundamentals: A- (ROE/ROA 5/5, Debt/Eq 2/5, P/E 3/5, P/B 1/5).
+- Bull: Earnings beats, PT upside ~15-20% from ~$679-691, momentum, sports marketing.
+- Bear: Wide PT range indicates uncertainty; debt concerns.
+
+Current price ~$679-691, P/E ~25.3x (above industry 20.4x, below peers 33.8x).
+
+## 4. Competitor Comparison
+- Peers (tool): Specialty retail - BBY (P/E22, poor perf), DKS(16.5, solid), TSCO(27), WSM(23.7 strong perf).
+- Beauty-specific: ELF (Buy consensus, strong Q3 rev+38% but stock -35% ann ret, volatile); COTY (Hold/Sell, Q2 miss, stock -54% ann ret, downgrades).
+- 2Y Perf (ann total ret): ULTA +13.9% (Sharpe 0.43), WSM +40.5% best, DKS +11.8%, TSCO +8.8%, BBY -1.4%, ELF -34.9%, COTY -53.9%.
+- ULTA outperforms direct beauty peers ELF/COTY, solid vs broader peers. Sephora (LVMH): Competition intensifying; Target ending ULTA partnership 2026, Amazon #1 beauty retailer.
+
+## 5. Product Segmentation
+- Limited data: Historical e-comm growth, salon, gift cards. No recent category breakdown (skincare/makeup/hair/fragrance).
+- Categories offered: Cosmetics, fragrance, skincare, haircare, bath/body, salon services. FY2025 proj net sales $12.3B, comp growth 4.4-4.7%.
+
+## 6. Sector Context
+- Consumer Discretionary P/E: Elevated ~89.4 (latest 02/06/26), range 40-92 past 2Y. ULTA P/E 25x relatively attractive vs sector.
+
+## Investment Takeaways
+- Bullish: Earnings momentum, analyst upgrades/rising PTs (upside to $700-790), strategic GenZ/sports push, strong fundamentals (A-, ROE46%), outperforms weak peers (ELF/COTY).
+- Risks: High sector P/E, competition (Sephora/Amazon/Target), no recent comps/loyalty details, debt.
+- ULTA positioned well in premium beauty retail; buy ahead of earnings if comps hold.
+
+---END_NOTE---
+## 2026-02-11T21:32:37.578201+00:00 - Ventas (VTR) Key Research Findings - Feb 2026
+
+# Ventas Inc. (VTR) Research Summary - Feb 2026
+
+## 1. Q4 2025 Earnings & 2026 Guidance
+- **Q4 2025 Normalized FFO:** $0.89 per share (10% YoY growth).
+- **Full Year 2025 Normalized FFO:** $3.48 per share (9% growth).
+- **2026 FFO Guidance:** $3.78 – $3.88 per share (midpoint $3.83, ~8% growth).
+- **Key 2026 Drivers:** SHOP NOI growth (+13-17%), offset by debt refinancing costs and Brookdale lease expiration.
+- **Leverage:** Net Debt to EBITDA improved to 5.2x (best since 2012).
+
+## 2. Senior Housing (SHOP) Trends
+- **Q4 2025 SHOP Same-Store Cash NOI:** +15.4% YoY.
+- **Occupancy:** SHOP reached 90.1% (up 300 bps YoY); U.S. portfolio reached 370 bps growth.
+- **RevPOR:** Increased 4.7% YoY in Q4 2025.
+- **2026 Outlook:** Guided for fifth consecutive year of double-digit SHOP NOI growth (13-17%).
+
+## 3. Acquisition Activity
+- **2025 Total:** ~$2.5 billion in senior housing acquisitions.
+- **2026 Target:** $2.5 billion (over $800M already closed as of Feb 2026).
+- **Strategy:** "Right Market, Right Asset, Right Operator."
+- **Operator Network:** Expanded from 10 in 2020 to 43 in 2026.
+
+## 4. Sector Outlook & Demographics
+- **"Silver Tsunami":** 2026 is a "historic demographic inflection point" as the first baby boomers turn 80.
+- **Supply/Demand Imbalance:** 2M people turning 80 in 2026 vs. only ~2,500 new units started in Q4 2025.
+- **Market Dynamics:** Healthcare REITs trading at significant premiums to NAV (Welltower ~99%, VTR ~25% range).
+
+## 5. Dividend Trajectory
+- **Recent Increase:** Raised 8% to $0.52/quarter ($2.08 annualized).
+- **Current Yield:** ~2.5% – 2.6%.
+- **Sustainability:** FFO payout ratio is ~54% (very sustainable).
+- **Taxation:** 2025 taxable dividend income was $1.89/share.
+
+---END_NOTE---
+## 2026-02-11T21:32:53.001149+00:00 - VTR Analysis Summary - Feb 2026
+
+# Ventas (VTR) Financial & Operational Performance (As of Feb 11, 2026)
+
+## 2025 Actuals
+- **Normalized FFO/Share**: Up 9% YoY.
+- **SHOP Same-Store Cash NOI Growth**: ~15% (4th consecutive year of double-digit growth).
+- **Total Company Same-Store Cash NOI**: Increased 8% (at Q3 report, likely ended year strong).
+- **Acquisitions**: $2.5B closed in 2025.
+- **Leverage**: 5.2x Net Debt/EBITDA (best since 2012).
+- **Dividend**: Increased 8% to $0.52/quarter ($2.08 annualized) starting April 2026.
+
+## 2026 Guidance
+- **Normalized FFO/Share**: $3.78 - $3.88 (Midpoint $3.83), representing ~8% growth.
+- **SHOP Same-Store Cash NOI Growth**: 13% - 17% (Midpoint 15%).
+- **Total Company Same-Store Cash NOI Growth**: Nearly 10%.
+- **Occupancy Growth (SHOP)**: Expected +270 bps.
+- **RevPOR Growth (SHOP)**: Expected +5%.
+- **Investment Target**: $2.5B (already $800M closed in Jan/Feb).
+
+## Analyst Sentiment
+- **Consensus**: Moderate Buy.
+- **Price Target Consensus**: ~$88.
+- **Key Recent Revisions**: Goldman Sachs ($100), RBC ($91), Argus ($88).
+- **Sentiment Drivers**: Accelerating senior housing demand (80+ population surge), record low supply, and aggressive accretive acquisitions.
+
+## Sector Context (Real Estate / Healthcare REITs)
+- **Tailwinds**: Demographic "silver tsunami" (first boomers turn 80 in 2026). Low construction starts (~2,500 units in Q4 2025).
+- **Valuation**: Sector P/E ~69x (per tool), but VTR trades at ~21.7x 2026 FFO (Price ~$83 / FFO $3.83).
+- **Relative Performance**: VTR outperformed industry benchmarks in 2025 (35% total return).
+
+## Strategic Priorities
+- "1, 2, 3 Strategy": Organic SHOP growth, value-creating senior housing investments, and portfolio cash flow.
+- Capital Allocation: US Senior Housing is the #1 priority.
+- Pipeline: Active, focused on "right market, right asset, right operator."
+
+---END_NOTE---
+## 2026-02-11T21:33:02.540304+00:00 - VTR Fundamental Analysis Notes
+
+# Ventas, Inc. (VTR) Fundamental Analysis Summary
+
+## 1. Company Overview & Business Mix
+- **Sector**: Real Estate (REIT)
+- **Industry**: Health Care REITs
+- **Market Cap**: $40.5B (Large-cap REIT)
+- **Business Mix**: 
+  - **Senior Living Operations (SHOP)**: ~73% of revenue. This is the primary growth engine, benefiting from the "Silver Tsunami" (aging demographic).
+  - **Outpatient Medical & Research**: ~15%. High-quality, stable cash flows.
+  - **Triple Net Leased (NNN)**: ~10%. Long-term leases with fixed escalators.
+
+## 2. Financial Performance (2025 Focus)
+- **Revenue**: $5.83B (TTM), showing steady growth (~7% YoY).
+- **Profitability**: Net income turned positive in 2024-2025 after a volatile period (2021-2023).
+- **Cash Flow**: Operating Cash Flow (OCF) is robust, reaching $505M in Q4 2025.
+- **REIT Metrics**: 
+  - **P/OCF**: ~24x.
+  - **Dividend Sustainability**: TTM Dividend of $1.92 (2.24% yield). Payout ratio vs. OCF is ~45%, suggesting significant room for dividend growth or reinvestment.
+
+## 3. Balance Sheet & Leverage
+- **Total Debt**: $13.2B.
+- **Leverage (Debt/EBITDA)**: ~5.9x (Calculated from TTM EBITDA of $2.24B). This is within the healthy range for a major REIT (typically 5x-7x).
+- **Interest Coverage**: ~1.1x to 1.3x. This is a primary concern; it's quite low, indicating that a significant portion of operating income is consumed by interest costs.
+- **Liquidity**: $741M in cash as of Q4 2025.
+
+## 4. Market Performance & Factors
+- **Returns**: Exceptional performance with a 43.5% 1-year total return and 95.8% 3-year return.
+- **Risk**: Very low Beta (0.25) relative to SPY, indicating the stock moves independently of the broader market. High Sharpe Ratio (1.51).
+- **Factors**: 
+  - **Momentum**: Strong (RSI 77, trending above SMAs).
+  - **Quality**: Strong FCF margins (23.5%), though GAAP earnings are low due to depreciation.
+  - **Growth**: Strong forward expectations as senior housing occupancy recovers post-pandemic.
+
+## 5. Peer Comparison
+- VTR is a leader in the healthcare REIT space by market cap.
+- Compared to peers like Healthpeak (DOC) and Omega (OHI), VTR trades at a premium valuation (P/E and P/OCF), likely due to its dominant SHOP portfolio which offers higher growth potential than OHI's skilled nursing focus.
+
+## 6. Forward Outlook (2026)
+- Analysts expect continued revenue growth (~11% for FY2026).
+- EPS is projected to remain positive, with Q1 2026 estimates around $0.11.
+
+## 7. Investment Thesis
+- **Strengths**: Dominant position in senior housing, strong cash flow growth, safe dividend payout ratio, and low market correlation.
+- **Concerns**: Low interest coverage ratio and premium valuation compared to historical norms. Dividends yield is relatively low for a REIT (2.2%), suggesting the market is pricing in growth rather than current income.
+
+---END_NOTE---
+## 2026-02-11T21:34:31.663894+00:00 - Initial Peer Comparison Data
+
+Today's Date: 02/11/2026
+
+Peer Group:
+- VTR (Ventas)
+- WELL (Welltower)
+- OHI (Omega Healthcare Investors)
+- DOC (Healthpeak Properties - formerly PEAK/DOC)
+- HR (Healthcare Realty Trust)
+
+Sector: Real Estate (equity_sector_real_estate)
+
+Initial 2-Year Performance Data (Annualized):
+- WELL: 55.11% (Leader)
+- VTR: 40.32% (Strong Runner-up)
+- OHI: 29.47%
+- HR: 13.01%
+- DOC: 4.63%
+
+Risk Metrics (2-Year):
+- Sharpe: WELL (2.07), VTR (1.52), OHI (1.21), HR (0.47), DOC (0.14)
+- Volatility: All around 20-23%. WELL and OHI are the least volatile (~20%).
+
+Next Steps:
+- Calculate 1m, 3m, 6m, 1y, and YTD returns using price data.
+- Compare against Sector performance.
+
+---END_NOTE---
+## 2026-02-11T21:35:38.851583+00:00 - Final Comparison Summary
+
+Final Performance Comparison (as of 02/11/2026):
+
+| Ticker | 1-Month | 3-Month | 1-Year | YTD | 2-Year Ann. | Sharpe (2Y) |
+| :--- | :--- | :--- | :--- | :--- | :--- | :--- |
+| **VTR (Ventas)** | +1.7% | ~+2.0% | +31.3% | +0.5% | 40.3% | 1.52 |
+| **WELL (Welltower)** | -9.0% | +5.0% | +39.9% | ~+2.0%* | 55.1% | 2.07 |
+| **OHI (Omega)** | +7.8% | +6.0% | +34.7% | -0.2% | 29.5% | 1.21 |
+| **HR (Healthcare Realty)** | +1.5% | -3.7% | +13.6% | +2.6% | 13.0% | 0.47 |
+| **DOC (Healthpeak)** | ~-1.0% | ~-2.0% | ~0.0% | ~-1.0% | 4.6% | 0.14 |
+| **Sector (Real Estate)** | +3.1% | +1.1% | -2.6% | +5.9% | N/A | N/A |
+
+*WELL's YTD is estimated based on the 1-month drop of 9% from a strong 2025 finish.
+
+Analysis:
+- VTR is a "Silver Medalist" in this group, consistently trailing WELL but beating most others.
+- The Healthcare REIT sub-sector has been a massive alpha generator vs the broader Real Estate sector over the last 12 months (30%+ vs -2.6%).
+- Short-term (YTD), the broader sector is catching up (+5.9%) while the healthcare leaders (VTR, WELL, OHI) are consolidating or lagging slightly.
+- VTR's volatility (21.2%) is inline with peers, but its risk-adjusted returns are superior to HR and DOC.
+
+---END_NOTE---
+## 2026-02-11T21:49:30.009269+00:00 - VTR Financial Analysis Summary Feb 2026
+
+### Ventas Inc. (VTR) Financial Health Analysis (as of Feb 2026)
+
+**1. Income Statement & REIT Metrics:**
+- **Revenue Trends:** Strong growth. Q4 2025 revenue was $1.57B (+21.7% YoY). Full year 2025 revenue $5.83B (+18.5% YoY).
+- **NOI (Net Operating Income):** Total company NOI grew 15% YoY in Q4 2025. SHOP (Senior Housing Operating Portfolio) is the primary driver, with 15.4% growth.
+- **FFO (Funds From Operations):** Normalized FFO for 2025 was $3.48/share (+9.1% YoY). Q4 2025 FFO was $0.89/share.
+- **2026 Guidance:** FFO projected at $3.78 - $3.88 per share.
+
+**2. Balance Sheet & Leverage:**
+- **Total Debt:** ~$13.2B (Q4 2025).
+- **Net Debt to EBITDA:** 5.2x (improved from 5.3x in Q3 2025). This is the lowest leverage for VTR since 2012.
+- **Liquidity:** $5.3B available. Investment grade ratings (BBB+ / Baa1).
+- **Debt Maturity:** $2.2B maturing in 2026. Management has already proactively refinanced a portion of the Q1 2026 maturities.
+
+**3. Cash Flow & Dividends:**
+- **Operating Cash Flow (OCF):** ~$505M in Q4 2025.
+- **Dividends Paid:** ~$225M in Q4 2025.
+- **Dividend Sustainability:** 
+    - Quarterly dividend increased to $0.52 in Feb 2026 ($2.08 annualized).
+    - FFO Payout Ratio (2025): ~55% ($1.92 / $3.48).
+    - FFO Payout Ratio (2026 Guidance Midpoint): ~54% ($2.08 / $3.83).
+    - This indicates the dividend is highly sustainable and has room for further growth.
+
+**4. Data Anomalies:**
+- The "Gross Profit" field in the raw data for Q4 2025 (-$2.1B) appears to be a classification error, as it does not reflect in the Operating Income ($204M) or Net Income ($70M) figures, nor is it mentioned in official earnings reports. Standard REIT metrics (NOI/FFO) remain strong.
+
+**Conclusion:**
+Ventas is in a position of significant financial strength. The SHOP segment is driving double-digit NOI growth, leverage is at a decade-low, and the dividend was recently increased with a very safe payout ratio of ~55% of FFO.
+
+---END_NOTE---
+## 2026-02-11T22:03:11.548768+00:00 - Market Analysis Synthesis - Feb 2026
+
+### Macro Environment (Feb 2026)
+- **GDP:** Slowing but positive. US ~2%, Global ~3%.
+- **Inflation:** Sticky at ~3% in the US. Tariffs are a new headwind expected to peak inflation mid-2026.
+- **Rates:** Fed easing has begun (Fed Funds ~3.64%), but rates remain restrictive compared to the last decade. Normalization to mid-3% expected.
+- **Commodities:** Gold at all-time highs (~$5000) signals extreme geopolitical anxiety. Copper at ~$5.90 suggests strong demand for AI/Electrification infrastructure. Oil is soft ($60s) due to manufacturing sluggishness.
+
+### Sector Analysis
+1. **Health Care (Growth + Resilience):**
+   - **Why:** Strong recent performance (+0.73% to +2.2% weekly). P/E expansion from 30 to 42 shows a flight to quality. It provides defensive characteristics (inelastic demand) with growth from biotech and med-tech.
+2. **Information Technology (High Growth):**
+   - **Why:** Despite high rates, enterprise CapEx on AI is "mission-critical." P/E compression from 63 to 42 makes the sector's valuation more sustainable than in 2025. Clear winner in the macro outlook.
+3. **Industrials (Defense & Electrification):**
+   - **Why:** Geopolitical tensions drive defense spending (confirmed by Gold rally). Copper prices support companies involved in the "electrification of everything" and AI data center infrastructure. Performance has been robust (+6% in Jan).
+4. **Consumer Staples (Pure Resilience):**
+   - **Why:** Recent leader in performance (+5.19% weekly). Investors are using it as a hedge against sticky inflation and tariff-related price spikes.
+
+### Sectors to Avoid
+1. **Utilities:** Highly sensitive to interest rates. Performance has been dismal (-5% to -9% in recent weeks) as high rates increase debt service costs and reduce the relative attractiveness of dividends.
+2. **Real Estate (Commercial):** Explicitly cited as the "weakest link" in macro outlooks due to high rates and structural shifts in office demand.
+
+---END_NOTE---

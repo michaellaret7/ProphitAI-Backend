@@ -324,17 +324,27 @@ class ToolHandler:
                     execution_args['_simulation_date'] = self.agent.simulation_date
 
                 result = func(**execution_args)
-                tool_span.update(output=str(result))
+                result_str = str(result)
+
+                if len(result_str) > 2000:
+                    result_str = result_str[:2000] + "... (truncated)"
+                    
+                tool_span.update(output=result_str)
 
                 return result
 
             except Exception as e:
                 error_msg = f"Error executing {name}: {str(e)}"
 
-                tool_span.update(output=error_msg)
+                # ----- Update the tool span with the error message and error details. ----- #
+                tool_span.update(
+                    level="ERROR",
+                    error=str(e),
+                    output={"error": error_msg}
+                )
 
                 self.printer.tool_error(error_msg)
-                
+
                 return error_response(error_msg)
 
     def _handle_note_tracking(self, result: Any, args: Dict[str, Any]) -> None:

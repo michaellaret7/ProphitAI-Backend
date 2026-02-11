@@ -121,9 +121,15 @@ class ChatAgent(AgentBase):
             name="chat_agent.run",
             input=user_message,
         ) as run_span:
+        
             self.langfuse.update_current_trace(
                 name="ChatAgent",
                 input=user_message,
+                metadata={
+                    "provider": self.provider,
+                    "model": self.model,
+                    "max_iterations": str(self.max_iterations),
+                },
             )
 
             self.total_tokens = 0

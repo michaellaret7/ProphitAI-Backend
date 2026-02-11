@@ -3,6 +3,8 @@
 from functools import partial
 from typing import Optional, List, Dict, Any
 
+from langfuse import propagate_attributes
+
 from app.core.atlas.agents.base import AgentBase
 from app.core.atlas.models import PrintMode, NoOpChatCallback
 from app.core.atlas.models.new_plan import Plan
@@ -11,7 +13,7 @@ from app.core.atlas.logging import AgentPrinter
 from app.core.atlas.tools.worker_agent.setup import DEPLOY_WORKER_TOOL
 from app.core.atlas.tools.base.search_engine import LLM_WEB_SEARCH_TOOL
 from app.core.atlas.tools.orchestrator import UPDATE_PLAN_TOOL, update_plan
-from app.core.atlas.prompts.chat_agent_prompts.orchestrator_agent import (
+from app.core.atlas.prompts.orchestrator_agent import (
     ORCHESTRATOR_SYSTEM_PROMPT,
     build_plan_prompt,
 )
@@ -62,7 +64,9 @@ class OrchestratorAgent(AgentBase):
 
         # Execution components
         self.printer = AgentPrinter(self.print_mode)
-        self.tool_handler = ToolHandler(self, self.printer, chat_callback=self.chat_callback)
+        self.tool_handler = ToolHandler(
+            self, self.printer, chat_callback=self.chat_callback
+        )
         self.execution_loop = ExecutionLoop(self)
 
         # Register orchestrator-specific tools (think + calculator come from AgentBase)
@@ -72,33 +76,60 @@ class OrchestratorAgent(AgentBase):
     def run(self) -> Dict[str, Any]:
         """Execute the orchestrator's task decomposition and delegation loop."""
 
-        if self.plan_first:
-            planner = PlannerAgent(task=self.task, print_mode=PrintMode.PRODUCTION)
-            self.plan = planner.run()
-            self.add_tool(**{**UPDATE_PLAN_TOOL, "function": partial(update_plan, self.plan)})
+        with self.langfuse.start_as_current_observation(
+            as_type="span",
+            name="orchestrator_agent.run",
+            input=self.task,
+            metadata={"provider": self.provider, "model": self.model},
+        ) as run_span:
+            self.langfuse.update_current_trace(
+                name="OrchestratorAgent",
+                input=self.task,
+                metadata={
+                    "provider": self.provider,
+                    "model": self.model,
+                    "max_iterations": str(self.max_iterations),
+                },
+            )
 
-        system_prompt = build_plan_prompt(self.plan) if self.plan else ORCHESTRATOR_SYSTEM_PROMPT
+            # ----- Keep the planner agent inside the orchestrator span ----- #
+            if self.plan_first:
+                print("Plan-first mode enabled. Generating plan...")
+                planner = PlannerAgent(task=self.task, print_mode=PrintMode.PRODUCTION)
+                self.plan = planner.run()
+                self.add_tool(**{**UPDATE_PLAN_TOOL, "function": partial(update_plan, self.plan)})
+                print(f"Plan generated: {self.plan}")
+                print("="*100)
 
-        self.messages = [
-            {"role": "system", "content": system_prompt},
-            {"role": "user", "content": self.task},
-        ]
+            system_prompt = build_plan_prompt(self.plan) if self.plan else ORCHESTRATOR_SYSTEM_PROMPT
 
-        result = self.execution_loop.execute()
+            self.messages = [
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": self.task},
+            ]
 
-        return {
-            "answer": result["answer"],
-            "tool_calls_made": result["tool_calls"],
-            "tokens_used": result["total_tokens"],
-            "iterations": result["iterations"],
-            "stop_reason": result["stop_reason"],
-            "plan": self.plan.model_dump() if self.plan else None,
-        }
+            with propagate_attributes(
+                session_id=self.session_id,
+                tags=["OrchestratorAgent", self.provider],
+                metadata={"model": self.model}
+            ):
+                result = self.execution_loop.execute()
 
+            self.langfuse.update_current_trace(output=result["answer"])
+            run_span.update(output=result["answer"])
+
+            return {
+                "answer": result["answer"],
+                "tool_calls_made": result["tool_calls"],
+                "tokens_used": result["total_tokens"],
+                "iterations": result["iterations"],
+                "stop_reason": result["stop_reason"],
+                "plan": self.plan.model_dump() if self.plan else None,
+            }
 
 if __name__ == "__main__":
     orchestrator_agent = OrchestratorAgent(
-        task="Build a defensive consumer staples portfolio.",
+        task="I am 24 years old and have 300,000,000 dollars I want to invest in high growth opportunities. Build me a small portfolio of 3-5 stocks that have high growth potential and can weather the macro headwinds.",
         provider="anthropic",
         model="claude-opus-4-6",
         max_iterations=50,

@@ -29,7 +29,7 @@ def deploy_worker_agent(task: str, tools: List[Dict[str, Any]]) -> str:
         worker_agent = WorkerAgent(
             task=task,
             provider='gemini',
-            model='gemini-3-pro-preview',
+            model='gemini-3-flash-preview',
             tools=tools,
             max_iterations=30,
             temperature=0.7

@@ -1,3 +1,6 @@
+from datetime import datetime
+
+
 ORCHESTRATOR_SYSTEM_PROMPT = """You are an orchestrator agent. Your job is to break down complex tasks
 into focused sub-tasks and delegate each one to a worker agent using the deploy_worker_agent tool.
 
@@ -43,6 +46,8 @@ def build_plan_prompt(plan) -> str:
         f"{t.id}. {t.description}" for t in plan.tasks
     )
 
+    date = datetime.now().strftime("%m/%d/%Y")
+
     return ORCHESTRATOR_SYSTEM_PROMPT + f"""
 
 ## Your Plan
@@ -54,4 +59,7 @@ After ALL tasks are marked complete, synthesize all worker results into your fin
 
 ### Tasks
 {task_lines}
+
+## Other Important Information
+--> Today's date is {date}.
 """
