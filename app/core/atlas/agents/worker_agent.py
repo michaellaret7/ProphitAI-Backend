@@ -5,7 +5,7 @@ from typing import Optional, List, Dict, Any
 from langfuse import propagate_attributes
 
 from app.core.atlas.agents.base import AgentBase
-from app.core.atlas.models import PrintMode, NoOpChatCallback
+from app.core.atlas.models import PrintMode, NoOpChatCallback, AgentResponse
 from app.core.atlas.execution import ExecutionLoop, ToolHandler
 from app.core.atlas.logging import AgentPrinter
 from app.core.atlas.tools.foundry.earnings_calls import EARNINGS_CALL_SEARCH_TOOL
@@ -67,7 +67,7 @@ class WorkerAgent(AgentBase):
         for tool_def in tools:
             self.add_tool(**tool_def)
 
-    def run(self) -> Dict[str, Any]:
+    def run(self) -> AgentResponse:
         """Execute the worker's task and return the result."""
 
         with self.langfuse.start_as_current_observation(
@@ -91,12 +91,12 @@ class WorkerAgent(AgentBase):
 
             run_span.update(output=result["answer"])
 
-            return {
-                "answer": result["answer"],
-                "tool_calls_made": result["tool_calls"],
-                "tokens_used": result["total_tokens"],
-                "iterations": result["iterations"],
-                "stop_reason": result["stop_reason"],
-            }
+            return AgentResponse(
+                answer=result["answer"],
+                tool_calls_made=result["tool_calls"],
+                tokens_used=result["total_tokens"],
+                iterations=result["iterations"],
+                stop_reason=result["stop_reason"]
+            )
 
 

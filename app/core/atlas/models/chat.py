@@ -5,17 +5,6 @@ from typing import List, Dict, Any
 
 
 @dataclass
-class ChatResponse:
-    """Response from ChatAgent.run()"""
-
-    answer: str
-    tool_calls_made: List[str] = field(default_factory=list)
-    tokens_used: int = 0
-    iterations: int = 0
-    stop_reason: str = "answer_ready"
-
-
-@dataclass
 class ChatSession:
     """Manages conversation state across multiple turns."""
 

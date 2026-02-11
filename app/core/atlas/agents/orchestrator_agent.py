@@ -6,7 +6,7 @@ from typing import Optional, List, Dict, Any
 from langfuse import propagate_attributes
 
 from app.core.atlas.agents.base import AgentBase
-from app.core.atlas.models import PrintMode, NoOpChatCallback
+from app.core.atlas.models import PrintMode, NoOpChatCallback, AgentResponse
 from app.core.atlas.models.new_plan import Plan
 from app.core.atlas.execution import ExecutionLoop, ToolHandler
 from app.core.atlas.logging import AgentPrinter
@@ -73,7 +73,7 @@ class OrchestratorAgent(AgentBase):
         self.add_tool(**DEPLOY_WORKER_TOOL)
         self.add_tool(**LLM_WEB_SEARCH_TOOL)
 
-    def run(self) -> Dict[str, Any]:
+    def run(self) -> AgentResponse:
         """Execute the orchestrator's task decomposition and delegation loop."""
 
         with self.langfuse.start_as_current_observation(
@@ -82,6 +82,7 @@ class OrchestratorAgent(AgentBase):
             input=self.task,
             metadata={"provider": self.provider, "model": self.model},
         ) as run_span:
+        
             self.langfuse.update_current_trace(
                 name="OrchestratorAgent",
                 input=self.task,
@@ -118,14 +119,14 @@ class OrchestratorAgent(AgentBase):
             self.langfuse.update_current_trace(output=result["answer"])
             run_span.update(output=result["answer"])
 
-            return {
-                "answer": result["answer"],
-                "tool_calls_made": result["tool_calls"],
-                "tokens_used": result["total_tokens"],
-                "iterations": result["iterations"],
-                "stop_reason": result["stop_reason"],
-                "plan": self.plan.model_dump() if self.plan else None,
-            }
+            return AgentResponse(
+                answer=result["answer"],
+                tool_calls_made=result["tool_calls"],
+                tokens_used=result["total_tokens"],
+                iterations=result["iterations"],
+                stop_reason=result["stop_reason"],
+                plan=self.plan if self.plan else None,
+            )
 
 if __name__ == "__main__":
     orchestrator_agent = OrchestratorAgent(
@@ -138,4 +139,4 @@ if __name__ == "__main__":
         plan_first=True,
     )
     result = orchestrator_agent.run()
-    print(result["answer"])
+    print(result.answer)

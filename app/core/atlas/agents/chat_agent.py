@@ -6,7 +6,7 @@ from typing import List, Dict, Any, Optional, Union
 
 from app.core.atlas.models import (
     PrintMode,
-    ChatResponse,
+    AgentResponse,
     ChatSession,
     ChatCallback,
     NoOpChatCallback,
@@ -113,7 +113,7 @@ class ChatAgent(AgentBase):
 
         return messages
 
-    def run(self, user_message: str, conversation_history: Optional[List[Dict[str, Any]]] = None) -> ChatResponse:
+    def run(self, user_message: str, conversation_history: Optional[List[Dict[str, Any]]] = None) -> AgentResponse:
         """Run the agent execution loop for a user query."""
 
         with self.langfuse.start_as_current_observation(
@@ -121,7 +121,7 @@ class ChatAgent(AgentBase):
             name="chat_agent.run",
             input=user_message,
         ) as run_span:
-        
+
             self.langfuse.update_current_trace(
                 name="ChatAgent",
                 input=user_message,
@@ -147,7 +147,7 @@ class ChatAgent(AgentBase):
             self.langfuse.update_current_trace(output=result["answer"])
             run_span.update(output=result["answer"])
 
-            return ChatResponse( # Change this to be Agent response class and apply it to all agents.
+            return AgentResponse( 
                 answer=result["answer"],
                 tool_calls_made=result["tool_calls"],
                 tokens_used=result["total_tokens"],
