@@ -22,7 +22,6 @@ from app.core.atlas.tools.foundry.earnings_calls import EARNINGS_CALL_SEARCH_TOO
 from app.core.atlas.tools.foundry.user_uploads import USER_UPLOAD_SEARCH_TOOL
 from app.core.atlas.tools.foundry.tax_research import TAX_RESEARCH_SEARCH_TOOL
 from app.core.atlas.tools.ticker.performance import GET_TICKER_PERFORMANCE_AND_RISK_TOOL
-from app.core.atlas.tools.worker_agent.setup import DEPLOY_WORKER_TOOL
 
 from langfuse import propagate_attributes
 
@@ -184,11 +183,4 @@ class ChatAgent(AgentBase):
                 print(f"\nError: {e}")
                 continue
 
-if __name__ == "__main__":
-    agent = ChatAgent(provider="anthropic", model="claude-opus-4-6")
-    agent.add_tool(**DEPLOY_WORKER_TOOL)
-    agent.run(
-        "Deploy a worker agent to research the performance of the tickers AAPL, MSFT, and GOOG."
-        "Deploy a worker agent to research the performance of the tickers TSLA, NVDA, and AMD."
-        "Summarize the results of the 2 worker agents and provide a final answer."
-    )
+

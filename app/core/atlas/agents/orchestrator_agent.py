@@ -1,9 +1,10 @@
 """OrchestratorAgent - Decomposes complex tasks and delegates to worker agents."""
 
 from functools import partial
-from typing import Optional, List, Dict, Any
+from typing import Optional, List
 
 from langfuse import propagate_attributes
+from app.core.atlas.models.notebook import Notebook
 
 from app.core.atlas.agents.base import AgentBase
 from app.core.atlas.models import PrintMode, NoOpChatCallback, AgentResponse
@@ -15,6 +16,8 @@ from app.core.atlas.tools.orchestrator import (
     UPDATE_PLAN_TOOL,
     update_plan,
 )
+from app.core.atlas.tools.orchestrator.retrieve_note import retrieve_notes, RETRIEVE_NOTES_TOOL
+from app.core.atlas.tools.worker_agent.setup import DEPLOY_WORKER_TOOL, _resolve_and_deploy
 from app.core.atlas.prompts.orchestrator_agent import (
     ORCHESTRATOR_SYSTEM_PROMPT,
     build_plan_prompt,
@@ -53,7 +56,8 @@ class OrchestratorAgent(AgentBase):
         )
 
         self.task = task
-
+        self.notebook = Notebook()
+        
         self.plan_first = plan_first
         self.plan: Optional[Plan] = None
 
@@ -71,6 +75,16 @@ class OrchestratorAgent(AgentBase):
         )
         self.execution_loop = ExecutionLoop(self)
 
+        #----- Register the Tools specific to the orchestrator agent -----#
+        # Reason: partial pre-binds notebook so the LLM only sees task + tools.
+        self.add_tool(
+            **DEPLOY_WORKER_TOOL,
+            function=partial(_resolve_and_deploy, self.notebook),
+        )
+        self.add_tool(
+            **RETRIEVE_NOTES_TOOL,
+            function=partial(retrieve_notes, self.notebook),
+        )
         self.add_tool(**LLM_WEB_SEARCH_TOOL)
 
     def run(self) -> AgentResponse:
@@ -129,13 +143,13 @@ class OrchestratorAgent(AgentBase):
 
 if __name__ == "__main__":
     orchestrator_agent = OrchestratorAgent(
-        task="I am 24 years old and have 300,000,000 dollars I want to invest in high growth opportunities. Build me a small portfolio of 3-5 stocks that have high growth potential and can weather the macro headwinds.",
+        task="deploy 2 workers agent, have one have ticker performance tools and the other have earnings call analysis tools. Once theyre done, pull their notes and synthesize a final answer. The ticker is question is AAPL, but there is no specific investment question yet, the purpose of this work is to test the write and retrieve notes functionality",
         provider="anthropic",
         model="claude-opus-4-6",
         max_iterations=50,
-        print_mode=PrintMode.DEBUG,
+        print_mode=PrintMode.PRODUCTION,
         temperature=0.7,
-        plan_first=True,
+        plan_first=False,
     )
     result = orchestrator_agent.run()
     print(result.answer)

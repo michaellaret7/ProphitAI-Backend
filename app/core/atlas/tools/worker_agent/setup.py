@@ -1,8 +1,8 @@
 """Worker tool setup - available tools registry and schema constants."""
 
-from typing import Dict, Any, List, Callable, Optional
-from uuid import uuid4
+from typing import Dict, Any, List
 
+from app.core.atlas.models.notebook import Notebook
 from app.core.atlas.tools.responses import error_response
 
 # --- data / etf ---
@@ -216,42 +216,34 @@ DEPLOY_WORKER_PARAMETERS = {
 _WORKER_DEFAULT_TOOLS = {"think", "calculator", "llm_web_search", "write_note"}
 
 
-def create_deploy_worker_tool(
-    *,
-    worker_id_factory: Optional[Callable[[], str]] = None,
-    note_sink: Optional[Callable[[Dict[str, Any]], None]] = None,
-) -> Dict[str, Any]:
-    """Create a deploy_worker_agent tool bound to orchestrator-local state."""
+def _resolve_and_deploy(notebook: Notebook, task: str, tools: List[str]) -> str:
+    """Resolve tool name strings to tool dicts, then deploy the worker agent.
 
-    def _resolve_and_deploy(task: str, tools: List[str]) -> str:
-        """Resolve tool name strings to tool dicts, then deploy the worker agent."""
-        from app.core.atlas.tools.worker_agent.worker import deploy_worker_agent
+    Args:
+        notebook: Shared Notebook instance (pre-bound via partial).
+        task: Task description from the orchestrator LLM.
+        tools: List of tool name strings from the orchestrator LLM.
+    """
+    from app.core.atlas.tools.worker_agent.worker import deploy_worker_agent
 
-        tool_defs = []
-        for name in tools:
-            if name in _WORKER_DEFAULT_TOOLS:
-                continue
-            tool = AVAILABLE_TOOLS.get(name)
-            if tool is None:
-                return error_response(
-                    f"Unknown tool '{name}'. Available: {sorted(AVAILABLE_TOOLS.keys())}"
-                )
-            tool_defs.append(tool)
+    tool_defs = []
+    for name in tools:
+        if name in _WORKER_DEFAULT_TOOLS:
+            continue
+        tool = AVAILABLE_TOOLS.get(name)
+        if tool is None:
+            return error_response(
+                f"Unknown tool '{name}'. Available: {sorted(AVAILABLE_TOOLS.keys())}"
+            )
+        tool_defs.append(tool)
 
-        worker_id = worker_id_factory() if worker_id_factory else f"worker-{uuid4().hex[:8]}"
-        return deploy_worker_agent(
-            task=task,
-            tools=tool_defs,
-            worker_id=worker_id,
-            note_sink=note_sink,
-        )
-
-    return {
-        "name": "deploy_worker_agent",
-        "description": DEPLOY_WORKER_DESCRIPTION,
-        "parameters": DEPLOY_WORKER_PARAMETERS,
-        "function": _resolve_and_deploy,
-    }
+    return deploy_worker_agent(notebook=notebook, task=task, tools=tool_defs)
 
 
-DEPLOY_WORKER_TOOL = create_deploy_worker_tool()
+# Reason: `function` is intentionally omitted — it must be bound via
+# functools.partial(_resolve_and_deploy, notebook) at registration time.
+DEPLOY_WORKER_TOOL = {
+    "name": "deploy_worker_agent",
+    "description": DEPLOY_WORKER_DESCRIPTION,
+    "parameters": DEPLOY_WORKER_PARAMETERS,
+}

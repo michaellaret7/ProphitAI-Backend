@@ -5,7 +5,7 @@ from app.core.atlas.tools.worker_agent.setup import (
     DEPLOY_WORKER_DESCRIPTION,
     DEPLOY_WORKER_PARAMETERS,
     AVAILABLE_TOOLS,
-    create_deploy_worker_tool,
+    _resolve_and_deploy,
 )
 
 __all__ = [
@@ -13,5 +13,5 @@ __all__ = [
     "DEPLOY_WORKER_DESCRIPTION",
     "DEPLOY_WORKER_PARAMETERS",
     "AVAILABLE_TOOLS",
-    "create_deploy_worker_tool",
+    "_resolve_and_deploy",
 ]

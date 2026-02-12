@@ -33,7 +33,7 @@ class Notebook(BaseModel):
     
     def get_available_notes(self) -> List[str]:
         """Get the available notes in the notebook."""
-        return [f"Title: {note.title}, Worker Task: {note.worker_task}, Timestamp: {note.timestamp}" for note in self.notes]
+        return [f"Title: {note.title}, Timestamp: {note.timestamp}" for note in self.notes]
 
     def get_notes(self, title_filter: Optional[str] = None) -> List[Note] | str:
         """Get notes, optionally filtered by title. Returns list of Notes or formatted string for LLM.
@@ -56,7 +56,6 @@ class Notebook(BaseModel):
             sections.append(
                 f"--- Note {i} ---\n"
                 f"Title: {note.title}\n"
-                f"Worker Task: {note.worker_task}\n"
                 f"Time: {note.timestamp}\n\n"
                 f"{note.content}"
             )

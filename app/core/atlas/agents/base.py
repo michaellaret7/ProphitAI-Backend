@@ -19,7 +19,7 @@ class AgentBase(ABC):
         provider: Optional[str] = None,
         model: Optional[str] = None,
         max_iterations: int = 100,
-        print_mode: PrintMode = PrintMode.VERBOSE,
+        print_mode: PrintMode = PrintMode.PRODUCTION,
         temperature: Optional[float] = None,
     ):
         # Observability
