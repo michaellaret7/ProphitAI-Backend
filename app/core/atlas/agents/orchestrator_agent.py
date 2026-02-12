@@ -1,7 +1,6 @@
 """OrchestratorAgent - Decomposes complex tasks and delegates to worker agents."""
 
 from functools import partial
-from threading import Lock
 from typing import Optional, List, Dict, Any
 
 from langfuse import propagate_attributes
@@ -11,12 +10,10 @@ from app.core.atlas.models import PrintMode, NoOpChatCallback, AgentResponse
 from app.core.atlas.models.new_plan import Plan
 from app.core.atlas.execution import ExecutionLoop, ToolHandler
 from app.core.atlas.logging import AgentPrinter
-from app.core.atlas.tools.worker_agent.setup import create_deploy_worker_tool
 from app.core.atlas.tools.base.search_engine import LLM_WEB_SEARCH_TOOL
 from app.core.atlas.tools.orchestrator import (
     UPDATE_PLAN_TOOL,
     update_plan,
-    create_review_worker_notes_tool,
 )
 from app.core.atlas.prompts.orchestrator_agent import (
     ORCHESTRATOR_SYSTEM_PROMPT,
@@ -66,9 +63,6 @@ class OrchestratorAgent(AgentBase):
         self.simulation_date = None
         self.note_titles: List[str] = []
         self.output_dir = None
-        self.worker_notes: List[Dict[str, Any]] = []
-        self._worker_notes_lock = Lock()
-        self._worker_counter = 0
 
         # Execution components
         self.printer = AgentPrinter(self.print_mode)
@@ -77,22 +71,10 @@ class OrchestratorAgent(AgentBase):
         )
         self.execution_loop = ExecutionLoop(self)
 
-        # Register orchestrator-specific tools (think + calculator come from AgentBase)
-        self.add_tool(
-            **create_deploy_worker_tool(
-                worker_id_factory=self._next_worker_id,
-                note_sink=self._store_worker_note,
-            )
-        )
-        self.add_tool(**create_review_worker_notes_tool(self._get_worker_notes))
         self.add_tool(**LLM_WEB_SEARCH_TOOL)
 
     def run(self) -> AgentResponse:
         """Execute the orchestrator's task decomposition and delegation loop."""
-        with self._worker_notes_lock:
-            self.worker_notes.clear()
-            self._worker_counter = 0
-
         with self.langfuse.start_as_current_observation(
             as_type="span",
             name="orchestrator_agent.run",
@@ -144,22 +126,6 @@ class OrchestratorAgent(AgentBase):
                 stop_reason=result["stop_reason"],
                 plan=self.plan if self.plan else None,
             )
-
-    def _next_worker_id(self) -> str:
-        """Generate a stable worker id for each deploy call."""
-        with self._worker_notes_lock:
-            self._worker_counter += 1
-            return f"worker-{self._worker_counter}"
-
-    def _store_worker_note(self, note: Dict[str, Any]) -> None:
-        """Append a worker note to orchestrator in-memory state."""
-        with self._worker_notes_lock:
-            self.worker_notes.append(note)
-
-    def _get_worker_notes(self) -> List[Dict[str, Any]]:
-        """Return a snapshot of worker notes for safe tool reads."""
-        with self._worker_notes_lock:
-            return [dict(note) for note in self.worker_notes]
 
 if __name__ == "__main__":
     orchestrator_agent = OrchestratorAgent(

@@ -1,16 +1,18 @@
 """WorkerAgent - Lightweight agent for executing focused tasks with scoped tool sets."""
 
-from typing import Optional, List, Dict, Any, Callable
+from functools import partial
+from typing import Optional, List, Dict, Any
 
 from langfuse import propagate_attributes
 
 from app.core.atlas.agents.base import AgentBase
 from app.core.atlas.models import PrintMode, NoOpChatCallback, AgentResponse
+from app.core.atlas.models.notebook import Notebook
 from app.core.atlas.execution import ExecutionLoop, ToolHandler
 from app.core.atlas.logging import AgentPrinter
 from app.core.atlas.prompts.worker import WORKER_SYSTEM_PROMPT
 from app.core.atlas.tools.base import LLM_WEB_SEARCH_TOOL
-from app.core.atlas.tools.worker_agent.notes import create_worker_write_note_tool
+from app.core.atlas.tools.worker_agent.write_note import write_note, WRITE_NOTE_TOOL
 
 
 class WorkerAgent(AgentBase):
@@ -25,14 +27,13 @@ class WorkerAgent(AgentBase):
         self,
         task: str,
         tools: List[Dict[str, Any]],
+        notebook: Notebook,
         *,
         provider: Optional[str] = None,
         model: Optional[str] = None,
         max_iterations: int = 30,
         print_mode: PrintMode = PrintMode.PRODUCTION,
         temperature: Optional[float] = None,
-        worker_id: str = "worker",
-        note_sink: Optional[Callable[[Dict[str, Any]], None]] = None,
     ):
         provider = provider or "gemini"
         model = model or "gemini-3-pro-preview"
@@ -46,9 +47,7 @@ class WorkerAgent(AgentBase):
         )
 
         self.task = task
-        self.worker_id = worker_id
-        self._orchestrator_note_sink = note_sink
-        self.worker_notes: List[Dict[str, Any]] = []
+        self.notebook = notebook
 
         # Attributes required by ExecutionLoop and ToolHandler (duck typing)
         self.chat_callback = NoOpChatCallback()
@@ -57,19 +56,17 @@ class WorkerAgent(AgentBase):
         self.note_titles: List[str] = []
         self.output_dir = None
 
-        # Execution components (NOTE: Add these to the AgentBase class.)
+        # Execution components
         self.printer = AgentPrinter(self.print_mode)
         self.tool_handler = ToolHandler(
             self, self.printer, chat_callback=self.chat_callback
         )
         self.execution_loop = ExecutionLoop(self)
 
+        # Reason: partial pre-binds notebook and worker_task so the LLM only sees title + content.
         self.add_tool(
-            **create_worker_write_note_tool(
-                worker_id=self.worker_id,
-                worker_task=self.task,
-                note_sink=self._store_note,
-            )
+            **WRITE_NOTE_TOOL,
+            function=partial(write_note, self.notebook, worker_task=self.task),
         )
         self.add_tool(**LLM_WEB_SEARCH_TOOL)
 
@@ -108,10 +105,4 @@ class WorkerAgent(AgentBase):
                 iterations=result["iterations"],
                 stop_reason=result["stop_reason"]
             )
-
-    def _store_note(self, note: Dict[str, Any]) -> None:
-        """Store note locally and forward to orchestrator sink when available."""
-        self.worker_notes.append(note)
-        if self._orchestrator_note_sink is not None:
-            self._orchestrator_note_sink(note)
 
