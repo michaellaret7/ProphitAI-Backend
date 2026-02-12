@@ -9,7 +9,6 @@ from app.core.atlas.tools.responses import success_response, error_response
 # TODO: Once this is working, test a complexity arg and a speed arg to dynamically select the model and provider.
 # This could be super helpful for cost, speed, and answer depth of the worker agent but needs testing and validation.
 
-
 def deploy_worker_agent(
     notebook: Notebook,
     task: str,
@@ -37,10 +36,10 @@ def deploy_worker_agent(
             task=task,
             tools=tools,
             notebook=notebook,
-            provider='gemini',
-            model='gemini-3-pro-preview',
-            # provider='grok',
-            # model='grok-4-1-fast-reasoning',
+            # provider='gemini',
+            # model='gemini-3-pro-preview',
+            provider='grok',
+            model='grok-4-1-fast-reasoning',
             max_iterations=30,
             temperature=0.7,
         )

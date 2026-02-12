@@ -328,8 +328,21 @@ class ToolHandler:
 
                 if len(result_str) > 2000:
                     result_str = result_str[:2000] + "... (truncated)"
-                    
-                tool_span.update(output=result_str)
+
+                # Reason: Tools that handle errors internally return error_response()
+                # without raising. Detect these so the span is flagged ERROR in Langfuse.
+                is_tool_error = False
+                try:
+                    parsed = yaml.safe_load(result) if isinstance(result, str) else result
+                    if isinstance(parsed, dict) and parsed.get("success") is False:
+                        is_tool_error = True
+                except Exception:
+                    pass
+
+                if is_tool_error:
+                    tool_span.update(level="ERROR", output=result_str)
+                else:
+                    tool_span.update(output=result_str)
 
                 return result
 
