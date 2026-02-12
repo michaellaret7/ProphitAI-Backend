@@ -1,6 +1,7 @@
 """Worker tool setup - available tools registry and schema constants."""
 
-from typing import Dict, Any, List
+from typing import Dict, Any, List, Callable, Optional
+from uuid import uuid4
 
 from app.core.atlas.tools.responses import error_response
 
@@ -172,7 +173,8 @@ DEPLOY_WORKER_DESCRIPTION = (
     "**HOW IT WORKS:**\n"
     "1. Provide a clear, detailed task description\n"
     "2. Select the tools the worker needs from the available set\n"
-    "3. The worker agent executes autonomously and returns results\n\n"
+    "3. The worker agent executes autonomously and returns results\n"
+    "4. Worker write_note calls are saved in orchestrator memory for later review\n\n"
     "**TIPS FOR GOOD TASK DESCRIPTIONS:**\n"
     "- Be specific about what data to gather and what output format you expect\n"
     "- Include relevant context (tickers, time periods, metrics of interest)\n"
@@ -214,27 +216,42 @@ DEPLOY_WORKER_PARAMETERS = {
 _WORKER_DEFAULT_TOOLS = {"think", "calculator", "llm_web_search", "write_note"}
 
 
-def _resolve_and_deploy(task: str, tools: List[str]) -> str:
-    """Resolve tool name strings to tool dicts, then deploy the worker agent."""
-    from app.core.atlas.tools.worker_agent.worker import deploy_worker_agent
+def create_deploy_worker_tool(
+    *,
+    worker_id_factory: Optional[Callable[[], str]] = None,
+    note_sink: Optional[Callable[[Dict[str, Any]], None]] = None,
+) -> Dict[str, Any]:
+    """Create a deploy_worker_agent tool bound to orchestrator-local state."""
 
-    tool_defs = []
-    for name in tools:
-        if name in _WORKER_DEFAULT_TOOLS:
-            continue
-        tool = AVAILABLE_TOOLS.get(name)
-        if tool is None:
-            return error_response(
-                f"Unknown tool '{name}'. Available: {sorted(AVAILABLE_TOOLS.keys())}"
-            )
-        tool_defs.append(tool)
+    def _resolve_and_deploy(task: str, tools: List[str]) -> str:
+        """Resolve tool name strings to tool dicts, then deploy the worker agent."""
+        from app.core.atlas.tools.worker_agent.worker import deploy_worker_agent
 
-    return deploy_worker_agent(task=task, tools=tool_defs)
+        tool_defs = []
+        for name in tools:
+            if name in _WORKER_DEFAULT_TOOLS:
+                continue
+            tool = AVAILABLE_TOOLS.get(name)
+            if tool is None:
+                return error_response(
+                    f"Unknown tool '{name}'. Available: {sorted(AVAILABLE_TOOLS.keys())}"
+                )
+            tool_defs.append(tool)
+
+        worker_id = worker_id_factory() if worker_id_factory else f"worker-{uuid4().hex[:8]}"
+        return deploy_worker_agent(
+            task=task,
+            tools=tool_defs,
+            worker_id=worker_id,
+            note_sink=note_sink,
+        )
+
+    return {
+        "name": "deploy_worker_agent",
+        "description": DEPLOY_WORKER_DESCRIPTION,
+        "parameters": DEPLOY_WORKER_PARAMETERS,
+        "function": _resolve_and_deploy,
+    }
 
 
-DEPLOY_WORKER_TOOL = {
-    "name": "deploy_worker_agent",
-    "description": DEPLOY_WORKER_DESCRIPTION,
-    "parameters": DEPLOY_WORKER_PARAMETERS,
-    "function": _resolve_and_deploy,
-}
+DEPLOY_WORKER_TOOL = create_deploy_worker_tool()

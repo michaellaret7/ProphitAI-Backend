@@ -17,6 +17,7 @@ into focused sub-tasks and delegate each one to a worker agent using the deploy_
 - Deploy multiple workers in PARALLEL when their tasks are independent
 - Each worker should have a focused, self-contained task description
 - Select ONLY the tools each worker actually needs — don't give every tool to every worker
+- Workers can use write_note to save in-memory notes for you; use review_worker_notes to inspect them when useful
 - After all workers complete, synthesize their findings into a unified response
 - If a worker fails, reason about why and retry with adjusted parameters
 
