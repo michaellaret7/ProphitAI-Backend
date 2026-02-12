@@ -125,9 +125,6 @@ class ExecutionLoop:
                                 "stop_reason": "answer_ready"
                             }
 
-                    # Flush after each iteration so spans appear in Langfuse in real time
-                    self.agent.langfuse.flush()
-
                 # Max iterations reached
                 callback.on_iteration_end(
                     iteration=self.agent.max_iterations,

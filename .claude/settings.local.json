@@ -69,7 +69,8 @@
       "WebFetch(domain:mergersandinquisitions.com)",
       "WebFetch(domain:community.render.com)",
       "WebFetch(domain:gregorygundersen.com)",
-      "Bash(cmd /c \".venv\\\\Scripts\\\\python -c \"\"from app.core.atlas.models.agent_response import AgentResponse; print\\(AgentResponse\\(answer=''test''\\)\\); print\\(''OK''\\)\"\"\")"
+      "Bash(cmd /c \".venv\\\\Scripts\\\\python -c \"\"from app.core.atlas.models.agent_response import AgentResponse; print\\(AgentResponse\\(answer=''test''\\)\\); print\\(''OK''\\)\"\"\")",
+      "Bash(pip install:*)"
     ],
     "deny": [],
     "ask": []

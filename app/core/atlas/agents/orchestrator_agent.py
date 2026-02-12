@@ -142,14 +142,20 @@ class OrchestratorAgent(AgentBase):
             )
 
 if __name__ == "__main__":
+    task = """
+    Context: I am a 24 year old and I want to invest $3,000 to $4,000 thousand dollars and I want to build a portfolio of 7-10 stocks or etfs.
+    My time horizon for this investment is 6-8 months. My goal is to maximize my risk adjusted returns and make around 20-30% return in those 6-8 months.
+
+    Your Goal: Build me a well hedged+diversified portfolio that is well constructed to maximize risk adjusted returns and mitigate any macro volatility.
+    """
     orchestrator_agent = OrchestratorAgent(
-        task="deploy 2 workers agent, have one have ticker performance tools and the other have earnings call analysis tools. Once theyre done, pull their notes and synthesize a final answer. The ticker is question is AAPL, but there is no specific investment question yet, the purpose of this work is to test the write and retrieve notes functionality",
+        task=task,
         provider="anthropic",
         model="claude-opus-4-6",
         max_iterations=50,
         print_mode=PrintMode.PRODUCTION,
         temperature=0.7,
-        plan_first=False,
+        plan_first=True,
     )
     result = orchestrator_agent.run()
     print(result.answer)

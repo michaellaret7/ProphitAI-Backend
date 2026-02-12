@@ -38,7 +38,9 @@ def deploy_worker_agent(
             tools=tools,
             notebook=notebook,
             provider='gemini',
-            model='gemini-3-flash-preview',
+            model='gemini-3-pro-preview',
+            # provider='grok',
+            # model='grok-4-1-fast-reasoning',
             max_iterations=30,
             temperature=0.7,
         )
