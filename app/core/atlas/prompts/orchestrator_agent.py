@@ -36,7 +36,7 @@ Be specific. Include:
 - **Dependent tasks** → deploy sequentially. Wait for the dependency to finish, then use its result to inform the next worker's task description.
 
 ## Final Synthesis
-- Once all workers have finished, call retrieve_notes to pull every note workers saved.
+- Once all workers have finished, call retrieve_notes to pull every note workers saved. You must call the retrieve notes tool to further your understanding of the workers results.
 - Use the think tool to cross-reference worker outputs and notes — look for contradictions, gaps, and patterns across results.
 - Only after this review should you write your final answer. The final answer must reflect the full body of research, not just the last worker's output.
 

@@ -31,6 +31,10 @@ def macro_rates(
     # Common countries with government bond data
     acceptable_countries = ['USA', 'GB', 'DE', 'FR', 'IT', 'ES', 'JP', 'CA', 'AU', 'NZ', 'CH', 'SE', 'NO', 'DK']
 
+    if 'US' in countries and 'USA' not in countries:
+        countries.pop(countries.index('US'))
+        countries.insert(0, 'USA')
+
     # If no countries specified, fetch all
     if countries is None:
         countries = acceptable_countries
