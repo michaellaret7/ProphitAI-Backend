@@ -83,10 +83,10 @@ class OrchestratorAgent(AgentBase):
         self.execution_loop = ExecutionLoop(self)
 
         #----- Register the Tools specific to the orchestrator agent -----#
-        # Reason: partial pre-binds notebook so the LLM only sees task + tools.
+        # Reason: partial pre-binds notebook + callback so the LLM only sees task + tools.
         self.add_tool(
             **DEPLOY_WORKER_TOOL,
-            function=partial(_resolve_and_deploy, self.notebook),
+            function=partial(_resolve_and_deploy, self.notebook, self.chat_callback),
         )
         self.add_tool(
             **RETRIEVE_NOTES_TOOL,

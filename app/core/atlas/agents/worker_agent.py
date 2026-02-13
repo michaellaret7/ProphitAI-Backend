@@ -34,6 +34,7 @@ class WorkerAgent(AgentBase):
         max_iterations: int = 30,
         print_mode: PrintMode = PrintMode.PRODUCTION,
         temperature: Optional[float] = None,
+        chat_callback: Optional[Any] = None,
     ):
         provider = provider or "gemini"
         model = model or "gemini-3-pro-preview"
@@ -50,7 +51,8 @@ class WorkerAgent(AgentBase):
         self.notebook = notebook
 
         # Attributes required by ExecutionLoop and ToolHandler (duck typing)
-        self.chat_callback = NoOpChatCallback()
+        self.chat_callback = chat_callback if chat_callback is not None else NoOpChatCallback()
+        
         self.session_id = "worker"
         self.simulation_date = None
         self.note_titles: List[str] = []

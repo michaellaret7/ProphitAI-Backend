@@ -1,6 +1,6 @@
 """Worker tool setup - available tools registry and schema constants."""
 
-from typing import Dict, Any, List
+from typing import Any, Dict, List
 
 from app.core.atlas.models.notebook import Notebook
 from app.core.atlas.tools.responses import error_response
@@ -216,11 +216,12 @@ DEPLOY_WORKER_PARAMETERS = {
 _WORKER_DEFAULT_TOOLS = {"think", "calculator", "llm_web_search", "write_note"}
 
 
-def _resolve_and_deploy(notebook: Notebook, task: str, tools: List[str]) -> str:
+def _resolve_and_deploy(notebook: Notebook, chat_callback: Any, task: str, tools: List[str]) -> str:
     """Resolve tool name strings to tool dicts, then deploy the worker agent.
 
     Args:
         notebook: Shared Notebook instance (pre-bound via partial).
+        chat_callback: Orchestrator's callback for streaming events (pre-bound via partial).
         task: Task description from the orchestrator LLM.
         tools: List of tool name strings from the orchestrator LLM.
     """
@@ -237,7 +238,12 @@ def _resolve_and_deploy(notebook: Notebook, task: str, tools: List[str]) -> str:
             )
         tool_defs.append(tool)
 
-    return deploy_worker_agent(notebook=notebook, task=task, tools=tool_defs)
+    return deploy_worker_agent(
+        notebook=notebook, 
+        chat_callback=chat_callback, 
+        task=task, 
+        tools=tool_defs
+    )
 
 
 # Reason: `function` is intentionally omitted — it must be bound via

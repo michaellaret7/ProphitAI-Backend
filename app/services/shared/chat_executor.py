@@ -338,6 +338,68 @@ class WebSocketChatCallback:
         self._send("plan_updated", _serialize_plan(plan))
 
 
+class WorkerCallbackWrapper:
+    """Wraps a ChatCallback to tag worker events with task context.
+
+    Reuses the inner callback's _send method to emit worker-prefixed
+    event types (worker_tool_call_start, worker_tool_call_result, etc.)
+    so the frontend can distinguish worker activity from orchestrator activity.
+    """
+
+    def __init__(self, inner_callback: "WebSocketChatCallback", task_id: str):
+        self._inner = inner_callback
+        self._task_id = task_id
+
+    def _send(self, event_type: str, payload: dict) -> None:
+        """Delegate to inner callback's _send with task_id injected."""
+        if hasattr(self._inner, '_send'):
+            payload["task_id"] = self._task_id
+            self._inner._send(event_type, payload)
+
+    # --- Events we forward with worker prefix ---
+
+    def on_tool_call_start(self, tool_call_id: str, tool_name: str,
+                           arguments: Dict[str, Any], iteration: int) -> None:
+        self._send("worker_tool_call_start", {
+            "tool_call_id": tool_call_id, "tool_name": tool_name,
+            "arguments": arguments, "iteration": iteration,
+        })
+
+    def on_tool_call_result(self, tool_call_id: str, tool_name: str,
+                            result: Any, success: bool, duration_ms: int) -> None:
+        result_str = str(result)
+        if len(result_str) > 2000:
+            result_str = result_str[:2000] + "... (truncated)"
+        self._send("worker_tool_call_result", {
+            "tool_call_id": tool_call_id, "tool_name": tool_name,
+            "result": result_str, "success": success, "duration_ms": duration_ms,
+        })
+
+    def on_iteration_start(self, iteration: int) -> None:
+        self._send("worker_iteration_start", {"iteration": iteration})
+
+    def on_iteration_end(self, iteration: int, tokens_used: int) -> None:
+        self._send("worker_iteration_end", {"iteration": iteration, "tokens_used": tokens_used})
+
+    # --- Events we suppress (orchestrator already handles these) ---
+
+    def on_run_started(self, session_id: str, message_id: str) -> None:
+        pass
+
+    def on_run_finished(self, answer: str, tool_calls_made: List[str],
+                        iterations: int, tokens_used: int, stop_reason: str) -> None:
+        pass
+
+    def on_run_error(self, error: str) -> None:
+        pass
+
+    def on_plan_created(self, plan: Any) -> None:
+        pass
+
+    def on_plan_updated(self, plan: Any) -> None:
+        pass
+
+
 def _serialize_plan(plan: Any) -> dict:
     """Convert a Plan model to a JSON-serializable dict for WebSocket."""
     return {

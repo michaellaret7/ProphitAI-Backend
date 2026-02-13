@@ -79,6 +79,17 @@
     .event.iteration_end { border-color: #78909c; background: #1a1a20; }
     .event.iteration_end .type-tag { background: #37474f; color: #cfd8dc; }
 
+    .event.worker_tool_call_start { border-color: #7e57c2; background: #1e1a30; }
+    .event.worker_tool_call_start .type-tag { background: #512da8; color: #d1c4e9; }
+
+    .event.worker_tool_call_result { border-color: #26a69a; background: #1a2a28; }
+    .event.worker_tool_call_result .type-tag { background: #00796b; color: #b2dfdb; }
+    .event.worker_tool_call_result.failed { border-color: #ef5350; background: #2a1a1a; }
+    .event.worker_tool_call_result.failed .type-tag { background: #c62828; color: #ffcdd2; }
+
+    .event.worker_iteration_start { border-color: #9575cd; background: #1a1828; }
+    .event.worker_iteration_start .type-tag { background: #4527a0; color: #d1c4e9; }
+
     .event.run_started { border-color: #ab47bc; background: #201a2a; }
     .event.run_started .type-tag { background: #6a1b9a; color: #e1bee7; }
 
@@ -117,6 +128,9 @@
     .tool-card.pending { border-color: #5c6bc0; opacity: 0.7; }
     .tool-card.done { border-color: #388e3c; }
     .tool-card.done.failed { border-color: #c62828; }
+    .tool-card.worker { border-left: 3px solid #7e57c2; }
+    .tool-card.worker .tool-name { color: #b39ddb; }
+    .tool-card.worker .tool-label { font-size: 9px; color: #7e57c2; text-transform: uppercase; font-weight: 700; letter-spacing: 0.5px; }
 
     /* ---- Plan Tasks ---- */
     .plan-empty { color: #555; font-size: 12px; padding: 10px; }
@@ -343,6 +357,31 @@ function handleEvent(msg) {
       updateToolCard(payload);
       break;
 
+    case 'worker_iteration_start':
+      addEvent(type, `Worker iteration ${payload.iteration} <span style="color:#9575cd">[${payload.task_id}]</span>`, type, ts);
+      break;
+
+    case 'worker_iteration_end':
+      addEvent(type, `Worker iteration ${payload.iteration} ended`, 'iteration_end', ts);
+      break;
+
+    case 'worker_tool_call_start':
+      toolCount++;
+      updateStat('tools', toolCount);
+      addEvent(type, `<code>${payload.tool_name}</code> <span style="color:#9575cd">[worker]</span>`, type, ts);
+      addToolCard(payload, true);
+      break;
+
+    case 'worker_tool_call_result':
+      addEvent(
+        type,
+        `<code>${payload.tool_name}</code> ${payload.success ? 'succeeded' : 'FAILED'} <span class="duration">(${payload.duration_ms}ms)</span> <span style="color:#9575cd">[worker]</span>`,
+        payload.success ? type : type + ' failed',
+        ts
+      );
+      updateToolCard(payload);
+      break;
+
     case 'run_finished':
       setStatus('connected', 'Agent finished');
       updateStat('tokens', payload.tokens_used);
@@ -386,10 +425,10 @@ function addEvent(type, html, cssClass, ts) {
   log.scrollTop = log.scrollHeight;
 }
 
-function addToolCard(payload) {
+function addToolCard(payload, isWorker = false) {
   const timeline = document.getElementById('tool-timeline');
   const card = document.createElement('div');
-  card.className = 'tool-card pending';
+  card.className = 'tool-card pending' + (isWorker ? ' worker' : '');
   card.id = 'tc-' + payload.tool_call_id;
 
   let argsStr = '';
@@ -397,7 +436,9 @@ function addToolCard(payload) {
     argsStr = JSON.stringify(payload.arguments, null, 2);
   } catch { argsStr = String(payload.arguments); }
 
+  const label = isWorker ? '<div class="tool-label">worker</div>' : '';
   card.innerHTML = `
+    ${label}
     <div class="tool-name">${payload.tool_name}</div>
     <div class="tool-meta">Iteration ${payload.iteration} &bull; Running...</div>
     <div class="tool-args">${argsStr}</div>
