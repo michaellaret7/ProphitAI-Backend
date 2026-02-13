@@ -120,17 +120,3 @@ class DeepAgent(AgentBase):
         return result
 
 
-if __name__ == "__main__":
-    from app.core.atlas.tools.data.screening import EQUITY_SCREENER_TOOL
-    from app.core.atlas.tools.ticker.performance import GET_TICKER_PERFORMANCE_AND_RISK_TOOL
-    agent = DeepAgent(
-        system_prompt="You are a helpful assistant that can answer questions and help with tasks using tool calls.",
-        user_prompt="Run through the equity screener and find me tickers with low debt that have high alpha.",
-        provider="grok",
-        model="grok-4-1-fast-reasoning",
-        print_mode=PrintMode.DEBUG,
-    )
-    agent.add_tool(**EQUITY_SCREENER_TOOL)
-    agent.add_tool(**GET_TICKER_PERFORMANCE_AND_RISK_TOOL)
-    result = agent.run()
-    print(result)

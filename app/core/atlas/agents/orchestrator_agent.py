@@ -45,7 +45,7 @@ class OrchestratorAgent(AgentBase):
         max_iterations: int = 50,
         print_mode: PrintMode = PrintMode.PRODUCTION,
         temperature: Optional[float] = None,
-        plan_first: bool = False,
+        plan_first: bool = True,
         format_output: Optional[type[BaseModel]] = None,
     ):
         provider = provider or "gemini"

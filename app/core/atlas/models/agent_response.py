@@ -16,3 +16,4 @@ class AgentResponse(BaseModel):
     iterations: int = 0
     stop_reason: str = "answer_ready"
     plan: Optional[Plan] = None
+    parsed_output: Optional[BaseModel] = None

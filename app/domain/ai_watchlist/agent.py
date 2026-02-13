@@ -1,49 +1,34 @@
-from app.core.atlas.agents import DeepAgent
-from app.core.atlas.models import StateCallback, PrintMode
-from app.domain.ai_watchlist.prompts import SYSTEM_PROMPT, USER_PROMPT_TEMPLATE
-from typing import Optional
+from app.core.atlas.agents import OrchestratorAgent
+from app.core.atlas.models import PrintMode
+from app.domain.ai_watchlist.prompts import WATCHLIST_PROMPT
 from .models import WatchlistResponse
-from .tool_registry import register_ai_watchlist_tools
 
 
-class AiWatchlistAgent(DeepAgent):
-    response_model = WatchlistResponse
-
+class Watchlist(OrchestratorAgent):
     def __init__(
         self,
         user_preferences: str,
-        print_mode: PrintMode = PrintMode.VERBOSE,
-        state_callback: Optional[StateCallback] = None,
+        print_mode: PrintMode = PrintMode.PRODUCTION,
+        provider: str = "gemini",
+        model: str = "gemini-3-pro-preview"
     ):
-        if not user_preferences or not user_preferences.strip():
-            raise ValueError("user_preferences is required and cannot be empty")
 
-        self.user_preferences = user_preferences.strip()
-
-        dynamic_user_prompt = self._build_user_prompt()
+        task = WATCHLIST_PROMPT.format(user_query=user_preferences)
 
         super().__init__(
-            # provider="gemini",
-            # model="gemini-3-flash-preview",
-            # provider="grok",
-            # model="grok-4-1-fast-non-reasoning",
-            # provider="openai",
-            # model="gpt-5.2",
-            provider="fireworks",
-            model="Kimi-K2.5",
-            # provider="anthropic",
-            # model="claude-haiku-4-5-20251001",
-            system_prompt=SYSTEM_PROMPT,
-            user_prompt=dynamic_user_prompt,
-            max_iterations=200,
-            plan_first=True,
+            task=task,
             print_mode=print_mode,
-            state_callback=state_callback,
-            # temperature=0.7,
+            provider=provider,
+            model=model,
+            format_output=WatchlistResponse
         )
 
-        register_ai_watchlist_tools(self)
-
-    def _build_user_prompt(self) -> str:
-        return USER_PROMPT_TEMPLATE.format(user_query=self.user_preferences)
+if __name__ == "__main__":
+    watchlist = Watchlist(
+        user_preferences="Build me a watchlist of software stocks that you think will rebound from the recent software selloff.",
+        provider="anthropic",
+        model="claude-opus-4-6",
+    )
+    result = watchlist.run()
+    print(result.parsed_output.model_dump_json(indent=4))
 
