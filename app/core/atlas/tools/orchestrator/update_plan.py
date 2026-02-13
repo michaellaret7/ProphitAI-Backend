@@ -1,14 +1,17 @@
 """Update Plan Tool - Mark orchestrator plan tasks as complete."""
 
+from typing import Any
+
 from app.core.atlas.models.new_plan import Plan, TaskStatus
 from app.core.atlas.tools.responses import success_response, error_response
 
 
-def update_plan(plan: Plan, task_id: str) -> str:
-    """Mark a plan task as complete.
+def update_plan(plan: Plan, chat_callback: Any, task_id: str) -> str:
+    """Mark a plan task as complete and notify the frontend.
 
     Args:
-        plan: The orchestrator's Plan object.
+        plan: The orchestrator's Plan object (bound via partial).
+        chat_callback: The agent's chat callback (bound via partial).
         task_id: The task ID to mark complete (e.g., "1", "2").
 
     Returns:
@@ -26,6 +29,10 @@ def update_plan(plan: Plan, task_id: str) -> str:
         return error_response(f"Task {task_id} is already complete.")
 
     task.status = TaskStatus.COMPLETE
+
+    # Notify frontend of the plan state change
+    if chat_callback and hasattr(chat_callback, "on_plan_updated"):
+        chat_callback.on_plan_updated(plan)
 
     completed = sum(1 for t in plan.tasks if t.status == TaskStatus.COMPLETE)
     total = len(plan.tasks)

@@ -118,7 +118,14 @@ class OrchestratorAgent(AgentBase):
                 print("Plan-first mode enabled. Generating plan...")
                 planner = PlannerAgent(task=self.task, print_mode=PrintMode.PRODUCTION)
                 self.plan = planner.run()
-                self.add_tool(**{**UPDATE_PLAN_TOOL, "function": partial(update_plan, self.plan)})
+
+                self.add_tool(**{
+                    **UPDATE_PLAN_TOOL,
+                    "function": partial(update_plan, self.plan, self.chat_callback),
+                })
+
+                self.chat_callback.on_plan_created(self.plan) # notify the callback when the plan is generated
+                
                 print(f"Plan generated: {self.plan}")
                 print("="*100)
 

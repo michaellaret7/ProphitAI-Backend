@@ -328,3 +328,21 @@ class WebSocketChatCallback:
     def on_run_error(self, error: str) -> None:
         """Called when an error occurs."""
         self._send("run_error", {"error": error})
+
+    def on_plan_created(self, plan: Any) -> None:
+        """Called when the orchestrator creates its execution plan."""
+        self._send("plan_created", _serialize_plan(plan))
+
+    def on_plan_updated(self, plan: Any) -> None:
+        """Called when a plan task is marked complete."""
+        self._send("plan_updated", _serialize_plan(plan))
+
+
+def _serialize_plan(plan: Any) -> dict:
+    """Convert a Plan model to a JSON-serializable dict for WebSocket."""
+    return {
+        "tasks": [
+            {"id": t.id, "description": t.description, "status": t.status.value}
+            for t in plan.tasks
+        ]
+    }

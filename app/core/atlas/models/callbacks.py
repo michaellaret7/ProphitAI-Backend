@@ -198,6 +198,22 @@ class ChatCallback(Protocol):
         """
         ...
 
+    def on_plan_created(self, plan: Any) -> None:
+        """Called when the orchestrator creates its execution plan.
+
+        Args:
+            plan: The Plan object with tasks list.
+        """
+        ...
+
+    def on_plan_updated(self, plan: Any) -> None:
+        """Called when a plan task status changes (e.g., marked complete).
+
+        Args:
+            plan: The updated Plan object.
+        """
+        ...
+
 
 class NoOpChatCallback:
     """Default no-operation callback for chat agents.
@@ -251,5 +267,13 @@ class NoOpChatCallback:
         pass
 
     def on_run_error(self, error: str) -> None:
+        """No-op implementation."""
+        pass
+
+    def on_plan_created(self, plan: Any) -> None:
+        """No-op implementation."""
+        pass
+
+    def on_plan_updated(self, plan: Any) -> None:
         """No-op implementation."""
         pass

@@ -42,7 +42,7 @@
     .stats span { color: #bbb; }
 
     /* ---- Layout ---- */
-    .panels { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; height: calc(100vh - 180px); }
+    .panels { display: grid; grid-template-columns: 280px 1fr 1fr; gap: 16px; height: calc(100vh - 180px); }
     .panel {
       background: #14141f; border: 1px solid #2a2a3a; border-radius: 8px;
       display: flex; flex-direction: column; overflow: hidden;
@@ -91,6 +91,12 @@
     .event.run_error { border-color: #ef5350; background: #2a1a1a; }
     .event.run_error .type-tag { background: #c62828; color: #ffcdd2; }
 
+    .event.plan_created { border-color: #ff9800; background: #2a2010; }
+    .event.plan_created .type-tag { background: #e65100; color: #ffe0b2; }
+
+    .event.plan_updated { border-color: #26a69a; background: #1a2a28; }
+    .event.plan_updated .type-tag { background: #00796b; color: #b2dfdb; }
+
     .event.heartbeat { border-color: #333; background: #111118; }
     .event.heartbeat .type-tag { background: #333; color: #777; }
 
@@ -111,6 +117,26 @@
     .tool-card.pending { border-color: #5c6bc0; opacity: 0.7; }
     .tool-card.done { border-color: #388e3c; }
     .tool-card.done.failed { border-color: #c62828; }
+
+    /* ---- Plan Tasks ---- */
+    .plan-empty { color: #555; font-size: 12px; padding: 10px; }
+    .plan-task {
+      padding: 8px 10px; margin-bottom: 6px; border-radius: 4px;
+      border-left: 3px solid #555; background: #1a1a22; font-size: 12px;
+      transition: border-color 0.3s, background 0.3s;
+    }
+    .plan-task .task-id { font-weight: 700; color: #7c8dff; margin-right: 6px; }
+    .plan-task .task-desc { color: #ccc; }
+    .plan-task .task-status {
+      display: inline-block; font-size: 10px; font-weight: 700; padding: 1px 6px;
+      border-radius: 3px; margin-top: 4px; text-transform: uppercase;
+    }
+    .plan-task[data-status="not started"] { border-color: #555; }
+    .plan-task[data-status="not started"] .task-status { background: #333; color: #888; }
+    .plan-task[data-status="in progress"] { border-color: #ffb74d; background: #2a2510; }
+    .plan-task[data-status="in progress"] .task-status { background: #e65100; color: #ffe0b2; }
+    .plan-task[data-status="complete"] { border-color: #4caf50; background: #1a2a1a; }
+    .plan-task[data-status="complete"] .task-status { background: #2e7d32; color: #c8e6c9; }
 
     /* ---- Final Result ---- */
     #final-result {
@@ -142,7 +168,15 @@
   </div>
 
   <div class="panels">
-    <!-- Left: Raw Event Log -->
+    <!-- Left: Plan -->
+    <div class="panel">
+      <div class="panel-header">Plan</div>
+      <div class="panel-body" id="plan-panel">
+        <div class="plan-empty">No plan yet — waiting for agent...</div>
+      </div>
+    </div>
+
+    <!-- Center: Raw Event Log -->
     <div class="panel">
       <div class="panel-header">Event Log</div>
       <div class="panel-body" id="event-log"></div>
@@ -188,6 +222,7 @@ async function startExecution() {
   // Reset UI
   document.getElementById('event-log').innerHTML = '';
   document.getElementById('tool-timeline').innerHTML = '';
+  document.getElementById('plan-panel').innerHTML = '<div class="plan-empty">No plan yet — waiting for agent...</div>';
   document.getElementById('final-result').style.display = 'none';
   toolCards = {};
   toolCount = 0;
@@ -262,6 +297,16 @@ function handleEvent(msg) {
   const ts = timestamp ? new Date(timestamp).toLocaleTimeString() : '';
 
   switch (type) {
+
+    case 'plan_created':
+      renderPlan(payload.tasks);
+      addEvent(type, `Plan created with ${payload.tasks.length} tasks`, type, ts);
+      break;
+
+    case 'plan_updated':
+      renderPlan(payload.tasks);
+      addEvent(type, `Plan updated`, type, ts);
+      break;
 
     case 'run_started':
       setStatus('running', 'Agent running...');
@@ -373,6 +418,23 @@ function updateToolCard(payload) {
   const resultEl = card.querySelector('.tool-result');
   resultEl.className = 'tool-result' + (payload.success ? '' : ' failed');
   resultEl.textContent = payload.result;
+}
+
+function renderPlan(tasks) {
+  const panel = document.getElementById('plan-panel');
+  panel.innerHTML = '';
+  tasks.forEach(t => {
+    const el = document.createElement('div');
+    el.className = 'plan-task';
+    el.setAttribute('data-status', t.status);
+    el.id = 'plan-task-' + t.id;
+    el.innerHTML = `
+      <span class="task-id">${t.id}.</span>
+      <span class="task-desc">${t.description}</span><br/>
+      <span class="task-status">${t.status}</span>
+    `;
+    panel.appendChild(el);
+  });
 }
 
 function showFinalResult(payload) {

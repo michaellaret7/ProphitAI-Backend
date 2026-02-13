@@ -132,9 +132,9 @@ LLM_WEB_SEARCH_PARAMETERS = {
         },
         "mode": {
             "type": "string",
-            "enum": ["regular-search", "deep-research"],
+            "enum": ["regular-search"],
             "default": "regular-search",
-            "description": "regular-search (faster) or deep-research (thorough)."
+            "description": "regular-search (faster)."
         }
     },
     "required": ["queries"]
