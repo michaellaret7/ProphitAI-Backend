@@ -18,6 +18,7 @@ from app.services.shared.agent_executor import (
     execution_manager,
     run_agent_background,
 )
+from app.services.shared.chat_executor import WebSocketChatCallback
 
 from app.core.atlas.models import PrintMode
 
@@ -63,13 +64,19 @@ class ExecutionResultResponse(BaseModel):
     tokens: int = Field(0, description="Total tokens consumed")
 
 
-def _create_agent(agent_type: AgentType, parameters: Dict[str, Any], state_callback: WebSocketCallback):
+def _create_agent(
+    agent_type: AgentType,
+    parameters: Dict[str, Any],
+    execution_id: str,
+    loop: "asyncio.AbstractEventLoop",
+):
     """Factory function to create agent instances based on type.
 
     Args:
         agent_type: The type of agent to create.
         parameters: Agent-specific parameters.
-        state_callback: The callback for streaming state updates.
+        execution_id: Unique execution ID (used for WebSocket routing).
+        loop: The main event loop for thread-safe WebSocket communication.
 
     Returns:
         An agent instance ready to run.
@@ -84,6 +91,8 @@ def _create_agent(agent_type: AgentType, parameters: Dict[str, Any], state_callb
         if not portfolio_id:
             raise ValueError("portfolio_id is required for optimizer agent")
 
+        # Optimizer still uses old StateCallback interface
+        state_callback = WebSocketCallback(execution_id, loop)
         return OptimizerAgent(
             portfolio_id=portfolio_id,
             risk_tolerance=parameters.get("risk_tolerance"),
@@ -98,15 +107,18 @@ def _create_agent(agent_type: AgentType, parameters: Dict[str, Any], state_callb
         )
 
     elif agent_type == AgentType.WATCHLIST:
-        from app.domain.ai_watchlist.agent import AiWatchlistAgent
+        from app.domain.ai_watchlist.agent import Watchlist
 
         user_preferences = parameters.get("user_preferences")
         if not user_preferences:
             raise ValueError("user_preferences is required for watchlist agent")
 
-        return AiWatchlistAgent(
+        # Watchlist uses new ChatCallback interface (tool-level events)
+        chat_callback = WebSocketChatCallback(execution_id, loop)
+        return Watchlist(
             user_preferences=user_preferences,
-            state_callback=state_callback,
+            chat_callback=chat_callback,
+            session_id=execution_id,
             print_mode=PrintMode.PRODUCTION,
         )
 
@@ -138,14 +150,12 @@ async def execute_agent(
     execution_state = execution_manager.create_execution()
     execution_id = execution_state.execution_id
 
-    # Create WebSocket callback with the current event loop
-    # This loop is needed for thread-safe WebSocket communication
+    # Reason: agent runs in thread pool, but WebSocket is async on the main loop.
+    # The factory creates the appropriate callback type per agent.
     loop = asyncio.get_running_loop()
-    callback = WebSocketCallback(execution_id, loop)
 
     try:
-        # Create the agent with the callback
-        agent = _create_agent(request.agent_type, request.parameters, callback)
+        agent = _create_agent(request.agent_type, request.parameters, execution_id, loop)
     except ValueError as e:
         execution_manager.remove_execution(execution_id)
         raise HTTPException(status_code=400, detail=str(e))

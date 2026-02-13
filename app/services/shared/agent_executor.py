@@ -10,7 +10,7 @@ import asyncio
 import uuid
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import Any, Dict, Optional, TYPE_CHECKING
+from typing import Any, Dict, Optional, TYPE_CHECKING, Union
 
 from app.api.routes.websocket_router import connection_manager
 from app.core.atlas.models import Plan, TaskStatus
@@ -18,6 +18,7 @@ from app.utils.time_utils import get_current_utc_time
 
 if TYPE_CHECKING:
     from app.core.atlas.agents import DeepAgent as BaseAgent
+    from app.core.atlas.agents.base import AgentBase
 
 
 class ExecutionStatus(str, Enum):
@@ -278,41 +279,68 @@ class WebSocketCallback:
         self._close_connection()
 
 
-async def run_agent_background(agent: "BaseAgent", execution_id: str) -> None:
+async def run_agent_background(
+    agent: "Union[BaseAgent, AgentBase]",
+    execution_id: str,
+) -> None:
     """Run an agent in the background with WebSocket streaming.
 
-    Executes the agent in a thread pool to avoid blocking,
-    streaming task state updates via WebSocket.
+    Executes the agent in a thread pool to avoid blocking.
+    Handles both old-style agents (DeepAgent, returns dict) and
+    new-style agents (AgentBase/OrchestratorAgent, returns AgentResponse).
 
     Args:
-        agent: The agent instance to run (should have WebSocketCallback as state_callback).
+        agent: The agent instance to run.
         execution_id: The execution ID for state management.
     """
+    from app.core.atlas.models import AgentResponse
+
     try:
-        # Run the synchronous agent.run() in a thread pool
-        # Pass response_format so parse_with_gpt is called to convert text -> structured JSON
         loop = asyncio.get_running_loop()
-        response_format = getattr(agent, 'response_model', None)
-        result = await loop.run_in_executor(
-            None,
-            lambda: agent.run(response_format=response_format)
-        )
 
-        # Extract metrics from result
-        iterations = result.get("iterations", 0) if isinstance(result, dict) else 0
-        tokens = result.get("total_tokens", 0) if isinstance(result, dict) else 0
+        # Detect agent architecture by base class
+        from app.core.atlas.agents.base import AgentBase
+        is_new_architecture = isinstance(agent, AgentBase)
 
-        # Use parsed_output from parse_with_gpt if available (already validated Pydantic model)
-        # Otherwise fall back to final_answer
-        if "parsed_output" in result and result["parsed_output"] is not None:
-            # parse_with_gpt returns a Pydantic model instance, convert to dict for JSON
-            parsed = result["parsed_output"]
-            if hasattr(parsed, "model_dump"):
-                result["final_answer"] = parsed.model_dump()
-            else:
-                result["final_answer"] = parsed
-            # Remove parsed_output as it's a Pydantic model (not JSON serializable)
-            del result["parsed_output"]
+        if is_new_architecture:
+            raw_result = await loop.run_in_executor(None, agent.run)
+        else:
+            response_format = getattr(agent, 'response_model', None)
+            raw_result = await loop.run_in_executor(
+                None,
+                lambda: agent.run(response_format=response_format)
+            )
+
+        # Normalize to a JSON-serializable dict
+        if isinstance(raw_result, AgentResponse):
+            final_answer = None
+            if raw_result.parsed_output is not None:
+                po = raw_result.parsed_output
+                final_answer = po.model_dump() if hasattr(po, "model_dump") else po
+
+            result = {
+                "answer": raw_result.answer,
+                "final_answer": final_answer,
+                "tool_calls": raw_result.tool_calls_made,
+                "total_tokens": raw_result.tokens_used,
+                "iterations": raw_result.iterations,
+                "stop_reason": raw_result.stop_reason,
+            }
+            iterations = raw_result.iterations
+            tokens = raw_result.tokens_used
+        else:
+            # Old-style dict result
+            result = raw_result
+            iterations = result.get("iterations", 0) if isinstance(result, dict) else 0
+            tokens = result.get("total_tokens", 0) if isinstance(result, dict) else 0
+
+            if "parsed_output" in result and result["parsed_output"] is not None:
+                parsed = result["parsed_output"]
+                if hasattr(parsed, "model_dump"):
+                    result["final_answer"] = parsed.model_dump()
+                else:
+                    result["final_answer"] = parsed
+                del result["parsed_output"]
 
         # Update execution state with result
         execution_manager.update_execution(
@@ -324,11 +352,9 @@ async def run_agent_background(agent: "BaseAgent", execution_id: str) -> None:
         )
 
         # Notify via WebSocket that execution is complete (includes final result)
-        # NOTE: We're in async context here, so use await directly instead of on_agent_finished
-        # (on_agent_finished uses run_coroutine_threadsafe which would deadlock the event loop)
-        # Only send JSON-serializable fields to frontend
         websocket_payload = {
             "execution_id": execution_id,
+            "answer": result.get("answer"),
             "final_answer": result.get("final_answer"),
             "iterations": iterations,
             "tokens": tokens,

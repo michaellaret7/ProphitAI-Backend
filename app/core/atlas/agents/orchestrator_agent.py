@@ -1,8 +1,7 @@
 """OrchestratorAgent - Decomposes complex tasks and delegates to worker agents."""
 
 from functools import partial
-from turtle import position
-from typing import Optional, List
+from typing import Optional, List, Union
 
 from pydantic import BaseModel
 from langfuse import propagate_attributes
@@ -10,6 +9,7 @@ from app.core.atlas.models.notebook import Notebook
 
 from app.core.atlas.agents.base import AgentBase
 from app.core.atlas.models import PrintMode, NoOpChatCallback, AgentResponse
+from app.core.atlas.models.callbacks import ChatCallback
 from app.core.atlas.models.new_plan import Plan
 from app.core.atlas.execution import ExecutionLoop, ToolHandler
 from app.core.atlas.logging import AgentPrinter
@@ -47,6 +47,8 @@ class OrchestratorAgent(AgentBase):
         temperature: Optional[float] = None,
         plan_first: bool = True,
         format_output: Optional[type[BaseModel]] = None,
+        chat_callback: Optional[Union[ChatCallback, NoOpChatCallback]] = None,
+        session_id: str = "orchestrator",
     ):
         provider = provider or "gemini"
         model = model or "gemini-3-pro-preview"
@@ -62,13 +64,13 @@ class OrchestratorAgent(AgentBase):
         self.task = task
         self.format_output = format_output
         self.notebook = Notebook()
-        
+
         self.plan_first = plan_first
         self.plan: Optional[Plan] = None
 
         # Attributes required by ExecutionLoop and ToolHandler (duck typing)
-        self.chat_callback = NoOpChatCallback()
-        self.session_id = "orchestrator"
+        self.chat_callback = chat_callback if chat_callback is not None else NoOpChatCallback()
+        self.session_id = session_id
         self.simulation_date = None
         self.note_titles: List[str] = []
         self.output_dir = None
@@ -160,31 +162,14 @@ class OrchestratorAgent(AgentBase):
 
 if __name__ == "__main__":
     task = """
-    Context: I am a 24 year old and I want to invest $3,000 to $4,000 thousand dollars and I want to build a portfolio of 7-10 stocks or etfs.
-    My time horizon for this investment is 6-8 months. My goal is to maximize my risk adjusted returns and make around 20-30% return in those 6-8 months.
+    Context:I want to build custom datasets to train machine learning models to improve my portfolio construction system. 
+    Look through the tools available (which is the data I have avialable) and come up with 3-5 proprietary datasets we can train ML models on right now that will help us improve 
+    our stock selection system and portfolio construction system. They can be macro datasets, fundamental datasets, technical datasets, portfolio datasets, etc. 
 
-    Your Goal: Build me a well hedged+diversified portfolio that is well constructed to maximize risk adjusted returns and mitigate any macro volatility.
-
-    your ouput format is:
-    {
-        "positions": [
-            {
-                "ticker": "TICKER_SYMBOL_HERE",
-                "allocation": "ALLOCATION_AS_DECIMAL_BETWEEN_0_AND_1_HERE",
-                "investment_thesis": "DETAILED_INVESTMENT_THESES_HERE",
-                "investment_strategy": "DETAILED_INVESTMENT_STRATEGY_HERE"
-            }
-        ]
-    }
+    Goal: Come up with 3-5 proprietary datasets we can train ML models on right now that will help us improve our stock selection system and portfolio construction system.
+    First research the best ML training and inference strategies and models and then review the type of data we have and then come up with 3-5 datasets 
+    and the ML strategy we can use to train the models on the datasets. (which model, which dataset, which strategy, etc.)
     """
-    class Position(BaseModel):
-        ticker: str
-        allocation: str
-        investment_thesis: str
-        investment_strategy: str
-
-    class Portfolio(BaseModel):
-        positions: List[Position]
 
     orchestrator_agent = OrchestratorAgent(
         task=task,
@@ -194,7 +179,6 @@ if __name__ == "__main__":
         print_mode=PrintMode.PRODUCTION,
         temperature=0.7,
         plan_first=True,
-        format_output=Portfolio,
     )
     result = orchestrator_agent.run()
-    print(result.parsed_output.model_dump_json(indent=4))
+    print(result.answer)
