@@ -68,14 +68,12 @@ For each watchlist entry, provide:
 
 <output_format>
 {{
-    "investment_thesis": "string",
+    "investment_thesis": "extensive and detailed investment thesis",
     "watchlist": [
         {{
             "ticker": "string",
             "name": "string",
-            "theme_fit": "string",
-            "rationale": "string",
-            "key_metrics": "string"
+            "investment_thesis": "extensive and detailed investment thesis citing specific data points from the tools and rationale for the pick"
         }}
     ]
 }}

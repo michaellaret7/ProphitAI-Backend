@@ -11,34 +11,13 @@ from app.core.foundry.embeddings.pinecone_manager import PineconeManager
 
 from collections import OrderedDict
 
-class LRUCache:
-    def __init__(self, capacity: int):
-        self.capacity = abs(capacity) # set capacity as positive integer
-        self.cache = OrderedDict() # set empty ordered dictionary to store the cache
+x = UserSession()
 
-    def get(self, key: int) -> int:
-        if key in self.cache:
-            value = self.cache[key] # Get the value of the key if its in the cache
+users = x.query(User).all()
+for user in users:
+    print(user.email)
 
-            self.cache.move_to_end(key) # Move the item to the end of the list for most recently used
-
-            return value 
-        else:
-            return -1 # return -1 if the key is not in the cache
-        
-    def put(self, key: int, value: int) -> None:
-        if key in self.cache: # check if the key exists in cache and update it by moving it to the end
-            self.cache[key] = value # update the value of the key in the cache 
-            self.cache.move_to_end(key) # move the key to the end of the list for most recently used
-        else:
-            self.cache[key] = value # add the key-value pair to the cache
-            self.cache.move_to_end(key) # move the key to the end of the list for most recently used
-        
-        if len(self.cache) > self.capacity: # check if the cache is over the capacity
-            self.cache.popitem(last=False) # remove the least recently used item from the cache (aka beginning of the list)
-
-
-
+x.close()
 
 
 '''

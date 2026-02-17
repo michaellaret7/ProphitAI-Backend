@@ -169,13 +169,16 @@ class OrchestratorAgent(AgentBase):
 
 if __name__ == "__main__":
     task = """
-    Context:I want to build custom datasets to train machine learning models to improve my portfolio construction system. 
-    Look through the tools available (which is the data I have avialable) and come up with 3-5 proprietary datasets we can train ML models on right now that will help us improve 
-    our stock selection system and portfolio construction system. They can be macro datasets, fundamental datasets, technical datasets, portfolio datasets, etc. 
+    Question 1: Review all of the tools available to you and what data they can access. I can also get you 15 minute intraday and 1 hour intraday data as well.
+    I will also give you the tools to have full access to execute trades in my Alpaca account. You will have $1,000,000 in the account to trade with.
 
-    Goal: Come up with 3-5 proprietary datasets we can train ML models on right now that will help us improve our stock selection system and portfolio construction system.
-    First research the best ML training and inference strategies and models and then review the type of data we have and then come up with 3-5 datasets 
-    and the ML strategy we can use to train the models on the datasets. (which model, which dataset, which strategy, etc.)
+    Goal: Do deep/heavy research and review all of the data available to you and build an alpha generating trading strategy. Fully map it out (investable universe, timeframes, etc). Define what the alpha signals are,
+    what exact data you will be using, etc. Then once I review the plan I will give you the tools to execute the trades.
+
+    Rules: 
+    - You may hold positions as long as you want. Minutes, hours, days, weeks, months, etc.
+    - You should be finding and making trades through out the day 
+    - Define your risk limits and criteria 
     """
 
     orchestrator_agent = OrchestratorAgent(

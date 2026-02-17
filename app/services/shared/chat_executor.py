@@ -107,7 +107,8 @@ class ChatSessionManager:
         # Create agent without callback (callback set per-message due to event loop)
         agent = ChatAgent(
             provider='anthropic',
-            model='claude-opus-4-5-20251101',
+            # model='claude-opus-4-5-20251101',
+            model='claude-opus-4-6',
             print_mode=PrintMode.PRODUCTION,
             temperature=0.7,
             max_iterations=20,
@@ -346,14 +347,21 @@ class WorkerCallbackWrapper:
     so the frontend can distinguish worker activity from orchestrator activity.
     """
 
-    def __init__(self, inner_callback: "WebSocketChatCallback", task_id: str):
+    def __init__(
+        self, inner_callback: "WebSocketChatCallback",
+        task_id: str, worker_id: str, plan_task_id: str = "",
+    ):
         self._inner = inner_callback
         self._task_id = task_id
+        self._worker_id = worker_id
+        self._plan_task_id = plan_task_id
 
     def _send(self, event_type: str, payload: dict) -> None:
-        """Delegate to inner callback's _send with task_id injected."""
+        """Delegate to inner callback's _send with identity fields injected."""
         if hasattr(self._inner, '_send'):
             payload["task_id"] = self._task_id
+            payload["worker_id"] = self._worker_id
+            payload["plan_task_id"] = self._plan_task_id
             self._inner._send(event_type, payload)
 
     # --- Events we forward with worker prefix ---

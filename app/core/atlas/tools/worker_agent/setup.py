@@ -179,10 +179,12 @@ DEPLOY_WORKER_DESCRIPTION = (
     "- Be specific about what data to gather and what output format you expect\n"
     "- Include relevant context (tickers, time periods, metrics of interest)\n"
     "- State the end goal clearly so the worker knows when it's done\n\n"
+    "**IMPORTANT:** Always pass the plan_task_id of the plan task you are working on.\n\n"
     "Example: deploy_worker_agent(\n"
     "  task='Research the latest earnings call for AAPL. Summarize key metrics, "
     "management guidance, and notable analyst Q&A.',\n"
-    "  tools=['earnings_call_search', 'get_ticker_news']\n"
+    "  tools=['earnings_call_search', 'get_ticker_news'],\n"
+    "  plan_task_id='1'\n"
     ")"
 )
 
@@ -205,9 +207,13 @@ DEPLOY_WORKER_PARAMETERS = {
             },
             "description": "List of tool names to equip the worker agent with.",
             "minItems": 1
+        },
+        "plan_task_id": {
+            "type": "string",
+            "description": "The plan task ID this worker is being deployed for (e.g., '1', '2')."
         }
     },
-    "required": ["task", "tools"],
+    "required": ["task", "tools", "plan_task_id"],
     "additionalProperties": False
 }
 
@@ -216,7 +222,10 @@ DEPLOY_WORKER_PARAMETERS = {
 _WORKER_DEFAULT_TOOLS = {"think", "calculator", "llm_web_search", "write_note"}
 
 
-def _resolve_and_deploy(notebook: Notebook, chat_callback: Any, task: str, tools: List[str]) -> str:
+def _resolve_and_deploy(
+    notebook: Notebook, chat_callback: Any,
+    task: str, tools: List[str], plan_task_id: str = "",
+) -> str:
     """Resolve tool name strings to tool dicts, then deploy the worker agent.
 
     Args:
@@ -224,6 +233,7 @@ def _resolve_and_deploy(notebook: Notebook, chat_callback: Any, task: str, tools
         chat_callback: Orchestrator's callback for streaming events (pre-bound via partial).
         task: Task description from the orchestrator LLM.
         tools: List of tool name strings from the orchestrator LLM.
+        plan_task_id: The plan task ID this worker is deployed for.
     """
     from app.core.atlas.tools.worker_agent.worker import deploy_worker_agent
 
@@ -239,10 +249,11 @@ def _resolve_and_deploy(notebook: Notebook, chat_callback: Any, task: str, tools
         tool_defs.append(tool)
 
     return deploy_worker_agent(
-        notebook=notebook, 
-        chat_callback=chat_callback, 
-        task=task, 
-        tools=tool_defs
+        notebook=notebook,
+        chat_callback=chat_callback,
+        task=task,
+        tools=tool_defs,
+        plan_task_id=plan_task_id,
     )
 
 
