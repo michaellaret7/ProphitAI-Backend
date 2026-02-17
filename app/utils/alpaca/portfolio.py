@@ -7,9 +7,7 @@ from alpaca.trading.client import TradingClient
 from alpaca.trading.requests import GetOrdersRequest
 from alpaca.trading.enums import QueryOrderStatus
 from typing import Optional, List, Dict
-
 from app.utils.alpaca.client import AlpacaClient
-
 
 class AlpacaPortfolio:
     """Handles portfolio data retrieval and account information"""
@@ -124,10 +122,3 @@ class AlpacaPortfolio:
             for order in orders
         ]
 
-if __name__ == '__main__':
-    client = AlpacaClient()
-    portfolio = AlpacaPortfolio(client.get_client())
-    print(portfolio.get_account())
-    print(portfolio.get_positions())
-    print(portfolio.get_orders())
-    print(portfolio.get_position('AAPL'))

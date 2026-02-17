@@ -27,6 +27,19 @@ from app.core.atlas.prompts.orchestrator_agent import (
 from app.core.atlas.planning.agent import PlannerAgent
 from app.utils.gpt_parser import parse_with_gpt
 
+from app.core.atlas.tools.alpaca import (
+    ALPACA_ACCT_AND_PORTFOLIO_TOOL,
+    OPTIONS_LOOKUP_TOOL,
+    OPTIONS_CHAIN_TOOL,
+    OPTIONS_TRADE_TOOL,
+    TRADE_TOOL,
+    CANCEL_ORDER_TOOL,
+    CANCEL_ALL_ORDERS_TOOL,
+    CLOSE_POSITION_TOOL,
+    CLOSE_ALL_POSITIONS_TOOL,
+)
+
+
 class OrchestratorAgent(AgentBase):
     """Decomposes complex tasks and delegates sub-tasks to worker agents.
 
@@ -168,20 +181,42 @@ class OrchestratorAgent(AgentBase):
             )
 
 if __name__ == "__main__":
+    from app.core.atlas.tools.alpaca import *
+    # task = """
+    # Question 1: Review all of the tools available to you and what data they can access. I can also get you 15 minute intraday and 1 hour intraday data as well.
+    # I will also give you the tools to have full access to execute trades in my Alpaca account. You will have $1,000,000 in the account to trade with.
+
+    # Goal: Do deep/heavy research and review all of the data available to you and build an alpha generating trading strategy. Fully map it out (investable universe, timeframes, etc). Define what the alpha signals are,
+    # what exact data you will be using, etc. Then once I review the plan I will give you the tools to execute the trades.
+
+    # Rules: 
+    # - You may hold positions as long as you want. Minutes, hours, days, weeks, months, etc.
+    # - You should be finding and making trades through out the day 
+    # - Define your risk limits and criteria 
+    # """
+
+    # orchestrator_agent = OrchestratorAgent(
+    #     task=task,
+    #     provider="anthropic",
+    #     model="claude-opus-4-6",
+    #     max_iterations=50,
+    #     print_mode=PrintMode.PRODUCTION,
+    #     temperature=0.7,
+    #     plan_first=True,
+    # )
+    # result = orchestrator_agent.run()
+    # print(result.answer)
+
     task = """
-    Question 1: Review all of the tools available to you and what data they can access. I can also get you 15 minute intraday and 1 hour intraday data as well.
-    I will also give you the tools to have full access to execute trades in my Alpaca account. You will have $1,000,000 in the account to trade with.
+    Review my portfolio, identify any risky positions and build an options hedge strategy to protect my portfolio.
+    Make sure you check the open orders to make sure you dont hurt our options hedge. The market is closed so these will execute tomorrow.
+    You will execute the alpaca tools, the workers will not have access to the alpaca tools.
 
-    Goal: Do deep/heavy research and review all of the data available to you and build an alpha generating trading strategy. Fully map it out (investable universe, timeframes, etc). Define what the alpha signals are,
-    what exact data you will be using, etc. Then once I review the plan I will give you the tools to execute the trades.
-
-    Rules: 
-    - You may hold positions as long as you want. Minutes, hours, days, weeks, months, etc.
-    - You should be finding and making trades through out the day 
-    - Define your risk limits and criteria 
+    Then, fix this issue:
+        1. **Reduce Leverage** — At 1.83x, you're one bad week from a margin call. Consider trimming the largest positions (RIG, HP) to reduce margin usage.
+    
     """
-
-    orchestrator_agent = OrchestratorAgent(
+    agent = OrchestratorAgent(
         task=task,
         provider="anthropic",
         model="claude-opus-4-6",
@@ -190,5 +225,16 @@ if __name__ == "__main__":
         temperature=0.7,
         plan_first=True,
     )
-    result = orchestrator_agent.run()
+
+    agent.add_tool(**ALPACA_ACCT_AND_PORTFOLIO_TOOL)
+    agent.add_tool(**OPTIONS_LOOKUP_TOOL)
+    agent.add_tool(**OPTIONS_CHAIN_TOOL)
+    agent.add_tool(**OPTIONS_TRADE_TOOL)
+    agent.add_tool(**TRADE_TOOL)
+    agent.add_tool(**CANCEL_ORDER_TOOL)
+    agent.add_tool(**CANCEL_ALL_ORDERS_TOOL)
+    agent.add_tool(**CLOSE_POSITION_TOOL)
+    agent.add_tool(**CLOSE_ALL_POSITIONS_TOOL)
+
+    result = agent.run()
     print(result.answer)

@@ -7,10 +7,13 @@ from alpaca.trading.client import TradingClient
 from alpaca.trading.requests import (
     MarketOrderRequest,
     LimitOrderRequest,
+    StopOrderRequest,
+    StopLimitOrderRequest,
+    TakeProfitRequest,
+    StopLossRequest
 )
 from alpaca.trading.enums import OrderSide, TimeInForce
 from typing import Optional, Dict, List
-
 
 class AlpacaTrading:
     """Handles order execution and trading operations"""
@@ -58,6 +61,9 @@ class AlpacaTrading:
         qty: Optional[float] = None,
         notional: Optional[float] = None,
         limit_price: Optional[float] = None,
+        stop_price: Optional[float] = None,
+        take_profit: Optional[float] = None,
+        stop_loss: Optional[float] = None,
         time_in_force: str = 'day'
     ) -> Dict:
         """
@@ -69,6 +75,9 @@ class AlpacaTrading:
             qty: Number of shares (use qty or notional, not both)
             notional: Dollar amount (use qty or notional, not both)
             limit_price: Price for limit order. None for market order
+            stop_price: Price for stop order (entry)
+            take_profit: Take profit price (exit)
+            stop_loss: Stop loss price (exit)
             time_in_force: 'day', 'gtc', 'ioc', 'fok'
 
         Returns:
@@ -76,15 +85,44 @@ class AlpacaTrading:
         """
         tif = self._parse_time_in_force(time_in_force)
 
+        # Construct take profit and stop loss objects if provided
+        tp_req = TakeProfitRequest(limit_price=take_profit) if take_profit else None
+        sl_req = StopLossRequest(stop_price=stop_loss) if stop_loss else None
+
         try:
-            if limit_price:
+            if stop_price and limit_price:
+                order_data = StopLimitOrderRequest(
+                    symbol=symbol,
+                    qty=qty,
+                    notional=notional,
+                    side=side,
+                    time_in_force=tif,
+                    stop_price=stop_price,
+                    limit_price=limit_price,
+                    take_profit=tp_req,
+                    stop_loss=sl_req
+                )
+            elif stop_price:
+                order_data = StopOrderRequest(
+                    symbol=symbol,
+                    qty=qty,
+                    notional=notional,
+                    side=side,
+                    time_in_force=tif,
+                    stop_price=stop_price,
+                    take_profit=tp_req,
+                    stop_loss=sl_req
+                )
+            elif limit_price:
                 order_data = LimitOrderRequest(
                     symbol=symbol,
                     qty=qty,
                     notional=notional,
                     side=side,
                     time_in_force=tif,
-                    limit_price=limit_price
+                    limit_price=limit_price,
+                    take_profit=tp_req,
+                    stop_loss=sl_req
                 )
             else:
                 order_data = MarketOrderRequest(
@@ -92,7 +130,9 @@ class AlpacaTrading:
                     qty=qty,
                     notional=notional,
                     side=side,
-                    time_in_force=tif
+                    time_in_force=tif,
+                    take_profit=tp_req,
+                    stop_loss=sl_req
                 )
 
             order = self.client.submit_order(order_data=order_data)
@@ -108,6 +148,9 @@ class AlpacaTrading:
         qty: Optional[float] = None,
         notional: Optional[float] = None,
         limit_price: Optional[float] = None,
+        stop_price: Optional[float] = None,
+        take_profit: Optional[float] = None,
+        stop_loss: Optional[float] = None,
         time_in_force: str = 'day'
     ) -> Dict:
         """
@@ -118,6 +161,9 @@ class AlpacaTrading:
             qty: Number of shares to buy (use either qty or notional, not both)
             notional: Dollar amount to spend (use either qty or notional, not both)
             limit_price: If set, creates a limit order at this price. If None, creates market order
+            stop_price: If set, creates a stop order at this price (entry)
+            take_profit: Take profit price (exit)
+            stop_loss: Stop loss price (exit)
             time_in_force: 'day', 'gtc' (good till canceled), 'ioc' (immediate or cancel), 'fok' (fill or kill)
 
         Returns:
@@ -129,6 +175,9 @@ class AlpacaTrading:
             qty=qty,
             notional=notional,
             limit_price=limit_price,
+            stop_price=stop_price,
+            take_profit=take_profit,
+            stop_loss=stop_loss,
             time_in_force=time_in_force
         )
 
@@ -138,6 +187,9 @@ class AlpacaTrading:
         qty: Optional[float] = None,
         notional: Optional[float] = None,
         limit_price: Optional[float] = None,
+        stop_price: Optional[float] = None,
+        take_profit: Optional[float] = None,
+        stop_loss: Optional[float] = None,
         time_in_force: str = 'day'
     ) -> Dict:
         """
@@ -148,6 +200,9 @@ class AlpacaTrading:
             qty: Number of shares to sell (use either qty or notional, not both)
             notional: Dollar amount to sell (use either qty or notional, not both)
             limit_price: If set, creates a limit order at this price. If None, creates market order
+            stop_price: If set, creates a stop order at this price (entry)
+            take_profit: Take profit price (exit)
+            stop_loss: Stop loss price (exit)
             time_in_force: 'day', 'gtc' (good till canceled), 'ioc' (immediate or cancel), 'fok' (fill or kill)
 
         Returns:
@@ -159,6 +214,9 @@ class AlpacaTrading:
             qty=qty,
             notional=notional,
             limit_price=limit_price,
+            stop_price=stop_price,
+            take_profit=take_profit,
+            stop_loss=stop_loss,
             time_in_force=time_in_force
         )
 

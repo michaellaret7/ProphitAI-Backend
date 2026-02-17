@@ -6,13 +6,10 @@ import re
 import random
 
 from app.utils.alpaca.client import AlpacaClient
-
 from alpaca.trading.requests import GetOptionContractsRequest, MarketOrderRequest
 from alpaca.trading.enums import OrderSide, TimeInForce
 from alpaca.data.historical.option import OptionHistoricalDataClient
 from alpaca.data.requests import OptionChainRequest
-
-from app.db.core.pull_fmp_data import FMP_API_DATA
 
 try:
     import pandas as pd
@@ -458,20 +455,16 @@ class OptionsService:
                 "type": opt_type,
             }
 
-
-
 if __name__ == "__main__":
     client = AlpacaClient(paper=True)
     svc = OptionsService(client, feed="indicative")
 
-    ticker = "PLTR"
-
-    available_dates = svc.get_available_dates(ticker, start="2025-10-20", end="2026-12-19")
+    available_dates = svc.get_available_dates("SPY", start="2025-10-20", end="2026-12-19")
     print(available_dates)
 
     # Example: pull far-dated contracts robustly (uses pagination + server filters + fallback)
     get_available_contracts = svc.get_available_contracts(
-        ticker,
+        "SPY",
         expiration="2026-03-31",
         contract_type="call",
         limit=200,
@@ -486,9 +479,5 @@ if __name__ == "__main__":
         pd.set_option('display.width', None)
         pd.set_option('display.max_colwidth', None)
     # Example: chain for same expiry (metadata filled via join + OSI fallback)
-    chain = svc.get_options_chain(ticker, expiration=available_dates[3])
+    chain = svc.get_options_chain("SPY", expiration="2026-03-31")
     print(chain)
-
-    fmp_data = FMP_API_DATA()
-    quote = fmp_data.get_full_quote(ticker)
-    print(quote[0]['price'])
