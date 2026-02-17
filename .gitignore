@@ -11,3 +11,5 @@ live_quotes.csv
 
 *.pdf
 *.xlsx
+
+active_tickers.csv
