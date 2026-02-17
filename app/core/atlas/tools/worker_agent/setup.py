@@ -84,6 +84,28 @@ from app.core.atlas.tools.ticker.performance import GET_TICKER_PERFORMANCE_AND_R
 from app.core.atlas.tools.ticker.technicals import TECHNICALS_TOOL
 from app.core.atlas.tools.ticker.weekly_returns import GET_WEEKLY_RETURNS_TOOL
 
+# --- alpaca tools ---
+from app.core.atlas.tools.alpaca import (
+    ALPACA_ACCT_AND_PORTFOLIO_TOOL,
+    OPTIONS_LOOKUP_TOOL,
+    OPTIONS_CHAIN_TOOL,
+    OPTIONS_TRADE_TOOL,
+    TRADE_TOOL,
+    CANCEL_ORDER_TOOL,
+    CANCEL_ALL_ORDERS_TOOL,
+    CLOSE_POSITION_TOOL,
+    CLOSE_ALL_POSITIONS_TOOL,
+    REPLACE_ORDER_TOOL,
+    PORTFOLIO_HISTORY_TOOL,
+    ASSET_LOOKUP_TOOL,
+    GET_ORDER_TOOL,
+    EXERCISE_OPTION_TOOL,
+    MULTI_LEG_ORDER_TOOL,
+    OPTION_BARS_TOOL,
+    OPTION_LATEST_QUOTE_TOOL,
+    OPTION_SNAPSHOT_TOOL,
+)
+
 # ==============================================================================
 # AVAILABLE TOOLS — name → TOOL dict lookup
 # ==============================================================================
@@ -155,6 +177,27 @@ AVAILABLE_TOOLS: Dict[str, Dict[str, Any]] = {
     "get_ticker_performance_and_risk": GET_TICKER_PERFORMANCE_AND_RISK_TOOL,
     "run_technicals": TECHNICALS_TOOL,
     "get_weekly_returns": GET_WEEKLY_RETURNS_TOOL,
+    # alpaca / account
+    "alpaca_acct_and_portfolio": ALPACA_ACCT_AND_PORTFOLIO_TOOL,
+    "portfolio_history": PORTFOLIO_HISTORY_TOOL,
+    "asset_lookup": ASSET_LOOKUP_TOOL,
+    # alpaca / orders
+    "submit_trade": TRADE_TOOL,
+    "replace_order": REPLACE_ORDER_TOOL,
+    "get_order": GET_ORDER_TOOL,
+    "cancel_order": CANCEL_ORDER_TOOL,
+    "cancel_all_orders": CANCEL_ALL_ORDERS_TOOL,
+    "close_position": CLOSE_POSITION_TOOL,
+    "close_all_positions": CLOSE_ALL_POSITIONS_TOOL,
+    # alpaca / options
+    "options_lookup": OPTIONS_LOOKUP_TOOL,
+    "options_chain": OPTIONS_CHAIN_TOOL,
+    "options_trade": OPTIONS_TRADE_TOOL,
+    "exercise_option": EXERCISE_OPTION_TOOL,
+    "multi_leg_order": MULTI_LEG_ORDER_TOOL,
+    "option_bars": OPTION_BARS_TOOL,
+    "option_latest_quote": OPTION_LATEST_QUOTE_TOOL,
+    "option_snapshot": OPTION_SNAPSHOT_TOOL,
 }
 
 

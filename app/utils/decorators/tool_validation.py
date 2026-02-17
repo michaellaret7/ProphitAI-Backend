@@ -447,13 +447,10 @@ def log_simulation_data_range(data_extractor: Optional[Callable] = None) -> Call
 
             args_str = f"({', '.join(key_args)})" if key_args else ""
 
-            # Log function call with date info
-            from datetime import datetime as dt
+            # Log function call with date info for simulation mode only
             if _simulation_date:
                 cutoff_str = _simulation_date.date()
                 print(f"[{mode}] {func_name}{args_str} | Cutoff: {cutoff_str}")
-            else:
-                print(f"[{mode}] {func_name}{args_str}")
 
             # Execute the function
             result = func(*args, **kwargs)
