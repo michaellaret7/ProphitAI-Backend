@@ -1,15 +1,18 @@
 # app/utils/alpaca/options.py
 
-from typing import List, Optional, Tuple, Union
+from typing import Dict, List, Optional, Tuple
 from datetime import date, datetime
 import re
-import random
-
 from app.utils.alpaca.client import AlpacaClient
-from alpaca.trading.requests import GetOptionContractsRequest, MarketOrderRequest
-from alpaca.trading.enums import OrderSide, TimeInForce
+from alpaca.trading.requests import GetOptionContractsRequest
 from alpaca.data.historical.option import OptionHistoricalDataClient
-from alpaca.data.requests import OptionChainRequest
+from alpaca.data.requests import (
+    OptionChainRequest,
+    OptionBarsRequest,
+    OptionLatestQuoteRequest,
+    OptionSnapshotRequest,
+)
+from alpaca.data.timeframe import TimeFrame
 
 try:
     import pandas as pd
@@ -39,13 +42,7 @@ def decode_osi(symbol: str):
 
 
 class OptionsService:
-    """
-    Options helper that reuses your AlpacaClient.
-    - get_available_dates: list all listed expirations (YYYY-MM-DD)
-    - get_available_contracts: list OSI symbols for an underlying (filters optional)
-    - get_options_chain: per-contract snapshots (quote + greeks)
-    - buy_random_option: simple market-order test utility
-    """
+    """Options helper that reuses your AlpacaClient for contracts, chains, bars, quotes, and snapshots."""
 
     def __init__(self, alpaca: AlpacaClient, feed: str = "indicative"):
         self.alpaca = alpaca
@@ -374,110 +371,127 @@ class OptionsService:
             return df.sort_values(sort_cols) if not df.empty and sort_cols else df
         return rows
 
-    # ---------------------------
-    # 3) Buy a random option (for testing purposes)
-    # ---------------------------
-    def buy_random_option(
+    # ── Option bars (OHLCV history) ──
+
+    _TIMEFRAME_MAP = {
+        '1min': TimeFrame.Minute,
+        '1h': TimeFrame.Hour,
+        '1d': TimeFrame.Day,
+        '1w': TimeFrame.Week,
+        '1m': TimeFrame.Month,
+    }
+
+    def get_option_bars(
         self,
-        underlying: str,
-        expiration: Optional[str] = None,
-        contract_type: Optional[str] = None,
-        qty: int = 1,
-    ) -> dict:
+        symbol: str,
+        timeframe: str = '1d',
+        start: Optional[str] = None,
+        end: Optional[str] = None,
+        limit: Optional[int] = None,
+    ) -> List[Dict]:
         """
-        Buy a random option contract as a market order.
+        Get OHLCV bars for an option contract.
 
         Args:
-            underlying: Stock symbol (e.g., "AAPL", "SPY")
-            expiration: Optional expiration date filter "YYYY-MM-DD"
-            contract_type: Optional "call" or "put"
-            qty: Number of contracts to buy (default 1)
-
-        Returns:
-            dict with order details including symbol, order_id, status, filled_qty
+            symbol: OSI option symbol (e.g., 'SPY260320C00580000')
+            timeframe: '1min', '1h', '1d', '1w', '1m'
+            start: Start date/datetime ISO string (optional)
+            end: End date/datetime ISO string (optional)
+            limit: Max number of bars to return
         """
-        # Get available contracts
-        contracts = self.get_available_contracts(
-            underlying=underlying,
-            expiration=expiration,
-            contract_type=contract_type,
-            status="active",
-            limit=50  # Get a reasonable pool to choose from
+        tf = self._TIMEFRAME_MAP.get(timeframe.lower(), TimeFrame.Day)
+        # Reason: SDK types expect datetime but accepts ISO strings at runtime
+        start_dt = datetime.fromisoformat(start) if start else None
+        end_dt = datetime.fromisoformat(end) if end else None
+
+        request = OptionBarsRequest(
+            symbol_or_symbols=symbol,
+            timeframe=tf,
+            start=start_dt,
+            end=end_dt,
+            limit=limit,
         )
 
-        if not contracts:
-            return {
-                "success": False,
-                "error": f"No active contracts found for {underlying}",
-                "underlying": underlying,
-                "expiration": expiration,
-                "contract_type": contract_type,
-            }
-
-        # Pick a random contract
-        selected_symbol = random.choice(contracts)
-
-        # Decode the option symbol for display
-        root, exp, opt_type, strike = decode_osi(selected_symbol)
-
-        # Submit market order
+        bars = self.data.get_option_bars(request)
+        # Reason: BarSet.__contains__ is broken in alpaca-py — use subscript with fallback
         try:
-            order_request = MarketOrderRequest(
-                symbol=selected_symbol,
-                qty=qty,
-                side=OrderSide.BUY,
-                time_in_force=TimeInForce.DAY,
-            )
+            symbol_bars = bars[symbol]
+        except (KeyError, IndexError):
+            symbol_bars = []
 
-            order = self.trading.submit_order(order_request)
-
-            return {
-                "success": True,
-                "symbol": selected_symbol,
-                "underlying": root,
-                "expiration": exp,
-                "strike": strike,
-                "type": opt_type,
-                "quantity": qty,
-                "order_id": getattr(order, "id", None),
-                "status": getattr(order, "status", None),
-                "filled_qty": getattr(order, "filled_qty", None),
-                "filled_avg_price": getattr(order, "filled_avg_price", None),
+        return [
+            {
+                'timestamp': str(bar.timestamp),
+                'open': float(bar.open),
+                'high': float(bar.high),
+                'low': float(bar.low),
+                'close': float(bar.close),
+                'volume': float(bar.volume),
+                'vwap': float(bar.vwap) if bar.vwap else None,
+                'trade_count': int(bar.trade_count) if bar.trade_count else None,
             }
-        except Exception as e:
-            return {
-                "success": False,
-                "error": str(e),
-                "symbol": selected_symbol,
-                "underlying": root,
-                "expiration": exp,
-                "strike": strike,
-                "type": opt_type,
+            for bar in symbol_bars
+        ]
+
+    # ── Option latest quote (real-time bid/ask) ──
+    def get_option_latest_quote(self, symbol: str) -> Dict:
+        """Get the latest bid/ask quote for an option contract (OSI symbol)."""
+        request = OptionLatestQuoteRequest(symbol_or_symbols=symbol)
+        quotes = self.data.get_option_latest_quote(request)
+
+        if symbol not in quotes:
+            raise ValueError(f"No quote data returned for {symbol}")
+
+        q = quotes[symbol]
+        return {
+            'symbol': symbol,
+            'bid_price': float(q.bid_price) if q.bid_price is not None else None,
+            'bid_size': float(q.bid_size) if q.bid_size is not None else None,
+            'ask_price': float(q.ask_price) if q.ask_price is not None else None,
+            'ask_size': float(q.ask_size) if q.ask_size is not None else None,
+            'timestamp': str(q.timestamp),
+        }
+
+    # ── Option snapshot (quote + trade + greeks) ──
+    def get_option_snapshot(self, symbol: str) -> Dict:
+        """Get a full snapshot (quote + trade + greeks) for an option contract (OSI symbol)."""
+        request = OptionSnapshotRequest(symbol_or_symbols=symbol)
+        snapshots = self.data.get_option_snapshot(request)
+
+        if symbol not in snapshots:
+            raise ValueError(f"No snapshot data returned for {symbol}")
+
+        snap = snapshots[symbol]
+        result: Dict = {'symbol': symbol}
+
+        if hasattr(snap, 'latest_quote') and snap.latest_quote:
+            q = snap.latest_quote
+            result['quote'] = {
+                'bid_price': float(q.bid_price) if q.bid_price is not None else None,
+                'bid_size': float(q.bid_size) if q.bid_size is not None else None,
+                'ask_price': float(q.ask_price) if q.ask_price is not None else None,
+                'ask_size': float(q.ask_size) if q.ask_size is not None else None,
+                'timestamp': str(q.timestamp),
             }
 
-if __name__ == "__main__":
-    client = AlpacaClient(paper=True)
-    svc = OptionsService(client, feed="indicative")
+        if hasattr(snap, 'latest_trade') and snap.latest_trade:
+            t = snap.latest_trade
+            result['trade'] = {
+                'price': float(t.price) if t.price is not None else None,
+                'size': float(t.size) if t.size is not None else None,
+                'timestamp': str(t.timestamp),
+            }
 
-    available_dates = svc.get_available_dates("SPY", start="2025-10-20", end="2026-12-19")
-    print(available_dates)
+        if hasattr(snap, 'greeks') and snap.greeks:
+            g = snap.greeks
+            result['greeks'] = {
+                'delta': g.delta,
+                'gamma': g.gamma,
+                'theta': g.theta,
+                'vega': g.vega,
+                'rho': g.rho,
+            }
 
-    # Example: pull far-dated contracts robustly (uses pagination + server filters + fallback)
-    get_available_contracts = svc.get_available_contracts(
-        "SPY",
-        expiration="2026-03-31",
-        contract_type="call",
-        limit=200,
-        status="active"
-    )
-    print(get_available_contracts)
+        return result
 
-    if pd is not None:
-        # Set pandas display options to show all rows and columns for the DataFrame
-        pd.set_option('display.max_rows', None)
-        pd.set_option('display.max_columns', None)
-        pd.set_option('display.width', None)
-        pd.set_option('display.max_colwidth', None)
-    # Example: chain for same expiry (metadata filled via join + OSI fallback)
-    chain = svc.get_options_chain("SPY", expiration="2026-03-31")
-    print(chain)
+

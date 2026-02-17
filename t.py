@@ -1,55 +1,64 @@
-"""Re-run monitor for all portfolios belonging to michaellaret7@gmail.com."""
-import os
-from typing import OrderedDict
-from app.core.foundry.retrieval.search.hybrid import HybridSearch
-from app.db.core.db_config import UserSession
-from app.db.core.models.user_data_models import User, Portfolio
-from app.db.jobs.portfolio.batch_monitor import BatchMonitorPortfolio
-from app.utils.serialize_output import serialize_sqlalchemy_obj
-from langfuse import get_client, observe
-from app.core.foundry.embeddings.pinecone_manager import PineconeManager
+"""Test: New option data methods through the Alpaca broker facade."""
 
-from collections import OrderedDict
+from app.utils.alpaca.broker import Alpaca
 
-x = UserSession()
-
-users = x.query(User).all()
-for user in users:
-    print(user.email)
-
-x.close()
+alpaca = Alpaca()
+TEST_SYMBOL = "SPY260320C00580000"
+SEP = "=" * 80
 
 
-'''
-PROBLEM:
-Design a data structure that follows the constraints of a Least Recently Used (LRU) cache.
+def test_option_bars():
+    print(f"\n{SEP}")
+    print("1. get_option_bars()")
+    print(SEP)
+    try:
+        bars = alpaca.get_option_bars(TEST_SYMBOL, timeframe='1d', limit=3)
+        print(f"Returned {len(bars)} bars")
+        for bar in bars:
+            print(f"  {bar['timestamp']} | O:{bar['open']} H:{bar['high']} L:{bar['low']} C:{bar['close']} V:{bar['volume']}")
+        print(">>> SUCCESS")
+    except Exception as e:
+        print(f">>> FAILED: {e}")
 
-Implement the LRUCache class:
 
-LRUCache(int capacity) Initialize the LRU cache with positive size capacity.
-int get(int key) Return the value of the key if the key exists, otherwise return -1.
-void put(int key, int value) Update the value of the key if the key exists. Otherwise, add the key-value pair to the cache. If the number of keys exceeds the capacity from this operation, evict the least recently used key.
-The functions get and put must each run in O(1) average time complexity.
+def test_option_latest_quote():
+    print(f"\n{SEP}")
+    print("2. get_option_latest_quote()")
+    print(SEP)
+    try:
+        quote = alpaca.get_option_latest_quote(TEST_SYMBOL)
+        print(f"  Bid: {quote['bid_price']} x {quote['bid_size']}")
+        print(f"  Ask: {quote['ask_price']} x {quote['ask_size']}")
+        print(f"  Time: {quote['timestamp']}")
+        print(">>> SUCCESS")
+    except Exception as e:
+        print(f">>> FAILED: {e}")
 
- 
 
-Example 1:
+def test_option_snapshot():
+    print(f"\n{SEP}")
+    print("3. get_option_snapshot()")
+    print(SEP)
+    try:
+        snap = alpaca.get_option_snapshot(TEST_SYMBOL)
+        if 'quote' in snap:
+            q = snap['quote']
+            print(f"  Quote - Bid: {q['bid_price']} x {q['bid_size']} | Ask: {q['ask_price']} x {q['ask_size']}")
+        if 'trade' in snap:
+            t = snap['trade']
+            print(f"  Trade - Price: {t['price']} Size: {t['size']} Time: {t['timestamp']}")
+        if 'greeks' in snap:
+            g = snap['greeks']
+            print(f"  Greeks - Delta: {g['delta']} Gamma: {g['gamma']} Theta: {g['theta']} Vega: {g['vega']} Rho: {g['rho']}")
+        print(">>> SUCCESS")
+    except Exception as e:
+        print(f">>> FAILED: {e}")
 
-Input
-["LRUCache", "put", "put", "get", "put", "get", "put", "get", "get", "get"]
-[[2], [1, 1], [2, 2], [1], [3, 3], [2], [4, 4], [1], [3], [4]]
-Output
-[null, null, null, 1, null, -1, null, -1, 3, 4]
 
-Explanation
-LRUCache lRUCache = new LRUCache(2);
-lRUCache.put(1, 1); // cache is {1=1}
-lRUCache.put(2, 2); // cache is {1=1, 2=2}
-lRUCache.get(1);    // return 1
-lRUCache.put(3, 3); // LRU key was 2, evicts key 2, cache is {1=1, 3=3}
-lRUCache.get(2);    // returns -1 (not found)
-lRUCache.put(4, 4); // LRU key was 1, evicts key 1, cache is {4=4, 3=3}
-lRUCache.get(1);    // return -1 (not found)
-lRUCache.get(3);    // return 3
-lRUCache.get(4);    // return 4
-'''
+if __name__ == "__main__":
+    print(f"Testing option data via Alpaca broker facade")
+    print(f"Test symbol: {TEST_SYMBOL}")
+    test_option_bars()
+    test_option_latest_quote()
+    test_option_snapshot()
+    print(f"\n{SEP}\nDone.")

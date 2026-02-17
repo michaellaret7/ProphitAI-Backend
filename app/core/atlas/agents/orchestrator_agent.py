@@ -37,6 +37,15 @@ from app.core.atlas.tools.alpaca import (
     CANCEL_ALL_ORDERS_TOOL,
     CLOSE_POSITION_TOOL,
     CLOSE_ALL_POSITIONS_TOOL,
+    REPLACE_ORDER_TOOL,
+    PORTFOLIO_HISTORY_TOOL,
+    ASSET_LOOKUP_TOOL,
+    GET_ORDER_TOOL,
+    EXERCISE_OPTION_TOOL,
+    MULTI_LEG_ORDER_TOOL,
+    OPTION_BARS_TOOL,
+    OPTION_LATEST_QUOTE_TOOL,
+    OPTION_SNAPSHOT_TOOL,
 )
 
 
@@ -235,6 +244,15 @@ if __name__ == "__main__":
     agent.add_tool(**CANCEL_ALL_ORDERS_TOOL)
     agent.add_tool(**CLOSE_POSITION_TOOL)
     agent.add_tool(**CLOSE_ALL_POSITIONS_TOOL)
+    agent.add_tool(**REPLACE_ORDER_TOOL)
+    agent.add_tool(**PORTFOLIO_HISTORY_TOOL)
+    agent.add_tool(**ASSET_LOOKUP_TOOL)
+    agent.add_tool(**GET_ORDER_TOOL)
+    agent.add_tool(**EXERCISE_OPTION_TOOL)
+    agent.add_tool(**MULTI_LEG_ORDER_TOOL)
+    agent.add_tool(**OPTION_BARS_TOOL)
+    agent.add_tool(**OPTION_LATEST_QUOTE_TOOL)
+    agent.add_tool(**OPTION_SNAPSHOT_TOOL)
 
     result = agent.run()
     print(result.answer)

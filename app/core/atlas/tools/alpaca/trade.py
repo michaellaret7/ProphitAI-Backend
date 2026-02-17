@@ -1,3 +1,5 @@
+"""Submit equity/crypto trade tool."""
+
 from app.utils.alpaca.broker import Alpaca
 from typing import Literal, Optional
 from app.core.atlas.tools.responses import success_response, error_response
@@ -10,12 +12,15 @@ def submit_trade(
     notional: Optional[float] = None,
     limit_price: Optional[float] = None,
     stop_price: Optional[float] = None,
+    trail_price: Optional[float] = None,
+    trail_percent: Optional[float] = None,
     take_profit: Optional[float] = None,
     stop_loss: Optional[float] = None,
-    time_in_force: str = 'day'
+    stop_loss_limit: Optional[float] = None,
+    order_class: Optional[str] = None,
+    time_in_force: str = 'day',
 ) -> str:
     """Submit a buy or sell order through Alpaca."""
-
     alpaca = Alpaca()
 
     ops = {
@@ -34,8 +39,12 @@ def submit_trade(
             notional=notional,
             limit_price=limit_price,
             stop_price=stop_price,
+            trail_price=trail_price,
+            trail_percent=trail_percent,
             take_profit=take_profit,
             stop_loss=stop_loss,
+            stop_loss_limit=stop_loss_limit,
+            order_class=order_class,
             time_in_force=time_in_force,
         )
         return success_response(result)
@@ -48,11 +57,19 @@ def submit_trade(
 # ==============================================================================
 
 TRADE_DESCRIPTION = (
-    "Submit a buy or sell equity order through Alpaca. "
-    "Specify qty (shares) OR notional (dollar amount), not both. "
-    "Omit limit_price and stop_price for a simple market order. "
-    "Example: submit_trade(position='buy', symbol='AAPL', qty=10)\n"
-    "Example: submit_trade(position='sell', symbol='MSFT', notional=500.0, limit_price=420.00)"
+    "Submit a buy or sell order through Alpaca. Supports market, limit, stop, "
+    "stop-limit, and trailing stop orders. Use order_class for bracket/OCO/OTO orders.\n"
+    "Order type is inferred from parameters:\n"
+    "  - trail_price or trail_percent → trailing stop\n"
+    "  - stop_price + limit_price → stop-limit\n"
+    "  - stop_price only → stop\n"
+    "  - limit_price only → limit\n"
+    "  - none of the above → market\n"
+    "Examples:\n"
+    "  Market buy: submit_trade(position='buy', symbol='AAPL', qty=10)\n"
+    "  Trailing stop sell: submit_trade(position='sell', symbol='AAPL', qty=10, trail_percent=2.0)\n"
+    "  Bracket buy: submit_trade(position='buy', symbol='AAPL', qty=10, "
+    "take_profit=160, stop_loss=140, order_class='bracket')"
 )
 
 TRADE_PARAMETERS = {
@@ -61,45 +78,66 @@ TRADE_PARAMETERS = {
         "position": {
             "type": "string",
             "enum": ["buy", "sell"],
-            "description": "'buy' or 'sell'."
+            "description": "'buy' or 'sell'.",
         },
         "symbol": {
             "type": "string",
-            "description": "Ticker symbol (e.g., 'AAPL')."
+            "description": "Ticker symbol (e.g., 'AAPL') or crypto pair (e.g., 'BTC/USD').",
         },
         "qty": {
             "type": "number",
-            "description": "Number of shares. Use this OR notional, not both."
+            "description": "Number of shares. Use this OR notional, not both.",
         },
         "notional": {
             "type": "number",
-            "description": "Dollar amount to trade. Use this OR qty, not both."
+            "description": "Dollar amount to trade. Use this OR qty, not both.",
         },
         "limit_price": {
             "type": "number",
-            "description": "Limit price. Omit for a market order."
+            "description": "Limit price. Creates a limit order (or stop-limit if stop_price also set).",
         },
         "stop_price": {
             "type": "number",
-            "description": "Stop price for stop/stop-limit orders."
+            "description": "Stop trigger price for stop/stop-limit orders.",
+        },
+        "trail_price": {
+            "type": "number",
+            "description": "Dollar offset for trailing stop. Mutually exclusive with trail_percent.",
+        },
+        "trail_percent": {
+            "type": "number",
+            "description": "Percent offset for trailing stop (e.g., 2.0 = 2%). Mutually exclusive with trail_price.",
         },
         "take_profit": {
             "type": "number",
-            "description": "Take-profit price for bracket orders."
+            "description": "Take-profit limit price (exit leg). Required for bracket/OCO orders.",
         },
         "stop_loss": {
             "type": "number",
-            "description": "Stop-loss price for bracket orders."
+            "description": "Stop-loss trigger price (exit leg). Required for bracket/OCO orders.",
+        },
+        "stop_loss_limit": {
+            "type": "number",
+            "description": "Stop-loss limit price (exit leg). Omit for market-on-trigger.",
+        },
+        "order_class": {
+            "type": "string",
+            "enum": ["bracket", "oco", "oto"],
+            "description": (
+                "'bracket': entry + take_profit + stop_loss. "
+                "'oco': one-cancels-other exit (both take_profit and stop_loss required). "
+                "'oto': one-triggers-other (entry + one exit leg)."
+            ),
         },
         "time_in_force": {
             "type": "string",
-            "enum": ["day", "gtc", "ioc", "fok"],
-            "description": "Time in force for the order.",
-            "default": "day"
-        }
+            "enum": ["day", "gtc", "ioc", "fok", "opg", "cls"],
+            "description": "Time in force. 'opg' = market-on-open, 'cls' = market-on-close.",
+            "default": "day",
+        },
     },
     "required": ["position", "symbol"],
-    "additionalProperties": False
+    "additionalProperties": False,
 }
 
 TRADE_TOOL = {

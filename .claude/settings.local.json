@@ -72,7 +72,9 @@
       "Bash(cmd /c \".venv\\\\Scripts\\\\python -c \"\"from app.core.atlas.models.agent_response import AgentResponse; print\\(AgentResponse\\(answer=''test''\\)\\); print\\(''OK''\\)\"\"\")",
       "Bash(pip install:*)",
       "WebFetch(domain:python.reference.langfuse.com)",
-      "WebFetch(domain:docs.alpaca.markets)"
+      "WebFetch(domain:docs.alpaca.markets)",
+      "WebFetch(domain:alpaca.markets)",
+      "Bash(test:*)"
     ],
     "deny": [],
     "ask": []
