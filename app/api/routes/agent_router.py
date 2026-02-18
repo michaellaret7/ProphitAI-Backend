@@ -33,7 +33,7 @@ class AgentType(str, Enum):
 
     OPTIMIZER = "optimizer"
     WATCHLIST = "watchlist"
-    # Add more BaseAgent-based agents as needed
+    PORTFOLIO_BUILDER = "portfolio_builder"
 
 
 class ExecuteAgentRequest(BaseModel):
@@ -116,6 +116,21 @@ def _create_agent(
         # Watchlist uses new ChatCallback interface (tool-level events)
         chat_callback = WebSocketChatCallback(execution_id, loop)
         return Watchlist(
+            user_preferences=user_preferences,
+            chat_callback=chat_callback,
+            session_id=execution_id,
+            print_mode=PrintMode.PRODUCTION,
+        )
+
+    elif agent_type == AgentType.PORTFOLIO_BUILDER:
+        from app.domain.portfolio_operations.builder.agent import PortfolioBuilder
+
+        user_preferences = parameters.get("user_preferences")
+        if not user_preferences:
+            raise ValueError("user_preferences is required for portfolio_builder agent")
+
+        chat_callback = WebSocketChatCallback(execution_id, loop)
+        return PortfolioBuilder(
             user_preferences=user_preferences,
             chat_callback=chat_callback,
             session_id=execution_id,
