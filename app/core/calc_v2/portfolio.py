@@ -10,9 +10,9 @@ from app.core.calc_v2.models.risk_model import RiskMetrics
 from app.core.calc_v2.models.performance_model import PerformanceMetrics
 from app.core.calc_v2.models.correlation_model import CorrelationMetrics
 from app.core.calc_v2.models.covariance_model import CovarianceMetrics
-from app.core.calc_v2.portfolio_calcs.group_metrics import fetch_ticker_classifications, calc_group_metrics
-from app.core.calc_v2.portfolio_calcs.calc_correlation import calc_correlation_matrix, calc_all_correlation_metrics
-from app.core.calc_v2.portfolio_calcs.calc_covariance import calc_covariance_matrix, calc_all_covariance_metrics
+from app.core.calc_v2.portfolio_specific.group_metrics import fetch_ticker_classifications, calc_group_metrics
+from app.core.calc_v2.portfolio_specific.calc_correlation import calc_correlation_matrix, calc_all_correlation_metrics
+from app.core.calc_v2.portfolio_specific.calc_covariance import calc_covariance_matrix, calc_all_covariance_metrics
 
 
 class Portfolio:

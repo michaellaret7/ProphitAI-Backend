@@ -26,6 +26,8 @@ class RiskMetrics(BaseModel):
 
     # Tier 4: Market-Relative (None if no benchmark provided)
     beta: Float4 | None = None                 # Systematic risk vs benchmark
+    up_beta: Float4 | None = None              # Sensitivity in up markets (benchmark > 0)
+    down_beta: Float4 | None = None            # Sensitivity in down markets (benchmark < 0)
     tracking_error: Float4 | None = None       # Volatility of returns vs benchmark
     upside_capture: Float4 | None = None       # % of benchmark gains captured
     downside_capture: Float4 | None = None     # % of benchmark losses captured

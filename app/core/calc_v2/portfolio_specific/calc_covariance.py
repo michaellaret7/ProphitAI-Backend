@@ -42,6 +42,7 @@ def calc_portfolio_variance(
     return float(w @ cov_matrix.values @ w)
 
 
+# This func is used to calc individual asset risk contributions to the portfolio
 def calc_risk_contributions(
     tickers: list[str],
     weights: np.ndarray,

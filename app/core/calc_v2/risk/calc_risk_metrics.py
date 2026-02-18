@@ -135,6 +135,56 @@ def calc_tracking_error(daily_returns: pd.Series, benchmark_returns: pd.Series, 
     return te * np.sqrt(252) if annualize else te
 
 
+def calc_up_beta(daily_returns: pd.Series, benchmark_returns: pd.Series) -> float:
+    """Calculate up beta — sensitivity to benchmark in up markets (benchmark > 0)."""
+    aligned = pd.DataFrame({
+        'portfolio': daily_returns,
+        'benchmark': benchmark_returns
+    }).dropna()
+
+    if len(aligned) < 2:
+        return 0.0
+
+    up_market = aligned[aligned['benchmark'] > 0]
+
+    if len(up_market) < 2:
+        return 0.0
+
+    port_series = cast(pd.Series, up_market['portfolio'])
+    bench_series = cast(pd.Series, up_market['benchmark'])
+
+    var = bench_series.var()
+    if var == 0:
+        return 0.0
+
+    return float(port_series.cov(bench_series) / var)
+
+
+def calc_down_beta(daily_returns: pd.Series, benchmark_returns: pd.Series) -> float:
+    """Calculate down beta — sensitivity to benchmark in down markets (benchmark < 0)."""
+    aligned = pd.DataFrame({
+        'portfolio': daily_returns,
+        'benchmark': benchmark_returns
+    }).dropna()
+
+    if len(aligned) < 2:
+        return 0.0
+
+    down_market = aligned[aligned['benchmark'] < 0]
+
+    if len(down_market) < 2:
+        return 0.0
+
+    port_series = cast(pd.Series, down_market['portfolio'])
+    bench_series = cast(pd.Series, down_market['benchmark'])
+
+    var = bench_series.var()
+    if var == 0:
+        return 0.0
+
+    return float(port_series.cov(bench_series) / var)
+
+
 def calc_upside_capture(daily_returns: pd.Series, benchmark_returns: pd.Series) -> float:
     """Calculate upside capture ratio (% of benchmark gains captured in up markets)."""
     aligned = pd.DataFrame({
@@ -215,12 +265,16 @@ def calc_all_risk_metrics(
 
     # Tier 4: Market-Relative (optional)
     beta = None
+    up_beta = None
+    down_beta = None
     tracking_error = None
     upside_capture = None
     downside_capture = None
     if benchmark_returns is not None:
         beta = calc_beta(daily_returns, benchmark_returns)
         tracking_error = calc_tracking_error(daily_returns, benchmark_returns)
+        up_beta = calc_up_beta(daily_returns, benchmark_returns)
+        down_beta = calc_down_beta(daily_returns, benchmark_returns)
         upside_capture = calc_upside_capture(daily_returns, benchmark_returns)
         downside_capture = calc_downside_capture(daily_returns, benchmark_returns)
 
@@ -237,6 +291,8 @@ def calc_all_risk_metrics(
         skewness=skewness,
         kurtosis=kurtosis,
         beta=beta,
+        up_beta=up_beta,
+        down_beta=down_beta,
         tracking_error=tracking_error,
         upside_capture=upside_capture,
         downside_capture=downside_capture,
