@@ -11,7 +11,7 @@ from app.utils.choose_model_and_client import get_model_and_client
 from app.core.atlas.tools.base import CALCULATOR_TOOL, THINK_TOOL
 
 class AgentBase(ABC):
-    """Abstract base class providing shared foundation for DeepAgent and ChatAgent."""
+    """Abstract base class providing shared foundation for all Atlas agents."""
 
     def __init__(
         self,

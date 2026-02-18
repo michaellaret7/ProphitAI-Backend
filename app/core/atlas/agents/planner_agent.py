@@ -83,5 +83,3 @@ class PlannerAgent(AgentBase):
             run_span.update(output=plan.model_dump())
 
             return plan
-
-

@@ -24,7 +24,7 @@ from app.core.atlas.prompts.orchestrator_agent import (
     ORCHESTRATOR_SYSTEM_PROMPT,
     build_plan_prompt,
 )
-from app.core.atlas.planning.agent import PlannerAgent
+from app.core.atlas.agents.planner_agent import PlannerAgent
 from app.utils.gpt_parser import parse_with_gpt
 
 from app.core.atlas.tools.alpaca import (

@@ -12,7 +12,6 @@ from app.services.shared.agent_executor import (
     AgentExecutionManager,
     ExecutionState,
     ExecutionStatus,
-    WebSocketCallback,
     execution_manager,
     run_agent_background,
 )
@@ -31,7 +30,6 @@ __all__ = [
     "AgentExecutionManager",
     "ExecutionState",
     "ExecutionStatus",
-    "WebSocketCallback",
     "execution_manager",
     "run_agent_background",
     # Chat session

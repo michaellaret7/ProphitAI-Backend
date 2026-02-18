@@ -3,12 +3,11 @@
 from typing import Any
 import yaml
 
-from app.core.atlas.models import TaskStatus
 from app.core.atlas.tools.responses import dump_yaml
 
 
 def validate_tool_call(name: str, args: dict, result: Any, agent: Any) -> str:
-    """Validate tool execution success and display in-progress tasks."""
+    """Validate tool execution success and format result for message history."""
     try:
         if isinstance(result, dict):
             tool_payload = result
@@ -19,24 +18,10 @@ def validate_tool_call(name: str, args: dict, result: Any, agent: Any) -> str:
         data = tool_payload.get("data", {})
         error = tool_payload.get("error") if not success else None
 
-        main_tasks_in_progress = []
-        subtasks_in_progress = []
-
-        if hasattr(agent, 'plan') and agent.plan:
-            for task in agent.plan.tasks:
-                if task.status == TaskStatus.IN_PROGRESS:
-                    main_tasks_in_progress.append(f"Task {task.id}: {task.description}")
-
-                for subtask in getattr(task, 'subtasks', []):
-                    if subtask.status == TaskStatus.IN_PROGRESS:
-                        subtasks_in_progress.append(f"Subtask {subtask.id}: {subtask.description}")
-
         return dump_yaml({
             "success": success,
             "tool_name": name,
             "args": args,
-            "main_tasks_in_progress": main_tasks_in_progress,
-            "subtasks_in_progress": subtasks_in_progress,
             "data": data,
             "error": error,
         })
@@ -48,6 +33,4 @@ def validate_tool_call(name: str, args: dict, result: Any, agent: Any) -> str:
             "error": f"Tool validation failed: {str(e)}",
             "tool_name": name,
             "args": args,
-            "main_tasks_in_progress": [],
-            "subtasks_in_progress": []
         })

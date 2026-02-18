@@ -28,7 +28,6 @@ from langfuse import propagate_attributes
 class ChatAgent(AgentBase):
     """Conversational agent for interactive tool-assisted chat.
 
-    Key differences from DeepAgent:
     - No planning phase - direct to tool calling
     - Bounded iterations (default: 20)
     - Terminates when LLM produces text without tool calls
@@ -132,7 +131,6 @@ class ChatAgent(AgentBase):
             )
 
             self.total_tokens = 0
-            self.tool_handler.tool_call_history = []
 
             self.messages = self._build_messages(user_message, conversation_history)
 

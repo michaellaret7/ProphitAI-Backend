@@ -139,29 +139,6 @@ class AgentPrinter:
             print(f"\n{self.CYAN}[Chat] Max iterations reached{self.RESET}")
 
     # -------------------------------------------------------------------------
-    # Planning
-    # -------------------------------------------------------------------------
-
-    def plan_parsed(self, task_count: int) -> None:
-        """Print when plan is successfully parsed."""
-        print("✅ Plan parsed successfully!")
-        print(f"   Tasks: {task_count}")
-
-    def plan_error(self, error: str) -> None:
-        """Print plan parsing failure."""
-        print(f"❌ Plan parsing failed: {error}")
-
-    def plan_status_injected(self) -> None:
-        """Print when plan status is injected."""
-        if self.mode in (PrintMode.VERBOSE, PrintMode.DEBUG):
-            print("📊 Injecting plan status into context...")
-
-    def planning_prompt_removed(self) -> None:
-        """Print when planning prompt is removed."""
-        if self.mode in (PrintMode.VERBOSE, PrintMode.DEBUG):
-            print("🗑️  Removed planning prompt from message history (planning phase complete)")
-
-    # -------------------------------------------------------------------------
     # General
     # -------------------------------------------------------------------------
 

@@ -1,6 +1,5 @@
 """Tool Handler - executes tools and manages message history."""
 
-import copy
 import json
 import time
 from concurrent.futures import ThreadPoolExecutor
@@ -9,8 +8,7 @@ from typing import List, Dict, Any, Optional, TYPE_CHECKING, Union
 import yaml
 
 from app.core.atlas.execution.validation import validate_tool_call
-from app.core.atlas.logging import AgentPrinter, write_messages_to_yaml, log_tool_call
-from app.core.atlas.context import prune_completed_task_messages, prune_note_content
+from app.core.atlas.logging import AgentPrinter
 from app.core.atlas.tools.responses import error_response
 from app.core.atlas.execution.utils import stringify_for_llm, check_tool_success
 
@@ -21,7 +19,7 @@ if TYPE_CHECKING:
 from opentelemetry import context as otel_context
 
 # Tools that modify agent state and must run sequentially
-SEQUENTIAL_ONLY_TOOLS = {"write_note", "finalize", "think", "update_plan"}
+SEQUENTIAL_ONLY_TOOLS = {"think"}
 
 def should_run_parallel(tool_calls: List[Any]) -> bool:
     """Determine if tool calls can be executed in parallel.
@@ -50,11 +48,8 @@ class ToolHandler:
     ):
         self.agent = agent
         self.printer = printer
-        # Note: chat_callback param kept for backwards compatibility but not used
-        # We always read from agent.chat_callback to get the current callback
         self.current_iteration: int = 0  # Set by execution loop for callback events
         self.retry = False
-        self.tool_call_history = []
 
     @property
     def chat_callback(self) -> Optional[Union["ChatCallback", "NoOpChatCallback"]]:
@@ -78,8 +73,6 @@ class ToolHandler:
                 "content": "",
                 "tool_calls": tool_calls
             })
-
-        current_assistant_idx = len(self.agent.messages) - 1
 
         for tool_call in tool_calls:
             name = tool_call.function.name
@@ -129,16 +122,6 @@ class ToolHandler:
             result = self._execute_tool(name, args)
             duration_ms = int((time.perf_counter() - start_time) * 1000)
 
-            # Track note titles
-            if name == "write_note":
-                self._handle_note_tracking(result, args)
-
-            # Handle task completion pruning
-            if name == "update_tasks":
-                current_assistant_idx = self._handle_task_update(
-                    result, args, tool_calls, current_assistant_idx
-                )
-
             # Add result to messages (returns success after validation)
             success = self._add_tool_result(tool_call, result, name, args)
 
@@ -155,8 +138,6 @@ class ToolHandler:
                     duration_ms=duration_ms,
                 )
 
-        self._write_messages_to_yaml()
-
     def handle_tool_calls_parallel(self, tool_calls: List[Any]) -> None:
         """Execute multiple tool calls in parallel using ThreadPoolExecutor."""
         num_tools = len(tool_calls)
@@ -172,7 +153,7 @@ class ToolHandler:
             args, parse_error = self._parse_arguments(args_json)
 
             parsed_calls.append((tool_call, name, args, parse_error))
-            
+
             self.printer.parallel_tool_queued(name)
 
             # Emit tool call start event
@@ -191,9 +172,6 @@ class ToolHandler:
 
         # Process results sequentially
         for (tool_call, name, args, _parse_error), result in zip(parsed_calls, results):
-            if name == "write_note":
-                self._handle_note_tracking(result, args)
-
             success = self._add_tool_result_parallel(tool_call, result, name, args)
 
             # Emit tool result event
@@ -209,10 +187,6 @@ class ToolHandler:
                     success=success,
                     duration_ms=duration_ms,
                 )
-
-        # Log all tool calls once after parallel execution completes
-        log_tool_call(self.tool_call_history, output_dir=getattr(self.agent, "output_dir", None))
-        self._write_messages_to_yaml()
 
     def _execute_tools_parallel(
         self,
@@ -275,8 +249,6 @@ class ToolHandler:
         tool_validation_dict = yaml.safe_load(tool_validation)
         success, _ = check_tool_success(tool_validation_dict)
 
-        self.tool_call_history.append(tool_validation_dict)
-
         self.printer.parallel_tool_result(name, result, success)
 
         content = stringify_for_llm(result) if success else yaml.dump(
@@ -307,7 +279,7 @@ class ToolHandler:
             error_msg = f"Tool '{name}' not found. Available: {list(self.agent.tool_functions.keys())}"
             self.printer.tool_error(error_msg)
             return error_response(error_msg)
-        
+
         # This execute tool method is the heart/base of the tool handler.
         # We want to track the tool executions and results in Langfuse.
         with self.agent.langfuse.start_as_current_observation(
@@ -349,7 +321,6 @@ class ToolHandler:
             except Exception as e:
                 error_msg = f"Error executing {name}: {str(e)}"
 
-                # ----- Update the tool span with the error message and error details. ----- #
                 tool_span.update(
                     level="ERROR",
                     error=str(e),
@@ -360,81 +331,6 @@ class ToolHandler:
 
                 return error_response(error_msg)
 
-    def _handle_note_tracking(self, result: Any, args: Dict[str, Any]) -> None:
-        """Track note titles when write_note succeeds."""
-        try:
-            result_dict = yaml.safe_load(result) if isinstance(result, str) else result
-            if result_dict.get("success") and "title" in args:
-                title = args["title"]
-                if title not in self.agent.note_titles:
-                    self.agent.note_titles.append(title)
-                    self.printer.note_added(title)
-        except Exception as e:
-            self.printer.warning(f"Failed to track note title: {e}")
-
-    def _handle_task_update(
-        self,
-        result: Any,
-        args: Dict[str, Any],
-        tool_calls: List[Any],
-        current_assistant_idx: int
-    ) -> int:
-        """Handle message pruning when tasks are updated. Returns updated assistant index."""
-        status = args.get("status")
-        if status not in ("complete", "completed", "in_progress"):
-            return current_assistant_idx
-
-        try:
-            result_dict = yaml.safe_load(result) if isinstance(result, str) else result
-            if not result_dict.get("success"):
-                return current_assistant_idx
-
-            if status in ("complete", "completed"):
-                self.agent.messages = prune_completed_task_messages(
-                    messages=self.agent.messages,
-                    main_task=args.get("main_task"),
-                    subtasks=args.get("subtasks"),
-                    exclude_index=current_assistant_idx,
-                    verbose=self.printer.is_verbose,
-                    prune_status="in_progress"
-                )
-            else:  # in_progress
-                self.agent.messages = prune_completed_task_messages(
-                    messages=self.agent.messages,
-                    exclude_index=current_assistant_idx,
-                    verbose=self.printer.is_verbose,
-                    prune_all_completed=True
-                )
-
-            # Recalculate assistant index after pruning
-            for i in range(len(self.agent.messages) - 1, -1, -1):
-                msg = self.agent.messages[i]
-                if msg.get("role") == "assistant" and msg.get("tool_calls") == tool_calls:
-                    return i
-
-        except Exception as e:
-            self.printer.warning(f"Failed to prune messages: {e}")
-
-        return current_assistant_idx
-
-    def _write_messages_to_yaml(self) -> None:
-        """Write pruned messages to YAML for logging."""
-        try:
-            iteration_indices = getattr(self.agent, "_iteration_message_indices", None)
-            messages_copy = copy.deepcopy(self.agent.messages)
-            pruned_messages = prune_note_content(
-                messages=messages_copy,
-                exclude_index=None,
-                verbose=self.printer.is_verbose
-            )
-            write_messages_to_yaml(
-                pruned_messages,
-                output_dir=getattr(self.agent, "output_dir", None),
-                iteration_indices=iteration_indices
-            )
-        except Exception as e:
-            self.printer.warning(f"Failed to write messages to YAML: {e}")
-
     def _add_tool_result(
         self,
         tool_call: Any,
@@ -442,13 +338,10 @@ class ToolHandler:
         name: str,
         args: Dict[str, Any],
     ) -> bool:
-        """Add a tool result to messages and log it."""
+        """Add a tool result to messages."""
         tool_validation = validate_tool_call(name, args, result, self.agent)
         tool_validation_dict = yaml.safe_load(tool_validation)
         success, _ = check_tool_success(tool_validation_dict)
-
-        self.tool_call_history.append(tool_validation_dict)
-        log_tool_call(self.tool_call_history, output_dir=getattr(self.agent, "output_dir", None))
 
         self.printer.tool_result(name, result, success)
 
