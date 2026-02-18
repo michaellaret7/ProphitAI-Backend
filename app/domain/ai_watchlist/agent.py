@@ -14,8 +14,8 @@ class Watchlist(OrchestratorAgent):
         self,
         user_preferences: str,
         print_mode: PrintMode = PrintMode.PRODUCTION,
-        provider: str = "gemini",
-        model: str = "gemini-3-pro-preview",
+        provider: str = "claude",
+        model: str = "claude-sonnet-4-6",
         chat_callback: Optional[ChatCallback] = None,
         session_id: str = "watchlist",
     ):
@@ -31,13 +31,4 @@ class Watchlist(OrchestratorAgent):
             chat_callback=chat_callback,
             session_id=session_id,
         )
-
-if __name__ == "__main__":
-    watchlist = Watchlist(
-        user_preferences="Build me a watchlist of software stocks that you think will rebound from the recent software selloff.",
-        provider="anthropic",
-        model="claude-opus-4-6",
-    )
-    result = watchlist.run()
-    print(result.parsed_output.model_dump_json(indent=4))
 

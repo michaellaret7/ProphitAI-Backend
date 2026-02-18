@@ -5,7 +5,7 @@ from typing import Optional
 from app.core.atlas.agents import OrchestratorAgent
 from app.core.atlas.models import PrintMode
 from app.core.atlas.models.callbacks import ChatCallback
-from app.domain.portfolio_operations.builder.prompts import PORTFOLIO_BUILDER_PROMPT
+from app.domain.builder.prompts import PORTFOLIO_BUILDER_PROMPT
 
 class PortfolioBuilder(OrchestratorAgent):
     """Portfolio construction agent - builds allocated portfolios via orchestration."""
@@ -15,7 +15,7 @@ class PortfolioBuilder(OrchestratorAgent):
         user_preferences: str,
         print_mode: PrintMode = PrintMode.PRODUCTION,
         provider: str = "anthropic",
-        model: str = "claude-opus-4-6",
+        model: str = "claude-sonnet-4-6",
         chat_callback: Optional[ChatCallback] = None,
         session_id: str = "portfolio_builder",
     ):
@@ -29,6 +29,3 @@ class PortfolioBuilder(OrchestratorAgent):
             chat_callback=chat_callback,
             session_id=session_id,
         )
-
-
-

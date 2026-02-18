@@ -93,7 +93,7 @@ def _create_agent(
         )
 
     elif agent_type == AgentType.PORTFOLIO_BUILDER:
-        from app.domain.portfolio_operations.builder.agent import PortfolioBuilder
+        from app.domain.builder.agent import PortfolioBuilder
 
         user_preferences = parameters.get("user_preferences")
         if not user_preferences:
