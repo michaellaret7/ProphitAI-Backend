@@ -1,5 +1,6 @@
 """Multi-asset portfolio entity that computes risk and performance metrics."""
 
+import json
 import pandas as pd
 import numpy as np
 
@@ -7,6 +8,11 @@ from app.core.calc_v2.risk.calc_risk_metrics import calc_all_risk_metrics
 from app.core.calc_v2.performance.calc_performance_metrics import calc_all_performance_metrics
 from app.core.calc_v2.models.risk_model import RiskMetrics
 from app.core.calc_v2.models.performance_model import PerformanceMetrics
+from app.core.calc_v2.models.correlation_model import CorrelationMetrics
+from app.core.calc_v2.models.covariance_model import CovarianceMetrics
+from app.core.calc_v2.portfolio_calcs.group_metrics import fetch_ticker_classifications, calc_group_metrics
+from app.core.calc_v2.portfolio_calcs.calc_correlation import calc_correlation_matrix, calc_all_correlation_metrics
+from app.core.calc_v2.portfolio_calcs.calc_covariance import calc_covariance_matrix, calc_all_covariance_metrics
 
 
 class Portfolio:
@@ -34,6 +40,7 @@ class Portfolio:
 
         # Benchmark returns (calculated from prices)
         self.benchmark_returns: pd.Series | None = None
+
         if benchmark_prices is not None:
             self.benchmark_returns = benchmark_prices.pct_change().dropna()
 
@@ -42,9 +49,14 @@ class Portfolio:
         self.cumulative_returns = (1 + self.daily_returns).cumprod() - 1
         self.log_returns = np.log(1 + self.daily_returns)
 
-        # Cross-asset covariance and correlation (uses asset-level returns)
-        self.corr_matrix: pd.DataFrame = self.asset_returns.corr()
-        self.cov_matrix: pd.DataFrame = self.asset_returns.cov()
+        # Cross-asset matrices (raw DataFrames + derived metrics)
+        self.corr_matrix: pd.DataFrame = calc_correlation_matrix(self.asset_returns)
+        self.cov_matrix: pd.DataFrame = calc_covariance_matrix(self.asset_returns)
+
+        self.correlation_metrics: CorrelationMetrics = calc_all_correlation_metrics(self.asset_returns)
+        self.covariance_metrics: CovarianceMetrics = calc_all_covariance_metrics(
+            self.asset_returns, self.tickers, self.weights
+        )
 
         # Risk metrics (with optional benchmark for beta/tracking error)
         self.risk_metrics: RiskMetrics = calc_all_risk_metrics(
@@ -57,3 +69,37 @@ class Portfolio:
             self.benchmark_returns
         )
 
+        # Classification-based group metrics (VaR + concentration by sector/industry/sub_industry)
+        classifications = fetch_ticker_classifications(self.tickers)
+
+        self.sector_metrics = calc_group_metrics(
+            'sector', classifications, self.tickers, self.weights, self.asset_returns
+        )
+        self.industry_metrics = calc_group_metrics(
+            'industry', classifications, self.tickers, self.weights, self.asset_returns
+        )
+        self.sub_industry_metrics = calc_group_metrics(
+            'sub_industry', classifications, self.tickers, self.weights, self.asset_returns
+        )
+
+
+if __name__ == '__main__':
+    from app.repositories.price_data import fetch_bulk_ohlcv_data_for_tickers
+    import time
+    start_time = time.time()
+    tickers = ['AAPL', 'MSFT', 'NVDA', 'PG', 'HYG']
+    weights = [0.25, 0.25, 0.25, 0.2, 0.05]
+    data = fetch_bulk_ohlcv_data_for_tickers(tickers + ['SPY'], '2020-01-01', '2026-01-31')
+    price_df = pd.DataFrame({t: data[t]['adj_close'] for t in tickers})
+    end_time = time.time()
+    print(f"Time taken: {end_time - start_time} seconds")
+
+    start_time = time.time()
+    portfolio = Portfolio('Test Portfolio', tickers, weights, price_df, data['SPY']['adj_close'])
+    end_time = time.time()
+    print(f"Time taken: {end_time - start_time} seconds")
+
+
+    print(portfolio.sector_metrics)
+    print(portfolio.industry_metrics)
+    print(portfolio.sub_industry_metrics)
