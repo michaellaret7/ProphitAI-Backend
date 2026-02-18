@@ -1,8 +1,10 @@
+"""Performance metrics calculation functions for portfolio analysis."""
+
 import numpy as np
 import pandas as pd
 
-from performance_model import PerformanceMetrics
-from calc_risk_metrics import calc_beta
+from app.core.calc_v2.models.performance_model import PerformanceMetrics
+from app.core.calc_v2.risk.calc_risk_metrics import calc_beta
 
 
 # =============================================================================
@@ -57,7 +59,7 @@ def calc_sharpe_ratio(
     rf_annual: float = DEFAULT_RF_ANNUAL
 ) -> float:
     """Calculate annualized Sharpe Ratio.
-    
+
     Sharpe = (Rp - Rf) / σp, annualized via sqrt(252).
     """
     rf_daily = rf_annual / TRADING_DAYS
@@ -76,7 +78,7 @@ def calc_sortino_ratio(
     rf_annual: float = DEFAULT_RF_ANNUAL
 ) -> float:
     """Calculate annualized Sortino Ratio.
-    
+
     Sortino = (Rp - Rf) / Downside Deviation
     Uses downside deviation (returns below rf) instead of total volatility.
     """
@@ -103,7 +105,7 @@ def calc_calmar_ratio(
     rf_annual: float = DEFAULT_RF_ANNUAL
 ) -> float:
     """Calculate Calmar Ratio.
-    
+
     Calmar = (Annualized Return - Rf) / |Max Drawdown|
     """
     ann_return = calc_annualized_return(daily_returns)
@@ -125,7 +127,7 @@ def calc_information_ratio(
     benchmark_returns: pd.Series
 ) -> float:
     """Calculate Information Ratio.
-    
+
     IR = Mean(Rp - Rb) / Tracking Error
     Measures excess return per unit of active risk.
     """
@@ -169,7 +171,7 @@ def calc_omega_ratio(
     rf_annual: float = DEFAULT_RF_ANNUAL
 ) -> float:
     """Calculate Omega Ratio.
-    
+
     Omega = Sum(returns above threshold) / |Sum(returns below threshold)|
     Threshold is the risk-free rate converted to daily.
     Captures all moments of the distribution (Keating & Shadwick 2002).
@@ -194,7 +196,7 @@ def calc_omega_ratio(
 
 def calc_momentum(daily_returns: pd.Series, months: int) -> float:
     """Calculate trailing momentum (total return) for a given number of months.
-    
+
     Uses ~21 trading days per month. Returns annualized CAGR for periods > 12 months.
     """
     trading_days = months * 21

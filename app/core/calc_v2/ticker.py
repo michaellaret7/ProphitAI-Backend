@@ -1,18 +1,16 @@
-import sys
-from pathlib import Path
-# Add project root and current directory to path for imports
-sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
-sys.path.insert(0, str(Path(__file__).resolve().parent))
+"""Single-asset entity that computes risk and performance metrics from OHLCV data."""
 
 import pandas as pd
 import numpy as np
-from calc_risk_metrics import calc_all_risk_metrics
-from calc_performance_metrics import calc_all_performance_metrics
-from risk_model import RiskMetrics
-from performance_model import PerformanceMetrics
+
+from app.core.calc_v2.risk.calc_risk_metrics import calc_all_risk_metrics
+from app.core.calc_v2.performance.calc_performance_metrics import calc_all_performance_metrics
+from app.core.calc_v2.models.risk_model import RiskMetrics
+from app.core.calc_v2.models.performance_model import PerformanceMetrics
 
 import warnings
 warnings.filterwarnings("ignore", category=RuntimeWarning)
+
 
 class Ticker:
     """Single-asset entity that computes risk and performance metrics from OHLCV data."""

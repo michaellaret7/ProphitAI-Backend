@@ -1,3 +1,5 @@
+"""Pydantic model for performance metric output."""
+
 from typing import Annotated
 from pydantic import AfterValidator, BaseModel
 
