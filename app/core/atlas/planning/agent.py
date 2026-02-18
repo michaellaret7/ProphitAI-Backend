@@ -30,8 +30,6 @@ class PlannerAgent(AgentBase):
         print_mode: PrintMode = PrintMode.VERBOSE,
         temperature: Optional[float] = None
     ):
-        provider = 'gemini'
-        model = 'gemini-3-pro-preview'
 
         super().__init__(
             provider=provider,

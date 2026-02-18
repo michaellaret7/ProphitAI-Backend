@@ -138,7 +138,7 @@ class OrchestratorAgent(AgentBase):
             # ----- Keep the planner agent inside the orchestrator span ----- #
             if self.plan_first:
                 print("Plan-first mode enabled. Generating plan...")
-                planner = PlannerAgent(task=self.task, print_mode=PrintMode.PRODUCTION)
+                planner = PlannerAgent(task=self.task, print_mode=PrintMode.PRODUCTION, provider="openai", model="gpt-5.2")
                 self.plan = planner.run()
 
                 self.add_tool(**{
@@ -189,20 +189,3 @@ class OrchestratorAgent(AgentBase):
                 parsed_output=parsed_output if parsed_output else None,
             )
 
-if __name__ == "__main__":
-    task = """
-    How can I add some options income to my portfolio?
-    """
-
-    agent = OrchestratorAgent(
-        task=task,
-        provider="anthropic",
-        model="claude-opus-4-6",
-        max_iterations=50,
-        print_mode=PrintMode.PRODUCTION,
-        temperature=0.7,
-        plan_first=True,
-    )
-
-    result = agent.run()
-    print(result.answer)

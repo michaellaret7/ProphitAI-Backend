@@ -7,7 +7,6 @@ from app.core.atlas.models import PrintMode
 from app.core.atlas.models.callbacks import ChatCallback
 from app.domain.portfolio_operations.builder.prompts import PORTFOLIO_BUILDER_PROMPT
 
-
 class PortfolioBuilder(OrchestratorAgent):
     """Portfolio construction agent - builds allocated portfolios via orchestration."""
 
@@ -15,8 +14,8 @@ class PortfolioBuilder(OrchestratorAgent):
         self,
         user_preferences: str,
         print_mode: PrintMode = PrintMode.PRODUCTION,
-        provider: str = "gemini",
-        model: str = "gemini-3-pro-preview",
+        provider: str = "anthropic",
+        model: str = "claude-opus-4-6",
         chat_callback: Optional[ChatCallback] = None,
         session_id: str = "portfolio_builder",
     ):
@@ -32,11 +31,4 @@ class PortfolioBuilder(OrchestratorAgent):
         )
 
 
-if __name__ == "__main__":
-    builder = PortfolioBuilder(
-        user_preferences="Build me a moderate-risk, long-term growth portfolio focused on technology and healthcare with some dividend income.",
-        provider="anthropic",
-        model="claude-opus-4-6",
-    )
-    result = builder.run()
-    print(result.answer)
+

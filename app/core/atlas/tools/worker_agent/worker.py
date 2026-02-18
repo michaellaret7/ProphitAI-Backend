@@ -48,10 +48,12 @@ def deploy_worker_agent(
             tools=tools,
             notebook=notebook,
             chat_callback=worker_callback,
-            provider='gemini',
-            model='gemini-3-pro-preview',
+            # provider='gemini',
+            # model='gemini-3-pro-preview',
+            provider='openai',
+            model='gpt-5.2',
             max_iterations=30,
-            temperature=0.7,
+            # temperature=0.7,
         )
 
         result = worker_agent.run()
