@@ -9,6 +9,9 @@ from app.core.calc_v2.models.risk import RiskMetrics
 from app.core.calc_v2.models.performance import PerformanceMetrics
 from app.core.calc_v2.technicals.calc_all import calc_all_technicals
 from app.core.calc_v2.models.technicals import TickerTechnicals
+from app.core.calc_v2.factors.calc_all import calc_all_factors
+from app.core.calc_v2.models.factors import TickerFactors
+from app.repositories.fundamentals.models import FundamentalsResult
 from app.repositories.price_data import fetch_bulk_ohlcv_data_for_tickers
 
 import warnings
@@ -23,6 +26,7 @@ class Ticker:
         ticker: str,
         ohlcv_data: pd.DataFrame,
         benchmark_prices: pd.Series | None = None,
+        fundamentals: FundamentalsResult | None = None,
     ):
         self.ticker = ticker
         self.ohlcv_data = ohlcv_data
@@ -58,6 +62,14 @@ class Ticker:
         )
 
         self.technicals: TickerTechnicals = calc_all_technicals(self.ohlcv_data)
+
+        # Factor metrics
+        self.factors: TickerFactors = calc_all_factors(
+            adj_close=self.adj_close,
+            daily_returns=self.daily_returns,
+            benchmark_returns=self.benchmark_returns,
+            fundamentals=fundamentals,
+        )
 
 if __name__ == '__main__':
     tickers = ['AAL', 'SPY', 'NVDA', 'AAL', 'MSFT', 'TSLA', 'GOOGL', 'AMZN', 'META', 'TSLA']

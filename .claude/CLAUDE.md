@@ -130,8 +130,11 @@ from app.utils.time_utils import get_current_utc_time, get_utc_date_str, get_utc
 - Fail Fast: Check for potential errors early and raise exceptions immediately when issues occur.
 
 **Development Goals**
-- Build maintainable, scaleable, modular, and efficicent systems
-- Aim for maximum code reuseability (always try to check if there is an existing helper function)
+- Scalable Architecture: Build stateless services where possible; pass state as arguments rather than relying on local server memory to ensure horizontal scaling.
+- Modular OOP: Use Classes to encapsulate logic, but maintain a strict Separation of Concerns between data processing and I/O.
+- DRY & Reuse: Check @helpers or @utils before coding. Refactor shared logic into pure, reusable functions to minimize duplication.
+- Type Safety: Mandate Type Hints and explicit return types to ensure the codebase remains self-documenting and maintainable.
+- Resource Efficiency: Use Context Managers for all I/O and prioritize vectorized operations for data-heavy tasks.
 
 ### Code Documentation
 - Every module should have a docstring explaining its purpose
