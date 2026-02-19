@@ -8,7 +8,27 @@ from typing import cast
 import numpy as np
 import pandas as pd
 
+from app.core.calc_v2.config import TRADING_DAYS
 from app.core.calc_v2.technicals.trend import calc_sma
+
+
+def calc_true_range(
+    high: pd.Series,
+    low: pd.Series,
+    close: pd.Series,
+) -> pd.Series:
+    """Calculate True Range — max of (H-L, |H-prevC|, |L-prevC|).
+
+    Captures intraday range plus overnight gaps. Building block for ATR and ADX.
+    """
+    prev_close = close.shift(1)
+    return cast(
+        pd.Series,
+        pd.concat(
+            [high - low, (high - prev_close).abs(), (low - prev_close).abs()],
+            axis=1,
+        ).max(axis=1),
+    )
 
 
 def calc_atr(
@@ -22,14 +42,7 @@ def calc_atr(
     ATR = EMA(true_range, window) where true_range captures gaps.
     Measures volatility in price units. Common window: 14.
     """
-    prev_close = close.shift(1)
-    true_range = cast(
-        pd.Series,
-        pd.concat(
-            [high - low, (high - prev_close).abs(), (low - prev_close).abs()],
-            axis=1,
-        ).max(axis=1),
-    )
+    true_range = calc_true_range(high, low, close)
     result = cast(pd.Series, true_range.ewm(span=window, adjust=False).mean())
     return result.dropna()
 
@@ -47,7 +60,7 @@ def calc_close_to_close_volatility(
     vol = cast(pd.Series, daily_returns.rolling(window=window, min_periods=window).std())
 
     if annualize:
-        vol = cast(pd.Series, vol * np.sqrt(252))
+        vol = cast(pd.Series, vol * np.sqrt(TRADING_DAYS))
 
     return cast(pd.Series, vol.dropna())
 
@@ -76,7 +89,7 @@ def calc_parkinson_volatility(
     vol = cast(pd.Series, np.sqrt(raw))
 
     if annualize:
-        vol = cast(pd.Series, vol * np.sqrt(252))
+        vol = cast(pd.Series, vol * np.sqrt(TRADING_DAYS))
 
     return vol.dropna()
 
@@ -105,7 +118,7 @@ def calc_garman_klass_volatility(
     vol = cast(pd.Series, np.sqrt(variance.clip(lower=0)))
 
     if annualize:
-        vol = cast(pd.Series, vol * np.sqrt(252))
+        vol = cast(pd.Series, vol * np.sqrt(TRADING_DAYS))
 
     return vol.dropna()
 
@@ -149,7 +162,7 @@ def calc_yang_zhang_volatility(
     vol = cast(pd.Series, np.sqrt(variance.clip(lower=0)))
 
     if annualize:
-        vol = cast(pd.Series, vol * np.sqrt(252))
+        vol = cast(pd.Series, vol * np.sqrt(TRADING_DAYS))
 
     return vol.dropna()
 

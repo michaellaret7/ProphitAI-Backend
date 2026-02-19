@@ -8,7 +8,9 @@ from typing import cast
 import numpy as np
 import pandas as pd
 
+from app.core.calc_v2.config import TRADING_DAYS
 from app.core.calc_v2.technicals.trend import calc_ema
+from app.core.calc_v2.technicals.volatility import calc_true_range
 
 
 def calc_roc(close: pd.Series, window: int = 252, skip_recent: int = 21) -> pd.Series:
@@ -81,7 +83,6 @@ def calc_adx(
     """
     prev_high = high.shift(1)
     prev_low = low.shift(1)
-    prev_close = close.shift(1)
 
     # Directional movement
     plus_dm = (high - prev_high).clip(lower=0)
@@ -91,14 +92,7 @@ def calc_adx(
     plus_dm = cast(pd.Series, plus_dm.where(plus_dm > minus_dm, 0.0))
     minus_dm = cast(pd.Series, minus_dm.where(minus_dm > plus_dm, 0.0))
 
-    # True range
-    true_range = cast(
-        pd.Series,
-        pd.concat(
-            [high - low, (high - prev_close).abs(), (low - prev_close).abs()],
-            axis=1,
-        ).max(axis=1),
-    )
+    true_range = calc_true_range(high, low, close)
 
     # Wilder's smoothing (alpha = 1/window)
     alpha = 1 / window
@@ -139,7 +133,7 @@ def calc_time_series_momentum(
     trailing_return = close.pct_change(periods=lookback)
     realized_vol = cast(
         pd.Series,
-        daily_returns.rolling(window=vol_window, min_periods=vol_window).std() * np.sqrt(252),
+        daily_returns.rolling(window=vol_window, min_periods=vol_window).std() * np.sqrt(TRADING_DAYS),
     )
 
     signal = cast(

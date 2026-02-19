@@ -3,7 +3,7 @@
 import numpy as np
 import pandas as pd
 
-from app.core.calc_v2.risk.calc_risk_metrics import calc_var
+from app.core.calc_v2.risk.distribution import calc_var
 from app.db.core.db_config import MarketSession
 from app.db.core.models.market_data_models import Ticker as TickerModel
 

@@ -1,7 +1,5 @@
 """Correlation matrix calculations for a group of assets."""
 
-from typing import cast
-
 import numpy as np
 import pandas as pd
 
@@ -72,23 +70,22 @@ def calc_rolling_avg_correlation(
         asset_returns: DataFrame of daily returns (columns = tickers).
         window: Rolling window size in trading days. Default 60.
     """
-    n = len(asset_returns.columns)
-    if n < 2 or len(asset_returns) < window:
+    arr = asset_returns.values
+    t_len, n = arr.shape
+    if n < 2 or t_len < window:
         return pd.Series(dtype=float)
 
-    pair_correlations: list[pd.Series] = []
+    upper_indices = np.triu_indices(n, k=1)
+    result = np.full(t_len, np.nan)
 
-    # Reason: compute rolling correlation for each unique pair, then average.
-    for i in range(n):
-        for j in range(i + 1, n):
-            rolling_corr = asset_returns.iloc[:, i].rolling(window).corr(
-                asset_returns.iloc[:, j]
-            )
-            pair_correlations.append(rolling_corr)
+    # Reason: One np.corrcoef call per window computes the full n×n matrix
+    # in optimized C, replacing n*(n-1)/2 individual pandas rolling calls.
+    for t in range(window - 1, t_len):
+        window_data = arr[t - window + 1 : t + 1]
+        corr = np.corrcoef(window_data, rowvar=False)
+        result[t] = corr[upper_indices].mean()
 
-    stacked = pd.concat(pair_correlations, axis=1)
-    result = cast(pd.Series, stacked.mean(axis=1))
-    return result.dropna()
+    return pd.Series(result, index=asset_returns.index).dropna()
 
 
 def calc_all_correlation_metrics(asset_returns: pd.DataFrame) -> CorrelationMetrics:

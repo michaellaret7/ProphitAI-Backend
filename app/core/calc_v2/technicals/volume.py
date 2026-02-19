@@ -9,6 +9,22 @@ import numpy as np
 import pandas as pd
 
 
+# Helper function for money flow calculation
+def _calc_money_flow_volume(
+    high: pd.Series,
+    low: pd.Series,
+    close: pd.Series,
+    volume: pd.Series,
+) -> pd.Series:
+    """Calculate money flow volume — MFM * volume.
+
+    MFM = ((close - low) - (high - close)) / (high - low).
+    Building block for CMF and A/D Line.
+    """
+    hl_range = (high - low).replace(0, np.nan)
+    money_flow_multiplier = ((close - low) - (high - close)) / hl_range
+    return cast(pd.Series, money_flow_multiplier * volume)
+
 def calc_obv(close: pd.Series, volume: pd.Series) -> pd.Series:
     """Calculate On-Balance Volume.
 
@@ -51,15 +67,14 @@ def calc_cmf(
     CMF = sum(money_flow_volume, window) / sum(volume, window).
     Positive = buying pressure, negative = selling pressure.
     """
-    hl_range = (high - low).replace(0, np.nan)
-    money_flow_multiplier = ((close - low) - (high - close)) / hl_range
-    money_flow_volume = money_flow_multiplier * volume
+    money_flow_volume = _calc_money_flow_volume(high, low, close, volume)
 
-    result = (
+    result = cast(
+        pd.Series,
         money_flow_volume.rolling(window=window, min_periods=window).sum()
-        / volume.rolling(window=window, min_periods=window).sum()
+        / volume.rolling(window=window, min_periods=window).sum(),
     )
-    return cast(pd.Series, result.dropna())
+    return result.dropna()
 
 
 def calc_accumulation_distribution(
@@ -73,10 +88,7 @@ def calc_accumulation_distribution(
     AD = cumsum(money_flow_multiplier * volume).
     Divergence from price signals institutional accumulation or distribution.
     """
-    hl_range = (high - low).replace(0, np.nan)
-    money_flow_multiplier = ((close - low) - (high - close)) / hl_range
-    money_flow_volume = money_flow_multiplier * volume
-
+    money_flow_volume = _calc_money_flow_volume(high, low, close, volume)
     return cast(pd.Series, money_flow_volume.cumsum().dropna())
 
 
