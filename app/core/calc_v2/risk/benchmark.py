@@ -105,6 +105,48 @@ def calc_down_beta(daily_returns: pd.Series, benchmark_returns: pd.Series) -> fl
     return float(port_series.cov(bench_series) / var)
 
 
+def calc_idiosyncratic_vol(
+    daily_returns: pd.Series,
+    benchmark_returns: pd.Series,
+    lookback: int | None = None,
+) -> float | None:
+    """Calculate idiosyncratic volatility: std(residuals) × √252 from OLS r = α + β×m + ε.
+
+    Ang et al. (2006) — stocks with high idiosyncratic vol earn lower returns.
+
+    Args:
+        daily_returns: Asset daily returns.
+        benchmark_returns: Benchmark daily returns.
+        lookback: Optional trailing window in trading days. When provided,
+            only the last `lookback` days of each series are used before
+            alignment. Defaults to None (full series).
+
+    Returns None if insufficient overlapping data.
+    """
+    r = daily_returns
+    m = benchmark_returns
+    if lookback is not None:
+        r = r.iloc[-lookback:]
+        m = m.iloc[-lookback:]
+
+    aligned = align_returns(r, m, min_obs=30)
+    if aligned is None:
+        return None
+
+    y = aligned['portfolio'].to_numpy(dtype=float)
+    x = aligned['benchmark'].to_numpy(dtype=float)
+
+    # Reason: simple OLS via numpy for speed (no statsmodels dependency)
+    X = np.column_stack([np.ones(len(x)), x])
+    try:
+        beta_vec, *_ = np.linalg.lstsq(X, y, rcond=None)
+        residuals = y - X @ beta_vec
+        ivol = float(np.std(residuals, ddof=1)) * np.sqrt(TRADING_DAYS)
+        return None if np.isnan(ivol) else ivol
+    except np.linalg.LinAlgError:
+        return None
+
+
 def calc_upside_capture(daily_returns: pd.Series, benchmark_returns: pd.Series) -> float | None:
     """Calculate upside capture ratio (% of benchmark gains captured in up markets).
 

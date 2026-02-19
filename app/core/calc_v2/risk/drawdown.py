@@ -12,9 +12,16 @@ def calc_drawdown_series(daily_returns: pd.Series) -> pd.Series:
     return drawdown
 
 
-def calc_max_drawdown(daily_returns: pd.Series) -> float:
-    """Calculate maximum drawdown (largest peak-to-trough decline)."""
-    drawdown = calc_drawdown_series(daily_returns)
+def calc_max_drawdown(daily_returns: pd.Series, lookback: int | None = None) -> float:
+    """Calculate maximum drawdown (largest peak-to-trough decline).
+
+    Args:
+        daily_returns: Daily return series.
+        lookback: Optional trailing window in trading days. When provided,
+            only the last `lookback` days are used. Defaults to None (full series).
+    """
+    r = daily_returns.iloc[-lookback:] if lookback is not None else daily_returns
+    drawdown = calc_drawdown_series(r)
     return float(drawdown.min())
 
 

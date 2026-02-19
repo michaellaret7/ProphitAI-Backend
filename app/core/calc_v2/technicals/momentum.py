@@ -109,6 +109,45 @@ def calc_adx(
     return cast(pd.Series, adx.dropna())
 
 
+def calc_risk_adj_momentum(
+    close: pd.Series,
+    r12_window: int = 252,
+    r6_window: int = 126,
+    skip_recent: int = 21,
+) -> pd.Series:
+    """Calculate risk-adjusted momentum: (r12_1 + r6_1) / (2 × annualized vol).
+
+    AQR-style normalization — penalizes high-volatility momentum so that
+    a 20% return on 15% vol scores higher than 20% on 40% vol.
+
+    Args:
+        close: Adjusted close price series.
+        r12_window: 12-month lookback window. Default 252.
+        r6_window: 6-month lookback window. Default 126.
+        skip_recent: Days to skip (short-term reversal). Default 21.
+
+    Returns:
+        Series of risk-adjusted momentum values.
+    """
+    r12 = calc_roc(close, window=r12_window, skip_recent=skip_recent)
+    r6 = calc_roc(close, window=r6_window, skip_recent=skip_recent)
+
+    daily_returns = close.pct_change()
+    # Reason: use r12 window for vol to match the longest momentum horizon
+    realized_vol = cast(
+        pd.Series,
+        daily_returns.rolling(window=r12_window, min_periods=r12_window).std() * np.sqrt(TRADING_DAYS),
+    )
+
+    # Reason: align all three series before combining
+    combined = pd.concat([r12.rename('r12'), r6.rename('r6'), realized_vol.rename('vol')], axis=1).dropna()
+    result = cast(
+        pd.Series,
+        (combined['r12'] + combined['r6']) / (2.0 * combined['vol'].replace(0, np.nan)),
+    )
+    return result.dropna()
+
+
 def calc_time_series_momentum(
     close: pd.Series,
     lookback: int = 252,

@@ -3,8 +3,7 @@
 Tests:
 1. Ticker with fundamentals → all 6 factor categories populated
 2. Ticker without fundamentals → momentum + volatility only, rest None
-3. Portfolio factor exposure from multiple tickers
-4. Universe-relative z-scoring vs. intra-portfolio z-scoring
+3. Portfolio factor exposure (universe-relative z-scoring)
 """
 
 import sys
@@ -19,12 +18,12 @@ from app.repositories.price_data import fetch_bulk_ohlcv_data_for_tickers
 from app.repositories.fundamentals.fetchers import get_bulk_fundamentals
 from app.core.calc_v2.ticker import Ticker
 from app.core.calc_v2.portfolio import Portfolio
-from app.core.calc_v2.factors.universe import build_universe_factors
+from app.core.calc_v2.portfolio_analytics.factor_exposures import build_universe_factors
 
 
 def main() -> None:
-    tickers = ['AAPL', 'MSFT', 'TSLA', 'GOOG', 'NVDA']
-    weights = [0.20, 0.35, 0.25, 0.10, 0.10]
+    tickers = ['AAPL', 'MSFT', 'TSLA', 'GOOG', 'NVDA', 'AAL']
+    weights = [0.20, 0.25, 0.25, 0.10, 0.10, 0.10]
 
     # Reason: broader universe to test z-scoring against market
     universe_tickers = [
@@ -111,44 +110,13 @@ def main() -> None:
     assert f.size is None
     print("  PASSED")
 
-    # ---- Test 3: Portfolio factor exposure ----
+    # ---- Test 3: Portfolio factor exposure (universe-relative) ----
     print("\n" + "=" * 60)
-    print("TEST 3: Portfolio factor exposure")
+    print("TEST 3: Portfolio factor exposure (universe-relative z-scoring)")
     print("=" * 60)
 
     price_df = pd.DataFrame({t: ohlcv[t]['adj_close'] for t in tickers})
     tf = {t: ticker_objs[t].factors for t in tickers}
-
-    portfolio = Portfolio(
-        name="Test Portfolio",
-        tickers=tickers,
-        weights=weights,
-        price_df=price_df,
-        benchmark_prices=benchmark,
-        ticker_factors=tf,
-    )
-
-    fe = portfolio.factor_exposure
-    assert fe is not None, "factor_exposure should not be None"
-    print(f"  Momentum composite:   {fe.momentum}")
-    print(f"  Value composite:      {fe.value}")
-    print(f"  Quality composite:    {fe.quality}")
-    print(f"  Growth composite:     {fe.growth}")
-    print(f"  Volatility composite: {fe.volatility}")
-    print(f"  Size composite:       {fe.size}")
-    print(f"\n  Detail:")
-    print(f"    r12_1:              {fe.detail.r12_1}")
-    print(f"    earnings_yield:     {fe.detail.earnings_yield}")
-    print(f"    gross_profitability:{fe.detail.gross_profitability}")
-    print(f"    revenue_growth_yoy: {fe.detail.revenue_growth_yoy}")
-    print(f"    realized_vol_1y:    {fe.detail.realized_vol_1y}")
-    print(f"    log_market_cap:     {fe.detail.log_market_cap}")
-    print("  PASSED")
-
-    # ---- Test 4: Universe-relative z-scoring ----
-    print("\n" + "=" * 60)
-    print("TEST 4: Universe-relative z-scoring")
-    print("=" * 60)
 
     print("  Building universe factors...")
     t0 = time.time()
@@ -161,8 +129,8 @@ def main() -> None:
     print(f"  Universe factors built in {time.time() - t0:.1f}s "
           f"({len(univ_factors)} tickers)")
 
-    portfolio_univ = Portfolio(
-        name="Test Portfolio (universe z-scored)",
+    portfolio = Portfolio(
+        name="Test Portfolio",
         tickers=tickers,
         weights=weights,
         price_df=price_df,
@@ -171,21 +139,18 @@ def main() -> None:
         universe_factors=univ_factors,
     )
 
-    fe_univ = portfolio_univ.factor_exposure
-    assert fe_univ is not None, "universe factor_exposure should not be None"
+    fe = portfolio.factor_exposure
+    assert fe is not None, "factor_exposure should not be None"
 
-    # Reason: print side-by-side comparison so we can visually validate the shift
-    print(f"\n  {'Composite':<22} {'Intra-portfolio':>16} {'vs. Universe':>16}")
-    print(f"  {'-' * 54}")
+    print(f"\n  {'Composite':<22} {'Score':>10}")
+    print(f"  {'-' * 32}")
     for name in ['momentum', 'value', 'quality', 'growth', 'volatility', 'size']:
-        intra = getattr(fe, name)
-        univ = getattr(fe_univ, name)
-        intra_str = f"{intra:.4f}" if intra is not None else "None"
-        univ_str = f"{univ:.4f}" if univ is not None else "None"
-        print(f"  {name:<22} {intra_str:>16} {univ_str:>16}")
+        val = getattr(fe, name)
+        val_str = f"{val:.4f}" if val is not None else "None"
+        print(f"  {name:<22} {val_str:>10}")
 
-    print(f"\n  {'Detail Metric':<22} {'Intra-portfolio':>16} {'vs. Universe':>16}")
-    print(f"  {'-' * 54}")
+    print(f"\n  {'Detail Metric':<22} {'Score':>10}")
+    print(f"  {'-' * 32}")
     detail_fields = [
         'r12_1', 'r6_1', 'risk_adj_momentum',
         'earnings_yield', 'book_to_price', 'fcf_yield', 'ebitda_to_ev',
@@ -194,12 +159,15 @@ def main() -> None:
         'realized_vol_1y', 'beta', 'log_market_cap',
     ]
     for field in detail_fields:
-        intra = getattr(fe.detail, field)
-        univ = getattr(fe_univ.detail, field)
-        intra_str = f"{intra:.4f}" if intra is not None else "None"
-        univ_str = f"{univ:.4f}" if univ is not None else "None"
-        print(f"  {field:<22} {intra_str:>16} {univ_str:>16}")
+        val = getattr(fe.detail, field)
+        val_str = f"{val:.4f}" if val is not None else "None"
+        print(f"  {field:<22} {val_str:>10}")
 
+    # Reason: mega-cap tech portfolio should score positive on size vs. broader universe
+    assert fe.size is not None and fe.size > 0, (
+        f"Size composite should be positive for mega-cap portfolio, got {fe.size}"
+    )
+    print(f"\n  Size > 0 for mega-cap portfolio: {fe.size:.4f}")
     print("  PASSED")
 
     print("\n" + "=" * 60)

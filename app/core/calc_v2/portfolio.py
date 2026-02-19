@@ -23,7 +23,7 @@ from app.core.calc_v2.portfolio_analytics.calc_correlation import (
     calc_rolling_avg_correlation,
 )
 from app.core.calc_v2.portfolio_analytics.calc_covariance import calc_covariance_matrix, calc_all_covariance_metrics
-from app.core.calc_v2.factors.exposure import calc_portfolio_factor_exposure
+from app.core.calc_v2.portfolio_analytics.factor_exposures import calc_portfolio_factor_exposure
 from app.core.calc_v2.models.factors import PortfolioFactorExposure, TickerFactors
 
 
@@ -42,6 +42,8 @@ class Portfolio:
     ):
         if len(tickers) != len(weights):
             raise ValueError("Tickers must match the amount of weights")
+        if ticker_factors is not None and universe_factors is None:
+            raise ValueError("universe_factors is required when ticker_factors is provided")
 
         self.name = name
         self.tickers = tickers
@@ -105,9 +107,9 @@ class Portfolio:
             'sub_industry', classifications, self.tickers, self.weights, self.asset_returns
         )
 
-        # Factor exposure (optional — requires pre-computed ticker factors)
+        # Factor exposure (optional — requires pre-computed ticker + universe factors)
         self.factor_exposure: PortfolioFactorExposure | None = None
-        if ticker_factors is not None:
+        if ticker_factors is not None and universe_factors is not None:
             weight_map = dict(zip(self.tickers, self.weights))
             self.factor_exposure = calc_portfolio_factor_exposure(
                 ticker_factors, weight_map, universe_factors

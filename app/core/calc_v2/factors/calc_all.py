@@ -34,7 +34,7 @@ def calc_all_factors(
         and value/quality/growth/size populated when fundamentals are provided.
     """
     # Always compute price-based factors
-    momentum = calc_momentum_factors(adj_close, daily_returns)
+    momentum = calc_momentum_factors(adj_close)
     volatility = calc_volatility_factors(adj_close, daily_returns, benchmark_returns)
 
     # Compute fundamental-based factors if data provided

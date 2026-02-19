@@ -1,15 +1,16 @@
-"""Portfolio-level factor exposure via cross-sectional z-scoring.
+"""Portfolio-level factor exposure via universe-relative z-scoring.
 
 Steps:
 1. Extract each factor metric into a Series (one value per ticker)
-2. Winsorize at 2.5th/97.5th percentile (handles outliers)
-3. Z-score cross-sectionally (mean=0, std=1 across reference population)
-4. Portfolio-weighted sum: Σ(w_i × z_i) for each metric
-5. Composite scores: mean of sub-factor exposures per category
+2. Merge portfolio + universe values into one reference population
+3. Winsorize at 2.5th/97.5th percentile (handles outliers)
+4. Z-score cross-sectionally (mean=0, std=1 across universe)
+5. Portfolio-weighted sum: Σ(w_i × z_i) for each metric
+6. Composite scores: mean of sub-factor exposures per category
 
-When a market universe is provided, z-scoring is performed against the full
-universe (merged with portfolio tickers) so that scores reflect absolute
-positioning relative to the market rather than intra-portfolio tilts.
+Z-scoring against a market universe ensures that portfolio exposures reflect
+absolute positioning (e.g. mega-caps score high on size) rather than
+misleading intra-portfolio tilts.
 """
 
 from __future__ import annotations
@@ -17,8 +18,11 @@ from __future__ import annotations
 from typing import Callable
 
 import numpy as np
+
 import pandas as pd
 
+from app.repositories.fundamentals.models import FundamentalsResult
+from app.core.calc_v2.factors.calc_all import calc_all_factors
 from app.core.calc_v2.models.factors import (
     TickerFactors,
     FactorExposureDetail,
@@ -62,28 +66,24 @@ _METRIC_EXTRACTORS: list[tuple[str, str, Callable[[TickerFactors], float | None]
 def _weighted_zscore(
     raw_values: dict[str, float | None],
     weights: dict[str, float],
-    universe_values: dict[str, float | None] | None = None,
+    universe_values: dict[str, float | None],
 ) -> float | None:
     """Winsorize → z-score → portfolio-weighted sum for a single metric.
 
     Args:
         raw_values: Dict mapping portfolio ticker → raw metric value.
         weights: Dict mapping portfolio ticker → portfolio weight.
-        universe_values: Optional dict mapping universe ticker → raw metric value.
-            When provided, portfolio + universe values are merged into one
-            reference population for z-scoring, so scores reflect positioning
+        universe_values: Dict mapping universe ticker → raw metric value.
+            Portfolio + universe values are merged into one reference
+            population for z-scoring, so scores reflect positioning
             relative to the market rather than intra-portfolio tilts.
 
     Returns None if fewer than 2 tickers in the reference population.
     """
     # Reason: build reference population — universe first, then portfolio overrides
-    if universe_values is not None:
-        reference = {t: v for t, v in universe_values.items() if v is not None and not np.isnan(v)}
-        # Reason: portfolio tickers override/update universe values
-        portfolio_clean = {t: v for t, v in raw_values.items() if v is not None and not np.isnan(v)}
-        reference.update(portfolio_clean)
-    else:
-        reference = {t: v for t, v in raw_values.items() if v is not None and not np.isnan(v)}
+    reference = {t: v for t, v in universe_values.items() if v is not None and not np.isnan(v)}
+    portfolio_clean = {t: v for t, v in raw_values.items() if v is not None and not np.isnan(v)}
+    reference.update(portfolio_clean)
 
     if len(reference) < 2:
         return None
@@ -110,6 +110,51 @@ def _weighted_zscore(
     # Reason: normalize by weight sum so partial coverage doesn't deflate scores
     return total / weight_sum
 
+# ================================
+# --> Universe builder
+# ================================
+
+def build_universe_factors(
+    tickers: list[str],
+    ohlcv_data: dict[str, pd.DataFrame],
+    benchmark_prices: pd.Series,
+    fundamentals: dict[str, FundamentalsResult] | None = None,
+) -> dict[str, TickerFactors]:
+    """Build TickerFactors for each ticker in the universe.
+
+    Used to create the reference population for universe-relative z-scoring.
+
+    Args:
+        tickers: Universe ticker symbols.
+        ohlcv_data: Dict mapping ticker → OHLCV DataFrame.
+        benchmark_prices: Benchmark adj_close series (e.g. SPY).
+        fundamentals: Optional dict mapping ticker → FundamentalsResult.
+
+    Returns:
+        Dict mapping ticker → TickerFactors. Tickers missing from
+        ohlcv_data are silently skipped.
+    """
+    benchmark_returns = benchmark_prices.pct_change().dropna()
+    fund_map = fundamentals or {}
+    result: dict[str, TickerFactors] = {}
+
+    for ticker in tickers:
+        if ticker not in ohlcv_data:
+            continue
+
+        ohlcv = ohlcv_data[ticker]
+        adj_close = ohlcv['adj_close']
+        daily_returns = adj_close.pct_change().dropna()
+
+        result[ticker] = calc_all_factors(
+            adj_close=adj_close,
+            daily_returns=daily_returns,
+            benchmark_returns=benchmark_returns,
+            fundamentals=fund_map.get(ticker),
+        )
+
+    return result
+
 
 # ================================
 # --> Main exposure function
@@ -118,16 +163,17 @@ def _weighted_zscore(
 def calc_portfolio_factor_exposure(
     ticker_factors: dict[str, TickerFactors],
     weights: dict[str, float],
-    universe_factors: dict[str, TickerFactors] | None = None,
+    universe_factors: dict[str, TickerFactors],
 ) -> PortfolioFactorExposure:
     """Calculate portfolio factor exposure via cross-sectional z-scoring.
+
+    Z-scores each metric against the full universe so portfolio exposures
+    reflect absolute market positioning rather than intra-portfolio tilts.
 
     Args:
         ticker_factors: Dict mapping ticker → TickerFactors (from Ticker.factors).
         weights: Dict mapping ticker → portfolio weight (decimal, e.g. 0.30).
-        universe_factors: Optional dict mapping universe ticker → TickerFactors.
-            When provided, z-scoring is performed against the full universe
-            so portfolio exposures reflect absolute market positioning.
+        universe_factors: Dict mapping universe ticker → TickerFactors.
 
     Returns:
         PortfolioFactorExposure with composite scores and granular detail.
@@ -136,12 +182,7 @@ def calc_portfolio_factor_exposure(
     metric_exposures: dict[str, float | None] = {}
     for metric_name, category, extractor in _METRIC_EXTRACTORS:
         raw = {t: extractor(f) for t, f in ticker_factors.items()}
-
-        # Reason: extract universe values using the same extractors
-        univ_vals: dict[str, float | None] | None = None
-        if universe_factors is not None:
-            univ_vals = {t: extractor(f) for t, f in universe_factors.items()}
-
+        univ_vals = {t: extractor(f) for t, f in universe_factors.items()}
         metric_exposures[metric_name] = _weighted_zscore(raw, weights, univ_vals)
 
     # Step 5: Composite scores (mean of sub-factor exposures per category)
@@ -171,3 +212,4 @@ def calc_portfolio_factor_exposure(
         size=_composite('size'),
         detail=detail,
     )
+    
