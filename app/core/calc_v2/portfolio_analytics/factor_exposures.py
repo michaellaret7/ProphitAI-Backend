@@ -15,6 +15,7 @@ misleading intra-portfolio tilts.
 
 from __future__ import annotations
 
+from concurrent.futures import ThreadPoolExecutor
 from typing import Callable
 
 import numpy as np
@@ -135,8 +136,12 @@ def build_universe_factors(benchmark_prices: pd.Series) -> dict[str, TickerFacto
     start_date = benchmark_prices.index[0].strftime('%Y-%m-%d')
     end_date = benchmark_prices.index[-1].strftime('%Y-%m-%d')
 
-    ohlcv_data = fetch_bulk_ohlcv_data_for_tickers(UNIVERSE_TICKERS, start_date, end_date)
-    fundamentals = get_bulk_fundamentals(UNIVERSE_TICKERS)
+    # Reason: OHLCV and fundamentals fetches are independent I/O — run in parallel
+    with ThreadPoolExecutor(max_workers=2) as pool:
+        ohlcv_future = pool.submit(fetch_bulk_ohlcv_data_for_tickers, UNIVERSE_TICKERS, start_date, end_date)
+        fund_future = pool.submit(get_bulk_fundamentals, UNIVERSE_TICKERS)
+        ohlcv_data = ohlcv_future.result()
+        fundamentals = fund_future.result()
 
     benchmark_returns = benchmark_prices.pct_change().dropna()
     fund_map = fundamentals or {}

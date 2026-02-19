@@ -4,12 +4,12 @@ import pandas as pd
 
 from app.repositories.fundamentals.models import FundamentalsResult
 from app.core.calc_v2.factors.prep import extract_fundamental_data
-from app.core.calc_v2.factors.momentum import calc_momentum_factors
-from app.core.calc_v2.factors.volatility import calc_volatility_factors
-from app.core.calc_v2.factors.value import calc_value_factors
-from app.core.calc_v2.factors.quality import calc_quality_factors
-from app.core.calc_v2.factors.growth import calc_growth_factors
-from app.core.calc_v2.factors.size import calc_size_factors
+from app.core.calc_v2.factors.calculations.momentum import calc_momentum_factors
+from app.core.calc_v2.factors.calculations.volatility import calc_volatility_factors
+from app.core.calc_v2.factors.calculations.value import calc_value_factors
+from app.core.calc_v2.factors.calculations.quality import calc_quality_factors
+from app.core.calc_v2.factors.calculations.growth import calc_growth_factors
+from app.core.calc_v2.factors.calculations.size import calc_size_factors
 from app.core.calc_v2.models.factors import TickerFactors
 
 

@@ -72,17 +72,26 @@ class Ticker:
         )
 
 if __name__ == '__main__':
-    tickers = ['AAL', 'SPY', 'NVDA', 'AAL', 'MSFT', 'TSLA', 'GOOGL', 'AMZN', 'META', 'TSLA']
+    from app.repositories.fundamentals.fetchers import get_bulk_fundamentals
+
+    tickers = ['AAL', 'SPY', 'NVDA', 'MSFT', 'TSLA', 'GOOGL', 'AMZN', 'META']
 
     import time
     start_time = time.time()
     data = fetch_bulk_ohlcv_data_for_tickers(tickers, '2024-01-01', '2026-01-31')
+    fundamentals = get_bulk_fundamentals(tickers)
     end_time = time.time()
-    print(f"Time taken: {end_time - start_time} seconds")
+    print(f"Data fetch: {end_time - start_time:.2f}s")
 
     for ticker in tickers:
         start_time = time.time()
-        ticker_obj = Ticker(ticker, data[ticker], data['SPY']['adj_close'])
+        ticker_obj = Ticker(
+            ticker,
+            data[ticker],
+            data['SPY']['adj_close'],
+            fundamentals=fundamentals.get(ticker),
+        )
         end_time = time.time()
-        print(f"Time taken: {end_time - start_time} seconds")
-        print(ticker_obj.performance_metrics.alpha)
+        print(f"\n{ticker} ({end_time - start_time:.2f}s)")
+        print(f"  alpha={ticker_obj.performance_metrics.alpha}")
+        print(f"  factors={ticker_obj.factors.momentum.r12_1}")

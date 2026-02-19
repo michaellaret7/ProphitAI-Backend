@@ -121,7 +121,7 @@ def get_fundamental_data(
                     "net_income": float(stmt.netIncome) if hasattr(stmt, 'netIncome') and stmt.netIncome else None,
                     "ebitda": float(stmt.ebitda) if hasattr(stmt, 'ebitda') and stmt.ebitda else None,
                     "eps": float(stmt.eps) if hasattr(stmt, 'eps') and stmt.eps else None,
-                    "diluted_eps": float(stmt.epsDiluted) if hasattr(stmt, 'epsDiluted') and stmt.epsDiluted else None,
+                    "diluted_eps": float(stmt.epsdiluted) if hasattr(stmt, 'epsdiluted') and stmt.epsdiluted else None,
                     "shares_outstanding": float(stmt.weightedAverageShsOut) if hasattr(stmt, 'weightedAverageShsOut') and stmt.weightedAverageShsOut else None,
                     "shares_outstanding_diluted": float(stmt.weightedAverageShsOutDil) if hasattr(stmt, 'weightedAverageShsOutDil') and stmt.weightedAverageShsOutDil else None,
                 }
@@ -171,11 +171,11 @@ def get_fundamental_data(
                     "date": str(stmt.date) if hasattr(stmt, 'date') else None,
                     "operating_cash_flow": float(stmt.netCashProvidedByOperatingActivities) if hasattr(stmt, 'netCashProvidedByOperatingActivities') and stmt.netCashProvidedByOperatingActivities else None,
                     "free_cash_flow": float(stmt.freeCashFlow) if hasattr(stmt, 'freeCashFlow') and stmt.freeCashFlow else None,
-                    "capital_expenditures": float(stmt.capitalExpenditures) if hasattr(stmt, 'capitalExpenditures') and stmt.capitalExpenditures else None,
+                    "capital_expenditures": float(stmt.capitalExpenditure) if hasattr(stmt, 'capitalExpenditure') and stmt.capitalExpenditure else None,
                     "dividends_paid": float(stmt.dividendsPaid) if hasattr(stmt, 'dividendsPaid') and stmt.dividendsPaid else None,
                     "investing_cash_flow": float(stmt.netCashUsedForInvestingActivites) if hasattr(stmt, 'netCashUsedForInvestingActivites') and stmt.netCashUsedForInvestingActivites else None,
                     "financing_cash_flow": float(stmt.netCashUsedProvidedByFinancingActivities) if hasattr(stmt, 'netCashUsedProvidedByFinancingActivities') and stmt.netCashUsedProvidedByFinancingActivities else None,
-                    "change_in_cash": float(stmt.changeInCash) if hasattr(stmt, 'changeInCash') and stmt.changeInCash else None,
+                    "change_in_cash": float(stmt.netChangeInCash) if hasattr(stmt, 'netChangeInCash') and stmt.netChangeInCash else None,
                 }
                 result["data"].append(period_data)
 

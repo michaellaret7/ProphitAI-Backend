@@ -84,16 +84,76 @@ def get_price_data_daily(ticker: str, start_date: datetime = None, end_date: dat
     return pd.read_sql(query.statement, session.bind)
 
 
+@with_session('market')
+def _get_bulk_daily_prices(
+    tickers: list[str], start_date: datetime, end_date: datetime, session=None,
+) -> dict[str, pd.DataFrame]:
+    """Fetch daily OHLCV for multiple tickers in a single query.
+
+    Args:
+        tickers: List of ticker symbols.
+        start_date: Start datetime for the range.
+        end_date: End datetime for the range.
+        session: Database session (injected by decorator).
+
+    Returns:
+        Dict mapping ticker → DataFrame with DatetimeIndex and columns
+        [open, high, low, close, adj_close, volume].
+    """
+    tickers_upper = [t.upper() for t in tickers]
+
+    query = (
+        session.query(
+            Ticker.ticker,
+            DailyPrices.datetime.label('date'),
+            DailyPrices.open,
+            DailyPrices.high,
+            DailyPrices.low,
+            DailyPrices.close,
+            DailyPrices.adj_close,
+            DailyPrices.volume,
+        )
+        .join(Ticker, DailyPrices.ticker_id == Ticker.id)
+        .filter(
+            Ticker.ticker.in_(tickers_upper),
+            DailyPrices.datetime >= start_date,
+            DailyPrices.datetime <= end_date,
+        )
+        .order_by(Ticker.ticker, DailyPrices.datetime.asc())
+    )
+
+    # Reason: use session.connection() to reuse the session's existing connection
+    # instead of session.bind which checks out a second connection from the pool
+    df = pd.read_sql(query.statement, session.connection())
+
+    if df.empty:
+        return {}
+
+    df['date'] = pd.to_datetime(df['date'])
+    result: dict[str, pd.DataFrame] = {}
+    for ticker, group in df.groupby('ticker'):
+        result[str(ticker)] = group.drop(columns=['ticker']).set_index('date')
+
+    return result
+
+
 def _fetch_bulk_threaded(tickers: list, start_date: datetime, end_date: datetime, frequency: str) -> dict[str, pd.DataFrame]:
-    """Fetches price data for multiple tickers in parallel using a thread pool."""
+    """Fetch price data for multiple tickers.
+
+    For daily frequency, uses a single bulk SQL query. For intraday
+    frequencies (15mins, hourly), uses a thread pool for parallel fetching.
+    """
+    # Reason: daily is the hot path (universe of 52 tickers); single query is 10-50x faster
+    if frequency == 'daily':
+        return _get_bulk_daily_prices(tickers, start_date, end_date)
+
     func_map = {
-        'daily': get_price_data_daily,
         '15mins': get_price_data_15_mins,
         'hourly': get_price_data_hourly,
     }
     get_func = func_map[frequency]
 
-    price_data_map = {}
+    price_data_map: dict[str, pd.DataFrame] = {}
     with ThreadPoolExecutor(max_workers=20) as executor:
         future_to_ticker = {
             executor.submit(get_func, ticker, start_date, end_date): ticker
@@ -104,11 +164,7 @@ def _fetch_bulk_threaded(tickers: list, start_date: datetime, end_date: datetime
             try:
                 data = future.result()
                 if data is not None and not data.empty:
-                    if frequency == 'daily':
-                        data['date'] = pd.to_datetime(data['date'])
-                        price_data_map[ticker] = data.set_index('date')
-                    else:
-                        price_data_map[ticker] = data
+                    price_data_map[ticker] = data
             except Exception as e:
                 logger.error("Error fetching %s data for %s: %s", frequency, ticker, e)
 

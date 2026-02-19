@@ -126,7 +126,7 @@ if __name__ == "__main__":
     from app.core.calc_v2.ticker import Ticker
     import time
 
-    tickers = ['AAPL', 'MSFT', 'TSLA', 'GOOG', 'NVDA']
+    tickers = ['AAPL', 'MSFT', 'NVDA', 'CCJ', 'AAL']
     weights = [0.20, 0.25, 0.25, 0.15, 0.15]
 
     t0 = time.time()
@@ -142,5 +142,5 @@ if __name__ == "__main__":
         ticker_factors={t: Ticker(t, ohlcv[t], benchmark).factors for t in tickers},
     )
 
-    print(f"Factor exposure value: {portfolio.factor_exposure.value}")
+    print(f"Factor exposure value: {portfolio.factor_exposure}")
     print(f"Time taken: {time.time() - t0:.1f}s")

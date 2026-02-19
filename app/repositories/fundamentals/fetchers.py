@@ -2,7 +2,8 @@
 
 from __future__ import annotations
 
-from concurrent.futures import ThreadPoolExecutor, as_completed
+import logging
+from collections import defaultdict
 from typing import Dict, Iterable
 
 from app.db.core.models.market_data_models import (
@@ -15,6 +16,8 @@ from app.db.core.models.market_data_models import (
 )
 from app.repositories.fundamentals.models import FundamentalsResult
 from app.utils.decorators.database import with_session
+
+logger = logging.getLogger(__name__)
 
 
 @with_session('market')
@@ -76,21 +79,25 @@ def get_fundamentals_raw(ticker: str, session=None) -> FundamentalsResult:
     )
 
 
+@with_session('market')
 def get_bulk_fundamentals(
-    tickers: Iterable[str], max_workers: int = 16
+    tickers: Iterable[str], session=None,
 ) -> Dict[str, FundamentalsResult]:
-    """Fetch fundamentals for multiple tickers in parallel.
+    """Fetch fundamentals for multiple tickers in a single session.
+
+    Uses bulk IN-clause queries (6 total: 1 ticker resolve + 5 statement types)
+    instead of N individual fetches per ticker.
 
     Args:
-        tickers: Iterable of ticker symbols
-        max_workers: Maximum number of parallel threads
+        tickers: Iterable of ticker symbols.
+        session: Database session (injected by decorator).
 
     Returns:
-        Dict mapping ticker to FundamentalsResult for successful fetches
+        Dict mapping ticker to FundamentalsResult for successful fetches.
     """
     # Deduplicate and normalize tickers
-    unique = []
-    seen = set()
+    unique: list[str] = []
+    seen: set[str] = set()
     for t in tickers:
         if not t:
             continue
@@ -102,20 +109,58 @@ def get_bulk_fundamentals(
     if not unique:
         return {}
 
-    results: Dict[str, FundamentalsResult] = {}
+    # Reason: resolve all ticker_ids in one query instead of JOINing per statement query
+    ticker_rows = (
+        session.query(Ticker.id, Ticker.ticker)
+        .filter(Ticker.ticker.in_(unique))
+        .all()
+    )
+    if not ticker_rows:
+        return {}
 
-    with ThreadPoolExecutor(max_workers=max_workers) as executor:
-        future_to_ticker = {
-            executor.submit(get_fundamentals_raw, t): t for t in unique
-        }
-        for fut in as_completed(future_to_ticker):
-            tkr = future_to_ticker[fut]
-            try:
-                data = fut.result()
-                if data is not None:
-                    results[tkr] = data
-            except Exception:
-                # Skip ticker on error
-                pass
+    id_to_ticker = {row.id: row.ticker for row in ticker_rows}
+    ids = list(id_to_ticker.keys())
+
+    # Reason: 5 bulk queries (one per statement type) instead of 5N individual queries
+    statement_models = [
+        ('income', IncomeStatement),
+        ('balance', BalanceSheet),
+        ('cashflow', CashFlowStatement),
+        ('ratios', FinancialRatio),
+        ('estimates', AnalystEstimate),
+    ]
+
+    grouped: dict[str, dict[str, list]] = {
+        key: defaultdict(list) for key, _ in statement_models
+    }
+
+    for key, model in statement_models:
+        try:
+            rows = (
+                session.query(model)
+                .filter(model.ticker_id.in_(ids))
+                .order_by(model.ticker_id, model.date.desc())
+                .all()
+            )
+            for row in rows:
+                tkr = id_to_ticker.get(row.ticker_id)
+                if tkr:
+                    grouped[key][tkr].append(row)
+        except Exception as e:
+            logger.warning("Failed to fetch %s statements in bulk: %s", key, e)
+
+    # Build FundamentalsResult per ticker
+    results: Dict[str, FundamentalsResult] = {}
+    for tkr in unique:
+        if tkr not in id_to_ticker.values():
+            continue
+        results[tkr] = FundamentalsResult(
+            ticker=tkr,
+            income_statements=grouped['income'].get(tkr, []),
+            balance_sheets=grouped['balance'].get(tkr, []),
+            cash_flow_statements=grouped['cashflow'].get(tkr, []),
+            financial_ratios=grouped['ratios'].get(tkr, []),
+            analyst_estimates=grouped['estimates'].get(tkr, []),
+        )
 
     return results
