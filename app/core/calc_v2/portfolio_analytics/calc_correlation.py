@@ -3,7 +3,7 @@
 import numpy as np
 import pandas as pd
 
-from app.core.calc_v2.models.correlation_model import CorrelationMetrics
+from app.core.calc_v2.models.correlation import CorrelationMetrics
 
 
 def calc_correlation_matrix(asset_returns: pd.DataFrame) -> pd.DataFrame:

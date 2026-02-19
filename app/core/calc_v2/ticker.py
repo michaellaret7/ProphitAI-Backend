@@ -5,10 +5,10 @@ import numpy as np
 
 from app.core.calc_v2.risk.calc_all import calc_all_risk_metrics
 from app.core.calc_v2.performance.calc_all import calc_all_performance_metrics
-from app.core.calc_v2.models.risk_model import RiskMetrics
-from app.core.calc_v2.models.performance_model import PerformanceMetrics
+from app.core.calc_v2.models.risk import RiskMetrics
+from app.core.calc_v2.models.performance import PerformanceMetrics
 from app.core.calc_v2.technicals.calc_all import calc_all_technicals
-from app.core.calc_v2.models.technicals_model import TickerTechnicals
+from app.core.calc_v2.models.technicals import TickerTechnicals
 from app.repositories.price_data import fetch_bulk_ohlcv_data_for_tickers
 
 import warnings

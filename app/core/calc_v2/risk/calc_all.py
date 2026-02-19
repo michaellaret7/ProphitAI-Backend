@@ -2,7 +2,7 @@
 
 import pandas as pd
 
-from app.core.calc_v2.models.risk_model import RiskMetrics
+from app.core.calc_v2.models.risk import RiskMetrics
 from app.core.calc_v2.risk.benchmark import (
     calc_beta,
     calc_down_beta,

@@ -2,7 +2,7 @@
 
 import pandas as pd
 
-from app.core.calc_v2.models.technicals_model import (
+from app.core.calc_v2.models.technicals import (
     MomentumTechnicals,
     StatisticalTechnicals,
     TickerTechnicals,

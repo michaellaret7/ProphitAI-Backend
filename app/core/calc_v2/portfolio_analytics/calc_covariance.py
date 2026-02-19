@@ -4,7 +4,7 @@ import numpy as np
 import pandas as pd
 
 from app.core.calc_v2.config import TRADING_DAYS
-from app.core.calc_v2.models.covariance_model import (
+from app.core.calc_v2.models.covariance import (
     AssetRiskContribution,
     CovarianceMetrics,
 )

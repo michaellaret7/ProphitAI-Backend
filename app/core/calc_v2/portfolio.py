@@ -5,10 +5,10 @@ import numpy as np
 
 from app.core.calc_v2.risk.calc_all import calc_all_risk_metrics
 from app.core.calc_v2.performance.calc_all import calc_all_performance_metrics
-from app.core.calc_v2.models.risk_model import RiskMetrics
-from app.core.calc_v2.models.performance_model import PerformanceMetrics
-from app.core.calc_v2.models.correlation_model import CorrelationMetrics
-from app.core.calc_v2.models.covariance_model import CovarianceMetrics
+from app.core.calc_v2.models.risk import RiskMetrics
+from app.core.calc_v2.models.performance import PerformanceMetrics
+from app.core.calc_v2.models.correlation import CorrelationMetrics
+from app.core.calc_v2.models.covariance import CovarianceMetrics
 from app.core.calc_v2.portfolio_analytics.group_metrics import (
     fetch_ticker_classifications,
     calc_group_metrics,

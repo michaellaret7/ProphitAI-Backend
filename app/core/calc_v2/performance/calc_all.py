@@ -3,7 +3,7 @@
 import pandas as pd
 
 from app.core.calc_v2.config import DEFAULT_RF_ANNUAL
-from app.core.calc_v2.models.performance_model import PerformanceMetrics
+from app.core.calc_v2.models.performance import PerformanceMetrics
 from app.core.calc_v2.performance.ratios import (
     calc_calmar_ratio,
     calc_information_ratio,
