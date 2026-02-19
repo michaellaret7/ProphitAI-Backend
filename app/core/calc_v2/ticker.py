@@ -7,6 +7,9 @@ from app.core.calc_v2.risk.calc_risk_metrics import calc_all_risk_metrics
 from app.core.calc_v2.performance.calc_performance_metrics import calc_all_performance_metrics
 from app.core.calc_v2.models.risk_model import RiskMetrics
 from app.core.calc_v2.models.performance_model import PerformanceMetrics
+from app.core.calc_v2.technicals.calc_technicals import calc_all_technicals
+from app.core.calc_v2.models.technicals_model import TickerTechnicals
+from app.repositories.price_data import fetch_bulk_ohlcv_data_for_tickers
 
 import warnings
 warnings.filterwarnings("ignore", category=RuntimeWarning)
@@ -54,3 +57,10 @@ class Ticker:
             self.benchmark_returns,
         )
 
+        self.technicals: TickerTechnicals = calc_all_technicals(self.ohlcv_data)
+
+if __name__ == '__main__':
+    ticker = 'AAL'
+    data = fetch_bulk_ohlcv_data_for_tickers([ticker, 'SPY'], '2020-01-01', '2026-01-31')
+    ticker_obj = Ticker(ticker, data[ticker], data['SPY']['adj_close'])
+    print(ticker_obj.technicals.momentum.time_series_momentum)
