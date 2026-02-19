@@ -18,20 +18,13 @@ from app.repositories.price_data import fetch_bulk_ohlcv_data_for_tickers
 from app.repositories.fundamentals.fetchers import get_bulk_fundamentals
 from app.core.calc_v2.ticker import Ticker
 from app.core.calc_v2.portfolio import Portfolio
-from app.core.calc_v2.portfolio_analytics.factor_exposures import build_universe_factors
 
 
 def main() -> None:
-    tickers = ['AAL', 'CCJ', 'F', 'AAPL', 'GLD']
+    tickers = ['AAL', 'CCJ', 'F', 'AAPL', 'MU']
     weights = [0.20, 0.25, 0.35, 0.10, 0.10]
 
-    # Reason: broader universe to test z-scoring against market
-    universe_tickers = [
-        'JNJ', 'PG', 'KO', 'PEP', 'MRK', 'ABT', 'WMT', 'COST',
-        'CVX', 'XOM', 'JPM', 'BAC', 'GS', 'HD', 'LOW',
-        'UNH', 'LLY', 'ABBV', 'CRM', 'ADBE', 'AMD', 'INTC',
-    ]
-    all_tickers = list(set(tickers + universe_tickers + ['SPY']))
+    all_tickers = list(set(tickers + ['SPY']))
 
     # ---- Fetch data ----
     print("Fetching OHLCV data...")
@@ -97,17 +90,6 @@ def main() -> None:
     price_df = pd.DataFrame({t: ohlcv[t]['adj_close'] for t in tickers})
     tf = {t: ticker_objs[t].factors for t in tickers}
 
-    print("  Building universe factors...")
-    t0 = time.time()
-    univ_factors = build_universe_factors(
-        tickers=universe_tickers,
-        ohlcv_data=ohlcv,
-        benchmark_prices=benchmark,
-        fundamentals=fundamentals,
-    )
-    print(f"  Universe factors built in {time.time() - t0:.1f}s "
-          f"({len(univ_factors)} tickers)")
-
     portfolio = Portfolio(
         name="Test Portfolio",
         tickers=tickers,
@@ -115,7 +97,6 @@ def main() -> None:
         price_df=price_df,
         benchmark_prices=benchmark,
         ticker_factors=tf,
-        universe_factors=univ_factors,
     )
 
     fe = portfolio.factor_exposure

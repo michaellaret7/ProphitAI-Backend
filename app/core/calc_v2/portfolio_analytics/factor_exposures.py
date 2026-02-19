@@ -21,7 +21,7 @@ import numpy as np
 
 import pandas as pd
 
-from app.repositories.fundamentals.models import FundamentalsResult
+from app.core.calc_v2.config import UNIVERSE_TICKERS
 from app.core.calc_v2.factors.calc_all import calc_all_factors
 from app.core.calc_v2.models.factors import (
     TickerFactors,
@@ -114,31 +114,35 @@ def _weighted_zscore(
 # --> Universe builder
 # ================================
 
-def build_universe_factors(
-    tickers: list[str],
-    ohlcv_data: dict[str, pd.DataFrame],
-    benchmark_prices: pd.Series,
-    fundamentals: dict[str, FundamentalsResult] | None = None,
-) -> dict[str, TickerFactors]:
-    """Build TickerFactors for each ticker in the universe.
+def build_universe_factors(benchmark_prices: pd.Series) -> dict[str, TickerFactors]:
+    """Build factor exposures for the standard market universe.
 
-    Used to create the reference population for universe-relative z-scoring.
+    Uses UNIVERSE_TICKERS from config, fetches OHLCV + fundamentals
+    internally, and computes TickerFactors for each ticker. Ensures
+    all portfolios are z-scored against the same reference population.
 
     Args:
-        tickers: Universe ticker symbols.
-        ohlcv_data: Dict mapping ticker → OHLCV DataFrame.
         benchmark_prices: Benchmark adj_close series (e.g. SPY).
-        fundamentals: Optional dict mapping ticker → FundamentalsResult.
 
     Returns:
         Dict mapping ticker → TickerFactors. Tickers missing from
-        ohlcv_data are silently skipped.
+        the fetched OHLCV data are silently skipped.
     """
+    # Reason: imports inside function to avoid circular imports (repositories → calc_v2 boundary)
+    from app.repositories.price_data import fetch_bulk_ohlcv_data_for_tickers
+    from app.repositories.fundamentals.fetchers import get_bulk_fundamentals
+
+    start_date = benchmark_prices.index[0].strftime('%Y-%m-%d')
+    end_date = benchmark_prices.index[-1].strftime('%Y-%m-%d')
+
+    ohlcv_data = fetch_bulk_ohlcv_data_for_tickers(UNIVERSE_TICKERS, start_date, end_date)
+    fundamentals = get_bulk_fundamentals(UNIVERSE_TICKERS)
+
     benchmark_returns = benchmark_prices.pct_change().dropna()
     fund_map = fundamentals or {}
     result: dict[str, TickerFactors] = {}
 
-    for ticker in tickers:
+    for ticker in UNIVERSE_TICKERS:
         if ticker not in ohlcv_data:
             continue
 

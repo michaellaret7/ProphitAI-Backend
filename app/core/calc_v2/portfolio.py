@@ -23,7 +23,10 @@ from app.core.calc_v2.portfolio_analytics.calc_correlation import (
     calc_rolling_avg_correlation,
 )
 from app.core.calc_v2.portfolio_analytics.calc_covariance import calc_covariance_matrix, calc_all_covariance_metrics
-from app.core.calc_v2.portfolio_analytics.factor_exposures import calc_portfolio_factor_exposure
+from app.core.calc_v2.portfolio_analytics.factor_exposures import (
+    calc_portfolio_factor_exposure,
+    build_universe_factors,
+)
 from app.core.calc_v2.models.factors import PortfolioFactorExposure, TickerFactors
 
 
@@ -38,15 +41,12 @@ class Portfolio:
         price_df: pd.DataFrame,
         benchmark_prices: pd.Series | None = None,
         ticker_factors: dict[str, TickerFactors] | None = None,
-        universe_factors: dict[str, TickerFactors] | None = None,
     ):
         if len(tickers) != len(weights):
             raise ValueError("Tickers must match the amount of weights")
         if len(tickers) != len(set(tickers)):
             dupes = [t for t in tickers if tickers.count(t) > 1]
             raise ValueError(f"Duplicate tickers not allowed — consolidate weights instead: {set(dupes)}")
-        if ticker_factors is not None and universe_factors is None:
-            raise ValueError("universe_factors is required when ticker_factors is provided")
 
         self.name = name
         self.tickers = tickers
@@ -110,13 +110,37 @@ class Portfolio:
             'sub_industry', classifications, self.tickers, self.weights, self.asset_returns
         )
 
-        # Factor exposure (optional — requires pre-computed ticker + universe factors)
+        # Factor exposure (optional — requires ticker_factors + benchmark)
         self.factor_exposure: PortfolioFactorExposure | None = None
-        if ticker_factors is not None and universe_factors is not None:
+
+        if ticker_factors is not None and benchmark_prices is not None:
+            universe_factors = build_universe_factors(benchmark_prices)
             weight_map = dict(zip(self.tickers, self.weights))
             self.factor_exposure = calc_portfolio_factor_exposure(
                 ticker_factors, weight_map, universe_factors
             )
 
 
+if __name__ == "__main__":
+    from app.repositories.price_data import fetch_bulk_ohlcv_data_for_tickers
+    from app.core.calc_v2.ticker import Ticker
+    import time
 
+    tickers = ['AAPL', 'MSFT', 'TSLA', 'GOOG', 'NVDA']
+    weights = [0.20, 0.25, 0.25, 0.15, 0.15]
+
+    t0 = time.time()
+    ohlcv = fetch_bulk_ohlcv_data_for_tickers(tickers + ['SPY'], '2024-01-01', '2026-01-31')
+    benchmark = ohlcv['SPY']['adj_close']
+
+    portfolio = Portfolio(
+        name="Test Portfolio",
+        tickers=tickers,
+        weights=weights,
+        price_df=pd.DataFrame({t: ohlcv[t]['adj_close'] for t in tickers}),
+        benchmark_prices=benchmark,
+        ticker_factors={t: Ticker(t, ohlcv[t], benchmark).factors for t in tickers},
+    )
+
+    print(f"Factor exposure value: {portfolio.factor_exposure.value}")
+    print(f"Time taken: {time.time() - t0:.1f}s")
