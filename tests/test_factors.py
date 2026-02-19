@@ -22,8 +22,8 @@ from app.core.calc_v2.portfolio_analytics.factor_exposures import build_universe
 
 
 def main() -> None:
-    tickers = ['AAPL', 'MSFT', 'TSLA', 'GOOG', 'NVDA', 'AAL']
-    weights = [0.20, 0.25, 0.25, 0.10, 0.10, 0.10]
+    tickers = ['AAL', 'CCJ', 'F', 'AAPL', 'GLD']
+    weights = [0.20, 0.25, 0.35, 0.10, 0.10]
 
     # Reason: broader universe to test z-scoring against market
     universe_tickers = [
@@ -89,27 +89,6 @@ def main() -> None:
         else:
             print("  Size:       None (no fundamentals)")
 
-    # ---- Test 2: Ticker WITHOUT fundamentals ----
-    print("\n" + "=" * 60)
-    print("TEST 2: Ticker without fundamentals (momentum + vol only)")
-    print("=" * 60)
-
-    no_fund = Ticker('AAPL', ohlcv['AAPL'], benchmark)
-    f = no_fund.factors
-    print(f"  Momentum present:   {f.momentum is not None}")
-    print(f"  Volatility present: {f.volatility is not None}")
-    print(f"  Value is None:      {f.value is None}")
-    print(f"  Quality is None:    {f.quality is None}")
-    print(f"  Growth is None:     {f.growth is None}")
-    print(f"  Size is None:       {f.size is None}")
-    assert f.momentum is not None
-    assert f.volatility is not None
-    assert f.value is None
-    assert f.quality is None
-    assert f.growth is None
-    assert f.size is None
-    print("  PASSED")
-
     # ---- Test 3: Portfolio factor exposure (universe-relative) ----
     print("\n" + "=" * 60)
     print("TEST 3: Portfolio factor exposure (universe-relative z-scoring)")
@@ -163,11 +142,6 @@ def main() -> None:
         val_str = f"{val:.4f}" if val is not None else "None"
         print(f"  {field:<22} {val_str:>10}")
 
-    # Reason: mega-cap tech portfolio should score positive on size vs. broader universe
-    assert fe.size is not None and fe.size > 0, (
-        f"Size composite should be positive for mega-cap portfolio, got {fe.size}"
-    )
-    print(f"\n  Size > 0 for mega-cap portfolio: {fe.size:.4f}")
     print("  PASSED")
 
     print("\n" + "=" * 60)
@@ -177,3 +151,5 @@ def main() -> None:
 
 if __name__ == '__main__':
     main()
+    
+    

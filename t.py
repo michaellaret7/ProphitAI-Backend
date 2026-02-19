@@ -1,64 +1,53 @@
-"""Test: New option data methods through the Alpaca broker facade."""
+from collections import OrderedDict, defaultdict
 
-from app.utils.alpaca.broker import Alpaca
+class LFUCache:
+    def __init__(self, capacity: int):
+        self.cap = capacity
+        self.cache = {}
+        self.key_freq = {}
+        self.freq_map = defaultdict(OrderedDict)
+        self.min_freq = 0
+    
+    def _update(self, key: int):
+        freq = self.key_freq[key] # get the frequency of the key from key_freq eg [4(key), 1(freq)]
 
-alpaca = Alpaca()
-TEST_SYMBOL = "SPY260320C00580000"
-SEP = "=" * 80
+        del self.freq_map[freq][key] # get rid of the key from the freq map (the number place in freq_map os the freq of the key) 
 
+        # if this was the minimum frequency bucket, move it to the next bucket and set the minimum frequency up 1
+        if not self.freq_map[freq] and freq == self.min_freq:
+            self.min_freq += 1
+        
+        new_freq = freq + 1 # Now we are setting the frequency of the key_freq to +1 because we are updating it
+        self.key_freq[key] = new_freq
+        self.freq_map[new_freq][key] = None
 
-def test_option_bars():
-    print(f"\n{SEP}")
-    print("1. get_option_bars()")
-    print(SEP)
-    try:
-        bars = alpaca.get_option_bars(TEST_SYMBOL, timeframe='1d', limit=3)
-        print(f"Returned {len(bars)} bars")
-        for bar in bars:
-            print(f"  {bar['timestamp']} | O:{bar['open']} H:{bar['high']} L:{bar['low']} C:{bar['close']} V:{bar['volume']}")
-        print(">>> SUCCESS")
-    except Exception as e:
-        print(f">>> FAILED: {e}")
+    def get(self, key: int) -> int:
+        if key not in self.cache:
+            return -1 
+        
+        self._update(key)
 
+        return self.cache[key]
 
-def test_option_latest_quote():
-    print(f"\n{SEP}")
-    print("2. get_option_latest_quote()")
-    print(SEP)
-    try:
-        quote = alpaca.get_option_latest_quote(TEST_SYMBOL)
-        print(f"  Bid: {quote['bid_price']} x {quote['bid_size']}")
-        print(f"  Ask: {quote['ask_price']} x {quote['ask_size']}")
-        print(f"  Time: {quote['timestamp']}")
-        print(">>> SUCCESS")
-    except Exception as e:
-        print(f">>> FAILED: {e}")
+    def put(self, key: int, value: int) -> None:
+        if self.cap <= 0:
+            return 
 
+        # If the key exists, set the new value to the key in the cache and then update the frequency tracking using _update
+        if key in self.cache:
+            self.cache[key] = value
+            self._update(key)
+            return 
+        
+        if len(self.cache) >= self.cap:
+            # evicted_key, _ is because the values in the ordered dict are (key, None)
+            evict_key, _ = self.freq_map[self.min_freq].popitem(last=False) # get the lowest frequency key in the list, pop the least freq used key from the list
+            del self.cache[evict_key]
+            del self.key_freq[evict_key]
+        
+        # insert new item 
+        self.cache[key] = value
+        self.key_freq[key] = 1 # set the freq to one because it has now been used once 
+        self.min_freq = 1 # reset minimum frequency because we now have a new item thats the smallest freq
+        self.freq_map[1][key] = None
 
-def test_option_snapshot():
-    print(f"\n{SEP}")
-    print("3. get_option_snapshot()")
-    print(SEP)
-    try:
-        snap = alpaca.get_option_snapshot(TEST_SYMBOL)
-        if 'quote' in snap:
-            q = snap['quote']
-            print(f"  Quote - Bid: {q['bid_price']} x {q['bid_size']} | Ask: {q['ask_price']} x {q['ask_size']}")
-        if 'trade' in snap:
-            t = snap['trade']
-            print(f"  Trade - Price: {t['price']} Size: {t['size']} Time: {t['timestamp']}")
-        if 'greeks' in snap:
-            g = snap['greeks']
-            print(f"  Greeks - Delta: {g['delta']} Gamma: {g['gamma']} Theta: {g['theta']} Vega: {g['vega']} Rho: {g['rho']}")
-        print(">>> SUCCESS")
-    except Exception as e:
-        print(f">>> FAILED: {e}")
-
-
-if __name__ == "__main__":
-    print(f"Testing option data via Alpaca broker facade")
-    print(f"Test symbol: {TEST_SYMBOL}")
-    test_option_bars()
-    test_option_latest_quote()
-    test_option_snapshot()
-    print(f"\n{SEP}\nDone.")

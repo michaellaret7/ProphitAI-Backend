@@ -7,6 +7,7 @@ from app.core.calc_v2.risk.benchmark import (
     calc_beta,
     calc_down_beta,
     calc_downside_capture,
+    calc_idiosyncratic_vol,
     calc_tracking_error,
     calc_up_beta,
     calc_upside_capture,
@@ -53,6 +54,7 @@ def calc_all_risk_metrics(
     tracking_error = None
     upside_capture = None
     downside_capture = None
+    idiosyncratic_vol = None
     if benchmark_returns is not None:
         beta = calc_beta(daily_returns, benchmark_returns)
         tracking_error = calc_tracking_error(daily_returns, benchmark_returns)
@@ -60,6 +62,7 @@ def calc_all_risk_metrics(
         down_beta = calc_down_beta(daily_returns, benchmark_returns)
         upside_capture = calc_upside_capture(daily_returns, benchmark_returns)
         downside_capture = calc_downside_capture(daily_returns, benchmark_returns)
+        idiosyncratic_vol = calc_idiosyncratic_vol(daily_returns, benchmark_returns)
 
     return RiskMetrics(
         annualized_volatility=volatility,
@@ -79,4 +82,5 @@ def calc_all_risk_metrics(
         tracking_error=tracking_error,
         upside_capture=upside_capture,
         downside_capture=downside_capture,
+        idiosyncratic_vol=idiosyncratic_vol,
     )

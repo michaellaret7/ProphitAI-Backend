@@ -42,6 +42,9 @@ class Portfolio:
     ):
         if len(tickers) != len(weights):
             raise ValueError("Tickers must match the amount of weights")
+        if len(tickers) != len(set(tickers)):
+            dupes = [t for t in tickers if tickers.count(t) > 1]
+            raise ValueError(f"Duplicate tickers not allowed — consolidate weights instead: {set(dupes)}")
         if ticker_factors is not None and universe_factors is None:
             raise ValueError("universe_factors is required when ticker_factors is provided")
 

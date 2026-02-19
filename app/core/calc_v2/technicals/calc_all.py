@@ -14,6 +14,7 @@ from app.core.calc_v2.technicals.momentum import (
     calc_adx,
     calc_macd,
     calc_momentum_acceleration,
+    calc_risk_adj_momentum,
     calc_roc,
     calc_rsi,
     calc_time_series_momentum,
@@ -99,6 +100,7 @@ def calc_momentum(ohlcv: pd.DataFrame) -> MomentumTechnicals:
         macd_signal=macd_signal,
         macd_histogram=macd_histogram,
         adx_14=calc_adx(high, low, close, window=14),
+        risk_adj_momentum=calc_risk_adj_momentum(close),
         time_series_momentum=calc_time_series_momentum(close),
         momentum_acceleration=calc_momentum_acceleration(close),
     )

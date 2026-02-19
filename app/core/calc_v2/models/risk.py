@@ -31,3 +31,4 @@ class RiskMetrics(BaseModel):
     tracking_error: Float4 | None = None       # Volatility of returns vs benchmark
     upside_capture: Float4 | None = None       # % of benchmark gains captured
     downside_capture: Float4 | None = None     # % of benchmark losses captured
+    idiosyncratic_vol: Float4 | None = None    # Annualized residual volatility (OLS vs benchmark)

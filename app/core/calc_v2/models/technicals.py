@@ -36,6 +36,7 @@ class MomentumTechnicals(BaseModel):
     macd_signal: pd.Series
     macd_histogram: pd.Series
     adx_14: pd.Series
+    risk_adj_momentum: pd.Series
     time_series_momentum: pd.Series
     momentum_acceleration: pd.Series
 
