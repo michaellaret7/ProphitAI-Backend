@@ -1,5 +1,7 @@
 """Correlation matrix calculations for a group of assets."""
 
+from typing import cast
+
 import numpy as np
 import pandas as pd
 
@@ -54,6 +56,39 @@ def calc_diversification_ratio(corr_matrix: pd.DataFrame) -> float:
     effective_n = float(np.exp(entropy))
 
     return effective_n / n
+
+
+def calc_rolling_avg_correlation(
+    asset_returns: pd.DataFrame,
+    window: int = 60,
+) -> pd.Series:
+    """Calculate rolling average pairwise correlation over time.
+
+    For each date, computes the correlation matrix over the trailing window,
+    then averages all off-diagonal values. Detects correlation regime changes —
+    rising average correlation means diversification is deteriorating.
+
+    Args:
+        asset_returns: DataFrame of daily returns (columns = tickers).
+        window: Rolling window size in trading days. Default 60.
+    """
+    n = len(asset_returns.columns)
+    if n < 2 or len(asset_returns) < window:
+        return pd.Series(dtype=float)
+
+    pair_correlations: list[pd.Series] = []
+
+    # Reason: compute rolling correlation for each unique pair, then average.
+    for i in range(n):
+        for j in range(i + 1, n):
+            rolling_corr = asset_returns.iloc[:, i].rolling(window).corr(
+                asset_returns.iloc[:, j]
+            )
+            pair_correlations.append(rolling_corr)
+
+    stacked = pd.concat(pair_correlations, axis=1)
+    result = cast(pd.Series, stacked.mean(axis=1))
+    return result.dropna()
 
 
 def calc_all_correlation_metrics(asset_returns: pd.DataFrame) -> CorrelationMetrics:

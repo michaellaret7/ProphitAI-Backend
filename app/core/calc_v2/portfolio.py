@@ -1,6 +1,5 @@
 """Multi-asset portfolio entity that computes risk and performance metrics."""
 
-import json
 import pandas as pd
 import numpy as np
 
@@ -10,8 +9,19 @@ from app.core.calc_v2.models.risk_model import RiskMetrics
 from app.core.calc_v2.models.performance_model import PerformanceMetrics
 from app.core.calc_v2.models.correlation_model import CorrelationMetrics
 from app.core.calc_v2.models.covariance_model import CovarianceMetrics
-from app.core.calc_v2.portfolio_specific.group_metrics import fetch_ticker_classifications, calc_group_metrics
-from app.core.calc_v2.portfolio_specific.calc_correlation import calc_correlation_matrix, calc_all_correlation_metrics
+from app.core.calc_v2.portfolio_specific.group_metrics import (
+    fetch_ticker_classifications,
+    calc_group_metrics,
+    calc_net_exposure,
+    calc_gross_exposure,
+    calc_long_exposure,
+    calc_short_exposure,
+)
+from app.core.calc_v2.portfolio_specific.calc_correlation import (
+    calc_correlation_matrix,
+    calc_all_correlation_metrics,
+    calc_rolling_avg_correlation,
+)
 from app.core.calc_v2.portfolio_specific.calc_covariance import calc_covariance_matrix, calc_all_covariance_metrics
 
 
@@ -68,6 +78,15 @@ class Portfolio:
             self.daily_returns,
             self.benchmark_returns
         )
+
+        # Portfolio exposure metrics
+        self.net_exposure: float = calc_net_exposure(self.weights)
+        self.gross_exposure: float = calc_gross_exposure(self.weights)
+        self.long_exposure: float = calc_long_exposure(self.weights)
+        self.short_exposure: float = calc_short_exposure(self.weights)
+
+        # Rolling average pairwise correlation (regime detection)
+        self.rolling_avg_correlation: pd.Series = calc_rolling_avg_correlation(self.asset_returns)
 
         # Classification-based group metrics (VaR + concentration by sector/industry/sub_industry)
         classifications = fetch_ticker_classifications(self.tickers)

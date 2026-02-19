@@ -1,4 +1,4 @@
-"""Group-level VaR and concentration calculations by sector, industry, and sub-industry."""
+"""Group-level metrics: exposures, VaR, and concentration by sector/industry/sub-industry."""
 
 import numpy as np
 import pandas as pd
@@ -6,6 +6,38 @@ import pandas as pd
 from app.core.calc_v2.risk.calc_risk_metrics import calc_var
 from app.db.core.db_config import MarketSession
 from app.db.core.models.market_data_models import Ticker as TickerModel
+
+
+# ---------------------------------------------------------------------------
+# Exposure helpers
+# ---------------------------------------------------------------------------
+
+
+def calc_net_exposure(weights: np.ndarray) -> float:
+    """Calculate net exposure — sum of all weights (long minus short).
+
+    +1.0 = fully long, 0.0 = market-neutral, negative = net short.
+    """
+    return float(weights.sum())
+
+
+def calc_gross_exposure(weights: np.ndarray) -> float:
+    """Calculate gross exposure — sum of absolute weights.
+
+    Measures total capital deployed regardless of direction.
+    A 130/30 portfolio has gross exposure of 1.6.
+    """
+    return float(np.abs(weights).sum())
+
+
+def calc_long_exposure(weights: np.ndarray) -> float:
+    """Calculate long exposure — sum of all positive weights."""
+    return float(weights[weights > 0].sum())
+
+
+def calc_short_exposure(weights: np.ndarray) -> float:
+    """Calculate short exposure — sum of negative weights as a positive number."""
+    return float(np.abs(weights[weights < 0]).sum())
 
 
 def fetch_ticker_classifications(tickers: list[str]) -> dict[str, dict[str, str | None]]:
