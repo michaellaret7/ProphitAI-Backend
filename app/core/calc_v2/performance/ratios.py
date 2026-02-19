@@ -138,3 +138,59 @@ def calc_omega_ratio(
         return None
 
     return numer / denom
+
+
+def calc_win_rate(daily_returns: pd.Series) -> float | None:
+    """Calculate win rate (percentage of positive return days).
+
+    Returns None if no observations.
+    """
+    if len(daily_returns) == 0:
+        return None
+
+    return float((daily_returns > 0).sum() / len(daily_returns))
+
+
+def calc_profit_factor(daily_returns: pd.Series) -> float | None:
+    """Calculate profit factor (gross profits / gross losses).
+
+    Profit factor > 1.0 means profitable, > 1.5 is strong.
+    Returns None if no losing days (ratio undefined).
+    """
+    gains = float(daily_returns[daily_returns > 0].sum())
+    losses = float(daily_returns[daily_returns < 0].sum())
+
+    if losses == 0:
+        return None
+
+    return gains / abs(losses)
+
+
+def calc_gain_loss_ratio(daily_returns: pd.Series) -> float | None:
+    """Calculate gain/loss ratio (average win / average loss).
+
+    Complements win rate — a low win rate with high gain/loss ratio
+    can still be profitable. Returns None if no winning or losing days.
+    """
+    winners = daily_returns[daily_returns > 0]
+    losers = daily_returns[daily_returns < 0]
+
+    if len(winners) == 0 or len(losers) == 0:
+        return None
+
+    return float(winners.mean() / abs(losers.mean()))
+
+
+def calc_tail_ratio(daily_returns: pd.Series) -> float | None:
+    """Calculate tail ratio (95th percentile / |5th percentile|).
+
+    Measures return asymmetry. > 1.0 means the right tail is fatter
+    than the left (favorable). Returns None if 5th percentile is zero.
+    """
+    p95 = float(daily_returns.quantile(0.95))
+    p5 = float(daily_returns.quantile(0.05))
+
+    if p5 == 0:
+        return None
+
+    return p95 / abs(p5)

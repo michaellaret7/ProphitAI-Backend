@@ -17,6 +17,12 @@ class PerformanceMetrics(BaseModel):
     calmar_ratio: Float4 | None = None
     omega_ratio: Float4 | None = None
 
+    # Tier 2b: Return Distribution Quality
+    win_rate: Float4 | None = None              # % of positive return days
+    profit_factor: Float4 | None = None         # Gross profits / gross losses
+    gain_loss_ratio: Float4 | None = None       # Avg winning day / |avg losing day|
+    tail_ratio: Float4 | None = None            # 95th percentile / |5th percentile|
+
     # Tier 3: Market-Relative (None if no benchmark provided)
     alpha: Float4 | None = None
     information_ratio: Float4 | None = None

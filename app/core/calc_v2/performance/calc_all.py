@@ -6,11 +6,15 @@ from app.core.calc_v2.config import DEFAULT_RF_ANNUAL
 from app.core.calc_v2.models.performance import PerformanceMetrics
 from app.core.calc_v2.performance.ratios import (
     calc_calmar_ratio,
+    calc_gain_loss_ratio,
     calc_information_ratio,
     calc_omega_ratio,
+    calc_profit_factor,
     calc_sharpe_ratio,
     calc_sortino_ratio,
+    calc_tail_ratio,
     calc_treynor_ratio,
+    calc_win_rate,
 )
 from app.core.calc_v2.performance.returns import (
     calc_alpha,
@@ -35,6 +39,12 @@ def calc_all_performance_metrics(
     sortino_ratio = calc_sortino_ratio(daily_returns, rf_annual)
     calmar_ratio = calc_calmar_ratio(daily_returns, rf_annual)
     omega_ratio = calc_omega_ratio(daily_returns, rf_annual)
+
+    # Return distribution quality
+    win_rate = calc_win_rate(daily_returns)
+    profit_factor = calc_profit_factor(daily_returns)
+    gain_loss_ratio = calc_gain_loss_ratio(daily_returns)
+    tail_ratio = calc_tail_ratio(daily_returns)
 
     # Benchmark-relative (optional)
     alpha = None
@@ -63,6 +73,10 @@ def calc_all_performance_metrics(
         information_ratio=information_ratio,
         treynor_ratio=treynor_ratio,
         omega_ratio=omega_ratio,
+        win_rate=win_rate,
+        profit_factor=profit_factor,
+        gain_loss_ratio=gain_loss_ratio,
+        tail_ratio=tail_ratio,
         momentum_1m=momentum_1m,
         momentum_3m=momentum_3m,
         momentum_6m=momentum_6m,
