@@ -164,6 +164,13 @@ from app.utils.time_utils import get_current_utc_time, get_utc_date_str, get_utc
 - `refactor/*`: Code refactoring
 - `test/*`: Test additions/fixes
 
+## Commenting Strategy and Helper functions
+- Always put helper functions at the top of the file 
+- Always comment them in blocks like such
+        ================================
+    --> Helper funcs
+        ================================
+
 ## External Dependencies
 
 - **FastAPI**: Web framework and API

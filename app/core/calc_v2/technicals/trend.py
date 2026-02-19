@@ -72,3 +72,59 @@ def calc_linear_regression(
     r_sq_series = pd.Series(r_squareds, index=indices, dtype=float)
 
     return slope_series, r_sq_series
+
+
+# =============================================================================
+# Ichimoku Cloud
+# =============================================================================
+
+def _midpoint(high: pd.Series, low: pd.Series, window: int) -> pd.Series:
+    """Calculate (highest high + lowest low) / 2 over a rolling window."""
+    return cast(
+        pd.Series,
+        (
+            high.rolling(window=window, min_periods=window).max()
+            + low.rolling(window=window, min_periods=window).min()
+        ) / 2,
+    )
+
+
+def calc_ichimoku(
+    high: pd.Series,
+    low: pd.Series,
+    close: pd.Series,
+    tenkan_window: int = 9,
+    kijun_window: int = 26,
+    senkou_b_window: int = 52,
+    displacement: int = 26,
+) -> tuple[pd.Series, pd.Series, pd.Series, pd.Series, pd.Series]:
+    """Calculate Ichimoku Cloud components.
+
+    - Tenkan-sen (Conversion): midpoint of (high, low) over 9 periods.
+      Short-term trend direction.
+    - Kijun-sen (Base): midpoint of (high, low) over 26 periods.
+      Medium-term trend and support/resistance.
+    - Senkou Span A (Leading A): (tenkan + kijun) / 2, shifted forward 26 periods.
+      Fast cloud boundary.
+    - Senkou Span B (Leading B): midpoint of (high, low) over 52 periods,
+      shifted forward 26 periods. Slow cloud boundary.
+    - Chikou Span (Lagging): close shifted back 26 periods.
+      Confirms trend when above/below past price.
+
+    Returns:
+        (tenkan_sen, kijun_sen, senkou_span_a, senkou_span_b, chikou_span)
+    """
+    tenkan = _midpoint(high, low, tenkan_window)
+    kijun = _midpoint(high, low, kijun_window)
+
+    senkou_a = cast(pd.Series, ((tenkan + kijun) / 2).shift(displacement))
+    senkou_b = cast(pd.Series, _midpoint(high, low, senkou_b_window).shift(displacement))
+    chikou = cast(pd.Series, close.shift(-displacement))
+
+    return (
+        tenkan.dropna(),
+        kijun.dropna(),
+        senkou_a.dropna(),
+        senkou_b.dropna(),
+        chikou.dropna(),
+    )

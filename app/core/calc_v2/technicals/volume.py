@@ -142,3 +142,28 @@ def calc_amihud_illiquidity(
     ratio = daily_returns / dollar_volume
 
     return cast(pd.Series, ratio.rolling(window=window, min_periods=window).mean().dropna())
+
+
+def calc_vwap(
+    high: pd.Series,
+    low: pd.Series,
+    close: pd.Series,
+    volume: pd.Series,
+    window: int = 20,
+) -> pd.Series:
+    """Calculate rolling Volume-Weighted Average Price.
+
+    VWAP = sum(typical_price * volume, window) / sum(volume, window).
+    Typical price = (high + low + close) / 3.
+    Price above VWAP = bullish bias, below = bearish bias.
+    Institutional benchmark — traders compare execution price to VWAP.
+    """
+    typical_price = (high + low + close) / 3
+    tp_vol = typical_price * volume
+
+    result = cast(
+        pd.Series,
+        tp_vol.rolling(window=window, min_periods=window).sum()
+        / volume.rolling(window=window, min_periods=window).sum(),
+    )
+    return result.dropna()

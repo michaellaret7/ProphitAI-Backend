@@ -25,13 +25,17 @@ def calc_alpha(
     daily_returns: pd.Series,
     benchmark_returns: pd.Series,
     rf_annual: float = DEFAULT_RF_ANNUAL,
-) -> float:
+) -> float | None:
     """Calculate Jensen's Alpha (CAPM-based).
 
     a = Rp - [Rf + B * (Rm - Rf)]
     Where Rp and Rm are annualized returns.
+    Returns None if beta cannot be computed.
     """
     beta = calc_beta(daily_returns, benchmark_returns)
+    if beta is None:
+        return None
+
     rp = calc_annualized_return(daily_returns)
     rm = calc_annualized_return(benchmark_returns)
 
@@ -39,14 +43,15 @@ def calc_alpha(
     return float(rp - expected_return)
 
 
-def calc_momentum(daily_returns: pd.Series, months: int) -> float:
+def calc_momentum(daily_returns: pd.Series, months: int) -> float | None:
     """Calculate trailing momentum (total return) for a given number of months.
 
     Uses ~21 trading days per month. Returns annualized CAGR for periods > 12 months.
+    Returns None if insufficient data for the requested period.
     """
     trading_days = months * 21
     if len(daily_returns) < trading_days:
-        return 0.0
+        return None
 
     period_returns = daily_returns.iloc[-trading_days:]
     total_return = float((1 + period_returns).prod() - 1)

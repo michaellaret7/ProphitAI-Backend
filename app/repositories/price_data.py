@@ -58,49 +58,66 @@ def get_price_data_hourly(ticker: str, start_date: datetime, end_date: datetime)
 @with_session('market')
 def get_price_data_daily(ticker: str, start_date: datetime = None, end_date: datetime = None, session=None):
     """
-    Fetches daily aggregated price data directly from the database.
-    Much more efficient than fetching 15-min data and resampling.
+    Fetches daily price data for a single ticker.
     If start_date or end_date is None, queries all available data.
     """
     ticker = ticker.upper()
-    
-    # Base query
-    query = session.query(DailyPrices).join(Ticker).filter(Ticker.ticker == ticker)
 
-    # Apply date filters if provided
+    query = session.query(
+        DailyPrices.datetime.label('date'),
+        DailyPrices.open,
+        DailyPrices.high,
+        DailyPrices.low,
+        DailyPrices.close,
+        DailyPrices.adj_close,
+        DailyPrices.volume,
+    ).join(Ticker).filter(Ticker.ticker == ticker)
+
     if start_date:
         query = query.filter(DailyPrices.datetime >= start_date)
     if end_date:
         query = query.filter(DailyPrices.datetime <= end_date)
 
-    query = query.order_by(DailyPrices.datetime.asc())  # Sort by date ascending
+    query = query.order_by(DailyPrices.datetime.asc())
 
-    rows = query.all()
+    # Reason: pd.read_sql bypasses ORM object hydration, reading directly into a DataFrame
+    return pd.read_sql(query.statement, session.bind)
 
-    # Convert to DataFrame to match expected return type
-    data = [
-        {
-            'date': row.datetime,
-            'open': row.open,
-            'high': row.high,
-            'low': row.low,
-            'close': row.close,
-            'adj_close': row.adj_close,
-            'volume': row.volume
+
+def _fetch_bulk_threaded(tickers: list, start_date: datetime, end_date: datetime, frequency: str) -> dict[str, pd.DataFrame]:
+    """Fetches price data for multiple tickers in parallel using a thread pool."""
+    func_map = {
+        'daily': get_price_data_daily,
+        '15mins': get_price_data_15_mins,
+        'hourly': get_price_data_hourly,
+    }
+    get_func = func_map[frequency]
+
+    price_data_map = {}
+    with ThreadPoolExecutor(max_workers=20) as executor:
+        future_to_ticker = {
+            executor.submit(get_func, ticker, start_date, end_date): ticker
+            for ticker in tickers
         }
-        for row in rows
-    ]
+        for future in as_completed(future_to_ticker):
+            ticker = future_to_ticker[future]
+            try:
+                data = future.result()
+                if data is not None and not data.empty:
+                    if frequency == 'daily':
+                        data['date'] = pd.to_datetime(data['date'])
+                        price_data_map[ticker] = data.set_index('date')
+                    else:
+                        price_data_map[ticker] = data
+            except Exception as e:
+                logger.error("Error fetching %s data for %s: %s", frequency, ticker, e)
 
-    df = pd.DataFrame(data)
+    return price_data_map
 
-    if not df.empty:
-        pass # Optional: set as index if needed
-
-    return df
 
 def fetch_bulk_price_data_for_tickers(tickers: list, start_date_str: str, end_date_str: str, frequency: str = 'daily') -> pd.DataFrame:
     """
-    Fetch price data for multiple tickers in parallel.
+    Fetch price data for multiple tickers.
 
     Parameters:
     - tickers: List of ticker symbols
@@ -115,126 +132,59 @@ def fetch_bulk_price_data_for_tickers(tickers: list, start_date_str: str, end_da
     Note: Daily data returns adj_close which accounts for dividends and splits.
     Use daily_price_returns on this data to get total returns.
     """
-    # Convert string dates to datetime objects
     start_date = datetime.strptime(start_date_str, '%Y-%m-%d')
-    # Set end_date to end of day (23:59:59) to include all data on the end date
     end_date = datetime.strptime(end_date_str, '%Y-%m-%d').replace(hour=23, minute=59, second=59)
 
-    if frequency == 'daily':
-        get_price_data_func = get_price_data_daily
-    elif frequency == '15mins':
-        get_price_data_func = get_price_data_15_mins
-    elif frequency == 'hourly':
-        get_price_data_func = get_price_data_hourly
-    else:
+    if frequency not in ('daily', '15mins', 'hourly'):
         raise ValueError(f"Invalid frequency: {frequency}. Must be 'daily', '15mins', or 'hourly'")
 
-    price_data_map = {}
-    with ThreadPoolExecutor(max_workers=20) as executor:
-        future_to_ticker = {
-            executor.submit(get_price_data_func, ticker, start_date, end_date): ticker
-            for ticker in tickers
-        }
-        for future in as_completed(future_to_ticker):
-            ticker = future_to_ticker[future]
-            try:
-                data = future.result()
-                if data is not None and not data.empty:
-                    # Handle different data formats based on frequency
-                    if frequency == 'daily':
-                        # Daily data has 'date' column - use adj_close for total returns
-                        # Reason: adj_close accounts for dividends and splits
-                        data['date'] = pd.to_datetime(data['date'])
-                        price_col = 'adj_close' if 'adj_close' in data.columns else 'close'
-                        price_data_map[ticker] = data.set_index('date')[price_col]
-                    else:
-                        # 15mins and hourly data already have datetime as index
-                        price_data_map[ticker] = data['close']
-            except Exception as e:
-                print(f"Error fetching data for {ticker}: {e}")
+    bulk_data = _fetch_bulk_threaded(tickers, start_date, end_date, frequency)
+
+    # Reason: adj_close accounts for dividends and splits
+    price_col = 'adj_close' if frequency == 'daily' else 'close'
+    price_data_map = {ticker: df[price_col] for ticker, df in bulk_data.items()}
 
     return pd.DataFrame(price_data_map)
 
 def fetch_bulk_ohlcv_data_for_tickers(tickers: list, start_date_str: str, end_date_str: str, frequency: str = 'daily', returns: bool = False):
     """
-    Fetch full OHLCV DataFrames for multiple tickers in parallel.
+    Fetch full OHLCV DataFrames for multiple tickers.
 
     Unlike fetch_bulk_price_data_for_tickers which returns only close Series,
-    this function returns complete DataFrames with all price columns (open, high, low, close, volume).
-    Use this for risk calculations that need full price data.
+    this function returns complete DataFrames with all price columns.
 
     Parameters:
     - tickers: List of ticker symbols
     - start_date_str: Start date in 'YYYY-MM-DD' format
     - end_date_str: End date in 'YYYY-MM-DD' format
     - frequency: Data frequency - 'daily', '15mins', or 'hourly'
+    - returns: If True, appends returns and cumulative returns columns
 
     Returns:
-    - dict: Mapping of ticker to DataFrame with columns [open, high, low, close, volume]
-            Index is date/datetime (DatetimeIndex)
+    - dict: Mapping of ticker to DataFrame with columns [open, high, low, close, adj_close, volume]
+            Index is DatetimeIndex
 
     Example:
         >>> data = fetch_bulk_ohlcv_data_for_tickers(['AAPL', 'SPY'], '2024-01-01', '2024-12-31')
         >>> data['AAPL']  # Returns full DataFrame with OHLCV columns
-        >>> data_15m = fetch_bulk_ohlcv_data_for_tickers(['AAPL'], '2024-01-01', '2024-01-05', frequency='15mins')
     """
-    # Convert string dates to datetime objects
     start_date = datetime.strptime(start_date_str, '%Y-%m-%d')
-    # Set end_date to end of day (23:59:59) to include all data on the end date
     end_date = datetime.strptime(end_date_str, '%Y-%m-%d').replace(hour=23, minute=59, second=59)
 
-    # Select appropriate data fetch function based on frequency
-    if frequency == 'daily':
-        get_price_data_func = get_price_data_daily
-    elif frequency == '15mins':
-        get_price_data_func = get_price_data_15_mins
-    elif frequency == 'hourly':
-        get_price_data_func = get_price_data_hourly
-    else:
+    if frequency not in ('daily', '15mins', 'hourly'):
         raise ValueError(f"Invalid frequency: {frequency}. Must be 'daily', '15mins', or 'hourly'")
 
-    price_data_map = {}
-    with ThreadPoolExecutor(max_workers=20) as executor:
-        future_to_ticker = {
-            executor.submit(get_price_data_func, ticker, start_date, end_date): ticker
-            for ticker in tickers
-        }
-        for future in as_completed(future_to_ticker):
-            ticker = future_to_ticker[future]
-            try:
-                data = future.result()
-                if data is not None and not data.empty:
-                    if frequency == 'daily':
-                        # Daily data has 'date' column that needs to be set as index
-                        data['date'] = pd.to_datetime(data['date'])
-                        df = data.set_index('date')
-                    else:
-                        # 15mins and hourly data already have datetime as index
-                        df = data
-                    
-                    # --- NEW LOGIC START ---
-                    if returns:
-                        # Calculate cumulative returns based on adj_close if available, else close
-                        target_col = 'adj_close'
+    price_data_map = _fetch_bulk_threaded(tickers, start_date, end_date, frequency)
 
-                        if target_col in df.columns:
-                            # 1. Calculate simple daily returns
-                            total_returns = df[target_col].pct_change()
-                            price_returns = df['close'].pct_change()
-
-                            df['returns'] = total_returns
-                            df['price_returns'] = price_returns
-                            
-                            # 2. Calculate cumulative returns: (1 + r).cumprod() - 1
-                            # This shows total return % (e.g., 0.10 for 10% total gain)
-                            df['cum_total_returns'] = (1 + total_returns).cumprod() - 1
-                            df['cum_price_returns'] = (1 + price_returns).cumprod() - 1
-                    # --- NEW LOGIC END ---
-
-                    price_data_map[ticker] = df
-                    
-            except Exception as e:
-                logger.error(f"Error fetching OHLCV data for {ticker}: {e}")
+    if returns:
+        for df in price_data_map.values():
+            if 'adj_close' in df.columns:
+                total_returns = df['adj_close'].pct_change()
+                price_returns = df['close'].pct_change()
+                df['returns'] = total_returns
+                df['price_returns'] = price_returns
+                df['cum_total_returns'] = (1 + total_returns).cumprod() - 1
+                df['cum_price_returns'] = (1 + price_returns).cumprod() - 1
 
     return price_data_map
 

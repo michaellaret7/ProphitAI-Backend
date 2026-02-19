@@ -5,7 +5,7 @@ from pydantic import BaseModel, ConfigDict
 
 
 class TrendTechnicals(BaseModel):
-    """Trend indicators — moving averages and regression signals."""
+    """Trend indicators — moving averages, regression, and Ichimoku."""
 
     model_config = ConfigDict(arbitrary_types_allowed=True)
 
@@ -18,6 +18,11 @@ class TrendTechnicals(BaseModel):
     ema_200: pd.Series
     linreg_slope_50: pd.Series
     linreg_r_squared_50: pd.Series
+    ichimoku_tenkan: pd.Series
+    ichimoku_kijun: pd.Series
+    ichimoku_senkou_a: pd.Series
+    ichimoku_senkou_b: pd.Series
+    ichimoku_chikou: pd.Series
 
 
 class MomentumTechnicals(BaseModel):
@@ -36,7 +41,7 @@ class MomentumTechnicals(BaseModel):
 
 
 class VolatilityTechnicals(BaseModel):
-    """Volatility indicators — ATR, range-based estimators, Bollinger Bands."""
+    """Volatility indicators — ATR, range-based estimators, Bollinger/Donchian/Keltner."""
 
     model_config = ConfigDict(arbitrary_types_allowed=True)
 
@@ -50,15 +55,22 @@ class VolatilityTechnicals(BaseModel):
     bollinger_lower: pd.Series
     bollinger_pct_b: pd.Series
     bollinger_bandwidth: pd.Series
+    donchian_upper: pd.Series
+    donchian_middle: pd.Series
+    donchian_lower: pd.Series
+    keltner_upper: pd.Series
+    keltner_middle: pd.Series
+    keltner_lower: pd.Series
 
 
 class VolumeTechnicals(BaseModel):
-    """Volume and liquidity indicators — OBV, VWMA, money flow, illiquidity."""
+    """Volume and liquidity indicators — OBV, VWMA, VWAP, money flow, illiquidity."""
 
     model_config = ConfigDict(arbitrary_types_allowed=True)
 
     obv: pd.Series
     vwma_20: pd.Series
+    vwap_20: pd.Series
     cmf_20: pd.Series
     accumulation_distribution: pd.Series
     mfi_14: pd.Series

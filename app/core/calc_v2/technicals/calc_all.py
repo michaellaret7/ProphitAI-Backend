@@ -24,6 +24,7 @@ from app.core.calc_v2.technicals.statistical import (
 )
 from app.core.calc_v2.technicals.trend import (
     calc_ema,
+    calc_ichimoku,
     calc_linear_regression,
     calc_sma,
 )
@@ -33,7 +34,9 @@ from app.core.calc_v2.technicals.volatility import (
     calc_bollinger_bandwidth,
     calc_bollinger_pct_b,
     calc_close_to_close_volatility,
+    calc_donchian_channels,
     calc_garman_klass_volatility,
+    calc_keltner_channels,
     calc_parkinson_volatility,
     calc_yang_zhang_volatility,
 )
@@ -43,6 +46,7 @@ from app.core.calc_v2.technicals.volume import (
     calc_cmf,
     calc_mfi,
     calc_obv,
+    calc_vwap,
     calc_vwma,
 )
 
@@ -53,8 +57,11 @@ def calc_trend(ohlcv: pd.DataFrame) -> TrendTechnicals:
     Args:
         ohlcv: DataFrame with columns [open, high, low, adj_close, volume].
     """
+    high = ohlcv["high"]
+    low = ohlcv["low"]
     close = ohlcv["adj_close"]
     slope, r_squared = calc_linear_regression(close, window=50)
+    tenkan, kijun, senkou_a, senkou_b, chikou = calc_ichimoku(high, low, close)
 
     return TrendTechnicals(
         sma_20=calc_sma(close, window=20),
@@ -66,6 +73,11 @@ def calc_trend(ohlcv: pd.DataFrame) -> TrendTechnicals:
         ema_200=calc_ema(close, span=200),
         linreg_slope_50=slope,
         linreg_r_squared_50=r_squared,
+        ichimoku_tenkan=tenkan,
+        ichimoku_kijun=kijun,
+        ichimoku_senkou_a=senkou_a,
+        ichimoku_senkou_b=senkou_b,
+        ichimoku_chikou=chikou,
     )
 
 
@@ -105,6 +117,8 @@ def calc_volatility(ohlcv: pd.DataFrame) -> VolatilityTechnicals:
     low = ohlcv["low"]
     close = ohlcv["adj_close"]
     bollinger_upper, bollinger_middle, bollinger_lower = calc_bollinger_bands(close)
+    donchian_upper, donchian_middle, donchian_lower = calc_donchian_channels(high, low)
+    keltner_upper, keltner_middle, keltner_lower = calc_keltner_channels(high, low, close)
 
     return VolatilityTechnicals(
         atr_14=calc_atr(high, low, close, window=14),
@@ -117,6 +131,12 @@ def calc_volatility(ohlcv: pd.DataFrame) -> VolatilityTechnicals:
         bollinger_lower=bollinger_lower,
         bollinger_pct_b=calc_bollinger_pct_b(close),
         bollinger_bandwidth=calc_bollinger_bandwidth(close),
+        donchian_upper=donchian_upper,
+        donchian_middle=donchian_middle,
+        donchian_lower=donchian_lower,
+        keltner_upper=keltner_upper,
+        keltner_middle=keltner_middle,
+        keltner_lower=keltner_lower,
     )
 
 
@@ -134,6 +154,7 @@ def calc_volume(ohlcv: pd.DataFrame) -> VolumeTechnicals:
     return VolumeTechnicals(
         obv=calc_obv(close, volume),
         vwma_20=calc_vwma(close, volume, window=20),
+        vwap_20=calc_vwap(high, low, close, volume, window=20),
         cmf_20=calc_cmf(high, low, close, volume, window=20),
         accumulation_distribution=calc_accumulation_distribution(high, low, close, volume),
         mfi_14=calc_mfi(high, low, close, volume, window=14),

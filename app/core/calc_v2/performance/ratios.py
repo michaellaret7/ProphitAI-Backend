@@ -12,10 +12,11 @@ from app.core.calc_v2.risk.drawdown import calc_max_drawdown
 def calc_sharpe_ratio(
     daily_returns: pd.Series,
     rf_annual: float = DEFAULT_RF_ANNUAL,
-) -> float:
+) -> float | None:
     """Calculate annualized Sharpe Ratio.
 
     Sharpe = (Rp - Rf) / sigma_p, annualized via sqrt(252).
+    Returns None if zero volatility (ratio undefined).
     """
     rf_daily = rf_annual / TRADING_DAYS
     excess_returns = daily_returns - rf_daily
@@ -23,7 +24,7 @@ def calc_sharpe_ratio(
     std = float(daily_returns.std())
 
     if std == 0:
-        return 0.0
+        return None
 
     return (mean_excess / std) * np.sqrt(TRADING_DAYS)
 
@@ -31,11 +32,12 @@ def calc_sharpe_ratio(
 def calc_sortino_ratio(
     daily_returns: pd.Series,
     rf_annual: float = DEFAULT_RF_ANNUAL,
-) -> float:
+) -> float | None:
     """Calculate annualized Sortino Ratio.
 
     Sortino = (Rp - Rf) / Downside Deviation
     Uses downside deviation (returns below rf) instead of total volatility.
+    Returns None if no downside returns or zero downside deviation.
     """
     rf_daily = rf_annual / TRADING_DAYS
     excess_returns = daily_returns - rf_daily
@@ -43,12 +45,12 @@ def calc_sortino_ratio(
     downside_returns = excess_returns[excess_returns < 0]
 
     if len(downside_returns) == 0:
-        return 0.0
+        return None
 
     downside_dev = float(np.sqrt((downside_returns ** 2).mean()))
 
     if downside_dev == 0:
-        return 0.0
+        return None
 
     mean_excess = float(excess_returns.mean())
     return (mean_excess / downside_dev) * np.sqrt(TRADING_DAYS)
@@ -57,16 +59,17 @@ def calc_sortino_ratio(
 def calc_calmar_ratio(
     daily_returns: pd.Series,
     rf_annual: float = DEFAULT_RF_ANNUAL,
-) -> float:
+) -> float | None:
     """Calculate Calmar Ratio.
 
     Calmar = (Annualized Return - Rf) / |Max Drawdown|
+    Returns None if no drawdown occurred (ratio undefined).
     """
     ann_return = calc_annualized_return(daily_returns)
     max_dd = abs(calc_max_drawdown(daily_returns))
 
     if max_dd == 0:
-        return 0.0
+        return None
 
     return (ann_return - rf_annual) / max_dd
 
@@ -74,21 +77,22 @@ def calc_calmar_ratio(
 def calc_information_ratio(
     daily_returns: pd.Series,
     benchmark_returns: pd.Series,
-) -> float:
+) -> float | None:
     """Calculate Information Ratio.
 
     IR = Mean(Rp - Rb) / Tracking Error
     Measures excess return per unit of active risk.
+    Returns None if insufficient overlapping data or zero tracking error.
     """
     aligned = align_returns(daily_returns, benchmark_returns)
     if aligned is None:
-        return 0.0
+        return None
 
     excess = aligned['portfolio'] - aligned['benchmark']
     te = float(excess.std())
 
     if te == 0:
-        return 0.0
+        return None
 
     return float(excess.mean() / te) * np.sqrt(TRADING_DAYS)
 
@@ -97,15 +101,16 @@ def calc_treynor_ratio(
     daily_returns: pd.Series,
     benchmark_returns: pd.Series,
     rf_annual: float = DEFAULT_RF_ANNUAL,
-) -> float:
+) -> float | None:
     """Calculate annualized Treynor Ratio.
 
     Treynor = (Rp - Rf) / Beta
     Measures excess return per unit of systematic risk.
+    Returns None if beta cannot be computed or is zero.
     """
     beta = calc_beta(daily_returns, benchmark_returns)
-    if beta == 0:
-        return 0.0
+    if beta is None or beta == 0:
+        return None
 
     ann_return = calc_annualized_return(daily_returns)
     return (ann_return - rf_annual) / beta
@@ -114,12 +119,13 @@ def calc_treynor_ratio(
 def calc_omega_ratio(
     daily_returns: pd.Series,
     rf_annual: float = DEFAULT_RF_ANNUAL,
-) -> float:
+) -> float | None:
     """Calculate Omega Ratio.
 
     Omega = Sum(returns above threshold) / |Sum(returns below threshold)|
     Threshold is the risk-free rate converted to daily.
     Captures all moments of the distribution (Keating & Shadwick 2002).
+    Returns None if no returns below threshold (ratio undefined).
     """
     threshold_daily = (1 + rf_annual) ** (1 / TRADING_DAYS) - 1
 
@@ -129,6 +135,6 @@ def calc_omega_ratio(
     denom = float(-1.0 * returns_less_thresh[returns_less_thresh < 0].sum())
 
     if denom == 0:
-        return 0.0
+        return None
 
     return numer / denom

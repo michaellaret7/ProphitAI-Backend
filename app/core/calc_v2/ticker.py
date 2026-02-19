@@ -60,7 +60,17 @@ class Ticker:
         self.technicals: TickerTechnicals = calc_all_technicals(self.ohlcv_data)
 
 if __name__ == '__main__':
-    ticker = 'AAL'
-    data = fetch_bulk_ohlcv_data_for_tickers([ticker, 'SPY'], '2020-01-01', '2026-01-31')
-    ticker_obj = Ticker(ticker, data[ticker], data['SPY']['adj_close'])
-    print(ticker_obj.technicals.momentum.time_series_momentum)
+    tickers = ['AAL', 'SPY', 'NVDA', 'AAL', 'MSFT', 'TSLA', 'GOOGL', 'AMZN', 'META', 'TSLA']
+
+    import time
+    start_time = time.time()
+    data = fetch_bulk_ohlcv_data_for_tickers(tickers, '2024-01-01', '2026-01-31')
+    end_time = time.time()
+    print(f"Time taken: {end_time - start_time} seconds")
+
+    for ticker in tickers:
+        start_time = time.time()
+        ticker_obj = Ticker(ticker, data[ticker], data['SPY']['adj_close'])
+        end_time = time.time()
+        print(f"Time taken: {end_time - start_time} seconds")
+        print(ticker_obj.performance_metrics.alpha)

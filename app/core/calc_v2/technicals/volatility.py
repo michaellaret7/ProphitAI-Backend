@@ -9,7 +9,7 @@ import numpy as np
 import pandas as pd
 
 from app.core.calc_v2.config import TRADING_DAYS
-from app.core.calc_v2.technicals.trend import calc_sma
+from app.core.calc_v2.technicals.trend import calc_ema, calc_sma
 
 
 def calc_true_range(
@@ -221,3 +221,62 @@ def calc_bollinger_bandwidth(close: pd.Series, window: int = 20, num_std: float 
     upper, middle, lower = calc_bollinger_bands(close, window, num_std)
     result = (upper - lower) / middle.replace(0, np.nan)
     return cast(pd.Series, result.dropna())
+
+
+# =============================================================================
+# Donchian Channels
+# =============================================================================
+
+def calc_donchian_channels(
+    high: pd.Series,
+    low: pd.Series,
+    window: int = 20,
+) -> tuple[pd.Series, pd.Series, pd.Series]:
+    """Calculate Donchian Channels (upper, middle, lower).
+
+    Upper = highest high over window. Lower = lowest low over window.
+    Middle = (upper + lower) / 2.
+    Breakout above upper = bullish, below lower = bearish.
+    Used in trend-following systems (Turtle Trading).
+
+    Returns:
+        (upper_channel, middle_channel, lower_channel)
+    """
+    upper = cast(pd.Series, high.rolling(window=window, min_periods=window).max().dropna())
+    lower = cast(pd.Series, low.rolling(window=window, min_periods=window).min().dropna())
+    middle = cast(pd.Series, ((upper + lower) / 2).dropna())
+
+    return upper, middle, lower
+
+
+# =============================================================================
+# Keltner Channels
+# =============================================================================
+
+def calc_keltner_channels(
+    high: pd.Series,
+    low: pd.Series,
+    close: pd.Series,
+    ema_span: int = 20,
+    atr_window: int = 10,
+    multiplier: float = 2.0,
+) -> tuple[pd.Series, pd.Series, pd.Series]:
+    """Calculate Keltner Channels (upper, middle, lower).
+
+    Middle = EMA(close, ema_span). Upper/Lower = middle ± multiplier * ATR.
+    Unlike Bollinger Bands (std-based), Keltner uses ATR for width —
+    less sensitive to single large moves.
+    Squeeze detection: Bollinger inside Keltner = low-volatility compression.
+
+    Returns:
+        (upper_channel, middle_channel, lower_channel)
+    """
+    middle = calc_ema(close, span=ema_span)
+    atr = calc_atr(high, low, close, window=atr_window)
+
+    # Reason: align ATR index to EMA index before arithmetic.
+    atr_aligned = atr.reindex(middle.index)
+    upper = cast(pd.Series, (middle + multiplier * atr_aligned).dropna())
+    lower = cast(pd.Series, (middle - multiplier * atr_aligned).dropna())
+
+    return upper, middle, lower

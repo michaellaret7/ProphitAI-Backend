@@ -28,6 +28,9 @@ def get_government_bond_rates(
     Returns:
         DataFrame with columns: country, date, m1, m2, m3, m6, y1, y2, y3, y5, y7, y10, y20, y30
     """
+    if country == 'US':
+        country = 'USA'
+
     query = session.query(GovernmentBondRates).filter(GovernmentBondRates.country == country)
 
     # Add date filters if provided
