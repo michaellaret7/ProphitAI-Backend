@@ -129,6 +129,10 @@ from app.utils.time_utils import get_current_utc_time, get_utc_date_str, get_utc
 - Single Responsibility: Each function, class, and module should have one clear purpose.
 - Fail Fast: Check for potential errors early and raise exceptions immediately when issues occur.
 
+**Development Goals**
+- Build maintainable, scaleable, modular, and efficicent systems
+- Aim for maximum code reuseability (always try to check if there is an existing helper function)
+
 ### Code Documentation
 - Every module should have a docstring explaining its purpose
 - Public functions must have complete docstrings

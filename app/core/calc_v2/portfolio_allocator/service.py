@@ -5,14 +5,14 @@ Public entry point for portfolio allocation.
 
 from typing import Dict, List
 
-from app.core.calc_v2.allocator.models import (
+from app.core.calc_v2.portfolio_allocator.models import (
     OptimizerConfig,
     Allocation,
     AllocationResult,
     PortfolioPerformance,
     StrategyLiteral,
 )
-from app.core.calc_v2.allocator.allocator import PortfolioAllocator
+from app.core.calc_v2.portfolio_allocator.allocator import PortfolioAllocator
 
 
 def calc_num_shares(weights: Dict[str, float], portfolio_value: float) -> Dict[str, int]:
@@ -71,10 +71,10 @@ def allocate(
     opt = PortfolioAllocator(tickers=tickers, config=config)
 
     prices = opt.fetch_prices()
-    ordered_tickers, mu, S = opt.compute_inputs(prices)
+    ordered_tickers, mu, cov_matrix = opt.compute_inputs(prices)
 
     w, perf = opt.optimize(
-        mu, S, ordered_tickers,
+        mu, cov_matrix, ordered_tickers,
         strategy=strategy,
         risk_aversion=risk_aversion,
         target_volatility=target_volatility,
@@ -135,13 +135,11 @@ if __name__ == "__main__":
 
     tickers = [
         # Equities
-        "AAPL", "MSFT", "GOOGL", "AMZN", "TSLA", "NVDA", "META",
+        "AAPL", "MU", "GOOGL", "AMZN", "TSLA", "NVDA", "META",
         # Commodities
         "GLD", "SLV", "DBA",
         # Bonds
         "AGG", "BND", "TLT",
-        # Crypto
-        "IBIT", "BITO",
     ]
 
     start = time.time()
@@ -150,9 +148,8 @@ if __name__ == "__main__":
         initial_portfolio_value=100_000,
         equity_weight_target=0.55,
         bond_weight_target=0.15,
-        commodity_weight_target=0.15,
-        crypto_weight_target=0.15,
-        strategy="min_vol",
+        commodity_weight_target=0.30,
+        strategy="max_sharpe",
     )
     elapsed = time.time() - start
 

@@ -7,7 +7,7 @@ Provides optimization-based portfolio allocation with support for:
 - Auto-detection and adjustment of asset class weights
 
 Usage:
-    from app.core.calc_v2.allocator import run, allocate, PortfolioAllocator
+    from app.core.calc_v2.portfolio_allocator import run, allocate, PortfolioAllocator
 
     # Simple usage with defaults
     result = run(
@@ -25,7 +25,7 @@ Usage:
     result = allocate(tickers, config, strategy="min_vol")
 """
 
-from app.core.calc_v2.allocator.models import (
+from app.core.calc_v2.portfolio_allocator.models import (
     OptimizerConfig,
     OptimizationStrategy,
     StrategyLiteral,
@@ -36,15 +36,15 @@ from app.core.calc_v2.allocator.models import (
     validate_weights,
     WEIGHT_TOLERANCE,
 )
-from app.core.calc_v2.allocator.allocator import PortfolioAllocator
-from app.core.calc_v2.allocator.service import allocate, run
-from app.core.calc_v2.allocator.classifier import (
+from app.core.calc_v2.portfolio_allocator.allocator import PortfolioAllocator
+from app.core.calc_v2.portfolio_allocator.service import allocate, run
+from app.core.calc_v2.portfolio_allocator.classifier import (
     classify_tickers,
     build_classified_tickers,
     auto_adjust_bucket_targets,
 )
-from app.core.calc_v2.allocator.strategies import STRATEGIES, run_strategy
-from app.core.calc_v2.allocator.constraints import ConstraintBuilder
+from app.core.calc_v2.portfolio_allocator.strategies import STRATEGIES, run_strategy
+from app.core.calc_v2.portfolio_allocator.constraints import ConstraintBuilder
 
 __all__ = [
     # Main API

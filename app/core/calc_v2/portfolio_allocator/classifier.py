@@ -8,7 +8,7 @@ from typing import Dict, List, Tuple
 from app.db.core.db_config import MarketSession
 from app.db.core.models.market_data_models import Ticker
 
-from app.core.calc_v2.allocator.models import (
+from app.core.calc_v2.portfolio_allocator.models import (
     ClassifiedTickers,
     OptimizerConfig,
     WEIGHT_TOLERANCE,

@@ -8,8 +8,8 @@ from typing import Callable, Dict, List, Tuple
 import pandas as pd
 from pypfopt import EfficientFrontier
 
-from app.core.calc_v2.allocator.models import OptimizationStrategy
-from app.core.calc_v2.allocator.constraints import ConstraintBuilder
+from app.core.calc_v2.portfolio_allocator.models import OptimizationStrategy
+from app.core.calc_v2.portfolio_allocator.constraints import ConstraintBuilder
 
 
 # Type alias for strategy functions
@@ -67,7 +67,7 @@ STRATEGIES: Dict[str, StrategyFunc] = {
 def run_strategy(
     constraint_builder: ConstraintBuilder,
     mu: pd.Series,
-    S: pd.DataFrame,
+    cov_matrix: pd.DataFrame,
     tickers: List[str],
     strategy: str,
     risk_free_rate: float,
@@ -89,7 +89,7 @@ def run_strategy(
         )
 
     # Build EfficientFrontier with constraints
-    ef = constraint_builder.build_ef(mu, S, tickers)
+    ef = constraint_builder.build_ef(mu, cov_matrix, tickers)
 
     # Execute strategy
     strategy_func = STRATEGIES[strategy]

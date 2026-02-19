@@ -10,6 +10,8 @@ from typing import Dict, List, Literal, Set
 import numpy as np
 from pydantic import BaseModel, ConfigDict
 
+from app.core.calc_v2.config import DEFAULT_RF_ANNUAL, TRADING_DAYS
+
 
 # Tolerance for numerical precision in weight comparisons
 WEIGHT_TOLERANCE = 1e-4
@@ -44,10 +46,10 @@ class OptimizerConfig(BaseModel):
     # Data params
     lookback_days: int = 504
     frequency: str = "daily"
-    trading_days: int = 252
+    trading_days: int = TRADING_DAYS
 
     # Solver params
-    risk_free_rate: float = 0.02
+    risk_free_rate: float = DEFAULT_RF_ANNUAL
 
     # Position constraints (hybrid hard/soft)
     min_weight: float = 0.01  # HARD floor - every ticker gets at least 1%

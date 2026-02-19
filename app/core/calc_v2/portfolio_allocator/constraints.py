@@ -9,7 +9,7 @@ import cvxpy as cp
 import pandas as pd
 from pypfopt import EfficientFrontier, objective_functions
 
-from app.core.calc_v2.allocator.models import (
+from app.core.calc_v2.portfolio_allocator.models import (
     OptimizerConfig,
     ClassifiedTickers,
     validate_weights,
@@ -56,12 +56,12 @@ class ConstraintBuilder:
     def build_ef(
         self,
         mu: pd.Series,
-        S: pd.DataFrame,
+        cov_matrix: pd.DataFrame,
         tickers: List[str],
     ) -> EfficientFrontier:
         """Build EfficientFrontier with all constraints applied."""
         # Hard bounds: min_weight floor, hard_max ceiling
-        ef = EfficientFrontier(mu, S, weight_bounds=(self.min_w, self.hard_max_w))
+        ef = EfficientFrontier(mu, cov_matrix, weight_bounds=(self.min_w, self.hard_max_w))
 
         # Bucket band constraints (only for non-empty buckets with non-zero targets)
         self._add_bucket_constraints(ef, tickers)

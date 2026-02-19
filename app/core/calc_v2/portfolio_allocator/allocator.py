@@ -15,16 +15,16 @@ from pypfopt import expected_returns, risk_models
 from app.repositories.price_data import fetch_bulk_price_data_for_tickers
 from app.utils.time_utils import get_utc_date_str, get_utc_days_ago
 
-from app.core.calc_v2.allocator.models import (
+from app.core.calc_v2.portfolio_allocator.models import (
     OptimizerConfig,
     StrategyLiteral,
 )
-from app.core.calc_v2.allocator.classifier import (
+from app.core.calc_v2.portfolio_allocator.classifier import (
     build_classified_tickers,
     auto_adjust_bucket_targets,
 )
-from app.core.calc_v2.allocator.constraints import ConstraintBuilder
-from app.core.calc_v2.allocator.strategies import run_strategy
+from app.core.calc_v2.portfolio_allocator.constraints import ConstraintBuilder
+from app.core.calc_v2.portfolio_allocator.strategies import run_strategy
 
 
 def _check_bucket_overlap(
@@ -251,8 +251,8 @@ class PortfolioAllocator:
         """Compute expected returns and covariance matrix from price data."""
         tickers = list(prices.columns)
         mu = expected_returns.mean_historical_return(prices, frequency=self.config.trading_days)
-        S = risk_models.sample_cov(prices, frequency=self.config.trading_days)
-        return tickers, mu, S
+        cov_matrix = risk_models.sample_cov(prices, frequency=self.config.trading_days)
+        return tickers, mu, cov_matrix
 
     def bucket_weights(self, weights: Dict[str, float]) -> Tuple[float, float, float, float]:
         """Calculate total weights for equity, bond, commodity, and crypto buckets."""
@@ -261,7 +261,7 @@ class PortfolioAllocator:
     def optimize(
         self,
         mu: pd.Series,
-        S: pd.DataFrame,
+        cov_matrix: pd.DataFrame,
         tickers: List[str],
         strategy: StrategyLiteral = "max_sharpe",
         **strategy_params,
@@ -274,7 +274,7 @@ class PortfolioAllocator:
         """
         return run_strategy(
             self.constraint_builder,
-            mu, S, tickers,
+            mu, cov_matrix, tickers,
             strategy=strategy,
             risk_free_rate=self.config.risk_free_rate,
             **strategy_params,

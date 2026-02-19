@@ -102,46 +102,4 @@ class Portfolio:
         )
 
 
-if __name__ == '__main__':
-    from app.repositories.price_data import fetch_bulk_ohlcv_data_for_tickers
-    import time
 
-    tickers = [
-        'AAPL', 'MSFT', 'NVDA', 'GOOGL', 'AMZN', 'META', 'TSLA', 'BRK-B', 'JPM', 'V',
-        'UNH', 'XOM', 'JNJ', 'WMT', 'PG', 'MA', 'HD', 'CVX', 'MRK', 'ABBV',
-        'KO', 'PEP', 'COST', 'AVGO', 'LLY', 'TMO', 'MCD', 'CSCO', 'ACN', 'ABT',
-        'DHR', 'NEE', 'TXN', 'PM', 'UPS', 'MS', 'RTX', 'HON', 'UNP', 'LOW',
-        'INTC', 'QCOM', 'AMGN', 'IBM', 'CAT', 'GE', 'BA', 'SBUX', 'GS', 'BLK',
-        'MDLZ', 'ADI', 'GILD', 'SYK', 'MMC', 'CB', 'ADP', 'CI', 'DE', 'SO',
-        'DUK', 'CL', 'CME', 'MO', 'ZTS', 'TGT', 'BDX', 'PLD', 'APD', 'SHW',
-        'FIS', 'ITW', 'EMR', 'NSC', 'ETN', 'AON', 'WM', 'ECL', 'HUM', 'ORLY',
-        'MCK', 'GM', 'F', 'PSA', 'KMB', 'AEP', 'D', 'SRE', 'AFL', 'TRV',
-        'ALL', 'PRU', 'AIG', 'MET', 'PNC', 'USB', 'SCHW', 'COF', 'FDX', 'HYG',
-    ]
-    weights = [0.01] * 100
-
-    print(f"Testing with {len(tickers)} tickers...")
-
-    start_time = time.time()
-    data = fetch_bulk_ohlcv_data_for_tickers(tickers + ['SPY'], '2020-01-01', '2026-01-31')
-    fetch_time = time.time() - start_time
-    print(f"Data fetch: {fetch_time:.2f}s")
-
-    # Reason: Some tickers may not have data — filter to those that do.
-    available = [t for t in tickers if t in data]
-    weights = [0.01] * len(available)
-    print(f"Available tickers: {len(available)} / {len(tickers)}")
-
-    price_df = pd.DataFrame({t: data[t]['adj_close'] for t in available})
-
-    start_time = time.time()
-    portfolio = Portfolio('100-Ticker Test', available, weights, price_df, data['SPY']['adj_close'])
-    portfolio_time = time.time() - start_time
-    print(f"Portfolio construction: {portfolio_time:.2f}s")
-
-    print(f"\nNet exposure: {portfolio.net_exposure:.4f}")
-    print(f"Gross exposure: {portfolio.gross_exposure:.4f}")
-    print(f"Sharpe: {portfolio.performance_metrics.sharpe_ratio}")
-    print(f"Max drawdown: {portfolio.risk_metrics.max_drawdown}")
-    print(f"Rolling avg corr length: {portfolio.rolling_avg_correlation}")
-    print(f"Sectors: {list(portfolio.sector_metrics.keys())}")
