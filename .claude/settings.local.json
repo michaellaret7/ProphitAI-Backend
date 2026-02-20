@@ -78,7 +78,8 @@
       "Bash(for f in __init__.py allocator.py classifier.py constraints.py models.py service.py strategies.py)",
       "Bash(do echo \"=== $f ===\")",
       "WebFetch(domain:www.wisdomtree.com)",
-      "Bash(ls:*)"
+      "Bash(ls:*)",
+      "Bash(PYTHONPATH=. .venv/Scripts/python.exe:*)"
     ],
     "deny": [],
     "ask": []

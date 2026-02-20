@@ -410,7 +410,7 @@ class Price(MarketBase):
     high = Column(Float)
     low = Column(Float)
     close = Column(Float)
-    volume = Column(Integer)
+    volume = Column(BigInteger)
 
     # Relationship
     ticker = relationship('Ticker', back_populates='prices')

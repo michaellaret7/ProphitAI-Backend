@@ -62,6 +62,9 @@ from app.core.atlas.tools.alpaca import (
     OPTION_SNAPSHOT_TOOL,
 )
 
+from app.core.atlas.tools.portfolio.get_user_portfolio import GET_USER_PORTFOLIO_TOOL
+from app.core.atlas.tools.portfolio.performance import CALCULATE_PORTFOLIO_PERFORMANCE_TOOL
+
 if TYPE_CHECKING:
     from app.core.atlas.agents.base import AgentBase
 
@@ -130,6 +133,9 @@ def register_tools_for_agent_type(agent: "AgentBase", agent_type: str) -> None:
         agent.add_tool(**GET_PRICE_TARGET_DATA_TOOL)
 
         agent.add_tool(**MACRO_RESEARCH_SEARCH_TOOL)
+
+        agent.add_tool(**GET_USER_PORTFOLIO_TOOL)
+        agent.add_tool(**CALCULATE_PORTFOLIO_PERFORMANCE_TOOL)
     
     elif agent_type == "user_uploads":
         agent.add_tool(**USER_UPLOAD_SEARCH_TOOL)
