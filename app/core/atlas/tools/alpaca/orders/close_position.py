@@ -1,6 +1,6 @@
 """Close a position tool - full or partial by qty or percentage."""
 
-from app.utils.alpaca.broker import Alpaca
+from app.brokers.alpaca.broker import Alpaca
 from typing import Optional
 from app.core.atlas.tools.responses import success_response, error_response
 

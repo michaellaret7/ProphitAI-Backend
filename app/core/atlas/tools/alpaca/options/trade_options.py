@@ -1,6 +1,6 @@
 """Options trading tool - buy or sell option contracts."""
 
-from app.utils.alpaca.broker import Alpaca
+from app.brokers.alpaca.broker import Alpaca
 from typing import Literal, Optional
 from app.core.atlas.tools.responses import success_response, error_response
 

@@ -1,9 +1,9 @@
-# app/utils/alpaca/options.py
+# app/brokers/alpaca/options.py
 
 from typing import Dict, List, Optional, Tuple
 from datetime import date, datetime
 import re
-from app.utils.alpaca.client import AlpacaClient
+from app.brokers.alpaca.client import AlpacaClient
 from alpaca.trading.requests import GetOptionContractsRequest
 from alpaca.data.historical.option import OptionHistoricalDataClient
 from alpaca.data.requests import (

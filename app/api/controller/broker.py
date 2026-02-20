@@ -1,7 +1,7 @@
 import uuid
-from app.utils.alpaca.client import AlpacaClient
-from app.utils.alpaca.portfolio import AlpacaPortfolio
-from app.utils.alpaca.trading import AlpacaTrading
+from app.brokers.alpaca.client import AlpacaClient
+from app.brokers.alpaca.portfolio import AlpacaPortfolio
+from app.brokers.alpaca.trading import AlpacaTrading
 from app.utils.decorators.api_decorators import handle_controller_errors
 from app.api.response_envelope import ok_envelope
 from app.repositories.portfolio.crud import add_portfolio, delete_portfolio_by_name
@@ -118,10 +118,3 @@ async def add_broker_portfolio_controller(
     )
 
 
-if __name__ == "__main__":
-    import asyncio
-    deleted_count = delete_portfolio_by_name(
-        portfolio_name="test",
-        email="michaellaret7@gmail.com"
-    )
-    print(f"Deleted {deleted_count} tickers")

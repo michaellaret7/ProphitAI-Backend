@@ -1,6 +1,6 @@
 """Option latest quote tool - real-time bid/ask for option contracts."""
 
-from app.utils.alpaca.broker import Alpaca
+from app.brokers.alpaca.broker import Alpaca
 from app.core.atlas.tools.responses import success_response, error_response
 
 

@@ -1,6 +1,6 @@
 """Multi-leg option order tool - spreads, straddles, iron condors, etc."""
 
-from app.utils.alpaca.broker import Alpaca
+from app.brokers.alpaca.broker import Alpaca
 from typing import Optional, List, Dict
 from app.core.atlas.tools.responses import success_response, error_response
 

@@ -147,22 +147,15 @@ if __name__ == "__main__":
     from app.core.calc_v2.ticker import Ticker
     import time
 
-    universe = [
-        'AAPL', 'MSFT', 'GOOGL', 'AMZN', 'NVDA', 'META', 'TSLA', 'JPM', 'V', 'JNJ',
-        'WMT', 'PG', 'MA', 'HD', 'DIS', 'BAC', 'XOM', 'UNH', 'CVX', 'KO', 'PEP', 'COST',
-        'ABBV', 'MRK', 'AVGO', 'ORCL', 'MU', 'AMD', 'INTC', 'CRM', 'NFLX', 'ADBE',
-    ]
-    tickers = random.sample(universe, 17)
-    raw = [random.random() for _ in range(17)]
-    weights = np.array(raw) / sum(raw)
+    tickers = ['AAPL', 'MSFT', 'GOOGL', 'AMZN', 'NVDA', 'META', 'TSLA', 'JPM', 'V', 'JNJ', 'AAL', 'F']
+    weights = [0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, -0.1, -0.1]
 
     # ETF shocks for stress testing
-    etf_tickers = ['TLT', 'GLD', 'EEM']
     shocks = {'SPY': -0.05, 'TLT': 0.10, 'GLD': -0.04, 'EEM': 0.15}
 
     start_time = time.time()
-    ohlcv = fetch_bulk_ohlcv_data_for_tickers(tickers + ['SPY'], '2024-01-01', '2026-01-31')
-    etf_prices = fetch_bulk_price_data_for_tickers(etf_tickers, '2024-01-01', '2026-01-31')
+    ohlcv = fetch_bulk_ohlcv_data_for_tickers(tickers + ['SPY'], '2020-01-01', '2026-01-31')
+    etf_prices = fetch_bulk_price_data_for_tickers(shocks.keys(), '2020-01-01', '2026-01-31')
     end_time = time.time()
     print(f"Data fetch: {end_time - start_time:.1f}s")
 
@@ -171,7 +164,7 @@ if __name__ == "__main__":
     # Build ETF returns map (SPY from ohlcv + other ETFs from price fetch)
     etf_returns_map: dict[str, pd.Series] = {}
     etf_returns_map['SPY'] = benchmark.pct_change().dropna()
-    for etf in etf_tickers:
+    for etf in shocks.keys():
         if etf in etf_prices.columns:
             etf_returns_map[etf] = etf_prices[etf].pct_change().dropna()
 
@@ -194,8 +187,5 @@ if __name__ == "__main__":
     print(f"Portfolio constructor: {t2 - t1:.1f}s")
     print(f"Total build: {t2 - t0:.1f}s")
 
-    print(f"\nFactor exposure: {portfolio.factor_exposure}")
-    print(f"Industry metrics: {portfolio.industry_metrics}")
-    print(f"\nStress test expected return: {portfolio.stress_test.expected_return if portfolio.stress_test else None}")
-    print(f"Stress test top detractors: {portfolio.stress_test.top_detractors if portfolio.stress_test else None}")
-    print(f"Stress test top hedges: {portfolio.stress_test.top_hedges if portfolio.stress_test else None}")
+    print(portfolio.performance_metrics)
+

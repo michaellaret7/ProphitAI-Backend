@@ -1,9 +1,9 @@
 """Alpaca Unified Interface - One-stop shop for all Alpaca trading operations."""
 from typing import Optional, List, Dict, Tuple
-from app.utils.alpaca.client import AlpacaClient
-from app.utils.alpaca.trading import AlpacaTrading
-from app.utils.alpaca.portfolio import AlpacaPortfolio
-from app.utils.alpaca.options import OptionsService
+from app.brokers.alpaca.client import AlpacaClient
+from app.brokers.alpaca.trading import AlpacaTrading
+from app.brokers.alpaca.portfolio import AlpacaPortfolio
+from app.brokers.alpaca.options import OptionsService
 
 
 class Alpaca:

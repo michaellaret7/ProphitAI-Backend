@@ -1,6 +1,6 @@
 """Replace/modify an existing open order tool."""
 
-from app.utils.alpaca.broker import Alpaca
+from app.brokers.alpaca.broker import Alpaca
 from typing import Optional
 from app.core.atlas.tools.responses import success_response, error_response
 
