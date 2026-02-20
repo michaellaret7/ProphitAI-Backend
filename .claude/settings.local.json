@@ -76,7 +76,8 @@
       "WebFetch(domain:alpaca.markets)",
       "Bash(test:*)",
       "Bash(for f in __init__.py allocator.py classifier.py constraints.py models.py service.py strategies.py)",
-      "Bash(do echo \"=== $f ===\")"
+      "Bash(do echo \"=== $f ===\")",
+      "WebFetch(domain:www.wisdomtree.com)"
     ],
     "deny": [],
     "ask": []

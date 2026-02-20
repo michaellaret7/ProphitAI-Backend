@@ -11,7 +11,7 @@ from dataclasses import dataclass
 import numpy as np
 
 from app.repositories.fundamentals.models import FundamentalsResult
-from app.core.calculations.core.helpers import sort_rows_desc_by_date, ttm
+from app.core.calc_v2.utils import sort_rows_desc_by_date, ttm
 
 
 @dataclass

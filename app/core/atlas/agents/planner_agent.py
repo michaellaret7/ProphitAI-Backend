@@ -31,6 +31,11 @@ class PlannerAgent(AgentBase):
         temperature: Optional[float] = None
     ):
 
+        if provider is None:
+            provider = "gemini"
+        if model is None:
+            model = "gemini-3.1-pro-preview"
+
         super().__init__(
             provider=provider,
             model=model,

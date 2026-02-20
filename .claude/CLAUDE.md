@@ -136,6 +136,9 @@ from app.utils.time_utils import get_current_utc_time, get_utc_date_str, get_utc
 - Type Safety: Mandate Type Hints and explicit return types to ensure the codebase remains self-documenting and maintainable.
 - Resource Efficiency: Use Context Managers for all I/O and prioritize vectorized operations for data-heavy tasks.
 
+**Rules**
+- When a function or class takes a portfolio as a parameter it should always be tickers: List[str] and holdings: List[int] 
+
 ### Code Documentation
 - Every module should have a docstring explaining its purpose
 - Public functions must have complete docstrings

@@ -29,7 +29,7 @@ from app.core.calc_v2.models.factors import (
     FactorExposureDetail,
     PortfolioFactorExposure,
 )
-from app.core.calculations.core.helpers import winsorize_series, zscore_series
+from app.core.calc_v2.utils import winsorize_series, zscore_series
 
 
 # ================================

@@ -3,6 +3,7 @@
 import numpy as np
 import pandas as pd
 
+from app.core.calc_v2.models.group_metrics import GroupMetrics
 from app.core.calc_v2.risk.distribution import calc_var
 from app.db.core.db_config import MarketSession
 from app.db.core.models.market_data_models import Ticker as TickerModel
@@ -69,10 +70,10 @@ def calc_group_metrics(
     tickers: list[str],
     weights: np.ndarray,
     asset_returns: pd.DataFrame,
-) -> dict[str, dict]:
+) -> dict[str, GroupMetrics]:
     """Calculate VaR and concentration for each group (sector/industry/sub_industry).
 
-    Returns a dict keyed by group name with var_99, concentration, and tickers.
+    Returns a dict keyed by group name with GroupMetrics (var_99, concentration, tickers).
     """
     # Reason: Build {group_name: [(ticker, weight)]} mapping
     groups: dict[str, list[tuple[str, float]]] = {}
@@ -81,7 +82,7 @@ def calc_group_metrics(
         group_name = classification.get(group_type) or 'Unknown'
         groups.setdefault(group_name, []).append((ticker, float(weights[i])))
 
-    results = {}
+    results: dict[str, GroupMetrics] = {}
     for group_name, members in sorted(groups.items()):
         member_tickers = [t for t, _ in members]
         member_weights = np.array([w for _, w in members])
@@ -92,10 +93,10 @@ def calc_group_metrics(
         group_returns = (asset_returns[member_tickers] * member_weights).sum(axis=1)
         var_99 = calc_var(group_returns, confidence=0.99)
 
-        results[group_name] = {
-            'var_99': round(var_99, 4),
-            'concentration': round(concentration, 4),
-            'tickers': member_tickers,
-        }
+        results[group_name] = GroupMetrics(
+            var_99=var_99,
+            concentration=concentration,
+            tickers=member_tickers,
+        )
 
     return results

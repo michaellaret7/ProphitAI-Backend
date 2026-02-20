@@ -7,7 +7,7 @@ import numpy as np
 
 from app.core.calc_v2.factors.prep import FundamentalData
 from app.core.calc_v2.models.factors import GrowthFactors
-from app.core.calculations.core.helpers import safe_divide
+from app.core.calc_v2.utils import safe_divide
 
 
 # ================================

@@ -36,8 +36,11 @@ class WorkerAgent(AgentBase):
         temperature: Optional[float] = None,
         chat_callback: Optional[Any] = None,
     ):
-        provider = provider or "gemini"
-        model = model or "gemini-3-pro-preview"
+
+        if provider is None:
+            provider = "gemini"
+        if model is None:
+            model = "gemini-3.1-pro-preview"
 
         super().__init__(
             provider=provider,

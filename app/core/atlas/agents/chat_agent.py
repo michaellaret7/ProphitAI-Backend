@@ -45,9 +45,9 @@ class ChatAgent(AgentBase):
         chat_callback: Optional[Union[ChatCallback, NoOpChatCallback]] = None,
     ):
         if provider is None:
-            provider = "grok"
+            provider = "anthropic"
         if model is None:
-            model = "grok-4-1-fast-non-reasoning"
+            model = "claude-sonnet-4-6"
 
         super().__init__(
             provider=provider,
