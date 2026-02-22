@@ -15,12 +15,6 @@ from app.utils.time_utils import get_current_utc_time
 
 class User(UserBase):
     __tablename__ = 'users'
-    __table_args__ = (
-        CheckConstraint(
-            "role IN ('ria', 'client', 'individual', 'system')",
-            name='chk_user_role'
-        ),
-    )
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     clerk_id = Column(String, unique=True, index=True, nullable=True)
@@ -29,28 +23,12 @@ class User(UserBase):
     last_name = Column(String)
     creation_date = Column(DateTime, default=get_current_utc_time)
 
-    # Direct company association
-    company_id = Column(UUID(as_uuid=True), ForeignKey('companies.id'), nullable=True, index=True)
-    role = Column(String, nullable=True, default=None)
-    handler_id = Column(UUID(as_uuid=True), ForeignKey('users.id'), nullable=True, index=True)
+    # Broker
+    broker = Column(String, nullable=True)  # e.g. 'alpaca'
+    broker_account_id = Column(String, nullable=True, unique=True, index=True)
 
     # Relationships
-    company = relationship('Company', back_populates='users')
-    clients = relationship('User', backref='handler', remote_side=[id], foreign_keys=[handler_id])
     watchlists = relationship('Watchlist', back_populates='user', cascade='all, delete-orphan')
-    # subscriptions = relationship('Subscription', back_populates='user', cascade='all, delete-orphan')
-
-class Company(UserBase):
-    __tablename__ = 'companies'
-    
-    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    name = Column(String, nullable=False)
-    creation_date = Column(DateTime, default=get_current_utc_time)
-    seats = Column(Integer)
-    
-    # Relationships
-    users = relationship('User', back_populates='company')
-    # subscriptions = relationship('Subscription', back_populates='company', cascade='all, delete-orphan')
 
 class Portfolio(UserBase):
     __tablename__ = 'portfolios'
