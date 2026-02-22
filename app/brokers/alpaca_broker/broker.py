@@ -9,7 +9,6 @@ Sub-components accessible directly:
     broker.funding     — ACH, transfers, journaling
     broker.options     — chains, quotes, snapshots, bars
     broker.documents   — statements, confirmations, tax forms
-    broker.watchlists  — per-account watchlist CRUD
 """
 
 from typing import Optional, List, Dict, Tuple
@@ -20,7 +19,6 @@ from app.brokers.alpaca_broker.portfolio import BrokerPortfolio
 from app.brokers.alpaca_broker.funding import BrokerFunding
 from app.brokers.alpaca_broker.options import BrokerOptionsService
 from app.brokers.alpaca_broker.documents import BrokerDocuments
-from app.brokers.alpaca_broker.watchlists import BrokerWatchlists
 
 
 class ProphitBroker:
@@ -54,7 +52,6 @@ class ProphitBroker:
         self.documents = BrokerDocuments(
             broker_client, api_key=_api_key, secret_key=_secret_key, sandbox=sandbox,
         )
-        self.watchlists = BrokerWatchlists(broker_client)
 
     # ══════════════════════════════════════════════════════════════
     # ACCOUNTS
@@ -398,47 +395,6 @@ class ProphitBroker:
     def get_document_download_url(self, account_id: str, document_id: str) -> str:
         """Get a pre-signed download URL for a document (PDF)."""
         return self.documents.get_download_url(account_id, document_id)
-
-    # ══════════════════════════════════════════════════════════════
-    # WATCHLISTS
-    # ══════════════════════════════════════════════════════════════
-
-    def create_watchlist(
-        self, account_id: str, name: str, symbols: Optional[List[str]] = None,
-    ) -> Dict:
-        """Create a new watchlist for an account."""
-        return self.watchlists.create_watchlist(account_id, name, symbols)
-
-    def get_watchlists(self, account_id: str) -> List[Dict]:
-        """Get all watchlists for an account."""
-        return self.watchlists.get_watchlists(account_id)
-
-    def get_watchlist(self, account_id: str, watchlist_id: str) -> Dict:
-        """Get a specific watchlist by ID."""
-        return self.watchlists.get_watchlist(account_id, watchlist_id)
-
-    def update_watchlist(
-        self, account_id: str, watchlist_id: str,
-        name: Optional[str] = None, symbols: Optional[List[str]] = None,
-    ) -> Dict:
-        """Update a watchlist (replace name and/or symbols)."""
-        return self.watchlists.update_watchlist(account_id, watchlist_id, name, symbols)
-
-    def add_symbol_to_watchlist(
-        self, account_id: str, watchlist_id: str, symbol: str,
-    ) -> Dict:
-        """Add a single symbol to a watchlist."""
-        return self.watchlists.add_symbol(account_id, watchlist_id, symbol)
-
-    def remove_symbol_from_watchlist(
-        self, account_id: str, watchlist_id: str, symbol: str,
-    ) -> Dict:
-        """Remove a single symbol from a watchlist."""
-        return self.watchlists.remove_symbol(account_id, watchlist_id, symbol)
-
-    def delete_watchlist(self, account_id: str, watchlist_id: str) -> None:
-        """Delete a watchlist."""
-        self.watchlists.delete_watchlist(account_id, watchlist_id)
 
     # ── Utilities ─────────────────────────────────────────────
 

@@ -77,6 +77,12 @@ class BrokerFunding:
                 "account_owner_name": relationship.account_owner_name,
             }
         except Exception as e:
+            # Reason: Alpaca allows only one active ACH relationship per account.
+            # If one already exists, return it instead of failing.
+            if "40910000" in str(e):
+                existing = self.get_ach_relationships(account_id)
+                if existing:
+                    return existing[0]
             raise Exception(f"Failed to link bank for account {account_id}: {str(e)}")
 
     def get_ach_relationships(self, account_id: str) -> List[Dict]:
@@ -188,7 +194,7 @@ class BrokerFunding:
         timing_enum = timing_map.get(timing, TransferTiming.IMMEDIATE)
 
         request = CreateACHTransferRequest(
-            amount=amount,
+            amount=str(amount),
             direction=direction,
             timing=timing_enum,
             relationship_id=relationship_id,

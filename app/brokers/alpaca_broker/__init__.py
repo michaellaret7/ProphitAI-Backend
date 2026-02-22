@@ -7,7 +7,6 @@ from app.brokers.alpaca_broker.portfolio import BrokerPortfolio
 from app.brokers.alpaca_broker.funding import BrokerFunding
 from app.brokers.alpaca_broker.options import BrokerOptionsService
 from app.brokers.alpaca_broker.documents import BrokerDocuments
-from app.brokers.alpaca_broker.watchlists import BrokerWatchlists
 
 __all__ = [
     "AlpacaBrokerClient",
@@ -18,5 +17,4 @@ __all__ = [
     "BrokerFunding",
     "BrokerOptionsService",
     "BrokerDocuments",
-    "BrokerWatchlists",
 ]
