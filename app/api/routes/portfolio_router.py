@@ -26,7 +26,7 @@ from app.api.controller.portfolio import (
     get_portfolio_alert_state_controller,
 )
 from app.api.auth.clerk import get_clerk_user_id
-from app.repositories.user.user import get_all_user_data_by_clerk_id
+from app.repositories.user.account import get_all_user_data_by_clerk_id
 
 router = APIRouter(tags=["Portfolios 💼"])
 

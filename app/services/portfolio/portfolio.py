@@ -2,7 +2,7 @@ from typing import Dict, Any, List, Tuple, Optional
 import uuid
 from app.repositories.portfolio.crud import add_portfolio, update_portfolio, delete_portfolio
 from app.repositories.portfolio.retrieval import list_portfolios, retrieve_portfolio
-from app.repositories.user.user import get_all_user_data_by_id
+from app.repositories.user.account import get_all_user_data_by_id
 
 
 class Position:

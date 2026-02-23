@@ -1,10 +1,9 @@
 from fastapi import HTTPException
 from typing import Optional, Dict, Any
-from app.repositories.user.user import (
+from app.repositories.user.account import (
     get_all_user_data_by_clerk_id,
     update_user_by_clerk_id,
     delete_user_by_clerk_id,
-    set_user_role_by_clerk_id,
 )
 from app.api.response_envelope import ok_envelope
 from app.utils.decorators.api_decorators import handle_controller_errors
@@ -12,16 +11,6 @@ from app.utils.decorators.api_decorators import handle_controller_errors
 
 def _format_user_response(user_data: dict, clerk_id: str) -> Dict[str, Any]:
     """Format user data for API response."""
-    # Format companies with full info
-    companies = [
-        {
-            "id": c["id"],
-            "name": c.get("name"),
-            "role": c.get("user_role"),
-        }
-        for c in user_data.get("companies", [])
-    ]
-
     # Format portfolios
     portfolios = [
         {
@@ -44,8 +33,8 @@ def _format_user_response(user_data: dict, clerk_id: str) -> Dict[str, Any]:
             "email": user_data.get("email"),
             "firstName": user_data.get("first_name"),
             "lastName": user_data.get("last_name"),
-            "role": user_data.get("role"),
-            "companies": companies,
+            "broker": user_data.get("broker"),
+            "brokerAccountId": user_data.get("broker_account_id"),
             "portfolios": portfolios,
         },
     )
@@ -108,23 +97,6 @@ async def delete_user_controller(*, clerk_id: str) -> Dict[str, Any]:
         self_link="/api/user",
         payload={}
     )
-
-
-@handle_controller_errors
-async def set_user_role_controller(*, clerk_id: str, role: str) -> Dict[str, Any]:
-    """Set user role during onboarding."""
-    if not clerk_id:
-        raise ValueError("clerkId is required")
-    if not role:
-        raise ValueError("role is required")
-
-    set_user_role_by_clerk_id(clerk_id=clerk_id, role=role)
-
-    user_data = get_all_user_data_by_clerk_id(clerk_id=clerk_id)
-    if not user_data:
-        raise HTTPException(status_code=404, detail="User not found")
-
-    return _format_user_response(user_data, clerk_id)
 
 
 # Legacy function kept for compatibility

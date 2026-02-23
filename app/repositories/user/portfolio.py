@@ -1,8 +1,10 @@
-"""User portfolio repository functions for querying user portfolio data."""
+"""User portfolio repository — DB portfolio data and broker portfolio history."""
 
+from typing import Optional, Dict
 from app.db.core.models.user_data_models import *
 from sqlalchemy.orm import selectinload
 from app.utils.decorators.database import with_session
+from app.repositories.user.broker import get_broker, resolve_broker_account
 
 
 @with_session('user')
@@ -44,3 +46,28 @@ def get_user_current_portfolio(email: str, session=None):
         'allocation': item.allocation,
         'num_shares': item.num_shares,
     } for item in current_portfolio.items]
+
+
+def get_portfolio_history(
+    clerk_id: str,
+    period: Optional[str] = None,
+    timeframe: Optional[str] = None,
+    extended_hours: Optional[bool] = None,
+) -> Dict:
+    """
+    Get historical portfolio equity and P&L over time from broker.
+
+    Args:
+        clerk_id: Clerk authentication ID
+        period: Time period (e.g. '1M', '3M', '1A', 'all')
+        timeframe: Data resolution (e.g. '1D', '1H', '15Min')
+        extended_hours: Include extended hours data
+
+    Returns:
+        Dict with timestamp, equity, profit_loss, etc.
+    """
+    account_id = resolve_broker_account(clerk_id=clerk_id)
+    return get_broker().get_portfolio_history(
+        account_id, period=period, timeframe=timeframe,
+        extended_hours=extended_hours,
+    )

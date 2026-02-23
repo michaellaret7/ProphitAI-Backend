@@ -79,7 +79,8 @@
       "Bash(do echo \"=== $f ===\")",
       "WebFetch(domain:www.wisdomtree.com)",
       "Bash(ls:*)",
-      "Bash(PYTHONPATH=. .venv/Scripts/python.exe:*)"
+      "Bash(PYTHONPATH=. .venv/Scripts/python.exe:*)",
+      "WebFetch(domain:forum.alpaca.markets)"
     ],
     "deny": [],
     "ask": []

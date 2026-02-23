@@ -9,8 +9,7 @@ import os
 import logging
 from fastapi import APIRouter, Request, HTTPException
 from svix.webhooks import Webhook, WebhookVerificationError
-from app.repositories.user.user import add_user, delete_user_by_clerk_id
-from app.repositories.user.company import assign_user_to_company_by_id
+from app.repositories.user.account import add_user, delete_user_by_clerk_id
 
 from dotenv import load_dotenv
 
@@ -21,7 +20,6 @@ logger = logging.getLogger(__name__)
 router = APIRouter(tags=["🪝Webhooks"])
 
 CLERK_WEBHOOK_SECRET = os.getenv("CLERK_WEBHOOK_SECRET")
-DEFAULT_COMPANY_ID = "c13abf69-e3ff-49b1-95a7-030c1bbef7af"
 
 @router.post("/webhooks/clerk")
 async def clerk_webhook(request: Request):
@@ -68,11 +66,6 @@ async def clerk_webhook(request: Request):
             )
             if created:
                 logger.info(f"Created user: {email} (clerk_id: {clerk_id})")
-                # Assign to default company (role set later during onboarding)
-                assign_user_to_company_by_id(
-                    email=email,
-                    company_id=DEFAULT_COMPANY_ID,
-                )
             else:
                 logger.warning(f"Failed to create user: {email}")
 
