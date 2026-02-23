@@ -23,6 +23,7 @@ from app.api.routes.search_router import router as search_router
 from app.api.routes.technical_router import router as technical_router
 from app.api.routes.ticker_router import router as ticker_router
 from app.api.routes.user_routes import router as user_router
+from app.api.routes.dashboard_router import router as dashboard_router
 from app.api.routes.watchlist_routes import router as watchlist_router
 from app.api.routes.websocket_router import router as websocket_router
 from app.api.routes.messaging_router import router as messaging_router
@@ -102,6 +103,7 @@ app.include_router(user_router, prefix="/api", dependencies=auth_dependencies)
 app.include_router(portfolio_router, prefix="/api", dependencies=auth_dependencies)
 app.include_router(broker_router, prefix="/api", dependencies=auth_dependencies)
 app.include_router(watchlist_router, prefix="/api", dependencies=auth_dependencies)
+app.include_router(dashboard_router, prefix="/api", dependencies=auth_dependencies)
 
 # Document upload - API key only (user_id passed as query param)
 app.include_router(document_router, prefix="/api", dependencies=api_key_only)
