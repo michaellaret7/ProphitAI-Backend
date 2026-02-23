@@ -23,7 +23,7 @@ def macro_research(
     top_k: Annotated[int, Param(min_val=3, max_val=15)] = 7,
     research_provider: Optional[str] = None,
     filename: Optional[str] = None,
-    _simulation_date: Optional[str] = None,
+
 ) -> str:
     """
     Search macro and economic research reports using hybrid semantic + keyword search.

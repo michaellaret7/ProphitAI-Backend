@@ -22,7 +22,7 @@ def user_upload_search(
     user_id: str,
     top_k: Annotated[int, Param(min_val=3, max_val=25)] = 7,
     file_name: Optional[str] = None,
-    _simulation_date: Optional[str] = None,
+
 ) -> str:
     """
     Search the user's uploaded documents using hybrid semantic + keyword search.

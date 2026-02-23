@@ -22,7 +22,7 @@ def economics_research_search(
     query: str,
     top_k: Annotated[int, Param(min_val=3, max_val=25)] = 7,
     doc_id: Optional[str] = None,
-    _simulation_date: Optional[str] = None,
+
 ) -> str:
     """
     Search economics reports and indicator publications using hybrid semantic + keyword search.

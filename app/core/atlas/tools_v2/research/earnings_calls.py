@@ -32,7 +32,7 @@ def earnings_call_search(
     tickers: Optional[list[str]] = None,
     fiscal_year: Optional[int] = None,
     fiscal_quarter: Optional[str] = None,
-    _simulation_date: Optional[str] = None,
+
 ) -> str:
     """
     Search earnings call transcripts using hybrid semantic + keyword search.

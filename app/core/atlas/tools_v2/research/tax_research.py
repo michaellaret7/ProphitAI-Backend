@@ -21,7 +21,7 @@ def tax_research_search(
     query: str,
     top_k: Annotated[int, Param(min_val=3, max_val=25)] = 7,
     file_name: Optional[str] = None,
-    _simulation_date: Optional[str] = None,
+
 ) -> str:
     """
     Search tax documents, IRS forms, instructions, and publications using hybrid semantic + keyword search.
