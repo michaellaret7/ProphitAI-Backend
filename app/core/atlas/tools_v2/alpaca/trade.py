@@ -114,4 +114,152 @@ def submit_trade(
         )
 
 
+@agent_tool(name="get_orders")
+def get_orders(
+    account_id: str,
+    status: Literal['open', 'closed', 'all'] = "open",
+) -> str:
+    """
+    Get orders for a brokerage account filtered by status.
+
+    Args:
+        account_id: The brokerage account UUID to query
+        status: Filter orders by status.
+            - open: Only unfilled/partially filled orders (default)
+            - closed: Only completed/cancelled/expired orders
+            - all: All orders regardless of status
+
+    Returns:
+        List of order dicts, each with id, symbol, qty, side, type, status,
+        limit_price, filled_qty, filled_avg_price, submitted_at, and filled_at
+
+    Examples:
+        get_orders(account_id="d27aa8c2-...", status="open")
+        >>> [{"id": "...", "symbol": "AAPL", "qty": 10.0, "side": "OrderSide.BUY",
+              "type": "OrderType.LIMIT", "status": "OrderStatus.NEW", ...}]
+
+        get_orders(account_id="d27aa8c2-...", status="closed")
+        >>> [{"id": "...", "symbol": "MSFT", "qty": 5.0, "status": "OrderStatus.FILLED", ...}]
+
+    Raises:
+        Exception: If the account ID is invalid
+    """
+    broker = ProphitBroker(sandbox=True)
+
+    try:
+        result = broker.get_orders(account_id, status)
+        if not result:
+            return success_response(f"No {status} orders found for this account")
+        return success_response(result)
+    except Exception as e:
+        return error_response(
+            f"Failed to get orders for {account_id}: {str(e)}"
+        )
+
+
+@agent_tool(name="cancel_order")
+def cancel_order(
+    account_id: str,
+    order_id: str,
+) -> str:
+    """
+    Cancel a specific open order by its UUID.
+
+    Args:
+        account_id: The brokerage account UUID that owns the order
+        order_id: The UUID of the order to cancel
+
+    Returns:
+        Confirmation message that the order was cancelled
+
+    Examples:
+        cancel_order(account_id="d27aa8c2-...", order_id="b1e2f3a4-...")
+        >>> "Order b1e2f3a4-... cancelled successfully"
+
+    Raises:
+        Exception: If the order does not exist, is already filled, or account ID is invalid
+    """
+    broker = ProphitBroker(sandbox=True)
+
+    try:
+        broker.cancel_order(account_id, order_id)
+        return success_response(f"Order {order_id} cancelled successfully")
+    except Exception as e:
+        return error_response(
+            f"Failed to cancel order {order_id} for {account_id}: {str(e)}"
+        )
+
+
+@agent_tool(name="cancel_all_orders")
+def cancel_all_orders(
+    account_id: str,
+) -> str:
+    """
+    Cancel all open orders for a brokerage account.
+
+    Args:
+        account_id: The brokerage account UUID
+
+    Returns:
+        Confirmation message that all orders were cancelled
+
+    Examples:
+        cancel_all_orders(account_id="d27aa8c2-...")
+        >>> "All open orders cancelled for account d27aa8c2-..."
+
+    Raises:
+        Exception: If the account ID is invalid
+    """
+    broker = ProphitBroker(sandbox=True)
+
+    try:
+        broker.cancel_all_orders(account_id)
+        return success_response(f"All open orders cancelled for account {account_id}")
+    except Exception as e:
+        return error_response(
+            f"Failed to cancel all orders for {account_id}: {str(e)}"
+        )
+
+
+@agent_tool(name="get_asset")
+def get_asset(
+    symbol: str,
+) -> str:
+    """
+    Get detailed information for a single tradeable asset.
+
+    Returns asset metadata including tradability, fractionability, marginability,
+    shortability, exchange, and order size constraints.
+
+    Args:
+        symbol: Ticker symbol (e.g. 'AAPL'), crypto pair (e.g. 'BTC/USD'),
+            or asset UUID
+
+    Returns:
+        Asset detail dict with id, symbol, name, asset_class, exchange, status,
+        tradable, fractionable, marginable, shortable, easy_to_borrow,
+        min_order_size, min_trade_increment, price_increment,
+        and maintenance_margin_requirement
+
+    Examples:
+        get_asset(symbol="AAPL")
+        >>> {"id": "...", "symbol": "AAPL", "name": "Apple Inc.", "asset_class": "us_equity",
+             "exchange": "NASDAQ", "status": "active", "tradable": True,
+             "fractionable": True, "marginable": True, "shortable": True, ...}
+
+        get_asset(symbol="BTC/USD")
+        >>> {"id": "...", "symbol": "BTC/USD", "name": "Bitcoin", "asset_class": "crypto",
+             "tradable": True, "fractionable": True, ...}
+
+    Raises:
+        Exception: If the symbol is invalid or not found
+    """
+    broker = ProphitBroker(sandbox=True)
+
+    try:
+        result = broker.get_asset(symbol)
+        return success_response(result)
+    except Exception as e:
+        return error_response(f"Failed to get asset info for {symbol}: {str(e)}")
+
 
