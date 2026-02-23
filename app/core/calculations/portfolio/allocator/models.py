@@ -63,7 +63,7 @@ class Allocation(BaseModel):
     """Single ticker allocation with weight and share count."""
     ticker: str
     weight: float
-    num_shares: int
+    num_shares: float
 
 
 class PortfolioPerformance(BaseModel):

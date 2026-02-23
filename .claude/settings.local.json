@@ -80,7 +80,8 @@
       "WebFetch(domain:www.wisdomtree.com)",
       "Bash(ls:*)",
       "Bash(PYTHONPATH=. .venv/Scripts/python.exe:*)",
-      "WebFetch(domain:forum.alpaca.markets)"
+      "WebFetch(domain:forum.alpaca.markets)",
+      "Bash(source .venv/bin/activate && alembic -c app/db/alembic_migration/alembic.ini --name user_data upgrade head 2>&1)"
     ],
     "deny": [],
     "ask": []

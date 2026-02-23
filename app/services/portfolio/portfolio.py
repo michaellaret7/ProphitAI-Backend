@@ -12,14 +12,14 @@ class Position:
     Attributes:
         ticker: Stock ticker symbol
         allocation: Position weight as decimal (0.25 = 25%), range 0-1
-        num_shares: Optional number of shares held (integer)
+        num_shares: Optional number of shares held (supports fractional)
         position_nav: Optional position value (num_shares * price)
     """
     def __init__(
         self,
         ticker: str,
         allocation: float,
-        num_shares: Optional[int] = None,
+        num_shares: Optional[float] = None,
         position_nav: Optional[float] = None
     ):
         self.ticker = ticker

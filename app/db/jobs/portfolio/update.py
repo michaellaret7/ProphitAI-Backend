@@ -207,7 +207,7 @@ class UpdatePortfolios:
                 and portfolio.nav > 0
             ):
                 target_value = item.allocation * portfolio.nav
-                update["num_shares"] = int(target_value / prices[item.ticker])
+                update["num_shares"] = round(target_value / prices[item.ticker], 4)
                 has_changes = True
                 logger.info(
                     f"Calculated num_shares for {item.ticker}: {update['num_shares']}"

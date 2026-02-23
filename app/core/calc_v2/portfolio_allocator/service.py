@@ -15,11 +15,11 @@ from app.core.calc_v2.portfolio_allocator.models import (
 from app.core.calc_v2.portfolio_allocator.allocator import PortfolioAllocator
 
 
-def calc_num_shares(weights: Dict[str, float], portfolio_value: float) -> Dict[str, int]:
+def calc_num_shares(weights: Dict[str, float], portfolio_value: float) -> Dict[str, float]:
     """Calculate the number of shares for each ticker based on weights and portfolio value.
 
     Returns:
-        Dict mapping ticker symbols to number of shares (integer, rounded down).
+        Dict mapping ticker symbols to number of shares (fractional).
 
     Raises:
         ValueError: If portfolio_value is invalid or price data is unavailable.
@@ -51,7 +51,7 @@ def calc_num_shares(weights: Dict[str, float], portfolio_value: float) -> Dict[s
 
     num_shares = {}
     for ticker, weight in weights.items():
-        num_shares[ticker] = int(weight * portfolio_value / prices[ticker])
+        num_shares[ticker] = round(weight * portfolio_value / prices[ticker], 4)
 
     return num_shares
 

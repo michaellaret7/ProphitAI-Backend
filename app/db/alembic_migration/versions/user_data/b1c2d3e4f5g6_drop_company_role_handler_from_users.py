@@ -21,22 +21,25 @@ depends_on: Union[str, Sequence[str], None] = None
 
 
 def upgrade() -> None:
+    # Reason: Use raw SQL with IF EXISTS to handle production environments
+    # where some/all of these objects were never created
+
     # Drop FK: users.handler_id -> users.id
-    op.drop_constraint('fk_users_handler_id', 'users', type_='foreignkey')
+    op.execute("ALTER TABLE users DROP CONSTRAINT IF EXISTS fk_users_handler_id")
 
     # Drop check constraint on role
-    op.drop_constraint('chk_user_role', 'users', type_='check')
+    op.execute("ALTER TABLE users DROP CONSTRAINT IF EXISTS chk_user_role")
 
     # Drop index on handler_id
-    op.drop_index('ix_users_handler_id', table_name='users')
+    op.execute("DROP INDEX IF EXISTS ix_users_handler_id")
 
-    # Drop columns
-    op.drop_column('users', 'handler_id')
-    op.drop_column('users', 'role')
-    op.drop_column('users', 'company_id')
+    # Drop columns (only if they exist)
+    op.execute("ALTER TABLE users DROP COLUMN IF EXISTS handler_id")
+    op.execute("ALTER TABLE users DROP COLUMN IF EXISTS role")
+    op.execute("ALTER TABLE users DROP COLUMN IF EXISTS company_id")
 
     # Drop the companies table entirely
-    op.drop_table('companies')
+    op.execute("DROP TABLE IF EXISTS companies")
 
 
 def downgrade() -> None:

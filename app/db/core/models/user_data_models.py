@@ -54,7 +54,7 @@ class PortfolioItem(UserBase):
     portfolio_id = Column(UUID(as_uuid=True), ForeignKey('portfolios.id', ondelete='CASCADE'), primary_key=True)
     ticker = Column(String, primary_key=True)
     allocation = Column(Float)  # Decimal format: 0.25 = 25%, range -1 to 1 (negative = short)
-    num_shares = Column(Integer, nullable=True)
+    num_shares = Column(Float, nullable=True)
     position_nav = Column(Float, nullable=True)  # Position value: num_shares * current_price
     supporting_metrics = Column(JSONB, nullable=True)
     reason_for_rec = Column(Text, nullable=True)
