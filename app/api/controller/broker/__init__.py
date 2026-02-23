@@ -14,6 +14,7 @@ from .account import (
     withdraw_controller,
     get_transfers_controller,
     cancel_transfer_controller,
+    instant_deposit_controller,
 )
 from .trading import (
     buy_controller,
@@ -46,6 +47,7 @@ __all__ = [
     "withdraw_controller",
     "get_transfers_controller",
     "cancel_transfer_controller",
+    "instant_deposit_controller",
     # Trading — Orders
     "buy_controller",
     "sell_controller",

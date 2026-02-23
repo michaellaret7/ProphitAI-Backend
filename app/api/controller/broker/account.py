@@ -17,6 +17,7 @@ from app.repositories.user.funding import (
     withdraw,
     get_transfers,
     cancel_transfer,
+    instant_deposit,
 )
 from app.api.response_envelope import ok_envelope
 from app.utils.decorators.api_decorators import handle_controller_errors
@@ -280,4 +281,29 @@ async def cancel_transfer_controller(
         resource_id=transfer_id,
         self_link=f"/api/broker/transfers/{transfer_id}",
         payload={},
+    )
+
+
+# ════════════════════════════════════════════════════════════
+# --> Instant Transfers (Firm Journal)
+# ════════════════════════════════════════════════════════════
+
+@handle_controller_errors
+async def instant_deposit_controller(
+    *, clerk_id: str, amount: float
+) -> Dict[str, Any]:
+    """Journal cash from the firm funding account to the user instantly."""
+    if not clerk_id:
+        raise ValueError("clerkId is required")
+    if amount <= 0:
+        raise ValueError("amount must be greater than 0")
+
+    result = instant_deposit(clerk_id=clerk_id, amount=amount)
+
+    return ok_envelope(
+        message="Instant deposit completed successfully",
+        kind="broker#instantTransfer",
+        self_link="/api/broker/transfers/instant-deposit",
+        status=201,
+        payload=result,
     )

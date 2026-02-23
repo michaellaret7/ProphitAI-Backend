@@ -1,6 +1,8 @@
 """User funding repository — bank linking, deposits, withdrawals, and transfers."""
 
+import os
 from typing import List, Dict
+from app.brokers.alpaca_broker.broker import ProphitBroker
 from app.repositories.user.broker import get_broker, resolve_broker_account
 
 
@@ -52,3 +54,21 @@ def cancel_transfer(clerk_id: str, transfer_id: str) -> None:
     """Cancel a pending transfer."""
     account_id = resolve_broker_account(clerk_id=clerk_id)
     get_broker().cancel_transfer(account_id, transfer_id)
+
+
+# ════════════════════════════════════════════════════════════
+# --> Instant Transfers (Firm Journal)
+# ════════════════════════════════════════════════════════════
+
+def instant_deposit(clerk_id: str, amount: float) -> Dict:
+    """Journal cash from the firm funding account to a user's brokerage account."""
+    user_account_id = resolve_broker_account(clerk_id=clerk_id)
+    firm_account_id = os.environ["ALPACA_BROKER_FUNDING_ACCOUNT_ID"]
+    return get_broker().journal_cash(
+        from_account=firm_account_id,
+        to_account=user_account_id,
+        amount=amount,
+        description="Instant deposit",
+    )
+
+

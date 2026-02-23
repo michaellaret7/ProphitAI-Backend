@@ -21,6 +21,7 @@ from app.api.controller.broker import (
     withdraw_controller,
     get_transfers_controller,
     cancel_transfer_controller,
+    instant_deposit_controller,
     # Trading — Orders
     buy_controller,
     sell_controller,
@@ -70,6 +71,11 @@ class LinkBankRequest(BaseModel):
 class TransferRequest(BaseModel):
     """Deposit or withdrawal request."""
     relationshipId: str
+    amount: float = Field(..., gt=0)
+
+
+class InstantTransferRequest(BaseModel):
+    """Instant deposit from firm funding account."""
     amount: float = Field(..., gt=0)
 
 
@@ -225,6 +231,17 @@ async def withdraw_funds(
         clerk_id=clerk_id,
         relationship_id=body.relationshipId,
         amount=body.amount,
+    )
+
+
+@router.post("/transfers/instant-deposit", status_code=201)
+async def instant_deposit(
+    body: InstantTransferRequest,
+    clerk_id: str = Depends(get_clerk_user_id),
+):
+    """Instantly journal cash from the firm funding account to the user."""
+    return await instant_deposit_controller(
+        clerk_id=clerk_id, amount=body.amount,
     )
 
 

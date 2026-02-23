@@ -13,6 +13,7 @@ from alpaca.broker.requests import (
     GetAccountActivitiesRequest,
     UpdateAccountRequest,
 )
+from alpaca.trading.enums import ActivityType
 from alpaca.broker.enums import (
     TaxIdType,
     FundingSource,
@@ -275,24 +276,29 @@ class BrokerAccounts:
             activity_type: Filter by type (e.g., 'FILL', 'DIV', 'TRANS', 'CSD')
         """
         try:
-            request = GetAccountActivitiesRequest(account_id=account_id)
-            if activity_type:
-                request.activity_type = activity_type
+            request = GetAccountActivitiesRequest(
+                account_id=account_id,
+                activity_types=[ActivityType(activity_type)] if activity_type else None,
+            )
 
             activities = self.client.get_account_activities(activity_filter=request)
-            return [
-                {
+            results = []
+            for a in activities:
+                qty = getattr(a, "qty", None)
+                price = getattr(a, "price", None)
+                notional = str(float(qty) * float(price)) if qty and price else None
+                results.append({
                     "id": str(getattr(a, "id", None)),
                     "activity_type": str(getattr(a, "activity_type", None)),
                     "date": str(getattr(a, "date", None)),
-                    "qty": str(getattr(a, "qty", None)),
-                    "price": str(getattr(a, "price", None)),
+                    "qty": str(qty),
+                    "price": str(price),
+                    "notional": notional,
                     "symbol": getattr(a, "symbol", None),
                     "side": str(getattr(a, "side", None)),
                     "net_amount": str(getattr(a, "net_amount", None)),
-                }
-                for a in activities
-            ]
+                })
+            return results
         except Exception as e:
             raise Exception(f"Failed to get activities for {account_id}: {str(e)}")
 
