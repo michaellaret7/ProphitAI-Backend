@@ -45,24 +45,53 @@ def _safe_result(result: Any) -> Optional[Any]:
     return result
 
 
-def _compute_day_pnl(history: Optional[Dict]) -> Optional[Dict[str, float]]:
-    """Extract day P&L (dollar + percent) from portfolio history equity array."""
-    if not history:
-        return None
+def _compute_day_pnl(
+    intraday_history: Optional[Dict],
+    positions: Optional[List[Dict]],
+) -> Optional[Dict[str, float]]:
+    """
+    Compute day P&L from intraday portfolio history.
 
-    equity_list = history.get("equity") or []
-    if len(equity_list) < 2:
-        return None
+    Uses base_value (prior close equity) when available. For new accounts where
+    base_value is 0, falls back to summing unrealized P&L from positions — this
+    gives real trading P&L without being polluted by same-day deposits.
+    """
+    if not intraday_history:
+        return _pnl_from_positions(positions)
 
-    current = equity_list[-1]
-    previous = equity_list[-2]
+    equity_list = intraday_history.get("equity") or []
+    current = equity_list[-1] if equity_list else None
+    if current is None:
+        return _pnl_from_positions(positions)
 
-    if current is None or previous is None or previous == 0:
-        return None
+    base = intraday_history.get("base_value")
+    if not base or base == 0:
+        # Reason: base_value is 0 for brand-new accounts (no prior close).
+        # Summing unrealized P&L from positions is the most accurate fallback.
+        return _pnl_from_positions(positions)
 
-    dollar = current - previous
-    percent = dollar / previous
+    dollar = current - base
+    percent = dollar / base
     return {"dollar": round(dollar, 2), "percent": round(percent, 6)}
+
+
+def _pnl_from_positions(positions: Optional[List[Dict]]) -> Optional[Dict[str, float]]:
+    """Sum unrealized P&L across all positions as a day-P&L fallback."""
+    if not positions or not isinstance(positions, list):
+        return None
+
+    total_pl = 0.0
+    total_cost = 0.0
+    for pos in positions:
+        pl = float(pos.get("unrealized_pl") or 0)
+        mv = float(pos.get("market_value") or 0)
+        total_pl += pl
+        total_cost += mv - pl
+
+    if total_cost == 0:
+        return None
+
+    return {"dollar": round(total_pl, 2), "percent": round(total_pl / total_cost, 6)}
 
 
 def _compute_sector_breakdown(
@@ -174,13 +203,14 @@ async def get_dashboard_controller(*, clerk_id: str) -> Dict[str, Any]:
         asyncio.to_thread(get_orders, clerk_id, "closed"),                          # 6
         asyncio.to_thread(get_account_activities, clerk_id),                        # 7
         asyncio.to_thread(fmp.get_batch_quote, ["SPY", "QQQ", "DIA", "IWM"]),      # 8
+        asyncio.to_thread(get_portfolio_history, clerk_id, period="1D", timeframe="5Min", extended_hours=False),  # 9
     ]
 
     # Only fetch treasury/news if not cached
     if cached_treasury is None:
-        tasks.append(asyncio.to_thread(fmp.get_treasury_rates))                     # 9
+        tasks.append(asyncio.to_thread(fmp.get_treasury_rates))                     # 10
     if cached_news is None:
-        tasks.append(asyncio.to_thread(fmp.get_general_news, 10))                   # 10
+        tasks.append(asyncio.to_thread(fmp.get_general_news, 10))                   # 11
 
     results = await asyncio.gather(*tasks, return_exceptions=True)
 
@@ -194,10 +224,11 @@ async def get_dashboard_controller(*, clerk_id: str) -> Dict[str, Any]:
     closed_orders = _safe_result(results[6])
     activities = _safe_result(results[7])
     indices_raw = _safe_result(results[8])
+    intraday_history = _safe_result(results[9])
 
     # Resolve treasury and news from cache or fresh fetch
-    # Reason: next_idx tracks the next dynamic slot after the 9 base tasks
-    next_idx = 9
+    # Reason: next_idx tracks the next dynamic slot after the 10 base tasks
+    next_idx = 10
     if cached_treasury is not None:
         treasury_raw = cached_treasury
     else:
@@ -230,7 +261,7 @@ async def get_dashboard_controller(*, clerk_id: str) -> Dict[str, Any]:
             holdings_news = _safe_result(phase2_results[1])
 
     # Phase 3: Derived computations
-    day_pnl = _compute_day_pnl(portfolio_history)
+    day_pnl = _compute_day_pnl(intraday_history, positions)
 
     enriched_positions = (
         _enrich_positions(positions, ticker_info_map)
@@ -267,6 +298,7 @@ async def get_dashboard_controller(*, clerk_id: str) -> Dict[str, Any]:
             "dayPnl": day_pnl,
         },
         "portfolioHistory": portfolio_history,
+        "intradayHistory": intraday_history,
         "positions": enriched_positions,
         "sectorBreakdown": sector_breakdown,
         "marketOverview": {

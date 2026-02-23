@@ -81,7 +81,8 @@
       "Bash(ls:*)",
       "Bash(PYTHONPATH=. .venv/Scripts/python.exe:*)",
       "WebFetch(domain:forum.alpaca.markets)",
-      "Bash(source .venv/bin/activate && alembic -c app/db/alembic_migration/alembic.ini --name user_data upgrade head 2>&1)"
+      "Bash(source .venv/bin/activate && alembic -c app/db/alembic_migration/alembic.ini --name user_data upgrade head 2>&1)",
+      "WebFetch(domain:ai.pydantic.dev)"
     ],
     "deny": [],
     "ask": []
