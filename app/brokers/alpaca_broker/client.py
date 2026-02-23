@@ -4,10 +4,14 @@ Handles initialization and connection to Alpaca Broker API (multi-user).
 
 Mirrors: app/brokers/alpaca/client.py
 Key difference: Uses BrokerClient instead of TradingClient.
-Also initializes market data clients (shared across all accounts).
+
+Market data (options chains, quotes, bars) uses Trading API keys because
+the Broker sandbox lacks OPRA data entitlements. Order execution still
+routes through the BrokerClient.
 """
 
 from alpaca.broker.client import BrokerClient
+from alpaca.trading.client import TradingClient
 from alpaca.data.historical.option import OptionHistoricalDataClient
 from typing import Optional
 import os
@@ -49,19 +53,39 @@ class AlpacaBrokerClient:
             sandbox=sandbox,
         )
 
-        # Market data clients are shared — they don't need account_id.
-        # Broker API credentials work for market data too.
+        # Reason: Broker sandbox accounts lack OPRA data agreements, so options
+        # market data and contract discovery must go through Trading API keys
+        # which hit data.alpaca.markets with full options support.
+        trading_api_key = os.getenv("ALPACA_API_KEY")
+        trading_secret_key = os.getenv("ALPACA_SECRET_KEY")
+
+        if not trading_api_key or not trading_secret_key:
+            raise ValueError(
+                "Trading API credentials required for options market data. Set "
+                "ALPACA_API_KEY and ALPACA_SECRET_KEY environment variables."
+            )
+
+        self.trading_client = TradingClient(
+            api_key=trading_api_key,
+            secret_key=trading_secret_key,
+            paper=sandbox,
+        )
+
         self.option_data_client = OptionHistoricalDataClient(
-            api_key=self.api_key,
-            secret_key=self.secret_key,
+            api_key=trading_api_key,
+            secret_key=trading_secret_key,
         )
 
     def get_client(self) -> BrokerClient:
         """Get the underlying BrokerClient instance."""
         return self.client
 
+    def get_trading_client(self) -> TradingClient:
+        """Get the TradingClient used for contract discovery and options data."""
+        return self.trading_client
+
     def get_option_data_client(self) -> OptionHistoricalDataClient:
-        """Get the option historical data client (shared, no account_id needed)."""
+        """Get the option historical data client (uses Trading API keys)."""
         return self.option_data_client
 
     def is_sandbox(self) -> bool:

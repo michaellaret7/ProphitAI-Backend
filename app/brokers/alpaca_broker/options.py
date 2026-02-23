@@ -3,16 +3,16 @@ Alpaca Broker Options Service
 Handles options chains, quotes, snapshots, bars, contract discovery.
 
 Mirrors: app/brokers/alpaca/options.py
-Key difference: Market data is global (no account_id needed). The option
-data client is shared across all accounts. Trading options uses the
-BrokerTrading module (which requires account_id).
+Key difference: Market data and contract discovery use a TradingClient
+(Trading API keys) because the Broker sandbox lacks OPRA data entitlements.
+Order execution still goes through BrokerTrading (which requires account_id).
 """
 
 from typing import Dict, List, Optional, Tuple
 from datetime import date, datetime
 import re
 
-from alpaca.broker.client import BrokerClient
+from alpaca.trading.client import TradingClient
 from alpaca.data.historical.option import OptionHistoricalDataClient
 from alpaca.trading.requests import GetOptionContractsRequest
 from alpaca.data.requests import (
@@ -52,17 +52,17 @@ def decode_osi(symbol: str):
 class BrokerOptionsService:
     """
     Options helper for Broker API.
-    Market data methods (chains, bars, quotes, snapshots) are account-agnostic.
-    Contract queries use the BrokerClient.
+    Market data and contract discovery use a TradingClient (Trading API keys)
+    because the Broker sandbox lacks OPRA data entitlements.
     """
 
     def __init__(
         self,
-        broker_client: BrokerClient,
+        trading_client: TradingClient,
         option_data_client: OptionHistoricalDataClient,
         feed: str = "indicative",
     ):
-        self.broker_client = broker_client
+        self.trading_client = trading_client
         self.data = option_data_client
         self.feed = "opra" if str(feed).lower().startswith("opra") else "indicative"
 
@@ -83,7 +83,7 @@ class BrokerOptionsService:
     def _iter_contract_pages(self, req) -> list:
         """Yield all option_contracts across pages."""
         all_contracts = []
-        resp = self.broker_client.get_option_contracts(req)
+        resp = self.trading_client.get_option_contracts(req)
         while True:
             all_contracts.extend(getattr(resp, "option_contracts", []) or [])
             nxt = getattr(resp, "next_page_token", None)
@@ -93,7 +93,7 @@ class BrokerOptionsService:
                 req.page_token = nxt
             else:
                 break
-            resp = self.broker_client.get_option_contracts(req)
+            resp = self.trading_client.get_option_contracts(req)
         return all_contracts
 
     def _build_contract_map(

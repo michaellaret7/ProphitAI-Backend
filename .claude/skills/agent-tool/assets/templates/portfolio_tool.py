@@ -4,20 +4,28 @@
 This tool analyzes [aspect] of a portfolio.
 """
 
-from app.core.atlas.tool_lib.common.responses import success_response, error_response
-from app.core.atlas.tool_lib.common.schemas import PORTFOLIO_DICT_SCHEMA
+from app.core.atlas.tools.decorator import agent_tool, Param, Schema
+from app.core.atlas.tools.tool_schemas import PORTFOLIO_DICT_SCHEMA
+from app.core.atlas.tools.responses import success_response, error_response
 from app.utils.tool_validator import ToolValidator
-from typing import Dict, Any, Optional
+from typing import Annotated, Optional
 
 
-# ==============================================================================
-# TOOL FUNCTION
-# ==============================================================================
+# ================================
+# --> Helper funcs
+# ================================
 
+
+# ================================
+# --> Tools
+# ================================
+
+@agent_tool(name="portfolio_tool_name")
 def portfolio_tool_name(
-    portfolio_dict: Optional[dict] = None,
-    lookback_days: Optional[int] = None,
-    _simulation_date: str = None
+    portfolio_dict: Annotated[dict, Schema(PORTFOLIO_DICT_SCHEMA)],
+    lookback_days: Annotated[int, Param(min_val=30, max_val=756)] = 252,
+    *,
+    _simulation_date: Optional[str] = None,
 ) -> str:
     """
     Analyze [aspect] of a portfolio.
@@ -25,38 +33,40 @@ def portfolio_tool_name(
     Args:
         portfolio_dict: Portfolio with ticker keys mapping to allocation/position values.
             Example: {'AAPL': {'allocation': 0.5, 'position': 'long'}, ...}
-        lookback_days: Historical window for analysis (default: 252 trading days)
-        _simulation_date: Optional simulation date (injected by agent framework)
+        lookback_days: Historical window for analysis in trading days
 
     Returns:
-        str: YAML-formatted result with:
-            - 'success' (bool): Whether analysis succeeded
-            - 'data' (dict): Analysis results when successful
-            - 'error' (str): Error message when unsuccessful
+        Dict with num_holdings, exposure metrics, and lookback_days
+
+    Examples:
+        portfolio_tool_name(
+            portfolio_dict={'AAPL': {'allocation': 0.5, 'position': 'long'},
+                            'TSLA': {'allocation': 0.5, 'position': 'short'}},
+            lookback_days=126
+        )
+        >>> {"success": True, "data": {"num_holdings": 2, "net_exposure": 0.0, ...}}
+
+    Raises:
+        Exception: If portfolio data is invalid or analysis fails
     """
-    # Validate inputs
+    # Reason: ToolValidator still needed for runtime normalization of portfolio_dict
     v = ToolValidator()
     v.require_portfolio('portfolio_dict', portfolio_dict, normalize=True)
-    v.optional_numeric('lookback_days', lookback_days, default=252, min_val=30, max_val=756)
 
     if not v.is_valid():
         return v.error_response()
 
-    # Get validated/normalized values (guaranteed non-None after validation)
     validated_portfolio: dict = v.get('portfolio_dict')
-    validated_lookback: int = v.get('lookback_days')
 
     try:
         # =====================================================================
         # CORE ANALYSIS LOGIC HERE
         # =====================================================================
 
-        # Extract holdings info
         tickers = list(validated_portfolio.keys())
         allocations = {t: h['allocation'] for t, h in validated_portfolio.items()}
         positions = {t: h['position'] for t, h in validated_portfolio.items()}
 
-        # Calculate metrics
         total_long = sum(a for t, a in allocations.items() if positions[t] == 'long')
         total_short = sum(a for t, a in allocations.items() if positions[t] == 'short')
 
@@ -67,8 +77,7 @@ def portfolio_tool_name(
             "total_short_exposure": round(total_short, 4),
             "net_exposure": round(total_long - total_short, 4),
             "gross_exposure": round(total_long + total_short, 4),
-            "lookback_days": validated_lookback,
-            # Add more analysis results here
+            "lookback_days": lookback_days,
         }
 
         return success_response(result)
@@ -77,47 +86,11 @@ def portfolio_tool_name(
         return error_response(f"Error in portfolio analysis: {str(e)}")
 
 
-# ==============================================================================
-# TOOL SCHEMA CONSTANTS
-# ==============================================================================
-
-PORTFOLIO_TOOL_NAME_DESCRIPTION = (
-    "Analyze [aspect] of a portfolio. Returns [metrics description]. "
-    "CRITICAL: You MUST ALWAYS include the portfolio_dict parameter with ALL holdings. "
-    "Example: portfolio_tool_name(portfolio_dict={'AAPL': {'allocation': 0.5, 'position': 'long'}, "
-    "'TSLA': {'allocation': 0.5, 'position': 'short'}}, lookback_days=126)"
-)
-
-PORTFOLIO_TOOL_NAME_PARAMETERS = {
-    "type": "object",
-    "properties": {
-        "portfolio_dict": PORTFOLIO_DICT_SCHEMA,
-        "lookback_days": {
-            "type": "integer",
-            "description": "Historical lookback period in trading days",
-            "minimum": 30,
-            "maximum": 756,
-            "default": 252
-        }
-    },
-    "required": ["portfolio_dict"],
-    "additionalProperties": False
-}
-
-PORTFOLIO_TOOL_NAME_TOOL = {
-    "name": "portfolio_tool_name",
-    "description": PORTFOLIO_TOOL_NAME_DESCRIPTION,
-    "parameters": PORTFOLIO_TOOL_NAME_PARAMETERS,
-    "function": portfolio_tool_name,
-}
-
-
-# ==============================================================================
-# STANDALONE TESTING
-# ==============================================================================
+# ================================
+# --> Standalone testing
+# ================================
 
 if __name__ == "__main__":
-    # Sample portfolio for testing
     test_portfolio = {
         "AAPL": {"allocation": 0.25, "position": "long"},
         "MSFT": {"allocation": 0.25, "position": "long"},

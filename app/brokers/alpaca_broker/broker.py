@@ -45,7 +45,7 @@ class ProphitBroker:
         self.portfolio = BrokerPortfolio(broker_client)
         self.funding = BrokerFunding(broker_client)
         self.options = BrokerOptionsService(
-            broker_client=broker_client,
+            trading_client=self.client.get_trading_client(),
             option_data_client=self.client.get_option_data_client(),
             feed=options_feed,
         )
