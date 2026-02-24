@@ -178,13 +178,3 @@ correlated pairs, and a rolling correlation trend to detect regime changes.
         return error_response(f"Failed to compute portfolio correlation: {str(e)}")
 
 
-# ================================
-# --> Standalone testing
-# ================================
-
-if __name__ == "__main__":
-    print(portfolio_correlation(
-        tickers=["AAPL", "MSFT", "GOOGL", "AMZN", "NVDA"],
-        weights=[0.30, 0.25, 0.20, 0.15, 0.10],
-        years_back=1,
-    ))
