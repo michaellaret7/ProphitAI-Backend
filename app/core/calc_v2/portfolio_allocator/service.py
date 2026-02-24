@@ -56,6 +56,55 @@ def calc_num_shares(weights: Dict[str, float], portfolio_value: float) -> Dict[s
     return num_shares
 
 
+def calc_position_navs(positions: Dict[str, float]) -> Dict[str, float]:
+    """Calculate position NAV (num_shares * current_price) for each position.
+
+    Args:
+        positions: Dict mapping ticker symbols to num_shares.
+
+    Returns:
+        Dict mapping ticker symbols to position_nav values.
+
+    Note:
+        Positions with None or zero num_shares are skipped.
+        If price fetch fails for a ticker, it will be omitted from results.
+    """
+    from app.db.core.pull_fmp_data import FMP_API_DATA
+
+    if not positions:
+        return {}
+
+    tickers_with_shares = {
+        ticker: num_shares
+        for ticker, num_shares in positions.items()
+        if num_shares is not None and num_shares > 0
+    }
+
+    if not tickers_with_shares:
+        return {}
+
+    fmp_data = FMP_API_DATA()
+    live_prices = fmp_data.get_batch_quote(list(tickers_with_shares.keys()))
+
+    if not live_prices:
+        return {}
+
+    prices = {}
+    for quote in live_prices:
+        symbol = quote.get("symbol")
+        price = quote.get("price")
+        if symbol and price is not None and price > 0:
+            prices[symbol] = price
+
+    position_navs = {}
+    for ticker, num_shares in tickers_with_shares.items():
+        price = prices.get(ticker)
+        if price is not None:
+            position_navs[ticker] = num_shares * price
+
+    return position_navs
+
+
 def allocate(
     tickers: List[str],
     config: OptimizerConfig,

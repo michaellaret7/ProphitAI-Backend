@@ -116,9 +116,3 @@ def ticker_factors(
         return error_response(f"Failed to compute factor exposures for {ticker}: {str(e)}")
 
 
-# ================================
-# --> Standalone testing
-# ================================
-
-if __name__ == "__main__":
-    print(ticker_factors(ticker="AAPL", category="all"))

@@ -11,6 +11,9 @@ from app.core.atlas.tools_v2.ticker.risk import ticker_risk
 from app.core.atlas.tools_v2.ticker.factors import ticker_factors
 from app.core.atlas.tools_v2.ticker.technicals import ticker_technicals
 
+# --- news ---
+from app.core.atlas.tools_v2.news import general_news, get_ticker_news, get_press_releases
+
 # --- fundamentals ---
 from app.core.atlas.tools_v2.ticker.fundamentals.statements import get_ticker_fundamental_data
 from app.core.atlas.tools_v2.ticker.fundamentals.estimates import get_analyst_estimates
@@ -37,6 +40,7 @@ from app.core.atlas.tools_v2.research.tax_research import tax_research_search
 from app.core.atlas.tools_v2.research.user_uploads import user_upload_search
 
 # --- portfolio ---
+from app.core.atlas.tools_v2.portfolio.allocator import portfolio_allocator
 from app.core.atlas.tools_v2.portfolio.performance import portfolio_performance
 from app.core.atlas.tools_v2.portfolio.risk import portfolio_risk
 from app.core.atlas.tools_v2.portfolio.stress_test import portfolio_stress_test
@@ -58,8 +62,11 @@ from app.core.atlas.tools_v2.alpaca.trade import (
 # ==============================================================================
 
 _ALL_TOOL_FUNCTIONS = [
-    # ticker (4)
+    # ticker (5)
     ticker_performance, ticker_risk, ticker_factors, ticker_technicals,
+    get_ticker_news,
+    # news (1)
+    get_press_releases,
     # fundamentals (4)
     get_ticker_fundamental_data, get_analyst_estimates, get_ratios_ttm, get_price_target_data,
     # info (6)
@@ -67,11 +74,11 @@ _ALL_TOOL_FUNCTIONS = [
     get_institutional_holders, get_product_segmentation,
     # screener (2)
     equity_screener, etf_screener,
-    # research (6)
+    # research (7)
     credit_research_search, earnings_call_search, economics_research_search,
-    macro_research, tax_research_search, user_upload_search,
-    # portfolio (5)
-    portfolio_performance, portfolio_risk, portfolio_stress_test,
+    general_news, macro_research, tax_research_search, user_upload_search,
+    # portfolio (6)
+    portfolio_allocator, portfolio_performance, portfolio_risk, portfolio_stress_test,
     portfolio_factor_exposure, portfolio_classification,
     # alpaca (11)
     account_info, account_activities, get_position, get_positions,
