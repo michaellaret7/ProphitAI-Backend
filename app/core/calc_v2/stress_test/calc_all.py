@@ -19,6 +19,7 @@ from app.core.calc_v2.config import TRADING_DAYS
 from app.core.calc_v2.models.stress_test import StressTestResult
 from app.core.calc_v2.stress_test.calc_stress import (
     calc_etf_contribution,
+    calc_factor_vif,
     calc_portfolio_ols,
     calc_ticker_stress_result,
     calc_total_stressed_vol,
@@ -63,7 +64,7 @@ def calc_all_stress_test(
     if expected_return_bottom_up is not None and expected_return_bottom_up != 0.0:
         for r in ticker_results:
             if r.weighted_pnl is not None:
-                r.pct_of_portfolio_impact = r.weighted_pnl / expected_return_bottom_up
+                r.pct_of_portfolio_impact = round(r.weighted_pnl / expected_return_bottom_up, 4)
 
     # ---- Step 4: Portfolio-level OLS → top-down expected return, R², residual_std ----
     expected_return: float | None = None
@@ -102,7 +103,10 @@ def calc_all_stress_test(
         for etf, shock in shocks.items()
     ]
 
-    # ---- Step 6: Rank tickers → top detractors + top hedges ----
+    # ---- Step 6: Factor collinearity diagnostic (VIF) ----
+    factor_vif = calc_factor_vif(etf_returns_map)
+
+    # ---- Step 7: Rank tickers → top detractors + top hedges ----
     scored = [
         (r.ticker, r.weighted_pnl)
         for r in ticker_results
@@ -124,6 +128,7 @@ def calc_all_stress_test(
         horizon=horizon,
         ticker_results=ticker_results,
         etf_contributions=etf_contributions,
+        factor_vif=factor_vif,
         top_detractors=top_detractors,
         top_hedges=top_hedges,
     )

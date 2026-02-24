@@ -61,6 +61,9 @@ class StressTestResult(BaseModel):
     ticker_results: list[TickerStressResult]
     etf_contributions: list[EtfContribution]
 
+    # Diagnostics
+    factor_vif: dict[str, Float4] | None = None
+
     # Summary
     top_detractors: list[str]
     top_hedges: list[str]

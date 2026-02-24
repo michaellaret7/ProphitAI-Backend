@@ -78,6 +78,7 @@ MODEL_ALIASES = {
 
     "glm-4-7": {
         "together": "zai-org/GLM-4.7",
+        "fireworks": "accounts/fireworks/models/glm-4p7"
     },
 
     "llama-3.3-70b-versatile": {

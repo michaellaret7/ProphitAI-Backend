@@ -31,6 +31,57 @@ class OlsDiagnostics:
     r_squared: float
 
 
+def calc_factor_vif(
+    etf_returns_map: dict[str, pd.Series],
+    min_obs: int = 30,
+) -> dict[str, float] | None:
+    """Compute Variance Inflation Factor for each ETF factor.
+
+    VIF_j = 1 / (1 - R²_j), where R²_j comes from regressing factor j on all
+    other factors. Detects multicollinearity that makes OLS betas unreliable.
+
+    Interpretation:
+        VIF < 5  → acceptable
+        VIF 5-10 → moderate collinearity, betas may be unstable
+        VIF > 10 → severe collinearity, betas are unreliable
+
+    Args:
+        etf_returns_map: {ETF: daily return Series} for each factor.
+        min_obs: Minimum overlapping observations required.
+
+    Returns:
+        {ETF: VIF} or None if < 2 factors or insufficient data.
+    """
+    etf_order = list(etf_returns_map.keys())
+    if len(etf_order) < 2:
+        return None
+
+    df = pd.DataFrame(etf_returns_map).dropna()
+    if len(df) < min_obs:
+        return None
+
+    vif: dict[str, float] = {}
+    for etf in etf_order:
+        others = [e for e in etf_order if e != etf]
+        y = df[etf].to_numpy(dtype=float)
+        X = np.column_stack([np.ones(len(y)), df[others].to_numpy(dtype=float)])
+
+        try:
+            beta, *_ = np.linalg.lstsq(X, y, rcond=None)
+        except np.linalg.LinAlgError:
+            vif[etf] = float("inf")
+            continue
+
+        residuals = y - X @ beta
+        ss_res = float(np.sum(residuals ** 2))
+        ss_tot = float(np.sum((y - np.mean(y)) ** 2))
+        r2 = 1.0 - (ss_res / ss_tot) if ss_tot > 0 else 0.0
+
+        vif[etf] = 1.0 / (1.0 - r2) if r2 < 1.0 else float("inf")
+
+    return vif
+
+
 def _build_aligned_matrix(
     target_returns: pd.Series,
     etf_returns_map: dict[str, pd.Series],

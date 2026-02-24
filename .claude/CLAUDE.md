@@ -85,6 +85,9 @@ Each agent registers relevant tools via `register_*_tools(agent)` functions that
 2. Map tool names to Python callables
 3. Provide argument parsing and validation
 
+### Tool Creation
+- When the user requests to build a tool, automatically use the create tool skill when building the tool
+
 ## Development Guidelines
 
 ### Timezone Handling (CRITICAL)
@@ -137,7 +140,7 @@ from app.utils.time_utils import get_current_utc_time, get_utc_date_str, get_utc
 - Resource Efficiency: Use Context Managers for all I/O and prioritize vectorized operations for data-heavy tasks.
 
 **Rules**
-- When a function or class takes a portfolio as a parameter it should always be tickers: List[str] and holdings: List[int] 
+- When a function or class takes a portfolio as a parameter it should always be tickers: List[str] and weights: List[float] (decimal percentages, e.g. 0.30 = 30%)
 
 ### Code Documentation
 - Every module should have a docstring explaining its purpose

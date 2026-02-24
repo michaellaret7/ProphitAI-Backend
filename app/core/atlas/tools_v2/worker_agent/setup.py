@@ -36,6 +36,11 @@ from app.core.atlas.tools_v2.research.macro_research import macro_research
 from app.core.atlas.tools_v2.research.tax_research import tax_research_search
 from app.core.atlas.tools_v2.research.user_uploads import user_upload_search
 
+# --- portfolio ---
+from app.core.atlas.tools_v2.portfolio.performance import portfolio_performance
+from app.core.atlas.tools_v2.portfolio.risk import portfolio_risk
+from app.core.atlas.tools_v2.portfolio.stress_test import portfolio_stress_test
+
 # --- alpaca ---
 from app.core.atlas.tools_v2.alpaca.account import account_info, account_activities
 from app.core.atlas.tools_v2.alpaca.portfolio import (
@@ -63,6 +68,8 @@ _ALL_TOOL_FUNCTIONS = [
     # research (6)
     credit_research_search, earnings_call_search, economics_research_search,
     macro_research, tax_research_search, user_upload_search,
+    # portfolio (3)
+    portfolio_performance, portfolio_risk, portfolio_stress_test,
     # alpaca (11)
     account_info, account_activities, get_position, get_positions,
     close_position, get_portfolio_history, submit_trade, get_orders,
