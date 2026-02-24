@@ -130,9 +130,4 @@ def macro_research(
         return error_response(f"Error searching macro research: {str(e)}")
 
 
-# ================================
-# --> Standalone testing
-# ================================
 
-if __name__ == "__main__":
-    print(macro_research.tool)
