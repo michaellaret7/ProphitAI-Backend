@@ -284,6 +284,55 @@ def my_tool(ticker: str, portfolio_dict: Annotated[dict, Schema(PORTFOLIO_DICT_S
 | `macro/` | Macro data | Rates, commodities, indicators |
 | `foundry/` | Research tools | Credit research, macro research |
 
+## Registering in Worker Agent Setup (tools_v2)
+
+After creating a tool in `app/core/atlas/tools_v2/`, you **must** register it in the worker agent setup file so the orchestrator can discover and deploy it.
+
+**File:** `app/core/atlas/tools_v2/worker_agent/setup.py`
+
+### Steps
+
+1. **Add the import** in the appropriate `# --- category ---` section at the top of the file:
+
+```python
+# --- portfolio ---
+from app.core.atlas.tools_v2.portfolio.performance import portfolio_performance
+from app.core.atlas.tools_v2.portfolio.risk import portfolio_risk
+from app.core.atlas.tools_v2.portfolio.my_new_tool import my_new_tool  # <-- add here
+```
+
+2. **Add the function** to the `_ALL_TOOL_FUNCTIONS` list under the matching category comment, and **update the count**:
+
+```python
+_ALL_TOOL_FUNCTIONS = [
+    # ...
+    # portfolio (4)  <-- update count from (3) to (4)
+    portfolio_performance, portfolio_risk, portfolio_stress_test, my_new_tool,
+    # ...
+]
+```
+
+### How It Works
+
+- `_ALL_TOOL_FUNCTIONS` is a flat list of `@agent_tool`-decorated functions.
+- `AVAILABLE_TOOLS` is built automatically from this list: `{func.tool["name"]: func.tool for func in _ALL_TOOL_FUNCTIONS}`.
+- The orchestrator uses `AVAILABLE_TOOLS` to resolve tool names to schemas and validate worker tool selections.
+- No other registration step is needed — adding the function to the list is sufficient.
+
+### Category Groups
+
+| Comment Tag | Path Prefix | Current Count |
+|-------------|-------------|---------------|
+| `# ticker` | `tools_v2/ticker/` | 4 |
+| `# fundamentals` | `tools_v2/ticker/fundamentals/` | 4 |
+| `# info` | `tools_v2/ticker/info/` | 6 |
+| `# screener` | `tools_v2/screener/` | 2 |
+| `# research` | `tools_v2/research/` | 6 |
+| `# portfolio` | `tools_v2/portfolio/` | 5 |
+| `# alpaca` | `tools_v2/alpaca/` | 11 |
+
+> **Note:** If adding a tool for a new category that doesn't exist yet, create a new `# --- category ---` import block and a new `# category (N)` comment line in `_ALL_TOOL_FUNCTIONS`.
+
 ## Best Practices
 
 **DO:**

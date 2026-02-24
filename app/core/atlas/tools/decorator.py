@@ -34,6 +34,7 @@ generated schema (e.g. ``_simulation_date``).
 
 from __future__ import annotations
 
+import functools
 import inspect
 import re
 from dataclasses import dataclass
@@ -297,6 +298,93 @@ def _build_tool_dict(func: Any, name: str | None) -> dict[str, Any]:
 
 
 # ================================
+# --> Runtime validation
+# ================================
+
+def _extract_validators(
+    func: Any,
+) -> dict[str, tuple[Param | None, list | None]]:
+    """Build a map of runtime validation rules from function type hints.
+
+    Returns:
+        {param_name: (param_meta_or_none, literal_values_or_none)}
+        Only includes params that have constraints to enforce.
+    """
+    hints = get_type_hints(func, include_extras=True)
+    sig = inspect.signature(func)
+    validators: dict[str, tuple[Param | None, list | None]] = {}
+
+    for param_name, param in sig.parameters.items():
+        if param_name.startswith("_"):
+            continue
+        if param.kind in (
+            inspect.Parameter.VAR_POSITIONAL,
+            inspect.Parameter.VAR_KEYWORD,
+        ):
+            continue
+
+        tp = hints.get(param_name)
+        if tp is None:
+            continue
+
+        base_type, param_meta, schema_meta = _extract_annotated_metadata(tp)
+
+        # Reason: Schema() params use pre-built schemas, no Param constraints
+        if schema_meta is not None:
+            continue
+
+        literal_values: list | None = None
+        if get_origin(base_type) is Literal:
+            literal_values = list(get_args(base_type))
+
+        has_param_constraints = param_meta is not None and (
+            param_meta.min_val is not None
+            or param_meta.max_val is not None
+            or param_meta.enum is not None
+        )
+
+        if has_param_constraints or literal_values:
+            validators[param_name] = (param_meta, literal_values)
+
+    return validators
+
+
+def _validate_arg(
+    param_name: str,
+    value: Any,
+    param_meta: Param | None,
+    literal_values: list | None,
+) -> str | None:
+    """Validate a single argument against its constraints.
+
+    Returns:
+        Error message string if invalid, None if valid.
+    """
+    # Reason: Optional params may legitimately be None
+    if value is None:
+        return None
+
+    if literal_values is not None and value not in literal_values:
+        return f"'{param_name}' must be one of {literal_values}, got '{value}'"
+
+    if param_meta is not None:
+        if param_meta.min_val is not None and value < param_meta.min_val:
+            return (
+                f"'{param_name}' must be >= {param_meta.min_val}, got {value}"
+            )
+        if param_meta.max_val is not None and value > param_meta.max_val:
+            return (
+                f"'{param_name}' must be <= {param_meta.max_val}, got {value}"
+            )
+        if param_meta.enum is not None and value not in param_meta.enum:
+            return (
+                f"'{param_name}' must be one of {param_meta.enum}, got '{value}'"
+            )
+
+    return None
+
+
+# ================================
 # --> Decorator
 # ================================
 
@@ -312,7 +400,30 @@ def agent_tool(func: Any = None, *, name: str | None = None) -> Any:
     """
     def _wrap(fn: Any) -> Any:
         tool_dict = _build_tool_dict(fn, name)
-        # Reason: attach .tool directly to fn — no wrapper needed, avoids Pyright issues
+        validators = _extract_validators(fn)
+
+        if validators:
+            cached_sig = inspect.signature(fn)
+
+            @functools.wraps(fn)
+            def _validated(*args: Any, **kwargs: Any) -> Any:
+                bound = cached_sig.bind(*args, **kwargs)
+                bound.apply_defaults()
+                for pname, (p_meta, lit_vals) in validators.items():
+                    if pname in bound.arguments:
+                        err = _validate_arg(
+                            pname, bound.arguments[pname], p_meta, lit_vals,
+                        )
+                        if err:
+                            from app.core.atlas.tools.responses import error_response
+                            return error_response(err)
+                return fn(*args, **kwargs)
+
+            tool_dict["function"] = _validated
+            _validated.tool = tool_dict  # type: ignore[attr-defined]
+            return _validated
+
+        # Reason: no constraints to enforce — attach .tool directly, no wrapper needed
         tool_dict["function"] = fn
         fn.tool = tool_dict  # type: ignore[attr-defined]
         return fn
