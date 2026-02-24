@@ -18,7 +18,7 @@ def build_ticker_obj(
 ) -> Ticker:
     """Fetch OHLCV data and construct a Ticker object with benchmark.
 
-    Args:
+    Args:  
         ticker: Uppercase ticker symbol.
         years_back: Number of years of historical data.
         fundamentals: If True, also fetch fundamentals for factor calculations.

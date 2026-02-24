@@ -11,8 +11,8 @@ from app.core.atlas.models.notebook import Notebook
 from app.core.atlas.execution import ExecutionLoop, ToolHandler
 from app.core.atlas.logging import AgentPrinter
 from app.core.atlas.prompts.worker import WORKER_SYSTEM_PROMPT
-from app.core.atlas.tools.base import LLM_WEB_SEARCH_TOOL
-from app.core.atlas.tools.worker_agent.write_note import write_note, WRITE_NOTE_TOOL
+from app.core.atlas.tools_v2.base import llm_web_search
+from app.core.atlas.tools_v2.worker_agent.write_note import write_note, WRITE_NOTE_TOOL
 
 
 class WorkerAgent(AgentBase):
@@ -73,7 +73,7 @@ class WorkerAgent(AgentBase):
             **WRITE_NOTE_TOOL,
             function=partial(write_note, self.notebook, worker_task=self.task),
         )
-        self.add_tool(**LLM_WEB_SEARCH_TOOL)
+        self.add_tool(**llm_web_search.tool)
 
         # Register the dynamically assigned tools
         for tool_def in tools:

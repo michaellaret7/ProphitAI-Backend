@@ -8,7 +8,7 @@ from langfuse import get_client
 from app.core.atlas.models import PrintMode
 from app.utils.choose_model_and_client import get_model_and_client
 
-from app.core.atlas.tools.base import CALCULATOR_TOOL, THINK_TOOL
+from app.core.atlas.tools_v2.base import think, calculator
 
 class AgentBase(ABC):
     """Abstract base class providing shared foundation for all Atlas agents."""
@@ -44,8 +44,8 @@ class AgentBase(ABC):
         self.total_tokens: int = 0
 
         # ---- Register default tools ---- #
-        self.add_tool(**THINK_TOOL)
-        self.add_tool(**CALCULATOR_TOOL)
+        self.add_tool(**think.tool)
+        self.add_tool(**calculator.tool)
 
     def add_tool(
         self,

@@ -164,6 +164,10 @@ from app.utils.time_utils import get_current_utc_time, get_utc_date_str, get_utc
 - Complete docstrings for public functions
 - Inline comments with `# Reason:` prefix for complex logic
 
+### Complexity Gauging
+- When in plan mode, evaluate whether the proposed plan is under-engineered, optimally engineered, or over-engineered.
+- Before executing any task on the fly, assess its complexity to ensure your approach is optimally engineered.
+
 ## Branching Strategy
 
 - `main`: Production-ready code

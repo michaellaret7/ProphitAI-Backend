@@ -13,13 +13,14 @@ from app.core.atlas.models.callbacks import ChatCallback
 from app.core.atlas.models.new_plan import Plan
 from app.core.atlas.execution import ExecutionLoop, ToolHandler
 from app.core.atlas.logging import AgentPrinter
-from app.core.atlas.tools.base.search_engine import LLM_WEB_SEARCH_TOOL
-from app.core.atlas.tools.orchestrator import (
+from app.core.atlas.tools_v2.base import llm_web_search
+from app.core.atlas.tools_v2.orchestrator import (
     UPDATE_PLAN_TOOL,
     update_plan,
+    retrieve_notes,
+    RETRIEVE_NOTES_TOOL,
 )
-from app.core.atlas.tools.orchestrator.retrieve_note import retrieve_notes, RETRIEVE_NOTES_TOOL
-from app.core.atlas.tools.worker_agent.setup import DEPLOY_WORKER_TOOL, _resolve_and_deploy
+from app.core.atlas.tools_v2.worker_agent.setup import DEPLOY_WORKER_TOOL, _resolve_and_deploy
 from app.core.atlas.prompts.orchestrator_agent import (
     ORCHESTRATOR_SYSTEM_PROMPT,
     build_plan_prompt,
@@ -27,26 +28,6 @@ from app.core.atlas.prompts.orchestrator_agent import (
 from app.core.atlas.agents.planner_agent import PlannerAgent
 from app.utils.gpt_parser import parse_with_gpt
 
-from app.core.atlas.tools.alpaca import (
-    ALPACA_ACCT_AND_PORTFOLIO_TOOL,
-    OPTIONS_LOOKUP_TOOL,
-    OPTIONS_CHAIN_TOOL,
-    OPTIONS_TRADE_TOOL,
-    TRADE_TOOL,
-    CANCEL_ORDER_TOOL,
-    CANCEL_ALL_ORDERS_TOOL,
-    CLOSE_POSITION_TOOL,
-    CLOSE_ALL_POSITIONS_TOOL,
-    REPLACE_ORDER_TOOL,
-    PORTFOLIO_HISTORY_TOOL,
-    ASSET_LOOKUP_TOOL,
-    GET_ORDER_TOOL,
-    EXERCISE_OPTION_TOOL,
-    MULTI_LEG_ORDER_TOOL,
-    OPTION_BARS_TOOL,
-    OPTION_LATEST_QUOTE_TOOL,
-    OPTION_SNAPSHOT_TOOL,
-)
 
 
 class OrchestratorAgent(AgentBase):
@@ -117,7 +98,7 @@ class OrchestratorAgent(AgentBase):
             **RETRIEVE_NOTES_TOOL,
             function=partial(retrieve_notes, self.notebook),
         )
-        self.add_tool(**LLM_WEB_SEARCH_TOOL)
+        self.add_tool(**llm_web_search.tool)
 
     def run(self) -> AgentResponse:
         """Execute the orchestrator's task decomposition and delegation loop."""
@@ -151,10 +132,10 @@ class OrchestratorAgent(AgentBase):
 
                 self.plan = planner.run()
 
-                self.add_tool(**{
+                self.add_tool(
                     **UPDATE_PLAN_TOOL,
-                    "function": partial(update_plan, self.plan, self.chat_callback),
-                })
+                    function=partial(update_plan, self.plan, self.chat_callback),
+                )
 
                 self.chat_callback.on_plan_created(self.plan) # notify the callback when the plan is generated
                 
