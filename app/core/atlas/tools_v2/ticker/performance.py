@@ -8,7 +8,7 @@ from typing import Annotated
 
 from app.core.atlas.tools.decorator import agent_tool, Param
 from app.core.atlas.tools.responses import success_response, error_response
-from app.core.atlas.tools_v2.ticker.risk import _build_ticker_obj
+from app.core.atlas.tools_v2.ticker.utils import build_ticker_obj
 
 
 # ================================
@@ -64,7 +64,7 @@ def ticker_performance(
     """
     try:
         ticker = ticker.upper().strip()
-        ticker_obj = _build_ticker_obj(ticker, years_back)
+        ticker_obj = build_ticker_obj(ticker, years_back)
         perf: dict = ticker_obj.performance_metrics.model_dump()
 
         perf.pop("momentum_5yr")

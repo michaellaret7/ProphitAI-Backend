@@ -10,7 +10,7 @@ import pandas as pd
 
 from app.core.atlas.tools.decorator import agent_tool, Param
 from app.core.atlas.tools.responses import success_response, error_response
-from app.core.atlas.tools_v2.ticker.risk import _build_ticker_obj
+from app.core.atlas.tools_v2.ticker.utils import build_ticker_obj
 from app.core.calc_v2.models.technicals import TickerTechnicals
 
 
@@ -114,7 +114,7 @@ def ticker_technicals(
     """
     try:
         ticker = ticker.upper().strip()
-        ticker_obj = _build_ticker_obj(ticker, 1)
+        ticker_obj = build_ticker_obj(ticker, 1)
 
         series = _extract_series_table(ticker_obj.technicals, category, days)
 

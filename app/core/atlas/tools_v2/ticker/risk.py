@@ -4,40 +4,11 @@ Provides a tool for analyzing single-ticker risk metrics using the Ticker
 class and RiskMetrics model from calc_v2.
 """
 
-from typing import Annotated, cast
-
-import pandas as pd
+from typing import Annotated
 
 from app.core.atlas.tools.decorator import agent_tool, Param
 from app.core.atlas.tools.responses import success_response, error_response
-from app.core.calc_v2.ticker import Ticker
-from app.repositories.price_data import fetch_bulk_ohlcv_data_for_tickers
-from app.utils.time_utils import get_utc_date_str, get_utc_days_ago
-
-
-# ================================
-# --> Helper funcs
-# ================================
-
-SPY = "SPY"
-
-def _build_ticker_obj(ticker: str, years_back: int) -> Ticker:
-    """Fetch OHLCV data and construct a Ticker object with benchmark."""
-    end_date = get_utc_date_str()
-    start_date = get_utc_days_ago(years_back * 365).strftime("%Y-%m-%d")
-
-    tickers_to_fetch = [ticker]
-    if ticker != SPY:
-        tickers_to_fetch.append(SPY)
-
-    data = fetch_bulk_ohlcv_data_for_tickers(tickers_to_fetch, start_date, end_date)
-
-    if ticker not in data or data[ticker].empty:
-        raise ValueError(f"No price data found for {ticker}")
-
-    benchmark_prices = cast(pd.Series, data[SPY]["adj_close"]) if ticker != SPY else None
-
-    return Ticker(ticker, data[ticker], benchmark_prices=benchmark_prices)
+from app.core.atlas.tools_v2.ticker.utils import build_ticker_obj
 
 
 # ================================
@@ -92,7 +63,7 @@ def ticker_risk(
     """
     try:
         ticker = ticker.upper().strip()
-        ticker_obj = _build_ticker_obj(ticker, years_back)
+        ticker_obj = build_ticker_obj(ticker, years_back)
         risk: dict = ticker_obj.risk_metrics.model_dump()
 
         return success_response({
