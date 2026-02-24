@@ -118,10 +118,4 @@ def get_etf_info(
         return error_response(f"Failed to retrieve ETF info for {ticker}: {str(e)}")
 
 
-# ================================
-# --> Standalone testing
-# ================================
 
-if __name__ == "__main__":
-    print(get_ticker_info.tool)
-    print(get_etf_info.tool)

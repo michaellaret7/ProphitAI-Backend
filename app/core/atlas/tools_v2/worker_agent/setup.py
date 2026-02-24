@@ -26,6 +26,8 @@ from app.core.atlas.tools_v2.ticker.info.peers import get_ticker_peers
 from app.core.atlas.tools_v2.ticker.info.ratings import get_stock_ratings
 from app.core.atlas.tools_v2.ticker.info.institutional_holders import get_institutional_holders
 from app.core.atlas.tools_v2.ticker.info.product_segmentation import get_product_segmentation
+from app.core.atlas.tools_v2.ticker.info.sectors import get_sector_industries, get_group_tickers
+from app.core.atlas.tools_v2.ticker.info.etf_holdings import get_etf_holdings
 
 # --- screener ---
 from app.core.atlas.tools_v2.screener.equity_screener import equity_screener
@@ -46,6 +48,7 @@ from app.core.atlas.tools_v2.portfolio.risk import portfolio_risk
 from app.core.atlas.tools_v2.portfolio.stress_test import portfolio_stress_test
 from app.core.atlas.tools_v2.portfolio.factor_exposure import portfolio_factor_exposure
 from app.core.atlas.tools_v2.portfolio.classification import portfolio_classification
+from app.core.atlas.tools_v2.portfolio.user_portfolio import get_user_simulated_portfolio
 
 # --- macro ---
 from app.core.atlas.tools_v2.macro.commodity_prices import commodity_prices
@@ -74,17 +77,18 @@ _ALL_TOOL_FUNCTIONS = [
     get_press_releases,
     # fundamentals (4)
     get_ticker_fundamental_data, get_analyst_estimates, get_ratios_ttm, get_price_target_data,
-    # info (6)
+    # info (9)
     get_ticker_info, get_etf_info, get_ticker_peers, get_stock_ratings,
     get_institutional_holders, get_product_segmentation,
+    get_sector_industries, get_group_tickers, get_etf_holdings,
     # screener (2)
     equity_screener, etf_screener,
     # research (7)
     credit_research_search, earnings_call_search, economics_research_search,
     general_news, macro_research, tax_research_search, user_upload_search,
-    # portfolio (6)
+    # portfolio (7)
     portfolio_allocator, portfolio_performance, portfolio_risk, portfolio_stress_test,
-    portfolio_factor_exposure, portfolio_classification,
+    portfolio_factor_exposure, portfolio_classification, get_user_simulated_portfolio,
     # macro (3)
     commodity_prices, us_treasury_rates, macro_indicators,
     # alpaca (11)
