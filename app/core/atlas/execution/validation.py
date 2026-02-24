@@ -3,7 +3,7 @@
 from typing import Any
 import yaml
 
-from app.core.atlas.tools.responses import dump_yaml
+from app.core.atlas.tools_v2.responses import dump_yaml
 
 
 def validate_tool_call(name: str, args: dict, result: Any, agent: Any) -> str:

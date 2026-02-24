@@ -9,7 +9,7 @@ import yaml
 
 from app.core.atlas.execution.validation import validate_tool_call
 from app.core.atlas.logging import AgentPrinter
-from app.core.atlas.tools.responses import error_response
+from app.core.atlas.tools_v2.responses import error_response
 from app.core.atlas.execution.utils import stringify_for_llm, check_tool_success
 
 if TYPE_CHECKING:

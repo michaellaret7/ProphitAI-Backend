@@ -6,8 +6,8 @@ class and PerformanceMetrics model from calc_v2.
 
 from typing import Annotated
 
-from app.core.atlas.tools.decorator import agent_tool, Param
-from app.core.atlas.tools.responses import success_response, error_response
+from app.core.atlas.tools_v2.decorator import agent_tool, Param
+from app.core.atlas.tools_v2.responses import success_response, error_response
 from app.core.atlas.tools_v2.ticker.utils import build_ticker_obj
 
 

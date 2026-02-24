@@ -4,8 +4,8 @@ Provides tools for retrieving peer companies with enriched
 fundamental and market data for comparative analysis.
 """
 
-from app.core.atlas.tools.decorator import agent_tool
-from app.core.atlas.tools.responses import success_response, error_response
+from app.core.atlas.tools_v2.decorator import agent_tool
+from app.core.atlas.tools_v2.responses import success_response, error_response
 from app.db.core.pull_fmp_data import FMP_API_DATA
 from app.db.core.db_config import MarketSession
 from app.db.core.models.market_data_models import Ticker

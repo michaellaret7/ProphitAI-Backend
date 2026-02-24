@@ -10,8 +10,8 @@ Build tools for the ProphitAI agentic framework using the `@agent_tool` decorato
 ## Quick Reference
 
 ```
-Tool Location: app/core/atlas/tools/<category>/<tool_name>.py
-Decorator: @agent_tool from app.core.atlas.tools.decorator
+Tool Location: app/core/atlas/tools_v2/<category>/<tool_name>.py
+Decorator: @agent_tool from app.core.atlas.tools_v2.decorator
 Response Format: YAML via success_response() / error_response()
 Registration: agent.add_tool(**func.tool)
 ```
@@ -23,8 +23,8 @@ Every tool file follows this structure:
 ```python
 """Tool description in docstring."""
 
-from app.core.atlas.tools.decorator import agent_tool, Param, Schema
-from app.core.atlas.tools.responses import success_response, error_response
+from app.core.atlas.tools_v2.decorator import agent_tool, Param, Schema
+from app.core.atlas.tools_v2.responses import success_response, error_response
 from typing import Annotated, Optional
 
 # ================================
@@ -106,14 +106,14 @@ def vol_es(portfolio_dict: dict) -> str:
 
 ```python
 # Single tool
-from app.core.atlas.tools.risk.vol_es import vol_es
+from app.core.atlas.tools_v2.portfolio.vol_es import vol_es
 agent.add_tool(**vol_es.tool)
 
 # Registry function for related tools
 def register_risk_tools(agent) -> None:
     """Register all risk analysis tools on the agent."""
-    from app.core.atlas.tools.risk.vol_es import vol_es
-    from app.core.atlas.tools.risk.stress_test import stress_test
+    from app.core.atlas.tools_v2.portfolio.vol_es import vol_es
+    from app.core.atlas.tools_v2.portfolio.stress_test import stress_test
 
     agent.add_tool(**vol_es.tool)
     agent.add_tool(**stress_test.tool)
@@ -127,7 +127,7 @@ Use `typing.Annotated` with `Param` or `Schema` to add constraints beyond basic 
 
 ```python
 from typing import Annotated
-from app.core.atlas.tools.decorator import Param
+from app.core.atlas.tools_v2.decorator import Param
 
 # Enum constraint
 activity_type: Annotated[str, Param(enum=['FILL', 'CSD', 'CSW', 'DIV', 'JNLC'])]
@@ -146,18 +146,6 @@ conf: Annotated[float, Param(description="Confidence level for VaR", min_val=0.5
 | `min_val` | `float \| None` | JSON Schema `minimum` |
 | `max_val` | `float \| None` | JSON Schema `maximum` |
 | `enum` | `list[str] \| None` | JSON Schema `enum` (fixed choices) |
-
-### Schema — Inject a Pre-Built JSON Schema
-
-For complex parameters (like portfolio_dict) that need `patternProperties` or nested objects:
-
-```python
-from typing import Annotated
-from app.core.atlas.tools.decorator import Schema
-from app.core.atlas.tools.tool_schemas import PORTFOLIO_DICT_SCHEMA
-
-portfolio_dict: Annotated[dict, Schema(PORTFOLIO_DICT_SCHEMA)]
-```
 
 ### Literal — Inline Enum via Type Hints
 
@@ -224,7 +212,7 @@ def my_tool(ticker: str, lookback: int = 252) -> str:
 ## Response Formatting
 
 ```python
-from app.core.atlas.tools.responses import success_response, error_response
+from app.core.atlas.tools_v2.responses import success_response, error_response
 
 # Success
 return success_response({
@@ -240,26 +228,19 @@ except Exception as e:
     return error_response(f"Error calculating metrics: {str(e)}")
 ```
 
-## Input Validation with ToolValidator
+## Portfolio Parameters
 
-ToolValidator is still available for runtime validation inside the function body:
+Portfolio tools always use `tickers: list[str]` and `weights: list[float]` (decimal percentages, e.g. 0.30 = 30%):
 
 ```python
-from app.utils.tool_validator import ToolValidator
-
-@agent_tool(name="my_tool")
-def my_tool(ticker: str, portfolio_dict: Annotated[dict, Schema(PORTFOLIO_DICT_SCHEMA)]) -> str:
-    """Analyze a ticker within portfolio context."""
-    v = ToolValidator()
-    v.require_ticker('ticker', ticker)
-    v.require_portfolio('portfolio_dict', portfolio_dict, normalize=True)
-
-    if not v.is_valid():
-        return v.error_response()
-
-    ticker = v.get('ticker')
-    portfolio_dict = v.get('portfolio_dict')
-    # ...
+@agent_tool(name="portfolio_risk")
+def portfolio_risk(
+    tickers: list[str],
+    weights: list[float],
+    years_back: Annotated[int, Param(min_val=1, max_val=10)] = 1,
+) -> str:
+    """Calculate portfolio risk metrics."""
+    ...
 ```
 
 | Method | Purpose | Parameters |

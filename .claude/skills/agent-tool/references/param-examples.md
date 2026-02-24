@@ -46,7 +46,7 @@ sort_order: Literal['asc', 'desc'] = 'desc'
 
 ```python
 from typing import Annotated
-from app.core.atlas.tools.decorator import Param
+from app.core.atlas.tools_v2.decorator import Param
 
 # Activity type filter
 activity_type: Annotated[str, Param(enum=['FILL', 'CSD', 'CSW', 'DIV', 'JNLC'])]
@@ -63,7 +63,7 @@ sector: Annotated[str, Param(enum=[
 
 ```python
 from typing import Annotated
-from app.core.atlas.tools.decorator import Param
+from app.core.atlas.tools_v2.decorator import Param
 
 # Integer with min/max
 lookback_days: Annotated[int, Param(min_val=30, max_val=756)] = 252
@@ -83,7 +83,7 @@ limit: Annotated[int, Param(max_val=100)] = 25
 
 ```python
 from typing import Annotated
-from app.core.atlas.tools.decorator import Param
+from app.core.atlas.tools_v2.decorator import Param
 
 # Override the docstring-derived description
 conf: Annotated[float, Param(
@@ -91,20 +91,6 @@ conf: Annotated[float, Param(
     min_val=0.5,
     max_val=0.999
 )] = 0.99
-```
-
-## Pre-Built Schema Injection
-
-For complex parameter types that can't be expressed with simple type hints (e.g. portfolio_dict with patternProperties):
-
-```python
-from typing import Annotated
-from app.core.atlas.tools.decorator import Schema
-from app.core.atlas.tools.tool_schemas import PORTFOLIO_DICT_SCHEMA
-
-# Inject the full pre-built JSON Schema
-portfolio_dict: Annotated[dict, Schema(PORTFOLIO_DICT_SCHEMA)]
-# The entire PORTFOLIO_DICT_SCHEMA dict is used as-is in the generated schema
 ```
 
 ## Array Parameters
@@ -184,23 +170,21 @@ def account_activities(
 ### Portfolio Tool — VaR/ES
 
 ```python
-@agent_tool(name="portfolio_vol_es")
-def vol_es(
-    portfolio_dict: Annotated[dict, Schema(PORTFOLIO_DICT_SCHEMA)],
-    horizon_days: Annotated[int, Param(min_val=1)] = 1,
+@agent_tool(name="portfolio_risk")
+def portfolio_risk(
+    tickers: list[str],
+    weights: list[float],
+    years_back: Annotated[int, Param(min_val=1, max_val=10)] = 1,
     conf: Annotated[float, Param(min_val=0.5, max_val=0.999)] = 0.99,
-    method: Literal['param', 'hist'] = 'param',
-    *,
-    _simulation_date: Optional[datetime] = None,
 ) -> str:
     """
     Calculate portfolio volatility, Value at Risk (VaR), and Expected Shortfall (ES).
 
     Args:
-        portfolio_dict: Portfolio configuration mapping ticker -> {allocation, position}
-        horizon_days: Time horizon for risk calculation
+        tickers: List of ticker symbols (e.g., ['AAPL', 'MSFT', 'GOOGL'])
+        weights: Decimal portfolio weights matching tickers (e.g., [0.40, 0.35, 0.25])
+        years_back: Historical lookback period in years
         conf: Confidence level
-        method: Calculation method
 
     Returns:
         VaR, ES, and annualized volatility metrics

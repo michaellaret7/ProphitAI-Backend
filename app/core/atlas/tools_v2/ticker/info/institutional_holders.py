@@ -7,8 +7,8 @@ including holder positions, changes in shares, and ownership trends.
 from typing import Annotated
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
-from app.core.atlas.tools.decorator import agent_tool, Param
-from app.core.atlas.tools.responses import success_response, error_response
+from app.core.atlas.tools_v2.decorator import agent_tool, Param
+from app.core.atlas.tools_v2.responses import success_response, error_response
 from app.db.core.pull_fmp_data import FMP_API_DATA
 
 

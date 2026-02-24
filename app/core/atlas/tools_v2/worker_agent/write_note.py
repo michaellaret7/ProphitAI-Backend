@@ -1,5 +1,5 @@
 from app.core.atlas.models.notebook import Notebook
-from app.core.atlas.tools.responses import success_response, error_response
+from app.core.atlas.tools_v2.responses import success_response, error_response
 
 def write_note(
     notebook: Notebook,

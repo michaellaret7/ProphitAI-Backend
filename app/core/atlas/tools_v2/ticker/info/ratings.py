@@ -7,8 +7,8 @@ and fundamental quality scores for stocks.
 from typing import Annotated, Literal
 from datetime import timedelta
 
-from app.core.atlas.tools.decorator import agent_tool, Param
-from app.core.atlas.tools.responses import success_response, error_response
+from app.core.atlas.tools_v2.decorator import agent_tool, Param
+from app.core.atlas.tools_v2.responses import success_response, error_response
 from app.db.core.pull_fmp_data import FMP_API_DATA
 from app.utils.time_utils import get_current_utc_time
 import pandas as pd

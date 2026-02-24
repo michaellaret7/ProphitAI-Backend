@@ -5,7 +5,7 @@ from typing import Any, List, Dict
 
 from app.core.atlas.agents.worker_agent import WorkerAgent
 from app.core.atlas.models.notebook import Notebook
-from app.core.atlas.tools.responses import success_response, error_response
+from app.core.atlas.tools_v2.responses import success_response, error_response
 
 
 def deploy_worker_agent(

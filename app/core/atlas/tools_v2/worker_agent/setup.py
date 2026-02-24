@@ -3,7 +3,7 @@
 from typing import Any, Dict, List
 
 from app.core.atlas.models.notebook import Notebook
-from app.core.atlas.tools.responses import error_response
+from app.core.atlas.tools_v2.responses import error_response
 
 # --- ticker ---
 from app.core.atlas.tools_v2.ticker.performance import ticker_performance
@@ -47,6 +47,11 @@ from app.core.atlas.tools_v2.portfolio.stress_test import portfolio_stress_test
 from app.core.atlas.tools_v2.portfolio.factor_exposure import portfolio_factor_exposure
 from app.core.atlas.tools_v2.portfolio.classification import portfolio_classification
 
+# --- macro ---
+from app.core.atlas.tools_v2.macro.commodity_prices import commodity_prices
+from app.core.atlas.tools_v2.macro.us_rates import us_treasury_rates
+from app.core.atlas.tools_v2.macro.indicators import macro_indicators
+
 # --- alpaca ---
 from app.core.atlas.tools_v2.alpaca.account import account_info, account_activities
 from app.core.atlas.tools_v2.alpaca.portfolio import (
@@ -80,6 +85,8 @@ _ALL_TOOL_FUNCTIONS = [
     # portfolio (6)
     portfolio_allocator, portfolio_performance, portfolio_risk, portfolio_stress_test,
     portfolio_factor_exposure, portfolio_classification,
+    # macro (3)
+    commodity_prices, us_treasury_rates, macro_indicators,
     # alpaca (11)
     account_info, account_activities, get_position, get_positions,
     close_position, get_portfolio_history, submit_trade, get_orders,

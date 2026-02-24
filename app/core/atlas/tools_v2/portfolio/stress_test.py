@@ -6,8 +6,8 @@ portfolio using the Portfolio class and StressTestResult model from calc_v2.
 
 from typing import Annotated
 
-from app.core.atlas.tools.decorator import agent_tool, Param, Schema
-from app.core.atlas.tools.responses import success_response, error_response
+from app.core.atlas.tools_v2.decorator import agent_tool, Param, Schema
+from app.core.atlas.tools_v2.responses import success_response, error_response
 from app.core.atlas.tools_v2.portfolio.utils import build_portfolio_obj
 
 
@@ -62,7 +62,7 @@ against ETF factor returns via OLS, then applying user-supplied shock magnitudes
     Args:
         tickers: List of ticker symbols in the portfolio (e.g., ['AAPL', 'MSFT', 'GOOGL'])
         weights: Decimal portfolio weights per ticker, same order as tickers.
-            0.30 = 30% allocation. Negative = short. (e.g., [0.40, 0.35, 0.25] or [0.60, -0.20, 0.20])
+            0.30 = 30% allocation. Negative = short. (e.g., [0.40, 0.35, 0.25])
         shocks: ETF shock magnitudes as {ETF_ticker: shock_size}.
             Each value is a decimal return shock. Example: {"SPY": -0.05, "TLT": 0.10}
         years_back: Number of years of historical data for OLS regressions (default 2)

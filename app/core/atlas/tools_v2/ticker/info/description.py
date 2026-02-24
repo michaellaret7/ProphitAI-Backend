@@ -4,8 +4,8 @@ Provides tools for retrieving comprehensive ticker and ETF metadata
 and characteristics from the database.
 """
 
-from app.core.atlas.tools.decorator import agent_tool
-from app.core.atlas.tools.responses import success_response, error_response
+from app.core.atlas.tools_v2.decorator import agent_tool
+from app.core.atlas.tools_v2.responses import success_response, error_response
 from app.db.core.db_config import MarketSession
 from app.db.core.models.market_data_models import Ticker
 from app.utils.serialize_output import serialize_sqlalchemy_obj

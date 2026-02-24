@@ -7,8 +7,8 @@ industry, and sub-industry — including concentration and group-level VaR.
 from typing import Annotated
 
 from app.core.calc_v2.models.group_metrics import GroupMetrics
-from app.core.atlas.tools.decorator import agent_tool, Param
-from app.core.atlas.tools.responses import success_response, error_response
+from app.core.atlas.tools_v2.decorator import agent_tool, Param
+from app.core.atlas.tools_v2.responses import success_response, error_response
 from app.core.atlas.tools_v2.portfolio.utils import build_portfolio_obj
 
 
@@ -60,7 +60,7 @@ tickers for each classification group, plus portfolio-level exposure metrics.
 - Groups are sorted by absolute concentration (largest exposure first).
 
     Args:
-        tickers: List of ticker symbols in the portfolio (e.g., ['AAPL', 'MSFT', 'JPM'])
+        tickers: List of ticker symbols in the portfolio (e.g., ['AAPL', 'MSFT', 'GOOGL'])
         weights: Decimal portfolio weights per ticker, same order as tickers.
             0.30 = 30% allocation. Negative = short. (e.g., [0.40, 0.35, 0.25])
         years_back: Number of years of historical data for VaR calculation (default 1)

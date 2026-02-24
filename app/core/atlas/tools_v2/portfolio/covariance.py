@@ -7,8 +7,8 @@ holdings are the largest contributors to overall portfolio variance.
 import math
 from typing import Annotated
 
-from app.core.atlas.tools.decorator import agent_tool, Param
-from app.core.atlas.tools.responses import success_response, error_response
+from app.core.atlas.tools_v2.decorator import agent_tool, Param
+from app.core.atlas.tools_v2.responses import success_response, error_response
 from app.core.atlas.tools_v2.portfolio.utils import build_portfolio_obj
 from app.core.calc_v2.config import TRADING_DAYS
 

@@ -2,8 +2,8 @@
 
 from typing import Any
 
-from app.core.atlas.tools.decorator import agent_tool
-from app.core.atlas.tools.responses import success_response, error_response
+from app.core.atlas.tools_v2.decorator import agent_tool
+from app.core.atlas.tools_v2.responses import success_response, error_response
 from app.core.atlas.models.new_plan import Plan, TaskStatus
 
 

@@ -9,8 +9,8 @@ Tools that fetch and return data without complex processing.
 ```python
 """Fetch ticker information tool."""
 
-from app.core.atlas.tools.decorator import agent_tool
-from app.core.atlas.tools.responses import success_response, error_response
+from app.core.atlas.tools_v2.decorator import agent_tool
+from app.core.atlas.tools_v2.responses import success_response, error_response
 
 
 @agent_tool(name="get_ticker_info")
@@ -49,57 +49,50 @@ def get_ticker_info(ticker: str) -> str:
 
 ## Pattern 2: Portfolio Analysis Tool
 
-Tools that operate on portfolio dictionaries with `Schema()` injection.
+Tools that operate on a portfolio via `tickers` and `weights`.
 
 ```python
 """Portfolio concentration analysis tool."""
 
-from app.core.atlas.tools.decorator import agent_tool, Schema
-from app.core.atlas.tools.tool_schemas import PORTFOLIO_DICT_SCHEMA
-from app.core.atlas.tools.responses import success_response, error_response
-from app.utils.tool_validator import ToolValidator
-from typing import Annotated, Optional
+from app.core.atlas.tools_v2.decorator import agent_tool, Param
+from app.core.atlas.tools_v2.responses import success_response, error_response
+from typing import Annotated
 
 
 @agent_tool(name="portfolio_concentration")
 def portfolio_concentration(
-    portfolio_dict: Annotated[dict, Schema(PORTFOLIO_DICT_SCHEMA)],
-    *,
-    _simulation_date: Optional[str] = None,
+    tickers: list[str],
+    weights: list[float],
 ) -> str:
     """
     Analyze concentration risk in a portfolio.
 
     Args:
-        portfolio_dict: Portfolio with ticker keys and allocation/position values
+        tickers: List of ticker symbols (e.g., ['AAPL', 'MSFT', 'GOOGL'])
+        weights: Decimal portfolio weights matching tickers (e.g., [0.40, 0.35, 0.25])
 
     Returns:
         Dict with num_holdings, top_5_concentration, hhi_index, and effective_positions
 
     Examples:
-        portfolio_concentration(portfolio_dict={'AAPL': {'allocation': 0.5, 'position': 'long'}, ...})
-        >>> {"success": True, "data": {"num_holdings": 5, "top_5_concentration": 1.0, ...}}
+        portfolio_concentration(tickers=['AAPL', 'MSFT'], weights=[0.6, 0.4])
+        >>> {"success": True, "data": {"num_holdings": 2, ...}}
     """
-    v = ToolValidator()
-    v.require_portfolio('portfolio_dict', portfolio_dict, normalize=True)
-
-    if not v.is_valid():
-        return v.error_response()
-
-    portfolio_dict = v.get('portfolio_dict')
+    if len(tickers) != len(weights):
+        return error_response("tickers and weights must have the same length")
 
     try:
-        allocations = [h["allocation"] for h in portfolio_dict.values()]
-        top_5 = sum(sorted(allocations, reverse=True)[:5])
-        hhi = sum(a**2 for a in allocations)
+        abs_weights = [abs(w) for w in weights]
+        top_5 = sum(sorted(abs_weights, reverse=True)[:5])
+        hhi = sum(w**2 for w in abs_weights)
 
         return success_response({
-            "num_holdings": len(portfolio_dict),
+            "num_holdings": len(tickers),
             "top_5_concentration": round(top_5, 4),
             "hhi_index": round(hhi, 4),
             "effective_positions": round(1 / hhi, 2) if hhi > 0 else 0,
-            "largest_position": max(allocations),
-            "smallest_position": min(allocations),
+            "largest_position": max(abs_weights),
+            "smallest_position": min(abs_weights),
         })
     except Exception as e:
         return error_response(f"Error calculating concentration: {str(e)}")
@@ -112,29 +105,27 @@ Tools with several optional parameters using `Param` and `Literal` constraints.
 ```python
 """Risk metrics calculation tool."""
 
-from app.core.atlas.tools.decorator import agent_tool, Param, Schema
-from app.core.atlas.tools.tool_schemas import PORTFOLIO_DICT_SCHEMA
-from app.core.atlas.tools.responses import success_response, error_response
-from app.utils.tool_validator import ToolValidator
-from typing import Annotated, Literal, Optional
+from app.core.atlas.tools_v2.decorator import agent_tool, Param
+from app.core.atlas.tools_v2.responses import success_response, error_response
+from typing import Annotated, Literal
 import numpy as np
 
 
 @agent_tool(name="calculate_risk_metrics")
 def calculate_risk_metrics(
-    portfolio_dict: Annotated[dict, Schema(PORTFOLIO_DICT_SCHEMA)],
-    lookback_days: Annotated[int, Param(min_val=30, max_val=756)] = 252,
+    tickers: list[str],
+    weights: list[float],
+    years_back: Annotated[int, Param(min_val=1, max_val=10)] = 1,
     confidence_level: Annotated[float, Param(min_val=0.9, max_val=0.99)] = 0.95,
     method: Literal['param', 'hist'] = 'param',
-    *,
-    _simulation_date: Optional[str] = None,
 ) -> str:
     """
     Calculate comprehensive risk metrics for a portfolio.
 
     Args:
-        portfolio_dict: Portfolio holdings
-        lookback_days: Historical window for calculations
+        tickers: List of ticker symbols (e.g., ['AAPL', 'MSFT', 'GOOGL'])
+        weights: Decimal portfolio weights matching tickers (e.g., [0.40, 0.35, 0.25])
+        years_back: Historical lookback period in years
         confidence_level: VaR confidence level
         method: Calculation method
 
@@ -143,22 +134,18 @@ def calculate_risk_metrics(
 
     Examples:
         calculate_risk_metrics(
-            portfolio_dict={...},
-            lookback_days=126,
+            tickers=['AAPL', 'MSFT'],
+            weights=[0.6, 0.4],
+            years_back=1,
             confidence_level=0.95,
             method='param'
         )
     """
-    v = ToolValidator()
-    v.require_portfolio('portfolio_dict', portfolio_dict, normalize=True)
-
-    if not v.is_valid():
-        return v.error_response()
-
-    portfolio_dict = v.get('portfolio_dict')
+    if len(tickers) != len(weights):
+        return error_response("tickers and weights must have the same length")
 
     try:
-        returns = fetch_portfolio_returns(portfolio_dict, lookback_days)
+        returns = fetch_portfolio_returns(tickers, weights, years_back)
 
         volatility = np.std(returns) * np.sqrt(252)
         var = np.percentile(returns, (1 - confidence_level) * 100)
@@ -174,7 +161,7 @@ def calculate_risk_metrics(
             "expected_shortfall": round(es, 4),
             "max_drawdown": round(max_dd, 4),
             "sharpe_ratio": round(np.mean(returns) / np.std(returns) * np.sqrt(252), 2),
-            "lookback_days": lookback_days,
+            "years_back": years_back,
         })
     except Exception as e:
         return error_response(f"Error calculating risk metrics: {str(e)}")
@@ -187,8 +174,8 @@ Tools with constrained string parameters using `Param(enum=...)`.
 ```python
 """Account activities tool."""
 
-from app.core.atlas.tools.decorator import agent_tool, Param
-from app.core.atlas.tools.responses import success_response, error_response
+from app.core.atlas.tools_v2.decorator import agent_tool, Param
+from app.core.atlas.tools_v2.responses import success_response, error_response
 from app.brokers.alpaca_broker.broker import ProphitBroker
 from typing import Annotated
 
@@ -236,8 +223,8 @@ Tools that spawn another agent to handle complex tasks.
 ```python
 """Sector analyst sub-agent tool."""
 
-from app.core.atlas.tools.decorator import agent_tool, Param
-from app.core.atlas.tools.responses import success_response, error_response
+from app.core.atlas.tools_v2.decorator import agent_tool, Param
+from app.core.atlas.tools_v2.responses import success_response, error_response
 from typing import Annotated, Literal, Optional
 
 
@@ -298,8 +285,8 @@ Tools that handle multiple items efficiently.
 ```python
 """Batch ticker data retrieval tool."""
 
-from app.core.atlas.tools.decorator import agent_tool, Param
-from app.core.atlas.tools.responses import success_response, error_response
+from app.core.atlas.tools_v2.decorator import agent_tool, Param
+from app.core.atlas.tools_v2.responses import success_response, error_response
 from typing import Annotated, List, Literal, Optional
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
@@ -366,8 +353,8 @@ Tools that need access to agent state. The wrapper captures the agent reference 
 ```python
 """Edit plan tool — requires access to agent.plan."""
 
-from app.core.atlas.tools.decorator import agent_tool, Param
-from app.core.atlas.tools.responses import success_response, error_response
+from app.core.atlas.tools_v2.decorator import agent_tool, Param
+from app.core.atlas.tools_v2.responses import success_response, error_response
 from typing import Annotated, Any, Callable, Literal, Optional
 
 

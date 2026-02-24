@@ -1,7 +1,7 @@
 """Think tool for structured reasoning."""
 
-from app.core.atlas.tools.decorator import agent_tool
-from app.core.atlas.tools.responses import success_response
+from app.core.atlas.tools_v2.decorator import agent_tool
+from app.core.atlas.tools_v2.responses import success_response
 
 
 @agent_tool(name="think")
