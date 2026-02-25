@@ -104,6 +104,17 @@ class ChatSessionManager:
             prompt_func = agent_prompt_funcs.get(agent_type)
             system_prompt = prompt_func() if prompt_func else None
 
+        # Resolve broker account and inject into prompt
+        if user_id:
+            from app.repositories.user.broker import resolve_broker_account
+            broker_account_id = resolve_broker_account(clerk_id=user_id)
+            broker_context = (
+                f"\n\n## Broker Context\n"
+                f"The user's Alpaca broker account ID is: `{broker_account_id}`.\n"
+                f"Always use this account ID for all broker operations."
+            )
+            system_prompt = (system_prompt or "") + broker_context
+
         # Create agent without callback (callback set per-message due to event loop)
         agent = ChatAgent(
             provider='anthropic',
