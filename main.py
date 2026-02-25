@@ -28,6 +28,7 @@ from app.api.routes.watchlist_routes import router as watchlist_router
 from app.api.routes.websocket_router import router as websocket_router
 from app.api.routes.messaging_router import router as messaging_router
 from app.api.routes.document_router import router as document_router
+from app.api.routes.trade_proposal_router import router as trade_proposal_router
 from app.api.auth.api_key import validate_api_key
 from app.api.auth.clerk import clerk_auth
 from app.redis.client import cache
@@ -102,6 +103,7 @@ api_key_only = [Depends(validate_api_key)]
 app.include_router(user_router, prefix="/api", dependencies=auth_dependencies)
 app.include_router(portfolio_router, prefix="/api", dependencies=auth_dependencies)
 app.include_router(broker_router, prefix="/api", dependencies=auth_dependencies)
+app.include_router(trade_proposal_router, prefix="/api", dependencies=auth_dependencies)
 app.include_router(watchlist_router, prefix="/api", dependencies=auth_dependencies)
 app.include_router(dashboard_router, prefix="/api", dependencies=auth_dependencies)
 

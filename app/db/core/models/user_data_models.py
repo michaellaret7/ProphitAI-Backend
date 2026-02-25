@@ -176,6 +176,52 @@ class WatchlistItem(UserBase):
 
 
 # =============================================================================
+# TRADE PROPOSALS SCHEMA
+# =============================================================================
+
+class TradeProposal(UserBase):
+    """AI-generated trade proposal awaiting user approval."""
+    __tablename__ = 'trade_proposals'
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    user_id = Column(UUID(as_uuid=True), ForeignKey('users.id', ondelete='CASCADE'), nullable=False, index=True)
+    account_id = Column(String, nullable=False)  # Alpaca broker account ID
+
+    # Order parameters (mirrors broker buy/sell signature)
+    symbol = Column(String, nullable=False)
+    side = Column(String, nullable=False)           # 'buy' or 'sell'
+    qty = Column(Float, nullable=True)
+    notional = Column(Float, nullable=True)
+    limit_price = Column(Float, nullable=True)
+    stop_price = Column(Float, nullable=True)
+    trail_price = Column(Float, nullable=True)
+    trail_percent = Column(Float, nullable=True)
+    take_profit = Column(Float, nullable=True)
+    stop_loss = Column(Float, nullable=True)
+    stop_loss_limit = Column(Float, nullable=True)
+    order_class = Column(String, nullable=True)     # simple, bracket, oco, oto
+    time_in_force = Column(String, nullable=False, default='day')
+
+    # Agent context
+    agent_reasoning = Column(Text, nullable=True)
+
+    # Lifecycle
+    status = Column(String, nullable=False, default='pending', index=True)
+    # Values: pending, executed, rejected, failed
+    alpaca_order_id = Column(String, nullable=True)
+    error_message = Column(Text, nullable=True)
+
+    # Timestamps
+    created_at = Column(DateTime, default=get_current_utc_time)
+    updated_at = Column(DateTime, default=get_current_utc_time, onupdate=get_current_utc_time)
+    executed_at = Column(DateTime, nullable=True)
+    rejected_at = Column(DateTime, nullable=True)
+
+    # Relationships
+    user = relationship('User', backref='trade_proposals')
+
+
+# =============================================================================
 # MESSAGING SCHEMA
 # =============================================================================
 

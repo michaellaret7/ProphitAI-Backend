@@ -104,14 +104,28 @@ class ChatSessionManager:
             prompt_func = agent_prompt_funcs.get(agent_type)
             system_prompt = prompt_func() if prompt_func else None
 
-        # Resolve broker account and inject into prompt
+        # Resolve broker account + internal user ID and inject into prompt
         if user_id:
             from app.repositories.user.broker import resolve_broker_account
+            from app.repositories.user.trade_proposal import get_internal_user_id
+
             broker_account_id = resolve_broker_account(clerk_id=user_id)
+            internal_user_id = get_internal_user_id(clerk_id=user_id)
+
             broker_context = (
                 f"\n\n## Broker Context\n"
                 f"The user's Alpaca broker account ID is: `{broker_account_id}`.\n"
-                f"Always use this account ID for all broker operations."
+                f"The user's internal user ID is: `{internal_user_id}`.\n"
+                f"Always use these IDs for broker and trade proposal operations.\n\n"
+                f"## Trade Proposal Rules\n"
+                f"NEVER call propose_trade without explicit user confirmation. Follow this flow:\n"
+                f"1. Do thorough research first — analyze fundamentals, technicals, recent news, "
+                f"and any relevant macro context before even considering a trade.\n"
+                f"2. Present the trade idea verbally to the user — include symbol, side (buy/sell), "
+                f"quantity or dollar amount, order type, and your detailed reasoning.\n"
+                f"3. Wait for the user to confirm (e.g. 'yes', 'go ahead', 'do it', 'submit it').\n"
+                f"4. Only AFTER confirmation, call propose_trade with all the details.\n"
+                f"5. If the user declines or wants changes, adjust and re-present — do NOT submit.\n"
             )
             system_prompt = (system_prompt or "") + broker_context
 

@@ -37,7 +37,7 @@ from app.core.atlas.tools.alpaca.portfolio import (
     get_position, get_positions, close_position, get_portfolio_history,
 )
 from app.core.atlas.tools.alpaca.trade import (
-    submit_trade, get_orders, cancel_order, cancel_all_orders, get_asset,
+    propose_trade, get_orders, cancel_order, cancel_all_orders, get_asset,
 )
 
 if TYPE_CHECKING:
@@ -75,7 +75,7 @@ def register_chat_tools(agent: "AgentBase") -> None:
         close_position,
         get_portfolio_history,
         # alpaca - trade
-        submit_trade,
+        propose_trade,
         get_orders,
         cancel_order,
         cancel_all_orders,

@@ -61,7 +61,7 @@ from app.core.atlas.tools.alpaca.portfolio import (
     get_position, get_positions, close_position, get_portfolio_history,
 )
 from app.core.atlas.tools.alpaca.trade import (
-    submit_trade, get_orders, cancel_order, cancel_all_orders, get_asset,
+    propose_trade, get_orders, cancel_order, cancel_all_orders, get_asset,
 )
 
 
@@ -93,7 +93,7 @@ _ALL_TOOL_FUNCTIONS = [
     commodity_prices, us_treasury_rates, macro_indicators,
     # alpaca (11)
     account_info, account_activities, get_position, get_positions,
-    close_position, get_portfolio_history, submit_trade, get_orders,
+    close_position, get_portfolio_history, propose_trade, get_orders,
     cancel_order, cancel_all_orders, get_asset,
 ]
 
