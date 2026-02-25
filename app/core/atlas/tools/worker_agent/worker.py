@@ -47,9 +47,12 @@ def deploy_worker_agent(
             task=task,
             tools=tools,
             notebook=notebook,
-            provider='gemini',
-            model='gemini-3.1-pro-preview',
-            chat_callback=worker_callback,  
+            # provider='gemini',
+            # model='gemini-3.1-pro-preview',
+            provider='fireworks',
+            # model='Kimi-K2.5',
+            model='glm-4-7',
+            chat_callback=worker_callback,
             max_iterations=30,
         )
 
@@ -57,4 +60,3 @@ def deploy_worker_agent(
         return success_response(result.model_dump())
     except Exception as e:
         return error_response(e)
-

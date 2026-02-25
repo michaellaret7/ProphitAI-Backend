@@ -9,7 +9,7 @@ import yaml
 
 from app.core.atlas.execution.validation import validate_tool_call
 from app.core.atlas.logging import AgentPrinter
-from app.core.atlas.tools_v2.responses import error_response
+from app.core.atlas.tools.responses import error_response
 from app.core.atlas.execution.utils import stringify_for_llm, check_tool_success
 
 if TYPE_CHECKING:
@@ -291,9 +291,6 @@ class ToolHandler:
 
             try:
                 execution_args = args.copy()
-
-                if getattr(self.agent, 'simulation_date', None) is not None and isinstance(execution_args, dict):
-                    execution_args['_simulation_date'] = self.agent.simulation_date
 
                 result = func(**execution_args)
                 result_str = str(result)

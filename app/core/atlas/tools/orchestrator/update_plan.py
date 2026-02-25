@@ -2,27 +2,32 @@
 
 from typing import Any
 
-from app.core.atlas.models.new_plan import Plan, TaskStatus
+from app.core.atlas.tools.decorator import agent_tool
 from app.core.atlas.tools.responses import success_response, error_response
+from app.core.atlas.models.new_plan import Plan, TaskStatus
 
 
-def update_plan(plan: Plan, chat_callback: Any, task_id: str) -> str:
-    """Mark a plan task as complete and notify the frontend.
+# ================================
+# --> Tools
+# ================================
+
+@agent_tool(name="update_plan")
+def update_plan(_plan: Plan, _chat_callback: Any, task_id: str) -> str:
+    """Mark a plan task as complete after a worker has finished it.
+Call this after each deploy_worker_agent returns successfully.
 
     Args:
-        plan: The orchestrator's Plan object (bound via partial).
-        chat_callback: The agent's chat callback (bound via partial).
-        task_id: The task ID to mark complete (e.g., "1", "2").
+        task_id: The task ID to mark as complete (e.g., '1', '2', '3')
 
-    Returns:
-        YAML-formatted success/error response with progress summary.
+    Examples:
+        update_plan(task_id='1')  # after worker finishes task 1
     """
-    if not plan or not plan.tasks:
+    if not _plan or not _plan.tasks:
         return error_response("No plan available to update")
 
-    task = next((t for t in plan.tasks if t.id == task_id), None)
+    task = next((t for t in _plan.tasks if t.id == task_id), None)
     if not task:
-        available = [t.id for t in plan.tasks]
+        available = [t.id for t in _plan.tasks]
         return error_response(f"Task '{task_id}' not found. Available: {available}")
 
     if task.status == TaskStatus.COMPLETE:
@@ -31,14 +36,14 @@ def update_plan(plan: Plan, chat_callback: Any, task_id: str) -> str:
     task.status = TaskStatus.COMPLETE
 
     # Notify frontend of the plan state change
-    if chat_callback and hasattr(chat_callback, "on_plan_updated"):
-        chat_callback.on_plan_updated(plan)
+    if _chat_callback and hasattr(_chat_callback, "on_plan_updated"):
+        _chat_callback.on_plan_updated(_plan)
 
-    completed = sum(1 for t in plan.tasks if t.status == TaskStatus.COMPLETE)
-    total = len(plan.tasks)
+    completed = sum(1 for t in _plan.tasks if t.status == TaskStatus.COMPLETE)
+    total = len(_plan.tasks)
     remaining = [
         f"  {t.id}. {t.description}"
-        for t in plan.tasks if t.status != TaskStatus.COMPLETE
+        for t in _plan.tasks if t.status != TaskStatus.COMPLETE
     ]
 
     summary = f"Task {task_id} marked complete. Progress: {completed}/{total}."
@@ -50,26 +55,6 @@ def update_plan(plan: Plan, chat_callback: Any, task_id: str) -> str:
     return success_response({"message": summary})
 
 
-UPDATE_PLAN_DESCRIPTION = (
-    "Mark a plan task as complete after a worker has finished it. "
-    "Call this after each deploy_worker_agent returns successfully.\n\n"
-    "Example: update_plan(task_id='1')  # after worker finishes task 1"
-)
-
-UPDATE_PLAN_PARAMETERS = {
-    "type": "object",
-    "properties": {
-        "task_id": {
-            "type": "string",
-            "description": "The task ID to mark as complete (e.g., '1', '2', '3')"
-        },
-    },
-    "required": ["task_id"],
-}
-
-UPDATE_PLAN_TOOL = {
-    "name": "update_plan",
-    "description": UPDATE_PLAN_DESCRIPTION,
-    "parameters": UPDATE_PLAN_PARAMETERS,
-    "function": update_plan,
-}
+# Reason: `function` is intentionally omitted — it must be bound via
+# functools.partial(update_plan, plan, chat_callback) at registration time.
+UPDATE_PLAN_TOOL = {k: v for k, v in update_plan.tool.items() if k != "function"}

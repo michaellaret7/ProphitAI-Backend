@@ -1,4 +1,4 @@
-from datetime import datetime
+from app.utils.time_utils import get_current_utc_time
 
 
 ORCHESTRATOR_SYSTEM_PROMPT = """You are an orchestrator agent. Your job is to break down complex tasks
@@ -79,7 +79,7 @@ def build_plan_prompt(plan) -> str:
         f"{t.id}. {t.description}" for t in plan.tasks
     )
 
-    date = datetime.now().strftime("%m/%d/%Y")
+    date = get_current_utc_time().strftime("%m/%d/%Y")
 
     return ORCHESTRATOR_SYSTEM_PROMPT + f"""
 

@@ -4,9 +4,9 @@
 This tool analyzes [aspect] of a portfolio.
 """
 
-from app.core.atlas.tools_v2.decorator import agent_tool, Param
-from app.core.atlas.tools_v2.responses import success_response, error_response
-from typing import Annotated, Optional
+from app.core.atlas.tools.decorator import agent_tool, Param
+from app.core.atlas.tools.responses import success_response, error_response
+from typing import Annotated
 
 
 # ================================
@@ -23,8 +23,6 @@ def portfolio_tool_name(
     tickers: list[str],
     weights: list[float],
     years_back: Annotated[int, Param(min_val=1, max_val=10)] = 1,
-    *,
-    _simulation_date: Optional[str] = None,
 ) -> str:
     """
     Analyze [aspect] of a portfolio.

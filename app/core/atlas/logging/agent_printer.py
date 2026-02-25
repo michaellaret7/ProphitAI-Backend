@@ -50,7 +50,7 @@ class AgentPrinter:
         if self.mode == PrintMode.PRODUCTION:
             return
 
-        display_args = {k: v for k, v in args.items() if k != '_simulation_date'}
+        display_args = args
 
         if self.mode == PrintMode.SUBAGENT:
             print(f"   [Sub-agent] Arguments: {self.YELLOW}SUCCESSFULLY PARSED{self.RESET}")

@@ -4,9 +4,9 @@
 This tool provides [functionality description].
 """
 
-from app.core.atlas.tools_v2.decorator import agent_tool, Param
-from app.core.atlas.tools_v2.responses import success_response, error_response
-from typing import Annotated, Optional
+from app.core.atlas.tools.decorator import agent_tool, Param
+from app.core.atlas.tools.responses import success_response, error_response
+from typing import Annotated
 
 
 # ================================
@@ -22,8 +22,6 @@ from typing import Annotated, Optional
 def tool_name(
     ticker: str,
     lookback_days: Annotated[int, Param(min_val=30, max_val=756)] = 252,
-    *,
-    _simulation_date: Optional[str] = None,
 ) -> str:
     """
     Brief description of what the tool does.

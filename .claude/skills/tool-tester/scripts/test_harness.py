@@ -1,4 +1,4 @@
-"""Test harness for tools_v2 - run, time, and measure tool outputs.
+"""Test harness for tools - run, time, and measure tool outputs.
 
 Usage:
     python test_harness.py <tool_name> '<args_json>'
@@ -24,7 +24,7 @@ load_dotenv(os.path.join(PROJECT_ROOT, ".env"))
 
 import tiktoken
 
-from app.core.atlas.tools_v2.worker_agent.setup import AVAILABLE_TOOLS
+from app.core.atlas.tools.worker_agent.setup import AVAILABLE_TOOLS
 
 
 # ================================

@@ -10,8 +10,8 @@ Build tools for the ProphitAI agentic framework using the `@agent_tool` decorato
 ## Quick Reference
 
 ```
-Tool Location: app/core/atlas/tools_v2/<category>/<tool_name>.py
-Decorator: @agent_tool from app.core.atlas.tools_v2.decorator
+Tool Location: app/core/atlas/tools/<category>/<tool_name>.py
+Decorator: @agent_tool from app.core.atlas.tools.decorator
 Response Format: YAML via success_response() / error_response()
 Registration: agent.add_tool(**func.tool)
 ```
@@ -23,8 +23,8 @@ Every tool file follows this structure:
 ```python
 """Tool description in docstring."""
 
-from app.core.atlas.tools_v2.decorator import agent_tool, Param, Schema
-from app.core.atlas.tools_v2.responses import success_response, error_response
+from app.core.atlas.tools.decorator import agent_tool, Param, Schema
+from app.core.atlas.tools.responses import success_response, error_response
 from typing import Annotated, Optional
 
 # ================================
@@ -40,7 +40,6 @@ from typing import Annotated, Optional
 def tool_name(
     param1: str,
     param2: Annotated[int, Param(min_val=1, max_val=100)] = 10,
-    _simulation_date: Optional[str] = None,
 ) -> str:
     """
     Brief description of what the tool does.
@@ -83,7 +82,7 @@ The decorator introspects the function signature, type hints, and docstring to a
 1. **Reads type hints** to determine JSON Schema types
 2. **Parses the docstring** for tool description and parameter descriptions
 3. **Extracts `Param`/`Schema` metadata** from `Annotated` types for constraints
-4. **Hides `_`-prefixed params** (e.g. `_simulation_date`) from the schema
+4. **Hides `_`-prefixed params** from the schema
 5. **Attaches a `.tool` dict** to the function for registration
 
 ### Decorator Usage
@@ -106,14 +105,14 @@ def vol_es(portfolio_dict: dict) -> str:
 
 ```python
 # Single tool
-from app.core.atlas.tools_v2.portfolio.vol_es import vol_es
+from app.core.atlas.tools.portfolio.vol_es import vol_es
 agent.add_tool(**vol_es.tool)
 
 # Registry function for related tools
 def register_risk_tools(agent) -> None:
     """Register all risk analysis tools on the agent."""
-    from app.core.atlas.tools_v2.portfolio.vol_es import vol_es
-    from app.core.atlas.tools_v2.portfolio.stress_test import stress_test
+    from app.core.atlas.tools.portfolio.vol_es import vol_es
+    from app.core.atlas.tools.portfolio.stress_test import stress_test
 
     agent.add_tool(**vol_es.tool)
     agent.add_tool(**stress_test.tool)
@@ -127,7 +126,7 @@ Use `typing.Annotated` with `Param` or `Schema` to add constraints beyond basic 
 
 ```python
 from typing import Annotated
-from app.core.atlas.tools_v2.decorator import Param
+from app.core.atlas.tools.decorator import Param
 
 # Enum constraint
 activity_type: Annotated[str, Param(enum=['FILL', 'CSD', 'CSW', 'DIV', 'JNLC'])]
@@ -212,7 +211,7 @@ def my_tool(ticker: str, lookback: int = 252) -> str:
 ## Response Formatting
 
 ```python
-from app.core.atlas.tools_v2.responses import success_response, error_response
+from app.core.atlas.tools.responses import success_response, error_response
 
 # Success
 return success_response({
@@ -265,11 +264,11 @@ def portfolio_risk(
 | `macro/` | Macro data | Rates, commodities, indicators |
 | `foundry/` | Research tools | Credit research, macro research |
 
-## Registering in Worker Agent Setup (tools_v2)
+## Registering in Worker Agent Setup (tools)
 
-After creating a tool in `app/core/atlas/tools_v2/`, you **must** register it in the worker agent setup file so the orchestrator can discover and deploy it.
+After creating a tool in `app/core/atlas/tools/`, you **must** register it in the worker agent setup file so the orchestrator can discover and deploy it.
 
-**File:** `app/core/atlas/tools_v2/worker_agent/setup.py`
+**File:** `app/core/atlas/tools/worker_agent/setup.py`
 
 ### Steps
 
@@ -277,9 +276,9 @@ After creating a tool in `app/core/atlas/tools_v2/`, you **must** register it in
 
 ```python
 # --- portfolio ---
-from app.core.atlas.tools_v2.portfolio.performance import portfolio_performance
-from app.core.atlas.tools_v2.portfolio.risk import portfolio_risk
-from app.core.atlas.tools_v2.portfolio.my_new_tool import my_new_tool  # <-- add here
+from app.core.atlas.tools.portfolio.performance import portfolio_performance
+from app.core.atlas.tools.portfolio.risk import portfolio_risk
+from app.core.atlas.tools.portfolio.my_new_tool import my_new_tool  # <-- add here
 ```
 
 2. **Add the function** to the `_ALL_TOOL_FUNCTIONS` list under the matching category comment, and **update the count**:
@@ -304,13 +303,13 @@ _ALL_TOOL_FUNCTIONS = [
 
 | Comment Tag | Path Prefix | Current Count |
 |-------------|-------------|---------------|
-| `# ticker` | `tools_v2/ticker/` | 4 |
-| `# fundamentals` | `tools_v2/ticker/fundamentals/` | 4 |
-| `# info` | `tools_v2/ticker/info/` | 6 |
-| `# screener` | `tools_v2/screener/` | 2 |
-| `# research` | `tools_v2/research/` | 6 |
-| `# portfolio` | `tools_v2/portfolio/` | 5 |
-| `# alpaca` | `tools_v2/alpaca/` | 11 |
+| `# ticker` | `tools/ticker/` | 4 |
+| `# fundamentals` | `tools/ticker/fundamentals/` | 4 |
+| `# info` | `tools/ticker/info/` | 6 |
+| `# screener` | `tools/screener/` | 2 |
+| `# research` | `tools/research/` | 6 |
+| `# portfolio` | `tools/portfolio/` | 5 |
+| `# alpaca` | `tools/alpaca/` | 11 |
 
 > **Note:** If adding a tool for a new category that doesn't exist yet, create a new `# --- category ---` import block and a new `# category (N)` comment line in `_ALL_TOOL_FUNCTIONS`.
 
@@ -323,7 +322,7 @@ _ALL_TOOL_FUNCTIONS = [
 - Use `Annotated[T, Param(...)]` for enum/range constraints
 - Use `Annotated[T, Schema({...})]` for complex pre-built schemas (portfolio_dict)
 - Use `Literal['a', 'b']` for simple enum choices
-- Prefix internal params with `_` (e.g. `_simulation_date`)
+- Prefix internal params with `_` to hide them from schemas
 - Include `if __name__ == "__main__"` testing block
 - Register via `agent.add_tool(**func.tool)`
 

@@ -1,19 +1,12 @@
 """Think tool for structured reasoning."""
 
-from app.core.atlas.tools.responses import success_response, error_response
+from app.core.atlas.tools.decorator import agent_tool
+from app.core.atlas.tools.responses import success_response
 
 
+@agent_tool(name="think")
 def think(thought: str) -> str:
-    """Record a structured thought process to the context window."""
-    try:
-        return success_response({
-            "thought": thought
-        })
-    except Exception as e:
-        return error_response(str(e))
-
-
-THINK_DESCRIPTION = """Use this tool to reason, reflect, and think through complex problems. It does NOT
+    """Use this tool to reason, reflect, and think through complex problems. It does NOT
 retrieve new information or modify any state - it simply logs your thought into the conversation
 history so you can build upon it in subsequent turns.
 
@@ -93,29 +86,13 @@ write tool call syntax, function calls, or tool invocations within the thought p
 
 **PARAMETER CONSTRAINT:** This tool accepts EXACTLY ONE parameter: "thought" (string).
 Do NOT pass any other parameters. Parameters like top_k, subtasks, status, main_task, query, etc.
-belong to other tools - NOT this one. Only pass {"thought": "your reasoning here"}."""
+belong to other tools - NOT this one. Only pass {"thought": "your reasoning here"}.
 
-THINK_PARAMETERS = {
-    "type": "object",
-    "properties": {
-        "thought": {
-            "type": "string",
-            "description": (
-                "Your reasoning, analysis, reflection, or plan. Be thorough - capture your full "
-                "thought process including: observations from data, hypotheses you're forming, "
-                "trade-offs you're weighing, decisions and their rationale, or plans for next steps. "
-                "This is your space for deep analytical thinking. "
-                "IMPORTANT: This is the ONLY parameter this tool accepts - do not pass top_k or any other params."
-            )
-        }
-    },
-    "required": ["thought"],
-    "additionalProperties": False
-}
-
-THINK_TOOL = {
-    "name": "think",
-    "description": THINK_DESCRIPTION,
-    "parameters": THINK_PARAMETERS,
-    "function": think
-}
+    Args:
+        thought: Your reasoning, analysis, reflection, or plan. Be thorough - capture your full
+            thought process including: observations from data, hypotheses you're forming,
+            trade-offs you're weighing, decisions and their rationale, or plans for next steps.
+            This is your space for deep analytical thinking.
+            IMPORTANT: This is the ONLY parameter this tool accepts - do not pass top_k or any other params.
+    """
+    return success_response({"thought": thought})

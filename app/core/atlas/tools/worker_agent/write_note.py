@@ -81,4 +81,3 @@ WRITE_NOTE_TOOL = {
     "description": WRITE_NOTE_DESCRIPTION,
     "parameters": WRITE_NOTE_PARAMETERS,
 }
-

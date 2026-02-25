@@ -1,6 +1,6 @@
 from typing import Any
-from app.core.atlas.tools.data.screening.equity.execute import execute_query as execute_equity_query
-from app.core.atlas.tools.data.screening.etf.execute import execute_query as execute_etf_query
+from app.core.atlas.tools.screener.equity.execute import execute_query as execute_equity_query
+from app.core.atlas.tools.screener.etf.execute import execute_query as execute_etf_query
 from app.api.response_envelope import ok_envelope
 
 

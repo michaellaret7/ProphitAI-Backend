@@ -13,14 +13,14 @@ from app.core.atlas.models.callbacks import ChatCallback
 from app.core.atlas.models.new_plan import Plan
 from app.core.atlas.execution import ExecutionLoop, ToolHandler
 from app.core.atlas.logging import AgentPrinter
-from app.core.atlas.tools_v2.base import llm_web_search
-from app.core.atlas.tools_v2.orchestrator import (
+from app.core.atlas.tools.base import llm_web_search
+from app.core.atlas.tools.orchestrator import (
     UPDATE_PLAN_TOOL,
     update_plan,
     retrieve_notes,
     RETRIEVE_NOTES_TOOL,
 )
-from app.core.atlas.tools_v2.worker_agent.setup import DEPLOY_WORKER_TOOL, _resolve_and_deploy
+from app.core.atlas.tools.worker_agent.setup import DEPLOY_WORKER_TOOL, _resolve_and_deploy
 from app.core.atlas.prompts.orchestrator_agent import (
     ORCHESTRATOR_SYSTEM_PROMPT,
     build_plan_prompt,
@@ -77,7 +77,6 @@ class OrchestratorAgent(AgentBase):
         # Attributes required by ExecutionLoop and ToolHandler (duck typing)
         self.chat_callback = chat_callback if chat_callback is not None else NoOpChatCallback()
         self.session_id = session_id
-        self.simulation_date = None
         self.note_titles: List[str] = []
         self.output_dir = None
 

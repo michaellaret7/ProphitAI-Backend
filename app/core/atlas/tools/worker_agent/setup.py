@@ -5,199 +5,100 @@ from typing import Any, Dict, List
 from app.core.atlas.models.notebook import Notebook
 from app.core.atlas.tools.responses import error_response
 
-# --- data / etf ---
-from app.core.atlas.tools.data.etf.holdings import GET_ETF_HOLDINGS_TOOL
-from app.core.atlas.tools.data.etf.info import GET_ETF_INFO_TOOL
+# --- ticker ---
+from app.core.atlas.tools.ticker.performance import ticker_performance
+from app.core.atlas.tools.ticker.risk import ticker_risk
+from app.core.atlas.tools.ticker.factors import ticker_factors
+from app.core.atlas.tools.ticker.technicals import ticker_technicals
 
-# --- data / factors ---
-from app.core.atlas.tools.data.factors.industry import GET_INDUSTRY_FACTOR_BENCHMARK_TOOL
-from app.core.atlas.tools.data.factors.sub_industry import GET_SUB_INDUSTRY_FACTOR_BENCHMARK_TOOL
+# --- news ---
+from app.core.atlas.tools.news import general_news, get_ticker_news, get_press_releases
 
-# --- data / fundamentals / ticker_info ---
-from app.core.atlas.tools.data.fundamentals.ticker_info.info import GET_TICKER_INFO_TOOL
-from app.core.atlas.tools.data.fundamentals.ticker_info.peers import GET_TICKER_PEERS_TOOL
-from app.core.atlas.tools.data.fundamentals.ticker_info.price_target import GET_PRICE_TARGET_DATA_TOOL
-from app.core.atlas.tools.data.fundamentals.ticker_info.product_segmentation import GET_PRODUCT_SEGMENTATION_TOOL
-from app.core.atlas.tools.data.fundamentals.ticker_info.ratings import GET_STOCK_RATINGS_TOOL
+# --- fundamentals ---
+from app.core.atlas.tools.ticker.fundamentals.statements import get_ticker_fundamental_data
+from app.core.atlas.tools.ticker.fundamentals.estimates import get_analyst_estimates
+from app.core.atlas.tools.ticker.fundamentals.ttm_ratios import get_ratios_ttm
+from app.core.atlas.tools.ticker.fundamentals.price_target import get_price_target_data
 
-# --- data / fundamentals / ticker_fundamentals ---
-from app.core.atlas.tools.data.fundamentals.ticker_fundamentals.estimates import GET_ANALYST_ESTIMATES_TOOL
-from app.core.atlas.tools.data.fundamentals.ticker_fundamentals.statements import GET_TICKER_FUNDAMENTAL_DATA_TOOL
-from app.core.atlas.tools.data.fundamentals.ticker_fundamentals.ttm_ratios import GET_RATIOS_TTM_TOOL
+# --- info ---
+from app.core.atlas.tools.ticker.info.description import get_ticker_info, get_etf_info
+from app.core.atlas.tools.ticker.info.peers import get_ticker_peers
+from app.core.atlas.tools.ticker.info.ratings import get_stock_ratings
+from app.core.atlas.tools.ticker.info.institutional_holders import get_institutional_holders
+from app.core.atlas.tools.ticker.info.product_segmentation import get_product_segmentation
+from app.core.atlas.tools.ticker.info.sectors import get_sector_industries, get_group_tickers
+from app.core.atlas.tools.ticker.info.etf_holdings import get_etf_holdings
 
-# --- data / news ---
-from app.core.atlas.tools.data.news.general_news import GET_GENERAL_NEWS_TOOL
-from app.core.atlas.tools.data.news.m_and_a_news import GET_MERGERS_ACQUISITIONS_TOOL
-from app.core.atlas.tools.data.news.press_releases import GET_PRESS_RELEASES_TOOL
-from app.core.atlas.tools.data.news.price_target_news import GET_PRICE_TARGET_NEWS_TOOL
-from app.core.atlas.tools.data.news.ticker_news import GET_TICKER_NEWS_TOOL
+# --- screener ---
+from app.core.atlas.tools.screener.equity_screener import equity_screener
+from app.core.atlas.tools.screener.etf_screener import etf_screener
 
-# --- data / screening ---
-from app.core.atlas.tools.data.screening.equity_screener import EQUITY_SCREENER_TOOL
-from app.core.atlas.tools.data.screening.etf_screener import ETF_SCREENER_TOOL
+# --- research ---
+from app.core.atlas.tools.research.credit_research import credit_research_search
+from app.core.atlas.tools.research.earnings_calls import earnings_call_search
+from app.core.atlas.tools.research.economics_research import economics_research_search
+from app.core.atlas.tools.research.macro_research import macro_research
+from app.core.atlas.tools.research.tax_research import tax_research_search
+from app.core.atlas.tools.research.user_uploads import user_upload_search
 
-# --- data / sectors ---
-from app.core.atlas.tools.data.sectors.hierarchy import GET_GROUP_TICKERS_TOOL, GET_SECTOR_INDUSTRIES_TOOL
-from app.core.atlas.tools.data.sectors.pe_ratios import GET_SECTOR_PE_TOOL
-from app.core.atlas.tools.data.sectors.performance import GET_SECTOR_PERFORMANCE_TOOL
+# --- portfolio ---
+from app.core.atlas.tools.portfolio.allocator import portfolio_allocator
+from app.core.atlas.tools.portfolio.performance import portfolio_performance
+from app.core.atlas.tools.portfolio.risk import portfolio_risk
+from app.core.atlas.tools.portfolio.stress_test import portfolio_stress_test
+from app.core.atlas.tools.portfolio.factor_exposure import portfolio_factor_exposure
+from app.core.atlas.tools.portfolio.classification import portfolio_classification
+from app.core.atlas.tools.portfolio.user_portfolio import get_user_simulated_portfolio
 
-# --- foundry tools ---
-from app.core.atlas.tools.foundry.credit_research import CREDIT_RESEARCH_SEARCH_TOOL
-from app.core.atlas.tools.foundry.earnings_calls import EARNINGS_CALL_SEARCH_TOOL
-from app.core.atlas.tools.foundry.macro_research import MACRO_RESEARCH_SEARCH_TOOL
-from app.core.atlas.tools.foundry.tax_research import TAX_RESEARCH_SEARCH_TOOL
-from app.core.atlas.tools.foundry.user_uploads import USER_UPLOAD_SEARCH_TOOL
+# --- macro ---
+from app.core.atlas.tools.macro.commodity_prices import commodity_prices
+from app.core.atlas.tools.macro.us_rates import us_treasury_rates
+from app.core.atlas.tools.macro.indicators import macro_indicators
 
-# --- macro tools ---
-from app.core.atlas.tools.macro.commodities import MACRO_COMMODITIES_TOOL
-from app.core.atlas.tools.macro.indicators import MACRO_INDICATORS_TOOL
-from app.core.atlas.tools.macro.outlook import MACRO_OUTLOOK_TOOL
-from app.core.atlas.tools.macro.rates import MACRO_RATES_TOOL
-
-# --- portfolio tools ---
-from app.core.atlas.tools.portfolio.beta import CALCULATE_PORTFOLIO_BETA_VS_INDEX_TOOL
-from app.core.atlas.tools.portfolio.build_allocations import BUILD_PORTFOLIO_TOOL
-from app.core.atlas.tools.portfolio.concentration import (
-    EXPOSURE_CALCULATOR_TOOL,
-    INDUSTRY_CONCENTRATION_TOOL,
-    VAR_CALCULATOR_TOOL,
+# --- alpaca ---
+from app.core.atlas.tools.alpaca.account import account_info, account_activities
+from app.core.atlas.tools.alpaca.portfolio import (
+    get_position, get_positions, close_position, get_portfolio_history,
 )
-from app.core.atlas.tools.portfolio.corr_matrix import CORRELATION_MATRIX_TOOL
-from app.core.atlas.tools.portfolio.factor_tilts import FACTOR_TILTS_FOR_PORTFOLIO_TOOL
-from app.core.atlas.tools.portfolio.get_user_portfolio import GET_USER_PORTFOLIO_TOOL
-from app.core.atlas.tools.portfolio.group_performance import CALCULATE_GROUP_PERFORMANCES_TOOL
-from app.core.atlas.tools.portfolio.performance import CALCULATE_PORTFOLIO_PERFORMANCE_TOOL
-from app.core.atlas.tools.portfolio.returns import CALCULATE_PORTFOLIO_RETURNS_METRICS_TOOL
-from app.core.atlas.tools.portfolio.ticker_performance import CALCULATE_TICKER_PERFORMANCES_TOOL
-
-# --- risk tools ---
-from app.core.atlas.tools.risk.asset_risk_contrib import RISK_CONTRIBUTION_TOOL
-from app.core.atlas.tools.risk.cov_matrix import CALCULATE_COVARIANCE_MATRIX_TOOL
-from app.core.atlas.tools.risk.drawdown_profile import DRAWDOWN_PROFILE_TOOL
-from app.core.atlas.tools.risk.pairwise_corr_analysis import PAIRWISE_CORR_ANALYSIS_TOOL
-from app.core.atlas.tools.risk.stress_test import STRESS_TEST_TOOL
-from app.core.atlas.tools.risk.vol_es import VOL_ES_TOOL
-
-# --- ticker tools ---
-from app.core.atlas.tools.ticker.factors import CALCULATE_TICKER_FACTORS_TOOL
-from app.core.atlas.tools.ticker.performance import GET_TICKER_PERFORMANCE_AND_RISK_TOOL
-from app.core.atlas.tools.ticker.technicals import TECHNICALS_TOOL
-from app.core.atlas.tools.ticker.weekly_returns import GET_WEEKLY_RETURNS_TOOL
-
-# --- alpaca tools ---
-from app.core.atlas.tools.alpaca import (
-    ALPACA_ACCT_AND_PORTFOLIO_TOOL,
-    OPTIONS_LOOKUP_TOOL,
-    OPTIONS_CHAIN_TOOL,
-    OPTIONS_TRADE_TOOL,
-    TRADE_TOOL,
-    CANCEL_ORDER_TOOL,
-    CANCEL_ALL_ORDERS_TOOL,
-    CLOSE_POSITION_TOOL,
-    CLOSE_ALL_POSITIONS_TOOL,
-    REPLACE_ORDER_TOOL,
-    PORTFOLIO_HISTORY_TOOL,
-    ASSET_LOOKUP_TOOL,
-    GET_ORDER_TOOL,
-    EXERCISE_OPTION_TOOL,
-    MULTI_LEG_ORDER_TOOL,
-    OPTION_BARS_TOOL,
-    OPTION_LATEST_QUOTE_TOOL,
-    OPTION_SNAPSHOT_TOOL,
+from app.core.atlas.tools.alpaca.trade import (
+    submit_trade, get_orders, cancel_order, cancel_all_orders, get_asset,
 )
 
+
 # ==============================================================================
-# AVAILABLE TOOLS — name → TOOL dict lookup
+# AVAILABLE TOOLS — built DRY from @agent_tool-decorated functions
 # ==============================================================================
+
+_ALL_TOOL_FUNCTIONS = [
+    # ticker (5)
+    ticker_performance, ticker_risk, ticker_factors, ticker_technicals,
+    get_ticker_news,
+    # news (1)
+    get_press_releases,
+    # fundamentals (4)
+    get_ticker_fundamental_data, get_analyst_estimates, get_ratios_ttm, get_price_target_data,
+    # info (9)
+    get_ticker_info, get_etf_info, get_ticker_peers, get_stock_ratings,
+    get_institutional_holders, get_product_segmentation,
+    get_sector_industries, get_group_tickers, get_etf_holdings,
+    # screener (2)
+    equity_screener, etf_screener,
+    # research (7)
+    credit_research_search, earnings_call_search, economics_research_search,
+    general_news, macro_research, tax_research_search, user_upload_search,
+    # portfolio (7)
+    portfolio_allocator, portfolio_performance, portfolio_risk, portfolio_stress_test,
+    portfolio_factor_exposure, portfolio_classification, get_user_simulated_portfolio,
+    # macro (3)
+    commodity_prices, us_treasury_rates, macro_indicators,
+    # alpaca (11)
+    account_info, account_activities, get_position, get_positions,
+    close_position, get_portfolio_history, submit_trade, get_orders,
+    cancel_order, cancel_all_orders, get_asset,
+]
 
 AVAILABLE_TOOLS: Dict[str, Dict[str, Any]] = {
-    # data / etf
-    "get_etf_holdings": GET_ETF_HOLDINGS_TOOL,
-    "get_etf_info": GET_ETF_INFO_TOOL,
-    # data / factors
-    "get_industry_factor_benchmark": GET_INDUSTRY_FACTOR_BENCHMARK_TOOL,
-    "get_sub_industry_factor_benchmark": GET_SUB_INDUSTRY_FACTOR_BENCHMARK_TOOL,
-    # data / fundamentals / ticker_info
-    "get_ticker_info": GET_TICKER_INFO_TOOL,
-    "get_ticker_peers": GET_TICKER_PEERS_TOOL,
-    "get_price_target_data": GET_PRICE_TARGET_DATA_TOOL,
-    "get_product_segmentation": GET_PRODUCT_SEGMENTATION_TOOL,
-    "get_stock_ratings": GET_STOCK_RATINGS_TOOL,
-    # data / fundamentals / ticker_fundamentals
-    "get_analyst_estimates": GET_ANALYST_ESTIMATES_TOOL,
-    "get_ticker_fundamental_data": GET_TICKER_FUNDAMENTAL_DATA_TOOL,
-    "get_ratios_ttm": GET_RATIOS_TTM_TOOL,
-    # data / news
-    "get_general_news": GET_GENERAL_NEWS_TOOL,
-    "get_mergers_acquisitions": GET_MERGERS_ACQUISITIONS_TOOL,
-    "get_press_releases": GET_PRESS_RELEASES_TOOL,
-    "get_price_target_news": GET_PRICE_TARGET_NEWS_TOOL,
-    "get_ticker_news": GET_TICKER_NEWS_TOOL,
-    # data / screening
-    "equity_screener": EQUITY_SCREENER_TOOL,
-    "etf_screener": ETF_SCREENER_TOOL,
-    # data / sectors
-    "get_group_tickers": GET_GROUP_TICKERS_TOOL,
-    "get_sector_industries": GET_SECTOR_INDUSTRIES_TOOL,
-    "get_sector_pe": GET_SECTOR_PE_TOOL,
-    "get_sector_performance": GET_SECTOR_PERFORMANCE_TOOL,
-    # foundry
-    "credit_research_search": CREDIT_RESEARCH_SEARCH_TOOL,
-    "earnings_call_search": EARNINGS_CALL_SEARCH_TOOL,
-    "macro_research_search": MACRO_RESEARCH_SEARCH_TOOL,
-    "tax_research_search": TAX_RESEARCH_SEARCH_TOOL,
-    "user_upload_search": USER_UPLOAD_SEARCH_TOOL,
-    # macro
-    "macro_commodities": MACRO_COMMODITIES_TOOL,
-    "macro_indicators": MACRO_INDICATORS_TOOL,
-    "macro_outlook": MACRO_OUTLOOK_TOOL,
-    "macro_rates": MACRO_RATES_TOOL,
-    # portfolio
-    "build_portfolio_allocations": BUILD_PORTFOLIO_TOOL,
-    "calculate_portfolio_beta_vs_index": CALCULATE_PORTFOLIO_BETA_VS_INDEX_TOOL,
-    "portfolio_exposure_calculator": EXPOSURE_CALCULATOR_TOOL,
-    "portfolio_industry_concentration": INDUSTRY_CONCENTRATION_TOOL,
-    "portfolio_VaR_calculator": VAR_CALCULATOR_TOOL,
-    "calculate_portfolio_correlation_matrix": CORRELATION_MATRIX_TOOL,
-    "calculate_portfolio_factor_tilts": FACTOR_TILTS_FOR_PORTFOLIO_TOOL,
-    "get_user_portfolio": GET_USER_PORTFOLIO_TOOL,
-    "calculate_group_performances": CALCULATE_GROUP_PERFORMANCES_TOOL,
-    "calculate_portfolio_performance": CALCULATE_PORTFOLIO_PERFORMANCE_TOOL,
-    "calculate_portfolio_returns_metrics": CALCULATE_PORTFOLIO_RETURNS_METRICS_TOOL,
-    "calculate_ticker_performances": CALCULATE_TICKER_PERFORMANCES_TOOL,
-    # risk
-    "portfolio_risk_contribution_by_asset": RISK_CONTRIBUTION_TOOL,
-    "portfolio_covariance_matrix": CALCULATE_COVARIANCE_MATRIX_TOOL,
-    "portfolio_drawdown_profile": DRAWDOWN_PROFILE_TOOL,
-    "portfolio_pairwise_correlation_analysis": PAIRWISE_CORR_ANALYSIS_TOOL,
-    "portfolio_stress_test": STRESS_TEST_TOOL,
-    "portfolio_vol_es": VOL_ES_TOOL,
-    # ticker
-    "calculate_ticker_factors": CALCULATE_TICKER_FACTORS_TOOL,
-    "get_ticker_performance_and_risk": GET_TICKER_PERFORMANCE_AND_RISK_TOOL,
-    "run_technicals": TECHNICALS_TOOL,
-    "get_weekly_returns": GET_WEEKLY_RETURNS_TOOL,
-    # alpaca / account
-    "alpaca_acct_and_portfolio": ALPACA_ACCT_AND_PORTFOLIO_TOOL,
-    "portfolio_history": PORTFOLIO_HISTORY_TOOL,
-    "asset_lookup": ASSET_LOOKUP_TOOL,
-    # alpaca / orders
-    "submit_trade": TRADE_TOOL,
-    "replace_order": REPLACE_ORDER_TOOL,
-    "get_order": GET_ORDER_TOOL,
-    "cancel_order": CANCEL_ORDER_TOOL,
-    "cancel_all_orders": CANCEL_ALL_ORDERS_TOOL,
-    "close_position": CLOSE_POSITION_TOOL,
-    "close_all_positions": CLOSE_ALL_POSITIONS_TOOL,
-    # alpaca / options
-    "options_lookup": OPTIONS_LOOKUP_TOOL,
-    "options_chain": OPTIONS_CHAIN_TOOL,
-    "options_trade": OPTIONS_TRADE_TOOL,
-    "exercise_option": EXERCISE_OPTION_TOOL,
-    "multi_leg_order": MULTI_LEG_ORDER_TOOL,
-    "option_bars": OPTION_BARS_TOOL,
-    "option_latest_quote": OPTION_LATEST_QUOTE_TOOL,
-    "option_snapshot": OPTION_SNAPSHOT_TOOL,
+    func.tool["name"]: func.tool for func in _ALL_TOOL_FUNCTIONS
 }
 
 

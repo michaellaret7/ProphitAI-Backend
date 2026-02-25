@@ -10,7 +10,7 @@ from app.repositories.price_data import (
 )
 from app.core.calculations.returns.calculator import ReturnsCalculator, PortfolioReturnsCalculator
 from app.db.core.pull_fmp_data import FMP_API_DATA
-from app.utils.simulation_utils import get_end_date, filter_series_by_date
+from app.utils.time_utils import get_current_utc_time
 
 
 def prepare_portfolio_data(
@@ -18,7 +18,6 @@ def prepare_portfolio_data(
     lookback_days: int = 252,
     include_dividends: bool = True,
     include_benchmark: Optional[str] = None,
-    _simulation_date: Optional[datetime] = None
 ) -> Tuple[Dict[str, float], Dict[str, pd.Series], Dict[str, pd.Series]]:
     """
     Common utility to prepare portfolio data for calculations.
@@ -28,7 +27,6 @@ def prepare_portfolio_data(
         lookback_days: Number of days to look back for historical data
         include_dividends: Deprecated - adj_close already accounts for dividends
         include_benchmark: Optional benchmark ticker to include (e.g., "SPY")
-        _simulation_date: INTERNAL USE ONLY - For simulation mode, not exposed to agents
 
     Returns:
         Tuple of:
@@ -37,7 +35,7 @@ def prepare_portfolio_data(
         - dividend_data: Empty dict (dividends now handled via adj_close)
     """
     # 1. Date range
-    end = get_end_date(_simulation_date)
+    end = get_current_utc_time()
     start = end - timedelta(days=lookback_days)
 
     # 2. Get tickers
@@ -53,11 +51,6 @@ def prepare_portfolio_data(
     # Convert DataFrame to dict for callers that expect Dict[str, pd.Series]
     # Reason: to_dict('series') returns dict with column names as keys and Series as values
     price_data: Dict[str, pd.Series] = {str(k): v for k, v in price_df.to_dict('series').items()}
-
-    # Filter price data by simulation date if provided
-    if _simulation_date is not None:
-        for ticker in price_data:
-            price_data[ticker] = filter_series_by_date(price_data[ticker], _simulation_date)
 
     # 4. Dividend data no longer fetched separately
     # Reason: adj_close already accounts for dividends, use fetch_bulk_ohlcv_data_for_tickers
@@ -82,7 +75,6 @@ def get_portfolio_returns(
     dropna: bool = True,
     renormalize_each_day: bool = False,
     normalization: str = "gross",
-    _simulation_date: Optional[datetime] = None
 ) -> Tuple[pd.Series, Dict[str, float]]:
     """
     Calculate portfolio returns from portfolio dict.
@@ -94,7 +86,6 @@ def get_portfolio_returns(
         dropna: Whether to drop days with missing data
         renormalize_each_day: Whether to renormalize weights daily
         normalization: "gross" or "net" exposure normalization
-        _simulation_date: INTERNAL USE ONLY - For simulation mode, not exposed to agents
 
     Returns:
         Tuple of:
@@ -106,9 +97,8 @@ def get_portfolio_returns(
         portfolio,
         lookback_days,
         include_dividends=use_total_returns,
-        _simulation_date=_simulation_date
     )
-    
+
     # Calculate individual ticker returns
     ticker_returns = {}
     for ticker in weights:
@@ -118,7 +108,7 @@ def get_portfolio_returns(
                 ticker_returns[ticker] = ReturnsCalculator.total_returns(price_data[ticker], divs)
             else:
                 ticker_returns[ticker] = ReturnsCalculator.daily_price_returns(price_data[ticker])
-    
+
     # Calculate weighted portfolio returns
     portfolio_returns = PortfolioReturnsCalculator.weighted_daily_returns(
         ticker_returns=ticker_returns,
@@ -127,17 +117,16 @@ def get_portfolio_returns(
         renormalize_each_day=renormalize_each_day,
         normalization=normalization
     )
-    
+
     return portfolio_returns, weights
 
 
 def get_benchmark_returns(
     benchmark: str = "SPY",
-    start: datetime = None,
-    end: datetime = None,
-    lookback_days: int = None,
+    start: Optional[datetime] = None,
+    end: Optional[datetime] = None,
+    lookback_days: Optional[int] = None,
     use_total_returns: bool = True,
-    _simulation_date: Optional[datetime] = None
 ) -> pd.Series:
     """
     Get benchmark returns for comparison.
@@ -147,13 +136,12 @@ def get_benchmark_returns(
         start/end: Date range (if not provided, uses lookback_days)
         lookback_days: Alternative to start/end
         use_total_returns: Deprecated - adj_close already accounts for dividends
-        _simulation_date: INTERNAL USE ONLY - For simulation mode, not exposed to agents
 
     Returns:
         pd.Series of benchmark returns
     """
     if not end:
-        end = get_end_date(_simulation_date)
+        end = get_current_utc_time()
 
     if not start:
         if lookback_days:
@@ -166,9 +154,6 @@ def get_benchmark_returns(
     end_str = end.strftime('%Y-%m-%d')
     price_data = fetch_bulk_price_data_for_tickers([benchmark], start_str, end_str)
     bench_prices = price_data[benchmark] if benchmark in price_data.columns else None
-
-    # Filter by simulation date if provided
-    bench_prices = filter_series_by_date(bench_prices, _simulation_date)
 
     if bench_prices is None or bench_prices.empty:
         raise ValueError(f"No price data for benchmark {benchmark}")

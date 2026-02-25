@@ -8,7 +8,7 @@ from langfuse import get_client
 from app.core.atlas.models import PrintMode
 from app.utils.choose_model_and_client import get_model_and_client
 
-from app.core.atlas.tools_v2.base import think, calculator
+from app.core.atlas.tools.base import think, calculator
 
 class AgentBase(ABC):
     """Abstract base class providing shared foundation for all Atlas agents."""

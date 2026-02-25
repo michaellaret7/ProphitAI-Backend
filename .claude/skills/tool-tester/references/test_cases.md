@@ -1,4 +1,4 @@
-# Test Cases for tools_v2
+# Test Cases for tools
 
 Pre-defined test cases organized by category. Each tool has **valid**, **bad-arg**, and **edge-case** variations.
 

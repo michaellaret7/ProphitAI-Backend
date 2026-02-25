@@ -1,7 +1,7 @@
 ---
 name: tool-tester
 description: >-
-  Systematically test tools_v2 agent tools for correctness, error handling,
+  Systematically test tools agent tools for correctness, error handling,
   performance, and output quality. Use when testing tools, validating tool
   outputs, benchmarking tool performance, or auditing tool error handling.
   Triggers on: test tools, benchmark tools, tool QA, tool audit.
@@ -9,7 +9,7 @@ description: >-
 
 ## Overview
 
-Run comprehensive tests against registered tools_v2 agent tools. For each tool,
+Run comprehensive tests against registered tools agent tools. For each tool,
 execute valid variations, bad-arg error cases, measure wall-clock time and token
 count, then evaluate output quality (insightfulness, actionability, conciseness).
 

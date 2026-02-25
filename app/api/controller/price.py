@@ -86,8 +86,9 @@ async def index_price_data_controller(ticker: str, days: int) -> Dict[str, Any]:
     """
     Controller to handle indexing of price data for a single ticker.
     """
-    from datetime import datetime, timedelta
-    to_date = datetime.now()
+    from datetime import timedelta
+    from app.utils.time_utils import get_current_utc_time
+    to_date = get_current_utc_time()
     from_date = to_date - timedelta(days=days)
 
     fmp = FMP_API_DATA()

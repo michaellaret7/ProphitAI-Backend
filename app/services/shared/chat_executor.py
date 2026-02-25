@@ -80,7 +80,7 @@ class ChatSessionManager:
         """
         from app.core.atlas.agents import ChatAgent
         from app.core.atlas.models import PrintMode
-        from app.core.atlas.tools.chat_registry import register_tools_for_agent_type
+        from app.core.atlas.tools.chat_registry import register_chat_tools
         from app.core.atlas.prompts.chat_agent_prompts import (
             get_equity_research_prompt,
             get_macro_research_prompt,
@@ -117,8 +117,8 @@ class ChatSessionManager:
 
         agent.session_id = session_id
 
-        # Register tools ONCE based on agent_type
-        register_tools_for_agent_type(agent, agent_type)
+        # Register all chat tools
+        register_chat_tools(agent)
 
         state = ChatSessionState(
             session_id=session_id,

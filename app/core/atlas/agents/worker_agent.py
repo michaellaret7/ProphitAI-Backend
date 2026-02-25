@@ -11,8 +11,8 @@ from app.core.atlas.models.notebook import Notebook
 from app.core.atlas.execution import ExecutionLoop, ToolHandler
 from app.core.atlas.logging import AgentPrinter
 from app.core.atlas.prompts.worker import WORKER_SYSTEM_PROMPT
-from app.core.atlas.tools_v2.base import llm_web_search
-from app.core.atlas.tools_v2.worker_agent.write_note import write_note, WRITE_NOTE_TOOL
+from app.core.atlas.tools.base import llm_web_search
+from app.core.atlas.tools.worker_agent.write_note import write_note, WRITE_NOTE_TOOL
 
 
 class WorkerAgent(AgentBase):
@@ -57,7 +57,6 @@ class WorkerAgent(AgentBase):
         self.chat_callback = chat_callback if chat_callback is not None else NoOpChatCallback()
         
         self.session_id = "worker"
-        self.simulation_date = None
         self.note_titles: List[str] = []
         self.output_dir = None
 

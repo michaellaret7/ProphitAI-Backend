@@ -102,7 +102,7 @@ def calc_growth_factors(tickers: List[str], as_of_date: Optional[datetime] = Non
 
     Args:
         tickers: List of ticker symbols
-        as_of_date: Optional as-of date for simulation mode
+        as_of_date: Optional as-of date for point-in-time analysis
 
     Returns:
         Series with winsorized median of each growth factor
@@ -115,7 +115,7 @@ def calc_value_factors(tickers: List[str], as_of_date: Optional[datetime] = None
 
     Args:
         tickers: List of ticker symbols
-        as_of_date: Optional as-of date for simulation mode
+        as_of_date: Optional as-of date for point-in-time analysis
 
     Returns:
         Series with winsorized median of each value factor
@@ -144,7 +144,7 @@ def calc_quality_factors(tickers: List[str], as_of_date: Optional[datetime] = No
 
     Args:
         tickers: List of ticker symbols
-        as_of_date: Optional as-of date for simulation mode
+        as_of_date: Optional as-of date for point-in-time analysis
 
     Returns:
         Series with winsorized median of each quality factor

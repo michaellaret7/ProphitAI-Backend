@@ -63,7 +63,9 @@ def cancel_transfer(clerk_id: str, transfer_id: str) -> None:
 def instant_deposit(clerk_id: str, amount: float) -> Dict:
     """Journal cash from the firm funding account to a user's brokerage account."""
     user_account_id = resolve_broker_account(clerk_id=clerk_id)
-    firm_account_id = os.environ["ALPACA_BROKER_FUNDING_ACCOUNT_ID"]
+    firm_account_id = os.getenv("ALPACA_BROKER_FUNDING_ACCOUNT_ID")
+    if not firm_account_id:
+        raise ValueError("ALPACA_BROKER_FUNDING_ACCOUNT_ID is not set")
     return get_broker().journal_cash(
         from_account=firm_account_id,
         to_account=user_account_id,

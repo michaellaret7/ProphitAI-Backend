@@ -1,57 +1,22 @@
-"""Search engine tools for agents."""
+"""LLM web search tool for agents."""
 
-from typing import List, Literal
+from typing import Literal, Optional
 
+from app.core.atlas.tools.decorator import agent_tool
 from app.core.atlas.tools.responses import success_response, error_response
 from app.core.search.web_search.perplexity_search import PerplexityWebSearch
 
-
-class AgentSearchEngine:
-    def __init__(self):
-        self.perplexity = PerplexityWebSearch()
-
-    def web_search(
-        self,
-        queries: List[str],
-        recency_filter: Literal["hour", "day", "week", "month", "year"] = None,
-        max_results_per_query: int = 20,
-        search_after_date_filter: str = None,
-        search_before_date_filter: str = None
-    ) -> dict:
-        """Execute batch web search with parallel query execution."""
-        try:
-            results = self.perplexity.batch_search(
-                queries,
-                recency_filter,
-                max_results_per_query,
-                search_after_date_filter,
-                search_before_date_filter
-            )
-            return success_response(results)
-        except Exception as e:
-            return error_response(f"Error executing web search: {str(e)}. Try again with different queries or parameters.")
-
-    def llm_web_search(
-        self,
-        queries: List[str],
-        recency_filter: Literal["hour", "day", "week", "month", "year"] = None,
-        reasoning_effort: Literal["minimal", "low", "medium", "high"] = None,
-        mode: Literal["deep-research", "regular-search"] = "regular-search"
-    ) -> dict:
-        """Use LLM to search the web and synthesize results with parallel query execution."""
-        try:
-            results = self.perplexity.batch_synthesize_search(
-                queries,
-                recency_filter,
-                reasoning_effort,
-                mode
-            )
-            return success_response(results)
-        except Exception as e:
-            return error_response(f"Error searching the web: {str(e)}. Try again with different search parameters.")
+_perplexity = PerplexityWebSearch()
 
 
-LLM_WEB_SEARCH_DESCRIPTION = """Search the web using Perplexity's AI-powered search engine to get synthesized,
+@agent_tool(name="llm_web_search")
+def llm_web_search(
+    queries: list[str],
+    recency_filter: Optional[Literal["hour", "day", "week", "month", "year"]] = None,
+    reasoning_effort: Optional[Literal["minimal", "low", "medium", "high"]] = None,
+    mode: Literal["regular-search"] = "regular-search",
+) -> str:
+    """Search the web using Perplexity's AI-powered search engine to get synthesized,
 well-researched answers based on real-time sources.
 
 **BATCH MULTIPLE QUERIES FOR EFFICIENCY:**
@@ -92,7 +57,6 @@ reasoning_effort: Controls depth vs speed:
 
 mode: Search depth:
   - "regular-search": Standard, faster (default)
-  - "deep-research": Comprehensive, slower
 
 **EXAMPLES:**
 
@@ -107,45 +71,20 @@ Example 2 - Single breaking news:
 Example 3 - Deep competitive research:
   queries: ["NVIDIA vs AMD datacenter GPU market share 2024", "AI chip competitive landscape"]
   reasoning_effort: "high"
-  mode: "deep-research" """
 
-LLM_WEB_SEARCH_PARAMETERS = {
-    "type": "object",
-    "properties": {
-        "queries": {
-            "type": "array",
-            "items": {"type": "string"},
-            "description": (
-                "List of search queries. BATCH MULTIPLE QUERIES for efficiency. "
-                "Example: [\"AAPL Q4 earnings\", \"MSFT Q4 earnings\"]"
-            )
-        },
-        "recency_filter": {
-            "type": "string",
-            "enum": ["hour", "day", "week", "month", "year"],
-            "description": "Filter by recency: hour, day, week, month, or year."
-        },
-        "reasoning_effort": {
-            "type": "string",
-            "enum": ["minimal", "low", "medium", "high"],
-            "description": "Reasoning depth: minimal, low, medium, or high."
-        },
-        "mode": {
-            "type": "string",
-            "enum": ["regular-search"],
-            "default": "regular-search",
-            "description": "regular-search (faster)."
-        }
-    },
-    "required": ["queries"]
-}
-
-# Singleton instance for tool registration
-_search_engine = AgentSearchEngine()
-
-LLM_WEB_SEARCH_TOOL = {
-    "name": "llm_web_search",
-    "description": LLM_WEB_SEARCH_DESCRIPTION,
-    "parameters": LLM_WEB_SEARCH_PARAMETERS,
-    "function": _search_engine.llm_web_search,
-}
+    Args:
+        queries: List of search queries. BATCH MULTIPLE QUERIES for efficiency.
+            Example: ["AAPL Q4 earnings", "MSFT Q4 earnings"]
+        recency_filter: Filter by recency: hour, day, week, month, or year.
+        reasoning_effort: Reasoning depth: minimal, low, medium, or high.
+        mode: regular-search (faster).
+    """
+    try:
+        results = _perplexity.batch_synthesize_search(
+            queries, recency_filter, reasoning_effort, mode
+        )
+        return success_response(results)
+    except Exception as e:
+        return error_response(
+            f"Error searching the web: {str(e)}. Try again with different search parameters."
+        )

@@ -1,20 +1,11 @@
-"""Base tools for all agents."""
+"""Base tools for all agents (tools pattern)."""
 
-from .calculator import calculator, CALCULATOR_DESCRIPTION, CALCULATOR_PARAMETERS, CALCULATOR_TOOL
-from .search_engine import AgentSearchEngine, LLM_WEB_SEARCH_DESCRIPTION, LLM_WEB_SEARCH_PARAMETERS, LLM_WEB_SEARCH_TOOL
-from .think import think, THINK_DESCRIPTION, THINK_PARAMETERS, THINK_TOOL
+from .think import think
+from .calculator import calculator
+from .search_engine import llm_web_search
 
 __all__ = [
-    "calculator",
-    "CALCULATOR_DESCRIPTION",
-    "CALCULATOR_PARAMETERS",
-    "CALCULATOR_TOOL",
-    "AgentSearchEngine",
-    "LLM_WEB_SEARCH_DESCRIPTION",
-    "LLM_WEB_SEARCH_PARAMETERS",
-    "LLM_WEB_SEARCH_TOOL",
     "think",
-    "THINK_DESCRIPTION",
-    "THINK_PARAMETERS",
-    "THINK_TOOL",
+    "calculator",
+    "llm_web_search",
 ]

@@ -49,7 +49,6 @@ class PlannerAgent(AgentBase):
         # Attributes required by ExecutionLoop and ToolHandler (duck typing)
         self.chat_callback = NoOpChatCallback()
         self.session_id = "planner"
-        self.simulation_date = None
         self.note_titles: List[str] = []
         self.output_dir = None
 

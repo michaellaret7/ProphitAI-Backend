@@ -5,12 +5,13 @@ since it already accounts for dividends and splits.
 """
 
 from functools import wraps
-from datetime import datetime, timedelta, timezone
+from datetime import timedelta
 
 import yaml
 
 from app.repositories.price_data import fetch_bulk_price_data_for_tickers
 from app.core.calculations.core.config import DEFAULT_LOOKBACK_1Y
+from app.utils.time_utils import get_current_utc_time
 
 
 def with_price_data(lookback_days=DEFAULT_LOOKBACK_1Y, include_dividends=True):
@@ -22,16 +23,13 @@ def with_price_data(lookback_days=DEFAULT_LOOKBACK_1Y, include_dividends=True):
 
     Usage:
         @with_price_data(lookback_days=252)
-        def analyze_ticker(ticker, price_data=None, _simulation_date=None):
+        def analyze_ticker(ticker, price_data=None):
             return calculate_something(price_data)
     """
     def decorator(func):
         @wraps(func)
         def wrapper(ticker, *args, **kwargs):
-            # Get date range - use simulation date if provided
-            # Reason: Simulation mode requires fetching historical data up to cutoff date
-            simulation_date = kwargs.get('_simulation_date')
-            end = simulation_date if simulation_date else datetime.now(timezone.utc)
+            end = get_current_utc_time()
             start = end - timedelta(days=lookback_days)
 
             # Fetch price data directly from repository
@@ -64,10 +62,7 @@ def with_bulk_price_data(lookback_days=DEFAULT_LOOKBACK_1Y, include_dividends=Tr
     def decorator(func):
         @wraps(func)
         def wrapper(*args, **kwargs):
-            # Get date range - use simulation date if provided
-            # Reason: Simulation mode requires fetching historical data up to cutoff date
-            simulation_date = kwargs.get('_simulation_date')
-            end = simulation_date if simulation_date else datetime.now(timezone.utc)
+            end = get_current_utc_time()
             start = end - timedelta(days=lookback_days)
 
             # Support either 'ticker' (single) or 'tickers' (list/iterable) inputs

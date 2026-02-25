@@ -1,11 +1,11 @@
-"""Orchestrator-specific tools."""
+"""Orchestrator-specific tools (tools pattern)."""
 
-from .update_plan import UPDATE_PLAN_TOOL, update_plan
-from .retrieve_note import retrieve_notes, RETRIEVE_NOTES_TOOL
+from .retrieve_notes import retrieve_notes, RETRIEVE_NOTES_TOOL
+from .update_plan import update_plan, UPDATE_PLAN_TOOL
 
 __all__ = [
-    "UPDATE_PLAN_TOOL",
-    "update_plan",
     "retrieve_notes",
     "RETRIEVE_NOTES_TOOL",
+    "update_plan",
+    "UPDATE_PLAN_TOOL",
 ]

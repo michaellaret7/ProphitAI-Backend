@@ -42,7 +42,7 @@ class GrowthFactors:
         self.ticker = ticker.upper()
         self.fund: FundamentalsResult = fundamentals or get_fundamentals_raw(self.ticker)
 
-        # As-of alignment controls (for simulation mode)
+        # As-of alignment controls (for point-in-time analysis)
         self.as_of_date: Optional[datetime] = as_of_date
         self.filing_lag_days: int = int(filing_lag_days) if filing_lag_days and filing_lag_days > 0 else 0
         self._effective_end_dt: datetime = as_of_date if as_of_date is not None else get_current_utc_time()

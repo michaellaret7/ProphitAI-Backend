@@ -17,19 +17,16 @@ Simple (name = function name, description = docstring)::
 Advanced (custom name, Param constraints, Schema injection, Literal enums)::
 
     @agent_tool(name="portfolio_vol_es")
-    @log_simulation_data_range()
     def vol_es(
         portfolio_dict: Annotated[dict, Schema(PORTFOLIO_DICT_SCHEMA)],
         horizon_days: Annotated[int, Param(min_val=1)] = 1,
         method: Literal['param', 'hist'] = 'param',
-        *,
-        _simulation_date: Optional[datetime] = None,
     ) -> str:
         \"\"\"Calculate portfolio volatility, VaR, and ES.\"\"\"
         ...
 
 Parameters whose names start with ``_`` are automatically hidden from the
-generated schema (e.g. ``_simulation_date``).
+generated schema.
 """
 
 from __future__ import annotations
@@ -215,7 +212,7 @@ def _build_param_schema(
     docstring_desc: str | None = None,
 ) -> dict[str, Any] | None:
     """Build the JSON Schema dict for a single parameter. Returns None if hidden."""
-    # Reason: params starting with _ are internal-only (e.g. _simulation_date)
+    # Reason: params starting with _ are internal-only
     if name.startswith("_"):
         return None
 

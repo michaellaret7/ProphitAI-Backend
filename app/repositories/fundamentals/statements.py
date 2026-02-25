@@ -8,31 +8,9 @@ from __future__ import annotations
 
 from datetime import datetime, date
 from decimal import Decimal
-from typing import Dict, Any, Optional, Literal, List
+from typing import Dict, Any, Literal
 
 from app.repositories.fundamentals.fetchers import get_fundamentals_raw
-
-
-def _filter_by_cutoff(statements: List, cutoff_date: date) -> List:
-    """Filter statements to only include those on or before cutoff_date.
-
-    Args:
-        statements: List of statement objects with 'date' attribute
-        cutoff_date: Date object representing the cutoff
-
-    Returns:
-        Filtered list of statements
-    """
-    if not statements:
-        return []
-    filtered = []
-    for s in statements:
-        if not hasattr(s, 'date') or s.date is None:
-            continue
-        # s.date is datetime.date from SQLAlchemy Date column
-        if s.date <= cutoff_date:
-            filtered.append(s)
-    return filtered
 
 
 def _serialize_sa_model(instance: Any) -> Dict[str, Any]:
@@ -76,7 +54,6 @@ def get_fundamental_data(
     ticker: str,
     statement_type: Literal["income_statement", "balance_sheet", "cash_flow", "financial_ratios", "analyst_estimates"],
     quarters_back: int = 1,
-    _simulation_date: Optional[datetime] = None
 ) -> Dict[str, Any]:
     """
     Retrieve fundamental data from the database for a given ticker.
@@ -85,7 +62,6 @@ def get_fundamental_data(
         ticker: Stock ticker symbol (e.g., 'AAPL', 'MSFT')
         statement_type: Type of fundamental data to retrieve
         quarters_back: Number of quarters of historical data to retrieve (1 = most recent only)
-        _simulation_date: INTERNAL USE ONLY - For simulation mode, only return data on or before this date
 
     Returns:
         Dictionary containing the requested fundamental data
@@ -104,10 +80,6 @@ def get_fundamental_data(
         # Get the appropriate statement list based on type
         if statement_type == "income_statement":
             statements = fundamentals.income_statements if fundamentals.income_statements else []
-
-            # Filter by simulation date if provided (simulation mode)
-            if _simulation_date is not None:
-                statements = _filter_by_cutoff(statements, _simulation_date.date())
 
             # Slice for quarters_back
             statements = statements[:quarters_back]
@@ -129,10 +101,6 @@ def get_fundamental_data(
 
         elif statement_type == "balance_sheet":
             statements = fundamentals.balance_sheets if fundamentals.balance_sheets else []
-
-            # Filter by simulation date if provided (simulation mode)
-            if _simulation_date is not None:
-                statements = _filter_by_cutoff(statements, _simulation_date.date())
 
             # Slice for quarters_back
             statements = statements[:quarters_back]
@@ -159,10 +127,6 @@ def get_fundamental_data(
         elif statement_type == "cash_flow":
             statements = fundamentals.cash_flow_statements if fundamentals.cash_flow_statements else []
 
-            # Filter by simulation date if provided (simulation mode)
-            if _simulation_date is not None:
-                statements = _filter_by_cutoff(statements, _simulation_date.date())
-
             # Slice for quarters_back
             statements = statements[:quarters_back]
 
@@ -181,10 +145,6 @@ def get_fundamental_data(
 
         elif statement_type == "financial_ratios":
             statements = fundamentals.financial_ratios if fundamentals.financial_ratios else []
-
-            # Filter by simulation date if provided (simulation mode)
-            if _simulation_date is not None:
-                statements = _filter_by_cutoff(statements, _simulation_date.date())
 
             # Slice for quarters_back
             statements = statements[:quarters_back]
@@ -210,10 +170,6 @@ def get_fundamental_data(
 
         elif statement_type == "analyst_estimates":
             statements = fundamentals.analyst_estimates if fundamentals.analyst_estimates else []
-
-            # Filter by simulation date if provided (simulation mode)
-            if _simulation_date is not None:
-                statements = _filter_by_cutoff(statements, _simulation_date.date())
 
             # Slice for quarters_back
             statements = statements[:quarters_back]
@@ -250,7 +206,6 @@ def get_fundamental_data(
 def get_analyst_estimates(
     ticker: str,
     quarters_back: int = 4,
-    _simulation_date: Optional[datetime] = None
 ) -> Dict[str, Any]:
     """
     Retrieve analyst estimates for a given ticker.
@@ -258,7 +213,6 @@ def get_analyst_estimates(
     Args:
         ticker: Stock ticker symbol (e.g., 'AAPL', 'MSFT')
         quarters_back: Number of quarters of estimates to retrieve (default: 4)
-        _simulation_date: INTERNAL USE ONLY - For simulation mode, only return data on or before this date
 
     Returns:
         Dictionary containing analyst estimates data
@@ -267,7 +221,6 @@ def get_analyst_estimates(
         ticker=ticker,
         statement_type="analyst_estimates",
         quarters_back=quarters_back,
-        _simulation_date=_simulation_date
     )
 
 
@@ -303,7 +256,6 @@ def get_all_columns_fundamentals(
     ticker: str,
     statement_type: Literal["income_statement", "balance_sheet", "cash_flow", "financial_ratios", "analyst_estimates"],
     quarters_back: int = 1,
-    _simulation_date: Optional[datetime] = None
 ) -> Dict[str, Any]:
     """
     Retrieve fundamentals with ALL columns/fields as stored in the DB for a given ticker and statement type.
@@ -331,9 +283,6 @@ def get_all_columns_fundamentals(
             statements = fundamentals.analyst_estimates if fundamentals.analyst_estimates else []
         else:
             return {"error": f"Invalid statement_type: {statement_type}"}
-
-        if _simulation_date is not None:
-            statements = _filter_by_cutoff(statements, _simulation_date.date())
 
         statements = statements[:quarters_back]
 

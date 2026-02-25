@@ -16,12 +16,6 @@ from app.core.atlas.execution import ExecutionLoop, ToolHandler
 from app.core.atlas.logging import AgentPrinter
 
 from .base import AgentBase
-from app.core.atlas.tools.foundry.credit_research import CREDIT_RESEARCH_SEARCH_TOOL
-from app.core.atlas.tools.foundry.macro_research import MACRO_RESEARCH_SEARCH_TOOL
-from app.core.atlas.tools.foundry.earnings_calls import EARNINGS_CALL_SEARCH_TOOL
-from app.core.atlas.tools.foundry.user_uploads import USER_UPLOAD_SEARCH_TOOL
-from app.core.atlas.tools.foundry.tax_research import TAX_RESEARCH_SEARCH_TOOL
-from app.core.atlas.tools.ticker.performance import GET_TICKER_PERFORMANCE_AND_RISK_TOOL
 
 from langfuse import propagate_attributes
 
@@ -75,7 +69,6 @@ class ChatAgent(AgentBase):
         self.execution_loop = ExecutionLoop(self)
 
         # Attributes expected by ToolHandler (BaseAgent compatibility)
-        self.simulation_date = None
         self.note_titles: List[str] = []
         self.output_dir = None
 
