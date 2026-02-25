@@ -181,7 +181,14 @@ class OrchestratorAgent(AgentBase):
 
 if __name__ == "__main__":
     orchestrator = OrchestratorAgent(
-        task="Review my alpaca portfolio and make sure it is diversified and has a good risk profile"
+        task="""
+        Review my alpaca portfolio and make sure it is diversified and has a good risk profile, take heavy notes and review them thoroughly.
+        
+        id:  f2231c17-92f5-4e78-9d36-a2c0c3f525a5
+        clerk_id:  user_36g2ainRF5BuSMwadbvxAXifAYf
+        broker_account_id:  d27aa8c2-5931-499b-bdfa-05c47b07ad70
+        email:  michaellaret7@gmail.com
+        """
     )
     result = orchestrator.run()
     print(result)

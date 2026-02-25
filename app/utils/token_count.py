@@ -1,3 +1,6 @@
+# NOTE: This module will be deprecated once the calc_v2 migration is complete.
+# It is only used by app/core/calculations/ which is being removed.
+
 import json
 import tiktoken
 
