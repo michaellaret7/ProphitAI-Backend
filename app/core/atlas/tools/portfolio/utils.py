@@ -1,4 +1,4 @@
-"""Shared utilities for tools portfolio tools."""
+"""Shared utilities for portfolio tools."""
 
 import pandas as pd
 
@@ -20,8 +20,8 @@ def _build_ticker_factors(
 ) -> dict:
     """Compute TickerFactors for each holding using calc_all_factors directly.
 
-    Fetches fundamentals in bulk (single DB round-trip) and computes factor
-    exposures per ticker without constructing full Ticker objects.
+    Checks the process-level cache first and only computes factors for tickers
+    not already cached. Fetches fundamentals in bulk for uncached tickers.
 
     Args:
         tickers: Portfolio holding symbols.
@@ -33,23 +33,33 @@ def _build_ticker_factors(
     """
     from app.core.calc_v2.factors.calc_all import calc_all_factors
     from app.repositories.fundamentals.fetchers import get_bulk_fundamentals
+    from app.utils.cache.data_cache import get_cache
+
+    cache = get_cache()
+
+    # Reason: skip computation for tickers already cached from prior tool calls
+    cached, compute_tickers = cache.get_ticker_factors(tickers)
+    if not compute_tickers:
+        return cached
 
     benchmark_returns = benchmark_prices.pct_change().dropna()
-    fundamentals_map = get_bulk_fundamentals(tickers)
+    fundamentals_map = get_bulk_fundamentals(compute_tickers)
 
-    ticker_factors = {}
-    for t in tickers:
+    computed = {}
+    for t in compute_tickers:
         adj_close = ohlcv_data[t]["adj_close"]
         daily_returns = adj_close.pct_change().dropna()
         fundamentals = fundamentals_map.get(t)
-        ticker_factors[t] = calc_all_factors(
+        computed[t] = calc_all_factors(
             adj_close=adj_close,
             daily_returns=daily_returns,
             benchmark_returns=benchmark_returns,
             fundamentals=fundamentals,
         )
 
-    return ticker_factors
+    cache.put_ticker_factors(computed)
+
+    return {**cached, **computed}
 
 
 def build_portfolio_obj(
@@ -69,7 +79,7 @@ def build_portfolio_obj(
             When provided, ETF price data is fetched and etf_returns_map is built for the Portfolio.
         with_factors: When True, compute ticker-level factor exposures and pass them to
             the Portfolio constructor, which triggers universe z-scoring and portfolio-level
-            factor exposure calculation. Adds ~15-25s due to build_universe_factors().
+            factor exposure calculation. Adds ~15-25s due to get_universe_factors().
     """
     tickers = [t.upper().strip() for t in tickers]
 

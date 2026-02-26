@@ -43,6 +43,21 @@ def calc_short_exposure(weights: np.ndarray) -> float:
 
 def fetch_ticker_classifications(tickers: list[str]) -> dict[str, dict[str, str | None]]:
     """Fetch sector, industry, and sub_industry for a list of tickers from the database."""
+    from app.utils.cache.data_cache import get_cache
+
+    tickers_upper = [t.upper() for t in tickers]
+    cache = get_cache()
+
+    cached, missing = cache.get_classifications(tickers_upper)
+    if not missing:
+        return cached
+    fetched = _query_classifications(missing)
+    cache.put_classifications(fetched)
+    return {**cached, **fetched}
+
+
+def _query_classifications(tickers: list[str]) -> dict[str, dict[str, str | None]]:
+    """Query ticker classifications from the database."""
     with MarketSession() as session:
         rows = (
             session.query(
@@ -51,7 +66,7 @@ def fetch_ticker_classifications(tickers: list[str]) -> dict[str, dict[str, str 
                 TickerModel.industry,
                 TickerModel.sub_industry,
             )
-            .filter(TickerModel.ticker.in_([t.upper() for t in tickers]))
+            .filter(TickerModel.ticker.in_(tickers))
             .all()
         )
     return {

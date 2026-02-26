@@ -18,6 +18,7 @@ if TYPE_CHECKING:
 
 from opentelemetry import context as otel_context
 
+
 # Tools that modify agent state and must run sequentially
 SEQUENTIAL_ONLY_TOOLS = {"think"}
 
@@ -230,12 +231,12 @@ class ToolHandler:
         return results
 
     def _execute_tool_with_context(self, ctx, name: str, args: Dict[str, Any]) -> Any:
-        """Execute a tool in a worker thread with the parent OTel context attached."""
-        token = otel_context.attach(ctx)
+        """Execute a tool in a worker thread with parent OTel context attached."""
+        otel_token = otel_context.attach(ctx)
         try:
             return self._execute_tool(name, args)
         finally:
-            otel_context.detach(token)
+            otel_context.detach(otel_token)
 
     def _add_tool_result_parallel(
         self,

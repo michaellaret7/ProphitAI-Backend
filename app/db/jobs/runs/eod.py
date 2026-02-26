@@ -7,6 +7,9 @@ from app.db.jobs.macro import (
 )
 import time
 
+import app.core.calc_v2.portfolio_analytics.factor_exposures as fe
+from app.utils.cache.data_cache import get_cache
+
 def main():
     print("=" * 100)
     print("EOD DATA UPDATE JOB")
@@ -51,6 +54,11 @@ def main():
     print("Updating US treasury rates...")
     rates_updater = UpdateUSRates()
     rates_updater.update_with_summary()
+
+    # Reason: clear in-memory caches so stale data isn't served after EOD update
+    print("Clearing in-memory caches...")
+    get_cache().clear()
+    fe._universe_cache_entry = None
 
     print("EOD data update completed!")
 

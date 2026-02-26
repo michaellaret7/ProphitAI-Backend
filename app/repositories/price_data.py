@@ -230,7 +230,20 @@ def fetch_bulk_ohlcv_data_for_tickers(tickers: list, start_date_str: str, end_da
     if frequency not in ('daily', '15mins', 'hourly'):
         raise ValueError(f"Invalid frequency: {frequency}. Must be 'daily', '15mins', or 'hourly'")
 
-    price_data_map = _fetch_bulk_threaded(tickers, start_date, end_date, frequency)
+    # Reason: check process-level cache for already-fetched OHLCV data (daily only — intraday not used by agent tools)
+    from app.utils.cache.data_cache import get_cache
+    cache = get_cache()
+
+    if frequency == 'daily':
+        cached, missing = cache.get_ohlcv(tickers, start_date_str, end_date_str)
+        if not missing:
+            price_data_map = cached
+        else:
+            fetched = _fetch_bulk_threaded(missing, start_date, end_date, frequency)
+            cache.put_ohlcv(fetched)
+            price_data_map = {**cached, **fetched}
+    else:
+        price_data_map = _fetch_bulk_threaded(tickers, start_date, end_date, frequency)
 
     if returns:
         for df in price_data_map.values():

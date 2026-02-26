@@ -86,7 +86,8 @@ def get_bulk_fundamentals(
     """Fetch fundamentals for multiple tickers in a single session.
 
     Uses bulk IN-clause queries (6 total: 1 ticker resolve + 5 statement types)
-    instead of N individual fetches per ticker.
+    instead of N individual fetches per ticker. Checks the process-level cache first
+    and only fetches missing tickers from the database.
 
     Args:
         tickers: Iterable of ticker symbols.
@@ -109,10 +110,34 @@ def get_bulk_fundamentals(
     if not unique:
         return {}
 
+    # Reason: check process-level cache before querying DB
+    from app.utils.cache.data_cache import get_cache
+    cache = get_cache()
+
+    cached, missing = cache.get_fundamentals(unique)
+    if not missing:
+        return cached
+    fetched = _fetch_fundamentals_from_db(missing, session)
+    cache.put_fundamentals(fetched)
+    return {**cached, **fetched}
+
+
+def _fetch_fundamentals_from_db(
+    tickers: list[str], session,
+) -> Dict[str, FundamentalsResult]:
+    """Fetch fundamentals from the database for the given tickers.
+
+    Args:
+        tickers: Pre-deduplicated, uppercased ticker list.
+        session: Active DB session.
+
+    Returns:
+        Dict mapping ticker -> FundamentalsResult.
+    """
     # Reason: resolve all ticker_ids in one query instead of JOINing per statement query
     ticker_rows = (
         session.query(Ticker.id, Ticker.ticker)
-        .filter(Ticker.ticker.in_(unique))
+        .filter(Ticker.ticker.in_(tickers))
         .all()
     )
     if not ticker_rows:
@@ -149,9 +174,8 @@ def get_bulk_fundamentals(
         except Exception as e:
             logger.warning("Failed to fetch %s statements in bulk: %s", key, e)
 
-    # Build FundamentalsResult per ticker
     results: Dict[str, FundamentalsResult] = {}
-    for tkr in unique:
+    for tkr in tickers:
         if tkr not in id_to_ticker.values():
             continue
         results[tkr] = FundamentalsResult(

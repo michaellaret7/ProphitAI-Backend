@@ -15,11 +15,12 @@ misleading intra-portfolio tilts.
 
 from __future__ import annotations
 
+import logging
+import threading
 from concurrent.futures import ThreadPoolExecutor
 from typing import Callable
 
 import numpy as np
-
 import pandas as pd
 
 from app.core.calc_v2.config import UNIVERSE_TICKERS
@@ -30,6 +31,15 @@ from app.core.calc_v2.models.factors import (
     PortfolioFactorExposure,
 )
 from app.core.calc_v2.utils import winsorize_series, zscore_series
+from app.utils.time_utils import get_utc_date_str, get_utc_days_ago
+
+logger = logging.getLogger(__name__)
+
+# Reason: module-level lock prevents multiple threads from computing
+# universe factors simultaneously on the first call of the day.
+# Stored as a single tuple so the fast-path read is one atomic reference load.
+_universe_lock = threading.Lock()
+_universe_cache_entry: tuple[str, dict[str, TickerFactors]] | None = None
 
 
 # ================================
@@ -112,38 +122,98 @@ def _weighted_zscore(
     return total / weight_sum
 
 # ================================
-# --> Universe builder
+# --> Universe factor cache
 # ================================
 
-def build_universe_factors(benchmark_prices: pd.Series) -> dict[str, TickerFactors]:
-    """Build factor exposures for the standard market universe.
+def get_universe_factors() -> dict[str, TickerFactors]:
+    """Return cached universe factor exposures, computing once per calendar day.
 
-    Uses UNIVERSE_TICKERS from config, fetches OHLCV + fundamentals
-    internally, and computes TickerFactors for each ticker. Ensures
-    all portfolios are z-scored against the same reference population.
-
-    Args:
-        benchmark_prices: Benchmark adj_close series (e.g. SPY).
+    Checks in-memory cache first, then Redis (survives server restarts),
+    then computes from scratch. Thread-safe via double-checked locking
+    with a single-tuple cache entry for atomic reads.
 
     Returns:
-        Dict mapping ticker → TickerFactors. Tickers missing from
-        the fetched OHLCV data are silently skipped.
+        Dict mapping UNIVERSE_TICKERS ticker -> TickerFactors.
+    """
+    global _universe_cache_entry
+
+    today = get_utc_date_str()
+
+    # Fast path: single atomic read — no lock needed
+    entry = _universe_cache_entry
+    if entry is not None and entry[0] == today:
+        return entry[1]
+
+    # Reason: try Redis before acquiring the compute lock
+    result = _load_from_redis(today)
+    if result is not None:
+        _universe_cache_entry = (today, result)
+        return result
+
+    with _universe_lock:
+        # Double-check after acquiring lock
+        entry = _universe_cache_entry
+        if entry is not None and entry[0] == today:
+            return entry[1]
+
+        logger.info("Computing universe factors for %s (%d tickers)...", today, len(UNIVERSE_TICKERS))
+        result = _compute_universe_factors()
+        _universe_cache_entry = (today, result)
+        _save_to_redis(today, result)
+        logger.info("Universe factors cached (%d tickers computed)", len(result))
+        return result
+
+
+def _load_from_redis(date_key: str) -> dict[str, TickerFactors] | None:
+    """Attempt to load universe factors from Redis."""
+    from app.redis.sync_client import sync_cache
+
+    raw = sync_cache.get(f"universe_factors:{date_key}")
+    if raw is None:
+        return None
+
+    try:
+        return {ticker: TickerFactors(**data) for ticker, data in raw.items()}
+    except Exception as e:
+        logger.warning("Failed to deserialize universe factors from Redis: %s", e)
+        return None
+
+
+def _save_to_redis(date_key: str, factors: dict[str, TickerFactors]) -> None:
+    """Persist universe factors to Redis with 24-hour TTL."""
+    from app.redis.sync_client import sync_cache
+
+    try:
+        serialized = {ticker: tf.model_dump() for ticker, tf in factors.items()}
+        sync_cache.set(f"universe_factors:{date_key}", serialized, ttl=86400)
+    except Exception as e:
+        logger.warning("Failed to save universe factors to Redis: %s", e)
+
+
+def _compute_universe_factors() -> dict[str, TickerFactors]:
+    """Fetch data and compute universe factors from scratch.
+
+    Uses a 5-year lookback to provide sufficient history for all
+    factor calculations (momentum needs 12mo, fundamentals are quarterly).
     """
     # Reason: imports inside function to avoid circular imports (repositories → calc_v2 boundary)
     from app.repositories.price_data import fetch_bulk_ohlcv_data_for_tickers
     from app.repositories.fundamentals.fetchers import get_bulk_fundamentals
 
-    start_date = benchmark_prices.index[0].strftime('%Y-%m-%d')
-    end_date = benchmark_prices.index[-1].strftime('%Y-%m-%d')
+    end_date = get_utc_date_str()
+    start_date = get_utc_days_ago(5 * 365).strftime("%Y-%m-%d")
+    fetch_tickers = list(UNIVERSE_TICKERS) + ["SPY"]
 
-    # Reason: OHLCV and fundamentals fetches are independent I/O — run in parallel
+    # Reason: OHLCV and fundamentals fetches are independent I/O — run in parallel.
+    # Note: OHLCV and fundamentals fetched here are also written to the process-level
+    # DataCache by the repository layer, benefiting subsequent agent tool calls.
     with ThreadPoolExecutor(max_workers=2) as pool:
-        ohlcv_future = pool.submit(fetch_bulk_ohlcv_data_for_tickers, UNIVERSE_TICKERS, start_date, end_date)
+        ohlcv_future = pool.submit(fetch_bulk_ohlcv_data_for_tickers, fetch_tickers, start_date, end_date)
         fund_future = pool.submit(get_bulk_fundamentals, UNIVERSE_TICKERS)
         ohlcv_data = ohlcv_future.result()
         fundamentals = fund_future.result()
 
-    benchmark_returns = benchmark_prices.pct_change().dropna()
+    benchmark_returns = ohlcv_data["SPY"]["adj_close"].pct_change().dropna()
     fund_map = fundamentals or {}
     result: dict[str, TickerFactors] = {}
 
@@ -152,7 +222,7 @@ def build_universe_factors(benchmark_prices: pd.Series) -> dict[str, TickerFacto
             continue
 
         ohlcv = ohlcv_data[ticker]
-        adj_close = ohlcv['adj_close']
+        adj_close = ohlcv["adj_close"]
         daily_returns = adj_close.pct_change().dropna()
 
         result[ticker] = calc_all_factors(

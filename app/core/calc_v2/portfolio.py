@@ -27,7 +27,7 @@ from app.core.calc_v2.portfolio_analytics.calc_correlation import (
 from app.core.calc_v2.portfolio_analytics.calc_covariance import calc_covariance_matrix, calc_all_covariance_metrics
 from app.core.calc_v2.portfolio_analytics.factor_exposures import (
     calc_portfolio_factor_exposure,
-    build_universe_factors,
+    get_universe_factors,
 )
 from app.core.calc_v2.models.factors import PortfolioFactorExposure, TickerFactors
 from app.core.calc_v2.models.stress_test import StressTestResult
@@ -120,8 +120,7 @@ class Portfolio:
         self.factor_exposure: PortfolioFactorExposure | None = None
 
         if ticker_factors is not None and benchmark_prices is not None:
-            import time
-            universe_factors = build_universe_factors(benchmark_prices) # this is the portfolio construction bottleneck needs to be cached
+            universe_factors = get_universe_factors()
             weight_map = dict(zip(self.tickers, self.weights))
             self.factor_exposure = calc_portfolio_factor_exposure(
                 ticker_factors, weight_map, universe_factors
