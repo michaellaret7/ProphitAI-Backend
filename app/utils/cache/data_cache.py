@@ -27,6 +27,10 @@ logger = logging.getLogger(__name__)
 class DataCache:
     """In-memory cache shared across all agent runs in a single process.
 
+    Thread-safe via a Lock guarding all get/put/clear operations.
+    Agent tools run in ThreadPoolExecutor — concurrent dict.update() and
+    iteration on the same dict can raise RuntimeError without locking.
+
     Stores:
         ohlcv: ticker -> OHLCV DataFrame (with DatetimeIndex)
         fundamentals: ticker -> FundamentalsResult
@@ -35,11 +39,27 @@ class DataCache:
     """
 
     def __init__(self) -> None:
+        self._lock = threading.Lock()
         self.ohlcv: dict[str, pd.DataFrame] = {}
         self.fundamentals: dict[str, Any] = {}
         self.classifications: dict[str, dict[str, str | None]] = {}
         self.ticker_factors: dict[str, Any] = {}
         self._cache_date: str = get_utc_date_str()
+
+    # ================================
+    # --> Helper funcs
+    # ================================
+
+    def _get_by_tickers(self, store: dict[str, Any], tickers: list[str]) -> tuple[dict[str, Any], list[str]]:
+        """Generic ticker lookup under lock: returns (cached_hits, missing_tickers)."""
+        cached: dict[str, Any] = {}
+        missing: list[str] = []
+        for t in tickers:
+            if t in store:
+                cached[t] = store[t]
+            else:
+                missing.append(t)
+        return cached, missing
 
     def clear(self) -> None:
         """Clear all cached data.
@@ -48,10 +68,11 @@ class DataCache:
         date-boundary resets separately. Call this to invalidate stale data
         within the same calendar day (e.g., after the EOD job writes new rows).
         """
-        self.ohlcv.clear()
-        self.fundamentals.clear()
-        self.classifications.clear()
-        self.ticker_factors.clear()
+        with self._lock:
+            self.ohlcv.clear()
+            self.fundamentals.clear()
+            self.classifications.clear()
+            self.ticker_factors.clear()
 
     # ================================
     # --> OHLCV methods
@@ -73,19 +94,21 @@ class DataCache:
         cached: dict[str, pd.DataFrame] = {}
         missing: list[str] = []
 
-        for t in tickers:
-            df = self.ohlcv.get(t)
-            if df is not None and not df.empty:
-                if df.index[0] <= req_start and df.index[-1] >= req_end:
-                    cached[t] = df
-                    continue
-            missing.append(t)
+        with self._lock:
+            for t in tickers:
+                df = self.ohlcv.get(t)
+                if df is not None and not df.empty:
+                    if df.index[0] <= req_start and df.index[-1] >= req_end:
+                        cached[t] = df
+                        continue
+                missing.append(t)
 
         return cached, missing
 
     def put_ohlcv(self, data: dict[str, pd.DataFrame]) -> None:
         """Store OHLCV DataFrames in the cache."""
-        self.ohlcv.update(data)
+        with self._lock:
+            self.ohlcv.update(data)
 
     # ================================
     # --> Fundamentals methods
@@ -95,18 +118,13 @@ class DataCache:
         self, tickers: list[str],
     ) -> tuple[dict[str, Any], list[str]]:
         """Look up cached fundamentals. Returns (cached_hits, missing_tickers)."""
-        cached: dict[str, Any] = {}
-        missing: list[str] = []
-        for t in tickers:
-            if t in self.fundamentals:
-                cached[t] = self.fundamentals[t]
-            else:
-                missing.append(t)
-        return cached, missing
+        with self._lock:
+            return self._get_by_tickers(self.fundamentals, tickers)
 
     def put_fundamentals(self, data: dict[str, Any]) -> None:
         """Store fundamentals data in the cache."""
-        self.fundamentals.update(data)
+        with self._lock:
+            self.fundamentals.update(data)
 
     # ================================
     # --> Classifications methods
@@ -116,19 +134,13 @@ class DataCache:
         self, tickers: list[str],
     ) -> tuple[dict[str, dict[str, str | None]], list[str]]:
         """Look up cached ticker classifications. Returns (cached_hits, missing_tickers)."""
-        cached: dict[str, dict[str, str | None]] = {}
-        missing: list[str] = []
-        for t in tickers:
-            if t in self.classifications:
-                cached[t] = self.classifications[t]
-            else:
-                missing.append(t)
-
-        return cached, missing
+        with self._lock:
+            return self._get_by_tickers(self.classifications, tickers)
 
     def put_classifications(self, data: dict[str, dict[str, str | None]]) -> None:
         """Store ticker classifications in the cache."""
-        self.classifications.update(data)
+        with self._lock:
+            self.classifications.update(data)
 
     # ================================
     # --> TickerFactors methods
@@ -138,18 +150,13 @@ class DataCache:
         self, tickers: list[str],
     ) -> tuple[dict[str, Any], list[str]]:
         """Look up cached ticker factors. Returns (cached_hits, missing_tickers)."""
-        cached: dict[str, Any] = {}
-        missing: list[str] = []
-        for t in tickers:
-            if t in self.ticker_factors:
-                cached[t] = self.ticker_factors[t]
-            else:
-                missing.append(t)
-        return cached, missing
+        with self._lock:
+            return self._get_by_tickers(self.ticker_factors, tickers)
 
     def put_ticker_factors(self, data: dict[str, Any]) -> None:
         """Store computed ticker factors in the cache."""
-        self.ticker_factors.update(data)
+        with self._lock:
+            self.ticker_factors.update(data)
 
 
 # Reason: module-level singleton — shared across all agent runs in the process.
@@ -167,3 +174,4 @@ def get_cache() -> DataCache:
                 _cache.clear()
                 _cache._cache_date = today
     return _cache
+

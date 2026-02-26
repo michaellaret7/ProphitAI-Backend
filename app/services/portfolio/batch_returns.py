@@ -25,7 +25,7 @@ class BatchPortfolioReturnsService:
 
     Optimizes dashboard loading by:
     1. Single DB query to get all portfolios with positions
-    2. Single price fetch for all unique tickers across portfolios (with returns=True)
+    2. Single price fetch for all unique tickers across portfolios
     3. Build shared returns DataFrame once
     4. Calculate weighted returns per portfolio from shared DataFrame
 
@@ -95,7 +95,7 @@ class BatchPortfolioReturnsService:
 
     def _fetch_and_build_returns_df(self) -> None:
         """
-        Fetch OHLCV data with returns=True and build shared returns DataFrame.
+        Fetch OHLCV data and build shared returns DataFrame.
 
         Uses fetch_bulk_ohlcv_data_for_tickers which internally parallelizes
         the price fetches with ThreadPoolExecutor(max_workers=20).
@@ -109,23 +109,21 @@ class BatchPortfolioReturnsService:
         end_date = get_current_utc_time()
         start_date = end_date - timedelta(days=365 * self.years)
 
-        # Fetch OHLCV data with pre-calculated returns
         price_data = fetch_bulk_ohlcv_data_for_tickers(
             tickers=self.unique_tickers,
             start_date_str=start_date.strftime('%Y-%m-%d'),
             end_date_str=end_date.strftime('%Y-%m-%d'),
             frequency='daily',
-            returns=True
         )
 
         if not price_data:
             return
 
-        # Build returns DataFrame from the 'returns' column of each ticker's data
+        # Build returns DataFrame from adj_close pct_change for each ticker
         returns_series = {
-            ticker: data['returns']
+            ticker: data['adj_close'].pct_change()
             for ticker, data in price_data.items()
-            if 'returns' in data.columns
+            if 'adj_close' in data.columns
         }
 
         if not returns_series:

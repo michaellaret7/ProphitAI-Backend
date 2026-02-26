@@ -144,17 +144,17 @@ def get_universe_factors() -> dict[str, TickerFactors]:
     if entry is not None and entry[0] == today:
         return entry[1]
 
-    # Reason: try Redis before acquiring the compute lock
-    result = _load_from_redis(today)
-    if result is not None:
-        _universe_cache_entry = (today, result)
-        return result
-
     with _universe_lock:
         # Double-check after acquiring lock
         entry = _universe_cache_entry
         if entry is not None and entry[0] == today:
             return entry[1]
+
+        # Reason: try Redis before expensive compute, inside lock to avoid race
+        result = _load_from_redis(today)
+        if result is not None:
+            _universe_cache_entry = (today, result)
+            return result
 
         logger.info("Computing universe factors for %s (%d tickers)...", today, len(UNIVERSE_TICKERS))
         result = _compute_universe_factors()
@@ -162,6 +162,17 @@ def get_universe_factors() -> dict[str, TickerFactors]:
         _save_to_redis(today, result)
         logger.info("Universe factors cached (%d tickers computed)", len(result))
         return result
+
+
+def clear_universe_cache() -> None:
+    """Reset the in-memory universe factor cache.
+
+    Acquires _universe_lock so concurrent readers see a consistent state.
+    Called by the EOD job after new price data is written.
+    """
+    global _universe_cache_entry
+    with _universe_lock:
+        _universe_cache_entry = None
 
 
 def _load_from_redis(date_key: str) -> dict[str, TickerFactors] | None:

@@ -7,7 +7,7 @@ from app.db.jobs.macro import (
 )
 import time
 
-import app.core.calc_v2.portfolio_analytics.factor_exposures as fe
+from app.core.calc_v2.portfolio_analytics.factor_exposures import clear_universe_cache
 from app.utils.cache.data_cache import get_cache
 
 def main():
@@ -58,7 +58,7 @@ def main():
     # Reason: clear in-memory caches so stale data isn't served after EOD update
     print("Clearing in-memory caches...")
     get_cache().clear()
-    fe._universe_cache_entry = None
+    clear_universe_cache()
 
     print("EOD data update completed!")
 

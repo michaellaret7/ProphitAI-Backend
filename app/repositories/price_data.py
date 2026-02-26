@@ -202,7 +202,7 @@ def fetch_bulk_price_data_for_tickers(tickers: list, start_date_str: str, end_da
 
     return pd.DataFrame(price_data_map)
 
-def fetch_bulk_ohlcv_data_for_tickers(tickers: list, start_date_str: str, end_date_str: str, frequency: str = 'daily', returns: bool = False):
+def fetch_bulk_ohlcv_data_for_tickers(tickers: list, start_date_str: str, end_date_str: str, frequency: str = 'daily'):
     """
     Fetch full OHLCV DataFrames for multiple tickers.
 
@@ -214,7 +214,6 @@ def fetch_bulk_ohlcv_data_for_tickers(tickers: list, start_date_str: str, end_da
     - start_date_str: Start date in 'YYYY-MM-DD' format
     - end_date_str: End date in 'YYYY-MM-DD' format
     - frequency: Data frequency - 'daily', '15mins', or 'hourly'
-    - returns: If True, appends returns and cumulative returns columns
 
     Returns:
     - dict: Mapping of ticker to DataFrame with columns [open, high, low, close, adj_close, volume]
@@ -244,16 +243,6 @@ def fetch_bulk_ohlcv_data_for_tickers(tickers: list, start_date_str: str, end_da
             price_data_map = {**cached, **fetched}
     else:
         price_data_map = _fetch_bulk_threaded(tickers, start_date, end_date, frequency)
-
-    if returns:
-        for df in price_data_map.values():
-            if 'adj_close' in df.columns:
-                total_returns = df['adj_close'].pct_change()
-                price_returns = df['close'].pct_change()
-                df['returns'] = total_returns
-                df['price_returns'] = price_returns
-                df['cum_total_returns'] = (1 + total_returns).cumprod() - 1
-                df['cum_price_returns'] = (1 + price_returns).cumprod() - 1
 
     return price_data_map
 
@@ -285,10 +274,9 @@ def build_returns_df(
         start_date,
         end_date,
         frequency,
-        returns=True
     )
 
-    returns_series = {ticker: data['returns'] for ticker, data in price_data.items()}
+    returns_series = {ticker: data['adj_close'].pct_change() for ticker, data in price_data.items()}
     returns_df = pd.concat(returns_series, axis=1)
 
     returns_df.index = pd.to_datetime(returns_df.index)

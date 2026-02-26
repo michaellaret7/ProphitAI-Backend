@@ -124,7 +124,7 @@ class UpdateETFScreenerTable:
         print(f"Fetching price data from {start_date} to {end_date}...")
         price_data = fetch_bulk_ohlcv_data_for_tickers(
             all_tickers, start_date, end_date,
-            frequency='daily', returns=True
+            frequency='daily'
         )
         print(f"Fetched data for {len(price_data)} tickers")
 
@@ -132,8 +132,8 @@ class UpdateETFScreenerTable:
         spy_returns = None
         if 'SPY' in price_data:
             spy_df = price_data['SPY']
-            if 'returns' in spy_df.columns:
-                spy_returns = spy_df['returns'].dropna()
+            if 'adj_close' in spy_df.columns:
+                spy_returns = spy_df['adj_close'].pct_change().dropna()
 
         # Get metadata
         metadata = self._get_etf_metadata(ticker_ids)
@@ -160,12 +160,12 @@ class UpdateETFScreenerTable:
                 continue
 
             df = price_data[ticker]
-            if 'returns' not in df.columns or df['returns'].dropna().empty:
+            if 'adj_close' not in df.columns or df['adj_close'].dropna().empty:
                 with self.lock:
                     self.total_errors += 1
                 continue
 
-            returns = df['returns'].dropna()
+            returns = df['adj_close'].pct_change().dropna()
 
             # Calculate metrics
             ann_ret = ReturnsCalculator.annualized_return(returns)

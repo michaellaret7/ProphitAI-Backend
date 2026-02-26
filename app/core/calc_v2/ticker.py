@@ -27,6 +27,7 @@ class Ticker:
         ohlcv_data: pd.DataFrame,
         benchmark_prices: pd.Series | None = None,
         fundamentals: FundamentalsResult | None = None,
+        factors: TickerFactors | None = None,
     ):
         self.ticker = ticker
         self.ohlcv_data = ohlcv_data
@@ -63,13 +64,16 @@ class Ticker:
 
         self.technicals: TickerTechnicals = calc_all_technicals(self.ohlcv_data)
 
-        # Factor metrics
-        self.factors: TickerFactors = calc_all_factors(
-            adj_close=self.adj_close,
-            daily_returns=self.daily_returns,
-            benchmark_returns=self.benchmark_returns,
-            fundamentals=fundamentals,
-        )
+        # Reason: accept pre-computed factors to skip redundant computation when cached
+        if factors is not None:
+            self.factors = factors
+        else:
+            self.factors = calc_all_factors(
+                adj_close=self.adj_close,
+                daily_returns=self.daily_returns,
+                benchmark_returns=self.benchmark_returns,
+                fundamentals=fundamentals,
+            )
 
 if __name__ == '__main__':
     from app.repositories.fundamentals.fetchers import get_bulk_fundamentals

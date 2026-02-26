@@ -1,104 +1,182 @@
-"""Benchmark: process-level DataCache singleton — cross-run cache hits."""
-
 import time
+from app.core.atlas.tools.ticker.utils import build_ticker_obj
+from app.core.atlas.tools.portfolio.utils import build_portfolio_obj
 from app.utils.cache.data_cache import get_cache
-from app.repositories.price_data import fetch_bulk_ohlcv_data_for_tickers
-from app.repositories.fundamentals.fetchers import get_bulk_fundamentals
-from app.core.calc_v2.portfolio_analytics.group_metrics import fetch_ticker_classifications
-from app.core.calc_v2.portfolio_analytics.factor_exposures import get_universe_factors
+from app.redis.sync_client import sync_cache
+
+SEP = "=" * 70
 
 
-# ================================
-# --> Config
-# ================================
-
-PORTFOLIO_A = ["AAPL", "MSFT", "GOOG", "AMZN", "NVDA", "META", "TSLA", "JPM", "V", "JNJ"]
-PORTFOLIO_B = ["AAPL", "MSFT", "GOOG", "NVDA", "BAC", "GS", "HD", "CAT", "XOM", "PG"]
-# 4 overlapping tickers: AAPL, MSFT, GOOG, NVDA (+ SPY benchmark fetched both times)
-
-START = "2021-02-25"
-END = "2026-02-25"
+def snap() -> dict[str, int]:
+    c = get_cache()
+    return {
+        "ohlcv": len(c.ohlcv), "fund": len(c.fundamentals),
+        "class": len(c.classifications), "factors": len(c.ticker_factors),
+    }
 
 
-# ================================
-# --> Helper funcs
-# ================================
-
-def print_cache_state(label: str) -> None:
-    """Print current cache contents inline."""
-    cache = get_cache()
-    print(f"    [cache] {label}:")
-    print(f"      ohlcv={sorted(cache.ohlcv.keys())}")
-    print(f"      fundamentals={sorted(cache.fundamentals.keys())}")
-    print(f"      classifications={sorted(cache.classifications.keys())}")
-    print(f"      ticker_factors={sorted(cache.ticker_factors.keys())}")
-    print()
+def redis_info() -> str:
+    sync_cache._ensure_connected()
+    if not sync_cache.client:
+        return "Redis: off"
+    from app.utils.time_utils import get_utc_date_str
+    key = f"universe_factors:{get_utc_date_str()}"
+    ttl = sync_cache.client.ttl(key)
+    return f"Redis: universe={ttl > 0} ttl={ttl}s"
 
 
-def timed_call(label: str, func, *args, **kwargs):
-    """Run a function, print timing and cache state after."""
-    t0 = time.perf_counter()
-    result = func(*args, **kwargs)
-    elapsed = time.perf_counter() - t0
-    print(f"  {label:<30s} {elapsed:>8.3f}s")
-    print_cache_state(f"after {label}")
-    return elapsed, result
+def run_ticker_research(tickers: list[str], fundamentals: bool = True) -> float:
+    """Simulate agent calling ticker tools. Returns total time."""
+    t0 = time.time()
+    for tkr in tickers:
+        t1 = time.time()
+        obj = build_ticker_obj(tkr, years_back=5, fundamentals=fundamentals)
+        elapsed = time.time() - t1
+        tag = "CACHED" if elapsed < 0.5 else "NEW"
+        has_val = obj.factors.value is not None
+        print(f"    {tkr:<5} {elapsed:.2f}s [{tag}]  fundamentals={'yes' if has_val else 'no'}")
+    return time.time() - t0
 
 
-def simulate_agent_run(label: str, portfolio: list[str]) -> dict[str, float]:
-    """Simulate an agent calling portfolio tools for a single portfolio."""
-    timings: dict[str, float] = {}
-
-    print(f"\n{'=' * 60}")
-    print(f"  {label}")
-    print(f"{'=' * 60}")
-
-    print_cache_state("before run")
-
-    timings["ohlcv"], _ = timed_call(
-        "ohlcv", fetch_bulk_ohlcv_data_for_tickers, portfolio + ["SPY"], START, END,
-    )
-    timings["fundamentals"], _ = timed_call(
-        "fundamentals", get_bulk_fundamentals, portfolio,
-    )
-    timings["classifications"], _ = timed_call(
-        "classifications", fetch_ticker_classifications, portfolio,
-    )
-    timings["universe_factors"], _ = timed_call(
-        "universe_factors", get_universe_factors,
-    )
-
-    total = sum(timings.values())
-    print(f"  {'-' * 45}")
-    print(f"  {'TOTAL':<30s} {total:>8.3f}s")
-
-    return timings
+def run_portfolio(tickers: list[str], weights: list[float]) -> float:
+    """Simulate agent building a portfolio. Returns total time."""
+    t0 = time.time()
+    p = build_portfolio_obj(tickers=tickers, weights=weights, years_back=5, with_factors=True)
+    elapsed = time.time() - t0
+    fe = p.factor_exposure
+    print(f"    Build: {elapsed:.2f}s")
+    print(f"    mom={fe.momentum:+.2f}  val={fe.value}  qual={fe.quality}")
+    print(f"    grow={fe.growth}  vol={fe.volatility:+.2f}  size={fe.size}")
+    return elapsed
 
 
-if __name__ == "__main__":
-    # Ensure cache starts fresh
-    get_cache().clear()
+print(SEP)
+print("INITIAL STATE")
+print(f"  cache: {snap()} | {redis_info()}")
+print(SEP)
 
-    # Run 1 — cold cache (Portfolio A)
-    run1 = simulate_agent_run("RUN 1 (cold cache) — Portfolio A", PORTFOLIO_A)
+results: list[tuple[str, float]] = []
 
-    # Run 2 — warm cache (Portfolio B has 4 overlapping tickers)
-    run2 = simulate_agent_run("RUN 2 (warm cache) — Portfolio B", PORTFOLIO_B)
+# ============================================================
+# User A — Cold start, big tech research + portfolio
+# ============================================================
+print(f"\nUSER A (12:00pm) — Tech research + portfolio")
+print("-" * 50)
+tA = ["AAPL", "MSFT", "NVDA", "GOOGL", "AMZN"]
+t0 = time.time()
+print("  Ticker research:")
+run_ticker_research(tA)
+print("  Portfolio:")
+run_portfolio(tA, [0.25, 0.25, 0.20, 0.15, 0.15])
+total_a = time.time() - t0
+results.append(("User A (cold tech)", total_a))
+print(f"  TOTAL: {total_a:.2f}s | cache: {snap()}")
 
-    # Comparison
-    run1_total = sum(run1.values())
-    run2_total = sum(run2.values())
-    saved = run1_total - run2_total
-    pct = (saved / run1_total) * 100 if run1_total > 0 else 0
+# ============================================================
+# User B — Overlapping tickers, growth portfolio
+# ============================================================
+print(f"\nUSER B (12:07pm) — Growth portfolio (3/5 overlap with A)")
+print("-" * 50)
+tB = ["NVDA", "AAPL", "TSLA", "META", "MSFT"]
+t0 = time.time()
+print("  Ticker research:")
+run_ticker_research(tB)
+print("  Portfolio:")
+run_portfolio(tB, [0.30, 0.20, 0.20, 0.15, 0.15])
+total_b = time.time() - t0
+results.append(("User B (3/5 cached)", total_b))
+print(f"  TOTAL: {total_b:.2f}s | cache: {snap()}")
 
-    print(f"\n{'=' * 60}")
-    print(f"  CROSS-RUN CACHE COMPARISON")
-    print(f"{'=' * 60}")
-    print(f"  Run 1 (cold): {run1_total:>8.3f}s")
-    print(f"  Run 2 (warm): {run2_total:>8.3f}s")
-    print(f"  Time saved:   {saved:>8.3f}s  ({pct:.1f}%)")
+# ============================================================
+# User C — Financials sector, no overlap
+# ============================================================
+print(f"\nUSER C (12:15pm) — Financials research (all new tickers)")
+print("-" * 50)
+tC = ["JPM", "GS", "MS", "BAC", "C"]
+t0 = time.time()
+print("  Ticker research:")
+run_ticker_research(tC)
+print("  Portfolio:")
+run_portfolio(tC, [0.25, 0.20, 0.20, 0.20, 0.15])
+total_c = time.time() - t0
+results.append(("User C (all new)", total_c))
+print(f"  TOTAL: {total_c:.2f}s | cache: {snap()}")
 
-    print(f"\n  Run 2 step savings (overlapping tickers):")
-    for key in run1:
-        diff = run1[key] - run2[key]
-        print(f"    {key:<25s}  {run1[key]:.3f}s -> {run2[key]:.3f}s  (saved {diff:.3f}s)")
+# ============================================================
+# User D — Mixed portfolio, heavy overlap with A+B+C
+# ============================================================
+print(f"\nUSER D (12:22pm) — Mixed portfolio (all 8 tickers already cached)")
+print("-" * 50)
+tD = ["AAPL", "NVDA", "JPM", "TSLA", "GS", "MSFT", "META", "GOOGL"]
+wD = [0.15, 0.15, 0.15, 0.10, 0.10, 0.15, 0.10, 0.10]
+t0 = time.time()
+print("  Ticker research:")
+run_ticker_research(tD)
+print("  Portfolio:")
+run_portfolio(tD, wD)
+total_d = time.time() - t0
+results.append(("User D (8/8 cached)", total_d))
+print(f"  TOTAL: {total_d:.2f}s | cache: {snap()}")
+
+# ============================================================
+# User E — Healthcare, all new, price-only first then fundamentals
+# ============================================================
+print(f"\nUSER E (12:30pm) — Healthcare (price-only scan, then deep dive)")
+print("-" * 50)
+tE = ["JNJ", "UNH", "PFE", "ABT", "TMO"]
+t0 = time.time()
+print("  Quick scan (no fundamentals):")
+run_ticker_research(tE, fundamentals=False)
+print(f"    cache mid-scan: {snap()}")
+print("  Deep dive (with fundamentals — factors recomputed):")
+run_ticker_research(tE, fundamentals=True)
+print("  Portfolio:")
+run_portfolio(tE, [0.25, 0.20, 0.20, 0.20, 0.15])
+total_e = time.time() - t0
+results.append(("User E (scan→deep)", total_e))
+print(f"  TOTAL: {total_e:.2f}s | cache: {snap()}")
+
+# ============================================================
+# User F — Semiconductors, mostly overlap with A+B
+# ============================================================
+print(f"\nUSER F (12:38pm) — Semiconductors (3/5 cached from earlier)")
+print("-" * 50)
+tF = ["NVDA", "AMD", "AVGO", "QCOM", "AAPL"]
+t0 = time.time()
+print("  Ticker research:")
+run_ticker_research(tF)
+print("  Portfolio:")
+run_portfolio(tF, [0.30, 0.20, 0.20, 0.15, 0.15])
+total_f = time.time() - t0
+results.append(("User F (3/5 cached)", total_f))
+print(f"  TOTAL: {total_f:.2f}s | cache: {snap()}")
+
+# ============================================================
+# User G — Mega portfolio, ALL tickers from every prior user
+# ============================================================
+print(f"\nUSER G (12:45pm) — Mega portfolio (all prior tickers, fully cached)")
+print("-" * 50)
+all_seen = list(dict.fromkeys(tA + tB + tC + tD + tE + tF))  # dedupe, preserve order
+wG = [1.0 / len(all_seen)] * len(all_seen)
+t0 = time.time()
+print(f"  Ticker research ({len(all_seen)} tickers):")
+run_ticker_research(all_seen)
+print("  Portfolio:")
+run_portfolio(all_seen, wG)
+total_g = time.time() - t0
+results.append(("User G (all cached)", total_g))
+print(f"  TOTAL: {total_g:.2f}s | cache: {snap()}")
+
+# ============================================================
+# Final Summary
+# ============================================================
+print(f"\n{SEP}")
+print("FINAL SUMMARY")
+print(SEP)
+print(f"  {'User':<22} {'Total':>7}  {'Bar'}")
+print(f"  {'-'*22} {'-'*7}  {'-'*30}")
+for label, t in results:
+    bar = "#" * int(t * 5)
+    print(f"  {label:<22} {t:>5.2f}s  {bar}")
+print(f"\n  Final cache: {snap()}")
+print(f"  {redis_info()}")

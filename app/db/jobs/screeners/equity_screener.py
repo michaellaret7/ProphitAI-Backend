@@ -182,24 +182,24 @@ class UpdateEquityScreenerTable:
 
             price_data = fetch_bulk_ohlcv_data_for_tickers(
                 tickers_to_fetch, start_date, end_date,
-                frequency='daily', returns=True
+                frequency='daily'
             )
 
             if ticker not in price_data:
                 return None
 
             df = price_data[ticker]
-            if 'returns' not in df.columns or df['returns'].dropna().empty:
+            if 'adj_close' not in df.columns or df['adj_close'].dropna().empty:
                 return None
 
-            returns = df['returns'].dropna()
+            returns = df['adj_close'].pct_change().dropna()
             spy_returns = None
             sector_returns = None
 
-            if 'SPY' in price_data and 'returns' in price_data['SPY'].columns:
-                spy_returns = price_data['SPY']['returns'].dropna()
-            if sector_etf and sector_etf in price_data and 'returns' in price_data[sector_etf].columns:
-                sector_returns = price_data[sector_etf]['returns'].dropna()
+            if 'SPY' in price_data and 'adj_close' in price_data['SPY'].columns:
+                spy_returns = price_data['SPY']['adj_close'].pct_change().dropna()
+            if sector_etf and sector_etf in price_data and 'adj_close' in price_data[sector_etf].columns:
+                sector_returns = price_data[sector_etf]['adj_close'].pct_change().dropna()
 
             # Calculate momentum metrics
             mf = MomentumFactors(df['close'])

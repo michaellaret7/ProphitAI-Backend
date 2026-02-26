@@ -53,8 +53,7 @@ def prepare_portfolio_data(
     price_data: Dict[str, pd.Series] = {str(k): v for k, v in price_df.to_dict('series').items()}
 
     # 4. Dividend data no longer fetched separately
-    # Reason: adj_close already accounts for dividends, use fetch_bulk_ohlcv_data_for_tickers
-    # with returns=True to get total returns directly
+    # Reason: adj_close already accounts for dividends; use adj_close.pct_change() for total returns
     dividend_data = {}
 
     # 5. Convert portfolio to weights (negative for shorts)

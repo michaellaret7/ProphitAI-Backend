@@ -15,6 +15,7 @@ from app.db.core.models.market_data_models import (
     AnalystEstimate,
 )
 from app.repositories.fundamentals.models import FundamentalsResult
+from app.utils.cache.data_cache import get_cache
 from app.utils.decorators.database import with_session
 
 logger = logging.getLogger(__name__)
@@ -22,7 +23,7 @@ logger = logging.getLogger(__name__)
 
 @with_session('market')
 def get_fundamentals_raw(ticker: str, session=None) -> FundamentalsResult:
-    """Fetch all fundamental data for a ticker directly from the database.
+    """Fetch all fundamental data for a ticker, checking process-level cache first.
 
     Args:
         ticker: Stock ticker symbol (e.g., 'AAPL', 'MSFT')
@@ -32,6 +33,12 @@ def get_fundamentals_raw(ticker: str, session=None) -> FundamentalsResult:
         FundamentalsResult containing all fundamental data types
     """
     tkr = ticker.upper()
+
+    # Reason: check process-level cache before hitting DB
+    cache = get_cache()
+    cached, missing = cache.get_fundamentals([tkr])
+    if not missing:
+        return cached[tkr]
 
     income = (
         session.query(IncomeStatement)
@@ -69,7 +76,7 @@ def get_fundamentals_raw(ticker: str, session=None) -> FundamentalsResult:
         .all()
     )
 
-    return FundamentalsResult(
+    result = FundamentalsResult(
         ticker=tkr,
         income_statements=income,
         balance_sheets=balance,
@@ -77,6 +84,8 @@ def get_fundamentals_raw(ticker: str, session=None) -> FundamentalsResult:
         financial_ratios=ratios,
         analyst_estimates=estimates,
     )
+    cache.put_fundamentals({tkr: result})
+    return result
 
 
 @with_session('market')
@@ -111,7 +120,6 @@ def get_bulk_fundamentals(
         return {}
 
     # Reason: check process-level cache before querying DB
-    from app.utils.cache.data_cache import get_cache
     cache = get_cache()
 
     cached, missing = cache.get_fundamentals(unique)
