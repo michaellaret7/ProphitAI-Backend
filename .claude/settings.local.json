@@ -90,7 +90,8 @@
       "mcp__claude_ai_Notion__notion-fetch",
       "mcp__claude_ai_Notion__notion-update-page",
       "Bash(git ls-tree:*)",
-      "Bash(PYTHONIOENCODING=utf-8 .venv/Scripts/python:*)"
+      "Bash(PYTHONIOENCODING=utf-8 .venv/Scripts/python:*)",
+      "mcp__claude_ai_Notion__notion-search"
     ],
     "deny": [],
     "ask": []
