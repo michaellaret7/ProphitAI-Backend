@@ -180,15 +180,30 @@ class OrchestratorAgent(AgentBase):
             )
 
 if __name__ == "__main__":
+
+    # THIS IS WHERE YOU RUN IT 
+
+    task = """
+Conduct an in-depth research report identifying publicly traded companies that are actively making or planning significant AI-driven workforce cuts, as well as companies that haven't announced cuts yet but employ large numbers of workers in mundane, repetitive roles that AI can easily replace.
+What to find for each company:
+
+What cuts have been announced or signaled (layoffs, hiring freezes, role eliminations tied to AI/automation)
+How many roles are affected and what percentage of their workforce
+Estimated cost savings and timeline
+Which departments/functions are being replaced by AI
+Current stock valuation and whether the market has priced in these efficiency gains yet
+
+Also identify companies ripe for AI-driven cuts — companies with disproportionately large workforces in easily automatable roles like data entry, customer support, content moderation, back-office processing, claims handling, bookkeeping, basic legal/compliance review, QA testing, transcription, and similar repetitive task-heavy functions. These are companies where the headcount-to-revenue ratio suggests significant fat that AI will trim, even if management hasn't publicly signaled it yet. Look at total employee counts, labor costs as a percentage of revenue, and the nature of the work being done.
+Cover all sectors — tech, finance, BPO/outsourcing, media, retail, insurance, telecom, professional services, etc. Include both companies that have already announced cuts and those showing strong signals they're about to.
+Deliver a ranked list of the top 15-20 companies by magnitude of expected AI-driven cuts, with a brief investment thesis for each explaining why the cost savings make them attractive.    
+"""
+
     orchestrator = OrchestratorAgent(
-        task="""
-        Review my alpaca portfolio and make sure it is diversified and has a good risk profile, take heavy notes and review them thoroughly.
-        
-        id:  f2231c17-92f5-4e78-9d36-a2c0c3f525a5
-        clerk_id:  user_36g2ainRF5BuSMwadbvxAXifAYf
-        broker_account_id:  d27aa8c2-5931-499b-bdfa-05c47b07ad70
-        email:  michaellaret7@gmail.com
-        """
+        task=task,
+        provider="anthropic",
+        model="claude-opus-4-6",
+        plan_first=True
     )
+
     result = orchestrator.run()
-    print(result)
+    print(result.answer)

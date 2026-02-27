@@ -14,6 +14,7 @@ from app.core.atlas.tools.research.macro_research import macro_research
 from app.core.atlas.tools.research.earnings_calls import earnings_call_search
 from app.core.atlas.tools.research.user_uploads import user_upload_search
 from app.core.atlas.tools.research.tax_research import tax_research_search
+from app.core.atlas.tools.research.theory_research import theory_research
 
 # --- ticker ---
 from app.core.atlas.tools.ticker.performance import ticker_performance
@@ -39,6 +40,8 @@ from app.core.atlas.tools.alpaca.portfolio import (
 from app.core.atlas.tools.alpaca.trade import (
     propose_trade, get_orders, cancel_order, cancel_all_orders, get_asset,
 )
+from app.core.atlas.tools.screener.equity_screener import equity_screener
+from app.core.atlas.tools.screener.etf_screener import etf_screener
 
 if TYPE_CHECKING:
     from app.core.atlas.agents.base import AgentBase
@@ -54,6 +57,7 @@ def register_chat_tools(agent: "AgentBase") -> None:
         earnings_call_search,
         user_upload_search,
         tax_research_search,
+        theory_research,
         # ticker
         ticker_performance,
         ticker_risk,
@@ -80,5 +84,8 @@ def register_chat_tools(agent: "AgentBase") -> None:
         cancel_order,
         cancel_all_orders,
         get_asset,
+        # screener
+        equity_screener,
+        etf_screener,
     ]:
         agent.add_tool(**func.tool)

@@ -39,6 +39,7 @@ from app.core.atlas.tools.research.earnings_calls import earnings_call_search
 from app.core.atlas.tools.research.economics_research import economics_research_search
 from app.core.atlas.tools.research.macro_research import macro_research
 from app.core.atlas.tools.research.tax_research import tax_research_search
+from app.core.atlas.tools.research.theory_research import theory_research
 from app.core.atlas.tools.research.user_uploads import user_upload_search
 
 # --- portfolio ---
@@ -83,9 +84,9 @@ _ALL_TOOL_FUNCTIONS = [
     get_sector_industries, get_group_tickers, get_etf_holdings,
     # screener (2)
     equity_screener, etf_screener,
-    # research (7)
+    # research (8)
     credit_research_search, earnings_call_search, economics_research_search,
-    general_news, macro_research, tax_research_search, user_upload_search,
+    general_news, macro_research, tax_research_search, theory_research, user_upload_search,
     # portfolio (7)
     portfolio_allocator, portfolio_performance, portfolio_risk, portfolio_stress_test,
     portfolio_factor_exposure, portfolio_classification, get_user_simulated_portfolio,
