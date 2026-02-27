@@ -19,9 +19,11 @@ def _proposal_to_dict(proposal: TradeProposal) -> dict:
         "id": str(proposal.id),
         "user_id": str(proposal.user_id),
         "account_id": proposal.account_id,
+        "proposal_type": proposal.proposal_type,
         "symbol": proposal.symbol,
         "side": proposal.side,
         "qty": proposal.qty,
+        "percentage": proposal.percentage,
         "notional": proposal.notional,
         "limit_price": proposal.limit_price,
         "stop_price": proposal.stop_price,
@@ -54,6 +56,42 @@ def get_internal_user_id(*, clerk_id: str, session=None) -> str:
         ValueError: If user not found.
     """
     return str(_resolve_user_id(clerk_id, session))
+
+
+def _execute_trade(broker, proposal: TradeProposal) -> dict:
+    """Execute a standard trade proposal via broker buy/sell."""
+    order_kwargs = {
+        "account_id": proposal.account_id,
+        "symbol": proposal.symbol,
+        "qty": proposal.qty,
+        "notional": proposal.notional,
+        "limit_price": proposal.limit_price,
+        "stop_price": proposal.stop_price,
+        "trail_price": proposal.trail_price,
+        "trail_percent": proposal.trail_percent,
+        "take_profit": proposal.take_profit,
+        "stop_loss": proposal.stop_loss,
+        "stop_loss_limit": proposal.stop_loss_limit,
+        "order_class": proposal.order_class,
+        "time_in_force": proposal.time_in_force,
+    }
+    # Reason: Strip None values so broker defaults aren't overridden
+    order_kwargs = {k: v for k, v in order_kwargs.items() if v is not None}
+    trade_fn = broker.buy if proposal.side == "buy" else broker.sell
+    return trade_fn(**order_kwargs)
+
+
+def _execute_close_position(broker, proposal: TradeProposal) -> dict:
+    """Execute a close_position proposal via broker.close_position()."""
+    close_kwargs = {
+        "account_id": proposal.account_id,
+        "symbol": proposal.symbol,
+    }
+    if proposal.qty is not None:
+        close_kwargs["qty"] = proposal.qty
+    if proposal.percentage is not None:
+        close_kwargs["percentage"] = proposal.percentage
+    return broker.close_position(**close_kwargs)
 
 
 def _resolve_user_id(clerk_id: str, session) -> UUID:
@@ -123,6 +161,7 @@ def create_proposal(
     proposal = TradeProposal(
         user_id=user_id,
         account_id=account_id,
+        proposal_type="trade",
         symbol=symbol.upper(),
         side=side,
         qty=qty,
@@ -144,18 +183,61 @@ def create_proposal(
     return _proposal_to_dict(proposal)
 
 
+@with_transaction('user')
+def create_close_proposal(
+    *,
+    user_id: str,
+    account_id: str,
+    symbol: str,
+    qty: Optional[float] = None,
+    percentage: Optional[float] = None,
+    agent_reasoning: Optional[str] = None,
+    session=None,
+) -> dict:
+    """Insert a close_position proposal with status 'pending'.
+
+    Args:
+        user_id: Internal user UUID (string).
+        account_id: Alpaca broker account ID.
+        symbol: Ticker symbol of the position to close.
+        qty: Number of shares to close. Omit for full close.
+        percentage: Percentage of position to close (e.g. 50.0 for 50%).
+        agent_reasoning: LLM explanation for why this close was proposed.
+
+    Returns:
+        Serialized proposal dict.
+    """
+    proposal = TradeProposal(
+        user_id=user_id,
+        account_id=account_id,
+        proposal_type="close_position",
+        symbol=symbol.upper(),
+        side="sell",
+        qty=qty,
+        percentage=percentage,
+        time_in_force="day",
+        agent_reasoning=agent_reasoning,
+        status="pending",
+    )
+    session.add(proposal)
+    session.flush()
+    return _proposal_to_dict(proposal)
+
+
 @with_session('user')
 def get_proposals_for_user(
     *,
     clerk_id: str,
     status_filter: Optional[str] = None,
+    proposal_type: Optional[str] = None,
     session=None,
 ) -> list[dict]:
-    """Get all trade proposals for a user, optionally filtered by status.
+    """Get all trade proposals for a user, optionally filtered by status and type.
 
     Args:
         clerk_id: Clerk authentication ID.
         status_filter: Optional status to filter by (pending, executed, rejected, failed).
+        proposal_type: Optional type to filter by ('trade', 'close_position').
 
     Returns:
         List of serialized proposal dicts ordered by created_at DESC.
@@ -164,6 +246,8 @@ def get_proposals_for_user(
     query = session.query(TradeProposal).filter(TradeProposal.user_id == user_id)
     if status_filter:
         query = query.filter(TradeProposal.status == status_filter)
+    if proposal_type:
+        query = query.filter(TradeProposal.proposal_type == proposal_type)
     proposals = query.order_by(TradeProposal.created_at.desc()).all()
     return [_proposal_to_dict(p) for p in proposals]
 
@@ -204,9 +288,13 @@ def approve_proposal(
     proposal_id: str,
     session=None,
 ) -> dict:
-    """Approve a pending proposal and execute the order on Alpaca.
+    """Approve a pending proposal and execute it on Alpaca.
 
-    Validates ownership and pending status, then calls broker buy/sell.
+    Validates ownership and pending status, then dispatches to the
+    appropriate broker method based on proposal_type:
+    - 'trade': calls broker.buy() / broker.sell()
+    - 'close_position': calls broker.close_position()
+
     Updates status to 'executed' on success or 'failed' on error.
 
     Args:
@@ -230,30 +318,14 @@ def approve_proposal(
     if proposal.status != "pending":
         raise ValueError(f"Proposal is already {proposal.status} — only pending proposals can be approved")
 
-    # Reason: Build kwargs dynamically to avoid passing None for optional params
-    order_kwargs = {
-        "account_id": proposal.account_id,
-        "symbol": proposal.symbol,
-        "qty": proposal.qty,
-        "notional": proposal.notional,
-        "limit_price": proposal.limit_price,
-        "stop_price": proposal.stop_price,
-        "trail_price": proposal.trail_price,
-        "trail_percent": proposal.trail_percent,
-        "take_profit": proposal.take_profit,
-        "stop_loss": proposal.stop_loss,
-        "stop_loss_limit": proposal.stop_loss_limit,
-        "order_class": proposal.order_class,
-        "time_in_force": proposal.time_in_force,
-    }
-    # Reason: Strip None values so broker defaults aren't overridden
-    order_kwargs = {k: v for k, v in order_kwargs.items() if v is not None}
-
     broker = get_broker()
-    trade_fn = broker.buy if proposal.side == "buy" else broker.sell
 
     try:
-        result = trade_fn(**order_kwargs)
+        if proposal.proposal_type == "close_position":
+            result = _execute_close_position(broker, proposal)
+        else:
+            result = _execute_trade(broker, proposal)
+
         proposal.status = "executed"
         proposal.alpaca_order_id = result.get("id") if isinstance(result, dict) else str(result)
         proposal.executed_at = get_current_utc_time()

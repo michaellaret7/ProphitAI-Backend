@@ -17,10 +17,13 @@ router = APIRouter(prefix="/trade-proposals", tags=["Trade Proposals"])
 @router.get("")
 async def list_proposals(
     status: Optional[str] = Query(None, description="Filter by status: pending, executed, rejected, failed"),
+    proposal_type: Optional[str] = Query(None, description="Filter by type: trade, close_position"),
     clerk_id: str = Depends(get_clerk_user_id),
 ):
     """List trade proposals for the authenticated user."""
-    return await get_proposals_controller(clerk_id=clerk_id, status=status)
+    return await get_proposals_controller(
+        clerk_id=clerk_id, status=status, proposal_type=proposal_type,
+    )
 
 
 @router.get("/{proposal_id}")

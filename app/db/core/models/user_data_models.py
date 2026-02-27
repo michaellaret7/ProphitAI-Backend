@@ -186,11 +186,13 @@ class TradeProposal(UserBase):
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     user_id = Column(UUID(as_uuid=True), ForeignKey('users.id', ondelete='CASCADE'), nullable=False, index=True)
     account_id = Column(String, nullable=False)  # Alpaca broker account ID
+    proposal_type = Column(String, nullable=False, default='trade', index=True)  # 'trade' or 'close_position'
 
     # Order parameters (mirrors broker buy/sell signature)
     symbol = Column(String, nullable=False)
     side = Column(String, nullable=False)           # 'buy' or 'sell'
     qty = Column(Float, nullable=True)
+    percentage = Column(Float, nullable=True)       # For close_position: % of position to close
     notional = Column(Float, nullable=True)
     limit_price = Column(Float, nullable=True)
     stop_price = Column(Float, nullable=True)

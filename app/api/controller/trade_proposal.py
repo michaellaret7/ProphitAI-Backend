@@ -20,13 +20,15 @@ from app.utils.decorators.api_decorators import handle_controller_errors
 
 @handle_controller_errors
 async def get_proposals_controller(
-    *, clerk_id: str, status: Optional[str] = None,
+    *, clerk_id: str, status: Optional[str] = None, proposal_type: Optional[str] = None,
 ) -> Dict[str, Any]:
     """List trade proposals for the authenticated user."""
     if not clerk_id:
         raise ValueError("clerkId is required")
 
-    proposals = get_proposals_for_user(clerk_id=clerk_id, status_filter=status)
+    proposals = get_proposals_for_user(
+        clerk_id=clerk_id, status_filter=status, proposal_type=proposal_type,
+    )
 
     return ok_envelope(
         message="Trade proposals retrieved successfully",

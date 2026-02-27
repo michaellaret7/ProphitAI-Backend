@@ -3,6 +3,7 @@
 from app.core.atlas.tools.decorator import agent_tool, Param
 from app.core.atlas.tools.responses import success_response, error_response
 from app.brokers.alpaca_broker.broker import ProphitBroker
+from app.repositories.user.trade_proposal import create_close_proposal
 from typing import Annotated, Dict, List, Optional
 from datetime import datetime, timezone
 
@@ -178,53 +179,80 @@ def get_positions(
 
 @agent_tool(name="close_position")
 def close_position(
+    user_id: str,
     account_id: str,
     symbol: str,
+    reasoning: str,
     qty: Optional[float] = None,
     percentage: Optional[float] = None,
 ) -> str:
     """
-    Close a position fully or partially for a specific symbol.
+    Submit a close-position proposal for user approval. The position is NOT
+    closed immediately — it is stored as a pending proposal that the user must
+    approve or reject from the trade proposals page.
 
-    Omit both qty and percentage to close the entire position. Provide exactly
-    one of qty or percentage for a partial close.
+    IMPORTANT: Do NOT call this tool until the user has explicitly confirmed
+    the close in chat. You must first present your analysis and reasoning,
+    and wait for the user to say 'yes', 'go ahead', or otherwise confirm.
+
+    Omit both qty and percentage to propose closing the entire position.
+    Provide exactly one of qty or percentage for a partial close.
 
     Args:
+        user_id: The internal user UUID (provided in system prompt)
         account_id: The brokerage account UUID
         symbol: Ticker symbol of the position to close (e.g. 'AAPL')
+        reasoning: Your explanation for why this position should be closed.
+            Must clearly explain the rationale so the user can make an informed decision.
         qty: Number of shares to sell. Omit for full close.
         percentage: Percentage of position to close (e.g. 50.0 for 50%). Omit for full close.
 
     Returns:
-        Order confirmation dict with id, symbol, qty, side, type, status,
-        filled_qty, and filled_avg_price
+        Confirmation that the close-position proposal was created and is pending.
 
     Examples:
-        close_position(account_id="d27aa8c2-...", symbol="AAPL")
-        >>> {"id": "...", "symbol": "AAPL", "qty": 10.0, "side": "OrderSide.SELL",
-             "type": "OrderType.MARKET", "status": "OrderStatus.ACCEPTED"}
+        close_position(user_id="abc-123", account_id="d27aa8c2-...", symbol="AAPL",
+                       reasoning="Position hit stop-loss target")
+        >>> "Close position proposal created: CLOSE 100% of AAPL — pending user approval"
 
-        close_position(account_id="d27aa8c2-...", symbol="AAPL", percentage=50.0)
-        >>> {"id": "...", "symbol": "AAPL", "qty": 5.0, "side": "OrderSide.SELL", ...}
+        close_position(user_id="abc-123", account_id="d27aa8c2-...", symbol="AAPL",
+                       reasoning="Taking partial profits", percentage=50.0)
+        >>> "Close position proposal created: CLOSE 50.0% of AAPL — pending user approval"
 
     Raises:
         ValueError: If both qty and percentage are provided
-        Exception: If the position does not exist or account ID is invalid
+        Exception: If the proposal could not be created
     """
-    broker = ProphitBroker(sandbox=True)
+    if qty is not None and percentage is not None:
+        return error_response("Cannot specify both qty and percentage")
 
     try:
-        result = broker.close_position(
+        proposal = create_close_proposal(
+            user_id=user_id,
             account_id=account_id,
             symbol=symbol,
             qty=qty,
             percentage=percentage,
+            agent_reasoning=reasoning,
         )
-        return success_response(result)
+
+        # Reason: Build a clear summary for the agent's response
+        if qty is not None:
+            amount_str = f"{qty} shares of"
+        elif percentage is not None:
+            amount_str = f"{percentage}% of"
+        else:
+            amount_str = "100% of"
+
+        return success_response(
+            f"Close position proposal created: CLOSE {amount_str} {symbol.upper()} "
+            f"— pending user approval. Proposal ID: {proposal['id']}"
+        )
     except Exception as e:
-        return error_response(
-            f"Failed to close position for {symbol} in {account_id}: {str(e)}"
-        )
+        msg = str(e)
+        if "psycopg2" in msg or "sqlalchemy" in msg.lower():
+            msg = msg.split("\n")[0]
+        return error_response(f"Failed to create close position proposal: {msg}")
 
 
 @agent_tool(name="get_portfolio_history")
