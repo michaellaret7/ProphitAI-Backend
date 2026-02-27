@@ -20,7 +20,7 @@ from app.repositories.portfolio.preferences import (
     delete_portfolio_preference,
 )
 from app.repositories.portfolio.alerts import get_portfolio_alert_state
-from app.core.calculations.portfolio.allocator import run, StrategyLiteral
+from app.core.calculations.portfolio_allocator import run, StrategyLiteral
 
 def _verify_portfolio_ownership(portfolio_id: str, user_id: str) -> None:
     """Verify that the portfolio belongs to the user."""

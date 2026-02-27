@@ -32,6 +32,9 @@ from app.core.atlas.tools.ticker.fundamentals.price_target import get_price_targ
 from app.core.atlas.tools.portfolio.performance import portfolio_performance
 from app.core.atlas.tools.portfolio.user_portfolio import get_user_simulated_portfolio
 
+# --- watchlist ---
+from app.core.atlas.tools.watchlist.get_watchlist import get_watchlist
+
 # --- alpaca ---
 from app.core.atlas.tools.alpaca.account import account_info, account_activities
 from app.core.atlas.tools.alpaca.portfolio import (
@@ -70,6 +73,8 @@ def register_chat_tools(agent: "AgentBase") -> None:
         # portfolio
         portfolio_performance,
         get_user_simulated_portfolio,
+        # watchlist
+        get_watchlist,
         # alpaca - account
         account_info,
         account_activities,

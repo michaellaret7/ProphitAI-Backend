@@ -1,7 +1,7 @@
 """Ticker risk analysis tool.
 
 Provides a tool for analyzing single-ticker risk metrics using the Ticker
-class and RiskMetrics model from calc_v2.
+class and RiskMetrics model.
 """
 
 from typing import Annotated

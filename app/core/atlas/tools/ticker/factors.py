@@ -1,7 +1,7 @@
 """Ticker factor exposure tool.
 
 Provides a tool for analyzing single-ticker factor exposures using the Ticker
-class and TickerFactors model from calc_v2. Supports momentum, volatility,
+class and TickerFactors model. Supports momentum, volatility,
 value, quality, growth, and size factors.
 """
 

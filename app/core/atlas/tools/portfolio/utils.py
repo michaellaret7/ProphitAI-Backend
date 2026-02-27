@@ -2,7 +2,7 @@
 
 import pandas as pd
 
-from app.core.calc_v2.portfolio import Portfolio
+from app.core.calculations.portfolio import Portfolio
 from app.repositories.price_data import fetch_bulk_ohlcv_data_for_tickers
 from app.utils.time_utils import get_utc_date_str, get_utc_days_ago
 
@@ -31,7 +31,7 @@ def _build_ticker_factors(
     Returns:
         dict[str, TickerFactors] mapping ticker → factor exposures.
     """
-    from app.core.calc_v2.factors.calc_all import calc_all_factors
+    from app.core.calculations.factors.calc_all import calc_all_factors
     from app.repositories.fundamentals.fetchers import get_bulk_fundamentals
     from app.utils.cache.data_cache import get_cache
 

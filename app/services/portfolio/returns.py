@@ -1,21 +1,22 @@
 from typing import Dict, Any, List, Optional
 import uuid
-from datetime import datetime, timedelta
+from datetime import timedelta
 import pandas as pd
 import numpy as np
 from app.repositories.portfolio.retrieval import retrieve_portfolio
 from app.utils.time_utils import get_current_utc_time
 from app.repositories.price_data import fetch_bulk_price_data_for_tickers
-from app.core.calculations.returns.calculator import PortfolioReturnsCalculator, ReturnsCalculator
+from app.core.calculations.performance.returns import calc_annualized_return, calc_cumulative_total_return
+from app.core.calculations.performance.ratios import calc_sharpe_ratio
+from app.core.calculations.risk.distribution import calc_volatility
+from app.core.calculations.risk.drawdown import calc_max_drawdown
 
 
 class PortfolioReturnsService:
     """
     Service to compute portfolio returns, NAV progression, and performance metrics.
 
-    Follows ProphitAltsServices pattern - precomputes all calculations in __init__
-    for performance optimization. This service is initialized once per request and
-    provides fast accessor methods for precomputed results.
+    Precomputes all calculations in __init__ for performance optimization.
 
     Precomputed attributes:
     - positions: List of portfolio positions
@@ -40,7 +41,7 @@ class PortfolioReturnsService:
     ):
         self.portfolio_id = portfolio_id
         self.years = years
-        self.email = email or "michaellaret7@gmail.com"  # Default email for now
+        self.email = email or "michaellaret7@gmail.com"
         self.initial_nav = initial_nav
 
         # Initialize empty state
@@ -57,7 +58,7 @@ class PortfolioReturnsService:
         self._calculate_returns()
         self._calculate_nav()
 
-    def _load_positions(self):
+    def _load_positions(self) -> None:
         """
         Load portfolio positions from repository and build weights dict.
 
@@ -80,25 +81,23 @@ class PortfolioReturnsService:
             ticker = pos.get('ticker')
             allocation = pos.get('allocation')
             if ticker and allocation is not None:
-                weights[ticker] = float(allocation)  # Already decimal (0.25 = 25%)
+                weights[ticker] = float(allocation)
 
         if not weights:
             raise ValueError("Portfolio has no valid positions")
 
         self.weights = weights
 
-    def _fetch_price_data(self):
+    def _fetch_price_data(self) -> None:
         """
         Fetch historical price data for all portfolio tickers.
 
         Raises:
             ValueError: If unable to fetch price data
         """
-        # Calculate date range (using UTC time)
         end_date = get_current_utc_time()
         start_date = end_date - timedelta(days=365 * self.years)
 
-        # Fetch bulk price data
         tickers = list(self.weights.keys())
         ticker_closes = fetch_bulk_price_data_for_tickers(
             tickers=tickers,
@@ -112,43 +111,20 @@ class PortfolioReturnsService:
 
         self.price_data = ticker_closes
 
-    def _calculate_returns(self):
-        """
-        Calculate portfolio daily returns using weighted average of ticker returns.
+    def _calculate_returns(self) -> None:
+        """Calculate portfolio daily returns using weighted average of ticker returns."""
+        available = [t for t in self.weights if t in self.price_data.columns]
+        asset_returns = self.price_data[available].pct_change().dropna()
 
-        Uses core calculations library (ReturnsCalculator, PortfolioReturnsCalculator)
-        to compute returns with day-by-day renormalization for missing data.
-        """
-        # Calculate daily returns for each ticker
-        ticker_price_returns = {
-            ticker: ReturnsCalculator.daily_price_returns(self.price_data[ticker])
-            for ticker in self.weights if ticker in self.price_data.columns
-        }
+        weights_series = pd.Series({t: self.weights[t] for t in available})
+        self.daily_returns = asset_returns.dot(weights_series)
 
-        # Calculate weighted portfolio returns
-        # Uses renormalize_each_day=True to handle missing data
-        portfolio_daily = PortfolioReturnsCalculator.weighted_daily_returns(
-            ticker_price_returns,
-            self.weights,
-            dropna=False,
-            renormalize_each_day=True
-        )
-
-        self.daily_returns = portfolio_daily
-
-    def _calculate_nav(self):
-        """
-        Calculate cumulative returns and NAV progression.
-
-        NAV progression starts at initial_nav and compounds daily returns.
-        """
+    def _calculate_nav(self) -> None:
+        """Calculate cumulative returns and NAV progression."""
         if self.daily_returns.empty:
             return
 
-        # Calculate cumulative returns
         self.cumulative_returns = (1 + self.daily_returns).cumprod()
-
-        # Calculate NAV progression starting at initial NAV
         self.nav_progression = self.cumulative_returns * self.initial_nav
 
     def get_returns_series(self) -> List[Dict[str, Any]]:
@@ -161,7 +137,7 @@ class PortfolioReturnsService:
         if self.cumulative_returns.empty:
             return []
 
-        returns_data = [
+        return [
             {
                 "date": (date if date.tz else pd.Timestamp(date, tz='UTC')).isoformat(),
                 "cumulativeReturn": float(cum_ret) if np.isfinite(cum_ret) else None,
@@ -174,50 +150,26 @@ class PortfolioReturnsService:
             )
         ]
 
-        return returns_data
-
     def get_summary_metrics(self) -> Dict[str, float]:
         """
         Get summary performance metrics.
 
         Returns:
-            Dict with total_return, annualized_return, volatility, sharpe_ratio, etc.
+            Dict with total_return, annualized_return, volatility, sharpe_ratio, max_drawdown
         """
         if self.daily_returns.empty:
             return {}
 
-        trading_days = 252
-
-        # Total return
-        total_return = float(self.cumulative_returns.iloc[-1] - 1) if len(self.cumulative_returns) > 0 else 0.0
-
-        # Annualized return
-        n_days = len(self.daily_returns)
-        years = n_days / trading_days
-        if years > 0 and total_return > -1:
-            annualized_return = (1 + total_return) ** (1 / years) - 1
-        else:
-            annualized_return = self.daily_returns.mean() * trading_days
-
-        # Volatility
-        annual_volatility = self.daily_returns.std() * np.sqrt(trading_days)
-
-        # Sharpe ratio (assuming 2% risk-free rate)
-        risk_free_rate = 0.02
-        sharpe_ratio = (annualized_return - risk_free_rate) / annual_volatility if annual_volatility > 0 else 0
-
-        # Max drawdown
-        if not self.cumulative_returns.empty:
-            running_max = self.cumulative_returns.expanding().max()
-            drawdown = (self.cumulative_returns - running_max) / running_max
-            max_drawdown = float(drawdown.min())
-        else:
-            max_drawdown = 0.0
+        total_return = calc_cumulative_total_return(self.daily_returns)
+        annualized_return = calc_annualized_return(self.daily_returns)
+        volatility = calc_volatility(self.daily_returns, annualize=True)
+        sharpe = calc_sharpe_ratio(self.daily_returns)
+        max_dd = calc_max_drawdown(self.daily_returns)
 
         return {
             'total_return': round(total_return * 100, 2),
             'annualized_return': round(annualized_return * 100, 2),
-            'volatility': round(annual_volatility * 100, 2),
-            'sharpe_ratio': round(sharpe_ratio, 3),
-            'max_drawdown': round(max_drawdown * 100, 2),
+            'volatility': round(volatility * 100, 2),
+            'sharpe_ratio': round(sharpe, 3) if sharpe is not None else 0,
+            'max_drawdown': round(max_dd * 100, 2),
         }

@@ -13,8 +13,9 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 from app.db.core.db_config import MarketSession
 from app.db.core.models.market_data_models import Ticker, ETFInfo, ETFScreener
 from app.repositories.price_data import fetch_bulk_ohlcv_data_for_tickers
-from app.core.calculations.returns.calculator import ReturnsCalculator
-from app.core.calculations.risk.calculator import RiskCalculator
+from app.core.calculations.performance.returns import calc_annualized_return
+from app.core.calculations.risk.distribution import calc_volatility
+from app.core.calculations.risk.benchmark import calc_beta
 from app.utils.time_utils import get_current_utc_time, get_utc_days_ago
 from sqlalchemy.dialects.postgresql import insert
 
@@ -119,8 +120,8 @@ def calculate_etf_metrics(etf_df: pd.DataFrame, lookback_days: int = 365) -> lis
         returns = df['adj_close'].pct_change().dropna()
 
         # Calculate metrics
-        ann_ret = ReturnsCalculator.annualized_return(returns)
-        ann_vol = RiskCalculator.annualized_volatility(returns)
+        ann_ret = calc_annualized_return(returns)
+        ann_vol = calc_volatility(returns, annualize=True)
 
         # Information ratio
         info_ratio = None
@@ -130,7 +131,7 @@ def calculate_etf_metrics(etf_df: pd.DataFrame, lookback_days: int = 365) -> lis
         # Beta vs SPY
         beta = None
         if spy_returns is not None and len(returns) > 10:
-            beta = RiskCalculator.beta(returns, spy_returns)
+            beta = calc_beta(returns, spy_returns)
             if np.isnan(beta):
                 beta = None
 

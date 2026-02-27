@@ -19,10 +19,9 @@ from app.db.core.models.market_data_models import (
 )
 from app.db.core.pull_fmp_data import FMP_API_DATA
 from app.repositories.price_data import fetch_bulk_ohlcv_data_for_tickers
-from app.core.calculations.returns.calculator import ReturnsCalculator
-from app.core.calculations.risk.calculator import RiskCalculator
-from app.core.calculations.performance.calculator import PerformanceCalculator
-from app.core.calculations.factors.momentum import MomentumFactors
+from app.core.calculations.performance.returns import calc_annualized_return, calc_alpha
+from app.core.calculations.risk.distribution import calc_volatility
+from app.core.calculations.risk.benchmark import calc_beta
 from app.utils.ticker_utils import get_sector_etf
 from app.utils.time_utils import get_current_utc_time, get_utc_days_ago
 from app.db.jobs.screeners.base import safe_round, safe_divide, RATIO_KEY_MAP
@@ -202,29 +201,29 @@ class UpdateEquityScreenerTable:
                 sector_returns = price_data[sector_etf]['adj_close'].pct_change().dropna()
 
             # Calculate momentum metrics
-            mf = MomentumFactors(df['close'])
-            momentum_1m = safe_round(mf.one_month_return())
-            momentum_3m = safe_round(mf.three_month_return())
-            momentum_6m = safe_round(mf.six_month_return())
+            close = df['close']
+            momentum_1m = safe_round(close.pct_change(21).iloc[-1])
+            momentum_3m = safe_round(close.pct_change(63).iloc[-1])
+            momentum_6m = safe_round(close.pct_change(126).iloc[-1])
 
             # Calculate performance metrics
-            ann_return = ReturnsCalculator.annualized_return(returns)
-            ann_vol = RiskCalculator.annualized_volatility(returns)
+            ann_return = calc_annualized_return(returns)
+            ann_vol = calc_volatility(returns, annualize=True)
             info_ratio = safe_divide(ann_return, ann_vol)
 
             # Calculate beta/alpha vs SPY
             beta_vs_spy = None
             alpha_vs_spy = None
             if spy_returns is not None and len(returns) > 10:
-                beta_vs_spy = RiskCalculator.beta(returns, spy_returns)
-                alpha_vs_spy = PerformanceCalculator.alpha(returns, spy_returns)
+                beta_vs_spy = calc_beta(returns, spy_returns)
+                alpha_vs_spy = calc_alpha(returns, spy_returns)
 
             # Calculate beta/alpha vs sector
             beta_vs_sector = None
             alpha_vs_sector = None
             if sector_returns is not None and len(returns) > 10:
-                beta_vs_sector = RiskCalculator.beta(returns, sector_returns)
-                alpha_vs_sector = PerformanceCalculator.alpha(returns, sector_returns)
+                beta_vs_sector = calc_beta(returns, sector_returns)
+                alpha_vs_sector = calc_alpha(returns, sector_returns)
 
             # Fetch TTM ratios from FMP
             raw_ratios = fmp_api.get_ratios_ttm(ticker)

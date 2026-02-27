@@ -1,7 +1,7 @@
 """Portfolio performance analysis tool.
 
 Provides a tool for analyzing multi-asset portfolio performance metrics
-using the Portfolio class and PerformanceMetrics model from calc_v2.
+using the Portfolio class and PerformanceMetrics model.
 """
 
 from typing import Annotated
@@ -80,6 +80,9 @@ horizons.
         ValueError: If tickers and weights have different lengths or no price data found
     """
     try:
+        if not tickers or not weights:
+            return error_response("tickers and weights must each contain at least one element")
+
         if len(tickers) != len(weights):
             return error_response(
                 f"tickers ({len(tickers)}) and weights ({len(weights)}) must have the same length"

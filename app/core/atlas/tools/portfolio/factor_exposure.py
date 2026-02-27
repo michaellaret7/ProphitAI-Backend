@@ -124,6 +124,9 @@ Composite scores are portfolio-weighted averages of per-metric z-scores.
         ValueError: If tickers and weights have different lengths or no price data found
     """
     try:
+        if not tickers or not weights:
+            return error_response("tickers and weights must each contain at least one element")
+
         if len(tickers) != len(weights):
             return error_response(
                 f"tickers ({len(tickers)}) and weights ({len(weights)}) must have the same length"

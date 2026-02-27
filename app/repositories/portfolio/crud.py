@@ -9,7 +9,7 @@ from app.db.core.models.user_data_models import *
 from app.db.core.models.market_data_models import *
 from app.utils.time_utils import get_current_utc_time
 from app.utils.decorators.database import with_session, with_transaction, with_sessions
-from app.core.calc_v2.portfolio_allocator.service import calc_num_shares, calc_position_navs
+from app.core.calculations.portfolio_allocator.service import calc_num_shares, calc_position_navs
 
 
 @with_sessions(user_session='user', market_session='market')

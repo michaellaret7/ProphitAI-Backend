@@ -25,7 +25,3 @@ from app.repositories.portfolio.preferences import (
 from app.repositories.portfolio.alerts import (
     get_portfolio_alert_state,
 )
-
-from app.repositories.portfolio.fund_positions import (
-    add_initial_positions,
-)

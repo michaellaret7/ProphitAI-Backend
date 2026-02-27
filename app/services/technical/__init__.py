@@ -1,8 +1,7 @@
-"""Technical analysis services for indicators and pivot points."""
+"""Technical analysis services for indicators."""
 
 from app.services.technical.technical_service import (
     TechnicalIndicatorService,
-    PivotPointService,
 )
 
-__all__ = ["TechnicalIndicatorService", "PivotPointService"]
+__all__ = ["TechnicalIndicatorService"]

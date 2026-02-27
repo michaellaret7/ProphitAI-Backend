@@ -7,7 +7,6 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.gzip import GZipMiddleware
 from fastapi.responses import ORJSONResponse
 from app.api.routes.agent_router import router as agent_router
-from app.api.routes.alts_router import router as prophit_alts_router
 from app.api.routes.chat_router import router as chat_router
 from app.api.routes.broker_router import router as broker_router
 from app.api.routes.cache_router import router as cache_router
@@ -111,7 +110,6 @@ app.include_router(dashboard_router, prefix="/api", dependencies=auth_dependenci
 app.include_router(document_router, prefix="/api", dependencies=api_key_only)
 
 # General data routes require API key only (no JWT needed)
-app.include_router(prophit_alts_router, prefix="/api", dependencies=api_key_only)
 app.include_router(price_router, prefix="/api", dependencies=api_key_only)
 app.include_router(cache_router, prefix="/api", dependencies=api_key_only)
 app.include_router(ticker_router, prefix="/api", dependencies=api_key_only)

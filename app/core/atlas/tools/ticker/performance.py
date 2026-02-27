@@ -1,7 +1,7 @@
 """Ticker performance analysis tool.
 
 Provides a tool for analyzing single-ticker performance metrics using the Ticker
-class and PerformanceMetrics model from calc_v2.
+class and PerformanceMetrics model.
 """
 
 from typing import Annotated

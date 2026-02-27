@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Query, Depends, Path, HTTPException
 from pydantic import BaseModel, Field, field_validator
 from typing import List, Optional, Dict
-from app.core.calculations.portfolio.allocator import StrategyLiteral
+from app.core.calculations.portfolio_allocator import StrategyLiteral
 from app.api.controller.portfolio import (
     get_user_portfolio_list_controller,
     create_portfolio_controller,

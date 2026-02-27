@@ -3,7 +3,6 @@ from datetime import datetime
 import pandas as pd
 import numpy as np
 from app.repositories.price_data import fetch_bulk_price_data_for_tickers
-from app.core.calculations.returns.calculator import PortfolioReturnsCalculator, ReturnsCalculator
 
 
 class StressReturnsService:
@@ -67,21 +66,12 @@ class StressReturnsService:
             frequency=self.frequency
         )
 
-    def _calculate_returns(self):
+    def _calculate_returns(self) -> None:
         """Calculate returns for both portfolio and SPY."""
-        # Calculate daily returns for each ticker
-        ticker_returns = {
-            ticker: ReturnsCalculator.daily_price_returns(self.price_data[ticker])
-            for ticker in self.weights if ticker in self.price_data.columns
-        }
-
-        # Calculate weighted portfolio returns
-        self.portfolio_returns = PortfolioReturnsCalculator.weighted_daily_returns(
-            ticker_returns,
-            self.weights,
-            dropna=False,
-            renormalize_each_day=True
-        )
+        available = [t for t in self.weights if t in self.price_data.columns]
+        asset_returns = self.price_data[available].pct_change().dropna()
+        weights_series = pd.Series({t: self.weights[t] for t in available})
+        self.portfolio_returns = asset_returns.dot(weights_series)
 
         # Calculate SPY returns and align with portfolio returns index
         if 'SPY' in self.price_data.columns and not self.price_data['SPY'].empty:

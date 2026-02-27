@@ -8,15 +8,18 @@ from typing import Dict, Any, List
 import uuid
 from datetime import timedelta
 
-import pandas as pd
 import numpy as np
+import pandas as pd
 from sqlalchemy.orm import joinedload
 
 from app.db.core.db_config import UserSession
 from app.db.core.models.user_data_models import Portfolio
 from app.utils.time_utils import get_current_utc_time
 from app.repositories.price_data import fetch_bulk_ohlcv_data_for_tickers
-from app.core.calculations.returns.calculator import PortfolioReturnsCalculator
+from app.core.calculations.performance.returns import calc_annualized_return, calc_cumulative_total_return
+from app.core.calculations.performance.ratios import calc_sharpe_ratio
+from app.core.calculations.risk.distribution import calc_volatility
+from app.core.calculations.risk.drawdown import calc_max_drawdown
 
 
 class BatchPortfolioReturnsService:
@@ -157,19 +160,10 @@ class BatchPortfolioReturnsService:
         if not available_tickers:
             return {'returns_series': [], 'summary_metrics': {}}
 
-        # Build ticker returns dict from the shared DataFrame
-        portfolio_ticker_returns = {
-            ticker: self.returns_df[ticker]
-            for ticker in available_tickers
-        }
-
-        # Calculate weighted portfolio returns
-        daily_returns = PortfolioReturnsCalculator.weighted_daily_returns(
-            portfolio_ticker_returns,
-            weights,
-            dropna=False,
-            renormalize_each_day=True
-        )
+        # Calculate weighted portfolio returns via matrix multiplication
+        subset = self.returns_df[available_tickers].dropna()
+        weights_series = pd.Series({t: weights[t] for t in available_tickers})
+        daily_returns = subset.dot(weights_series)
 
         if daily_returns.empty:
             return {'returns_series': [], 'summary_metrics': {}}
@@ -209,40 +203,18 @@ class BatchPortfolioReturnsService:
         if daily_returns.empty:
             return {}
 
-        trading_days = 252
-
-        # Total return
-        total_return = float(cumulative_returns.iloc[-1] - 1) if len(cumulative_returns) > 0 else 0.0
-
-        # Annualized return
-        n_days = len(daily_returns)
-        years = n_days / trading_days
-        if years > 0 and total_return > -1:
-            annualized_return = (1 + total_return) ** (1 / years) - 1
-        else:
-            annualized_return = daily_returns.mean() * trading_days
-
-        # Volatility
-        annual_volatility = daily_returns.std() * np.sqrt(trading_days)
-
-        # Sharpe ratio (assuming 2% risk-free rate)
-        risk_free_rate = 0.02
-        sharpe_ratio = (annualized_return - risk_free_rate) / annual_volatility if annual_volatility > 0 else 0
-
-        # Max drawdown
-        if not cumulative_returns.empty:
-            running_max = cumulative_returns.expanding().max()
-            drawdown = (cumulative_returns - running_max) / running_max
-            max_drawdown = float(drawdown.min())
-        else:
-            max_drawdown = 0.0
+        total_return = calc_cumulative_total_return(daily_returns)
+        annualized_return = calc_annualized_return(daily_returns)
+        volatility = calc_volatility(daily_returns, annualize=True)
+        sharpe = calc_sharpe_ratio(daily_returns)
+        max_dd = calc_max_drawdown(daily_returns)
 
         return {
             'total_return': round(total_return * 100, 2),
             'annualized_return': round(annualized_return * 100, 2),
-            'volatility': round(annual_volatility * 100, 2),
-            'sharpe_ratio': round(sharpe_ratio, 3),
-            'max_drawdown': round(max_drawdown * 100, 2),
+            'volatility': round(volatility * 100, 2),
+            'sharpe_ratio': round(sharpe, 3) if sharpe is not None else 0,
+            'max_drawdown': round(max_dd * 100, 2),
         }
 
     def get_all_returns(self) -> Dict[str, List[Dict[str, Any]]]:

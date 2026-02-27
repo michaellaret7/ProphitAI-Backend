@@ -6,8 +6,8 @@ from typing import cast, TYPE_CHECKING
 
 import pandas as pd
 
-from app.core.calc_v2.ticker import Ticker
-from app.core.calc_v2.models.factors import TickerFactors
+from app.core.calculations.ticker import Ticker
+from app.core.calculations.models.factors import TickerFactors
 from app.repositories.price_data import fetch_bulk_ohlcv_data_for_tickers
 from app.utils.cache.data_cache import get_cache
 from app.utils.time_utils import get_utc_date_str, get_utc_days_ago

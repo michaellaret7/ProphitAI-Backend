@@ -20,9 +20,9 @@ from app.db.core.models.market_data_models import (
 )
 from app.db.core.pull_fmp_data import FMP_API_DATA
 from app.repositories.price_data import fetch_bulk_ohlcv_data_for_tickers
-from app.core.calculations.returns.calculator import ReturnsCalculator
-from app.core.calculations.risk.calculator import RiskCalculator
-from app.core.calculations.performance.calculator import PerformanceCalculator
+from app.core.calculations.performance.returns import calc_annualized_return, calc_alpha
+from app.core.calculations.risk.distribution import calc_volatility
+from app.core.calculations.risk.benchmark import calc_beta
 from app.utils.time_utils import get_current_utc_time, get_utc_days_ago
 from app.db.jobs.screeners.base import safe_round, safe_divide
 
@@ -168,15 +168,15 @@ class UpdateETFScreenerTable:
             returns = df['adj_close'].pct_change().dropna()
 
             # Calculate metrics
-            ann_ret = ReturnsCalculator.annualized_return(returns)
-            ann_vol = RiskCalculator.annualized_volatility(returns)
+            ann_ret = calc_annualized_return(returns)
+            ann_vol = calc_volatility(returns, annualize=True)
             info_ratio = safe_divide(ann_ret, ann_vol)
 
             beta = None
             alpha = None
             if spy_returns is not None and len(returns) > 10:
-                beta = RiskCalculator.beta(returns, spy_returns)
-                alpha = PerformanceCalculator.alpha(returns, spy_returns)
+                beta = calc_beta(returns, spy_returns)
+                alpha = calc_alpha(returns, spy_returns)
 
             meta = metadata.get(ticker_id, {})
 

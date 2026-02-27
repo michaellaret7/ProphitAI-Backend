@@ -139,8 +139,8 @@ into asset classes, and bucket targets are auto-adjusted when not all asset clas
 
         tickers = [t.upper().strip() for t in tickers]
 
-        from app.core.calc_v2.portfolio_allocator.models import OptimizerConfig
-        from app.core.calc_v2.portfolio_allocator.service import allocate
+        from app.core.calculations.portfolio_allocator.models import OptimizerConfig
+        from app.core.calculations.portfolio_allocator.service import allocate
 
         config = OptimizerConfig(
             equity_weight_target=equity_weight_target,

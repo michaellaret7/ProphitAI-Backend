@@ -6,14 +6,17 @@ including returns comparison, underwater charts (drawdowns), and risk/performanc
 """
 
 from typing import Dict, Any, List, Optional
-from datetime import datetime, timedelta
+from datetime import timedelta
 import uuid
 import pandas as pd
 import numpy as np
 from app.repositories.price_data import fetch_bulk_price_data_for_tickers
 from app.utils.time_utils import get_current_utc_time
 from app.repositories.portfolio.retrieval import retrieve_portfolio
-from app.core.calculations.returns.calculator import PortfolioReturnsCalculator, ReturnsCalculator
+from app.core.calculations.performance.returns import calc_annualized_return
+from app.core.calculations.performance.ratios import calc_sharpe_ratio, calc_sortino_ratio
+from app.core.calculations.risk.distribution import calc_volatility, calc_var
+from app.core.calculations.risk.drawdown import calc_max_drawdown
 
 
 class PortfolioPerformanceComparisonService:
@@ -120,41 +123,22 @@ class PortfolioPerformanceComparisonService:
         self.spy_prices = ticker_closes['SPY'] if 'SPY' in ticker_closes.columns else pd.Series(dtype=float)
         self.price_data = ticker_closes.drop(columns=['SPY'], errors='ignore')
 
-    def _calculate_returns(self):
-        """
-        Calculate daily returns for current portfolio, optimized portfolio, and SPY.
+    def _calculate_returns(self) -> None:
+        """Calculate daily returns for current portfolio, optimized portfolio, and SPY."""
+        asset_returns = self.price_data.pct_change().dropna()
 
-        Uses core calculations library (ReturnsCalculator, PortfolioReturnsCalculator)
-        to compute returns with day-by-day renormalization for missing data.
-        """
-        # Calculate daily returns for each ticker
-        ticker_price_returns = {
-            ticker: ReturnsCalculator.daily_price_returns(self.price_data[ticker])
-            for ticker in self.price_data.columns
-        }
+        # Current portfolio weighted returns
+        current_tickers = [t for t in self.current_weights if t in asset_returns.columns]
+        current_w = pd.Series({t: self.current_weights[t] for t in current_tickers})
+        self.current_returns = asset_returns[current_tickers].dot(current_w)
 
-        # Calculate weighted portfolio returns for current portfolio
-        current_daily = PortfolioReturnsCalculator.weighted_daily_returns(
-            ticker_price_returns,
-            self.current_weights,
-            dropna=False,
-            renormalize_each_day=True
-        )
+        # Optimized portfolio weighted returns
+        opt_tickers = [t for t in self.optimized_weights if t in asset_returns.columns]
+        opt_w = pd.Series({t: self.optimized_weights[t] for t in opt_tickers})
+        self.optimized_returns = asset_returns[opt_tickers].dot(opt_w)
 
-        # Calculate weighted portfolio returns for optimized portfolio
-        optimized_daily = PortfolioReturnsCalculator.weighted_daily_returns(
-            ticker_price_returns,
-            self.optimized_weights,
-            dropna=False,
-            renormalize_each_day=True
-        )
-
-        # Calculate SPY returns
-        spy_daily = ReturnsCalculator.daily_price_returns(self.spy_prices)
-
-        self.current_returns = current_daily
-        self.optimized_returns = optimized_daily
-        self.spy_returns = spy_daily
+        # SPY returns
+        self.spy_returns = self.spy_prices.pct_change().dropna()
 
     def _calculate_cumulative_returns(self, daily_returns: pd.Series) -> pd.Series:
         """Calculate cumulative returns from daily returns."""
@@ -179,19 +163,11 @@ class PortfolioPerformanceComparisonService:
         """
         Calculate comprehensive performance metrics.
 
-        Metrics:
-        - Sharpe ratio (risk-adjusted return)
-        - Sortino ratio (downside risk-adjusted return)
-        - Annualized return
-        - Annualized volatility
-        - Max drawdown
-        - VaR (95%)
-
         Args:
             daily_returns: Daily returns series
 
         Returns:
-            Dict with all performance metrics
+            Dict with sharpeRatio, sortinoRatio, maxDrawdown, annualizedReturn, annualizedVolatility, var95
         """
         if daily_returns.empty:
             return {
@@ -203,47 +179,20 @@ class PortfolioPerformanceComparisonService:
                 "var95": 0.0,
             }
 
-        trading_days = 252
-        risk_free_rate = 0.02
-
-        # Cumulative returns for drawdown calculation
-        cumulative_returns = self._calculate_cumulative_returns(daily_returns)
-
-        # Annualized return
-        n_days = len(daily_returns)
-        years = n_days / trading_days
-        total_return = float(cumulative_returns.iloc[-1] - 1) if len(cumulative_returns) > 0 else 0.0
-
-        if years > 0 and total_return > -1:
-            annualized_return = (1 + total_return) ** (1 / years) - 1
-        else:
-            annualized_return = daily_returns.mean() * trading_days
-
-        # Volatility
-        annual_volatility = daily_returns.std() * np.sqrt(trading_days)
-
-        # Sharpe ratio
-        sharpe_ratio = (annualized_return - risk_free_rate) / annual_volatility if annual_volatility > 0 else 0.0
-
-        # Sortino ratio (downside deviation)
-        downside_returns = daily_returns[daily_returns < 0]
-        downside_std = downside_returns.std() * np.sqrt(trading_days) if len(downside_returns) > 0 else 0.0
-        sortino_ratio = (annualized_return - risk_free_rate) / downside_std if downside_std > 0 else 0.0
-
-        # Max drawdown
-        drawdowns = self._calculate_drawdowns(cumulative_returns)
-        max_drawdown = float(drawdowns.min()) if not drawdowns.empty else 0.0
-
-        # VaR (95% confidence)
-        var_95_pct = daily_returns.quantile(0.05)
+        ann_ret = calc_annualized_return(daily_returns)
+        ann_vol = calc_volatility(daily_returns, annualize=True)
+        sharpe = calc_sharpe_ratio(daily_returns)
+        sortino = calc_sortino_ratio(daily_returns)
+        max_dd = calc_max_drawdown(daily_returns)
+        var_95 = calc_var(daily_returns, confidence=0.95)
 
         return {
-            "sharpeRatio": round(sharpe_ratio, 2),
-            "sortinoRatio": round(sortino_ratio, 2),
-            "maxDrawdown": round(max_drawdown * 100, 1),  # As percentage
-            "annualizedReturn": round(annualized_return * 100, 1),  # As percentage
-            "annualizedVolatility": round(annual_volatility * 100, 1),  # As percentage
-            "var95": round(var_95_pct * 100, 1),  # As percentage
+            "sharpeRatio": round(sharpe, 2) if sharpe is not None else 0.0,
+            "sortinoRatio": round(sortino, 2) if sortino is not None else 0.0,
+            "maxDrawdown": round(max_dd * 100, 1),
+            "annualizedReturn": round(ann_ret * 100, 1),
+            "annualizedVolatility": round(ann_vol * 100, 1),
+            "var95": round(var_95 * 100, 1),
         }
 
     def get_returns_comparison(self) -> List[Dict[str, Any]]:

@@ -10,7 +10,7 @@ from typing import Annotated
 from app.core.atlas.tools.decorator import agent_tool, Param
 from app.core.atlas.tools.responses import success_response, error_response
 from app.core.atlas.tools.portfolio.utils import build_portfolio_obj
-from app.core.calc_v2.config import TRADING_DAYS
+from app.core.calculations.config import TRADING_DAYS
 
 
 # ================================
@@ -73,6 +73,9 @@ component, and percentage contribution to total portfolio risk.
         ValueError: If tickers and weights have different lengths or no price data found
     """
     try:
+        if not tickers or not weights:
+            return error_response("tickers and weights must each contain at least one element")
+
         if len(tickers) != len(weights):
             return error_response(
                 f"tickers ({len(tickers)}) and weights ({len(weights)}) must have the same length"

@@ -2,7 +2,9 @@ from app.db.core.pull_fmp_data import FMP_API_DATA
 from app.utils.time_utils import get_current_utc_time
 from datetime import timedelta
 from app.utils.serialize_output import serialize_sqlalchemy_obj
-from app.core.calculations.technical.indicators import TechnicalIndicators
+from app.core.calculations.technicals.momentum import calc_rsi, calc_macd
+from app.core.calculations.technicals.trend import calc_sma, calc_ema, calc_ichimoku
+from app.core.calculations.technicals.volatility import calc_bollinger_bands
 import pandas as pd
 import asyncio
 
@@ -41,52 +43,39 @@ class CryptoPriceService:
                  df.sort_values('date', ascending=True, inplace=True)
 
             if technical_indicators:
-                # Initialize TechnicalIndicators
-                ti = TechnicalIndicators(df)
+                close = df['close']
+                high = df['high']
+                low = df['low']
 
-                # SMAs (keeping existing logic or using ti.moving_averages if preferred, sticking to existing for simplicity unless requested)
-                df['SMA8'] = ti.moving_averages(lookbacks=[8], ma_type="sma")
-                df['SMA20'] = ti.moving_averages(lookbacks=[20], ma_type="sma")
-                df['SMA50'] = ti.moving_averages(lookbacks=[50], ma_type="sma")
-                df['SMA100'] = ti.moving_averages(lookbacks=[100], ma_type="sma")
-                df['SMA200'] = ti.moving_averages(lookbacks=[200], ma_type="sma")
+                # SMAs
+                df['SMA8'] = calc_sma(close, window=8)
+                df['SMA20'] = calc_sma(close, window=20)
+                df['SMA50'] = calc_sma(close, window=50)
+                df['SMA100'] = calc_sma(close, window=100)
+                df['SMA200'] = calc_sma(close, window=200)
 
-                # RSI using calculations module
-                df['RSI'] = ti.rsi(period=14)
+                # RSI
+                df['RSI'] = calc_rsi(close, window=14)
 
-                # MACD using calculations module
-                macd_data = ti.macd(fast_period=12, slow_period=26, signal_period=9)
-                df['MACD'] = macd_data['macd']
-                df['MACD_Signal'] = macd_data['signal']
-                df['MACD_Hist'] = macd_data['hist']
+                # MACD
+                macd_line, signal, histogram = calc_macd(close, fast=12, slow=26, signal_span=9)
+                df['MACD'] = macd_line
+                df['MACD_Signal'] = signal
+                df['MACD_Hist'] = histogram
 
-                # Bollinger Bands using calculations module
-                df['Bollinger_Bands_Upper'] = ti.bollinger_bands(period=20, num_std=2.0)['bb_upper']
-                df['Bollinger_Bands_Lower'] = ti.bollinger_bands(period=20, num_std=2.0)['bb_lower']
-                df['Bollinger_Bands_Middle'] = ti.bollinger_bands(period=20, num_std=2.0)['bb_middle']
+                # Bollinger Bands
+                bb_upper, bb_middle, bb_lower = calc_bollinger_bands(close, window=20, num_std=2.0)
+                df['Bollinger_Bands_Upper'] = bb_upper
+                df['Bollinger_Bands_Lower'] = bb_lower
+                df['Bollinger_Bands_Middle'] = bb_middle
 
-                # ADX using calculations module
-                adx_df = ti.adx(period=14)
-                df['ADX'] = adx_df['adx']
-
-                # Ichimoku Cloud using calculations module
-                ichimoku_df = ti.ichimoku_cloud(tenkan_period=9, kijun_period=26, senkou_b_period=52)
-                df['Ichimoku_Cloud_Tenkan'] = ichimoku_df['tenkan_sen']
-                df['Ichimoku_Cloud_Kijun'] = ichimoku_df['kijun_sen']
-                df['Ichimoku_Cloud_Senkou_A'] = ichimoku_df['senkou_span_a']
-                df['Ichimoku_Cloud_Senkou_B'] = ichimoku_df['senkou_span_b']
-                df['Ichimoku_Cloud_Chikou'] = ichimoku_df['chikou_span']
-
-                # TD Sequential using calculations module
-                td_sequential_df = ti.td_sequential()
-                df['TD_Buy_Setup'] = td_sequential_df['buy_setup']
-                df['TD_Sell_Setup'] = td_sequential_df['sell_setup']
-                df['TD_Buy_Setup_Complete'] = td_sequential_df['buy_setup_complete']
-                df['TD_Sell_Setup_Complete'] = td_sequential_df['sell_setup_complete']
-                df['TD_Buy_Countdown'] = td_sequential_df['buy_countdown']
-                df['TD_Sell_Countdown'] = td_sequential_df['sell_countdown']
-                df['TD_Buy_Signal'] = td_sequential_df['td_buy_signal']
-                df['TD_Sell_Signal'] = td_sequential_df['td_sell_signal']
+                # Ichimoku Cloud
+                tenkan, kijun, senkou_a, senkou_b, chikou = calc_ichimoku(high, low, close)
+                df['Ichimoku_Cloud_Tenkan'] = tenkan
+                df['Ichimoku_Cloud_Kijun'] = kijun
+                df['Ichimoku_Cloud_Senkou_A'] = senkou_a
+                df['Ichimoku_Cloud_Senkou_B'] = senkou_b
+                df['Ichimoku_Cloud_Chikou'] = chikou
 
                 # Clean up
                 df.dropna(inplace=True)

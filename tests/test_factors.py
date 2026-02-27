@@ -1,4 +1,4 @@
-"""End-to-end test for calc_v2 factor module.
+"""End-to-end test for calculations factor module.
 
 Tests:
 1. Ticker with fundamentals → all 6 factor categories populated
@@ -16,8 +16,8 @@ import pandas as pd
 
 from app.repositories.price_data import fetch_bulk_ohlcv_data_for_tickers
 from app.repositories.fundamentals.fetchers import get_bulk_fundamentals
-from app.core.calc_v2.ticker import Ticker
-from app.core.calc_v2.portfolio import Portfolio
+from app.core.calculations.ticker import Ticker
+from app.core.calculations.portfolio import Portfolio
 
 
 def main() -> None:

@@ -6,7 +6,7 @@ industry, and sub-industry — including concentration and group-level VaR.
 
 from typing import Annotated
 
-from app.core.calc_v2.models.group_metrics import GroupMetrics
+from app.core.calculations.models.group_metrics import GroupMetrics
 from app.core.atlas.tools.decorator import agent_tool, Param
 from app.core.atlas.tools.responses import success_response, error_response
 from app.core.atlas.tools.portfolio.utils import build_portfolio_obj

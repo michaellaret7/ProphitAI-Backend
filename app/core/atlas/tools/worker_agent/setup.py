@@ -56,6 +56,9 @@ from app.core.atlas.tools.macro.commodity_prices import commodity_prices
 from app.core.atlas.tools.macro.us_rates import us_treasury_rates
 from app.core.atlas.tools.macro.indicators import macro_indicators
 
+# --- watchlist ---
+from app.core.atlas.tools.watchlist.get_watchlist import get_watchlist
+
 # --- alpaca ---
 from app.core.atlas.tools.alpaca.account import account_info, account_activities
 from app.core.atlas.tools.alpaca.portfolio import (
@@ -92,6 +95,8 @@ _ALL_TOOL_FUNCTIONS = [
     portfolio_factor_exposure, portfolio_classification, get_user_simulated_portfolio,
     # macro (3)
     commodity_prices, us_treasury_rates, macro_indicators,
+    # watchlist (1)
+    get_watchlist,
     # alpaca (11)
     account_info, account_activities, get_position, get_positions,
     close_position, get_portfolio_history, propose_trade, get_orders,

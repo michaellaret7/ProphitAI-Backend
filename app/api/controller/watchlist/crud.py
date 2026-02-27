@@ -13,7 +13,10 @@ from app.db.core.pull_fmp_data import FMP_API_DATA
 from app.redis.client import cache
 from app.repositories.price_data import fetch_bulk_price_data_for_tickers
 from app.utils.time_utils import get_current_utc_time, get_utc_days_ago
-from app.core.calculations.portfolio.correlation import CorrelationAnalysis
+from app.core.calculations.portfolio_analytics.calc_correlation import (
+    calc_correlation_matrix,
+    calc_rolling_avg_correlation,
+)
 
 
 def _safe_round(value: Any, decimals: int = 4) -> Any:
@@ -67,6 +70,68 @@ def _calculate_cagr(prices: pd.Series, years: float) -> Optional[float]:
     total_return = end_price / start_price
     cagr = (total_return ** (1.0 / years)) - 1.0
     return float(cagr) if np.isfinite(cagr) else None
+
+
+def _multi_period_correlations(
+    returns_df: pd.DataFrame,
+    matrix_periods: list[str] | None = None,
+    rolling_periods: list[str] | None = None,
+) -> dict:
+    """Calculate correlation matrices and rolling correlations for multiple periods.
+
+    Args:
+        returns_df: DataFrame of daily returns (columns = tickers, index = dates)
+        matrix_periods: Periods for correlation matrix (e.g., ["1M", "3M", "6M", "9M", "1Y"])
+        rolling_periods: Periods for rolling avg correlation (e.g., ["1M", "3M", "6M", "1Y", "5Y"])
+
+    Returns:
+        {"matrix": {period: nested_dict}, "rolling": {period: [{date, avg}]}}
+    """
+    if matrix_periods is None:
+        matrix_periods = ["1M", "3M", "6M", "9M", "1Y"]
+    if rolling_periods is None:
+        rolling_periods = ["1M", "3M", "6M", "1Y", "5Y"]
+
+    if returns_df is None or returns_df.empty or len(returns_df.columns) < 2:
+        return {"matrix": {}, "rolling": {}}
+
+    if not isinstance(returns_df.index, pd.DatetimeIndex):
+        returns_df = returns_df.copy()
+        returns_df.index = pd.to_datetime(returns_df.index)
+
+    period_to_days = {"1M": 30, "3M": 90, "6M": 180, "9M": 270, "1Y": 365, "5Y": 1825}
+    period_to_trading_days = {"1M": 21, "3M": 63, "6M": 126, "9M": 189, "1Y": 252, "5Y": 1260}
+    today = get_current_utc_time()
+    result: dict = {"matrix": {}, "rolling": {}}
+
+    # Correlation matrices for each lookback period
+    for period in matrix_periods:
+        days = period_to_days.get(period, 90)
+        period_start = pd.Timestamp(today - timedelta(days=days))
+        period_returns = returns_df[returns_df.index >= period_start]
+
+        if len(period_returns) >= 2:
+            corr_matrix = calc_correlation_matrix(period_returns)
+            # Convert to nested dict, excluding diagonal
+            matrix_dict: dict = {}
+            for t1 in corr_matrix.columns:
+                matrix_dict[t1] = {}
+                for t2 in corr_matrix.columns:
+                    if t1 != t2:
+                        val = float(corr_matrix.loc[t1, t2])
+                        matrix_dict[t1][t2] = round(val, 4) if np.isfinite(val) else None
+            result["matrix"][period] = matrix_dict
+
+    # Rolling average correlations for each window
+    for period in rolling_periods:
+        window = period_to_trading_days.get(period, 63)
+        rolling_series = calc_rolling_avg_correlation(returns_df, window)
+        result["rolling"][period] = [
+            {"date": str(date), "avg": round(float(value), 4)}
+            for date, value in rolling_series.items()
+        ]
+
+    return result
 
 
 def _calculate_performance_from_prices(
@@ -453,13 +518,8 @@ async def get_watchlist_charts_controller(tickers: List[str]) -> Dict[str, Any]:
 
     # Calculate multi-period correlations from returns
     if len(prices.columns) > 1:
-        price_df = prices  # Already a DataFrame
-        returns_df = price_df.pct_change().dropna()
-        correlations = CorrelationAnalysis.multi_period_correlations(
-            returns_df,
-            matrix_periods=["1M", "3M", "6M", "9M", "1Y"],
-            rolling_periods=["1M", "3M", "6M", "1Y", "5Y"]
-        )
+        returns_df = prices.pct_change().dropna()
+        correlations = _multi_period_correlations(returns_df)
     else:
         correlations = {"matrix": {}, "rolling": {}}
 

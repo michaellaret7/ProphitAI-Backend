@@ -1,11 +1,12 @@
-"""Factor calculators for calculations_v2."""
+"""Factor calculation module.
 
-from .value import ValueFactors
-from .growth import GrowthFactors
-from .momentum import MomentumFactors
-from .quality import QualityFactors
-from .volatility import VolatilityFactors
-from . import config
+Provides ticker-level factor exposures (momentum, value, quality, growth,
+volatility, size). Portfolio-level factor exposure analysis lives in
+portfolio_analytics/factor_exposures.py.
+"""
 
-__all__ = ["ValueFactors", "GrowthFactors", "MomentumFactors", "QualityFactors", "VolatilityFactors", "config"]
+from app.core.calculations.factors.calc_all import calc_all_factors
 
+__all__ = [
+    'calc_all_factors',
+]

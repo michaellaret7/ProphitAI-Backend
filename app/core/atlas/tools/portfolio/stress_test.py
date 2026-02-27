@@ -1,7 +1,7 @@
 """Portfolio stress testing tool.
 
 Provides a tool for running ETF beta-shock stress tests on a multi-asset
-portfolio using the Portfolio class and StressTestResult model from calc_v2.
+portfolio using the Portfolio class and StressTestResult model.
 """
 
 from typing import Annotated
@@ -112,6 +112,9 @@ against ETF factor returns via OLS, then applying user-supplied shock magnitudes
             or ETF factor data unavailable
     """
     try:
+        if not tickers or not weights:
+            return error_response("tickers and weights must each contain at least one element")
+
         if len(tickers) != len(weights):
             return error_response(
                 f"tickers ({len(tickers)}) and weights ({len(weights)}) must have the same length"

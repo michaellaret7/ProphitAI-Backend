@@ -7,7 +7,7 @@ from app.db.jobs.macro import (
 )
 import time
 
-from app.core.calc_v2.portfolio_analytics.factor_exposures import clear_universe_cache
+from app.core.calculations.portfolio_analytics.factor_exposures import clear_universe_cache
 from app.utils.cache.data_cache import get_cache
 
 def main():
