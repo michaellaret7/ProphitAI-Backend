@@ -203,7 +203,7 @@ async def get_dashboard_controller(*, clerk_id: str) -> Dict[str, Any]:
         asyncio.to_thread(get_orders, clerk_id, "closed"),                          # 6
         asyncio.to_thread(get_account_activities, clerk_id),                        # 7
         asyncio.to_thread(fmp.get_batch_quote, ["SPY", "QQQ", "DIA", "IWM"]),      # 8
-        asyncio.to_thread(get_portfolio_history, clerk_id, period="1D", timeframe="5Min", extended_hours=False),  # 9
+        asyncio.to_thread(get_portfolio_history, clerk_id, period="1D", timeframe="1Min", extended_hours=False),  # 9
     ]
 
     # Only fetch treasury/news if not cached
