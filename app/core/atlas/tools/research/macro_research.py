@@ -22,7 +22,7 @@ def macro_research(
     query: str,
     top_k: Annotated[int, Param(min_val=3, max_val=15)] = 7,
     research_provider: Optional[str] = None,
-    filename: Optional[str] = None,
+    file_name: Optional[str] = None,
 
 ) -> str:
     """
@@ -59,11 +59,11 @@ def macro_research(
             outlook for 2026?' NOT: 'Fed rates 2026'
         top_k: Number of results to return (default: 7, max: 15)
         research_provider: Filter by research provider name (e.g., 'JPMorgan', 'Goldman', 'Morgan Stanley')
-        filename: Filter by filename pattern
+        file_name: Filter by file name pattern
 
     Returns:
         YAML-formatted search results with query, num_results, filters_applied,
-        and results list containing id, score, text, research_provider, filename,
+        and results list containing id, score, text, research_provider, file_name,
         and chunk_id for each match
 
     Examples:
@@ -91,8 +91,8 @@ def macro_research(
     filters: dict = {}
     if research_provider:
         filters["research_provider"] = research_provider
-    if filename:
-        filters["filename"] = filename
+    if file_name:
+        filters["file_name"] = file_name
 
     try:
         searcher = HybridSearch(use_rerank=True, enhanced=True)
@@ -111,7 +111,7 @@ def macro_research(
                 "score": round(result.score, 4),
                 "text": result.metadata.get("text", ""),
                 "research_provider": result.metadata.get("research_provider"),
-                "filename": result.metadata.get("filename"),
+                "file_name": result.metadata.get("file_name"),
                 "chunk_id": result.metadata.get("chunk_id"),
             })
 

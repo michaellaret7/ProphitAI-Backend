@@ -7,10 +7,9 @@ from .prompts import QUERY_DECOMPOSITION_PROMPT
 
 
 class SubQuery(BaseModel):
-    """A single decomposed sub-query with its retrieval parameters."""
+    """A single decomposed sub-query."""
 
     sub_query: str
-    top_k: int
 
 
 class SubQueries(BaseModel):
@@ -27,7 +26,7 @@ def decompose_query(query: str) -> SubQueries:
         query: The user's original query.
 
     Returns:
-        SubQueries containing the decomposed sub-queries with top_k values.
+        SubQueries containing the decomposed sub-queries.
     """
     model, client = get_model_and_client(provider="groq", model="openai-gpt-oss-120b")
 

@@ -5,6 +5,7 @@ Wraps pinecone-text's BM25Encoder with save/load functionality
 for persistence across application restarts.
 """
 
+import zipfile
 from pathlib import Path
 
 # Reason: Pre-load NLTK stopwords before BM25Encoder to prevent race condition
@@ -15,8 +16,21 @@ from nltk.corpus import stopwords
 
 try:
     nltk.data.find("corpora/stopwords")
-except LookupError:
-    # Reason: Download stopwords if not found (e.g., fresh Render deployment)
+    # Reason: Validate the corpus is loadable, not just present on disk.
+    # A corrupt/incomplete download passes the find() check but fails when read.
+    stopwords.ensure_loaded()
+except (LookupError, zipfile.BadZipFile, OSError):
+    # Reason: Force re-download if missing OR corrupted (e.g., partial Render deploy)
+    import shutil
+
+    for p in nltk.data.path:
+        corrupt = Path(p) / "corpora" / "stopwords"
+        if corrupt.exists():
+            shutil.rmtree(corrupt, ignore_errors=True)
+        corrupt_zip = Path(p) / "corpora" / "stopwords.zip"
+        if corrupt_zip.exists():
+            corrupt_zip.unlink(missing_ok=True)
+
     nltk.download("stopwords", quiet=True)
 
 _ = stopwords.words("english")
@@ -44,13 +58,13 @@ class SparseEncoder:
         """Encode a document into a sparse vector."""
         if not self.is_fitted:
             raise RuntimeError("Encoder not fitted. Call fit() or load() first.")
-        return self.encoder.encode_documents([text])[0]
+        return self.encoder.encode_documents([text])[0] # type: ignore
 
     def encode_query(self, query: str) -> dict:
         """Encode a query into a sparse vector."""
         if not self.is_fitted:
             raise RuntimeError("Encoder not fitted. Call fit() or load() first.")
-        return self.encoder.encode_queries([query])[0]
+        return self.encoder.encode_queries([query])[0] # type: ignore
 
     def save(self, path: Path | str | None = None) -> Path:
         """Save the fitted encoder."""

@@ -5,7 +5,7 @@ documents covering portfolio theory, factor models, asset pricing, quantitative
 strategies, behavioral finance, and market microstructure.
 """
 
-from typing import Annotated, Optional
+from typing import Annotated
 
 from app.core.atlas.tools.decorator import agent_tool, Param
 from app.core.atlas.tools.responses import success_response, error_response
@@ -21,8 +21,6 @@ from app.core.foundry.models.vector import QueryResult
 def theory_research(
     query: str,
     top_k: Annotated[int, Param(min_val=3, max_val=15)] = 7,
-    research_provider: Optional[str] = None,
-    filename: Optional[str] = None,
 ) -> str:
     """
     Search investment theory and academic finance research using hybrid semantic + keyword search.
@@ -60,13 +58,10 @@ def theory_research(
             Example: 'What is the theoretical basis for hierarchical risk parity
             and how does it address instability in mean-variance optimization?' NOT: 'HRP theory'
         top_k: Number of results to return (default: 7, max: 15)
-        research_provider: Filter by research provider or author
-        filename: Filter by filename pattern
 
     Returns:
-        YAML-formatted search results with query, num_results, filters_applied,
-        and results list containing id, score, text, research_provider, filename,
-        and chunk_id for each match
+        Search results with query, num_results, and results list containing
+        id, score, text, doc_id, doc_type, and chunk_id for each match.
 
     Examples:
         theory_research(query="How does the Black-Litterman model blend market equilibrium with investor views?")
@@ -76,7 +71,7 @@ def theory_research(
         >>> {"success": True, "data": {"query": "...", "num_results": 10, "results": [...]}}
 
     Raises:
-        ValueError: If query is empty or filters are invalid
+        ValueError: If query is empty
     """
     if not query or not isinstance(query, str):
         return error_response("Query is required and must be a non-empty string")
@@ -89,13 +84,6 @@ def theory_research(
         return error_response("top_k must be a positive integer")
     top_k = min(top_k, 25)
 
-    # Reason: build metadata filters dict only with provided values
-    filters: dict = {}
-    if research_provider:
-        filters["research_provider"] = research_provider
-    if filename:
-        filters["filename"] = filename
-
     try:
         searcher = HybridSearch(use_rerank=True, enhanced=True)
 
@@ -103,7 +91,6 @@ def theory_research(
             query=query,
             top_k=top_k,
             namespace="theory_research",
-            **filters,
         )
 
         formatted_results = []
@@ -112,15 +99,14 @@ def theory_research(
                 "id": result.id,
                 "score": round(result.score, 4),
                 "text": result.metadata.get("text", ""),
-                "research_provider": result.metadata.get("research_provider"),
-                "filename": result.metadata.get("filename"),
+                "doc_id": result.metadata.get("doc_id"),
+                "doc_type": result.metadata.get("doc_type"),
                 "chunk_id": result.metadata.get("chunk_id"),
             })
 
         return success_response({
             "query": query,
             "num_results": len(formatted_results),
-            "filters_applied": filters if filters else None,
             "results": formatted_results,
         })
 

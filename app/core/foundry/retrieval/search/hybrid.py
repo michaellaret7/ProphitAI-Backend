@@ -98,8 +98,8 @@ class HybridSearch(BaseSearch):
             # Earnings calls with specific filters
             search("revenue growth", ticker="AAPL", fiscal_year=2025)
 
-            # Macro research with filename filter
-            search("interest rates", namespace="macro_research", filename="JPM_Report")
+            # Macro research with file_name filter
+            search("interest rates", namespace="macro_research", file_name="JPM_Report")
 
             # Multiple values for a filter
             search("guidance", ticker=["AAPL", "GOOGL", "MSFT"])

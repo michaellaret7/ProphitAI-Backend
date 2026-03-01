@@ -104,7 +104,7 @@ class Ingestor:
             Document with content and metadata.
         """
         metadata = {
-            "filename": source_name,
+            "file_name": source_name,
             "extension": None,
             "size_bytes": len(text.encode("utf-8")),
             "char_count": len(text),
@@ -165,7 +165,7 @@ class Ingestor:
             s3_uri = f"s3://{bucket}/{key}"
             content = self._get_modal_client().extract_from_s3(s3_uri)
             metadata = {
-                "filename": filename,
+                "file_name": filename,
                 "extension": extension,
                 "char_count": len(content),
                 "source_type": "s3",
@@ -186,7 +186,7 @@ class Ingestor:
         content = self._extract(data, extension)
 
         metadata = {
-            "filename": filename,
+            "file_name": filename,
             "extension": extension,
             "size_bytes": size_bytes,
             "char_count": len(content),
@@ -221,7 +221,7 @@ class Ingestor:
         content = self._extract(data, extension)
 
         metadata = {
-            "filename": filename,
+            "file_name": filename,
             "extension": extension,
             "size_bytes": path.stat().st_size,
             "char_count": len(content),
@@ -356,7 +356,7 @@ class Ingestor:
             documents.append(Document(
                 content=result["content"],
                 metadata={
-                    "filename": Path(key).name,
+                    "file_name": Path(key).name,
                     "extension": ".pdf",
                     "char_count": result.get("char_count", len(result["content"])),
                     "source_type": "s3",
