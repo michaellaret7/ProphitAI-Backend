@@ -45,7 +45,7 @@ def calc_autocorrelation(
     if lags is None:
         lags = [1, 5, 10, 21]
 
-    daily_returns = close.pct_change().dropna()
+    daily_returns = close.pct_change(fill_method=None).dropna()
     result: dict[int, pd.Series] = {}
 
     for lag in lags:

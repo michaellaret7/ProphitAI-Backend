@@ -41,7 +41,7 @@ class Ticker:
         self.volume = ohlcv_data['volume']
 
         # Return series (computed from adj_close)
-        self.daily_returns = self.adj_close.pct_change().dropna()
+        self.daily_returns = self.adj_close.pct_change(fill_method=None).dropna()
         self.cumulative_returns = (1 + self.daily_returns).cumprod() - 1
         self.log_returns = np.log(1 + self.daily_returns)
         self.cumulative_log_returns = np.log(1 + self.daily_returns).cumsum()
@@ -49,7 +49,7 @@ class Ticker:
         # Benchmark
         self.benchmark_returns: pd.Series | None = None
         if benchmark_prices is not None:
-            self.benchmark_returns = benchmark_prices.pct_change().dropna()
+            self.benchmark_returns = benchmark_prices.pct_change(fill_method=None).dropna()
 
         # Metrics
         self.risk_metrics: RiskMetrics = calc_all_risk_metrics(

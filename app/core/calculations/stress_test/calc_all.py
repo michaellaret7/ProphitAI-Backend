@@ -143,7 +143,7 @@ if __name__ == "__main__":
     shocks = {'SPY': -0.05, 'TLT': 0.10, 'GLD': -0.04, 'EEM': 0.15}
 
     price_df = fetch_bulk_price_data_for_tickers(list(holdings) + list(shocks), '2024-01-01', '2026-02-01')
-    returns_df = price_df.pct_change().dropna()
+    returns_df = price_df.pct_change(fill_method=None).dropna()
 
     ticker_rets = {t: returns_df[t] for t in holdings if t in returns_df.columns}
     etf_rets = {e: returns_df[e] for e in shocks}

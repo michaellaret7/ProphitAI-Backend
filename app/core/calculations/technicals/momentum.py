@@ -132,7 +132,7 @@ def calc_risk_adj_momentum(
     r12 = calc_roc(close, window=r12_window, skip_recent=skip_recent)
     r6 = calc_roc(close, window=r6_window, skip_recent=skip_recent)
 
-    daily_returns = close.pct_change()
+    daily_returns = close.pct_change(fill_method=None)
     # Reason: use r12 window for vol to match the longest momentum horizon
     realized_vol = cast(
         pd.Series,
@@ -168,7 +168,7 @@ def calc_time_series_momentum(
     Returns:
         Series of vol-scaled momentum signals.
     """
-    daily_returns = close.pct_change()
+    daily_returns = close.pct_change(fill_method=None)
     trailing_return = close.pct_change(periods=lookback)
     realized_vol = cast(
         pd.Series,

@@ -61,13 +61,13 @@ class Portfolio:
         self.positions = list(zip(tickers, weights))
 
         # Asset-level daily returns (for cov/corr matrices)
-        self.asset_returns = self.price_df.pct_change().dropna()
+        self.asset_returns = self.price_df.pct_change(fill_method=None).dropna()
 
         # Benchmark returns (calculated from prices)
         self.benchmark_returns: pd.Series | None = None
 
         if benchmark_prices is not None:
-            self.benchmark_returns = benchmark_prices.pct_change().dropna()
+            self.benchmark_returns = benchmark_prices.pct_change(fill_method=None).dropna()
 
         # Portfolio-level returns
         self.daily_returns = (self.asset_returns * self.weights).sum(axis=1)

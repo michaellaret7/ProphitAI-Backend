@@ -224,7 +224,7 @@ def _compute_universe_factors() -> dict[str, TickerFactors]:
         ohlcv_data = ohlcv_future.result()
         fundamentals = fund_future.result()
 
-    benchmark_returns = ohlcv_data["SPY"]["adj_close"].pct_change().dropna()
+    benchmark_returns = ohlcv_data["SPY"]["adj_close"].pct_change(fill_method=None).dropna()
     fund_map = fundamentals or {}
     result: dict[str, TickerFactors] = {}
 
@@ -234,7 +234,7 @@ def _compute_universe_factors() -> dict[str, TickerFactors]:
 
         ohlcv = ohlcv_data[ticker]
         adj_close = ohlcv["adj_close"]
-        daily_returns = adj_close.pct_change().dropna()
+        daily_returns = adj_close.pct_change(fill_method=None).dropna()
 
         result[ticker] = calc_all_factors(
             adj_close=adj_close,

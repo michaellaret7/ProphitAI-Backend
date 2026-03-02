@@ -16,6 +16,7 @@ from app.repositories.price_data import fetch_bulk_price_data_for_tickers
 from app.utils.time_utils import get_utc_date_str, get_utc_days_ago
 
 from app.core.calculations.portfolio_allocator.models import (
+    ClassifiedTickers,
     OptimizerConfig,
     StrategyLiteral,
 )
@@ -50,10 +51,37 @@ def _check_bucket_feasibility(
     if target > 0 and count > 0:
         feasible_max = count * hard_max
         if bucket_min > feasible_max:
+            min_tickers_needed = int(bucket_min / hard_max) + 1
             raise ValueError(
                 f"{name} bucket infeasible: min={bucket_min:.2%} but max achievable is "
-                f"{feasible_max:.2%} with {count} assets at hard_max={hard_max:.2%}."
+                f"{feasible_max:.2%} with {count} assets at hard_max={hard_max:.2%}. "
+                f"Fix: add at least {min_tickers_needed - count} more {name.lower()} ticker(s) "
+                f"(need {min_tickers_needed} total)."
             )
+
+
+def _compute_feasible_hard_max(config: OptimizerConfig, classified: ClassifiedTickers) -> float:
+    """Compute minimum hard_max_weight that makes all buckets feasible.
+
+    When few tickers exist in a bucket, the default hard_max (15%) may be too
+    low for the bucket minimum to be achievable.  This returns the smallest
+    hard_max that satisfies every active bucket's lower bound.
+    """
+    total_count = len(classified.all_tickers)
+    # Reason: weights must sum to 1.0, so hard_max >= 1.0 / n
+    required_maxes: List[float] = [config.hard_max_weight, 1.0 / total_count + 0.01]
+    buckets = [
+        (config.equity_weight_target, classified.equity_count),
+        (config.bond_weight_target, classified.bond_count),
+        (config.commodity_weight_target, classified.commodity_count),
+        (config.crypto_weight_target, classified.crypto_count),
+    ]
+    for target, count in buckets:
+        if target > 0 and count > 0:
+            bucket_min = max(0, target - config.bucket_band)
+            # Reason: each ticker can hold at most hard_max, need bucket_min / count + margin
+            required_maxes.append(bucket_min / count + 0.01)
+    return max(required_maxes)
 
 
 class PortfolioAllocator:
@@ -80,6 +108,14 @@ class PortfolioAllocator:
 
         # Auto-adjust bucket targets based on present asset classes
         self.config = auto_adjust_bucket_targets(config, self.classified)
+
+        # Reason: raise hard_max if needed to keep small-bucket constraints feasible
+        feasible_hard_max = _compute_feasible_hard_max(self.config, self.classified)
+        if feasible_hard_max > self.config.hard_max_weight:
+            self.config = self.config.model_copy(update={
+                "hard_max_weight": feasible_hard_max,
+                "soft_max_weight": min(self.config.soft_max_weight, feasible_hard_max),
+            })
 
         # Build constraint handler (needed by validation)
         self.constraint_builder = ConstraintBuilder(self.config, self.classified)

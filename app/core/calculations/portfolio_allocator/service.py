@@ -147,6 +147,13 @@ def allocate(
         allocations=allocations,
         performance=performance,
         strategy=strategy,
+        adjusted_targets={
+            "equity_target": opt.config.equity_weight_target,
+            "bond_target": opt.config.bond_weight_target,
+            "commodity_target": opt.config.commodity_weight_target,
+            "crypto_target": opt.config.crypto_weight_target,
+            "hard_max_weight": opt.config.hard_max_weight,
+        },
     )
 
 

@@ -56,7 +56,7 @@ def calc_close_to_close_volatility(
 
     Rolling std of daily returns. Annualized by default via sqrt(252).
     """
-    daily_returns = close.pct_change()
+    daily_returns = close.pct_change(fill_method=None)
     vol = cast(pd.Series, daily_returns.rolling(window=window, min_periods=window).std())
 
     if annualize:

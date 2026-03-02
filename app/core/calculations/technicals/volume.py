@@ -137,7 +137,7 @@ def calc_amihud_illiquidity(
     Higher values = less liquid, larger price impact per dollar traded.
     Common window: 21 days (1 month).
     """
-    daily_returns = close.pct_change().abs()
+    daily_returns = close.pct_change(fill_method=None).abs()
     dollar_volume = (close * volume).replace(0, np.nan)
     ratio = daily_returns / dollar_volume
 

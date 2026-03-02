@@ -80,6 +80,7 @@ class AllocationResult(BaseModel):
     allocations: List[Allocation]
     performance: PortfolioPerformance
     strategy: str
+    adjusted_targets: Dict[str, float] | None = None
 
 
 @dataclass
