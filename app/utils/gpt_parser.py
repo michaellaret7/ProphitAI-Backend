@@ -36,7 +36,8 @@ def _call_parser_with_fallback(messages: List[Dict[str, str]], target_model: Typ
             completion = client.chat.completions.parse(
                 model=model,
                 messages=messages,
-                response_format=target_model
+                response_format=target_model,
+                max_tokens=16384,
             )
             return completion.choices[0].message.parsed
 

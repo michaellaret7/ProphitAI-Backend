@@ -14,7 +14,7 @@ class Watchlist(OrchestratorAgent):
         self,
         user_preferences: str,
         print_mode: PrintMode = PrintMode.PRODUCTION,
-        provider: str = "claude",
+        provider: str = "anthropic",
         model: str = "claude-sonnet-4-6",
         chat_callback: Optional[ChatCallback] = None,
         session_id: str = "watchlist",
@@ -32,3 +32,11 @@ class Watchlist(OrchestratorAgent):
             session_id=session_id,
         )
 
+if __name__ == "__main__":
+    watchlist = Watchlist(
+        user_preferences="I want to build a watchlist of stocks that are related to the stock market.",
+        print_mode=PrintMode.PRODUCTION,
+        provider="anthropic",
+        model="claude-sonnet-4-6",
+    )
+    watchlist.run()

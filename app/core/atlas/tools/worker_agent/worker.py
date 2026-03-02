@@ -47,11 +47,8 @@ def deploy_worker_agent(
             task=task,
             tools=tools,
             notebook=notebook,
-            # provider='anthropic',
-            # model='claude-sonnet-4-6',
             provider='fireworks',
             model='Kimi-K2.5',
-            # model='glm-4-7',
             chat_callback=worker_callback,
             max_iterations=30,
         )

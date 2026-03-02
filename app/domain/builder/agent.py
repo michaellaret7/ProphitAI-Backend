@@ -14,8 +14,10 @@ class PortfolioBuilder(OrchestratorAgent):
         self,
         user_preferences: str,
         print_mode: PrintMode = PrintMode.PRODUCTION,
-        provider: str = "anthropic",
-        model: str = "claude-sonnet-4-6",
+        # provider: str = "anthropic",
+        # model: str = "claude-sonnet-4-6",
+        provider: str = "fireworks",
+        model: str = "Kimi-K2.5",
         chat_callback: Optional[ChatCallback] = None,
         session_id: str = "portfolio_builder",
     ):

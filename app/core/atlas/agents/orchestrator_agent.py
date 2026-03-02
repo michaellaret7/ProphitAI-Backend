@@ -125,8 +125,8 @@ class OrchestratorAgent(AgentBase):
                 planner = PlannerAgent(
                     task=self.task, 
                     print_mode=PrintMode.PRODUCTION,
-                    provider="gemini", 
-                    model="gemini-3.1-pro-preview"
+                    provider="anthropic", 
+                    model="claude-opus-4-6"
                 )
 
                 self.plan = planner.run()

@@ -451,49 +451,17 @@ def plot_results(
 # ══════════════════════════════════════════════════════════════════════
 
 if __name__ == "__main__":
-    device, gpu_name, gpu_available = select_device()
+    from app.db.core.models.user_data_models import User, Portfolio, PortfolioItem
+    from app.db.core.db_config import UserSession
 
-    print("=" * 60)
-    print("  MONTE CARLO PORTFOLIO SIMULATION (Real Data)")
-    print(f"  {'GPU-Accelerated (PyTorch CUDA)' if gpu_available else 'CPU Mode (PyTorch)'}")
-    if gpu_name:
-        print(f"  Device: {gpu_name}")
-    print("=" * 60)
+    session = UserSession()
 
-    # Fetch real historical stats from DB
-    valid_tickers, valid_weights, annual_returns, annual_vols, corr_matrix = (
-        fetch_historical_stats(TICKERS, WEIGHTS)
-    )
+    user = session.query(User).filter(User.email == "michaellaret7@gmail.com").first()
 
-    # Print portfolio with real stats
-    print("\nPortfolio (real historical stats):")
-    for t, w, r, v in zip(valid_tickers, valid_weights, annual_returns, annual_vols):
-        print(f"   {t:6s}  {w:5.0%}  (ann. return: {r:+.1%}, ann. vol: {v:.1%})")
+    print('user.id: ', user.id)
+    print('user.broker_account_id: ', user.broker_account_id)
+    print('user.broker: ', user.broker)
 
-    print(f"\nCorrelation matrix:")
-    corr_df = pd.DataFrame(corr_matrix, index=valid_tickers, columns=valid_tickers)
-    print(corr_df.round(2).to_string())
 
-    # Run simulation
-    paths, daily_rets, elapsed = run_monte_carlo(
-        valid_tickers, valid_weights, annual_returns, annual_vols,
-        corr_matrix, device, gpu_available,
-    )
 
-    # Calculate risk metrics
-    metrics = calculate_risk_metrics(paths, daily_rets)
-
-    # Print summary
-    print(f"\nResults Summary:")
-    print(f"   Expected return:   {metrics['mean_return']:+.2%}")
-    print(f"   Portfolio vol:     {metrics['std_return']:.2%}")
-    print(f"   Sharpe ratio:      {metrics['sharpe']:.2f}")
-    print(f"   95% VaR:           ${metrics['var_dollar']:,.0f} ({metrics['var_return']:.2%})")
-    print(f"   95% CVaR:          ${metrics['cvar_dollar']:,.0f} ({metrics['cvar_return']:.2%})")
-    print(f"   P(loss):           {metrics['prob_loss']:.1f}%")
-
-    # Plot
-    plot_results(
-        paths, metrics, valid_tickers, valid_weights,
-        annual_returns, annual_vols, elapsed, gpu_available,
-    )
+    session.close()
