@@ -94,7 +94,7 @@ def calculate_etf_metrics(etf_df: pd.DataFrame, lookback_days: int = 365) -> lis
     if 'SPY' in price_data:
         spy_df = price_data['SPY']
         if 'adj_close' in spy_df.columns:
-            spy_returns = spy_df['adj_close'].pct_change().dropna()
+            spy_returns = spy_df['adj_close'].pct_change(fill_method=None).dropna()
 
     # Get ETF metadata
     ticker_ids = etf_df['ticker_id'].tolist()
@@ -117,7 +117,7 @@ def calculate_etf_metrics(etf_df: pd.DataFrame, lookback_days: int = 365) -> lis
             print(f"  {ticker}: No price data")
             continue
 
-        returns = df['adj_close'].pct_change().dropna()
+        returns = df['adj_close'].pct_change(fill_method=None).dropna()
 
         # Calculate metrics
         ann_ret = calc_annualized_return(returns)

@@ -133,7 +133,7 @@ class UpdateETFScreenerTable:
         if 'SPY' in price_data:
             spy_df = price_data['SPY']
             if 'adj_close' in spy_df.columns:
-                spy_returns = spy_df['adj_close'].pct_change().dropna()
+                spy_returns = spy_df['adj_close'].pct_change(fill_method=None).dropna()
 
         # Get metadata
         metadata = self._get_etf_metadata(ticker_ids)
@@ -165,7 +165,7 @@ class UpdateETFScreenerTable:
                     self.total_errors += 1
                 continue
 
-            returns = df['adj_close'].pct_change().dropna()
+            returns = df['adj_close'].pct_change(fill_method=None).dropna()
 
             # Calculate metrics
             ann_ret = calc_annualized_return(returns)

@@ -21,7 +21,7 @@ def _format_allocation_result(result) -> dict:
     """Convert AllocationResult into a clean dict for agent consumption."""
     allocations = sorted(result.allocations, key=lambda a: a.weight, reverse=True)
 
-    return {
+    formatted = {
         "strategy": result.strategy,
         "performance": {
             "expected_return": result.performance.expected_return,
@@ -39,6 +39,13 @@ def _format_allocation_result(result) -> dict:
         ],
         "total_positions": len(allocations),
     }
+
+    if result.adjusted_targets:
+        formatted["adjusted_config"] = {
+            k: f"{v:.2%}" for k, v in result.adjusted_targets.items()
+        }
+
+    return formatted
 
 
 # ================================

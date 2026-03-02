@@ -191,14 +191,14 @@ class UpdateEquityScreenerTable:
             if 'adj_close' not in df.columns or df['adj_close'].dropna().empty:
                 return None
 
-            returns = df['adj_close'].pct_change().dropna()
+            returns = df['adj_close'].pct_change(fill_method=None).dropna()
             spy_returns = None
             sector_returns = None
 
             if 'SPY' in price_data and 'adj_close' in price_data['SPY'].columns:
-                spy_returns = price_data['SPY']['adj_close'].pct_change().dropna()
+                spy_returns = price_data['SPY']['adj_close'].pct_change(fill_method=None).dropna()
             if sector_etf and sector_etf in price_data and 'adj_close' in price_data[sector_etf].columns:
-                sector_returns = price_data[sector_etf]['adj_close'].pct_change().dropna()
+                sector_returns = price_data[sector_etf]['adj_close'].pct_change(fill_method=None).dropna()
 
             # Calculate momentum metrics
             close = df['close']

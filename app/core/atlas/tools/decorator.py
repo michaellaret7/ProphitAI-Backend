@@ -404,8 +404,12 @@ def agent_tool(func: Any = None, *, name: str | None = None) -> Any:
 
             @functools.wraps(fn)
             def _validated(*args: Any, **kwargs: Any) -> Any:
-                bound = cached_sig.bind(*args, **kwargs)
-                bound.apply_defaults()
+                try:
+                    bound = cached_sig.bind(*args, **kwargs)
+                    bound.apply_defaults()
+                except TypeError as e:
+                    from app.core.atlas.tools.responses import error_response
+                    return error_response(str(e))
                 for pname, (p_meta, lit_vals) in validators.items():
                     if pname in bound.arguments:
                         err = _validate_arg(

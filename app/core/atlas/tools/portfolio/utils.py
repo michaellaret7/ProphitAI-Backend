@@ -42,13 +42,13 @@ def _build_ticker_factors(
     if not compute_tickers:
         return cached
 
-    benchmark_returns = benchmark_prices.pct_change().dropna()
+    benchmark_returns = benchmark_prices.pct_change(fill_method=None).dropna()
     fundamentals_map = get_bulk_fundamentals(compute_tickers)
 
     computed = {}
     for t in compute_tickers:
         adj_close = ohlcv_data[t]["adj_close"]
-        daily_returns = adj_close.pct_change().dropna()
+        daily_returns = adj_close.pct_change(fill_method=None).dropna()
         fundamentals = fundamentals_map.get(t)
         computed[t] = calc_all_factors(
             adj_close=adj_close,
@@ -105,7 +105,7 @@ def build_portfolio_obj(
         if missing_etfs:
             raise ValueError(f"No price data found for ETF factors: {missing_etfs}")
         etf_returns_map = {
-            etf: data[etf]["adj_close"].pct_change().dropna()
+            etf: data[etf]["adj_close"].pct_change(fill_method=None).dropna()
             for etf in shocks
         }
 
