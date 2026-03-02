@@ -54,4 +54,20 @@ portfolio needs less than a multi-leg options + equity hedge strategy.
 <user_request>
 {user_preferences}
 </user_request>
+
+<output_format>
+Your final answer MUST be valid JSON matching this exact structure:
+{{
+    "thesis": "Your investment thesis here — a detailed narrative covering the macro backdrop, strategic rationale, key themes, risk considerations, and how the portfolio is positioned. Write freely and in depth.",
+    "portfolio": [
+        {{
+            "ticker": "AAPL",
+            "allocation": "15%",
+            "direction": "long",
+            "instrument_type": "equity",
+            "reasoning": "In-depth reasoning for this specific position — why it was selected, what data supports it, how it fits the thesis, and what catalysts or risks apply."
+        }}
+    ]
+}}
+</output_format>
 """
