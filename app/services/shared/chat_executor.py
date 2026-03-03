@@ -33,7 +33,6 @@ class ChatSessionState:
 
     Attributes:
         session_id: Unique identifier for this session.
-        agent_type: Type of agent determining which tools are registered.
         agent: The ChatAgent instance for this session (created once, reused).
         status: Current status (active, processing, idle).
         messages: Conversation history as list of role/content dicts.
@@ -42,7 +41,6 @@ class ChatSessionState:
     """
 
     session_id: str
-    agent_type: str = "general"
     agent: Optional["ChatAgent"] = None
     status: ChatSessionStatus = ChatSessionStatus.IDLE
     messages: List[Dict[str, Any]] = field(default_factory=list)
@@ -63,17 +61,15 @@ class ChatSessionManager:
 
     def create_session(
         self,
-        agent_type: str = "general",
         user_id: Optional[str] = None,
     ) -> ChatSessionState:
         """Create a new chat session with a configured agent.
 
-        Creates a ChatAgent instance and registers tools based on agent_type.
+        Creates a ChatAgent instance and registers tools.
         Tools are registered ONCE here and persist for all messages in session.
 
         Args:
-            agent_type: Type of agent (e.g., "macro_research", "equity_research", "user_uploads").
-            user_id: User ID for user-specific agents (required for "user_uploads").
+            user_id: User ID for broker context injection.
 
         Returns:
             The created ChatSessionState with configured agent.
@@ -81,28 +77,9 @@ class ChatSessionManager:
         from app.core.atlas.agents import ChatAgent
         from app.core.atlas.models import PrintMode
         from app.core.atlas.tools.chat_registry import register_chat_tools
-        from app.core.atlas.prompts.chat_agent_prompts import (
-            get_equity_research_prompt,
-            get_macro_research_prompt,
-            get_tax_research_prompt,
-            get_user_uploads_prompt,
-        )
 
         session_id = str(uuid.uuid4())
-
-        # Map agent types to their prompt functions
-        agent_prompt_funcs = {
-            "macro_research": get_macro_research_prompt,
-            "equity_research": get_equity_research_prompt,
-            "tax_research": get_tax_research_prompt,
-        }
-
-        # Get prompt (call function to inject current date / user context)
-        if agent_type == "user_uploads" and user_id:
-            system_prompt = get_user_uploads_prompt(user_id)
-        else:
-            prompt_func = agent_prompt_funcs.get(agent_type)
-            system_prompt = prompt_func() if prompt_func else None
+        system_prompt = None
 
         # Resolve broker account + internal user ID and inject into prompt
         if user_id:
@@ -131,13 +108,12 @@ class ChatSessionManager:
 
         # Create agent without callback (callback set per-message due to event loop)
         agent = ChatAgent(
-            provider='anthropic',
-            # model='claude-opus-4-5-20251101',
-            model='claude-opus-4-6',
+            provider='fireworks',
+            model='Kimi-K2.5',
             print_mode=PrintMode.PRODUCTION,
             temperature=0.7,
             max_iterations=20,
-            system_prompt=system_prompt,
+            system_prompt=system_prompt
         )
 
         agent.session_id = session_id
@@ -147,7 +123,6 @@ class ChatSessionManager:
 
         state = ChatSessionState(
             session_id=session_id,
-            agent_type=agent_type,
             agent=agent,
         )
         self._sessions[session_id] = state

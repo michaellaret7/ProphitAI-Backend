@@ -10,20 +10,11 @@ from openai import RateLimitError, APIError, AuthenticationError, InternalServer
 
 T = TypeVar('T', bound=BaseModel)
 
-# Helper model for parsing portfolio data
-class PortfolioItem(BaseModel):
-    ticker: str
-    allocation: float = Field(..., ge=0.0, le=1.0)
-    position: str
-
-class PortfolioWrapper(BaseModel):
-    """Wrapper to help parse portfolio data"""
-    portfolio: List[PortfolioItem]
-
 def _call_parser_with_fallback(messages: List[Dict[str, str]], target_model: Type[T]) -> T:
     providers = [
+        ('anthropic', 'claude-sonnet-4-6'),
+        ('openai', 'gpt-5.2'),
         ('groq', 'moonshotai/kimi-k2-instruct-0905'),
-        ('openai', 'gpt-5-mini'),
         ('fireworks', 'accounts/fireworks/models/gpt-oss-120b'),
         ('together', 'Qwen/Qwen3-235B-A22B-Instruct-2507-tput')
     ]
@@ -32,12 +23,16 @@ def _call_parser_with_fallback(messages: List[Dict[str, str]], target_model: Typ
 
     for provider, model_name in providers:
         try:
+
             model, client = get_model_and_client(provider, model_name)
-            completion = client.chat.completions.parse(
+
+            # Reason: bypass langfuse class-level monkey-patch on Completions.parse
+            original_parse = type(client.chat.completions).parse.__wrapped__
+            completion = original_parse(
+                client.chat.completions,
                 model=model,
                 messages=messages,
                 response_format=target_model,
-                max_tokens=16384,
             )
             return completion.choices[0].message.parsed
 
@@ -48,7 +43,11 @@ def _call_parser_with_fallback(messages: List[Dict[str, str]], target_model: Typ
 
     raise RuntimeError(f"All parser providers failed. Last error: {last_error}")
 
-def parse_with_gpt(query: str, target_model: Type[T], system_prompt: str = None) -> T:
+def parse_with_gpt(
+    query: str, 
+    target_model: Type[T], 
+    system_prompt: str = None
+) -> T:
     """
     Generic LLM parser that converts natural language to structured Pydantic models.
 
@@ -62,8 +61,8 @@ def parse_with_gpt(query: str, target_model: Type[T], system_prompt: str = None)
     """
 
     if system_prompt is None:
-        system_prompt = f"""Parse the user's input into the requested structured format.
-        Extract all relevant information and populate the fields accurately.
+        system_prompt = """Parse the user's input into the requested structured format.
+        Preserve the user's exact wording — do not rephrase, summarize, or rewrite their input.
         If information is not provided, leave fields as None/null, do not make up any information."""
     
     parsed = _call_parser_with_fallback([
@@ -73,54 +72,5 @@ def parse_with_gpt(query: str, target_model: Type[T], system_prompt: str = None)
 
     return parsed
 
-def parse_portfolio_with_gpt(data: any) -> Dict:
-    """
-    Parse any data into a portfolio dictionary format
 
-    Args:
-        data: Any input data (string, dict, list, etc.)
 
-    Returns:
-        Dict in format: {"TICKER": {"allocation": 0.x, "position": "long/short"}, ...}
-    """
-    # Convert data to string
-    data_str = str(data) if not isinstance(data, str) else data
-
-    system_prompt = """Parse the input into a portfolio format.
-    Extract tickers, allocations (as decimals between 0-1), and positions (long/short).
-    Examples of input formats you might see:
-    - "AAPL 10% long, MSFT 5% short"
-    - {"AAPL": 0.1, "MSFT": -0.05}
-    - [("AAPL", 0.1, "long"), ("MSFT", 0.05, "short")]
-    Always output as a list of portfolio items."""
-
-    # Parse using generic parser
-    parsed = parse_with_gpt(data_str, PortfolioWrapper, system_prompt)
-
-    # Convert to desired dict format
-    portfolio_dict = {}
-    for item in parsed.portfolio:
-        portfolio_dict[item.ticker] = {
-            "allocation": item.allocation,
-            "position": item.position.lower()
-        }
-
-    return portfolio_dict
-
-def canonical_portfolio(portfolio: PortfolioInput | dict) -> Dict[str, Dict]:
-    """Convert any portfolio format to canonical dictionary using GPT parser."""
-    # If already in the correct format, return as-is
-    if isinstance(portfolio, dict):
-        # Check if it's already in canonical format
-        if all(isinstance(v, dict) and 'allocation' in v and 'position' in v for v in portfolio.values()):
-            # Ensure position is lowercase and allocation is float
-            return {
-                ticker: {
-                    "allocation": float(config['allocation']),
-                    "position": config['position'].lower() if isinstance(config['position'], str) else config['position']
-                }
-                for ticker, config in portfolio.items()
-            }
-    
-    # Use GPT parser for any other format
-    return parse_portfolio_with_gpt(portfolio)

@@ -518,7 +518,7 @@ async def get_watchlist_charts_controller(tickers: List[str]) -> Dict[str, Any]:
 
     # Calculate multi-period correlations from returns
     if len(prices.columns) > 1:
-        returns_df = prices.pct_change().dropna()
+        returns_df = prices.pct_change(fill_method=None).dropna()
         correlations = _multi_period_correlations(returns_df)
     else:
         correlations = {"matrix": {}, "rolling": {}}

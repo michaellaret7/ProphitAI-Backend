@@ -148,7 +148,7 @@ class PortfolioFactorTiltService:
         # Build TickerFactors for each ticker
         spy_returns = None
         if "SPY" in price_df.columns:
-            spy_returns = price_df["SPY"].pct_change().dropna()
+            spy_returns = price_df["SPY"].pct_change(fill_method=None).dropna()
 
         ticker_factors: Dict[str, TickerFactors] = {}
 
@@ -157,7 +157,7 @@ class PortfolioFactorTiltService:
                 if t not in price_df.columns:
                     return t, None
                 adj_close = price_df[t].dropna()
-                daily_returns = adj_close.pct_change().dropna()
+                daily_returns = adj_close.pct_change(fill_method=None).dropna()
                 fund = fundamentals.get(t)
                 return t, calc_all_factors(adj_close, daily_returns, spy_returns, fund)
             except Exception:

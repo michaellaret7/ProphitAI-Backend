@@ -462,6 +462,5 @@ if __name__ == "__main__":
     print('user.broker_account_id: ', user.broker_account_id)
     print('user.broker: ', user.broker)
 
-
-
     session.close()
+

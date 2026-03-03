@@ -124,7 +124,7 @@ class BatchPortfolioReturnsService:
 
         # Build returns DataFrame from adj_close pct_change for each ticker
         returns_series = {
-            ticker: data['adj_close'].pct_change()
+            ticker: data['adj_close'].pct_change(fill_method=None)
             for ticker, data in price_data.items()
             if 'adj_close' in data.columns
         }

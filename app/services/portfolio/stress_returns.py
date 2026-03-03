@@ -69,7 +69,7 @@ class StressReturnsService:
     def _calculate_returns(self) -> None:
         """Calculate returns for both portfolio and SPY."""
         available = [t for t in self.weights if t in self.price_data.columns]
-        asset_returns = self.price_data[available].pct_change().dropna()
+        asset_returns = self.price_data[available].pct_change(fill_method=None).dropna()
         weights_series = pd.Series({t: self.weights[t] for t in available})
         self.portfolio_returns = asset_returns.dot(weights_series)
 
@@ -84,7 +84,7 @@ class StressReturnsService:
             spy_prices_aligned = spy_prices_aligned.bfill().ffill()
 
             # Calculate returns from aligned prices
-            self.spy_returns = spy_prices_aligned.pct_change().fillna(0.0)
+            self.spy_returns = spy_prices_aligned.pct_change(fill_method=None).fillna(0.0)
         else:
             # Create empty series with same index as portfolio
             self.spy_returns = pd.Series(0.0, index=self.portfolio_returns.index)

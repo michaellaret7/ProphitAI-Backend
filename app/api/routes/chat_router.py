@@ -37,13 +37,9 @@ router = APIRouter(prefix="/chat", tags=["Chat"])
 class CreateSessionRequest(BaseModel):
     """Request body for creating a chat session."""
 
-    agent_type: str = Field(
-        default="general",
-        description="Type of agent for this session: 'macro_research', 'equity_research', 'user_uploads', or 'general' (default)",
-    )
     user_id: Optional[str] = Field(
         default=None,
-        description="User ID for user-specific agents (required for 'user_uploads' agent type)",
+        description="User ID for broker context injection.",
     )
 
 
@@ -51,7 +47,6 @@ class CreateSessionResponse(BaseModel):
     """Response from creating a chat session."""
 
     session_id: str = Field(..., description="Unique identifier for the session")
-    agent_type: str = Field(..., description="The agent type for this session")
     created_at: str = Field(..., description="ISO timestamp of session creation")
 
 
@@ -105,26 +100,16 @@ class ExportPDFRequest(BaseModel):
 async def create_chat_session(
     request: CreateSessionRequest = CreateSessionRequest(),
 ) -> CreateSessionResponse:
-    """Create a new chat session with specified agent type.
-
-    The agent_type determines which tools and prompts are configured:
-    - macro_research: Macro strategy agent with research search + web search
-    - equity_research: Equity analyst with fundamentals, earnings calls, news, estimates, ratings
-    - general: Default general-purpose tools
+    """Create a new chat session.
 
     Returns a session_id that should be used for all subsequent
     requests and WebSocket connections.
     """
-    if request.agent_type == "user_uploads" and not request.user_id:
-        raise HTTPException(status_code=400, detail="user_id is required for user_uploads agent type")
-
     session = chat_session_manager.create_session(
-        agent_type=request.agent_type,
         user_id=request.user_id,
     )
     return CreateSessionResponse(
         session_id=session.session_id,
-        agent_type=session.agent_type,
         created_at=session.created_at,
     )
 

@@ -125,7 +125,7 @@ class PortfolioPerformanceComparisonService:
 
     def _calculate_returns(self) -> None:
         """Calculate daily returns for current portfolio, optimized portfolio, and SPY."""
-        asset_returns = self.price_data.pct_change().dropna()
+        asset_returns = self.price_data.pct_change(fill_method=None).dropna()
 
         # Current portfolio weighted returns
         current_tickers = [t for t in self.current_weights if t in asset_returns.columns]
@@ -138,7 +138,7 @@ class PortfolioPerformanceComparisonService:
         self.optimized_returns = asset_returns[opt_tickers].dot(opt_w)
 
         # SPY returns
-        self.spy_returns = self.spy_prices.pct_change().dropna()
+        self.spy_returns = self.spy_prices.pct_change(fill_method=None).dropna()
 
     def _calculate_cumulative_returns(self, daily_returns: pd.Series) -> pd.Series:
         """Calculate cumulative returns from daily returns."""

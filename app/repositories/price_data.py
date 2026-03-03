@@ -276,7 +276,7 @@ def build_returns_df(
         frequency,
     )
 
-    returns_series = {ticker: data['adj_close'].pct_change() for ticker, data in price_data.items()}
+    returns_series = {ticker: data['adj_close'].pct_change(fill_method=None) for ticker, data in price_data.items()}
     returns_df = pd.concat(returns_series, axis=1)
 
     returns_df.index = pd.to_datetime(returns_df.index)

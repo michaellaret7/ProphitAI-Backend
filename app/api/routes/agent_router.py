@@ -3,6 +3,8 @@
 Provides REST endpoints for:
 - Starting agent execution (returns execution_id)
 - Polling for execution results
+- Clarifying user preferences before portfolio build
+- Building portfolios from enriched briefs
 """
 
 import asyncio
@@ -20,6 +22,8 @@ from app.services.shared.agent_executor import (
 from app.services.shared.chat_executor import WebSocketChatCallback
 
 from app.core.atlas.models import PrintMode
+from app.domain.builder.models import BuildRequest, ClarifyRequest, ClarifyResult
+from app.domain.builder.clarify import compose_enriched_brief, generate_clarifying_questions
 
 router = APIRouter(prefix="/agents", tags=["Agent Execution"])
 
@@ -183,4 +187,75 @@ async def get_execution_result(execution_id: str) -> ExecutionResultResponse:
         error=state.error,
         iterations=state.iterations,
         tokens=state.tokens,
+    )
+
+
+@router.post("/clarify", response_model=ClarifyResult)
+async def clarify_preferences(request: ClarifyRequest) -> ClarifyResult:
+    """Generate clarifying questions for a portfolio request.
+
+    Analyzes the user's query and returns context-aware questions
+    about missing investment dimensions (risk, horizon, capital, etc.).
+
+    Args:
+        request: The raw user query.
+
+    Returns:
+        Clarifying questions, detected preferences, and the original query.
+    """
+    try:
+        result = generate_clarifying_questions(request.user_preferences)
+    except RuntimeError as e:
+        raise HTTPException(status_code=502, detail=f"LLM provider error: {e}")
+
+    return ClarifyResult(
+        questions=result.questions,
+        detected_preferences=result.detected_preferences,
+        original_query=request.user_preferences,
+    )
+
+
+@router.post("/build-portfolio", response_model=ExecuteAgentResponse)
+async def build_portfolio(
+    request: BuildRequest,
+    background_tasks: BackgroundTasks,
+) -> ExecuteAgentResponse:
+    """Build a portfolio from the original query and optional clarification answers.
+
+    Composes an enriched investment brief from the user's answers,
+    then starts the PortfolioBuilder agent in the background.
+
+    Args:
+        request: Original query + answered clarifying questions.
+        background_tasks: FastAPI background tasks for async execution.
+
+    Returns:
+        The execution_id for tracking this agent run.
+    """
+    from app.domain.builder.agent import PortfolioBuilder
+
+    enriched_brief = compose_enriched_brief(request.user_preferences, request.answers)
+
+    execution_state = execution_manager.create_execution()
+    execution_id = execution_state.execution_id
+
+    loop = asyncio.get_running_loop()
+    chat_callback = WebSocketChatCallback(execution_id, loop)
+
+    try:
+        agent = PortfolioBuilder(
+            user_preferences=enriched_brief,
+            chat_callback=chat_callback,
+            session_id=execution_id,
+            print_mode=PrintMode.PRODUCTION,
+        )
+    except Exception as e:
+        execution_manager.remove_execution(execution_id)
+        raise HTTPException(status_code=500, detail=f"Failed to create agent: {e}")
+
+    background_tasks.add_task(run_agent_background, agent, execution_id)
+
+    return ExecuteAgentResponse(
+        execution_id=execution_id,
+        message="Portfolio build started with enriched brief",
     )

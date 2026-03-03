@@ -114,7 +114,7 @@ class PortfolioReturnsService:
     def _calculate_returns(self) -> None:
         """Calculate portfolio daily returns using weighted average of ticker returns."""
         available = [t for t in self.weights if t in self.price_data.columns]
-        asset_returns = self.price_data[available].pct_change().dropna()
+        asset_returns = self.price_data[available].pct_change(fill_method=None).dropna()
 
         weights_series = pd.Series({t: self.weights[t] for t in available})
         self.daily_returns = asset_returns.dot(weights_series)

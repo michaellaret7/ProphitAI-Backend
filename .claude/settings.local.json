@@ -97,7 +97,9 @@
       "WebFetch(domain:console.groq.com)",
       "WebFetch(domain:www.agno.com)",
       "WebFetch(domain:pypi.org)",
-      "Bash(head:*)"
+      "Bash(head:*)",
+      "WebFetch(domain:stockanalysis.com)",
+      "WebFetch(domain:www.campaignforamillion.com)"
     ],
     "deny": [],
     "ask": []
