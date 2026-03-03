@@ -99,7 +99,8 @@
       "WebFetch(domain:pypi.org)",
       "Bash(head:*)",
       "WebFetch(domain:stockanalysis.com)",
-      "WebFetch(domain:www.campaignforamillion.com)"
+      "WebFetch(domain:www.campaignforamillion.com)",
+      "WebFetch(domain:financialmodelingprep.com)"
     ],
     "deny": [],
     "ask": []
