@@ -151,9 +151,6 @@ Composite scores are portfolio-weighted averages of per-metric z-scores.
         }
 
         return success_response({
-            "tickers": portfolio.tickers,
-            "weights": [round(w, 4) for w in portfolio.weights.tolist()],
-            "years_back": years_back,
             "composite_scores": composite_scores,
             "tilt_summary": _build_tilt_summary(composite_scores),
             "detail": exposure.detail.model_dump(),

@@ -1,14 +1,14 @@
 """Ticker risk analysis tool.
 
-Provides a tool for analyzing single-ticker risk metrics using the Ticker
-class and RiskMetrics model.
+Provides a tool for analyzing ticker risk metrics using the Ticker
+class and RiskMetrics model. Supports batched multi-ticker calls.
 """
 
 from typing import Annotated
 
 from app.core.atlas.tools.decorator import agent_tool, Param
 from app.core.atlas.tools.responses import success_response, error_response
-from app.core.atlas.tools.ticker.utils import build_ticker_obj
+from app.core.atlas.tools.ticker.utils import build_ticker_objs_bulk
 
 
 # ================================
@@ -17,18 +17,18 @@ from app.core.atlas.tools.ticker.utils import build_ticker_obj
 
 @agent_tool(name="ticker_risk")
 def ticker_risk(
-    ticker: str,
+    tickers: list[str],
     years_back: Annotated[int, Param(min_val=1, max_val=5)] = 1,
 ) -> str:
     """
-    Compute comprehensive risk metrics for a single ticker.
+    Compute comprehensive risk metrics for one or more tickers.
 
     Returns volatility, drawdown, Value at Risk, Expected Shortfall, tail risk
     statistics, and market-relative risk measures (beta, capture ratios, tracking
     error) benchmarked against SPY.
 
     Args:
-        ticker: Stock ticker symbol (e.g., 'AAPL', 'MSFT', 'KO')
+        tickers: List of stock ticker symbols (e.g., ['AAPL', 'MSFT', 'KO'])
         years_back: Number of years of historical data to analyze
 
     Returns:
@@ -55,23 +55,31 @@ def ticker_risk(
         idiosyncratic_vol: Stock-specific risk. <10% market-driven, 10-20% moderate, >25% high (event-driven).
 
     Examples:
-        ticker_risk(ticker="AAPL", years_back=1)
-        >>> {"success": True, "data": {"ticker": "AAPL", "years_back": 1, "risk_metrics": {...}}}
+        ticker_risk(tickers=["AAPL", "MSFT"], years_back=1)
+        >>> {"success": True, "data": {"results": {"AAPL": {...}, "MSFT": {...}}, "errors": {}}}
 
     Raises:
-        ValueError: If ticker has no available price data
+        ValueError: If no tickers have available price data
     """
+    tickers = [t.upper().strip() for t in tickers]
+
     try:
-        ticker = ticker.upper().strip()
-        ticker_obj = build_ticker_obj(ticker, years_back)
-        risk: dict = ticker_obj.risk_metrics.model_dump()
-
-        return success_response({
-            "ticker": ticker,
-            "years_back": years_back,
-            "risk_metrics": risk,
-        })
-
+        ticker_objs = build_ticker_objs_bulk(tickers, years_back)
     except Exception as e:
-        return error_response(f"Failed to compute risk metrics for {ticker}: {str(e)}")
+        return error_response(f"Failed to fetch price data: {str(e)}")
 
+    results: dict = {}
+    errors: dict = {}
+
+    for t in tickers:
+        if t not in ticker_objs:
+            errors[t] = f"No price data found for {t}"
+            continue
+
+        try:
+            risk: dict = ticker_objs[t].risk_metrics.model_dump()
+            results[t] = {"years_back": years_back, "risk_metrics": risk}
+        except Exception as e:
+            errors[t] = str(e)
+
+    return success_response({"results": results, "errors": errors})

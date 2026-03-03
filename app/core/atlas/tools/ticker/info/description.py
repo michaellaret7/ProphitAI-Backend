@@ -1,7 +1,7 @@
 """Ticker and ETF information tools.
 
 Provides tools for retrieving comprehensive ticker and ETF metadata
-and characteristics from the database.
+and characteristics from the database. Supports batched multi-ticker calls.
 """
 
 from app.core.atlas.tools.decorator import agent_tool
@@ -9,7 +9,7 @@ from app.core.atlas.tools.responses import success_response, error_response
 from app.db.core.db_config import MarketSession
 from app.db.core.models.market_data_models import Ticker
 from app.utils.serialize_output import serialize_sqlalchemy_obj
-from app.repositories.etf_data import get_etf_info as _get_etf_info
+from app.repositories.etf_data import get_etf_info as _get_etf_info_repo
 
 
 # ================================
@@ -18,11 +18,11 @@ from app.repositories.etf_data import get_etf_info as _get_etf_info
 
 @agent_tool(name="get_ticker_info")
 def get_ticker_info(
-    ticker: str,
+    tickers: list[str],
 ) -> str:
     """
     Retrieve comprehensive ticker information including company metadata
-    and characteristics.
+    and characteristics for one or more tickers.
 
     Returns detailed stock profile data from the database for fundamental analysis.
 
@@ -44,40 +44,54 @@ def get_ticker_info(
     - Portfolio Mapping: Determine sector/industry exposure for holdings
 
     Args:
-        ticker: Stock ticker symbol (e.g., 'AAPL', 'MSFT', 'JPM')
+        tickers: List of stock ticker symbols (e.g., ['AAPL', 'MSFT', 'JPM'])
 
     Returns:
-        Comprehensive ticker profile including company name, description,
+        Comprehensive ticker profiles including company name, description,
         sector/industry classification, valuation metrics, and liquidity data
 
     Examples:
-        get_ticker_info(ticker='AAPL')
-        >>> {"success": True, "data": {"ticker": "AAPL", "ticker_name": "Apple Inc.", ...}}
-
-        get_ticker_info(ticker='JPM')
-        >>> {"success": True, "data": {"ticker": "JPM", "ticker_name": "JPMorgan Chase & Co.", ...}}
+        get_ticker_info(tickers=['AAPL', 'JPM'])
+        >>> {"success": True, "data": {"results": {"AAPL": {...}, "JPM": {...}}, "errors": {}}}
 
     Raises:
-        Exception: If ticker is not found in the database
+        Exception: If database query fails
     """
+    tickers = [t.upper().strip() for t in tickers]
+
+    results: dict = {}
+    errors: dict = {}
+
     try:
         with MarketSession() as session:
-            ticker_obj = session.query(Ticker).filter(Ticker.ticker == ticker.upper()).first()
-            if not ticker_obj:
-                return error_response(f"Ticker {ticker.upper()} not found")
-            return success_response(serialize_sqlalchemy_obj(ticker_obj))
-    except Exception as e:
-        return error_response(f"Failed to retrieve ticker info for {ticker}: {str(e)}")
+            rows = (
+                session.query(Ticker)
+                .filter(Ticker.ticker.in_(tickers))
+                .all()
+            )
 
+            # Reason: build lookup by ticker symbol for O(1) access
+            row_map = {r.ticker: r for r in rows}
+
+            for t in tickers:
+                if t not in row_map:
+                    errors[t] = f"Ticker {t} not found"
+                    continue
+                results[t] = serialize_sqlalchemy_obj(row_map[t])
+
+    except Exception as e:
+        return error_response(f"Failed to retrieve ticker info: {str(e)}")
+
+    return success_response({"results": results, "errors": errors})
 
 
 @agent_tool(name="get_etf_info")
 def get_etf_info(
-    ticker: str,
+    tickers: list[str],
 ) -> str:
     """
     Retrieve comprehensive ETF information including metadata, characteristics,
-    and investment focus.
+    and investment focus for one or more ETFs.
 
     Returns detailed information about the ETF's structure, costs, and
     investment strategy.
@@ -95,27 +109,35 @@ def get_etf_info(
     - Validate ETF characteristics before portfolio inclusion
 
     Args:
-        ticker: ETF ticker symbol (e.g., 'SPY', 'QQQ', 'VTI')
+        tickers: List of ETF ticker symbols (e.g., ['SPY', 'QQQ', 'VTI'])
 
     Returns:
-        ETF profile including name, description, issuer, expense ratio,
+        ETF profiles including name, description, issuer, expense ratio,
         AUM, inception date, sector focus, and asset class
 
     Examples:
-        get_etf_info(ticker='SPY')
-        >>> {"success": True, "data": {"name": "SPDR S&P 500 ETF Trust", "expenseRatio": 0.0945, ...}}
-
-        get_etf_info(ticker='QQQ')
-        >>> {"success": True, "data": {"name": "Invesco QQQ Trust", ...}}
+        get_etf_info(tickers=['SPY', 'QQQ'])
+        >>> {"success": True, "data": {"results": {"SPY": {...}, "QQQ": {...}}, "errors": {}}}
 
     Raises:
-        Exception: If ETF ticker is not found
+        Exception: If database query fails
     """
+    tickers = [t.upper().strip() for t in tickers]
+
+    results: dict = {}
+    errors: dict = {}
+
     try:
-        data = _get_etf_info(ticker.upper())
-        return success_response(data)
+        etf_map = _get_etf_info_repo(tickers)
+
+        for t in tickers:
+            data = etf_map.get(t, {"ticker": t, "found": False})
+            if not data.get("found", False):
+                errors[t] = f"ETF {t} not found"
+                continue
+            results[t] = data
+
     except Exception as e:
-        return error_response(f"Failed to retrieve ETF info for {ticker}: {str(e)}")
+        return error_response(f"Failed to retrieve ETF info: {str(e)}")
 
-
-
+    return success_response({"results": results, "errors": errors})

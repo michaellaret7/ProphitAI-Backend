@@ -99,9 +99,6 @@ horizons.
             perf.pop("momentum_1yr", None)
 
         return success_response({
-            "tickers": portfolio.tickers,
-            "weights": [round(w, 4) for w in portfolio.weights.tolist()],
-            "years_back": years_back,
             "performance_metrics": perf,
         })
 

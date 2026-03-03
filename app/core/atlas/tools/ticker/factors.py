@@ -1,15 +1,15 @@
 """Ticker factor exposure tool.
 
-Provides a tool for analyzing single-ticker factor exposures using the Ticker
+Provides a tool for analyzing ticker factor exposures using the Ticker
 class and TickerFactors model. Supports momentum, volatility,
-value, quality, growth, and size factors.
+value, quality, growth, and size factors. Supports batched multi-ticker calls.
 """
 
 from typing import Annotated, Literal
 
 from app.core.atlas.tools.decorator import agent_tool, Param
 from app.core.atlas.tools.responses import success_response, error_response
-from app.core.atlas.tools.ticker.utils import build_ticker_obj
+from app.core.atlas.tools.ticker.utils import build_ticker_objs_bulk
 
 
 # ================================
@@ -18,19 +18,19 @@ from app.core.atlas.tools.ticker.utils import build_ticker_obj
 
 @agent_tool(name="ticker_factors")
 def ticker_factors(
-    ticker: str,
+    tickers: list[str],
     category: Literal["momentum", "volatility", "value", "quality", "growth", "size", "all"] = "all",
     years_back: Annotated[int, Param(min_val=1, max_val=5)] = 2,
 ) -> str:
     """
-    Compute quantitative factor exposures for a single ticker.
+    Compute quantitative factor exposures for one or more tickers.
 
     Returns factor metrics organized by category. Momentum and volatility are
     always available (price-based). Value, quality, growth, and size require
     fundamentals data and will be null if unavailable.
 
     Args:
-        ticker: Stock ticker symbol (e.g., 'AAPL', 'MSFT', 'KO')
+        tickers: List of stock ticker symbols (e.g., ['AAPL', 'MSFT', 'KO'])
         category: Factor category to retrieve, or 'all' for every category
         years_back: Number of years of historical price data to analyze
 
@@ -80,39 +80,48 @@ def ticker_factors(
             log_market_cap: Natural log of market cap. Used for cross-sectional factor models.
 
     Examples:
-        ticker_factors(ticker="AAPL", category="momentum")
-        >>> {"success": True, "data": {"ticker": "AAPL", "category": "momentum", "factors": {...}}}
-
-        ticker_factors(ticker="MSFT", category="all")
-        >>> {"success": True, "data": {"ticker": "MSFT", "category": "all", "factors": {...}}}
+        ticker_factors(tickers=["AAPL", "MSFT"], category="momentum")
+        >>> {"success": True, "data": {"results": {"AAPL": {...}, "MSFT": {...}}, "errors": {}}}
 
     Raises:
-        ValueError: If ticker has no available price data
+        ValueError: If no tickers have available price data
     """
+    tickers = [t.upper().strip() for t in tickers]
+
     try:
-        ticker = ticker.upper().strip()
-        ticker_obj = build_ticker_obj(ticker, years_back, fundamentals=True)
-        all_factors = ticker_obj.factors
-
-        if category == "all":
-            factors_out = all_factors.model_dump()
-        else:
-            cat_data = getattr(all_factors, category)
-            if cat_data is None:
-                return error_response(
-                    f"No {category} factors available for {ticker}. "
-                    f"This category requires fundamentals data which may not be available."
-                )
-            factors_out = {category: cat_data.model_dump()}
-
-        return success_response({
-            "ticker": ticker,
-            "category": category,
-            "years_back": years_back,
-            "factors": factors_out,
-        })
-
+        ticker_objs = build_ticker_objs_bulk(tickers, years_back, fundamentals=True)
     except Exception as e:
-        return error_response(f"Failed to compute factor exposures for {ticker}: {str(e)}")
+        return error_response(f"Failed to fetch data: {str(e)}")
 
+    results: dict = {}
+    errors: dict = {}
 
+    for t in tickers:
+        if t not in ticker_objs:
+            errors[t] = f"No price data found for {t}"
+            continue
+
+        try:
+            all_factors = ticker_objs[t].factors
+
+            if category == "all":
+                factors_out = all_factors.model_dump()
+            else:
+                cat_data = getattr(all_factors, category)
+                if cat_data is None:
+                    errors[t] = (
+                        f"No {category} factors available for {t}. "
+                        f"This category requires fundamentals data which may not be available."
+                    )
+                    continue
+                factors_out = {category: cat_data.model_dump()}
+
+            results[t] = {
+                "category": category,
+                "years_back": years_back,
+                "factors": factors_out,
+            }
+        except Exception as e:
+            errors[t] = str(e)
+
+    return success_response({"results": results, "errors": errors})

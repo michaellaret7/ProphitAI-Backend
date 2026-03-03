@@ -2,6 +2,7 @@
 
 Provides tools for fetching analyst price target data including
 consensus targets, ranges, and historical price target trends.
+Supports batched multi-ticker calls.
 """
 
 from typing import Literal
@@ -12,16 +13,54 @@ from app.db.core.pull_fmp_data import FMP_API_DATA
 
 
 # ================================
+# --> Helper funcs
+# ================================
+
+def _fetch_price_target_for_ticker(
+    fmp: FMP_API_DATA,
+    ticker: str,
+    data_type: str,
+) -> dict:
+    """Fetch and process price target data for a single ticker."""
+
+    result = {}
+
+    if data_type in ['consensus', 'both']:
+        consensus_data = fmp.get_price_target_consensus(ticker)
+        if consensus_data:
+            if isinstance(consensus_data, list):
+                consensus_data = consensus_data[0] if consensus_data else {}
+            result['consensus'] = consensus_data
+
+    if data_type in ['summary', 'both']:
+        summary_data = fmp.get_price_target_summary(ticker)
+        if summary_data:
+            if isinstance(summary_data, list):
+                summary_data = summary_data[0] if summary_data else {}
+            if 'publishers' in summary_data:
+                del summary_data['publishers']
+            result['summary'] = summary_data
+
+    # Reason: flatten result when only one type requested
+    if data_type == 'consensus':
+        result = result.get('consensus', {})
+    elif data_type == 'summary':
+        result = result.get('summary', {})
+
+    return result
+
+
+# ================================
 # --> Tools
 # ================================
 
 @agent_tool(name="get_price_target_data")
 def get_price_target_data(
-    ticker: str,
+    tickers: list[str],
     data_type: Literal['consensus', 'summary', 'both'] = 'consensus',
 ) -> str:
     """
-    Get analyst price target data for a ticker including consensus targets,
+    Get analyst price target data for one or more tickers including consensus targets,
     ranges, and historical trends.
 
     Provides comprehensive price target information from Wall Street analysts,
@@ -52,56 +91,40 @@ def get_price_target_data(
     - Falling targets: Deteriorating outlook
 
     Args:
-        ticker: Stock ticker symbol (e.g., 'AAPL', 'MSFT', 'TSLA')
+        tickers: List of stock ticker symbols (e.g., ['AAPL', 'MSFT', 'TSLA'])
         data_type: Type of price target data to retrieve
 
     Returns:
         Price target data with consensus and/or summary information
 
     Examples:
-        get_price_target_data(ticker='AAPL', data_type='consensus')
-        >>> {"success": True, "data": {"targetHigh": 250, "targetLow": 180, "targetConsensus": 215, ...}}
-
-        get_price_target_data(ticker='NVDA', data_type='both')
-        >>> {"success": True, "data": {"consensus": {...}, "summary": {...}}}
+        get_price_target_data(tickers=['AAPL', 'NVDA'], data_type='consensus')
+        >>> {"success": True, "data": {"results": {"AAPL": {...}, "NVDA": {...}}, "errors": {}}}
 
     Raises:
-        Exception: If ticker is invalid or no data found
+        Exception: If data retrieval fails
     """
-    ticker = ticker.upper()
+    tickers = [t.upper().strip() for t in tickers]
+
+    results: dict = {}
+    errors: dict = {}
 
     try:
         fmp = FMP_API_DATA()
-        result = {}
-
-        if data_type in ['consensus', 'both']:
-            consensus_data = fmp.get_price_target_consensus(ticker)
-            if consensus_data:
-                if isinstance(consensus_data, list):
-                    consensus_data = consensus_data[0] if consensus_data else {}
-                result['consensus'] = consensus_data
-
-        if data_type in ['summary', 'both']:
-            summary_data = fmp.get_price_target_summary(ticker)
-            if summary_data:
-                if isinstance(summary_data, list):
-                    summary_data = summary_data[0] if summary_data else {}
-                if 'publishers' in summary_data:
-                    del summary_data['publishers']
-                result['summary'] = summary_data
-
-        # Reason: flatten result when only one type requested
-        if data_type == 'consensus':
-            result = result.get('consensus', {})
-        elif data_type == 'summary':
-            result = result.get('summary', {})
-
-        if not result:
-            return error_response(f"No price target data found for {ticker}")
-
-        return success_response(result)
     except Exception as e:
-        return error_response(f"Failed to retrieve price target data for {ticker}: {str(e)}")
+        return error_response(f"Failed to initialize FMP API: {str(e)}")
+
+    for t in tickers:
+        try:
+            data = _fetch_price_target_for_ticker(fmp, t, data_type)
+            if not data:
+                errors[t] = f"No price target data found for {t}"
+                continue
+            results[t] = data
+        except Exception as e:
+            errors[t] = f"Failed to retrieve price target data for {t}: {str(e)}"
+
+    return success_response({"results": results, "errors": errors})
 
 
 # ================================

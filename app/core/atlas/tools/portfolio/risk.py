@@ -94,9 +94,6 @@ risk measures (vs SPY).
         risk: dict = portfolio.risk_metrics.model_dump()
 
         return success_response({
-            "tickers": portfolio.tickers,
-            "weights": [round(w, 4) for w in portfolio.weights.tolist()],
-            "years_back": years_back,
             "risk_metrics": risk,
         })
 

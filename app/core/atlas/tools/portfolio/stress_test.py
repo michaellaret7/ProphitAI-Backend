@@ -137,10 +137,6 @@ against ETF factor returns via OLS, then applying user-supplied shock magnitudes
         result.pop("top_detractors", None)
 
         return success_response({
-            "tickers": portfolio.tickers,
-            "weights": [round(w, 4) for w in portfolio.weights.tolist()],
-            "years_back": years_back,
-            "shocks": shocks,
             "stress_test": result,
         })
 

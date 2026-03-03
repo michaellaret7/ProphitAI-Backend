@@ -1,14 +1,14 @@
 """Ticker performance analysis tool.
 
-Provides a tool for analyzing single-ticker performance metrics using the Ticker
-class and PerformanceMetrics model.
+Provides a tool for analyzing ticker performance metrics using the Ticker
+class and PerformanceMetrics model. Supports batched multi-ticker calls.
 """
 
 from typing import Annotated
 
 from app.core.atlas.tools.decorator import agent_tool, Param
 from app.core.atlas.tools.responses import success_response, error_response
-from app.core.atlas.tools.ticker.utils import build_ticker_obj
+from app.core.atlas.tools.ticker.utils import build_ticker_objs_bulk
 
 
 # ================================
@@ -17,18 +17,18 @@ from app.core.atlas.tools.ticker.utils import build_ticker_obj
 
 @agent_tool(name="ticker_performance")
 def ticker_performance(
-    ticker: str,
+    tickers: list[str],
     years_back: Annotated[int, Param(min_val=1, max_val=5)] = 1,
 ) -> str:
     """
-    Compute comprehensive performance metrics for a single ticker.
+    Compute comprehensive performance metrics for one or more tickers.
 
     Returns absolute returns, risk-adjusted ratios, return distribution quality,
     market-relative performance, and momentum across multiple horizons.
     All market-relative metrics are benchmarked against SPY.
 
     Args:
-        ticker: Stock ticker symbol (e.g., 'AAPL', 'MSFT', 'KO')
+        tickers: List of stock ticker symbols (e.g., ['AAPL', 'MSFT', 'KO'])
         years_back: Number of years of historical data to analyze
 
     Returns:
@@ -56,30 +56,38 @@ def ticker_performance(
         momentum_Xm/Xyr: Cumulative return over trailing period. Positive = uptrend.
 
     Examples:
-        ticker_performance(ticker="AAPL", years_back=1)
-        >>> {"success": True, "data": {"ticker": "AAPL", "years_back": 1, "performance_metrics": {...}}}
+        ticker_performance(tickers=["AAPL", "MSFT"], years_back=1)
+        >>> {"success": True, "data": {"results": {"AAPL": {...}, "MSFT": {...}}, "errors": {}}}
 
     Raises:
-        ValueError: If ticker has no available price data
+        ValueError: If no tickers have available price data
     """
+    tickers = [t.upper().strip() for t in tickers]
+
     try:
-        ticker = ticker.upper().strip()
-        ticker_obj = build_ticker_obj(ticker, years_back)
-        perf: dict = ticker_obj.performance_metrics.model_dump()
-
-        perf.pop("momentum_5yr")
-
-        if years_back <= 3:
-            perf.pop("momentum_3yr")
-        if years_back == 1:
-            perf.pop("momentum_1yr")
-
-        return success_response({
-            "ticker": ticker,
-            "years_back": years_back,
-            "performance_metrics": perf,
-        })
-
+        ticker_objs = build_ticker_objs_bulk(tickers, years_back)
     except Exception as e:
-        return error_response(f"Failed to compute performance metrics for {ticker}: {str(e)}")
+        return error_response(f"Failed to fetch price data: {str(e)}")
 
+    results: dict = {}
+    errors: dict = {}
+
+    for t in tickers:
+        if t not in ticker_objs:
+            errors[t] = f"No price data found for {t}"
+            continue
+
+        try:
+            perf: dict = ticker_objs[t].performance_metrics.model_dump()
+
+            perf.pop("momentum_5yr")
+            if years_back <= 3:
+                perf.pop("momentum_3yr")
+            if years_back == 1:
+                perf.pop("momentum_1yr")
+
+            results[t] = {"years_back": years_back, "performance_metrics": perf}
+        except Exception as e:
+            errors[t] = str(e)
+
+    return success_response({"results": results, "errors": errors})

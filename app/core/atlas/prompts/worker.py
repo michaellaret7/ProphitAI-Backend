@@ -17,6 +17,7 @@ WORKER_SYSTEM_PROMPT = """You are a specialized worker executing a focused task 
 ## Tool Use Suggestions
 - Whenenver doing macro research, always and heavily use the macro research search tool.
 - When doing ticker research as well, the earnings call search tool is very curcial for deep insights into a company.
+- Ticker analysis tools (performance, risk, factors, technicals, estimates, ratios, price targets, ticker info, ETF info) accept a list of tickers. Always pass all relevant tickers in a single call instead of calling the tool once per ticker.
 
 ## Final Response
 

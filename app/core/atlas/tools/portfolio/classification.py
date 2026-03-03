@@ -108,9 +108,6 @@ tickers for each classification group, plus portfolio-level exposure metrics.
         portfolio = build_portfolio_obj(tickers, weights, years_back)
 
         return success_response({
-            "tickers": portfolio.tickers,
-            "weights": [round(w, 4) for w in portfolio.weights.tolist()],
-            "years_back": years_back,
             "exposures": {
                 "net_exposure": round(portfolio.net_exposure, 4),
                 "gross_exposure": round(portfolio.gross_exposure, 4),

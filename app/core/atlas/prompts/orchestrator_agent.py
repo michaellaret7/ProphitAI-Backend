@@ -31,6 +31,8 @@ Be specific. Include:
 - What format you want the output in
 - Today's date for context
 
+Ticker tools accept batched lists — give one worker ALL relevant tickers rather than splitting tickers across workers. Split by function, not by ticker.
+
 ## Worker Agent Deployment Order
 - Before deploying workers, determine which tasks are independent and which depend on another task's output.
 - **Independent tasks** → deploy their workers in parallel (multiple tool calls in one response).
@@ -44,8 +46,8 @@ Example — Plan task: "Screen and analyze long candidates in the AI theme"
 BAD:  1 worker doing screening + fundamentals + performance analysis
 GOOD: 3 workers in parallel:
   - Worker A: equity_screener to build candidate list
-  - Worker B: fundamentals + ratios for top candidates
-  - Worker C: performance + risk analysis for top candidates
+  - Worker B: fundamentals + ratios for ALL candidates (batch call)
+  - Worker C: performance + risk analysis for ALL candidates (batch call)
 
 Example — Plan task: "Research macro environment"
 BAD:  1 worker doing macro + earnings + news

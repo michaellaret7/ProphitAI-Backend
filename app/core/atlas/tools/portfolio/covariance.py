@@ -88,8 +88,6 @@ component, and percentage contribution to total portfolio risk.
         vol_annualized = round(math.sqrt(variance_daily * TRADING_DAYS), 4)
 
         return success_response({
-            "tickers": portfolio.tickers,
-            "years_back": years_back,
             "portfolio_variance_daily": variance_daily,
             "portfolio_volatility_annualized": vol_annualized,
             "asset_risk_contributions": cov_metrics["asset_risk_contributions"],

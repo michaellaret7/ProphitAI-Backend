@@ -169,8 +169,6 @@ correlated pairs, and a rolling correlation trend to detect regime changes.
         trend = _summarize_rolling_trend(portfolio.rolling_avg_correlation)
 
         return success_response({
-            "tickers": portfolio.tickers,
-            "years_back": years_back,
             "correlation_metrics": portfolio.correlation_metrics.model_dump(),
             "highest_correlated_pairs": highest,
             "lowest_correlated_pairs": lowest,

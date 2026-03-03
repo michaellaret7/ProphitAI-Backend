@@ -2,6 +2,7 @@
 
 Provides tools for fetching trailing twelve months (TTM) financial
 ratios for companies, enabling current-state fundamental analysis.
+Supports batched multi-ticker calls.
 """
 
 from app.core.atlas.tools.decorator import agent_tool
@@ -10,56 +11,102 @@ from app.db.core.pull_fmp_data import FMP_API_DATA
 
 
 # ================================
+# --> Constants
+# ================================
+
+# Reason: curated subset — drops 22 duplicate/redundant/niche fields from FMP's 57
+CURATED_TTM_FIELDS: set[str] = {
+    # Valuation
+    "peRatioTTM", "pegRatioTTM", "priceToBookRatioTTM", "priceToSalesRatioTTM",
+    "priceToFreeCashFlowsRatioTTM", "priceToOperatingCashFlowsRatioTTM",
+    "enterpriseValueMultipleTTM", "payoutRatioTTM",
+    # Profitability
+    "grossProfitMarginTTM", "operatingProfitMarginTTM",
+    "pretaxProfitMarginTTM", "netProfitMarginTTM",
+    # Tax
+    "effectiveTaxRateTTM",
+    # Leverage
+    "debtRatioTTM", "longTermDebtToCapitalizationTTM",
+    "totalDebtToCapitalizationTTM", "cashFlowToDebtRatioTTM",
+    # Liquidity
+    "currentRatioTTM", "quickRatioTTM", "cashRatioTTM",
+    # Efficiency
+    "daysOfSalesOutstandingTTM", "daysOfInventoryOutstandingTTM",
+    "operatingCycleTTM", "daysOfPayablesOutstandingTTM",
+    "cashConversionCycleTTM", "inventoryTurnoverTTM", "assetTurnoverTTM",
+    # Cash Flow
+    "operatingCashFlowPerShareTTM", "freeCashFlowPerShareTTM", "cashPerShareTTM",
+    "operatingCashFlowSalesRatioTTM", "freeCashFlowOperatingCashFlowRatioTTM",
+}
+
+
+# ================================
 # --> Tools
 # ================================
 
 @agent_tool(name="get_ratios_ttm")
 def get_ratios_ttm(
-    ticker: str,
+    tickers: list[str],
 ) -> str:
     """
-    Get trailing twelve months (TTM) financial ratios for a ticker.
+    Get curated TTM financial ratios for one or more tickers.
 
-    TTM ratios provide a current snapshot of a company's financial health using
-    the most recent 12 months of data, smoothing out seasonal variations.
+    Returns ~31 high-signal ratios per ticker (filtered from FMP's 57 raw fields).
+    Drops duplicates, niche metrics, and fields already served by `ticker_factors`
+    (ROE, ROA, D/E, interest coverage, dividend yield).
 
     **Ratio Categories:**
-    - Profitability: ROE, ROA, gross margin, operating margin, net profit margin
-    - Liquidity: Current ratio, quick ratio, cash ratio
-    - Leverage: Debt-to-equity, debt-to-assets, interest coverage
-    - Efficiency: Asset turnover, inventory turnover, receivables turnover
-    - Valuation: P/E, P/B, P/S, EV/EBITDA, dividend yield
-
-    **Use Cases:**
-    - Quick financial health assessment
-    - Peer comparison across key metrics
-    - Screening for value or quality characteristics
-    - Identifying red flags (low coverage, high leverage)
+    - Valuation: P/E, PEG, P/B, P/S, P/FCF, P/OCF, EV/EBITDA, payout ratio
+    - Profitability: Gross, operating, pretax, net profit margins
+    - Tax: Effective tax rate
+    - Leverage: Debt ratio, LT debt/cap, total debt/cap, CF-to-debt
+    - Liquidity: Current, quick, cash ratios
+    - Efficiency: DSO, DIO, DPO, operating & cash conversion cycles, turnover
+    - Cash Flow: OCF/share, FCF/share, cash/share, OCF/sales, FCF/OCF
 
     Args:
-        ticker: Stock ticker symbol (e.g., 'AAPL', 'MSFT', 'KO')
+        tickers: List of stock ticker symbols (e.g., ['AAPL', 'MSFT', 'KO'])
 
     Returns:
-        TTM financial ratios including profitability, liquidity, leverage,
-        efficiency, and valuation metrics
+        Curated TTM financial ratios across valuation, profitability, leverage,
+        liquidity, efficiency, and cash flow categories
 
     Examples:
-        get_ratios_ttm(ticker='AAPL')
-        >>> {"success": True, "data": [{"peRatioTTM": 28.5, "returnOnEquityTTM": 1.47, ...}]}
+        get_ratios_ttm(tickers=['AAPL', 'MSFT'])
+        >>> {"success": True, "data": {"results": {"AAPL": {...}, "MSFT": {...}}, "errors": {}}}
 
     Raises:
-        Exception: If ticker is invalid or no data found
+        Exception: If data retrieval fails
     """
-    fmp = FMP_API_DATA()
-    data = fmp.get_ratios_ttm(ticker.upper())
+    tickers = [t.upper().strip() for t in tickers]
 
-    if data is None or len(data) == 0:
-        return error_response(f"No TTM ratios found for {ticker}")
+    results: dict = {}
+    errors: dict = {}
 
-    if isinstance(data, list) and len(data) > 0:
-        data[0] = {k: round(v, 4) if isinstance(v, (int, float)) else v for k, v in data[0].items()}
+    try:
+        fmp = FMP_API_DATA()
+    except Exception as e:
+        return error_response(f"Failed to initialize FMP API: {str(e)}")
 
-    return success_response(data)
+    for t in tickers:
+        try:
+            data = fmp.get_ratios_ttm(t)
+
+            if data is None or len(data) == 0:
+                errors[t] = f"No TTM ratios found for {t}"
+                continue
+
+            if isinstance(data, list) and len(data) > 0:
+                ratios = {
+                    k: round(v, 4) if isinstance(v, (int, float)) else v
+                    for k, v in data[0].items()
+                    if k in CURATED_TTM_FIELDS
+                }
+                results[t] = ratios
+        except Exception as e:
+            errors[t] = f"Failed to retrieve TTM ratios for {t}: {str(e)}"
+
+    return success_response({"results": results, "errors": errors})
 
 
 # ================================

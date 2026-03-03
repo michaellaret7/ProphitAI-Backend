@@ -1,7 +1,7 @@
 """Ticker technical analysis tool.
 
 Provides a tool for retrieving curated technical indicator series
-for a single ticker, organized by category.
+for tickers, organized by category. Supports batched multi-ticker calls.
 """
 
 from typing import Annotated, Literal
@@ -10,7 +10,7 @@ import pandas as pd
 
 from app.core.atlas.tools.decorator import agent_tool, Param
 from app.core.atlas.tools.responses import success_response, error_response
-from app.core.atlas.tools.ticker.utils import build_ticker_obj
+from app.core.atlas.tools.ticker.utils import build_ticker_objs_bulk
 from app.core.calculations.models.technicals import TickerTechnicals
 
 
@@ -67,12 +67,12 @@ def _extract_series_table(
 
 @agent_tool(name="ticker_technicals")
 def ticker_technicals(
-    ticker: str,
+    tickers: list[str],
     category: Literal["trend", "momentum", "volatility", "volume", "statistical"],
     days: Annotated[int, Param(min_val=1, max_val=30)] = 20,
 ) -> str:
     """
-    Get technical indicator time series for a single ticker.
+    Get technical indicator time series for one or more tickers.
 
     Returns the last N trading days of curated indicators for the chosen category.
     Use this to analyze trends, momentum shifts, volatility regimes, and volume
@@ -86,7 +86,7 @@ def ticker_technicals(
         statistical: z_score_50, autocorrelation_lag_1
 
     Args:
-        ticker: Stock ticker symbol (e.g., 'AAPL', 'MSFT', 'KO')
+        tickers: List of stock ticker symbols (e.g., ['AAPL', 'MSFT', 'KO'])
         category: Technical indicator category to retrieve series data for
         days: Number of trailing trading days of data to return
 
@@ -106,28 +106,37 @@ def ticker_technicals(
         linreg_slope_50: Direction/steepness of 50d linear trend. Positive = uptrend.
 
     Examples:
-        ticker_technicals(ticker="AAPL", category="momentum", days=10)
-        >>> {"success": True, "data": {"ticker": "AAPL", "series": [...]}}
+        ticker_technicals(tickers=["AAPL", "MSFT"], category="momentum", days=10)
+        >>> {"success": True, "data": {"results": {"AAPL": {...}, "MSFT": {...}}, "errors": {}}}
 
     Raises:
-        ValueError: If ticker has no available price data
+        ValueError: If no tickers have available price data
     """
+    tickers = [t.upper().strip() for t in tickers]
+
     try:
-        ticker = ticker.upper().strip()
-        ticker_obj = build_ticker_obj(ticker, 1)
-
-        series = _extract_series_table(ticker_obj.technicals, category, days)
-
-        return success_response({
-            "ticker": ticker,
-            "current_price": round(float(ticker_obj.adj_close.iloc[-1]), 2),
-            "category": category,
-            "days": days,
-            "series": series,
-        })
-
+        ticker_objs = build_ticker_objs_bulk(tickers, 1)
     except Exception as e:
-        return error_response(f"Failed to compute technicals for {ticker}: {str(e)}")
+        return error_response(f"Failed to fetch price data: {str(e)}")
 
+    results: dict = {}
+    errors: dict = {}
 
+    for t in tickers:
+        if t not in ticker_objs:
+            errors[t] = f"No price data found for {t}"
+            continue
 
+        try:
+            obj = ticker_objs[t]
+            series = _extract_series_table(obj.technicals, category, days)
+            results[t] = {
+                "current_price": round(float(obj.adj_close.iloc[-1]), 2),
+                "category": category,
+                "days": days,
+                "series": series,
+            }
+        except Exception as e:
+            errors[t] = str(e)
+
+    return success_response({"results": results, "errors": errors})
