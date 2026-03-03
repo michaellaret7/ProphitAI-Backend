@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 import uuid
 from typing import TYPE_CHECKING, Dict, Any, List, Optional
 
@@ -205,8 +206,25 @@ class ExecutionLoop:
             "last_message_preview": last_content[:500],
         }
 
+    @staticmethod
+    def _sanitize_tool_calls(tool_calls) -> None:
+        """Ensure all tool call arguments are valid JSON before entering message history.
+
+        The LLM occasionally generates malformed JSON in function.arguments.
+        If that raw string is appended to messages, the *next* API call will
+        reject the entire conversation with a 400 error. Replacing invalid
+        arguments with '{}' keeps the history clean so the agent can recover.
+        """
+        for tc in tool_calls:
+            try:
+                json.loads(tc.function.arguments or "{}")
+            except (json.JSONDecodeError, TypeError):
+                tc.function.arguments = "{}"
+
     def _handle_tool_calls(self, tool_calls, assistant_text: str) -> List[str]:
         """Execute tool calls and return list of tool names called."""
+        self._sanitize_tool_calls(tool_calls)
+
         self.agent.messages.append({
             "role": "assistant",
             "content": assistant_text,

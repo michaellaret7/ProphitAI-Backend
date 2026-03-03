@@ -69,6 +69,7 @@ class ToolHandler:
         already_added = isinstance(last, dict) and last.get("role") == "assistant" and last.get("tool_calls")
 
         if not already_added:
+            self._sanitize_tool_call_args(tool_calls)
             self.agent.messages.append({
                 "role": "assistant",
                 "content": "",
@@ -262,6 +263,15 @@ class ToolHandler:
         })
 
         return success
+
+    @staticmethod
+    def _sanitize_tool_call_args(tool_calls: List[Any]) -> None:
+        """Replace invalid JSON in tool call arguments with '{}' to prevent API 400 errors."""
+        for tc in tool_calls:
+            try:
+                json.loads(tc.function.arguments or "{}")
+            except (json.JSONDecodeError, TypeError):
+                tc.function.arguments = "{}"
 
     def _parse_arguments(self, args_json: str) -> tuple[Dict[str, Any], str | None]:
         """Parse tool arguments from JSON string."""
