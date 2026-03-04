@@ -35,13 +35,14 @@ from app.core.atlas.tools.portfolio.user_portfolio import get_user_simulated_por
 # --- watchlist ---
 from app.core.atlas.tools.watchlist.get_watchlist import get_watchlist
 
-# --- alpaca ---
-from app.core.atlas.tools.alpaca.account import account_info, account_activities
-from app.core.atlas.tools.alpaca.portfolio import (
-    get_position, get_positions, close_position, get_portfolio_history,
+# --- broker ---
+from app.core.atlas.tools.broker.account import account_info
+from app.core.atlas.tools.broker.portfolio import (
+    get_positions, close_position,
 )
-from app.core.atlas.tools.alpaca.trade import (
-    propose_trade, get_orders, cancel_order, cancel_all_orders, get_asset,
+from app.core.atlas.tools.broker.trade import propose_trade
+from app.core.atlas.tools.broker.orders import (
+    get_orders, cancel_order, get_quotes,
 )
 from app.core.atlas.tools.screener.equity_screener import equity_screener
 from app.core.atlas.tools.screener.etf_screener import etf_screener
@@ -75,20 +76,16 @@ def register_chat_tools(agent: "AgentBase") -> None:
         get_user_simulated_portfolio,
         # watchlist
         get_watchlist,
-        # alpaca - account
+        # broker - account
         account_info,
-        account_activities,
-        # alpaca - portfolio
-        get_position,
+        # broker - portfolio
         get_positions,
         close_position,
-        get_portfolio_history,
-        # alpaca - trade
+        # broker - trade & orders
         propose_trade,
         get_orders,
         cancel_order,
-        cancel_all_orders,
-        get_asset,
+        get_quotes,
         # screener
         equity_screener,
         etf_screener,
