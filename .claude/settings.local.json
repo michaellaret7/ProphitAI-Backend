@@ -100,7 +100,8 @@
       "Bash(head:*)",
       "WebFetch(domain:stockanalysis.com)",
       "WebFetch(domain:www.campaignforamillion.com)",
-      "WebFetch(domain:financialmodelingprep.com)"
+      "WebFetch(domain:financialmodelingprep.com)",
+      "WebFetch(domain:docs.snaptrade.com)"
     ],
     "deny": [],
     "ask": []

@@ -98,5 +98,8 @@ openpyxl>=3.1.0
 # AWS
 boto3>=1.28.0
 
+# Brokerage
+snaptrade-python-sdk>=11.0.165
+
 # Testing
 pytest>=7.0.0
