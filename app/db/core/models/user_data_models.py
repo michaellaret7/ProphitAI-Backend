@@ -24,8 +24,10 @@ class User(UserBase):
     creation_date = Column(DateTime, default=get_current_utc_time)
 
     # Broker
-    broker = Column(String, nullable=True)  # e.g. 'alpaca'
-    broker_account_id = Column(String, nullable=True, unique=True, index=True)
+    broker = Column(String, nullable=True, default='snaptrade')
+    snaptrade_user_id = Column(String, nullable=True, unique=True, index=True)
+    snaptrade_user_secret = Column(String, nullable=True)
+    snaptrade_account_id = Column(String, nullable=True, index=True)
 
     # Relationships
     watchlists = relationship('Watchlist', back_populates='user', cascade='all, delete-orphan')
@@ -185,7 +187,7 @@ class TradeProposal(UserBase):
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     user_id = Column(UUID(as_uuid=True), ForeignKey('users.id', ondelete='CASCADE'), nullable=False, index=True)
-    account_id = Column(String, nullable=False)  # Alpaca broker account ID
+    account_id = Column(String, nullable=False)  # Brokerage account ID
     proposal_type = Column(String, nullable=False, default='trade', index=True)  # 'trade' or 'close_position'
 
     # Order parameters (mirrors broker buy/sell signature)
@@ -210,7 +212,7 @@ class TradeProposal(UserBase):
     # Lifecycle
     status = Column(String, nullable=False, default='pending', index=True)
     # Values: pending, executed, rejected, failed
-    alpaca_order_id = Column(String, nullable=True)
+    broker_order_id = Column(String, nullable=True)
     error_message = Column(Text, nullable=True)
 
     # Timestamps
