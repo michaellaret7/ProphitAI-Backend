@@ -3,7 +3,7 @@ from typing import Optional, List, Dict, Tuple
 from app.brokers.alpaca.client import AlpacaClient
 from app.brokers.alpaca.trading import AlpacaTrading
 from app.brokers.alpaca.portfolio import AlpacaPortfolio
-from app.brokers.alpaca.options import OptionsService
+from app.repositories.options.service import OptionsService
 
 
 class Alpaca:

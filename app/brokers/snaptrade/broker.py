@@ -18,6 +18,7 @@ from typing import Any, Dict, List, Optional, Tuple
 from app.brokers.snaptrade.client import SnapTradeClient
 from app.brokers.snaptrade.auth import SnapTradeAuth
 from app.brokers.snaptrade.accounts import SnapTradeAccounts
+from app.brokers.snaptrade.models.positions import Position
 from app.brokers.snaptrade.trading import SnapTradeTrading
 from app.brokers.snaptrade.connections import SnapTradeConnections
 from app.brokers.snaptrade.reporting import SnapTradeReporting
@@ -152,7 +153,7 @@ class SnapTradeBroker:
 
     def get_positions(
         self, user_id: str, user_secret: str, account_id: str,
-    ) -> List[Dict[str, Any]]:
+    ) -> List[Position]:
         """Get open positions for an account."""
         return self.accounts.get_positions(user_id, user_secret, account_id)
 

@@ -7,6 +7,7 @@ from typing import Any, Dict, List, Optional
 
 from snaptrade_client import SnapTrade
 
+from app.brokers.snaptrade.models.positions import Position
 from app.brokers.snaptrade.utils import extract_body
 
 
@@ -97,7 +98,7 @@ class SnapTradeAccounts:
 
     def get_positions(
         self, user_id: str, user_secret: str, account_id: str,
-    ) -> List[Dict[str, Any]]:
+    ) -> List[Position]:
         """
         Get open positions for an account.
 
@@ -105,11 +106,15 @@ class SnapTradeAccounts:
             user_id: SnapTrade user ID
             user_secret: SnapTrade user secret
             account_id: Brokerage account ID
+
+        Returns:
+            List of Position dataclasses with flattened position data
         """
         response = self._accounts.get_user_account_positions(
             user_id=user_id, user_secret=user_secret, account_id=account_id,
         )
-        return extract_body(response)
+        raw = extract_body(response)
+        return Position.from_raw_list(raw)
 
     def get_orders(
         self,
