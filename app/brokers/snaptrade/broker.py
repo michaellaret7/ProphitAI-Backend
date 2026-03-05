@@ -8,17 +8,15 @@ Sub-components accessible directly:
     broker.trading       — order execution (equities + options)
     broker.connections   — brokerage authorization management
     broker.reporting     — activities, performance reports
-    broker.options       — options chains, quotes, snapshots (via Alpaca)
 """
 
 import logging
-import os
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional
 
 from app.brokers.snaptrade.client import SnapTradeClient
 from app.brokers.snaptrade.auth import SnapTradeAuth
 from app.brokers.snaptrade.accounts import SnapTradeAccounts
-from app.brokers.snaptrade.models.positions import Position
+from app.brokers.snaptrade.models.holdings import Holdings
 from app.brokers.snaptrade.trading import SnapTradeTrading
 from app.brokers.snaptrade.connections import SnapTradeConnections
 from app.brokers.snaptrade.reporting import SnapTradeReporting
@@ -33,7 +31,6 @@ class SnapTradeBroker:
         self,
         client_id: Optional[str] = None,
         consumer_key: Optional[str] = None,
-        alpaca_options_feed: str = "indicative",
     ):
         self._st_client = SnapTradeClient(
             client_id=client_id, consumer_key=consumer_key,
@@ -45,44 +42,6 @@ class SnapTradeBroker:
         self.trading = SnapTradeTrading(client)
         self.connections = SnapTradeConnections(client)
         self.reporting = SnapTradeReporting(client)
-
-        # Reason: SnapTrade's options chain endpoint returns 500 for Alpaca Paper,
-        # so options DATA comes from Alpaca's native API while options EXECUTION
-        # goes through SnapTrade.
-        self.options = self._init_options_service(alpaca_options_feed)
-
-    @staticmethod
-    def _init_options_service(feed: str):
-        """Initialize Alpaca options data service if credentials are available."""
-        api_key = os.getenv("ALPACA_API_KEY")
-        secret_key = os.getenv("ALPACA_SECRET_KEY")
-
-        if not api_key or not secret_key:
-            logger.warning(
-                "ALPACA_API_KEY / ALPACA_SECRET_KEY not set. "
-                "Options data (chains, quotes, greeks) will be unavailable."
-            )
-            return None
-
-        try:
-            from alpaca.trading.client import TradingClient
-            from alpaca.data.historical.option import OptionHistoricalDataClient
-            from app.brokers.alpaca_broker.options import BrokerOptionsService
-
-            trading_client = TradingClient(
-                api_key=api_key, secret_key=secret_key, paper=True,
-            )
-            option_data_client = OptionHistoricalDataClient(
-                api_key=api_key, secret_key=secret_key,
-            )
-            return BrokerOptionsService(
-                trading_client=trading_client,
-                option_data_client=option_data_client,
-                feed=feed,
-            )
-        except Exception as e:
-            logger.warning(f"Failed to initialize Alpaca options service: {e}")
-            return None
 
     # ══════════════════════════════════════════════════════════════
     # AUTH
@@ -141,8 +100,8 @@ class SnapTradeBroker:
 
     def get_holdings(
         self, user_id: str, user_secret: str, account_id: str,
-    ) -> Dict[str, Any]:
-        """Get full holdings (positions + balances + orders)."""
+    ) -> Holdings:
+        """Get full holdings (positions + balances + orders + options)."""
         return self.accounts.get_holdings(user_id, user_secret, account_id)
 
     def get_all_holdings(
@@ -150,12 +109,6 @@ class SnapTradeBroker:
     ) -> List[Dict[str, Any]]:
         """Get holdings across all accounts."""
         return self.accounts.get_all_holdings(user_id, user_secret)
-
-    def get_positions(
-        self, user_id: str, user_secret: str, account_id: str,
-    ) -> List[Position]:
-        """Get open positions for an account."""
-        return self.accounts.get_positions(user_id, user_secret, account_id)
 
     def get_orders(
         self,
@@ -463,59 +416,3 @@ class SnapTradeBroker:
             user_id, user_secret, start_date, end_date, accounts=accounts,
         )
 
-    # ══════════════════════════════════════════════════════════════
-    # OPTIONS DATA (via Alpaca)
-    # ══════════════════════════════════════════════════════════════
-
-    def get_options_chain(
-        self,
-        underlying: str,
-        expiration: Optional[str] = None,
-        limit: Optional[int] = None,
-        return_df: Optional[bool] = None,
-    ):
-        """Get options chain with quotes and greeks (via Alpaca)."""
-        if self.options is None:
-            raise RuntimeError(
-                "Options data unavailable — ALPACA_API_KEY / ALPACA_SECRET_KEY not configured."
-            )
-        return self.options.get_options_chain(
-            underlying=underlying, expiration=expiration,
-            limit=limit, return_df=return_df,
-        )
-
-    def get_option_expirations(
-        self, underlying: str, start: Optional[str] = None, end: Optional[str] = None,
-    ) -> List[str]:
-        """Get available expiration dates (via Alpaca)."""
-        if self.options is None:
-            raise RuntimeError("Options data unavailable — Alpaca credentials not configured.")
-        return self.options.get_available_dates(underlying=underlying, start=start, end=end)
-
-    def get_option_contracts(
-        self,
-        underlying: str,
-        expiration: Optional[str] = None,
-        contract_type: Optional[str] = None,
-        strike_range: Optional[Tuple[float, float]] = None,
-        limit: Optional[int] = None,
-    ) -> List[str]:
-        """Get available option contracts (via Alpaca)."""
-        if self.options is None:
-            raise RuntimeError("Options data unavailable — Alpaca credentials not configured.")
-        return self.options.get_available_contracts(
-            underlying=underlying, expiration=expiration,
-            contract_type=contract_type, strike_range=strike_range, limit=limit,
-        )
-
-    def get_option_latest_quote(self, symbol: str) -> Dict:
-        """Get latest bid/ask quote for an option contract (via Alpaca)."""
-        if self.options is None:
-            raise RuntimeError("Options data unavailable — Alpaca credentials not configured.")
-        return self.options.get_option_latest_quote(symbol)
-
-    def get_option_snapshot(self, symbol: str) -> Dict:
-        """Get full snapshot (quote + trade + greeks) for an option (via Alpaca)."""
-        if self.options is None:
-            raise RuntimeError("Options data unavailable — Alpaca credentials not configured.")
-        return self.options.get_option_snapshot(symbol)

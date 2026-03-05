@@ -459,7 +459,7 @@ if __name__ == "__main__":
     user = session.query(User).filter(User.email == "michaellaret7@gmail.com").first()
 
     print('user.id: ', user.id)
-    print('user.broker_account_id: ', user.broker_account_id)
+    print('user.snaptrade_account_id: ', user.snaptrade_account_id)
     print('user.broker: ', user.broker)
 
     session.close()

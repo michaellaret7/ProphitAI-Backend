@@ -64,7 +64,7 @@ async def get_proposal_by_id_controller(
 async def approve_proposal_controller(
     *, clerk_id: str, proposal_id: str,
 ) -> Dict[str, Any]:
-    """Approve a pending trade proposal and execute on Alpaca."""
+    """Approve a pending trade proposal and execute via SnapTrade."""
     if not clerk_id:
         raise ValueError("clerkId is required")
     if not proposal_id:

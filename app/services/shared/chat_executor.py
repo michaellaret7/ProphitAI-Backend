@@ -81,17 +81,19 @@ class ChatSessionManager:
         session_id = str(uuid.uuid4())
         system_prompt = None
 
-        # Resolve broker account + internal user ID and inject into prompt
+        # Resolve broker credentials + internal user ID and inject into prompt
         if user_id:
-            from app.repositories.user.broker import resolve_broker_account
+            from app.repositories.user.broker import resolve_snaptrade_credentials
             from app.repositories.user.trade_proposal import get_internal_user_id
 
-            broker_account_id = resolve_broker_account(clerk_id=user_id)
+            creds = resolve_snaptrade_credentials(clerk_id=user_id)
             internal_user_id = get_internal_user_id(clerk_id=user_id)
 
             broker_context = (
                 f"\n\n## Broker Context\n"
-                f"The user's Alpaca broker account ID is: `{broker_account_id}`.\n"
+                f"The user's SnapTrade user ID is: `{creds['snaptrade_user_id']}`.\n"
+                f"The user's SnapTrade user secret is: `{creds['snaptrade_user_secret']}`.\n"
+                f"The user's SnapTrade account ID is: `{creds['snaptrade_account_id']}`.\n"
                 f"The user's internal user ID is: `{internal_user_id}`.\n"
                 f"Always use these IDs for broker and trade proposal operations.\n\n"
                 f"## Trade Proposal Rules\n"

@@ -1,9 +1,9 @@
 """User account repository — CRUD operations and broker account management."""
 
 from app.db.core.models.user_data_models import *
-from app.repositories.user.broker import get_broker, resolve_broker_account
+from app.repositories.user.broker import get_snaptrade_broker, resolve_snaptrade_credentials
 from sqlalchemy.orm import selectinload
-from typing import Optional, Dict, Any
+from typing import Optional, Dict, Any, List
 from app.utils.decorators.database import with_session, with_transaction
 from app.utils.time_utils import get_current_utc_time
 import uuid
@@ -22,7 +22,9 @@ def _format_user_data(user) -> Dict[str, Any]:
         'first_name': user.first_name,
         'last_name': user.last_name,
         'broker': user.broker,
-        'broker_account_id': user.broker_account_id,
+        'snaptrade_user_id': user.snaptrade_user_id,
+        'snaptrade_user_secret': user.snaptrade_user_secret,
+        'snaptrade_account_id': user.snaptrade_account_id,
         'creation_date': user.creation_date.isoformat() if getattr(user, 'creation_date', None) else None,
         'portfolios': []
     }
@@ -230,91 +232,69 @@ def delete_user_by_clerk_id(clerk_id: str, session=None) -> bool:
 # --> Broker Account Operations
 # ════════════════════════════════════════════════════════════
 
-@with_transaction('user')
-def create_user_with_broker_account(signup_data: Dict[str, Any], session=None) -> Dict[str, Any]:
+def get_broker_account(clerk_id: str) -> Dict[str, Any]:
     """
-    Create a brokerage account on Alpaca and link it to a user record.
-
-    If the user already exists (e.g. from Clerk webhook), the Alpaca account is
-    created and linked to the existing row. If the user doesn't exist, both the
-    user and Alpaca account are created.
-
-    Alpaca runs KYC/AML automatically. On success, stores the returned
-    account_id on the user row so every future broker call can resolve
-    user -> account_id.
+    Get full broker account info via SnapTrade.
 
     Args:
-        signup_data: Dict with:
-            - first_name, last_name, email, phone
-            - address, city, state, zip
-            - dob (YYYY-MM-DD), ssn
-            - funding_source (optional, defaults to 'employment_income')
-            - clerk_id (optional)
+        clerk_id: Clerk authentication ID
 
     Returns:
-        Dict with user_id, broker_account_id, account_status, and name
+        Dict with account details (number, name, type, status, balances, etc.)
     """
-    existing_user = session.query(User).filter(User.email == signup_data["email"]).first()
-
-    if existing_user and existing_user.broker_account_id:
-        raise ValueError(f"User with email {signup_data['email']} already has a broker account")
-
-    # Reason: create Alpaca account first — if KYC fails we don't want an orphan DB row
-    broker = get_broker()
-    alpaca_result = broker.create_account(signup_data)
-
-    if existing_user:
-        # Reason: user exists from Clerk webhook — link the broker account
-        existing_user.broker = "alpaca"
-        existing_user.broker_account_id = alpaca_result["account_id"]
-        user = existing_user
-    else:
-        user = User(
-            id=uuid.uuid4(),
-            email=signup_data["email"],
-            first_name=signup_data["first_name"],
-            last_name=signup_data["last_name"],
-            clerk_id=signup_data.get("clerk_id"),
-            broker="alpaca",
-            broker_account_id=alpaca_result["account_id"],
-            creation_date=get_current_utc_time(),
-        )
-        session.add(user)
-
-    return {
-        "user_id": str(user.id),
-        "broker_account_id": alpaca_result["account_id"],
-        "account_status": alpaca_result["status"],
-        "name": alpaca_result["name"],
-        "email": user.email,
-    }
+    creds = resolve_snaptrade_credentials(clerk_id=clerk_id)
+    broker = get_snaptrade_broker()
+    return broker.get_account_details(
+        user_id=creds["snaptrade_user_id"],
+        user_secret=creds["snaptrade_user_secret"],
+        account_id=creds["snaptrade_account_id"],
+    )
 
 
-def get_broker_account(clerk_id: str) -> Dict:
-    """Get full broker account info for a user."""
-    account_id = resolve_broker_account(clerk_id=clerk_id)
-    return get_broker().get_account(account_id)
+def get_balances(clerk_id: str) -> List[Dict[str, Any]]:
+    """
+    Get account balances (cash, buying power, equity) via SnapTrade.
+
+    Args:
+        clerk_id: Clerk authentication ID
+
+    Returns:
+        List of balance dicts with currency, cash, buying_power fields
+    """
+    creds = resolve_snaptrade_credentials(clerk_id=clerk_id)
+    broker = get_snaptrade_broker()
+    return broker.get_balances(
+        user_id=creds["snaptrade_user_id"],
+        user_secret=creds["snaptrade_user_secret"],
+        account_id=creds["snaptrade_account_id"],
+    )
 
 
-def get_buying_power(clerk_id: str) -> float:
-    """Get broker account buying power."""
-    account_id = resolve_broker_account(clerk_id=clerk_id)
-    return get_broker().get_buying_power(account_id)
+def get_account_activities(
+    clerk_id: str,
+    start_date: Optional[str] = None,
+    end_date: Optional[str] = None,
+    activity_type: Optional[str] = None,
+) -> list:
+    """
+    Get broker account activities (fills, dividends, transfers, etc.) via SnapTrade.
 
+    Args:
+        clerk_id: Clerk authentication ID
+        start_date: Filter start date (YYYY-MM-DD)
+        end_date: Filter end date (YYYY-MM-DD)
+        activity_type: Filter by activity type
 
-def get_cash_balance(clerk_id: str) -> float:
-    """Get broker account cash balance."""
-    account_id = resolve_broker_account(clerk_id=clerk_id)
-    return get_broker().get_cash(account_id)
-
-
-def get_equity(clerk_id: str) -> float:
-    """Get broker account equity."""
-    account_id = resolve_broker_account(clerk_id=clerk_id)
-    return get_broker().get_equity(account_id)
-
-
-def get_account_activities(clerk_id: str, activity_type: Optional[str] = None) -> list:
-    """Get broker account activities (fills, dividends, transfers, etc.)."""
-    account_id = resolve_broker_account(clerk_id=clerk_id)
-    return get_broker().get_account_activities(account_id, activity_type)
+    Returns:
+        List of activity dicts
+    """
+    creds = resolve_snaptrade_credentials(clerk_id=clerk_id)
+    broker = get_snaptrade_broker()
+    return broker.get_account_activities(
+        user_id=creds["snaptrade_user_id"],
+        user_secret=creds["snaptrade_user_secret"],
+        account_id=creds["snaptrade_account_id"],
+        start_date=start_date,
+        end_date=end_date,
+        type=activity_type,
+    )

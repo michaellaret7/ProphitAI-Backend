@@ -42,7 +42,7 @@ from app.core.atlas.tools.broker.portfolio import (
 )
 from app.core.atlas.tools.broker.trade import propose_trade
 from app.core.atlas.tools.broker.orders import (
-    get_orders, cancel_order, get_quotes,
+    get_balances, get_order_impact, get_orders, cancel_order, get_quotes,
 )
 from app.core.atlas.tools.screener.equity_screener import equity_screener
 from app.core.atlas.tools.screener.etf_screener import etf_screener
@@ -78,6 +78,7 @@ def register_chat_tools(agent: "AgentBase") -> None:
         get_watchlist,
         # broker - account
         account_info,
+        get_balances,
         # broker - portfolio
         get_positions,
         close_position,
@@ -86,6 +87,7 @@ def register_chat_tools(agent: "AgentBase") -> None:
         get_orders,
         cancel_order,
         get_quotes,
+        get_order_impact,
         # screener
         equity_screener,
         etf_screener,

@@ -66,7 +66,7 @@ from app.core.atlas.tools.broker.portfolio import (
 )
 from app.core.atlas.tools.broker.trade import propose_trade
 from app.core.atlas.tools.broker.orders import (
-    get_orders, cancel_order, get_quotes,
+    get_balances, get_order_impact, get_orders, cancel_order, get_quotes,
 )
 
 
@@ -98,10 +98,10 @@ _ALL_TOOL_FUNCTIONS = [
     commodity_prices, us_treasury_rates, macro_indicators,
     # watchlist (1)
     get_watchlist,
-    # broker (7)
-    account_info, get_positions, close_position,
+    # broker (9)
+    account_info, get_balances, get_positions, close_position,
     propose_trade, get_orders,
-    cancel_order, get_quotes,
+    cancel_order, get_quotes, get_order_impact,
 ]
 
 AVAILABLE_TOOLS: Dict[str, Dict[str, Any]] = {

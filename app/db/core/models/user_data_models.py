@@ -190,21 +190,16 @@ class TradeProposal(UserBase):
     account_id = Column(String, nullable=False)  # Brokerage account ID
     proposal_type = Column(String, nullable=False, default='trade', index=True)  # 'trade' or 'close_position'
 
-    # Order parameters (mirrors broker buy/sell signature)
+    # Order parameters (mirrors SnapTrade buy/sell signature)
     symbol = Column(String, nullable=False)
     side = Column(String, nullable=False)           # 'buy' or 'sell'
     qty = Column(Float, nullable=True)
     percentage = Column(Float, nullable=True)       # For close_position: % of position to close
     notional = Column(Float, nullable=True)
+    order_type = Column(String, nullable=True, default='Market')  # Market, Limit, Stop, StopLimit
     limit_price = Column(Float, nullable=True)
     stop_price = Column(Float, nullable=True)
-    trail_price = Column(Float, nullable=True)
-    trail_percent = Column(Float, nullable=True)
-    take_profit = Column(Float, nullable=True)
-    stop_loss = Column(Float, nullable=True)
-    stop_loss_limit = Column(Float, nullable=True)
-    order_class = Column(String, nullable=True)     # simple, bracket, oco, oto
-    time_in_force = Column(String, nullable=False, default='day')
+    time_in_force = Column(String, nullable=False, default='Day')
 
     # Agent context
     agent_reasoning = Column(Text, nullable=True)

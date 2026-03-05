@@ -1,9 +1,106 @@
-"""SnapTrade order tools for agent framework."""
+"""SnapTrade order and account tools for agent framework."""
 
 from app.core.atlas.tools.decorator import agent_tool, Param
 from app.core.atlas.tools.responses import success_response, error_response
 from app.repositories.user.broker import get_snaptrade_broker, resolve_snaptrade_credentials
 from typing import Annotated, Optional, Literal
+
+
+# ================================
+# --> Account Tools
+# ================================
+
+@agent_tool(name="get_balances")
+def get_balances(
+    email: str,
+) -> str:
+    """
+    Get cash balances and buying power for a user's brokerage account.
+    Use this BEFORE proposing any trade to verify the account has sufficient
+    funds. Returns cash, buying power, and market value per currency.
+
+    Args:
+        email: User's email address
+
+    Returns:
+        List of balance dicts with currency, cash, buying_power, and market_value
+
+    Examples:
+        get_balances(email="user@example.com")
+        >>> [{"currency": "USD", "cash": 50000.0, "buying_power": 100000.0, ...}]
+
+    Raises:
+        Exception: If credentials are invalid or API call fails
+    """
+    try:
+        creds = resolve_snaptrade_credentials(email=email)
+        broker = get_snaptrade_broker()
+        result = broker.get_balances(
+            user_id=creds["snaptrade_user_id"],
+            user_secret=creds["snaptrade_user_secret"],
+            account_id=creds["snaptrade_account_id"],
+        )
+        return success_response(result)
+    except Exception as e:
+        return error_response(f"Failed to get balances for {email}: {str(e)}")
+
+
+@agent_tool(name="get_order_impact")
+def get_order_impact(
+    email: str,
+    symbol: str,
+    action: Literal['BUY', 'SELL'],
+    units: float,
+    order_type: Annotated[str, Param(enum=['Market', 'Limit', 'Stop', 'StopLimit'])] = "Market",
+    time_in_force: Annotated[str, Param(enum=['Day', 'GTC', 'FOK', 'IOC'])] = "Day",
+    price: Optional[float] = None,
+    stop: Optional[float] = None,
+) -> str:
+    """
+    Preview the estimated impact of an order before placing it. Returns
+    projected cost, commission, buying power effect, and whether the account
+    has sufficient funds. Use this to validate a trade idea before proposing it.
+
+    Args:
+        email: User's email address
+        symbol: Ticker symbol (e.g. 'AAPL')
+        action: Trade direction — BUY or SELL
+        units: Number of shares
+        order_type: Order type (Market, Limit, Stop, StopLimit)
+        time_in_force: How long the order stays active (Day, GTC, FOK, IOC)
+        price: Limit price (required for Limit/StopLimit orders)
+        stop: Stop trigger price (required for Stop/StopLimit orders)
+
+    Returns:
+        Dict with estimated trade cost, commission, buying power impact,
+        and remaining buying power after the trade
+
+    Examples:
+        get_order_impact(email="user@example.com", symbol="AAPL",
+                         action="BUY", units=100)
+        >>> {"trade": {"symbol": "AAPL", ...}, "buying_power_effect": -17525.00, ...}
+
+    Raises:
+        Exception: If the order would be rejected or credentials are invalid
+    """
+    try:
+        creds = resolve_snaptrade_credentials(email=email)
+        broker = get_snaptrade_broker()
+        result = broker.get_order_impact(
+            user_id=creds["snaptrade_user_id"],
+            user_secret=creds["snaptrade_user_secret"],
+            account_id=creds["snaptrade_account_id"],
+            symbol=symbol,
+            action=action,
+            units=units,
+            order_type=order_type,
+            time_in_force=time_in_force,
+            price=price,
+            stop=stop,
+        )
+        return success_response(result)
+    except Exception as e:
+        return error_response(f"Failed to get order impact for {symbol}: {str(e)}")
 
 
 # ================================

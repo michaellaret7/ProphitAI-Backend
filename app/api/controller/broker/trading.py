@@ -5,13 +5,10 @@ from app.repositories.user.trading import (
     buy,
     sell,
     get_orders,
-    get_order_by_id,
     cancel_order,
-    cancel_all_orders,
     get_positions,
     get_position,
     close_position,
-    close_all_positions,
 )
 from app.repositories.user.portfolio import get_portfolio_history
 from app.api.response_envelope import ok_envelope
@@ -28,14 +25,9 @@ def _order_controller(
     symbol: str,
     qty: Optional[float],
     notional: Optional[float],
+    order_type: str,
     limit_price: Optional[float],
     stop_price: Optional[float],
-    trail_price: Optional[float],
-    trail_percent: Optional[float],
-    take_profit: Optional[float],
-    stop_loss: Optional[float],
-    stop_loss_limit: Optional[float],
-    order_class: Optional[str],
     time_in_force: str,
 ) -> Dict:
     """Shared logic for buy/sell controllers."""
@@ -44,14 +36,9 @@ def _order_controller(
         symbol=symbol,
         qty=qty,
         notional=notional,
+        order_type=order_type,
         limit_price=limit_price,
         stop_price=stop_price,
-        trail_price=trail_price,
-        trail_percent=trail_percent,
-        take_profit=take_profit,
-        stop_loss=stop_loss,
-        stop_loss_limit=stop_loss_limit,
-        order_class=order_class,
         time_in_force=time_in_force,
     )
 
@@ -67,24 +54,18 @@ async def buy_controller(
     symbol: str,
     qty: Optional[float] = None,
     notional: Optional[float] = None,
+    order_type: str = "Market",
     limit_price: Optional[float] = None,
     stop_price: Optional[float] = None,
-    trail_price: Optional[float] = None,
-    trail_percent: Optional[float] = None,
-    take_profit: Optional[float] = None,
-    stop_loss: Optional[float] = None,
-    stop_loss_limit: Optional[float] = None,
-    order_class: Optional[str] = None,
-    time_in_force: str = "day",
+    time_in_force: str = "Day",
 ) -> Dict[str, Any]:
     """Place a buy order."""
     if not clerk_id:
         raise ValueError("clerkId is required")
 
     result = _order_controller(
-        clerk_id, buy, symbol, qty, notional, limit_price, stop_price,
-        trail_price, trail_percent, take_profit, stop_loss, stop_loss_limit,
-        order_class, time_in_force,
+        clerk_id, buy, symbol, qty, notional, order_type,
+        limit_price, stop_price, time_in_force,
     )
 
     return ok_envelope(
@@ -103,24 +84,18 @@ async def sell_controller(
     symbol: str,
     qty: Optional[float] = None,
     notional: Optional[float] = None,
+    order_type: str = "Market",
     limit_price: Optional[float] = None,
     stop_price: Optional[float] = None,
-    trail_price: Optional[float] = None,
-    trail_percent: Optional[float] = None,
-    take_profit: Optional[float] = None,
-    stop_loss: Optional[float] = None,
-    stop_loss_limit: Optional[float] = None,
-    order_class: Optional[str] = None,
-    time_in_force: str = "day",
+    time_in_force: str = "Day",
 ) -> Dict[str, Any]:
     """Place a sell order."""
     if not clerk_id:
         raise ValueError("clerkId is required")
 
     result = _order_controller(
-        clerk_id, sell, symbol, qty, notional, limit_price, stop_price,
-        trail_price, trail_percent, take_profit, stop_loss, stop_loss_limit,
-        order_class, time_in_force,
+        clerk_id, sell, symbol, qty, notional, order_type,
+        limit_price, stop_price, time_in_force,
     )
 
     return ok_envelope(
@@ -134,13 +109,13 @@ async def sell_controller(
 
 @handle_controller_errors
 async def get_orders_controller(
-    *, clerk_id: str, status: str = "open"
+    *, clerk_id: str, state: str = "open"
 ) -> Dict[str, Any]:
-    """Get orders for a user, filtered by status."""
+    """Get orders for a user, filtered by state."""
     if not clerk_id:
         raise ValueError("clerkId is required")
 
-    orders = get_orders(clerk_id=clerk_id, status=status)
+    orders = get_orders(clerk_id=clerk_id, state=state)
 
     return ok_envelope(
         message="Orders retrieved successfully",
@@ -152,60 +127,23 @@ async def get_orders_controller(
 
 
 @handle_controller_errors
-async def get_order_by_id_controller(
-    *, clerk_id: str, order_id: str
-) -> Dict[str, Any]:
-    """Get a specific order by UUID."""
-    if not clerk_id:
-        raise ValueError("clerkId is required")
-    if not order_id:
-        raise ValueError("orderId is required")
-
-    order = get_order_by_id(clerk_id=clerk_id, order_id=order_id)
-
-    return ok_envelope(
-        message="Order retrieved successfully",
-        kind="broker#order",
-        resource_id=order_id,
-        self_link=f"/api/broker/orders/{order_id}",
-        payload=order,
-    )
-
-
-@handle_controller_errors
 async def cancel_order_controller(
-    *, clerk_id: str, order_id: str
+    *, clerk_id: str, brokerage_order_id: str
 ) -> Dict[str, Any]:
     """Cancel a specific order."""
     if not clerk_id:
         raise ValueError("clerkId is required")
-    if not order_id:
-        raise ValueError("orderId is required")
+    if not brokerage_order_id:
+        raise ValueError("brokerageOrderId is required")
 
-    cancel_order(clerk_id=clerk_id, order_id=order_id)
+    result = cancel_order(clerk_id=clerk_id, brokerage_order_id=brokerage_order_id)
 
     return ok_envelope(
         message="Order cancelled successfully",
         kind="broker#order",
-        resource_id=order_id,
-        self_link=f"/api/broker/orders/{order_id}",
-        payload={},
-    )
-
-
-@handle_controller_errors
-async def cancel_all_orders_controller(*, clerk_id: str) -> Dict[str, Any]:
-    """Cancel all open orders for a user."""
-    if not clerk_id:
-        raise ValueError("clerkId is required")
-
-    cancel_all_orders(clerk_id=clerk_id)
-
-    return ok_envelope(
-        message="All orders cancelled successfully",
-        kind="broker#orders",
-        self_link="/api/broker/orders",
-        payload={},
+        resource_id=brokerage_order_id,
+        self_link=f"/api/broker/orders/{brokerage_order_id}",
+        payload=result,
     )
 
 
@@ -277,26 +215,6 @@ async def close_position_controller(
     )
 
 
-@handle_controller_errors
-async def close_all_positions_controller(
-    *, clerk_id: str, cancel_orders: bool = True
-) -> Dict[str, Any]:
-    """Close all positions for a user."""
-    if not clerk_id:
-        raise ValueError("clerkId is required")
-
-    results = close_all_positions(
-        clerk_id=clerk_id, cancel_orders=cancel_orders,
-    )
-
-    return ok_envelope(
-        message="All positions closed successfully",
-        kind="broker#positions",
-        self_link="/api/broker/positions",
-        payload=results,
-    )
-
-
 # ════════════════════════════════════════════════════════════
 # --> Portfolio History
 # ════════════════════════════════════════════════════════════
@@ -305,17 +223,17 @@ async def close_all_positions_controller(
 async def get_portfolio_history_controller(
     *,
     clerk_id: str,
-    period: Optional[str] = None,
-    timeframe: Optional[str] = None,
-    extended_hours: Optional[bool] = None,
+    start_date: str,
+    end_date: str,
 ) -> Dict[str, Any]:
-    """Get historical portfolio equity and P&L over time."""
+    """Get historical portfolio performance report."""
     if not clerk_id:
         raise ValueError("clerkId is required")
 
     history = get_portfolio_history(
-        clerk_id=clerk_id, period=period,
-        timeframe=timeframe, extended_hours=extended_hours,
+        clerk_id=clerk_id,
+        start_date=start_date,
+        end_date=end_date,
     )
 
     return ok_envelope(

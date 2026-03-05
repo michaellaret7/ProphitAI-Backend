@@ -1,10 +1,10 @@
-"""User portfolio repository — DB portfolio data and broker portfolio history."""
+"""User portfolio repository — DB portfolio data and broker performance history."""
 
 from typing import Optional, Dict
 from app.db.core.models.user_data_models import *
 from sqlalchemy.orm import selectinload
 from app.utils.decorators.database import with_session
-from app.repositories.user.broker import get_broker, resolve_broker_account
+from app.repositories.user.broker import get_snaptrade_broker, resolve_snaptrade_credentials
 
 
 @with_session('user')
@@ -50,24 +50,26 @@ def get_user_current_portfolio(email: str, session=None):
 
 def get_portfolio_history(
     clerk_id: str,
-    period: Optional[str] = None,
-    timeframe: Optional[str] = None,
-    extended_hours: Optional[bool] = None,
+    start_date: str,
+    end_date: str,
 ) -> Dict:
     """
-    Get historical portfolio equity and P&L over time from broker.
+    Get historical portfolio performance report from SnapTrade.
 
     Args:
         clerk_id: Clerk authentication ID
-        period: Time period (e.g. '1M', '3M', '1A', 'all')
-        timeframe: Data resolution (e.g. '1D', '1H', '15Min')
-        extended_hours: Include extended hours data
+        start_date: Start date (YYYY-MM-DD)
+        end_date: End date (YYYY-MM-DD)
 
     Returns:
-        Dict with timestamp, equity, profit_loss, etc.
+        Dict with performance data (returns, equity curve, etc.)
     """
-    account_id = resolve_broker_account(clerk_id=clerk_id)
-    return get_broker().get_portfolio_history(
-        account_id, period=period, timeframe=timeframe,
-        extended_hours=extended_hours,
+    creds = resolve_snaptrade_credentials(clerk_id=clerk_id)
+    broker = get_snaptrade_broker()
+    return broker.get_performance_report(
+        user_id=creds["snaptrade_user_id"],
+        user_secret=creds["snaptrade_user_secret"],
+        start_date=start_date,
+        end_date=end_date,
+        accounts=creds["snaptrade_account_id"],
     )

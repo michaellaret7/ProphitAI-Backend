@@ -429,11 +429,14 @@ class SnapTradeTrading:
         """
         Preview the impact of an order before placing it.
 
+        Resolves ticker symbol to SnapTrade universal_symbol_id via quotes,
+        then calls the order impact endpoint.
+
         Args:
             user_id: SnapTrade user ID
             user_secret: SnapTrade user secret
             account_id: Brokerage account ID
-            symbol: Ticker symbol
+            symbol: Ticker symbol (e.g. 'AAPL')
             action: 'BUY', 'SELL', etc.
             units: Number of shares/contracts
             order_type: 'Market', 'Limit', 'Stop', 'StopLimit'
@@ -441,20 +444,33 @@ class SnapTradeTrading:
             price: Limit price
             stop: Stop price
         """
+        # Reason: get_order_impact requires universal_symbol_id (UUID), not ticker.
+        # Resolve by fetching a quote which returns the symbol metadata.
+        quotes = self.get_quotes(
+            user_id=user_id, user_secret=user_secret,
+            account_id=account_id, symbols=symbol, use_ticker=True,
+        )
+        if not quotes:
+            raise ValueError(f"Could not resolve symbol '{symbol}' to a SnapTrade universal symbol ID")
+
+        universal_id = quotes[0].get("symbol", {}).get("id")
+        if not universal_id:
+            raise ValueError(f"Quote for '{symbol}' did not contain a universal symbol ID")
+
         kwargs: Dict[str, Any] = {
             "user_id": user_id,
             "user_secret": user_secret,
             "account_id": account_id,
             "action": action,
-            "universal_symbol_id": symbol,
+            "universal_symbol_id": universal_id,
             "order_type": order_type,
             "time_in_force": time_in_force,
-            "units": units,
+            "units": float(units),
         }
         if price is not None:
-            kwargs["price"] = price
+            kwargs["price"] = float(price)
         if stop is not None:
-            kwargs["stop"] = stop
+            kwargs["stop"] = float(stop)
 
         response = self._trading.get_order_impact(**kwargs)
         return extract_body(response)

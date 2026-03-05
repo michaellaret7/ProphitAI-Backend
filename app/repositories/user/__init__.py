@@ -12,11 +12,8 @@ from app.repositories.user.account import (
     update_user_fields,
     update_user_by_clerk_id,
     delete_user_by_clerk_id,
-    create_user_with_broker_account,
     get_broker_account,
-    get_buying_power,
-    get_cash_balance,
-    get_equity,
+    get_balances,
     get_account_activities,
 )
 
@@ -25,24 +22,10 @@ from app.repositories.user.trading import (
     buy,
     sell,
     get_orders,
-    get_order_by_id,
     cancel_order,
-    cancel_all_orders,
     get_positions,
     get_position,
     close_position,
-    close_all_positions,
-)
-
-# ── Funding (ACH + transfers) ────────────────────────────────
-from app.repositories.user.funding import (
-    link_bank_account,
-    get_ach_relationships,
-    delete_ach_relationship,
-    deposit,
-    withdraw,
-    get_transfers,
-    cancel_transfer,
 )
 
 # ── Portfolio ─────────────────────────────────────────────────

@@ -42,7 +42,7 @@ async def approve_proposal(
     proposal_id: str,
     clerk_id: str = Depends(get_clerk_user_id),
 ):
-    """Approve a pending trade proposal and execute the order on Alpaca."""
+    """Approve a pending trade proposal and execute the order via SnapTrade."""
     return await approve_proposal_controller(
         clerk_id=clerk_id, proposal_id=proposal_id,
     )

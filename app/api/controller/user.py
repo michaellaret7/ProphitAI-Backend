@@ -34,7 +34,8 @@ def _format_user_response(user_data: dict, clerk_id: str) -> Dict[str, Any]:
             "firstName": user_data.get("first_name"),
             "lastName": user_data.get("last_name"),
             "broker": user_data.get("broker"),
-            "brokerAccountId": user_data.get("broker_account_id"),
+            "snaptradeUserId": user_data.get("snaptrade_user_id"),
+            "snaptradeAccountId": user_data.get("snaptrade_account_id"),
             "portfolios": portfolios,
         },
     )

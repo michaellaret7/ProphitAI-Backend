@@ -4,7 +4,9 @@ from typing import Optional
 from uuid import UUID
 
 from app.db.core.models.user_data_models import TradeProposal, User
-from app.repositories.user.broker import get_broker
+from app.repositories.user.broker import (
+    get_snaptrade_broker, resolve_snaptrade_credentials,
+)
 from app.utils.decorators.database import with_session, with_transaction
 from app.utils.time_utils import get_current_utc_time
 
@@ -25,18 +27,13 @@ def _proposal_to_dict(proposal: TradeProposal) -> dict:
         "qty": proposal.qty,
         "percentage": proposal.percentage,
         "notional": proposal.notional,
+        "order_type": proposal.order_type,
         "limit_price": proposal.limit_price,
         "stop_price": proposal.stop_price,
-        "trail_price": proposal.trail_price,
-        "trail_percent": proposal.trail_percent,
-        "take_profit": proposal.take_profit,
-        "stop_loss": proposal.stop_loss,
-        "stop_loss_limit": proposal.stop_loss_limit,
-        "order_class": proposal.order_class,
         "time_in_force": proposal.time_in_force,
         "agent_reasoning": proposal.agent_reasoning,
         "status": proposal.status,
-        "alpaca_order_id": proposal.alpaca_order_id,
+        "broker_order_id": proposal.broker_order_id,
         "error_message": proposal.error_message,
         "created_at": proposal.created_at.isoformat() if proposal.created_at else None,
         "updated_at": proposal.updated_at.isoformat() if proposal.updated_at else None,
@@ -58,40 +55,80 @@ def get_internal_user_id(*, clerk_id: str, session=None) -> str:
     return str(_resolve_user_id(clerk_id, session))
 
 
-def _execute_trade(broker, proposal: TradeProposal) -> dict:
-    """Execute a standard trade proposal via broker buy/sell."""
+def _execute_trade(broker, proposal: TradeProposal, creds: dict) -> dict:
+    """Execute a standard trade proposal via SnapTrade buy/sell.
+
+    Args:
+        broker: SnapTradeBroker instance.
+        proposal: The TradeProposal ORM record.
+        creds: Dict with snaptrade_user_id, snaptrade_user_secret, snaptrade_account_id.
+    """
     order_kwargs = {
+        "user_id": creds["snaptrade_user_id"],
+        "user_secret": creds["snaptrade_user_secret"],
         "account_id": proposal.account_id,
         "symbol": proposal.symbol,
-        "qty": proposal.qty,
-        "notional": proposal.notional,
-        "limit_price": proposal.limit_price,
-        "stop_price": proposal.stop_price,
-        "trail_price": proposal.trail_price,
-        "trail_percent": proposal.trail_percent,
-        "take_profit": proposal.take_profit,
-        "stop_loss": proposal.stop_loss,
-        "stop_loss_limit": proposal.stop_loss_limit,
-        "order_class": proposal.order_class,
-        "time_in_force": proposal.time_in_force,
+        "order_type": proposal.order_type or "Market",
+        "time_in_force": proposal.time_in_force or "Day",
     }
-    # Reason: Strip None values so broker defaults aren't overridden
-    order_kwargs = {k: v for k, v in order_kwargs.items() if v is not None}
+    if proposal.qty is not None:
+        order_kwargs["units"] = proposal.qty
+    if proposal.notional is not None:
+        order_kwargs["notional"] = proposal.notional
+    if proposal.limit_price is not None:
+        order_kwargs["price"] = proposal.limit_price
+    if proposal.stop_price is not None:
+        order_kwargs["stop"] = proposal.stop_price
+
     trade_fn = broker.buy if proposal.side == "buy" else broker.sell
     return trade_fn(**order_kwargs)
 
 
-def _execute_close_position(broker, proposal: TradeProposal) -> dict:
-    """Execute a close_position proposal via broker.close_position()."""
-    close_kwargs = {
-        "account_id": proposal.account_id,
-        "symbol": proposal.symbol,
-    }
+def _execute_close_position(broker, proposal: TradeProposal, creds: dict) -> dict:
+    """Execute a close_position proposal via SnapTrade sell.
+
+    SnapTrade has no close_position() method, so we:
+    1. Fetch current holdings to find the matching position
+    2. Calculate units to sell based on qty, percentage, or full close
+    3. Execute a sell order
+
+    Args:
+        broker: SnapTradeBroker instance.
+        proposal: The TradeProposal ORM record.
+        creds: Dict with snaptrade_user_id, snaptrade_user_secret, snaptrade_account_id.
+    """
+    holdings = broker.get_holdings(
+        user_id=creds["snaptrade_user_id"],
+        user_secret=creds["snaptrade_user_secret"],
+        account_id=proposal.account_id,
+    )
+
+    # Reason: Find the position matching the proposal symbol
+    position = None
+    for p in holdings.positions:
+        if p.ticker.upper() == proposal.symbol.upper():
+            position = p
+            break
+
+    if position is None:
+        raise ValueError(f"No open position found for {proposal.symbol}")
+
+    # Reason: Determine units to sell
     if proposal.qty is not None:
-        close_kwargs["qty"] = proposal.qty
-    if proposal.percentage is not None:
-        close_kwargs["percentage"] = proposal.percentage
-    return broker.close_position(**close_kwargs)
+        units = proposal.qty
+    elif proposal.percentage is not None:
+        units = position.units * (proposal.percentage / 100)
+    else:
+        units = position.units
+
+    return broker.sell(
+        user_id=creds["snaptrade_user_id"],
+        user_secret=creds["snaptrade_user_secret"],
+        account_id=proposal.account_id,
+        symbol=proposal.symbol,
+        units=units,
+        time_in_force="Day",
+    )
 
 
 def _resolve_user_id(clerk_id: str, session) -> UUID:
@@ -123,15 +160,10 @@ def create_proposal(
     side: str,
     qty: Optional[float] = None,
     notional: Optional[float] = None,
+    order_type: str = "Market",
     limit_price: Optional[float] = None,
     stop_price: Optional[float] = None,
-    trail_price: Optional[float] = None,
-    trail_percent: Optional[float] = None,
-    take_profit: Optional[float] = None,
-    stop_loss: Optional[float] = None,
-    stop_loss_limit: Optional[float] = None,
-    order_class: Optional[str] = None,
-    time_in_force: str = "day",
+    time_in_force: str = "Day",
     agent_reasoning: Optional[str] = None,
     session=None,
 ) -> dict:
@@ -139,20 +171,15 @@ def create_proposal(
 
     Args:
         user_id: Internal user UUID (string).
-        account_id: Alpaca broker account ID.
+        account_id: SnapTrade broker account ID.
         symbol: Ticker symbol.
         side: 'buy' or 'sell'.
         qty: Share quantity (mutually exclusive with notional).
         notional: Dollar amount (mutually exclusive with qty).
-        limit_price: Limit price for limit/stop-limit orders.
-        stop_price: Stop trigger price.
-        trail_price: Dollar offset for trailing stop.
-        trail_percent: Percentage offset for trailing stop.
-        take_profit: Take-profit limit price for bracket orders.
-        stop_loss: Stop-loss trigger price for bracket orders.
-        stop_loss_limit: Stop-loss limit price for bracket orders.
-        order_class: Order class (simple, bracket, oco, oto).
-        time_in_force: How long the order stays active.
+        order_type: Order type — Market, Limit, Stop, or StopLimit.
+        limit_price: Limit price for Limit/StopLimit orders.
+        stop_price: Stop trigger price for Stop/StopLimit orders.
+        time_in_force: How long the order stays active (Day, GTC, FOK, IOC).
         agent_reasoning: LLM explanation for why this trade was proposed.
 
     Returns:
@@ -166,14 +193,9 @@ def create_proposal(
         side=side,
         qty=qty,
         notional=notional,
+        order_type=order_type,
         limit_price=limit_price,
         stop_price=stop_price,
-        trail_price=trail_price,
-        trail_percent=trail_percent,
-        take_profit=take_profit,
-        stop_loss=stop_loss,
-        stop_loss_limit=stop_loss_limit,
-        order_class=order_class,
         time_in_force=time_in_force,
         agent_reasoning=agent_reasoning,
         status="pending",
@@ -198,7 +220,7 @@ def create_close_proposal(
 
     Args:
         user_id: Internal user UUID (string).
-        account_id: Alpaca broker account ID.
+        account_id: SnapTrade broker account ID.
         symbol: Ticker symbol of the position to close.
         qty: Number of shares to close. Omit for full close.
         percentage: Percentage of position to close (e.g. 50.0 for 50%).
@@ -215,7 +237,7 @@ def create_close_proposal(
         side="sell",
         qty=qty,
         percentage=percentage,
-        time_in_force="day",
+        time_in_force="Day",
         agent_reasoning=agent_reasoning,
         status="pending",
     )
@@ -288,12 +310,12 @@ def approve_proposal(
     proposal_id: str,
     session=None,
 ) -> dict:
-    """Approve a pending proposal and execute it on Alpaca.
+    """Approve a pending proposal and execute it via SnapTrade.
 
     Validates ownership and pending status, then dispatches to the
-    appropriate broker method based on proposal_type:
+    appropriate execution path based on proposal_type:
     - 'trade': calls broker.buy() / broker.sell()
-    - 'close_position': calls broker.close_position()
+    - 'close_position': fetches holdings, calculates units, calls broker.sell()
 
     Updates status to 'executed' on success or 'failed' on error.
 
@@ -318,16 +340,20 @@ def approve_proposal(
     if proposal.status != "pending":
         raise ValueError(f"Proposal is already {proposal.status} — only pending proposals can be approved")
 
-    broker = get_broker()
+    broker = get_snaptrade_broker()
+    creds = resolve_snaptrade_credentials(clerk_id=clerk_id)
 
     try:
         if proposal.proposal_type == "close_position":
-            result = _execute_close_position(broker, proposal)
+            result = _execute_close_position(broker, proposal, creds)
         else:
-            result = _execute_trade(broker, proposal)
+            result = _execute_trade(broker, proposal, creds)
 
         proposal.status = "executed"
-        proposal.alpaca_order_id = result.get("id") if isinstance(result, dict) else str(result)
+        proposal.broker_order_id = (
+            (result.get("brokerage_order_id") or result.get("id"))
+            if isinstance(result, dict) else str(result)
+        )
         proposal.executed_at = get_current_utc_time()
     except Exception as e:
         proposal.status = "failed"

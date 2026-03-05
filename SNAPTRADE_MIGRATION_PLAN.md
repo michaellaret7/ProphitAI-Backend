@@ -208,7 +208,7 @@ Remove funding exports, add connection controller exports.
 
 ### 6E. Update tool registries
 
-- `app/core/atlas/tools/chat_registry.py`: update imports from `tools.alpaca` → `tools.broker`, remove `get_asset`
+- `app/core/atlas/tools/chat_registry.py`: update imports from `tools.broker` → `tools.broker`, remove `get_asset`
 - `app/core/atlas/tools/worker_agent/setup.py`: same import update
 
 ---

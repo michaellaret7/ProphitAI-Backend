@@ -7,7 +7,7 @@ from typing import Any, Dict, List, Optional
 
 from snaptrade_client import SnapTrade
 
-from app.brokers.snaptrade.models.positions import Position
+from app.brokers.snaptrade.models.holdings import Holdings
 from app.brokers.snaptrade.utils import extract_body
 
 
@@ -67,19 +67,23 @@ class SnapTradeAccounts:
 
     def get_holdings(
         self, user_id: str, user_secret: str, account_id: str,
-    ) -> Dict[str, Any]:
+    ) -> Holdings:
         """
-        Get full holdings for an account (positions + balances + orders).
+        Get full holdings for an account (positions + balances + orders + options).
 
         Args:
             user_id: SnapTrade user ID
             user_secret: SnapTrade user secret
             account_id: Brokerage account ID
+
+        Returns:
+            Holdings model with positions, orders, option_positions, and total_value
         """
         response = self._accounts.get_user_holdings(
             user_id=user_id, user_secret=user_secret, account_id=account_id,
         )
-        return extract_body(response)
+        raw = extract_body(response)
+        return Holdings.from_raw(raw)
 
     def get_all_holdings(
         self, user_id: str, user_secret: str,
@@ -95,26 +99,6 @@ class SnapTradeAccounts:
             user_id=user_id, user_secret=user_secret,
         )
         return extract_body(response)
-
-    def get_positions(
-        self, user_id: str, user_secret: str, account_id: str,
-    ) -> List[Position]:
-        """
-        Get open positions for an account.
-
-        Args:
-            user_id: SnapTrade user ID
-            user_secret: SnapTrade user secret
-            account_id: Brokerage account ID
-
-        Returns:
-            List of Position dataclasses with flattened position data
-        """
-        response = self._accounts.get_user_account_positions(
-            user_id=user_id, user_secret=user_secret, account_id=account_id,
-        )
-        raw = extract_body(response)
-        return Position.from_raw_list(raw)
 
     def get_orders(
         self,
