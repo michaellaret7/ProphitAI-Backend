@@ -1,4 +1,5 @@
 RatesTickers.xlsx
+.DS_Store
 __pycache__/
 *.py[cod]
 DATABASE_SCHEMA.md
