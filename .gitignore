@@ -1,16 +1,53 @@
-RatesTickers.xlsx
-.DS_Store
+# Python
 __pycache__/
 *.py[cod]
-DATABASE_SCHEMA.md
-.env
-testing/FinalSectorSheet.xlsx
+*.pyo
+*.egg-info/
+dist/
+build/
+*.egg
+
+# Virtual Environment
 .venv/
-git_helper.md
-agent_output/
-live_quotes.csv
 
-*.pdf
+# Environment Variables
+.env
+.env.local
+.env.*.local
+
+# IDE / Editor
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+logs/
+
+# Data / Output files
+*.csv
 *.xlsx
+*.pdf
+agent_output/
 
-active_tickers.csv
+# Project-specific
+DATABASE_SCHEMA.md
+git_helper.md
+RatesTickers.xlsx
+testing/FinalSectorSheet.xlsx
+
+# Testing artifacts
+.pytest_cache/
+.coverage
+htmlcov/
+.mypy_cache/
+
+# Distribution
+*.tar.gz
+*.whl

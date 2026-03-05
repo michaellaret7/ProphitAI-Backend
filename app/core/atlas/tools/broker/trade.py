@@ -6,32 +6,7 @@ from app.core.atlas.tools.decorator import agent_tool, Param
 from app.core.atlas.tools.responses import success_response, error_response
 from app.repositories.user.broker import resolve_snaptrade_credentials
 from app.repositories.user.trade_proposal import create_proposal
-
-
-# ================================
-# --> Helper funcs
-# ================================
-
-def _resolve_user_id_by_email(email: str) -> str:
-    """Resolve an email address to the internal user UUID string.
-
-    Args:
-        email: User email address.
-
-    Raises:
-        ValueError: If user not found.
-    """
-    from app.utils.decorators.database import with_session
-    from app.db.core.models.user_data_models import User
-
-    @with_session('user')
-    def _query(*, session=None) -> str:
-        user = session.query(User).filter(User.email == email).first()
-        if not user:
-            raise ValueError(f"User not found for email: {email}")
-        return str(user.id)
-
-    return _query()
+from app.core.atlas.tools.broker.helpers import resolve_user_id_by_email 
 
 
 # ================================
@@ -106,7 +81,7 @@ def propose_trade(
 
     try:
         creds = resolve_snaptrade_credentials(email=email)
-        user_id = _resolve_user_id_by_email(email)
+        user_id = resolve_user_id_by_email(email)
 
         proposal = create_proposal(
             user_id=user_id,

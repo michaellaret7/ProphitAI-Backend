@@ -66,8 +66,18 @@ from app.core.atlas.tools.broker.portfolio import (
 )
 from app.core.atlas.tools.broker.trade import propose_trade
 from app.core.atlas.tools.broker.orders import (
-    get_balances, get_order_impact, get_orders, cancel_order, get_quotes,
+    get_order_impact, get_orders, cancel_order, get_quotes,
 )
+from app.core.atlas.tools.broker.options_trade import (
+    propose_options_trade, propose_multi_leg_options_trade,
+)
+
+# --- options ---
+from app.core.atlas.tools.options.expirations import get_option_expirations
+from app.core.atlas.tools.options.contracts import get_option_contracts
+from app.core.atlas.tools.options.chain import get_options_chain
+from app.core.atlas.tools.options.quote import get_option_quote
+from app.core.atlas.tools.options.price_history import get_option_price_history
 
 
 # ==============================================================================
@@ -98,10 +108,13 @@ _ALL_TOOL_FUNCTIONS = [
     commodity_prices, us_treasury_rates, macro_indicators,
     # watchlist (1)
     get_watchlist,
-    # broker (9)
-    account_info, get_balances, get_positions, close_position,
-    propose_trade, get_orders,
-    cancel_order, get_quotes, get_order_impact,
+    # broker (11)
+    account_info, get_positions, close_position,
+    propose_trade, propose_options_trade, propose_multi_leg_options_trade,
+    get_orders, cancel_order, get_quotes, get_order_impact,
+    # options (5)
+    get_option_expirations, get_option_contracts, get_options_chain,
+    get_option_quote, get_option_price_history,
 ]
 
 AVAILABLE_TOOLS: Dict[str, Dict[str, Any]] = {

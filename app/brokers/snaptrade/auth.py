@@ -34,7 +34,7 @@ class SnapTradeAuth:
         user_id: str,
         user_secret: str,
         broker: Optional[str] = None,
-        connection_type: Optional[str] = None,
+        connection_type: Optional[str] = "trade",
         custom_redirect: Optional[str] = None,
         reconnect: Optional[str] = None,
     ) -> Dict[str, Any]:

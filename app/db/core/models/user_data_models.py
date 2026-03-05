@@ -203,6 +203,7 @@ class TradeProposal(UserBase):
 
     # Agent context
     agent_reasoning = Column(Text, nullable=True)
+    legs = Column(Text, nullable=True)  # JSON-serialized list of leg dicts for multi-leg options
 
     # Lifecycle
     status = Column(String, nullable=False, default='pending', index=True)

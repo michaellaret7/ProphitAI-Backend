@@ -10,41 +10,6 @@ from typing import Annotated, Optional, Literal
 # --> Account Tools
 # ================================
 
-@agent_tool(name="get_balances")
-def get_balances(
-    email: str,
-) -> str:
-    """
-    Get cash balances and buying power for a user's brokerage account.
-    Use this BEFORE proposing any trade to verify the account has sufficient
-    funds. Returns cash, buying power, and market value per currency.
-
-    Args:
-        email: User's email address
-
-    Returns:
-        List of balance dicts with currency, cash, buying_power, and market_value
-
-    Examples:
-        get_balances(email="user@example.com")
-        >>> [{"currency": "USD", "cash": 50000.0, "buying_power": 100000.0, ...}]
-
-    Raises:
-        Exception: If credentials are invalid or API call fails
-    """
-    try:
-        creds = resolve_snaptrade_credentials(email=email)
-        broker = get_snaptrade_broker()
-        result = broker.get_balances(
-            user_id=creds["snaptrade_user_id"],
-            user_secret=creds["snaptrade_user_secret"],
-            account_id=creds["snaptrade_account_id"],
-        )
-        return success_response(result)
-    except Exception as e:
-        return error_response(f"Failed to get balances for {email}: {str(e)}")
-
-
 @agent_tool(name="get_order_impact")
 def get_order_impact(
     email: str,

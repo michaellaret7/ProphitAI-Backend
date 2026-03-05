@@ -41,11 +41,21 @@ from app.core.atlas.tools.broker.portfolio import (
     get_positions, close_position,
 )
 from app.core.atlas.tools.broker.trade import propose_trade
+from app.core.atlas.tools.broker.options_trade import (
+    propose_options_trade, propose_multi_leg_options_trade,
+)
 from app.core.atlas.tools.broker.orders import (
-    get_balances, get_order_impact, get_orders, cancel_order, get_quotes,
+    get_order_impact, get_orders, cancel_order, get_quotes,
 )
 from app.core.atlas.tools.screener.equity_screener import equity_screener
 from app.core.atlas.tools.screener.etf_screener import etf_screener
+
+# --- options ---
+from app.core.atlas.tools.options.expirations import get_option_expirations
+from app.core.atlas.tools.options.contracts import get_option_contracts
+from app.core.atlas.tools.options.chain import get_options_chain
+from app.core.atlas.tools.options.quote import get_option_quote
+from app.core.atlas.tools.options.price_history import get_option_price_history
 
 if TYPE_CHECKING:
     from app.core.atlas.agents.base import AgentBase
@@ -78,12 +88,14 @@ def register_chat_tools(agent: "AgentBase") -> None:
         get_watchlist,
         # broker - account
         account_info,
-        get_balances,
         # broker - portfolio
         get_positions,
         close_position,
         # broker - trade & orders
         propose_trade,
+        # broker - options trade
+        propose_options_trade,
+        propose_multi_leg_options_trade,
         get_orders,
         cancel_order,
         get_quotes,
@@ -91,5 +103,11 @@ def register_chat_tools(agent: "AgentBase") -> None:
         # screener
         equity_screener,
         etf_screener,
+        # options
+        get_option_expirations,
+        get_option_contracts,
+        get_options_chain,
+        get_option_quote,
+        get_option_price_history,
     ]:
         agent.add_tool(**func.tool)

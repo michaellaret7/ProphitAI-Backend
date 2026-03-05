@@ -312,11 +312,22 @@ class SnapTradeTrading:
         Returns:
             Order response dict
         """
+        # Reason: SDK expects uppercase order_type (MARKET, LIMIT, etc.)
+        order_type_map = {
+            "Market": "MARKET", "Limit": "LIMIT",
+            "Stop": "STOP_LOSS_MARKET", "StopLimit": "STOP_LOSS_LIMIT",
+        }
+        sdk_order_type = order_type_map.get(order_type, order_type.upper())
+
+        # Reason: SDK expects each leg as {instrument: {symbol, instrument_type}, action, units}
         converted_legs = []
         for leg in legs:
             converted_legs.append({
-                "symbol": osi_to_occ(leg["symbol"]),
-                "action": leg["action"],
+                "instrument": {
+                    "symbol": osi_to_occ(leg["symbol"]),
+                    "instrument_type": "OPTION",
+                },
+                "action": leg["action"].upper(),
                 "units": leg.get("units", 1),
             })
 
@@ -325,13 +336,13 @@ class SnapTradeTrading:
             "user_secret": user_secret,
             "account_id": account_id,
             "legs": converted_legs,
-            "order_type": order_type,
+            "order_type": sdk_order_type,
             "time_in_force": time_in_force,
         }
         if limit_price is not None:
-            kwargs["limit_price"] = limit_price
+            kwargs["limit_price"] = str(limit_price)
         if stop_price is not None:
-            kwargs["stop_price"] = stop_price
+            kwargs["stop_price"] = str(stop_price)
 
         response = self._trading.place_mleg_order(**kwargs)
         return extract_body(response)
