@@ -111,7 +111,7 @@ Every function: resolve `BrokerCredentials`, pass triple to SnapTrade methods.
 
 ### 3E. Update `app/repositories/user/portfolio.py`
 
-- `get_portfolio_history()`: convert `period` param to `start_date`/`end_date` → call `broker.get_performance_report()`
+- `get_portfolio_history()`: ✅ Replaced — now uses `PortfolioReturnsService` with live broker positions
 
 ### 3F. Update `app/repositories/user/trade_proposal.py`
 
@@ -195,7 +195,7 @@ Remove funding exports, add connection controller exports.
 - `get_position(user_id, user_secret, account_id, symbol)`: get all positions, filter by symbol
 - `get_positions(user_id, user_secret, account_id)`: `broker.get_positions()`
 - `close_position(user_id, account_id, symbol, ...)`: stays as proposal creation (broker-agnostic)
-- `get_portfolio_history(user_id, user_secret, account_id, ...)`: use `broker.get_performance_report()`
+- `get_portfolio_history(user_id, user_secret, account_id, ...)`: ✅ Replaced — uses `PortfolioReturnsService`
 - Remove `_get_trade_dates()` helper (Alpaca-specific)
 
 ### 6D. Rewrite `broker/trade.py`

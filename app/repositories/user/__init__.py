@@ -1,6 +1,6 @@
 """User data repository — organized into submodules by domain."""
 
-# ── Account (CRUD + broker account) ──────────────────────────
+# ── Account (CRUD) ───────────────────────────────────────────
 from app.repositories.user.account import (
     get_all_user_data,
     get_all_user_data_by_id,
@@ -12,27 +12,11 @@ from app.repositories.user.account import (
     update_user_fields,
     update_user_by_clerk_id,
     delete_user_by_clerk_id,
-    get_broker_account,
-    get_balances,
-    get_account_activities,
-)
-
-# ── Trading (orders + positions) ─────────────────────────────
-from app.repositories.user.trading import (
-    buy,
-    sell,
-    get_orders,
-    cancel_order,
-    get_positions,
-    get_position,
-    close_position,
+    get_connection_status,
 )
 
 # ── Portfolio ─────────────────────────────────────────────────
-from app.repositories.user.portfolio import (
-    get_user_current_portfolio,
-    get_portfolio_history,
-)
+from app.repositories.user.portfolio import get_user_current_portfolio
 
 # ── Watchlists ────────────────────────────────────────────────
 from app.repositories.user.watchlist import (

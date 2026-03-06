@@ -2,7 +2,7 @@
 
 from typing import Optional, Dict, Any
 from fastapi import HTTPException
-from app.repositories.user.trading import (
+from app.services.broker.trading import (
     buy,
     sell,
     get_orders,
@@ -10,8 +10,8 @@ from app.repositories.user.trading import (
     get_positions,
     get_position,
     close_position,
+    get_portfolio_history,
 )
-from app.repositories.user.portfolio import get_portfolio_history
 from app.api.response_envelope import ok_envelope
 from app.utils.decorators.api_decorators import handle_controller_errors
 
@@ -110,13 +110,16 @@ async def sell_controller(
 
 @handle_controller_errors
 async def get_orders_controller(
-    *, clerk_id: str, state: str = "open"
+    *,
+    clerk_id: str,
+    start_date: Optional[str] = None,
+    end_date: Optional[str] = None,
 ) -> Dict[str, Any]:
-    """Get orders for a user, filtered by state."""
+    """Get recent BUY/SELL trade activity for a user."""
     if not clerk_id:
         raise ValueError("clerkId is required")
 
-    orders = get_orders(clerk_id=clerk_id, state=state)
+    orders = get_orders(clerk_id=clerk_id, start_date=start_date, end_date=end_date)
 
     return ok_envelope(
         message="Orders retrieved successfully",
@@ -230,18 +233,13 @@ async def close_position_controller(
 async def get_portfolio_history_controller(
     *,
     clerk_id: str,
-    start_date: str,
-    end_date: str,
+    years: int = 2,
 ) -> Dict[str, Any]:
     """Get historical portfolio performance report."""
     if not clerk_id:
         raise ValueError("clerkId is required")
 
-    history = get_portfolio_history(
-        clerk_id=clerk_id,
-        start_date=start_date,
-        end_date=end_date,
-    )
+    history = get_portfolio_history(clerk_id=clerk_id, years=years)
 
     return ok_envelope(
         message="Portfolio history retrieved successfully",

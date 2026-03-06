@@ -8,8 +8,8 @@ from app.api.response_envelope import ok_envelope
 from app.db.core.models.market_data_models import Ticker
 from app.db.core.pull_fmp_data import FMP_API_DATA
 from app.redis.client import cache
-from app.repositories.user.account import get_account_activities, get_balances
-from app.repositories.user.trading import get_positions
+from app.services.broker.account import get_balances
+from app.services.broker.trading import get_positions, get_orders, get_portfolio_performance
 from app.utils.decorators.api_decorators import handle_controller_errors
 from app.utils.decorators.database import with_session
 from app.utils.serialize_output import serialize_sqlalchemy_obj
@@ -23,14 +23,16 @@ TREASURY_CACHE_TTL = 3600   # 1 hour
 NEWS_CACHE_TTL = 300         # 5 minutes
 BALANCES_CACHE_TTL = 30      # 30 seconds
 POSITIONS_CACHE_TTL = 30     # 30 seconds
-ACTIVITIES_CACHE_TTL = 60    # 1 minute
+ORDERS_CACHE_TTL = 60        # 1 minute
+PERFORMANCE_CACHE_TTL = 300  # 5 minutes
 
 # Cache keys
 TREASURY_CACHE_KEY = "dashboard:treasury:latest"
 NEWS_CACHE_KEY = "dashboard:general_news:latest"
 BALANCES_CACHE_KEY = "dashboard:{clerk_id}:balances"
 POSITIONS_CACHE_KEY = "dashboard:{clerk_id}:positions"
-ACTIVITIES_CACHE_KEY = "dashboard:{clerk_id}:activities"
+ORDERS_CACHE_KEY = "dashboard:{clerk_id}:orders"
+PERFORMANCE_CACHE_KEY = "dashboard:{clerk_id}:performance"
 
 
 # ════════════════════════════════════════════════════════════
@@ -172,16 +174,20 @@ async def get_dashboard_controller(*, clerk_id: str) -> Dict[str, Any]:
     # Check caches before building Phase 1 task list
     bal_key = BALANCES_CACHE_KEY.format(clerk_id=clerk_id)
     pos_key = POSITIONS_CACHE_KEY.format(clerk_id=clerk_id)
-    act_key = ACTIVITIES_CACHE_KEY.format(clerk_id=clerk_id)
+    ord_key = ORDERS_CACHE_KEY.format(clerk_id=clerk_id)
+    perf_key = PERFORMANCE_CACHE_KEY.format(clerk_id=clerk_id)
 
-    cached_balances, cached_positions, cached_activities, cached_treasury, cached_news = (
-        await asyncio.gather(
-            cache.get(bal_key),
-            cache.get(pos_key),
-            cache.get(act_key),
-            _get_cached_treasury(),
-            _get_cached_news(),
-        )
+    (
+        cached_balances, cached_positions,
+        cached_orders, cached_performance,
+        cached_treasury, cached_news,
+    ) = await asyncio.gather(
+        cache.get(bal_key),
+        cache.get(pos_key),
+        cache.get(ord_key),
+        cache.get(perf_key),
+        _get_cached_treasury(),
+        _get_cached_news(),
     )
 
     # Phase 1: Independent parallel calls — only fetch on cache miss
@@ -195,9 +201,12 @@ async def get_dashboard_controller(*, clerk_id: str) -> Dict[str, Any]:
     if cached_positions is None:
         task_map.append("positions")
         tasks.append(asyncio.to_thread(get_positions, clerk_id=clerk_id))
-    if cached_activities is None:
-        task_map.append("activities")
-        tasks.append(asyncio.to_thread(get_account_activities, clerk_id=clerk_id))
+    if cached_orders is None:
+        task_map.append("orders")
+        tasks.append(asyncio.to_thread(get_orders, clerk_id=clerk_id))
+    if cached_performance is None:
+        task_map.append("performance")
+        tasks.append(asyncio.to_thread(get_portfolio_performance, clerk_id=clerk_id))
 
     task_map.append("indices")
     tasks.append(asyncio.to_thread(fmp.get_batch_quote, ["SPY", "QQQ", "DIA", "IWM"]))
@@ -219,7 +228,8 @@ async def get_dashboard_controller(*, clerk_id: str) -> Dict[str, Any]:
     # Resolve broker data from cache or fresh fetch, cache on miss
     balances = cached_balances if cached_balances is not None else fresh.get("balances")
     positions = cached_positions if cached_positions is not None else fresh.get("positions")
-    activities = cached_activities if cached_activities is not None else fresh.get("activities")
+    orders = cached_orders if cached_orders is not None else fresh.get("orders")
+    performance = cached_performance if cached_performance is not None else fresh.get("performance")
     indices_raw = fresh.get("indices")
 
     # Cache fresh broker results
@@ -228,8 +238,10 @@ async def get_dashboard_controller(*, clerk_id: str) -> Dict[str, Any]:
         cache_ops.append(cache.set(bal_key, balances, BALANCES_CACHE_TTL))
     if cached_positions is None and positions is not None:
         cache_ops.append(cache.set(pos_key, positions, POSITIONS_CACHE_TTL))
-    if cached_activities is None and activities is not None:
-        cache_ops.append(cache.set(act_key, activities, ACTIVITIES_CACHE_TTL))
+    if cached_orders is None and orders is not None:
+        cache_ops.append(cache.set(ord_key, orders, ORDERS_CACHE_TTL))
+    if cached_performance is None and performance is not None:
+        cache_ops.append(cache.set(perf_key, performance, PERFORMANCE_CACHE_TTL))
 
     equity, buying_power, cash = _extract_balances(balances)
 
@@ -305,14 +317,14 @@ async def get_dashboard_controller(*, clerk_id: str) -> Dict[str, Any]:
             "cash": cash,
             "dayPnl": day_pnl,
         },
-        "portfolioPerformance": None,
+        "portfolioPerformance": performance,
         "positions": enriched_positions,
         "sectorBreakdown": sector_breakdown,
         "marketOverview": {
             "indices": indices,
             "treasuryRates": treasury_snapshot,
         },
-        "recentActivity": activities,
+        "recentOrders": orders,
         "news": {
             "general": general_news,
             "holdings": holdings_news,

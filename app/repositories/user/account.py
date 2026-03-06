@@ -1,9 +1,8 @@
-"""User account repository — CRUD operations and broker account management."""
+"""User account repository — CRUD operations."""
 
 from app.db.core.models.user_data_models import *
-from app.repositories.user.broker import get_snaptrade_broker, resolve_snaptrade_credentials
 from sqlalchemy.orm import selectinload
-from typing import Optional, Dict, Any, List
+from typing import Optional, Dict, Any
 from app.utils.decorators.database import with_session, with_transaction
 from app.utils.time_utils import get_current_utc_time
 import uuid
@@ -227,7 +226,7 @@ def delete_user_by_clerk_id(clerk_id: str, session=None) -> bool:
 
 
 # ════════════════════════════════════════════════════════════
-# --> Broker Account Operations
+# --> Connection Status
 # ════════════════════════════════════════════════════════════
 
 @with_session('user')
@@ -257,93 +256,3 @@ def get_connection_status(clerk_id: str, session=None) -> Dict[str, Any]:
         "connected": has_user_id and has_account,
         "account_id": user.snaptrade_account_id,
     }
-
-
-def get_broker_account(clerk_id: str) -> Dict[str, Any]:
-    """
-    Get full broker account info via SnapTrade.
-
-    Args:
-        clerk_id: Clerk authentication ID
-
-    Returns:
-        Dict with account details (number, name, type, status, balances, etc.)
-    """
-    creds = resolve_snaptrade_credentials(clerk_id=clerk_id)
-    broker = get_snaptrade_broker()
-    return broker.get_account_details(
-        user_id=creds["snaptrade_user_id"],
-        user_secret=creds["snaptrade_user_secret"],
-        account_id=creds["snaptrade_account_id"],
-    )
-
-
-def get_balances(clerk_id: str) -> List[Dict[str, Any]]:
-    """
-    Get account balances (cash, buying power, equity) via SnapTrade.
-
-    Args:
-        clerk_id: Clerk authentication ID
-
-    Returns:
-        List of balance dicts with currency, cash, buying_power fields
-    """
-    creds = resolve_snaptrade_credentials(clerk_id=clerk_id)
-    broker = get_snaptrade_broker()
-    return broker.get_balances(
-        user_id=creds["snaptrade_user_id"],
-        user_secret=creds["snaptrade_user_secret"],
-        account_id=creds["snaptrade_account_id"],
-    )
-
-
-def _first_balance(clerk_id: str) -> Dict[str, Any]:
-    """Return the first balance dict from SnapTrade, or empty dict."""
-    balances = get_balances(clerk_id)
-    return balances[0] if balances else {}
-
-
-def get_equity(clerk_id: str) -> Optional[float]:
-    """Get total account equity (balance total) via SnapTrade."""
-    bal = _first_balance(clerk_id)
-    return bal.get("amount") or bal.get("cash")
-
-
-def get_buying_power(clerk_id: str) -> Optional[float]:
-    """Get buying power from account balances via SnapTrade."""
-    return _first_balance(clerk_id).get("buying_power")
-
-
-def get_cash_balance(clerk_id: str) -> Optional[float]:
-    """Get cash balance from account balances via SnapTrade."""
-    return _first_balance(clerk_id).get("cash")
-
-
-def get_account_activities(
-    clerk_id: str,
-    start_date: Optional[str] = None,
-    end_date: Optional[str] = None,
-    activity_type: Optional[str] = None,
-) -> list:
-    """
-    Get broker account activities (fills, dividends, transfers, etc.) via SnapTrade.
-
-    Args:
-        clerk_id: Clerk authentication ID
-        start_date: Filter start date (YYYY-MM-DD)
-        end_date: Filter end date (YYYY-MM-DD)
-        activity_type: Filter by activity type
-
-    Returns:
-        List of activity dicts
-    """
-    creds = resolve_snaptrade_credentials(clerk_id=clerk_id)
-    broker = get_snaptrade_broker()
-    return broker.get_account_activities(
-        user_id=creds["snaptrade_user_id"],
-        user_secret=creds["snaptrade_user_secret"],
-        account_id=creds["snaptrade_account_id"],
-        start_date=start_date,
-        end_date=end_date,
-        type=activity_type,
-    )

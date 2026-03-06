@@ -18,6 +18,10 @@ class PortfolioReturnsService:
 
     Precomputes all calculations in __init__ for performance optimization.
 
+    Supports two modes:
+    - DB mode: pass portfolio_id + email to load positions from database
+    - Direct mode: pass tickers + weights to skip DB lookup (e.g. from live broker positions)
+
     Precomputed attributes:
     - positions: List of portfolio positions
     - weights: Dict of ticker -> allocation (as decimal)
@@ -26,18 +30,22 @@ class PortfolioReturnsService:
     - nav_progression: NAV progression series (starting at initial_nav)
 
     Args:
-        portfolio_id: UUID of the portfolio
+        portfolio_id: UUID of the portfolio (DB mode)
+        tickers: List of ticker symbols (direct mode)
+        weights: Dict of ticker -> weight as decimal (direct mode)
         years: Number of years of historical data (default 2)
-        email: Optional email for portfolio retrieval
+        email: Optional email for portfolio retrieval (DB mode)
         initial_nav: Starting NAV value (default $1,000,000)
     """
 
     def __init__(
         self,
-        portfolio_id: str,
+        portfolio_id: Optional[str] = None,
+        tickers: Optional[List[str]] = None,
+        weights: Optional[Dict[str, float]] = None,
         years: int = 2,
         email: Optional[str] = None,
-        initial_nav: float = 1_000_000
+        initial_nav: float = 1_000_000,
     ):
         self.portfolio_id = portfolio_id
         self.years = years
@@ -52,8 +60,16 @@ class PortfolioReturnsService:
         self.cumulative_returns: pd.Series = pd.Series(dtype=float)
         self.nav_progression: pd.Series = pd.Series(dtype=float)
 
+        # Reason: Support both direct tickers+weights and DB portfolio lookup
+        if tickers and weights:
+            self.positions = [{"ticker": t, "allocation": w} for t, w in weights.items()]
+            self.weights = weights
+        elif portfolio_id:
+            self._load_positions()
+        else:
+            raise ValueError("Either portfolio_id or (tickers, weights) required")
+
         # Precompute all calculations
-        self._load_positions()
         self._fetch_price_data()
         self._calculate_returns()
         self._calculate_nav()

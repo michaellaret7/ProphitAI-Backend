@@ -1,11 +1,12 @@
-"""User trading repository — order execution and position management via SnapTrade."""
+"""Broker trading services — buy/sell, orders, positions, and portfolio history."""
 
-from typing import Optional, List, Dict
+from typing import Optional, List, Dict, Any
+
 from app.repositories.user.broker import get_snaptrade_broker, resolve_snaptrade_credentials
 
 
 # ════════════════════════════════════════════════════════════
-# --> Orders
+# --> Trading
 # ════════════════════════════════════════════════════════════
 
 def buy(
@@ -106,25 +107,39 @@ def sell(
     return broker.sell(**kwargs)
 
 
-def get_orders(clerk_id: str, state: str = "open") -> List[Dict]:
+def get_orders(
+    clerk_id: str,
+    start_date: Optional[str] = None,
+    end_date: Optional[str] = None,
+) -> List[Dict]:
     """
-    Get orders for a user, filtered by state.
+    Get recent BUY/SELL trade activity for a user via SnapTrade.
 
     Args:
         clerk_id: Clerk authentication ID
-        state: Order state filter (open, executed, cancelled, all)
+        start_date: Start date (YYYY-MM-DD), defaults to 30 days ago
+        end_date: End date (YYYY-MM-DD), defaults to today
 
     Returns:
-        List of order dicts
+        List of ActivityRecord dicts
     """
+    from app.utils.time_utils import get_current_utc_time, get_utc_days_ago
+
+    if not end_date:
+        end_date = get_current_utc_time().strftime("%Y-%m-%d")
+    if not start_date:
+        start_date = get_utc_days_ago(30).strftime("%Y-%m-%d")
+
     creds = resolve_snaptrade_credentials(clerk_id=clerk_id)
     broker = get_snaptrade_broker()
-    return broker.get_orders(
+    records = broker.get_orders(
         user_id=creds["snaptrade_user_id"],
         user_secret=creds["snaptrade_user_secret"],
         account_id=creds["snaptrade_account_id"],
-        state=state,
+        start_date=start_date,
+        end_date=end_date,
     )
+    return [r.model_dump() for r in records]
 
 
 def cancel_order(clerk_id: str, brokerage_order_id: str) -> Dict:
@@ -225,3 +240,83 @@ def close_position(
         units_to_sell = float(position.get("units", 0))
 
     return sell(clerk_id=clerk_id, symbol=symbol, qty=units_to_sell)
+
+
+# ════════════════════════════════════════════════════════════
+# --> Portfolio
+# ════════════════════════════════════════════════════════════
+
+def get_portfolio_performance(clerk_id: str) -> Dict[str, Any]:
+    """
+    Get portfolio performance: 1-year daily returns series + summary metrics.
+
+    Fetches current positions, derives weights from market values, then uses
+    PortfolioReturnsService to compute historical returns and performance metrics.
+
+    Args:
+        clerk_id: Clerk authentication ID
+
+    Returns:
+        Dict with 'series' (list of date/cumulativeReturn/nav dicts) and
+        'metrics' (total_return, annualized_return, volatility, sharpe_ratio, max_drawdown)
+    """
+    from app.services.portfolio.returns import PortfolioReturnsService
+
+    positions = get_positions(clerk_id)
+    if not positions:
+        return {"series": [], "metrics": {}}
+
+    total_value = sum(p["market_value"] for p in positions)
+    if total_value == 0:
+        return {"series": [], "metrics": {}}
+
+    weights = {p["ticker"]: p["market_value"] / total_value for p in positions}
+    tickers = list(weights.keys())
+
+    service = PortfolioReturnsService(
+        tickers=tickers,
+        weights=weights,
+        years=1,
+        initial_nav=total_value,
+    )
+
+    return {
+        "series": service.get_returns_series(),
+        "metrics": service.get_summary_metrics(),
+    }
+
+
+def get_portfolio_history(clerk_id: str, years: int = 2) -> List[Dict]:
+    """
+    Get historical portfolio performance computed from live SnapTrade positions.
+
+    Fetches current positions, derives weights from market values, then uses
+    PortfolioReturnsService to compute historical returns and NAV progression.
+
+    Args:
+        clerk_id: Clerk authentication ID
+        years: Number of years of historical data (default 2)
+
+    Returns:
+        List of dicts with date, cumulativeReturn, and nav keys
+    """
+    from app.services.portfolio.returns import PortfolioReturnsService
+
+    positions = get_positions(clerk_id)
+    if not positions:
+        raise ValueError("No positions found")
+
+    total_value = sum(p["market_value"] for p in positions)
+    if total_value == 0:
+        raise ValueError("Portfolio has zero market value")
+
+    weights = {p["ticker"]: p["market_value"] / total_value for p in positions}
+    tickers = list(weights.keys())
+
+    service = PortfolioReturnsService(
+        tickers=tickers,
+        weights=weights,
+        years=years,
+        initial_nav=total_value,
+    )
+    return service.get_returns_series()

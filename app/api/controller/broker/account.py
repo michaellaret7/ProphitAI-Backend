@@ -1,16 +1,15 @@
-"""Broker account controllers — account info, balances, activities, SnapTrade connection."""
+"""Broker account controllers — account info, balances, SnapTrade connection."""
 
 from typing import Optional, Dict, Any
-from app.repositories.user.account import (
-    get_broker_account,
-    get_balances,
-    get_account_activities,
-    get_connection_status,
-)
-from app.repositories.user.broker import (
-    get_snaptrade_connect_url,
+from app.repositories.user.account import get_connection_status
+from app.services.broker.onboarding import (
     register_snaptrade_user,
     save_snaptrade_account,
+    get_snaptrade_connect_url,
+)
+from app.services.broker.account import (
+    get_broker_account,
+    get_balances,
 )
 from app.api.response_envelope import ok_envelope
 from app.utils.decorators.api_decorators import handle_controller_errors
@@ -49,34 +48,6 @@ async def get_balances_controller(*, clerk_id: str) -> Dict[str, Any]:
         kind="broker#balances",
         self_link="/api/broker/account/balances",
         payload=balances,
-    )
-
-
-@handle_controller_errors
-async def get_account_activities_controller(
-    *,
-    clerk_id: str,
-    start_date: Optional[str] = None,
-    end_date: Optional[str] = None,
-    activity_type: Optional[str] = None,
-) -> Dict[str, Any]:
-    """Get broker account activities."""
-    if not clerk_id:
-        raise ValueError("clerkId is required")
-
-    activities = get_account_activities(
-        clerk_id=clerk_id,
-        start_date=start_date,
-        end_date=end_date,
-        activity_type=activity_type,
-    )
-
-    return ok_envelope(
-        message="Account activities retrieved successfully",
-        kind="broker#activities",
-        self_link="/api/broker/account/activities",
-        counts={"totalItems": len(activities)},
-        payload=activities,
     )
 
 

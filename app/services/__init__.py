@@ -2,6 +2,7 @@
 Services layer for ProphitAI.
 
 Domain-organized service modules:
+- broker: SnapTrade brokerage operations (onboarding, account, trading, proposals)
 - portfolio: Portfolio management and analytics
 - shared: Cross-domain utility services
 """

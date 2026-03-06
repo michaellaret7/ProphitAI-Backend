@@ -3,7 +3,6 @@
 from .account import (
     get_broker_account_controller,
     get_balances_controller,
-    get_account_activities_controller,
     get_connection_status_controller,
     snaptrade_register_controller,
     snaptrade_callback_controller,
@@ -24,7 +23,6 @@ __all__ = [
     # Account
     "get_broker_account_controller",
     "get_balances_controller",
-    "get_account_activities_controller",
     # Connection Status
     "get_connection_status_controller",
     # SnapTrade Connection

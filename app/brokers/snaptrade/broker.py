@@ -7,7 +7,6 @@ Sub-components accessible directly:
     broker.accounts      — account info, balances, holdings, positions, orders
     broker.trading       — order execution (equities + options)
     broker.connections   — brokerage authorization management
-    broker.reporting     — activities, performance reports
 """
 
 import logging
@@ -21,7 +20,6 @@ from app.brokers.snaptrade.models.activities import ActivityRecord
 from app.brokers.snaptrade.models.holdings import STPortfolio
 from app.brokers.snaptrade.trading import SnapTradeTrading
 from app.brokers.snaptrade.connections import SnapTradeConnections
-from app.brokers.snaptrade.reporting import SnapTradeReporting
 
 logger = logging.getLogger(__name__)
 
@@ -43,7 +41,6 @@ class SnapTradeBroker:
         self.accounts = SnapTradeAccounts(self.client)
         self.trading = SnapTradeTrading(self.client)
         self.connections = SnapTradeConnections(self.client)
-        self.reporting = SnapTradeReporting(self.client)
 
     # ══════════════════════════════════════════════════════════════
     # AUTH
@@ -415,20 +412,4 @@ class SnapTradeBroker:
             user_id, user_secret, authorization_id,
         )
 
-    # ══════════════════════════════════════════════════════════════
-    # REPORTING
-    # ══════════════════════════════════════════════════════════════
-
-    def get_performance_report(
-        self,
-        user_id: str,
-        user_secret: str,
-        start_date: str,
-        end_date: str,
-        accounts: Optional[str] = None,
-    ) -> Dict[str, Any]:
-        """Get portfolio performance report."""
-        return self.reporting.get_performance_report(
-            user_id, user_secret, start_date, end_date, accounts=accounts,
-        )
 

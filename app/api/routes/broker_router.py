@@ -8,7 +8,6 @@ from app.api.controller.broker import (
     # Account
     get_broker_account_controller,
     get_balances_controller,
-    get_account_activities_controller,
     get_connection_status_controller,
     snaptrade_register_controller,
     snaptrade_callback_controller,
@@ -113,22 +112,6 @@ async def get_balances(clerk_id: str = Depends(get_clerk_user_id)):
     return await get_balances_controller(clerk_id=clerk_id)
 
 
-@router.get("/account/activities")
-async def get_account_activities(
-    startDate: Optional[str] = Query(None),
-    endDate: Optional[str] = Query(None),
-    activityType: Optional[str] = Query(None),
-    clerk_id: str = Depends(get_clerk_user_id),
-):
-    """Get account activities (fills, dividends, transfers, etc.)."""
-    return await get_account_activities_controller(
-        clerk_id=clerk_id,
-        start_date=startDate,
-        end_date=endDate,
-        activity_type=activityType,
-    )
-
-
 # ════════════════════════════════════════════════════════════
 # --> Trading — Orders
 # ════════════════════════════════════════════════════════════
@@ -171,11 +154,14 @@ async def sell_order(
 
 @router.get("/orders")
 async def get_orders(
-    state: str = Query("open"),
+    startDate: Optional[str] = Query(None),
+    endDate: Optional[str] = Query(None),
     clerk_id: str = Depends(get_clerk_user_id),
 ):
-    """Get orders filtered by state."""
-    return await get_orders_controller(clerk_id=clerk_id, state=state)
+    """Get recent BUY/SELL trade activity."""
+    return await get_orders_controller(
+        clerk_id=clerk_id, start_date=startDate, end_date=endDate,
+    )
 
 
 @router.delete("/orders/{orderId}")
@@ -230,13 +216,11 @@ async def close_position(
 
 @router.get("/portfolio/history")
 async def get_portfolio_history(
-    startDate: str = Query(..., description="Start date (YYYY-MM-DD)"),
-    endDate: str = Query(..., description="End date (YYYY-MM-DD)"),
+    years: int = Query(2, description="Years of historical data", ge=1, le=10),
     clerk_id: str = Depends(get_clerk_user_id),
 ):
     """Get historical portfolio performance report."""
     return await get_portfolio_history_controller(
         clerk_id=clerk_id,
-        start_date=startDate,
-        end_date=endDate,
+        years=years,
     )

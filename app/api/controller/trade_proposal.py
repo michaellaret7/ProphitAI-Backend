@@ -8,9 +8,9 @@ from app.api.response_envelope import ok_envelope
 from app.repositories.user.trade_proposal import (
     get_proposals_for_user,
     get_proposal_by_id,
-    approve_proposal,
     reject_proposal,
 )
+from app.services.broker.proposals import approve_proposal
 from app.utils.decorators.api_decorators import handle_controller_errors
 
 
