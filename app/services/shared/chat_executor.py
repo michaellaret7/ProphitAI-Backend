@@ -83,19 +83,24 @@ class ChatSessionManager:
 
         # Resolve broker credentials + internal user ID and inject into prompt
         if user_id:
+            from app.repositories.user.account import get_all_user_data_by_clerk_id
             from app.repositories.user.broker import resolve_snaptrade_credentials
             from app.repositories.user.trade_proposal import get_internal_user_id
 
             creds = resolve_snaptrade_credentials(clerk_id=user_id)
             internal_user_id = get_internal_user_id(clerk_id=user_id)
+            user_data = get_all_user_data_by_clerk_id(clerk_id=user_id)
+            user_email = user_data["email"] if user_data else None
 
             broker_context = (
                 f"\n\n## Broker Context\n"
+                f"The user's email is: `{user_email}`.\n"
                 f"The user's SnapTrade user ID is: `{creds['snaptrade_user_id']}`.\n"
                 f"The user's SnapTrade user secret is: `{creds['snaptrade_user_secret']}`.\n"
                 f"The user's SnapTrade account ID is: `{creds['snaptrade_account_id']}`.\n"
                 f"The user's internal user ID is: `{internal_user_id}`.\n"
-                f"Always use these IDs for broker and trade proposal operations.\n\n"
+                f"Always use these IDs for broker and trade proposal operations.\n"
+                f"When any tool requires an email parameter, use `{user_email}`.\n\n"
                 f"## Trade Proposal Rules\n"
                 f"NEVER call propose_trade without explicit user confirmation. Follow this flow:\n"
                 f"1. Do thorough research first — analyze fundamentals, technicals, recent news, "

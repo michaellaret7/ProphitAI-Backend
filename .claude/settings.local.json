@@ -99,7 +99,9 @@
       "WebFetch(domain:pypi.org)",
       "Bash(head:*)",
       "WebFetch(domain:stockanalysis.com)",
-      "WebFetch(domain:www.campaignforamillion.com)"
+      "WebFetch(domain:www.campaignforamillion.com)",
+      "Bash(git log:*)",
+      "Bash(kill %1:*)"
     ],
     "deny": [],
     "ask": []

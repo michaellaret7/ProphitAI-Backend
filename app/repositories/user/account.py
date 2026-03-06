@@ -22,8 +22,6 @@ def _format_user_data(user) -> Dict[str, Any]:
         'first_name': user.first_name,
         'last_name': user.last_name,
         'broker': user.broker,
-        'snaptrade_user_id': user.snaptrade_user_id,
-        'snaptrade_user_secret': user.snaptrade_user_secret,
         'snaptrade_account_id': user.snaptrade_account_id,
         'creation_date': user.creation_date.isoformat() if getattr(user, 'creation_date', None) else None,
         'portfolios': []
@@ -232,6 +230,35 @@ def delete_user_by_clerk_id(clerk_id: str, session=None) -> bool:
 # --> Broker Account Operations
 # ════════════════════════════════════════════════════════════
 
+@with_session('user')
+def get_connection_status(clerk_id: str, session=None) -> Dict[str, Any]:
+    """
+    Check whether the user has SnapTrade credentials stored (DB-only, no API call).
+
+    Args:
+        clerk_id: Clerk authentication ID
+
+    Returns:
+        Dict with registered (bool), connected (bool), account_id (str or None)
+    """
+    if not clerk_id:
+        raise ValueError("Clerk ID must be provided")
+
+    user = session.query(User).filter(User.clerk_id == clerk_id).first()
+
+    if not user:
+        return {"registered": False, "connected": False, "account_id": None}
+
+    has_user_id = bool(user.snaptrade_user_id)
+    has_account = bool(user.snaptrade_account_id)
+
+    return {
+        "registered": has_user_id,
+        "connected": has_user_id and has_account,
+        "account_id": user.snaptrade_account_id,
+    }
+
+
 def get_broker_account(clerk_id: str) -> Dict[str, Any]:
     """
     Get full broker account info via SnapTrade.
@@ -268,6 +295,28 @@ def get_balances(clerk_id: str) -> List[Dict[str, Any]]:
         user_secret=creds["snaptrade_user_secret"],
         account_id=creds["snaptrade_account_id"],
     )
+
+
+def _first_balance(clerk_id: str) -> Dict[str, Any]:
+    """Return the first balance dict from SnapTrade, or empty dict."""
+    balances = get_balances(clerk_id)
+    return balances[0] if balances else {}
+
+
+def get_equity(clerk_id: str) -> Optional[float]:
+    """Get total account equity (balance total) via SnapTrade."""
+    bal = _first_balance(clerk_id)
+    return bal.get("amount") or bal.get("cash")
+
+
+def get_buying_power(clerk_id: str) -> Optional[float]:
+    """Get buying power from account balances via SnapTrade."""
+    return _first_balance(clerk_id).get("buying_power")
+
+
+def get_cash_balance(clerk_id: str) -> Optional[float]:
+    """Get cash balance from account balances via SnapTrade."""
+    return _first_balance(clerk_id).get("cash")
 
 
 def get_account_activities(

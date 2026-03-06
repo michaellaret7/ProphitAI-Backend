@@ -18,7 +18,7 @@ class UpdateUserRequest(BaseModel):
 
 @router.get("/user")
 async def get_user(clerk_id: str = Depends(get_clerk_user_id)):
-    """Get current user data."""
+    """Get current user data. Auto-provisions from Clerk if not in local DB."""
     return await get_user_by_clerk_controller(clerk_id=clerk_id)
 
 

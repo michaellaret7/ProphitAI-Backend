@@ -184,23 +184,15 @@ if __name__ == "__main__":
     # THIS IS WHERE YOU RUN IT 
 
     task = """
-
-Test the ticker analysis tools. For the following tickers: AAPL, MSFT, NVDA, JPM, SPY, QQQ
-
-Deploy workers split by FUNCTION (not by ticker) so each worker passes ALL tickers in a single worker run:
-- Worker 1: Run ticker_performance for all 6 tickers, and ticker_risk for all 6 tickers.
-- Worker 2: Run ticker_factors and ticker_technicals for all 6 tickers.
-- Worker 3: Run get_ticker_info for the 4 stocks (AAPL, MSFT, NVDA, JPM) and get_etf_info for the 2 ETFs (SPY, QQQ).
-- Worker 4: Run analyst_estimates, ttm_ratios, and analyst_price_targets for the 4 stocks.
-
-After all workers finish, provide a brief summary confirming which tools returned results successfully and flag any errors.
-"""
+    What are your views on Intel (INTC) as relates to the company's turnaround and the 18A chip, the company's financial position, market share trend, valuation and how it stacks up against its peers especially as it pertains to AI.  Analyze the last 6 quarters of earnings call transcripts, financials, and more recently any news since the latest calls that might shed additional light on the company's prospects and competitiveness going forward. Lastly, does the government's involvement (taking an ownership stake) change the company's prospects and potential price appreciation potential at all?  Finally, give the pros and cons and final assessment whether INTC is a strong candidate to own/buy in here?
+    Tell the worker agents to go super deep and do extensive detailed research.
+    """
 
     orchestrator = OrchestratorAgent(
         task=task,
         provider="anthropic",
         model="claude-sonnet-4-6",
-        plan_first=False
+        plan_first=True
     )
 
     result = orchestrator.run()

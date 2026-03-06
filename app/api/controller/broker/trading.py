@@ -1,6 +1,7 @@
 """Broker trading controllers — orders, positions, and portfolio history."""
 
 from typing import Optional, Dict, Any
+from fastapi import HTTPException
 from app.repositories.user.trading import (
     buy,
     sell,
@@ -179,6 +180,12 @@ async def get_position_controller(
         raise ValueError("symbol is required")
 
     position = get_position(clerk_id=clerk_id, symbol=symbol.upper())
+
+    if position is None:
+        raise HTTPException(
+            status_code=404,
+            detail=f"No position found for {symbol.upper()}",
+        )
 
     return ok_envelope(
         message="Position retrieved successfully",

@@ -17,17 +17,19 @@ def get_positions(
     email: str,
 ) -> str:
     """
-    Get all open equity positions for a user's brokerage account.
+    Get all open positions (equities and options) for a user's brokerage account.
 
     Args:
         email: The user's email address
 
     Returns:
-        List of position dicts with ticker, units, price, market_value, open_pnl, etc.
+        Dict with 'equity_positions' and 'option_positions' lists.
+        Equity positions have ticker, units, price, market_value, open_pnl, etc.
+        Option positions have underlying_ticker, strike_price, expiration_date, option_type, units, price, etc.
 
     Examples:
         get_positions(email="user@example.com")
-        >>> [{"ticker": "AAPL", "units": 10.0, "price": 175.25, ...}, ...]
+        >>> {"equity_positions": [...], "option_positions": [...]}
 
     Raises:
         Exception: If credentials cannot be resolved or API call fails
@@ -41,8 +43,10 @@ def get_positions(
             user_secret=creds["snaptrade_user_secret"],
             account_id=creds["snaptrade_account_id"],
         )
-        positions = [p.model_dump() for p in holdings.positions]
-        return success_response(positions)
+        return success_response({
+            "equity_positions": [p.model_dump() for p in holdings.positions],
+            "option_positions": [op.model_dump() for op in holdings.option_positions],
+        })
     except Exception as e:
         return error_response(f"Failed to get positions for {email}: {str(e)}")
 

@@ -9,6 +9,9 @@ from app.api.controller.broker import (
     get_broker_account_controller,
     get_balances_controller,
     get_account_activities_controller,
+    get_connection_status_controller,
+    snaptrade_register_controller,
+    snaptrade_callback_controller,
     snaptrade_connect_controller,
     # Trading — Orders
     buy_controller,
@@ -33,7 +36,6 @@ router = APIRouter(prefix="/broker", tags=["Broker"])
 class SnapTradeConnectRequest(BaseModel):
     """Optional params for SnapTrade connection portal redirect."""
     broker: Optional[str] = None
-    connectionType: Optional[str] = None
     customRedirect: Optional[str] = None
 
 
@@ -57,6 +59,32 @@ class OrderRequest(BaseModel):
 
 
 # ════════════════════════════════════════════════════════════
+# --> Connection Status
+# ════════════════════════════════════════════════════════════
+
+@router.get("/connection-status")
+async def get_connection_status(clerk_id: str = Depends(get_clerk_user_id)):
+    """Check whether the user has a connected brokerage account."""
+    return await get_connection_status_controller(clerk_id=clerk_id)
+
+
+# ════════════════════════════════════════════════════════════
+# --> SnapTrade Registration & Callback
+# ════════════════════════════════════════════════════════════
+
+@router.post("/snaptrade/register")
+async def snaptrade_register(clerk_id: str = Depends(get_clerk_user_id)):
+    """Register a new user with SnapTrade."""
+    return await snaptrade_register_controller(clerk_id=clerk_id)
+
+
+@router.post("/snaptrade/callback")
+async def snaptrade_callback(clerk_id: str = Depends(get_clerk_user_id)):
+    """Save SnapTrade account after OAuth completion."""
+    return await snaptrade_callback_controller(clerk_id=clerk_id)
+
+
+# ════════════════════════════════════════════════════════════
 # --> Account Info
 # ════════════════════════════════════════════════════════════
 
@@ -75,7 +103,6 @@ async def snaptrade_connect(
     return await snaptrade_connect_controller(
         clerk_id=clerk_id,
         broker=body.broker,
-        connection_type=body.connectionType,
         custom_redirect=body.customRedirect,
     )
 

@@ -5,8 +5,13 @@ from app.repositories.user.account import (
     get_broker_account,
     get_balances,
     get_account_activities,
+    get_connection_status,
 )
-from app.repositories.user.broker import get_snaptrade_connect_url
+from app.repositories.user.broker import (
+    get_snaptrade_connect_url,
+    register_snaptrade_user,
+    save_snaptrade_account,
+)
 from app.api.response_envelope import ok_envelope
 from app.utils.decorators.api_decorators import handle_controller_errors
 
@@ -76,6 +81,62 @@ async def get_account_activities_controller(
 
 
 # ════════════════════════════════════════════════════════════
+# --> Connection Status
+# ════════════════════════════════════════════════════════════
+
+@handle_controller_errors
+async def get_connection_status_controller(*, clerk_id: str) -> Dict[str, Any]:
+    """Check whether the user has a connected brokerage account (DB-only)."""
+    if not clerk_id:
+        raise ValueError("clerkId is required")
+
+    status = get_connection_status(clerk_id=clerk_id)
+
+    return ok_envelope(
+        message="Connection status retrieved successfully",
+        kind="broker#connectionStatus",
+        self_link="/api/broker/connection-status",
+        payload=status,
+    )
+
+
+# ════════════════════════════════════════════════════════════
+# --> SnapTrade Registration & Callback
+# ════════════════════════════════════════════════════════════
+
+@handle_controller_errors
+async def snaptrade_register_controller(*, clerk_id: str) -> Dict[str, Any]:
+    """Register a new user with SnapTrade and store credentials."""
+    if not clerk_id:
+        raise ValueError("clerkId is required")
+
+    result = register_snaptrade_user(clerk_id=clerk_id)
+
+    return ok_envelope(
+        message="SnapTrade user registered successfully",
+        kind="broker#snaptradeRegister",
+        self_link="/api/broker/snaptrade/register",
+        payload=result,
+    )
+
+
+@handle_controller_errors
+async def snaptrade_callback_controller(*, clerk_id: str) -> Dict[str, Any]:
+    """Fetch and save SnapTrade account after OAuth completion."""
+    if not clerk_id:
+        raise ValueError("clerkId is required")
+
+    result = save_snaptrade_account(clerk_id=clerk_id)
+
+    return ok_envelope(
+        message="SnapTrade account saved successfully",
+        kind="broker#snaptradeCallback",
+        self_link="/api/broker/snaptrade/callback",
+        payload=result,
+    )
+
+
+# ════════════════════════════════════════════════════════════
 # --> SnapTrade Connection
 # ════════════════════════════════════════════════════════════
 
@@ -84,17 +145,15 @@ async def snaptrade_connect_controller(
     *,
     clerk_id: str,
     broker: Optional[str] = None,
-    connection_type: Optional[str] = None,
     custom_redirect: Optional[str] = None,
 ) -> Dict[str, Any]:
-    """Generate a SnapTrade connection portal redirect URL."""
+    """Generate a SnapTrade connection portal redirect URL (always trade permissions)."""
     if not clerk_id:
         raise ValueError("clerkId is required")
 
     result = get_snaptrade_connect_url(
         clerk_id=clerk_id,
         broker=broker,
-        connection_type=connection_type,
         custom_redirect=custom_redirect,
     )
 

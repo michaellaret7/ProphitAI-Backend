@@ -1,17 +1,21 @@
+import logging
 from fastapi import HTTPException
 from typing import Optional, Dict, Any
 from app.repositories.user.account import (
     get_all_user_data_by_clerk_id,
+    add_user,
     update_user_by_clerk_id,
     delete_user_by_clerk_id,
 )
+from app.api.auth.clerk import get_clerk_client
 from app.api.response_envelope import ok_envelope
 from app.utils.decorators.api_decorators import handle_controller_errors
+
+logger = logging.getLogger(__name__)
 
 
 def _format_user_response(user_data: dict, clerk_id: str) -> Dict[str, Any]:
     """Format user data for API response."""
-    # Format portfolios
     portfolios = [
         {
             "portfolioId": p.get("portfolio_id"),
@@ -43,13 +47,34 @@ def _format_user_response(user_data: dict, clerk_id: str) -> Dict[str, Any]:
 
 @handle_controller_errors
 async def get_user_by_clerk_controller(*, clerk_id: str) -> Dict[str, Any]:
-    """Get user by Clerk ID."""
+    """
+    Get user by Clerk ID with JIT provisioning.
+
+    If the user doesn't exist locally (e.g. webhook didn't fire in local dev),
+    fetch their info from Clerk's API and create them on the fly.
+    """
     if not clerk_id:
         raise ValueError("clerkId is required")
 
     user_data = get_all_user_data_by_clerk_id(clerk_id=clerk_id)
+
     if not user_data:
-        raise HTTPException(status_code=404, detail="User not found")
+        # Reason: JIT provisioning — covers local dev where Clerk webhooks can't reach localhost
+        logger.info(f"User not found for clerk_id={clerk_id}, provisioning from Clerk API")
+        clerk = get_clerk_client()
+        clerk_user = clerk.users.get(user_id=clerk_id)
+
+        email = clerk_user.email_addresses[0].email_address
+        add_user(
+            email=email,
+            first_name=clerk_user.first_name or "",
+            last_name=clerk_user.last_name or "",
+            clerk_id=clerk_id,
+        )
+        user_data = get_all_user_data_by_clerk_id(clerk_id=clerk_id)
+
+        if not user_data:
+            raise HTTPException(status_code=500, detail="Failed to provision user")
 
     return _format_user_response(user_data, clerk_id)
 
@@ -98,10 +123,3 @@ async def delete_user_controller(*, clerk_id: str) -> Dict[str, Any]:
         self_link="/api/user",
         payload={}
     )
-
-
-# Legacy function kept for compatibility
-@handle_controller_errors
-async def get_user_data_controller(email: str) -> Dict[str, Any]:
-    """Get user by email (legacy)."""
-    raise HTTPException(status_code=410, detail="Use /api/user with JWT instead")

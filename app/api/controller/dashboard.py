@@ -8,14 +8,8 @@ from app.api.response_envelope import ok_envelope
 from app.db.core.models.market_data_models import Ticker
 from app.db.core.pull_fmp_data import FMP_API_DATA
 from app.redis.client import cache
-from app.repositories.user.account import (
-    get_account_activities,
-    get_buying_power,
-    get_cash_balance,
-    get_equity,
-)
-from app.repositories.user.portfolio import get_portfolio_history
-from app.repositories.user.trading import get_orders, get_positions
+from app.repositories.user.account import get_account_activities, get_balances
+from app.repositories.user.trading import get_positions
 from app.utils.decorators.api_decorators import handle_controller_errors
 from app.utils.decorators.database import with_session
 from app.utils.serialize_output import serialize_sqlalchemy_obj
@@ -27,10 +21,16 @@ fmp = FMP_API_DATA()
 # Cache TTLs (seconds)
 TREASURY_CACHE_TTL = 3600   # 1 hour
 NEWS_CACHE_TTL = 300         # 5 minutes
+BALANCES_CACHE_TTL = 30      # 30 seconds
+POSITIONS_CACHE_TTL = 30     # 30 seconds
+ACTIVITIES_CACHE_TTL = 60    # 1 minute
 
 # Cache keys
 TREASURY_CACHE_KEY = "dashboard:treasury:latest"
 NEWS_CACHE_KEY = "dashboard:general_news:latest"
+BALANCES_CACHE_KEY = "dashboard:{clerk_id}:balances"
+POSITIONS_CACHE_KEY = "dashboard:{clerk_id}:positions"
+ACTIVITIES_CACHE_KEY = "dashboard:{clerk_id}:activities"
 
 
 # ════════════════════════════════════════════════════════════
@@ -45,45 +45,15 @@ def _safe_result(result: Any) -> Optional[Any]:
     return result
 
 
-def _compute_day_pnl(
-    intraday_history: Optional[Dict],
-    positions: Optional[List[Dict]],
-) -> Optional[Dict[str, float]]:
-    """
-    Compute day P&L from intraday portfolio history.
-
-    Uses base_value (prior close equity) when available. For new accounts where
-    base_value is 0, falls back to summing unrealized P&L from positions — this
-    gives real trading P&L without being polluted by same-day deposits.
-    """
-    if not intraday_history:
-        return _pnl_from_positions(positions)
-
-    equity_list = intraday_history.get("equity") or []
-    current = equity_list[-1] if equity_list else None
-    if current is None:
-        return _pnl_from_positions(positions)
-
-    base = intraday_history.get("base_value")
-    if not base or base == 0:
-        # Reason: base_value is 0 for brand-new accounts (no prior close).
-        # Summing unrealized P&L from positions is the most accurate fallback.
-        return _pnl_from_positions(positions)
-
-    dollar = current - base
-    percent = dollar / base
-    return {"dollar": round(dollar, 2), "percent": round(percent, 6)}
-
-
 def _pnl_from_positions(positions: Optional[List[Dict]]) -> Optional[Dict[str, float]]:
-    """Sum unrealized P&L across all positions as a day-P&L fallback."""
+    """Sum open P&L across all positions as day-P&L."""
     if not positions or not isinstance(positions, list):
         return None
 
     total_pl = 0.0
     total_cost = 0.0
     for pos in positions:
-        pl = float(pos.get("unrealized_pl") or 0)
+        pl = float(pos.get("open_pnl") or 0)
         mv = float(pos.get("market_value") or 0)
         total_pl += pl
         total_cost += mv - pl
@@ -103,9 +73,9 @@ def _compute_sector_breakdown(
     total_mv = 0.0
 
     for pos in positions:
-        symbol = pos.get("symbol", "")
-        mv = float(pos.get("market_value") or pos.get("marketValue") or 0)
-        info = ticker_info_map.get(symbol, {})
+        ticker = pos.get("ticker", "")
+        mv = float(pos.get("market_value") or 0)
+        info = ticker_info_map.get(ticker, {})
         sector = info.get("sector") or "Unknown"
 
         sector_mv[sector] = sector_mv.get(sector, 0.0) + mv
@@ -143,8 +113,8 @@ def _enrich_positions(
     """Merge sector/industry/beta/tickerName from ticker info into each position."""
     enriched = []
     for pos in positions:
-        symbol = pos.get("symbol", "")
-        info = ticker_info_map.get(symbol, {})
+        ticker = pos.get("ticker", "")
+        info = ticker_info_map.get(ticker, {})
         enriched.append({
             **pos,
             "sector": info.get("sector"),
@@ -168,6 +138,17 @@ def _extract_treasury_snapshot(rates: Optional[Any]) -> Optional[Dict]:
     }
 
 
+def _extract_balances(balances: Optional[List[Dict]]) -> tuple[Optional[float], Optional[float], Optional[float]]:
+    """Extract equity, buying_power, cash from a single get_balances call."""
+    if not balances or not isinstance(balances, list) or len(balances) == 0:
+        return None, None, None
+    bal = balances[0]
+    equity = bal.get("amount") or bal.get("cash")
+    buying_power = bal.get("buying_power")
+    cash = bal.get("cash")
+    return equity, buying_power, cash
+
+
 async def _get_cached_treasury() -> Optional[Any]:
     """Return cached treasury rates or None."""
     return await cache.get(TREASURY_CACHE_KEY)
@@ -189,67 +170,94 @@ async def get_dashboard_controller(*, clerk_id: str) -> Dict[str, Any]:
         raise ValueError("clerk_id is required")
 
     # Check caches before building Phase 1 task list
-    cached_treasury = await _get_cached_treasury()
-    cached_news = await _get_cached_news()
+    bal_key = BALANCES_CACHE_KEY.format(clerk_id=clerk_id)
+    pos_key = POSITIONS_CACHE_KEY.format(clerk_id=clerk_id)
+    act_key = ACTIVITIES_CACHE_KEY.format(clerk_id=clerk_id)
 
-    # Phase 1: Independent parallel calls
-    tasks = [
-        asyncio.to_thread(get_equity, clerk_id),                                    # 0
-        asyncio.to_thread(get_buying_power, clerk_id),                              # 1
-        asyncio.to_thread(get_cash_balance, clerk_id),                              # 2
-        asyncio.to_thread(get_portfolio_history, clerk_id, period="1M", timeframe="1D", extended_hours=False),  # 3
-        asyncio.to_thread(get_positions, clerk_id),                                 # 4
-        asyncio.to_thread(get_orders, clerk_id, "open"),                            # 5
-        asyncio.to_thread(get_orders, clerk_id, "closed"),                          # 6
-        asyncio.to_thread(get_account_activities, clerk_id),                        # 7
-        asyncio.to_thread(fmp.get_batch_quote, ["SPY", "QQQ", "DIA", "IWM"]),      # 8
-        asyncio.to_thread(get_portfolio_history, clerk_id, period="1D", timeframe="1Min", extended_hours=False),  # 9
-    ]
+    cached_balances, cached_positions, cached_activities, cached_treasury, cached_news = (
+        await asyncio.gather(
+            cache.get(bal_key),
+            cache.get(pos_key),
+            cache.get(act_key),
+            _get_cached_treasury(),
+            _get_cached_news(),
+        )
+    )
 
-    # Only fetch treasury/news if not cached
+    # Phase 1: Independent parallel calls — only fetch on cache miss
+    # Reason: task_map tracks which slot index maps to which data key
+    tasks = []
+    task_map: List[str] = []
+
+    if cached_balances is None:
+        task_map.append("balances")
+        tasks.append(asyncio.to_thread(get_balances, clerk_id=clerk_id))
+    if cached_positions is None:
+        task_map.append("positions")
+        tasks.append(asyncio.to_thread(get_positions, clerk_id=clerk_id))
+    if cached_activities is None:
+        task_map.append("activities")
+        tasks.append(asyncio.to_thread(get_account_activities, clerk_id=clerk_id))
+
+    task_map.append("indices")
+    tasks.append(asyncio.to_thread(fmp.get_batch_quote, ["SPY", "QQQ", "DIA", "IWM"]))
+
     if cached_treasury is None:
-        tasks.append(asyncio.to_thread(fmp.get_treasury_rates))                     # 10
+        task_map.append("treasury")
+        tasks.append(asyncio.to_thread(fmp.get_treasury_rates))
     if cached_news is None:
-        tasks.append(asyncio.to_thread(fmp.get_general_news, 10))                   # 11
+        task_map.append("news")
+        tasks.append(asyncio.to_thread(fmp.get_general_news, 10))
 
     results = await asyncio.gather(*tasks, return_exceptions=True)
 
-    # Unpack Phase 1 results
-    equity = _safe_result(results[0])
-    buying_power = _safe_result(results[1])
-    cash = _safe_result(results[2])
-    portfolio_history = _safe_result(results[3])
-    positions = _safe_result(results[4])
-    open_orders = _safe_result(results[5])
-    closed_orders = _safe_result(results[6])
-    activities = _safe_result(results[7])
-    indices_raw = _safe_result(results[8])
-    intraday_history = _safe_result(results[9])
+    # Reason: build a dict from task_map so we can look up results by name
+    fresh: Dict[str, Any] = {}
+    for i, key in enumerate(task_map):
+        fresh[key] = _safe_result(results[i])
+
+    # Resolve broker data from cache or fresh fetch, cache on miss
+    balances = cached_balances if cached_balances is not None else fresh.get("balances")
+    positions = cached_positions if cached_positions is not None else fresh.get("positions")
+    activities = cached_activities if cached_activities is not None else fresh.get("activities")
+    indices_raw = fresh.get("indices")
+
+    # Cache fresh broker results
+    cache_ops = []
+    if cached_balances is None and balances is not None:
+        cache_ops.append(cache.set(bal_key, balances, BALANCES_CACHE_TTL))
+    if cached_positions is None and positions is not None:
+        cache_ops.append(cache.set(pos_key, positions, POSITIONS_CACHE_TTL))
+    if cached_activities is None and activities is not None:
+        cache_ops.append(cache.set(act_key, activities, ACTIVITIES_CACHE_TTL))
+
+    equity, buying_power, cash = _extract_balances(balances)
 
     # Resolve treasury and news from cache or fresh fetch
-    # Reason: next_idx tracks the next dynamic slot after the 10 base tasks
-    next_idx = 10
     if cached_treasury is not None:
         treasury_raw = cached_treasury
     else:
-        treasury_raw = _safe_result(results[next_idx])
+        treasury_raw = fresh.get("treasury")
         if treasury_raw is not None:
-            await cache.set(TREASURY_CACHE_KEY, treasury_raw, TREASURY_CACHE_TTL)
-        next_idx += 1
+            cache_ops.append(cache.set(TREASURY_CACHE_KEY, treasury_raw, TREASURY_CACHE_TTL))
 
     if cached_news is not None:
         general_news = cached_news
     else:
-        general_news = _safe_result(results[next_idx])
+        general_news = fresh.get("news")
         if general_news is not None:
-            await cache.set(NEWS_CACHE_KEY, general_news, NEWS_CACHE_TTL)
+            cache_ops.append(cache.set(NEWS_CACHE_KEY, general_news, NEWS_CACHE_TTL))
+
+    # Reason: fire all cache.set calls in parallel without blocking
+    if cache_ops:
+        await asyncio.gather(*cache_ops)
 
     # Phase 2: Dependent calls (need position tickers)
     ticker_info_map: Dict[str, Dict] = {}
     holdings_news = None
 
     if positions and isinstance(positions, list) and len(positions) > 0:
-        holding_tickers = [p.get("symbol", "") for p in positions if p.get("symbol")]
+        holding_tickers = [p.get("ticker", "") for p in positions if p.get("ticker")]
 
         if holding_tickers:
             phase2_results = await asyncio.gather(
@@ -261,7 +269,7 @@ async def get_dashboard_controller(*, clerk_id: str) -> Dict[str, Any]:
             holdings_news = _safe_result(phase2_results[1])
 
     # Phase 3: Derived computations
-    day_pnl = _compute_day_pnl(intraday_history, positions)
+    day_pnl = _pnl_from_positions(positions)
 
     enriched_positions = (
         _enrich_positions(positions, ticker_info_map)
@@ -297,17 +305,12 @@ async def get_dashboard_controller(*, clerk_id: str) -> Dict[str, Any]:
             "cash": cash,
             "dayPnl": day_pnl,
         },
-        "portfolioHistory": portfolio_history,
-        "intradayHistory": intraday_history,
+        "portfolioPerformance": None,
         "positions": enriched_positions,
         "sectorBreakdown": sector_breakdown,
         "marketOverview": {
             "indices": indices,
             "treasuryRates": treasury_snapshot,
-        },
-        "orders": {
-            "open": open_orders,
-            "closed": closed_orders,
         },
         "recentActivity": activities,
         "news": {

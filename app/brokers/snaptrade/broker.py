@@ -56,11 +56,11 @@ class SnapTradeBroker:
         user_id: str,
         user_secret: str,
         broker: Optional[str] = None,
-        connection_type: Optional[str] = None,
+        connection_type: str = "trade",
         custom_redirect: Optional[str] = None,
         reconnect: Optional[str] = None,
     ) -> Dict[str, Any]:
-        """Generate a login redirect URL for the connection portal."""
+        """Generate a login redirect URL for the connection portal (always trade permissions)."""
         return self.auth.login_user(
             user_id, user_secret, broker=broker, connection_type=connection_type,
             custom_redirect=custom_redirect, reconnect=reconnect,
