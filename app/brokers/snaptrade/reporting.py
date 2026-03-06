@@ -1,9 +1,9 @@
 """
 SnapTrade Reporting Service
-Handles activities and performance reports.
+Handles performance reports.
 """
 
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, Optional
 
 from snaptrade_client import SnapTrade
 
@@ -15,38 +15,6 @@ class SnapTradeReporting:
 
     def __init__(self, client: SnapTrade):
         self._reporting = client.transactions_and_reporting
-
-    def get_activities(
-        self,
-        user_id: str,
-        user_secret: str,
-        start_date: Optional[str] = None,
-        end_date: Optional[str] = None,
-        accounts: Optional[str] = None,
-    ) -> List[Dict[str, Any]]:
-        """
-        Get transaction activities across accounts.
-
-        Args:
-            user_id: SnapTrade user ID
-            user_secret: SnapTrade user secret
-            start_date: Start date (YYYY-MM-DD)
-            end_date: End date (YYYY-MM-DD)
-            accounts: Comma-separated account IDs to filter
-        """
-        kwargs: Dict[str, Any] = {
-            "user_id": user_id,
-            "user_secret": user_secret,
-        }
-        if start_date is not None:
-            kwargs["start_date"] = start_date
-        if end_date is not None:
-            kwargs["end_date"] = end_date
-        if accounts is not None:
-            kwargs["accounts"] = accounts
-
-        response = self._reporting.get_activities(**kwargs)
-        return extract_body(response)
 
     def get_performance_report(
         self,

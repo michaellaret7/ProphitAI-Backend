@@ -99,7 +99,7 @@ def _execute_close_position(broker, proposal: TradeProposal, creds: dict) -> dic
         proposal: The TradeProposal ORM record.
         creds: Dict with snaptrade_user_id, snaptrade_user_secret, snaptrade_account_id.
     """
-    holdings = broker.get_holdings(
+    portfolio = broker.get_portfolio(
         user_id=creds["snaptrade_user_id"],
         user_secret=creds["snaptrade_user_secret"],
         account_id=proposal.account_id,
@@ -107,7 +107,7 @@ def _execute_close_position(broker, proposal: TradeProposal, creds: dict) -> dic
 
     # Reason: Find the position matching the proposal symbol
     position = None
-    for p in holdings.positions:
+    for p in portfolio.equity_positions:
         if p.ticker.upper() == proposal.symbol.upper():
             position = p
             break

@@ -1,49 +1,34 @@
-from sqlalchemy.orm import session
-from app.core.atlas.models.notebook import Notebook
-from app.core.atlas.agents.worker_agent import WorkerAgent
-from app.core.atlas.tools.options.expirations import get_option_expirations
-from app.core.atlas.tools.options.contracts import get_option_contracts
-from app.core.atlas.tools.options.chain import get_options_chain
-from app.core.atlas.tools.options.quote import get_option_quote
-from app.core.atlas.tools.options.price_history import get_option_price_history
-from app.core.atlas.tools.broker.options_trade import propose_options_trade, propose_multi_leg_options_trade
-from app.core.atlas.tools.broker.trade import propose_trade
-from app.core.atlas.tools.broker.portfolio import get_positions, close_position
-from app.core.atlas.tools.broker.account import account_info
-from app.db.core.db_config import UserSession
-from app.db.core.models.user_data_models import User
-from app.utils.serialize_output import serialize_sqlalchemy_obj
+import time
+from app.repositories.user.broker import resolve_snaptrade_credentials, get_snaptrade_broker
 
+EMAIL = "michaellaret7@gmail.com"
 
-us = UserSession()
-all_users = us.query(User).filter(User.email == "sam_altman+clerk_test@gmail.com").first()
-print(serialize_sqlalchemy_obj(all_users))
-us.close()
+creds = resolve_snaptrade_credentials(email=EMAIL)
+user_id = creds["snaptrade_user_id"]
+user_secret = creds["snaptrade_user_secret"]
+account_id = creds["snaptrade_account_id"]
 
-# task = """
-# Instructions:
-# - Review the users portfolio (michaellaret7@gmail.com) 
-# - run a risk analysis on the portfolio
-# - propose a multi-leg options trade on the portfolio to mitigate risk
-# """
+broker = get_snaptrade_broker()
 
-# worker = WorkerAgent(
-#     task=task,
-#     tools=[
-#         get_option_expirations.tool,
-#         get_option_contracts.tool,
-#         get_options_chain.tool,
-#         get_option_quote.tool,
-#         get_option_price_history.tool,
-#         propose_options_trade.tool,
-#         propose_multi_leg_options_trade.tool,
-#         propose_trade.tool,
-#         get_positions.tool,
-#         close_position.tool,
-#         account_info.tool,
-#     ],
-#     notebook=Notebook(),
-# )
+start_time = time.time()
 
-# result = worker.run()
-# print(result.answer)
+orders = broker.get_orders(
+    user_id=user_id,
+    user_secret=user_secret,
+    account_id=account_id,
+    start_date="2026-02-15",
+    end_date="2026-03-06",
+)
+
+portfolio = broker.get_portfolio(
+    user_id=user_id,
+    user_secret=user_secret,
+    account_id=account_id,
+)
+
+elapsed = time.time() - start_time
+
+print(f"\nFetched {len(orders)} orders in {elapsed:.2f}s\n")
+for order in orders:
+    print(f"  {order.type:<4} | {order.ticker:<6} | {order.units:>8.2f} units @ ${order.price:>9.2f} | ${order.amount:>10.2f} | {order.trade_date} | {order.asset_type}")
+print(portfolio)

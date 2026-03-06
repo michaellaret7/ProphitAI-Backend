@@ -44,7 +44,9 @@ class AgentBase(ABC):
         self.total_tokens: int = 0
 
         # ---- Register default tools ---- #
-        self.add_tool(**think.tool)
+        if self.provider != 'openai':
+            self.add_tool(**think.tool)
+            
         self.add_tool(**calculator.tool)
 
     def add_tool(

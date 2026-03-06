@@ -424,10 +424,21 @@ def agent_tool(func: Any = None, *, name: str | None = None) -> Any:
             _validated.tool = tool_dict  # type: ignore[attr-defined]
             return _validated
 
-        # Reason: no constraints to enforce — attach .tool directly, no wrapper needed
-        tool_dict["function"] = fn
-        fn.tool = tool_dict  # type: ignore[attr-defined]
-        return fn
+        # Reason: no Param constraints, but still catch missing-arg TypeErrors
+        cached_sig = inspect.signature(fn)
+
+        @functools.wraps(fn)
+        def _safe(*args: Any, **kwargs: Any) -> Any:
+            try:
+                cached_sig.bind(*args, **kwargs)
+            except TypeError as e:
+                from app.core.atlas.tools.responses import error_response
+                return error_response(str(e))
+            return fn(*args, **kwargs)
+
+        tool_dict["function"] = _safe
+        _safe.tool = tool_dict  # type: ignore[attr-defined]
+        return _safe
 
     # Reason: support @agent_tool (no parens) — func is the decorated function itself
     if func is not None:

@@ -1,5 +1,6 @@
 """SnapTrade order and account tools for agent framework."""
 
+from datetime import datetime, timedelta
 from app.core.atlas.tools.decorator import agent_tool, Param
 from app.core.atlas.tools.responses import success_response, error_response
 from app.repositories.user.broker import get_snaptrade_broker, resolve_snaptrade_credentials
@@ -100,6 +101,10 @@ def get_orders(
     Raises:
         Exception: If credentials are invalid or API call fails
     """
+
+    start_date = datetime.now() - timedelta(days=days)
+    end_date = datetime.now()
+
     try:
         creds = resolve_snaptrade_credentials(email=email)
         broker = get_snaptrade_broker()
@@ -107,8 +112,8 @@ def get_orders(
             user_id=creds["snaptrade_user_id"],
             user_secret=creds["snaptrade_user_secret"],
             account_id=creds["snaptrade_account_id"],
-            state=state,
-            days=days,
+            start_date=start_date,
+            end_date=end_date,
         )
         if not result:
             return success_response(f"No {state} orders found")
@@ -189,3 +194,4 @@ def get_quotes(
         return success_response(result)
     except Exception as e:
         return error_response(f"Failed to get quotes for {symbols}: {str(e)}")
+

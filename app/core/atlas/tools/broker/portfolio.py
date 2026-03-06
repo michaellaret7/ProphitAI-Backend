@@ -9,6 +9,12 @@ from app.repositories.user.trade_proposal import create_close_proposal
 from app.core.atlas.tools.broker.helpers import resolve_user_id_by_email
 
 # ================================
+# --> Constants
+# ================================
+
+_EXCLUDE_POSITION_FIELDS = {"snaptrade_symbol_id", "figi_code", "fractional_units", "cash_equivalent"}
+
+# ================================
 # --> Tools
 # ================================
 
@@ -38,17 +44,23 @@ def get_positions(
         creds = resolve_snaptrade_credentials(email=email)
         broker = get_snaptrade_broker()
 
-        holdings = broker.get_holdings(
+        portfolio = broker.get_portfolio(
             user_id=creds["snaptrade_user_id"],
             user_secret=creds["snaptrade_user_secret"],
             account_id=creds["snaptrade_account_id"],
         )
+
         return success_response({
-            "equity_positions": [p.model_dump() for p in holdings.positions],
-            "option_positions": [op.model_dump() for op in holdings.option_positions],
+            "equity_positions": [p.model_dump(exclude=_EXCLUDE_POSITION_FIELDS) for p in portfolio.equity_positions],
+            "option_positions": [op.model_dump() for op in portfolio.option_positions],
         })
+    except TypeError as e:
+        return error_response(f"Missing or invalid arguments: {e}")
     except Exception as e:
-        return error_response(f"Failed to get positions for {email}: {str(e)}")
+        msg = str(e)
+        if "psycopg2" in msg or "sqlalchemy" in msg.lower():
+            msg = msg.split("\n")[0]
+        return error_response(f"Failed to get positions for {email}: {msg}")
 
 @agent_tool(name="close_position")
 def close_position(
@@ -90,10 +102,13 @@ def close_position(
         ValueError: If both qty and percentage are provided
         Exception: If the proposal could not be created
     """
-    if qty is not None and percentage is not None:
-        return error_response("Cannot specify both qty and percentage")
-
     try:
+        if qty is not None and percentage is not None:
+            return error_response("Cannot specify both qty and percentage")
+
+        if percentage is not None and not (0 < percentage <= 100):
+            return error_response("percentage must be between 0 and 100")
+
         creds = resolve_snaptrade_credentials(email=email)
         user_id = resolve_user_id_by_email(email)
 
@@ -118,6 +133,8 @@ def close_position(
             f"Close position proposal created: CLOSE {amount_str} {symbol.upper()} "
             f"— pending user approval. Proposal ID: {proposal['id']}"
         )
+    except TypeError as e:
+        return error_response(f"Missing or invalid arguments: {e}")
     except Exception as e:
         msg = str(e)
         if "psycopg2" in msg or "sqlalchemy" in msg.lower():

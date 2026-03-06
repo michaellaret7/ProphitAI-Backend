@@ -1,6 +1,6 @@
 """
-SnapTrade Holdings Model
-Flattens the deeply nested SnapTrade holdings response into clean Pydantic models.
+SnapTrade Portfolio Models
+Flattens the deeply nested SnapTrade responses into clean Pydantic models.
 Parses equity positions, orders, option positions, and total portfolio value.
 """
 
@@ -103,27 +103,23 @@ class OptionPosition(BaseModel):
         return [_parse_option_position(op) for op in raw_list]
 
 
-class Holdings(BaseModel):
-    """Top-level container for all holdings data from SnapTrade."""
+class STPortfolio(BaseModel):
+    """Parsed portfolio snapshot: equity + option positions from SnapTrade."""
 
     model_config = {"frozen": True}
 
-    positions: List[Position]
+    equity_positions: List[Position]
     option_positions: List[OptionPosition]
-    total_value: float
 
     @staticmethod
-    def from_raw(raw: Dict[str, Any]) -> "Holdings":
-        """Parse the full SnapTrade get_holdings response into a Holdings model."""
-        total_value_data = raw.get("total_value", {})
-        return Holdings(
-            positions=Position.from_raw_list(raw.get("positions", [])),
-            option_positions=OptionPosition.from_raw_list(
-                raw.get("option_positions", []),
-            ),
-            total_value=total_value_data.get("value", 0.0)
-            if isinstance(total_value_data, dict)
-            else float(total_value_data or 0.0),
+    def from_raw(
+        equity_raw: List[Dict[str, Any]],
+        options_raw: List[Dict[str, Any]],
+    ) -> "STPortfolio":
+        """Build an STPortfolio from raw SnapTrade API response lists."""
+        return STPortfolio(
+            equity_positions=Position.from_raw_list(equity_raw),
+            option_positions=OptionPosition.from_raw_list(options_raw),
         )
 
 

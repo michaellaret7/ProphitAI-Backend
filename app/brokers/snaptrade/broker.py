@@ -11,12 +11,14 @@ Sub-components accessible directly:
 """
 
 import logging
+from concurrent.futures import ThreadPoolExecutor
 from typing import Any, Dict, List, Optional
 
 from app.brokers.snaptrade.client import SnapTradeClient
 from app.brokers.snaptrade.auth import SnapTradeAuth
 from app.brokers.snaptrade.accounts import SnapTradeAccounts
-from app.brokers.snaptrade.models.holdings import Holdings
+from app.brokers.snaptrade.models.activities import ActivityRecord
+from app.brokers.snaptrade.models.holdings import STPortfolio
 from app.brokers.snaptrade.trading import SnapTradeTrading
 from app.brokers.snaptrade.connections import SnapTradeConnections
 from app.brokers.snaptrade.reporting import SnapTradeReporting
@@ -35,13 +37,13 @@ class SnapTradeBroker:
         self._st_client = SnapTradeClient(
             client_id=client_id, consumer_key=consumer_key,
         )
-        client = self._st_client.get_client()
+        self.client = self._st_client.get_client()
 
-        self.auth = SnapTradeAuth(client)
-        self.accounts = SnapTradeAccounts(client)
-        self.trading = SnapTradeTrading(client)
-        self.connections = SnapTradeConnections(client)
-        self.reporting = SnapTradeReporting(client)
+        self.auth = SnapTradeAuth(self.client)
+        self.accounts = SnapTradeAccounts(self.client)
+        self.trading = SnapTradeTrading(self.client)
+        self.connections = SnapTradeConnections(self.client)
+        self.reporting = SnapTradeReporting(self.client)
 
     # ══════════════════════════════════════════════════════════════
     # AUTH
@@ -98,45 +100,73 @@ class SnapTradeBroker:
         """Get cash balances for an account."""
         return self.accounts.get_balances(user_id, user_secret, account_id)
 
-    def get_holdings(
-        self, user_id: str, user_secret: str, account_id: str,
-    ) -> Holdings:
-        """Get full holdings (positions + balances + orders + options)."""
-        return self.accounts.get_holdings(user_id, user_secret, account_id)
+    def get_portfolio(
+        self,
+        user_id: str,
+        user_secret: str,
+        account_id: str,
+    ) -> STPortfolio:
+        """Get portfolio for an account."""
 
-    def get_all_holdings(
-        self, user_id: str, user_secret: str,
-    ) -> List[Dict[str, Any]]:
-        """Get holdings across all accounts."""
-        return self.accounts.get_all_holdings(user_id, user_secret)
+        kwargs = dict(account_id=account_id, user_id=user_id, user_secret=user_secret)
+
+        with ThreadPoolExecutor(max_workers=2) as pool:
+            equity_future = pool.submit(
+                self.client.account_information.get_user_account_positions, **kwargs,
+            )
+            options_future = pool.submit(
+                self.client.options.list_option_holdings, **kwargs,
+            )
+
+        return STPortfolio.from_raw(
+            equity_raw=equity_future.result().body,
+            options_raw=options_future.result().body,
+        )
 
     def get_orders(
         self,
         user_id: str,
         user_secret: str,
         account_id: str,
-        state: Optional[str] = None,
-        days: Optional[int] = None,
-    ) -> List[Dict[str, Any]]:
-        """Get orders for an account."""
-        return self.accounts.get_orders(
-            user_id, user_secret, account_id, state=state, days=days,
-        )
+        start_date: str,
+        end_date: str,
+    ) -> List[ActivityRecord]:
+        """
+        Fetch BUY and SELL activities concurrently and return typed records.
 
-    def get_account_activities(
-        self,
-        user_id: str,
-        user_secret: str,
-        account_id: str,
-        start_date: Optional[str] = None,
-        end_date: Optional[str] = None,
-        type: Optional[str] = None,
-    ) -> List[Dict[str, Any]]:
-        """Get account activities (fills, dividends, transfers, etc.)."""
-        return self.accounts.get_activities(
-            user_id, user_secret, account_id,
-            start_date=start_date, end_date=end_date, type=type,
-        )
+        Args:
+            user_id: SnapTrade user ID
+            user_secret: SnapTrade user secret
+            account_id: Brokerage account ID
+            start_date: Start date (YYYY-MM-DD)
+            end_date: End date (YYYY-MM-DD)
+
+        Returns:
+            Combined list of BUY and SELL ActivityRecord objects
+        """
+        base_kwargs = {
+            "user_id": user_id,
+            "user_secret": user_secret,
+            "account_id": account_id,
+            "start_date": start_date,
+            "end_date": end_date,
+        }
+
+        with ThreadPoolExecutor(max_workers=2) as pool:
+            buy_future = pool.submit(
+                self.accounts._accounts.get_account_activities,
+                **base_kwargs, type="BUY",
+            )
+            sell_future = pool.submit(
+                self.accounts._accounts.get_account_activities,
+                **base_kwargs, type="SELL",
+            )
+
+        # Reason: .body is {"data": [...], "pagination": {...}}
+        raw_buys = buy_future.result().body.get("data", [])
+        raw_sells = sell_future.result().body.get("data", [])
+
+        return ActivityRecord.from_raw_list(raw_buys + raw_sells)
 
     # ══════════════════════════════════════════════════════════════
     # TRADING — Equities
@@ -388,20 +418,6 @@ class SnapTradeBroker:
     # ══════════════════════════════════════════════════════════════
     # REPORTING
     # ══════════════════════════════════════════════════════════════
-
-    def get_activities(
-        self,
-        user_id: str,
-        user_secret: str,
-        start_date: Optional[str] = None,
-        end_date: Optional[str] = None,
-        accounts: Optional[str] = None,
-    ) -> List[Dict[str, Any]]:
-        """Get transaction activities across accounts."""
-        return self.reporting.get_activities(
-            user_id, user_secret,
-            start_date=start_date, end_date=end_date, accounts=accounts,
-        )
 
     def get_performance_report(
         self,
