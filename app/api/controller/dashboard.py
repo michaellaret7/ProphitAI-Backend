@@ -75,7 +75,12 @@ def _compute_sector_breakdown(
     total_mv = 0.0
 
     for pos in positions:
-        ticker = pos.get("ticker", "")
+        # Reason: option positions use underlying_ticker for sector lookup
+        ticker = (
+            pos.get("underlying_ticker") or pos.get("ticker", "")
+            if pos.get("position_type") == "option"
+            else pos.get("ticker", "")
+        )
         mv = float(pos.get("market_value") or 0)
         info = ticker_info_map.get(ticker, {})
         sector = info.get("sector") or "Unknown"
@@ -115,8 +120,13 @@ def _enrich_positions(
     """Merge sector/industry/beta/tickerName from ticker info into each position."""
     enriched = []
     for pos in positions:
-        ticker = pos.get("ticker", "")
-        info = ticker_info_map.get(ticker, {})
+        # Reason: option positions use underlying_ticker for metadata lookup
+        lookup_ticker = (
+            pos.get("underlying_ticker") or pos.get("ticker", "")
+            if pos.get("position_type") == "option"
+            else pos.get("ticker", "")
+        )
+        info = ticker_info_map.get(lookup_ticker, {})
         enriched.append({
             **pos,
             "sector": info.get("sector"),
@@ -269,7 +279,14 @@ async def get_dashboard_controller(*, clerk_id: str) -> Dict[str, Any]:
     holdings_news = None
 
     if positions and isinstance(positions, list) and len(positions) > 0:
-        holding_tickers = [p.get("ticker", "") for p in positions if p.get("ticker")]
+        # Reason: use underlying_ticker for options so DB lookup finds the equity metadata
+        holding_tickers = list({
+            p.get("underlying_ticker") or p.get("ticker", "")
+            if p.get("position_type") == "option"
+            else p.get("ticker", "")
+            for p in positions
+            if p.get("ticker") or p.get("underlying_ticker")
+        })
 
         if holding_tickers:
             phase2_results = await asyncio.gather(

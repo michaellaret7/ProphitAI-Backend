@@ -1,5 +1,6 @@
 """Broker onboarding services — SnapTrade user registration and connection."""
 
+import uuid
 from typing import Optional, Dict, Any
 
 from app.repositories.user.broker import (
@@ -8,6 +9,7 @@ from app.repositories.user.broker import (
     _persist_account_id,
 )
 from app.utils.decorators.database import with_transaction
+from app.utils.time_utils import get_current_utc_time
 from app.db.core.models.user_data_models import User
 
 
@@ -34,7 +36,21 @@ def register_snaptrade_user(*, clerk_id: str, session=None) -> Dict[str, str]:
     """
     user = session.query(User).filter(User.clerk_id == clerk_id).first()
     if not user:
-        raise ValueError("User not found")
+        # Reason: JIT provisioning — covers local dev where Clerk webhooks can't reach localhost
+        from app.api.auth.clerk import get_clerk_client
+        clerk = get_clerk_client()
+        clerk_user = clerk.users.get(user_id=clerk_id)
+        email = clerk_user.email_addresses[0].email_address
+        user = User(
+            id=uuid.uuid4(),
+            email=email,
+            first_name=clerk_user.first_name or "",
+            last_name=clerk_user.last_name or "",
+            clerk_id=clerk_id,
+            creation_date=get_current_utc_time(),
+        )
+        session.add(user)
+        session.flush()
 
     if user.snaptrade_user_id:
         raise ValueError("User is already registered with SnapTrade")

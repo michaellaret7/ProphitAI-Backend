@@ -184,7 +184,9 @@ def get_positions(clerk_id: str) -> List[Dict]:
         user_secret=creds["snaptrade_user_secret"],
         account_id=creds["snaptrade_account_id"],
     )
-    return [p.model_dump() for p in portfolio.equity_positions]
+    all_positions = [p.model_dump() for p in portfolio.equity_positions]
+    all_positions += [p.model_dump() for p in portfolio.option_positions]
+    return all_positions
 
 
 def get_position(clerk_id: str, symbol: str) -> Optional[Dict]:

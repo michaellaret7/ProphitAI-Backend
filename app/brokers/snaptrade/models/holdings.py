@@ -29,6 +29,7 @@ class Position(BaseModel):
     cash_equivalent: bool
     snaptrade_symbol_id: str
     figi_code: str
+    position_type: str = "equity"
 
     @computed_field
     @property
@@ -91,6 +92,33 @@ class OptionPosition(BaseModel):
     price: float
     units: float
     average_purchase_price: float
+    position_type: str = "option"
+
+    @computed_field
+    @property
+    def market_value(self) -> float:
+        """Market value: price * units * 100 (each contract = 100 shares)."""
+        return round(self.price * self.units * 100, 2)
+
+    @computed_field
+    @property
+    def cost_basis(self) -> float:
+        """Cost basis: average_purchase_price * units * 100."""
+        return round(self.average_purchase_price * self.units * 100, 2)
+
+    @computed_field
+    @property
+    def open_pnl(self) -> float:
+        """Unrealized P&L."""
+        return round(self.market_value - self.cost_basis, 2)
+
+    @computed_field
+    @property
+    def pnl_pct(self) -> Optional[float]:
+        """Unrealized PnL as a percentage of cost basis."""
+        if self.cost_basis == 0:
+            return None
+        return round((self.open_pnl / self.cost_basis) * 100, 4)
 
     @staticmethod
     def from_raw(raw: Dict[str, Any]) -> "OptionPosition":
