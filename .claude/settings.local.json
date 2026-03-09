@@ -103,7 +103,8 @@
       "Bash(git log:*)",
       "Bash(kill %1:*)",
       "Bash(pip:*)",
-      "Bash(do echo:*)"
+      "Bash(do echo:*)",
+      "Bash(git check-ignore:*)"
     ],
     "deny": [],
     "ask": []
