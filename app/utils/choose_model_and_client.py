@@ -51,6 +51,12 @@ MODEL_ALIASES = {
         "together": "deepseek-ai/DeepSeek-V3.2-Exp",
     },
 
+    "Qwen3.5-397B-A17B":{
+        "together": "Qwen/Qwen3.5-397B-A17B",
+    },
+    "Qwen3.5-9B":{
+        "together": "Qwen/Qwen3.5-9B",
+    },
     "Qwen3-235B-instruct": {
         "together": "Qwen/Qwen3-235B-A22B-Instruct-2507-tput",
         "fireworks": "accounts/fireworks/models/qwen3-235b-a22b-instruct-2507",

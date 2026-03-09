@@ -110,3 +110,16 @@ class WorkerAgent(AgentBase):
                 stop_reason=result["stop_reason"]
             )
 
+if __name__ == "__main__":
+    from app.core.atlas.tools.worker_agent.write_note import write_note
+    from app.core.atlas.tools.research.earnings_calls import earnings_call_search
+
+    worker_agent = WorkerAgent(
+        task="Research the earnings calls for the tickers AAPL, MSFT, and GOOGL. Then compare the results for each of them",
+        tools=[earnings_call_search.tool],
+        notebook=Notebook(),
+        provider="together",
+        model="Qwen3.5-397B-A17B",
+    )
+    result = worker_agent.run()
+    print(result.answer)
