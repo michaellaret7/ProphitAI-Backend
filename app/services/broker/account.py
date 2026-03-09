@@ -58,9 +58,12 @@ def get_balances(clerk_id: str) -> List[Dict[str, Any]]:
 
 
 def get_equity(clerk_id: str) -> Optional[float]:
-    """Get total account equity (balance total) via SnapTrade."""
-    bal = _first_balance(clerk_id)
-    return bal.get("amount") or bal.get("cash")
+    """Get total account equity (cash + position market values)."""
+    from app.services.broker.trading import get_positions
+    cash = get_cash_balance(clerk_id) or 0
+    positions = get_positions(clerk_id)
+    total_mv = sum(float(p.get("market_value") or 0) for p in positions) if positions else 0.0
+    return round(cash + total_mv, 2)
 
 
 def get_buying_power(clerk_id: str) -> Optional[float]:
@@ -71,3 +74,5 @@ def get_buying_power(clerk_id: str) -> Optional[float]:
 def get_cash_balance(clerk_id: str) -> Optional[float]:
     """Get cash balance from account balances via SnapTrade."""
     return _first_balance(clerk_id).get("cash")
+
+

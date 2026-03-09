@@ -47,25 +47,6 @@ def _safe_result(result: Any) -> Optional[Any]:
     return result
 
 
-def _pnl_from_positions(positions: Optional[List[Dict]]) -> Optional[Dict[str, float]]:
-    """Sum open P&L across all positions as day-P&L."""
-    if not positions or not isinstance(positions, list):
-        return None
-
-    total_pl = 0.0
-    total_cost = 0.0
-    for pos in positions:
-        pl = float(pos.get("open_pnl") or 0)
-        mv = float(pos.get("market_value") or 0)
-        total_pl += pl
-        total_cost += mv - pl
-
-    if total_cost == 0:
-        return None
-
-    return {"dollar": round(total_pl, 2), "percent": round(total_pl / total_cost, 6)}
-
-
 def _compute_sector_breakdown(
     positions: List[Dict],
     ticker_info_map: Dict[str, Dict],
@@ -98,6 +79,41 @@ def _compute_sector_breakdown(
             "marketValue": round(mv, 2),
         }
         for sector, mv in sorted(sector_mv.items(), key=lambda x: x[1], reverse=True)
+    ]
+
+
+def _compute_industry_breakdown(
+    positions: List[Dict],
+    ticker_info_map: Dict[str, Dict],
+) -> List[Dict[str, Any]]:
+    """Group positions by industry, compute weight percentages."""
+    industry_mv: Dict[str, float] = {}
+    total_mv = 0.0
+
+    for pos in positions:
+        # Reason: option positions use underlying_ticker for industry lookup
+        ticker = (
+            pos.get("underlying_ticker") or pos.get("ticker", "")
+            if pos.get("position_type") == "option"
+            else pos.get("ticker", "")
+        )
+        mv = float(pos.get("market_value") or 0)
+        info = ticker_info_map.get(ticker, {})
+        industry = info.get("industry") or "Unknown"
+
+        industry_mv[industry] = industry_mv.get(industry, 0.0) + mv
+        total_mv += mv
+
+    if total_mv == 0:
+        return []
+
+    return [
+        {
+            "industry": industry,
+            "weight": round(mv / total_mv, 4),
+            "marketValue": round(mv, 2),
+        }
+        for industry, mv in sorted(industry_mv.items(), key=lambda x: x[1], reverse=True)
     ]
 
 
@@ -150,15 +166,56 @@ def _extract_treasury_snapshot(rates: Optional[Any]) -> Optional[Dict]:
     }
 
 
-def _extract_balances(balances: Optional[List[Dict]]) -> tuple[Optional[float], Optional[float], Optional[float]]:
-    """Extract equity, buying_power, cash from a single get_balances call."""
+def _extract_balances(balances: Optional[List[Dict]]) -> tuple[Optional[float], Optional[float]]:
+    """Extract buying_power and cash from a single get_balances call."""
     if not balances or not isinstance(balances, list) or len(balances) == 0:
-        return None, None, None
+        return None, None
     bal = balances[0]
-    equity = bal.get("amount") or bal.get("cash")
     buying_power = bal.get("buying_power")
     cash = bal.get("cash")
-    return equity, buying_power, cash
+    return buying_power, cash
+
+
+def _compute_equity(cash: Optional[float], positions: Optional[List[Dict]]) -> Optional[float]:
+    """Compute total equity as cash + sum of position market values."""
+    total_mv = sum(float(p.get("market_value") or 0) for p in positions) if positions else 0.0
+    return round((cash or 0) + total_mv, 2)
+
+
+def _compute_day_pnl(
+    positions: List[Dict],
+    quotes: List[Dict],
+) -> Optional[Dict[str, float]]:
+    """Compute today's P&L from FMP batch quotes and position units."""
+    if not positions or not quotes:
+        return None
+
+    change_map = {q["symbol"]: float(q.get("change") or 0) for q in quotes}
+
+    total_daily_change = 0.0
+    prev_total_value = 0.0
+    for pos in positions:
+        # Reason: option positions use underlying_ticker for price lookup
+        ticker = (
+            pos.get("underlying_ticker") or pos.get("ticker", "")
+            if pos.get("position_type") == "option"
+            else pos.get("ticker", "")
+        )
+        units = float(pos.get("units") or 0)
+        mv = float(pos.get("market_value") or 0)
+        change = change_map.get(ticker, 0.0)
+
+        pos_daily = change * units
+        total_daily_change += pos_daily
+        prev_total_value += mv - pos_daily
+
+    if prev_total_value == 0:
+        return None
+
+    return {
+        "dollar": round(total_daily_change, 2),
+        "percent": round(total_daily_change / prev_total_value, 6),
+    }
 
 
 async def _get_cached_treasury() -> Optional[Any]:
@@ -219,7 +276,7 @@ async def get_dashboard_controller(*, clerk_id: str) -> Dict[str, Any]:
         tasks.append(asyncio.to_thread(get_portfolio_performance, clerk_id=clerk_id))
 
     task_map.append("indices")
-    tasks.append(asyncio.to_thread(fmp.get_batch_quote, ["SPY", "QQQ", "DIA", "IWM"]))
+    tasks.append(asyncio.to_thread(fmp.get_batch_quote, ["SPY", "QQQ", "DIA", "IWM", "GLD"]))
 
     if cached_treasury is None:
         task_map.append("treasury")
@@ -253,7 +310,7 @@ async def get_dashboard_controller(*, clerk_id: str) -> Dict[str, Any]:
     if cached_performance is None and performance is not None:
         cache_ops.append(cache.set(perf_key, performance, PERFORMANCE_CACHE_TTL))
 
-    equity, buying_power, cash = _extract_balances(balances)
+    buying_power, cash = _extract_balances(balances)
 
     # Resolve treasury and news from cache or fresh fetch
     if cached_treasury is not None:
@@ -277,6 +334,7 @@ async def get_dashboard_controller(*, clerk_id: str) -> Dict[str, Any]:
     # Phase 2: Dependent calls (need position tickers)
     ticker_info_map: Dict[str, Dict] = {}
     holdings_news = None
+    holdings_quotes: List[Dict] = []
 
     if positions and isinstance(positions, list) and len(positions) > 0:
         # Reason: use underlying_ticker for options so DB lookup finds the equity metadata
@@ -292,13 +350,18 @@ async def get_dashboard_controller(*, clerk_id: str) -> Dict[str, Any]:
             phase2_results = await asyncio.gather(
                 asyncio.to_thread(_fetch_ticker_info_batch, holding_tickers),
                 asyncio.to_thread(fmp.get_batch_stock_news, holding_tickers, 20),
+                asyncio.to_thread(fmp.get_batch_quote, holding_tickers),
                 return_exceptions=True,
             )
             ticker_info_map = _safe_result(phase2_results[0]) or {}
             holdings_news = _safe_result(phase2_results[1])
+            holdings_quotes = _safe_result(phase2_results[2]) or []
+
+    # Reason: equity = cash + sum(position market_values), not the balance "amount"
+    equity = _compute_equity(cash, positions)
 
     # Phase 3: Derived computations
-    day_pnl = _pnl_from_positions(positions)
+    day_pnl = _compute_day_pnl(positions or [], holdings_quotes)
 
     enriched_positions = (
         _enrich_positions(positions, ticker_info_map)
@@ -308,6 +371,12 @@ async def get_dashboard_controller(*, clerk_id: str) -> Dict[str, Any]:
 
     sector_breakdown = (
         _compute_sector_breakdown(positions, ticker_info_map)
+        if positions and isinstance(positions, list)
+        else None
+    )
+
+    industry_breakdown = (
+        _compute_industry_breakdown(positions, ticker_info_map)
         if positions and isinstance(positions, list)
         else None
     )
@@ -337,6 +406,7 @@ async def get_dashboard_controller(*, clerk_id: str) -> Dict[str, Any]:
         "portfolioPerformance": performance,
         "positions": enriched_positions,
         "sectorBreakdown": sector_breakdown,
+        "industryBreakdown": industry_breakdown,
         "marketOverview": {
             "indices": indices,
             "treasuryRates": treasury_snapshot,

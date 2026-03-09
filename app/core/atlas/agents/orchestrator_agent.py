@@ -143,6 +143,7 @@ class OrchestratorAgent(AgentBase):
 
             system_prompt = build_plan_prompt(self.plan) if self.plan else ORCHESTRATOR_SYSTEM_PROMPT
 
+            # THIS IS THE INITIAL CONTEXT PACKAGE IS BUILT FOR THE ORCHESTRATOR AGENT
             self.messages = [
                 {"role": "system", "content": system_prompt},
                 {"role": "user", "content": self.task},

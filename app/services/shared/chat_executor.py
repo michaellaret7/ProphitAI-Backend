@@ -7,6 +7,7 @@ Provides:
 """
 
 import asyncio
+import logging
 import uuid
 from dataclasses import dataclass, field
 from enum import Enum
@@ -17,6 +18,76 @@ from app.utils.time_utils import get_current_utc_time
 
 if TYPE_CHECKING:
     from app.core.atlas.agents import ChatAgent
+
+logger = logging.getLogger(__name__)
+
+# ================================
+# --> Helper funcs
+# ================================
+
+_EXCLUDE_POSITION_FIELDS = {"snaptrade_symbol_id", "figi_code", "fractional_units", "cash_equivalent"}
+
+
+def _build_positions_context(creds: Dict[str, str]) -> str:
+    """Fetch current positions and format as a system prompt section.
+
+    Args:
+        creds: Resolved SnapTrade credentials dict.
+
+    Returns:
+        Formatted positions context string, or empty string on failure.
+    """
+    try:
+        from app.repositories.user.broker import get_snaptrade_broker
+
+        broker = get_snaptrade_broker()
+        portfolio = broker.get_portfolio(
+            user_id=creds["snaptrade_user_id"],
+            user_secret=creds["snaptrade_user_secret"],
+            account_id=creds["snaptrade_account_id"],
+        )
+
+        lines = ["\n\n## Current Portfolio Positions"]
+
+        # Equity positions
+        if portfolio.equity_positions:
+            lines.append("\n### Equity Positions")
+            for p in portfolio.equity_positions:
+                d = p.model_dump(exclude=_EXCLUDE_POSITION_FIELDS)
+                pnl_sign = "+" if d.get("open_pnl", 0) >= 0 else ""
+                lines.append(
+                    f"- **{d['ticker']}**: {d['units']} shares @ ${d['price']:.2f} | "
+                    f"Market Value: ${d['market_value']:.2f} | "
+                    f"Avg Cost: ${d['average_purchase_price']:.2f} | "
+                    f"P&L: {pnl_sign}${d['open_pnl']:.2f} ({pnl_sign}{d.get('pnl_pct', 0):.2f}%)"
+                )
+
+        # Option positions
+        if portfolio.option_positions:
+            lines.append("\n### Option Positions")
+            for op in portfolio.option_positions:
+                d = op.model_dump()
+                pnl_sign = "+" if d.get("open_pnl", 0) >= 0 else ""
+                lines.append(
+                    f"- **{d['underlying_ticker']}** {d['option_type'].upper()} "
+                    f"${d['strike_price']:.2f} exp {d['expiration_date']} | "
+                    f"{d['units']} contracts @ ${d['price']:.2f} | "
+                    f"Market Value: ${d['market_value']:.2f} | "
+                    f"P&L: {pnl_sign}${d['open_pnl']:.2f} ({pnl_sign}{d.get('pnl_pct', 0):.2f}%)"
+                )
+
+        if not portfolio.equity_positions and not portfolio.option_positions:
+            lines.append("\nNo open positions.")
+
+        lines.append(
+            "\nYou already have this portfolio context — do NOT call get_positions "
+            "unless the user explicitly asks to refresh or re-check their positions.\n"
+        )
+        return "\n".join(lines)
+
+    except Exception as e:
+        logger.warning("Failed to fetch positions for system prompt: %s", e)
+        return ""
 
 
 class ChatSessionStatus(str, Enum):
@@ -79,9 +150,17 @@ class ChatSessionManager:
         from app.core.atlas.tools.chat_registry import register_chat_tools
 
         session_id = str(uuid.uuid4())
-        system_prompt = None
 
-        # Resolve broker credentials + internal user ID and inject into prompt
+        # Create agent without callback (callback set per-message due to event loop)
+        agent = ChatAgent(
+            provider='anthropic',
+            model='claude-sonnet-4-6',
+            print_mode=PrintMode.PRODUCTION,
+            temperature=0.7,
+            max_iterations=20,
+        )
+
+        # Append broker credentials, positions, and context to the default system prompt
         if user_id:
             from app.repositories.user.account import get_all_user_data_by_clerk_id
             from app.repositories.user.broker import resolve_snaptrade_credentials
@@ -111,17 +190,12 @@ class ChatSessionManager:
                 f"4. Only AFTER confirmation, call propose_trade with all the details.\n"
                 f"5. If the user declines or wants changes, adjust and re-present — do NOT submit.\n"
             )
-            system_prompt = (system_prompt or "") + broker_context
+            agent.system_prompt += broker_context
 
-        # Create agent without callback (callback set per-message due to event loop)
-        agent = ChatAgent(
-            provider='anthropic',
-            model='claude-sonnet-4-6',
-            print_mode=PrintMode.PRODUCTION,
-            temperature=0.7,
-            max_iterations=20,
-            system_prompt=system_prompt
-        )
+            # Fetch and inject current positions so the agent has portfolio awareness
+            positions_context = _build_positions_context(creds)
+            if positions_context:
+                agent.system_prompt += positions_context
 
         agent.session_id = session_id
 

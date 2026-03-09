@@ -11,7 +11,7 @@ from app.core.atlas.models import (
     ChatCallback,
     NoOpChatCallback,
 )
-from app.core.atlas.prompts import CHAT_SYSTEM_PROMPT
+from app.core.atlas.prompts import build_chat_system_prompt
 from app.core.atlas.execution import ExecutionLoop, ToolHandler
 from app.core.atlas.logging import AgentPrinter
 
@@ -35,7 +35,6 @@ class ChatAgent(AgentBase):
         max_iterations: int = 20,
         print_mode: PrintMode = PrintMode.PRODUCTION,
         temperature: Optional[float] = None,
-        system_prompt: Optional[str] = None,
         chat_callback: Optional[Union[ChatCallback, NoOpChatCallback]] = None,
     ):
         if provider is None:
@@ -51,7 +50,7 @@ class ChatAgent(AgentBase):
             temperature=temperature,
         )
 
-        self.system_prompt = system_prompt if system_prompt is not None else CHAT_SYSTEM_PROMPT
+        self.system_prompt = build_chat_system_prompt()
 
         # Chat streaming callback - defaults to no-op if not provided
         self.chat_callback: Union[ChatCallback, NoOpChatCallback] = (
