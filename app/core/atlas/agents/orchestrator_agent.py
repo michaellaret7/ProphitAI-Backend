@@ -185,8 +185,7 @@ if __name__ == "__main__":
     # THIS IS WHERE YOU RUN IT 
 
     task = """
-    What are your views on Intel (INTC) as relates to the company's turnaround and the 18A chip, the company's financial position, market share trend, valuation and how it stacks up against its peers especially as it pertains to AI.  Analyze the last 6 quarters of earnings call transcripts, financials, and more recently any news since the latest calls that might shed additional light on the company's prospects and competitiveness going forward. Lastly, does the government's involvement (taking an ownership stake) change the company's prospects and potential price appreciation potential at all?  Finally, give the pros and cons and final assessment whether INTC is a strong candidate to own/buy in here?
-    Tell the worker agents to go super deep and do extensive detailed research.
+    Review the macro environment and then my portfolio and build me a 1-2 months trade idea.
     """
 
     orchestrator = OrchestratorAgent(

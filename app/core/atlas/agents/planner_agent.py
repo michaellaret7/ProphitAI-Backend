@@ -87,3 +87,21 @@ class PlannerAgent(AgentBase):
             run_span.update(output=plan.model_dump())
 
             return plan
+
+if __name__ == "__main__":
+    planner = PlannerAgent(
+        task=(
+            "Analyze AAPL and MSFT as potential long-term portfolio holdings and determine which is more attractive "
+            "at current valuation. Use the last 5 years of financial performance and the latest filings/transcripts. "
+            "Evaluate competitive moat strength, AI and cloud monetization quality, capital allocation discipline, "
+            "balance-sheet resilience, and downside risk under a macro slowdown. Include comparable-multiple analysis "
+            "and scenario-based intrinsic valuation (bear/base/bull), then identify key 2-4 quarter catalysts, "
+            "define measurable decision thresholds, and produce a final invest/hold/avoid recommendation with "
+            "confidence level and thesis invalidation triggers."
+        ),
+        print_mode=PrintMode.PRODUCTION,
+        provider="anthropic",
+        model="claude-opus-4-6",
+    )
+    plan = planner.run()
+    print(plan)

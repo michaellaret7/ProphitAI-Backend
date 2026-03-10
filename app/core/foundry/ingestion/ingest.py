@@ -317,7 +317,7 @@ class Ingestor:
 
         return bucket, key
 
-    def process_batch_s3(self, s3_uris: list[str]) -> list[Document | None]:
+    async def process_batch_s3(self, s3_uris: list[str]) -> list[Document | None]:
         """
         Process multiple S3 PDFs in a single Modal batch call.
 
@@ -338,7 +338,7 @@ class Ingestor:
             return [None] * len(s3_uris)
 
         logger.info(f"Batch processing {len(pdf_uris)} PDFs via Modal")
-        results = self._get_modal_client().extract_batch_from_s3(pdf_uris)
+        results = await self._get_modal_client().extract_batch_from_s3(pdf_uris)
 
         # Build Documents from results, preserving order
         documents: list[Document | None] = []

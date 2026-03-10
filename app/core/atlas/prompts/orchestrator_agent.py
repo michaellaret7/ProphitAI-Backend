@@ -75,12 +75,25 @@ def build_plan_prompt(plan) -> str:
     """Build the system prompt for plan-first mode.
 
     Appends the plan tasks to the base orchestrator prompt so the LLM
-    knows exactly what to execute and in what order.
+    knows exactly what to execute and in what order. Groups tasks by
+    step number to communicate parallelism.
     """
-    task_lines = "\n".join(
-        f"{t.id}. {t.description}" for t in plan.tasks
-    )
+    from itertools import groupby
 
+    # Reason: group tasks by step so the orchestrator sees which are parallel
+    sorted_tasks = sorted(plan.tasks, key=lambda t: t.step)
+    step_groups = []
+    for step_num, tasks in groupby(sorted_tasks, key=lambda t: t.step):
+        task_list = list(tasks)
+        if len(task_list) == 1:
+            step_groups.append(f"Step {step_num}: {task_list[0].id}. {task_list[0].description}")
+        else:
+            lines = [f"Step {step_num} (parallel):"]
+            for t in task_list:
+                lines.append(f"  {t.id}. {t.description}")
+            step_groups.append("\n".join(lines))
+
+    task_block = "\n".join(step_groups)
     date = get_current_utc_time().strftime("%m/%d/%Y")
 
     return ORCHESTRATOR_SYSTEM_PROMPT + f"""
@@ -90,10 +103,11 @@ def build_plan_prompt(plan) -> str:
 A structured plan has been created for this task. Execute each task by deploying
 workers with the right tools, then mark it complete with update_plan.
 
+Tasks within the same step are independent — deploy their workers in parallel.
 After ALL tasks are marked complete, synthesize all worker results into your final answer.
 
 ### Tasks
-{task_lines}
+{task_block}
 
 ## Other Important Information
 --> Today's date is {date}.

@@ -13,6 +13,7 @@ class TaskStatus(str, Enum):
 
 class PlanTask(BaseModel):
     id: str = Field(..., description="Task identifier, e.g., '1'")
+    step: int = Field(..., description="Step number — tasks sharing the same step run in parallel")
     description: str = Field(..., description="What the task will do")
     status: TaskStatus = Field(default=TaskStatus.NOT_STARTED, description="Current status of the task")
 

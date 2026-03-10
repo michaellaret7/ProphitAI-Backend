@@ -75,7 +75,7 @@ async def upload_and_ingest_controller(
     logger.info(f"Uploaded {len(uploaded_files)} files for user {clerk_id}")
 
     # Step 2: Run pipeline on uploaded documents
-    pipeline_result = run_user_pipeline(
+    pipeline_result = await run_user_pipeline(
         clerk_id=clerk_id,
         s3_uris=s3_uris,
         move_to_embedded=move_to_embedded,

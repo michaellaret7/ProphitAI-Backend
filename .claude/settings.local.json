@@ -104,7 +104,9 @@
       "Bash(kill %1:*)",
       "Bash(pip:*)",
       "Bash(do echo:*)",
-      "Bash(git check-ignore:*)"
+      "Bash(git check-ignore:*)",
+      "Bash(cd \"C:\\\\Dev\\\\ProphitAI\" && source .venv/Scripts/activate && PYTHONIOENCODING=utf-8 python tests/planner_eval.py 2>&1)",
+      "Bash(cd \"C:\\\\Dev\\\\ProphitAI\" && source .venv/Scripts/activate && PYTHONIOENCODING=utf-8 python tests/planner_eval.py --verify 2>&1)"
     ],
     "deny": [],
     "ask": []

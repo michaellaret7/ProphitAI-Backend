@@ -4,6 +4,7 @@ Pipeline execution helpers for document ingestion.
 Provides utilities for running the RAG pipeline on user documents.
 """
 
+import asyncio
 import logging
 from typing import Dict, Any, List
 
@@ -55,7 +56,7 @@ def list_user_s3_documents(clerk_id: str, folder: str = "not_embedded") -> List[
 
     return documents
 
-def run_user_pipeline(
+async def run_user_pipeline(
     clerk_id: str,
     s3_uris: List[Dict[str, Any]] | None = None,
     move_to_embedded: bool = True,
@@ -75,7 +76,7 @@ def run_user_pipeline(
         ValueError: If no documents found for user.
     """
     if s3_uris is None:
-        s3_uris = list_user_s3_documents(clerk_id)
+        s3_uris = await asyncio.to_thread(list_user_s3_documents, clerk_id)
 
     if not s3_uris:
         raise ValueError(
@@ -91,7 +92,7 @@ def run_user_pipeline(
         move_to_embedded_after_success=move_to_embedded,
     )
 
-    vectors_upserted = pipeline.run(s3_uris=s3_uris)
+    vectors_upserted = await pipeline.run(s3_uris=s3_uris)
 
     logger.info(f"Ingested {vectors_upserted} vectors for user {clerk_id}")
 

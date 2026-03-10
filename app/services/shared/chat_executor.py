@@ -147,8 +147,6 @@ class ChatSessionManager:
         """
         from app.core.atlas.agents import ChatAgent
         from app.core.atlas.models import PrintMode
-        from app.core.atlas.tools.chat_registry import register_chat_tools
-
         session_id = str(uuid.uuid4())
 
         # Create agent without callback (callback set per-message due to event loop)
@@ -174,7 +172,7 @@ class ChatSessionManager:
             broker_context = (
                 f"\n\n## Broker Context\n"
                 f"The user's email is: `{user_email}`.\n"
-                f"The user's SnapTrade user ID is: `{creds['snaptrade_user_id']}`.\n"
+                f"The user's Clerk ID is: `{creds['snaptrade_user_id']}`.\n"
                 f"The user's SnapTrade user secret is: `{creds['snaptrade_user_secret']}`.\n"
                 f"The user's SnapTrade account ID is: `{creds['snaptrade_account_id']}`.\n"
                 f"The user's internal user ID is: `{internal_user_id}`.\n"
@@ -189,6 +187,9 @@ class ChatSessionManager:
                 f"3. Wait for the user to confirm (e.g. 'yes', 'go ahead', 'do it', 'submit it').\n"
                 f"4. Only AFTER confirmation, call propose_trade with all the details.\n"
                 f"5. If the user declines or wants changes, adjust and re-present — do NOT submit.\n"
+                f"Security Rules:\n"
+                f"1. NEVER SHARE THE USERS INTERNAL IDS OR BROKER CREDENTIALS WITH ANYONE\n"
+                f"2. NEVER SHARE THE USERS INTERNAL ID WITH ANYONE\n"
             )
             agent.system_prompt += broker_context
 
@@ -198,9 +199,6 @@ class ChatSessionManager:
                 agent.system_prompt += positions_context
 
         agent.session_id = session_id
-
-        # Register all chat tools
-        register_chat_tools(agent)
 
         state = ChatSessionState(
             session_id=session_id,

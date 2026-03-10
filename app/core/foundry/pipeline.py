@@ -10,9 +10,11 @@ Processes multiple texts and S3 documents in a single pass:
 
 from __future__ import annotations
 
+import asyncio
 import os
 import uuid
 from dataclasses import dataclass
+from functools import partial
 from typing import Callable
 
 from dotenv import load_dotenv
@@ -115,7 +117,7 @@ class Pipeline:
 
         self._chunker = CHUNKERS[chunker_type]() # --> get the chunker method for the document type
 
-    def run(
+    async def run(
         self,
         texts: list[dict] | None = None,
         s3_uris: list[dict] | None = None,
@@ -139,7 +141,7 @@ class Pipeline:
             return 0
 
         # Step 1: Ingest all documents (S3 processed in batches to avoid Modal timeout)
-        ingested = self._ingest_all(texts, s3_uris, s3_batch_size)
+        ingested = await self._ingest_all(texts, s3_uris, s3_batch_size)
         if not ingested:
             return 0
 
@@ -158,30 +160,27 @@ class Pipeline:
 
         print(f"Created {len(all_chunks)} chunks from {len(ingested)} documents")
 
-        # Step 3: Embed all chunks in one batch. Here we are embedding dense and sparse vectors 
-        embedded_chunks = embed_chunks(
-            all_chunks,
-            sparse_encoder=self._sparse_encoder,
+        # Step 3: Embed all chunks in one batch (blocking Voyage AI call → offload to thread)
+        embedded_chunks = await asyncio.to_thread(
+            partial(embed_chunks, all_chunks, sparse_encoder=self._sparse_encoder)
         )
 
         print(f"Embedded {len(embedded_chunks)} chunks")
 
-        # Step 4: Upsert all vectors to Pinecone vector db in one batch
-        upserted = self._pinecone.upsert_chunks(
-            embedded_chunks,
-            namespace=self.namespace,
-            batch_size=100,
+        # Step 4: Upsert all vectors to Pinecone vector db in one batch (blocking Pinecone call → offload to thread)
+        upserted = await asyncio.to_thread(
+            partial(self._pinecone.upsert_chunks, embedded_chunks, namespace=self.namespace, batch_size=100)
         )
 
         print(f"Upserted {upserted} vectors to namespace '{self.namespace}'")
 
-        # Step 5: Move S3 documents from not_embedded to embedded folder
+        # Step 5: Move S3 documents from not_embedded to embedded folder (blocking S3 call → offload to thread)
         if self.move_to_embedded_after_success and upserted > 0:
-            self._move_to_embedded(ingested)
+            await asyncio.to_thread(self._move_to_embedded, ingested)
 
         return upserted
 
-    def _ingest_all(
+    async def _ingest_all(
         self,
         texts: list[dict],
         s3_uris: list[dict],
@@ -206,7 +205,7 @@ class Pipeline:
             print(f"Processing S3 batch {batch_num}/{total_batches}: {len(batch)} files")
 
             uri_strings = [item["uri"] for item in batch]
-            documents = self._ingestor.process_batch_s3(uri_strings)
+            documents = await self._ingestor.process_batch_s3(uri_strings)
 
             for item, doc in zip(batch, documents):
                 if doc is None:
@@ -341,32 +340,36 @@ class Pipeline:
 
 
 if __name__ == "__main__":
+    import asyncio
     import boto3
 
-    bucket = "prophitai-s3-bucket"
-    prefix = "pdfs/taxes/not_embedded/"
+    async def main():
+        bucket = "prophitai-s3-bucket"
+        prefix = "pdfs/taxes/not_embedded/"
 
-    s3 = boto3.client("s3")
+        s3 = boto3.client("s3")
 
-    paginator = s3.get_paginator("list_objects_v2")
+        paginator = s3.get_paginator("list_objects_v2")
 
-    s3_uris = []
-    for page in paginator.paginate(Bucket=bucket, Prefix=prefix):
-        for obj in page.get("Contents", []):
-            s3_uris.append({"uri": f"s3://{bucket}/{obj['Key']}", "metadata": {}})
-    
-    if len(s3_uris) > 0:
-        s3_uris.pop(0)
-    
-    print(len(s3_uris))
-    print(s3_uris)
+        s3_uris = []
+        for page in paginator.paginate(Bucket=bucket, Prefix=prefix):
+            for obj in page.get("Contents", []):
+                s3_uris.append({"uri": f"s3://{bucket}/{obj['Key']}", "metadata": {}})
 
-    pipeline = Pipeline(
-        namespace="tax_docs",
-        doc_type="tax_doc",
-        chunker_type="semantic",
-        move_to_embedded_after_success=True,
-    )
+        if len(s3_uris) > 0:
+            s3_uris.pop(0)
 
-    count = pipeline.run(s3_uris=s3_uris, s3_batch_size=5)
-    print(f"Upserted {count} vectors")
+        print(len(s3_uris))
+        print(s3_uris)
+
+        pipeline = Pipeline(
+            namespace="tax_docs",
+            doc_type="tax_doc",
+            chunker_type="semantic",
+            move_to_embedded_after_success=True,
+        )
+
+        count = await pipeline.run(s3_uris=s3_uris, s3_batch_size=5)
+        print(f"Upserted {count} vectors")
+
+    asyncio.run(main())

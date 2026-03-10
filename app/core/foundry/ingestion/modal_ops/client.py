@@ -30,7 +30,7 @@ class ModalPDFClient:
         result = self.extractor.extract_from_s3.remote(s3_uri)
         return result["content"]
 
-    def extract_batch_from_s3(self, s3_uris: list[str]) -> list[dict]:
+    async def extract_batch_from_s3(self, s3_uris: list[str]) -> list[dict]:
         """
         Extract multiple PDFs from S3 in a single Modal call.
 
@@ -40,4 +40,4 @@ class ModalPDFClient:
         Returns:
             List of dicts with 'content', 'char_count', 's3_uri' (or 'error' if failed).
         """
-        return self.extractor.extract_batch_from_s3.remote(s3_uris)
+        return await self.extractor.extract_batch_from_s3.remote.aio(s3_uris)

@@ -3,5 +3,7 @@ from app.db.core.models.user_data_models import User
 
 session = UserSession()
 u = session.query(User).filter(User.email == "michael@prophitai.com").first()
-print(u)
+print(u.clerk_id)
+print(u.snaptrade_account_id)
+
 session.close()
