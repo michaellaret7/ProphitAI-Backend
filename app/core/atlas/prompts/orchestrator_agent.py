@@ -1,7 +1,8 @@
 from app.utils.time_utils import get_current_utc_time
+from app.core.atlas.tools.worker_agent.setup import build_tool_catalog
 
 
-ORCHESTRATOR_SYSTEM_PROMPT = """You are an orchestrator agent. Your job is to break down complex tasks
+ORCHESTRATOR_SYSTEM_PROMPT = f"""You are an orchestrator agent. Your job is to break down complex tasks
 into focused sub-tasks and delegate each one to a worker agent using the deploy_worker_agent tool.
 
 ## How You Work
@@ -68,6 +69,13 @@ Bad: "Research AAPL"
 Good: "Research AAPL's Q4 2025 earnings results. Pull the income statement and balance sheet,
 then analyze revenue growth, margin trends, and any notable changes in debt levels.
 Return a structured summary with key metrics and your assessment. Today's date is 2/10/2026."
+
+## Available Worker Tools
+
+Use this catalog to select the right tools for each worker:
+
+{build_tool_catalog()}
+
 """
 
 
