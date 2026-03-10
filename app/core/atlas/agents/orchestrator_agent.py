@@ -186,6 +186,7 @@ if __name__ == "__main__":
 
     task = """
     Review the macro environment and then my portfolio and build me a 1-2 months trade idea.
+    user: michaellaret7@gmail.com
     """
 
     orchestrator = OrchestratorAgent(
