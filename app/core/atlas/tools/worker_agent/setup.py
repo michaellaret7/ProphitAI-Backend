@@ -49,6 +49,8 @@ from app.core.atlas.tools.portfolio.risk import portfolio_risk
 from app.core.atlas.tools.portfolio.stress_test import portfolio_stress_test
 from app.core.atlas.tools.portfolio.factor_exposure import portfolio_factor_exposure
 from app.core.atlas.tools.portfolio.classification import portfolio_classification
+from app.core.atlas.tools.portfolio.covariance import portfolio_covariance
+from app.core.atlas.tools.portfolio.correlation import portfolio_correlation
 from app.core.atlas.tools.portfolio.user_portfolio import get_user_simulated_portfolio
 
 # --- macro ---
@@ -64,12 +66,8 @@ from app.core.atlas.tools.broker.account import account_info
 from app.core.atlas.tools.broker.portfolio import (
     get_positions, close_position,
 )
-from app.core.atlas.tools.broker.trade import propose_trade
 from app.core.atlas.tools.broker.orders import (
     get_order_impact, get_orders, cancel_order, get_quotes,
-)
-from app.core.atlas.tools.broker.options_trade import (
-    propose_options_trade, propose_multi_leg_options_trade,
 )
 
 # --- options ---
@@ -101,16 +99,16 @@ _ALL_TOOL_FUNCTIONS = [
     # research (8)
     credit_research_search, earnings_call_search, economics_research_search,
     general_news, macro_research, tax_research_search, theory_research, user_upload_search,
-    # portfolio (7)
+    # portfolio (9)
     portfolio_allocator, portfolio_performance, portfolio_risk, portfolio_stress_test,
-    portfolio_factor_exposure, portfolio_classification, get_user_simulated_portfolio,
+    portfolio_factor_exposure, portfolio_classification, portfolio_covariance,
+    portfolio_correlation, get_user_simulated_portfolio,
     # macro (3)
     commodity_prices, us_treasury_rates, macro_indicators,
     # watchlist (1)
     get_watchlist,
-    # broker (11)
+    # broker (8)
     account_info, get_positions, close_position,
-    propose_trade, propose_options_trade, propose_multi_leg_options_trade,
     get_orders, cancel_order, get_quotes, get_order_impact,
     # options (5)
     get_option_expirations, get_option_contracts, get_options_chain,

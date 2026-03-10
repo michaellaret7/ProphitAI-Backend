@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from functools import partial
 from typing import List, Dict, Any, Optional, Union
 
 from app.core.atlas.models import (
@@ -11,12 +12,15 @@ from app.core.atlas.models import (
     ChatCallback,
     NoOpChatCallback,
 )
+from app.core.atlas.models.notebook import Notebook
 from app.core.atlas.prompts import build_chat_system_prompt
 from app.core.atlas.execution import ExecutionLoop, ToolHandler
 from app.core.atlas.logging import AgentPrinter
 
 from .base import AgentBase
 from app.core.atlas.tools.chat_registry import register_chat_tools
+from app.core.atlas.tools.worker_agent.setup import DEPLOY_WORKER_TOOL, _resolve_and_deploy
+from app.core.atlas.tools.orchestrator import retrieve_notes, RETRIEVE_NOTES_TOOL
 
 from langfuse import propagate_attributes
 
@@ -74,6 +78,17 @@ class ChatAgent(AgentBase):
 
         # Register chat tools (after super().__init__ so add_tool is available)
         register_chat_tools(self)
+
+        # Register worker agent delegation tools
+        self.notebook = Notebook()
+        self.add_tool(
+            **DEPLOY_WORKER_TOOL,
+            function=partial(_resolve_and_deploy, self.notebook, self.chat_callback),
+        )
+        self.add_tool(
+            **RETRIEVE_NOTES_TOOL,
+            function=partial(retrieve_notes, self.notebook),
+        )
 
         print(f"Initialized Agent with model: {self.model} (provider: {self.provider})")
 
@@ -177,11 +192,3 @@ class ChatAgent(AgentBase):
                 print(f"\nError: {e}")
                 continue
 
-if __name__ == "__main__":
-    chat = ChatAgent(
-        user_message="Analyze AAPL and MSFT as potential long-term portfolio holdings and determine which is more attractive at current valuation. Use the last 5 years of financial performance and the latest filings/transcripts. Evaluate competitive moat strength, AI and cloud monetization quality, capital allocation discipline, balance-sheet resilience, and downside risk under a macro slowdown. Include comparable-multiple analysis and scenario-based intrinsic valuation (bear/base/bull), then identify key 2-4 quarter catalysts, define measurable decision thresholds, and produce a final invest/hold/avoid recommendation with confidence level and thesis invalidation triggers.",
-        provider="anthropic",
-        model="claude-sonnet-4-6",
-        print_mode=PrintMode.PRODUCTION
-    )
-    chat.run()

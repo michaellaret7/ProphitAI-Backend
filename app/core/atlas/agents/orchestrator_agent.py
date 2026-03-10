@@ -180,21 +180,3 @@ class OrchestratorAgent(AgentBase):
                 parsed_output=parsed_output if parsed_output else None,
             )
 
-if __name__ == "__main__":
-
-    # THIS IS WHERE YOU RUN IT 
-
-    task = """
-    Review the macro environment and then my portfolio and build me a 1-2 months trade idea.
-    user: michaellaret7@gmail.com
-    """
-
-    orchestrator = OrchestratorAgent(
-        task=task,
-        provider="anthropic",
-        model="claude-sonnet-4-6",
-        plan_first=True
-    )
-
-    result = orchestrator.run()
-    print(result.answer)

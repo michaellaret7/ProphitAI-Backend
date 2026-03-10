@@ -21,7 +21,12 @@ from app.core.atlas.tools.ticker.performance import ticker_performance
 from app.core.atlas.tools.ticker.risk import ticker_risk
 
 # --- news ---
-from app.core.atlas.tools.news import get_ticker_news
+from app.core.atlas.tools.news import get_ticker_news, general_news
+
+# --- macro ---
+from app.core.atlas.tools.macro.commodity_prices import commodity_prices
+from app.core.atlas.tools.macro.us_rates import us_treasury_rates
+from app.core.atlas.tools.macro.indicators import macro_indicators
 
 # --- fundamentals ---
 from app.core.atlas.tools.ticker.fundamentals.statements import get_ticker_fundamental_data
@@ -66,33 +71,49 @@ def register_chat_tools(agent: "AgentBase") -> None:
     for func in [
         # base
         llm_web_search,
+
         # research
         macro_research,
         earnings_call_search,
         user_upload_search,
         tax_research_search,
         theory_research,
+
         # ticker
         ticker_performance,
         ticker_risk,
+
         # news
         get_ticker_news,
+        general_news,
+
+        # macro
+        commodity_prices,
+        us_treasury_rates,
+        macro_indicators,
+
         # fundamentals
         get_ticker_fundamental_data,
         get_analyst_estimates,
         get_price_target_data,
+
         # portfolio
         portfolio_performance,
         get_user_simulated_portfolio,
+
         # watchlist
         get_watchlist,
+
         # broker - account
         account_info,
+
         # broker - portfolio
         get_positions,
         close_position,
+
         # broker - trade & orders
         propose_trade,
+
         # broker - options trade
         propose_options_trade,
         propose_multi_leg_options_trade,
@@ -100,9 +121,11 @@ def register_chat_tools(agent: "AgentBase") -> None:
         cancel_order,
         get_quotes,
         get_order_impact,
+
         # screener
         equity_screener,
         etf_screener,
+        
         # options
         get_option_expirations,
         get_option_contracts,
