@@ -86,7 +86,8 @@ app.add_middleware(
         "http://localhost:5500",
         "https://inspiring-melomakarona-dd431a.netlify.app",
         "https://dev--inspiring-melomakarona-dd431a.netlify.app",
-        "https://prophitai.com"
+        "https://prophitai.com",
+        "https://www.prophitai.com",
     ],
     allow_credentials=True,
     allow_methods=["*"],
