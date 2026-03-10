@@ -1,9 +1,22 @@
-from app.db.core.db_config import UserSession
-from app.db.core.models.user_data_models import User
+import os
+from openai import OpenAI
+from dotenv import load_dotenv
 
-session = UserSession()
-u = session.query(User).filter(User.email == "michael@prophitai.com").first()
-print(u.clerk_id)
-print(u.snaptrade_account_id)
+load_dotenv()
 
-session.close()
+ANTHROPIC_API_KEY = os.getenv("ANTHROPIC_API_KEY")
+
+client = OpenAI(
+    base_url="https://api.anthropic.com/v1",
+    api_key=ANTHROPIC_API_KEY
+)
+
+response = client.chat.completions.create(
+    model="claude-sonnet-4-5-20250929",
+    messages=[
+        {"role": "system", "content": "You are a helpful assistant."},
+        {"role": "user", "content": "What is the capital of France?"}
+    ]
+)
+
+print(response.choices[0].message.content)

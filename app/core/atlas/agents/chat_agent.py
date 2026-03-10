@@ -14,6 +14,7 @@ from app.core.atlas.models import (
 )
 from app.core.atlas.models.notebook import Notebook
 from app.core.atlas.prompts import build_chat_system_prompt
+from app.core.atlas.prompts.context import build_user_context
 from app.core.atlas.execution import ExecutionLoop, ToolHandler
 from app.core.atlas.logging import AgentPrinter
 
@@ -41,6 +42,7 @@ class ChatAgent(AgentBase):
         print_mode: PrintMode = PrintMode.PRODUCTION,
         temperature: Optional[float] = None,
         chat_callback: Optional[Union[ChatCallback, NoOpChatCallback]] = None,
+        user_id: Optional[str] = None,
     ):
         if provider is None:
             provider = "anthropic"
@@ -56,6 +58,10 @@ class ChatAgent(AgentBase):
         )
 
         self.system_prompt = build_chat_system_prompt()
+
+        # Enrich system prompt with user context (broker creds, positions, etc.)
+        if user_id:
+            self.system_prompt += build_user_context(user_id)
 
         # Chat streaming callback - defaults to no-op if not provided
         self.chat_callback: Union[ChatCallback, NoOpChatCallback] = (
@@ -192,3 +198,11 @@ class ChatAgent(AgentBase):
                 print(f"\nError: {e}")
                 continue
 
+
+if __name__ == "__main__":
+    agent = ChatAgent(
+        provider="anthropic",
+        model="claude-sonnet-4-6",
+        print_mode=PrintMode.PRODUCTION,
+    )
+    agent.run_interactive()

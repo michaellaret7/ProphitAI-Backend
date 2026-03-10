@@ -37,9 +37,9 @@ router = APIRouter(prefix="/chat", tags=["Chat"])
 class CreateSessionRequest(BaseModel):
     """Request body for creating a chat session."""
 
-    user_id: Optional[str] = Field(
-        default=None,
-        description="User ID for broker context injection.",
+    user_id: str = Field(
+        ...,
+        description="Clerk user ID for broker context injection.",
     )
 
 
