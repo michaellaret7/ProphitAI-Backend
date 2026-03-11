@@ -43,6 +43,7 @@ langfuse==3.14.1
 
 # Text Chunking
 chonkie[semantic,voyageai]>=1.0.0
+flatbuffers>=23.5.26
 
 # NLP
 nltk>=3.8.0
