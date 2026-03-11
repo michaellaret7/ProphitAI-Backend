@@ -98,7 +98,7 @@ class ExportPDFRequest(BaseModel):
 
 @router.post("/sessions", response_model=CreateSessionResponse)
 async def create_chat_session(
-    request: CreateSessionRequest = CreateSessionRequest(),
+    request: CreateSessionRequest,
 ) -> CreateSessionResponse:
     """Create a new chat session.
 

@@ -83,8 +83,8 @@ class ChatSessionManager:
 
         # Create agent without callback (callback set per-message due to event loop)
         agent = ChatAgent(
-            provider='anthropic',
-            model='claude-sonnet-4-6',
+            provider='grok',
+            model='grok-4-1-fast-reasoning',
             print_mode=PrintMode.PRODUCTION,
             temperature=0.7,
             max_iterations=20,

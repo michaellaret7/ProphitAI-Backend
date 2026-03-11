@@ -1,7 +1,7 @@
 """ChatAgent system prompts."""
 
 from app.utils.time_utils import get_utc_date_str
-from app.core.atlas.tools.worker_agent.setup import build_tool_catalog
+from app.core.atlas.prompts.context.tool_catalogue import build_tool_catalog
 
 
 def build_chat_system_prompt() -> str:

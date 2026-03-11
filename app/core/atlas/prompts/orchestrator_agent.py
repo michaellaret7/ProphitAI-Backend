@@ -1,5 +1,5 @@
 from app.utils.time_utils import get_current_utc_time
-from app.core.atlas.tools.worker_agent.setup import build_tool_catalog
+from app.core.atlas.prompts.context.tool_catalogue import build_tool_catalog
 
 
 ORCHESTRATOR_SYSTEM_PROMPT = f"""You are an orchestrator agent. Your job is to break down complex tasks

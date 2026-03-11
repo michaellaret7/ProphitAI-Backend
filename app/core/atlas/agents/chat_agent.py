@@ -89,7 +89,9 @@ class ChatAgent(AgentBase):
         self.notebook = Notebook()
         self.add_tool(
             **DEPLOY_WORKER_TOOL,
-            function=partial(_resolve_and_deploy, self.notebook, self.chat_callback),
+            function=lambda task, tools, plan_task_id="": _resolve_and_deploy(
+                self.notebook, self.chat_callback, task, tools, plan_task_id
+            ),
         )
         self.add_tool(
             **RETRIEVE_NOTES_TOOL,
@@ -200,9 +202,13 @@ class ChatAgent(AgentBase):
 
 
 if __name__ == "__main__":
-    agent = ChatAgent(
-        provider="anthropic",
-        model="claude-sonnet-4-6",
+    chat = ChatAgent(
+        provider="grok",
+        model="grok-4-1-fast-reasoning",
         print_mode=PrintMode.PRODUCTION,
+        temperature=0.7,
+        max_iterations=20,
+        user_id="user_3Anw2M5QNbqc7G7z2l5Uo48aHjw",
     )
-    agent.run_interactive()
+
+    chat.run_interactive()

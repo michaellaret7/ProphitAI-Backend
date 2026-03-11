@@ -47,10 +47,8 @@ def deploy_worker_agent(
             task=task,
             tools=tools,
             notebook=notebook,
-            # provider='fireworks',
-            # model='Kimi-K2.5',
-            provider='gemini',
-            model='gemini-3.1-flash-lite-preview',
+            provider="grok",
+            model="grok-4-1-fast-reasoning",
             chat_callback=worker_callback,
             max_iterations=30,
         )
