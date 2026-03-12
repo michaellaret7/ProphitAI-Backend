@@ -102,21 +102,11 @@ class OrchestratorAgent(AgentBase):
     def run(self) -> AgentResponse:
         """Execute the orchestrator's task decomposition and delegation loop."""
         with self.langfuse.start_as_current_observation(
-            as_type="span",
+            as_type="agent",
             name="orchestrator_agent.run",
             input=self.task,
             metadata={"provider": self.provider, "model": self.model},
         ) as run_span:
-        
-            self.langfuse.update_current_trace(
-                name="OrchestratorAgent",
-                input=self.task,
-                metadata={
-                    "provider": self.provider,
-                    "model": self.model,
-                    "max_iterations": str(self.max_iterations),
-                },
-            )
 
             # ----- Keep the planner agent inside the orchestrator span ----- #
             if self.plan_first:
@@ -150,13 +140,13 @@ class OrchestratorAgent(AgentBase):
             ]
 
             with propagate_attributes(
+                trace_name="OrchestratorAgent",
                 session_id=self.session_id,
                 tags=["OrchestratorAgent", self.provider],
-                metadata={"model": self.model}
+                metadata={"model": self.model, "provider": self.provider, "max_iterations": str(self.max_iterations)},
             ):
                 result = self.execution_loop.execute()
 
-            self.langfuse.update_current_trace(output=result["answer"])
             run_span.update(output=result["answer"])
 
             parsed_output = None

@@ -112,7 +112,8 @@
       "Bash(git checkout:*)",
       "Bash(git stash:*)",
       "Bash(source .venv/Scripts/activate && PYTHONIOENCODING=utf-8 python t.py 2>&1)",
-      "WebFetch(domain:docs.snaptrade.com)"
+      "WebFetch(domain:docs.snaptrade.com)",
+      "WebFetch(domain:deepwiki.com)"
     ],
     "deny": [],
     "ask": []

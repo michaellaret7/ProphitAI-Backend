@@ -294,7 +294,7 @@ class ToolHandler:
         # This execute tool method is the heart/base of the tool handler.
         # We want to track the tool executions and results in Langfuse.
         with self.agent.langfuse.start_as_current_observation(
-            as_type="span",
+            as_type="tool",
             name=f"tool: {name}",
         ) as tool_span:
 

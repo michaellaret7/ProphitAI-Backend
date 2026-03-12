@@ -28,7 +28,7 @@ class ExecutionLoop:
             Dict with answer, tool_calls, total_tokens, iterations, and stop_reason.
         """
         with self.agent.langfuse.start_as_current_observation(
-            as_type="span",
+            as_type="chain",
             name="execution_loop",
             input={
                 "agent": self.agent.__class__.__name__,

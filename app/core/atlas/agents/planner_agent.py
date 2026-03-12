@@ -61,7 +61,7 @@ class PlannerAgent(AgentBase):
         """Generate a structured Plan for the given task."""
 
         with self.langfuse.start_as_current_observation(
-            as_type="span",
+            as_type="agent",
             name="planner_agent.run",
             input=self.task,
             metadata={"provider": self.provider, "model": self.model},

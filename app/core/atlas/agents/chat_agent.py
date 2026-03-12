@@ -132,33 +132,23 @@ class ChatAgent(AgentBase):
         """Run the agent execution loop for a user query."""
 
         with self.langfuse.start_as_current_observation(
-            as_type="span",
+            as_type="agent",
             name="chat_agent.run",
             input=user_message,
         ) as run_span:
-
-            self.langfuse.update_current_trace(
-                name="ChatAgent",
-                input=user_message,
-                metadata={
-                    "provider": self.provider,
-                    "model": self.model,
-                    "max_iterations": str(self.max_iterations),
-                },
-            )
 
             self.total_tokens = 0
 
             self.messages = self._build_messages(user_message, conversation_history)
 
             with propagate_attributes(
+                trace_name="ChatAgent",
                 session_id=self.session_id,
                 tags=["ChatAgent", self.provider],
-                metadata={"model": self.model}
+                metadata={"model": self.model, "provider": self.provider, "max_iterations": str(self.max_iterations)},
             ):
                 result = self.execution_loop.execute()
 
-            self.langfuse.update_current_trace(output=result["answer"])
             run_span.update(output=result["answer"])
 
             return AgentResponse( 

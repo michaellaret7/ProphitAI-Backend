@@ -27,7 +27,9 @@ def _call_parser_with_fallback(messages: List[Dict[str, str]], target_model: Typ
             model, client = get_model_and_client(provider, model_name)
 
             # Reason: bypass langfuse class-level monkey-patch on Completions.parse
-            original_parse = type(client.chat.completions).parse.__wrapped__
+            # v3 used functools.wraps (__wrapped__), v4 uses wrapt which may not expose it.
+            parse_method = type(client.chat.completions).parse
+            original_parse = getattr(parse_method, '__wrapped__', parse_method)
             completion = original_parse(
                 client.chat.completions,
                 model=model,

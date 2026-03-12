@@ -82,7 +82,7 @@ class WorkerAgent(AgentBase):
         """Execute the worker's task and return the result."""
 
         with self.langfuse.start_as_current_observation(
-            as_type="span",
+            as_type="agent",
             name="worker_agent.run",
             input=self.task,
             metadata={"provider": self.provider, "model": self.model},
