@@ -107,7 +107,10 @@
       "Bash(git check-ignore:*)",
       "Bash(cd \"C:\\\\Dev\\\\ProphitAI\" && source .venv/Scripts/activate && PYTHONIOENCODING=utf-8 python tests/planner_eval.py 2>&1)",
       "Bash(cd \"C:\\\\Dev\\\\ProphitAI\" && source .venv/Scripts/activate && PYTHONIOENCODING=utf-8 python tests/planner_eval.py --verify 2>&1)",
-      "Bash(find /Users/michaellaret/Desktop/ProphitAI -maxdepth 3 -type f \\\\\\( -name \".clerkrc\" -o -name \"clerk.config*\" -o -name \"*clerk*config*\" \\\\\\) 2>/dev/null | grep -v node_modules | grep -v .venv)"
+      "Bash(find /Users/michaellaret/Desktop/ProphitAI -maxdepth 3 -type f \\\\\\( -name \".clerkrc\" -o -name \"clerk.config*\" -o -name \"*clerk*config*\" \\\\\\) 2>/dev/null | grep -v node_modules | grep -v .venv)",
+      "Bash(git merge:*)",
+      "Bash(git checkout:*)",
+      "Bash(git stash:*)"
     ],
     "deny": [],
     "ask": []

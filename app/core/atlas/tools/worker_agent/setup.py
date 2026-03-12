@@ -124,31 +124,35 @@ AVAILABLE_TOOLS: Dict[str, Dict[str, Any]] = {
 # TOOL SCHEMA CONSTANTS
 # ==============================================================================
 
-DEPLOY_WORKER_DESCRIPTION = (
-    "Deploy a focused worker agent to autonomously execute a specific sub-task. "
-    "The worker runs its own tool-calling loop with the tools you select and returns "
-    "a structured result.\n\n"
-    "**WHEN TO USE:**\n"
-    "- Research tasks: earnings call analysis, news summarization, sector deep-dives\n"
-    "- Data-heavy analysis that requires multiple sequential tool calls\n"
-    "- Any focused sub-task that benefits from isolated execution\n\n"
-    "**HOW IT WORKS:**\n"
-    "1. Provide a clear, detailed task description\n"
-    "2. Select the tools the worker needs from the available set\n"
-    "3. The worker agent executes autonomously and returns results\n"
-    "4. Worker write_note calls are saved in orchestrator memory for later review\n\n"
-    "**TIPS FOR GOOD TASK DESCRIPTIONS:**\n"
-    "- Be specific about what data to gather and what output format you expect\n"
-    "- Include relevant context (tickers, time periods, metrics of interest)\n"
-    "- State the end goal clearly so the worker knows when it's done\n\n"
-    "**IMPORTANT:** Always pass the plan_task_id of the plan task you are working on.\n\n"
-    "Example: deploy_worker_agent(\n"
-    "  task='Research the latest earnings call for AAPL. Summarize key metrics, "
-    "management guidance, and notable analyst Q&A.',\n"
-    "  tools=['earnings_call_search', 'get_ticker_news'],\n"
-    "  plan_task_id='1'\n"
-    ")"
-)
+DEPLOY_WORKER_DESCRIPTION = """                                                                                             
+  Deploy a focused worker agent to autonomously execute a specific sub-task.
+  The worker runs its own tool-calling loop with the tools you select and returns
+  a structured result.                                                                                                        
+                                                                                                                              
+  **WHEN TO USE:**                                                                                                            
+  - Research tasks: earnings call analysis, news summarization, sector deep-dives                                             
+  - Data-heavy analysis that requires multiple sequential tool calls                                                        
+  - Any focused sub-task that benefits from isolated execution
+
+  **HOW IT WORKS:**
+  1. Provide a clear, detailed task description
+  2. Select the tools the worker needs from the available set
+  3. The worker agent executes autonomously and returns results
+  4. Worker write_note calls are saved in orchestrator memory for later review
+
+  **TIPS FOR GOOD TASK DESCRIPTIONS:**
+  - Be specific about what data to gather and what output format you expect
+  - Include relevant context (tickers, time periods, metrics of interest)
+  - State the end goal clearly so the worker knows when it's done
+
+  **IMPORTANT:** Always pass the plan_task_id of the plan task you are working on.
+
+  Example: deploy_worker_agent(
+    task='Research the latest earnings call for AAPL. Summarize key metrics, management guidance, and notable analyst Q&A.',
+    tools=['earnings_call_search', 'get_ticker_news'],
+    plan_task_id='1'
+  )
+"""
 
 DEPLOY_WORKER_PARAMETERS = {
     "type": "object",
