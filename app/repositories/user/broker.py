@@ -156,3 +156,12 @@ def _persist_account_id(*, clerk_id: str, account_id: str, session=None) -> None
     if not user:
         raise ValueError("User not found")
     user.snaptrade_account_id = account_id
+
+
+@with_transaction('user')
+def clear_snaptrade_account(*, clerk_id: str, session=None) -> None:
+    """Clear snaptrade_account_id from the User row after connection deletion."""
+    user = session.query(User).filter(User.clerk_id == clerk_id).first()
+    if not user:
+        raise ValueError("User not found")
+    user.snaptrade_account_id = None

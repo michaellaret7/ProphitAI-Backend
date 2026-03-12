@@ -1,7 +1,10 @@
-from app.core.atlas.agents.chat_agent import ChatAgent
-from app.core.atlas.models import PrintMode
-from openai import OpenAI
-import os
-from dotenv import load_dotenv
-from app.core.atlas.tools.decorator import agent_tool
-import json
+from app.db.core.db_config import UserSession
+from app.db.core.models.user_data_models import User, Portfolio, PortfolioItem
+
+user_session = UserSession()
+
+user = user_session.query(User).filter(User.email == "michael@prophitai.com").first()
+
+print(user.clerk_id)
+
+user_session.close()

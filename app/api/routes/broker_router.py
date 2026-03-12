@@ -12,6 +12,9 @@ from app.api.controller.broker import (
     snaptrade_register_controller,
     snaptrade_callback_controller,
     snaptrade_connect_controller,
+    # Connection Management
+    list_connections_controller,
+    remove_connection_controller,
     # Trading — Orders
     buy_controller,
     sell_controller,
@@ -65,6 +68,28 @@ class OrderRequest(BaseModel):
 async def get_connection_status(clerk_id: str = Depends(get_clerk_user_id)):
     """Check whether the user has a connected brokerage account."""
     return await get_connection_status_controller(clerk_id=clerk_id)
+
+
+# ════════════════════════════════════════════════════════════
+# --> Connection Management
+# ════════════════════════════════════════════════════════════
+
+@router.get("/connections")
+async def list_connections(clerk_id: str = Depends(get_clerk_user_id)):
+    """List all SnapTrade brokerage connections."""
+    return await list_connections_controller(clerk_id=clerk_id)
+
+
+@router.delete("/connections/{authorization_id}")
+async def delete_connection(
+    authorization_id: str,
+    clerk_id: str = Depends(get_clerk_user_id),
+):
+    """Delete a SnapTrade brokerage connection."""
+    return await remove_connection_controller(
+        clerk_id=clerk_id,
+        authorization_id=authorization_id,
+    )
 
 
 # ════════════════════════════════════════════════════════════

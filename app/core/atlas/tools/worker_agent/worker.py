@@ -23,7 +23,6 @@ def deploy_worker_agent(
         task: Focused task description for the worker agent to execute.
         tools: List of resolved tool definition dicts to register with the worker.
         plan_task_id: The plan task ID this worker is deployed for.
-
     Returns:
         str: YAML-formatted result with:
             - 'success' (bool): Whether operation succeeded

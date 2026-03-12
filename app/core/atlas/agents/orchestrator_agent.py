@@ -180,3 +180,11 @@ class OrchestratorAgent(AgentBase):
                 parsed_output=parsed_output if parsed_output else None,
             )
 
+if __name__ == "__main__":
+    orchestrator = OrchestratorAgent(
+        task="Do a deep dive on coreweave and tell me if the lawsuit is legitimate or not.",
+        print_mode=PrintMode.PRODUCTION,
+        provider="together",
+        model="glm-5",
+    )
+    orchestrator.run()

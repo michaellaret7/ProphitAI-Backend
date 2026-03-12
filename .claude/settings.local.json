@@ -110,7 +110,9 @@
       "Bash(find /Users/michaellaret/Desktop/ProphitAI -maxdepth 3 -type f \\\\\\( -name \".clerkrc\" -o -name \"clerk.config*\" -o -name \"*clerk*config*\" \\\\\\) 2>/dev/null | grep -v node_modules | grep -v .venv)",
       "Bash(git merge:*)",
       "Bash(git checkout:*)",
-      "Bash(git stash:*)"
+      "Bash(git stash:*)",
+      "Bash(source .venv/Scripts/activate && PYTHONIOENCODING=utf-8 python t.py 2>&1)",
+      "WebFetch(domain:docs.snaptrade.com)"
     ],
     "deny": [],
     "ask": []

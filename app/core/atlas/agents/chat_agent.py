@@ -89,9 +89,7 @@ class ChatAgent(AgentBase):
         self.notebook = Notebook()
         self.add_tool(
             **DEPLOY_WORKER_TOOL,
-            function=lambda task, tools, plan_task_id="": _resolve_and_deploy(
-                self.notebook, self.chat_callback, task, tools, plan_task_id
-            ),
+            function=partial(_resolve_and_deploy, self.notebook, self.chat_callback),
         )
         self.add_tool(
             **RETRIEVE_NOTES_TOOL,
@@ -203,12 +201,13 @@ class ChatAgent(AgentBase):
 
 if __name__ == "__main__":
     chat = ChatAgent(
-        provider="grok",
-        model="grok-4-1-fast-reasoning",
+        provider="together",
+        # model="minimax-m2.5",
+        model="glm-5",
         print_mode=PrintMode.PRODUCTION,
         temperature=0.7,
         max_iterations=20,
-        user_id="user_3Anw2M5QNbqc7G7z2l5Uo48aHjw",
+        user_id="user_3Aqz68vbZEpdhoF3mLjzhhg8Cr9",
     )
 
-    chat.run_interactive()
+    chat.run(user_message="Do a deep dive on coreweave and tell me if the lawsuit is legitimate or not.")

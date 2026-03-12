@@ -8,6 +8,10 @@ from .account import (
     snaptrade_callback_controller,
     snaptrade_connect_controller,
 )
+from .connections import (
+    list_connections_controller,
+    remove_connection_controller,
+)
 from .trading import (
     buy_controller,
     sell_controller,
@@ -29,6 +33,9 @@ __all__ = [
     "snaptrade_register_controller",
     "snaptrade_callback_controller",
     "snaptrade_connect_controller",
+    # Connection Management
+    "list_connections_controller",
+    "remove_connection_controller",
     # Trading — Orders
     "buy_controller",
     "sell_controller",
