@@ -4,8 +4,11 @@ import uuid
 from typing import Any, List, Dict
 
 from app.core.atlas.agents.worker_agent import WorkerAgent
+from app.core.atlas.models.callbacks import NoOpChatCallback
 from app.core.atlas.models.notebook import Notebook
 from app.core.atlas.tools.responses import success_response, error_response
+from app.core.atlas.tools.ticker.fundamentals.statements import get_ticker_fundamental_data
+from app.core.atlas.tools.ticker.performance import ticker_performance
 
 
 def deploy_worker_agent(
@@ -46,12 +49,8 @@ def deploy_worker_agent(
             task=task,
             tools=tools,
             notebook=notebook,
-            # provider="grok",
-            # model="grok-4-1-fast-reasoning",
-            provider="groq",
-            model="openai-gpt-oss-120b",
-            # provider="anthropic",
-            # model="claude-sonnet-4-6",
+            provider="together",
+            model="glm-5",
             chat_callback=worker_callback,
             max_iterations=30,
         )

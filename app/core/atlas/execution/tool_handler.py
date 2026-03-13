@@ -20,7 +20,7 @@ from opentelemetry import context as otel_context
 
 
 # Tools that modify agent state and must run sequentially
-SEQUENTIAL_ONLY_TOOLS = {"think"}
+SEQUENTIAL_ONLY_TOOLS = {"think", "register_tools"}
 
 def should_run_parallel(tool_calls: List[Any]) -> bool:
     """Determine if tool calls can be executed in parallel.

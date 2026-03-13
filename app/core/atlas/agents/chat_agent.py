@@ -19,7 +19,8 @@ from app.core.atlas.execution import ExecutionLoop, ToolHandler
 from app.core.atlas.logging import AgentPrinter
 
 from .base import AgentBase
-from app.core.atlas.tools.chat_registry import register_chat_tools
+from app.core.atlas.tools.chat.register_tools import register_tools
+from app.core.atlas.tools.base import llm_web_search
 from app.core.atlas.tools.worker_agent.setup import DEPLOY_WORKER_TOOL, _resolve_and_deploy
 from app.core.atlas.tools.orchestrator import retrieve_notes, RETRIEVE_NOTES_TOOL
 
@@ -82,11 +83,17 @@ class ChatAgent(AgentBase):
         self.note_titles: List[str] = []
         self.output_dir = None
 
-        # Register chat tools (after super().__init__ so add_tool is available)
-        register_chat_tools(self)
+        self.notebook = Notebook()
+
+        # Register pre-registered tools (small always-on set)
+        self.add_tool(**llm_web_search.tool)
+
+        # Register the dynamic register_tools tool (bound with _agent=self)
+        tool_def = register_tools.tool.copy()
+        tool_def["function"] = partial(register_tools, _agent=self)
+        self.add_tool(**tool_def)
 
         # Register worker agent delegation tools
-        self.notebook = Notebook()
         self.add_tool(
             **DEPLOY_WORKER_TOOL,
             function=lambda task, tools, plan_task_id="", context="": _resolve_and_deploy(
@@ -99,6 +106,7 @@ class ChatAgent(AgentBase):
         )
 
         print(f"Initialized Agent with model: {self.model} (provider: {self.provider})")
+        print(f"Registered tools ({len(self.tool_functions)}): {sorted(self.tool_functions.keys())}")
 
     def _build_messages(
         self,
@@ -193,9 +201,8 @@ class ChatAgent(AgentBase):
 
 if __name__ == "__main__":
     chat = ChatAgent(
-        provider="groq",
-        # model="minimax-m2.5",
-        model="openai-gpt-oss-120b",
+        provider="anthropic",
+        model="claude-sonnet-4-6",
         print_mode=PrintMode.PRODUCTION,
         temperature=0.7,
         max_iterations=20,

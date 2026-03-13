@@ -264,54 +264,77 @@ def portfolio_risk(
 | `macro/` | Macro data | Rates, commodities, indicators |
 | `foundry/` | Research tools | Credit research, macro research |
 
-## Registering in Worker Agent Setup (tools)
+## Registering in the Tool Registry
 
-After creating a tool in `app/core/atlas/tools/`, you **must** register it in the worker agent setup file so the orchestrator can discover and deploy it.
+After creating a tool in `app/core/atlas/tools/`, you **must** register it in the centralized tool registry so both the ChatAgent and WorkerAgent can discover it.
 
-**File:** `app/core/atlas/tools/worker_agent/setup.py`
+**File:** `app/core/atlas/tools/registry.py`
 
 ### Steps
 
-1. **Add the import** in the appropriate `# --- category ---` section at the top of the file:
+1. **Add the import** in the appropriate `# --> Imports: <category>` section at the top of the file:
 
 ```python
-# --- portfolio ---
+# ================================
+# --> Imports: portfolio
+# ================================
 from app.core.atlas.tools.portfolio.performance import portfolio_performance
 from app.core.atlas.tools.portfolio.risk import portfolio_risk
 from app.core.atlas.tools.portfolio.my_new_tool import my_new_tool  # <-- add here
 ```
 
-2. **Add the function** to the `_ALL_TOOL_FUNCTIONS` list under the matching category comment, and **update the count**:
+2. **Add the function** to the matching category list in `TOOL_REGISTRY`:
 
 ```python
-_ALL_TOOL_FUNCTIONS = [
+TOOL_REGISTRY: Dict[str, List[Callable]] = {
     # ...
-    # portfolio (4)  <-- update count from (3) to (4)
-    portfolio_performance, portfolio_risk, portfolio_stress_test, my_new_tool,
+    "portfolio": [
+        portfolio_performance, portfolio_risk, portfolio_stress_test,
+        portfolio_factor_exposure, portfolio_classification, portfolio_covariance,
+        portfolio_correlation, get_user_simulated_portfolio, get_watchlist,
+        my_new_tool,  # <-- add here
+    ],
     # ...
-]
+}
+```
+
+3. If the tool belongs to a **new category** that doesn't exist yet, create a new import block and add a new key to `TOOL_REGISTRY`:
+
+```python
+# ================================
+# --> Imports: my_new_category
+# ================================
+from app.core.atlas.tools.my_new_category.my_tool import my_tool
+
+# Then in TOOL_REGISTRY:
+"my_new_category": [
+    my_tool,
+],
 ```
 
 ### How It Works
 
-- `_ALL_TOOL_FUNCTIONS` is a flat list of `@agent_tool`-decorated functions.
-- `AVAILABLE_TOOLS` is built automatically from this list: `{func.tool["name"]: func.tool for func in _ALL_TOOL_FUNCTIONS}`.
-- The orchestrator uses `AVAILABLE_TOOLS` to resolve tool names to schemas and validate worker tool selections.
-- No other registration step is needed — adding the function to the list is sufficient.
+- `TOOL_REGISTRY` is the single source of truth: `category_name -> list of @agent_tool-decorated functions`.
+- `ALL_TOOLS` is derived automatically: `{func.tool["name"]: func.tool for func in all registry functions}`.
+- **ChatAgent** uses `ALL_TOOLS` via `register_tools` — the LLM dynamically loads tools by category or name.
+- **WorkerAgent** uses `ALL_TOOLS` minus `CHAT_ONLY_TOOLS` via `setup.py` — no separate registration needed.
+- `build_catalogue_description()` auto-generates the prompt catalogue from the registry.
+- No other registration step is needed — adding the function to `TOOL_REGISTRY` is sufficient.
 
-### Category Groups
+### CHAT_ONLY_TOOLS
 
-| Comment Tag | Path Prefix | Current Count |
-|-------------|-------------|---------------|
-| `# ticker` | `tools/ticker/` | 4 |
-| `# fundamentals` | `tools/ticker/fundamentals/` | 4 |
-| `# info` | `tools/ticker/info/` | 6 |
-| `# screener` | `tools/screener/` | 2 |
-| `# research` | `tools/research/` | 6 |
-| `# portfolio` | `tools/portfolio/` | 5 |
-| `# alpaca` | `tools/alpaca/` | 11 |
+If your new tool involves real money / trade execution and must never be delegated to a worker agent, add it to the `CHAT_ONLY_TOOLS` set in `registry.py`:
 
-> **Note:** If adding a tool for a new category that doesn't exist yet, create a new `# --- category ---` import block and a new `# category (N)` comment line in `_ALL_TOOL_FUNCTIONS`.
+```python
+CHAT_ONLY_TOOLS: Set[str] = {
+    "propose_trade",
+    "propose_options_trade",
+    "propose_multi_leg_options_trade",
+    "close_position",
+    "cancel_order",
+    "my_new_trade_tool",  # <-- add here if applicable
+}
+```
 
 ## Best Practices
 

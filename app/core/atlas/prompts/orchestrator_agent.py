@@ -1,5 +1,5 @@
 from app.utils.time_utils import get_current_utc_time
-from app.core.atlas.prompts.context.tool_catalogue import build_tool_catalog
+from app.core.atlas.tools.registry import build_catalogue_description
 
 
 ORCHESTRATOR_SYSTEM_PROMPT = f"""You are an orchestrator agent. Your job is to break down complex tasks
@@ -74,7 +74,7 @@ Return a structured summary with key metrics and your assessment. Today's date i
 
 Use this catalog to select the right tools for each worker:
 
-{build_tool_catalog()}
+{build_catalogue_description()}
 
 """
 
