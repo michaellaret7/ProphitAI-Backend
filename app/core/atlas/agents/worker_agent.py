@@ -110,3 +110,15 @@ class WorkerAgent(AgentBase):
                 stop_reason=result["stop_reason"]
             )
 
+if __name__ == "__main__":
+    worker = WorkerAgent(
+        task="What is the latest news in the stock market?",
+        tools=[llm_web_search.tool],
+        notebook=Notebook(),
+        provider="groq",
+        model="openai-gpt-oss-120b",
+        chat_callback=NoOpChatCallback(),
+        max_iterations=30,
+    )
+    result = worker.run()
+    print(result)
