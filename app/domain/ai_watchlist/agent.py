@@ -14,8 +14,8 @@ class Watchlist(OrchestratorAgent):
         self,
         user_preferences: str,
         print_mode: PrintMode = PrintMode.PRODUCTION,
-        provider: str = "grok",
-        model: str = "grok-4-1-fast-reasoning",
+        provider: str = "anthropic",
+        model: str = "claude-sonnet-4-6",
         chat_callback: Optional[ChatCallback] = None,
         session_id: str = "watchlist",
     ):
