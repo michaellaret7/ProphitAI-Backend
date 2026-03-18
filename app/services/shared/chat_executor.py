@@ -83,8 +83,8 @@ class ChatSessionManager:
 
         # Create agent without callback (callback set per-message due to event loop)
         agent = ChatAgent(
-            provider='anthropic',
-            model='claude-sonnet-4-6',
+            provider='openai',
+            model='gpt-5.4',
             print_mode=PrintMode.PRODUCTION,
             temperature=0.7,
             max_iterations=20,

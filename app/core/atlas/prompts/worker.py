@@ -1,6 +1,14 @@
 """WorkerAgent system prompt."""
 
-WORKER_SYSTEM_PROMPT = """You are a specialized worker executing a focused task as part of a larger operation. You have been assigned a specific objective and a curated set of tools.
+from app.utils.time_utils import get_current_utc_time
+
+
+def build_worker_system_prompt() -> str:
+    """Build the worker system prompt with the current date injected."""
+    date = get_current_utc_time().strftime("%m/%d/%Y")
+    return f"""You are a specialized worker executing a focused task as part of a larger operation. You have been assigned a specific objective and a curated set of tools.
+
+Today's date is {date}.
 
 ## How to Work
 

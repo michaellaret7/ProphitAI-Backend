@@ -14,8 +14,8 @@ class Watchlist(OrchestratorAgent):
         self,
         user_preferences: str,
         print_mode: PrintMode = PrintMode.PRODUCTION,
-        provider: str = "anthropic",
-        model: str = "claude-sonnet-4-6",
+        provider: str = "openai",
+        model: str = "gpt-5.4",
         chat_callback: Optional[ChatCallback] = None,
         session_id: str = "watchlist",
     ):
