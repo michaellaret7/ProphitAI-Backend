@@ -87,7 +87,7 @@ class ChatSessionManager:
             model='gpt-5.4',
             print_mode=PrintMode.PRODUCTION,
             temperature=0.7,
-            max_iterations=20,
+            max_iterations=200,
             user_id=user_id,
         )
 
