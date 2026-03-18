@@ -115,7 +115,9 @@
       "WebFetch(domain:docs.snaptrade.com)",
       "WebFetch(domain:deepwiki.com)",
       "WebFetch(domain:docs.claude.com)",
-      "WebFetch(domain:docs.anthropic.com)"
+      "WebFetch(domain:docs.anthropic.com)",
+      "Bash(find /c/Dev/ProphitAI -type f \\\\\\(-name *prompt* -o -name *chat* \\\\\\))",
+      "Bash(PYTHONIOENCODING=utf-8 python -m tests.test_chat_prompt_formatting)"
     ],
     "deny": [],
     "ask": []
