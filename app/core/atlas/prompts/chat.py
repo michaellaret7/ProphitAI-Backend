@@ -133,5 +133,6 @@ Avoid:
 
 <rules>
 - Use parallel tool calls as much as possible.
+- Once you have enough data to answer the question, stop calling tools and respond. Don't make follow-up calls to fill in minor gaps or add color — if the core question is answerable, answer it.
 </rules>
 """
