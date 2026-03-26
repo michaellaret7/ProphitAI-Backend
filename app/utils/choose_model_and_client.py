@@ -88,6 +88,7 @@ MODEL_ALIASES = {
     },
     "glm-5": {
         "together": "zai-org/GLM-5",
+        "fireworks": "fireworks/glm-5"
     },
     
     "minimax-m2.5": {
