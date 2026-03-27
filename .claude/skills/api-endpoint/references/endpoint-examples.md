@@ -2,20 +2,20 @@
 
 ## Example 1: CRUD Endpoint (User-Authenticated)
 
-### Router: `app/api/routes/portfolio_router.py`
+### Router: `services/api/src/prophitai_api/routes/portfolio_router.py`
 
 ```python
 from fastapi import APIRouter, Query, Depends, Path, HTTPException
 from pydantic import BaseModel, Field, field_validator
 from typing import List, Optional, Dict
-from app.api.controller.portfolio import (
+from prophitai_api.controller.portfolio import (
     get_user_portfolio_list_controller,
     create_portfolio_controller,
     update_portfolio_controller,
     delete_portfolio_controller,
 )
-from app.api.auth.clerk import get_clerk_user_id
-from app.repositories.user.user import get_all_user_data_by_clerk_id
+from prophitai_api.auth.clerk import get_clerk_user_id
+from prophitai_data.repositories.user.user import get_all_user_data_by_clerk_id
 
 router = APIRouter(tags=["Portfolios"])
 
@@ -108,15 +108,15 @@ async def delete_portfolio(
     )
 ```
 
-### Controller: `app/api/controller/portfolio/operations.py`
+### Controller: `services/api/src/prophitai_api/controller/portfolio/operations.py`
 
 ```python
 from typing import Dict, Any, List, Optional
 from fastapi import HTTPException
-from app.api.response_envelope import ok_envelope
-from app.redis.client import cache
-from app.utils.decorators.api_decorators import handle_controller_errors
-from app.services.portfolio.portfolio import PortfolioService
+from prophitai_api.response_envelope import ok_envelope
+from prophitai_api.cache.client import cache
+from prophitai_api.decorators.api_decorators import handle_controller_errors
+from prophitai_api.services.portfolio.portfolio import PortfolioService
 
 
 @handle_controller_errors
@@ -242,11 +242,11 @@ async def delete_portfolio_controller(
     )
 ```
 
-### Service: `app/services/portfolio/portfolio.py`
+### Service: `services/api/src/prophitai_api/services/portfolio/portfolio.py`
 
 ```python
 from typing import Dict, Any, List, Optional
-from app.repositories.portfolio import (
+from prophitai_data.repositories.portfolio import (
     get_portfolios_by_user_id,
     create_portfolio_db,
     update_portfolio_db,
@@ -346,11 +346,11 @@ class PortfolioService:
 
 ## Example 2: Analytics Endpoint (Public Data)
 
-### Router: `app/api/routes/ticker_router.py`
+### Router: `services/api/src/prophitai_api/routes/ticker_router.py`
 
 ```python
 from fastapi import APIRouter, Query
-from app.api.controller.ticker import get_ticker_fundamentals_controller
+from prophitai_api.controller.ticker import get_ticker_fundamentals_controller
 
 router = APIRouter(tags=["Ticker Data"])
 
@@ -367,14 +367,14 @@ async def get_ticker_fundamentals(
     )
 ```
 
-### Controller: `app/api/controller/ticker.py`
+### Controller: `services/api/src/prophitai_api/controller/ticker.py`
 
 ```python
 from typing import Dict, Any
-from app.api.response_envelope import ok_envelope
-from app.redis.client import cache
-from app.utils.decorators.api_decorators import handle_controller_errors
-from app.services.fundamentals.ticker_fundamentals import TickerFundamentalsService
+from prophitai_api.response_envelope import ok_envelope
+from prophitai_api.cache.client import cache
+from prophitai_api.decorators.api_decorators import handle_controller_errors
+from prophitai_api.services.fundamentals.ticker_fundamentals import TickerFundamentalsService
 
 
 @handle_controller_errors

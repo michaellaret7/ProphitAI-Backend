@@ -1,0 +1,15 @@
+[project]
+name = "prophitai-shared"
+version = "0.1.0"
+description = "Shared utilities for the ProphitAI platform"
+requires-python = ">=3.13"
+dependencies = [
+    "pydantic>=2.0",
+    "openai>=2.0.0",
+    "langfuse",
+    "python-dotenv",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"

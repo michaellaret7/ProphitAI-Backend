@@ -13,18 +13,19 @@ import json
 import time
 import traceback
 
-# Reason: project root must be on sys.path so `app.*` imports resolve
-PROJECT_ROOT = os.path.abspath(
-    os.path.join(os.path.dirname(__file__), "..", "..", "..", "..")
-)
-sys.path.insert(0, PROJECT_ROOT)
-
 from dotenv import load_dotenv
-load_dotenv(os.path.join(PROJECT_ROOT, ".env"))
+load_dotenv()
 
 import tiktoken
 
-from app.core.atlas.tools.worker_agent.setup import AVAILABLE_TOOLS
+from prophitai_tools.registry import ALL_TOOL_FUNCTIONS, CHAT_ONLY_TOOLS
+
+# Reason: Build AVAILABLE_TOOLS dict from registry, excluding chat-only tools
+AVAILABLE_TOOLS = {
+    func.tool["name"]: func.tool
+    for func in ALL_TOOL_FUNCTIONS
+    if func.tool["name"] not in CHAT_ONLY_TOOLS
+}
 
 
 # ================================

@@ -6,8 +6,8 @@ import os
 # Reason: Ensure the project root is on sys.path so imports resolve
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "../../../..")))
 
-from app.db.core.db_config import MarketSession
-from app.db.core.models.market_data_models import Ticker
+from prophitai_data.db.config import MarketSession
+from prophitai_data.db.models.market import Ticker
 
 
 # ================================

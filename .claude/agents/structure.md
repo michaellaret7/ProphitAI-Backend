@@ -1,7 +1,7 @@
 ---
 name: structure-grader
 Description: Python codebase structure and architecture specialist for evaluating project organization, domain design, and dependency patterns.
-model: inherit
+model: opus
 ---
 # Architecture Grader Sub-Agent (Claude Code)
 

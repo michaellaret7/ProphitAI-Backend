@@ -1,0 +1,53 @@
+"""Portfolio controllers — analytics and CRUD operations."""
+
+from .analytics import (
+    get_portfolio_returns_controller,
+    get_portfolio_metrics_controller,
+    get_portfolio_sector_concentration_controller,
+    get_portfolio_industry_concentration_controller,
+    get_portfolio_sub_industry_concentration_controller,
+    get_portfolio_performance_comparison_controller,
+    get_portfolio_factor_tilt_controller,
+    get_portfolio_stress_returns_controller,
+    get_batch_portfolio_returns_controller,
+)
+from .operations import (
+    create_portfolio_controller,
+    update_portfolio_controller,
+    delete_portfolio_controller,
+    get_user_portfolio_list_controller,
+    get_portfolio_positions_controller,
+    get_batch_portfolio_positions_controller,
+    rebalance_portfolio_controller,
+    get_portfolio_preference_controller,
+    create_portfolio_preference_controller,
+    update_portfolio_preference_controller,
+    delete_portfolio_preference_controller,
+    get_portfolio_alert_state_controller,
+)
+
+__all__ = [
+    # analytics
+    "get_portfolio_returns_controller",
+    "get_portfolio_metrics_controller",
+    "get_portfolio_sector_concentration_controller",
+    "get_portfolio_industry_concentration_controller",
+    "get_portfolio_sub_industry_concentration_controller",
+    "get_portfolio_performance_comparison_controller",
+    "get_portfolio_factor_tilt_controller",
+    "get_portfolio_stress_returns_controller",
+    "get_batch_portfolio_returns_controller",
+    # operations
+    "create_portfolio_controller",
+    "update_portfolio_controller",
+    "delete_portfolio_controller",
+    "get_user_portfolio_list_controller",
+    "get_portfolio_positions_controller",
+    "get_batch_portfolio_positions_controller",
+    "rebalance_portfolio_controller",
+    "get_portfolio_preference_controller",
+    "create_portfolio_preference_controller",
+    "update_portfolio_preference_controller",
+    "delete_portfolio_preference_controller",
+    "get_portfolio_alert_state_controller",
+]

@@ -9,8 +9,8 @@ Tools that fetch and return data without complex processing.
 ```python
 """Fetch ticker information tool."""
 
-from app.core.atlas.tools.decorator import agent_tool
-from app.core.atlas.tools.responses import success_response, error_response
+from prophitai_atlas.tools.decorator import agent_tool
+from prophitai_atlas.tools.responses import success_response, error_response
 
 
 @agent_tool(name="get_ticker_info")
@@ -54,8 +54,8 @@ Tools that operate on a portfolio via `tickers` and `weights`.
 ```python
 """Portfolio concentration analysis tool."""
 
-from app.core.atlas.tools.decorator import agent_tool, Param
-from app.core.atlas.tools.responses import success_response, error_response
+from prophitai_atlas.tools.decorator import agent_tool, Param
+from prophitai_atlas.tools.responses import success_response, error_response
 from typing import Annotated
 
 
@@ -105,8 +105,8 @@ Tools with several optional parameters using `Param` and `Literal` constraints.
 ```python
 """Risk metrics calculation tool."""
 
-from app.core.atlas.tools.decorator import agent_tool, Param
-from app.core.atlas.tools.responses import success_response, error_response
+from prophitai_atlas.tools.decorator import agent_tool, Param
+from prophitai_atlas.tools.responses import success_response, error_response
 from typing import Annotated, Literal
 import numpy as np
 
@@ -174,9 +174,9 @@ Tools with constrained string parameters using `Param(enum=...)`.
 ```python
 """Account activities tool."""
 
-from app.core.atlas.tools.decorator import agent_tool, Param
-from app.core.atlas.tools.responses import success_response, error_response
-from app.brokers.alpaca_broker.broker import ProphitBroker
+from prophitai_atlas.tools.decorator import agent_tool, Param
+from prophitai_atlas.tools.responses import success_response, error_response
+from prophitai_data.clients.snaptrade.broker import SnapTradeBroker
 from typing import Annotated
 
 
@@ -223,8 +223,8 @@ Tools that spawn another agent to handle complex tasks.
 ```python
 """Sector analyst sub-agent tool."""
 
-from app.core.atlas.tools.decorator import agent_tool, Param
-from app.core.atlas.tools.responses import success_response, error_response
+from prophitai_atlas.tools.decorator import agent_tool, Param
+from prophitai_atlas.tools.responses import success_response, error_response
 from typing import Annotated, Literal, Optional
 
 
@@ -251,7 +251,7 @@ def sector_analysis(
         sector_analysis(sector="Technology", analysis_type="deep_dive")
     """
     try:
-        from app.core.atlas.tool_lib.sub_agents.sector_analyst.agent import SectorAnalystAgent
+        # Import your domain agent here
 
         analyst = SectorAnalystAgent(
             sector=sector,
@@ -282,8 +282,8 @@ Tools that handle multiple items efficiently.
 ```python
 """Batch ticker data retrieval tool."""
 
-from app.core.atlas.tools.decorator import agent_tool, Param
-from app.core.atlas.tools.responses import success_response, error_response
+from prophitai_atlas.tools.decorator import agent_tool, Param
+from prophitai_atlas.tools.responses import success_response, error_response
 from typing import Annotated, List, Literal, Optional
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
@@ -348,8 +348,8 @@ Tools that need access to agent state. The wrapper captures the agent reference 
 ```python
 """Edit plan tool — requires access to agent.plan."""
 
-from app.core.atlas.tools.decorator import agent_tool, Param
-from app.core.atlas.tools.responses import success_response, error_response
+from prophitai_atlas.tools.decorator import agent_tool, Param
+from prophitai_atlas.tools.responses import success_response, error_response
 from typing import Annotated, Any, Callable, Literal, Optional
 
 

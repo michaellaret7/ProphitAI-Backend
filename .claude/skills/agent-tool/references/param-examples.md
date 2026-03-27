@@ -46,7 +46,7 @@ sort_order: Literal['asc', 'desc'] = 'desc'
 
 ```python
 from typing import Annotated
-from app.core.atlas.tools.decorator import Param
+from prophitai_atlas.tools.decorator import Param
 
 # Activity type filter
 activity_type: Annotated[str, Param(enum=['FILL', 'CSD', 'CSW', 'DIV', 'JNLC'])]
@@ -63,7 +63,7 @@ sector: Annotated[str, Param(enum=[
 
 ```python
 from typing import Annotated
-from app.core.atlas.tools.decorator import Param
+from prophitai_atlas.tools.decorator import Param
 
 # Integer with min/max
 lookback_days: Annotated[int, Param(min_val=30, max_val=756)] = 252
@@ -83,7 +83,7 @@ limit: Annotated[int, Param(max_val=100)] = 25
 
 ```python
 from typing import Annotated
-from app.core.atlas.tools.decorator import Param
+from prophitai_atlas.tools.decorator import Param
 
 # Override the docstring-derived description
 conf: Annotated[float, Param(

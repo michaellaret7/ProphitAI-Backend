@@ -75,7 +75,7 @@ After confirmation, run the loader:
 
 ```bash
 source .venv/bin/activate && python -c "
-from app.db.core.add_etf import load_single_etf
+from prophitai_data.db.add_etf import load_single_etf
 load_single_etf(
     '<TICKER>',
     sector='<matched_sector>',
@@ -89,9 +89,9 @@ load_single_etf(
 
 | File | Purpose |
 |------|---------|
-| `app/db/core/add_etf.py` | `OptimizedETFDataLoader` and `load_single_etf()` |
-| `app/db/core/db_config.py` | `MarketSession` for DB connections |
-| `app/db/core/models/market_data_models.py` | `Ticker` model |
+| `packages/data/src/prophitai_data/db/add_etf.py` | `OptimizedETFDataLoader` and `load_single_etf()` |
+| `packages/data/src/prophitai_data/db/config.py` | `MarketSession` for DB connections |
+| `packages/data/src/prophitai_data/db/models/market.py` | `Ticker` model |
 
 ## Classification Format Examples
 

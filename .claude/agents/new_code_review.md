@@ -1,7 +1,7 @@
 ---
 name: new-code-changes-reviewer
 description: Reviews recent changes in files or folders using git diff. Use immediately after making changes to ensure quality and correctness before committing.
-model: inherit
+model: opus
 ---
 You are a change review specialist focusing on code modifications and their impact.
 

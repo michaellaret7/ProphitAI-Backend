@@ -10,10 +10,10 @@ Build tools for the ProphitAI agentic framework using the `@agent_tool` decorato
 ## Quick Reference
 
 ```
-Tool Location: app/core/atlas/tools/<category>/<tool_name>.py
-Decorator: @agent_tool from app.core.atlas.tools.decorator
+Tool Location: packages/tools/src/prophitai_tools/<category>/<tool_name>.py
+Decorator: @agent_tool from prophitai_atlas.tools.decorator
 Response Format: YAML via success_response() / error_response()
-Registration: agent.add_tool(**func.tool)
+Registration: Add to ALL_TOOL_FUNCTIONS in prophitai_tools/registry.py
 ```
 
 ## Tool File Structure
@@ -23,8 +23,8 @@ Every tool file follows this structure:
 ```python
 """Tool description in docstring."""
 
-from app.core.atlas.tools.decorator import agent_tool, Param, Schema
-from app.core.atlas.tools.responses import success_response, error_response
+from prophitai_atlas.tools.decorator import agent_tool, Param, Schema
+from prophitai_atlas.tools.responses import success_response, error_response
 from typing import Annotated, Optional
 
 # ================================
@@ -36,7 +36,7 @@ from typing import Annotated, Optional
 # --> Tools
 # ================================
 
-@agent_tool(name="tool_name")
+@agent_tool(name="tool_name", category="category_name")
 def tool_name(
     param1: str,
     param2: Annotated[int, Param(min_val=1, max_val=100)] = 10,
@@ -105,17 +105,13 @@ def vol_es(portfolio_dict: dict) -> str:
 
 ```python
 # Single tool
-from app.core.atlas.tools.portfolio.vol_es import vol_es
+from prophitai_tools.portfolio.vol_es import vol_es
 agent.add_tool(**vol_es.tool)
 
-# Registry function for related tools
-def register_risk_tools(agent) -> None:
-    """Register all risk analysis tools on the agent."""
-    from app.core.atlas.tools.portfolio.vol_es import vol_es
-    from app.core.atlas.tools.portfolio.stress_test import stress_test
-
-    agent.add_tool(**vol_es.tool)
-    agent.add_tool(**stress_test.tool)
+# Or use the registry for bulk registration
+from prophitai_tools.registry import ALL_TOOL_FUNCTIONS
+for func in ALL_TOOL_FUNCTIONS:
+    agent.add_tool(**func.tool)
 ```
 
 ## Parameter Constraints with Annotated
@@ -126,7 +122,7 @@ Use `typing.Annotated` with `Param` or `Schema` to add constraints beyond basic 
 
 ```python
 from typing import Annotated
-from app.core.atlas.tools.decorator import Param
+from prophitai_atlas.tools.decorator import Param
 
 # Enum constraint
 activity_type: Annotated[str, Param(enum=['FILL', 'CSD', 'CSW', 'DIV', 'JNLC'])]
@@ -211,7 +207,7 @@ def my_tool(ticker: str, lookback: int = 252) -> str:
 ## Response Formatting
 
 ```python
-from app.core.atlas.tools.responses import success_response, error_response
+from prophitai_atlas.tools.responses import success_response, error_response
 
 # Success
 return success_response({
@@ -254,72 +250,65 @@ def portfolio_risk(
 
 ## Tool Categories
 
-| Category | Path | Purpose |
+| Category | Package Path | Purpose |
 |----------|------|---------|
-| `base/` | Core utilities | Calculator, think, finalize |
-| `data/` | Market data | Prices, fundamentals, news, screeners |
-| `portfolio/` | Portfolio analysis | Returns, concentration, beta, performance |
-| `risk/` | Risk metrics | VaR, stress tests, drawdowns, correlations |
-| `ticker/` | Single-ticker analysis | Performance, factors, technicals |
-| `macro/` | Macro data | Rates, commodities, indicators |
-| `foundry/` | Research tools | Credit research, macro research |
+| `ticker/` | `prophitai_tools/ticker/` | Performance, risk, factors, technicals |
+| `ticker/info/` | `prophitai_tools/ticker/info/` | Company info, peers, ratings, sectors |
+| `ticker/fundamentals/` | `prophitai_tools/ticker/fundamentals/` | Statements, estimates, ratios |
+| `portfolio/` | `prophitai_tools/portfolio/` | Returns, risk, stress tests, allocation |
+| `broker/` | `prophitai_tools/broker/` | Trading, positions, account |
+| `options/` | `prophitai_tools/options/` | Options chain, quotes, pricing |
+| `research/` | `prophitai_tools/research/` | Earnings calls, macro, credit research |
+| `macro/` | `prophitai_tools/macro/` | Rates, commodities, indicators |
+| `news/` | `prophitai_tools/news/` | Market and ticker news |
+| `screener/` | `prophitai_tools/screener/` | Equity and ETF screening |
+| `watchlist/` | `prophitai_tools/watchlist/` | User watchlists |
 
 ## Registering in the Tool Registry
 
-After creating a tool in `app/core/atlas/tools/`, you **must** register it in the centralized tool registry so both the ChatAgent and WorkerAgent can discover it.
+After creating a tool in `packages/tools/src/prophitai_tools/`, you **must** register it in the centralized tool registry.
 
-**File:** `app/core/atlas/tools/registry.py`
+**File:** `packages/tools/src/prophitai_tools/registry.py`
 
 ### Steps
 
-1. **Add the import** in the appropriate `# --> Imports: <category>` section at the top of the file:
+1. **Add `category=` to your `@agent_tool` decorator** — this is how `ToolCatalogue` knows which category the tool belongs to:
+
+```python
+@agent_tool(name="my_new_tool", category="portfolio")
+def my_new_tool(...) -> str:
+    ...
+```
+
+2. **Add the import** in the appropriate section of `registry.py`:
 
 ```python
 # ================================
 # --> Imports: portfolio
 # ================================
-from app.core.atlas.tools.portfolio.performance import portfolio_performance
-from app.core.atlas.tools.portfolio.risk import portfolio_risk
-from app.core.atlas.tools.portfolio.my_new_tool import my_new_tool  # <-- add here
+from prophitai_tools.portfolio.performance import portfolio_performance
+from prophitai_tools.portfolio.my_new_tool import my_new_tool  # <-- add here
 ```
 
-2. **Add the function** to the matching category list in `TOOL_REGISTRY`:
+3. **Add the function** to the `ALL_TOOL_FUNCTIONS` list:
 
 ```python
-TOOL_REGISTRY: Dict[str, List[Callable]] = {
+ALL_TOOL_FUNCTIONS: list[Callable] = [
     # ...
-    "portfolio": [
-        portfolio_performance, portfolio_risk, portfolio_stress_test,
-        portfolio_factor_exposure, portfolio_classification, portfolio_covariance,
-        portfolio_correlation, get_user_simulated_portfolio, get_watchlist,
-        my_new_tool,  # <-- add here
-    ],
+    # portfolio
+    portfolio_performance, portfolio_risk, portfolio_stress_test,
+    my_new_tool,  # <-- add here
     # ...
-}
-```
-
-3. If the tool belongs to a **new category** that doesn't exist yet, create a new import block and add a new key to `TOOL_REGISTRY`:
-
-```python
-# ================================
-# --> Imports: my_new_category
-# ================================
-from app.core.atlas.tools.my_new_category.my_tool import my_tool
-
-# Then in TOOL_REGISTRY:
-"my_new_category": [
-    my_tool,
-],
+]
 ```
 
 ### How It Works
 
-- `TOOL_REGISTRY` is the single source of truth: `category_name -> list of @agent_tool-decorated functions`.
-- `ALL_TOOLS` is derived automatically: `{func.tool["name"]: func.tool for func in all registry functions}`.
-- **ChatAgent** uses `ALL_TOOLS` via `register_tools` — the LLM dynamically loads tools by category or name.
-- **WorkerAgent** uses `ALL_TOOLS` minus `CHAT_ONLY_TOOLS` via `setup.py` — no separate registration needed.
-- `build_catalogue_description()` auto-generates the prompt catalogue from the registry.
-- No other registration step is needed — adding the function to `TOOL_REGISTRY` is sufficient.
+- `ALL_TOOL_FUNCTIONS` is a flat list of every `@agent_tool`-decorated function.
+- `ToolCatalogue(ALL_TOOL_FUNCTIONS)` reads `.category` from each function and groups them automatically — no manual `TOOL_REGISTRY` dict needed.
+- **ChatAgent** uses `ToolCatalogue` + `register_tools` — the LLM dynamically loads tools by category or name.
+- **WorkerAgent** uses `ALL_TOOL_FUNCTIONS` minus `CHAT_ONLY_TOOLS` — filtering is done at the service layer.
+- No `build_catalogue_description()` call needed — `ToolCatalogue` handles this automatically.
 
 ### CHAT_ONLY_TOOLS
 

@@ -1,0 +1,28 @@
+[project]
+name = "prophitai-foundry"
+version = "0.1.0"
+description = "RAG system — embeddings, chunking, ingestion, and retrieval"
+requires-python = ">=3.13"
+dependencies = [
+    "prophitai-shared",
+    "openai>=2.0.0",
+    "pydantic>=2.0",
+    "python-dotenv",
+    "pinecone",
+    "pinecone-text",
+    "voyageai",
+    "chonkie",
+    "boto3",
+    "modal",
+    "nltk",
+    "pymupdf",
+    "pdf2image",
+    "pytesseract",
+    "docling",
+    "openpyxl",
+    "xlrd",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"

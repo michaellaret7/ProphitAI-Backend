@@ -1,0 +1,27 @@
+[project]
+name = "prophitai-data"
+version = "0.1.0"
+description = "Data layer — database models, repositories, jobs, clients, and caching"
+requires-python = ">=3.13"
+dependencies = [
+    "prophitai-shared",
+    "sqlalchemy>=2.0",
+    "psycopg2-binary",
+    "pandas>=2.0",
+    "numpy",
+    "alpaca-py",
+    "requests",
+    "cryptography",
+    "snaptrade-python-sdk",
+]
+
+[project.optional-dependencies]
+migrations = ["alembic"]
+
+[tool.pytest.ini_options]
+pythonpath = ["src"]
+testpaths = ["tests"]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
