@@ -12,97 +12,39 @@ from prophitai_atlas.tools.responses import error_response
 # ==============================================================================
 
 DEPLOY_WORKER_DESCRIPTION = """
-  Deploy a focused worker agent to autonomously execute a specific sub-task.
-  The worker runs its own tool-calling loop with the tools you select and returns
-  a structured result.
+  Deploy a focused worker agent to autonomously execute a sub-task.
+  The worker runs its own tool-calling loop and returns a structured result.
 
-  **WHEN TO USE:**
-  - Research tasks: earnings call analysis, news summarization, sector deep-dives
-  - Data-heavy analysis that requires multiple sequential tool calls
-  - Any focused sub-task that benefits from isolated execution
+  The `task` string MUST contain ALL 5 labeled sections:
+    ROLE — The worker's persona and expertise. Be specific.
+    TASK — What to accomplish. Include concrete inputs (tickers, dates, metrics).
+    SUCCESS CRITERIA — Measurable conditions the worker checks to know it's done.
+    RULES — Constraints, scope limits, and guardrails.
+    OUTPUT FORMAT — Exact structure of the final response.
 
-  **IMPORTANT:** Always pass the plan_task_id of the plan task you are working on.
+  Pass prior results via `context` to avoid re-fetching.
+  Only equip tools the worker actually needs — fewer is better.
+  Always pass `plan_task_id`.
 
-  **MANDATORY PROMPT STRUCTURE:**
-  The `task` string MUST contain ALL 5 of the following labeled sections.
-  Do NOT omit any section. Do NOT reorder them.
+  Args:
+      task: The worker's full prompt with all 5 sections: ROLE, TASK,
+          SUCCESS CRITERIA, RULES, OUTPUT FORMAT.
+      tools: List of tool names to equip the worker with.
+      plan_task_id: The plan task ID this worker is deployed for (e.g., '1', '2').
+      context: Optional data from prior steps to prepend as background.
 
-  ── ROLE ──
-  The worker's persona and expertise for this task.
-  Specificity matters — "senior equity analyst covering consumer staples" beats
-  "analyst". The more targeted the persona, the better the worker's output quality
-  because it anchors the LLM's domain knowledge and tone.
+  Returns:
+      YAML-formatted result:
+      - success (bool): Whether the worker completed successfully
+      - data: answer, tool_calls_made, tokens_used, iterations, stop_reason
 
-  ── TASK ──
-  What specifically the worker must accomplish.
-  Include concrete inputs: tickers, dates, metrics, thresholds. If you already have
-  data from prior steps or other workers, paste it directly here so the worker does
-  not waste iterations re-fetching information you already possess.
-
-  ── SUCCESS CRITERIA ──
-  How the worker knows it is done. The worker continues until every criterion is met.
-  Use measurable, checkable conditions (e.g., "at least 5 tickers analyzed",
-  "all risk metrics computed", "output contains a table with columns X, Y, Z").
-  Avoid vague criteria like "do a thorough job" — the worker cannot self-evaluate
-  against ambiguity.
-
-  ── RULES ──
-  Constraints and guardrails the worker must follow.
-  Scope limits, data source constraints, things to explicitly avoid, and any
-  domain-specific guardrails (e.g., "only use TTM data", "exclude ETFs",
-  "do not make forward-looking projections").
-
-  ── OUTPUT FORMAT ──
-  The exact structure and format of the final response.
-  Be explicit about structure — specify sections, bullet lists, tables, JSON schema,
-  or prose. The more precise the format specification, the more directly usable the
-  worker's output will be in your next step without manual reformatting.
-
-  **CONTEXT-PASSING:**
-  Use the `context` parameter to pass results from prior workers or earlier tool
-  calls. This data is automatically prepended to the worker's prompt under a
-  CONTEXT label, keeping the 5-section task structure clean. For example, if a
-  previous worker returned a list of tickers with scores, pass that as `context`
-  instead of embedding it in the TASK section.
-
-  **TOOL SELECTION:**
-  Only equip tools the worker actually needs for this specific task. Over-provisioning
-  dilutes the worker's focus and wastes its iteration budget on irrelevant options.
-  A worker with 3 targeted tools outperforms one with 15 broad tools.
-
-  **WRITE_NOTE BEHAVIOR:**
-  When a worker calls `write_note`, those notes are saved to the orchestrator's
-  shared notebook. You can read these notes to inform subsequent workers or your
-  own final synthesis.
-
-  **DO NOT:**
-  - Send vague one-liner tasks with no structure — the worker will underperform.
-  - Omit OUTPUT FORMAT — the worker will guess, and its output will be unusable.
-  - Dump every available tool into the tools list — select only what is needed.
-  - Repeat data-fetching work a prior worker already completed — use `context` to pass it.
-
-  **EXAMPLE:**
-  deploy_worker_agent(
-    task=(
-      "ROLE: You are a senior equity research analyst specializing in mega-cap tech.\\n\\n"
-      "TASK: Research the latest AAPL earnings call. Extract key financial metrics, "
-      "management forward guidance, and notable analyst Q&A exchanges.\\n\\n"
-      "SUCCESS CRITERIA:\\n"
-      "- Revenue, EPS, and gross margin figures for the reported quarter are included\\n"
-      "- Management guidance for next quarter is summarized\\n"
-      "- At least 3 notable analyst Q&A exchanges are captured\\n\\n"
-      "RULES:\\n"
-      "- Only use data from the most recent earnings call\\n"
-      "- Do not speculate beyond what management explicitly stated\\n"
-      "- Cite specific numbers, not vague qualitative language\\n\\n"
-      "OUTPUT FORMAT:\\n"
-      "Return a structured summary with sections: Financial Highlights, "
-      "Forward Guidance, and Analyst Q&A (each Q&A as Question / Answer pairs)."
-    ),
-    context="Prior screening worker identified AAPL as a top pick with score 92/100. Current price: $187.50, P/E: 29.3x.",
-    tools=['earnings_call_search', 'get_ticker_news'],
-    plan_task_id='1'
-  )
+  Examples:
+      deploy_worker_agent(
+          task="ROLE: Senior equity analyst...\\nTASK: Research AAPL earnings...\\n...",
+          tools=["earnings_call_search", "get_ticker_news"],
+          plan_task_id="1",
+          context="Prior worker identified AAPL as top pick, score 92/100."
+      )
 """
 
 DEPLOY_WORKER_PARAMETERS = {
@@ -110,13 +52,7 @@ DEPLOY_WORKER_PARAMETERS = {
     "properties": {
         "task": {
             "type": "string",
-            "description": (
-                "The worker's full prompt. MUST include all 5 labeled sections: "
-                "ROLE, TASK, SUCCESS CRITERIA, RULES, and OUTPUT FORMAT. "
-                "If you have data from prior steps or other workers, embed it "
-                "directly in the TASK section to avoid redundant fetching. "
-                "See the tool description for the required structure and example."
-            )
+            "description": "The worker's full prompt with all 5 sections: ROLE, TASK, SUCCESS CRITERIA, RULES, OUTPUT FORMAT."
         },
         "tools": {
             "type": "array",
@@ -132,12 +68,7 @@ DEPLOY_WORKER_PARAMETERS = {
         },
         "context": {
             "type": "string",
-            "description": (
-                "Optional data from prior steps or other workers to provide as background. "
-                "This is prepended to the task prompt so the worker has it without re-fetching. "
-                "Use this for passing raw data (ticker lists, scores, tables) instead of "
-                "stuffing it into the TASK section."
-            )
+            "description": "Optional data from prior steps to prepend as background context."
         }
     },
     "required": ["task", "tools", "plan_task_id"],

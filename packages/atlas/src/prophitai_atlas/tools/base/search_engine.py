@@ -16,68 +16,23 @@ def llm_web_search(
     reasoning_effort: Optional[Literal["minimal", "low", "medium", "high"]] = None,
     mode: Literal["regular-search"] = "regular-search",
 ) -> str:
-    """Search the web using Perplexity's AI-powered search engine to get synthesized,
-well-researched answers based on real-time sources.
+    """Search the web via Perplexity for synthesized answers from real-time sources.
 
-**BATCH MULTIPLE QUERIES FOR EFFICIENCY:**
-This tool accepts a LIST of queries. When researching multiple topics, batch them together
-in a single call rather than making separate calls.
+Batch multiple queries in a single call for efficiency.
 
-Good: queries: ["AAPL Q4 earnings", "MSFT Q4 earnings", "GOOGL Q4 earnings"]
-Bad: Three separate calls with one query each
-
-**USE THIS TOOL WHEN YOU NEED:**
-- Current market news, earnings reports, or company announcements
-- Recent analyst opinions, price targets, or rating changes
-- Macroeconomic data, Fed decisions, or policy changes
-- Industry trends, competitive dynamics, or sector developments
-- Any information that may have changed since your knowledge cutoff
-
-**QUERY TIPS:**
-- Be specific: "NVIDIA Q4 2024 earnings results and guidance" vs "NVIDIA earnings"
-- Include context: "Fed interest rate decision December 2024 and market impact"
-- Specify what you want: "Analyst consensus price target for Apple as of January 2025"
-
-**PARAMETERS:**
-
-queries (REQUIRED - array): List of search queries. Batch multiple for efficiency.
-
-recency_filter: Constrains results to a time window:
-  - "hour": Breaking news, intraday moves
-  - "day": Today's news
-  - "week": Recent developments (good default)
-  - "month": Quarterly trends
-  - "year": Annual comparisons
-
-reasoning_effort: Controls depth vs speed:
-  - "minimal": Quick facts
-  - "low": Standard queries
-  - "medium": Balanced (good default)
-  - "high": Complex topics
-
-mode: Search depth:
-  - "regular-search": Standard, faster (default)
-
-**EXAMPLES:**
-
-Example 1 - Batch earnings research:
-  queries: ["Microsoft Q4 2024 earnings", "Apple Q4 2024 earnings", "Google Q4 2024 earnings"]
-  recency_filter: "week"
-
-Example 2 - Single breaking news:
-  queries: ["Fed interest rate decision and Powell comments"]
-  recency_filter: "day"
-
-Example 3 - Deep competitive research:
-  queries: ["NVIDIA vs AMD datacenter GPU market share 2024", "AI chip competitive landscape"]
-  reasoning_effort: "high"
+Use for: current news, earnings, analyst opinions, macro data, Fed decisions,
+industry trends, or any post-knowledge-cutoff information.
 
     Args:
-        queries: List of search queries. BATCH MULTIPLE QUERIES for efficiency.
-            Example: ["AAPL Q4 earnings", "MSFT Q4 earnings"]
+        queries: List of search queries. Batch multiple for efficiency.
+            (e.g., ["AAPL Q4 earnings", "MSFT Q4 earnings"])
         recency_filter: Filter by recency: hour, day, week, month, or year.
         reasoning_effort: Reasoning depth: minimal, low, medium, or high.
         mode: regular-search (faster).
+
+    Examples:
+        llm_web_search(queries=["AAPL Q4 earnings", "MSFT Q4 earnings"], recency_filter="week")
+        llm_web_search(queries=["Fed rate decision"], recency_filter="day")
     """
     try:
         results = _perplexity.batch_synthesize_search(

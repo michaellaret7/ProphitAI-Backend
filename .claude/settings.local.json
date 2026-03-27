@@ -131,7 +131,11 @@
       "Bash(python -c \"from prophitai_data.repositories import screener; print\\(''repo import OK''\\)\")",
       "Bash(python -c \"from prophitai_tools.screener.equity_screener import equity_screener; print\\(''equity tool OK''\\)\")",
       "Bash(python -c \"from prophitai_tools.screener.etf_screener import etf_screener; print\\(''etf tool OK''\\)\")",
-      "Bash(python -c \"from prophitai_tools.registry import ALL_TOOL_FUNCTIONS; print\\(f''registry OK: {len\\(ALL_TOOL_FUNCTIONS\\)} tools''\\)\")"
+      "Bash(python -c \"from prophitai_tools.registry import ALL_TOOL_FUNCTIONS; print\\(f''registry OK: {len\\(ALL_TOOL_FUNCTIONS\\)} tools''\\)\")",
+      "Bash(claude mcp:*)",
+      "mcp__langfuse__fetch_traces",
+      "mcp__langfuse__fetch_observations",
+      "Bash(find /c/Dev/ProphitAI/packages/atlas/src/prophitai_atlas/tools -type f -name *.py)"
     ]
   }
 }
