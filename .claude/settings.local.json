@@ -123,7 +123,15 @@
       "Bash(python -c \"from prophitai_data.db.add_etf import load_single_etf, cleanup_etf_data, load_multiple_etfs; print\\(''ETF loader OK''\\)\")",
       "Bash(python -c \"from prophitai_data.db.add_ticker import load_single_ticker, cleanup_ticker_data, load_multiple_tickers; print\\(''Ticker loader OK''\\)\")",
       "Bash(python -c \"from prophitai_api.redis.sync_client import sync_cache; print\\(f''SyncRedisCache OK - client connected: {sync_cache.client is not None}''\\)\")",
-      "Bash(find /c/Dev/backend_restructure -name populate_etf* -o -name build_price*)"
+      "Bash(find /c/Dev/backend_restructure -name populate_etf* -o -name build_price*)",
+      "Bash(python projects/api/tests/test_agent.py)",
+      "Bash(find packages/tools/src/prophitai_tools/screener packages/data/src/prophitai_data/repositories/screener.py infra/jobs/src/prophitai_jobs/screeners -name \"*.py\" -exec wc -l {} +)",
+      "Bash(sort -k2)",
+      "Bash(python projects/api/tests/test_screeners.py)",
+      "Bash(python -c \"from prophitai_data.repositories import screener; print\\(''repo import OK''\\)\")",
+      "Bash(python -c \"from prophitai_tools.screener.equity_screener import equity_screener; print\\(''equity tool OK''\\)\")",
+      "Bash(python -c \"from prophitai_tools.screener.etf_screener import etf_screener; print\\(''etf tool OK''\\)\")",
+      "Bash(python -c \"from prophitai_tools.registry import ALL_TOOL_FUNCTIONS; print\\(f''registry OK: {len\\(ALL_TOOL_FUNCTIONS\\)} tools''\\)\")"
     ]
   }
 }

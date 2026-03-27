@@ -55,9 +55,7 @@ def _format_allocation_result(result) -> dict:
 @agent_tool(name="portfolio_allocator", category="portfolio_construction")
 def portfolio_allocator(
     tickers: list[str],
-    strategy: Literal[
-        "max_sharpe", "min_vol", "max_utility", "efficient_risk", "efficient_return"
-    ] = "max_sharpe",
+    strategy: Literal["max_sharpe", "min_vol", "max_utility", "efficient_risk", "efficient_return"] = "max_sharpe",
     initial_portfolio_value: Annotated[float, Param(min_val=1000, max_val=100_000_000)] = 10_000,
     equity_weight_target: Annotated[float, Param(min_val=0.0, max_val=1.0)] = 0.60,
     bond_weight_target: Annotated[float, Param(min_val=0.0, max_val=1.0)] = 0.40,

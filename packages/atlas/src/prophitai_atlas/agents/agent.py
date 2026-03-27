@@ -95,6 +95,8 @@ class Agent(AgentBase):
             tool_registry = {}
             all_tools = {}
             deploy_schema = DEPLOY_WORKER_TOOL
+        
+        print(self.catalogue)
 
         # Reason: caller-provided prompt takes precedence; fallback to generic base prompt
         if system_prompt is not None:
@@ -272,3 +274,6 @@ class Agent(AgentBase):
 
 
 
+if __name__ == "__main__":
+    agent = Agent()
+    print(agent.catalogue)

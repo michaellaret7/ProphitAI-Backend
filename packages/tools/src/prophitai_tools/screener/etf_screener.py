@@ -4,8 +4,8 @@ import yaml
 
 from prophitai_atlas.tools.decorator import agent_tool
 from prophitai_atlas.tools.responses import success_response, error_response
-from prophitai_tools.screener.etf.execute import execute_query
-from prophitai_tools.screener.etf.schema import (
+from prophitai_data.repositories.screener import screen_etfs
+from prophitai_tools.screener.etf_schema import (
     ETF_SCREENER_DESCRIPTION,
     ETF_SCREENER_PARAMETERS,
 )
@@ -50,7 +50,7 @@ def etf_screener(**kwargs) -> str:
         Exception: If query execution fails
     """
     converted_kwargs = _convert_lists_to_tuples(kwargs)
-    results, error = execute_query(**converted_kwargs)
+    results, error = screen_etfs(**converted_kwargs)
 
     if error is not None:
         return error_response(error)
@@ -67,9 +67,4 @@ etf_screener.tool["description"] = ETF_SCREENER_DESCRIPTION
 etf_screener.tool["parameters"] = ETF_SCREENER_PARAMETERS
 
 
-# ================================
-# --> Standalone testing
-# ================================
 
-if __name__ == "__main__":
-    print(etf_screener(industries=["equity_etfs"], ann_ret=[0.10, None]))

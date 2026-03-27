@@ -4,8 +4,8 @@ import yaml
 
 from prophitai_atlas.tools.decorator import agent_tool
 from prophitai_atlas.tools.responses import success_response, error_response
-from prophitai_tools.screener.equity.execute import execute_query
-from prophitai_tools.screener.equity.schema import (
+from prophitai_data.repositories.screener import screen_equities
+from prophitai_tools.screener.equity_schema import (
     EQUITY_SCREENER_DESCRIPTION,
     EQUITY_SCREENER_PARAMETERS,
 )
@@ -50,7 +50,7 @@ def equity_screener(**kwargs) -> str:
         Exception: If query execution fails
     """
     converted_kwargs = _convert_lists_to_tuples(kwargs)
-    results, error = execute_query(**converted_kwargs)
+    results, error = screen_equities(**converted_kwargs)
 
     if error is not None:
         return error_response(error)
@@ -67,9 +67,4 @@ equity_screener.tool["description"] = EQUITY_SCREENER_DESCRIPTION
 equity_screener.tool["parameters"] = EQUITY_SCREENER_PARAMETERS
 
 
-# ================================
-# --> Standalone testing
-# ================================
 
-if __name__ == "__main__":
-    print(equity_screener(sectors=["equity_sector_financials"], pe_ratio_ttm=[None, 15]))

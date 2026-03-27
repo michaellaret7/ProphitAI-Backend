@@ -1,6 +1,5 @@
 from typing import Any
-from prophitai_tools.screener.equity.execute import execute_query as execute_equity_query
-from prophitai_tools.screener.etf.execute import execute_query as execute_etf_query
+from prophitai_data.repositories.screener import screen_equities, screen_etfs
 from prophitai_api.utils.response_envelope import ok_envelope
 
 
@@ -26,7 +25,7 @@ def run_equity_screener(**kwargs) -> dict[str, Any]:
         else:
             converted_kwargs[key] = value
 
-    results, error = execute_equity_query(**converted_kwargs)
+    results, error = screen_equities(**converted_kwargs)
 
     if error:
         return {"error": error}
@@ -65,7 +64,7 @@ def run_etf_screener(**kwargs) -> dict[str, Any]:
         else:
             converted_kwargs[key] = value
 
-    results, error = execute_etf_query(**converted_kwargs)
+    results, error = screen_etfs(**converted_kwargs)
 
     if error:
         return {"error": error}
