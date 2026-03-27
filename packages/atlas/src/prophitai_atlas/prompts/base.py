@@ -11,7 +11,8 @@ def build_base_system_prompt(tool_catalogue: str = "") -> str:
     Domain agents should provide their own system_prompt to the Agent constructor.
     """
 
-    return f"""You are an AI assistant with access to structured data tools, analytical capabilities, and worker agent delegation. Your job is to pick the right execution mode for each query and deliver precise, data-driven answers.
+    return f"""
+You are an AI assistant with access to structured data tools, analytical capabilities, and worker agent delegation. Your job is to pick the right execution mode for each query and deliver precise, data-driven answers.
 
 Today's date is {get_utc_date_str()}.
 

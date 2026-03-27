@@ -88,6 +88,7 @@ class Agent(AgentBase):
             all_tools = self.catalogue.all_tools
 
             deploy_schema = build_deploy_worker_schema(all_tools) # Build the deploy_worker_agent tool schema with all avail tools
+
         else:
             self.catalogue = None
             catalogue_text = ""
@@ -112,6 +113,7 @@ class Agent(AgentBase):
         )
 
         # --- Add the register_tools tool ---
+        # TODO: Make this into a boolean argument that defaults to True. This way we can have some agents that don't have access to all tools.
         self.add_tool(
             **reg_schema,
             function=partial(register_tools_fn, tool_registry, all_tools, self),
