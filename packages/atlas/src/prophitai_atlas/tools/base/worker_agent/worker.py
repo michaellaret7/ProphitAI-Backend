@@ -16,7 +16,8 @@ def deploy_worker_agent(
     tools: List[Dict[str, Any]],
     plan_task_id: str = "",
 ) -> str:
-    """Deploy a worker agent to execute a focused task with selected tools.
+    """
+    Deploy a worker agent to execute a focused task with selected tools.
 
     Args:
         notebook: Shared Notebook instance (pre-bound via partial).

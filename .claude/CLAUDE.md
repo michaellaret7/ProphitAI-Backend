@@ -577,6 +577,7 @@ mcp__notion__notion-update-page(
 - Do not ever create code functionality where we have to use arg commands to run it properly --> for example: tests/hrp_comb.py --mode long-only
 - Use the LSP Pyright server whenever you can
 - never name a folder or file with a '_' in front
+- Anytime you want to record a spec, standard, pattern, or anything you might need to reference later, write a document about it in `docs/`. Organize by topic (e.g., `docs/tools/`, `docs/agents/`). This keeps institutional knowledge in the repo, not just in conversation history.
 
 # Testing
 1. When creating a test, do not use any pytest

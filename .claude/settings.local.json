@@ -135,7 +135,8 @@
       "Bash(claude mcp:*)",
       "mcp__langfuse__fetch_traces",
       "mcp__langfuse__fetch_observations",
-      "Bash(find /c/Dev/ProphitAI/packages/atlas/src/prophitai_atlas/tools -type f -name *.py)"
+      "Bash(find /c/Dev/ProphitAI/packages/atlas/src/prophitai_atlas/tools -type f -name *.py)",
+      "Bash(git remote:*)"
     ]
   }
 }

@@ -73,10 +73,8 @@ risk measures (vs SPY).
 
     Examples:
         portfolio_risk(tickers=["AAPL", "MSFT", "GOOGL"], weights=[0.40, 0.35, 0.25])
-        >>> {"success": True, "data": {"tickers": [...], "weights": [...], "years_back": 1, "risk_metrics": {...}}}
 
         portfolio_risk(tickers=["AAPL", "TSLA"], weights=[0.60, -0.20], years_back=3)
-        >>> {"success": True, "data": {"tickers": [...], "weights": [...], "years_back": 3, "risk_metrics": {...}}}
 
     Raises:
         ValueError: If tickers and weights have different lengths or no price data found

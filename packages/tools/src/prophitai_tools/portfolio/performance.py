@@ -71,10 +71,8 @@ horizons.
 
     Examples:
         portfolio_performance(tickers=["AAPL", "MSFT", "GOOGL"], weights=[0.40, 0.35, 0.25])
-        >>> {"success": True, "data": {"tickers": [...], "weights": [...], "years_back": 1, "performance_metrics": {...}}}
 
         portfolio_performance(tickers=["AAPL", "TSLA"], weights=[0.60, -0.20], years_back=3)
-        >>> {"success": True, "data": {"tickers": [...], "weights": [...], "years_back": 3, "performance_metrics": {...}}}
 
     Raises:
         ValueError: If tickers and weights have different lengths or no price data found
