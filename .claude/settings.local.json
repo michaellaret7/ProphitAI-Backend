@@ -136,7 +136,18 @@
       "mcp__langfuse__fetch_traces",
       "mcp__langfuse__fetch_observations",
       "Bash(find /c/Dev/ProphitAI/packages/atlas/src/prophitai_atlas/tools -type f -name *.py)",
-      "Bash(git remote:*)"
+      "Bash(git remote:*)",
+      "mcp__langfuse__fetch_trace",
+      "Bash(e2b:*)",
+      "Bash(python -c \"from e2b import Template; help\\(Template.from_python_image\\)\")",
+      "Bash(python e2b/build_template.py)",
+      "Bash(.venv/Scripts/python.exe -m pip install pyreadline3)",
+      "Bash(.venv/Scripts/python.exe -c \"import e2b_code_interpreter; print\\(e2b_code_interpreter.__version__\\)\" 2>&1)",
+      "Bash(.venv/Scripts/python.exe -c \"from e2b_code_interpreter import Sandbox; import inspect; print\\(inspect.signature\\(Sandbox.__init__\\)\\)\" 2>&1)",
+      "Bash(.venv/Scripts/python.exe -c \"\nfrom e2b.sandbox.main import SandboxOpts\nimport typing\nhints = typing.get_type_hints\\(SandboxOpts\\)\nfor k, v in sorted\\(hints.items\\(\\)\\):\n    print\\(f'{k}: {v}'\\)\n\" 2>&1)",
+      "Bash(.venv/Scripts/python.exe -c \"\nfrom e2b_code_interpreter import Sandbox\nprint\\(hasattr\\(Sandbox, 'close'\\)\\)\nprint\\(hasattr\\(Sandbox, 'kill'\\)\\)\n\" 2>&1)",
+      "Bash(.venv/Scripts/python.exe -c \"\nfrom e2b_code_interpreter import Sandbox\nimport inspect\nprint\\(inspect.signature\\(Sandbox.files.fget\\(None\\).__class__.read\\)\\)\n\" 2>&1)",
+      "Bash(.venv/Scripts/python.exe c:/Dev/ProphitAI/packages/tools/tests/test_sandbox.py)"
     ]
   }
 }

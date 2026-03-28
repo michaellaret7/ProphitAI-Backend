@@ -9,6 +9,7 @@ dependencies = [
     "prophitai-data",
     "prophitai-shared",
     "prophitai-foundry",
+    "e2b-code-interpreter>=1.0.0",
 ]
 
 [build-system]

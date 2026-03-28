@@ -127,6 +127,14 @@ from prophitai_tools.render.services import (
 from prophitai_tools.render.env_vars import list_env_vars, set_env_var, delete_env_var
 from prophitai_tools.render.logs import get_render_logs, get_render_log_labels
 
+# ================================
+# --> Imports: sandbox
+# ================================
+from prophitai_tools.sandbox.lifecycle import start_sandbox, close_sandbox, get_sandbox_status
+from prophitai_tools.sandbox.files import sandbox_write_file, sandbox_read_file, sandbox_list_files, sandbox_file_tree
+from prophitai_tools.sandbox.execution import sandbox_run_python, sandbox_run_command
+from prophitai_tools.sandbox.github import create_pull_request
+
 
 # ==============================================================================
 # --> ALL_TOOL_FUNCTIONS: flat list of every @agent_tool-decorated function
@@ -171,6 +179,11 @@ ALL_TOOL_FUNCTIONS: list[Callable] = [
     list_instances, restart_service, suspend_service, resume_service,
     list_env_vars, set_env_var, delete_env_var,
     get_render_logs, get_render_log_labels,
+    # sandbox
+    start_sandbox, close_sandbox, get_sandbox_status,
+    sandbox_write_file, sandbox_read_file, sandbox_list_files, sandbox_file_tree,
+    sandbox_run_python, sandbox_run_command,
+    create_pull_request,
 ]
 
 # Reason: These tools require direct user confirmation and must never be
