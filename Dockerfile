@@ -2,8 +2,9 @@ FROM python:3.13-slim
 
 WORKDIR /app
 
-# Install system deps for Playwright Chromium
+# Install build tools (gcc for C extensions like mmh3) and Playwright system deps
 RUN apt-get update && apt-get install -y --no-install-recommends \
+    build-essential \
     libnss3 libnspr4 libatk1.0-0 libatk-bridge2.0-0 libcups2 \
     libdrm2 libxkbcommon0 libxcomposite1 libxdamage1 libxrandr2 \
     libgbm1 libpango-1.0-0 libcairo2 libasound2 libxshmfence1 \
