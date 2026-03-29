@@ -1,384 +1,292 @@
-# ProphitAI
+# ProphitAI Monorepo
 
-<p align="left">
-  <img src="frontend/src/assets/logo_smaller.png" alt="ProphitAI Logo"/>
-</p>
+A uv workspace monorepo for the ProphitAI platform — an AI-powered institutional-grade portfolio management system. This repo consolidates all backend systems (agent framework, quantitative finance, data layer, algorithmic trading, RAG, and API) into a single repository with clear package boundaries and explicit dependencies.
 
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![Python Version](https://img.shields.io/badge/python-3.13.5-blue)](https://www.python.org/downloads/)
-[![FastAPI](https://img.shields.io/badge/FastAPI-0.115-009688)](https://fastapi.tiangolo.com/)
-[![React](https://img.shields.io/badge/React-18-61DAFB)](https://react.dev/)
+## Architecture
 
-> An AI-powered institutional-grade portfolio management platform leveraging autonomous agents for portfolio construction, risk analysis, and financial research.
+The monorepo is organized into **7 packages** (reusable libraries), **1 project** (deployable application), and **1 infra job runner**. The design is modeled after Apache Airflow's approach: a core framework consumed by multiple packages, all managed with uv workspaces and a single lockfile.
 
-## Overview
-
-ProphitAI is a sophisticated portfolio management platform that uses a state-of-the-art agentic framework powered by multiple LLM providers (OpenAI, Claude, Grok). The system employs autonomous agents that collaborate to construct portfolios, analyze risk, perform stress testing, and conduct financial research—all while maintaining institutional-grade rigor.
-
-**Key Innovation:** Unlike traditional portfolio management tools, ProphitAI uses a **ReAct (Reasoning + Acting) pattern** with specialized domain agents that have memory systems, tool-calling capabilities, and structured planning workflows.
-
-## Core Features
-
-### Autonomous Agentic Framework
-- **BaseAgent Architecture**: Implements ReAct pattern with native tool-calling across OpenAI, Claude, and Grok
-- **Task Management**: Hierarchical TodoList system with MainTask/SubTask tracking
-- **Memory Systems**: Domain memory for agent-specific knowledge + episodic memory for learning from successful executions
-- **Specialized Agents**: CIO (portfolio construction), CRO (risk analysis), Industry analysts, Macro agents, AI Watchlist agents
-- **Portfolio Optimizer Agent**: Automated portfolio optimization with multiple strategies
-
-### Portfolio Management
-- **AI-Driven Construction**: Thesis-driven stock selection with structured allocation recommendations
-- **Alternative Investments**: Specialized funds (Consumer Staples, etc.) with sector-specific agents
-- **Portfolio Allocation**: Intelligent allocation engine with position sizing
-- **Performance Analytics**: Portfolio metrics, concentration analysis, factor tilts, beta calculations
-- **Correlation Analysis**: Multi-asset correlation matrices and group performance tracking
-
-### Risk Management
-- **Covariance & VaR/ES**: Statistical risk measures and portfolio volatility analysis
-- **Stress Testing**: Scenario-based stress testing with custom market conditions
-- **Drawdown Analysis**: Historical drawdown profiles and recovery periods
-- **Asset Risk Contribution**: Identify portfolio risk concentrations
-- **Risk Scores**: Comprehensive risk scoring system
-
-### Data & Analytics
-- **Market Data**: Real-time and historical price data via bulk fetching
-- **Fundamentals**: Company financials, ratios, and screening tools
-- **Factor Analysis**: Volatility factors, industry/sub-industry analytics
-- **Technical Indicators**: Comprehensive technical analysis toolkit
-- **Market Regime Detection**: ML-powered market regime classification
-- **Sector Analytics**: Sector and industry performance analysis
-- **Crypto Data**: Cryptocurrency market data and analytics
-- **ETF Analytics**: ETF analysis and screening
-
-### Macro Research
-- **Macro Agent**: AI-powered macroeconomic research and analysis
-- **Economic Indicators**: Integration with economic data sources
-- **Market Regime Analysis**: Automated market environment classification
-
-### API & Integration
-- **RESTful API**: FastAPI-based with automatic OpenAPI/Swagger documentation
-- **WebSocket Support**: Real-time streaming for agent execution and live updates
-- **Alpaca Integration**: Broker integration for trading
-- **Redis Caching**: High-performance caching layer
-- **Database**: PostgreSQL with SQLAlchemy/Peewee ORM and Alembic migrations
-- **Messaging System**: Encrypted messaging infrastructure
-
-## Technology Stack
-
-### Backend
-- **Framework**: FastAPI 0.115
-- **Database**: PostgreSQL
-- **ORM**: SQLAlchemy, Peewee
-- **Migrations**: Alembic
-- **Caching**: Redis
-- **LLM Providers**: OpenAI, Claude (Anthropic), Grok
-- **Data Science**: Pandas, NumPy, SciPy, scikit-learn
-- **Portfolio Optimization**: Riskfolio-Lib
-- **Validation**: Pydantic 2.x
-- **Brokerage**: Alpaca
-
-### Frontend
-- **Framework**: React
-- **Dev Server**: Vite (port 5173)
-
-## Getting Started
-
-### Prerequisites
-- **Python**: 3.13.5
-- **PostgreSQL**: Latest version
-- **Redis**: For caching
-- **Node.js**: For frontend development
-- **API Keys**: OpenAI, Claude, Grok (optional)
-- **Alpaca**: Account (for live trading)
-
-### Installation
-
-1. **Clone the repository**
-   ```bash
-   git clone https://github.com/yourusername/ProphitAI.git
-   cd ProphitAI
-   ```
-
-2. **Set up Python virtual environment**
-   ```bash
-   python -m venv .venv
-
-   # Windows
-   .venv\Scripts\Activate.ps1
-
-   # Linux/Mac
-   source .venv/bin/activate
-   ```
-
-3. **Install dependencies**
-   ```bash
-   pip install -r requirements.txt
-   ```
-
-4. **Configure environment variables**
-
-   Create a `.env` file in the root directory:
-   ```env
-   # Database
-   DB_HOST=localhost
-   DB_USER=your_db_user
-   DB_PASSWORD=your_db_password
-   DB_PORT=5432
-   DB_NAME=prophitai
-
-   # Redis
-   REDIS_HOST=localhost
-   REDIS_PORT=6379
-
-   # LLM API Keys
-   OPENAI_API_KEY=your_openai_key
-   ANTHROPIC_API_KEY=your_claude_key
-   GROK_API_KEY=your_grok_key
-
-   # Alpaca
-   ALPACA_API_KEY=your_alpaca_key
-   ALPACA_SECRET_KEY=your_alpaca_secret
-   ```
-
-5. **Set up database**
-   ```bash
-   # Create PostgreSQL database
-   createdb prophitai
-
-   # Run migrations
-   cd app/db/alembic_migration
-   alembic upgrade head
-   ```
-
-### Running the Application
-
-#### Backend (FastAPI)
-```bash
-# Ensure virtual environment is activated
-python main.py
-```
-The API will be available at `http://localhost:8000`
-
-- **Interactive API Docs**: `http://localhost:8000/docs`
-- **Health Check**: `http://localhost:8000/health`
-
-#### Frontend (React)
-```bash
-cd frontend
-npm install
-npm run dev
-```
-The frontend will be available at `http://localhost:5173`
-
-## Project Structure
+### Dependency Graph
 
 ```
-ProphitAI/
-├── app/
-│   ├── api/                          # FastAPI routes and controllers
-│   │   ├── routes/                   # API endpoints
-│   │   │   ├── alts_router.py        # Alternative investment portfolios
-│   │   │   ├── portfolio_router.py   # Portfolio operations
-│   │   │   ├── ticker_router.py      # Ticker data and analysis
-│   │   │   ├── fundamentals_router.py # Company fundamentals
-│   │   │   ├── technical_router.py   # Technical analysis
-│   │   │   ├── screener_router.py    # Stock screening
-│   │   │   ├── macro_router.py       # Macroeconomic data
-│   │   │   ├── crypto_router.py      # Cryptocurrency data
-│   │   │   ├── etf_router.py         # ETF analytics
-│   │   │   ├── news_router.py        # News and sentiment
-│   │   │   ├── broker_router.py      # Broker integration
-│   │   │   ├── agent_router.py       # Agent execution
-│   │   │   ├── messaging_router.py   # Messaging system
-│   │   │   ├── watchlist_routes.py   # Watchlist management
-│   │   │   ├── user_routes.py        # User management
-│   │   │   ├── cache_router.py       # Cache management
-│   │   │   └── websocket_router.py   # Real-time streaming
-│   │   └── controller/               # Business logic layer
-│   │
-│   ├── agents/                       # Standalone agents
-│   │   └── macro_agent/              # Macroeconomic research agent
-│   │
-│   ├── core/
-│   │   ├── atlas/        # Core agent system
-│   │   │   ├── base_agent/           # BaseAgent implementation
-│   │   │   │   ├── agent.py          # ReAct pattern + tool calling
-│   │   │   │   ├── tasks/            # Task management (TodoList, etc.)
-│   │   │   │   ├── memory/           # Domain + episodic memory
-│   │   │   │   └── core/             # Parser, logger, utilities
-│   │   │   └── tool_lib/             # Tool library
-│   │   │       ├── base_tools/       # Core utility tools
-│   │   │       ├── data_tools/       # Market data, fundamentals
-│   │   │       ├── risk_tools/       # Risk analytics
-│   │   │       ├── portfolio_tools/  # Portfolio metrics
-│   │   │       ├── ticker_tools/     # Ticker-specific analysis
-│   │   │       ├── macro_tools/      # Macroeconomic tools
-│   │   │       ├── sub_agents/       # Sub-agent orchestration
-│   │   │       └── agent_specific_tools/  # CIO, CRO, Industry tools
-│   │   │
-│   │   ├── calculations/             # Core calculation engines
-│   │   │   ├── core/                 # Core calculation utilities
-│   │   │   ├── risk/                 # Risk calculations
-│   │   │   │   └── scores/           # Risk scoring system
-│   │   │   ├── performance/          # Performance metrics
-│   │   │   ├── factors/              # Factor analysis
-│   │   │   ├── returns/              # Return calculations
-│   │   │   ├── portfolio/            # Portfolio calculations
-│   │   │   │   └── allocator/        # Position allocation
-│   │   │   ├── technical/            # Technical indicators
-│   │   │   │   └── indicator_calcs/  # Indicator calculations
-│   │   │   ├── stress_test/          # Stress testing
-│   │   │   ├── sectors/              # Sector analytics
-│   │   │   ├── market_regime/        # Market regime detection
-│   │   │   └── machine_learning/     # ML models
-│   │   │
-│   │   └── search/                   # Search functionality
-│   │       └── web_search/           # Web search integration
-│   │
-│   ├── domain/                       # Domain-specific agents
-│   │   ├── prophit_alts/             # Alternative investment strategies
-│   │   │   └── consumer_staples_fund/
-│   │   │       ├── build_portfolio/  # CIO, CRO, Industry agents
-│   │   │       └── manage_portfolio/ # Portfolio management
-│   │   ├── prophit_gpt/              # Conversational AI assistant
-│   │   ├── ai_watchlist/             # AI-powered watchlist agent
-│   │   └── portfolio_operations/     # Portfolio operations
-│   │       ├── builder/              # Portfolio builder
-│   │       └── optimizer/            # Portfolio optimizer agent
-│   │
-│   ├── db/                           # Database layer
-│   │   ├── core/                     # Core database models
-│   │   ├── alembic_migration/        # Alembic migrations
-│   │   ├── jobs/                     # Background jobs
-│   │   │   └── macro_jobs/           # Macro data jobs
-│   │   └── monitor/                  # Database monitoring
-│   │
-│   ├── redis/                        # Redis caching layer
-│   ├── models/                       # Pydantic/SQLAlchemy models
-│   ├── repositories/                 # Data access layer
-│   ├── services/                     # Business services
-│   └── utils/                        # Shared utilities
-│       ├── decorators/               # Custom decorators
-│       └── alpaca/                   # Alpaca integration
+                ┌──────────┐
+                │  shared   │
+                └─────┬─────┘
+                      │
+      ┌───────────────┼───────────────┐
+      │               │               │
+┌─────▼─────┐  ┌─────▼─────┐  ┌──────▼─────┐
+│   atlas   │  │   calc    │  │    data    │
+│(framework)│  │ (calcs)   │  │ (db/repos) │
+└─────┬─────┘  └─────┬─────┘  └──────┬─────┘
+      │               │               │
+      └───────┬───────┴───────────────┘
+              │
+       ┌──────▼──────┐    ┌────────────────┐    ┌──────────┐
+       │    tools    │    │  algo_trading   │    │ foundry  │
+       │(agent tools)│    │   (trading)     │    │  (RAG)   │
+       └──────┬──────┘    └────────┬───────┘    └────┬─────┘
+              │                    │                  │
+              └────────┬───────────┴──────────────────┘
+                       │
+                  ┌────▼───┐       ┌────────┐
+                  │  api   │       │  jobs  │
+                  │        │       │(infra) │
+                  │+redis  │       └────────┘
+                  └────────┘
+```
+
+Key architectural decisions:
+
+- **`algo_trading` and `tools` are independent branches.** Algo is pure trading machinery with no knowledge of agents or AI. Tools is the agent composition layer that wires atlas + calculations + data together.
+- **`atlas` has zero domain dependencies.** It depends only on `shared`, making it publishable to PyPI as a standalone agent framework.
+- **`api` is where everything converges.** It imports tools for agent capabilities, foundry for RAG, and algo_trading for trading — but none of those packages know about each other.
+- **`jobs` is the data pipeline runner.** It depends on data, calculations, and shared — no agent or API dependencies.
+
+## Repo Structure
+
+```
+backend_restructure/
+├── pyproject.toml                    # uv workspace definition
+├── uv.lock                           # Single lockfile for all packages
+├── Makefile                          # Dev targets (sync, dev, test, lint, format)
+├── .python-version                   # 3.13.5
+├── pyrightconfig.json
+├── .claude/
 │
-├── frontend/                         # React frontend application
-│   └── src/
+├── packages/
+│   ├── shared/                       # Minimal shared utilities
+│   │   ├── pyproject.toml            # "prophitai-shared"
+│   │   └── src/
+│   │       └── prophitai_shared/
+│   │           ├── time_utils.py     # get_current_utc_time() — universal
+│   │           └── choose_model_and_client.py  # LLM provider abstraction
+│   │
+│   ├── atlas/                        # PURE agent framework (no domain dependencies)
+│   │   ├── pyproject.toml            # "prophitai-atlas"
+│   │   └── src/
+│   │       └── prophitai_atlas/
+│   │           ├── agents/           # Base agent, planner, worker
+│   │           ├── execution/        # ReAct loop, tool handler, validation
+│   │           ├── tools/            # Framework primitives
+│   │           │   ├── decorator.py  # @agent_tool decorator
+│   │           │   ├── catalogue.py  # Tool discovery and grouping
+│   │           │   ├── responses.py  # Tool response models
+│   │           │   └── base/         # think, calculator, search_engine, update_plan, worker
+│   │           ├── models/           # Agent response, callbacks, chat, events, defaults
+│   │           ├── prompts/          # base, planner, worker, plan_injection
+│   │           ├── evaluation/       # Agent evaluation
+│   │           ├── gym/              # Agent training/testing
+│   │           ├── logging/          # Agent printer
+│   │           └── utils/            # gpt_parser, token_count
+│   │
+│   ├── calculations/                 # Quantitative finance calculations (pure math)
+│   │   ├── pyproject.toml            # "prophitai-calculations"
+│   │   └── src/
+│   │       └── prophitai_calculations/
+│   │           ├── factors/          # Value, Growth, Momentum, Quality, Size, Volatility
+│   │           ├── performance/      # Returns, ratios (Sharpe, Sortino, etc.)
+│   │           ├── risk/             # VaR, drawdown, benchmark comparison
+│   │           ├── stress_test/      # Multi-scenario stress testing
+│   │           ├── technicals/       # Momentum, trend, volatility, volume, statistical
+│   │           ├── portfolio_allocator/  # Mean-Variance, HRP, constraints, strategies
+│   │           ├── portfolio_analytics/  # Correlation, covariance, factor exposures, groups
+│   │           └── models/           # Pydantic result models for all calculation types
+│   │
+│   ├── data/                         # Data layer (DB, repos, clients, jobs, caching)
+│   │   ├── pyproject.toml            # "prophitai-data"
+│   │   └── src/
+│   │       └── prophitai_data/
+│   │           ├── db/               # 4 SQLAlchemy engines, models (market, user, alts, macro)
+│   │           ├── session/          # @with_session, @with_transaction, @with_sessions decorators
+│   │           ├── repositories/     # Data access layer
+│   │           │   ├── price.py, ticker.py, etf.py, news.py, ratings.py, screener.py, transcripts.py
+│   │           │   ├── alts/
+│   │           │   ├── fundamentals/ # Fetchers, statements, models
+│   │           │   ├── macro/        # Rates, commodities, indicators, calendar
+│   │           │   ├── messaging/    # Conversations, messages, read state
+│   │           │   ├── portfolio/    # CRUD, retrieval, alerts, preferences
+│   │           │   └── user/         # Account, trade proposals, watchlist
+│   │           ├── clients/          # FMP, SnapTrade, options
+│   │           ├── jobs/             # Market, fundamentals, macro, portfolio monitoring
+│   │           ├── cache/            # DataCache — in-memory OHLCV/fundamentals cache
+│   │           └── internal/         # Encryption utilities
+│   │
+│   ├── tools/                        # Shared agent tool library (composition layer)
+│   │   ├── pyproject.toml            # "prophitai-tools"
+│   │   └── src/
+│   │       └── prophitai_tools/
+│   │           ├── registry.py       # Central registry — imports all tools, exports ALL_TOOL_FUNCTIONS
+│   │           ├── ticker/           # Performance, risk, factors, technicals, fundamentals, info
+│   │           ├── portfolio/        # Performance, risk, stress test, correlation, allocator
+│   │           ├── broker/           # Account, positions, trades, orders, options trades
+│   │           ├── options/          # Expirations, contracts, chains, quotes, price history
+│   │           ├── research/         # Macro, earnings calls, credit, economics, tax, theory, uploads
+│   │           ├── screener/         # Equity and ETF screening
+│   │           ├── macro/            # Commodity prices, indicators, US rates
+│   │           ├── news/             # General news, ticker news, press releases
+│   │           └── watchlist/        # Watchlist retrieval
+│   │
+│   ├── foundry/                      # RAG system (embeddings, chunking, retrieval)
+│   │   ├── pyproject.toml            # "prophitai-foundry"
+│   │   └── src/
+│   │       └── prophitai_foundry/
+│   │           ├── ingestion/        # PDF, text, Excel loaders (Modal serverless for PDF)
+│   │           ├── chunking/         # Recursive, semantic, earnings-call-specific
+│   │           ├── embeddings/       # Voyage AI embeddings, Pinecone vector DB, sparse encoder
+│   │           ├── retrieval/        # Vector/hybrid search, reranking, query decomposition
+│   │           ├── models/           # Document, chunk, vector, metadata models
+│   │           ├── pipeline.py       # Ingestion pipeline orchestration
+│   │           └── utils/
+│   │
+│   └── algo_trading/                 # Algorithmic trading LIBRARY (pure machinery)
+│       ├── pyproject.toml            # "prophitai-algo_trading"
+│       └── src/
+│           └── prophitai_algo_trading/
+│               ├── strategies/       # BaseStrategy + 7 concrete strategies
+│               │   ├── base.py
+│               │   ├── macd_momentum/
+│               │   ├── rsi_mean_reversion/
+│               │   ├── ichimoku_cross/
+│               │   ├── orb_breakout/
+│               │   ├── squeeze_breakout/
+│               │   ├── vwap_hurst_btc/
+│               │   └── kalman_stat_arb/
+│               ├── indicators/       # Pure technical indicator calculators
+│               ├── engines/          # Execution engines
+│               │   ├── live.py       # LiveRunner (ZMQ subscriber)
+│               │   ├── trade_routing.py
+│               │   └── backtest/     # Vectorized + event-driven backtesting
+│               ├── execution/        # Portfolio/position management, cost model
+│               ├── broker/           # Alpaca interface
+│               ├── data/             # Data clients (Alpaca, FMP, yfinance), DB, streaming
+│               └── utils/
 │
-├── tests/                            # Test suite
-├── main.py                           # FastAPI entrypoint
-├── requirements.txt                  # Python dependencies
-├── .env.example                      # Environment template
-└── README.md                         # This file
+├── projects/
+│   └── api/                          # ProphitAI API service
+│       ├── pyproject.toml            # "prophitai-api"
+│       ├── main.py                   # Uvicorn entrypoint
+│       └── src/
+│           └── prophitai_api/
+│               ├── app.py            # FastAPI factory (lifespan, middleware, CORS)
+│               ├── routes/           # 24 route modules
+│               ├── controllers/      # Request handling, orchestration
+│               │   ├── broker/       # Account, connections, trading
+│               │   ├── portfolio/    # Analytics, operations
+│               │   ├── watchlist/    # CRUD, operations
+│               │   ├── foundry/      # Document processing with S3/pipeline
+│               │   ├── fundamentals/ # Company, estimates, ratings
+│               │   └── macro/        # Economic, market, sector
+│               ├── services/         # Business logic
+│               │   ├── broker/       # Account, connections, trading, proposals, onboarding
+│               │   ├── portfolio/    # Metrics, returns, factors, stress, comparison
+│               │   ├── shared/       # chat_executor, agent_executor, connection_manager, pdf
+│               │   └── ...           # crypto, etfs, macro, messaging, search, technical
+│               ├── agents/           # Domain agents (clarify, portfolio_builder, watchlist)
+│               │   └── prompts/      # Agent-specific prompts
+│               ├── auth/             # Clerk JWT, API key validation
+│               ├── cache/            # Redis client
+│               ├── schemas/          # Request/response Pydantic models
+│               └── utils/            # Case conversion, decorators, validation, serialization
+│
+└── infra/
+    └── jobs/                         # Scheduled data jobs
+        ├── pyproject.toml            # "prophitai-jobs"
+        └── src/
+            └── prophitai_jobs/
+                ├── runs/             # eod, eow, intraday, screeners, run_all
+                ├── screeners/        # Equity and ETF screener implementations
+                ├── monitor/          # Health checks, query performance
+                └── utils/            # Timezone fixes, transcript fixes
 ```
 
-## Key Design Patterns
+## Packages
 
-### Agent Pattern
-Agents follow a **planning-then-execution** workflow:
-1. Initialize with system/user prompts and iteration limits
-2. Create structured plan using `PlanningTool` (Pydantic models)
-3. Execute tools in ReAct loop until completion
-4. Parse final output into structured format
+| Package | PyPI Name | Description | Key Dependencies |
+|---------|-----------|-------------|------------------|
+| `packages/shared` | `prophitai-shared` | Minimal shared utilities (time, LLM client selection) | `pydantic` |
+| `packages/atlas` | `prophitai-atlas` | Pure agent framework — ReAct loop, tool registry, evaluation | `shared`, `openai`, `tiktoken` |
+| `packages/calculations` | `prophitai-calculations` | Quantitative finance — risk, factors, portfolio analytics, technicals | `shared`, `pandas`, `numpy`, `scipy` |
+| `packages/data` | `prophitai-data` | Data layer — DB models, repositories, jobs, external API clients, caching | `shared`, `sqlalchemy`, `pandas` |
+| `packages/tools` | `prophitai-tools` | Agent tool library — composes atlas + calculations + data into callable tools | `atlas`, `calculations`, `data`, `shared` |
+| `packages/foundry` | `prophitai-foundry` | RAG system — embeddings, chunking, ingestion, retrieval | `shared`, `openai`, `pinecone`, `voyageai` |
+| `packages/algo_trading` | `prophitai-algo_trading` | Algorithmic trading — strategies, engines, indicators, execution, broker | `shared`, `pandas`, `numpy`, `alpaca-py`, `pyzmq` |
 
-### Memory-Enhanced Learning
-- **Domain Memory**: Pre-loaded patterns (e.g., CIO investment strategies)
-- **Episodic Memory**: Stores recent successful tool executions for pattern recognition
+| Deployable | PyPI Name | Description | Key Dependencies |
+|------------|-----------|-------------|------------------|
+| `projects/api` | `prophitai-api` | FastAPI application — routes, controllers, auth, Redis caching | `tools`, `foundry`, `algo_trading`, `atlas`, `data`, `calculations`, `shared`, `fastapi`, `redis` |
+| `infra/jobs` | `prophitai-jobs` | Scheduled data jobs — EOD, EOW, intraday, screeners, monitoring | `data`, `calculations`, `shared` |
 
-### Tool Registration
-Each agent registers relevant tools via `register_*_tools(agent)`:
-1. Define tool schemas (OpenAI function calling format)
-2. Map tool names to Python callables
-3. Provide argument parsing and validation
+## Naming Convention
+
+All importable Python packages use the `prophitai_` prefix:
+
+```python
+from prophitai_atlas.agents import AgentBase
+from prophitai_calculations.risk import calculate_var
+from prophitai_algo_trading.strategies.macd_momentum import MACDMomentum
+from prophitai_algo_trading.engines import LiveRunner, VectorizedBacktestEngine
+```
+
+Why `prophitai_*` over short names:
+
+- **Collision safety** — `data`, `shared`, `tools` are generic and will collide with third-party packages
+- **Grep-ability** — `from prophitai_atlas.agents import ...` is immediately identifiable as project code
+- **PyPI publishability** — `prophitai-atlas` is unambiguous on PyPI
+- **Consistency** — no cognitive overhead deciding which packages are prefixed
+
+## Setup
+
+```bash
+# Clone and sync
+git clone https://github.com/Prophit-AI/backend_restructure.git
+cd backend_restructure
+
+# Install all workspace packages in editable mode
+uv sync
+
+# Copy .env.example and fill in your keys
+cp .env.example .env
+```
 
 ## Development
 
-### Branching Strategy
-- `main` - Production-ready code
-- `dev` - Integration branch (current active branch)
-- `feature/*` - New features
-- `fix/*` - Bug fixes
-- `docs/*` - Documentation updates
-- `refactor/*` - Code refactoring
-- `test/*` - Test additions/fixes
+```bash
+# Run the API server
+make dev
 
-### Code Philosophy
-- **KISS**: Keep it simple—favor straightforward solutions
-- **YAGNI**: You aren't gonna need it—build only what's needed
-- **DRY**: Don't repeat yourself—single source of truth
+# Run all tests
+make test
 
-### Code Constraints
-- **Files**: Max 500 lines (split into modules if larger)
-- **Functions**: Max 50 lines, single responsibility
-- **Classes**: Max 100 lines, single concept
-- **Naming**: `snake_case` for functions/variables, `PascalCase` for classes
+# Lint and format
+make lint
+make format
 
-### Documentation Requirements
-- Module docstrings explaining purpose
-- Complete docstrings for public functions
-- Inline comments with `# Reason:` prefix for complex logic
+# Type checking
+make typecheck
 
-## API Documentation
+# Clean caches
+make clean
 
-Once the backend is running, visit `http://localhost:8000/docs` for interactive API documentation (Swagger UI).
+# Run a specific package's tests
+uv run pytest packages/algo_trading/tests/
+```
 
-### Key Endpoints
+## CLI Commands (Jobs)
 
-#### Portfolio Operations
-- `POST /api/portfolio/optimize` - Optimize portfolio allocations
-- `GET /api/portfolio/{portfolio_id}/risk` - Get risk analytics
-- `POST /api/portfolio/{portfolio_id}/stress-test` - Run stress tests
+```bash
+# Run end-of-day data sync
+prophitai-run-eod
 
-#### Alternative Investments
-- `POST /api/alts/consumer-staples/build` - Build consumer staples portfolio
-- `GET /api/alts/portfolios/{portfolio_id}` - Retrieve portfolio details
+# Run end-of-week data sync
+prophitai-run-eow
 
-#### Market Data
-- `GET /api/ticker/{symbol}` - Get ticker information
-- `GET /api/price/{symbol}` - Get price data
-- `GET /api/fundamentals/{symbol}` - Get company fundamentals
-- `GET /api/technical/{symbol}` - Get technical indicators
+# Run intraday data sync
+prophitai-run-intraday
 
-#### Research & Analytics
-- `GET /api/macro/indicators` - Get macroeconomic indicators
-- `GET /api/screener/screen` - Screen stocks by criteria
-- `GET /api/etf/{symbol}` - Get ETF analytics
-- `GET /api/crypto/{symbol}` - Get cryptocurrency data
-- `GET /api/news/{symbol}` - Get news and sentiment
+# Run screeners
+prophitai-run-screeners
 
-#### Agent Execution
-- `POST /api/agent/execute` - Execute agent task
-- `WS /api/ws/agent-stream` - Real-time agent execution streaming
-
-#### User & Watchlist
-- `GET /api/watchlist` - Get user watchlists
-- `POST /api/watchlist` - Create watchlist
-
-## Contributing
-
-Contributions are welcome! Please follow these steps:
-
-1. Fork the repository
-2. Create a feature branch (`git checkout -b feature/AmazingFeature`)
-3. Commit your changes (`git commit -m 'Add AmazingFeature'`)
-4. Push to the branch (`git push origin feature/AmazingFeature`)
-5. Open a Pull Request
-
-Please ensure code follows the project's style guidelines and includes appropriate tests.
-
-## License
-
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
-
-## Acknowledgments
-
-- **FastAPI**: High-performance web framework
-- **Pydantic**: Data validation and settings management
-- **OpenAI/Anthropic/xAI**: LLM providers powering the agent framework
-- **Riskfolio-Lib**: Portfolio optimization library
-- **Redis**: In-memory caching
-- **Alembic**: Database migrations
-- **Alpaca**: Brokerage integration
-
----
-
-**Built for institutional-grade portfolio management**
+# Run all jobs
+prophitai-run-all
+```

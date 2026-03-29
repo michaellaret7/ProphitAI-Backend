@@ -1,0 +1,27 @@
+[project]
+name = "prophitai-api"
+version = "0.1.0"
+description = "ProphitAI API service"
+requires-python = ">=3.13"
+dependencies = [
+    "fastapi>=0.100.0",
+    "uvicorn",
+    "redis",
+    "orjson",
+    "python-dotenv",
+    "fastapi-clerk-auth",
+    "clerk-backend-api",
+    "svix",
+    "prophitai-tools",
+    "prophitai-foundry",
+    "prophitai-algo_trading",
+    "prophitai-shared",
+    "prophitai-data",
+    "prophitai-calculations",
+    "prophitai-atlas",
+    "python-multipart>=0.0.22",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"

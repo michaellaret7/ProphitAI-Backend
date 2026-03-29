@@ -1,0 +1,17 @@
+[project]
+name = "prophitai-tools"
+version = "0.1.0"
+description = "Shared financial agent tool library for the Atlas framework"
+requires-python = ">=3.13"
+dependencies = [
+    "prophitai-atlas",
+    "prophitai-calculations",
+    "prophitai-data",
+    "prophitai-shared",
+    "prophitai-foundry",
+    "e2b-code-interpreter>=1.0.0",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"

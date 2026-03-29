@@ -74,7 +74,7 @@ After confirmation, run the loader:
 
 ```bash
 source .venv/bin/activate && python -c "
-from app.db.core.add_ticker import load_single_ticker
+from prophitai_data.db.add_ticker import load_single_ticker
 load_single_ticker(
     '<TICKER>',
     sector='<matched_sector>',
@@ -84,15 +84,15 @@ load_single_ticker(
 "
 ```
 
-**Important:** The function is `load_single_ticker` from `app.db.core.add_ticker`, NOT `load_single_stock`.
+**Important:** The function is `load_single_ticker` from `prophitai_data.db.add_ticker`, NOT `load_single_stock`.
 
 ## Key References
 
 | File | Purpose |
 |------|---------|
-| `app/db/core/add_ticker.py` | `OptimizedTickerDataLoader` and `load_single_ticker()` |
-| `app/db/core/db_config.py` | `MarketSession` for DB connections |
-| `app/db/core/models/market_data_models.py` | `Ticker` model |
+| `packages/data/src/prophitai_data/db/add_ticker.py` | `OptimizedTickerDataLoader` and `load_single_ticker()` |
+| `packages/data/src/prophitai_data/db/config.py` | `MarketSession` for DB connections |
+| `packages/data/src/prophitai_data/db/models/market.py` | `Ticker` model |
 
 ## Classification Format Examples
 

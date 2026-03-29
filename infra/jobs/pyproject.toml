@@ -1,0 +1,23 @@
+[project]
+name = "prophitai-jobs"
+version = "0.1.0"
+description = "Scheduled jobs, run orchestrators, DB monitoring, and maintenance utilities"
+requires-python = ">=3.13"
+dependencies = [
+    "prophitai-shared",
+    "prophitai-data",
+    "prophitai-calculations",
+    "numpy",
+    "sqlalchemy>=2.0",
+]
+
+[project.scripts]
+prophitai-run-eod = "prophitai_jobs.runs.eod:main"
+prophitai-run-eow = "prophitai_jobs.runs.eow:main"
+prophitai-run-intraday = "prophitai_jobs.runs.intraday:main"
+prophitai-run-screeners = "prophitai_jobs.runs.screeners:main"
+prophitai-run-all = "prophitai_jobs.runs.run_all:main"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"

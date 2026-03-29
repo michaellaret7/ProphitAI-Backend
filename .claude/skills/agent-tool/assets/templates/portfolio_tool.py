@@ -4,8 +4,8 @@
 This tool analyzes [aspect] of a portfolio.
 """
 
-from app.core.atlas.tools.decorator import agent_tool, Param
-from app.core.atlas.tools.responses import success_response, error_response
+from prophitai_atlas.tools.decorator import agent_tool, Param
+from prophitai_atlas.tools.responses import success_response, error_response
 from typing import Annotated
 
 

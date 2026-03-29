@@ -1,0 +1,16 @@
+{
+  "venvPath": ".",
+  "venv": ".venv",
+  "pythonVersion": "3.13",
+  "typeCheckingMode": "off",
+  "extraPaths": [
+    "packages/algo_trading/src",
+    "packages/atlas/src",
+    "packages/calculations/src",
+    "packages/data/src",
+    "packages/foundry/src",
+    "packages/shared/src",
+    "packages/tools/src",
+    "services/api/src"
+  ]
+}

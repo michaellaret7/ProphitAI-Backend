@@ -1,7 +1,7 @@
 ---
 name: code-grader
 Description: Debugging specialist for errors, test failures, and unexpected behavior.
-model: inherit
+model: opus
 ---
 # Code Grader Sub-Agent (Claude Code)
 

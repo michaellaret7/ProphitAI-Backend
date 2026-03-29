@@ -36,13 +36,13 @@ class CreateResourceRequest(BaseModel):
         return v
 ```
 
-### 2. Create Router (`app/api/routes/<domain>_router.py`)
+### 2. Create Router (`prophitai_api/routes/<domain>_router.py`)
 
 ```python
 from fastapi import APIRouter, Query, Depends, Path, HTTPException
 from pydantic import BaseModel
-from app.api.controller.<domain> import my_controller
-from app.api.auth.clerk import get_clerk_user_id
+from prophitai_api.controller.<domain> import my_controller
+from prophitai_api.auth.clerk import get_clerk_user_id
 
 router = APIRouter(tags=["Domain Name"])
 
@@ -59,14 +59,14 @@ async def create_resource(
     )
 ```
 
-### 3. Create Controller (`app/api/controller/<domain>.py`)
+### 3. Create Controller (`prophitai_api/controller/<domain>.py`)
 
 ```python
 from typing import Dict, Any
-from app.api.response_envelope import ok_envelope
-from app.redis.client import cache
-from app.utils.decorators.api_decorators import handle_controller_errors
-from app.services.<domain>.<service> import MyService
+from prophitai_api.response_envelope import ok_envelope
+from prophitai_api.cache.client import cache
+from prophitai_api.decorators.api_decorators import handle_controller_errors
+from prophitai_api.services.<domain>.<service> import MyService
 
 @handle_controller_errors
 async def create_resource_controller(
@@ -113,7 +113,7 @@ async def create_resource_controller(
     return response
 ```
 
-### 4. Create Service (`app/services/<domain>/<service>.py`)
+### 4. Create Service (`prophitai_api/services/<domain>/<service>.py`)
 
 ```python
 from typing import Dict, Any, List
@@ -154,7 +154,7 @@ class MyService:
 ### 5. Register Router (`main.py`)
 
 ```python
-from app.api.routes.<domain>_router import router as domain_router
+from prophitai_api.routes.<domain>_router import router as domain_router
 
 # Choose appropriate auth level:
 # User-specific routes (require JWT + API key)
@@ -172,7 +172,7 @@ app.include_router(domain_router, prefix="/api")
 All responses use `ok_envelope()` for consistency:
 
 ```python
-from app.api.response_envelope import ok_envelope
+from prophitai_api.response_envelope import ok_envelope
 
 ok_envelope(
     message="Success message",
@@ -273,7 +273,7 @@ api_key_only = [Depends(validate_api_key)]
 
 **Get user ID from Clerk:**
 ```python
-from app.api.auth.clerk import get_clerk_user_id
+from prophitai_api.auth.clerk import get_clerk_user_id
 
 async def get_user_id_from_clerk(clerk_id: str = Depends(get_clerk_user_id)) -> str:
     """Get internal database user_id from Clerk ID."""
@@ -308,16 +308,16 @@ async def get_user_id_from_clerk(clerk_id: str = Depends(get_clerk_user_id)) -> 
 
 | Layer | Location | Naming |
 |-------|----------|--------|
-| Router | `app/api/routes/<domain>_router.py` | `*_router.py` |
-| Controller | `app/api/controller/<domain>.py` or `<domain>/<file>.py` | `*_controller` functions |
-| Service | `app/services/<domain>/<service>.py` | `*Service` classes |
-| Repository | `app/repositories/<domain>.py` | Functions with `@with_session` |
-| Models | `app/db/core/models/<db>_models.py` | SQLAlchemy models |
+| Router | `services/api/src/prophitai_api/routes/<domain>_router.py` | `*_router.py` |
+| Controller | `services/api/src/prophitai_api/controller/<domain>.py` | `*_controller` functions |
+| Service | `services/api/src/prophitai_api/services/<domain>/<service>.py` | `*Service` classes |
+| Repository | `packages/data/src/prophitai_data/repositories/<domain>.py` | Functions with `@with_session` |
+| Models | `packages/data/src/prophitai_data/db/models/<db>.py` | SQLAlchemy models |
 
 ## Reference
 
 For detailed patterns and examples, see:
 - `references/endpoint-examples.md` - Complete endpoint examples
-- `app/api/routes/portfolio_router.py` - Full router implementation
-- `app/api/controller/portfolio/` - Controller organization
-- `app/api/response_envelope.py` - Response envelope implementation
+- `services/api/src/prophitai_api/routes/portfolio_router.py` - Full router implementation
+- `services/api/src/prophitai_api/controller/portfolio/` - Controller organization
+- `services/api/src/prophitai_api/response_envelope.py` - Response envelope implementation

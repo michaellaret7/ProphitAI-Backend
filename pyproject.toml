@@ -1,0 +1,44 @@
+[project]
+name = "prophitai-workspace"
+version = "0.1.0"
+requires-python = ">=3.13"
+dependencies = [
+    "prophitai-shared",
+    "prophitai-atlas",
+    "prophitai-calculations",
+    "prophitai-data",
+    "prophitai-tools",
+    "prophitai-algo_trading",
+    "prophitai-foundry",
+    "prophitai-api",
+    "prophitai-jobs",
+]
+
+[tool.uv.workspace]
+members = [
+    "packages/*",
+    "projects/*",
+    "infra/jobs",
+]
+
+[tool.uv.sources]
+prophitai-shared = { workspace = true }
+prophitai-atlas = { workspace = true }
+prophitai-calculations = { workspace = true }
+prophitai-data = { workspace = true }
+prophitai-tools = { workspace = true }
+prophitai-algo_trading = { workspace = true }
+prophitai-foundry = { workspace = true }
+prophitai-api = { workspace = true }
+prophitai-jobs = { workspace = true }
+
+[tool.ruff]
+line-length = 120
+
+[tool.mypy]
+python_version = "3.13"
+strict = true
+
+[tool.pyright]
+pythonVersion = "3.13"
+typeCheckingMode = "off"
