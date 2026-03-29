@@ -1,10 +1,10 @@
 .PHONY: sync dev test lint format typecheck clean
 
 sync:
-	uv sync
+	uv sync --no-editable
 
 dev:
-	uv run uvicorn prophitai_api.main:app --reload --port 8000
+	uv run uvicorn prophitai_api.app:app --reload --reload-dir packages --reload-dir projects --reload-dir infra --port 8000
 
 test:
 	uv run pytest

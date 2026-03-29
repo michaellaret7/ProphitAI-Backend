@@ -151,7 +151,8 @@
       "Bash(uv pip:*)",
       "Bash(python -c \"import prophitai_api; print\\(prophitai_api.__file__\\)\")",
       "Bash(python -c \"import site; print\\(''site enabled:'', hasattr\\(site, ''ENABLE_USER_SITE''\\)\\); print\\(''site packages:'', site.getsitepackages\\(\\)\\); import sys; print\\(''.pth processing:'', ''no-global-site-packages.txt'' not in str\\(sys.path\\)\\)\")",
-      "Bash(python -c \"import prophitai_api; print\\(''OK:'', prophitai_api.__file__\\)\")"
+      "Bash(python -c \"import prophitai_api; print\\(''OK:'', prophitai_api.__file__\\)\")",
+      "Bash(python3:*)"
     ]
   }
 }
