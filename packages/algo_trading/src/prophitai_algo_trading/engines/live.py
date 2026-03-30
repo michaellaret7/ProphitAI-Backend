@@ -25,11 +25,20 @@ from prophitai_algo_trading.execution.portfolio_tracker import PortfolioTracker
 from prophitai_algo_trading.execution.position_tracker import PositionTracker
 from prophitai_algo_trading.execution.cost_model import CostModel
 from prophitai_algo_trading.execution.position_sizer import BasePositionSizer, PercentOfEquitySizer
+from prophitai_algo_trading.execution.models import Direction
 from prophitai_shared import get_current_utc_time
 
 if TYPE_CHECKING:
     from prophitai_algo_trading.broker.alpaca import Alpaca
+    from prophitai_algo_trading.rules.base import TradingRule
     from prophitai_algo_trading.strategies.base import BaseStrategy
+
+_REASON_TO_DIRECTION = {
+    "open_long": Direction.LONG,
+    "close_long": Direction.LONG,
+    "open_short": Direction.SHORT,
+    "close_short": Direction.SHORT,
+}
 
 logger = logging.getLogger(__name__)
 
@@ -51,6 +60,7 @@ class LiveRunner:
         warmup_bars: Number of historical bars for warmup
                      (defaults to strategy.min_bars_required).
         max_positions: Maximum number of concurrent open positions.
+        rules: Trading rules evaluated per bar (entry gating, forced exits).
     """
 
     def __init__(
@@ -63,7 +73,10 @@ class LiveRunner:
         data_interval: str = '1min',
         warmup_bars: int | None = None,
         max_positions: int = 10,
+        rules: list[TradingRule] | None = None,
     ):
+        from prophitai_algo_trading.rules.engine import RuleEngine
+
         self._broker = broker
         self._tickers = list(tickers)
         self._cost_model = cost_model or CostModel()
@@ -73,6 +86,7 @@ class LiveRunner:
         self._data_interval = data_interval
         self._warmup_bars = warmup_bars or strategy.min_bars_required
         self._max_positions = max_positions
+        self._rule_engine = RuleEngine(rules or [])
 
         self._strategies: dict[str, BaseStrategy] = {
             t: deepcopy(strategy) for t in tickers
@@ -168,6 +182,7 @@ class LiveRunner:
             timestamp: Bar timestamp for this batch.
         """
         signal_map = {1: 'LONG', -1: 'SHORT', 0: 'FLAT'}
+        has_rules = self._rule_engine.active
 
         # Reason: generate signals for all tickers in the batch, classify exits vs entries
         exits: list[tuple[str, int, float]] = []
@@ -178,13 +193,26 @@ class LiveRunner:
                 continue
 
             try:
+                price = self._data[ticker]['close'].iloc[-1]
+
+                # Notify rules of new bar
+                if has_rules:
+                    self._rule_engine.notify_bar(ticker, price, timestamp)
+
+                # Check if rules force an exit on an open position
+                if has_rules and self._position_trackers[ticker].position != 0:
+                    if self._rule_engine.check_forced_exit(
+                        ticker, price, timestamp,
+                        self._data[ticker], portfolio_tracker,
+                    ):
+                        exits.append((ticker, 0, price))
+                        continue
+
                 signals = self._strategies[ticker].generate_signals(self._data[ticker])
                 le = signals["long_entry"].iloc[-1]
                 lx = signals["long_exit"].iloc[-1]
                 se = signals["short_entry"].iloc[-1]
                 sx = signals["short_exit"].iloc[-1]
-
-                price = self._data[ticker]['close'].iloc[-1]
 
                 target = resolve_signal(
                     le, lx, se, sx, self._position_trackers[ticker].position,
@@ -197,6 +225,14 @@ class LiveRunner:
 
                 if target == self._position_trackers[ticker].position:
                     continue
+
+                # Check if rules block an entry
+                if has_rules and target != 0:
+                    if not self._rule_engine.check_entry(
+                        ticker, price, timestamp,
+                        self._data[ticker], portfolio_tracker,
+                    ):
+                        continue
 
                 if target == 0:
                     exits.append((ticker, target, price))
@@ -227,9 +263,22 @@ class LiveRunner:
                 ticker, instr["reason"],
             )
 
+        # Reason: notify rules of entries/exits for state tracking
+        on_trade = None
+        if has_rules:
+            def on_trade(ticker: str, instr: dict) -> None:
+                reason = instr["reason"]
+                p = instr["price"]
+                ts = instr["timestamp"]
+                direction = _REASON_TO_DIRECTION.get(reason, Direction.LONG)
+                if reason in ("open_long", "open_short"):
+                    self._rule_engine.notify_entry(ticker, p, ts, direction)
+                elif reason in ("close_long", "close_short"):
+                    self._rule_engine.notify_exit(ticker, p, ts, direction)
+
         process_exits_and_entries(
             exits, entries, self._position_trackers, portfolio_tracker,
-            self._max_positions, timestamp, on_error=on_error,
+            self._max_positions, timestamp, on_trade=on_trade, on_error=on_error,
         )
 
         portfolio_tracker.record_equity(timestamp, self._latest_prices)

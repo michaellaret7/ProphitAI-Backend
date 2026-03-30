@@ -76,6 +76,10 @@ class PortfolioTracker:
             positions=dict(self._positions),
         )
 
+    def get_position(self, symbol: str) -> PositionState | None:
+        """Return the open position for a symbol, or None if flat."""
+        return self._positions.get(symbol)
+
     @property
     def open_position_count(self) -> int:
         """Number of currently open positions."""

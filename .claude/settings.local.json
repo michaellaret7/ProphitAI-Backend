@@ -170,7 +170,12 @@
       "WebFetch(domain:www.crypto-reporter.com)",
       "Bash(playwright install:*)",
       "Bash(rm \".git/refs/remotes/origin/dev 2\")",
-      "Bash(git fetch:*)"
+      "Bash(git fetch:*)",
+      "Bash(gh pr:*)",
+      "WebFetch(domain:www.notion.so)",
+      "Bash(find /Users/michaellaret/Desktop/ProphitAI/packages/tools/src -name \"*.py\" -type f -exec grep -l \"screener\\\\|Strategy\\\\|backtest\" {})",
+      "Bash(xargs -0 rm -rf)",
+      "Bash(ruff check:*)"
     ]
   }
 }

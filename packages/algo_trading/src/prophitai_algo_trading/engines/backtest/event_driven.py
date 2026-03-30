@@ -24,7 +24,17 @@ from prophitai_algo_trading.engines.utils import (
 )
 from prophitai_algo_trading.execution import PortfolioTracker, PositionTracker, CostModel
 from prophitai_algo_trading.execution.position_sizer import BasePositionSizer, PercentOfEquitySizer
+from prophitai_algo_trading.execution.models import Direction
+from prophitai_algo_trading.rules.base import TradingRule
+from prophitai_algo_trading.rules.engine import RuleEngine
 from prophitai_algo_trading.strategies.base import BaseStrategy
+
+_REASON_TO_DIRECTION = {
+    "open_long": Direction.LONG,
+    "close_long": Direction.LONG,
+    "open_short": Direction.SHORT,
+    "close_short": Direction.SHORT,
+}
 
 
 class BacktestEngine:
@@ -43,6 +53,7 @@ class BacktestEngine:
         warmup_bars: Number of initial bars to skip
                      (defaults to strategy.min_bars_required).
         max_positions: Maximum number of concurrent open positions.
+        rules: Trading rules evaluated per bar (entry gating, forced exits).
     """
 
     def __init__(
@@ -53,6 +64,7 @@ class BacktestEngine:
         sizer: BasePositionSizer | None = None,
         warmup_bars: int | None = None,
         max_positions: int = 10,
+        rules: list[TradingRule] | None = None,
     ):
         self._strategy_template = strategy
         self.initial_capital = initial_capital
@@ -62,6 +74,7 @@ class BacktestEngine:
         )
         self._warmup_bars = warmup_bars
         self._max_positions = max_positions
+        self._rule_engine = RuleEngine(rules or [])
 
     # ================================
     # --> Helper funcs
@@ -154,6 +167,7 @@ class BacktestEngine:
         latest_prices: dict[str, float],
         warmup: int,
         verbose: bool,
+        rule_engine: RuleEngine | None = None,
     ) -> None:
         """Process bars one at a time, executing trades with exits-first ordering.
 
@@ -175,6 +189,8 @@ class BacktestEngine:
         if verbose:
             print(f"[2/3] Trading: processing {len(common_index) - warmup} bars "
                   f"bar-by-bar across {len(tickers)} tickers...")
+
+        has_rules = rule_engine is not None and rule_engine.active
 
         for i in range(warmup, len(common_index)):
             timestamp = common_index[i]
@@ -206,6 +222,21 @@ class BacktestEngine:
                     ticker_dfs[ticker],
                 )
 
+                price = ticker_dfs[ticker]["close"].iloc[-1]
+
+                # Notify rules of new bar
+                if has_rules:
+                    rule_engine.notify_bar(ticker, price, timestamp)
+
+                # Check if rules force an exit on an open position
+                if has_rules and position_trackers[ticker].position != 0:
+                    if rule_engine.check_forced_exit(
+                        ticker, price, timestamp, ticker_dfs[ticker], portfolio_tracker,
+                    ):
+                        score = float(strategies[ticker].score_entries(ticker_dfs[ticker]).iloc[-1])
+                        bar_signals[ticker] = (0, price, score)
+                        continue
+
                 # Generate signals from latest bar
                 signals = strategies[ticker].generate_signals(ticker_dfs[ticker])
                 le = bool(signals["long_entry"].iloc[-1])
@@ -213,14 +244,23 @@ class BacktestEngine:
                 se = bool(signals["short_entry"].iloc[-1])
                 sx = bool(signals["short_exit"].iloc[-1])
 
-                price = ticker_dfs[ticker]["close"].iloc[-1]
-
                 target = resolve_signal(
                     le, lx, se, sx, position_trackers[ticker].position,
                 )
 
                 if target == position_trackers[ticker].position:
                     continue
+
+                # Check if rules block an entry
+                if has_rules and target != 0:
+                    if not rule_engine.check_entry(
+                        ticker, 
+                        price, 
+                        timestamp, 
+                        ticker_dfs[ticker], 
+                        portfolio_tracker,
+                    ):
+                        continue
 
                 score = float(strategies[ticker].score_entries(ticker_dfs[ticker]).iloc[-1])
                 bar_signals[ticker] = (target, price, score)
@@ -247,13 +287,29 @@ class BacktestEngine:
 
             # Reason: verbose callback captures latest_prices for equity logging
             on_trade = None
-            
+
             if verbose:
                 def on_trade(ticker: str, instr: dict) -> None:
                     reason = instr["reason"]
                     equity = portfolio_tracker.get_total_equity(latest_prices)
                     print(f"  [{timestamp}]  {ticker}  ${instr['price']:.2f}  "
                           f"{reason.upper()}  equity=${equity:,.2f}")
+
+            # Reason: wrap on_trade to notify rules of entries/exits
+            if has_rules:
+                _original_on_trade = on_trade
+
+                def on_trade(ticker: str, instr: dict, _orig=_original_on_trade) -> None:
+                    reason = instr["reason"]
+                    price = instr["price"]
+                    ts = instr["timestamp"]
+                    direction = _REASON_TO_DIRECTION.get(reason, Direction.LONG)
+                    if reason in ("open_long", "open_short"):
+                        rule_engine.notify_entry(ticker, price, ts, direction)
+                    elif reason in ("close_long", "close_short"):
+                        rule_engine.notify_exit(ticker, price, ts, direction)
+                    if _orig is not None:
+                        _orig(ticker, instr)
 
             process_exits_and_entries(
                 exits, entries, position_trackers, portfolio_tracker,
@@ -301,13 +357,25 @@ class BacktestEngine:
         )
 
         self._simulate_bar_by_bar(
-            common_index, aligned, tickers, strategies, position_trackers,
-            portfolio_tracker, ticker_dfs, latest_prices, warmup, verbose,
+            common_index, 
+            aligned, 
+            tickers, 
+            strategies, 
+            position_trackers,
+            portfolio_tracker, 
+            ticker_dfs, 
+            latest_prices, 
+            warmup, 
+            verbose,
+            rule_engine=self._rule_engine,
         )
 
         force_close_open_positions(
-            portfolio_tracker, position_trackers, latest_prices,
-            common_index[-1], verbose,
+            portfolio_tracker, 
+            position_trackers, 
+            latest_prices,
+            common_index[-1], 
+            verbose,
         )
 
         result = compile_backtest_result(portfolio_tracker, len(tickers), verbose)
