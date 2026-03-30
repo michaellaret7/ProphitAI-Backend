@@ -13,7 +13,7 @@ from typing import Annotated, Optional, Literal
 
 @agent_tool(name="get_order_impact", category="broker")
 def get_order_impact(
-    email: str,
+    _clerk_id: str,
     symbol: str,
     action: Literal['BUY', 'SELL'],
     units: float,
@@ -28,7 +28,6 @@ def get_order_impact(
     has sufficient funds. Use this to validate a trade idea before proposing it.
 
     Args:
-        email: User's email address
         symbol: Ticker symbol (e.g. 'AAPL')
         action: Trade direction — BUY or SELL
         units: Number of shares
@@ -42,19 +41,18 @@ def get_order_impact(
         and remaining buying power after the trade
 
     Examples:
-        get_order_impact(email="user@example.com", symbol="AAPL",
-                         action="BUY", units=100)
+        get_order_impact(symbol="AAPL", action="BUY", units=100)
         >>> {"trade": {"symbol": "AAPL", ...}, "buying_power_effect": -17525.00, ...}
 
     Raises:
         Exception: If the order would be rejected or credentials are invalid
     """
-    broker_msg = check_broker_connected(email)
+    broker_msg = check_broker_connected(_clerk_id)
     if broker_msg:
         return success_response(broker_msg)
 
     try:
-        creds = resolve_snaptrade_credentials(email=email)
+        creds = resolve_snaptrade_credentials(clerk_id=_clerk_id)
         broker = get_snaptrade_broker()
         result = broker.get_order_impact(
             user_id=creds["snaptrade_user_id"],
@@ -79,7 +77,7 @@ def get_order_impact(
 
 @agent_tool(name="get_orders", category="broker")
 def get_orders(
-    email: str,
+    _clerk_id: str,
     state: Literal['all', 'open', 'executed'] = "open",
     days: Annotated[Optional[int], Param(min_val=1, max_val=20)] = None,
 ) -> str:
@@ -87,7 +85,6 @@ def get_orders(
     Get orders for the user's brokerage account filtered by state.
 
     Args:
-        email: User's email address
         state: Filter orders by state.
             - open: Only unfilled/partially filled orders (default)
             - executed: Only completed orders
@@ -99,18 +96,18 @@ def get_orders(
         filled quantity, and timestamps
 
     Examples:
-        get_orders(email="user@example.com", state="open")
+        get_orders(state="open")
         >>> [{"symbol": "AAPL", "action": "BUY", "units": 10, ...}]
 
     Raises:
         Exception: If credentials are invalid or API call fails
     """
-    broker_msg = check_broker_connected(email)
+    broker_msg = check_broker_connected(_clerk_id)
     if broker_msg:
         return success_response(broker_msg)
 
     try:
-        creds = resolve_snaptrade_credentials(email=email)
+        creds = resolve_snaptrade_credentials(clerk_id=_clerk_id)
         broker = get_snaptrade_broker()
         records = broker.get_orders(
             user_id=creds["snaptrade_user_id"],
@@ -128,32 +125,31 @@ def get_orders(
 
 @agent_tool(name="cancel_order", category="broker")
 def cancel_order(
-    email: str,
+    _clerk_id: str,
     brokerage_order_id: str,
 ) -> str:
     """
     Cancel a specific open order by its brokerage order ID.
 
     Args:
-        email: User's email address
         brokerage_order_id: The brokerage-assigned order ID to cancel
 
     Returns:
         Confirmation that the order was cancelled
 
     Examples:
-        cancel_order(email="user@example.com", brokerage_order_id="abc-123")
+        cancel_order(brokerage_order_id="abc-123")
         >>> "Order abc-123 cancelled successfully"
 
     Raises:
         Exception: If the order does not exist, is already filled, or credentials are invalid
     """
-    broker_msg = check_broker_connected(email)
+    broker_msg = check_broker_connected(_clerk_id)
     if broker_msg:
         return success_response(broker_msg)
 
     try:
-        creds = resolve_snaptrade_credentials(email=email)
+        creds = resolve_snaptrade_credentials(clerk_id=_clerk_id)
         broker = get_snaptrade_broker()
         broker.cancel_order(
             user_id=creds["snaptrade_user_id"],

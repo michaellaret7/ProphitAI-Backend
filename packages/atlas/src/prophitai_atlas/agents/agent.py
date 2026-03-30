@@ -78,6 +78,7 @@ class Agent(AgentBase):
 
         self.plan: Optional[Plan] = None
         self.notebook = Notebook()
+        self.user_id: Optional[str] = user_id
 
         # --- Tool catalogue wiring --- #
         if tools:
@@ -122,10 +123,13 @@ class Agent(AgentBase):
         )
 
         # --- Add the deploy_worker_agent tool ---
+        # Reason: Use lambda to read self.chat_callback and self.user_id at call-time,
+        # not init-time. The callback is set to WebSocketChatCallback AFTER __init__
+        # (in send_message_controller), so partial() would capture stale values.
         self.add_tool(
             **deploy_schema,
-            function=partial(
-                _resolve_and_deploy, all_tools, self.notebook, self.chat_callback
+            function=lambda **kwargs: _resolve_and_deploy(
+                all_tools, self.notebook, self.chat_callback, self.user_id, **kwargs
             ),
         )
 

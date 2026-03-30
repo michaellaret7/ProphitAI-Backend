@@ -152,7 +152,23 @@
       "Bash(python -c \"import prophitai_api; print\\(prophitai_api.__file__\\)\")",
       "Bash(python -c \"import site; print\\(''site enabled:'', hasattr\\(site, ''ENABLE_USER_SITE''\\)\\); print\\(''site packages:'', site.getsitepackages\\(\\)\\); import sys; print\\(''.pth processing:'', ''no-global-site-packages.txt'' not in str\\(sys.path\\)\\)\")",
       "Bash(python -c \"import prophitai_api; print\\(''OK:'', prophitai_api.__file__\\)\")",
-      "Bash(python3:*)"
+      "Bash(python3:*)",
+      "Bash(find /Users/michaellaret/Desktop/ProphitAI/packages/atlas/tests -type f -name *.py)",
+      "Bash(python:*)",
+      "Bash(source /Users/michaellaret/Desktop/ProphitAI/.venv/bin/activate)",
+      "Bash(pip list:*)",
+      "WebFetch(domain:stockanalysis.com)",
+      "WebFetch(domain:investor.gamestop.com)",
+      "WebFetch(domain:investor.funko.com)",
+      "WebFetch(domain:www.globenewswire.com)",
+      "WebFetch(domain:www.businesswire.com)",
+      "WebFetch(domain:www.macrotrends.net)",
+      "Bash(echo:*)",
+      "Bash(git check-ignore:*)",
+      "mcp__langfuse__list_prompts",
+      "WebFetch(domain:247wallst.com)",
+      "WebFetch(domain:www.crypto-reporter.com)",
+      "Bash(playwright install:*)"
     ]
   }
 }

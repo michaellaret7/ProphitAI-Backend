@@ -9,17 +9,17 @@ from concurrent.futures import ThreadPoolExecutor
 
 @agent_tool(name="account_info", category="broker")
 def account_info(
-    email: str,
+    _clerk_id: str,
 ) -> str:
     """
-    Get the account information for the given email.
+    Get the user's brokerage account information including balances and details.
     """
-    broker_msg = check_broker_connected(email)
+    broker_msg = check_broker_connected(_clerk_id)
     if broker_msg:
         return success_response(broker_msg)
 
     try:
-        user = resolve_snaptrade_credentials(email=email)
+        user = resolve_snaptrade_credentials(clerk_id=_clerk_id)
         snaptrade_broker = SnapTradeBroker()
 
         args = dict(
@@ -38,4 +38,4 @@ def account_info(
         account = AccountInfo.from_raw(details, balances)
         return success_response(account.model_dump())
     except Exception as e:
-        return error_response(f"Failed to get account info for {email}: {str(e)}")
+        return error_response(f"Failed to get account info: {str(e)}")

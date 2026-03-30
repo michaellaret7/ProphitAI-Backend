@@ -51,3 +51,4 @@ htmlcov/
 # Distribution
 *.tar.gz
 *.whl
+.mcp.json

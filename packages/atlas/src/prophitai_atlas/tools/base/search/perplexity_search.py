@@ -153,6 +153,13 @@ Think step by step and be as detailed and thorough as possible in your research,
 - Cite key findings and insights
 - Be analytical and objective in your assessment
 
+CRITICAL — Accuracy requirements:
+- For every financial figure (revenue, net income, EPS, market cap, etc.), specify the exact reporting period (e.g., "FY2025 ended Jan 31, 2026" or "Q4 2025"). Never present a quarterly figure without labeling it as quarterly.
+- For leadership claims (CEO, CFO, etc.), include when they were appointed and confirm they are still in the role as of the most recent source.
+- For share prices and market caps, include the date of the data point.
+- If sources conflict on a figure, report both values and the sources rather than picking one.
+- Distinguish clearly between fiscal year and calendar year when companies have non-standard fiscal year ends.
+
 Your goal is to deliver a complete, well-researched answer that leaves no important information uncovered."""
 
         with ThreadPoolExecutor(max_workers=min(len(queries), 3)) as executor:

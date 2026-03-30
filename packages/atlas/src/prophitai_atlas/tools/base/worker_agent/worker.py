@@ -1,7 +1,7 @@
 """Worker tool - delegates a focused task to a WorkerAgent."""
 
 import uuid
-from typing import Any, List, Dict
+from typing import Any, List, Dict, Optional
 
 from prophitai_atlas.agents.worker_agent import WorkerAgent
 from prophitai_atlas.models.callbacks import WorkerCallbackWrapper
@@ -15,6 +15,7 @@ def deploy_worker_agent(
     task: str,
     tools: List[Dict[str, Any]],
     plan_task_id: str = "",
+    user_id: Optional[str] = None,
 ) -> str:
     """
     Deploy a worker agent to execute a focused task with selected tools.
@@ -48,10 +49,11 @@ def deploy_worker_agent(
             task=task,
             tools=tools,
             notebook=notebook,
-            provider="together",
+            provider="fireworks",
             model="glm-5",
             chat_callback=worker_callback,
             max_iterations=30,
+            user_id=user_id,
         )
 
         result = worker_agent.run()

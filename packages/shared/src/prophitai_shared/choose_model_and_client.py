@@ -22,6 +22,7 @@ PROVIDER_CONFIGS = {
     "anthropic": ProviderConfig("ANTHROPIC_API_KEY", "ANTHROPIC_MODEL", "https://api.anthropic.com/v1"),
     "gemini": ProviderConfig("GEMINI_API_KEY", "GEMINI_MODEL", "https://generativelanguage.googleapis.com/v1beta/openai/"),
     "grok": ProviderConfig("GROK_API_KEY", "GROK_MODEL", "https://api.x.ai/v1"),
+    "bedrock": ProviderConfig("AWS_BEARER_TOKEN_BEDROCK", "BEDROCK_MODEL", "https://bedrock-mantle.us-west-2.api.aws/v1"),
 
     "deepseek": ProviderConfig("DEEPSEEK_API_KEY", "DEEPSEEK_MODEL", "https://api.deepseek.com"),
     "perplexity": ProviderConfig("PERPLEXITY_API_KEY", "PERPLEXITY_MODEL", "https://api.perplexity.ai"),
@@ -92,6 +93,9 @@ MODEL_ALIASES = {
     },
     "llama-3.1-8B": {
         "groq": "llama-3.1-8b-instant",
+    },
+    "nemotron-super-3-120b": {
+        "bedrock": "nvidia.nemotron-super-3-120b",
     },
 }
 
