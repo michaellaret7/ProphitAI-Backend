@@ -168,7 +168,9 @@
       "mcp__langfuse__list_prompts",
       "WebFetch(domain:247wallst.com)",
       "WebFetch(domain:www.crypto-reporter.com)",
-      "Bash(playwright install:*)"
+      "Bash(playwright install:*)",
+      "Bash(rm \".git/refs/remotes/origin/dev 2\")",
+      "Bash(git fetch:*)"
     ]
   }
 }
