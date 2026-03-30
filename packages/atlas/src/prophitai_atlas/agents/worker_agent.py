@@ -32,6 +32,7 @@ class WorkerAgent(AgentBase):
         print_mode: PrintMode = PrintMode.PRODUCTION,
         temperature: Optional[float] = None,
         chat_callback: Optional[Any] = None,
+        user_id: Optional[str] = None,
     ):
         super().__init__(
             provider=provider or WORKER_PROVIDER,
@@ -44,6 +45,7 @@ class WorkerAgent(AgentBase):
         )
 
         self.task = task
+        self.user_id = user_id
         self.notebook = notebook
 
         # Reason: partial pre-binds notebook and worker_task so the LLM only sees title + content.

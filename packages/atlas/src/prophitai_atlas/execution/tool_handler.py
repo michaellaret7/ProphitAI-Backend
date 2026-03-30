@@ -1,5 +1,6 @@
 """Tool Handler - executes tools and manages message history."""
 
+import inspect
 import json
 import time
 from concurrent.futures import ThreadPoolExecutor
@@ -231,6 +232,19 @@ class ToolHandler:
             tool_span.update(input=args, metadata={"tool_name": name})
             try:
                 execution_args = args.copy()
+
+                # Reason: Auto-inject user_id as _clerk_id for user-scoped tools.
+                # Hidden params (prefixed with _) are excluded from the LLM schema
+                # but still need values at execution time.
+                if (
+                    "_clerk_id" not in execution_args
+                    and hasattr(self.agent, "user_id")
+                    and self.agent.user_id
+                ):
+                    sig = inspect.signature(func)
+                    if "_clerk_id" in sig.parameters:
+                        execution_args["_clerk_id"] = self.agent.user_id
+
                 result = func(**execution_args)
                 result_str = str(result)
                 if len(result_str) > 2000:

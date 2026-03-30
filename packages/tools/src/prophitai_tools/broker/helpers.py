@@ -13,11 +13,11 @@ _NO_BROKER_MSG = (
 )
 
 
-def check_broker_connected(email: str) -> Optional[str]:
+def check_broker_connected(clerk_id: str) -> Optional[str]:
     """Check whether the user has a connected brokerage account.
 
     Args:
-        email: User email address.
+        clerk_id: Clerk authentication ID.
 
     Returns:
         None if broker is connected, user-friendly message string if not.
@@ -25,17 +25,17 @@ def check_broker_connected(email: str) -> Optional[str]:
     from prophitai_data.clients.snaptrade import resolve_snaptrade_credentials
 
     try:
-        resolve_snaptrade_credentials(email=email)
+        resolve_snaptrade_credentials(clerk_id=clerk_id)
         return None
     except (ValueError, Exception):
         return _NO_BROKER_MSG
 
 
-def resolve_user_id_by_email(email: str) -> str:
-    """Resolve an email address to the internal user UUID string.
+def resolve_user_id_by_clerk_id(clerk_id: str) -> str:
+    """Resolve a Clerk ID to the internal user UUID string.
 
     Args:
-        email: User email address.
+        clerk_id: Clerk authentication ID.
 
     Raises:
         ValueError: If user not found.
@@ -45,9 +45,9 @@ def resolve_user_id_by_email(email: str) -> str:
 
     @with_session('user')
     def _query(*, session=None) -> str:
-        user = session.query(User).filter(User.email == email).first()
+        user = session.query(User).filter(User.clerk_id == clerk_id).first()
         if not user:
-            raise ValueError(f"User not found for email: {email}")
+            raise ValueError(f"User not found for clerk_id: {clerk_id}")
         return str(user.id)
 
     return _query()

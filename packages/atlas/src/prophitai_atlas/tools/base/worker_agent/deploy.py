@@ -1,7 +1,7 @@
 """Worker tool setup — deploy schema, resolution, and worker dispatch."""
 
 from copy import deepcopy
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Optional
 
 from prophitai_atlas.models.notebook import Notebook
 from prophitai_atlas.tools.responses import error_response
@@ -84,6 +84,7 @@ def _resolve_and_deploy(
     available_tools: Dict[str, Dict[str, Any]],
     notebook: Notebook,
     chat_callback: Any,
+    user_id: Optional[str],
     task: str,
     tools: List[str],
     plan_task_id: str = "",
@@ -95,6 +96,7 @@ def _resolve_and_deploy(
         available_tools: Flat dict of tool_name → tool dict (pre-bound via lambda).
         notebook: Shared Notebook instance (pre-bound via lambda).
         chat_callback: Orchestrator's callback for streaming events (pre-bound via lambda).
+        user_id: Clerk user ID for user-scoped tools (pre-bound via lambda).
         task: Task description from the orchestrator LLM.
         tools: List of tool name strings from the orchestrator LLM.
         plan_task_id: The plan task ID this worker is deployed for.
@@ -120,6 +122,7 @@ def _resolve_and_deploy(
     return deploy_worker_agent(
         notebook=notebook,
         chat_callback=chat_callback,
+        user_id=user_id,
         task=full_task,
         tools=tool_defs,
         plan_task_id=plan_task_id,

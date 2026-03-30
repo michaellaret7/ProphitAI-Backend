@@ -19,19 +19,16 @@ from prophitai_foundry.models.vector import QueryResult
 @agent_tool(name="user_upload_search", category="research")
 def user_upload_search(
     query: str,
-    clerk_id: str,
     top_k: Annotated[int, Param(min_val=3, max_val=25)] = 7,
     file_name: Optional[str] = None,
-
+    _clerk_id: Optional[str] = None,
 ) -> str:
     """
     Search the user's uploaded documents using hybrid semantic + keyword search.
 
     Use this tool when the user wants to search through documents they have
-    uploaded (PDFs, reports, etc.).
-
-    IMPORTANT: This tool requires the users clerk_id to ensure users can only search
-    their own documents.
+    uploaded (PDFs, reports, etc.). The user's identity is automatically
+    resolved — you do NOT need to provide a clerk_id.
 
     Query Tips:
     - Write detailed, specific natural language queries for best results
@@ -49,8 +46,6 @@ def user_upload_search(
         query: A detailed natural language query describing what information you
             need from the user's documents. Be specific about the topic or question.
             Example: 'What are the revenue projections for next quarter?' NOT: 'revenue'
-        clerk_id: The user's Clerk ID. REQUIRED for security - ensures users can only
-            search their own documents.
         top_k: Number of results to return (default: 7, max: 25)
         file_name: Filter by filename pattern (e.g., 'quarterly-report' to match
             files containing that name)
@@ -61,18 +56,19 @@ def user_upload_search(
         file_name, doc_id, chunk_id, chunk_index, and total_chunks
 
     Examples:
-        user_upload_search(query="What are the key findings?", clerk_id="abc-123")
+        user_upload_search(query="What are the key findings?")
         >>> {"success": True, "data": {"query": "...", "num_results": 7, "results": [...]}}
 
     Raises:
-        ValueError: If query or clerk_id is empty or filters are invalid
+        ValueError: If query is empty or filters are invalid
     """
+    clerk_id = _clerk_id
     if not clerk_id or not isinstance(clerk_id, str):
-        return error_response("clerk_id is required and must be a non-empty string")
+        return error_response("clerk_id could not be resolved. User session may be missing.")
 
     clerk_id = clerk_id.strip()
     if not clerk_id:
-        return error_response("clerk_id cannot be empty or whitespace only")
+        return error_response("clerk_id could not be resolved. User session may be missing.")
 
     if not query or not isinstance(query, str):
         return error_response("Query is required and must be a non-empty string")

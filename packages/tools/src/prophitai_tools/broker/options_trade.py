@@ -5,7 +5,7 @@ from typing import Annotated, Optional, Literal
 
 from prophitai_atlas.tools.decorator import agent_tool, Param, Schema
 from prophitai_atlas.tools.responses import success_response, error_response
-from prophitai_tools.broker.helpers import resolve_user_id_by_email, check_broker_connected
+from prophitai_tools.broker.helpers import resolve_user_id_by_clerk_id, check_broker_connected
 from prophitai_data.clients.snaptrade import resolve_snaptrade_credentials
 from prophitai_data.repositories.user.trade_proposal import (
     create_options_proposal,
@@ -49,7 +49,7 @@ MULTI_LEG_SCHEMA = {
 
 @agent_tool(name="propose_options_trade", category="broker")
 def propose_options_trade(
-    email: str,
+    _clerk_id: str,
     osi_symbol: str,
     side: Literal['buy_to_open', 'sell_to_close', 'sell_to_open', 'buy_to_close'],
     contracts: Annotated[int, Param(min_val=1)],
@@ -72,7 +72,7 @@ def propose_options_trade(
     You must provide limit_price when order_type is 'Limit'.
 
     Examples:
-        propose_options_trade(email="user@example.com", osi_symbol="AAPL260620C00200000",
+        propose_options_trade(osi_symbol="AAPL260620C00200000",
                               side="buy_to_open", contracts=5,
                               reasoning="Bullish earnings play, buying June calls")
         >>> "Options proposal created: BUY_TO_OPEN 5x AAPL260620C00200000 — pending user approval"
@@ -80,7 +80,7 @@ def propose_options_trade(
     Raises:
         Exception: If the proposal could not be created
     """
-    broker_msg = check_broker_connected(email)
+    broker_msg = check_broker_connected(_clerk_id)
     if broker_msg:
         return success_response(broker_msg)
 
@@ -94,8 +94,8 @@ def propose_options_trade(
         return error_response("limit_price is required for Limit orders")
 
     try:
-        creds = resolve_snaptrade_credentials(email=email)
-        user_id = resolve_user_id_by_email(email)
+        creds = resolve_snaptrade_credentials(clerk_id=_clerk_id)
+        user_id = resolve_user_id_by_clerk_id(_clerk_id)
 
         proposal = create_options_proposal(
             user_id=user_id,
@@ -122,7 +122,7 @@ def propose_options_trade(
 
 @agent_tool(name="propose_multi_leg_options_trade", category="broker")
 def propose_multi_leg_options_trade(
-    email: str,
+    _clerk_id: str,
     legs: Annotated[list, Schema(MULTI_LEG_SCHEMA)],
     reasoning: str,
     order_type: Annotated[str, Param(enum=['Market', 'Limit'])] = "Market",
@@ -147,7 +147,6 @@ def propose_multi_leg_options_trade(
 
     Examples:
         propose_multi_leg_options_trade(
-            email="user@example.com",
             legs=[
                 {"symbol": "AAPL260620C00200000", "action": "buy_to_open", "units": 5},
                 {"symbol": "AAPL260620C00210000", "action": "sell_to_open", "units": 5},
@@ -158,7 +157,7 @@ def propose_multi_leg_options_trade(
     Raises:
         Exception: If the proposal could not be created
     """
-    broker_msg = check_broker_connected(email)
+    broker_msg = check_broker_connected(_clerk_id)
     if broker_msg:
         return success_response(broker_msg)
 
@@ -177,8 +176,8 @@ def propose_multi_leg_options_trade(
         return error_response("limit_price is required for Limit orders")
 
     try:
-        creds = resolve_snaptrade_credentials(email=email)
-        user_id = resolve_user_id_by_email(email)
+        creds = resolve_snaptrade_credentials(clerk_id=_clerk_id)
+        user_id = resolve_user_id_by_clerk_id(_clerk_id)
 
         proposal = create_multi_leg_options_proposal(
             user_id=user_id,

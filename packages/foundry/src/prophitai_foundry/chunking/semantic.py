@@ -178,6 +178,13 @@ class SemanticChunker:
 
         embedding_model = _create_embedding_model(embedding_provider, model_name)
 
+        # Reason: chonkie 1.6.1 bug — CatsuTokenizerWrapper (returned by VoyageAI
+        # embeddings) isn't recognized by AutoTokenizer and its tokenize() API is
+        # broken. Override get_tokenizer to return a tiktoken-based tokenizer instead.
+        import tiktoken
+        _tiktoken_enc = tiktoken.get_encoding("cl100k_base")
+        embedding_model.get_tokenizer = lambda: _tiktoken_enc
+
         self.config = {
             "chunker_type": "semantic",
             "embedding_provider": embedding_provider,

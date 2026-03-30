@@ -19,15 +19,19 @@ MAX_FILE_SIZE_BYTES = MAX_FILE_SIZE_MB * 1024 * 1024
 
 def sanitize_filename(filename: str) -> str:
     """
-    Sanitize a filename by removing path separators.
+    Sanitize a filename by removing path separators and non-ASCII characters.
 
     Args:
         filename: Original filename from upload.
 
     Returns:
-        Sanitized filename safe for S3 keys.
+        Sanitized filename safe for S3 keys and metadata (ASCII-only).
     """
-    return filename.replace("/", "_").replace("\\", "_")
+    sanitized = filename.replace("/", "_").replace("\\", "_")
+    # Reason: S3 metadata only accepts ASCII characters — encode to ASCII,
+    # replacing non-ASCII chars (e.g. curly quotes) with closest ASCII equivalents
+    sanitized = sanitized.encode("ascii", errors="ignore").decode("ascii")
+    return sanitized
 
 
 async def validate_upload_file(file: UploadFile) -> Tuple[bytes, str]:

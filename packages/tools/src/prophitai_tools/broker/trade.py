@@ -6,7 +6,7 @@ from prophitai_atlas.tools.decorator import agent_tool, Param
 from prophitai_atlas.tools.responses import success_response, error_response
 from prophitai_data.clients.snaptrade import resolve_snaptrade_credentials
 from prophitai_data.repositories.user.trade_proposal import create_proposal
-from prophitai_tools.broker.helpers import resolve_user_id_by_email, check_broker_connected
+from prophitai_tools.broker.helpers import resolve_user_id_by_clerk_id, check_broker_connected
 
 
 # ================================
@@ -15,7 +15,7 @@ from prophitai_tools.broker.helpers import resolve_user_id_by_email, check_broke
 
 @agent_tool(name="propose_trade", category="broker")
 def propose_trade(
-    email: str,
+    _clerk_id: str,
     symbol: str,
     side: Literal['buy', 'sell'],
     reasoning: str,
@@ -45,7 +45,6 @@ def propose_trade(
     You must provide exactly one of qty or notional, not both.
 
     Args:
-        email: The user's email address (used to resolve broker credentials)
         symbol: Ticker symbol to trade (e.g. 'AAPL', 'MSFT')
         side: Trade direction — 'buy' or 'sell'
         reasoning: Your explanation for why this trade is being proposed.
@@ -67,14 +66,14 @@ def propose_trade(
         Confirmation that the trade proposal was created and is pending user approval.
 
     Examples:
-        propose_trade(email="user@example.com", symbol="AAPL",
-                      side="buy", qty=10, reasoning="Strong earnings beat, momentum play")
+        propose_trade(symbol="AAPL", side="buy", qty=10,
+                      reasoning="Strong earnings beat, momentum play")
         >>> "Trade proposal created: BUY 10 shares of AAPL — pending user approval"
 
     Raises:
         Exception: If the proposal could not be created
     """
-    broker_msg = check_broker_connected(email)
+    broker_msg = check_broker_connected(_clerk_id)
     if broker_msg:
         return success_response(broker_msg)
 
@@ -84,8 +83,8 @@ def propose_trade(
         return error_response("Cannot specify both qty and notional")
 
     try:
-        creds = resolve_snaptrade_credentials(email=email)
-        user_id = resolve_user_id_by_email(email)
+        creds = resolve_snaptrade_credentials(clerk_id=_clerk_id)
+        user_id = resolve_user_id_by_clerk_id(_clerk_id)
 
         proposal = create_proposal(
             user_id=user_id,

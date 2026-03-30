@@ -8,11 +8,11 @@
         "3.11",
         "langfuse-mcp",
         "--public-key",
-        "${LANGFUSE_PUBLIC_KEY}",
+        "pk-lf-c6db0cd6-9789-4156-93c3-95f3f008df29",
         "--secret-key",
-        "${LANGFUSE_SECRET_KEY}",
+        "sk-lf-a0bd0529-9b1f-41f4-9dda-b659e12f4979",
         "--host",
-        "${LANGFUSE_BASE_URL}"
+        "https://us.cloud.langfuse.com"
       ]
     }
   }

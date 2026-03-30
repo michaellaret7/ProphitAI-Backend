@@ -6,7 +6,7 @@ from prophitai_atlas.tools.decorator import agent_tool
 from prophitai_atlas.tools.responses import success_response, error_response
 from prophitai_data.clients.snaptrade import resolve_snaptrade_credentials, get_snaptrade_broker
 from prophitai_data.repositories.user.trade_proposal import create_close_proposal
-from prophitai_tools.broker.helpers import resolve_user_id_by_email, check_broker_connected
+from prophitai_tools.broker.helpers import resolve_user_id_by_clerk_id, check_broker_connected
 
 # ================================
 # --> Constants
@@ -20,13 +20,10 @@ _EXCLUDE_POSITION_FIELDS = {"snaptrade_symbol_id", "figi_code", "fractional_unit
 
 @agent_tool(name="get_positions", category="broker")
 def get_positions(
-    email: str,
+    _clerk_id: str,
 ) -> str:
     """
     Get all open positions (equities and options) for a user's brokerage account.
-
-    Args:
-        email: The user's email address
 
     Returns:
         Dict with 'equity_positions' and 'option_positions' lists.
@@ -34,18 +31,18 @@ def get_positions(
         Option positions have underlying_ticker, strike_price, expiration_date, option_type, units, price, etc.
 
     Examples:
-        get_positions(email="user@example.com")
+        get_positions()
         >>> {"equity_positions": [...], "option_positions": [...]}
 
     Raises:
         Exception: If credentials cannot be resolved or API call fails
     """
-    broker_msg = check_broker_connected(email)
+    broker_msg = check_broker_connected(_clerk_id)
     if broker_msg:
         return success_response(broker_msg)
 
     try:
-        creds = resolve_snaptrade_credentials(email=email)
+        creds = resolve_snaptrade_credentials(clerk_id=_clerk_id)
         broker = get_snaptrade_broker()
 
         portfolio = broker.get_portfolio(
@@ -64,11 +61,11 @@ def get_positions(
         msg = str(e)
         if "psycopg2" in msg or "sqlalchemy" in msg.lower():
             msg = msg.split("\n")[0]
-        return error_response(f"Failed to get positions for {email}: {msg}")
+        return error_response(f"Failed to get positions: {msg}")
 
 @agent_tool(name="close_position", category="broker")
 def close_position(
-    email: str,
+    _clerk_id: str,
     symbol: str,
     reasoning: str,
     qty: Optional[float] = None,
@@ -87,7 +84,6 @@ def close_position(
     Provide exactly one of qty or percentage for a partial close.
 
     Args:
-        email: The user's email address
         symbol: Ticker symbol of the position to close (e.g. 'AAPL')
         reasoning: Your explanation for why this position should be closed.
             Must clearly explain the rationale so the user can make an informed decision.
@@ -98,15 +94,14 @@ def close_position(
         Confirmation that the close-position proposal was created and is pending.
 
     Examples:
-        close_position(email="user@example.com", symbol="AAPL",
-                       reasoning="Position hit stop-loss target")
+        close_position(symbol="AAPL", reasoning="Position hit stop-loss target")
         >>> "Close position proposal created: CLOSE 100% of AAPL — pending user approval"
 
     Raises:
         ValueError: If both qty and percentage are provided
         Exception: If the proposal could not be created
     """
-    broker_msg = check_broker_connected(email)
+    broker_msg = check_broker_connected(_clerk_id)
     if broker_msg:
         return success_response(broker_msg)
 
@@ -117,8 +112,8 @@ def close_position(
         if percentage is not None and not (0 < percentage <= 100):
             return error_response("percentage must be between 0 and 100")
 
-        creds = resolve_snaptrade_credentials(email=email)
-        user_id = resolve_user_id_by_email(email)
+        creds = resolve_snaptrade_credentials(clerk_id=_clerk_id)
+        user_id = resolve_user_id_by_clerk_id(_clerk_id)
 
         proposal = create_close_proposal(
             user_id=user_id,
