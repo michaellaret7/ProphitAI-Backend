@@ -10,31 +10,25 @@ from copy import deepcopy
 
 import pandas as pd
 
+from prophitai_algo_trading.engines.signal_processing import (
+    build_rule_trade_callback,
+    process_bar_batch,
+)
 from prophitai_algo_trading.engines.trade_routing import (
-    process_exits_and_entries,
     force_close_open_positions,
     compile_backtest_result,
 )
 from prophitai_algo_trading.engines.backtest.models import BacktestResult
 from prophitai_algo_trading.engines.utils import (
-    resolve_signal,
     align_multi_ticker_data,
     validate_engine_data,
     resolve_warmup,
 )
 from prophitai_algo_trading.execution import PortfolioTracker, PositionTracker, CostModel
 from prophitai_algo_trading.execution.position_sizer import BasePositionSizer, PercentOfEquitySizer
-from prophitai_algo_trading.execution.models import Direction
 from prophitai_algo_trading.rules.base import TradingRule
 from prophitai_algo_trading.rules.engine import RuleEngine
 from prophitai_algo_trading.strategies.base import BaseStrategy
-
-_REASON_TO_DIRECTION = {
-    "open_long": Direction.LONG,
-    "close_long": Direction.LONG,
-    "open_short": Direction.SHORT,
-    "close_short": Direction.SHORT,
-}
 
 
 class BacktestEngine:
@@ -185,6 +179,7 @@ class BacktestEngine:
             latest_prices: Most recent price per ticker (mutated in place).
             warmup: Number of warmup bars already processed.
             verbose: If True, print trade-by-trade details.
+            rule_engine: Optional rule engine for entry gating and forced exits.
         """
         if verbose:
             print(f"[2/3] Trading: processing {len(common_index) - warmup} bars "
@@ -195,9 +190,8 @@ class BacktestEngine:
         for i in range(warmup, len(common_index)):
             timestamp = common_index[i]
 
-            # Reason: first pass — update data and compute signals for all tickers,
-            # then classify into exits/entries for deterministic ordering.
-            bar_signals: dict[str, tuple[int, float, float]] = {}
+            # Reason: ingest data from aligned DataFrames, update indicators per ticker
+            tickers_with_data: list[tuple[str, pd.DataFrame]] = []
 
             for ticker in tickers:
                 row = aligned[ticker].iloc[i]
@@ -222,72 +216,10 @@ class BacktestEngine:
                     ticker_dfs[ticker],
                 )
 
-                price = ticker_dfs[ticker]["close"].iloc[-1]
-
-                # Notify rules of new bar
-                if has_rules:
-                    rule_engine.notify_bar(ticker, price, timestamp)
-
-                # Check if rules force an exit on an open position
-                if has_rules and position_trackers[ticker].position != 0:
-                    if rule_engine.check_forced_exit(
-                        ticker, price, timestamp, ticker_dfs[ticker], portfolio_tracker,
-                    ):
-                        score = float(strategies[ticker].score_entries(ticker_dfs[ticker]).iloc[-1])
-                        bar_signals[ticker] = (0, price, score)
-                        continue
-
-                # Generate signals from latest bar
-                signals = strategies[ticker].generate_signals(ticker_dfs[ticker])
-                le = bool(signals["long_entry"].iloc[-1])
-                lx = bool(signals["long_exit"].iloc[-1])
-                se = bool(signals["short_entry"].iloc[-1])
-                sx = bool(signals["short_exit"].iloc[-1])
-
-                target = resolve_signal(
-                    le, lx, se, sx, position_trackers[ticker].position,
-                )
-
-                if target == position_trackers[ticker].position:
-                    continue
-
-                # Check if rules block an entry
-                if has_rules and target != 0:
-                    if not rule_engine.check_entry(
-                        ticker, 
-                        price, 
-                        timestamp, 
-                        ticker_dfs[ticker], 
-                        portfolio_tracker,
-                    ):
-                        continue
-
-                score = float(strategies[ticker].score_entries(ticker_dfs[ticker]).iloc[-1])
-                bar_signals[ticker] = (target, price, score)
-
-            # Reason: exits first to free capital/slots, then entries ranked by score
-            exits = [
-                (t, target, price)
-                for t, (target, price, _score) in bar_signals.items()
-                if target == 0
-            ]
-            entries = sorted(
-                [
-                    (t, target, price, score)
-                    for t, (target, price, score) in bar_signals.items()
-                    if target != 0
-                ],
-                key=lambda x: x[3],
-                reverse=True,
-            )
-
-            # Reason: only refresh sizer state when entries exist (sizing only matters for new positions)
-            if entries and ticker_dfs:
-                self._sizer.prepare_for_bar({t: ticker_dfs[t]["close"] for t in ticker_dfs})
+                tickers_with_data.append((ticker, ticker_dfs[ticker]))
 
             # Reason: verbose callback captures latest_prices for equity logging
             on_trade = None
-
             if verbose:
                 def on_trade(ticker: str, instr: dict) -> None:
                     reason = instr["reason"]
@@ -295,28 +227,25 @@ class BacktestEngine:
                     print(f"  [{timestamp}]  {ticker}  ${instr['price']:.2f}  "
                           f"{reason.upper()}  equity=${equity:,.2f}")
 
-            # Reason: wrap on_trade to notify rules of entries/exits
             if has_rules:
-                _original_on_trade = on_trade
+                on_trade = build_rule_trade_callback(
+                    rule_engine, inner_callback=on_trade,
+                )
 
-                def on_trade(ticker: str, instr: dict, _orig=_original_on_trade) -> None:
-                    reason = instr["reason"]
-                    price = instr["price"]
-                    ts = instr["timestamp"]
-                    direction = _REASON_TO_DIRECTION.get(reason, Direction.LONG)
-                    if reason in ("open_long", "open_short"):
-                        rule_engine.notify_entry(ticker, price, ts, direction)
-                    elif reason in ("close_long", "close_short"):
-                        rule_engine.notify_exit(ticker, price, ts, direction)
-                    if _orig is not None:
-                        _orig(ticker, instr)
-
-            process_exits_and_entries(
-                exits, entries, position_trackers, portfolio_tracker,
-                self._max_positions, timestamp, on_trade=on_trade,
+            process_bar_batch(
+                tickers_with_data=tickers_with_data,
+                strategies=strategies,
+                position_trackers=position_trackers,
+                portfolio_tracker=portfolio_tracker,
+                rule_engine=rule_engine,
+                sizer=self._sizer,
+                all_close_prices={t: ticker_dfs[t]["close"] for t in ticker_dfs},
+                max_positions=self._max_positions,
+                timestamp=timestamp,
+                latest_prices=latest_prices,
+                on_trade=on_trade,
+                swallow_signal_errors=False,
             )
-
-            portfolio_tracker.record_equity(timestamp, latest_prices)
 
     # ================================
     # --> Public API

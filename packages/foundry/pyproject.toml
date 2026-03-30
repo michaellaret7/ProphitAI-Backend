@@ -11,7 +11,7 @@ dependencies = [
     "pinecone",
     "pinecone-text",
     "voyageai",
-    "chonkie",
+    "chonkie[catsu]",
     "boto3",
     "modal",
     "nltk",
