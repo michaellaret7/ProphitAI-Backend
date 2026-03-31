@@ -162,6 +162,7 @@ def process_bar_batch(
     has_rules = rule_engine is not None and rule_engine.active
     signal_map = {1: "LONG", -1: "SHORT", 0: "FLAT"}
     bar_signals: dict[str, tuple[int, float, float]] = {}
+    portfolio_tracker.update_market_prices(latest_prices)
 
     for ticker, df in tickers_with_data:
         try:

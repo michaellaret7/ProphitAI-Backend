@@ -36,7 +36,7 @@ class MaxDrawdownRule(TradingRule):
         self, ticker: str, price: float, portfolio: PortfolioTracker,
     ) -> bool:
         """Return True if drawdown from peak exceeds threshold."""
-        current_equity = portfolio.get_total_equity({ticker: price})
+        current_equity = portfolio.get_total_equity()
 
         if current_equity > self._peak_equity:
             self._peak_equity = current_equity

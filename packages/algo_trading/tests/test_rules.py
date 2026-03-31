@@ -17,28 +17,33 @@ TICKERS = ["AAPL", "NVDA", "MSFT", "GOOGL", "JPM", "XOM", "PG", "UNH", "HD", "CA
 START = datetime(2021, 1, 1)
 END = datetime(2026, 3, 1)
 
-print("Fetching data...")
-data = {}
-for t in TICKERS:
-    df = get_price_data_df(t, START, END, "15min")
-    if not df.empty:
-        data[t] = df
-        print(f"  {t}: {len(df)} bars")
+def main() -> None:
+    print("Fetching data...")
+    data = {}
+    for t in TICKERS:
+        df = get_price_data_df(t, START, END, "15min")
+        if not df.empty:
+            data[t] = df
+            print(f"  {t}: {len(df)} bars")
 
-engine = BacktestEngine(
-    strategy=RSIMeanReversion(),
-    initial_capital=100_000,
-    max_positions=len(data),
-    rules=[
-        CooldownRule(bars=6),
-        TakeProfitRule(pct=0.1),
-        TrailingStopRule(pct=0.07),
-        EarningsProximityRule(days=5),
-    ],
-)
+    engine = BacktestEngine(
+        strategy=RSIMeanReversion(),
+        initial_capital=100_000,
+        max_positions=len(data),
+        rules=[
+            CooldownRule(bars=6),
+            TakeProfitRule(pct=0.1),
+            TrailingStopRule(pct=0.07),
+            EarningsProximityRule(days=5),
+        ],
+    )
 
-result = engine.run(data, verbose=True)
+    result = engine.run(data, verbose=True)
 
-print("\n=== METRICS ===")
-for k, v in result.metrics.items():
-    print(f"  {k}: {v}")
+    print("\n=== METRICS ===")
+    for k, v in result.metrics.items():
+        print(f"  {k}: {v}")
+
+
+if __name__ == "__main__":
+    main()

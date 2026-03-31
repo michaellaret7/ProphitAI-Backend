@@ -38,6 +38,7 @@ class PortfolioTracker:
         self._positions: dict[str, PositionState] = {}
         self._equity_history: list[dict] = []
         self._trades: list[Trade] = []
+        self._latest_prices: dict[str, float] = {}
 
     # ================================
     # --> Helper funcs
@@ -55,7 +56,9 @@ class PortfolioTracker:
         """
         position_value = 0.0
         for sym, pos in self._positions.items():
-            current_price = (prices or {}).get(sym, pos.entry_price)
+            current_price = (prices or {}).get(
+                sym, self._latest_prices.get(sym, pos.entry_price),
+            )
             if pos.direction == Direction.LONG:
                 position_value += pos.shares * current_price
             else:
@@ -79,6 +82,10 @@ class PortfolioTracker:
     def get_position(self, symbol: str) -> PositionState | None:
         """Return the open position for a symbol, or None if flat."""
         return self._positions.get(symbol)
+
+    def update_market_prices(self, prices: dict[str, float]) -> None:
+        """Merge the latest known market prices into the tracker state."""
+        self._latest_prices.update(prices)
 
     @property
     def open_position_count(self) -> int:
@@ -136,6 +143,7 @@ class PortfolioTracker:
             self._broker.buy(symbol, qty=shares)
             print(f"[OPEN LONG] {symbol}  shares={shares}  price={price:.2f}")
 
+        self._latest_prices[symbol] = price
         self.cash -= (shares * price + commission)
         self._positions[symbol] = PositionState(
             symbol=symbol,
@@ -162,6 +170,7 @@ class PortfolioTracker:
             print(f"[OPEN SHORT] {symbol}  shares={shares}  price={price:.2f}")
 
         # Reason: for shorts, cash is retained as margin; only commission is deducted on entry.
+        self._latest_prices[symbol] = price
         self.cash -= commission
         self._positions[symbol] = PositionState(
             symbol=symbol,
@@ -182,6 +191,7 @@ class PortfolioTracker:
             self._broker.close_position(symbol)
             print(f"[CLOSE] {symbol}  price={price:.2f}  direction={pos.direction.value}")
 
+        self._latest_prices[symbol] = price
         exit_commission = self._cost_model.cost_for_trade(price, pos.shares)
         total_commission = pos.entry_commission + exit_commission
 
@@ -214,6 +224,7 @@ class PortfolioTracker:
 
     def record_equity(self, timestamp: datetime, prices: dict[str, float]) -> None:
         """Snapshot current portfolio equity using live prices for open positions."""
+        self.update_market_prices(prices)
         position_value = self._mark_to_market(prices)
         equity = self.cash + position_value
 

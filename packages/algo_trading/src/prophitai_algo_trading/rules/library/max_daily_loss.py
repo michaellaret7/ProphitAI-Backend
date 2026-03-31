@@ -43,12 +43,12 @@ class MaxDailyLossRule(TradingRule):
         # Reason: capture start-of-day equity on the first check of each new date
         if self._current_date != bar_date:
             self._current_date = bar_date
-            self._sod_equity = portfolio.get_total_equity({ticker: price})
+            self._sod_equity = portfolio.get_total_equity()
 
         if self._sod_equity <= 0:
             return False
 
-        current_equity = portfolio.get_total_equity({ticker: price})
+        current_equity = portfolio.get_total_equity()
         daily_return = (current_equity - self._sod_equity) / self._sod_equity
         return daily_return <= -self.max_pct
 
