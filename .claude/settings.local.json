@@ -181,12 +181,7 @@
       "Bash(npx pyright:*)",
       "Bash(xargs -0 rm -f)",
       "Bash(find /Users/michaellaret/Desktop/ProphitAI -not -path */.git/* -not -path */.venv/* -not -path */__pycache__/* -not -path */.claude/* \\\\\\(-name '* 2' -o -name '* 3' -o -name '* 2.*' -o -name '* 3.*' \\\\\\))",
-      "Bash(cp:*)",
-      "Bash(xargs sed:*)",
-      "Bash(find /Users/michaellaret/Desktop/strategies/strategies/templates -type d -name __pycache__ -exec rm -rf {} +)",
-      "Bash(find:*)",
-      "Bash(git:*)",
-      "Bash(wc:*)"
+      "Read(//c/Dev/**)"
     ]
   }
 }

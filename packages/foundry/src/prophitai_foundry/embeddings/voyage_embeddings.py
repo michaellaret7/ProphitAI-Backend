@@ -6,6 +6,7 @@ Generates embeddings from text chunks using Voyage AI's finance-optimized model.
 
 from __future__ import annotations
 
+import logging
 import math
 import os
 from typing import Optional, TYPE_CHECKING
@@ -22,6 +23,7 @@ if TYPE_CHECKING:
     from prophitai_foundry.embeddings.sparse_encoder import SparseEncoder
 
 load_dotenv()
+logger = logging.getLogger(__name__)
 
 
 class QueryEmbedding(BaseModel):
@@ -136,7 +138,7 @@ def _embed_batch(
 
         left_batch, right_batch = _split_batch(batch)
         estimated_tokens = _sum_estimated_tokens(batch)
-        print(
+        logger.warning(
             "Voyage batch exceeded token limit; "
             f"retrying {len(batch)} chunks (~{estimated_tokens} estimated tokens) "
             f"as {len(left_batch)} + {len(right_batch)} chunks"

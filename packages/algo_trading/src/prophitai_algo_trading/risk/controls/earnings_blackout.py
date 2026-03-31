@@ -79,14 +79,9 @@ class EarningsBlackoutControl(RiskControl):
         Returns:
             Earnings announcement datetime, or None if not found.
         """
-        from prophitai_data.db.config import MarketSession
-        from prophitai_data.db.models.market import Ticker
+        from prophitai_data.repositories.ticker import get_earnings_announcement
 
-        with MarketSession() as session:
-            result = session.query(Ticker.earnings_announcement).filter(
-                Ticker.ticker == ticker,
-            ).scalar()
-        return result
+        return get_earnings_announcement(ticker)
 
     def _is_near_earnings(self, ticker: str, timestamp: datetime) -> bool:
         """Check if the current bar is within the earnings proximity window.

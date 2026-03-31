@@ -10,9 +10,6 @@ __all__ = [
     "VectorizedBacktestEngine",
 ]
 
-try:
-    from prophitai_algo_trading.engines.live import LiveRunner
-except ModuleNotFoundError:
-    LiveRunner = None  # type: ignore[assignment]
-else:
-    __all__.append("LiveRunner")
+from prophitai_algo_trading.engines.live import LiveRunner
+
+__all__.append("LiveRunner")

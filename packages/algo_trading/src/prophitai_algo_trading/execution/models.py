@@ -22,7 +22,7 @@ class Trade:
     """Record of a completed round-trip trade."""
 
     symbol: str
-    entry_date: datetime
+    entry_date: datetime | None
     exit_date: datetime
     direction: Direction
     entry_price: float
@@ -40,7 +40,7 @@ class PositionState:
     shares: float
     direction: Direction
     entry_price: float
-    entry_date: datetime
+    entry_date: datetime | None
     entry_commission: float
 
 

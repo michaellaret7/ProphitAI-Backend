@@ -9,7 +9,7 @@ ProphitAI is an AI-powered institutional-grade portfolio management platform tha
 ## Development Environment
 
 **Python Version:** 3.13.5
-**Virtual Environment:** `.venv` (activate with `source .venv/bin/activate`) [Always activate venv before executing python commands]
+**Virtual Environment:** `.venv` (activate with `source .venv/bin/activate` on POSIX or `.\.venv\Scripts\Activate.ps1` in PowerShell) [Always activate venv before executing python commands]
 **Package Manager:** UV (workspace-based monorepo)
 **Workspace Config:** Root `pyproject.toml` defines UV workspace members
 **Installing Packages:** Always use `uv sync` from the repo root — NEVER use `uv pip install -e`. On macOS, `uv pip install -e` creates `.pth` files that don't get processed correctly, causing `ModuleNotFoundError`. `uv sync` also resolves all workspace members together, preventing dependency version conflicts.

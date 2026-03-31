@@ -48,13 +48,13 @@ def get_stock_classifications() -> dict:
     """
     with MarketSession() as session:
         sectors = sorted(
-            {r[0] for r in session.query(Ticker.sector).distinct().filter(Ticker.sector != "etf").all() if r[0]}
+            {r[0] for r in session.query(Ticker.sector).distinct().filter(Ticker.is_etf == False).all() if r[0]}
         )
         industries = sorted(
-            {r[0] for r in session.query(Ticker.industry).distinct().filter(Ticker.sector != "etf").all() if r[0]}
+            {r[0] for r in session.query(Ticker.industry).distinct().filter(Ticker.is_etf == False).all() if r[0]}
         )
         sub_industries = sorted(
-            {r[0] for r in session.query(Ticker.sub_industry).distinct().filter(Ticker.sector != "etf").all() if r[0]}
+            {r[0] for r in session.query(Ticker.sub_industry).distinct().filter(Ticker.is_etf == False).all() if r[0]}
         )
 
     return {

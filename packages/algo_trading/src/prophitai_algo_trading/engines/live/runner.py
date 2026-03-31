@@ -4,7 +4,7 @@ Runs the same strategy (deepcopied) across multiple tickers simultaneously,
 with shared capital allocation via a single PortfolioTracker and configurable
 max concurrent positions. Bars are batched by timestamp so that all tickers
 for the same interval are processed together with exits-first + score-ranked
-entry ordering — matching backtest execution semantics exactly.
+entry ordering â€” matching backtest execution semantics exactly.
 """
 
 from __future__ import annotations
@@ -49,7 +49,7 @@ class LiveRunner:
     ordering. This matches backtest execution semantics exactly.
 
     Args:
-        strategy: A BaseStrategy instance — deepcopied per ticker internally.
+        strategy: A BaseStrategy instance â€” deepcopied per ticker internally.
         broker: Alpaca broker instance for order routing.
         tickers: List of symbols to trade.
         sizer: Position sizing strategy (defaults to PercentOfEquitySizer).
@@ -68,7 +68,7 @@ class LiveRunner:
         tickers: list[str],
         sizer: BasePositionSizer | None = None,
         cost_model: CostModel | None = None,
-        data_interval: str = '1min',
+        data_interval: str = "1min",
         warmup_bars: int | None = None,
         max_positions: int = 10,
         risk_controls: list[RiskControl] | None = None,
@@ -85,15 +85,15 @@ class LiveRunner:
         self._risk_engine = RiskEngine(risk_controls or [])
 
         self._strategies: dict[str, BaseStrategy] = {
-            t: deepcopy(strategy) for t in tickers
+            ticker: deepcopy(strategy) for ticker in tickers
         }
-        self._data: dict[str, pd.DataFrame] = {t: pd.DataFrame() for t in tickers}
+        self._data: dict[str, pd.DataFrame] = {ticker: pd.DataFrame() for ticker in tickers}
         self._position_trackers: dict[str, PositionTracker] = {
-            t: PositionTracker() for t in tickers
+            ticker: PositionTracker() for ticker in tickers
         }
         self._latest_prices: dict[str, float] = {}
 
-        # Reason: batch state for collecting bars by timestamp
+        # Reason: batch state for collecting bars by timestamp.
         self._current_batch_ts: datetime | None = None
         self._batch_tickers: set[str] = set()
 
@@ -119,28 +119,36 @@ class LiveRunner:
         Returns:
             True if warmup succeeded, False if ticker should be removed.
         """
-        raw_data = client.get_intraday_prices_for_ticker(
-            ticker, start_date, end_date, self._data_interval,
-        )
+        try:
+            raw_data = client.get_intraday_prices_for_ticker(
+                ticker, start_date, end_date, self._data_interval,
+            )
 
-        if not raw_data:
-            logger.warning("No warmup data for %s — removing from universe", ticker)
+            if not raw_data:
+                logger.warning("No warmup data for %s â€” removing from universe", ticker)
+                return False
+
+            df = pd.DataFrame(raw_data)
+            df["symbol"] = ticker
+            df = df[["date", "symbol", "open", "high", "low", "close", "volume"]]
+            df = df.set_index("date")
+            df = df.sort_index()
+
+            df = self._strategies[ticker].calculate_indicators(df)
+            df = df.dropna()
+            if df.empty:
+                logger.warning(
+                    "Warmup indicators produced no usable rows for %s â€” removing from universe",
+                    ticker,
+                )
+                return False
+
+            self._data[ticker] = df
+            self._latest_prices[ticker] = df["close"].iloc[-1]
+            return True
+        except Exception:
+            logger.exception("Warmup failed for %s â€” removing from universe", ticker)
             return False
-
-        df = pd.DataFrame(raw_data)
-        df['symbol'] = ticker
-        df = df[['date', 'symbol', 'open', 'high', 'low', 'close', 'volume']]
-        df = df.set_index('date')
-        df = df.sort_index()
-
-        df = self._strategies[ticker].calculate_indicators(df)
-        df = df.dropna()
-        self._data[ticker] = df
-
-        if not df.empty:
-            self._latest_prices[ticker] = df['close'].iloc[-1]
-
-        return True
 
     def _ingest_bar(self, bar: dict) -> None:
         """Append a bar to its ticker's DataFrame and update indicators.
@@ -159,7 +167,7 @@ class LiveRunner:
             self._data[ticker],
         )
 
-        price = self._data[ticker]['close'].iloc[-1]
+        price = self._data[ticker]["close"].iloc[-1]
         self._latest_prices[ticker] = price
 
     def _execute_batch(
@@ -178,8 +186,8 @@ class LiveRunner:
             timestamp: Bar timestamp for this batch.
         """
         tickers_with_data = [
-            (t, self._data[t]) for t in self._batch_tickers
-            if not self._data[t].empty
+            (ticker, self._data[ticker]) for ticker in self._batch_tickers
+            if not self._data[ticker].empty
         ]
 
         on_trade = None
@@ -200,8 +208,8 @@ class LiveRunner:
             risk_engine=self._risk_engine,
             sizer=self._sizer,
             all_close_prices={
-                t: self._data[t]["close"]
-                for t in self._tickers if not self._data[t].empty
+                ticker: self._data[ticker]["close"]
+                for ticker in self._tickers if not self._data[ticker].empty
             },
             max_positions=self._max_positions,
             timestamp=timestamp,
@@ -227,7 +235,7 @@ class LiveRunner:
 
         client = AlpacaDataClient()
 
-        # Reason: fetch all tickers concurrently — each HTTP call runs in a thread
+        # Reason: fetch all tickers concurrently â€” each HTTP call runs in a thread.
         results = await asyncio.gather(*(
             asyncio.to_thread(
                 self._warmup_ticker, ticker, client, start_date, end_date,
@@ -235,22 +243,21 @@ class LiveRunner:
             for ticker in self._tickers
         ))
 
-        # Reason: rebuild ticker list in one pass, then clean up failed entries
-        active = [t for t, ok in zip(self._tickers, results) if ok]
+        # Reason: rebuild ticker list in one pass, then clean up failed entries.
+        active = [ticker for ticker, ok in zip(self._tickers, results) if ok]
         failed = set(self._tickers) - set(active)
 
-        for t in failed:
-            del self._strategies[t]
-            del self._data[t]
-            del self._position_trackers[t]
+        for ticker in failed:
+            del self._strategies[ticker]
+            del self._data[ticker]
+            del self._position_trackers[ticker]
 
         self._tickers = active
 
         if not self._tickers:
-            raise RuntimeError("All tickers failed warmup — cannot start live trading")
+            raise RuntimeError("All tickers failed warmup â€” cannot start live trading")
 
         name = self._strategies[self._tickers[0]].__class__.__name__
-
         print(f"{name} universe warmed up: {len(self._tickers)} tickers active")
 
     def _hydrate_from_broker(self) -> PortfolioTracker:
@@ -283,10 +290,11 @@ class LiveRunner:
             position_trackers=self._position_trackers,
             latest_prices=self._latest_prices,
             active_universe=self._tickers,
+            risk_engine=self._risk_engine,
         )
 
         logger.info(
-            "Live startup reconciliation complete — "
+            "Live startup reconciliation complete â€” "
             "cash=%.2f equity=%.2f hydrated_positions=%d symbols=%s open_orders=%d",
             summary.cash,
             summary.equity,
@@ -320,24 +328,29 @@ class LiveRunner:
 
             bar_ts = bar.get("date")
 
-            # Reason: a new timestamp means the previous batch is complete — flush it
+            # Reason: a new timestamp means the previous batch is complete â€” flush it.
             if self._current_batch_ts is not None and bar_ts != self._current_batch_ts:
                 self._execute_batch(portfolio_tracker, self._current_batch_ts)
                 self._batch_tickers.clear()
 
             self._current_batch_ts = bar_ts
 
-            # Reason: ingest bar data (append + indicators) before adding to batch
+            # Reason: ingest bar data (append + indicators) before adding to batch.
             try:
                 self._ingest_bar(bar)
                 self._batch_tickers.add(ticker)
             except Exception:
                 logger.exception(
-                    "Bar ingestion failed for %s — skipping", ticker,
+                    "Bar ingestion failed for %s â€” skipping", ticker,
                 )
 
-            # Reason: if all tickers have reported, flush immediately
+            # Reason: if all tickers have reported, flush immediately.
             if self._batch_tickers == set(self._tickers):
                 self._execute_batch(portfolio_tracker, self._current_batch_ts)
                 self._batch_tickers.clear()
                 self._current_batch_ts = None
+
+        if self._current_batch_ts is not None and self._batch_tickers:
+            self._execute_batch(portfolio_tracker, self._current_batch_ts)
+            self._batch_tickers.clear()
+            self._current_batch_ts = None

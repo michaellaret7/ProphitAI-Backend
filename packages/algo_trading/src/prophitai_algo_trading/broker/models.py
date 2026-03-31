@@ -19,6 +19,7 @@ class BrokerPositionSnapshot:
     shares: float
     direction: Direction
     entry_price: float
+    entry_date: datetime | None = None
 
 
 @dataclass

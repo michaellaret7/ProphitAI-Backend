@@ -40,6 +40,41 @@ class InverseVolatilitySizer(BasePositionSizer):
         self._volatilities: dict[str, float] = {}
         self._weights: dict[str, float] = {}
 
+    # ================================
+    # --> Helper funcs
+    # ================================
+
+    def _apply_weight_cap(self, raw_weights: dict[str, float]) -> dict[str, float]:
+        """Apply a hard per-name cap without forcing full reinvestment."""
+        capped_weights: dict[str, float] = {}
+        remaining_symbols = set(raw_weights)
+        remaining_budget = 1.0
+
+        while remaining_symbols and remaining_budget > 0:
+            raw_total = sum(raw_weights[symbol] for symbol in remaining_symbols)
+            if raw_total <= 0:
+                break
+
+            provisional = {
+                symbol: remaining_budget * (raw_weights[symbol] / raw_total)
+                for symbol in remaining_symbols
+            }
+            breached = {
+                symbol for symbol, weight in provisional.items()
+                if weight > self._max_weight
+            }
+
+            if not breached:
+                capped_weights.update(provisional)
+                break
+
+            for symbol in breached:
+                capped_weights[symbol] = self._max_weight
+                remaining_budget -= self._max_weight
+                remaining_symbols.remove(symbol)
+
+        return capped_weights
+
     def update_volatilities(self, volatilities: dict[str, float]) -> None:
         """Refresh volatility estimates and recompute allocation weights.
 
@@ -52,12 +87,8 @@ class InverseVolatilitySizer(BasePositionSizer):
         total = sum(inv.values())
         if total > 0:
             raw = {k: v / total for k, v in inv.items()}
-            # Reason: clamp to max_weight and renormalize so weights still sum to 1.0
-            clamped = {k: min(w, self._max_weight) for k, w in raw.items()}
-            clamp_total = sum(clamped.values())
-            self._weights = {
-                k: v / clamp_total for k, v in clamped.items()
-            } if clamp_total > 0 else {}
+            # Reason: max_weight is a hard cap; residual allocation may remain in cash.
+            self._weights = self._apply_weight_cap(raw)
         else:
             self._weights = {}
 

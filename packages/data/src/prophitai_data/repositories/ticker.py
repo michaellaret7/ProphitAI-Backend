@@ -4,6 +4,7 @@ Consolidated from app/utils/ticker_utils.py (DB-dependent functions only).
 NOTE: name_to_ticker() is NOT here — it uses OpenAI and belongs in prophitai-tools.
 """
 
+from datetime import datetime
 from typing import List, Optional
 
 from prophitai_data.db.models.market import Ticker
@@ -65,3 +66,14 @@ def get_eligible_tickers(
 
     tickers = query.all()
     return [serialize_sqlalchemy_obj(t)['ticker'] for t in tickers]
+
+
+@with_session('market')
+def get_earnings_announcement(
+    ticker: str,
+    session=None,
+) -> datetime | None:
+    """Return the next stored earnings announcement timestamp for a ticker."""
+    return session.query(Ticker.earnings_announcement).filter(
+        Ticker.ticker == ticker,
+    ).scalar()

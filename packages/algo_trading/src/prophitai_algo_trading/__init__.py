@@ -34,16 +34,8 @@ from prophitai_algo_trading.sizing import (
     InverseVolatilitySizer,
     VolatilityTargetSizer,
 )
-
-try:
-    from prophitai_algo_trading.engines import LiveRunner
-except ModuleNotFoundError:
-    LiveRunner = None  # type: ignore[assignment]
-
-try:
-    from prophitai_algo_trading.broker import Alpaca
-except ModuleNotFoundError:
-    Alpaca = None  # type: ignore[assignment]
+from prophitai_algo_trading.engines import LiveRunner
+from prophitai_algo_trading.broker import Alpaca
 
 __all__ = [
     "BaseStrategy",
@@ -68,10 +60,6 @@ __all__ = [
     "DrawdownScaledSizer",
     "InverseVolatilitySizer",
     "VolatilityTargetSizer",
+    "LiveRunner",
+    "Alpaca",
 ]
-
-if LiveRunner is not None:
-    __all__.append("LiveRunner")
-
-if Alpaca is not None:
-    __all__.append("Alpaca")

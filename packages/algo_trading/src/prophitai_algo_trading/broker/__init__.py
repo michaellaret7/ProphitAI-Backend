@@ -14,9 +14,6 @@ __all__: list[str] = [
     "HydrationSummary",
 ]
 
-try:
-    from prophitai_algo_trading.broker.alpaca import Alpaca
-except ModuleNotFoundError:
-    Alpaca = None  # type: ignore[assignment]
-else:
-    __all__.append("Alpaca")
+from prophitai_algo_trading.broker.alpaca import Alpaca
+
+__all__.append("Alpaca")

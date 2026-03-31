@@ -58,6 +58,7 @@ class AlpacaPortfolio:
                 'symbol': pos.symbol,
                 'qty': float(pos.qty),
                 'avg_entry_price': float(pos.avg_entry_price),
+                'entry_date': getattr(pos, 'entry_date', None),
                 'market_value': float(pos.market_value),
                 'unrealized_pl': float(pos.unrealized_pl) if pos.unrealized_pl else 0,
                 'unrealized_plpc': float(pos.unrealized_plpc) if pos.unrealized_plpc else 0,
@@ -82,6 +83,7 @@ class AlpacaPortfolio:
                 'symbol': pos.symbol,
                 'qty': float(pos.qty),
                 'avg_entry_price': float(pos.avg_entry_price),
+                'entry_date': getattr(pos, 'entry_date', None),
                 'market_value': float(pos.market_value),
                 'unrealized_pl': float(pos.unrealized_pl) if pos.unrealized_pl else 0,
                 'unrealized_plpc': float(pos.unrealized_plpc) if pos.unrealized_plpc else 0,
@@ -218,6 +220,7 @@ class AlpacaPortfolio:
             shares=abs(float(pos_dict['qty'])),
             direction=direction,
             entry_price=float(pos_dict['avg_entry_price']),
+            entry_date=pos_dict.get('entry_date'),
         )
 
     def _normalize_order(self, order_dict: Dict) -> BrokerOrderSnapshot:

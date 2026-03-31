@@ -16,8 +16,13 @@ import argparse
 import os
 import re
 import sys
-from datetime import datetime
 from pathlib import Path
+
+
+REPO_ROOT = Path(__file__).resolve().parents[4]
+sys.path.insert(0, str(REPO_ROOT / "packages" / "shared" / "src"))
+
+from prophitai_shared import get_current_utc_time
 
 
 def validate_skill_name(name: str) -> bool:
@@ -41,7 +46,7 @@ license: Apache-2.0
 metadata:
   author: [your-name]
   version: "1.0"
-  created: "{datetime.now().strftime('%Y-%m-%d')}"
+  created: "{get_current_utc_time().strftime('%Y-%m-%d')}"
 ---
 
 # {skill_name.replace('-', ' ').title()}

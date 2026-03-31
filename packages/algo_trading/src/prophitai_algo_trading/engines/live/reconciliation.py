@@ -7,6 +7,7 @@ reconciles and applies startup state.
 """
 
 import logging
+from typing import TYPE_CHECKING
 
 from prophitai_algo_trading.broker.models import (
     BrokerOrderSnapshot,
@@ -17,6 +18,10 @@ from prophitai_algo_trading.broker.models import (
 from prophitai_algo_trading.execution.models import Direction
 from prophitai_algo_trading.execution.portfolio_tracker import PortfolioTracker
 from prophitai_algo_trading.execution.position_tracker import PositionTracker
+from prophitai_shared import get_current_utc_time
+
+if TYPE_CHECKING:
+    from prophitai_algo_trading.risk.engine import RiskEngine
 
 logger = logging.getLogger(__name__)
 
@@ -74,6 +79,7 @@ def hydrate_live_state(
     position_trackers: dict[str, PositionTracker],
     latest_prices: dict[str, float],
     active_universe: list[str],
+    risk_engine: RiskEngine | None = None,
 ) -> HydrationSummary:
     """Validate and apply a broker snapshot to the live engine's in-memory state.
 
@@ -83,6 +89,7 @@ def hydrate_live_state(
         position_trackers: Per-symbol position trackers keyed by ticker.
         latest_prices: Latest known prices from warmup data.
         active_universe: Symbols the live engine is configured to trade.
+        risk_engine: Optional risk engine to seed for hydrated positions.
 
     Returns:
         HydrationSummary with diagnostics for logging.
@@ -117,21 +124,26 @@ def hydrate_live_state(
                 f"Invalid broker position for {pos.symbol}: shares={pos.shares}"
             )
 
-        # Reason: use snapshot capture time as entry_date since the broker
-        # does not provide the original fill timestamp
-        entry_date = snapshot.captured_at
-
         portfolio_tracker.seed_position(
             symbol=pos.symbol,
             shares=pos.shares,
             direction=pos.direction,
             entry_price=pos.entry_price,
-            entry_date=entry_date,
+            entry_date=pos.entry_date,
         )
 
         # Reason: translate Direction enum to PositionTracker's int convention
         tracker_position = 1 if pos.direction == Direction.LONG else -1
         position_trackers[pos.symbol].hydrate(tracker_position)
+
+        if risk_engine is not None and risk_engine.active:
+            hydration_ts = pos.entry_date or snapshot.captured_at or get_current_utc_time()
+            risk_engine.notify_entry(
+                pos.symbol,
+                pos.entry_price,
+                hydration_ts,
+                pos.direction,
+            )
 
         hydrated_symbols.append(pos.symbol)
 
