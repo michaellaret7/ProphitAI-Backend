@@ -53,9 +53,7 @@ class BaseSignalModel(ABC):
     def score_entries(self, df: pd.DataFrame) -> pd.Series:
         """Score entry signals by conviction. Override in subclasses."""
         self.validate(df)
-        
         enriched = self.enrich(df)
-
         return pd.Series(1.0, index=enriched.index, dtype=float)
 
     @abstractmethod
