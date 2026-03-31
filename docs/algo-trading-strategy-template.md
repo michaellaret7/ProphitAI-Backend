@@ -1,11 +1,11 @@
 # Algo Trading Strategy Template
 
-The canonical strategy scaffold lives at `packages/algo_trading/src/prophitai_algo_trading/strategies/template/`.
+The canonical strategy scaffold lives in the `prophitai-strategies` repo at `strategies/templates/`.
 
 Purpose:
 
-- Keep one package-owned source of truth for how agent-authored strategies should be structured.
-- Give downstream strategy repos a stable folder shape to generate into.
+- Keep one source of truth for how agent-authored strategies should be structured.
+- Give the coding agent a stable folder shape to generate new strategies from.
 - Separate strategy logic from engine, sizing, and risk-control plumbing.
 
 Package shape:
@@ -16,13 +16,13 @@ Package shape:
 - `run_event_backtest.py`: real-data event-driven runner
 - `run_vectorized_backtest.py`: real-data vectorized runner
 - `run_live.py`: live/paper runner
-- `indicators/`: shared indicator specs and derived feature enrichment
-- `signals/`: signal predicates and the signal model
-- `risk_controls/`: opt-in execution-layer controls
+- `indicators/`: shared indicator specs, custom indicator example, and derived feature enrichment
+- `signals/`: signal model with entry/exit logic
+- `risk_controls/`: shared and custom execution-layer controls
 - `sizing/`: strategy-local sizing policy
 
 Usage rule:
 
-- Treat `template/` as scaffold-only.
-- Do not maintain a second canonical template in another repo.
-- Downstream strategy repos should copy or generate from this package-owned scaffold, then edit the generated strategy logic locally.
+- Treat `templates/` as scaffold-only — never run it as a production strategy.
+- New strategies go into `strategies/development/` or `strategies/production/`.
+- Copy the template folder, rename `Template` to the strategy name, and customize the logic.
