@@ -119,6 +119,7 @@ class BaseStrategy(ABC):
                 row,
                 "stop_long",
                 "chandelier_long",
+                "chandelier_long_stop",
                 "chandelier_stop",
                 "donchian_low",
                 "or_low",
@@ -128,6 +129,7 @@ class BaseStrategy(ABC):
                 row,
                 "stop_short",
                 "chandelier_short",
+                "chandelier_short_stop",
                 "donchian_high",
                 "or_high",
             )

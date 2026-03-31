@@ -5,15 +5,16 @@ Pure trading machinery with no agent or AI dependencies.
 """
 
 from prophitai_algo_trading.strategies.base import BaseStrategy
-from prophitai_algo_trading.strategies.macd_momentum import MACDMomentum
 from prophitai_algo_trading.strategies.rsi_mean_reversion import RSIMeanReversion
-from prophitai_algo_trading.strategies.ichimoku_cross import IchimokuCross
-from prophitai_algo_trading.strategies.orb_breakout import ORBBreakout
-from prophitai_algo_trading.strategies.squeeze_breakout import SqueezeBreakout
-from prophitai_algo_trading.strategies.vwap_hurst_btc import VwapHurstBTC
-from prophitai_algo_trading.strategies.kalman_stat_arb import KalmanStatArb
-from prophitai_algo_trading.engines import LiveRunner, BacktestEngine, VectorizedBacktestEngine
-from prophitai_algo_trading.broker import Alpaca
+from prophitai_algo_trading.engines import BacktestEngine, VectorizedBacktestEngine
+from prophitai_algo_trading.indicators import (
+    BaseIndicator,
+    BaseIndicatorSuite,
+    INDICATOR_REGISTRY,
+    IndicatorPipeline,
+    IndicatorSpec,
+)
+from prophitai_algo_trading.signals import BaseSignalModel
 from prophitai_algo_trading.execution import (
     PortfolioContext,
     PortfolioTracker,
@@ -29,19 +30,27 @@ from prophitai_algo_trading.sizing import (
     VolatilityTargetSizer,
 )
 
+try:
+    from prophitai_algo_trading.engines import LiveRunner
+except ModuleNotFoundError:
+    LiveRunner = None  # type: ignore[assignment]
+
+try:
+    from prophitai_algo_trading.broker import Alpaca
+except ModuleNotFoundError:
+    Alpaca = None  # type: ignore[assignment]
+
 __all__ = [
     "BaseStrategy",
-    "MACDMomentum",
     "RSIMeanReversion",
-    "IchimokuCross",
-    "ORBBreakout",
-    "SqueezeBreakout",
-    "VwapHurstBTC",
-    "KalmanStatArb",
-    "LiveRunner",
     "BacktestEngine",
     "VectorizedBacktestEngine",
-    "Alpaca",
+    "BaseIndicator",
+    "BaseIndicatorSuite",
+    "BaseSignalModel",
+    "IndicatorPipeline",
+    "IndicatorSpec",
+    "INDICATOR_REGISTRY",
     "PortfolioContext",
     "PortfolioTracker",
     "PositionTracker",
@@ -53,3 +62,9 @@ __all__ = [
     "InverseVolatilitySizer",
     "VolatilityTargetSizer",
 ]
+
+if LiveRunner is not None:
+    __all__.append("LiveRunner")
+
+if Alpaca is not None:
+    __all__.append("Alpaca")

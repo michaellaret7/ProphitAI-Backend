@@ -1,10 +1,10 @@
-"""Run event-driven backtest with MACDMomentum on a small universe."""
+"""Run event-driven backtest with the in-repo reference strategy."""
 
 from datetime import datetime
 
 from prophitai_algo_trading.data.repository.price_data import get_price_data_df
-from prophitai_algo_trading.strategies.macd_momentum import MACDMomentum
 from prophitai_algo_trading.engines import BacktestEngine
+from prophitai_algo_trading.strategies.rsi_mean_reversion import RSIMeanReversion
 
 TICKERS = ["AAPL", "MSFT", "GOOGL", "NVDA", "JPM", "XOM", "PG", "UNH", "HD", "CAT"]
 START = datetime(2024, 1, 1)
@@ -22,7 +22,7 @@ for ticker in TICKERS:
 
 print(f"\nLoaded {len(data)}/{len(TICKERS)} tickers")
 
-engine = BacktestEngine(strategy=MACDMomentum(), max_positions=len(data))
+engine = BacktestEngine(strategy=RSIMeanReversion(), max_positions=len(data))
 result = engine.run(data, verbose=True, plot=True)
 
 print("\n=== METRICS ===")

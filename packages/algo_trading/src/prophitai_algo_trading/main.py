@@ -1,12 +1,12 @@
 import asyncio
 
 from prophitai_algo_trading.sizing import InverseVolatilitySizer
-from prophitai_algo_trading.strategies.macd_momentum import MACDMomentum
+from prophitai_algo_trading.strategies.rsi_mean_reversion import RSIMeanReversion
 from prophitai_algo_trading.engines import LiveRunner
 from prophitai_algo_trading.execution.cost_model import CostModel
 from prophitai_algo_trading.broker.alpaca import Alpaca
 
-strategy = MACDMomentum()
+strategy = RSIMeanReversion()
 
 tickers = [
     # Consumer Staples

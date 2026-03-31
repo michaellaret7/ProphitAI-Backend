@@ -7,10 +7,10 @@ for real-time bar-by-bar processing.
 import numpy as np
 import pandas as pd
 
-from prophitai_algo_trading.utils.normalize_columns import normalize_columns
+from prophitai_algo_trading.indicators.base import BaseIndicator
 
 
-class RSI:
+class RSI(BaseIndicator):
     """RSI indicator with incremental update support.
 
     Args:
@@ -19,9 +19,8 @@ class RSI:
     """
 
     def __init__(self, df: pd.DataFrame, period: int = 2):
-        self.df = normalize_columns(df.copy())
         self.period = period
-        self.calculate()
+        super().__init__(df)
 
     def calculate(self) -> pd.DataFrame:
         """Compute RSI for all rows using Wilder's smoothing method."""

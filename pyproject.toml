@@ -14,6 +14,11 @@ dependencies = [
     "prophitai-jobs",
 ]
 
+[dependency-groups]
+dev = [
+    "pytest>=8.4,<9",
+]
+
 [tool.uv.workspace]
 members = [
     "packages/*",
