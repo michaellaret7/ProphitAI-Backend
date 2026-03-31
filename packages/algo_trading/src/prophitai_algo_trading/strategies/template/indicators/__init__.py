@@ -3,11 +3,15 @@
 from prophitai_algo_trading.strategies.template.indicators.custom import (
     add_template_indicator_features,
 )
+from prophitai_algo_trading.strategies.template.indicators.custom_indicator import (
+    BollingerBandIndicator,
+)
 from prophitai_algo_trading.strategies.template.indicators.suite import (
     TemplateIndicatorSuite,
 )
 
 __all__ = [
+    "BollingerBandIndicator",
     "TemplateIndicatorSuite",
     "add_template_indicator_features",
 ]

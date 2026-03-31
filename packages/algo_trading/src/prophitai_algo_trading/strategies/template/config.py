@@ -25,6 +25,8 @@ class TemplateStrategyConfig:
     fast_ema_period: int = 20
     slow_ema_period: int = 50
     rsi_period: int = 14
+    bb_window: int = 20
+    bb_num_std: float = 2.0
     rsi_long_entry_threshold: float = 55.0
     rsi_short_entry_threshold: float = 45.0
     allow_shorts: bool = True

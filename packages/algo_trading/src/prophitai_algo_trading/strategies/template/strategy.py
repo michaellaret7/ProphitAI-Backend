@@ -39,6 +39,7 @@ class TemplateStrategy(BaseComposableStrategy):
             self.config.fast_ema_period,
             self.config.slow_ema_period,
             self.config.rsi_period,
+            self.config.bb_window,
         )
 
     def get_sizing_hints(

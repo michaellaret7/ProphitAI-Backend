@@ -11,18 +11,26 @@ from prophitai_algo_trading.strategies.template.config import TemplateStrategyCo
 from prophitai_algo_trading.strategies.template.indicators.custom import (
     add_template_indicator_features,
 )
+from prophitai_algo_trading.strategies.template.indicators.custom_indicator import (
+    BollingerBandIndicator,
+)
 
 
 class TemplateIndicatorSuite(BaseIndicatorSuite):
-    """Compose a small, editable indicator pipeline for the scaffold."""
+    """Compose a small, editable indicator pipeline for the scaffold.
+
+    Shared indicators use string registry keys (``"ema"``, ``"rsi"``).
+    Custom indicators use class references (``BollingerBandIndicator``).
+    """
 
     def __init__(self, config: TemplateStrategyConfig):
         self.config = config
         super().__init__()
 
     def indicator_specs(self) -> Sequence[IndicatorSpec]:
-        """Return the shared indicators used by the scaffold."""
+        """Return the ordered indicator specs for the scaffold."""
         return (
+            # Reason: shared indicators are referenced by string key.
             IndicatorSpec(
                 indicator="ema",
                 params={
@@ -43,6 +51,15 @@ class TemplateIndicatorSuite(BaseIndicatorSuite):
                 indicator="rsi",
                 params={"period": self.config.rsi_period},
                 description="Momentum confirmation oscillator.",
+            ),
+            # Reason: custom indicators are referenced by class.
+            IndicatorSpec(
+                indicator=BollingerBandIndicator,
+                params={
+                    "window": self.config.bb_window,
+                    "num_std": self.config.bb_num_std,
+                },
+                description="Custom Bollinger Band indicator.",
             ),
         )
 

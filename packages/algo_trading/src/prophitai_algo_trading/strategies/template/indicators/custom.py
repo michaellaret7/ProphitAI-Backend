@@ -5,6 +5,24 @@ from __future__ import annotations
 import pandas as pd
 
 
+# ================================
+# --> Sizing hint column names
+# ================================
+# BaseStrategy.get_sizing_hints() auto-extracts values from these
+# column names when building EntryCandidate for the sizer:
+#
+# Volatility:  atr, atr_14, volatility, realized_vol,
+#              close_to_close_vol_20, parkinson_vol_20
+# Long stops:  stop_long, chandelier_long, chandelier_long_stop,
+#              chandelier_stop, donchian_low, or_low
+# Short stops: stop_short, chandelier_short, chandelier_short_stop,
+#              donchian_high, or_high
+# Regime:      regime, hurst_regime
+#
+# Name your derived columns using these keys and they'll flow
+# automatically into the sizing pipeline via EntryCandidate.
+
+
 def add_template_indicator_features(df: pd.DataFrame) -> pd.DataFrame:
     """Add lightweight derived columns on top of the shared indicators.
 
