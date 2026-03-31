@@ -4,6 +4,7 @@ from prophitai_algo_trading.broker.client import AlpacaClient
 from prophitai_algo_trading.broker.trading import AlpacaTrading
 from prophitai_algo_trading.broker.portfolio import AlpacaPortfolio
 from prophitai_algo_trading.broker.options import OptionsService
+from prophitai_algo_trading.broker.models import BrokerStartupSnapshot
 
 
 class Alpaca:
@@ -44,6 +45,16 @@ class Alpaca:
         self.trading = AlpacaTrading(self.client.get_client())
         self.portfolio = AlpacaPortfolio(self.client.get_client())
         self.options = OptionsService(self.client, feed=options_feed)
+
+    # ── Startup Hydration ───────────────────────────────────────────
+
+    def get_startup_snapshot(self) -> BrokerStartupSnapshot:
+        """Fetch a complete startup snapshot for live engine hydration.
+
+        Returns:
+            BrokerStartupSnapshot with normalized account, positions, and open orders.
+        """
+        return self.portfolio.get_startup_snapshot()
 
     # ── Account & Portfolio ──────────────────────────────────────────
 

@@ -43,6 +43,46 @@ class PortfolioTracker:
         self._peak_equity = initial_capital
 
     # ================================
+    # --> Hydration (live startup only)
+    # ================================
+
+    def seed_cash(self, cash: float) -> None:
+        """Override cash with the broker's reported cash balance.
+
+        Called during live startup hydration after the tracker is constructed
+        with initial_capital=broker_equity. Backtests must never call this.
+        """
+        self.cash = cash
+
+    def seed_position(
+        self,
+        symbol: str,
+        shares: float,
+        direction: Direction,
+        entry_price: float,
+        entry_date: datetime,
+        entry_commission: float = 0.0,
+    ) -> None:
+        """Inject a broker position into the tracker without executing a trade.
+
+        Called during live startup hydration to restore positions that already
+        exist on the broker. Does not route orders or deduct cash — the broker
+        already holds these positions.
+        """
+        self._positions[symbol] = PositionState(
+            symbol=symbol,
+            shares=shares,
+            direction=direction,
+            entry_price=entry_price,
+            entry_date=entry_date,
+            entry_commission=entry_commission,
+        )
+
+    def seed_latest_prices(self, prices: dict[str, float]) -> None:
+        """Bulk-set latest prices from warmup data during live hydration."""
+        self._latest_prices.update(prices)
+
+    # ================================
     # --> Helper funcs
     # ================================
 

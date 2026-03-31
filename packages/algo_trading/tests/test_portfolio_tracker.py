@@ -6,7 +6,7 @@ import pytest
 
 from prophitai_algo_trading.execution.cost_model import CostModel
 from prophitai_algo_trading.execution.portfolio_tracker import PortfolioTracker
-from prophitai_algo_trading.execution.models import PortfolioContext
+from prophitai_algo_trading.execution.models import Direction, PortfolioContext
 from prophitai_algo_trading.sizing import AllInSizer, BasePositionSizer
 
 
@@ -190,3 +190,130 @@ class TestEquityRecording:
         expected_equity = CAPITAL + shares * (50.0 - 45.0)
 
         assert eq["equity"].iloc[0] == pytest.approx(expected_equity, abs=0.01)
+
+
+# ================================
+# --> Hydration tests (live startup)
+# ================================
+
+class TestHydration:
+    """Verify seed methods used during live startup hydration."""
+
+    def test_seed_cash_overrides_initial_capital(self):
+        """seed_cash should set cash to broker-reported value, not initial_capital."""
+        tracker = _make_tracker()
+        assert tracker.cash == pytest.approx(CAPITAL)
+
+        broker_cash = 75_000.0
+        tracker.seed_cash(broker_cash)
+
+        assert tracker.cash == pytest.approx(broker_cash)
+
+    def test_seed_long_position(self):
+        """Seeding a long position should appear in _positions and count."""
+        tracker = _make_tracker()
+        tracker.seed_position(
+            symbol="AAPL",
+            shares=100.0,
+            direction=Direction.LONG,
+            entry_price=150.0,
+            entry_date=T0,
+        )
+
+        pos = tracker.get_position("AAPL")
+        assert pos is not None
+        assert pos.shares == 100.0
+        assert pos.direction == Direction.LONG
+        assert pos.entry_price == 150.0
+        assert tracker.open_position_count == 1
+
+    def test_seed_short_position(self):
+        """Seeding a short position should appear in _positions and count."""
+        tracker = _make_tracker()
+        tracker.seed_position(
+            symbol="TSLA",
+            shares=50.0,
+            direction=Direction.SHORT,
+            entry_price=200.0,
+            entry_date=T0,
+        )
+
+        pos = tracker.get_position("TSLA")
+        assert pos is not None
+        assert pos.shares == 50.0
+        assert pos.direction == Direction.SHORT
+        assert tracker.open_position_count == 1
+
+    def test_equity_after_hydration_long(self):
+        """Total equity after hydrating a long position should reflect market value."""
+        tracker = _make_tracker()
+        # Reason: simulate broker state — equity=100k, cash=85k, 100 shares AAPL@150
+        tracker.seed_cash(85_000.0)
+        tracker.seed_position(
+            symbol="AAPL",
+            shares=100.0,
+            direction=Direction.LONG,
+            entry_price=150.0,
+            entry_date=T0,
+        )
+
+        # Reason: mark-to-market at current price of 160
+        equity = tracker.get_total_equity(prices={"AAPL": 160.0})
+        expected = 85_000.0 + 100.0 * 160.0  # cash + position value
+
+        assert equity == pytest.approx(expected, abs=0.01)
+
+    def test_equity_after_hydration_short(self):
+        """Total equity after hydrating a short position should reflect P&L."""
+        tracker = _make_tracker()
+        tracker.seed_cash(100_000.0)
+        tracker.seed_position(
+            symbol="TSLA",
+            shares=50.0,
+            direction=Direction.SHORT,
+            entry_price=200.0,
+            entry_date=T0,
+        )
+
+        # Reason: short position value = shares * (entry - current)
+        equity = tracker.get_total_equity(prices={"TSLA": 190.0})
+        position_value = 50.0 * (200.0 - 190.0)
+        expected = 100_000.0 + position_value
+
+        assert equity == pytest.approx(expected, abs=0.01)
+
+    def test_multiple_hydrated_positions(self):
+        """Multiple seeded positions should all be tracked correctly."""
+        tracker = _make_tracker()
+        tracker.seed_cash(50_000.0)
+
+        tracker.seed_position("AAPL", 100.0, Direction.LONG, 150.0, T0)
+        tracker.seed_position("MSFT", 200.0, Direction.LONG, 300.0, T0)
+        tracker.seed_position("NVDA", 30.0, Direction.SHORT, 500.0, T0)
+
+        assert tracker.open_position_count == 3
+        assert set(tracker.open_symbols) == {"AAPL", "MSFT", "NVDA"}
+
+    def test_close_hydrated_position(self):
+        """A hydrated position should be closeable through normal close_position."""
+        tracker = _make_tracker()
+        tracker.seed_cash(85_000.0)
+        tracker.seed_position("AAPL", 100.0, Direction.LONG, 150.0, T0)
+
+        tracker.close_position("AAPL", 160.0, T1)
+
+        assert tracker.get_position("AAPL") is None
+        assert tracker.open_position_count == 0
+        assert len(tracker._trades) == 1
+        assert tracker._trades[0].pnl == pytest.approx(
+            (160.0 - 150.0) * 100.0, abs=0.01,
+        )
+
+    def test_seed_latest_prices(self):
+        """seed_latest_prices should populate the internal price cache."""
+        tracker = _make_tracker()
+        prices = {"AAPL": 155.0, "MSFT": 310.0}
+        tracker.seed_latest_prices(prices)
+
+        assert tracker._latest_prices["AAPL"] == 155.0
+        assert tracker._latest_prices["MSFT"] == 310.0

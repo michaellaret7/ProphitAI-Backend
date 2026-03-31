@@ -27,6 +27,8 @@ from prophitai_algo_trading.execution import (
     SizingDecision,
 )
 from prophitai_algo_trading.sizing import (
+    BasePositionSizer,
+    SizingSpec,
     ATRRiskSizer,
     DrawdownScaledSizer,
     InverseVolatilitySizer,
@@ -60,6 +62,8 @@ __all__ = [
     "CostModel",
     "SizingDecision",
     "EntryCandidate",
+    "BasePositionSizer",
+    "SizingSpec",
     "ATRRiskSizer",
     "DrawdownScaledSizer",
     "InverseVolatilitySizer",

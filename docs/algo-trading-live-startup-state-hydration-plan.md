@@ -22,8 +22,7 @@ That distinction is non-negotiable.
 
 ### In Scope
 
-- Hydrating the live engine from the broker at process startup.
-- Making the startup snapshot broker-agnostic.
+- Hydrating the live engine from Alpaca at process startup.
 - Preventing duplicate same-direction entries after restart.
 - Restoring correct cash, equity baseline, position count, and symbol-level direction state for the live engine.
 - Failing fast on unsafe startup conditions such as unmanaged positions or ambiguous open orders.
@@ -34,7 +33,7 @@ That distinction is non-negotiable.
 - Generic persistence for all engine state.
 - Exact reconstruction of every risk-control internal variable across restarts.
 - Rebuilding historical trade logs from broker fills.
-- Multi-broker routing or full broker abstraction across the whole trading stack.
+- Broker abstraction layers or protocols (Alpaca is the only broker).
 
 ## Why This Is Needed
 
@@ -56,18 +55,6 @@ That means the process restarts with memory that says:
 
 That is wrong whenever the broker account already has open positions.
 
-## Design Goal
-
-The design goal is not "make Alpaca special."
-
-The design goal is:
-
-- define a broker-neutral startup snapshot
-- make the live engine consume that neutral shape
-- make Alpaca translate its own API responses into that neutral shape
-
-This keeps the broker-specific logic at the broker boundary and keeps the live engine focused on trading state, not on Alpaca response formats.
-
 ## Core Design
 
 ### High-Level Rule
@@ -75,18 +62,16 @@ This keeps the broker-specific logic at the broker boundary and keeps the live e
 The live engine will always follow this sequence:
 
 1. warm up market data
-2. fetch the broker startup snapshot
+2. fetch the startup snapshot from Alpaca
 3. validate the snapshot against the configured live universe
 4. hydrate in-memory portfolio state from the snapshot
 5. start processing live bars
 
 The engine must never subscribe to live bars before startup hydration completes successfully.
 
-### Broker-Agnostic Snapshot
+### Startup Snapshot Models
 
-The startup snapshot will be a broker-neutral object containing only the fields the engine actually needs.
-
-Suggested shape:
+The startup snapshot will be a set of dataclasses containing only the fields the engine actually needs.
 
 ```python
 from dataclasses import dataclass, field
@@ -120,13 +105,18 @@ class BrokerStartupSnapshot:
     positions: list[BrokerPositionSnapshot] = field(default_factory=list)
     open_orders: list[BrokerOrderSnapshot] = field(default_factory=list)
     captured_at: datetime | None = None
+
+
+@dataclass
+class HydrationSummary:
+    cash: float
+    equity: float
+    hydrated_count: int
+    hydrated_symbols: list[str]
+    unmanaged_symbols: list[str]
+    open_order_count: int
+    success: bool
 ```
-
-Important constraints:
-
-- No Alpaca enums should leak past the broker layer.
-- No Alpaca response dicts should be consumed by `LiveRunner`.
-- No broker-specific fields should be required by the live engine if they are not actually used for startup hydration.
 
 ## Startup Behavior Contract
 
@@ -147,9 +137,7 @@ At startup, broker positions must be partitioned into:
 - managed positions: symbols that are in the configured live universe and successfully warmed up
 - unmanaged positions: symbols not in the configured live universe or symbols the live engine cannot safely manage
 
-Default V1 policy:
-
-- fail fast if unmanaged positions exist
+V1 policy: always fail fast if unmanaged positions exist.
 
 Reason:
 
@@ -157,15 +145,11 @@ Reason:
 - silently tracking them read-only still leaves unclear ownership
 - failing fast makes the problem visible and prevents accidental overtrading
 
-This can be relaxed later behind an explicit configuration flag if needed.
-
 ### Open Orders Policy
 
 The startup snapshot must also include open orders.
 
-Default V1 policy:
-
-- fail fast if the broker account contains open orders for managed symbols
+V1 policy: always fail fast if the broker account contains open orders for managed symbols.
 
 Reason:
 
@@ -198,76 +182,29 @@ The backtest path may not.
 
 ## File-by-File Implementation Plan
 
-### 1. `docs/algo-trading-live-startup-state-hydration-plan.md`
+### 1. `packages/algo_trading/src/prophitai_algo_trading/broker/models.py`
 
-This file is the implementation spec and source of truth for the feature.
-
-It exists so that:
-
-- the behavior is defined before code changes begin
-- live-only scope is explicit
-- startup invariants are documented
-- future iterations do not accidentally blur live and backtest behavior
-
-### 2. `packages/algo_trading/src/prophitai_algo_trading/broker/models.py`
-
-Create a new module for the broker-neutral startup snapshot dataclasses.
+Create a new module for the startup snapshot dataclasses.
 
 Planned contents:
 
 - `BrokerPositionSnapshot`
 - `BrokerOrderSnapshot`
 - `BrokerStartupSnapshot`
+- `HydrationSummary`
 
 Responsibilities:
 
 - represent startup broker state in a normalized form
-- keep the live engine independent from Alpaca-specific payloads
-- create a stable boundary for future brokers if needed
+- provide a typed reconciliation result
 
-Reason this belongs in `broker/`:
-
-- the snapshot is a broker-boundary contract
-- it is not execution state yet
-- execution state starts after the snapshot is translated into trackers
-
-### 3. `packages/algo_trading/src/prophitai_algo_trading/broker/base.py`
-
-Create a small broker protocol for the live engine.
-
-Suggested direction:
-
-```python
-from typing import Protocol
-
-from prophitai_algo_trading.broker.models import BrokerStartupSnapshot
-
-
-class LiveBroker(Protocol):
-    def get_startup_snapshot(self) -> BrokerStartupSnapshot: ...
-    def buy(self, symbol: str, **kwargs): ...
-    def sell(self, symbol: str, **kwargs): ...
-    def close_position(self, symbol: str, **kwargs): ...
-```
-
-Purpose:
-
-- let `LiveRunner` depend on a minimal live broker interface instead of `Alpaca`
-- keep the startup snapshot broker-agnostic
-- make future broker support possible without refactoring the live engine again
-
-Important:
-
-- do not over-abstract the entire trading system here
-- only abstract the surface the live engine actually uses
-
-### 4. `packages/algo_trading/src/prophitai_algo_trading/broker/portfolio.py`
+### 2. `packages/algo_trading/src/prophitai_algo_trading/broker/portfolio.py`
 
 This remains the Alpaca-specific data retrieval layer.
 
 Changes planned:
 
-- add private normalization helpers that convert Alpaca account, positions, and orders into broker-neutral snapshot models
+- add private normalization helpers that convert Alpaca account, positions, and orders into snapshot models
 - add a method that assembles a full startup snapshot from:
   - account
   - positions
@@ -286,36 +223,34 @@ Things this file should not do:
 - no portfolio-tracker mutation
 - no startup policy decisions about managed vs unmanaged positions
 
-Those decisions belong in the live engine layer, not in the broker adapter.
+Those decisions belong in the live engine layer, not in the data retrieval layer.
 
-### 5. `packages/algo_trading/src/prophitai_algo_trading/broker/alpaca.py`
+### 3. `packages/algo_trading/src/prophitai_algo_trading/broker/alpaca.py`
 
-This file will expose the neutral startup snapshot through the unified broker facade.
+This file will expose the startup snapshot through the `Alpaca` facade.
 
 Changes planned:
 
-- add `get_startup_snapshot()`
-- have the class satisfy the new `LiveBroker` protocol
+- add `get_startup_snapshot() -> BrokerStartupSnapshot`
+- delegates to `AlpacaPortfolio` for the actual data fetching and normalization
 
 Purpose:
 
-- keep `LiveRunner` from needing to know about `self.portfolio.get_account()`, `self.portfolio.get_positions()`, or `self.portfolio.get_orders()`
+- keep `LiveRunner` from needing to call `self._broker.portfolio.get_account()`, `self._broker.portfolio.get_positions()`, and `self._broker.portfolio.get_orders()` separately
 - make startup reconciliation a single broker call from the live engine's perspective
 
-This keeps the live runner clean and reduces repeated broker orchestration logic.
+### 4. `packages/algo_trading/src/prophitai_algo_trading/broker/__init__.py`
 
-### 6. `packages/algo_trading/src/prophitai_algo_trading/broker/__init__.py`
+Export the new models alongside `Alpaca`:
 
-If the package root is used for imports, export:
-
-- `LiveBroker`
 - `BrokerStartupSnapshot`
 - `BrokerPositionSnapshot`
 - `BrokerOrderSnapshot`
+- `HydrationSummary`
 
-This is a small cleanup step, not a core behavior change.
+Small cleanup step, not a core behavior change.
 
-### 7. `packages/algo_trading/src/prophitai_algo_trading/execution/portfolio_tracker.py`
+### 5. `packages/algo_trading/src/prophitai_algo_trading/execution/portfolio_tracker.py`
 
 This file needs explicit hydration APIs.
 
@@ -359,21 +294,19 @@ Important design rule:
 - do not add broker calls here
 - keep the class reusable for backtests
 
-### 8. `packages/algo_trading/src/prophitai_algo_trading/execution/position_tracker.py`
+### 6. `packages/algo_trading/src/prophitai_algo_trading/execution/position_tracker.py`
 
 This file needs a simple explicit hydration method.
 
 Current issue:
 
-- `PositionTracker` starts flat every time
+- `PositionTracker` starts with `position = 0` every time
 - that is correct for backtests
 - that is wrong for live restart when the broker already has an open position
 
 Required change:
 
 - add a method to seed the current position state directly
-
-Suggested direction:
 
 ```python
 def hydrate(self, position: int) -> None:
@@ -382,17 +315,18 @@ def hydrate(self, position: int) -> None:
     self.position = position
 ```
 
-This is intentionally small.
+Note on tracker responsibilities:
 
-The `PositionTracker` should remain a lightweight signal-to-trade state machine.
+- `PositionTracker` owns direction state (`position` as -1, 0, 1)
+- `PortfolioTracker` owns share count via `PositionState` in `_positions`
+- both must be hydrated consistently by the reconciliation layer
 
-### 9. `packages/algo_trading/src/prophitai_algo_trading/engines/live_reconciliation.py`
+### 7. `packages/algo_trading/src/prophitai_algo_trading/engines/live_reconciliation.py`
 
 Create a new helper module for live startup hydration.
 
 Reason this should be a separate file:
 
-- `live.py` should not absorb all reconciliation logic
 - startup policy is easier to test if extracted
 - it keeps the orchestration code isolated from the streaming loop
 
@@ -402,7 +336,7 @@ Planned responsibilities:
 - partition managed vs unmanaged positions
 - validate open orders
 - map broker positions onto tracker state
-- produce a reconciliation summary for logging
+- produce a `HydrationSummary` for logging
 - apply normalized startup state to:
   - `PortfolioTracker`
   - per-symbol `PositionTracker`s
@@ -426,7 +360,7 @@ def hydrate_live_state(
     position_trackers: dict[str, PositionTracker],
     latest_prices: dict[str, float],
     active_universe: list[str],
-) -> dict[str, object]: ...
+) -> HydrationSummary: ...
 ```
 
 This module should not:
@@ -437,13 +371,12 @@ This module should not:
 
 It should only reconcile and apply startup state.
 
-### 10. `packages/algo_trading/src/prophitai_algo_trading/engines/live.py`
+### 8. `packages/algo_trading/src/prophitai_algo_trading/engines/live.py`
 
 This is the main orchestration change.
 
 Planned updates:
 
-- change the broker type hint from `Alpaca` to `LiveBroker`
 - warm up data first
 - fetch `snapshot = self._broker.get_startup_snapshot()`
 - create the `PortfolioTracker`
@@ -456,7 +389,7 @@ Startup order should be:
 2. `snapshot = self._broker.get_startup_snapshot()`
 3. build `PortfolioTracker(initial_capital=snapshot.equity, ...)`
 4. call `hydrate_live_state(...)`
-5. log reconciliation summary
+5. log hydration summary
 6. start `async for bar in async_subscribe(...)`
 
 Why warmup comes first:
@@ -466,25 +399,18 @@ Why warmup comes first:
 - the reconciliation layer may use those prices for mark-to-market and diagnostics
 - a position in an unwarmable symbol should be treated as an unsafe startup condition
 
-Additional live-only configuration options to consider:
+Failure handling:
 
-- `fail_on_unmanaged_positions: bool = True`
-- `fail_on_open_orders: bool = True`
+- if `get_startup_snapshot()` fails (network error, auth failure, Alpaca downtime), the engine must not start — hard failure with clear logging
+- if reconciliation raises (unmanaged positions, open orders, bad data), the engine must not start — hard failure with clear logging
 
-These can live on `LiveRunner.__init__`.
-
-### 11. `packages/algo_trading/src/prophitai_algo_trading/main.py`
+### 9. `packages/algo_trading/src/prophitai_algo_trading/main.py`
 
 This file may need only a small wiring change.
 
-Possible changes:
-
-- surface strict startup reconciliation flags explicitly
-- make it obvious that live runner startup hydration is enabled
-
 If `LiveRunner` defaults are clean, this file may require little or no modification.
 
-### 12. `packages/algo_trading/tests/test_portfolio_tracker.py`
+### 10. `packages/algo_trading/tests/test_portfolio_tracker.py`
 
 Extend this file instead of creating unnecessary duplicate tracker tests.
 
@@ -498,7 +424,7 @@ Add tests for:
 
 These tests should validate the accounting layer independently of `LiveRunner`.
 
-### 13. `packages/algo_trading/tests/test_engine_startup_state.py`
+### 11. `packages/algo_trading/tests/test_engine_startup_state.py`
 
 Add one focused engine-level test file for startup hydration behavior.
 
@@ -513,15 +439,9 @@ This file should cover:
 
 Test strategy:
 
-- use a lightweight fake broker class that satisfies `LiveBroker`
+- use a lightweight fake `Alpaca` class that returns canned snapshots
 - do not use a mocking framework
 - keep the test explicit and concrete
-
-The point of this file is to validate:
-
-- the broker-neutral startup contract
-- the live-only boundary
-- the behavior that matters most to the user
 
 ## Risk Control Treatment
 
@@ -578,16 +498,17 @@ This is intentionally conservative and honest in effect:
 - direction and sizing behavior become correct
 - time-based controls are not pretending to know the original hold duration
 
-This should be documented clearly in code comments and user-facing expectations.
+This should be documented clearly in code comments.
 
 ## Failure Policy
 
 Startup should fail fast when the engine cannot safely reconcile live state.
 
-V1 startup failures should include:
+V1 startup failures:
 
 - unmanaged broker positions
 - open orders for managed symbols
+- broker connectivity failure (network, auth, Alpaca downtime)
 - malformed broker snapshot data
 - inconsistent symbol direction or quantity data
 - empty active universe after warmup
@@ -636,15 +557,14 @@ The feature is complete when all of the following are true:
 
 This should be implemented in the following order:
 
-1. write the broker-neutral startup contract in code via `broker/models.py`
-2. add the `LiveBroker` protocol
-3. implement Alpaca snapshot translation
-4. add explicit hydration APIs to the execution trackers
-5. implement the live reconciliation helper
-6. wire the live engine to use the helper
-7. add tracker-level tests
-8. add engine-level startup tests
-9. manually validate the behavior in a paper account
+1. write the startup snapshot models in `broker/models.py`
+2. implement Alpaca snapshot assembly in `portfolio.py` and expose via `alpaca.py`
+3. add explicit hydration APIs to the execution trackers
+4. implement the live reconciliation helper
+5. wire the live engine to use the helper
+6. add tracker-level tests
+7. add engine-level startup tests
+8. manually validate the behavior in a paper account
 
 That order keeps the dependency chain clean and avoids mixing orchestration with data-shape design too early.
 
@@ -664,21 +584,20 @@ This manual validation is important because startup reconciliation is fundamenta
 
 ## Future Phase 2
 
-If needed later, Phase 2 can add exact restart continuity for stateful risk controls.
+If needed later, Phase 2 can add:
 
-That would require:
-
-- a persisted engine-state snapshot
+- exact restart continuity for stateful risk controls via persisted engine-state snapshots
 - explicit control-level rehydration hooks
 - reconciliation between persisted engine state and broker truth
+- broker abstraction layer if a second broker becomes necessary
 
-That is a separate feature and should not be folded into V1 unless exact restart continuity becomes a hard requirement.
+That is a separate feature and should not be folded into V1.
 
 ## Final Implementation Rule
 
 The implementation must preserve this simple rule:
 
-- live engines may hydrate from a broker-neutral startup snapshot
+- live engines may hydrate from a startup snapshot
 - backtest engines may not
 
 If any code change weakens that boundary, the design is wrong.

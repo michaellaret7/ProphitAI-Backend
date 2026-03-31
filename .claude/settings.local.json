@@ -185,7 +185,8 @@
       "Bash(xargs sed:*)",
       "Bash(find /Users/michaellaret/Desktop/strategies/strategies/templates -type d -name __pycache__ -exec rm -rf {} +)",
       "Bash(find:*)",
-      "Bash(git:*)"
+      "Bash(git:*)",
+      "Bash(wc:*)"
     ]
   }
 }

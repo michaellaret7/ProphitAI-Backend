@@ -21,6 +21,19 @@ class PositionTracker:
     def __init__(self):
         self.position: int = 0
 
+    def hydrate(self, position: int) -> None:
+        """Set the position state directly for live startup hydration.
+
+        Args:
+            position: Target state (1=long, -1=short, 0=flat).
+
+        Raises:
+            ValueError: If position is not -1, 0, or 1.
+        """
+        if position not in (-1, 0, 1):
+            raise ValueError(f"Invalid hydration position: {position}. Must be -1, 0, or 1.")
+        self.position = position
+
     def plan_transition(
         self,
         signal: int,
