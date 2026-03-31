@@ -14,7 +14,7 @@ from datetime import datetime
 import pandas as pd
 
 from prophitai_algo_trading.engines.trade_routing import process_exits_and_entries
-from prophitai_algo_trading.engines.utils import REASON_TO_DIRECTION, resolve_signal
+from prophitai_algo_trading.engines.signal_resolution import REASON_TO_DIRECTION, resolve_signal
 from prophitai_algo_trading.execution.models import Direction, EntryCandidate
 from prophitai_algo_trading.execution.portfolio_tracker import PortfolioTracker
 from prophitai_algo_trading.execution.position_tracker import PositionTracker

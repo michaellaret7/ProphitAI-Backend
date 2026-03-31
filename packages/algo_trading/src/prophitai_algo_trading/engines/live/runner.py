@@ -19,11 +19,12 @@ import pandas as pd
 
 from prophitai_algo_trading.data.clients.alpaca_data import AlpacaDataClient
 from prophitai_algo_trading.data.stream.subscriber import async_subscribe
+from prophitai_algo_trading.engines.live.reconciliation import hydrate_live_state
 from prophitai_algo_trading.engines.signal_processing import (
     build_risk_trade_callback,
     process_bar_batch,
 )
-from prophitai_algo_trading.engines.utils import append_bar, bars_to_calendar_days
+from prophitai_algo_trading.engines.data_utils import append_bar, bars_to_calendar_days
 from prophitai_algo_trading.execution.portfolio_tracker import PortfolioTracker
 from prophitai_algo_trading.execution.position_tracker import PositionTracker
 from prophitai_algo_trading.execution.cost_model import CostModel
@@ -242,35 +243,78 @@ class LiveRunner:
             del self._strategies[t]
             del self._data[t]
             del self._position_trackers[t]
-            
+
         self._tickers = active
 
         if not self._tickers:
             raise RuntimeError("All tickers failed warmup — cannot start live trading")
 
         name = self._strategies[self._tickers[0]].__class__.__name__
-        
+
         print(f"{name} universe warmed up: {len(self._tickers)} tickers active")
 
-    async def run(self) -> None:
-        """Subscribe to live data and run the strategy loop across all tickers.
+    def _hydrate_from_broker(self) -> PortfolioTracker:
+        """Fetch broker snapshot and hydrate the portfolio tracker.
 
-        Bars are batched by timestamp: when a bar arrives with a new timestamp,
-        the previous batch is flushed with exits-first + score-ranked entry
-        ordering. This matches backtest execution semantics exactly.
+        Must be called after warmup so the active universe and latest prices
+        are available. Fails fast on connectivity errors, unmanaged positions,
+        or open orders for managed symbols.
+
+        Returns:
+            A fully hydrated PortfolioTracker ready for live trading.
         """
-        if all(df.empty for df in self._data.values()):
-            await self.warmup()
+        try:
+            snapshot = self._broker.get_startup_snapshot()
+        except Exception as exc:
+            raise RuntimeError(
+                f"Failed to fetch broker startup snapshot: {exc}"
+            ) from exc
 
         portfolio_tracker = PortfolioTracker(
-            initial_capital=self._broker.get_equity(),
+            initial_capital=snapshot.equity,
             sizer=self._sizer,
             cost_model=self._cost_model,
             broker=self._broker,
         )
 
+        summary = hydrate_live_state(
+            snapshot=snapshot,
+            portfolio_tracker=portfolio_tracker,
+            position_trackers=self._position_trackers,
+            latest_prices=self._latest_prices,
+            active_universe=self._tickers,
+        )
+
+        logger.info(
+            "Live startup reconciliation complete — "
+            "cash=%.2f equity=%.2f hydrated_positions=%d symbols=%s open_orders=%d",
+            summary.cash,
+            summary.equity,
+            summary.hydrated_count,
+            ",".join(summary.hydrated_symbols) or "none",
+            summary.open_order_count,
+        )
+
+        return portfolio_tracker
+
+    async def run(self) -> None:
+        """Subscribe to live data and run the strategy loop across all tickers.
+
+        Startup sequence:
+        1. Warm up market data (determines active universe + latest prices)
+        2. Fetch broker snapshot and hydrate portfolio state
+        3. Start processing live bars
+
+        The engine never subscribes to live bars before hydration completes.
+        """
+        if all(df.empty for df in self._data.values()):
+            await self.warmup()
+
+        portfolio_tracker = self._hydrate_from_broker()
+
         async for bar in async_subscribe(symbol_filter=self._tickers):
             ticker = bar.get("symbol")
+
             if ticker not in self._strategies:
                 continue
 

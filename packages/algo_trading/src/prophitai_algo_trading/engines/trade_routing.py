@@ -12,7 +12,7 @@ import pandas as pd
 
 from prophitai_algo_trading.engines.backtest.metrics import calculate_metrics
 from prophitai_algo_trading.engines.backtest.models import BacktestResult
-from prophitai_algo_trading.engines.utils import is_entry_instruction
+from prophitai_algo_trading.engines.signal_resolution import is_entry_instruction
 from prophitai_algo_trading.execution.models import EntryCandidate
 from prophitai_algo_trading.execution.portfolio_tracker import PortfolioTracker
 from prophitai_algo_trading.execution.position_tracker import PositionTracker

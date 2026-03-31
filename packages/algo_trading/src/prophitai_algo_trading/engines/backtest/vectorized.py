@@ -19,8 +19,8 @@ from prophitai_algo_trading.engines.trade_routing import (
     compile_backtest_result,
 )
 from prophitai_algo_trading.engines.backtest.models import BacktestResult, SignalData, SimulationArrays
-from prophitai_algo_trading.engines.utils import (
-    resolve_positions,
+from prophitai_algo_trading.engines.signal_resolution import resolve_positions
+from prophitai_algo_trading.engines.data_utils import (
     align_multi_ticker_data,
     validate_engine_data,
     resolve_warmup,
