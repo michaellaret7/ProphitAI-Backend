@@ -170,7 +170,17 @@
       "WebFetch(domain:www.crypto-reporter.com)",
       "Bash(playwright install:*)",
       "Bash(rm \".git/refs/remotes/origin/dev 2\")",
-      "Bash(git fetch:*)"
+      "Bash(git fetch:*)",
+      "Bash(gh pr:*)",
+      "WebFetch(domain:www.notion.so)",
+      "Bash(find /Users/michaellaret/Desktop/ProphitAI/packages/tools/src -name \"*.py\" -type f -exec grep -l \"screener\\\\|Strategy\\\\|backtest\" {})",
+      "Bash(xargs -0 rm -rf)",
+      "Bash(ruff check:*)",
+      "Bash(find /Users/michaellaret/Desktop/ProphitAI/packages/algo_trading/src/prophitai_algo_trading/rules -type f -name *.py)",
+      "Bash(PYTHONPATH=\"/Users/michaellaret/Desktop/ProphitAI/packages/algo_trading/src:/Users/michaellaret/Desktop/ProphitAI/packages/shared/src:/Users/michaellaret/Desktop/ProphitAI/packages/data/src:/Users/michaellaret/Desktop/ProphitAI/packages/calculations/src:/Users/michaellaret/Desktop/ProphitAI/packages/atlas/src:/Users/michaellaret/Desktop/ProphitAI/packages/foundry/src:/Users/michaellaret/Desktop/ProphitAI/packages/tools/src\" python -c \":*)",
+      "Bash(npx pyright:*)",
+      "Bash(xargs -0 rm -f)",
+      "Bash(find /Users/michaellaret/Desktop/ProphitAI -not -path */.git/* -not -path */.venv/* -not -path */__pycache__/* -not -path */.claude/* \\\\\\(-name '* 2' -o -name '* 3' -o -name '* 2.*' -o -name '* 3.*' \\\\\\))"
     ]
   }
 }

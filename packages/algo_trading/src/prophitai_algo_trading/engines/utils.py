@@ -9,7 +9,19 @@ import math
 import numpy as np
 import pandas as pd
 
+from prophitai_algo_trading.execution.models import Direction
 from prophitai_algo_trading.utils.validation import validate_backtest_data
+
+# ================================
+# --> Constants
+# ================================
+
+REASON_TO_DIRECTION: dict[str, Direction] = {
+    "open_long": Direction.LONG,
+    "close_long": Direction.LONG,
+    "open_short": Direction.SHORT,
+    "close_short": Direction.SHORT,
+}
 
 # ================================
 # --> Helper funcs

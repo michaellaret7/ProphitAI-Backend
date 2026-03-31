@@ -19,16 +19,22 @@ import pandas as pd
 
 from prophitai_algo_trading.data.clients.alpaca_data import AlpacaDataClient
 from prophitai_algo_trading.data.stream.subscriber import async_subscribe
-from prophitai_algo_trading.engines.trade_routing import process_exits_and_entries
-from prophitai_algo_trading.engines.utils import resolve_signal, append_bar, bars_to_calendar_days
+from prophitai_algo_trading.engines.signal_processing import (
+    build_rule_trade_callback,
+    process_bar_batch,
+)
+from prophitai_algo_trading.engines.utils import append_bar, bars_to_calendar_days
 from prophitai_algo_trading.execution.portfolio_tracker import PortfolioTracker
 from prophitai_algo_trading.execution.position_tracker import PositionTracker
 from prophitai_algo_trading.execution.cost_model import CostModel
 from prophitai_algo_trading.execution.position_sizer import BasePositionSizer, PercentOfEquitySizer
 from prophitai_shared import get_current_utc_time
 
+from prophitai_algo_trading.rules.engine import RuleEngine
+
 if TYPE_CHECKING:
     from prophitai_algo_trading.broker.alpaca import Alpaca
+    from prophitai_algo_trading.rules.base import TradingRule
     from prophitai_algo_trading.strategies.base import BaseStrategy
 
 logger = logging.getLogger(__name__)
@@ -51,6 +57,7 @@ class LiveRunner:
         warmup_bars: Number of historical bars for warmup
                      (defaults to strategy.min_bars_required).
         max_positions: Maximum number of concurrent open positions.
+        rules: Trading rules evaluated per bar (entry gating, forced exits).
     """
 
     def __init__(
@@ -63,6 +70,7 @@ class LiveRunner:
         data_interval: str = '1min',
         warmup_bars: int | None = None,
         max_positions: int = 10,
+        rules: list[TradingRule] | None = None,
     ):
         self._broker = broker
         self._tickers = list(tickers)
@@ -73,6 +81,7 @@ class LiveRunner:
         self._data_interval = data_interval
         self._warmup_bars = warmup_bars or strategy.min_bars_required
         self._max_positions = max_positions
+        self._rule_engine = RuleEngine(rules or [])
 
         self._strategies: dict[str, BaseStrategy] = {
             t: deepcopy(strategy) for t in tickers
@@ -167,59 +176,14 @@ class LiveRunner:
             portfolio_tracker: Shared portfolio tracker.
             timestamp: Bar timestamp for this batch.
         """
-        signal_map = {1: 'LONG', -1: 'SHORT', 0: 'FLAT'}
+        tickers_with_data = [
+            (t, self._data[t]) for t in self._batch_tickers
+            if not self._data[t].empty
+        ]
 
-        # Reason: generate signals for all tickers in the batch, classify exits vs entries
-        exits: list[tuple[str, int, float]] = []
-        entries: list[tuple[str, int, float, float]] = []
-
-        for ticker in self._batch_tickers:
-            if self._data[ticker].empty:
-                continue
-
-            try:
-                signals = self._strategies[ticker].generate_signals(self._data[ticker])
-                le = signals["long_entry"].iloc[-1]
-                lx = signals["long_exit"].iloc[-1]
-                se = signals["short_entry"].iloc[-1]
-                sx = signals["short_exit"].iloc[-1]
-
-                price = self._data[ticker]['close'].iloc[-1]
-
-                target = resolve_signal(
-                    le, lx, se, sx, self._position_trackers[ticker].position,
-                )
-
-                print(
-                    f"[{timestamp}] {ticker}  close={price:.2f}  "
-                    f"signal={signal_map.get(target, target)}"
-                )
-
-                if target == self._position_trackers[ticker].position:
-                    continue
-
-                if target == 0:
-                    exits.append((ticker, target, price))
-                else:
-                    score = float(
-                        self._strategies[ticker].score_entries(self._data[ticker]).iloc[-1]
-                    )
-                    entries.append((ticker, target, price, score))
-
-            except Exception:
-                logger.exception(
-                    "Signal processing failed for %s — skipping", ticker,
-                )
-
-        # Reason: sort entries by score descending — strongest signals fill first
-        entries.sort(key=lambda x: x[3], reverse=True)
-
-        # Reason: only refresh sizer state when entries exist (sizing only matters for new positions)
-        if entries:
-            self._sizer.prepare_for_bar({
-                t: self._data[t]["close"]
-                for t in self._tickers if not self._data[t].empty
-            })
+        on_trade = None
+        if self._rule_engine.active:
+            on_trade = build_rule_trade_callback(self._rule_engine)
 
         def on_error(ticker: str, instr: dict, _exc: Exception) -> None:
             logger.exception(
@@ -227,12 +191,24 @@ class LiveRunner:
                 ticker, instr["reason"],
             )
 
-        process_exits_and_entries(
-            exits, entries, self._position_trackers, portfolio_tracker,
-            self._max_positions, timestamp, on_error=on_error,
+        process_bar_batch(
+            tickers_with_data=tickers_with_data,
+            strategies=self._strategies,
+            position_trackers=self._position_trackers,
+            portfolio_tracker=portfolio_tracker,
+            rule_engine=self._rule_engine,
+            sizer=self._sizer,
+            all_close_prices={
+                t: self._data[t]["close"]
+                for t in self._tickers if not self._data[t].empty
+            },
+            max_positions=self._max_positions,
+            timestamp=timestamp,
+            latest_prices=self._latest_prices,
+            on_trade=on_trade,
+            on_error=on_error,
+            swallow_signal_errors=True,
         )
-
-        portfolio_tracker.record_equity(timestamp, self._latest_prices)
 
     # ================================
     # --> Public API
