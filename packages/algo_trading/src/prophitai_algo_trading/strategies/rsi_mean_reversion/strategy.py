@@ -16,7 +16,7 @@ from prophitai_algo_trading.strategies.composable import BaseComposableStrategy
 from prophitai_algo_trading.strategies.rsi_mean_reversion.indicators import (
     RSIMeanReversionIndicatorSuite,
 )
-from prophitai_algo_trading.strategies.rsi_mean_reversion.trade_logic import (
+from prophitai_algo_trading.strategies.rsi_mean_reversion.signal_model import (
     RSIMeanReversionSignalModel,
 )
 

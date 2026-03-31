@@ -20,7 +20,7 @@ import pandas as pd
 from prophitai_algo_trading.data.clients.alpaca_data import AlpacaDataClient
 from prophitai_algo_trading.data.stream.subscriber import async_subscribe
 from prophitai_algo_trading.engines.signal_processing import (
-    build_rule_trade_callback,
+    build_risk_trade_callback,
     process_bar_batch,
 )
 from prophitai_algo_trading.engines.utils import append_bar, bars_to_calendar_days
@@ -30,11 +30,11 @@ from prophitai_algo_trading.execution.cost_model import CostModel
 from prophitai_algo_trading.sizing import BasePositionSizer, PercentOfEquitySizer
 from prophitai_shared import get_current_utc_time
 
-from prophitai_algo_trading.rules.engine import RuleEngine
+from prophitai_algo_trading.risk.engine import RiskEngine
 
 if TYPE_CHECKING:
     from prophitai_algo_trading.broker.alpaca import Alpaca
-    from prophitai_algo_trading.rules.base import TradingRule
+    from prophitai_algo_trading.risk.base import RiskControl
     from prophitai_algo_trading.strategies.base import BaseStrategy
 
 logger = logging.getLogger(__name__)
@@ -57,7 +57,7 @@ class LiveRunner:
         warmup_bars: Number of historical bars for warmup
                      (defaults to strategy.min_bars_required).
         max_positions: Maximum number of concurrent open positions.
-        rules: Trading rules evaluated per bar (entry gating, forced exits).
+        risk_controls: Risk controls evaluated per bar (entry gating, forced exits).
     """
 
     def __init__(
@@ -70,7 +70,7 @@ class LiveRunner:
         data_interval: str = '1min',
         warmup_bars: int | None = None,
         max_positions: int = 10,
-        rules: list[TradingRule] | None = None,
+        risk_controls: list[RiskControl] | None = None,
     ):
         self._broker = broker
         self._tickers = list(tickers)
@@ -81,7 +81,7 @@ class LiveRunner:
         self._data_interval = data_interval
         self._warmup_bars = warmup_bars or strategy.min_bars_required
         self._max_positions = max_positions
-        self._rule_engine = RuleEngine(rules or [])
+        self._risk_engine = RiskEngine(risk_controls or [])
 
         self._strategies: dict[str, BaseStrategy] = {
             t: deepcopy(strategy) for t in tickers
@@ -182,8 +182,8 @@ class LiveRunner:
         ]
 
         on_trade = None
-        if self._rule_engine.active:
-            on_trade = build_rule_trade_callback(self._rule_engine)
+        if self._risk_engine.active:
+            on_trade = build_risk_trade_callback(self._risk_engine)
 
         def on_error(ticker: str, instr: dict, _exc: Exception) -> None:
             logger.exception(
@@ -196,7 +196,7 @@ class LiveRunner:
             strategies=self._strategies,
             position_trackers=self._position_trackers,
             portfolio_tracker=portfolio_tracker,
-            rule_engine=self._rule_engine,
+            risk_engine=self._risk_engine,
             sizer=self._sizer,
             all_close_prices={
                 t: self._data[t]["close"]

@@ -1,4 +1,4 @@
-"""Trailing stop rule — force exit when price retraces from best price."""
+"""Trailing-stop exit control — force exit when price retraces."""
 
 from __future__ import annotations
 
@@ -8,13 +8,13 @@ from typing import TYPE_CHECKING
 import pandas as pd
 
 from prophitai_algo_trading.execution.models import Direction
-from prophitai_algo_trading.rules.base import TradingRule
+from prophitai_algo_trading.risk.base import RiskControl
 
 if TYPE_CHECKING:
     from prophitai_algo_trading.execution.portfolio_tracker import PortfolioTracker
 
 
-class TrailingStopRule(TradingRule):
+class TrailingStopExitControl(RiskControl):
     """Force exit when price retraces from the best price since entry.
 
     Direction-aware: for longs, tracks the high-water mark and exits on

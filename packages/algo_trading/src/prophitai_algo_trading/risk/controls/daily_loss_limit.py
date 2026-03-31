@@ -1,4 +1,4 @@
-"""Max daily loss rule — shut down trading when daily loss limit is hit."""
+"""Daily-loss limit control — shut down trading when loss limit is hit."""
 
 from __future__ import annotations
 
@@ -7,13 +7,13 @@ from typing import TYPE_CHECKING
 
 import pandas as pd
 
-from prophitai_algo_trading.rules.base import TradingRule
+from prophitai_algo_trading.risk.base import RiskControl
 
 if TYPE_CHECKING:
     from prophitai_algo_trading.execution.portfolio_tracker import PortfolioTracker
 
 
-class MaxDailyLossRule(TradingRule):
+class DailyLossLimitControl(RiskControl):
     """Force-exit all positions and block entries when the portfolio is
     down more than ``max_pct`` from the day's starting equity.
 

@@ -117,7 +117,7 @@ def test_rsi_mean_reversion_strategy_incremental_update_matches_full_recalculati
         assert updated[column].iloc[-1] == pytest.approx(fresh[column].iloc[-1])
 
 
-def test_base_strategy_build_trade_candidate_uses_chandelier_stop_columns() -> None:
+def test_base_strategy_build_entry_candidate_uses_chandelier_stop_columns() -> None:
     strategy = _DummyStrategy()
     row = pd.Series({
         "close": 101.0,
@@ -126,7 +126,7 @@ def test_base_strategy_build_trade_candidate_uses_chandelier_stop_columns() -> N
         "or_low": 95.0,
     })
 
-    candidate = strategy.build_trade_candidate(
+    candidate = strategy.build_entry_candidate(
         symbol="AAPL",
         row=row,
         target_position=1,

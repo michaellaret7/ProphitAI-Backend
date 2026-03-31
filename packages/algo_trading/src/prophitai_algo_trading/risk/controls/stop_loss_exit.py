@@ -1,4 +1,4 @@
-"""Stop loss rule — force exit when price moves against position."""
+"""Stop-loss exit control — force exit when price moves against position."""
 
 from __future__ import annotations
 
@@ -8,13 +8,13 @@ from typing import TYPE_CHECKING
 import pandas as pd
 
 from prophitai_algo_trading.execution.models import Direction
-from prophitai_algo_trading.rules.base import TradingRule
+from prophitai_algo_trading.risk.base import RiskControl
 
 if TYPE_CHECKING:
     from prophitai_algo_trading.execution.portfolio_tracker import PortfolioTracker
 
 
-class StopLossRule(TradingRule):
+class StopLossExitControl(RiskControl):
     """Force exit when price moves against the position by a percentage.
 
     Direction-aware: triggers when a long drops below entry or a short

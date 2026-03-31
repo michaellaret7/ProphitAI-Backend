@@ -1,13 +1,13 @@
-"""Adaptive quality gate for filtering weak entries and stale trades.
+"""Adaptive quality gate control for filtering weak entries and stale trades.
 
-This rule is designed as a broadly useful companion for existing strategies:
+This control is designed as a broadly useful companion for existing strategies:
 - learns a rolling distribution of candidate entry scores per ticker
 - blocks the bottom percentile of signals once enough history exists
 - optionally requires liquidity confirmation when volume columns exist
 - optionally requires trend alignment using common indicator columns
 - force-exits when the higher-level trade thesis breaks
 
-It follows the AdvancedRuleTemplate pattern but ships as a concrete rule
+It follows the AdvancedRiskControlTemplate pattern but ships as a concrete control
 with defaults that are practical for most discretionary strategy testing.
 """
 
@@ -20,13 +20,13 @@ from typing import TYPE_CHECKING
 import pandas as pd
 
 from prophitai_algo_trading.execution.models import Direction
-from prophitai_algo_trading.rules.advanced_base import AdvancedRuleTemplate
+from prophitai_algo_trading.risk.advanced_base import AdvancedRiskControlTemplate
 
 if TYPE_CHECKING:
     from prophitai_algo_trading.execution.portfolio_tracker import PortfolioTracker
 
 
-class QualityGateRule(AdvancedRuleTemplate):
+class QualityGateControl(AdvancedRiskControlTemplate):
     """Adaptive execution filter for weak entries and broken trades.
 
     The most useful feature is the adaptive score gate: instead of forcing
@@ -171,7 +171,7 @@ class QualityGateRule(AdvancedRuleTemplate):
         return True
 
     # ================================
-    # --> TradingRule impl
+    # --> RiskControl impl
     # ================================
 
     def should_block_entry(

@@ -1,4 +1,4 @@
-"""Cooldown rule — block re-entry for N bars after exiting a position."""
+"""Re-entry cooldown control — block re-entry for N bars after exit."""
 
 from __future__ import annotations
 
@@ -8,13 +8,13 @@ from typing import TYPE_CHECKING
 import pandas as pd
 
 from prophitai_algo_trading.execution.models import Direction
-from prophitai_algo_trading.rules.base import TradingRule
+from prophitai_algo_trading.risk.base import RiskControl
 
 if TYPE_CHECKING:
     from prophitai_algo_trading.execution.portfolio_tracker import PortfolioTracker
 
 
-class CooldownRule(TradingRule):
+class ReentryCooldownControl(RiskControl):
     """Block re-entry for N bars after exiting a position on a ticker.
 
     Direction-neutral: applies equally to longs and shorts. Tracks

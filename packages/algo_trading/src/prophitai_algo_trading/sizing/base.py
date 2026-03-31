@@ -8,9 +8,9 @@ from datetime import datetime
 import pandas as pd
 
 from prophitai_algo_trading.execution.models import (
+    EntryCandidate,
     PortfolioContext,
     SizingDecision,
-    TradeCandidate,
 )
 
 
@@ -38,7 +38,7 @@ class BasePositionSizer(ABC):
 
     def size_trade(
         self,
-        candidate: TradeCandidate,
+        candidate: EntryCandidate,
         context: PortfolioContext,
     ) -> SizingDecision:
         """Convert a trade candidate into a sizing decision."""
@@ -67,7 +67,7 @@ class BasePositionSizer(ABC):
         symbol: str,
         price: float,
         context: PortfolioContext,
-        candidate: TradeCandidate | None = None,
+        candidate: EntryCandidate | None = None,
     ) -> float:
         """Calculate the number of shares to trade.
 

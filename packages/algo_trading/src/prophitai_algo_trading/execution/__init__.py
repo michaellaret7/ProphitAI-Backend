@@ -2,10 +2,10 @@
 
 from prophitai_algo_trading.execution.models import (
     Direction,
+    EntryCandidate,
     PortfolioContext,
     PositionState,
     SizingDecision,
-    TradeCandidate,
     Trade,
 )
 from prophitai_algo_trading.execution.portfolio_tracker import PortfolioTracker
@@ -17,7 +17,7 @@ __all__ = [
     "PortfolioContext",
     "PositionState",
     "SizingDecision",
-    "TradeCandidate",
+    "EntryCandidate",
     "Trade",
     "PortfolioTracker",
     "PositionTracker",

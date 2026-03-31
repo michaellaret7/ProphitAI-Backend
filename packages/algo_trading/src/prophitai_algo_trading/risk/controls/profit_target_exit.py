@@ -1,4 +1,4 @@
-"""Take profit rule — force exit when price moves in favor of position."""
+"""Profit-target exit control — force exit when price moves in favor of position."""
 
 from __future__ import annotations
 
@@ -8,13 +8,13 @@ from typing import TYPE_CHECKING
 import pandas as pd
 
 from prophitai_algo_trading.execution.models import Direction
-from prophitai_algo_trading.rules.base import TradingRule
+from prophitai_algo_trading.risk.base import RiskControl
 
 if TYPE_CHECKING:
     from prophitai_algo_trading.execution.portfolio_tracker import PortfolioTracker
 
 
-class TakeProfitRule(TradingRule):
+class ProfitTargetExitControl(RiskControl):
     """Force exit when price moves in favor of the position by a percentage.
 
     Direction-aware: for longs, exits when price rises above entry by

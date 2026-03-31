@@ -1,4 +1,4 @@
-"""Earnings proximity rule — exit positions approaching an earnings date."""
+"""Earnings blackout control — exit positions approaching an earnings date."""
 
 from __future__ import annotations
 
@@ -8,7 +8,7 @@ from typing import TYPE_CHECKING
 
 import pandas as pd
 
-from prophitai_algo_trading.rules.base import TradingRule
+from prophitai_algo_trading.risk.base import RiskControl
 
 if TYPE_CHECKING:
     from prophitai_algo_trading.execution.portfolio_tracker import PortfolioTracker
@@ -16,7 +16,7 @@ if TYPE_CHECKING:
 logger = logging.getLogger(__name__)
 
 
-class EarningsProximityRule(TradingRule):
+class EarningsBlackoutControl(RiskControl):
     """Force exit when a ticker's next earnings date is within N days.
 
     Queries the ``Ticker.earnings_announcement`` column from the DB on

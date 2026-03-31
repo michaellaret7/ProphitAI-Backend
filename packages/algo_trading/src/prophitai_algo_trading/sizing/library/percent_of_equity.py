@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from prophitai_algo_trading.execution.cost_model import CostModel
-from prophitai_algo_trading.execution.models import PortfolioContext, TradeCandidate
+from prophitai_algo_trading.execution.models import EntryCandidate, PortfolioContext
 from prophitai_algo_trading.sizing.base import BasePositionSizer
 
 
@@ -24,7 +24,7 @@ class PercentOfEquitySizer(BasePositionSizer):
         symbol: str,
         price: float,
         context: PortfolioContext,
-        candidate: TradeCandidate | None = None,
+        candidate: EntryCandidate | None = None,
     ) -> float:
         """Allocate pct of equity, capped at available cash, accounting for costs."""
         target_value = context.equity * self.pct

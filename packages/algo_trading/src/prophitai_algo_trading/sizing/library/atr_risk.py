@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from prophitai_algo_trading.execution.cost_model import CostModel
-from prophitai_algo_trading.execution.models import PortfolioContext, TradeCandidate
+from prophitai_algo_trading.execution.models import EntryCandidate, PortfolioContext
 from prophitai_algo_trading.sizing.base import BasePositionSizer
 
 
@@ -36,11 +36,11 @@ class ATRRiskSizer(BasePositionSizer):
         symbol: str,
         price: float,
         context: PortfolioContext,
-        candidate: TradeCandidate | None = None,
+        candidate: EntryCandidate | None = None,
     ) -> float:
         """Allocate shares from a risk-per-share estimate."""
         if candidate is None:
-            raise ValueError("ATRRiskSizer requires a TradeCandidate.")
+            raise ValueError("ATRRiskSizer requires an EntryCandidate.")
 
         risk_per_share = candidate.risk_per_share or candidate.stop_distance
         if risk_per_share is None and candidate.atr is not None:

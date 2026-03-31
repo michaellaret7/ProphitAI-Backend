@@ -1,4 +1,4 @@
-"""Regression tests for execution-layer trading rules."""
+"""Regression tests for execution-layer risk controls."""
 
 from datetime import datetime, timedelta
 
@@ -7,18 +7,26 @@ import pandas as pd
 from prophitai_algo_trading.execution.models import Direction
 from prophitai_algo_trading.execution.cost_model import CostModel
 from prophitai_algo_trading.execution.portfolio_tracker import PortfolioTracker
-from prophitai_algo_trading.rules.base import (
-    CANDIDATE_SCORE_ATTR,
-    CANDIDATE_TARGET_ATTR,
-    TradingRule,
+from prophitai_algo_trading.risk.base import (
+    RISK_CANDIDATE_SCORE_ATTR,
+    RISK_CANDIDATE_TARGET_ATTR,
+    RiskControl,
 )
-from prophitai_algo_trading.rules.engine import RuleEngine
-from prophitai_algo_trading.rules.library.consecutive_loss import ConsecutiveLossRule
-from prophitai_algo_trading.rules.library.earnings_proximity import EarningsProximityRule
-from prophitai_algo_trading.rules.library.max_daily_loss import MaxDailyLossRule
-from prophitai_algo_trading.rules.library.max_drawdown import MaxDrawdownRule
-from prophitai_algo_trading.rules.library.quality_gate import QualityGateRule
-from prophitai_algo_trading.rules.library.trailing_stop import TrailingStopRule
+from prophitai_algo_trading.risk.engine import RiskEngine
+from prophitai_algo_trading.risk.controls.consecutive_loss_cooldown import (
+    ConsecutiveLossCooldownControl,
+)
+from prophitai_algo_trading.risk.controls.daily_loss_limit import DailyLossLimitControl
+from prophitai_algo_trading.risk.controls.earnings_blackout import (
+    EarningsBlackoutControl,
+)
+from prophitai_algo_trading.risk.controls.portfolio_drawdown_limit import (
+    PortfolioDrawdownLimitControl,
+)
+from prophitai_algo_trading.risk.controls.quality_gate import QualityGateControl
+from prophitai_algo_trading.risk.controls.trailing_stop_exit import (
+    TrailingStopExitControl,
+)
 from prophitai_algo_trading.sizing import FixedQuantitySizer
 
 T0 = datetime(2025, 1, 1, 9, 30)
@@ -36,7 +44,7 @@ def _make_tracker() -> PortfolioTracker:
     )
 
 
-class _CandidateAwareRule(TradingRule):
+class _CandidateAwareControl(RiskControl):
     def __init__(self):
         self.last_direction: Direction | None = None
         self.last_score: float | None = None
@@ -59,8 +67,8 @@ class _CandidateAwareRule(TradingRule):
         return False
 
 
-def test_consecutive_loss_rule_resets_immediately_when_pause_is_zero():
-    rule = ConsecutiveLossRule(max_losses=1, pause_bars=0)
+def test_consecutive_loss_cooldown_control_resets_immediately_when_pause_is_zero():
+    rule = ConsecutiveLossCooldownControl(max_losses=1, pause_bars=0)
 
     rule.on_entry("AAPL", 100.0, T0)
     rule.on_exit("AAPL", 90.0, T1)
@@ -68,8 +76,8 @@ def test_consecutive_loss_rule_resets_immediately_when_pause_is_zero():
     assert not rule.should_block_entry("AAPL", 90.0, T1, DUMMY_DF, None)
 
 
-def test_consecutive_loss_rule_counts_unique_timestamps_once():
-    rule = ConsecutiveLossRule(max_losses=1, pause_bars=2)
+def test_consecutive_loss_cooldown_control_counts_unique_timestamps_once():
+    rule = ConsecutiveLossCooldownControl(max_losses=1, pause_bars=2)
 
     rule.on_entry("AAPL", 100.0, T0)
     rule.on_exit("AAPL", 90.0, T0)
@@ -86,8 +94,8 @@ def test_consecutive_loss_rule_counts_unique_timestamps_once():
     assert not rule.should_block_entry("AAPL", 90.0, T2, DUMMY_DF, None)
 
 
-def test_consecutive_loss_rule_only_blocks_the_losing_ticker():
-    rule = ConsecutiveLossRule(max_losses=1, pause_bars=2)
+def test_consecutive_loss_cooldown_control_only_blocks_the_losing_ticker():
+    rule = ConsecutiveLossCooldownControl(max_losses=1, pause_bars=2)
 
     rule.on_entry("AAPL", 100.0, T0)
     rule.on_exit("AAPL", 90.0, T0)
@@ -96,13 +104,13 @@ def test_consecutive_loss_rule_only_blocks_the_losing_ticker():
     assert not rule.should_block_entry("MSFT", 50.0, T0, DUMMY_DF, None)
 
 
-def test_max_daily_loss_rule_uses_full_portfolio_equity():
+def test_daily_loss_limit_control_uses_full_portfolio_equity():
     tracker = _make_tracker()
     tracker.open_long("AAPL", 100.0, T0)
     tracker.open_long("MSFT", 100.0, T0)
     tracker.update_market_prices({"AAPL": 100.0, "MSFT": 100.0})
 
-    rule = MaxDailyLossRule(max_pct=0.08)
+    rule = DailyLossLimitControl(max_pct=0.08)
     assert not rule.should_block_entry("AAPL", 100.0, T0, DUMMY_DF, tracker)
 
     tracker.update_market_prices({"AAPL": 50.0, "MSFT": 50.0})
@@ -110,13 +118,13 @@ def test_max_daily_loss_rule_uses_full_portfolio_equity():
     assert rule.should_block_entry("AAPL", 50.0, T1, DUMMY_DF, tracker)
 
 
-def test_max_drawdown_rule_uses_full_portfolio_equity():
+def test_portfolio_drawdown_limit_control_uses_full_portfolio_equity():
     tracker = _make_tracker()
     tracker.open_long("AAPL", 100.0, T0)
     tracker.open_long("MSFT", 100.0, T0)
     tracker.update_market_prices({"AAPL": 100.0, "MSFT": 100.0})
 
-    rule = MaxDrawdownRule(max_pct=0.08)
+    rule = PortfolioDrawdownLimitControl(max_pct=0.08)
     assert not rule.should_block_entry("AAPL", 100.0, T0, DUMMY_DF, tracker)
 
     tracker.update_market_prices({"AAPL": 50.0, "MSFT": 50.0})
@@ -124,26 +132,26 @@ def test_max_drawdown_rule_uses_full_portfolio_equity():
     assert rule.should_block_entry("AAPL", 50.0, T1, DUMMY_DF, tracker)
 
 
-def test_rule_engine_exposes_candidate_entry_metadata_to_rules():
-    rule = _CandidateAwareRule()
-    engine = RuleEngine([rule])
+def test_risk_engine_exposes_candidate_entry_metadata_to_controls():
+    rule = _CandidateAwareControl()
+    engine = RiskEngine([rule])
     df = pd.DataFrame({"close": [100.0]})
 
-    assert engine.check_entry("AAPL", 100.0, T0, df, None, target=1, score=2.5)
+    assert engine.allows_entry("AAPL", 100.0, T0, df, None, target=1, score=2.5)
     assert rule.last_direction == Direction.LONG
     assert rule.last_score == 2.5
-    assert CANDIDATE_TARGET_ATTR not in df.attrs
-    assert CANDIDATE_SCORE_ATTR not in df.attrs
+    assert RISK_CANDIDATE_TARGET_ATTR not in df.attrs
+    assert RISK_CANDIDATE_SCORE_ATTR not in df.attrs
 
-    assert not engine.check_entry("AAPL", 100.0, T0, df, None, target=-1, score=2.5)
+    assert not engine.allows_entry("AAPL", 100.0, T0, df, None, target=-1, score=2.5)
     assert rule.last_direction == Direction.SHORT
 
 
-def test_trailing_stop_rule_updates_best_price_on_bar():
+def test_trailing_stop_exit_control_updates_best_price_on_bar():
     tracker = _make_tracker()
     tracker.open_long("AAPL", 100.0, T0)
 
-    rule = TrailingStopRule(pct=0.05)
+    rule = TrailingStopExitControl(pct=0.05)
     rule.on_entry("AAPL", 100.0, T0, Direction.LONG)
     rule.on_bar("AAPL", 110.0, T1)
 
@@ -151,25 +159,25 @@ def test_trailing_stop_rule_updates_best_price_on_bar():
     assert rule.should_force_exit("AAPL", 104.5, T1, DUMMY_DF, tracker)
 
 
-def test_earnings_proximity_rule_uses_injected_dates():
+def test_earnings_blackout_control_uses_injected_dates():
     upcoming = T0 + timedelta(days=1)
-    rule = EarningsProximityRule(days=2, earnings_dates={"AAPL": upcoming})
+    rule = EarningsBlackoutControl(days=2, earnings_dates={"AAPL": upcoming})
 
     assert rule.should_block_entry("AAPL", 100.0, T0, DUMMY_DF, None)
 
 
-class _ExplodingEarningsRule(EarningsProximityRule):
+class _ExplodingEarningsControl(EarningsBlackoutControl):
     def _query_earnings_date(self, ticker: str):
         raise RuntimeError("db unavailable")
 
 
-def test_earnings_proximity_rule_handles_lookup_failures():
-    rule = _ExplodingEarningsRule(days=2)
+def test_earnings_blackout_control_handles_lookup_failures():
+    rule = _ExplodingEarningsControl(days=2)
 
     assert not rule.should_block_entry("AAPL", 100.0, T0, DUMMY_DF, None)
 
 
-class _FlakyEarningsRule(EarningsProximityRule):
+class _FlakyEarningsControl(EarningsBlackoutControl):
     def __init__(self, days: int):
         super().__init__(days=days)
         self.calls = 0
@@ -181,16 +189,16 @@ class _FlakyEarningsRule(EarningsProximityRule):
         return T0 + timedelta(days=1)
 
 
-def test_earnings_proximity_rule_retries_after_lookup_failures():
-    rule = _FlakyEarningsRule(days=2)
+def test_earnings_blackout_control_retries_after_lookup_failures():
+    rule = _FlakyEarningsControl(days=2)
 
     assert not rule.should_block_entry("AAPL", 100.0, T0, DUMMY_DF, None)
     assert rule.should_block_entry("AAPL", 100.0, T0, DUMMY_DF, None)
     assert rule.calls == 2
 
 
-def test_quality_gate_rule_blocks_bottom_tier_scores_after_history_builds():
-    rule = QualityGateRule(
+def test_quality_gate_control_blocks_bottom_tier_scores_after_history_builds():
+    rule = QualityGateControl(
         score_window=10,
         min_score_history=3,
         min_score_percentile=0.5,
@@ -203,23 +211,23 @@ def test_quality_gate_rule_blocks_bottom_tier_scores_after_history_builds():
         max_bars_in_trade=None,
         cooldown_bars_after_exit=0,
     )
-    engine = RuleEngine([rule])
+    engine = RiskEngine([rule])
     df = pd.DataFrame({"close": [100.0]})
 
-    assert engine.check_entry("AAPL", 100.0, T0, df, None, target=1, score=5.0)
-    assert engine.check_entry("AAPL", 100.0, T0, df, None, target=1, score=4.0)
-    assert engine.check_entry("AAPL", 100.0, T0, df, None, target=1, score=3.0)
+    assert engine.allows_entry("AAPL", 100.0, T0, df, None, target=1, score=5.0)
+    assert engine.allows_entry("AAPL", 100.0, T0, df, None, target=1, score=4.0)
+    assert engine.allows_entry("AAPL", 100.0, T0, df, None, target=1, score=3.0)
 
-    assert not engine.check_entry("AAPL", 100.0, T0, df, None, target=1, score=2.0)
-    assert engine.check_entry("AAPL", 100.0, T0, df, None, target=1, score=4.5)
+    assert not engine.allows_entry("AAPL", 100.0, T0, df, None, target=1, score=2.0)
+    assert engine.allows_entry("AAPL", 100.0, T0, df, None, target=1, score=4.5)
 
 
-def test_quality_gate_rule_forces_exit_when_trend_breaks():
+def test_quality_gate_control_forces_exit_when_trend_breaks():
     tracker = _make_tracker()
     tracker.open_long("AAPL", 100.0, T0)
     tracker.update_market_prices({"AAPL": 95.0})
 
-    rule = QualityGateRule(
+    rule = QualityGateControl(
         require_trend_alignment=True,
         min_score_history=99,
         min_volume_ratio=None,

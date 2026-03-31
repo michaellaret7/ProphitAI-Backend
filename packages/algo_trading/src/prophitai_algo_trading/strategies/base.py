@@ -11,7 +11,7 @@ from datetime import datetime
 
 import pandas as pd
 
-from prophitai_algo_trading.execution.models import Direction, TradeCandidate
+from prophitai_algo_trading.execution.models import Direction, EntryCandidate
 
 
 class BaseStrategy(ABC):
@@ -28,7 +28,7 @@ class BaseStrategy(ABC):
 
     Optional sizing hooks:
         - get_sizing_hints(row, target_position): Strategy-specific sizing hints.
-        - build_trade_candidate(...): Standardized candidate for shared sizers.
+        - build_entry_candidate(...): Standardized candidate for shared sizers.
     """
 
     @abstractmethod
@@ -161,21 +161,21 @@ class BaseStrategy(ABC):
 
         return hints
 
-    def build_trade_candidate(
+    def build_entry_candidate(
         self,
         symbol: str,
         row: pd.Series,
         target_position: int,
         timestamp: datetime | pd.Timestamp,
         score: float,
-    ) -> TradeCandidate:
-        """Build a standardized trade candidate from the latest strategy row."""
+    ) -> EntryCandidate:
+        """Build a standardized entry candidate from the latest strategy row."""
         if target_position == 0:
-            raise ValueError("TradeCandidate is only defined for non-flat targets.")
+            raise ValueError("EntryCandidate is only defined for non-flat targets.")
 
         price = self._coerce_float(row.get("close"))
         if price is None:
-            raise ValueError("TradeCandidate requires a finite close price.")
+            raise ValueError("EntryCandidate requires a finite close price.")
 
         hints = dict(self.get_sizing_hints(row, target_position))
         stop_price = self._coerce_float(hints.pop("stop_price", None))
@@ -193,7 +193,7 @@ class BaseStrategy(ABC):
         if risk_per_share is None:
             risk_per_share = stop_distance
 
-        return TradeCandidate(
+        return EntryCandidate(
             symbol=symbol,
             direction=Direction.LONG if target_position > 0 else Direction.SHORT,
             target_position=target_position,

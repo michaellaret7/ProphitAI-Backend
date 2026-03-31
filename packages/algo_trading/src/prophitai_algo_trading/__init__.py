@@ -7,7 +7,10 @@ Pure trading machinery with no agent or AI dependencies.
 from prophitai_algo_trading.strategies.base import BaseStrategy
 from prophitai_algo_trading.strategies.composable import BaseComposableStrategy
 from prophitai_algo_trading.strategies.rsi_mean_reversion import RSIMeanReversion
-from prophitai_algo_trading.engines import BacktestEngine, VectorizedBacktestEngine
+from prophitai_algo_trading.engines import (
+    EventDrivenBacktestEngine,
+    VectorizedBacktestEngine,
+)
 from prophitai_algo_trading.indicators import (
     BaseIndicator,
     BaseIndicatorSuite,
@@ -21,8 +24,8 @@ from prophitai_algo_trading.execution import (
     PortfolioTracker,
     PositionTracker,
     CostModel,
+    EntryCandidate,
     SizingDecision,
-    TradeCandidate,
 )
 from prophitai_algo_trading.sizing import (
     ATRRiskSizer,
@@ -45,7 +48,7 @@ __all__ = [
     "BaseStrategy",
     "BaseComposableStrategy",
     "RSIMeanReversion",
-    "BacktestEngine",
+    "EventDrivenBacktestEngine",
     "VectorizedBacktestEngine",
     "BaseIndicator",
     "BaseIndicatorSuite",
@@ -58,7 +61,7 @@ __all__ = [
     "PositionTracker",
     "CostModel",
     "SizingDecision",
-    "TradeCandidate",
+    "EntryCandidate",
     "ATRRiskSizer",
     "DrawdownScaledSizer",
     "InverseVolatilitySizer",

@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from prophitai_algo_trading.execution.cost_model import CostModel
-from prophitai_algo_trading.execution.models import PortfolioContext, TradeCandidate
+from prophitai_algo_trading.execution.models import EntryCandidate, PortfolioContext
 from prophitai_algo_trading.sizing.base import BasePositionSizer
 
 
@@ -24,7 +24,7 @@ class FixedQuantitySizer(BasePositionSizer):
         symbol: str,
         price: float,
         context: PortfolioContext,
-        candidate: TradeCandidate | None = None,
+        candidate: EntryCandidate | None = None,
     ) -> float:
         """Return the fixed quantity, raising if insufficient cash after costs."""
         required = self._cost_model.total_outlay(price, self.qty)

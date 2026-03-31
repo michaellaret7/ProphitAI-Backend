@@ -5,7 +5,7 @@ Two-phase approach for fast batch evaluation:
   Phase 2 — Sequential portfolio simulation across tickers (fast because
              signals are pre-computed; just reading arrays and doing cash math).
 
-Gives 10-50x speedup over BacktestEngine for research and screening.
+Gives 10-50x speedup over EventDrivenBacktestEngine for research and screening.
 """
 
 import numpy as np
@@ -88,7 +88,7 @@ class VectorizedBacktestEngine:
         if self._cost_model.ftc != 0:
             raise ValueError(
                 "VectorizedBacktestEngine does not support fixed transaction "
-                "costs (ftc). Use BacktestEngine for ftc > 0."
+                "costs (ftc). Use EventDrivenBacktestEngine for ftc > 0."
             )
 
     def _generate_signals(
@@ -173,7 +173,7 @@ class VectorizedBacktestEngine:
 
                 row_series = warm_slice.iloc[idx]
 
-                real_candidates[idx] = strategies[ticker].build_trade_candidate(
+                real_candidates[idx] = strategies[ticker].build_entry_candidate(
                     symbol=ticker,
                     row=row_series,
                     target_position=target,

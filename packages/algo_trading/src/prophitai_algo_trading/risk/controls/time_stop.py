@@ -1,4 +1,4 @@
-"""Max holding period rule — force exit after holding for N bars."""
+"""Time-stop control — force exit after holding for N bars."""
 
 from __future__ import annotations
 
@@ -8,13 +8,13 @@ from typing import TYPE_CHECKING
 import pandas as pd
 
 from prophitai_algo_trading.execution.models import Direction
-from prophitai_algo_trading.rules.base import TradingRule
+from prophitai_algo_trading.risk.base import RiskControl
 
 if TYPE_CHECKING:
     from prophitai_algo_trading.execution.portfolio_tracker import PortfolioTracker
 
 
-class MaxHoldingPeriodRule(TradingRule):
+class TimeStopControl(RiskControl):
     """Force exit after holding a position for N bars.
 
     Direction-neutral: applies equally to long and short positions.

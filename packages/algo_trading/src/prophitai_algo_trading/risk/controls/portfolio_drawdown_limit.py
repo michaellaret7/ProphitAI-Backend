@@ -1,4 +1,4 @@
-"""Max drawdown rule — shut down trading when portfolio drawdown exceeds threshold."""
+"""Portfolio drawdown limit control — shut down trading past a drawdown limit."""
 
 from __future__ import annotations
 
@@ -7,13 +7,13 @@ from typing import TYPE_CHECKING
 
 import pandas as pd
 
-from prophitai_algo_trading.rules.base import TradingRule
+from prophitai_algo_trading.risk.base import RiskControl
 
 if TYPE_CHECKING:
     from prophitai_algo_trading.execution.portfolio_tracker import PortfolioTracker
 
 
-class MaxDrawdownRule(TradingRule):
+class PortfolioDrawdownLimitControl(RiskControl):
     """Force-exit all positions and block entries when portfolio equity
     drops more than ``max_pct`` from its all-time high.
 

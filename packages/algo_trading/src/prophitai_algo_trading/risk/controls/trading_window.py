@@ -1,4 +1,4 @@
-"""Time of day rule — restrict trading to a time window, optionally force-exit by cutoff."""
+"""Trading-window control — restrict trading to a time window."""
 
 from __future__ import annotations
 
@@ -7,13 +7,13 @@ from typing import TYPE_CHECKING
 
 import pandas as pd
 
-from prophitai_algo_trading.rules.base import TradingRule
+from prophitai_algo_trading.risk.base import RiskControl
 
 if TYPE_CHECKING:
     from prophitai_algo_trading.execution.portfolio_tracker import PortfolioTracker
 
 
-class TimeOfDayRule(TradingRule):
+class TradingWindowControl(RiskControl):
     """Block entries outside an allowed time window and optionally
     force-exit all positions by a cutoff time.
 

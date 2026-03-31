@@ -11,7 +11,7 @@ from copy import deepcopy
 import pandas as pd
 
 from prophitai_algo_trading.engines.signal_processing import (
-    build_rule_trade_callback,
+    build_risk_trade_callback,
     process_bar_batch,
 )
 from prophitai_algo_trading.engines.trade_routing import (
@@ -25,13 +25,13 @@ from prophitai_algo_trading.engines.utils import (
     resolve_warmup,
 )
 from prophitai_algo_trading.execution import PortfolioTracker, PositionTracker, CostModel
-from prophitai_algo_trading.rules.base import TradingRule
-from prophitai_algo_trading.rules.engine import RuleEngine
+from prophitai_algo_trading.risk.base import RiskControl
+from prophitai_algo_trading.risk.engine import RiskEngine
 from prophitai_algo_trading.sizing import BasePositionSizer, PercentOfEquitySizer
 from prophitai_algo_trading.strategies.base import BaseStrategy
 
 
-class BacktestEngine:
+class EventDrivenBacktestEngine:
     """Bar-by-bar backtest engine for a multi-ticker universe.
 
     Processes each bar sequentially across all tickers: appends data, updates
@@ -47,7 +47,7 @@ class BacktestEngine:
         warmup_bars: Number of initial bars to skip
                      (defaults to strategy.min_bars_required).
         max_positions: Maximum number of concurrent open positions.
-        rules: Trading rules evaluated per bar (entry gating, forced exits).
+        risk_controls: Risk controls evaluated per bar (entry gating, forced exits).
     """
 
     def __init__(
@@ -58,7 +58,7 @@ class BacktestEngine:
         sizer: BasePositionSizer | None = None,
         warmup_bars: int | None = None,
         max_positions: int = 10,
-        rules: list[TradingRule] | None = None,
+        risk_controls: list[RiskControl] | None = None,
     ):
         self._strategy_template = strategy
         self.initial_capital = initial_capital
@@ -68,7 +68,7 @@ class BacktestEngine:
         )
         self._warmup_bars = warmup_bars
         self._max_positions = max_positions
-        self._rule_engine = RuleEngine(rules or [])
+        self._risk_engine = RiskEngine(risk_controls or [])
 
     # ================================
     # --> Helper funcs
@@ -161,7 +161,7 @@ class BacktestEngine:
         latest_prices: dict[str, float],
         warmup: int,
         verbose: bool,
-        rule_engine: RuleEngine | None = None,
+        risk_engine: RiskEngine | None = None,
     ) -> None:
         """Process bars one at a time, executing trades with exits-first ordering.
 
@@ -179,13 +179,13 @@ class BacktestEngine:
             latest_prices: Most recent price per ticker (mutated in place).
             warmup: Number of warmup bars already processed.
             verbose: If True, print trade-by-trade details.
-            rule_engine: Optional rule engine for entry gating and forced exits.
+            risk_engine: Optional risk engine for entry gating and forced exits.
         """
         if verbose:
             print(f"[2/3] Trading: processing {len(common_index) - warmup} bars "
                   f"bar-by-bar across {len(tickers)} tickers...")
 
-        has_rules = rule_engine is not None and rule_engine.active
+        has_risk_controls = risk_engine is not None and risk_engine.active
 
         for i in range(warmup, len(common_index)):
             timestamp = common_index[i]
@@ -227,9 +227,9 @@ class BacktestEngine:
                     print(f"  [{timestamp}]  {ticker}  ${instr['price']:.2f}  "
                           f"{reason.upper()}  equity=${equity:,.2f}")
 
-            if has_rules:
-                on_trade = build_rule_trade_callback(
-                    rule_engine, inner_callback=on_trade,
+            if has_risk_controls:
+                on_trade = build_risk_trade_callback(
+                    risk_engine, inner_callback=on_trade,
                 )
 
             process_bar_batch(
@@ -237,7 +237,7 @@ class BacktestEngine:
                 strategies=strategies,
                 position_trackers=position_trackers,
                 portfolio_tracker=portfolio_tracker,
-                rule_engine=rule_engine,
+                risk_engine=risk_engine,
                 sizer=self._sizer,
                 all_close_prices={t: ticker_dfs[t]["close"] for t in ticker_dfs},
                 max_positions=self._max_positions,
@@ -296,7 +296,7 @@ class BacktestEngine:
             latest_prices, 
             warmup, 
             verbose,
-            rule_engine=self._rule_engine,
+            risk_engine=self._risk_engine,
         )
 
         force_close_open_positions(

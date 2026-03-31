@@ -1,13 +1,13 @@
-"""Advanced rule template for direction-aware, stateful trade management.
+"""Advanced risk-control template for direction-aware, stateful trade management.
 
-Copy and adapt this file when you need a rule that combines:
+Copy and adapt this file when you need a risk control that combines:
 - directional entry gating
 - regime / liquidity / score filters
 - stateful exits (stop, trailing stop, time stop)
 - post-exit cooldowns
 
-The goal is to give agent-generated rules a much stronger starting point
-than the simple one-condition examples in the standard rule library.
+The goal is to give agent-generated risk controls a much stronger starting
+point than the simple one-condition examples in the standard risk library.
 """
 
 from __future__ import annotations
@@ -18,14 +18,14 @@ from typing import TYPE_CHECKING
 import pandas as pd
 
 from prophitai_algo_trading.execution.models import Direction
-from prophitai_algo_trading.rules.base import TradingRule
+from prophitai_algo_trading.risk.base import RiskControl
 
 if TYPE_CHECKING:
     from prophitai_algo_trading.execution.portfolio_tracker import PortfolioTracker
 
 
-class AdvancedRuleTemplate(TradingRule):
-    """Reference scaffold for complex execution-layer rules.
+class AdvancedRiskControlTemplate(RiskControl):
+    """Reference scaffold for complex execution-layer risk controls.
 
     Example patterns this template supports:
     - Allow longs only in a bullish regime, shorts only in a bearish regime
@@ -166,7 +166,7 @@ class AdvancedRuleTemplate(TradingRule):
         return self._bars_in_trade.get(ticker, 0) >= self.max_bars_in_trade
 
     # ================================
-    # --> TradingRule impl
+    # --> RiskControl impl
     # ================================
 
     def should_block_entry(

@@ -6,7 +6,7 @@ from .signals import (
     price_above_sma,
     price_below_sma,
 )
-from .trade_logic import (
+from .signal_model import (
     RSIMeanReversionSignalModel,
 )
 

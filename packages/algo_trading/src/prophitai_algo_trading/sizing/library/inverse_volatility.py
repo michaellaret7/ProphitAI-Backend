@@ -7,7 +7,7 @@ from datetime import datetime
 import pandas as pd
 
 from prophitai_algo_trading.execution.cost_model import CostModel
-from prophitai_algo_trading.execution.models import PortfolioContext, TradeCandidate
+from prophitai_algo_trading.execution.models import EntryCandidate, PortfolioContext
 from prophitai_algo_trading.sizing.base import BasePositionSizer
 
 
@@ -81,7 +81,7 @@ class InverseVolatilitySizer(BasePositionSizer):
         symbol: str,
         price: float,
         context: PortfolioContext,
-        candidate: TradeCandidate | None = None,
+        candidate: EntryCandidate | None = None,
     ) -> float:
         """Allocate vol-weighted fraction of equity, capped at available cash."""
         weight = self._weights.get(symbol, 1.0 / self._max_positions)

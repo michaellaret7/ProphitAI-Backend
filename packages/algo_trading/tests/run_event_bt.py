@@ -3,7 +3,7 @@
 from datetime import datetime
 
 from prophitai_algo_trading.data.repository.price_data import get_price_data_df
-from prophitai_algo_trading.engines import BacktestEngine
+from prophitai_algo_trading.engines import EventDrivenBacktestEngine
 from prophitai_algo_trading.strategies.rsi_mean_reversion import RSIMeanReversion
 
 TICKERS = ["AAPL", "MSFT", "GOOGL", "NVDA", "JPM", "XOM", "PG", "UNH", "HD", "CAT"]
@@ -22,7 +22,7 @@ for ticker in TICKERS:
 
 print(f"\nLoaded {len(data)}/{len(TICKERS)} tickers")
 
-engine = BacktestEngine(strategy=RSIMeanReversion(), max_positions=len(data))
+engine = EventDrivenBacktestEngine(strategy=RSIMeanReversion(), max_positions=len(data))
 result = engine.run(data, verbose=True, plot=True)
 
 print("\n=== METRICS ===")

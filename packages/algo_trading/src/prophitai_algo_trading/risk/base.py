@@ -1,11 +1,11 @@
-"""Base class for all trading rules.
+"""Base class for all execution-layer risk controls.
 
-Trading rules are execution-layer guards evaluated bar-by-bar. They sit
+Risk controls are execution-layer guards evaluated bar-by-bar. They sit
 between signal generation and trade execution, governing how trades happen
 (cooldowns, stop losses, position limits) rather than what signals fire.
 
-Rules are passed to BacktestEngine and LiveRunner via the ``rules`` parameter
-and evaluated by RuleEngine during the bar loop.
+Risk controls are passed to EventDrivenBacktestEngine and LiveRunner via the
+``risk_controls`` parameter and evaluated by RiskEngine during the bar loop.
 """
 
 from __future__ import annotations
@@ -22,24 +22,25 @@ if TYPE_CHECKING:
     from prophitai_algo_trading.execution.portfolio_tracker import PortfolioTracker
 
 
-CANDIDATE_TARGET_ATTR = "_rule_candidate_target"
-CANDIDATE_SCORE_ATTR = "_rule_candidate_score"
+RISK_CANDIDATE_TARGET_ATTR = "_risk_candidate_target"
+RISK_CANDIDATE_SCORE_ATTR = "_risk_candidate_score"
 
 
-class TradingRule(ABC):
-    """Abstract base for all trading rules.
+class RiskControl(ABC):
+    """Abstract base for all execution-layer risk controls.
 
-    Rules can block entry signals and force position exits. They receive
+    Risk controls can block entry signals and force position exits. They receive
     the full bar context (DataFrame, ticker, price, portfolio state) and
     maintain their own per-ticker state across bars via lifecycle hooks.
 
-    During entry evaluation, RuleEngine annotates ``df.attrs`` with:
-        - ``_rule_candidate_target``: Intended target position (1 or -1)
-        - ``_rule_candidate_score``: Strategy entry score for that signal
+    During entry evaluation, RiskEngine annotates ``df.attrs`` with:
+        - ``_risk_candidate_target``: Intended target position (1 or -1)
+        - ``_risk_candidate_score``: Strategy entry score for that signal
 
-    This lets rules express direction-aware or score-aware entry gating
+    This lets risk controls express direction-aware or score-aware entry gating
     without changing the public method signature. These attrs are
-    ephemeral to the current rule evaluation call: rules must not cache
+    ephemeral to the current risk-control evaluation call: risk controls must
+    not cache
     ``df`` or persist references to ``df.attrs`` beyond the synchronous
     execution of ``should_block_entry`` / ``should_force_exit``.
 
@@ -137,12 +138,12 @@ class TradingRule(ABC):
     @staticmethod
     def candidate_target(df: pd.DataFrame) -> int:
         """Return the intended target position for the current entry check."""
-        return int(df.attrs.get(CANDIDATE_TARGET_ATTR, 0) or 0)
+        return int(df.attrs.get(RISK_CANDIDATE_TARGET_ATTR, 0) or 0)
 
     @staticmethod
     def candidate_score(df: pd.DataFrame) -> float:
         """Return the strategy-provided entry score for the current signal."""
-        return float(df.attrs.get(CANDIDATE_SCORE_ATTR, 0.0) or 0.0)
+        return float(df.attrs.get(RISK_CANDIDATE_SCORE_ATTR, 0.0) or 0.0)
 
     @classmethod
     def candidate_direction(cls, df: pd.DataFrame) -> Direction | None:

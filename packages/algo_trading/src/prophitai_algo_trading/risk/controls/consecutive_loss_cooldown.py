@@ -1,4 +1,4 @@
-"""Consecutive loss rule — pause trading after N consecutive losing trades."""
+"""Consecutive-loss cooldown control — pause trading after N losses."""
 
 from __future__ import annotations
 
@@ -8,13 +8,13 @@ from typing import TYPE_CHECKING
 import pandas as pd
 
 from prophitai_algo_trading.execution.models import Direction
-from prophitai_algo_trading.rules.base import TradingRule
+from prophitai_algo_trading.risk.base import RiskControl
 
 if TYPE_CHECKING:
     from prophitai_algo_trading.execution.portfolio_tracker import PortfolioTracker
 
 
-class ConsecutiveLossRule(TradingRule):
+class ConsecutiveLossCooldownControl(RiskControl):
     """Block entries after N consecutive losing trades, pause for M bars.
 
     Direction-aware: determines win/loss based on position direction.

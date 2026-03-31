@@ -2,7 +2,7 @@
 
 Defines enums and dataclasses used by executors, position sizers, and the
 execution engine for tracking positions, trades, portfolio context, and
-standardized trade candidates for sizing.
+standardized entry candidates for sizing.
 """
 
 from dataclasses import dataclass, field
@@ -63,7 +63,7 @@ class PortfolioContext:
 
 
 @dataclass
-class TradeCandidate:
+class EntryCandidate:
     """Standardized entry candidate passed from strategies into sizers.
 
     Strategies can use custom local indicators internally, but they should map

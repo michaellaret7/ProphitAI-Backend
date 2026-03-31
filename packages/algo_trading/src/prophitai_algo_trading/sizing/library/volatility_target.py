@@ -7,7 +7,7 @@ from datetime import datetime
 import pandas as pd
 
 from prophitai_algo_trading.execution.cost_model import CostModel
-from prophitai_algo_trading.execution.models import PortfolioContext, TradeCandidate
+from prophitai_algo_trading.execution.models import EntryCandidate, PortfolioContext
 from prophitai_algo_trading.sizing.base import BasePositionSizer
 
 
@@ -48,7 +48,7 @@ class VolatilityTargetSizer(BasePositionSizer):
         symbol: str,
         price: float,
         context: PortfolioContext,
-        candidate: TradeCandidate | None = None,
+        candidate: EntryCandidate | None = None,
     ) -> float:
         """Allocate less capital to more volatile assets."""
         volatility = None

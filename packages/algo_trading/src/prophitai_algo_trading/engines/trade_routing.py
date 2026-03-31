@@ -2,7 +2,7 @@
 
 Contains the exits-first + score-ranked entries routing loop,
 force-close logic, and backtest result compilation used by
-VectorizedBacktestEngine, BacktestEngine, and LiveRunner.
+VectorizedBacktestEngine, EventDrivenBacktestEngine, and LiveRunner.
 """
 
 from collections.abc import Callable
@@ -13,7 +13,7 @@ import pandas as pd
 from prophitai_algo_trading.engines.backtest.metrics import calculate_metrics
 from prophitai_algo_trading.engines.backtest.models import BacktestResult
 from prophitai_algo_trading.engines.utils import is_entry_instruction
-from prophitai_algo_trading.execution.models import TradeCandidate
+from prophitai_algo_trading.execution.models import EntryCandidate
 from prophitai_algo_trading.execution.portfolio_tracker import PortfolioTracker
 from prophitai_algo_trading.execution.position_tracker import PositionTracker
 from prophitai_algo_trading.sizing import BasePositionSizer
@@ -60,7 +60,7 @@ def _execute_instruction(
 
 def process_exits_and_entries(
     exits: list[tuple[str, int, float]],
-    entries: list[TradeCandidate],
+    entries: list[EntryCandidate],
     position_trackers: dict[str, PositionTracker],
     portfolio_tracker: PortfolioTracker,
     sizer: BasePositionSizer,

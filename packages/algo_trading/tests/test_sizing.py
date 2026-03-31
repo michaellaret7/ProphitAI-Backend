@@ -11,8 +11,8 @@ from prophitai_algo_trading.engines import VectorizedBacktestEngine
 from prophitai_algo_trading.execution.cost_model import CostModel
 from prophitai_algo_trading.execution.models import (
     Direction,
+    EntryCandidate,
     PortfolioContext,
-    TradeCandidate,
 )
 from prophitai_algo_trading.sizing import (
     ATRRiskSizer,
@@ -51,7 +51,7 @@ class _RecordingSizer(BasePositionSizer):
         symbol: str,
         price: float,
         context: PortfolioContext,
-        candidate: TradeCandidate | None = None,
+        candidate: EntryCandidate | None = None,
     ) -> float:
         return 1.0
 
@@ -118,7 +118,7 @@ def test_atr_risk_sizer_uses_candidate_risk_per_share() -> None:
         cost_model=CostModel(ptc=0.0),
     )
     context = PortfolioContext(equity=10_000.0, cash=10_000.0, positions={})
-    candidate = TradeCandidate(
+    candidate = EntryCandidate(
         symbol="AAPL",
         direction=Direction.LONG,
         target_position=1,
@@ -141,7 +141,7 @@ def test_volatility_target_sizer_allocates_less_to_higher_volatility() -> None:
         cost_model=CostModel(ptc=0.0),
     )
     context = PortfolioContext(equity=10_000.0, cash=10_000.0, positions={})
-    calm = TradeCandidate(
+    calm = EntryCandidate(
         symbol="AAPL",
         direction=Direction.LONG,
         target_position=1,
@@ -151,7 +151,7 @@ def test_volatility_target_sizer_allocates_less_to_higher_volatility() -> None:
         strategy_id="TestStrategy",
         volatility=0.10,
     )
-    volatile = TradeCandidate(
+    volatile = EntryCandidate(
         symbol="TSLA",
         direction=Direction.LONG,
         target_position=1,

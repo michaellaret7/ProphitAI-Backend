@@ -1,4 +1,4 @@
-"""Signal model for RSI Mean Reversion strategy."""
+"""Signal model for the RSI mean-reversion strategy."""
 
 from __future__ import annotations
 
