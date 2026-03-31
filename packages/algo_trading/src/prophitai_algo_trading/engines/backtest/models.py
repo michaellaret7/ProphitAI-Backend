@@ -27,8 +27,10 @@ class SignalData(NamedTuple):
 
     common_index: pd.DatetimeIndex
     aligned: dict[str, pd.DataFrame]
+    strategy_frames: dict[str, pd.DataFrame]
     raw_positions: dict[str, np.ndarray]
     entry_scores: dict[str, np.ndarray]
+    entry_candidates: dict[str, np.ndarray]
 
 
 class SimulationArrays(NamedTuple):
@@ -38,4 +40,5 @@ class SimulationArrays(NamedTuple):
     vol_matrix: np.ndarray
     positions_matrix: np.ndarray
     score_matrix: np.ndarray
+    candidate_matrix: np.ndarray
     ticker_list: list[str]

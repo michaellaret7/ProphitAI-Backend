@@ -21,8 +21,26 @@ class PositionTracker:
     def __init__(self):
         self.position: int = 0
 
-    def update(self, signal: int, price: float, timestamp: datetime) -> list[dict]:
-        """Convert a signal into trade instructions.
+    def hydrate(self, position: int) -> None:
+        """Set the position state directly for live startup hydration.
+
+        Args:
+            position: Target state (1=long, -1=short, 0=flat).
+
+        Raises:
+            ValueError: If position is not -1, 0, or 1.
+        """
+        if position not in (-1, 0, 1):
+            raise ValueError(f"Invalid hydration position: {position}. Must be -1, 0, or 1.")
+        self.position = position
+
+    def plan_transition(
+        self,
+        signal: int,
+        price: float,
+        timestamp: datetime,
+    ) -> list[dict]:
+        """Plan instructions for a target signal without mutating state.
 
         Args:
             signal: Target position (1=long, -1=short, 0=flat).
@@ -73,5 +91,27 @@ class PositionTracker:
                 "timestamp": timestamp,
             })
 
-        self.position = signal
+        return instructions
+
+    def apply_instruction(self, instruction: dict) -> None:
+        """Advance internal position state after a successful execution."""
+        reason = instruction["reason"]
+        if reason == "open_long":
+            self.position = 1
+        elif reason == "open_short":
+            self.position = -1
+        elif reason in ("close_long", "close_short"):
+            self.position = 0
+        else:
+            raise ValueError(f"Unknown trade reason: {reason}")
+
+    def update(self, signal: int, price: float, timestamp: datetime) -> list[dict]:
+        """Convert a signal into trade instructions and apply them locally.
+
+        This preserves the legacy mutation behavior for callers that expect
+        ``update()`` to immediately advance state.
+        """
+        instructions = self.plan_transition(signal, price, timestamp)
+        for instr in instructions:
+            self.apply_instruction(instr)
         return instructions

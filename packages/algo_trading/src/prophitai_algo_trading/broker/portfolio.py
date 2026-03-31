@@ -8,6 +8,14 @@ from alpaca.trading.requests import GetOrdersRequest, GetAssetsRequest, GetPortf
 from alpaca.trading.enums import QueryOrderStatus, AssetClass, AssetStatus
 from typing import Optional, List, Dict
 
+from prophitai_algo_trading.broker.models import (
+    BrokerOrderSnapshot,
+    BrokerPositionSnapshot,
+    BrokerStartupSnapshot,
+)
+from prophitai_algo_trading.execution.models import Direction
+from prophitai_shared import get_current_utc_time
+
 class AlpacaPortfolio:
     """Handles portfolio data retrieval and account information"""
 
@@ -50,6 +58,7 @@ class AlpacaPortfolio:
                 'symbol': pos.symbol,
                 'qty': float(pos.qty),
                 'avg_entry_price': float(pos.avg_entry_price),
+                'entry_date': getattr(pos, 'entry_date', None),
                 'market_value': float(pos.market_value),
                 'unrealized_pl': float(pos.unrealized_pl) if pos.unrealized_pl else 0,
                 'unrealized_plpc': float(pos.unrealized_plpc) if pos.unrealized_plpc else 0,
@@ -74,6 +83,7 @@ class AlpacaPortfolio:
                 'symbol': pos.symbol,
                 'qty': float(pos.qty),
                 'avg_entry_price': float(pos.avg_entry_price),
+                'entry_date': getattr(pos, 'entry_date', None),
                 'market_value': float(pos.market_value),
                 'unrealized_pl': float(pos.unrealized_pl) if pos.unrealized_pl else 0,
                 'unrealized_plpc': float(pos.unrealized_plpc) if pos.unrealized_plpc else 0,
@@ -196,6 +206,51 @@ class AlpacaPortfolio:
             filter=GetAssetsRequest(status=status_enum, asset_class=class_enum)
         )
         return [self._format_asset(a) for a in assets]
+
+    # ================================
+    # --> Helper funcs
+    # ================================
+
+    def _normalize_position(self, pos_dict: Dict) -> BrokerPositionSnapshot:
+        """Convert an Alpaca position dict into a BrokerPositionSnapshot."""
+        side = str(pos_dict['side']).lower()
+        direction = Direction.SHORT if side == 'short' else Direction.LONG
+        return BrokerPositionSnapshot(
+            symbol=pos_dict['symbol'],
+            shares=abs(float(pos_dict['qty'])),
+            direction=direction,
+            entry_price=float(pos_dict['avg_entry_price']),
+            entry_date=pos_dict.get('entry_date'),
+        )
+
+    def _normalize_order(self, order_dict: Dict) -> BrokerOrderSnapshot:
+        """Convert an Alpaca order dict into a BrokerOrderSnapshot."""
+        return BrokerOrderSnapshot(
+            order_id=str(order_dict['id']),
+            symbol=order_dict['symbol'],
+            side=str(order_dict['side']),
+            qty=order_dict.get('qty'),
+            status=str(order_dict['status']),
+            order_type=str(order_dict['type']),
+        )
+
+    def get_startup_snapshot(self) -> BrokerStartupSnapshot:
+        """Assemble a complete startup snapshot from account, positions, and open orders.
+
+        Returns:
+            BrokerStartupSnapshot with normalized positions and orders.
+        """
+        account = self.get_account()
+        positions = self.get_positions()
+        open_orders = self.get_orders(status='open')
+
+        return BrokerStartupSnapshot(
+            cash=account['cash'],
+            equity=account['equity'],
+            positions=[self._normalize_position(p) for p in positions],
+            open_orders=[self._normalize_order(o) for o in open_orders],
+            captured_at=get_current_utc_time(),
+        )
 
     @staticmethod
     def _format_asset(asset) -> Dict:

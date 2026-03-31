@@ -5,37 +5,61 @@ Pure trading machinery with no agent or AI dependencies.
 """
 
 from prophitai_algo_trading.strategies.base import BaseStrategy
-from prophitai_algo_trading.strategies.macd_momentum import MACDMomentum
-from prophitai_algo_trading.strategies.rsi_mean_reversion import RSIMeanReversion
-from prophitai_algo_trading.strategies.ichimoku_cross import IchimokuCross
-from prophitai_algo_trading.strategies.orb_breakout import ORBBreakout
-from prophitai_algo_trading.strategies.squeeze_breakout import SqueezeBreakout
-from prophitai_algo_trading.strategies.vwap_hurst_btc import VwapHurstBTC
-from prophitai_algo_trading.strategies.kalman_stat_arb import KalmanStatArb
-from prophitai_algo_trading.engines import LiveRunner, BacktestEngine, VectorizedBacktestEngine
-from prophitai_algo_trading.broker import Alpaca
+from prophitai_algo_trading.strategies.composable import BaseComposableStrategy
+from prophitai_algo_trading.engines import (
+    EventDrivenBacktestEngine,
+    VectorizedBacktestEngine,
+)
+from prophitai_algo_trading.indicators import (
+    BaseIndicator,
+    BaseIndicatorSuite,
+    INDICATOR_REGISTRY,
+    IndicatorPipeline,
+    IndicatorSpec,
+)
+from prophitai_algo_trading.signals import BaseSignalModel
 from prophitai_algo_trading.execution import (
+    PortfolioContext,
     PortfolioTracker,
     PositionTracker,
     CostModel,
-    InverseVolatilitySizer,
+    EntryCandidate,
+    SizingDecision,
 )
+from prophitai_algo_trading.sizing import (
+    BasePositionSizer,
+    SizingSpec,
+    ATRRiskSizer,
+    DrawdownScaledSizer,
+    InverseVolatilitySizer,
+    VolatilityTargetSizer,
+)
+from prophitai_algo_trading.engines import LiveRunner
+from prophitai_algo_trading.broker import Alpaca
 
 __all__ = [
     "BaseStrategy",
-    "MACDMomentum",
-    "RSIMeanReversion",
-    "IchimokuCross",
-    "ORBBreakout",
-    "SqueezeBreakout",
-    "VwapHurstBTC",
-    "KalmanStatArb",
-    "LiveRunner",
-    "BacktestEngine",
+    "BaseComposableStrategy",
+    "EventDrivenBacktestEngine",
     "VectorizedBacktestEngine",
-    "Alpaca",
+    "BaseIndicator",
+    "BaseIndicatorSuite",
+    "BaseSignalModel",
+    "IndicatorPipeline",
+    "IndicatorSpec",
+    "INDICATOR_REGISTRY",
+    "PortfolioContext",
     "PortfolioTracker",
     "PositionTracker",
     "CostModel",
+    "SizingDecision",
+    "EntryCandidate",
+    "BasePositionSizer",
+    "SizingSpec",
+    "ATRRiskSizer",
+    "DrawdownScaledSizer",
     "InverseVolatilitySizer",
+    "VolatilityTargetSizer",
+    "LiveRunner",
+    "Alpaca",
 ]

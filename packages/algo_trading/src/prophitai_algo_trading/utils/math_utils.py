@@ -21,13 +21,15 @@ def compute_rolling_volatilities(
 
     Returns:
         Mapping of ticker → volatility. Tickers with insufficient
-        data (NaN vol) are omitted.
+        data (fewer than 3 closes) are omitted.
     """
     vols: dict[str, float] = {}
     for ticker, closes in ticker_closes.items():
-        if len(closes) < window + 1:
+        if len(closes) < 3:
             continue
-        vol = closes.pct_change().rolling(window).std().iloc[-1]
+        effective_window = min(window, len(closes) - 1)
+        returns = closes.pct_change(fill_method=None)
+        vol = returns.rolling(effective_window, min_periods=effective_window).std().iloc[-1]
         if pd.notna(vol) and vol > 0:
             vols[ticker] = vol * annualize_factor
     return vols

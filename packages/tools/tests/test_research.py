@@ -53,7 +53,7 @@ def test_theory_research():
 
 
 def test_user_upload_search():
-    raw = user_upload_search(query="test query", clerk_id="test_clerk_id", top_k=3)
+    raw = user_upload_search(query="test query", _clerk_id="test_clerk_id", top_k=3)
     result = parse_result(raw)
     # Reason: likely returns error since test_clerk_id doesn't exist, but tool should not crash
     assert result is not None, "Expected a valid YAML response"

@@ -2,7 +2,7 @@
 
 Contains the exits-first + score-ranked entries routing loop,
 force-close logic, and backtest result compilation used by
-VectorizedBacktestEngine, BacktestEngine, and LiveRunner.
+VectorizedBacktestEngine, EventDrivenBacktestEngine, and LiveRunner.
 """
 
 from collections.abc import Callable
@@ -12,9 +12,11 @@ import pandas as pd
 
 from prophitai_algo_trading.engines.backtest.metrics import calculate_metrics
 from prophitai_algo_trading.engines.backtest.models import BacktestResult
-from prophitai_algo_trading.engines.utils import is_entry_instruction
+from prophitai_algo_trading.engines.signal_resolution import is_entry_instruction
+from prophitai_algo_trading.execution.models import EntryCandidate
 from prophitai_algo_trading.execution.portfolio_tracker import PortfolioTracker
 from prophitai_algo_trading.execution.position_tracker import PositionTracker
+from prophitai_algo_trading.sizing import BasePositionSizer
 
 
 # ================================
@@ -58,9 +60,10 @@ def _execute_instruction(
 
 def process_exits_and_entries(
     exits: list[tuple[str, int, float]],
-    entries: list[tuple[str, int, float, float]],
+    entries: list[EntryCandidate],
     position_trackers: dict[str, PositionTracker],
     portfolio_tracker: PortfolioTracker,
+    sizer: BasePositionSizer,
     max_positions: int,
     timestamp: datetime | pd.Timestamp,
     on_trade: Callable[[str, dict], None] | None = None,
@@ -74,10 +77,10 @@ def process_exits_and_entries(
 
     Args:
         exits: List of (ticker, target_position, price) for positions closing to flat.
-        entries: List of (ticker, target_position, price, score), pre-sorted by
-                 score descending (strongest conviction first).
+        entries: Standardized trade candidates, pre-sorted by score descending.
         position_trackers: Per-ticker position state machines.
         portfolio_tracker: Shared portfolio tracker.
+        sizer: Position sizer used to convert candidates into target shares.
         max_positions: Maximum number of concurrent open positions.
         timestamp: Bar timestamp for the trade log.
         on_trade: Optional callback fired after each successful execution.
@@ -86,22 +89,43 @@ def process_exits_and_entries(
     """
     # Process exits first — free capital and position slots
     for ticker, target, price in exits:
-        instructions = position_trackers[ticker].update(target, price, timestamp)
+        instructions = position_trackers[ticker].plan_transition(target, price, timestamp)
         for instr in instructions:
-            _execute_instruction(portfolio_tracker, instr, ticker, on_trade, on_error)
-
-    # Process entries ranked by signal strength — strongest conviction fills first
-    open_count = portfolio_tracker.open_position_count
-    for ticker, target, price, _score in entries:
-        instructions = position_trackers[ticker].update(target, price, timestamp)
-        for instr in instructions:
-            if is_entry_instruction(instr) and open_count >= max_positions:
-                continue
             success = _execute_instruction(
                 portfolio_tracker, instr, ticker, on_trade, on_error,
             )
-            if success and is_entry_instruction(instr):
-                open_count += 1
+            if success:
+                position_trackers[ticker].apply_instruction(instr)
+
+    # Process entries ranked by signal strength — strongest conviction fills first
+    for candidate in entries:
+        ticker = candidate.symbol
+        instructions = position_trackers[ticker].plan_transition(
+            candidate.target_position,
+            candidate.price,
+            candidate.timestamp,
+        )
+        for instr in instructions:
+            if is_entry_instruction(instr):
+                if portfolio_tracker.open_position_count >= max_positions:
+                    continue
+
+                context = portfolio_tracker.build_portfolio_context(
+                    prices={ticker: candidate.price},
+                    timestamp=candidate.timestamp,
+                )
+                decision = sizer.size_trade(candidate, context)
+                if decision.shares <= 0:
+                    continue
+                instr["target_shares"] = decision.shares
+                instr["trade_candidate"] = candidate
+                instr["sizing_decision"] = decision
+
+            success = _execute_instruction(
+                portfolio_tracker, instr, ticker, on_trade, on_error,
+            )
+            if success:
+                position_trackers[ticker].apply_instruction(instr)
 
 
 def force_close_open_positions(
@@ -131,9 +155,10 @@ def force_close_open_positions(
 
     for ticker in portfolio_tracker.open_symbols:
         price = latest_prices.get(ticker, 0.0)
-        instructions = position_trackers[ticker].update(0, price, last_timestamp)
+        instructions = position_trackers[ticker].plan_transition(0, price, last_timestamp)
         for instr in instructions:
             portfolio_tracker.execute_instruction(instr, ticker)
+            position_trackers[ticker].apply_instruction(instr)
 
     portfolio_tracker.record_equity(last_timestamp, latest_prices)
 

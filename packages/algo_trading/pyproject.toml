@@ -10,6 +10,7 @@ requires-python = ">=3.13"
 dependencies = [
     "prophitai-shared",
     "prophitai-data",
+    "prophitai-calculations",
     "alpaca>=1.0.0",
     "alpaca-py>=0.43.2",
     "annotated-types>=0.7.0",
@@ -41,3 +42,6 @@ dependencies = [
 [tool.pyright]
 pythonVersion = "3.13"
 typeCheckingMode = "off"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/prophitai_algo_trading"]

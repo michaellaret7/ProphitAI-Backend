@@ -301,6 +301,18 @@ wheels = [
 ]
 
 [[package]]
+name = "catsu"
+version = "0.1.8"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/85/54/84b62d54afe2695a9170f6f434dc8912976a57bf6680aa99557eadb3676f/catsu-0.1.8.tar.gz", hash = "sha256:961cbc239e77b32ee08e5498a7ddcb83a3c08b025fb3fc504f97c14569e9aa74", size = 49998, upload-time = "2026-02-20T18:03:38.908Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/5b/a4/3542483167e1a98998a2d5fb39a50978200c703d8f5fc9ac63acb529ee29/catsu-0.1.8-cp313-cp313-macosx_10_12_x86_64.whl", hash = "sha256:6805074bbfb0c9df144834a02af14573ab423d822207d735b297fb5bed74dee4", size = 2214576, upload-time = "2026-02-20T18:03:33.691Z" },
+    { url = "https://files.pythonhosted.org/packages/ba/d5/5f8e90bfcd5b5c3b9e9e51fa644856fa89fb5f4e1f2cefd9e87be05d2e2d/catsu-0.1.8-cp313-cp313-macosx_11_0_arm64.whl", hash = "sha256:e1a81d2098e5dfb1e2394c7eeb594fe349451ebe4b51994e54dde5e4f06ecdb9", size = 2148945, upload-time = "2026-02-20T18:03:34.84Z" },
+    { url = "https://files.pythonhosted.org/packages/76/72/edb51405083f3c9e87c0c30498b5ade0950eec8968d986c0baf1723ebb02/catsu-0.1.8-cp313-cp313-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:97b84a6412562370ac42270c965ea065d4f8a8f66eb706ac8d4ab5544fbe38fd", size = 2400941, upload-time = "2026-02-20T18:03:36.145Z" },
+    { url = "https://files.pythonhosted.org/packages/4b/ce/254323b237e230e5534b3226551172357751c9633438327a939104b56551/catsu-0.1.8-cp313-cp313-win_amd64.whl", hash = "sha256:50ff392f5b9f0ad18fc11496f62079e36bb57270b5bca966feda220744139fa5", size = 1959463, upload-time = "2026-02-20T18:03:37.453Z" },
+]
+
+[[package]]
 name = "cbor2"
 version = "5.9.0"
 source = { registry = "https://pypi.org/simple" }
@@ -448,6 +460,11 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/a3/14/35be73c3ef1db72462e49ccadbfce30623968277230818933a858f2a680d/chonkie-1.6.1.tar.gz", hash = "sha256:5719b82dbb24f8750f1033222ed92734272e06389e52ea7d25be9537acf0210f", size = 187171, upload-time = "2026-03-18T17:06:08.931Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/ed/76/64c3672f442e6b2e53ae33f1162f914b987bf9c63c4e6569de3142af0d9f/chonkie-1.6.1-py3-none-any.whl", hash = "sha256:d539156bbcb3cb2a5eb8724f6f6edf7bc9da93b4c320ae46f989778a4b11b92f", size = 233033, upload-time = "2026-03-18T17:06:07.254Z" },
+]
+
+[package.optional-dependencies]
+catsu = [
+    { name = "catsu" },
 ]
 
 [[package]]
@@ -1416,6 +1433,15 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/f3/49/3b30cad09e7771a4982d9975a8cbf64f00d4a1ececb53297f1d9a7be1b10/importlib_metadata-8.7.1.tar.gz", hash = "sha256:49fef1ae6440c182052f407c8d34a68f72efc36db9ca90dc0113398f2fdde8bb", size = 57107, upload-time = "2025-12-21T10:00:19.278Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/fa/5e/f8e9a1d23b9c20a551a8a02ea3637b4642e22c2626e3a13a9a29cdea99eb/importlib_metadata-8.7.1-py3-none-any.whl", hash = "sha256:5a1f80bf1daa489495071efbb095d75a634cf28a8bc299581244063b53176151", size = 27865, upload-time = "2025-12-21T10:00:18.329Z" },
+]
+
+[[package]]
+name = "iniconfig"
+version = "2.3.0"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/72/34/14ca021ce8e5dfedc35312d08ba8bf51fdd999c576889fc2c24cb97f4f10/iniconfig-2.3.0.tar.gz", hash = "sha256:c76315c77db068650d49c5b56314774a7804df16fee4402c1f19d6d15d8c4730", size = 20503, upload-time = "2025-10-18T21:55:43.219Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/cb/b1/3846dd7f199d53cb17f49cba7e651e9ce294d8497c8c150530ed11865bb8/iniconfig-2.3.0-py3-none-any.whl", hash = "sha256:f631c04d2c48c52b84d0d0549c99ff3859c98df65b3101406327ecc7d53fbf12", size = 7484, upload-time = "2025-10-18T21:55:41.639Z" },
 ]
 
 [[package]]
@@ -2861,6 +2887,7 @@ dependencies = [
     { name = "msgpack" },
     { name = "numpy" },
     { name = "pandas" },
+    { name = "prophitai-calculations" },
     { name = "prophitai-data" },
     { name = "prophitai-shared" },
     { name = "psycopg2-binary" },
@@ -2893,6 +2920,7 @@ requires-dist = [
     { name = "msgpack", specifier = ">=1.1.2" },
     { name = "numpy", specifier = ">=2.3.5" },
     { name = "pandas", specifier = ">=2.3.3" },
+    { name = "prophitai-calculations", editable = "packages/calculations" },
     { name = "prophitai-data", editable = "packages/data" },
     { name = "prophitai-shared", editable = "packages/shared" },
     { name = "psycopg2-binary", specifier = ">=2.9.11" },
@@ -3065,7 +3093,7 @@ version = "0.1.0"
 source = { editable = "packages/foundry" }
 dependencies = [
     { name = "boto3" },
-    { name = "chonkie" },
+    { name = "chonkie", extra = ["catsu"] },
     { name = "docling" },
     { name = "modal" },
     { name = "nltk" },
@@ -3086,7 +3114,7 @@ dependencies = [
 [package.metadata]
 requires-dist = [
     { name = "boto3" },
-    { name = "chonkie" },
+    { name = "chonkie", extras = ["catsu"] },
     { name = "docling" },
     { name = "modal" },
     { name = "nltk" },
@@ -3183,6 +3211,11 @@ dependencies = [
     { name = "prophitai-tools" },
 ]
 
+[package.dev-dependencies]
+dev = [
+    { name = "pytest" },
+]
+
 [package.metadata]
 requires-dist = [
     { name = "prophitai-algo-trading", editable = "packages/algo_trading" },
@@ -3195,6 +3228,9 @@ requires-dist = [
     { name = "prophitai-shared", editable = "packages/shared" },
     { name = "prophitai-tools", editable = "packages/tools" },
 ]
+
+[package.metadata.requires-dev]
+dev = [{ name = "pytest", specifier = ">=8.4,<9" }]
 
 [[package]]
 name = "protobuf"
@@ -3579,6 +3615,22 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/9f/a6/7d679b83c285974a7cb94d739b461fa7e7a9b17a3abfd7bf6cbc5c2394b0/pytesseract-0.3.13.tar.gz", hash = "sha256:4bf5f880c99406f52a3cfc2633e42d9dc67615e69d8a509d74867d3baddb5db9", size = 17689, upload-time = "2024-08-16T02:33:56.762Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/7a/33/8312d7ce74670c9d39a532b2c246a853861120486be9443eebf048043637/pytesseract-0.3.13-py3-none-any.whl", hash = "sha256:7a99c6c2ac598360693d83a416e36e0b33a67638bb9d77fdcac094a3589d4b34", size = 14705, upload-time = "2024-08-16T02:36:10.09Z" },
+]
+
+[[package]]
+name = "pytest"
+version = "8.4.2"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "colorama", marker = "sys_platform == 'win32'" },
+    { name = "iniconfig" },
+    { name = "packaging" },
+    { name = "pluggy" },
+    { name = "pygments" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/a3/5c/00a0e072241553e1a7496d638deababa67c5058571567b92a7eaa258397c/pytest-8.4.2.tar.gz", hash = "sha256:86c0d0b93306b961d58d62a4db4879f27fe25513d4b969df351abdddb3c30e01", size = 1519618, upload-time = "2025-09-04T14:34:22.711Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/a8/a4/20da314d277121d6534b3a980b29035dcd51e6744bd79075a6ce8fa4eb8d/pytest-8.4.2-py3-none-any.whl", hash = "sha256:872f880de3fc3a5bdc88a11b39c9710c3497a547cfa9320bc3c5e62fbf272e79", size = 365750, upload-time = "2025-09-04T14:34:20.226Z" },
 ]
 
 [[package]]

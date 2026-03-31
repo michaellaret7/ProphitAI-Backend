@@ -4,6 +4,7 @@ Validation helpers for document uploads.
 Provides file validation and sanitization utilities.
 """
 
+import unicodedata
 from typing import Tuple
 
 from fastapi import UploadFile
@@ -28,8 +29,9 @@ def sanitize_filename(filename: str) -> str:
         Sanitized filename safe for S3 keys and metadata (ASCII-only).
     """
     sanitized = filename.replace("/", "_").replace("\\", "_")
-    # Reason: S3 metadata only accepts ASCII characters — encode to ASCII,
-    # replacing non-ASCII chars (e.g. curly quotes) with closest ASCII equivalents
+    # Reason: normalize first so accented characters preserve an ASCII base
+    # where possible before dropping any remaining non-ASCII bytes.
+    sanitized = unicodedata.normalize("NFKD", sanitized)
     sanitized = sanitized.encode("ascii", errors="ignore").decode("ascii")
     return sanitized
 

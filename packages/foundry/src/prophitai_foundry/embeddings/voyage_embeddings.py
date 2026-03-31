@@ -6,10 +6,13 @@ Generates embeddings from text chunks using Voyage AI's finance-optimized model.
 
 from __future__ import annotations
 
+import logging
+import math
 import os
 from typing import Optional, TYPE_CHECKING
 
 import voyageai  # type: ignore[import-untyped]
+import voyageai.error as voyage_error  # type: ignore[import-untyped]
 from dotenv import load_dotenv
 
 from pydantic import BaseModel
@@ -20,6 +23,8 @@ if TYPE_CHECKING:
     from prophitai_foundry.embeddings.sparse_encoder import SparseEncoder
 
 load_dotenv()
+logger = logging.getLogger(__name__)
+
 
 class QueryEmbedding(BaseModel):
     """Result of embedding a query for hybrid search."""
@@ -28,7 +33,22 @@ class QueryEmbedding(BaseModel):
     sparse: Optional[dict] = None
 
 VOYAGE_MAX_TOKENS = 120_000
-VOYAGE_TOKEN_BUFFER = 20_000  # Safety buffer
+VOYAGE_TOKEN_BUFFER = int(os.getenv("VOYAGE_EMBED_TOKEN_BUFFER", "35000"))
+VOYAGE_TOKEN_ESTIMATE_MULTIPLIER = float(os.getenv("VOYAGE_EMBED_TOKEN_ESTIMATE_MULTIPLIER", "1.35"))
+VOYAGE_CHUNK_OVERHEAD_TOKENS = int(os.getenv("VOYAGE_EMBED_CHUNK_OVERHEAD_TOKENS", "32"))
+
+
+def _estimate_chunk_tokens(chunk: Chunk) -> int:
+    """Inflate local token estimates to better match Voyage's server-side counting."""
+    base_tokens = chunk.token_count or 0
+    inflated_tokens = math.ceil(base_tokens * VOYAGE_TOKEN_ESTIMATE_MULTIPLIER) if base_tokens > 0 else 0
+    char_floor_tokens = math.ceil(len(chunk.text) / 3) if chunk.text else 0
+    return max(inflated_tokens, char_floor_tokens) + VOYAGE_CHUNK_OVERHEAD_TOKENS
+
+
+def _sum_estimated_tokens(chunks: list[Chunk]) -> int:
+    """Return the estimated token total for a batch of chunks."""
+    return sum(_estimate_chunk_tokens(chunk) for chunk in chunks)
 
 
 def _batch_chunks_by_tokens(
@@ -41,7 +61,7 @@ def _batch_chunks_by_tokens(
     current_tokens = 0
 
     for chunk in chunks:
-        chunk_tokens = chunk.token_count or len(chunk.text) // 4  # Fallback estimate
+        chunk_tokens = _estimate_chunk_tokens(chunk)
 
         if current_tokens + chunk_tokens > max_tokens and current_batch:
             batches.append(current_batch)
@@ -55,6 +75,82 @@ def _batch_chunks_by_tokens(
         batches.append(current_batch)
 
     return batches
+
+
+def _is_batch_token_limit_error(exc: Exception) -> bool:
+    """Return True when Voyage rejected a request for exceeding the batch token cap."""
+    if not isinstance(exc, voyage_error.InvalidRequestError):
+        return False
+
+    error_text = str(exc).lower()
+    return (
+        "max allowed tokens per submitted batch" in error_text
+        or "lower the number of tokens in the batch" in error_text
+    )
+
+
+def _split_batch(chunks: list[Chunk]) -> tuple[list[Chunk], list[Chunk]]:
+    """Split a batch into two smaller batches near the halfway token mark."""
+    if len(chunks) < 2:
+        raise ValueError("Cannot split a batch with fewer than two chunks")
+
+    target_tokens = _sum_estimated_tokens(chunks) / 2
+    running_tokens = 0
+    split_index = len(chunks) // 2
+
+    for idx, chunk in enumerate(chunks, start=1):
+        running_tokens += _estimate_chunk_tokens(chunk)
+        if running_tokens >= target_tokens:
+            split_index = idx
+            break
+
+    split_index = min(max(split_index, 1), len(chunks) - 1)
+    return chunks[:split_index], chunks[split_index:]
+
+
+def _embed_batch(
+    client: voyageai.Client,
+    batch: list[Chunk],
+    *,
+    model: str,
+) -> list[list[float]]:
+    """Embed one batch and recursively split if Voyage still rejects it."""
+    texts = [chunk.text for chunk in batch]
+
+    try:
+        response = client.embed(
+            texts=texts,
+            model=model,
+            input_type="document",
+        )
+    except voyage_error.InvalidRequestError as exc:
+        if not _is_batch_token_limit_error(exc):
+            raise
+
+        if len(batch) == 1:
+            chunk = batch[0]
+            chunk_id = chunk.metadata.get("chunk_id", "<unknown>")
+            estimated_tokens = _estimate_chunk_tokens(chunk)
+            raise ValueError(
+                "Voyage rejected a single chunk after client-side batching. "
+                f"chunk_id={chunk_id}, estimated_tokens={estimated_tokens}"
+            ) from exc
+
+        left_batch, right_batch = _split_batch(batch)
+        estimated_tokens = _sum_estimated_tokens(batch)
+        logger.warning(
+            "Voyage batch exceeded token limit; "
+            f"retrying {len(batch)} chunks (~{estimated_tokens} estimated tokens) "
+            f"as {len(left_batch)} + {len(right_batch)} chunks"
+        )
+        return _embed_batch(client, left_batch, model=model) + _embed_batch(client, right_batch, model=model)
+
+    if len(response.embeddings) != len(batch):
+        raise RuntimeError(
+            f"Voyage returned {len(response.embeddings)} embeddings for {len(batch)} chunks"
+        )
+
+    return [[float(x) for x in embedding] for embedding in response.embeddings]
 
 
 def embed_chunks(
@@ -89,14 +185,7 @@ def embed_chunks(
 
     all_embeddings: list[list[float]] = []
     for batch in batches:
-        texts = [chunk.text for chunk in batch]
-        response = client.embed(
-            texts=texts,
-            model=model,
-            input_type="document",
-        )
-        for emb in response.embeddings:
-            all_embeddings.append([float(x) for x in emb])
+        all_embeddings.extend(_embed_batch(client, batch, model=model))
 
     # Reason: Generate sparse embeddings if encoder provided
     sparse_embeddings: list[dict | None] = []
@@ -160,6 +249,4 @@ def embed_query(
         sparse = sparse_encoder.encode_query(text)
 
     return QueryEmbedding(dense=dense, sparse=sparse)
-
-
 
