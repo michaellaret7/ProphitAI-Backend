@@ -22,6 +22,7 @@ from opentelemetry import context as otel_context
 
 # Tools that modify agent state and must run sequentially
 SEQUENTIAL_ONLY_TOOLS = {"think", "register_tools"}
+MAX_TOOL_RESULT_CHARS = 2000
 
 def should_run_parallel(tool_calls: List[Any]) -> bool:
     """Determine if tool calls can be executed in parallel."""
@@ -45,6 +46,7 @@ class ToolHandler:
         self.printer = printer
         self.current_iteration: int = 0
         self.retry = False
+        self._clerk_id_signature_cache: dict[Any, bool] = {}
 
     @property
     def chat_callback(self) -> Optional[Union["ChatCallback", "NoOpChatCallback"]]:
@@ -105,13 +107,10 @@ class ToolHandler:
             success = self._add_tool_result(tool_call, result, name, args)
 
             if self.chat_callback:
-                result_str = str(result)
-                if len(result_str) > 2000:
-                    result_str = result_str[:2000] + "... (truncated)"
                 self.chat_callback.on_tool_call_result(
                     tool_call_id=tool_call_id,
                     tool_name=name,
-                    result=result_str,
+                    result=self._truncate_tool_output(result),
                     success=success,
                     duration_ms=duration_ms,
                 )
@@ -144,13 +143,10 @@ class ToolHandler:
             success = self._add_tool_result_parallel(tool_call, result, name, args)
             if self.chat_callback:
                 duration_ms = int((end_time - start_times[tool_call.id]) * 1000)
-                result_str = str(result)
-                if len(result_str) > 2000:
-                    result_str = result_str[:2000] + "... (truncated)"
                 self.chat_callback.on_tool_call_result(
                     tool_call_id=tool_call.id,
                     tool_name=name,
-                    result=result_str,
+                    result=self._truncate_tool_output(result),
                     success=success,
                     duration_ms=duration_ms,
                 )
@@ -219,6 +215,22 @@ class ToolHandler:
             error_msg = f"Failed to parse tool arguments (invalid JSON): {str(e)}"
             return {}, error_msg
 
+    @staticmethod
+    def _truncate_tool_output(result: Any) -> str:
+        result_str = str(result)
+        if len(result_str) > MAX_TOOL_RESULT_CHARS:
+            result_str = result_str[:MAX_TOOL_RESULT_CHARS] + "... (truncated)"
+        return result_str
+
+    def _accepts_hidden_clerk_id(self, func: Any) -> bool:
+        cached = self._clerk_id_signature_cache.get(func)
+        if cached is not None:
+            return cached
+
+        accepts = "_clerk_id" in inspect.signature(func).parameters
+        self._clerk_id_signature_cache[func] = accepts
+        return accepts
+
     def _execute_tool(self, name: str, args: Dict[str, Any]) -> Any:
         func = self.agent.tool_functions.get(name)
         if not func:
@@ -242,21 +254,20 @@ class ToolHandler:
                     and hasattr(self.agent, "user_id")
                     and self.agent.user_id
                 ):
-                    sig = inspect.signature(func)
-                    if "_clerk_id" in sig.parameters:
+                    if self._accepts_hidden_clerk_id(func):
                         execution_args["_clerk_id"] = self.agent.user_id
 
                 result = func(**execution_args) # This is where the tool is executed
-                result_str = str(result)
-
-                # if len(result_str) > 2000:
-                #     result_str = result_str[:2000] + "... (truncated)"
+                result_str = self._truncate_tool_output(result)
 
                 is_tool_error = False
+
                 try:
                     parsed = yaml.safe_load(result) if isinstance(result, str) else result
+
                     if isinstance(parsed, dict) and parsed.get("success") is False:
                         is_tool_error = True
+                
                 except Exception:
                     pass
 
@@ -270,19 +281,23 @@ class ToolHandler:
             except Exception as e:
                 error_msg = f"Error executing {name}: {str(e)}"
                 tool_span.update(level="ERROR", error=str(e), output={"error": error_msg})
+                
                 self.printer.tool_error(error_msg)
+
                 return error_response(error_msg)
 
     def _add_tool_result(self, tool_call: Any, result: Any, name: str, args: Dict[str, Any]) -> bool:
         tool_validation = validate_tool_call(name, args, result, self.agent)
         tool_validation_dict = yaml.safe_load(tool_validation)
-        
+
         success, _ = check_tool_success(tool_validation_dict)
 
         self.printer.tool_result(name, result, success)
 
         content = stringify_for_llm(result) if success else yaml.dump(
-            tool_validation_dict, default_flow_style=False, sort_keys=False
+            tool_validation_dict, 
+            default_flow_style=False, 
+            sort_keys=False
         )
 
         self.agent.messages.append({

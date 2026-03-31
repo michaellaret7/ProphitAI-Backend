@@ -29,7 +29,7 @@ from prophitai_algo_trading.utils.math_utils import compute_rolling_volatilities
 from prophitai_algo_trading.execution.portfolio_tracker import PortfolioTracker
 from prophitai_algo_trading.execution.position_tracker import PositionTracker
 from prophitai_algo_trading.execution.cost_model import CostModel
-from prophitai_algo_trading.execution.position_sizer import BasePositionSizer, PercentOfEquitySizer
+from prophitai_algo_trading.sizing import BasePositionSizer, PercentOfEquitySizer
 from prophitai_algo_trading.strategies.base import BaseStrategy
 
 
@@ -123,8 +123,10 @@ class VectorizedBacktestEngine:
             t: deepcopy(self._strategy_template) for t in tickers
         }
 
+        strategy_frames: dict[str, pd.DataFrame] = {}
         raw_positions: dict[str, np.ndarray] = {}
         entry_scores: dict[str, np.ndarray] = {}
+        entry_candidates: dict[str, np.ndarray] = {}
         common_index, aligned = align_multi_ticker_data(data)
 
         for ticker in tickers:
@@ -137,6 +139,7 @@ class VectorizedBacktestEngine:
                 continue
 
             real_data = strategies[ticker].calculate_indicators(real_data)
+            strategy_frames[ticker] = real_data.copy()
             signals = strategies[ticker].generate_signals(real_data)
             scores = strategies[ticker].score_entries(real_data)
 
@@ -148,21 +151,53 @@ class VectorizedBacktestEngine:
             real_pos = resolve_positions(real_le, real_lx, real_se, real_sx)
             real_scores = scores.iloc[warmup:].fillna(0.0).values.astype(np.float64)
 
-            # Reason: map real-data positions and scores back to common index via searchsorted
             real_indices = real_data.index[warmup:]
             full_positions = np.zeros(len(common_index), dtype=np.int8)
             full_scores = np.zeros(len(common_index), dtype=np.float64)
+            full_candidates = np.empty(len(common_index), dtype=object)
+            full_candidates[:] = None
+
             mapped_indices = common_index.searchsorted(real_indices)
+
             full_positions[mapped_indices] = real_pos
             full_scores[mapped_indices] = real_scores
 
+            real_candidates = np.empty(len(real_indices), dtype=object)
+            real_candidates[:] = None
+            warm_slice = real_data.iloc[warmup:]
+
+            for idx in range(len(warm_slice)):
+                target = int(real_pos[idx])
+                if target == 0:
+                    continue
+
+                row_series = warm_slice.iloc[idx]
+
+                real_candidates[idx] = strategies[ticker].build_trade_candidate(
+                    symbol=ticker,
+                    row=row_series,
+                    target_position=target,
+                    timestamp=real_indices[idx],
+                    score=float(real_scores[idx]),
+                )
+
+            full_candidates[mapped_indices] = real_candidates
+
             raw_positions[ticker] = full_positions
             entry_scores[ticker] = full_scores
+            entry_candidates[ticker] = full_candidates
 
         if not raw_positions:
             raise ValueError("No tickers had sufficient data for backtesting.")
 
-        return SignalData(common_index, aligned, raw_positions, entry_scores)
+        return SignalData(
+            common_index,
+            aligned,
+            strategy_frames,
+            raw_positions,
+            entry_scores,
+            entry_candidates,
+        )
 
     def _build_simulation_arrays(self, signal_data: SignalData) -> SimulationArrays:
         """Pre-build numpy matrices for Phase 2 simulation.
@@ -192,11 +227,22 @@ class VectorizedBacktestEngine:
             signal_data.entry_scores[t] for t in ticker_list
         ])
 
-        return SimulationArrays(close_matrix, vol_matrix, positions_matrix, score_matrix, ticker_list)
+        candidate_matrix = np.column_stack([
+            signal_data.entry_candidates[t] for t in ticker_list
+        ])
+
+        return SimulationArrays(
+            close_matrix,
+            vol_matrix,
+            positions_matrix,
+            score_matrix,
+            candidate_matrix,
+            ticker_list,
+        )
 
     def _simulate_portfolio(
         self,
-        common_index: pd.DatetimeIndex,
+        signal_data: SignalData,
         arrays: SimulationArrays,
         verbose: bool,
     ) -> tuple[PortfolioTracker, dict[str, PositionTracker], dict[str, float]]:
@@ -213,6 +259,7 @@ class VectorizedBacktestEngine:
         Returns:
             Tuple of (PortfolioTracker, position_trackers dict, latest_prices dict).
         """
+        common_index = signal_data.common_index
         n_tickers = len(arrays.ticker_list)
         n_bars = len(common_index)
 
@@ -242,7 +289,7 @@ class VectorizedBacktestEngine:
             # Reason: classify tickers into exits and entries for deterministic ordering.
             # Exits run first to free capital/slots; entries are ranked by signal score.
             exits: list[tuple[str, int, float]] = []
-            entries: list[tuple[str, int, float, float]] = []
+            entries = []
 
             for idx in range(n_tickers):
                 target_pos = int(arrays.positions_matrix[i, idx])
@@ -255,24 +302,43 @@ class VectorizedBacktestEngine:
                 if target_pos == 0:
                     exits.append((ticker, target_pos, price))
                 else:
-                    entries.append((ticker, target_pos, price, arrays.score_matrix[i, idx]))
+                    candidate = arrays.candidate_matrix[i, idx]
+                    if candidate is None:
+                        continue
+                    if candidate.volatility is None and not np.isnan(arrays.vol_matrix[i, idx]):
+                        candidate.volatility = float(arrays.vol_matrix[i, idx])
+                    entries.append(candidate)
 
-            # Reason: sort entries by score descending — strongest signals fill first
-            entries.sort(key=lambda x: x[3], reverse=True)
+            entries.sort(key=lambda candidate: candidate.score, reverse=True)
 
-            # Reason: only refresh sizer vol weights when entries exist (sizing only matters for new positions)
-            if entries and hasattr(self._sizer, 'update_volatilities'):
-                vols = {
-                    arrays.ticker_list[j]: arrays.vol_matrix[i, j]
-                    for j in range(n_tickers)
-                    if not np.isnan(arrays.vol_matrix[i, j])
-                }
-                if vols:
-                    self._sizer.update_volatilities(vols)
+            # Reason: match event-driven/live sizing hooks so wrapped and
+            # context-aware sizers see close history, indicator history, and
+            # latest prices before entry sizing.
+            if entries:
+                close_history: dict[str, pd.Series] = {}
+                strategy_history: dict[str, pd.DataFrame] = {}
+                for ticker in arrays.ticker_list:
+                    frame = signal_data.strategy_frames.get(ticker)
+                    if frame is None or frame.empty:
+                        continue
+
+                    history = frame.loc[:timestamp]
+                    if history.empty:
+                        continue
+
+                    close_history[ticker] = history["close"]
+                    strategy_history[ticker] = history
+
+                self._sizer.prepare_for_bar(
+                    close_history,
+                    latest_prices=latest_prices,
+                    strategy_data=strategy_history,
+                    timestamp=timestamp,
+                )
 
             process_exits_and_entries(
                 exits, entries, position_trackers, portfolio_tracker,
-                self._max_positions, timestamp,
+                self._sizer, self._max_positions, timestamp,
             )
 
             portfolio_tracker.record_equity(timestamp, latest_prices)
@@ -313,7 +379,7 @@ class VectorizedBacktestEngine:
         arrays = self._build_simulation_arrays(signal_data)
 
         portfolio_tracker, position_trackers, latest_prices = self._simulate_portfolio(
-            signal_data.common_index, arrays, verbose,
+            signal_data, arrays, verbose,
         )
 
         force_close_open_positions(

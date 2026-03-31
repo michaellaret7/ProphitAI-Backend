@@ -27,7 +27,7 @@ from prophitai_algo_trading.engines.utils import append_bar, bars_to_calendar_da
 from prophitai_algo_trading.execution.portfolio_tracker import PortfolioTracker
 from prophitai_algo_trading.execution.position_tracker import PositionTracker
 from prophitai_algo_trading.execution.cost_model import CostModel
-from prophitai_algo_trading.execution.position_sizer import BasePositionSizer, PercentOfEquitySizer
+from prophitai_algo_trading.sizing import BasePositionSizer, PercentOfEquitySizer
 from prophitai_shared import get_current_utc_time
 
 from prophitai_algo_trading.rules.engine import RuleEngine

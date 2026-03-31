@@ -15,10 +15,18 @@ from prophitai_algo_trading.strategies.kalman_stat_arb import KalmanStatArb
 from prophitai_algo_trading.engines import LiveRunner, BacktestEngine, VectorizedBacktestEngine
 from prophitai_algo_trading.broker import Alpaca
 from prophitai_algo_trading.execution import (
+    PortfolioContext,
     PortfolioTracker,
     PositionTracker,
     CostModel,
+    SizingDecision,
+    TradeCandidate,
+)
+from prophitai_algo_trading.sizing import (
+    ATRRiskSizer,
+    DrawdownScaledSizer,
     InverseVolatilitySizer,
+    VolatilityTargetSizer,
 )
 
 __all__ = [
@@ -34,8 +42,14 @@ __all__ = [
     "BacktestEngine",
     "VectorizedBacktestEngine",
     "Alpaca",
+    "PortfolioContext",
     "PortfolioTracker",
     "PositionTracker",
     "CostModel",
+    "SizingDecision",
+    "TradeCandidate",
+    "ATRRiskSizer",
+    "DrawdownScaledSizer",
     "InverseVolatilitySizer",
+    "VolatilityTargetSizer",
 ]

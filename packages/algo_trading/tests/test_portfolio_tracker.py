@@ -4,9 +4,10 @@ from datetime import datetime
 
 import pytest
 
-from prophitai_algo_trading.execution.portfolio_tracker import PortfolioTracker
-from prophitai_algo_trading.execution.position_sizer import AllInSizer
 from prophitai_algo_trading.execution.cost_model import CostModel
+from prophitai_algo_trading.execution.portfolio_tracker import PortfolioTracker
+from prophitai_algo_trading.execution.models import PortfolioContext
+from prophitai_algo_trading.sizing import AllInSizer, BasePositionSizer
 
 
 CAPITAL = 100_000.0
@@ -24,12 +25,39 @@ def _make_tracker(commission_pct: float = 0.0) -> PortfolioTracker:
     )
 
 
+class ZeroShareSizer(BasePositionSizer):
+    """Sizer that intentionally skips entries."""
+
+    def calculate_shares(
+        self,
+        symbol: str,
+        price: float,
+        context: PortfolioContext,
+        candidate=None,
+    ) -> float:
+        return 0.0
+
+
 # ================================
 # --> Long position tests
 # ================================
 
 class TestLongPosition:
     """Verify long position cash accounting."""
+
+    def test_long_entry_skips_when_sizer_returns_zero_shares(self):
+        """A skipped long entry should leave cash and positions unchanged."""
+        tracker = PortfolioTracker(
+            initial_capital=CAPITAL,
+            sizer=ZeroShareSizer(),
+            cost_model=CostModel(),
+        )
+
+        tracker.open_long("AAPL", 50.0, T0)
+
+        assert tracker.cash == pytest.approx(CAPITAL)
+        assert tracker.get_position("AAPL") is None
+        assert tracker.open_position_count == 0
 
     def test_long_round_trip_no_commission(self):
         """Open long at $50, close at $60 — expect 20% profit on full capital."""

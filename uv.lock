@@ -301,6 +301,18 @@ wheels = [
 ]
 
 [[package]]
+name = "catsu"
+version = "0.1.8"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/85/54/84b62d54afe2695a9170f6f434dc8912976a57bf6680aa99557eadb3676f/catsu-0.1.8.tar.gz", hash = "sha256:961cbc239e77b32ee08e5498a7ddcb83a3c08b025fb3fc504f97c14569e9aa74", size = 49998, upload-time = "2026-02-20T18:03:38.908Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/5b/a4/3542483167e1a98998a2d5fb39a50978200c703d8f5fc9ac63acb529ee29/catsu-0.1.8-cp313-cp313-macosx_10_12_x86_64.whl", hash = "sha256:6805074bbfb0c9df144834a02af14573ab423d822207d735b297fb5bed74dee4", size = 2214576, upload-time = "2026-02-20T18:03:33.691Z" },
+    { url = "https://files.pythonhosted.org/packages/ba/d5/5f8e90bfcd5b5c3b9e9e51fa644856fa89fb5f4e1f2cefd9e87be05d2e2d/catsu-0.1.8-cp313-cp313-macosx_11_0_arm64.whl", hash = "sha256:e1a81d2098e5dfb1e2394c7eeb594fe349451ebe4b51994e54dde5e4f06ecdb9", size = 2148945, upload-time = "2026-02-20T18:03:34.84Z" },
+    { url = "https://files.pythonhosted.org/packages/76/72/edb51405083f3c9e87c0c30498b5ade0950eec8968d986c0baf1723ebb02/catsu-0.1.8-cp313-cp313-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:97b84a6412562370ac42270c965ea065d4f8a8f66eb706ac8d4ab5544fbe38fd", size = 2400941, upload-time = "2026-02-20T18:03:36.145Z" },
+    { url = "https://files.pythonhosted.org/packages/4b/ce/254323b237e230e5534b3226551172357751c9633438327a939104b56551/catsu-0.1.8-cp313-cp313-win_amd64.whl", hash = "sha256:50ff392f5b9f0ad18fc11496f62079e36bb57270b5bca966feda220744139fa5", size = 1959463, upload-time = "2026-02-20T18:03:37.453Z" },
+]
+
+[[package]]
 name = "cbor2"
 version = "5.9.0"
 source = { registry = "https://pypi.org/simple" }
@@ -448,6 +460,11 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/a3/14/35be73c3ef1db72462e49ccadbfce30623968277230818933a858f2a680d/chonkie-1.6.1.tar.gz", hash = "sha256:5719b82dbb24f8750f1033222ed92734272e06389e52ea7d25be9537acf0210f", size = 187171, upload-time = "2026-03-18T17:06:08.931Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/ed/76/64c3672f442e6b2e53ae33f1162f914b987bf9c63c4e6569de3142af0d9f/chonkie-1.6.1-py3-none-any.whl", hash = "sha256:d539156bbcb3cb2a5eb8724f6f6edf7bc9da93b4c320ae46f989778a4b11b92f", size = 233033, upload-time = "2026-03-18T17:06:07.254Z" },
+]
+
+[package.optional-dependencies]
+catsu = [
+    { name = "catsu" },
 ]
 
 [[package]]
@@ -3065,7 +3082,7 @@ version = "0.1.0"
 source = { editable = "packages/foundry" }
 dependencies = [
     { name = "boto3" },
-    { name = "chonkie" },
+    { name = "chonkie", extra = ["catsu"] },
     { name = "docling" },
     { name = "modal" },
     { name = "nltk" },
@@ -3086,7 +3103,7 @@ dependencies = [
 [package.metadata]
 requires-dist = [
     { name = "boto3" },
-    { name = "chonkie" },
+    { name = "chonkie", extras = ["catsu"] },
     { name = "docling" },
     { name = "modal" },
     { name = "nltk" },

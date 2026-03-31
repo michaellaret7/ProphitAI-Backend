@@ -19,9 +19,9 @@ from prophitai_foundry.models.vector import QueryResult
 @agent_tool(name="user_upload_search", category="research")
 def user_upload_search(
     query: str,
+    _clerk_id: str,
     top_k: Annotated[int, Param(min_val=3, max_val=25)] = 7,
     file_name: Optional[str] = None,
-    _clerk_id: Optional[str] = None,
 ) -> str:
     """
     Search the user's uploaded documents using hybrid semantic + keyword search.

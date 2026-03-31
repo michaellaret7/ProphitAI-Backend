@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import logging
 from datetime import datetime
 from typing import TYPE_CHECKING
 
@@ -11,6 +12,8 @@ from prophitai_algo_trading.rules.base import TradingRule
 
 if TYPE_CHECKING:
     from prophitai_algo_trading.execution.portfolio_tracker import PortfolioTracker
+
+logger = logging.getLogger(__name__)
 
 
 class EarningsProximityRule(TradingRule):
@@ -25,9 +28,14 @@ class EarningsProximityRule(TradingRule):
         days: Number of days before earnings to trigger exit/block entry.
     """
 
-    def __init__(self, days: int):
+    def __init__(
+        self,
+        days: int,
+        earnings_dates: dict[str, datetime | None] | None = None,
+    ):
         self.days = days
-        self._cache: dict[str, datetime | None] = {}
+        self._cache: dict[str, datetime | None] = dict(earnings_dates or {})
+        self._queried: set[str] = set(self._cache)
 
     # ================================
     # --> Helper funcs
@@ -46,12 +54,19 @@ class EarningsProximityRule(TradingRule):
         Returns:
             Next earnings datetime, or None if unavailable.
         """
-        cached = self._cache.get(ticker)
-        if cached is not None and cached > current_ts:
-            return cached
+        if ticker in self._queried:
+            cached = self._cache.get(ticker)
+            if cached is None or cached > current_ts:
+                return cached
 
         # Reason: only query DB when cache is empty or stale
-        earnings_dt = self._query_earnings_date(ticker)
+        try:
+            earnings_dt = self._query_earnings_date(ticker)
+        except Exception as exc:
+            logger.warning("Failed to load earnings date for %s: %s", ticker, exc)
+            return None
+
+        self._queried.add(ticker)
         self._cache[ticker] = earnings_dt
         return earnings_dt
 

@@ -32,9 +32,9 @@ class ConsecutiveLossRule(TradingRule):
     def __init__(self, max_losses: int, pause_bars: int = 0):
         self.max_losses = max_losses
         self.pause_bars = pause_bars
-        self._consecutive_losses: int = 0
+        self._consecutive_losses: dict[str, int] = {}
         self._entry_prices: dict[str, float] = {}
-        self._pause_until_bar: int = 0
+        self._pause_until_bar: dict[str, int] = {}
         self._global_bar_count: int = 0
         self._last_bar_timestamp: datetime | None = None
 
@@ -42,15 +42,18 @@ class ConsecutiveLossRule(TradingRule):
         self, ticker: str, price: float, timestamp: datetime,
         df: pd.DataFrame, portfolio: PortfolioTracker,
     ) -> bool:
-        if self._consecutive_losses >= self.max_losses:
+        losses = self._consecutive_losses.get(ticker, 0)
+        pause_until_bar = self._pause_until_bar.get(ticker, 0)
+
+        if losses >= self.max_losses:
             if self.pause_bars <= 0:
-                self._consecutive_losses = 0
-                self._pause_until_bar = 0
+                self._consecutive_losses[ticker] = 0
+                self._pause_until_bar.pop(ticker, None)
                 return False
-            if self._global_bar_count >= self._pause_until_bar:
+            if self._global_bar_count >= pause_until_bar:
                 # Reason: pause period elapsed, reset and allow trading
-                self._consecutive_losses = 0
-                self._pause_until_bar = 0
+                self._consecutive_losses[ticker] = 0
+                self._pause_until_bar.pop(ticker, None)
                 return False
             return True
         return False
@@ -79,11 +82,13 @@ class ConsecutiveLossRule(TradingRule):
             is_loss = price > entry_price
 
         if is_loss:
-            self._consecutive_losses += 1
-            if self._consecutive_losses >= self.max_losses and self.pause_bars > 0:
-                self._pause_until_bar = self._global_bar_count + self.pause_bars
+            losses = self._consecutive_losses.get(ticker, 0) + 1
+            self._consecutive_losses[ticker] = losses
+            if losses >= self.max_losses and self.pause_bars > 0:
+                self._pause_until_bar[ticker] = self._global_bar_count + self.pause_bars
         else:
-            self._consecutive_losses = 0
+            self._consecutive_losses[ticker] = 0
+            self._pause_until_bar.pop(ticker, None)
 
     def on_bar(self, ticker: str, price: float, timestamp: datetime) -> None:
         if self._last_bar_timestamp != timestamp:

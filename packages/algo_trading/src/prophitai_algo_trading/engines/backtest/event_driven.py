@@ -25,9 +25,9 @@ from prophitai_algo_trading.engines.utils import (
     resolve_warmup,
 )
 from prophitai_algo_trading.execution import PortfolioTracker, PositionTracker, CostModel
-from prophitai_algo_trading.execution.position_sizer import BasePositionSizer, PercentOfEquitySizer
 from prophitai_algo_trading.rules.base import TradingRule
 from prophitai_algo_trading.rules.engine import RuleEngine
+from prophitai_algo_trading.sizing import BasePositionSizer, PercentOfEquitySizer
 from prophitai_algo_trading.strategies.base import BaseStrategy
 
 

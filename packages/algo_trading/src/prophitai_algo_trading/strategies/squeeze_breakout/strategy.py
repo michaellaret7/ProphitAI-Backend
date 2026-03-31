@@ -113,6 +113,30 @@ class SqueezeBreakout(BaseStrategy):
         """Momentum magnitude — stronger directional thrust = higher conviction breakout."""
         return df["momentum"].abs()
 
+    def get_sizing_hints(
+        self,
+        row: pd.Series,
+        target_position: int,
+    ) -> dict[str, object]:
+        """Publish breakout stop levels and holding hints for shared sizers."""
+        hints = super().get_sizing_hints(row, target_position)
+        close = self._coerce_float(row.get("close"))
+
+        if target_position > 0:
+            stop_price = self._first_finite(row, "chandelier_stop", "donchian_low")
+        else:
+            stop_price = self._first_finite(row, "donchian_high")
+
+        if close is not None and stop_price is not None:
+            stop_distance = abs(close - stop_price)
+            if stop_distance > 0:
+                hints["stop_price"] = stop_price
+                hints["stop_distance"] = stop_distance
+                hints["risk_per_share"] = stop_distance
+
+        hints["expected_holding_bars"] = self.chandelier_period
+        return hints
+
     @property
     def min_bars_required(self) -> int:
         """Longest lookback: trend SMA + buffer for BB width percentile warmup."""

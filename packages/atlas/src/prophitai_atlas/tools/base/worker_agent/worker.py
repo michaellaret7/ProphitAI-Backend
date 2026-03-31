@@ -8,6 +8,9 @@ from prophitai_atlas.models.callbacks import WorkerCallbackWrapper
 from prophitai_atlas.models.notebook import Notebook
 from prophitai_atlas.tools.responses import success_response, error_response
 
+DEFAULT_WORKER_PROVIDER = "fireworks"
+DEFAULT_WORKER_MODEL = "glm-5"
+
 
 def deploy_worker_agent(
     notebook: Notebook,
@@ -49,8 +52,8 @@ def deploy_worker_agent(
             task=task,
             tools=tools,
             notebook=notebook,
-            provider="fireworks",
-            model="glm-5",
+            provider=DEFAULT_WORKER_PROVIDER,
+            model=DEFAULT_WORKER_MODEL,
             chat_callback=worker_callback,
             max_iterations=30,
             user_id=user_id,

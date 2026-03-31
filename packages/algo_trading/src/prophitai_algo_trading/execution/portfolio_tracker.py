@@ -4,13 +4,14 @@ Single class replaces the former BaseExecutor → TrackingExecutor → Simulated
 BrokerExecutor hierarchy. Uses CostModel for consistent transaction cost handling.
 """
 
+import math
 from datetime import datetime
 
 import pandas as pd
 
 from prophitai_algo_trading.execution.models import Direction, PositionState, PortfolioContext, Trade
-from prophitai_algo_trading.execution.position_sizer import BasePositionSizer
 from prophitai_algo_trading.execution.cost_model import CostModel
+from prophitai_algo_trading.sizing import BasePositionSizer
 
 
 class PortfolioTracker:
@@ -39,6 +40,7 @@ class PortfolioTracker:
         self._equity_history: list[dict] = []
         self._trades: list[Trade] = []
         self._latest_prices: dict[str, float] = {}
+        self._peak_equity = initial_capital
 
     # ================================
     # --> Helper funcs
@@ -65,18 +67,62 @@ class PortfolioTracker:
                 position_value += pos.shares * (pos.entry_price - current_price)
         return position_value
 
-    def _build_context(self, prices: dict[str, float] | None = None) -> PortfolioContext:
-        """Build a PortfolioContext snapshot for the sizer.
+    def _compute_exposures(
+        self,
+        prices: dict[str, float] | None = None,
+    ) -> tuple[float, float, float, float]:
+        """Return long, short, gross, and net exposure using live prices."""
+        long_exposure = 0.0
+        short_exposure = 0.0
+
+        for sym, pos in self._positions.items():
+            current_price = (prices or {}).get(
+                sym, self._latest_prices.get(sym, pos.entry_price),
+            )
+            notional = pos.shares * current_price
+            if pos.direction == Direction.LONG:
+                long_exposure += notional
+            else:
+                short_exposure += notional
+
+        gross_exposure = long_exposure + short_exposure
+        net_exposure = long_exposure - short_exposure
+        return long_exposure, short_exposure, gross_exposure, net_exposure
+
+    def build_portfolio_context(
+        self,
+        prices: dict[str, float] | None = None,
+        timestamp: datetime | None = None,
+    ) -> PortfolioContext:
+        """Build a PortfolioContext snapshot for sizing and risk checks.
 
         Args:
             prices: Current market prices keyed by symbol.
         """
         position_value = self._mark_to_market(prices)
-        
+        equity = self.cash + position_value
+        self._peak_equity = max(self._peak_equity, equity)
+        long_exposure, short_exposure, gross_exposure, net_exposure = (
+            self._compute_exposures(prices)
+        )
+
         return PortfolioContext(
-            equity=self.cash + position_value,
+            equity=equity,
             cash=self.cash,
             positions=dict(self._positions),
+            latest_prices={**self._latest_prices, **(prices or {})},
+            open_position_count=len(self._positions),
+            gross_exposure=gross_exposure,
+            net_exposure=net_exposure,
+            long_exposure=long_exposure,
+            short_exposure=short_exposure,
+            peak_equity=self._peak_equity,
+            drawdown_pct=(
+                max(self._peak_equity - equity, 0.0) / self._peak_equity
+                if self._peak_equity > 0
+                else 0.0
+            ),
+            timestamp=timestamp,
         )
 
     def get_position(self, symbol: str) -> PositionState | None:
@@ -121,22 +167,34 @@ class PortfolioTracker:
         reason = instruction["reason"]
         price = instruction["price"]
         timestamp = instruction["timestamp"]
+        target_shares = instruction.get("target_shares")
 
         if reason == "open_long":
-            self.open_long(symbol, price, timestamp)
+            self.open_long(symbol, price, timestamp, shares=target_shares)
         elif reason == "close_long":
             self.close_position(symbol, price, timestamp)
         elif reason == "open_short":
-            self.open_short(symbol, price, timestamp)
+            self.open_short(symbol, price, timestamp, shares=target_shares)
         elif reason == "close_short":
             self.close_position(symbol, price, timestamp)
         else:
             raise ValueError(f"Unknown trade reason: {reason}")
 
-    def open_long(self, symbol: str, price: float, timestamp: datetime) -> None:
-        """Open a long position using the injected sizer."""
-        context = self._build_context(prices={symbol: price})
-        shares = self._sizer.calculate_shares(symbol, price, context)
+    def open_long(
+        self,
+        symbol: str,
+        price: float,
+        timestamp: datetime,
+        shares: float | None = None,
+    ) -> None:
+        """Open a long position using an explicit share target or the injected sizer."""
+        context = self.build_portfolio_context(prices={symbol: price}, timestamp=timestamp)
+        shares = (
+            shares if shares is not None
+            else self._sizer.calculate_shares(symbol, price, context)
+        )
+        if pd.isna(shares) or shares <= 0:
+            return
         commission = self._cost_model.cost_for_trade(price, shares)
 
         if self._broker:
@@ -154,13 +212,21 @@ class PortfolioTracker:
             entry_commission=commission,
         )
 
-    def open_short(self, symbol: str, price: float, timestamp: datetime) -> None:
-        """Open a short position using the injected sizer."""
-        import math
-
-        context = self._build_context(prices={symbol: price})
+    def open_short(
+        self,
+        symbol: str,
+        price: float,
+        timestamp: datetime,
+        shares: float | None = None,
+    ) -> None:
+        """Open a short position using an explicit share target or the injected sizer."""
+        context = self.build_portfolio_context(prices={symbol: price}, timestamp=timestamp)
         # Reason: brokers do not allow fractional short selling
-        shares = math.floor(self._sizer.calculate_shares(symbol, price, context))
+        raw_shares = (
+            shares if shares is not None
+            else self._sizer.calculate_shares(symbol, price, context)
+        )
+        shares = math.floor(raw_shares)
         if shares < 1:
             return
         commission = self._cost_model.cost_for_trade(price, shares)
@@ -227,6 +293,7 @@ class PortfolioTracker:
         self.update_market_prices(prices)
         position_value = self._mark_to_market(prices)
         equity = self.cash + position_value
+        self._peak_equity = max(self._peak_equity, equity)
 
         self._equity_history.append({
             "timestamp": timestamp,

@@ -1,6 +1,6 @@
 import asyncio
 
-from prophitai_algo_trading.execution.position_sizer import InverseVolatilitySizer
+from prophitai_algo_trading.sizing import InverseVolatilitySizer
 from prophitai_algo_trading.strategies.macd_momentum import MACDMomentum
 from prophitai_algo_trading.engines import LiveRunner
 from prophitai_algo_trading.execution.cost_model import CostModel

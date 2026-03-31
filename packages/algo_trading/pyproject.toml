@@ -41,3 +41,6 @@ dependencies = [
 [tool.pyright]
 pythonVersion = "3.13"
 typeCheckingMode = "off"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/prophitai_algo_trading"]

@@ -13,7 +13,7 @@ import numpy as np
 
 from prophitai_algo_trading.data.repository.price_data import get_price_data_df
 from prophitai_algo_trading.execution.cost_model import CostModel
-from prophitai_algo_trading.execution.position_sizer import PercentOfEquitySizer
+from prophitai_algo_trading.sizing import PercentOfEquitySizer
 from prophitai_algo_trading.strategies.orb_breakout import ORBBreakout
 from prophitai_algo_trading.engines import VectorizedBacktestEngine
 

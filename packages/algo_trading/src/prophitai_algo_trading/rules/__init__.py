@@ -1,5 +1,6 @@
 """Trading rules — execution-layer guards for BacktestEngine and LiveRunner."""
 
+from prophitai_algo_trading.rules.advanced_base import AdvancedRuleTemplate
 from prophitai_algo_trading.rules.base import TradingRule
 from prophitai_algo_trading.rules.engine import RuleEngine
 from prophitai_algo_trading.rules.library import (
@@ -9,6 +10,7 @@ from prophitai_algo_trading.rules.library import (
     MaxDailyLossRule,
     MaxDrawdownRule,
     MaxHoldingPeriodRule,
+    QualityGateRule,
     StopLossRule,
     TakeProfitRule,
     TimeOfDayRule,
@@ -17,6 +19,7 @@ from prophitai_algo_trading.rules.library import (
 
 __all__ = [
     "TradingRule",
+    "AdvancedRuleTemplate",
     "RuleEngine",
     "ConsecutiveLossRule",
     "CooldownRule",
@@ -24,6 +27,7 @@ __all__ = [
     "MaxDailyLossRule",
     "MaxDrawdownRule",
     "MaxHoldingPeriodRule",
+    "QualityGateRule",
     "StopLossRule",
     "TakeProfitRule",
     "TimeOfDayRule",

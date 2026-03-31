@@ -28,6 +28,7 @@ class TrailingStopRule(TradingRule):
     def __init__(self, pct: float):
         self.pct = pct
         self._best_price: dict[str, float] = {}
+        self._direction: dict[str, Direction] = {}
 
     def should_block_entry(
         self, ticker: str, price: float, timestamp: datetime,
@@ -45,15 +46,9 @@ class TrailingStopRule(TradingRule):
         if pos is None:
             return False
         best = self._best_price[ticker]
-        if pos.direction == Direction.LONG:
-            if price > best:
-                self._best_price[ticker] = price
-                best = price
+        direction = self._direction.get(ticker, pos.direction)
+        if direction == Direction.LONG:
             return price <= best * (1 - self.pct)
-        # SHORT: track lowest price since entry, exit if price rises above it
-        if price < best:
-            self._best_price[ticker] = price
-            best = price
         return price >= best * (1 + self.pct)
 
     def on_entry(
@@ -61,9 +56,21 @@ class TrailingStopRule(TradingRule):
         direction: Direction = Direction.LONG,
     ) -> None:
         self._best_price[ticker] = price
+        self._direction[ticker] = direction
+
+    def on_bar(self, ticker: str, price: float, timestamp: datetime) -> None:
+        if ticker not in self._best_price:
+            return
+
+        direction = self._direction.get(ticker)
+        if direction == Direction.LONG and price > self._best_price[ticker]:
+            self._best_price[ticker] = price
+        elif direction == Direction.SHORT and price < self._best_price[ticker]:
+            self._best_price[ticker] = price
 
     def on_exit(
         self, ticker: str, price: float, timestamp: datetime,
         direction: Direction = Direction.LONG,
     ) -> None:
         self._best_price.pop(ticker, None)
+        self._direction.pop(ticker, None)

@@ -3,10 +3,10 @@
 from datetime import datetime
 
 from prophitai_algo_trading.data.repository.price_data import get_price_data_df
-from prophitai_algo_trading.strategies.squeeze_breakout import SqueezeBreakout
 from prophitai_algo_trading.engines import VectorizedBacktestEngine
 from prophitai_algo_trading.execution.cost_model import CostModel
-from prophitai_algo_trading.execution.position_sizer import PercentOfEquitySizer
+from prophitai_algo_trading.sizing import PercentOfEquitySizer
+from prophitai_algo_trading.strategies.squeeze_breakout import SqueezeBreakout
 
 # Reason: 25 liquid large-caps across sectors for diversified squeeze events
 TICKERS = [

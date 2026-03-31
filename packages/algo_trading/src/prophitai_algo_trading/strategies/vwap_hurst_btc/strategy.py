@@ -104,6 +104,21 @@ class VwapHurstBTC(BaseStrategy):
         """VWAP z-score magnitude — larger deviation from fair value = stronger signal."""
         return df["vwap_z_score"].abs()
 
+    def get_sizing_hints(
+        self,
+        row: pd.Series,
+        target_position: int,
+    ) -> dict[str, object]:
+        """Publish regime and ATR-based stop hints for shared sizers."""
+        hints = super().get_sizing_hints(row, target_position)
+        atr = self._coerce_positive_float(row.get("atr"))
+        if atr is not None:
+            hints["stop_distance"] = atr * max(self.vwap_exit_mult, 1.0)
+            hints["risk_per_share"] = hints["stop_distance"]
+        hints["regime"] = row.get("hurst_regime")
+        hints["expected_holding_bars"] = self.vwap_window
+        return hints
+
     @property
     def min_bars_required(self) -> int:
         """Hurst window is the longest lookback; add VWAP window for convergence."""
