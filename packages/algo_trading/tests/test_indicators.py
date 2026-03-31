@@ -10,10 +10,6 @@ import pytest
 from prophitai_algo_trading.strategies.base import BaseStrategy
 from prophitai_algo_trading.execution.models import Direction
 from prophitai_algo_trading.indicators import IndicatorPipeline, IndicatorSpec
-from prophitai_algo_trading.strategies.rsi_mean_reversion import (
-    RSIMeanReversion,
-    RSIMeanReversionIndicatorSuite,
-)
 
 
 class _DummyStrategy(BaseStrategy):
@@ -80,41 +76,6 @@ def test_indicator_pipeline_incremental_update_matches_full_recalculation() -> N
 
     assert updated["rsi"].iloc[-1] == pytest.approx(fresh["rsi"].iloc[-1])
     assert updated["sma_fast"].iloc[-1] == pytest.approx(fresh["sma_fast"].iloc[-1])
-
-
-def test_strategy_local_indicator_suite_uses_shared_building_blocks() -> None:
-    suite = RSIMeanReversionIndicatorSuite(
-        rsi_period=2,
-        trend_sma_period=5,
-        exit_sma_period=3,
-    )
-
-    enriched = suite.calculate(_sample_ohlcv(8))
-
-    assert {"rsi", "sma_trend", "sma_exit"} <= set(enriched.columns)
-    assert enriched["sma_exit"].iloc[-1] == pytest.approx((107.0 + 106.0 + 108.0) / 3)
-
-
-def test_rsi_mean_reversion_strategy_incremental_update_matches_full_recalculation() -> None:
-    strategy = RSIMeanReversion(
-        rsi_period=2,
-        trend_sma_period=5,
-        exit_sma_period=3,
-    )
-    initial = _sample_ohlcv(8)
-    appended = _sample_ohlcv(9)
-
-    strategy.calculate_indicators(initial.copy())
-    updated = strategy.update_indicators(appended.copy())
-
-    fresh = RSIMeanReversion(
-        rsi_period=2,
-        trend_sma_period=5,
-        exit_sma_period=3,
-    ).calculate_indicators(appended.copy())
-
-    for column in ("rsi", "sma_trend", "sma_exit"):
-        assert updated[column].iloc[-1] == pytest.approx(fresh[column].iloc[-1])
 
 
 def test_base_strategy_build_entry_candidate_uses_chandelier_stop_columns() -> None:

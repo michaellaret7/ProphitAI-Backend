@@ -6,7 +6,6 @@ Pure trading machinery with no agent or AI dependencies.
 
 from prophitai_algo_trading.strategies.base import BaseStrategy
 from prophitai_algo_trading.strategies.composable import BaseComposableStrategy
-from prophitai_algo_trading.strategies.rsi_mean_reversion import RSIMeanReversion
 from prophitai_algo_trading.engines import (
     EventDrivenBacktestEngine,
     VectorizedBacktestEngine,
@@ -47,7 +46,6 @@ except ModuleNotFoundError:
 __all__ = [
     "BaseStrategy",
     "BaseComposableStrategy",
-    "RSIMeanReversion",
     "EventDrivenBacktestEngine",
     "VectorizedBacktestEngine",
     "BaseIndicator",
