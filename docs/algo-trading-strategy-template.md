@@ -1,6 +1,6 @@
 # Algo Trading Strategy Template
 
-The canonical strategy scaffold lives in the `prophitai-strategies` repo at `strategies/templates/`.
+The canonical strategy scaffold lives in the `prophitai-strategies` repo at `strategies/template/`.
 
 Purpose:
 

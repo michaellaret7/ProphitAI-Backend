@@ -12,10 +12,36 @@ from prophitai_algo_trading.indicators.moving_averages import (
     SimpleMovingAverageIndicator,
 )
 from prophitai_algo_trading.indicators.rsi import RSI
+from prophitai_algo_trading.indicators.std_lib import (
+    ADXIndicator,
+    ATRIndicator,
+    BollingerBandsIndicator,
+    BollingerPctBIndicator,
+    DonchianChannelsIndicator,
+    MACDIndicator,
+    OBVIndicator,
+    RateOfChangeIndicator,
+    VWAPIndicator,
+    ZScoreIndicator,
+)
+
+# ================================
+# --> Registry registration
+# ================================
 
 INDICATOR_REGISTRY.register("sma", SimpleMovingAverageIndicator)
 INDICATOR_REGISTRY.register("ema", ExponentialMovingAverageIndicator)
 INDICATOR_REGISTRY.register("rsi", RSI)
+INDICATOR_REGISTRY.register("macd", MACDIndicator)
+INDICATOR_REGISTRY.register("adx", ADXIndicator)
+INDICATOR_REGISTRY.register("roc", RateOfChangeIndicator)
+INDICATOR_REGISTRY.register("atr", ATRIndicator)
+INDICATOR_REGISTRY.register("bollinger_bands", BollingerBandsIndicator)
+INDICATOR_REGISTRY.register("bollinger_pct_b", BollingerPctBIndicator)
+INDICATOR_REGISTRY.register("donchian_channels", DonchianChannelsIndicator)
+INDICATOR_REGISTRY.register("obv", OBVIndicator)
+INDICATOR_REGISTRY.register("vwap", VWAPIndicator)
+INDICATOR_REGISTRY.register("zscore", ZScoreIndicator)
 
 __all__ = [
     "BaseIndicator",
@@ -26,4 +52,14 @@ __all__ = [
     "SimpleMovingAverageIndicator",
     "ExponentialMovingAverageIndicator",
     "RSI",
+    "MACDIndicator",
+    "ADXIndicator",
+    "RateOfChangeIndicator",
+    "ATRIndicator",
+    "BollingerBandsIndicator",
+    "BollingerPctBIndicator",
+    "DonchianChannelsIndicator",
+    "OBVIndicator",
+    "VWAPIndicator",
+    "ZScoreIndicator",
 ]
