@@ -8,7 +8,6 @@ from typing import Optional, Union
 from prophitai_atlas.agents import Agent
 from prophitai_atlas.models import PrintMode, AgentResponse
 from prophitai_atlas.models.callbacks import ChatCallback, NoOpChatCallback
-from prophitai_atlas.tools.catalogue import ToolCatalogue
 
 from prophitai_api.agents.models import WatchlistResponse
 from prophitai_api.agents.prompts import build_orchestrator_system_prompt
@@ -180,13 +179,10 @@ class WatchlistAgent:
     ):
         self._task = WATCHLIST_PROMPT.format(user_query=user_preferences)
 
-        catalogue = ToolCatalogue(WATCHLIST_TOOLS)
-        orchestrator_prompt = build_orchestrator_system_prompt(
-            tool_catalogue=catalogue.build_catalogue_description()
-        )
+        orchestrator_prompt = build_orchestrator_system_prompt()
 
         self._agent = Agent(
-            tools=WATCHLIST_TOOLS,
+            deferred_tools=WATCHLIST_TOOLS,
             system_prompt=orchestrator_prompt,
             chat_callback=chat_callback,
             session_id=session_id,

@@ -20,9 +20,9 @@ from prophitai_atlas.models.notebook import Notebook
 from prophitai_atlas.models.new_plan import Plan
 from prophitai_atlas.prompts.base import build_base_system_prompt
 from prophitai_atlas.prompts.plan_injection import inject_plan_tasks
-from prophitai_atlas.tools.catalogue import ToolCatalogue
+from prophitai_atlas.tools.catalogue import build_deferred_tools_data
 from prophitai_atlas.tools.base.register_tools import (
-    build_register_tools_schema,
+    REGISTER_TOOLS_TOOL,
     register_tools_fn,
 )
 
@@ -31,7 +31,6 @@ from prophitai_atlas.tools.base import (
     llm_web_search,
     DEPLOY_WORKER_TOOL,
     _resolve_and_deploy,
-    build_deploy_worker_schema,
     retrieve_notes,
     RETRIEVE_NOTES_TOOL,
     UPDATE_PLAN_TOOL,
@@ -49,6 +48,12 @@ class Agent(AgentBase):
     - Plan-first: PlannerAgent generates a structured plan, then the agent
       executes each task via worker delegation and marks them complete.
 
+    Args:
+        tools: List of @agent_tool-decorated callables registered immediately at init.
+            These tools are in the LLM context window from the first turn.
+        deferred_tools: List of @agent_tool-decorated callables available via register_tools.
+            Their names and short descriptions are appended to the system prompt.
+
     Use `run()` for multi-turn chat with optional per-turn planning.
     Pass `plan_first=True` for one-shot orchestrator-style jobs.
     """
@@ -64,6 +69,7 @@ class Agent(AgentBase):
         user_id: Optional[str] = None,
         session_id: str = "default",
         tools: Optional[List[Callable]] = None,
+        deferred_tools: Optional[List[Callable]] = None,
         system_prompt: Optional[str] = None,
     ):
         super().__init__(
@@ -80,56 +86,56 @@ class Agent(AgentBase):
         self.notebook = Notebook()
         self.user_id: Optional[str] = user_id
 
-        # --- Tool catalogue wiring --- #
-        if tools:
-            self.catalogue: Optional[ToolCatalogue] = ToolCatalogue(tools)
-
-            catalogue_text = self.catalogue.build_catalogue_description()
-            tool_registry = self.catalogue.tool_registry
-            all_tools = self.catalogue.all_tools
-
-            deploy_schema = build_deploy_worker_schema(all_tools) # Build the deploy_worker_agent tool schema with all avail tools
-
+        # --- Deferred tools wiring --- #
+        if deferred_tools:
+            data = build_deferred_tools_data(deferred_tools)
+            deferred_description = data.description
+            tool_registry = data.tool_registry
+            all_tools = data.all_tools
         else:
-            self.catalogue = None
-            catalogue_text = ""
+            deferred_description = ""
             tool_registry = {}
             all_tools = {}
-            deploy_schema = DEPLOY_WORKER_TOOL
-        
-        print(self.catalogue)
 
+        # --- Register Tools Upfront --- #
+        if tools:
+            for func in tools:
+                self.add_tool(**func.tool)
+
+        # --- System prompt --- #
         # Reason: caller-provided prompt takes precedence; fallback to generic base prompt
         if system_prompt is not None:
             self.system_prompt: str = system_prompt
         else:
-            self.system_prompt = build_base_system_prompt(tool_catalogue=catalogue_text)
+            self.system_prompt = build_base_system_prompt()
 
-        reg_schema = build_register_tools_schema(tool_registry, all_tools)
+        # Reason: Append deferred tools description to whatever prompt is used (system-prompt agnostic)
+        if deferred_description:
+            self.system_prompt = f"{self.system_prompt}\n\n{deferred_description}"
 
         # --- Add the built-in tools ---
         self.add_tool(**llm_web_search.tool)
-        
+
         self.add_tool(
             **RETRIEVE_NOTES_TOOL,
             function=partial(retrieve_notes, self.notebook),
         )
 
         # --- Add the register_tools tool ---
-        # TODO: Make this into a boolean argument that defaults to True. This way we can have some agents that don't have access to all tools.
-        self.add_tool(
-            **reg_schema,
-            function=partial(register_tools_fn, tool_registry, all_tools, self),
-        )
+        if deferred_tools:
+            self.add_tool(
+                **REGISTER_TOOLS_TOOL,
+                function=partial(register_tools_fn, tool_registry, all_tools, self),
+            )
 
         # --- Add the deploy_worker_agent tool ---
         # Reason: Use lambda to read self.chat_callback and self.user_id at call-time,
         # not init-time. The callback is set to WebSocketChatCallback AFTER __init__
         # (in send_message_controller), so partial() would capture stale values.
         self.add_tool(
-            **deploy_schema,
+            **DEPLOY_WORKER_TOOL,
             function=lambda **kwargs: _resolve_and_deploy(
-                all_tools, self.notebook, self.chat_callback, self.user_id, **kwargs
+                self.notebook, self.chat_callback, self.user_id, **kwargs
             ),
         )
 
@@ -292,4 +298,4 @@ class Agent(AgentBase):
 
 if __name__ == "__main__":
     agent = Agent()
-    print(agent.catalogue)
+    print(agent.system_prompt)

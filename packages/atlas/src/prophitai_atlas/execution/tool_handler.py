@@ -263,8 +263,7 @@ class ToolHandler:
                     if self._accepts_hidden_clerk_id(func):
                         execution_args["_clerk_id"] = self.agent.user_id
 
-                result = func(**execution_args) # This is where the tool is executed
-                result_str = self._truncate_tool_output(result)
+                result = func(**execution_args) # This is where the tool is executed and the result is returned and stored in result
 
                 is_tool_error = False
 
@@ -278,9 +277,9 @@ class ToolHandler:
                     pass
 
                 if is_tool_error:
-                    tool_span.update(level="ERROR", output=result_str)
+                    tool_span.update(level="ERROR", output=result)
                 else:
-                    tool_span.update(output=result_str)
+                    tool_span.update(output=result)
 
                 return result
 

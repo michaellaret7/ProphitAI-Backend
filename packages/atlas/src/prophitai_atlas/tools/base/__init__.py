@@ -5,7 +5,7 @@ from .calculator import calculator
 from .search_engine import llm_web_search
 
 # Worker tools
-from .worker_agent import DEPLOY_WORKER_TOOL, _resolve_and_deploy, build_deploy_worker_schema
+from .worker_agent import DEPLOY_WORKER_TOOL, _resolve_and_deploy
 from .worker_agent import write_note, WRITE_NOTE_TOOL
 
 # Orchestrator tools
@@ -19,7 +19,6 @@ __all__ = [
     # Worker
     "DEPLOY_WORKER_TOOL",
     "_resolve_and_deploy",
-    "build_deploy_worker_schema",
     "write_note",
     "WRITE_NOTE_TOOL",
     # Orchestrator

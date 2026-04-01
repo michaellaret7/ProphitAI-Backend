@@ -1,52 +1,74 @@
-"""ToolCatalogue — builds registry dicts and prompt text from @agent_tool functions.
+"""Deferred tools utilities — builds description text and registry dicts from @agent_tool functions.
 
 Takes a flat list of @agent_tool-decorated callables, groups them by category,
-and exposes the data structures that register_tools and deploy_worker_agent need.
+and returns the data structures that register_tools and deploy_worker_agent need.
 """
 
-from typing import Any, Callable, Dict, List
+from typing import Any, Callable, Dict, List, NamedTuple
 
 
-class ToolCatalogue:
-    """Organizes @agent_tool-decorated functions into a queryable catalogue.
+class DeferredToolsData(NamedTuple):
+    """Data bundle for deferred tool registration.
 
     Attributes:
-        tool_registry: Category name → list of @agent_tool-decorated callables.
-        all_tools: Flat dict of tool_name → tool dict (.tool attribute).
+        description: Formatted text block listing all tools grouped by category.
+        tool_registry: Category name -> list of @agent_tool-decorated callables.
+        all_tools: Flat dict of tool_name -> tool dict (.tool attribute).
     """
 
-    def __init__(self, tools: List[Callable]) -> None:
-        self.tool_registry: Dict[str, List[Callable]] = {}
-        self.all_tools: Dict[str, Dict[str, Any]] = {}
+    description: str
+    tool_registry: Dict[str, List[Callable]]
+    all_tools: Dict[str, Dict[str, Any]]
 
-        for func in tools:
-            if not hasattr(func, "tool"):
-                raise ValueError(
-                    f"'{getattr(func, '__name__', func)}' is not decorated with @agent_tool"
-                )
-            category = getattr(func, "category", None) or "uncategorized"
-            self.tool_registry.setdefault(category, []).append(func)
-            self.all_tools[func.tool["name"]] = func.tool
 
-    def build_catalogue_description(self) -> str:
-        """Generate prompt text listing every category and its tools.
+def build_deferred_tools_data(tools: List[Callable]) -> DeferredToolsData:
+    """Build description text and registry dicts from a list of @agent_tool-decorated callables.
 
-        Output format (one block per category):
-            **category_name**
-              - tool_name: First sentence of the tool description.
-              - tool_name: First sentence of the tool description.
-        """
-        sections: List[str] = []
+    Groups tools by their `.category` attribute, extracts first-sentence descriptions,
+    and returns everything needed for deferred tool registration.
 
-        for category in sorted(self.tool_registry.keys()):
-            lines = [f"**{category}**"]
-            for func in self.tool_registry[category]:
-                tool_name = func.tool["name"]
-                description = _first_sentence(func.tool.get("description", ""))
-                lines.append(f"  - `{tool_name}`: {description}")
-            sections.append("\n".join(lines))
+    Args:
+        tools: List of @agent_tool-decorated callables.
 
-        return "\n\n".join(sections)
+    Returns:
+        DeferredToolsData with description, tool_registry, and all_tools.
+    """
+    tool_registry: Dict[str, List[Callable]] = {}
+    all_tools: Dict[str, Dict[str, Any]] = {}
+
+    for func in tools:
+        if not hasattr(func, "tool"):
+            raise ValueError(
+                f"'{getattr(func, '__name__', func)}' is not decorated with @agent_tool"
+            )
+        category = getattr(func, "category", None) or "uncategorized"
+        tool_registry.setdefault(category, []).append(func)
+        all_tools[func.tool["name"]] = func.tool
+
+    # Reason: Build a description block listing all tools grouped by category
+    sections: List[str] = []
+    for category in sorted(tool_registry.keys()):
+        lines = [f"**{category}**"]
+        for func in tool_registry[category]:
+            tool_name = func.tool["name"]
+            description = _first_sentence(func.tool.get("description", ""))
+            lines.append(f"  - `{tool_name}`: {description}")
+        sections.append("\n".join(lines))
+
+    catalogue_text = "\n\n".join(sections)
+
+    description = (
+        "<deferred_tools>\n"
+        "## Available Tools (call `register_tools` to load before use)\n\n"
+        f"{catalogue_text}\n"
+        "</deferred_tools>"
+    )
+
+    return DeferredToolsData(
+        description=description,
+        tool_registry=tool_registry,
+        all_tools=all_tools,
+    )
 
 
 # ================================

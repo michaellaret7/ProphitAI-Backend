@@ -8,7 +8,6 @@ from typing import Optional, Union
 from prophitai_atlas.agents import Agent
 from prophitai_atlas.models import PrintMode, AgentResponse
 from prophitai_atlas.models.callbacks import ChatCallback, NoOpChatCallback
-from prophitai_atlas.tools.catalogue import ToolCatalogue
 
 from prophitai_api.agents.models import PortfolioResponse
 from prophitai_api.agents.prompts import build_orchestrator_system_prompt
@@ -200,13 +199,10 @@ class PortfolioBuilderAgent:
     ):
         self._task = PORTFOLIO_BUILDER_PROMPT.format(user_preferences=user_preferences)
 
-        catalogue = ToolCatalogue(PORTFOLIO_BUILDER_TOOLS)
-        orchestrator_prompt = build_orchestrator_system_prompt(
-            tool_catalogue=catalogue.build_catalogue_description()
-        )
+        orchestrator_prompt = build_orchestrator_system_prompt()
 
         self._agent = Agent(
-            tools=PORTFOLIO_BUILDER_TOOLS,
+            deferred_tools=PORTFOLIO_BUILDER_TOOLS,
             system_prompt=orchestrator_prompt,
             chat_callback=chat_callback,
             session_id=session_id,

@@ -82,7 +82,7 @@ def test_agent_chat_mode():
         provider="anthropic",
         model="claude-sonnet-4-6",
         print_mode=PrintMode.PRODUCTION,
-        tools=FAKE_TOOLS,
+        deferred_tools=FAKE_TOOLS,
     )
 
     result = agent.run(
@@ -108,7 +108,7 @@ def test_agent_plan_first_mode():
         provider="anthropic",
         model="claude-sonnet-4-6",
         print_mode=PrintMode.PRODUCTION,
-        tools=FAKE_TOOLS,
+        deferred_tools=FAKE_TOOLS,
     )
 
     result = agent.run(

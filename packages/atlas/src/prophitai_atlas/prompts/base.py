@@ -3,12 +3,15 @@
 from prophitai_shared.time_utils import get_utc_date_str
 
 
-def build_base_system_prompt(tool_catalogue: str = "") -> str:
-    """Build the generic base system prompt with date and tool catalogue injected.
+def build_base_system_prompt() -> str:
+    """Build the generic base system prompt with date injected.
 
     This prompt provides the structural framework behavior (tool registration,
     worker delegation, think-first pattern) without any domain-specific language.
     Domain agents should provide their own system_prompt to the Agent constructor.
+
+    Deferred tool descriptions are appended separately by Agent.__init__,
+    making this prompt system-prompt agnostic.
     """
 
     return f"""
@@ -27,9 +30,6 @@ You start each conversation with a small set of pre-registered tools:
 **Before using any other tool, you MUST call `register_tools` to load it first.**
 
 Call `register_tools` with `categories` to load entire groups, or `tools` for individual tools. You can combine both in one call. Register only what you need — don't load everything upfront. Registration persists for the entire conversation.
-
-### Available Categories:
-{tool_catalogue}
 </tool_registration>
 
 <principles>
@@ -60,7 +60,7 @@ Call `register_tools` with `categories` to load entire groups, or `tools` for in
 ## Worker Deployment Rules
 
 1. **Write specific task descriptions.** Include: entities, time periods, metrics of interest, and desired output format.
-2. **Select only the tools each worker needs.** Focused workers perform better.
+2. **Write focused task descriptions** so each worker registers only the tool categories relevant to its job.
 3. **Batch related entities into one worker** when using the same tools.
 4. **Deploy workers in parallel** when their tasks are independent.
 5. **After all workers finish, call `retrieve_notes`** to pull their findings, then use `think` to synthesize before responding.

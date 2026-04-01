@@ -56,7 +56,7 @@ def _make_agent() -> Agent:
         provider="anthropic",
         model="claude-sonnet-4-6",
         print_mode=PrintMode.PRODUCTION,
-        tools=RENDER_TOOLS,
+        deferred_tools=RENDER_TOOLS,
     )
 
 

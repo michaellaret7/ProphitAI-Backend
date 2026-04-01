@@ -1,10 +1,10 @@
 """Central tool registry for ProphitAI domain tools.
 
 Imports all @agent_tool-decorated functions and exposes them as a flat list
-for injection into the Agent constructor via ``Agent(tools=ALL_TOOL_FUNCTIONS)``.
+for injection into the Agent constructor via ``Agent(deferred_tools=ALL_TOOL_FUNCTIONS)``.
 
-Each tool is decorated with ``@agent_tool(category="category_name")`` so the
-ToolCatalogue can group them automatically.
+Each tool is decorated with ``@agent_tool(category="category_name")`` so
+build_deferred_tools_data can group them automatically.
 """
 
 from typing import Callable
