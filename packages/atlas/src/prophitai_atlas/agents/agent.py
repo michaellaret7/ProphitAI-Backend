@@ -192,6 +192,8 @@ class Agent(AgentBase):
 
             try:
                 self.total_tokens = 0 # reset total tokens
+                self.cache_creation_input_tokens = 0
+                self.cache_read_input_tokens = 0
 
                 # --- Planning phase ---
                 if plan_first:
@@ -263,6 +265,8 @@ class Agent(AgentBase):
                     answer=result["answer"],
                     tool_calls_made=result["tool_calls"],
                     tokens_used=result["total_tokens"],
+                    cache_creation_input_tokens=result["cache_creation_input_tokens"],
+                    cache_read_input_tokens=result["cache_read_input_tokens"],
                     iterations=result["iterations"],
                     stop_reason=result["stop_reason"],
                     plan=self.plan if plan_first else None,

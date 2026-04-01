@@ -6,7 +6,7 @@ from typing import List, Dict, Any, Callable, Optional, Union
 from langfuse import get_client
 
 from prophitai_atlas.models import PrintMode, ChatCallback, NoOpChatCallback
-from prophitai_shared.choose_model_and_client import get_model_and_client
+from prophitai_shared import get_backend
 from prophitai_atlas.execution import ExecutionLoop, ToolHandler
 from prophitai_atlas.logging import AgentPrinter
 
@@ -36,7 +36,9 @@ class AgentBase(ABC):
 
         # LLM client setup
         self.provider = provider
-        self.model, self.client = get_model_and_client(provider=provider, model=model)
+        self.backend = get_backend(provider=provider, model=model)
+        self.model = self.backend.model
+        self.client = self.backend.raw_client
 
         # Configuration
         self.max_iterations = max_iterations
@@ -57,6 +59,8 @@ class AgentBase(ABC):
         # Execution state
         self.messages: List[Dict[str, Any]] = []
         self.total_tokens: int = 0
+        self.cache_creation_input_tokens: int = 0
+        self.cache_read_input_tokens: int = 0
 
         # Execution components
         self.printer = AgentPrinter(self.print_mode)
@@ -83,12 +87,9 @@ class AgentBase(ABC):
             return
 
         tool_def = {
-            "type": "function",
-            "function": {
-                "name": name,
-                "description": description,
-                "parameters": parameters,
-            },
+            "name": name,
+            "description": description,
+            "parameters": parameters,
         }
         self.tools.append(tool_def)
         self.tool_functions[name] = function
@@ -100,7 +101,7 @@ class AgentBase(ABC):
             return
         del self.tool_functions[name]
         del self.tool_schemas[name]
-        self.tools = [t for t in self.tools if t["function"]["name"] != name]
+        self.tools = [t for t in self.tools if t["name"] != name]
 
     def get_tool_names(self) -> List[str]:
         """Return list of registered tool names."""

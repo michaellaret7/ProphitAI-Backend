@@ -3,8 +3,7 @@ Ultra simple parser utility for converting data to Pydantic models.
 """
 from typing import Type, TypeVar, Dict, List
 from pydantic import BaseModel
-from prophitai_shared.choose_model_and_client import get_model_and_client
-from openai import RateLimitError, APIError, AuthenticationError, InternalServerError
+from prophitai_shared import get_backend
 from prophitai_atlas.models.defaults import PARSER_FALLBACK_CHAIN
 
 T = TypeVar('T', bound=BaseModel)
@@ -16,21 +15,13 @@ def _call_parser_with_fallback(messages: List[Dict[str, str]], target_model: Typ
 
     for provider, model_name in providers:
         try:
-
-            model, client = get_model_and_client(provider, model_name)
-
-            # Reason: bypass langfuse class-level monkey-patch on Completions.parse
-            parse_method = type(client.chat.completions).parse
-            original_parse = getattr(parse_method, '__wrapped__', parse_method)
-            completion = original_parse(
-                client.chat.completions,
-                model=model,
+            backend = get_backend(provider, model_name)
+            return backend.parse_structured(
                 messages=messages,
-                response_format=target_model,
+                target_model=target_model,
             )
-            return completion.choices[0].message.parsed
 
-        except (RateLimitError, APIError, AuthenticationError, InternalServerError) as e:
+        except Exception as e:
             print(f"[GPT Parser] {provider}/{model_name} failed: {e}, trying next...")
             last_error = e
             continue

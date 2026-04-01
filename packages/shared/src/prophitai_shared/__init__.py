@@ -1,19 +1,27 @@
-"""ProphitAI Shared — shared utilities for the ProphitAI platform."""
+"""ProphitAI Shared - shared utilities for the ProphitAI platform."""
 
 from prophitai_shared.time_utils import (
-    get_current_utc_time,
-    get_utc_days_ago,
-    get_utc_date_range,
-    get_utc_timestamp_str,
-    get_utc_date_str,
     ensure_naive_utc,
+    get_current_utc_time,
+    get_utc_date_range,
+    get_utc_date_str,
+    get_utc_days_ago,
+    get_utc_timestamp_str,
 )
 
 from prophitai_shared.choose_model_and_client import (
-    ProviderConfig,
-    PROVIDER_CONFIGS,
     MODEL_ALIASES,
-    get_model_and_client,
+    PROVIDER_CONFIGS,
+    ProviderConfig,
+    get_backend,
+)
+from prophitai_shared.llm_backends import (
+    AnthropicBackend,
+    LLMBackend,
+    NormalizedLLMResponse,
+    NormalizedToolCall,
+    OpenAICompatibleBackend,
+    UsageStats,
 )
 
 __all__ = [
@@ -26,5 +34,11 @@ __all__ = [
     "ProviderConfig",
     "PROVIDER_CONFIGS",
     "MODEL_ALIASES",
-    "get_model_and_client",
+    "LLMBackend",
+    "OpenAICompatibleBackend",
+    "AnthropicBackend",
+    "NormalizedLLMResponse",
+    "NormalizedToolCall",
+    "UsageStats",
+    "get_backend",
 ]

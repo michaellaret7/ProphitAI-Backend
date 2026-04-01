@@ -2,7 +2,7 @@
 
 from pydantic import BaseModel
 
-from prophitai_shared import get_model_and_client
+from prophitai_shared import get_backend
 from .prompts import QUERY_DECOMPOSITION_PROMPT
 
 
@@ -28,18 +28,15 @@ def decompose_query(query: str) -> SubQueries:
     Returns:
         SubQueries containing the decomposed sub-queries.
     """
-    model, client = get_model_and_client(provider="groq", model="openai-gpt-oss-120b")
+    backend = get_backend(provider="groq", model="openai-gpt-oss-120b")
 
-    response = client.chat.completions.parse(
-        model=model,
+    return backend.parse_structured(
         messages=[
             {"role": "system", "content": QUERY_DECOMPOSITION_PROMPT},
             {"role": "user", "content": query},
         ],
-        response_format=SubQueries,
+        target_model=SubQueries,
     )
-
-    return response.choices[0].message.parsed
 
 
 if __name__ == "__main__":

@@ -11,7 +11,7 @@ from typing import Optional
 from pydantic import BaseModel, Field, computed_field
 
 from prophitai_foundry.models.metadata.utils import sanitize_for_vector_id
-from prophitai_shared import get_model_and_client
+from prophitai_shared import get_backend
 
 
 class ResearchDocumentMetadata(BaseModel):
@@ -81,10 +81,8 @@ class ResearchDocumentMetadata(BaseModel):
         Returns:
             ResearchDocumentMetadata with fields populated from LLM extraction.
         """
-        model_name, client = get_model_and_client(provider=provider, model=model)
-
-        response = client.chat.completions.create(
-            model=model_name,
+        backend = get_backend(provider=provider, model=model)
+        response_json = backend.create_json_object(
             messages=[
                 {
                     "role": "user",
@@ -104,10 +102,9 @@ Return a JSON object with these fields:
 Return ONLY valid JSON, no other text.""",
                 }
             ],
-            response_format={"type": "json_object"},
         )
 
-        parsed = json.loads(response.choices[0].message.content)
+        parsed = json.loads(response_json)
         document_type = parsed.get("document_type") or "research"
         # Macro research should never have a ticker
         ticker = None if document_type == "macro_research" else parsed.get("ticker")
@@ -142,12 +139,11 @@ Return ONLY valid JSON, no other text.""",
         Returns:
             List of ResearchDocumentMetadata instances.
         """
-        model_name, client = get_model_and_client(provider=provider, model=model)
+        backend = get_backend(provider=provider, model=model)
 
         uris_formatted = "\n".join(f"{i+1}. {uri}" for i, uri in enumerate(s3_uris))
 
-        response = client.chat.completions.create(
-            model=model_name,
+        response_json = backend.create_json_object(
             messages=[
                 {
                     "role": "user",
@@ -168,10 +164,9 @@ Return a JSON object with a "documents" array where each element has:
 Return ONLY valid JSON, no other text.""",
                 }
             ],
-            response_format={"type": "json_object"},
         )
 
-        parsed = json.loads(response.choices[0].message.content)
+        parsed = json.loads(response_json)
         documents = parsed.get("documents", [])
 
         results = []

@@ -12,6 +12,7 @@ from prophitai_atlas.execution.validation import validate_tool_call
 from prophitai_atlas.logging import AgentPrinter
 from prophitai_atlas.tools.responses import error_response
 from prophitai_atlas.execution.utils import stringify_for_llm, check_tool_success
+from prophitai_shared import NormalizedToolCall
 
 if TYPE_CHECKING:
     from prophitai_atlas.agents import AgentBase
@@ -24,12 +25,12 @@ from opentelemetry import context as otel_context
 SEQUENTIAL_ONLY_TOOLS = {"think", "register_tools"}
 MAX_TOOL_RESULT_CHARS = 2000
 
-def should_run_parallel(tool_calls: List[Any]) -> bool:
+def should_run_parallel(tool_calls: List[NormalizedToolCall]) -> bool:
     """Determine if tool calls can be executed in parallel."""
     if len(tool_calls) <= 1:
         return False
     for tool_call in tool_calls:
-        if tool_call.function.name in SEQUENTIAL_ONLY_TOOLS:
+        if tool_call.name in SEQUENTIAL_ONLY_TOOLS:
             return False
     return True
 
@@ -52,7 +53,7 @@ class ToolHandler:
     def chat_callback(self) -> Optional[Union["ChatCallback", "NoOpChatCallback"]]:
         return getattr(self.agent, 'chat_callback', None)
 
-    def handle_tool_calls(self, tool_calls: List[Any]) -> None:
+    def handle_tool_calls(self, tool_calls: List[NormalizedToolCall]) -> None:
         last = self.agent.messages[-1] if self.agent.messages else None
         already_added = isinstance(last, dict) and last.get("role") == "assistant" and last.get("tool_calls")
 
@@ -66,9 +67,9 @@ class ToolHandler:
             })
 
         for tool_call in tool_calls:
-            name = tool_call.function.name
+            name = tool_call.name
             tool_call_id = tool_call.id
-            args_json = tool_call.function.arguments or "{}"
+            args_json = tool_call.arguments_json or "{}"
             args, parse_error = self._parse_arguments(args_json)
 
             self.printer.tool_call_start(name)
@@ -115,18 +116,22 @@ class ToolHandler:
                     duration_ms=duration_ms,
                 )
 
-    def handle_tool_calls_parallel(self, tool_calls: List[Any]) -> None:
+    def handle_tool_calls_parallel(self, tool_calls: List[NormalizedToolCall]) -> None:
         num_tools = len(tool_calls)
         self.printer.parallel_start(num_tools)
 
         parsed_calls = []
         for tool_call in tool_calls:
-            name = tool_call.function.name
+            name = tool_call.name
+
             tool_call_id = tool_call.id
-            args_json = tool_call.function.arguments or "{}"
+
+            args_json = tool_call.arguments_json or "{}"
             args, parse_error = self._parse_arguments(args_json)
             parsed_calls.append((tool_call, name, args, parse_error))
+
             self.printer.parallel_tool_queued(name)
+
             if self.chat_callback:
                 self.chat_callback.on_tool_call_start(
                     tool_call_id=tool_call_id,
@@ -141,6 +146,7 @@ class ToolHandler:
 
         for (tool_call, name, args, _parse_error), result in zip(parsed_calls, results):
             success = self._add_tool_result_parallel(tool_call, result, name, args)
+            
             if self.chat_callback:
                 duration_ms = int((end_time - start_times[tool_call.id]) * 1000)
                 self.chat_callback.on_tool_call_result(
@@ -184,7 +190,7 @@ class ToolHandler:
         finally:
             otel_context.detach(otel_token)
 
-    def _add_tool_result_parallel(self, tool_call: Any, result: Any, name: str, args: Dict[str, Any]) -> bool:
+    def _add_tool_result_parallel(self, tool_call: NormalizedToolCall, result: Any, name: str, args: Dict[str, Any]) -> bool:
         tool_validation = validate_tool_call(name, args, result, self.agent)
         tool_validation_dict = yaml.safe_load(tool_validation)
         success, _ = check_tool_success(tool_validation_dict)
@@ -200,12 +206,12 @@ class ToolHandler:
         return success
 
     @staticmethod
-    def _sanitize_tool_call_args(tool_calls: List[Any]) -> None:
+    def _sanitize_tool_call_args(tool_calls: List[NormalizedToolCall]) -> None:
         for tc in tool_calls:
             try:
-                json.loads(tc.function.arguments or "{}")
+                json.loads(tc.arguments_json or "{}")
             except (json.JSONDecodeError, TypeError):
-                tc.function.arguments = "{}"
+                tc.arguments_json = "{}"
 
     def _parse_arguments(self, args_json: str) -> tuple[Dict[str, Any], str | None]:
         try:
@@ -286,7 +292,7 @@ class ToolHandler:
 
                 return error_response(error_msg)
 
-    def _add_tool_result(self, tool_call: Any, result: Any, name: str, args: Dict[str, Any]) -> bool:
+    def _add_tool_result(self, tool_call: NormalizedToolCall, result: Any, name: str, args: Dict[str, Any]) -> bool:
         tool_validation = validate_tool_call(name, args, result, self.agent)
         tool_validation_dict = yaml.safe_load(tool_validation)
 

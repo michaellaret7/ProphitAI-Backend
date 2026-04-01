@@ -4,6 +4,8 @@ version = "0.1.0"
 description = "Shared utilities for the ProphitAI platform"
 requires-python = ">=3.13"
 dependencies = [
+    "anthropic>=0.40.0",
+    "opentelemetry-instrumentation-anthropic",
     "pydantic>=2.0",
     "openai>=2.0.0",
     "langfuse",

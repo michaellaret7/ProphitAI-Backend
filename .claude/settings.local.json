@@ -181,7 +181,8 @@
       "Bash(npx pyright:*)",
       "Bash(xargs -0 rm -f)",
       "Bash(find /Users/michaellaret/Desktop/ProphitAI -not -path */.git/* -not -path */.venv/* -not -path */__pycache__/* -not -path */.claude/* \\\\\\(-name '* 2' -o -name '* 3' -o -name '* 2.*' -o -name '* 3.*' \\\\\\))",
-      "Read(//c/Dev/**)"
+      "Read(//c/Dev/**)",
+      "Bash(find C:/Dev/ProphitAI -type f -name \"*.py\" -exec grep -l \"from prophitai_shared import\" {} \\\\;)"
     ]
   }
 }
