@@ -247,7 +247,15 @@ class Agent(AgentBase):
                 ):
                     result = self.execution_loop.execute()
 
-                run_span.update(output=result["answer"])
+                run_span.update(output={
+                    "answer": result["answer"],
+                    "tool_calls": result["tool_calls"],
+                    "total_tokens": result["total_tokens"],
+                    "cache_creation_input_tokens": result["cache_creation_input_tokens"],
+                    "cache_read_input_tokens": result["cache_read_input_tokens"],
+                    "iterations": result["iterations"],
+                    "stop_reason": result["stop_reason"],
+                })
 
                 # --- Structured output parsing ---
                 parsed_output = None

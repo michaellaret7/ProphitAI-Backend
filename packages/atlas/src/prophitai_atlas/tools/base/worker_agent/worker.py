@@ -5,11 +5,9 @@ from typing import Any, List, Dict, Optional
 
 from prophitai_atlas.agents.worker_agent import WorkerAgent
 from prophitai_atlas.models.callbacks import WorkerCallbackWrapper
+from prophitai_atlas.models.defaults import WORKER_PROVIDER, WORKER_MODEL
 from prophitai_atlas.models.notebook import Notebook
 from prophitai_atlas.tools.responses import success_response, error_response
-
-DEFAULT_WORKER_PROVIDER = "fireworks"
-DEFAULT_WORKER_MODEL = "glm-5"
 
 
 def deploy_worker_agent(
@@ -35,8 +33,6 @@ def deploy_worker_agent(
             - 'data' (dict): Worker result (answer, tool_calls_made, tokens_used, iterations, stop_reason)
             - 'error' (str): Error message when unsuccessful
     """
-    from prophitai_atlas.models.callbacks import WorkerCallbackWrapper
-
     try:
         tool_names = [t["name"] for t in tools]
         print(f"\n[WorkerDeploy] Spawning worker for plan task {plan_task_id} with tools: {tool_names}")
@@ -52,8 +48,8 @@ def deploy_worker_agent(
             task=task,
             tools=tools,
             notebook=notebook,
-            provider=DEFAULT_WORKER_PROVIDER,
-            model=DEFAULT_WORKER_MODEL,
+            provider=WORKER_PROVIDER,
+            model=WORKER_MODEL,
             chat_callback=worker_callback,
             max_iterations=30,
             user_id=user_id,

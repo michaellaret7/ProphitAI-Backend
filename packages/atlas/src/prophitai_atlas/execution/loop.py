@@ -74,6 +74,7 @@ class ExecutionLoop:
 
                         response = self.call_llm()
                         iteration_tokens = self._track_token_usage(response)
+                        iteration_usage = self._build_iteration_usage(response)
 
                         assistant_text = response.assistant_text
 
@@ -87,6 +88,7 @@ class ExecutionLoop:
                                 "action": "tool_calls",
                                 "tools_called": called_tools,
                                 "assistant_text": assistant_text if assistant_text else None,
+                                "usage": iteration_usage,
                             })
 
                             callback.on_iteration_end(iteration=i, tokens_used=iteration_tokens)
@@ -100,6 +102,7 @@ class ExecutionLoop:
                             iteration_span.update(output={
                                 "action": "answer_ready",
                                 "answer": assistant_text,
+                                "usage": iteration_usage,
                             })
 
                             callback.on_iteration_end(iteration=i, tokens_used=iteration_tokens)
@@ -191,6 +194,16 @@ class ExecutionLoop:
         self.agent.cache_creation_input_tokens += int(response.usage.cache_creation_input_tokens)
         self.agent.cache_read_input_tokens += int(response.usage.cache_read_input_tokens)
         return iteration_tokens
+
+    @staticmethod
+    def _build_iteration_usage(response: NormalizedLLMResponse) -> Dict[str, int]:
+        return {
+            "input_tokens": int(response.usage.input_tokens),
+            "output_tokens": int(response.usage.output_tokens),
+            "total_tokens": int(response.usage.total_tokens),
+            "cache_creation_input_tokens": int(response.usage.cache_creation_input_tokens),
+            "cache_read_input_tokens": int(response.usage.cache_read_input_tokens),
+        }
 
     def _build_iteration_input(self, iteration: int) -> Dict[str, Any]:
         messages = self.agent.messages
