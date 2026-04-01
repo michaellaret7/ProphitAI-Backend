@@ -8,7 +8,7 @@ from langfuse import propagate_attributes
 from prophitai_atlas.agents.base import AgentBase
 from prophitai_atlas.models import PrintMode, AgentResponse, WORKER_PROVIDER, WORKER_MODEL
 from prophitai_atlas.models.notebook import Notebook
-from prophitai_atlas.prompts.worker import build_worker_system_prompt
+from prophitai_atlas.prompts.worker import build_worker_system_blocks, build_worker_system_prompt
 from prophitai_atlas.tools.base import llm_web_search, write_note, WRITE_NOTE_TOOL
 from prophitai_atlas.tools.base.register_tools import REGISTER_TOOLS_TOOL, register_tools_fn
 from prophitai_atlas.tools.catalogue import build_deferred_tools_data
@@ -83,10 +83,17 @@ class WorkerAgent(AgentBase):
         ) as run_span:
 
             # Reason: Append deferred tools description to the worker prompt
-            worker_prompt = build_worker_system_prompt()
-            
-            if self._deferred_description:
-                worker_prompt = f"{worker_prompt}\n\n{self._deferred_description}"
+            if self.provider == "anthropic":
+                worker_prompt: Any = build_worker_system_blocks()
+                
+                if self._deferred_description:
+                    worker_prompt.append(
+                        {"type": "text", "text": self._deferred_description, "cacheable": True}
+                    )
+            else:
+                worker_prompt = build_worker_system_prompt()
+                if self._deferred_description:
+                    worker_prompt = f"{worker_prompt}\n\n{self._deferred_description}"
 
             self.messages = [
                 {"role": "system", "content": worker_prompt},
@@ -106,6 +113,8 @@ class WorkerAgent(AgentBase):
                 answer=result["answer"],
                 tool_calls_made=result["tool_calls"],
                 tokens_used=result["total_tokens"],
+                cache_creation_input_tokens=result["cache_creation_input_tokens"],
+                cache_read_input_tokens=result["cache_read_input_tokens"],
                 iterations=result["iterations"],
                 stop_reason=result["stop_reason"]
             )

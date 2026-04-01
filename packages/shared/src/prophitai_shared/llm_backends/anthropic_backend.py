@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from dataclasses import dataclass
 import json
 import os
 import threading
@@ -13,12 +14,31 @@ from prophitai_shared.llm_backends.base import DEFAULT_MAX_OUTPUT_TOKENS, LLMBac
 from prophitai_shared.llm_backends.models import NormalizedLLMResponse, NormalizedToolCall, UsageStats
 from prophitai_shared.llm_backends.utils import _compact_kwargs, _strip_json_wrappers
 
-ANTHROPIC_PROMPT_CACHE_ENABLED = (
-    os.getenv("USE_ANTHROPIC_PROMPT_CACHING", "true").strip().lower() in {"1", "true", "yes", "on"}
-)
-ANTHROPIC_CACHE_CONTROL = {"type": "ephemeral"}
 _ANTHROPIC_OTEL_LOCK = threading.Lock()
 _ANTHROPIC_OTEL_INSTRUMENTED = False
+
+
+@dataclass(frozen=True)
+class AnthropicCachePolicy:
+    """Cache policy for Anthropic requests."""
+
+    enabled: bool
+    automatic_conversation_caching: bool = True
+    cache_tools: bool = True
+    cache_static_system: bool = True
+    ttl: Optional[str] = None
+
+    @property
+    def cache_control(self) -> dict[str, str]:
+        control = {"type": "ephemeral"}
+        if self.ttl:
+            control["ttl"] = self.ttl
+        return control
+
+
+ANTHROPIC_CACHE_POLICY = AnthropicCachePolicy(
+    enabled=os.getenv("USE_ANTHROPIC_PROMPT_CACHING", "true").strip().lower() in {"1", "true", "yes", "on"},
+)
 
 
 # ================================
@@ -38,9 +58,7 @@ def _to_anthropic_messages(
         role = message["role"]
 
         if role == "system":
-            content = message.get("content") or ""
-            if content:
-                system_blocks.append(_build_anthropic_text_block(content, cacheable=False))
+            system_blocks.extend(_coerce_system_blocks(message.get("content")))
             continue
 
         if role == "tool":
@@ -82,8 +100,7 @@ def _to_anthropic_messages(
     if pending_tool_results:
         anthropic_messages.append(_build_anthropic_tool_result_message(pending_tool_results))
 
-    if ANTHROPIC_PROMPT_CACHE_ENABLED and system_blocks:
-        system_blocks[-1]["cache_control"] = dict(ANTHROPIC_CACHE_CONTROL)
+    _ensure_system_cache_breakpoint(system_blocks)
 
     return system_blocks, anthropic_messages
 
@@ -110,12 +127,64 @@ def _ensure_anthropic_text_blocks(content: Any) -> list[dict[str, Any]]:
     return [{"type": "text", "text": str(content)}]
 
 
+def _coerce_system_blocks(content: Any) -> list[dict[str, Any]]:
+    """Convert internal system content into Anthropic text blocks."""
+    if not content:
+        return []
+
+    if isinstance(content, str):
+        return [_build_anthropic_text_block(content, cacheable=False)]
+
+    if isinstance(content, list):
+        blocks: list[dict[str, Any]] = []
+        for block in content:
+            if isinstance(block, str):
+                blocks.append(_build_anthropic_text_block(block, cacheable=False))
+                continue
+
+            if not isinstance(block, dict):
+                blocks.append(_build_anthropic_text_block(str(block), cacheable=False))
+                continue
+
+            if "cache_control" in block:
+                normalized = dict(block)
+                normalized.pop("cacheable", None)
+                blocks.append(normalized)
+                continue
+
+            block_text = block.get("text")
+            if block_text is None:
+                blocks.append(_build_anthropic_text_block(str(block), cacheable=False))
+                continue
+
+            blocks.append(
+                _build_anthropic_text_block(
+                    str(block_text),
+                    cacheable=bool(block.get("cacheable", False)),
+                )
+            )
+        return blocks
+
+    return [_build_anthropic_text_block(str(content), cacheable=False)]
+
+
 def _build_anthropic_text_block(text: str, *, cacheable: bool) -> dict[str, Any]:
     """Build an Anthropic text block, optionally with cache control."""
     block = {"type": "text", "text": text}
-    if cacheable and ANTHROPIC_PROMPT_CACHE_ENABLED:
-        block["cache_control"] = dict(ANTHROPIC_CACHE_CONTROL)
+    if cacheable and ANTHROPIC_CACHE_POLICY.enabled and ANTHROPIC_CACHE_POLICY.cache_static_system:
+        block["cache_control"] = dict(ANTHROPIC_CACHE_POLICY.cache_control)
     return block
+
+
+def _ensure_system_cache_breakpoint(system_blocks: list[dict[str, Any]]) -> None:
+    """Ensure there is one explicit static-system cache breakpoint when none was supplied."""
+    if not system_blocks or not ANTHROPIC_CACHE_POLICY.enabled or not ANTHROPIC_CACHE_POLICY.cache_static_system:
+        return
+
+    if any("cache_control" in block for block in system_blocks):
+        return
+
+    system_blocks[-1]["cache_control"] = dict(ANTHROPIC_CACHE_POLICY.cache_control)
 
 
 def _normalize_anthropic_usage(usage: Any) -> UsageStats:
@@ -187,8 +256,8 @@ class AnthropicBackend(LLMBackend[T]):
             }
             for tool in tools
         ]
-        if ANTHROPIC_PROMPT_CACHE_ENABLED and rendered_tools:
-            rendered_tools[-1]["cache_control"] = dict(ANTHROPIC_CACHE_CONTROL)
+        if ANTHROPIC_CACHE_POLICY.enabled and ANTHROPIC_CACHE_POLICY.cache_tools and rendered_tools:
+            rendered_tools[-1]["cache_control"] = dict(ANTHROPIC_CACHE_POLICY.cache_control)
         return rendered_tools
 
     def create_turn(
@@ -203,6 +272,11 @@ class AnthropicBackend(LLMBackend[T]):
         response = self.raw_client.messages.create(
             **_compact_kwargs(
                 model=self.model,
+                cache_control=(
+                    dict(ANTHROPIC_CACHE_POLICY.cache_control)
+                    if ANTHROPIC_CACHE_POLICY.enabled and ANTHROPIC_CACHE_POLICY.automatic_conversation_caching
+                    else None
+                ),
                 system=system_blocks or None,
                 messages=anthropic_messages,
                 tools=self.render_tools(tools) if tools else None,

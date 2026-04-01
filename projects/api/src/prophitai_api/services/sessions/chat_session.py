@@ -79,7 +79,7 @@ class ChatSessionManager:
         """
         from prophitai_atlas.agents import Agent
         from prophitai_atlas.models import PrintMode
-        from prophitai_tools.registry import ALL_TOOL_FUNCTIONS
+        from prophitai_tools.registry import CHAT_TOOL_FUNCTIONS
         from prophitai_api.agents.prompts import build_chat_system_prompt
 
         session_id = str(uuid.uuid4())
@@ -94,7 +94,7 @@ class ChatSessionManager:
             temperature=0.7,
             max_iterations=200,
             user_id=user_id,
-            deferred_tools=ALL_TOOL_FUNCTIONS,
+            deferred_tools=CHAT_TOOL_FUNCTIONS,
             system_prompt=chat_prompt,
         )
 

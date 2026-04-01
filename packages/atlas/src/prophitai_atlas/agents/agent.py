@@ -18,8 +18,8 @@ from prophitai_atlas.models import (
 )
 from prophitai_atlas.models.notebook import Notebook
 from prophitai_atlas.models.new_plan import Plan
-from prophitai_atlas.prompts.base import build_base_system_prompt
-from prophitai_atlas.prompts.plan_injection import inject_plan_tasks
+from prophitai_atlas.prompts.base import build_base_system_blocks, build_base_system_prompt
+from prophitai_atlas.prompts.plan_injection import inject_plan_tasks, inject_plan_tasks_blocks
 from prophitai_atlas.tools.catalogue import build_deferred_tools_data
 from prophitai_atlas.tools.base.register_tools import (
     REGISTER_TOOLS_TOOL,
@@ -106,12 +106,20 @@ class Agent(AgentBase):
         # Reason: caller-provided prompt takes precedence; fallback to generic base prompt
         if system_prompt is not None:
             self.system_prompt: str = system_prompt
+            self.system_prompt_blocks: Optional[List[Dict[str, Any]]] = None
         else:
             self.system_prompt = build_base_system_prompt()
+            self.system_prompt_blocks = build_base_system_blocks()
 
         # Reason: Append deferred tools description to whatever prompt is used (system-prompt agnostic)
         if deferred_description:
             self.system_prompt = f"{self.system_prompt}\n\n{deferred_description}"
+
+            if self.system_prompt_blocks is not None:
+
+                self.system_prompt_blocks.append(
+                    {"type": "text", "text": deferred_description, "cacheable": True}
+                )
 
         # --- Add the built-in tools ---
         self.add_tool(**llm_web_search.tool)
@@ -146,20 +154,29 @@ class Agent(AgentBase):
         self,
         user_message: str,
         conversation_history: Optional[List[Dict[str, Any]]] = None,
-        system_prompt: Optional[str] = None,
+        system_prompt: Optional[Any] = None,
     ) -> List[Dict[str, Any]]:
         """Build the message list for the LLM call.
 
         Trusts the caller to provide properly filtered conversation_history.
         Use ChatSession.get_history() to pre-filter at the boundary.
         """
-        prompt = system_prompt or self.system_prompt
+        if system_prompt is not None:
+            prompt = system_prompt
+
+        elif self.provider == "anthropic" and self.system_prompt_blocks is not None:
+            prompt = self.system_prompt_blocks
+
+        else:
+            prompt = self.system_prompt
+
         messages = [{"role": "system", "content": prompt}]
 
         if conversation_history:
             messages.extend(conversation_history)
 
         messages.append({"role": "user", "content": user_message})
+
         return messages
 
     def run(
@@ -169,7 +186,6 @@ class Agent(AgentBase):
         *,
         plan_first: bool = False,
         format_output: Optional[type[BaseModel]] = None,
-        max_iterations: Optional[int] = None,
     ) -> AgentResponse:
         """Run the agent for a user query.
 
@@ -178,15 +194,7 @@ class Agent(AgentBase):
             conversation_history: Prior conversation turns (ignored when plan_first=True).
             plan_first: If True, run PlannerAgent first and execute the plan.
             format_output: Optional Pydantic model to parse the final answer into.
-            max_iterations: Override max iterations for this turn (defaults to 50 when plan_first=True).
         """
-        original_max_iterations = self.max_iterations
-
-        if max_iterations is not None:
-            self.max_iterations = max_iterations
-        elif plan_first:
-            self.max_iterations = 50
-
         span_name = "agent.run_planned" if plan_first else "agent.run"
 
         with self.langfuse.start_as_current_observation(
@@ -228,7 +236,11 @@ class Agent(AgentBase):
 
                 # --- Select system prompt ---
                 if plan_first and self.plan:
-                    system_prompt = inject_plan_tasks(self.system_prompt, self.plan)
+                    if self.provider == "anthropic" and self.system_prompt_blocks is not None:
+                        system_prompt = inject_plan_tasks_blocks(self.system_prompt_blocks, self.plan)
+                        print(f"System prompt blocks: {self.system_prompt_blocks}")
+                    else:
+                        system_prompt = inject_plan_tasks(self.system_prompt, self.plan)
                 else:
                     system_prompt = None  # uses self.system_prompt via build_messages
 
@@ -292,10 +304,5 @@ class Agent(AgentBase):
                 if plan_first:
                     self.remove_tool("update_plan")
 
-                self.max_iterations = original_max_iterations
 
 
-
-if __name__ == "__main__":
-    agent = Agent()
-    print(agent.system_prompt)

@@ -1,4 +1,4 @@
-"""Interactive chat agent with all tools available."""
+"""Test: Agent with deferred tools — portfolio analysis + worker research."""
 
 from prophitai_atlas.agents import Agent
 from prophitai_atlas.models import PrintMode
@@ -14,37 +14,37 @@ def main():
         max_iterations=50,
     )
 
-    conversation_history = []
+    result = agent.run(
+        user_message=(
+            "I have a portfolio of AAPL (25%), MSFT (20%), NVDA (15%), AMZN (15%), "
+            "JPM (10%), UNH (10%), and XOM (5%). "
+            "\n\n"
+            "1. First, run the portfolio allocator on these tickers and weights to get "
+            "an optimized allocation suggestion. "
+            "\n\n"
+            "2. Then deploy a worker agent to do deep research on the macro environment "
+            "right now — have it use the macro research tool, earnings call search on "
+            "a couple of the top holdings, and pull current US treasury rates and commodity prices. "
+            "The worker should write detailed notes on everything it finds. "
+            "\n\n"
+            "3. After the worker finishes, retrieve its notes, synthesize everything, and "
+            "give me a final recommendation: should I rebalance toward the optimized weights, "
+            "or does the macro environment suggest a different tilt?"
+        ),
+        plan_first=True,
+        max_iterations=50,
+    )
 
-    print("\n" + "=" * 60)
-    print("  ProphitAI Chat Agent")
-    print("  Type 'quit' or 'exit' to end the session.")
-    print("=" * 60 + "\n")
-
-    while True:
-        try:
-            user_input = input("You: ").strip()
-        except (EOFError, KeyboardInterrupt):
-            print("\nGoodbye.")
-            break
-
-        if not user_input:
-            continue
-        if user_input.lower() in ("quit", "exit"):
-            print("Goodbye.")
-            break
-
-        result = agent.run(
-            user_message=user_input,
-            conversation_history=conversation_history,
-            max_iterations=50,
-        )
-
-        print(f"\nAssistant: {result.answer}\n")
-
-        # Reason: Track conversation for multi-turn context
-        conversation_history.append({"role": "user", "content": user_input})
-        conversation_history.append({"role": "assistant", "content": result.answer})
+    print("\n" + "=" * 80)
+    print("FINAL ANSWER")
+    print("=" * 80)
+    print(result.answer)
+    print("\n" + "=" * 80)
+    print(f"Iterations: {result.iterations}")
+    print(f"Tokens: {result.tokens_used}")
+    print(f"Tool calls: {result.tool_calls_made}")
+    print(f"Stop reason: {result.stop_reason}")
+    print("=" * 80)
 
 
 if __name__ == "__main__":
