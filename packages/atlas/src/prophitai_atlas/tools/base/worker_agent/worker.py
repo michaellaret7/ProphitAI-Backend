@@ -56,7 +56,7 @@ def deploy_worker_agent(
             provider=WORKER_PROVIDER,
             model=WORKER_MODEL,
             chat_callback=worker_callback,
-            max_iterations=30,
+            max_iterations=100,
             user_id=user_id,
         )
 
