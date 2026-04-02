@@ -79,16 +79,12 @@ class ChatSessionManager:
         """
         from prophitai_atlas.agents import Agent
         from prophitai_atlas.models import PrintMode
-        from prophitai_atlas.tools.catalogue import ToolCatalogue
-        from prophitai_tools.registry import ALL_TOOL_FUNCTIONS
+        from prophitai_tools.registry import CHAT_TOOL_FUNCTIONS
         from prophitai_api.agents.prompts import build_chat_system_prompt
 
         session_id = str(uuid.uuid4())
 
-        catalogue = ToolCatalogue(ALL_TOOL_FUNCTIONS)
-        chat_prompt = build_chat_system_prompt(
-            tool_catalogue=catalogue.build_catalogue_description()
-        )
+        chat_prompt = build_chat_system_prompt()
 
         # Create agent without callback (callback set per-message due to event loop)
         agent = Agent(
@@ -98,7 +94,7 @@ class ChatSessionManager:
             temperature=0.7,
             max_iterations=200,
             user_id=user_id,
-            tools=ALL_TOOL_FUNCTIONS,
+            deferred_tools=CHAT_TOOL_FUNCTIONS,
             system_prompt=chat_prompt,
         )
 

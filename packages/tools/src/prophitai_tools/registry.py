@@ -1,10 +1,10 @@
 """Central tool registry for ProphitAI domain tools.
 
 Imports all @agent_tool-decorated functions and exposes them as a flat list
-for injection into the Agent constructor via ``Agent(tools=ALL_TOOL_FUNCTIONS)``.
+for injection into the Agent constructor via ``Agent(deferred_tools=ALL_TOOL_FUNCTIONS)``.
 
-Each tool is decorated with ``@agent_tool(category="category_name")`` so the
-ToolCatalogue can group them automatically.
+Each tool is decorated with ``@agent_tool(category="category_name")`` so
+build_deferred_tools_data can group them automatically.
 """
 
 from typing import Callable
@@ -184,6 +184,26 @@ ALL_TOOL_FUNCTIONS: list[Callable] = [
     sandbox_write_file, sandbox_read_file, sandbox_list_files, sandbox_file_tree,
     sandbox_run_python, sandbox_run_command,
     create_pull_request,
+]
+
+# Reason: Render deployment and sandbox tools are infrastructure / dev-only
+# and should not be available to the chat agent.
+_EXCLUDED_FROM_CHAT: set[Callable] = {
+    # render
+    list_deploys, get_deploy, trigger_deploy, cancel_deploy, rollback_deploy,
+    create_render_service, list_render_services, get_render_service,
+    list_instances, restart_service, suspend_service, resume_service,
+    list_env_vars, set_env_var, delete_env_var,
+    get_render_logs, get_render_log_labels,
+    # sandbox
+    start_sandbox, close_sandbox, get_sandbox_status,
+    sandbox_write_file, sandbox_read_file, sandbox_list_files, sandbox_file_tree,
+    sandbox_run_python, sandbox_run_command,
+    create_pull_request,
+}
+
+CHAT_TOOL_FUNCTIONS: list[Callable] = [
+    fn for fn in ALL_TOOL_FUNCTIONS if fn not in _EXCLUDED_FROM_CHAT
 ]
 
 # Reason: These tools require direct user confirmation and must never be

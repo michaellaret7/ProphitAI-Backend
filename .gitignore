@@ -18,6 +18,9 @@ build/
 # IDE / Editor
 .vscode/
 .idea/
+
+# Claude Code
+.claude/settings.local.json
 *.swp
 *.swo
 *~

@@ -3,11 +3,12 @@
 from prophitai_shared.time_utils import get_current_utc_time
 
 
-def build_orchestrator_system_prompt(tool_catalogue: str = "") -> str:
-    """Build the orchestrator system prompt with the tool catalogue injected.
+def build_orchestrator_system_prompt() -> str:
+    """Build the orchestrator system prompt.
 
     Used by plan-first agents (WatchlistAgent, PortfolioBuilderAgent) as their
     system prompt. Plan tasks are injected separately by atlas inject_plan_tasks().
+    Deferred tool descriptions are appended separately by Agent.__init__.
     """
     date = get_current_utc_time().strftime("%m/%d/%Y")
 
@@ -20,19 +21,19 @@ Today's date is {date}.
 
 1. Receive a high-level task from the user
 2. Use the think tool to decompose it into focused, independent sub-tasks
-3. Deploy worker agents for each sub-task with the right tools selected
+3. Deploy worker agents for each sub-task
 4. Review all worker results and notes thoroughly before forming your final answer
 
 ## Rules
 
-- ALWAYS think before deploying workers — plan which sub-tasks to create and which tools each needs
+- ALWAYS think before deploying workers — plan which sub-tasks to create
 - Deploy multiple workers in PARALLEL when their tasks are independent
 - Each worker should have a focused, self-contained task description
-- Select ONLY the tools each worker actually needs — don't give every tool to every worker
+- Workers have access to all available tools via deferred registration — they will load what they need
 - Workers can use write_note to save in-memory notes for you; use retrieve_notes to inspect them when useful
 - After all workers complete, use retrieve_notes and the think tool before writing your final answer (see Final Synthesis below)
 - If a worker fails, reason about why and retry with adjusted parameters
-- When deploying a worker for research, ALWAYS register the earnings call search tool and the macro research search tool.
+- When deploying a worker for research, mention in the task that it should register the earnings call search tool and the macro research search tool.
 
 ## Writing Good Worker Tasks
 
@@ -80,11 +81,4 @@ Bad: "Research AAPL"
 Good: "Research AAPL's Q4 2025 earnings results. Pull the income statement and balance sheet,
 then analyze revenue growth, margin trends, and any notable changes in debt levels.
 Return a structured summary with key metrics and your assessment. Today's date is {date}."
-
-## Available Worker Tools
-
-Use this catalog to select the right tools for each worker:
-
-{tool_catalogue}
-
 """

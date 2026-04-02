@@ -14,7 +14,6 @@ from prophitai_atlas.agents import Agent
 from prophitai_atlas.models import PrintMode
 from prophitai_atlas.tools.decorator import agent_tool
 from prophitai_atlas.tools.responses import success_response, error_response
-from prophitai_atlas.tools.catalogue import ToolCatalogue
 from prophitai_atlas.prompts.base import build_base_system_prompt
 from prophitai_atlas.prompts.plan_injection import inject_plan_tasks
 
@@ -171,7 +170,7 @@ def test_agent_base_prompt():
         provider="anthropic",
         model="claude-sonnet-4-6",
         print_mode=PrintMode.PRODUCTION,
-        tools=FAKE_TOOLS,
+        deferred_tools=FAKE_TOOLS,
         # no system_prompt — should use build_base_system_prompt
     )
 
@@ -201,22 +200,20 @@ def test_agent_custom_chat_prompt():
     """Agent with chat system_prompt (as chat_executor does) should use it as-is."""
     from prophitai_api.agents.prompts import build_chat_system_prompt
 
-    catalogue = ToolCatalogue(FAKE_TOOLS)
-    chat_prompt = build_chat_system_prompt(
-        tool_catalogue=catalogue.build_catalogue_description()
-    )
+    chat_prompt = build_chat_system_prompt()
 
     agent = Agent(
         provider="anthropic",
         model="claude-sonnet-4-6",
         print_mode=PrintMode.PRODUCTION,
-        tools=FAKE_TOOLS,
+        deferred_tools=FAKE_TOOLS,
         system_prompt=chat_prompt,
     )
 
     # Verify the agent uses the chat prompt, not the base prompt
     assert "expert financial research analyst" in agent.system_prompt, "Should use the chat prompt"
     assert "3-Tier Decision Framework" in agent.system_prompt, "Chat prompt should have decision framework"
+    assert "<deferred_tools>" in agent.system_prompt, "Deferred tools should be appended"
 
     result = agent.run(
         user_message="What's AAPL trading at?",
@@ -236,22 +233,20 @@ def test_agent_orchestrator_prompt_plan_first():
     """Agent with orchestrator system_prompt in plan_first mode should inject plan tasks."""
     from prophitai_api.agents.prompts import build_orchestrator_system_prompt
 
-    catalogue = ToolCatalogue(FAKE_TOOLS)
-    orchestrator_prompt = build_orchestrator_system_prompt(
-        tool_catalogue=catalogue.build_catalogue_description()
-    )
+    orchestrator_prompt = build_orchestrator_system_prompt()
 
     agent = Agent(
         provider="anthropic",
         model="claude-sonnet-4-6",
         print_mode=PrintMode.PRODUCTION,
-        tools=FAKE_TOOLS,
+        deferred_tools=FAKE_TOOLS,
         system_prompt=orchestrator_prompt,
     )
 
     # Verify the agent uses the orchestrator prompt
     assert "orchestrator agent" in agent.system_prompt, "Should use the orchestrator prompt"
     assert "Deploy Multiple Workers" in agent.system_prompt, "Orchestrator prompt should have worker rules"
+    assert "<deferred_tools>" in agent.system_prompt, "Deferred tools should be appended"
 
     result = agent.run(
         user_message=(

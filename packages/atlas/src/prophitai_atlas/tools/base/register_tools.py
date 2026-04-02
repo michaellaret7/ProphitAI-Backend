@@ -3,53 +3,45 @@
 Allows the LLM to load tool categories or individual tools on demand,
 rather than having all tools registered at init.
 
-This is a framework tool — it reads from the agent's `tool_registry` attribute
+This is a framework tool — it reads from the agent's deferred tools data
 which is populated by the caller (e.g., packages/tools or projects/api).
 """
 
 from typing import Any, Dict, List, Optional, Callable
 
-from prophitai_atlas.tools.decorator import agent_tool
 from prophitai_atlas.tools.responses import success_response, error_response
 
 
-def build_register_tools_schema(
-    tool_registry: Dict[str, List[Callable]],
-    all_tools: Dict[str, Dict[str, Any]],
-) -> Dict[str, Any]:
-    """Build the tool schema dict for register_tools with the actual registry enums.
+# ==============================================================================
+# --> Static tool schema
+# ==============================================================================
 
-    Called by the caller when setting up the agent to generate the correct
-    schema with valid category/tool name enums.
-    """
-    return {
-        "name": "register_tools",
-        "description": (
-            "Register tools for this conversation. Call this before using "
-            "tools that aren't in your pre-registered set. You start with a small set "
-            "of pre-registered tools. Use this tool to load additional categories or "
-            "individual tools on demand. At least one of `categories` or `tools` must "
-            "be provided."
-        ),
-        "parameters": {
-            "type": "object",
-            "properties": {
-                "categories": {
-                    "type": "array",
-                    "description": "Register all tools in these categories at once.",
-                    "items": {"type": "string", "enum": sorted(tool_registry.keys())},
-                    "default": None,
-                },
-                "tools": {
-                    "type": "array",
-                    "description": "Register individual tools by name.",
-                    "items": {"type": "string", "enum": sorted(all_tools.keys())},
-                    "default": None,
-                },
+REGISTER_TOOLS_TOOL = {
+    "name": "register_tools",
+    "description": (
+        "Register tools for this conversation. Call this before using "
+        "tools that aren't in your pre-registered set. You start with a small set "
+        "of pre-registered tools. Use this tool to load additional categories or "
+        "individual tools on demand. At least one of `categories` or `tools` must "
+        "be provided."
+    ),
+    "parameters": {
+        "type": "object",
+        "properties": {
+            "categories": {
+                "type": "array",
+                "description": "Register all tools in these categories at once.",
+                "items": {"type": "string"},
             },
-            "additionalProperties": False,
+            "tools": {
+                "type": "array",
+                "description": "Register individual tools by name.",
+                "items": {"type": "string"},
+            },
         },
-    }
+        "additionalProperties": False,
+    },
+}
 
 
 def register_tools_fn(

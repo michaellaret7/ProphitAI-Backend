@@ -6,6 +6,8 @@ position trackers. This module never fetches data or executes trades — it only
 reconciles and applies startup state.
 """
 
+from __future__ import annotations
+
 import logging
 from typing import TYPE_CHECKING
 

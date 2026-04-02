@@ -14,7 +14,6 @@ Usage:
 
 from prophitai_atlas.agents import Agent
 from prophitai_atlas.models import PrintMode
-from prophitai_atlas.tools.catalogue import ToolCatalogue
 from prophitai_shared.time_utils import get_utc_date_str
 
 # ================================
@@ -128,8 +127,11 @@ DEEP_RESEARCH_TOOLS = [
 # --> Deep research system prompt
 # ==============================================================================
 
-def build_deep_research_prompt(tool_catalogue: str = "") -> str:
-    """Build the deep research agent system prompt."""
+def build_deep_research_prompt() -> str:
+    """Build the deep research agent system prompt.
+
+    Deferred tool descriptions are appended separately by Agent.__init__.
+    """
 
     date = get_utc_date_str()
 
@@ -268,9 +270,8 @@ convergence of evidence suggest? What conviction level is warranted?
 <available_tools>
 ## Available Worker Tools
 
-Use this catalog to select the right tools for each worker:
-
-{tool_catalogue}
+Workers have access to all available tools via deferred registration.
+They will use `register_tools` to load the tools they need for their task.
 </available_tools>
 
 <orchestration_rules>
@@ -308,17 +309,14 @@ class DeepResearchAgent:
         print_mode: PrintMode = PrintMode.VERBOSE,
         max_iterations: int = 150,
     ) -> None:
-        catalogue = ToolCatalogue(DEEP_RESEARCH_TOOLS)
-        system_prompt = build_deep_research_prompt(
-            tool_catalogue=catalogue.build_catalogue_description()
-        )
+        system_prompt = build_deep_research_prompt()
 
         self._agent = Agent(
             provider=provider,
             model=model,
             max_iterations=max_iterations,
             print_mode=print_mode,
-            tools=DEEP_RESEARCH_TOOLS,
+            deferred_tools=DEEP_RESEARCH_TOOLS,
             system_prompt=system_prompt,
         )
 

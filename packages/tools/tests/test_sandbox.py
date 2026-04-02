@@ -42,7 +42,7 @@ def _make_agent() -> Agent:
         provider="anthropic",
         model="claude-sonnet-4-6",
         print_mode=PrintMode.PRODUCTION,
-        tools=SANDBOX_TOOLS,
+        deferred_tools=SANDBOX_TOOLS,
     )
 
 
