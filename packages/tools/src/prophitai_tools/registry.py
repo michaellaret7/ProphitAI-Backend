@@ -93,6 +93,7 @@ from prophitai_tools.research.economics_research import economics_research_searc
 from prophitai_tools.research.user_uploads import user_upload_search
 from prophitai_tools.research.tax_research import tax_research_search
 from prophitai_tools.research.theory_research import theory_research
+from prophitai_tools.research.strategy_research import strategy_research
 
 # ================================
 # --> Imports: market / macro
@@ -167,7 +168,7 @@ ALL_TOOL_FUNCTIONS: list[Callable] = [
     # research
     macro_research, earnings_call_search, credit_research_search,
     economics_research_search, user_upload_search, tax_research_search,
-    theory_research,
+    theory_research, strategy_research,
     # market
     commodity_prices, us_treasury_rates, macro_indicators,
     general_news, get_ticker_news, get_press_releases,
