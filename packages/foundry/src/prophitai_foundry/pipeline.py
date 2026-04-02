@@ -32,12 +32,27 @@ from prophitai_foundry.models.metadata import (
     DefaultMetadata,
     EarningsCallMetadata,
     ResearchDocumentMetadata,
+    TradingStrategyMetadata,
     UserUploadMetadata,
 )
 
 load_dotenv()
 
-RESEARCH_DOC_TYPES = {"macro_research", "equity_research"}
+METADATA_KIND_BY_DOC_TYPE = {
+    "earnings_call": "earnings_call",
+    "user_upload": "user_upload",
+    "macro_research": "research",
+    "equity_research": "research",
+    "ticker_research": "research",
+    "credit": "research",
+    "credit_research": "research",
+    "strategy_research": "strategy",
+    "trading_strategy_research": "strategy",
+}
+
+CANONICAL_DOC_TYPES = {
+    "trading_strategy_research": "strategy_research",
+}
 
 @dataclass
 class IngestedDoc:
@@ -47,6 +62,7 @@ class IngestedDoc:
     doc_id: str
     earnings_meta: EarningsCallMetadata | None = None
     research_meta: ResearchDocumentMetadata | None = None
+    strategy_meta: TradingStrategyMetadata | None = None
     user_upload_meta: UserUploadMetadata | None = None
     default_meta: DefaultMetadata | None = None
     s3_uri: str | None = None  # Track S3 URI for cleanup after processing
@@ -222,7 +238,10 @@ class Pipeline:
         s3_uri: str | None = None,
     ) -> IngestedDoc:
         """Build IngestedDoc with appropriate metadata extraction."""
-        if self.doc_type == "earnings_call":
+        metadata_kind = METADATA_KIND_BY_DOC_TYPE.get(self.doc_type, "default")
+        canonical_doc_type = CANONICAL_DOC_TYPES.get(self.doc_type, self.doc_type)
+
+        if metadata_kind == "earnings_call":
             earnings_meta = EarningsCallMetadata.from_transcript(raw_metadata)
             return IngestedDoc(
                 document=doc,
@@ -232,16 +251,13 @@ class Pipeline:
                 s3_uri=s3_uri,
             )
 
-        if self.doc_type in RESEARCH_DOC_TYPES and s3_uri:
-            research_meta = ResearchDocumentMetadata.from_s3_uri(s3_uri)
-            # Allow user to override fields via raw_metadata
-            overrides = {}
-            if raw_metadata.get("ticker"):
-                overrides["ticker"] = raw_metadata["ticker"]
-            if raw_metadata.get("research_provider"):
-                overrides["research_provider"] = raw_metadata["research_provider"]
-            if overrides:
-                research_meta = research_meta.model_copy(update=overrides)
+        if metadata_kind == "research":
+            research_meta = self._build_structured_metadata(
+                ResearchDocumentMetadata,
+                raw_metadata,
+                s3_uri,
+                document_type=canonical_doc_type,
+            )
             return IngestedDoc(
                 document=doc,
                 metadata=research_meta.to_chunk_metadata(),
@@ -250,7 +266,22 @@ class Pipeline:
                 s3_uri=s3_uri,
             )
 
-        if self.doc_type == "user_upload" and s3_uri:
+        if metadata_kind == "strategy":
+            strategy_meta = self._build_structured_metadata(
+                TradingStrategyMetadata,
+                raw_metadata,
+                s3_uri,
+                document_type=canonical_doc_type,
+            )
+            return IngestedDoc(
+                document=doc,
+                metadata=strategy_meta.to_chunk_metadata(),
+                doc_id=strategy_meta.doc_id,
+                strategy_meta=strategy_meta,
+                s3_uri=s3_uri,
+            )
+
+        if metadata_kind == "user_upload" and s3_uri:
             user_id = raw_metadata.get("user_id")
             if not user_id:
                 raise ValueError("user_id required in metadata for user_upload doc_type")
@@ -279,6 +310,36 @@ class Pipeline:
             s3_uri=s3_uri,
         )
 
+    def _build_structured_metadata(
+        self,
+        model_cls,
+        raw_metadata: dict,
+        s3_uri: str | None,
+        document_type: str,
+    ):
+        """Build a structured metadata model with optional user overrides."""
+        if s3_uri:
+            meta = model_cls.from_s3_uri(s3_uri, document_type=document_type)
+        else:
+            meta = model_cls(
+                file_name=raw_metadata.get("file_name") or raw_metadata.get("source_name", "raw_text"),
+                file_extension=raw_metadata.get("file_extension", "txt"),
+                document_type=document_type,
+            )
+
+        overrides = {
+            key: value
+            for key, value in raw_metadata.items()
+            if value is not None and key in model_cls.model_fields
+        }
+        if "document_type" not in overrides:
+            overrides["document_type"] = document_type
+
+        if overrides:
+            meta = meta.model_copy(update=overrides)
+
+        return meta
+
     def _chunk_all(self, ingested: list[IngestedDoc]) -> list[Chunk]:
         """Chunk all documents and collect all chunks."""
         all_chunks: list[Chunk] = []
@@ -299,6 +360,8 @@ class Pipeline:
                     chunk.metadata["chunk_id"] = doc_item.earnings_meta.build_chunk_id(chunk_index)
                 elif doc_item.research_meta:
                     chunk.metadata["chunk_id"] = doc_item.research_meta.build_chunk_id(chunk_index)
+                elif doc_item.strategy_meta:
+                    chunk.metadata["chunk_id"] = doc_item.strategy_meta.build_chunk_id(chunk_index)
                 elif doc_item.user_upload_meta:
                     chunk.metadata["chunk_id"] = doc_item.user_upload_meta.build_chunk_id(chunk_index)
                 elif doc_item.default_meta:
@@ -339,37 +402,59 @@ class Pipeline:
         return uuid.uuid4().hex
 
 
-if __name__ == "__main__":
-    import asyncio
+def build_s3_uri_batch(bucket: str, prefix: str, limit: int | None = None) -> list[dict]:
+    """Collect S3 URIs under a prefix for pipeline ingestion."""
     import boto3
 
-    async def main():
-        bucket = "prophitai-s3-bucket"
-        prefix = "pdfs/taxes/not_embedded/"
+    s3 = boto3.client("s3")
+    paginator = s3.get_paginator("list_objects_v2")
 
-        s3 = boto3.client("s3")
+    s3_uris: list[dict] = []
+    for page in paginator.paginate(Bucket=bucket, Prefix=prefix):
+        for obj in page.get("Contents", []):
+            key = obj["Key"]
+            if key == prefix or key.endswith("/"):
+                continue
+            s3_uris.append({"uri": f"s3://{bucket}/{key}", "metadata": {}})
 
-        paginator = s3.get_paginator("list_objects_v2")
+    s3_uris.sort(key=lambda item: item["uri"])
+    if limit is not None:
+        return s3_uris[:limit]
+    return s3_uris
 
-        s3_uris = []
-        for page in paginator.paginate(Bucket=bucket, Prefix=prefix):
-            for obj in page.get("Contents", []):
-                s3_uris.append({"uri": f"s3://{bucket}/{obj['Key']}", "metadata": {}})
 
-        if len(s3_uris) > 0:
-            s3_uris.pop(0)
+async def run_trading_strategies_pipeline(limit: int | None = None) -> int:
+    """
+    Ingest PDFs from the trading strategies S3 folder.
 
-        print(len(s3_uris))
-        print(s3_uris)
+    Intended to be called from a CLI or module entrypoint rather than by
+    executing this source file directly.
+    """
+    bucket = "prophitai-s3-bucket"
+    prefix = "pdfs/trading_strategies/not_embedded/"
+    s3_uris = build_s3_uri_batch(bucket, prefix, limit=limit)
 
-        pipeline = Pipeline(
-            namespace="tax_docs",
-            doc_type="tax_doc",
-            chunker_type="semantic",
-            move_to_embedded_after_success=True,
-        )
+    if not s3_uris:
+        print("No trading strategy files found to ingest.")
+        return 0
 
-        count = await pipeline.run(s3_uris=s3_uris, s3_batch_size=5)
-        print(f"Upserted {count} vectors")
+    print(len(s3_uris))
+    print(s3_uris)
 
-    asyncio.run(main())
+    pipeline = Pipeline(
+        namespace="trading_strategies",
+        doc_type="strategy_research",
+        chunker_type="semantic",
+        move_to_embedded_after_success=True,
+    )
+
+    count = await pipeline.run(s3_uris=s3_uris, s3_batch_size=5)
+    print(f"Upserted {count} vectors to namespace 'trading_strategies'")
+    return count
+
+
+if __name__ == "__main__":
+    # Set to 1 for a single-file test run.
+    # Set to None to ingest the full trading_strategies folder.
+    TEST_LIMIT = 200
+    asyncio.run(run_trading_strategies_pipeline(limit=TEST_LIMIT))

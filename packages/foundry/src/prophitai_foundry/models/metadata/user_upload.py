@@ -7,7 +7,7 @@ Simple metadata that tracks user ownership for filtering.
 import uuid
 from typing import Optional
 
-from pydantic import BaseModel, Field, computed_field
+from pydantic import BaseModel, Field, PrivateAttr
 
 from prophitai_foundry.models.metadata.utils import sanitize_for_vector_id
 
@@ -31,12 +31,17 @@ class UserUploadMetadata(BaseModel):
     file_extension: str = Field(default="pdf", description="File extension")
     s3_key: Optional[str] = Field(None, description="Full S3 object key")
 
-    @computed_field
+    _doc_id: str = PrivateAttr(default="")
+
+    def model_post_init(self, _context) -> None:
+        """Generate a stable document ID once per model instance."""
+        safe_name = sanitize_for_vector_id(self.file_name)
+        self._doc_id = f"user_upload:{self.user_id}:{safe_name}:{uuid.uuid4().hex[:8]}"
+
     @property
     def doc_id(self) -> str:
         """Unique document identifier combining user_id and file_name."""
-        safe_name = sanitize_for_vector_id(self.file_name)
-        return f"user_upload:{self.user_id}:{safe_name}:{uuid.uuid4().hex[:8]}"
+        return self._doc_id
 
     @classmethod
     def from_s3_uri(cls, s3_uri: str, user_id: str) -> "UserUploadMetadata":

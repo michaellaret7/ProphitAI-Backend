@@ -8,9 +8,14 @@ and live VectorSearch against the real Pinecone index.
 import pytest
 
 from prophitai_foundry.models.chunk import Chunk
+from prophitai_foundry.models.document import Document
 from prophitai_foundry.models.metadata.earnings import EarningsCallMetadata
+from prophitai_foundry.models.metadata.research import ResearchDocumentMetadata
+from prophitai_foundry.models.metadata.strategy import TradingStrategyMetadata
+from prophitai_foundry.models.metadata.user_upload import UserUploadMetadata
 from prophitai_foundry.models.vector import QueryResult
 from prophitai_foundry.chunking.recursive import RecursiveChunker
+from prophitai_foundry.pipeline import Pipeline
 from prophitai_foundry.retrieval.utils import build_metadata_filter
 from prophitai_foundry.retrieval.search.vector import VectorSearch
 
@@ -87,7 +92,148 @@ class TestEarningsCallMetadata:
 
 
 # ================================
-# --> Test 2: RecursiveChunker
+# --> Test 2: UserUploadMetadata
+# ================================
+
+class TestUserUploadMetadata:
+    """Verify user-upload metadata produces stable document IDs."""
+
+    def test_doc_id_stable_across_accesses(self):
+        """doc_id should be generated once, not on every property access."""
+        meta = UserUploadMetadata(
+            user_id="clerk_123",
+            file_name="report",
+            file_extension="pdf",
+        )
+
+        first = meta.doc_id
+        second = meta.doc_id
+
+        assert first == second
+        assert meta.to_chunk_metadata()["doc_id"] == first
+        assert meta.build_chunk_id(2) == f"{first}#0002"
+
+
+# ================================
+# --> Test 3: ResearchDocumentMetadata
+# ================================
+
+class TestResearchDocumentMetadata:
+    """Verify research metadata IDs remain stable and collision-resistant."""
+
+    def test_ticker_research_doc_id_uses_source_identifier(self):
+        """Two same-month ticker notes should not collide when source differs."""
+        base = {
+            "file_extension": "pdf",
+            "document_type": "equity_research",
+            "research_provider": "Goldman Sachs",
+            "research_date": "2026-01",
+            "ticker": "AAPL",
+        }
+
+        meta_one = ResearchDocumentMetadata(
+            file_name="AAPL_note_v1",
+            source_id="gs:aapl-note-v1",
+            **base,
+        )
+        meta_two = ResearchDocumentMetadata(
+            file_name="AAPL_note_v2",
+            source_id="gs:aapl-note-v2",
+            **base,
+        )
+
+        assert meta_one.doc_id != meta_two.doc_id
+
+    def test_source_id_included_in_chunk_metadata(self):
+        """source_id should remain available for downstream filtering and traceability."""
+        meta = ResearchDocumentMetadata(
+            file_name="JPM_Weekly_Jan2026",
+            file_extension="pdf",
+            document_type="macro_research",
+            source_id="jpm:weekly:2026-01",
+            research_provider="JPMorgan",
+            research_date="2026-01",
+        )
+
+        chunk_meta = meta.to_chunk_metadata()
+
+        assert chunk_meta["source_id"] == "jpm:weekly:2026-01"
+        assert chunk_meta["document_type"] == "macro_research"
+
+
+# ================================
+# --> Test 4: TradingStrategyMetadata
+# ================================
+
+class TestTradingStrategyMetadata:
+    """Verify strategy metadata supports flat filtering and stable IDs."""
+
+    def test_from_s3_uri_infers_source_and_strategy_fields(self):
+        """Known filename patterns should populate useful default metadata."""
+        meta = TradingStrategyMetadata.from_s3_uri(
+            "s3://bucket/pdfs/trading_strategies/not_embedded/"
+            "arxiv_2312.15730_Deep_RL_for_Quantitative_Trading.pdf"
+        )
+
+        assert meta.document_type == "strategy_research"
+        assert meta.source_id == "arxiv:2312.15730"
+        assert meta.strategy_family == "reinforcement_learning"
+        assert meta.doc_id.startswith("strategy_research:reinforcement_learning:arxiv:2312.15730")
+
+    def test_to_chunk_metadata_preserves_flat_filterable_fields(self):
+        """Chunk metadata should keep list and scalar fields flat for Pinecone."""
+        meta = TradingStrategyMetadata(
+            file_name="stat_arb_playbook",
+            file_extension="pdf",
+            source_id="internal:stat-arb-playbook",
+            research_provider="Internal",
+            publication_date="2026-02-14",
+            strategy_family="stat_arb",
+            asset_class="equities",
+            market="us",
+            frequency="daily",
+            universe="SP500",
+            tickers=["AAPL", "MSFT"],
+            tags=["pairs", "mean_reversion"],
+            version="v2",
+        )
+
+        chunk_meta = meta.to_chunk_metadata()
+
+        assert chunk_meta["strategy_family"] == "stat_arb"
+        assert chunk_meta["tickers"] == ["AAPL", "MSFT"]
+        assert chunk_meta["tags"] == ["pairs", "mean_reversion"]
+        assert chunk_meta["publication_date"] == "2026-02-14"
+
+    def test_pipeline_strategy_builder_applies_overrides(self):
+        """Pipeline strategy metadata should use inferred defaults plus explicit overrides."""
+        pipeline = Pipeline.__new__(Pipeline)
+        pipeline.doc_type = "strategy_research"
+
+        ingested = Pipeline._build_ingested_doc(
+            pipeline,
+            Document(content="alpha", metadata={}, source="s3://bucket/doc.pdf"),
+            {
+                "publication_date": "2026-03-01",
+                "strategy_family": "momentum",
+                "research_provider": "Internal Research",
+                "tags": ["equities", "trend"],
+            },
+            s3_uri=(
+                "s3://bucket/pdfs/trading_strategies/not_embedded/"
+                "arxiv_2312.15730_Deep_RL_for_Quantitative_Trading.pdf"
+            ),
+        )
+
+        assert ingested.strategy_meta is not None
+        assert ingested.strategy_meta.strategy_family == "momentum"
+        assert ingested.strategy_meta.research_provider == "Internal Research"
+        assert ingested.strategy_meta.publication_date == "2026-03-01"
+        assert ingested.metadata["tags"] == ["equities", "trend"]
+
+
+# ================================
+# --> Test 5: RecursiveChunker
 # ================================
 
 class TestRecursiveChunker:
@@ -154,7 +300,7 @@ class TestRecursiveChunker:
 
 
 # ================================
-# --> Test 3: build_metadata_filter
+# --> Test 6: build_metadata_filter
 # ================================
 
 class TestBuildMetadataFilter:
@@ -205,7 +351,7 @@ class TestBuildMetadataFilter:
 
 
 # ================================
-# --> Test 4: VectorSearch (live)
+# --> Test 7: VectorSearch (live)
 # ================================
 
 class TestVectorSearch:

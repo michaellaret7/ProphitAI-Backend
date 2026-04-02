@@ -10,7 +10,12 @@ from typing import Optional
 
 from pydantic import BaseModel, Field, computed_field
 
-from prophitai_foundry.models.metadata.utils import sanitize_for_vector_id
+from prophitai_foundry.models.metadata.utils import (
+    infer_source_id,
+    parse_s3_uri,
+    sanitize_for_vector_id,
+    split_file_name,
+)
 from prophitai_shared import get_backend
 
 
@@ -45,6 +50,7 @@ class ResearchDocumentMetadata(BaseModel):
     file_name: str = Field(..., description="File name without extension")
     file_extension: str = Field(..., description="File extension (pdf, csv, etc.)")
     document_type: str = Field(..., description="Type of document (macro_research, ticker_research, equity_research)")
+    source_id: Optional[str] = Field(None, description="Stable external source identifier when available")
     research_provider: Optional[str] = Field(None, description="Research provider (JPMorgan, Goldman, etc.)")
     research_date: Optional[str] = Field(None, description="Research date or period (YYYY-MM or descriptive)")
     ticker: Optional[str] = Field(None, description="Stock ticker if this is ticker-specific research")
@@ -57,16 +63,17 @@ class ResearchDocumentMetadata(BaseModel):
         """Unique document identifier for the research document."""
         provider_part = sanitize_for_vector_id(self.research_provider.lower()) if self.research_provider else "unknown"
         date_part = self.research_date.replace("-", "") if self.research_date else "undated"
+        source_part = sanitize_for_vector_id((self.source_id or self.file_name).lower())
 
         if self.ticker:
-            return f"{self.document_type}:{self.ticker}:{provider_part}:{date_part}"
-        safe_name = sanitize_for_vector_id(self.file_name)
-        return f"{self.document_type}:{provider_part}:{safe_name}:{date_part}"
+            return f"{self.document_type}:{self.ticker}:{provider_part}:{date_part}:{source_part}"
+        return f"{self.document_type}:{provider_part}:{source_part}:{date_part}"
 
     @classmethod
     def from_s3_uri(
         cls,
         s3_uri: str,
+        document_type: Optional[str] = None,
         provider: str = "groq",
         model: str = "llama-3.1-8b-instant",
     ) -> "ResearchDocumentMetadata":
@@ -81,6 +88,9 @@ class ResearchDocumentMetadata(BaseModel):
         Returns:
             ResearchDocumentMetadata with fields populated from LLM extraction.
         """
+        s3_bucket, s3_key = parse_s3_uri(s3_uri)
+        file_name, file_extension = split_file_name(s3_key)
+
         backend = get_backend(provider=provider, model=model)
         response_json = backend.create_json_object(
             messages=[
@@ -91,9 +101,7 @@ class ResearchDocumentMetadata(BaseModel):
 URI: {s3_uri}
 
 Return a JSON object with these fields:
-- s3_bucket: the S3 bucket name
-- file_name: just the file name without extension
-- file_extension: the file extension (e.g., pdf, csv)
+- source_id: stable source identifier if obvious from the path or filename (e.g., arxiv:2312.15730, ssrn:5278107), null if unknown
 - research_provider: infer the research provider from the path/filename if possible (e.g., JPMorgan, Goldman Sachs, Morgan Stanley), null if unknown
 - research_date: infer date from the path/filename if possible (format as YYYY-MM if possible), null if unknown
 - document_type: infer the type from the path (e.g., macro_research, ticker_research, equity_research). Use "ticker_research" or "equity_research" if a specific stock ticker is mentioned
@@ -105,24 +113,26 @@ Return ONLY valid JSON, no other text.""",
         )
 
         parsed = json.loads(response_json)
-        document_type = parsed.get("document_type") or "research"
+        resolved_document_type = document_type or parsed.get("document_type") or "research"
         # Macro research should never have a ticker
-        ticker = None if document_type == "macro_research" else parsed.get("ticker")
+        ticker = None if resolved_document_type == "macro_research" else parsed.get("ticker")
         return cls(
-            file_name=parsed.get("file_name") or "unknown",
-            file_extension=parsed.get("file_extension") or "pdf",
-            document_type=document_type,
+            file_name=file_name,
+            file_extension=file_extension,
+            document_type=resolved_document_type,
+            source_id=parsed.get("source_id") or infer_source_id(file_name),
             research_provider=parsed.get("research_provider"),
             research_date=parsed.get("research_date"),
             ticker=ticker,
-            s3_bucket=parsed.get("s3_bucket"),
-            s3_key=parsed.get("s3_key"),
+            s3_bucket=s3_bucket,
+            s3_key=s3_key,
         )
 
     @classmethod
     def from_s3_uris_batch(
         cls,
         s3_uris: list[str],
+        document_type: Optional[str] = None,
         provider: str = "groq",
         model: str = "llama-3.1-8b-instant",
     ) -> list["ResearchDocumentMetadata"]:
@@ -153,9 +163,7 @@ URIs:
 {uris_formatted}
 
 Return a JSON object with a "documents" array where each element has:
-- s3_bucket: the S3 bucket name
-- file_name: just the file name without extension
-- file_extension: the file extension (e.g., pdf, csv)
+- source_id: stable source identifier if obvious from the path or filename (e.g., arxiv:2312.15730, ssrn:5278107), null if unknown
 - research_provider: infer the research provider if possible, null if unknown
 - research_date: infer date if possible (format as YYYY-MM), null if unknown
 - document_type: infer the type from the path (e.g., macro_research, ticker_research, equity_research). Use "ticker_research" or "equity_research" if a specific stock ticker is mentioned
@@ -170,20 +178,24 @@ Return ONLY valid JSON, no other text.""",
         documents = parsed.get("documents", [])
 
         results = []
-        for doc in documents:
-            document_type = doc.get("document_type") or "research"
+        for s3_uri, doc in zip(s3_uris, documents):
+            s3_bucket, s3_key = parse_s3_uri(s3_uri)
+            file_name, file_extension = split_file_name(s3_key)
+
+            resolved_document_type = document_type or doc.get("document_type") or "research"
             # Macro research should never have a ticker
-            ticker = None if document_type == "macro_research" else doc.get("ticker")
+            ticker = None if resolved_document_type == "macro_research" else doc.get("ticker")
             results.append(
                 cls(
-                    file_name=doc.get("file_name") or "unknown",
-                    file_extension=doc.get("file_extension") or "pdf",
-                    document_type=document_type,
+                    file_name=file_name,
+                    file_extension=file_extension,
+                    document_type=resolved_document_type,
+                    source_id=doc.get("source_id") or infer_source_id(file_name),
                     research_provider=doc.get("research_provider"),
                     research_date=doc.get("research_date"),
                     ticker=ticker,
-                    s3_bucket=doc.get("s3_bucket"),
-                    s3_key=doc.get("s3_key"),
+                    s3_bucket=s3_bucket,
+                    s3_key=s3_key,
                 )
             )
         return results
@@ -202,6 +214,8 @@ Return ONLY valid JSON, no other text.""",
             "research_provider": self.research_provider,
             "research_date": self.research_date,
         }
+        if self.source_id:
+            meta["source_id"] = self.source_id
         if self.ticker:
             meta["ticker"] = self.ticker
         return meta
