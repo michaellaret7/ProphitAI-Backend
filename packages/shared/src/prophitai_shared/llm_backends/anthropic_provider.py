@@ -7,7 +7,7 @@ from typing import Any, Optional, Sequence
 
 from anthropic import Anthropic
 
-from prophitai_shared.llm_backends.base import DEFAULT_MAX_OUTPUT_TOKENS, LLMBackend, T
+from prophitai_shared.llm_backends.base import LLMBackend, T
 from prophitai_shared.llm_backends.helpers.anthropic_helpers import (
     ANTHROPIC_CACHE_POLICY,
     _build_anthropic_text_block,
@@ -70,7 +70,7 @@ class AnthropicBackend(LLMBackend[T]):
                 tools=self.format_tools(tools) if tools else None,
                 temperature=temperature,
                 thinking={"type": "adaptive"},
-                max_tokens=DEFAULT_MAX_OUTPUT_TOKENS,
+                max_tokens=64000,
             )
         )
 
@@ -114,7 +114,7 @@ class AnthropicBackend(LLMBackend[T]):
                 messages=anthropic_messages,
                 output_format=target_model,
                 temperature=temperature,
-                max_tokens=DEFAULT_MAX_OUTPUT_TOKENS,
+                max_tokens=64000,
             )
         )
         return response.parsed_output
@@ -155,7 +155,7 @@ class AnthropicBackend(LLMBackend[T]):
                 system=system_blocks or None,
                 messages=anthropic_messages,
                 temperature=temperature,
-                max_tokens=DEFAULT_MAX_OUTPUT_TOKENS,
+                max_tokens=64000,
             )
         )
         text = "".join(block.text for block in response.content if block.type == "text")

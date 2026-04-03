@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import os
 from abc import ABC, abstractmethod
 from typing import Any, Generic, Optional, Sequence, TypeVar
 
@@ -11,8 +10,6 @@ from pydantic import BaseModel
 from prophitai_shared.llm_backends.models import NormalizedLLMResponse
 
 T = TypeVar("T", bound=BaseModel)
-
-DEFAULT_MAX_OUTPUT_TOKENS = int(os.getenv("LLM_MAX_OUTPUT_TOKENS", "4096"))
 
 class LLMBackend(ABC, Generic[T]):
     """Abstract provider backend used by Atlas and Foundry."""
