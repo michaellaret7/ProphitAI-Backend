@@ -182,7 +182,7 @@ class ExecutionLoop:
     def call_llm(self) -> NormalizedLLMResponse:
         """Make LLM API call."""
 
-        return self.agent.backend.create_turn(
+        return self.agent.backend.call_llm(
             messages=self.agent.messages,
             tools=self.agent.tools if self.agent.tools else None,
             temperature=self.agent.temperature,

@@ -68,7 +68,7 @@ class AgentBase(ABC):
         self.execution_loop = ExecutionLoop(self)
 
         # ---- Register default tools ---- #
-        if self.provider != 'openai':
+        if self.provider != 'openai' or self.provider != 'anthropic':
             self.add_tool(**think.tool)
 
         self.add_tool(**calculator.tool)

@@ -16,7 +16,7 @@ def _call_parser_with_fallback(messages: List[Dict[str, str]], target_model: Typ
     for provider, model_name in providers:
         try:
             backend = get_backend(provider, model_name)
-            return backend.parse_structured(
+            return backend.call_llm_structured(
                 messages=messages,
                 target_model=target_model,
             )
