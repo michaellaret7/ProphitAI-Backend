@@ -139,6 +139,7 @@ def get_model_and_client(provider: Optional[str], model: Optional[str] = None) -
     Prefer `get_backend()` for all new code.
     """
     backend = get_backend(provider=provider, model=model)
+    
     return backend.model, backend.raw_client
 
 

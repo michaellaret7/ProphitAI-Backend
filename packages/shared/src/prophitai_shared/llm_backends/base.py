@@ -14,7 +14,6 @@ T = TypeVar("T", bound=BaseModel)
 
 DEFAULT_MAX_OUTPUT_TOKENS = int(os.getenv("LLM_MAX_OUTPUT_TOKENS", "4096"))
 
-
 class LLMBackend(ABC, Generic[T]):
     """Abstract provider backend used by Atlas and Foundry."""
 
@@ -24,7 +23,7 @@ class LLMBackend(ABC, Generic[T]):
         self.raw_client = raw_client
 
     @abstractmethod
-    def create_turn(
+    def call_llm(
         self,
         *,
         messages: list[dict[str, Any]],
@@ -34,7 +33,7 @@ class LLMBackend(ABC, Generic[T]):
         """Send one LLM turn and normalize the response."""
 
     @abstractmethod
-    def parse_structured(
+    def call_llm_structured(
         self,
         *,
         messages: list[dict[str, Any]],
@@ -44,7 +43,7 @@ class LLMBackend(ABC, Generic[T]):
         """Return a validated structured object from the provider."""
 
     @abstractmethod
-    def create_json_object(
+    def call_llm_json(
         self,
         *,
         messages: list[dict[str, Any]],
@@ -53,5 +52,5 @@ class LLMBackend(ABC, Generic[T]):
         """Return a JSON object string from the provider."""
 
     @abstractmethod
-    def render_tools(self, tools: Sequence[dict[str, Any]]) -> list[dict[str, Any]]:
+    def format_tools(self, tools: Sequence[dict[str, Any]]) -> list[dict[str, Any]]:
         """Render canonical tool definitions into provider wire format."""

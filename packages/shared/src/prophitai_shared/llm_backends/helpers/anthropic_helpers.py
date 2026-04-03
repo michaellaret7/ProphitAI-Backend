@@ -1,18 +1,13 @@
-"""Anthropic Messages API backend."""
+"""Anthropic-specific helper functions for message conversion, caching, and instrumentation."""
 
 from __future__ import annotations
 
 from dataclasses import dataclass
-import json
 import os
 import threading
-from typing import Any, Optional, Sequence
+from typing import Any, Optional
 
-from anthropic import Anthropic
-
-from prophitai_shared.llm_backends.base import DEFAULT_MAX_OUTPUT_TOKENS, LLMBackend, T
-from prophitai_shared.llm_backends.models import NormalizedLLMResponse, NormalizedToolCall, UsageStats
-from prophitai_shared.llm_backends.utils import _compact_kwargs, _strip_json_wrappers
+from prophitai_shared.llm_backends.models import UsageStats
 
 _ANTHROPIC_OTEL_LOCK = threading.Lock()
 _ANTHROPIC_OTEL_INSTRUMENTED = False
@@ -107,6 +102,7 @@ def _to_anthropic_messages(
 
 def _build_anthropic_tool_result_message(tool_messages: list[dict[str, Any]]) -> dict[str, Any]:
     """Build an Anthropic user message containing tool_result blocks."""
+
     return {
         "role": "user",
         "content": [
@@ -171,8 +167,10 @@ def _coerce_system_blocks(content: Any) -> list[dict[str, Any]]:
 def _build_anthropic_text_block(text: str, *, cacheable: bool) -> dict[str, Any]:
     """Build an Anthropic text block, optionally with cache control."""
     block = {"type": "text", "text": text}
+
     if cacheable and ANTHROPIC_CACHE_POLICY.enabled and ANTHROPIC_CACHE_POLICY.cache_static_system:
         block["cache_control"] = dict(ANTHROPIC_CACHE_POLICY.cache_control)
+
     return block
 
 
@@ -227,145 +225,3 @@ def _ensure_anthropic_instrumentation() -> None:
         except Exception:
             # Reason: tracing must never block Anthropic model calls.
             _ANTHROPIC_OTEL_INSTRUMENTED = False
-
-
-# ================================
-# --> Anthropic Backend
-# ================================
-
-
-class AnthropicBackend(LLMBackend[T]):
-    """Backend for native Anthropic Messages API."""
-
-    def __init__(self, *, model: str, api_key: str):
-        _ensure_anthropic_instrumentation()
-        raw_client = Anthropic(api_key=api_key)
-        super().__init__(
-            provider="anthropic", 
-            model=model, 
-            raw_client=raw_client
-        )
-
-    def render_tools(self, tools: Sequence[dict[str, Any]]) -> list[dict[str, Any]]:
-        """Render canonical tool definitions into Anthropic tool format."""
-        rendered_tools = [
-            {
-                "name": tool["name"],
-                "description": tool["description"],
-                "input_schema": tool["parameters"],
-            }
-            for tool in tools
-        ]
-        if ANTHROPIC_CACHE_POLICY.enabled and ANTHROPIC_CACHE_POLICY.cache_tools and rendered_tools:
-            rendered_tools[-1]["cache_control"] = dict(ANTHROPIC_CACHE_POLICY.cache_control)
-        return rendered_tools
-
-    def create_turn(
-        self,
-        *,
-        messages: list[dict[str, Any]],
-        tools: Optional[Sequence[dict[str, Any]]] = None,
-        temperature: Optional[float] = None,
-    ) -> NormalizedLLMResponse:
-        """Send one Anthropic message turn and normalize the response."""
-        system_blocks, anthropic_messages = _to_anthropic_messages(messages)
-        response = self.raw_client.messages.create(
-            **_compact_kwargs(
-                model=self.model,
-                cache_control=(
-                    dict(ANTHROPIC_CACHE_POLICY.cache_control)
-                    if ANTHROPIC_CACHE_POLICY.enabled and ANTHROPIC_CACHE_POLICY.automatic_conversation_caching
-                    else None
-                ),
-                system=system_blocks or None,
-                messages=anthropic_messages,
-                tools=self.render_tools(tools) if tools else None,
-                temperature=temperature,
-                max_tokens=DEFAULT_MAX_OUTPUT_TOKENS,
-            )
-        )
-
-        assistant_text = []
-        tool_calls: list[NormalizedToolCall] = []
-
-        for block in response.content:
-            if block.type == "text":
-                assistant_text.append(block.text)
-            elif block.type == "tool_use":
-                tool_calls.append(
-                    NormalizedToolCall(
-                        id=block.id,
-                        name=block.name,
-                        arguments_json=json.dumps(block.input or {}, ensure_ascii=True),
-                    )
-                )
-
-        return NormalizedLLMResponse(
-            assistant_text="".join(assistant_text).strip(),
-            tool_calls=tool_calls,
-            stop_reason=response.stop_reason or "",
-            usage=_normalize_anthropic_usage(getattr(response, "usage", None)),
-            raw_response=response,
-        )
-
-    def parse_structured(
-        self,
-        *,
-        messages: list[dict[str, Any]],
-        target_model: type[T],
-        temperature: Optional[float] = None,
-    ) -> T:
-        """Return a validated Pydantic model via Anthropic JSON extraction."""
-        schema_json = json.dumps(target_model.model_json_schema(), ensure_ascii=True)
-        json_text = self._create_json_with_instruction(
-            messages=messages,
-            instruction=(
-                "Return only valid JSON matching this schema exactly. "
-                "Do not include markdown fences or explanatory text.\n"
-                f"{schema_json}"
-            ),
-            temperature=temperature,
-        )
-        return target_model.model_validate_json(json_text)
-
-    def create_json_object(
-        self,
-        *,
-        messages: list[dict[str, Any]],
-        temperature: Optional[float] = None,
-    ) -> str:
-        """Return a JSON object string via Anthropic."""
-        return self._create_json_with_instruction(
-            messages=messages,
-            instruction=(
-                "Return only a valid JSON object. "
-                "Do not include markdown fences or any explanatory text."
-            ),
-            temperature=temperature,
-        )
-
-    def _create_json_with_instruction(
-        self,
-        *,
-        messages: list[dict[str, Any]],
-        instruction: str,
-        temperature: Optional[float] = None,
-    ) -> str:
-        """Send a message with a JSON instruction appended to system blocks."""
-        system_blocks, anthropic_messages = _to_anthropic_messages(messages)
-        if instruction:
-            system_blocks = [
-                *system_blocks,
-                _build_anthropic_text_block(instruction, cacheable=True),
-            ]
-        response = self.raw_client.messages.create(
-            **_compact_kwargs(
-                model=self.model,
-                system=system_blocks or None,
-                messages=anthropic_messages,
-                temperature=temperature,
-                max_tokens=DEFAULT_MAX_OUTPUT_TOKENS,
-            )
-        )
-        text = "".join(block.text for block in response.content if block.type == "text")
-        return _strip_json_wrappers(text)

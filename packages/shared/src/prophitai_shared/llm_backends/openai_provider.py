@@ -1,4 +1,4 @@
-"""OpenAI-compatible LLM backend."""
+"""OpenAI-compatible LLM provider."""
 
 from __future__ import annotations
 
@@ -7,73 +7,11 @@ from typing import Any, Optional, Sequence
 from langfuse.openai import openai as langfuse_openai
 
 from prophitai_shared.llm_backends.base import LLMBackend, T
-from prophitai_shared.llm_backends.models import NormalizedLLMResponse, NormalizedToolCall, UsageStats
-
-
-# ================================
-# --> Helper funcs
-# ================================
-
-
-def _to_openai_messages(messages: list[dict[str, Any]]) -> list[dict[str, Any]]:
-    """Convert internal message format to OpenAI wire format."""
-    openai_messages: list[dict[str, Any]] = []
-    for message in messages:
-        role = message["role"]
-        if role == "assistant" and message.get("tool_calls"):
-            openai_messages.append(
-                {
-                    "role": "assistant",
-                    "content": message.get("content") or "",
-                    "tool_calls": [
-                        tool_call.to_openai_dict()
-                        for tool_call in message.get("tool_calls", [])
-                    ],
-                }
-            )
-            continue
-
-        if role == "tool":
-            openai_messages.append(
-                {
-                    "role": "tool",
-                    "tool_call_id": message["tool_call_id"],
-                    "content": message.get("content") or "",
-                }
-            )
-            continue
-
-        openai_messages.append(
-            {
-                "role": role,
-                "content": message.get("content") or "",
-            }
-        )
-    return openai_messages
-
-
-def _normalize_openai_usage(usage: Any) -> UsageStats:
-    """Normalize OpenAI usage stats into UsageStats."""
-    if usage is None:
-        return UsageStats()
-
-    input_tokens = int(getattr(usage, "prompt_tokens", 0) or 0)
-    output_tokens = int(getattr(usage, "completion_tokens", 0) or 0)
-    total_tokens = int(getattr(usage, "total_tokens", input_tokens + output_tokens) or 0)
-    prompt_tokens_details = getattr(usage, "prompt_tokens_details", None)
-    cache_read_input_tokens = int(getattr(prompt_tokens_details, "cached_tokens", 0) or 0)
-
-    return UsageStats(
-        input_tokens=input_tokens,
-        output_tokens=output_tokens,
-        total_tokens=total_tokens,
-        cache_read_input_tokens=cache_read_input_tokens,
-    )
-
-
-# ================================
-# --> OpenAI Backend
-# ================================
+from prophitai_shared.llm_backends.helpers.openai_helpers import (
+    _normalize_openai_usage,
+    _to_openai_messages,
+)
+from prophitai_shared.llm_backends.models import NormalizedLLMResponse, NormalizedToolCall
 
 
 class OpenAICompatibleBackend(LLMBackend[T]):
@@ -89,11 +27,11 @@ class OpenAICompatibleBackend(LLMBackend[T]):
 
         super().__init__(
             provider=provider,
-            model=model, 
+            model=model,
             raw_client=raw_client)
 
-    def render_tools(self, tools: Sequence[dict[str, Any]]) -> list[dict[str, Any]]:
-        """Render canonical tool definitions into OpenAI function-calling format."""
+    def format_tools(self, tools: Sequence[dict[str, Any]]) -> list[dict[str, Any]]:
+        """Format canonical tool definitions into OpenAI function-calling format."""
         return [
             {
                 "type": "function",
@@ -106,7 +44,7 @@ class OpenAICompatibleBackend(LLMBackend[T]):
             for tool in tools
         ]
 
-    def create_turn(
+    def call_llm(
         self,
         *,
         messages: list[dict[str, Any]],
@@ -117,7 +55,7 @@ class OpenAICompatibleBackend(LLMBackend[T]):
         response = self.raw_client.chat.completions.create(
             model=self.model,
             messages=_to_openai_messages(messages),
-            tools=self.render_tools(tools) if tools else None,
+            tools=self.format_tools(tools) if tools else None,
             tool_choice="auto" if tools else None,
             temperature=temperature,
         )
@@ -140,7 +78,7 @@ class OpenAICompatibleBackend(LLMBackend[T]):
             raw_response=response,
         )
 
-    def parse_structured(
+    def call_llm_structured(
         self,
         *,
         messages: list[dict[str, Any]],
@@ -148,8 +86,11 @@ class OpenAICompatibleBackend(LLMBackend[T]):
         temperature: Optional[float] = None,
     ) -> T:
         """Return a validated Pydantic model via OpenAI structured output."""
+
         parse_method = type(self.raw_client.chat.completions).parse
+
         original_parse = getattr(parse_method, "__wrapped__", parse_method)
+
         completion = original_parse(
             self.raw_client.chat.completions,
             model=self.model,
@@ -157,9 +98,10 @@ class OpenAICompatibleBackend(LLMBackend[T]):
             response_format=target_model,
             temperature=temperature,
         )
+
         return completion.choices[0].message.parsed
 
-    def create_json_object(
+    def call_llm_json(
         self,
         *,
         messages: list[dict[str, Any]],
