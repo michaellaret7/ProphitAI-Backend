@@ -343,8 +343,12 @@ class Pipeline:
     def _chunk_all(self, ingested: list[IngestedDoc]) -> list[Chunk]:
         """Chunk all documents and collect all chunks."""
         all_chunks: list[Chunk] = []
+        total = len(ingested)
 
-        for doc_item in ingested:
+        for idx, doc_item in enumerate(ingested, start=1):
+            if idx == 1 or idx % 25 == 0 or idx == total:
+                print(f"Chunking document {idx}/{total}...")
+
             chunk_metadata = {**doc_item.metadata, "doc_id": doc_item.doc_id}
 
             chunks = self._chunker.chunk(

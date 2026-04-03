@@ -183,14 +183,20 @@ def embed_chunks(
     # Batch by token count to stay under Voyage's 120k limit
     batches = _batch_chunks_by_tokens(chunks)
 
+    total_batches = len(batches)
     all_embeddings: list[list[float]] = []
-    for batch in batches:
+    for batch_idx, batch in enumerate(batches, start=1):
+        if batch_idx == 1 or batch_idx % 5 == 0 or batch_idx == total_batches:
+            print(f"Embedding batch {batch_idx}/{total_batches} ({len(batch)} chunks)...")
         all_embeddings.extend(_embed_batch(client, batch, model=model))
 
     # Reason: Generate sparse embeddings if encoder provided
     sparse_embeddings: list[dict | None] = []
     if sparse_encoder is not None:
-        for chunk in chunks:
+        total_chunks = len(chunks)
+        for i, chunk in enumerate(chunks, start=1):
+            if i == 1 or i % 100 == 0 or i == total_chunks:
+                print(f"Sparse encoding chunk {i}/{total_chunks}...")
             sparse_embeddings.append(sparse_encoder.encode(chunk.text))
     else:
         sparse_embeddings = [None] * len(chunks)

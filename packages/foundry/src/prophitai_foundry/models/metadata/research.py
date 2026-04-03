@@ -92,7 +92,7 @@ class ResearchDocumentMetadata(BaseModel):
         file_name, file_extension = split_file_name(s3_key)
 
         backend = get_backend(provider=provider, model=model)
-        response_json = backend.create_json_object(
+        response_json = backend.call_llm_json(
             messages=[
                 {
                     "role": "user",
@@ -153,7 +153,7 @@ Return ONLY valid JSON, no other text.""",
 
         uris_formatted = "\n".join(f"{i+1}. {uri}" for i, uri in enumerate(s3_uris))
 
-        response_json = backend.create_json_object(
+        response_json = backend.call_llm_json(
             messages=[
                 {
                     "role": "user",

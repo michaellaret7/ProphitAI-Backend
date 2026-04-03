@@ -6,6 +6,7 @@ Uses PyMuPDF for fast digital extraction and Docling for layout-aware processing
 """
 import logging
 import os
+import sys
 import tempfile
 from typing import Optional
 
@@ -191,7 +192,19 @@ class PDFHandler:
             tmp.close()  # Reason: Must close before Docling can read on Windows
 
             converter = self._get_docling_converter()
-            result = converter.convert(tmp_path)
+            # Reason: docling_parse (Rust/C backend) writes raw PDF page dicts
+            # directly to the OS file descriptor, bypassing Python's sys.stdout.
+            # Must redirect at the fd level to suppress it.
+            sys.stdout.flush()
+            devnull_fd = os.open(os.devnull, os.O_WRONLY)
+            saved_stdout_fd = os.dup(1)
+            os.dup2(devnull_fd, 1)
+            try:
+                result = converter.convert(tmp_path)
+            finally:
+                os.dup2(saved_stdout_fd, 1)
+                os.close(saved_stdout_fd)
+                os.close(devnull_fd)
             markdown = result.document.export_to_markdown()
 
             logger.debug(f"Docling extraction: {len(markdown)} chars")

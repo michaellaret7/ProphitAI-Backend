@@ -30,7 +30,7 @@ def decompose_query(query: str) -> SubQueries:
     """
     backend = get_backend(provider="groq", model="openai-gpt-oss-120b")
 
-    return backend.parse_structured(
+    return backend.call_llm_structured(
         messages=[
             {"role": "system", "content": QUERY_DECOMPOSITION_PROMPT},
             {"role": "user", "content": query},

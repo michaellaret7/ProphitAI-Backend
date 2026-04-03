@@ -90,6 +90,7 @@ class PDFExtractor:
     def extract_from_s3(self, s3_uri: str) -> dict:
         """Extract text from a single PDF in S3."""
         import boto3
+        import sys
         import tempfile
         import os
 
@@ -110,7 +111,19 @@ class PDFExtractor:
             tmp_path = tmp.name
 
         try:
-            result = converter.convert(tmp_path)
+            # Reason: docling_parse (Rust/C backend) writes raw PDF page dicts
+            # directly to the OS file descriptor, bypassing Python's sys.stdout.
+            # Must redirect at the fd level to suppress it.
+            sys.stdout.flush()
+            devnull_fd = os.open(os.devnull, os.O_WRONLY)
+            saved_stdout_fd = os.dup(1)
+            os.dup2(devnull_fd, 1)
+            try:
+                result = converter.convert(tmp_path)
+            finally:
+                os.dup2(saved_stdout_fd, 1)
+                os.close(saved_stdout_fd)
+                os.close(devnull_fd)
             content = result.document.export_to_markdown()
             return {
                 "content": content,
@@ -136,6 +149,7 @@ class PDFExtractor:
     @modal.method()
     def extract_from_bytes(self, pdf_bytes: bytes) -> dict:
         """Extract text from PDF bytes."""
+        import sys
         import tempfile
         import os
 
@@ -147,7 +161,16 @@ class PDFExtractor:
             tmp_path = tmp.name
 
         try:
-            result = converter.convert(tmp_path)
+            sys.stdout.flush()
+            devnull_fd = os.open(os.devnull, os.O_WRONLY)
+            saved_stdout_fd = os.dup(1)
+            os.dup2(devnull_fd, 1)
+            try:
+                result = converter.convert(tmp_path)
+            finally:
+                os.dup2(saved_stdout_fd, 1)
+                os.close(saved_stdout_fd)
+                os.close(devnull_fd)
             content = result.document.export_to_markdown()
             return {"content": content, "char_count": len(content), "used_ocr": needs_ocr}
         finally:
