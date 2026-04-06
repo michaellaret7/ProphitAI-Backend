@@ -1,4 +1,4 @@
-"""Sandbox execution tools for running Python code and shell commands."""
+"""Sandbox execution tool for running shell commands."""
 
 from prophitai_atlas.tools.decorator import agent_tool
 from prophitai_atlas.tools.responses import error_response, success_response
@@ -10,53 +10,16 @@ BLOCKED_REPOS = [
 ]
 
 
-@agent_tool(name="sandbox_run_python", category="sandbox")
-def sandbox_run_python(sandbox_id: str, code: str) -> str:
-    """Execute Python code inside the sandbox.
-
-    The code runs in the sandbox's Python environment with all prophitai
-    packages available. Use this for quick computations, data exploration,
-    or running strategy logic directly.
-
-    Args:
-        sandbox_id: The sandbox ID returned by start_sandbox.
-        code: Python code to execute.
-    """
-    sandbox = get_sandbox(sandbox_id)
-
-    if not sandbox:
-        return error_response(f"No active sandbox with id '{sandbox_id}'. Start one with start_sandbox.")
-
-    try:
-        execution = sandbox.run_code(code)
-        stdout = "\n".join(execution.logs.stdout) if execution.logs.stdout else ""
-        stderr = "\n".join(execution.logs.stderr) if execution.logs.stderr else ""
-        results = [str(r) for r in execution.results] if execution.results else []
-        response = {
-            "stdout": stdout,
-            "stderr": stderr,
-            "results": results,
-        }
-        
-        if execution.error:
-            response["error"] = str(execution.error)
-
-        return success_response(response)
-
-    except Exception as e:
-        return error_response(f"Failed to execute Python code: {e}")
-
-
-@agent_tool(name="sandbox_run_command", category="sandbox")
-def sandbox_run_command(sandbox_id: str, command: str, timeout: int = 1200) -> str:
+@agent_tool(name="sandbox_bash", category="sandbox")
+def sandbox_bash(sandbox_id: str, command: str, timeout: int = 1200) -> str:
     """Run a shell command inside the sandbox.
 
-    Use this for git operations, pip installs, linting, running test scripts,
-    or any other CLI command.
+    This is the single execution tool for all sandbox operations: file I/O,
+    Python scripts, git commands, linting, testing, and any other CLI work.
 
     Args:
         sandbox_id: The sandbox ID returned by start_sandbox.
-        command: Shell command to execute (e.g. "cd /home/user/strategies && python main.py").
+        command: Shell command to execute (e.g. "cat main.py", "python strategy.py", "ls -la").
         timeout: Max seconds to wait for the command to finish.
     """
     # Reason: prevent cloning proprietary repos into the sandbox

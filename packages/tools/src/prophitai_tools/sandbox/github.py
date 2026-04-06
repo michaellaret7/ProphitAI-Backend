@@ -58,6 +58,7 @@ def create_pull_request(
     
     if not token:
         return error_response("SANDBOX_GITHUB_TOKEN not set in environment.")
+        
     try:
         response = github_request(
             "POST",

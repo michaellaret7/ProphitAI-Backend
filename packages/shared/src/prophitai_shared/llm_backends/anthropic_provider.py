@@ -70,7 +70,7 @@ class AnthropicBackend(LLMBackend[T]):
                 tools=self.format_tools(tools) if tools else None,
                 temperature=temperature,
                 thinking={"type": "adaptive"},
-                max_tokens=64000,
+                max_tokens=21000,
             )
         )
 
@@ -114,7 +114,7 @@ class AnthropicBackend(LLMBackend[T]):
                 messages=anthropic_messages,
                 output_format=target_model,
                 temperature=temperature,
-                max_tokens=64000,
+                max_tokens=21000,
             )
         )
         return response.parsed_output
@@ -155,7 +155,7 @@ class AnthropicBackend(LLMBackend[T]):
                 system=system_blocks or None,
                 messages=anthropic_messages,
                 temperature=temperature,
-                max_tokens=64000,
+                max_tokens=21000,
             )
         )
         text = "".join(block.text for block in response.content if block.type == "text")

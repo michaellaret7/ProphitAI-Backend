@@ -24,7 +24,7 @@ def bootstrap_repo(sandbox, strategy_name: str) -> dict[str, str]:
     """
     branch = f"strategy/{strategy_name}"
 
-    # Reason: Use GITHUB_TOKEN (injected via SANDBOX_ prefix stripping) for private repo auth
+    # Reason: Use GITHUB_TOKEN for private repo auth
     clone_cmd = (
         f'if [ -n "$GITHUB_TOKEN" ]; then '
         f'  git clone https://$GITHUB_TOKEN@github.com/Prophit-AI/Strategies.git {REPO_PATH}; '
@@ -83,8 +83,11 @@ def start_sandbox(strategy_name: str, timeout_minutes: int = 60) -> str:
     """
     try:
         timeout_seconds = timeout_minutes * 60
+
         sandbox_id, sandbox = create_sandbox(timeout=timeout_seconds)
+
         repo_info = bootstrap_repo(sandbox, strategy_name)
+
         return success_response({
             "sandbox_id": sandbox_id,
             "branch": repo_info["branch"],
@@ -92,6 +95,7 @@ def start_sandbox(strategy_name: str, timeout_minutes: int = 60) -> str:
             "timeout_minutes": timeout_minutes,
             "status": "running",
         })
+
     except Exception as e:
         return error_response(f"Failed to start sandbox: {e}")
 
@@ -106,12 +110,15 @@ def close_sandbox(sandbox_id: str) -> str:
         sandbox_id: The sandbox ID returned by start_sandbox.
     """
     sandbox = get_sandbox(sandbox_id)
+
     if not sandbox:
         return error_response(f"No active sandbox with id '{sandbox_id}'.")
+
     try:
         sandbox.kill()
         remove_sandbox(sandbox_id)
         return success_response({"sandbox_id": sandbox_id, "status": "closed"})
+
     except Exception as e:
         remove_sandbox(sandbox_id)
         return error_response(f"Error closing sandbox: {e}")
@@ -125,10 +132,12 @@ def get_sandbox_status(sandbox_id: str) -> str:
         sandbox_id: The sandbox ID returned by start_sandbox.
     """
     sandbox = get_sandbox(sandbox_id)
+
     if not sandbox:
         return error_response(
             f"No active sandbox with id '{sandbox_id}'. Start one with start_sandbox."
         )
+
     try:
         running = sandbox.is_running()
         return success_response({
@@ -136,5 +145,6 @@ def get_sandbox_status(sandbox_id: str) -> str:
             "is_running": running,
             "status": "running" if running else "stopped",
         })
+        
     except Exception as e:
         return error_response(f"Failed to check sandbox status: {e}")

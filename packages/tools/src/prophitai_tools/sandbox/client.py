@@ -9,7 +9,6 @@ import os
 from dotenv import load_dotenv
 from e2b_code_interpreter import Sandbox
 
-# Reason: .env contains SANDBOX_* vars that aren't always in the shell environment
 load_dotenv()
 
 # ================================
@@ -17,26 +16,34 @@ load_dotenv()
 # ================================
 
 TEMPLATE_NAME = "prophitai-strategies"
-SANDBOX_ENV_PREFIX = "SANDBOX_"
 STRATEGIES_REPO = "https://github.com/Prophit-AI/Strategies.git"
 REPO_PATH = "/home/user/strategies"
+
+SANDBOX_ENV_KEYS = [
+    "GITHUB_TOKEN",
+    "MARKET_DATA",
+    "FMP_API_KEY",
+]
 
 sessions: dict[str, Sandbox] = {}
 
 
 def build_sandbox_envs() -> dict[str, str]:
-    """Read SANDBOX_* env vars from host and strip the prefix for injection.
+    """Collect host env vars to inject into the sandbox.
 
-    For example, SANDBOX_DATABASE_URL=x becomes DATABASE_URL=x inside the sandbox.
+    Only forwards the keys listed in SANDBOX_ENV_KEYS.
     """
     envs: dict[str, str] = {}
-    for key, value in os.environ.items():
-        if key.startswith(SANDBOX_ENV_PREFIX) and key != "SANDBOX_":
-            sandbox_key = key[len(SANDBOX_ENV_PREFIX):]
-            envs[sandbox_key] = value
+
+    for key in SANDBOX_ENV_KEYS:
+        value = os.environ.get(key)
+        if value:
+            envs[key] = value
+
     return envs
 
 
+print(build_sandbox_envs())
 def create_sandbox(timeout: int = 3600) -> tuple[str, Sandbox]:
     """Create a new E2B sandbox and store it in the session registry.
 
@@ -47,13 +54,16 @@ def create_sandbox(timeout: int = 3600) -> tuple[str, Sandbox]:
         Tuple of (sandbox_id, sandbox_instance).
     """
     envs = build_sandbox_envs()
+
     sandbox = Sandbox.create(
         template=TEMPLATE_NAME,
         timeout=timeout,
         envs=envs,
     )
+
     sandbox_id = sandbox.sandbox_id
     sessions[sandbox_id] = sandbox
+    
     return sandbox_id, sandbox
 
 
