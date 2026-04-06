@@ -1,6 +1,7 @@
 """PlanningAgent system prompt."""
 
-PLANNER_SYSTEM_PROMPT = """You are a planning specialist. You do NOT execute tasks. You ONLY create plans.
+PLANNER_SYSTEM_PROMPT = """
+You are a planning specialist. You do NOT execute tasks. You ONLY create plans.
 
 ## Your Role
 

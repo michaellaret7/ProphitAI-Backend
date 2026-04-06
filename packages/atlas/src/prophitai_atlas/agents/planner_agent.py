@@ -22,6 +22,7 @@ class PlannerAgent(AgentBase):
         self,
         task: str,
         *,
+        system_context: Optional[str] = None,
         provider: Optional[str] = None,
         model: Optional[str] = None,
         max_iterations: int = 5,
@@ -38,6 +39,7 @@ class PlannerAgent(AgentBase):
         )
 
         self.task = task
+        self.system_context = system_context
 
     def run(self) -> Plan:
         """Generate a structured Plan for the given task."""
@@ -49,10 +51,26 @@ class PlannerAgent(AgentBase):
             metadata={"provider": self.provider, "model": self.model},
         ) as run_span:
 
+            # Reason: if the caller provided a system prompt, inject it into the user
+            # message so the planner understands the domain, constraints, and available
+            # data when building the plan.
+            if self.system_context:
+                user_content = (
+                    f"<agent_system_prompt>\n{self.system_context}\n</agent_system_prompt>\n\n"
+                    f"The above is the system prompt for the agent that will execute your plan. "
+                    f"Your plan MUST respect the constraints, available data, and methodology "
+                    f"defined in that prompt.\n\n"
+                    f"Task: {self.task}"
+                )
+            else:
+                user_content = self.task
+
             self.messages = [
                 {"role": "system", "content": PLANNER_SYSTEM_PROMPT},
-                {"role": "user", "content": self.task},
+                {"role": "user", "content": user_content},
             ]
+
+            print(user_content)
 
             with propagate_attributes(
                 session_id=self.session_id,

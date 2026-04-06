@@ -216,9 +216,12 @@ class Agent(AgentBase):
 
                     planner = PlannerAgent(
                         task=user_message,
+                        system_context=self.system_prompt,
                         print_mode=PrintMode.PRODUCTION,
                     )
+
                     self.plan = planner.run()
+
                     print(f"Plan generated: {self.plan}")
 
                     # Reason: remove first to avoid stale binding if a prior run() left it registered
