@@ -26,3 +26,10 @@ topic: regime_observations
 ---
 As of April 2026, leveraged ETF AUM reached $132B (30% YoY growth, 552 funds). Citi/Goldman documented $5B+ single-day LETF rebalancing flows in early 2026 — described as 'an additional source of short gamma not present in previous selloffs.' The LETF rebalancing mechanism (buy on up days / sell on down days) is now large enough to mechanically amplify afternoon directional moves in S&P 500 components. When designing intraday breakout or momentum strategies for afternoon sessions (13:00–15:00 PM), the session cumulative SPX return should be used as a LETF direction gate — if SPX ≥ +0.5%, expect LETF buy flows to amplify upside breakouts; if SPX ≤ -0.5%, expect amplified downside. This is a structural market-making force, not informational, and does not decay between sessions. Shum et al. (2015) is the foundational academic paper on LETF-equity volatility transmission.
 
+---
+date: 2026-04-06
+title: OFI Win Rate Requires 65%+ and 30bps Gross to Clear April 2026 Transaction Costs
+topic: strategy_insights
+---
+In April 2026 thin-book conditions (market depth -25%), round-trip transaction costs for large-cap US equities at 1-min bar frequency are 12–15 bps (spread + impact + timing + commission), NOT the commonly assumed 5–10 bps. An OFI-based strategy needs ≥25–35 bps gross per trade AND ≥65% win rate to achieve reliable net positive EV (~5 bps net per trade). At 15 bps gross target, net EV is near zero. Minimum OFI signal threshold for positive EV: 4 consecutive bars (not 3) with proxy ≥ 0.50 AND volume ≥ 1.25× 20-session same-TOD-slot avg. Strategy capacity ceiling: ~$150–200M net AUM before self-impact and HFT front-running degrade alpha. Source: strategy_research stress-test April 2026 (arxiv_2506.06356, arxiv_2406.10695, HMM paper).
+
