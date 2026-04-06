@@ -138,6 +138,7 @@ from prophitai_tools.render.logs import get_render_logs, get_render_log_labels
 # ================================
 from prophitai_tools.sandbox.lifecycle import start_sandbox, close_sandbox, get_sandbox_status
 from prophitai_tools.sandbox.execution import sandbox_bash
+from prophitai_tools.sandbox.scaffolding import scaffold_strategy
 from prophitai_tools.sandbox.github import create_pull_request
 
 
@@ -188,7 +189,7 @@ ALL_TOOL_FUNCTIONS: list[Callable] = [
     get_render_logs, get_render_log_labels,
     # sandbox
     start_sandbox, close_sandbox, get_sandbox_status,
-    sandbox_bash, create_pull_request,
+    sandbox_bash, scaffold_strategy, create_pull_request,
 ]
 
 # Reason: Render deployment and sandbox tools are infrastructure / dev-only
@@ -202,7 +203,7 @@ _EXCLUDED_FROM_CHAT: set[Callable] = {
     get_render_logs, get_render_log_labels,
     # sandbox
     start_sandbox, close_sandbox, get_sandbox_status,
-    sandbox_bash,
+    sandbox_bash, scaffold_strategy,
     create_pull_request,
 }
 

@@ -42,7 +42,8 @@ class EventDrivenBacktestEngine:
         self.initial_capital = initial_capital
         self._cost_model = cost_model or CostModel()
         self._sizer = sizer or PercentOfEquitySizer(
-            pct=1 / max_positions, cost_model=self._cost_model,
+            pct=1 / max_positions, 
+            cost_model=self._cost_model,
         )
         self._warmup_bars = warmup_bars
         self._max_positions = max_positions
@@ -57,26 +58,35 @@ class EventDrivenBacktestEngine:
     ) -> BacktestResult:
         """Run the backtest over historical data for multiple tickers."""
         validate_engine_data(data)
+
         warmup = resolve_warmup(
             warmup_bars, self._warmup_bars, self._strategy_template.min_bars_required,
         )
+
         tickers = list(data.keys())
         common_index, aligned = align_multi_ticker_data(data)
+
         strategies, position_trackers, portfolio_tracker = init_event_trackers(
             self._strategy_template, tickers, self.initial_capital, self._sizer, self._cost_model,
         )
+
         ticker_dfs, latest_prices = warmup_event_indicators(
             tickers, aligned, strategies, warmup, verbose,
         )
+
         simulate_event_bars(
             common_index, aligned, tickers, strategies, position_trackers,
             portfolio_tracker, ticker_dfs, latest_prices, warmup, verbose,
             self._risk_engine, self._sizer, self._max_positions,
         )
+
         force_close_open_positions(
             portfolio_tracker, position_trackers, latest_prices, common_index[-1], verbose,
         )
+
         result = compile_backtest_result(portfolio_tracker, len(tickers), verbose)
+
         if plot:
             plot_event_backtest_results(result)
+            
         return result

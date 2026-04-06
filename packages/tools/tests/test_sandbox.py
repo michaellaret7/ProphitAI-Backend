@@ -1,7 +1,7 @@
 """Smoke test — runs an Agent with sandbox tools against a real E2B sandbox.
 
 
-Opens a sandbox, reads files, runs bash commands, and closes it.
+Opens a sandbox, scaffolds a strategy, inspects files, and closes it.
 """
 
 from prophitai_atlas.agents import Agent
@@ -9,11 +9,12 @@ from prophitai_atlas.models import PrintMode
 
 from prophitai_tools.sandbox.lifecycle import start_sandbox, close_sandbox, get_sandbox_status
 from prophitai_tools.sandbox.execution import sandbox_bash
+from prophitai_tools.sandbox.scaffolding import scaffold_strategy
 
 
 SANDBOX_TOOLS = [
     start_sandbox, close_sandbox, get_sandbox_status,
-    sandbox_bash,
+    sandbox_bash, scaffold_strategy,
 ]
 
 
@@ -49,20 +50,20 @@ def _make_agent() -> Agent:
 # ================================
 
 
-def test_sandbox_full_flow():
-    """Open a sandbox, read files, run bash, and close."""
+def test_scaffold_and_inspect():
+    """Open a sandbox, scaffold a strategy, inspect the files, and close."""
     agent = _make_agent()
     result = agent.run(
         user_message=(
-            """
-            start a sandbox with strategy name 'test_flow'
-            check all of the local and remote branches and return them
-            """
+            "1. Start a sandbox with strategy name 'test_scaffold'.\n"
+            "2. Scaffold a new strategy called 'test_scaffold_ma'.\n"
+            "3. Test to see if the get_price_data_df function works \n"
+            "8. Close the sandbox."
         ),
     )
-    _print_result("Sandbox full flow", result)
+    _print_result("Scaffold and inspect", result)
 
 
 if __name__ == "__main__":
     print("Running sandbox smoke tests...\n")
-    test_sandbox_full_flow()
+    test_scaffold_and_inspect()

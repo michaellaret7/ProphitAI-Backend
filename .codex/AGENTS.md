@@ -320,6 +320,49 @@ from prophitai_shared import get_current_utc_time, get_utc_date_str, get_utc_day
 - **Classes**: Max 100 lines representing single concept
 - **Organization**: Organize code into clearly separated modules, grouped by feature or responsibility
 
+### Whitespace & Vertical Formatting (CRITICAL)
+Use blank lines to separate logical blocks within functions. Code should breathe — never pack unrelated logic together.
+
+- **Between variable declaration groups and logic**: blank line after initial declarations
+- **Between logical steps inside loops**: blank line between each distinct operation (fetch → validate → transform → assign)
+- **Before return statements**: blank line before `return`
+- **Between conditional blocks**: blank line between independent `if` checks in a loop
+
+**Correct:**
+```python
+def process_items(items: list[str], lookup: dict):
+    results: dict[str, float] = {}
+    errors: list[str] = []
+
+    for item in items:
+        value = lookup.get(item)
+
+        if value is None:
+            errors.append(item)
+            continue
+
+        transformed = value * 2.0
+
+        results[item] = transformed
+
+    return results, errors
+```
+
+**Wrong — no vertical separation:**
+```python
+def process_items(items: list[str], lookup: dict):
+    results: dict[str, float] = {}
+    errors: list[str] = []
+    for item in items:
+        value = lookup.get(item)
+        if value is None:
+            errors.append(item)
+            continue
+        transformed = value * 2.0
+        results[item] = transformed
+    return results, errors
+```
+
 ### Naming Conventions
 - Variables/functions: `snake_case`
 - Classes: `PascalCase`

@@ -2,7 +2,7 @@
 
 from prophitai_atlas.tools.decorator import agent_tool
 from prophitai_atlas.tools.responses import error_response, success_response
-from prophitai_tools.sandbox.client import get_sandbox
+from prophitai_tools.sandbox.client import REPO_PATH, get_sandbox
 
 BLOCKED_REPOS = [
     "https://github.com/Prophit-AI/ProphitAI.git",
@@ -35,7 +35,9 @@ def sandbox_bash(sandbox_id: str, command: str, timeout: int = 1200) -> str:
         return error_response(f"No active sandbox with id '{sandbox_id}'. Start one with start_sandbox.")
 
     try:
-        result = sandbox.commands.run(command, timeout=timeout)
+        # Reason: Auto-activate the project venv so `python` resolves correctly
+        wrapped = f"source {REPO_PATH}/.venv/bin/activate && {command}"
+        result = sandbox.commands.run(wrapped, timeout=timeout)
         return success_response({
             "exit_code": result.exit_code,
             "stdout": result.stdout,

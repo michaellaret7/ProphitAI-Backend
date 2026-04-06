@@ -21,8 +21,15 @@ REPO_PATH = "/home/user/strategies"
 
 SANDBOX_ENV_KEYS = [
     "GITHUB_TOKEN",
-    "MARKET_DATA",
     "FMP_API_KEY",
+    "DB_USER",
+    "DB_PASSWORD",
+    "DB_HOST",
+    "DB_PORT",
+    "MARKET_DATA",
+    "USER_DATA",
+    "PROPHIT_ALTS",
+    "MACRO_DATA",
 ]
 
 sessions: dict[str, Sandbox] = {}
@@ -43,7 +50,6 @@ def build_sandbox_envs() -> dict[str, str]:
     return envs
 
 
-print(build_sandbox_envs())
 def create_sandbox(timeout: int = 3600) -> tuple[str, Sandbox]:
     """Create a new E2B sandbox and store it in the session registry.
 
