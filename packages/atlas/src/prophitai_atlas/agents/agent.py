@@ -103,7 +103,7 @@ class Agent(AgentBase):
                 self.add_tool(**func.tool)
 
         # --- System prompt --- #
-        # Reason: caller-provided prompt takes precedence; fallback to generic base prompt
+        # Reason: if there is a system prompt passed to the agent, that is the system prompt used for the agent. Else, use the generic base prompt.
         if system_prompt is not None:
             self.system_prompt: str = system_prompt
             self.system_prompt_blocks: Optional[List[Dict[str, Any]]] = None

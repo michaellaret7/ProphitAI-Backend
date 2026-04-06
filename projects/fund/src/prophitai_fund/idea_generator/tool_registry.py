@@ -31,8 +31,11 @@ from prophitai_tools.news.general_news import general_news
 IDEA_GENERATOR_TOOLS: List[Callable] = [
     # research (core)
     strategy_research, theory_research, macro_research, economics_research_search,
-    # macro context
-    commodity_prices, us_treasury_rates, macro_indicators,
     # news
     general_news,
+]
+
+IDEA_GENERATOR_TOOLS_DEFERRED: List[Callable] = [
+    # macro context
+    commodity_prices, us_treasury_rates, macro_indicators,
 ]

@@ -16,7 +16,7 @@ from prophitai_atlas.models import PrintMode, AgentResponse
 from prophitai_atlas.models.callbacks import ChatCallback, NoOpChatCallback
 from prophitai_shared.time_utils import get_current_utc_time
 
-from prophitai_fund.idea_generator.tool_registry import IDEA_GENERATOR_TOOLS
+from prophitai_fund.idea_generator.tool_registry import IDEA_GENERATOR_TOOLS, IDEA_GENERATOR_TOOLS_DEFERRED
 from prophitai_fund.tools import append_memory, past_ideas, retrieve_memory
 
 class IdeaGeneratorAgent:
@@ -27,10 +27,11 @@ class IdeaGeneratorAgent:
     Does not select specific tickers or build portfolios.
     """
 
-    TASK = (
-        "Generate a new trade idea. "
+    DEFAULT_TASK = (
+        "Research and generate a novel trading strategy idea. "
         "Use the research tools extensively to find a compelling edge, "
-        "assess its macro viability, and produce a complete trade idea proposal."
+        "assess its macro viability, check past ideas to avoid repetition, "
+        "and produce a complete trade idea proposal."
     )
 
     def __init__(
@@ -47,7 +48,8 @@ class IdeaGeneratorAgent:
         system_prompt = prompt_path.read_text().format(date=date)
 
         self.agent = Agent(
-            deferred_tools=IDEA_GENERATOR_TOOLS,
+            tools=IDEA_GENERATOR_TOOLS,
+            deferred_tools=IDEA_GENERATOR_TOOLS_DEFERRED,
             system_prompt=system_prompt,
             chat_callback=chat_callback,
             session_id=session_id,
@@ -63,20 +65,30 @@ class IdeaGeneratorAgent:
         self.agent.add_tool(**{**past_ideas.tool, "function": partial(past_ideas, ideas_file)})
         self.agent.add_tool(**{**retrieve_memory.tool, "function": partial(retrieve_memory, memory_file)})
 
-    def run(self) -> AgentResponse:
+    def run(self, task: Optional[str] = None) -> AgentResponse:
         """Execute the idea generator agent.
+
+        Args:
+            task: Optional task override. Defaults to autonomous strategy discovery.
 
         Returns:
             AgentResponse with answer, parsed_output (StrategyIdea), and metadata.
         """
         return self.agent.run(
-            self.TASK,
-            plan_first=True
+            task or self.DEFAULT_TASK,
+            plan_first=True,
         )
 
 
 if __name__ == "__main__":
+    task = """
+    Research and generate a novel high frequency trading strategy idea.
+    Use the research tools extensively to find a compelling edge,
+    assess its macro viability, check past ideas to avoid repetition,
+    and produce a complete trade idea proposal. The trading strategy should be high frequency so 1 min bars are preferred. 1 min is 
+    the lowest granularity available.
+    """
     agent = IdeaGeneratorAgent()
-    response = agent.run()
+    response = agent.run(task)
     print(response.answer)
     print(response.parsed_output)

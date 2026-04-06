@@ -70,8 +70,6 @@ class PlannerAgent(AgentBase):
                 {"role": "user", "content": user_content},
             ]
 
-            print(user_content)
-
             with propagate_attributes(
                 session_id=self.session_id,
                 tags=["PlannerAgent", self.provider],
