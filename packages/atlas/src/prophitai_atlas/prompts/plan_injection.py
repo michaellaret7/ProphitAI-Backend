@@ -40,11 +40,19 @@ def inject_plan_tasks(base_prompt: str, plan: Plan) -> str:
 
 ## Your Plan
 
-A structured plan has been created for this task. Execute each task by deploying
-workers with the right tools, then mark it complete with update_plan.
+A structured plan has been created for this task. You are an ACTIVE PARTICIPANT —
+you call tools directly, do work yourself, and only delegate to workers when it pays off.
 
-Tasks within the same step are independent — deploy their workers in parallel.
-After ALL tasks are marked complete, synthesize all worker results into your final answer.
+For each task, decide how to execute it:
+- **Do it yourself** (default): If the task is 1-3 tool calls, if you need the raw output
+  for your next step, or if it involves context gathering (memory, past work, notes).
+  Call the tools directly, then mark the task complete with update_plan.
+- **Deploy a worker**: Only when the task requires deep multi-step research (4+ tool calls)
+  and you only need the conclusion, not the raw data. Workers run in a separate context —
+  their intermediate work is discarded, only the final answer comes back.
+
+Tasks within the same step are independent and can be run in parallel.
+After ALL tasks are marked complete, synthesize everything into your final answer.
 
 ### Tasks
 {task_block}
@@ -73,11 +81,19 @@ def inject_plan_tasks_blocks(base_blocks: list[dict[str, Any]], plan: Plan) -> l
             "type": "text",
             "text": f"""## Your Plan
 
-A structured plan has been created for this task. Execute each task by deploying
-workers with the right tools, then mark it complete with update_plan.
+A structured plan has been created for this task. You are an ACTIVE PARTICIPANT —
+you call tools directly, do work yourself, and only delegate to workers when it pays off.
 
-Tasks within the same step are independent - deploy their workers in parallel.
-After ALL tasks are marked complete, synthesize all worker results into your final answer.
+For each task, decide how to execute it:
+- **Do it yourself** (default): If the task is 1-3 tool calls, if you need the raw output
+  for your next step, or if it involves context gathering (memory, past work, notes).
+  Call the tools directly, then mark the task complete with update_plan.
+- **Deploy a worker**: Only when the task requires deep multi-step research (4+ tool calls)
+  and you only need the conclusion, not the raw data. Workers run in a separate context —
+  their intermediate work is discarded, only the final answer comes back.
+
+Tasks within the same step are independent and can be run in parallel.
+After ALL tasks are marked complete, synthesize everything into your final answer.
 
 ### Tasks
 {task_block}""",

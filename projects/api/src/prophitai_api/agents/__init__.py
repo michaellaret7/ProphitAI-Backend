@@ -2,6 +2,7 @@
 
 from .watchlist import WatchlistAgent
 from .portfolio_builder import PortfolioBuilderAgent
+from .chat import ChatAgent
 from .clarify import generate_clarifying_questions, compose_enriched_brief
 from .models import (
     WatchlistResponse,
@@ -19,6 +20,7 @@ from .models import (
 __all__ = [
     "WatchlistAgent",
     "PortfolioBuilderAgent",
+    "ChatAgent",
     "generate_clarifying_questions",
     "compose_enriched_brief",
     "WatchlistResponse",

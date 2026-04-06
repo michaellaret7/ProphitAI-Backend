@@ -5,7 +5,7 @@ from typing import Any, Dict, Optional
 
 from pydantic import BaseModel, Field
 
-from prophitai_api.services.sessions.agent_session import ExecutionStatus
+from prophitai_api.agents.sessions import ExecutionStatus
 
 
 class AgentType(str, Enum):

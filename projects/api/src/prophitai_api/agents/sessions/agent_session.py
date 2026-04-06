@@ -67,6 +67,7 @@ class AgentExecutionManager:
         execution_id = str(uuid.uuid4())
         state = ExecutionState(execution_id=execution_id)
         self._executions[execution_id] = state
+
         return state
 
     def get_execution(self, execution_id: str) -> Optional[ExecutionState]:
@@ -132,6 +133,7 @@ class AgentExecutionManager:
         if execution_id in self._executions:
             del self._executions[execution_id]
             return True
+
         return False
 
 

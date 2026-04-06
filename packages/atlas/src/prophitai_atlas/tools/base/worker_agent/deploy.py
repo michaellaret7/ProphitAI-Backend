@@ -11,8 +11,30 @@ from prophitai_atlas.models.notebook import Notebook
 
 DEPLOY_WORKER_DESCRIPTION = """
   Deploy a focused worker agent to autonomously execute a sub-task.
-  The worker runs its own tool-calling loop and returns a structured result.
-  The worker has access to all available tools via deferred registration.
+  The worker runs its own tool-calling loop in a separate context window and
+  returns a structured result. Only the worker's final answer comes back —
+  all intermediate tool calls and raw data stay in the worker's context.
+
+  ## When to Deploy a Worker
+
+  Workers are a CONTEXT COMPRESSION mechanism. Use them when:
+  - The task requires 4+ tool calls and you only need the conclusion, not the raw data.
+  - You're running multiple independent research queries in parallel.
+  - The task involves deep, multi-step analysis whose intermediate results you won't reference later.
+
+  ## When NOT to Deploy a Worker (do it yourself instead)
+
+  - The task is 1-3 tool calls — spawning a worker has overhead (new context window,
+    system prompt, tool registration). Just call the tools directly.
+  - You need the raw output for your next reasoning step (e.g., reading memory,
+    reviewing past work, fetching a data point you'll use in a decision).
+  - The task is context gathering, synthesis, or decision-making — that is YOUR job.
+  - Never deploy a worker just to avoid calling a tool yourself.
+
+  The decision heuristic: "Will I need the raw output later?" If yes → do it yourself.
+  If no, and the task is substantial → deploy a worker.
+
+  ## Task Format
 
   The `task` string MUST contain ALL 5 labeled sections:
     ROLE — The worker's persona and expertise. Be specific.

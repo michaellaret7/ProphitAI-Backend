@@ -4,6 +4,7 @@ Provides:
 - ChatSessionManager: Stores active chat sessions and conversation history
 - ChatSessionState: Session state with messages and timestamps
 - WebSocketChatCallback: Streams chat events via WebSocket
+- run_chat_agent_background: Runs chat agent in thread pool
 """
 
 import asyncio
@@ -17,7 +18,7 @@ from prophitai_api.services.sessions.connection_manager import connection_manage
 from prophitai_shared.time_utils import get_current_utc_time
 
 if TYPE_CHECKING:
-    from prophitai_atlas.agents import Agent as ChatAgent
+    from prophitai_api.agents.chat import ChatAgent
 
 logger = logging.getLogger(__name__)
 
@@ -68,7 +69,7 @@ class ChatSessionManager:
     ) -> ChatSessionState:
         """Create a new chat session with a configured agent.
 
-        Creates a ChatAgent instance and registers tools.
+        Creates a ChatAgent instance with tools pre-registered.
         Tools are registered ONCE here and persist for all messages in session.
 
         Args:
@@ -77,34 +78,21 @@ class ChatSessionManager:
         Returns:
             The created ChatSessionState with configured agent.
         """
-        from prophitai_atlas.agents import Agent
-        from prophitai_atlas.models import PrintMode
-        from prophitai_tools.registry import CHAT_TOOL_FUNCTIONS
-        from prophitai_api.agents.prompts import build_chat_system_prompt
+        from prophitai_api.agents.chat import ChatAgent
 
         session_id = str(uuid.uuid4())
 
-        chat_prompt = build_chat_system_prompt()
-
-        # Create agent without callback (callback set per-message due to event loop)
-        agent = Agent(
-            provider='anthropic',
-            model='claude-sonnet-4-6',
-            print_mode=PrintMode.PRODUCTION,
-            temperature=0.7,
-            max_iterations=200,
+        agent = ChatAgent(
+            session_id=session_id,
             user_id=user_id,
-            deferred_tools=CHAT_TOOL_FUNCTIONS,
-            system_prompt=chat_prompt,
         )
-
-        agent.session_id = session_id
 
         state = ChatSessionState(
             session_id=session_id,
             agent=agent,
         )
         self._sessions[session_id] = state
+
         return state
 
     def get_session(self, session_id: str) -> Optional[ChatSessionState]:
@@ -135,6 +123,7 @@ class ChatSessionManager:
 
         session.messages.append({"role": role, "content": content})
         session.last_activity = get_current_utc_time().isoformat()
+
         return True
 
     def get_history(
@@ -159,6 +148,7 @@ class ChatSessionManager:
         filtered = [
             msg for msg in session.messages if msg.get("role") in ("user", "assistant")
         ]
+
         return filtered[-max_messages:]
 
     def update_status(
@@ -179,6 +169,7 @@ class ChatSessionManager:
 
         session.status = status
         session.last_activity = get_current_utc_time().isoformat()
+
         return session
 
     def remove_session(self, session_id: str) -> bool:
@@ -193,6 +184,7 @@ class ChatSessionManager:
         if session_id in self._sessions:
             del self._sessions[session_id]
             return True
+
         return False
 
 
@@ -326,3 +318,37 @@ def _serialize_plan(plan: Any) -> dict:
             for t in plan.tasks
         ]
     }
+
+
+async def run_chat_agent_background(
+    agent: "ChatAgent",
+    session_id: str,
+    user_message: str,
+    conversation_history: List[Dict[str, Any]],
+    message_id: str,
+) -> None:
+    """Run chat agent in thread pool with WebSocket streaming.
+
+    Args:
+        agent: The ChatAgent instance with callback configured.
+        session_id: The session ID for storing the response.
+        user_message: The user's message.
+        conversation_history: Previous conversation for context.
+        message_id: Unique ID for this message exchange.
+    """
+    loop = asyncio.get_running_loop()
+
+    try:
+        # Run synchronous agent in thread pool
+        result = await loop.run_in_executor(
+            None,
+            lambda: agent.run(user_message, conversation_history),
+        )
+
+        # Store assistant response in session history
+        chat_session_manager.add_message(session_id, "assistant", result.answer)
+
+    except Exception as e:
+        # Error already sent via callback's on_run_error
+        # Log for debugging but don't re-raise (background task)
+        logger.error(f"Chat agent error for session {session_id}: {e}", exc_info=True)

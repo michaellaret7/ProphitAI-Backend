@@ -9,11 +9,11 @@ from prophitai_api.agents import (
     compose_enriched_brief,
     ClarifyAnswer,
 )
-from prophitai_api.services.sessions.agent_session import (
+from prophitai_api.agents.sessions import (
     execution_manager,
     run_agent_background,
+    WebSocketChatCallback,
 )
-from prophitai_api.services.sessions.chat_session import WebSocketChatCallback
 from prophitai_api.utils.decorators import handle_controller_errors
 
 

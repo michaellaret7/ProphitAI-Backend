@@ -106,7 +106,10 @@ class Agent(AgentBase):
         # Reason: if there is a system prompt passed to the agent, that is the system prompt used for the agent. Else, use the generic base prompt.
         if system_prompt is not None:
             self.system_prompt: str = system_prompt
-            self.system_prompt_blocks: Optional[List[Dict[str, Any]]] = None
+            self.system_prompt_blocks: Optional[List[Dict[str, Any]]] = [
+                {"type": "text", "text": system_prompt, "cacheable": True},
+            ]
+            
         else:
             self.system_prompt = build_base_system_prompt()
             self.system_prompt_blocks = build_base_system_blocks()

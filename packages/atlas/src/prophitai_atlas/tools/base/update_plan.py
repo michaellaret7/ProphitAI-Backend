@@ -13,14 +13,15 @@ from prophitai_atlas.models.new_plan import Plan, TaskStatus
 
 @agent_tool(name="update_plan")
 def update_plan(_plan: Plan, _chat_callback: Any, task_id: str) -> str:
-    """Mark a plan task as complete after a worker has finished it.
-Call this after each deploy_worker_agent returns successfully.
+    """Mark a plan task as complete after you have finished it.
+Call this after completing a task — whether you executed it yourself
+with direct tool calls or delegated it to a worker agent.
 
     Args:
         task_id: The task ID to mark as complete (e.g., '1', '2', '3')
 
     Examples:
-        update_plan(task_id='1')  # after worker finishes task 1
+        update_plan(task_id='1')  # after completing task 1
     """
     if not _plan or not _plan.tasks:
         return error_response("No plan available to update")
