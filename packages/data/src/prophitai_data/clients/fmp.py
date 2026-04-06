@@ -446,6 +446,17 @@ class FMP_API_DATA:
         url = f"https://financialmodelingprep.com/stable/search-cik?cik={cik}"
         return self._make_fmp_api_request(url)
 
+    def search_institution_by_name(self, name: str):
+        """
+        Searches for institutional 13F filers by name.
+        Returns list of matching institutions with CIK numbers.
+
+        Args:
+            name (str): Institution name to search (e.g., 'Berkshire', 'Bridgewater').
+        """
+        url = f"https://financialmodelingprep.com/api/v3/cik-search/{name}"
+        return self._make_fmp_api_request(url)
+
     def get_isin_lookup(self, isin: str):
         """
         Retrieves security information by ISIN (International Securities Identification Number).

@@ -116,6 +116,11 @@ from prophitai_tools.screener.equity_screener import equity_screener
 from prophitai_tools.screener.etf_screener import etf_screener
 
 # ================================
+# --> Imports: institutional
+# ================================
+from prophitai_tools.institutional.fund_holdings import get_fund_13f_holdings
+
+# ================================
 # --> Imports: render (infra)
 # ================================
 from prophitai_tools.render.deploys import (
@@ -174,6 +179,8 @@ ALL_TOOL_FUNCTIONS: list[Callable] = [
     general_news, get_ticker_news, get_press_releases,
     # screener
     equity_screener, etf_screener,
+    # institutional
+    get_fund_13f_holdings,
     # render (infra)
     list_deploys, get_deploy, trigger_deploy, cancel_deploy, rollback_deploy,
     create_render_service, list_render_services, get_render_service,
