@@ -1,6 +1,6 @@
 """Price data repository — fetches OHLCV data from DB or FMP API."""
 
-from datetime import datetime
+from datetime import datetime, timedelta
 from enum import Enum
 
 import pandas as pd
@@ -55,6 +55,56 @@ class PriceData(BaseModel):
     volume: float
 
 
+def _fetch_intraday_by_day(
+    fmp_client: FmpClient,
+    symbol: str,
+    start_date: datetime,
+    end_date: datetime,
+    interval: str,
+) -> list[PriceData]:
+    """Fetch intraday bars day-by-day to work around FMP's single-day limit.
+
+    FMP's 1-min and 5-min endpoints only return data for one trading day per
+    request, even when a multi-day range is provided. This helper iterates
+    each calendar day, skips weekends, and collects all bars into a flat list.
+
+    Args:
+        fmp_client: Initialized FMP API client.
+        symbol: Ticker symbol.
+        start_date: Start of date range.
+        end_date: End of date range.
+        interval: FMP interval string ('1min' or '5min').
+
+    Returns:
+        Flat list of PriceData across all trading days in the range.
+    """
+    data: list[PriceData] = []
+    current = start_date
+
+    while current <= end_date:
+        # Reason: Skip Saturday (5) and Sunday (6) to avoid wasted API calls.
+        if current.weekday() >= 5:
+            current += timedelta(days=1)
+            continue
+
+        results = fmp_client.get_intraday_prices_for_ticker(symbol, current, current, interval)
+
+        if results:
+            for item in results:
+                data.append(PriceData(
+                    datetime=item.get('date'),
+                    open=item.get('open'),
+                    high=item.get('high'),
+                    low=item.get('low'),
+                    close=item.get('close'),
+                    volume=item.get('volume'),
+                ))
+
+        current += timedelta(days=1)
+
+    return data
+
+
 class Interval(Enum):
     DAILY = 'daily'
     HOURLY = 'hourly'
@@ -89,20 +139,11 @@ def get_price_data_df(symbol: str, start_date: datetime, end_date: datetime, int
     data = []
     resample_rule = None
 
-    # Reason: FMP API intervals are fetched directly; DB intervals use the mapping
+    # Reason: FMP 1-min/5-min endpoints only return one trading day per request,
+    # so we paginate day-by-day to get the full date range.
     if interval_enum in (Interval.FIVE_MIN, Interval.ONE_MIN):
         fmp_client = FmpClient()
-        results = fmp_client.get_intraday_prices_for_ticker(symbol, start_date, end_date, interval_enum.value)
-        if results:
-            for item in results:
-                data.append(PriceData(
-                    datetime=item.get('date'),
-                    open=item.get('open'),
-                    high=item.get('high'),
-                    low=item.get('low'),
-                    close=item.get('close'),
-                    volume=item.get('volume'),
-                ))
+        data = _fetch_intraday_by_day(fmp_client, symbol, start_date, end_date, interval_enum.value)
     else:
         db_config = _DB_INTERVAL_MAP.get(interval_enum.name)
         if db_config:
