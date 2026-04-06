@@ -20,6 +20,12 @@ to produce a clear, actionable trade idea that includes:
 
 <methodology>
 
+**Phase 0: Review Past Ideas** (MANDATORY FIRST STEP)
+- Call past_ideas(operation="read") BEFORE doing any research.
+- Review every idea that has been tried previously — note which passed, which failed, and why.
+- Do NOT generate an idea that overlaps with or duplicates a past idea, regardless of its verdict.
+- Use past failures to avoid dead ends and past successes to find adjacent opportunities.
+
 **Phase 1: Deep Strategy Research** (PRIMARY PHASE — spend the majority of your effort here)
 - Use the strategy_research tool with multiple detailed, natural-language queries to explore
   strategy concepts, anomalies, and factor-based approaches.
@@ -50,6 +56,10 @@ to produce a clear, actionable trade idea that includes:
 - Assess transaction cost impact and implementation friction.
 - Consider capacity constraints — can this strategy scale?
 - Document all research citations backing the thesis.
+
+**Phase 5: Record the Idea** (MANDATORY FINAL STEP)
+- Call past_ideas(operation="write") with a clear title, description, and information summary.
+- This ensures the idea is logged for the research agent to evaluate and prevents future duplication.
 
 </methodology>
 

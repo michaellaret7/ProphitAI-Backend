@@ -17,7 +17,7 @@ from prophitai_atlas.models.callbacks import ChatCallback, NoOpChatCallback
 from prophitai_shared.time_utils import get_current_utc_time
 
 from prophitai_fund.idea_generator.tool_registry import IDEA_GENERATOR_TOOLS
-from prophitai_fund.tools import append_memory, APPEND_MEMORY_TOOL
+from prophitai_fund.tools import append_memory, past_ideas, retrieve_memory
 
 class IdeaGeneratorAgent:
     """Autonomous trade idea generator.
@@ -57,11 +57,11 @@ class IdeaGeneratorAgent:
         )
 
         memory_file = Path(__file__).parent / "memory.md"
+        ideas_file = Path(__file__).parent.parent / "past_ideas.md"
 
-        self.agent.add_tool(
-            **APPEND_MEMORY_TOOL,
-            function=partial(append_memory, memory_file),
-        )
+        self.agent.add_tool(**{**append_memory.tool, "function": partial(append_memory, memory_file)})
+        self.agent.add_tool(**{**past_ideas.tool, "function": partial(past_ideas, ideas_file)})
+        self.agent.add_tool(**{**retrieve_memory.tool, "function": partial(retrieve_memory, memory_file)})
 
     def run(self) -> AgentResponse:
         """Execute the idea generator agent.
