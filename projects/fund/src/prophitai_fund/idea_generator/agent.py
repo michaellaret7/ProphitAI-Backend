@@ -80,15 +80,4 @@ class IdeaGeneratorAgent:
         )
 
 
-if __name__ == "__main__":
-    task = """
-    Research and generate a novel high frequency trading strategy idea.
-    Use the research tools extensively to find a compelling edge,
-    assess its macro viability, check past ideas to avoid repetition,
-    and produce a complete trade idea proposal. The trading strategy should be high frequency so 1 min bars are preferred. 1 min is 
-    the lowest granularity available.
-    """
-    agent = IdeaGeneratorAgent()
-    # response = agent.run(task)
-    # print(response.answer)
-    # print(response.parsed_output)
+

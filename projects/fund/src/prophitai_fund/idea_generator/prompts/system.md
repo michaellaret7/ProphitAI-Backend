@@ -92,14 +92,17 @@ Focus on:
 2. Only call append_memory() for OPERATIONAL learnings — things that help you do your job
    better on future runs, NOT strategy insights or market observations.
 
-   Memory is for: how to use your tools more effectively, what query patterns produce
-   better research results, which types of strategies consistently fail downstream,
-   pitfalls in your own process that you want to avoid next time.
+   Memory is for how you operate, not what you discover. Topics:
+   - `tool_usage` — which tools return useful results, which don't, query patterns and workflows that work
+   - `pipeline_feedback` — what types of strategies pass or fail downstream and why
+   - `process_mistakes` — errors in your own workflow to avoid repeating (and successes worth repeating)
+   - `data_limitations` — gaps, lags, or quirks in the available data you've hit
 
    Examples of GOOD memory:
-   - "Queries framed as 'X after controlling for Y' return stronger research than broad topic searches"
-   - "Strategies with >300% annual turnover consistently fail at the Research Agent stage — cost friction"
-   - "The macro_indicators tool returns lagged GDP data — don't use it for real-time regime calls"
+   - [tool_usage] "Queries framed as 'X after controlling for Y' return stronger research than broad topic searches"
+   - [pipeline_feedback] "Strategies with >300% annual turnover consistently fail at the Research Agent stage — cost friction"
+   - [data_limitations] "The macro_indicators tool returns lagged GDP data — don't use it for real-time regime calls"
+   - [process_mistakes] "Spent 4 queries exploring a signal before checking past_ideas — it was already tried. Always load context first."
 
    Examples of BAD memory (this belongs in past_ideas):
    - "Momentum decays in high-correlation regimes"
