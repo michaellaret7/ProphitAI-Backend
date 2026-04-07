@@ -144,6 +144,7 @@ from prophitai_tools.sandbox.dev_tools.edit import sandbox_edit
 from prophitai_tools.sandbox.dev_tools.read import sandbox_read
 from prophitai_tools.sandbox.dev_tools.write import sandbox_write
 from prophitai_tools.sandbox.dev_tools.glob import sandbox_glob
+from prophitai_tools.sandbox.dev_tools.grep import sandbox_grep
 
 
 # ==============================================================================
@@ -194,7 +195,7 @@ ALL_TOOL_FUNCTIONS: list[Callable] = [
     # sandbox
     start_sandbox, close_sandbox, get_sandbox_status,
     sandbox_bash, scaffold_strategy, create_pull_request,
-    sandbox_read, sandbox_write, sandbox_edit, sandbox_glob,
+    sandbox_read, sandbox_write, sandbox_edit, sandbox_glob, sandbox_grep,
 ]
 
 # Reason: Render deployment and sandbox tools are infrastructure / dev-only
@@ -208,7 +209,7 @@ _EXCLUDED_FROM_CHAT: set[Callable] = {
     get_render_logs, get_render_log_labels,
     # sandbox
     start_sandbox, close_sandbox, get_sandbox_status,
-    sandbox_bash, scaffold_strategy, sandbox_read, sandbox_write, sandbox_edit, sandbox_glob,
+    sandbox_bash, scaffold_strategy, sandbox_read, sandbox_write, sandbox_edit, sandbox_glob, sandbox_grep,
     create_pull_request,
 }
 
