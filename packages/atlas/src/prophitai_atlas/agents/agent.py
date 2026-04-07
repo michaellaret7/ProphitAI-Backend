@@ -244,7 +244,6 @@ class Agent(AgentBase):
                 if plan_first and self.plan:
                     if self.provider == "anthropic" and self.system_prompt_blocks is not None:
                         system_prompt = inject_plan_tasks_blocks(self.system_prompt_blocks, self.plan)
-                        print(f"System prompt blocks: {self.system_prompt_blocks}")
                     else:
                         system_prompt = inject_plan_tasks(self.system_prompt, self.plan)
                 else:

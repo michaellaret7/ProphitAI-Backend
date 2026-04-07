@@ -8,9 +8,7 @@ coding agents consume directly.
 
 from functools import partial
 from pathlib import Path
-from typing import Optional, Union, Any
-
-from pydantic import BaseModel, Field
+from typing import Optional, Union
 
 from prophitai_atlas.agents import Agent
 from prophitai_atlas.models import PrintMode, AgentResponse
@@ -20,7 +18,7 @@ from prophitai_shared.time_utils import get_current_utc_time
 from prophitai_fund.researcher.architect.tool_registry import ARCHITECT_TOOLS
 from prophitai_fund.tools import append_memory, retrieve_memory
 
-from prophitai_fund.researcher.architect.models import StrategyManifest, ImplementationNote, ConfigDefaults, IndicatorEntry, DerivedFeature, SignalSpec, SizingSpec, RiskControlEntry, StrategyClassSpec
+from prophitai_fund.researcher.architect.models import StrategyManifest
 
 class StrategyArchitectAgent:
     """Translates idea generator output into a Strategy Manifest.
@@ -87,11 +85,3 @@ class StrategyArchitectAgent:
             plan_first=True,
             format_output=StrategyManifest,
         )
-
-
-if __name__ == "__main__":
-    
-    agent = StrategyArchitectAgent(sandbox_id="sandbox-123")
-    response = agent.run("A strategy that buys stocks that have a high correlation to the S&P 500 and sells them when the correlation decreases.")
-    print(response.answer)
-    print(response.parsed_output)

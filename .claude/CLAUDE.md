@@ -622,6 +622,7 @@ mcp__notion__notion-update-page(
 - Use the LSP Pyright server whenever you can
 - never name a folder or file with a '_' in front
 - Anytime you want to record a spec, standard, pattern, or anything you might need to reference later, write a document about it in `docs/`. Organize by topic (e.g., `docs/tools/`, `docs/agents/`). This keeps institutional knowledge in the repo, not just in conversation history.
+- **Agent system prompts must use XML tags** for top-level section structure (e.g., `<role>`, `<methodology>`, `<constraints>`, `<output_format>`). Markdown headers (`##`, `###`) are used for sub-structure within XML sections. This is the project standard — Claude was specifically trained to parse XML tags as prompt boundaries, which reduces misinterpretation in complex multi-section prompts. See the idea generator and architect agent prompts for reference examples.
 
 # Testing
 1. When creating a test, do not use any pytest

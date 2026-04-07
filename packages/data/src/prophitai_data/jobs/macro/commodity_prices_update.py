@@ -55,7 +55,13 @@ class UpdateCommodityPrices:
         'ZNUSD',    # U.S. 10-Year Treasury Note Futures
         'ZQUSD',    # 30-Day Fed Funds Futures
         'ZSUSX',    # Soybeans
+        'VIXUSD',   # CBOE Volatility Index (VIX)
     ]
+
+    # Reason: Some DB symbols differ from FMP API symbols (e.g., FMP uses '^VIX')
+    FMP_SYMBOL_MAP = {
+        'VIXUSD': '^VIX',
+    }
 
     def __init__(self):
         self.api_key = os.getenv("FMP_API_KEY")
@@ -123,7 +129,8 @@ class UpdateCommodityPrices:
             List of dictionaries containing OHLCV data
         """
         base_url = "https://financialmodelingprep.com/api/v3"
-        url = f"{base_url}/historical-price-full/{symbol}"
+        api_symbol = self.FMP_SYMBOL_MAP.get(symbol, symbol)
+        url = f"{base_url}/historical-price-full/{api_symbol}"
 
         params = {
             'apikey': self.api_key,

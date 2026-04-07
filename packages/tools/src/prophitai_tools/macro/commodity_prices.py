@@ -1,7 +1,7 @@
 """Commodity price data tool for macro analysis.
 
-Fetches up to 60 days of daily OHLCV data for 15 major commodities across
-precious metals, energy, industrial metals, and agriculture.
+Fetches up to 60 days of daily OHLCV data for 16 major commodities across
+precious metals, energy, industrial metals, agriculture, and volatility.
 """
 
 from typing import Annotated, Optional
@@ -35,6 +35,7 @@ COMMODITY_SYMBOLS = [
     "WUSD",    # Wheat
     "CUSD",    # Corn
     "SUSD",    # Soybeans
+    "VIXUSD",  # CBOE Volatility Index (VIX)
 ]
 
 
@@ -69,11 +70,12 @@ def commodity_prices(
         Schema({
             "type": "array",
             "description": (
-                "Commodity symbols to fetch. If omitted, fetches all 15.\n"
+                "Commodity symbols to fetch. If omitted, fetches all 16.\n"
                 "Valid: GCUSD (Gold), SIUSD (Silver), PLUSD (Platinum), PAUSD (Palladium), "
                 "CLUSD (WTI Crude), BRUSD (Brent Crude), NGUSD (Natural Gas), HGUSD (Copper), "
                 "ZSUSD (Sugar), CCUSD (Cocoa), CTUSD (Cotton), KCUSD (Coffee), "
-                "WUSD (Wheat), CUSD (Corn), SUSD (Soybeans)"
+                "WUSD (Wheat), CUSD (Corn), SUSD (Soybeans), "
+                "VIXUSD (CBOE Volatility Index)"
             ),
             "items": {"type": "string", "enum": COMMODITY_SYMBOLS},
             "default": None,
@@ -86,22 +88,24 @@ def commodity_prices(
 Returns a wide-format table of daily close prices and volume for each
 requested commodity symbol.
 
-**Available Commodities (15 total):**
+**Available Commodities (16 total):**
 - Precious Metals: GCUSD (Gold), SIUSD (Silver), PLUSD (Platinum), PAUSD (Palladium)
 - Energy: CLUSD (Crude Oil WTI), BRUSD (Brent Crude), NGUSD (Natural Gas)
 - Industrial Metals: HGUSD (Copper)
 - Agriculture - Softs: ZSUSD (Sugar), CCUSD (Cocoa), CTUSD (Cotton), KCUSD (Coffee)
 - Agriculture - Grains: WUSD (Wheat), CUSD (Corn), SUSD (Soybeans)
+- Volatility: VIXUSD (CBOE Volatility Index (VIX))
 
 **Use Cases:**
 - Gold price tracking: symbols=['GCUSD']
 - Energy complex: symbols=['CLUSD', 'BRUSD', 'NGUSD']
 - Precious metals basket: symbols=['GCUSD', 'SIUSD', 'PLUSD', 'PAUSD']
 - Agricultural commodities: symbols=['WUSD', 'CUSD', 'SUSD']
-- All commodities: symbols=None (returns all 15)
+- Volatility: symbols=['VIXUSD']
+- All commodities: symbols=None (returns all 16)
 
     Args:
-        symbols: Commodity symbols to fetch (default: all 15)
+        symbols: Commodity symbols to fetch (default: all 16)
         days_back: Number of calendar days of history (default: 30, max: 60)
 
     Examples:
