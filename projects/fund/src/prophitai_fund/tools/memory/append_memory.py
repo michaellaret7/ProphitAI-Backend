@@ -6,7 +6,6 @@ title, topic, and content.
 """
 
 from pathlib import Path
-from typing import Literal
 
 from prophitai_atlas.tools.decorator import agent_tool
 from prophitai_atlas.tools.responses import success_response, error_response
@@ -21,14 +20,7 @@ from prophitai_shared.time_utils import get_utc_date_str
 def append_memory(
     _memory_file: Path,
     title: str,
-    topic: Literal[
-        "strategy_insights",
-        "regime_observations",
-        "factor_interactions",
-        "macro_signals",
-        "research_gaps",
-        "past_mistakes",
-    ],
+    topic: str,
     content: str,
 ) -> str:
     """
@@ -38,10 +30,14 @@ def append_memory(
     Memories survive across sessions — anything written here will be available
     the next time you run. Write concise, actionable entries.
 
+    Valid topics are defined by each agent's system prompt. Common examples:
+    tool_usage, pipeline_feedback, process_mistakes, data_limitations,
+    translation_patterns, framework_gaps.
+
     Args:
         _memory_file: Absolute path to the agent's memory.md (pre-bound).
         title: Short descriptive title for the memory entry.
-        topic: Category of the memory entry.
+        topic: Category of the memory entry (agent-specific, see system prompt).
         content: The memory body. Should be concise and actionable.
 
     Returns:
