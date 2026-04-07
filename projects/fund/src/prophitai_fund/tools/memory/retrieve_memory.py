@@ -80,6 +80,3 @@ def retrieve_memory(_memory_file: Path) -> str:
 
     except Exception as e:
         return error_response(f"Failed to retrieve memories: {e}")
-
-
-

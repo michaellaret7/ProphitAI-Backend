@@ -73,6 +73,3 @@ def append_memory(
 
     except Exception as e:
         return error_response(f"Failed to append memory: {e}")
-
-
-
