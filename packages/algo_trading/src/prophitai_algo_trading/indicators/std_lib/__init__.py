@@ -3,7 +3,12 @@
 from prophitai_algo_trading.indicators.std_lib.momentum import (
     ADXIndicator,
     MACDIndicator,
+    RSI,
     RateOfChangeIndicator,
+)
+from prophitai_algo_trading.indicators.std_lib.trend import (
+    ExponentialMovingAverageIndicator,
+    SimpleMovingAverageIndicator,
 )
 from prophitai_algo_trading.indicators.std_lib.volatility import (
     ATRIndicator,
@@ -20,6 +25,9 @@ from prophitai_algo_trading.indicators.std_lib.statistical import (
 )
 
 __all__ = [
+    "SimpleMovingAverageIndicator",
+    "ExponentialMovingAverageIndicator",
+    "RSI",
     "MACDIndicator",
     "ADXIndicator",
     "RateOfChangeIndicator",

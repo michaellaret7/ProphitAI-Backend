@@ -7,20 +7,18 @@ from prophitai_algo_trading.indicators.pipeline import (
     BaseIndicatorSuite,
     IndicatorPipeline,
 )
-from prophitai_algo_trading.indicators.moving_averages import (
-    ExponentialMovingAverageIndicator,
-    SimpleMovingAverageIndicator,
-)
-from prophitai_algo_trading.indicators.rsi import RSI
 from prophitai_algo_trading.indicators.std_lib import (
     ADXIndicator,
     ATRIndicator,
     BollingerBandsIndicator,
     BollingerPctBIndicator,
     DonchianChannelsIndicator,
+    ExponentialMovingAverageIndicator,
     MACDIndicator,
     OBVIndicator,
+    RSI,
     RateOfChangeIndicator,
+    SimpleMovingAverageIndicator,
     VWAPIndicator,
     ZScoreIndicator,
 )
