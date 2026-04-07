@@ -23,7 +23,7 @@ builder = (
     .from_python_image("3.13")
     .apt_install(["git", "curl"])
     .run_cmd("curl -LsSf https://astral.sh/uv/install.sh | sh")
-    .pip_install(["ruff"])
+    .pip_install(["ruff", "psycopg2-binary"])
     .set_workdir("/home/user")
 )
 

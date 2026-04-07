@@ -22,30 +22,49 @@ REPO_PATH = "/home/user/strategies"
 SANDBOX_ENV_KEYS = [
     "GITHUB_TOKEN",
     "FMP_API_KEY",
-    "DB_USER",
-    "DB_PASSWORD",
     "DB_HOST",
     "DB_PORT",
-    "MARKET_DATA",
-    "USER_DATA",
-    "PROPHIT_ALTS",
-    "MACRO_DATA",
 ]
 
-sessions: dict[str, Sandbox] = {}
+# Reason: Database names needed to build read-only connection strings for the sandbox
+DATABASE_NAMES = ["market_data", "user_data", "prophit_alts", "macro_data"]
+DATABASE_ENV_MAP = {
+    "market_data": "MARKET_DATA",
+    "user_data": "USER_DATA",
+    "prophit_alts": "PROPHIT_ALTS",
+    "macro_data": "MACRO_DATA",
+}
 
+sessions: dict[str, Sandbox] = {}
 
 def build_sandbox_envs() -> dict[str, str]:
     """Collect host env vars to inject into the sandbox.
 
-    Only forwards the keys listed in SANDBOX_ENV_KEYS.
+    Forwards non-DB keys directly, then overrides DB credentials
+    with the read-only user so the sandbox cannot write to any database.
     """
     envs: dict[str, str] = {}
 
     for key in SANDBOX_ENV_KEYS:
         value = os.environ.get(key)
+
         if value:
             envs[key] = value
+
+    # Reason: Sandbox must use the read-only DB user to prevent writes/deletes
+    readonly_user = os.environ.get("DB_READONLY_USER", "")
+    readonly_password = os.environ.get("DB_READONLY_PASSWORD", "")
+    db_host = os.environ.get("DB_HOST", "")
+    db_port = os.environ.get("DB_PORT", "5432")
+
+    envs["DB_USER"] = readonly_user
+    envs["DB_PASSWORD"] = readonly_password
+
+    for db_name, env_key in DATABASE_ENV_MAP.items():
+        envs[env_key] = (
+            f"postgresql://{readonly_user}:{readonly_password}"
+            f"@{db_host}:{db_port}/{db_name}"
+        )
 
     return envs
 
