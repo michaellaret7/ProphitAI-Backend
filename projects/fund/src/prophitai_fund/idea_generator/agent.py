@@ -17,8 +17,7 @@ from prophitai_atlas.models.callbacks import ChatCallback, NoOpChatCallback
 from prophitai_shared.time_utils import get_current_utc_time
 
 from prophitai_fund.idea_generator.tool_registry import IDEA_GENERATOR_TOOLS, IDEA_GENERATOR_TOOLS_DEFERRED
-from prophitai_fund.idea_generator.skills.summary import SKILLS_DIR, build_skills_summary
-from prophitai_fund.tools import append_memory, load_skill, past_ideas, retrieve_memory
+from prophitai_fund.tools import append_memory, past_ideas, retrieve_memory
 
 class IdeaGeneratorAgent:
     """Autonomous trade idea generator.
@@ -47,7 +46,6 @@ class IdeaGeneratorAgent:
         date = get_current_utc_time().strftime("%m/%d/%Y")
         prompt_path = Path(__file__).parent / "prompts" / "system.md"
         system_prompt = prompt_path.read_text().format(date=date)
-        skills_summary = build_skills_summary()
 
         self.agent = Agent(
             tools=IDEA_GENERATOR_TOOLS,
@@ -64,19 +62,8 @@ class IdeaGeneratorAgent:
         ideas_file = Path(__file__).parent.parent / "past_ideas.md"
 
         self.agent.add_tool(**{**append_memory.tool, "function": partial(append_memory, memory_file)})
-        self.agent.add_tool(**{**load_skill.tool, "function": partial(load_skill, SKILLS_DIR)})
         self.agent.add_tool(**{**past_ideas.tool, "function": partial(past_ideas, ideas_file)})
         self.agent.add_tool(**{**retrieve_memory.tool, "function": partial(retrieve_memory, memory_file)})
-
-        # Reason: Append skill summaries so the agent knows what skills are available
-        # without loading each one. Placed after deferred tools, before plan injection.
-
-        if skills_summary:
-            self.agent.system_prompt += f"\n\n{skills_summary}"
-
-            self.agent.system_prompt_blocks.append(
-                {"type": "text", "text": skills_summary, "cacheable": True},
-            )
         
     def run(self, task: Optional[str] = None) -> AgentResponse:
         """Execute the idea generator agent.
