@@ -21,11 +21,15 @@ def _run(sandbox, command: str, timeout: int = 30):
 def _format_lines(raw: str, offset: int) -> str:
     """Add compact line numbers to raw file content.
 
-    Produces `{line_no}\\t{content}` with line numbers starting at offset + 1.
-    This is more token-efficient than `cat -n` which pads to 6+ chars.
+    Produces `{line_no} | {content}` with line numbers starting at offset + 1.
+    Empty source lines get just the line number (no trailing whitespace) so
+    that PyYAML can use block-scalar style instead of falling back to quoted.
     """
     lines = raw.splitlines()
-    numbered = [f"{offset + i + 1} | {line}" for i, line in enumerate(lines)]
+    numbered = [
+        f"{offset + i + 1} | {line}" if line else str(offset + i + 1)
+        for i, line in enumerate(lines)
+    ]
 
     return "\n".join(numbered)
 

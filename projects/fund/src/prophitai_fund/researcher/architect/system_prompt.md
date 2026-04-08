@@ -141,6 +141,23 @@ automatically using the Pydantic model. Ensure:
 4. Custom components have `is_custom: true`, a `file` path, and a `calculation` description
 5. `config_defaults` covers every tunable parameter referenced in the manifest
 6. `implementation_notes` documents any simplifications from the original idea
+
+**CRITICAL — ConfigParam format for all parameter fields:**
+All `params`, `sizing_hints`, and `config_defaults` fields use `ConfigParam` objects instead
+of plain dicts. Each ConfigParam has a `key` and exactly one populated value field:
+- `value_str` for strings (e.g. `{"key": "source_column", "value_str": "close"}`)
+- `value_num` for numbers (e.g. `{"key": "window", "value_num": 252}`)
+- `value_bool` for booleans (e.g. `{"key": "annualize", "value_bool": true}`)
+- `value_list` for string lists (e.g. `{"key": "allowed_regimes", "value_list": ["up", "down_moderate"]}`)
+- `value_map` for nested objects (e.g. `{"key": "market_state_scales", "value_map": [{"key": "up", "value_num": 1.0}, {"key": "down_moderate", "value_num": 0.6}]}`)
+
+Leave all other value fields as null. Example indicator params:
+```json
+"params": [
+  {"key": "window", "value_num": 252, "value_str": null, "value_bool": null, "value_list": null, "value_map": null},
+  {"key": "source_column", "value_str": "close", "value_num": null, "value_bool": null, "value_list": null, "value_map": null}
+]
+```
 </output_format>
 
 <self_validation_checklist>

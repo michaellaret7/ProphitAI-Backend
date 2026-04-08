@@ -37,7 +37,7 @@ class Fund:
         return manifest
 
 
-# if __name__ == "__main__":
-#     fund = Fund("ProphitAI Fund")
-#     manifest = fund.run()
-#     print(manifest)
+if __name__ == "__main__":
+    fund = Fund("ProphitAI Fund")
+    manifest = fund.run()
+    print(manifest)

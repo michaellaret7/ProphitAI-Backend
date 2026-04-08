@@ -1,5 +1,44 @@
-from typing import Optional, Any
+from typing import Optional
 from pydantic import BaseModel, Field
+
+# ================================
+# --> Helper models
+# ================================
+
+class ConfigParam(BaseModel):
+    """A single key-value parameter. Use value_str for strings, value_num for numbers,
+    value_bool for booleans, value_list for lists, and value_map for nested key-value maps.
+    Exactly one value field should be populated."""
+
+    key: str = Field(description="Parameter name (e.g. 'window', 'source_column')")
+    value_str: Optional[str] = Field(None, description="String value")
+    value_num: Optional[float] = Field(None, description="Numeric value (int or float)")
+    value_bool: Optional[bool] = Field(None, description="Boolean value")
+    value_list: Optional[list[str]] = Field(None, description="List of string values")
+    value_map: Optional[list["ConfigParam"]] = Field(None, description="Nested key-value pairs for sub-objects")
+
+    @property
+    def value(self) -> str | float | bool | list[str] | dict | None:
+        """Return the populated value, resolved to its native Python type."""
+
+        if self.value_map is not None:
+            return params_to_dict(self.value_map)
+
+        if self.value_list is not None:
+            return self.value_list
+
+        if self.value_bool is not None:
+            return self.value_bool
+
+        if self.value_num is not None:
+            return self.value_num
+
+        return self.value_str
+
+
+def params_to_dict(params: list["ConfigParam"]) -> dict:
+    """Convert a list of ConfigParam into a plain dict."""
+    return {p.key: p.value for p in params}
 
 # ================================
 # --> Manifest output models
@@ -11,7 +50,7 @@ class IndicatorEntry(BaseModel):
     class_name: str = Field(description="Class name (e.g. 'ATRIndicator' or 'OFIProxyIndicator')")
     is_custom: bool = Field(default=False, description="True if this requires a new BaseIndicator subclass")
     file: Optional[str] = Field(None, description="Relative file path for custom indicator (e.g. 'indicators/ofi_proxy.py')")
-    params: dict[str, Any] = Field(default_factory=dict, description="Constructor kwargs")
+    params: list[ConfigParam] = Field(default_factory=list, description="Constructor kwargs as key-value pairs")
     input_columns: list[str] = Field(default_factory=list, description="Columns this indicator reads from the DataFrame")
     output_columns: list[str] = Field(description="Columns this indicator adds to the DataFrame")
     calculation: Optional[str] = Field(None, description="Natural-language calculation description for custom indicators")
@@ -49,7 +88,7 @@ class SizerEntry(BaseModel):
     """A single sizer in the sizing chain."""
     class_name: str = Field(description="Sizer class name")
     is_custom: bool = Field(default=False)
-    params: dict[str, Any] = Field(default_factory=dict)
+    params: list[ConfigParam] = Field(default_factory=list, description="Constructor kwargs as key-value pairs")
     description: Optional[str] = None
 
 
@@ -65,7 +104,7 @@ class RiskControlEntry(BaseModel):
     """A single risk control."""
     class_name: str = Field(description="Risk control class name (e.g. 'StopLossExitControl')")
     is_custom: bool = Field(default=False)
-    params: dict[str, Any] = Field(default_factory=dict)
+    params: list[ConfigParam] = Field(default_factory=list, description="Constructor kwargs as key-value pairs")
     rationale: str = Field(description="Why this control is included")
 
 
@@ -74,16 +113,16 @@ class StrategyClassSpec(BaseModel):
     class_name: str = Field(description="Strategy class name (e.g. 'OMFM15Strategy')")
     min_bars_required: int = Field(description="Warmup bars needed before signals can fire")
     min_bars_rationale: str = Field(description="How min_bars_required was derived")
-    sizing_hints: dict[str, Any] = Field(default_factory=dict, description="Overrides for get_sizing_hints()")
+    sizing_hints: list[ConfigParam] = Field(default_factory=list, description="Overrides for get_sizing_hints() as key-value pairs")
 
 
 class ConfigDefaults(BaseModel):
     """All tunable parameter defaults grouped by concern."""
-    strategy: dict[str, Any] = Field(default_factory=dict)
-    sizing: dict[str, Any] = Field(default_factory=dict)
-    risk: dict[str, Any] = Field(default_factory=dict)
-    backtest: dict[str, Any] = Field(default_factory=dict)
-    live: dict[str, Any] = Field(default_factory=dict)
+    strategy: list[ConfigParam] = Field(default_factory=list, description="Strategy config params")
+    sizing: list[ConfigParam] = Field(default_factory=list, description="Sizing config params")
+    risk: list[ConfigParam] = Field(default_factory=list, description="Risk config params")
+    backtest: list[ConfigParam] = Field(default_factory=list, description="Backtest config params")
+    live: list[ConfigParam] = Field(default_factory=list, description="Live trading config params")
 
 
 class ImplementationNote(BaseModel):
