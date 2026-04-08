@@ -1,7 +1,7 @@
 """Deferred tools utilities — builds description text and registry dicts from @agent_tool functions.
 
 Takes a flat list of @agent_tool-decorated callables, groups them by category,
-and returns the data structures that register_tools and deploy_worker_agent need.
+and returns the data structures that register_tools needs.
 """
 
 from typing import Any, Callable, Dict, List, NamedTuple

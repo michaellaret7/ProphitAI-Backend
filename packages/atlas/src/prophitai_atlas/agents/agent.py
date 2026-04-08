@@ -29,10 +29,12 @@ from prophitai_atlas.tools.base.register_tools import (
 from .base import AgentBase
 from prophitai_atlas.tools.base import (
     llm_web_search,
-    DEPLOY_WORKER_TOOL,
-    _resolve_and_deploy,
-    retrieve_notes,
+    DEPLOY_SCOPED_WORKER_TOOL,
+    deploy_scoped_worker,
+    DEPLOY_GENERAL_WORKER_TOOL,
+    deploy_general_worker,
     RETRIEVE_NOTES_TOOL,
+    retrieve_notes,
     UPDATE_PLAN_TOOL,
     update_plan,
 )
@@ -139,13 +141,20 @@ class Agent(AgentBase):
                 function=partial(register_tools_fn, tool_registry, all_tools, self),
             )
 
-        # --- Add the deploy_worker_agent tool ---
+        # --- Add deploy tools ---
         # Reason: Use lambda to read self.chat_callback and self.user_id at call-time,
         # not init-time. The callback is set to WebSocketChatCallback AFTER __init__
         # (in send_message_controller), so partial() would capture stale values.
         self.add_tool(
-            **DEPLOY_WORKER_TOOL,
-            function=lambda **kwargs: _resolve_and_deploy(
+            **DEPLOY_SCOPED_WORKER_TOOL,
+            function=lambda **kwargs: deploy_scoped_worker(
+                self.notebook, self.chat_callback, self.user_id, **kwargs
+            ),
+        )
+
+        self.add_tool(
+            **DEPLOY_GENERAL_WORKER_TOOL,
+            function=lambda **kwargs: deploy_general_worker(
                 self.notebook, self.chat_callback, self.user_id, **kwargs
             ),
         )

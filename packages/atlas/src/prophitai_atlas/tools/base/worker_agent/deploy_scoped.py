@@ -1,0 +1,192 @@
+"""deploy_scoped_worker — Deploy a pre-defined scoped worker from the WorkerSpec registry."""
+
+import uuid
+from typing import Any, Optional
+
+from prophitai_atlas.models.callbacks import WorkerCallbackWrapper
+from prophitai_atlas.models.defaults import WORKER_PROVIDER, WORKER_MODEL
+from prophitai_atlas.models.notebook import Notebook
+from prophitai_atlas.tools.responses import success_response, error_response
+
+
+# ==============================================================================
+# --> Tool Schema
+# ==============================================================================
+
+DEPLOY_SCOPED_WORKER_DESCRIPTION = """
+  Deploy a pre-defined scoped worker agent to execute a sub-task.
+
+  Each worker_type is a specialist with a curated tool set and system prompt
+  optimized for its domain. The worker runs its own tool-calling loop in a
+  separate context window and returns a structured result. Only the worker's
+  final answer comes back — all intermediate tool calls stay in the worker's context.
+
+  ## When to Deploy a Worker
+
+  Workers are a CONTEXT COMPRESSION mechanism. Use them when:
+  - The task requires 4+ tool calls and you only need the conclusion, not the raw data.
+  - You're running multiple independent research queries in parallel.
+  - The task involves deep, multi-step analysis whose intermediate results you won't reference later.
+
+  ## When NOT to Deploy a Worker (do it yourself instead)
+
+  - The task is 1-3 tool calls — spawning a worker has overhead. Just call the tools directly.
+  - You need the raw output for your next reasoning step (e.g., reading memory,
+    reviewing past work, fetching a data point you'll use in a decision).
+  - The task is context gathering, synthesis, or decision-making — that is YOUR job.
+  - Never deploy a worker just to avoid calling a tool yourself.
+
+  The decision heuristic: "Will I need the raw output later?" If yes → do it yourself.
+  If no, and the task is substantial → deploy a worker.
+
+  ## Task Format
+
+  The `task` string MUST contain ALL 5 labeled sections:
+    ROLE — The worker's persona and expertise. Be specific.
+    TASK — What to accomplish. Include concrete inputs (tickers, dates, metrics).
+    SUCCESS CRITERIA — Measurable conditions the worker checks to know it's done.
+    RULES — Constraints, scope limits, and guardrails.
+    OUTPUT FORMAT — Exact structure of the final response.
+
+  Pass prior results via `context` to avoid re-fetching.
+  Always pass `plan_task_id`.
+
+  Args:
+      worker_type: The type of scoped worker to deploy. Each type has curated
+          tools and a specialized system prompt.
+      task: The worker's full prompt with all 5 sections: ROLE, TASK,
+          SUCCESS CRITERIA, RULES, OUTPUT FORMAT.
+      plan_task_id: The plan task ID this worker is deployed for (e.g., '1', '2').
+      context: Optional data from prior steps to prepend as background.
+
+  Returns:
+      YAML-formatted result:
+      - success (bool): Whether the worker completed successfully
+      - data: answer, tool_calls_made, tokens_used, iterations, stop_reason
+"""
+
+DEPLOY_SCOPED_WORKER_PARAMETERS = {
+    "type": "object",
+    "properties": {
+        "worker_type": {
+            "type": "string",
+            "description": (
+                "The type of scoped worker to deploy. Each type has curated "
+                "tools and a specialized system prompt."
+            ),
+        },
+        "task": {
+            "type": "string",
+            "description": (
+                "The worker's full prompt with all 5 sections: ROLE, TASK, "
+                "SUCCESS CRITERIA, RULES, OUTPUT FORMAT."
+            ),
+        },
+        "plan_task_id": {
+            "type": "string",
+            "description": "The plan task ID this worker is being deployed for (e.g., '1', '2').",
+        },
+        "context": {
+            "type": "string",
+            "description": "Optional data from prior steps to prepend as background context.",
+        },
+    },
+    "required": ["worker_type", "task", "plan_task_id"],
+    "additionalProperties": False,
+}
+
+
+# ==============================================================================
+# --> Deploy Function
+# ==============================================================================
+
+def deploy_scoped_worker(
+    notebook: Notebook,
+    chat_callback: Any,
+    user_id: Optional[str],
+    worker_type: str,
+    task: str,
+    plan_task_id: str = "",
+    context: str = "",
+) -> str:
+    """Deploy a scoped worker from the WorkerSpec registry.
+
+    Looks up the spec by worker_type, resolves its tool names to callables,
+    and runs the worker with the spec's custom system prompt.
+
+    Args:
+        notebook: Shared Notebook instance (pre-bound via lambda).
+        chat_callback: Orchestrator's callback for streaming events (pre-bound via lambda).
+        user_id: Clerk user ID for user-scoped tools (pre-bound via lambda).
+        worker_type: Registry key for the WorkerSpec to deploy.
+        task: Task description from the orchestrator LLM.
+        plan_task_id: The plan task ID this worker is deployed for.
+        context: Optional data from prior steps to prepend to the task.
+
+    Returns:
+        YAML-formatted success/error response.
+    """
+    # Reason: Lazy imports to avoid circular dependency (atlas -> tools -> atlas).
+    from prophitai_tools.registry import ALL_TOOL_FUNCTIONS
+    from prophitai_atlas.models.worker_registry import WORKER_REGISTRY
+    from prophitai_atlas.tools.base.worker_agent.resolve import resolve_tools_by_name
+    from prophitai_atlas.agents.worker_agent import WorkerAgent
+
+    if worker_type not in WORKER_REGISTRY:
+        available = sorted(WORKER_REGISTRY.keys()) if WORKER_REGISTRY else ["(none registered)"]
+
+        return error_response(
+            f"Unknown worker_type '{worker_type}'. Available: {available}"
+        )
+
+    spec = WORKER_REGISTRY[worker_type]
+
+    try:
+        tools = resolve_tools_by_name(ALL_TOOL_FUNCTIONS, spec.tools)
+    except ValueError as e:
+        return error_response(str(e))
+
+    # Reason: Prepend context with a label so the worker LLM can distinguish
+    # background data from the structured 5-section task prompt.
+    full_task = f"CONTEXT:\n{context}\n\n{task}" if context else task
+
+    try:
+        print(f"\n[DeployWorker] Spawning '{worker_type}' for plan task {plan_task_id} with {len(tools)} tools")
+        print(f"[DeployWorker] Task: {full_task[:100]}{'...' if len(full_task) > 100 else ''}\n")
+
+        worker_id = f"worker-{uuid.uuid4().hex[:8]}"
+
+        worker_callback = WorkerCallbackWrapper(
+            chat_callback,
+            task_id=full_task[:80],
+            worker_id=worker_id,
+            plan_task_id=plan_task_id,
+        )
+
+        worker_agent = WorkerAgent(
+            task=full_task,
+            tools=tools,
+            notebook=notebook,
+            system_prompt=spec.system_prompt,
+            provider=WORKER_PROVIDER,
+            model=WORKER_MODEL,
+            chat_callback=worker_callback,
+            max_iterations=spec.max_iterations,
+            user_id=user_id,
+        )
+
+        result = worker_agent.run()
+
+        return success_response(result.model_dump())
+
+    except Exception as e:
+        return error_response(e)
+
+
+# Reason: `function` is intentionally omitted — it must be bound via
+# lambda at registration time in the parent agent's __init__.
+DEPLOY_SCOPED_WORKER_TOOL = {
+    "name": "deploy_scoped_worker",
+    "description": DEPLOY_SCOPED_WORKER_DESCRIPTION,
+    "parameters": DEPLOY_SCOPED_WORKER_PARAMETERS,
+}

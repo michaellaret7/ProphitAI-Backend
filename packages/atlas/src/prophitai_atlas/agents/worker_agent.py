@@ -1,4 +1,4 @@
-"""WorkerAgent - Lightweight agent for executing focused tasks with deferred tool registration."""
+"""WorkerAgent - Lightweight agent for executing focused tasks with scoped tools."""
 
 from functools import partial
 from typing import Optional, List, Callable, Any
@@ -9,31 +9,33 @@ from prophitai_atlas.agents.base import AgentBase
 from prophitai_atlas.models import PrintMode, AgentResponse, WORKER_PROVIDER, WORKER_MODEL
 from prophitai_atlas.models.notebook import Notebook
 from prophitai_atlas.prompts.worker import build_worker_system_blocks, build_worker_system_prompt
-from prophitai_atlas.tools.base import llm_web_search, write_note, WRITE_NOTE_TOOL
-from prophitai_atlas.tools.base.register_tools import REGISTER_TOOLS_TOOL, register_tools_fn
-from prophitai_atlas.tools.catalogue import build_deferred_tools_data
+from prophitai_atlas.tools.base import llm_web_search
+from prophitai_atlas.tools.base.worker_agent.write_note import write_note, WRITE_NOTE_TOOL
+
+from prophitai_shared.time_utils import get_current_utc_time
 
 
 class WorkerAgent(AgentBase):
-    """Lightweight agent for executing a focused task with deferred tool registration.
+    """Lightweight agent for executing a focused task with scoped tools.
 
     Used by the orchestrator Agent to run isolated execution loops per task.
     Reuses ExecutionLoop (same as Agent) — no planning, terminates on
     text-only response. Internal messages never leave the worker.
 
-    Workers receive all available tools as deferred_tools and can register
-    the ones they need via the register_tools meta-tool.
+    Workers receive only the tools they need, registered directly at init.
+    No deferred tools, no register_tools overhead.
     """
 
     def __init__(
         self,
         task: str,
-        deferred_tools: List[Callable],
         notebook: Notebook,
         *,
+        tools: Optional[List[Callable]] = None,
+        system_prompt: Optional[str] = None,
         provider: Optional[str] = None,
         model: Optional[str] = None,
-        max_iterations: int = 30,
+        max_iterations: int = 100,
         print_mode: PrintMode = PrintMode.PRODUCTION,
         temperature: Optional[float] = None,
         chat_callback: Optional[Any] = None,
@@ -52,25 +54,22 @@ class WorkerAgent(AgentBase):
         self.task = task
         self.user_id = user_id
         self.notebook = notebook
+        self.custom_system_prompt = system_prompt
+
+        # --- Built-in tools (always present) --- #
 
         # Reason: partial pre-binds notebook and worker_task so the LLM only sees title + content.
         self.add_tool(
             **WRITE_NOTE_TOOL,
             function=partial(write_note, self.notebook, worker_task=self.task),
         )
+
         self.add_tool(**llm_web_search.tool)
 
-        # --- Deferred tools wiring --- #
-        if deferred_tools:
-            data = build_deferred_tools_data(deferred_tools)
-            self._deferred_description = data.description
-
-            self.add_tool(
-                **REGISTER_TOOLS_TOOL,
-                function=partial(register_tools_fn, data.tool_registry, data.all_tools, self),
-            )
-        else:
-            self._deferred_description = ""
+        # --- Register scoped tools directly --- #
+        if tools:
+            for func in tools:
+                self.add_tool(**func.tool)
 
     def run(self) -> AgentResponse:
         """Execute the worker's task and return the result."""
@@ -82,18 +81,7 @@ class WorkerAgent(AgentBase):
             metadata={"provider": self.provider, "model": self.model},
         ) as run_span:
 
-            # Reason: Append deferred tools description to the worker prompt
-            if self.provider == "anthropic":
-                worker_prompt: Any = build_worker_system_blocks()
-                
-                if self._deferred_description:
-                    worker_prompt.append(
-                        {"type": "text", "text": self._deferred_description, "cacheable": True}
-                    )
-            else:
-                worker_prompt = build_worker_system_prompt()
-                if self._deferred_description:
-                    worker_prompt = f"{worker_prompt}\n\n{self._deferred_description}"
+            worker_prompt = self._build_system_prompt()
 
             self.messages = [
                 {"role": "system", "content": worker_prompt},
@@ -105,7 +93,7 @@ class WorkerAgent(AgentBase):
                 tags=["WorkerAgent", self.provider],
                 metadata={"model": self.model}
             ):
-                result = self.execution_loop.execute()
+                result = self.execution_loop.execute() # main agent execution loop 
 
             run_span.update(output=result["answer"])
 
@@ -118,3 +106,25 @@ class WorkerAgent(AgentBase):
                 iterations=result["iterations"],
                 stop_reason=result["stop_reason"]
             )
+
+    # ================================
+    # --> Helper funcs
+    # ================================
+
+    def _build_system_prompt(self) -> Any:
+        """Build the system prompt, using custom prompt if set or default otherwise."""
+        if self.custom_system_prompt:
+            date = get_current_utc_time().strftime("%m/%d/%Y")
+
+            if self.provider == "anthropic":
+                return [
+                    {"type": "text", "text": self.custom_system_prompt, "cacheable": True},
+                    {"type": "text", "text": f"Today's date is {date}.", "cacheable": False},
+                ]
+
+            return f"{self.custom_system_prompt}\n\nToday's date is {date}."
+
+        if self.provider == "anthropic":
+            return build_worker_system_blocks()
+
+        return build_worker_system_prompt()
