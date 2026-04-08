@@ -1,9 +1,10 @@
 """deploy_scoped_worker — Deploy a pre-defined scoped worker from the WorkerSpec registry."""
 
 import uuid
-from typing import Any, Optional
+from typing import Any, Dict, Optional
 
 from prophitai_atlas.models.callbacks import WorkerCallbackWrapper
+from prophitai_atlas.models.worker_spec import WorkerSpec
 from prophitai_atlas.models.defaults import WORKER_PROVIDER, WORKER_MODEL
 from prophitai_atlas.models.notebook import Notebook
 from prophitai_atlas.tools.responses import success_response, error_response
@@ -104,12 +105,13 @@ def deploy_scoped_worker(
     notebook: Notebook,
     chat_callback: Any,
     user_id: Optional[str],
+    registry: Dict[str, WorkerSpec],
     worker_type: str,
     task: str,
     plan_task_id: str = "",
     context: str = "",
 ) -> str:
-    """Deploy a scoped worker from the WorkerSpec registry.
+    """Deploy a scoped worker from a workflow's worker registry.
 
     Looks up the spec by worker_type, resolves its tool names to callables,
     and runs the worker with the spec's custom system prompt.
@@ -118,6 +120,7 @@ def deploy_scoped_worker(
         notebook: Shared Notebook instance (pre-bound via lambda).
         chat_callback: Orchestrator's callback for streaming events (pre-bound via lambda).
         user_id: Clerk user ID for user-scoped tools (pre-bound via lambda).
+        registry: Workflow-specific dict of worker_type -> WorkerSpec (pre-bound via lambda).
         worker_type: Registry key for the WorkerSpec to deploy.
         task: Task description from the orchestrator LLM.
         plan_task_id: The plan task ID this worker is deployed for.
@@ -128,18 +131,17 @@ def deploy_scoped_worker(
     """
     # Reason: Lazy imports to avoid circular dependency (atlas -> tools -> atlas).
     from prophitai_tools.registry import ALL_TOOL_FUNCTIONS
-    from prophitai_atlas.models.worker_registry import WORKER_REGISTRY
     from prophitai_atlas.tools.base.worker_agent.resolve import resolve_tools_by_name
     from prophitai_atlas.agents.worker_agent import WorkerAgent
 
-    if worker_type not in WORKER_REGISTRY:
-        available = sorted(WORKER_REGISTRY.keys()) if WORKER_REGISTRY else ["(none registered)"]
+    if worker_type not in registry:
+        available = sorted(registry.keys()) if registry else ["(none registered)"]
 
         return error_response(
             f"Unknown worker_type '{worker_type}'. Available: {available}"
         )
 
-    spec = WORKER_REGISTRY[worker_type]
+    spec = registry[worker_type]
 
     try:
         tools = resolve_tools_by_name(ALL_TOOL_FUNCTIONS, spec.tools)

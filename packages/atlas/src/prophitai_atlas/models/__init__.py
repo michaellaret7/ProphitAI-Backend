@@ -5,7 +5,6 @@ from .chat import ChatSession
 from .callbacks import ChatCallback, NoOpChatCallback, WorkerCallbackWrapper
 from .agent_response import AgentResponse
 from .worker_spec import WorkerSpec
-from .worker_registry import WORKER_REGISTRY
 from .defaults import (
     DEFAULT_PROVIDER,
     DEFAULT_MODEL,
@@ -25,7 +24,6 @@ __all__ = [
     "NoOpChatCallback",
     "WorkerCallbackWrapper",
     "WorkerSpec",
-    "WORKER_REGISTRY",
     "DEFAULT_PROVIDER",
     "DEFAULT_MODEL",
     "STRONG_MODEL",

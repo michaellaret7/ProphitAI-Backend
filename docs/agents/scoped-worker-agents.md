@@ -16,7 +16,7 @@ We replaced the old worker deployment system where every worker received ALL_TOO
 - Workers get ONLY the tools they need, registered directly at init
 - No deferred tools, no `register_tools`, no tool catalogue in the system prompt
 - `WorkerSpec` dataclass defines scoped worker configurations (name, system_prompt, tools, max_iterations)
-- `WORKER_REGISTRY` dict maps worker type names to specs — empty in Phase 1, projects populate it
+- No global registry — each workflow defines its own `dict[str, WorkerSpec]` and binds it via lambda
 
 ---
 
@@ -28,7 +28,6 @@ We replaced the old worker deployment system where every worker received ALL_TOO
 packages/atlas/src/prophitai_atlas/
   models/
     worker_spec.py          # WorkerSpec frozen dataclass
-    worker_registry.py      # WORKER_REGISTRY dict (empty, projects populate)
   agents/
     worker_agent.py         # WorkerAgent class (accepts direct tools + optional system_prompt)
   tools/base/worker_agent/
@@ -42,7 +41,7 @@ packages/atlas/src/prophitai_atlas/
 
 **`deploy_scoped_worker`** — for pre-defined specialist workers
 - LLM passes: `worker_type`, `task`, `plan_task_id`, `context` (optional)
-- Deploy function looks up `WORKER_REGISTRY[worker_type]` → gets `WorkerSpec`
+- Deploy function looks up `registry[worker_type]` → gets `WorkerSpec` (registry is pre-bound per workflow via lambda)
 - Resolves `spec.tools` (frozenset of tool name strings) → actual callables via `resolve_tools_by_name`
 - Creates WorkerAgent with `spec.system_prompt` and `spec.max_iterations`
 - The parent agent has NO control over which tools the worker gets — it's locked in the spec
@@ -101,27 +100,35 @@ class WorkerSpec:
 
 ### How Deploy Tools Are Registered on Parent Agents
 
-In `Agent.__init__` (agent.py lines 144-160):
+Currently hardcoded in `Agent.__init__` (agent.py lines 144-160) — **Phase 2 must move this out**.
+
+Lambda is used (not partial) because `self.chat_callback` is set to `WebSocketChatCallback` AFTER `__init__` in `send_message_controller`. Partial would capture the stale `NoOpChatCallback`.
+
+For scoped workers, the workflow binds its own registry dict:
 
 ```python
-self.add_tool(
+FUND_WORKERS = {"equity_researcher": WorkerSpec(...), "macro_analyst": WorkerSpec(...)}
+
+agent.add_tool(
     **DEPLOY_SCOPED_WORKER_TOOL,
     function=lambda **kwargs: deploy_scoped_worker(
-        self.notebook, self.chat_callback, self.user_id, **kwargs
-    ),
-)
-
-self.add_tool(
-    **DEPLOY_GENERAL_WORKER_TOOL,
-    function=lambda **kwargs: deploy_general_worker(
-        self.notebook, self.chat_callback, self.user_id, **kwargs
+        notebook, callback, user_id, registry=FUND_WORKERS, **kwargs
     ),
 )
 ```
 
-Lambda is used (not partial) because `self.chat_callback` is set to `WebSocketChatCallback` AFTER `__init__` in `send_message_controller`. Partial would capture the stale `NoOpChatCallback`.
+For general workers, no registry needed:
 
-**Phase 2 change needed**: These should NOT be hardcoded in `Agent.__init__`. Different parent agents should register different deploy tools. Scoped agents → only `deploy_scoped_worker`. Chat agent → both.
+```python
+agent.add_tool(
+    **DEPLOY_GENERAL_WORKER_TOOL,
+    function=lambda **kwargs: deploy_general_worker(
+        notebook, callback, user_id, **kwargs
+    ),
+)
+```
+
+**Phase 2 change needed**: Move deploy tool registration out of `Agent.__init__`. Different parent agents register different deploy tools with different registries.
 
 ---
 
@@ -146,7 +153,7 @@ Phase 2 is about wiring the deploy tools into parent agents and building the fir
 
 3. **Chat agent** → both `deploy_scoped_worker` and `deploy_general_worker` registered.
 
-4. **WorkerSpec definitions live where they're used** — not in Atlas. Example: the fund workflow defines its own worker specs in `projects/fund/`. They register into `WORKER_REGISTRY` at import time.
+4. **WorkerSpec definitions live where they're used** — not in Atlas. Each workflow defines its own `dict[str, WorkerSpec]` (e.g., `FUND_WORKERS` in `projects/fund/`) and binds it via lambda when registering the deploy tool. No global registry.
 
 5. **Worker system prompts use XML tags** for top-level sections (project standard from CLAUDE.md).
 
@@ -185,7 +192,7 @@ Both deploy functions (`deploy_scoped.py` and `deploy_general.py`) share ~15 lin
 
 ```python
 # Models
-from prophitai_atlas.models import WorkerSpec, WORKER_REGISTRY
+from prophitai_atlas.models import WorkerSpec
 
 # Deploy tools (for registering on parent agents)
 from prophitai_atlas.tools.base import (
@@ -203,35 +210,48 @@ from prophitai_atlas.models.notebook import Notebook
 from prophitai_atlas.tools.base.worker_agent.resolve import resolve_tools_by_name
 ```
 
-### Registering a WorkerSpec
+### Defining a Per-Workflow Registry
 
 ```python
-from prophitai_atlas.models import WorkerSpec, WORKER_REGISTRY
+# projects/fund/src/prophitai_fund/workers.py
+from prophitai_atlas.models import WorkerSpec
 
-WORKER_REGISTRY["equity_researcher"] = WorkerSpec(
-    name="equity_researcher",
-    system_prompt="<role>You are a senior equity analyst...</role>",
-    tools=frozenset({
-        "ticker_performance", "ticker_risk", "ticker_factors",
-        "get_ticker_info", "get_ticker_fundamental_data",
-        "get_analyst_estimates", "earnings_call_search",
-    }),
-    max_iterations=30,
-)
+FUND_WORKERS: dict[str, WorkerSpec] = {
+    "equity_researcher": WorkerSpec(
+        name="equity_researcher",
+        system_prompt="<role>You are a senior equity analyst...</role>",
+        tools=frozenset({
+            "ticker_performance", "ticker_risk", "ticker_factors",
+            "get_ticker_info", "get_ticker_fundamental_data",
+            "get_analyst_estimates", "earnings_call_search",
+        }),
+        max_iterations=30,
+    ),
+}
 ```
 
 ### Registering Deploy Tools on a Parent Agent
 
 ```python
-# Scoped agent — only scoped workers
+# Scoped agent — only scoped workers, bound to workflow's registry
 agent.add_tool(
     **DEPLOY_SCOPED_WORKER_TOOL,
     function=lambda **kwargs: deploy_scoped_worker(
-        notebook, chat_callback, user_id, **kwargs
+        notebook, callback, user_id, registry=FUND_WORKERS, **kwargs
     ),
 )
 
-# Chat agent — both
-agent.add_tool(**DEPLOY_SCOPED_WORKER_TOOL, function=lambda **kwargs: deploy_scoped_worker(...))
-agent.add_tool(**DEPLOY_GENERAL_WORKER_TOOL, function=lambda **kwargs: deploy_general_worker(...))
+# Chat agent — both (no registry needed for general)
+agent.add_tool(
+    **DEPLOY_SCOPED_WORKER_TOOL,
+    function=lambda **kwargs: deploy_scoped_worker(
+        notebook, callback, user_id, registry=SHARED_WORKERS, **kwargs
+    ),
+)
+agent.add_tool(
+    **DEPLOY_GENERAL_WORKER_TOOL,
+    function=lambda **kwargs: deploy_general_worker(
+        notebook, callback, user_id, **kwargs
+    ),
+)
 ```
