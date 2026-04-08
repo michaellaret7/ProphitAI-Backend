@@ -1,8 +1,5 @@
 """Scoped worker definitions for the researcher phase of the fund workflow."""
 
-from prophitai_atlas.models import WorkerSpec
-
-
 # ==============================================================================
 # --> System Prompts
 # ==============================================================================
@@ -90,20 +87,3 @@ Anything explicitly NOT found that was searched for.
 </output_format>
 """
 
-
-# ==============================================================================
-# --> Worker Registry
-# ==============================================================================
-
-RESEARCHER_WORKERS: dict[str, WorkerSpec] = {
-    "codebase_researcher": WorkerSpec(
-        name="codebase_researcher",
-        system_prompt=CODEBASE_RESEARCHER_PROMPT,
-        tools=frozenset({
-          "sandbox_read", 
-          "sandbox_glob", 
-          "sandbox_grep"
-        }),
-        max_iterations=30,
-    ),
-}

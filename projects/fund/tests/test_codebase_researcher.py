@@ -12,7 +12,7 @@ from prophitai_tools.sandbox.client import create_sandbox, remove_sandbox
 from prophitai_tools.sandbox.lifecycle import bootstrap_repo
 
 from prophitai_atlas.tools.base.worker_agent.deploy_scoped import deploy_scoped_worker
-from prophitai_fund.researcher.workers import RESEARCHER_WORKERS
+from prophitai_fund.tools.worker_registry import WORKERS
 
 
 # ================================
@@ -58,7 +58,7 @@ def test_codebase_researcher() -> None:
             notebook=notebook,
             chat_callback=callback,
             user_id=None,
-            registry=RESEARCHER_WORKERS,
+            registry=WORKERS,
             worker_type="codebase_researcher",
             task=(
                 "ROLE: You are a codebase researcher exploring a strategies repository.\n\n"
