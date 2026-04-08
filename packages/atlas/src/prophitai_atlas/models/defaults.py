@@ -10,7 +10,8 @@ Update these when model versions change instead of hunting through files.
 # ================================
 
 DEFAULT_PROVIDER = "anthropic"
-WORKER_PROVIDER = "anthropic"
+# WORKER_PROVIDER = "anthropic"
+WORKER_PROVIDER = "fireworks"
 PLANNER_PROVIDER = "anthropic"
 
 # ================================
@@ -19,7 +20,8 @@ PLANNER_PROVIDER = "anthropic"
 
 DEFAULT_MODEL = "claude-sonnet-4-6"
 STRONG_MODEL = "claude-opus-4-6"
-WORKER_MODEL = "claude-sonnet-4-6"
+# WORKER_MODEL = "claude-sonnet-4-6"
+WORKER_MODEL = "Qwen3.6-Plus"
 PLANNER_MODEL = "claude-sonnet-4-6"
 
 # ================================

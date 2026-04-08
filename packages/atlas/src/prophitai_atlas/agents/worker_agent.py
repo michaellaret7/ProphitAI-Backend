@@ -36,7 +36,7 @@ class WorkerAgent(AgentBase):
         provider: Optional[str] = None,
         model: Optional[str] = None,
         max_iterations: int = 100,
-        print_mode: PrintMode = PrintMode.PRODUCTION,
+        print_mode: PrintMode = PrintMode.VERBOSE,
         temperature: Optional[float] = None,
         chat_callback: Optional[Any] = None,
         user_id: Optional[str] = None,
