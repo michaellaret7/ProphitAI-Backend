@@ -18,6 +18,8 @@ from prophitai_algo_trading.indicators.std_lib import (
     OBVIndicator,
     RSI,
     RateOfChangeIndicator,
+    RealizedVolIndicator,
+    RollingMaxIndicator,
     SimpleMovingAverageIndicator,
     VWAPIndicator,
     ZScoreIndicator,
@@ -40,6 +42,8 @@ INDICATOR_REGISTRY.register("donchian_channels", DonchianChannelsIndicator)
 INDICATOR_REGISTRY.register("obv", OBVIndicator)
 INDICATOR_REGISTRY.register("vwap", VWAPIndicator)
 INDICATOR_REGISTRY.register("zscore", ZScoreIndicator)
+INDICATOR_REGISTRY.register("rolling_max", RollingMaxIndicator)
+INDICATOR_REGISTRY.register("realized_vol", RealizedVolIndicator)
 
 __all__ = [
     "BaseIndicator",
@@ -57,6 +61,8 @@ __all__ = [
     "BollingerBandsIndicator",
     "BollingerPctBIndicator",
     "DonchianChannelsIndicator",
+    "RealizedVolIndicator",
+    "RollingMaxIndicator",
     "OBVIndicator",
     "VWAPIndicator",
     "ZScoreIndicator",

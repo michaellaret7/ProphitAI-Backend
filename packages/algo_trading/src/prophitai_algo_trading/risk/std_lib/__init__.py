@@ -22,6 +22,7 @@ from prophitai_algo_trading.risk.std_lib.reentry_cooldown import (
 from prophitai_algo_trading.risk.std_lib.stop_loss_exit import StopLossExitControl
 from prophitai_algo_trading.risk.std_lib.time_stop import TimeStopControl
 from prophitai_algo_trading.risk.std_lib.trading_window import TradingWindowControl
+from prophitai_algo_trading.risk.std_lib.regime_halt import RegimeHaltControl
 from prophitai_algo_trading.risk.std_lib.trailing_stop_exit import (
     TrailingStopExitControl,
 )
@@ -33,6 +34,7 @@ __all__ = [
     "PortfolioDrawdownLimitControl",
     "ProfitTargetExitControl",
     "QualityGateControl",
+    "RegimeHaltControl",
     "ReentryCooldownControl",
     "StopLossExitControl",
     "TimeStopControl",

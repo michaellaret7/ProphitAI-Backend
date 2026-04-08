@@ -15,12 +15,14 @@ from prophitai_algo_trading.indicators.std_lib.volatility import (
     BollingerBandsIndicator,
     BollingerPctBIndicator,
     DonchianChannelsIndicator,
+    RealizedVolIndicator,
 )
 from prophitai_algo_trading.indicators.std_lib.volume import (
     OBVIndicator,
     VWAPIndicator,
 )
 from prophitai_algo_trading.indicators.std_lib.statistical import (
+    RollingMaxIndicator,
     ZScoreIndicator,
 )
 
@@ -35,7 +37,9 @@ __all__ = [
     "BollingerBandsIndicator",
     "BollingerPctBIndicator",
     "DonchianChannelsIndicator",
+    "RealizedVolIndicator",
     "OBVIndicator",
     "VWAPIndicator",
+    "RollingMaxIndicator",
     "ZScoreIndicator",
 ]

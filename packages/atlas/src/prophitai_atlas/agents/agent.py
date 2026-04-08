@@ -132,7 +132,7 @@ class Agent(AgentBase):
             function=partial(retrieve_notes, self.notebook),
         )
 
-        # --- Add the register_tools tool ---
+        # --- Add the register_tools tool only if deferred_tools is not None ---
         if deferred_tools:
             self.add_tool(
                 **REGISTER_TOOLS_TOOL,
