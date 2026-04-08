@@ -7,6 +7,7 @@ import uuid
 from typing import TYPE_CHECKING, Dict, Any, List, Optional
 
 from prophitai_atlas.execution.tool_handler import should_run_parallel
+from prophitai_atlas.models.new_plan import TaskStatus
 from prophitai_shared import NormalizedLLMResponse, NormalizedToolCall
 
 if TYPE_CHECKING:
@@ -93,7 +94,29 @@ class ExecutionLoop:
 
                             callback.on_iteration_end(iteration=i, tokens_used=iteration_tokens)
                         else:
-                            # No tool calls = LLM has answer ready
+                            # No tool calls — check for empty answer with incomplete plan
+                            if not assistant_text.strip() and self._has_incomplete_tasks():
+                                incomplete = self._get_incomplete_tasks()
+                                next_task = incomplete[0]
+
+                                self.printer.iteration_complete(i, "empty_answer_retry")
+
+                                self.agent.messages.append({
+                                    "role": "assistant",
+                                    "content": "I need to continue working on the remaining tasks."
+                                })
+                                self.agent.messages.append({
+                                    "role": "user",
+                                    "content": (
+                                        f"You returned an empty response but {len(incomplete)} "
+                                        f"plan task(s) remain incomplete. Continue with task "
+                                        f"{next_task.id}: {next_task.description}"
+                                    ),
+                                })
+
+                                callback.on_iteration_end(iteration=i, tokens_used=iteration_tokens)
+                                continue
+
                             self.agent.messages.append({
                                 "role": "assistant",
                                 "content": assistant_text
@@ -221,6 +244,28 @@ class ExecutionLoop:
             "last_message_role": last_role,
             "last_message_preview": last_content[:500],
         }
+
+    # ================================
+    # --> Helper funcs
+    # ================================
+
+    def _has_incomplete_tasks(self) -> bool:
+        """Check if the agent has a plan with incomplete tasks."""
+        plan = getattr(self.agent, "plan", None)
+
+        if not plan or not plan.tasks:
+            return False
+
+        return any(t.status != TaskStatus.COMPLETE for t in plan.tasks)
+
+    def _get_incomplete_tasks(self) -> list:
+        """Return incomplete tasks from the agent's plan, ordered by step then id."""
+        plan = getattr(self.agent, "plan", None)
+
+        if not plan or not plan.tasks:
+            return []
+
+        return [t for t in plan.tasks if t.status != TaskStatus.COMPLETE]
 
     @staticmethod
     def _sanitize_tool_calls(tool_calls: list[NormalizedToolCall]) -> None:
