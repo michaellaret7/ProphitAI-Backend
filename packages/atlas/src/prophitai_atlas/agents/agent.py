@@ -29,10 +29,6 @@ from prophitai_atlas.tools.base.register_tools import (
 from .base import AgentBase
 from prophitai_atlas.tools.base import (
     llm_web_search,
-    DEPLOY_SCOPED_WORKER_TOOL,
-    deploy_scoped_worker,
-    DEPLOY_GENERAL_WORKER_TOOL,
-    deploy_general_worker,
     RETRIEVE_NOTES_TOOL,
     retrieve_notes,
     UPDATE_PLAN_TOOL,
@@ -141,23 +137,6 @@ class Agent(AgentBase):
                 function=partial(register_tools_fn, tool_registry, all_tools, self),
             )
 
-        # --- Add deploy tools ---
-        # Reason: Use lambda to read self.chat_callback and self.user_id at call-time,
-        # not init-time. The callback is set to WebSocketChatCallback AFTER __init__
-        # (in send_message_controller), so partial() would capture stale values.
-        self.add_tool(
-            **DEPLOY_SCOPED_WORKER_TOOL,
-            function=lambda **kwargs: deploy_scoped_worker(
-                self.notebook, self.chat_callback, self.user_id, **kwargs
-            ),
-        )
-
-        self.add_tool(
-            **DEPLOY_GENERAL_WORKER_TOOL,
-            function=lambda **kwargs: deploy_general_worker(
-                self.notebook, self.chat_callback, self.user_id, **kwargs
-            ),
-        )
 
         print(f"Initialized Agent with model: {self.model} (provider: {self.provider})")
         print(f"Registered tools ({len(self.tool_functions)}): {sorted(self.tool_functions.keys())}")
