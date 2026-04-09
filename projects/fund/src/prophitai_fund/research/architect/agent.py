@@ -15,10 +15,10 @@ from prophitai_atlas.models import PrintMode, AgentResponse
 from prophitai_atlas.models.callbacks import ChatCallback, NoOpChatCallback
 from prophitai_shared.time_utils import get_current_utc_time
 
-from prophitai_fund.researcher.architect.tool_registry import ARCHITECT_TOOLS
+from prophitai_fund.research.architect.tool_registry import ARCHITECT_TOOLS
 from prophitai_fund.tools import append_memory, retrieve_memory
 
-from prophitai_fund.researcher.architect.models import StrategyManifest
+from prophitai_fund.research.architect.models import StrategyManifest
 
 class StrategyArchitectAgent:
     """Translates idea generator output into a Strategy Manifest.
