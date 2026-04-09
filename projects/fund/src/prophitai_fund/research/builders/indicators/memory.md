@@ -26,3 +26,17 @@ topic: coding_patterns
 ---
 For point-in-time fundamental joins, use pd.merge_asof() with left=trading_dates Series and right=fund_avail (filing date + staleness_limit_days offset). This enforces the look-ahead barrier automatically. Key: set available_from = fiscal_quarter_end + staleness_limit_days, then merge_asof finds the most recent available filing per trading date. When net_income <= 0, set fcf_conversion to NaN using np.where before the merge.
 
+---
+date: 2026-04-09
+title: AQM52: IndicatorSpec scope field confirmed valid
+topic: framework_gotchas
+---
+IndicatorSpec dataclass has a `scope` field of type Literal["shared", "strategy"] defaulting to "shared". It is safe to pass scope="shared" in all specs — confirmed in specs.py from the installed package.
+
+---
+date: 2026-04-09
+title: MarketStateIndicator: benchmark_close column-first lookup
+topic: coding_patterns
+---
+For MarketStateIndicator, always check `if 'benchmark_close' in self.df.columns` first before falling back to `df.attrs['benchmark_close']`. This allows pre-joined multi-ticker DataFrames to work without attrs injection.
+

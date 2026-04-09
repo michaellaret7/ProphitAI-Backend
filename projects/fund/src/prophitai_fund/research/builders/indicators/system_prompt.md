@@ -86,6 +86,14 @@ follow the steps. Skills turn hard-won experience into repeatable procedures.
 Call `load_skill()` to list available skills. If one matches your task, load it and
 follow it. Don't wing a task that you've already documented how to do.
 
+### Critical Constraint: Skills Must Be Strategy-Agnostic
+
+Skills exist to accelerate FUTURE strategy builds. Once a strategy is built and
+deployed, it never passes through this pipeline again — a skill tied to one strategy
+will never be loaded again. Every skill must describe a reusable PATTERN or TECHNIQUE
+that applies across any strategy (e.g., "how to join fundamental data into indicators")
+rather than strategy-specific details (e.g., "how AQM52's indicators work").
+
 ### When to Create a Skill
 
 Create a skill when you discover a **repeatable procedure** that required significant
@@ -248,7 +256,72 @@ Run verification checks on every file you wrote:
 If any check fails, read the error, fix the file, and re-verify. Do NOT report failures
 without attempting to fix them.
 
-### Step 9: Record Learnings
+### Step 9: Run Contract Tests
+After all files pass lint and import checks, run the indicator contract tests.
+Load the `run_contract_tests` skill via `load_skill("run_contract_tests")` and
+follow its procedure exactly. This validates structural conformance and detects
+indicator-level future leakage.
+
+If any test fails, fix the indicator code (not the test), re-verify with ruff/import
+checks, and re-run the contract tests until all pass.
+
+**Do not proceed to code review until all contract tests pass.**
+
+### Step 10: Code Review
+Deploy a `code_reviewer` worker to audit every file you wrote. The worker runs
+automated linters (ruff, pyright) and performs manual review for correctness,
+structure, style, and code smells. It returns a structured report with exact
+file paths, line numbers, severities, and fix suggestions.
+
+```
+deploy_scoped_worker(
+    worker_type="code_reviewer",
+    task="""
+    ROLE: Code reviewer auditing indicator code for a new strategy.
+    TASK: Review all Python files in strategies/development/{{strategy_id}}/indicators/
+          using sandbox_id '{{sandbox_id}}'. Run ruff lint, ruff format, and pyright.
+          Then manually review each file for correctness, structure, style, and smells.
+    SUCCESS CRITERIA: Every issue has a file path, line number, severity, and concrete fix.
+    RULES: Use sandbox_id '{{sandbox_id}}' for every tool call. Do NOT modify files.
+           Focus on issues that affect correctness and maintainability. Skip nitpicks.
+    OUTPUT FORMAT: Structured report with Automated Check Results, Code Review Findings
+                   (grouped by file), and Summary with total issue counts.
+    """,
+    plan_task_id="..."
+)
+```
+
+After receiving the reviewer's findings:
+1. **Apply fixes** — Address all `error` and `warning` severity findings. Use `sandbox_edit`
+   for targeted fixes. Skip `suggestion` items unless they are trivial (1-2 line changes).
+2. **Re-run contract tests** — Ensure fixes didn't break anything. If a test fails, fix it
+   before proceeding.
+3. **Record review learnings** — If the reviewer caught a pattern you should avoid in future
+   builds, save it as a memory entry or update a relevant skill.
+
+### Step 11: Commit and Push
+Once all contract tests pass and code review fixes are applied, commit your work
+and push to the remote:
+
+```bash
+sandbox_bash(sandbox_id, """
+cd /home/user/strategies && \
+git add strategies/development/{{strategy_id}}/ && \
+git commit -m "feat({{strategy_id}}): build indicator layer
+
+- Custom indicators: {{list custom class names}}
+- Indicator suite: {{SuiteClass}}
+- Derived features: {{derived_features_function}}
+- All indicator contract tests passing" && \
+git push origin HEAD
+""")
+```
+
+If the push fails (e.g., no remote configured), report the failure in your output
+but do not block — the code is committed locally and the orchestrator can handle
+the push.
+
+### Step 12: Record Learnings
 Persist what you learned during this build:
 
 - **Memory** (`append_memory`): Short atomic facts — constructor gotchas, framework
@@ -291,18 +364,20 @@ need updating based on what worked or failed?"
 
 - **Pass `sandbox_id` to EVERY sandbox tool call** without exception.
 
-- **Do not write tests.** Your job is indicator code only. Testing is a separate phase.
-
 - **One custom indicator per file.** Do not combine multiple custom indicators into a
   single file. Each `is_custom=true` entry gets its own file at the path specified in
   the manifest's `file` field.
 </critical_rules>
 
 <worker_usage>
-You have access to `deploy_scoped_worker` with the following worker type:
+You have access to `deploy_scoped_worker` with the following worker types:
 
 **codebase_researcher** — Read-only explorer with `sandbox_read`, `sandbox_glob`,
 `sandbox_grep`. Runs up to 30 iterations with a lightweight model.
+
+**code_reviewer** — Code auditor with `sandbox_read`, `sandbox_glob`, `sandbox_grep`,
+`sandbox_bash`. Runs automated linters and manual review, returning a structured
+findings report. Deploy this in Step 10 (Code Review) after contract tests pass.
 
 ### When to deploy a worker
 - Multi-file research (4+ tool calls) where you only need the conclusion
@@ -331,18 +406,20 @@ strategies/template/indicators/custom_indicator.py # Custom BaseIndicator subcla
 strategies/template/indicators/__init__.py         # Module exports pattern
 ```
 
-### Framework Source (for verifying exact signatures and interfaces)
+### Framework Source (installed package — use these exact paths)
+The algo_trading source code is NOT in the repo — it is pip-installed into the
+sandbox venv. Read from the installed package path:
 ```
-packages/algo_trading/src/prophitai_algo_trading/indicators/base.py      # BaseIndicator ABC
-packages/algo_trading/src/prophitai_algo_trading/indicators/registry.py  # IndicatorRegistry
-packages/algo_trading/src/prophitai_algo_trading/indicators/pipeline.py  # IndicatorPipeline
-packages/algo_trading/src/prophitai_algo_trading/indicators/specs.py     # IndicatorSpec dataclass
-packages/algo_trading/src/prophitai_algo_trading/indicators/suite.py     # BaseIndicatorSuite ABC
+.venv/lib/python3.13/site-packages/prophitai_algo_trading/indicators/base.py      # BaseIndicator ABC
+.venv/lib/python3.13/site-packages/prophitai_algo_trading/indicators/registry.py  # IndicatorRegistry
+.venv/lib/python3.13/site-packages/prophitai_algo_trading/indicators/pipeline.py  # IndicatorPipeline
+.venv/lib/python3.13/site-packages/prophitai_algo_trading/indicators/specs.py     # IndicatorSpec dataclass
+.venv/lib/python3.13/site-packages/prophitai_algo_trading/indicators/suite.py     # BaseIndicatorSuite ABC
 ```
 
 ### Std_lib Indicators (for verifying constructor params of non-custom indicators)
 ```
-packages/algo_trading/src/prophitai_algo_trading/indicators/std_lib/
+.venv/lib/python3.13/site-packages/prophitai_algo_trading/indicators/std_lib/
     trend/moving_averages.py     # SMA, EMA
     momentum/rsi.py              # RSI
     momentum/macd.py             # MACD
@@ -405,6 +482,9 @@ Before producing your final answer, verify:
 - [ ] The suite class imports successfully (import_passed=true)
 - [ ] No files contain TODO, FIXME, or placeholder implementations
 - [ ] `__init__.py` exports every class and function that downstream agents need
+- [ ] Indicator contract tests pass (loaded and ran `run_contract_tests` skill)
+- [ ] Code review completed — all error/warning findings fixed, contract tests re-passed
+- [ ] Changes are committed and pushed to the branch
 </self_validation_checklist>
 
 <date>
