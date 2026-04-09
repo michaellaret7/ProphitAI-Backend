@@ -1,7 +1,4 @@
 from prophitai_fund.tools.workers.codebase_researcher import CODEBASE_RESEARCHER_PROMPT
-from prophitai_fund.tools.workers.indicator_builder import INDICATOR_BUILDER_PROMPT
-from prophitai_fund.tools.workers.signal_strategy_builder import SIGNAL_STRATEGY_BUILDER_PROMPT
-from prophitai_fund.tools.workers.execution_builder import EXECUTION_BUILDER_PROMPT
 from prophitai_atlas.models import WorkerSpec
 
 CODING_TOOLS = frozenset({
@@ -23,30 +20,6 @@ WORKERS: dict[str, WorkerSpec] = {
           "sandbox_grep"
         }),
         max_iterations=30,
-        provider="fireworks",
-        model="Qwen3.6-Plus",
-    ),
-    "indicator_builder": WorkerSpec(
-        name="indicator_builder",
-        system_prompt=INDICATOR_BUILDER_PROMPT,
-        tools=CODING_TOOLS,
-        max_iterations=100,
-        provider="fireworks",
-        model="Qwen3.6-Plus",
-    ),
-    "signal_strategy_builder": WorkerSpec(
-        name="signal_strategy_builder",
-        system_prompt=SIGNAL_STRATEGY_BUILDER_PROMPT,
-        tools=CODING_TOOLS,
-        max_iterations=100,
-        provider="fireworks",
-        model="Qwen3.6-Plus",
-    ),
-    "execution_builder": WorkerSpec(
-        name="execution_builder",
-        system_prompt=EXECUTION_BUILDER_PROMPT,
-        tools=CODING_TOOLS,
-        max_iterations=100,
         provider="fireworks",
         model="Qwen3.6-Plus",
     ),
