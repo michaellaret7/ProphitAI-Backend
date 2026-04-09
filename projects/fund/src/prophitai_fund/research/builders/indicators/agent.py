@@ -24,7 +24,7 @@ from prophitai_atlas.tools.base.worker_agent.deploy_scoped import (
 from prophitai_fund.research.architect.models import StrategyManifest
 from prophitai_fund.research.builders.indicators.models import IndicatorBuildResult
 from prophitai_fund.research.builders.indicators.tool_registry import INDICATOR_BUILDER_TOOLS
-from prophitai_fund.tools import append_memory, retrieve_memory
+from prophitai_fund.tools import append_memory, build_skill, edit_skill, load_skill, retrieve_memory
 from prophitai_fund.tools.worker_registry import WORKERS
 
 
@@ -74,9 +74,16 @@ class IndicatorBuilderAgent:
         # Reason: Memory tools are bound with partial to bake in the file path.
         # The LLM never sees the _memory_file parameter.
         memory_file = Path(__file__).parent / "memory.md"
+        
+        # Reason: Skill tools are bound with partial to bake in the skills directory.
+        # The LLM sees skill_name, title, description, content — not the directory path.
+        skills_dir = Path(__file__).parent / "skills"
 
         self.agent.add_tool(**{**append_memory.tool, "function": partial(append_memory, memory_file)})
         self.agent.add_tool(**{**retrieve_memory.tool, "function": partial(retrieve_memory, memory_file)})
+        self.agent.add_tool(**{**load_skill.tool, "function": partial(load_skill, skills_dir)})
+        self.agent.add_tool(**{**build_skill.tool, "function": partial(build_skill, skills_dir)})
+        self.agent.add_tool(**{**edit_skill.tool, "function": partial(edit_skill, skills_dir)})
 
         # Reason: deploy_scoped_worker needs notebook, callback, user_id, and registry
         # pre-bound. The LLM only sees worker_type, task, plan_task_id, context.
