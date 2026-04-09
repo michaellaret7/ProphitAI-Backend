@@ -65,6 +65,8 @@ with self.langfuse.start_as_current_observation(
 
 ### 2.2 Langfuse Attribute Propagation + Execution
 
+> **⚠ Note:** `run_span.update(output=...)` output shapes differ across all three agents — `Agent` passes a full dict, `PlannerAgent` passes `plan.model_dump()`, `WorkerAgent` passes just the answer string. The `_observe` helper can only encapsulate span setup, not teardown — callers must handle `run_span.update()` themselves after yield.
+
 **Where:** All three agents wrap `self.execution_loop.execute()` in `propagate_attributes`.
 
 | File | Lines |
@@ -130,6 +132,19 @@ messages.append({"role": "user", "content": <user_content>})
 ```
 
 **Variation:** `Agent` performs prompt resolution before assembling the list. `PlannerAgent` and `WorkerAgent` do not.
+
+> **⚠ Clarification:** `PlannerAgent` and `WorkerAgent` never use `conversation_history` — they always build a strict `[system, user]` list. The `[system, ...history, user]` pattern is `Agent`-only. The proposed `_build_messages` helper generalizes this with an optional `conversation_history` parameter, which is correct but the shared surface for planner/worker is smaller than implied.
+
+> **⚠ Implementation detail:** `Agent.build_messages()` (lines 155-163) currently contains Anthropic prompt-selection logic *inside itself*:
+> ```python
+> if system_prompt is not None:
+>     prompt = system_prompt
+> elif self.provider == "anthropic" and self.system_prompt_blocks is not None:
+>     prompt = self.system_prompt_blocks
+> else:
+>     prompt = self.system_prompt
+> ```
+> This must be extracted into `Agent.run()` before calling `self._build_messages(resolved_prompt, ...)`. This is the trickiest part of the `Agent` refactor.
 
 **Refactor suitability:** High, as long as prompt selection stays in the subclasses and only the list assembly moves to base.
 
@@ -304,7 +319,7 @@ def _reset_counters(self) -> None:
 ```python
 def _build_messages(
     self,
-    system_prompt: Any,
+    system_prompt: Union[str, List[Dict[str, Any]]],
     user_content: str,
     conversation_history: Optional[List[Dict[str, Any]]] = None,
 ) -> List[Dict[str, Any]]:
@@ -475,7 +490,9 @@ This refactor should not silently add `trace_name`, `provider`, or `max_iteratio
 - [ ] **`worker_agent.py`**: Refactor `run()` to use `_observe`, `_reset_counters`, `_build_messages`, `_execute_with_tracing`
 - [ ] **`planner_agent.py`**: Refactor `run()` to use `_observe`, `_reset_counters`, `_build_messages`, `_execute_with_tracing`
 - [ ] **`agent.py`**: Refactor `__init__` to use `self.register_tools(tools)`
+- [ ] **`agent.py`**: Extract Anthropic prompt-selection logic (lines 155-163) from `build_messages()` into `Agent.run()` so the resolved prompt can be passed to `self._build_messages()`
 - [ ] **`agent.py`**: Refactor `run()` to use `_observe`, `_reset_counters`, `_build_messages`, `_execute_with_tracing`
+- [ ] **`agent.py`**: Ensure the existing `try/finally` block for `update_plan` tool cleanup (lines 198/295-298) coexists correctly with the `_observe` context manager
 - [ ] **`agent.py`**: Preserve current `Agent`-only `trace_name` / metadata behavior when calling `_execute_with_tracing(...)`
 - [ ] **`agent.py`**: Collapse or remove public `build_messages()` if desired
 - [ ] **Verify**: Confirm `build_messages()` has no external callers before removing it
@@ -522,3 +539,15 @@ Removing or privatizing `Agent.build_messages()` would break any external code t
 **Risk: Existing tests are too shallow**  
 Current repo tests are smoke-style and do not assert tracing kwargs or repeated-run counter behavior.  
 **Mitigation:** Add targeted unit tests for the helper contract before relying on smoke tests alone.
+
+**Risk: `Agent.build_messages()` prompt-selection extraction**  
+`Agent.build_messages()` is not a pure list assembler — it contains Anthropic-specific provider branching (lines 155-163) that selects between `system_prompt`, `system_prompt_blocks`, and `self.system_prompt`. After refactoring, this logic must move into `Agent.run()` before calling `self._build_messages(resolved_prompt, ...)`. Missing this would break Anthropic prompt-block behavior.  
+**Mitigation:** Explicitly extract prompt resolution as a separate step in `Agent.run()` before calling the base helper. Add a regression test with `provider="anthropic"` and `system_prompt_blocks` set.
+
+**Risk: `Agent.run()` try/finally cleanup pattern**  
+`Agent.run()` wraps its body in a `try/finally` (lines 198/295-298) that removes the `update_plan` tool. This must coexist with the `_observe` context manager — the `try/finally` should remain inside the `with self._observe(...)` block, not be replaced by it.  
+**Mitigation:** Preserve the `try/finally` inside the observation context manager during refactoring.
+
+**Risk: `system_prompt` type contract is implicit**  
+`WorkerAgent._build_system_prompt()` returns either `str` or `List[Dict]` depending on provider. Using `Any` as the type hint on `_build_messages` hides this contract.  
+**Mitigation:** Use `Union[str, List[Dict[str, Any]]]` to document the actual type contract.
