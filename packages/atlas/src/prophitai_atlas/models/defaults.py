@@ -11,7 +11,7 @@ Update these when model versions change instead of hunting through files.
 
 DEFAULT_PROVIDER = "anthropic"
 WORKER_PROVIDER = "anthropic"
-PLANNER_PROVIDER = "anthropic"
+PLANNER_PROVIDER = "gemini"
 
 # ================================
 # --> Default models
@@ -20,7 +20,7 @@ PLANNER_PROVIDER = "anthropic"
 DEFAULT_MODEL = "claude-sonnet-4-6"
 STRONG_MODEL = "claude-opus-4-6"
 WORKER_MODEL = "claude-sonnet-4-6"
-PLANNER_MODEL = "claude-sonnet-4-6"
+PLANNER_MODEL = "gemini-3.1-pro-preview"
 
 # ================================
 # --> Parser fallback chain
