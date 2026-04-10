@@ -7,18 +7,27 @@ and returns a dictionary of all computed metrics.
 import numpy as np
 import pandas as pd
 
+from prophitai_calculations.performance.returns import calc_alpha
+
 TRADING_DAYS_PER_YEAR = 252
 RISK_FREE_RATE = 0.04
 SECONDS_PER_YEAR = 365.25 * 86_400
 EPSILON = 1e-9
 
-def calculate_metrics(equity_curve: pd.DataFrame, trades: pd.DataFrame) -> dict:
+
+def calculate_metrics(
+    equity_curve: pd.DataFrame,
+    trades: pd.DataFrame,
+    benchmark_prices: pd.Series | None = None,
+) -> dict:
     """Calculate all performance metrics from backtest results.
 
     Args:
         equity_curve: DataFrame with 'equity' column, datetime-indexed.
         trades: DataFrame with one row per round-trip trade, must have
             'pnl', 'return_pct', and 'direction' columns.
+        benchmark_prices: Optional Series of benchmark close prices (e.g. SPY),
+            datetime-indexed. When provided, Jensen's alpha is computed.
 
     Returns:
         Dictionary of metric name to value.
@@ -34,6 +43,7 @@ def calculate_metrics(equity_curve: pd.DataFrame, trades: pd.DataFrame) -> dict:
     metrics.update(_return_metrics(equity_curve, years))
     metrics.update(_risk_metrics(equity_curve, bars_per_year))
     metrics.update(_trade_metrics(trades))
+    metrics.update(_benchmark_metrics(equity_curve, benchmark_prices))
 
     return metrics
 
@@ -144,3 +154,28 @@ def _trade_metrics(trades: pd.DataFrame) -> dict:
         "long_trades": long_trades,
         "short_trades": short_trades,
     }
+
+
+def _benchmark_metrics(
+    equity_curve: pd.DataFrame,
+    benchmark_prices: pd.Series | None,
+) -> dict:
+    """Compute benchmark-relative metrics (Jensen's alpha vs SPY).
+
+    Args:
+        equity_curve: DataFrame with 'equity' column, datetime-indexed.
+        benchmark_prices: Series of benchmark close prices, datetime-indexed.
+            If None, alpha is reported as None.
+    """
+    if benchmark_prices is None or len(benchmark_prices) < 2:
+        return {"alpha_vs_spy": None}
+
+    portfolio_returns = equity_curve["equity"].pct_change().dropna()
+    benchmark_returns = benchmark_prices.pct_change().dropna()
+
+    alpha = calc_alpha(portfolio_returns, benchmark_returns)
+
+    # Reason: calc_alpha returns a decimal (e.g. 0.05 = 5%), convert to pct.
+    alpha_pct = round(alpha * 100, 2) if alpha is not None else None
+
+    return {"alpha_vs_spy": alpha_pct}

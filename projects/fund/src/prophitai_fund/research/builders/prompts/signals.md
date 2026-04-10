@@ -272,8 +272,18 @@ Run verification checks on every file you wrote:
 1. **Lint check**: `sandbox_bash(sandbox_id, "ruff check {{file_path}}")` for each file
 2. **Import check**: `sandbox_bash(sandbox_id, "cd /home/user/strategies && python -c \"from strategies.development.{{strategy_id}}.strategy import {{StrategyClass}}\"")`
    This transitively validates that the config, signal model, and indicator suite all import correctly.
-3. **Column cross-check**: Verify that every column in `required_columns` exists in
-   `indicator_result.all_output_columns` or is produced by `enrich()`.
+3. **Column cross-check** — run programmatically via `sandbox_bash`:
+   ```
+   python -c "
+   required = {<required_columns tuple elements>}
+   available = {<indicator_result.all_output_columns>}
+   ohlcv = {'open','high','low','close','volume'}
+   enrich = {<enrich_columns>}
+   missing = sorted(required - available - ohlcv - enrich)
+   assert not missing, f'MISSING: {missing}'
+   print('Column cross-check passed')
+   "
+   ```
 
 If any check fails, read the error, fix the file, and re-verify. Do NOT report failures
 without attempting to fix them.
@@ -427,6 +437,7 @@ Read these to understand the patterns before writing any code:
 strategies/template/signals/model.py    # BaseSignalModel subclass pattern
 strategies/template/strategy.py         # BaseComposableStrategy subclass pattern
 strategies/template/config.py           # Frozen dataclass pattern
+strategies/template/tests/__init__.py  # Test package init
 ```
 
 ### Framework Source (installed package — use these exact paths)

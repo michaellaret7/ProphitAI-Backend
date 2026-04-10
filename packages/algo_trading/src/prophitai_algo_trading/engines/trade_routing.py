@@ -167,6 +167,7 @@ def compile_backtest_result(
     portfolio_tracker: PortfolioTracker,
     ticker_count: int,
     verbose: bool = False,
+    benchmark_prices: pd.Series | None = None,
 ) -> BacktestResult:
     """Package portfolio tracker outputs into a BacktestResult.
 
@@ -174,13 +175,15 @@ def compile_backtest_result(
         portfolio_tracker: Completed portfolio tracker.
         ticker_count: Number of tickers in the universe (for verbose logging).
         verbose: If True, print summary.
+        benchmark_prices: Optional Series of benchmark close prices (e.g. SPY),
+            datetime-indexed. When provided, alpha vs benchmark is computed.
 
     Returns:
         BacktestResult with metrics, equity curve, and trades.
     """
     equity_curve = portfolio_tracker.get_equity_curve()
     trades = portfolio_tracker.get_trades_df()
-    metrics = calculate_metrics(equity_curve, trades)
+    metrics = calculate_metrics(equity_curve, trades, benchmark_prices)
 
     if verbose:
         print(f"\nDone: {len(trades)} trades across {ticker_count} tickers, "

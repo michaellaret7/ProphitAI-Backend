@@ -41,6 +41,8 @@ strategies/development/{{strategy_id}}/
         defaults.py            — build_risk_controls() factory function
         {{custom_control}}.py  — One file per is_custom=true risk control
         __init__.py            — Module exports
+    tests/
+        __init__.py            — Test package init
     wiring.py                  — build_{{strategy_id}}_engine() assembly function
     run_event_backtest.py      — Event-driven backtest runner
     run_vectorized_backtest.py — Vectorized backtest runner
@@ -433,7 +435,8 @@ git add strategies/development/{{strategy_id}}/sizing/ \
        strategies/development/{{strategy_id}}/wiring.py \
        strategies/development/{{strategy_id}}/run_event_backtest.py \
        strategies/development/{{strategy_id}}/run_vectorized_backtest.py \
-       strategies/development/{{strategy_id}}/run_live.py && \
+       strategies/development/{{strategy_id}}/run_live.py \
+       strategies/development/{{strategy_id}}/tests/ && \
 git commit -m "feat({{strategy_id}}): build execution layer
 
 - Sizer: {{sizer_chain_description}}
@@ -547,6 +550,7 @@ strategies/template/wiring.py                     # Engine wiring pattern
 strategies/template/run_event_backtest.py         # Event-driven backtest runner
 strategies/template/run_vectorized_backtest.py    # Vectorized backtest runner
 strategies/template/run_live.py                   # Live trading runner
+strategies/template/tests/__init__.py              # Test package init
 ```
 
 ### Framework Source (installed package — use these exact paths)

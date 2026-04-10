@@ -39,6 +39,11 @@ def scaffold_strategy(sandbox_id: str, strategy_name: str) -> str:
         if result.exit_code != 0:
             return error_response(f"Copy failed: {result.stderr}")
 
+        # Reason: Ensure a tests/ package exists so agents place test files here
+        # TODO: Just add the tests folder to the template in Strategies
+        sandbox.commands.run(f"mkdir -p {target_path}/tests")
+        sandbox.files.write(f"{target_path}/tests/__init__.py", "")
+
         return success_response({
             "strategy_name": strategy_name,
             "path": target_path,

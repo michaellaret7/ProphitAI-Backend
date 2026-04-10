@@ -119,8 +119,8 @@ class SignalStrategyBuilderAgent:
         Returns:
             AgentResponse with parsed_output containing a SignalStrategyBuildResult.
         """
-        manifest_json = manifest.model_dump_json(indent=2)
-        indicator_result_json = indicator_result.model_dump_json(indent=2)
+        manifest_json = manifest.model_dump_json()
+        indicator_result_json = indicator_result.model_dump_json()
 
         task = self.DEFAULT_TASK_TEMPLATE.format(
             manifest_json=manifest_json,

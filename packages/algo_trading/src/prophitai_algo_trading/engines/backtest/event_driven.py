@@ -55,8 +55,18 @@ class EventDrivenBacktestEngine:
         warmup_bars: int | None = None,
         plot: bool = False,
         verbose: bool = False,
+        benchmark_prices: pd.Series | None = None,
     ) -> BacktestResult:
-        """Run the backtest over historical data for multiple tickers."""
+        """Run the backtest over historical data for multiple tickers.
+
+        Args:
+            data: Dict mapping ticker symbols to OHLCV DataFrames.
+            warmup_bars: Override for warmup period.
+            plot: If True, plot results after backtest.
+            verbose: If True, print progress info.
+            benchmark_prices: Optional Series of benchmark close prices (e.g. SPY),
+                datetime-indexed. When provided, alpha vs benchmark is computed.
+        """
         validate_engine_data(data)
 
         warmup = resolve_warmup(
@@ -84,9 +94,11 @@ class EventDrivenBacktestEngine:
             portfolio_tracker, position_trackers, latest_prices, common_index[-1], verbose,
         )
 
-        result = compile_backtest_result(portfolio_tracker, len(tickers), verbose)
+        result = compile_backtest_result(
+            portfolio_tracker, len(tickers), verbose, benchmark_prices,
+        )
 
         if plot:
             plot_event_backtest_results(result)
-            
+
         return result

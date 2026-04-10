@@ -130,13 +130,13 @@ Deploy a `codebase_researcher` worker for broad exploration. Example tasks:
 Always include the sandbox_id in worker tasks.
 
 **Minimum reads before writing any code:**
-1. `strategies/template/indicators/suite.py` — BaseIndicatorSuite subclass pattern
-2. `strategies/template/indicators/custom.py` — Derived features function pattern
-3. `strategies/template/indicators/custom_indicator.py` — Custom BaseIndicator pattern
+1. `/home/user/strategies/strategies/template/indicators/suite.py` — BaseIndicatorSuite subclass pattern
+2. `/home/user/strategies/strategies/template/indicators/custom.py` — Derived features function pattern
+3. `/home/user/strategies/strategies/template/indicators/custom_indicator.py` — Custom BaseIndicator pattern
 4. The std_lib source for every non-custom indicator in the manifest — **ALWAYS verify
    constructor params from source, even if memory contains them.** Memory informs which
    file to read, but the source file is the authority. Run:
-   `sandbox_grep(sandbox_id, "def __init__", path=".venv/lib/python3.13/site-packages/prophitai_algo_trading/indicators/std_lib/", include="*.py")`
+   `sandbox_grep(sandbox_id, "def __init__", path="/home/user/strategies/.venv/lib/python3.13/site-packages/prophitai_algo_trading/indicators/std_lib/", include="*.py")`
    to get all constructor signatures in a single call, then confirm each non-custom
    indicator's kwarg names match what you pass in `IndicatorSpec.params`.
 
@@ -193,7 +193,14 @@ Export the suite class, all custom indicator classes, and the derived features f
 Follow the template's export pattern.
 
 ### Step 7: Verify
-Run verification checks on every file you wrote:
+Run verification checks on every file you wrote.
+
+**Write test scripts to files — do not use inline `python -c` for anything beyond
+a single import statement.** Multi-assertion tests, smoke tests, and contract tests
+must be written via `sandbox_write` to `strategies/development/{{strategy_id}}/tests/`
+then executed with `sandbox_bash(sandbox_id, "cd /home/user/strategies && python strategies/development/{{strategy_id}}/tests/test_file.py")`.
+Inline shell-embedded Python is fragile (quoting, escaping, syntax errors are invisible
+until runtime) and wastes iterations when it fails.
 
 1. **Lint check**: `sandbox_bash(sandbox_id, "ruff check {{file_path}}")` for each file
 2. **Import check**: `sandbox_bash(sandbox_id, "cd /home/user/strategies && python -c \"from strategies.development.{{strategy_id}}.indicators.suite import {{SuiteClass}}\"")`
@@ -259,7 +266,7 @@ If the push fails (e.g., no remote configured), report the failure in your outpu
 but do not block — the code is committed locally and the orchestrator can handle
 the push.
 
-### Step 12: Record Learnings
+### Step 11: Record Learnings
 Persist what you learned during this build:
 
 - **Memory** (`append_memory`): Short atomic facts — constructor gotchas, framework
@@ -302,6 +309,14 @@ need updating based on what worked or failed?"
   single file. Each `is_custom=true` entry gets its own file at the path specified in
   the manifest's `file` field.
 
+- **Never hardcode a value that exists as a constructor parameter.** When a
+  threshold, boundary, or configurable value is accepted in `__init__` and stored
+  as `self.param`, ALWAYS use `self.param` in `calculate()` and `update_last_row()`.
+  Never substitute the numeric default (e.g., `< 0.0` when `self.down_moderate_threshold`
+  exists). Hardcoded values make the parameter ineffective and silently produce
+  wrong results. This applies to thresholds, windows, multipliers, and any value
+  the manifest passes as a configurable param.
+
 </critical_rules>
 
 <worker_usage>
@@ -331,30 +346,34 @@ for every tool call").
 </worker_usage>
 
 <sandbox_reference_paths>
-Read these to understand the patterns before writing any code:
+Read these to understand the patterns before writing any code.
+
+**Sandbox repo root:** `/home/user/strategies/`
+All paths below are absolute — pass them directly to `sandbox_read`.
 
 ### Template (your primary reference — read these first)
 ```
-strategies/template/indicators/suite.py            # BaseIndicatorSuite subclass pattern
-strategies/template/indicators/custom.py           # Derived features function pattern
-strategies/template/indicators/custom_indicator.py # Custom BaseIndicator subclass pattern
-strategies/template/indicators/__init__.py         # Module exports pattern
+/home/user/strategies/strategies/template/indicators/suite.py            # BaseIndicatorSuite subclass pattern
+/home/user/strategies/strategies/template/indicators/custom.py           # Derived features function pattern
+/home/user/strategies/strategies/template/indicators/custom_indicator.py # Custom BaseIndicator subclass pattern
+/home/user/strategies/strategies/template/indicators/__init__.py         # Module exports pattern
+/home/user/strategies/strategies/template/tests/__init__.py              # Test package init
 ```
 
 ### Framework Source (installed package — use these exact paths)
 The algo_trading source code is NOT in the repo — it is pip-installed into the
 sandbox venv. Read from the installed package path:
 ```
-.venv/lib/python3.13/site-packages/prophitai_algo_trading/indicators/base.py      # BaseIndicator ABC
-.venv/lib/python3.13/site-packages/prophitai_algo_trading/indicators/registry.py  # IndicatorRegistry
-.venv/lib/python3.13/site-packages/prophitai_algo_trading/indicators/pipeline.py  # IndicatorPipeline
-.venv/lib/python3.13/site-packages/prophitai_algo_trading/indicators/specs.py     # IndicatorSpec dataclass
-.venv/lib/python3.13/site-packages/prophitai_algo_trading/indicators/suite.py     # BaseIndicatorSuite ABC
+/home/user/strategies/.venv/lib/python3.13/site-packages/prophitai_algo_trading/indicators/base.py      # BaseIndicator ABC
+/home/user/strategies/.venv/lib/python3.13/site-packages/prophitai_algo_trading/indicators/registry.py  # IndicatorRegistry
+/home/user/strategies/.venv/lib/python3.13/site-packages/prophitai_algo_trading/indicators/pipeline.py  # IndicatorPipeline
+/home/user/strategies/.venv/lib/python3.13/site-packages/prophitai_algo_trading/indicators/specs.py     # IndicatorSpec dataclass
+/home/user/strategies/.venv/lib/python3.13/site-packages/prophitai_algo_trading/indicators/suite.py     # BaseIndicatorSuite ABC
 ```
 
 ### Std_lib Indicators (for verifying constructor params of non-custom indicators)
 ```
-.venv/lib/python3.13/site-packages/prophitai_algo_trading/indicators/std_lib/
+/home/user/strategies/.venv/lib/python3.13/site-packages/prophitai_algo_trading/indicators/std_lib/
     trend/moving_averages.py     # SMA, EMA
     momentum/rsi.py              # RSI
     momentum/macd.py             # MACD

@@ -56,7 +56,7 @@ class IndicatorBuilderAgent:
         session_id: str = "indicator_builder",
         provider: Optional[str] = None,
         model: Optional[str] = None,
-        print_mode: PrintMode = PrintMode.VERBOSE,
+        print_mode: PrintMode = PrintMode.PRODUCTION,
     ):
 
         date = get_current_utc_time().strftime("%m/%d/%Y")
@@ -109,7 +109,7 @@ class IndicatorBuilderAgent:
         Returns:
             AgentResponse with parsed_output containing an IndicatorBuildResult.
         """
-        manifest_json = manifest.model_dump_json(indent=2)
+        manifest_json = manifest.model_dump_json()
         task = self.DEFAULT_TASK_TEMPLATE.format(manifest_json=manifest_json)
 
         return self.agent.run(

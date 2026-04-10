@@ -26,7 +26,7 @@ class PlannerAgent(AgentBase):
         provider: Optional[str] = None,
         model: Optional[str] = None,
         max_iterations: int = 5,
-        print_mode: PrintMode = PrintMode.VERBOSE,
+        print_mode: PrintMode = PrintMode.PRODUCTION,
         temperature: Optional[float] = None
     ):
         super().__init__(

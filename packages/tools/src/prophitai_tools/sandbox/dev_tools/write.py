@@ -71,6 +71,16 @@ def sandbox_write(sandbox_id: str, file_path: str, content: str) -> str:
     if not sandbox:
         return error_response(f"No active sandbox with id '{sandbox_id}'. Start one with start_sandbox.")
 
+    # Reason: Prevent agents from writing test files outside the strategy directory
+    filename = file_path.rsplit("/", 1)[-1]
+
+    if filename.startswith("test_") and filename.endswith(".py"):
+        if "/strategies/development/" not in file_path:
+            return error_response(
+                "Test files must be placed inside 'strategies/development/{strategy_id}/tests/', "
+                f"not at '{file_path}'. Move the file to the correct location."
+            )
+
     try:
         # Reason: test -f returns exit code 1 when the file doesn't exist,
         # which E2B raises as CommandExitException — expected behavior here

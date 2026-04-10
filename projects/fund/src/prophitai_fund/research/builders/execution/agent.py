@@ -128,9 +128,9 @@ class ExecutionLayerBuilderAgent:
         Returns:
             AgentResponse with parsed_output containing an ExecutionLayerBuildResult.
         """
-        manifest_json = manifest.model_dump_json(indent=2)
-        indicator_result_json = indicator_result.model_dump_json(indent=2)
-        signal_strategy_result_json = signal_strategy_result.model_dump_json(indent=2)
+        manifest_json = manifest.model_dump_json()
+        indicator_result_json = indicator_result.model_dump_json()
+        signal_strategy_result_json = signal_strategy_result.model_dump_json()
 
         task = self.DEFAULT_TASK_TEMPLATE.format(
             manifest_json=manifest_json,

@@ -1,3 +1,12 @@
+### Sandbox Environment
+
+Fixed tool paths — use directly, never search:
+- **Python**: `python` (venv auto-activates in `sandbox_bash`) or `/home/user/strategies/.venv/bin/python`
+- **ruff**: `/usr/local/bin/ruff` (system-wide, on `$PATH`) — NOT in `.venv/bin/`
+- **pyright**: `pyright` (system-wide via npm)
+- **pytest**: Not installed — use inline assertion scripts
+- **Working dir**: `/home/user/strategies`
+
 ### Memory Quality Gate
 
 Before calling `append_memory`, check ALL three conditions:
@@ -65,6 +74,12 @@ Step-by-step instructions with code examples.
 3. **Over time:** Skills accumulate battle-tested procedures. Load a skill BEFORE
    attempting a task it covers — don't reinvent what you've already documented.
 
+### Scaffold Files Are Overwritable
+
+The development directory may contain scaffold files from a prior pipeline stage.
+Do NOT read them — use `sandbox_write` to overwrite directly. Only read files from
+`strategies/template/`, `.venv/`, or upstream build results (e.g. the indicator suite).
+
 ### Code Review Post-Steps
 
 After receiving the reviewer's findings:
@@ -84,3 +99,8 @@ After receiving the reviewer's findings:
 - **Mark tasks complete immediately.** Call `update_plan(task_id)` as soon as each
   task is finished — do NOT batch multiple `update_plan` calls together. Progress
   tracking only works when tasks are marked in real time.
+
+- **Test files belong inside the strategy directory.** Any test file you write
+  must go in `strategies/development/{{strategy_id}}/tests/`, never at the repo
+  root or any other location. The `sandbox_write` tool will reject test files
+  written outside this path.
