@@ -7,6 +7,8 @@ CRUD, namespace management, and statistics.
 Reference: https://docs.pinecone.io/reference/python-sdk
 """
 
+import json
+import logging
 import os
 from typing import Any, Optional
 
@@ -17,6 +19,10 @@ from prophitai_foundry.models.chunk import Chunk
 from prophitai_foundry.models.vector import IndexStats, QueryResult, VectorRecord
 
 load_dotenv()
+
+logger = logging.getLogger(__name__)
+
+PINECONE_METADATA_LIMIT = 40_960
 
 class PineconeManager:
     """
@@ -189,6 +195,7 @@ class PineconeManager:
 
             flat_metadata = self._flatten_metadata(metadata)
             flat_metadata["text"] = chunk.text
+            flat_metadata = self._enforce_metadata_limit(flat_metadata)
 
             # Reason: Include sparse values for hybrid search if available
             sparse_values = None
@@ -521,6 +528,36 @@ class PineconeManager:
     # =========================================================================
     # Utility Methods
     # =========================================================================
+
+    def _enforce_metadata_limit(self, metadata: dict) -> dict:
+        """
+        Truncate the text field if total metadata exceeds Pinecone's 40KB limit.
+
+        Args:
+            metadata: Flat metadata dict with text field.
+
+        Returns:
+            Metadata dict, with text truncated if necessary.
+        """
+        raw = json.dumps(metadata, default=str).encode("utf-8")
+
+        if len(raw) <= PINECONE_METADATA_LIMIT:
+            return metadata
+
+        overage = len(raw) - PINECONE_METADATA_LIMIT
+        text = metadata.get("text", "")
+
+        # Reason: Truncate text by the overage + buffer for the "..." suffix
+        truncated = text[: len(text) - overage - 3] + "..."
+        metadata["text"] = truncated
+
+        logger.warning(
+            "Truncated chunk text from %d to %d chars to fit Pinecone metadata limit",
+            len(text),
+            len(truncated),
+        )
+
+        return metadata
 
     def _flatten_metadata(self, metadata: dict) -> dict:
         """
