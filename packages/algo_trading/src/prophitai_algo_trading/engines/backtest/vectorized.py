@@ -49,17 +49,8 @@ class VectorizedBacktestEngine:
         data: dict[str, pd.DataFrame],
         warmup_bars: int | None = None,
         verbose: bool = False,
-        benchmark_prices: pd.Series | None = None,
     ) -> BacktestResult:
-        """Run the vectorized backtest over historical data for multiple tickers.
-
-        Args:
-            data: Dict mapping ticker symbols to OHLCV DataFrames.
-            warmup_bars: Override for warmup period.
-            verbose: If True, print progress info.
-            benchmark_prices: Optional Series of benchmark close prices (e.g. SPY),
-                datetime-indexed. When provided, alpha vs benchmark is computed.
-        """
+        """Run the vectorized backtest over historical data for multiple tickers."""
         validate_vectorized_data(data, self._cost_model, validate_engine_data)
         warmup = resolve_warmup(
             warmup_bars, self._warmup_bars, self._strategy_template.min_bars_required,
@@ -77,5 +68,5 @@ class VectorizedBacktestEngine:
         )
 
         return compile_backtest_result(
-            portfolio_tracker, len(signal_data.raw_positions), verbose, benchmark_prices,
+            portfolio_tracker, len(signal_data.raw_positions), verbose,
         )

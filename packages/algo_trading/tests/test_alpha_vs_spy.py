@@ -1,7 +1,7 @@
-"""Test that alpha_vs_spy appears in backtest results.
+"""Test that alpha_vs_spy is automatically computed in backtest results.
 
-Runs a real backtest with synthetic data and a synthetic benchmark,
-then verifies the alpha metric is computed and present.
+Runs a real backtest with the vectorized engine using real SPY data
+fetched from the database. Verifies the alpha metric appears in results.
 """
 
 from __future__ import annotations
@@ -15,7 +15,7 @@ from prophitai_algo_trading.indicators.pipeline import BaseIndicatorSuite
 from prophitai_algo_trading.indicators.specs import IndicatorSpec
 from prophitai_algo_trading.signals.base import BaseSignalModel
 from prophitai_algo_trading.strategies.composable import BaseComposableStrategy
-from prophitai_algo_trading.testing.fixtures import make_ohlcv, uptrend
+from prophitai_data.repositories.price import fetch_bulk_ohlcv_data_for_tickers
 
 
 # ================================
@@ -77,15 +77,13 @@ class SmaCrossoverStrategy(BaseComposableStrategy):
 
 
 def main():
-    """Run a vectorized backtest with benchmark data and verify alpha_vs_spy."""
+    """Run a vectorized backtest with real AAPL data — SPY fetched automatically."""
 
-    # Strategy uptrends, benchmark is slower — should produce positive alpha
-    strategy_data = uptrend(bars=300, start=100.0, drift=0.003)
-    benchmark_closes = make_ohlcv(
-        [100.0 * (1.0 + 0.001) ** i for i in range(300)],
-    )["close"]
+    start = "2024-01-01"
+    end = "2025-01-01"
 
-    data = {"FAKE": strategy_data}
+    ohlcv = fetch_bulk_ohlcv_data_for_tickers(["AAPL"], start, end)
+    data = {"AAPL": ohlcv["AAPL"]}
 
     engine = VectorizedBacktestEngine(
         strategy=SmaCrossoverStrategy(),
@@ -93,28 +91,17 @@ def main():
         max_positions=1,
     )
 
-    # Run WITHOUT benchmark
-    result_no_bench = engine.run(data, verbose=True)
+    result = engine.run(data, verbose=True)
 
-    print("\n=== Metrics WITHOUT benchmark ===")
-    for k, v in result_no_bench.metrics.items():
+    print("\n=== Backtest Metrics ===")
+    for k, v in result.metrics.items():
         print(f"  {k}: {v}")
 
-    assert "alpha_vs_spy" in result_no_bench.metrics, "alpha_vs_spy key missing from metrics!"
-    assert result_no_bench.metrics["alpha_vs_spy"] is None, "alpha should be None without benchmark"
+    assert "alpha_vs_spy" in result.metrics, "alpha_vs_spy key missing from metrics!"
+    assert result.metrics["alpha_vs_spy"] is not None, "alpha_vs_spy should not be None when DB is available"
+    assert isinstance(result.metrics["alpha_vs_spy"], float), "alpha_vs_spy should be a float"
 
-    # Run WITH benchmark
-    result_with_bench = engine.run(data, verbose=True, benchmark_prices=benchmark_closes)
-
-    print("\n=== Metrics WITH benchmark ===")
-    for k, v in result_with_bench.metrics.items():
-        print(f"  {k}: {v}")
-
-    assert "alpha_vs_spy" in result_with_bench.metrics, "alpha_vs_spy key missing from metrics!"
-    assert result_with_bench.metrics["alpha_vs_spy"] is not None, "alpha should not be None with benchmark"
-    assert isinstance(result_with_bench.metrics["alpha_vs_spy"], float), "alpha should be a float"
-
-    print(f"\n--> alpha_vs_spy = {result_with_bench.metrics['alpha_vs_spy']}%")
+    print(f"\n--> alpha_vs_spy = {result.metrics['alpha_vs_spy']}%")
     print("\nAll assertions passed.")
 
 

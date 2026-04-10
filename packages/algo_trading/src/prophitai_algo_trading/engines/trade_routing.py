@@ -5,6 +5,7 @@ force-close logic, and backtest result compilation used by
 VectorizedBacktestEngine, EventDrivenBacktestEngine, and LiveRunner.
 """
 
+import logging
 from collections.abc import Callable
 from datetime import datetime
 
@@ -17,6 +18,8 @@ from prophitai_algo_trading.execution.models import EntryCandidate
 from prophitai_algo_trading.execution.portfolio_tracker import PortfolioTracker
 from prophitai_algo_trading.execution.position_tracker import PositionTracker
 from prophitai_algo_trading.sizing import BasePositionSizer
+
+logger = logging.getLogger(__name__)
 
 
 # ================================
@@ -163,27 +166,52 @@ def force_close_open_positions(
     portfolio_tracker.record_equity(last_timestamp, latest_prices)
 
 
+def _fetch_spy_prices(start_date: str, end_date: str) -> pd.Series | None:
+    """Fetch SPY close prices for benchmark alpha calculation.
+
+    Returns None if the fetch fails so callers degrade gracefully.
+    """
+    try:
+        from prophitai_data.repositories.price import fetch_bulk_price_data_for_tickers
+
+        df = fetch_bulk_price_data_for_tickers(["SPY"], start_date, end_date)
+
+        if "SPY" not in df.columns or df["SPY"].dropna().empty:
+            return None
+
+        return df["SPY"].dropna()
+    except Exception as exc:
+        logger.warning("Failed to fetch SPY benchmark data: %s", exc)
+
+        return None
+
+
 def compile_backtest_result(
     portfolio_tracker: PortfolioTracker,
     ticker_count: int,
     verbose: bool = False,
-    benchmark_prices: pd.Series | None = None,
 ) -> BacktestResult:
     """Package portfolio tracker outputs into a BacktestResult.
+
+    Automatically fetches SPY data for the backtest period to compute
+    Jensen's alpha vs SPY. If the fetch fails, alpha_vs_spy is None.
 
     Args:
         portfolio_tracker: Completed portfolio tracker.
         ticker_count: Number of tickers in the universe (for verbose logging).
         verbose: If True, print summary.
-        benchmark_prices: Optional Series of benchmark close prices (e.g. SPY),
-            datetime-indexed. When provided, alpha vs benchmark is computed.
 
     Returns:
         BacktestResult with metrics, equity curve, and trades.
     """
     equity_curve = portfolio_tracker.get_equity_curve()
     trades = portfolio_tracker.get_trades_df()
-    metrics = calculate_metrics(equity_curve, trades, benchmark_prices)
+
+    start_date = equity_curve.index[0].strftime("%Y-%m-%d")
+    end_date = equity_curve.index[-1].strftime("%Y-%m-%d")
+    spy_prices = _fetch_spy_prices(start_date, end_date)
+
+    metrics = calculate_metrics(equity_curve, trades, spy_prices)
 
     if verbose:
         print(f"\nDone: {len(trades)} trades across {ticker_count} tickers, "
