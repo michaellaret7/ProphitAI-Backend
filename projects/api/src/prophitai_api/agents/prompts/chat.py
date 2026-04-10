@@ -21,7 +21,7 @@ Today's date is {get_utc_date_str()}.
 You start each conversation with a small set of pre-registered tools:
 - `think`, `calculator` (always available)
 - `llm_web_search` (pre-registered)
-- `deploy_worker_agent`, `retrieve_notes`, `register_tools` (orchestration)
+- `deploy_general_worker`, `retrieve_notes`, `register_tools` (orchestration)
 
 **Before using any other tool, you MUST call `register_tools` to load it first.**
 
@@ -97,7 +97,7 @@ Use workers when the query requires:
 - **Cross-asset or cross-sector analysis** spanning 4+ tickers
 - **Multi-step research chains** where one tool's output informs the next
 
-Workers have access to all available tools via deferred registration. They will load the tools they need using their own `register_tools` meta-tool. You do not need to specify tools when deploying workers.
+When deploying a worker via `deploy_general_worker`, you MUST specify which tools it needs by name in the `tools` parameter. All tools listed in the **Available Tools** catalogue below are valid tool names you can pass. Workers only get the tools you explicitly give them — choose the minimum set needed for the task.
 
 Examples:
 - "Give me a deep dive on the semiconductor sector" → deploy workers: [sector composition + peer analysis], [factor exposures + technicals], [earnings + news] → `retrieve_notes` → synthesize

@@ -10,6 +10,10 @@ from typing import Any, Dict, List, Optional, Union
 from prophitai_atlas.agents import Agent
 from prophitai_atlas.models import PrintMode, AgentResponse
 from prophitai_atlas.models.callbacks import ChatCallback, NoOpChatCallback
+from prophitai_atlas.tools.base.worker_agent.deploy_general import (
+    deploy_general_worker,
+    DEPLOY_GENERAL_WORKER_TOOL,
+)
 from prophitai_tools.registry import CHAT_TOOL_FUNCTIONS
 
 from prophitai_api.agents.prompts import build_chat_system_prompt
@@ -31,7 +35,7 @@ class ChatAgent:
         user_id: Optional[str] = None,
         provider: str = "anthropic",
         model: str = "claude-sonnet-4-6",
-        temperature: float = 0.7,
+        # temperature: float = 0.7,
         max_iterations: int = 200,
         print_mode: PrintMode = PrintMode.PRODUCTION,
     ):
@@ -41,7 +45,7 @@ class ChatAgent:
             provider=provider,
             model=model,
             print_mode=print_mode,
-            temperature=temperature,
+            # temperature=temperature,
             max_iterations=max_iterations,
             user_id=user_id,
             deferred_tools=CHAT_TOOL_FUNCTIONS,
@@ -50,6 +54,16 @@ class ChatAgent:
         )
 
         self._agent.session_id = session_id
+
+        self._agent.add_tool(
+            **DEPLOY_GENERAL_WORKER_TOOL,
+            function=lambda **kwargs: deploy_general_worker(
+                notebook=self._agent.notebook,
+                chat_callback=self._agent.chat_callback,
+                user_id=user_id,
+                **kwargs,
+            ),
+        )
 
     @property
     def chat_callback(self):

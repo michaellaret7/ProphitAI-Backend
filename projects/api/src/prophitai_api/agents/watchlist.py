@@ -8,6 +8,10 @@ from typing import Optional, Union
 from prophitai_atlas.agents import Agent
 from prophitai_atlas.models import PrintMode, AgentResponse
 from prophitai_atlas.models.callbacks import ChatCallback, NoOpChatCallback
+from prophitai_atlas.tools.base.worker_agent.deploy_general import (
+    deploy_general_worker,
+    DEPLOY_GENERAL_WORKER_TOOL,
+)
 
 from prophitai_api.agents.models import WatchlistResponse
 from prophitai_api.agents.prompts import build_orchestrator_system_prompt
@@ -189,6 +193,16 @@ class WatchlistAgent:
             provider=provider,
             model=model,
             print_mode=print_mode,
+        )
+
+        self._agent.add_tool(
+            **DEPLOY_GENERAL_WORKER_TOOL,
+            function=lambda **kwargs: deploy_general_worker(
+                notebook=self._agent.notebook,
+                chat_callback=self._agent.chat_callback,
+                user_id=None,
+                **kwargs,
+            ),
         )
 
     def run(self) -> AgentResponse:
