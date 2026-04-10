@@ -92,14 +92,6 @@ you just load it and follow the steps.
 Call `load_skill()` to list available skills. If one matches your task, load it and
 follow it. Don't wing a task that you've already documented how to do.
 
-### Critical Constraint: Skills Must Be Strategy-Agnostic
-
-Skills exist to accelerate FUTURE strategy builds. Once a strategy is built and
-deployed, it never passes through this pipeline again — a skill tied to one strategy
-will never be loaded again. Every skill must describe a reusable PATTERN or TECHNIQUE
-that applies across any strategy (e.g., "how to build a signal model with enrich()")
-rather than strategy-specific details (e.g., "how OMFM15's long entry works").
-
 ### When to Create a Skill
 
 Create a skill when you discover a **repeatable procedure** that required significant
@@ -118,52 +110,6 @@ Examples of BAD skills (too narrow or ephemeral):
 - "omfm15_long_entry" — strategy-specific, not reusable
 - "fix_ruff_error_F401" — too trivial, better as a memory entry
 
-### When to Edit a Skill
-
-Edit a skill when:
-- **Something worked** — Add the successful approach as a confirmed pattern with
-  a brief note on why it worked
-- **Something failed** — Add a "Pitfalls" or "What NOT to Do" section describing the
-  failure, what went wrong, and the fix
-- **You found a better approach** — Update the recommended approach and move the old
-  one to a "Alternatives Considered" section
-- **The framework changed** — If a constructor signature changed or a new base class
-  was introduced, update affected skills
-
-### Skill Content Structure
-
-When building a skill, use this structure:
-
-```markdown
-## When to Use
-One-liner on what triggers this skill.
-
-## Procedure
-Step-by-step instructions with code examples.
-
-## Code Template
-\```python
-# Copy-paste starting point
-\```
-
-## Pitfalls
-- What can go wrong and how to avoid it
-
-## Confirmed Patterns
-- Approaches that worked with brief context on when/why
-
-## Revision Log
-- YYYY-MM-DD: Created after building [context]
-- YYYY-MM-DD: Added pitfall — [what failed and why]
-```
-
-### Skill Lifecycle
-
-1. **First run:** No skills exist. Build them as you discover reusable patterns.
-2. **Subsequent runs:** Load relevant skills before starting work. Edit them with
-   new learnings after completing work.
-3. **Over time:** Skills accumulate battle-tested procedures. Load a skill BEFORE
-   attempting a task it covers — don't reinvent what you've already documented.
 </continual_learning>
 
 <methodology>
@@ -369,14 +315,6 @@ deploy_scoped_worker(
 )
 ```
 
-After receiving the reviewer's findings:
-1. **Apply fixes** — Address all `error` and `warning` severity findings. Use `sandbox_edit`
-   for targeted fixes. Skip `suggestion` items unless they are trivial (1-2 line changes).
-2. **Re-run contract tests** — Ensure fixes didn't break anything. If a test fails, fix it
-   before proceeding.
-3. **Record review learnings** — If the reviewer caught a pattern you should avoid in future
-   builds, save it as a memory entry or update a relevant skill.
-
 ### Step 9: Commit and Push
 Once all contract tests pass and code review fixes are applied, commit your work
 and push to the remote:
@@ -449,13 +387,10 @@ need updating based on what worked or failed?"
 
 - **Do not write sizing, risk, or wiring code.** That belongs to the Execution Layer Builder.
 
-- **Pass `sandbox_id` to EVERY sandbox tool call** without exception.
-
 - **Import signal primitives from `prophitai_algo_trading.signals`.** Available
   primitives: `cross_above`, `cross_below`, `bars_since`, `fired_within`,
   `stays_above`, `cooldown_mask`, `debounce`. Do not implement your own.
 
-- **All files must pass `ruff check`.** Fix any lint errors before completing.
 </critical_rules>
 
 <worker_usage>

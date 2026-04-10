@@ -40,3 +40,17 @@ topic: coding_patterns
 ---
 For MarketStateIndicator, always check `if 'benchmark_close' in self.df.columns` first before falling back to `df.attrs['benchmark_close']`. This allows pre-joined multi-ticker DataFrames to work without attrs injection.
 
+---
+date: 2026-04-09
+title: run_contract_tests skill: testing module absent in current package install
+topic: framework_gotchas
+---
+The `prophitai_algo_trading.testing` module (StrategyTestManifest, IndicatorSuiteContract, LeakageContract) is NOT present in the installed package in the sandbox as of 2026-04-09. The run_contract_tests skill procedure fails at import. Fall back to running manual functional smoke tests + leakage checks via sandbox_bash Python scripts instead.
+
+---
+date: 2026-04-09
+title: RealizedVol: update_last_row needs window+1 price bars for window pct_change
+topic: coding_patterns
+---
+RealizedVolIndicator.update_last_row() must slice `-(window + 1)` prices (not `-window`) because pct_change() consumes one extra bar. Only after dropna() do you have exactly `window` returns to compute std() from.
+

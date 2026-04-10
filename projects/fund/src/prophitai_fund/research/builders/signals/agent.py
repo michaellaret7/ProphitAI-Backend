@@ -15,6 +15,8 @@ from prophitai_atlas.models import PrintMode, AgentResponse
 from prophitai_atlas.models.callbacks import ChatCallback, NoOpChatCallback
 from prophitai_shared.time_utils import get_current_utc_time
 
+from prophitai_fund.research.builders.prompts.compose import compose_builder_prompt
+
 from prophitai_atlas.tools.base.worker_agent.deploy_scoped import (
     DEPLOY_SCOPED_WORKER_TOOL,
     deploy_scoped_worker,
@@ -62,8 +64,8 @@ class SignalStrategyBuilderAgent:
     ):
 
         date = get_current_utc_time().strftime("%m/%d/%Y")
-        prompt_path = Path(__file__).parent / "system_prompt.md"
-        system_prompt = prompt_path.read_text().format(date=date, sandbox_id=sandbox_id)
+        prompt_path = Path(__file__).resolve().parent.parent / "prompts" / "signals.md"
+        system_prompt = compose_builder_prompt(prompt_path, date=date, sandbox_id=sandbox_id)
 
         self.agent = Agent(
             tools=SIGNAL_STRATEGY_BUILDER_TOOLS,

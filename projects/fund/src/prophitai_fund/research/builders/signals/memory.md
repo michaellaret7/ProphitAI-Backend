@@ -19,3 +19,10 @@ topic: coding_patterns
 ---
 When a signal model's required_columns includes 'close' (or other OHLCV raw columns like 'open', 'high', 'low', 'volume'), these will not appear in indicator_result.all_output_columns. This is expected — they're always present as DataFrame inputs, not indicator outputs. Not a validation error.
 
+---
+date: 2026-04-09
+title: run_contract_tests: pytest not installed, use inline Python assertions
+topic: framework_gotchas
+---
+pytest is NOT installed in the venv and prophitai_algo_trading.testing does NOT exist. Contract tests must be written as inline Python assertion scripts using /home/user/strategies/.venv/bin/python. See run_contract_tests skill for the full pattern.
+

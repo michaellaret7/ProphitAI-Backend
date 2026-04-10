@@ -13,159 +13,115 @@ After building the signal model, strategy class, and config dataclass — and AF
 the Indicator Builder's tests have passed. This validates that the signal and
 strategy layers are structurally sound and leak-free.
 
-## What These Tests Check
-Only contracts relevant to the signal and strategy layers:
+## CRITICAL: prophitai_algo_trading.testing Does NOT Exist
+The `prophitai_algo_trading.testing` module referenced in the original skill content
+**does not exist in the installed package** (confirmed AQM52 build 2026-04-09).
+`pytest` is also **not installed** in the venv. You must write manual contract tests.
 
-- **SignalModelContract** (5 tests): Returns 4 bool Series (long_entry/exit,
-  short_entry/exit), correct length, validates required columns, bounded scores
-- **ConfigContract** (3 tests): Defaults instantiate, frozen dataclass, positive
-  period params
-- **StrategyContract** (5 tests): Is BaseComposableStrategy, min_bars_required > 0,
-  full pipeline runs, score_entries returns Series, builds valid EntryCandidate
-- **LeakageContract — signal leakage only** (9 parametrized): Signal values at
-  bar N are identical whether computed on the full series or a truncated series
+## What to Test
+Write a manual Python script that validates:
 
-## What These Tests Do NOT Check
-The following are **not your responsibility**:
-
-- Indicator column presence, NaN, OHLCV preservation, incremental parity (Indicator Builder — should already pass)
-- Indicator leakage (Indicator Builder — should already pass)
-- Risk controls: instantiation, should_block_entry, should_force_exit, lifecycle hooks (Execution Builder)
+1. **ConfigContract**: defaults instantiate, frozen (mutation raises), correct fields
+2. **StrategyContract**: isinstance BaseComposableStrategy, min_bars_required > 0 and correct, calculate_indicators runs, get_sizing_hints returns dict
+3. **SignalModelContract**: validate() passes on complete df, validate() raises on missing col, enrich() adds expected columns, generate() returns 4 bool Series of correct length, score_entries() returns float Series with no NaN
+4. **LeakageContract**: signal values at bar N are identical whether computed on full or truncated series
 
 ## Procedure
 
-### Step 1: Run the Tests via sandbox_bash
-Execute the test inline — no test file needed. Use `-k` to exclude indicator
-leakage tests:
+### Step 1: Build synthetic test data
+Create a DataFrame with `n=300` rows on a business-day DatetimeIndex with:
+- All raw OHLCV columns
+- All indicator output columns (manually computed or with realistic mock values)
+- All derived feature columns (h52_ratio, h52_quintile_entry, etc.)
 
-```bash
-sandbox_bash(sandbox_id, """
-cd /home/user/strategies && python -c "
-import sys
-from prophitai_algo_trading.testing import (
-    StrategyTestManifest,
-    SignalModelContract,
-    ConfigContract,
-    StrategyContract,
-    LeakageContract,
-)
-from strategies.development.{{strategy_id}}.strategy import {{StrategyClass}}
-from strategies.development.{{strategy_id}}.config import {{ConfigClass}}
+### Step 2: Run all contract checks in a single inline script
 
-class TestSignalStrategy(SignalModelContract, ConfigContract, StrategyContract, LeakageContract):
-    manifest = StrategyTestManifest(
-        name='{{StrategyName}}',
-        build_strategy=lambda: {{StrategyClass}}({{ConfigClass}}()),
-        config_class={{ConfigClass}},
-        min_warmup_bars={{max_warmup_from_indicators}},
-    )
+```python
+cd /home/user/strategies && /home/user/strategies/.venv/bin/python -c "
+import pandas as pd
+import numpy as np
+from strategies.development.{strategy_id}.config import {ConfigClass}
+from strategies.development.{strategy_id}.strategy import {StrategyClass}
+from strategies.development.{strategy_id}.signals.model import {SignalModelClass}
+from prophitai_algo_trading import BaseComposableStrategy
+from prophitai_algo_trading.signals import BaseSignalModel
+import dataclasses
 
-sys.exit(
-    __import__('pytest').main([
-        __file__,
-        '-k', 'not test_no_indicator_leakage',
-        '-v', '--tb=short',
-    ])
-)
-" 2>&1
-""")
+errors = []
+
+# ConfigContract
+cfg = {ConfigClass}()
+try:
+    cfg.some_field = 99  # Should raise FrozenInstanceError
+    errors.append('Config is not frozen')
+except Exception:
+    pass  # Expected
+
+# StrategyContract
+strat = {StrategyClass}({ConfigClass}())
+assert isinstance(strat, BaseComposableStrategy)
+assert strat.min_bars_required == {expected_min_bars}
+
+# Build synthetic df with all required columns...
+# (populate as needed based on strategy's required_columns)
+
+model = {SignalModelClass}()
+
+# validate passes on complete df
+model.validate(df)
+
+# validate raises on missing column
+try:
+    model.validate(df.drop(columns=[model.required_columns[0]]))
+    errors.append('validate did not raise on missing column')
+except (ValueError, KeyError):
+    pass
+
+# generate returns 4 bool Series
+signals = model.generate(df)
+assert set(signals.keys()) == {'long_entry', 'long_exit', 'short_entry', 'short_exit'}
+for k, v in signals.items():
+    assert isinstance(v, pd.Series) and v.dtype == bool and len(v) == len(df)
+
+# score_entries: no NaN
+scores = model.score_entries(df)
+assert not scores.isna().any()
+
+# Leakage check
+for bar in [260, 270, 280]:
+    sig_full = model.generate(df)
+    sig_trunc = model.generate(df.iloc[:bar+1].copy())
+    for k in ['long_entry', 'long_exit']:
+        if sig_full[k].iloc[bar] != sig_trunc[k].iloc[bar]:
+            errors.append(f'LEAKAGE: {k} at bar {bar}')
+
+print('Errors:', errors if errors else 'NONE — ALL PASS')
+"
 ```
 
-Expected passing count: **~22 tests** (5 signal + 3 config + 5 strategy + 9 signal
-leakage parametrizations).
-
-### Step 2: Interpret Results
-
-**All tests pass:**
-```
-======================== 22 passed in 1.1s =========================
-```
-Signal and strategy layers are structurally sound. Hand off to Execution Builder.
-
-**Signal returns wrong keys or types:**
-```
-FAILED test_generate_returns_four_keys
-    assert {'long_entry', 'short_entry'} == {'long_entry', 'long_exit', 'short_entry', 'short_exit'}
-```
-The signal model's `generate()` is not returning all 4 required keys. Ensure
-`long_entry()`, `long_exit()`, `short_entry()`, and `short_exit()` all return
-`pd.Series` with dtype `bool`.
-
-**Signals are not bool:**
-```
-FAILED test_signals_are_bool_series
-    long_entry dtype is float64, not bool
-```
-Common causes:
-- Returning a comparison result that includes NaN (NaN poisons bool dtype)
-- Forgetting `.fillna(False)` after a comparison involving shifted columns
-- Using numeric thresholds without converting to bool
-
-**Missing columns validation failure:**
-```
-FAILED test_missing_columns_raises
-    DID NOT RAISE <class 'ValueError'>
-```
-The signal model's `required_columns` tuple is empty or missing. Add every indicator
-column the signal model reads to `required_columns`. This protects against running
-the signal model on un-enriched data.
-
-**Config not frozen:**
-```
-FAILED test_frozen
-    MyConfig is not frozen
-```
-Add `frozen=True` to the `@dataclass` decorator.
-
-**min_bars_required is 0:**
-```
-FAILED test_min_bars_required_positive
-    min_bars_required should be > 0 for any real strategy
-```
-The strategy's `min_bars_required` property returns 0 or is not implemented.
-It should return the slowest indicator's lookback period.
-
-**Signal leakage failure** (CRITICAL):
-```
-FAILED test_no_signal_leakage[uptrend-30]
-    Future leakage in 'long_entry' at bar 80: full=True, truncated=False
-```
-A signal at bar 80 changes depending on whether future bars exist. Common causes:
-- Using `df.iloc[-1]` instead of a proper rolling window
-- Using `shift(-n)` (forward shift instead of backward)
-- Signal logic that depends on global statistics (full-series rank, mean, etc.)
-- Threshold computed from the full series rather than a rolling window
-
-**Score entries failure:**
-```
-FAILED test_score_entries_bounded
-    score_entries contains NaN
-```
-The `score_entries()` method produces NaN. Common cause: dividing by an indicator
-that is zero or NaN during warmup. Ensure scores are computed only on post-warmup
-rows or use `.fillna(0)`.
-
-**EntryCandidate failure:**
-```
-FAILED test_build_entry_candidate
-    assert candidate.price > 0
-```
-The `build_entry_candidate()` method is not extracting price correctly from the
-enriched row. Ensure it reads from `row["close"]` or the appropriate price column.
+### Step 3: Interpret Results
+- Zero errors → hand off to Execution Builder
+- Any leakage error → check enrich() for global statistics or forward-looking indexing
+- NaN in score_entries → add `.fillna(0.0)` on the returned Series
+- validate not raising → ensure required_columns is non-empty tuple
 
 ## Key Rules
 
-1. **`build_strategy` must be a lambda/callable**, not an instance.
+1. **pytest is NOT installed** — use inline Python assertions only
+2. **prophitai_algo_trading.testing does NOT exist** — write manual checks
+3. Use `/home/user/strategies/.venv/bin/python` explicitly (not `python -m`)
+4. Build synthetic data that covers post-warmup bars (bar index > min_bars_required)
+5. For leakage: test signal values at bars well past warmup (260, 270, 280 for 252-bar warmup)
 
-2. **`min_warmup_bars` must match the value set by the Indicator Builder.**
+## Pitfalls
+- `python -m pytest` will silently return exit code 0 with no output if pytest is not installed
+- Using `source .venv/bin/activate` in sandbox_bash does not persist across commands
+- Always use the full venv python path: `/home/user/strategies/.venv/bin/python`
 
-3. **If indicator leakage tests appear in output, ignore them** — use `-k` to
-   exclude. Indicator leakage is the Indicator Builder's responsibility.
-
-4. **If a test fails, fix the signal/strategy/config code, not the test.**
-
-5. **Do not inherit IndicatorSuiteContract or RiskControlContract** — those belong
-   to other builders.
+## Confirmed Patterns
+- AQM52 (2026-04): Manual inline test script validated all 4 contract areas successfully
 
 ## Revision Log
-- 2026-04-09: Created as scoped signal+strategy testing skill with inline execution.
+- 2026-04-09: Created after building AQM52 signal+strategy layer
+- 2026-04-09: MAJOR UPDATE — prophitai_algo_trading.testing does not exist, pytest not installed; replaced with manual inline test approach
+

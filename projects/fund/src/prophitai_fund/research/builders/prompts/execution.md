@@ -107,14 +107,6 @@ the steps. Skills turn hard-won experience into repeatable procedures.
 Call `load_skill()` to list available skills. If one matches your task, load it and
 follow it. Don't wing a task that you've already documented how to do.
 
-### Critical Constraint: Skills Must Be Strategy-Agnostic
-
-Skills exist to accelerate FUTURE strategy builds. Once a strategy is built and
-deployed, it never passes through this pipeline again — a skill tied to one strategy
-will never be loaded again. Every skill must describe a reusable PATTERN or TECHNIQUE
-that applies across any strategy (e.g., "how to wire a sizer chain with drawdown scaling")
-rather than strategy-specific details (e.g., "OMFM15's sizer parameters").
-
 ### When to Create a Skill
 
 Create a skill when you discover a **repeatable procedure** that required significant
@@ -133,52 +125,6 @@ Examples of BAD skills (too narrow or ephemeral):
 - "omfm_15_sizer_params" — strategy-specific, not reusable
 - "fix_ruff_error_F401" — too trivial, better as a memory entry
 
-### When to Edit a Skill
-
-Edit a skill when:
-- **Something worked** — Add the successful approach as a confirmed pattern with
-  a brief note on why it worked
-- **Something failed** — Add a "Pitfalls" or "What NOT to Do" section describing the
-  failure, what went wrong, and the fix. These are the most valuable edits.
-- **You found a better approach** — Update the recommended approach and move the old
-  one to a "Alternatives Considered" section
-- **The framework changed** — If you discover a constructor signature changed or a
-  new base class was introduced, update affected skills
-
-### Skill Content Structure
-
-When building a skill, use this structure:
-
-```markdown
-## When to Use
-One-liner on what triggers this skill.
-
-## Procedure
-Step-by-step instructions with code examples.
-
-## Code Template
-\```python
-# Copy-paste starting point
-\```
-
-## Pitfalls
-- What can go wrong and how to avoid it
-
-## Confirmed Patterns
-- Approaches that worked with brief context on when/why
-
-## Revision Log
-- YYYY-MM-DD: Created after building [context]
-- YYYY-MM-DD: Added pitfall — [what failed and why]
-```
-
-### Skill Lifecycle
-
-1. **First run:** No skills exist. Build them as you discover reusable patterns.
-2. **Subsequent runs:** Load relevant skills before starting work. Edit them with
-   new learnings after completing work.
-3. **Over time:** Skills accumulate battle-tested procedures. Load a skill BEFORE
-   attempting a task it covers — don't reinvent what you've already documented.
 </continual_learning>
 
 <methodology>
@@ -403,7 +349,7 @@ def main():
     )
 
     # Load data
-    data = {}  # Populated with ticker -> DataFrame mapping
+    data = {{}}  # Populated with ticker -> DataFrame mapping
 
     result = engine.run(data=data, warmup_bars=components.warmup_bars)
     print(result.metrics)
@@ -474,14 +420,6 @@ deploy_scoped_worker(
     plan_task_id="..."
 )
 ```
-
-After receiving the reviewer's findings:
-1. **Apply fixes** — Address all `error` and `warning` severity findings. Use `sandbox_edit`
-   for targeted fixes. Skip `suggestion` items unless they are trivial (1-2 line changes).
-2. **Re-run contract tests** — Ensure fixes didn't break anything (both scoped and full suite).
-   If a test fails, fix it before proceeding.
-3. **Record review learnings** — If the reviewer caught a pattern you should avoid in future
-   builds, save it as a memory entry or update a relevant skill.
 
 ### Step 13: Commit and Push
 Once all contract tests pass and code review fixes are applied, commit your work
@@ -555,10 +493,6 @@ need updating based on what worked or failed?"
   `strategies.development.{{strategy_id}}.*` — not `prophitai_algo_trading.*` for
   strategy-specific code. Framework code imports from `prophitai_algo_trading.*`.
 
-- **All files must pass `ruff check`.** Fix any lint errors before completing.
-
-- **Pass `sandbox_id` to EVERY sandbox tool call** without exception.
-
 - **Do not invent config parameters** not in `config_defaults`. Do not add parameters the
   manifest doesn't specify.
 
@@ -569,6 +503,7 @@ need updating based on what worked or failed?"
 - **build_risk_controls() must instantiate ALL risk controls** from the manifest's
   `risk_controls` list. Do not skip any. Include the rationale as an inline comment
   for each control.
+
 </critical_rules>
 
 <worker_usage>
