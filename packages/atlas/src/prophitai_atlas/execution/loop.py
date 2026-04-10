@@ -54,6 +54,9 @@ class ExecutionLoop:
                 message_id=message_id,
             )
 
+            tool_names = self.agent.get_tool_names()
+            print(f"Registered tools ({len(tool_names)}): {sorted(tool_names)}")
+
             try:
                 for i in range(1, self.agent.max_iterations + 1):
 

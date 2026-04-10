@@ -9,7 +9,7 @@ from prophitai_atlas.models.notebook import Notebook
 from prophitai_atlas.models.callbacks import NoOpChatCallback
 
 from prophitai_tools.sandbox.client import create_sandbox, remove_sandbox
-from prophitai_tools.sandbox.lifecycle import bootstrap_repo
+from prophitai_tools.sandbox.lifecycle import setup_repo
 
 from prophitai_atlas.tools.base.worker_agent.deploy_scoped import deploy_scoped_worker
 from prophitai_fund.tools.worker_registry import WORKERS
@@ -47,7 +47,7 @@ def test_codebase_researcher() -> None:
 
         # --- Step 2: Bootstrap the repo inside the sandbox ---
         print("Bootstrapping repo...")
-        repo_info = bootstrap_repo(sandbox, "test_researcher")
+        repo_info = setup_repo(sandbox, "test_researcher")
         print(f"Repo bootstrapped: {repo_info}")
 
         # --- Step 3: Deploy the codebase_researcher worker ---

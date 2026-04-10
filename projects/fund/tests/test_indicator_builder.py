@@ -8,7 +8,7 @@ changes to the strategy branch for human review.
 from prophitai_atlas.models.callbacks import NoOpChatCallback
 
 from prophitai_tools.sandbox.client import create_sandbox, remove_sandbox, get_sandbox
-from prophitai_tools.sandbox.lifecycle import bootstrap_repo
+from prophitai_tools.sandbox.lifecycle import setup_repo
 from prophitai_tools.sandbox.execution import sandbox_bash
 
 from prophitai_fund.research.builders.indicators import IndicatorBuilderAgent
@@ -447,7 +447,7 @@ def test_indicator_builder() -> None:
         print(f"Sandbox created: {sandbox_id}")
 
         print("Bootstrapping repo...")
-        repo_info = bootstrap_repo(sandbox, strategy_name)
+        repo_info = setup_repo(sandbox, strategy_name)
         print(f"Repo bootstrapped: {repo_info}")
 
         # --- Step 2: Build the manifest ---

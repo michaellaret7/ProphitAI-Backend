@@ -26,3 +26,24 @@ topic: framework_gotchas
 ---
 pytest is NOT installed in the venv and prophitai_algo_trading.testing does NOT exist. Contract tests must be written as inline Python assertion scripts using /home/user/strategies/.venv/bin/python. See run_contract_tests skill for the full pattern.
 
+---
+date: 2026-04-10
+title: Frozen dataclass test: use normal assignment, not object.__setattr__
+topic: verification_failures
+---
+When testing that a dataclass is frozen, use normal attribute assignment (`cfg.field = value`) — it raises FrozenInstanceError. Using `object.__setattr__(cfg, 'field', value)` BYPASSES the frozen check and silently mutates the object, causing subsequent value assertions to fail.
+
+---
+date: 2026-04-10
+title: signals/__init__.py must export the strategy's own SignalModel class
+topic: framework_gotchas
+---
+When a signals/__init__.py exists (e.g. from scaffold tooling), verify it exports the strategy's actual class — not the template. The file may be auto-populated with TemplateSignalModel imports that break the public API contract even though the strategy imports directly from signals.model (so no runtime bug).
+
+---
+date: 2026-04-10
+title: ruff binary at /usr/local/bin/ruff, not in venv
+topic: verification_failures
+---
+ruff is installed system-wide at /usr/local/bin/ruff, NOT in .venv/bin/. Use `ruff check file.py` directly (it's on PATH). The sandbox_write tool also auto-runs ruff. Python is at /home/user/strategies/.venv/bin/python.
+

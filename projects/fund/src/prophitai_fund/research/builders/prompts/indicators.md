@@ -113,12 +113,7 @@ Call `retrieve_memory()` to load past operational learnings. Then call `load_ski
 to list available skills. Load any skills relevant to the current manifest before
 writing code. Apply learnings and follow loaded skill procedures.
 
-### Step 2: Scaffold the Strategy Directory
-Call `scaffold_strategy(sandbox_id, strategy_id)` to copy the strategy template into
-`strategies/development/{{strategy_id}}/`. This creates the full directory structure with
-template files that you will overwrite with strategy-specific implementations.
-
-### Step 3: Research the Framework
+### Step 2: Research the Framework
 You have two research tools — choose based on scope:
 
 **Direct reads** (1-3 files, you need the raw content):
@@ -145,7 +140,7 @@ Always include the sandbox_id in worker tasks.
    to get all constructor signatures in a single call, then confirm each non-custom
    indicator's kwarg names match what you pass in `IndicatorSpec.params`.
 
-### Step 4: Write Custom Indicator Files
+### Step 3: Write Custom Indicator Files
 For each indicator in the manifest where `is_custom=true`:
 
 1. Create `strategies/development/{{strategy_id}}/indicators/{{manifest.file}}` 
@@ -169,7 +164,7 @@ class CustomIndicator(BaseIndicator):
         return self.df
 ```
 
-### Step 5: Write the Indicator Suite
+### Step 4: Write the Indicator Suite
 Create `strategies/development/{{strategy_id}}/indicators/suite.py`:
 
 1. Subclass `BaseIndicatorSuite`
@@ -180,7 +175,7 @@ Create `strategies/development/{{strategy_id}}/indicators/suite.py`:
 4. Maintain the exact dependency order from the manifest's `indicators` list
 5. Import custom indicator classes from their respective modules
 
-### Step 6: Write the Derived Features Function
+### Step 5: Write the Derived Features Function
 Create `strategies/development/{{strategy_id}}/indicators/custom.py`:
 
 1. Define `add_{{strategy_id}}_indicator_features(df: pd.DataFrame) -> pd.DataFrame`
@@ -191,13 +186,13 @@ Create `strategies/development/{{strategy_id}}/indicators/custom.py`:
 3. Return the enriched DataFrame
 4. If there are no derived features, create a pass-through function
 
-### Step 7: Write __init__.py
+### Step 6: Write __init__.py
 Create `strategies/development/{{strategy_id}}/indicators/__init__.py`:
 
 Export the suite class, all custom indicator classes, and the derived features function.
 Follow the template's export pattern.
 
-### Step 8: Verify
+### Step 7: Verify
 Run verification checks on every file you wrote:
 
 1. **Lint check**: `sandbox_bash(sandbox_id, "ruff check {{file_path}}")` for each file
@@ -207,7 +202,7 @@ Run verification checks on every file you wrote:
 If any check fails, read the error, fix the file, and re-verify. Do NOT report failures
 without attempting to fix them.
 
-### Step 9: Run Contract Tests
+### Step 8: Run Contract Tests
 After all files pass lint and import checks, run the indicator contract tests.
 Load the `run_contract_tests` skill via `load_skill("run_contract_tests")` and
 follow its procedure exactly. This validates structural conformance and detects
@@ -218,7 +213,7 @@ checks, and re-run the contract tests until all pass.
 
 **Do not proceed to code review until all contract tests pass.**
 
-### Step 10: Code Review
+### Step 9: Code Review
 Deploy a `code_reviewer` worker to audit every file you wrote. The worker runs
 automated linters (ruff, pyright) and performs manual review for correctness,
 structure, style, and code smells. It returns a structured report with exact
@@ -242,7 +237,7 @@ deploy_scoped_worker(
 )
 ```
 
-### Step 11: Commit and Push
+### Step 10: Commit and Push
 Once all contract tests pass and code review fixes are applied, commit your work
 and push to the remote:
 

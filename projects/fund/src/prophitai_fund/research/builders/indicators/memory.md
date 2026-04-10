@@ -54,3 +54,38 @@ topic: coding_patterns
 ---
 RealizedVolIndicator.update_last_row() must slice `-(window + 1)` prices (not `-window`) because pct_change() consumes one extra bar. Only after dropna() do you have exactly `window` returns to compute std() from.
 
+---
+date: 2026-04-10
+title: attrs stashing in suite.update_last_row for pandas combine_first
+topic: framework_gotchas
+---
+When df.attrs contains a DataFrame (e.g. 'fundamentals'), pandas combine_first inside the base pipeline's update_last_row raises "truth value of DataFrame is ambiguous". Fix: stash non-scalar attrs before calling super().update_last_row(), restore in a finally block with `if updated is not None` guard. Custom indicators that read attrs in update_last_row must forward-fill last value instead — FcfConversionIndicator pattern: if output_column in df.columns, copy prev row value to last row.
+
+---
+date: 2026-04-10
+title: RollingMaxIndicator: std_lib now has rolling_max registered
+topic: framework_gotchas
+---
+As of 2026-04-10, the std_lib statistical/ directory DOES contain rolling_max.py and it IS registered with registry key "rolling_max". RollingMaxIndicator is importable from prophitai_algo_trading.indicators. Memory entry from 2026-04-09 was incorrect. When the manifest specifies is_custom=true for rolling max (with min_periods=window enforcement), build a custom class anyway — the std_lib version uses min_periods=1 which has different NaN behavior.
+
+---
+date: 2026-04-10
+title: RealizedVolIndicator: custom kwarg name is annualize/trading_days_per_year
+topic: coding_patterns
+---
+The std_lib RealizedVolIndicator uses kwarg annualization_factor (not annualize/trading_days_per_year). When manifest specifies those specific kwargs, build a custom subclass that accepts them. The update_last_row() pattern: slice -(window+1) prices, pct_change(), dropna(), tail(window) to get exactly window clean returns, then guard len(returns) < window → NaN.
+
+---
+date: 2026-04-10
+title: FcfConversion: normalize timestamps to tz-naive before merge_asof
+topic: coding_patterns
+---
+When fundamental dates and trading index come from different sources, merge_asof fails on mixed tz-aware/tz-naive timestamps. Fix: apply .dt.tz_localize(None).dt.normalize() to both the fund["date"] column and pd.to_datetime(self.df.index) before building the trading_dates DataFrame. Do this in _build_fundamentals() for fund dates and in calculate() for trading dates.
+
+---
+date: 2026-04-10
+title: FcfConversion update_last_row: look up latest available filing, not prev row
+topic: coding_patterns
+---
+FcfConversionIndicator.update_last_row() must query the most recent filing where available_from <= last_idx, not blindly copy the previous row value. Blind forward-fill misses a new filing that just crossed its staleness window. Use: last_date = pd.Timestamp(last_idx).tz_localize(None).normalize(); available = fund[fund['available_from'] <= last_date]; value = available['metric'].iloc[-1] if not available.empty else NaN.
+

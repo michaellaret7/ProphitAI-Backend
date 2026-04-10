@@ -16,7 +16,7 @@ from prophitai_tools.sandbox.client import (
 # ================================
 
 
-def bootstrap_repo(sandbox, strategy_name: str) -> dict[str, str]:
+def setup_repo(sandbox, strategy_name: str) -> dict[str, str]:
     """Clone the strategies repo and create/checkout the strategy branch.
 
     Returns:
@@ -86,7 +86,7 @@ def start_sandbox(strategy_name: str, timeout_minutes: int = 60) -> str:
 
         sandbox_id, sandbox = create_sandbox(timeout=timeout_seconds)
 
-        repo_info = bootstrap_repo(sandbox, strategy_name)
+        repo_info = setup_repo(sandbox, strategy_name)
 
         return success_response({
             "sandbox_id": sandbox_id,

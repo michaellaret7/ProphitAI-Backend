@@ -9,7 +9,8 @@ complete strategy code to the strategy branch for human review.
 from prophitai_atlas.models.callbacks import NoOpChatCallback
 
 from prophitai_tools.sandbox.client import create_sandbox, remove_sandbox, get_sandbox
-from prophitai_tools.sandbox.lifecycle import bootstrap_repo
+from prophitai_tools.sandbox.lifecycle import setup_repo
+from prophitai_tools.sandbox.scaffolding import scaffold_strategy
 
 from prophitai_fund.research.builders.indicators import IndicatorBuilderAgent, IndicatorBuildResult
 from prophitai_fund.research.builders.signals import SignalStrategyBuilderAgent, SignalStrategyBuildResult
@@ -508,11 +509,11 @@ def test_builder_pipeline() -> None:
         # ---- Step 1: Spin up sandbox and bootstrap repo ----
 
         print("Creating sandbox...")
-        sandbox_id, sandbox = create_sandbox(timeout=1800)
+        sandbox_id, sandbox = create_sandbox(timeout=3600)
         print(f"Sandbox created: {sandbox_id}")
 
         print("Bootstrapping repo...")
-        repo_info = bootstrap_repo(sandbox, strategy_name)
+        repo_info = setup_repo(sandbox, strategy_name)
         print(f"Repo bootstrapped: {repo_info}")
 
         # ---- Step 2: Build the manifest ----
@@ -534,6 +535,12 @@ def test_builder_pipeline() -> None:
         )
 
         callback = NoOpChatCallback()
+
+        # ---- Step 2b: Scaffold the strategy directory ----
+
+        print("Scaffolding strategy directory...")
+        scaffold_result = scaffold_strategy(sandbox_id, strategy_name)
+        print(f"Scaffold result: {scaffold_result}")
 
         # ---- Step 3: Run the Indicator Builder ----
 

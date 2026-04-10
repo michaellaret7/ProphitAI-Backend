@@ -139,7 +139,6 @@ class Agent(AgentBase):
 
 
         print(f"Initialized Agent with model: {self.model} (provider: {self.provider})")
-        print(f"Registered tools ({len(self.tool_functions)}): {sorted(self.tool_functions.keys())}")
 
     def build_messages(
         self,
