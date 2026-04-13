@@ -104,8 +104,16 @@ MODEL_ALIASES = {
         "together": "zai-org/GLM-5",
         "fireworks": "accounts/fireworks/models/glm-5",
     },
+    "glm-5.1": {
+        "together": "zai-org/GLM-5.1",
+        "fireworks": "accounts/fireworks/models/glm-5p1",
+    },
     "minimax-m2.5": {
         "together": "MiniMaxAI/MiniMax-M2.5",
+    },
+    "minimax-m2.7": {
+        "together": "MiniMaxAI/MiniMax-M2.7",
+        "fireworks": "accounts/fireworks/models/minimax-m2p7",
     },
     "llama-3.3-70b-versatile": {
         "groq": "llama-3.3-70b-versatile",
