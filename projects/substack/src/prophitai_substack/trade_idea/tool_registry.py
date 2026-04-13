@@ -10,7 +10,7 @@ from typing import Callable
 # --> Research tools
 # ================================
 from prophitai_tools.research.theory_research import theory_research
-from prophitai_tools.research.macro_research import macro_research
+from prophitai_tools.research.macro_research import macro_research_search
 from prophitai_tools.research.economics_research import economics_research_search
 from prophitai_tools.research.credit_research import credit_research_search
 from prophitai_tools.research.earnings_calls import earnings_call_search
@@ -59,7 +59,7 @@ from prophitai_tools.screener.etf_screener import etf_screener
 TRADE_IDEA_TOOLS: list[Callable] = [
     # research (core — longer-term portfolio ideas)
     theory_research,
-    macro_research,
+    macro_research_search,
     economics_research_search,
     credit_research_search,
     earnings_call_search,

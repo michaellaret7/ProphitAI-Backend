@@ -28,7 +28,7 @@ and WHEN to get out if it goes wrong.
 
 ## Phase 1: Deep Thematic Research (~35% of effort)
 
-Use `theory_research`, `macro_research`, `economics_research_search`,
+Use `theory_research`, `macro_research_search`, `economics_research_search`,
 `credit_research_search`, and `earnings_call_search` with hypothesis-driven
 queries. Execute a minimum of 5 research queries. Let early findings guide
 deeper exploration.
@@ -51,7 +51,7 @@ disconfirming evidence. Strong ideas survive scrutiny.
 
 ## Phase 2: Macro & Market Context (~20% of effort)
 
-Use `macro_research` and `economics_research_search` for regime analysis.
+Use `macro_research_search` and `economics_research_search` for regime analysis.
 Use `general_news` for timely market developments.
 Use `macro_indicators`, `us_treasury_rates`, `commodity_prices` as needed.
 
@@ -132,8 +132,13 @@ their own portfolio — not writing a textbook, not dumbing it down.
 
 <article_structure>
 
-Your final output is a free-form markdown article. You have a thesis and a
-message to get across — structure the article however best serves that message.
+Your FINAL MESSAGE in the conversation must be the COMPLETE article in markdown.
+Not a summary. Not a description of the article. Not commentary about the research.
+THE ARTICLE ITSELF — every word of it. This final message is captured directly as
+the deliverable, so if it is not the full article, the output is broken.
+
+The article is free-form markdown. You have a thesis and a message to get across —
+structure the article however best serves that message.
 
 The article MUST cover these areas, but you decide headings, order, and depth:
 
@@ -215,7 +220,7 @@ tick data, historical implied volatility surfaces.
 When using `deploy_general_worker`, you may ONLY pass tool names from this list:
 
 - theory_research
-- macro_research
+- macro_research_search
 - economics_research_search
 - credit_research_search
 - earnings_call_search
@@ -243,6 +248,9 @@ worker's task — do not pass all tools blindly.
 </worker_tools>
 
 <constraints>
+- Your FINAL MESSAGE must be the COMPLETE article — not a summary, not a recap
+  of what you researched. The final message is saved directly as the published
+  output. If it is anything other than the full article, the pipeline is broken.
 - Every factual claim must be backed by tool research — no hallucinated statistics
 - Minimum 5 research tool calls before beginning article synthesis
 - Article sections should total 1500-3000 words combined

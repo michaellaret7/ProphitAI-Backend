@@ -176,7 +176,7 @@ Phase 2 is about wiring the deploy tools into parent agents and building the fir
 | portfolio_construction | portfolio_allocator |
 | broker | account_info, propose_trade, propose_options_trade, propose_multi_leg_options_trade, get_order_impact, get_orders, cancel_order, get_quotes, get_positions, close_position |
 | options | get_option_quote, get_option_contracts, get_option_price_history, get_option_expirations, get_options_chain |
-| research | strategy_research, credit_research_search, macro_research, economics_research_search, theory_research, earnings_call_search, tax_research_search, user_upload_search |
+| research | strategy_research, credit_research_search, macro_research_search, economics_research_search, theory_research, earnings_call_search, tax_research_search, user_upload_search |
 | market | us_treasury_rates, commodity_prices, macro_indicators, get_press_releases, get_ticker_news, general_news |
 | screener | etf_screener, equity_screener |
 | institutional | get_fund_13f_holdings |

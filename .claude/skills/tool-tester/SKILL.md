@@ -72,7 +72,7 @@ for pre-defined test cases organized by category:
 | Info | get_ticker_info, get_etf_info, get_ticker_peers, get_stock_ratings, get_institutional_holders, get_product_segmentation | Yes |
 | Portfolio | portfolio_performance, portfolio_risk, portfolio_stress_test, portfolio_factor_exposure, portfolio_classification | Yes |
 | Screener | equity_screener, etf_screener | Yes |
-| Research | earnings_call_search, credit_research_search, macro_research, economics_research_search, tax_research_search, user_upload_search | Needs vector DB |
+| Research | earnings_call_search, credit_research_search, macro_research_search, economics_research_search, tax_research_search, user_upload_search | Needs vector DB |
 | Alpaca | get_asset (safe), others (use fake IDs only) | Read-only safe, no real trades |
 
 ### Step 2: Run test cases for each tool

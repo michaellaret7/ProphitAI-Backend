@@ -49,7 +49,7 @@ from prophitai_tools.registry import (
     get_ticker_news,
     get_press_releases,
     # research
-    macro_research,
+    macro_research_search,
     earnings_call_search,
 )
 
@@ -69,7 +69,7 @@ WATCHLIST_TOOLS = [
     # news
     general_news, get_ticker_news, get_press_releases,
     # research
-    macro_research, earnings_call_search,
+    macro_research_search, earnings_call_search,
 ]
 
 

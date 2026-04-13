@@ -216,7 +216,7 @@ PYTHON test_harness.py <tool_name> '<args_json>'
 | valid | `{"query": "high yield spreads credit default risk", "top_k": 5}` | Credit research |
 | bad-empty | `{"query": ""}` | Graceful error |
 
-### macro_research
+### macro_research_search
 | Label | Args | Expect |
 |-------|------|--------|
 | valid | `{"query": "federal reserve interest rate outlook inflation", "top_k": 5}` | Macro research |

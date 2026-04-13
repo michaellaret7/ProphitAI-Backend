@@ -65,7 +65,7 @@ GOOD: 3 workers in parallel:
 Example — Plan task: "Research macro environment"
 BAD:  1 worker doing macro + earnings + news
 GOOD: 3 workers in parallel:
-  - Worker A: macro research → tools: ["macro_research"]
+  - Worker A: macro research → tools: ["macro_research_search"]
   - Worker B: earnings insights → tools: ["earnings_call_search"]
   - Worker C: news + sector data → tools: ["general_news", "get_ticker_news", "ticker_performance"]
 

@@ -86,7 +86,7 @@ from prophitai_tools.options.price_history import get_option_price_history
 # ================================
 # --> Imports: research
 # ================================
-from prophitai_tools.research.macro_research import macro_research
+from prophitai_tools.research.macro_research import macro_research_search
 from prophitai_tools.research.earnings_calls import earnings_call_search
 from prophitai_tools.research.credit_research import credit_research_search
 from prophitai_tools.research.economics_research import economics_research_search
@@ -176,7 +176,7 @@ ALL_TOOL_FUNCTIONS: list[Callable] = [
     get_option_expirations, get_option_contracts, get_options_chain,
     get_option_quote, get_option_price_history,
     # research
-    macro_research, earnings_call_search, credit_research_search,
+    macro_research_search, earnings_call_search, credit_research_search,
     economics_research_search, user_upload_search, tax_research_search,
     theory_research, strategy_research,
     # market

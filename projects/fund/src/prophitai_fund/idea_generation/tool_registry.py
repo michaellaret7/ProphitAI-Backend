@@ -12,7 +12,7 @@ from typing import Callable, List
 # ================================
 from prophitai_tools.research.strategy_research import strategy_research
 from prophitai_tools.research.theory_research import theory_research
-from prophitai_tools.research.macro_research import macro_research
+from prophitai_tools.research.macro_research import macro_research_search
 from prophitai_tools.research.economics_research import economics_research_search
 
 # ================================
@@ -30,7 +30,7 @@ from prophitai_tools.news.general_news import general_news
 
 IDEA_GENERATOR_TOOLS: List[Callable] = [
     # research (core)
-    strategy_research, theory_research, macro_research, economics_research_search,
+    strategy_research, theory_research, macro_research_search, economics_research_search,
     # news
     general_news,
 ]

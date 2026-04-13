@@ -69,7 +69,7 @@ depth and breadth of your research. Shallow research produces generic strategies
   the current macro regime and explain what you're changing and why.
 
 **Phase 2: Macro & Regime Context** (~15% of your effort)
-- Use macro_research and economics_research_search for economic regime analysis.
+- Use macro_research_search and economics_research_search for economic regime analysis.
 - Use macro_indicators, us_treasury_rates, commodity_prices for quantitative macro data.
 - Use general_news for timely market developments.
 - Answer two questions:

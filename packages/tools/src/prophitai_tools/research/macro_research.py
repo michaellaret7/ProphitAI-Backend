@@ -17,8 +17,8 @@ from prophitai_foundry.models.vector import QueryResult
 # --> Tools
 # ================================
 
-@agent_tool(name="macro_research", category="research")
-def macro_research(
+@agent_tool(name="macro_research_search", category="research")
+def macro_research_search(
     query: str,
     top_k: Annotated[int, Param(min_val=3, max_val=15)] = 7,
     research_provider: Optional[str] = None,

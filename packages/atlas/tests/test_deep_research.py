@@ -19,7 +19,7 @@ from prophitai_shared.time_utils import get_utc_date_str
 # ================================
 # --> Research tool imports
 # ================================
-from prophitai_tools.research.macro_research import macro_research
+from prophitai_tools.research.macro_research import macro_research_search
 from prophitai_tools.research.earnings_calls import earnings_call_search
 from prophitai_tools.research.credit_research import credit_research_search
 from prophitai_tools.research.economics_research import economics_research_search
@@ -83,7 +83,7 @@ from prophitai_tools.ticker.info.sectors import get_sector_industries, get_group
 
 DEEP_RESEARCH_TOOLS = [
     # Research (RAG-powered document search)
-    macro_research,
+    macro_research_search,
     earnings_call_search,
     credit_research_search,
     economics_research_search,

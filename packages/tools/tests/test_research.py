@@ -1,7 +1,7 @@
 """Test research tools (7 tools). May SKIP if Foundry/Pinecone not configured."""
 
 from helpers import parse_result, assert_success, run_test, print_summary
-from prophitai_tools.research.macro_research import macro_research
+from prophitai_tools.research.macro_research import macro_research_search
 from prophitai_tools.research.earnings_calls import earnings_call_search
 from prophitai_tools.research.credit_research import credit_research_search
 from prophitai_tools.research.economics_research import economics_research_search
@@ -10,10 +10,10 @@ from prophitai_tools.research.theory_research import theory_research
 from prophitai_tools.research.user_uploads import user_upload_search
 
 
-def test_macro_research():
-    raw = macro_research(query="Federal Reserve interest rate outlook 2026", top_k=3)
+def test_macro_research_search():
+    raw = macro_research_search(query="Federal Reserve interest rate outlook 2026", top_k=3)
     result = parse_result(raw)
-    data = assert_success(result, "macro_research")
+    data = assert_success(result, "macro_research_search")
     assert data is not None
 
 
@@ -62,7 +62,7 @@ def test_user_upload_search():
 
 def main():
     results = []
-    results.append(run_test("macro_research", test_macro_research))
+    results.append(run_test("macro_research_search", test_macro_research_search))
     results.append(run_test("earnings_call_search", test_earnings_call_search))
     results.append(run_test("credit_research_search", test_credit_research_search))
     results.append(run_test("economics_research_search", test_economics_research_search))

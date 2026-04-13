@@ -59,7 +59,7 @@ from prophitai_tools.registry import (
     get_ticker_news,
     get_press_releases,
     # research
-    macro_research,
+    macro_research_search,
     earnings_call_search,
     credit_research_search,
     economics_research_search,
@@ -94,7 +94,7 @@ PORTFOLIO_BUILDER_TOOLS = [
     # news
     general_news, get_ticker_news, get_press_releases,
     # research
-    macro_research, earnings_call_search, credit_research_search,
+    macro_research_search, earnings_call_search, credit_research_search,
     economics_research_search, theory_research,
     # options (read-only)
     get_option_expirations, get_option_contracts, get_options_chain,
@@ -129,7 +129,7 @@ You have access to a broad toolkit. Use whatever is relevant to the user's reque
 - Risk tools: correlation, beta, VaR/ES, stress testing, drawdown analysis
 - Options chain lookup, pricing, and multi-leg order construction
 - Web search for current market context
-- macro_research_search for deep macro analysis (rates, inflation, Fed policy, sector rotation)
+- macro_research_search_search for deep macro analysis (rates, inflation, Fed policy, sector rotation)
 - earnings_call_search for company-level earnings insights, guidance, and management commentary
 </capabilities>
 
