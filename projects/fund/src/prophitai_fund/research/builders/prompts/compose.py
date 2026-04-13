@@ -8,7 +8,7 @@ stay consistent.
 from pathlib import Path
 
 
-_SHARED_FILE = Path(__file__).parent / "builder_shared.md"
+SHARED_FILE = Path(__file__).parent / "builder_shared.md"
 
 
 def compose_builder_prompt(
@@ -23,7 +23,7 @@ def compose_builder_prompt(
     then formats runtime params ({date}, {sandbox_id}).
     """
     agent_prompt = agent_prompt_path.read_text()
-    shared_sections = _SHARED_FILE.read_text()
+    shared_sections = SHARED_FILE.read_text()
 
     combined = agent_prompt + "\n\n<shared_builder_standards>\n" + shared_sections + "\n</shared_builder_standards>"
 

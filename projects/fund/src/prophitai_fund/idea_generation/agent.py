@@ -16,7 +16,7 @@ from prophitai_atlas.models import PrintMode, AgentResponse
 from prophitai_atlas.models.callbacks import ChatCallback, NoOpChatCallback
 from prophitai_shared.time_utils import get_current_utc_time
 
-from prophitai_fund.idea_generator.tool_registry import IDEA_GENERATOR_TOOLS, IDEA_GENERATOR_TOOLS_DEFERRED
+from prophitai_fund.idea_generation.tool_registry import IDEA_GENERATOR_TOOLS, IDEA_GENERATOR_TOOLS_DEFERRED
 from prophitai_fund.tools import append_memory, past_ideas, retrieve_memory
 
 class IdeaGeneratorAgent:
@@ -38,7 +38,7 @@ class IdeaGeneratorAgent:
         self,
         *,
         chat_callback: Optional[Union[ChatCallback, NoOpChatCallback]] = None,
-        session_id: str = "idea_generator",
+        session_id: str = "idea_generation",
         provider: Optional[str] = None,
         model: Optional[str] = None,
         print_mode: PrintMode = PrintMode.PRODUCTION,
