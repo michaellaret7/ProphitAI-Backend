@@ -51,7 +51,7 @@ class StrategyArchitectAgent:
 
         date = get_current_utc_time().strftime("%m/%d/%Y")
         prompt_path = Path(__file__).parent / "system_prompt.md"
-        system_prompt = prompt_path.read_text().format(date=date, sandbox_id=sandbox_id)
+        system_prompt = prompt_path.read_text().replace("{date}", date).replace("{sandbox_id}", sandbox_id)
 
         self.agent = Agent(
             tools=ARCHITECT_TOOLS,

@@ -49,7 +49,6 @@ class IdeaGeneratorAgent:
 
         self.agent = Agent(
             tools=IDEA_GENERATOR_TOOLS,
-            deferred_tools=IDEA_GENERATOR_TOOLS_DEFERRED,
             system_prompt=system_prompt,
             chat_callback=chat_callback,
             session_id=session_id,

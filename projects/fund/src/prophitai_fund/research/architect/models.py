@@ -5,6 +5,14 @@ from pydantic import BaseModel, Field
 # --> Helper models
 # ================================
 
+class MapEntry(BaseModel):
+    """A single key-value pair within a value_map. Values are stored as strings
+    and parsed by consumers (e.g. '1.0' for floats, 'true' for booleans)."""
+
+    key: str = Field(description="Sub-parameter name (e.g. 'up', 'down_moderate')")
+    value: str = Field(description="Sub-parameter value as string (e.g. '1.0', 'true', 'close')")
+
+
 class ConfigParam(BaseModel):
     """A single key-value parameter. Use value_str for strings, value_num for numbers,
     value_bool for booleans, value_list for lists, and value_map for nested key-value maps.
@@ -15,14 +23,14 @@ class ConfigParam(BaseModel):
     value_num: Optional[float] = Field(None, description="Numeric value (int or float)")
     value_bool: Optional[bool] = Field(None, description="Boolean value")
     value_list: Optional[list[str]] = Field(None, description="List of string values")
-    value_map: Optional[list["ConfigParam"]] = Field(None, description="Nested key-value pairs for sub-objects")
+    value_map: Optional[list[MapEntry]] = Field(None, description="Nested key-value pairs for sub-objects")
 
     @property
-    def value(self) -> str | float | bool | list[str] | dict | None:
+    def resolved_value(self) -> str | float | bool | list[str] | dict | None:
         """Return the populated value, resolved to its native Python type."""
 
         if self.value_map is not None:
-            return params_to_dict(self.value_map)
+            return {entry.key: entry.value for entry in self.value_map}
 
         if self.value_list is not None:
             return self.value_list
@@ -38,7 +46,7 @@ class ConfigParam(BaseModel):
 
 def params_to_dict(params: list["ConfigParam"]) -> dict:
     """Convert a list of ConfigParam into a plain dict."""
-    return {p.key: p.value for p in params}
+    return {p.key: p.resolved_value for p in params}
 
 # ================================
 # --> Manifest output models

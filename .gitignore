@@ -1,3 +1,6 @@
+# Pipeline checkpoints
+_checkpoint/
+
 # Python
 __pycache__/
 *.py[cod]

@@ -27,3 +27,10 @@ topic: process_mistakes
 ---
 When deploying parallel workers (signal research vs. macro regime), the two workers may give conflicting verdicts. In the AQM-52 run: signal worker picked Candidate A (52-week high, stronger evidence), macro worker picked Candidate B (forecast dispersion, better current regime fit). Resolution: the signal worker's verdict (stronger academic evidence, cleaner mechanism, lower costs) should be the primary tie-breaker when both signals are plausible. The macro regime concern can be addressed by building regime conditioning INTO the strategy (vol-scaling + market state gate) rather than switching to a weaker signal. Don't let short-term macro threats override long-term signal quality — instead, design the regime adaptation into the strategy itself.
 
+---
+date: 2026-04-13
+title: Direct Tool Calls More Efficient Than Workers for Multi-Signal Research
+topic: tool_usage
+---
+For fundamentals-based quarterly strategies with 3-4 candidate signals, doing 8-10 direct strategy_research + theory_research + macro_research_search + llm_web_search calls sequentially (without workers) is efficient and allows dynamic query pivoting based on early results. Workers are better when 6+ queries must be pre-specified before any results arrive. When first 2-3 queries confirm a direction strongly, direct calls let you immediately follow up with targeted disconfirming queries — workers cannot do this adaptively.
+

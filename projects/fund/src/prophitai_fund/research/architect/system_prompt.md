@@ -149,7 +149,7 @@ of plain dicts. Each ConfigParam has a `key` and exactly one populated value fie
 - `value_num` for numbers (e.g. `{"key": "window", "value_num": 252}`)
 - `value_bool` for booleans (e.g. `{"key": "annualize", "value_bool": true}`)
 - `value_list` for string lists (e.g. `{"key": "allowed_regimes", "value_list": ["up", "down_moderate"]}`)
-- `value_map` for nested objects (e.g. `{"key": "market_state_scales", "value_map": [{"key": "up", "value_num": 1.0}, {"key": "down_moderate", "value_num": 0.6}]}`)
+- `value_map` for nested objects — uses `MapEntry` objects with string key/value pairs (e.g. `{"key": "market_state_scales", "value_map": [{"key": "up", "value": "1.0"}, {"key": "down_moderate", "value": "0.6"}]}`)
 
 Leave all other value fields as null. Example indicator params:
 ```json

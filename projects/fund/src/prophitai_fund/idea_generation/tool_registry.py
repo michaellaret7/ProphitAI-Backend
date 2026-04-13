@@ -32,10 +32,9 @@ IDEA_GENERATOR_TOOLS: List[Callable] = [
     # research (core)
     strategy_research, theory_research, macro_research_search, economics_research_search,
     # news
-    general_news,
+    general_news,     
+    # macro
+    commodity_prices, us_treasury_rates, macro_indicators,
+
 ]
 
-IDEA_GENERATOR_TOOLS_DEFERRED: List[Callable] = [
-    # macro context
-    commodity_prices, us_treasury_rates, macro_indicators,
-]
