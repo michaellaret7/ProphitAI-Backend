@@ -11,6 +11,9 @@
     "packages/foundry/src",
     "packages/shared/src",
     "packages/tools/src",
+    "projects/api/src",
+    "projects/fund/src",
+    "projects/substack/src",
     "services/api/src"
   ]
 }

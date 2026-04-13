@@ -18,9 +18,9 @@
 
 - Owns idea research, macro fit, past-idea avoidance, and strategy thesis.
 - Files:
-  - `projects/fund/src/prophitai_fund/idea_generator/agent.py`
-  - `projects/fund/src/prophitai_fund/idea_generator/tool_registry.py`
-  - `projects/fund/src/prophitai_fund/idea_generator/prompts/system.md`
+  - `projects/fund/src/prophitai_fund/idea_generation/agent.py`
+  - `projects/fund/src/prophitai_fund/idea_generation/tool_registry.py`
+  - `projects/fund/src/prophitai_fund/idea_generation/prompts/system.md`
 
 ### StrategyArchitectAgent
 
