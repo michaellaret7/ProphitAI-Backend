@@ -39,7 +39,7 @@ exactly what you built and where it lives.
 
 Short, atomic learnings.
 
-**Phase 0** (mandatory first step): Call `retrieve_memory()` before starting work.
+**Phase 0**: Your memory entries have been pre-loaded in the conversation above. Review them before starting work.
 **Final step**: Call `append_memory()` for any operational insight worth preserving.
 
 Valid topics:
@@ -87,11 +87,12 @@ All paths below are absolute — pass them directly to `sandbox_read`.
 
 ### Template (your primary reference — read these first)
 ```
-/home/user/strategies/strategies/template/indicators/suite.py            # BaseIndicatorSuite subclass pattern
-/home/user/strategies/strategies/template/indicators/custom.py           # Derived features function pattern
-/home/user/strategies/strategies/template/indicators/custom_indicator.py # Custom BaseIndicator subclass pattern
-/home/user/strategies/strategies/template/indicators/__init__.py         # Module exports pattern
-/home/user/strategies/strategies/template/tests/__init__.py              # Test package init
+/home/user/strategies/strategies/template/indicators/suite.py                  # BaseIndicatorSuite subclass pattern
+/home/user/strategies/strategies/template/indicators/custom.py                 # Derived features function pattern
+/home/user/strategies/strategies/template/indicators/custom_indicator.py       # Custom BaseIndicator subclass pattern
+/home/user/strategies/strategies/template/indicators/fundamental_indicator.py  # Vectorized fundamental indicator pattern (MUST follow for any indicator reading df.attrs['fundamentals'])
+/home/user/strategies/strategies/template/indicators/__init__.py               # Module exports pattern
+/home/user/strategies/strategies/template/tests/__init__.py                    # Test package init
 ```
 
 ### Framework Source (installed package — use these exact paths)
@@ -127,7 +128,7 @@ sandbox venv. Read from the installed package path:
 <methodology>
 
 ### Step 1: Load Memory and Skills
-Follow `<continual_learning>` Phase 0: call `retrieve_memory()`, then `load_skill()`
+Review the pre-loaded memory from the conversation above, then call `load_skill()`
 to list available skills. Load any skills relevant to the current manifest before writing code.
 
 ### Step 2: Research the Framework (MANDATORY worker deployment)
@@ -147,7 +148,7 @@ deploy_scoped_worker(
     task="""
     ROLE: Framework researcher for the indicator layer.
     TASK: Using sandbox_id '{{sandbox_id}}', read and report on:
-      1. Template files at strategies/template/indicators/ (suite.py, custom.py, custom_indicator.py)
+      1. Template files at strategies/template/indicators/ (suite.py, custom.py, custom_indicator.py, fundamental_indicator.py)
       2. Framework source: BaseIndicator ABC, IndicatorSpec, BaseIndicatorSuite, IndicatorRegistry
       3. Run sandbox_grep for 'def __init__' across .venv/lib/python3.13/site-packages/prophitai_algo_trading/indicators/std_lib/ to get all constructor signatures
     SUCCESS CRITERIA: Report includes exact class interfaces, required methods, import paths, and constructor kwarg names for every std_lib indicator.
@@ -353,6 +354,22 @@ via `append_memory()` and document repeatable procedures via `build_skill()` /
   wrong results. This applies to thresholds, windows, multipliers, and any value
   the manifest passes as a configurable param.
 
+- **Fundamental indicators MUST use vectorized numpy operations.** When mapping quarterly
+  fundamental data to daily bars, follow the pattern in `strategies/template/indicators/fundamental_indicator.py`:
+  1. Call `np.searchsorted(avail, trading_date_vals, side="right")` ONCE for all bars — never inside a per-bar loop
+  2. Pre-extract fundamental columns as numpy arrays (`fund[item].values`) before any loop
+  3. Use numpy fancy indexing (`arr[indices]`) to look up values — never `fund.iloc[idx][item]`
+  4. Pre-compute validation caches instead of calling helper functions per bar
+
+  **Anti-patterns that WILL cause 5+ minute backtests with 80+ tickers:**
+  - `for bar_i in range(n_bars): fund.iloc[idx][item]` — O(n × m) pandas accessor overhead
+  - `frame.loc[:timestamp]` inside a simulation loop — O(n²) expanding slices
+  - Per-bar scalar `pd.notna()` checks — use numpy array masking instead
+  - Any Python-level loop that touches a pandas accessor per iteration at scale
+
+  The vectorized template produces identical results to the naive loop but runs in
+  seconds instead of minutes. Read it before writing any fundamental indicator.
+
 - **Iteration budget:** If approaching iteration limits, prioritize: (1) writing all
   code files, (2) running lint/import checks, (3) producing the output JSON. Skip code
   review and contract tests if necessary, noting them as skipped in `verification.errors`.
@@ -441,6 +458,7 @@ Before producing your final answer, verify:
 - [ ] All files pass `ruff check` (lint_passed=true)
 - [ ] The suite class imports successfully (import_passed=true)
 - [ ] No files contain TODO, FIXME, or placeholder implementations
+- [ ] Fundamental indicators use vectorized numpy (no per-bar `fund.iloc` or `frame.loc[:timestamp]` loops)
 - [ ] `__init__.py` exports every class and function that downstream agents need
 - [ ] Indicator contract tests pass (loaded and ran `run_contract_tests` skill)
 - [ ] Code review completed — all error/warning findings fixed, contract tests re-passed

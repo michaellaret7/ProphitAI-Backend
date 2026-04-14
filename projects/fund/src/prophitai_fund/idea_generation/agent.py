@@ -57,13 +57,41 @@ class IdeaGeneratorAgent:
             print_mode=print_mode,
         )
 
-        memory_file = Path(__file__).parent / "memory.md"
-        ideas_file = Path(__file__).parent.parent / "past_ideas.md"
+        self.memory_file = Path(__file__).parent / "memory.md"
+        self.ideas_file = Path(__file__).parent.parent / "past_ideas.md"
 
-        self.agent.add_tool(**{**append_memory.tool, "function": partial(append_memory, memory_file)})
-        self.agent.add_tool(**{**past_ideas.tool, "function": partial(past_ideas, ideas_file)})
-        self.agent.add_tool(**{**retrieve_memory.tool, "function": partial(retrieve_memory, memory_file)})
+        self.agent.add_tool(**{**append_memory.tool, "function": partial(append_memory, self.memory_file)})
+        self.agent.add_tool(**{**retrieve_memory.tool, "function": partial(retrieve_memory, self.memory_file)})
+        self.agent.add_tool(**{**past_ideas.tool, "function": partial(past_ideas, self.ideas_file)})
         
+    def _build_context_history(self) -> List[dict]:
+        """Pre-read memory and past ideas files into conversation history messages."""
+        memory_content = (
+            self.memory_file.read_text(encoding="utf-8").strip()
+            if self.memory_file.exists()
+            else "No memories recorded yet."
+        )
+
+        ideas_content = (
+            self.ideas_file.read_text(encoding="utf-8").strip()
+            if self.ideas_file.exists()
+            else "No past ideas recorded yet."
+        )
+
+        return [
+            {
+                "role": "user",
+                "content": (
+                    f"<your_memory>\n{memory_content}\n</your_memory>\n\n"
+                    f"<past_ideas>\n{ideas_content}\n</past_ideas>"
+                ),
+            },
+            {
+                "role": "assistant",
+                "content": "Context loaded. I've reviewed my memory entries and all past strategy ideas. Ready to begin.",
+            },
+        ]
+
     def run(self, task: Optional[str] = None) -> AgentResponse:
         """Execute the idea generator agent.
 
@@ -73,8 +101,11 @@ class IdeaGeneratorAgent:
         Returns:
             AgentResponse with answer, parsed_output (StrategyIdea), and metadata.
         """
+        context_history = self._build_context_history()
+
         return self.agent.run(
             task or self.DEFAULT_TASK,
+            conversation_history=context_history,
             plan_first=True,
         )
 

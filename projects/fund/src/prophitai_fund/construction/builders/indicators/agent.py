@@ -75,14 +75,14 @@ class IndicatorBuilderAgent:
 
         # Reason: Memory tools are bound with partial to bake in the file path.
         # The LLM never sees the _memory_file parameter.
-        memory_file = Path(__file__).parent / "memory.md"
+        self.memory_file = Path(__file__).parent / "memory.md"
         
         # Reason: Skill tools are bound with partial to bake in the skills directory.
         # The LLM sees skill_name, title, description, content — not the directory path.
         skills_dir = Path(__file__).parent / "skills"
 
-        self.agent.add_tool(**{**append_memory.tool, "function": partial(append_memory, memory_file)})
-        self.agent.add_tool(**{**retrieve_memory.tool, "function": partial(retrieve_memory, memory_file)})
+        self.agent.add_tool(**{**append_memory.tool, "function": partial(append_memory, self.memory_file)})
+        self.agent.add_tool(**{**retrieve_memory.tool, "function": partial(retrieve_memory, self.memory_file)})
         self.agent.add_tool(**{**load_skill.tool, "function": partial(load_skill, skills_dir)})
         self.agent.add_tool(**{**build_skill.tool, "function": partial(build_skill, skills_dir)})
         self.agent.add_tool(**{**edit_skill.tool, "function": partial(edit_skill, skills_dir)})
@@ -100,6 +100,19 @@ class IndicatorBuilderAgent:
             ),
         )
 
+    def _build_context_history(self) -> list[dict]:
+        """Pre-read memory file into conversation history messages."""
+        memory_content = (
+            self.memory_file.read_text(encoding="utf-8").strip()
+            if self.memory_file.exists()
+            else "No memories recorded yet."
+        )
+
+        return [
+            {"role": "user", "content": f"<your_memory>\n{memory_content}\n</your_memory>"},
+            {"role": "assistant", "content": "Memory loaded. Ready to begin."},
+        ]
+
     def run(self, manifest: StrategyManifest) -> AgentResponse:
         """Build indicator code files from a Strategy Manifest.
 
@@ -111,9 +124,11 @@ class IndicatorBuilderAgent:
         """
         manifest_json = manifest.model_dump_json()
         task = self.DEFAULT_TASK_TEMPLATE.format(manifest_json=manifest_json)
+        context_history = self._build_context_history()
 
         return self.agent.run(
             task,
+            conversation_history=context_history,
             plan_first=True,
             format_output=IndicatorBuildResult,
         )

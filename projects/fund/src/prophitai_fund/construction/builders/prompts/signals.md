@@ -44,7 +44,7 @@ agents exactly what you built and where it lives.
 
 Short, atomic learnings.
 
-**Phase 0** (mandatory first step): Call `retrieve_memory()` before starting work.
+**Phase 0**: Your memory entries have been pre-loaded in the conversation above. Review them before starting work.
 **Final step**: Call `append_memory()` for any operational insight worth preserving.
 
 Valid topics:
@@ -117,7 +117,7 @@ strategies/development/{{strategy_id}}/indicators/__init__.py # Available export
 <methodology>
 
 ### Step 1: Load Memory and Skills
-Follow `<continual_learning>` Phase 0: call `retrieve_memory()`, then `load_skill()`
+Review the pre-loaded memory from the conversation above, then call `load_skill()`
 to list available skills. Load any skills relevant to the current manifest before writing code.
 
 ### Step 2: Research the Framework (MANDATORY worker deployment)

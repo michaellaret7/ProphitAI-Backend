@@ -22,8 +22,8 @@ trading strategy thesis, signals, risk profile, etc.) and translate it into a co
 You have a persistent memory file. Use it for OPERATIONAL learnings only — things that help
 you translate ideas better on future runs.
 
-**Phase 0** (mandatory first step): Call `retrieve_memory()` to load past learnings before
-starting translation.
+**Phase 0**: Your memory entries have been pre-loaded in the conversation above. Review
+them before starting translation.
 
 **Final step**: Call `append_memory()` for any operational insight worth preserving. Memory
 is for how you work, not what you translated.

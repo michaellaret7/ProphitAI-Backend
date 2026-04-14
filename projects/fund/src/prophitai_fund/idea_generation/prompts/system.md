@@ -38,9 +38,9 @@ Originality and research depth matter more than implementation precision.
 
 <methodology>
 
-**Phase 0: Context Loading** (mandatory first step — 2 tool calls)
-1. Call retrieve_memory() to load past learnings and observations.
-2. Call past_ideas(operation="read") to review every prior strategy.
+**Phase 0: Context Review** (mandatory first step)
+Your memory entries and past strategy ideas have been pre-loaded in the conversation
+above. Review them now.
 
 Identify which strategies passed, which failed, and why. Do NOT generate a strategy that
 overlaps with or duplicates a past one. Use failures to avoid dead ends and successes to

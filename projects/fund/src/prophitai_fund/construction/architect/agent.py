@@ -67,10 +67,23 @@ class StrategyArchitectAgent:
         )
 
         # Bind memory tools with file paths
-        memory_file = Path(__file__).parent / "memory.md"
+        self.memory_file = Path(__file__).parent / "memory.md"
 
-        self.agent.add_tool(**{**append_memory.tool, "function": partial(append_memory, memory_file)})
-        self.agent.add_tool(**{**retrieve_memory.tool, "function": partial(retrieve_memory, memory_file)})
+        self.agent.add_tool(**{**append_memory.tool, "function": partial(append_memory, self.memory_file)})
+        self.agent.add_tool(**{**retrieve_memory.tool, "function": partial(retrieve_memory, self.memory_file)})
+
+    def _build_context_history(self) -> list[dict]:
+        """Pre-read memory file into conversation history messages."""
+        memory_content = (
+            self.memory_file.read_text(encoding="utf-8").strip()
+            if self.memory_file.exists()
+            else "No memories recorded yet."
+        )
+
+        return [
+            {"role": "user", "content": f"<your_memory>\n{memory_content}\n</your_memory>"},
+            {"role": "assistant", "content": "Memory loaded. Ready to begin."},
+        ]
 
     def run(self, idea_text: str) -> AgentResponse:
         """Translate a strategy idea into a Strategy Manifest.
@@ -87,10 +100,11 @@ class StrategyArchitectAgent:
             AgentResponse with parsed_output containing a StrategyManifest.
         """
         task = self.DEFAULT_TASK_TEMPLATE.format(idea_text=idea_text)
+        context_history = self._build_context_history()
 
         # Reason: no format_output — the agent writes MANIFEST.json to the sandbox
         # via tool calls instead of outputting the full JSON as text
-        response = self.agent.run(task, plan_first=True)
+        response = self.agent.run(task, conversation_history=context_history, plan_first=True)
 
         # Reason: read the assembled manifest directly from the sandbox file
         # instead of parsing the agent's text answer with another LLM call
