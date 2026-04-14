@@ -156,9 +156,22 @@ Algorithmic trading strategies and backtesting:
 - `strategies/`: 7 strategies (Ichimoku, Kalman StatArb, MACD, ORB, RSI, Squeeze, VWAP-Hurst)
 - `engines/`: Event-driven and vectorized backtesting, live trading
 - `execution/`: Cost model, position sizing, portfolio tracking
-- `indicators/`: Technical indicator implementations
+- `indicators/`: Technical indicator implementations + `DataRequirement` declarations
 - `broker/`: Alpaca integration
-- `data/`: Market data clients (Alpaca, FMP, Yahoo Finance)
+- `data/`: Market data clients (Alpaca, FMP, Yahoo Finance) + `DataResolver` for automatic supplementary data loading
+
+**Indicator Data Requirements**: Custom indicators that read supplementary data from `df.attrs` (fundamentals, macro series, etc.) declare their needs via `data_requirements` class variable on `BaseIndicator`. The `DataResolver` (`data/resolver.py`) walks an indicator suite, collects all `DataRequirement` declarations, and fetches/attaches everything automatically. Use `load_strategy_data()` in backtest runners instead of manually loading supplementary data.
+
+Available `DataRequirement` kinds (registered in `build_default_resolver()`):
+| Kind | Data Source | Scope | Required Params |
+|------|-----------|-------|----------------|
+| `ticker_meta` | Ticker string | per_ticker | — |
+| `fundamentals` | Income/balance/cashflow + sector | per_ticker | — |
+| `financial_ratios` | PE, ROE, margins, turnover, etc. | per_ticker | — |
+| `commodity` | Any commodity series (VIX, oil, gold) | shared | `symbol` |
+| `economic_indicator` | Any economic series (claims, CPI) | shared | `indicator` |
+| `government_bond_rates` | Yield curve (m1-y30) | shared | `country` |
+| `economic_calendar` | Scheduled economic events | shared | `country` |
 
 #### 7. Shared (`packages/shared/src/prophitai_shared/`)
 Foundational utilities used by all packages:

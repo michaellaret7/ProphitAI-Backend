@@ -185,6 +185,25 @@ class CustomIndicator(BaseIndicator):
         return self.df
 ```
 
+6. If the manifest entry has `data_requirements`, declare them as a class variable.
+   This tells the data resolver what supplementary data to fetch and attach to `df.attrs`
+   before the indicator runs:
+```python
+from prophitai_algo_trading.indicators import BaseIndicator, DataRequirement
+
+class FundamentalIndicator(BaseIndicator):
+    data_requirements = (
+        DataRequirement(kind="fundamentals", attrs_key="fundamentals", scope="per_ticker"),
+        DataRequirement(kind="ticker_meta", attrs_key="ticker", scope="per_ticker"),
+    )
+
+class MacroIndicator(BaseIndicator):
+    data_requirements = (
+        DataRequirement(kind="commodity", attrs_key="vix", scope="shared", params={"symbol": "VIXUSD"}),
+        DataRequirement(kind="economic_indicator", attrs_key="claims", scope="shared", params={"indicator": "initialClaims"}),
+    )
+```
+
 ### Step 4: Write the Indicator Suite
 Create `strategies/development/{{strategy_id}}/indicators/suite.py`:
 
@@ -320,6 +339,11 @@ via `append_memory()` and document repeatable procedures via `build_skill()` /
 - **One custom indicator per file.** Do not combine multiple custom indicators into a
   single file. Each `is_custom=true` entry gets its own file at the path specified in
   the manifest's `file` field.
+
+- **Declare `data_requirements` for every indicator that reads from `df.attrs`.** Every
+  `data_requirements` entry from the manifest's `IndicatorEntry` must appear as a
+  `DataRequirement` in the indicator's class variable. The `attrs_key` must exactly
+  match the key used in `calculate()` when reading `self.df.attrs[key]`.
 
 - **Never hardcode a value that exists as a constructor parameter.** When a
   threshold, boundary, or configurable value is accepted in `__init__` and stored

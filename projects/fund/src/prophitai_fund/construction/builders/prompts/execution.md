@@ -313,6 +313,25 @@ def build_{{strategy_id}}_engine(
         max_positions=max_positions,
         warmup_bars=strategy.min_bars_required,
     )
+
+
+def load_backtest_data(
+    tickers: list[str],
+    start_date: str,
+    end_date: str,
+    interval: str = "daily",
+    strategy: {{StrategyClass}} | None = None,
+) -> dict[str, pd.DataFrame]:
+    """Load OHLCV + all supplementary data declared by indicator data_requirements."""
+    from prophitai_algo_trading.data.resolver import load_strategy_data
+
+    return load_strategy_data(
+        tickers=tickers,
+        start_date=start_date,
+        end_date=end_date,
+        interval=interval,
+        indicator_suite=strategy._indicator_suite if strategy else None,
+    )
 ```
 
 ### Step 9: Write Runner Scripts
@@ -321,7 +340,12 @@ Three executable scripts, each with `if __name__ == "__main__":` blocks.
 **run_event_backtest.py:**
 ```python
 from prophitai_algo_trading.engines.backtest.event_driven import EventDrivenBacktestEngine
-from strategies.development.{{strategy_id}}.wiring import build_{{strategy_id}}_engine
+from strategies.development.{{strategy_id}}.wiring import build_{{strategy_id}}_engine, load_backtest_data
+
+START_DATE = "2010-01-01"
+END_DATE = "2026-01-01"
+INTERVAL = "daily"
+TICKERS: list[str] = []  # Populate with target universe
 
 def main():
     components = build_{{strategy_id}}_engine()
@@ -336,8 +360,14 @@ def main():
         risk_controls=components.risk_controls,
     )
 
-    # Load data
-    data = {{}}  # Populated with ticker -> DataFrame mapping
+    # Load OHLCV + all supplementary data declared by indicator data_requirements
+    data = load_backtest_data(
+        tickers=TICKERS,
+        start_date=START_DATE,
+        end_date=END_DATE,
+        interval=INTERVAL,
+        strategy=components.strategy,
+    )
 
     result = engine.run(data=data, warmup_bars=components.warmup_bars)
     print(result.metrics)
@@ -481,6 +511,13 @@ via `append_memory()` and document repeatable procedures via `build_skill()` /
 
 - **build_risk_controls() must instantiate all risk controls** from the manifest's
   `risk_controls` list. Include the rationale as an inline comment for each control.
+
+- **Use `load_strategy_data()` for data loading — never manually fetch supplementary data.**
+  The wiring.py `load_backtest_data()` function must delegate to
+  `prophitai_algo_trading.data.resolver.load_strategy_data()`, passing the strategy's
+  `_indicator_suite`. This automatically resolves all indicator `data_requirements`
+  (fundamentals, macro data, etc.) without manual fetching. Runner scripts call
+  `load_backtest_data()` from wiring.py — they never fetch supplementary data directly.
 
 - **Iteration budget:** If approaching iteration limits, prioritize: (1) writing all
   code files, (2) running lint/import checks, (3) producing the output JSON. Skip code

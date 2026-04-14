@@ -71,6 +71,15 @@ these. Get them wrong and every downstream agent produces broken code.
 - **Order matters for indicators.** If indicator B depends on a column produced by indicator A, A must come first in the list. The pipeline runs sequentially.
 - **Use std_lib first.** Only create custom indicators/sizers/controls when the std_lib genuinely doesn't cover the need. Every custom component increases build complexity.
 - **Be concrete.** No "TBD", no "to be determined", no placeholder values. Every field must have a real, usable value. If the idea says "exact cutoffs for the Research Agent to optimize," pick reasonable initial defaults.
+- **Declare data requirements for indicators that read from `df.attrs`.** Custom indicators that need supplementary data (fundamentals, macro series, etc.) must declare `data_requirements` on the `IndicatorEntry`. This tells the data resolver what to fetch automatically. Available kinds:
+  - `"fundamentals"` — quarterly income statements, balance sheets, cash flow. Scope: `"per_ticker"`. No extra params needed.
+  - `"financial_ratios"` — quarterly financial ratios (PE, PB, ROE, ROA, margins, turnover, etc.). Scope: `"per_ticker"`. No extra params needed.
+  - `"ticker_meta"` — attaches the ticker string to `df.attrs["ticker"]`. Scope: `"per_ticker"`. No extra params.
+  - `"commodity"` — commodity price series. Scope: `"shared"`. Requires param: `symbol` (e.g. `"VIXUSD"` for VIX, `"CLUSD"` for crude oil, `"GCUSD"` for gold).
+  - `"economic_indicator"` — economic data series. Scope: `"shared"`. Requires param: `indicator` (e.g. `"initialClaims"`, `"CPI"`, `"GDP"`).
+  - `"government_bond_rates"` — yield curve data (m1..m6, y1..y30). Scope: `"shared"`. Requires param: `country` (e.g. `"US"`).
+  - `"economic_calendar"` — scheduled economic events. Scope: `"shared"`. Requires param: `country`. Optional param: `event` to filter by event type.
+  - Indicators that only read OHLCV columns (open/high/low/close/volume) need no data requirements.
 </critical_rules>
 
 <sandbox_reference_paths>

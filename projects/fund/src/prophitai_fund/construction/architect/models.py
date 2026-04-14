@@ -52,6 +52,14 @@ def params_to_dict(params: list["ConfigParam"]) -> dict:
 # --> Manifest output models
 # ================================
 
+class DataRequirementEntry(BaseModel):
+    """A supplementary data dependency for an indicator that reads from df.attrs."""
+    kind: str = Field(description="Data source kind: 'fundamentals', 'commodity', 'economic_indicator', 'ticker_meta'")
+    attrs_key: str = Field(description="Key in df.attrs where data is attached (e.g. 'fundamentals', 'vix', 'claims')")
+    scope: str = Field(default="per_ticker", description="'per_ticker' when data varies by ticker, 'shared' when same for all")
+    params: list[ConfigParam] = Field(default_factory=list, description="Provider-specific params (e.g. symbol='VIXUSD' for commodity)")
+
+
 class IndicatorEntry(BaseModel):
     """A single indicator in the manifest — either std_lib or custom."""
     registry_key: Optional[str] = Field(None, description="Std_lib registry key (e.g. 'atr', 'ema'). Null for custom indicators.")
@@ -64,6 +72,7 @@ class IndicatorEntry(BaseModel):
     calculation: Optional[str] = Field(None, description="Natural-language calculation description for custom indicators")
     scope: str = Field(default="shared", description="'shared' or 'strategy'")
     description: Optional[str] = Field(None, description="One-line purpose")
+    data_requirements: list[DataRequirementEntry] = Field(default_factory=list, description="Supplementary data this indicator reads from df.attrs. Only needed for indicators that access df.attrs.")
 
 
 class DerivedFeature(BaseModel):
