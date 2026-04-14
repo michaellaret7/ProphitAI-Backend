@@ -98,7 +98,7 @@ class StrategyBuilder:
 
             if cached_idea:
                 idea_text = cached_idea
-                print(f"Loading cached idea from {cached_idea}")
+                print(f"Loading cached idea from {cached_idea[:100]}...")
             else:
                 idea = self.idea_generator.run()
 
@@ -122,7 +122,7 @@ class StrategyBuilder:
             cached_manifest = _load_checkpoint("manifest")
 
             if cached_manifest:
-                print(f"Loading cached manifest from {cached_manifest}")
+                print(f"Loading cached manifest from {cached_manifest[:100]}...")
                 manifest = StrategyManifest.model_validate_json(cached_manifest)
             else:
                 strategy_architect = StrategyArchitectAgent(model=MODEL, provider=PROVIDER, sandbox_id=sandbox_id)

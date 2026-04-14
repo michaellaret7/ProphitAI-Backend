@@ -22,23 +22,14 @@ DEPLOY_SCOPED_WORKER_DESCRIPTION = """
   separate context window and returns a structured result. Only the worker's
   final answer comes back — all intermediate tool calls stay in the worker's context.
 
-  ## When to Deploy a Worker
+  Workers serve two purposes:
+  1. **Context compression** — multi-step research stays in the worker's context,
+     keeping your context clean for coding and reasoning.
+  2. **Specialization** — workers have domain-specific system prompts that make
+     them better at their job (e.g., code reviewers know what to look for).
 
-  Workers are a CONTEXT COMPRESSION mechanism. Use them when:
-  - The task requires 4+ tool calls and you only need the conclusion, not the raw data.
-  - You're running multiple independent research queries in parallel.
-  - The task involves deep, multi-step analysis whose intermediate results you won't reference later.
-
-  ## When NOT to Deploy a Worker (do it yourself instead)
-
-  - The task is 1-3 tool calls — spawning a worker has overhead. Just call the tools directly.
-  - You need the raw output for your next reasoning step (e.g., reading memory,
-    reviewing past work, fetching a data point you'll use in a decision).
-  - The task is context gathering, synthesis, or decision-making — that is YOUR job.
-  - Never deploy a worker just to avoid calling a tool yourself.
-
-  The decision heuristic: "Will I need the raw output later?" If yes → do it yourself.
-  If no, and the task is substantial → deploy a worker.
+  Your system prompt specifies which steps REQUIRE worker deployment. Follow those
+  instructions — when a step says "MANDATORY worker deployment", you must use this tool.
 
   ## Task Format
 

@@ -96,3 +96,24 @@ topic: framework_gaps
 ---
 Strategies with complex universe criteria (market cap bands, ADV thresholds, sector exclusions, SPAC/BDC exclusions, short interest checks, SBC/SGA ratios for specific sectors) cannot implement these filters in the per-ticker indicator pipeline. Always add an implementation_note documenting that a UniverseFilter class must be built in wiring.py or a separate universe builder that runs before tickers are passed to the strategy engine. The indicator pipeline only receives pre-filtered tickers.
 
+---
+date: 2026-04-14
+title: CCC/WC fundamental strategies: q2 intermediate snapshots require separate balance sheet columns
+topic: translation_patterns
+---
+Strategies computing WC momentum via sequential quarter-over-quarter CCC deltas (q0, q2, q4) need balance sheet snapshots at q0, q2, AND q4 — not just current and year-ago. The custom fundamental indicator must be specced to output accounts_receivable_q2, inventory_q2, accounts_payable_q2, plus the matching TTM denominators (revenue_ttm_q2, cogs_ttm_q2 derived from flow items q2..q5). Always spec balance sheet snapshots at every lag needed by derived_features, not just current and year-ago.
+
+---
+date: 2026-04-14
+title: FCF conversion spread exit condition — use absolute threshold not column comparison
+topic: process_mistakes
+---
+Initial draft of FCF deterioration exit condition was "fcf_spread_change_yoy < fcf_spread_q4" which is semantically wrong (compares a change value to a level value). The correct exit condition is "fcf_spread_change_yoy < 0.0" (the YoY spread change is negative, meaning spread compressed vs year-ago). Always double-check that exit conditions compare change-columns to 0 and level-columns to absolute thresholds — never mix change and level in a single inequality.
+
+---
+date: 2026-04-14
+title: UnemploymentRegimeControl pattern for macro time-series threshold counting
+topic: framework_gaps
+---
+Strategies with recession triggers based on consecutive weeks of elevated initial unemployment claims require a custom UnemploymentRegimeControl that: (1) reads an initial_claims column broadcast by MacroRegimeIndicator (weekly data interpolated to daily), (2) counts consecutive weeks where claims exceed threshold (e.g., 280K), (3) blocks new entries after N consecutive triggering weeks (e.g., 4), (4) resets counter when claims fall back below threshold for 2+ weeks. No std_lib equivalent. Implement as entry-blocker only (should_block_entry returns True, should_force_exit returns False). Pattern reusable for any macro time-series threshold trigger (ISM, NFP, etc.).
+

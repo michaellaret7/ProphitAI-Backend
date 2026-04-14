@@ -41,3 +41,10 @@ topic: tool_usage
 ---
 For multi-candidate signal exploration (testing 3-4 novel signal families before committing to one), direct tool calls are more efficient than workers. Early queries confirmed that the research database returned V/P valuation papers for broad queries; pivoting immediately to more specific angles (operating leverage + revenue acceleration) yielded actionable evidence faster than pre-specified worker queries would have. The adaptive pivot saved ~4 redundant queries. Key pattern: when the research DB repeatedly returns the same paper cluster (V/P / accruals / profitability), immediately switch to llm_web_search for more targeted academic findings.
 
+---
+date: 2026-04-14
+title: Research DB Returns V/P Papers for Broad Payout/Cash Queries — Pivot to LLM Web Search
+topic: tool_usage
+---
+When querying strategy_research or theory_research for shareholder yield, buyback anomaly, net share issuance, or cash return signals, the DB consistently returns V/P valuation papers and accruals papers instead of the target signal. For these specific signals, immediately pivot to llm_web_search with targeted academic queries (e.g., 'Pontiff Woodgate 2008 share issuance anomaly', 'Aktas Croci CCC working capital returns'). The research DB is much better suited to momentum, factor model, and volatility topics than capital structure / payout anomalies. This saved ~4 queries by pivoting early to llm_web_search for CCC/working capital evidence.
+

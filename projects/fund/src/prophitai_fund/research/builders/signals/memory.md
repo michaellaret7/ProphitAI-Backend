@@ -47,3 +47,10 @@ topic: verification_failures
 ---
 ruff is installed system-wide at /usr/local/bin/ruff, NOT in .venv/bin/. Use `ruff check file.py` directly (it's on PATH). The sandbox_write tool also auto-runs ruff. Python is at /home/user/strategies/.venv/bin/python.
 
+---
+date: 2026-04-14
+title: Explicit bool dtype for pd.Series(True/False) no-op signals
+topic: coding_patterns
+---
+When creating pass-through no-op Series in signal methods (e.g. `pd.Series(False, index=df.index)` for disabled shorts), always specify `dtype=bool` explicitly. Without it, pandas infers object dtype in some edge cases, causing downstream bool comparisons or `_coerce_signal` to behave unexpectedly. Always: `pd.Series(False, index=df.index, dtype=bool)`.
+

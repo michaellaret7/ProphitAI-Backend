@@ -89,3 +89,17 @@ topic: coding_patterns
 ---
 FcfConversionIndicator.update_last_row() must query the most recent filing where available_from <= last_idx, not blindly copy the previous row value. Blind forward-fill misses a new filing that just crossed its staleness window. Use: last_date = pd.Timestamp(last_idx).tz_localize(None).normalize(); available = fund[fund['available_from'] <= last_date]; value = available['metric'].iloc[-1] if not available.empty else NaN.
 
+---
+date: 2026-04-14
+title: Multi-quarter fundamental indicator: _check_fundamentals_valid helper pattern
+topic: coding_patterns
+---
+When building a fundamentals indicator with a fundamentals_valid flag, extract a `_check_fundamentals_valid(fund, n_avail)` helper that: (1) returns 0.0 if n_avail < MIN_QUARTERS, (2) explicitly checks that every required field is present in fund.columns (returning 0.0 if any missing), (3) checks notna().all() across the check window. Use this helper from both calculate() and update_last_row() to avoid duplicated logic and the silent bug where missing columns are skipped rather than flagged invalid. Using `if f in check_rows.columns` in the all() generator silently passes missing fields.
+
+---
+date: 2026-04-14
+title: Rolling z-score on forward-filled daily series: quarterly transition detection
+topic: coding_patterns
+---
+For z-scores computed on fundamental columns (forward-filled daily from quarterly filings), detect quarterly transitions by: (1) dropna() to remove NaN prefix, (2) round to 10 decimal places to collapse float drift, (3) `mask = rounded != rounded.shift(1); mask.iloc[0] = True` to get the first bar of each new quarterly value-block. Do NOT use `not_null != not_null.shift(1)` without rounding — float arithmetic drift can create spurious transitions on daily bars within a quarter. Then reindex back to daily with ffill.
+

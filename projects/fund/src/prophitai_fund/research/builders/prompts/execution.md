@@ -111,29 +111,40 @@ Examples of bad skills (too narrow or ephemeral):
 Follow `<continual_learning>` Phase 0: call `retrieve_memory()`, then call `load_skill()`
 to list available skills. Load any skills relevant to the current manifest before writing code.
 
-### Step 2: Research the Framework
-You have two research tools — choose based on scope:
+### Step 2: Research the Framework (MANDATORY worker deployment)
+Deploy a `codebase_researcher` worker to research the framework and templates.
+Do NOT read these files yourself — the worker reads them and returns a consolidated
+report that you code from.
 
-**Direct reads** (1-3 files, you need the raw content):
-Use `sandbox_read` to inspect specific template files or framework source.
-Read template files first to understand the exact patterns to follow.
+**Worker task must cover:**
+1. Template files for sizing, risk_controls, wiring, and runners in `strategies/template/`
+2. Framework sizer source for every sizer in the manifest's sizing chain (constructor signatures)
+3. Framework risk control source for every risk control in the manifest (constructor signatures)
+4. Engine constructors: `EventDrivenBacktestEngine`, `VectorizedBacktestEngine`, `LiveRunner`
+5. The upstream strategy class file (to understand get_sizing_hints() overrides)
 
-**Codebase researcher worker** (4+ files, multi-step exploration):
-Deploy a `codebase_researcher` worker for broad exploration. Example tasks:
-- "Read BasePositionSizer ABC, DrawdownScaledSizer, ATRRiskSizer, and PercentOfEquitySizer
-  to report exact constructor signatures, import paths, and the wrapper nesting pattern"
-- "Read RiskControl ABC, RiskEngine, StopLossExitControl, and TrailingStopExitControl
-  to report exact constructor signatures, lifecycle hooks, and import paths"
-- "Read EventDrivenBacktestEngine, VectorizedBacktestEngine, and LiveRunner constructors
-  to report exact parameter names, types, defaults, and which accept risk_controls"
+Example deployment:
+```
+deploy_scoped_worker(
+    worker_type="codebase_researcher",
+    task="""
+    ROLE: Framework researcher for the execution layer.
+    TASK: Using sandbox_id '{{sandbox_id}}', read and report on:
+      1. Template files at strategies/template/ for sizing/, risk_controls/, wiring.py, and runner scripts
+      2. Framework sizers: BasePositionSizer ABC, plus {{list sizers from manifest}} — report exact constructor kwarg names
+      3. Framework risk controls: RiskControl ABC, plus {{list controls from manifest}} — report exact constructor kwarg names and lifecycle hooks
+      4. Engine constructors: EventDrivenBacktestEngine, VectorizedBacktestEngine, LiveRunner — which accept risk_controls?
+      5. Upstream strategy class at {{signal_result.strategy.file_path}} — get_sizing_hints() override?
+    SUCCESS CRITERIA: Report includes exact constructor signatures, import paths, and which engines accept risk_controls.
+    RULES: Use sandbox_id '{{sandbox_id}}' for every tool call. Read actual source — do not guess.
+    OUTPUT FORMAT: Structured report with sections for Template Patterns, Sizer Signatures, Risk Control Signatures, Engine Signatures, and Upstream Strategy Details.
+    """,
+    plan_task_id="2"
+)
+```
 
-Include the sandbox_id in worker tasks.
-
-**Minimum reads before writing any code:**
-1. The template files for sizing, risk_controls, wiring, and runners (if they exist)
-2. The upstream strategy class file (to understand get_sizing_hints() overrides)
-3. The framework sizer source for every sizer in the manifest's sizing chain
-4. The framework risk control source for every risk control in the manifest
+After receiving the worker's report, you may use `sandbox_read` for quick targeted
+lookups if you need to verify a specific detail during coding.
 
 ### Step 3: Write Custom Sizer(s) (if needed)
 For each sizer in the manifest's `sizing` where `is_custom=true`:
@@ -480,22 +491,35 @@ via `append_memory()` and document repeatable procedures via `build_skill()` /
 You have access to `deploy_scoped_worker` with the following worker types:
 
 **codebase_researcher** — Read-only explorer with `sandbox_read`, `sandbox_glob`,
-`sandbox_grep`. Runs up to 30 iterations with a lightweight model.
+`sandbox_grep`. Runs up to 50 iterations with a lightweight model.
 
 **code_reviewer** — Code auditor with `sandbox_read`, `sandbox_glob`, `sandbox_grep`,
 `sandbox_bash`. Runs automated linters and manual review, returning a structured
-findings report. Deploy this in Step 12 (Code Review) after contract tests pass.
+findings report.
 
-### When to deploy a worker
-- Multi-file research (4+ tool calls) where you only need the conclusion
-- Exploring sizer constructors for all sizers in the sizing chain at once
-- Exploring risk control constructors for all controls in the manifest at once
-- Mapping the upstream strategy/config/suite class details from their files
+### MANDATORY worker deployments
 
-### When not to deploy (do it yourself)
-- Reading 1-3 specific files — call `sandbox_read` directly
-- You need the raw file content for your next coding step
-- Quick grep for a class name or import path
+You MUST deploy workers for these steps — do NOT do them yourself:
+
+1. **Step 2 (Research the Framework)** — Deploy a `codebase_researcher` worker.
+   The worker reads template files, framework source (sizers, risk controls, engines),
+   and upstream strategy code, then returns a consolidated research report. You use
+   that report to write code. Do NOT read framework/template files yourself with
+   `sandbox_read` — delegate the research to the worker and code from its findings.
+
+2. **Step 12 (Code Review)** — Deploy a `code_reviewer` worker. The worker runs
+   ruff, pyright, and manual code review, then returns a structured findings report.
+   Do NOT review your own code yourself.
+
+### When to use direct tools instead
+
+You still have `sandbox_read`, `sandbox_glob`, `sandbox_grep` for situations where
+you need a quick, targeted lookup during coding — for example:
+- Re-checking a single import path or constructor param mid-implementation
+- Verifying a specific line you just wrote
+- Reading an error traceback from a failed lint/test
+
+The rule: **research and review go through workers; quick mid-coding lookups go direct.**
 
 ### Worker task format
 Include `sandbox_id` in the TASK and RULES sections of every worker deployment.

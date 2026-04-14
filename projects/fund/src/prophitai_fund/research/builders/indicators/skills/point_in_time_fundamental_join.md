@@ -3,7 +3,7 @@ name: point_in_time_fundamental_join
 title: Point-in-Time Fundamental Data Join for Custom Indicators
 description: Use when a custom indicator needs to join quarterly fundamental data (FCF, earnings, etc.) into an OHLCV DataFrame with a look-ahead barrier (staleness gate).
 created: 2026-04-09
-updated: 2026-04-10
+updated: 2026-04-14
 ---
 
 # Point-in-Time Fundamental Data Join for Custom Indicators
@@ -40,20 +40,55 @@ def update_last_row(self, new_df):
     self.df = new_df
     last_idx = self.df.index[-1]
 
-    fund = self._build_fundamentals()
+    fund = self._get_ticker_fundamentals()
     if fund is None:
-        # carry forward prev value or NaN
-        ...
+        for col in _ALL_OUTPUT_COLUMNS:
+            self.df.loc[last_idx, col] = np.nan
         return self.df
 
     last_date = pd.Timestamp(last_idx).tz_localize(None).normalize()
-    available = fund[fund["available_from"] <= last_date]
-    if available.empty:
-        self.df.loc[last_idx, self.output_column] = float("nan")
-    else:
-        self.df.loc[last_idx, self.output_column] = available["metric"].iloc[-1]
+    avail = fund["available_from"].values
+    n_avail = int(np.searchsorted(avail, last_date, side="right"))
+    # ... assign columns at n_avail - 1 - lag indices ...
     return self.df
 ```
+
+## Multi-Quarter Output Pattern (q0/q2/q4 balance sheet, q0..q7 flow)
+
+For strategies outputting multiple lagged snapshots per field (like WVCCI):
+
+```python
+# For each trading bar, use np.searchsorted to find n_avail
+# Then assign: q{lag} = fund.iloc[n_avail - 1 - lag][field]
+
+for item in _BS_ITEMS:
+    for lag in [0, 2, 4]:
+        col = f"{item}_q{lag}"
+        idx = n_avail - 1 - lag
+        if 0 <= idx < len(fund):
+            val = fund.iloc[idx][item]
+            result[col][bar_i] = val if pd.notna(val) else np.nan
+```
+
+## fundamentals_valid Flag Pattern
+
+Extract a `_check_fundamentals_valid(fund, n_avail)` helper:
+```python
+def _check_fundamentals_valid(self, fund, n_avail):
+    if n_avail < _MIN_CONSECUTIVE_QUARTERS:
+        return 0.0
+    required_fields = _BS_ITEMS + _FLOW_ITEMS
+    for f in required_fields:
+        if f not in fund.columns:  # CRITICAL: missing field → 0.0
+            return 0.0
+    check_rows = fund.iloc[n_avail - _MIN_CONSECUTIVE_QUARTERS : n_avail]
+    for f in required_fields:
+        if not check_rows[f].notna().all():
+            return 0.0
+    return 1.0
+```
+Use from both `calculate()` and `update_last_row()` to avoid duplication.
+**CRITICAL**: Do NOT use `if f in check_rows.columns` inside an `all()` generator — it silently passes missing required fields instead of flagging them invalid.
 
 ## Code Template
 
@@ -66,16 +101,17 @@ def _build_fundamentals(self) -> pd.DataFrame | None:
         return None
 
     fund = fundamentals.copy()
-    # CRITICAL: normalize to tz-naive to avoid mixed-tz merge_asof failures
-    fund["date"] = pd.to_datetime(fund["date"]).dt.tz_localize(None).dt.normalize()
-    fund = fund.sort_values("date").reset_index(drop=True)
+    # Resolve ticker
+    ticker = self.df.attrs.get("ticker")
+    if ticker is not None and "ticker" in fund.columns:
+        fund = fund[fund["ticker"] == ticker]
+    if fund.empty:
+        return None
 
-    fund["metric"] = np.where(
-        fund["net_income_ttm"] > 0,
-        fund["operating_cash_flow_ttm"] / fund["net_income_ttm"],
-        np.nan,
-    )
-    fund["available_from"] = fund["date"] + pd.Timedelta(days=self.staleness_limit_days)
+    # CRITICAL: normalize to tz-naive to avoid mixed-tz merge_asof failures
+    fund["fiscal_quarter_end_date"] = pd.to_datetime(fund["fiscal_quarter_end_date"]).dt.tz_localize(None).dt.normalize()
+    fund = fund.sort_values("fiscal_quarter_end_date").reset_index(drop=True)
+    fund["available_from"] = fund["fiscal_quarter_end_date"] + pd.Timedelta(days=self.filing_lag_days)
     return fund
 
 def calculate(self) -> pd.DataFrame:
@@ -112,23 +148,21 @@ def calculate(self) -> pd.DataFrame:
 - **Return `.values`** when assigning back: `merged["metric"].values` avoids
   index-alignment surprises.
 - **ALWAYS normalize timestamps to tz-naive** on BOTH sides before merge_asof.
-  `pd.to_datetime(fund["date"]).dt.tz_localize(None).dt.normalize()` for fund dates,
-  `pd.to_datetime(self.df.index).tz_localize(None).normalize()` for trading dates.
-  Mixed tz-aware/naive comparisons crash at runtime.
 - **update_last_row must look up the latest available filing**, NOT blindly
-  forward-fill the previous row. A new filing may have crossed the staleness
-  window at the current bar. Use the `_build_fundamentals()` helper and filter
-  `fund[fund["available_from"] <= last_date]`.
+  forward-fill the previous row.
+- **_check_fundamentals_valid MUST explicitly guard missing fields**: use a for-loop
+  with `if f not in fund.columns: return 0.0`, NOT `if f in cols` in a generator.
 
 ## Confirmed Patterns
-- FcfConversionIndicator (AQM52) — uses this pattern exactly; passes smoke test
-  with 300 bars synthetic data and 8 quarterly filings.
-- `_build_fundamentals()` helper is key — called by both `calculate()` and
-  `update_last_row()`, avoiding duplication of the normalization and ratio logic.
+- FcfConversionIndicator (AQM52) — single metric output.
+- CCCFundamentalsIndicator (WVCCI) — multi-quarter output (q0..q7 flow, q0/q2/q4 BS).
+  Uses np.searchsorted on available_from array for O(log n) per-bar lookup.
+  Uses _check_fundamentals_valid helper called from both calculate() and update_last_row().
 
 ## Revision Log
 - 2026-04-09: Created after building FcfConversionIndicator for AQM52 strategy.
-- 2026-04-10: Added tz-normalization pitfall (both sides of merge_asof must be
-  tz-naive). Added correct update_last_row pattern (query latest available filing
-  rather than forward-filling prev row). Added _build_fundamentals() helper pattern.
+- 2026-04-10: Added tz-normalization pitfall. Added correct update_last_row pattern.
+- 2026-04-14: Added multi-quarter output pattern (WVCCI). Added _check_fundamentals_valid
+  helper pattern with critical missing-column guard. Added np.searchsorted approach for
+  efficient per-bar filing lookup without merge_asof (useful when output is many columns).
 

@@ -130,32 +130,36 @@ sandbox venv. Read from the installed package path:
 Follow `<continual_learning>` Phase 0: call `retrieve_memory()`, then `load_skill()`
 to list available skills. Load any skills relevant to the current manifest before writing code.
 
-### Step 2: Research the Framework
-You have two research tools — choose based on scope:
+### Step 2: Research the Framework (MANDATORY worker deployment)
+Deploy a `codebase_researcher` worker to research the framework and templates.
+Do NOT read these files yourself — the worker reads them and returns a consolidated
+report that you code from.
 
-**Direct reads** (1-3 files, you need the raw content):
-Use `sandbox_read` to inspect specific template files or framework source.
-Read the template files first to understand the exact patterns to follow.
+**Worker task must cover:**
+1. Template files: `suite.py`, `custom.py`, `custom_indicator.py` in `strategies/template/indicators/`
+2. Framework source: `BaseIndicator`, `IndicatorSpec`, `BaseIndicatorSuite`, `IndicatorRegistry`
+3. Std_lib constructor signatures for every non-custom indicator in the manifest
 
-**Codebase researcher worker** (4+ files, multi-step exploration):
-Deploy a `codebase_researcher` worker for broad exploration. Example tasks:
-- "Read BaseIndicator ABC, IndicatorSpec, BaseIndicatorSuite, and the template
-  suite.py to report the exact interfaces, required methods, and import paths"
-- "Find the std_lib indicator for {{registry_key}}, read its __init__ signature,
-  and report exact parameter names, types, and defaults"
+Example deployment:
+```
+deploy_scoped_worker(
+    worker_type="codebase_researcher",
+    task="""
+    ROLE: Framework researcher for the indicator layer.
+    TASK: Using sandbox_id '{{sandbox_id}}', read and report on:
+      1. Template files at strategies/template/indicators/ (suite.py, custom.py, custom_indicator.py)
+      2. Framework source: BaseIndicator ABC, IndicatorSpec, BaseIndicatorSuite, IndicatorRegistry
+      3. Run sandbox_grep for 'def __init__' across .venv/lib/python3.13/site-packages/prophitai_algo_trading/indicators/std_lib/ to get all constructor signatures
+    SUCCESS CRITERIA: Report includes exact class interfaces, required methods, import paths, and constructor kwarg names for every std_lib indicator.
+    RULES: Use sandbox_id '{{sandbox_id}}' for every tool call. Read actual source — do not guess.
+    OUTPUT FORMAT: Structured report with sections for Template Patterns, Framework Interfaces, and Std_lib Constructor Signatures.
+    """,
+    plan_task_id="2"
+)
+```
 
-Include the sandbox_id in worker tasks.
-
-**Minimum reads before writing any code:**
-1. `/home/user/strategies/strategies/template/indicators/suite.py` — BaseIndicatorSuite subclass pattern
-2. `/home/user/strategies/strategies/template/indicators/custom.py` — Derived features function pattern
-3. `/home/user/strategies/strategies/template/indicators/custom_indicator.py` — Custom BaseIndicator pattern
-4. The std_lib source for every non-custom indicator in the manifest — verify
-   constructor params from source, even if memory contains them. Memory informs which
-   file to read, but the source file is the authority. Run:
-   `sandbox_grep(sandbox_id, "def __init__", path="/home/user/strategies/.venv/lib/python3.13/site-packages/prophitai_algo_trading/indicators/std_lib/", include="*.py")`
-   to get all constructor signatures in a single call, then confirm each non-custom
-   indicator's kwarg names match what you pass in `IndicatorSpec.params`.
+After receiving the worker's report, you may use `sandbox_read` for quick targeted
+lookups if you need to verify a specific detail during coding.
 
 ### Step 3: Write Custom Indicator Files
 For each indicator in the manifest where `is_custom=true`:
@@ -334,21 +338,35 @@ via `append_memory()` and document repeatable procedures via `build_skill()` /
 You have access to `deploy_scoped_worker` with the following worker types:
 
 **codebase_researcher** — Read-only explorer with `sandbox_read`, `sandbox_glob`,
-`sandbox_grep`. Runs up to 30 iterations with a lightweight model.
+`sandbox_grep`. Runs up to 50 iterations with a lightweight model.
 
 **code_reviewer** — Code auditor with `sandbox_read`, `sandbox_glob`, `sandbox_grep`,
 `sandbox_bash`. Runs automated linters and manual review, returning a structured
-findings report. Deploy this in Step 9 (Code Review) after contract tests pass.
+findings report.
 
-### When to deploy a worker
-- Multi-file research (4+ tool calls) where you only need the conclusion
-- Exploring std_lib indicator constructors for multiple indicators at once
-- Mapping the template directory structure and conventions
+### MANDATORY worker deployments
 
-### When not to deploy (do it yourself)
-- Reading 1-3 specific files — call `sandbox_read` directly
-- You need the raw file content for your next coding step
-- Quick grep for a class name or import path
+You MUST deploy workers for these steps — do NOT do them yourself:
+
+1. **Step 2 (Research the Framework)** — Deploy a `codebase_researcher` worker.
+   The worker reads template files, framework source, and std_lib constructors,
+   then returns a consolidated research report. You use that report to write code.
+   Do NOT read framework/template files yourself with `sandbox_read` — delegate
+   the research to the worker and code from its findings.
+
+2. **Step 9 (Code Review)** — Deploy a `code_reviewer` worker. The worker runs
+   ruff, pyright, and manual code review, then returns a structured findings report.
+   Do NOT review your own code yourself.
+
+### When to use direct tools instead
+
+You still have `sandbox_read`, `sandbox_glob`, `sandbox_grep` for situations where
+you need a quick, targeted lookup during coding — for example:
+- Re-checking a single import path or constructor param mid-implementation
+- Verifying a specific line you just wrote
+- Reading an error traceback from a failed lint/test
+
+The rule: **research and review go through workers; quick mid-coding lookups go direct.**
 
 ### Worker task format
 Include `sandbox_id` in the TASK and RULES sections of every worker deployment.

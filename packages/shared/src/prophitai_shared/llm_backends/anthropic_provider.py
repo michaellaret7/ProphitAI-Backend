@@ -70,6 +70,7 @@ class AnthropicBackend(LLMBackend[T]):
                 tools=self.format_tools(tools) if tools else None,
                 temperature=temperature,
                 thinking={"type": "adaptive"},
+                effort="low",
                 max_tokens=21000,
             )
         )

@@ -56,3 +56,24 @@ topic: verification_failures
 ---
 In sandbox iyqhoe5gcufg6tz7ilrk9, the venv has no pip. pytest must be installed system-wide via pip3 then copied to the venv site-packages with: pip3 install pytest --target=/home/user/strategies/.venv/lib/python3.13/site-packages/. After that, python3 -m pytest works. Run test files directly with python3 -m pytest test_file.py, not via exec paths.
 
+---
+date: 2026-04-14
+title: SectorConcentrationControl: include incoming notional estimate in cap check
+topic: risk_control_patterns
+---
+When implementing sector concentration controls, the should_block_entry API only provides price (not proposed shares). Use price as a 1-share minimum notional estimate and check projected_pct = (existing_sector_notional + price) / equity > cap. Without this, a trade that pushes from 24% to 26% passes through a >= cap check. The per-name sizer cap (3.5%) ensures actual trades won't massively exceed 1-share estimates.
+
+---
+date: 2026-04-14
+title: VIX scale hint lives in candidate.raw_features, not candidate.volatility
+topic: sizing_patterns
+---
+For WVCCI (and similar strategies), the get_sizing_hints() override puts vix_scale into hints dict under key 'vix_scale'. This populates candidate.raw_features['vix_scale'] — NOT candidate.volatility, candidate.regime, or any other top-level field. Custom sizer must read from candidate.raw_features.get('vix_scale') explicitly. Confirmed by reading WVCCIStrategy.get_sizing_hints() source.
+
+---
+date: 2026-04-14
+title: Interval.from_string accepts 'daily' not '1d'
+topic: wiring_gotchas
+---
+get_price_data_df() calls Interval.from_string(interval) which only accepts: 'daily', 'hourly', '30min', '15min', '5min', '1min'. Using '1d' or '1h' raises ValueError at runtime. Always use 'daily' (not '1d') and 'hourly' (not '1h') in runner scripts, wiring.py load_backtest_data(), and config interval fields.
+
