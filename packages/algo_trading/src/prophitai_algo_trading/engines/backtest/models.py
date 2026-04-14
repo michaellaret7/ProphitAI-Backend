@@ -37,6 +37,7 @@ class SimulationArrays(NamedTuple):
     """Pre-built numpy arrays for Phase 2 simulation."""
 
     close_matrix: np.ndarray
+    ffilled_close_matrix: np.ndarray
     vol_matrix: np.ndarray
     positions_matrix: np.ndarray
     score_matrix: np.ndarray

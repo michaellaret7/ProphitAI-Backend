@@ -57,16 +57,13 @@ def build_full_candidate_arrays(
     real_candidates = np.empty(len(real_indices), dtype=object)
     real_candidates[:] = None
 
-    for idx in range(len(warm_slice)):
-        target = int(real_pos[idx])
+    signal_indices = np.nonzero(real_pos)[0]
 
-        if target == 0:
-            continue
-
+    for idx in signal_indices:
         real_candidates[idx] = strategy.build_entry_candidate(
             symbol=ticker,
             row=warm_slice.iloc[idx],
-            target_position=target,
+            target_position=int(real_pos[idx]),
             timestamp=real_indices[idx],
             score=float(real_scores[idx]),
         )
@@ -139,16 +136,33 @@ def build_simulation_arrays(signal_data: SignalData) -> SimulationArrays:
     ticker_list = list(signal_data.raw_positions.keys())
 
     close_matrix = np.column_stack([signal_data.aligned[ticker]["close"].values for ticker in ticker_list])
+
+    # Reason: forward-fill closes so the simulation loop can read latest prices
+    # directly from a row instead of maintaining an incremental dict per bar
+    ffilled_close_matrix = pd.DataFrame(close_matrix).ffill().values
+
     vol_matrix = compute_rolling_volatilities_bulk(close_matrix)
     positions_matrix = np.column_stack([signal_data.raw_positions[ticker] for ticker in ticker_list])
     score_matrix = np.column_stack([signal_data.entry_scores[ticker] for ticker in ticker_list])
     candidate_matrix = np.column_stack([signal_data.entry_candidates[ticker] for ticker in ticker_list])
 
-    return SimulationArrays(close_matrix, vol_matrix, positions_matrix, score_matrix, candidate_matrix, ticker_list)
+    return SimulationArrays(
+        close_matrix, ffilled_close_matrix, vol_matrix,
+        positions_matrix, score_matrix, candidate_matrix, ticker_list,
+    )
 
 
-def prepare_sizer_history(signal_data: SignalData, ticker_list: list[str], timestamp):
-    """Prepare close and strategy history for context-aware sizers."""
+def prepare_sizer_history(
+    signal_data: SignalData,
+    ticker_list: list[str],
+    timestamp,
+    window: int = 40,
+):
+    """Prepare close and strategy history for context-aware sizers.
+
+    Uses binary search (searchsorted) and a fixed-size window instead of
+    expanding .loc[:timestamp] slices to avoid O(n²) degradation.
+    """
     close_history: dict[str, pd.Series] = {}
     strategy_history: dict[str, pd.DataFrame] = {}
 
@@ -158,13 +172,17 @@ def prepare_sizer_history(signal_data: SignalData, ticker_list: list[str], times
         if frame is None or frame.empty:
             continue
 
-        history = frame.loc[:timestamp]
+        # Reason: searchsorted is O(log n) vs .loc[:timestamp] which is O(n)
+        idx = frame.index.searchsorted(timestamp, side="right")
 
-        if history.empty:
+        if idx == 0:
             continue
 
-        close_history[ticker] = history["close"]
-        strategy_history[ticker] = history
+        start = max(0, idx - window)
+        sliced = frame.iloc[start:idx]
+
+        close_history[ticker] = sliced["close"]
+        strategy_history[ticker] = sliced
 
     return close_history, strategy_history
 
@@ -222,20 +240,23 @@ def simulate_vectorized_portfolio(
     """Walk the unified timeline executing trades."""
 
     common_index = signal_data.common_index
+    n_tickers = len(arrays.ticker_list)
 
     if verbose:
         print(f"[Phase 2] Simulating portfolio across {len(common_index)} bars...")
 
     portfolio_tracker = PortfolioTracker(initial_capital=initial_capital, sizer=sizer, cost_model=cost_model)
     position_trackers = {ticker: PositionTracker() for ticker in arrays.ticker_list}
-    latest_prices: dict[str, float] = {}
 
     for i, timestamp in enumerate(common_index):
-        for j, ticker in enumerate(arrays.ticker_list):
-            close_val = arrays.close_matrix[i, j]
-
-            if not np.isnan(close_val):
-                latest_prices[ticker] = close_val
+        # Reason: forward-filled matrix lets us build latest_prices from a single
+        # row instead of maintaining an incremental dict across bars
+        row = arrays.ffilled_close_matrix[i]
+        latest_prices = {
+            arrays.ticker_list[j]: row[j]
+            for j in range(n_tickers)
+            if not np.isnan(row[j])
+        }
 
         exits, entries = classify_vectorized_orders(arrays, position_trackers, latest_prices, i)
 
@@ -243,12 +264,15 @@ def simulate_vectorized_portfolio(
             close_history, strategy_history = prepare_sizer_history(
                 signal_data, arrays.ticker_list, timestamp,
             )
+
             sizer.prepare_for_bar(
                 close_history, latest_prices=latest_prices, strategy_data=strategy_history, timestamp=timestamp,
             )
+
         process_exits_and_entries(
             exits, entries, position_trackers, portfolio_tracker, sizer, max_positions, timestamp,
         )
+
         portfolio_tracker.record_equity(timestamp, latest_prices)
         
     return portfolio_tracker, position_trackers, latest_prices

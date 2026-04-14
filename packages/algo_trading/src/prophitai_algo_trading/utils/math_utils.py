@@ -54,18 +54,18 @@ def compute_rolling_volatilities_bulk(
         Array of shape (n_bars, n_tickers) with rolling volatility values.
         Rows before ``window + 1`` are NaN (insufficient data for returns + std).
     """
+    from numpy.lib.stride_tricks import sliding_window_view
+
     n_bars, n_tickers = close_matrix.shape
     vol_matrix = np.full((n_bars, n_tickers), np.nan)
 
     # Reason: compute returns matrix once (n_bars - 1, n_tickers)
-    with np.errstate(divide='ignore', invalid='ignore'):
+    with np.errstate(divide="ignore", invalid="ignore"):
         returns = np.diff(close_matrix, axis=0) / close_matrix[:-1]
 
-    # Reason: rolling std over the returns matrix, row by row
-    for i in range(window, n_bars):
-        # returns[i-1] corresponds to bar i (return from bar i-1 to bar i)
-        # So returns[i-window:i] gives the last `window` returns ending at bar i
-        window_returns = returns[i - window:i]
-        vol_matrix[i] = np.nanstd(window_returns, axis=0, ddof=1)
+    # Reason: sliding_window_view creates a zero-copy (n_returns - window + 1, n_tickers, window)
+    # view, letting np.nanstd vectorize across all windows at once instead of looping per bar
+    windowed = sliding_window_view(returns, window_shape=window, axis=0)
+    vol_matrix[window:n_bars] = np.nanstd(windowed, axis=2, ddof=1)
 
     return vol_matrix
