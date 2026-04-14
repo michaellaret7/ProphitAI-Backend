@@ -67,7 +67,7 @@ Scan for tokens that add zero information:
 - Examples must be in `<example>` tags, not mixed inline with instructions.
 
 **Cross-reference gold standards**:
-- Compare structure against the idea generator prompt (`projects/fund/src/prophitai_fund/research/builders/prompts/system.md`) and `base.py` prompt.
+- Compare structure against the idea generator prompt (`projects/fund/src/prophitai_fund/construction/builders/prompts/system.md`) and `base.py` prompt.
 
 ### 3) Specificity and Actionability (Weight: 15%)
 

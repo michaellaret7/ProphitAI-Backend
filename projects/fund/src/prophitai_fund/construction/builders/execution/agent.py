@@ -16,18 +16,18 @@ from prophitai_atlas.models import PrintMode, AgentResponse
 from prophitai_atlas.models.callbacks import ChatCallback, NoOpChatCallback
 from prophitai_shared.time_utils import get_current_utc_time
 
-from prophitai_fund.research.builders.prompts.compose import compose_builder_prompt
+from prophitai_fund.construction.builders.prompts.compose import compose_builder_prompt
 
 from prophitai_atlas.tools.base.worker_agent.deploy_scoped import (
     DEPLOY_SCOPED_WORKER_TOOL,
     deploy_scoped_worker,
 )
 
-from prophitai_fund.research.architect.models import StrategyManifest
-from prophitai_fund.research.builders.indicators.models import IndicatorBuildResult
-from prophitai_fund.research.builders.signals.models import SignalStrategyBuildResult
-from prophitai_fund.research.builders.execution.models import ExecutionLayerBuildResult
-from prophitai_fund.research.builders.execution.tool_registry import EXECUTION_LAYER_BUILDER_TOOLS
+from prophitai_fund.construction.architect.models import StrategyManifest
+from prophitai_fund.construction.builders.indicators.models import IndicatorBuildResult
+from prophitai_fund.construction.builders.signals.models import SignalStrategyBuildResult
+from prophitai_fund.construction.builders.execution.models import ExecutionLayerBuildResult
+from prophitai_fund.construction.builders.execution.tool_registry import EXECUTION_LAYER_BUILDER_TOOLS
 from prophitai_fund.tools import append_memory, build_skill, edit_skill, load_skill, retrieve_memory
 from prophitai_fund.tools.worker_registry import WORKERS
 

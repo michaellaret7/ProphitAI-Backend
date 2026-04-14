@@ -3,13 +3,13 @@ import shutil
 from pathlib import Path
 
 from prophitai_fund.idea_generation.agent import IdeaGeneratorAgent
-from prophitai_fund.research.architect.agent import StrategyArchitectAgent
-from prophitai_fund.research.architect.models import StrategyManifest
-from prophitai_fund.research.builders.indicators import IndicatorBuilderAgent
-from prophitai_fund.research.builders.indicators.models import IndicatorBuildResult
-from prophitai_fund.research.builders.signals import SignalStrategyBuilderAgent
-from prophitai_fund.research.builders.signals.models import SignalStrategyBuildResult
-from prophitai_fund.research.builders.execution import ExecutionLayerBuilderAgent
+from prophitai_fund.construction.architect.agent import StrategyArchitectAgent
+from prophitai_fund.construction.architect.models import StrategyManifest
+from prophitai_fund.construction.builders.indicators import IndicatorBuilderAgent
+from prophitai_fund.construction.builders.indicators.models import IndicatorBuildResult
+from prophitai_fund.construction.builders.signals import SignalStrategyBuilderAgent
+from prophitai_fund.construction.builders.signals.models import SignalStrategyBuildResult
+from prophitai_fund.construction.builders.execution import ExecutionLayerBuilderAgent
 from prophitai_tools.sandbox.client import create_sandbox, get_sandbox, REPO_PATH
 from prophitai_tools.sandbox.lifecycle import close_sandbox, setup_repo
 from prophitai_tools.sandbox.scaffolding import scaffold_strategy

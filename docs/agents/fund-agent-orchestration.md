@@ -26,8 +26,8 @@
 
 - Owns manifest generation only. It should not write strategy code.
 - Files:
-  - `projects/fund/src/prophitai_fund/researcher/architect/agent.py`
-  - `projects/fund/src/prophitai_fund/researcher/architect/models.py`
+  - `projects/fund/src/prophitai_fund/construction/architect/agent.py`
+  - `projects/fund/src/prophitai_fund/construction/architect/models.py`
 
 ### Indicator Builder
 

@@ -3,7 +3,7 @@
 from prophitai_atlas.utils.gpt_parser import parse_with_gpt
 from prophitai_tools.sandbox.client import get_sandbox, REPO_PATH
 
-from prophitai_fund.research.architect.models import StrategyManifest
+from prophitai_fund.construction.architect.models import StrategyManifest
 
 
 # ================================

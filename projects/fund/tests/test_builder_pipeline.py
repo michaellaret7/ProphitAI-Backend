@@ -12,10 +12,10 @@ from prophitai_tools.sandbox.client import create_sandbox, remove_sandbox, get_s
 from prophitai_tools.sandbox.lifecycle import setup_repo
 from prophitai_tools.sandbox.scaffolding import scaffold_strategy
 
-from prophitai_fund.research.builders.indicators import IndicatorBuilderAgent, IndicatorBuildResult
-from prophitai_fund.research.builders.signals import SignalStrategyBuilderAgent, SignalStrategyBuildResult
-from prophitai_fund.research.builders.execution import ExecutionLayerBuilderAgent, ExecutionLayerBuildResult
-from prophitai_fund.research.architect.models import (
+from prophitai_fund.construction.builders.indicators import IndicatorBuilderAgent, IndicatorBuildResult
+from prophitai_fund.construction.builders.signals import SignalStrategyBuilderAgent, SignalStrategyBuildResult
+from prophitai_fund.construction.builders.execution import ExecutionLayerBuilderAgent, ExecutionLayerBuildResult
+from prophitai_fund.construction.architect.models import (
     StrategyManifest,
     IndicatorEntry,
     DerivedFeature,

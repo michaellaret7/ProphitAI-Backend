@@ -15,8 +15,8 @@ from prophitai_atlas.models import PrintMode, AgentResponse
 from prophitai_atlas.models.callbacks import ChatCallback, NoOpChatCallback
 from prophitai_shared.time_utils import get_current_utc_time
 
-from prophitai_fund.research.architect.helpers import read_manifest_from_sandbox
-from prophitai_fund.research.architect.tool_registry import ARCHITECT_TOOLS
+from prophitai_fund.construction.architect.helpers import read_manifest_from_sandbox
+from prophitai_fund.construction.architect.tool_registry import ARCHITECT_TOOLS
 from prophitai_fund.tools import append_memory, retrieve_memory
 
 

@@ -6,7 +6,7 @@ parser to extract it into a validated StrategyManifest instance.
 """
 
 from prophitai_atlas.utils.gpt_parser import parse_with_gpt
-from prophitai_fund.research.architect.models import StrategyManifest
+from prophitai_fund.construction.architect.models import StrategyManifest
 
 SAMPLE_MANIFEST_TEXT = """
 Here is the complete Strategy Manifest for the Order-Flow Momentum strategy on 15-minute bars:
