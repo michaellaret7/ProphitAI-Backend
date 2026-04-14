@@ -40,17 +40,9 @@ def inject_plan_tasks(base_prompt: str, plan: Plan) -> str:
 
 ## Your Plan
 
-A structured plan has been created for this task. You are an ACTIVE PARTICIPANT —
-you call tools directly, do work yourself, and only delegate to workers when it pays off.
-
-For each task, decide how to execute it:
-- **Do it yourself** (default): If the task is 1-3 tool calls, if you need the raw output
-  for your next step, or if it involves context gathering (memory, past work, notes).
-  Call the tools directly, then IMMEDIATELY mark the task complete with update_plan
-  before starting the next task. Never batch update_plan calls.
-- **Deploy a worker**: Only when the task requires deep multi-step research (4+ tool calls)
-  and you only need the conclusion, not the raw data. Workers run in a separate context —
-  their intermediate work is discarded, only the final answer comes back.
+A structured plan has been created for this task. You have access to `deploy_scoped_worker`
+to delegate tasks to worker agents. Use your judgment — delegate when it makes sense,
+do it yourself when it doesn't.
 
 **CRITICAL: Mark each task complete with `update_plan(task_id)` as soon as it finishes —
 do NOT accumulate multiple tasks and mark them all at once.**
@@ -85,17 +77,9 @@ def inject_plan_tasks_blocks(base_blocks: list[dict[str, Any]], plan: Plan) -> l
             "type": "text",
             "text": f"""## Your Plan
 
-A structured plan has been created for this task. You are an ACTIVE PARTICIPANT —
-you call tools directly, do work yourself, and only delegate to workers when it pays off.
-
-For each task, decide how to execute it:
-- **Do it yourself** (default): If the task is 1-3 tool calls, if you need the raw output
-  for your next step, or if it involves context gathering (memory, past work, notes).
-  Call the tools directly, then IMMEDIATELY mark the task complete with update_plan
-  before starting the next task. Never batch update_plan calls.
-- **Deploy a worker**: Only when the task requires deep multi-step research (4+ tool calls)
-  and you only need the conclusion, not the raw data. Workers run in a separate context —
-  their intermediate work is discarded, only the final answer comes back.
+A structured plan has been created for this task. You have access to `deploy_scoped_worker`
+to delegate tasks to worker agents. Use your judgment — delegate when it makes sense,
+do it yourself when it doesn't.
 
 **CRITICAL: Mark each task complete with `update_plan(task_id)` as soon as it finishes —
 do NOT accumulate multiple tasks and mark them all at once.**

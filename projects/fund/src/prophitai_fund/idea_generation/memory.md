@@ -34,3 +34,10 @@ topic: tool_usage
 ---
 For fundamentals-based quarterly strategies with 3-4 candidate signals, doing 8-10 direct strategy_research + theory_research + macro_research_search + llm_web_search calls sequentially (without workers) is efficient and allows dynamic query pivoting based on early results. Workers are better when 6+ queries must be pre-specified before any results arrive. When first 2-3 queries confirm a direction strongly, direct calls let you immediately follow up with targeted disconfirming queries — workers cannot do this adaptively.
 
+---
+date: 2026-04-13
+title: Direct Tool Calls Adaptive vs. Workers for Signal Selection Research
+topic: tool_usage
+---
+For multi-candidate signal exploration (testing 3-4 novel signal families before committing to one), direct tool calls are more efficient than workers. Early queries confirmed that the research database returned V/P valuation papers for broad queries; pivoting immediately to more specific angles (operating leverage + revenue acceleration) yielded actionable evidence faster than pre-specified worker queries would have. The adaptive pivot saved ~4 redundant queries. Key pattern: when the research DB repeatedly returns the same paper cluster (V/P / accruals / profitability), immediately switch to llm_web_search for more targeted academic findings.
+

@@ -132,8 +132,66 @@ packages/algo_trading/src/prophitai_algo_trading/execution/risk_controls/
 </sandbox_reference_paths>
 
 <output_format>
-Your final answer must be a valid `StrategyManifest` JSON object. The system will parse it
-automatically using the Pydantic model. Ensure:
+You build the manifest **incrementally** by writing JSON sections to sandbox files, then
+assembling them into a single MANIFEST.json. This prevents output-size failures.
+
+### Step-by-step output process
+
+**1. Write each section as a separate JSON file** using `sandbox_write`:
+
+```
+{strategy_dir}/manifest_parts/metadata.json      # strategy_name, strategy_id, category, timeframe, direction, holding_period, expected_holding_bars, description, core_edge, mechanism, regime_favorable, regime_unfavorable, input_columns, lookback_bars
+{strategy_dir}/manifest_parts/indicators.json     # indicators array + derived_features array
+{strategy_dir}/manifest_parts/signals.json        # signals object
+{strategy_dir}/manifest_parts/execution.json      # sizing object + risk_controls array
+{strategy_dir}/manifest_parts/strategy_class.json # strategy_class object + config_defaults object + implementation_notes array
+```
+
+Where `{strategy_dir}` is the development strategy directory that already exists in the sandbox
+(e.g. `/home/user/strategies/strategies/development/{strategy_id}/`). Use `sandbox_glob` to
+find it if needed.
+
+Each file must contain valid JSON. Write one section, verify it mentally, then move to the next.
+
+**2. Assemble the final manifest** by writing a single `MANIFEST.json` to the strategy root:
+
+After all 5 section files are written, read them back with `sandbox_read`, merge them into a
+single JSON object, and write the complete manifest to:
+```
+{strategy_dir}/MANIFEST.json
+```
+
+This final file must be a valid `StrategyManifest` JSON object.
+
+**3. Your final text answer** should be a short confirmation message like:
+```
+Manifest written to {strategy_dir}/MANIFEST.json
+```
+
+The system will read MANIFEST.json from the sandbox automatically — do NOT paste the full
+JSON into your text response.
+
+### EXACT field names (Pydantic schema — use these EXACTLY)
+
+**IndicatorEntry:** `registry_key`, `class_name`, `is_custom`, `file`, `params`, `input_columns`, `output_columns`, `calculation`, `scope`, `description`
+**DerivedFeature:** `column_name`, `depends_on`, `logic` (string description, NOT an object)
+**SignalSpec:** `class_name`, `required_columns`, `enrich_columns`, `enrich_logic`, `long_entry`, `long_exit`, `short_entry`, `short_exit`, `scoring_method`
+**SignalCondition:** `conditions` (array of **strings**, NOT objects), `primitives_used`
+**SizingSpec:** `chain_description`, `base_sizer`, `wrapper`, `custom_outer`
+**SizerEntry:** `class_name`, `is_custom`, `params`, `description`
+**RiskControlEntry:** `class_name`, `is_custom`, `params`, `rationale`
+**StrategyClassSpec:** `class_name`, `min_bars_required`, `min_bars_rationale`, `sizing_hints`
+**ConfigDefaults:** `strategy`, `sizing`, `risk`, `backtest`, `live` (each is an array of ConfigParam)
+**ImplementationNote:** `topic`, `description` (object with 2 fields, NOT a plain string)
+
+**Common mistakes to avoid:**
+- Do NOT use `name` or `class` — the field is always `class_name`
+- `conditions` is `["composite_score >= 0.60", "fcr_raw >= 0.25"]` — plain strings, NOT objects
+- `implementation_notes` is `[{"topic": "...", "description": "..."}]` — NOT plain strings
+- `regime_favorable` / `regime_unfavorable` are arrays of strings, NOT a single string
+- `config_defaults` is an object with 5 keys (strategy/sizing/risk/backtest/live), NOT an array
+
+### Validation rules for all section files
 
 1. Every field has a concrete value — no nulls where a value is required
 2. `indicators` list is ordered by dependency (if B depends on A's output, A comes first)

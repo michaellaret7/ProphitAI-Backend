@@ -276,12 +276,12 @@ Run verification checks on every file you wrote:
 3. **Column cross-check** — run programmatically via `sandbox_bash`:
    ```
    python -c "
-   required = {<required_columns tuple elements>}
-   available = {<indicator_result.all_output_columns>}
-   ohlcv = {'open','high','low','close','volume'}
-   enrich = {<enrich_columns>}
+   required = {{<required_columns tuple elements>}}
+   available = {{<indicator_result.all_output_columns>}}
+   ohlcv = {{'open','high','low','close','volume'}}
+   enrich = {{<enrich_columns>}}
    missing = sorted(required - available - ohlcv - enrich)
-   assert not missing, f'MISSING: {missing}'
+   assert not missing, f'MISSING: {{missing}}'
    print('Column cross-check passed')
    "
    ```
