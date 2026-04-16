@@ -15,15 +15,53 @@ from prophitai_tools.screener.equity_schema import (
 # --> Helper funcs
 # ================================
 
-def _convert_lists_to_tuples(kwargs: dict) -> dict:
-    """Convert list values to tuples for range parameters (LLM sends JSON arrays)."""
-    converted = {}
+# Classification parameters are lists of enum strings, not ranges.
+LIST_PARAMS = frozenset({'sectors', 'industries', 'sub_industries'})
+
+
+def _validate_and_convert(kwargs: dict) -> tuple[dict, str | None]:
+    """Validate parameter shapes and convert ranges to tuples.
+
+    Classification params (LIST_PARAMS) must be lists of strings.
+    All other params must be 2-element ranges [min, max] where each is
+    a number or null.
+
+    Returns:
+        (converted_kwargs, None) on success, ({}, error_message) on validation failure.
+    """
+    converted: dict = {}
+
     for key, value in kwargs.items():
-        if isinstance(value, list) and len(value) == 2:
-            converted[key] = tuple(value)
-        else:
+        if value is None:
+            continue
+
+        if key in LIST_PARAMS:
+            if not isinstance(value, list):
+                return {}, f"Parameter '{key}' must be a list of strings, got {type(value).__name__}"
             converted[key] = value
-    return converted
+            continue
+
+        # Range parameter — must be [min, max] with numbers or null
+        if not isinstance(value, list):
+            return {}, (
+                f"Parameter '{key}' must be a [min, max] array, got {type(value).__name__}. "
+                f"Example: {key}=[10, 30] or {key}=[null, 30]"
+            )
+        if len(value) != 2:
+            return {}, (
+                f"Parameter '{key}' must be a 2-element [min, max] array, got {len(value)} element(s). "
+                f"Example: {key}=[10, 30]"
+            )
+        for v in value:
+            if v is not None and not isinstance(v, (int, float)):
+                return {}, (
+                    f"Parameter '{key}' range values must be numbers or null, "
+                    f"got {type(v).__name__}: {v!r}"
+                )
+
+        converted[key] = tuple(value)
+
+    return converted, None
 
 
 # ================================
@@ -45,12 +83,19 @@ def equity_screener(**kwargs) -> str:
     Examples:
         equity_screener(pe_ratio_ttm=[None, 15], dividend_yield_ttm=[0.03, None])
         >>> {"success": True, "data": "- ticker: KO\\n  ..."}
-
-    Raises:
-        Exception: If query execution fails
     """
-    converted_kwargs = _convert_lists_to_tuples(kwargs)
-    results, error = screen_equities(**converted_kwargs)
+    converted_kwargs, err = _validate_and_convert(kwargs)
+    if err is not None:
+        return error_response(err)
+
+    try:
+        results, error = screen_equities(**converted_kwargs)
+    except TypeError as e:
+        # Reason: unknown kwargs from the LLM surface as TypeError from _build_query
+        msg = str(e)
+        if 'unexpected keyword argument' in msg:
+            return error_response(f"Unknown screener parameter: {msg}")
+        raise
 
     if error is not None:
         return error_response(error)

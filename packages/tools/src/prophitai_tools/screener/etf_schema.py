@@ -95,7 +95,15 @@ ETF_SCREENER_DESCRIPTION = (
     "  - Performance: ann_ret, ann_vol, information_ratio\n"
     "  - Risk: beta, alpha\n"
     "  - Income: dividend_yield_ttm\n"
-    "  - Size: market_cap, dollar_volume\n\n"
+    "  - Size: market_cap, dollar_volume\n"
+    "  - QUANT (daily-frequency metrics for algo strategy universe selection):\n"
+    "      * Volatility: atr_pct, bb_width, vol_regime_pctile, yang_zhang_vol, vol_ratio_short_long\n"
+    "      * Momentum quality: momentum_12m_1m_skip, risk_adj_momentum, rsi_14d, tsmom\n"
+    "      * Mean-reversion: hurst_exponent (<0.5=reverting, >0.5=trending), autocorrelation_1d\n"
+    "      * Trend strength: adx_14d (<20 no trend, >25 trending)\n"
+    "      * Risk/Performance: max_drawdown_1y, sharpe_ratio (rf-adjusted, distinct from information_ratio), sortino_ratio, cvar_95\n"
+    "      * Distribution: return_skewness, return_kurtosis, positive_return_ratio\n"
+    "      * Return quality: equity_curve_r2\n\n"
     "**NOTES:**\n"
     "  - All ETFs must have price >= $5 (penny ETFs excluded)\n"
     "  - All parameters are optional - use only the filters you need\n"
@@ -169,6 +177,37 @@ ETF_SCREENER_PARAMETERS = {
         "dollar_volume": _range_param(
             "Average daily dollar trading volume (price x volume)."
         ),
+        # ============================================================
+        # QUANT SCREENER — 20 daily-frequency metrics for algo-strategy
+        # universe selection.
+        # ============================================================
+        # Quant - Volatility
+        "atr_pct": _range_param("ATR(14) / close. Normalized volatility comparable across price levels."),
+        "bb_width": _range_param("Bollinger Bandwidth (20, 2 stds). Low = squeeze, high = expansion."),
+        "vol_regime_pctile": _range_param("Percentile rank (0-1) of current 20d vol within 252d history."),
+        "yang_zhang_vol": _range_param("Yang-Zhang 20d annualized vol (OHLC estimator, handles gaps)."),
+        "vol_ratio_short_long": _range_param("20d vol / 60d vol. >1 = expanding, <1 = compressing."),
+        # Quant - Momentum quality
+        "momentum_12m_1m_skip": _range_param("Academic 12-1 momentum: 12-month return skipping last 21d."),
+        "risk_adj_momentum": _range_param("AQR-style risk-adjusted momentum."),
+        "rsi_14d": _range_param("RSI(14) last value (0-100)."),
+        "tsmom": _range_param("Time-series momentum signal."),
+        # Quant - Mean-reversion
+        "hurst_exponent": _range_param("Hurst on log-returns. <0.5=reverting, >0.5=trending."),
+        "autocorrelation_1d": _range_param("Lag-1 autocorrelation of daily returns over 252d."),
+        # Quant - Trend
+        "adx_14d": _range_param("ADX(14). <20 no trend, 25-40 established, >40 strong."),
+        # Quant - Risk & performance
+        "max_drawdown_1y": _range_param("Max drawdown over trailing 252d (decimal, negative)."),
+        "sharpe_ratio": _range_param("Rf-adjusted Sharpe. Distinct from information_ratio (no rf)."),
+        "sortino_ratio": _range_param("Downside-risk-adjusted return."),
+        "cvar_95": _range_param("Mean of worst 5% daily returns (decimal, negative). Tail risk."),
+        # Quant - Distribution
+        "return_skewness": _range_param("Skewness of daily returns (252d)."),
+        "return_kurtosis": _range_param("Excess kurtosis of daily returns (252d)."),
+        "positive_return_ratio": _range_param("% of days with positive returns (0-1)."),
+        # Quant - Return quality
+        "equity_curve_r2": _range_param("R^2 of cumulative returns vs time (252d). Smooth curve signal."),
     },
     "additionalProperties": False,
 }
