@@ -2,7 +2,7 @@
 
 from typing import List, Optional
 
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 from sqlalchemy import or_
 
 from prophitai_data.db.config import MarketSession
@@ -27,6 +27,8 @@ DOMAIN_FILTERS = {'industries', 'sub_industries'}
 # ================================
 
 class ETFScreenerResult(BaseModel):
+    model_config = ConfigDict(extra='allow')
+
     ticker: str
     industry: Optional[str] = None
     sub_industry: Optional[str] = None
@@ -40,6 +42,14 @@ class ETFScreenerResult(BaseModel):
     market_cap: Optional[float] = None
     dollar_volume: Optional[float] = None
     dividend_yield_ttm: Optional[float] = None
+
+    # Quant screener — key fields surfaced by default
+    hurst_exponent: Optional[float] = None
+    adx_14d: Optional[float] = None
+    atr_pct: Optional[float] = None
+    momentum_12m_1m_skip: Optional[float] = None
+    max_drawdown_1y: Optional[float] = None
+    sharpe_ratio: Optional[float] = None
 
 
 # ================================
@@ -61,6 +71,36 @@ def _build_query(
     beta: tuple[float | None, float | None] | None = None,
     alpha: tuple[float | None, float | None] | None = None,
     dividend_yield_ttm: tuple[float | None, float | None] | None = None,
+    # ================================================================
+    # Quant screener filters (20 columns)
+    # ================================================================
+    # Volatility
+    atr_pct: tuple[float | None, float | None] | None = None,
+    bb_width: tuple[float | None, float | None] | None = None,
+    vol_regime_pctile: tuple[float | None, float | None] | None = None,
+    yang_zhang_vol: tuple[float | None, float | None] | None = None,
+    vol_ratio_short_long: tuple[float | None, float | None] | None = None,
+    # Momentum quality
+    momentum_12m_1m_skip: tuple[float | None, float | None] | None = None,
+    risk_adj_momentum: tuple[float | None, float | None] | None = None,
+    rsi_14d: tuple[float | None, float | None] | None = None,
+    tsmom: tuple[float | None, float | None] | None = None,
+    # Mean-reversion
+    hurst_exponent: tuple[float | None, float | None] | None = None,
+    autocorrelation_1d: tuple[float | None, float | None] | None = None,
+    # Trend
+    adx_14d: tuple[float | None, float | None] | None = None,
+    # Risk & performance
+    max_drawdown_1y: tuple[float | None, float | None] | None = None,
+    sharpe_ratio: tuple[float | None, float | None] | None = None,
+    sortino_ratio: tuple[float | None, float | None] | None = None,
+    cvar_95: tuple[float | None, float | None] | None = None,
+    # Distribution
+    return_skewness: tuple[float | None, float | None] | None = None,
+    return_kurtosis: tuple[float | None, float | None] | None = None,
+    positive_return_ratio: tuple[float | None, float | None] | None = None,
+    # Return quality
+    equity_curve_r2: tuple[float | None, float | None] | None = None,
 ):
     """Build a screener query with optional filters from Ticker and ETFScreener tables."""
 

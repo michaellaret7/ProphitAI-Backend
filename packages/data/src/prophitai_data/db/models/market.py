@@ -694,6 +694,82 @@ class EquityScreener(MarketBase):
     inventory_turnover_ttm = Column(Float)
     asset_turnover_ttm = Column(Float)
 
+    # =========================================================================
+    # QUANT SCREENER COLUMNS — daily-frequency metrics for strategy universe selection
+    # =========================================================================
+
+    # Quant — Liquidity (4)
+    avg_dollar_volume_20d = Column(Float, index=True)
+    amihud_illiquidity = Column(Float)
+    dollar_volume_consistency = Column(Float)
+    relative_volume_20d = Column(Float)
+
+    # Quant — Volatility (6)
+    atr_14d = Column(Float)
+    atr_pct = Column(Float, index=True)
+    bb_width = Column(Float)
+    vol_regime_pctile = Column(Float)
+    yang_zhang_vol = Column(Float)
+    vol_ratio_short_long = Column(Float)
+
+    # Quant — Momentum Quality (6)
+    momentum_12m_1m_skip = Column(Float, index=True)
+    risk_adj_momentum = Column(Float)
+    rsi_14d = Column(Float)
+    tsmom = Column(Float)
+    momentum_acceleration = Column(Float)
+    frog_in_pan = Column(Float)
+
+    # Quant — Mean-Reversion (3)
+    hurst_exponent = Column(Float, index=True)
+    autocorrelation_1d = Column(Float)
+    ou_half_life_logret = Column(Float)
+
+    # Quant — Trend (1)
+    adx_14d = Column(Float, index=True)
+
+    # Quant — Risk & Performance (10)
+    max_drawdown_1y = Column(Float, index=True)
+    max_drawdown_duration_days = Column(Float)
+    calmar_ratio = Column(Float)
+    sharpe_ratio = Column(Float, index=True)
+    sortino_ratio = Column(Float)
+    omega_ratio = Column(Float)
+    cvar_95 = Column(Float)
+    up_capture_vs_spy = Column(Float)
+    down_capture_vs_spy = Column(Float)
+    beta_stability = Column(Float)
+
+    # Quant — Distribution (4)
+    return_skewness = Column(Float)
+    return_kurtosis = Column(Float)
+    positive_return_ratio = Column(Float)
+    gain_loss_ratio = Column(Float)
+
+    # Quant — Volume-Based (2)
+    obv_slope_60d = Column(Float)
+    vwap_distance_pct = Column(Float)
+
+    # Quant — Cross-Sectional / Relative (4)
+    corr_to_spy_60d = Column(Float, index=True)
+    corr_to_sector_60d = Column(Float)
+    sector_relative_momentum_6m = Column(Float)
+    sector_relative_vol = Column(Float)
+
+    # Quant — Technical Structure (5)
+    dist_from_52w_high_pct = Column(Float)
+    dist_from_52w_low_pct = Column(Float)
+    price_vs_sma200_pct = Column(Float)
+    price_vs_sma50_pct = Column(Float)
+    donchian_width_pct = Column(Float)
+
+    # Quant — Microstructure (2)
+    zero_return_days_pct = Column(Float)
+    roll_spread_estimate = Column(Float)
+
+    # Quant — Return Quality (1)
+    equity_curve_r2 = Column(Float)
+
     # Relationship
     ticker = relationship('Ticker', back_populates='equity_screener')
 
@@ -732,6 +808,44 @@ class ETFScreener(MarketBase):
     # Size metrics
     market_cap = Column(Numeric)
     dollar_volume = Column(Numeric)
+
+    # =========================================================================
+    # QUANT SCREENER COLUMNS — daily-frequency metrics for strategy universe selection
+    # =========================================================================
+
+    # Volatility
+    atr_pct = Column(Float, index=True)
+    bb_width = Column(Float)
+    vol_regime_pctile = Column(Float)
+    yang_zhang_vol = Column(Float)
+    vol_ratio_short_long = Column(Float)
+
+    # Momentum Quality
+    momentum_12m_1m_skip = Column(Float, index=True)
+    risk_adj_momentum = Column(Float)
+    rsi_14d = Column(Float)
+    tsmom = Column(Float)
+
+    # Mean-Reversion
+    hurst_exponent = Column(Float, index=True)
+    autocorrelation_1d = Column(Float)
+
+    # Trend
+    adx_14d = Column(Float, index=True)
+
+    # Risk & Performance
+    max_drawdown_1y = Column(Float, index=True)
+    sharpe_ratio = Column(Float, index=True)
+    sortino_ratio = Column(Float)
+    cvar_95 = Column(Float)
+
+    # Distribution
+    return_skewness = Column(Float)
+    return_kurtosis = Column(Float)
+    positive_return_ratio = Column(Float)
+
+    # Return Quality
+    equity_curve_r2 = Column(Float)
 
     # Relationship
     ticker = relationship('Ticker', back_populates='etf_screener')

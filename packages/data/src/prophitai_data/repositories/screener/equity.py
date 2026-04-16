@@ -38,6 +38,16 @@ class EquityScreenerResult(BaseModel):
     anualized_volatility: Optional[float] = None
     anualized_return: Optional[float] = None
 
+    # Quant screener — key fields surfaced by default
+    hurst_exponent: Optional[float] = None
+    adx_14d: Optional[float] = None
+    atr_pct: Optional[float] = None
+    momentum_12m_1m_skip: Optional[float] = None
+    max_drawdown_1y: Optional[float] = None
+    sharpe_ratio: Optional[float] = None
+    avg_dollar_volume_20d: Optional[float] = None
+    corr_to_spy_60d: Optional[float] = None
+
 
 # ================================
 # --> Helper funcs
@@ -114,6 +124,70 @@ def _build_query(
     payables_turnover_ttm: tuple[float | None, float | None] | None = None,
     inventory_turnover_ttm: tuple[float | None, float | None] | None = None,
     asset_turnover_ttm: tuple[float | None, float | None] | None = None,
+    # ================================================================
+    # Quant screener filters (48 columns) — daily-frequency metrics
+    # for strategy universe selection.
+    # ================================================================
+    # Liquidity
+    avg_dollar_volume_20d: tuple[float | None, float | None] | None = None,
+    amihud_illiquidity: tuple[float | None, float | None] | None = None,
+    dollar_volume_consistency: tuple[float | None, float | None] | None = None,
+    relative_volume_20d: tuple[float | None, float | None] | None = None,
+    # Volatility
+    atr_14d: tuple[float | None, float | None] | None = None,
+    atr_pct: tuple[float | None, float | None] | None = None,
+    bb_width: tuple[float | None, float | None] | None = None,
+    vol_regime_pctile: tuple[float | None, float | None] | None = None,
+    yang_zhang_vol: tuple[float | None, float | None] | None = None,
+    vol_ratio_short_long: tuple[float | None, float | None] | None = None,
+    # Momentum quality
+    momentum_12m_1m_skip: tuple[float | None, float | None] | None = None,
+    risk_adj_momentum: tuple[float | None, float | None] | None = None,
+    rsi_14d: tuple[float | None, float | None] | None = None,
+    tsmom: tuple[float | None, float | None] | None = None,
+    momentum_acceleration: tuple[float | None, float | None] | None = None,
+    frog_in_pan: tuple[float | None, float | None] | None = None,
+    # Mean-reversion
+    hurst_exponent: tuple[float | None, float | None] | None = None,
+    autocorrelation_1d: tuple[float | None, float | None] | None = None,
+    ou_half_life_logret: tuple[float | None, float | None] | None = None,
+    # Trend
+    adx_14d: tuple[float | None, float | None] | None = None,
+    # Risk & performance
+    max_drawdown_1y: tuple[float | None, float | None] | None = None,
+    max_drawdown_duration_days: tuple[float | None, float | None] | None = None,
+    calmar_ratio: tuple[float | None, float | None] | None = None,
+    sharpe_ratio: tuple[float | None, float | None] | None = None,
+    sortino_ratio: tuple[float | None, float | None] | None = None,
+    omega_ratio: tuple[float | None, float | None] | None = None,
+    cvar_95: tuple[float | None, float | None] | None = None,
+    up_capture_vs_spy: tuple[float | None, float | None] | None = None,
+    down_capture_vs_spy: tuple[float | None, float | None] | None = None,
+    beta_stability: tuple[float | None, float | None] | None = None,
+    # Distribution
+    return_skewness: tuple[float | None, float | None] | None = None,
+    return_kurtosis: tuple[float | None, float | None] | None = None,
+    positive_return_ratio: tuple[float | None, float | None] | None = None,
+    gain_loss_ratio: tuple[float | None, float | None] | None = None,
+    # Volume-based
+    obv_slope_60d: tuple[float | None, float | None] | None = None,
+    vwap_distance_pct: tuple[float | None, float | None] | None = None,
+    # Cross-sectional
+    corr_to_spy_60d: tuple[float | None, float | None] | None = None,
+    corr_to_sector_60d: tuple[float | None, float | None] | None = None,
+    sector_relative_momentum_6m: tuple[float | None, float | None] | None = None,
+    sector_relative_vol: tuple[float | None, float | None] | None = None,
+    # Technical structure
+    dist_from_52w_high_pct: tuple[float | None, float | None] | None = None,
+    dist_from_52w_low_pct: tuple[float | None, float | None] | None = None,
+    price_vs_sma200_pct: tuple[float | None, float | None] | None = None,
+    price_vs_sma50_pct: tuple[float | None, float | None] | None = None,
+    donchian_width_pct: tuple[float | None, float | None] | None = None,
+    # Microstructure
+    zero_return_days_pct: tuple[float | None, float | None] | None = None,
+    roll_spread_estimate: tuple[float | None, float | None] | None = None,
+    # Return quality
+    equity_curve_r2: tuple[float | None, float | None] | None = None,
 ):
     """Build a screener query with optional filters from Ticker and EquityScreener tables."""
 

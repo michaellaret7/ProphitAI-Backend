@@ -1,0 +1,203 @@
+"""add_quant_screener_columns
+
+Revision ID: ac3cc645e3cc
+Revises: i0j1k2l3m4n5
+Create Date: 2026-04-16 12:16:17.350851
+
+Adds 48 quant metric columns to equity_screener and 20 to etf_screener
+for strategy-universe selection by the fund agents. Creates btree indexes
+on the most-filtered columns.
+"""
+from typing import Sequence, Union
+
+from alembic import op
+import sqlalchemy as sa
+
+
+# revision identifiers, used by Alembic.
+revision: str = 'ac3cc645e3cc'
+down_revision: Union[str, None] = 'i0j1k2l3m4n5'
+branch_labels: Union[str, Sequence[str], None] = None
+depends_on: Union[str, Sequence[str], None] = None
+
+
+def upgrade() -> None:
+    # -------- EquityScreener: 48 new columns --------
+    op.add_column('equity_screener', sa.Column('avg_dollar_volume_20d', sa.Float(), nullable=True), schema='screener_data')
+    op.add_column('equity_screener', sa.Column('amihud_illiquidity', sa.Float(), nullable=True), schema='screener_data')
+    op.add_column('equity_screener', sa.Column('dollar_volume_consistency', sa.Float(), nullable=True), schema='screener_data')
+    op.add_column('equity_screener', sa.Column('relative_volume_20d', sa.Float(), nullable=True), schema='screener_data')
+    op.add_column('equity_screener', sa.Column('atr_14d', sa.Float(), nullable=True), schema='screener_data')
+    op.add_column('equity_screener', sa.Column('atr_pct', sa.Float(), nullable=True), schema='screener_data')
+    op.add_column('equity_screener', sa.Column('bb_width', sa.Float(), nullable=True), schema='screener_data')
+    op.add_column('equity_screener', sa.Column('vol_regime_pctile', sa.Float(), nullable=True), schema='screener_data')
+    op.add_column('equity_screener', sa.Column('yang_zhang_vol', sa.Float(), nullable=True), schema='screener_data')
+    op.add_column('equity_screener', sa.Column('vol_ratio_short_long', sa.Float(), nullable=True), schema='screener_data')
+    op.add_column('equity_screener', sa.Column('momentum_12m_1m_skip', sa.Float(), nullable=True), schema='screener_data')
+    op.add_column('equity_screener', sa.Column('risk_adj_momentum', sa.Float(), nullable=True), schema='screener_data')
+    op.add_column('equity_screener', sa.Column('rsi_14d', sa.Float(), nullable=True), schema='screener_data')
+    op.add_column('equity_screener', sa.Column('tsmom', sa.Float(), nullable=True), schema='screener_data')
+    op.add_column('equity_screener', sa.Column('momentum_acceleration', sa.Float(), nullable=True), schema='screener_data')
+    op.add_column('equity_screener', sa.Column('frog_in_pan', sa.Float(), nullable=True), schema='screener_data')
+    op.add_column('equity_screener', sa.Column('hurst_exponent', sa.Float(), nullable=True), schema='screener_data')
+    op.add_column('equity_screener', sa.Column('autocorrelation_1d', sa.Float(), nullable=True), schema='screener_data')
+    op.add_column('equity_screener', sa.Column('ou_half_life_logret', sa.Float(), nullable=True), schema='screener_data')
+    op.add_column('equity_screener', sa.Column('adx_14d', sa.Float(), nullable=True), schema='screener_data')
+    op.add_column('equity_screener', sa.Column('max_drawdown_1y', sa.Float(), nullable=True), schema='screener_data')
+    op.add_column('equity_screener', sa.Column('max_drawdown_duration_days', sa.Float(), nullable=True), schema='screener_data')
+    op.add_column('equity_screener', sa.Column('calmar_ratio', sa.Float(), nullable=True), schema='screener_data')
+    op.add_column('equity_screener', sa.Column('sharpe_ratio', sa.Float(), nullable=True), schema='screener_data')
+    op.add_column('equity_screener', sa.Column('sortino_ratio', sa.Float(), nullable=True), schema='screener_data')
+    op.add_column('equity_screener', sa.Column('omega_ratio', sa.Float(), nullable=True), schema='screener_data')
+    op.add_column('equity_screener', sa.Column('cvar_95', sa.Float(), nullable=True), schema='screener_data')
+    op.add_column('equity_screener', sa.Column('up_capture_vs_spy', sa.Float(), nullable=True), schema='screener_data')
+    op.add_column('equity_screener', sa.Column('down_capture_vs_spy', sa.Float(), nullable=True), schema='screener_data')
+    op.add_column('equity_screener', sa.Column('beta_stability', sa.Float(), nullable=True), schema='screener_data')
+    op.add_column('equity_screener', sa.Column('return_skewness', sa.Float(), nullable=True), schema='screener_data')
+    op.add_column('equity_screener', sa.Column('return_kurtosis', sa.Float(), nullable=True), schema='screener_data')
+    op.add_column('equity_screener', sa.Column('positive_return_ratio', sa.Float(), nullable=True), schema='screener_data')
+    op.add_column('equity_screener', sa.Column('gain_loss_ratio', sa.Float(), nullable=True), schema='screener_data')
+    op.add_column('equity_screener', sa.Column('obv_slope_60d', sa.Float(), nullable=True), schema='screener_data')
+    op.add_column('equity_screener', sa.Column('vwap_distance_pct', sa.Float(), nullable=True), schema='screener_data')
+    op.add_column('equity_screener', sa.Column('corr_to_spy_60d', sa.Float(), nullable=True), schema='screener_data')
+    op.add_column('equity_screener', sa.Column('corr_to_sector_60d', sa.Float(), nullable=True), schema='screener_data')
+    op.add_column('equity_screener', sa.Column('sector_relative_momentum_6m', sa.Float(), nullable=True), schema='screener_data')
+    op.add_column('equity_screener', sa.Column('sector_relative_vol', sa.Float(), nullable=True), schema='screener_data')
+    op.add_column('equity_screener', sa.Column('dist_from_52w_high_pct', sa.Float(), nullable=True), schema='screener_data')
+    op.add_column('equity_screener', sa.Column('dist_from_52w_low_pct', sa.Float(), nullable=True), schema='screener_data')
+    op.add_column('equity_screener', sa.Column('price_vs_sma200_pct', sa.Float(), nullable=True), schema='screener_data')
+    op.add_column('equity_screener', sa.Column('price_vs_sma50_pct', sa.Float(), nullable=True), schema='screener_data')
+    op.add_column('equity_screener', sa.Column('donchian_width_pct', sa.Float(), nullable=True), schema='screener_data')
+    op.add_column('equity_screener', sa.Column('zero_return_days_pct', sa.Float(), nullable=True), schema='screener_data')
+    op.add_column('equity_screener', sa.Column('roll_spread_estimate', sa.Float(), nullable=True), schema='screener_data')
+    op.add_column('equity_screener', sa.Column('equity_curve_r2', sa.Float(), nullable=True), schema='screener_data')
+
+    # -------- EquityScreener: 8 indexes --------
+    op.create_index(op.f('ix_screener_data_equity_screener_adx_14d'), 'equity_screener', ['adx_14d'], unique=False, schema='screener_data')
+    op.create_index(op.f('ix_screener_data_equity_screener_atr_pct'), 'equity_screener', ['atr_pct'], unique=False, schema='screener_data')
+    op.create_index(op.f('ix_screener_data_equity_screener_avg_dollar_volume_20d'), 'equity_screener', ['avg_dollar_volume_20d'], unique=False, schema='screener_data')
+    op.create_index(op.f('ix_screener_data_equity_screener_corr_to_spy_60d'), 'equity_screener', ['corr_to_spy_60d'], unique=False, schema='screener_data')
+    op.create_index(op.f('ix_screener_data_equity_screener_hurst_exponent'), 'equity_screener', ['hurst_exponent'], unique=False, schema='screener_data')
+    op.create_index(op.f('ix_screener_data_equity_screener_max_drawdown_1y'), 'equity_screener', ['max_drawdown_1y'], unique=False, schema='screener_data')
+    op.create_index(op.f('ix_screener_data_equity_screener_momentum_12m_1m_skip'), 'equity_screener', ['momentum_12m_1m_skip'], unique=False, schema='screener_data')
+    op.create_index(op.f('ix_screener_data_equity_screener_sharpe_ratio'), 'equity_screener', ['sharpe_ratio'], unique=False, schema='screener_data')
+
+    # -------- ETFScreener: 20 new columns --------
+    op.add_column('etf_screener', sa.Column('atr_pct', sa.Float(), nullable=True), schema='screener_data')
+    op.add_column('etf_screener', sa.Column('bb_width', sa.Float(), nullable=True), schema='screener_data')
+    op.add_column('etf_screener', sa.Column('vol_regime_pctile', sa.Float(), nullable=True), schema='screener_data')
+    op.add_column('etf_screener', sa.Column('yang_zhang_vol', sa.Float(), nullable=True), schema='screener_data')
+    op.add_column('etf_screener', sa.Column('vol_ratio_short_long', sa.Float(), nullable=True), schema='screener_data')
+    op.add_column('etf_screener', sa.Column('momentum_12m_1m_skip', sa.Float(), nullable=True), schema='screener_data')
+    op.add_column('etf_screener', sa.Column('risk_adj_momentum', sa.Float(), nullable=True), schema='screener_data')
+    op.add_column('etf_screener', sa.Column('rsi_14d', sa.Float(), nullable=True), schema='screener_data')
+    op.add_column('etf_screener', sa.Column('tsmom', sa.Float(), nullable=True), schema='screener_data')
+    op.add_column('etf_screener', sa.Column('hurst_exponent', sa.Float(), nullable=True), schema='screener_data')
+    op.add_column('etf_screener', sa.Column('autocorrelation_1d', sa.Float(), nullable=True), schema='screener_data')
+    op.add_column('etf_screener', sa.Column('adx_14d', sa.Float(), nullable=True), schema='screener_data')
+    op.add_column('etf_screener', sa.Column('max_drawdown_1y', sa.Float(), nullable=True), schema='screener_data')
+    op.add_column('etf_screener', sa.Column('sharpe_ratio', sa.Float(), nullable=True), schema='screener_data')
+    op.add_column('etf_screener', sa.Column('sortino_ratio', sa.Float(), nullable=True), schema='screener_data')
+    op.add_column('etf_screener', sa.Column('cvar_95', sa.Float(), nullable=True), schema='screener_data')
+    op.add_column('etf_screener', sa.Column('return_skewness', sa.Float(), nullable=True), schema='screener_data')
+    op.add_column('etf_screener', sa.Column('return_kurtosis', sa.Float(), nullable=True), schema='screener_data')
+    op.add_column('etf_screener', sa.Column('positive_return_ratio', sa.Float(), nullable=True), schema='screener_data')
+    op.add_column('etf_screener', sa.Column('equity_curve_r2', sa.Float(), nullable=True), schema='screener_data')
+
+    # -------- ETFScreener: 6 indexes --------
+    op.create_index(op.f('ix_screener_data_etf_screener_adx_14d'), 'etf_screener', ['adx_14d'], unique=False, schema='screener_data')
+    op.create_index(op.f('ix_screener_data_etf_screener_atr_pct'), 'etf_screener', ['atr_pct'], unique=False, schema='screener_data')
+    op.create_index(op.f('ix_screener_data_etf_screener_hurst_exponent'), 'etf_screener', ['hurst_exponent'], unique=False, schema='screener_data')
+    op.create_index(op.f('ix_screener_data_etf_screener_max_drawdown_1y'), 'etf_screener', ['max_drawdown_1y'], unique=False, schema='screener_data')
+    op.create_index(op.f('ix_screener_data_etf_screener_momentum_12m_1m_skip'), 'etf_screener', ['momentum_12m_1m_skip'], unique=False, schema='screener_data')
+    op.create_index(op.f('ix_screener_data_etf_screener_sharpe_ratio'), 'etf_screener', ['sharpe_ratio'], unique=False, schema='screener_data')
+
+
+def downgrade() -> None:
+    # -------- ETFScreener: drop indexes, then columns --------
+    op.drop_index(op.f('ix_screener_data_etf_screener_sharpe_ratio'), table_name='etf_screener', schema='screener_data')
+    op.drop_index(op.f('ix_screener_data_etf_screener_momentum_12m_1m_skip'), table_name='etf_screener', schema='screener_data')
+    op.drop_index(op.f('ix_screener_data_etf_screener_max_drawdown_1y'), table_name='etf_screener', schema='screener_data')
+    op.drop_index(op.f('ix_screener_data_etf_screener_hurst_exponent'), table_name='etf_screener', schema='screener_data')
+    op.drop_index(op.f('ix_screener_data_etf_screener_atr_pct'), table_name='etf_screener', schema='screener_data')
+    op.drop_index(op.f('ix_screener_data_etf_screener_adx_14d'), table_name='etf_screener', schema='screener_data')
+
+    op.drop_column('etf_screener', 'equity_curve_r2', schema='screener_data')
+    op.drop_column('etf_screener', 'positive_return_ratio', schema='screener_data')
+    op.drop_column('etf_screener', 'return_kurtosis', schema='screener_data')
+    op.drop_column('etf_screener', 'return_skewness', schema='screener_data')
+    op.drop_column('etf_screener', 'cvar_95', schema='screener_data')
+    op.drop_column('etf_screener', 'sortino_ratio', schema='screener_data')
+    op.drop_column('etf_screener', 'sharpe_ratio', schema='screener_data')
+    op.drop_column('etf_screener', 'max_drawdown_1y', schema='screener_data')
+    op.drop_column('etf_screener', 'adx_14d', schema='screener_data')
+    op.drop_column('etf_screener', 'autocorrelation_1d', schema='screener_data')
+    op.drop_column('etf_screener', 'hurst_exponent', schema='screener_data')
+    op.drop_column('etf_screener', 'tsmom', schema='screener_data')
+    op.drop_column('etf_screener', 'rsi_14d', schema='screener_data')
+    op.drop_column('etf_screener', 'risk_adj_momentum', schema='screener_data')
+    op.drop_column('etf_screener', 'momentum_12m_1m_skip', schema='screener_data')
+    op.drop_column('etf_screener', 'vol_ratio_short_long', schema='screener_data')
+    op.drop_column('etf_screener', 'yang_zhang_vol', schema='screener_data')
+    op.drop_column('etf_screener', 'vol_regime_pctile', schema='screener_data')
+    op.drop_column('etf_screener', 'bb_width', schema='screener_data')
+    op.drop_column('etf_screener', 'atr_pct', schema='screener_data')
+
+    # -------- EquityScreener: drop indexes, then columns --------
+    op.drop_index(op.f('ix_screener_data_equity_screener_sharpe_ratio'), table_name='equity_screener', schema='screener_data')
+    op.drop_index(op.f('ix_screener_data_equity_screener_momentum_12m_1m_skip'), table_name='equity_screener', schema='screener_data')
+    op.drop_index(op.f('ix_screener_data_equity_screener_max_drawdown_1y'), table_name='equity_screener', schema='screener_data')
+    op.drop_index(op.f('ix_screener_data_equity_screener_hurst_exponent'), table_name='equity_screener', schema='screener_data')
+    op.drop_index(op.f('ix_screener_data_equity_screener_corr_to_spy_60d'), table_name='equity_screener', schema='screener_data')
+    op.drop_index(op.f('ix_screener_data_equity_screener_avg_dollar_volume_20d'), table_name='equity_screener', schema='screener_data')
+    op.drop_index(op.f('ix_screener_data_equity_screener_atr_pct'), table_name='equity_screener', schema='screener_data')
+    op.drop_index(op.f('ix_screener_data_equity_screener_adx_14d'), table_name='equity_screener', schema='screener_data')
+
+    op.drop_column('equity_screener', 'equity_curve_r2', schema='screener_data')
+    op.drop_column('equity_screener', 'roll_spread_estimate', schema='screener_data')
+    op.drop_column('equity_screener', 'zero_return_days_pct', schema='screener_data')
+    op.drop_column('equity_screener', 'donchian_width_pct', schema='screener_data')
+    op.drop_column('equity_screener', 'price_vs_sma50_pct', schema='screener_data')
+    op.drop_column('equity_screener', 'price_vs_sma200_pct', schema='screener_data')
+    op.drop_column('equity_screener', 'dist_from_52w_low_pct', schema='screener_data')
+    op.drop_column('equity_screener', 'dist_from_52w_high_pct', schema='screener_data')
+    op.drop_column('equity_screener', 'sector_relative_vol', schema='screener_data')
+    op.drop_column('equity_screener', 'sector_relative_momentum_6m', schema='screener_data')
+    op.drop_column('equity_screener', 'corr_to_sector_60d', schema='screener_data')
+    op.drop_column('equity_screener', 'corr_to_spy_60d', schema='screener_data')
+    op.drop_column('equity_screener', 'vwap_distance_pct', schema='screener_data')
+    op.drop_column('equity_screener', 'obv_slope_60d', schema='screener_data')
+    op.drop_column('equity_screener', 'gain_loss_ratio', schema='screener_data')
+    op.drop_column('equity_screener', 'positive_return_ratio', schema='screener_data')
+    op.drop_column('equity_screener', 'return_kurtosis', schema='screener_data')
+    op.drop_column('equity_screener', 'return_skewness', schema='screener_data')
+    op.drop_column('equity_screener', 'beta_stability', schema='screener_data')
+    op.drop_column('equity_screener', 'down_capture_vs_spy', schema='screener_data')
+    op.drop_column('equity_screener', 'up_capture_vs_spy', schema='screener_data')
+    op.drop_column('equity_screener', 'cvar_95', schema='screener_data')
+    op.drop_column('equity_screener', 'omega_ratio', schema='screener_data')
+    op.drop_column('equity_screener', 'sortino_ratio', schema='screener_data')
+    op.drop_column('equity_screener', 'sharpe_ratio', schema='screener_data')
+    op.drop_column('equity_screener', 'calmar_ratio', schema='screener_data')
+    op.drop_column('equity_screener', 'max_drawdown_duration_days', schema='screener_data')
+    op.drop_column('equity_screener', 'max_drawdown_1y', schema='screener_data')
+    op.drop_column('equity_screener', 'adx_14d', schema='screener_data')
+    op.drop_column('equity_screener', 'ou_half_life_logret', schema='screener_data')
+    op.drop_column('equity_screener', 'autocorrelation_1d', schema='screener_data')
+    op.drop_column('equity_screener', 'hurst_exponent', schema='screener_data')
+    op.drop_column('equity_screener', 'frog_in_pan', schema='screener_data')
+    op.drop_column('equity_screener', 'momentum_acceleration', schema='screener_data')
+    op.drop_column('equity_screener', 'tsmom', schema='screener_data')
+    op.drop_column('equity_screener', 'rsi_14d', schema='screener_data')
+    op.drop_column('equity_screener', 'risk_adj_momentum', schema='screener_data')
+    op.drop_column('equity_screener', 'momentum_12m_1m_skip', schema='screener_data')
+    op.drop_column('equity_screener', 'vol_ratio_short_long', schema='screener_data')
+    op.drop_column('equity_screener', 'yang_zhang_vol', schema='screener_data')
+    op.drop_column('equity_screener', 'vol_regime_pctile', schema='screener_data')
+    op.drop_column('equity_screener', 'bb_width', schema='screener_data')
+    op.drop_column('equity_screener', 'atr_pct', schema='screener_data')
+    op.drop_column('equity_screener', 'atr_14d', schema='screener_data')
+    op.drop_column('equity_screener', 'relative_volume_20d', schema='screener_data')
+    op.drop_column('equity_screener', 'dollar_volume_consistency', schema='screener_data')
+    op.drop_column('equity_screener', 'amihud_illiquidity', schema='screener_data')
+    op.drop_column('equity_screener', 'avg_dollar_volume_20d', schema='screener_data')
