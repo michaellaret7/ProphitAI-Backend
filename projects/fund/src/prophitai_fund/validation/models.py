@@ -26,8 +26,7 @@ class TickerUniverse(BaseModel):
         description="Ticker symbols returned by the screener, post liquidity gate",
     )
     filters_applied: dict[str, str] = Field(
-        default_factory=dict,
-        description="Screener filter name -> stringified value, for the record",
+        description="Screener filter name -> stringified value, for the record (empty dict if none)",
     )
 
 
@@ -39,8 +38,7 @@ class BacktestRun(BaseModel):
         description="Short human label for what was tuned this run (e.g. 'baseline', 'fast_ema=10, bb_window=15')",
     )
     param_overrides: dict[str, str] = Field(
-        default_factory=dict,
-        description="Strategy + sizing param overrides applied for this run, stringified",
+        description="Strategy + sizing param overrides applied for this run, stringified (empty dict for baseline)",
     )
     metrics: dict[str, float] = Field(
         description="Raw metrics dict from BacktestResult.metrics (sharpe, max_drawdown, total_return, trade_count, etc.)",

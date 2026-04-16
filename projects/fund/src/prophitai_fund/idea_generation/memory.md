@@ -69,3 +69,17 @@ topic: pipeline_feedback
 ---
 As of April 2026, the fund has 9 strategies covering fundamental trajectory (CBERM/RACEQ/DQROE/OLIGA/WVCCI/IIMM), price momentum (AQM-52), and intraday microstructure (IVCCM/OMFM-15). ZERO strategies use return-distribution-shape signals (MAX effect, skewness, kurtosis, BAB/low-vol). This is the single largest unexplored dimension in the strategy set. Screener already exposes yang_zhang_vol, return_skewness, return_kurtosis, beta_stability — direct support for distribution-based strategies. Future idea generation should prioritize distribution-tail / behavioral-demand signals, short-interest/ownership signals, and dispersion/correlation signals before returning to more fundamental trajectory variants (which are nearing saturation within this fund's set).
 
+---
+date: 2026-04-16
+title: Screener alpha_vs_spy / alpha_vs_sector = Blitz-Huij-Martens Residual Momentum Native Implementation
+topic: tool_usage
+---
+The screener columns alpha_vs_spy and alpha_vs_sector are, by definition, regression residual returns against the market and sector — i.e., they ARE residual momentum per Blitz-Huij-Martens (2011) finance theory (alpha = Y-intercept of return regression = historical residual return). This means residual momentum strategies can be implemented NATIVELY in the fund screener without needing raw OHLC regression computation. The information_ratio column (= alpha/vol, no rf) provides a risk-adjusted version. Combining alpha_vs_spy + alpha_vs_sector + information_ratio in a composite z-score produces a sector+market-neutralized residual momentum signal directly. For future momentum strategy ideation, these columns are the primary go-to for any neutralized/residualized momentum formulation.
+
+---
+date: 2026-04-16
+title: Momentum Research DB Gap: Pivot to Web Search for Post-2020 Variant Performance
+topic: tool_usage
+---
+The research DBs (strategy_research, theory_research) are strong on foundational momentum papers (Jegadeesh-Titman, Daniel-Moskowitz, Barroso-Santa-Clara, Grundy-Martin) but have very thin coverage of residual momentum, industry-neutral momentum, and post-2020 factor performance. For Blitz-Huij-Martens residual momentum, Chaves, Huij-Lansdorp, and post-2022 momentum drawdown/recovery evidence, pivot directly to llm_web_search after 1-2 DB queries. Similar gap for analyst forecast dispersion (DMS 2002) — DB returns V/P papers for these queries. Save 3-4 wasted queries by going to web search immediately on these topics.
+

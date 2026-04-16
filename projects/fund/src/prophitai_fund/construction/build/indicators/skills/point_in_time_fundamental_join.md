@@ -3,7 +3,7 @@ name: point_in_time_fundamental_join
 title: Point-in-Time Fundamental Data Join for Custom Indicators
 description: Use when a custom indicator needs to join quarterly fundamental data (FCF, earnings, etc.) into an OHLCV DataFrame with a look-ahead barrier (staleness gate).
 created: 2026-04-09
-updated: 2026-04-14
+updated: 2026-04-16
 ---
 
 # Point-in-Time Fundamental Data Join for Custom Indicators
@@ -90,6 +90,37 @@ def _check_fundamentals_valid(self, fund, n_avail):
 Use from both `calculate()` and `update_last_row()` to avoid duplication.
 **CRITICAL**: Do NOT use `if f in check_rows.columns` inside an `all()` generator — it silently passes missing required fields instead of flagging them invalid.
 
+## Rolling Z-Score Pattern for Quarterly Fundamental Series
+
+When computing per-ticker rolling z-scores on forward-filled quarterly columns:
+
+```python
+def _rolling_quarterly_zscore(series, window=8, negate=False):
+    # 1. Extract quarterly transitions (first bar of each unique value block)
+    not_null = series.dropna()
+    rounded = not_null.round(10)  # collapse float drift
+    mask = rounded != rounded.shift(1)
+    mask.iloc[0] = True
+    changed = not_null[mask]
+
+    # 2. CRITICAL: shift(1) so current obs is NOT in its own normalization params
+    roll_mean = changed.rolling(window=window, min_periods=2).mean().shift(1)
+    roll_std = changed.rolling(window=window, min_periods=2).std().shift(1).fillna(0.0)
+
+    # 3. z-score, clip, optional negate
+    z_raw = (changed - roll_mean) / np.maximum(roll_std, 0.001)
+    z = z_raw.clip(-3.0, 3.0)
+    if negate:
+        z = -z
+
+    # 4. Map back to daily index via ffill
+    return z.reindex(series.index, method="ffill")
+```
+
+**CRITICAL: shift(1) is mandatory.** Without it, the current observation is included
+in its own rolling mean/std, which dampens extreme values and introduces look-ahead
+contamination within the normalization window. This was caught by code review.
+
 ## Code Template
 
 ```python
@@ -152,12 +183,15 @@ def calculate(self) -> pd.DataFrame:
   forward-fill the previous row.
 - **_check_fundamentals_valid MUST explicitly guard missing fields**: use a for-loop
   with `if f not in fund.columns: return 0.0`, NOT `if f in cols` in a generator.
+- **Rolling z-score MUST shift(1)**: current observation must not appear in its own
+  rolling mean/std — shift() ensures normalization uses only prior observations.
 
 ## Confirmed Patterns
 - FcfConversionIndicator (AQM52) — single metric output.
 - CCCFundamentalsIndicator (WVCCI) — multi-quarter output (q0..q7 flow, q0/q2/q4 BS).
   Uses np.searchsorted on available_from array for O(log n) per-bar lookup.
   Uses _check_fundamentals_valid helper called from both calculate() and update_last_row().
+- Rolling z-score with shift(1) (WVCCI) — quarterly z-score on forward-filled daily series.
 
 ## Revision Log
 - 2026-04-09: Created after building FcfConversionIndicator for AQM52 strategy.
@@ -165,4 +199,6 @@ def calculate(self) -> pd.DataFrame:
 - 2026-04-14: Added multi-quarter output pattern (WVCCI). Added _check_fundamentals_valid
   helper pattern with critical missing-column guard. Added np.searchsorted approach for
   efficient per-bar filing lookup without merge_asof (useful when output is many columns).
+- 2026-04-16: Added rolling z-score pattern with shift(1) — CRITICAL to avoid self-inclusion
+  in normalization. Confirmed in WVCCI build and caught by code review.
 

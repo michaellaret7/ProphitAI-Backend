@@ -117,3 +117,24 @@ topic: framework_gaps
 ---
 Strategies with recession triggers based on consecutive weeks of elevated initial unemployment claims require a custom UnemploymentRegimeControl that: (1) reads an initial_claims column broadcast by MacroRegimeIndicator (weekly data interpolated to daily), (2) counts consecutive weeks where claims exceed threshold (e.g., 280K), (3) blocks new entries after N consecutive triggering weeks (e.g., 4), (4) resets counter when claims fall back below threshold for 2+ weeks. No std_lib equivalent. Implement as entry-blocker only (should_block_entry returns True, should_force_exit returns False). Pattern reusable for any macro time-series threshold trigger (ISM, NFP, etc.).
 
+---
+date: 2026-04-16
+title: Rolling OLS alpha strategies — InformationRatio must be a separate downstream indicator
+topic: translation_patterns
+---
+For residual momentum strategies that compute Information Ratio = alpha / residual_std: ResidualAlphaIndicator must output BOTH alpha_vs_spy AND residual_std as separate columns. InformationRatioIndicator is then a separate downstream indicator in the pipeline that reads those two columns as input_columns. Do NOT compute IR inside ResidualAlphaIndicator — the derived composite (rmc_composite) needs IR as an independent column for z-scoring weight. Indicator ordering must be: RealizedVol → MacroRegime → ResidualAlpha → SectorResidualAlpha → InformationRatio (reads alpha_vs_spy + residual_std) → ADX → 52WkHigh → RiskAdjMomentum (reads realized_vol).
+
+---
+date: 2026-04-16
+title: Composite score normalization pattern: clip-and-rescale to [0,1] for sizer compatibility
+topic: translation_patterns
+---
+When a strategy's entry signal is a weighted composite of z-scored inputs (like rmc_composite = 0.4*z1 + 0.4*z2 + 0.2*z3), the raw composite is approximately N(0, ~1) and can be negative. For sizer compatibility (candidate.score is expected in [0,1]), normalize via: clip to [-3, 3] then rescale to [0,1] as (clipped + 3.0) / 6.0. Entry threshold 0.60 on this scale ≈ raw z-composite of +0.60 ≈ 75th pctile of N(0,1). Always document this in the derived_feature logic field and in implementation_notes so the coding agent knows both the raw and normalized forms.
+
+---
+date: 2026-04-16
+title: Three-layer sizer chain pattern: VolTarget → DrawdownScaled → custom RegimeScaled outer
+topic: translation_patterns
+---
+For strategies with multiple simultaneous sizing axes (vol-target base + drawdown scaling + regime scaling), use a three-layer chain: VolatilityTargetSizer(max_pct_equity=X) as the base, wrapped by DrawdownScaledSizer, with a custom outer sizer (e.g., RAMDRegimeScaledSizer) that delegates to DrawdownScaledSizer for the base share count then multiplies by regime scale factors from candidate sizing hints. The custom outer reads vix_regime_scale and market_state_scale from hints populated by get_sizing_hints(). Declare these in strategy_class.sizing_hints as value_str references to the column names, not value_num.
+

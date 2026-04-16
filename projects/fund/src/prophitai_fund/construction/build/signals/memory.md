@@ -54,3 +54,10 @@ topic: coding_patterns
 ---
 When creating pass-through no-op Series in signal methods (e.g. `pd.Series(False, index=df.index)` for disabled shorts), always specify `dtype=bool` explicitly. Without it, pandas infers object dtype in some edge cases, causing downstream bool comparisons or `_coerce_signal` to behave unexpectedly. Always: `pd.Series(False, index=df.index, dtype=bool)`.
 
+---
+date: 2026-04-16
+title: WVCCI: pass-through enrich() for diagnostic columns from indicator suite
+topic: coding_patterns
+---
+When manifest specifies enrich_columns as "diagnostic pass-throughs" already produced by the indicator suite (e.g. for P&L attribution logging), implement enrich() as a simple return-df pass-through with a docstring explaining why. Do NOT try to recompute these columns inside enrich() — they're already in the DataFrame from the indicator pipeline. The _enrich_columns class attribute can be declared for documentation purposes but validate() only checks required_columns, not enrich_columns.
+

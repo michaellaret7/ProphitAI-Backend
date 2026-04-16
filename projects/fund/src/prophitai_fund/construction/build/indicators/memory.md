@@ -103,3 +103,17 @@ topic: coding_patterns
 ---
 For z-scores computed on fundamental columns (forward-filled daily from quarterly filings), detect quarterly transitions by: (1) dropna() to remove NaN prefix, (2) round to 10 decimal places to collapse float drift, (3) `mask = rounded != rounded.shift(1); mask.iloc[0] = True` to get the first bar of each new quarterly value-block. Do NOT use `not_null != not_null.shift(1)` without rounding — float arithmetic drift can create spurious transitions on daily bars within a quarter. Then reindex back to daily with ffill.
 
+---
+date: 2026-04-16
+title: Rolling z-score: shift(1) required to avoid self-inclusion in normalization
+topic: coding_patterns
+---
+When computing a rolling z-score for a signal (e.g., per-ticker quarterly z-score), the rolling mean and std must be shifted by 1 period before computing z_raw. Pattern: roll_mean = series.rolling(window=W, min_periods=2).mean().shift(1); roll_std = series.rolling(window=W, min_periods=2).std().shift(1).fillna(0.0); z_raw = (series - roll_mean) / max(roll_std, 0.001). Without .shift(1), the current observation is included in its own normalization parameters, which dampens extreme values and creates subtle look-ahead contamination within the normalization window. This was caught by code review on WVCCI.
+
+---
+date: 2026-04-16
+title: MacroRegimeIndicator update_last_row: align VIX to trading index before SMA
+topic: coding_patterns
+---
+MacroRegimeIndicator.update_last_row() must align the raw VIX series to the trading index (using reindex(..., method='ffill')) BEFORE computing the rolling SMA — not slice the raw VIX directly. The full calculate() path does: reindex_to_trading → rolling SMA → regime scale. The incremental path must mirror this exactly. If update_last_row slices raw VIX observations (skipping non-VIX days), it diverges from calculate() which forward-fills VIX across non-trading-day gaps first. Fix: trading_index = pd.to_datetime(self.df.index).tz_localize(None).normalize(); vix_aligned = vix_series.reindex(trading_index, method='ffill'); lookback = vix_aligned.tail(window).dropna().
+

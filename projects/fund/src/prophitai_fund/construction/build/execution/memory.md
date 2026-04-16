@@ -77,3 +77,17 @@ topic: wiring_gotchas
 ---
 get_price_data_df() calls Interval.from_string(interval) which only accepts: 'daily', 'hourly', '30min', '15min', '5min', '1min'. Using '1d' or '1h' raises ValueError at runtime. Always use 'daily' (not '1d') and 'hourly' (not '1h') in runner scripts, wiring.py load_backtest_data(), and config interval fields.
 
+---
+date: 2026-04-16
+title: build_live_runner must reuse components.cost_model not rebuild it
+topic: wiring_gotchas
+---
+When building build_live_runner() in wiring.py, always pass components.cost_model directly to LiveRunner instead of calling _build_cost_model() again. Rebuilding creates a second source of truth that can silently diverge. A code reviewer will flag this as a warning. Pattern: components = build_X_engine(...); return LiveRunner(..., cost_model=components.cost_model, ...).
+
+---
+date: 2026-04-16
+title: Never define should_block_entry twice in a RiskControl — F811 duplicate
+topic: risk_control_patterns
+---
+When building a custom RiskControl that needs to update internal cache during should_block_entry, implement the full logic in a single definition. If you draft a stub then override it, ruff will catch the redefinition as F811. The pattern is: one should_block_entry method that both updates internal state (e.g., sector cache, claims counter) and returns the bool result.
+

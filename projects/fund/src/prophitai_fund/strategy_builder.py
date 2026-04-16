@@ -88,7 +88,7 @@ def _extract_strategy_id(idea_text: str) -> str:
 
 class StrategyBuilder:
     def __init__(self):
-        self.idea_generator = IdeaGeneratorAgent(model=MODEL, provider=PROVIDER)
+        self.idea_generator = IdeaGeneratorAgent()
 
     def run(self):
         # Stage 1: Idea Generation — runs on the host, no sandbox needed.
