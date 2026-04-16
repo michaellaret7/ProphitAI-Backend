@@ -1,0 +1,71 @@
+{
+  "config": "hybrid_sonnet_orch_gpt54_worker_gpt54_simple",
+  "config_details": {
+    "description": "Sonnet orch + GPT-5.4 workers + GPT-5.4 simple (best hybrid)",
+    "simple_median": 0.03,
+    "simple_p90": 0.15,
+    "planned_median": 1.51,
+    "planned_p90": 5.57
+  },
+  "users_per_persona": 1000,
+  "fixed_cost_per_user": 4.0,
+  "personas": {
+    "casual_retail": {
+      "description": "Checks portfolio weekly, reads news, asks basic questions",
+      "params": {
+        "sessions_per_month_mean": 8,
+        "queries_per_session_mean": 3,
+        "analyses_per_month_mean": 1
+      },
+      "cost_percentiles": {
+        "P10": 5.059534382556235,
+        "P25": 5.582422463554092,
+        "P50": 6.847403884873214,
+        "P75": 9.013241144799998,
+        "P90": 12.228632116542459,
+        "P95": 15.11248636106175,
+        "P99": 20.280211641836313
+      },
+      "avg_queries": 24.023,
+      "avg_analyses": 1.03
+    },
+    "active_trader": {
+      "description": "Logs in several times per week, trades actively, uses research tools",
+      "params": {
+        "sessions_per_month_mean": 20,
+        "queries_per_session_mean": 5,
+        "analyses_per_month_mean": 6
+      },
+      "cost_percentiles": {
+        "P10": 14.571429273559925,
+        "P25": 18.45110283359972,
+        "P50": 23.931904995950426,
+        "P75": 31.62604903973315,
+        "P90": 38.728303674668744,
+        "P95": 45.853652870222646,
+        "P99": 61.188341814029734
+      },
+      "avg_queries": 100.598,
+      "avg_analyses": 5.978
+    },
+    "power_user": {
+      "description": "Daily user, multiple portfolios, heavy research and construction",
+      "params": {
+        "sessions_per_month_mean": 40,
+        "queries_per_session_mean": 8,
+        "analyses_per_month_mean": 15
+      },
+      "cost_percentiles": {
+        "P10": 44.06002697868643,
+        "P25": 51.5502219090518,
+        "P50": 61.00396946221908,
+        "P75": 72.84498186368441,
+        "P90": 85.42517113088144,
+        "P95": 96.22635145533414,
+        "P99": 118.67136016273487
+      },
+      "avg_queries": 321.239,
+      "avg_analyses": 15.015
+    }
+  }
+}

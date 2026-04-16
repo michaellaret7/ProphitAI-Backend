@@ -5,11 +5,12 @@ from pathlib import Path
 from prophitai_fund.idea_generation.agent import IdeaGeneratorAgent
 from prophitai_fund.construction.architect.agent import StrategyArchitectAgent
 from prophitai_fund.construction.architect.models import StrategyManifest
-from prophitai_fund.construction.builders.indicators import IndicatorBuilderAgent
-from prophitai_fund.construction.builders.indicators.models import IndicatorBuildResult
-from prophitai_fund.construction.builders.signals import SignalStrategyBuilderAgent
-from prophitai_fund.construction.builders.signals.models import SignalStrategyBuildResult
-from prophitai_fund.construction.builders.execution import ExecutionLayerBuilderAgent
+from prophitai_fund.construction.build.indicators import IndicatorBuilderAgent
+from prophitai_fund.construction.build.indicators.models import IndicatorBuildResult
+from prophitai_fund.construction.build.signals import SignalStrategyBuilderAgent
+from prophitai_fund.construction.build.signals.models import SignalStrategyBuildResult
+from prophitai_fund.construction.build.execution import ExecutionLayerBuilderAgent
+from prophitai_fund.validation.agent import ValidatorAgent
 from prophitai_tools.sandbox.client import create_sandbox, get_sandbox, REPO_PATH
 from prophitai_tools.sandbox.lifecycle import close_sandbox, setup_repo
 from prophitai_tools.sandbox.scaffolding import scaffold_strategy
@@ -90,27 +91,31 @@ class StrategyBuilder:
         self.idea_generator = IdeaGeneratorAgent(model=MODEL, provider=PROVIDER)
 
     def run(self):
+        # Stage 1: Idea Generation — runs on the host, no sandbox needed.
+        # Reason: spinning up the sandbox before idea gen burns its timeout budget
+        # while the idea agent does web research.
+        cached_idea = _load_checkpoint("idea")
+
+        if cached_idea:
+            idea_text = cached_idea
+            print(f"Loading cached idea from {cached_idea[:100]}...")
+        else:
+            idea = self.idea_generator.run()
+
+            if not idea.answer:
+                raise RuntimeError("Idea generation failed: agent returned no output")
+
+            idea_text = idea.answer
+
+            _save_checkpoint("idea", idea_text)
+
+        strategy_id = _extract_strategy_id(idea_text)
+
+        # Sandbox needed from here on — spin it up now that we have a strategy_id.
         sandbox_id, sandbox = create_sandbox(timeout=3600)
 
         try:
-            # Stage 1: Idea Generation
-            cached_idea = _load_checkpoint("idea")
-
-            if cached_idea:
-                idea_text = cached_idea
-                print(f"Loading cached idea from {cached_idea[:100]}...")
-            else:
-                idea = self.idea_generator.run()
-
-                if not idea.answer:
-                    raise RuntimeError("Idea generation failed: agent returned no output")
-
-                idea_text = idea.answer
-                _save_checkpoint("idea", idea_text)
-
             # Stage 1b: Bootstrap repo and scaffold strategy directory
-            strategy_id = _extract_strategy_id(idea_text)
-            
             setup_repo(sandbox, strategy_id)
             scaffold_strategy(sandbox_id, strategy_id)
 
@@ -176,15 +181,22 @@ class StrategyBuilder:
             execution_layer_builder = ExecutionLayerBuilderAgent(model=MODEL, provider=PROVIDER, sandbox_id=sandbox_id)
             execution_response = execution_layer_builder.run(manifest, indicator_result, signal_result)
 
-            execution_result = execution_response.parsed_output
-
-            if not execution_result:
+            if not execution_response.parsed_output:
                 raise RuntimeError(f"Execution layer builder failed: {execution_response.answer}")
+
+            # Stage 6: Validator
+            validator = ValidatorAgent(model=MODEL, provider=PROVIDER, sandbox_id=sandbox_id)
+            validation_response = validator.run(strategy_id=strategy_id)
+
+            verdict = validation_response.parsed_output
+
+            if not verdict:
+                raise RuntimeError(f"Validator failed to produce verdict: {validation_response.answer}")
 
             # Pipeline complete — clean up checkpoints
             _clear_checkpoints()
 
-            return execution_result
+            return verdict
 
         finally:
             close_sandbox(sandbox_id)

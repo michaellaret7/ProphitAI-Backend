@@ -1,9 +1,10 @@
-"""Signal+Strategy Builder Agent — writes signal, strategy, and config code from a Strategy Manifest.
+"""Indicator Builder Agent — writes indicator code from a Strategy Manifest.
 
-Takes the StrategyManifest (from the Strategy Architect) and IndicatorBuildResult
-(from the Indicator Builder) and writes production-quality code files into an E2B
-sandbox: a BaseSignalModel subclass, a BaseComposableStrategy subclass, and a frozen
-config dataclass. Produces a SignalStrategyBuildResult for downstream agents.
+Takes the StrategyManifest produced by the Strategy Architect and writes
+production-quality indicator code files into an E2B sandbox: custom
+BaseIndicator subclasses, a BaseIndicatorSuite configuration, derived
+feature functions, and module exports. Produces an IndicatorBuildResult
+for downstream agents.
 """
 
 from functools import partial
@@ -15,7 +16,7 @@ from prophitai_atlas.models import PrintMode, AgentResponse
 from prophitai_atlas.models.callbacks import ChatCallback, NoOpChatCallback
 from prophitai_shared.time_utils import get_current_utc_time
 
-from prophitai_fund.construction.builders.prompts.compose import compose_builder_prompt
+from prophitai_fund.construction.build.prompts.compose import compose_builder_prompt
 
 from prophitai_atlas.tools.base.worker_agent.deploy_scoped import (
     DEPLOY_SCOPED_WORKER_TOOL,
@@ -23,33 +24,28 @@ from prophitai_atlas.tools.base.worker_agent.deploy_scoped import (
 )
 
 from prophitai_fund.construction.architect.models import StrategyManifest
-from prophitai_fund.construction.builders.indicators.models import IndicatorBuildResult
-from prophitai_fund.construction.builders.signals.models import SignalStrategyBuildResult
-from prophitai_fund.construction.builders.signals.tool_registry import SIGNAL_STRATEGY_BUILDER_TOOLS
+from prophitai_fund.construction.build.indicators.models import IndicatorBuildResult
+from prophitai_fund.construction.build.indicators.tool_registry import INDICATOR_BUILDER_TOOLS
 from prophitai_fund.tools import append_memory, build_skill, edit_skill, load_skill, retrieve_memory
 from prophitai_fund.tools.worker_registry import WORKERS
 
 
-class SignalStrategyBuilderAgent:
-    """Writes signal model, strategy class, and config files from a Strategy Manifest.
+class IndicatorBuilderAgent:
+    """Writes indicator code files from a Strategy Manifest.
 
     Reads the algo_trading framework via sandbox tools and codebase_researcher
-    workers, then writes a BaseSignalModel subclass, a BaseComposableStrategy
-    subclass, and a frozen config dataclass into the sandbox.
+    workers, then writes custom BaseIndicator subclasses, a BaseIndicatorSuite,
+    derived features, and module exports into the sandbox.
     """
 
     DEFAULT_TASK_TEMPLATE = (
-        "Build the signal model, strategy class, and config dataclass for the "
-        "following strategy. The manifest contains the signal spec, strategy class "
-        "spec, and config defaults. The indicator build result tells you exactly "
-        "what indicator classes exist, where they live, and what columns they "
-        "produce.\n\n"
+        "Build all indicator code files for the following strategy manifest. "
+        "The manifest contains the complete spec for indicators, derived features, "
+        "and their dependencies. Write production-quality code that follows the "
+        "framework conventions exactly.\n\n"
         "---\n\n"
         "STRATEGY MANIFEST:\n"
-        "{manifest_json}\n\n"
-        "---\n\n"
-        "INDICATOR BUILD RESULT:\n"
-        "{indicator_result_json}"
+        "{manifest_json}"
     )
 
     def __init__(
@@ -57,18 +53,18 @@ class SignalStrategyBuilderAgent:
         *,
         sandbox_id: str,
         chat_callback: Optional[Union[ChatCallback, NoOpChatCallback]] = None,
-        session_id: str = "signal_strategy_builder",
+        session_id: str = "indicator_builder",
         provider: Optional[str] = None,
         model: Optional[str] = None,
         print_mode: PrintMode = PrintMode.PRODUCTION,
     ):
 
         date = get_current_utc_time().strftime("%m/%d/%Y")
-        prompt_path = Path(__file__).resolve().parent.parent / "prompts" / "signals.md"
+        prompt_path = Path(__file__).resolve().parent.parent / "prompts" / "indicators.md"
         system_prompt = compose_builder_prompt(prompt_path, date=date, sandbox_id=sandbox_id)
 
         self.agent = Agent(
-            tools=SIGNAL_STRATEGY_BUILDER_TOOLS,
+            tools=INDICATOR_BUILDER_TOOLS,
             system_prompt=system_prompt,
             chat_callback=chat_callback,
             session_id=session_id,
@@ -80,7 +76,7 @@ class SignalStrategyBuilderAgent:
         # Reason: Memory tools are bound with partial to bake in the file path.
         # The LLM never sees the _memory_file parameter.
         self.memory_file = Path(__file__).parent / "memory.md"
-
+        
         # Reason: Skill tools are bound with partial to bake in the skills directory.
         # The LLM sees skill_name, title, description, content — not the directory path.
         skills_dir = Path(__file__).parent / "skills"
@@ -117,34 +113,22 @@ class SignalStrategyBuilderAgent:
             {"role": "assistant", "content": "Memory loaded. Ready to begin."},
         ]
 
-    def run(
-        self,
-        manifest: StrategyManifest,
-        indicator_result: IndicatorBuildResult,
-    ) -> AgentResponse:
-        """Build signal model, strategy class, and config from a Strategy Manifest.
+    def run(self, manifest: StrategyManifest) -> AgentResponse:
+        """Build indicator code files from a Strategy Manifest.
 
         Args:
             manifest: The complete StrategyManifest from the Strategy Architect.
-            indicator_result: The IndicatorBuildResult from the Indicator Builder,
-                providing exact class names, file paths, and output columns.
 
         Returns:
-            AgentResponse with parsed_output containing a SignalStrategyBuildResult.
+            AgentResponse with parsed_output containing an IndicatorBuildResult.
         """
         manifest_json = manifest.model_dump_json()
-        indicator_result_json = indicator_result.model_dump_json()
-
-        task = self.DEFAULT_TASK_TEMPLATE.format(
-            manifest_json=manifest_json,
-            indicator_result_json=indicator_result_json,
-        )
-
+        task = self.DEFAULT_TASK_TEMPLATE.format(manifest_json=manifest_json)
         context_history = self._build_context_history()
 
         return self.agent.run(
             task,
             conversation_history=context_history,
             plan_first=True,
-            format_output=SignalStrategyBuildResult,
+            format_output=IndicatorBuildResult,
         )

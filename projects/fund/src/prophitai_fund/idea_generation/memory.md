@@ -48,3 +48,24 @@ topic: tool_usage
 ---
 When querying strategy_research or theory_research for shareholder yield, buyback anomaly, net share issuance, or cash return signals, the DB consistently returns V/P valuation papers and accruals papers instead of the target signal. For these specific signals, immediately pivot to llm_web_search with targeted academic queries (e.g., 'Pontiff Woodgate 2008 share issuance anomaly', 'Aktas Croci CCC working capital returns'). The research DB is much better suited to momentum, factor model, and volatility topics than capital structure / payout anomalies. This saved ~4 queries by pivoting early to llm_web_search for CCC/working capital evidence.
 
+---
+date: 2026-04-16
+title: R&D Anomaly Evidence Gap in Research DB — Use Web Search Immediately
+topic: tool_usage
+---
+The strategy_research and theory_research DBs return no useful results for R&D intensity, intangible investment, or SGA-to-revenue anomaly queries. All R&D anomaly evidence must come from llm_web_search with specific author/paper queries. The DB is strong for momentum, BAB/low-vol, factor models, and stat-arb but blind to intangible capital research. For future R&D-related strategies, go directly to llm_web_search with queries like 'Leung Mazouz Evans 2020 R&D anomaly alpha Carhart' or 'R&D intensity cross-section returns bear market boundary conditions' — saves 3-4 wasted DB queries.
+
+---
+date: 2026-04-16
+title: CMA/Asset Growth DB Gap — Use Web Search for Post-2013 Factor Decay Evidence
+topic: tool_usage
+---
+strategy_research and theory_research return very little on asset growth / CMA / investment factor specifically (Cooper-Gulen-Schill 2008, Titman-Wei-Xie 2004, Fama-French CMA performance post-2013). The DBs return V/P and general factor papers instead. llm_web_search with specific author/paper queries is far more efficient for these topics. Critical finding unearthed this way: CMA has decayed substantially since 2013 with aggressive-investment firms OUTPERFORMING in recent years — this disconfirming evidence would have been missed relying only on DB queries. Save ~4 DB queries by going directly to web search for asset-growth / investment-factor topics.
+
+---
+date: 2026-04-16
+title: Distribution-Tail Signals (MAX, Skewness) Are an Open Territory Within Fund's Strategy Set
+topic: pipeline_feedback
+---
+As of April 2026, the fund has 9 strategies covering fundamental trajectory (CBERM/RACEQ/DQROE/OLIGA/WVCCI/IIMM), price momentum (AQM-52), and intraday microstructure (IVCCM/OMFM-15). ZERO strategies use return-distribution-shape signals (MAX effect, skewness, kurtosis, BAB/low-vol). This is the single largest unexplored dimension in the strategy set. Screener already exposes yang_zhang_vol, return_skewness, return_kurtosis, beta_stability — direct support for distribution-based strategies. Future idea generation should prioritize distribution-tail / behavioral-demand signals, short-interest/ownership signals, and dispersion/correlation signals before returning to more fundamental trajectory variants (which are nearing saturation within this fund's set).
+

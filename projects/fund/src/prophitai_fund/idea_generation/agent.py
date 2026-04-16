@@ -52,8 +52,8 @@ class IdeaGeneratorAgent:
             system_prompt=system_prompt,
             chat_callback=chat_callback,
             session_id=session_id,
-            provider=provider,
-            model=model,
+            provider='anthropic',
+            model='claude-opus-4-7',
             print_mode=print_mode,
         )
 
@@ -111,3 +111,7 @@ class IdeaGeneratorAgent:
 
 
 
+if __name__ == "__main__":
+    agent = IdeaGeneratorAgent()
+    response = agent.run()
+    print(response)

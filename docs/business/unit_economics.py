@@ -399,11 +399,20 @@ def _estimate_cost(profile: UsageProfile, model_key: str) -> dict[str, float]:
     if not pricing:
         return {"error": -1}
 
-    input_cost = (profile.avg_input_tokens / 1_000_000) * pricing["input"]
-    output_cost = (profile.avg_output_tokens / 1_000_000) * pricing["output"]
-    cache_create_cost = (profile.avg_cache_create_tokens / 1_000_000) * pricing["cache_create"]
-    cache_read_cost = (profile.avg_cache_read_tokens / 1_000_000) * pricing["cache_read"]
+    has_caching = pricing["cache_create"] > 0 or pricing["cache_read"] > 0
     search_cost = profile.avg_web_searches * PERPLEXITY_COST_PER_CALL
+
+    if has_caching:
+        input_cost = (profile.avg_input_tokens / 1_000_000) * pricing["input"]
+        output_cost = (profile.avg_output_tokens / 1_000_000) * pricing["output"]
+        cache_create_cost = (profile.avg_cache_create_tokens / 1_000_000) * pricing["cache_create"]
+        cache_read_cost = (profile.avg_cache_read_tokens / 1_000_000) * pricing["cache_read"]
+    else:
+        effective_input = profile.avg_total_tokens - profile.avg_output_tokens
+        input_cost = (effective_input / 1_000_000) * pricing["input"]
+        output_cost = (profile.avg_output_tokens / 1_000_000) * pricing["output"]
+        cache_create_cost = 0.0
+        cache_read_cost = 0.0
 
     total = input_cost + output_cost + cache_create_cost + cache_read_cost + search_cost
 
@@ -423,18 +432,35 @@ def _cost_for_role_tokens(
     role: RoleTokens,
     pricing: dict[str, float],
 ) -> float:
-    """Calculate cost for a RoleTokens bucket under a given pricing."""
+    """Calculate cost for a RoleTokens bucket under a given pricing.
 
-    # Reason: models without caching treat all input tokens at the regular rate
-    if pricing["cache_create"] == 0 and pricing["cache_read"] == 0:
-        total_in = role.input_tokens + role.cache_create_tokens + role.cache_read_tokens
-        return (total_in / 1e6) * pricing["input"] + (role.output_tokens / 1e6) * pricing["output"]
+    For caching models (Anthropic): input + cache_create + cache_read each priced separately.
+    For non-caching models: use total_tokens as the true token count.
+    Cache tokens are an artifact of Anthropic's billing — they represent the same
+    conversation tokens being replayed from cache across iterations. Non-caching
+    models process the same conversation but report it differently, so total_tokens
+    is the accurate measure of actual work done.
+    """
+
+    has_caching = pricing["cache_create"] > 0 or pricing["cache_read"] > 0
+
+    if has_caching:
+        return (
+            (role.input_tokens / 1e6) * pricing["input"]
+            + (role.output_tokens / 1e6) * pricing["output"]
+            + (role.cache_create_tokens / 1e6) * pricing["cache_create"]
+            + (role.cache_read_tokens / 1e6) * pricing["cache_read"]
+        )
+
+    # Reason: total_tokens = actual tokens processed per the LLM provider.
+    # For non-caching models we use (total - output) as input count since
+    # total_tokens already accounts for the real context size without
+    # double-counting cache artifacts.
+    effective_input = role.total_tokens - role.output_tokens
 
     return (
-        (role.input_tokens / 1e6) * pricing["input"]
+        (effective_input / 1e6) * pricing["input"]
         + (role.output_tokens / 1e6) * pricing["output"]
-        + (role.cache_create_tokens / 1e6) * pricing["cache_create"]
-        + (role.cache_read_tokens / 1e6) * pricing["cache_read"]
     )
 
 

@@ -11,7 +11,7 @@ from prophitai_tools.sandbox.client import create_sandbox, remove_sandbox, get_s
 from prophitai_tools.sandbox.lifecycle import setup_repo
 from prophitai_tools.sandbox.execution import sandbox_bash
 
-from prophitai_fund.construction.builders.indicators import IndicatorBuilderAgent
+from prophitai_fund.construction.build.indicators import IndicatorBuilderAgent
 from prophitai_fund.construction.architect.models import (
     StrategyManifest,
     IndicatorEntry,
