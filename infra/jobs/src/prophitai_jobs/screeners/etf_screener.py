@@ -25,6 +25,7 @@ from prophitai_calculations.risk.distribution import calc_volatility
 from prophitai_calculations.risk.benchmark import calc_beta
 from prophitai_shared.time_utils import get_current_utc_time, get_utc_days_ago
 from prophitai_jobs.screeners.base import safe_round, safe_divide
+from prophitai_jobs.screeners.quant_metrics import compute_etf_quant_metrics
 
 
 class UpdateETFScreenerTable:
@@ -87,7 +88,7 @@ class UpdateETFScreenerTable:
             session.commit()
         return len(records)
 
-    def run_update(self, lookback_days: int = 365) -> None:
+    def run_update(self, lookback_days: int = 500) -> None:
         """
         Run the ETF screener update.
 
@@ -196,6 +197,15 @@ class UpdateETFScreenerTable:
                 'market_cap': Decimal(str(meta['market_cap'])) if meta.get('market_cap') else None,
                 'dollar_volume': Decimal(str(meta['dollar_volume'])) if meta.get('dollar_volume') else None,
             }
+
+            # Compute 20 quant metrics from the already-fetched OHLCV
+            try:
+                quant_metrics = compute_etf_quant_metrics(df)
+                record.update(quant_metrics)
+            except Exception:
+                # Reason: skip quant metrics on failure — don't kill the whole ETF record
+                pass
+
             records.append(record)
 
             with self.lock:

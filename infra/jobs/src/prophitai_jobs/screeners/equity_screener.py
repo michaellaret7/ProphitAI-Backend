@@ -25,6 +25,7 @@ from prophitai_calculations.risk.benchmark import calc_beta
 from prophitai_data.repositories.ticker import get_sector_etf
 from prophitai_shared.time_utils import get_current_utc_time, get_utc_days_ago
 from prophitai_jobs.screeners.base import safe_round, safe_divide, RATIO_KEY_MAP
+from prophitai_jobs.screeners.quant_metrics import compute_equity_quant_metrics
 
 
 class UpdateEquityScreenerTable:
@@ -171,8 +172,10 @@ class UpdateEquityScreenerTable:
             # Get sector ETF
             sector_etf = get_sector_etf(sector) if sector else None
 
-            # Fetch price data
-            start_date = get_utc_days_ago(365).strftime('%Y-%m-%d')
+            # Reason: 500 calendar days (~342 trading days) — quant metrics like
+            # momentum_12m_1m_skip (252 window + 21 skip), hurst_exponent (252
+            # log-returns), and ou_half_life_logret need >252 trading days of data.
+            start_date = get_utc_days_ago(500).strftime('%Y-%m-%d')
             end_date = get_current_utc_time().strftime('%Y-%m-%d')
 
             tickers_to_fetch = [ticker, 'SPY']
@@ -252,6 +255,17 @@ class UpdateEquityScreenerTable:
             # Map FMP ratios to DB columns
             for fmp_key, db_column in RATIO_KEY_MAP.items():
                 record[db_column] = ratios.get(fmp_key)
+
+            # Compute all 48 quant metrics from the already-fetched OHLCV
+            spy_df = price_data.get('SPY')
+            sector_df = price_data.get(sector_etf) if sector_etf else None
+            try:
+                quant_metrics = compute_equity_quant_metrics(df, spy_df=spy_df, sector_df=sector_df)
+                record.update(quant_metrics)
+            except Exception:
+                # Reason: a quant-metric failure should not kill the whole ticker record.
+                # Leave the columns as None/absent — upsert will simply skip them.
+                pass
 
             return record
 
