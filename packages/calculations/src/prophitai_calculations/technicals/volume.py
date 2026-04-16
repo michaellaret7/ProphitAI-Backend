@@ -167,3 +167,41 @@ def calc_vwap(
         / volume.rolling(window=window, min_periods=window).sum(),
     )
     return result.dropna()
+
+
+def calc_roll_spread(close: pd.Series, window: int = 252) -> float | None:
+    """Estimate effective bid-ask spread from daily closes (Roll 1984).
+
+    spread = 2 * sqrt(-cov(delta_P_t, delta_P_{t-1}))
+
+    Bid-ask bounce produces negative serial covariance in price changes:
+    a buy at the ask is often followed by a sell at the bid, creating a
+    negative correlation even without information changes. The magnitude
+    of that covariance estimates the round-trip transaction cost.
+
+    Useful as a microstructure liquidity proxy when intraday quotes are
+    unavailable.
+
+    Args:
+        close: Daily close price series.
+        window: Trailing window in days. Default 252.
+
+    Returns:
+        Estimated spread in price units, or None when covariance is
+        non-negative (series doesn't show bid-ask bounce pattern) or
+        insufficient data.
+    """
+    if len(close) < window:
+        return None
+
+    price_changes = close.iloc[-window:].diff().dropna()
+
+    if len(price_changes) < 2:
+        return None
+
+    cov = float(price_changes.cov(price_changes.shift(1)))
+
+    if np.isnan(cov) or cov >= 0:
+        return None
+
+    return float(2.0 * np.sqrt(-cov))

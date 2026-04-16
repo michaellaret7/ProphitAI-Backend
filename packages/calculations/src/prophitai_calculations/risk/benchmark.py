@@ -191,3 +191,37 @@ def calc_downside_capture(daily_returns: pd.Series, benchmark_returns: pd.Series
         return None
 
     return (portfolio_avg / benchmark_avg) * 100
+
+
+def calc_rolling_beta(
+    daily_returns: pd.Series,
+    benchmark_returns: pd.Series,
+    window: int = 60,
+) -> pd.Series:
+    """Calculate rolling beta via rolling covariance / variance.
+
+    Rolling OLS beta of portfolio returns on benchmark returns. The std
+    of this series is used as a beta-stability signal — unstable beta
+    means unreliable hedging, problematic for market-neutral strategies.
+
+    Args:
+        daily_returns: Asset daily returns.
+        benchmark_returns: Benchmark daily returns.
+        window: Rolling window size in days. Default 60.
+
+    Returns:
+        Series of rolling betas indexed on the overlapping dates.
+        NaN rows are dropped.
+    """
+    aligned = align_returns(daily_returns, benchmark_returns)
+    if aligned is None:
+        return pd.Series(dtype=float)
+
+    port = cast(pd.Series, aligned['portfolio'])
+    bench = cast(pd.Series, aligned['benchmark'])
+
+    cov = port.rolling(window=window, min_periods=window).cov(bench)
+    var = bench.rolling(window=window, min_periods=window).var()
+
+    beta = cast(pd.Series, cov / var.replace(0, np.nan))
+    return beta.dropna()

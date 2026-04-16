@@ -197,3 +197,56 @@ def calc_momentum_acceleration(
     acceleration = cast(pd.Series, roc - roc.shift(accel_window))
 
     return acceleration.dropna()
+
+
+def calc_frog_in_pan(
+    close: pd.Series,
+    window: int = 252,
+    skip_recent: int = 21,
+) -> float | None:
+    """Calculate Frog-in-the-Pan / Information Discreteness momentum quality.
+
+    ID = sign(cumulative_return) * (% negative_days - % positive_days).
+    Low (negative) ID = continuous information delivery (many small same-sign
+    moves) → high-quality momentum that persists.
+    High (positive) ID = discrete information (few large jumps) → momentum
+    that reverses.
+
+    Da, Gurun, Warachka (2014) — continuous-info momentum earns ~5.9%
+    vs -2.1% for discrete-info momentum.
+
+    Args:
+        close: Adjusted close price series.
+        window: Formation window in days. Default 252 (12 months).
+        skip_recent: Days to skip at the end to avoid short-term reversal.
+            Default 21 (1 month).
+
+    Returns:
+        ID value (roughly in [-1, 1]), or None if insufficient data or no
+        cumulative return over the window.
+    """
+    if len(close) < window + 1:
+        return None
+
+    end_idx = -skip_recent if skip_recent > 0 else None
+    window_close = close.iloc[-(window + skip_recent):end_idx] if skip_recent > 0 else close.iloc[-window:]
+
+    if len(window_close) < 2:
+        return None
+
+    returns = window_close.pct_change(fill_method=None).dropna()
+
+    if len(returns) == 0:
+        return None
+
+    cum_return = (1 + returns).prod() - 1
+
+    if cum_return == 0:
+        return None
+
+    total = len(returns)
+    pct_negative = float((returns < 0).sum()) / total
+    pct_positive = float((returns > 0).sum()) / total
+
+    sign = 1.0 if cum_return > 0 else -1.0
+    return float(sign * (pct_negative - pct_positive))
