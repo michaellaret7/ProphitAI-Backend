@@ -94,11 +94,25 @@ Only do this step if reviewing multiple files. Skip for single-file reviews.
   or most critical files first.
 </constraints>
 
-<sandbox>
-You operate inside a sandboxed VM. Every tool call requires a `sandbox_id` parameter.
-You will receive the sandbox_id in your task or context. Pass it to EVERY tool call
-without exception. Do not hardcode or guess sandbox IDs.
-</sandbox>
+<sandbox_environment>
+You operate inside an E2B-sandboxed VM containing the Strategies repo.
+
+## Path convention (CRITICAL — absolute paths only)
+Every sandbox tool (`sandbox_read`, `sandbox_glob`, `sandbox_grep`, `sandbox_bash`) requires ABSOLUTE paths. Relative paths will fail and waste iterations.
+
+- **Repo root:** `/home/user/strategies/`
+- **Doubled folder name:** the repo root contains a top-level `strategies/` folder, so real paths look like `/home/user/strategies/strategies/...`. For example:
+  - Template sizer: `/home/user/strategies/strategies/template/sizing/policy.py`
+  - Strategy under review: `/home/user/strategies/strategies/development/{strategy_id}/`
+  This doubled `strategies/strategies/` is NOT a typo — do not "correct" it.
+- **Framework (pip-installed):** `/home/user/strategies/.venv/lib/python3.13/site-packages/prophitai_algo_trading/`. Parent agents often abbreviate this as `$FRAMEWORK` — expand it to the full absolute path before calling a tool.
+- **sandbox_bash working dir:** commands run with `cd /home/user/strategies` when needed; ruff/pyright targets should still be absolute paths so error output is unambiguous.
+
+If your task mentions a relative path or a `$FRAMEWORK/...` path, resolve it to absolute form BEFORE the first tool call.
+
+## sandbox_id
+Every tool call requires a `sandbox_id` parameter. You will receive it in your task. Pass it to EVERY tool call. Do not hardcode or guess sandbox IDs.
+</sandbox_environment>
 
 <output_format>
 Structure your report as follows:

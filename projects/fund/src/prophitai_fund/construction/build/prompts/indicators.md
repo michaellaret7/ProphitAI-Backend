@@ -50,30 +50,33 @@ Skill creation examples:
 
 <sandbox_reference_paths>
 
-All paths assume sandbox repo root `/home/user/strategies/`.
+All paths below are ABSOLUTE. Use them verbatim in worker task payloads and `sandbox_*` tool calls — never strip the prefix. Note the doubled `strategies/strategies/` (repo root is `/home/user/strategies/` and contains a top-level `strategies/` folder).
 
 ### Template (read these first via the Step 2 worker)
 ```
-strategies/template/indicators/suite.py                  # BaseIndicatorSuite subclass pattern
-strategies/template/indicators/custom.py                 # Derived features function pattern
-strategies/template/indicators/custom_indicator.py       # Custom BaseIndicator subclass pattern
-strategies/template/indicators/fundamental_indicator.py  # Vectorized fundamental indicator pattern (MUST follow for any indicator reading df.attrs['fundamentals'])
-strategies/template/indicators/__init__.py               # Module exports pattern
-strategies/template/tests/__init__.py                    # Test package init
+/home/user/strategies/strategies/template/indicators/suite.py                  # BaseIndicatorSuite subclass pattern
+/home/user/strategies/strategies/template/indicators/custom.py                 # Derived features function pattern
+/home/user/strategies/strategies/template/indicators/custom_indicator.py       # Custom BaseIndicator subclass pattern
+/home/user/strategies/strategies/template/indicators/fundamental_indicator.py  # Vectorized fundamental indicator pattern (MUST follow for any indicator reading df.attrs['fundamentals'])
+/home/user/strategies/strategies/template/indicators/__init__.py               # Module exports pattern
+/home/user/strategies/strategies/template/tests/__init__.py                    # Test package init
 ```
 
-### Framework Source (see `<framework_paths>` for `$FRAMEWORK` resolution)
+### Framework Source
+
+`$FRAMEWORK` expands to `/home/user/strategies/.venv/lib/python3.13/site-packages/prophitai_algo_trading`. When handing paths to a worker, substitute the full absolute path — workers will NOT expand `$FRAMEWORK` themselves.
+
 ```
-$FRAMEWORK/indicators/base.py      # BaseIndicator ABC
-$FRAMEWORK/indicators/registry.py  # IndicatorRegistry
-$FRAMEWORK/indicators/pipeline.py  # IndicatorPipeline
-$FRAMEWORK/indicators/specs.py     # IndicatorSpec dataclass
-$FRAMEWORK/indicators/suite.py     # BaseIndicatorSuite ABC
+/home/user/strategies/.venv/lib/python3.13/site-packages/prophitai_algo_trading/indicators/base.py      # BaseIndicator ABC
+/home/user/strategies/.venv/lib/python3.13/site-packages/prophitai_algo_trading/indicators/registry.py  # IndicatorRegistry
+/home/user/strategies/.venv/lib/python3.13/site-packages/prophitai_algo_trading/indicators/pipeline.py  # IndicatorPipeline
+/home/user/strategies/.venv/lib/python3.13/site-packages/prophitai_algo_trading/indicators/specs.py     # IndicatorSpec dataclass
+/home/user/strategies/.venv/lib/python3.13/site-packages/prophitai_algo_trading/indicators/suite.py     # BaseIndicatorSuite ABC
 ```
 
 ### Std_lib indicators (verify constructor params of non-custom indicators)
 ```
-$FRAMEWORK/indicators/std_lib/
+/home/user/strategies/.venv/lib/python3.13/site-packages/prophitai_algo_trading/indicators/std_lib/
     trend/moving_averages.py     # SMA, EMA
     momentum/rsi.py              # RSI
     momentum/macd.py             # MACD
@@ -96,10 +99,10 @@ Follows `<standard_workflow>` in shared standards. Stage-specific steps below.
 
 ### Step 2 — Research the Framework (MANDATORY codebase_researcher)
 
-Worker task must cover:
-1. Template files: `suite.py`, `custom.py`, `custom_indicator.py`, `fundamental_indicator.py` in `strategies/template/indicators/`
-2. Framework source: `BaseIndicator`, `IndicatorSpec`, `BaseIndicatorSuite`, `IndicatorRegistry`
-3. Std_lib constructor signatures for every non-custom indicator in the manifest (use `sandbox_grep` for `'def __init__'` across `$FRAMEWORK/indicators/std_lib/`)
+Worker task must use ABSOLUTE paths (see `<sandbox_reference_paths>`). Cover:
+1. Template files under `/home/user/strategies/strategies/template/indicators/`: `suite.py`, `custom.py`, `custom_indicator.py`, `fundamental_indicator.py`
+2. Framework source: `BaseIndicator`, `IndicatorSpec`, `BaseIndicatorSuite`, `IndicatorRegistry` — under `/home/user/strategies/.venv/lib/python3.13/site-packages/prophitai_algo_trading/indicators/`
+3. Std_lib constructor signatures for every non-custom indicator in the manifest (use `sandbox_grep` for `'def __init__'` across `/home/user/strategies/.venv/lib/python3.13/site-packages/prophitai_algo_trading/indicators/std_lib/`)
 
 Output: structured report with sections for Template Patterns, Framework Interfaces, and Std_lib Constructor Signatures. Code all subsequent steps from this report; use direct `sandbox_read` only for quick mid-coding lookups.
 
@@ -172,7 +175,7 @@ Load the `run_contract_tests` skill and follow its procedure. This validates str
 
 Deploy a `code_reviewer` per `<code_review_worker_pattern>` with:
 - `layer = "indicator"`
-- `files_list = "all Python files in strategies/development/{{strategy_id}}/indicators/"`
+- `files_list = "all Python files in /home/user/strategies/strategies/development/{{strategy_id}}/indicators/"` (ABSOLUTE path — workers require it)
 
 Apply findings per `<code_review_post_steps>`.
 
@@ -210,7 +213,7 @@ Apply `<commit_push_pattern>` with:
 
 - **Never hardcode a value that exists as a constructor parameter.** When a threshold, boundary, or configurable value is accepted in `__init__` and stored as `self.param`, use `self.param` in `calculate()` and `update_last_row()`. Never substitute the numeric default (e.g., `< 0.0` when `self.down_moderate_threshold` exists). Hardcoded values make the parameter ineffective and silently produce wrong results.
 
-- **Fundamental indicators MUST use vectorized numpy operations.** When mapping quarterly fundamental data to daily bars, follow the pattern in `strategies/template/indicators/fundamental_indicator.py`:
+- **Fundamental indicators MUST use vectorized numpy operations.** When mapping quarterly fundamental data to daily bars, follow the pattern in `/home/user/strategies/strategies/template/indicators/fundamental_indicator.py`:
   1. Call `np.searchsorted(avail, trading_date_vals, side="right")` ONCE for all bars — never inside a per-bar loop
   2. Pre-extract fundamental columns as numpy arrays (`fund[item].values`) before any loop
   3. Use numpy fancy indexing (`arr[indices]`) to look up values — never `fund.iloc[idx][item]`

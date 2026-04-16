@@ -83,3 +83,10 @@ topic: tool_usage
 ---
 The research DBs (strategy_research, theory_research) are strong on foundational momentum papers (Jegadeesh-Titman, Daniel-Moskowitz, Barroso-Santa-Clara, Grundy-Martin) but have very thin coverage of residual momentum, industry-neutral momentum, and post-2020 factor performance. For Blitz-Huij-Martens residual momentum, Chaves, Huij-Lansdorp, and post-2022 momentum drawdown/recovery evidence, pivot directly to llm_web_search after 1-2 DB queries. Similar gap for analyst forecast dispersion (DMS 2002) — DB returns V/P papers for these queries. Save 3-4 wasted queries by going to web search immediately on these topics.
 
+---
+date: 2026-04-16
+title: Distribution-Tail Signals: DB Gap Requires Web Search for Modern Evidence
+topic: tool_usage
+---
+For lottery-demand / MAX effect / IVOL puzzle / skewness-return research, strategy_research and theory_research return strong foundational BAB/Frazzini-Pedersen results but are thin on: (a) Bali-Cakici-Whitelaw 2011 MAX specifics, (b) Bali-Brown-Murray-Tang 2017 lottery-beta link, (c) post-2020 IVOL replication, (d) Π-CAPM probability-weighting extension (2025). Pivot immediately to llm_web_search with specific author/year queries. The Frazzini-Pedersen "Betting Against Beta" paper IS fully indexed in theory_research and provides excellent direct quotes — query it directly with mechanism-focused queries. Key pattern: use theory_research for BAB/CAPM/leverage-constraints, web search for MAX/skewness/IVOL specifics. Saved ~3 queries by going to web search early for Π-CAPM and 2017 Bali paper.
+

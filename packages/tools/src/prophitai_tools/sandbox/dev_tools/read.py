@@ -34,6 +34,32 @@ def _format_lines(raw: str, offset: int) -> str:
     return "\n".join(numbered)
 
 
+def _nearest_existing_ancestor(sandbox, file_path: str) -> tuple[str, str] | None:
+    """Walk up from a missing path until an existing directory is found.
+
+    Returns (ancestor_path, listing) or None if nothing along the chain exists.
+    Caps the walk at 8 levels to bound shell calls when an agent passes a path
+    rooted in a totally wrong place.
+    """
+    current = file_path.rstrip("/")
+
+    for _ in range(8):
+        # Reason: strip last segment to step up one level
+        if "/" not in current or current == "/":
+            return None
+
+        current = current.rsplit("/", 1)[0] or "/"
+
+        check = _run(sandbox, f"test -d {current} && echo DIR || echo NO")
+
+        if check.stdout.strip() == "DIR":
+            listing = _run(sandbox, f"ls -1 {current}")
+
+            return current, listing.stdout
+
+    return None
+
+
 # ================================
 # --> Tools
 # ================================
@@ -86,7 +112,21 @@ def sandbox_read(
         file_check = _run(sandbox, f"test -f {file_path} && echo EXISTS || echo MISSING")
 
         if file_check.stdout.strip() != "EXISTS":
-            return error_response(f"File not found: {file_path}")
+            # Reason: On miss, surface the nearest existing ancestor's listing so
+            # the agent can correct the path in one step instead of probing blindly.
+            hint = _nearest_existing_ancestor(sandbox, file_path)
+
+            if hint is None:
+                return error_response(f"File not found: {file_path} (no ancestor directory exists — check sandbox_id and absolute-path prefix).")
+
+            ancestor, listing = hint
+            truncated = listing if len(listing) <= 2_000 else listing[:2_000] + "\n... (truncated)"
+
+            return error_response(
+                f"File not found: {file_path}\n"
+                f"Nearest existing directory: {ancestor}\n"
+                f"Contents:\n{truncated}"
+            )
 
         # Reason: Detect binary files to prevent dumping non-printable bytes into context
         mime_check = _run(sandbox, f"file --mime-encoding {file_path}")

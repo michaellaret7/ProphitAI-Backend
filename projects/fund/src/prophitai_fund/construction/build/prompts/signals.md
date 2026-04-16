@@ -56,29 +56,32 @@ Skill creation examples:
 
 <sandbox_reference_paths>
 
-All paths assume sandbox repo root `/home/user/strategies/`.
+All paths below are ABSOLUTE. Use them verbatim in worker task payloads and `sandbox_*` tool calls — never strip the prefix. Note the doubled `strategies/strategies/` (repo root is `/home/user/strategies/` and contains a top-level `strategies/` folder).
 
 ### Template (read these first via the Step 2 worker)
 ```
-strategies/template/signals/model.py    # BaseSignalModel subclass pattern
-strategies/template/strategy.py         # BaseComposableStrategy subclass pattern
-strategies/template/config.py           # Frozen dataclass pattern
-strategies/template/tests/__init__.py   # Test package init
+/home/user/strategies/strategies/template/signals/model.py    # BaseSignalModel subclass pattern
+/home/user/strategies/strategies/template/strategy.py         # BaseComposableStrategy subclass pattern
+/home/user/strategies/strategies/template/config.py           # Frozen dataclass pattern
+/home/user/strategies/strategies/template/tests/__init__.py   # Test package init
 ```
 
-### Framework Source (see `<framework_paths>` for `$FRAMEWORK` resolution)
+### Framework Source
+
+`$FRAMEWORK` expands to `/home/user/strategies/.venv/lib/python3.13/site-packages/prophitai_algo_trading`. When handing paths to a worker, substitute the full absolute path — workers will NOT expand `$FRAMEWORK` themselves.
+
 ```
-$FRAMEWORK/signals/base.py          # BaseSignalModel ABC
-$FRAMEWORK/signals/primitives.py    # Signal primitives (cross_above, etc.)
-$FRAMEWORK/strategies/base.py       # BaseStrategy (min_bars_required, get_sizing_hints)
-$FRAMEWORK/strategies/composable.py # BaseComposableStrategy
+/home/user/strategies/.venv/lib/python3.13/site-packages/prophitai_algo_trading/signals/base.py          # BaseSignalModel ABC
+/home/user/strategies/.venv/lib/python3.13/site-packages/prophitai_algo_trading/signals/primitives.py    # Signal primitives (cross_above, etc.)
+/home/user/strategies/.venv/lib/python3.13/site-packages/prophitai_algo_trading/strategies/base.py       # BaseStrategy (min_bars_required, get_sizing_hints)
+/home/user/strategies/.venv/lib/python3.13/site-packages/prophitai_algo_trading/strategies/composable.py # BaseComposableStrategy
 ```
 
-### Indicator Output (paths come from IndicatorBuildResult)
+### Indicator Output (paths come from IndicatorBuildResult — prefix with `/home/user/strategies/` before passing to a worker)
 ```
-strategies/development/{{strategy_id}}/indicators/suite.py     # Suite class to import
-strategies/development/{{strategy_id}}/indicators/custom.py    # Derived features function
-strategies/development/{{strategy_id}}/indicators/__init__.py  # Available exports
+/home/user/strategies/strategies/development/{{strategy_id}}/indicators/suite.py     # Suite class to import
+/home/user/strategies/strategies/development/{{strategy_id}}/indicators/custom.py    # Derived features function
+/home/user/strategies/strategies/development/{{strategy_id}}/indicators/__init__.py  # Available exports
 ```
 </sandbox_reference_paths>
 
@@ -88,10 +91,10 @@ Follows `<standard_workflow>` in shared standards. Stage-specific steps below.
 
 ### Step 2 — Research the Framework (MANDATORY codebase_researcher)
 
-Worker task must cover:
-1. Template files: `signals/model.py`, `strategy.py`, `config.py` in `strategies/template/`
-2. Framework source: `BaseSignalModel`, `BaseComposableStrategy`, signal primitives (`cross_above`, `cross_below`, `bars_since`, `fired_within`, `stays_above`, `cooldown_mask`, `debounce`)
-3. The indicator suite at `{{indicator_result.suite_file}}` — report class name, exports, and import path
+Worker task must use ABSOLUTE paths (see `<sandbox_reference_paths>`). Cover:
+1. Template files: `/home/user/strategies/strategies/template/signals/model.py`, `/home/user/strategies/strategies/template/strategy.py`, `/home/user/strategies/strategies/template/config.py`
+2. Framework source: `BaseSignalModel`, `BaseComposableStrategy`, signal primitives (`cross_above`, `cross_below`, `bars_since`, `fired_within`, `stays_above`, `cooldown_mask`, `debounce`) — absolute paths under `/home/user/strategies/.venv/lib/python3.13/site-packages/prophitai_algo_trading/signals/` and `.../strategies/`
+3. The indicator suite — prefix `{{indicator_result.suite_file}}` with `/home/user/strategies/` before passing to the worker. Report class name, exports, and import path.
 
 Output: structured report with sections for Template Patterns, Framework Interfaces, Signal Primitives, and Indicator Suite Exports. Code all subsequent steps from this report.
 
@@ -173,11 +176,11 @@ Load the `run_contract_tests` skill. Validates signal model conformance, config 
 
 Deploy a `code_reviewer` per `<code_review_worker_pattern>` with:
 - `layer = "signal + strategy"`
-- `files_list`:
+- `files_list` (ABSOLUTE paths — workers require them):
   ```
-  strategies/development/{{strategy_id}}/signals/model.py
-  strategies/development/{{strategy_id}}/strategy.py
-  strategies/development/{{strategy_id}}/config.py
+  /home/user/strategies/strategies/development/{{strategy_id}}/signals/model.py
+  /home/user/strategies/strategies/development/{{strategy_id}}/strategy.py
+  /home/user/strategies/strategies/development/{{strategy_id}}/config.py
   ```
 
 Apply findings per `<code_review_post_steps>`.

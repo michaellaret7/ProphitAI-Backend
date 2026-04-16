@@ -83,58 +83,59 @@ Skill creation examples:
 
 <sandbox_reference_paths>
 
-All paths assume sandbox repo root `/home/user/strategies/`.
+All paths below are ABSOLUTE. Use them verbatim in worker task payloads and `sandbox_*` tool calls — never strip the prefix. Note the doubled `strategies/strategies/` (repo root is `/home/user/strategies/` and contains a top-level `strategies/` folder).
 
 ### Template (read these first via the Step 2 worker)
 ```
-strategies/template/sizing/policy.py                 # Custom sizer pattern
-strategies/template/sizing/__init__.py               # Sizing module exports
-strategies/template/risk_controls/defaults.py        # build_risk_controls() pattern
-strategies/template/risk_controls/custom_control.py  # Custom RiskControl pattern
-strategies/template/risk_controls/__init__.py        # Risk controls module exports
-strategies/template/wiring.py                        # Engine wiring pattern
-strategies/template/run_event_backtest.py            # Event-driven backtest runner
-strategies/template/run_vectorized_backtest.py       # Vectorized backtest runner
-strategies/template/run_live.py                      # Live trading runner
-strategies/template/tests/__init__.py                # Test package init
+/home/user/strategies/strategies/template/sizing/policy.py                 # Custom sizer pattern
+/home/user/strategies/strategies/template/sizing/__init__.py               # Sizing module exports
+/home/user/strategies/strategies/template/risk_controls/defaults.py        # build_risk_controls() pattern
+/home/user/strategies/strategies/template/risk_controls/custom_control.py  # Custom RiskControl pattern
+/home/user/strategies/strategies/template/risk_controls/__init__.py        # Risk controls module exports
+/home/user/strategies/strategies/template/wiring.py                        # Engine wiring pattern
+/home/user/strategies/strategies/template/run_event_backtest.py            # Event-driven backtest runner
+/home/user/strategies/strategies/template/run_vectorized_backtest.py       # Vectorized backtest runner
+/home/user/strategies/strategies/template/run_live.py                      # Live trading runner
+/home/user/strategies/strategies/template/tests/__init__.py                # Test package init
 ```
 
-### Framework Source (see `<framework_paths>` for `$FRAMEWORK` resolution)
+### Framework Source
+
+`$FRAMEWORK` expands to `/home/user/strategies/.venv/lib/python3.13/site-packages/prophitai_algo_trading`. When handing paths to a worker, substitute the full absolute path — workers will NOT expand `$FRAMEWORK` themselves.
 
 **Sizing** (verify constructor signatures):
 ```
-$FRAMEWORK/sizing/base.py                   # BasePositionSizer ABC
-$FRAMEWORK/sizing/__init__.py               # All sizer exports
-$FRAMEWORK/sizing/std_lib/equity/           # PercentOfEquitySizer, AllInSizer, FixedQuantitySizer
-$FRAMEWORK/sizing/std_lib/risk_based/       # ATRRiskSizer
-$FRAMEWORK/sizing/std_lib/volatility/       # VolatilityTargetSizer, InverseVolatilitySizer
-$FRAMEWORK/sizing/std_lib/wrappers/         # DrawdownScaledSizer
+/home/user/strategies/.venv/lib/python3.13/site-packages/prophitai_algo_trading/sizing/base.py                   # BasePositionSizer ABC
+/home/user/strategies/.venv/lib/python3.13/site-packages/prophitai_algo_trading/sizing/__init__.py               # All sizer exports
+/home/user/strategies/.venv/lib/python3.13/site-packages/prophitai_algo_trading/sizing/std_lib/equity/           # PercentOfEquitySizer, AllInSizer, FixedQuantitySizer
+/home/user/strategies/.venv/lib/python3.13/site-packages/prophitai_algo_trading/sizing/std_lib/risk_based/       # ATRRiskSizer
+/home/user/strategies/.venv/lib/python3.13/site-packages/prophitai_algo_trading/sizing/std_lib/volatility/       # VolatilityTargetSizer, InverseVolatilitySizer
+/home/user/strategies/.venv/lib/python3.13/site-packages/prophitai_algo_trading/sizing/std_lib/wrappers/         # DrawdownScaledSizer
 ```
 
 **Risk Controls** (verify constructor signatures):
 ```
-$FRAMEWORK/risk/base.py         # RiskControl ABC
-$FRAMEWORK/risk/engine.py       # RiskEngine coordinator
-$FRAMEWORK/risk/__init__.py     # All risk control exports
-$FRAMEWORK/risk/std_lib/        # All standard risk controls
+/home/user/strategies/.venv/lib/python3.13/site-packages/prophitai_algo_trading/risk/base.py         # RiskControl ABC
+/home/user/strategies/.venv/lib/python3.13/site-packages/prophitai_algo_trading/risk/engine.py       # RiskEngine coordinator
+/home/user/strategies/.venv/lib/python3.13/site-packages/prophitai_algo_trading/risk/__init__.py     # All risk control exports
+/home/user/strategies/.venv/lib/python3.13/site-packages/prophitai_algo_trading/risk/std_lib/        # All standard risk controls
 ```
 
 **Engines** (verify constructor signatures):
 ```
-$FRAMEWORK/engines/backtest/event_driven.py  # EventDrivenBacktestEngine
-$FRAMEWORK/engines/backtest/vectorized.py    # VectorizedBacktestEngine
-$FRAMEWORK/engines/live/runner.py            # LiveRunner
+/home/user/strategies/.venv/lib/python3.13/site-packages/prophitai_algo_trading/engines/backtest/event_driven.py  # EventDrivenBacktestEngine
+/home/user/strategies/.venv/lib/python3.13/site-packages/prophitai_algo_trading/engines/backtest/vectorized.py    # VectorizedBacktestEngine
+/home/user/strategies/.venv/lib/python3.13/site-packages/prophitai_algo_trading/engines/live/runner.py            # LiveRunner
 ```
 
 **Execution Models**:
 ```
-$FRAMEWORK/execution/models.py      # EntryCandidate, PortfolioContext, SizingDecision
-$FRAMEWORK/execution/cost_model.py  # CostModel
+/home/user/strategies/.venv/lib/python3.13/site-packages/prophitai_algo_trading/execution/models.py      # EntryCandidate, PortfolioContext, SizingDecision
+/home/user/strategies/.venv/lib/python3.13/site-packages/prophitai_algo_trading/execution/cost_model.py  # CostModel
 ```
 
 ### Upstream Strategy Code (paths from build results)
-Read the strategy class, config class, and indicator suite from the file paths provided
-in the Signal+Strategy Build Result and Indicator Build Result.
+The upstream build results provide `file_path` values as repo-relative paths (e.g. `strategies/development/{{strategy_id}}/strategy.py`). When handing them to a worker, prefix with `/home/user/strategies/` to make them absolute.
 </sandbox_reference_paths>
 
 <methodology>
@@ -143,12 +144,12 @@ Follows `<standard_workflow>` in shared standards. Stage-specific steps below.
 
 ### Step 2 — Research the Framework (MANDATORY codebase_researcher)
 
-Worker task must cover:
-1. Template files for sizing, risk_controls, wiring, and runners in `strategies/template/`
-2. Framework sizer source for every sizer in the manifest's sizing chain — exact constructor kwarg names
-3. Framework risk control source for every control in the manifest — exact constructor kwarg names and lifecycle hooks
+Worker task must use ABSOLUTE paths (see `<sandbox_reference_paths>`). Cover:
+1. Template files for sizing, risk_controls, wiring, and runners under `/home/user/strategies/strategies/template/`
+2. Framework sizer source for every sizer in the manifest's sizing chain — exact constructor kwarg names (absolute paths under `/home/user/strategies/.venv/lib/python3.13/site-packages/prophitai_algo_trading/sizing/`)
+3. Framework risk control source for every control in the manifest — exact constructor kwarg names and lifecycle hooks (absolute paths under `.../prophitai_algo_trading/risk/`)
 4. Engine constructors: `EventDrivenBacktestEngine`, `VectorizedBacktestEngine`, `LiveRunner` — which accept `risk_controls`?
-5. The upstream strategy class at `{{signal_result.strategy.file_path}}` — `get_sizing_hints()` override?
+5. The upstream strategy class — prefix `{{signal_result.strategy.file_path}}` with `/home/user/strategies/` before passing to the worker. Check for `get_sizing_hints()` override.
 
 Output: structured report with sections for Template Patterns, Sizer Signatures, Risk Control Signatures, Engine Signatures, and Upstream Strategy Details. Code all subsequent steps from this report.
 
@@ -242,14 +243,14 @@ If a test fails in execution layer code, fix it per `<code_review_post_steps>`. 
 
 Deploy a `code_reviewer` per `<code_review_worker_pattern>` with:
 - `layer = "execution layer"`
-- `files_list`:
+- `files_list` (ABSOLUTE paths — workers require them):
   ```
-  strategies/development/{{strategy_id}}/sizing/
-  strategies/development/{{strategy_id}}/risk_controls/
-  strategies/development/{{strategy_id}}/wiring.py
-  strategies/development/{{strategy_id}}/run_event_backtest.py
-  strategies/development/{{strategy_id}}/run_vectorized_backtest.py
-  strategies/development/{{strategy_id}}/run_live.py
+  /home/user/strategies/strategies/development/{{strategy_id}}/sizing/
+  /home/user/strategies/strategies/development/{{strategy_id}}/risk_controls/
+  /home/user/strategies/strategies/development/{{strategy_id}}/wiring.py
+  /home/user/strategies/strategies/development/{{strategy_id}}/run_event_backtest.py
+  /home/user/strategies/strategies/development/{{strategy_id}}/run_vectorized_backtest.py
+  /home/user/strategies/strategies/development/{{strategy_id}}/run_live.py
   ```
 
 Apply findings per `<code_review_post_steps>`.

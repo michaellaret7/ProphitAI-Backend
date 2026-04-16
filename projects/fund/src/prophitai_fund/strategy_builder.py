@@ -68,11 +68,20 @@ def _validate_manifest(manifest: StrategyManifest) -> None:
 
 
 def _extract_strategy_id(idea_text: str) -> str:
-    """Parse '## Strategy Name' from the idea output and slugify it to a strategy_id."""
+    """Parse the strategy name from the idea output and slugify it to a strategy_id.
+
+    Accepts '## Strategy Name\\n<name>' (spec) or a leading '# <name>' H1 title
+    (common LLM rendering where the strategy name becomes the document title).
+    """
     match = re.search(r"##\s*Strategy\s+Name\s*\n+(.+)", idea_text)
 
     if not match:
-        raise RuntimeError("Idea output missing '## Strategy Name' section")
+        # Reason: fall back to first H1 heading when the agent renders the
+        # name as a document title instead of under '## Strategy Name'.
+        match = re.search(r"^#\s+(.+)$", idea_text, re.MULTILINE)
+
+    if not match:
+        raise RuntimeError("Idea output missing strategy name heading")
 
     name = match.group(1).strip()
 

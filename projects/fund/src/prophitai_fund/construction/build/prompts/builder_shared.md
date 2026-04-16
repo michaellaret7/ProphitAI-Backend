@@ -119,6 +119,16 @@ If a worker fails or returns an empty report, re-deploy once. If it fails again,
 
 Include `sandbox_id` in the TASK and RULES sections of every worker deployment.
 
+### Path convention for worker tasks (CRITICAL)
+
+Workers do NOT load `<sandbox_environment>` or `<framework_paths>` from this shared prompt. When you hand a task to a worker, every path you mention must be ABSOLUTE:
+
+- Repo-relative paths from build results (e.g. `strategies/development/omfm_15/strategy.py`) must be prefixed with `/home/user/strategies/` → `/home/user/strategies/strategies/development/omfm_15/strategy.py`. Note the doubled `strategies/strategies/` — it is NOT a typo.
+- `$FRAMEWORK/...` shorthand must be expanded to `/home/user/strategies/.venv/lib/python3.13/site-packages/prophitai_algo_trading/...` before going into a worker payload.
+- Template references (`strategies/template/...`) must be prefixed to `/home/user/strategies/strategies/template/...`.
+
+Workers will waste iterations flailing on relative paths — resolve them in the parent.
+
 </worker_usage>
 
 <standard_workflow>
