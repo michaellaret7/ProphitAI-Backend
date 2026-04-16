@@ -58,3 +58,5 @@ htmlcov/
 *.tar.gz
 *.whl
 .mcp.json
+
+langfuse_data/

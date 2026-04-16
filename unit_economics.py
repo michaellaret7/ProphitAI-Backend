@@ -1,24 +1,19 @@
 """
 Unit Economics Calculator for ProphitAI Agent Runs.
 
-Pulls real usage data from Langfuse, computes average token consumption
-per agent type, and estimates costs under pluggable model pricing.
+Reads local Langfuse data (downloaded by download_langfuse_data.py)
+and computes average token consumption per agent type with cost estimates
+under pluggable model pricing.
 
 Usage:
-    python unit_economics.py
+    python download_langfuse_data.py        # first: download data
+    python unit_economics.py                # then: run the report
 """
 
+import json
 from dataclasses import dataclass, field
-from datetime import datetime, timedelta, timezone
+from pathlib import Path
 from typing import Optional
-
-from dotenv import load_dotenv
-from langfuse import Langfuse
-from langfuse.api.core.request_options import RequestOptions
-
-load_dotenv()
-
-REQUEST_OPTS = RequestOptions(timeout_in_seconds=120)
 
 
 # ================================
@@ -97,6 +92,12 @@ PRICING: dict[str, dict[str, float]] = {
         "cache_read": 0.025,
     },
     # xAI
+    "grok-4.2": {
+        "input": 2.00,
+        "output": 6.00,
+        "cache_create": 0.0,
+        "cache_read": 0.0,
+    },
     "grok-3": {
         "input": 3.00,
         "output": 15.00,
@@ -110,6 +111,22 @@ PRICING: dict[str, dict[str, float]] = {
         "cache_read": 0.0,
     },
 }
+
+# Model combos for mixed-model cost estimation (orchestrator + worker)
+MIXED_MODEL_COMBOS: list[tuple[str, str]] = [
+    ("claude-sonnet-4-6", "claude-sonnet-4-6"),
+    ("claude-sonnet-4-6", "grok-4.2"),
+    ("claude-sonnet-4-6", "claude-haiku-4-5"),
+    ("claude-sonnet-4-6", "grok-3-mini"),
+    ("claude-sonnet-4-6", "gemini-2.5-flash"),
+    ("claude-sonnet-4-6", "gpt-4.1-mini"),
+    ("grok-4.2", "grok-4.2"),
+    ("grok-4.2", "grok-3-mini"),
+    ("grok-4.2", "claude-haiku-4-5"),
+    ("grok-4.2", "gemini-2.5-flash"),
+    ("gemini-2.5-pro", "gemini-2.5-flash"),
+    ("gpt-4.1", "gpt-4.1-mini"),
+]
 
 # Perplexity cost per web search call (sonar pro)
 PERPLEXITY_COST_PER_CALL = 0.005
@@ -133,6 +150,18 @@ class GenerationStats:
 
 
 @dataclass
+class RoleTokens:
+    """Token usage split by role (orchestrator vs worker)."""
+
+    input_tokens: int = 0
+    output_tokens: int = 0
+    cache_create_tokens: int = 0
+    cache_read_tokens: int = 0
+    total_tokens: int = 0
+    generation_count: int = 0
+
+
+@dataclass
 class TraceStats:
     """Aggregated stats for a single agent trace."""
 
@@ -151,6 +180,9 @@ class TraceStats:
     total_cache_create_tokens: int = 0
     total_cache_read_tokens: int = 0
     total_tokens: int = 0
+
+    orchestrator_tokens: RoleTokens = field(default_factory=RoleTokens)
+    worker_tokens: RoleTokens = field(default_factory=RoleTokens)
 
     models_used: set[str] = field(default_factory=set)
     generations: list[GenerationStats] = field(default_factory=list)
@@ -186,17 +218,20 @@ class UsageProfile:
 # ================================
 
 def _extract_generation_stats(obs) -> Optional[GenerationStats]:
-    """Extract generation stats from a Langfuse ObservationsView object.
+    """Extract generation stats from a trace observation (dict or SDK object).
 
     Uses usage_details (dict) for token counts including cache breakdown,
     and cost_details (dict) for actual dollar costs.
     """
 
-    # Reason: usage_details is a dict with cache token fields,
-    # usage is a Pydantic Usage model without them
-    usage = getattr(obs, "usage_details", None) or {}
-    cost_details = getattr(obs, "cost_details", None) or {}
-    model = getattr(obs, "model", None) or "unknown"
+    if isinstance(obs, dict):
+        usage = obs.get("usage_details") or {}
+        cost_details = obs.get("cost_details") or {}
+        model = obs.get("model") or "unknown"
+    else:
+        usage = getattr(obs, "usage_details", None) or {}
+        cost_details = getattr(obs, "cost_details", None) or {}
+        model = getattr(obs, "model", None) or "unknown"
 
     if not usage:
         return None
@@ -212,20 +247,88 @@ def _extract_generation_stats(obs) -> Optional[GenerationStats]:
     )
 
 
-def _build_trace_stats(trace, observations: list) -> TraceStats:
-    """Build aggregated stats for a single trace from its ObservationsView list."""
+def _get_obs_field(obs, field_name: str, default="") -> str:
+    """Get a field from an observation (dict or SDK object)."""
 
-    stats = TraceStats(
-        trace_id=trace.id,
-        trace_name=trace.name or "unknown",
-        tags=trace.tags or [],
-        latency=trace.latency or 0.0,
-        actual_cost=trace.total_cost or 0.0,
-    )
+    if isinstance(obs, dict):
+        return obs.get(field_name, default) or default
+
+    return getattr(obs, field_name, default) or default
+
+
+def _build_worker_obs_ids(observations: list) -> set[str]:
+    """Find all observation IDs that are descendants of a worker_agent.run.
+
+    Walks the parent chain: any obs whose ancestor is a worker_agent.run
+    is classified as a worker observation.
+    """
+
+    obs_by_id: dict[str, dict] = {}
+    worker_root_ids: set[str] = set()
 
     for obs in observations:
-        obs_type = getattr(obs, "type", "") or ""
-        obs_name = getattr(obs, "name", "") or ""
+        obs_id = _get_obs_field(obs, "id")
+        obs_name = _get_obs_field(obs, "name")
+
+        obs_by_id[obs_id] = obs
+
+        if "worker_agent" in obs_name.lower():
+            worker_root_ids.add(obs_id)
+
+    # Reason: walk every obs up its parent chain to see if it hits a worker root
+    worker_descendant_ids: set[str] = set()
+
+    for obs in observations:
+        obs_id = _get_obs_field(obs, "id")
+        current = obs
+
+        while current:
+            current_id = _get_obs_field(current, "id")
+
+            if current_id in worker_root_ids:
+                worker_descendant_ids.add(obs_id)
+                break
+
+            parent_id = _get_obs_field(current, "parent_observation_id")
+
+            if not parent_id or parent_id == current_id:
+                break
+
+            current = obs_by_id.get(parent_id)
+
+    return worker_descendant_ids
+
+
+def _add_to_role_tokens(role: RoleTokens, gen: GenerationStats) -> None:
+    """Accumulate generation stats into a RoleTokens bucket."""
+
+    role.input_tokens += gen.input_tokens
+    role.output_tokens += gen.output_tokens
+    role.cache_create_tokens += gen.cache_create_tokens
+    role.cache_read_tokens += gen.cache_read_tokens
+    role.total_tokens += gen.total_tokens
+    role.generation_count += 1
+
+
+def _build_trace_stats(trace, observations: list) -> TraceStats:
+    """Build aggregated stats for a single trace from its observations (dicts or SDK objects)."""
+
+    stats = TraceStats(
+        trace_id=trace.id if hasattr(trace, "id") else trace.get("id", ""),
+        trace_name=(trace.name if hasattr(trace, "name") else trace.get("name")) or "unknown",
+        tags=(trace.tags if hasattr(trace, "tags") else trace.get("tags")) or [],
+        latency=(trace.latency if hasattr(trace, "latency") else trace.get("latency")) or 0.0,
+        actual_cost=(trace.total_cost if hasattr(trace, "total_cost") else trace.get("total_cost")) or 0.0,
+    )
+
+    worker_obs_ids = _build_worker_obs_ids(observations)
+
+    for obs in observations:
+        obs_type = _get_obs_field(obs, "type")
+        obs_name = _get_obs_field(obs, "name")
+        obs_id = _get_obs_field(obs, "id")
+
+        is_worker = obs_id in worker_obs_ids
 
         if obs_type == "GENERATION":
             stats.generation_count += 1
@@ -240,6 +343,11 @@ def _build_trace_stats(trace, observations: list) -> TraceStats:
                 stats.total_cache_read_tokens += gen.cache_read_tokens
                 stats.total_tokens += gen.total_tokens
                 stats.models_used.add(gen.model)
+
+                if is_worker:
+                    _add_to_role_tokens(stats.worker_tokens, gen)
+                else:
+                    _add_to_role_tokens(stats.orchestrator_tokens, gen)
 
         elif obs_type == "TOOL":
             stats.tool_call_count += 1
@@ -311,54 +419,113 @@ def _estimate_cost(profile: UsageProfile, model_key: str) -> dict[str, float]:
     }
 
 
+def _cost_for_role_tokens(
+    role: RoleTokens,
+    pricing: dict[str, float],
+) -> float:
+    """Calculate cost for a RoleTokens bucket under a given pricing."""
+
+    # Reason: models without caching treat all input tokens at the regular rate
+    if pricing["cache_create"] == 0 and pricing["cache_read"] == 0:
+        total_in = role.input_tokens + role.cache_create_tokens + role.cache_read_tokens
+        return (total_in / 1e6) * pricing["input"] + (role.output_tokens / 1e6) * pricing["output"]
+
+    return (
+        (role.input_tokens / 1e6) * pricing["input"]
+        + (role.output_tokens / 1e6) * pricing["output"]
+        + (role.cache_create_tokens / 1e6) * pricing["cache_create"]
+        + (role.cache_read_tokens / 1e6) * pricing["cache_read"]
+    )
+
+
+def _estimate_mixed_cost(
+    traces: list[TraceStats],
+    orch_model: str,
+    worker_model: str,
+) -> dict[str, float]:
+    """Estimate avg cost per planned agent run with different models for orchestrator vs worker."""
+
+    orch_pricing = PRICING.get(orch_model)
+    worker_pricing = PRICING.get(worker_model)
+
+    if not orch_pricing or not worker_pricing:
+        return {"error": -1}
+
+    if not traces:
+        return {"error": -1}
+
+    total_cost = 0.0
+    costs = []
+
+    for t in traces:
+        orch_cost = _cost_for_role_tokens(t.orchestrator_tokens, orch_pricing)
+        worker_cost = _cost_for_role_tokens(t.worker_tokens, worker_pricing)
+        search_cost = t.web_search_count * PERPLEXITY_COST_PER_CALL
+
+        trace_cost = orch_cost + worker_cost + search_cost
+        costs.append(trace_cost)
+        total_cost += trace_cost
+
+    costs.sort()
+    n = len(costs)
+
+    return {
+        "orchestrator": orch_model,
+        "worker": worker_model,
+        "avg_cost": total_cost / n,
+        "median_cost": costs[n // 2],
+        "min_cost": costs[0],
+        "max_cost": costs[-1],
+    }
+
+
 # ================================
-# --> Data fetching
+# --> Data loading
 # ================================
 
-def fetch_trace_data(lookback_days: int = 7) -> list[TraceStats]:
-    """Fetch all traces and their observations from Langfuse.
+DATA_DIR = Path(__file__).parent / "langfuse_data"
 
-    Uses trace.get() per trace to get full ObservationsView objects
-    with model, usage, and cost data populated.
-    """
 
-    client = Langfuse()
+class _TraceProxy:
+    """Lightweight proxy so _build_trace_stats can read trace dicts with attribute access."""
+
+    def __init__(self, d: dict):
+        self._d = d
+
+    def __getattr__(self, name: str):
+        return self._d.get(name)
+
+
+def load_trace_data() -> list[TraceStats]:
+    """Load all traces from local JSON files in langfuse_data/."""
+
+    if not DATA_DIR.exists():
+        print(f"No data directory found at {DATA_DIR}")
+        print("Run 'python download_langfuse_data.py' first.")
+        return []
+
+    json_files = sorted(DATA_DIR.glob("*.json"))
+
+    if not json_files:
+        print(f"No JSON files found in {DATA_DIR}/")
+        print("Run 'python download_langfuse_data.py' first.")
+        return []
+
     all_trace_stats: list[TraceStats] = []
-    page = 1
 
-    from_ts = datetime.now(timezone.utc) - timedelta(days=lookback_days)
+    for filepath in json_files:
+        with open(filepath) as f:
+            traces = json.load(f)
 
-    print(f"Fetching traces from last {lookback_days} days...")
-
-    while True:
-        traces_response = client.api.trace.list(
-            limit=50,
-            page=page,
-            from_timestamp=from_ts,
-            request_options=REQUEST_OPTS,
-        )
-
-        traces = traces_response.data
-
-        if not traces:
-            break
-
-        for trace in traces:
-            # Reason: trace.get() returns full detail with ObservationsView objects
-            # that include model, usage, and cost_details — list() doesn't
-            detail = client.api.trace.get(trace.id, request_options=REQUEST_OPTS)
-            observations = detail.observations or []
+        for trace_dict in traces:
+            trace = _TraceProxy(trace_dict)
+            observations = trace_dict.get("observations", [])
             stats = _build_trace_stats(trace, observations)
             all_trace_stats.append(stats)
 
-        print(f"  Page {page}: {len(traces)} traces fetched ({len(all_trace_stats)} total)")
+        print(f"  {filepath.name}: {len(traces)} traces")
 
-        if len(traces) < 50:
-            break
-
-        page += 1
-
-    print(f"Total traces: {len(all_trace_stats)}")
+    print(f"Total traces loaded: {len(all_trace_stats)}")
 
     return all_trace_stats
 
@@ -474,6 +641,78 @@ def print_monthly_projection(profiles: list[UsageProfile]) -> None:
         print(row)
 
 
+def print_role_breakdown(planned_traces: list[TraceStats]) -> None:
+    """Print avg token breakdown by role (orchestrator vs worker) for planned runs."""
+
+    n = len(planned_traces)
+
+    if n == 0:
+        return
+
+    avg_orch = RoleTokens(
+        input_tokens=sum(t.orchestrator_tokens.input_tokens for t in planned_traces) // n,
+        output_tokens=sum(t.orchestrator_tokens.output_tokens for t in planned_traces) // n,
+        cache_create_tokens=sum(t.orchestrator_tokens.cache_create_tokens for t in planned_traces) // n,
+        cache_read_tokens=sum(t.orchestrator_tokens.cache_read_tokens for t in planned_traces) // n,
+        total_tokens=sum(t.orchestrator_tokens.total_tokens for t in planned_traces) // n,
+        generation_count=sum(t.orchestrator_tokens.generation_count for t in planned_traces) // n,
+    )
+
+    avg_worker = RoleTokens(
+        input_tokens=sum(t.worker_tokens.input_tokens for t in planned_traces) // n,
+        output_tokens=sum(t.worker_tokens.output_tokens for t in planned_traces) // n,
+        cache_create_tokens=sum(t.worker_tokens.cache_create_tokens for t in planned_traces) // n,
+        cache_read_tokens=sum(t.worker_tokens.cache_read_tokens for t in planned_traces) // n,
+        total_tokens=sum(t.worker_tokens.total_tokens for t in planned_traces) // n,
+        generation_count=sum(t.worker_tokens.generation_count for t in planned_traces) // n,
+    )
+
+    print(f"\n\n{'=' * 70}")
+    print(f"  ROLE BREAKDOWN — Planned Agent Runs (n={n})")
+    print(f"{'=' * 70}")
+    print(f"\n  {'':20} {'Orchestrator':>15} {'Workers':>15} {'Total':>15}")
+    print(f"  {'-' * 65}")
+    print(f"  {'Avg generations':<20} {avg_orch.generation_count:>15,} {avg_worker.generation_count:>15,} {avg_orch.generation_count + avg_worker.generation_count:>15,}")
+    print(f"  {'Avg input tokens':<20} {avg_orch.input_tokens:>15,} {avg_worker.input_tokens:>15,} {avg_orch.input_tokens + avg_worker.input_tokens:>15,}")
+    print(f"  {'Avg output tokens':<20} {avg_orch.output_tokens:>15,} {avg_worker.output_tokens:>15,} {avg_orch.output_tokens + avg_worker.output_tokens:>15,}")
+    print(f"  {'Avg cache create':<20} {avg_orch.cache_create_tokens:>15,} {avg_worker.cache_create_tokens:>15,} {avg_orch.cache_create_tokens + avg_worker.cache_create_tokens:>15,}")
+    print(f"  {'Avg cache read':<20} {avg_orch.cache_read_tokens:>15,} {avg_worker.cache_read_tokens:>15,} {avg_orch.cache_read_tokens + avg_worker.cache_read_tokens:>15,}")
+    print(f"  {'Avg total tokens':<20} {avg_orch.total_tokens:>15,} {avg_worker.total_tokens:>15,} {avg_orch.total_tokens + avg_worker.total_tokens:>15,}")
+
+
+def print_mixed_model_comparison(planned_traces: list[TraceStats]) -> None:
+    """Print cost estimates for planned agents under mixed model combos."""
+
+    print(f"\n\n{'=' * 70}")
+    print(f"  MIXED-MODEL COST COMPARISON — Planned Agent Runs (n={len(planned_traces)})")
+    print(f"  (applies different pricing to orchestrator vs worker tokens)")
+    print(f"{'=' * 70}")
+    print(f"\n  {'Orchestrator':<22} {'Worker':<22} {'Avg':>10} {'Median':>10} {'Min':>10} {'Max':>10}")
+    print(f"  {'-' * 84}")
+
+    results = []
+
+    for orch_model, worker_model in MIXED_MODEL_COMBOS:
+        est = _estimate_mixed_cost(planned_traces, orch_model, worker_model)
+
+        if "error" in est:
+            continue
+
+        results.append(est)
+
+    results.sort(key=lambda r: r["avg_cost"])
+
+    for r in results:
+        print(
+            f"  {r['orchestrator']:<22} "
+            f"{r['worker']:<22} "
+            f"${r['avg_cost']:>8.4f} "
+            f"${r['median_cost']:>8.4f} "
+            f"${r['min_cost']:>8.4f} "
+            f"${r['max_cost']:>8.4f}"
+        )
+
+
 def generate_report(all_traces: list[TraceStats]) -> None:
     """Generate the full unit economics report."""
 
@@ -512,8 +751,16 @@ def generate_report(all_traces: list[TraceStats]) -> None:
             print(f"\n  --- {profile.category} ---")
             print_model_comparison(profile)
 
+    # Mixed-model comparison for planned agents
+    if planned_with_cost:
+        print_mixed_model_comparison(planned_with_cost)
+
     # Monthly projections
     print_monthly_projection([simple_profile, planned_profile])
+
+    # Role breakdown for planned agents
+    if planned_with_cost:
+        print_role_breakdown(planned_with_cost)
 
     # Per-trace detail table
     print(f"\n\n{'=' * 70}")
@@ -543,5 +790,5 @@ def generate_report(all_traces: list[TraceStats]) -> None:
 # ================================
 
 if __name__ == "__main__":
-    traces = fetch_trace_data(lookback_days=7)
+    traces = load_trace_data()
     generate_report(traces)

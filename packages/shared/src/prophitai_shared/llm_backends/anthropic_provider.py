@@ -58,6 +58,16 @@ class AnthropicBackend(LLMBackend[T]):
         """Send one Anthropic message turn and normalize the response."""
 
         system_blocks, anthropic_messages = _to_anthropic_messages(messages)
+        formatted_tools = self.format_tools(tools) if tools else None
+
+        # Reason: Anthropic allows max 4 cache breakpoints. The top-level cache_control
+        # auto-places one on the message history. Warn if explicit BPs leave no room.
+        if ANTHROPIC_CACHING_ENABLED:
+            bp_count = sum(1 for t in (formatted_tools or []) if "cache_control" in t)
+            bp_count += sum(1 for b in system_blocks if "cache_control" in b)
+
+            if bp_count >= 3:
+                print(f"[CacheWarning] {bp_count} explicit breakpoints + auto-BP = {bp_count + 1} total (limit: 4)")
 
         response = self.raw_client.messages.create(
             **_compact_kwargs(
@@ -65,9 +75,9 @@ class AnthropicBackend(LLMBackend[T]):
                 cache_control=dict(CACHE_CONTROL_EPHEMERAL) if ANTHROPIC_CACHING_ENABLED else None,
                 system=system_blocks or None,
                 messages=anthropic_messages,
-                tools=self.format_tools(tools) if tools else None,
+                tools=formatted_tools,
                 temperature=temperature,
-                thinking={"type": "adaptive"},
+                # thinking={"type": "adaptive"},
                 max_tokens=21000,
             )
         )

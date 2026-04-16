@@ -77,7 +77,14 @@ def _to_anthropic_messages(
     if pending_tool_results:
         anthropic_messages.append(_build_anthropic_tool_result_message(pending_tool_results))
 
-    _ensure_system_cache_breakpoint(system_blocks)
+    # Reason: Anthropic allows max 4 cache breakpoints. Prefix-based caching means
+    # only the LAST system breakpoint matters — it covers everything before it.
+    # Consolidate to a single breakpoint to conserve budget for tools + auto-BP.
+    cached_indices = [i for i, b in enumerate(system_blocks) if "cache_control" in b]
+
+    if len(cached_indices) > 1:
+        for idx in cached_indices[:-1]:
+            del system_blocks[idx]["cache_control"]
 
     return system_blocks, anthropic_messages
 
@@ -154,17 +161,6 @@ def _build_anthropic_text_block(text: str, *, cacheable: bool) -> dict[str, Any]
         block["cache_control"] = dict(CACHE_CONTROL_EPHEMERAL)
 
     return block
-
-
-def _ensure_system_cache_breakpoint(system_blocks: list[dict[str, Any]]) -> None:
-    """Ensure there is one explicit static-system cache breakpoint when none was supplied."""
-    if not system_blocks or not ANTHROPIC_CACHING_ENABLED:
-        return
-
-    if any("cache_control" in block for block in system_blocks):
-        return
-
-    system_blocks[-1]["cache_control"] = dict(CACHE_CONTROL_EPHEMERAL)
 
 
 def _normalize_anthropic_usage(usage: Any) -> UsageStats:
