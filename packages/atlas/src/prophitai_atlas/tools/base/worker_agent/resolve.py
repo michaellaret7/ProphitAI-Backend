@@ -2,6 +2,11 @@
 
 from typing import Callable, Dict, Iterable, List
 
+# Reason: These tools are either built-in to WorkerAgent (write_note, llm_web_search)
+# or orchestrator-only meta-tools (register_tools). LLMs hallucinate them into
+# worker tool lists, so we silently drop them instead of erroring.
+WORKER_BUILTIN_TOOLS = frozenset({"write_note", "llm_web_search", "register_tools"})
+
 
 def resolve_tools_by_name(
     tool_functions: List[Callable],
@@ -10,7 +15,10 @@ def resolve_tools_by_name(
     """Resolve tool name strings to their @agent_tool-decorated callable objects.
 
     Builds a name -> callable lookup from the full tool list, then resolves
-    each requested name. Order of the returned list matches the input order.
+    each requested name. Unknown tool names are silently dropped — LLMs
+    sometimes hallucinate tool names that don't exist in the registry.
+    Tools already built into WorkerAgent (write_note, llm_web_search) and
+    orchestrator-only tools (register_tools) are also silently dropped.
 
     Args:
         tool_functions: Full list of @agent_tool-decorated callables (e.g., ALL_TOOL_FUNCTIONS).
@@ -18,9 +26,6 @@ def resolve_tools_by_name(
 
     Returns:
         List of matching @agent_tool-decorated callables.
-
-    Raises:
-        ValueError: If any requested name is not found in tool_functions.
     """
     # Reason: Build lookup once, O(1) per resolution
     name_to_func: Dict[str, Callable] = {}
@@ -34,22 +39,22 @@ def resolve_tools_by_name(
         name_to_func[tool_dict["name"]] = func
 
     resolved: List[Callable] = []
-    missing: List[str] = []
+    dropped: List[str] = []
 
     for name in tool_names:
+        # Reason: Skip tools already built into WorkerAgent or orchestrator-only meta-tools
+        if name in WORKER_BUILTIN_TOOLS:
+            dropped.append(name)
+            continue
+
         func = name_to_func.get(name)
 
         if func is None:
-            missing.append(name)
+            dropped.append(name)
         else:
             resolved.append(func)
 
-    if missing:
-        available = sorted(name_to_func.keys())
-
-        raise ValueError(
-            f"Unknown tool name(s): {missing}. "
-            f"Available tools: {available}"
-        )
+    if dropped:
+        print(f"[resolve_tools] Dropped invalid/built-in tool names: {dropped}")
 
     return resolved

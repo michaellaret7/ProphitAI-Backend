@@ -134,10 +134,7 @@ def deploy_scoped_worker(
 
     spec = registry[worker_type]
 
-    try:
-        tools = resolve_tools_by_name(ALL_TOOL_FUNCTIONS, spec.tools)
-    except ValueError as e:
-        return error_response(str(e))
+    tools = resolve_tools_by_name(ALL_TOOL_FUNCTIONS, spec.tools)
 
     # Reason: Prepend context with a label so the worker LLM can distinguish
     # background data from the structured 5-section task prompt.

@@ -29,7 +29,6 @@ PLANNER_MODEL = "gpt-5.4"
 PARSER_FALLBACK_CHAIN = [
     ("openai", "gpt-5.4"),
     ("anthropic", "claude-sonnet-4-6"),
-    ("groq", "moonshotai/kimi-k2-instruct-0905"),
     ("fireworks", "accounts/fireworks/models/gpt-oss-120b"),
     ("together", "Qwen/Qwen3-235B-A22B-Instruct-2507-tput"),
 ]

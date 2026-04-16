@@ -9,7 +9,8 @@ from anthropic import Anthropic
 
 from prophitai_shared.llm_backends.base import LLMBackend, T
 from prophitai_shared.llm_backends.helpers.anthropic_helpers import (
-    ANTHROPIC_CACHE_POLICY,
+    ANTHROPIC_CACHING_ENABLED,
+    CACHE_CONTROL_EPHEMERAL,
     _build_anthropic_text_block,
     _ensure_anthropic_instrumentation,
     _normalize_anthropic_usage,
@@ -42,8 +43,9 @@ class AnthropicBackend(LLMBackend[T]):
             }
             for tool in tools
         ]
-        if ANTHROPIC_CACHE_POLICY.enabled and ANTHROPIC_CACHE_POLICY.cache_tools and rendered_tools:
-            rendered_tools[-1]["cache_control"] = dict(ANTHROPIC_CACHE_POLICY.cache_control)
+        if ANTHROPIC_CACHING_ENABLED and rendered_tools:
+            rendered_tools[-1]["cache_control"] = dict(CACHE_CONTROL_EPHEMERAL)
+            
         return rendered_tools
 
     def call_llm(
@@ -60,17 +62,12 @@ class AnthropicBackend(LLMBackend[T]):
         response = self.raw_client.messages.create(
             **_compact_kwargs(
                 model=self.model,
-                cache_control=(
-                    dict(ANTHROPIC_CACHE_POLICY.cache_control)
-                    if ANTHROPIC_CACHE_POLICY.enabled and ANTHROPIC_CACHE_POLICY.automatic_conversation_caching
-                    else None
-                ),
+                cache_control=dict(CACHE_CONTROL_EPHEMERAL) if ANTHROPIC_CACHING_ENABLED else None,
                 system=system_blocks or None,
                 messages=anthropic_messages,
                 tools=self.format_tools(tools) if tools else None,
                 temperature=temperature,
                 thinking={"type": "adaptive"},
-                effort="low",
                 max_tokens=21000,
             )
         )

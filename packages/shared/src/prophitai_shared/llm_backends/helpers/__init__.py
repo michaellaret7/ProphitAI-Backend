@@ -1,8 +1,8 @@
 """Helper functions for LLM backend implementations."""
 
 from prophitai_shared.llm_backends.helpers.anthropic_helpers import (
-    ANTHROPIC_CACHE_POLICY,
-    AnthropicCachePolicy,
+    ANTHROPIC_CACHING_ENABLED,
+    CACHE_CONTROL_EPHEMERAL,
     _build_anthropic_text_block,
     _build_anthropic_tool_result_message,
     _coerce_system_blocks,
@@ -18,8 +18,8 @@ from prophitai_shared.llm_backends.helpers.openai_helpers import (
 )
 
 __all__ = [
-    "ANTHROPIC_CACHE_POLICY",
-    "AnthropicCachePolicy",
+    "ANTHROPIC_CACHING_ENABLED",
+    "CACHE_CONTROL_EPHEMERAL",
     "_build_anthropic_text_block",
     "_build_anthropic_tool_result_message",
     "_coerce_system_blocks",

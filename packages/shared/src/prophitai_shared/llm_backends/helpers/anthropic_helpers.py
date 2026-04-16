@@ -2,38 +2,20 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass
 import os
 import threading
-from typing import Any, Optional
+from typing import Any
 
 from prophitai_shared.llm_backends.models import UsageStats
 
 _ANTHROPIC_OTEL_LOCK = threading.Lock()
 _ANTHROPIC_OTEL_INSTRUMENTED = False
 
+ANTHROPIC_CACHING_ENABLED: bool = os.getenv(
+    "USE_ANTHROPIC_PROMPT_CACHING", "true"
+).strip().lower() in {"1", "true", "yes", "on"}
 
-@dataclass(frozen=True)
-class AnthropicCachePolicy:
-    """Cache policy for Anthropic requests."""
-
-    enabled: bool
-    automatic_conversation_caching: bool = True
-    cache_tools: bool = True
-    cache_static_system: bool = True
-    ttl: Optional[str] = None
-
-    @property
-    def cache_control(self) -> dict[str, str]:
-        control = {"type": "ephemeral"}
-        if self.ttl:
-            control["ttl"] = self.ttl
-        return control
-
-
-ANTHROPIC_CACHE_POLICY = AnthropicCachePolicy(
-    enabled=os.getenv("USE_ANTHROPIC_PROMPT_CACHING", "true").strip().lower() in {"1", "true", "yes", "on"},
-)
+CACHE_CONTROL_EPHEMERAL: dict[str, str] = {"type": "ephemeral"}
 
 
 # ================================
@@ -168,21 +150,21 @@ def _build_anthropic_text_block(text: str, *, cacheable: bool) -> dict[str, Any]
     """Build an Anthropic text block, optionally with cache control."""
     block = {"type": "text", "text": text}
 
-    if cacheable and ANTHROPIC_CACHE_POLICY.enabled and ANTHROPIC_CACHE_POLICY.cache_static_system:
-        block["cache_control"] = dict(ANTHROPIC_CACHE_POLICY.cache_control)
+    if cacheable and ANTHROPIC_CACHING_ENABLED:
+        block["cache_control"] = dict(CACHE_CONTROL_EPHEMERAL)
 
     return block
 
 
 def _ensure_system_cache_breakpoint(system_blocks: list[dict[str, Any]]) -> None:
     """Ensure there is one explicit static-system cache breakpoint when none was supplied."""
-    if not system_blocks or not ANTHROPIC_CACHE_POLICY.enabled or not ANTHROPIC_CACHE_POLICY.cache_static_system:
+    if not system_blocks or not ANTHROPIC_CACHING_ENABLED:
         return
 
     if any("cache_control" in block for block in system_blocks):
         return
 
-    system_blocks[-1]["cache_control"] = dict(ANTHROPIC_CACHE_POLICY.cache_control)
+    system_blocks[-1]["cache_control"] = dict(CACHE_CONTROL_EPHEMERAL)
 
 
 def _normalize_anthropic_usage(usage: Any) -> UsageStats:

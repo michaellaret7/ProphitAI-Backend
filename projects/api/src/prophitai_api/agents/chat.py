@@ -33,9 +33,10 @@ class ChatAgent:
         chat_callback: Optional[Union[ChatCallback, NoOpChatCallback]] = None,
         session_id: str = "chat",
         user_id: Optional[str] = None,
-        provider: str = "anthropic",
-        model: str = "claude-sonnet-4-6",
-        # temperature: float = 0.7,
+        # provider: str = "anthropic",
+        # model: str = "claude-sonnet-4-6",
+        provider: str = "grok",
+        model: str = "grok-4.20-0309-non-reasoning",
         max_iterations: int = 200,
         print_mode: PrintMode = PrintMode.PRODUCTION,
     ):
@@ -61,6 +62,8 @@ class ChatAgent:
                 notebook=self._agent.notebook,
                 chat_callback=self._agent.chat_callback,
                 user_id=user_id,
+                provider="grok",
+                model="grok-4.20-0309-non-reasoning",
                 **kwargs,
             ),
         )

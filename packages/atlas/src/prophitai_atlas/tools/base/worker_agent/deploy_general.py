@@ -102,6 +102,8 @@ def deploy_general_worker(
     tools: List[str],
     plan_task_id: str = "",
     context: str = "",
+    provider: str = WORKER_PROVIDER,
+    model: str = WORKER_MODEL,
 ) -> str:
     """Deploy an ad-hoc worker with explicitly named tools.
 
@@ -116,6 +118,8 @@ def deploy_general_worker(
         tools: List of tool name strings to resolve and give to the worker.
         plan_task_id: The plan task ID this worker is deployed for.
         context: Optional data from prior steps to prepend to the task.
+        provider: LLM provider for the worker. Bound at registration time via lambda.
+        model: LLM model for the worker. Bound at registration time via lambda.
 
     Returns:
         YAML-formatted success/error response.
@@ -128,10 +132,13 @@ def deploy_general_worker(
     if not tools:
         return error_response("tools array is empty. Provide at least one tool name.")
 
-    try:
-        resolved_tools = resolve_tools_by_name(ALL_TOOL_FUNCTIONS, tools)
-    except ValueError as e:
-        return error_response(str(e))
+    resolved_tools = resolve_tools_by_name(ALL_TOOL_FUNCTIONS, tools)
+
+    if not resolved_tools:
+        return error_response(
+            f"None of the requested tools could be resolved: {tools}. "
+            f"They were all invalid or built-in worker tools."
+        )
 
     full_task = f"CONTEXT:\n{context}\n\n{task}" if context else task
 
@@ -152,8 +159,8 @@ def deploy_general_worker(
             task=full_task,
             tools=resolved_tools,
             notebook=notebook,
-            provider=WORKER_PROVIDER,
-            model=WORKER_MODEL,
+            provider=provider,
+            model=model,
             chat_callback=worker_callback,
             max_iterations=GENERAL_WORKER_MAX_ITERATIONS,
             user_id=user_id,
