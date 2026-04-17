@@ -91,3 +91,38 @@ topic: risk_control_patterns
 ---
 When building a custom RiskControl that needs to update internal cache during should_block_entry, implement the full logic in a single definition. If you draft a stub then override it, ruff will catch the redefinition as F811. The pattern is: one should_block_entry method that both updates internal state (e.g., sector cache, claims counter) and returns the bool result.
 
+---
+date: 2026-04-16
+title: UnemploymentRegimeControl: update state in should_block_entry not on_bar
+topic: risk_control_patterns
+---
+When building a macro-counter custom RiskControl (e.g., claims threshold counting), update internal state inside should_block_entry (not on_bar). Reason: should_block_entry is guaranteed to be called for every candidate entry bar by the engine — on_bar is not reliably called for all tickers. Use a _last_update_timestamp guard to prevent double-counting when multiple tickers share the same bar. Pattern: read claims from df, check `timestamp != self._last_update_timestamp` before calling `self.update_macro_state(claims_value)`, then return self._halted.
+
+---
+date: 2026-04-16
+title: SectorConcentrationControl: ticker_sector_cache must be instance-level dict
+topic: risk_control_patterns
+---
+When implementing SectorConcentrationControl (or any control that caches ticker metadata), the cache dict MUST be instance-level (initialized in __init__ as self._ticker_sector_cache = {}), NOT class-level. Class-level mutable dicts pollute state across separate backtests, live sessions, and test runs. Code reviewer will flag class-level mutable dict as a correctness warning. Fix: move to __init__ and use self._ticker_sector_cache consistently throughout the class.
+
+---
+date: 2026-04-17
+title: PortfolioTracker correct import path
+topic: risk_control_patterns
+---
+PortfolioTracker imports from `prophitai_algo_trading.execution.portfolio_tracker` NOT `prophitai_algo_trading.portfolio.tracker`. The latter module does not exist. Confirmed from risk/base.py and template custom_control.py. Always use: `from prophitai_algo_trading.execution.portfolio_tracker import PortfolioTracker`.
+
+---
+date: 2026-04-17
+title: Alpaca broker correct import path is broker not brokers
+topic: wiring_gotchas
+---
+Alpaca class imports from `prophitai_algo_trading.broker.alpaca` (singular `broker`) NOT `prophitai_algo_trading.brokers.alpaca` (plural). Module path: `/home/user/strategies/.venv/lib/python3.13/site-packages/prophitai_algo_trading/broker/alpaca.py`. Template wiring.py also uses the singular form. Common mistake to write `brokers` — always use `broker`.
+
+---
+date: 2026-04-17
+title: Runner scripts: build components once, construct engine inline
+topic: runner_patterns
+---
+Runner scripts should call build_wvcci_engine() once to get EngineComponents, then pass components.* directly to the engine constructor inline (EventDrivenBacktestEngine(...) / VectorizedBacktestEngine(...)). Do NOT call both build_wvcci_engine() for data loading AND a separate build_event_backtest_engine() — that creates two independent instances (double-construction). Pattern: components = build_X_engine(); data = load_backtest_data(strategy=components.strategy); engine = EventDrivenBacktestEngine(strategy=components.strategy, ..., risk_controls=components.risk_controls).
+

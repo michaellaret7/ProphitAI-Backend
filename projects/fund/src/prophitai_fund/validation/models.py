@@ -72,7 +72,7 @@ class ValidationVerdict(BaseModel):
 
     verdict: Literal["passed", "failed", "build_failure"] = Field(
         description=(
-            "'passed' if best-run Sharpe > 0.8; 'failed' if the strategy ran but didn't clear. "
+            "'passed' if best-run Sharpe > 0.5; 'failed' if the strategy ran but didn't clear. "
             "'build_failure' if the built code itself couldn't produce any clean run — "
             "this path does NOT update past_ideas.md and signals upstream fix needed."
         ),

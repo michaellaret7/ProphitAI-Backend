@@ -47,7 +47,23 @@ def _clear_checkpoints() -> None:
         shutil.rmtree(CHECKPOINT_DIR)
 
 
-def _validate_manifest(manifest: StrategyManifest) -> None:
+def _checkpoint_strategy_id() -> str | None:
+    """Return the strategy_id this checkpoint dir is stamped with, if any."""
+    path = CHECKPOINT_DIR / ".strategy_id"
+
+    if path.exists():
+        return path.read_text(encoding="utf-8").strip()
+
+    return None
+
+
+def _stamp_checkpoint(strategy_id: str) -> None:
+    """Bind the checkpoint dir to a strategy_id so stale state can be detected."""
+    CHECKPOINT_DIR.mkdir(exist_ok=True)
+    (CHECKPOINT_DIR / ".strategy_id").write_text(strategy_id, encoding="utf-8")
+
+
+def _validate_manifest(manifest: StrategyManifest, expected_strategy_id: str) -> None:
     """Verify the manifest has real content, not empty defaults from a failed parse."""
     errors = []
 
@@ -62,6 +78,14 @@ def _validate_manifest(manifest: StrategyManifest) -> None:
 
     if not manifest.signals.class_name:
         errors.append("signals.class_name is empty")
+
+    # Reason: defense in depth — Change 1 overwrites manifest.strategy_id with the
+    # host value, so this assertion only fires if that override is removed later.
+    if manifest.strategy_id != expected_strategy_id:
+        errors.append(
+            f"manifest.strategy_id '{manifest.strategy_id}' does not match "
+            f"host strategy_id '{expected_strategy_id}'"
+        )
 
     if errors:
         raise RuntimeError(f"Manifest validation failed: {', '.join(errors)}")
@@ -120,6 +144,23 @@ class StrategyBuilder:
 
         strategy_id = _extract_strategy_id(idea_text)
 
+        # Reason: checkpoints from a prior run of a *different* strategy will silently
+        # pair a new idea with a stale manifest/indicator/signal result — clear and
+        # restart if the stamp doesn't match this run's strategy. An unstamped dir
+        # with downstream checkpoints present is pre-fix stale state; clear that too.
+        stamped = _checkpoint_strategy_id()
+        unstamped_stale = stamped is None and any(
+            (CHECKPOINT_DIR / f"{stage}.md").exists() for stage in ("manifest", "indicators", "signals")
+        )
+
+        if (stamped is not None and stamped != strategy_id) or unstamped_stale:
+            reason = f"stamp '{stamped}' != '{strategy_id}'" if stamped else "unstamped checkpoint from prior run"
+            print(f"Clearing checkpoints: {reason}.")
+            _clear_checkpoints()
+            _save_checkpoint("idea", idea_text)
+
+        _stamp_checkpoint(strategy_id)
+
         # Sandbox needed from here on — spin it up now that we have a strategy_id.
         sandbox_id, sandbox = create_sandbox(timeout=3600)
 
@@ -140,14 +181,19 @@ class StrategyBuilder:
                 manifest = StrategyManifest.model_validate_json(cached_manifest)
             else:
                 strategy_architect = StrategyArchitectAgent(model=MODEL, provider=PROVIDER, sandbox_id=sandbox_id)
-                architect_response = strategy_architect.run(idea_text)
+                architect_response = strategy_architect.run(idea_text, strategy_id=strategy_id)
 
                 manifest = architect_response.parsed_output
 
                 if not manifest:
                     raise RuntimeError(f"Strategy architect failed to produce manifest: {architect_response.answer}")
 
-                _validate_manifest(manifest)
+                # Reason: host owns strategy_id; the architect's value is advisory. Override
+                # before validation and caching so every downstream consumer (builders,
+                # validator, checkpoint) sees a single source of truth.
+                manifest = manifest.model_copy(update={"strategy_id": strategy_id})
+
+                _validate_manifest(manifest, expected_strategy_id=strategy_id)
                 _save_checkpoint("manifest", manifest.model_dump_json())
 
             # Stage 2b: Write the manifest to the strategy root

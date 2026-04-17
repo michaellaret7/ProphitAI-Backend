@@ -117,3 +117,24 @@ topic: coding_patterns
 ---
 MacroRegimeIndicator.update_last_row() must align the raw VIX series to the trading index (using reindex(..., method='ffill')) BEFORE computing the rolling SMA — not slice the raw VIX directly. The full calculate() path does: reindex_to_trading → rolling SMA → regime scale. The incremental path must mirror this exactly. If update_last_row slices raw VIX observations (skipping non-VIX days), it diverges from calculate() which forward-fills VIX across non-trading-day gaps first. Fix: trading_index = pd.to_datetime(self.df.index).tz_localize(None).normalize(); vix_aligned = vix_series.reindex(trading_index, method='ffill'); lookback = vix_aligned.tail(window).dropna().
 
+---
+date: 2026-04-16
+title: CCCFundamentalsIndicator: fully vectorized fundamentals_valid with cumsum trick
+topic: coding_patterns
+---
+For multi-quarter fundamental indicators, compute fundamentals_valid entirely with numpy arrays using the cumsum trick. Key steps: (1) build filing_all_valid = AND of fund[f].notna().to_numpy() for all required fields — use pd.notna, NOT np.isnan which breaks on nullable/object dtypes. (2) cumsum = np.cumsum(filing_all_valid). (3) For each bar, window_sum = cumsum[end_idx] - cumsum[prev_idx] using np.where(start_idx==0, 0, cumsum[prev_idx]). (4) all_clean = window_sum == MIN_CONSECUTIVE. (5) Assign via boolean masks. This eliminates the per-bar Python loop entirely. Also in update_last_row: always use pd.notna(val)/pd.isna(val) for scalar null checks, not np.isnan — np.isnan fails on pandas nullable integer dtypes.
+
+---
+date: 2026-04-17
+title: VIX piecewise scale: use > not >= for halt_threshold boundary
+topic: coding_patterns
+---
+When implementing piecewise linear VIX regime scale: use `vix > halt_threshold` (strictly above) for the 0.0 region, NOT `>=`. At exactly vix_halt_threshold the scale must equal vix_min_scale (the interpolation boundary), not 0.0. Pattern: above_halt = vix > halt_threshold; in_range = (vix > full_threshold) & ~above_halt. Without this, vix==halt_threshold falls into the 0.0 bucket and the unit test "VIX=35 → scale=0.65" fails. Confirmed in WVCCI build.
+
+---
+date: 2026-04-17
+title: CCCFundamentalsIndicator: fully vectorized numpy indexed gather pattern
+topic: coding_patterns
+---
+For multi-lag fundamental indicators, replace a per-bar Python loop with O(items×lags) numpy operations: filing_idx = n_avail_per_bar.astype(np.int64) - 1 - lag; valid_mask = (filing_idx >= 0) & (filing_idx < n_filings); out[valid_mask] = fund_arr[filing_idx[valid_mask]]. This is the correct fully vectorized pattern — code reviewer flagged the O(bars×items×lags) Python loop even when using numpy arrays inside. The outer loop must be over (items×lags) not over bars.
+

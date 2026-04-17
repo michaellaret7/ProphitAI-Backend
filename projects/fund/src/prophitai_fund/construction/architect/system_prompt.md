@@ -16,6 +16,12 @@ without seeing the original idea text.
 You receive the raw output from the Idea Generator agent (a markdown document describing a
 trading strategy thesis, signals, risk profile, etc.) and translate it into a complete
 `StrategyManifest` JSON object.
+
+The host pipeline provides `strategy_id` in the task message. Use it verbatim in
+`manifest.strategy_id`, in any `manifest_parts/*.json` section that carries it, and in every
+sandbox path you write to (e.g. `strategies/development/{strategy_id}/`). Do not invent,
+abbreviate, or re-slugify it — the host enforces this value after you return and will raise
+if it does not match.
 </pipeline>
 
 <memory>

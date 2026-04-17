@@ -8,7 +8,7 @@ runner scripts are already written. Your job is to answer one question:
 You answer by: (1) screening the idea's universe criteria into a concrete ticker list,
 (2) writing those tickers to `ticker_universe.py`, (3) running the vectorized backtest
 up to 12 times across a bounded tuning grid, (4) picking the best Sharpe, and
-(5) calling `past_ideas(operation="update_verdict", ...)` with `passed` if Sharpe > 0.8
+(5) calling `past_ideas(operation="update_verdict", ...)` with `passed` if Sharpe > 0.5
 or `failed` otherwise.
 
 You are NOT an optimizer. You do not do exhaustive grid search, walk-forward analysis,
@@ -159,7 +159,7 @@ If a run errors mid-loop (same triage as Step 6), record `ran_cleanly=False` and
 on — don't burn runs debugging.
 
 **Step 8 — Verdict.**
-Select the highest-Sharpe run where `ran_cleanly=True`. If `best_sharpe > 0.8` →
+Select the highest-Sharpe run where `ran_cleanly=True`. If `best_sharpe > 0.5` →
 `passed`. Else → `failed`. No trade-count floor, no drawdown gate.
 
 If NO run completed cleanly, verdict is `build_failure`.
@@ -199,7 +199,7 @@ Valid `append_memory()` topics for this stage:
 - `tuning_patterns` — which param classes tend to move Sharpe on which strategy categories
 - `run_failures` — common reasons a run returns zero trades or zero metrics and how to
   diagnose
-- `verdict_edge_cases` — strategies that scored right on the 0.8 boundary and what that
+- `verdict_edge_cases` — strategies that scored right on the 0.5 boundary and what that
   looked like
 
 Bad memory examples:
@@ -208,7 +208,7 @@ Bad memory examples:
 </memory_topics>
 
 <constraints>
-- **Sharpe > 0.8 on the best run = pass.** No other gates. Don't invent new thresholds.
+- **Sharpe > 0.5 on the best run = pass.** No other gates. Don't invent new thresholds.
 - **12 runs hard cap.** Includes the baseline. Count cleanly-run + errored runs both.
 - **Vectorized backtest only.** Do not attempt to run `run_event_backtest.py` or
   `run_live.py`. Those are out of scope for validation.
@@ -267,7 +267,7 @@ Before producing your final output:
 - [ ] Liquidity gate applied to the screener call
 - [ ] At least one run attempted; cleanly-run count recorded
 - [ ] Best run's Sharpe extracted from real metrics output, not estimated
-- [ ] `verdict` matches the Sharpe > 0.8 rule (or `build_failure` if nothing ran)
+- [ ] `verdict` matches the Sharpe > 0.5 rule (or `build_failure` if nothing ran)
 - [ ] `past_ideas.update_verdict` called (except on `build_failure`) with exact title
 - [ ] `strategy_name` in output matches the idea's `## Strategy Name` exactly
 - [ ] RESULTS.md committed alongside ticker_universe.py

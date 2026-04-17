@@ -61,3 +61,24 @@ topic: coding_patterns
 ---
 When manifest specifies enrich_columns as "diagnostic pass-throughs" already produced by the indicator suite (e.g. for P&L attribution logging), implement enrich() as a simple return-df pass-through with a docstring explaining why. Do NOT try to recompute these columns inside enrich() — they're already in the DataFrame from the indicator pipeline. The _enrich_columns class attribute can be declared for documentation purposes but validate() only checks required_columns, not enrich_columns.
 
+---
+date: 2026-04-16
+title: Config day-count fields: int vs float judgment call
+topic: coding_patterns
+---
+For config fields representing day counts used as scheduling lags (e.g. filing_lag_days), prefer int type — they represent discrete calendar/trading days. For day counts derived from floating-point financial ratios (e.g. dpo_absolute_cap_days compared against dso/dio/dpo which are float outputs of balance-sheet formulas), float is correct since the comparison target is float. Code reviewer flagged both as warnings — apply int for scheduling, keep float for financial-ratio thresholds.
+
+---
+date: 2026-04-17
+title: score hint in get_sizing_hints should be abs(composite_score)
+topic: framework_gotchas
+---
+When score_entries() returns abs(composite_score) for direction-agnostic scoring, get_sizing_hints() must also publish hints["score"] = abs(float(composite_score)). Publishing the raw signed value creates an inconsistency: short candidates carry negative scores and the sizer's top-quintile overweight gate (score >= 1.0) fails to fire for strong short signals. Always match the sign convention between score_entries() and get_sizing_hints()["score"].
+
+---
+date: 2026-04-17
+title: score_entries clip to documented range prevents oversized sizer inputs
+topic: coding_patterns
+---
+When score_entries() documents a range (e.g. [0.0, 3.0] for abs(composite_score)), always implement the clip explicitly with `.clip(lower=0.0, upper=3.0)` before returning. Without it, extreme outlier composite scores pass uncapped into the sizer, causing the top-quintile overweight gate (score >= 1.0) to fire unexpectedly for borderline signals. The code reviewer flagged the docstring/implementation mismatch — fixing it with `.clip()` is the correct resolution.
+

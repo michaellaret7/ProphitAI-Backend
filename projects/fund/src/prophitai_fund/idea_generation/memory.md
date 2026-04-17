@@ -90,3 +90,38 @@ topic: tool_usage
 ---
 For lottery-demand / MAX effect / IVOL puzzle / skewness-return research, strategy_research and theory_research return strong foundational BAB/Frazzini-Pedersen results but are thin on: (a) Bali-Cakici-Whitelaw 2011 MAX specifics, (b) Bali-Brown-Murray-Tang 2017 lottery-beta link, (c) post-2020 IVOL replication, (d) Π-CAPM probability-weighting extension (2025). Pivot immediately to llm_web_search with specific author/year queries. The Frazzini-Pedersen "Betting Against Beta" paper IS fully indexed in theory_research and provides excellent direct quotes — query it directly with mechanism-focused queries. Key pattern: use theory_research for BAB/CAPM/leverage-constraints, web search for MAX/skewness/IVOL specifics. Saved ~3 queries by going to web search early for Π-CAPM and 2017 Bali paper.
 
+---
+date: 2026-04-16
+title: FIP / Information Discreteness Evidence Best Sourced via Web Search
+topic: tool_usage
+---
+For Da-Gurun-Warachka (2014) Frog-in-the-Pan, information discreteness, and equity-path-smoothness research, strategy_research and theory_research return weak results (generic ML momentum papers, Fama-French term-structure papers). llm_web_search with "Da Gurun Warachka 2014 frog in the pan" and "information discreteness momentum post-2014 replication" returns strong specific evidence: 8pp continuous vs discrete differential, 2024 market-state replication, international replication, Alpha Architect practitioner implementation. Go directly to web search for FIP / information-path / smoothness research. This pattern is consistent with other behavioral-anomaly DB gaps (R&D anomaly, CMA/asset growth, MAX effect specifics, short-interest anomaly) — the research DBs are strong on foundational momentum/factor/volatility papers but thin on specific behavioral-anomaly author names.
+
+---
+date: 2026-04-16
+title: Screener frog_in_pan and equity_curve_r2 Are Native FIP Implementation
+topic: tool_usage
+---
+The equity screener columns frog_in_pan (description: "low = continuous = better quality") and equity_curve_r2 (description: "0-1, smoothness of cumulative returns") ARE native implementations of Da-Gurun-Warachka (2014) information discreteness and price-path smoothness respectively. This means FIP-style momentum strategies can be implemented natively in the screener without custom OHLC derivation — similar to how alpha_vs_spy/alpha_vs_sector natively implement Blitz-Huij-Martens residual momentum. For future behavioral-momentum ideation, these two columns are the primary go-to for any path-quality or information-arrival-based signal. Complementary columns: zero_return_days_pct (active price formation), autocorrelation_1d (gradual diffusion consistency), frog_in_pan (direct FIP), equity_curve_r2 (direct smoothness).
+
+---
+date: 2026-04-17
+title: past_ideas write fails if field values contain XML-like angle-bracket tags
+topic: process_mistakes
+---
+The past_ideas(operation='write') tool call FAILED twice with 'write requires all fields' error when my universe field ended with a literal string like '</universe>' or contained any XML-style tag-like pattern (e.g. '<parameter name="entry_exit">'). The tool's argument parser apparently interprets angle-bracket patterns inside parameter values as field delimiters, causing the subsequent fields to be swallowed into the preceding field. Fix: NEVER include angle brackets, HTML tags, XML tags, or parameter-name-like tokens inside any past_ideas field value. Use plain text, parentheses, or quotation marks instead. Also avoid mathematical symbols like less-than / greater-than signs: write 'greater than 0.10' in prose rather than '> 0.10' — this eliminated the error on the third attempt. This will save failed tool calls on future strategy write-ups.
+
+---
+date: 2026-04-17
+title: PEAD signal requires mid-cap universe filter and event-driven architecture
+topic: pipeline_feedback
+---
+For any future earnings-surprise or PEAD strategy design: (1) DO NOT target large-caps (market_cap > 30B) — PEAD has been arbitraged to near-zero per Subrahmanyam 2024 and Martineau 2022. (2) DO NOT target microcaps (market_cap < 2B) — Chordia et al 2009 show 70-100 percent of gross profit is eaten by costs. (3) The Goldilocks zone is 2B-30B mid-caps. (4) Include revenue-surprise concordance (Jegadeesh-Livnat 2006) — roughly doubles signal robustness vs SUE alone. (5) Quality overlay (ROE, margin, FCF) is mandatory given Garfinkel-Hribar-Hsiao 2024 finding that SUE persistence decay is the primary PEAD-decay driver. (6) PEAD strategies are DISCRETE-EVENT-DRIVEN, not monthly-rebalance — entry is triggered by a specific qualifying earnings release in the past 1-5 days, not a calendar cycle. This requires the Builder to implement an event scanner plus 45-day time-based holding, not a monthly portfolio constructor.
+
+---
+date: 2026-04-17
+title: Research DB has very thin PEAD/earnings-surprise coverage — pivot to web immediately
+topic: tool_usage
+---
+strategy_research and theory_research return mostly V/P valuation papers and generic momentum citations when queried for PEAD, SUE, earnings surprise, analyst forecast dispersion, short interest anomaly, or betting-against-correlation. For any of these signal families, go DIRECTLY to llm_web_search with specific author-year queries: 'Chordia Goyal Sadka Sadka Shivakumar 2009 PEAD liquidity', 'Garfinkel Hribar Hsiao 2024 SUE modern replication', 'Subrahmanyam 2024 PEAD microcap exclusion', 'Jegadeesh Livnat 2006 revenue surprise concordance'. This yielded specific quantitative results (5.1%/3mo hedge return, 2.43%/month illiquid, 78.1% beat rate) that the DB queries never produced. Saves 3-4 wasted DB queries. Pattern consistent with previous memory: DB is strong on momentum/BAB/volatility/factor models but thin on event-driven anomalies, intangible-capital signals, short-interest, and specific behavioral-anomaly author names.
+

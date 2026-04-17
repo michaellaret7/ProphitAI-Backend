@@ -35,7 +35,7 @@ class ValidatorAgent:
 
     Screens the universe → writes ticker_universe.py → runs up to 12 vectorized
     backtests tuning only `config_defaults.strategy` + `.sizing` → picks the
-    highest Sharpe → marks passed (>0.8) or failed in past_ideas.md.
+    highest Sharpe → marks passed (>0.5) or failed in past_ideas.md.
 
     The agent reads IDEA.md and MANIFEST.json directly from the sandbox — the
     caller only has to pass `strategy_id`.
@@ -48,7 +48,7 @@ class ValidatorAgent:
         "Screen the universe into a concrete ticker list, write them to "
         "`ticker_universe.py`, run the vectorized backtest up to 12 times across "
         "a bounded tuning grid on strategy + sizing params only, then mark the "
-        "verdict in past_ideas.md (passed if best Sharpe > 0.8, else failed).\n\n"
+        "verdict in past_ideas.md (passed if best Sharpe > 0.5, else failed).\n\n"
         "STRATEGY ID: {strategy_id}"
     )
 

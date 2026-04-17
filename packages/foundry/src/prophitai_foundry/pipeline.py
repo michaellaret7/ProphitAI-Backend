@@ -457,8 +457,38 @@ async def run_trading_strategies_pipeline(limit: int | None = None) -> int:
     return count
 
 
+async def run_macro_research_pipeline(limit: int | None = None) -> int:
+    """
+    Ingest PDFs from the macro research S3 folder.
+
+    Intended to be called from a CLI or module entrypoint rather than by
+    executing this source file directly.
+    """
+    bucket = "prophitai-s3-bucket"
+    prefix = "pdfs/macro_research/not_embedded/"
+    s3_uris = build_s3_uri_batch(bucket, prefix, limit=limit)
+
+    if not s3_uris:
+        print("No macro research files found to ingest.")
+        return 0
+
+    print(len(s3_uris))
+    print(s3_uris)
+
+    pipeline = Pipeline(
+        namespace="macro_research",
+        doc_type="macro_research",
+        chunker_type="semantic",
+        move_to_embedded_after_success=True,
+    )
+
+    count = await pipeline.run(s3_uris=s3_uris, s3_batch_size=5)
+    print(f"Upserted {count} vectors to namespace 'macro_research'")
+    return count
+
+
 if __name__ == "__main__":
     # Set to 1 for a single-file test run.
-    # Set to None to ingest the full trading_strategies folder.
-    TEST_LIMIT = 200
-    asyncio.run(run_trading_strategies_pipeline(limit=TEST_LIMIT))
+    # Set to None to ingest the full macro_research folder.
+    TEST_LIMIT = 100
+    asyncio.run(run_macro_research_pipeline(limit=TEST_LIMIT))

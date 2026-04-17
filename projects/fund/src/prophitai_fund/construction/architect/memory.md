@@ -138,3 +138,45 @@ topic: translation_patterns
 ---
 For strategies with multiple simultaneous sizing axes (vol-target base + drawdown scaling + regime scaling), use a three-layer chain: VolatilityTargetSizer(max_pct_equity=X) as the base, wrapped by DrawdownScaledSizer, with a custom outer sizer (e.g., RAMDRegimeScaledSizer) that delegates to DrawdownScaledSizer for the base share count then multiplies by regime scale factors from candidate sizing hints. The custom outer reads vix_regime_scale and market_state_scale from hints populated by get_sizing_hints(). Declare these in strategy_class.sizing_hints as value_str references to the column names, not value_num.
 
+---
+date: 2026-04-16
+title: Side-differentiated stops require custom control — StopLossExitControl is direction-neutral
+topic: framework_gaps
+---
+StopLossExitControl applies the same pct threshold to both LONG and SHORT positions regardless of direction. For strategies needing different stop percentages by side (e.g., -10% on longs for drawdown, +18% on shorts for squeeze protection), you must spec a custom control (e.g., LotteryShortSqueezeControl) that in should_force_exit() checks position.direction and applies separate thresholds. Pattern: SHORT gets the wider squeeze stop (18%), LONG gets the tighter drawdown stop (10%). Returns False from should_block_entry().
+
+---
+date: 2026-04-16
+title: E6/E7 asymmetric halt pattern: force-exit shorts only, block all new entries, hold longs
+topic: translation_patterns
+---
+For BAB/low-vol strategies with funding-stress (E6) and VIX crash (E7) halts, the correct asymmetric pattern is: (1) force-exit ALL short positions immediately (right-tail squeeze risk, BAB signal breaks); (2) block ALL new entries (both long and short); (3) do NOT force-exit existing longs (quality names benefit from flight-to-quality during stress). This requires two separate custom controls: LotteryFundingStressControl reads funding_halt_active column, LotteryVixHaltControl reads vix_halt_active column. Both have force_exit_shorts_on_halt=True and only-block-entries for longs. No std-lib equivalent can handle side-differentiated force-exit logic — always spec as custom controls. Also mirror halt columns as signal conditions (funding_halt_active==0.0, vix_halt_active==0.0 in entry conditions) as defense-in-depth.
+
+---
+date: 2026-04-16
+title: CIM FIP pattern: all price-path metrics computed from OHLCV in single custom indicator
+topic: translation_patterns
+---
+For strategies whose signals are all price-path-derived (FIP fraction, equity_curve_R², autocorrelation, zero-return pct, rolling momentum), spec a single custom indicator (CIMFipComputeIndicator) that outputs all 8 metrics from the 'close' column in one rolling-window pass. This avoids multiple custom indicator files and keeps the warmup arithmetic simple: 252 lookback + 21 skip = 273 bars minimum. The indicator must be placed AFTER RealizedVolIndicator in the pipeline because risk_adj_momentum = momentum / realized_vol reads the vol column. min_bars_required = 273 + 42 buffer = 315 (NOT 252+21) to allow z-score rolling windows to stabilize.
+
+---
+date: 2026-04-16
+title: Monthly-rebalance scheduling: signal model must gate entry/E1-exit on is_rebalance_bar()
+topic: translation_patterns
+---
+For monthly-rebalance strategies with daily signal models, entry signals and the scheduled E1 exit condition (composite below median) must be gated behind a helper method is_rebalance_bar(timestamp) that returns True only in the first 2 trading days of a new calendar month. Mid-month intraday exits (signal decay, momentum reversal, VIX/regime flags) fire on ANY bar. Always document this scheduling constraint in implementation_notes with explicit per-condition scheduling guidance, since coding agents default to evaluating all conditions uniformly.
+
+---
+date: 2026-04-16
+title: VIX sustained-halt pattern: rolling_min over N days is simpler than stateful counter
+topic: translation_patterns
+---
+For 'VIX > threshold sustained N days' patterns, the calculation spec should use pandas rolling_min(N)(vix_level) > threshold rather than a stateful day-counter loop. This is fully vectorizable and avoids state management in the indicator. vix_entry_halt = (rolling_min(5)(vix_level) > 35.0).astype(float). Specify this exact formula in the calculation field so the coding agent doesn't implement a slow Python loop.
+
+---
+date: 2026-04-17
+title: PEAD/earnings-event strategies: days_since_earnings is iterative, not vectorizable
+topic: translation_patterns
+---
+For strategies where entry eligibility and exit conditions depend on the count of trading days since a specific event (e.g., earnings announcement), days_since_earnings cannot be computed as a rolling window — it must reset to 0 on each event date and increment daily. This requires row-by-row iteration in the custom indicator, not a vectorized pandas operation. Always add an implementation_note flagging this to the coding agent, and document the state management pattern: 'if event_date on this bar → set=0; else → previous_value + 1; forward-fill event anchor columns (earnings_date, sue_raw, day0_return) until the next event.'
+

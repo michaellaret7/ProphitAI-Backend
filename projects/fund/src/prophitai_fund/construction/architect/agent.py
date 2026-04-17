@@ -36,6 +36,7 @@ class StrategyArchitectAgent:
         "Map every aspect of the idea to concrete framework components. "
         "Write each manifest section to a separate JSON file in the sandbox, "
         "then assemble them into MANIFEST.json as described in the output_format instructions.\n\n"
+        "STRATEGY ID (use verbatim in manifest.strategy_id and all file paths): {strategy_id}\n\n"
         "---\n\n"
         "{idea_text}"
     )
@@ -85,7 +86,7 @@ class StrategyArchitectAgent:
             {"role": "assistant", "content": "Memory loaded. Ready to begin."},
         ]
 
-    def run(self, idea_text: str) -> AgentResponse:
+    def run(self, idea_text: str, *, strategy_id: str) -> AgentResponse:
         """Translate a strategy idea into a Strategy Manifest.
 
         The agent writes manifest sections incrementally to sandbox files,
@@ -95,11 +96,14 @@ class StrategyArchitectAgent:
 
         Args:
             idea_text: Raw markdown output from the Idea Generator agent.
+            strategy_id: Host-owned snake_case identifier. The architect must use
+                this verbatim in ``manifest.strategy_id`` and all sandbox paths;
+                ``strategy_builder`` enforces this after the agent returns.
 
         Returns:
             AgentResponse with parsed_output containing a StrategyManifest.
         """
-        task = self.DEFAULT_TASK_TEMPLATE.format(idea_text=idea_text)
+        task = self.DEFAULT_TASK_TEMPLATE.format(idea_text=idea_text, strategy_id=strategy_id)
         context_history = self._build_context_history()
 
         # Reason: no format_output — the agent writes MANIFEST.json to the sandbox

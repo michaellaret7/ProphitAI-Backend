@@ -3,7 +3,7 @@ name: point_in_time_fundamental_join
 title: Point-in-Time Fundamental Data Join for Custom Indicators
 description: Use when a custom indicator needs to join quarterly fundamental data (FCF, earnings, etc.) into an OHLCV DataFrame with a look-ahead barrier (staleness gate).
 created: 2026-04-09
-updated: 2026-04-16
+updated: 2026-04-17
 ---
 
 # Point-in-Time Fundamental Data Join for Custom Indicators
@@ -53,21 +53,45 @@ def update_last_row(self, new_df):
     return self.df
 ```
 
+**CRITICAL: When n_avail == 0**, assign NaN/empty defaults — do NOT forward-fill
+from the previous row. A bar before the first available_from date has no filing data.
+
+**CRITICAL: For missing lags (idx out of range)**, set NaN — NOT the previous row value.
+Substituting the previous row makes calculate() and update_last_row() diverge
+when a new filing transitions across the available_from boundary.
+
 ## Multi-Quarter Output Pattern (q0/q2/q4 balance sheet, q0..q7 flow)
 
-For strategies outputting multiple lagged snapshots per field (like WVCCI):
+### Vectorized Indexed Gather (CORRECT — fully O(bars) per item×lag)
 
 ```python
-# For each trading bar, use np.searchsorted to find n_avail
-# Then assign: q{lag} = fund.iloc[n_avail - 1 - lag][field]
+# n_avail_per_bar = np.searchsorted(avail_arr, trading_arr, side="right")
 
 for item in _BS_ITEMS:
-    for lag in [0, 2, 4]:
-        col = f"{item}_q{lag}"
-        idx = n_avail - 1 - lag
-        if 0 <= idx < len(fund):
-            val = fund.iloc[idx][item]
-            result[col][bar_i] = val if pd.notna(val) else np.nan
+    arr = fund_arrays[item]
+    for lag in _BS_LAGS:
+        filing_idx = n_avail_per_bar.astype(np.int64) - 1 - lag
+        valid_mask = (filing_idx >= 0) & (filing_idx < n_filings)
+        out = np.full(n_bars, np.nan)
+        if valid_mask.any():
+            out[valid_mask] = arr[filing_idx[valid_mask]]
+        result[f"{item}_q{lag}"] = out
+```
+
+**CRITICAL: The outer loop must be over (items × lags), NOT over bars.**
+An O(bars) Python loop that uses numpy arrays inside is still an O(bars×items×lags)
+operation at scale. The correct pattern eliminates the per-bar loop entirely —
+code reviewer will flag it.
+
+### Anti-Pattern (WRONG — per-bar Python loop)
+```python
+for bar_i in range(len(self.df)):          # O(n_bars) Python loop — WRONG
+    n_avail = int(n_avail_per_bar[bar_i])
+    for item in _BS_ITEMS:
+        for lag in _BS_LAGS:
+            idx = n_avail - 1 - lag
+            if 0 <= idx < n_filings:
+                result[f"{item}_q{lag}"][bar_i] = fund_arr[idx]  # scalar access
 ```
 
 ## fundamentals_valid Flag Pattern
@@ -89,6 +113,16 @@ def _check_fundamentals_valid(self, fund, n_avail):
 ```
 Use from both `calculate()` and `update_last_row()` to avoid duplication.
 **CRITICAL**: Do NOT use `if f in check_rows.columns` inside an `all()` generator — it silently passes missing required fields instead of flagging them invalid.
+
+### Vectorized validity via cumsum trick (for calculate())
+```python
+filing_all_valid = np.ones(len(fund), dtype=bool)
+for f in _REQUIRED_FIELDS:
+    filing_all_valid &= pd.notna(fund[f].to_numpy())
+cumsum = np.cumsum(filing_all_valid.astype(np.int32))
+# For each filing end_idx, window_sum = cumsum[end_idx] - (cumsum[start-1] if start>0 else 0)
+# Then: validity_arr[end_idx] = window_sum == _MIN_CONSECUTIVE_QUARTERS
+```
 
 ## Rolling Z-Score Pattern for Quarterly Fundamental Series
 
@@ -120,6 +154,16 @@ def _rolling_quarterly_zscore(series, window=8, negate=False):
 **CRITICAL: shift(1) is mandatory.** Without it, the current observation is included
 in its own rolling mean/std, which dampens extreme values and introduces look-ahead
 contamination within the normalization window. This was caught by code review.
+
+**NOTE on equal-value quarters:** The value-change detection (`rounded != rounded.shift(1)`)
+misses consecutive quarters with identical values — those quarters are collapsed to
+one observation. This is an acceptable approximation for financial metrics that
+rarely stay identical across quarters. If exact quarter-count is critical, use an
+explicit filing cadence marker (e.g., fiscal_quarter_end_date transitions) instead.
+
+**NOTE on single-ticker requirement:** The derived-features function calling this
+helper MUST be invoked on a single-ticker DataFrame only. The rolling computation
+mixes ticker histories if called on a combined multi-ticker DataFrame.
 
 ## Code Template
 
@@ -181,17 +225,29 @@ def calculate(self) -> pd.DataFrame:
 - **ALWAYS normalize timestamps to tz-naive** on BOTH sides before merge_asof.
 - **update_last_row must look up the latest available filing**, NOT blindly
   forward-fill the previous row.
+- **update_last_row n_avail==0 → assign NaN defaults, NOT previous row forward-fill.**
+- **update_last_row missing lags → NaN, NOT previous row copy.**
 - **_check_fundamentals_valid MUST explicitly guard missing fields**: use a for-loop
   with `if f not in fund.columns: return 0.0`, NOT `if f in cols` in a generator.
 - **Rolling z-score MUST shift(1)**: current observation must not appear in its own
   rolling mean/std — shift() ensures normalization uses only prior observations.
+- **Per-ticker only**: derived-features function with rolling z-scores must only
+  be called with a single-ticker DataFrame.
+- **VIX piecewise scale: use `>` not `>=` for halt_threshold**: at exactly
+  halt_threshold the scale should equal vix_min_scale (the interpolation boundary),
+  not 0.0. Use `above_halt = vix > halt_threshold` (strictly above).
 
 ## Confirmed Patterns
 - FcfConversionIndicator (AQM52) — single metric output.
 - CCCFundamentalsIndicator (WVCCI) — multi-quarter output (q0..q7 flow, q0/q2/q4 BS).
   Uses np.searchsorted on available_from array for O(log n) per-bar lookup.
   Uses _check_fundamentals_valid helper called from both calculate() and update_last_row().
+  Vectorized indexed gather: outer loop over (items×lags), inner numpy fancy indexing.
 - Rolling z-score with shift(1) (WVCCI) — quarterly z-score on forward-filled daily series.
+- NaN flags for boolean derived columns: use np.nan (not 0.0) when inputs are missing
+  — prevents "unknown data" from being encoded as "false" in the signal model.
+- Named module-level constants for derived-feature thresholds (e.g. _DPO_ABSOLUTE_CAP_DAYS)
+  instead of inline literals — caught by code reviewer as maintainability issue.
 
 ## Revision Log
 - 2026-04-09: Created after building FcfConversionIndicator for AQM52 strategy.
@@ -201,4 +257,11 @@ def calculate(self) -> pd.DataFrame:
   efficient per-bar filing lookup without merge_asof (useful when output is many columns).
 - 2026-04-16: Added rolling z-score pattern with shift(1) — CRITICAL to avoid self-inclusion
   in normalization. Confirmed in WVCCI build and caught by code review.
+- 2026-04-16: Added CRITICAL update_last_row NaN policy pitfalls (n_avail==0 and
+  missing lags must assign NaN, NOT forward-fill from previous row). Added per-ticker
+  single-ticker requirement for derived-features function. Added NaN-flag best practice.
+- 2026-04-17: Added fully vectorized indexed gather pattern for multi-lag indicators
+  (outer loop over items×lags, inner numpy fancy indexing). Clarified anti-pattern
+  (per-bar Python loop). Added VIX piecewise scale `>` vs `>=` pitfall.
+  Added named module-level constants for hardcoded thresholds (reviewer finding).
 
