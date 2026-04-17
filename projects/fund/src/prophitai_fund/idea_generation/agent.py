@@ -44,7 +44,7 @@ class IdeaGeneratorAgent:
         print_mode: PrintMode = PrintMode.PRODUCTION,
     ):
         date = get_current_utc_time().strftime("%m/%d/%Y")
-        prompt_path = Path(__file__).parent / "prompts" / "system.md"
+        prompt_path = Path(__file__).parent / "system.md"
         system_prompt = prompt_path.read_text().format(date=date)
 
         self.agent = Agent(
