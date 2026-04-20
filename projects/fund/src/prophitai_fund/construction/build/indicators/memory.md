@@ -140,10 +140,10 @@ Add __init__ validation: if halt_threshold <= full_threshold, raise ValueError. 
 
 ---
 date: 2026-04-17
-title: Test fixtures: ticker in _make_fundamentals must match df.attrs['ticker']
+title: Test fixtures: ticker in _make_fundamentals must match df.attrs['ticker_meta']['symbol']
 topic: verification_failures
 ---
-Contract test failure mode: fundamentals_valid=0.0 even with sufficient quarters. Root cause: _make_fundamentals() called with default ticker='AAAA' but df.attrs['ticker']='TEST'. Fundamentals indicators filter fund by ticker, so all rows were excluded → 0 available filings. Always pass matching ticker to _make_fundamentals(ticker='TEST') in tests, and explicitly set ticker='TEST' in both the fund DataFrame and df.attrs['ticker'].
+Contract test failure mode: fundamentals_valid=0.0 even with sufficient quarters. Root cause: _make_fundamentals() called with default ticker='AAAA' but df.attrs['ticker_meta']['symbol']='TEST'. Fundamentals indicators filter fund by ticker, so all rows were excluded → 0 available filings. Always pass matching ticker to _make_fundamentals(ticker='TEST') in tests, and explicitly set `df.attrs['ticker_meta'] = {"symbol": "TEST", "sector": "Technology", "industry": "Software"}` in fixtures. (As of 2026-04-20, TickerMetaProvider attaches a dict — fixtures must write the dict shape, not a bare string.)
 
 ---
 date: 2026-04-17
@@ -199,4 +199,39 @@ title: update_last_row ffill semantics: mirror calculate() ffill, not blind copy
 topic: coding_patterns
 ---
 For trend indicators where calculate() does ffill() on the quarterly-sampled output (carrying filing values forward daily), update_last_row() must mirror this semantics: if the vectorized point-in-time lookup returns NaN for the last bar (no new filing crossed its available_from threshold), carry forward the previous bar's value — because that previous value came from a valid earlier filing and daily persistence is correct. This is NOT blind forward-fill of stale data — it's correct filing-date propagation. The distinction: NaN from vectorized lookup means 'same filing as yesterday', not 'no data'. Code reviewer's initial concern was valid for the case where NaN means 'insufficient history', but the ffill from prev row is correct for 'no new filing'. Pattern: _ffill_or_nan helper that reads self.df[col].iloc[-2] only when the new computed value is NaN.
+
+---
+date: 2026-04-20
+title: ADX attrs compat: stash non-scalar attrs before pipeline, re-inject via custom runner
+topic: framework_gotchas
+---
+ADXIndicator internally calls pd.concat() on Series derived from the data DataFrame. When df.attrs contains non-scalar objects (Series, DataFrame, dict), pandas propagates those attrs to derived Series and then compares them in concat's finalize step, raising 'truth value of Series is ambiguous'. Fix: implement a custom _run_pipeline_with_attrs() in the suite that (1) strips non-scalar attrs before running std-lib indicators, (2) re-injects the full attrs dict before each custom indicator runs. Pattern in suite.py: for std_lib specs strip attrs on the data copy; for custom specs do data.attrs.update(full_attrs) before constructing the indicator. BaseIndicator.__init__ calls calculate() automatically so indicator.df already has computed columns after construction — no need to call calculate() explicitly.
+
+---
+date: 2026-04-20
+title: tz_localize(None) fails on tz-naive DatetimeIndex — always use safe_normalize_index
+topic: coding_patterns
+---
+pd.to_datetime(idx).tz_localize(None) raises TypeError when idx is already tz-naive. Always use a safe helper: def safe_normalize_index(idx): dti = pd.to_datetime(idx); return (dti.tz_localize(None) if dti.tz is not None else dti).normalize(). Apply to ALL series/dataframe index normalization in indicators that accept attrs data from external feeds (VIX, SPY, sector_etfs, universe_returns).
+
+---
+date: 2026-04-20
+title: equity_price data_requirement for SPY, sector ETFs, and any equity/ETF reference series
+topic: coding_patterns
+---
+For indicators that need SPY, QQQ, sector ETFs (XLK, XLV, XLF, ...), or any equity/ETF reference close series, declare `DataRequirement(kind="equity_price", attrs_key="<name>", scope="shared", params={"symbol": "<SYMBOL>"})` — NOT `kind="commodity"`. CommodityProvider only handles commodity symbols (VIXUSD, CLUSD, GCUSD); SPY/XLK/etc. are not in the commodity table and return empty. One DataRequirement per ETF. Attaches a tz-naive `pd.Series` of closes to `df.attrs[attrs_key]`. Always use safe_normalize_index before aligning with self.df.index.
+
+---
+date: 2026-04-20
+title: universe_returns data_requirement replaces suite-override pre-injection
+topic: coding_patterns
+---
+For cross-sectional indicators (dispersion regimes, universe-relative z-scores), declare `DataRequirement(kind="universe_returns", attrs_key="universe_returns", scope="shared", params={"return_type": "pct"})`. The resolver attaches a DataFrame (date × ticker) of daily returns to every ticker's `df.attrs["universe_returns"]`. The indicator reads it directly in per-ticker `calculate()` — no suite override needed. Pass `{"return_type": "log"}` for log returns instead of percent. Previous patterns that instructed overriding `BaseIndicatorSuite.calculate()` to pre-inject are obsolete.
+
+---
+date: 2026-04-20
+title: ticker_meta now attaches dict {symbol, sector, industry}, not a bare string
+topic: framework_gotchas
+---
+As of 2026-04-20, `TickerMetaProvider` attaches `{"symbol": str, "sector": str, "industry": str}` — not the ticker string. Read via `df.attrs[attrs_key]["symbol"]` / `["sector"]` / `["industry"]`. Missing sector/industry return empty string, never None. Recommended `attrs_key="ticker_meta"` so `df.attrs["ticker_meta"]["sector"]` reads naturally. Tests that stub ticker_meta must write the dict shape: `df.attrs['ticker_meta'] = {"symbol": "TEST", "sector": "Technology", "industry": "Software"}`.
 

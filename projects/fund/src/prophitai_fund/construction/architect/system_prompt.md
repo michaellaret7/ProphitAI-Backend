@@ -80,8 +80,10 @@ these. Get them wrong and every downstream agent produces broken code.
 - **Declare data requirements for indicators that read from `df.attrs`.** Custom indicators that need supplementary data (fundamentals, macro series, etc.) must declare `data_requirements` on the `IndicatorEntry`. This tells the data resolver what to fetch automatically. Available kinds:
   - `"fundamentals"` — quarterly income statements, balance sheets, cash flow. Scope: `"per_ticker"`. No extra params needed.
   - `"financial_ratios"` — quarterly financial ratios (PE, PB, ROE, ROA, margins, turnover, etc.). Scope: `"per_ticker"`. No extra params needed.
-  - `"ticker_meta"` — attaches the ticker string to `df.attrs["ticker"]`. Scope: `"per_ticker"`. No extra params.
-  - `"commodity"` — commodity price series. Scope: `"shared"`. Requires param: `symbol` (e.g. `"VIXUSD"` for VIX, `"CLUSD"` for crude oil, `"GCUSD"` for gold).
+  - `"ticker_meta"` — attaches `{"symbol", "sector", "industry"}` dict to `df.attrs[attrs_key]`. Scope: `"per_ticker"`. No extra params. Recommended `attrs_key="ticker_meta"` (read `meta["sector"]` for sector-proxy routing).
+  - `"commodity"` — commodity price series. Scope: `"shared"`. Requires param: `symbol` (e.g. `"VIXUSD"` for VIX, `"CLUSD"` for crude oil, `"GCUSD"` for gold). Do NOT use for equities/ETFs — use `"equity_price"` instead.
+  - `"equity_price"` — equity or ETF close-price series (SPY, QQQ, sector ETFs like XLK/XLV, etc.). Scope: `"shared"`. Requires param: `symbol`. One DataRequirement per symbol; do not pass a list.
+  - `"universe_returns"` — cross-sectional daily returns for every backtest ticker (DataFrame: date index × ticker columns). Scope: `"shared"`. Optional param: `return_type` (`"pct"` default, `"log"`). Use for dispersion regimes, universe-relative z-scores, and any cross-sectional feature.
   - `"economic_indicator"` — economic data series. Scope: `"shared"`. Requires param: `indicator` (e.g. `"initialClaims"`, `"CPI"`, `"GDP"`).
   - `"government_bond_rates"` — yield curve data (m1..m6, y1..y30). Scope: `"shared"`. Requires param: `country` (e.g. `"US"`).
   - `"economic_calendar"` — scheduled economic events. Scope: `"shared"`. Requires param: `country`. Optional param: `event` to filter by event type.

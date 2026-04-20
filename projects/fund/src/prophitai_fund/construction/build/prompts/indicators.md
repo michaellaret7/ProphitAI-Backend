@@ -123,13 +123,24 @@ from prophitai_algo_trading.indicators import BaseIndicator, DataRequirement
 class FundamentalIndicator(BaseIndicator):
     data_requirements = (
         DataRequirement(kind="fundamentals", attrs_key="fundamentals", scope="per_ticker"),
-        DataRequirement(kind="ticker_meta", attrs_key="ticker", scope="per_ticker"),
+        # ticker_meta attaches a dict {"symbol","sector","industry"} — read meta["symbol"], meta["sector"].
+        DataRequirement(kind="ticker_meta", attrs_key="ticker_meta", scope="per_ticker"),
     )
 
 class MacroIndicator(BaseIndicator):
     data_requirements = (
         DataRequirement(kind="commodity", attrs_key="vix", scope="shared", params={{"symbol": "VIXUSD"}}),
         DataRequirement(kind="economic_indicator", attrs_key="claims", scope="shared", params={{"indicator": "initialClaims"}}),
+    )
+
+class ReferenceSeriesIndicator(BaseIndicator):
+    # equity_price: one DataRequirement per ETF — not a list. Attaches a tz-naive pd.Series of closes.
+    # universe_returns: cross-sectional DataFrame (date index x ticker columns) of daily returns,
+    # attached identically to every ticker's df.attrs. Use for dispersion, universe-relative z-scores, etc.
+    data_requirements = (
+        DataRequirement(kind="equity_price", attrs_key="spy", scope="shared", params={{"symbol": "SPY"}}),
+        DataRequirement(kind="equity_price", attrs_key="xlk", scope="shared", params={{"symbol": "XLK"}}),
+        DataRequirement(kind="universe_returns", attrs_key="universe_returns", scope="shared"),
     )
 ```
 

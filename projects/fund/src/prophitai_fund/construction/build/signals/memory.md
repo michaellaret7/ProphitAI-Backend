@@ -102,3 +102,10 @@ topic: coding_patterns
 ---
 When the indicator suite pre-computes gate columns (e.g. trend_gate, universe_quality_gate) from derived features, signal model params like z_trend_min and allow_shorts become dead code — the signal method just checks the pre-computed boolean column. Remove these params from both the signal model __init__ and config dataclass to avoid misleading API. Code reviewer will flag them as "stored but never used" warnings. Pattern: if gate logic lives entirely in derived_features → pre-computed column → signal model checks column directly, no threshold param needed.
 
+---
+date: 2026-04-20
+title: Config fields from manifest: keep all config_defaults.strategy regardless of suite wiring
+topic: coding_patterns
+---
+The manifest's config_defaults.strategy section defines ALL strategy-facing parameters — including indicator window params — even when the indicator suite takes no constructor args and can't consume them yet. Keep all fields in the config dataclass (they are the documented tunable contract for the Execution Layer Builder to wire later). Add a docstring note clarifying which fields are consumed by the signal model directly vs. which are reserved for suite wiring. Code reviewer will flag them as "dead" but this is by-design for layered builders. The response: add a docstring explanation, not remove the fields.
+

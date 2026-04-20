@@ -235,3 +235,24 @@ topic: framework_gaps
 ---
 PercentOfEquitySizer uses a static pct parameter. For truly equal-weight strategies (pct = 1/current_position_count, capped at max_name_pct), the static pct cannot adapt as positions open/close. Always add an implementation_note 'Equal-weight sizing: PercentOfEquitySizer pct must be dynamically computed' instructing the coding agent to implement a thin EqualWeightPositionSizer or wiring.py override that computes pct = min(1.0 / max(context.open_position_count, 1), max_name_pct) at calculate_shares() time. This is the correct pattern for any 50-120 name equal-weight portfolio targeting 95-100% deployment.
 
+---
+date: 2026-04-20
+title: Cross-sectional dispersion uses universe_returns data_requirement
+topic: translation_patterns
+---
+For strategies whose regime gate depends on cross-sectional dispersion (std of universe returns across tickers), declare `DataRequirement(kind="universe_returns", attrs_key="universe_returns", scope="shared")` on the dispersion indicator. The resolver attaches a DataFrame (date × ticker) of daily returns to every ticker's `df.attrs["universe_returns"]`. The indicator reads `df.attrs["universe_returns"]` and computes `universe_returns.std(axis=1).rolling(21).mean()`. DO NOT override `suite.calculate()` to pre-inject — the vectorized engine never calls such an override path.
+
+---
+date: 2026-04-20
+title: Rolling OLS residual alpha: separate indicators for SPY-alpha and sector-alpha, IR downstream
+topic: translation_patterns
+---
+For residual-reversal strategies built on rolling OLS regressions vs market and sector: (1) ResidualAlphaIndicator outputs alpha_vs_spy, beta_vs_spy, residual_std_spy (annualized) reading `df.attrs['spy']` from a `DataRequirement(kind="equity_price", attrs_key="spy", scope="shared", params={"symbol": "SPY"})`; (2) SectorResidualAlphaIndicator reads `df.attrs['ticker_meta']['sector']` (platform-provided dict) to map to ETF proxy and outputs alpha_vs_sector, residual_std_sector — one `DataRequirement(kind="equity_price", ...)` per sector ETF (XLK, XLV, XLF, XLE, XLY, XLP, XLI, XLU, XLB, XLRE, XLC); (3) InformationRatioIndicator = alpha_vs_spy / max(residual_std_spy, 0.001), MUST come after ResidualAlphaIndicator. Composite reversal score = -1 * (z_alpha_spy + z_alpha_sector + z_IR), where each z is own-history rolling 63-day z-score. Normalization: clip(-4.5, 4.5) then rescale to [0,1] via (x+4.5)/9.0. Sector ETF mapping is a hardcoded dict in SectorResidualAlphaIndicator keyed by GICS sector name.
+
+---
+date: 2026-04-20
+title: Three new data_requirement kinds — equity_price, ticker_meta dict, universe_returns
+topic: framework_gotchas
+---
+Architect may specify three platform-native kinds: (a) `kind="equity_price"` params={"symbol": "SPY"} scope="shared" — ETF/equity close series (replaces commodity misuse for SPY/sector ETFs). One DataRequirement per symbol; attaches tz-naive `pd.Series` to `df.attrs[attrs_key]`. (b) `kind="ticker_meta"` scope="per_ticker" — attaches dict `{"symbol","sector","industry"}` to `df.attrs[attrs_key]`. Recommended attrs_key="ticker_meta". Sector-proxy indicators read `meta["sector"]`. (c) `kind="universe_returns"` scope="shared" optional params={"return_type": "pct"|"log"} — cross-sectional returns DataFrame (date × ticker) at `df.attrs[attrs_key]`. Used for dispersion regimes and universe-relative features. Indicator agents should never be told to override `suite.calculate()` to pre-inject these — declare the data_requirement and the resolver handles it.
+

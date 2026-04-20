@@ -60,3 +60,24 @@ topic: run_failures
 ---
 When a strategy screener selects tickers based on CURRENT fundamental metrics (e.g., asset_turnover >= 0.30 today) but the strategy's indicator pipeline enforces the same gate on HISTORICAL data (e.g., in custom.py hardcoded `_MIN_ASSET_TURNOVER = 0.30`), the backtest will produce very few trades because many tickers didn't meet the gate historically even though they do today. Detection: screener returns 400+ qualifying tickers, backtest fires only 9-14 trades over 7 years. The sparse trades then produce negative Sharpe from the warmup-drag pattern (few positions deployed, long flat periods). Remedies: (1) expand universe to 200+ with historical screening, (2) lower the historical gate threshold (e.g., 0.20 vs 0.30), (3) skip warmup bars from Sharpe calculation.
 
+---
+date: 2026-04-20
+title: SPY and sector ETFs use kind="equity_price", not commodity
+topic: run_failures
+---
+Indicators needing SPY / QQQ / sector ETF (XLK, XLV, XLF, ...) close series must declare `DataRequirement(kind="equity_price", attrs_key="<name>", scope="shared", params={"symbol": "<SYMBOL>"})`. Declaring `kind="commodity"` with an equity symbol returns empty (CommodityProvider only fetches from the commodity table). One DataRequirement per ETF. FLAG any strategy whose indicator reads `df.attrs['spy']` / `df.attrs['xlk']` but whose indicator-level `data_requirements` use kind="commodity" for those symbols. Detection at validation time: `df.attrs` contains 'vix' but not 'spy'; alpha_vs_spy is all-NaN; composite score stuck at its NaN-fill value; 0 trades. Do NOT accept "fix in wiring.py by manually injecting" — the execution prompt forbids manual fetching (execution.md:211,301); the indicator builder must use the correct kind.
+
+---
+date: 2026-04-20
+title: ticker_meta is a dict {symbol, sector, industry} — flag string-assumers
+topic: run_failures
+---
+`TickerMetaProvider` attaches a dict `{"symbol", "sector", "industry"}` to `df.attrs[attrs_key]`. Validator should FLAG strategies whose indicator treats `ticker_meta` as a bare ticker string (e.g. using `df.attrs.get("ticker")` and feeding it to a dataframe filter). Expected readers look like `df.attrs["ticker_meta"]["sector"]` or `meta = df.attrs["ticker_meta"]; sector = meta["sector"]`. Detection: `alpha_vs_sector` all-NaN despite sector ETF series being present in `df.attrs`; sector-proxy mapping returns None; 0 sector-residual trades.
+
+---
+date: 2026-04-20
+title: DataRequirement params=[] vs params={} causes TypeError at **unpacking
+topic: run_failures
+---
+DataRequirement.params must be a dict (defaulting to {}), not a list ([]). When params=[] (a list), the DataResolver's call to provider.fetch(tickers, sd, ed, **req.params) raises TypeError: argument after ** must be a mapping, not list. Fix: change params=[] to params={} in the DataRequirement definition. This is a builder error that appears in indicators with no provider params needed (e.g. ticker_meta which needs no symbol).
+

@@ -130,3 +130,17 @@ topic: tool_usage
 ---
 The Barra GEMLT quality factor uses four descriptors — asset turnover, gross margin, gross profit / assets, return on assets — ALL FOUR available natively in the equity screener as asset_turnover_ttm, gross_profit_margin_ttm, return_on_assets_ttm, return_on_capital_employed_ttm. Novy-Marx 2013 gross profitability can be implemented natively without any custom OHLC or line-item derivation. Furthermore, high asset_turnover_ttm serves as a model-free proxy for Peters-Taylor 2017 intangible-capital intensity since asset-light firms have low PPE relative to economic output — sidesteps the lack of SG&A or R&D fields. Combined with change columns (operating_margin_change_yoy, roce_change_5yr, ebit_growth_yoy minus revenue_cagr_3yr) this gives a native implementation of DuPont-style static-plus-trend quality strategies. Future quality/profitability/intangibles strategies can skip custom indicator development entirely and rely on screener composites.
 
+---
+date: 2026-04-20
+title: Dispersion regime gate is the key novelty for reversal strategies in 2026
+topic: tool_usage
+---
+For reversal-family strategy research in April 2026, the single most valuable web query was 'short term reversal cross-sectional dispersion relationship high dispersion regime stronger alpha'. Returned a direct empirical finding: high-IDR regimes produce approximately 45 percent annualized performance difference for reversal strategies, dispersion outperforms VIX as opportunity indicator. Combined with Goldman 2026-01 data showing SPX dispersion at 97th percentile 4y lookback, this produced a compelling regime-conditioning angle that would not have been found via strategy_research or theory_research DBs. Pattern: when strategy has a natural regime-conditioning story, one targeted llm_web_search query on 'X strategy + regime state + dispersion' is worth three DB queries.
+
+---
+date: 2026-04-20
+title: Residual reversal is the natural counterpart to failed RAMD residual momentum
+topic: pipeline_feedback
+---
+When a residual-momentum signal family (like RAMD) has been tried and failed at the build stage, the residual-REVERSAL signal on the same screener columns (alpha_vs_spy, alpha_vs_sector, information_ratio) is a distinct signal with opposite sign and different horizon (1-3mo vs 12-1mo) and different mechanism (liquidity provision vs behavioral underreaction). Both can coexist in future strategy sets without overlap. Key design differences downstream must preserve: negative-sign composite (LOSERS not winners), shorter horizon, dispersion gate not momentum gate, higher turnover so stricter liquidity gates.
+

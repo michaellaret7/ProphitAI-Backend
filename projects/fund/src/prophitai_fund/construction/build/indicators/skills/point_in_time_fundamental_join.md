@@ -176,8 +176,9 @@ def _build_fundamentals(self) -> pd.DataFrame | None:
         return None
 
     fund = fundamentals.copy()
-    # Resolve ticker
-    ticker = self.df.attrs.get("ticker")
+    # Resolve ticker from ticker_meta dict (framework contract as of 2026-04-20)
+    meta = self.df.attrs.get("ticker_meta") or {}
+    ticker = meta.get("symbol") if isinstance(meta, dict) else None
     if ticker is not None and "ticker" in fund.columns:
         fund = fund[fund["ticker"] == ticker]
     if fund.empty:

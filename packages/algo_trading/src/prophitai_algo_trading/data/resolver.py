@@ -147,13 +147,55 @@ class BaseDataProvider(ABC):
 
 
 class TickerMetaProvider(BaseDataProvider):
-    """Attaches ``df.attrs["ticker"] = ticker`` for each DataFrame."""
+    """Attaches a ``{"symbol", "sector", "industry"}`` dict to ``df.attrs``.
 
-    def fetch(self, tickers: list[str], start_date: dt_date, end_date: dt_date, **params: Any) -> dict[str, str]:
-        return {t: t for t in tickers}
+    Bulk-queries the ``Ticker`` model once for the full universe and attaches
+    a per-ticker metadata dict. Indicators that need sector/industry for proxy
+    routing (e.g. sector-residual indicators) read
+    ``df.attrs[attrs_key]["sector"]``. Missing rows return empty strings,
+    never ``None``.
+    """
+
+    def fetch(self, tickers: list[str], start_date: dt_date, end_date: dt_date, **params: Any) -> dict[str, dict[str, str]]:
+        meta = self._bulk_meta(tickers)
+
+        return {
+            t: {
+                "symbol": t,
+                "sector": meta.get(t, ("", ""))[0],
+                "industry": meta.get(t, ("", ""))[1],
+            }
+            for t in tickers
+        }
 
     def attach(self, df: pd.DataFrame, ticker: str, fetched_data: Any, attrs_key: str) -> None:
-        df.attrs[attrs_key] = fetched_data.get(ticker, ticker)
+        df.attrs[attrs_key] = fetched_data.get(
+            ticker,
+            {"symbol": ticker, "sector": "", "industry": ""},
+        )
+
+    @staticmethod
+    def _bulk_meta(tickers: list[str]) -> dict[str, tuple[str, str]]:
+        """Single-query sector + industry lookup for the universe."""
+
+        try:
+            from prophitai_data.db.models.market import Ticker as TickerModel
+            from prophitai_data.session.decorators import with_session
+
+            @with_session("market")
+            def _query(tkrs: list[str], session=None) -> dict[str, tuple[str, str]]:
+                rows = (
+                    session.query(TickerModel.ticker, TickerModel.sector, TickerModel.industry)
+                    .filter(TickerModel.ticker.in_(tkrs))
+                    .all()
+                )
+
+                return {r.ticker: (r.sector or "", r.industry or "") for r in rows}
+
+            return _query(tickers)
+        except Exception:
+            logger.warning("Failed to fetch ticker metadata", exc_info=True)
+            return {}
 
 
 class FundamentalsProvider(BaseDataProvider):
@@ -236,6 +278,99 @@ class CommodityProvider(BaseDataProvider):
         series.index = pd.to_datetime(series.index).tz_localize(None).normalize()
 
         return series
+
+    def attach(self, df: pd.DataFrame, ticker: str, fetched_data: Any, attrs_key: str) -> None:
+        if fetched_data is not None:
+            df.attrs[attrs_key] = fetched_data
+
+
+class EquityPriceProvider(BaseDataProvider):
+    """Fetches an equity or ETF close-price series via ``get_price_data_df``.
+
+    Single-symbol provider, mirroring ``CommodityProvider``. Strategies that
+    need SPY / sector ETF / any equity close series as a shared reference
+    declare one ``DataRequirement`` per symbol. Attaches a tz-naive
+    ``pd.Series`` of closes indexed on calendar dates to ``df.attrs``.
+    """
+
+    def fetch(self, tickers: list[str], start_date: dt_date, end_date: dt_date, **params: Any) -> pd.Series | None:
+        from prophitai_algo_trading.data.repository.price_data import get_price_data_df
+
+        symbol = params.get("symbol", "")
+        if not symbol:
+            logger.warning("EquityPriceProvider requires 'symbol' param")
+            return None
+
+        try:
+            df = get_price_data_df(symbol=symbol, start_date=start_date, end_date=end_date, interval="daily")
+        except Exception:
+            logger.warning("Failed to fetch equity price for %s", symbol, exc_info=True)
+            return None
+
+        if df.empty or "close" not in df.columns:
+            return None
+
+        series = df["close"].copy()
+        series.index = pd.to_datetime(series.index).tz_localize(None).normalize()
+
+        return series
+
+    def attach(self, df: pd.DataFrame, ticker: str, fetched_data: Any, attrs_key: str) -> None:
+        if fetched_data is not None:
+            df.attrs[attrs_key] = fetched_data
+
+
+class UniverseReturnsProvider(BaseDataProvider):
+    """Fetches cross-sectional daily returns for the full backtest universe.
+
+    Builds a single DataFrame (date index × ticker columns) of daily returns
+    and attaches it to every ticker's ``df.attrs`` — the same DataFrame
+    reference across all tickers. Cross-sectional indicators (dispersion
+    regimes, universe-relative z-scores, etc.) can read the full matrix from
+    ``df.attrs[attrs_key]``.
+
+    Params:
+        return_type: ``"pct"`` (default) or ``"log"``.
+
+    # TODO(perf): Re-fetches OHLCV the backtest already loaded. Add a
+    # request-scoped lru_cache wrapper around get_price_data_df inside
+    # load_strategy_data() if profiling shows this matters on large universes.
+    """
+
+    def fetch(self, tickers: list[str], start_date: dt_date, end_date: dt_date, **params: Any) -> pd.DataFrame | None:
+        from prophitai_algo_trading.data.repository.price_data import get_price_data_df
+
+        return_type = params.get("return_type", "pct")
+        closes: dict[str, pd.Series] = {}
+
+        for ticker in tickers:
+            try:
+                df = get_price_data_df(symbol=ticker, start_date=start_date, end_date=end_date, interval="daily")
+            except Exception:
+                logger.warning("Failed to fetch universe price for %s", ticker, exc_info=True)
+                continue
+
+            if df.empty or "close" not in df.columns:
+                continue
+
+            series = df["close"].copy()
+            series.index = pd.to_datetime(series.index).tz_localize(None).normalize()
+
+            closes[ticker] = series
+
+        if not closes:
+            return None
+
+        prices = pd.DataFrame(closes).sort_index()
+
+        if return_type == "log":
+            import numpy as np
+
+            returns = np.log(prices / prices.shift(1))
+        else:
+            returns = prices.pct_change()
+
+        return returns
 
     def attach(self, df: pd.DataFrame, ticker: str, fetched_data: Any, attrs_key: str) -> None:
         if fetched_data is not None:
@@ -542,10 +677,12 @@ def build_default_resolver() -> DataResolver:
     """Create a ``DataResolver`` with all standard providers registered.
 
     Standard kinds:
-        ``"ticker_meta"``          — ticker string attached to df.attrs
+        ``"ticker_meta"``          — {symbol, sector, industry} dict attached to df.attrs
         ``"fundamentals"``         — quarterly income/balance/cashflow + sector
         ``"financial_ratios"``     — quarterly financial ratios (PE, ROE, margins, etc.)
         ``"commodity"``            — commodity price series (requires ``symbol`` param)
+        ``"equity_price"``         — equity/ETF close series (requires ``symbol`` param)
+        ``"universe_returns"``     — cross-sectional daily returns DataFrame (optional ``return_type`` param)
         ``"economic_indicator"``   — economic data series (requires ``indicator`` param)
         ``"government_bond_rates"``— yield curve data (requires ``country`` param)
         ``"economic_calendar"``    — economic event calendar (requires ``country`` param)
@@ -557,6 +694,8 @@ def build_default_resolver() -> DataResolver:
     resolver.register("fundamentals", FundamentalsProvider())
     resolver.register("financial_ratios", FinancialRatiosProvider())
     resolver.register("commodity", CommodityProvider())
+    resolver.register("equity_price", EquityPriceProvider())
+    resolver.register("universe_returns", UniverseReturnsProvider())
     resolver.register("economic_indicator", EconomicIndicatorProvider())
     resolver.register("government_bond_rates", GovernmentBondRatesProvider())
     resolver.register("economic_calendar", EconomicCalendarProvider())

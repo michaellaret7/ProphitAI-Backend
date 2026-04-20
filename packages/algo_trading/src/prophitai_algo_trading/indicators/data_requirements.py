@@ -16,14 +16,21 @@ class DataRequirement:
 
     Attributes:
         kind: Data source type. Standard kinds:
-              ``"fundamentals"``, ``"commodity"``, ``"economic_indicator"``,
-              ``"ticker_meta"``.
+              ``"fundamentals"``, ``"financial_ratios"``, ``"commodity"``,
+              ``"equity_price"``, ``"universe_returns"``,
+              ``"economic_indicator"``, ``"government_bond_rates"``,
+              ``"economic_calendar"``, ``"ticker_meta"``.
         attrs_key: Key in ``df.attrs`` where the fetched data is stored.
         scope: ``"per_ticker"`` when data varies by ticker (e.g. fundamentals),
                ``"shared"`` when the same data applies to all tickers (e.g. VIX).
+               Informational only today — ``resolver.resolve()`` attaches the
+               same fetched object to every ticker regardless. See
+               ``resolver.py:455``.
         params: Provider-specific parameters. For ``"commodity"`` include
-                ``{"symbol": "VIXUSD"}``, for ``"economic_indicator"`` include
-                ``{"indicator": "initialClaims"}``, etc.
+                ``{"symbol": "VIXUSD"}``; for ``"equity_price"`` include
+                ``{"symbol": "SPY"}``; for ``"universe_returns"`` optionally
+                ``{"return_type": "log"}`` (default ``"pct"``); for
+                ``"economic_indicator"`` include ``{"indicator": "initialClaims"}``.
     """
 
     kind: str

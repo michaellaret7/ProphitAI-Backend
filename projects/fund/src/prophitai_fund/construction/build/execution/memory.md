@@ -186,3 +186,10 @@ topic: risk_control_patterns
 ---
 When _compute_sector_exposure iterates portfolio holdings and classifies sectors, extract the per-symbol lookup into a _resolve_sector_for_held(sym) helper method. This makes the conservative classification decision explicit and documentable (unknown symbols excluded from sector gross but included in total_gross — conservative direction for a blocking control). Reviewers flag direct dict.get(sym, '__UNKNOWN__') inline calls as "never attempts to resolve" — the named helper makes the deliberate design choice clear.
 
+---
+date: 2026-04-20
+title: has_columns() is variadic *args, NOT list arg
+topic: risk_control_patterns
+---
+RiskControl.has_columns(df, *columns: str) is variadic — pass individual string args, NOT a list. Calling has_columns(df, [col]) passes a list as a single arg, causing TypeError: unhashable type 'list' in pandas __contains__. Correct: self.has_columns(df, self._column_name). Wrong: self.has_columns(df, [self._column_name]).
+
