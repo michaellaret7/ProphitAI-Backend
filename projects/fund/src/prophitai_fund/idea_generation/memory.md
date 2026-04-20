@@ -1,127 +1,132 @@
 ---
 date: 2026-04-07
-title: Parallel Worker Deployment for 3-Track Research is Highly Efficient
+title: Parallel 3-worker deployment for intraday strategy research
 topic: tool_usage
 ---
-Deploying 3 parallel workers simultaneously (signal-existence, mechanism/boundary, macro-regime) for intraday strategy research produces comprehensive, non-overlapping results in one round. Each worker gets a focused ROLE and exactly 6 sequential queries. Workers reliably complete all queries and synthesize findings. Total research coverage: 18 structured queries + 4 follow-ups in a single parallel step. This pattern is highly efficient for intraday strategy idea generation.
-
+Deploying 3 parallel workers simultaneously (signal-existence, mechanism/boundary, macro-regime) for intraday strategy research produces comprehensive, non-overlapping results in one round. Each worker gets a focused ROLE and exactly 6 sequential queries. Total research coverage: 18 structured queries plus follow-ups in a single parallel step.
 
 ---
 date: 2026-04-07
-title: Parallel 2-Worker Research for Fundamentals-Based Strategies is Efficient
+title: Parallel 2-worker deployment for fundamentals-based strategy research
 topic: tool_usage
 ---
-For fundamentals-based daily/monthly strategies, deploy 2 parallel workers: one for signal-existence + mechanism + boundary conditions + costs + counter-evidence (7 queries via strategy_research + theory_research), and one for macro regime context (6 queries via macro_research_search_search + economics_research_search + general_news + us_treasury_rates). This produces comprehensive, non-overlapping results efficiently. The fundamentals worker benefits from theory_research for academic citations (accruals, PEAD, behavioral finance) while strategy_research handles implementation specifics. Workers reliably synthesize their own findings into clean outputs.
+For fundamentals-based daily/monthly strategies, deploy 2 parallel workers: one for signal-existence plus mechanism plus boundary conditions plus costs plus counter-evidence (7 queries via strategy_research + theory_research), one for macro regime context (6 queries via macro_research + economics_research + general_news + us_treasury_rates). The fundamentals worker benefits from theory_research for academic citations (accruals, PEAD, behavioral finance) while strategy_research handles implementation specifics.
 
 ---
 date: 2026-04-08
-title: 2-Worker Parallel Research (Signal + Macro) Highly Efficient for Fundamental Strategies
+title: Parallel 2-worker research with 3-candidate signal family comparison
 topic: tool_usage
 ---
-Deploying 2 parallel workers for fundamental/multi-factor strategy research works well: Worker 1 evaluates 3 candidate signal families (7 queries via strategy_research + theory_research), Worker 2 does macro regime context (6 queries via macro_research_search_search + economics_research_search + general_news + market data tools). Workers self-synthesize findings including a clear comparative verdict on candidates. This pattern provides comprehensive coverage and a clean recommendation in a single parallel step. Critical: give Worker 1 a structured 3-candidate format with explicit query assignments per candidate — it keeps findings organized and prevents one signal getting all the attention.
+For fundamental/multi-factor strategy research, deploy 2 parallel workers: Worker 1 evaluates 3 candidate signal families (7 queries across strategy_research + theory_research), Worker 2 covers macro regime context (6 queries). Critical: give Worker 1 a structured 3-candidate format with explicit query assignments per candidate — keeps findings organized and prevents one signal getting all the attention.
 
 ---
 date: 2026-04-08
-title: Macro Worker Assessments Can Conflict with Signal Worker Verdicts — Synthesize Both
+title: Signal worker vs macro worker verdict conflicts — signal quality wins
 topic: process_mistakes
 ---
-When deploying parallel workers (signal research vs. macro regime), the two workers may give conflicting verdicts. In the AQM-52 run: signal worker picked Candidate A (52-week high, stronger evidence), macro worker picked Candidate B (forecast dispersion, better current regime fit). Resolution: the signal worker's verdict (stronger academic evidence, cleaner mechanism, lower costs) should be the primary tie-breaker when both signals are plausible. The macro regime concern can be addressed by building regime conditioning INTO the strategy (vol-scaling + market state gate) rather than switching to a weaker signal. Don't let short-term macro threats override long-term signal quality — instead, design the regime adaptation into the strategy itself.
+When parallel workers give conflicting verdicts (signal worker favors candidate A on academic evidence, macro worker favors candidate B on current-regime fit), the signal worker's verdict wins when both signals are plausible — stronger academic evidence, cleaner mechanism, and lower costs dominate short-term macro fit. Address the macro concern by building regime conditioning INTO the strategy (vol scaling, market-state gate) rather than switching to a weaker signal. Don't let short-term macro threats override long-term signal quality.
 
 ---
 date: 2026-04-13
-title: Direct Tool Calls More Efficient Than Workers for Multi-Signal Research
+title: Direct tool calls beat workers for multi-signal exploration
 topic: tool_usage
 ---
-For fundamentals-based quarterly strategies with 3-4 candidate signals, doing 8-10 direct strategy_research + theory_research + macro_research_search + llm_web_search calls sequentially (without workers) is efficient and allows dynamic query pivoting based on early results. Workers are better when 6+ queries must be pre-specified before any results arrive. When first 2-3 queries confirm a direction strongly, direct calls let you immediately follow up with targeted disconfirming queries — workers cannot do this adaptively.
+For fundamentals-based quarterly strategies with 3-4 candidate signals, 8-10 direct strategy_research + theory_research + macro_research + llm_web_search calls sequentially (without workers) is efficient and allows dynamic query pivoting based on early results. Workers are better when 6+ queries must be pre-specified before any results arrive. When first 2-3 queries confirm a direction strongly, direct calls let you immediately follow up with targeted disconfirming queries — workers cannot pivot adaptively.
 
 ---
 date: 2026-04-13
-title: Direct Tool Calls Adaptive vs. Workers for Signal Selection Research
+title: Pivot to llm_web_search when research DB returns the same paper cluster
 topic: tool_usage
 ---
-For multi-candidate signal exploration (testing 3-4 novel signal families before committing to one), direct tool calls are more efficient than workers. Early queries confirmed that the research database returned V/P valuation papers for broad queries; pivoting immediately to more specific angles (operating leverage + revenue acceleration) yielded actionable evidence faster than pre-specified worker queries would have. The adaptive pivot saved ~4 redundant queries. Key pattern: when the research DB repeatedly returns the same paper cluster (V/P / accruals / profitability), immediately switch to llm_web_search for more targeted academic findings.
+When strategy_research or theory_research repeatedly returns the same paper cluster for distinct queries (commonly V/P valuation papers, accruals papers, or generic momentum papers), immediately switch to llm_web_search with more targeted academic queries (specific author-year citations). The research DBs are strong on foundational momentum, factor models, BAB/low-vol, and volatility topics but thin on capital-structure, intangible-capital, event-driven, and specific behavioral-anomaly topics.
 
 ---
 date: 2026-04-14
-title: Research DB Returns V/P Papers for Broad Payout/Cash Queries — Pivot to LLM Web Search
+title: Research DB gaps requiring immediate web-search pivot
 topic: tool_usage
 ---
-When querying strategy_research or theory_research for shareholder yield, buyback anomaly, net share issuance, or cash return signals, the DB consistently returns V/P valuation papers and accruals papers instead of the target signal. For these specific signals, immediately pivot to llm_web_search with targeted academic queries (e.g., 'Pontiff Woodgate 2008 share issuance anomaly', 'Aktas Croci CCC working capital returns'). The research DB is much better suited to momentum, factor model, and volatility topics than capital structure / payout anomalies. This saved ~4 queries by pivoting early to llm_web_search for CCC/working capital evidence.
+The strategy_research and theory_research DBs return V/P valuation and generic momentum papers for the following signal families and should be skipped after 1 confirmatory query. Go directly to llm_web_search with specific author-year queries for: shareholder yield / buybacks / net share issuance (Pontiff-Woodgate), working-capital / CCC (Aktas-Croci), R&D intensity / intangibles (Leung-Mazouz-Evans), CMA / asset growth / investment factor (Cooper-Gulen-Schill, Titman-Wei-Xie, Fama-French CMA post-2013), lottery / MAX / IVOL / skewness (Bali-Cakici-Whitelaw, Bali-Brown-Murray-Tang, Π-CAPM), Frog-in-the-Pan / information discreteness (Da-Gurun-Warachka), PEAD / SUE / earnings surprise (Chordia-Goyal-Sadka, Garfinkel-Hribar-Hsiao, Subrahmanyam, Jegadeesh-Livnat), earnings announcement premium / EAP (Frazzini-Lamont, Barber-De George-Lehavy-Trueman, Savor-Wilson), residual momentum (Blitz-Huij-Martens, Chaves, Huij-Lansdorp), and analyst forecast dispersion (Diether-Malloy-Scherbina). For BAB / CAPM / leverage constraints, the theory_research DB indexes Frazzini-Pedersen directly with good mechanism quotes — query it first. Going to web search early on these topics saves 3-4 wasted DB queries per session.
 
 ---
 date: 2026-04-16
-title: R&D Anomaly Evidence Gap in Research DB — Use Web Search Immediately
+title: Screener alpha_vs_spy and alpha_vs_sector are native residual-momentum columns
 topic: tool_usage
 ---
-The strategy_research and theory_research DBs return no useful results for R&D intensity, intangible investment, or SGA-to-revenue anomaly queries. All R&D anomaly evidence must come from llm_web_search with specific author/paper queries. The DB is strong for momentum, BAB/low-vol, factor models, and stat-arb but blind to intangible capital research. For future R&D-related strategies, go directly to llm_web_search with queries like 'Leung Mazouz Evans 2020 R&D anomaly alpha Carhart' or 'R&D intensity cross-section returns bear market boundary conditions' — saves 3-4 wasted DB queries.
+alpha_vs_spy and alpha_vs_sector in the equity screener are, by definition, regression residual returns against the market and sector — i.e., they ARE residual momentum per Blitz-Huij-Martens (2011) finance theory (alpha = Y-intercept of return regression = historical residual return). Residual momentum strategies can be implemented NATIVELY in the fund screener without raw OHLC regression. The information_ratio column (alpha / vol, no rf) provides a risk-adjusted version. Composite z-score of alpha_vs_spy + alpha_vs_sector + information_ratio produces a sector-and-market-neutralized residual momentum signal directly.
 
 ---
 date: 2026-04-16
-title: CMA/Asset Growth DB Gap — Use Web Search for Post-2013 Factor Decay Evidence
+title: Screener frog_in_pan and equity_curve_r2 are native FIP implementation
 topic: tool_usage
 ---
-strategy_research and theory_research return very little on asset growth / CMA / investment factor specifically (Cooper-Gulen-Schill 2008, Titman-Wei-Xie 2004, Fama-French CMA performance post-2013). The DBs return V/P and general factor papers instead. llm_web_search with specific author/paper queries is far more efficient for these topics. Critical finding unearthed this way: CMA has decayed substantially since 2013 with aggressive-investment firms OUTPERFORMING in recent years — this disconfirming evidence would have been missed relying only on DB queries. Save ~4 DB queries by going directly to web search for asset-growth / investment-factor topics.
-
----
-date: 2026-04-16
-title: Distribution-Tail Signals (MAX, Skewness) Are an Open Territory Within Fund's Strategy Set
-topic: pipeline_feedback
----
-As of April 2026, the fund has 9 strategies covering fundamental trajectory (CBERM/RACEQ/DQROE/OLIGA/WVCCI/IIMM), price momentum (AQM-52), and intraday microstructure (IVCCM/OMFM-15). ZERO strategies use return-distribution-shape signals (MAX effect, skewness, kurtosis, BAB/low-vol). This is the single largest unexplored dimension in the strategy set. Screener already exposes yang_zhang_vol, return_skewness, return_kurtosis, beta_stability — direct support for distribution-based strategies. Future idea generation should prioritize distribution-tail / behavioral-demand signals, short-interest/ownership signals, and dispersion/correlation signals before returning to more fundamental trajectory variants (which are nearing saturation within this fund's set).
-
----
-date: 2026-04-16
-title: Screener alpha_vs_spy / alpha_vs_sector = Blitz-Huij-Martens Residual Momentum Native Implementation
-topic: tool_usage
----
-The screener columns alpha_vs_spy and alpha_vs_sector are, by definition, regression residual returns against the market and sector — i.e., they ARE residual momentum per Blitz-Huij-Martens (2011) finance theory (alpha = Y-intercept of return regression = historical residual return). This means residual momentum strategies can be implemented NATIVELY in the fund screener without needing raw OHLC regression computation. The information_ratio column (= alpha/vol, no rf) provides a risk-adjusted version. Combining alpha_vs_spy + alpha_vs_sector + information_ratio in a composite z-score produces a sector+market-neutralized residual momentum signal directly. For future momentum strategy ideation, these columns are the primary go-to for any neutralized/residualized momentum formulation.
-
----
-date: 2026-04-16
-title: Momentum Research DB Gap: Pivot to Web Search for Post-2020 Variant Performance
-topic: tool_usage
----
-The research DBs (strategy_research, theory_research) are strong on foundational momentum papers (Jegadeesh-Titman, Daniel-Moskowitz, Barroso-Santa-Clara, Grundy-Martin) but have very thin coverage of residual momentum, industry-neutral momentum, and post-2020 factor performance. For Blitz-Huij-Martens residual momentum, Chaves, Huij-Lansdorp, and post-2022 momentum drawdown/recovery evidence, pivot directly to llm_web_search after 1-2 DB queries. Similar gap for analyst forecast dispersion (DMS 2002) — DB returns V/P papers for these queries. Save 3-4 wasted queries by going to web search immediately on these topics.
-
----
-date: 2026-04-16
-title: Distribution-Tail Signals: DB Gap Requires Web Search for Modern Evidence
-topic: tool_usage
----
-For lottery-demand / MAX effect / IVOL puzzle / skewness-return research, strategy_research and theory_research return strong foundational BAB/Frazzini-Pedersen results but are thin on: (a) Bali-Cakici-Whitelaw 2011 MAX specifics, (b) Bali-Brown-Murray-Tang 2017 lottery-beta link, (c) post-2020 IVOL replication, (d) Π-CAPM probability-weighting extension (2025). Pivot immediately to llm_web_search with specific author/year queries. The Frazzini-Pedersen "Betting Against Beta" paper IS fully indexed in theory_research and provides excellent direct quotes — query it directly with mechanism-focused queries. Key pattern: use theory_research for BAB/CAPM/leverage-constraints, web search for MAX/skewness/IVOL specifics. Saved ~3 queries by going to web search early for Π-CAPM and 2017 Bali paper.
-
----
-date: 2026-04-16
-title: FIP / Information Discreteness Evidence Best Sourced via Web Search
-topic: tool_usage
----
-For Da-Gurun-Warachka (2014) Frog-in-the-Pan, information discreteness, and equity-path-smoothness research, strategy_research and theory_research return weak results (generic ML momentum papers, Fama-French term-structure papers). llm_web_search with "Da Gurun Warachka 2014 frog in the pan" and "information discreteness momentum post-2014 replication" returns strong specific evidence: 8pp continuous vs discrete differential, 2024 market-state replication, international replication, Alpha Architect practitioner implementation. Go directly to web search for FIP / information-path / smoothness research. This pattern is consistent with other behavioral-anomaly DB gaps (R&D anomaly, CMA/asset growth, MAX effect specifics, short-interest anomaly) — the research DBs are strong on foundational momentum/factor/volatility papers but thin on specific behavioral-anomaly author names.
-
----
-date: 2026-04-16
-title: Screener frog_in_pan and equity_curve_r2 Are Native FIP Implementation
-topic: tool_usage
----
-The equity screener columns frog_in_pan (description: "low = continuous = better quality") and equity_curve_r2 (description: "0-1, smoothness of cumulative returns") ARE native implementations of Da-Gurun-Warachka (2014) information discreteness and price-path smoothness respectively. This means FIP-style momentum strategies can be implemented natively in the screener without custom OHLC derivation — similar to how alpha_vs_spy/alpha_vs_sector natively implement Blitz-Huij-Martens residual momentum. For future behavioral-momentum ideation, these two columns are the primary go-to for any path-quality or information-arrival-based signal. Complementary columns: zero_return_days_pct (active price formation), autocorrelation_1d (gradual diffusion consistency), frog_in_pan (direct FIP), equity_curve_r2 (direct smoothness).
+frog_in_pan (low = continuous = better quality) and equity_curve_r2 (0-1, smoothness of cumulative returns) in the equity screener ARE native implementations of Da-Gurun-Warachka (2014) information discreteness and price-path smoothness. FIP-style momentum strategies can be implemented natively without custom OHLC derivation. Complementary columns: zero_return_days_pct (active price formation), autocorrelation_1d (gradual diffusion consistency).
 
 ---
 date: 2026-04-17
-title: past_ideas write fails if field values contain XML-like angle-bracket tags
+title: past_ideas writes fail on angle brackets and mathematical symbols
 topic: process_mistakes
 ---
-The past_ideas(operation='write') tool call FAILED twice with 'write requires all fields' error when my universe field ended with a literal string like '</universe>' or contained any XML-style tag-like pattern (e.g. '<parameter name="entry_exit">'). The tool's argument parser apparently interprets angle-bracket patterns inside parameter values as field delimiters, causing the subsequent fields to be swallowed into the preceding field. Fix: NEVER include angle brackets, HTML tags, XML tags, or parameter-name-like tokens inside any past_ideas field value. Use plain text, parentheses, or quotation marks instead. Also avoid mathematical symbols like less-than / greater-than signs: write 'greater than 0.10' in prose rather than '> 0.10' — this eliminated the error on the third attempt. This will save failed tool calls on future strategy write-ups.
+The past_ideas(operation='write') tool call fails with 'write requires all fields' when any field value contains angle-bracket patterns ('</universe>', '<parameter>', '&lt;tag&gt;') OR mathematical symbols (> 0.10, < 0.40). The argument parser interprets angle brackets as field delimiters and swallows subsequent fields. Always use prose thresholds: 'greater than 0.10', 'less than 0.40', 'approximately 7 to 10', 'between 500 million USD and 10 billion USD'. Writes succeed on first attempt with prose thresholds.
 
 ---
 date: 2026-04-17
-title: PEAD signal requires mid-cap universe filter and event-driven architecture
+title: PEAD and earnings-event strategies — universe, signal, and architecture checklist
 topic: pipeline_feedback
 ---
-For any future earnings-surprise or PEAD strategy design: (1) DO NOT target large-caps (market_cap > 30B) — PEAD has been arbitraged to near-zero per Subrahmanyam 2024 and Martineau 2022. (2) DO NOT target microcaps (market_cap < 2B) — Chordia et al 2009 show 70-100 percent of gross profit is eaten by costs. (3) The Goldilocks zone is 2B-30B mid-caps. (4) Include revenue-surprise concordance (Jegadeesh-Livnat 2006) — roughly doubles signal robustness vs SUE alone. (5) Quality overlay (ROE, margin, FCF) is mandatory given Garfinkel-Hribar-Hsiao 2024 finding that SUE persistence decay is the primary PEAD-decay driver. (6) PEAD strategies are DISCRETE-EVENT-DRIVEN, not monthly-rebalance — entry is triggered by a specific qualifying earnings release in the past 1-5 days, not a calendar cycle. This requires the Builder to implement an event scanner plus 45-day time-based holding, not a monthly portfolio constructor.
+For any earnings-surprise or PEAD strategy design: (1) Target market_cap 2B-30B mid-caps — large-cap PEAD is arbitraged to near-zero per Subrahmanyam 2024 / Martineau 2022, microcap gross profit is 70-100 percent cost-eaten per Chordia et al 2009. (2) Require revenue-surprise concordance per Jegadeesh-Livnat 2006 — roughly doubles drift magnitude versus SUE alone. (3) Quality overlay (ROE, margin, FCF) is mandatory per Garfinkel-Hribar-Hsiao 2024 since SUE persistence decay is the primary PEAD-decay driver. (4) PEAD is discrete-event-driven — entry is triggered by a qualifying earnings release in the past 1-5 days, not a monthly calendar cycle. Architect must spec an event scanner plus 45-day time-based holding, not a monthly portfolio constructor.
 
 ---
 date: 2026-04-17
-title: Research DB has very thin PEAD/earnings-surprise coverage — pivot to web immediately
+title: Pre-event exit pattern for earnings-proximate strategies
+topic: pipeline_feedback
+---
+For any earnings-proximate strategy, structure the hold window to exit at exactly one of: pre-event, event, or post-event — never default to holding through the announcement. Pre-event exit (close day before scheduled earnings) eliminates the dominant tail risk (announcement gap) while still capturing the 72 percent of the 21-day EAP realized pre-announcement per Frazzini-Lamont 2007. Pre-event and post-event strategies on the same underlying have non-overlapping hold windows and are structurally orthogonal. Holding through the event must be an explicit design choice with stated tail-risk justification, not a default.
+
+---
+date: 2026-04-17
+title: Nagel 2012 research path for mean-reversion strategy design
 topic: tool_usage
 ---
-strategy_research and theory_research return mostly V/P valuation papers and generic momentum citations when queried for PEAD, SUE, earnings surprise, analyst forecast dispersion, short interest anomaly, or betting-against-correlation. For any of these signal families, go DIRECTLY to llm_web_search with specific author-year queries: 'Chordia Goyal Sadka Sadka Shivakumar 2009 PEAD liquidity', 'Garfinkel Hribar Hsiao 2024 SUE modern replication', 'Subrahmanyam 2024 PEAD microcap exclusion', 'Jegadeesh Livnat 2006 revenue surprise concordance'. This yielded specific quantitative results (5.1%/3mo hedge return, 2.43%/month illiquid, 78.1% beat rate) that the DB queries never produced. Saves 3-4 wasted DB queries. Pattern consistent with previous memory: DB is strong on momentum/BAB/volatility/factor models but thin on event-driven anomalies, intangible-capital signals, short-interest, and specific behavioral-anomaly author names.
+For mean-reversion strategies: theory_research for Nagel 2012 liquidity-provision framework (DB has strong Brunnermeier-Pedersen coverage) + llm_web_search for Connors RSI-2 practitioner specs + llm_web_search for Khandani-Lo 2011 cost-aware reversal + llm_web_search for Avellaneda-Lee 2010 ETF stat-arb Sharpe numbers. DB is WEAK on practitioner reversal and backtest numbers but STRONG on the theoretical liquidity-provision mechanism. Complete thesis achievable in 6 queries.
+
+---
+date: 2026-04-17
+title: ETF screener has only 32 columns — verify column parity before specifying filters
+topic: data_limitations
+---
+The ETF screener has a reduced 32-column set vs 108 for equities. Notably missing on ETF side: alpha, beta_stability, up/down capture, momentum_3m, price_vs_sma200_pct, dist_from_52w_high_pct. Present on ETF side: rsi_14d, bb_width, vol_regime_pctile, yang_zhang_vol, autocorrelation_1d, adx_14d, hurst_exponent, ann_ret, ann_vol, sharpe_ratio, max_drawdown_1y, return_skewness. For ETF strategies, cross-check every universe filter against the ETF column list before writing criteria. Trend filters (200-day SMA) and 52-week-high filters must be computed in indicator-stage logic, not at screener stage.
+
+---
+date: 2026-04-17
+title: Validator-reported ETF screener quantitative filters return zero results
+topic: data_limitations
+---
+Even though hurst_exponent, autocorrelation_1d, adx_14d, and vol_regime_pctile appear in the ETF screener schema, they are sparsely populated — applying any bound on these columns returns zero results even for broad equity_etf universes with relaxed other filters. When designing ETF universes, drop these four filters from etf_screener calls; apply only market_cap, dollar_volume, expense_ratio, nav (price), ann_vol, and industry/sub_industry. Any quantitative regime/behavior requirement must be implemented downstream in the indicator suite, not filtered at screen time.
+
+---
+date: 2026-04-17
+title: Before claiming a signal space is unexplored, read past_ideas.md
+topic: pipeline_feedback
+---
+Before proposing a strategy because its signal family is "unexplored in the fund's strategy set", check past_ideas.md for prior attempts. Entries marked "signal concept unevaluated" (pipeline-bug failures) are genuinely unexplored and worth reattempting. Entries marked as real signal failures with best Sharpe and per-trade stats ARE evaluated — proposing the same signal family again without a materially different construction just burns pipeline cycles. The distribution-tail, residual-momentum, FIP, ETF-reversal, and pre-earnings-attention spaces all have prior entries.
+---
+date: 2026-04-17
+title: Real-money ETF performance data is the single most useful disconfirming evidence
+topic: tool_usage
+---
+When researching factor-based equity strategies, llm_web_search for the corresponding real-money ETF (SYLD for shareholder yield, MTUM for momentum, QUAL for quality, etc.) performance over the most recent 1-3 years yields more useful disconfirming evidence than academic decay papers. Real ETFs reveal current crowding, narrow-market underperformance patterns, and timing-skill failures that academic papers don't capture. Two queries that work well: (1) '[ETF ticker] underperformance [recent year] versus S&P 500 [reason]' and (2) '[factor name] strategy weakness during [current dominant theme]'. This single check materially improved the design by exposing the 2024-25 buyback-timing failure that motivated the valuation gate addition.
+
+---
+date: 2026-04-17
+title: Shareholder yield space was unexplored — confirmed by reading past_ideas first
+topic: pipeline_feedback
+---
+Past ideas to date have all clustered around momentum (RAMD, CIM), distribution-tail (LSDA), event-driven (PEAPH), and ETF reversal (VCLR). The total-payout-yield / capital-return / shareholder-yield family is genuinely unexplored as of 2026-04-17. Adjacent unexplored families per my memory: asset growth / CMA investment factor, analyst forecast dispersion, working-capital / CCC, R&D intensity / intangible capital, short-interest / squeeze. These are still on the table for future runs.
+
+---
+date: 2026-04-17
+title: Barra MSCI quality descriptors map directly to native screener columns
+topic: tool_usage
+---
+The Barra GEMLT quality factor uses four descriptors — asset turnover, gross margin, gross profit / assets, return on assets — ALL FOUR available natively in the equity screener as asset_turnover_ttm, gross_profit_margin_ttm, return_on_assets_ttm, return_on_capital_employed_ttm. Novy-Marx 2013 gross profitability can be implemented natively without any custom OHLC or line-item derivation. Furthermore, high asset_turnover_ttm serves as a model-free proxy for Peters-Taylor 2017 intangible-capital intensity since asset-light firms have low PPE relative to economic output — sidesteps the lack of SG&A or R&D fields. Combined with change columns (operating_margin_change_yoy, roce_change_5yr, ebit_growth_yoy minus revenue_cagr_3yr) this gives a native implementation of DuPont-style static-plus-trend quality strategies. Future quality/profitability/intangibles strategies can skip custom indicator development entirely and rely on screener composites.
 

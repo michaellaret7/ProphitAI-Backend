@@ -7,10 +7,13 @@ and returns a dictionary of all computed metrics.
 import numpy as np
 import pandas as pd
 
-from prophitai_calculations.performance.returns import calc_alpha
+from prophitai_calculations.config import DEFAULT_RF_ANNUAL
+from prophitai_calculations.risk.benchmark import calc_beta
 
-TRADING_DAYS_PER_YEAR = 252
-RISK_FREE_RATE = 0.04
+# Reason: single source of truth for the risk-free rate across all metrics.
+# Previously metrics.py used 0.04 while calc_alpha used DEFAULT_RF_ANNUAL=0.045,
+# so Sharpe and Alpha were inconsistent. Use DEFAULT_RF_ANNUAL everywhere.
+RISK_FREE_RATE = DEFAULT_RF_ANNUAL
 SECONDS_PER_YEAR = 365.25 * 86_400
 EPSILON = 1e-9
 
@@ -32,6 +35,17 @@ def calculate_metrics(
     Returns:
         Dictionary of metric name to value.
     """
+    # Reason: force_close_open_positions records equity at the last bar that
+    # was already recorded by the simulation loop. Deduping keeps the LAST
+    # entry so post-force-close commission drag is preserved, and prevents
+    # the duplicate from inflating bars_per_year.
+    equity_curve = equity_curve[~equity_curve.index.duplicated(keep="last")].sort_index()
+
+    # Reason: validate equity FIRST — a non-positive curve makes CAGR's
+    # negative-base power raise RuntimeWarning and returns NaN, and makes
+    # log-returns undefined in Sharpe. Fail loud up front.
+    _validate_equity(equity_curve["equity"])
+
     # Reason: derive years from actual calendar span so intraday bars are not
     # counted as separate trading days.
     time_span = (equity_curve.index[-1] - equity_curve.index[0]).total_seconds()
@@ -43,9 +57,21 @@ def calculate_metrics(
     metrics.update(_return_metrics(equity_curve, years))
     metrics.update(_risk_metrics(equity_curve, bars_per_year))
     metrics.update(_trade_metrics(trades))
-    metrics.update(_benchmark_metrics(equity_curve, benchmark_prices))
+    metrics.update(_benchmark_metrics(equity_curve, benchmark_prices, years))
 
     return metrics
+
+
+def _validate_equity(equity: pd.Series) -> None:
+    """Raise loudly when the equity curve is corrupted."""
+    if (equity <= 0).any():
+        first_bad = equity[equity <= 0].index[0]
+        raise ValueError(
+            f"Equity curve contains non-positive values at {first_bad} "
+            f"(min={equity.min():.2f}). Portfolio tracker accounting is "
+            f"corrupted — metrics are undefined. Investigate the tracker, "
+            f"do not silence this check."
+        )
 
 
 def _return_metrics(equity_curve: pd.DataFrame, years: float) -> dict:
@@ -82,18 +108,28 @@ def _risk_metrics(equity_curve: pd.DataFrame, bars_per_year: float) -> dict:
     """
     equity = equity_curve["equity"]
 
-    # Max drawdown
     cumulative_max = equity.cummax()
     drawdown = (equity - cumulative_max) / cumulative_max
     max_drawdown_pct = round(drawdown.min() * 100, 2)
 
-    # Sharpe ratio (annualized)
-    bar_returns = equity.pct_change().dropna()
-    if len(bar_returns) > 1 and bar_returns.std() > 0:
-        risk_free_per_bar = RISK_FREE_RATE / bars_per_year
-        excess_returns = bar_returns - risk_free_per_bar
+    # Reason: log returns are numerically stable (no sign-flip pathology), and
+    # their annualized Sharpe — (mean/std) * sqrt(bars_per_year) — is the
+    # standard continuous-compounding formulation. Subtracting the continuous
+    # risk-free rate log(1+rf)/bars_per_year keeps the ratio a proper excess-
+    # return Sharpe. AM ≥ GM guarantees a positive Sharpe whenever CAGR > rf.
+    log_returns = np.log(equity).diff().dropna()
+
+    # Reason: floating-point noise from cumulative compounding makes a
+    # constant-drift equity curve's log-return std ≈ 1e-16 instead of 0.
+    # Dividing by that produces a 1e12-scale bogus Sharpe. Treat anything
+    # below a reasonable floor as zero-variance (Sharpe=0.0) — this matches
+    # the mathematical definition (no risk → Sharpe undefined).
+    std = float(log_returns.std())
+    if len(log_returns) > 1 and std > 1e-10:
+        risk_free_per_bar = np.log(1.0 + RISK_FREE_RATE) / bars_per_year
+        excess_returns = log_returns - risk_free_per_bar
         sharpe_ratio = round(
-            (excess_returns.mean() / excess_returns.std()) * np.sqrt(bars_per_year),
+            (excess_returns.mean() / std) * np.sqrt(bars_per_year),
             2,
         )
     else:
@@ -159,6 +195,7 @@ def _trade_metrics(trades: pd.DataFrame) -> dict:
 def _benchmark_metrics(
     equity_curve: pd.DataFrame,
     benchmark_prices: pd.Series | None,
+    years: float,
 ) -> dict:
     """Compute benchmark-relative metrics (Jensen's alpha vs SPY).
 
@@ -166,16 +203,35 @@ def _benchmark_metrics(
         equity_curve: DataFrame with 'equity' column, datetime-indexed.
         benchmark_prices: Series of benchmark close prices, datetime-indexed.
             If None, alpha is reported as None.
+        years: Calendar duration of the backtest in years — used to annualize
+            both the portfolio and benchmark returns at the same horizon,
+            independent of bar frequency.
     """
-    if benchmark_prices is None or len(benchmark_prices) < 2:
+    if benchmark_prices is None or len(benchmark_prices) < 2 or years <= 0:
         return {"alpha_vs_spy": None}
 
-    portfolio_returns = equity_curve["equity"].pct_change().dropna()
+    equity = equity_curve["equity"]
+
+    if (equity <= 0).any() or (benchmark_prices <= 0).any():
+        return {"alpha_vs_spy": None}
+
+    # Reason: annualize via calendar years (not assumed 252 trading days) so
+    # the math is correct for intraday, hourly, and daily backtests alike.
+    rp = (equity.iloc[-1] / equity.iloc[0]) ** (1.0 / years) - 1.0
+    rm = (benchmark_prices.iloc[-1] / benchmark_prices.iloc[0]) ** (1.0 / years) - 1.0
+
+    # Reason: beta is frequency-invariant (cov/var of same-frequency returns),
+    # so bar-level pct_change is fine for beta even on intraday data. Log
+    # returns would also work but require equity > 0 (already guarded above).
+    portfolio_returns = equity.pct_change().dropna()
     benchmark_returns = benchmark_prices.pct_change().dropna()
 
-    alpha = calc_alpha(portfolio_returns, benchmark_returns)
+    beta = calc_beta(portfolio_returns, benchmark_returns)
 
-    # Reason: calc_alpha returns a decimal (e.g. 0.05 = 5%), convert to pct.
-    alpha_pct = round(alpha * 100, 2) if alpha is not None else None
+    if beta is None:
+        return {"alpha_vs_spy": None}
 
-    return {"alpha_vs_spy": alpha_pct}
+    expected_return = RISK_FREE_RATE + beta * (rm - RISK_FREE_RATE)
+    alpha = rp - expected_return
+
+    return {"alpha_vs_spy": round(alpha * 100, 2)}

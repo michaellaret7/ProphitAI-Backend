@@ -11,28 +11,35 @@ from prophitai_fund.construction.architect.models import StrategyManifest
 # ================================
 
 
-def find_manifest_path(sandbox_id: str) -> str | None:
-    """Locate MANIFEST.json in the sandbox development directory.
+def find_manifest_path(sandbox_id: str, strategy_id: str) -> str | None:
+    """Locate MANIFEST.json for a specific strategy in the sandbox.
+
+    Reason: `find` across the whole development dir returns ALL MANIFEST.json
+    files in the cloned repo (including prior successfully-built strategies)
+    and `paths[0]` picks whichever filesystem order gave it — causing stale
+    manifests from unrelated strategies to leak downstream. Always read the
+    manifest at the deterministic path for the current strategy_id.
 
     Args:
         sandbox_id: Active sandbox ID.
+        strategy_id: Current strategy_id owned by the orchestrator.
 
     Returns:
-        Absolute path to MANIFEST.json, or None if not found.
+        Absolute path to MANIFEST.json for this strategy, or None if the
+        sandbox is gone or the file does not exist.
     """
     sandbox = get_sandbox(sandbox_id)
 
     if not sandbox:
         return None
 
-    dev_dir = f"{REPO_PATH}/strategies/development"
+    manifest_path = f"{REPO_PATH}/strategies/development/{strategy_id}/MANIFEST.json"
 
     try:
-        result = sandbox.commands.run(f"find {dev_dir} -maxdepth 2 -name MANIFEST.json", timeout=10)
-        paths = result.stdout.strip().splitlines()
+        result = sandbox.commands.run(f"test -f {manifest_path}", timeout=10)
 
-        if paths:
-            return paths[0]
+        if result.exit_code == 0:
+            return manifest_path
 
     except Exception:
         pass
@@ -40,8 +47,8 @@ def find_manifest_path(sandbox_id: str) -> str | None:
     return None
 
 
-def read_manifest_from_sandbox(sandbox_id: str) -> StrategyManifest | None:
-    """Read and parse MANIFEST.json from the sandbox.
+def read_manifest_from_sandbox(sandbox_id: str, strategy_id: str) -> StrategyManifest | None:
+    """Read and parse MANIFEST.json for a specific strategy from the sandbox.
 
     Tries direct Pydantic validation first. If the agent used slightly
     wrong field names, falls back to parse_with_gpt which can fix
@@ -49,11 +56,13 @@ def read_manifest_from_sandbox(sandbox_id: str) -> StrategyManifest | None:
 
     Args:
         sandbox_id: Active sandbox ID.
+        strategy_id: Current strategy_id — manifest is read from
+            ``strategies/development/{strategy_id}/MANIFEST.json``.
 
     Returns:
         Parsed StrategyManifest, or None if not found or invalid.
     """
-    manifest_path = find_manifest_path(sandbox_id)
+    manifest_path = find_manifest_path(sandbox_id, strategy_id)
 
     if not manifest_path:
         return None

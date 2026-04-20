@@ -1,44 +1,44 @@
 ---
 date: 2026-04-09
-title: BaseSignalModel.generate() calls enrich() automatically
+title: BaseSignalModel.generate() calls enrich() automatically; score_entries does not
 topic: framework_gotchas
 ---
 generate() in BaseSignalModel calls validate() then enrich(), then passes the enriched df to all 4 signal methods. Signal methods should reference enriched columns (e.g. is_rebalance_bar) directly — they receive the enriched frame, not the original. score_entries() must manually call validate() and enrich() since it does NOT go through generate().
 
 ---
 date: 2026-04-09
-title: AQM52IndicatorSuite takes no constructor args
+title: Indicator suites may have no constructor args — check the suite signature
 topic: coding_patterns
 ---
-AQM52IndicatorSuite (and likely other suites with no config-parameterized indicators) has no custom __init__ — instantiate with AQM52IndicatorSuite() (no args). Contrast with template suite which accepts config=.
+Some indicator suites have no custom __init__ and are instantiated with no arguments (Suite()), while the template suite accepts config=. Check the suite's signature before instantiating — passing config= to a no-arg suite raises TypeError. Suites without config-parameterized indicators typically omit __init__ entirely.
 
 ---
 date: 2026-04-09
-title: close column is an OHLCV raw input — not in indicator all_output_columns
+title: OHLCV raw columns are not in indicator_result.all_output_columns
 topic: coding_patterns
 ---
-When a signal model's required_columns includes 'close' (or other OHLCV raw columns like 'open', 'high', 'low', 'volume'), these will not appear in indicator_result.all_output_columns. This is expected — they're always present as DataFrame inputs, not indicator outputs. Not a validation error.
+When a signal model's required_columns includes 'close', 'open', 'high', 'low', or 'volume', these will not appear in indicator_result.all_output_columns. This is expected — they're always present as DataFrame inputs, not indicator outputs. Not a validation error. Skip OHLCV raw columns when cross-checking required_columns against indicator outputs.
 
 ---
 date: 2026-04-09
-title: run_contract_tests: pytest not installed, use inline Python assertions
+title: Contract tests: pytest absent, use inline Python assertion scripts
 topic: framework_gotchas
 ---
-pytest is NOT installed in the venv and prophitai_algo_trading.testing does NOT exist. Contract tests must be written as inline Python assertion scripts using /home/user/strategies/.venv/bin/python. See run_contract_tests skill for the full pattern.
+pytest is NOT installed in the venv and prophitai_algo_trading.testing does NOT exist. Contract tests must be written as inline Python assertion scripts invoked via /home/user/strategies/.venv/bin/python. See run_contract_tests skill for the full pattern.
 
 ---
 date: 2026-04-10
 title: Frozen dataclass test: use normal assignment, not object.__setattr__
 topic: verification_failures
 ---
-When testing that a dataclass is frozen, use normal attribute assignment (`cfg.field = value`) — it raises FrozenInstanceError. Using `object.__setattr__(cfg, 'field', value)` BYPASSES the frozen check and silently mutates the object, causing subsequent value assertions to fail.
+When testing that a dataclass is frozen, use normal attribute assignment (cfg.field = value) — it raises FrozenInstanceError. Using object.__setattr__(cfg, 'field', value) BYPASSES the frozen check and silently mutates the object, causing subsequent value assertions to fail.
 
 ---
 date: 2026-04-10
 title: signals/__init__.py must export the strategy's own SignalModel class
 topic: framework_gotchas
 ---
-When a signals/__init__.py exists (e.g. from scaffold tooling), verify it exports the strategy's actual class — not the template. The file may be auto-populated with TemplateSignalModel imports that break the public API contract even though the strategy imports directly from signals.model (so no runtime bug).
+When a signals/__init__.py exists (from scaffold tooling), verify it exports the strategy's actual class — not the template. The file may be auto-populated with TemplateSignalModel imports that break the public API contract even though the strategy imports directly from signals.model (so no runtime bug). Always rewrite signals/__init__.py to export the new strategy's SignalModel class before committing.
 
 ---
 date: 2026-04-10
@@ -52,33 +52,53 @@ date: 2026-04-14
 title: Explicit bool dtype for pd.Series(True/False) no-op signals
 topic: coding_patterns
 ---
-When creating pass-through no-op Series in signal methods (e.g. `pd.Series(False, index=df.index)` for disabled shorts), always specify `dtype=bool` explicitly. Without it, pandas infers object dtype in some edge cases, causing downstream bool comparisons or `_coerce_signal` to behave unexpectedly. Always: `pd.Series(False, index=df.index, dtype=bool)`.
+When creating pass-through no-op Series in signal methods (e.g. pd.Series(False, index=df.index) for disabled shorts), always specify dtype=bool explicitly. Without it, pandas infers object dtype in edge cases, causing downstream bool comparisons or _coerce_signal to behave unexpectedly. Always: pd.Series(False, index=df.index, dtype=bool).
 
 ---
 date: 2026-04-16
-title: WVCCI: pass-through enrich() for diagnostic columns from indicator suite
+title: Pass-through enrich() when manifest specifies diagnostic columns from indicator suite
 topic: coding_patterns
 ---
-When manifest specifies enrich_columns as "diagnostic pass-throughs" already produced by the indicator suite (e.g. for P&L attribution logging), implement enrich() as a simple return-df pass-through with a docstring explaining why. Do NOT try to recompute these columns inside enrich() — they're already in the DataFrame from the indicator pipeline. The _enrich_columns class attribute can be declared for documentation purposes but validate() only checks required_columns, not enrich_columns.
+When manifest specifies enrich_columns as 'diagnostic pass-throughs' already produced by the indicator suite (e.g. for P&L attribution logging), implement enrich() as a simple return-df pass-through with a docstring explaining why. Do NOT try to recompute these columns inside enrich() — they're already in the DataFrame from the indicator pipeline. The _enrich_columns class attribute can be declared for documentation, but validate() only checks required_columns, not enrich_columns.
 
 ---
 date: 2026-04-16
-title: Config day-count fields: int vs float judgment call
+title: Config day-count fields: int for scheduling, float for financial-ratio thresholds
 topic: coding_patterns
 ---
-For config fields representing day counts used as scheduling lags (e.g. filing_lag_days), prefer int type — they represent discrete calendar/trading days. For day counts derived from floating-point financial ratios (e.g. dpo_absolute_cap_days compared against dso/dio/dpo which are float outputs of balance-sheet formulas), float is correct since the comparison target is float. Code reviewer flagged both as warnings — apply int for scheduling, keep float for financial-ratio thresholds.
+For config fields representing day counts used as scheduling lags (filing_lag_days, entry_window_days), prefer int — they represent discrete calendar/trading days. For day counts compared against floating-point financial ratios (absolute_cap_days compared to dso/dio/dpo which are float outputs of balance-sheet formulas), float is correct since the comparison target is float. Apply int for scheduling, keep float for financial-ratio thresholds.
 
 ---
 date: 2026-04-17
-title: score hint in get_sizing_hints should be abs(composite_score)
+title: score_entries and get_sizing_hints must use the same sign convention
 topic: framework_gotchas
 ---
-When score_entries() returns abs(composite_score) for direction-agnostic scoring, get_sizing_hints() must also publish hints["score"] = abs(float(composite_score)). Publishing the raw signed value creates an inconsistency: short candidates carry negative scores and the sizer's top-quintile overweight gate (score >= 1.0) fails to fire for strong short signals. Always match the sign convention between score_entries() and get_sizing_hints()["score"].
+When score_entries() returns abs(composite_score) for direction-agnostic scoring, get_sizing_hints() must also publish hints['score'] = abs(float(composite_score)). Publishing the raw signed value creates an inconsistency: short candidates carry negative scores and the sizer's top-quintile overweight gate (score >= 1.0) fails to fire for strong short signals. Always match the sign convention between score_entries() and get_sizing_hints()['score'].
 
 ---
 date: 2026-04-17
-title: score_entries clip to documented range prevents oversized sizer inputs
+title: score_entries: clip to the documented range before returning
 topic: coding_patterns
 ---
-When score_entries() documents a range (e.g. [0.0, 3.0] for abs(composite_score)), always implement the clip explicitly with `.clip(lower=0.0, upper=3.0)` before returning. Without it, extreme outlier composite scores pass uncapped into the sizer, causing the top-quintile overweight gate (score >= 1.0) to fire unexpectedly for borderline signals. The code reviewer flagged the docstring/implementation mismatch — fixing it with `.clip()` is the correct resolution.
+When score_entries() documents a range (e.g. [0.0, 3.0] for abs(composite_score)), always implement the clip explicitly with .clip(lower=0.0, upper=3.0) before returning. Without it, extreme outlier composite scores pass uncapped into the sizer, causing the top-quintile overweight gate to fire unexpectedly for borderline signals. Fix the docstring/implementation mismatch with .clip() at the return site.
+
+---
+date: 2026-04-17
+title: Event-driven strategies: check implementation_notes for OR vs AND exit intent
+topic: coding_patterns
+---
+Event-driven strategies with mandatory pre/post-event exits typically use OR logic across exit conditions (e.g. days_to_event <= 1 | reschedule_flag == 1 | regime_off == 1) — any single condition triggers exit. Do NOT default to AND. Always check the manifest's implementation_notes section for explicit OR/AND intent before coding long_exit/short_exit. Missing this produces strategies that only exit on the rare conjunction of all conditions, holding through the event the strategy was designed to avoid.
+---
+date: 2026-04-17
+title: z_window config field: int not float for rolling bar counts
+topic: coding_patterns
+---
+z_window (and any rolling window bar count) should be typed as int in frozen dataclasses, not float. The code reviewer caught z_window: float = 252.0 — rolling window APIs expect int and float weakens the contract. Apply int for ALL rolling window bar-count config fields. Only use float for ratio/threshold comparisons (z_floor, z_cap, composite_entry_threshold, etc.).
+
+---
+date: 2026-04-17
+title: Dead signal-model params: remove z_trend_min and allow_shorts when pre-computed by suite
+topic: coding_patterns
+---
+When the indicator suite pre-computes gate columns (e.g. trend_gate, universe_quality_gate) from derived features, signal model params like z_trend_min and allow_shorts become dead code — the signal method just checks the pre-computed boolean column. Remove these params from both the signal model __init__ and config dataclass to avoid misleading API. Code reviewer will flag them as "stored but never used" warnings. Pattern: if gate logic lives entirely in derived_features → pre-computed column → signal model checks column directly, no threshold param needed.
 

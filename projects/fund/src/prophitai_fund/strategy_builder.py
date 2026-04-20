@@ -87,6 +87,22 @@ def _validate_manifest(manifest: StrategyManifest, expected_strategy_id: str) ->
             f"host strategy_id '{expected_strategy_id}'"
         )
 
+    # Reason: indicator file paths are embedded in the manifest and consumed
+    # verbatim by the builder agents. If the architect produced content for a
+    # different strategy (e.g. via stale sandbox state), the paths will point
+    # at the wrong development directory. strategy_id override does NOT rewrite
+    # these paths, so the builders silently write to the wrong strategy's dir.
+    expected_dir = f"strategies/development/{expected_strategy_id}/"
+
+    for indicator in manifest.indicators:
+        if indicator.file and "strategies/development/" in indicator.file:
+            if expected_dir not in indicator.file:
+                errors.append(
+                    f"indicator '{indicator.class_name}' file path "
+                    f"'{indicator.file}' does not reference expected "
+                    f"strategy directory '{expected_dir}'"
+                )
+
     if errors:
         raise RuntimeError(f"Manifest validation failed: {', '.join(errors)}")
 
@@ -114,7 +130,16 @@ def _extract_strategy_id(idea_text: str) -> str:
 
     # Reason: strip non-alphanumeric chars, collapse whitespace, lowercase → snake_case
     strategy_id = re.sub(r"[^a-zA-Z0-9\s]", "", name)
-    strategy_id = re.sub(r"\s+", "_", strategy_id).lower()
+    strategy_id = re.sub(r"\s+", "_", strategy_id).strip("_").lower()
+
+    # Reason: empty strategy_id creates path like 'strategies/development//MANIFEST.json'
+    # and every downstream helper silently operates on the development/ dir itself,
+    # re-opening the same leakage class the manifest fix just closed. Fail loudly.
+    if not strategy_id:
+        raise RuntimeError(
+            f"Extracted strategy_id is empty from heading: '{name}'. "
+            f"Idea generator must emit a strategy name with at least one alphanumeric character."
+        )
 
     return strategy_id
 
@@ -149,6 +174,7 @@ class StrategyBuilder:
         # restart if the stamp doesn't match this run's strategy. An unstamped dir
         # with downstream checkpoints present is pre-fix stale state; clear that too.
         stamped = _checkpoint_strategy_id()
+        
         unstamped_stale = stamped is None and any(
             (CHECKPOINT_DIR / f"{stage}.md").exists() for stage in ("manifest", "indicators", "signals")
         )
@@ -167,7 +193,18 @@ class StrategyBuilder:
         try:
             # Stage 1b: Bootstrap repo and scaffold strategy directory
             setup_repo(sandbox, strategy_id)
-            scaffold_strategy(sandbox_id, strategy_id)
+
+            # Reason: scaffold_strategy is an @agent_tool that returns an error
+            # STRING (not an exception) when the target dir already exists — which
+            # happens whenever strategy_id collides with a prior strategy committed
+            # to the Strategies repo. Ignoring the return silently proceeds on top
+            # of stale code. Inspect the response and raise on failure.
+            scaffold_result = scaffold_strategy(sandbox_id, strategy_id)
+
+            if "success: false" in scaffold_result or "error:" in scaffold_result:
+                raise RuntimeError(
+                    f"scaffold_strategy failed for '{strategy_id}': {scaffold_result}"
+                )
 
             # Stage 1c: Write the original idea to the strategy root
             idea_path = f"{REPO_PATH}/strategies/development/{strategy_id}/IDEA.md"

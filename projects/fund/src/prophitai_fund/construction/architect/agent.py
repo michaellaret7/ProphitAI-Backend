@@ -112,7 +112,7 @@ class StrategyArchitectAgent:
 
         # Reason: read the assembled manifest directly from the sandbox file
         # instead of parsing the agent's text answer with another LLM call
-        manifest = read_manifest_from_sandbox(self.sandbox_id)
+        manifest = read_manifest_from_sandbox(self.sandbox_id, strategy_id)
 
         if manifest:
             response.parsed_output = manifest

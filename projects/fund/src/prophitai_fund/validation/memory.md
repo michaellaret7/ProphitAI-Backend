@@ -1,21 +1,62 @@
 ---
 date: 2026-04-16
-title: Template Scaffold Never Customized — Detection Pattern
+title: Template scaffold detection — HALT the pipeline, do not tune and accept
 topic: run_failures
 ---
-When strategy code files (strategy.py, wiring.py, signals/model.py, indicators/suite.py, config.py) all import from `strategies.template.*` unchanged, the strategy was never built by Stages 4+5. Red flags: (1) strategy.py contains `TemplateStrategy` class and imports `from strategies.template.indicators import TemplateIndicatorSuite`; (2) MANIFEST.json may belong to a different strategy entirely (wrong strategy name/ID). In this case the backtest still runs (using template EMA/RSI crossover) but all Sharpe ratios are deeply negative on daily data regardless of parameter tuning. Best fix budget usage: fix the runner's interval string and ticker_universe import — the core strategy logic cannot be patched. Verdict is always `failed` in this scenario.
+If strategy code files (strategy.py, wiring.py, signals/model.py, indicators/suite.py, config.py) import from strategies.template.* unchanged, or reference TemplateStrategy / TemplateSignalModel / TemplateIndicatorSuite class names, the strategy was never built by Stages 4+5. Additional red flag: MANIFEST.json's strategy_id or strategy_name does not match the current strategy_id, or wiring.py imports classes from a different strategy's directory. When any of these is detected, the correct verdict is `build_failure` — halt the validation stage and report upstream. Do NOT run 12 tunings on the template EMA/RSI crossover and record it as a signal-level failure. Recording template scaffold as 'failed' pollutes past_ideas.md and causes future idea generators to skip a genuinely unevaluated signal concept.
 
 ---
 date: 2026-04-16
-title: LSDA Short-Leg Screener: Strict Joint Filters Yield Very Few Tickers
+title: Strict joint screener filters can return <5 tickers — validate universe size first
 topic: screener_translation
 ---
-The LSDA short-leg screen (yang_zhang_vol > 0.45 AND return_skewness > 0.8 AND return_kurtosis > 4.0 AND beta_vs_spy > 1.3 AND vol_ratio_short_long > 1.15 AND atr_pct > 0.04 AND momentum_3m > 0.15 AND rsi_14d > 60 AND corr_to_spy_60d > 0.3) returned only 3 tickers in April 2026. The combination of high vol + high skew + high kurtosis + high beta + active vol expansion + high momentum + overbought + correlated is very rare as a joint condition. For lottery-type strategies with strict joint short filters: expect <5 qualifying tickers in any given market snapshot; a proper implementation uses rolling daily evaluation rather than a point-in-time screener. Similarly, strict low-vol long filters (yang_zhang_vol < 0.25, beta_stability < 0.25) returned only 1 ticker — must loosen substantially (to 0.35, 0.30) to get viable universe of 10+.
+Some signal designs combine many filters (e.g. vol + skew + kurtosis + beta + momentum + RSI + correlation), producing a valid per-filter screen but near-empty joint result. Before proceeding to tuning, assert that the screened universe has at least ~20 tickers (or the minimum needed for diversification per IDEA.md). If under 5, halt and report the universe construction as structurally broken — either loosen the joint filters or switch to rolling daily evaluation rather than a point-in-time screener. Do not continue to backtest on a 3-ticker universe.
 
 ---
 date: 2026-04-17
-title: CIM-Class Strategy: Template Scaffold + Wrong MANIFEST = Always Fails
+title: ETF screener quantitative columns return zero results — drop at screen time
+topic: screener_translation
+---
+hurst_exponent, autocorrelation_1d, adx_14d, and vol_regime_pctile are sparsely populated in the etf_screener and return zero results when used as filters, even on broad equity_etf universes with other filters relaxed. Workaround: drop all four quantitative regime/behavior filters from etf_screener calls; apply only market_cap, dollar_volume, expense_ratio, nav (price), ann_vol, and industry/sub_industry filters. If IDEA.md requires these as universe gates, they must be computed downstream in the indicator suite — note this as unverifiable at screen time.
+
+---
+date: 2026-04-17
+title: Structural mismatch between signal logic and universe — treat as build_failure
 topic: run_failures
 ---
-When strategy_id has IDEA.md for strategy X but MANIFEST.json for a completely different strategy Y (wrong strategy_name/strategy_id in JSON), Stages 4+5 definitely never ran. In this case the entire strategy directory is the raw template scaffold. The run_vectorized_backtest.py also uses `"1d"` as interval string — invalid; must be `"daily"`. Fix budget: (1) patch runner to import local ticker_universe and use `interval="daily"`, `start/end` from MANIFEST backtest config. Best Sharpe for template EMA/RSI crossover on any daily universe is ~0.31 (long-only variant) — never reaches 0.5. Verdict is always `failed`, not `build_failure` since the template does run cleanly after wiring fixes.
+When a signal model's long_entry conditions depend on a data gate that is structurally impossible for the chosen universe (e.g. fundamentals_valid == 1.0 on an ETF universe, earnings_in_window on a non-reporting security, sector_neutral gate on a single-sector universe), the strategy produces 0 trades across all parameter variations. Detection: 0 trades on baseline AND 0 trades at every relaxed threshold. Do NOT attempt tuning — verdict is `build_failure`, not `failed`, because the builder wired incompatible components. Report the mismatch upstream (signal/universe incompatibility) so the next run rebuilds rather than re-ranks.
+
+---
+date: 2026-04-17
+title: Broadcast columns required by signal model must be injected by load_backtest_data
+topic: run_failures
+---
+Strategies that gate entries on broadcast columns (spy_close, spy_above_200sma, vix_level, claims_value) produce 0 trades on baseline if load_backtest_data() doesn't inject the broadcast column into per-ticker DataFrames. Detection pattern: 0 trades + regime_entry_allowed all-zero + the broadcast column all-NaN in sampled ticker DataFrames. Fix: modify load_backtest_data() in wiring.py to load the broadcast source separately, reindex to the per-ticker date index, and inject as a column into every non-source ticker DataFrame. Source ticker (SPY) gets the value from its own close. This is a valid in-validator wiring fix — distinct from the build_failure class above, because the signal model and indicator pipeline are correctly built but the wiring forgot to broadcast.
+
+---
+date: 2026-04-17
+title: Small universes (<100 tickers) structurally cap event-driven Sharpe
+topic: tuning_patterns
+---
+Event-calendar-gated strategies (earnings-proximate, macro-event-driven) produce ~200 trades over 8 years on a 50-ticker universe at default composite thresholds — too sparse for reliable Sharpe. Lowering the composite entry threshold increases trade count but still fails the Sharpe bar when the universe cannot supply enough simultaneous events. Before tuning, check IDEA.md's target universe size — if the screened result is <25% of target, flag as a universe-size failure and recommend expanding the screen before further tuning. Per-trade edge can be positive (win rate >50%, avg trade >0) even while Sharpe is negative from long flat periods between events.
+---
+date: 2026-04-17
+title: Warmup-period Sharpe drag in vectorized backtest
+topic: run_failures
+---
+Strategies with long warmup periods (e.g., 504 bars = ~2 years for rolling z-score indicators) can show negative Sharpe despite positive per-trade metrics and positive total return. The VectorizedBacktestEngine computes Sharpe over the FULL equity curve including the flat warmup phase. Two flat years depress mean daily return toward zero while daily volatility from the active period appears in the denominator. Detection: total_return_pct > 0, win_rate > 50%, profit_factor > 1, but Sharpe negative. Post-warmup Sharpe computed manually was -1.54 on a case where engine reported -1.76 — showing the warmup is partially but not entirely responsible. Low capital deployment (1/N sizing with few simultaneous positions on a 50-ticker universe) compounds the problem. Fix recommendation: start backtest after warmup completes, expand universe, or use portfolio-level gross-exposure targeting.
+
+---
+date: 2026-04-17
+title: Financial ratios column naming: TTM suffix mismatch
+topic: run_failures
+---
+Indicator code built for DSY-VSG used column names with TTM suffix (dividendYieldTTM, priceToFreeCashFlowsRatioTTM, etc.) but the actual financial_ratios data from the data resolver uses non-suffixed names (dividendYield, priceToFreeCashFlowsRatio, debtRatio, interestCoverage, dividendPaidAndCapexCoverageRatio). Fix: remove TTM suffix from source column name constants in the indicator. Detection: 0 trades on baseline, all fundamental ratio columns are NaN, but financial_ratios is present in df.attrs with 162 rows.
+
+---
+date: 2026-04-18
+title: Current-vs-historical universe mismatch in quality-gated strategies
+topic: run_failures
+---
+When a strategy screener selects tickers based on CURRENT fundamental metrics (e.g., asset_turnover >= 0.30 today) but the strategy's indicator pipeline enforces the same gate on HISTORICAL data (e.g., in custom.py hardcoded `_MIN_ASSET_TURNOVER = 0.30`), the backtest will produce very few trades because many tickers didn't meet the gate historically even though they do today. Detection: screener returns 400+ qualifying tickers, backtest fires only 9-14 trades over 7 years. The sparse trades then produce negative Sharpe from the warmup-drag pattern (few positions deployed, long flat periods). Remedies: (1) expand universe to 200+ with historical screening, (2) lower the historical gate threshold (e.g., 0.20 vs 0.30), (3) skip warmup bars from Sharpe calculation.
 
