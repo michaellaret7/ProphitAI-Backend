@@ -69,4 +69,5 @@ class VectorizedBacktestEngine:
 
         return compile_backtest_result(
             portfolio_tracker, len(signal_data.raw_positions), verbose,
+            warmup=warmup,
         )

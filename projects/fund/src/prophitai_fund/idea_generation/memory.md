@@ -144,3 +144,24 @@ topic: pipeline_feedback
 ---
 When a residual-momentum signal family (like RAMD) has been tried and failed at the build stage, the residual-REVERSAL signal on the same screener columns (alpha_vs_spy, alpha_vs_sector, information_ratio) is a distinct signal with opposite sign and different horizon (1-3mo vs 12-1mo) and different mechanism (liquidity provision vs behavioral underreaction). Both can coexist in future strategy sets without overlap. Key design differences downstream must preserve: negative-sign composite (LOSERS not winners), shorter horizon, dispersion gate not momentum gate, higher turnover so stricter liquidity gates.
 
+---
+date: 2026-04-20
+title: Theory DB has full Daniel-Moskowitz 2016 momentum crashes paper indexed
+topic: tool_usage
+---
+The theory_research DB has the full Daniel-Moskowitz 2016 "Momentum Crashes" paper (JFE vol 122) indexed at doc_id theory_research:MomentumCrashes:ef67d127 including Tables 2, 4, 5, 6, 8 with all regression coefficients, the dynamic weighting formula (w_t proportional to mu_t-1 / sigma_squared_t-1), the bear-market indicator definition (I_B = 1 if cumulative past 2-year market return is negative), the 126-day realized variance spec, and the spanning test results (Sharpe 1.19 vs 0.3 static, 22% alpha vs FF3+static, 7% alpha vs constant-vol). Also has Barroso-Santa-Clara 2015 indexed at doc_id theory_research:Momentum_Has_Its_Moments. For any momentum crash or dynamic momentum strategy design, two targeted queries on these papers produce a complete implementation spec in the research DB without needing web search fallback. Query pattern that worked: "forecasting momentum premium using bear market indicators and ex-ante market variance ... optimal dynamic weighting equation".
+
+---
+date: 2026-04-20
+title: Long-short momentum is a genuinely unexplored pattern in the fund ledger
+topic: pipeline_feedback
+---
+As of 2026-04-20 no TRUE long/short momentum strategy with dynamic gross scaling has been evaluated by the pipeline. Past momentum ideas are all long-only (RAMD residual-momentum, CIM frog-in-the-pan), both failed as pipeline build bugs not signal failures. LSDA was L/S but on lottery not momentum. The distinct angle that makes L/S momentum non-duplicative is the dynamic panic-state scaler per Daniel-Moskowitz 2016 that solves the crash problem no prior fund idea tackled. Distress filter on the short leg per Merton 1974 also novel in the fund set. This pattern (explicit crash-risk mitigation on a well-known factor) is a good template for future "classic factor with novel risk overlay" ideas — applies to value (crash risk), carry (tail risk), size (liquidity risk), low-vol (anti-momentum decay).
+
+---
+date: 2026-04-20
+title: VIX commodity tool and macro_indicators confirm Daniel-Moskowitz bear indicator state
+topic: tool_usage
+---
+For momentum strategies needing the Daniel-Moskowitz bear-market indicator (trailing 2-year SPX return negative) and ex-ante variance, three tools together give a complete current-regime snapshot in parallel: commodity_prices VIXUSD for recent vol (60 days), macro_research_search for the "trailing 2-year SPX return" narrative from providers, and BNP/Citi regime clustering notes. April 2026 snapshot: bull market since October 2022 per BNP Paribas 2026 outlook confirms I_B = 0, VIX spiked 31.05 on 3/27/2026 then back to 24-25 range, indicates intermediate variance not panic. Skip llm_web_search for "current momentum regime" queries — Perplexity returns generic framing; the macro_research_search DB has the JPMorgan/Citi/BNP specific numbers needed.
+

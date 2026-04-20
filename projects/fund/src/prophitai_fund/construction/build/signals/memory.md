@@ -109,3 +109,17 @@ topic: coding_patterns
 ---
 The manifest's config_defaults.strategy section defines ALL strategy-facing parameters — including indicator window params — even when the indicator suite takes no constructor args and can't consume them yet. Keep all fields in the config dataclass (they are the documented tunable contract for the Execution Layer Builder to wire later). Add a docstring note clarifying which fields are consumed by the signal model directly vs. which are reserved for suite wiring. Code reviewer will flag them as "dead" but this is by-design for layered builders. The response: add a docstring explanation, not remove the fields.
 
+---
+date: 2026-04-20
+title: Dead signal-model params: keep in __init__ signature but don't store — noqa: ARG002 pattern
+topic: coding_patterns
+---
+When a signal model accepts threshold params for API compatibility with PSMOConfig (so PSMOStrategy can pass config.long_entry_threshold etc.), but those params are dead because the suite pre-computes eligibility columns, keep the params in __init__ signature with defaults but do NOT store them as self.attr. Add `# noqa: ARG002` inline and a comment explaining why. This avoids ruff ARG002 lint errors AND documents the intent. The code reviewer will flag "stored but never used" — the fix is exactly this pattern: accept but don't store, with noqa + comment.
+
+---
+date: 2026-04-20
+title: enrich() variable naming: use month_group not intra_month_day for cumsum grouping key
+topic: coding_patterns
+---
+In the monthly rebalance enrich() pattern (from enrich_month_rebalance_signal skill), the cumsum() result used as a groupby key should be named `month_group` (not `intra_month_day`). The code reviewer flagged `intra_month_day` as misleading since it's the group key (increments at month boundaries), not the actual within-month day counter. `trading_day_of_month` = the actual cumcount+1 result. Update the skill accordingly.
+

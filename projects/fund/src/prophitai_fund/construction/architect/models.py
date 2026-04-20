@@ -54,10 +54,12 @@ def params_to_dict(params: list["ConfigParam"]) -> dict:
 
 class DataRequirementEntry(BaseModel):
     """A supplementary data dependency for an indicator that reads from df.attrs."""
-    kind: str = Field(description="Data source kind: 'fundamentals', 'commodity', 'economic_indicator', 'ticker_meta'")
-    attrs_key: str = Field(description="Key in df.attrs where data is attached (e.g. 'fundamentals', 'vix', 'claims')")
+    kind: str = Field(description="Data source kind: 'fundamentals', 'financial_ratios', 'commodity', 'equity_price', 'universe_returns', 'economic_indicator', 'government_bond_rates', 'economic_calendar', 'ticker_meta'")
+    attrs_key: str = Field(description="Key in df.attrs where data is attached (e.g. 'fundamentals', 'vix', 'claims', 'spy')")
     scope: str = Field(default="per_ticker", description="'per_ticker' when data varies by ticker, 'shared' when same for all")
-    params: list[ConfigParam] = Field(default_factory=list, description="Provider-specific params (e.g. symbol='VIXUSD' for commodity)")
+    params: list[ConfigParam] = Field(default_factory=list, description="Provider-specific params (e.g. symbol='VIXUSD' for commodity, symbol='SPY' for equity_price, indicator='initialClaims' for economic_indicator)")
+    min_coverage: float = Field(default=0.8, description="Fraction (0.0-1.0) of the universe that must have this data populated after resolve. Preflight raises DataCoverageError if coverage is below threshold. Set 1.0 for hard requirements (SPY broadcast, ticker_meta), 0.6-0.8 for fundamentals on noisy universes.")
+    broadcast_as: Optional[str] = Field(default=None, description="Column name to broadcast a scope='shared' Series/DataFrame onto every ticker's DataFrame. REQUIRED when the signal model reads the data as a per-ticker column (e.g. df['spy_close']). Only valid when scope='shared'. Example: DataRequirement for SPY equity_price with broadcast_as='spy_close' makes df['spy_close'] available to signal code.")
 
 
 class IndicatorEntry(BaseModel):

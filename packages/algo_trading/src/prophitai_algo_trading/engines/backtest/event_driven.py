@@ -84,7 +84,9 @@ class EventDrivenBacktestEngine:
             portfolio_tracker, position_trackers, latest_prices, common_index[-1], verbose,
         )
 
-        result = compile_backtest_result(portfolio_tracker, len(tickers), verbose)
+        result = compile_backtest_result(
+            portfolio_tracker, len(tickers), verbose, warmup=warmup,
+        )
 
         if plot:
             plot_event_backtest_results(result)

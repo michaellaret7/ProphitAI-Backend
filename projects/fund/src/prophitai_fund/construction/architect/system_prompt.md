@@ -88,6 +88,16 @@ these. Get them wrong and every downstream agent produces broken code.
   - `"government_bond_rates"` — yield curve data (m1..m6, y1..y30). Scope: `"shared"`. Requires param: `country` (e.g. `"US"`).
   - `"economic_calendar"` — scheduled economic events. Scope: `"shared"`. Requires param: `country`. Optional param: `event` to filter by event type.
   - Indicators that only read OHLCV columns (open/high/low/close/volume) need no data requirements.
+
+- **Set `min_coverage` on every DataRequirement.** Fraction (0.0–1.0) of the universe that must have this data populated after the resolver runs. Preflight raises `DataCoverageError` on failure — the validator treats it as `build_failure` (no tuning). Defaults to `0.8`. Guidance:
+  - `1.0` — SPY/benchmark series and `ticker_meta` (structural; missing = broken build).
+  - `0.8` (default) — fundamentals / financial_ratios on large-cap universes where full coverage is realistic.
+  - `0.6`–`0.7` — fundamentals on small-cap / micro-cap universes where FMP coverage is spottier.
+  - Never set below `0.5` — if coverage is that bad, the strategy is structurally unsound for this universe.
+
+- **Set `broadcast_as="<col_name>"` on shared DataRequirements the signal model reads as a per-ticker column.** When `scope="shared"` and the signal's entry/exit conditions reference the data as a column (e.g. `df["spy_close"] > df["spy_sma200"]`), set `broadcast_as` so the library automatically lifts the shared Series onto every ticker's DataFrame. Without this, `df["spy_close"]` is NaN and signals never fire. Only valid when `scope="shared"`. Example: `DataRequirement(kind="equity_price", attrs_key="spy", scope="shared", params={"symbol": "SPY"}, broadcast_as="spy_close")`. Indicators that read `df.attrs["spy"]` directly (not via a column) do NOT need `broadcast_as`.
+
+- **L/S and levered strategies: declare `target_gross_pct` and `max_name_pct` in `config_defaults.sizing`.** When the strategy intends gross exposure above 100% (long-only fully-invested is `1.0`; 100% long + 50% short is `1.5`; full L/S 1x per leg is `2.0`), include `target_gross_pct` and `max_name_pct` in `config_defaults.sizing` so the execution builder can wrap the sizer in `GrossExposureSizer`. Without this, the portfolio chronically under-deploys (~40–60% gross with 20 asymmetrically-opening positions) and Sharpe reads artificially low. Long-only fully-invested strategies (`target_gross_pct <= 1.0`) do not need `GrossExposureSizer`.
 </critical_rules>
 
 <sandbox_reference_paths>

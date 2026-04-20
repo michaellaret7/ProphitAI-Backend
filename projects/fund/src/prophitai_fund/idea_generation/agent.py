@@ -32,6 +32,7 @@ class IdeaGeneratorAgent:
         "Use the research tools extensively to find a compelling edge, "
         "assess its macro viability, check past ideas to avoid repetition, "
         "and produce a complete trade idea proposal."
+        "Goal: Build an equity focused long short momentum trading strategy."
     )
 
     def __init__(

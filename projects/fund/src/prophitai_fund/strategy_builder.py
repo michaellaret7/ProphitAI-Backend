@@ -194,17 +194,37 @@ class StrategyBuilder:
             # Stage 1b: Bootstrap repo and scaffold strategy directory
             setup_repo(sandbox, strategy_id)
 
-            # Reason: scaffold_strategy is an @agent_tool that returns an error
-            # STRING (not an exception) when the target dir already exists — which
-            # happens whenever strategy_id collides with a prior strategy committed
-            # to the Strategies repo. Ignoring the return silently proceeds on top
-            # of stale code. Inspect the response and raise on failure.
-            scaffold_result = scaffold_strategy(sandbox_id, strategy_id)
+            # Reason: a prior run can push the scaffolded folder to the remote
+            # strategy branch; re-cloning and checking that branch out brings the
+            # folder back into the fresh sandbox. When this run is resuming from
+            # a cached idea (same strategy_id), treat the existing folder as
+            # expected state and skip scaffolding. When there is no resume
+            # checkpoint, an existing folder means strategy_id collided with a
+            # previously-built strategy — fail loudly rather than overwrite it.
+            strategy_dir = f"{REPO_PATH}/strategies/development/{strategy_id}"
+            
+            dir_check = get_sandbox(sandbox_id).commands.run(
+                f"test -d {strategy_dir} && echo exists || echo missing"
+            )
+            folder_exists = "exists" in dir_check.stdout
 
-            if "success: false" in scaffold_result or "error:" in scaffold_result:
+            if folder_exists and cached_idea:
+                print(f"Resuming — strategy folder present at {strategy_dir}, skipping scaffold.")
+            elif folder_exists:
                 raise RuntimeError(
-                    f"scaffold_strategy failed for '{strategy_id}': {scaffold_result}"
+                    f"Strategy folder '{strategy_id}' already exists on remote branch "
+                    f"'strategy/{strategy_id}' without a local resume checkpoint. "
+                    f"Rename the strategy or delete the remote branch before rerunning."
                 )
+            else:
+                # Reason: scaffold_strategy is an @agent_tool that returns an error
+                # STRING (not an exception) on failure. Inspect the response and raise.
+                scaffold_result = scaffold_strategy(sandbox_id, strategy_id)
+
+                if "success: false" in scaffold_result or "error:" in scaffold_result:
+                    raise RuntimeError(
+                        f"scaffold_strategy failed for '{strategy_id}': {scaffold_result}"
+                    )
 
             # Stage 1c: Write the original idea to the strategy root
             idea_path = f"{REPO_PATH}/strategies/development/{strategy_id}/IDEA.md"

@@ -22,6 +22,7 @@ def calculate_metrics(
     equity_curve: pd.DataFrame,
     trades: pd.DataFrame,
     benchmark_prices: pd.Series | None = None,
+    warmup: int = 0,
 ) -> dict:
     """Calculate all performance metrics from backtest results.
 
@@ -31,6 +32,12 @@ def calculate_metrics(
             'pnl', 'return_pct', and 'direction' columns.
         benchmark_prices: Optional Series of benchmark close prices (e.g. SPY),
             datetime-indexed. When provided, Jensen's alpha is computed.
+        warmup: Number of leading bars to exclude from return/risk/benchmark
+            metrics. Indicators with long lookbacks (e.g. 504-bar z-scores)
+            produce a flat equity curve during warmup that artificially
+            depresses Sharpe — slicing those bars gives an honest measure of
+            the strategy's post-warmup behaviour. Per-trade metrics are
+            unaffected. Default 0 (no slicing) for backwards compatibility.
 
     Returns:
         Dictionary of metric name to value.
@@ -46,18 +53,27 @@ def calculate_metrics(
     # log-returns undefined in Sharpe. Fail loud up front.
     _validate_equity(equity_curve["equity"])
 
+    # Reason: slice warmup bars from the front so the flat no-positions phase
+    # doesn't depress Sharpe or distort annualized return. Guard against a
+    # warmup that would leave fewer than 2 bars — in that case we fall back
+    # to the full curve so metrics are still computable (the strategy just
+    # won't be trusted downstream anyway).
+    effective_curve = equity_curve
+    if warmup > 0 and warmup < len(equity_curve) - 1:
+        effective_curve = equity_curve.iloc[warmup:]
+
     # Reason: derive years from actual calendar span so intraday bars are not
     # counted as separate trading days.
-    time_span = (equity_curve.index[-1] - equity_curve.index[0]).total_seconds()
+    time_span = (effective_curve.index[-1] - effective_curve.index[0]).total_seconds()
     years = time_span / SECONDS_PER_YEAR
-    bars_per_year = len(equity_curve) / max(years, EPSILON)
+    bars_per_year = len(effective_curve) / max(years, EPSILON)
 
     metrics = {}
 
-    metrics.update(_return_metrics(equity_curve, years))
-    metrics.update(_risk_metrics(equity_curve, bars_per_year))
+    metrics.update(_return_metrics(effective_curve, years))
+    metrics.update(_risk_metrics(effective_curve, bars_per_year))
     metrics.update(_trade_metrics(trades))
-    metrics.update(_benchmark_metrics(equity_curve, benchmark_prices, years))
+    metrics.update(_benchmark_metrics(effective_curve, benchmark_prices, years))
 
     return metrics
 

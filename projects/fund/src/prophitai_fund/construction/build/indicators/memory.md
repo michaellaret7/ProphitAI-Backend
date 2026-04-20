@@ -235,3 +235,31 @@ topic: framework_gotchas
 ---
 As of 2026-04-20, `TickerMetaProvider` attaches `{"symbol": str, "sector": str, "industry": str}` — not the ticker string. Read via `df.attrs[attrs_key]["symbol"]` / `["sector"]` / `["industry"]`. Missing sector/industry return empty string, never None. Recommended `attrs_key="ticker_meta"` so `df.attrs["ticker_meta"]["sector"]` reads naturally. Tests that stub ticker_meta must write the dict shape: `df.attrs['ticker_meta'] = {"symbol": "TEST", "sector": "Technology", "industry": "Software"}`.
 
+---
+date: 2026-04-20
+title: _scalar_zscore should return np.nan not 0.0 for insufficient warmup
+topic: coding_patterns
+---
+In composite indicator update_last_row(), `_scalar_zscore()` must return `np.nan` (not 0.0) when insufficient history exists. Returning 0.0 makes update_last_row produce different values than calculate() during warmup: calculate() leaves NaN in z-score columns until min_periods is met, but update_last_row would write 0.0 z-scores that sum to a non-NaN composite. Pattern: `if len(lookback) < zscore_min_periods: return float(np.nan)`, then in update_last_row propagate NaN through to composite_score_raw and set composite_score_normalized = NEUTRAL_DEFAULT.
+
+---
+date: 2026-04-20
+title: FIP (Frog-In-Pan) warmup: start loop at min_periods-1, not full_window-1
+topic: coding_patterns
+---
+When implementing Frog-In-Pan (or any rolling fraction metric with min_periods < window), start the computation loop at `min_periods - 1` (not `window - 1`). Otherwise bars between min_periods and window have FIP=NaN_FILL when they should have partial-window values. Mirror this in update_last_row: use `start = max(0, n - window)` unconditionally — the min_periods check inside the loop handles insufficient data. Code reviewer caught this as a batch/incremental consistency bug.
+
+---
+date: 2026-04-20
+title: Business day count (earnings): use busday_count(from+1day, to+1day) not +1 unconditionally
+topic: coding_patterns
+---
+Counting business days from `from_date` (exclusive) to `to_date` (inclusive) where `to_date` may fall on a weekend: correct formula is `np.busday_count((from_date + 1 day).date(), (to_date + 1 day).date())`. The unconditional `+1` was wrong — for a Friday→Saturday case it returned 1 (wrong) instead of 0. The shifted-by-1-day approach naturally handles weekend to_dates because busday_count to Sunday equals count through Friday. If result <= 0, return 999 sentinel.
+
+---
+date: 2026-04-20
+title: pd.date_range with freq='QE' may return n-1 periods — use explicit list instead
+topic: verification_failures
+---
+In test fixtures, `pd.date_range(end=date, periods=12, freq='QE')` may return 11 dates instead of 12 due to partial-quarter boundary alignment. Use explicit list generation instead: `dates = [end - pd.Timedelta(days=90*i) for i in range(n-1, -1, -1)]` and `n = len(dates)` to drive array allocation. Avoids "All arrays must be of the same length" ValueError when building the fixture DataFrame.
+

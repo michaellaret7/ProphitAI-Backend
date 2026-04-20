@@ -123,7 +123,7 @@ from prophitai_algo_trading.indicators import BaseIndicator, DataRequirement
 class FundamentalIndicator(BaseIndicator):
     data_requirements = (
         DataRequirement(kind="fundamentals", attrs_key="fundamentals", scope="per_ticker"),
-        # ticker_meta attaches a dict {"symbol","sector","industry"} — read meta["symbol"], meta["sector"].
+        # ticker_meta attaches a dict {{"symbol","sector","industry"}} — read meta["symbol"], meta["sector"].
         DataRequirement(kind="ticker_meta", attrs_key="ticker_meta", scope="per_ticker"),
     )
 
@@ -137,12 +137,23 @@ class ReferenceSeriesIndicator(BaseIndicator):
     # equity_price: one DataRequirement per ETF — not a list. Attaches a tz-naive pd.Series of closes.
     # universe_returns: cross-sectional DataFrame (date index x ticker columns) of daily returns,
     # attached identically to every ticker's df.attrs. Use for dispersion, universe-relative z-scores, etc.
+    # broadcast_as: when a shared series must appear as a COLUMN on every ticker's DataFrame
+    # (e.g. signal_model reads df["spy_close"] directly), set broadcast_as="<col_name>".
+    # The library's load_backtest_data() lifts the shared Series onto each ticker's frame.
     data_requirements = (
-        DataRequirement(kind="equity_price", attrs_key="spy", scope="shared", params={{"symbol": "SPY"}}),
+        DataRequirement(kind="equity_price", attrs_key="spy", scope="shared", params={{"symbol": "SPY"}}, broadcast_as="spy_close"),
         DataRequirement(kind="equity_price", attrs_key="xlk", scope="shared", params={{"symbol": "XLK"}}),
         DataRequirement(kind="universe_returns", attrs_key="universe_returns", scope="shared"),
     )
 ```
+
+**DataRequirement fields (full reference):**
+- `kind` — provider kind (`"fundamentals"`, `"financial_ratios"`, `"commodity"`, `"equity_price"`, `"universe_returns"`, `"economic_indicator"`, `"government_bond_rates"`, `"economic_calendar"`, `"ticker_meta"`).
+- `attrs_key` — the key in `df.attrs` the indicator reads from.
+- `scope` — `"per_ticker"` or `"shared"`. `scope="shared"` means one blob shared across the universe.
+- `params` — MUST be a dict (never a list). `params=[]` raises `TypeError` at construction.
+- `min_coverage` — `0.0`–`1.0`. Fraction of the universe that must have this data populated after resolve. Default `0.8`. Preflight raises `DataCoverageError` if coverage is below threshold. Set to `1.0` for hard requirements (SPY broadcast), lower (e.g. `0.6`) for noisy micro-cap fundamentals.
+- `broadcast_as` — when `scope="shared"`, lift the shared Series/DataFrame into every ticker's DataFrame as a column of this name. REQUIRED when the signal model reads the data as a per-ticker column (e.g. `df["spy_close"]`). Only valid with `scope="shared"`.
 
 The worker's Step 2 report provides the full class template — follow it. Do not invent structure.
 

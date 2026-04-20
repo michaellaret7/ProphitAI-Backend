@@ -110,7 +110,7 @@ All paths below are ABSOLUTE. Use them verbatim in worker task payloads and `san
 /home/user/strategies/.venv/lib/python3.13/site-packages/prophitai_algo_trading/sizing/std_lib/equity/           # PercentOfEquitySizer, AllInSizer, FixedQuantitySizer
 /home/user/strategies/.venv/lib/python3.13/site-packages/prophitai_algo_trading/sizing/std_lib/risk_based/       # ATRRiskSizer
 /home/user/strategies/.venv/lib/python3.13/site-packages/prophitai_algo_trading/sizing/std_lib/volatility/       # VolatilityTargetSizer, InverseVolatilitySizer
-/home/user/strategies/.venv/lib/python3.13/site-packages/prophitai_algo_trading/sizing/std_lib/wrappers/         # DrawdownScaledSizer
+/home/user/strategies/.venv/lib/python3.13/site-packages/prophitai_algo_trading/sizing/std_lib/wrappers/         # DrawdownScaledSizer, GrossExposureSizer
 ```
 
 **Risk Controls** (verify constructor signatures):
@@ -208,7 +208,7 @@ Create `strategies/development/{{strategy_id}}/wiring.py`:
    - Construct the sizer chain respecting nesting order (see constraints)
    - Call `build_risk_controls()` from the defaults module
    - Return `EngineComponents(...)` with `warmup_bars=strategy.min_bars_required`
-3. Define `load_backtest_data(tickers, start_date, end_date, interval, strategy)` that delegates to `prophitai_algo_trading.data.resolver.load_strategy_data()`, passing `strategy._indicator_suite`. This resolves all indicator `data_requirements` automatically — never manually fetch supplementary data.
+3. **Do NOT define a `load_backtest_data` function in wiring.py.** The canonical loader is `prophitai_algo_trading.data.load_backtest_data`. Runner scripts import it directly from the library: `from prophitai_algo_trading.data import load_backtest_data`. The library function handles OHLCV fetch, data requirement resolution, preflight coverage check (raises `DataCoverageError` if a declared `DataRequirement` fails its `min_coverage` gate), and broadcast of shared attrs into per-ticker columns. Any hand-rolled data loader is forbidden — it silently diverges from the canonical one and re-introduces the data-pipeline bugs the loader was built to prevent.
 
 Use `config_defaults.sizing`, `config_defaults.backtest`, and `config_defaults.live` for defaults throughout. The worker's Step 2 report provides the full pattern.
 
@@ -216,13 +216,13 @@ Use `config_defaults.sizing`, `config_defaults.backtest`, and `config_defaults.l
 
 Three executable scripts, each with `if __name__ == "__main__":` blocks.
 
-**`run_event_backtest.py`** — uses `EventDrivenBacktestEngine`. Constructor receives `strategy`, `initial_capital`, `cost_model`, `sizer`, `warmup_bars`, `max_positions`, `risk_controls` (from `components`). Call `engine.run(data=data, warmup_bars=components.warmup_bars)`. Load data via `load_backtest_data(tickers=TICKERS, ..., strategy=components.strategy)`.
+**`run_event_backtest.py`** — uses `EventDrivenBacktestEngine`. Constructor receives `strategy`, `initial_capital`, `cost_model`, `sizer`, `warmup_bars`, `max_positions`, `risk_controls` (from `components`). Call `engine.run(data=data, warmup_bars=components.warmup_bars)`. Load data via `load_backtest_data(tickers=TICKERS, start_date=..., end_date=..., interval=..., strategy=components.strategy)` imported from `prophitai_algo_trading.data`.
 
 **`run_vectorized_backtest.py`** — uses `VectorizedBacktestEngine`. **Do NOT pass `risk_controls`** (see constraints).
 
 **`run_live.py`** — uses `LiveRunner` with `Alpaca` broker. Uses `config_defaults.live` for `data_interval` and ticker configuration.
 
-All runner scripts call `load_backtest_data()` from `wiring.py` — they never fetch supplementary data directly.
+All runner scripts import `load_backtest_data` directly from `prophitai_algo_trading.data` — they NEVER define their own loader and NEVER fetch supplementary data directly.
 
 ### Step 10 — Verify
 
@@ -286,6 +286,8 @@ Apply `<commit_push_pattern>` with:
   ```
   The outermost sizer is what gets passed to the engine.
 
+- **Long/short or levered strategies must wrap their sizer in `GrossExposureSizer`.** Any strategy whose manifest declares `target_gross_pct > 1.0` (e.g. L/S at 150%, levered long at 125%) MUST include `GrossExposureSizer(base_sizer=..., target_gross_pct=<manifest_value>, max_name_pct=<manifest_value>)` as the outer sizer. Without this wrapper the portfolio chronically under-deploys — `PercentOfEquitySizer` alone has no notion of a gross target and stalls at ~50% deployment with ~20 asymmetrically-opening positions. Long-only, fully-invested strategies (`target_gross_pct <= 1.0`) do not need it.
+
 - **Use `config_defaults` values, not hardcoded magic numbers.** The manifest's `config_defaults.sizing`, `config_defaults.risk`, `config_defaults.backtest`, and `config_defaults.live` sections contain the intended default parameter values.
 
 - **Import paths must match the sandbox package structure.** Strategy code lives at `strategies.development.{{strategy_id}}.*` — not `prophitai_algo_trading.*`. Framework code imports from `prophitai_algo_trading.*`.
@@ -298,7 +300,7 @@ Apply `<commit_push_pattern>` with:
 
 - **`build_risk_controls()` must instantiate all risk controls** from the manifest's `risk_controls` list with inline rationale comments.
 
-- **Use `load_strategy_data()` for data loading — never manually fetch supplementary data.** `wiring.py`'s `load_backtest_data()` delegates to `prophitai_algo_trading.data.resolver.load_strategy_data()`, passing `strategy._indicator_suite`. This automatically resolves all indicator `data_requirements` (fundamentals, macro, etc.). Runner scripts call `load_backtest_data()` from wiring — never fetch directly.
+- **Use `load_backtest_data()` from the library for data loading — never manually fetch supplementary data and never define a local loader.** Runners import `from prophitai_algo_trading.data import load_backtest_data` and call it with `strategy=components.strategy`. The library function resolves all indicator `data_requirements`, runs preflight (`DataCoverageError` on coverage failure — this is a hard stop, not a warning), and broadcasts shared attrs (SPY, VIX, claims, etc.) into per-ticker columns per each requirement's `broadcast_as` declaration. If a runner or wiring file contains a hand-rolled loader, the strategy is malformed and the validator must reject it.
 </constraints>
 
 <output_format>
@@ -352,7 +354,8 @@ Stage-specific items (universal items from `<universal_validation>` apply implic
 - [ ] All risk control constructor kwargs verified against framework source
 - [ ] Engine constructor kwargs verified against framework source
 - [ ] `wiring.py` imports strategy, config, and suite from correct upstream paths
-- [ ] `load_backtest_data()` delegates to `load_strategy_data()` — no manual supplementary fetching
+- [ ] Runners import `load_backtest_data` from `prophitai_algo_trading.data` — NO local loader in `wiring.py` or any runner, NO manual supplementary fetching
+- [ ] Every `DataRequirement` with `scope="shared"` that signal code needs as a per-ticker column sets `broadcast_as="<col_name>"` on the requirement (so the library broadcasts it automatically)
 - [ ] Runner scripts are self-contained with `if __name__ == "__main__":` blocks
 - [ ] `config_defaults` values used instead of hardcoded magic numbers
 - [ ] `__init__.py` files export everything downstream needs

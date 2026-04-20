@@ -190,6 +190,7 @@ def compile_backtest_result(
     portfolio_tracker: PortfolioTracker,
     ticker_count: int,
     verbose: bool = False,
+    warmup: int = 0,
 ) -> BacktestResult:
     """Package portfolio tracker outputs into a BacktestResult.
 
@@ -200,6 +201,8 @@ def compile_backtest_result(
         portfolio_tracker: Completed portfolio tracker.
         ticker_count: Number of tickers in the universe (for verbose logging).
         verbose: If True, print summary.
+        warmup: Number of leading bars to exclude from return/risk metrics.
+            Forwarded to ``calculate_metrics``. Per-trade metrics ignore it.
 
     Returns:
         BacktestResult with metrics, equity curve, and trades.
@@ -211,7 +214,7 @@ def compile_backtest_result(
     end_date = equity_curve.index[-1].strftime("%Y-%m-%d")
     spy_prices = _fetch_spy_prices(start_date, end_date)
 
-    metrics = calculate_metrics(equity_curve, trades, spy_prices)
+    metrics = calculate_metrics(equity_curve, trades, spy_prices, warmup=warmup)
 
     if verbose:
         print(f"\nDone: {len(trades)} trades across {ticker_count} tickers, "

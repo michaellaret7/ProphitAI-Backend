@@ -256,3 +256,24 @@ topic: framework_gotchas
 ---
 Architect may specify three platform-native kinds: (a) `kind="equity_price"` params={"symbol": "SPY"} scope="shared" — ETF/equity close series (replaces commodity misuse for SPY/sector ETFs). One DataRequirement per symbol; attaches tz-naive `pd.Series` to `df.attrs[attrs_key]`. (b) `kind="ticker_meta"` scope="per_ticker" — attaches dict `{"symbol","sector","industry"}` to `df.attrs[attrs_key]`. Recommended attrs_key="ticker_meta". Sector-proxy indicators read `meta["sector"]`. (c) `kind="universe_returns"` scope="shared" optional params={"return_type": "pct"|"log"} — cross-sectional returns DataFrame (date × ticker) at `df.attrs[attrs_key]`. Used for dispersion regimes and universe-relative features. Indicator agents should never be told to override `suite.calculate()` to pre-inject these — declare the data_requirement and the resolver handles it.
 
+---
+date: 2026-04-20
+title: Daniel-Moskowitz panic-state indicator: bear mean-variance requires conditional forward-fill
+topic: translation_patterns
+---
+For PanicRegimeIndicator (Daniel-Moskowitz 2016), spx_mean_bear_variance = rolling mean of realized variance computed ONLY over bear-period bars, then forward-filled to all bars. If the backtest period never enters a bear state, fall back to unconditional rolling(252).mean() of variance to prevent division-by-zero in panic_intensity. Pattern: bear_var_series = spx_realized_variance_126d.where(spx_bear_indicator == 1.0, np.nan).rolling(252, min_periods=1).mean().ffill().fillna(spx_realized_variance_126d.rolling(252, min_periods=1).mean()). This handles cold-start and all-bull backtests gracefully.
+
+---
+date: 2026-04-20
+title: FIP rolling apply is slow — recommend numba or fixed threshold
+topic: framework_gaps
+---
+Frog-In-Pan (Da-Gurun-Warachka 2014) requires counting direction-concordant small returns in each trailing 252-bar window. This is a per-row apply over O(252) elements for each of 400-700 tickers × 3000+ bars — extremely slow with Python rolling apply. Always flag in implementation_notes: use numba JIT or pre-compute with vectorized numpy (threshold = scalar from most recent realized_vol, not per-bar dynamic threshold) to achieve acceptable backtest performance. Fallback: use fixed threshold |r| < 0.01 instead of 0.5 * realized_vol for 10-100x speedup.
+
+---
+date: 2026-04-20
+title: PanicHaltControl: direction-differentiated force-exit for long-short asymmetric halt
+topic: translation_patterns
+---
+For Daniel-Moskowitz zero-gross-on-panic strategies, the asymmetric halt pattern is: PanicHaltControl.should_force_exit() checks position.direction — force-exit SHORTS immediately (right-tail squeeze risk), do NOT force-exit LONGS (flight-to-quality hold). should_block_entry() returns True for ALL new entries regardless of direction. Signal model ALSO gates entries on panic_state_gate == 1.0 as defense-in-depth (defense-in-depth pattern: both signal condition AND risk control enforce the same rule). Custom outer sizer also scales all new shares to 0 via panic_exposure_scale == 0.0 — triple redundancy. This triple-lock pattern (signal gate + risk control + sizer) is appropriate for the primary risk failure mode of a long-short momentum strategy.
+

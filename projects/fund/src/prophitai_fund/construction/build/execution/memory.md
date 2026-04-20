@@ -73,7 +73,7 @@ date: 2026-04-14
 title: Interval.from_string accepts 'daily' not '1d'
 topic: wiring_gotchas
 ---
-get_price_data_df() calls Interval.from_string(interval) which only accepts: 'daily', 'hourly', '30min', '15min', '5min', '1min'. Using '1d' or '1h' raises ValueError at runtime. Always use 'daily' (not '1d') and 'hourly' (not '1h') in runner scripts, wiring.py load_backtest_data(), and config interval fields.
+get_price_data_df() calls Interval.from_string(interval) which only accepts: 'daily', 'hourly', '30min', '15min', '5min', '1min'. Using '1d' or '1h' raises ValueError at runtime. Always use 'daily' (not '1d') and 'hourly' (not '1h') in runner scripts calling `load_backtest_data()` and in config interval fields.
 
 ---
 date: 2026-04-16
@@ -118,11 +118,11 @@ topic: wiring_gotchas
 Alpaca class imports from prophitai_algo_trading.broker.alpaca (singular 'broker') NOT prophitai_algo_trading.brokers.alpaca (plural). Template wiring.py uses the singular form. Common mistake to write 'brokers' — always use 'broker'.
 
 ---
-date: 2026-04-17
-title: Runner scripts: build components once, construct engine inline
+date: 2026-04-20
+title: Runner scripts: build components once, import load_backtest_data from library
 topic: runner_patterns
 ---
-Runner scripts should call build_X_engine() once to get EngineComponents, then pass components.* directly to the engine constructor inline (EventDrivenBacktestEngine(...) / VectorizedBacktestEngine(...)). Do NOT call both build_X_engine() for data loading AND a separate build_event_backtest_engine() — that creates two independent instances (double-construction). Pattern: components = build_X_engine(); data = load_backtest_data(strategy=components.strategy); engine = EventDrivenBacktestEngine(strategy=components.strategy, ..., risk_controls=components.risk_controls).
+Runner scripts must import `from prophitai_algo_trading.data import load_backtest_data` — there is no local loader in wiring.py anymore. Build components once via build_X_engine() to get EngineComponents, then pass components.* directly to the engine constructor inline. Do NOT call both build_X_engine() for data loading AND a separate build_event_backtest_engine() — that creates two independent instances (double-construction). Pattern: `components = build_X_engine(); data = load_backtest_data(tickers=list(TICKERS), start_date=config.start, end_date=config.end, interval=config.interval, strategy=components.strategy); engine = EventDrivenBacktestEngine(strategy=components.strategy, ..., risk_controls=components.risk_controls)`. If `load_backtest_data` raises `DataCoverageError`, DO NOT catch it — let it bubble up so the validator sees it.
 
 ---
 date: 2026-04-17
@@ -192,4 +192,25 @@ title: has_columns() is variadic *args, NOT list arg
 topic: risk_control_patterns
 ---
 RiskControl.has_columns(df, *columns: str) is variadic — pass individual string args, NOT a list. Calling has_columns(df, [col]) passes a list as a single arg, causing TypeError: unhashable type 'list' in pandas __contains__. Correct: self.has_columns(df, self._column_name). Wrong: self.has_columns(df, [self._column_name]).
+
+---
+date: 2026-04-20
+title: Long-short sizer: use equity not cash for notional — short entries must not be cash-capped
+topic: sizing_patterns
+---
+In long-short strategies, custom sizers must NOT cap target notional by context.cash for short entries. Short positions don't consume cash from the portfolio cash bucket — the engine handles margin/collateral separately. Using min(target_value, context.cash) will incorrectly size shorts to zero once long allocations have consumed cash. Correct pattern: target_value = context.equity * dyn_pct (no cash cap). Code reviewers flag the cash-cap as an error specifically for long-short strategies.
+
+---
+date: 2026-04-20
+title: PanicScaledSizer: compute drawdown scale directly from context.drawdown_pct, not from inner share ratio
+topic: sizing_patterns
+---
+When wrapping DrawdownScaledSizer in a custom outer sizer, do NOT reverse-engineer the drawdown scale factor from inner_shares / inner_static_base. This is brittle — it assumes the inner base sizer uses the same max_name_pct and cash treatment. Instead: mirror the DrawdownScaledSizer linear interpolation formula directly in the outer sizer using context.drawdown_pct and the configured soft_drawdown/hard_drawdown/min_scale parameters. Store these params in the outer sizer's __init__ and pass them from wiring.py matching the inner sizer's configuration. This makes the scale computation self-contained and auditable.
+
+---
+date: 2026-04-20
+title: SectorConcentrationControl: bucket unknown-sector incoming names, don't auto-allow them
+topic: risk_control_patterns
+---
+When should_block_entry() cannot classify the incoming ticker's sector (metadata missing/incomplete), do NOT return False (auto-allow). Instead, include the unknown ticker in a _UNKNOWN_SECTOR bucket and apply the same sector gross cap to that bucket. If _UNKNOWN_SECTOR accumulates enough names to exceed max_sector_gross_pct, block further entries. This prevents silent bypass when metadata is incomplete. Code reviewer flags the auto-allow pattern as a correctness warning. The _compute_sector_exposure helper must always add the incoming notional regardless of whether the sector is _UNKNOWN_SECTOR.
 

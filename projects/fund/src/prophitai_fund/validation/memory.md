@@ -27,11 +27,11 @@ topic: run_failures
 When a signal model's long_entry conditions depend on a data gate that is structurally impossible for the chosen universe (e.g. fundamentals_valid == 1.0 on an ETF universe, earnings_in_window on a non-reporting security, sector_neutral gate on a single-sector universe), the strategy produces 0 trades across all parameter variations. Detection: 0 trades on baseline AND 0 trades at every relaxed threshold. Do NOT attempt tuning — verdict is `build_failure`, not `failed`, because the builder wired incompatible components. Report the mismatch upstream (signal/universe incompatibility) so the next run rebuilds rather than re-ranks.
 
 ---
-date: 2026-04-17
-title: Broadcast columns required by signal model must be injected by load_backtest_data
+date: 2026-04-20
+title: Missing broadcast column → check DataRequirement.broadcast_as, not wiring.py
 topic: run_failures
 ---
-Strategies that gate entries on broadcast columns (spy_close, spy_above_200sma, vix_level, claims_value) produce 0 trades on baseline if load_backtest_data() doesn't inject the broadcast column into per-ticker DataFrames. Detection pattern: 0 trades + regime_entry_allowed all-zero + the broadcast column all-NaN in sampled ticker DataFrames. Fix: modify load_backtest_data() in wiring.py to load the broadcast source separately, reindex to the per-ticker date index, and inject as a column into every non-source ticker DataFrame. Source ticker (SPY) gets the value from its own close. This is a valid in-validator wiring fix — distinct from the build_failure class above, because the signal model and indicator pipeline are correctly built but the wiring forgot to broadcast.
+`load_backtest_data` is library code (`prophitai_algo_trading.data.load_backtest_data`); wiring.py must NOT define a local loader. If the signal model references a per-ticker column like `df["spy_close"]` but the column is all-NaN, the indicator author forgot to set `broadcast_as="<col_name>"` on the corresponding shared DataRequirement. Detection: 0 trades + `regime_entry_allowed` all-zero + sampled ticker DataFrames missing the column. Correct fix is at the indicator builder stage — add `broadcast_as` to the DataRequirement. DO NOT edit wiring.py to hand-inject the column; that path no longer exists and a hand-rolled loader is a build_failure signal. If the indicator declaration is correct but the column is still missing, the shared blob itself is missing — that is a DataCoverageError at preflight time (build_failure), not a wiring bug.
 
 ---
 date: 2026-04-17
@@ -80,4 +80,18 @@ title: DataRequirement params=[] vs params={} causes TypeError at **unpacking
 topic: run_failures
 ---
 DataRequirement.params must be a dict (defaulting to {}), not a list ([]). When params=[] (a list), the DataResolver's call to provider.fetch(tickers, sd, ed, **req.params) raises TypeError: argument after ** must be a mapping, not list. Fix: change params=[] to params={} in the DataRequirement definition. This is a builder error that appears in indicators with no provider params needed (e.g. ticker_meta which needs no symbol).
+
+---
+date: 2026-04-20
+title: Position sizing as primary Sharpe lever for long-only L/S strategies with missing short leg
+topic: tuning_patterns
+---
+When the short leg of a L/S strategy is non-functional (e.g., distress_filter_pass=0 from missing financial_ratios data), the strategy degrades to long-only. In that case, the position size cap (max_name_pct) becomes the single biggest Sharpe lever — more than entry thresholds or zscore windows. In the PSMO validation, raising max_name_pct from 2.5% to 6% moved Sharpe from 0.13 to 0.44 (+0.31), while all signal-level tuning only moved it by ±0.1. The root: with a 2.5% cap and ~20 simultaneous positions, only ~50% of capital is deployed. Raising the cap or increasing target_gross_pct is the fastest path to improving gross Sharpe on under-deployed long-only runs. However, drawdown also scales with position size (15% → 26% here), so there's a frontier.
+
+---
+date: 2026-04-20
+title: DistressFilterIndicator defaults to 0.0 (fail) when financial_ratios data is absent
+topic: run_failures
+---
+The DistressFilterIndicator (PSMO strategy) conservatively defaults `distress_filter_pass=0.0` when `df.attrs['financial_ratios']` is None or empty. This causes the short leg to be completely disabled (short_eligible=0 always) when the financial_ratios data pipeline fails. Detection: 0 short trades, all 18 years. Confirming test: removing the distress filter enabled 679 short trades but Sharpe dropped to -0.31 (short leg loses without distress protection). Fix needed upstream: ensure financial_ratios DataRequirement resolves data for large-cap equities. The conservative default is intentional and correct behavior; the bug is in data pipeline registration, not indicator logic.
 

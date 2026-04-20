@@ -203,7 +203,7 @@ Apply `<commit_push_pattern>` with:
 <constraints>
 - **`required_columns` must exactly match `manifest.signals.required_columns`.** Do not add, remove, or rename. It's the contract with the indicator layer.
 
-- **Every required column must exist in `indicator_result.all_output_columns` or be produced by `enrich()`.** If missing from both, raise as an error in your output — do not silently invent columns.
+- **Every required column must exist in `indicator_result.all_output_columns`, be produced by `enrich()`, or be a broadcast column declared on an indicator's DataRequirement.** Broadcast columns (e.g. `spy_close`, `vix_level`) come from `scope="shared"` DataRequirements that set `broadcast_as="<col_name>"` — the library attaches them to every ticker's DataFrame as columns automatically. Read them like any other column: `df["spy_close"]`, not `df.attrs["spy"]`. If a required column is not in any of these three sources, raise as an error in your output — do not silently invent columns and do not fetch data yourself.
 
 - **`required_columns` must be a tuple, not a list.** `BaseSignalModel.validate()` iterates over it expecting a tuple class attribute.
 

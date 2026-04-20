@@ -118,6 +118,16 @@ Capture stdout/stderr. Parse the `=== METRICS ===` block for `sharpe`, `max_draw
 `total_return`, `trade_count`, etc.
 
 **Failure triage (important):**
+- **`DataCoverageError` raised by `load_backtest_data`** → the strategy's declared
+  `DataRequirement`s did not resolve for enough of the universe (e.g. financial_ratios
+  missing for 40/50 tickers, or `spy` shared blob returned empty). The error message
+  names every failed `attrs_key` and the specific tickers that were missing.
+  This is a PIPELINE bug, not a strategy bug — verdict is `build_failure`,
+  include the full error message in `research_summary`. DO NOT attempt to tune.
+  DO NOT relax `min_coverage` in the indicator to paper over it. DO NOT re-screen
+  and retry. The indicator builder declared data the pipeline cannot provide, or
+  the screener picked tickers with no fundamentals coverage — both are build failures
+  that must surface upstream for the next run to fix properly.
 - **Import error, syntax error, undefined symbol, wrong class/attribute name** →
   read the traceback, fix the upstream code via `sandbox_edit`, and re-run. Common
   causes: typo in an import, mismatched class name between `wiring.py` and the
@@ -126,6 +136,12 @@ Capture stdout/stderr. Parse the `=== METRICS ===` block for `sharpe`, `max_draw
   **Fix budget: 3 attempts.** If the same or a new error recurs after 3 fix attempts,
   set `verdict="build_failure"`, include the traceback + list of fixes attempted in
   `research_summary`, and do NOT call past_ideas.
+- **Hand-rolled `load_backtest_data` found in wiring.py or any runner** → the
+  execution builder violated the contract. Delete the local function and have
+  runners import `from prophitai_algo_trading.data import load_backtest_data`.
+  If the builder insists on a local loader (> 1 fix attempt), set
+  `verdict="build_failure"` — the builder agent is not following the canonical
+  data-loading contract and downstream runs will keep corrupting.
 - **No data loaded / all tickers returned zero bars** → screener picked tickers without
   history at the strategy's interval. Re-screen with tighter market cap / trading
   history filters and retry ONCE.
