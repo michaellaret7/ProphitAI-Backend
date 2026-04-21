@@ -42,7 +42,7 @@ class IdeaGeneratorAgent:
         session_id: str = "idea_generation",
         provider: Optional[str] = None,
         model: Optional[str] = None,
-        print_mode: PrintMode = PrintMode.PRODUCTION,
+        print_mode: PrintMode = PrintMode.VERBOSE,
     ):
         date = get_current_utc_time().strftime("%m/%d/%Y")
         prompt_path = Path(__file__).parent / "system.md"

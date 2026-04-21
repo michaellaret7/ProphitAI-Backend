@@ -49,7 +49,7 @@ class StrategyArchitectAgent:
         session_id: str = "strategy_architect",
         provider: Optional[str] = None,
         model: Optional[str] = None,
-        print_mode: PrintMode = PrintMode.PRODUCTION,
+        print_mode: PrintMode = PrintMode.VERBOSE,
     ):
         self.sandbox_id = sandbox_id
 

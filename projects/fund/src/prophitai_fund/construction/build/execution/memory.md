@@ -214,3 +214,24 @@ topic: risk_control_patterns
 ---
 When should_block_entry() cannot classify the incoming ticker's sector (metadata missing/incomplete), do NOT return False (auto-allow). Instead, include the unknown ticker in a _UNKNOWN_SECTOR bucket and apply the same sector gross cap to that bucket. If _UNKNOWN_SECTOR accumulates enough names to exceed max_sector_gross_pct, block further entries. This prevents silent bypass when metadata is incomplete. Code reviewer flags the auto-allow pattern as a correctness warning. The _compute_sector_exposure helper must always add the incoming notional regardless of whether the sector is _UNKNOWN_SECTOR.
 
+---
+date: 2026-04-20
+title: Per-leg equal-weight sizer: count same-leg open positions for denominator
+topic: sizing_patterns
+---
+In a long/short equal-weight sizer, the denominator must count only open positions on the same leg as the candidate — NOT total portfolio open_position_count. Using total open_position_count causes cross-leg interference: long sizing shrinks when shorts are open and vice versa. Pattern: iterate context.positions, filter by pos_state.is_short == is_short, count, then use max(same_leg_open + 1, target_leg_positions).
+
+---
+date: 2026-04-20
+title: BSC vol overlay sizer: capture equity in calculate_shares, not prepare_for_bar
+topic: sizing_patterns
+---
+When implementing a Barroso-Santa-Clara vol overlay that needs rolling portfolio equity history, DO NOT try to read equity from prepare_for_bar()'s strategy_data dict using a magic key — the engine passes dict[str, pd.DataFrame] and has no guaranteed equity key. Instead, capture context.equity directly inside calculate_shares() where it's always available. Use a _last_equity guard to avoid double-appending the same equity snapshot when the engine calls calculate_shares multiple times per bar.
+
+---
+date: 2026-04-20
+title: SectorConcentrationControl: use max_name_pct directly as incoming notional estimate
+topic: risk_control_patterns
+---
+When projecting incoming position exposure in should_block_entry, use self._max_name_pct (the sizer's hard per-name cap) as the conservative upper-bound. Do NOT use price/equity as a substitute — that gives share-price fraction which is meaningless (too small for cheap stocks, too large for expensive stocks). The correct question is: "if this name takes max allowed size, would the sector cap break?" So: projected_sector_pct = existing_sector_pct + self._max_name_pct > cap.
+

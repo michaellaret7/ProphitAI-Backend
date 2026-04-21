@@ -95,3 +95,17 @@ topic: run_failures
 ---
 The DistressFilterIndicator (PSMO strategy) conservatively defaults `distress_filter_pass=0.0` when `df.attrs['financial_ratios']` is None or empty. This causes the short leg to be completely disabled (short_eligible=0 always) when the financial_ratios data pipeline fails. Detection: 0 short trades, all 18 years. Confirming test: removing the distress filter enabled 679 short trades but Sharpe dropped to -0.31 (short leg loses without distress protection). Fix needed upstream: ensure financial_ratios DataRequirement resolves data for large-cap equities. The conservative default is intentional and correct behavior; the bug is in data pipeline registration, not indicator logic.
 
+---
+date: 2026-04-20
+title: Financial ratios TTM suffix mismatch — confirmed second occurrence
+topic: run_failures
+---
+APEX strategy (2026-04-20) hit the same TTM suffix mismatch as documented previously. The indicator builder consistently uses column names ending in TTM (e.g., operatingProfitMarginTTM, returnOnCapitalEmployedTTM, freeCashFlowOperatingCashFlowRatioTTM, interestCoverageTTM, cashRatioTTM, debtRatioTTM) but the financial_ratios data provider uses names WITHOUT the TTM suffix (operatingProfitMargin, returnOnCapitalEmployed, freeCashFlowOperatingCashFlowRatio, interestCoverage, cashRatio, debtRatio). This results in all fundamental columns being NaN, long_quality_gate always 0, and 0 long trades. Detection: fundamentals_quality_valid=1.0 but operating_profit_margin_ttm all NaN. Fix: remove TTM suffix from all source column name constants. Additionally: the fundamentals table (not financial_ratios) contains revenue, cogs, net_income, operating_cf, accounts_receivable, inventory, accounts_payable — NOT operatingIncome. Use operating_cf as EBIT proxy.
+
+---
+date: 2026-04-20
+title: pd.concat with df.attrs containing DataFrames → ValueError on pandas attrs comparison
+topic: run_failures
+---
+When a per-ticker DataFrame carries df.attrs with DataFrame values (e.g., financial_ratios, fundamentals), any pd.concat of Series derived from that DataFrame inherits the attrs. Pandas then tries to compare attrs equality across the concatenated objects, which requires evaluating DataFrame == DataFrame, raising ValueError: truth value of DataFrame is ambiguous. Detection: error in _compute_adx_on() at pd.concat([high-low, ...], axis=1). Fix: strip attrs from each Series before concat (series.copy(); series.attrs = {}). This affects any indicator that uses pd.concat on columns of a df that has DataFrame-valued attrs.
+

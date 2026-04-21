@@ -277,3 +277,24 @@ topic: translation_patterns
 ---
 For Daniel-Moskowitz zero-gross-on-panic strategies, the asymmetric halt pattern is: PanicHaltControl.should_force_exit() checks position.direction — force-exit SHORTS immediately (right-tail squeeze risk), do NOT force-exit LONGS (flight-to-quality hold). should_block_entry() returns True for ALL new entries regardless of direction. Signal model ALSO gates entries on panic_state_gate == 1.0 as defense-in-depth (defense-in-depth pattern: both signal condition AND risk control enforce the same rule). Custom outer sizer also scales all new shares to 0 via panic_exposure_scale == 0.0 — triple redundancy. This triple-lock pattern (signal gate + risk control + sizer) is appropriate for the primary risk failure mode of a long-short momentum strategy.
 
+---
+date: 2026-04-20
+title: Quiet-decay short leg: equity_curve_r2 band gate is a derived_feature, not a custom risk control
+topic: translation_patterns
+---
+For strategies with short-leg path-quality filters (smooth decliner, not panic-collapse), the quiet-decay gate (equity_curve_r2 in [0.30, 0.75] AND autocorrelation_1d in [-0.15, 0.05] AND vol_regime_pctile < 0.80) should be encoded as a derived_feature column (short_quiet_decay_gate = 1.0/0.0) checked as a signal condition, NOT as a custom risk control. The risk control layer is for portfolio-level or cross-ticker logic; per-ticker path conditions belong in derived_features. This keeps the signal model self-contained and the control layer clean.
+
+---
+date: 2026-04-20
+title: BSC constant-vol overlay: custom sizer reads portfolio equity history, not per-ticker vol
+topic: constructor_gotchas
+---
+Barroso-Santa-Clara constant-vol overlay computes gross_exposure_scale from the strategy's OWN daily portfolio equity returns (not individual ticker volatility). The custom ConstantVolEqualWeightSizer must: (1) maintain an equity log in prepare_for_bar() by appending context.equity each bar; (2) compute ann_portfolio_vol = std(log(eq_series/eq_series.shift(1)), min_periods=63) * sqrt(252) over trailing 126 bars; (3) gross_exposure_scale = target_annual_vol / max(ann_portfolio_vol, 0.001), clipped to [min_scale, max_scale]; (4) fallback scale=1.0 until 126 bars of equity history exist. This is structurally different from VolatilityTargetSizer which reads per-ticker candidate.volatility. Do NOT use VolatilityTargetSizer for BSC-style overlay.
+
+---
+date: 2026-04-20
+title: PriceMomentumIndicator pattern: combine all price-path metrics in one custom indicator
+topic: translation_patterns
+---
+For momentum strategies needing 5+ price-path metrics (dist_from_52w_high, momentum_12m_1m_skip, echo_momentum_12_7, risk_adj_momentum, ADX, Hurst, autocorrelation, vol_regime_pctile, equity_curve_r2, tsmom), combine all into a single PriceMomentumIndicator custom class rather than separate indicator files. This avoids multiple custom files and keeps warmup arithmetic simple. Must be ordered AFTER RealizedVolIndicator in the pipeline so risk_adj_momentum = momentum / realized_vol can read the already-computed realized_vol column. Hurst (R/S) and equity_curve_r2 (rolling OLS) BOTH require numba JIT — always flag this in implementation_notes.
+

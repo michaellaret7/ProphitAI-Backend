@@ -65,7 +65,7 @@ class ExecutionLayerBuilderAgent:
         session_id: str = "execution_layer_builder",
         provider: Optional[str] = None,
         model: Optional[str] = None,
-        print_mode: PrintMode = PrintMode.PRODUCTION,
+        print_mode: PrintMode = PrintMode.VERBOSE,
     ):
 
         date = get_current_utc_time().strftime("%m/%d/%Y")

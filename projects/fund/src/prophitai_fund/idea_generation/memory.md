@@ -165,3 +165,17 @@ topic: tool_usage
 ---
 For momentum strategies needing the Daniel-Moskowitz bear-market indicator (trailing 2-year SPX return negative) and ex-ante variance, three tools together give a complete current-regime snapshot in parallel: commodity_prices VIXUSD for recent vol (60 days), macro_research_search for the "trailing 2-year SPX return" narrative from providers, and BNP/Citi regime clustering notes. April 2026 snapshot: bull market since October 2022 per BNP Paribas 2026 outlook confirms I_B = 0, VIX spiked 31.05 on 3/27/2026 then back to 24-25 range, indicates intermediate variance not panic. Skip llm_web_search for "current momentum regime" queries — Perplexity returns generic framing; the macro_research_search DB has the JPMorgan/Citi/BNP specific numbers needed.
 
+---
+date: 2026-04-20
+title: Web search for George-Hwang 52-week-high beats DB for proximity-momentum research
+topic: tool_usage
+---
+The strategy_research and theory_research DBs return generic Jegadeesh-Titman and Value-Momentum-Everywhere paper clusters when querying George-Hwang 2004 52-week-high momentum. Go directly to llm_web_search with specific author-year queries (George Hwang 2004, Barroso-Wang 2021, Novy-Marx 2012 echo) for proximity-momentum, intermediate-horizon echo, and anchoring-bias behavioral papers. The research DBs have deep coverage of momentum crashes (Daniel-Moskowitz 2016, Barroso-Santa-Clara 2015) and Value-Momentum-Everywhere (Asness-Moskowitz-Pedersen 2013) but thin coverage of the proximity-anchoring and echo-effect sub-literatures. Pattern confirmed: for well-known but sub-topical papers, go to web search directly after one confirmatory DB query.
+
+---
+date: 2026-04-20
+title: Asymmetric L/S leg construction differentiates from prior L/S momentum attempts
+topic: pipeline_feedback
+---
+When a L/S momentum strategy has been tried and failed in the fund ledger (PSMO 2026-04-20 with Jegadeesh-Titman 12-1 + Daniel-Moskowitz panic scaler + Merton distress filter), a structurally-distinct L/S momentum can still be non-duplicative if it changes TWO of these three dimensions: (1) the underlying momentum signal (proximity-to-52w-high + Novy-Marx echo, NOT raw 12-1), (2) the short-leg construction philosophy (quiet-decay avoidance of deep-loser Merton zone, NOT distress-filter-protected deep losers), (3) the risk overlay (Barroso-Santa-Clara constant-vol, NOT Daniel-Moskowitz panic-state — advantage: constant-vol overlay uses portfolio-own returns and does not require SPX data which tripped up PSMO). Pattern for future L/S factor strategies: if prior attempt failed on DATA-PIPELINE grounds, a replacement should ALSO choose a mechanism that minimizes external data dependencies (screener-native columns only, no SPX/macro-state overlays).
+

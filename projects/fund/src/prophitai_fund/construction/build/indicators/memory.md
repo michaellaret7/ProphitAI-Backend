@@ -263,3 +263,24 @@ topic: verification_failures
 ---
 In test fixtures, `pd.date_range(end=date, periods=12, freq='QE')` may return 11 dates instead of 12 due to partial-quarter boundary alignment. Use explicit list generation instead: `dates = [end - pd.Timedelta(days=90*i) for i in range(n-1, -1, -1)]` and `n = len(dates)` to drive array allocation. Avoids "All arrays must be of the same length" ValueError when building the fixture DataFrame.
 
+---
+date: 2026-04-20
+title: vol_regime_pctile update_last_row must include current bar in rank window
+topic: coding_patterns
+---
+rolling(w).rank(pct=True) INCLUDES the current bar in the window. In update_last_row, to match batch semantics, include the last bar in the window slice and compute rank using pd.Series.rank(pct=True, method="average").iloc[-1]. Using tail[:-1] and computing (tail < current).sum()/len(tail) produces a slightly different result (off-by-1 in denominator and no tie handling).
+
+---
+date: 2026-04-20
+title: ADX update_last_row must recompute on full df — EWM is recursive
+topic: coding_patterns
+---
+ADX uses Wilder EWM smoothing (ewm(alpha=1/w, adjust=False)) which is a recursive IIR filter. Truncating to a tail slice for update_last_row gives a different result from the full-history batch path because EWM state diverges. Fix: in update_last_row for any EWM-based indicator (ADX, ATR), recompute on the full self.df and take the last value. Only truly additive/windowed indicators (SMA, rolling std) can safely use tail slices.
+
+---
+date: 2026-04-20
+title: numba not available in sandbox — use pure numpy/scipy for JIT-compiled rolling ops
+topic: framework_gotchas
+---
+The sandbox venv does NOT have numba installed. Any manifest that says "use numba @jit" must be implemented with pure numpy alternatives. For Hurst R/S: implement as Python function called via rolling.apply(raw=True). For rolling OLS R²: use stride_tricks.as_strided to build a window matrix, then vectorized numpy OLS (ss_xx, ss_xy, ss_tot, ss_res) — no per-bar loop, O(n*w) memory but O(n) arithmetic ops after the stride view. The analytical formula avoids any Python loop over bars.
+
