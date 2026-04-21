@@ -57,7 +57,7 @@ class TradeIdeaAgent:
         """
 
         date = get_current_utc_time().strftime("%m/%d/%Y")
-        prompt_path = Path(__file__).parent / "prompts" / "system.md"
+        prompt_path = Path(__file__).parent / "system.md"
         system_prompt = prompt_path.read_text(encoding="utf-8").format(date=date)
 
         self.agent = Agent(
@@ -96,5 +96,13 @@ class TradeIdeaAgent:
         """
         return self.agent.run(
             task or self.DEFAULT_TASK,
-            plan_first=True,
+            plan_first=True
         )
+
+if __name__ == "__main__":
+    agent = TradeIdeaAgent(
+        provider="anthropic",
+        model="claude-opus-4-7",
+        print_mode=PrintMode.PRODUCTION,
+    )
+    agent.run()
