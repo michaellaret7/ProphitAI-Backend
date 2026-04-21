@@ -93,6 +93,9 @@ MODEL_ALIASES = {
     "Kimi-K2.5": {
         "fireworks": "accounts/fireworks/models/kimi-k2p5",
     },
+    "Kimi-K2.6": {
+        "fireworks": "accounts/fireworks/models/kimi-k2p6",
+    },
     "nemotron-nano-3-30b": {
         "fireworks": "accounts/fireworks/models/nemotron-nano-3-30b-a3b",
     },

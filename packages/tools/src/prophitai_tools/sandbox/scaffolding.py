@@ -39,14 +39,6 @@ def scaffold_strategy(sandbox_id: str, strategy_name: str) -> str:
         if result.exit_code != 0:
             return error_response(f"Copy failed: {result.stderr}")
 
-        # Reason: The template's package-level __init__.py re-exports Template*
-        # classes from strategies.template.*. Leaving it in place lets builders
-        # silently inherit template references that trip scaffold_check and —
-        # worse — can cause runners to execute template logic. Forcing it to be
-        # recreated (or left absent as a namespace package) removes the failure
-        # mode at its source.
-        sandbox.commands.run(f"rm -f {target_path}/__init__.py")
-
         # Reason: Ensure a tests/ package exists so agents place test files here
         # TODO: Just add the tests folder to the template in Strategies
         sandbox.commands.run(f"mkdir -p {target_path}/tests")

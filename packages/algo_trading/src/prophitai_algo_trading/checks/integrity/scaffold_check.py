@@ -15,7 +15,7 @@ guaranteed waste.
 
 CLI usage::
 
-    python -m prophitai_algo_trading.integrity.scaffold_check <strategy_id> \\
+    python -m prophitai_algo_trading.checks.integrity <strategy_id> \\
         [--root /home/user/strategies]
 
 Exit code 1 + stdout lists violations when dirty; exit 0 + silent when clean.

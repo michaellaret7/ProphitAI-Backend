@@ -53,12 +53,12 @@ Backtest window 2019-01-01 → 2024-12-31. Interval daily. Initial capital $1M.
 
 **Evidence.** C6 produced 1495 trades vs SMCR's 182 — entirely different behavior, zero detection from the framework.
 
-**Fix applied (2026-04-21).** New module `packages/algo_trading/src/prophitai_algo_trading/integrity/scaffold_check.py` plus `__main__.py` CLI entry. Public API `check_scaffold_integrity(strategy_dir, strategy_id)` returns a list of `IntegrityViolation` records. Enforces:
+**Fix applied (2026-04-21).** New module `packages/algo_trading/src/prophitai_algo_trading/checks/integrity/scaffold_check.py` plus `__main__.py` CLI entry. Public API `check_scaffold_integrity(strategy_dir, strategy_id)` returns a list of `IntegrityViolation` records. Enforces:
 - `MANIFEST.json` exists and `strategy_id` matches the expected id (catches the VCLR case where MANIFEST belonged to WVCCI).
 - No `.py` file imports from `strategies.template.*` (catches C6's `from strategies.template.strategy import TemplateStrategy`).
 - No `.py` file references `TemplateStrategy`, `TemplateSignalModel`, `TemplateIndicatorSuite`, `TemplatePositionSizer`, or any of the template config classes as live code (docstrings/comments are allowed).
 
-Validator wired via `projects/fund/src/prophitai_fund/validation/system.md` Step 6 — runs `python -m prophitai_algo_trading.integrity {strategy_id}` as a pre-flight before the baseline backtest. Exit 1 → `verdict="build_failure"`, no tuning attempted. Empirically verified: running the check against the C6 injection correctly surfaces all three banned lines.
+Validator wired via `projects/fund/src/prophitai_fund/validation/system.md` Step 6 — runs `python -m prophitai_algo_trading.checks.integrity {strategy_id}` as a pre-flight before the baseline backtest. Exit 1 → `verdict="build_failure"`, no tuning attempted. Empirically verified: running the check against the C6 injection correctly surfaces all three banned lines.
 
 ---
 
@@ -142,7 +142,7 @@ Ordered by impact:
 
 1. ~~**Drop the 4.5% RFR from Sharpe.**~~ **Done 2026-04-21** — `DEFAULT_RF_ANNUAL = 0.0` in `calculations/config.py`. SMCR baseline Sharpe went -1.35 → +0.65 with no other changes.
 2. ~~**Validator respects IDEA universe_size + `GrossExposureSizer` as default.**~~ **Done 2026-04-21** — validator cap lifted 50 → `min(idea_target_size, 500)`; template now wraps every sizer in `GrossExposureSizer`; execution-builder prompt mandates the wrapper for every strategy.
-3. ~~**Pre-backtest scaffold-integrity check.**~~ **Done 2026-04-21** — new `prophitai_algo_trading.integrity` module + CLI entry, wired into the validator's Step 6 as a gate before the baseline backtest.
+3. ~~**Pre-backtest scaffold-integrity check.**~~ **Done 2026-04-21** — new `prophitai_algo_trading.checks.integrity` module + CLI entry, wired into the validator's Step 6 as a gate before the baseline backtest.
 4. ~~**`FinancialRatiosProvider` column aliases for TTM suffixes.**~~ **Done 2026-04-21** — `_add_ttm_aliases` helper emits both `dividendYield` and `dividendYieldTTM` names for every ratio.
 5. ~~**Registry rename `financial_ratios` → `financial_ratios_ttm` plus clearer feed documentation.**~~ **Done 2026-04-21** — kind is self-documenting; indicator-builder prompt now has a decision table for fundamentals vs ratios vs equity_price.
 6. ~~**Explicit provider-kind validation** — `kind="commodity"` + symbol in equity whitelist → ValueError.~~ **Done 2026-04-21** — `DataRequirement.__post_init__` fires at indicator import time with a message that prints the correct `equity_price` incantation.
