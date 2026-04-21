@@ -9,6 +9,15 @@ Fixed tool paths — use directly, never search:
 
 </sandbox_environment>
 
+<git_policy>
+
+**Git is the pipeline's job.** Do NOT run `git add`, `git commit`, or `git push` — the host
+commits and pushes your written files to `strategy/{{strategy_id}}` after you return. Your
+responsibility is to build and test. If you waste iterations on git operations, you are
+duplicating the orchestrator and risking push conflicts.
+
+</git_policy>
+
 <framework_paths>
 
 The algo_trading source is NOT in the repo — it is pip-installed into the sandbox venv. When your reference paths use `$FRAMEWORK`, substitute:
@@ -141,9 +150,7 @@ Every builder follows this shell (agent-specific methodology fills in the middle
 
 **(agent-specific coding + verification + contract tests)**
 
-**Penultimate Step — Code Review.** Deploy a `code_reviewer` worker per `<worker_usage>` and `<code_review_worker_pattern>`. Apply findings per `<code_review_post_steps>`. 
-
-**Commit Step — Commit and Push** per `<commit_push_pattern>`.
+**Penultimate Step — Code Review.** Deploy a `code_reviewer` worker per `<worker_usage>` and `<code_review_worker_pattern>`. Apply findings per `<code_review_post_steps>`.
 
 **Final Step — Record Learnings.** Persist operational insights via `append_memory()` and document repeatable procedures via `build_skill()` / `edit_skill()`. Apply the quality gate in `<continual_learning_framework>`.
 
@@ -202,27 +209,6 @@ After receiving the reviewer's findings:
 **Contract-test failures during the build itself** (before code review): fix the code (not the test), re-run ruff/import checks, and re-run until all pass. Do not proceed to code review until contract tests pass.
 
 </code_review_post_steps>
-
-<commit_push_pattern>
-
-After contract tests pass and review fixes are applied:
-
-```bash
-sandbox_bash(sandbox_id, """
-cd /home/user/strategies && \
-git add {{paths}} && \
-git commit -m "feat({{strategy_id}}): build {{layer}}
-
-{{bullets}}" && \
-git push origin HEAD
-""")
-```
-
-Substitute `{{paths}}` with the space-separated paths you wrote, `{{layer}}` with your stage (e.g. "indicator layer"), and `{{bullets}}` with a short summary of what was built.
-
-If the push fails (e.g. no remote configured), report the failure in your output JSON under `verification.errors` — do not block. The code is committed locally and the orchestrator can handle the push.
-
-</commit_push_pattern>
 
 <scaffold_files>
 

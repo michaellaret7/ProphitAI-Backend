@@ -193,3 +193,24 @@ topic: tool_usage
 ---
 The macro_research_search DB indexes Citi's Thematic Equity Strategy report with named factor-basket tickers (CGRBLBRP large-cap beat-and-raise, CGRBSBRP SMID beat-and-raise, CGRBGROE positive ROE trend, CGRBBROE negative ROE trend, CGRBEPSS EPS Sharpe) and live 2025-26 performance attribution. Single query pattern that works: 'Current US equity market regime [year] momentum factor performance earnings growth dispersion cross-sectional opportunity'. This is the best source for real-money-basket disconfirming evidence on factor strategies when llm_web_search returns generic 2010s decay commentary. Saves the llm_web_search step for factor-basket performance that memory entry 2026-04-17 recommended.
 
+---
+date: 2026-04-21
+title: Two-stage momentum decomposition via Moskowitz-Grinblatt sector aggregate is screener-native
+topic: tool_usage
+---
+Sector-aggregate momentum (Moskowitz-Grinblatt 1999) is implementable natively by averaging momentum_12m_1m_skip across universe names grouped by GICS sector — no sector-index ETF OHLC needed, no external sector-return series. Combined with beta_vs_sector for within-sector BAB ranking (Frazzini-Pedersen 2014), the entire two-stage momentum-decomposition architecture is screener-only. This sidesteps the PSMO SPY-data failure mode because no external regime series is required for either the signal or the Barroso-Santa-Clara portfolio-own-return vol overlay. Pattern for future factor decompositions: check if the macro factor (sector, industry, size, beta) can be computed as a cross-sectional aggregate of a screener column grouped by a native classification field before assuming external data is needed.
+
+---
+date: 2026-04-21
+title: Real-money factor ETF concentration data disconfirms simple momentum designs
+topic: tool_usage
+---
+Single llm_web_search query on MTUM 2024-2025 performance revealed the 40 percent TMT concentration problem that unconstrained cross-sectional momentum creates in the current AI-dominated regime. This disconfirming evidence directly shaped the design — adding a top-3/bottom-3 sector cap instead of unconstrained cross-sectional ranking. Pattern confirmed from 2026-04-17 memory: real-money factor ETF performance is the single highest-signal disconfirming evidence for factor-strategy designs. Before finalizing any momentum, quality, low-vol, value, or shareholder-yield strategy, query the corresponding major ETF (MTUM, QUAL, USMV, SPYV, SYLD, etc) for 1-3 year recent performance and concentration risks.
+
+---
+date: 2026-04-21
+title: Structural crash mitigation beats ex-post regime scaling for momentum strategies
+topic: pipeline_feedback
+---
+When designing momentum strategies with crash-risk mitigation, structural mitigation via BAB-style leg construction (long low-beta winners, short high-beta losers) is architecturally superior to ex-post regime scaling (Daniel-Moskowitz panic scaler, bear-market indicator). The structural approach requires only screener-native columns (beta_vs_sector, beta_stability) versus the ex-post approach that needs SPY OHLC plus 24-month return state. PSMO failed on unregistered SPY data; a structural BAB leg would not have had that failure mode. Pattern for future momentum or crash-sensitive strategies: prefer position-construction solutions to risk problems over overlay solutions whenever the same underlying mechanism can be addressed either way. Overlay solutions are also appropriate (Barroso-Santa-Clara portfolio-own-return vol scaling works and has no data dependency) but should layer ON TOP of structural mitigation, not replace it.
+

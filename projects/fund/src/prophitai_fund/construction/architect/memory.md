@@ -298,3 +298,10 @@ topic: translation_patterns
 ---
 For momentum strategies needing 5+ price-path metrics (dist_from_52w_high, momentum_12m_1m_skip, echo_momentum_12_7, risk_adj_momentum, ADX, Hurst, autocorrelation, vol_regime_pctile, equity_curve_r2, tsmom), combine all into a single PriceMomentumIndicator custom class rather than separate indicator files. This avoids multiple custom files and keeps warmup arithmetic simple. Must be ordered AFTER RealizedVolIndicator in the pipeline so risk_adj_momentum = momentum / realized_vol can read the already-computed realized_vol column. Hurst (R/S) and equity_curve_r2 (rolling OLS) BOTH require numba JIT — always flag this in implementation_notes.
 
+---
+date: 2026-04-21
+title: Manifest sandbox may lack framework source files; fall back to docs and template
+topic: process_mistakes
+---
+When the referenced packages/algo_trading source tree is absent from the sandbox, verify available std_lib components from documentation files plus template wiring instead of assuming the source path exists. Still document any constructor uncertainty conservatively and avoid inventing unsupported std_lib classes.
+

@@ -235,3 +235,10 @@ topic: risk_control_patterns
 ---
 When projecting incoming position exposure in should_block_entry, use self._max_name_pct (the sizer's hard per-name cap) as the conservative upper-bound. Do NOT use price/equity as a substitute — that gives share-price fraction which is meaningless (too small for cheap stocks, too large for expensive stocks). The correct question is: "if this name takes max allowed size, would the sector cap break?" So: projected_sector_pct = existing_sector_pct + self._max_name_pct > cap.
 
+---
+date: 2026-04-21
+title: BasePositionSizer.size_trade treats negative shares as skip
+topic: sizing_patterns
+---
+BasePositionSizer.size_trade converts calculate_shares() output to float and returns skip when shares_f <= 0.0. For long/short strategies, custom sizers must still return positive unit counts; short direction is carried by EntryCandidate/engine state, not by negative shares. Returning negative shares silently drops short trades.
+

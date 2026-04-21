@@ -99,10 +99,4 @@ class TradeIdeaAgent:
             plan_first=True
         )
 
-if __name__ == "__main__":
-    agent = TradeIdeaAgent(
-        provider="anthropic",
-        model="claude-opus-4-7",
-        print_mode=PrintMode.PRODUCTION,
-    )
-    agent.run()
+

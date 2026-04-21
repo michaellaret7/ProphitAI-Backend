@@ -207,19 +207,6 @@ Deploy a `code_reviewer` per `<code_review_worker_pattern>` with:
 
 Apply findings per `<code_review_post_steps>`.
 
-### Step 10 — Commit and Push
-
-Apply `<commit_push_pattern>` with:
-- `paths = "strategies/development/{{strategy_id}}/"`
-- `layer = "indicator layer"`
-- `bullets`:
-  ```
-  - Custom indicators: {{list custom class names}}
-  - Indicator suite: {{SuiteClass}}
-  - Derived features: {{derived_features_function}}
-  - All indicator contract tests passing
-  ```
-
 </methodology>
 
 <constraints>

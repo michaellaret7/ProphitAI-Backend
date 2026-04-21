@@ -30,10 +30,39 @@ SECTOR_ETF_MAP = {
     'equity_sector_materials': 'XLB',
 }
 
+# Reason: the DB stores sectors as enum keys (e.g. 'equity_sector_industrials'),
+# but downstream consumers (strategy indicators, prompts, UI) speak human-readable
+# GICS labels. Keep this mapping in one place so every consumer normalizes the
+# same way.
+SECTOR_ENUM_TO_GICS_LABEL = {
+    'equity_sector_information_technology': 'Information Technology',
+    'equity_sector_financials': 'Financials',
+    'equity_sector_health_care': 'Health Care',
+    'equity_sector_consumer_discretionary': 'Consumer Discretionary',
+    'equity_sector_communication_services': 'Communication Services',
+    'equity_sector_industrials': 'Industrials',
+    'equity_sector_consumer_staples': 'Consumer Staples',
+    'equity_sector_energy': 'Energy',
+    'equity_sector_utilities': 'Utilities',
+    'equity_sector_real_estate': 'Real Estate',
+    'equity_sector_materials': 'Materials',
+}
+
 
 def get_sector_etf(sector: str) -> Optional[str]:
     """Map a sector preference key to its corresponding sector ETF ticker."""
     return SECTOR_ETF_MAP.get(sector)
+
+
+def get_gics_sector_label(sector: str) -> str:
+    """Map a DB sector enum key to its human-readable GICS label.
+
+    Unknown or empty inputs pass through unchanged so callers can distinguish
+    "not in database" from a mapping miss.
+    """
+    if not sector:
+        return sector
+    return SECTOR_ENUM_TO_GICS_LABEL.get(sector, sector)
 
 
 @with_session('market')

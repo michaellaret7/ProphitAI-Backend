@@ -255,20 +255,6 @@ Deploy a `code_reviewer` per `<code_review_worker_pattern>` with:
 
 Apply findings per `<code_review_post_steps>`.
 
-### Step 13 — Commit and Push
-
-Apply `<commit_push_pattern>` with:
-- `paths`: `strategies/development/{{strategy_id}}/sizing/ strategies/development/{{strategy_id}}/risk_controls/ strategies/development/{{strategy_id}}/wiring.py strategies/development/{{strategy_id}}/run_event_backtest.py strategies/development/{{strategy_id}}/run_vectorized_backtest.py strategies/development/{{strategy_id}}/run_live.py strategies/development/{{strategy_id}}/tests/`
-- `layer = "execution layer"`
-- `bullets`:
-  ```
-  - Sizer: {{sizer_chain_description}}
-  - Risk controls: {{list risk control classes}}
-  - Wiring: {{build_function_name}}
-  - Runner scripts: event backtest, vectorized backtest, live
-  - All contract tests passing (indicator + signal + execution + full suite)
-  ```
-
 </methodology>
 
 <constraints>

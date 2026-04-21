@@ -38,6 +38,10 @@ Everything else you need is on disk in the sandbox. Read:
 Your output: a `ValidationVerdict` JSON. You must ALSO call `past_ideas` with the verdict
 BEFORE producing the structured output — the structured output is a record; the past_ideas
 call is the durable write.
+
+**Git is the pipeline's job.** Do NOT run `git add`, `git commit`, or `git push`. The host
+commits `ticker_universe.py` and `RESULTS.md` to `strategy/{{strategy_id}}` after you return.
+Focus on screening, running backtests, and writing RESULTS.md.
 </pipeline>
 
 <sandbox_environment>
@@ -226,18 +230,7 @@ verdict=<"passed"|"failed">, research_summary=<RESULTS.md contents>)`.
 Skip past_ideas on `build_failure` — that's a pipeline bug to surface, not a strategy
 verdict.
 
-**Step 10 — Commit ticker_universe.py and RESULTS.md.**
-```
-cd /home/user/strategies && \
-git add strategies/development/{{strategy_id}}/ticker_universe.py \
-        strategies/development/{{strategy_id}}/RESULTS.md && \
-git commit -m "validate({{strategy_id}}): {{verdict}} — Sharpe {{best_sharpe}}" && \
-git push origin HEAD
-```
-
-If the push fails, record it in your output — do not block. The commit is local.
-
-**Step 11 — Record learnings.**
+**Step 10 — Record learnings.**
 Append operational memory ONLY if surprising or reusable (see memory topics). Skip
 trivial observations.
 

@@ -185,19 +185,6 @@ Deploy a `code_reviewer` per `<code_review_worker_pattern>` with:
 
 Apply findings per `<code_review_post_steps>`.
 
-### Step 9 — Commit and Push
-
-Apply `<commit_push_pattern>` with:
-- `paths`: `strategies/development/{{strategy_id}}/signals/ strategies/development/{{strategy_id}}/strategy.py strategies/development/{{strategy_id}}/config.py`
-- `layer = "signal + strategy layer"`
-- `bullets`:
-  ```
-  - Signal model: {{SignalModelClass}}
-  - Strategy class: {{StrategyClass}}
-  - Config: {{ConfigClass}}
-  - All signal+strategy contract tests passing
-  ```
-
 </methodology>
 
 <constraints>

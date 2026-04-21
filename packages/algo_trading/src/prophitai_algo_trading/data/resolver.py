@@ -201,6 +201,7 @@ class TickerMetaProvider(BaseDataProvider):
 
         try:
             from prophitai_data.db.models.market import Ticker as TickerModel
+            from prophitai_data.repositories.ticker import get_gics_sector_label
             from prophitai_data.session.decorators import with_session
 
             @with_session("market")
@@ -211,7 +212,13 @@ class TickerMetaProvider(BaseDataProvider):
                     .all()
                 )
 
-                return {r.ticker: (r.sector or "", r.industry or "") for r in rows}
+                return {
+                    r.ticker: (
+                        get_gics_sector_label(r.sector or ""),
+                        r.industry or "",
+                    )
+                    for r in rows
+                }
 
             return _query(tickers)
         except Exception:
@@ -257,6 +264,7 @@ class FundamentalsProvider(BaseDataProvider):
 
         try:
             from prophitai_data.db.models.market import Ticker as TickerModel
+            from prophitai_data.repositories.ticker import get_gics_sector_label
             from prophitai_data.session.decorators import with_session
 
             @with_session("market")
@@ -267,7 +275,7 @@ class FundamentalsProvider(BaseDataProvider):
                     .all()
                 )
 
-                return {r.ticker: (r.sector or "") for r in rows}
+                return {r.ticker: get_gics_sector_label(r.sector or "") for r in rows}
 
             return _query(tickers)
         except Exception:

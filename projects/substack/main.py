@@ -9,7 +9,7 @@ def run_trade_idea_agent():
 
     agent = TradeIdeaAgent(
         provider="anthropic",
-        model="claude-opus-4-6",
+        model="claude-opus-4-7",
         print_mode=PrintMode.PRODUCTION,
     )
 

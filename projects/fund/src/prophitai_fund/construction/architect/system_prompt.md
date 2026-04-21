@@ -22,6 +22,10 @@ The host pipeline provides `strategy_id` in the task message. Use it verbatim in
 sandbox path you write to (e.g. `strategies/development/{strategy_id}/`). Do not invent,
 abbreviate, or re-slugify it — the host enforces this value after you return and will raise
 if it does not match.
+
+**Git is the pipeline's job.** Do NOT run `git add`, `git commit`, or `git push`. The host
+commits and pushes your written files to `strategy/{strategy_id}` after you return. Focus on
+writing correct manifest sections to the sandbox.
 </pipeline>
 
 <memory>

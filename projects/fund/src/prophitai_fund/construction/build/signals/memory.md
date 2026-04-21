@@ -137,3 +137,10 @@ topic: coding_patterns
 ---
 When signal methods directly threshold raw indicator columns (adx_14d > adx_min_threshold, hurst_exponent > hurst_min_threshold) rather than consuming pre-computed gate columns, the code reviewer will flag a "design mismatch" warning. Fix: add explicit docstring rationale explaining (a) the manifest lists them as direct entry criteria, (b) they are tunable via config without re-running the indicator pipeline, (c) they differ conceptually from the gate flags (which are pre-computed multi-condition AND expressions). APEX build: added this explanation to the module docstring, reviewer warning resolved.
 
+---
+date: 2026-04-21
+title: Indicator-suite config drift: document deferred wiring when suite has no constructor args
+topic: framework_gotchas
+---
+If the manifest exposes strategy-facing indicator params but the generated indicator suite has no config-aware __init__, keep the full frozen config contract and add an explicit strategy comment/docstring that suite wiring is deferred to downstream builders. Otherwise code review flags silent config drift between manifest tunables and runtime behavior.
+
