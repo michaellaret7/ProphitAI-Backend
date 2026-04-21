@@ -148,7 +148,13 @@ class ReferenceSeriesIndicator(BaseIndicator):
 ```
 
 **DataRequirement fields (full reference):**
-- `kind` — provider kind (`"fundamentals"`, `"financial_ratios"`, `"commodity"`, `"equity_price"`, `"universe_returns"`, `"economic_indicator"`, `"government_bond_rates"`, `"economic_calendar"`, `"ticker_meta"`).
+- `kind` — provider kind. Pick the kind that matches the data your indicator actually needs:
+  - `"fundamentals"` — raw quarterly line items (revenue, operatingIncome, netIncome, accountsReceivable, grossProfit, etc.). Use this when computing ratios yourself or referencing raw statement numbers.
+  - `"financial_ratios_ttm"` — precomputed TTM ratios (dividendYield, returnOnEquity, operatingProfitMargin, priceToFreeCashFlowsRatio, interestCoverage, debtRatio, etc.). Columns are exposed under BOTH their canonical DB name and a `TTM`-suffixed alias, so `dividendYield` and `dividendYieldTTM` both resolve. Use this when the IDEA references a standard ratio by name.
+  - `"equity_price"` — equity/ETF close series, requires `params={{"symbol": "SPY"}}` (or QQQ, XLK, etc.). **Do NOT use `"commodity"` for SPY** — that endpoint does not serve equities and silently returns empty.
+  - `"commodity"` — commodity price series (VIX, oil, gold), requires `params={{"symbol": "VIXUSD"}}`.
+  - `"earnings_calendar"` — per-ticker quarterly earnings-announcement dates (`scope="per_ticker"`, no params). Use this for pre/post-earnings exit and entry logic. **Do NOT use `"economic_calendar"` for earnings** — that's macro events (Fed, CPI) with `scope="shared"` and a `country` param.
+  - `"universe_returns"`, `"economic_indicator"`, `"government_bond_rates"`, `"economic_calendar"` (macro events — requires `country`), `"ticker_meta"` — as previously documented in the resolver docstring.
 - `attrs_key` — the key in `df.attrs` the indicator reads from.
 - `scope` — `"per_ticker"` or `"shared"`. `scope="shared"` means one blob shared across the universe.
 - `params` — MUST be a dict (never a list). `params=[]` raises `TypeError` at construction.

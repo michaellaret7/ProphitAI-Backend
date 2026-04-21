@@ -179,3 +179,17 @@ topic: pipeline_feedback
 ---
 When a L/S momentum strategy has been tried and failed in the fund ledger (PSMO 2026-04-20 with Jegadeesh-Titman 12-1 + Daniel-Moskowitz panic scaler + Merton distress filter), a structurally-distinct L/S momentum can still be non-duplicative if it changes TWO of these three dimensions: (1) the underlying momentum signal (proximity-to-52w-high + Novy-Marx echo, NOT raw 12-1), (2) the short-leg construction philosophy (quiet-decay avoidance of deep-loser Merton zone, NOT distress-filter-protected deep losers), (3) the risk overlay (Barroso-Santa-Clara constant-vol, NOT Daniel-Moskowitz panic-state — advantage: constant-vol overlay uses portfolio-own returns and does not require SPX data which tripped up PSMO). Pattern for future L/S factor strategies: if prior attempt failed on DATA-PIPELINE grounds, a replacement should ALSO choose a mechanism that minimizes external data dependencies (screener-native columns only, no SPX/macro-state overlays).
 
+---
+date: 2026-04-21
+title: Fundamental-delta signals are screener-native and avoid PSMO/APEX external-data failures
+topic: pipeline_feedback
+---
+L/S momentum strategies based on fundamental-trend deltas (operating_margin_change_yoy, roce_change_5yr, ebit_growth_yoy, revenue_cagr_3yr, eps_growth_yoy, fcf_growth_yoy) are implementable entirely from equity screener columns with zero OHLC regression and zero SPY or macro-state dependency. This directly addresses the two failure modes of PSMO (unregistered SPY data provider for Daniel-Moskowitz panic state) and APEX (undersized universe when signal requires 500+ fundamentally-valid names). Pattern for future 'classic factor with novel risk overlay' designs per my 2026-04-20 memory: when the prior attempt failed on data-pipeline grounds (missing SPY, missing financial_ratios for short-leg distress filter), a replacement should (a) use only screener-native columns, (b) use portfolio-own-return Barroso-Santa-Clara vol overlay not Daniel-Moskowitz state-based scaler, (c) verify no sector-neutral ranking step requires columns unavailable on all candidates. FMLS-TD template applied these three rules explicitly.
+
+---
+date: 2026-04-21
+title: Citi Thematic Equity Strategy macro DB has named factor-basket tickers
+topic: tool_usage
+---
+The macro_research_search DB indexes Citi's Thematic Equity Strategy report with named factor-basket tickers (CGRBLBRP large-cap beat-and-raise, CGRBSBRP SMID beat-and-raise, CGRBGROE positive ROE trend, CGRBBROE negative ROE trend, CGRBEPSS EPS Sharpe) and live 2025-26 performance attribution. Single query pattern that works: 'Current US equity market regime [year] momentum factor performance earnings growth dispersion cross-sectional opportunity'. This is the best source for real-money-basket disconfirming evidence on factor strategies when llm_web_search returns generic 2010s decay commentary. Saves the llm_web_search step for factor-basket performance that memory entry 2026-04-17 recommended.
+

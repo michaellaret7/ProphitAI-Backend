@@ -284,3 +284,10 @@ topic: framework_gotchas
 ---
 The sandbox venv does NOT have numba installed. Any manifest that says "use numba @jit" must be implemented with pure numpy alternatives. For Hurst R/S: implement as Python function called via rolling.apply(raw=True). For rolling OLS R²: use stride_tricks.as_strided to build a window matrix, then vectorized numpy OLS (ss_xx, ss_xy, ss_tot, ss_res) — no per-bar loop, O(n*w) memory but O(n) arithmetic ops after the stride view. The analytical formula avoids any Python loop over bars.
 
+---
+date: 2026-04-21
+title: Non-scalar attrs can still break ATR via pandas concat finalize
+topic: framework_gotchas
+---
+In current sandbox env, std-lib ATR can still raise `ValueError: truth value of DataFrame is ambiguous` when df.attrs contains non-scalar objects (e.g. fundamentals DataFrame). Cause: pandas propagates attrs through Series ops and compares attrs during concat finalize. Robust suite pattern: strip non-scalar attrs before std-lib indicators run, then restore full attrs before each custom indicator that reads df.attrs. This can be isolated in suite helpers for full and incremental pipeline paths.
+

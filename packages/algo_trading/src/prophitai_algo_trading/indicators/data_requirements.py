@@ -6,6 +6,33 @@ from dataclasses import dataclass, field
 from typing import Any, Literal
 
 
+# ================================
+# --> Helper funcs
+# ================================
+
+
+# Reason: a recurring indicator-author bug is declaring kind="commodity"
+# with symbol="SPY" (or QQQ, sector SPDR, etc.) because SPY resembles a
+# continuous series. The commodity provider does not serve equities and
+# silently returns empty, producing zero-trade backtests. Guard at
+# construction time against any symbol on this whitelist.
+_EQUITY_SYMBOLS_REQUIRING_EQUITY_PRICE_KIND: frozenset[str] = frozenset({
+    # Broad-market ETFs
+    "SPY", "VOO", "IVV", "QQQ", "QQQM", "DIA", "IWM", "IWB", "RSP", "VTI",
+    # Sector SPDR ETFs (all 11 GICS)
+    "XLC", "XLY", "XLP", "XLE", "XLF", "XLV", "XLI", "XLB", "XLRE", "XLK", "XLU",
+    # Common factor / style ETFs
+    "MTUM", "QUAL", "VLUE", "SIZE", "USMV", "SPLV",
+    # International and bond bellwether ETFs (not commodities)
+    "EFA", "EEM", "VEA", "VWO", "AGG", "BND", "TLT", "IEF", "SHY", "HYG", "LQD",
+})
+
+
+# ================================
+# --> Public API
+# ================================
+
+
 @dataclass(frozen=True, slots=True)
 class DataRequirement:
     """Declares a supplementary data dependency for an indicator.
@@ -16,10 +43,20 @@ class DataRequirement:
 
     Attributes:
         kind: Data source type. Standard kinds:
-              ``"fundamentals"``, ``"financial_ratios"``, ``"commodity"``,
-              ``"equity_price"``, ``"universe_returns"``,
-              ``"economic_indicator"``, ``"government_bond_rates"``,
-              ``"economic_calendar"``, ``"ticker_meta"``.
+              ``"fundamentals"`` (raw quarterly line items — revenue,
+              operatingIncome, netIncome, ...),
+              ``"financial_ratios_ttm"`` (TTM ratios — dividendYield,
+              returnOnEquity, priceToFreeCashFlowsRatio, ...; columns are
+              also exposed with a ``TTM`` suffix so both naming conventions
+              work), ``"commodity"``, ``"equity_price"``
+              (use for SPY/QQQ/sector-ETF close series — NOT commodity),
+              ``"universe_returns"``, ``"economic_indicator"``,
+              ``"government_bond_rates"``,
+              ``"economic_calendar"`` (macro events — Fed, CPI — scope=shared,
+              requires ``country`` param),
+              ``"earnings_calendar"`` (per-ticker quarterly announcement dates
+              — scope=per_ticker, no params),
+              ``"ticker_meta"``.
         attrs_key: Key in ``df.attrs`` where the fetched data is stored.
         scope: ``"per_ticker"`` when data varies by ticker (e.g. fundamentals),
                ``"shared"`` when the same data applies to all tickers (e.g. VIX).
@@ -70,3 +107,15 @@ class DataRequirement:
                 f"DataRequirement.broadcast_as only valid when scope='shared' "
                 f"(attrs_key={self.attrs_key!r}, scope={self.scope!r})"
             )
+
+        if self.kind == "commodity":
+            symbol = str(self.params.get("symbol", "")).upper()
+
+            if symbol in _EQUITY_SYMBOLS_REQUIRING_EQUITY_PRICE_KIND:
+                raise ValueError(
+                    f"DataRequirement(kind='commodity', symbol={symbol!r}) is invalid — "
+                    f"the commodity provider does not serve equities or ETFs. "
+                    f"Use kind='equity_price' with the same symbol: "
+                    f"DataRequirement(kind='equity_price', attrs_key={self.attrs_key!r}, "
+                    f"scope={self.scope!r}, params={{'symbol': {symbol!r}}})."
+                )

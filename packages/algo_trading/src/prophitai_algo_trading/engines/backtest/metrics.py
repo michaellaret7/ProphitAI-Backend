@@ -10,9 +10,9 @@ import pandas as pd
 from prophitai_calculations.config import DEFAULT_RF_ANNUAL
 from prophitai_calculations.risk.benchmark import calc_beta
 
-# Reason: single source of truth for the risk-free rate across all metrics.
-# Previously metrics.py used 0.04 while calc_alpha used DEFAULT_RF_ANNUAL=0.045,
-# so Sharpe and Alpha were inconsistent. Use DEFAULT_RF_ANNUAL everywhere.
+# Reason: Sharpe and Jensen's alpha read the same risk-free rate from
+# calculations.config. Default is 0, so both metrics judge strategies on
+# raw return / vol rather than penalizing against a hardcoded UST yield.
 RISK_FREE_RATE = DEFAULT_RF_ANNUAL
 SECONDS_PER_YEAR = 365.25 * 86_400
 EPSILON = 1e-9
@@ -130,9 +130,10 @@ def _risk_metrics(equity_curve: pd.DataFrame, bars_per_year: float) -> dict:
 
     # Reason: log returns are numerically stable (no sign-flip pathology), and
     # their annualized Sharpe — (mean/std) * sqrt(bars_per_year) — is the
-    # standard continuous-compounding formulation. Subtracting the continuous
-    # risk-free rate log(1+rf)/bars_per_year keeps the ratio a proper excess-
-    # return Sharpe. AM ≥ GM guarantees a positive Sharpe whenever CAGR > rf.
+    # standard continuous-compounding formulation. The rf subtraction is a
+    # no-op at the default RISK_FREE_RATE=0 but preserved so callers can
+    # configure a non-zero rf via calculations.config if needed. AM ≥ GM
+    # guarantees a positive Sharpe whenever CAGR > rf.
     log_returns = np.log(equity).diff().dropna()
 
     # Reason: floating-point noise from cumulative compounding makes a

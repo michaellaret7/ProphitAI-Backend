@@ -2,7 +2,7 @@
 
 TRADING_DAYS = 252
 
-DEFAULT_RF_ANNUAL = 0.045  # 10-Year UST yield (~4.5%)
+DEFAULT_RF_ANNUAL = 0.0
 
 # Reason: constant universe ensures all portfolios are z-scored against the
 # same broad, diversified reference population (55 tickers, all 11 GICS sectors).

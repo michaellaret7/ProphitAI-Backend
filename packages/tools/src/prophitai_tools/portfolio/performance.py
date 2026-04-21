@@ -56,7 +56,7 @@ horizons.
     Interpretation Guide (all market-relative metrics benchmarked vs SPY):
         annualized_return: CAGR over the period. 8-12% is market-average for equities.
         cumulative_total_return: Total gain/loss as decimal. 0.25 = 25% total return.
-        sharpe_ratio: Return per unit of total risk (rf=4.5%). <0.5 poor, 0.5-1.0 decent, 1.0-2.0 good, >2.0 excellent.
+        sharpe_ratio: Return per unit of total risk (rf=0). <0.5 poor, 0.5-1.0 decent, 1.0-2.0 good, >2.0 excellent.
         sortino_ratio: Return per unit of downside risk. Same scale as Sharpe but usually higher.
         calmar_ratio: Annualized return / max drawdown. <0.5 poor, 0.5-1.0 fair, >2.0 excellent.
         omega_ratio: Probability-weighted gains / losses. >1.0 means gains outweigh losses overall.

@@ -82,12 +82,23 @@ Use the exact column names listed in the screener tool description. If the idea 
 a metric not in the schema (e.g. `short_interest_pct`), skip that filter and note it in
 the research summary — don't guess a close-sounding column name.
 
-**Step 4 — Call the screener.**
-Invoke the chosen screener once with all translated filters. If the result set is too
-large (>300 tickers) add a tighter liquidity or market-cap floor and re-screen. If too
-small (<10 tickers) loosen one filter — prefer loosening market-cap bounds over
-classification filters. Cap the working universe at **50 tickers** (take the top 50 by
-`market_cap` if more come back — this keeps backtest runtime bounded).
+**Step 4 — Call the screener and size the universe to the IDEA.**
+Invoke the chosen screener once with all translated filters.
+
+**Read the IDEA's expressed universe size.** The `## Universe` or `## Universe Criteria`
+section of `IDEA.md` states the intended investable universe, typically as prose like
+"approximately 200 to 350 names" or "approximately 400 to 700 names before ranking".
+Extract the upper bound as `idea_target_size`. If the IDEA is silent on size, use 300.
+
+**Cap the working universe at `min(idea_target_size, 500)`.** Take the top N by
+`market_cap` where N is that cap. Hard ceiling of 500 keeps backtest runtime bounded;
+anything tighter under-deploys capital and structurally fails the Sharpe bar regardless
+of signal quality (this was the #1 cause of past failed strategies — the prior 50-ticker
+cap forced 200-800-name strategies to run at <50% gross exposure).
+
+If the screener returns fewer than `idea_target_size`, use everything it returns and
+note the shortfall in the research summary. If it returns <10 tickers, loosen one filter
+— prefer loosening market-cap bounds over classification filters.
 
 **Step 5 — Write `ticker_universe.py`.**
 Use `sandbox_write` to replace the file contents with:
@@ -108,7 +119,23 @@ TICKERS: tuple[str, ...] = (
 Keep the docstring. Keep the `from __future__ import annotations`. Tickers must be a
 tuple of string literals (matches the template type).
 
-**Step 6 — Baseline run.**
+**Step 6 — Scaffold-integrity pre-flight (runs before the baseline).**
+Run the template-leakage check:
+```
+cd /home/user/strategies && python -m prophitai_algo_trading.integrity {{strategy_id}}
+```
+
+Exit code 0 = clean, proceed to the backtest. Exit code 1 = integrity
+violations (banned `strategies.template.*` imports, references to
+`TemplateStrategy`/`TemplateSignalModel`/similar, MANIFEST.strategy_id
+mismatch). Violations mean the construction pipeline produced partially
+customized code that would silently execute template logic — this is
+the RAMD/LSDA/CIM/VCLR failure mode. Set `verdict="build_failure"`,
+include the CLI output verbatim in `research_summary`, and STOP — do
+NOT attempt to tune or fix. Construction agents must re-produce the
+strategy correctly.
+
+**Step 6b — Baseline run.**
 Run the vectorized backtest:
 ```
 cd /home/user/strategies && python strategies/development/{{strategy_id}}/run_vectorized_backtest.py
@@ -147,6 +174,14 @@ Capture stdout/stderr. Parse the `=== METRICS ===` block for `sharpe`, `max_draw
   history filters and retry ONCE.
 - **Clean run, empty metrics** → record as `ran_cleanly=False` with explanation; this
   counts as a failed run, not a build failure.
+- **Clean run, very few trades relative to universe × window** → if
+  `total_trades < 0.5 × len(TICKERS)` over a multi-year backtest, the strategy is
+  either signal-sparse or under-deployed. Inspect the metrics: if
+  `annualized_return_pct` is near 0 and `max_drawdown_pct` is also near 0, the
+  portfolio was flat most of the time — this is capital-underdeployment masquerading as
+  a signal failure. Note it in the research summary so the execution builder or
+  architect can react next iteration. Do NOT fix it by editing the sizer during
+  tuning (that's outside the tuning contract).
 
 **Fix-and-retry does NOT count against the 12-run tuning budget.** Only the baseline
 + tuning grid runs count. A fix attempt produces the same baseline on the next clean run.

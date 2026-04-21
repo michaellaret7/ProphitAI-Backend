@@ -28,6 +28,27 @@ logger = logging.getLogger(__name__)
 # ================================
 
 
+_RATIO_METADATA_COLUMNS = frozenset({"id", "ticker_id", "date", "period", "fiscal_year"})
+
+
+def _add_ttm_aliases(ratio_df: pd.DataFrame) -> None:
+    """Duplicate every numeric ratio column under a ``TTM``-suffixed name.
+
+    Rows in ``financial_ratios`` are already TTM values by construction,
+    but indicator authors routinely hardcode names like ``dividendYieldTTM``
+    expecting the suffix to exist. Without this alias pass those lookups
+    silently resolve to NaN and produce zero-trade backtests. Mutates the
+    frame in place and skips the TTM suffix when the column already ends
+    in ``TTM`` or is a metadata column.
+    """
+    for column in list(ratio_df.columns):
+        if column in _RATIO_METADATA_COLUMNS or column.endswith("TTM"):
+            continue
+
+        ratio_df[f"{column}TTM"] = ratio_df[column]
+
+
+
 def _parse_date(value: str | dt_date) -> dt_date:
     """Coerce a string or date into a ``datetime.date``."""
 
@@ -408,11 +429,23 @@ class EconomicIndicatorProvider(BaseDataProvider):
 
 
 class FinancialRatiosProvider(BaseDataProvider):
-    """Fetches quarterly financial ratios from ``get_bulk_fundamentals``.
+    """Fetches quarterly financial ratios (TTM values) from ``get_bulk_fundamentals``.
 
-    Extracts the ``financial_ratios`` list from each ticker's
-    ``FundamentalsResult`` and converts to a flat DataFrame with columns
-    like ``date``, ``period``, ``currentRatio``, ``returnOnEquity``, etc.
+    Every row represents a trailing-twelve-month snapshot as of the row's
+    ``date``. Ratios include ``dividendYield``, ``returnOnEquity``,
+    ``operatingProfitMargin``, ``priceToFreeCashFlowsRatio``,
+    ``interestCoverage``, ``debtRatio``, etc.
+
+    The provider emits each numeric ratio under TWO column names — the
+    canonical name as stored in the DB (e.g. ``dividendYield``) and a
+    ``TTM``-suffixed alias (e.g. ``dividendYieldTTM``) pointing at the
+    same values. This neutralizes a recurring indicator-author bug where
+    code hardcodes the ``TTM`` suffix, silently resolves to NaN, and
+    produces 0 trades. Both conventions now work.
+
+    For raw quarterly line items (revenue, operatingIncome, netIncome,
+    accountsReceivable, etc.) use ``kind="fundamentals"`` instead — THIS
+    provider only emits ratios, not statement line items.
     """
 
     def fetch(self, tickers: list[str], start_date: dt_date, end_date: dt_date, **params: Any) -> dict[str, pd.DataFrame]:
@@ -446,6 +479,8 @@ class FinancialRatiosProvider(BaseDataProvider):
                 if "date" in ratio_df.columns:
                     ratio_df["date"] = pd.to_datetime(ratio_df["date"])
                     ratio_df = ratio_df.sort_values("date").reset_index(drop=True)
+
+                _add_ttm_aliases(ratio_df)
 
                 result[ticker] = ratio_df
 
@@ -532,6 +567,81 @@ class EconomicCalendarProvider(BaseDataProvider):
     def attach(self, df: pd.DataFrame, ticker: str, fetched_data: Any, attrs_key: str) -> None:
         if fetched_data is not None:
             df.attrs[attrs_key] = fetched_data
+
+
+class EarningsCalendarProvider(BaseDataProvider):
+    """Fetches per-ticker historical earnings-announcement dates.
+
+    Sources from ``get_earnings_transcripts`` — each row has a ``date``
+    column with the transcript date (≈ the earnings-call date). Use for
+    pre-earnings exits, post-earnings entries, and any strategy that
+    needs to react to the quarterly announcement cadence.
+
+    Scope is ``per_ticker`` — each ticker's announcement dates differ.
+    No params required.
+
+    Returned frame per ticker: columns ``date``, ``period``, ``year``.
+    """
+
+    def fetch(
+        self,
+        tickers: list[str],
+        start_date: dt_date,
+        end_date: dt_date,
+        **params: Any,
+    ) -> dict[str, pd.DataFrame]:
+        from prophitai_data.repositories.transcripts import get_earnings_transcripts
+
+        result: dict[str, pd.DataFrame] = {}
+
+        start_year = start_date.year if hasattr(start_date, "year") else None
+        end_year = end_date.year if hasattr(end_date, "year") else None
+
+        for ticker in tickers:
+            try:
+                payload = get_earnings_transcripts(
+                    ticker,
+                    start_year=start_year,
+                    end_year=end_year,
+                )
+            except Exception:
+                logger.warning("Failed to fetch earnings calendar for %s", ticker, exc_info=True)
+                continue
+
+            items = payload.get("items") or []
+
+            if not items:
+                continue
+
+            rows = [
+                {
+                    "date": item.get("date"),
+                    "period": item.get("period"),
+                    "year": item.get("year"),
+                }
+                for item in items
+                if item.get("date")
+            ]
+
+            if not rows:
+                continue
+
+            cal_df = pd.DataFrame(rows)
+            cal_df["date"] = pd.to_datetime(cal_df["date"], errors="coerce")
+            cal_df = cal_df.dropna(subset=["date"]).sort_values("date").reset_index(drop=True)
+
+            if cal_df.empty:
+                continue
+
+            result[ticker] = cal_df
+
+        return result
+
+    def attach(self, df: pd.DataFrame, ticker: str, fetched_data: Any, attrs_key: str) -> None:
+        cal_df = fetched_data.get(ticker) if isinstance(fetched_data, dict) else None
+
+        if cal_df is not None and not cal_df.empty:
+            df.attrs[attrs_key] = cal_df
 
 
 # ================================
@@ -677,28 +787,45 @@ def build_default_resolver() -> DataResolver:
     """Create a ``DataResolver`` with all standard providers registered.
 
     Standard kinds:
-        ``"ticker_meta"``          — {symbol, sector, industry} dict attached to df.attrs
-        ``"fundamentals"``         — quarterly income/balance/cashflow + sector
-        ``"financial_ratios"``     — quarterly financial ratios (PE, ROE, margins, etc.)
-        ``"commodity"``            — commodity price series (requires ``symbol`` param)
-        ``"equity_price"``         — equity/ETF close series (requires ``symbol`` param)
-        ``"universe_returns"``     — cross-sectional daily returns DataFrame (optional ``return_type`` param)
-        ``"economic_indicator"``   — economic data series (requires ``indicator`` param)
-        ``"government_bond_rates"``— yield curve data (requires ``country`` param)
-        ``"economic_calendar"``    — economic event calendar (requires ``country`` param)
+        ``"ticker_meta"``           — {symbol, sector, industry} dict attached to df.attrs
+        ``"fundamentals"``          — raw quarterly line items (revenue, operatingIncome,
+                                      netIncome, accountsReceivable, etc.) — use this for
+                                      signals that need raw statement numbers.
+        ``"financial_ratios_ttm"``  — TTM financial ratios (dividendYield, returnOnEquity,
+                                      operatingProfitMargin, priceToFreeCashFlowsRatio,
+                                      interestCoverage, debtRatio, etc.). Every ratio is
+                                      also emitted under a ``TTM``-suffixed alias so
+                                      ``dividendYield`` and ``dividendYieldTTM`` both
+                                      resolve to the same values.
+        ``"commodity"``             — commodity price series (requires ``symbol`` param)
+        ``"equity_price"``          — equity/ETF close series (requires ``symbol`` param).
+                                      Use THIS for SPY/QQQ/sector-ETF references —
+                                      ``commodity`` does not serve equities.
+        ``"universe_returns"``      — cross-sectional daily returns DataFrame (optional
+                                      ``return_type`` param)
+        ``"economic_indicator"``    — economic data series (requires ``indicator`` param)
+        ``"government_bond_rates"`` — yield curve data (requires ``country`` param)
+        ``"economic_calendar"``     — macro economic event calendar (Fed, CPI;
+                                      requires ``country`` param; shared across
+                                      the universe — NOT per-ticker)
+        ``"earnings_calendar"``     — per-ticker quarterly earnings-announcement
+                                      dates. Use this for pre/post-earnings entry
+                                      and exit logic — do NOT reach for
+                                      ``economic_calendar`` since that's macro.
     """
 
     resolver = DataResolver()
 
     resolver.register("ticker_meta", TickerMetaProvider())
     resolver.register("fundamentals", FundamentalsProvider())
-    resolver.register("financial_ratios", FinancialRatiosProvider())
+    resolver.register("financial_ratios_ttm", FinancialRatiosProvider())
     resolver.register("commodity", CommodityProvider())
     resolver.register("equity_price", EquityPriceProvider())
     resolver.register("universe_returns", UniverseReturnsProvider())
     resolver.register("economic_indicator", EconomicIndicatorProvider())
     resolver.register("government_bond_rates", GovernmentBondRatesProvider())
     resolver.register("economic_calendar", EconomicCalendarProvider())
+    resolver.register("earnings_calendar", EarningsCalendarProvider())
 
     return resolver
 

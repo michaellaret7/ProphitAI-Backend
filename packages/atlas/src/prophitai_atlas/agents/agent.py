@@ -212,8 +212,6 @@ class Agent(AgentBase):
 
                     self.plan = planner.run()
 
-                    print(f"Plan generated: {self.plan}")
-
                     # Reason: remove first to avoid stale binding if a prior run() left it registered
                     self.remove_tool(UPDATE_PLAN_TOOL["name"])
                     
