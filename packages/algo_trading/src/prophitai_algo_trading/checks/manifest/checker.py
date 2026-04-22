@@ -60,6 +60,7 @@ _FALLBACK_KNOWN_KINDS: frozenset[str] = frozenset({
     "ticker_meta", "fundamentals", "financial_ratios_ttm", "financial_ratios",
     "commodity", "equity_price", "universe_returns", "economic_indicator",
     "government_bond_rates", "economic_calendar", "earnings_calendar",
+    "residual_screener_snapshots", "universe_snapshot_panel",
 })
 
 # Reason: naive cross-sectional patterns that only work when given a

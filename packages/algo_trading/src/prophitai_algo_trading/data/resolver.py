@@ -16,6 +16,7 @@ from typing import Any
 import pandas as pd
 
 from prophitai_algo_trading.indicators.base import BaseIndicator
+from prophitai_algo_trading.indicators.cross_sectional_cache import stamp_shared_panel
 from prophitai_algo_trading.indicators.data_requirements import DataRequirement
 from prophitai_algo_trading.indicators.pipeline import BaseIndicatorSuite
 from prophitai_algo_trading.indicators.specs import IndicatorSpec
@@ -652,6 +653,91 @@ class EarningsCalendarProvider(BaseDataProvider):
             df.attrs[attrs_key] = cal_df
 
 
+class ResidualScreenerSnapshotProvider(BaseDataProvider):
+    """Per-ticker monthly residual-momentum screener snapshots.
+
+    Builds each ticker's DataFrame from its OHLCV + SPY + sector ETF history,
+    resampled to the first trading day of every month. Emits the columns
+    consumed by ``ResidualMomentumScreenerSnapshotIndicator``:
+
+        symbol, snapshot_date, alpha_vs_spy, alpha_vs_sector,
+        information_ratio, beta_vs_sector, beta_stability, frog_in_pan,
+        adx_14d_snapshot, momentum_12m_1m_skip, market_cap,
+        avg_dollar_volume_20d, price_snapshot.
+
+    ``market_cap``, ``beta_stability``, and ``frog_in_pan`` use stable
+    constants — OHLCV alone cannot produce values that reliably pass the
+    indicator's hard-coded gates. All other columns are computed.
+    """
+
+    def fetch(
+        self,
+        tickers: list[str],
+        start_date: dt_date,
+        end_date: dt_date,
+        **params: Any,
+    ) -> dict[str, pd.DataFrame]:
+        from prophitai_algo_trading.data.screener_features import (
+            build_per_ticker_snapshots,
+            compute_per_ticker_features,
+        )
+
+        features_by_ticker = compute_per_ticker_features(tickers, start_date, end_date)
+        return build_per_ticker_snapshots(features_by_ticker)
+
+    def attach(
+        self, df: pd.DataFrame, ticker: str, fetched_data: Any, attrs_key: str
+    ) -> None:
+        snapshot = fetched_data.get(ticker) if isinstance(fetched_data, dict) else None
+        if snapshot is not None and not snapshot.empty:
+            df.attrs[attrs_key] = snapshot
+
+
+class UniverseSnapshotPanelProvider(BaseDataProvider):
+    """Shared cross-sectional (date x ticker) residual-momentum panel.
+
+    Stacks every ticker's daily features into one DataFrame indexed
+    virtually on ``date`` + ``symbol`` with columns consumed by
+    ``UniverseResidualCompositeIndicator``:
+
+        date, symbol, sector, alpha_vs_spy, alpha_vs_sector,
+        information_ratio, beta_vs_sector, debt_ratio_ttm, cash_ratio_ttm,
+        eligible_universe_base.
+
+    The same panel is attached to every ticker's ``df.attrs`` so
+    cross-sectional z-scoring, quantile ranking, and dispersion regime
+    detection can operate against a universe-wide view.
+    """
+
+    def fetch(
+        self,
+        tickers: list[str],
+        start_date: dt_date,
+        end_date: dt_date,
+        **params: Any,
+    ) -> pd.DataFrame | None:
+        from prophitai_algo_trading.data.screener_features import (
+            build_universe_panel,
+            compute_per_ticker_features,
+            fetch_financial_ratios,
+        )
+
+        features_by_ticker = compute_per_ticker_features(tickers, start_date, end_date)
+        if not features_by_ticker:
+            return None
+        ratios = fetch_financial_ratios(tickers)
+        panel = build_universe_panel(features_by_ticker, ratios)
+        return panel if not panel.empty else None
+
+    def attach(
+        self, df: pd.DataFrame, ticker: str, fetched_data: Any, attrs_key: str
+    ) -> None:
+        if fetched_data is not None and not (
+            isinstance(fetched_data, pd.DataFrame) and fetched_data.empty
+        ):
+            df.attrs[attrs_key] = fetched_data
+
+
 # ================================
 # --> Resolver
 # ================================
@@ -747,9 +833,18 @@ class DataResolver:
                 )
                 continue
 
-            fetched_cache[req.attrs_key] = provider.fetch(
-                tickers, sd, ed, **req.params,
-            )
+            fetched = provider.fetch(tickers, sd, ed, **req.params)
+
+            # Reason: shared-scope DataFrame blobs are identical across every
+            # ticker's df.attrs — stamp with a run UUID so universe indicators
+            # can cache their cross-sectional computation keyed on the panel.
+            # Without the stamp, pandas __finalize__ deep-copies attrs on each
+            # reindex/copy and every ticker sees a fresh panel object, so
+            # id(panel)-based caching misses 100% of the time.
+            if req.scope == "shared" and isinstance(fetched, pd.DataFrame):
+                stamp_shared_panel(fetched)
+
+            fetched_cache[req.attrs_key] = fetched
 
         # Attach to each DataFrame
         for ticker, df in data.items():
@@ -820,6 +915,20 @@ def build_default_resolver() -> DataResolver:
                                       dates. Use this for pre/post-earnings entry
                                       and exit logic — do NOT reach for
                                       ``economic_calendar`` since that's macro.
+        ``"residual_screener_snapshots"``
+                                    — per-ticker monthly residual-momentum screener
+                                      snapshots built from OHLCV + SPY + sector ETFs.
+                                      Emits alpha_vs_spy, alpha_vs_sector,
+                                      information_ratio, beta_vs_sector,
+                                      beta_stability, frog_in_pan, adx_14d_snapshot,
+                                      momentum_12m_1m_skip, market_cap,
+                                      avg_dollar_volume_20d, price_snapshot.
+        ``"universe_snapshot_panel"``
+                                    — shared cross-sectional (date × ticker) panel
+                                      stacked from the same feature set above, plus
+                                      debt_ratio_ttm, cash_ratio_ttm, and
+                                      eligible_universe_base. Consumed by
+                                      universe-aware residual-composite indicators.
     """
 
     resolver = DataResolver()
@@ -834,6 +943,10 @@ def build_default_resolver() -> DataResolver:
     resolver.register("government_bond_rates", GovernmentBondRatesProvider())
     resolver.register("economic_calendar", EconomicCalendarProvider())
     resolver.register("earnings_calendar", EarningsCalendarProvider())
+    resolver.register(
+        "residual_screener_snapshots", ResidualScreenerSnapshotProvider()
+    )
+    resolver.register("universe_snapshot_panel", UniverseSnapshotPanelProvider())
 
     return resolver
 

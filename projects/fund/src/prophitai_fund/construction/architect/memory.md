@@ -305,3 +305,10 @@ topic: process_mistakes
 ---
 When the referenced packages/algo_trading source tree is absent from the sandbox, verify available std_lib components from documentation files plus template wiring instead of assuming the source path exists. Still document any constructor uncertainty conservatively and avoid inventing unsupported std_lib classes.
 
+---
+date: 2026-04-21
+title: Manifest translation: sandbox may not expose validator or manifest schema extras
+topic: process_mistakes
+---
+If the sandbox lacks the runnable manifest validator or source-tree grep targets, rely on the framework_reference plus docs/template to keep the manifest conservative. Avoid inventing unsupported extra fields like indicator-level data_requirements unless the schema explicitly exposes them, and document any attrs-based wiring assumptions in implementation_notes instead.
+

@@ -291,3 +291,10 @@ topic: framework_gotchas
 ---
 In current sandbox env, std-lib ATR can still raise `ValueError: truth value of DataFrame is ambiguous` when df.attrs contains non-scalar objects (e.g. fundamentals DataFrame). Cause: pandas propagates attrs through Series ops and compares attrs during concat finalize. Robust suite pattern: strip non-scalar attrs before std-lib indicators run, then restore full attrs before each custom indicator that reads df.attrs. This can be isolated in suite helpers for full and incremental pipeline paths.
 
+---
+date: 2026-04-21
+title: Universe-scoped indicators MUST use framework cross-sectional cache
+topic: performance_patterns
+---
+The vectorized engine re-instantiates each indicator once per ticker, so any universe-scoped indicator that rebuilds a cross-sectional panel on every call does O(n²) work — measured at 93s for n=36 (~58min projected at n=220) on RLS-DB. Fix: use `prophitai_algo_trading.indicators.{stamp_shared_panel, crosssectional_cache_key, get_or_compute_crosssectional}`. Split the indicator into `_compute_full_crosssectional(panel) -> DataFrame` (universe-wide, expensive, cached) and `calculate()` (per-ticker slice, cheap). Stamp the panel at construction time; the cache keys on the stamp + every indicator param. Without the stamp, pandas `__finalize__` deep-copies `attrs` on every `.reindex`/`.copy()` and each ticker sees a fresh panel object — `id(panel)` caching misses 100%. `DataResolver.resolve` auto-stamps shared-scope DataFrame blobs; hand-built panels (strategy-local helpers like `attach_screener_attrs`) must call `stamp_shared_panel(panel)` explicitly before attach. Canonical example: `strategies/development/residual_alpha_longshort_momentum_with_dispersionscaled_gross_and_betaneutral_legs/indicators/custom.py::UniverseResidualCompositeIndicator`. Full pattern + gotchas: `docs/algo_trading/universe_indicator_caching.md`. Measured: 5.1× speedup on `engine.run`, 2.5× on total wall clock at n=36.
+

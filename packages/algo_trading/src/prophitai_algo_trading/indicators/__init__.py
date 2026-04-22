@@ -1,6 +1,12 @@
 """Shared indicator building blocks and composition utilities."""
 
 from prophitai_algo_trading.indicators.base import BaseIndicator
+from prophitai_algo_trading.indicators.cross_sectional_cache import (
+    clear_crosssectional_cache,
+    crosssectional_cache_key,
+    get_or_compute_crosssectional,
+    stamp_shared_panel,
+)
 from prophitai_algo_trading.indicators.data_requirements import DataRequirement
 from prophitai_algo_trading.indicators.registry import INDICATOR_REGISTRY
 from prophitai_algo_trading.indicators.specs import IndicatorSpec
@@ -53,6 +59,10 @@ __all__ = [
     "IndicatorPipeline",
     "IndicatorSpec",
     "INDICATOR_REGISTRY",
+    "clear_crosssectional_cache",
+    "crosssectional_cache_key",
+    "get_or_compute_crosssectional",
+    "stamp_shared_panel",
     "SimpleMovingAverageIndicator",
     "ExponentialMovingAverageIndicator",
     "RSI",
