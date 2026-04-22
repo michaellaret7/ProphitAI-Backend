@@ -32,7 +32,8 @@ class IdeaGeneratorAgent:
         "Use the research tools extensively to find a compelling edge, "
         "assess its macro viability, check past ideas to avoid repetition, "
         "and produce a complete trade idea proposal."
-        "Goal: Build an equity focused long short momentum trading strategy."
+        "Goal: Build an equity focused long short equity momentum trading strategy. Keep it super simple, have it be technical driven signals only(this means only price data), "
+        "and have the data be 15 minute bars. Do not overcomplicate the strategy, keep it simple and technical."
     )
 
     def __init__(

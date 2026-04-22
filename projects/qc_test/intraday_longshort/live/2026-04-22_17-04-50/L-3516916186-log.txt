@@ -1,0 +1,3 @@
+Algorithm Initialization: Alpaca account base currency: USD
+Launching analysis for L-3516916186 with LEAN Engine v2.5.0.0
+2026-04-22 17:05:13 Will use UniverseSettings for automatically added securities for open orders and holdings. UniverseSettings: Resolution = Minute; Leverage = default; FillForward = True; ExtendedHours = False

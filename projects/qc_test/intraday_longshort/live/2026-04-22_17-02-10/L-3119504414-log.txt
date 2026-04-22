@@ -1,0 +1,2 @@
+Algorithm Initialization: Alpaca account base currency: USD
+Launching analysis for L-3119504414 with LEAN Engine v2.5.0.0

@@ -1,0 +1,14 @@
+{
+  "holdings": {},
+  "charts": {
+    "Strategy Equity": {
+      "name": "Strategy Equity",
+      "chartType": 0,
+      "series": {
+        "Equity": {"name":"Equity","unit":"$","index":0,"seriesType":2,"values":[[1776891670,1137657.165,1137657.165,1137657.165,1137657.165]]},
+        "Return": {"name":"Return","unit":"%","index":1,"seriesType":3,"values":[],"color":"","scatterMarkerSymbol":"none"}
+      }
+    }
+  },
+  "orders": {}
+}

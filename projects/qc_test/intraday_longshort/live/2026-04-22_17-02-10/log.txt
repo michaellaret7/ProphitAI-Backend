@@ -1,0 +1,359 @@
+2026-04-22T21:02:13.8400577Z TRACE:: Engine.Main(): LEAN ALGORITHMIC TRADING ENGINE v2.5.0.0 Mode: DEBUG (64bit) Host: Michaels-MacBook-Air
+2026-04-22T21:02:13.8421882Z TRACE:: Engine.Main(): Started 9:02 PM
+2026-04-22T21:02:13.8486122Z TRACE:: JobQueue.NextJob(): Selected /LeanCLI/main.py
+2026-04-22T21:02:14.1423653Z TRACE:: AlgorithmManager.CreateTokenBucket(): Initializing LeakyBucket: Capacity: 120 RefillAmount: 18 TimeInterval: 1440
+2026-04-22T21:02:14.1448165Z TRACE:: Engine.Run(): Resource limits '0' CPUs. 2147483647 MB RAM.
+2026-04-22T21:02:14.1450543Z TRACE:: TextSubscriptionDataSourceReader.SetCacheSize(): Setting cache size to 71582788 items
+2026-04-22T21:02:14.1465318Z TRACE:: PythonInitializer.Initialize(): start...
+2026-04-22T21:02:14.2664483Z TRACE:: PythonInitializer.Initialize(): ended
+2026-04-22T21:02:14.2671463Z TRACE:: AlgorithmPythonWrapper(): Python version 3.11.9 | packaged by conda-forge | (main, Apr 19 2024, 18:26:34) [GCC 12.3.0]: Importing python module main
+2026-04-22T21:02:15.4803989Z TRACE:: AlgorithmPythonWrapper(): main successfully imported.
+2026-04-22T21:02:15.4810256Z TRACE:: AlgorithmPythonWrapper(): Creating IAlgorithm instance.
+2026-04-22T21:02:15.5493322Z TRACE:: LocalObjectStore.Initialize(): Storage Root: /Storage. StorageFileCount 9999999. StorageLimit 10240MB. StoragePermissions Read=True Write=True Delete=True
+2026-04-22T21:02:15.5495560Z TRACE:: LiveTradingDataFeed.GetDataChannelProvider(): will use DataChannelProvider
+2026-04-22T21:02:15.5504454Z TRACE:: BrokerageSetupHandler.CreateBrokerage(): creating brokerage 'AlpacaBrokerage'
+2026-04-22T21:02:15.7788417Z TRACE:: AlpacaBrokerage.AlpacaBrokerage(): found no data aggregator instance, creating QuantConnect.Lean.Engine.DataFeeds.AggregationManager
+2026-04-22T21:02:15.7806805Z TRACE:: AlpacaBrokerage.ReconnectionLogic: Starting reconnection loop.
+2026-04-22T21:02:15.7837039Z TRACE:: CompositeDataQueueHandler.SetJob(): will use ["AlpacaBrokerage"]
+2026-04-22T21:02:15.8516233Z TRACE:: StreamingClient_SocketOpened(AlpacaStreamingClient): SocketOpened
+2026-04-22T21:02:15.8836327Z TRACE:: StreamingClient_Connected(AlpacaStreamingClient): Authorized
+2026-04-22T21:02:15.8837385Z TRACE:: StreamingClient_Connected(AlpacaStreamingClient): order stream authorized; releasing order operations.
+2026-04-22T21:02:15.8848227Z TRACE:: BaseDataExchange(CustomDataExchange) Starting...
+2026-04-22T21:02:15.8868052Z TRACE:: HistoryProviderManager.Initialize(): Wrapping 'AlpacaBrokerage' instance as 'BrokerageHistoryProvider'
+2026-04-22T21:02:15.8870529Z TRACE:: HistoryProviderManager.Initialize(): history providers [SubscriptionDataReaderHistoryProvider,BrokerageHistoryProvider]
+2026-04-22T21:02:15.8887756Z TRACE:: BaseSetupHandler.Setup(LocalPlatform): UID: 489040, PID: -1, Version: 2.5.0.0, Source: WebIDE
+2026-04-22T21:02:15.8892060Z TRACE:: LiveTradingResultHandler.SendStatusUpdate(): status: 'LoggingIn'.  Logging into brokerage...
+2026-04-22T21:02:15.8893297Z TRACE:: BrokerageSetupHandler.Setup(): Connecting to brokerage...
+2026-04-22T21:02:15.8895599Z TRACE:: BrokerageSetupHandler.Setup(): Alpaca account base currency: USD
+2026-04-22T21:02:15.8898880Z TRACE:: BrokerageSetupHandler.Setup(): Initializing algorithm...
+2026-04-22T21:02:15.8899490Z TRACE:: LiveTradingResultHandler.SendStatusUpdate(): status: 'Initializing'.  Initializing algorithm...
+2026-04-22T21:02:15.9378093Z TRACE:: BrokerageSetupHandler.Setup(): Fetching cash balance from brokerage...
+2026-04-22T21:02:16.0273625Z TRACE:: BrokerageSetupHandler.Setup(): Setting USD cash to -122412.13
+2026-04-22T21:02:16.0280015Z TRACE:: BrokerageSetupHandler.Setup(): Fetching open orders from brokerage...
+2026-04-22T21:02:16.0657523Z TRACE:: BrokerageSetupHandler.Setup(): Fetching holdings from brokerage...
+2026-04-22T21:02:16.1174085Z TRACE:: BrokerageSetupHandler.Setup(): Has existing holding: AAL: 2 @ USD11.715 - Market: USD11.5
+2026-04-22T21:02:16.1186360Z TRACE:: GetOrAddUnrequestedSecurity(): Adding unrequested security: AAL
+2026-04-22T21:02:16.1209565Z TRACE:: BrokerageSetupHandler.Setup(): Has existing holding: AAPL: 101 @ USD256.261782 - Market: USD272.4391
+2026-04-22T21:02:16.1211350Z TRACE:: BrokerageSetupHandler.Setup(): Has existing holding: ASTS: 86 @ USD88.180581 - Market: USD84.2294
+2026-04-22T21:02:16.1212337Z TRACE:: GetOrAddUnrequestedSecurity(): Adding unrequested security: ASTS
+2026-04-22T21:02:16.1215042Z TRACE:: BrokerageSetupHandler.Setup(): Has existing holding: AVGO: 344 @ USD323.27 - Market: USD421.94
+2026-04-22T21:02:16.1215762Z TRACE:: GetOrAddUnrequestedSecurity(): Adding unrequested security: AVGO
+2026-04-22T21:02:16.1217929Z TRACE:: BrokerageSetupHandler.Setup(): Has existing holding: CCJ: 804 @ USD110.33 - Market: USD126
+2026-04-22T21:02:16.1218464Z TRACE:: GetOrAddUnrequestedSecurity(): Adding unrequested security: CCJ
+2026-04-22T21:02:16.1220815Z TRACE:: BrokerageSetupHandler.Setup(): Has existing holding: CRWD: 137 @ USD400.7 - Market: USD456.2
+2026-04-22T21:02:16.1221390Z TRACE:: GetOrAddUnrequestedSecurity(): Adding unrequested security: CRWD
+2026-04-22T21:02:16.1223592Z TRACE:: BrokerageSetupHandler.Setup(): Has existing holding: CRWV: 86 @ USD118.099302 - Market: USD123.51
+2026-04-22T21:02:16.1224384Z TRACE:: GetOrAddUnrequestedSecurity(): Adding unrequested security: CRWV
+2026-04-22T21:02:16.1226003Z TRACE:: BrokerageSetupHandler.Setup(): Has existing holding: GEV: 83 @ USD804.42 - Market: USD1125.81
+2026-04-22T21:02:16.1226474Z TRACE:: GetOrAddUnrequestedSecurity(): Adding unrequested security: GEV
+2026-04-22T21:02:16.1227991Z TRACE:: BrokerageSetupHandler.Setup(): Has existing holding: GLD: 198 @ USD446.79 - Market: USD435.18
+2026-04-22T21:02:16.1228450Z TRACE:: GetOrAddUnrequestedSecurity(): Adding unrequested security: GLD
+2026-04-22T21:02:16.1230398Z TRACE:: BrokerageSetupHandler.Setup(): Has existing holding: GOOGL: 44.657652827 @ USD337.125421 - Market: USD338.3649
+2026-04-22T21:02:16.1230952Z TRACE:: BrokerageSetupHandler.Setup(): Has existing holding: ITA: 229 @ USD235.14 - Market: USD219.18
+2026-04-22T21:02:16.1231467Z TRACE:: GetOrAddUnrequestedSecurity(): Adding unrequested security: ITA
+2026-04-22T21:02:16.1233215Z TRACE:: BrokerageSetupHandler.Setup(): Has existing holding: NVDA: 737.157918101 @ USD180.028399 - Market: USD202.3
+2026-04-22T21:02:16.1233657Z TRACE:: BrokerageSetupHandler.Setup(): Has existing holding: PLTR: 525 @ USD134.233333 - Market: USD150.95
+2026-04-22T21:02:16.1234346Z TRACE:: GetOrAddUnrequestedSecurity(): Adding unrequested security: PLTR
+2026-04-22T21:02:16.1236283Z TRACE:: BrokerageSetupHandler.Setup(): Has existing holding: POWL: 59 @ USD569.66 - Market: USD244.8595
+2026-04-22T21:02:16.1236752Z TRACE:: GetOrAddUnrequestedSecurity(): Adding unrequested security: POWL
+2026-04-22T21:02:16.1238155Z TRACE:: BrokerageSetupHandler.Setup(): Has existing holding: QQQ: 100 @ USD589.3364 - Market: USD655.73
+2026-04-22T21:02:16.1238775Z TRACE:: GetOrAddUnrequestedSecurity(): Adding unrequested security: QQQ
+2026-04-22T21:02:16.1240555Z TRACE:: BrokerageSetupHandler.Setup(): Has existing holding: RKLB: 101 @ USD77.498812 - Market: USD89.67
+2026-04-22T21:02:16.1241059Z TRACE:: GetOrAddUnrequestedSecurity(): Adding unrequested security: RKLB
+2026-04-22T21:02:16.1242974Z TRACE:: BrokerageSetupHandler.Setup(): Has existing holding: RTX: 275 @ USD200.44 - Market: USD180.5
+2026-04-22T21:02:16.1243447Z TRACE:: GetOrAddUnrequestedSecurity(): Adding unrequested security: RTX
+2026-04-22T21:02:16.1245090Z TRACE:: BrokerageSetupHandler.Setup(): Has existing holding: SPY: 200 @ USD681.925 - Market: USD710.71
+2026-04-22T21:02:16.1245517Z TRACE:: GetOrAddUnrequestedSecurity(): Adding unrequested security: SPY
+2026-04-22T21:02:16.1246979Z TRACE:: BrokerageSetupHandler.Setup(): Has existing holding: TAIL: 2420 @ USD11.75 - Market: USD11.095
+2026-04-22T21:02:16.1247464Z TRACE:: GetOrAddUnrequestedSecurity(): Adding unrequested security: TAIL
+2026-04-22T21:02:16.1248960Z TRACE:: BrokerageSetupHandler.Setup(): Has existing holding: TSLA: 4 @ USD404.51 - Market: USD403.4
+2026-04-22T21:02:16.1249560Z TRACE:: BrokerageSetupHandler.Setup(): Has existing holding: VRT: 141 @ USD236.3 - Market: USD304
+2026-04-22T21:02:16.1250803Z TRACE:: GetOrAddUnrequestedSecurity(): Adding unrequested security: VRT
+2026-04-22T21:02:16.1252515Z TRACE:: BrokerageSetupHandler.Setup(): Has existing holding: VST: 321 @ USD173.05 - Market: USD155.92
+2026-04-22T21:02:16.1253141Z TRACE:: GetOrAddUnrequestedSecurity(): Adding unrequested security: VST
+2026-04-22T21:02:16.1254336Z TRACE:: BrokerageSetupHandler.Setup(): Has existing holding: XOM: 199 @ USD149.137136 - Market: USD149.5
+2026-04-22T21:02:16.1258202Z TRACE:: AggregationManager.Initialize(): daily strict end times: True
+2026-04-22T21:02:16.1332233Z TRACE:: LiveTradingDataFeed.CreateUniverseSubscription(): Creating user defined universe: qc-universe-userdefined-usa-Base 2S
+2026-04-22T21:02:16.1347622Z TRACE:: DataManager.AddSubscription(): Added QC-UNIVERSE-USERDEFINED-USA-BASE,#0,QC-UNIVERSE-USERDEFINED-USA-BASE,Minute,ProphitAI15MinBar,Trade,Adjusted,OpenInterest,Internal. Start: 4/22/2026 9:02:15 PM. End: 12/31/2050 12:00:00 AM
+2026-04-22T21:02:16.1351987Z TRACE:: LiveTradingDataFeed.CreateUniverseSubscription(): Creating user defined universe: QC-UNIVERSE-USERDEFINED-USA-EQUITY 2T
+2026-04-22T21:02:16.1352984Z TRACE:: DataManager.AddSubscription(): Added QC-UNIVERSE-USERDEFINED-USA-EQUITY,#0,QC-UNIVERSE-USERDEFINED-USA-EQUITY,Minute,TradeBar,Trade,Adjusted,OpenInterest,Internal. Start: 4/22/2026 9:02:15 PM. End: 12/31/2050 12:00:00 AM
+2026-04-22T21:02:16.1403492Z TRACE:: BaseSetupHandler.SetupCurrencyConversions():
+Account Type: Margin
+
+Symbol      Quantity    Conversion = Value in USD
+USD: $     -122412.13 @       1.00 = $-122412.13
+-------------------------------------------------
+CashBook Total Value:                $-122412.13
+
+2026-04-22T21:02:16.1439654Z TRACE:: Total margin information: TotalMarginUsed: 629813.18, MarginRemaining: 507401.05
+2026-04-22T21:02:16.1454684Z TRACE:: JOB HANDLERS:
+         DataFeed:             QuantConnect.Lean.Engine.DataFeeds.LiveTradingDataFeed
+         Setup:                QuantConnect.Lean.Engine.Setup.BrokerageSetupHandler
+         RealTime:             QuantConnect.Lean.Engine.RealTime.LiveTradingRealTimeHandler
+         Results:              QuantConnect.Lean.Engine.Results.LiveTradingResultHandler
+         Transactions:         QuantConnect.Lean.Engine.TransactionHandlers.BrokerageTransactionHandler
+         Object Store:         QuantConnect.Lean.Engine.Storage.LocalObjectStore
+         History Provider:     QuantConnect.Lean.Engine.HistoricalData.HistoryProviderManager
+         Brokerage:            QuantConnect.Brokerages.Alpaca.AlpacaBrokerage
+         Data Provider:        QuantConnect.Lean.Engine.DataFeeds.DefaultDataProvider
+
+2026-04-22T21:02:16.1525844Z TRACE:: Event Name "Daily Sampling", scheduled to run.
+2026-04-22T21:02:16.1553365Z TRACE:: AlgorithmManager.Run(): Begin DataStream - Start: 4/22/2026 12:00:00 AM Stop: 12/31/2050 12:00:00 AM Time: 4/22/2026 5:02:15 PM Warmup: False
+2026-04-22T21:02:16.1559135Z TRACE:: LiveTradingResultHandler.SendStatusUpdate(): status: 'Running'. 
+2026-04-22T21:02:16.1563341Z TRACE:: ProcessVolatilityHistoryRequirements(): Updating volatility models with historical data...
+2026-04-22T21:02:16.1567540Z TRACE:: ProcessVolatilityHistoryRequirements(): finished.
+2026-04-22T21:02:17.0430886Z TRACE:: EventBasedDataQueueHandlerSubscriptionManager.Subscribe(): AAPL
+2026-04-22T21:02:17.0468348Z TRACE:: AlpacaStreamingClientWrapper.ConnectAndAuthenticateAsync(Equity): try connecting paid feed
+2026-04-22T21:02:17.1502679Z TRACE:: StreamingClient_SocketOpened(AlpacaDataStreamingClient): SocketOpened
+2026-04-22T21:02:17.1877036Z TRACE:: StreamingClient_OnError(AlpacaDataStreamingClient): Alpaca.Markets.RestClientErrorException: insufficient subscription
+2026-04-22T21:02:17.1882206Z TRACE:: AlpacaBrokerage.Initialize(): Equity failed to connect to live feed 'Sip', will retry with free feed
+2026-04-22T21:02:17.1918335Z TRACE:: AlpacaStreamingClientWrapper.ConnectAndAuthenticateAsync(Equity): try connecting free feed
+2026-04-22T21:02:17.2005790Z TRACE:: Debug: Alpaca account base currency: USD
+2026-04-22T21:02:17.2006620Z TRACE:: Debug: Launching analysis for L-3119504414 with LEAN Engine v2.5.0.0
+2026-04-22T21:02:17.2577113Z TRACE:: StreamingClient_SocketOpened(AlpacaDataStreamingClient): SocketOpened
+2026-04-22T21:02:17.2940253Z TRACE:: StreamingClient_Connected(AlpacaDataStreamingClient): Authorized
+2026-04-22T21:02:17.2942065Z TRACE:: AlpacaStreamingClientWrapper.ConnectAndAuthenticateAsync(Equity): connection succeeded
+2026-04-22T21:02:17.3004324Z TRACE:: DataManager.AddSubscription(): Added AAPL,#0,AAPL,Minute,TradeBar,Trade,Adjusted,OpenInterest. Start: 4/22/2026 9:02:17 PM. End: 12/31/2050 5:00:00 AM
+2026-04-22T21:02:17.3027762Z TRACE:: DataManager.AddSubscription(): Added AAPL,#0,AAPL,Minute,QuoteBar,Quote,Adjusted,OpenInterest. Start: 4/22/2026 9:02:17 PM. End: 12/31/2050 5:00:00 AM
+2026-04-22T21:02:17.3035539Z TRACE:: EventBasedDataQueueHandlerSubscriptionManager.Subscribe(): MSFT
+2026-04-22T21:02:17.3040003Z TRACE:: DataManager.AddSubscription(): Added MSFT,#0,MSFT,Minute,TradeBar,Trade,Adjusted,OpenInterest. Start: 4/22/2026 9:02:17 PM. End: 12/31/2050 5:00:00 AM
+2026-04-22T21:02:17.3046715Z TRACE:: DataManager.AddSubscription(): Added MSFT,#0,MSFT,Minute,QuoteBar,Quote,Adjusted,OpenInterest. Start: 4/22/2026 9:02:17 PM. End: 12/31/2050 5:00:00 AM
+2026-04-22T21:02:17.3049975Z TRACE:: EventBasedDataQueueHandlerSubscriptionManager.Subscribe(): NVDA
+2026-04-22T21:02:17.3054058Z TRACE:: DataManager.AddSubscription(): Added NVDA,#0,NVDA,Minute,TradeBar,Trade,Adjusted,OpenInterest. Start: 4/22/2026 9:02:17 PM. End: 12/31/2050 5:00:00 AM
+2026-04-22T21:02:17.3056030Z TRACE:: DataManager.AddSubscription(): Added NVDA,#0,NVDA,Minute,QuoteBar,Quote,Adjusted,OpenInterest. Start: 4/22/2026 9:02:17 PM. End: 12/31/2050 5:00:00 AM
+2026-04-22T21:02:17.3070797Z TRACE:: EventBasedDataQueueHandlerSubscriptionManager.Subscribe(): GOOGL
+2026-04-22T21:02:17.3075104Z TRACE:: DataManager.AddSubscription(): Added GOOGL,#0,GOOGL,Minute,TradeBar,Trade,Adjusted,OpenInterest. Start: 4/22/2026 9:02:17 PM. End: 12/31/2050 5:00:00 AM
+2026-04-22T21:02:17.3077096Z TRACE:: DataManager.AddSubscription(): Added GOOGL,#0,GOOGL,Minute,QuoteBar,Quote,Adjusted,OpenInterest. Start: 4/22/2026 9:02:17 PM. End: 12/31/2050 5:00:00 AM
+2026-04-22T21:02:17.3079933Z TRACE:: EventBasedDataQueueHandlerSubscriptionManager.Subscribe(): META
+2026-04-22T21:02:17.3082802Z TRACE:: DataManager.AddSubscription(): Added META,#0,META,Minute,TradeBar,Trade,Adjusted,OpenInterest. Start: 4/22/2026 9:02:17 PM. End: 12/31/2050 5:00:00 AM
+2026-04-22T21:02:17.3084318Z TRACE:: DataManager.AddSubscription(): Added META,#0,META,Minute,QuoteBar,Quote,Adjusted,OpenInterest. Start: 4/22/2026 9:02:17 PM. End: 12/31/2050 5:00:00 AM
+2026-04-22T21:02:17.3087111Z TRACE:: EventBasedDataQueueHandlerSubscriptionManager.Subscribe(): AMZN
+2026-04-22T21:02:17.3089501Z TRACE:: DataManager.AddSubscription(): Added AMZN,#0,AMZN,Minute,TradeBar,Trade,Adjusted,OpenInterest. Start: 4/22/2026 9:02:17 PM. End: 12/31/2050 5:00:00 AM
+2026-04-22T21:02:17.3090995Z TRACE:: DataManager.AddSubscription(): Added AMZN,#0,AMZN,Minute,QuoteBar,Quote,Adjusted,OpenInterest. Start: 4/22/2026 9:02:17 PM. End: 12/31/2050 5:00:00 AM
+2026-04-22T21:02:17.3093558Z TRACE:: EventBasedDataQueueHandlerSubscriptionManager.Subscribe(): TSLA
+2026-04-22T21:02:17.3097066Z TRACE:: DataManager.AddSubscription(): Added TSLA,#0,TSLA,Minute,TradeBar,Trade,Adjusted,OpenInterest. Start: 4/22/2026 9:02:17 PM. End: 12/31/2050 5:00:00 AM
+2026-04-22T21:02:17.3098725Z TRACE:: DataManager.AddSubscription(): Added TSLA,#0,TSLA,Minute,QuoteBar,Quote,Adjusted,OpenInterest. Start: 4/22/2026 9:02:17 PM. End: 12/31/2050 5:00:00 AM
+2026-04-22T21:02:17.3101430Z TRACE:: EventBasedDataQueueHandlerSubscriptionManager.Subscribe(): JPM
+2026-04-22T21:02:17.3104497Z TRACE:: DataManager.AddSubscription(): Added JPM,#0,JPM,Minute,TradeBar,Trade,Adjusted,OpenInterest. Start: 4/22/2026 9:02:17 PM. End: 12/31/2050 5:00:00 AM
+2026-04-22T21:02:17.3105871Z TRACE:: DataManager.AddSubscription(): Added JPM,#0,JPM,Minute,QuoteBar,Quote,Adjusted,OpenInterest. Start: 4/22/2026 9:02:17 PM. End: 12/31/2050 5:00:00 AM
+2026-04-22T21:02:17.3112978Z TRACE:: EventBasedDataQueueHandlerSubscriptionManager.Subscribe(): BAC
+2026-04-22T21:02:17.3116338Z TRACE:: DataManager.AddSubscription(): Added BAC,#0,BAC,Minute,TradeBar,Trade,Adjusted,OpenInterest. Start: 4/22/2026 9:02:17 PM. End: 12/31/2050 5:00:00 AM
+2026-04-22T21:02:17.3117858Z TRACE:: DataManager.AddSubscription(): Added BAC,#0,BAC,Minute,QuoteBar,Quote,Adjusted,OpenInterest. Start: 4/22/2026 9:02:17 PM. End: 12/31/2050 5:00:00 AM
+2026-04-22T21:02:17.3120051Z TRACE:: EventBasedDataQueueHandlerSubscriptionManager.Subscribe(): GS
+2026-04-22T21:02:17.3123126Z TRACE:: DataManager.AddSubscription(): Added GS,#0,GS,Minute,TradeBar,Trade,Adjusted,OpenInterest. Start: 4/22/2026 9:02:17 PM. End: 12/31/2050 5:00:00 AM
+2026-04-22T21:02:17.3124293Z TRACE:: DataManager.AddSubscription(): Added GS,#0,GS,Minute,QuoteBar,Quote,Adjusted,OpenInterest. Start: 4/22/2026 9:02:17 PM. End: 12/31/2050 5:00:00 AM
+2026-04-22T21:02:17.3126706Z TRACE:: EventBasedDataQueueHandlerSubscriptionManager.Subscribe(): WFC
+2026-04-22T21:02:17.3129492Z TRACE:: DataManager.AddSubscription(): Added WFC,#0,WFC,Minute,TradeBar,Trade,Adjusted,OpenInterest. Start: 4/22/2026 9:02:17 PM. End: 12/31/2050 5:00:00 AM
+2026-04-22T21:02:17.3130818Z TRACE:: DataManager.AddSubscription(): Added WFC,#0,WFC,Minute,QuoteBar,Quote,Adjusted,OpenInterest. Start: 4/22/2026 9:02:17 PM. End: 12/31/2050 5:00:00 AM
+2026-04-22T21:02:17.3133426Z TRACE:: EventBasedDataQueueHandlerSubscriptionManager.Subscribe(): JNJ
+2026-04-22T21:02:17.3136764Z TRACE:: DataManager.AddSubscription(): Added JNJ,#0,JNJ,Minute,TradeBar,Trade,Adjusted,OpenInterest. Start: 4/22/2026 9:02:17 PM. End: 12/31/2050 5:00:00 AM
+2026-04-22T21:02:17.3138008Z TRACE:: DataManager.AddSubscription(): Added JNJ,#0,JNJ,Minute,QuoteBar,Quote,Adjusted,OpenInterest. Start: 4/22/2026 9:02:17 PM. End: 12/31/2050 5:00:00 AM
+2026-04-22T21:02:17.3139693Z TRACE:: EventBasedDataQueueHandlerSubscriptionManager.Subscribe(): UNH
+2026-04-22T21:02:17.3142361Z TRACE:: DataManager.AddSubscription(): Added UNH,#0,UNH,Minute,TradeBar,Trade,Adjusted,OpenInterest. Start: 4/22/2026 9:02:17 PM. End: 12/31/2050 5:00:00 AM
+2026-04-22T21:02:17.3143468Z TRACE:: DataManager.AddSubscription(): Added UNH,#0,UNH,Minute,QuoteBar,Quote,Adjusted,OpenInterest. Start: 4/22/2026 9:02:17 PM. End: 12/31/2050 5:00:00 AM
+2026-04-22T21:02:17.3145904Z TRACE:: EventBasedDataQueueHandlerSubscriptionManager.Subscribe(): PFE
+2026-04-22T21:02:17.3148773Z TRACE:: DataManager.AddSubscription(): Added PFE,#0,PFE,Minute,TradeBar,Trade,Adjusted,OpenInterest. Start: 4/22/2026 9:02:17 PM. End: 12/31/2050 5:00:00 AM
+2026-04-22T21:02:17.3150240Z TRACE:: DataManager.AddSubscription(): Added PFE,#0,PFE,Minute,QuoteBar,Quote,Adjusted,OpenInterest. Start: 4/22/2026 9:02:17 PM. End: 12/31/2050 5:00:00 AM
+2026-04-22T21:02:17.3152161Z TRACE:: EventBasedDataQueueHandlerSubscriptionManager.Subscribe(): LLY
+2026-04-22T21:02:17.3154665Z TRACE:: DataManager.AddSubscription(): Added LLY,#0,LLY,Minute,TradeBar,Trade,Adjusted,OpenInterest. Start: 4/22/2026 9:02:17 PM. End: 12/31/2050 5:00:00 AM
+2026-04-22T21:02:17.3156308Z TRACE:: DataManager.AddSubscription(): Added LLY,#0,LLY,Minute,QuoteBar,Quote,Adjusted,OpenInterest. Start: 4/22/2026 9:02:17 PM. End: 12/31/2050 5:00:00 AM
+2026-04-22T21:02:17.3158342Z TRACE:: EventBasedDataQueueHandlerSubscriptionManager.Subscribe(): PG
+2026-04-22T21:02:17.3160245Z TRACE:: DataManager.AddSubscription(): Added PG,#0,PG,Minute,TradeBar,Trade,Adjusted,OpenInterest. Start: 4/22/2026 9:02:17 PM. End: 12/31/2050 5:00:00 AM
+2026-04-22T21:02:17.3161895Z TRACE:: DataManager.AddSubscription(): Added PG,#0,PG,Minute,QuoteBar,Quote,Adjusted,OpenInterest. Start: 4/22/2026 9:02:17 PM. End: 12/31/2050 5:00:00 AM
+2026-04-22T21:02:17.3163879Z TRACE:: EventBasedDataQueueHandlerSubscriptionManager.Subscribe(): KO
+2026-04-22T21:02:17.3166283Z TRACE:: DataManager.AddSubscription(): Added KO,#0,KO,Minute,TradeBar,Trade,Adjusted,OpenInterest. Start: 4/22/2026 9:02:17 PM. End: 12/31/2050 5:00:00 AM
+2026-04-22T21:02:17.3168077Z TRACE:: DataManager.AddSubscription(): Added KO,#0,KO,Minute,QuoteBar,Quote,Adjusted,OpenInterest. Start: 4/22/2026 9:02:17 PM. End: 12/31/2050 5:00:00 AM
+2026-04-22T21:02:17.3170209Z TRACE:: EventBasedDataQueueHandlerSubscriptionManager.Subscribe(): WMT
+2026-04-22T21:02:17.3172169Z TRACE:: DataManager.AddSubscription(): Added WMT,#0,WMT,Minute,TradeBar,Trade,Adjusted,OpenInterest. Start: 4/22/2026 9:02:17 PM. End: 12/31/2050 5:00:00 AM
+2026-04-22T21:02:17.3173269Z TRACE:: DataManager.AddSubscription(): Added WMT,#0,WMT,Minute,QuoteBar,Quote,Adjusted,OpenInterest. Start: 4/22/2026 9:02:17 PM. End: 12/31/2050 5:00:00 AM
+2026-04-22T21:02:17.3175630Z TRACE:: EventBasedDataQueueHandlerSubscriptionManager.Subscribe(): HD
+2026-04-22T21:02:17.3177591Z TRACE:: DataManager.AddSubscription(): Added HD,#0,HD,Minute,TradeBar,Trade,Adjusted,OpenInterest. Start: 4/22/2026 9:02:17 PM. End: 12/31/2050 5:00:00 AM
+2026-04-22T21:02:17.3179275Z TRACE:: DataManager.AddSubscription(): Added HD,#0,HD,Minute,QuoteBar,Quote,Adjusted,OpenInterest. Start: 4/22/2026 9:02:17 PM. End: 12/31/2050 5:00:00 AM
+2026-04-22T21:02:17.3181560Z TRACE:: EventBasedDataQueueHandlerSubscriptionManager.Subscribe(): DIS
+2026-04-22T21:02:17.3183905Z TRACE:: DataManager.AddSubscription(): Added DIS,#0,DIS,Minute,TradeBar,Trade,Adjusted,OpenInterest. Start: 4/22/2026 9:02:17 PM. End: 12/31/2050 5:00:00 AM
+2026-04-22T21:02:17.3185787Z TRACE:: DataManager.AddSubscription(): Added DIS,#0,DIS,Minute,QuoteBar,Quote,Adjusted,OpenInterest. Start: 4/22/2026 9:02:17 PM. End: 12/31/2050 5:00:00 AM
+2026-04-22T21:02:17.3188198Z TRACE:: EventBasedDataQueueHandlerSubscriptionManager.Subscribe(): CAT
+2026-04-22T21:02:17.3191181Z TRACE:: DataManager.AddSubscription(): Added CAT,#0,CAT,Minute,TradeBar,Trade,Adjusted,OpenInterest. Start: 4/22/2026 9:02:17 PM. End: 12/31/2050 5:00:00 AM
+2026-04-22T21:02:17.3192535Z TRACE:: DataManager.AddSubscription(): Added CAT,#0,CAT,Minute,QuoteBar,Quote,Adjusted,OpenInterest. Start: 4/22/2026 9:02:17 PM. End: 12/31/2050 5:00:00 AM
+2026-04-22T21:02:17.3195042Z TRACE:: EventBasedDataQueueHandlerSubscriptionManager.Subscribe(): BA
+2026-04-22T21:02:17.3197783Z TRACE:: DataManager.AddSubscription(): Added BA,#0,BA,Minute,TradeBar,Trade,Adjusted,OpenInterest. Start: 4/22/2026 9:02:17 PM. End: 12/31/2050 5:00:00 AM
+2026-04-22T21:02:17.3199703Z TRACE:: DataManager.AddSubscription(): Added BA,#0,BA,Minute,QuoteBar,Quote,Adjusted,OpenInterest. Start: 4/22/2026 9:02:17 PM. End: 12/31/2050 5:00:00 AM
+2026-04-22T21:02:17.3201980Z TRACE:: EventBasedDataQueueHandlerSubscriptionManager.Subscribe(): XOM
+2026-04-22T21:02:17.3204792Z TRACE:: DataManager.AddSubscription(): Added XOM,#0,XOM,Minute,TradeBar,Trade,Adjusted,OpenInterest. Start: 4/22/2026 9:02:17 PM. End: 12/31/2050 5:00:00 AM
+2026-04-22T21:02:17.3206247Z TRACE:: DataManager.AddSubscription(): Added XOM,#0,XOM,Minute,QuoteBar,Quote,Adjusted,OpenInterest. Start: 4/22/2026 9:02:17 PM. End: 12/31/2050 5:00:00 AM
+2026-04-22T21:02:17.3208698Z TRACE:: EventBasedDataQueueHandlerSubscriptionManager.Subscribe(): CVX
+2026-04-22T21:02:17.3211535Z TRACE:: DataManager.AddSubscription(): Added CVX,#0,CVX,Minute,TradeBar,Trade,Adjusted,OpenInterest. Start: 4/22/2026 9:02:17 PM. End: 12/31/2050 5:00:00 AM
+2026-04-22T21:02:17.3213147Z TRACE:: DataManager.AddSubscription(): Added CVX,#0,CVX,Minute,QuoteBar,Quote,Adjusted,OpenInterest. Start: 4/22/2026 9:02:17 PM. End: 12/31/2050 5:00:00 AM
+2026-04-22T21:02:17.3215540Z TRACE:: EventBasedDataQueueHandlerSubscriptionManager.Subscribe(): AAL
+2026-04-22T21:02:17.3217695Z TRACE:: DataManager.AddSubscription(): Added AAL,#0,AAL,Minute,TradeBar,Trade,Adjusted,OpenInterest. Start: 4/22/2026 9:02:17 PM. End: 12/31/2050 5:00:00 AM
+2026-04-22T21:02:17.3218644Z TRACE:: DataManager.AddSubscription(): Added AAL,#0,AAL,Minute,QuoteBar,Quote,Adjusted,OpenInterest. Start: 4/22/2026 9:02:17 PM. End: 12/31/2050 5:00:00 AM
+2026-04-22T21:02:17.3220868Z TRACE:: EventBasedDataQueueHandlerSubscriptionManager.Subscribe(): ASTS
+2026-04-22T21:02:17.3223439Z TRACE:: DataManager.AddSubscription(): Added ASTS,#0,ASTS,Minute,TradeBar,Trade,Adjusted,OpenInterest. Start: 4/22/2026 9:02:17 PM. End: 12/31/2050 5:00:00 AM
+2026-04-22T21:02:17.3225244Z TRACE:: DataManager.AddSubscription(): Added ASTS,#0,ASTS,Minute,QuoteBar,Quote,Adjusted,OpenInterest. Start: 4/22/2026 9:02:17 PM. End: 12/31/2050 5:00:00 AM
+2026-04-22T21:02:17.3227376Z TRACE:: EventBasedDataQueueHandlerSubscriptionManager.Subscribe(): AVGO
+2026-04-22T21:02:17.3229863Z TRACE:: DataManager.AddSubscription(): Added AVGO,#0,AVGO,Minute,TradeBar,Trade,Adjusted,OpenInterest. Start: 4/22/2026 9:02:17 PM. End: 12/31/2050 5:00:00 AM
+2026-04-22T21:02:17.3230821Z TRACE:: DataManager.AddSubscription(): Added AVGO,#0,AVGO,Minute,QuoteBar,Quote,Adjusted,OpenInterest. Start: 4/22/2026 9:02:17 PM. End: 12/31/2050 5:00:00 AM
+2026-04-22T21:02:17.3232839Z TRACE:: EventBasedDataQueueHandlerSubscriptionManager.Subscribe(): CCJ
+2026-04-22T21:02:17.3235552Z TRACE:: DataManager.AddSubscription(): Added CCJ,#0,CCJ,Minute,TradeBar,Trade,Adjusted,OpenInterest. Start: 4/22/2026 9:02:17 PM. End: 12/31/2050 5:00:00 AM
+2026-04-22T21:02:17.3237443Z TRACE:: DataManager.AddSubscription(): Added CCJ,#0,CCJ,Minute,QuoteBar,Quote,Adjusted,OpenInterest. Start: 4/22/2026 9:02:17 PM. End: 12/31/2050 5:00:00 AM
+2026-04-22T21:02:17.3239780Z TRACE:: EventBasedDataQueueHandlerSubscriptionManager.Subscribe(): CRWD
+2026-04-22T21:02:17.3242595Z TRACE:: DataManager.AddSubscription(): Added CRWD,#0,CRWD,Minute,TradeBar,Trade,Adjusted,OpenInterest. Start: 4/22/2026 9:02:17 PM. End: 12/31/2050 5:00:00 AM
+2026-04-22T21:02:17.3244093Z TRACE:: DataManager.AddSubscription(): Added CRWD,#0,CRWD,Minute,QuoteBar,Quote,Adjusted,OpenInterest. Start: 4/22/2026 9:02:17 PM. End: 12/31/2050 5:00:00 AM
+2026-04-22T21:02:17.3248226Z TRACE:: EventBasedDataQueueHandlerSubscriptionManager.Subscribe(): CRWV
+2026-04-22T21:02:17.3251347Z TRACE:: DataManager.AddSubscription(): Added CRWV,#0,CRWV,Minute,TradeBar,Trade,Adjusted,OpenInterest. Start: 4/22/2026 9:02:17 PM. End: 12/31/2050 5:00:00 AM
+2026-04-22T21:02:17.3252506Z TRACE:: DataManager.AddSubscription(): Added CRWV,#0,CRWV,Minute,QuoteBar,Quote,Adjusted,OpenInterest. Start: 4/22/2026 9:02:17 PM. End: 12/31/2050 5:00:00 AM
+2026-04-22T21:02:17.3254937Z TRACE:: EventBasedDataQueueHandlerSubscriptionManager.Subscribe(): GEV
+2026-04-22T21:02:17.3257899Z TRACE:: DataManager.AddSubscription(): Added GEV,#0,GEV,Minute,TradeBar,Trade,Adjusted,OpenInterest. Start: 4/22/2026 9:02:17 PM. End: 12/31/2050 5:00:00 AM
+2026-04-22T21:02:17.3261073Z TRACE:: DataManager.AddSubscription(): Added GEV,#0,GEV,Minute,QuoteBar,Quote,Adjusted,OpenInterest. Start: 4/22/2026 9:02:17 PM. End: 12/31/2050 5:00:00 AM
+2026-04-22T21:02:17.3262857Z TRACE:: EventBasedDataQueueHandlerSubscriptionManager.Subscribe(): GLD
+2026-04-22T21:02:17.3266081Z TRACE:: DataManager.AddSubscription(): Added GLD,#0,GLD,Minute,TradeBar,Trade,Adjusted,OpenInterest. Start: 4/22/2026 9:02:17 PM. End: 12/31/2050 5:00:00 AM
+2026-04-22T21:02:17.3267468Z TRACE:: DataManager.AddSubscription(): Added GLD,#0,GLD,Minute,QuoteBar,Quote,Adjusted,OpenInterest. Start: 4/22/2026 9:02:17 PM. End: 12/31/2050 5:00:00 AM
+2026-04-22T21:02:17.3269715Z TRACE:: EventBasedDataQueueHandlerSubscriptionManager.Subscribe(): ITA
+2026-04-22T21:02:17.3272364Z TRACE:: DataManager.AddSubscription(): Added ITA,#0,ITA,Minute,TradeBar,Trade,Adjusted,OpenInterest. Start: 4/22/2026 9:02:17 PM. End: 12/31/2050 5:00:00 AM
+2026-04-22T21:02:17.3273845Z TRACE:: DataManager.AddSubscription(): Added ITA,#0,ITA,Minute,QuoteBar,Quote,Adjusted,OpenInterest. Start: 4/22/2026 9:02:17 PM. End: 12/31/2050 5:00:00 AM
+2026-04-22T21:02:17.3275892Z TRACE:: EventBasedDataQueueHandlerSubscriptionManager.Subscribe(): PLTR
+2026-04-22T21:02:17.3278178Z TRACE:: DataManager.AddSubscription(): Added PLTR,#0,PLTR,Minute,TradeBar,Trade,Adjusted,OpenInterest. Start: 4/22/2026 9:02:17 PM. End: 12/31/2050 5:00:00 AM
+2026-04-22T21:02:17.3279492Z TRACE:: DataManager.AddSubscription(): Added PLTR,#0,PLTR,Minute,QuoteBar,Quote,Adjusted,OpenInterest. Start: 4/22/2026 9:02:17 PM. End: 12/31/2050 5:00:00 AM
+2026-04-22T21:02:17.3281893Z TRACE:: EventBasedDataQueueHandlerSubscriptionManager.Subscribe(): POWL
+2026-04-22T21:02:17.3283870Z TRACE:: DataManager.AddSubscription(): Added POWL,#0,POWL,Minute,TradeBar,Trade,Adjusted,OpenInterest. Start: 4/22/2026 9:02:17 PM. End: 12/31/2050 5:00:00 AM
+2026-04-22T21:02:17.3285413Z TRACE:: DataManager.AddSubscription(): Added POWL,#0,POWL,Minute,QuoteBar,Quote,Adjusted,OpenInterest. Start: 4/22/2026 9:02:17 PM. End: 12/31/2050 5:00:00 AM
+2026-04-22T21:02:17.3295582Z TRACE:: EventBasedDataQueueHandlerSubscriptionManager.Subscribe(): QQQ
+2026-04-22T21:02:17.3299152Z TRACE:: DataManager.AddSubscription(): Added QQQ,#0,QQQ,Minute,TradeBar,Trade,Adjusted,OpenInterest. Start: 4/22/2026 9:02:17 PM. End: 12/31/2050 5:00:00 AM
+2026-04-22T21:02:17.3301516Z TRACE:: DataManager.AddSubscription(): Added QQQ,#0,QQQ,Minute,QuoteBar,Quote,Adjusted,OpenInterest. Start: 4/22/2026 9:02:17 PM. End: 12/31/2050 5:00:00 AM
+2026-04-22T21:02:17.3304835Z TRACE:: EventBasedDataQueueHandlerSubscriptionManager.Subscribe(): RKLB
+2026-04-22T21:02:17.3307471Z TRACE:: DataManager.AddSubscription(): Added RKLB,#0,RKLB,Minute,TradeBar,Trade,Adjusted,OpenInterest. Start: 4/22/2026 9:02:17 PM. End: 12/31/2050 5:00:00 AM
+2026-04-22T21:02:17.3308873Z TRACE:: DataManager.AddSubscription(): Added RKLB,#0,RKLB,Minute,QuoteBar,Quote,Adjusted,OpenInterest. Start: 4/22/2026 9:02:17 PM. End: 12/31/2050 5:00:00 AM
+2026-04-22T21:02:17.3310693Z TRACE:: EventBasedDataQueueHandlerSubscriptionManager.Subscribe(): RTX
+2026-04-22T21:02:17.3312960Z TRACE:: DataManager.AddSubscription(): Added RTX,#0,RTX,Minute,TradeBar,Trade,Adjusted,OpenInterest. Start: 4/22/2026 9:02:17 PM. End: 12/31/2050 5:00:00 AM
+2026-04-22T21:02:17.3314365Z TRACE:: DataManager.AddSubscription(): Added RTX,#0,RTX,Minute,QuoteBar,Quote,Adjusted,OpenInterest. Start: 4/22/2026 9:02:17 PM. End: 12/31/2050 5:00:00 AM
+2026-04-22T21:02:17.3318860Z TRACE:: EventBasedDataQueueHandlerSubscriptionManager.Subscribe(): SPY
+2026-04-22T21:02:17.3321238Z TRACE:: DataManager.AddSubscription(): Added SPY,#0,SPY,Minute,TradeBar,Trade,Adjusted,OpenInterest. Start: 4/22/2026 9:02:17 PM. End: 12/31/2050 5:00:00 AM
+2026-04-22T21:02:17.3322490Z TRACE:: DataManager.AddSubscription(): Added SPY,#0,SPY,Minute,QuoteBar,Quote,Adjusted,OpenInterest. Start: 4/22/2026 9:02:17 PM. End: 12/31/2050 5:00:00 AM
+2026-04-22T21:02:17.3324312Z TRACE:: EventBasedDataQueueHandlerSubscriptionManager.Subscribe(): TAIL
+2026-04-22T21:02:17.3326963Z TRACE:: DataManager.AddSubscription(): Added TAIL,#0,TAIL,Minute,TradeBar,Trade,Adjusted,OpenInterest. Start: 4/22/2026 9:02:17 PM. End: 12/31/2050 5:00:00 AM
+2026-04-22T21:02:17.3328207Z TRACE:: DataManager.AddSubscription(): Added TAIL,#0,TAIL,Minute,QuoteBar,Quote,Adjusted,OpenInterest. Start: 4/22/2026 9:02:17 PM. End: 12/31/2050 5:00:00 AM
+2026-04-22T21:02:17.3330057Z TRACE:: EventBasedDataQueueHandlerSubscriptionManager.Subscribe(): VRT
+2026-04-22T21:02:17.3331895Z TRACE:: DataManager.AddSubscription(): Added VRT,#0,VRT,Minute,TradeBar,Trade,Adjusted,OpenInterest. Start: 4/22/2026 9:02:17 PM. End: 12/31/2050 5:00:00 AM
+2026-04-22T21:02:17.3333061Z TRACE:: DataManager.AddSubscription(): Added VRT,#0,VRT,Minute,QuoteBar,Quote,Adjusted,OpenInterest. Start: 4/22/2026 9:02:17 PM. End: 12/31/2050 5:00:00 AM
+2026-04-22T21:02:17.3335062Z TRACE:: EventBasedDataQueueHandlerSubscriptionManager.Subscribe(): VST
+2026-04-22T21:02:17.3337168Z TRACE:: DataManager.AddSubscription(): Added VST,#0,VST,Minute,TradeBar,Trade,Adjusted,OpenInterest. Start: 4/22/2026 9:02:17 PM. End: 12/31/2050 5:00:00 AM
+2026-04-22T21:02:17.3338512Z TRACE:: DataManager.AddSubscription(): Added VST,#0,VST,Minute,QuoteBar,Quote,Adjusted,OpenInterest. Start: 4/22/2026 9:02:17 PM. End: 12/31/2050 5:00:00 AM
+2026-04-22T21:02:17.3373440Z TRACE:: DataManager.AddSubscription(): Added AAPL,#0,AAPL,Minute,ProphitAI15MinBar,Trade,Adjusted,OpenInterest. Start: 4/22/2026 9:02:17 PM. End: 12/31/2050 5:00:00 AM
+2026-04-22T21:02:17.3378023Z TRACE:: DataManager.AddSubscription(): Added MSFT,#0,MSFT,Minute,ProphitAI15MinBar,Trade,Adjusted,OpenInterest. Start: 4/22/2026 9:02:17 PM. End: 12/31/2050 5:00:00 AM
+2026-04-22T21:02:17.3380128Z TRACE:: DataManager.AddSubscription(): Added NVDA,#0,NVDA,Minute,ProphitAI15MinBar,Trade,Adjusted,OpenInterest. Start: 4/22/2026 9:02:17 PM. End: 12/31/2050 5:00:00 AM
+2026-04-22T21:02:17.3382443Z TRACE:: DataManager.AddSubscription(): Added GOOGL,#0,GOOGL,Minute,ProphitAI15MinBar,Trade,Adjusted,OpenInterest. Start: 4/22/2026 9:02:17 PM. End: 12/31/2050 5:00:00 AM
+2026-04-22T21:02:17.3384345Z TRACE:: DataManager.AddSubscription(): Added META,#0,META,Minute,ProphitAI15MinBar,Trade,Adjusted,OpenInterest. Start: 4/22/2026 9:02:17 PM. End: 12/31/2050 5:00:00 AM
+2026-04-22T21:02:17.3385843Z TRACE:: DataManager.AddSubscription(): Added AMZN,#0,AMZN,Minute,ProphitAI15MinBar,Trade,Adjusted,OpenInterest. Start: 4/22/2026 9:02:17 PM. End: 12/31/2050 5:00:00 AM
+2026-04-22T21:02:17.3388170Z TRACE:: DataManager.AddSubscription(): Added TSLA,#0,TSLA,Minute,ProphitAI15MinBar,Trade,Adjusted,OpenInterest. Start: 4/22/2026 9:02:17 PM. End: 12/31/2050 5:00:00 AM
+2026-04-22T21:02:17.3395775Z TRACE:: DataManager.AddSubscription(): Added JPM,#0,JPM,Minute,ProphitAI15MinBar,Trade,Adjusted,OpenInterest. Start: 4/22/2026 9:02:17 PM. End: 12/31/2050 5:00:00 AM
+2026-04-22T21:02:17.3399225Z TRACE:: DataManager.AddSubscription(): Added BAC,#0,BAC,Minute,ProphitAI15MinBar,Trade,Adjusted,OpenInterest. Start: 4/22/2026 9:02:17 PM. End: 12/31/2050 5:00:00 AM
+2026-04-22T21:02:17.3402966Z TRACE:: StreamingClient_OnError(AlpacaDataStreamingClient): Alpaca.Markets.RestClientErrorException: symbol limit exceeded
+2026-04-22T21:02:17.3405430Z TRACE:: DataManager.AddSubscription(): Added GS,#0,GS,Minute,ProphitAI15MinBar,Trade,Adjusted,OpenInterest. Start: 4/22/2026 9:02:17 PM. End: 12/31/2050 5:00:00 AM
+2026-04-22T21:02:17.3433300Z TRACE:: DataManager.AddSubscription(): Added WFC,#0,WFC,Minute,ProphitAI15MinBar,Trade,Adjusted,OpenInterest. Start: 4/22/2026 9:02:17 PM. End: 12/31/2050 5:00:00 AM
+2026-04-22T21:02:17.3434584Z TRACE:: DataManager.AddSubscription(): Added JNJ,#0,JNJ,Minute,ProphitAI15MinBar,Trade,Adjusted,OpenInterest. Start: 4/22/2026 9:02:17 PM. End: 12/31/2050 5:00:00 AM
+2026-04-22T21:02:17.3436143Z TRACE:: DataManager.AddSubscription(): Added UNH,#0,UNH,Minute,ProphitAI15MinBar,Trade,Adjusted,OpenInterest. Start: 4/22/2026 9:02:17 PM. End: 12/31/2050 5:00:00 AM
+2026-04-22T21:02:17.3437537Z TRACE:: DataManager.AddSubscription(): Added PFE,#0,PFE,Minute,ProphitAI15MinBar,Trade,Adjusted,OpenInterest. Start: 4/22/2026 9:02:17 PM. End: 12/31/2050 5:00:00 AM
+2026-04-22T21:02:17.3438881Z TRACE:: DataManager.AddSubscription(): Added LLY,#0,LLY,Minute,ProphitAI15MinBar,Trade,Adjusted,OpenInterest. Start: 4/22/2026 9:02:17 PM. End: 12/31/2050 5:00:00 AM
+2026-04-22T21:02:17.3440070Z TRACE:: DataManager.AddSubscription(): Added PG,#0,PG,Minute,ProphitAI15MinBar,Trade,Adjusted,OpenInterest. Start: 4/22/2026 9:02:17 PM. End: 12/31/2050 5:00:00 AM
+2026-04-22T21:02:17.3441193Z TRACE:: DataManager.AddSubscription(): Added KO,#0,KO,Minute,ProphitAI15MinBar,Trade,Adjusted,OpenInterest. Start: 4/22/2026 9:02:17 PM. End: 12/31/2050 5:00:00 AM
+2026-04-22T21:02:17.3442258Z TRACE:: DataManager.AddSubscription(): Added WMT,#0,WMT,Minute,ProphitAI15MinBar,Trade,Adjusted,OpenInterest. Start: 4/22/2026 9:02:17 PM. End: 12/31/2050 5:00:00 AM
+2026-04-22T21:02:17.3444833Z TRACE:: DataManager.AddSubscription(): Added HD,#0,HD,Minute,ProphitAI15MinBar,Trade,Adjusted,OpenInterest. Start: 4/22/2026 9:02:17 PM. End: 12/31/2050 5:00:00 AM
+2026-04-22T21:02:17.3448055Z TRACE:: StreamingClient_OnError(AlpacaDataStreamingClient): Alpaca.Markets.RestClientErrorException: symbol limit exceeded
+2026-04-22T21:02:17.3465258Z TRACE:: DataManager.AddSubscription(): Added DIS,#0,DIS,Minute,ProphitAI15MinBar,Trade,Adjusted,OpenInterest. Start: 4/22/2026 9:02:17 PM. End: 12/31/2050 5:00:00 AM
+2026-04-22T21:02:17.3469309Z TRACE:: DataManager.AddSubscription(): Added CAT,#0,CAT,Minute,ProphitAI15MinBar,Trade,Adjusted,OpenInterest. Start: 4/22/2026 9:02:17 PM. End: 12/31/2050 5:00:00 AM
+2026-04-22T21:02:17.3473082Z TRACE:: DataManager.AddSubscription(): Added BA,#0,BA,Minute,ProphitAI15MinBar,Trade,Adjusted,OpenInterest. Start: 4/22/2026 9:02:17 PM. End: 12/31/2050 5:00:00 AM
+2026-04-22T21:02:17.3478597Z TRACE:: DataManager.AddSubscription(): Added XOM,#0,XOM,Minute,ProphitAI15MinBar,Trade,Adjusted,OpenInterest. Start: 4/22/2026 9:02:17 PM. End: 12/31/2050 5:00:00 AM
+2026-04-22T21:02:17.3479155Z TRACE:: StreamingClient_OnError(AlpacaDataStreamingClient): Alpaca.Markets.RestClientErrorException: symbol limit exceeded
+2026-04-22T21:02:17.3484730Z TRACE:: DataManager.AddSubscription(): Added CVX,#0,CVX,Minute,ProphitAI15MinBar,Trade,Adjusted,OpenInterest. Start: 4/22/2026 9:02:17 PM. End: 12/31/2050 5:00:00 AM
+2026-04-22T21:02:17.3497108Z TRACE:: StreamingClient_OnError(AlpacaDataStreamingClient): Alpaca.Markets.RestClientErrorException: symbol limit exceeded
+2026-04-22T21:02:17.3501497Z TRACE:: DataManager.RemoveSubscription(): Removed QC-UNIVERSE-USERDEFINED-USA-BASE,#0,QC-UNIVERSE-USERDEFINED-USA-BASE,Minute,ProphitAI15MinBar,Trade,Adjusted,OpenInterest,Internal
+2026-04-22T21:02:17.3514832Z TRACE:: LiveMappingEventProvider(AAL,#0,AAL,Minute,TradeBar,Trade,Adjusted,OpenInterest): new tradable date 20260422. New MapFile: True. MapFile.Count Old: 0 New: 0
+2026-04-22T21:02:17.3532053Z TRACE:: StreamingClient_OnError(AlpacaDataStreamingClient): Alpaca.Markets.RestClientErrorException: symbol limit exceeded
+2026-04-22T21:02:17.3534108Z TRACE:: LiveMappingEventProvider(AAPL,#0,AAPL,Minute,TradeBar,Trade,Adjusted,OpenInterest): new tradable date 20260422. New MapFile: False. MapFile.Count Old: 2 New: 2
+2026-04-22T21:02:17.3536677Z TRACE:: LiveMappingEventProvider(AMZN,#0,AMZN,Minute,TradeBar,Trade,Adjusted,OpenInterest): new tradable date 20260422. New MapFile: True. MapFile.Count Old: 0 New: 0
+2026-04-22T21:02:17.3537207Z TRACE:: LiveMappingEventProvider(ASTS,#0,ASTS,Minute,TradeBar,Trade,Adjusted,OpenInterest): new tradable date 20260422. New MapFile: True. MapFile.Count Old: 0 New: 0
+2026-04-22T21:02:17.3538063Z TRACE:: LiveMappingEventProvider(AVGO,#0,AVGO,Minute,TradeBar,Trade,Adjusted,OpenInterest): new tradable date 20260422. New MapFile: True. MapFile.Count Old: 0 New: 0
+2026-04-22T21:02:17.3539532Z TRACE:: LiveMappingEventProvider(BA,#0,BA,Minute,TradeBar,Trade,Adjusted,OpenInterest): new tradable date 20260422. New MapFile: True. MapFile.Count Old: 0 New: 0
+2026-04-22T21:02:17.3540874Z TRACE:: LiveMappingEventProvider(BAC,#0,BAC,Minute,TradeBar,Trade,Adjusted,OpenInterest): new tradable date 20260422. New MapFile: False. MapFile.Count Old: 3 New: 3
+2026-04-22T21:02:17.3542695Z TRACE:: LiveMappingEventProvider(CAT,#0,CAT,Minute,TradeBar,Trade,Adjusted,OpenInterest): new tradable date 20260422. New MapFile: True. MapFile.Count Old: 0 New: 0
+2026-04-22T21:02:17.3543183Z TRACE:: LiveMappingEventProvider(CCJ,#0,CCJ,Minute,TradeBar,Trade,Adjusted,OpenInterest): new tradable date 20260422. New MapFile: True. MapFile.Count Old: 0 New: 0
+2026-04-22T21:02:17.3544345Z TRACE:: LiveMappingEventProvider(CRWD,#0,CRWD,Minute,TradeBar,Trade,Adjusted,OpenInterest): new tradable date 20260422. New MapFile: True. MapFile.Count Old: 0 New: 0
+2026-04-22T21:02:17.3545338Z TRACE:: LiveMappingEventProvider(CRWV,#0,CRWV,Minute,TradeBar,Trade,Adjusted,OpenInterest): new tradable date 20260422. New MapFile: True. MapFile.Count Old: 0 New: 0
+2026-04-22T21:02:17.3546585Z TRACE:: LiveMappingEventProvider(CVX,#0,CVX,Minute,TradeBar,Trade,Adjusted,OpenInterest): new tradable date 20260422. New MapFile: True. MapFile.Count Old: 0 New: 0
+2026-04-22T21:02:17.3550548Z TRACE:: LiveMappingEventProvider(DIS,#0,DIS,Minute,TradeBar,Trade,Adjusted,OpenInterest): new tradable date 20260422. New MapFile: True. MapFile.Count Old: 0 New: 0
+2026-04-22T21:02:17.3551205Z TRACE:: LiveMappingEventProvider(GEV,#0,GEV,Minute,TradeBar,Trade,Adjusted,OpenInterest): new tradable date 20260422. New MapFile: True. MapFile.Count Old: 0 New: 0
+2026-04-22T21:02:17.3553245Z TRACE:: LiveMappingEventProvider(GLD,#0,GLD,Minute,TradeBar,Trade,Adjusted,OpenInterest): new tradable date 20260422. New MapFile: True. MapFile.Count Old: 0 New: 0
+2026-04-22T21:02:17.3555251Z TRACE:: LiveMappingEventProvider(GOOGL,#0,GOOGL,Minute,TradeBar,Trade,Adjusted,OpenInterest): new tradable date 20260422. New MapFile: False. MapFile.Count Old: 3 New: 3
+2026-04-22T21:02:17.3556662Z TRACE:: LiveMappingEventProvider(GS,#0,GS,Minute,TradeBar,Trade,Adjusted,OpenInterest): new tradable date 20260422. New MapFile: True. MapFile.Count Old: 0 New: 0
+2026-04-22T21:02:17.3557132Z TRACE:: LiveMappingEventProvider(HD,#0,HD,Minute,TradeBar,Trade,Adjusted,OpenInterest): new tradable date 20260422. New MapFile: True. MapFile.Count Old: 0 New: 0
+2026-04-22T21:02:17.3558012Z TRACE:: LiveMappingEventProvider(ITA,#0,ITA,Minute,TradeBar,Trade,Adjusted,OpenInterest): new tradable date 20260422. New MapFile: True. MapFile.Count Old: 0 New: 0
+2026-04-22T21:02:17.3558868Z TRACE:: LiveMappingEventProvider(JNJ,#0,JNJ,Minute,TradeBar,Trade,Adjusted,OpenInterest): new tradable date 20260422. New MapFile: True. MapFile.Count Old: 0 New: 0
+2026-04-22T21:02:17.3560163Z TRACE:: LiveMappingEventProvider(JPM,#0,JPM,Minute,TradeBar,Trade,Adjusted,OpenInterest): new tradable date 20260422. New MapFile: True. MapFile.Count Old: 0 New: 0
+2026-04-22T21:02:17.3562292Z TRACE:: LiveMappingEventProvider(KO,#0,KO,Minute,TradeBar,Trade,Adjusted,OpenInterest): new tradable date 20260422. New MapFile: True. MapFile.Count Old: 0 New: 0
+2026-04-22T21:02:17.3563763Z TRACE:: LiveMappingEventProvider(LLY,#0,LLY,Minute,TradeBar,Trade,Adjusted,OpenInterest): new tradable date 20260422. New MapFile: True. MapFile.Count Old: 0 New: 0
+2026-04-22T21:02:17.3590829Z TRACE:: LiveMappingEventProvider(META,#0,META,Minute,TradeBar,Trade,Adjusted,OpenInterest): new tradable date 20260422. New MapFile: True. MapFile.Count Old: 0 New: 0
+2026-04-22T21:02:17.3592534Z TRACE:: LiveMappingEventProvider(MSFT,#0,MSFT,Minute,TradeBar,Trade,Adjusted,OpenInterest): new tradable date 20260422. New MapFile: True. MapFile.Count Old: 0 New: 0
+2026-04-22T21:02:17.3593859Z TRACE:: LiveMappingEventProvider(NVDA,#0,NVDA,Minute,TradeBar,Trade,Adjusted,OpenInterest): new tradable date 20260422. New MapFile: True. MapFile.Count Old: 0 New: 0
+2026-04-22T21:02:17.3595374Z TRACE:: LiveMappingEventProvider(PFE,#0,PFE,Minute,TradeBar,Trade,Adjusted,OpenInterest): new tradable date 20260422. New MapFile: True. MapFile.Count Old: 0 New: 0
+2026-04-22T21:02:17.3597339Z TRACE:: LiveMappingEventProvider(PG,#0,PG,Minute,TradeBar,Trade,Adjusted,OpenInterest): new tradable date 20260422. New MapFile: True. MapFile.Count Old: 0 New: 0
+2026-04-22T21:02:17.3597799Z TRACE:: LiveMappingEventProvider(PLTR,#0,PLTR,Minute,TradeBar,Trade,Adjusted,OpenInterest): new tradable date 20260422. New MapFile: True. MapFile.Count Old: 0 New: 0
+2026-04-22T21:02:17.3598954Z TRACE:: LiveMappingEventProvider(POWL,#0,POWL,Minute,TradeBar,Trade,Adjusted,OpenInterest): new tradable date 20260422. New MapFile: True. MapFile.Count Old: 0 New: 0
+2026-04-22T21:02:17.3602830Z TRACE:: DataManager.RemoveSubscription(): Removed QC-UNIVERSE-USERDEFINED-USA-EQUITY,#0,QC-UNIVERSE-USERDEFINED-USA-EQUITY,Minute,TradeBar,Trade,Adjusted,OpenInterest,Internal
+2026-04-22T21:02:17.3603365Z TRACE:: LiveMappingEventProvider(QQQ,#0,QQQ,Minute,TradeBar,Trade,Adjusted,OpenInterest): new tradable date 20260422. New MapFile: False. MapFile.Count Old: 4 New: 4
+2026-04-22T21:02:17.3603996Z TRACE:: LiveMappingEventProvider(RKLB,#0,RKLB,Minute,TradeBar,Trade,Adjusted,OpenInterest): new tradable date 20260422. New MapFile: True. MapFile.Count Old: 0 New: 0
+2026-04-22T21:02:17.3605747Z TRACE:: LiveMappingEventProvider(RTX,#0,RTX,Minute,TradeBar,Trade,Adjusted,OpenInterest): new tradable date 20260422. New MapFile: True. MapFile.Count Old: 0 New: 0
+2026-04-22T21:02:17.3606182Z TRACE:: LiveMappingEventProvider(SPY,#0,SPY,Minute,TradeBar,Trade,Adjusted,OpenInterest): new tradable date 20260422. New MapFile: False. MapFile.Count Old: 2 New: 2
+2026-04-22T21:02:17.3607816Z TRACE:: LiveMappingEventProvider(TAIL,#0,TAIL,Minute,TradeBar,Trade,Adjusted,OpenInterest): new tradable date 20260422. New MapFile: True. MapFile.Count Old: 0 New: 0
+2026-04-22T21:02:17.3608908Z TRACE:: LiveMappingEventProvider(TSLA,#0,TSLA,Minute,TradeBar,Trade,Adjusted,OpenInterest): new tradable date 20260422. New MapFile: True. MapFile.Count Old: 0 New: 0
+2026-04-22T21:02:17.3609282Z TRACE:: LiveMappingEventProvider(UNH,#0,UNH,Minute,TradeBar,Trade,Adjusted,OpenInterest): new tradable date 20260422. New MapFile: True. MapFile.Count Old: 0 New: 0
+2026-04-22T21:02:17.3609871Z TRACE:: LiveMappingEventProvider(VRT,#0,VRT,Minute,TradeBar,Trade,Adjusted,OpenInterest): new tradable date 20260422. New MapFile: True. MapFile.Count Old: 0 New: 0
+2026-04-22T21:02:17.3610769Z TRACE:: LiveMappingEventProvider(VST,#0,VST,Minute,TradeBar,Trade,Adjusted,OpenInterest): new tradable date 20260422. New MapFile: True. MapFile.Count Old: 0 New: 0
+2026-04-22T21:02:17.3611549Z TRACE:: LiveMappingEventProvider(WFC,#0,WFC,Minute,TradeBar,Trade,Adjusted,OpenInterest): new tradable date 20260422. New MapFile: True. MapFile.Count Old: 0 New: 0
+2026-04-22T21:02:17.3611992Z TRACE:: LiveMappingEventProvider(WMT,#0,WMT,Minute,TradeBar,Trade,Adjusted,OpenInterest): new tradable date 20260422. New MapFile: True. MapFile.Count Old: 0 New: 0
+2026-04-22T21:02:17.3612755Z TRACE:: LiveMappingEventProvider(XOM,#0,XOM,Minute,TradeBar,Trade,Adjusted,OpenInterest): new tradable date 20260422. New MapFile: True. MapFile.Count Old: 0 New: 0
+2026-04-22T21:02:17.3613584Z TRACE:: LiveMappingEventProvider(AAL,#0,AAL,Minute,QuoteBar,Quote,Adjusted,OpenInterest): new tradable date 20260422. New MapFile: True. MapFile.Count Old: 0 New: 0
+2026-04-22T21:02:17.3614284Z TRACE:: LiveMappingEventProvider(AAPL,#0,AAPL,Minute,QuoteBar,Quote,Adjusted,OpenInterest): new tradable date 20260422. New MapFile: False. MapFile.Count Old: 2 New: 2
+2026-04-22T21:02:17.3615469Z TRACE:: LiveMappingEventProvider(AMZN,#0,AMZN,Minute,QuoteBar,Quote,Adjusted,OpenInterest): new tradable date 20260422. New MapFile: True. MapFile.Count Old: 0 New: 0
+2026-04-22T21:02:17.3616331Z TRACE:: LiveMappingEventProvider(ASTS,#0,ASTS,Minute,QuoteBar,Quote,Adjusted,OpenInterest): new tradable date 20260422. New MapFile: True. MapFile.Count Old: 0 New: 0
+2026-04-22T21:02:17.3616774Z TRACE:: LiveMappingEventProvider(AVGO,#0,AVGO,Minute,QuoteBar,Quote,Adjusted,OpenInterest): new tradable date 20260422. New MapFile: True. MapFile.Count Old: 0 New: 0
+2026-04-22T21:02:17.3618449Z TRACE:: LiveMappingEventProvider(BA,#0,BA,Minute,QuoteBar,Quote,Adjusted,OpenInterest): new tradable date 20260422. New MapFile: True. MapFile.Count Old: 0 New: 0
+2026-04-22T21:02:17.3618880Z TRACE:: LiveMappingEventProvider(BAC,#0,BAC,Minute,QuoteBar,Quote,Adjusted,OpenInterest): new tradable date 20260422. New MapFile: False. MapFile.Count Old: 3 New: 3
+2026-04-22T21:02:17.3620207Z TRACE:: LiveMappingEventProvider(CAT,#0,CAT,Minute,QuoteBar,Quote,Adjusted,OpenInterest): new tradable date 20260422. New MapFile: True. MapFile.Count Old: 0 New: 0
+2026-04-22T21:02:17.3620769Z TRACE:: LiveMappingEventProvider(CCJ,#0,CCJ,Minute,QuoteBar,Quote,Adjusted,OpenInterest): new tradable date 20260422. New MapFile: True. MapFile.Count Old: 0 New: 0
+2026-04-22T21:02:17.3621834Z TRACE:: LiveMappingEventProvider(CRWD,#0,CRWD,Minute,QuoteBar,Quote,Adjusted,OpenInterest): new tradable date 20260422. New MapFile: True. MapFile.Count Old: 0 New: 0
+2026-04-22T21:02:17.3624334Z TRACE:: LiveMappingEventProvider(CRWV,#0,CRWV,Minute,QuoteBar,Quote,Adjusted,OpenInterest): new tradable date 20260422. New MapFile: True. MapFile.Count Old: 0 New: 0
+2026-04-22T21:02:17.3626023Z TRACE:: LiveMappingEventProvider(CVX,#0,CVX,Minute,QuoteBar,Quote,Adjusted,OpenInterest): new tradable date 20260422. New MapFile: True. MapFile.Count Old: 0 New: 0
+2026-04-22T21:02:17.3626783Z TRACE:: LiveMappingEventProvider(DIS,#0,DIS,Minute,QuoteBar,Quote,Adjusted,OpenInterest): new tradable date 20260422. New MapFile: True. MapFile.Count Old: 0 New: 0
+2026-04-22T21:02:17.3627710Z TRACE:: LiveMappingEventProvider(GEV,#0,GEV,Minute,QuoteBar,Quote,Adjusted,OpenInterest): new tradable date 20260422. New MapFile: True. MapFile.Count Old: 0 New: 0
+2026-04-22T21:02:17.3629602Z TRACE:: LiveMappingEventProvider(GLD,#0,GLD,Minute,QuoteBar,Quote,Adjusted,OpenInterest): new tradable date 20260422. New MapFile: True. MapFile.Count Old: 0 New: 0
+2026-04-22T21:02:17.3630182Z TRACE:: LiveMappingEventProvider(GOOGL,#0,GOOGL,Minute,QuoteBar,Quote,Adjusted,OpenInterest): new tradable date 20260422. New MapFile: False. MapFile.Count Old: 3 New: 3
+2026-04-22T21:02:17.3630637Z TRACE:: LiveMappingEventProvider(GS,#0,GS,Minute,QuoteBar,Quote,Adjusted,OpenInterest): new tradable date 20260422. New MapFile: True. MapFile.Count Old: 0 New: 0
+2026-04-22T21:02:17.3632069Z TRACE:: LiveMappingEventProvider(HD,#0,HD,Minute,QuoteBar,Quote,Adjusted,OpenInterest): new tradable date 20260422. New MapFile: True. MapFile.Count Old: 0 New: 0
+2026-04-22T21:02:17.3632863Z TRACE:: LiveMappingEventProvider(ITA,#0,ITA,Minute,QuoteBar,Quote,Adjusted,OpenInterest): new tradable date 20260422. New MapFile: True. MapFile.Count Old: 0 New: 0
+2026-04-22T21:02:17.3633575Z TRACE:: LiveMappingEventProvider(JNJ,#0,JNJ,Minute,QuoteBar,Quote,Adjusted,OpenInterest): new tradable date 20260422. New MapFile: True. MapFile.Count Old: 0 New: 0
+2026-04-22T21:02:17.3635278Z TRACE:: LiveMappingEventProvider(JPM,#0,JPM,Minute,QuoteBar,Quote,Adjusted,OpenInterest): new tradable date 20260422. New MapFile: True. MapFile.Count Old: 0 New: 0
+2026-04-22T21:02:17.3635734Z TRACE:: LiveMappingEventProvider(KO,#0,KO,Minute,QuoteBar,Quote,Adjusted,OpenInterest): new tradable date 20260422. New MapFile: True. MapFile.Count Old: 0 New: 0
+2026-04-22T21:02:17.3636482Z TRACE:: LiveMappingEventProvider(LLY,#0,LLY,Minute,QuoteBar,Quote,Adjusted,OpenInterest): new tradable date 20260422. New MapFile: True. MapFile.Count Old: 0 New: 0
+2026-04-22T21:02:17.3637934Z TRACE:: LiveMappingEventProvider(META,#0,META,Minute,QuoteBar,Quote,Adjusted,OpenInterest): new tradable date 20260422. New MapFile: True. MapFile.Count Old: 0 New: 0
+2026-04-22T21:02:17.3638558Z TRACE:: LiveMappingEventProvider(MSFT,#0,MSFT,Minute,QuoteBar,Quote,Adjusted,OpenInterest): new tradable date 20260422. New MapFile: True. MapFile.Count Old: 0 New: 0
+2026-04-22T21:02:17.3639364Z TRACE:: LiveMappingEventProvider(NVDA,#0,NVDA,Minute,QuoteBar,Quote,Adjusted,OpenInterest): new tradable date 20260422. New MapFile: True. MapFile.Count Old: 0 New: 0
+2026-04-22T21:02:17.3640599Z TRACE:: LiveMappingEventProvider(PFE,#0,PFE,Minute,QuoteBar,Quote,Adjusted,OpenInterest): new tradable date 20260422. New MapFile: True. MapFile.Count Old: 0 New: 0
+2026-04-22T21:02:17.3641481Z TRACE:: LiveMappingEventProvider(PG,#0,PG,Minute,QuoteBar,Quote,Adjusted,OpenInterest): new tradable date 20260422. New MapFile: True. MapFile.Count Old: 0 New: 0
+2026-04-22T21:02:17.3642610Z TRACE:: LiveMappingEventProvider(PLTR,#0,PLTR,Minute,QuoteBar,Quote,Adjusted,OpenInterest): new tradable date 20260422. New MapFile: True. MapFile.Count Old: 0 New: 0
+2026-04-22T21:02:17.3643720Z TRACE:: LiveMappingEventProvider(POWL,#0,POWL,Minute,QuoteBar,Quote,Adjusted,OpenInterest): new tradable date 20260422. New MapFile: True. MapFile.Count Old: 0 New: 0
+2026-04-22T21:02:17.3644791Z TRACE:: LiveMappingEventProvider(QQQ,#0,QQQ,Minute,QuoteBar,Quote,Adjusted,OpenInterest): new tradable date 20260422. New MapFile: False. MapFile.Count Old: 4 New: 4
+2026-04-22T21:02:17.3645655Z TRACE:: LiveMappingEventProvider(RKLB,#0,RKLB,Minute,QuoteBar,Quote,Adjusted,OpenInterest): new tradable date 20260422. New MapFile: True. MapFile.Count Old: 0 New: 0
+2026-04-22T21:02:17.3646463Z TRACE:: LiveMappingEventProvider(RTX,#0,RTX,Minute,QuoteBar,Quote,Adjusted,OpenInterest): new tradable date 20260422. New MapFile: True. MapFile.Count Old: 0 New: 0
+2026-04-22T21:02:17.3646910Z TRACE:: LiveMappingEventProvider(SPY,#0,SPY,Minute,QuoteBar,Quote,Adjusted,OpenInterest): new tradable date 20260422. New MapFile: False. MapFile.Count Old: 2 New: 2
+2026-04-22T21:02:17.3648483Z TRACE:: LiveMappingEventProvider(TAIL,#0,TAIL,Minute,QuoteBar,Quote,Adjusted,OpenInterest): new tradable date 20260422. New MapFile: True. MapFile.Count Old: 0 New: 0
+2026-04-22T21:02:17.3649229Z TRACE:: LiveMappingEventProvider(TSLA,#0,TSLA,Minute,QuoteBar,Quote,Adjusted,OpenInterest): new tradable date 20260422. New MapFile: True. MapFile.Count Old: 0 New: 0
+2026-04-22T21:02:17.3650328Z TRACE:: LiveMappingEventProvider(UNH,#0,UNH,Minute,QuoteBar,Quote,Adjusted,OpenInterest): new tradable date 20260422. New MapFile: True. MapFile.Count Old: 0 New: 0
+2026-04-22T21:02:17.3650832Z TRACE:: LiveMappingEventProvider(VRT,#0,VRT,Minute,QuoteBar,Quote,Adjusted,OpenInterest): new tradable date 20260422. New MapFile: True. MapFile.Count Old: 0 New: 0
+2026-04-22T21:02:17.3651451Z TRACE:: LiveMappingEventProvider(VST,#0,VST,Minute,QuoteBar,Quote,Adjusted,OpenInterest): new tradable date 20260422. New MapFile: True. MapFile.Count Old: 0 New: 0
+2026-04-22T21:02:17.3653072Z TRACE:: LiveMappingEventProvider(WFC,#0,WFC,Minute,QuoteBar,Quote,Adjusted,OpenInterest): new tradable date 20260422. New MapFile: True. MapFile.Count Old: 0 New: 0
+2026-04-22T21:02:17.3653973Z TRACE:: LiveMappingEventProvider(WMT,#0,WMT,Minute,QuoteBar,Quote,Adjusted,OpenInterest): new tradable date 20260422. New MapFile: True. MapFile.Count Old: 0 New: 0
+2026-04-22T21:02:17.3654473Z TRACE:: LiveMappingEventProvider(XOM,#0,XOM,Minute,QuoteBar,Quote,Adjusted,OpenInterest): new tradable date 20260422. New MapFile: True. MapFile.Count Old: 0 New: 0
+2026-04-22T21:02:17.3670924Z TRACE:: DataManager.AddSubscription(): Added AAPL,#0,AAPL,Minute,TradeBar,Trade,Adjusted,OpenInterest,Internal. Start: 4/22/2026 7:59:00 PM. End: 12/31/2050 5:00:00 AM
+2026-04-22T21:02:17.3671341Z TRACE:: UniverseSelection.AddPendingInternalDataFeeds(): Adding internal benchmark data feed AAPL,#0,AAPL,Minute,TradeBar,Trade,Adjusted,OpenInterest,Internal
+2026-04-22T21:02:17.3673796Z TRACE:: LiveMappingEventProvider(AAPL,#0,AAPL,Minute,TradeBar,Trade,Adjusted,OpenInterest,Internal): new tradable date 20260422. New MapFile: False. MapFile.Count Old: 2 New: 2
+2026-04-22T21:02:18.2012303Z TRACE:: Debug: 2026-04-22 17:02:15 Will use UniverseSettings for automatically added securities for open orders and holdings. UniverseSettings: Resolution = Minute; Leverage = default; FillForward = True; ExtendedHours = False

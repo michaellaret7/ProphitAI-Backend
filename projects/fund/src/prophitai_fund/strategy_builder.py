@@ -23,8 +23,8 @@ from prophitai_tools.sandbox.client import REPO_PATH, get_sandbox
 from prophitai_tools.sandbox.lifecycle import close_sandbox
 from prophitai_tools.sandbox.scaffolding import scaffold_strategy
 
-MODEL = "gpt-5.4"
-PROVIDER = "openai"
+MODEL = "claude-sonnet-4-6"
+PROVIDER = "anthropic"
 
 
 class StrategyBuilder:

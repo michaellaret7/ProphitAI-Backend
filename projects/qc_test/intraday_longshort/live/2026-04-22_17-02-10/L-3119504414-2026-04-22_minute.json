@@ -1,0 +1,274 @@
+{
+  "holdings": {
+    "AAL 2T": {
+      "a": 11.72,
+      "q": 2,
+      "p": 11.5,
+      "v": 23,
+      "u": -0.43,
+      "up": -1.84
+    },
+    "AAPL.ProphitAI15MinBar 2S": {},
+    "AAPL R735QTJ8XC9X": {
+      "a": 256.26,
+      "q": 101,
+      "p": 272.44,
+      "v": 27516,
+      "u": 1633,
+      "up": 6.31
+    },
+    "AMZN.ProphitAI15MinBar 2S": {},
+    "AMZN 2T": {},
+    "ASTS 2T": {
+      "a": 88.18,
+      "q": 86,
+      "p": 84.23,
+      "v": 7243,
+      "u": -339.8,
+      "up": -4.48
+    },
+    "AVGO 2T": {
+      "a": 323.27,
+      "q": 344,
+      "p": 421.94,
+      "v": 145147,
+      "u": 33942,
+      "up": 30.5
+    },
+    "BA.ProphitAI15MinBar 2S": {},
+    "BA 2T": {},
+    "BAC.ProphitAI15MinBar 2S": {},
+    "NB R735QTJ8XC9X": {},
+    "CAT.ProphitAI15MinBar 2S": {},
+    "CAT 2T": {},
+    "CCJ 2T": {
+      "a": 110.33,
+      "q": 804,
+      "p": 126,
+      "v": 101304,
+      "u": 12598,
+      "up": 14.2
+    },
+    "CRWD 2T": {
+      "a": 400.7,
+      "q": 137,
+      "p": 456.2,
+      "v": 62499,
+      "u": 7603,
+      "up": 13.8
+    },
+    "CRWV 2T": {
+      "a": 118.1,
+      "q": 86,
+      "p": 123.51,
+      "v": 10621,
+      "u": 465,
+      "up": 4.58
+    },
+    "CVX.ProphitAI15MinBar 2S": {},
+    "CVX 2T": {},
+    "DIS.ProphitAI15MinBar 2S": {},
+    "DIS 2T": {},
+    "GEV 2T": {
+      "a": 804.42,
+      "q": 83,
+      "p": 1125.81,
+      "v": 93442,
+      "u": 26675,
+      "up": 40
+    },
+    "GLD 2T": {
+      "a": 446.79,
+      "q": 198,
+      "p": 435.18,
+      "v": 86165,
+      "u": -2298.78,
+      "up": -2.6
+    },
+    "GOOGL.ProphitAI15MinBar 2S": {},
+    "GOOG T1AZ164W5VTX": {
+      "a": 337.13,
+      "q": 44.657652827,
+      "p": 338.36,
+      "v": 15110,
+      "u": 55.4,
+      "up": 0.37
+    },
+    "GS.ProphitAI15MinBar 2S": {},
+    "GS 2T": {},
+    "HD.ProphitAI15MinBar 2S": {},
+    "HD 2T": {},
+    "ITA 2T": {
+      "a": 235.14,
+      "q": 229,
+      "p": 219.18,
+      "v": 50192,
+      "u": -3654.84,
+      "up": -6.79
+    },
+    "JNJ.ProphitAI15MinBar 2S": {},
+    "JNJ 2T": {},
+    "JPM.ProphitAI15MinBar 2S": {},
+    "JPM 2T": {},
+    "KO.ProphitAI15MinBar 2S": {},
+    "KO 2T": {},
+    "LLY.ProphitAI15MinBar 2S": {},
+    "LLY 2T": {},
+    "META.ProphitAI15MinBar 2S": {},
+    "META 2T": {},
+    "MSFT.ProphitAI15MinBar 2S": {},
+    "MSFT 2T": {},
+    "NVDA.ProphitAI15MinBar 2S": {},
+    "NVDA 2T": {
+      "a": 180.03,
+      "q": 737.157918101,
+      "p": 202.3,
+      "v": 149127,
+      "u": 16417,
+      "up": 12.4
+    },
+    "PFE.ProphitAI15MinBar 2S": {},
+    "PFE 2T": {},
+    "PG.ProphitAI15MinBar 2S": {},
+    "PG 2T": {},
+    "PLTR 2T": {
+      "a": 134.23,
+      "q": 525,
+      "p": 150.95,
+      "v": 79248,
+      "u": 8776,
+      "up": 12.4
+    },
+    "POWL 2T": {
+      "a": 569.66,
+      "q": 59,
+      "p": 244.86,
+      "v": 14446,
+      "u": -19163.23,
+      "up": -57.02
+    },
+    "QQQ RIWIV7K5Z9LX": {
+      "a": 589.34,
+      "q": 100,
+      "p": 655.73,
+      "v": 65573,
+      "u": 6639,
+      "up": 11.3
+    },
+    "RKLB 2T": {
+      "a": 77.5,
+      "q": 101,
+      "p": 89.67,
+      "v": 9056,
+      "u": 1229,
+      "up": 15.7
+    },
+    "RTX 2T": {
+      "a": 200.44,
+      "q": 275,
+      "p": 180.5,
+      "v": 49637,
+      "u": -5483.5,
+      "up": -9.95
+    },
+    "SPY R735QTJ8XC9X": {
+      "a": 681.92,
+      "q": 200,
+      "p": 710.71,
+      "v": 142142,
+      "u": 5757,
+      "up": 4.22
+    },
+    "TAIL 2T": {
+      "a": 11.75,
+      "q": 2420,
+      "p": 11.1,
+      "v": 26849,
+      "u": -1585.1,
+      "up": -5.57
+    },
+    "TSLA.ProphitAI15MinBar 2S": {},
+    "TSLA 2T": {
+      "a": 404.51,
+      "q": 4,
+      "p": 403.4,
+      "v": 1613,
+      "u": -4.44,
+      "up": -0.27
+    },
+    "UNH.ProphitAI15MinBar 2S": {},
+    "UNH 2T": {},
+    "VRT 2T": {
+      "a": 236.3,
+      "q": 141,
+      "p": 304,
+      "v": 42864,
+      "u": 9545,
+      "up": 28.6
+    },
+    "VST 2T": {
+      "a": 173.05,
+      "q": 321,
+      "p": 155.92,
+      "v": 50050,
+      "u": -5498.73,
+      "up": -9.9
+    },
+    "WFC.ProphitAI15MinBar 2S": {},
+    "WFC 2T": {},
+    "WMT.ProphitAI15MinBar 2S": {},
+    "WMT 2T": {},
+    "XOM.ProphitAI15MinBar 2S": {},
+    "XOM 2T": {
+      "a": 149.14,
+      "q": 199,
+      "p": 149.5,
+      "v": 29750,
+      "u": 72.2,
+      "up": 0.24
+    }
+  },
+  "cash": {
+    "USD": {
+      "securitySymbols": [],
+      "symbol": "USD",
+      "amount": -122412.13,
+      "conversionRate": 1.0,
+      "currencySymbol": "$",
+      "valueInAccountCurrency": -122412.13
+    }
+  },
+  "accountCurrency": "USD",
+  "accountCurrencySymbol": "$",
+  "charts": {
+    "Strategy Equity": {
+      "name": "Strategy Equity",
+      "chartType": 0,
+      "series": {}
+    }
+  },
+  "orders": {},
+  "profitLoss": {},
+  "statistics": {},
+  "runtimeStatistics": {
+    "Equity": "$1,137,214.24",
+    "Fees": "-$0.00",
+    "Holdings": "$1,259,626.37",
+    "Net Profit": "$0.00",
+    "Probabilistic Sharpe Ratio": "0%",
+    "Return": "0.00 %",
+    "Unrealized": "$0.00",
+    "Volume": "$0.00"
+  },
+  "state": {
+    "StartTime": "2026-04-22T21:02:13Z",
+    "EndTime": "",
+    "RuntimeError": "",
+    "StackTrace": "",
+    "LogCount": "2",
+    "OrderCount": "0",
+    "InsightCount": "0",
+    "Hostname": "Michaels-MacBook-Air",
+    "Status": "Running"
+  }
+}

@@ -144,3 +144,17 @@ topic: framework_gotchas
 ---
 If the manifest exposes strategy-facing indicator params but the generated indicator suite has no config-aware __init__, keep the full frozen config contract and add an explicit strategy comment/docstring that suite wiring is deferred to downstream builders. Otherwise code review flags silent config drift between manifest tunables and runtime behavior.
 
+---
+date: 2026-04-22
+title: allow_shorts must be stored + used in short_entry(); don't suppress with noqa:ARG002
+topic: coding_patterns
+---
+When allow_shorts is a constructor param in a signal model, it must be stored as self._allow_shorts and short_entry() must return pd.Series(False, index=df.index, dtype=bool) when not self._allow_shorts. The noqa:ARG002 pattern is only correct for params that are truly reserved for future wiring (e.g. time strings, thresholds baked into the suite). Behavioral flags that gate signal generation must always be stored and applied. Code reviewer will flag this as an error — it's a real correctness bug, not a style issue.
+
+---
+date: 2026-04-22
+title: get_sizing_hints: invert or_score for shorts using target_position < 0 branch
+topic: coding_patterns
+---
+For strategies where score_entries() returns a long-biased score (e.g. or_rank_pct / or_score where high = strong long), get_sizing_hints() must publish hints['score'] = 1.0 - float(or_score_val) when target_position < 0 (short candidates). This ensures the sizer's overweight gate fires consistently for strong shorts (low rank = strong short = high inverted score). Pattern: check target_position in get_sizing_hints(), invert the score for shorts, keep raw score for longs.
+

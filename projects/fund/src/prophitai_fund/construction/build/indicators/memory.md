@@ -298,3 +298,17 @@ topic: performance_patterns
 ---
 The vectorized engine re-instantiates each indicator once per ticker, so any universe-scoped indicator that rebuilds a cross-sectional panel on every call does O(n²) work — measured at 93s for n=36 (~58min projected at n=220) on RLS-DB. Fix: use `prophitai_algo_trading.indicators.{stamp_shared_panel, crosssectional_cache_key, get_or_compute_crosssectional}`. Split the indicator into `_compute_full_crosssectional(panel) -> DataFrame` (universe-wide, expensive, cached) and `calculate()` (per-ticker slice, cheap). Stamp the panel at construction time; the cache keys on the stamp + every indicator param. Without the stamp, pandas `__finalize__` deep-copies `attrs` on every `.reindex`/`.copy()` and each ticker sees a fresh panel object — `id(panel)` caching misses 100%. `DataResolver.resolve` auto-stamps shared-scope DataFrame blobs; hand-built panels (strategy-local helpers like `attach_screener_attrs`) must call `stamp_shared_panel(panel)` explicitly before attach. Canonical example: `strategies/development/residual_alpha_longshort_momentum_with_dispersionscaled_gross_and_betaneutral_legs/indicators/custom.py::UniverseResidualCompositeIndicator`. Full pattern + gotchas: `docs/algo_trading/universe_indicator_caching.md`. Measured: 5.1× speedup on `engine.run`, 2.5× on total wall clock at n=36.
 
+---
+date: 2026-04-22
+title: DatetimeIndex.isin() returns numpy bool array — no .values needed
+topic: coding_patterns
+---
+pd.DatetimeIndex.isin(set_of_timestamps) returns a numpy bool array (NOT a pandas Series). Calling .values on it raises AttributeError. Pattern: `mask = dates.isin(skip_dates).astype(np.float64)` — the result is already a numpy float64 array ready to assign to df[col]. Also: pd.Series(bool_array).astype(float) works but is redundant for numpy arrays.
+
+---
+date: 2026-04-22
+title: pd.Series.values is read-only when underlying array is non-writeable — use .copy()
+topic: coding_patterns
+---
+When building a pd.Series from a boolean mask (e.g. pd.Series(np.nan, index=mask_index)), the underlying .values array may be read-only. Pattern: always call .copy() on array slices before assigning into them. `denom = open_prices.loc[common_dates].values.copy()` avoids `ValueError: assignment destination is read-only`.
+

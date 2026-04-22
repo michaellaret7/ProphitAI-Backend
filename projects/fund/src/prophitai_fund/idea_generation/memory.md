@@ -221,3 +221,24 @@ topic: pipeline_feedback
 ---
 As of 2026-04-21 the fund ledger has six momentum or momentum-adjacent ideas but NO true L/S residual momentum. RAMD was residual but long-only. DR3 uses residual losers as reversal (opposite sign and horizon). PSMO/APEX/SRMBN/FMLS-TD are all raw-price or fundamental signals, not residual. RLS-DB fills this slot. Pattern for future momentum-family ideas in this fund: before proposing a new momentum signal, map the existing ledger along three dimensions — (1) signal type: raw-return vs residual-alpha vs sector-aggregate vs fundamental-delta vs 52wk-proximity, (2) legs: long-only vs L/S, (3) crash mitigation: none vs overlay (BSC vol, DM panic scaler, VIX) vs structural (BAB legs, distress filter, quality gate). Any novel strategy must occupy a CELL not already filled. RLS-DB occupies residual-alpha + L/S + BAB-structural + BSC+dispersion overlay — previously empty. Remaining empty cells worth future attention: time-series momentum (TSMOM) with cross-sectional overlay, intermediate-horizon echo (Novy-Marx 12-7) as primary signal (APEX used it as composite), and momentum + short-interest-squeeze avoidance.
 
+---
+date: 2026-04-22
+title: Intraday 15-min-bar time horizon was an empty cell in the fund ledger
+topic: pipeline_feedback
+---
+As of 2026-04-22 the fund ledger had zero intraday strategies — all 11 prior ideas used daily or monthly screener snapshots. Per my 2026-04-21 memory on mapping existing ledger along signal-type/legs/crash-mitigation dimensions, the time-horizon dimension was missing from that framework. Add time-horizon as a FOURTH dimension: intraday 15-min, daily, monthly, quarterly. Intraday momentum (Heston-Korajczyk-Sadka, Gao-Han-Li-Zhou, Lou-Polk-Skouras) is a distinct literature cluster from daily 12-1 momentum with different mechanisms (institutional execution patterns, intermediary clientele) and zero overlap with daily factor ETF crowding. Remaining empty intraday cells worth future attention: intraday mean-reversion on 15-min bars (Nagel 2012 extended to intraday), intraday pairs stat-arb, overnight-gap reversal (separate clientele per LPS 2019), first-vs-last-hour timing on individual ETFs. Pattern: before claiming novelty in any signal space, verify the time-horizon dimension is not already occupied.
+
+---
+date: 2026-04-22
+title: Intraday strategy research requires immediate web-search pivot for specific papers
+topic: tool_usage
+---
+strategy_research and theory_research DBs are THIN on intraday-specific literature. Queries for Heston-Korajczyk-Sadka 2010, Gao-Han-Li-Zhou 2018, Lou-Polk-Skouras 2019 return generic cross-sectional momentum papers (Jegadeesh-Titman, AQR Value-Momentum-Everywhere) and occasionally an arxiv HMM intraday futures paper. Go directly to llm_web_search with specific author-year queries after 1 confirmatory DB query. Effective pattern: one DB query confirms the momentum literature baseline, then 5-6 llm_web_search queries targeting specific intraday papers and real-world implementations (opening-range breakout on SPY, MTUM narrow-market underperformance). llm_web_search returned usable Sharpe/return figures for real-world SPY opening-range strategies (high-teens annualized net of costs, 2007-2024) that no DB could produce. Add intraday momentum to the list of DB-weak topics in my 2026-04-14 memory alongside shareholder yield, asset growth, analyst dispersion, and lottery/IVOL.
+
+---
+date: 2026-04-22
+title: past_ideas write field-delimiter bug persists on closing-tag strings — use only plain prose
+topic: process_mistakes
+---
+Confirmed again on 2026-04-22: past_ideas write fails when ANY field value contains closing-tag patterns like </universe> or <parameter name=...>. My IORS first-attempt write embedded a XML-style closing tag at the end of the universe field because I was copy-pasting from a scratch draft with section delimiters. The tool parser reads the closing tag as a field delimiter and swallows subsequent fields. FIX: write field values as plain prose only, NEVER include angle-bracket delimiters, closing tags, mathematical inequality symbols (> < >=), or any character that could be interpreted as markup. Write "greater than 0.10" not "> 0.10", write "approximately 3 to 100 billion USD" not "3B to 100B USD" with angle-bracket context. Also: do NOT paste in section markers like </universe> or <output_format> tags even as narrative labels — they trigger the parser bug. Strategy section labels belong in the agent output, not inside past_ideas field values.
+

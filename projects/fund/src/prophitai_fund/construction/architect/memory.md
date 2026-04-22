@@ -312,3 +312,24 @@ topic: process_mistakes
 ---
 If the sandbox lacks the runnable manifest validator or source-tree grep targets, rely on the framework_reference plus docs/template to keep the manifest conservative. Avoid inventing unsupported extra fields like indicator-level data_requirements unless the schema explicitly exposes them, and document any attrs-based wiring assumptions in implementation_notes instead.
 
+---
+date: 2026-04-22
+title: Intraday strategies: session-boundary timing notes for 15-min bar label vs bar close
+topic: constructor_gotchas
+---
+15-min bars in the framework are labeled at bar OPEN time. Bar labeled 09:30 covers 09:30–09:45 (open at 09:30, close at 09:45). Bar labeled 10:30 covers 10:15–10:30 (open at 10:15, close at 10:30). For opening-range strategies: session_open_price = bar labeled 09:30 → use 'open' column. OR close = bar labeled 10:30 → use 'close' column. Scheduled exit bar = bar labeled 15:45 → covers 15:45–16:00 (last full bar). Always use df.index.time == time(H, M) for session-aware filtering. min_bars_required must be in 15-min bar counts (multiply daily lookback × 26 bars/day for US equities). BSC equity history sizer must sample equity at the 15:45 bar only (detect via timestamp.time() == time(15, 45) in prepare_for_bar) to get one sample per session, not 26 samples per session.
+
+---
+date: 2026-04-22
+title: Intraday OR rank: OR_RETURN_CACHE module-level singleton pattern for cross-sectional ranking from OHLCV
+topic: translation_patterns
+---
+For intraday strategies requiring cross-sectional ranking of a per-ticker metric derived from OHLCV (not from universe_returns daily panel directly): use a TWO-indicator chain. (1) FirstIndicator computes the metric from OHLCV and ALSO writes to a module-level singleton dict METRIC_CACHE = {} keyed by (symbol, date). This indicator declares DataRequirement(kind='ticker_meta', scope='per_ticker') to read the symbol. (2) RankIndicator declares DataRequirement(kind='universe_returns', scope='shared') for cache-UUID-based cross-sectional caching. In _compute_full_crosssectional(panel), it builds a date×ticker panel from METRIC_CACHE (iterating panel.index × panel.columns), then ranks row-wise with rank(axis=1, pct=True). Uses get_or_compute_crosssectional with cache_key = crosssectional_cache_key(panel, 'my_metric_rank'). The vectorized engine processes ALL tickers through indicator 1 before any ticker runs indicator 2 — the cache is fully populated at rank time. For event-driven engine, this introduces a one-bar lag (prior bar's or_returns used for today's rank); document in implementation_notes. METRIC_CACHE must be cleared between runs via a module-level clear_cache() called in wiring.py build_strategy(). This pattern cleanly extends universe_returns cache machinery to any OHLCV-derived per-session metric.
+
+---
+date: 2026-04-22
+title: TradingWindowControl entry_start==entry_end for single-bar-only entries
+topic: constructor_gotchas
+---
+For intraday strategies that allow entries ONLY at a single specific bar time (e.g., only at 10:30 ET), set TradingWindowControl(entry_start=time(10,30), entry_end=time(10,30), exit_by=time(15,45)). The equal entry_start==entry_end restriction means the control only allows entries at that exact bar time. This is the correct pattern for opening-range strategies that enter at exactly one bar per session. Do not try to implement this via signal conditions alone — TradingWindowControl is the risk-engine backstop that blocks any accidental out-of-window entries from signal bugs.
+

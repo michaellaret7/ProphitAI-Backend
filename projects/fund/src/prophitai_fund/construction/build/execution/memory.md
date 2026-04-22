@@ -242,3 +242,17 @@ topic: sizing_patterns
 ---
 BasePositionSizer.size_trade converts calculate_shares() output to float and returns skip when shares_f <= 0.0. For long/short strategies, custom sizers must still return positive unit counts; short direction is carried by EntryCandidate/engine state, not by negative shares. Returning negative shares silently drops short trades.
 
+---
+date: 2026-04-22
+title: EntryCandidate and PositionState use .direction (Direction enum), not .is_short
+topic: sizing_patterns
+---
+EntryCandidate.direction is a Direction enum (Direction.LONG or Direction.SHORT), NOT a bool is_short attribute. PositionState also exposes .direction (Direction enum), not .is_short. Custom sizers doing per-leg equal-weight must filter positions using: pos_is_short = getattr(pos, 'direction', Direction.LONG) == Direction.SHORT. Using getattr(candidate, 'is_short', False) silently defaults to long for all entries.
+
+---
+date: 2026-04-22
+title: BSC equity sampling: prepare_for_bar only called when entries exist — must sample in calculate_shares
+topic: sizing_patterns
+---
+The framework (signal_processing.py) only calls sizer.prepare_for_bar() when there are active entry candidates (the 'if entries:' guard). prepare_for_bar does NOT have access to PortfolioContext (no equity available). For BSC constant-vol overlay that needs rolling portfolio equity history, the correct sampling point is inside calculate_shares() where PortfolioContext is always available. Use a session-date deduplication key (_last_session_date) to record one sample per session regardless of how many candidates evaluate at the same bar.
+
