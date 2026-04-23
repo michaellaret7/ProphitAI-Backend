@@ -1,65 +1,35 @@
-"""ProphitAI Algo — algorithmic trading library.
+"""ProphitAI Algo Trading.
 
-Strategies, engines, indicators, execution, and broker interfaces.
-Pure trading machinery with no agent or AI dependencies.
+Research → backtest → deploy. Flat architecture, matrix-math vectorized
+engine, honest event-driven engine, ZMQ-based live runner against Alpaca.
 """
 
-from prophitai_algo_trading.strategies.base import BaseStrategy
-from prophitai_algo_trading.strategies.composable import BaseComposableStrategy
+from prophitai_algo_trading.cost_model import CostModel
+from prophitai_algo_trading.enums import Direction
+from prophitai_algo_trading.metrics import BacktestResult, calculate_metrics
+from prophitai_algo_trading.portfolio import Portfolio, Position, Trade
+from prophitai_algo_trading.strategy import BaseStrategy
+
+from prophitai_algo_trading.data.loader import load_csv_data
 from prophitai_algo_trading.engines import (
-    EventDrivenBacktestEngine,
-    VectorizedBacktestEngine,
+    EventDrivenBacktest,
+    LiveRunner,
+    VectorizedBacktest,
 )
-from prophitai_algo_trading.indicators import (
-    BaseIndicator,
-    BaseIndicatorSuite,
-    INDICATOR_REGISTRY,
-    IndicatorPipeline,
-    IndicatorSpec,
-)
-from prophitai_algo_trading.signals import BaseSignalModel
-from prophitai_algo_trading.execution import (
-    PortfolioContext,
-    PortfolioTracker,
-    PositionTracker,
-    CostModel,
-    EntryCandidate,
-    SizingDecision,
-)
-from prophitai_algo_trading.sizing import (
-    BasePositionSizer,
-    SizingSpec,
-    ATRRiskSizer,
-    DrawdownScaledSizer,
-    InverseVolatilitySizer,
-    VolatilityTargetSizer,
-)
-from prophitai_algo_trading.engines import LiveRunner
 from prophitai_algo_trading.broker import Alpaca
 
 __all__ = [
     "BaseStrategy",
-    "BaseComposableStrategy",
-    "EventDrivenBacktestEngine",
-    "VectorizedBacktestEngine",
-    "BaseIndicator",
-    "BaseIndicatorSuite",
-    "BaseSignalModel",
-    "IndicatorPipeline",
-    "IndicatorSpec",
-    "INDICATOR_REGISTRY",
-    "PortfolioContext",
-    "PortfolioTracker",
-    "PositionTracker",
     "CostModel",
-    "SizingDecision",
-    "EntryCandidate",
-    "BasePositionSizer",
-    "SizingSpec",
-    "ATRRiskSizer",
-    "DrawdownScaledSizer",
-    "InverseVolatilitySizer",
-    "VolatilityTargetSizer",
+    "Direction",
+    "BacktestResult",
+    "calculate_metrics",
+    "Portfolio",
+    "Position",
+    "Trade",
+    "load_csv_data",
+    "VectorizedBacktest",
+    "EventDrivenBacktest",
     "LiveRunner",
     "Alpaca",
 ]

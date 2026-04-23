@@ -1,25 +1,28 @@
-"""Position sizing policies for algo trading engines."""
+"""Position sizing policies.
 
-from prophitai_algo_trading.sizing.base import BasePositionSizer
-from prophitai_algo_trading.sizing.specs import SizingSpec
-from prophitai_algo_trading.sizing.std_lib import (
-    ATRRiskSizer,
+Sizers receive a SizingInput (price, portfolio state, optional per-ticker
+indicator snapshot) and return a share count. That's the whole contract.
+"""
+
+from prophitai_algo_trading.sizing.base import BaseSizer, SizingInput
+from prophitai_algo_trading.sizing.equity import (
     AllInSizer,
-    DrawdownScaledSizer,
     FixedQuantitySizer,
-    InverseVolatilitySizer,
     PercentOfEquitySizer,
+)
+from prophitai_algo_trading.sizing.volatility import (
+    InverseVolatilitySizer,
     VolatilityTargetSizer,
 )
+from prophitai_algo_trading.sizing.risk_based import ATRRiskSizer
 
 __all__ = [
-    "BasePositionSizer",
-    "SizingSpec",
-    "ATRRiskSizer",
+    "BaseSizer",
+    "SizingInput",
     "AllInSizer",
-    "DrawdownScaledSizer",
     "FixedQuantitySizer",
-    "InverseVolatilitySizer",
     "PercentOfEquitySizer",
+    "InverseVolatilitySizer",
     "VolatilityTargetSizer",
+    "ATRRiskSizer",
 ]

@@ -8,7 +8,7 @@ as plain data so the live engine never touches raw Alpaca response dicts.
 from dataclasses import dataclass, field
 from datetime import datetime
 
-from prophitai_algo_trading.execution.models import Direction
+from prophitai_algo_trading.enums import Direction
 
 
 @dataclass

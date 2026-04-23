@@ -13,7 +13,7 @@ from prophitai_algo_trading.broker.models import (
     BrokerPositionSnapshot,
     BrokerStartupSnapshot,
 )
-from prophitai_algo_trading.execution.models import Direction
+from prophitai_algo_trading.enums import Direction
 from prophitai_shared import get_current_utc_time
 
 class AlpacaPortfolio:

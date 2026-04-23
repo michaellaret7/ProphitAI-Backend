@@ -1,37 +1,32 @@
-"""Risk controls — execution-layer guards for EventDrivenBacktestEngine and LiveRunner."""
+"""Risk rules — per-bar gates that block entries or force exits."""
 
-from prophitai_algo_trading.risk.advanced_base import AdvancedRiskControlTemplate
-from prophitai_algo_trading.risk.base import RiskControl
-from prophitai_algo_trading.risk.engine import RiskEngine
-from prophitai_algo_trading.risk.std_lib import (
-    ConsecutiveLossCooldownControl,
-    DailyLossLimitControl,
-    EarningsBlackoutControl,
-    PortfolioDrawdownLimitControl,
-    ProfitTargetExitControl,
-    QualityGateControl,
-    RegimeHaltControl,
-    ReentryCooldownControl,
-    StopLossExitControl,
-    TimeStopControl,
-    TradingWindowControl,
-    TrailingStopExitControl,
+from prophitai_algo_trading.risk.base import RiskContext, RiskRule
+from prophitai_algo_trading.risk.stops import (
+    ProfitTargetExit,
+    StopLossExit,
+    TimeStop,
+    TrailingStopExit,
 )
+from prophitai_algo_trading.risk.cooldowns import (
+    ConsecutiveLossCooldown,
+    ReentryCooldown,
+)
+from prophitai_algo_trading.risk.limits import (
+    DailyLossLimit,
+    PortfolioDrawdownLimit,
+)
+from prophitai_algo_trading.risk.windows import TradingWindow
 
 __all__ = [
-    "RiskControl",
-    "AdvancedRiskControlTemplate",
-    "RiskEngine",
-    "ConsecutiveLossCooldownControl",
-    "DailyLossLimitControl",
-    "EarningsBlackoutControl",
-    "PortfolioDrawdownLimitControl",
-    "ProfitTargetExitControl",
-    "QualityGateControl",
-    "RegimeHaltControl",
-    "ReentryCooldownControl",
-    "StopLossExitControl",
-    "TimeStopControl",
-    "TradingWindowControl",
-    "TrailingStopExitControl",
+    "RiskContext",
+    "RiskRule",
+    "ProfitTargetExit",
+    "StopLossExit",
+    "TimeStop",
+    "TrailingStopExit",
+    "ConsecutiveLossCooldown",
+    "ReentryCooldown",
+    "DailyLossLimit",
+    "PortfolioDrawdownLimit",
+    "TradingWindow",
 ]
