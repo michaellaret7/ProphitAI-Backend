@@ -1,9 +1,0 @@
-{
-    "algorithm-language": "Python",
-    "parameters": {},
-    "description": "Intraday long/short equity on a curated universe of US stocks using 15-min ProphitAI bars. Demonstrates custom PythonData, custom indicators, custom portfolio construction, and custom risk model in Lean.",
-    "cloud-id": null,
-    "local-id": 1,
-    "algorithm-type-name": "IntradayLongShortEquity",
-    "algorithm-location": "main.py"
-}

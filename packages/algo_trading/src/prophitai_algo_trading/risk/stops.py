@@ -15,6 +15,7 @@ class StopLossExit(RiskRule):
     """
 
     def __init__(self, pct: float):
+        super().__init__()
         self.pct = pct
 
     def force_exit(self, ctx: RiskContext) -> bool:
@@ -37,6 +38,7 @@ class TrailingStopExit(RiskRule):
     """
 
     def __init__(self, pct: float):
+        super().__init__()
         self.pct = pct
         self._extremes: dict[str, float] = {}
 
@@ -95,6 +97,7 @@ class TimeStop(RiskRule):
         if max_bars is None and max_duration is None:
             raise ValueError("TimeStop requires max_bars or max_duration.")
 
+        super().__init__()
         self.max_bars = max_bars
         self.max_duration = max_duration
         self._entry_bars: dict[str, int] = {}
@@ -130,6 +133,7 @@ class ProfitTargetExit(RiskRule):
     """
 
     def __init__(self, pct: float):
+        super().__init__()
         self.pct = pct
 
     def force_exit(self, ctx: RiskContext) -> bool:

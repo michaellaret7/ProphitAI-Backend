@@ -1,5 +1,0 @@
-Algorithm Initialization: Alpaca account base currency: USD
-Launching analysis for L-3490185889 with LEAN Engine v2.5.0.0
-Runtime Error: QuantConnect.Queues.LiveDataQueue has not implemented live data. in DataQueueHandlerManager.cs:line 139
-Runtime Error: QuantConnect.Queues.LiveDataQueue has not implemented live data. in DataQueueHandlerManager.cs:line 139: StackTrace: QuantConnect.Queues.LiveDataQueue has not implemented live data. in DataQueueHandlerManager.cs:line 139
-2026-04-22 17:01:08 Will use UniverseSettings for automatically added securities for open orders and holdings. UniverseSettings: Resolution = Minute; Leverage = default; FillForward = True; ExtendedHours = False

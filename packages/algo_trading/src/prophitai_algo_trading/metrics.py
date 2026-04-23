@@ -8,6 +8,7 @@ explicitly.
 from __future__ import annotations
 
 from dataclasses import dataclass, field
+from datetime import datetime
 
 import numpy as np
 import pandas as pd
@@ -17,6 +18,10 @@ from prophitai_calculations.risk.benchmark import calc_beta
 
 SECONDS_PER_YEAR = 365.25 * 86_400
 EPSILON = 1e-9
+
+# Reason: auto-detect threshold for "equity has deviated from start" —
+#         fraction of initial capital below which we consider the curve flat.
+ACTIVE_DEVIATION_REL = 1e-6
 
 
 @dataclass
@@ -34,32 +39,43 @@ def calculate_metrics(
     benchmark: pd.Series | None = None,
     risk_free_rate: float = 0.0,
     warmup: int = 0,
+    active_start: datetime | pd.Timestamp | None = None,
 ) -> dict[str, float | int | None]:
     """Compute return, risk, trade, and benchmark-relative metrics.
+
+    Precedence for the active-window slice (front-trim only):
+        1. If ``active_start`` is provided, start there.
+        2. Else if ``warmup > 0``, skip that many leading bars.
+        3. Else auto-detect: trim leading bars where the equity curve is
+           still exactly at initial capital (within ``ACTIVE_DEVIATION_REL``
+           of the first bar). This captures the common case where a
+           strategy has extensive pre-engine warmup (e.g., 252-day beta
+           + 252-day momentum) during which no positions are held and
+           equity is flat — measuring Sharpe/beta over that flat stretch
+           dilutes both toward zero.
+
+    All return, risk, and benchmark metrics are computed on the same
+    trimmed sample. Trade-level metrics are always computed on the full
+    trade log (trades are discrete events, unaffected by warmup slicing).
 
     Args:
         equity_curve: DataFrame with 'equity' column, datetime-indexed.
         trades: DataFrame with pnl, return_pct, direction columns.
-        benchmark: Optional benchmark price series indexed on the same
-            timeline (e.g., SPY close, or an equal-weighted universe
-            proxy). Enables beta + Jensen's alpha.
-        risk_free_rate: Annual risk-free rate for Sharpe and Jensen's alpha.
-        warmup: Bars to skip from the front of the equity curve before
-            computing return/risk metrics (flat warmup phase depresses Sharpe).
+        benchmark: Optional benchmark price series for beta + Jensen's alpha.
+        risk_free_rate: Annual risk-free rate.
+        warmup: Bars to skip from the front (legacy explicit override).
+        active_start: Optional explicit start — overrides both warmup and
+            auto-detect.
 
     Returns:
-        Dict of metric name -> value. Benchmark-relative metrics appear
-        when ``benchmark`` is provided; otherwise they are absent.
+        Dict of metric name -> value.
     """
     curve = equity_curve[~equity_curve.index.duplicated(keep="last")].sort_index()
 
     if (curve["equity"] <= 0).any():
         raise ValueError("Equity curve has non-positive values — accounting is broken.")
 
-    effective = curve
-
-    if 0 < warmup < len(curve) - 1:
-        effective = curve.iloc[warmup:]
+    effective = _trim_to_active_window(curve, warmup, active_start)
 
     span_seconds = (effective.index[-1] - effective.index[0]).total_seconds()
     years = max(span_seconds / SECONDS_PER_YEAR, EPSILON)
@@ -77,6 +93,42 @@ def calculate_metrics(
         )
 
     return metrics
+
+
+def _trim_to_active_window(
+    curve: pd.DataFrame,
+    warmup: int,
+    active_start: datetime | pd.Timestamp | None,
+) -> pd.DataFrame:
+    """Apply the active-window precedence rule to the equity curve."""
+    if active_start is not None:
+        sliced = curve.loc[curve.index >= pd.Timestamp(active_start)]
+        return sliced if len(sliced) >= 2 else curve
+
+    if 0 < warmup < len(curve) - 1:
+        return curve.iloc[warmup:]
+
+    # Reason: auto-detect — find the first bar where equity deviates from
+    #         its starting value by more than ACTIVE_DEVIATION_REL. Before
+    #         that point, the strategy hasn't put on any positions.
+    equity = curve["equity"]
+    initial = float(equity.iloc[0])
+
+    if initial <= 0:
+        return curve
+
+    threshold = abs(initial) * ACTIVE_DEVIATION_REL
+    deviation = (equity - initial).abs()
+
+    moved = deviation > threshold
+
+    if not moved.any():
+        return curve
+
+    first_active = moved.idxmax()
+    sliced = curve.loc[first_active:]
+
+    return sliced if len(sliced) >= 2 else curve
 
 
 def _return_metrics(curve: pd.DataFrame, years: float) -> dict[str, float]:

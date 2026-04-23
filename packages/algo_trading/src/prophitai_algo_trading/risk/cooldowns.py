@@ -18,6 +18,7 @@ class ReentryCooldown(RiskRule):
         if bars < 0:
             raise ValueError("bars must be >= 0.")
 
+        super().__init__()
         self.bars = bars
         self._last_exit_bar: dict[str, int] = {}
 
@@ -47,6 +48,7 @@ class ConsecutiveLossCooldown(RiskRule):
         if bars < 0:
             raise ValueError("bars must be >= 0.")
 
+        super().__init__()
         self.max_losses = max_losses
         self.bars = bars
         self._streak = 0

@@ -22,6 +22,7 @@ class TradingWindow(RiskRule):
         if start >= end:
             raise ValueError("start must be < end")
 
+        super().__init__()
         self.start = start
         self.end = end
 

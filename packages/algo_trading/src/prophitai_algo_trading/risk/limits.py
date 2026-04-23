@@ -19,6 +19,7 @@ class DailyLossLimit(RiskRule):
         if loss_pct <= 0:
             raise ValueError("loss_pct must be > 0.")
 
+        super().__init__()
         self.loss_pct = loss_pct
         self._day: object | None = None
         self._day_start_equity: float | None = None
@@ -55,6 +56,7 @@ class PortfolioDrawdownLimit(RiskRule):
         if dd_pct <= 0:
             raise ValueError("dd_pct must be > 0.")
 
+        super().__init__()
         self.dd_pct = dd_pct
 
     def block_entry(self, ctx: RiskContext) -> bool:
