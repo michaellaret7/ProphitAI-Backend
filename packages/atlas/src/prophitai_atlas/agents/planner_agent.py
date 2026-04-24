@@ -2,8 +2,6 @@
 
 from typing import Optional
 
-from langfuse import propagate_attributes
-
 from prophitai_atlas.agents.base import AgentBase
 from prophitai_atlas.models import PrintMode, PLANNER_PROVIDER, PLANNER_MODEL
 from prophitai_atlas.utils.gpt_parser import parse_with_gpt
@@ -44,11 +42,11 @@ class PlannerAgent(AgentBase):
     def run(self) -> Plan:
         """Generate a structured Plan for the given task."""
 
-        with self.langfuse.start_as_current_observation(
-            as_type="agent",
+        with self.observer.agent_run(
             name="planner_agent.run",
             input=self.task,
-            metadata={"provider": self.provider, "model": self.model},
+            provider=self.provider,
+            model=self.model,
         ) as run_span:
 
             # Reason: if the caller provided a system prompt, inject it into the user
@@ -70,9 +68,11 @@ class PlannerAgent(AgentBase):
                 {"role": "user", "content": user_content},
             ]
 
-            with propagate_attributes(
+            trace_name = self.get_trace_name()
+            with self.observer.trace_context(
+                trace_name=trace_name,
                 session_id=self.session_id,
-                tags=["PlannerAgent", self.provider],
+                tags=[trace_name, self.provider],
                 metadata={"model": self.model},
             ):
                 response = self.execution_loop.execute()

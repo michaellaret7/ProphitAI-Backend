@@ -17,8 +17,7 @@ from prophitai_shared import NormalizedToolCall
 if TYPE_CHECKING:
     from prophitai_atlas.agents import AgentBase
     from prophitai_atlas.models.callbacks import ChatCallback, NoOpChatCallback
-
-from opentelemetry import context as otel_context
+    from prophitai_atlas.observability import LangfuseObserver
 
 
 # Tools that modify agent state and must run sequentially
@@ -41,10 +40,12 @@ class ToolHandler:
         self,
         agent: 'AgentBase',
         printer: AgentPrinter,
+        observer: 'LangfuseObserver',
         chat_callback: Optional[Union["ChatCallback", "NoOpChatCallback"]] = None,
     ):
         self.agent = agent
         self.printer = printer
+        self.observer = observer
         self.current_iteration: int = 0
         self.retry = False
         self._clerk_id_signature_cache: dict[Any, bool] = {}
@@ -158,7 +159,7 @@ class ToolHandler:
                 )
 
     def _execute_tools_parallel(self, parsed_calls: List[tuple]) -> List[Any]:
-        parent_ctx = otel_context.get_current()
+        parent_ctx = self.observer.current_context()
         results = []
         try:
             with ThreadPoolExecutor(max_workers=len(parsed_calls)) as executor:
@@ -184,11 +185,8 @@ class ToolHandler:
         return results
 
     def _execute_tool_with_context(self, ctx, name: str, args: Dict[str, Any]) -> Any:
-        otel_token = otel_context.attach(ctx)
-        try:
+        with self.observer.attach_context(ctx):
             return self._execute_tool(name, args)
-        finally:
-            otel_context.detach(otel_token)
 
     def _add_tool_result_parallel(self, tool_call: NormalizedToolCall, result: Any, name: str, args: Dict[str, Any]) -> bool:
         tool_validation = validate_tool_call(name, args, result, self.agent)
@@ -244,11 +242,7 @@ class ToolHandler:
             self.printer.tool_error(error_msg)
             return error_response(error_msg)
 
-        with self.agent.langfuse.start_as_current_observation(
-            as_type="tool",
-            name=f"tool: {name}",
-        ) as tool_span:
-            tool_span.update(input=args, metadata={"tool_name": name})
+        with self.observer.tool(name=name, args=args) as tool_span:
             try:
                 execution_args = args.copy()
 

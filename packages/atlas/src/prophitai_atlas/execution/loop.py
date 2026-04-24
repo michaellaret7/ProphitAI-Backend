@@ -12,13 +12,15 @@ from prophitai_shared import NormalizedLLMResponse, NormalizedToolCall
 
 if TYPE_CHECKING:
     from prophitai_atlas.agents.base import AgentBase
+    from prophitai_atlas.observability import LangfuseObserver
 
 class ExecutionLoop:
     """Fast execution loop for chat - no planning, terminates on text-only response."""
 
-    def __init__(self, agent: 'AgentBase'):
+    def __init__(self, agent: 'AgentBase', *, observer: 'LangfuseObserver'):
         self.agent = agent
         self.printer = agent.printer
+        self.observer = observer
 
     def execute(self, message_id: Optional[str] = None) -> Dict[str, Any]:
         """Run ReAct loop until answer ready or max iterations.
@@ -29,9 +31,7 @@ class ExecutionLoop:
         Returns:
             Dict with answer, tool_calls, total_tokens, cache token stats, iterations, and stop_reason.
         """
-        with self.agent.langfuse.start_as_current_observation(
-            as_type="chain",
-            name="execution_loop",
+        with self.observer.execution_loop(
             input={
                 "agent": self.agent.__class__.__name__,
                 "model": self.agent.model,
@@ -59,16 +59,10 @@ class ExecutionLoop:
 
             try:
                 for i in range(1, self.agent.max_iterations + 1):
-
-                    with self.agent.langfuse.start_as_current_observation(
-                        as_type="span",
-                        name=f"iteration_{i}"
+                    with self.observer.iteration(
+                        number=i,
+                        input=self._build_iteration_input(i),
                     ) as iteration_span:
-                    
-                        iteration_span.update(
-                            input=self._build_iteration_input(i),
-                            metadata={"iteration": str(i)},
-                        )
 
                         # Set current iteration for tool handler callback events
                         self.agent.tool_handler.current_iteration = i
@@ -77,6 +71,7 @@ class ExecutionLoop:
                         self.printer.iteration_start(i, self.agent.max_iterations)
 
                         response = self.call_llm()
+                        
                         iteration_tokens = self._track_token_usage(response)
                         iteration_usage = self._build_iteration_usage(response)
 
@@ -86,6 +81,7 @@ class ExecutionLoop:
                             called_tools = self._handle_tool_calls(
                                 response.tool_calls, assistant_text
                             )
+
                             tool_calls_made.extend(called_tools)
 
                             iteration_span.update(output={
@@ -96,6 +92,7 @@ class ExecutionLoop:
                             })
 
                             callback.on_iteration_end(iteration=i, tokens_used=iteration_tokens)
+
                         else:
                             # No tool calls — check for empty answer with incomplete plan
                             if not assistant_text.strip() and self._has_incomplete_tasks():
@@ -118,6 +115,7 @@ class ExecutionLoop:
                                 })
 
                                 callback.on_iteration_end(iteration=i, tokens_used=iteration_tokens)
+
                                 continue
 
                             self.agent.messages.append({

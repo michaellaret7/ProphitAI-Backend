@@ -3,12 +3,11 @@
 from abc import ABC, abstractmethod
 from typing import List, Dict, Any, Callable, Optional, Union
 
-from langfuse import get_client
-
 from prophitai_atlas.models import PrintMode, ChatCallback, NoOpChatCallback
 from prophitai_shared import get_backend
 from prophitai_atlas.execution import ExecutionLoop, ToolHandler
 from prophitai_atlas.logging import AgentPrinter
+from prophitai_atlas.observability import LangfuseObserver
 
 from prophitai_atlas.tools.base import think, calculator
 
@@ -32,7 +31,7 @@ class AgentBase(ABC):
         session_id: str = "default",
     ):
         # Observability
-        self.langfuse = get_client()
+        self.observer = LangfuseObserver()
 
         # LLM client setup
         self.provider = provider
@@ -64,8 +63,15 @@ class AgentBase(ABC):
 
         # Execution components
         self.printer = AgentPrinter(self.print_mode)
-        self.tool_handler = ToolHandler(self, self.printer, chat_callback=self.chat_callback)
-        self.execution_loop = ExecutionLoop(self)
+
+        self.tool_handler = ToolHandler(
+            self,
+            self.printer,
+            observer=self.observer,
+            chat_callback=self.chat_callback,
+        )
+        
+        self.execution_loop = ExecutionLoop(self, observer=self.observer)
 
         # ---- Register default tools ---- #
         if self.provider not in ('openai', 'anthropic'):
@@ -110,6 +116,11 @@ class AgentBase(ABC):
     def has_tool(self, name: str) -> bool:
         """Check if a tool is registered."""
         return name in self.tool_functions
+
+    def get_trace_name(self, *, planned: bool = False) -> str:
+        """Return the Langfuse trace name for this concrete agent class."""
+        agent_name = self.__class__.__name__
+        return f"{agent_name} (planned)" if planned else agent_name
 
     @abstractmethod
     def run(self, *args, **kwargs) -> Any:

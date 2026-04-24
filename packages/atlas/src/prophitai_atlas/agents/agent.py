@@ -6,7 +6,6 @@ from functools import partial
 from typing import Callable, List, Dict, Any, Optional, Union
 
 from pydantic import BaseModel
-from langfuse import propagate_attributes
 
 from prophitai_atlas.models import (
     PrintMode,
@@ -187,11 +186,11 @@ class Agent(AgentBase):
         """
         span_name = "agent.run_planned" if plan_first else "agent.run"
 
-        with self.langfuse.start_as_current_observation(
-            as_type="agent",
+        with self.observer.agent_run(
             name=span_name,
             input=user_message,
-            metadata={"provider": self.provider, "model": self.model},
+            provider=self.provider,
+            model=self.model,
         ) as run_span:
 
             try:
@@ -242,8 +241,9 @@ class Agent(AgentBase):
                 )
 
                 # --- Execute ---
-                trace_name = "Agent (planned)" if plan_first else "Agent"
-                with propagate_attributes(
+                trace_name = self.get_trace_name(planned=plan_first)
+                
+                with self.observer.trace_context(
                     trace_name=trace_name,
                     session_id=self.session_id,
                     tags=[trace_name, self.provider],

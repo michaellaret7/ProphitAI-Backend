@@ -3,8 +3,6 @@
 from functools import partial
 from typing import Optional, List, Callable, Any
 
-from langfuse import propagate_attributes
-
 from prophitai_atlas.agents.base import AgentBase
 from prophitai_atlas.models import PrintMode, AgentResponse, WORKER_PROVIDER, WORKER_MODEL
 from prophitai_atlas.models.notebook import Notebook
@@ -74,11 +72,11 @@ class WorkerAgent(AgentBase):
     def run(self) -> AgentResponse:
         """Execute the worker's task and return the result."""
 
-        with self.langfuse.start_as_current_observation(
-            as_type="agent",
+        with self.observer.agent_run(
             name="worker_agent.run",
             input=self.task,
-            metadata={"provider": self.provider, "model": self.model},
+            provider=self.provider,
+            model=self.model,
         ) as run_span:
 
             worker_prompt = self._build_system_prompt()
@@ -88,9 +86,12 @@ class WorkerAgent(AgentBase):
                 {"role": "user", "content": self.task},
             ]
 
-            with propagate_attributes(
+            trace_name = self.get_trace_name()
+            
+            with self.observer.trace_context(
+                trace_name=trace_name,
                 session_id=self.session_id,
-                tags=["WorkerAgent", self.provider],
+                tags=[trace_name, self.provider],
                 metadata={"model": self.model}
             ):
                 result = self.execution_loop.execute() # main agent execution loop 
