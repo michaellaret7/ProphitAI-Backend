@@ -16,15 +16,22 @@ composite alongside the standalone portfolio models:
         StopLossExit(pct=0.05),
         MaxGrossExposureRiskModel(max_gross=2.0),
     ])
+
+Composite always advertises the ``LifecycleAwareRiskModel`` protocol;
+individual children opt in structurally, and the engine's lifecycle
+events fan out via per-child ``isinstance`` checks.
 """
 
 from __future__ import annotations
 
-from prophitai_algo_trading.framework.models import (
+from prophitai_algo_trading.core.models import (
     AlgorithmContext,
     PortfolioTarget,
 )
-from prophitai_algo_trading.framework.protocols import RiskManagementModel
+from prophitai_algo_trading.core.protocols import (
+    LifecycleAwareRiskModel,
+    RiskManagementModel,
+)
 
 
 class CompositeRiskModel:
@@ -49,26 +56,24 @@ class CompositeRiskModel:
         return current
 
     #     ================================
-    # --> Lifecycle forwarding (engine hooks)
+    # --> Lifecycle forwarding
     #     ================================
 
-    def notify_entry(self, ctx: AlgorithmContext, symbol: str) -> None:
-        """Forward on_entry to every child that supports it."""
+    def on_position_opened(
+        self, ctx: AlgorithmContext, symbol: str,
+    ) -> None:
+        """Forward to every child that satisfies ``LifecycleAwareRiskModel``."""
         for model in self._models:
-            notifier = getattr(model, "notify_entry", None)
+            if isinstance(model, LifecycleAwareRiskModel):
+                model.on_position_opened(ctx, symbol)
 
-            if notifier is not None:
-                notifier(ctx, symbol)
-
-    def notify_exit(
+    def on_position_closed(
         self,
         ctx: AlgorithmContext,
         symbol: str,
-        trade_pnl: float,
+        pnl: float,
     ) -> None:
-        """Forward on_exit to every child that supports it."""
+        """Forward to every child that satisfies ``LifecycleAwareRiskModel``."""
         for model in self._models:
-            notifier = getattr(model, "notify_exit", None)
-
-            if notifier is not None:
-                notifier(ctx, symbol, trade_pnl)
+            if isinstance(model, LifecycleAwareRiskModel):
+                model.on_position_closed(ctx, symbol, pnl)

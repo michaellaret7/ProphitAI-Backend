@@ -1,12 +1,12 @@
 """End-to-end integration test for the framework.
 
 Builds a complete Algorithm (5 alphas + MultiAlphaBlend PCM + composite
-risk + simulated execution), runs EventDrivenBacktest on 2 years of
-real daily OHLCV for a 20-ticker universe, and grades the result
-against contract + sanity invariants.
+risk + ``ExecutionModel(PortfolioSink())``), runs ``Backtest`` on 2
+years of real daily OHLCV for a 20-ticker universe, and grades the
+result against contract + sanity invariants.
 
-This is the test that proves Phase 5 actually works — all 4 framework
-stages chained end-to-end through a real engine against real data.
+This is the test that proves the deepened framework actually works —
+all 4 stages chained end-to-end through a real engine against real data.
 
 Run:
     PYTHONIOENCODING=utf-8 /c/Dev/ProphitAI/.venv/Scripts/python.exe \
@@ -25,8 +25,8 @@ sys.path.insert(0, str(_PKG_SRC))
 
 from prophitai_algo_trading import (
     Algorithm,
+    Backtest,
     CostModel,
-    EventDrivenBacktest,
 )
 from prophitai_algo_trading.alphas import (
     BreakoutAlpha,
@@ -35,8 +35,11 @@ from prophitai_algo_trading.alphas import (
     ShortTermReversalAlpha,
     TrendVolumeAlpha,
 )
-from prophitai_algo_trading.framework.execution import SimulatedExecutionModel
-from prophitai_algo_trading.framework.portfolio_construction import (
+from prophitai_algo_trading.execution import (
+    ExecutionModel,
+    PortfolioSink,
+)
+from prophitai_algo_trading.portfolio_construction import (
     MagnitudeWeightedLongShortPCM,
     MultiAlphaBlendPCM,
 )
@@ -123,7 +126,7 @@ def build_algorithm() -> Algorithm:
             StopLossExit(pct=0.10),
             MaxGrossExposureRiskModel(max_gross=1.5),
         ]),
-        execution=SimulatedExecutionModel(min_change_pct=0.005),
+        execution=ExecutionModel(sink=PortfolioSink(), min_change_pct=0.005),
     )
 
 
@@ -168,11 +171,11 @@ def grade(result) -> None:
 #     ================================
 
 def test_event_driven() -> None:
-    print("\n=== EventDrivenBacktest end-to-end ===")
+    print("\n=== Backtest end-to-end ===")
     data = load_data()
     algo = build_algorithm()
 
-    engine = EventDrivenBacktest(
+    engine = Backtest(
         algo, initial_capital=INITIAL_CAPITAL,
         cost_model=CostModel(ptc=0.0001, ftc=1.0),
     )
@@ -206,10 +209,10 @@ def test_forced_stop_loss_fires() -> None:
             ),
         ),
         risk_management=StopLossExit(pct=0.02),
-        execution=SimulatedExecutionModel(),
+        execution=ExecutionModel(sink=PortfolioSink()),
     )
 
-    result = EventDrivenBacktest(
+    result = Backtest(
         tight_algo, initial_capital=INITIAL_CAPITAL,
     ).run(data)
 

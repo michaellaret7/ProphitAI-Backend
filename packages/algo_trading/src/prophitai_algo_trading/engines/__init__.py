@@ -1,9 +1,11 @@
-"""Backtest and live engines."""
+"""Backtest and live engines, plus the shared ``BarRunner``."""
 
-from prophitai_algo_trading.engines.event_driven import EventDrivenBacktest
+from prophitai_algo_trading.engines.backtest import Backtest
 from prophitai_algo_trading.engines.live import LiveRunner
+from prophitai_algo_trading.engines.runner import BarRunner
 
 __all__ = [
-    "EventDrivenBacktest",
+    "Backtest",
+    "BarRunner",
     "LiveRunner",
 ]

@@ -1,9 +1,12 @@
-"""Targeted tests for the 2 Phase 4 ExecutionModels.
+"""Scenario tests for the deep ``ExecutionModel``.
 
-Each scenario constructs an AlgorithmContext with known price data + a
-portfolio in a known state, calls ``execute()``, and asserts the
-resulting portfolio / broker calls. Real price data from the market_data
-DB so fill-price math matches production behavior.
+One decision engine (``ExecutionModel``), two sinks (``PortfolioSink`` +
+``BrokerSink``). The same scenario exercises each sink in turn so the
+shared decision matrix is covered once and the sink-specific side-
+effect is asserted separately.
+
+Real price data from the market_data DB so fill-price math matches
+production behavior.
 
 Run:
     PYTHONIOENCODING=utf-8 /c/Dev/ProphitAI/.venv/Scripts/python.exe \
@@ -22,15 +25,16 @@ import pandas as pd
 _PKG_SRC = Path(__file__).resolve().parents[1] / "src"
 sys.path.insert(0, str(_PKG_SRC))
 
-from prophitai_algo_trading.framework import (
+from prophitai_algo_trading.core import (
     AlgorithmContext,
     PortfolioTarget,
 )
-from prophitai_algo_trading.framework.execution import (
-    BrokerExecutionModel,
-    SimulatedExecutionModel,
+from prophitai_algo_trading.execution import (
+    BrokerSink,
+    ExecutionModel,
+    PortfolioSink,
 )
-from prophitai_algo_trading.portfolio import Portfolio, Position
+from prophitai_algo_trading.accounting.portfolio import Portfolio, Position
 from prophitai_data.repositories.price import fetch_bulk_ohlcv_data_for_tickers
 
 
@@ -101,16 +105,16 @@ class MockBroker:
 
 
 #     ================================
-# --> Simulated — open new
+# --> Portfolio-sink scenarios
 #     ================================
 
-def test_sim_open_long() -> None:
-    print("\n--- SIM: open new long from flat ---")
+def test_portfolio_sink_open_long() -> None:
+    print("\n--- PortfolioSink: open new long from flat ---")
     data = _load_bars()
     asof = max(df.index[-1] for df in data.values()).to_pydatetime()
     ctx = _make_ctx(data, asof)
 
-    model = SimulatedExecutionModel()
+    model = ExecutionModel(sink=PortfolioSink())
     model.execute(ctx, [PortfolioTarget("AAPL", 100.0)])
 
     pos = ctx.portfolio.positions.get("AAPL")
@@ -119,13 +123,13 @@ def test_sim_open_long() -> None:
     print(f"  AAPL long {pos.shares} @ ${pos.entry_price:.2f}  OK")
 
 
-def test_sim_open_short() -> None:
-    print("\n--- SIM: open new short from flat ---")
+def test_portfolio_sink_open_short() -> None:
+    print("\n--- PortfolioSink: open new short from flat ---")
     data = _load_bars()
     asof = max(df.index[-1] for df in data.values()).to_pydatetime()
     ctx = _make_ctx(data, asof)
 
-    model = SimulatedExecutionModel()
+    model = ExecutionModel(sink=PortfolioSink())
     model.execute(ctx, [PortfolioTarget("MSFT", -50.0)])
 
     pos = ctx.portfolio.positions.get("MSFT")
@@ -134,12 +138,8 @@ def test_sim_open_short() -> None:
     print(f"  MSFT short {pos.shares} @ ${pos.entry_price:.2f}  OK")
 
 
-#     ================================
-# --> Simulated — close
-#     ================================
-
-def test_sim_close() -> None:
-    print("\n--- SIM: close existing position (target=0) ---")
+def test_portfolio_sink_close() -> None:
+    print("\n--- PortfolioSink: close existing position (target=0) ---")
     data = _load_bars()
     asof = max(df.index[-1] for df in data.values()).to_pydatetime()
 
@@ -152,7 +152,7 @@ def test_sim_close() -> None:
 
     ctx = _make_ctx(data, asof, portfolio=portfolio)
 
-    model = SimulatedExecutionModel()
+    model = ExecutionModel(sink=PortfolioSink())
     model.execute(ctx, [PortfolioTarget("AAPL", 0.0)])
 
     assert "AAPL" not in ctx.portfolio.positions, "AAPL should be closed"
@@ -160,12 +160,8 @@ def test_sim_close() -> None:
     print(f"  AAPL closed, trade logged: pnl=${ctx.portfolio.trades[0].pnl:.2f}  OK")
 
 
-#     ================================
-# --> Simulated — resize
-#     ================================
-
-def test_sim_resize_material() -> None:
-    print("\n--- SIM: resize 100 -> 150 long (material change) ---")
+def test_portfolio_sink_resize_material() -> None:
+    print("\n--- PortfolioSink: resize 100 -> 150 long (material change) ---")
     data = _load_bars()
     asof = max(df.index[-1] for df in data.values()).to_pydatetime()
     price = float(data["AAPL"]["close"].iloc[-1])
@@ -179,7 +175,7 @@ def test_sim_resize_material() -> None:
 
     ctx = _make_ctx(data, asof, portfolio=portfolio)
 
-    model = SimulatedExecutionModel()
+    model = ExecutionModel(sink=PortfolioSink())
     model.execute(ctx, [PortfolioTarget("AAPL", 150.0)])
 
     pos = ctx.portfolio.positions.get("AAPL")
@@ -188,8 +184,8 @@ def test_sim_resize_material() -> None:
     print(f"  AAPL resized 100 -> 150 via close+reopen, trades logged: {len(ctx.portfolio.trades)}  OK")
 
 
-def test_sim_resize_skip_under_tolerance() -> None:
-    print("\n--- SIM: skip tiny rebalance (under 0.5% tolerance) ---")
+def test_portfolio_sink_resize_skip_under_tolerance() -> None:
+    print("\n--- PortfolioSink: skip tiny rebalance (under 0.5% tolerance) ---")
     data = _load_bars()
     asof = max(df.index[-1] for df in data.values()).to_pydatetime()
     price = float(data["AAPL"]["close"].iloc[-1])
@@ -203,9 +199,9 @@ def test_sim_resize_skip_under_tolerance() -> None:
 
     ctx = _make_ctx(data, asof, portfolio=portfolio)
 
-    model = SimulatedExecutionModel(min_change_pct=0.005)
+    model = ExecutionModel(sink=PortfolioSink(), min_change_pct=0.005)
     # Delta = 1 share * price; threshold = 0.005 * 1_000_000 = $5,000
-    # AAPL price around $250 → 1 share ≈ $250 < $5,000 → should skip.
+    # AAPL price around $250 -> 1 share ≈ $250 < $5,000 -> should skip.
     model.execute(ctx, [PortfolioTarget("AAPL", 101.0)])
 
     pos = ctx.portfolio.positions.get("AAPL")
@@ -215,12 +211,8 @@ def test_sim_resize_skip_under_tolerance() -> None:
     print(f"  delta notional ${price:.0f} < $5,000 threshold -> skipped, pos still 100  OK")
 
 
-#     ================================
-# --> Simulated — flip
-#     ================================
-
-def test_sim_flip() -> None:
-    print("\n--- SIM: flip long -> short ---")
+def test_portfolio_sink_flip() -> None:
+    print("\n--- PortfolioSink: flip long -> short ---")
     data = _load_bars()
     asof = max(df.index[-1] for df in data.values()).to_pydatetime()
     price = float(data["AAPL"]["close"].iloc[-1])
@@ -234,7 +226,7 @@ def test_sim_flip() -> None:
 
     ctx = _make_ctx(data, asof, portfolio=portfolio)
 
-    model = SimulatedExecutionModel()
+    model = ExecutionModel(sink=PortfolioSink())
     model.execute(ctx, [PortfolioTarget("AAPL", -100.0)])
 
     pos = ctx.portfolio.positions.get("AAPL")
@@ -243,17 +235,13 @@ def test_sim_flip() -> None:
     print(f"  AAPL flipped: now short {pos.shares}  OK")
 
 
-#     ================================
-# --> Simulated — warmup
-#     ================================
-
-def test_sim_warmup_noop() -> None:
-    print("\n--- SIM: warmup no-op ---")
+def test_portfolio_sink_warmup_noop() -> None:
+    print("\n--- PortfolioSink: warmup no-op ---")
     data = _load_bars()
     asof = max(df.index[-1] for df in data.values()).to_pydatetime()
     ctx = _make_ctx(data, asof, warmup=True)
 
-    model = SimulatedExecutionModel()
+    model = ExecutionModel(sink=PortfolioSink())
     model.execute(ctx, [PortfolioTarget("AAPL", 100.0)])
 
     assert len(ctx.portfolio.positions) == 0, "warmup should suppress all trades"
@@ -261,17 +249,17 @@ def test_sim_warmup_noop() -> None:
 
 
 #     ================================
-# --> Broker — open long
+# --> Broker-sink scenarios
 #     ================================
 
-def test_broker_open_long() -> None:
-    print("\n--- BROKER: open new long fires buy() and mirrors into portfolio ---")
+def test_broker_sink_open_long() -> None:
+    print("\n--- BrokerSink: open new long fires buy() and mirrors into portfolio ---")
     data = _load_bars()
     asof = max(df.index[-1] for df in data.values()).to_pydatetime()
     ctx = _make_ctx(data, asof)
 
     broker = MockBroker()
-    model = BrokerExecutionModel(broker)
+    model = ExecutionModel(sink=BrokerSink(broker))
     model.execute(ctx, [PortfolioTarget("AAPL", 100.0)])
 
     assert broker.calls == [("buy", "AAPL", 100.0)], \
@@ -285,12 +273,8 @@ def test_broker_open_long() -> None:
     print(f"  mirror: AAPL long {pos.shares}  OK")
 
 
-#     ================================
-# --> Broker — close
-#     ================================
-
-def test_broker_close() -> None:
-    print("\n--- BROKER: close fires close_position() and updates mirror ---")
+def test_broker_sink_close() -> None:
+    print("\n--- BrokerSink: close fires close_position() and updates mirror ---")
     data = _load_bars()
     asof = max(df.index[-1] for df in data.values()).to_pydatetime()
 
@@ -303,7 +287,7 @@ def test_broker_close() -> None:
     ctx = _make_ctx(data, asof, portfolio=portfolio)
 
     broker = MockBroker()
-    model = BrokerExecutionModel(broker)
+    model = ExecutionModel(sink=BrokerSink(broker))
     model.execute(ctx, [PortfolioTarget("MSFT", 0.0)])
 
     assert broker.calls == [("close", "MSFT", None)], \
@@ -312,12 +296,8 @@ def test_broker_close() -> None:
     print(f"  broker call: {broker.calls[0]}, mirror closed  OK")
 
 
-#     ================================
-# --> Broker — flip fires close + short
-#     ================================
-
-def test_broker_flip() -> None:
-    print("\n--- BROKER: flip long -> short fires close + sell ---")
+def test_broker_sink_flip() -> None:
+    print("\n--- BrokerSink: flip long -> short fires close + sell ---")
     data = _load_bars()
     asof = max(df.index[-1] for df in data.values()).to_pydatetime()
     price = float(data["NVDA"]["close"].iloc[-1])
@@ -332,7 +312,7 @@ def test_broker_flip() -> None:
     ctx = _make_ctx(data, asof, portfolio=portfolio)
 
     broker = MockBroker()
-    model = BrokerExecutionModel(broker)
+    model = ExecutionModel(sink=BrokerSink(broker))
     model.execute(ctx, [PortfolioTarget("NVDA", -200.0)])
 
     expected = [("close", "NVDA", None), ("sell", "NVDA", 200.0)]
@@ -346,18 +326,14 @@ def test_broker_flip() -> None:
     print(f"  broker calls: {broker.calls}, mirror flipped to short  OK")
 
 
-#     ================================
-# --> Broker — warmup no-op
-#     ================================
-
-def test_broker_warmup_noop() -> None:
-    print("\n--- BROKER: warmup no-op ---")
+def test_broker_sink_warmup_noop() -> None:
+    print("\n--- BrokerSink: warmup no-op ---")
     data = _load_bars()
     asof = max(df.index[-1] for df in data.values()).to_pydatetime()
     ctx = _make_ctx(data, asof, warmup=True)
 
     broker = MockBroker()
-    model = BrokerExecutionModel(broker)
+    model = ExecutionModel(sink=BrokerSink(broker))
     model.execute(ctx, [PortfolioTarget("AAPL", 100.0)])
 
     assert broker.calls == [], f"warmup should not fire broker calls, got {broker.calls}"
@@ -369,20 +345,20 @@ def test_broker_warmup_noop() -> None:
 #     ================================
 
 def main() -> None:
-    # Simulated
-    test_sim_open_long()
-    test_sim_open_short()
-    test_sim_close()
-    test_sim_resize_material()
-    test_sim_resize_skip_under_tolerance()
-    test_sim_flip()
-    test_sim_warmup_noop()
+    # PortfolioSink
+    test_portfolio_sink_open_long()
+    test_portfolio_sink_open_short()
+    test_portfolio_sink_close()
+    test_portfolio_sink_resize_material()
+    test_portfolio_sink_resize_skip_under_tolerance()
+    test_portfolio_sink_flip()
+    test_portfolio_sink_warmup_noop()
 
-    # Broker
-    test_broker_open_long()
-    test_broker_close()
-    test_broker_flip()
-    test_broker_warmup_noop()
+    # BrokerSink
+    test_broker_sink_open_long()
+    test_broker_sink_close()
+    test_broker_sink_flip()
+    test_broker_sink_warmup_noop()
 
     print("\nAll execution tests passed.")
 

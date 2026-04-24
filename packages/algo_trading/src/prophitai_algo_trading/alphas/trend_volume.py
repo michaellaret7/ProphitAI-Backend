@@ -20,9 +20,12 @@ during summer / thin-volume periods.
 
 from __future__ import annotations
 
-from datetime import timedelta
+from typing import TYPE_CHECKING
 
-from prophitai_algo_trading.framework.models import AlgorithmContext, Insight
+from prophitai_algo_trading.alphas.base import PerSymbolAlpha
+
+if TYPE_CHECKING:
+    import pandas as pd
 
 
 #     ================================
@@ -61,7 +64,7 @@ def _volume_zscore(volume, lookback: int) -> float:
 # --> Alpha
 #     ================================
 
-class TrendVolumeAlpha:
+class TrendVolumeAlpha(PerSymbolAlpha):
     """MACD histogram scaled by rolling volume z-score.
 
     Args:
@@ -90,37 +93,17 @@ class TrendVolumeAlpha:
         self._signal = signal
         self._vol_lookback = volume_lookback
         self._gate_floor = gate_floor
-        self._hold_days = hold_days
+        self.hold_days = hold_days
 
         # Reason: need slow-EMA to stabilize, then signal-EMA to settle on top.
         self.lookback = max(slow, volume_lookback) + signal
 
-    def update(self, ctx: AlgorithmContext) -> list[Insight]:
-        insights: list[Insight] = []
+    def compute_score(self, df: "pd.DataFrame") -> float | None:
+        macd_hist = _macd_histogram(
+            df["close"], self._fast, self._slow, self._signal,
+        )
+        vol_z = _volume_zscore(df["volume"], self._vol_lookback)
 
-        close_time = ctx.timestamp + timedelta(days=self._hold_days)
+        gate = max(vol_z, self._gate_floor)
 
-        for symbol, df in ctx.data.items():
-            if len(df) < self.lookback:
-                continue
-
-            macd_hist = _macd_histogram(
-                df["close"], self._fast, self._slow, self._signal,
-            )
-            vol_z = _volume_zscore(df["volume"], self._vol_lookback)
-
-            gate = max(vol_z, self._gate_floor)
-            raw_score = macd_hist * gate
-
-            direction = 1 if raw_score > 0.0 else -1 if raw_score < 0.0 else 0
-
-            insights.append(Insight(
-                symbol=symbol,
-                direction=direction,
-                generated_time=ctx.timestamp,
-                close_time=close_time,
-                magnitude=abs(raw_score),
-                source_alpha=self.name,
-            ))
-
-        return insights
+        return macd_hist * gate

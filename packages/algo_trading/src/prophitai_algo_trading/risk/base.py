@@ -22,8 +22,10 @@ Pipeline per ``manage()`` call (all encapsulated in this base):
   5. For invested symbols in forced-closes but absent from the target
      list, append explicit 0-share targets so Execution closes them.
 
-``notify_entry`` / ``notify_exit`` are the engine hooks that forward
-position open/close events into ``on_entry`` / ``on_exit``.
+``on_position_opened`` / ``on_position_closed`` are the engine hooks
+that forward position open/close events into ``on_entry`` / ``on_exit``.
+They satisfy the ``LifecycleAwareRiskModel`` protocol so the engine
+dispatches to them via a single ``isinstance`` gate.
 """
 
 from __future__ import annotations
@@ -36,7 +38,7 @@ from typing import TYPE_CHECKING
 import pandas as pd
 
 if TYPE_CHECKING:
-    from prophitai_algo_trading.framework.models import (
+    from prophitai_algo_trading.core.models import (
         AlgorithmContext,
         PortfolioTarget,
     )
@@ -180,7 +182,9 @@ class RiskRule(ABC):
 
         return self._apply_to_targets(ctx, targets, forced_closes, peak)
 
-    def notify_entry(self, ctx: "AlgorithmContext", symbol: str) -> None:
+    def on_position_opened(
+        self, ctx: "AlgorithmContext", symbol: str,
+    ) -> None:
         """Forward an open-position event into ``on_entry``."""
         rule_ctx = self._build_rule_context(
             ctx, symbol, portfolio_peak=self._peak_tracker.peak,
@@ -188,18 +192,18 @@ class RiskRule(ABC):
 
         self.on_entry(rule_ctx)
 
-    def notify_exit(
+    def on_position_closed(
         self,
         ctx: "AlgorithmContext",
         symbol: str,
-        trade_pnl: float,
+        pnl: float,
     ) -> None:
         """Forward a close-position event into ``on_exit``."""
         rule_ctx = self._build_rule_context(
             ctx, symbol, portfolio_peak=self._peak_tracker.peak,
         )
 
-        self.on_exit(rule_ctx, trade_pnl)
+        self.on_exit(rule_ctx, pnl)
 
     #     ================================
     # --> Internal pipeline
@@ -256,7 +260,7 @@ class RiskRule(ABC):
         forced_closes: set[str],
         peak: float,
     ) -> list["PortfolioTarget"]:
-        from prophitai_algo_trading.framework.models import PortfolioTarget
+        from prophitai_algo_trading.core.models import PortfolioTarget
 
         out: list[PortfolioTarget] = []
         present: set[str] = set()

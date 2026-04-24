@@ -28,8 +28,8 @@ from prophitai_algo_trading.alphas import (
     ShortTermReversalAlpha,
     TrendVolumeAlpha,
 )
-from prophitai_algo_trading.framework import AlgorithmContext, AlphaModel, Insight
-from prophitai_algo_trading.portfolio import Portfolio
+from prophitai_algo_trading.core import AlgorithmContext, AlphaModel, Insight
+from prophitai_algo_trading.accounting.portfolio import Portfolio
 from prophitai_data.repositories.price import fetch_bulk_ohlcv_data_for_tickers
 
 

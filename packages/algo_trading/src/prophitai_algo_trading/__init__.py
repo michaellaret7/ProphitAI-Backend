@@ -2,20 +2,23 @@
 
 Composable algorithm framework for research -> backtest -> deploy.
 Alpha -> PortfolioConstruction -> RiskManagement -> Execution is the
-same pipeline in backtest and live; only the ExecutionModel differs.
+same pipeline in backtest and live; only the ``ExecutionModel``'s sink
+differs (``PortfolioSink`` for backtest, ``BrokerSink`` for live).
 
 Quick start::
 
-    from prophitai_algo_trading import Algorithm, EventDrivenBacktest, CostModel
+    from prophitai_algo_trading import Algorithm, Backtest, CostModel
     from prophitai_algo_trading.alphas import MomentumAlpha, BreakoutAlpha
-    from prophitai_algo_trading.framework.portfolio_construction import (
+    from prophitai_algo_trading.portfolio_construction import (
         MagnitudeWeightedLongShortPCM,
         MultiAlphaBlendPCM,
     )
     from prophitai_algo_trading.risk import (
         CompositeRiskModel, MaxDrawdownRiskModel, MaxGrossExposureRiskModel,
     )
-    from prophitai_algo_trading.framework.execution import SimulatedExecutionModel
+    from prophitai_algo_trading.execution import (
+        ExecutionModel, PortfolioSink,
+    )
 
     algo = Algorithm(
         alphas=[MomentumAlpha(), BreakoutAlpha()],
@@ -27,21 +30,22 @@ Quick start::
             MaxDrawdownRiskModel(max_drawdown_pct=0.15),
             MaxGrossExposureRiskModel(max_gross=1.5),
         ]),
-        execution=SimulatedExecutionModel(min_change_pct=0.005),
+        execution=ExecutionModel(sink=PortfolioSink(), min_change_pct=0.005),
     )
 
-    result = EventDrivenBacktest(algo, initial_capital=1_000_000.0).run(data)
+    result = Backtest(algo, initial_capital=1_000_000.0).run(data)
 """
 
-from prophitai_algo_trading.broker import Alpaca
-from prophitai_algo_trading.cost_model import CostModel
-from prophitai_algo_trading.data.loader import load_csv_data
+from prophitai_algo_trading.brokers import Alpaca
+from prophitai_algo_trading.accounting.cost_model import CostModel
+from prophitai_algo_trading.data.csv_loader import load_csv_data
 from prophitai_algo_trading.engines import (
-    EventDrivenBacktest,
+    Backtest,
+    BarRunner,
     LiveRunner,
 )
-from prophitai_algo_trading.enums import Direction
-from prophitai_algo_trading.framework import (
+from prophitai_algo_trading.core.enums import Direction
+from prophitai_algo_trading.core import (
     AlgorithmContext,
     AlphaModel,
     ExecutionModel,
@@ -50,9 +54,9 @@ from prophitai_algo_trading.framework import (
     PortfolioTarget,
     RiskManagementModel,
 )
-from prophitai_algo_trading.framework.algorithm import Algorithm
-from prophitai_algo_trading.metrics import BacktestResult, calculate_metrics
-from prophitai_algo_trading.portfolio import Portfolio, Position, Trade
+from prophitai_algo_trading.core.algorithm import Algorithm
+from prophitai_algo_trading.analytics.metrics import BacktestResult, calculate_metrics
+from prophitai_algo_trading.accounting.portfolio import Portfolio, Position, Trade
 
 __all__ = [
     # Framework core
@@ -65,7 +69,8 @@ __all__ = [
     "RiskManagementModel",
     "ExecutionModel",
     # Engines
-    "EventDrivenBacktest",
+    "Backtest",
+    "BarRunner",
     "LiveRunner",
     # Portfolio / accounting
     "Portfolio",

@@ -15,7 +15,7 @@ alongside the rules as a standalone ``RiskManagementModel``.
 
 from __future__ import annotations
 
-from prophitai_algo_trading.framework.models import (
+from prophitai_algo_trading.core.models import (
     AlgorithmContext,
     PortfolioTarget,
 )

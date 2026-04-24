@@ -1,11 +1,10 @@
-"""Live/paper trading runner — framework version.
+"""Live/paper trading runner — thin wrapper around ``BarRunner``.
 
 Subscribes to the ZMQ bar stream, batches bars by timestamp, and drives
-the same Alpha -> PCM -> Risk -> Execution pipeline as
-``EventDrivenBacktest``. The user constructs an ``Algorithm`` with a
-``BrokerExecutionModel`` so the pipeline terminates at real broker
-orders; the runner calls the broker directly only for lifecycle work
-(startup snapshot + hydrate).
+the same ``BarRunner`` pipeline as ``Backtest``. The user constructs an
+``Algorithm`` wired with ``ExecutionModel(sink=BrokerSink(alpaca))`` so
+the pipeline terminates at real broker orders; this runner calls the
+broker directly only for lifecycle work (startup snapshot + hydrate).
 
 Lifecycle:
 
@@ -27,14 +26,15 @@ from typing import TYPE_CHECKING
 
 import pandas as pd
 
-from prophitai_algo_trading.cost_model import CostModel
-from prophitai_algo_trading.data.stream.subscriber import async_subscribe
-from prophitai_algo_trading.framework.models import AlgorithmContext
-from prophitai_algo_trading.portfolio import Portfolio, Position
+from prophitai_algo_trading.accounting.cost_model import CostModel
+from prophitai_algo_trading.data.streaming.subscriber import async_subscribe
+from prophitai_algo_trading.engines.runner import BarRunner
+from prophitai_algo_trading.core.models import AlgorithmContext
+from prophitai_algo_trading.accounting.portfolio import Portfolio, Position
 
 if TYPE_CHECKING:
-    from prophitai_algo_trading.broker.alpaca import Alpaca
-    from prophitai_algo_trading.framework.algorithm import Algorithm
+    from prophitai_algo_trading.brokers.alpaca.facade import Alpaca
+    from prophitai_algo_trading.core.algorithm import Algorithm
 
 
 logger = logging.getLogger(__name__)
@@ -67,14 +67,6 @@ def _ingest_bar(
     return combined[~combined.index.duplicated(keep="last")].sort_index()
 
 
-def _position_snapshot(portfolio: Portfolio) -> dict[str, int]:
-    """Symbol -> signed direction (±1 for open, 0 for flat)."""
-    return {
-        symbol: pos.direction
-        for symbol, pos in portfolio.positions.items()
-    }
-
-
 #     ================================
 # --> Runner
 #     ================================
@@ -84,8 +76,8 @@ class LiveRunner:
 
     Args:
         algorithm: Fully-configured ``Algorithm``. The ``execution`` field
-            should be a ``BrokerExecutionModel(broker)`` that references
-            the same broker passed into this runner.
+            should be ``ExecutionModel(sink=BrokerSink(broker))`` where
+            ``broker`` is the same broker passed into this runner.
         broker: Alpaca wrapper — used for startup snapshot + hydrate.
             Execution goes through ``algorithm.execution``, not directly
             through the broker.
@@ -104,6 +96,8 @@ class LiveRunner:
         self.broker = broker
         self.tickers = list(tickers)
         self.cost_model = cost_model or CostModel()
+
+        self._runner = BarRunner(algorithm)
 
         self._frames: dict[str, pd.DataFrame] = {
             t: pd.DataFrame() for t in self.tickers
@@ -256,65 +250,6 @@ class LiveRunner:
             warmup=self._bar_count <= self.algorithm.max_lookback,
         )
 
-        insights: list = []
-
-        for alpha in self.algorithm.alphas:
-            insights.extend(alpha.update(ctx))
-
-        targets = self.algorithm.portfolio_construction.create_targets(ctx, insights)
-        targets = self.algorithm.risk_management.manage(ctx, targets)
-
-        positions_before = _position_snapshot(self._portfolio)
-        trades_before = len(self._portfolio.trades)
-
-        self.algorithm.execution.execute(ctx, targets)
-
-        self._notify_position_changes(ctx, positions_before, trades_before)
+        self._runner.step(ctx)
 
         self._portfolio.record_equity(timestamp, prices)
-
-    #     ================================
-    # --> Notify diffing (shared shape with backtest)
-    #     ================================
-
-    def _notify_position_changes(
-        self,
-        ctx: AlgorithmContext,
-        before: dict[str, int],
-        trades_before: int,
-    ) -> None:
-        risk = self.algorithm.risk_management
-
-        notify_entry = getattr(risk, "notify_entry", None)
-        notify_exit = getattr(risk, "notify_exit", None)
-
-        if notify_entry is None and notify_exit is None:
-            return
-
-        assert self._portfolio is not None
-
-        after = _position_snapshot(self._portfolio)
-
-        new_trades = self._portfolio.trades[trades_before:]
-        pnl_by_symbol: dict[str, float] = {
-            trade.symbol: trade.pnl for trade in new_trades
-        }
-
-        for symbol in set(before) | set(after):
-            before_dir = before.get(symbol, 0)
-            after_dir = after.get(symbol, 0)
-
-            was_flat = before_dir == 0
-            is_flat = after_dir == 0
-            flipped = (
-                not was_flat and not is_flat and before_dir * after_dir < 0
-            )
-
-            closed = not was_flat and (is_flat or flipped)
-            opened = not is_flat and (was_flat or flipped)
-
-            if closed and notify_exit is not None:
-                notify_exit(ctx, symbol, pnl_by_symbol.get(symbol, 0.0))
-
-            if opened and notify_entry is not None:
-                notify_entry(ctx, symbol)

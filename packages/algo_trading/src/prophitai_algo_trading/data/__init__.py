@@ -1,5 +1,5 @@
-"""Data loading and live streaming for strategies."""
+"""Market-data I/O — historical loaders and live streaming transport."""
 
-from prophitai_algo_trading.data.loader import load_csv_data
+from prophitai_algo_trading.data.csv_loader import load_csv_data
 
 __all__ = ["load_csv_data"]

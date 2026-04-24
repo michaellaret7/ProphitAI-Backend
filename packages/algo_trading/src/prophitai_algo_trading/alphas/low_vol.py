@@ -19,11 +19,16 @@ The PCM can still cross-sectionally z-score magnitude before blending.
 
 from __future__ import annotations
 
-from datetime import timedelta
+from typing import TYPE_CHECKING
 
 import numpy as np
 
-from prophitai_algo_trading.framework.models import AlgorithmContext, Insight
+from prophitai_algo_trading.alphas.base import CrossSectionalAlpha
+
+if TYPE_CHECKING:
+    import pandas as pd
+
+    from prophitai_algo_trading.core.models import AlgorithmContext
 
 
 #     ================================
@@ -57,8 +62,15 @@ def _realized_sigma(closes, lookback: int) -> float | None:
 # --> Alpha
 #     ================================
 
-class LowVolAlpha:
+class LowVolAlpha(CrossSectionalAlpha):
     """Cross-sectional low-vol signal.
+
+    Two-phase per bar:
+        1. ``compute_universe_stats`` measures realized sigma for every
+           ready symbol and returns ``{"sigmas": {...}, "median": float}``
+           (or ``None`` if universe is too small this bar).
+        2. ``compute_score`` returns ``median - sigma`` for each ticker —
+           positive = below-median (long), negative = above (short).
 
     Args:
         lookback_days: Window over which realized vol is measured.
@@ -77,13 +89,14 @@ class LowVolAlpha:
         min_universe_size: int = 3,
     ):
         self._window = lookback_days
-        self._hold_days = hold_days
+        self.hold_days = hold_days
         self._min_universe = min_universe_size
 
         self.lookback = lookback_days + 1
 
-    def update(self, ctx: AlgorithmContext) -> list[Insight]:
-        # Reason: phase 1 — sigma per ready symbol.
+    def compute_universe_stats(
+        self, ctx: "AlgorithmContext",
+    ) -> dict | None:
         sigmas: dict[str, float] = {}
 
         for symbol, df in ctx.data.items():
@@ -98,27 +111,25 @@ class LowVolAlpha:
             sigmas[symbol] = sigma
 
         if len(sigmas) < self._min_universe:
-            return []
+            return None
 
-        # Reason: phase 2 — cross-sectional direction via median split.
         median_sigma = float(np.median(list(sigmas.values())))
 
-        close_time = ctx.timestamp + timedelta(days=self._hold_days)
+        return {"sigmas": sigmas, "median": median_sigma}
 
-        insights: list[Insight] = []
+    def compute_score(
+        self, df: "pd.DataFrame", stats: dict,
+    ) -> float | None:
+        # Reason: find this ticker's sigma via identity — iterating the
+        # dict with an unknown symbol would require passing symbol in.
+        # Cleaner: the base already filtered len(df) >= lookback, so we
+        # recompute sigma here (cheap vs. plumbing a symbol key in).
+        sigma = _realized_sigma(df["close"], self._window)
 
-        for symbol, sigma in sigmas.items():
-            distance = median_sigma - sigma  # positive for below-median (low vol)
+        if sigma is None:
+            return None
 
-            direction = 1 if distance > 0.0 else -1 if distance < 0.0 else 0
+        median_sigma: float = stats["median"]
 
-            insights.append(Insight(
-                symbol=symbol,
-                direction=direction,
-                generated_time=ctx.timestamp,
-                close_time=close_time,
-                magnitude=abs(distance),
-                source_alpha=self.name,
-            ))
-
-        return insights
+        # Positive => below-median-sigma (low vol → long).
+        return median_sigma - sigma

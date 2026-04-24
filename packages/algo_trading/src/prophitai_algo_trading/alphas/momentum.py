@@ -5,19 +5,22 @@ t-(skip). Skipping the most recent ~21 trading days avoids the
 well-documented one-month reversal effect that otherwise contaminates
 raw momentum signals.
 
-Emits one Insight per ready symbol. Direction is the sign of the 12-1
-return; magnitude is its absolute value. The PortfolioConstructionModel
-cross-sectionally z-scores magnitude before blending with other alphas.
+Direction is the sign of the 12-1 return; magnitude is its absolute
+value. The ``PortfolioConstructionModel`` cross-sectionally z-scores
+magnitude before blending with other alphas.
 """
 
 from __future__ import annotations
 
-from datetime import timedelta
+from typing import TYPE_CHECKING
 
-from prophitai_algo_trading.framework.models import AlgorithmContext, Insight
+from prophitai_algo_trading.alphas.base import PerSymbolAlpha
+
+if TYPE_CHECKING:
+    import pandas as pd
 
 
-class MomentumAlpha:
+class MomentumAlpha(PerSymbolAlpha):
     """12-1 price momentum.
 
     With defaults (lookback=252, skip=21), measures the return from 252
@@ -42,39 +45,18 @@ class MomentumAlpha:
     ):
         self._lookback_days = lookback_days
         self._skip_days = skip_days
-        self._hold_days = hold_days
+        self.hold_days = hold_days
 
         # Reason: need lookback+1 observations so closes[-lookback-1] exists.
         self.lookback = lookback_days + 1
 
-    def update(self, ctx: AlgorithmContext) -> list[Insight]:
-        insights: list[Insight] = []
+    def compute_score(self, df: "pd.DataFrame") -> float | None:
+        closes = df["close"]
 
-        close_time = ctx.timestamp + timedelta(days=self._hold_days)
+        start_price = float(closes.iloc[-(self._lookback_days + 1)])
+        end_price = float(closes.iloc[-(self._skip_days + 1)])
 
-        for symbol, df in ctx.data.items():
-            if len(df) < self.lookback:
-                continue
+        if start_price <= 0.0 or end_price <= 0.0:
+            return None
 
-            closes = df["close"]
-
-            start_price = float(closes.iloc[-(self._lookback_days + 1)])
-            end_price = float(closes.iloc[-(self._skip_days + 1)])
-
-            if start_price <= 0.0 or end_price <= 0.0:
-                continue
-
-            raw_return = (end_price / start_price) - 1.0
-
-            direction = 1 if raw_return > 0.0 else -1 if raw_return < 0.0 else 0
-
-            insights.append(Insight(
-                symbol=symbol,
-                direction=direction,
-                generated_time=ctx.timestamp,
-                close_time=close_time,
-                magnitude=abs(raw_return),
-                source_alpha=self.name,
-            ))
-
-        return insights
+        return (end_price / start_price) - 1.0
