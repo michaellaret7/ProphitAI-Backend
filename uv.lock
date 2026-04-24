@@ -15,13 +15,11 @@ members = [
     "prophitai-algo-trading",
     "prophitai-api",
     "prophitai-atlas",
-    "prophitai-bt-test",
     "prophitai-calculations",
     "prophitai-data",
     "prophitai-foundry",
     "prophitai-fund",
     "prophitai-jobs",
-    "prophitai-qc-test",
     "prophitai-shared",
     "prophitai-substack",
     "prophitai-tools",
@@ -790,20 +788,6 @@ wheels = [
 ]
 
 [[package]]
-name = "docker"
-version = "7.1.0"
-source = { registry = "https://pypi.org/simple" }
-dependencies = [
-    { name = "pywin32", marker = "sys_platform == 'win32'" },
-    { name = "requests" },
-    { name = "urllib3" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/91/9b/4a2ea29aeba62471211598dac5d96825bb49348fa07e906ea930394a83ce/docker-7.1.0.tar.gz", hash = "sha256:ad8c70e6e3f8926cb8a92619b832b4ea5299e2831c14284663184e200546fa6c", size = 117834 }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/e3/26/57c6fb270950d476074c087527a558ccb6f4436657314bfb6cdf484114c4/docker-7.1.0-py3-none-any.whl", hash = "sha256:c96b93b7f0a746f9e77d325bcfb87422a3d8bd4f03136ae8a85b37f1898d5fc0", size = 147774 },
-]
-
-[[package]]
 name = "dockerfile-parse"
 version = "2.0.1"
 source = { registry = "https://pypi.org/simple" }
@@ -1544,15 +1528,6 @@ wheels = [
 ]
 
 [[package]]
-name = "json5"
-version = "0.14.0"
-source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/9c/4b/6f8906aaf67d501e259b0adab4d312945bb7211e8b8d4dcc77c92320edaa/json5-0.14.0.tar.gz", hash = "sha256:b3f492fad9f6cdbced8b7d40b28b9b1c9701c5f561bef0d33b81c2ff433fefcb", size = 52656 }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/b8/42/cf027b4ac873b076189d935b135397675dac80cb29acb13e1ab86ad6c631/json5-0.14.0-py3-none-any.whl", hash = "sha256:56cf861bab076b1178eb8c92e1311d273a9b9acea2ccc82c276abf839ebaef3a", size = 36271 },
-]
-
-[[package]]
 name = "jsonlines"
 version = "4.0.0"
 source = { registry = "https://pypi.org/simple" }
@@ -1766,29 +1741,6 @@ source = { registry = "https://pypi.org/simple" }
 sdist = { url = "https://files.pythonhosted.org/packages/dd/8d/2161f46485d9c36c0fa0e1c997faf08bb7843027e59b549598e49f55f8bf/latex2mathml-3.79.0.tar.gz", hash = "sha256:11bde318c2d2d6fcdd105a07509d867cee2208f653278eb80243dec7ea77a0ce", size = 151103 }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/fd/92/56a954dd59637dd2ee013581fa3beea0821f17f2c07f818fc51dcc11fd10/latex2mathml-3.79.0-py3-none-any.whl", hash = "sha256:9f10720d4fcf6b22d1b81f6628237832419a7a29783c13aa92fa8d680165e63d", size = 73945 },
-]
-
-[[package]]
-name = "lean"
-version = "1.0.225"
-source = { registry = "https://pypi.org/simple" }
-dependencies = [
-    { name = "click" },
-    { name = "cryptography" },
-    { name = "docker" },
-    { name = "joblib" },
-    { name = "json5" },
-    { name = "lxml" },
-    { name = "pydantic" },
-    { name = "python-dateutil" },
-    { name = "quantconnect-stubs" },
-    { name = "requests" },
-    { name = "rich" },
-    { name = "setuptools" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/f7/13/ed078b993c19eb29ac497e21698b35da92e3d0b2383fc8febb622ee6b9d9/lean-1.0.225.tar.gz", hash = "sha256:9689053985a6c90bd276c9d929513ff6c8c61c0c9856c14f79b32bbf47923767", size = 245696 }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/90/15/57d4ebe646eadadfb6847d394537fae0268666a5061e04ddb5cd2ec90c89/lean-1.0.225-py3-none-any.whl", hash = "sha256:dfb4bd019dc8ada20d3e2d9832be9bba556363d9c87b884c2437ef96252300dd", size = 328495 },
 ]
 
 [[package]]
@@ -3120,23 +3072,6 @@ requires-dist = [
 provides-extras = ["claude", "grok"]
 
 [[package]]
-name = "prophitai-bt-test"
-version = "0.1.0"
-source = { editable = "projects/bt_test" }
-dependencies = [
-    { name = "numpy" },
-    { name = "pandas" },
-    { name = "prophitai-algo-trading" },
-]
-
-[package.metadata]
-requires-dist = [
-    { name = "numpy", specifier = ">=2.3.5" },
-    { name = "pandas", specifier = ">=2.3.3" },
-    { name = "prophitai-algo-trading", editable = "packages/algo_trading" },
-]
-
-[[package]]
 name = "prophitai-calculations"
 version = "0.1.0"
 source = { editable = "packages/calculations" }
@@ -3289,23 +3224,6 @@ requires-dist = [
 ]
 
 [[package]]
-name = "prophitai-qc-test"
-version = "0.1.0"
-source = { editable = "projects/qc_test" }
-dependencies = [
-    { name = "lean" },
-    { name = "pandas" },
-    { name = "prophitai-data" },
-]
-
-[package.metadata]
-requires-dist = [
-    { name = "lean" },
-    { name = "pandas" },
-    { name = "prophitai-data", editable = "packages/data" },
-]
-
-[[package]]
 name = "prophitai-shared"
 version = "0.1.0"
 source = { editable = "packages/shared" }
@@ -3384,13 +3302,11 @@ dependencies = [
     { name = "prophitai-algo-trading" },
     { name = "prophitai-api" },
     { name = "prophitai-atlas" },
-    { name = "prophitai-bt-test" },
     { name = "prophitai-calculations" },
     { name = "prophitai-data" },
     { name = "prophitai-foundry" },
     { name = "prophitai-fund" },
     { name = "prophitai-jobs" },
-    { name = "prophitai-qc-test" },
     { name = "prophitai-shared" },
     { name = "prophitai-substack" },
     { name = "prophitai-tools" },
@@ -3406,13 +3322,11 @@ requires-dist = [
     { name = "prophitai-algo-trading", editable = "packages/algo_trading" },
     { name = "prophitai-api", editable = "projects/api" },
     { name = "prophitai-atlas", editable = "packages/atlas" },
-    { name = "prophitai-bt-test", editable = "projects/bt_test" },
     { name = "prophitai-calculations", editable = "packages/calculations" },
     { name = "prophitai-data", editable = "packages/data" },
     { name = "prophitai-foundry", editable = "packages/foundry" },
     { name = "prophitai-fund", editable = "projects/fund" },
     { name = "prophitai-jobs", editable = "infra/jobs" },
-    { name = "prophitai-qc-test", editable = "projects/qc_test" },
     { name = "prophitai-shared", editable = "packages/shared" },
     { name = "prophitai-substack", editable = "projects/substack" },
     { name = "prophitai-tools", editable = "packages/tools" },
@@ -3979,19 +3893,6 @@ wheels = [
     { url = "https://files.pythonhosted.org/packages/c4/59/a5f38970f9bf07cee96128de79590bb354917914a9be11272cfc7ff26af0/pyzmq-27.1.0-cp314-cp314t-win32.whl", hash = "sha256:1f0b2a577fd770aa6f053211a55d1c47901f4d537389a034c690291485e5fe92", size = 587472 },
     { url = "https://files.pythonhosted.org/packages/70/d8/78b1bad170f93fcf5e3536e70e8fadac55030002275c9a29e8f5719185de/pyzmq-27.1.0-cp314-cp314t-win_amd64.whl", hash = "sha256:19c9468ae0437f8074af379e986c5d3d7d7bfe033506af442e8c879732bedbe0", size = 661401 },
     { url = "https://files.pythonhosted.org/packages/81/d6/4bfbb40c9a0b42fc53c7cf442f6385db70b40f74a783130c5d0a5aa62228/pyzmq-27.1.0-cp314-cp314t-win_arm64.whl", hash = "sha256:dc5dbf68a7857b59473f7df42650c621d7e8923fb03fa74a526890f4d33cc4d7", size = 575170 },
-]
-
-[[package]]
-name = "quantconnect-stubs"
-version = "17677"
-source = { registry = "https://pypi.org/simple" }
-dependencies = [
-    { name = "matplotlib" },
-    { name = "pandas" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/53/15/5ea45a0f9cc5ec5c84cad73cbec2460b3e4eb3fdf73b8d4259a27e51c7aa/quantconnect_stubs-17677.tar.gz", hash = "sha256:b5d566e5ff19693b142eca752c38ae16620d0f76fa3a611d4d3564831fafae1a", size = 1153341 }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/20/9a/9cbe36afa68dd1c47edc20c4bfc5c0052e7dca78956a9948ed7e3f3536d2/quantconnect_stubs-17677-py3-none-any.whl", hash = "sha256:dbcaba93b3d855b5170f7e7a46440c1b31d82d4709010104aebed2835fd72b46", size = 1366276 },
 ]
 
 [[package]]

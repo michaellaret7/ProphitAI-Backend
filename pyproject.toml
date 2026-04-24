@@ -12,8 +12,6 @@ dependencies = [
     "prophitai-foundry",
     "prophitai-api",
     "prophitai-fund",
-    "prophitai-qc-test",
-    "prophitai-bt-test",
     "prophitai-substack",
     "prophitai-jobs",
 ]
@@ -28,8 +26,6 @@ members = [
     "packages/*",
     "projects/api",
     "projects/fund",
-    "projects/qc_test",
-    "projects/bt_test",
     "projects/substack",
     "infra/jobs",
 ]
@@ -44,8 +40,6 @@ prophitai-algo_trading = { workspace = true }
 prophitai-foundry = { workspace = true }
 prophitai-api = { workspace = true }
 prophitai-fund = { workspace = true }
-prophitai-qc-test = { workspace = true }
-prophitai-bt-test = { workspace = true }
 prophitai-substack = { workspace = true }
 prophitai-jobs = { workspace = true }
 
