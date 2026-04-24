@@ -118,18 +118,15 @@ class LowVolAlpha(CrossSectionalAlpha):
         return {"sigmas": sigmas, "median": median_sigma}
 
     def compute_score(
-        self, df: "pd.DataFrame", stats: dict,
+        self, symbol: str, df: "pd.DataFrame", stats: dict,
     ) -> float | None:
-        # Reason: find this ticker's sigma via identity — iterating the
-        # dict with an unknown symbol would require passing symbol in.
-        # Cleaner: the base already filtered len(df) >= lookback, so we
-        # recompute sigma here (cheap vs. plumbing a symbol key in).
-        sigma = _realized_sigma(df["close"], self._window)
+        sigmas: dict[str, float] = stats["sigmas"]
+        median_sigma: float = stats["median"]
+
+        sigma = sigmas.get(symbol)
 
         if sigma is None:
             return None
-
-        median_sigma: float = stats["median"]
 
         # Positive => below-median-sigma (low vol → long).
         return median_sigma - sigma

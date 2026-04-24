@@ -36,7 +36,7 @@ class RSIMeanReversionAlpha(PerSymbolAlpha):
         # Reason: need window+1 closes so the first delta exists.
         self.lookback = lookback_days + 1
 
-    def compute_score(self, df: pd.DataFrame) -> float | None:
+    def compute_score(self, symbol: str, df: pd.DataFrame) -> float | None:
         closes = df["close"]
 
         deltas = closes.diff().iloc[-self._window:]

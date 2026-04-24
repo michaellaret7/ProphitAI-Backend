@@ -50,7 +50,7 @@ class MomentumAlpha(PerSymbolAlpha):
         # Reason: need lookback+1 observations so closes[-lookback-1] exists.
         self.lookback = lookback_days + 1
 
-    def compute_score(self, df: "pd.DataFrame") -> float | None:
+    def compute_score(self, symbol: str, df: "pd.DataFrame") -> float | None:
         closes = df["close"]
 
         start_price = float(closes.iloc[-(self._lookback_days + 1)])

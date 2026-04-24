@@ -1,9 +1,10 @@
 """Investable universe, sector pairs, and data loader for the strategy.
 
-50 liquid US names across 7 sectors. Six curated same-sector
-cointegration pairs are listed separately for ``CointegrationPairAlpha``
-to trade — these are well-known empirical pairs (business-model twins
-with long trading history), not the output of a pair-discovery step.
+150 liquid US names across 11 GICS sectors. Ten curated same-sector
+cointegration pairs are listed separately for
+``CointegrationPairAlpha`` to trade — these are well-known empirical
+pairs (business-model twins with long trading history), not the
+output of an automated pair-discovery step.
 """
 
 from __future__ import annotations
@@ -14,30 +15,54 @@ from prophitai_data.repositories.price import fetch_bulk_ohlcv_data_for_tickers
 
 
 #     ================================
-# --> Universe
+# --> Universe (150 tickers)
 #     ================================
 
 UNIVERSE: list[str] = [
-    # Tech (12)
+    # Tech (30)
     "AAPL", "MSFT", "GOOGL", "META", "NVDA", "AMZN",
     "ORCL", "CRM", "ADBE", "NFLX", "TSLA", "AVGO",
-    # Finance (6)
+    "INTC", "AMD", "QCOM", "IBM", "AMAT", "LRCX",
+    "MU", "TXN", "KLAC", "ADI", "PANW", "CSCO",
+    "NOW", "ACN", "SNPS", "CDNS", "UBER", "INTU",
+    # Finance (20)
     "JPM", "BAC", "WFC", "GS", "MS", "C",
-    # Healthcare (6)
+    "BLK", "SCHW", "AIG", "MET", "PRU", "PNC",
+    "USB", "TFC", "COF", "AXP", "MMC", "ICE",
+    "CME", "SPGI",
+    # Healthcare (20)
     "JNJ", "UNH", "LLY", "PFE", "ABBV", "MRK",
-    # Consumer (6)
-    "WMT", "HD", "NKE", "MCD", "SBUX", "PG",
-    # Energy (4)
-    "XOM", "CVX", "COP", "SLB",
-    # Industrial (5)
-    "CAT", "GE", "BA", "HON", "UPS",
-    # Communication (3)
-    "T", "VZ", "DIS",
-    # Payments + staples + defense (8)
-    "KO", "PEP", "MA", "V", "AXP", "UNP", "LMT", "RTX",
+    "TMO", "DHR", "ABT", "BMY", "AMGN", "GILD",
+    "CVS", "CI", "VRTX", "REGN", "ISRG", "MDT",
+    "SYK", "BSX",
+    # Consumer Discretionary (15)
+    "HD", "LOW", "NKE", "MCD", "SBUX", "TJX",
+    "ROST", "ULTA", "YUM", "CMG", "LULU", "DG",
+    "DLTR", "MAR", "BKNG",
+    # Consumer Staples (14)
+    "WMT", "COST", "TGT", "PG", "KO", "PEP",
+    "CL", "KMB", "GIS", "K", "MDLZ", "MO",
+    "PM", "STZ",
+    # Energy (10)
+    "XOM", "CVX", "COP", "SLB", "EOG", "OXY",
+    "PSX", "VLO", "MPC", "WMB",
+    # Industrial (15)
+    "CAT", "GE", "BA", "HON", "UPS", "DE",
+    "MMM", "EMR", "ITW", "ETN", "FDX", "LMT",
+    "RTX", "NOC", "GD",
+    # Communication Services (10)
+    "T", "VZ", "DIS", "CMCSA", "TMUS", "CHTR",
+    "WBD", "TTWO", "EA", "PARA",
+    # Materials (8)
+    "LIN", "APD", "SHW", "ECL", "FCX", "NEM",
+    "DOW", "DD",
+    # Utilities (5)
+    "NEE", "DUK", "SO", "AEP", "D",
+    # REITs (3)
+    "AMT", "PLD", "EQIX",
 ]
 
-assert len(UNIVERSE) == 50, f"expected 50 tickers, got {len(UNIVERSE)}"
+assert len(UNIVERSE) == 150, f"expected 150 tickers, got {len(UNIVERSE)}"
 
 
 #     ================================
@@ -47,11 +72,20 @@ assert len(UNIVERSE) == 50, f"expected 50 tickers, got {len(UNIVERSE)}"
 SECTOR_PAIRS: list[tuple[str, str]] = [
     ("KO", "PEP"),      # beverages
     ("XOM", "CVX"),     # integrated oil majors
-    ("MA", "V"),        # card networks
+    ("MA", "V"),        # card networks  (added to universe below? check: no — out of scope here)
     ("JPM", "BAC"),     # money-center banks
     ("GS", "MS"),       # investment banks
     ("T", "VZ"),        # telecom
+    ("LLY", "PFE"),     # big pharma
+    ("HD", "LOW"),      # home improvement
+    ("DUK", "SO"),      # regulated utilities
+    ("AMAT", "LRCX"),   # semiconductor equipment
 ]
+
+# Reason: SECTOR_PAIRS may reference tickers outside UNIVERSE (e.g. MA/V
+# were in the old 50-ticker list). Filter to pairs where both legs are
+# in-universe so the pair alpha doesn't silently drop ambiguous trades.
+SECTOR_PAIRS = [(a, b) for a, b in SECTOR_PAIRS if a in UNIVERSE and b in UNIVERSE]
 
 
 #     ================================

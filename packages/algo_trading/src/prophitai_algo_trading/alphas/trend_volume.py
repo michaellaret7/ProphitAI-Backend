@@ -78,6 +78,7 @@ class TrendVolumeAlpha(PerSymbolAlpha):
     """
 
     name = "trend_vol"
+    required_columns = ("close", "volume")
 
     def __init__(
         self,
@@ -98,7 +99,7 @@ class TrendVolumeAlpha(PerSymbolAlpha):
         # Reason: need slow-EMA to stabilize, then signal-EMA to settle on top.
         self.lookback = max(slow, volume_lookback) + signal
 
-    def compute_score(self, df: "pd.DataFrame") -> float | None:
+    def compute_score(self, symbol: str, df: "pd.DataFrame") -> float | None:
         macd_hist = _macd_histogram(
             df["close"], self._fast, self._slow, self._signal,
         )

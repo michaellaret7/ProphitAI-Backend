@@ -36,7 +36,7 @@ from test_strategy.universe import INITIAL_CAPITAL, SECTOR_PAIRS, load_data
 #     ================================
 
 def test_strategy_end_to_end() -> None:
-    print("\n=== Multi-factor 50-ticker strategy ===")
+    print("\n=== Multi-factor 150-ticker strategy ===")
 
     data = load_data()
     algo = build_algorithm()

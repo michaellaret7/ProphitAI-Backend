@@ -31,6 +31,7 @@ class ATRNormalizedMomentumAlpha(PerSymbolAlpha):
     """
 
     name = "atr_momentum"
+    required_columns = ("close", "high", "low")
 
     def __init__(
         self,
@@ -46,7 +47,7 @@ class ATRNormalizedMomentumAlpha(PerSymbolAlpha):
         # atr_window+1 bars for the true-range with prev_close.
         self.lookback = max(return_window + 1, atr_window + 1)
 
-    def compute_score(self, df: pd.DataFrame) -> float | None:
+    def compute_score(self, symbol: str, df: pd.DataFrame) -> float | None:
         closes = df["close"]
         highs = df["high"]
         lows = df["low"]

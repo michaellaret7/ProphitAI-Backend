@@ -1,17 +1,21 @@
 """Algorithm composer — wires alphas, PCM, risk, and execution.
 
-The 5-alpha stack:
+The 8-alpha stack (weights sum to 1.00):
 
-    rsi_reversion        0.20    (PerSymbolAlpha)
-    bollinger_reversion  0.20    (PerSymbolAlpha)
-    atr_momentum         0.25    (PerSymbolAlpha)
-    liquidity_tilt       0.10    (CrossSectionalAlpha)
-    cointegration_pair   0.25    (PairAlpha, built-in)
+    rsi_reversion        0.12    PerSymbolAlpha       — short-horizon mean rev
+    bollinger_reversion  0.12    PerSymbolAlpha       — 20-day band mean rev
+    atr_momentum         0.14    PerSymbolAlpha       — vol-adjusted momentum
+    macd_histogram       0.12    PerSymbolAlpha       — trend-following
+    overnight_gap        0.08    PerSymbolAlpha       — gap persistence
+    liquidity_tilt       0.08    CrossSectionalAlpha  — $-volume tilt
+    rs_rank              0.14    CrossSectionalAlpha  — 3M return rank
+    cointegration_pair   0.20    PairAlpha            — stat arb (built-in)
 
 Blend = ``MultiAlphaBlendPCM`` (z-scores per alpha, weighted sum)
 feeding a ``MagnitudeWeightedLongShortPCM`` that converts blended
 scores into dollar-neutral target shares at 1.5x gross exposure with
-an 8% per-position cap.
+a 6% per-position cap (tighter than before because the 150-ticker
+universe can absorb more names without concentration).
 
 Risk stack (in order): drawdown delever -> stop-loss forced exit ->
 gross-exposure cap. Order matters — portfolio-wide circuit breakers
@@ -40,6 +44,9 @@ from .alphas import (
     ATRNormalizedMomentumAlpha,
     BollingerBandReversionAlpha,
     DollarVolumeRankAlpha,
+    MACDHistogramAlpha,
+    OvernightGapAlpha,
+    RelativeStrengthRankAlpha,
     RSIMeanReversionAlpha,
 )
 from .universe import SECTOR_PAIRS
@@ -50,13 +57,16 @@ from .universe import SECTOR_PAIRS
 #     ================================
 
 def build_algorithm() -> Algorithm:
-    """Construct the fully-composed 5-alpha long/short algorithm."""
+    """Construct the fully-composed 8-alpha long/short algorithm."""
     return Algorithm(
         alphas=[
             RSIMeanReversionAlpha(),
             BollingerBandReversionAlpha(),
             ATRNormalizedMomentumAlpha(),
+            MACDHistogramAlpha(),
+            OvernightGapAlpha(),
             DollarVolumeRankAlpha(),
+            RelativeStrengthRankAlpha(),
             CointegrationPairAlpha(
                 pairs=SECTOR_PAIRS,
                 lookback_days=60,
@@ -67,16 +77,19 @@ def build_algorithm() -> Algorithm:
         ],
         portfolio_construction=MultiAlphaBlendPCM(
             weights={
-                "rsi_reversion":       0.20,
-                "bollinger_reversion": 0.20,
-                "atr_momentum":        0.25,
-                "liquidity_tilt":      0.10,
-                "cointegration_pair":  0.25,
+                "rsi_reversion":       0.12,
+                "bollinger_reversion": 0.12,
+                "atr_momentum":        0.14,
+                "macd_histogram":      0.12,
+                "overnight_gap":       0.08,
+                "liquidity_tilt":      0.08,
+                "rs_rank":             0.14,
+                "cointegration_pair":  0.20,
             },
             inner=MagnitudeWeightedLongShortPCM(
                 gross_exposure=1.5,
-                per_position_cap=0.08,
-                quantile=0.20,
+                per_position_cap=0.06,
+                quantile=0.15,
                 min_abs_score=0.10,
             ),
         ),

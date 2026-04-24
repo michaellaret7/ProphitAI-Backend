@@ -1,4 +1,4 @@
-"""Base classes for alpha models.
+"""Base classes for alpha models — robust, agent-safe templates.
 
 Three templates cover ~100% of alpha patterns. Pick the one that matches
 the semantics of your signal; each base owns ``Insight`` construction
@@ -19,20 +19,37 @@ so subclasses only implement the scoring math.
 
 All three satisfy the ``AlphaModel`` protocol (``name``, ``lookback``,
 ``update(ctx) -> list[Insight]``). ``update`` is implemented on each
-base; subclasses must not override it. Only the ``compute_*`` hooks are
-subclass responsibility.
+base and MAY NOT be overridden by subclasses — ``__init_subclass__``
+raises if it is.
 
-If your alpha doesn't fit any of these three (e.g. emits Insights from
-event streams, uses external data injected through a side channel),
-implement the ``AlphaModel`` protocol directly — inheritance is
-optional, the protocol is the only real contract.
+Robustness layers applied uniformly across all three bases:
+
+    1. Symbol passed to every ``compute_*`` hook so subclasses can
+       implement ticker-conditional logic.
+    2. ``required_columns: ClassVar[tuple[str, ...]]`` — base filters
+       out frames missing declared OHLCV columns before calling
+       ``compute_*``. Default is ``("close",)``.
+    3. NaN / Inf guard on returned scores — non-finite is treated as
+       ``None`` (skip) so malformed scores never leak into Insights.
+    4. ``__init_subclass__`` checks at class-definition time — enforces
+       ``name: str`` is set and ``update`` is not overridden.
+    5. One-shot instance preflight on the first ``update()`` call —
+       validates ``lookback``, ``hold_days`` (and ``pairs`` for
+       ``PairAlpha``). Flag-gated so overhead is paid once per alpha.
+
+If your alpha doesn't fit any of the three bases (event streams,
+external data injected through a side channel), implement the
+``AlphaModel`` protocol directly — inheritance is optional, the
+protocol is the only real contract.
 """
 
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
 from datetime import timedelta
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, ClassVar
+
+import math
 
 from prophitai_algo_trading.core.models import Insight
 
@@ -57,6 +74,51 @@ def _direction_from_score(score: float) -> int:
     return 0
 
 
+def _is_finite(value: float) -> bool:
+    """True if ``value`` is a real finite number (not NaN, not Inf)."""
+    return isinstance(value, (int, float)) and math.isfinite(float(value))
+
+
+def _has_required_columns(df: "pd.DataFrame", required: tuple[str, ...]) -> bool:
+    """True if ``df`` has every column name in ``required``."""
+    columns = df.columns
+
+    for col in required:
+        if col not in columns:
+            return False
+
+    return True
+
+
+#     ================================
+# --> Shared subclass validator
+#     ================================
+
+def _validate_subclass_shape(cls: type, base_name: str) -> None:
+    """Enforce ``name`` attr + no ``update`` override. Called from
+    ``__init_subclass__`` on each base."""
+    # Reason: skip validation for abstract intermediates — only concrete
+    # leaves should have a non-empty ``name``.
+    if getattr(cls, "__abstractmethods__", None):
+        return
+
+    name = getattr(cls, "name", None)
+
+    if not isinstance(name, str) or not name:
+        raise TypeError(
+            f"{cls.__name__} must set class attribute `name: str` "
+            f"(unique identifier used by multi-alpha PCMs to partition "
+            f"insights by source).",
+        )
+
+    if "update" in cls.__dict__:
+        raise TypeError(
+            f"{cls.__name__} overrides `update` — the {base_name} base "
+            f"owns pipeline semantics. Implement the `compute_*` hook "
+            f"instead; `update` must not be overridden.",
+        )
+
+
 #     ================================
 # --> Per-symbol base
 #     ================================
@@ -64,33 +126,59 @@ def _direction_from_score(score: float) -> int:
 class PerSymbolAlpha(ABC):
     """Base for alphas that score each ticker independently.
 
-    Use this when the signal is computable from one ticker's own history
-    — the vast majority of technical/fundamental alphas.
-
     Subclass contract:
 
-        name:       ClassVar[str] — unique identifier used by multi-alpha
-                    PCMs to partition insights by source. Set at class level.
-        lookback:   int (instance or class attr) — bars of history a symbol
-                    needs before the alpha emits for it.
-        hold_days:  int (instance or class attr) — Insight ``close_time``
-                    horizon in calendar days.
+        name:               ClassVar[str] — unique identifier.
+        lookback:           int > 0 (instance attr) — bars required.
+        hold_days:          int > 0 (instance attr) — Insight horizon.
+        required_columns:   ClassVar[tuple[str, ...]] — OHLCV columns
+                            this alpha needs. Default ``("close",)``.
 
-        compute_score(df) -> float | None:
+        compute_score(symbol, df) -> float | None:
             Return a signed score. Positive = long, negative = short,
             zero = flat. Return ``None`` to skip this symbol (missing
-            data, bad price, degenerate sample). The base class handles
-            direction derivation + ``abs(score)`` for magnitude.
+            data, bad price, degenerate sample). Return value must be
+            finite — NaN / Inf are treated as ``None`` by the base.
 
-    Do NOT override ``update`` — the base class owns Insight construction
-    so the per-alpha contract stays consistent across the framework.
+    Do NOT override ``update`` — enforced by ``__init_subclass__``.
     """
 
     name: str
     lookback: int
     hold_days: int
 
+    required_columns: ClassVar[tuple[str, ...]] = ("close",)
+
+    _preflight_done: bool = False
+
+    def __init_subclass__(cls, **kwargs: Any) -> None:
+        super().__init_subclass__(**kwargs)
+        _validate_subclass_shape(cls, "PerSymbolAlpha")
+
+    def _preflight(self) -> None:
+        """Validate instance attrs. Called once on first ``update()``."""
+        if not isinstance(self.lookback, int) or self.lookback <= 0:
+            raise ValueError(
+                f"{type(self).__name__}.lookback must be a positive int, "
+                f"got {self.lookback!r}",
+            )
+
+        if not isinstance(self.hold_days, int) or self.hold_days <= 0:
+            raise ValueError(
+                f"{type(self).__name__}.hold_days must be a positive int, "
+                f"got {self.hold_days!r}",
+            )
+
+        if not self.required_columns:
+            raise ValueError(
+                f"{type(self).__name__}.required_columns cannot be empty",
+            )
+
     def update(self, ctx: "AlgorithmContext") -> list[Insight]:
+        if not self._preflight_done:
+            self._preflight()
+            self._preflight_done = True
+
         close_time = ctx.timestamp + timedelta(days=self.hold_days)
 
         out: list[Insight] = []
@@ -99,9 +187,12 @@ class PerSymbolAlpha(ABC):
             if len(df) < self.lookback:
                 continue
 
-            score = self.compute_score(df)
+            if not _has_required_columns(df, self.required_columns):
+                continue
 
-            if score is None:
+            score = self.compute_score(symbol, df)
+
+            if score is None or not _is_finite(score):
                 continue
 
             out.append(Insight(
@@ -116,16 +207,14 @@ class PerSymbolAlpha(ABC):
         return out
 
     @abstractmethod
-    def compute_score(self, df: "pd.DataFrame") -> float | None:
+    def compute_score(self, symbol: str, df: "pd.DataFrame") -> float | None:
         """Signed score for one symbol, or None to skip.
 
         Args:
-            df: OHLCV slice up to and including the current bar. Guaranteed
-                to have ``len(df) >= self.lookback``.
-
-        Returns:
-            Signed score (positive = long, negative = short), or ``None``
-            to skip emission for this symbol (e.g. degenerate sample).
+            symbol: Ticker being scored.
+            df: OHLCV slice up to and including the current bar.
+                Guaranteed to have ``len(df) >= self.lookback`` and
+                every column in ``self.required_columns``.
         """
 
 
@@ -136,38 +225,65 @@ class PerSymbolAlpha(ABC):
 class CrossSectionalAlpha(ABC):
     """Base for alphas that score tickers against universe-wide stats.
 
-    Use this when the signal depends on how one ticker compares to the
-    rest of the universe — low-vol anomaly, rank-based L/S, dispersion.
-
     Two-phase ``update``:
 
         1. ``compute_universe_stats(ctx)`` runs once per bar across the
-           full universe. Returns whatever shape the alpha needs
-           (median, rank array, percentile table, regime flag, etc.).
-        2. ``compute_score(df, stats)`` runs per ticker, using the
-           precomputed stats.
+           full universe. Returns whatever shape the alpha needs.
+        2. ``compute_score(symbol, df, stats)`` runs per ticker, using
+           the precomputed stats.
 
     Subclass contract:
 
-        name, lookback, hold_days: as PerSymbolAlpha.
+        name, lookback, hold_days, required_columns: as PerSymbolAlpha.
 
         compute_universe_stats(ctx) -> T:
             Return precomputed stats for this bar. Return ``None`` to
-            signal "universe not ready this bar" — the base will emit
-            an empty list.
+            signal "universe not ready this bar" — the base emits an
+            empty list.
 
-        compute_score(df, stats) -> float | None:
-            Signed score using ``stats``. Same semantics as
-            PerSymbolAlpha.compute_score.
+        compute_score(symbol, df, stats) -> float | None:
+            Signed score using ``stats``. Receives the ticker symbol so
+            subclasses look up per-symbol values without value-matching
+            hacks.
 
-    Do NOT override ``update``.
+    Do NOT override ``update`` — enforced by ``__init_subclass__``.
     """
 
     name: str
     lookback: int
     hold_days: int
 
+    required_columns: ClassVar[tuple[str, ...]] = ("close",)
+
+    _preflight_done: bool = False
+
+    def __init_subclass__(cls, **kwargs: Any) -> None:
+        super().__init_subclass__(**kwargs)
+        _validate_subclass_shape(cls, "CrossSectionalAlpha")
+
+    def _preflight(self) -> None:
+        if not isinstance(self.lookback, int) or self.lookback <= 0:
+            raise ValueError(
+                f"{type(self).__name__}.lookback must be a positive int, "
+                f"got {self.lookback!r}",
+            )
+
+        if not isinstance(self.hold_days, int) or self.hold_days <= 0:
+            raise ValueError(
+                f"{type(self).__name__}.hold_days must be a positive int, "
+                f"got {self.hold_days!r}",
+            )
+
+        if not self.required_columns:
+            raise ValueError(
+                f"{type(self).__name__}.required_columns cannot be empty",
+            )
+
     def update(self, ctx: "AlgorithmContext") -> list[Insight]:
+        if not self._preflight_done:
+            self._preflight()
+            self._preflight_done = True
+
         stats = self.compute_universe_stats(ctx)
 
         if stats is None:
@@ -181,9 +297,12 @@ class CrossSectionalAlpha(ABC):
             if len(df) < self.lookback:
                 continue
 
-            score = self.compute_score(df, stats)
+            if not _has_required_columns(df, self.required_columns):
+                continue
 
-            if score is None:
+            score = self.compute_score(symbol, df, stats)
+
+            if score is None or not _is_finite(score):
                 continue
 
             out.append(Insight(
@@ -199,17 +318,11 @@ class CrossSectionalAlpha(ABC):
 
     @abstractmethod
     def compute_universe_stats(self, ctx: "AlgorithmContext") -> Any:
-        """Precompute universe-wide stats for this bar.
-
-        Return whatever shape the alpha needs to score one ticker against
-        the universe (e.g. ``{"median_sigma": 0.021}`` for low-vol, a
-        ``pd.Series`` of ranks for rank-based alphas). Return ``None`` if
-        the universe isn't ready (e.g. too few symbols have data yet).
-        """
+        """Precompute universe-wide stats for this bar, or ``None`` to skip."""
 
     @abstractmethod
     def compute_score(
-        self, df: "pd.DataFrame", stats: Any,
+        self, symbol: str, df: "pd.DataFrame", stats: Any,
     ) -> float | None:
         """Signed score for one symbol using precomputed universe stats."""
 
@@ -221,27 +334,23 @@ class CrossSectionalAlpha(ABC):
 class PairAlpha(ABC):
     """Base for stat-arb alphas emitting paired long/short Insights.
 
-    Use this for cointegration, relative-value, or sector-neutral pair
-    strategies where the signal is about a *pair*, not an individual
-    ticker. Each firing pair emits exactly two Insights with opposite
-    directions and equal magnitude — PCMs see a dollar-neutral signal.
+    Each firing pair emits exactly two Insights — opposite directions,
+    equal magnitude — so PCMs see a dollar-neutral signal.
 
     Subclass contract:
 
-        name, lookback, hold_days: as PerSymbolAlpha.
-
+        name, lookback, hold_days, required_columns: as PerSymbolAlpha.
         pairs: list[tuple[str, str]] — ticker pairs this alpha watches.
-            Populate in ``__init__``. Order matters: ``(A, B)`` means
-            "positive score longs A, shorts B."
+               Populate in ``__init__``. Order matters: ``(A, B)`` =>
+               "positive score longs A, shorts B."
 
-        compute_pair_score(df_a, df_b) -> float | None:
-            Signed score for the pair. Positive = long leg A / short
-            leg B. Negative = short A / long B. ``None`` to skip the
-            pair (missing data, degenerate cointegration, etc.). Both
-            dfs are guaranteed to have ``len >= self.lookback``.
+        compute_pair_score(sym_a, sym_b, df_a, df_b) -> float | None:
+            Signed score for the pair. Positive = long A / short B.
+            Negative = short A / long B. ``None`` to skip the pair.
+            Both dfs are guaranteed to have ``len >= self.lookback``
+            and all columns in ``self.required_columns``.
 
-    Do NOT override ``update``. Both legs of a firing pair always emit
-    together so the PCM sees a self-consistent signal.
+    Do NOT override ``update`` — enforced by ``__init_subclass__``.
     """
 
     name: str
@@ -249,7 +358,61 @@ class PairAlpha(ABC):
     hold_days: int
     pairs: list[tuple[str, str]]
 
+    required_columns: ClassVar[tuple[str, ...]] = ("close",)
+
+    _preflight_done: bool = False
+
+    def __init_subclass__(cls, **kwargs: Any) -> None:
+        super().__init_subclass__(**kwargs)
+        _validate_subclass_shape(cls, "PairAlpha")
+
+    def _preflight(self) -> None:
+        if not isinstance(self.lookback, int) or self.lookback <= 0:
+            raise ValueError(
+                f"{type(self).__name__}.lookback must be a positive int, "
+                f"got {self.lookback!r}",
+            )
+
+        if not isinstance(self.hold_days, int) or self.hold_days <= 0:
+            raise ValueError(
+                f"{type(self).__name__}.hold_days must be a positive int, "
+                f"got {self.hold_days!r}",
+            )
+
+        if not self.required_columns:
+            raise ValueError(
+                f"{type(self).__name__}.required_columns cannot be empty",
+            )
+
+        if not self.pairs:
+            raise ValueError(
+                f"{type(self).__name__}.pairs cannot be empty",
+            )
+
+        seen: set[tuple[str, str]] = set()
+
+        for sym_a, sym_b in self.pairs:
+            if sym_a == sym_b:
+                raise ValueError(
+                    f"{type(self).__name__}: self-pair ({sym_a}, {sym_b}) "
+                    f"not allowed",
+                )
+
+            key = tuple(sorted((sym_a, sym_b)))
+
+            if key in seen:
+                raise ValueError(
+                    f"{type(self).__name__}: duplicate pair {sym_a}/{sym_b} "
+                    f"(pairs must be unique regardless of leg order)",
+                )
+
+            seen.add(key)
+
     def update(self, ctx: "AlgorithmContext") -> list[Insight]:
+        if not self._preflight_done:
+            self._preflight()
+            self._preflight_done = True
+
         close_time = ctx.timestamp + timedelta(days=self.hold_days)
 
         out: list[Insight] = []
@@ -264,9 +427,15 @@ class PairAlpha(ABC):
             if len(df_a) < self.lookback or len(df_b) < self.lookback:
                 continue
 
-            score = self.compute_pair_score(df_a, df_b)
+            if not _has_required_columns(df_a, self.required_columns):
+                continue
 
-            if score is None:
+            if not _has_required_columns(df_b, self.required_columns):
+                continue
+
+            score = self.compute_pair_score(sym_a, sym_b, df_a, df_b)
+
+            if score is None or not _is_finite(score):
                 continue
 
             # Reason: positive score => long A / short B; flip on negative.
@@ -297,10 +466,15 @@ class PairAlpha(ABC):
 
     @abstractmethod
     def compute_pair_score(
-        self, df_a: "pd.DataFrame", df_b: "pd.DataFrame",
+        self,
+        sym_a: str,
+        sym_b: str,
+        df_a: "pd.DataFrame",
+        df_b: "pd.DataFrame",
     ) -> float | None:
         """Signed score for one ticker pair, or None to skip.
 
         Positive score => long leg A, short leg B. Negative => flip.
-        Both dfs are sliced to the current bar and have ``len >= lookback``.
+        Both dfs are sliced to the current bar and have
+        ``len >= self.lookback`` plus all ``required_columns``.
         """

@@ -38,6 +38,7 @@ class DollarVolumeRankAlpha(CrossSectionalAlpha):
     """
 
     name = "liquidity_tilt"
+    required_columns = ("close", "volume")
 
     def __init__(
         self,
@@ -75,18 +76,17 @@ class DollarVolumeRankAlpha(CrossSectionalAlpha):
         if median_dv <= 0.0:
             return None
 
-        return {"median_dv": median_dv}
+        return {"dvs": dvs, "median_dv": median_dv}
 
     def compute_score(
-        self, df: pd.DataFrame, stats: dict,
+        self, symbol: str, df: pd.DataFrame, stats: dict,
     ) -> float | None:
-        window = df.iloc[-self._window:]
-
-        dv = float((window["close"] * window["volume"]).mean())
-
-        if dv <= 0.0 or not np.isfinite(dv):
-            return None
-
+        dvs: dict[str, float] = stats["dvs"]
         median_dv: float = stats["median_dv"]
+
+        dv = dvs.get(symbol)
+
+        if dv is None:
+            return None
 
         return float(np.log(dv) - np.log(median_dv))

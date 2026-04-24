@@ -114,7 +114,11 @@ class CointegrationPairAlpha(PairAlpha):
         self._max_z = max_z
 
     def compute_pair_score(
-        self, df_a: "pd.DataFrame", df_b: "pd.DataFrame",
+        self,
+        sym_a: str,
+        sym_b: str,
+        df_a: "pd.DataFrame",
+        df_b: "pd.DataFrame",
     ) -> float | None:
         # Reason: common bars only — misaligned indices produce bogus
         # regressions. Intersect on index, take the trailing window.

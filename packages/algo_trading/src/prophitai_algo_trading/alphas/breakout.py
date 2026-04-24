@@ -44,7 +44,7 @@ class BreakoutAlpha(PerSymbolAlpha):
         self.hold_days = hold_days
         self.lookback = lookback_days
 
-    def compute_score(self, df: "pd.DataFrame") -> float | None:
+    def compute_score(self, symbol: str, df: "pd.DataFrame") -> float | None:
         closes = df["close"]
 
         window = closes.iloc[-self._window:]
