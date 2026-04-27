@@ -1,4 +1,4 @@
-"""Market-data I/O — historical loaders and live streaming transport."""
+"""Historical market-data loaders (CSV, etc.)."""
 
 from prophitai_algo_trading.data.historical.csv_loader import load_csv_data
 

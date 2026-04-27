@@ -29,7 +29,7 @@ from prophitai_algo_trading.core import (
     AlgorithmContext,
     PortfolioTarget,
 )
-from prophitai_algo_trading.accounting.portfolio import Portfolio, Position, Trade
+from prophitai_algo_trading.portfolio.portfolio import Portfolio, Position, Trade
 
 
 ASOF = datetime(2024, 12, 31, 0, 0, 0)

@@ -24,14 +24,14 @@ from prophitai_algo_trading.core.models import (
     Insight,
     PortfolioTarget,
 )
-from prophitai_algo_trading.portfolio_construction.base import (
+from prophitai_algo_trading.construction.base import (
     BasePCM,
     BuildResult,
 )
-from prophitai_algo_trading.portfolio_construction.helpers import (
+from prophitai_algo_trading.construction.helpers.event import (
     weight_to_shares,
 )
-from prophitai_algo_trading.portfolio_construction.vector_helpers import (
+from prophitai_algo_trading.construction.helpers.vector import (
     apply_cadence,
     rank_to_long_short_weights,
 )
@@ -227,7 +227,7 @@ class MagnitudeWeightedLongShortPCM(BasePCM):
         Returns:
             ``[date x ticker]`` signed weight panel, cadence-applied.
         """
-        from prophitai_algo_trading.portfolio_construction.equal_weight import (
+        from prophitai_algo_trading.construction.equal_weight import (
             _max_abs_pick,
         )
 

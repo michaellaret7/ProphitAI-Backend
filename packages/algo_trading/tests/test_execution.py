@@ -34,7 +34,7 @@ from prophitai_algo_trading.execution import (
     ExecutionModel,
     PortfolioSink,
 )
-from prophitai_algo_trading.accounting.portfolio import Portfolio, Position
+from prophitai_algo_trading.portfolio.portfolio import Portfolio, Position
 from prophitai_data.repositories.price import fetch_bulk_ohlcv_data_for_tickers
 
 

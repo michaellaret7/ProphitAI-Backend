@@ -25,19 +25,19 @@ If none of the three fits, implement ``AlphaModel`` (the Protocol in
 ``core.protocols``) directly — inheritance is optional.
 """
 
-from prophitai_algo_trading.alphas.base import (
+from prophitai_algo_trading.alpha_signals.base import (
     CrossSectionalAlpha,
     PairAlpha,
     PerSymbolAlpha,
 )
-from prophitai_algo_trading.alphas.breakout import BreakoutAlpha
-from prophitai_algo_trading.alphas.cointegration_pair import (
+from prophitai_algo_trading.alpha_signals.breakout import BreakoutAlpha
+from prophitai_algo_trading.alpha_signals.cointegration_pair import (
     CointegrationPairAlpha,
 )
-from prophitai_algo_trading.alphas.low_vol import LowVolAlpha
-from prophitai_algo_trading.alphas.momentum import MomentumAlpha
-from prophitai_algo_trading.alphas.reversal import ShortTermReversalAlpha
-from prophitai_algo_trading.alphas.trend_volume import TrendVolumeAlpha
+from prophitai_algo_trading.alpha_signals.low_vol import LowVolAlpha
+from prophitai_algo_trading.alpha_signals.momentum import MomentumAlpha
+from prophitai_algo_trading.alpha_signals.reversal import ShortTermReversalAlpha
+from prophitai_algo_trading.alpha_signals.trend_volume import TrendVolumeAlpha
 
 __all__ = [
     # Base classes (for agent-authored alphas)

@@ -36,7 +36,7 @@ from prophitai_algo_trading.analytics.metrics import (
 
 if TYPE_CHECKING:
     from prophitai_algo_trading.core.panel import PricePanel
-    from prophitai_algo_trading.core.vector_algorithm import VectorAlgorithm
+    from prophitai_algo_trading.algorithm.vector import VectorAlgorithm
 
 
 #     ================================

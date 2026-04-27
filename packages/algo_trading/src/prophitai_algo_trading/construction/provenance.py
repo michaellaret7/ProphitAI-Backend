@@ -31,7 +31,7 @@ from dataclasses import replace
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from prophitai_algo_trading.accounting.portfolio import Portfolio
+    from prophitai_algo_trading.portfolio.portfolio import Portfolio
     from prophitai_algo_trading.core.models import PortfolioTarget
 
 

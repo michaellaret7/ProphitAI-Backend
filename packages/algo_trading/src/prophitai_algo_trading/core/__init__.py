@@ -1,11 +1,12 @@
-"""Core framework contracts — dataclasses, protocols, and the Algorithm composer.
+"""Core framework contracts — protocols, dataclasses, enums, and shared types.
 
 Every pipeline stage (alpha → portfolio construction → risk → execution)
 depends on the types defined here. No concrete stage implementations
-live in this package — only the contracts.
+or composers live in this package — only the contracts.
+
+Concrete strategy composers live in ``algorithm/``.
 """
 
-from prophitai_algo_trading.core.algorithm import Algorithm
 from prophitai_algo_trading.core.enums import Direction
 from prophitai_algo_trading.core.models import (
     AlgorithmContext,
@@ -22,10 +23,8 @@ from prophitai_algo_trading.core.protocols import (
     VectorAlpha,
     VectorPCM,
 )
-from prophitai_algo_trading.core.vector_algorithm import VectorAlgorithm
 
 __all__ = [
-    "Algorithm",
     "AlgorithmContext",
     "AlphaModel",
     "Direction",
@@ -36,7 +35,6 @@ __all__ = [
     "PortfolioTarget",
     "PricePanel",
     "RiskManagementModel",
-    "VectorAlgorithm",
     "VectorAlpha",
     "VectorPCM",
     "panel_from_per_ticker",

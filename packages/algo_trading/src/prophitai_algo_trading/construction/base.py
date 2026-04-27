@@ -44,11 +44,11 @@ if TYPE_CHECKING:
         PortfolioTarget,
     )
 
-from prophitai_algo_trading.portfolio_construction.helpers import (
+from prophitai_algo_trading.construction.helpers.event import (
     RebalanceScheduler,
     append_close_orphans,
 )
-from prophitai_algo_trading.portfolio_construction.provenance import (
+from prophitai_algo_trading.construction.provenance import (
     ProvenanceTracker,
 )
 

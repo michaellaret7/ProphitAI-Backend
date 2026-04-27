@@ -17,7 +17,7 @@ from __future__ import annotations
 
 import pandas as pd
 
-from prophitai_algo_trading.alphas.base import PerSymbolAlpha
+from prophitai_algo_trading.alpha_signals.base import PerSymbolAlpha
 
 
 class RSIMeanReversionAlpha(PerSymbolAlpha):

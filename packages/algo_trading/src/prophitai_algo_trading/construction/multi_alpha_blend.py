@@ -37,11 +37,11 @@ from prophitai_algo_trading.core.protocols import (
     PortfolioConstructionModel,
     VectorPCM,
 )
-from prophitai_algo_trading.portfolio_construction.base import BasePCM
-from prophitai_algo_trading.portfolio_construction.helpers import (
+from prophitai_algo_trading.construction.base import BasePCM
+from prophitai_algo_trading.construction.helpers.event import (
     cross_sectional_zscore,
 )
-from prophitai_algo_trading.portfolio_construction.vector_helpers import (
+from prophitai_algo_trading.construction.helpers.vector import (
     zscore_rowwise,
 )
 

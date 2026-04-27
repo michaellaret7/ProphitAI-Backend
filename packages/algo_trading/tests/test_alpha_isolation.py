@@ -20,14 +20,14 @@ from prophitai_algo_trading import (
     panel_from_per_ticker,
     run_alpha_isolation,
 )
-from prophitai_algo_trading.alphas import (
+from prophitai_algo_trading.alpha_signals import (
     BreakoutAlpha,
     LowVolAlpha,
     MomentumAlpha,
     ShortTermReversalAlpha,
     TrendVolumeAlpha,
 )
-from prophitai_algo_trading.portfolio_construction import (
+from prophitai_algo_trading.construction import (
     MagnitudeWeightedLongShortPCM,
 )
 from prophitai_data.repositories.price import fetch_bulk_ohlcv_data_for_tickers

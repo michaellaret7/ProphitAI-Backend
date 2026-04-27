@@ -31,7 +31,7 @@ from prophitai_algo_trading.core.models import (
 
 if TYPE_CHECKING:
     from prophitai_algo_trading.execution.sinks import OrderSink
-    from prophitai_algo_trading.accounting.portfolio import Portfolio
+    from prophitai_algo_trading.portfolio.portfolio import Portfolio
 
 
 #     ================================

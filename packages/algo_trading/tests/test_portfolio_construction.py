@@ -25,7 +25,7 @@ import pandas as pd
 _PKG_SRC = Path(__file__).resolve().parents[1] / "src"
 sys.path.insert(0, str(_PKG_SRC))
 
-from prophitai_algo_trading.alphas import (
+from prophitai_algo_trading.alpha_signals import (
     BreakoutAlpha,
     LowVolAlpha,
     MomentumAlpha,
@@ -37,13 +37,13 @@ from prophitai_algo_trading.core import (
     Insight,
     PortfolioTarget,
 )
-from prophitai_algo_trading.portfolio_construction import (
+from prophitai_algo_trading.construction import (
     EqualWeightPCM,
     InsightWeightedPCM,
     MagnitudeWeightedLongShortPCM,
     MultiAlphaBlendPCM,
 )
-from prophitai_algo_trading.accounting.portfolio import Portfolio
+from prophitai_algo_trading.portfolio.portfolio import Portfolio
 from prophitai_data.repositories.price import fetch_bulk_ohlcv_data_for_tickers
 
 

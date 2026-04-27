@@ -11,16 +11,16 @@ All four satisfy the ``PortfolioConstructionModel`` protocol. Compose as
 needed — MultiAlphaBlendPCM nests another PCM as its ``inner``.
 """
 
-from prophitai_algo_trading.portfolio_construction.equal_weight import (
+from prophitai_algo_trading.construction.equal_weight import (
     EqualWeightPCM,
 )
-from prophitai_algo_trading.portfolio_construction.insight_weighted import (
+from prophitai_algo_trading.construction.insight_weighted import (
     InsightWeightedPCM,
 )
-from prophitai_algo_trading.portfolio_construction.magnitude_ls import (
+from prophitai_algo_trading.construction.magnitude_ls import (
     MagnitudeWeightedLongShortPCM,
 )
-from prophitai_algo_trading.portfolio_construction.multi_alpha_blend import (
+from prophitai_algo_trading.construction.multi_alpha_blend import (
     MultiAlphaBlendPCM,
 )
 

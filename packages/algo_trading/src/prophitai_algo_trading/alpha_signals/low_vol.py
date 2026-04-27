@@ -23,7 +23,7 @@ from typing import TYPE_CHECKING
 
 import numpy as np
 
-from prophitai_algo_trading.alphas.base import CrossSectionalAlpha
+from prophitai_algo_trading.alpha_signals.base import CrossSectionalAlpha
 
 if TYPE_CHECKING:
     import pandas as pd

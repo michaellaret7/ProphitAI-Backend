@@ -9,7 +9,7 @@ Module layout:
     run.py               Entry point — ``python ... run.py``.
 
 Every alpha in ``alphas/`` subclasses a base from
-``prophitai_algo_trading.alphas.base``. Every concern (universe, signal,
+``prophitai_algo_trading.alpha_signals.base``. Every concern (universe, signal,
 composition, grading) lives in its own file so future agents can drop
 new alphas in without touching unrelated code.
 """

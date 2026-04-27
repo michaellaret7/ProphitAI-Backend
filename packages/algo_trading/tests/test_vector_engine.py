@@ -25,14 +25,14 @@ from prophitai_algo_trading import (
     VectorBacktest,
     panel_from_per_ticker,
 )
-from prophitai_algo_trading.alphas import (
+from prophitai_algo_trading.alpha_signals import (
     BreakoutAlpha,
     LowVolAlpha,
     MomentumAlpha,
     ShortTermReversalAlpha,
     TrendVolumeAlpha,
 )
-from prophitai_algo_trading.portfolio_construction import (
+from prophitai_algo_trading.construction import (
     MagnitudeWeightedLongShortPCM,
     MultiAlphaBlendPCM,
 )

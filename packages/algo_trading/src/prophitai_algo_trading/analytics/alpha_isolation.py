@@ -32,14 +32,14 @@ from typing import TYPE_CHECKING, Callable
 import numpy as np
 import pandas as pd
 
-from prophitai_algo_trading.core.vector_algorithm import VectorAlgorithm
-from prophitai_algo_trading.engines.vector import VectorBacktest
+from prophitai_algo_trading.algorithm.vector import VectorAlgorithm
+from prophitai_algo_trading.engines.vector_backtest import VectorBacktest
 
 if TYPE_CHECKING:
     from prophitai_algo_trading.analytics.metrics import BacktestResult
     from prophitai_algo_trading.core.panel import PricePanel
     from prophitai_algo_trading.core.protocols import VectorAlpha, VectorPCM
-    from prophitai_algo_trading.engines.vector import VectorDiagnostics
+    from prophitai_algo_trading.engines.vector_backtest import VectorDiagnostics
 
 
 SECONDS_PER_YEAR = 365.25 * 86_400

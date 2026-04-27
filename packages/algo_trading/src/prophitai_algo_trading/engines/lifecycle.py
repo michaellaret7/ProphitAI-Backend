@@ -22,7 +22,7 @@ from prophitai_algo_trading.core.protocols import LifecycleAwareRiskModel
 if TYPE_CHECKING:
     from prophitai_algo_trading.core.models import AlgorithmContext
     from prophitai_algo_trading.core.protocols import RiskManagementModel
-    from prophitai_algo_trading.accounting.portfolio import Portfolio
+    from prophitai_algo_trading.portfolio.portfolio import Portfolio
 
 
 #     ================================

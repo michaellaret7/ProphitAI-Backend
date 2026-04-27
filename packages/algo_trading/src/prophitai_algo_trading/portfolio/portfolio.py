@@ -15,7 +15,7 @@ from datetime import datetime
 
 import pandas as pd
 
-from prophitai_algo_trading.accounting.cost_model import CostModel
+from prophitai_algo_trading.portfolio.cost_model import CostModel
 
 
 #     ================================

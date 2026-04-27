@@ -30,7 +30,7 @@ from typing import TYPE_CHECKING
 import numpy as np
 import pandas as pd
 
-from prophitai_algo_trading.alphas.base import PairAlpha
+from prophitai_algo_trading.alpha_signals.base import PairAlpha
 
 if TYPE_CHECKING:
     from prophitai_algo_trading.core.panel import PricePanel

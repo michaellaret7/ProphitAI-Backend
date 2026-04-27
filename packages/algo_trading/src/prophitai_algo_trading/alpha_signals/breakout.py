@@ -18,7 +18,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from prophitai_algo_trading.alphas.base import PerSymbolAlpha
+from prophitai_algo_trading.alpha_signals.base import PerSymbolAlpha
 
 if TYPE_CHECKING:
     import pandas as pd

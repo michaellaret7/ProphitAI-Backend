@@ -18,16 +18,16 @@ from typing import TYPE_CHECKING
 
 import pandas as pd
 
-from prophitai_algo_trading.accounting.cost_model import CostModel
+from prophitai_algo_trading.portfolio.cost_model import CostModel
 from prophitai_algo_trading.engines.runner import BarRunner
 from prophitai_algo_trading.core.models import AlgorithmContext
 from prophitai_algo_trading.analytics.metrics import BacktestResult, calculate_metrics
-from prophitai_algo_trading.accounting.portfolio import Portfolio
+from prophitai_algo_trading.portfolio.portfolio import Portfolio
 
 if TYPE_CHECKING:
     from datetime import datetime
 
-    from prophitai_algo_trading.core.algorithm import Algorithm
+    from prophitai_algo_trading.algorithm.event import Algorithm
 
 
 #     ================================

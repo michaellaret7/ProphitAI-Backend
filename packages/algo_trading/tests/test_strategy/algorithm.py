@@ -28,10 +28,10 @@ Execution = ``ExecutionModel(sink=PortfolioSink())`` for backtests.
 
 from __future__ import annotations
 
-from prophitai_algo_trading.alphas import CointegrationPairAlpha
-from prophitai_algo_trading.core.algorithm import Algorithm
+from prophitai_algo_trading.alpha_signals import CointegrationPairAlpha
+from prophitai_algo_trading.algorithm.event import Algorithm
 from prophitai_algo_trading.execution import ExecutionModel, PortfolioSink
-from prophitai_algo_trading.portfolio_construction import (
+from prophitai_algo_trading.construction import (
     MagnitudeWeightedLongShortPCM,
     MultiAlphaBlendPCM,
 )

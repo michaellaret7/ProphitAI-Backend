@@ -28,7 +28,7 @@ from prophitai_algo_trading import (
     Backtest,
     CostModel,
 )
-from prophitai_algo_trading.alphas import (
+from prophitai_algo_trading.alpha_signals import (
     BreakoutAlpha,
     LowVolAlpha,
     MomentumAlpha,
@@ -39,7 +39,7 @@ from prophitai_algo_trading.execution import (
     ExecutionModel,
     PortfolioSink,
 )
-from prophitai_algo_trading.portfolio_construction import (
+from prophitai_algo_trading.construction import (
     MagnitudeWeightedLongShortPCM,
     MultiAlphaBlendPCM,
 )

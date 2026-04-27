@@ -25,7 +25,7 @@ from prophitai_algo_trading.engines.lifecycle import (
 from prophitai_algo_trading.core.models import PortfolioTarget
 
 if TYPE_CHECKING:
-    from prophitai_algo_trading.core.algorithm import Algorithm
+    from prophitai_algo_trading.algorithm.event import Algorithm
     from prophitai_algo_trading.core.models import AlgorithmContext
 
 

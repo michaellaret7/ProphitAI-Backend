@@ -30,12 +30,12 @@ from prophitai_algo_trading.core import (
     Insight,
     PortfolioTarget,
 )
-from prophitai_algo_trading.core.algorithm import Algorithm
+from prophitai_algo_trading.algorithm.event import Algorithm
 from prophitai_algo_trading.execution import (
     ExecutionModel,
     PortfolioSink,
 )
-from prophitai_algo_trading.accounting.portfolio import Portfolio, Position
+from prophitai_algo_trading.portfolio.portfolio import Portfolio, Position
 from prophitai_data.repositories.price import fetch_bulk_ohlcv_data_for_tickers
 
 

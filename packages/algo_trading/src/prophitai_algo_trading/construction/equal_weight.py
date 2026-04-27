@@ -20,15 +20,15 @@ from prophitai_algo_trading.core.models import (
     Insight,
     PortfolioTarget,
 )
-from prophitai_algo_trading.portfolio_construction.base import (
+from prophitai_algo_trading.construction.base import (
     BasePCM,
     BuildResult,
 )
-from prophitai_algo_trading.portfolio_construction.helpers import (
+from prophitai_algo_trading.construction.helpers.event import (
     dedupe_insights,
     weight_to_shares,
 )
-from prophitai_algo_trading.portfolio_construction.vector_helpers import (
+from prophitai_algo_trading.construction.helpers.vector import (
     apply_cadence,
 )
 
