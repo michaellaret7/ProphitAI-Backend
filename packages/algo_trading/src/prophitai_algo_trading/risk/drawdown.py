@@ -17,6 +17,7 @@ rules as a standalone ``RiskManagementModel``.
 
 from __future__ import annotations
 
+from dataclasses import replace
 from datetime import timedelta
 
 from prophitai_algo_trading.core.models import (
@@ -84,10 +85,7 @@ class MaxDrawdownRiskModel:
 
         if self._cooldown_until is not None:
             return [
-                PortfolioTarget(
-                    symbol=t.symbol,
-                    target_shares=t.target_shares * self._delever,
-                )
+                replace(t, target_shares=t.target_shares * self._delever)
                 for t in targets
             ]
 

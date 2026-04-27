@@ -17,9 +17,11 @@ scores into dollar-neutral target shares at 1.5x gross exposure with
 a 6% per-position cap (tighter than before because the 150-ticker
 universe can absorb more names without concentration).
 
-Risk stack (in order): drawdown delever -> stop-loss forced exit ->
-gross-exposure cap. Order matters — portfolio-wide circuit breakers
-before position-level stops before final gross guard.
+Risk stack (in order): drawdown delever -> tightened stop-loss ->
+time-stop (max 5 bars) -> gross-exposure cap. Tightened from the
+original 8% stop after attribution analysis showed per-stop avg loss
+of -$2,800; TimeStop added because magnitude_decay exits past 4 days
+bleed (-$41 avg) while 1-day exits were profitable (+$12 avg).
 
 Execution = ``ExecutionModel(sink=PortfolioSink())`` for backtests.
 """
@@ -38,6 +40,7 @@ from prophitai_algo_trading.risk import (
     MaxDrawdownRiskModel,
     MaxGrossExposureRiskModel,
     StopLossExit,
+    TimeStop,
 )
 
 from .alphas import (
@@ -99,7 +102,8 @@ def build_algorithm() -> Algorithm:
                 delever_factor=0.5,
                 cooldown_days=30,
             ),
-            StopLossExit(pct=0.08),
+            StopLossExit(pct=0.04),
+            TimeStop(max_bars=5),
             MaxGrossExposureRiskModel(max_gross=1.5),
         ]),
         execution=ExecutionModel(sink=PortfolioSink(), min_change_pct=0.005),

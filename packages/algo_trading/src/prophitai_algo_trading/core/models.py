@@ -102,10 +102,22 @@ class PortfolioTarget:
     PCMs that think in percentages should convert via:
         target_shares = equity * pct / price
     at target-creation time, so the PCM's output is always concrete.
+
+    Provenance fields (optional, populated by PCM/risk for trade logging):
+        entry_alphas: Tuple of ``(alpha_name, signed_weight)`` for non-zero
+            targets. Weights are normalized contributions to the post-blend
+            score (sum of |weight| ≈ 1.0). Filtered to |weight| > epsilon.
+        exit_reason: Snake-case attribution for ``target_shares == 0``. PCM
+            stamps one of ``alpha_reversal | cohort_drop | magnitude_decay
+            | pcm_rebalance``. Risk rules stamp their class name in
+            snake_case (``trailing_stop_exit``, etc.). The engine stamps
+            ``engine_eod`` for end-of-backtest force-flatten.
     """
 
     symbol: str
     target_shares: float
+    entry_alphas: tuple[tuple[str, float], ...] | None = None
+    exit_reason: str | None = None
 
 
 #     ================================

@@ -15,6 +15,8 @@ alongside the rules as a standalone ``RiskManagementModel``.
 
 from __future__ import annotations
 
+from dataclasses import replace
+
 from prophitai_algo_trading.core.models import (
     AlgorithmContext,
     PortfolioTarget,
@@ -78,9 +80,6 @@ class MaxGrossExposureRiskModel:
         scale = self._max_gross / gross_ratio
 
         return [
-            PortfolioTarget(
-                symbol=t.symbol,
-                target_shares=t.target_shares * scale,
-            )
+            replace(t, target_shares=t.target_shares * scale)
             for t in targets
         ]

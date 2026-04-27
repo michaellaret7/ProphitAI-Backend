@@ -25,6 +25,9 @@ from prophitai_algo_trading.portfolio_construction.helpers import (
     dedupe_insights,
     weight_to_shares,
 )
+from prophitai_algo_trading.portfolio_construction.provenance import (
+    ProvenanceTracker,
+)
 
 
 #     ================================
@@ -76,6 +79,7 @@ class InsightWeightedPCM:
         self._cap = per_position_cap
         self._max = max_positions
         self._scheduler = RebalanceScheduler(rebalance_every)
+        self._provenance = ProvenanceTracker()
 
     def create_targets(
         self,
@@ -87,10 +91,17 @@ class InsightWeightedPCM:
 
         unique = dedupe_insights(insights)
 
+        # Reason: feed *every* deduped insight into the score map so
+        # the provenance tracker can split cohort_drop (no insight) from
+        # magnitude_decay (insight present but didn't make the book).
+        scores: dict[str, float] = {
+            i.symbol: i.direction * (i.magnitude or 0.0) for i in unique
+        }
+
         active = [i for i in unique if i.direction != 0]
 
         if not active:
-            return append_close_orphans(ctx, [])
+            return self._enrich(ctx, append_close_orphans(ctx, []), {}, scores)
 
         # Reason: rank + truncate before normalizing, so cap math sees
         # only the chosen cohort.
@@ -103,9 +114,10 @@ class InsightWeightedPCM:
         total = sum(raw_weights.values())
 
         if total <= 0:
-            return append_close_orphans(ctx, [])
+            return self._enrich(ctx, append_close_orphans(ctx, []), {}, scores)
 
         targets: list[PortfolioTarget] = []
+        contributions: dict[str, dict[str, float]] = {}
 
         for insight, raw in raw_weights.items():
             # Reason: normalize to sum to gross, then cap per-position.
@@ -122,5 +134,19 @@ class InsightWeightedPCM:
             targets.append(PortfolioTarget(
                 symbol=insight.symbol, target_shares=shares,
             ))
+            contributions[insight.symbol] = {insight.source_alpha: 1.0}
 
-        return append_close_orphans(ctx, targets)
+        return self._enrich(
+            ctx, append_close_orphans(ctx, targets), contributions, scores,
+        )
+
+    def _enrich(
+        self,
+        ctx: AlgorithmContext,
+        targets: list[PortfolioTarget],
+        contributions: dict[str, dict[str, float]],
+        scores: dict[str, float],
+    ) -> list[PortfolioTarget]:
+        return self._provenance.enrich(
+            targets, contributions, scores, ctx.portfolio,
+        )

@@ -92,8 +92,8 @@ SECTOR_PAIRS = [(a, b) for a, b in SECTOR_PAIRS if a in UNIVERSE and b in UNIVER
 # --> Backtest window + capital
 #     ================================
 
-START = "2023-01-01"
-END = "2024-12-31"
+START = "2021-01-01"
+END = "2025-12-31"
 INITIAL_CAPITAL = 1_000_000.0
 
 

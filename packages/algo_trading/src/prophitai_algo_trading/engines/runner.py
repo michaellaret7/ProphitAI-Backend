@@ -89,7 +89,12 @@ class BarRunner:
         if not open_symbols:
             return
 
-        targets = [PortfolioTarget(symbol, 0.0) for symbol in open_symbols]
+        targets = [
+            PortfolioTarget(
+                symbol=symbol, target_shares=0.0, exit_reason="engine_eod",
+            )
+            for symbol in open_symbols
+        ]
 
         before = snapshot_positions(ctx.portfolio)
         trades_before = len(ctx.portfolio.trades)

@@ -27,6 +27,9 @@ from prophitai_algo_trading.portfolio_construction.helpers import (
     append_close_orphans,
     weight_to_shares,
 )
+from prophitai_algo_trading.portfolio_construction.provenance import (
+    ProvenanceTracker,
+)
 
 
 #     ================================
@@ -126,6 +129,7 @@ class MagnitudeWeightedLongShortPCM:
         self._quantile = quantile
         self._min_abs = min_abs_score
         self._scheduler = RebalanceScheduler(rebalance_every)
+        self._provenance = ProvenanceTracker()
 
     def create_targets(
         self,
@@ -142,9 +146,10 @@ class MagnitudeWeightedLongShortPCM:
             i.symbol: i.direction * (i.magnitude or 0.0)
             for i in insights
         }
+        source_by_symbol: dict[str, str] = {i.symbol: i.source_alpha for i in insights}
 
         if not signed:
-            return append_close_orphans(ctx, [])
+            return self._enrich(ctx, append_close_orphans(ctx, []), {}, signed)
 
         ranked = sorted(signed.items(), key=lambda kv: kv[1])
 
@@ -159,7 +164,7 @@ class MagnitudeWeightedLongShortPCM:
         ]
 
         if not longs_side or not shorts_side:
-            return append_close_orphans(ctx, [])
+            return self._enrich(ctx, append_close_orphans(ctx, []), {}, signed)
 
         side_budget = self._gross / 2.0
 
@@ -169,9 +174,10 @@ class MagnitudeWeightedLongShortPCM:
         long_scaled, short_scaled = _rescale_to_neutral(long_weights, short_weights)
 
         if not long_scaled or not short_scaled:
-            return append_close_orphans(ctx, [])
+            return self._enrich(ctx, append_close_orphans(ctx, []), {}, signed)
 
         targets: list[PortfolioTarget] = []
+        contributions: dict[str, dict[str, float]] = {}
 
         for sym, weight in long_scaled.items():
             shares = weight_to_shares(ctx, sym, weight, direction=1)
@@ -180,6 +186,7 @@ class MagnitudeWeightedLongShortPCM:
                 continue
 
             targets.append(PortfolioTarget(symbol=sym, target_shares=shares))
+            contributions[sym] = {source_by_symbol[sym]: 1.0}
 
         for sym, weight in short_scaled.items():
             shares = weight_to_shares(ctx, sym, weight, direction=-1)
@@ -188,5 +195,19 @@ class MagnitudeWeightedLongShortPCM:
                 continue
 
             targets.append(PortfolioTarget(symbol=sym, target_shares=shares))
+            contributions[sym] = {source_by_symbol[sym]: 1.0}
 
-        return append_close_orphans(ctx, targets)
+        return self._enrich(
+            ctx, append_close_orphans(ctx, targets), contributions, signed,
+        )
+
+    def _enrich(
+        self,
+        ctx: AlgorithmContext,
+        targets: list[PortfolioTarget],
+        contributions: dict[str, dict[str, float]],
+        scores: dict[str, float],
+    ) -> list[PortfolioTarget]:
+        return self._provenance.enrich(
+            targets, contributions, scores, ctx.portfolio,
+        )

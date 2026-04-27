@@ -66,6 +66,7 @@ class OrderSink(Protocol):
         direction: int,
         shares: float,
         price: float,
+        entry_alphas: tuple[tuple[str, float], ...] | None = None,
     ) -> None: ...
 
     def close(
@@ -73,6 +74,7 @@ class OrderSink(Protocol):
         ctx: "AlgorithmContext",
         symbol: str,
         price: float,
+        exit_reason: str | None = None,
     ) -> None: ...
 
 
@@ -94,16 +96,24 @@ class PortfolioSink:
         direction: int,
         shares: float,
         price: float,
+        entry_alphas: tuple[tuple[str, float], ...] | None = None,
     ) -> None:
-        ctx.portfolio.open(symbol, direction, shares, price, ctx.timestamp)
+        ctx.portfolio.open(
+            symbol, direction, shares, price, ctx.timestamp,
+            entry_alphas=entry_alphas,
+        )
 
     def close(
         self,
         ctx: "AlgorithmContext",
         symbol: str,
         price: float,
+        exit_reason: str | None = None,
     ) -> None:
-        ctx.portfolio.close(symbol, price, ctx.timestamp)
+        ctx.portfolio.close(
+            symbol, price, ctx.timestamp,
+            exit_reason=exit_reason,
+        )
 
 
 #     ================================
@@ -133,6 +143,7 @@ class BrokerSink:
         direction: int,
         shares: float,
         price: float,
+        entry_alphas: tuple[tuple[str, float], ...] | None = None,
     ) -> None:
         try:
             if direction == 1:
@@ -143,13 +154,17 @@ class BrokerSink:
             logger.exception("Broker open failed for %s", symbol)
             return
 
-        ctx.portfolio.open(symbol, direction, shares, price, ctx.timestamp)
+        ctx.portfolio.open(
+            symbol, direction, shares, price, ctx.timestamp,
+            entry_alphas=entry_alphas,
+        )
 
     def close(
         self,
         ctx: "AlgorithmContext",
         symbol: str,
         price: float,
+        exit_reason: str | None = None,
     ) -> None:
         try:
             self._broker.close_position(symbol)
@@ -157,4 +172,7 @@ class BrokerSink:
             logger.exception("Broker close failed for %s", symbol)
             return
 
-        ctx.portfolio.close(symbol, price, ctx.timestamp)
+        ctx.portfolio.close(
+            symbol, price, ctx.timestamp,
+            exit_reason=exit_reason,
+        )

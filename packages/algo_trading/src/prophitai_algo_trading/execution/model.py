@@ -126,13 +126,16 @@ class ExecutionModel:
             # Reason: target_shares == 0 always means "flatten the symbol."
             if target.target_shares == 0.0:
                 if current != 0.0:
-                    self._sink.close(ctx, target.symbol, price)
+                    self._sink.close(
+                        ctx, target.symbol, price,
+                        exit_reason=target.exit_reason,
+                    )
 
                 continue
 
             # Reason: empty-to-held opens cleanly through the sink.
             if current == 0.0:
-                self._open(ctx, target.symbol, target.target_shares, price)
+                self._open(ctx, target, price)
 
                 continue
 
@@ -148,10 +151,19 @@ class ExecutionModel:
             # crystallize prior P&L and land on the exact new share
             # count. Also cleanly handles flips (opposite direction)
             # since close + reopen doesn't care about the sign of the
-            # previous position.
-            self._sink.close(ctx, target.symbol, price)
+            # previous position. Implicit-close attribution: an
+            # opposite-sign target is a true direction flip
+            # (``alpha_reversal``); a same-sign target is a resize
+            # bookkeeping artifact (``resize``). Both are PCM-induced;
+            # an explicit ``target.exit_reason`` always wins.
+            same_direction = (target.target_shares * current) > 0.0
+            close_reason = target.exit_reason or (
+                "resize" if same_direction else "alpha_reversal"
+            )
 
-            self._open(ctx, target.symbol, target.target_shares, price)
+            self._sink.close(ctx, target.symbol, price, exit_reason=close_reason)
+
+            self._open(ctx, target, price)
 
     #     ================================
     # --> Internal
@@ -160,14 +172,16 @@ class ExecutionModel:
     def _open(
         self,
         ctx: AlgorithmContext,
-        symbol: str,
-        target_shares: float,
+        target: PortfolioTarget,
         price: float,
     ) -> None:
-        direction = 1 if target_shares > 0 else -1
-        shares = abs(target_shares)
+        direction = 1 if target.target_shares > 0 else -1
+        shares = abs(target.target_shares)
 
         if shares <= 0:
             return
 
-        self._sink.open(ctx, symbol, direction, shares, price)
+        self._sink.open(
+            ctx, target.symbol, direction, shares, price,
+            entry_alphas=target.entry_alphas,
+        )

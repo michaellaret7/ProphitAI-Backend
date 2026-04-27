@@ -11,6 +11,12 @@ The PCM that makes multi-alpha portfolios clean. Pipeline:
      as magnitude and ``source_alpha='blended'``.
   5. Delegate to an inner PCM (typically MagnitudeWeightedLongShortPCM)
      for the actual target construction.
+  6. Hand the inner's targets + per-symbol composite + per-alpha
+     contributions to a ``ProvenanceTracker`` for ``entry_alphas`` /
+     ``exit_reason`` enrichment. Any provenance the inner already
+     stamped is overwritten — the outer has richer multi-alpha
+     attribution than the inner can produce on synthesized "blended"
+     insights.
 
 This is the framework analog of the hand-rolled ``SignalCombiner`` +
 ``MagnitudeWeightedLongShort`` pair used in
@@ -27,6 +33,9 @@ from prophitai_algo_trading.core.models import (
 )
 from prophitai_algo_trading.portfolio_construction.helpers import (
     cross_sectional_zscore,
+)
+from prophitai_algo_trading.portfolio_construction.provenance import (
+    ProvenanceTracker,
 )
 from prophitai_algo_trading.core.protocols import PortfolioConstructionModel
 
@@ -57,6 +66,7 @@ class MultiAlphaBlendPCM:
         self._weights = dict(weights)
         self._inner = inner
         self._winsor = winsor_at
+        self._provenance = ProvenanceTracker()
 
     def create_targets(
         self,
@@ -64,7 +74,11 @@ class MultiAlphaBlendPCM:
         insights: list[Insight],
     ) -> list[PortfolioTarget]:
         if not insights:
-            return self._inner.create_targets(ctx, [])
+            inner_targets = self._inner.create_targets(ctx, [])
+
+            return self._provenance.enrich(
+                inner_targets, {}, {}, ctx.portfolio,
+            )
 
         by_alpha: dict[str, list[Insight]] = {}
 
@@ -87,20 +101,23 @@ class MultiAlphaBlendPCM:
         for z_map in zscored_by_alpha.values():
             all_symbols.update(z_map.keys())
 
+        contributions: dict[str, dict[str, float]] = {}
         composite: dict[str, float] = {}
 
         for sym in all_symbols:
+            per_alpha: dict[str, float] = {}
             total = 0.0
 
             for alpha_name, z_map in zscored_by_alpha.items():
                 w = self._weights.get(alpha_name, 0.0)
-                total += w * z_map.get(sym, 0.0)
+                contrib = w * z_map.get(sym, 0.0)
 
+                per_alpha[alpha_name] = contrib
+                total += contrib
+
+            contributions[sym] = per_alpha
             composite[sym] = total
 
-        # Reason: use any incoming insight as a source for generated/close
-        # times. Blended insights inherit the first real insight's
-        # timestamps for consistency with whatever triggered this bar.
         reference = insights[0]
 
         blended: list[Insight] = []
@@ -117,4 +134,8 @@ class MultiAlphaBlendPCM:
                 source_alpha="blended",
             ))
 
-        return self._inner.create_targets(ctx, blended)
+        inner_targets = self._inner.create_targets(ctx, blended)
+
+        return self._provenance.enrich(
+            inner_targets, contributions, composite, ctx.portfolio,
+        )

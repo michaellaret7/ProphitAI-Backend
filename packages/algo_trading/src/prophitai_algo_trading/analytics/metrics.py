@@ -9,6 +9,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from datetime import datetime
+from pathlib import Path
 
 import numpy as np
 import pandas as pd
@@ -31,6 +32,28 @@ class BacktestResult:
     equity_curve: pd.DataFrame
     trades: pd.DataFrame
     metrics: dict[str, float | int] = field(default_factory=dict)
+
+    def save_trades(
+        self, output_dir: Path | str, filename: str = "trades.csv",
+    ) -> Path:
+        """Write the trade log to ``<output_dir>/<filename>``.
+
+        Args:
+            output_dir: Directory to write into — typically a strategy
+                folder's root (``Path(__file__).parent`` from a ``run.py``).
+            filename: Output filename (default ``trades.csv``).
+
+        Returns:
+            The absolute path written.
+        """
+        out_dir = Path(output_dir)
+        out_dir.mkdir(parents=True, exist_ok=True)
+
+        out_path = out_dir / filename
+
+        self.trades.to_csv(out_path, index=False)
+
+        return out_path.resolve()
 
 
 def calculate_metrics(

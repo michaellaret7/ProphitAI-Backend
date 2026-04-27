@@ -30,8 +30,9 @@ dispatches to them via a single ``isinstance`` gate.
 
 from __future__ import annotations
 
+import re
 from abc import ABC
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from datetime import datetime
 from typing import TYPE_CHECKING
 
@@ -44,6 +45,14 @@ if TYPE_CHECKING:
     )
 
 
+# Reason: the four PCM-induced exit reasons. Risk rules override these
+# (risk-wins) but defer to peer risk rules that already stamped the
+# target (first-risk-rule-wins).
+PCM_EXIT_REASONS: frozenset[str] = frozenset({
+    "alpha_reversal", "cohort_drop", "magnitude_decay", "pcm_rebalance",
+})
+
+
 #     ================================
 # --> Helper funcs
 #     ================================
@@ -54,6 +63,33 @@ def _probe_symbol(targets: list["PortfolioTarget"]) -> str | None:
         return target.symbol
 
     return None
+
+
+def class_name_to_snake(cls: type) -> str:
+    """Convert ``TrailingStopExit`` → ``trailing_stop_exit``."""
+    name = cls.__name__
+    s1 = re.sub(r"(.)([A-Z][a-z]+)", r"\1_\2", name)
+    s2 = re.sub(r"([a-z0-9])([A-Z])", r"\1_\2", s1)
+
+    return s2.lower()
+
+
+def stamp_exit_reason(
+    target: "PortfolioTarget", reason: str,
+) -> "PortfolioTarget":
+    """Stamp ``reason`` on a zero-share target unless a peer risk rule
+    already stamped it.
+
+    Honors first-risk-rule-wins inside a composite: if ``target.exit_reason``
+    is None or one of the PCM-induced reasons, override; otherwise keep
+    the existing risk-rule attribution.
+    """
+    existing = target.exit_reason
+
+    if existing is None or existing in PCM_EXIT_REASONS:
+        return replace(target, exit_reason=reason)
+
+    return target
 
 
 #     ================================
@@ -265,6 +301,8 @@ class RiskRule(ABC):
         out: list[PortfolioTarget] = []
         present: set[str] = set()
 
+        reason = class_name_to_snake(type(self))
+
         for target in targets:
             present.add(target.symbol)
 
@@ -275,14 +313,18 @@ class RiskRule(ABC):
                 continue
 
             if target.symbol in forced_closes:
-                out.append(PortfolioTarget(target.symbol, 0.0))
+                forced = replace(target, target_shares=0.0)
+
+                out.append(stamp_exit_reason(forced, reason))
                 continue
 
             out.append(target)
 
         for symbol in forced_closes:
             if symbol not in present:
-                out.append(PortfolioTarget(symbol, 0.0))
+                out.append(PortfolioTarget(
+                    symbol=symbol, target_shares=0.0, exit_reason=reason,
+                ))
 
         return out
 

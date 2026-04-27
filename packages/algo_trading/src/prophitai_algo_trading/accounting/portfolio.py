@@ -18,6 +18,24 @@ import pandas as pd
 from prophitai_algo_trading.accounting.cost_model import CostModel
 
 
+#     ================================
+# --> Helper funcs
+#     ================================
+
+def _format_entry_alphas(
+    entry_alphas: tuple[tuple[str, float], ...] | None,
+) -> str:
+    """Render entry-alpha attribution as a CSV-friendly string.
+
+    Format: ``"name:weight,name:weight"`` with weights to 4 decimals.
+    Empty/None → ``""``.
+    """
+    if not entry_alphas:
+        return ""
+
+    return ",".join(f"{name}:{weight:.4f}" for name, weight in entry_alphas)
+
+
 @dataclass
 class Position:
     """Open position state."""
@@ -28,6 +46,7 @@ class Position:
     entry_price: float
     entry_time: datetime
     entry_cost: float
+    entry_alphas: tuple[tuple[str, float], ...] | None = None
 
 
 @dataclass
@@ -43,6 +62,8 @@ class Trade:
     shares: float
     pnl: float
     return_pct: float
+    entry_alphas: tuple[tuple[str, float], ...] | None = None
+    exit_reason: str | None = None
 
 
 class Portfolio:
@@ -104,6 +125,7 @@ class Portfolio:
         shares: float,
         price: float,
         timestamp: datetime,
+        entry_alphas: tuple[tuple[str, float], ...] | None = None,
     ) -> bool:
         """Open a new position. Returns True on success, False if rejected.
 
@@ -138,12 +160,19 @@ class Portfolio:
             entry_price=price,
             entry_time=timestamp,
             entry_cost=cost,
+            entry_alphas=entry_alphas,
         )
         self._latest_prices[symbol] = price
 
         return True
 
-    def close(self, symbol: str, price: float, timestamp: datetime) -> Trade | None:
+    def close(
+        self,
+        symbol: str,
+        price: float,
+        timestamp: datetime,
+        exit_reason: str | None = None,
+    ) -> Trade | None:
         """Close a position. Returns the Trade record, or None if no position."""
         pos = self.positions.pop(symbol, None)
 
@@ -173,6 +202,8 @@ class Portfolio:
             shares=pos.shares,
             pnl=pnl,
             return_pct=return_pct,
+            entry_alphas=pos.entry_alphas,
+            exit_reason=exit_reason,
         )
 
         self.trades.append(trade)
@@ -206,11 +237,14 @@ class Portfolio:
 
     def trades_df(self) -> pd.DataFrame:
         """Trade log as a DataFrame."""
+        columns = [
+            "symbol", "direction", "entry_time", "exit_time",
+            "entry_price", "exit_price", "shares", "pnl", "return_pct",
+            "entry_alphas", "exit_reason",
+        ]
+
         if not self.trades:
-            return pd.DataFrame(columns=[
-                "symbol", "direction", "entry_time", "exit_time",
-                "entry_price", "exit_price", "shares", "pnl", "return_pct",
-            ])
+            return pd.DataFrame(columns=columns)
 
         return pd.DataFrame([
             {
@@ -223,6 +257,8 @@ class Portfolio:
                 "shares": t.shares,
                 "pnl": t.pnl,
                 "return_pct": t.return_pct,
+                "entry_alphas": _format_entry_alphas(t.entry_alphas),
+                "exit_reason": t.exit_reason or "",
             }
             for t in self.trades
         ])

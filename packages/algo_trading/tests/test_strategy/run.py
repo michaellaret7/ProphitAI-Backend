@@ -53,6 +53,9 @@ def test_strategy_end_to_end() -> None:
 
     result = engine.run(data)
 
+    trades_path = result.save_trades(Path(__file__).parent)
+    print(f"\n  trades written: {trades_path}")
+
     grade(result)
 
 
