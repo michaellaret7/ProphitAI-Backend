@@ -17,18 +17,23 @@ from __future__ import annotations
 
 from datetime import timedelta
 
+import pandas as pd
+
 from prophitai_algo_trading.core.models import (
     AlgorithmContext,
     Insight,
     PortfolioTarget,
 )
+from prophitai_algo_trading.portfolio_construction.base import (
+    BasePCM,
+    BuildResult,
+)
 from prophitai_algo_trading.portfolio_construction.helpers import (
-    RebalanceScheduler,
-    append_close_orphans,
     weight_to_shares,
 )
-from prophitai_algo_trading.portfolio_construction.provenance import (
-    ProvenanceTracker,
+from prophitai_algo_trading.portfolio_construction.vector_helpers import (
+    apply_cadence,
+    rank_to_long_short_weights,
 )
 
 
@@ -93,7 +98,7 @@ def _rescale_to_neutral(
 # --> PCM
 #     ================================
 
-class MagnitudeWeightedLongShortPCM:
+class MagnitudeWeightedLongShortPCM(BasePCM):
     """Decile-cut magnitude-weighted dollar-neutral builder.
 
     Args:
@@ -124,21 +129,18 @@ class MagnitudeWeightedLongShortPCM:
         if not 0.0 < quantile <= 0.5:
             raise ValueError("quantile must be in (0, 0.5]")
 
+        super().__init__(rebalance_every=rebalance_every)
+
         self._gross = gross_exposure
         self._cap = per_position_cap
         self._quantile = quantile
         self._min_abs = min_abs_score
-        self._scheduler = RebalanceScheduler(rebalance_every)
-        self._provenance = ProvenanceTracker()
 
-    def create_targets(
+    def _build(
         self,
         ctx: AlgorithmContext,
         insights: list[Insight],
-    ) -> list[PortfolioTarget]:
-        if not self._scheduler.is_rebalance_bar(ctx.timestamp):
-            return []
-
+    ) -> BuildResult:
         # Reason: one insight per symbol by construction (the PCM upstream
         # of this — e.g. MultiAlphaBlendPCM — deduplicates). Use whatever
         # comes in; if multiple exist for a symbol, the last wins.
@@ -146,10 +148,12 @@ class MagnitudeWeightedLongShortPCM:
             i.symbol: i.direction * (i.magnitude or 0.0)
             for i in insights
         }
-        source_by_symbol: dict[str, str] = {i.symbol: i.source_alpha for i in insights}
+        source_by_symbol: dict[str, str] = {
+            i.symbol: i.source_alpha for i in insights
+        }
 
         if not signed:
-            return self._enrich(ctx, append_close_orphans(ctx, []), {}, signed)
+            return BuildResult(targets=[], scores=signed)
 
         ranked = sorted(signed.items(), key=lambda kv: kv[1])
 
@@ -164,17 +168,19 @@ class MagnitudeWeightedLongShortPCM:
         ]
 
         if not longs_side or not shorts_side:
-            return self._enrich(ctx, append_close_orphans(ctx, []), {}, signed)
+            return BuildResult(targets=[], scores=signed)
 
         side_budget = self._gross / 2.0
 
         long_weights = _side_weights(longs_side, side_budget, self._cap)
         short_weights = _side_weights(shorts_side, side_budget, self._cap)
 
-        long_scaled, short_scaled = _rescale_to_neutral(long_weights, short_weights)
+        long_scaled, short_scaled = _rescale_to_neutral(
+            long_weights, short_weights,
+        )
 
         if not long_scaled or not short_scaled:
-            return self._enrich(ctx, append_close_orphans(ctx, []), {}, signed)
+            return BuildResult(targets=[], scores=signed)
 
         targets: list[PortfolioTarget] = []
         contributions: dict[str, dict[str, float]] = {}
@@ -197,17 +203,42 @@ class MagnitudeWeightedLongShortPCM:
             targets.append(PortfolioTarget(symbol=sym, target_shares=shares))
             contributions[sym] = {source_by_symbol[sym]: 1.0}
 
-        return self._enrich(
-            ctx, append_close_orphans(ctx, targets), contributions, signed,
+        return BuildResult(
+            targets=targets, contributions=contributions, scores=signed,
         )
 
-    def _enrich(
-        self,
-        ctx: AlgorithmContext,
-        targets: list[PortfolioTarget],
-        contributions: dict[str, dict[str, float]],
-        scores: dict[str, float],
-    ) -> list[PortfolioTarget]:
-        return self._provenance.enrich(
-            targets, contributions, scores, ctx.portfolio,
+    #     ================================
+    # --> Vectorized PCM
+    #     ================================
+
+    def build_weights(
+        self, scores: dict[str, pd.DataFrame],
+    ) -> pd.DataFrame:
+        """Vectorized decile-cut magnitude-weighted dollar-neutral builder.
+
+        Multi-alpha input is collapsed by picking the ``|signed_score|``
+        max per ticker (matches event-driven ``dedupe_insights``).
+        Then per row: rank → quantile cut → magnitude-weighted sizing
+        with per-position cap and cross-side rescale to dollar-neutral.
+
+        Args:
+            scores: ``{alpha_name: signed_score_panel}``.
+
+        Returns:
+            ``[date x ticker]`` signed weight panel, cadence-applied.
+        """
+        from prophitai_algo_trading.portfolio_construction.equal_weight import (
+            _max_abs_pick,
         )
+
+        composite = _max_abs_pick(scores)
+
+        weights = rank_to_long_short_weights(
+            composite,
+            quantile=self._quantile,
+            gross_exposure=self._gross,
+            per_position_cap=self._cap,
+            min_abs_score=self._min_abs,
+        )
+
+        return apply_cadence(weights, self._scheduler._every)

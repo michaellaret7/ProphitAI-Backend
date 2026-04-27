@@ -23,6 +23,8 @@ from prophitai_algo_trading.alphas.base import PerSymbolAlpha
 if TYPE_CHECKING:
     import pandas as pd
 
+    from prophitai_algo_trading.core.panel import PricePanel
+
 
 class BreakoutAlpha(PerSymbolAlpha):
     """Position within the trailing close-price high-low channel.
@@ -60,3 +62,23 @@ class BreakoutAlpha(PerSymbolAlpha):
         current = float(closes.iloc[-1])
 
         return (current - channel_low) / span - 0.5
+
+    def compute_panel(self, panel: "PricePanel") -> "pd.DataFrame":
+        """Vectorized Donchian channel position across the full panel.
+
+        Position within the trailing N-bar high/low channel:
+            (close - rolling_min) / (rolling_max - rolling_min) - 0.5
+        Rows where the channel collapses (high == low) emit NaN.
+        """
+        closes = panel.close
+
+        channel_high = closes.rolling(self._window).max()
+        channel_low = closes.rolling(self._window).min()
+
+        span = channel_high - channel_low
+
+        # Reason: zero-span rows go NaN — degenerate channel produces
+        # no actionable signal.
+        span = span.where(span > 0.0)
+
+        return (closes - channel_low) / span - 0.5

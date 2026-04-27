@@ -26,21 +26,27 @@ you can blend into EqualWeight, InsightWeighted, or any other PCM.
 
 from __future__ import annotations
 
+import pandas as pd
+
 from prophitai_algo_trading.core.models import (
     AlgorithmContext,
     Insight,
     PortfolioTarget,
 )
+from prophitai_algo_trading.core.protocols import (
+    PortfolioConstructionModel,
+    VectorPCM,
+)
+from prophitai_algo_trading.portfolio_construction.base import BasePCM
 from prophitai_algo_trading.portfolio_construction.helpers import (
     cross_sectional_zscore,
 )
-from prophitai_algo_trading.portfolio_construction.provenance import (
-    ProvenanceTracker,
+from prophitai_algo_trading.portfolio_construction.vector_helpers import (
+    zscore_rowwise,
 )
-from prophitai_algo_trading.core.protocols import PortfolioConstructionModel
 
 
-class MultiAlphaBlendPCM:
+class MultiAlphaBlendPCM(BasePCM):
     """Cross-sec z-score + weighted blend → inner PCM.
 
     Args:
@@ -57,16 +63,22 @@ class MultiAlphaBlendPCM:
     def __init__(
         self,
         weights: dict[str, float],
-        inner: PortfolioConstructionModel,
+        inner: PortfolioConstructionModel | VectorPCM,
         winsor_at: float | None = 3.0,
     ):
         if not weights:
             raise ValueError("weights must be non-empty")
 
+        # Reason: rebalance_every=None — MAPM is a wrapper. Cadence
+        # gating belongs to the inner PCM. The base's scheduler is
+        # always-pass-through here (unused), but we still get
+        # ``self._provenance`` from super().__init__() which is the
+        # actual point of subclassing BasePCM.
+        super().__init__(rebalance_every=None)
+
         self._weights = dict(weights)
         self._inner = inner
         self._winsor = winsor_at
-        self._provenance = ProvenanceTracker()
 
     def create_targets(
         self,
@@ -139,3 +151,46 @@ class MultiAlphaBlendPCM:
         return self._provenance.enrich(
             inner_targets, contributions, composite, ctx.portfolio,
         )
+
+    #     ================================
+    # --> Vectorized PCM
+    #     ================================
+
+    def build_weights(
+        self, scores: dict[str, pd.DataFrame],
+    ) -> pd.DataFrame:
+        """Vectorized z-score + weighted blend → inner vector PCM.
+
+        Per alpha:
+            1. Cross-sectional z-score per row (winsorize at ``winsor_at``).
+            2. Multiply by configured static weight.
+        Sum across alphas → composite score panel → hand to ``inner``
+        as a single-entry dict ``{"blended": composite}``. Inner PCM
+        does its own ranking / sizing / cadence.
+
+        Args:
+            scores: ``{alpha_name: signed_score_panel}``.
+
+        Returns:
+            ``[date x ticker]`` signed weight panel from the inner PCM.
+        """
+        if not scores:
+            raise ValueError("MultiAlphaBlendPCM.build_weights got no scores")
+
+        first = next(iter(scores.values()))
+
+        composite = pd.DataFrame(
+            0.0, index=first.index, columns=first.columns,
+        )
+
+        for alpha_name, panel in scores.items():
+            weight = self._weights.get(alpha_name, 0.0)
+
+            if weight == 0.0:
+                continue
+
+            zscored = zscore_rowwise(panel, winsor_at=self._winsor)
+
+            composite = composite.add(zscored * weight, fill_value=0.0)
+
+        return self._inner.build_weights({"blended": composite})

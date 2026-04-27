@@ -12,23 +12,28 @@ from __future__ import annotations
 
 from datetime import timedelta
 
+import numpy as np
+import pandas as pd
+
 from prophitai_algo_trading.core.models import (
     AlgorithmContext,
     Insight,
     PortfolioTarget,
 )
+from prophitai_algo_trading.portfolio_construction.base import (
+    BasePCM,
+    BuildResult,
+)
 from prophitai_algo_trading.portfolio_construction.helpers import (
-    RebalanceScheduler,
-    append_close_orphans,
     dedupe_insights,
     weight_to_shares,
 )
-from prophitai_algo_trading.portfolio_construction.provenance import (
-    ProvenanceTracker,
+from prophitai_algo_trading.portfolio_construction.vector_helpers import (
+    apply_cadence,
 )
 
 
-class EqualWeightPCM:
+class EqualWeightPCM(BasePCM):
     """Top-N equal-weight construction.
 
     Ranks insights by ``direction * magnitude`` (signed score), picks the
@@ -58,19 +63,16 @@ class EqualWeightPCM:
         if gross_exposure <= 0:
             raise ValueError("gross_exposure must be > 0")
 
+        super().__init__(rebalance_every=rebalance_every)
+
         self._max = max_positions
         self._gross = gross_exposure
-        self._scheduler = RebalanceScheduler(rebalance_every)
-        self._provenance = ProvenanceTracker()
 
-    def create_targets(
+    def _build(
         self,
         ctx: AlgorithmContext,
         insights: list[Insight],
-    ) -> list[PortfolioTarget]:
-        if not self._scheduler.is_rebalance_bar(ctx.timestamp):
-            return []
-
+    ) -> BuildResult:
         unique = dedupe_insights(insights)
 
         # Reason: feed *every* deduped insight into the score map so
@@ -83,7 +85,7 @@ class EqualWeightPCM:
         scored = [(i, scores[i.symbol]) for i in unique if i.direction != 0]
 
         if not scored:
-            return self._enrich(ctx, append_close_orphans(ctx, []), {}, scores)
+            return BuildResult(targets=[], scores=scores)
 
         # Reason: |signed_score| picks most extreme regardless of sign.
         scored.sort(key=lambda pair: abs(pair[1]), reverse=True)
@@ -91,7 +93,7 @@ class EqualWeightPCM:
         chosen = scored[: self._max]
 
         if not chosen:
-            return self._enrich(ctx, append_close_orphans(ctx, []), {}, scores)
+            return BuildResult(targets=[], scores=scores)
 
         per_position_weight = self._gross / len(chosen)
 
@@ -111,17 +113,91 @@ class EqualWeightPCM:
             ))
             contributions[insight.symbol] = {insight.source_alpha: 1.0}
 
-        return self._enrich(
-            ctx, append_close_orphans(ctx, targets), contributions, scores,
+        return BuildResult(
+            targets=targets, contributions=contributions, scores=scores,
         )
 
-    def _enrich(
-        self,
-        ctx: AlgorithmContext,
-        targets: list[PortfolioTarget],
-        contributions: dict[str, dict[str, float]],
-        scores: dict[str, float],
-    ) -> list[PortfolioTarget]:
-        return self._provenance.enrich(
-            targets, contributions, scores, ctx.portfolio,
-        )
+    #     ================================
+    # --> Vectorized PCM
+    #     ================================
+
+    def build_weights(
+        self, scores: dict[str, pd.DataFrame],
+    ) -> pd.DataFrame:
+        """Vectorized top-N equal-weight construction.
+
+        Per row: take the ``max_positions`` tickers with the largest
+        ``|signed_score|``, split ``gross_exposure`` equally, sign by
+        the original score sign. Multi-alpha input is collapsed by
+        picking the alpha with the largest ``|signed_score|`` per ticker
+        (matches event-driven ``dedupe_insights`` semantics).
+
+        Args:
+            scores: ``{alpha_name: signed_score_panel}``. All panels
+                share the same index and columns.
+
+        Returns:
+            ``[date x ticker]`` weight panel, cadence-applied.
+        """
+        composite = _max_abs_pick(scores)
+
+        if composite.empty:
+            return composite.copy()
+
+        index = composite.index
+        columns = composite.columns
+
+        score_arr = composite.to_numpy(dtype=float, copy=True)
+        weight_arr = np.zeros_like(score_arr)
+
+        per_position = self._gross / self._max
+
+        for row_idx in range(score_arr.shape[0]):
+            row = score_arr[row_idx]
+
+            finite_mask = np.isfinite(row) & (row != 0.0)
+
+            if not finite_mask.any():
+                continue
+
+            finite_idx = np.where(finite_mask)[0]
+            finite_scores = row[finite_idx]
+
+            n_pick = min(self._max, finite_idx.size)
+
+            top_local = np.argsort(np.abs(finite_scores))[-n_pick:]
+
+            chosen = finite_idx[top_local]
+            chosen_scores = row[chosen]
+
+            signs = np.sign(chosen_scores)
+
+            weight_arr[row_idx, chosen] = signs * per_position
+
+        weights = pd.DataFrame(weight_arr, index=index, columns=columns)
+
+        return apply_cadence(weights, self._scheduler._every)
+
+
+#     ================================
+# --> Helper funcs (vectorized)
+#     ================================
+
+def _max_abs_pick(
+    scores: dict[str, pd.DataFrame],
+) -> pd.DataFrame:
+    """Collapse ``{alpha: panel}`` to one panel by picking the largest
+    ``|score|`` per (date, ticker)."""
+    if not scores:
+        raise ValueError("scores dict is empty")
+
+    panels = list(scores.values())
+
+    composite = panels[0].copy()
+
+    for other in panels[1:]:
+        # Reason: keep the value whose |.| is larger; ties prefer existing.
+        replace_mask = other.abs() > composite.abs()
+        composite = composite.where(~replace_mask, other=other)
+
+    return composite

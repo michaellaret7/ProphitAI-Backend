@@ -21,13 +21,18 @@ holds a list of other ``RiskManagementModel`` instances, no class hierarchy).
 
 from __future__ import annotations
 
-from typing import Protocol, runtime_checkable
+from typing import TYPE_CHECKING, Protocol, runtime_checkable
 
 from prophitai_algo_trading.core.models import (
     AlgorithmContext,
     Insight,
     PortfolioTarget,
 )
+
+if TYPE_CHECKING:
+    import pandas as pd
+
+    from prophitai_algo_trading.core.panel import PricePanel
 
 
 #     ================================
@@ -146,6 +151,67 @@ class ExecutionModel(Protocol):
 
 #     ================================
 # --> Optional lifecycle contract
+#     ================================
+
+#     ================================
+# --> Vectorized contracts
+#     ================================
+
+@runtime_checkable
+class VectorAlpha(Protocol):
+    """Vectorized alpha — produces a score panel from a price panel.
+
+    Mirrors ``AlphaModel`` but operates on full-history panels rather
+    than per-bar context. A single alpha class may satisfy *both*
+    protocols (one ``update`` method for event-driven, one
+    ``compute_panel`` method for vectorized) — duck typing only, no
+    inheritance required.
+
+    Attributes:
+        name: Unique identifier — used by multi-alpha PCMs to partition
+            score panels by source. Must match the ``AlphaModel.name``
+            on the same class when both protocols are implemented.
+
+    Methods:
+        compute_panel(panel): Return a ``[date x ticker]`` DataFrame of
+            signed scores. Positive = long candidate, negative = short
+            candidate, NaN/0 = no signal. Index and columns must match
+            ``panel.close`` exactly.
+    """
+
+    name: str
+
+    def compute_panel(self, panel: "PricePanel") -> "pd.DataFrame": ...
+
+
+@runtime_checkable
+class VectorPCM(Protocol):
+    """Vectorized PortfolioConstructionModel.
+
+    Consumes ``{alpha_name: score_panel}`` and returns a single
+    ``[date x ticker]`` weight panel. Rows represent target weights at
+    each bar (positive = long, negative = short, NaN/0 = flat).
+
+    The PCM owns:
+      - blending policy across multiple alphas (or none — single-alpha
+        PCMs can ignore names entirely),
+      - sign / sizing / quantile / cap logic,
+      - rebalance cadence (returns a *dense* panel — non-rebalance
+        rows must be forward-filled from the prior rebalance).
+
+    Methods:
+        build_weights(scores): Return a dense weight DataFrame.
+            ``scores`` is keyed by alpha name; every value is a
+            ``[date x ticker]`` panel with shared index and columns.
+    """
+
+    def build_weights(
+        self, scores: dict[str, "pd.DataFrame"],
+    ) -> "pd.DataFrame": ...
+
+
+#     ================================
+# --> Optional lifecycle contract (event-driven)
 #     ================================
 
 @runtime_checkable

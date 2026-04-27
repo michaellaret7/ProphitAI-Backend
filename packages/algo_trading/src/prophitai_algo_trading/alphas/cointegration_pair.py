@@ -28,16 +28,70 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 import numpy as np
+import pandas as pd
 
 from prophitai_algo_trading.alphas.base import PairAlpha
 
 if TYPE_CHECKING:
-    import pandas as pd
+    from prophitai_algo_trading.core.panel import PricePanel
 
 
 #     ================================
 # --> Helper funcs
 #     ================================
+
+def _rolling_pair_zscore(
+    closes_a: "pd.Series", closes_b: "pd.Series", lookback: int,
+) -> "pd.Series":
+    """Rolling-OLS spread z-score for one pair, vectorized.
+
+    Computes per-bar:
+        1. Rolling alpha + beta from log(A) ~ alpha + beta * log(B).
+        2. Residual = log(A) - alpha - beta * log(B).
+        3. z = (resid - rolling_mean(resid)) / rolling_std(resid).
+
+    Uses the closed-form OLS coefficients via rolling sums:
+        beta  = (n * S_xy - S_x * S_y) / (n * S_xx - S_x ** 2)
+        alpha = (S_y - beta * S_x) / n
+
+    Returns a Series aligned with the inputs; rows with insufficient
+    history or degenerate variance are NaN.
+    """
+    # Reason: align on the union index so an asymmetric pair doesn't
+    # silently drop valid bars.
+    log_a = np.log(closes_a.replace({0.0: np.nan}))
+    log_b = np.log(closes_b.replace({0.0: np.nan}))
+
+    aligned = pd.concat([log_a, log_b], axis=1, join="outer").sort_index()
+    aligned.columns = ["a", "b"]
+
+    a = aligned["a"]
+    b = aligned["b"]
+
+    n = lookback
+
+    s_x = b.rolling(n).sum()
+    s_y = a.rolling(n).sum()
+    s_xx = (b * b).rolling(n).sum()
+    s_xy = (a * b).rolling(n).sum()
+
+    denom = n * s_xx - s_x * s_x
+    denom = denom.where(denom > 0.0)
+
+    beta = (n * s_xy - s_x * s_y) / denom
+    alpha = (s_y - beta * s_x) / n
+
+    resid = a - alpha - beta * b
+
+    mean_e = resid.rolling(n).mean()
+    std_e = resid.rolling(n).std(ddof=1)
+
+    std_e = std_e.where(std_e > 0.0)
+
+    z = (resid - mean_e) / std_e
+
+    return z.reindex(closes_a.index)
+
 
 def _spread_zscore(
     log_a: np.ndarray, log_b: np.ndarray,
@@ -159,3 +213,45 @@ class CointegrationPairAlpha(PairAlpha):
         # long B, which is direction_a = -1 under PairAlpha's
         # "positive score = long A" convention.
         return -clipped
+
+    def compute_panel(self, panel: "PricePanel") -> "pd.DataFrame":
+        """Vectorized pair z-scores across the full panel.
+
+        Per pair (A, B):
+            1. Rolling OLS of log(A) on log(B) over ``lookback_days``,
+               vectorized via rolling Sum / SumSq / SumXY identities.
+            2. Spread residual ``log(A) - alpha - beta * log(B)``.
+            3. Rolling z-score of the residual at the bar.
+            4. Apply entry-band threshold + clip + sign-flip.
+
+        Emits two columns per pair — long-leg score on A's column,
+        short-leg score on B's column. Score on A is set to
+        ``-clipped_z`` (positive z → A rich → short A → score < 0
+        on A); B receives ``+clipped_z``. Tickers not part of any
+        pair contribute zeros.
+        """
+        closes = panel.close
+
+        score = pd.DataFrame(
+            0.0, index=closes.index, columns=closes.columns,
+        )
+
+        for sym_a, sym_b in self.pairs:
+            if sym_a not in closes.columns or sym_b not in closes.columns:
+                continue
+
+            pair_z = _rolling_pair_zscore(
+                closes[sym_a], closes[sym_b], self.lookback,
+            )
+
+            clipped = pair_z.clip(lower=-self._max_z, upper=self._max_z)
+
+            # Reason: in-band → no signal. Outside band → flip sign so
+            # positive A-score = long A.
+            in_band = clipped.abs() < self._entry_z
+            signal = (-clipped).where(~in_band, other=0.0)
+
+            score[sym_a] = score[sym_a] + signal
+            score[sym_b] = score[sym_b] + (-signal)
+
+        return score

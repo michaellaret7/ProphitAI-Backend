@@ -27,6 +27,8 @@ from prophitai_algo_trading.alphas.base import PerSymbolAlpha
 if TYPE_CHECKING:
     import pandas as pd
 
+    from prophitai_algo_trading.core.panel import PricePanel
+
 
 #     ================================
 # --> Helper funcs
@@ -106,5 +108,40 @@ class TrendVolumeAlpha(PerSymbolAlpha):
         vol_z = _volume_zscore(df["volume"], self._vol_lookback)
 
         gate = max(vol_z, self._gate_floor)
+
+        return macd_hist * gate
+
+    def compute_panel(self, panel: "PricePanel") -> "pd.DataFrame":
+        """Vectorized MACD histogram gated by rolling volume z-score.
+
+        Computes per-ticker MACD histogram via ``ewm`` and rolling
+        volume z-score, then multiplies element-wise. Volume z-score
+        is floored at ``gate_floor`` so quiet days still contribute.
+        """
+        if panel.volume is None:
+            raise ValueError(
+                "TrendVolumeAlpha.compute_panel requires panel.volume",
+            )
+
+        closes = panel.close
+        volume = panel.volume
+
+        ema_fast = closes.ewm(span=self._fast, adjust=False).mean()
+        ema_slow = closes.ewm(span=self._slow, adjust=False).mean()
+
+        macd_line = ema_fast - ema_slow
+
+        signal_line = macd_line.ewm(span=self._signal, adjust=False).mean()
+
+        macd_hist = macd_line - signal_line
+
+        vol_mean = volume.rolling(self._vol_lookback).mean()
+        vol_std = volume.rolling(self._vol_lookback).std()
+
+        vol_z = (volume - vol_mean) / vol_std.where(vol_std > 0.0)
+
+        vol_z = vol_z.fillna(0.0)
+
+        gate = vol_z.clip(lower=self._gate_floor)
 
         return macd_hist * gate

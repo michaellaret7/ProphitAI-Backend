@@ -40,9 +40,12 @@ from prophitai_algo_trading.brokers import Alpaca
 from prophitai_algo_trading.accounting.cost_model import CostModel
 from prophitai_algo_trading.data.csv_loader import load_csv_data
 from prophitai_algo_trading.engines import (
+    AlphaIsolationReport,
     Backtest,
     BarRunner,
     LiveRunner,
+    VectorBacktest,
+    run_alpha_isolation,
 )
 from prophitai_algo_trading.core.enums import Direction
 from prophitai_algo_trading.core import (
@@ -52,7 +55,12 @@ from prophitai_algo_trading.core import (
     Insight,
     PortfolioConstructionModel,
     PortfolioTarget,
+    PricePanel,
     RiskManagementModel,
+    VectorAlgorithm,
+    VectorAlpha,
+    VectorPCM,
+    panel_from_per_ticker,
 )
 from prophitai_algo_trading.core.algorithm import Algorithm
 from prophitai_algo_trading.analytics.metrics import BacktestResult, calculate_metrics
@@ -68,10 +76,19 @@ __all__ = [
     "PortfolioConstructionModel",
     "RiskManagementModel",
     "ExecutionModel",
+    # Vector framework
+    "VectorAlgorithm",
+    "VectorAlpha",
+    "VectorPCM",
+    "PricePanel",
+    "panel_from_per_ticker",
     # Engines
+    "AlphaIsolationReport",
     "Backtest",
     "BarRunner",
     "LiveRunner",
+    "VectorBacktest",
+    "run_alpha_isolation",
     # Portfolio / accounting
     "Portfolio",
     "Position",

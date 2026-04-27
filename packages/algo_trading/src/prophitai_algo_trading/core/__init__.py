@@ -12,13 +12,17 @@ from prophitai_algo_trading.core.models import (
     Insight,
     PortfolioTarget,
 )
+from prophitai_algo_trading.core.panel import PricePanel, panel_from_per_ticker
 from prophitai_algo_trading.core.protocols import (
     AlphaModel,
     ExecutionModel,
     LifecycleAwareRiskModel,
     PortfolioConstructionModel,
     RiskManagementModel,
+    VectorAlpha,
+    VectorPCM,
 )
+from prophitai_algo_trading.core.vector_algorithm import VectorAlgorithm
 
 __all__ = [
     "Algorithm",
@@ -30,5 +34,10 @@ __all__ = [
     "LifecycleAwareRiskModel",
     "PortfolioConstructionModel",
     "PortfolioTarget",
+    "PricePanel",
     "RiskManagementModel",
+    "VectorAlgorithm",
+    "VectorAlpha",
+    "VectorPCM",
+    "panel_from_per_ticker",
 ]

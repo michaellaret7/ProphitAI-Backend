@@ -19,6 +19,8 @@ from prophitai_algo_trading.alphas.base import PerSymbolAlpha
 if TYPE_CHECKING:
     import pandas as pd
 
+    from prophitai_algo_trading.core.panel import PricePanel
+
 
 class MomentumAlpha(PerSymbolAlpha):
     """12-1 price momentum.
@@ -60,3 +62,15 @@ class MomentumAlpha(PerSymbolAlpha):
             return None
 
         return (end_price / start_price) - 1.0
+
+    def compute_panel(self, panel: "PricePanel") -> "pd.DataFrame":
+        """Vectorized 12-1 momentum across the full ``[date x ticker]`` panel.
+
+        Equivalent to ``compute_score`` applied at every bar:
+            (close[t - skip] / close[t - skip - lookback]) - 1
+        """
+        closes = panel.close
+
+        ratio = closes / closes.shift(self._lookback_days)
+
+        return (ratio - 1.0).shift(self._skip_days)

@@ -19,6 +19,8 @@ from prophitai_algo_trading.alphas.base import PerSymbolAlpha
 if TYPE_CHECKING:
     import pandas as pd
 
+    from prophitai_algo_trading.core.panel import PricePanel
+
 
 class ShortTermReversalAlpha(PerSymbolAlpha):
     """Negated N-day return on daily closes.
@@ -58,3 +60,10 @@ class ShortTermReversalAlpha(PerSymbolAlpha):
         # Reason: negate — recent loser is the long candidate, recent
         # winner is the short candidate.
         return -recent_return
+
+    def compute_panel(self, panel: "PricePanel") -> "pd.DataFrame":
+        """Vectorized N-day reversal across the full panel.
+
+        Negated N-bar return on the close panel.
+        """
+        return -panel.close.pct_change(self._lookback_days)

@@ -29,6 +29,7 @@ if TYPE_CHECKING:
     import pandas as pd
 
     from prophitai_algo_trading.core.models import AlgorithmContext
+    from prophitai_algo_trading.core.panel import PricePanel
 
 
 #     ================================
@@ -130,3 +131,31 @@ class LowVolAlpha(CrossSectionalAlpha):
 
         # Positive => below-median-sigma (low vol → long).
         return median_sigma - sigma
+
+    def compute_panel(self, panel: "PricePanel") -> "pd.DataFrame":
+        """Vectorized cross-sectional low-vol score across the full panel.
+
+        Score per (date, ticker) is ``row_median_sigma - ticker_sigma``
+        where sigma is realized log-return volatility over a rolling
+        window. Rows with fewer than ``min_universe_size`` valid sigmas
+        emit zeros.
+        """
+        log_returns = np.log(panel.close).diff()
+
+        sigma_panel = log_returns.rolling(self._window).std(ddof=1)
+
+        # Reason: degenerate sigma (NaN, 0, negative) cleared so it
+        # doesn't pollute the row median.
+        sigma_panel = sigma_panel.where(sigma_panel > 0.0)
+
+        valid_count = sigma_panel.count(axis=1)
+        median_sigma = sigma_panel.median(axis=1)
+
+        score = sigma_panel.rsub(median_sigma, axis=0)
+
+        # Reason: rows where the universe is too thin → all zeros, no
+        # cross-sectional signal.
+        thin_rows = valid_count < self._min_universe
+        score.loc[thin_rows, :] = 0.0
+
+        return score.fillna(0.0)
