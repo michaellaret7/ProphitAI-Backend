@@ -176,7 +176,7 @@ class VectorBacktest:
 
         Returns:
             ``BacktestResult`` with equity curve, empty trades frame,
-            and the standard metrics dict from ``calculate_metrics``.
+            and vector-appropriate metrics from ``calculate_metrics``.
         """
         result, _ = self._run_internal(algo, panel, benchmark)
 
@@ -227,7 +227,10 @@ class VectorBacktest:
         ])
 
         metrics = calculate_metrics(
-            equity_curve, empty_trades, benchmark=benchmark,
+            equity_curve,
+            empty_trades,
+            benchmark=benchmark,
+            include_trade_metrics=False,
         )
 
         result = BacktestResult(

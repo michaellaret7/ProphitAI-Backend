@@ -63,8 +63,9 @@ def calculate_metrics(
     risk_free_rate: float = 0.0,
     warmup: int = 0,
     active_start: datetime | pd.Timestamp | None = None,
+    include_trade_metrics: bool = True,
 ) -> dict[str, float | int | None]:
-    """Compute return, risk, trade, and benchmark-relative metrics.
+    """Compute return, risk, optional trade, and benchmark-relative metrics.
 
     Precedence for the active-window slice (front-trim only):
         1. If ``active_start`` is provided, start there.
@@ -89,6 +90,8 @@ def calculate_metrics(
         warmup: Bars to skip from the front (legacy explicit override).
         active_start: Optional explicit start — overrides both warmup and
             auto-detect.
+        include_trade_metrics: Whether to include per-trade stats. Vector
+            backtests do not produce trades, so they should leave these out.
 
     Returns:
         Dict of metric name -> value.
@@ -107,8 +110,10 @@ def calculate_metrics(
     metrics: dict[str, float | int | None] = {
         **_return_metrics(effective, years),
         **_risk_metrics(effective, bars_per_year, risk_free_rate),
-        **_trade_metrics(trades),
     }
+
+    if include_trade_metrics:
+        metrics.update(_trade_metrics(trades))
 
     if benchmark is not None:
         metrics.update(
